@@ -4,6 +4,7 @@
 #include "FusionTrace.hpp"
 #include "FusionClassState.hpp"
 #include "FusionStateTrace.hpp"
+#include <Geometry/FrameBoundary.hpp>
 #include "Global/Global.hpp"       // LiDARObjectInfo가 정의된 헤더
 #include <iterator>
 #include <vector>
@@ -33,6 +34,7 @@ struct TimedLidarObjects {
     ros::Time stamp;
     std::vector<LiDARObjectInfo> objects;
     ros::WallTime queued_at;
+    asmc::lidar::Context context;
 };
 
 struct TimedCameraImage {
@@ -237,6 +239,16 @@ static void LidarToImage(LiDAR &st_LiDAR, CAMERA &st_Camera)
 {
     st_Camera.fusion_data.vec_Lidar_BBoxes.clear();
 
+    Eigen::Matrix<double,3,4> projection=st_Camera.params.sensor_fusion_projection_matrix;
+    if(frame_boundary::Enabled()) {
+        asmc::lidar::Pose camera_mount;
+        camera_mount.matrix()=st_Camera.params.bird_eye_view_transform.inverse();
+        const auto p=asmc::lidar::camera_projection(st_LiDAR.frame_context,camera_mount,
+            st_Camera.params.intrinsic_matrix_90_fov.leftCols<3>());
+        if(!p) {ROS_ERROR_THROTTLE(1.,"Invalid scan projection context"); return;}
+        projection=*p;
+    }
+
     // Optional legacy hood y-band. Disabled by default because even a small
     // overlap can reject a legitimate nearby object.
     int ex_ymin = 637, ex_ymax = 720;
@@ -257,7 +269,7 @@ static void LidarToImage(LiDAR &st_LiDAR, CAMERA &st_Camera)
 
         for (const auto& pt : det.pcl_ClusterPoints.points) {
             Eigen::Vector4d pt_vec(pt.x, pt.y, pt.z, 1.0);
-            Eigen::Vector3d cam = st_Camera.params.sensor_fusion_projection_matrix * pt_vec;
+            Eigen::Vector3d cam = projection * pt_vec;
 
             if (cam[2] <= 0.0) continue; // 카메라 뒤쪽 포인트 제거
 
@@ -521,6 +533,8 @@ static ros::Publisher& FusionDebugRawImagePub()
 static void PublishFusionDebugImage(LiDAR& st_LiDAR, CAMERA& st_Camera)
 {
     if (st_Camera.bgr_image.empty()) return;
+    if(frame_boundary::Enabled() && !FusionDebugImagePub().getNumSubscribers() &&
+        !FusionDebugRawImagePub().getNumSubscribers()) return;
 
     // The processing loop can run faster than the sensors. Limit JPEG encoding
     // so this diagnostic view does not steal CPU from YOLO.
@@ -621,7 +635,8 @@ static void PublishFusionDebugImage(LiDAR& st_LiDAR, CAMERA& st_Camera)
  * @brief 카메라-LiDAR 퓨전 프로세스를 총괄하는 메인 함수입니다.
  */
 void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
-                     CAMERA &st_Camera, const ros::Time& lidar_stamp)
+                     CAMERA &st_Camera, const ros::Time& lidar_stamp,
+                     const ros::WallTime& decision_time)
 {
     // RAW_YOLO_DATA remains in the public interface for legacy callers.  Live
     // ROS input is queued at YoloCallback so no intermediate result is lost
@@ -663,8 +678,18 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
 
     if (!lidar_stamp.isZero() &&
         lidar_stamp != last_queued_lidar_stamp) {
+        if(frame_boundary::Enabled())
+            fusion_trace::Event("lidar_coordinate_context",lidar_stamp.toNSec(),[&](std::ostream& out) {
+                const auto& c=st_LiDAR.frame_context;
+                out<<",\"generation\":"<<c.input_generation
+                    <<",\"calibration_sha\":"<<fusion_trace::Quote(c.calibration_source)
+                    <<",\"input_frame\":\"leveled_sensor\",\"map_valid\":"<<(c.map_pose.valid?"true":"false")
+                    <<",\"map_reason\":"<<fusion_trace::Quote(c.map_pose.reason)<<",\"leveling\":[";
+                for(unsigned i=0;i<9;++i) {if(i) out<<',';out<<std::setprecision(17)<<c.applied_leveling(i/3,i%3);}
+                out<<']';
+            });
         pending_lidar.push_back(
-            {lidar_stamp, st_LiDAR.vec_Objects, ros::WallTime::now()});
+            {lidar_stamp, st_LiDAR.vec_Objects, decision_time, st_LiDAR.frame_context});
         last_queued_lidar_stamp = lidar_stamp;
     }
 
@@ -719,7 +744,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
             yolo_stamps_ns.push_back(static_cast<int64>(frame.stamp.toNSec()));
         }
         const int64 waited_ns = static_cast<int64>(std::llround(
-            (ros::WallTime::now() - lidar_frame.queued_at).toSec() * 1e9));
+            (decision_time - lidar_frame.queued_at).toSec() * 1e9));
         const auto decision = fusion_sync::DecideMatch(
             static_cast<int64>(lidar_frame.stamp.toNSec()), yolo_stamps_ns,
             waited_ns, max_offset_ns, wait_timeout_ns);
@@ -769,6 +794,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         yolo_history.erase(yolo_history.begin() + decision.yolo_index);
 
         LiDAR synchronized_lidar;
+        synchronized_lidar.frame_context=synchronized_lidar_frame.context;
         synchronized_lidar.vec_Objects =
             std::move(synchronized_lidar_frame.objects);
         CAMERA synchronized_camera = st_Camera;

@@ -40,6 +40,33 @@ launch_defaults:
 # currently names every expanded topic in the family. It is evidence of use,
 # not permission to expose a debug topic as a planning contract.
 topic_families:
+  - id: lidar_frame_candidates
+    topics:
+      - {pattern: /perception/lidar/objects_local, type: asmc_msgs/LidarObjectArray}
+      - {pattern: /perception/lidar/objects_map, type: asmc_msgs/LidarObjectArray}
+    producer:
+      file: src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundaryPublisher.cpp
+      anchors: ['"/perception/lidar/objects_local"', '"/perception/lidar/objects_map"']
+    consumers: []
+    bag_profiles: []
+    classification: candidate_contract
+    current_mode: explicit_argument
+    p5b_action: keep
+    rationale: Opt-in Main adapter of the asmc_lidar core; serialization is subscriber-demand. No planner cutover or package-port acceptance.
+
+  - id: lidar_frame_diagnostics
+    topics:
+      - {pattern: /perception/lidar/diagnostics, type: diagnostic_msgs/DiagnosticArray}
+    producer:
+      file: src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundaryPublisher.cpp
+      anchors: ['"/perception/lidar/diagnostics"']
+    consumers: []
+    bag_profiles: []
+    classification: operational_diagnostics
+    current_mode: explicit_argument
+    p5b_action: keep
+    rationale: Input silence, unavailable pose, scan generation, calibration and legacy withholding reasons for the opt-in boundary.
+
   - id: camera_inference_status
     topics:
       - {pattern: /camera_semantic_inference/inference_status, type: asmc_camera/InferenceStatus}

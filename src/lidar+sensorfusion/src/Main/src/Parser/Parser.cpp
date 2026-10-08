@@ -1,6 +1,7 @@
 #include "Parser.hpp"
 #include <Parser/GpsSanityFilter.hpp>
 #include <Parser/SensorPoseHistory.hpp>
+#include <Geometry/FrameBoundary.hpp>
 #include <SensorFusion/SensorFusion.hpp>
 #include <SensorFusion/FusionTrace.hpp>
 
@@ -50,6 +51,20 @@ bool LookupSensorPoseForLidar(std::uint64_t lidar_stamp_ms,
 {
     return g_SensorPoseHistory.WaitForLookup(
         lidar_stamp_ms, g_LidarPoseWaitTimeoutS, pose, reason);
+}
+
+bool LookupLocalStateForLidar(std::uint64_t stamp_ms,GPS_IMU* local,std::string* reason) {
+    return g_SensorPoseHistory.WaitForLocalLookup(stamp_ms,g_LidarPoseWaitTimeoutS,local,reason);
+}
+bool LookupLocalStateForLidarNs(std::uint64_t stamp_ns,GPS_IMU* local,
+    LocalInputSelection* selection,std::string* reason) {
+    return g_SensorPoseHistory.WaitForLocalLookupNs(stamp_ns,g_LidarPoseWaitTimeoutS,local,selection,reason);
+}
+asmc::lidar::PoseSelection LookupMapPoseForLidar(const asmc::lidar::Observation& time,const GPS_IMU& local) {
+    return g_SensorPoseHistory.MapAt(time,local);
+}
+asmc::lidar::PoseSelection LookupMapPoseForLidar(std::uint64_t stamp_ms,const GPS_IMU& local) {
+    return g_SensorPoseHistory.MapAt(stamp_ms,local);
 }
 
 // Parser.cpp 파일 역할 
@@ -251,9 +266,21 @@ void LiDARParser_Driver_ROS(ros::NodeHandle &st_NodeHandle)
 }
 
 void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
-{   
+{
+    const auto receipt_steady=fusion_trace::SteadyNowNs();
+    const auto receipt_ros=ros::Time::now().toNSec();
+    if(frame_boundary::Enabled() && msg->header.stamp.isZero()) {
+        ROS_WARN_THROTTLE(1.,"Rejected LiDAR scan: zero source stamp");
+        return;
+    }
     pcl::PointCloud<pcl::PointXYZI> pcl_Cloud;
     pcl::fromROSMsg(*msg, pcl_Cloud);
+
+    if(frame_boundary::Enabled() && pcl_Cloud.size()>
+        sizeof(st_SensorData.st_RawLiDAR.arc_Buffer)/sizeof(pcl::PointXYZI)) {
+        ROS_WARN_THROTTLE(1.,"Rejected LiDAR scan: raw buffer capacity exceeded");
+        return;
+    }
 
 
     int32 s32_Count = pcl_Cloud.size();
@@ -265,6 +292,10 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     // cout << "bytes: " << bytes << endl;
 
 
+    // Match TemporalThread's lock order: the source buffer and generation must
+    // be one atomic observation in the common path, including under overload.
+    const bool atomic_observation=frame_boundary::Enabled();
+    if(atomic_observation) pthread_mutex_lock(&st_DataTemporal);
     pthread_mutex_lock(&st_SensorData.st_MutexLiDAR);
     // cout << "Before setting st_RawLiDAR.s32_Num: " << st_SensorData.st_RawLiDAR.s32_Num << endl;
 
@@ -272,11 +303,23 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     // GetMillisecond() 는 steady_clock(부팅 기준)이라 여기에 쓰면 이 노드가 발행하는
     // stamp 가 실제 시각과 약 17억 초(20698일) 어긋난다 — bag 분석에서 다른 토픽과
     // 맞출 수 없고 TF lookup 도 실패한다. 들어온 stamp 를 그대로 승계한다.
-    // 단위는 ms 를 유지해야 한다 (LidarProcess 가 *1e6 으로 ns 로 되돌린다).
+    // Legacy keeps its millisecond field. Common geometry preserves the original
+    // nanoseconds separately and never rounds its source header.
     const ros::Time ts_LiDARIn = msg->header.stamp.isZero() ? ros::Time::now()
                                                             : msg->header.stamp;
+    const auto source_ms=ts_LiDARIn.toNSec()/1000000ULL;
+    if(frame_boundary::Enabled() && (!source_ms ||
+        ts_LiDARIn.toNSec()<=st_SensorData.st_RawLiDAR.source_stamp_ns)) {
+        pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR);
+        if(atomic_observation) pthread_mutex_unlock(&st_DataTemporal);
+        ROS_WARN_THROTTLE(1.,"Rejected LiDAR scan: duplicate or regressing source stamp");
+        return;
+    }
     st_SensorData.st_RawLiDAR.u64_Timestamp =
-        static_cast<uint64>(ts_LiDARIn.toNSec() / 1000000ULL);
+        static_cast<uint64>(source_ms);
+    st_SensorData.st_RawLiDAR.source_stamp_ns=ts_LiDARIn.toNSec();
+    st_SensorData.st_RawLiDAR.receipt_ros_ns=receipt_ros;
+    st_SensorData.st_RawLiDAR.receipt_steady_ns=receipt_steady;
 
     st_SensorData.st_RawLiDAR.s32_Num  = s32_Count;  // Set the number of points (not bytes)
 
@@ -290,14 +333,15 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     // after the complete raw frame has been published also gives the worker a
     // real predicate to wait on instead of processing the same scan whenever
     // a vehicle-status callback happens to run.
-    pthread_mutex_lock(&st_DataTemporal);
+    if(!atomic_observation) pthread_mutex_lock(&st_DataTemporal);
     ++u64_LidarFrameGeneration;
     const auto generation = u64_LidarFrameGeneration;
     pthread_cond_signal(&st_DataTemporalCond);
     pthread_mutex_unlock(&st_DataTemporal);
     fusion_trace::Event("lidar_input", ts_LiDARIn.toNSec(), [&](std::ostream& out) {
         out << ",\"generation\":" << generation << ",\"points\":" << s32_Count
-            << ",\"buffer_stamp_ns\":" << (ts_LiDARIn.toNSec() / 1000000ULL) * 1000000ULL;
+            << ",\"buffer_stamp_ns\":" << (frame_boundary::Enabled()?ts_LiDARIn.toNSec():(ts_LiDARIn.toNSec()/1000000ULL)*1000000ULL)
+            << ",\"receipt_ros_ns\":" << receipt_ros << ",\"receipt_steady_ns\":" << receipt_steady;
     });
         // cout << "After setting st_RawLiDAR.s32_Num: " << st_SensorData.st_RawLiDAR.s32_Num << endl;
 
@@ -351,6 +395,7 @@ void *ParseGPS(void *pst_NodeHandle)
 
 void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
 {
+    const auto receipt_steady=fusion_trace::SteadyNowNs();
     GPS_DATA st_GPSData;
     float64 f64_X, f64_Y, f64_Z, f64_Dx, f64_Dy, f64_Dz, f64_Latitude, f64_Longitude, f64_Altitude;
     float64 f64_Phi, f64_Lambda, f64_N;
@@ -359,7 +404,20 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
     st_GPSData.f64_Longitude = st_Msg->longitude;
     st_GPSData.f64_Altitude = st_Msg->altitude;
     st_GPSData.b_isJamming = (st_Msg->status == 0);
-    if (st_Msg->status == 0) {
+    const ros::Time received=ros::Time::now();
+    const ros::Time original_stamp=st_Msg->header.stamp;
+    auto invalidate=[&] {
+        const auto stamp=original_stamp.isZero()?received:original_stamp;
+        if(frame_boundary::Enabled()) g_SensorPoseHistory.AddGpsInvalidAt(original_stamp.toNSec(),receipt_steady);
+        else g_SensorPoseHistory.AddGpsInvalid(stamp.toNSec()/1000000ULL,received.toNSec()/1000000ULL);
+    };
+    if (st_Msg->status == 0 || (frame_boundary::Enabled() &&
+        (original_stamp.isZero() || !std::isfinite(st_Msg->latitude) ||
+         !std::isfinite(st_Msg->longitude) || !std::isfinite(st_Msg->altitude) ||
+         !std::isfinite(st_Msg->eastOffset) || !std::isfinite(st_Msg->northOffset) ||
+         !frame_boundary::MapOffsetsValid(st_Msg->eastOffset,st_Msg->northOffset) ||
+         (st_Msg->latitude==0. && st_Msg->longitude==0.)))) {
+        invalidate();
         ROS_WARN_THROTTLE(1.0, "Rejected GPS sample: invalid status");
         return;
     }
@@ -377,7 +435,8 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
     );
     st_GPSData.f64_E = f64_East - f64_EastOffset;
     st_GPSData.f64_N = f64_North - f64_NorthOffset;
-    st_GPSData.f64_U = 0;
+    st_GPSData.f64_U = frame_boundary::Enabled()
+        ? st_Msg->altitude-frame_boundary::MapAltitudeOrigin() : 0;
 
     const ros::Time source_stamp = st_Msg->header.stamp.isZero()
         ? ros::Time::now() : st_Msg->header.stamp;
@@ -391,6 +450,7 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
             st_GPSData.f64_E, st_GPSData.f64_N, source_stamp.toSec());
     }
     if (!sanity.accepted) {
+        invalidate();
         ROS_WARN_THROTTLE(
             1.0,
             "Rejected GPS sample: status=%d map=(%.1f,%.1f) reason=%s jump=%.1fm allowed=%.1fm",
@@ -402,7 +462,8 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
 
     const std::uint64_t source_stamp_ms =
         static_cast<std::uint64_t>(source_stamp.toNSec() / 1000000ULL);
-    g_SensorPoseHistory.AddGps(source_stamp_ms, st_GPSData);
+    g_SensorPoseHistory.AddGps(source_stamp_ms, st_GPSData,
+        frame_boundary::Enabled()?source_stamp.toNSec():0,frame_boundary::Enabled()?receipt_steady:0);
 
     // cout << st_GPSData.f64_E << " " << st_GPSData.f64_N << endl;
 
@@ -455,9 +516,13 @@ void *ParseCAN(void *pst_NodeHandle)
 
 void CANParser_Callback(const morai_msgs::EgoVehicleStatus::ConstPtr& st_Msg)
 {
+    const auto receipt_steady=fusion_trace::SteadyNowNs();
     CAN_DATA st_CANData;
     st_CANData.f32_CurrentVel_KPH = 3.6 * sqrt(pow(st_Msg->velocity.x, 2) + pow(st_Msg->velocity.y, 2) + pow(st_Msg->velocity.z, 2));
     st_CANData.f32_CurrentVel_MPS = sqrt(pow(st_Msg->velocity.x, 2) + pow(st_Msg->velocity.y, 2) + pow(st_Msg->velocity.z, 2));
+    if(frame_boundary::Enabled() && st_Msg->header.stamp.isZero()) {
+        st_CANData.f32_CurrentVel_MPS=NAN; st_CANData.f32_CurrentVel_KPH=NAN;
+    }
     st_CANData.f32_Steer_deg = st_Msg->wheel_angle;
     st_CANData.f32_Steer_rad = Deg2Rad(st_Msg->wheel_angle);
 
@@ -467,7 +532,8 @@ void CANParser_Callback(const morai_msgs::EgoVehicleStatus::ConstPtr& st_Msg)
         static_cast<std::uint64_t>(source_stamp.toNSec() / 1000000ULL);
     std::string sanity_reason;
     if (!g_SensorPoseHistory.AddCan(
-            source_stamp_ms, st_CANData, &sanity_reason)) {
+            source_stamp_ms, st_CANData, &sanity_reason,
+            frame_boundary::Enabled()?st_Msg->header.stamp.toNSec():0,frame_boundary::Enabled()?receipt_steady:0)) {
         ROS_WARN_THROTTLE(
             1.0, "Rejected vehicle-speed sample: %s speed=%.2fm/s",
             sanity_reason.c_str(), st_CANData.f32_CurrentVel_MPS);
@@ -497,6 +563,7 @@ void *ParseIMU(void *pst_NodeHandle)
 
 void IMUParser_Callback(const sensor_msgs::Imu::ConstPtr& st_Msg)
 {
+    const auto receipt_steady=fusion_trace::SteadyNowNs();
     IMU_DATA st_IMUData;
 
     st_IMUData.f32_AccelX = st_Msg->linear_acceleration.x;
@@ -522,6 +589,11 @@ void IMUParser_Callback(const sensor_msgs::Imu::ConstPtr& st_Msg)
     st_IMUData.f32_Pitch_deg = Rad2Deg(st_IMUData.f32_Pitch_rad);
     st_IMUData.f32_Yaw_deg = Rad2Deg(st_IMUData.f32_Yaw_rad);
     st_IMUData.b_ImuReady=true; //라이다에서 Kalman.cpp에서 사용중
+    if(frame_boundary::Enabled()) {
+        const auto& q=st_Msg->orientation;
+        const double norm=q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w;
+        st_IMUData.b_ImuReady=!st_Msg->header.stamp.isZero() && std::isfinite(norm) && std::abs(norm-1.)<=.001;
+    }
 
     const ros::Time source_stamp = st_Msg->header.stamp.isZero()
         ? ros::Time::now() : st_Msg->header.stamp;
@@ -529,7 +601,8 @@ void IMUParser_Callback(const sensor_msgs::Imu::ConstPtr& st_Msg)
         static_cast<std::uint64_t>(source_stamp.toNSec() / 1000000ULL);
     std::string sanity_reason;
     if (!g_SensorPoseHistory.AddImu(
-            source_stamp_ms, st_IMUData, &sanity_reason)) {
+            source_stamp_ms, st_IMUData, &sanity_reason,
+            frame_boundary::Enabled()?st_Msg->header.stamp.toNSec():0,frame_boundary::Enabled()?receipt_steady:0)) {
         ROS_WARN_THROTTLE(
             1.0, "Rejected IMU sample: %s yaw=%.1fdeg",
             sanity_reason.c_str(), st_IMUData.f32_Yaw_deg);

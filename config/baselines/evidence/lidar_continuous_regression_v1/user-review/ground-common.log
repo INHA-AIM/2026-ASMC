@@ -1,0 +1,15 @@
+[33m[WARN] [1791425251.698379716, 75.100000000]: Ground plane unavailable; preserving finite points for fail-safe processing[0m
+[0m[INFO] [1791425251.685756754]: Fusion intrinsics: 1280x720 HFOV=90.00 fx=640.000 fy=640.000 cx=640.000 cy=360.000[0m
+[0m[INFO] [1791425251.686090570]: Fusion camera pose: xyz=(1.900, 0.000, 1.200)m rpy=(0.000, 2.000, 0.000)deg[0m
+[0m[INFO] [1791425251.686113527]: Fusion LiDAR pose: xyz=(0.800, 0.000, 1.450)m rpy=(0.000, 0.000, 0.000)deg[0m
+[0m[INFO] [1791425251.686138994]: T_camera_mount_lidar:
+  0.999391          0 -0.0348995   -1.10805
+         0          1          0          0
+ 0.0348995          0   0.999391   0.211458
+         0          0          0          1[0m
+[0m[INFO] [1791425251.686165388]: P_opencv_lidar:
+    639.61       -640   -22.3357   -709.155
+   337.445          0   -652.174   -534.233
+  0.999391          0 -0.0348995   -1.10805[0m
+[0m[INFO] [1791425251.696681295]: Common geometry enabled; roll=on calibration=e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88:86d36e10f5ca1f9b32d201b3222e4328a63d9ff1452b49defec07c7b2ca806ec:0c5a144a575372c8c0b57ebf25fd40c8b7274fad08523734d66aa90752470a5f altitude_origin=0.000[0m
+[0m[INFO] [1791425251.698247256, 75.000000000]: Ground filter configured: threshold 0.30->0.40m by 50.0m, tilt<=25.0deg, seed_z=[-2.00,-0.65], fallback=2 frames[0m

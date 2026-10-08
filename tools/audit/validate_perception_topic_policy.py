@@ -16,6 +16,8 @@ class PolicyError(RuntimeError):
 
 
 REQUIRED_FAMILY_IDS = {
+    "lidar_frame_candidates",
+    "lidar_frame_diagnostics",
     "camera_inference_status",
     "camera_objects",
     "camera_objects_debug_raw",

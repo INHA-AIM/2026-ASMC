@@ -1,4 +1,5 @@
 #include "ImuRansac.hpp"
+#include <Geometry/FrameBoundary.hpp>
 
 #include <pcl/segmentation/sac_segmentation.h>
 
@@ -192,7 +193,9 @@ void NormalVectorFiltering(
     pcl::PointCloud<pcl::PointXYZI>::Ptr input,
     pcl::PointCloud<pcl::PointXYZI>::Ptr output,
     const GPS_IMU&) {
-    // Never attach an arbitrarily old plane to a new observation.
+    // Common geometry cannot justify transporting an old ground plane without
+    // the intervening translation and attitude. Preserve unknown points on a
+    // failed current fit; the opt-out legacy fallback remains unchanged.
     State().current_plane = GroundPlaneSnapshot{};
     if (!input || !output || input->points.size() < 3) {
         if (output) output->clear();
@@ -209,7 +212,7 @@ void NormalVectorFiltering(
         state.consecutive_failures = 0;
     } else {
         ++state.consecutive_failures;
-        if (state.has_previous_plane &&
+        if (!frame_boundary::Enabled() && state.has_previous_plane &&
             state.consecutive_failures <= state.config.fallback_frames) {
             plane = state.previous_plane;
             ROS_WARN_THROTTLE(

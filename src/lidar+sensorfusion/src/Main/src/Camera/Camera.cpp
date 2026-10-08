@@ -316,6 +316,12 @@ void InitProjectionMatrix(CAMERA &st_Camera, const YAML::Node& config)
     ROS_INFO_STREAM("P_opencv_lidar:\n"
                     << st_Camera.params.sensor_fusion_projection_matrix);
 
+    // This function is also used by the startup calibration check, before the
+    // camera worker is created. Load its own required BEV fields first.
+    st_Camera.params.world_points_vector=config["Camera"]["BEV"]["WorldPoints"].as<vector<float32>>();
+    st_Camera.params.moving_average_filter_size=config["Camera"]["BEV"]["MAF"].as<int32>();
+    if(st_Camera.params.world_points_vector.size()!=4)
+        throw std::runtime_error("Camera BEV WorldPoints requires four values");
     // BEV를 위한 월드 좌표계 포인트 설정
     st_Camera.params.world_points_3d = {
             {st_Camera.params.world_points_vector[0], st_Camera.params.world_points_vector[2], 0.0f},

@@ -1,0 +1,69 @@
+[
+  {
+    "command": [
+      "python3",
+      "tools/audit/check_documentation_migration.py"
+    ],
+    "return_code": 0,
+    "output": "documentation migration check passed: markdown=37, generated_text=2, redirects=12, frozen=5, history=not requested\n"
+  },
+  {
+    "command": [
+      "python3",
+      "tools/audit/validate_p1b_contract.py"
+    ],
+    "return_code": 0,
+    "output": "P1-B contract valid: 32 registered messages; HD Map contract owns 25 (13 frozen + 12 additive), 11 topics\n"
+  },
+  {
+    "command": [
+      "python3",
+      "tools/audit/validate_perception_contract.py"
+    ],
+    "return_code": 0,
+    "output": "Perception contract valid: 3 messages, 3 canonical topics, 4 compatibility topics, 12 guarded canonical configs\n"
+  },
+  {
+    "command": [
+      "python3",
+      "tools/audit/validate_perception_topic_policy.py"
+    ],
+    "return_code": 0,
+    "output": "{\n  \"audit_id\": \"p5a_perception_topic_audit_v1\",\n  \"bag_profile_count\": 11,\n  \"default_off_candidate_count\": 2,\n  \"expanded_topic_count\": 74,\n  \"family_count\": 32,\n  \"policy_id\": \"asmc_perception_topic_policy_v1\",\n  \"required_internal_family_count\": 2\n}\n"
+  },
+  {
+    "command": [
+      "python3",
+      "tools/audit/validate_perception_runtime_acceptance.py"
+    ],
+    "return_code": 0,
+    "output": "{\n  \"all_topic_count\": 40,\n  \"camera_lane_topic_count\": 33,\n  \"contract_id\": \"asmc_perception_runtime_acceptance_v1\",\n  \"default_forbidden_topic_count\": 20,\n  \"deferred_topic_count\": 2,\n  \"optional_consumer_gate_count\": 2,\n  \"p5_closeout\": {\n    \"consumer_count\": 2,\n    \"evidence_count\": 6,\n    \"phase_count\": 3,\n    \"representative_lane_family_messages\": 293\n  },\n  \"static_binding_count\": 8,\n  \"topic_group_count\": 4\n}\n"
+  },
+  {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "tools/audit/test_p1b_contract.py",
+      "tools/audit/test_perception_contract.py",
+      "tools/audit/test_perception_topic_policy.py",
+      "tools/audit/test_perception_runtime_acceptance.py",
+      "tools/perception/test_frame_boundary_measurements.py"
+    ],
+    "return_code": 0,
+    "output": ".....................................\n----------------------------------------------------------------------\nRan 37 tests in 0.547s\n\nOK\n"
+  },
+  {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "tools/perception/test_b1a_protocol.py",
+      "tools/perception/test_fusion_diagnostics.py",
+      "tools/perception/test_b0_measurements.py",
+      "tools/perception/test_lifecycle_measurements.py"
+    ],
+    "return_code": 1,
+    "output": ".....................................E\n======================================================================\nERROR: test_lifecycle_measurements (unittest.loader._FailedTest.test_lifecycle_measurements)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_lifecycle_measurements\nTraceback (most recent call last):\n  File \"/usr/lib/python3.14/unittest/loader.py\", line 137, in loadTestsFromName\n    module = __import__(module_name)\n  File \"/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-objects/tools/perception/test_lifecycle_measurements.py\", line 6, in <module>\n    from asmc_camera.runtime.trace import LifecycleTrace\nModuleNotFoundError: No module named 'asmc_camera'\n\n\n----------------------------------------------------------------------\nRan 38 tests in 0.020s\n\nFAILED (errors=1)\n"
+  }
+]

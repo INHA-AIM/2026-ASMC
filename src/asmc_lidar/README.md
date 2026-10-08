@@ -6,7 +6,9 @@ ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며
 
 2026-10-08 B1a의 GPS·map·수평화·카메라 투영·추적 경계와 담당별 후속 작업은
 [B1a 개선 과제](../../docs/packages/asmc_lidar/b1a-improvement-tasks.md)에 정리했다.
-공통 기반을 `Main`에 연결하는 후속 구현과 재호의 전체 이전·필터 개선을 구분한다.
+공통 기반은 `Main`의 opt-in `Geometry/` 어댑터에 연결했다. 검증 상태와 직접 launch는
+[좌표·GPS 경계 인계](../../docs/handoffs/perception/lidar-camera-frame-boundaries.md)에 있다.
+재호의 전체 이전·터널 필터 운영 수락과 기본값 승격은 별도다.
 
 담당 작업과 완료 조건은 [LiDAR 인계 문서](../../docs/packages/asmc_lidar/README.md),
 카메라와의 역할 분담은 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)에 있다.
@@ -16,6 +18,8 @@ ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며
 | 경로 | 역할 |
 |---|---|
 | `include/asmc_lidar/frame_time.hpp`, `src/frame_time_core.cpp` | 실제 수평화 역변환·장착 변환·관측시점 pose 보간·속도 의미 변환 |
+| `include/asmc_lidar/projection.hpp`, `src/projection.cpp` | 장착 회전을 고려한 수평화와 관측별 합성 카메라 투영 |
+| `include/asmc_lidar/bounded_pose.hpp`, `src/bounded_pose.cpp` | 별도 300ms 제한 GPS 위치 보정·무효 barrier·3회 복구 API |
 | `include/asmc_lidar/imu_selection.hpp` | 이미 도착한 IMU 중 scan 시각 이전의 최신 유효 표본 선택, 누락/stale 진단 |
 | `config/autonav_v3.yaml` | 장착 변환의 출처/SHA와 값. 후속 ROS 어댑터에서 검증·로딩할 참고 설정 |
 | `test/` | 중심/8코너·시간·pose·속도·IMU 선택의 회귀시험 |
@@ -70,3 +74,15 @@ python3 src/asmc_msgs/test/test_message_serialization.py
 이전 연구 소스·보고서는 정리 전 커밋 `020f6c2`에 남아 있다. 선택적 복구는 별도
 checkout에서 검토한다. 예전 `unified.launch`와 `ground_compare_live.launch`는 삭제됐다.
 기존 devel에 같은 이름의 실행파일이 남아 있어도 현재 패키지의 지원 기능으로 사용하지 않는다.
+
+## 시간 API 선택
+
+`PoseHistory`는 같은 clock에서 최대 100ms bracketing 보간만 허용한다.
+`BoundedPoseHistory`는 Main의 별도 300ms 제한 보정·GPS 정상 3회 복구 정책이다.
+공통 Main은 `Observation.clock=ros`, `receipt_clock=steady`를 명시하고 source age와
+수신/처리 소요시간을 서로 다른 축에서 계산한다. strict API는 mixed clock을 거부한다.
+GPS stamp가 0인 무효 입력은 bounded API의 수신 시각 barrier로만 처리한다.
+local 준비 조건은 유효 IMU·차량 속도이며 GPS와 독립적이다.
+
+실제 지면·군집·추적 연속 재현기는 nested Main의 시험 도구이며 이 코어의 기능이 아니다.
+[연속 회귀와 재호 과제](../../docs/handoffs/perception/lidar-continuous-regression.md)를 참고한다.

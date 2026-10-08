@@ -10,6 +10,7 @@
 #include <PlannerInterface/PlannerObjectSender.hpp>
 #include <PlannerInterface/PlannerObjectRosPublisher.hpp>
 #include <ros/package.h>
+#include <Geometry/FrameBoundaryPublisher.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -38,6 +39,7 @@ CAMERA st_Camera, st_CameraTemporal;
 GPS_REF st_GPSRef;
 std::unique_ptr<PlannerObjectSender> st_PlannerObjectSender;
 std::unique_ptr<PlannerObjectRosPublisher> st_PlannerObjectRosPublisher;
+std::unique_ptr<frame_boundary::Publisher> st_FrameBoundaryPublisher;
 std::unique_ptr<MotionClassifier> st_MotionClassifier;
 
 int32 GPSHZ, VisionHZ, LiDARHZ, IMUHZ, CANHZ;
@@ -311,7 +313,7 @@ void InitializeCamera(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Camera)
 
 };
 
-void InitLidar(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Lidar)
+void InitLidarSettings()
 {   
     YAML::Node config = YAML::LoadFile(YamlURL);
 
@@ -395,6 +397,11 @@ void InitLidar(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Lidar)
         st_Tracking.f32_ContinuityBonus,
         st_Tracking.f32_DuplicateCenterDistance,
         st_Tracking.f32_DuplicateIouThreshold);
+}
+
+void InitLidar(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Lidar)
+{
+    InitLidarSettings();
     pthread_create(pth_Lidar, NULL, ParseLiDAR, (void*)&st_NodeHandle);
 }
 
@@ -461,7 +468,7 @@ void *TemporalThread(void *p_Arg)
         pthread_mutex_unlock(&st_DataTemporal);
 
         fusion_trace::Event("lidar_process_start",
-            st_CurrentData.st_RawLiDAR.u64_Timestamp * 1000000ULL,
+            frame_boundary::SourceStamp(st_CurrentData.st_RawLiDAR).toNSec(),
             [&](std::ostream& out) {
                 out << ",\"generation\":" << processed_lidar_generation
                     << ",\"skipped_generations\":"
@@ -475,9 +482,37 @@ void *TemporalThread(void *p_Arg)
         const auto lidar_pipeline_start = std::chrono::steady_clock::now();
         GPS_IMU lidar_pose = st_GPSIMU;
         std::string pose_reason;
-        const bool pose_ready = LookupSensorPoseForLidar(
-            st_CurrentData.st_RawLiDAR.u64_Timestamp,
-            &lidar_pose, &pose_reason);
+        const auto scan_stamp=frame_boundary::SourceStamp(st_CurrentData.st_RawLiDAR);
+        auto scan_time=frame_boundary::ScanTime(st_CurrentData.st_RawLiDAR);
+        LocalInputSelection selected_inputs;
+        const bool pose_ready = frame_boundary::Enabled()
+            ? LookupLocalStateForLidarNs(scan_stamp.toNSec(),&lidar_pose,&selected_inputs,&pose_reason)
+            : LookupSensorPoseForLidar(st_CurrentData.st_RawLiDAR.u64_Timestamp,&lidar_pose,&pose_reason);
+        if(frame_boundary::Enabled() && pose_ready) {
+            scan_time=frame_boundary::ScanTime(st_CurrentData.st_RawLiDAR);
+            const auto map=LookupMapPoseForLidar(scan_time,lidar_pose);
+            frame_boundary::PrepareScan(scan_time,lidar_pose,st_VehicleSpec,map,processed_lidar_generation);
+            fusion_trace::Event("scan_input_selection",scan_stamp.toNSec(),[&](std::ostream& out) {
+                out << ",\"generation\":" << processed_lidar_generation
+                    << ",\"receipt_steady_ns\":" << scan_time.receipt_ns
+                    << ",\"receipt_ros_ns\":" << st_CurrentData.st_RawLiDAR.receipt_ros_ns
+                    << ",\"processing_steady_ns\":" << scan_time.processing_ns
+                    << ",\"imu_stamp_ns\":" << selected_inputs.imu_stamp_ns
+                    << ",\"imu_receipt_steady_ns\":" << selected_inputs.imu_receipt_steady_ns
+                    << ",\"can_stamp_ns\":" << selected_inputs.can_stamp_ns
+                    << ",\"can_receipt_steady_ns\":" << selected_inputs.can_receipt_steady_ns
+                    << ",\"map_reason\":" << fusion_trace::Quote(map.reason);
+            });
+            if(map.valid) {
+                const Eigen::Vector3d gps=map.map_from_base.translation()+map.map_from_base.rotation()*
+                    Eigen::Vector3d(st_VehicleSpec.st_GPSPos.f32_X,st_VehicleSpec.st_GPSPos.f32_Y,st_VehicleSpec.st_GPSPos.f32_Z);
+                lidar_pose.st_GPS.f64_E=gps.x(); lidar_pose.st_GPS.f64_N=gps.y(); lidar_pose.st_GPS.f64_U=gps.z();
+                lidar_pose.st_GPS.b_isJamming=false;
+            } else {
+                lidar_pose.st_GPS.f64_E=lidar_pose.st_GPS.f64_N=lidar_pose.st_GPS.f64_U=NAN;
+                lidar_pose.st_GPS.b_isJamming=true;
+            }
+        }
         if (!pose_ready) {
             ROS_WARN_THROTTLE(
                 1.0, "Skipping LiDAR frame without synchronized pose: %s",
@@ -498,7 +533,20 @@ void *TemporalThread(void *p_Arg)
             fusion_state_trace::Snapshot("class_publish_input", ts_CurrTime, ros::Time(),
                 st_LiDAR.vec_Objects, processed_lidar_generation);
         }
-        if (lidar_processed && st_PlannerObjectRosPublisher) {
+        if(frame_boundary::Enabled() && st_FrameBoundaryPublisher) {
+            if(lidar_processed) st_FrameBoundaryPublisher->Publish(st_LiDAR);
+            else st_FrameBoundaryPublisher->Invalid(scan_stamp,pose_ready?"empty_or_invalid_lidar_input":pose_reason);
+        }
+        const bool map_ready=!frame_boundary::Enabled() ||
+            (frame_boundary::Current().map_pose.valid && asmc::lidar::validate_time(frame_boundary::Current().time).empty());
+        const bool legacy_ready=map_ready && (!frame_boundary::Enabled() ||
+            (lidar_processed && frame_boundary::LegacyMotionReady(st_LiDAR)));
+        if(frame_boundary::Enabled() && st_FrameBoundaryPublisher)
+            st_FrameBoundaryPublisher->SetLegacyReason(!pose_ready?"input_invalid":!map_ready?"pose_unavailable":
+                !legacy_ready?"motion_state_unrepresentable":"available");
+        if(st_PlannerObjectRosPublisher && frame_boundary::Enabled() && (!pose_ready || !legacy_ready))
+            st_PlannerObjectRosPublisher->SuppressMap(scan_stamp);
+        if (lidar_processed && legacy_ready && st_PlannerObjectRosPublisher) {
             st_PlannerObjectRosPublisher->Publish(
                 st_LiDAR, lidar_pose, st_VehicleSpec, ts_CurrTime);
         }
@@ -512,12 +560,12 @@ void *TemporalThread(void *p_Arg)
                 elapsed_ms, st_CurrentData.st_RawLiDAR.s32_Num,
                 st_LiDAR.vec_Objects.size());
         }
-        if (lidar_processed && st_PlannerObjectSender) {
+        if (lidar_processed && legacy_ready && st_PlannerObjectSender) {
             st_PlannerObjectSender->Send(
                 st_LiDAR, lidar_pose, st_VehicleSpec);
         }
         fusion_trace::Event("lidar_process_end",
-            st_CurrentData.st_RawLiDAR.u64_Timestamp * 1000000ULL,
+            frame_boundary::SourceStamp(st_CurrentData.st_RawLiDAR).toNSec(),
             [&](std::ostream& out) {
                 out << ",\"pose_ready\":" << (pose_ready ? "true" : "false")
                     << ",\"processed\":" << (lidar_processed ? "true" : "false")
@@ -577,6 +625,13 @@ int main(int argc, char **argv)
 
     InitMutex();
     InitVehicleSpec();
+    try {
+        InitProjectionMatrix(st_Camera,YAML::LoadFile(YamlURL));
+        frame_boundary::Configure(st_PrivateNodeHandle,st_VehicleSpec,st_Camera);
+    } catch(const std::exception& error) {
+        ROS_FATAL("Common geometry initialization failed: %s",error.what()); return 1;
+    }
+    st_FrameBoundaryPublisher=std::make_unique<frame_boundary::Publisher>(st_NodeHandle);
     ConfigureSensorPoseHistory(st_PrivateNodeHandle);
     st_MotionClassifier =
         std::make_unique<MotionClassifier>(st_PrivateNodeHandle);
@@ -619,6 +674,7 @@ int main(int argc, char **argv)
     pthread_join(th_Temporal, nullptr);
 
     ReportFusionTotals();
+    if(st_FrameBoundaryPublisher) st_FrameBoundaryPublisher->ReportTotals();
     fusion_trace::Sink().Flush();
 
     return 0;

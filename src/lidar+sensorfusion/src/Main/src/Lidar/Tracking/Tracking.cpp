@@ -1,3 +1,4 @@
+#include <Geometry/FrameBoundary.hpp>
 #include <Lidar/Tracking/tracking_utils.hpp>
 #include <Lidar/Kalman/kalman_utils.hpp>
 #include <iomanip>
@@ -617,7 +618,7 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             float32 f32_Dx = f32_Det_x - f32_Pred_x;
             float32 f32_Dy = f32_Det_y - f32_Pred_y;
             float32 f32_Cost_dist = sqrt(f32_Dx * f32_Dx + f32_Dy * f32_Dy);
-            if (st_Tracking.b_UseMapAssociation &&
+            if (!frame_boundary::Enabled() && st_Tracking.b_UseMapAssociation &&
                 tracking_association::FiniteMapCenter(vec_Compare[i]) &&
                 tracking_association::FiniteMapCenter(vec_NowObject[j])) {
                 f32_Cost_dist = tracking_association::MapCenterDistance(
@@ -677,6 +678,19 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
     AssignmentProblemSolver solver;
     vector<int32> assignment;
     solver.Solve(vec_CostMatrix, assignment, AssignmentProblemSolver::optimal);
+    fusion_trace::Event("tracking_assignment",ts_CurrTime.toNSec(),[&](std::ostream& out) {
+        out << ",\"source_dt_sec\":" << f64_Time << ",\"pairs\":[";
+        bool first=true;
+        for(unsigned i=0;i<assignment.size();++i) {
+            const int j=assignment[i];
+            if(j<0 || j>=static_cast<int>(vec_NowObject.size()))continue;
+            if(!first)out<<',';first=false;
+            out << "{\"previous_id\":" << vec_Compare[i].s32_Id
+                << ",\"detection_index\":" << j << ",\"cost\":" << vec_CostMatrix[i][j]
+                << ",\"accepted\":" << (vec_CostMatrix[i][j]<st_Tracking.f32_COST_THRESHOLD?"true":"false") << '}';
+        }
+        out << ']';
+    });
 
     vector<bool> matched_now(M, false);
     vector<bool> matched_prev(N, false);
@@ -719,6 +733,10 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             vec_NowObject[j].f32_PrevE  = vec_Compare[i].f32_PrevE;
             vec_NowObject[j].f32_PrevN  = vec_Compare[i].f32_PrevN;
             vec_NowObject[j].f32_PrevYaw = vec_Compare[i].f32_PrevYaw ;
+            vec_NowObject[j].tracking_frame_valid=vec_Compare[i].tracking_frame_valid;
+            vec_NowObject[j].tracking_height_input=vec_Compare[i].tracking_height_input;
+            vec_NowObject[j].tracking_yaw_from_input=vec_Compare[i].tracking_yaw_from_input;
+            vec_NowObject[j].tracking_origin_in_yaw=vec_Compare[i].tracking_origin_in_yaw;
 
             if (tracking_association::ShouldCarryPreviousClass(
                     vec_Compare[i], vec_NowObject[j])) {
@@ -727,9 +745,21 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
                 fusion_state_trace::Initial("class_tracking_reset", vec_NowObject[j], ts_CurrTime);
             }
 
-            obb_util::stabilizeMatchedOBB(
-                vec_Compare[i], vec_NowObject[j],
-                st_GPSIMU.st_IMU.f32_Yaw_deg);
+            if(frame_boundary::Enabled() && vec_Compare[i].tracking_frame_valid) {
+                // Heading alignment needs no point-cloud copy of the old track.
+                LiDARObjectInfo aligned{};
+                aligned.s32_MissCount=vec_Compare[i].s32_MissCount;
+                aligned.Eigen_KfState_CA=vec_Compare[i].Eigen_KfState_CA;
+                aligned.Eigen_KfP_CA=vec_Compare[i].Eigen_KfP_CA;
+                aligned.tracking_frame_valid=true;
+                aligned.tracking_height_input=vec_Compare[i].tracking_height_input;
+                aligned.tracking_yaw_from_input=vec_Compare[i].tracking_yaw_from_input;
+                aligned.tracking_origin_in_yaw=vec_Compare[i].tracking_origin_in_yaw;
+                aligned.f32_PrevYaw=vec_Compare[i].f32_PrevYaw;
+                aligned.f32_OBB_YawRad=vec_Compare[i].f32_OBB_YawRad;
+                frame_boundary::AlignTrackingFrame(aligned,st_GPSIMU.st_IMU.f32_Yaw_rad);
+                obb_util::stabilizeMatchedOBB(aligned,vec_NowObject[j],st_GPSIMU.st_IMU.f32_Yaw_deg);
+            } else obb_util::stabilizeMatchedOBB(vec_Compare[i],vec_NowObject[j],st_GPSIMU.st_IMU.f32_Yaw_deg);
             // 칼만 업데이트
             kalman_filter_update(vec_NowObject[j], f32_Det_x, f32_Det_y,vec_NowObject[j].f32_PredCoreX,
             vec_NowObject[j].f32_PredCoreY ,f64_Time,st_GPSIMU.st_IMU.f32_Yaw_deg);
@@ -831,8 +861,11 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
         if (matched_prev[i]) continue;
         for (int j = 0; j < M; ++j) {
             if (!matched_now[j]) continue;
-            if (tracking_association::MapCenterDistance(
-                    vec_Compare[i], vec_NowObject[j]) > retire_distance) {
+            const float retire_dist=frame_boundary::Enabled()
+                ? std::hypot(vec_NowObject[j].f32_CoreX-vec_PredictedPositions[i].first,
+                             vec_NowObject[j].f32_CoreY-vec_PredictedPositions[i].second)
+                : tracking_association::MapCenterDistance(vec_Compare[i],vec_NowObject[j]);
+            if (retire_dist > retire_distance) {
                 continue;
             }
             if (tracking_association::ShapeAgreement(

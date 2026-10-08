@@ -1,0 +1,14 @@
+[33m[WARN] [1791425251.379806010, 75.100000000]: Ground fit missed once; reusing the last valid plane (1/2)[0m
+[0m[INFO] [1791425251.376498413]: Fusion intrinsics: 1280x720 HFOV=90.00 fx=640.000 fy=640.000 cx=640.000 cy=360.000[0m
+[0m[INFO] [1791425251.376926000]: Fusion camera pose: xyz=(1.900, 0.000, 1.200)m rpy=(0.000, 2.000, 0.000)deg[0m
+[0m[INFO] [1791425251.376934436]: Fusion LiDAR pose: xyz=(0.800, 0.000, 1.450)m rpy=(0.000, 0.000, 0.000)deg[0m
+[0m[INFO] [1791425251.376961052]: T_camera_mount_lidar:
+  0.999391          0 -0.0348995   -1.10805
+         0          1          0          0
+ 0.0348995          0   0.999391   0.211458
+         0          0          0          1[0m
+[0m[INFO] [1791425251.376988056]: P_opencv_lidar:
+    639.61       -640   -22.3357   -709.155
+   337.445          0   -652.174   -534.233
+  0.999391          0 -0.0348995   -1.10805[0m
+[0m[INFO] [1791425251.379695216, 75.000000000]: Ground filter configured: threshold 0.30->0.40m by 50.0m, tilt<=25.0deg, seed_z=[-2.00,-0.65], fallback=2 frames[0m

@@ -20,16 +20,19 @@ bool pose_valid(const Pose& p);
 struct Observation {
   Ns stamp_ns = 0, receipt_ns = 0, processing_ns = 0;
   std::string clock, stamp_provenance;
+  // Empty means the original same-clock contract. Main explicitly uses
+  // ROS source stamps with steady-clock receipts; these are never subtracted.
+  std::string receipt_clock;
 };
-// Receipt/processing timestamps below use the explicitly declared common clock.
-// CPU durations are measured separately with steady_clock, never subtracted here.
+// Receipt and processing use receipt_clock (or clock when empty).
+// Source ages compare only source clocks; durations compare only receipt clocks.
 std::string validate_time(const Observation& t);
 class StampGuard {
  public:
   std::string accept(const Observation& t);
  private:
   Ns last_ = 0;
-  std::string clock_;
+  std::string clock_, receipt_clock_;
 };
 
 struct PoseSample {
@@ -40,6 +43,7 @@ struct PoseSample {
   // map_from_reference is either rear axle or GPS antenna, NOT object bbox center.
   bool reference_is_gps = false;
   Vec gps_in_base = Vec::Zero();
+  std::string arrival_clock;
 };
 struct PoseSelection {
   bool valid = false;
@@ -65,6 +69,7 @@ enum class Frame { Sensor, LeveledSensor, Base };
 enum class VelocityMeaning { Unknown, AbsoluteInputVector, BasePositionDerivative };
 struct Context {
   Observation time;
+  std::uint64_t input_generation = 0;
   Frame frame = Frame::Sensor;
   Pose base_from_sensor = Pose::Identity();
   std::string calibration_source;

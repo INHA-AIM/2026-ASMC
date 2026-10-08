@@ -1,0 +1,18 @@
+python3 -m unittest tools/perception/test_b1a_protocol.py tools/perception/test_fusion_diagnostics.py tools/perception/test_b0_measurements.py tools/perception/test_lifecycle_measurements.py
+.....................................E
+======================================================================
+ERROR: test_lifecycle_measurements (unittest.loader._FailedTest.test_lifecycle_measurements)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_lifecycle_measurements
+Traceback (most recent call last):
+  File "/usr/lib/python3.14/unittest/loader.py", line 137, in loadTestsFromName
+    module = __import__(module_name)
+  File "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-objects/tools/perception/test_lifecycle_measurements.py", line 6, in <module>
+    from asmc_camera.runtime.trace import LifecycleTrace
+ModuleNotFoundError: No module named 'asmc_camera'
+
+
+----------------------------------------------------------------------
+Ran 38 tests in 0.020s
+
+FAILED (errors=1)

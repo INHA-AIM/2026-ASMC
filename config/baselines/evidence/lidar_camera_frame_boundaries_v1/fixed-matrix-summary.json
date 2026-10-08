@@ -1,0 +1,1366 @@
+{
+  "measured_revision": "682bff65153c09b16a69aa6bd378708b01e781c6",
+  "trials": 78,
+  "execution_complete": 78,
+  "analysis_errors": [],
+  "runtime_sha_preserved": true,
+  "operational_acceptance": false,
+  "roll_promotion": false,
+  "boundary_promotion": false,
+  "gps_contrasts": [
+    {
+      "reference": "state-primary-common_pitch-normal-both-r1",
+      "candidate": "state-primary-common_pitch-invalid-both-r1",
+      "common": 649,
+      "changed": 577,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_pitch-normal-both-r1",
+      "candidate": "state-primary-common_pitch-missing-both-r1",
+      "common": 649,
+      "changed": 556,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_roll_pitch-normal-both-r1",
+      "candidate": "state-primary-common_roll_pitch-invalid-both-r1",
+      "common": 649,
+      "changed": 602,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_roll_pitch-normal-both-r1",
+      "candidate": "state-primary-common_roll_pitch-missing-both-r1",
+      "common": 649,
+      "changed": 596,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_pitch-normal-both-r1",
+      "candidate": "state-shadow-common_pitch-invalid-both-r1",
+      "common": 208,
+      "changed": 193,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_pitch-normal-both-r1",
+      "candidate": "state-shadow-common_pitch-missing-both-r1",
+      "common": 208,
+      "changed": 179,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_roll_pitch-normal-both-r1",
+      "candidate": "state-shadow-common_roll_pitch-invalid-both-r1",
+      "common": 208,
+      "changed": 192,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_roll_pitch-normal-both-r1",
+      "candidate": "state-shadow-common_roll_pitch-missing-both-r1",
+      "common": 208,
+      "changed": 193,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_pitch-normal-both-r2",
+      "candidate": "state-primary-common_pitch-invalid-both-r2",
+      "common": 649,
+      "changed": 598,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_pitch-normal-both-r2",
+      "candidate": "state-primary-common_pitch-missing-both-r2",
+      "common": 649,
+      "changed": 602,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_roll_pitch-normal-both-r2",
+      "candidate": "state-primary-common_roll_pitch-invalid-both-r2",
+      "common": 649,
+      "changed": 596,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_roll_pitch-normal-both-r2",
+      "candidate": "state-primary-common_roll_pitch-missing-both-r2",
+      "common": 649,
+      "changed": 597,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_pitch-normal-both-r2",
+      "candidate": "state-shadow-common_pitch-invalid-both-r2",
+      "common": 208,
+      "changed": 197,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_pitch-normal-both-r2",
+      "candidate": "state-shadow-common_pitch-missing-both-r2",
+      "common": 208,
+      "changed": 193,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_roll_pitch-normal-both-r2",
+      "candidate": "state-shadow-common_roll_pitch-invalid-both-r2",
+      "common": 208,
+      "changed": 187,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_roll_pitch-normal-both-r2",
+      "candidate": "state-shadow-common_roll_pitch-missing-both-r2",
+      "common": 208,
+      "changed": 192,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_roll_pitch-normal-both-r3",
+      "candidate": "state-primary-common_roll_pitch-invalid-both-r3",
+      "common": 649,
+      "changed": 602,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_roll_pitch-normal-both-r3",
+      "candidate": "state-primary-common_roll_pitch-missing-both-r3",
+      "common": 649,
+      "changed": 542,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_pitch-normal-both-r3",
+      "candidate": "state-primary-common_pitch-invalid-both-r3",
+      "common": 649,
+      "changed": 596,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-primary-common_pitch-normal-both-r3",
+      "candidate": "state-primary-common_pitch-missing-both-r3",
+      "common": 649,
+      "changed": 598,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_roll_pitch-normal-both-r3",
+      "candidate": "state-shadow-common_roll_pitch-invalid-both-r3",
+      "common": 208,
+      "changed": 193,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_roll_pitch-normal-both-r3",
+      "candidate": "state-shadow-common_roll_pitch-missing-both-r3",
+      "common": 208,
+      "changed": 187,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_pitch-normal-both-r3",
+      "candidate": "state-shadow-common_pitch-invalid-both-r3",
+      "common": 208,
+      "changed": 193,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    },
+    {
+      "reference": "state-shadow-common_pitch-normal-both-r3",
+      "candidate": "state-shadow-common_pitch-missing-both-r3",
+      "common": 208,
+      "changed": 179,
+      "missing": 0,
+      "extra": 0,
+      "exact": false
+    }
+  ],
+  "map_gate_violations": 0,
+  "observer_boundary_review_required": true,
+  "stamp_errors": 0,
+  "subscriber_cost": {
+    "primary": {
+      "none": {
+        "cpu_median_of_run_p50": 34.94331146738727,
+        "rss_max_run_p95_mib": 221.5234375,
+        "runs": [
+          {
+            "label": "cost-primary-common_roll_pitch-normal-none-r1",
+            "final": {
+              "processed": 648,
+              "invalid": 1,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          },
+          {
+            "label": "cost-primary-common_roll_pitch-normal-none-r2",
+            "final": {
+              "processed": 647,
+              "invalid": 2,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          },
+          {
+            "label": "cost-primary-common_roll_pitch-normal-none-r3",
+            "final": {
+              "processed": 647,
+              "invalid": 2,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          }
+        ]
+      },
+      "local": {
+        "cpu_median_of_run_p50": 34.902197414735255,
+        "rss_max_run_p95_mib": 220.23828125,
+        "runs": [
+          {
+            "label": "cost-primary-common_roll_pitch-normal-local-r1",
+            "final": {
+              "processed": 648,
+              "invalid": 1,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 648,
+                "2": 0,
+                "3": 1,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 30.77257302356884,
+                "p95": 45.55708939442411,
+                "p99": 48.87545496691018,
+                "maximum": 79.81721000396647
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          },
+          {
+            "label": "cost-primary-common_roll_pitch-normal-local-r2",
+            "final": {
+              "processed": 648,
+              "invalid": 1,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 648,
+                "2": 0,
+                "3": 1,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 31.019026006106287,
+                "p95": 45.05650380742736,
+                "p99": 49.2375707940664,
+                "maximum": 77.38718402106315
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          },
+          {
+            "label": "cost-primary-common_roll_pitch-normal-local-r3",
+            "final": {
+              "processed": 648,
+              "invalid": 1,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 648,
+                "2": 0,
+                "3": 1,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 30.825983005343005,
+                "p95": 44.54632520209998,
+                "p99": 48.96870779804885,
+                "maximum": 80.5430129985325
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          }
+        ]
+      },
+      "map": {
+        "cpu_median_of_run_p50": 34.736218934384695,
+        "rss_max_run_p95_mib": 220.72578125,
+        "runs": [
+          {
+            "label": "cost-primary-common_roll_pitch-normal-map-r1",
+            "final": {
+              "processed": 648,
+              "invalid": 1,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 629,
+                "2": 0,
+                "3": 1,
+                "4": 19
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 30.478299013338983,
+                "p95": 44.8219375917688,
+                "p99": 48.707292885519564,
+                "maximum": 77.90514201042242
+              }
+            }
+          },
+          {
+            "label": "cost-primary-common_roll_pitch-normal-map-r2",
+            "final": {
+              "processed": 647,
+              "invalid": 2,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 629,
+                "2": 0,
+                "3": 2,
+                "4": 18
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 30.837278987746686,
+                "p95": 44.80686458409764,
+                "p99": 48.564995876513414,
+                "maximum": 78.61830899491906
+              }
+            }
+          },
+          {
+            "label": "cost-primary-common_roll_pitch-normal-map-r3",
+            "final": {
+              "processed": 648,
+              "invalid": 1,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 629,
+                "2": 0,
+                "3": 1,
+                "4": 19
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 30.688468017615378,
+                "p95": 45.11073960456997,
+                "p99": 49.1153520788066,
+                "maximum": 79.25697401515208
+              }
+            }
+          }
+        ]
+      },
+      "both": {
+        "cpu_median_of_run_p50": 34.88824892791883,
+        "rss_max_run_p95_mib": 221.28125,
+        "runs": [
+          {
+            "label": "cost-primary-common_roll_pitch-normal-both-r1",
+            "final": {
+              "processed": 648,
+              "invalid": 1,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 648,
+                "2": 0,
+                "3": 1,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 30.99859901703894,
+                "p95": 45.26852500857785,
+                "p99": 49.905574667500325,
+                "maximum": 82.35913098906167
+              }
+            },
+            "map": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 636,
+                "2": 0,
+                "3": 1,
+                "4": 12
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 31.259680981747806,
+                "p95": 45.58771260199137,
+                "p99": 50.62420564121566,
+                "maximum": 82.58271098020487
+              }
+            }
+          },
+          {
+            "label": "cost-primary-common_roll_pitch-normal-both-r2",
+            "final": {
+              "processed": 648,
+              "invalid": 1,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 648,
+                "2": 0,
+                "3": 1,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 30.93077300582081,
+                "p95": 44.70795200904831,
+                "p99": 48.34313812199979,
+                "maximum": 79.10244099912234
+              }
+            },
+            "map": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 636,
+                "2": 0,
+                "3": 1,
+                "4": 12
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 31.15120201255195,
+                "p95": 45.4120009962935,
+                "p99": 49.078868111828335,
+                "maximum": 79.3613129935693
+              }
+            }
+          },
+          {
+            "label": "cost-primary-common_roll_pitch-normal-both-r3",
+            "final": {
+              "processed": 648,
+              "invalid": 1,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1790654834525000000
+            },
+            "local": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 648,
+                "2": 0,
+                "3": 1,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 30.803432979155332,
+                "p95": 44.591274205595255,
+                "p99": 48.874283933546394,
+                "maximum": 80.06606600247324
+              }
+            },
+            "map": {
+              "frames": 649,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 636,
+                "2": 0,
+                "3": 1,
+                "4": 12
+              },
+              "latency_ms": {
+                "samples": 649,
+                "p50": 31.078258994966745,
+                "p95": 45.20751698873938,
+                "p99": 49.17908408213407,
+                "maximum": 80.2330209990032
+              }
+            }
+          }
+        ]
+      }
+    },
+    "shadow": {
+      "none": {
+        "cpu_median_of_run_p50": 23.813508187524903,
+        "rss_max_run_p95_mib": 246.3078125,
+        "runs": [
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-none-r1",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          },
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-none-r2",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          },
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-none-r3",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          }
+        ]
+      },
+      "local": {
+        "cpu_median_of_run_p50": 20.519156087262182,
+        "rss_max_run_p95_mib": 243.734375,
+        "runs": [
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-local-r1",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 208,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 31.896598506136797,
+                "p95": 47.238835602183826,
+                "p99": 51.61338248784887,
+                "maximum": 53.84165502618998
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          },
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-local-r2",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 208,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 31.872944004135206,
+                "p95": 47.9991717991652,
+                "p99": 53.23917998524849,
+                "maximum": 53.628509980626404
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          },
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-local-r3",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 208,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 31.291705992771313,
+                "p95": 47.570441498828586,
+                "p99": 52.03107372508384,
+                "maximum": 55.42404000880197
+              }
+            },
+            "map": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            }
+          }
+        ]
+      },
+      "map": {
+        "cpu_median_of_run_p50": 22.460462312846936,
+        "rss_max_run_p95_mib": 242.553125,
+        "runs": [
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-map-r1",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 201,
+                "2": 0,
+                "3": 0,
+                "4": 7
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 31.633603997761384,
+                "p95": 46.34778960025869,
+                "p99": 51.5519750697422,
+                "maximum": 54.30883797816932
+              }
+            }
+          },
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-map-r2",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 205,
+                "2": 0,
+                "3": 0,
+                "4": 3
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 31.924319991958328,
+                "p95": 48.069950347417034,
+                "p99": 50.12693372031208,
+                "maximum": 51.10014698584564
+              }
+            }
+          },
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-map-r3",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 0,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "maximum": null
+              }
+            },
+            "map": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 201,
+                "2": 0,
+                "3": 0,
+                "4": 7
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 30.506427996442653,
+                "p95": 48.93854719121009,
+                "p99": 50.73656599939569,
+                "maximum": 52.77671400108375
+              }
+            }
+          }
+        ]
+      },
+      "both": {
+        "cpu_median_of_run_p50": 24.3488538572471,
+        "rss_max_run_p95_mib": 244.46484375,
+        "runs": [
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-both-r1",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 208,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 32.0877060003113,
+                "p95": 48.36766355583678,
+                "p99": 51.94384545437062,
+                "maximum": 55.94934499822557
+              }
+            },
+            "map": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 205,
+                "2": 0,
+                "3": 0,
+                "4": 3
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 32.13318748748861,
+                "p95": 49.410433568118606,
+                "p99": 54.52493046497695,
+                "maximum": 61.86005499330349
+              }
+            }
+          },
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-both-r2",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 208,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 31.647395007894374,
+                "p95": 49.63475390250096,
+                "p99": 52.725851227296516,
+                "maximum": 56.67049399926327
+              }
+            },
+            "map": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 205,
+                "2": 0,
+                "3": 0,
+                "4": 3
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 31.877098997938447,
+                "p95": 49.905590632988606,
+                "p99": 54.20868041634095,
+                "maximum": 59.27294000866823
+              }
+            }
+          },
+          {
+            "label": "cost-shadow-common_roll_pitch-normal-both-r3",
+            "final": {
+              "processed": 208,
+              "invalid": 0,
+              "stamp_errors": 0,
+              "source_stamp_ns": 1789141109048000000
+            },
+            "local": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 208,
+                "2": 0,
+                "3": 0,
+                "4": 0
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 32.426676494651474,
+                "p95": 47.09125225053867,
+                "p99": 53.42271366040224,
+                "maximum": 55.41219102451578
+              }
+            },
+            "map": {
+              "frames": 208,
+              "duplicate_stamps": 0,
+              "regressions": 0,
+              "statuses": {
+                "1": 205,
+                "2": 0,
+                "3": 0,
+                "4": 3
+              },
+              "latency_ms": {
+                "samples": 208,
+                "p50": 32.7955410029972,
+                "p95": 47.445486855576746,
+                "p99": 53.674651303736034,
+                "maximum": 55.768600024748594
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "scope": "Frozen YOLO; 200ms Main resource observer; no camera inference, GUI or full competition stack; differences are not waived."
+}

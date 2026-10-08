@@ -1,0 +1,6 @@
+python3 -m unittest tools/audit/test_p1b_contract.py tools/audit/test_perception_contract.py tools/audit/test_perception_topic_policy.py tools/audit/test_perception_runtime_acceptance.py tools/perception/test_frame_boundary_measurements.py
+.....................................
+----------------------------------------------------------------------
+Ran 37 tests in 0.547s
+
+OK

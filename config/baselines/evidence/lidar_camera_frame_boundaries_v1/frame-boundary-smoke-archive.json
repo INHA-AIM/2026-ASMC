@@ -1,0 +1,10 @@
+{
+  "file": "frame-boundary-smoke-attempts.tar.gz",
+  "sha256": "86535db564f8cdf8cc0a2a2f4338e08558abdaad3a9f73f87b27abd81f05c0ca",
+  "size_bytes": 4088767,
+  "attempts": {
+    "v1": "observer pass; incomplete timer accounting",
+    "v2": "failed: final rosconsole log unavailable after shutdown",
+    "v3": "passed: final stdout accounting processed=208"
+  }
+}

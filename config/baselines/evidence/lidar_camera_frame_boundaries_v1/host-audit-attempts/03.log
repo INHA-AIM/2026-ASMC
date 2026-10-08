@@ -1,0 +1,10 @@
+python3 tools/audit/validate_perception_topic_policy.py
+{
+  "audit_id": "p5a_perception_topic_audit_v1",
+  "bag_profile_count": 11,
+  "default_off_candidate_count": 2,
+  "expanded_topic_count": 74,
+  "family_count": 32,
+  "policy_id": "asmc_perception_topic_policy_v1",
+  "required_internal_family_count": 2
+}

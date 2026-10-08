@@ -1,0 +1,95 @@
+{
+  "schema": "asmc.fusion_coordinate_audit.v1",
+  "passed": true,
+  "cases": 54,
+  "reference_sources": {
+    "frustum-pointnets": {
+      "revision": "2ffdd345e1fce4775ecb508d207e0ad465bcca80",
+      "dirty": false,
+      "file": "kitti/kitti_util.py",
+      "sha256": "7fd0001c12a859e626f1fcfe71200e1fbd8abcba73ec1c317b822bcf16017a44"
+    },
+    "PointPainting-community": {
+      "revision": "ec732f1ae103234d60040194df3bf4067bc37b92",
+      "dirty": false,
+      "file": "painting/pcdet_utils/calibration_kitti.py",
+      "sha256": "d1bcc3d0707488919e29f6f91ba464bf4118eed7c6c684a0a7d535bb52e7bdda"
+    },
+    "CLOCs": {
+      "revision": "d7d78f69fcd2b30147f0448f0606df3551975472",
+      "dirty": false,
+      "file": "second/core/box_np_ops.py",
+      "sha256": "f8983e7bca0f0acb074d2c25d026290a4ab33418d04fddfa36ad91782af112b7"
+    },
+    "bevfusion": {
+      "revision": "326653dc06e0938edf1aae7d01efcd158ba83de5",
+      "dirty": false,
+      "source_review_only": true,
+      "files": {
+        "tools/data_converter/nuscenes_converter.py": "c41f30d43efb2173959e914945446287b8196e3832a59d2d42044e872e9c5300",
+        "mmdet3d/models/vtransforms/base.py": "47e22a6a08689893caf428ea7cb7220a8e958bc518ce4f1d09c9826b20c3e44b"
+      }
+    },
+    "lift-splat-shoot": {
+      "revision": "2903467c91ee9c12f0917a12c22ab1f04e607ae0",
+      "dirty": false,
+      "source_review_only": true,
+      "files": {
+        "src/data.py": "6b1321fece81308aa0020ff66def8a8c05dbefa2c1f974e02991564ebc07a5a8",
+        "src/models.py": "446e68848534bb2c262392cc11de7159647ddf2f96065806749409fb2016397a"
+      }
+    },
+    "Lidar_AI_Solution": {
+      "revision": "7c1623f234d5a9794fd862c9456f68f87ae7b900",
+      "dirty": false,
+      "source_review_only": true,
+      "files": {
+        "CUDA-BEVFusion/src/bevfusion/camera-geometry.cu": "e61df2ccf43c98f03d90aa7b53229adf9b8f6b20b6ac6847d71ad96bad570b3a",
+        "CUDA-BEVFusion/src/bevfusion/camera-depth.cu": "03c35830a6aa599e5bde60a011a524b480fee662f9cb8987a298d818a8d69584"
+      }
+    }
+  },
+  "camera_snapshot": {
+    "source": "config/morai/sensors/ASMC_sensor_set_v3.json",
+    "sha256": "4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f"
+  },
+  "maximum_errors": {
+    "camera_vs_lidar_raw": 2.2737367544323206e-13,
+    "camera_vs_lidar_leveled": 2.2737367544323206e-13,
+    "frustum": 1.1368683772161603e-13,
+    "painting": 5.684341886080802e-14,
+    "clocs_rigid_roundtrip": 7.105427357601002e-15
+  },
+  "negative_control_minimum_pixel_error": {
+    "missing_inverse": 11.913831259418046,
+    "extra_inverse": 11.874721900042898,
+    "wrong_observation_attitude": 8.028741591007375
+  },
+  "stereo_probe": {
+    "frustum_error_px": {
+      "minimum": 0.0,
+      "maximum": 0.0
+    },
+    "painting_error_px": {
+      "minimum": 0.0,
+      "maximum": 1.1368683772161603e-13
+    },
+    "clocs_difference_px": {
+      "minimum": 2.6859321109727716,
+      "maximum": 69.12
+    }
+  },
+  "input_sha256": {
+    "src/asmc_camera/config/cameras_v3.yaml": "86d36e10f5ca1f9b32d201b3222e4328a63d9ff1452b49defec07c7b2ca806ec",
+    "src/asmc_lidar/config/autonav_v3.yaml": "e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88",
+    "src/asmc_lidar/src/projection.cpp": "d1a66bd384d3ae5064c21b168a32c3934e38a4953d8be9e1974e868d71cb7fae",
+    "src/asmc_camera/src/asmc_camera/bev/calibration.py": "1bf6efb0c96e1056e12ed9afbff1474b247529ea09b03fbb0b7bc9acccf1fedc",
+    "tools/perception/audit_fusion_coordinates.py": "a1f120cfa7aee1671c34dad54eb5dba7c90b47f9cbb7b521eb2f88a6a3d20ec3",
+    "tools/perception/frame_projection_probe.cpp": "3436a3740eefbe0fb8fe41518705ca53510635b1c9de1bff11715383b5dd7134"
+  },
+  "limits": [
+    "synthetic projection consistency, not physical extrinsic accuracy",
+    "no neural inference benchmark or sensor time alignment validation",
+    "CLOCs probe is limited to the selected helper at the pinned revision"
+  ]
+}

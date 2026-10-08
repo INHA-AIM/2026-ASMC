@@ -1,0 +1,30 @@
+{
+  "cpu-failed-attempt-v1.tar.gz": {
+    "bytes": 1755628,
+    "sha256": "c91b28418f48bfcc0f67614caee69ca675b7da6b7522c49a12dca4bd0af9a66a"
+  },
+  "synthetic-and-fixed-cases.tar.gz": {
+    "bytes": 42640062,
+    "sha256": "2cff5e3aef226d03bb19d5a0d62fee790479a844b47b1cd46887b5632ec94c8b"
+  },
+  "cpu-attempt-v2.tar.gz": {
+    "bytes": 31939044,
+    "sha256": "9db5ec6790565a34095814089a2909b98bf6f3b40b3b5cce68b4b7eb873aefdf"
+  },
+  "cpu-final-v3-shadow.tar.gz": {
+    "bytes": 48527044,
+    "sha256": "ce31b64d26ceb30927fcbc6241eba26267786bb9a7034fadb72c814ec03245ba"
+  },
+  "cpu-final-v3-primary.tar.gz": {
+    "bytes": 71098005,
+    "sha256": "38c723d489ace6806a7c707812af0ca27e6d74792861844eb5f69a8111a8847f"
+  },
+  "final-checks.tar.gz": {
+    "bytes": 34394,
+    "sha256": "7742829923b2f582339c287164f2981b030a284a24b790596cee3e31832dd8e6"
+  },
+  "realtime-all-18.tar.gz": {
+    "bytes": 55091074,
+    "sha256": "660c3bb0d9d082b270dfab9209edb1a5d7e01b59e8890b283c6d09b7682cc51b"
+  }
+}

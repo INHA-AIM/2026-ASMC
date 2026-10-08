@@ -1,0 +1,312 @@
+schema_version: 1
+baseline_id: perception_lidar_camera_frame_boundaries_v1
+recorded_on: '2026-10-08'
+status: implemented_cpu_ros_fixed_replay_verified_acceptance_pending
+branch: feat/lidar-camera-frame-boundaries
+base_main: 534ddc5e952f768b9e9cd898d88bcd3f1cc268fd
+depends_on_pr: null
+b1a_handoff_revision: f1dda9b9db5ae447e1492ba37db9bff8fd4f2ff9
+tested_operational_revision: e51391d702350013c6b3835808de9dc013b11560
+operational_adoption: none
+operational_defaults_changed: false
+candidate_arguments:
+  enable_common_geometry: false
+  lidar_level_roll: false
+environment:
+  container: asmc-camera-lidar-b1a
+  source_mount_read_only: true
+  shared_container_changed: false
+  temporary_outer_workspace: /tmp/boundary_ws
+  temporary_nested_workspace: /tmp/boundary_nested
+  network: none
+  gpu: RTX 4060 Ti 8GB; no new GPU inference measurement
+  simulator: stopped by user; fresh Windows host monitor during measurements
+  snapshot: original failed host check preserved; latest successful checks archived
+    with smoke evidence
+implemented:
+  scan_specific_leveling_and_projection: true
+  mounting_aware_roll_pitch_candidate: true
+  gps_independent_local_association: true
+  observed_only_typed_local_map: true
+  bounded_gps_age_ms: 300
+  gps_recovery_samples: 3
+  imu_can_age_ms: 120
+  input_wait_ms: 50
+  gps_arrival_policy: Main currently uses scan source-ms as a conservative receipt
+    cutoff; actual callback receipt and original-ns capture remain pending
+  velocity_dynamic_validity: false until semantics established
+  map_unavailable_policy: typed POSE_UNAVAILABLE; legacy map and UDP withheld; markers
+    cleared
+  legacy_motion_unrepresentable_policy: withheld; typed outputs may remain available
+  subscriber_demand_geometry_serialization: true
+  tf: base_link to lidar_leveled at scan source-ms; original source ns pending
+  invalid_scan_stamp_policy: callback rejects zero, duplicate, backward stamps before
+    tracking; no current-time substitution
+  input_snapshot: raw buffer and generation atomic under common-path temporal lock
+  typed_lidar_stamp_precision: existing Main millisecond quantization; original ns
+    preservation pending
+validation:
+  core_ctest:
+    tests: 3
+    failures: 0
+  new_frame_boundary_ros:
+    test_cases: 10
+    failures: 0
+  nested_Main_catkin_test_results:
+    reported_tests: 288
+    errors: 0
+    failures: 0
+    count_is_aggregate: true
+  outer_workspace_build: passed
+  outer_regression:
+    reported_tests: 533
+    errors: 0
+    failures: 1
+    count_is_aggregate: true
+    known_failure: asmc_camera facade contract; existing main failure
+  all_package_test_target:
+    status: blocked_by_unchanged_planner_link_failure
+    target: behavior_planner/fsm_command_binding_test
+    error: undefined reference to main
+    source_diff_vs_main: false
+  documentation_and_contract_validators: 5 passed
+  contract_and_measurement_unittests:
+    tests: 38
+    failures: 0
+  existing_measurement_unittests:
+    tests: 43
+    failures: 0
+    after_explicit_asmc_camera_library_path: true
+  initial_failures_preserved: true
+  continuous_local_kalman_contrast:
+    frames: 40
+    exact: true
+    scope: same synthetic detections; not raw pipeline equivalence
+  protected_paths_diff_vs_main: []
+fixed_protocol:
+  state_expected: 54
+  state_completed: 54
+  subscriber_cost_expected: 24
+  subscriber_cost_completed: 24
+  trace_diagnostic_expected: 6
+  trace_diagnostic_completed: 0
+  bag_rate: 1.0
+  fresh_yolo_inference: false
+  reuse: B1a frozen fixtures; original bag bytes and B0 YOLO availability preserved
+  trace_diagnostic_status: not run; scheduling/source-time cause requires deterministic
+    input-selection capture first
+  tested_revision: 682bff65153c09b16a69aa6bd378708b01e781c6
+  runtime_source_sha_preserved_after_run: true
+input_manifest: config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixture-manifest.json
+height_audit:
+  source_bag_sha256: 859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02
+  available_samples: 238
+  unavailable_samples: 7
+  maximum_absolute_delta_m: 0.04780206806243115
+  policy: GPS altitude minus GPS-time rotated antenna lever; causal Ego/IMU within
+    120ms
+  scope: primary bag audit only; no universal vertical datum or full map-quality guarantee
+pending:
+- original LiDAR ns preservation and actual callback receipt/time-domain capture
+- signed/body ego motion validity or verified forward ODD gate
+- deterministic full raw-LiDAR pipeline with identical IMU/CAN selection
+- pitch-only versus roll-pitch object-preservation and ground-removal review
+- normal GPS map tracking quality comparison
+- actual GPU YOLO and fusion workload trials after coordinate/state acceptance
+- final remote CI and user direct launch verification before promotion
+acceptance:
+  common_geometry: false
+  roll_pitch: false
+  normal_map_tracking: false
+  prior_classification_exceptions_reused: false
+evidence_sha256:
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/README.md: e1a203a038650721d581fe730075fecbdc36ea2ab9e19a1127c802ed23e00c2d
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/binary-sha.json: 05d2b60110652812b74ca4e3fb717e22b699149f198c8452db8b1420a65d10e6
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/build-and-test-attempts.tar.gz: faec2ff9908deb324dbb2e95fe84b30754b3121c86be29ce449ae5471bba335e
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/ci-install-failures.json: e60206960453da9e807eef5023ac89693798d387c74549ffd85c644c2e772e09
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/ci-install-failures.tar.gz: 52cf40c85ecb2f7a365c00dc49a6482d2db697379f03c146008b094e0d36e99f
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-analysis.json: a1d8dfffb5cb46acc6e1de88c1191966ad0281538336bf938c863e5890b6d429
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-cost-primary.tar.gz: 7c92340ddcc00d82181aafb5ff0c28073342734e700b0676c2f6fdef5b830063
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-cost-shadow.tar.gz: e832cc141952f4e3bac1f766f90b941f79d1b8c6134c173bfbff98b2f7c12bcd
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-evidence-sha.json: 96c9623a5ac8a27f2bf9752953c868f658814e3740e7712839418d1665052711
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-first-repeat-identity.json: 3028f9a5b54523564ee99c0737217b3e3a4c67c2ae33b60adbc9659b038280e9
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-frame-boundary-host-state.json: 1dc5deead515ac3cd319bb5f06fe641c4d51f14c21848bdb27aa19c93bd2d266
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-frame-boundary-host-state.jsonl: 439cd95b6435fc3176f41ade7b361e01139ed12e0a176198ff2c19b85b2991e2
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-index.json: c1ed125e362b7e330584398ec1c93e64537479b4a78045421ac365c53d35927f
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-manifest.json: 341108dd8c000c14a26976a416ec2dac5c03e959d833301a84583577e5e14e1c
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-protocol.json: d9f16880e8a1fb4767a4d013be1af28f22aecd961857ae01eaeab84ec0814125
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-primary-r1.tar.gz: 822ba7e986a16b3f754db6ec33924fd21d22c1cb5c5badbeac454a2984db408d
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-primary-r2.tar.gz: 3b15df1e4e04388cc25326a3a5ddfcfba29069416801f624f6846ebd11b83976
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-primary-r3.tar.gz: 972ecd72ef3d3f51e60bc72d5252dd7b85b35d3d5b5c222644ff973d338df1a8
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-shadow-r1.tar.gz: e21efb1ff3e8160c3389f6f2ae3c33986f02a03ba4f275c706c1ff42f107b571
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-shadow-r2.tar.gz: 3898384ce7f7bb5439898b3b9179e0fe9dd31a65a3b45cd4b5effc61f36bacf0
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-shadow-r3.tar.gz: a3405c6bc40d4c3310403be51c78a7b152b8b00fe58ba7b6d7e35234d94d1ad3
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-summary.json: fa069a57d0729f85ea0c996bd57a64e12c170167827cab9273c8b37194959569
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixture-manifest.json: 317c756cc9196be4e3ca4435dbc411c3a90f0adc96846b4d5b6057938c362980
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-boundary-height-audit.json: d1d42343535e9daa892436183003e26d0616cbc76608cad5a61002437bd7950f
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-boundary-host-state.json: 56dadcd3c7ce6b03e5f24b5dc7ebda7700d160a554ceb0fa25a72ff461b94240
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-boundary-smoke-archive.json: 7dae71c52fc027788fadf6d69c5180bc8d4b0e1cd60126bdb30dadeb8099e5cf
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-boundary-smoke-attempts.tar.gz: 86535db564f8cdf8cc0a2a2f4338e08558abdaad3a9f73f87b27abd81f05c0ca
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-pose-audit-primary.json: c456a0121ec1845dcc83c11a9408f4deb9ff129e2631763fdb955f3818398cfa
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-pose-audit-shadow.json: 85278a1aa0ea7cc3c9f80f4ccb97de9fcb958e798b27ae3e759444f2d3724ecb
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/fusion-coordinate-audit.json: 481028fd11fac385b72ad29279944b0931ce0df1ed2c7ebbcaa823b0e6735060
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/00.log: 39de7bd4a865ff298aef30eb44f8f66754e63250bd97e5a1381f81381f8a7031
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/01.log: a6b334470fc9d754270b1fa93b8e0eb47de2b0f4ba47a436d12cf9d24e5acf20
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/02.log: 1b912f2db869357e65887c9c2c30038bf4e95308a0c3549641e8f624d8b19c88
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/03.log: e8ce0f10ac7ad2abe0e9432b11af3e110a851f2497363691c7aadc65b3638491
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/04.log: 98b08ca1385d9a58ff39423d8a676c94a52bd91851afea001890a1531ecb538e
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/05.log: ae3f8e77ce3f0a63df999e3d1a0a85a9cd85a5b7623a321d6dd7432fb839e560
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/06.log: dff530a0d6edbe7cd86a5eb1c7d3780255cc3a441ed541f2d30617ffa355236c
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/07-corrected-library-path.log: 576f56db6265d01c7eaeaf00501c9962e5f3d19f9f39273233b4b95e703144ee
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/results.json: fd5e81a1b0dffb860628b2c1a7d5f543e8cac0a798edb612c0d992704dab0619
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/manifest.json: ba9882d0cd769debb07fe5529c0399e26472703764e2fb7945ae1dacc8ec6c0a
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/parser-order-binary-sha.json: b98608a9ae6e0a27cd3ad362380459fbff1917c16a6f177a7bc436cc6da63497
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/parser-order-final.tar.gz: 1295626ee1d802f5d1c1881bb62b986f97fe321470eac09de30f6f32d851d343
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/parser-order-manifest.json: 64eb0267d48e8463e1534baab3214dedd6d43dfc41558776d7934d97694f68d6
+measurement_tool_revision: 539b5ee
+initial_tested_operational_revision: f620a6edb9a1578f0e1da05a837aa915b8385bb3
+b1a_pr_71:
+  state: merged
+  merge_commit: 534ddc5e952f768b9e9cd898d88bcd3f1cc268fd
+  authorization: user explicit approval on 2026-10-08
+rebase_source_sha_preserved: true
+coordinate_reference_review:
+  document: docs/handoffs/perception/camera-lidar-coordinate-reference-review.md
+  evidence: config/baselines/evidence/lidar_camera_frame_boundaries_v1/fusion-coordinate-audit.json
+  repositories: 6
+  synthetic_cases: 54
+  passed: true
+  physical_and_temporal_calibration_accepted: false
+  remaining_time_contract:
+    actual_main_callback_receipt_captured: false
+    original_lidar_ns_preserved: false
+    source_ms_used_as_receipt_cutoff: true
+    replay_clock_lag_observed: true
+    separate_followup_required: true
+  pose_output_audit:
+    primary:
+      samples: 637
+      unavailable: 12
+      degenerate: 0
+      metrics:
+        rigid_residual_m:
+          p50: 5.915561660197963e-14
+          p95: 1.3722859588816026e-13
+          maximum: 2.630507995851111e-13
+        xy_error_m:
+          p50: 0.07063350236823841
+          p95: 0.1703372419294198
+          maximum: 0.4041445943225097
+        z_error_m:
+          p50: 0.02702647925563184
+          p95: 0.04454406812292076
+          maximum: 0.09478145001598648
+        yaw_error_deg:
+          p50: 0.0008440813981588096
+          p95: 0.20249923390724406
+          maximum: 0.5525718396154753
+        ego_age_sec:
+          p50: 0.009971442
+          p95: 0.025927020799999995
+          maximum: 0.028721413
+      scope: rigid consistency and pose-convention audit only; no object recall, absolute
+        accuracy guarantee or default promotion
+    shadow:
+      samples: 205
+      unavailable: 3
+      degenerate: 0
+      metrics:
+        rigid_residual_m:
+          p50: 5.90221124448794e-14
+          p95: 1.628970888529715e-13
+          maximum: 2.495006848744117e-13
+        xy_error_m:
+          p50: 0.10429509329400075
+          p95: 0.25700152864610126
+          maximum: 0.3368453139436927
+        z_error_m:
+          p50: 0.027545812771595735
+          p95: 0.046438327269311935
+          maximum: 0.05146549653810695
+        yaw_error_deg:
+          p50: 0.020071102122114423
+          p95: 0.10871551568758528
+          maximum: 0.24380448502050658
+        ego_age_sec:
+          p50: 0.013165524
+          p95: 0.0293062158
+          maximum: 0.033338603
+      scope: rigid consistency and pose-convention audit only; no object recall, absolute
+        accuracy guarantee or default promotion
+  ego_motion_direction_pending: CAN norm discards sign; bounded map assumes forward
+    +x; reverse/lateral validity not established
+final_accounting_smoke:
+  tested_revision: ef4554c plus recorded stdout accounting diff; later committed c1d00b1
+  condition: shadow common_pitch GPS missing; both typed subscribers
+  complete: true
+  raw_scans: 208
+  final_totals:
+    processed: 208
+    invalid: 0
+    stamp_errors: 0
+    source_stamp_ns: 1789141109048000000
+  typed_local:
+    frames: 208
+    duplicate_stamps: 0
+    regressions: 0
+    statuses:
+      '1': 208
+      '2': 0
+      '3': 0
+      '4': 0
+    latency_ms:
+      samples: 208
+      p50: 32.1222950151423
+      p95: 47.50608085596468
+      p99: 52.017545439885005
+      maximum: 55.77697299304418
+  typed_map:
+    frames: 208
+    duplicate_stamps: 0
+    regressions: 0
+    statuses:
+      '1': 84
+      '2': 0
+      '3': 0
+      '4': 124
+    latency_ms:
+      samples: 208
+      p50: 32.243759007542394
+      p95: 47.6077946004807
+      p99: 52.225227615563206
+      maximum: 55.92943599913269
+  all_previous_attempts_retained: true
+  full_repeated_protocol_acceptance: false
+fixed_replay_results:
+  measured_revision: 682bff65153c09b16a69aa6bd378708b01e781c6
+  trials: 78
+  execution_complete: 78
+  analysis_errors: []
+  runtime_sha_preserved: true
+  operational_acceptance: false
+  roll_promotion: false
+  boundary_promotion: false
+  map_gate_violations: 0
+  observer_boundary_review_required: true
+  stamp_errors: 0
+  scope: Frozen YOLO; 200ms Main resource observer; no camera inference, GUI or full
+    competition stack; differences are not waived.
+  strict_gps_payload_contrasts:
+    pairs: 24
+    passed: 0
+    all_common_stamp_sets_equal: true
+    quality_differences_waived: false
+  evidence: config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-analysis.json
+  subscriber_cost_summary: config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-summary.json
+remote_ci:
+  revision: 89c7fc4
+  checks:
+    catkin-build: passed
+    planning-catkin-build: passed
+    validated-lidar-build: passed
+  final_evidence_commit: pending

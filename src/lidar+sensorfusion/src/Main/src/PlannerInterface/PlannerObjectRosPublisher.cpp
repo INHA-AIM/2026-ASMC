@@ -235,7 +235,7 @@ geometry_msgs::Point ToRosPoint(const PlannerPoint3D& point) {
 
 std_msgs::Header MapHeader(const ros::Time& stamp) {
     std_msgs::Header header;
-    header.stamp = stamp.isZero() ? ros::Time::now() : stamp;
+    header.stamp = stamp;
     header.frame_id = "map";
     return header;
 }
@@ -694,7 +694,7 @@ PlannerObjectRosPublisher::PlannerObjectRosPublisher(
 void PlannerObjectRosPublisher::Publish(
     const LiDAR& lidar, const GPS_IMU& gps_imu,
     const VehicleSpec& vehicle, const ros::Time& stamp) {
-    if (!stamp.isZero() && stamp == last_stamp_) return;
+    if (stamp.isZero() || (!last_stamp_.isZero() && stamp<=last_stamp_)) return;
     last_stamp_ = stamp;
     const auto objects = MakePlannerObjects(
         lidar, gps_imu, vehicle, max_objects_);
@@ -928,4 +928,15 @@ void PlannerObjectRosPublisher::Publish(
         markers.markers.push_back(MakeTextMarker(object, header));
     }
     markers_publisher_.publish(markers);
+}
+
+void PlannerObjectRosPublisher::SuppressMap(const ros::Time& stamp) {
+    if(stamp.isZero()) return;
+    visualization_msgs::MarkerArray map_clear,local_clear;
+    visualization_msgs::Marker marker;
+    marker.header.stamp=stamp; marker.header.frame_id="map";
+    marker.action=visualization_msgs::Marker::DELETEALL;
+    map_clear.markers.push_back(marker);
+    marker.header.frame_id="velodyne"; local_clear.markers.push_back(marker);
+    markers_publisher_.publish(map_clear); last_markers_publisher_.publish(local_clear);
 }

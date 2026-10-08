@@ -47,6 +47,10 @@ private:
 };
 
 inline Recorder& Sink() { static Recorder recorder; return recorder; }
+inline std::uint64_t SteadyNowNs() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 inline std::string Quote(const std::string& value) {
     std::ostringstream out;
@@ -66,8 +70,7 @@ inline void Event(const char* kind, std::uint64_t stamp_ns, Fields fields) {
     if (!Sink().Enabled()) return;
     std::ostringstream out;
     out << std::setprecision(17);
-    const auto steady_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
+    const auto steady_ns = SteadyNowNs();
     out << "{\"event\":" << Quote(kind) << ",\"stamp_ns\":" << stamp_ns
         << ",\"steady_ns\":" << steady_ns;
     fields(out);

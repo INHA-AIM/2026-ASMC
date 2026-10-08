@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "config_sha256": "7741672eba80fd65999ac8e8ebf81b995d241a80ed11a270e61c69bca79be5e9",
+  "original_archive_sha256": "37a07832f698162183f0ea06902b10db03c306ad5ef0dc76a850ee0fdccc9db4",
+  "fresh_inference": false,
+  "bags": {
+    "primary": {
+      "source": "/data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag",
+      "source_sha256": "859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02",
+      "source_start_sec": 1790654785.6578424,
+      "source_duration_sec": 48.926517724990845,
+      "source_topics": [
+        "/Ego_topic",
+        "/cam_extra/image_jpeg/compressed",
+        "/cam_left/image_jpeg/compressed",
+        "/cam_right/image_jpeg/compressed",
+        "/gps",
+        "/image_jpeg/compressed",
+        "/imu",
+        "/morai_sensor_bridge/diagnostics",
+        "/morai_udp_bridge/diagnostics",
+        "/tf_static",
+        "/velodyne_points"
+      ],
+      "yolo_events": 978,
+      "yolo_event_sha256": "ac6745a62d2664f569efbcd0b25029c02d92114dd81c6f51f8a4800ba738e20b",
+      "variants": {
+        "normal": {
+          "path": "/evidence/fixtures/primary-normal.bag",
+          "sha256": "ab14a17eb0ef1267cba1a1dff73a021cdce7e543e401837745ca3d8844f24a54",
+          "topics": {
+            "/Ego_topic": 2445,
+            "/camera/image/compressed": 979,
+            "/imu": 2384,
+            "/velodyne_points": 649,
+            "/gps": 245,
+            "/YOLO/BBox": 978
+          },
+          "injected_gps_messages": 0,
+          "omitted_gps_messages": 0,
+          "image_bytes_and_sensor_headers_unchanged": true,
+          "natural_gps_denial": false
+        },
+        "invalid": {
+          "path": "/evidence/fixtures/primary-invalid.bag",
+          "sha256": "c6c9a3f35c6a9d10721305c532e91955b5a10daaecca1eb4635ddab0d10982b1",
+          "topics": {
+            "/Ego_topic": 2445,
+            "/camera/image/compressed": 979,
+            "/imu": 2384,
+            "/velodyne_points": 649,
+            "/gps": 245,
+            "/YOLO/BBox": 978
+          },
+          "injected_gps_messages": 100,
+          "omitted_gps_messages": 0,
+          "image_bytes_and_sensor_headers_unchanged": true,
+          "natural_gps_denial": false
+        },
+        "missing": {
+          "path": "/evidence/fixtures/primary-missing.bag",
+          "sha256": "f12c6c5654d33f33c14a925d933dc0ade9300169645985b2f842c18c303b49b0",
+          "topics": {
+            "/Ego_topic": 2445,
+            "/camera/image/compressed": 979,
+            "/imu": 2384,
+            "/velodyne_points": 649,
+            "/gps": 145,
+            "/YOLO/BBox": 978
+          },
+          "injected_gps_messages": 0,
+          "omitted_gps_messages": 100,
+          "image_bytes_and_sensor_headers_unchanged": true,
+          "natural_gps_denial": false
+        }
+      }
+    },
+    "shadow": {
+      "source": "/data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag",
+      "source_sha256": "9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34",
+      "source_start_sec": 1789141084.3867638,
+      "source_duration_sec": 24.751930475234985,
+      "source_topics": [
+        "/Ego_topic",
+        "/cam_extra/image_jpeg/compressed",
+        "/cam_left/image_jpeg/compressed",
+        "/cam_right/image_jpeg/compressed",
+        "/gps",
+        "/gps/fix",
+        "/image_jpeg/compressed",
+        "/imu",
+        "/morai_sensor_bridge/diagnostics",
+        "/morai_udp_bridge/diagnostics",
+        "/tf_static",
+        "/velodyne_points"
+      ],
+      "yolo_events": 493,
+      "yolo_event_sha256": "2a05873f4f88c166a25213a0e9adac5b6fcd66d2420cb40d605da6b8aba06547",
+      "variants": {
+        "normal": {
+          "path": "/evidence/fixtures/shadow-normal.bag",
+          "sha256": "c9bdd50d53661f430826f544df35dd1b3ef56a99cf2db3918656d208bf254665",
+          "topics": {
+            "/imu": 1223,
+            "/Ego_topic": 1238,
+            "/camera/image/compressed": 494,
+            "/gps/fix": 124,
+            "/gps": 124,
+            "/YOLO/BBox": 493,
+            "/velodyne_points": 208
+          },
+          "injected_gps_messages": 0,
+          "omitted_gps_messages": 0,
+          "image_bytes_and_sensor_headers_unchanged": true,
+          "natural_gps_denial": false
+        },
+        "invalid": {
+          "path": "/evidence/fixtures/shadow-invalid.bag",
+          "sha256": "9d182ece0a41f893a27303941dfff55fbe00e883c12ee941dc58a0dd011133a9",
+          "topics": {
+            "/imu": 1223,
+            "/Ego_topic": 1238,
+            "/camera/image/compressed": 494,
+            "/gps/fix": 124,
+            "/gps": 124,
+            "/YOLO/BBox": 493,
+            "/velodyne_points": 208
+          },
+          "injected_gps_messages": 140,
+          "omitted_gps_messages": 0,
+          "image_bytes_and_sensor_headers_unchanged": true,
+          "natural_gps_denial": false
+        },
+        "missing": {
+          "path": "/evidence/fixtures/shadow-missing.bag",
+          "sha256": "89a73745c22831a6c985a3faceb299c29dd237fe22d4fe0cc2fdfdd7c7f9544f",
+          "topics": {
+            "/imu": 1223,
+            "/Ego_topic": 1238,
+            "/camera/image/compressed": 494,
+            "/gps/fix": 54,
+            "/gps": 54,
+            "/YOLO/BBox": 493,
+            "/velodyne_points": 208
+          },
+          "injected_gps_messages": 0,
+          "omitted_gps_messages": 140,
+          "image_bytes_and_sensor_headers_unchanged": true,
+          "natural_gps_denial": false
+        }
+      }
+    }
+  }
+}

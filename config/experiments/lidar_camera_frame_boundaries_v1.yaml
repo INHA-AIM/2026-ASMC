@@ -1,0 +1,70 @@
+schema_version: 1
+experiment_id: lidar_camera_frame_boundaries_v1
+conditions:
+  simulator: stopped
+  network: none
+  ros_master_port: 11314
+  resource_sample_sec: 0.2
+  realtime_rate: 1.0
+  repeats: 3
+  fresh_yolo_inference: false
+  fusion_trace: false
+  gui: false
+  operational_defaults_changed: false
+bags:
+  primary:
+    path: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+    injection_window_sec:
+    - 20.0
+    - 40.0
+    b0_trial: fusion-primary-C1-r1
+  shadow:
+    path: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+    injection_window_sec:
+    - 6.0
+    - 20.0
+    b0_trial: fusion-shadow-C1-r1
+profiles:
+  legacy:
+    enable_common_geometry: false
+    lidar_level_roll: false
+  common_pitch:
+    enable_common_geometry: true
+    lidar_level_roll: false
+  common_roll_pitch:
+    enable_common_geometry: true
+    lidar_level_roll: true
+gps_modes:
+- normal
+- invalid
+- missing
+subscriber_modes:
+- none
+- local
+- map
+- both
+frozen_yolo:
+  archive: config/baselines/evidence/camera_lidar_b0_v1/raw-fixed-fusion.tar.gz
+  weight_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+  allowed_names:
+  - bus
+  - truck
+  - person
+  - car
+  confidence: 0.7
+  availability: recorded_output_ros_ns
+  coordinates: legacy_int_truncation_from_original_float
+  hood_mask: semantic_contour
+gates:
+  local_gps_independent: true
+  map_max_gps_age_sec: 0.3
+  gps_recovery_samples: 3
+  imu_can_max_age_sec: 0.12
+  fusion_offset_sec: 0.05
+  fusion_wait_sec: 0.2
+  promote_common_geometry: false
+  promote_roll_pitch: false
+followup:
+  real_gpu_inference: after frozen-input coordinate and state comparison
+  independent_object_gt: not present in these bags; visual review required
+  normal_map_tracking_quality: review before any default promotion

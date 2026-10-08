@@ -1,0 +1,1820 @@
+{
+  "host_root": "artifacts/lidar-pr72",
+  "files": [
+    {
+      "path": "checks/boundary-camera-detection-tests.log",
+      "bytes": 141,
+      "sha256": "29bf0e9ac166de4c2cdb467bcaac8c3ed7b0b5bc92e6098ee40eba60bcaa40d9"
+    },
+    {
+      "path": "checks/boundary-camera-runtime-tests.log",
+      "bytes": 128,
+      "sha256": "3a713f9fb52744897059cffa6e779bdb9ec1fe509ace1b2dd6bbadf6eb51e5cb"
+    },
+    {
+      "path": "checks/boundary-continuous-build-v1.log",
+      "bytes": 26281,
+      "sha256": "e07ddbda3855740395b67a45fb6458718453fb0ffd19544fb99afe0ab94170bf"
+    },
+    {
+      "path": "checks/boundary-continuous-build-v2.log",
+      "bytes": 44974,
+      "sha256": "e6d650b5b74c267d4ecb4e838d38432ea4006a88fe1603fb70e282382b63bea1"
+    },
+    {
+      "path": "checks/boundary-continuous-build-v3.log",
+      "bytes": 14428,
+      "sha256": "a98b23d0ecabbb22f42f866514d3b459ac7fe80ac8b7aa0ccad38149711f4d5a"
+    },
+    {
+      "path": "checks/boundary-continuous-ros-build.log",
+      "bytes": 14292,
+      "sha256": "6c6371c4b8d6d74007f5885a1c20013a99e45cdf6278facb0c87737c5fa1c6fc"
+    },
+    {
+      "path": "checks/boundary-continuous-ros-v2.log",
+      "bytes": 2837,
+      "sha256": "eec0411ebbd23e00a65e19b02475b7a99a8ffe2fa7e58be62cd3e17d91eb6d3b"
+    },
+    {
+      "path": "checks/boundary-final-hdmap-tests-v3.log",
+      "bytes": 2198,
+      "sha256": "a178c4d51b99a872bfb6df70e08abddfe49c1dd44e985a399cb888174ca2e143"
+    },
+    {
+      "path": "checks/boundary-final-main-tests.log",
+      "bytes": 54190,
+      "sha256": "93ff7ad30f0b18bef6e4269d312f18a2b2579421fa8161cae6fa1600b4e6cc7e"
+    },
+    {
+      "path": "checks/boundary-final-outer-tests-v2.log",
+      "bytes": 73650,
+      "sha256": "0f01fec737f82a208528833b4a17777e87e466043bdec856b09b491996789df8"
+    },
+    {
+      "path": "checks/boundary-final-outer-tests.log",
+      "bytes": 3044,
+      "sha256": "83fb3a53ce66a981486172636edfdc1f41378878e83f727ad6e9260a168d8b1b"
+    },
+    {
+      "path": "checks/boundary-msg-tests.log",
+      "bytes": 98,
+      "sha256": "c346f1228fe88f4ab3cb336ffa610dc3a34ec7c7bb7d05df7a1c222f2d928881"
+    },
+    {
+      "path": "checks/boundary-time-core-tests.log",
+      "bytes": 476,
+      "sha256": "91344240feaec19b4d7bf38153ca2b303d7052358e5c4ba168bc4b953226fb57"
+    },
+    {
+      "path": "checks/boundary-time-ground-after.log",
+      "bytes": 2730,
+      "sha256": "a1c69d00eeefa48b0471e135ce79930b0cedc63ca7f9383a764ef9ba243c7c74"
+    },
+    {
+      "path": "checks/boundary-time-ground-before.log",
+      "bytes": 3306,
+      "sha256": "9f8259f093ca9eacd00ec8cddb456f494c3f65c53ea52494a7d05fa4bd54f2d6"
+    },
+    {
+      "path": "checks/boundary-time-nested-build-retry.log",
+      "bytes": 16575,
+      "sha256": "8668edb93d5ec56b48d9a0208f00ccb144724696809af02ef11ea862d700fe04"
+    },
+    {
+      "path": "checks/boundary-time-nested-build.log",
+      "bytes": 28028,
+      "sha256": "00ae8c0b6aac286403c161d83189f68462b9a94b98f13870fc7ba9b07fd70bde"
+    },
+    {
+      "path": "checks/boundary-time-outer-build.log",
+      "bytes": 6577,
+      "sha256": "75db6243937388fc4f030ce4458f569063935c1da492b0e9095c83972110413a"
+    },
+    {
+      "path": "checks/boundary-time-ros-build.log",
+      "bytes": 14557,
+      "sha256": "931d0e930eae5fe901af0fe614ba607b19f8da3ac052ff47318b1c78df6e00c5"
+    },
+    {
+      "path": "checks/host-state.json",
+      "bytes": 139,
+      "sha256": "34e7c86ee30f8014695a1f8dc15e3c629e0ab8eb5f73b69cdd3e308fdf929ba1"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/analysis.json",
+      "bytes": 361467,
+      "sha256": "3b86b8d324b2466c61f17788d8aa4f3312976b83409054e19493e6707fc7b926"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/index.json",
+      "bytes": 6147,
+      "sha256": "892127fa1e1bfd4f3c5786ecfa4de4a4781623e2a45f215f80d23ef1e5c58326"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/manifest.json",
+      "bytes": 27578,
+      "sha256": "0690d266928a41fb1b9292328c43b5d62212344a163d6457270706f195b07fd7"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/protocol.json",
+      "bytes": 3246,
+      "sha256": "0c1bc19933b937b16a6d1d534157d63886e14ff552b63d4b5fdb7af217437f0c"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r1/bag.log",
+      "bytes": 678240,
+      "sha256": "0be3fac05c5cb50773371ec89d8fddcf8e80d050ed22c550138a5495caf09614"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r1/node.log",
+      "bytes": 14258,
+      "sha256": "c0dc4af533ed31d93e7aae41679ef7795b9c743477e62be8776550527adf13a0"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r1/observations.json",
+      "bytes": 38830323,
+      "sha256": "d861523117d3147fa5ad98df17a0474e9bf8d32e72371d016f114ee081c78af5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r1/parameters.json",
+      "bytes": 3874,
+      "sha256": "812bdb7d1a4fd8acf0d4da566236c02e5b33fa1a734d627cb18f3b148e1cf5ba"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r1/report.json",
+      "bytes": 19586,
+      "sha256": "cb99ddaf4c3b587a0bd1f932c9ae23522414983e2f227a936d526d655ff61120"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r1/resources.json",
+      "bytes": 90379,
+      "sha256": "4f6494f5ce8de58df03dd3406e7913c6cc795e3d8d2dd9dfaec404c1a3e661fe"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r1/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r1.core.log",
+      "bytes": 1231,
+      "sha256": "21a70b47109617b99a1c9bdddd7c4534fa22c5d31734e3dcaa89caead72cef9f"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r1.trial.log",
+      "bytes": 188,
+      "sha256": "cab3a8ecd9a4763ee873ee44e1ef6d59e912566a18213bc7112717354f5e74ce"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r2/bag.log",
+      "bytes": 677164,
+      "sha256": "00124d99165269933ca4abce0ac6df6b6c8c933bc9846c4ee18d7cf50bd3289b"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r2/node.log",
+      "bytes": 13904,
+      "sha256": "caa193e41167ab47719b80ef870e14df4b2b68ed2eda7606b6cf644ba0081fa2"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r2/observations.json",
+      "bytes": 38757848,
+      "sha256": "8534578366c073e24037cc4b65c008a09591e19140f06dc998e9ab0aff38ee81"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r2/parameters.json",
+      "bytes": 3874,
+      "sha256": "812bdb7d1a4fd8acf0d4da566236c02e5b33fa1a734d627cb18f3b148e1cf5ba"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r2/report.json",
+      "bytes": 19581,
+      "sha256": "23523d7c7163b032278cd29ecfd80218dbaad0c7f2058fd06a44c2453f8b4500"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r2/resources.json",
+      "bytes": 90221,
+      "sha256": "d1f530b62b75e021f19188e949ddf083bcbc2e71dbd3297655a153ae9a6a3791"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r2/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r2.core.log",
+      "bytes": 1231,
+      "sha256": "8c91015f810b9b0449a9a9b33177afb9b1808e226fb2da5380a27b18e7f53ae0"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r2.trial.log",
+      "bytes": 188,
+      "sha256": "5aadc4e707cb3bc7be98333f0cc8f47cbb0370c07534f53464bd517b476ac981"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r3/bag.log",
+      "bytes": 677702,
+      "sha256": "301c9fb5aa777bb9370ad60de98b462a1ff0ca6f7bd2576c07ad91e7dd60b227"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r3/node.log",
+      "bytes": 14632,
+      "sha256": "9dda8ea082d8ae2a44870fefe6fd635f3ac3db3c7c68cf1ddbb40bb45ac8b0df"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r3/observations.json",
+      "bytes": 38748037,
+      "sha256": "f574d0ad1279b5e6e39b2b6a4c4b8c6ec7395c07ec31e046479aa3714cc71621"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r3/parameters.json",
+      "bytes": 3874,
+      "sha256": "812bdb7d1a4fd8acf0d4da566236c02e5b33fa1a734d627cb18f3b148e1cf5ba"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r3/report.json",
+      "bytes": 19573,
+      "sha256": "9400ef19535b7cd3ab9b8162afdfdee8717776303ac38dbc0762d97da81f751e"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r3/resources.json",
+      "bytes": 90356,
+      "sha256": "b506a9daec16d3e347f4d1beae8209eb1e73d9c729e135908c79ad50c8ddd465"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r3/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r3.core.log",
+      "bytes": 1231,
+      "sha256": "57294ab86287142cdaa0b6843f6f83dbf0bfa8059a2a36e42d8cf54d3712ce5e"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_pitch-normal-both-r3.trial.log",
+      "bytes": 188,
+      "sha256": "dd2a279a0a4ffa451dcd98e07c61d850de61ef2791a12c5a45870bb5ac0fb7c9"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r1/bag.log",
+      "bytes": 677345,
+      "sha256": "885ecbb745868c9e9b25c3264ac72daa8c38ad69e219f32cb6b8d95283b91ea5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r1/node.log",
+      "bytes": 14430,
+      "sha256": "55429796113264bec6c64cd0b22a5d697c4f4b2187482187e54f3bc5a90b4023"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r1/observations.json",
+      "bytes": 38559309,
+      "sha256": "b8ca3031935604af0a8d673310fb21efdd1f145eaae187035b34a5ada23e5a05"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r1/parameters.json",
+      "bytes": 3873,
+      "sha256": "7c2c825ce63440c950b096a2d3f53b82eca8653453824152f988077f720d26c7"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r1/report.json",
+      "bytes": 19590,
+      "sha256": "99e97186a06fd9dd02ef22637942ab5eeb5d7fed150cf5871f95822fa048a9c3"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r1/resources.json",
+      "bytes": 90615,
+      "sha256": "395ccb402744e0f9f175a9acfcb64f3f313e5302eec39833003bf83c87c5f39d"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r1/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r1.core.log",
+      "bytes": 1231,
+      "sha256": "48d8557b217b987f0cabec2c28a80b4c52a1b4ffb5124f6a80039ba302dbf21a"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r1.trial.log",
+      "bytes": 193,
+      "sha256": "9230493e3b9f6a61afaf17c1ead4ae9ad0393688444c73547560385f31095feb"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r2/bag.log",
+      "bytes": 677344,
+      "sha256": "5cddb5b1e09c07fa50f05d3132e1803699739d869061f672c1eb3a62a82ed0dc"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r2/node.log",
+      "bytes": 14593,
+      "sha256": "1390816be7348d2ecd08995ba61f2cbc4e2ceb81aad674a879c9c01cc8061cc3"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r2/observations.json",
+      "bytes": 38605491,
+      "sha256": "3db013f9b75f51b1b1177377805752c392d2335090f10f328323ee72deb8e20c"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r2/parameters.json",
+      "bytes": 3873,
+      "sha256": "7c2c825ce63440c950b096a2d3f53b82eca8653453824152f988077f720d26c7"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r2/report.json",
+      "bytes": 19600,
+      "sha256": "977337620a4a2a02ede80095a031e4805d5933612a9108d662802078a40cbf78"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r2/resources.json",
+      "bytes": 90538,
+      "sha256": "0ad0577d6991016d17e98e898c445bec612c37a41399ab5a64c0e5c7b1a4a4a7"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r2/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r2.core.log",
+      "bytes": 1231,
+      "sha256": "e6b962f09470db5636ec233610c59b3db39d58fdde38e23ee8ac5e88a72243e5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r2.trial.log",
+      "bytes": 193,
+      "sha256": "01bd51769f6e3ffc68b4ef07f1b5faf613045523e78003d20681ac23af8cc627"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r3/bag.log",
+      "bytes": 676714,
+      "sha256": "73717c75b98089cfa579517a06c5f2d1274fabf9dcaa15296ee0631f35c9127c"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r3/node.log",
+      "bytes": 15251,
+      "sha256": "afb0c5c9953feb35fb0f977908415a684ed55ad5ca7ad90b729c5781bae24575"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r3/observations.json",
+      "bytes": 38651545,
+      "sha256": "ff34a63f427eb4460eec3767f53ba664b1dfac1ae246934e210799666c5fde92"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r3/parameters.json",
+      "bytes": 3873,
+      "sha256": "7c2c825ce63440c950b096a2d3f53b82eca8653453824152f988077f720d26c7"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r3/report.json",
+      "bytes": 19603,
+      "sha256": "e97a440926e991516ef2b17f018bd6c3c6adf7d7bbc4fc28722a898801314cc5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r3/resources.json",
+      "bytes": 90238,
+      "sha256": "ae22363267d855e3ece52745947c75f71681fd40f96f5c6d10725e920520aeb2"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r3/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r3.core.log",
+      "bytes": 1231,
+      "sha256": "63119b0ab57a21aeb29b1bc4dffc9fb314d668baa78a59c75c85130e79447d91"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-common_roll_pitch-normal-both-r3.trial.log",
+      "bytes": 193,
+      "sha256": "a14fc45029668b6a46969ce5e27ebf12a0b9167284902eb431144156fa777061"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r1/bag.log",
+      "bytes": 676715,
+      "sha256": "4c3ed990f3571cf1ed4a096c215988c8edfd0913c62c7ef0910d43a1f6714663"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r1/node.log",
+      "bytes": 25498,
+      "sha256": "2bf72c522df919bceadafb3f3db9118bd8ee77d508eae006e730f2ab6be2a27e"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r1/observations.json",
+      "bytes": 7802598,
+      "sha256": "3f8d04cc1bf42fe3633d4e428d1842d9ef2d9ddb9afce453ff1735be531d49ce"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r1/parameters.json",
+      "bytes": 3875,
+      "sha256": "9a71287e90325c958b6f683c09a7c6c4dcbf049f17640fb5640a4f9e818633db"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r1/report.json",
+      "bytes": 19436,
+      "sha256": "a6a2248aff0a61ccf9049280b9f8aacc27f6dfa0b573893cefa88c67bc08743f"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r1/resources.json",
+      "bytes": 90196,
+      "sha256": "206acea16a65e4506e48d5f09cc9a5cd2d0a77d0a6230d5fcb7e286e44b217d8"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r1/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r1.core.log",
+      "bytes": 1231,
+      "sha256": "2be3809991d80cde444f72011b15a1f936e1d5da82703caedb878083f7692adb"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r1.trial.log",
+      "bytes": 182,
+      "sha256": "b78638936136901f50cba343943b043f4b9c49cfffb564db5da753bca40dfe82"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r2/bag.log",
+      "bytes": 677613,
+      "sha256": "8edb4391a64cdd9d02bcf63c99ccac8932a2bb54fa80d0554809c1b00226df39"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r2/node.log",
+      "bytes": 26037,
+      "sha256": "3ba99e333d89090fe30611800e652716d92e43baef04b2979f5ef75ed603f8a9"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r2/observations.json",
+      "bytes": 7765597,
+      "sha256": "b156d8d137a5b14c05fb3426f173efca87c96bf62501d4c19b668d0948e52036"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r2/parameters.json",
+      "bytes": 3875,
+      "sha256": "9a71287e90325c958b6f683c09a7c6c4dcbf049f17640fb5640a4f9e818633db"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r2/report.json",
+      "bytes": 19431,
+      "sha256": "8bf779cb67b51f86297b17d786beff8e112b9cea868c2dc1b2952457ddba1094"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r2/resources.json",
+      "bytes": 90525,
+      "sha256": "253d2d3b9d94bdfec8ef412a30d4a28527a927b44932c4b663323193a214abe6"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r2/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r2.core.log",
+      "bytes": 1231,
+      "sha256": "320320a8cba4221995ce0e5c9b95d9ab9b4ff6066aa3d4cf4c15e31a35ae8f91"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r2.trial.log",
+      "bytes": 182,
+      "sha256": "30472f9d894452fd15a442b8091d7290aa63e9d5d891f4c27bb78891405cef6e"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r3/bag.log",
+      "bytes": 677614,
+      "sha256": "a6a1e7da1e1328ccab4e93c6f64e29c1b7bf4a17a3aefb9c418d4f4a69a8d6ae"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r3/node.log",
+      "bytes": 26190,
+      "sha256": "35cc18123fb0d52ceb528dfffe298f338085d85f019e9ae2ed1170eaf38c516d"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r3/observations.json",
+      "bytes": 7802898,
+      "sha256": "fdba97c4154292ac36ce71f160288e8c578b8f006ee5c03a78ef1036819be0a3"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r3/parameters.json",
+      "bytes": 3875,
+      "sha256": "9a71287e90325c958b6f683c09a7c6c4dcbf049f17640fb5640a4f9e818633db"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r3/report.json",
+      "bytes": 19420,
+      "sha256": "06f12eb246f0f54a100e72b4fe537a2b0b753bec74764c3f48342b63acb4ebef"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r3/resources.json",
+      "bytes": 90533,
+      "sha256": "534e0b4191d4b64d3480f9686d407b9ffe69891e0f6693e0156bf8943d0ed4eb"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r3/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r3.core.log",
+      "bytes": 1231,
+      "sha256": "34e530feb67803c93c2c37150292659082c072c3b66277ef44816360f91d8745"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-primary-legacy-normal-both-r3.trial.log",
+      "bytes": 182,
+      "sha256": "b6813f36a6edf7b1c066ca906b4a7bca5dc0b22071a5bc90b45617ee58e1c142"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r1/bag.log",
+      "bytes": 329641,
+      "sha256": "26e2c021e9509feadf92f4c21f85aa6feac89be32be04d797f1e2e1a7a8ea5db"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r1/node.log",
+      "bytes": 11603,
+      "sha256": "f983f1a658df0b8c1d7e8b04595681aef2373fbbb99e03ee9f7f0a39b221a831"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r1/observations.json",
+      "bytes": 12469163,
+      "sha256": "f8123fb6350cd1217d962ab5159977044d94b04b7fc9d49b6d83a70651de00c0"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r1/parameters.json",
+      "bytes": 3874,
+      "sha256": "812bdb7d1a4fd8acf0d4da566236c02e5b33fa1a734d627cb18f3b148e1cf5ba"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r1/report.json",
+      "bytes": 8567,
+      "sha256": "5d46732ba7b22a5cd7fcee56850224acbf7df5327fbff8a3672c9b8724e2c79f"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r1/resources.json",
+      "bytes": 48875,
+      "sha256": "552f272d619a5fad6d4fd56434c422fd93c677a46aac685b2afefaa5c3d0a42c"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r1/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r1.core.log",
+      "bytes": 1231,
+      "sha256": "7739593ddf8442691fb4f4dd5769dc456be017dd255f82c60d48d784d36a7871"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r1.trial.log",
+      "bytes": 187,
+      "sha256": "0f23dbe134c04e5d331bb7eb4488ff67fc0d6dbb8842854f4c2d3a2ad7cc46fe"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r2/bag.log",
+      "bytes": 330534,
+      "sha256": "d35b16d01dc2e2796c77a4b063ea6b3138426697c17b0774dba54b25cdef29ad"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r2/node.log",
+      "bytes": 10782,
+      "sha256": "8be475f622b9c32c60568cdc43d72ed612f383d5e9b6627b96ba6d6673ae68bc"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r2/observations.json",
+      "bytes": 12379716,
+      "sha256": "65d9e1311eccedeb5fea0577059165264ac650a073d75773bd25812c6d56ee38"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r2/parameters.json",
+      "bytes": 3874,
+      "sha256": "812bdb7d1a4fd8acf0d4da566236c02e5b33fa1a734d627cb18f3b148e1cf5ba"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r2/report.json",
+      "bytes": 8569,
+      "sha256": "d611cce4cadc0399043a37d4652c061d0268c606d53ed589035c93bfcd9aeeb8"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r2/resources.json",
+      "bytes": 48741,
+      "sha256": "03e092f405538af58304c819d3f7c973a76e2847a0a6d9f6940ee2adbd2a05fa"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r2/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r2.core.log",
+      "bytes": 1231,
+      "sha256": "75501ba7ccaf8905a0d75f9213f843c0c79b0b0fa23c6204f6ff98ac0404caec"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r2.trial.log",
+      "bytes": 187,
+      "sha256": "551eab8791b4bb7eb416943e52b5d63b077bdcf64350fba496224c1e918fee29"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r3/bag.log",
+      "bytes": 329641,
+      "sha256": "c8aa797d73d144c7f6a18bde460192be7f590c7765dadd1299b949c308fbad46"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r3/node.log",
+      "bytes": 11066,
+      "sha256": "8e23ead60aaf8ca661cc5d210d56bdeac5c6efc54a026665cab52238b89a2a1f"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r3/observations.json",
+      "bytes": 12455768,
+      "sha256": "38347c177f046ff5a068af5cdb92fb15d4617ffd005a91f10772f98a405d49ce"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r3/parameters.json",
+      "bytes": 3874,
+      "sha256": "812bdb7d1a4fd8acf0d4da566236c02e5b33fa1a734d627cb18f3b148e1cf5ba"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r3/report.json",
+      "bytes": 8567,
+      "sha256": "e7e0d0dabb4aab6c25e273f56289d6f5cc7b4c22000dbdfd3f7d500ce0246677"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r3/resources.json",
+      "bytes": 48877,
+      "sha256": "47e62c9a3dffa3e2478071245b8eba712659ad3402045c16af1c3338c345aa84"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r3/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r3.core.log",
+      "bytes": 1231,
+      "sha256": "0b00e3a49f465011ced4e6cb8a164215d4606d6bb1aa0f2f7f16a996e61a894a"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_pitch-normal-both-r3.trial.log",
+      "bytes": 187,
+      "sha256": "cb2086dca9f735f9654da3621c26b05f94c9e22b3b8666c1cba1f1ac65514531"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r1/bag.log",
+      "bytes": 329905,
+      "sha256": "b9f46f524b673dbdf10550a6ceb8babb62fe7bdcc4e7e03cbf5a73b59ac8493e"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r1/node.log",
+      "bytes": 10932,
+      "sha256": "1d58f0f16e0f33a9ddf3d5e211848348121c746185f8648d5fe38a2187845c11"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r1/observations.json",
+      "bytes": 12511244,
+      "sha256": "51bef2bf649d706b94318b75e6b92d44869c609ea4c34e839227b18c03e88661"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r1/parameters.json",
+      "bytes": 3873,
+      "sha256": "7c2c825ce63440c950b096a2d3f53b82eca8653453824152f988077f720d26c7"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r1/report.json",
+      "bytes": 8595,
+      "sha256": "ee1206c8dd244ffc7c0ce1941e921ad6b4a8f427a0accc748ebb2c604ccf5e35"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r1/resources.json",
+      "bytes": 49096,
+      "sha256": "6568393a5fb6b292cea0301c846d053ad71bf436d4fdab78fa90f146885a46d0"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r1/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r1.core.log",
+      "bytes": 1231,
+      "sha256": "e4688ab5a9d5d05e752f1d37fe6f389d8b68ea38ab2e655a2838deac2014ecbd"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r1.trial.log",
+      "bytes": 192,
+      "sha256": "5dd1cb251536dd7a19650d3872ecf16e39162c53703df64f8e81113437c5d17b"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r2/bag.log",
+      "bytes": 329639,
+      "sha256": "996ef17ed9c35c44a6249156d6da1d1eea55e951d8aab05211e2cb5445557d54"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r2/node.log",
+      "bytes": 11216,
+      "sha256": "a1b1b81f18ab02bfd9aada2992cd65954ee1e7c29bd3d72568dcf68986e27c94"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r2/observations.json",
+      "bytes": 12441062,
+      "sha256": "9e3b68144ad3b906d377d0cadb49a83c3b471e208b2c63f70079082c59b7c7c7"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r2/parameters.json",
+      "bytes": 3873,
+      "sha256": "7c2c825ce63440c950b096a2d3f53b82eca8653453824152f988077f720d26c7"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r2/report.json",
+      "bytes": 8580,
+      "sha256": "1d6a3a53aaefbbed2a92e409e956e8d9d31071e003fa1b9a8889b8c1117c6631"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r2/resources.json",
+      "bytes": 48732,
+      "sha256": "d22c6554609c4c2d8430c1a6c60d4e72af1e322e2c5033b82a191b24064a8e40"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r2/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r2.core.log",
+      "bytes": 1231,
+      "sha256": "0d218397c123cb3a013286deab667bf7d9e0efbcd1d1457eb895d6bb5e690663"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r2.trial.log",
+      "bytes": 192,
+      "sha256": "9ecd393cc5a9eb342d69bffdd7566c0423b68137faed0ef194f24461b998e0b5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r3/bag.log",
+      "bytes": 329637,
+      "sha256": "1ea34791e266c47947072dc1f3b713a5d65199cc95f13e75ff2a02557bd2a56c"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r3/node.log",
+      "bytes": 11252,
+      "sha256": "8b29be414300224c60b885108b6e32651c1360fa39fc1722427658fffb4c096a"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r3/observations.json",
+      "bytes": 12523722,
+      "sha256": "ff9995c80145f4a12cf8543a72392b7e1d63a2e5753a6e8e29d5aadaa9d62788"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r3/parameters.json",
+      "bytes": 3873,
+      "sha256": "7c2c825ce63440c950b096a2d3f53b82eca8653453824152f988077f720d26c7"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r3/report.json",
+      "bytes": 8595,
+      "sha256": "61884bd3c7f86d3162aa24f697e0a49763e59508045e350937baf45aa9a01dfb"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r3/resources.json",
+      "bytes": 48712,
+      "sha256": "c04ce32e3107be5b4623880ca0bd14b7807e21f440ded7d56d9b3b8f1e8a4096"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r3/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r3.core.log",
+      "bytes": 1231,
+      "sha256": "8450da47c90a1a9f6d4beff3d5d43de2527f95dfa8870d6f3f4347fbfd44e81e"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-common_roll_pitch-normal-both-r3.trial.log",
+      "bytes": 192,
+      "sha256": "2e1fe96e5ba9d5f01e120566648b19c3d9d1dfcb3054807db7a5c1cb152b8772"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r1/bag.log",
+      "bytes": 329907,
+      "sha256": "abcce3ea8ce4eec0b9aca35fa86a9735b4f35e664f9af68bee7770f47e9f33ad"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r1/node.log",
+      "bytes": 14687,
+      "sha256": "e04e37a62219cb8c4b31496f46644b884e89172fd96f7bb2c0c1aadf8917caf6"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r1/observations.json",
+      "bytes": 2758510,
+      "sha256": "e0af8dd231f1c9dbfd149575e827fba7c80f0437aee3a0cc4c1c562fcd51edde"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r1/parameters.json",
+      "bytes": 3875,
+      "sha256": "9a71287e90325c958b6f683c09a7c6c4dcbf049f17640fb5640a4f9e818633db"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r1/report.json",
+      "bytes": 8433,
+      "sha256": "4beddceb4f3e10ffb2e7a6d59bcbbf5aa4f5881e5a8bd74feb31725ca0238abc"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r1/resources.json",
+      "bytes": 49083,
+      "sha256": "ac7365dfdcab44d2bf864d3ff3d395da9a26e7c8d4ffa4df1df3749eb4bda660"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r1/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r1.core.log",
+      "bytes": 1231,
+      "sha256": "350560b29b82df8f07ae6deab89d9717c81c0fd30151d59a1b650d13e53a33b6"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r1.trial.log",
+      "bytes": 181,
+      "sha256": "aa1a10245d7edd251723f436407d06ecac51a3f739064a7599520270172cee04"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r2/bag.log",
+      "bytes": 330269,
+      "sha256": "4521e3c983337cd13b5859b6dc302058626b785cfb16da719c4c339fd33c1c16"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r2/node.log",
+      "bytes": 15403,
+      "sha256": "acf9c7c18bcf799ff0e2da6a13372a4d6ecb83ca5124b8d7f2783341ce8e5b5a"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r2/observations.json",
+      "bytes": 2769924,
+      "sha256": "cf67fb7424aa84ea93ea62d7c40214cde61c14c5673467c25f59246f012ecc22"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r2/parameters.json",
+      "bytes": 3875,
+      "sha256": "9a71287e90325c958b6f683c09a7c6c4dcbf049f17640fb5640a4f9e818633db"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r2/report.json",
+      "bytes": 8435,
+      "sha256": "45f8989d6c78e83242745e6115bacbf5cf6b018822984b94a25d616e79066dbc"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r2/resources.json",
+      "bytes": 49170,
+      "sha256": "719d5ac8bed24f47c7ecbec5991422fbdb19d92c346966a5c0a5d50a4ff8155b"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r2/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r2.core.log",
+      "bytes": 1231,
+      "sha256": "804c60128a2feed0f6bdd2e55782db997dc618a420b61bf2153096c516c35f6f"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r2.trial.log",
+      "bytes": 181,
+      "sha256": "45c47e7798604e48ead0cb0aea8b9b0b8c4c0c76a90cc06bfde4822853cd6733"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r3/bag.log",
+      "bytes": 329816,
+      "sha256": "0f7a583bdaa7a8ce089840efc0ab8b5952fe8e23ac4398bd06fa7cf22f1a68a2"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r3/node.log",
+      "bytes": 15907,
+      "sha256": "888aca15f3317c0b576bbf5b8494709b40b5c6bfaa9ef1d1d215f8ff5d302771"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r3/observations.json",
+      "bytes": 2762816,
+      "sha256": "d4ac98f6bf0e64e327c456a205a0cd08e88a47520859dc4910242ee3b36d609d"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r3/parameters.json",
+      "bytes": 3875,
+      "sha256": "9a71287e90325c958b6f683c09a7c6c4dcbf049f17640fb5640a4f9e818633db"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r3/report.json",
+      "bytes": 8433,
+      "sha256": "fbcf7415e1f9283e0bd26474b501b302b3c5a2449403cf0fb8a88b0df3940394"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r3/resources.json",
+      "bytes": 49086,
+      "sha256": "8368d7a19747b199669e3f1b35d65d0742c86e9fb75bb824b5f1a067a3552382"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r3/trial.launch",
+      "bytes": 11780,
+      "sha256": "7b50df90b7680ac7ef41dfdd205c422190f0b2e984d13549fd4d098dfa740dd5"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r3.core.log",
+      "bytes": 1231,
+      "sha256": "de23303c6ffd7166db232c4f00644ac72d8773c033527da05a8a656a4c818008"
+    },
+    {
+      "path": "frame-boundary-continuous-realtime-v1/state-shadow-legacy-normal-both-r3.trial.log",
+      "bytes": 181,
+      "sha256": "3e61ba4f92132b5bfe22974366ff7b3f94096ff636a7e5425e050728f7665f8f"
+    },
+    {
+      "path": "lidar-continuous-preserved-v1/primary-common_pitch-invalid-r1.trace.jsonl.gz",
+      "bytes": 55938322,
+      "sha256": "2feca82edf5e631e4c5e638e375262b5925cd5850ea464d24f39ac56c2285881"
+    },
+    {
+      "path": "lidar-continuous-preserved-v1/primary-common_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 249916597,
+      "sha256": "a9951b1526e11ea8f1fabc39ffcc23cf9e2ebcd63f85ca0870bef909eb263d4b"
+    },
+    {
+      "path": "lidar-continuous-preserved-v1/primary-common_pitch-normal-r2.trace.jsonl.gz",
+      "bytes": 249916605,
+      "sha256": "334ddbb06f60314a9936b3816131627b5d5f7e03d0dc48c5f952754f731e2cc9"
+    },
+    {
+      "path": "lidar-continuous-preserved-v1/primary-legacy-normal-r1.trace.jsonl.gz",
+      "bytes": 249371780,
+      "sha256": "2737598b2afc0e93acf106ac196839e9cbac35913ac0f578ec8cece0860bb6e4"
+    },
+    {
+      "path": "lidar-continuous-preserved-v1/primary-legacy-normal-r2.trace.jsonl.gz",
+      "bytes": 249371690,
+      "sha256": "0bb3ce91f0130904fdabbb959bebb1c5cd85d3fb7533ccc7ca0935878f280146"
+    },
+    {
+      "path": "lidar-continuous-v1/index.json",
+      "bytes": 847,
+      "sha256": "f649a72561d91ff556dc71bd7fb507fa2b972bb294d9c54b6e5b95a7098e38df"
+    },
+    {
+      "path": "lidar-continuous-v1/manifest.json",
+      "bytes": 24203,
+      "sha256": "6185d13f59c2fec37ef7cf91b039c51f0abea7353d60e9414708ec3f49ad341a"
+    },
+    {
+      "path": "lidar-continuous-v1/master.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-common_pitch-invalid-r1.jsonl",
+      "bytes": 1123090,
+      "sha256": "054596e2e9e4a340fd415494d5a8b730edb78d7d71fa3fbfdc6c44e7ab253fa5"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-common_pitch-invalid-r1.log",
+      "bytes": 2530,
+      "sha256": "107793e6d37462912b84792182188645db2a2d651786c39f8c89647f4b0b6da9"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-common_pitch-normal-r1.jsonl",
+      "bytes": 4603761,
+      "sha256": "7f3a4ce87097ebd52221475caf085a9241446c8584aa62a42b1d17f0c8b0edf5"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-common_pitch-normal-r1.log",
+      "bytes": 9025,
+      "sha256": "ab14e8f9c4b200069c344b7b818c2fb23833e5edca36579dd3311d2d7634f85c"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-common_pitch-normal-r2.jsonl",
+      "bytes": 4603761,
+      "sha256": "7f3a4ce87097ebd52221475caf085a9241446c8584aa62a42b1d17f0c8b0edf5"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-common_pitch-normal-r2.log",
+      "bytes": 9025,
+      "sha256": "a640dad276d8b83bbf87f6001db9e3577db087afd827eee83952eec201ae72fb"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-legacy-normal-r1.jsonl",
+      "bytes": 4549328,
+      "sha256": "2990135db6ed9ca2a7e386a70fe9fa430ac2140f9acea1d2f8632800652f6ea4"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-legacy-normal-r1.log",
+      "bytes": 8723,
+      "sha256": "46c21a23d030202dc3a38e644fe84f7614c625a5c485b9f1c7423818320f80ad"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-legacy-normal-r2.jsonl",
+      "bytes": 4549328,
+      "sha256": "2990135db6ed9ca2a7e386a70fe9fa430ac2140f9acea1d2f8632800652f6ea4"
+    },
+    {
+      "path": "lidar-continuous-v1/primary-legacy-normal-r2.log",
+      "bytes": 8723,
+      "sha256": "6e491e324dfcc2f80312ac10cef95142b045a9467c5b1e4c82355e4084c15e2b"
+    },
+    {
+      "path": "lidar-continuous-v1/trace-preservation.json",
+      "bytes": 1506,
+      "sha256": "d0f68bc851cd73a4bafe2c696fdcfb79cbecf238e88907b474496656d57641e3"
+    },
+    {
+      "path": "lidar-continuous-v2/analysis.json",
+      "bytes": 1138092,
+      "sha256": "f298e383fc244034a01bac0746aba093f232b5fd998994657788cd83764da53e"
+    },
+    {
+      "path": "lidar-continuous-v2/index.json",
+      "bytes": 3491,
+      "sha256": "603be9026b83df8e1f00c2fd68a115649de7a66a9029352e3bf873721adf992e"
+    },
+    {
+      "path": "lidar-continuous-v2/manifest.json",
+      "bytes": 24776,
+      "sha256": "42253d016644d779a982499f6dbdbc81191454a1d9df8357d2fef3a754caf14d"
+    },
+    {
+      "path": "lidar-continuous-v2/master.log",
+      "bytes": 1231,
+      "sha256": "8efd2c1b4f72c4d7db132975211da76e31371ac9030b65d4a4d54cc4caa24845"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_pitch-invalid-r1.jsonl",
+      "bytes": 4603761,
+      "sha256": "7f3a4ce87097ebd52221475caf085a9241446c8584aa62a42b1d17f0c8b0edf5"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_pitch-invalid-r1.log",
+      "bytes": 8866,
+      "sha256": "d12d464b573efaf8ea9cecc4442da46df6ce6453e822a548ad22f7cf1feb9fee"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_pitch-missing-r1.jsonl",
+      "bytes": 4603761,
+      "sha256": "7f3a4ce87097ebd52221475caf085a9241446c8584aa62a42b1d17f0c8b0edf5"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_pitch-missing-r1.log",
+      "bytes": 8866,
+      "sha256": "57f0111a74aaf2acf49cba60d055fc167657d8335581a215fbc60739bac62301"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_pitch-normal-r1.jsonl",
+      "bytes": 4603761,
+      "sha256": "7f3a4ce87097ebd52221475caf085a9241446c8584aa62a42b1d17f0c8b0edf5"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_pitch-normal-r1.log",
+      "bytes": 9025,
+      "sha256": "bc07693c36be8442c43da625b1027d577e27c5ff9623226f3893a2471e1ae666"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 250140744,
+      "sha256": "ee3794548fcba0c276940d4aa52b10a9319001bd91e4de4ad9cb8bdbe90b1dc0"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_pitch-normal-r2.jsonl",
+      "bytes": 4603761,
+      "sha256": "7f3a4ce87097ebd52221475caf085a9241446c8584aa62a42b1d17f0c8b0edf5"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_pitch-normal-r2.log",
+      "bytes": 8866,
+      "sha256": "00da8959af3be0ad02f6014f1b75154c7d6fb36a967fc1a5fc718d18274c246d"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_roll_pitch-invalid-r1.jsonl",
+      "bytes": 4580328,
+      "sha256": "087166f34509be71934e86ca106004c8b626db5027ebf504d55c637baf45a810"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_roll_pitch-invalid-r1.log",
+      "bytes": 8865,
+      "sha256": "414cc27e45da12de9615d01bf535377dcdb6434f719bcf65db03abc5213a88d5"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_roll_pitch-missing-r1.jsonl",
+      "bytes": 4580328,
+      "sha256": "087166f34509be71934e86ca106004c8b626db5027ebf504d55c637baf45a810"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_roll_pitch-missing-r1.log",
+      "bytes": 8865,
+      "sha256": "6b04dac33390ed4a4485c8cddd2600517c31cadbeb5956eb3722cdb183cafdb5"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_roll_pitch-normal-r1.jsonl",
+      "bytes": 4580328,
+      "sha256": "087166f34509be71934e86ca106004c8b626db5027ebf504d55c637baf45a810"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_roll_pitch-normal-r1.log",
+      "bytes": 9024,
+      "sha256": "1d46fb53f4e43721aba7e605d7efc2042dbfb2c96267794615d2f31dbfa4a4e8"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_roll_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 278200683,
+      "sha256": "53e8a0c02bfd62879d689b31185a41ef2863fd1c60e80e45e012cbf4229596d5"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_roll_pitch-normal-r2.jsonl",
+      "bytes": 4580328,
+      "sha256": "087166f34509be71934e86ca106004c8b626db5027ebf504d55c637baf45a810"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-common_roll_pitch-normal-r2.log",
+      "bytes": 8865,
+      "sha256": "d7db205f41751a679eb328b2e82ec5c2324bb0f38fa980f9f669b6723d668aa7"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-legacy-normal-r1.jsonl",
+      "bytes": 4549328,
+      "sha256": "2990135db6ed9ca2a7e386a70fe9fa430ac2140f9acea1d2f8632800652f6ea4"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-legacy-normal-r1.log",
+      "bytes": 8723,
+      "sha256": "cd38f965a74563eb33ab58bf65f4f89f66f2a6acef414e321be54c4499b1ae23"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-legacy-normal-r1.trace.jsonl.gz",
+      "bytes": 249595218,
+      "sha256": "be9e1ad9f36909fe17aeb873dcc681a7c65d171e6fefe15ba32ab3657a47284e"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-legacy-normal-r2.jsonl",
+      "bytes": 4549328,
+      "sha256": "2990135db6ed9ca2a7e386a70fe9fa430ac2140f9acea1d2f8632800652f6ea4"
+    },
+    {
+      "path": "lidar-continuous-v2/primary-legacy-normal-r2.log",
+      "bytes": 8564,
+      "sha256": "6f86e303c66cab2bbd98df798e6b3f69f2b3847d3cc113a5b6dfdc87a28f9b27"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_pitch-invalid-r1.jsonl",
+      "bytes": 2940426,
+      "sha256": "9cf69274a7f5162e5137cebbeab2dfc3a498cdca1e72ed8dd4f3738fbfb83126"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_pitch-invalid-r1.log",
+      "bytes": 5156,
+      "sha256": "016abaa6bb6c0bb023799124525cb89276f607b7a70009c3d663239a9e7399a7"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_pitch-missing-r1.jsonl",
+      "bytes": 2940426,
+      "sha256": "9cf69274a7f5162e5137cebbeab2dfc3a498cdca1e72ed8dd4f3738fbfb83126"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_pitch-missing-r1.log",
+      "bytes": 5156,
+      "sha256": "545706a3ce9f5a4ae4dc9e1aa77043ee54ae0c0c7331cf20d052316852149561"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_pitch-normal-r1.jsonl",
+      "bytes": 2940426,
+      "sha256": "9cf69274a7f5162e5137cebbeab2dfc3a498cdca1e72ed8dd4f3738fbfb83126"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_pitch-normal-r1.log",
+      "bytes": 5314,
+      "sha256": "c2c5695c7ebf4fac32102e508af7495b2091a8b3845f86c82c34a972bfbcecdc"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 85662957,
+      "sha256": "e933ae42af2ff7bee55146935e869e76b94324c09cba600df0d3c62b1b5d8b18"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_pitch-normal-r2.jsonl",
+      "bytes": 2940426,
+      "sha256": "9cf69274a7f5162e5137cebbeab2dfc3a498cdca1e72ed8dd4f3738fbfb83126"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_pitch-normal-r2.log",
+      "bytes": 5156,
+      "sha256": "f9ad8028c46c39a6acc7ddde11ba81c4b1584fcf1dc3474ffb57551fa3ac4ff2"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_roll_pitch-invalid-r1.jsonl",
+      "bytes": 2988217,
+      "sha256": "3b6660122f945208ffee4a0802ba67805d71b2cc1b475a9153b08c5fd53fa6e5"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_roll_pitch-invalid-r1.log",
+      "bytes": 5155,
+      "sha256": "4c0b056d7601a9e6c99565e247742dcb9c1b1f3bd9dd857d71ca4d50d6b47c93"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_roll_pitch-missing-r1.jsonl",
+      "bytes": 2988217,
+      "sha256": "3b6660122f945208ffee4a0802ba67805d71b2cc1b475a9153b08c5fd53fa6e5"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_roll_pitch-missing-r1.log",
+      "bytes": 5155,
+      "sha256": "cfcf926f8a83a53f9831ffc72ba4064f20087b32b0e4bcec67fe9783be4ea828"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_roll_pitch-normal-r1.jsonl",
+      "bytes": 2988217,
+      "sha256": "3b6660122f945208ffee4a0802ba67805d71b2cc1b475a9153b08c5fd53fa6e5"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_roll_pitch-normal-r1.log",
+      "bytes": 5312,
+      "sha256": "c9f7b16ea65e2729c8a0092020d50edb08d85120b24cc669e5269e6a8e179c49"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_roll_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 95191055,
+      "sha256": "d9e221181bfe7af5595e4261d89762786d79c5b64451de3ccf1f74bd34456612"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_roll_pitch-normal-r2.jsonl",
+      "bytes": 2988217,
+      "sha256": "3b6660122f945208ffee4a0802ba67805d71b2cc1b475a9153b08c5fd53fa6e5"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-common_roll_pitch-normal-r2.log",
+      "bytes": 5155,
+      "sha256": "74d4dee4fbebd40426d543fab40fbdce32694615f02a2bf0ba764b7733c224d4"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-legacy-normal-r1.jsonl",
+      "bytes": 2873637,
+      "sha256": "4a1e1f84d76c91a38358ac387f01dc659e069b6c07068fb82133fb414be0fc35"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-legacy-normal-r1.log",
+      "bytes": 5012,
+      "sha256": "bf4ba93044cb50359be1e6d0463f007372b56c6a57a932ca8532f472179b17ed"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-legacy-normal-r1.trace.jsonl.gz",
+      "bytes": 85532071,
+      "sha256": "22c4874c18f6fca31847f9ac4736b7a9f6df94dd41df6ffc7c2d4c07780dc8f2"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-legacy-normal-r2.jsonl",
+      "bytes": 2873637,
+      "sha256": "4a1e1f84d76c91a38358ac387f01dc659e069b6c07068fb82133fb414be0fc35"
+    },
+    {
+      "path": "lidar-continuous-v2/shadow-legacy-normal-r2.log",
+      "bytes": 4854,
+      "sha256": "dbf05fcd301fa1c99b0ecbf6b283e52401e7c807a28a0b11928d88b15cbfaf0e"
+    },
+    {
+      "path": "lidar-continuous-v2-state-traces/primary-common_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 5236942,
+      "sha256": "40919c4bc89f838103218f349d0a2a50a0756fbfa374d68ed19f14e79940ecfc"
+    },
+    {
+      "path": "lidar-continuous-v2-state-traces/primary-common_roll_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 5306276,
+      "sha256": "fe25fa8d32c66f53a20cfdd4e956b7343112469018e09ad003894977a6d3e268"
+    },
+    {
+      "path": "lidar-continuous-v2-state-traces/primary-legacy-normal-r1.trace.jsonl.gz",
+      "bytes": 5011484,
+      "sha256": "5c164b36ccecf18a70f8a1c02ad4895f2be00ee861d7a0c8bea2dcfe535b8058"
+    },
+    {
+      "path": "lidar-continuous-v2-state-traces/shadow-common_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 3442174,
+      "sha256": "87e5eee6b9c720fbaf143ff0157c11806a6d119e6cc5ac98a318d73cd6aa330d"
+    },
+    {
+      "path": "lidar-continuous-v2-state-traces/shadow-common_roll_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 3494837,
+      "sha256": "20ba13f374be4d9b86372bba77058c57a859a493be0b29f43cffc5ab47841a57"
+    },
+    {
+      "path": "lidar-continuous-v2-state-traces/shadow-legacy-normal-r1.trace.jsonl.gz",
+      "bytes": 3306297,
+      "sha256": "b3e2cc769d5ec0a0233acc179b9c1df966e397358c4054a0adf20f632d8a3bf5"
+    },
+    {
+      "path": "lidar-continuous-v3/analysis-corrected.json",
+      "bytes": 1233227,
+      "sha256": "4f97e4aa45db4847c019b9248e4226f4742473f32a32ce086eb55ca5ff20f628"
+    },
+    {
+      "path": "lidar-continuous-v3/analysis.json",
+      "bytes": 1138092,
+      "sha256": "f298e383fc244034a01bac0746aba093f232b5fd998994657788cd83764da53e"
+    },
+    {
+      "path": "lidar-continuous-v3/index.json",
+      "bytes": 3491,
+      "sha256": "603be9026b83df8e1f00c2fd68a115649de7a66a9029352e3bf873721adf992e"
+    },
+    {
+      "path": "lidar-continuous-v3/manifest.json",
+      "bytes": 24759,
+      "sha256": "b45c8757ece8ac9cfe348e3557dc4bcc564216625ac3ee904dffd1a3da91bb59"
+    },
+    {
+      "path": "lidar-continuous-v3/master.log",
+      "bytes": 1231,
+      "sha256": "4089a68be5b272a7d3fb067f596b4c4c83d662a2fd91ff0d0bf1cca0b71b19c0"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_pitch-invalid-r1.jsonl",
+      "bytes": 20993190,
+      "sha256": "70a8d1aa7ac056e1fd050eba21e5c0686499dc494c46804b693a7c65faa49d26"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_pitch-invalid-r1.log",
+      "bytes": 2104,
+      "sha256": "e54237e2b668ad812b26de9138374a1e354fb6b4fc4322ab273095237b3ae35f"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_pitch-missing-r1.jsonl",
+      "bytes": 20993190,
+      "sha256": "70a8d1aa7ac056e1fd050eba21e5c0686499dc494c46804b693a7c65faa49d26"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_pitch-missing-r1.log",
+      "bytes": 2104,
+      "sha256": "264c7c9c4407eb44da5b100989305692fbf0c92c3dfc85782090f48d8eb36ffb"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_pitch-normal-r1.jsonl",
+      "bytes": 20993190,
+      "sha256": "70a8d1aa7ac056e1fd050eba21e5c0686499dc494c46804b693a7c65faa49d26"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_pitch-normal-r1.log",
+      "bytes": 2428,
+      "sha256": "0c2956db186ddec1cc92d1ea0e5ebcd183ebbd416c9379f9ea135c30e16789f2"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 252141069,
+      "sha256": "1dae72784b791c0282cdcd58dda1f7078549f69b37f5641663aa5f52d3d466bf"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_pitch-normal-r2.jsonl",
+      "bytes": 20993190,
+      "sha256": "70a8d1aa7ac056e1fd050eba21e5c0686499dc494c46804b693a7c65faa49d26"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_pitch-normal-r2.log",
+      "bytes": 2104,
+      "sha256": "1f51567042cce07f28085ed4d96d4dde08a521a9d71ff7f1de5379fb54a594f4"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_roll_pitch-invalid-r1.jsonl",
+      "bytes": 20878714,
+      "sha256": "415c943a52e953225a0004bb61330bd4dbe5381d2f6ce242529e01ee08c95ac9"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_roll_pitch-invalid-r1.log",
+      "bytes": 2103,
+      "sha256": "333e9a3c8ca467c3b8d3f419172374e8a357044799055d49c6074b00c41d8d04"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_roll_pitch-missing-r1.jsonl",
+      "bytes": 20878714,
+      "sha256": "415c943a52e953225a0004bb61330bd4dbe5381d2f6ce242529e01ee08c95ac9"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_roll_pitch-missing-r1.log",
+      "bytes": 2103,
+      "sha256": "050b91993c62c5ef8510431ec90782ed73bb1068508d7e1c2781d1f84dc9b3f0"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_roll_pitch-normal-r1.jsonl",
+      "bytes": 20878714,
+      "sha256": "415c943a52e953225a0004bb61330bd4dbe5381d2f6ce242529e01ee08c95ac9"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_roll_pitch-normal-r1.log",
+      "bytes": 2426,
+      "sha256": "849e12cc6ce9685905a06c84b1a28c0f88118f6727bc261efd6325afd8dda103"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_roll_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 280199929,
+      "sha256": "67077ea23fb9d01eb864d0edbd5f1ae976b2cd09e3505863e38a7ddfcc6b1761"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_roll_pitch-normal-r2.jsonl",
+      "bytes": 20878714,
+      "sha256": "415c943a52e953225a0004bb61330bd4dbe5381d2f6ce242529e01ee08c95ac9"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-common_roll_pitch-normal-r2.log",
+      "bytes": 2103,
+      "sha256": "670183bbd9e5ab9d12ad70a9800ddf76378d2bbbc7a65dbb16b5d29febeea361"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-legacy-normal-r1.jsonl",
+      "bytes": 20809802,
+      "sha256": "9b1b17a5fd45498a7dda2122f6d88da01ee8307691aa745bcdc3c32e132216b4"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-legacy-normal-r1.log",
+      "bytes": 2126,
+      "sha256": "5fc392db4b330c5cd808dcb536856ea37aa7ca303c81aa9060c0be8666746ab0"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-legacy-normal-r1.trace.jsonl.gz",
+      "bytes": 251583115,
+      "sha256": "d8dba3bcce5a288653cc1c87139e99dd9fe2e5ceaf78e80a19ed926cc37c9b0e"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-legacy-normal-r2.jsonl",
+      "bytes": 20809802,
+      "sha256": "9b1b17a5fd45498a7dda2122f6d88da01ee8307691aa745bcdc3c32e132216b4"
+    },
+    {
+      "path": "lidar-continuous-v3/primary-legacy-normal-r2.log",
+      "bytes": 1802,
+      "sha256": "f93ecbef2d062cc12ef521300b2652a8d205f17afd6202bd9577c33bf4bc37bf"
+    },
+    {
+      "path": "lidar-continuous-v3/provenance-correction.json",
+      "bytes": 11225,
+      "sha256": "88018300b25c56defd31a0c4fbc76cdef989dcd0e15013eec66d67d2435e427d"
+    },
+    {
+      "path": "lidar-continuous-v3/roll-analysis-corrected.json",
+      "bytes": 1391143,
+      "sha256": "e47725f7e16b6297a52a3a7491dae623bba49d5a89add7bf76be5985e0ccee83"
+    },
+    {
+      "path": "lidar-continuous-v3/roll-analysis.json",
+      "bytes": 1295779,
+      "sha256": "16655feae62309cdd2a20e798f2f74f5cc53674b7a32ee33ecd3464e6f0203d3"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_pitch-invalid-r1.jsonl",
+      "bytes": 13583620,
+      "sha256": "64b58f02c5eb3acfd99911037a0533883bc0663228bec04ebd3a36e40b63e484"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_pitch-invalid-r1.log",
+      "bytes": 1774,
+      "sha256": "c12d4e436a5d3cd787b34d5340a7eb65820552f441ea26cb239be2e1dea9e9cb"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_pitch-missing-r1.jsonl",
+      "bytes": 13583620,
+      "sha256": "64b58f02c5eb3acfd99911037a0533883bc0663228bec04ebd3a36e40b63e484"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_pitch-missing-r1.log",
+      "bytes": 1774,
+      "sha256": "8566b0bf9b9d07369fd899447d4e22e4860cbf4c1908fa71e55d0a72f9ddb994"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_pitch-normal-r1.jsonl",
+      "bytes": 13583620,
+      "sha256": "64b58f02c5eb3acfd99911037a0533883bc0663228bec04ebd3a36e40b63e484"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_pitch-normal-r1.log",
+      "bytes": 1935,
+      "sha256": "c2dfc294afa9430c1d7025fb816ec99d1fe432755d93098bb7019c1aea4d6c22"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 87015444,
+      "sha256": "43c30ae6e9ba2ed17a6d2b6163e5eb08f4ea9b3423ec386acf9bba9a5bea293e"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_pitch-normal-r2.jsonl",
+      "bytes": 13583620,
+      "sha256": "64b58f02c5eb3acfd99911037a0533883bc0663228bec04ebd3a36e40b63e484"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_pitch-normal-r2.log",
+      "bytes": 1774,
+      "sha256": "fce124b987a54b147b1490ba4cc5d974295df53ff9677fff3f1f2b0c09438a3f"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_roll_pitch-invalid-r1.jsonl",
+      "bytes": 13802273,
+      "sha256": "b5762eaff2ffa9a5cfe5f8a9f60416ddbc23969f624ca9c3164445c376b437b4"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_roll_pitch-invalid-r1.log",
+      "bytes": 1773,
+      "sha256": "b5c8ebc16911183992da94d908f7c4bee6008d29b46a1d4b9df5800ae368244a"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_roll_pitch-missing-r1.jsonl",
+      "bytes": 13802273,
+      "sha256": "b5762eaff2ffa9a5cfe5f8a9f60416ddbc23969f624ca9c3164445c376b437b4"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_roll_pitch-missing-r1.log",
+      "bytes": 1773,
+      "sha256": "21b8bf18aa4c4ec900ec329d4ce9c17269d9a02c4f4be1d9394af76ae0e33f63"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_roll_pitch-normal-r1.jsonl",
+      "bytes": 13802273,
+      "sha256": "b5762eaff2ffa9a5cfe5f8a9f60416ddbc23969f624ca9c3164445c376b437b4"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_roll_pitch-normal-r1.log",
+      "bytes": 1934,
+      "sha256": "54a321550201c27745068e14194570e4bb498dcdb431b6fc60c2a20e1ab164c8"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_roll_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 96569365,
+      "sha256": "32467579293a4a5012b747e81390a06cbd6d0ba1ad6a95c3ce26570a08a0d678"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_roll_pitch-normal-r2.jsonl",
+      "bytes": 13802273,
+      "sha256": "b5762eaff2ffa9a5cfe5f8a9f60416ddbc23969f624ca9c3164445c376b437b4"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-common_roll_pitch-normal-r2.log",
+      "bytes": 1773,
+      "sha256": "d06058fd75f3975c6822b19d37039109e2a299f8d6dd139cca58aa8e57a50633"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-legacy-normal-r1.jsonl",
+      "bytes": 13292748,
+      "sha256": "b73d39db33817bad7c0cf9800eceba01006f5423a88742e0573961984189ddc8"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-legacy-normal-r1.log",
+      "bytes": 1633,
+      "sha256": "2f2b07dfd5ecd267d33f500857adce5d8b1f5bd671d6a09e883d9e220dc7b805"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-legacy-normal-r1.trace.jsonl.gz",
+      "bytes": 86849287,
+      "sha256": "097ee39b6e3fb1a8a0db3cc705488cdea9b1b6f1c4b1df3b4149c99568118512"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-legacy-normal-r2.jsonl",
+      "bytes": 13292748,
+      "sha256": "b73d39db33817bad7c0cf9800eceba01006f5423a88742e0573961984189ddc8"
+    },
+    {
+      "path": "lidar-continuous-v3/shadow-legacy-normal-r2.log",
+      "bytes": 1472,
+      "sha256": "e9aaae9582dee53ae637046c2714f0020476b246adc0be9fd21fb823b4e670aa"
+    },
+    {
+      "path": "lidar-continuous-v3-state-traces/primary-common_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 7345070,
+      "sha256": "a8c0de0ba4fedd27fe808a1c199832e1ad47f390db917361e853a8f73cf1ef8c"
+    },
+    {
+      "path": "lidar-continuous-v3-state-traces/primary-common_roll_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 7356936,
+      "sha256": "0ca833c790f47b1238dfd88e5a8e1e00274232a952dcef5fe67162ca5dad4480"
+    },
+    {
+      "path": "lidar-continuous-v3-state-traces/primary-legacy-normal-r1.trace.jsonl.gz",
+      "bytes": 7117279,
+      "sha256": "d671fd17308be148e9c07b45214373291a9603a05aa44909df6a935f0da30b5e"
+    },
+    {
+      "path": "lidar-continuous-v3-state-traces/shadow-common_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 4832519,
+      "sha256": "a457cd0692f303de01b03ad745e9b53c60de7f35daf84a42326bca737d090fa7"
+    },
+    {
+      "path": "lidar-continuous-v3-state-traces/shadow-common_roll_pitch-normal-r1.trace.jsonl.gz",
+      "bytes": 4909134,
+      "sha256": "357fe3dffcd75dacd7185813f600481dd973a2b6b1667f0a87002517ee7e8d8b"
+    },
+    {
+      "path": "lidar-continuous-v3-state-traces/shadow-legacy-normal-r1.trace.jsonl.gz",
+      "bytes": 4679013,
+      "sha256": "478cc745c82bff01881e752a47620ff035d536326e3b90620bacfa5e861ba4ad"
+    },
+    {
+      "path": "lidar-motion-fixture-v1/synthetic.bag",
+      "bytes": 3526476,
+      "sha256": "c138239f6c7ab5403fcf222f5e2e195fd2a84dac1f00f8589a66dc9063df7eb1"
+    },
+    {
+      "path": "lidar-motion-fixture-v1/truth.json",
+      "bytes": 136990,
+      "sha256": "c941c416be5af2c8a942f35d6c0cfead152f0836cdf132e6ab5a2f450a6f181f"
+    },
+    {
+      "path": "lidar-motion-fixture-v2/fixture/manifest.json",
+      "bytes": 576,
+      "sha256": "f12bf5f08a0d768d729a5b01be0abcc06a91a889fb04b23262e57dea27319b78"
+    },
+    {
+      "path": "lidar-motion-fixture-v2/fixture/synthetic.bag",
+      "bytes": 3526476,
+      "sha256": "803c618190afbd165621d188e1f5446daeb35bb0a97bb4a19e019460e39d286f"
+    },
+    {
+      "path": "lidar-motion-fixture-v2/fixture/truth.json",
+      "bytes": 147290,
+      "sha256": "18353d4d69b3cc510395852268b0ced3208fd35ba315751d9893ecca6b8b8118"
+    },
+    {
+      "path": "lidar-motion-fixture-v2/index.json",
+      "bytes": 58,
+      "sha256": "058b2fec827fbf9da20ba975784b16d4bf10cdb3a9db4ac448b908a5fe059831"
+    },
+    {
+      "path": "lidar-motion-fixture-v2/legacy.jsonl",
+      "bytes": 476081,
+      "sha256": "855b2320b17eb30588b5bb4cda854873e8f87d5837641e0338fbd4932667982c"
+    },
+    {
+      "path": "lidar-motion-fixture-v2/legacy.log",
+      "bytes": 1459,
+      "sha256": "95c4a22fb639836ab1bc9db1319889ffd9d924da76ace770c77a028cca34ecce"
+    },
+    {
+      "path": "lidar-motion-fixture-v2/legacy.trace.jsonl",
+      "bytes": 25225369,
+      "sha256": "87c3ecf949c719c94140cb7f741df6194605d796ba2ce2b6ab84283e1283a64e"
+    },
+    {
+      "path": "lidar-motion-fixture-v2/master.log",
+      "bytes": 1231,
+      "sha256": "1f5ac245cd064da6edfb4c8465a5d637fb847baf4a4a6fdb49500d3c373188aa"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/common_pitch.analysis.json",
+      "bytes": 103337,
+      "sha256": "117eed189f710396a1dd3a4921a04701a188c3c2df36685a4022bcbf6df337bb"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/common_pitch.jsonl",
+      "bytes": 501242,
+      "sha256": "9642f112f2b0c7c71137b87030e6b78b9bd8a5884f4ebedf2bf600381776567b"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/common_pitch.log",
+      "bytes": 1761,
+      "sha256": "b221f54f1a7c979a702c09b54d25db31f577811e67bed4134b09e4b13c7e11ee"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/common_pitch.trace.jsonl",
+      "bytes": 25283780,
+      "sha256": "1a5dd83b6211c966d9a589d45e7f733cf362c5796db3d19812b645bfdf0ea657"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/common_roll_pitch.analysis-corrected.json",
+      "bytes": 101523,
+      "sha256": "1534504c090ced383abab7914f1c216588a5f950a3e47916dd87de42985a9a10"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/common_roll_pitch.analysis.json",
+      "bytes": 101515,
+      "sha256": "c618ec8bf5ad20be62956ab78b98e0f82b984bc1fee8b61c85ac9f1021270f0e"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/common_roll_pitch.jsonl",
+      "bytes": 500070,
+      "sha256": "1db3d0e0e306f658339ffb6cd40865ab16bd0cacad7be83823b7cbffb11dd32d"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/common_roll_pitch.log",
+      "bytes": 1760,
+      "sha256": "8240b1966e58b7da6c1e4a424e29975adc2d5cd3168e3a471cfc33dabf7b0e9a"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/common_roll_pitch.trace.jsonl",
+      "bytes": 25086539,
+      "sha256": "100e9d7dcd44439d3a25e4c87c6b0ac0ad0d793e2ce200333b80a78f23b55b44"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/fixture/manifest.json",
+      "bytes": 576,
+      "sha256": "f12bf5f08a0d768d729a5b01be0abcc06a91a889fb04b23262e57dea27319b78"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/fixture/synthetic.bag",
+      "bytes": 3526476,
+      "sha256": "803c618190afbd165621d188e1f5446daeb35bb0a97bb4a19e019460e39d286f"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/fixture/truth.json",
+      "bytes": 147290,
+      "sha256": "18353d4d69b3cc510395852268b0ced3208fd35ba315751d9893ecca6b8b8118"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/index.json",
+      "bytes": 185,
+      "sha256": "e52cb64406593b4b000539595639fbedd0f0cd5be0687416e5550c0b02ee998e"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/legacy.analysis.json",
+      "bytes": 103418,
+      "sha256": "d67f9dacd0defaf2bf6d077d72524952bff8ead9e8fb283199070b6977ae35e2"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/legacy.jsonl",
+      "bytes": 476081,
+      "sha256": "855b2320b17eb30588b5bb4cda854873e8f87d5837641e0338fbd4932667982c"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/legacy.log",
+      "bytes": 1459,
+      "sha256": "9ebe3e20179d2ad939de6f3b732f479ae24d1c74d927db12acb1d1ff8cf6eb54"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/legacy.trace.jsonl",
+      "bytes": 25225369,
+      "sha256": "bda1be231f1679769277006379a47184d176075a165045ef7c2b51ba61c74c3b"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/manifest.json",
+      "bytes": 1162,
+      "sha256": "1b66a9af5a0e40a8fccbc90fac81efe0f9c7072e8e98ff5c0ae14bfaa9db8eba"
+    },
+    {
+      "path": "lidar-motion-fixture-v3/master.log",
+      "bytes": 1231,
+      "sha256": "60f7e02e6e088c3a6d591f6b0ecb5474a4c93a385b2ae6d59580e23addc2e377"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-primary-case-00.json.gz",
+      "bytes": 1462670,
+      "sha256": "9f8e52938711978454f6f2e787dda49a3473c049e744235d61ee3c27ad1f0277"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-primary-case-00.png",
+      "bytes": 85518,
+      "sha256": "99045a25fa7e1f0f14adc028e0dc969483528f46175362fca160c323d016f543"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-primary-case-01.json.gz",
+      "bytes": 1475806,
+      "sha256": "bd31134f988e9855fc6f4986e0b03d13d8472e4bb298790cab388993de55124e"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-primary-case-01.png",
+      "bytes": 86212,
+      "sha256": "940a794dc4d4ee561da03c69a7483f985f8dd965aed223eddcdebe0e294b40a4"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-primary-case-02.json.gz",
+      "bytes": 1476568,
+      "sha256": "e725e14cab0e04ada4cb3f2e806919f0b7606bdb55c98fb6e33703b08ffc83bf"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-primary-case-02.png",
+      "bytes": 89030,
+      "sha256": "bc3aac870dd74e1d10ba8692fe618f5aafec512a3b792ec03e1be088bc455656"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-shadow-case-00.json.gz",
+      "bytes": 1625742,
+      "sha256": "0373568aef5360a3a30063049da116656a9b394b31f5815b4086138192b2ccb6"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-shadow-case-00.png",
+      "bytes": 82678,
+      "sha256": "4bd6bcbfd693fd51b3ad9e603a5968706f227d6873c7b3bb28b5aa52a93a8529"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-shadow-case-01.json.gz",
+      "bytes": 1512391,
+      "sha256": "bc0209d410214e655605de084deeacaa3ec613538db55e2c2824a05f9d12b2b4"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-shadow-case-01.png",
+      "bytes": 79954,
+      "sha256": "d74a1401764d099579661e39bf8ab819a732f3288e8817ff55fae3cd07668337"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-shadow-case-02.json.gz",
+      "bytes": 1577087,
+      "sha256": "a7029cd254588cf95d00332f595b3453f3103be3a715d4c3ba87cc844ac474f5"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/cases-shadow-case-02.png",
+      "bytes": 81324,
+      "sha256": "2c67c9134d02a97af9257d332b0d3eb2c54e49a302343078ca2867c26ed8832f"
+    },
+    {
+      "path": "pr72-continuous-fixed-cases/review.json",
+      "bytes": 9794,
+      "sha256": "264bd46662c2c4a6449455e5d9f155783b402b7bbdec7c5b6989aef4de56f61e"
+    }
+  ]
+}

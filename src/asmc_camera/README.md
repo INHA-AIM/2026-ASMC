@@ -410,3 +410,10 @@ canonical adapter와 message 전환을 진행한다.
 `managed:=true`에서 TwinLite·YOLO·ResNet18을 독립적으로 STANDBY/PREPARE/ACTIVE로
 요청할 수 있다. 직접 launch·서비스·GUI 명령, 판제 역할과 현재 수락 제한은
 [모델별 실행 상태 안내](../../docs/handoffs/perception/camera-inference-control.md)를 따른다.
+
+## LiDAR와의 관측 좌표 경계
+
+카메라 객체는 원본 영상의 픽셀 좌표·header를 유지한다. LiDAR 관측별 수평화
+역변환·장착 변환·local/map 출력과 원본 박스의 fusion은 Main의
+[공통 경계 어댑터](../../docs/handoffs/perception/lidar-camera-frame-boundaries.md)가 담당한다.
+구간 활성화·결과 소비·차선 주행 모드는 판제가 결정한다.

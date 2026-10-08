@@ -14,7 +14,8 @@ extern std_msgs::ColorRGBA g_box_color;
 
 // 카메라 오케스트레이션
 void runCameraFusion(RAW_YOLO_DATA& raw, LiDAR& lidar, CAMERA& camera,
-                     const ros::Time& lidar_stamp);
+                     const ros::Time& lidar_stamp,
+                     const ros::WallTime& decision_time = ros::WallTime::now());
 
 // Parser callbacks enqueue every source frame here.  Keeping the queues at
 // the callback boundary prevents the slower processing thread from silently
@@ -34,5 +35,9 @@ void SetLiDARClassWithGroundNoise(LiDAR& st_LiDAR, const std::string& class_name
 
 void FusionProcess(RAW_YOLO_DATA& raw, LiDAR& lidar, CAMERA &camera,
                    const ros::Time& lidar_stamp);
+
+// Offline replay supplies a frozen decision clock; runtime keeps real wall time.
+void FusionProcessAt(RAW_YOLO_DATA& raw, LiDAR& lidar, CAMERA& camera,
+                     const ros::Time& stamp, const ros::WallTime& decision_time);
 
 #endif

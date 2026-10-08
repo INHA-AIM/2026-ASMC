@@ -1,0 +1,22 @@
+{
+  "revision": "d235d75",
+  "tools": {
+    "tools/perception/analyze_lidar_roll_regression.py": "c46fbe6a61a5cf6e1136d5c0cb40c37e5b3e95dbfca1a89e883bc5dac3b29779",
+    "tools/perception/summarize_camera_lidar_evidence.py": "ecb6ee6f00ae534a71410854778a0285e8421e3cf8e1f979cd9e31e33949fe73",
+    "tools/perception/review_lidar_continuous_cases.py": "920fa8d9a7e1ca32b03745fbfadf9801d0cdbb66e8d31546a3fdfe9aab91403c",
+    "tools/perception/lidar_continuous_measurements.py": "cf6515e9357a45fcb4a75c403e108a2a8cc4f60ca3ead7c9daf2a9f94f7ee2c6",
+    "tools/perception/run_camera_lidar_b0.py": "d5080019850e480c72e0a083db6e73e08a3f2084544189fc6a5c7a471a6de0cd",
+    "tools/perception/test_lidar_continuous_measurements.py": "f465f5e3d62049cb95f95c9baf701185166583149afcde53fa10de1b7f78a4e4",
+    "tools/perception/analyze_lidar_continuous_matrix.py": "8bc31a92d8cd5fcb4b1accbf92c01947b1f0a232f0f24746f00299eb8e88dfce",
+    "tools/perception/test_camera_lidar_evidence.py": "0a15b6df2ac0d822f62053ff65e146e8780bcd9fc009eac0495ede0fa7761ac8",
+    "tools/perception/run_lidar_motion_fixture.py": "7472e2d55e4ba71e50027bae0d5be2466308b23eefc37afab08dae5a722f3ac8",
+    "tools/perception/analyze_lidar_motion_fixture.py": "e7327859b3043bb55b87ad335c7563ee98c70b03ebc0abead027109b096c34a1",
+    "tools/perception/plot_camera_lidar_baseline.py": "d3b60a22ad401dc740219ee69224e29a5257b4784edf733f83777fbc6a146254",
+    "tools/perception/run_lidar_continuous_matrix.py": "63825c1bdc0cc9f6b0483e2bfccd7d330adab37eb3fc7bf7aee2b05e812b7059",
+    "tools/perception/run_camera_lidar_supplements.py": "bace82f28b9b0b30830a4ffd55326870f30916b0df243f7c369e07d80c9560b4",
+    "tools/perception/catalog_camera_lidar_cases.py": "74d83f425c88a5d8740d104a9a407232ac9198c7bb83b201282c0960e3fc6799",
+    "tools/perception/make_lidar_motion_fixture.py": "fb6ab7af482c16e56b20bc19162b409a0624ee2074b60974c94a4b8a5fa5c281"
+  },
+  "dt_consistency_checked": true,
+  "original_runtime_revision": "08dbb79"
+}

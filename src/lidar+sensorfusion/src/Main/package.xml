@@ -15,7 +15,11 @@
   
   <build_depend>rospy</build_depend>
   <exec_depend>rospy</exec_depend>
-  <exec_depend>asmc_msgs</exec_depend>
+  <depend>asmc_msgs</depend>
+  <depend>asmc_lidar</depend>
+  <exec_depend>asmc_camera</exec_depend>
+  <depend>libssl-dev</depend>
+  <depend>diagnostic_msgs</depend>
   <test_depend>rostest</test_depend>
 
   <build_depend>roslib</build_depend>
@@ -63,4 +67,5 @@
 
   <export>
   </export>
+  <test_depend>rosbag</test_depend>
 </package>
