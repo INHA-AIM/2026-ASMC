@@ -89,7 +89,7 @@ def main():
         name='{model}-{width}-{rates}-{batch}-{profile}-r{repeat}'.format(**j)+('-debug' if j.get('debug') else '')
         out=a.output/name;out.mkdir()
         report=dict(job=j, failures=[],requests=[], preparation={}, interpretation='MORAI rendering active; wall input arrival anchors; no driving')
-        arrivals={};inputs=defaultdict(list);outputs=defaultdict(list);statuses={};status_rows=[];diagnostics=[];controls=[];bbox=[];planning=defaultdict(list)
+        arrivals={};inputs=defaultdict(list);outputs=defaultdict(list);statuses={};status_rows=[];diagnostics=[];controls=[];bbox=[];planning=defaultdict(list);debug_rows=defaultdict(list)
         lock=threading.RLock();subs=[];processes=[];handles=[];sampler=None;begin=end=None
         def save(): (out/'report.json').write_text(json.dumps(report,indent=2)+'\n')
         def receive_input(view,msg):
@@ -162,6 +162,22 @@ def main():
             subs.append(rospy.Subscriber('/perception/lane/boundary_family',LaneBoundaryFamily,lambda m:receive_output('family',m),queue_size=100))
             for model,node in NODES.items():subs.append(rospy.Subscriber(node+'/inference_status',InferenceStatus,lambda m,n=model:receive_status(n,m),queue_size=100))
             subs.append(rospy.Subscriber('/perception/camera/objects/diagnostics',DiagnosticArray,lambda m:diagnostics.append(dict(arrival=time.monotonic(),values=[{v.key:v.value for v in s.values} for s in m.status])),queue_size=100))
+            if j.get('debug'):
+                # Consume debug outputs without GUI/recording. Subscriber-aware
+                # publishers must really encode images for the ON cost trial.
+                topics=['/perception/camera/objects/debug/image/compressed',
+                    '/perception/camera/objects/debug/left/image/compressed',
+                    '/perception/camera/objects/debug/right/image/compressed',
+                    '/perception/camera/debug/mosaic/compressed',
+                    '/perception/bev/debug/comparison/compressed',
+                    '/perception/traffic_light/debug/image/compressed']
+                if 'seg' in j['model']:
+                    topics += ['/perception/camera/objects/debug/instances/compressed',
+                        '/perception/camera/objects/debug/left/instances/compressed',
+                        '/perception/camera/objects/debug/right/instances/compressed']
+                for topic in topics:
+                    subs.append(rospy.Subscriber(topic,CompressedImage,lambda m,t=topic:debug_rows[t].append(
+                        dict(arrival=time.monotonic(),bytes=len(m.data))),queue_size=1,buff_size=2**24))
             subs.append(rospy.Subscriber('/YOLO/BBox',Yolo_bbox_arr,lambda m:bbox.append(dict(arrival=time.monotonic(),source_stamp_ns=m.header.stamp.to_nsec(),count=m.objc)),queue_size=100))
             subs.append(rospy.Subscriber('/planning/trajectory',Trajectory,lambda m:planning['trajectory'].append(dict(arrival=time.monotonic(),valid=m.valid,failure_reason=m.failure_reason,points=len(m.points))),queue_size=100))
             subs.append(rospy.Subscriber('/planning/vehicle/state',VehicleState,lambda m:planning['state'].append(dict(arrival=time.monotonic(),valid=m.valid)),queue_size=100))
@@ -236,6 +252,13 @@ def main():
                 if not report['planning']['trajectory']['valid_messages']:
                     report['failures'].append('planner did not produce any valid trajectory; STOP heartbeat alone is not whole-stack validation')
             report['input_hz']={v:sum(begin<=r['arrival']<end for r in rows)/(end-begin) for v,rows in inputs.items()}
+            if j.get('debug'):
+                report['debug_consumption']={topic:dict(messages=sum(begin<=r['arrival']<end for r in rows),
+                    bytes=sum(r['bytes'] for r in rows if begin<=r['arrival']<end)) for topic,rows in debug_rows.items()}
+                report['debug_scope']='Compressed outputs consumed without GUI or extra recorder; each output must actually encode.'
+                for topic in topics:
+                    if not report['debug_consumption'].get(topic,{}).get('messages'):
+                        report['failures'].append('debug output absent '+topic)
             report['graph']=master.getSystemState()
             report['passed']=not report['failures']
         except Exception as exc:
@@ -256,7 +279,7 @@ def main():
             for child in reversed(processes):stop(child)
             for handle in handles:handle.close()
             for sub in subs:sub.unregister()
-            for filename,rows in [('inputs',dict(inputs)),('outputs',dict(outputs)),('status',status_rows),('diagnostics',diagnostics),('controls',controls),('bbox',bbox),('planning',dict(planning))]:
+            for filename,rows in [('inputs',dict(inputs)),('outputs',dict(outputs)),('status',status_rows),('diagnostics',diagnostics),('controls',controls),('bbox',bbox),('planning',dict(planning)),('debug',dict(debug_rows))]:
                 (out/(filename+'.json')).write_text(json.dumps(rows)+'\n')
             save();index.append(dict(name=name,job=j,passed=report['passed'],failures=report['failures']))
             (a.output/'index.json').write_text(json.dumps(index,indent=2)+'\n')

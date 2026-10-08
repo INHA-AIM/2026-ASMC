@@ -40,12 +40,49 @@ gt:
   - bicycle
   - motorcycle
 pending:
-- rate_profiles_three_repeats
-- concurrent_and_full_stack
+- batch_and_full_stack_rates
 - heldout_frozen_confidence
+- full_mask_off_controls
 - bag_fusion_reuse
 - low_speed_driving
 - 30min_stability
+- shared_container_reconnection
 - default_promotion
+- final_regression_and_CI
 artifacts: ../../artifacts/camera-coco7-live-v1
 model_directory: ../../data/models/camera_coco7_v1
+optimized_runtime:
+  description: Box tensors transferred once; unsubscribed TwinLite image serialization
+    skipped; output parity rechecked
+  shared_default_promoted: false
+completed_measurement_sets:
+  live-rates-output-optimized:
+    trials: 36
+    failed: 3
+    index_sha256: 26e1b31877c1099455bc598643e045c82b777cc4b5a895112e4e8d321ad537c3
+    failed_trials:
+    - yolo26m-seg-960-all20-2plus1-C1-r1
+    - yolo26m-seg-960-all10-2plus1-C1-r1
+    - yolo26m-seg-960-all10-2plus1-C1-r2
+  live-concurrent-output-optimized:
+    trials: 36
+    failed: 4
+    index_sha256: 2f92bfacfe2333176df8be56b2a3af0c93411ac3724fac0b69daf6163bde29e7
+    failed_trials:
+    - yolo26m-960-all10-2plus1-C4-r1
+    - yolo26m-seg-960-all10-2plus1-C4-r2
+    - yolo26m-1280-all10-2plus1-C1-r3
+    - yolo26m-960-all10-2plus1-C5-r3
+  live-seg1280-output-optimized-v2:
+    trials: 12
+    failed: 2
+    index_sha256: 167ba3a054a27ac07f96d48faeab448c91da7b1c3eb79031bd6b79dc445ea768
+    failed_trials:
+    - yolo26m-seg-1280-all10-2plus1-C1-r2
+    - yolo26m-seg-1280-all10-2plus1-C6-r2
+near_object_diagnostic:
+  gallery: ../../artifacts/camera-coco7-live-v1/near-object-gallery/index.html
+  case: 'foggy front 000227–000229: 960 finds close car; 1280 m-seg misses even at0.25
+    in both PyTorch and TensorRT'
+  interpretation: Resolution/model effect, not proven TensorRT conversion error; all
+    original failures retained

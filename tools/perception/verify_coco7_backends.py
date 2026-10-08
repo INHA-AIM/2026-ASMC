@@ -111,6 +111,7 @@ def main():
     report['parity_failures']=sum(not r['passed'] for r in report['parity'])
     report['new_side_mask_misses']=sum(len(r['new_misses']) for r in report['mask_controls'])
     save()
+    return 1 if report['parity_failures'] or report['new_side_mask_misses'] else 0
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':raise SystemExit(main())
