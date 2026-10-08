@@ -243,9 +243,11 @@ class Coco7EvaluationTest(unittest.TestCase):
         rows=[dict(image=str(i),predictions=[dict(source_class_name='car',confidence=.9,xyxy=[0,0,10,10])] if i in (1,3,4) else []) for i in range(7)]
         r=temporal_report(gt,rows,.7)['objects'][0]
         self.assertEqual(4,r['first_stable_frame'])
+        self.assertEqual(1,r['reentries'])  # Initial miss -> first hit is acquisition.
         missing=temporal_report(gt,[rows[i] for i in (0,1,4,5,6)],.7)
         self.assertEqual(1,missing['insufficient_contiguous_gt'])
         self.assertEqual(0,missing['not_stably_detected'])
+        self.assertEqual(0,missing['objects'][0]['reentries'])
 
 
 if __name__=='__main__':unittest.main()

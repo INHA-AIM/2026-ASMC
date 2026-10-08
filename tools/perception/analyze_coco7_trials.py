@@ -18,16 +18,17 @@ def temporal_report(gt, predictions, confidence):
             sequence[row['run'],row['view'],a['actor_id']].append((int(row['frame']),a['actor_id'] in hits,a['source_class_name']))
     report=[]
     for key,values in sequence.items():
-        values.sort();windows=deque(maxlen=5);stable=None;max_misses=current_misses=0;reentries=0;previous=None;contiguous=True;length=longest=0
+        values.sort();windows=deque(maxlen=5);stable=None;max_misses=current_misses=0;reentries=0;previous=None;contiguous=True;length=longest=0;seen=False
         for frame,hit,label in values:
             if previous is not None and frame!=previous+1:
-                windows.clear();contiguous=False;current_misses=0;length=0
+                windows.clear();contiguous=False;current_misses=0;length=0;seen=False
             length+=1;longest=max(longest,length)
             windows.append(hit)
             if len(windows)==5 and sum(windows)>=3 and stable is None:stable=frame
             if hit:
-                if current_misses:reentries+=1
+                if seen and current_misses:reentries+=1
                 current_misses=0
+                seen=True
             else:
                 current_misses+=1;max_misses=max(max_misses,current_misses)
             previous=frame
@@ -38,7 +39,7 @@ def temporal_report(gt, predictions, confidence):
             longest_contiguous_visible_inputs=longest,stability_evaluable=longest>=5))
     return dict(objects=report,not_stably_detected=sum(r['stability_evaluable'] and r['first_stable_frame'] is None for r in report),
                 insufficient_contiguous_gt=sum(not r['stability_evaluable'] for r in report),
-                interpretation='3 hits in 5 consecutive annotated source inputs; frame counts, not wall seconds; visibility gaps reset window')
+                interpretation='3 hits in 5 consecutive annotated source inputs; frame counts, not wall seconds; visibility gaps reset window; initial acquisition is not re-entry')
 
 
 def main():
@@ -75,6 +76,7 @@ def main():
         ('full-neutral-mask-controls-selection','Seg: neutral mask 신규 누락 전체'),
         ('full-detect-mask-controls-selection','Detect: black mask 신규 누락 전체'),
         ('full-detect-neutral-controls-selection','Detect: neutral mask 신규 누락 전체'),
+        ('actor-all-models-fixed07','다섯 모델 × 세 해상도 · 같은 MORAI RGB'),
         ('actor-model-gallery','동일 MORAI 스폰 영상 · detect/seg 비교')]
         if (root/name/'index.html').exists()]
     report=dict(quality=quality,live=live,rejected_provenance=rejected,review_galleries=review_galleries,
@@ -88,6 +90,8 @@ def main():
         body.append(f'<tr><td>{r["model"]}</td><td>{r["width"]}</td><td>{r["fixed"]["macro_f1"]:.3f}</td><td>{r["fixed"]["false_positives"]} / {r["baseline_fp_limit"]}</td><td>{chosen}</td><td><a href="quality/{r["model"]}-{r["width"]}-selection/gallery/index.html">GT / output / mask</a></td></tr>')
     body+=['</table><p>Score-only confidence selection is not operating acceptance. Close-object continuity, mask preservation, all repeats, and heldout evidence must also be reviewed.</p><h2>누락·스폰 검토 갤러리</h2><ul>']
     body += ['<li><a href="'+r['path']+'">'+html.escape(r['label'])+'</a></li>' for r in review_galleries]
+    if (root/'actor-all-models-fixed07/comparison.html').exists():
+        body.append('<li><a href="actor-all-models-fixed07/comparison.html">동일 RGB 두 모델을 직접 선택하는 비교 갤러리</a></li>')
     body+=['</ul><h2>All live trials</h2><table><tr><th>Condition</th><th>Output Hz front / left / right</th><th>VRAM MiB</th><th>Minimum gate</th></tr>']
     for r in live:
         m=r['measurements'] or {};rates=' / '.join(str(round(m.get('yolo_'+v,{}).get('hz',0),2)) for v in ('front','left','right'))
