@@ -71,3 +71,27 @@ TEST(FusionClassPolicy, SevenLabelsAndRepeatedSourceCannotConfirm) {
         EXPECT_EQ(0, object.class_miss_counter);
     }
 }
+
+TEST(FusionClassPolicy, EpochInvalidationRemovesOldClassWithoutResettingGeometryOrTrack) {
+    LiDARObjectInfo object;
+    object.s32_Id = 12;
+    object.str_ObjectClass = "car";
+    object.str_YoloClass = "truck";
+    object.continuity_counter = 4;
+    object.class_miss_counter = 2;
+    object.camera_observation_ns = 300;
+    fusion_class::InvalidateObservation(object, 2);
+    EXPECT_EQ(12, object.s32_Id);
+    EXPECT_EQ("unknown", object.str_ObjectClass);
+    EXPECT_EQ("unknown", object.str_YoloClass);
+    EXPECT_EQ(0, object.continuity_counter);
+    EXPECT_EQ(0, object.class_miss_counter);
+    EXPECT_EQ(0u, object.camera_observation_ns);
+    EXPECT_EQ(2u, object.camera_observation_epoch);
+    ASSERT_TRUE(fusion_class::BeginObservation(object, 400, 2));
+    fusion_class::Observe(object, "truck", "truck", 5, 3);
+    EXPECT_EQ("unknown", object.str_ObjectClass);
+    object.str_ObjectClass = "noise";
+    fusion_class::InvalidateObservation(object, 3);
+    EXPECT_EQ("noise", object.str_ObjectClass);
+}

@@ -719,19 +719,26 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
                 g_YoloInputQueue.clear();
             }
             if (admitted_epoch != g_CameraEpoch) {
+                fusion_trace::Event("camera_epoch_invalidated", lidar_stamp.toNSec(), [&](std::ostream& out) {
+                    out << ",\"epoch\":" << g_CameraEpoch
+                        << ",\"discarded_pending_lidar\":" << pending_lidar.size()
+                        << ",\"discarded_yolo\":" << yolo_history.size();
+                });
                 pending_lidar.clear(); yolo_history.clear(); camera_history.clear();
+                g_PendingLidar = g_PendingYolo = 0;
                 received_any_yolo = false;
                 admitted_epoch = g_CameraEpoch;
+                for (auto& object : st_LiDAR.vec_Objects)
+                    fusion_class::InvalidateObservation(object, g_CameraEpoch);
+                // A missed/reappearing track must not reacquire classification
+                // from an older history snapshot after a producer restart.
+                for (auto& snapshot : st_LiDAR.Prev_Objects_Queue)
+                    for (auto& object : snapshot)
+                        fusion_class::InvalidateObservation(object, g_CameraEpoch);
             }
             if (!g_CameraActive || g_YoloSilent) {
                 for (auto& object : st_LiDAR.vec_Objects) {
-                    if (!IsGroundNoise(object)) {
-                        object.str_ObjectClass = object.str_YoloClass = "unknown";
-                        object.last_seen_class = "unknown";
-                        object.continuity_counter = object.class_miss_counter = 0;
-                        object.camera_observation_ns = 0;
-                        object.camera_observation_epoch = g_CameraEpoch;
-                    }
+                    fusion_class::InvalidateObservation(object, g_CameraEpoch);
                 }
                 if (!st_LiDAR.Prev_Objects_Queue.empty())
                     fusion_state::Persist(st_LiDAR.vec_Objects, st_LiDAR.Prev_Objects_Queue.back());

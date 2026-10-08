@@ -34,6 +34,16 @@ inline std::string RawLabel(std::string label) {
 }
 
 // A repeated image is not another independent confirmation/miss.
+inline void InvalidateObservation(LiDARObjectInfo& object, uint64 epoch) {
+    if (object.str_ObjectClass == "noise" || object.str_ObjectClass == "지면노이즈") return;
+    object.str_ObjectClass = object.str_YoloClass = "unknown";
+    object.last_seen_class = "unknown";
+    object.continuity_counter = object.class_miss_counter = 0;
+    object.is_class_locked = false;
+    object.camera_observation_ns = 0;
+    object.camera_observation_epoch = epoch;
+}
+
 inline bool BeginObservation(LiDARObjectInfo& object, uint64 stamp_ns, uint64 epoch) {
     if (object.camera_observation_epoch == epoch &&
         stamp_ns <= object.camera_observation_ns) return false;
