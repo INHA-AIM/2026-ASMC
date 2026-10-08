@@ -20,6 +20,10 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 
 ## 실행
 
+YOLO26s-seg·YOLOE-26s-seg의 별도 관측 실험은
+[seg 모델 선정 안내](../../docs/handoffs/perception/camera-seg-model-selection.md)를 따른다.
+전방/3뷰 mask overlay를 제공하지만 학습·운영 기본 모델·LiDAR 소비 정책은 바꾸지 않는다.
+
 기본 `perception.launch`는 모델을 실행하지 않는 idle 프로필이다. bridge·컨테이너와
 GUI는 별도로 준비하고, ROS 환경을 읽은 터미널에서 다음 중 하나를 직접 실행한다.
 

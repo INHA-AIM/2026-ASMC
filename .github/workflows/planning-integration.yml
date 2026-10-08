@@ -106,3 +106,4 @@ jobs:
           trap 'kill "$coco_core_pid" 2>/dev/null || true' EXIT
           python3 tools/perception/check_camera_coco_ros.py --profile baseline --adapter
           python3 tools/perception/check_camera_coco_ros.py --profile all --adapter
+          python3 tools/perception/check_camera_seg_ros.py --adapter

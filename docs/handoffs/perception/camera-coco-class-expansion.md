@@ -6,7 +6,7 @@ PR #72를 `a8c4f3b`에 병합한 뒤 별도 카메라 브랜치에서 비교한�
 
 후속 허용 클래스 선정과 `person / animal / vehicle / obstacle` 후보, MORAI 출제 범위와
 학습 라벨은 [객체 에셋·분류 설계](../competition/obstacle-assets-and-labels.md)에 모았다.
-현재 세 그룹과 80종 실험은 유지하며 animal 추가·신규 학습은 아직 구현하지 않았다.
+기존 세 그룹과 80종 실험은 유지한다. 후속 [seg 모델 선정](camera-seg-model-selection.md)은 별도 실험에서 animal 그룹을 추가하며 신규 학습은 수행하지 않는다.
 
 ## 직접 실행과 시각화
 

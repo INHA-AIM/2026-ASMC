@@ -43,7 +43,6 @@ def main():
     selected=[r for r in rows if r['split']=='selection' and r['annotation_complete']]
     sweep=[round(.10+.05*i,2) for i in range(13)]
     sums={c:dict(counts={g:Counter() for g in GROUPS},masks=[],names=Counter()) for c in sweep}
-    runs={},
     all_latency=[]; labels=Counter(); gallery=[]; continuity={}; gaps=Counter(); total_gt=Counter()
     (args.output/'masks').mkdir()
     (args.output/'gallery').mkdir()
@@ -86,8 +85,10 @@ def main():
             for ann in row['annotations']:
                 key=(row['run'],row['view'],ann['actor_id'])
                 matched=ann['actor_id'] in present
-                if key in continuity and continuity[key] and not matched:gaps[ann['group']]+=1
-                continuity[key]=matched
+                previous=continuity.get(key)
+                if previous and previous[0]==int(row['frame'])-1 and previous[1] and not matched:
+                    gaps[ann['group']]+=1
+                continuity[key]=(int(row['frame']),matched)
                 total_gt[ann['group']]+=1
             for d in predicted:labels[d['source_class_name']]+=1
             # Uniform fixed samples, including missed objects, not only attractive detections.

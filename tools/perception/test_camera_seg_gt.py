@@ -1,9 +1,19 @@
 import unittest
 import numpy as np
 from prepare_camera_seg_gt import convert_arrays,parse_bbox,split_runs
+from quarantine_camera_seg_runs import quarantine
 
 
 class GTTest(unittest.TestCase):
+    def test_unverified_palette_is_quarantined_without_mutating_original_or_split(self):
+        row=dict(run='old',split='heldout',issues=[],annotation_complete=True,annotations=[])
+        revised=quarantine(row,{'old'})
+        self.assertFalse(revised['annotation_complete'])
+        self.assertEqual('heldout',revised['split'])
+        self.assertTrue(row['annotation_complete'])
+        self.assertEqual([],row['issues'])
+        self.assertIs(row,quarantine(row,{'different'}))
+
     def test_actor_link_visible_bbox_and_source_preserved(self):
         inst=np.zeros((4,5,4),np.uint8); sem=np.zeros((4,5,3),np.uint8)
         inst[1:3,2:4]=[1,2,3,255]; sem[1:3,2:4]=[255,90,90]
