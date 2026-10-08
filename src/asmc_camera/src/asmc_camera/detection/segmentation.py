@@ -40,7 +40,11 @@ def select_result(result, names, allowed_names, confidence, mask_array=None):
         return detections, masks
     if mask_array is not None and len(mask_array) != len(boxes):
         raise ValueError("mask/box count mismatch")
-    for index, box in enumerate(boxes):
+    # Transfer one box tensor rather than synchronizing CUDA for every class,
+    # confidence and coordinate scalar. Python test/backends without cpu()
+    # still follow the same filtering and mask-index contract.
+    cpu_boxes = boxes.cpu() if callable(getattr(boxes, 'cpu', None)) else boxes
+    for index, box in enumerate(cpu_boxes):
         name = str(names.get(int(box.cls[0]), str(int(box.cls[0]))))
         score = float(box.conf[0])
         if name.lower() not in allowed or not np.isfinite(score) or score < confidence:

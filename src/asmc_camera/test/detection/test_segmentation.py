@@ -13,6 +13,23 @@ class Box:
 
 
 class SegmentationTest(unittest.TestCase):
+    def test_gpu_box_transfer_is_once_and_preserves_order_confidence_and_mask_indices(self):
+        class DeviceBoxes:
+            calls = 0
+            def __len__(self): return 3
+            def __iter__(self): raise AssertionError('device scalars must not be read individually')
+            def cpu(self):
+                self.calls += 1
+                return [Box(0,.69),Box(1,.7),Box(0,.9)]
+        source=DeviceBoxes()
+        result=type('Result',(),dict(boxes=source))()
+        masks=np.array([[[0]],[[1]],[[0]]],dtype=bool)
+        boxes,kept=select_result(result,{0:'car',1:'dog'},['car','dog'],.7,masks)
+        self.assertEqual(1,source.calls)
+        self.assertEqual([('dog',.7),('car',.9)],[(b.source_class_name,b.confidence) for b in boxes])
+        self.assertEqual([True,False],[m.item() for m in kept])
+        self.assertEqual((1.2,2.3,4.5,6.7),(boxes[0].xmin,boxes[0].ymin,boxes[0].xmax,boxes[0].ymax))
+
     def test_optional_animals_do_not_change_old_mapping(self):
         old = load_class_groups(dict(groups=dict(person=['bicycle'], vehicle=['car'])))
         self.assertEqual(old.group_of('bicycle'), 'person')

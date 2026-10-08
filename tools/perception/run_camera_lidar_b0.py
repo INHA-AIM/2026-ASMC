@@ -292,8 +292,12 @@ def main():
         wait(loaded, 'all resident models loaded and dummy warmed', 60)
         report['load_dummy_warmup_sec'] = time.monotonic()-launch_start
         if args.phase != 'camera':
+            adapter_confidence = (yaml.safe_load(args.objects_config.read_text()).get('conf_thres', .7)
+                                  if args.objects_config else .7)
+            report['adapter_confidence'] = adapter_confidence
             main_command = ['roslaunch', str(Path(__file__).resolve().with_name('b0_main.launch')),
-                            'fusion_yolo_policy:='+args.fusion_yolo_policy]
+                            'fusion_yolo_policy:='+args.fusion_yolo_policy,
+                            'camera_objects_conf_thres:='+str(adapter_confidence)]
             if traced:
                 main_command.append('fusion_trace_path:='+str(args.output/'fusion.jsonl'))
             main_process = launch('main', main_command)

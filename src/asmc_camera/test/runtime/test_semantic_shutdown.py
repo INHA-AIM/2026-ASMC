@@ -8,6 +8,20 @@ from asmc_camera.nodes.semantic_inference_node import SemanticInferenceNode
 
 
 class SemanticShutdownTest(unittest.TestCase):
+    def test_unconsumed_images_do_not_materialize_and_new_subscriber_gets_fresh_header(self):
+        node = SemanticInferenceNode.__new__(SemanticInferenceNode)
+        publisher = Mock()
+        publisher.get_num_connections.return_value = 0
+        node._image_message = Mock(return_value='fresh-source-image')
+        with patch('rospy.is_shutdown', return_value=False):
+            self.assertTrue(node._publish_connected_image(publisher, 'pixels', 'source-header', True))
+            node._image_message.assert_not_called()
+            publisher.publish.assert_not_called()
+            publisher.get_num_connections.return_value = 1
+            self.assertTrue(node._publish_connected_image(publisher, 'pixels', 'source-header', True))
+            node._image_message.assert_called_once_with('pixels', 'source-header', categorical=True)
+            publisher.publish.assert_called_once_with('fresh-source-image')
+
     def test_shutdown_terminates_waiting_worker_before_trace_close(self):
         node = SemanticInferenceNode.__new__(SemanticInferenceNode)
         node.views = ['front']

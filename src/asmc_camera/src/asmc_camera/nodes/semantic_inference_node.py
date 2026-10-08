@@ -293,6 +293,15 @@ class SemanticInferenceNode:
             raise
         return True
 
+    def _publish_connected_image(self, publisher, value, frame, categorical=False):
+        # Keep the topic advertised, but avoid full-resolution conversion and
+        # serialization when nobody consumes it. A new subscriber gets the
+        # next fresh observation; no cached output is replayed.
+        if publisher.get_num_connections() == 0:
+            return True
+        return self._publish_unless_shutdown(
+            publisher, self._image_message(value, frame, categorical=categorical))
+
     def _worker(self) -> None:
         pending = CoherentFrames(self.views, int(float(
             rospy.get_param("~managed_max_skew_ms", 35.)) * 1e6))
@@ -356,54 +365,28 @@ class SemanticInferenceNode:
                 publish_model_grid = preserve_model_grid and self._should_publish_model_grid(
                     prediction.views, usable_frames
                 )
+                categorical_outputs, other_outputs = [], []
                 for view, value in prediction.views.items():
                     frame = usable_frames[view]
                     for head, output in value.probabilities.items():
                         if head in self.categorical_heads:
-                            if not self._publish_unless_shutdown(
-                                self.publishers[view][head],
-                                self._image_message(output, frame, categorical=True)
-                            ):
-                                return
-                            if not self._publish_unless_shutdown(
-                                self.confidence_publishers[view][head],
-                                self._image_message(
-                                    value.categorical_confidences[head], frame
-                                ),
-                            ):
-                                return
+                            categorical_outputs.append((self.publishers[view][head], output, frame, True))
+                            other_outputs.append((self.confidence_publishers[view][head],
+                                                  value.categorical_confidences[head], frame, False))
                         else:
-                            if not self._publish_unless_shutdown(
-                                self.publishers[view][head],
-                                self._image_message(output, frame)
-                            ):
-                                return
+                            other_outputs.append((self.publishers[view][head], output, frame, False))
                     if publish_model_grid and view in self.model_grid_publishers:
-                        class_publisher = self.model_grid_publishers[view]
-                        confidence_publisher = self.model_grid_confidence_publishers[view]
-                        if (
-                            class_publisher.get_num_connections() > 0
-                            or confidence_publisher.get_num_connections() > 0
-                        ):
-                            if not self._publish_unless_shutdown(
-                                class_publisher,
-                                self._image_message(
-                                    value.model_grid_probabilities["road_marking"],
-                                    frame,
-                                    categorical=True,
-                                ),
-                            ):
-                                return
-                            if not self._publish_unless_shutdown(
-                                confidence_publisher,
-                                self._image_message(
-                                    value.model_grid_categorical_confidences[
-                                        "road_marking"
-                                    ],
-                                    frame,
-                                ),
-                            ):
-                                return
+                        other_outputs.extend([
+                            (self.model_grid_publishers[view],
+                             value.model_grid_probabilities['road_marking'], frame, True),
+                            (self.model_grid_confidence_publishers[view],
+                             value.model_grid_categorical_confidences['road_marking'], frame, False)])
+                # All views share one model batch. Publish their small class-ID
+                # images before converting larger probability arrays, so the
+                # last view does not inherit earlier views' serialization cost.
+                for publisher, value, frame, categorical in categorical_outputs + other_outputs:
+                    if not self._publish_connected_image(publisher, value, frame, categorical):
+                        return
                 publish_ms = (time.perf_counter() - started) * 1000.0
                 self.control.state.record('published', stamps=stamps, decode_ms=decode_ms,
                     preprocess_ms=prediction.preprocess_ms, inference_ms=prediction.inference_ms,

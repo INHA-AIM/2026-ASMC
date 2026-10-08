@@ -48,8 +48,17 @@ def provenance(models, engine, revision):
     hashes = {str(f.relative_to(ROOT)): hashlib.sha256(f.read_bytes()).hexdigest() for f in files if f.is_file()}
     if len(revision)!=40 or any(c not in '0123456789abcdef' for c in revision):
         raise ValueError('full host checkout revision required')
+    binaries={}
+    for relative in ('Main/Main','frenet_planner/frenet_planner_node',
+                     'behavior_planner/behavior_node','asmc_controller/mpc_controller'):
+        for prefix in os.environ.get('CMAKE_PREFIX_PATH','').split(':'):
+            path=Path(prefix)/'lib'/relative
+            if path.is_file():
+                binaries[relative]=dict(path=str(path),sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+                break
     return dict(head=revision,
                 source_sha256=hashes, engine_sha256=hashlib.sha256(engine.read_bytes()).hexdigest(),
+                built_binaries=binaries,
                 model_provenance={f.name:json.loads(f.read_text()) for f in models.glob(engine.stem+'*.json')},
                 renderer='MORAI left running with user sensor/render settings; preset not independently verified',
                 windows_background_cpu_ram='unavailable; global NVIDIA GPU includes simulator and desktop')
