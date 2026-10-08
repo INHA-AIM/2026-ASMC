@@ -33,6 +33,10 @@ def main():
     p.add_argument('--datasets',type=Path,required=True)
     p.add_argument('--models',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--model',nargs='+',default=['yolo11m','yolo26m','yolo26l','yolo26m-seg','yolo26l-seg'])
+    p.add_argument('--width',type=int,nargs='+',default=[640,960,1280])
+    p.add_argument('--confidence',type=float,default=.7)
+    p.add_argument('--image',nargs='+',help='Explicit selection GT hard cases, in addition to every side-overlap control')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
     rows=[json.loads(line) for line in (a.gt/'frames.jsonl').read_text().splitlines()]
     rows=[r for r in rows if r['split']=='selection' and r['annotation_complete']]
@@ -42,6 +46,10 @@ def main():
     for view in ('front','left','right'):
         subset=[r for r in rows if r['view']==view and any(g.get('subtype_verified') and g['source_class_name'] in COCO7 for g in r['annotations'])]
         selected.extend(subset[::max(1,len(subset)//5)][:5])
+    if a.image:
+        by_image={r['image']:r for r in rows}
+        if set(a.image)-by_image.keys():raise ValueError('hard case absent from complete selection GT')
+        selected=[by_image[name] for name in a.image]
     # Include every actual GT mask overlap on either side, not just easy samples.
     overlap=[]
     for row in rows:
@@ -51,17 +59,17 @@ def main():
         objects=[g['actor_id'] for n,g in enumerate(row['annotations']) if g.get('subtype_verified') and g['source_class_name'] in COCO7 and np.any(gm[n]&ego)]
         if objects:overlap.append(dict(row,overlap_actors=objects))
     selected+= [r for r in overlap if r['image'] not in {s['image'] for s in selected}]
-    report=dict(samples=len(selected),side_overlap_frames=len(overlap),parity=[],mask_controls=[],
+    report=dict(samples=len(selected),confidence=a.confidence,side_overlap_frames=len(overlap),parity=[],mask_controls=[],
                 acceptance=dict(box_iou=.95,confidence_delta=.03,mask_iou=.95),all_side_overlap_frames=[r['image'] for r in overlap])
     def save():(a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
-    for model in ('yolo11m','yolo26m','yolo26l','yolo26m-seg','yolo26l-seg'):
-        for width in (640,960,1280):
+    for model in a.model:
+        for width in a.width:
             task='segment' if 'seg' in model else 'detect'
             cached=[]
             for backend,suffix in [('pytorch','.pt'),('tensorrt','.engine')]:
                 weight=a.models/(model+suffix)
                 detector=BatchedYoloDetector(weights=str(weight),expected_sha256=file_sha256(weight),runtime_backend=backend,
-                    task=task,front_width=width,conf_thres=.7)
+                    task=task,front_width=width,conf_thres=a.confidence)
                 outputs=[]
                 for row in selected:
                     image=cv2.imread(str(a.datasets/row['image']))
@@ -74,8 +82,8 @@ def main():
                         image=cv2.imread(str(a.datasets/row['image']));view=row['view']
                         on=detector.infer_images({view:masks[view].apply(image)},[view])[view]
                         off=detector.infer_images({view:image},[view])[view]
-                        _,_,on_pairs,on_gt,_=evaluate(row['annotations'],predictions(on),.7)
-                        _,_,off_pairs,off_gt,_=evaluate(row['annotations'],predictions(off),.7)
+                        _,_,on_pairs,on_gt,_=evaluate(row['annotations'],predictions(on),a.confidence)
+                        _,_,off_pairs,off_gt,_=evaluate(row['annotations'],predictions(off),a.confidence)
                         on_ids={on_gt[g]['actor_id'] for g,_,_ in on_pairs};off_ids={off_gt[g]['actor_id'] for g,_,_ in off_pairs}
                         report['mask_controls'].append(dict(model=model,width=width,image=row['image'],
                             overlap_actors=row['overlap_actors'],on_matched=sorted(on_ids),off_matched=sorted(off_ids),
