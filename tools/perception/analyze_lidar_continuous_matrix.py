@@ -13,7 +13,8 @@ def read(path, event=None):
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('root',type=Path);args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('root',type=Path)
+    p.add_argument('--output',type=Path);args=p.parse_args()
     index=json.loads((args.root/'index.json').read_text());manifest=json.loads((args.root/'manifest.json').read_text());result=dict(repeats=[],gps_contrasts=[],speed_diagnostics=[])
     for trial in index:
         label=trial['label'];base=dict(trial)
@@ -29,7 +30,7 @@ def main():
     result['complete_matrix']=len(index)==20
     result['all_comparisons_pass']=result['complete_matrix'] and all(x['exact'] for kind in ('repeats','gps_contrasts') for x in result[kind])
     result['scope']='actual ground/clustering/tracker plus production fusion; frozen logical arrivals, not projection GT or realtime scheduling proof'
-    (args.root/'analysis.json').write_text(json.dumps(result,indent=2)+'\n')
+    (args.output or args.root/'analysis.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(dict(pass_=result['all_comparisons_pass'],repeats=len(result['repeats']),gps_contrasts=len(result['gps_contrasts']))))
     return 0 if result['all_comparisons_pass'] else 1
 

@@ -32,6 +32,10 @@ def speed_events(rows):
     for row in rows:
         if row.get('event')!='tracking_state':continue
         dt=row['source_dt_sec']
+        if not math.isfinite(dt) or dt<=0:raise ValueError('invalid source dt')
+        before_ns=row.get('previous_stamp_ns',0)
+        if before_ns and abs(dt-(row['stamp_ns']-before_ns)/1e9)>1e-9:
+            raise ValueError('dt does not match original source stamps')
         for o in row['objects']:
             s=o['semantic'];key=s['id'];before=previous.get(key)
             if before:

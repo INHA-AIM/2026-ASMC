@@ -27,5 +27,11 @@ class ContinuousMeasurementsTest(unittest.TestCase):
         later=copy.deepcopy(obj);later['kf_ca'][2]=3.;later['age']=77
         rows.append(dict(event='tracking_state',stamp_ns=2,source_dt_sec=.1,objects=[later]))
         self.assertEqual(speed_events(rows)[0]['cause'],'requires geometry/association/attitude review')
+    def test_wrong_dt_is_rejected(self):
+        row=dict(event='tracking_state',stamp_ns=200000000,previous_stamp_ns=100000000,
+            source_dt_sec=.1,objects=[])
+        self.assertEqual(speed_events([row]),[])
+        for dt in (0.,-.1,float('nan'),.2):
+            with self.assertRaises(ValueError):speed_events([dict(row,source_dt_sec=dt)])
 
 if __name__=='__main__':unittest.main()
