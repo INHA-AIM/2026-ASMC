@@ -164,4 +164,44 @@ dt가 마지막 실측 이후 경과시간과 맞는지도 고정 trace로 확�
 판제의 소비 안정화와 LiDAR 관측/추적 정확도 개선은 각각 검증한다. 현재 typed 공개
 velocity/dynamic validity는 false로 유지한다.
 
+### 위치·속도 관측 조사와 재호의 비교 순서 — 2026-10-08
+
+**칼만 필터는 추정 수단이며 관측 군집의 평균이 물체의 고정된 중심이라는 보장은 없다.**
+정지 차량도 뒤쪽 면만 보이다가 옆면이 드러나면 점 밀도와 평균 중심이 이동한다.
+이 관측 편향은 영평균 잡음과 다르므로 평활화를 강화하는 것만으로 해결하지 않는다.
+현재 `Kalman.cpp:kalman_filter_update`는 CA 상태의 x/y를 관측하고 고정
+`R = 0.01 I`, `Q = 0.003 I`를 사용한다. OBB 기하 중심으로 관측을 바꾸더라도
+매 프레임 부분 점군으로 만든 박스의 치수·중심이 변하면 같은 문제가 남는다.
+
+아래 후보는 **공식 구현·논문을 읽은 설계 제안**이며 우리 VLP-16/MORAI 입력에서
+빌드·정확도·부하를 검증하거나 이번 PR에 구현한 기능은 아니다.
+
+| 근거의 종류 | 참고 내용 | 우리에게 적용할 때 확인할 것 |
+|---|---|---|
+| [Autoware 공개 추적 구현](https://github.com/autowarefoundation/autoware_universe/blob/main/perception/autoware_multi_object_tracker/README.md) | 객체 연결 + EKF, 클래스별 운동 모델과 Mahalanobis/거리 등의 gate | 공개 프로젝트의 구현 사례다. 업계 전체의 유일한 표준이나 우리 센서의 성능 보장이 아니다. |
+| [Autoware 공개 형상 추정](https://github.com/autowarefoundation/autoware_universe/blob/main/perception/autoware_shape_estimation/README.md) | L-shape·클래스별 형상과 참조 방향/치수 보정 | 우리도 L-shape가 있다. 새 도입보다 이전 형상·방향을 활용한 위치 관측의 일관성을 비교한다. |
+| [AB3DMOT 연구 기준선](https://arxiv.org/abs/2008.08063) | 3D 검출 + KF + Hungarian 연결 | 학습 검출의 box 중심과 보이는 raw 점의 평균은 같은 관측이 아니다. 논문의 tracker 속도를 전체 추론 속도로 사용하지 않는다. |
+| [확률적 3D 추적 연구](https://arxiv.org/abs/2001.05673) | 관측/상태 불확실성을 반영하는 KF와 Mahalanobis 연결 | 관측 오차와 연결 임계값을 독립적으로 비교한다. 점 수만으로 보정되지 않은 confidence를 만들지 않는다. |
+| [CenterPoint 연구](https://openaccess.thecvf.com/content/CVPR2021/papers/Yin_Center-Based_3D_Object_Detection_and_Tracking_CVPR_2021_paper.pdf) | 학습된 3D 중심·크기·방향·속도 검출 | 별도 GT·학습/센서 적합성·GPU 부하가 필요하다. 공개 benchmark 결과를 우리 16채널 입력에 그대로 적용하지 않는다. |
+
+재호가 작업을 고를 때는 다음 순서를 권한다. 각 후보는 고정 입력의 기존 평균 중심
+기준선과 별도 커밋·실험으로 비교하며 필터·군집·연결을 한 번에 바꾸지 않는다.
+
+1. **시간·초기화·연결:** 최대 급변 trace에서 마지막 실측 이후 객체별 경과시간과
+   scan dt, miss 후 재관측/초기 속도, source stamp와 자차 보상을 확인한다. 시간 오류와
+   다른 객체 연결을 필터 평활화로 숨기지 않는다. 현재 기록은 원인 후보이지 확정 결함이 아니다.
+2. **구조물·객체 군집:** 갤러리 구간 1·2·3의 벽 조각과 분류 10번을 우선 고정한다.
+   벽 혼입·분할/합침·부분 관측을 분리하고 구조물 충돌 근거와 실제 객체 지지점을 보존한다.
+3. **일관된 위치 관측:** 평균 중심과 이전 방향/형상에 기반한 중심 또는 관측 가능한
+   면/모서리 기준점을 비교한다. 기준점 변경과 물체 중심 보정의 불확실성을 기록하고,
+   보이지 않은 차량 전체 치수를 검증 없이 늘리지 않는다. 관측 점유 형상과 추정 기준점은 구분한다.
+4. **불확실성·연결:** 형상 잔차·가림·예측 불일치 등을 반영한 관측 오차와
+   Mahalanobis gate를 각각 비교한다. CV/CA/IMM 등의 모델 비교는 관측·시간 오류를
+   먼저 분리한 뒤 수행하며 EKF/UKF로 바꾸는 것 자체를 정확도 개선으로 간주하지 않는다.
+
+수락에는 위치·속도 오차, 가속/감속에 대한 반응 지연, ID 연속성·오연결·재등장을
+함께 사용한다. 합성 정답 구간과 실제 bag의 GT 없는 안정성 통계를 분리하고,
+속도 변화 >2m/s 횟수만 줄었다고 정확도가 개선됐다고 판정하지 않는다.
+GPS 조건만 바꾼 local 상태 동등성·관측별 좌표와 시간 계약도 계속 검사한다.
+
 입력·결과·검증 범위는 [연속 회귀 문서](../../handoffs/perception/lidar-continuous-regression.md)와 그 baseline을 따른다.
