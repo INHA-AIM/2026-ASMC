@@ -52,7 +52,7 @@ def main():
                   failures=[], requests=[], provenance=provenance(a.models, Path(runtime['weights']), a.revision))
     statuses = {}; anchors = {}; outputs = defaultdict(list); trajectories = []
     lock = threading.RLock(); subs = []; processes = []; handles = []
-    sampler = None
+    sampler = None; drive_process = None
 
     def save():
         (a.output/'report.json').write_text(json.dumps(report, indent=2)+'\n')
@@ -146,6 +146,7 @@ def main():
                  '--output',str(a.output/'drive'),'--seconds',str(a.drive_seconds)]
         with (a.output/'drive.log').open('w') as handle:
             child = subprocess.Popen(drive, stdout=handle, stderr=subprocess.STDOUT, start_new_session=True)
+            drive_process = child
             # The gate owns its public publisher and restoration. Give its
             # finally block time to finish even when a guard stops the trial.
             try: child.wait(timeout=a.drive_seconds+60.)
@@ -179,6 +180,9 @@ def main():
     except Exception as exc:
         report['failures'].append(str(exc))
     finally:
+        # Interrupt the actuator gate before taking its sensor/preview inputs
+        # down, so its own finally block can brake and restore the Ego.
+        if drive_process is not None: stop(drive_process)
         if sampler:
             samples = sampler.close(); report['resources'] = resource_report(samples)
             (a.output/'resources.json').write_text(json.dumps(samples)+'\n')

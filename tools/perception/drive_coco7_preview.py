@@ -133,6 +133,7 @@ def main():
                              np.array([original.transform.location.x,original.transform.location.y]))
         report['displacement_m']=float(moved)
         if moved<.5: report['failures'].append('no verified drive: less than0.5m displacement')
+    except KeyboardInterrupt: report['failures'].append('trial interrupted; restoration attempted')
     except Exception as exc: report['failures'].append(str(exc))
     finally:
         if publisher:
