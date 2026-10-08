@@ -61,16 +61,19 @@ def main():
             (directory/'temporal.json').write_text(json.dumps(temporal,indent=2)+'\n')
             row['temporal_summary']={k:v for k,v in temporal.items() if k!='objects'}
         quality.append(row)
-    live=[]
+    live=[];rejected=[]
     for parent in root.glob('live-*'):
         if not parent.is_dir():continue
+        if (parent/'REJECTED_PROVENANCE.json').exists():
+            rejected.append(dict(path=str(parent.relative_to(root)),reason=json.loads((parent/'REJECTED_PROVENANCE.json').read_text())))
+            continue
         for path in parent.glob('*/report.json'):
             r=json.loads(path.read_text());live.append(dict(path=str(path.relative_to(root)),job=r['job'],passed=r['passed'],failures=r['failures'],
                 measurements=r.get('measurements'),target_attainment=r.get('target_attainment'),resources=r.get('resources'),planning=r.get('planning')))
-    report=dict(quality=quality,live=live,failed_trials=sum(not r['passed'] for r in live),trials=len(live))
+    report=dict(quality=quality,live=live,rejected_provenance=rejected,failed_trials=sum(not r['passed'] for r in live),trials=len(live))
     (root/'comparison.json').write_text(json.dumps(report,indent=2)+'\n')
     body=['<!doctype html><meta charset="utf-8"><style>body{font:16px system-ui;margin:24px}table{border-collapse:collapse}td,th{padding:8px;border:1px solid #ccc}img{max-width:95%}</style><h1>COCO7 · same images, live MORAI 4060 Ti</h1>',
-          '<p>Four labelled classes in Capture GT; dog/bicycle/motorcycle remain inspection only. Failed repeats are retained. Minimum feasibility does not mean target 20 Hz.</p>',
+          '<p>Four labelled classes in Capture GT; dog/bicycle/motorcycle remain inspection only. Failed repeats are retained. Minimum feasibility does not mean target 20 Hz.</p><p><a href="near-object-gallery/index.html">근거리 차량 · 960/1280 · PyTorch/TensorRT 비교</a></p>',
           '<table><tr><th>Model</th><th>Front width</th><th>F1 @0.7</th><th>FP @0.7 / limit</th><th>Frozen selection</th><th>Images</th></tr>']
     for r in quality:
         s=r['selected'];chosen=f'{s["confidence"]:.2f} / F1 {s["macro_f1"]:.3f}' if s else 'ineligible FP'
@@ -81,6 +84,7 @@ def main():
         memory=(r['resources'] or {}).get('gpu_memory_mib',{}).get('maximum')
         body.append(f'<tr><td><a href="{r["path"]}">{html.escape(r["path"].split("/")[-2])}</a></td><td>{rates}</td><td>{memory}</td><td>{"PASS" if r["passed"] else html.escape(str(r["failures"]))}</td></tr>')
     body+=['</table><h2>Fixed compute scene · original images</h2>']
+    body+=['<h2>Rejected provenance · excluded from model measurement counts</h2><pre>'+html.escape(json.dumps(rejected,indent=2))+'</pre>']
     for view in ('front','left','right'):body.append(f'<h3>{view}</h3><img src="live-scene-rgb/{view}.jpg">')
     (root/'index.html').write_text(''.join(body))
     print(json.dumps(dict(quality=len(quality),live=len(live),failed_trials=report['failed_trials'])))

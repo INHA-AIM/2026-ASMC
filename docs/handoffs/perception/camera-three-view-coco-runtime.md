@@ -45,12 +45,31 @@
 5. `run_coco7_live_trials.py`: 모델 3개 상주, PREPARE 실제 영상 준비 확인 후 ACTIVE,
    wall 입력 수신→출력 수신 지연·뷰별 공급률·200ms 리소스 기록.
    모든 실패를 보존하고, 최소 실행 가능성과 목표 Hz 달성을 구분한다.
+   최신 측정기는 모델 로드·예열부터 GPU 메모리를 수집하고 90% gate를 적용한다.
+   `resources`는 ACTIVE 구간, `resources_startup_and_active`는 로드·준비 포함이다.
+   이전 실행의 ACTIVE 메모리로 시작 시점 peak까지 검증했다고 해석하지 않는다.
 6. `analyze_coco7_input_gaps.py`: 실패한 출력 공백과 같은 시점의 원본 카메라
    공급 공백을 연결한다. 입력 공백이 설명된 실행도 원래 수락 실패는 유지한다.
 7. `analyze_coco7_mask_control.py`: 동일 RGB SHA의 전체 mask ON/OFF 결과를
    같은 GT·confidence로 비교하고 신규 누락 전부를 이미지 갤러리에 남긴다.
 8. `analyze_coco7_fusion.py`: 완전한 종료 집계, 고유/재사용 관측, 트랙별
    시간적 분류 확인 중복과 빈 결과 이후의 과거 관측 사용을 검사한다.
+9. `summarize_coco7_live_matrix.py`: 실험 버전·모델·해상도·주기·batch별 세 반복을
+   함께 판정한다. 실패 반복을 제외하지 않으며 미완성 묶음을 수락하지 않는다.
+   잘못된 코드 SHA로 중단한 실행은 `REJECTED_PROVENANCE.json`과 원본을 보존하고
+   정상적인 모델 성능 표본에서 제외한다.
+
+`near-object-gallery/index.html`은 같은 RGB의 960/1280과 PyTorch/TensorRT를
+비교하는 갤러리다. 파랑은 GT, 초록은 검출이며 slider는 저장된 예측을 필터링한다.
+선정 자료의 일부 가까운 차량은 960에서 검출되지만 1280에서 미검출됐다.
+해상도 확대를 무조건 품질 개선으로 간주하지 않는다. `summarize_coco7_geometry.py`의
+GT 픽셀 높이별 평가는 크기별 진단이며 실제 거리·정량 거리 정확도가 아니다.
+
+heldout 평가는 `evaluate_coco7_models.py --split heldout --frozen-confidence ...`로
+선정 자료에서 정한 점수만 사용한다. heldout에서 점수를 다시 탐색하지 않는다.
+Capture의 현재 검수 GT에는 car/truck/person/bus만 있으므로 dog/bicycle/motorcycle을
+포함한 7종 전체의 정량 수락으로 확대하지 않는다. gRPC actor의 3D 상태와 영상
+검토 갤러리는 나머지 종류의 관찰 자료이며 독립적인 픽셀 GT를 대체하지 않는다.
 
 실측에서 GPU의 박스 필드를 하나씩 Python scalar로 읽는 비용이 컸다. 박스를
 한 번에 CPU로 옮기고, TwinLite가 구독자 없는 대형 debug 영상을 직렬화하지

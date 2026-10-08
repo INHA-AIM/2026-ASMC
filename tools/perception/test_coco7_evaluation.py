@@ -17,6 +17,28 @@ def ann(label, verified=True):
 
 
 class Coco7EvaluationTest(unittest.TestCase):
+    def test_matrix_retains_failed_repeat_and_rejects_partial_or_invalid_provenance(self):
+        import json
+        import tempfile
+        from summarize_coco7_live_matrix import summarize as live_summary
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            for experiment,repeats in [('live-failed',[1,2,3]),('live-partial',[1,2]),('live-complete',[1,2,3])]:
+                for repeat in repeats:
+                    directory=root/experiment/str(repeat);directory.mkdir(parents=True)
+                    job=dict(model='m',width=960,rates='all10',batch='batch3',profile='C6',repeat=repeat)
+                    passed=not (experiment=='live-failed' and repeat==2)
+                    (directory/'report.json').write_text(json.dumps(dict(job=job,passed=passed,failures=[] if passed else ['gap'])))
+            rejected=root/'live-aborted';rejected.mkdir()
+            (rejected/'REJECTED_PROVENANCE.json').write_text('{}')
+            result=live_summary(root)
+            rows={r['experiment']:r for r in result['groups']}
+            self.assertFalse(rows['live-failed']['all_passed'])
+            self.assertEqual(1,len(rows['live-failed']['failures']))
+            self.assertFalse(rows['live-partial']['all_passed'])
+            self.assertTrue(rows['live-complete']['all_passed'])
+            self.assertEqual(['live-aborted'],result['rejected_provenance'])
+
     def test_drive_gate_honors_stop_and_caps_trajectory_speed(self):
         from drive_coco7_preview import speed_command
         preview=SimpleNamespace(brake=0.,longlCmdType=1,velocity=0.)
