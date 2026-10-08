@@ -87,7 +87,26 @@ LiDAR의 호환 어댑터가 기존 `/YOLO/BBox`로 변환하며 기본 `start_y
 객체만 검사할 때는 `python3 scripts/verify_perception_runtime.py --camera-objects --no-camera-lane`을 쓴다.
 모델·MD5·CPU/GPU·진단·롤백·증거는 [P2a 안내](../../docs/handoffs/perception/camera-objects-p2a.md)를 따른다.
 
+### YOLO11m COCO 80종 관측 실험
+
+기본 네 클래스는 유지한다. 전방 YOLO와 객체 overlay만 ACTIVE로 확인하려면 다음을
+실행한다. 신호등·정지표지판도 원본 라벨로 제공하지만 coarse obstacle 그룹이 판제의
+회피 대상 확정을 의미하지는 않는다. ResNet 신호 상태 판정과도 구분한다.
+
+```bash
+roslaunch asmc_camera camera_objects_coco_experiment.launch classes:=all
+```
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
+```
+
+이전 launch를 종료하고 `classes:=baseline`으로 바꾸면 네 클래스·같은 보넷 mask를
+비교한다. 이 launch는 TwinLite/BEV/차선·ResNet·LiDAR·rqt를 자동 실행하지 않는다.
+설정 파일·소비 경계·고정 비교와 검증 상태는 [클래스 확대 안내](../../docs/handoffs/perception/camera-coco-class-expansion.md)를 따른다.
+
 ### `camera_bev`와 `camera_bev_fusion`
+
 
 `camera_bev` 노드는 front/left/right 카메라의 semantic probability·road-marking을
 카메라별 calibration으로 `base_link` 평면에 각각 투영한다. 출력은

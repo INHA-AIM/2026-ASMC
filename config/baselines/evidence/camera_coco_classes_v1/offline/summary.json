@@ -1,0 +1,278 @@
+{
+  "models": {
+    "baseline": {
+      "backend": "ultralytics",
+      "weights": "/root/ws/src/asmc_camera/models/object_detection/yolo11m.pt",
+      "weights_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+      "device": "cuda:0",
+      "model_device": "cuda:0",
+      "ultralytics": "8.4.150",
+      "torch": "2.1.2+cu118",
+      "conf_thres": 0.7,
+      "allowed_names": [
+        "bus",
+        "truck",
+        "person",
+        "car"
+      ],
+      "predict_overrides": {
+        "iou": 0.7,
+        "max_det": 300,
+        "agnostic_nms": false
+      },
+      "warmup_ms": 515.3,
+      "model_load_ms": 337.12934897630475
+    },
+    "all": {
+      "backend": "ultralytics",
+      "weights": "/root/ws/src/asmc_camera/models/object_detection/yolo11m.pt",
+      "weights_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+      "device": "cuda:0",
+      "model_device": "cuda:0",
+      "ultralytics": "8.4.150",
+      "torch": "2.1.2+cu118",
+      "conf_thres": 0.7,
+      "allowed_names": [
+        "person",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "airplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light",
+        "fire hydrant",
+        "stop sign",
+        "parking meter",
+        "bench",
+        "bird",
+        "cat",
+        "dog",
+        "horse",
+        "sheep",
+        "cow",
+        "elephant",
+        "bear",
+        "zebra",
+        "giraffe",
+        "backpack",
+        "umbrella",
+        "handbag",
+        "tie",
+        "suitcase",
+        "frisbee",
+        "skis",
+        "snowboard",
+        "sports ball",
+        "kite",
+        "baseball bat",
+        "baseball glove",
+        "skateboard",
+        "surfboard",
+        "tennis racket",
+        "bottle",
+        "wine glass",
+        "cup",
+        "fork",
+        "knife",
+        "spoon",
+        "bowl",
+        "banana",
+        "apple",
+        "sandwich",
+        "orange",
+        "broccoli",
+        "carrot",
+        "hot dog",
+        "pizza",
+        "donut",
+        "cake",
+        "chair",
+        "couch",
+        "potted plant",
+        "bed",
+        "dining table",
+        "toilet",
+        "tv",
+        "laptop",
+        "mouse",
+        "remote",
+        "keyboard",
+        "cell phone",
+        "microwave",
+        "oven",
+        "toaster",
+        "sink",
+        "refrigerator",
+        "book",
+        "clock",
+        "vase",
+        "scissors",
+        "teddy bear",
+        "hair drier",
+        "toothbrush"
+      ],
+      "predict_overrides": {
+        "iou": 0.7,
+        "max_det": 300,
+        "agnostic_nms": false
+      },
+      "warmup_ms": 108.4,
+      "model_load_ms": 317.2572950134054
+    }
+  },
+  "mask": {
+    "enabled": true,
+    "config_sha256": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+    "polygon_normalized": [
+      [
+        0.051562,
+        0.998611
+      ],
+      [
+        0.947656,
+        0.998611
+      ],
+      [
+        0.821875,
+        0.888889
+      ],
+      [
+        0.786719,
+        0.863889
+      ],
+      [
+        0.748437,
+        0.843056
+      ],
+      [
+        0.650781,
+        0.816667
+      ],
+      [
+        0.539844,
+        0.806944
+      ],
+      [
+        0.377344,
+        0.8125
+      ],
+      [
+        0.313281,
+        0.823611
+      ],
+      [
+        0.257031,
+        0.840278
+      ],
+      [
+        0.2125,
+        0.863889
+      ],
+      [
+        0.177344,
+        0.888889
+      ]
+    ]
+  },
+  "experiment_config_sha256": "21fd6593baf4afb886b6ca3ff572dac7e90728a02330e07297bca29957f32876",
+  "bags": {
+    "camera": {
+      "frames": 3514,
+      "label_counts": {
+        "traffic light": 294,
+        "train": 27,
+        "bench": 4
+      },
+      "common_label_exact_frames": 3514,
+      "common_label_difference_frames": 0,
+      "gallery_selection": {
+        "bench": [
+          1661,
+          2056,
+          2057
+        ],
+        "traffic light": [
+          950,
+          1030,
+          1179,
+          1626
+        ],
+        "train": [
+          1645,
+          1681,
+          1682,
+          2741
+        ]
+      },
+      "expected_frames": 3514
+    },
+    "primary": {
+      "frames": 979,
+      "label_counts": {
+        "truck": 2,
+        "car": 330
+      },
+      "common_label_exact_frames": 979,
+      "common_label_difference_frames": 0,
+      "gallery_selection": {},
+      "expected_frames": null
+    },
+    "shadow": {
+      "frames": 494,
+      "label_counts": {},
+      "common_label_exact_frames": 494,
+      "common_label_difference_frames": 0,
+      "gallery_selection": {},
+      "expected_frames": null
+    }
+  },
+  "gt": {
+    "gt287": {
+      "frames": 287,
+      "manifest_sha256": "f5f763395ddcef3da6904a1de22729b9d6923622890faff10a5761fea19a053d",
+      "counts": {
+        "gt_person": 386,
+        "baseline_matches": 195,
+        "all_matches": 195,
+        "new_misses": 0,
+        "gt_vehicle": 540
+      },
+      "new_miss_frames": [],
+      "scope": "existing person/vehicle GT; new COCO categories lack independent GT"
+    },
+    "challenges39": {
+      "frames": 39,
+      "manifest_sha256": "b96a282ce59b23371194577ad6dcbcf239bcd30c0c5c1bbb2b29560975829249",
+      "counts": {
+        "gt_vehicle": 24,
+        "baseline_matches": 18,
+        "all_matches": 18,
+        "new_misses": 0
+      },
+      "new_miss_frames": [],
+      "scope": "existing person/vehicle GT; new COCO categories lack independent GT"
+    }
+  },
+  "gallery_review": "pending_user_review",
+  "semantics": "class coverage experiment; not camera-only driving acceptance",
+  "inference_ms": {
+    "baseline": {
+      "samples": 5313,
+      "p50": 7.638333016075194,
+      "p95": 14.273215405410154,
+      "p99": 15.523907822789624,
+      "maximum": 23.576323001179844
+    },
+    "all": {
+      "samples": 5313,
+      "p50": 7.640550989890471,
+      "p95": 14.176189014688134,
+      "p99": 15.60611536493525,
+      "maximum": 19.254122977145016
+    }
+  },
+  "complete": true
+}

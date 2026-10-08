@@ -1,0 +1,155 @@
+make[4]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+Scanning dependencies of target roslint_velodyne_pcl
+Done processing /tmp/boundary_nested/src/velodyne/velodyne_pcl/include/velodyne_pcl/point_types.h
+Total errors found: 0
+Built target roslint_velodyne_pcl
+-- run_tests.py: execute commands with working directory "/tmp/boundary_nested_build/velodyne/velodyne_pcl"
+  /opt/ros/noetic/share/roslint/cmake/../../../lib/roslint/test_wrapper /tmp/boundary_nested_build/test_results/velodyne_pcl/roslint-velodyne_pcl.xml make roslint_velodyne_pcl
+-- run_tests.py: verify result "/tmp/boundary_nested_build/test_results/velodyne_pcl/roslint-velodyne_pcl.xml"
+Built target _run_tests_velodyne_pcl_roslint_package
+Scanning dependencies of target _run_tests_velodyne_pointcloud_rostest
+Built target _run_tests_velodyne_pointcloud_rostest
+Scanning dependencies of target _run_tests_velodyne_pointcloud_roslaunch-check
+Built target _run_tests_velodyne_pointcloud_roslaunch-check
+Scanning dependencies of target _run_tests_velodyne_pointcloud_gtest
+Built target _run_tests_velodyne_pointcloud_gtest
+Scanning dependencies of target _run_tests_Main_gtest
+Built target _run_tests_Main_gtest
+Scanning dependencies of target _run_tests_Main_rostest
+Built target _run_tests_Main_rostest
+Scanning dependencies of target _run_tests_Main_nosetests
+Built target _run_tests_Main_nosetests
+Scanning dependencies of target _run_tests_velodyne_driver_roslaunch-check
+Built target _run_tests_velodyne_driver_roslaunch-check
+Scanning dependencies of target _run_tests_velodyne_driver_gtest
+Built target _run_tests_velodyne_driver_gtest
+Scanning dependencies of target _run_tests_velodyne_pcl_roslint
+Built target _run_tests_velodyne_pcl_roslint
+Scanning dependencies of target _run_tests_velodyne_pointcloud
+Built target _run_tests_velodyne_pointcloud
+Scanning dependencies of target _run_tests_Main
+Built target _run_tests_Main
+Scanning dependencies of target _run_tests_velodyne_pcl
+Built target _run_tests_velodyne_pcl
+WARNING: Package name "Msg" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+WARNING: Package name "Main" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+WARNING: Package name "Msg" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+WARNING: Package name "Main" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+WARNING: Package name "Msg" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+WARNING: Package name "Main" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+... logging to /root/.ros/log/rostest-9b828b86d822-236734.log
+[ROSUNIT] Outputting test results to /tmp/boundary_nested_build/test_results/velodyne_driver/rostest-tests_pcap_nodelet_hertz.xml
+[Testcase: testnodelet_diagnostics_test] ... ok
+[Testcase: testpcap_nodelet_hertz_test] ... ok
+
+[ROSTEST]-----------------------------------------------------------------------
+
+[velodyne_driver.rosunit-nodelet_diagnostics_test/test_hz][FAILURE]-------------
+False is not true : no messages before timeout
+  File "/usr/lib/python3.8/unittest/case.py", line 60, in testPartExecutor
+    yield
+  File "/usr/lib/python3.8/unittest/case.py", line 676, in run
+    self._callTestMethod(testMethod)
+  File "/usr/lib/python3.8/unittest/case.py", line 633, in _callTestMethod
+    method()
+  File "/opt/ros/noetic/share/rostest/nodes/hztest", line 117, in test_hz
+    self._test_hz(hz, hzerror, topic, test_duration, wait_time)
+  File "/opt/ros/noetic/share/rostest/nodes/hztest", line 152, in _test_hz
+    self.assertTrue(self.message_received, "no messages before timeout")
+  File "/usr/lib/python3.8/unittest/case.py", line 765, in assertTrue
+    raise self.failureException(msg)
+--------------------------------------------------------------------------------
+
+[velodyne_driver.rosunit-pcap_nodelet_hertz_test/test_hz][FAILURE]--------------
+False is not true : no messages before timeout
+  File "/usr/lib/python3.8/unittest/case.py", line 60, in testPartExecutor
+    yield
+  File "/usr/lib/python3.8/unittest/case.py", line 676, in run
+    self._callTestMethod(testMethod)
+  File "/usr/lib/python3.8/unittest/case.py", line 633, in _callTestMethod
+    method()
+  File "/opt/ros/noetic/share/rostest/nodes/hztest", line 117, in test_hz
+    self._test_hz(hz, hzerror, topic, test_duration, wait_time)
+  File "/opt/ros/noetic/share/rostest/nodes/hztest", line 152, in _test_hz
+    self.assertTrue(self.message_received, "no messages before timeout")
+  File "/usr/lib/python3.8/unittest/case.py", line 765, in assertTrue
+    raise self.failureException(msg)
+--------------------------------------------------------------------------------
+
+
+SUMMARY
+[1;31m * RESULT: FAIL[0m
+ * TESTS: 2
+ * ERRORS: 0
+[1;31m * FAILURES: 2[0m
+
+rostest log file is in /root/.ros/log/rostest-9b828b86d822-236734.log
+-- run_tests.py: execute commands
+  /usr/bin/python3 /opt/ros/noetic/share/rostest/cmake/../../../bin/rostest --pkgdir=/tmp/boundary_nested/src/velodyne/velodyne_driver --package=velodyne_driver --results-filename tests_pcap_nodelet_hertz.xml --results-base-dir "/tmp/boundary_nested_build/test_results" /tmp/boundary_nested/src/velodyne/velodyne_driver/tests/pcap_nodelet_hertz.test 
+-- run_tests.py: verify result "/tmp/boundary_nested_build/test_results/velodyne_driver/rostest-tests_pcap_nodelet_hertz.xml"
+Built target _run_tests_velodyne_driver_rostest_tests_pcap_nodelet_hertz.test
+Scanning dependencies of target _run_tests_velodyne_driver_rostest
+Built target _run_tests_velodyne_driver_rostest
+Scanning dependencies of target _run_tests_velodyne_driver
+Built target _run_tests_velodyne_driver
+WARNING: Package name "Msg" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+WARNING: Package name "Main" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+... logging to /root/.ros/log/rostest-9b828b86d822-237224.log
+[ROSUNIT] Outputting test results to /tmp/boundary_nested_build/test_results/velodyne_laserscan/rostest-tests_lazy_subscriber_node.xml
+[Testcase: testtest_lazy_subscriber_node] ... ok
+
+[ROSTEST]-----------------------------------------------------------------------
+
+[velodyne_laserscan.rosunit-test_lazy_subscriber_node/subscribe_unsubscribe][passed]
+
+SUMMARY
+[32m * RESULT: SUCCESS[0m
+ * TESTS: 1
+ * ERRORS: 0
+ * FAILURES: 0
+
+rostest log file is in /root/.ros/log/rostest-9b828b86d822-237224.log
+-- run_tests.py: execute commands
+  /usr/bin/python3 /opt/ros/noetic/share/rostest/cmake/../../../bin/rostest --pkgdir=/tmp/boundary_nested/src/velodyne/velodyne_laserscan --package=velodyne_laserscan --results-filename tests_lazy_subscriber_node.xml --results-base-dir "/tmp/boundary_nested_build/test_results" /tmp/boundary_nested/src/velodyne/velodyne_laserscan/tests/lazy_subscriber_node.test 
+-- run_tests.py: verify result "/tmp/boundary_nested_build/test_results/velodyne_laserscan/rostest-tests_lazy_subscriber_node.xml"
+Built target _run_tests_velodyne_laserscan_rostest_tests_lazy_subscriber_node.test
+WARNING: Package name "Msg" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+WARNING: Package name "Main" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+... logging to /root/.ros/log/rostest-9b828b86d822-237284.log
+[ROSUNIT] Outputting test results to /tmp/boundary_nested_build/test_results/velodyne_laserscan/rostest-tests_lazy_subscriber_nodelet.xml
+[Testcase: testtest_lazy_subscriber_nodelet] ... ok
+
+[ROSTEST]-----------------------------------------------------------------------
+
+[velodyne_laserscan.rosunit-test_lazy_subscriber_nodelet/subscribe_unsubscribe][passed]
+
+SUMMARY
+[32m * RESULT: SUCCESS[0m
+ * TESTS: 1
+ * ERRORS: 0
+ * FAILURES: 0
+
+rostest log file is in /root/.ros/log/rostest-9b828b86d822-237284.log
+-- run_tests.py: execute commands
+  /usr/bin/python3 /opt/ros/noetic/share/rostest/cmake/../../../bin/rostest --pkgdir=/tmp/boundary_nested/src/velodyne/velodyne_laserscan --package=velodyne_laserscan --results-filename tests_lazy_subscriber_nodelet.xml --results-base-dir "/tmp/boundary_nested_build/test_results" /tmp/boundary_nested/src/velodyne/velodyne_laserscan/tests/lazy_subscriber_nodelet.test 
+-- run_tests.py: verify result "/tmp/boundary_nested_build/test_results/velodyne_laserscan/rostest-tests_lazy_subscriber_nodelet.xml"
+Built target _run_tests_velodyne_laserscan_rostest_tests_lazy_subscriber_nodelet.test
+Scanning dependencies of target _run_tests_velodyne_laserscan_rostest
+Built target _run_tests_velodyne_laserscan_rostest
+Scanning dependencies of target _run_tests_velodyne_laserscan
+Built target _run_tests_velodyne_laserscan
+Scanning dependencies of target run_tests
+Built target run_tests
+WARNING: Package name "Msg" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+WARNING: Package name "Main" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.
+Base path: /tmp/boundary_nested
+Source space: /tmp/boundary_nested/src
+Build space: /tmp/boundary_nested_build
+Devel space: /tmp/boundary_nested_devel
+Install space: /tmp/boundary_nested/install
+####
+#### Running command: "make cmake_check_build_system" in "/tmp/boundary_nested_build"
+####
+####
+#### Running command: "make run_tests -j4" in "/tmp/boundary_nested_build"
+####

@@ -7,6 +7,8 @@
 > **대상:** LiDAR·센서융합 담당 손재호, 카메라 담당 안승현
 > **범위:** 기존 detector 즉시 사용, 경량 후보 선택, NAS Capture 데이터 fine-tune 준비
 > **현재 구현:** [P2a 생산자·어댑터](camera-objects-p2a.md). 학습·모델 선택·동시 부하는 후속 단계
+> **2026-10-08 카메라 다음 단계:** [YOLO11m COCO 클래스 확대](camera-coco-class-expansion.md)는
+> 기존 네 클래스 기본값과 LiDAR 호환 정책을 유지하는 별도 80종 관측 실험이다.
 
 > **2026-10-07 후속 연구:** [카메라와 LiDAR 장애물 융합 분석](camera-lidar-fusion-study.md)에
 > YOLO26 detect/seg, 공개 데이터·가중치, 터널 객체 분리와 full-stack 부하 비교를 정리했다.
