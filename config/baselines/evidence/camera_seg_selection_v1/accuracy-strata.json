@@ -1,0 +1,770 @@
+{
+  "baseline": {
+    "fixed_07": {
+      "confidence": 0.7,
+      "recall_by_proxy": [
+        {
+          "proxy": "all",
+          "group": "obstacle",
+          "gt": 2306,
+          "matched": 2,
+          "recall": 0.0008673026886383347
+        },
+        {
+          "proxy": "all",
+          "group": "person",
+          "gt": 348,
+          "matched": 57,
+          "recall": 0.16379310344827586
+        },
+        {
+          "proxy": "all",
+          "group": "vehicle",
+          "gt": 2710,
+          "matched": 168,
+          "recall": 0.06199261992619926
+        },
+        {
+          "proxy": "image_edge",
+          "group": "obstacle",
+          "gt": 132,
+          "matched": 2,
+          "recall": 0.015151515151515152
+        },
+        {
+          "proxy": "image_edge",
+          "group": "person",
+          "gt": 18,
+          "matched": 4,
+          "recall": 0.2222222222222222
+        },
+        {
+          "proxy": "image_edge",
+          "group": "vehicle",
+          "gt": 145,
+          "matched": 25,
+          "recall": 0.1724137931034483
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "obstacle",
+          "gt": 114,
+          "matched": 2,
+          "recall": 0.017543859649122806
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "person",
+          "gt": 3,
+          "matched": 3,
+          "recall": 1.0
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "vehicle",
+          "gt": 60,
+          "matched": 45,
+          "recall": 0.75
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "obstacle",
+          "gt": 262,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "person",
+          "gt": 19,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "vehicle",
+          "gt": 264,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "obstacle",
+          "gt": 1947,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "person",
+          "gt": 259,
+          "matched": 3,
+          "recall": 0.011583011583011582
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "vehicle",
+          "gt": 2405,
+          "matched": 1,
+          "recall": 0.0004158004158004158
+        }
+      ],
+      "visible_consecutive_intervals": {
+        "obstacle": 2131,
+        "person": 217,
+        "vehicle": 2321
+      },
+      "matched_to_missed_transitions": {
+        "obstacle": 0,
+        "person": 10,
+        "vehicle": 28
+      },
+      "actor_reappearances": {
+        "person": 114,
+        "vehicle": 269,
+        "obstacle": 130
+      },
+      "scope": "Capture consecutive frame IDs only; no missing GT frame interpolation; not 20Hz bag continuity",
+      "proximity_and_occlusion": "image-size/edge/fill proxies only; not metric distance or verified occlusion labels"
+    },
+    "selected": {
+      "confidence": 0.1,
+      "recall_by_proxy": [
+        {
+          "proxy": "all",
+          "group": "obstacle",
+          "gt": 2306,
+          "matched": 25,
+          "recall": 0.010841283607979185
+        },
+        {
+          "proxy": "all",
+          "group": "person",
+          "gt": 348,
+          "matched": 119,
+          "recall": 0.34195402298850575
+        },
+        {
+          "proxy": "all",
+          "group": "vehicle",
+          "gt": 2710,
+          "matched": 332,
+          "recall": 0.12250922509225093
+        },
+        {
+          "proxy": "image_edge",
+          "group": "obstacle",
+          "gt": 132,
+          "matched": 6,
+          "recall": 0.045454545454545456
+        },
+        {
+          "proxy": "image_edge",
+          "group": "person",
+          "gt": 18,
+          "matched": 12,
+          "recall": 0.6666666666666666
+        },
+        {
+          "proxy": "image_edge",
+          "group": "vehicle",
+          "gt": 145,
+          "matched": 57,
+          "recall": 0.3931034482758621
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "obstacle",
+          "gt": 114,
+          "matched": 11,
+          "recall": 0.09649122807017543
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "person",
+          "gt": 3,
+          "matched": 3,
+          "recall": 1.0
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "vehicle",
+          "gt": 60,
+          "matched": 52,
+          "recall": 0.8666666666666667
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "obstacle",
+          "gt": 262,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "person",
+          "gt": 19,
+          "matched": 1,
+          "recall": 0.05263157894736842
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "vehicle",
+          "gt": 264,
+          "matched": 2,
+          "recall": 0.007575757575757576
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "obstacle",
+          "gt": 1947,
+          "matched": 1,
+          "recall": 0.0005136106831022085
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "person",
+          "gt": 259,
+          "matched": 36,
+          "recall": 0.138996138996139
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "vehicle",
+          "gt": 2405,
+          "matched": 60,
+          "recall": 0.02494802494802495
+        }
+      ],
+      "visible_consecutive_intervals": {
+        "obstacle": 2131,
+        "person": 217,
+        "vehicle": 2321
+      },
+      "matched_to_missed_transitions": {
+        "obstacle": 5,
+        "person": 8,
+        "vehicle": 31
+      },
+      "actor_reappearances": {
+        "person": 114,
+        "vehicle": 269,
+        "obstacle": 130
+      },
+      "scope": "Capture consecutive frame IDs only; no missing GT frame interpolation; not 20Hz bag continuity",
+      "proximity_and_occlusion": "image-size/edge/fill proxies only; not metric distance or verified occlusion labels"
+    }
+  },
+  "yolo26": {
+    "fixed_07": {
+      "confidence": 0.7,
+      "recall_by_proxy": [
+        {
+          "proxy": "all",
+          "group": "obstacle",
+          "gt": 2306,
+          "matched": 1,
+          "recall": 0.0004336513443191674
+        },
+        {
+          "proxy": "all",
+          "group": "person",
+          "gt": 348,
+          "matched": 51,
+          "recall": 0.14655172413793102
+        },
+        {
+          "proxy": "all",
+          "group": "vehicle",
+          "gt": 2710,
+          "matched": 123,
+          "recall": 0.04538745387453875
+        },
+        {
+          "proxy": "image_edge",
+          "group": "obstacle",
+          "gt": 132,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "image_edge",
+          "group": "person",
+          "gt": 18,
+          "matched": 3,
+          "recall": 0.16666666666666666
+        },
+        {
+          "proxy": "image_edge",
+          "group": "vehicle",
+          "gt": 145,
+          "matched": 19,
+          "recall": 0.1310344827586207
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "obstacle",
+          "gt": 114,
+          "matched": 1,
+          "recall": 0.008771929824561403
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "person",
+          "gt": 3,
+          "matched": 3,
+          "recall": 1.0
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "vehicle",
+          "gt": 60,
+          "matched": 42,
+          "recall": 0.7
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "obstacle",
+          "gt": 262,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "person",
+          "gt": 19,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "vehicle",
+          "gt": 264,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "obstacle",
+          "gt": 1947,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "person",
+          "gt": 259,
+          "matched": 2,
+          "recall": 0.007722007722007722
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "vehicle",
+          "gt": 2405,
+          "matched": 0,
+          "recall": 0.0
+        }
+      ],
+      "visible_consecutive_intervals": {
+        "obstacle": 2131,
+        "person": 217,
+        "vehicle": 2321
+      },
+      "matched_to_missed_transitions": {
+        "obstacle": 0,
+        "person": 11,
+        "vehicle": 17
+      },
+      "actor_reappearances": {
+        "person": 114,
+        "vehicle": 269,
+        "obstacle": 130
+      },
+      "scope": "Capture consecutive frame IDs only; no missing GT frame interpolation; not 20Hz bag continuity",
+      "proximity_and_occlusion": "image-size/edge/fill proxies only; not metric distance or verified occlusion labels"
+    },
+    "selected": {
+      "confidence": 0.15,
+      "recall_by_proxy": [
+        {
+          "proxy": "all",
+          "group": "obstacle",
+          "gt": 2306,
+          "matched": 17,
+          "recall": 0.007372072853425846
+        },
+        {
+          "proxy": "all",
+          "group": "person",
+          "gt": 348,
+          "matched": 103,
+          "recall": 0.2959770114942529
+        },
+        {
+          "proxy": "all",
+          "group": "vehicle",
+          "gt": 2710,
+          "matched": 275,
+          "recall": 0.1014760147601476
+        },
+        {
+          "proxy": "image_edge",
+          "group": "obstacle",
+          "gt": 132,
+          "matched": 4,
+          "recall": 0.030303030303030304
+        },
+        {
+          "proxy": "image_edge",
+          "group": "person",
+          "gt": 18,
+          "matched": 9,
+          "recall": 0.5
+        },
+        {
+          "proxy": "image_edge",
+          "group": "vehicle",
+          "gt": 145,
+          "matched": 39,
+          "recall": 0.2689655172413793
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "obstacle",
+          "gt": 114,
+          "matched": 5,
+          "recall": 0.043859649122807015
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "person",
+          "gt": 3,
+          "matched": 3,
+          "recall": 1.0
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "vehicle",
+          "gt": 60,
+          "matched": 49,
+          "recall": 0.8166666666666667
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "obstacle",
+          "gt": 262,
+          "matched": 1,
+          "recall": 0.003816793893129771
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "person",
+          "gt": 19,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "vehicle",
+          "gt": 264,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "obstacle",
+          "gt": 1947,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "person",
+          "gt": 259,
+          "matched": 25,
+          "recall": 0.09652509652509653
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "vehicle",
+          "gt": 2405,
+          "matched": 34,
+          "recall": 0.014137214137214138
+        }
+      ],
+      "visible_consecutive_intervals": {
+        "obstacle": 2131,
+        "person": 217,
+        "vehicle": 2321
+      },
+      "matched_to_missed_transitions": {
+        "obstacle": 1,
+        "person": 8,
+        "vehicle": 28
+      },
+      "actor_reappearances": {
+        "person": 114,
+        "vehicle": 269,
+        "obstacle": 130
+      },
+      "scope": "Capture consecutive frame IDs only; no missing GT frame interpolation; not 20Hz bag continuity",
+      "proximity_and_occlusion": "image-size/edge/fill proxies only; not metric distance or verified occlusion labels"
+    }
+  },
+  "yoloe": {
+    "fixed_07": {
+      "confidence": 0.7,
+      "recall_by_proxy": [
+        {
+          "proxy": "all",
+          "group": "obstacle",
+          "gt": 2306,
+          "matched": 36,
+          "recall": 0.015611448395490026
+        },
+        {
+          "proxy": "all",
+          "group": "person",
+          "gt": 348,
+          "matched": 49,
+          "recall": 0.14080459770114942
+        },
+        {
+          "proxy": "all",
+          "group": "vehicle",
+          "gt": 2710,
+          "matched": 106,
+          "recall": 0.03911439114391144
+        },
+        {
+          "proxy": "image_edge",
+          "group": "obstacle",
+          "gt": 132,
+          "matched": 3,
+          "recall": 0.022727272727272728
+        },
+        {
+          "proxy": "image_edge",
+          "group": "person",
+          "gt": 18,
+          "matched": 4,
+          "recall": 0.2222222222222222
+        },
+        {
+          "proxy": "image_edge",
+          "group": "vehicle",
+          "gt": 145,
+          "matched": 18,
+          "recall": 0.12413793103448276
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "obstacle",
+          "gt": 114,
+          "matched": 6,
+          "recall": 0.05263157894736842
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "person",
+          "gt": 3,
+          "matched": 3,
+          "recall": 1.0
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "vehicle",
+          "gt": 60,
+          "matched": 40,
+          "recall": 0.6666666666666666
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "obstacle",
+          "gt": 262,
+          "matched": 3,
+          "recall": 0.011450381679389313
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "person",
+          "gt": 19,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "vehicle",
+          "gt": 264,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "obstacle",
+          "gt": 1947,
+          "matched": 1,
+          "recall": 0.0005136106831022085
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "person",
+          "gt": 259,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "vehicle",
+          "gt": 2405,
+          "matched": 0,
+          "recall": 0.0
+        }
+      ],
+      "visible_consecutive_intervals": {
+        "obstacle": 2131,
+        "person": 217,
+        "vehicle": 2321
+      },
+      "matched_to_missed_transitions": {
+        "obstacle": 6,
+        "person": 12,
+        "vehicle": 21
+      },
+      "actor_reappearances": {
+        "person": 114,
+        "vehicle": 269,
+        "obstacle": 130
+      },
+      "scope": "Capture consecutive frame IDs only; no missing GT frame interpolation; not 20Hz bag continuity",
+      "proximity_and_occlusion": "image-size/edge/fill proxies only; not metric distance or verified occlusion labels"
+    },
+    "selected": {
+      "confidence": 0.1,
+      "recall_by_proxy": [
+        {
+          "proxy": "all",
+          "group": "obstacle",
+          "gt": 2306,
+          "matched": 292,
+          "recall": 0.1266261925411969
+        },
+        {
+          "proxy": "all",
+          "group": "person",
+          "gt": 348,
+          "matched": 97,
+          "recall": 0.27873563218390807
+        },
+        {
+          "proxy": "all",
+          "group": "vehicle",
+          "gt": 2710,
+          "matched": 331,
+          "recall": 0.12214022140221402
+        },
+        {
+          "proxy": "image_edge",
+          "group": "obstacle",
+          "gt": 132,
+          "matched": 8,
+          "recall": 0.06060606060606061
+        },
+        {
+          "proxy": "image_edge",
+          "group": "person",
+          "gt": 18,
+          "matched": 8,
+          "recall": 0.4444444444444444
+        },
+        {
+          "proxy": "image_edge",
+          "group": "vehicle",
+          "gt": 145,
+          "matched": 54,
+          "recall": 0.3724137931034483
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "obstacle",
+          "gt": 114,
+          "matched": 13,
+          "recall": 0.11403508771929824
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "person",
+          "gt": 3,
+          "matched": 3,
+          "recall": 1.0
+        },
+        {
+          "proxy": "large_visible_box",
+          "group": "vehicle",
+          "gt": 60,
+          "matched": 52,
+          "recall": 0.8666666666666667
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "obstacle",
+          "gt": 262,
+          "matched": 6,
+          "recall": 0.022900763358778626
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "person",
+          "gt": 19,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "low_instance_fill",
+          "group": "vehicle",
+          "gt": 264,
+          "matched": 0,
+          "recall": 0.0
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "obstacle",
+          "gt": 1947,
+          "matched": 154,
+          "recall": 0.07909604519774012
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "person",
+          "gt": 259,
+          "matched": 22,
+          "recall": 0.08494208494208494
+        },
+        {
+          "proxy": "small_visible_box",
+          "group": "vehicle",
+          "gt": 2405,
+          "matched": 67,
+          "recall": 0.02785862785862786
+        }
+      ],
+      "visible_consecutive_intervals": {
+        "obstacle": 2131,
+        "person": 217,
+        "vehicle": 2321
+      },
+      "matched_to_missed_transitions": {
+        "obstacle": 20,
+        "person": 10,
+        "vehicle": 34
+      },
+      "actor_reappearances": {
+        "person": 114,
+        "vehicle": 269,
+        "obstacle": 130
+      },
+      "scope": "Capture consecutive frame IDs only; no missing GT frame interpolation; not 20Hz bag continuity",
+      "proximity_and_occlusion": "image-size/edge/fill proxies only; not metric distance or verified occlusion labels"
+    }
+  }
+}

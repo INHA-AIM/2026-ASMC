@@ -1,0 +1,50 @@
+{
+  "scope": "filename inventory plus stratified decoded samples; not full image/annotation acceptance",
+  "capture_runs": 18,
+  "paired_by_view": {
+    "front": 10030,
+    "left": 10030,
+    "right": 10030,
+    "traffic_light": 10030
+  },
+  "bbox2d_files_by_view": {
+    "front": 4223,
+    "left": 2706,
+    "right": 3345,
+    "traffic_light": 4004
+  },
+  "bbox2d_rows_by_label": {
+    "Obstacle": 11915,
+    "Truck": 3492,
+    "SUV": 4605,
+    "Pedestrian": 8403,
+    "Sedan": 10681,
+    "Vehicle": 5574,
+    "Bus": 946,
+    "MPV": 1054,
+    "Wagon": 636
+  },
+  "positive_samples": {
+    "box_rows_checked": 644,
+    "visible_mask_rows": 629,
+    "no_visible_mask_rows": 15,
+    "frames": 203
+  },
+  "bbox_files_missing_rgb": {
+    "front": 7,
+    "left": 8,
+    "right": 7,
+    "traffic_light": 4
+  },
+  "missing_bbox_sample_check": {
+    "frames": 157,
+    "frames_with_known_actor_semantic_pixels": 3,
+    "interpretation": "missing BBox is not automatically a negative; semantic checks and complete annotations required"
+  },
+  "aim_channels": {
+    "Intensity": 417435
+  },
+  "aim_capture_results": 174,
+  "native_result_training_visible_count": 0,
+  "note": "native result is not a blanket ban on derived manually annotated RGB; curate and validate independently; no new captures or model training performed"
+}

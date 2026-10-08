@@ -1,0 +1,18 @@
+[
+  {
+    "name": "YOLOE",
+    "url": "https://github.com/THU-MIG/yoloe",
+    "license": "AGPL-3.0",
+    "revision": "40cd606cabdbe2b566d6f14a6b162c89206e9a1b",
+    "clean": true,
+    "runtime_installed": false
+  },
+  {
+    "name": "YOLO-World",
+    "url": "https://github.com/AILab-CVC/YOLO-World",
+    "license": "GPL-3.0",
+    "revision": "4f70adbaacf5685bd9ec5bea85f1f91057f6fc0b",
+    "clean": true,
+    "runtime_installed": false
+  }
+]

@@ -1,0 +1,363 @@
+schema_version: 1
+experiment_id: camera_seg_selection_v1
+status: complete_model_selection_only
+runtime_revision: 89bc3d9
+parent_pr: 73
+parent_revision: 62981e657bd80a419b8e11d86861dec463339477
+base_main: a8c4f3b9dd15edee4d5b6434934ffe52011efcb8
+upstream_pr_merged: false
+model_selection:
+  model: yoloe
+  confidence: 0.1
+  macro_f1: 0.21576843277162086
+  mask_iou: 0.7438331208804849
+  p95_latency_ms: 28.020015498623252
+front_eligible:
+  yolo26: true
+  yoloe: true
+accuracy_scope: 3 evaluable groups; animal has no GT; selected threshold is experimental,
+  not operational
+accuracy:
+  yolo26:
+    fixed_07:
+      confidence: 0.7
+      metrics:
+        groups:
+          person:
+            evaluable: true
+            f1: 0.2556390977443609
+            recall: 0.14655172413793102
+            precision: 1.0
+            gt: 348
+            tp: 51
+            fn: 297
+            fp: 0
+          animal:
+            evaluable: false
+            gt: 0
+            tp: 0
+            fn: 0
+            fp: 0
+          vehicle:
+            evaluable: true
+            f1: 0.08658922914466737
+            recall: 0.04538745387453875
+            precision: 0.9389312977099237
+            gt: 2710
+            tp: 123
+            fn: 2587
+            fp: 8
+          obstacle:
+            evaluable: true
+            f1: 0.00072992700729927
+            recall: 0.0004336513443191674
+            precision: 0.002304147465437788
+            gt: 2306
+            tp: 1
+            fn: 2305
+            fp: 433
+        macro_f1: 0.11431941796544252
+        mask_iou: 0.8691419603722869
+        mask_pairs: 175
+        fine_names:
+          evaluated: 132
+          correct: 132
+    selected:
+      confidence: 0.15
+      metrics:
+        groups:
+          person:
+            evaluable: true
+            f1: 0.42916666666666664
+            recall: 0.2959770114942529
+            precision: 0.7803030303030303
+            gt: 348
+            tp: 103
+            fn: 245
+            fp: 29
+          animal:
+            evaluable: false
+            gt: 0
+            tp: 0
+            fn: 0
+            fp: 2
+          vehicle:
+            evaluable: true
+            f1: 0.17033137194177764
+            recall: 0.1014760147601476
+            precision: 0.5298651252408478
+            gt: 2710
+            tp: 275
+            fn: 2435
+            fp: 244
+          obstacle:
+            evaluable: true
+            f1: 0.006320877486521658
+            recall: 0.007372072853425846
+            precision: 0.005532053368044257
+            gt: 2306
+            tp: 17
+            fn: 2289
+            fp: 3056
+        macro_f1: 0.201939638698322
+        mask_iou: 0.8231683031135781
+        mask_pairs: 395
+        fine_names:
+          evaluated: 306
+          correct: 261
+  yoloe:
+    fixed_07:
+      confidence: 0.7
+      metrics:
+        groups:
+          person:
+            evaluable: true
+            f1: 0.24623115577889448
+            recall: 0.14080459770114942
+            precision: 0.98
+            gt: 348
+            tp: 49
+            fn: 299
+            fp: 1
+          animal:
+            evaluable: false
+            gt: 0
+            tp: 0
+            fn: 0
+            fp: 0
+          vehicle:
+            evaluable: true
+            f1: 0.07491166077738516
+            recall: 0.03911439114391144
+            precision: 0.8833333333333333
+            gt: 2710
+            tp: 106
+            fn: 2604
+            fp: 14
+          obstacle:
+            evaluable: true
+            f1: 0.02869669190912714
+            recall: 0.015611448395490026
+            precision: 0.17733990147783252
+            gt: 2306
+            tp: 36
+            fn: 2270
+            fp: 167
+        macro_f1: 0.11661316948846893
+        mask_iou: 0.8538702792112928
+        mask_pairs: 191
+        fine_names:
+          evaluated: 111
+          correct: 108
+    selected:
+      confidence: 0.1
+      metrics:
+        groups:
+          person:
+            evaluable: true
+            f1: 0.4
+            recall: 0.27873563218390807
+            precision: 0.708029197080292
+            gt: 348
+            tp: 97
+            fn: 251
+            fp: 40
+          animal:
+            evaluable: false
+            gt: 0
+            tp: 0
+            fn: 0
+            fp: 0
+          vehicle:
+            evaluable: true
+            f1: 0.1758767268862912
+            recall: 0.12214022140221402
+            precision: 0.31404174573055027
+            gt: 2710
+            tp: 331
+            fn: 2379
+            fp: 723
+          obstacle:
+            evaluable: true
+            f1: 0.07142857142857142
+            recall: 0.1266261925411969
+            precision: 0.049744463373083476
+            gt: 2306
+            tp: 292
+            fn: 2014
+            fp: 5578
+        macro_f1: 0.21576843277162086
+        mask_iou: 0.7438331208804849
+        mask_pairs: 720
+        fine_names:
+          evaluated: 346
+          correct: 282
+camera_performance_hz:
+  yolo26:
+    front:
+      min: 19.694508337008582
+      max: 19.898033083389468
+    all:
+      min: 18.698276983701373
+      max: 19.696381394586847
+  yoloe:
+    front:
+      min: 19.59583654510246
+      max: 19.943688473758332
+    all:
+      min: 18.344125447003602
+      max: 19.596924645798985
+camera_latency:
+  yolo26:
+    front:
+      maximum_p95_wall_ms: 29.82282111479435
+    all:
+      maximum_p95_wall_ms: 82.11238259100355
+  yoloe:
+    front:
+      maximum_p95_wall_ms: 30.275956797413528
+    all:
+      maximum_p95_wall_ms: 85.56664258940145
+protocol:
+  complete: true
+  total: 54
+  passed: 50
+  failed:
+  - camera-camera-yolo26-front-C4-r1
+  - camera-camera-yoloe-front-C4-r1
+  - camera-camera-yolo26-all-C4-r2
+  - camera-camera-yoloe-front-C5-r3
+gt:
+  counts:
+    frames: 30090
+    train_frames: 24423
+    annotations: 32966
+    complete_frames: 15259
+    train_complete: 10533
+    quarantined_frames: 14831
+    selection_frames: 2271
+    selection_complete: 2252
+    heldout_frames: 3396
+    heldout_complete: 2474
+  splits:
+    20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel: train
+    20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel: train
+    kcity_auto_sunny_003: train
+    20260903_225540_kcity_comp_sample_foggy_sim11am_wheel: train
+    20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel: train
+    20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel: train
+    20260903_213829_kcity_comp_sample_sunny_sim11am_wheel: train
+    20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel: train
+    kcity_drive_002: train
+    kcity_drive_001: train
+    20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel: train
+    20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel: train
+    20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel: selection
+    20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel: selection
+    20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel: selection
+    kcity_drive_003: heldout
+    20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel: heldout
+    20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel: heldout
+  unverified_palette_runs:
+  - kcity_auto_sunny_003
+  - kcity_drive_001
+  - kcity_drive_002
+  - kcity_drive_003
+  manifest_sha256: ed2cefea5274c3366e2514b983ace614532a3926697be5e5d2ba68c0404cf968
+  initial_manifest_sha256: ea4e66727e0a40d881af921d64f704189189f062b19a44618798517f8562f627
+  selection_rows_identity:
+    gt-v1:
+      selection_frames: 2252
+      selection_rows_sha256: 4f114a5373fe78f3196eb26ab9e66cc750d6f6003f7e9b5d0409184153debf53
+    gt-v2:
+      selection_frames: 2252
+      selection_rows_sha256: 4f114a5373fe78f3196eb26ab9e66cc750d6f6003f7e9b5d0409184153debf53
+  animal_gt_present: false
+  subtype_labels_manually_verified: false
+  missing_rgb_count: 26
+fusion:
+  primary-yolo26:
+    baseline_matched:
+    - 538
+    - 535
+    candidate_matched:
+    - 536
+    - 534
+    matched_not_degraded: false
+    classification_gate_pass: false
+    prior_exceptions_applied: false
+    stable_classification_differences: 1
+  primary-yoloe:
+    baseline_matched:
+    - 538
+    - 535
+    candidate_matched:
+    - 532
+    - 531
+    matched_not_degraded: false
+    classification_gate_pass: false
+    prior_exceptions_applied: false
+    stable_classification_differences: 6
+  shadow-yolo26:
+    baseline_matched:
+    - 191
+    - 190
+    candidate_matched:
+    - 191
+    - 193
+    matched_not_degraded: true
+    classification_gate_pass: true
+    prior_exceptions_applied: false
+    stable_classification_differences: 0
+  shadow-yoloe:
+    baseline_matched:
+    - 191
+    - 190
+    candidate_matched:
+    - 192
+    - 194
+    matched_not_degraded: true
+    classification_gate_pass: true
+    prior_exceptions_applied: false
+    stable_classification_differences: 0
+operational_fusion_acceptance: false
+mask_support:
+  samples: 144
+  models:
+    yolo26:
+      boxes: 15
+      box_points: 2387
+      mask_points: 1925
+    yoloe:
+      boxes: 16
+      box_points: 2127
+      mask_points: 1749
+  coordinate: raw velodyne -> fixed lidar mount -> base_link -> front optical; no
+    leveling inverse
+  calibration_sha256: 86d36e10f5ca1f9b32d201b3222e4328a63d9ff1452b49defec07c7b2ca806ec
+  sensors_sha256: 4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f
+  operational_fusion_changed: false
+  gt_accuracy_evaluable: false
+  scope: offline nearest raw scan within 50ms; 1s camera samples; no arrival policy,
+    depth visibility or GT semantic labels
+  warning: fewer points can remove object points; support reduction is not wall-removal
+    or object-preservation accuracy
+regression:
+  exact_parity_frames: 3514
+  parity_errors: 0
+  parity_exceptions: 0
+  outer_catkin_tests: 288
+  outer_failures: 1
+  known_facade_failure: 'test_planning_launches_use_the_canonical_traffic_light_model:
+    autonomy_no_bridges_v2.launch traffic_light true instead of false'
+  nested_tests: 296
+  nested_failures: 0
+  seg_ros_contract: true
+training_performed: false
+heldout_inferred: false
+operational_defaults_changed: false
+lidar_algorithms_changed: false
+raw_evidence: config/baselines/evidence/camera_seg_selection_v1/raw-manifest.json
+comparison_gallery: config/baselines/evidence/camera_seg_selection_v1/gallery/index.html
+mask_support_gallery: config/baselines/evidence/camera_seg_selection_v1/mask-support-gallery/index.html
+handoff: docs/handoffs/perception/camera-seg-model-selection.md

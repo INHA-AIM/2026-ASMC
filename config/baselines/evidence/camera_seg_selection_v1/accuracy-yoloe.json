@@ -1,0 +1,1068 @@
+{
+  "selection_frames": 2252,
+  "thresholds": [
+    {
+      "confidence": 0.1,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.4,
+            "recall": 0.27873563218390807,
+            "precision": 0.708029197080292,
+            "gt": 348,
+            "tp": 97,
+            "fn": 251,
+            "fp": 40
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.1758767268862912,
+            "recall": 0.12214022140221402,
+            "precision": 0.31404174573055027,
+            "gt": 2710,
+            "tp": 331,
+            "fn": 2379,
+            "fp": 723
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.07142857142857142,
+            "recall": 0.1266261925411969,
+            "precision": 0.049744463373083476,
+            "gt": 2306,
+            "tp": 292,
+            "fn": 2014,
+            "fp": 5578
+          }
+        },
+        "macro_f1": 0.21576843277162086,
+        "mask_iou": 0.7438331208804849,
+        "mask_pairs": 720,
+        "fine_names": {
+          "evaluated": 346,
+          "correct": 282
+        }
+      }
+    },
+    {
+      "confidence": 0.15,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.4043010752688172,
+            "recall": 0.27011494252873564,
+            "precision": 0.8034188034188035,
+            "gt": 348,
+            "tp": 94,
+            "fn": 254,
+            "fp": 23
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.17306590257879656,
+            "recall": 0.11143911439114391,
+            "precision": 0.3871794871794872,
+            "gt": 2710,
+            "tp": 302,
+            "fn": 2408,
+            "fp": 478
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.06795277857759861,
+            "recall": 0.1023417172593235,
+            "precision": 0.05086206896551724,
+            "gt": 2306,
+            "tp": 236,
+            "fn": 2070,
+            "fp": 4404
+          }
+        },
+        "macro_f1": 0.2151065854750708,
+        "mask_iou": 0.7498228058559374,
+        "mask_pairs": 632,
+        "fine_names": {
+          "evaluated": 325,
+          "correct": 271
+        }
+      }
+    },
+    {
+      "confidence": 0.2,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.4,
+            "recall": 0.2614942528735632,
+            "precision": 0.8504672897196262,
+            "gt": 348,
+            "tp": 91,
+            "fn": 257,
+            "fp": 16
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.16967509025270758,
+            "recall": 0.10405904059040591,
+            "precision": 0.4592833876221498,
+            "gt": 2710,
+            "tp": 282,
+            "fn": 2428,
+            "fp": 332
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.06782945736434108,
+            "recall": 0.09106678230702515,
+            "precision": 0.05404014410705095,
+            "gt": 2306,
+            "tp": 210,
+            "fn": 2096,
+            "fp": 3676
+          }
+        },
+        "macro_f1": 0.21250151587234956,
+        "mask_iou": 0.7644230229836932,
+        "mask_pairs": 583,
+        "fine_names": {
+          "evaluated": 304,
+          "correct": 255
+        }
+      }
+    },
+    {
+      "confidence": 0.25,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.39555555555555555,
+            "recall": 0.2557471264367816,
+            "precision": 0.8725490196078431,
+            "gt": 348,
+            "tp": 89,
+            "fn": 259,
+            "fp": 13
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.16708229426433915,
+            "recall": 0.0988929889298893,
+            "precision": 0.5381526104417671,
+            "gt": 2710,
+            "tp": 268,
+            "fn": 2442,
+            "fp": 230
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.07098710930602155,
+            "recall": 0.08716392020815264,
+            "precision": 0.05987488829311886,
+            "gt": 2306,
+            "tp": 201,
+            "fn": 2105,
+            "fp": 3156
+          }
+        },
+        "macro_f1": 0.21120831970863876,
+        "mask_iou": 0.7696364508423413,
+        "mask_pairs": 558,
+        "fine_names": {
+          "evaluated": 289,
+          "correct": 246
+        }
+      }
+    },
+    {
+      "confidence": 0.3,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.39461883408071746,
+            "recall": 0.25287356321839083,
+            "precision": 0.8979591836734694,
+            "gt": 348,
+            "tp": 88,
+            "fn": 260,
+            "fp": 10
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.15844734330257715,
+            "recall": 0.0918819188191882,
+            "precision": 0.5750577367205543,
+            "gt": 2710,
+            "tp": 249,
+            "fn": 2461,
+            "fp": 184
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.07391803906549214,
+            "recall": 0.0836947094535993,
+            "precision": 0.06618655692729766,
+            "gt": 2306,
+            "tp": 193,
+            "fn": 2113,
+            "fp": 2723
+          }
+        },
+        "macro_f1": 0.2089947388162622,
+        "mask_iou": 0.77087306356235,
+        "mask_pairs": 530,
+        "fine_names": {
+          "evaluated": 272,
+          "correct": 237
+        }
+      }
+    },
+    {
+      "confidence": 0.35,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.38461538461538464,
+            "recall": 0.2442528735632184,
+            "precision": 0.9042553191489362,
+            "gt": 348,
+            "tp": 85,
+            "fn": 263,
+            "fp": 9
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.1479806138933764,
+            "recall": 0.08450184501845018,
+            "precision": 0.5948051948051948,
+            "gt": 2710,
+            "tp": 229,
+            "fn": 2481,
+            "fp": 156
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.07187630589218554,
+            "recall": 0.0745880312228968,
+            "precision": 0.06935483870967742,
+            "gt": 2306,
+            "tp": 172,
+            "fn": 2134,
+            "fp": 2308
+          }
+        },
+        "macro_f1": 0.20149076813364886,
+        "mask_iou": 0.774727782497436,
+        "mask_pairs": 486,
+        "fine_names": {
+          "evaluated": 254,
+          "correct": 223
+        }
+      }
+    },
+    {
+      "confidence": 0.4,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.37813211845102507,
+            "recall": 0.23850574712643677,
+            "precision": 0.9120879120879121,
+            "gt": 348,
+            "tp": 83,
+            "fn": 265,
+            "fp": 8
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.1429977041653001,
+            "recall": 0.08044280442804429,
+            "precision": 0.6430678466076696,
+            "gt": 2710,
+            "tp": 218,
+            "fn": 2492,
+            "fp": 121
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.05086327578161456,
+            "recall": 0.047267996530789246,
+            "precision": 0.05505050505050505,
+            "gt": 2306,
+            "tp": 109,
+            "fn": 2197,
+            "fp": 1871
+          }
+        },
+        "macro_f1": 0.1906643661326466,
+        "mask_iou": 0.803232524895964,
+        "mask_pairs": 410,
+        "fine_names": {
+          "evaluated": 243,
+          "correct": 215
+        }
+      }
+    },
+    {
+      "confidence": 0.45,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.3724137931034483,
+            "recall": 0.23275862068965517,
+            "precision": 0.9310344827586207,
+            "gt": 348,
+            "tp": 81,
+            "fn": 267,
+            "fp": 6
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.13466666666666666,
+            "recall": 0.07453874538745388,
+            "precision": 0.696551724137931,
+            "gt": 2710,
+            "tp": 202,
+            "fn": 2508,
+            "fp": 88
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.042077922077922075,
+            "recall": 0.03512575888985256,
+            "precision": 0.052461139896373056,
+            "gt": 2306,
+            "tp": 81,
+            "fn": 2225,
+            "fp": 1463
+          }
+        },
+        "macro_f1": 0.18305279394934568,
+        "mask_iou": 0.8130569962877389,
+        "mask_pairs": 364,
+        "fine_names": {
+          "evaluated": 227,
+          "correct": 203
+        }
+      }
+    },
+    {
+      "confidence": 0.5,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.3543123543123543,
+            "recall": 0.21839080459770116,
+            "precision": 0.9382716049382716,
+            "gt": 348,
+            "tp": 76,
+            "fn": 272,
+            "fp": 5
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.1250422440013518,
+            "recall": 0.06826568265682657,
+            "precision": 0.7429718875502008,
+            "gt": 2710,
+            "tp": 185,
+            "fn": 2525,
+            "fp": 64
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.032441661923733635,
+            "recall": 0.024718126626192542,
+            "precision": 0.04718543046357616,
+            "gt": 2306,
+            "tp": 57,
+            "fn": 2249,
+            "fp": 1151
+          }
+        },
+        "macro_f1": 0.1705987534124799,
+        "mask_iou": 0.8321430384172877,
+        "mask_pairs": 318,
+        "fine_names": {
+          "evaluated": 207,
+          "correct": 186
+        }
+      }
+    },
+    {
+      "confidence": 0.55,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.33569739952718675,
+            "recall": 0.20402298850574713,
+            "precision": 0.9466666666666667,
+            "gt": 348,
+            "tp": 71,
+            "fn": 277,
+            "fp": 4
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.11660415956358677,
+            "recall": 0.06309963099630997,
+            "precision": 0.7668161434977578,
+            "gt": 2710,
+            "tp": 171,
+            "fn": 2539,
+            "fp": 52
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.031687995124923825,
+            "recall": 0.022549869904596703,
+            "precision": 0.05327868852459016,
+            "gt": 2306,
+            "tp": 52,
+            "fn": 2254,
+            "fp": 924
+          }
+        },
+        "macro_f1": 0.16132985140523246,
+        "mask_iou": 0.8376529388023242,
+        "mask_pairs": 294,
+        "fine_names": {
+          "evaluated": 193,
+          "correct": 174
+        }
+      }
+    },
+    {
+      "confidence": 0.6,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.3238095238095238,
+            "recall": 0.19540229885057472,
+            "precision": 0.9444444444444444,
+            "gt": 348,
+            "tp": 68,
+            "fn": 280,
+            "fp": 4
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.10743801652892562,
+            "recall": 0.057564575645756455,
+            "precision": 0.8041237113402062,
+            "gt": 2710,
+            "tp": 156,
+            "fn": 2554,
+            "fp": 38
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.03208556149732621,
+            "recall": 0.020815264527320035,
+            "precision": 0.06997084548104957,
+            "gt": 2306,
+            "tp": 48,
+            "fn": 2258,
+            "fp": 638
+          }
+        },
+        "macro_f1": 0.1544443672785919,
+        "mask_iou": 0.839130289771222,
+        "mask_pairs": 272,
+        "fine_names": {
+          "evaluated": 175,
+          "correct": 164
+        }
+      }
+    },
+    {
+      "confidence": 0.65,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.29539951573849876,
+            "recall": 0.1752873563218391,
+            "precision": 0.9384615384615385,
+            "gt": 348,
+            "tp": 61,
+            "fn": 287,
+            "fp": 4
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.09141660851360782,
+            "recall": 0.048339483394833946,
+            "precision": 0.8397435897435898,
+            "gt": 2710,
+            "tp": 131,
+            "fn": 2579,
+            "fp": 25
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.03414996288047513,
+            "recall": 0.0199479618386817,
+            "precision": 0.11855670103092783,
+            "gt": 2306,
+            "tp": 46,
+            "fn": 2260,
+            "fp": 342
+          }
+        },
+        "macro_f1": 0.1403220290441939,
+        "mask_iou": 0.8437895319249155,
+        "mask_pairs": 238,
+        "fine_names": {
+          "evaluated": 146,
+          "correct": 138
+        }
+      }
+    },
+    {
+      "confidence": 0.7,
+      "metrics": {
+        "groups": {
+          "person": {
+            "evaluable": true,
+            "f1": 0.24623115577889448,
+            "recall": 0.14080459770114942,
+            "precision": 0.98,
+            "gt": 348,
+            "tp": 49,
+            "fn": 299,
+            "fp": 1
+          },
+          "animal": {
+            "evaluable": false,
+            "gt": 0,
+            "tp": 0,
+            "fn": 0,
+            "fp": 0
+          },
+          "vehicle": {
+            "evaluable": true,
+            "f1": 0.07491166077738516,
+            "recall": 0.03911439114391144,
+            "precision": 0.8833333333333333,
+            "gt": 2710,
+            "tp": 106,
+            "fn": 2604,
+            "fp": 14
+          },
+          "obstacle": {
+            "evaluable": true,
+            "f1": 0.02869669190912714,
+            "recall": 0.015611448395490026,
+            "precision": 0.17733990147783252,
+            "gt": 2306,
+            "tp": 36,
+            "fn": 2270,
+            "fp": 167
+          }
+        },
+        "macro_f1": 0.11661316948846893,
+        "mask_iou": 0.8538702792112928,
+        "mask_pairs": 191,
+        "fine_names": {
+          "evaluated": 111,
+          "correct": 108
+        }
+      }
+    }
+  ],
+  "selected_threshold": {
+    "confidence": 0.1,
+    "metrics": {
+      "groups": {
+        "person": {
+          "evaluable": true,
+          "f1": 0.4,
+          "recall": 0.27873563218390807,
+          "precision": 0.708029197080292,
+          "gt": 348,
+          "tp": 97,
+          "fn": 251,
+          "fp": 40
+        },
+        "animal": {
+          "evaluable": false,
+          "gt": 0,
+          "tp": 0,
+          "fn": 0,
+          "fp": 0
+        },
+        "vehicle": {
+          "evaluable": true,
+          "f1": 0.1758767268862912,
+          "recall": 0.12214022140221402,
+          "precision": 0.31404174573055027,
+          "gt": 2710,
+          "tp": 331,
+          "fn": 2379,
+          "fp": 723
+        },
+        "obstacle": {
+          "evaluable": true,
+          "f1": 0.07142857142857142,
+          "recall": 0.1266261925411969,
+          "precision": 0.049744463373083476,
+          "gt": 2306,
+          "tp": 292,
+          "fn": 2014,
+          "fp": 5578
+        }
+      },
+      "macro_f1": 0.21576843277162086,
+      "mask_iou": 0.7438331208804849,
+      "mask_pairs": 720,
+      "fine_names": {
+        "evaluated": 346,
+        "correct": 282
+      }
+    }
+  },
+  "fixed_07": {
+    "confidence": 0.7,
+    "metrics": {
+      "groups": {
+        "person": {
+          "evaluable": true,
+          "f1": 0.24623115577889448,
+          "recall": 0.14080459770114942,
+          "precision": 0.98,
+          "gt": 348,
+          "tp": 49,
+          "fn": 299,
+          "fp": 1
+        },
+        "animal": {
+          "evaluable": false,
+          "gt": 0,
+          "tp": 0,
+          "fn": 0,
+          "fp": 0
+        },
+        "vehicle": {
+          "evaluable": true,
+          "f1": 0.07491166077738516,
+          "recall": 0.03911439114391144,
+          "precision": 0.8833333333333333,
+          "gt": 2710,
+          "tp": 106,
+          "fn": 2604,
+          "fp": 14
+        },
+        "obstacle": {
+          "evaluable": true,
+          "f1": 0.02869669190912714,
+          "recall": 0.015611448395490026,
+          "precision": 0.17733990147783252,
+          "gt": 2306,
+          "tp": 36,
+          "fn": 2270,
+          "fp": 167
+        }
+      },
+      "macro_f1": 0.11661316948846893,
+      "mask_iou": 0.8538702792112928,
+      "mask_pairs": 191,
+      "fine_names": {
+        "evaluated": 111,
+        "correct": 108
+      }
+    }
+  },
+  "model": {
+    "backend": "ultralytics",
+    "model_kind": "yoloe",
+    "prompt_embeddings_sha256": "fc680dca84439aaca9fa64e1c2637a833e57bda9ccae24ceed714a1e36a08dd5",
+    "weights": "/data/models/camera_seg_v1/yoloe-26s-seg.pt",
+    "weights_sha256": "48f24206bc8680d60cbbfa296b0140da849669b9515058b72f5a945142df0654",
+    "device": "cuda:0",
+    "model_device": "cuda:0",
+    "ultralytics": "8.4.150",
+    "torch": "2.1.2+cu118",
+    "conf_thres": 0.1,
+    "allowed_names": [
+      "person",
+      "bicycle",
+      "car",
+      "motorcycle",
+      "airplane",
+      "bus",
+      "train",
+      "truck",
+      "boat",
+      "traffic light",
+      "fire hydrant",
+      "stop sign",
+      "parking meter",
+      "bench",
+      "bird",
+      "cat",
+      "dog",
+      "horse",
+      "sheep",
+      "cow",
+      "elephant",
+      "bear",
+      "zebra",
+      "giraffe",
+      "backpack",
+      "umbrella",
+      "handbag",
+      "tie",
+      "suitcase",
+      "frisbee",
+      "skis",
+      "snowboard",
+      "sports ball",
+      "kite",
+      "baseball bat",
+      "baseball glove",
+      "skateboard",
+      "surfboard",
+      "tennis racket",
+      "bottle",
+      "wine glass",
+      "cup",
+      "fork",
+      "knife",
+      "spoon",
+      "bowl",
+      "banana",
+      "apple",
+      "sandwich",
+      "orange",
+      "broccoli",
+      "carrot",
+      "hot dog",
+      "pizza",
+      "donut",
+      "cake",
+      "chair",
+      "couch",
+      "potted plant",
+      "bed",
+      "dining table",
+      "toilet",
+      "tv",
+      "laptop",
+      "mouse",
+      "remote",
+      "keyboard",
+      "cell phone",
+      "microwave",
+      "oven",
+      "toaster",
+      "sink",
+      "refrigerator",
+      "book",
+      "clock",
+      "vase",
+      "scissors",
+      "teddy bear",
+      "hair drier",
+      "toothbrush",
+      "traffic cone",
+      "wooden crate",
+      "cardboard box",
+      "barrel",
+      "barricade",
+      "rock pile",
+      "stroller",
+      "deer",
+      "electric scooter"
+    ],
+    "predict_overrides": {
+      "iou": 0.7,
+      "max_det": 300,
+      "agnostic_nms": false,
+      "imgsz": 640,
+      "half": false,
+      "end2end": true
+    },
+    "warmup_ms": 1362.9,
+    "model_load_ms": 400.83477398729883
+  },
+  "hood": {
+    "enabled": true,
+    "config_sha256": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+    "polygon_normalized": [
+      [
+        0.051562,
+        0.998611
+      ],
+      [
+        0.947656,
+        0.998611
+      ],
+      [
+        0.821875,
+        0.888889
+      ],
+      [
+        0.786719,
+        0.863889
+      ],
+      [
+        0.748437,
+        0.843056
+      ],
+      [
+        0.650781,
+        0.816667
+      ],
+      [
+        0.539844,
+        0.806944
+      ],
+      [
+        0.377344,
+        0.8125
+      ],
+      [
+        0.313281,
+        0.823611
+      ],
+      [
+        0.257031,
+        0.840278
+      ],
+      [
+        0.2125,
+        0.863889
+      ],
+      [
+        0.177344,
+        0.888889
+      ]
+    ],
+    "image_width": 1280,
+    "image_height": 720,
+    "polygon_pixels": [
+      [
+        65,
+        718
+      ],
+      [
+        1212,
+        718
+      ],
+      [
+        1052,
+        640
+      ],
+      [
+        1007,
+        622
+      ],
+      [
+        957,
+        607
+      ],
+      [
+        832,
+        588
+      ],
+      [
+        691,
+        580
+      ],
+      [
+        483,
+        585
+      ],
+      [
+        400,
+        592
+      ],
+      [
+        328,
+        605
+      ],
+      [
+        272,
+        622
+      ],
+      [
+        227,
+        640
+      ]
+    ],
+    "excluded_pixels": 114058
+  },
+  "source_config_sha256": "c23ed41e00fa70d0c925cd00e84c4c4ab4183433d7d3ceaf7e96e5cd1f397192",
+  "gt_manifest_sha256": "ea4e66727e0a40d881af921d64f704189189f062b19a44618798517f8562f627",
+  "input_latency_ms": {
+    "p50": 18.107880983734503,
+    "p95": 30.96451715100556,
+    "p99": 40.45630463835519
+  },
+  "labels": {
+    "truck": 321,
+    "traffic light": 728,
+    "clock": 39,
+    "car": 363,
+    "bench": 458,
+    "wooden crate": 60,
+    "person": 137,
+    "skateboard": 13,
+    "handbag": 11,
+    "backpack": 11,
+    "bus": 142,
+    "train": 225,
+    "fire hydrant": 4,
+    "traffic cone": 270,
+    "boat": 39,
+    "barricade": 12,
+    "chair": 544,
+    "parking meter": 6,
+    "barrel": 123,
+    "cup": 51,
+    "stop sign": 9,
+    "rock pile": 2,
+    "airplane": 3303,
+    "laptop": 17,
+    "baseball bat": 25,
+    "cell phone": 195,
+    "umbrella": 19,
+    "frisbee": 178,
+    "surfboard": 61,
+    "suitcase": 9,
+    "kite": 239,
+    "snowboard": 16,
+    "cardboard box": 1,
+    "bicycle": 3,
+    "toothbrush": 34,
+    "scissors": 46,
+    "mouse": 2,
+    "keyboard": 4,
+    "skis": 5,
+    "cake": 48,
+    "sports ball": 1,
+    "banana": 2,
+    "carrot": 6,
+    "tv": 3,
+    "bottle": 12,
+    "bowl": 4,
+    "dining table": 1,
+    "knife": 5,
+    "remote": 1
+  },
+  "matched_to_missed_transitions": {
+    "obstacle": 13,
+    "person": 18,
+    "vehicle": 24
+  },
+  "observed_gt_frames": {
+    "obstacle": 2306,
+    "person": 348,
+    "vehicle": 2710
+  },
+  "temporal_scope": "visible GT actor/run/view only; no absent-actor interpolation",
+  "excluded_infrastructure": [
+    "fire hydrant",
+    "parking meter",
+    "stop sign",
+    "traffic light"
+  ],
+  "evaluation_scope": "actor GT; infrastructure observations retained but not scored",
+  "heldout_evaluated": false,
+  "training_performed": false
+}

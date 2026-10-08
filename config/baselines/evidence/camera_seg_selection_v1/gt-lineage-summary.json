@@ -1,0 +1,30 @@
+{
+  "counts": {
+    "frames": 30090,
+    "linked": 30090,
+    "missing": 0
+  },
+  "manifest_sha256": {
+    "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel": "23741968b91c4b98bb458dac38e081f127e83f4d8d8ee59b52d732dd1f79e576",
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel": "96f606573ec978efb42ccb014825af8117d80cebf45b9be68863336d3303b6d7",
+    "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel": "c1aa85263cf5be827866745ff8b866eea9fbbb0e8f5e257855500e13b2a16eea",
+    "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel": "2fbaf81ed53459e90517f82f005fb16aee0d3bb685ec08a36d8d52136e656ae1",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel": "222d91c331fe3536f197d199ddb4455967ac18c6dca97f05924cf0de4281d037",
+    "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel": "9acbc7ab5692d0cf5ba2a71e96ea4ab7e79e3d60b96ae9308a9c4e2ce1dacd1c",
+    "20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel": "ac48ae3b5c7887431c0f1dbc9081fe774a0f75e8a2f88deaf77b463256713a04",
+    "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel": "10a1c9944a048a36c34eb1ef9c005729f3502e4ebf75bcd3fcd2069912f1c162",
+    "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel": "3b0c99dce094c08568b41d8b076efec5228f072714034aad6004bd86bc5b0bc5",
+    "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel": "41408864589c2404cbbf7c48f91bb8f5d7be4204d2868bbd1589f6ef9a48def3",
+    "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel": "77708164b3ee8e989195588a72d2ba7a2643850ee1145b5bd9ffd0559b82db18",
+    "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel": "5f7a8eac19182118d3a5d47fa4bafc70d8e5c82502f5f56ee42a0246eb2f8500",
+    "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel": "0b324ae7e93772df68e47456cb85d893987c4bb0f985cf08deecc41bedd1126c",
+    "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel": "85892035b4511f9de4e5e77d717cc35f19479eb2390a94455816662e5d7e946e",
+    "kcity_auto_sunny_003": "bc320fdfd2d8ddd76db1b2f7f4098fab62186d81250b493fd4fb2493cd773c01",
+    "kcity_drive_001": "d0d8a3bca5ff8dc8cd5fb4340daecb800354df6d44c39bf248c17c9cb2aaf896",
+    "kcity_drive_002": "47360c91f19acbe1d0315b8cf1d040bf9ab2e74b80f96969c1c3922fdef695ce",
+    "kcity_drive_003": "42b486f34aaff7b0d70c2133e1981e40d2a065e9c9d6d230dacbf9080fc321cd"
+  },
+  "gt_manifest_sha256": "ea4e66727e0a40d881af921d64f704189189f062b19a44618798517f8562f627",
+  "lineage_sha256": "49534716c46269f2f78c7fec1ca63bb27c1f8fab72a15beaa3763a3f688b4ce2",
+  "timing": "requested ros_time_ns and original morai_sim_time_ms preserved verbatim; unit/exposure not inferred"
+}
