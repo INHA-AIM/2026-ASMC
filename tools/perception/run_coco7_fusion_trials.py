@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Isolated bag policy trials with identical model/rate/masks, preserving every failure."""
 import argparse
+import copy
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,15 @@ from run_b0_matrix import stop
 from run_coco7_live_trials import provenance
 
 ROOT=Path(__file__).resolve().parents[2]
+
+
+def pin_uniform_rate(runtime, target_hz):
+    if not 0 < target_hz <= 20:
+        raise ValueError('target Hz must be in (0,20]')
+    result=copy.deepcopy(runtime)
+    result['target_hz']=target_hz
+    result['target_hz_by_view']={v:target_hz for v in ('front','left','right')}
+    return result
 
 
 def main():
@@ -31,6 +41,11 @@ def main():
     c['conditions'].update(ros_master_port=11314,simulator='running outside isolated container',target_hz=dict(yolo=a.target_hz,twinlite=10.,resnet18=10.))
     config=a.output/'conditions.yaml';config.write_text(yaml.safe_dump(c))
     runtime=yaml.safe_load(a.runtime.read_text());engine=Path(runtime['weights'])
+    # A launch scalar does not override a per-view cadence map. Pin both in
+    # the actual run-local config, so the 10Hz policy comparison really is10Hz.
+    runtime=pin_uniform_rate(runtime,a.target_hz)
+    effective_runtime=a.output/'runtime.yaml'
+    effective_runtime.write_text(yaml.safe_dump(runtime))
     (a.output/'provenance.json').write_text(json.dumps(provenance(a.models,engine,a.revision),indent=2)+'\n')
     result=[]
     jobs=[dict(bag_id=bag,policy=policy,repeat=r,diagnostic=False) for r in range(1,a.repeats+1)
@@ -54,7 +69,7 @@ def main():
                 command=[sys.executable,str(ROOT/'tools/perception/run_camera_lidar_b0.py'),
                     '--config',str(config),'--phase','fusion','--profile','C1','--bag-id',job['bag_id'],
                     '--repeat',str(job['repeat']),'--output',str(a.output/label),
-                    '--objects-config',str(a.runtime),'--objects-views','all','--objects-side-ego-mask',
+                    '--objects-config',str(effective_runtime),'--objects-views','all','--objects-side-ego-mask',
                     '--objects-min-rate','9.5','--fusion-yolo-policy',job['policy']]
                 if job['diagnostic']:command.append('--diagnostic')
                 child=subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)

@@ -291,6 +291,17 @@ def main():
             rospy.wait_for_service(node+'/set_inference_mode', timeout=60)
         wait(loaded, 'all resident models loaded and dummy warmed', 60)
         report['load_dummy_warmup_sec'] = time.monotonic()-launch_start
+        if args.objects_config:
+            runtime = yaml.safe_load(args.objects_config.read_text())
+            report['objects_runtime'] = runtime
+            report['objects_runtime_sha256'] = hashlib.sha256(args.objects_config.read_bytes()).hexdigest()
+            expected_rates = runtime.get('target_hz_by_view')
+            if expected_rates is not None:
+                effective_rates = rospy.get_param(NODES['yolo']+'/target_hz_by_view', {})
+                report['effective_objects_target_hz_by_view'] = effective_rates
+                report['checks']['objects_target_rates_match_runtime'] = effective_rates == expected_rates
+                if effective_rates != expected_rates:
+                    raise RuntimeError('effective object view rates differ from pinned runtime')
         if args.phase != 'camera':
             adapter_confidence = (yaml.safe_load(args.objects_config.read_text()).get('conf_thres', .7)
                                   if args.objects_config else .7)

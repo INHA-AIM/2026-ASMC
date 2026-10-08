@@ -17,6 +17,17 @@ def ann(label, verified=True):
 
 
 class Coco7EvaluationTest(unittest.TestCase):
+    def test_fusion_rate_override_replaces_view_map_without_mutating_source(self):
+        from run_coco7_fusion_trials import pin_uniform_rate
+        original=dict(target_hz=20.,target_hz_by_view=dict(front=20.,left=15.,right=15.),conf_thres=.65)
+        pinned=pin_uniform_rate(original,10.)
+        self.assertEqual(dict(front=10.,left=10.,right=10.),pinned['target_hz_by_view'])
+        self.assertEqual(10.,pinned['target_hz'])
+        self.assertEqual(20.,original['target_hz_by_view']['front'])
+        self.assertEqual(.65,pinned['conf_thres'])
+        for hz in (0,-1,21,float('nan')):
+            with self.assertRaises(ValueError): pin_uniform_rate(original,hz)
+
     def test_matrix_retains_failed_repeat_and_rejects_partial_or_invalid_provenance(self):
         import json
         import tempfile
