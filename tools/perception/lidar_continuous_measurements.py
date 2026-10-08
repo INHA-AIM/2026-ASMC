@@ -12,7 +12,8 @@ def table(rows):
         ids=[o['id'] for o in row['objects']]
         if len(ids)!=len(set(ids)):raise ValueError('duplicate track IDs')
         for o in row['objects']:
-            if not all(math.isfinite(x) for x in o['center']):raise ValueError('nonfinite center')
+            values=o['center']+o.get('kf_ca',[])+o.get('obb',[])+[v for c in o.get('corners',[]) for v in c]
+            if not all(math.isfinite(x) for x in values):raise ValueError('nonfinite geometry or state')
     return {x['stamp_ns']:x for x in rows}
 
 
@@ -41,6 +42,8 @@ def speed_events(rows):
                     events.append(dict(stamp_ns=row['stamp_ns'],id=key,jump_mps=jump,
                         dt_sec=dt,kf_init_count=o['kf_init_count'],age=o['age'],misses=s['lidar_misses'],
                         center_delta_m=math.dist(s['center'],old['semantic']['center']),
-                        cause='initialization' if o['kf_init_count']<=2 else 'requires geometry/association/attitude review'))
+                        cause=('initialization transition candidate' if o['age']<=2 or
+                            o['kf_init_count']!=old['kf_init_count'] else
+                            'requires geometry/association/attitude review')))
             previous[key]=(o,dt)
     return events

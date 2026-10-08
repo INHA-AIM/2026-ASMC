@@ -3,8 +3,9 @@
 import argparse
 import json
 from pathlib import Path
-from frame_boundary_measurements import compare_local, map_gate
+from frame_boundary_measurements import compare_local, map_gate, observation_latencies
 from fusion_log_accounting import parse_fusion_observations
+from b0_measurements import quantiles
 
 
 def main():
@@ -26,6 +27,14 @@ def main():
             if trial['job']['profile']!='legacy' and trial['job']['subscribers'] in ('map','both'):
                 report['map_gate']=map_gate(observed['outputs'].get('typed_map',[]),
                     observed['inputs'].get('gps',[]),observed['inputs'].get('lidar',[]))
+            report['recomputed_source_latency']={}
+            for name in ('typed_local','typed_map'):
+                anchor=observation_latencies(observed['outputs'].get(name,[]),observed['inputs'].get('lidar',[]),
+                    legacy_ms=trial['job']['profile']=='legacy')
+                report['recomputed_source_latency'][name]=dict(anchor,
+                    wall_ms=quantiles(anchor['wall_ms']),ros_source_age_ms=quantiles(anchor['ros_source_age_ms']))
+                report[name]['latency_ms']=report['recomputed_source_latency'][name]['wall_ms']
+                report[name]['latency_recomputed_from_original_observations']=True
             observations[label]=observed;reports[label]=report
         except (OSError,ValueError,KeyError) as error:
             errors.append(dict(label=label,error=str(error)))

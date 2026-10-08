@@ -2,7 +2,7 @@ import copy
 from pathlib import Path
 import unittest
 import yaml
-from tools.perception.frame_boundary_measurements import jobs, stamp_table, compare_local, map_gate, frame_totals
+from tools.perception.frame_boundary_measurements import jobs, stamp_table, compare_local, map_gate, frame_totals, observation_latencies
 
 
 class MeasurementsTest(unittest.TestCase):
@@ -14,6 +14,15 @@ class MeasurementsTest(unittest.TestCase):
     def row(self, stamp=1000000000, status=2):
         return dict(stamp_ns=stamp, arrival=10., status=status, objects=[], frame_id='base_link',
             stamp_provenance='bridge_receive_ms')
+
+    def test_ns_latency_does_not_round_distinct_sources_into_one_anchor(self):
+        inputs=[dict(stamp_ns=1000000001,arrival=1.),dict(stamp_ns=1000000002,arrival=2.)]
+        rows=[dict(stamp_ns=1000000002,arrival=2.1,ros_ns=1000000000)]
+        exact=observation_latencies(rows,inputs)
+        self.assertAlmostEqual(exact['wall_ms'][0],100.)
+        self.assertLess(exact['ros_source_age_ms'][0],0)
+        self.assertEqual(observation_latencies([dict(rows[0],stamp_ns=1000000000)],inputs,True)['ambiguous_anchors'],1)
+        self.assertEqual(observation_latencies([dict(rows[0],stamp_ns=9)],inputs)['missing_anchors'],1)
 
     def test_protocol_preserves_all_profiles_repetitions_and_subscriptions(self):
         config=yaml.safe_load((Path(__file__).resolve().parents[2]/

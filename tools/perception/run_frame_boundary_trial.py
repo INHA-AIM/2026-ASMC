@@ -25,7 +25,7 @@ from b1a_protocol import launch_values, test_launch, require_stopped_simulator
 from b0_measurements import quantiles, resource_report
 from b0_resources import ResourceSampler
 from run_b0_matrix import stop
-from frame_boundary_measurements import frame_totals
+from frame_boundary_measurements import frame_totals, observation_latencies
 
 
 def geometry(message):
@@ -192,9 +192,8 @@ def main():
         report[name]=dict(frames=len(rows),duplicate_stamps=len(stamps)-len(set(stamps)),
             regressions=sum(b<=a for a,b in zip(stamps,stamps[1:])),
             statuses={str(code):sum(row['status']==code for row in rows) for code in (1,2,3,4)},
-            latency_ms=quantiles([(row['arrival']-source['arrival'])*1000
-                for row in rows for source in inputs.get('lidar',[])
-                if row['stamp_ns']==source['stamp_ns']//1000000*1000000]))
+            latency_ms=quantiles(observation_latencies(rows,inputs.get('lidar',[]),
+                legacy_ms=job['profile']=='legacy')['wall_ms']))
     if job.get('suite')=='cost':
         report['processed_unique_stamps_ns']=None
         report['unprocessed_input_stamps_ns']=None

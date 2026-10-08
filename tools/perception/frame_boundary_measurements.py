@@ -103,3 +103,25 @@ def map_gate(rows, gps_rows, lidar_rows=None):
     return dict(checked_frames=len(outputs), violations=violations,
         input_receipt_reference_available=lidar_rows is not None,
         observer_boundary_review_required=True)
+
+
+def observation_latencies(rows, inputs, legacy_ms=False):
+    """Same observer monotonic clock; not Main callback/processing time.
+
+    Explicit legacy rounding is allowed only with a unique input in that ms.
+    Missing/ambiguous anchors and ROS-clock-lag ages are never hidden.
+    """
+    anchors={}
+    for row in inputs:
+        key=row['stamp_ns']//1000000*1000000 if legacy_ms else row['stamp_ns']
+        anchors.setdefault(key,[]).append(row)
+    values=[];missing=ambiguous=0
+    for row in rows:
+        candidates=anchors.get(row['stamp_ns'],[])
+        if not candidates:missing+=1
+        elif len(candidates)!=1:ambiguous+=1
+        else:values.append((row['arrival']-candidates[0]['arrival'])*1000)
+    return dict(wall_ms=values,missing_anchors=missing,ambiguous_anchors=ambiguous,
+        negative_wall_samples=sum(v<0 for v in values),
+        ros_source_age_ms=[(r['ros_ns']-r['stamp_ns'])*1e-6 for r in rows if 'ros_ns' in r],
+        scope='observer input to output; separate from actual Main callback receipt and processing')
