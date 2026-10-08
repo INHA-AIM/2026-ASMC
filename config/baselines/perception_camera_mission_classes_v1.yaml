@@ -1,0 +1,551 @@
+schema_version: 1
+status: saved_prediction_comparison_only
+policy: config/experiments/camera_mission_classes_v1.yaml
+allowed_names:
+- person
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+- dog
+source_runtime_revision: 89bc3d9
+gt_manifest_sha256: ed2cefea5274c3366e2514b983ace614532a3926697be5e5d2ba68c0404cf968
+selection_frames: 2252
+metrics:
+  baseline:
+    all:
+      fixed_07:
+        confidence: 0.7
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.28078817733990147
+              recall: 0.16379310344827586
+              precision: 0.9827586206896551
+              gt: 348
+              tp: 57
+              fn: 291
+              fp: 1
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.1161424127203595
+              recall: 0.06199261992619926
+              precision: 0.9180327868852459
+              gt: 2710
+              tp: 168
+              fn: 2542
+              fp: 15
+            obstacle:
+              evaluable: true
+              f1: 0.0012804097311139564
+              recall: 0.0008673026886383347
+              precision: 0.0024449877750611247
+              gt: 2306
+              tp: 2
+              fn: 2304
+              fp: 816
+          macro_f1: 0.13273699993045832
+          mask_iou: null
+          mask_pairs: 0
+          fine_names:
+            evaluated: 169
+            correct: 169
+      selected_threshold:
+        confidence: 0.1
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.46303501945525294
+              recall: 0.34195402298850575
+              precision: 0.7168674698795181
+              gt: 348
+              tp: 119
+              fn: 229
+              fp: 47
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 5
+            vehicle:
+              evaluable: true
+              f1: 0.1762675869392089
+              recall: 0.12250922509225093
+              precision: 0.3140964995269631
+              gt: 2710
+              tp: 332
+              fn: 2378
+              fp: 725
+            obstacle:
+              evaluable: true
+              f1: 0.011030222810500772
+              recall: 0.010841283607979185
+              precision: 0.01122586439155815
+              gt: 2306
+              tp: 25
+              fn: 2281
+              fp: 2202
+          macro_f1: 0.21677760973498753
+          mask_iou: null
+          mask_pairs: 0
+          fine_names:
+            evaluated: 372
+            correct: 320
+    mission:
+      fixed_07:
+        confidence: 0.7
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.28078817733990147
+              recall: 0.16379310344827586
+              precision: 0.9827586206896551
+              gt: 348
+              tp: 57
+              fn: 291
+              fp: 1
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.11674774148714386
+              recall: 0.06199261992619926
+              precision: 1.0
+              gt: 2710
+              tp: 168
+              fn: 2542
+              fp: 0
+            obstacle:
+              evaluable: true
+              f1: 0.0
+              recall: 0.0
+              precision: 0.0
+              gt: 2306
+              tp: 0
+              fn: 2306
+              fp: 0
+          macro_f1: 0.13251197294234843
+          mask_iou: null
+          mask_pairs: 0
+          fine_names:
+            evaluated: 169
+            correct: 169
+      selected_threshold:
+        confidence: 0.1
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.46303501945525294
+              recall: 0.34195402298850575
+              precision: 0.7168674698795181
+              gt: 348
+              tp: 119
+              fn: 229
+              fp: 47
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.20607579079235827
+              recall: 0.12140221402214021
+              precision: 0.6811594202898551
+              gt: 2710
+              tp: 329
+              fn: 2381
+              fp: 154
+            obstacle:
+              evaluable: true
+              f1: 0.0
+              recall: 0.0
+              precision: 0.0
+              gt: 2306
+              tp: 0
+              fn: 2306
+              fp: 0
+          macro_f1: 0.22303693674920375
+          mask_iou: null
+          mask_pairs: 0
+          fine_names:
+            evaluated: 369
+            correct: 321
+  yolo26:
+    all:
+      fixed_07:
+        confidence: 0.7
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.2556390977443609
+              recall: 0.14655172413793102
+              precision: 1.0
+              gt: 348
+              tp: 51
+              fn: 297
+              fp: 0
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.08658922914466737
+              recall: 0.04538745387453875
+              precision: 0.9389312977099237
+              gt: 2710
+              tp: 123
+              fn: 2587
+              fp: 8
+            obstacle:
+              evaluable: true
+              f1: 0.00072992700729927
+              recall: 0.0004336513443191674
+              precision: 0.002304147465437788
+              gt: 2306
+              tp: 1
+              fn: 2305
+              fp: 433
+          macro_f1: 0.11431941796544252
+          mask_iou: 0.8691419603722869
+          mask_pairs: 175
+          fine_names:
+            evaluated: 132
+            correct: 132
+      selected_threshold:
+        confidence: 0.15
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.42916666666666664
+              recall: 0.2959770114942529
+              precision: 0.7803030303030303
+              gt: 348
+              tp: 103
+              fn: 245
+              fp: 29
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 2
+            vehicle:
+              evaluable: true
+              f1: 0.17033137194177764
+              recall: 0.1014760147601476
+              precision: 0.5298651252408478
+              gt: 2710
+              tp: 275
+              fn: 2435
+              fp: 244
+            obstacle:
+              evaluable: true
+              f1: 0.006320877486521658
+              recall: 0.007372072853425846
+              precision: 0.005532053368044257
+              gt: 2306
+              tp: 17
+              fn: 2289
+              fp: 3056
+          macro_f1: 0.201939638698322
+          mask_iou: 0.8231683031135781
+          mask_pairs: 395
+          fine_names:
+            evaluated: 306
+            correct: 261
+    mission:
+      fixed_07:
+        confidence: 0.7
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.2556390977443609
+              recall: 0.14655172413793102
+              precision: 1.0
+              gt: 348
+              tp: 51
+              fn: 297
+              fp: 0
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.08683374514648783
+              recall: 0.04538745387453875
+              precision: 1.0
+              gt: 2710
+              tp: 123
+              fn: 2587
+              fp: 0
+            obstacle:
+              evaluable: true
+              f1: 0.0
+              recall: 0.0
+              precision: 0.0
+              gt: 2306
+              tp: 0
+              fn: 2306
+              fp: 0
+          macro_f1: 0.11415761429694958
+          mask_iou: 0.8688541545583556
+          mask_pairs: 174
+          fine_names:
+            evaluated: 132
+            correct: 132
+      selected_threshold:
+        confidence: 0.15
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.42916666666666664
+              recall: 0.2959770114942529
+              precision: 0.7803030303030303
+              gt: 348
+              tp: 103
+              fn: 245
+              fp: 29
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.17673521850899743
+              recall: 0.1014760147601476
+              precision: 0.6840796019900498
+              gt: 2710
+              tp: 275
+              fn: 2435
+              fp: 127
+            obstacle:
+              evaluable: true
+              f1: 0.0
+              recall: 0.0
+              precision: 0.0
+              gt: 2306
+              tp: 0
+              fn: 2306
+              fp: 0
+          macro_f1: 0.2019672950585547
+          mask_iou: 0.8219351390727184
+          mask_pairs: 378
+          fine_names:
+            evaluated: 306
+            correct: 262
+  yoloe:
+    all:
+      fixed_07:
+        confidence: 0.7
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.24623115577889448
+              recall: 0.14080459770114942
+              precision: 0.98
+              gt: 348
+              tp: 49
+              fn: 299
+              fp: 1
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.07491166077738516
+              recall: 0.03911439114391144
+              precision: 0.8833333333333333
+              gt: 2710
+              tp: 106
+              fn: 2604
+              fp: 14
+            obstacle:
+              evaluable: true
+              f1: 0.02869669190912714
+              recall: 0.015611448395490026
+              precision: 0.17733990147783252
+              gt: 2306
+              tp: 36
+              fn: 2270
+              fp: 167
+          macro_f1: 0.11661316948846893
+          mask_iou: 0.8538702792112928
+          mask_pairs: 191
+          fine_names:
+            evaluated: 111
+            correct: 108
+      selected_threshold:
+        confidence: 0.1
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.4
+              recall: 0.27873563218390807
+              precision: 0.708029197080292
+              gt: 348
+              tp: 97
+              fn: 251
+              fp: 40
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.1758767268862912
+              recall: 0.12214022140221402
+              precision: 0.31404174573055027
+              gt: 2710
+              tp: 331
+              fn: 2379
+              fp: 723
+            obstacle:
+              evaluable: true
+              f1: 0.07142857142857142
+              recall: 0.1266261925411969
+              precision: 0.049744463373083476
+              gt: 2306
+              tp: 292
+              fn: 2014
+              fp: 5578
+          macro_f1: 0.21576843277162086
+          mask_iou: 0.7438331208804849
+          mask_pairs: 720
+          fine_names:
+            evaluated: 346
+            correct: 282
+    mission:
+      fixed_07:
+        confidence: 0.7
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.24623115577889448
+              recall: 0.14080459770114942
+              precision: 0.98
+              gt: 348
+              tp: 49
+              fn: 299
+              fp: 1
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.07525736599219027
+              recall: 0.03911439114391144
+              precision: 0.9906542056074766
+              gt: 2710
+              tp: 106
+              fn: 2604
+              fp: 1
+            obstacle:
+              evaluable: true
+              f1: 0.0
+              recall: 0.0
+              precision: 0.0
+              gt: 2306
+              tp: 0
+              fn: 2306
+              fp: 0
+          macro_f1: 0.10716284059036159
+          mask_iou: 0.8580873637034871
+          mask_pairs: 155
+          fine_names:
+            evaluated: 111
+            correct: 108
+      selected_threshold:
+        confidence: 0.1
+        metrics:
+          groups:
+            person:
+              evaluable: true
+              f1: 0.4
+              recall: 0.27873563218390807
+              precision: 0.708029197080292
+              gt: 348
+              tp: 97
+              fn: 251
+              fp: 40
+            animal:
+              evaluable: false
+              gt: 0
+              tp: 0
+              fn: 0
+              fp: 0
+            vehicle:
+              evaluable: true
+              f1: 0.18649335970613168
+              recall: 0.12177121771217712
+              precision: 0.39806996381182147
+              gt: 2710
+              tp: 330
+              fn: 2380
+              fp: 499
+            obstacle:
+              evaluable: true
+              f1: 0.0
+              recall: 0.0
+              precision: 0.0
+              gt: 2306
+              tp: 0
+              fn: 2306
+              fp: 0
+          macro_f1: 0.19549778656871056
+          mask_iou: 0.7948810504643948
+          mask_pairs: 427
+          fine_names:
+            evaluated: 345
+            correct: 283
+all_gt_retained: true
+training_performed: false
+fresh_inference: false
+runtime_validated: false
+operational_defaults_changed: false
+yoloe_prompt_cache_changed: false
+previous_training_candidate: yoloe provisional under the prior full-class protocol;
+  under review for the mission scope
+next_training_recommendation: YOLO26s-seg starting hypothesis, subject to initial-detection/gap
+  and runtime validation
+evidence: config/baselines/evidence/camera_mission_classes_v1/summary.json

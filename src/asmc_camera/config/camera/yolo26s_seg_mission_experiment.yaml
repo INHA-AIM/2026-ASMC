@@ -1,0 +1,26 @@
+# Opt-in mission output filter; original all-class profile remains separate.
+views:
+- front
+image_topic: /image_jpeg/compressed
+weights: $(optenv ASMC_SEG_MODELS /data/models/camera_seg_v1)/yolo26s-seg.pt
+expected_sha256: 3da1d83e31caec96f9300eb4064f4f62882c133c7c264d63dfe61a7c197837a4
+device: cuda:0
+require_cuda: true
+conf_thres: 0.7
+allowed_names:
+- person
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+- dog
+predict_overrides:
+  iou: 0.7
+  max_det: 300
+  agnostic_nms: false
+  imgsz: 640
+  half: false
+  end2end: true
+seg_experiment: true
+model_kind: yolo

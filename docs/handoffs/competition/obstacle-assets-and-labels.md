@@ -5,7 +5,7 @@
 > 원문 메시지 URL·첨부 사진·개인 메시지의 재현 시나리오는 제공되지 않았다.
 > 아래 운영진 답변 요약과 팀의 설계 제안·미확인 목록을 구분한다. 최신 공식 공지가 우선한다.
 > **구현 상태:** PR #73은 YOLO11m의 COCO 80종 **관측 실험**이다. 신규 학습과
-> `animal` 그룹 추가는 미구현이다. 이 문서 추가로 운영 설정·메시지·모델은 바뀌지 않는다.
+> `animal` 그룹은 PR #74의 별도 실험 설정에서 구현했다. 운영 세 그룹·메시지·모델 기본값은 유지한다.
 
 ## 운영진이 답변한 출제 범위
 
@@ -75,7 +75,8 @@ Effect는 별도 위험 표현을 검토하고, 일반 장애물의 충돌 형�
 pedestrian·VRU를 새 학습 클래스나 다섯 번째 그룹으로 추가하지 않는 방향을 권한다.
 원본 person을 사람 전체로 유지하고 자전거·킥보드의 탑승자도 별도 person 관측으로 다룬다.
 
-현재 구현은 `person / vehicle / obstacle` 세 그룹이며 bicycle은 person에 포함된다.
+현재 운영 기본은 `person / vehicle / obstacle` 세 그룹이며 bicycle은 person에 포함된다.
+PR #74의 실험 설정은 네 그룹을 지원하고 bicycle을 vehicle로 분리한다.
 다음 후보에서 bicycle→vehicle과 animal 분리는 **소비 의미의 변경**이다. YAML 수정만으로
 끝내지 않고 `detection/classes.py`, 그룹 설정·검사, 메시지 의미 문서·후보 계약과 소비자 시험을
 함께 검토해야 한다. 이 문서에서는 그룹·기본 허용 클래스·메시지 MD5를 바꾸지 않는다.
@@ -209,3 +210,15 @@ weight 행을 복사할 수 없고 bias만 맞을 수 있다. 나머지는 shape
 
 현재 결과와 직접 실행은 [COCO 확대 실험](../perception/camera-coco-class-expansion.md),
 전체 개발 순서는 [카메라 런타임 계획](../perception/camera-runtime-plan.md)에서 확인한다.
+
+## 2026-10-08 승인된 COCO 교집합 비교
+
+사용자는 확인된 종류의 `person, bicycle, car, motorcycle, bus, truck, dog` 7종 비교를
+승인했다. COCO 원래 ID는 `[0,1,2,3,5,7,16]`이다. train·bench·생활용품은 이 프로필에서
+제외하며 신호등·정지표지판은 별도 인프라 관측으로 둔다. 102개 F2 전체 이름을 검수한
+완결 목록은 아니며 신규 에셋 확인 시 정책 버전을 갱신한다. deer·나무 상자·콘 등은
+COCO 교집합 밖의 신규 학습 과제다. 7종만으로 obstacle 그룹을 검출할 수 있다고 안내하지 않는다.
+
+[7종 비교와 다음 학습 설계](../perception/camera-seg-model-selection.md#7종-미션-출력-비교와-학습-설계)는
+기존 80종 실험과 분리된 opt-in 설정이다. 원본 세부 라벨을 보존하고 소비 그룹은
+`person / animal / vehicle / obstacle`로 유지한다. LiDAR 네 클래스 호환 경로는 유지한다.

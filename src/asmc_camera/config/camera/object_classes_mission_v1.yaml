@@ -1,0 +1,8 @@
+# Confirmed COCO overlap only; not a complete inventory of F2 assets.
+class_groups:
+  groups:
+    person: [person]
+    animal: [dog]
+    vehicle: [bicycle, car, motorcycle, bus, truck]
+  default_group: obstacle
+  excluded: []

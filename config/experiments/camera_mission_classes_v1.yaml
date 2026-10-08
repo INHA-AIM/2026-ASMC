@@ -1,0 +1,21 @@
+schema_version: 1
+experiment_id: camera_mission_classes_v1
+status: saved_prediction_comparison_only
+source_scope: user-approved COCO overlap of documented MORAI object examples; not a verified full F2 inventory
+allowed_names: [person, bicycle, car, motorcycle, bus, truck, dog]
+original_coco_ids: [0, 1, 2, 3, 5, 7, 16]
+consumer_groups:
+  person: [person]
+  animal: [dog]
+  vehicle: [bicycle, car, motorcycle, bus, truck]
+  obstacle: []
+non_coco_examples_requiring_labels: [deer, stroller, electric_scooter, wooden_crate, cardboard_box, barrel, barricade, traffic_cone, tree]
+separate_infrastructure: [traffic light, stop sign]
+confirmed_prior_false_positive_labels: [train, bench]
+full_asset_catalog_verified: false
+confidence_control: 0.7
+confidence_sweep: {start: 0.10, stop: 0.70, step: 0.05}
+retained_gt: all selection GT, including unsupported objects
+runtime_defaults_changed: false
+yoloe_prompt_cache: pinned 89-name cache unchanged; seven-name output filter only
+training_performed: false

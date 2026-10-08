@@ -213,3 +213,112 @@ TwinLite BEV는 현재 base_link 고정 지면 평면 투영이며 영상 시점
 주장하지 않는다. 지연 보상용 짧은 자차 운동 보상도 별도 시험이다.
 주행가능영역 mask는 객체 부재·충돌 없는 공간의 근거가 아니며 장애물·미관측과 결합한다.
 차선 피팅 소비는 음영 ODD, 구간·주행 모드·결과 소비는 판제 책임으로 유지한다.
+
+## 7종 미션 출력 비교와 학습 설계
+
+사용자가 승인한 COCO 교집합은 `person, bicycle, car, motorcycle, bus, truck, dog`다.
+person은 person, dog는 animal, 나머지 5종은 vehicle에 대응한다. 이 7종에는 일반
+obstacle에 해당하는 클래스가 없다. deer·유모차·킥보드·상자·콘·드럼통·바리케이드·나무
+등은 외형과 실제 보유 GT를 검수해 신규 세부 학습 라벨로 추가해야 한다. train/bench의
+기존 오검출과 생활용품을 출력에서 제외하며 신호등/정지표지판은 별도 관측이다.
+이 목록은 개별 이름이 미확인인 102개 F2 에셋 전체를 검수했다는 의미가 아니다.
+[승인된 정책](../../../config/experiments/camera_mission_classes_v1.yaml)에 원래 COCO ID도 보존한다.
+
+`classes:=mission`은 새 7종 출력 설정과 네 그룹 설정을 선택한다. 기본 `classes:=all`은
+기존 실험이다. YOLOE의 checkpoint-bound 89-name embedding cache는 그대로이며
+**7종 출력 허용 필터와 7개 prompt로 재구성한 모델은 다르다.** 다음 실제 비교에서
+축소 prompt를 만들면 별도 SHA와 결과로 기록한다. class 수 축소만으로 backbone 연산
+절감을 주장하지 않는다. 기존 model/target Hz/hood mask/source 좌표·메시지·어댑터는 유지한다.
+
+```bash
+roslaunch asmc_camera camera_objects_seg_experiment.launch model:=yolo26 classes:=mission
+```
+
+```bash
+roslaunch asmc_camera camera_objects_seg_experiment.launch model:=yoloe classes:=mission
+```
+
+다른 객체 launch를 종료한 뒤 하나씩 실행한다. `views:=all`은 동일한 7종 출력의 3뷰
+선택이며 GUI와 bridge는 별도다. instance overlay 토픽은 위 직접 launch 절과 같다.
+
+### 저장 결과 재평가 — 새 추론 측정과 구분
+
+[요약 baseline](../../../config/baselines/perception_camera_mission_classes_v1.yaml)과
+[전체 threshold 결과](../../../config/baselines/evidence/camera_mission_classes_v1/summary.json)는
+기존 선정용 2,252프레임의 저장된 box/mask를 필터링한 결과다. 새 GPU 실행·시간적 안정성·
+7-prompt 모델·m 모델을 측정한 결과가 아니다. 전체 클래스 재계산이 기존 원본과 정확히
+같음을 확인했고, 미지원 obstacle GT 2,306개도 FN으로 남겼다. 잘 검출되는 GT만 남겨
+점수를 높이지 않는다. original bbox 순서·mask index·coords·confidence는 유지한다.
+
+| 모델 | 0.7 원본→7종 macro F1 | 7종 sweep 최대 macro F1 / conf | 0.7 person TP | 0.7 vehicle TP / FP |
+|---|---:|---:|---:|---:|
+| YOLO11m 참고 | 0.13274→0.13251 | 0.22304 / 0.10 | 57 | 168 / 0 |
+| YOLO26s-seg | 0.11432→0.11416 | 0.20197 / 0.15 | 51 | 123 / 0 |
+| YOLOE-26s-seg | 0.11661→0.10716 | 0.19550 / 0.10 | 49 | 106 / 1 |
+
+animal GT는 없어 평가 불가다. 7종은 obstacle TP도 0이다. YOLOE의 원본 추가 클래스
+검출을 제외했으므로 이전 full-class 선정 순위와 목적이 달라진다. 이전 학습 후보 결정을
+지우지 않고 **미션 범위에서 재검토**한다. 현재는 YOLO26s-seg를 학습 출발점으로 우선
+검토하며 첫 검출 시점·공통 actor의 검출 공백·실제 런타임 검증 후 확정한다. 기존
+threshold의 큰 FN과 선별되지 않은 세부 GT의 한계는 그대로다.
+
+재현은 ROS/SciPy 환경의 CPU 명령이며 GPU나 shared ROS master를 사용하지 않는다.
+
+```bash
+python3 tools/perception/rescore_camera_mission_classes.py \
+  --gt /results/gt-v2 --accuracy /results/accuracy \
+  --policy config/experiments/camera_mission_classes_v1.yaml \
+  --output /results/mission-classes-reproduction
+```
+
+### 모델 비교와 학습 순서
+
+| 경로 | 이 시스템에서의 역할 | 확정 전 확인 |
+|---|---|---|
+| YOLO26s-seg 추가학습 | 우선 후보. Capture instance GT와 mask 기반 fusion 연구를 함께 활용 | 실제 상자 등 신규 종류 GT, first-detection/gap, 선택 threshold의 동시 부하 |
+| YOLO26s bbox 추가학습 | mask의 fusion 보완 이득이 부족할 때 단순한 대안 | mask를 사용하지 않는다는 이유로 bbox 검출 품질 우위를 가정하지 않음 |
+| YOLO26m-seg 추가학습 | s의 작은 객체·조기 검출 한계가 확인될 때 승격 후보 | 전방/3뷰·동시 모델의 18Hz 및 latency/VRAM |
+| YOLO26m bbox 추가학습 | 큰 backbone을 쓰면서 mask branch 비용을 피하는 대안 | bbox m도 s-seg보다 가볍다고 가정하지 않음 |
+| YOLOE-26s/m prompt + 추가학습 | 라벨이 부족한 신규 종류의 초안 생성·미학습 범주 관측 후보 | prompt 미검출/오검출, 실제 대회 클래스 PE fine-tuning, runtime 비용 |
+
+여섯 경로를 모두 학습하지 않는다. 먼저 같은 7종에서 기존 s 결과와 일반 YOLO26의
+s-bbox/m-bbox/m-seg를 짧은 대표 구간으로 추론 비교한다. 필요가 입증된 경우만 E-m을
+추가한다. 대회 핵심 지표는 객체 최초 검출·누락/오검출·최대 공백·fusion 객체 보존이며
+macro F1은 보조로 함께 본다. 학습은 선정한 한 모델만 시작하고 m 승격은 실패 근거가
+있을 때 비교한다. mask의 실제 fusion 이득이 없으면 bbox 경로를 사용할 수 있다.
+일반 YOLO26도 custom class로 fine-tune할 수 있어 상자 추가학습에 YOLOE가 필수는 아니다.
+[일반 seg 학습](https://docs.ultralytics.com/tasks/segment/#train),
+[YOLOE PE 학습](https://docs.ultralytics.com/models/yoloe/#train-usage)을 참고하되 실제 고정
+8.4.150의 trainer/head 이전과 출력은 학습 실행 전에 확인한다.
+
+### 추가 수집 없이 보유 데이터 활용
+
+1. **Capture GT를 먼저 고정한다.** 사용할 actor mask/box를 직접 연결하고 coarse
+   Obstacle/Vehicle의 세부 종류를 검수한다. 가시 mask와 bbox 기준을 통일하고 원본
+   actor ID·세부 라벨·학습 ID 대응을 보존한다. 초기 4run palette 미확인 자료는 격리한다.
+   split 12/3/3을 유지하며 학습·selection·heldout의 역할을 바꾸지 않는다.
+2. **일반/AIM RGB는 학습용 세션만 먼저 선별한다.** D드라이브 417,435장을 일괄 라벨링하기
+   전에 세션·카메라·조도·음영·객체별 표본을 고르고 근접 중복을 줄인다. 검증 세션은
+   teacher threshold 조정이나 student 학습에 섞지 않는다. camera4 rear는 Capture TLC와
+   혼용하지 않는다. 배경·기하를 확인한 원본을 보존한다.
+3. **YOLO26x로 기존 7종 라벨 초안을 만든다.** bbox 학습이면 x detect의 box를 사용하고,
+   seg 학습이면 x-seg의 box+instance mask를 우선 사용한다. x detect+SAM은 별도 대안이다.
+   큰 teacher는 오프라인이므로 실시간 모델과 같은 latency 제한을 적용하지 않지만
+   4060 Ti 8GB의 해상도/메모리는 소규모 시험으로 확인한다. model·버전·SHA·conf·
+   해상도·원본 결과·검수 이력도 기록한다.
+4. **자동 라벨은 GT와 분리해 검수한다.** teacher가 놓친 대상·누락된 mask·여러 사람이
+   하나로 합쳐진 결과·신규 상자/콘 등을 확인한다. 선택한 학습 클래스의 보이는 대상을
+   모두 주석 처리하지 못한 영상은 완전 라벨 영상으로 넣지 않는다. 무검출을 빈 GT로
+   확정하지 않고 validation/heldout 정답은 독립 검수한다. [공식 자동 주석 도구](https://docs.ultralytics.com/reference/data/annotator/)
+   역시 detector box를 사용하므로 미검출 객체를 자동 복구하는 보장이 아니다.
+5. **미지원 종류는 Capture에서 먼저 학습한 teacher로 보강한다.** COCO x/x-seg는 deer·
+   wooden crate·cone 등의 새 라벨을 반환할 수 없다. Capture로 선정 모델을 학습한 뒤
+   그 모델 또는 검수한 YOLOE prompt 초안을 사용해 기존 일반/AIM 영상의 신규 종류를
+   보강한다. segmentation 경계만 만드는 SAM은 종류 정답을 대신하지 않는다.
+6. **검수한 자료를 혼합해 한 모델을 추가학습한다.** Capture GT와 검수된 실제 영상의
+   출처/검수 수준을 유지하며 기존 car/person과 신규 종류를 함께 평가한다. 독립 test의
+   에셋별 누락·거리/가림/음영·시간 연속성과 실제 GPU/fusion을 확인한 뒤 운영 적용한다.
+
+YOLO26x 자동 라벨링과 실제 fine-tuning은 이번 클래스 선택 작업에서 실행하지 않았다.
+자료 수집 없이 시작할 수 있지만 보유 영상에 없는 에셋의 인식 능력을 학습 완료로
+주장하지 않는다. 선택한 7종과 후속 학습의 신규 클래스 목록은 서로 다른 정책 버전이다.
