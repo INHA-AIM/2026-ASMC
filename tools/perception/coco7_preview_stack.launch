@@ -1,0 +1,25 @@
+<launch>
+  <!-- Compute with real sensor/path inputs; commands never reach the UDP bridge. -->
+  <arg name="fusion_yolo_policy" default="unique"/>
+  <remap from="/ctrl_cmd" to="/evaluation/ctrl_cmd"/>
+  <remap from="/ctrl_cmd_0" to="/evaluation/ctrl_cmd_0"/>
+  <include file="$(find asmc_hd_map)/launch/competition_map.launch">
+    <arg name="rviz" value="false"/>
+    <arg name="publish_local" value="false"/>
+  </include>
+  <include file="$(find Main)/main.launch">
+    <arg name="start_yolo" value="false"/>
+    <arg name="rviz" value="false"/>
+    <arg name="start_velodyne_driver" value="false"/>
+    <arg name="fusion_yolo_policy" value="$(arg fusion_yolo_policy)"/>
+  </include>
+  <group>
+    <remap from="/ctrl_cmd" to="/evaluation/ctrl_cmd"/>
+    <remap from="/ctrl_cmd_0" to="/evaluation/ctrl_cmd_0"/>
+    <include file="$(find behavior_planner)/launch/autonomy_no_bridges_v2.launch">
+      <arg name="traffic_light" value="false"/>
+      <arg name="objects_source" value="lidar"/>
+      <arg name="dashboard" value="false"/>
+    </include>
+  </group>
+</launch>

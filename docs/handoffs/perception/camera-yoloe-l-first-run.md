@@ -1,5 +1,7 @@
 # YOLOE-26l 첫 실행: 27종/42종과 native 3뷰
 
+> **2026-10-09 통합 작업:** [3뷰 COCO7 실행·모델 선정](camera-three-view-coco-runtime.md)을 현재 시작점으로 사용합니다. 아래 기존 실험과 실패 증거는 보존합니다.
+
 이번 작업은 추가학습 전 문제 확인이다. 운영 YOLO11m 기본값, 메시지/MD5,
 LiDAR 어댑터의 네 클래스/confidence 0.7, 50ms 매칭·200ms 대기는 유지한다.
 작업 폴더는 `asmc-camera-objects`, 브랜치는 `feat/camera-yoloe-l-first-run`이다.

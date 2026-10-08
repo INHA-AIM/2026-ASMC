@@ -1,5 +1,7 @@
 # YOLO26·YOLOE seg 모델 선정
 
+> **2026-10-09 통합 작업:** [3뷰 COCO7 실행·모델 선정](camera-three-view-coco-runtime.md)을 현재 시작점으로 사용합니다. 아래 기존 실험과 실패 증거는 보존합니다.
+
 후속 대형 모델 첫 실행은 [YOLOE-l 42종/27종·3뷰 실험](camera-yoloe-l-first-run.md)에서
 진행한다. 아래 s 모델의 성공·실패는 기존 증거로 보존한다.
 

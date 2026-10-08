@@ -103,7 +103,7 @@ def main():
             spec=importlib.util.spec_from_file_location('seg_actual_adapter',path);adapter=importlib.util.module_from_spec(spec);spec.loader.exec_module(adapter)
             front=next(m for m in messages if m.header.frame_id=='camera_front')
             converted=adapter.convert(front)
-            checks['legacy_front_four_class_policy']=converted.header==front.header and [b.classes for b in converted.yolo_bbox_arr]==['person','car'] and all(adapter.convert(m) is None for m in messages if m.header.frame_id!='camera_front')
+            checks['front_seven_class_policy']=converted.header==front.header and [b.classes for b in converted.yolo_bbox_arr]==['person','dog','car'] and all(adapter.convert(m) is None for m in messages if m.header.frame_id!='camera_front')
         backend.empty=True;empty=send(6)
         wait(lambda:len(for_headers(outputs,empty))==3,'valid empty')
         checks['empty_valid_all_views']=all(m.valid and not m.boxes for m in for_headers(outputs,empty))

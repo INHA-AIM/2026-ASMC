@@ -26,7 +26,7 @@ def process_sample(pid):
 
 
 class ResourceSampler:
-    def __init__(self, master_uri, node_names, interval=.2):
+    def __init__(self, master_uri, node_names, interval=.2, system_metrics=False):
         # xmlrpc.client HTTPConnection/rosgraph.Master transports are not
         # thread safe. Only an immutable URI crosses into the sampler thread.
         self.master_uri, self.names, self.interval = master_uri, node_names, interval
@@ -34,6 +34,21 @@ class ResourceSampler:
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.ticks = os.sysconf('SC_CLK_TCK')
+        self.system_metrics = system_metrics
+        self.previous_system = None
+
+    def _system_sample(self):
+        values = [int(v) for v in Path('/proc/stat').read_text().splitlines()[0].split()[1:]]
+        # guest ticks are already included in user/nice.
+        total, idle = sum(values[:8]), values[3]+values[4]
+        old = self.previous_system
+        self.previous_system = total, idle
+        memory = {line.split(':')[0]: int(line.split()[1]) for line in
+                  Path('/proc/meminfo').read_text().splitlines() if line.startswith(('MemTotal:', 'MemAvailable:'))}
+        return dict(cpu_percent=(100*(1-(idle-old[1])/(total-old[0])) if old and total>old[0] else None),
+                    memory_used_mib=(memory['MemTotal']-memory['MemAvailable'])/1024.,
+                    memory_total_mib=memory['MemTotal']/1024.,
+                    scope='WSL Linux guest; Windows applications CPU/RAM unavailable')
 
     def start(self):
         self.thread.start()
@@ -62,6 +77,11 @@ class ResourceSampler:
                 self._discover()
                 next_discovery = started+1.
             row = dict(arrival=started, gpu=None, nodes={})
+            if self.system_metrics:
+                try:
+                    row['system'] = self._system_sample()
+                except (OSError, ValueError, KeyError) as exc:
+                    row['system_error'] = str(exc)
             try:
                 row['gpu'] = gpu_sample()
             except Exception as exc:

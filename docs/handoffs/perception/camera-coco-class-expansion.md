@@ -1,5 +1,7 @@
 # YOLO11m COCO 클래스 확대 실험
 
+> **2026-10-09 통합 작업:** [3뷰 COCO7 실행·모델 선정](camera-three-view-coco-runtime.md)을 현재 시작점으로 사용합니다. 아래 기존 실험과 실패 증거는 보존합니다.
+
 PR #72를 `a8c4f3b`에 병합한 뒤 별도 카메라 브랜치에서 비교한다. **운영 기본값은
 네 클래스이며 전체 COCO 관측은 명시적인 실험 프로필**이다. 실행별 성공·실패와
 원본 결과는 [실험 baseline](../../../config/baselines/perception_camera_coco_classes_v1.yaml)에 연결한다.

@@ -111,9 +111,9 @@ def main():
             adapter = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(adapter)
             converted = adapter.convert(restored)
-            expected = [name for name in names if name in ('bus','truck','person','car')]
-            checks['actual_adapter_four_classes_header_integer_coordinates'] = (converted.header==restored.header and
-                converted.objc==4 and [b.classes for b in converted.yolo_bbox_arr]==expected and
+            expected = [name for name in names if name in ('bus','truck','person','car','dog','bicycle','motorcycle')]
+            checks['actual_adapter_source_classes_header_integer_coordinates'] = (converted.header==restored.header and
+                converted.objc==len(expected) and [b.classes for b in converted.yolo_bbox_arr]==expected and
                 all((b.xMin,b.yMin,b.xMax,b.yMax)==(1,2,10,20) for b in converted.yolo_bbox_arr))
         backend.empty = True
         empty_header = send(6)

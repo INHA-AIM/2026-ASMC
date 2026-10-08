@@ -12,6 +12,7 @@ on:
       - 'src/asmc_msgs/**'
       - 'src/asmc_lidar/**'
       - 'src/asmc_camera/**'
+      - 'src/jamming_lane_boundary_adapter/**'
       - '.github/workflows/planning-integration.yml'
 
 jobs:
@@ -107,3 +108,14 @@ jobs:
           python3 tools/perception/check_camera_coco_ros.py --profile baseline --adapter
           python3 tools/perception/check_camera_coco_ros.py --profile all --adapter
           python3 tools/perception/check_camera_seg_ros.py --adapter
+      - name: Check jamming shared detections and Ego-mask contacts
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='asmc_msgs;asmc_lidar;asmc_camera;morai_msgs;lane_boundary_adapter'
+          source devel/setup.bash
+          source src/lidar+sensorfusion/devel/setup.bash
+          # Direct rostest preserves the nested Msg Python environment.
+          for fixture_case in camera_bbox_lane camera_bbox_clipped camera_bbox_lane_change camera_bbox_ego_mask; do
+            rostest lane_boundary_adapter "$fixture_case.test"
+          done

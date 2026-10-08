@@ -78,6 +78,7 @@ jobs:
           python3 -m unittest tools/perception/test_hood_evaluation.py
           python3 -m unittest tools/perception/test_lifecycle_measurements.py
           python3 -m unittest tools/perception/test_b0_measurements.py
+          python3 -m unittest tools/perception/test_coco7_evaluation.py
           python3 -m unittest discover -s tools/perception -p 'test_camera_coco_measurements.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_coco_matrix.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_seg_gt.py'
@@ -118,10 +119,14 @@ jobs:
           roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yoloe classes:=mission views:=all debug:=false
           roslaunch --nodes asmc_camera camera_objects_yoloe_l_experiment.launch debug:=false
           roslaunch --nodes asmc_camera camera_objects_yoloe_l_experiment.launch prompt_profile:=base27 batch_mode:=batch3 debug:=false
+          roslaunch --nodes asmc_camera camera_objects_three_view_experiment.launch debug:=false
+          roslaunch --nodes asmc_camera camera_objects_three_view_experiment.launch debug:=true
           python3 tools/perception/check_region_example_ros.py
           python3 tools/perception/check_object_visualization_ros.py
           python3 tools/perception/check_object_visualization_ros.py --hood-mask
           python3 tools/perception/check_object_visualization_ros.py --hood-mask --debug-raw
+          python3 tools/perception/check_object_visualization_ros.py --hood-mask --view left
+          python3 tools/perception/check_object_visualization_ros.py --hood-mask --view right
           python3 tools/perception/check_hood_mask_ros.py
           python3 tools/perception/check_ego_hood_filter_ros.py
           python3 tools/perception/check_object_visualization_ros.py --ego-hood-filter

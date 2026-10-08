@@ -1,5 +1,7 @@
 # 카메라 객체 검출 인수 가이드 — 손재호
 
+> **2026-10-09 통합 작업:** [3뷰 COCO7 실행·모델 선정](camera-three-view-coco-runtime.md)을 현재 시작점으로 사용합니다. 아래 기존 실험과 실패 증거는 보존합니다.
+
 > **문서 상태:** Active Guide / Handoff
 > **Handoff 허브:** [README.md](../README.md)
 > **Perception 경계:** [Perception 개발·통합 가이드](../../packages/asmc_perception/README.md)
