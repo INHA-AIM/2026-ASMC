@@ -114,6 +114,8 @@ def main():
         raise RuntimeError('stationary Ego required before the bounded trial')
     report=dict(original_ego=MessageToDict(original),original_mode=original_mode,
                 failures=[],rpc=[],samples=[],restored=False,
+                bridge_control_destination=dict(ip=rospy.get_param('/morai_udp_bridge/cmd_ip',None),
+                                                port=rospy.get_param('/morai_udp_bridge/cmd_port',None)),
                 actuator_policy='UDP type2 speed capped at5km/h from valid trajectory; preview steering; MPC actuator conversion is explicit',
                 actor_restore_scope='Ego pose/gear/control mode only; other actors untouched')
     def save(): (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
@@ -155,6 +157,9 @@ def main():
         mutate(actors.SetVehicleControlMode,VehicleControlModeParam(actor_info=ego,mode=VEHICLE_CONTROL_AUTO_MODE))
         mutate(actors.SetVehicleGear,VehicleGear(actor_info=ego,gear=GEAR_MODE_D))
         begin=time.monotonic()
+        heading=np.array([math.cos(math.radians(original.transform.rotation.z)),
+                          math.sin(math.radians(original.transform.rotation.z))])
+        origin=np.array([original.transform.location.x,original.transform.location.y])
         while time.monotonic()-begin<a.seconds and not rospy.is_shutdown():
             now=time.monotonic();state=actors.GetActorState(ego,timeout=.3)
             point=np.array([state.transform.location.x,state.transform.location.y])
@@ -162,6 +167,7 @@ def main():
             reason=None; command=CtrlCmd(longlCmdType=1,brake=1.)
             with lock:
                 if collision[0] or state.vehicle_state.collision_objects: reason='collision'
+                elif float(np.dot(point-origin,heading)) < -.3: reason='reverse movement during forward-only rehearsal'
                 elif distance>4.5: reason='route corridor exit'
                 elif any(now-latest[k][0]>age for k,age in [('preview',.25),('trajectory',.25),('state',.2)]): reason='stale preview input'
                 elif not latest['trajectory'][1].valid or not latest['state'][1].valid: reason='invalid planning input'
@@ -187,7 +193,9 @@ def main():
         moved=np.linalg.norm(np.array(report['samples'][-1]['position'])-
                              np.array([original.transform.location.x,original.transform.location.y]))
         report['displacement_m']=float(moved)
-        if moved<.5: report['failures'].append('no verified drive: less than0.5m displacement')
+        report['forward_progress_m']=float(np.dot(np.array(report['samples'][-1]['position'])-origin,heading))
+        if moved<.5 or report['forward_progress_m']<.5:
+            report['failures'].append('no verified forward drive: less than0.5m forward progress')
     except KeyboardInterrupt: report['failures'].append('trial interrupted; restoration attempted')
     except Exception as exc: report['failures'].append(str(exc))
     finally:
