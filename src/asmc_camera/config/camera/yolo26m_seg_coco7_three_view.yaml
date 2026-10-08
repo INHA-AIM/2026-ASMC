@@ -1,0 +1,31 @@
+# Provisional candidate; full acceptance and default promotion are pending.
+# Engine is built for the pinned TensorRT environment on RTX 4060 Ti.
+weights: /data/models/camera_coco7_v1/yolo26m-seg.engine
+expected_sha256: 0f1b980de6a8ebdfb0052a61bc771f8eaa14704238247a7ed9131161eaeed0f1
+runtime_backend: tensorrt
+task: segment
+batched_runtime: true
+label_mode: source
+views:
+- front
+- left
+- right
+front_width: 960
+batch_mode: 2plus1
+batch_wait_ms: 10.0
+target_hz: 15.0
+target_hz_by_view:
+  front: 15.0
+  left: 15.0
+  right: 15.0
+conf_thres: 0.65
+allowed_names:
+- person
+- dog
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+device: cuda:0
+require_cuda: true

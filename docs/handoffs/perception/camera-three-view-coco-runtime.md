@@ -71,6 +71,26 @@ Capture의 현재 검수 GT에는 car/truck/person/bus만 있으므로 dog/bicyc
 포함한 7종 전체의 정량 수락으로 확대하지 않는다. gRPC actor의 3D 상태와 영상
 검토 갤러리는 나머지 종류의 관찰 자료이며 독립적인 픽셀 GT를 대체하지 않는다.
 
+### Mask 수락 보류
+
+960 입력의 YOLO26m-seg, confidence 0.65, 2+1 batch, 세 뷰 15Hz는 전체 스택
+세 반복에서 처리 기준을 통과했다. 그러나 같은 RGB 2,252장의 black mask ON/OFF
+대조에서 전방 1·좌측 1·우측 4건의 신규 GT 누락이 나왔다. 윤곽 안쪽 4픽셀과
+중성색 96을 적용한 선택적 v2 후보는 기존 사례를 회복했지만 다른 전방 1·우측 1건이
+생겼고 오검출 4건으로 같은 너비의 기준선 3건을 초과했다. detect 960/0.7의
+black mask에서도 좌측 1·우측 1건이 나왔다. 기존 전방 누락 승인과 별개다.
+
+부분 장면에서 회복됐다는 이유로 v2를 기본값으로 적용하지 않는다. v1의 black
+설정과 실패 원본을 유지하며 v2는 명시적 실험 프로필이다. `coco7_masks.py`의
+`--mask-profile black-v1|neutral-v2`로 동일 데이터 대조를 재현한다. OFF는 원본을
+수정하지 않고 빈 제외 영역을 반환한다. v2의 fill/inset과 실제 raster 윤곽은 진단에
+기록된다. 선정되지 않은 설정을 heldout 결과에 맞춰 다시 조정하지 않는다.
+
+`full-mask-controls-selection/index.html`,
+`full-neutral-mask-controls-selection/index.html`,
+`full-detect-mask-controls-selection/index.html`에서 모든 신규 누락을 직접 확인한다.
+`yolo26m_seg_coco7_three_view.yaml`은 처리 성능 후보이며 운영 수락된 기본값이 아니다.
+
 실측에서 GPU의 박스 필드를 하나씩 Python scalar로 읽는 비용이 컸다. 박스를
 한 번에 CPU로 옮기고, TwinLite가 구독자 없는 대형 debug 영상을 직렬화하지
 않도록 수정했다. 클래스·좌표·순서·source header와 GPU 추론 결과는 유지한다.

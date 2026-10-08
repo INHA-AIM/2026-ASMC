@@ -11,6 +11,7 @@ from asmc_camera.detection.ultralytics_backend import file_sha256
 from asmc_camera.detection.hood_mask import HoodMask, load_view_masks
 from evaluate_coco7_models import evaluate
 from seg_measurements import match_boxes
+from coco7_masks import add_mask_profile,load_masks
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -37,11 +38,11 @@ def main():
     p.add_argument('--width',type=int,nargs='+',default=[640,960,1280])
     p.add_argument('--confidence',type=float,default=.7)
     p.add_argument('--image',nargs='+',help='Explicit selection GT hard cases, in addition to every side-overlap control')
+    add_mask_profile(p)
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
     rows=[json.loads(line) for line in (a.gt/'frames.jsonl').read_text().splitlines()]
     rows=[r for r in rows if r['split']=='selection' and r['annotation_complete']]
-    masks=load_view_masks(['front','left','right'],HoodMask.load(True,ROOT/'src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml'),True,
-        {v:ROOT/f'src/asmc_camera/config/camera/yolo_ego_mask_{v}_v1.yaml' for v in ['left','right']})
+    masks=load_masks(a.mask_profile)
     selected=[]
     for view in ('front','left','right'):
         subset=[r for r in rows if r['view']==view and any(g.get('subtype_verified') and g['source_class_name'] in COCO7 for g in r['annotations'])]
@@ -59,7 +60,7 @@ def main():
         objects=[g['actor_id'] for n,g in enumerate(row['annotations']) if g.get('subtype_verified') and g['source_class_name'] in COCO7 and np.any(gm[n]&ego)]
         if objects:overlap.append(dict(row,overlap_actors=objects))
     selected+= [r for r in overlap if r['image'] not in {s['image'] for s in selected}]
-    report=dict(samples=len(selected),confidence=a.confidence,side_overlap_frames=len(overlap),parity=[],mask_controls=[],
+    report=dict(samples=len(selected),confidence=a.confidence,mask_profile=a.mask_profile,side_overlap_frames=len(overlap),parity=[],mask_controls=[],
                 backends=[],masks={v:m.info for v,m in masks.items()},
                 gt_manifest_sha256=file_sha256(a.gt/'frames.jsonl'),
                 tool_sha256=file_sha256(Path(__file__)),

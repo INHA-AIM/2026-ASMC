@@ -15,6 +15,7 @@ from asmc_camera.detection.yolo_batch_backend import BatchedYoloDetector, COCO7
 from asmc_camera.detection.ultralytics_backend import file_sha256
 from asmc_camera.detection.hood_mask import HoodMask, load_view_masks
 from seg_measurements import iou, match_boxes
+from coco7_masks import add_mask_profile,load_masks
 
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = ('yolo11m', 'yolo26m', 'yolo26l', 'yolo26m-seg', 'yolo26l-seg')
@@ -64,6 +65,7 @@ def main():
     p.add_argument('--ego-mask-off', action='store_true', help='Explicit original-input control, including all side GT frames')
     p.add_argument('--frozen-confidence', type=float, choices=CONFIDENCES,
                    help='Evaluate only the selection-frozen confidence; never sweep heldout data')
+    add_mask_profile(p)
     a = p.parse_args(); a.output.mkdir(parents=True, exist_ok=True)
     if a.split=='heldout' and a.frozen_confidence is None:
         p.error('heldout requires --frozen-confidence fixed on selection data')
@@ -72,9 +74,7 @@ def main():
     manifest = a.gt/'frames.jsonl'
     rows = [json.loads(line) for line in manifest.read_text().splitlines()]
     rows = [r for r in rows if r['split']==a.split and r['annotation_complete']]
-    masks = load_view_masks(['front','left','right'],
-        HoodMask.load(not a.ego_mask_off, ROOT/'src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml'), not a.ego_mask_off,
-        {v: ROOT/f'src/asmc_camera/config/camera/yolo_ego_mask_{v}_v1.yaml' for v in ['left','right']})
+    masks=load_masks(a.mask_profile,not a.ego_mask_off)
     all_results = []
     for model in a.model:
         for width in a.width:
@@ -148,7 +148,7 @@ def main():
                 gt_manifest_sha256=file_sha256(manifest),masks={v:m.info for v,m in masks.items()},
                 latency_ms={name:float(np.percentile(latencies,q)) for name,q in [('p50',50),('p95',95),('p99',99)]},
                 matched_to_missed_transitions=dict(transitions),
-                frozen_confidence=a.frozen_confidence,
+                frozen_confidence=a.frozen_confidence,mask_profile=a.mask_profile,
                 missing_gt_classes=[c for c in COCO7 if not counts[display_confidence][c]['gt']],
                 interpretation='known subtype GT only; unknown-region predictions ignored, not negatives; actor captures are inspection only')
             (out/'summary.json').write_text(json.dumps(report,indent=2)+'\n')

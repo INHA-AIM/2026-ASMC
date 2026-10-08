@@ -40,7 +40,6 @@ gt:
   - bicycle
   - motorcycle
 pending:
-- batch_and_full_stack_rates
 - heldout_frozen_confidence
 - full_mask_off_controls
 - bag_fusion_reuse
@@ -49,6 +48,10 @@ pending:
 - shared_container_reconnection
 - default_promotion
 - final_regression_and_CI
+- debug_on_cost
+- actor_capture_inspection
+- legacy_3514_parity
+- mask_acceptance_or_alternative_model
 artifacts: ../../artifacts/camera-coco7-live-v1
 model_directory: ../../data/models/camera_coco7_v1
 optimized_runtime:
@@ -80,9 +83,99 @@ completed_measurement_sets:
     failed_trials:
     - yolo26m-seg-1280-all10-2plus1-C1-r2
     - yolo26m-seg-1280-all10-2plus1-C6-r2
+  live-batch-output-optimized:
+    trials: 18
+    failed: 4
+    index_sha256: af5195b30724bfe5e3b592e8e5dbb711c59dc3a31b06bd771e14e244f9d2b4eb
+    failed_trials:
+    - yolo26m-seg-1280-all10-sequential-C6-r1
+    - yolo26m-seg-960-all10-batch3-C6-r2
+    - yolo26m-seg-1280-all10-batch3-C6-r2
+    - yolo26m-1280-all10-batch3-C6-r3
+  live-finalist-full-stack-rates:
+    trials: 9
+    failed: 1
+    index_sha256: 55c026b17bb5d03f2d8ce1d930ebb50fb3cfc0c301dffb3a43bf71d397bd8cc1
+    failed_trials:
+    - yolo26m-seg-960-front20_side10-2plus1-C6-r2
 near_object_diagnostic:
   gallery: ../../artifacts/camera-coco7-live-v1/near-object-gallery/index.html
   case: 'foggy front 000227–000229: 960 finds close car; 1280 m-seg misses even at0.25
     in both PyTorch and TensorRT'
   interpretation: Resolution/model effect, not proven TensorRT conversion error; all
     original failures retained
+selection_candidate:
+  model: yolo26m-seg
+  front_width: 960
+  confidence: 0.65
+  batch: 2plus1
+  target_hz_by_view:
+    front: 15
+    left: 15
+    right: 15
+  status: not_accepted_full_mask_control_failed
+  selection_macro_f1: 0.20156618028553436
+  reason: Higher-scoring 1280 candidates regress on the same visible close-car consecutive
+    frames; 960 passes all three C6 all15 repeats and retains the close-car observations.
+    Apply object-gap eligibility before macro-F1 ranking.
+  three_repeats_output_hz:
+  - - 14.9
+    - 14.85
+    - 14.85
+  - - 14.9
+    - 14.95
+    - 14.8
+  - - 14.9
+    - 14.8
+    - 14.85
+  peak_startup_and_active_vram_mib: 5139
+  selection_false_positives: 3
+  runtime_config: src/asmc_camera/config/camera/yolo26m_seg_coco7_three_view.yaml
+  engine_sha256: 0f1b980de6a8ebdfb0052a61bc771f8eaa14704238247a7ed9131161eaeed0f1
+mask_ablation:
+  full-mask-controls-selection:
+    images: 2252
+    confidence: 0.65
+    new_missed:
+      front: 1
+      left: 1
+      right: 4
+    recovered:
+      front: 0
+      left: 2
+      right: 0
+    report_sha256: a03f0562491b058f80d772e59dbd4f2b80cbad5b4e96890708a3c2e54a83cfa6
+    passed: false
+    exceptions_applied: false
+  full-neutral-mask-controls-selection:
+    images: 2252
+    confidence: 0.65
+    new_missed:
+      front: 1
+      left: 0
+      right: 1
+    recovered:
+      front: 1
+      left: 2
+      right: 0
+    report_sha256: 31d51dacc26a07bca4d1e20d9d2688157d9f8d21622015fc2bf408091d11ac4a
+    passed: false
+    exceptions_applied: false
+  neutral_selection_false_positives: 4
+  neutral_selection_fp_limit: 3
+  full-detect-mask-controls-selection:
+    images: 2252
+    confidence: 0.7
+    new_missed:
+      front: 0
+      left: 1
+      right: 1
+    recovered:
+      front: 2
+      left: 0
+      right: 3
+    report_sha256: 31eedc1d61787f611957f9935979d7226d937bc1e0a17385cc7adc7812816db4
+    passed: false
+    exceptions_applied: false
+    model: yolo26m
+    front_width: 960

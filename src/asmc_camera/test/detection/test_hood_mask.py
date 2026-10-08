@@ -44,6 +44,18 @@ class HoodMaskTest(unittest.TestCase):
         image = np.full((720,1280,3),127,np.uint8)
         self.assertIs(image,HoodMask.load(False,'missing.yaml').apply(image))
 
+    def test_off_control_geometry_is_empty_and_readonly(self):
+        mask=HoodMask.load(False,'missing.yaml')
+        for height,width in [(720,1280),(480,640)]:
+            bitmap,vertices=mask.geometry(height,width)
+            self.assertEqual((height,width),bitmap.shape)
+            self.assertFalse(bitmap.any())
+            self.assertEqual((0,2),vertices.shape)
+            self.assertFalse(bitmap.flags.writeable)
+            self.assertFalse(vertices.flags.writeable)
+            self.assertEqual(0,mask.info['excluded_pixels'])
+            self.assertIs(bitmap,mask.geometry(height,width)[0])
+
     def test_source_unchanged_dimensions_preserved_and_cache_readonly(self):
         mask=HoodMask(POLYGON)
         for h,w in [(720,1280),(480,640)]:
@@ -64,6 +76,33 @@ class HoodMaskTest(unittest.TestCase):
         out=HoodMask([(0,.9),(.5,.7),(1,.9),(1,1),(0,1)]).apply(image)
         self.assertTrue(out[75,5].all())
         self.assertFalse(out[75,50].any())
+
+    def test_version2_fill_changes_only_excluded_pixels_and_preserves_source(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'mask.yaml';p.write_text('version: 2\npolygon: [[0, 0.79], [1, 0.79], [1, 1], [0, 1]]\nfill_bgr: [96, 96, 96]\n')
+            mask=HoodMask.load(True,p)
+            image=np.full((100,120,3),200,np.uint8);result=mask.apply(image)
+            bitmap,_=mask.geometry(*image.shape[:2])
+            self.assertTrue((result[bitmap]==96).all())
+            self.assertTrue((result[~bitmap]==200).all())
+            self.assertTrue((image==200).all())
+            self.assertEqual([96,96,96],mask.info['fill_bgr'])
+            for fill in ([1,2],[1,2,256],[1,2,float('nan')],[True,1,2],[1.,2,3]):
+                with self.assertRaises(ValueError):HoodMask(POLYGON,fill_bgr=fill)
+
+    def test_inset_geometry_matches_actual_filled_area_and_keeps_boundary(self):
+        import cv2
+        original=HoodMask(POLYGON)
+        inset=HoodMask(POLYGON,fill_bgr=(96,96,96),inset_pixels=4)
+        before,_=original.geometry(100,120);after,pixels=inset.geometry(100,120)
+        expected=cv2.erode(before.astype(np.uint8),np.ones((9,9),np.uint8)).astype(bool)
+        self.assertTrue(np.array_equal(expected,after))
+        self.assertFalse(after[79,60]);self.assertTrue(after[83,60])
+        self.assertEqual(83,int(pixels[:,1].min()))
+        image=np.full((100,120,3),200,np.uint8);result=inset.apply(image)
+        self.assertTrue((result[after]==96).all());self.assertTrue((result[~after]==200).all())
+        for invalid in (-1,17,1.5,True):
+            with self.assertRaises(ValueError):HoodMask(POLYGON,inset_pixels=invalid)
 
     def test_invalid_polygons_are_rejected(self):
         for polygon in [[],[(0,0),(1,1)],[(0,0),(1,1),(0,1),(1,0)],
