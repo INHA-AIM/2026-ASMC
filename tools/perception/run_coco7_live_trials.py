@@ -21,6 +21,21 @@ RATES = dict(all20=dict(front=20.,left=20.,right=20.), all15=dict(front=15.,left
              all10=dict(front=10.,left=10.,right=10.), front20_side10=dict(front=20.,left=10.,right=10.))
 
 
+def debug_topics(job):
+    if not job.get('debug'): return []
+    topics=['/perception/camera/objects/debug/image/compressed',
+        '/perception/camera/objects/debug/left/image/compressed',
+        '/perception/camera/objects/debug/right/image/compressed',
+        '/perception/camera/debug/mosaic/compressed',
+        '/perception/bev/debug/comparison/compressed',
+        '/perception/traffic_light/debug/image/compressed']
+    if 'seg' in job['model'] and job.get('debug_masks',True):
+        topics += ['/perception/camera/objects/debug/instances/compressed',
+            '/perception/camera/objects/debug/left/instances/compressed',
+            '/perception/camera/objects/debug/right/instances/compressed']
+    return topics
+
+
 def measurement_gate(row, minimum=9.5):
     return bool(row.get('complete') and row.get('five_second_hz') and
         all(hz >= minimum for hz in row['five_second_hz']) and
@@ -88,7 +103,8 @@ def main():
     for j in jobs:
         name='{model}-{width}-{rates}-{batch}-{profile}-r{repeat}'.format(**j)+('-debug' if j.get('debug') else '')
         out=a.output/name;out.mkdir()
-        report=dict(job=j, failures=[],requests=[], preparation={}, interpretation='MORAI rendering active; wall input arrival anchors; no driving')
+        report=dict(job=j, failures=[],requests=[], preparation={}, observation_window_completed=False,
+                    interpretation='MORAI rendering active; wall input arrival anchors; no driving')
         arrivals={};inputs=defaultdict(list);outputs=defaultdict(list);statuses={};status_rows=[];diagnostics=[];controls=[];bbox=[];planning=defaultdict(list);debug_rows=defaultdict(list)
         lock=threading.RLock();subs=[];processes=[];handles=[];sampler=None;begin=end=None
         def save(): (out/'report.json').write_text(json.dumps(report,indent=2)+'\n')
@@ -165,16 +181,7 @@ def main():
             if j.get('debug'):
                 # Consume debug outputs without GUI/recording. Subscriber-aware
                 # publishers must really encode images for the ON cost trial.
-                topics=['/perception/camera/objects/debug/image/compressed',
-                    '/perception/camera/objects/debug/left/image/compressed',
-                    '/perception/camera/objects/debug/right/image/compressed',
-                    '/perception/camera/debug/mosaic/compressed',
-                    '/perception/bev/debug/comparison/compressed',
-                    '/perception/traffic_light/debug/image/compressed']
-                if 'seg' in j['model']:
-                    topics += ['/perception/camera/objects/debug/instances/compressed',
-                        '/perception/camera/objects/debug/left/instances/compressed',
-                        '/perception/camera/objects/debug/right/instances/compressed']
+                topics=debug_topics(j)
                 for topic in topics:
                     subs.append(rospy.Subscriber(topic,CompressedImage,lambda m,t=topic:debug_rows[t].append(
                         dict(arrival=time.monotonic(),bytes=len(m.data))),queue_size=1,buff_size=2**24))
@@ -188,7 +195,7 @@ def main():
             launch(['roslaunch','asmc_camera','perception.launch','profile:=planning',
                 'camera_objects_config:='+str(out/'runtime.yaml'),'objects_views:=[front, left, right]',
                 'start_visualization:='+str(j.get('debug',False)).lower(),
-                'objects_debug_masks:='+str(j.get('debug',False)).lower(),
+                'objects_debug_masks:='+str(j.get('debug') and j.get('debug_masks',True)).lower(),
                 'lane_target_hz:=10','traffic_light_hz:=10','objects_target_hz:=20','traffic_light_wait_first:=0'], 'camera')
             wait_for(lambda:all(n in statuses and statuses[n].loaded and statuses[n].warmed_up for n in NODES),90,'model load timeout')
             time.sleep(2.)
@@ -216,11 +223,13 @@ def main():
             begin=min(r['call_started'] for r in active.values())
             end=max(r['call_started'] for r in active.values())+float(j.get('seconds',20))
             while time.monotonic()<end:
-                wait_for(lambda:True,.1,'')
+                if rospy.is_shutdown():raise RuntimeError('ACTIVE observation window interrupted')
                 graph=master.getSystemState()
                 if any(topic in ('/ctrl_cmd','/ctrl_cmd_0') and names for topic,names in graph[0]):raise RuntimeError('unexpected public control publisher')
                 if any(c.poll() is not None for c in processes):raise RuntimeError('launch exited in measurement')
                 time.sleep(.2)
+            report['observation_window_completed']=True
+            report['observed_window_end']=time.monotonic()
             report['measurements']={}
             for label,rows in outputs.items():
                 owner='yolo' if label.startswith('yolo_') else 'resnet18' if label=='resnet18' else 'twinlite'

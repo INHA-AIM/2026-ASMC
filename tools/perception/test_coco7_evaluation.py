@@ -40,6 +40,16 @@ class Coco7EvaluationTest(unittest.TestCase):
         for hz in (0,-1,21,float('nan')):
             with self.assertRaises(ValueError): pin_uniform_rate(original,hz)
 
+    def test_debug_measurement_consumes_exactly_the_enabled_outputs(self):
+        from run_coco7_live_trials import debug_topics
+        self.assertEqual([],debug_topics(dict(model='yolo26m-seg',debug=False)))
+        masks=debug_topics(dict(model='yolo26m-seg',debug=True))
+        standard=debug_topics(dict(model='yolo26m-seg',debug=True,debug_masks=False))
+        self.assertEqual(9,len(set(masks)))
+        self.assertEqual(6,len(set(standard)))
+        self.assertFalse(any('/instances/' in t for t in standard))
+        self.assertEqual(standard,debug_topics(dict(model='yolo26m',debug=True)))
+
     def test_matrix_retains_failed_repeat_and_rejects_partial_or_invalid_provenance(self):
         import json
         import tempfile
