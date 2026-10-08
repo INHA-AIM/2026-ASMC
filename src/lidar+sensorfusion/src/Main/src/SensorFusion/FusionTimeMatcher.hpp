@@ -1,11 +1,22 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <vector>
 
 namespace fusion_sync {
+
+// A newly admitted normal empty result invalidates older nonempty evidence,
+// including while an older LiDAR snapshot is still waiting for association.
+template <class Frames>
+std::uint64_t LatestEmptyStamp(const Frames& frames) {
+    std::uint64_t barrier = 0;
+    for (const auto& frame : frames)
+        if (frame.boxes.empty()) barrier = std::max(barrier, frame.stamp.toNSec());
+    return barrier;
+}
 
 template <class Frames>
 bool ConsumeMatchedFrame(Frames& frames, std::size_t index, bool reusable) {

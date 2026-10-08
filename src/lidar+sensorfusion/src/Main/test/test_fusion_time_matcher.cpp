@@ -73,3 +73,18 @@ TEST(FusionTimeMatcher, InvalidatedBeforeEmptyCannotResurrect) {
     const auto invalid_only = fusion_sync::DecideMatch(1, {0}, 200*kMs, 50*kMs, 200*kMs);
     EXPECT_EQ(fusion_sync::MatchAction::Drop, invalid_only.action);
 }
+
+TEST(FusionTimeMatcher, LatestEmptyAlsoBlocksReuseForWaitingOlderLidar) {
+    struct Stamp { std::uint64_t ns; std::uint64_t toNSec() const { return ns; } };
+    struct Frame { Stamp stamp; std::vector<int> boxes; };
+    const std::vector<Frame> frames{{{90*kMs},{1}},{{120*kMs},{}},{{150*kMs},{2}}};
+    const auto barrier = fusion_sync::LatestEmptyStamp(frames);
+    EXPECT_EQ(120*kMs, barrier);
+    std::vector<std::int64_t> stamps;
+    for (const auto& frame : frames)
+        stamps.push_back(frame.stamp.ns < barrier ? 0 : frame.stamp.ns);
+    const auto result = fusion_sync::DecideMatch(100*kMs, stamps, 10*kMs, 50*kMs, 200*kMs);
+    EXPECT_EQ(fusion_sync::MatchAction::Match, result.action);
+    EXPECT_EQ(1u, result.yolo_index); // Empty, rather than resurrected 90ms box.
+    EXPECT_EQ(0u, fusion_sync::LatestEmptyStamp(std::vector<Frame>{{{150*kMs},{1}}}));
+}

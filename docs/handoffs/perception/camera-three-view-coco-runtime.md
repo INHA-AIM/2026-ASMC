@@ -45,6 +45,18 @@
 5. `run_coco7_live_trials.py`: 모델 3개 상주, PREPARE 실제 영상 준비 확인 후 ACTIVE,
    wall 입력 수신→출력 수신 지연·뷰별 공급률·200ms 리소스 기록.
    모든 실패를 보존하고, 최소 실행 가능성과 목표 Hz 달성을 구분한다.
+6. `analyze_coco7_input_gaps.py`: 실패한 출력 공백과 같은 시점의 원본 카메라
+   공급 공백을 연결한다. 입력 공백이 설명된 실행도 원래 수락 실패는 유지한다.
+7. `analyze_coco7_mask_control.py`: 동일 RGB SHA의 전체 mask ON/OFF 결과를
+   같은 GT·confidence로 비교하고 신규 누락 전부를 이미지 갤러리에 남긴다.
+8. `analyze_coco7_fusion.py`: 완전한 종료 집계, 고유/재사용 관측, 트랙별
+   시간적 분류 확인 중복과 빈 결과 이후의 과거 관측 사용을 검사한다.
+
+실측에서 GPU의 박스 필드를 하나씩 Python scalar로 읽는 비용이 컸다. 박스를
+한 번에 CPU로 옮기고, TwinLite가 구독자 없는 대형 debug 영상을 직렬화하지
+않도록 수정했다. 클래스·좌표·순서·source header와 GPU 추론 결과는 유지한다.
+이 수정 전후 실행은 별도 증거로 보존하며 수정 전 실패를 삭제하지 않는다.
+수정 후 PyTorch–TensorRT 동일 입력 270개 비교도 다시 통과했다.
 
 ## 전방 fusion 재사용 실험
 
@@ -84,8 +96,22 @@ rqt_image_view --clear-config /perception/camera/objects/debug/right/image/compr
 ```
 
 위 실험 launch의 debug는 영상 발행이며 rqt 자동 실행이 아니다.
+3뷰 raw7 공급 검사는 아래 도구를 사용한다. legacy
+`verify_perception_runtime.py --camera-objects`는 전방 18Hz 계약 검사이므로
+3뷰 저주기 후보 검사로 대신 사용하지 않는다.
+
+```bash
+python3 tools/perception/verify_coco7_runtime.py --seconds 20 --minimum-hz 9.5
+```
+
 전체 스택 계산 시험의 `coco7_preview_stack.launch`는 명령을 `/evaluation/ctrl_cmd*`로
 격리한다. 실제 주행은 별도 gate·저속 시험이며 preview 성공으로 대체하지 않는다.
+`drive_coco7_preview.py`는 이미 준비된 전체 preview를 5km/h 이하에서 확인하는
+시험 도구다. preview 조향과 유효 trajectory의 속도를 사용하되 종방향 명령은
+type2 속도 상한으로 변환한다. 이는 수정 없는 MPC 구동 성능 검증과 구분한다.
+단일 공개 제어 발행자, 모델·영상·판제 입력 신선도, 충돌·경로 이탈·속도 상한을
+감시하고 종료 후 Ego pose·gear·제어 모드를 확인한다. 실제 이동이 0.5m 미만인
+명령 시도는 주행 성공으로 기록하지 않는다. 기존 actor·시나리오는 변경하지 않는다.
 
 ## 이후
 

@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
 sys.path.insert(0,str(Path(__file__).parent))
 from evaluate_coco7_models import evaluate, summary
@@ -7,6 +8,8 @@ from run_coco7_live_trials import measurement_gate, deadline_report
 from b0_measurements import output_report
 from fusion_log_accounting import parse_fusion_logs
 from analyze_coco7_trials import temporal_report
+from analyze_coco7_fusion import reuse_report
+from verify_coco7_runtime import check_view
 
 
 def ann(label, verified=True):
@@ -14,6 +17,44 @@ def ann(label, verified=True):
 
 
 class Coco7EvaluationTest(unittest.TestCase):
+    def test_drive_gate_honors_stop_and_caps_trajectory_speed(self):
+        from drive_coco7_preview import speed_command
+        preview=SimpleNamespace(brake=0.,longlCmdType=1,velocity=0.)
+        trajectory=SimpleNamespace(valid=True,points=[SimpleNamespace(velocity=4.)])
+        self.assertEqual(5.,speed_command(preview,trajectory))
+        preview.brake=1.
+        self.assertEqual(0.,speed_command(preview,trajectory))
+        preview.brake=0.;preview.longlCmdType=2;preview.velocity=2.
+        self.assertEqual(2.,speed_command(preview,trajectory))
+        preview.velocity=0.
+        self.assertEqual(0.,speed_command(preview,trajectory))
+        trajectory.valid=False
+        self.assertEqual(0.,speed_command(preview,trajectory))
+
+    def test_three_view_verifier_checks_each_source_stream(self):
+        rows=[dict(arrival=i*.1+.025,stamp_ns=i+1,valid=True,
+                   wall_latency_ms=25.,source_age_ms=25.,input_anchor='matched') for i in range(50)]
+        # Three cameras may share stamps; each camera is checked separately.
+        for _ in range(3): self.assertTrue(check_view(rows,0,5,9.5)['passed'])
+        self.assertFalse(check_view([],0,5,9.5)['passed'])
+        bad=[dict(r) for r in rows];bad[5]['wall_latency_ms']=None;bad[5]['input_anchor']='missing'
+        self.assertFalse(check_view(bad,0,5,9.5)['passed'])
+
+    def test_reuse_counts_geometry_pairs_without_duplicating_temporal_class_evidence(self):
+        first=dict(event='camera_observation_use',stamp_ns=100,source_stamp_ns=100,
+                   camera_id='front',calibration_id='c',epoch=1,reused=False)
+        again=dict(first,stamp_ns=120,reused=True)
+        observe=dict(event='class_observation',stamp_ns=100,id=7)
+        final=dict(event='fusion_summary',matched=2,fresh=1,reused=1)
+        self.assertTrue(reuse_report([first,observe,again,final],'bounded_reuse')['passed'])
+        self.assertFalse(reuse_report([first,observe,again,observe,final],'bounded_reuse')['passed'])
+        empty=dict(event='yolo_input',stamp_ns=110,boxes=[])
+        admitted=dict(event='yolo_admitted',stamp_ns=110)
+        self.assertFalse(reuse_report([first,observe,empty,admitted,again,final],'bounded_reuse')['passed'])
+        waiting_old_lidar=dict(again,stamp_ns=105)
+        self.assertFalse(reuse_report([first,observe,empty,admitted,waiting_old_lidar,final],'bounded_reuse')['passed'])
+        self.assertFalse(reuse_report([first,observe,again],'bounded_reuse')['passed'])
+
     def test_unknown_subtype_is_not_a_negative_or_a_positive(self):
         c,ignored,pairs,_,_=evaluate([ann('Vehicle',False)],
             [dict(source_class_name='car',confidence=.9,xyxy=[0,0,10,10])],.7)

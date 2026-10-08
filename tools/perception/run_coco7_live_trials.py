@@ -49,8 +49,8 @@ def provenance(models, engine, revision):
     if len(revision)!=40 or any(c not in '0123456789abcdef' for c in revision):
         raise ValueError('full host checkout revision required')
     binaries={}
-    for relative in ('Main/Main','frenet_planner/frenet_planner_node',
-                     'behavior_planner/behavior_node','asmc_controller/mpc_controller'):
+    for relative in ('Main/main','frenet_planner/frenet_planner_node',
+                     'behavior_planner/behavior_node','asmc_controller/mpc_controller_node'):
         for prefix in os.environ.get('CMAKE_PREFIX_PATH','').split(':'):
             path=Path(prefix)/'lib'/relative
             if path.is_file():
