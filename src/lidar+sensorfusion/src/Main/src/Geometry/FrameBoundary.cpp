@@ -1,4 +1,5 @@
 #include <Geometry/FrameBoundary.hpp>
+#include <SensorFusion/FusionTrace.hpp>
 #include <ros/package.h>
 #include <openssl/sha.h>
 #include <iomanip>
@@ -129,10 +130,28 @@ void Configure(ros::NodeHandle& node,const VehicleSpec& vehicle,const CAMERA& ca
 }
 void PrepareScan(const ros::Time& stamp,const GPS_IMU& local,const VehicleSpec& vehicle,
                  const asmc::lidar::PoseSelection& map_pose,std::uint64_t input_generation) {
+  asmc::lidar::Observation time{static_cast<asmc::lidar::Ns>(stamp.toNSec()),
+      static_cast<asmc::lidar::Ns>(stamp.toNSec()),
+      static_cast<asmc::lidar::Ns>(ros::Time::now().toNSec()),"ros","bridge_receive_ms"};
+  PrepareScan(time,local,vehicle,map_pose,input_generation);
+}
+ros::Time SourceStamp(const RAW_LIDAR_DATA& raw) {
+  return ros::Time().fromNSec(Enabled() && raw.source_stamp_ns?raw.source_stamp_ns:raw.u64_Timestamp*1000000ULL);
+}
+asmc::lidar::Observation ScanTime(const RAW_LIDAR_DATA& raw) {
+  const auto ns=SourceStamp(raw).toNSec();
+  if(raw.receipt_steady_ns) return {static_cast<asmc::lidar::Ns>(ns),
+      static_cast<asmc::lidar::Ns>(raw.receipt_steady_ns),
+      static_cast<asmc::lidar::Ns>(fusion_trace::SteadyNowNs()),"ros","bridge_receive_ns","steady"};
+  return {static_cast<asmc::lidar::Ns>(ns),static_cast<asmc::lidar::Ns>(ns),
+      static_cast<asmc::lidar::Ns>(ros::Time::now().toNSec()),"ros","bridge_receive_ms"};
+}
+void PrepareScan(const asmc::lidar::Observation& time,const GPS_IMU& local,
+                 const VehicleSpec& vehicle,const asmc::lidar::PoseSelection& map_pose,
+                 std::uint64_t input_generation) {
   current=asmc::lidar::Context{};
   scan_attitude=MapRotation(local); scan_yaw=local.st_IMU.f32_Yaw_rad;
-  current.time={static_cast<asmc::lidar::Ns>(stamp.toNSec()),static_cast<asmc::lidar::Ns>(stamp.toNSec()),
-      static_cast<asmc::lidar::Ns>(ros::Time::now().toNSec()),"ros","bridge_receive_ms"};
+  current.time=time;
   current.input_generation=input_generation;
   current.frame=asmc::lidar::Frame::LeveledSensor;
   current.base_from_sensor=SensorMount(vehicle);

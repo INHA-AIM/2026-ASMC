@@ -10,8 +10,16 @@ BoundedPoseHistory::BoundedPoseHistory(Ns age, unsigned recovery)
 }
 void BoundedPoseHistory::clear() { samples_.clear(); }
 std::string BoundedPoseHistory::append(const PoseSample& sample) {
-  if (sample.stamp_ns <= 0 || sample.arrival_ns < sample.stamp_ns || sample.clock.empty())
+  const auto arrival_clock=sample.arrival_clock.empty()?sample.clock:sample.arrival_clock;
+  const bool unknown_stamp_barrier=sample.stamp_ns==0 && !sample.valid &&
+      sample.clock=="ros" && arrival_clock=="steady";
+  if ((!unknown_stamp_barrier && sample.stamp_ns <= 0) || sample.arrival_ns<=0 || sample.clock.empty() ||
+      (arrival_clock==sample.clock && sample.arrival_ns < sample.stamp_ns) ||
+      (arrival_clock!=sample.clock && !(sample.clock=="ros" && arrival_clock=="steady")))
     return "pose_time_invalid";
+  if (!samples_.empty() && (samples_.back().clock!=sample.clock ||
+      (samples_.back().arrival_clock.empty()?samples_.back().clock:samples_.back().arrival_clock)!=arrival_clock))
+    return "pose_clock_changed";
   if (!samples_.empty() && sample.arrival_ns < samples_.back().arrival_ns)
     return "arrival_regression";
   samples_.push_back(sample);
@@ -35,8 +43,11 @@ PoseSelection BoundedPoseHistory::at(const Observation& time, const Rot& rotatio
   for (const auto& s : samples_) {
     // A late GPS callback cannot retroactively make an earlier scan's map
     // output available. Receipt time belongs to the observation, not publish.
-    if (s.clock != time.clock || s.arrival_ns > time.receipt_ns ||
-        s.stamp_ns > time.stamp_ns || s.stamp_ns <= last_source) continue;
+    if (s.clock != time.clock ||
+        (s.arrival_clock.empty()?s.clock:s.arrival_clock)!=(time.receipt_clock.empty()?time.clock:time.receipt_clock) ||
+        s.arrival_ns > time.receipt_ns) continue;
+    if(!s.valid && s.stamp_ns==0) {latest=&s;consecutive=0;continue;}
+    if(s.stamp_ns > time.stamp_ns || s.stamp_ns <= last_source) continue;
     if (last_source && s.stamp_ns - last_source > max_age_) consecutive=0;
     last_source=s.stamp_ns; latest=&s;
     const bool good=s.valid && pose_valid(s.map_from_reference) && s.gps_in_base.allFinite();

@@ -29,7 +29,7 @@ asmc_msgs::LidarObject Message(const LiDARObjectInfo& original,const asmc::lidar
 }
 Array Empty(const ros::Time& stamp,const char* frame,std::uint8_t status,const std::string& reason) {
   Array out; out.header.stamp=stamp; out.header.frame_id=frame;
-  out.status=status; out.reason=reason; out.stamp_provenance="bridge_receive_ms";
+  out.status=status; out.reason=reason; out.stamp_provenance="bridge_receive_ns";
   return out;
 }
 }
@@ -95,6 +95,7 @@ void Publisher::Publish(const LiDAR& lidar) {
   Array local=Empty(stamp,"base_link",Array::OBSERVED_EMPTY,"observed_empty");
   Array map=Empty(stamp,"map",context.map_pose.valid?Array::OBSERVED_EMPTY:Array::POSE_UNAVAILABLE,
       context.map_pose.valid?"observed_empty":context.map_pose.reason);
+  local.stamp_provenance=map.stamp_provenance=context.time.stamp_provenance;
   for(const auto& original:lidar.vec_Objects) {
     if(original.s32_Id<0 || original.s32_MissCount!=0 || original.pcl_ClusterPoints.empty() ||
         original.str_ObjectClass=="noise" || original.str_ObjectClass=="지면노이즈") continue;
@@ -138,6 +139,10 @@ void Publisher::Diagnostics(const ros::WallTimerEvent&) {
   value("source_stamp_ns",std::to_string(last_stamp_.toNSec())); value("calibration_sha",CalibrationId());
   value("legacy_output",legacy_reason_);
   value("input_generation",std::to_string(last_context_.input_generation));
+  value("source_clock",last_context_.time.clock);
+  value("receipt_clock",last_context_.time.receipt_clock.empty()?last_context_.time.clock:last_context_.time.receipt_clock);
+  value("receipt_ns",std::to_string(last_context_.time.receipt_ns));
+  value("processing_ns",std::to_string(last_context_.time.processing_ns));
   value("input_coordinate","leveled_sensor");
   value("leveling_source",last_context_.leveling_source);
   if(!last_context_.map_pose.sample_stamps.empty()) {

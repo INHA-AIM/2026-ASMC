@@ -162,6 +162,9 @@ struct RAW_YOLO_DATA
 struct RAW_LIDAR_DATA
 {
 	uint64 u64_Timestamp;
+	uint64 source_stamp_ns = 0;
+	uint64 receipt_ros_ns = 0;
+	uint64 receipt_steady_ns = 0;
 	int32 s32_Num;
 	char arc_Buffer[c_LIDAR_BUFFER_SIZE];
 };

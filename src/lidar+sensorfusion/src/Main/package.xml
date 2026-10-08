@@ -67,4 +67,5 @@
 
   <export>
   </export>
+  <test_depend>rosbag</test_depend>
 </package>

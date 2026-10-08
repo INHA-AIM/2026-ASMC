@@ -3,6 +3,7 @@
 #include <Lidar/Tracking/MotionClassifier.hpp>
 #include <PlannerInterface/PlannerObjectAdapter.hpp>
 #include <Geometry/FrameBoundary.hpp>
+#include "PipelineTrace.hpp"
 
 
 ros::Publisher marker_pub;
@@ -125,7 +126,7 @@ static inline void PublishCloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& clou
         pcl::PointCloud<pcl::PointXYZI> empty;
         pcl::toROSMsg(empty, msg);
     }
-    msg.header.stamp    = ros::Time().fromNSec((uint64)raw.u64_Timestamp * 1000000ULL);
+    msg.header.stamp    = frame_boundary::SourceStamp(raw);
     msg.header.frame_id = frame;
     RawPub().publish(msg);
 }
@@ -142,7 +143,7 @@ static inline void PublishCloudWithPub(const pcl::PointCloud<pcl::PointXYZI>::Pt
         pcl::PointCloud<pcl::PointXYZI> empty;
         pcl::toROSMsg(empty, msg);
     }
-    msg.header.stamp    = ros::Time().fromNSec((uint64)raw.u64_Timestamp * 1000000ULL);
+    msg.header.stamp    = frame_boundary::SourceStamp(raw);
     msg.header.frame_id = frame;
     pub.publish(msg);
 }
@@ -158,7 +159,7 @@ bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     pthread_mutex_lock(&st_SensorData.st_MutexLiDAR); //LiDAR 파이프라인 잠금 시작
 
     static uint64_t last_raw = 0;
-    const uint64_t raw = st_RawLiDAR.u64_Timestamp;
+    const uint64_t raw = frame_boundary::Enabled()?frame_boundary::SourceStamp(st_RawLiDAR).toNSec():st_RawLiDAR.u64_Timestamp;
     if (raw == last_raw || (frame_boundary::Enabled() && raw<last_raw)) {
         pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR); // 반드시 잠금 해제
         return false; // 중복 프레임은 처리/갱신/속도계산 전부 스킵
@@ -173,7 +174,7 @@ bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     }
 
     // [MOVE/SET] ROS 시간은 여기서, raw(ms) -> ns 변환
-    ts_CurrTime = ros::Time().fromNSec((uint64_t)raw * 1000000ULL); // ms → ns
+    ts_CurrTime = frame_boundary::SourceStamp(st_RawLiDAR);
 
     g_LidarStageProfile.Reset();
     g_LidarStageProfile.raw_points = st_RawLiDAR.s32_Num;
@@ -209,6 +210,8 @@ bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
                 CorrectingPoints(voxeled_cloud, imu_compensation_cloud, st_GPSIMU));
     LIDAR_STAGE(ransac_ms,
                 NormalVectorFiltering(imu_compensation_cloud, ransac_cloud, st_GPSIMU));
+    pipeline_trace::Ground(ts_CurrTime,*voxeled_cloud,*imu_compensation_cloud,
+        *ransac_cloud,CurrentGroundPlaneSnapshot());
     g_LidarStageProfile.ransac_points =
         static_cast<int>(ransac_cloud->points.size());
     LIDAR_STAGE(ransac_pub_ms,
@@ -257,6 +260,7 @@ bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     LIDAR_STAGE(framefilter_ms,
                 FrameFilter(prev_objects_queue, object, st_GPSIMU, st_VehicleSpec));
     
+    pipeline_trace::Tracking(ts_CurrTime,ts_PrevTime,object);
     // PublishCloud(clustering_cloud, st_RawLiDAR, "map");
     header.stamp = ts_CurrTime;      // 바운딩 박스 stamp 전달 
     header.frame_id = frame_boundary::Enabled()?"lidar_leveled":"velodyne";

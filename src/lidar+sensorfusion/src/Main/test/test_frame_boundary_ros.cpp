@@ -4,6 +4,7 @@
 #include <Parser/Parser.hpp>
 #include <Camera/Camera.hpp>
 #include <Lidar/Tracking/tracking_utils.hpp>
+#include <Lidar/ImuRansac/ImuRansac.hpp>
 #include <ros/package.h>
 #include <mutex>
 #include <functional>
@@ -203,10 +204,11 @@ TEST(FrameBoundary, ContinuousLocalTrackingStateIsIndependentOfGpsHistory) {
 TEST(FrameBoundary, ParserRejectsZeroDuplicateAndBackwardStampsBeforeTrackerInput) {
   Configure();Now(45.);
   const auto old_stamp=st_SensorData.st_RawLiDAR.u64_Timestamp;
+  const auto old_source_ns=st_SensorData.st_RawLiDAR.source_stamp_ns;
   const auto old_count=st_SensorData.st_RawLiDAR.s32_Num;
   const auto old_generation=u64_LidarFrameGeneration;
   pthread_mutex_init(&st_SensorData.st_MutexLiDAR,nullptr);
-  st_SensorData.st_RawLiDAR.u64_Timestamp=0;u64_LidarFrameGeneration=0;
+  st_SensorData.st_RawLiDAR.u64_Timestamp=0;st_SensorData.st_RawLiDAR.source_stamp_ns=0;u64_LidarFrameGeneration=0;
   pcl::PointCloud<pcl::PointXYZI> cloud;cloud.push_back(pcl::PointXYZI());
   sensor_msgs::PointCloud2::Ptr message(new sensor_msgs::PointCloud2);
   pcl::toROSMsg(cloud,*message);message->header.frame_id="velodyne";
@@ -223,9 +225,91 @@ TEST(FrameBoundary, ParserRejectsZeroDuplicateAndBackwardStampsBeforeTrackerInpu
   message->header.stamp=ros::Time(45.1);LiDARParser_Callback(message);
   EXPECT_EQ(st_SensorData.st_RawLiDAR.u64_Timestamp,45100u);
   EXPECT_EQ(u64_LidarFrameGeneration,2u);
-  st_SensorData.st_RawLiDAR.u64_Timestamp=old_stamp;
+  st_SensorData.st_RawLiDAR.u64_Timestamp=old_stamp;st_SensorData.st_RawLiDAR.source_stamp_ns=old_source_ns;
   st_SensorData.st_RawLiDAR.s32_Num=old_count;u64_LidarFrameGeneration=old_generation;
   pthread_mutex_destroy(&st_SensorData.st_MutexLiDAR);
+}
+
+TEST(FrameBoundary, FullNsLocalSelectionDoesNotAdmitFutureSameMsInput) {
+  Configure();Now(60.);SensorPoseHistory history;auto motion=Local();
+  history.AddImu(60000,motion.st_IMU,nullptr,60000000100ULL,1000);
+  history.AddCan(60000,motion.st_CAN,nullptr,60000000100ULL,1000);
+  auto future=motion;future.st_IMU.f32_Roll_rad=.1;
+  history.AddImu(60000,future.st_IMU,nullptr,60000000900ULL,1100);
+  GPS_IMU selected{};LocalInputSelection inputs;std::string reason;
+  ASSERT_TRUE(history.WaitForLocalLookupNs(60000000500ULL,0,&selected,&inputs,&reason));
+  EXPECT_EQ(inputs.imu_stamp_ns,60000000100ULL);
+  EXPECT_EQ(inputs.imu_receipt_steady_ns,1000ULL);
+  EXPECT_FLOAT_EQ(selected.st_IMU.f32_Roll_rad,0.f);
+  ASSERT_TRUE(history.WaitForLocalLookupNs(60000000900ULL,0,&selected,&inputs,&reason));
+  EXPECT_EQ(inputs.imu_stamp_ns,60000000900ULL);
+}
+TEST(FrameBoundary, OriginalScanNsAndDualClockSurviveCallbackAndContext) {
+  Configure();Now(70.);
+  pthread_mutex_init(&st_SensorData.st_MutexLiDAR,nullptr);
+  st_SensorData.st_RawLiDAR.source_stamp_ns=0;
+  pcl::PointCloud<pcl::PointXYZI> cloud;cloud.push_back(pcl::PointXYZI());
+  sensor_msgs::PointCloud2::Ptr message(new sensor_msgs::PointCloud2);
+  pcl::toROSMsg(cloud,*message);message->header.stamp.fromNSec(70000000123ULL);
+  const auto generation=u64_LidarFrameGeneration;
+  LiDARParser_Callback(message);
+  EXPECT_EQ(frame_boundary::SourceStamp(st_SensorData.st_RawLiDAR).toNSec(),70000000123ULL);
+  const auto time=frame_boundary::ScanTime(st_SensorData.st_RawLiDAR);
+  EXPECT_EQ(time.stamp_ns,70000000123LL);EXPECT_EQ(time.receipt_clock,"steady");
+  EXPECT_GT(time.receipt_ns,0);EXPECT_GE(time.processing_ns,time.receipt_ns);
+  EXPECT_EQ(st_SensorData.st_RawLiDAR.receipt_ros_ns,70000000000ULL);
+  message->header.stamp.fromNSec(70000000234ULL);LiDARParser_Callback(message);
+  EXPECT_EQ(u64_LidarFrameGeneration,generation+2);
+  EXPECT_EQ(frame_boundary::SourceStamp(st_SensorData.st_RawLiDAR).toNSec(),70000000234ULL);
+  pthread_mutex_destroy(&st_SensorData.st_MutexLiDAR);
+}
+
+TEST(FrameBoundary, RealGroundFilterPreservesIndependentElevatedPointsAcrossAttitude) {
+  Configure();
+  for(double roll:{0.,5.,-5.,10.,-10.}) for(double pitch:{-3.,0.,3.}) {
+    auto local=Local();local.st_IMU.f32_Roll_rad=roll*M_PI/180.;local.st_IMU.f32_Pitch_rad=pitch*M_PI/180.;
+    frame_boundary::PrepareScan(ros::Time(74.),local,st_VehicleSpec,{},1);
+    const auto level=asmc::lidar::leveling_rotation(local.st_IMU.f32_Roll_rad,
+        local.st_IMU.f32_Pitch_rad,asmc::lidar::Rot::Identity(),true,true);
+    auto raw=pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+    auto corrected=pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+    auto remaining=pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+    // Truth is generated from a known sloped ground before running RANSAC.
+    for(unsigned i=0;i<256;++i) {
+      const double x=5.+.3*(i%16),y=-2.+.3*(i/16);
+      const asmc::lidar::Vec q=level.transpose()*asmc::lidar::Vec(x,y,-1.45+.02*x);
+      pcl::PointXYZI p;p.x=q.x();p.y=q.y();p.z=q.z();p.intensity=0;raw->push_back(p);
+    }
+    for(unsigned i=0;i<24;++i) {
+      const asmc::lidar::Vec q=level.transpose()*asmc::lidar::Vec(7.+.1*(i%4),1.+.1*(i/4),-.7);
+      pcl::PointXYZI p;p.x=q.x();p.y=q.y();p.z=q.z();p.intensity=1;raw->push_back(p);
+    }
+    CorrectingPoints(raw,corrected,local);NormalVectorFiltering(corrected,remaining,local);
+    ASSERT_TRUE(CurrentGroundPlaneSnapshot().valid)<<roll<<","<<pitch;
+    EXPECT_EQ(remaining->size(),24U)<<roll<<","<<pitch;
+    for(const auto& p:*remaining)EXPECT_EQ(p.intensity,1);
+  }
+}
+
+TEST(FrameBoundary, GroundFitFailureAfterAttitudeChangePreservesUnprovenPoints) {
+  Configure();Now(75.);auto local=Local();asmc::lidar::PoseSelection no_map;
+  frame_boundary::PrepareScan(ros::Time(75.),local,st_VehicleSpec,no_map);
+  frame_boundary::StoreLeveling(asmc::lidar::Rot::Identity());
+  auto ground=pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+  auto output=pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+  for(int x=0;x<8;++x)for(int y=0;y<8;++y) {
+    pcl::PointXYZI p;p.x=5.f+x*.3f;p.y=-1.f+y*.3f;p.z=-1.5f;ground->push_back(p);
+  }
+  NormalVectorFiltering(ground,output,local);
+  ASSERT_TRUE(CurrentGroundPlaneSnapshot().valid);
+  local.st_IMU.f32_Roll_rad=10*M_PI/180.;
+  frame_boundary::PrepareScan(ros::Time(75.1),local,st_VehicleSpec,no_map);
+  frame_boundary::StoreLeveling(asmc::lidar::leveling_rotation(local.st_IMU.f32_Roll_rad,0,asmc::lidar::Rot::Identity()));
+  auto ambiguous=pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+  for(int i=0;i<24;++i) {pcl::PointXYZI p;p.x=8.f+i*.02f;p.y=.2f;p.z=-1.5f;ambiguous->push_back(p);}
+  NormalVectorFiltering(ambiguous,output,local);
+  EXPECT_FALSE(CurrentGroundPlaneSnapshot().valid);
+  EXPECT_EQ(output->size(),ambiguous->size());
 }
 
 bool Wait(const std::function<bool()>& condition) {

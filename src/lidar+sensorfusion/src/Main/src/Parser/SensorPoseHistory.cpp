@@ -13,11 +13,12 @@ constexpr double kPi = 3.14159265358979323846;
 template <typename Sample>
 void InsertOrdered(std::deque<Sample>* samples, const Sample& sample) {
     const auto it = std::lower_bound(
-        samples->begin(), samples->end(), sample.stamp_ms,
-        [](const Sample& lhs, std::uint64_t stamp_ms) {
-            return lhs.stamp_ms < stamp_ms;
+        samples->begin(), samples->end(), sample.source_ns?sample.source_ns:sample.stamp_ms*1000000ULL,
+        [](const Sample& lhs, std::uint64_t ns) {
+            return (lhs.source_ns?lhs.source_ns:lhs.stamp_ms*1000000ULL) < ns;
         });
-    if (it != samples->end() && it->stamp_ms == sample.stamp_ms) {
+    if (it != samples->end() && (it->source_ns?it->source_ns:it->stamp_ms*1000000ULL)==
+        (sample.source_ns?sample.source_ns:sample.stamp_ms*1000000ULL)) {
         *it = sample;
     } else {
         samples->insert(it, sample);
@@ -56,6 +57,7 @@ void SensorPoseHistory::Configure(const SensorPoseHistoryConfig& config) {
         imu_.clear();
         can_.clear();
         invalid_imu_stamp_ms_=invalid_can_stamp_ms_=0;
+        invalid_imu_stamp_ns_=invalid_can_stamp_ns_=0;
         has_accepted_imu_ = false;
         has_accepted_can_ = false;
         last_seen_imu_stamp_ms_ = 0;
@@ -65,26 +67,34 @@ void SensorPoseHistory::Configure(const SensorPoseHistoryConfig& config) {
 }
 
 void SensorPoseHistory::AddGps(
-    std::uint64_t stamp_ms, const GPS_DATA& gps) {
+    std::uint64_t stamp_ms, const GPS_DATA& gps,
+    std::uint64_t source_ns, std::uint64_t receipt_steady_ns) {
     if (stamp_ms == 0 || !std::isfinite(gps.f64_E) ||
         !std::isfinite(gps.f64_N) || !std::isfinite(gps.f64_U)) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        InsertOrdered(&gps_, TimedGps{stamp_ms, gps});
+        InsertOrdered(&gps_, TimedGps{stamp_ms, gps, source_ns});
         if(frame_boundary::Enabled()) {
         asmc::lidar::PoseSample sample;
-        sample.stamp_ns=static_cast<asmc::lidar::Ns>(stamp_ms)*1000000LL;
-        sample.arrival_ns=static_cast<asmc::lidar::Ns>(ros::Time::now().toNSec());
+        sample.stamp_ns=source_ns?source_ns:static_cast<asmc::lidar::Ns>(stamp_ms)*1000000LL;
+        sample.arrival_ns=receipt_steady_ns?receipt_steady_ns:static_cast<asmc::lidar::Ns>(ros::Time::now().toNSec());
+        if(receipt_steady_ns) sample.arrival_clock="steady";
         sample.clock="ros"; sample.valid=!gps.b_isJamming;
         sample.reference_is_gps=true;
         sample.gps_in_base=asmc::lidar::Vec(st_VehicleSpec.st_GPSPos.f32_X,
             st_VehicleSpec.st_GPSPos.f32_Y,st_VehicleSpec.st_GPSPos.f32_Z);
         sample.map_from_reference.translation()=asmc::lidar::Vec(gps.f64_E,gps.f64_N,gps.f64_U);
-        const auto attitude=LatestAtOrBefore(imu_,stamp_ms);
-        if(attitude==imu_.end() || double(stamp_ms-attitude->stamp_ms)/1000.>config_.imu_max_age_s ||
-            (invalid_imu_stamp_ms_<=stamp_ms && invalid_imu_stamp_ms_>=attitude->stamp_ms)) {
+        auto attitude=LatestAtOrBefore(imu_,stamp_ms);
+        if(source_ns) {
+            attitude=imu_.end();
+            for(auto it=imu_.begin();it!=imu_.end();++it)
+                if((it->source_ns?it->source_ns:it->stamp_ms*1000000ULL)<=source_ns) attitude=it;
+        }
+        const auto attitude_ns=attitude==imu_.end()?0:(attitude->source_ns?attitude->source_ns:attitude->stamp_ms*1000000ULL);
+        if(!attitude_ns || double(sample.stamp_ns-attitude_ns)*1e-9>config_.imu_max_age_s ||
+            (invalid_imu_stamp_ns_<=static_cast<std::uint64_t>(sample.stamp_ns) && invalid_imu_stamp_ns_>=attitude_ns)) {
             sample.valid=false;
         } else {
             GPS_IMU at_gps{};at_gps.st_IMU=attitude->data;
@@ -98,13 +108,15 @@ void SensorPoseHistory::AddGps(
 }
 
 bool SensorPoseHistory::AddImu(
-    std::uint64_t stamp_ms, const IMU_DATA& imu, std::string* reason) {
+    std::uint64_t stamp_ms, const IMU_DATA& imu, std::string* reason,
+    std::uint64_t source_ns, std::uint64_t receipt_steady_ns) {
     if (stamp_ms == 0 || !imu.b_ImuReady ||
         !std::isfinite(imu.f32_Yaw_rad) || !std::isfinite(imu.f32_Roll_rad) ||
         !std::isfinite(imu.f32_Pitch_rad)) {
         if(frame_boundary::Enabled()) {
             std::lock_guard<std::mutex> lock(mutex_);
             invalid_imu_stamp_ms_=std::max(invalid_imu_stamp_ms_,stamp_ms);
+            invalid_imu_stamp_ns_=std::max<std::uint64_t>(invalid_imu_stamp_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
         }
         SetReason(reason, "invalid IMU sample");
         return false;
@@ -132,11 +144,12 @@ bool SensorPoseHistory::AddImu(
             yaw - accepted_imu_yaw_rad_, 2.0 * kPi));
         if (jump > allowed) {
             if(frame_boundary::Enabled()) invalid_imu_stamp_ms_=std::max(invalid_imu_stamp_ms_,stamp_ms);
+            invalid_imu_stamp_ns_=std::max<std::uint64_t>(invalid_imu_stamp_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
             SetReason(reason, "implausible IMU yaw jump");
             return false;
         }
     }
-    InsertOrdered(&imu_, TimedImu{stamp_ms, imu});
+    InsertOrdered(&imu_, TimedImu{stamp_ms, imu, source_ns, receipt_steady_ns});
     has_accepted_imu_ = true;
     accepted_imu_yaw_rad_ = yaw;
     accepted_imu_stamp_ms_ = stamp_ms;
@@ -147,12 +160,14 @@ bool SensorPoseHistory::AddImu(
 }
 
 bool SensorPoseHistory::AddCan(
-    std::uint64_t stamp_ms, const CAN_DATA& can, std::string* reason) {
+    std::uint64_t stamp_ms, const CAN_DATA& can, std::string* reason,
+    std::uint64_t source_ns, std::uint64_t receipt_steady_ns) {
     const double speed_mps = can.f32_CurrentVel_MPS;
     if (stamp_ms == 0 || !std::isfinite(speed_mps) || speed_mps < 0.0) {
         if(frame_boundary::Enabled()) {
             std::lock_guard<std::mutex> lock(mutex_);
             invalid_can_stamp_ms_=std::max(invalid_can_stamp_ms_,stamp_ms);
+            invalid_can_stamp_ns_=std::max<std::uint64_t>(invalid_can_stamp_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
         }
         SetReason(reason, "invalid vehicle-speed sample");
         return false;
@@ -176,11 +191,12 @@ bool SensorPoseHistory::AddCan(
             config_.can_maximum_acceleration_mps2 * elapsed_s;
         if (std::abs(speed_mps - accepted_can_speed_mps_) > allowed) {
             if(frame_boundary::Enabled()) invalid_can_stamp_ms_=std::max(invalid_can_stamp_ms_,stamp_ms);
+            invalid_can_stamp_ns_=std::max<std::uint64_t>(invalid_can_stamp_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
             SetReason(reason, "implausible vehicle-speed jump");
             return false;
         }
     }
-    InsertOrdered(&can_, TimedCan{stamp_ms, can});
+    InsertOrdered(&can_, TimedCan{stamp_ms, can, source_ns, receipt_steady_ns});
     has_accepted_can_ = true;
     accepted_can_speed_mps_ = speed_mps;
     accepted_can_stamp_ms_ = stamp_ms;
@@ -288,35 +304,52 @@ bool SensorPoseHistory::LookupLocked(
 }
 
 bool SensorPoseHistory::LookupLocalLocked(std::uint64_t lidar_stamp_ms,
-    GPS_IMU* pose,std::string* reason) const {
-    const auto imu_latest = LatestAtOrBefore(imu_, lidar_stamp_ms);
+    GPS_IMU* pose,std::string* reason,std::uint64_t source_ns,
+    LocalInputSelection* selection) const {
+    auto imu_latest = LatestAtOrBefore(imu_, lidar_stamp_ms);
+    if(source_ns) {
+        imu_latest=imu_.end();
+        for(auto it=imu_.begin();it!=imu_.end();++it)
+            if((it->source_ns?it->source_ns:it->stamp_ms*1000000ULL)<=source_ns) imu_latest=it;
+    }
     if (imu_latest == imu_.end()) {
         SetReason(reason, "no IMU at or before LiDAR scan");
         return false;
     }
     const double imu_age_s =
-        static_cast<double>(lidar_stamp_ms - imu_latest->stamp_ms) / 1000.0;
+        (source_ns?double(source_ns-(imu_latest->source_ns?imu_latest->source_ns:imu_latest->stamp_ms*1000000ULL))*1e-9:
+        static_cast<double>(lidar_stamp_ms - imu_latest->stamp_ms) / 1000.0);
     if (imu_age_s > config_.imu_max_age_s) {
         SetReason(reason, "IMU is stale for LiDAR scan");
         return false;
     }
 
-    const auto can_latest = LatestAtOrBefore(can_, lidar_stamp_ms);
+    auto can_latest = LatestAtOrBefore(can_, lidar_stamp_ms);
+    if(source_ns) {
+        can_latest=can_.end();
+        for(auto it=can_.begin();it!=can_.end();++it)
+            if((it->source_ns?it->source_ns:it->stamp_ms*1000000ULL)<=source_ns) can_latest=it;
+    }
     if (can_latest == can_.end()) {
         SetReason(reason, "no vehicle speed at or before LiDAR scan");
         return false;
     }
     const double can_age_s =
-        static_cast<double>(lidar_stamp_ms - can_latest->stamp_ms) / 1000.0;
+        (source_ns?double(source_ns-(can_latest->source_ns?can_latest->source_ns:can_latest->stamp_ms*1000000ULL))*1e-9:
+        static_cast<double>(lidar_stamp_ms - can_latest->stamp_ms) / 1000.0);
     if (can_age_s > config_.can_max_age_s) {
         SetReason(reason, "vehicle speed is stale for LiDAR scan");
         return false;
     }
 
-    if(frame_boundary::Enabled() && invalid_imu_stamp_ms_<=lidar_stamp_ms &&
-        invalid_imu_stamp_ms_>=imu_latest->stamp_ms) {SetReason(reason,"imu_input_invalid");return false;}
-    if(frame_boundary::Enabled() && invalid_can_stamp_ms_<=lidar_stamp_ms &&
-        invalid_can_stamp_ms_>=can_latest->stamp_ms) {SetReason(reason,"speed_input_invalid");return false;}
+    const auto query_ns=source_ns?source_ns:lidar_stamp_ms*1000000ULL;
+    const auto imu_ns=imu_latest->source_ns?imu_latest->source_ns:imu_latest->stamp_ms*1000000ULL;
+    const auto can_ns=can_latest->source_ns?can_latest->source_ns:can_latest->stamp_ms*1000000ULL;
+    if(frame_boundary::Enabled() && invalid_imu_stamp_ns_<=query_ns &&
+        invalid_imu_stamp_ns_>=imu_ns) {SetReason(reason,"imu_input_invalid");return false;}
+    if(frame_boundary::Enabled() && invalid_can_stamp_ns_<=query_ns &&
+        invalid_can_stamp_ns_>=can_ns) {SetReason(reason,"speed_input_invalid");return false;}
+    if(selection) *selection={imu_ns,imu_latest->receipt_steady_ns,can_ns,can_latest->receipt_steady_ns};
     pose->st_IMU=imu_latest->data;
     pose->st_CAN=can_latest->data;
     SetReason(reason,"local_ready");
@@ -333,6 +366,24 @@ bool SensorPoseHistory::WaitForLocalLookup(std::uint64_t stamp_ms,double timeout
     }
     return true;
 }
+bool SensorPoseHistory::WaitForLocalLookupNs(std::uint64_t source_ns,double timeout_s,
+    GPS_IMU* pose,LocalInputSelection* selection,std::string* reason) const {
+    if(!pose || !source_ns) {SetReason(reason,"invalid local timestamp");return false;}
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto deadline=std::chrono::steady_clock::now()+std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(std::max(0.,timeout_s)));
+    while(!LookupLocalLocked(source_ns/1000000ULL,pose,reason,source_ns,selection)) {
+        if(timeout_s<=0. || sample_cv_.wait_until(lock,deadline)==std::cv_status::timeout)
+            return LookupLocalLocked(source_ns/1000000ULL,pose,reason,source_ns,selection);
+    }
+    return true;
+}
+void SensorPoseHistory::AddGpsInvalidAt(std::uint64_t source_ns,std::uint64_t receipt_steady_ns) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    asmc::lidar::PoseSample sample;
+    sample.stamp_ns=source_ns;sample.arrival_ns=receipt_steady_ns;
+    sample.clock="ros";sample.arrival_clock="steady";sample.valid=false;
+    bounded_gps_.append(sample);
+}
 void SensorPoseHistory::AddGpsInvalid(std::uint64_t stamp_ms,std::uint64_t arrival_ms) {
     std::lock_guard<std::mutex> lock(mutex_);
     asmc::lidar::PoseSample sample;
@@ -343,10 +394,14 @@ void SensorPoseHistory::AddGpsInvalid(std::uint64_t stamp_ms,std::uint64_t arriv
 }
 asmc::lidar::PoseSelection SensorPoseHistory::MapAt(std::uint64_t stamp_ms,
     const GPS_IMU& local) const {
-    std::lock_guard<std::mutex> lock(mutex_);
     asmc::lidar::Observation t{static_cast<asmc::lidar::Ns>(stamp_ms)*1000000LL,
         static_cast<asmc::lidar::Ns>(stamp_ms)*1000000LL,
         static_cast<asmc::lidar::Ns>(ros::Time::now().toNSec()),"ros","bridge_receive_ms"};
+    return MapAt(t,local);
+}
+asmc::lidar::PoseSelection SensorPoseHistory::MapAt(const asmc::lidar::Observation& t,
+    const GPS_IMU& local) const {
+    std::lock_guard<std::mutex> lock(mutex_);
     if(!std::isfinite(local.st_CAN.f32_CurrentVel_MPS) ||
         local.st_CAN.f32_CurrentVel_MPS>config_.maximum_extrapolation_speed_mps) {
         asmc::lidar::PoseSelection invalid;invalid.reason="map_speed_invalid";return invalid;
@@ -363,6 +418,7 @@ void SensorPoseHistory::Reset() {
         imu_.clear();
         can_.clear();
         invalid_imu_stamp_ms_=invalid_can_stamp_ms_=0;
+        invalid_imu_stamp_ns_=invalid_can_stamp_ns_=0;
         has_accepted_imu_ = false;
         has_accepted_can_ = false;
         last_seen_imu_stamp_ms_ = 0;

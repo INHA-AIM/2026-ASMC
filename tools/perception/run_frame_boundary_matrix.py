@@ -24,6 +24,7 @@ def main():
     parser.add_argument('--suites',default='state,cost')
     parser.add_argument('--binary-dir',type=Path,required=True)
     parser.add_argument('--smoke',action='store_true')
+    parser.add_argument('--normal-only',action='store_true',help='three profiles x two full bags x three repeats')
     parser.add_argument('--revision',required=True,help='host worktree commit; recorded alongside tool SHA')
     parser.add_argument('--host-state',type=Path,required=True,help='fresh Windows Simulator check, updated by host monitor')
     args=parser.parse_args()
@@ -51,6 +52,7 @@ def main():
         library_sha256=hashlib.sha256((args.binary_dir.parents[0]/'libmyHeader.so').read_bytes()).hexdigest())
     (args.output/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     protocol=[job for suite in args.suites.split(',') for job in jobs(config,suite)]
+    if args.normal_only: protocol=[job for job in protocol if job['gps_mode']=='normal']
     if args.smoke: protocol=[dict(phase='realtime',suite='state',bag_id='shadow',gps_mode='missing',profile='common_pitch',subscribers='both',repeat=0)]
     (args.output/'protocol.json').write_text(json.dumps(protocol,indent=2)+'\n')
     rows=[]

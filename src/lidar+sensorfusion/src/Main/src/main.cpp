@@ -313,7 +313,7 @@ void InitializeCamera(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Camera)
 
 };
 
-void InitLidar(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Lidar)
+void InitLidarSettings()
 {   
     YAML::Node config = YAML::LoadFile(YamlURL);
 
@@ -397,6 +397,11 @@ void InitLidar(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Lidar)
         st_Tracking.f32_ContinuityBonus,
         st_Tracking.f32_DuplicateCenterDistance,
         st_Tracking.f32_DuplicateIouThreshold);
+}
+
+void InitLidar(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Lidar)
+{
+    InitLidarSettings();
     pthread_create(pth_Lidar, NULL, ParseLiDAR, (void*)&st_NodeHandle);
 }
 
@@ -463,7 +468,7 @@ void *TemporalThread(void *p_Arg)
         pthread_mutex_unlock(&st_DataTemporal);
 
         fusion_trace::Event("lidar_process_start",
-            st_CurrentData.st_RawLiDAR.u64_Timestamp * 1000000ULL,
+            frame_boundary::SourceStamp(st_CurrentData.st_RawLiDAR).toNSec(),
             [&](std::ostream& out) {
                 out << ",\"generation\":" << processed_lidar_generation
                     << ",\"skipped_generations\":"
@@ -477,13 +482,27 @@ void *TemporalThread(void *p_Arg)
         const auto lidar_pipeline_start = std::chrono::steady_clock::now();
         GPS_IMU lidar_pose = st_GPSIMU;
         std::string pose_reason;
-        const auto scan_stamp=ros::Time().fromNSec(st_CurrentData.st_RawLiDAR.u64_Timestamp*1000000ULL);
+        const auto scan_stamp=frame_boundary::SourceStamp(st_CurrentData.st_RawLiDAR);
+        auto scan_time=frame_boundary::ScanTime(st_CurrentData.st_RawLiDAR);
+        LocalInputSelection selected_inputs;
         const bool pose_ready = frame_boundary::Enabled()
-            ? LookupLocalStateForLidar(st_CurrentData.st_RawLiDAR.u64_Timestamp,&lidar_pose,&pose_reason)
+            ? LookupLocalStateForLidarNs(scan_stamp.toNSec(),&lidar_pose,&selected_inputs,&pose_reason)
             : LookupSensorPoseForLidar(st_CurrentData.st_RawLiDAR.u64_Timestamp,&lidar_pose,&pose_reason);
         if(frame_boundary::Enabled() && pose_ready) {
-            const auto map=LookupMapPoseForLidar(st_CurrentData.st_RawLiDAR.u64_Timestamp,lidar_pose);
-            frame_boundary::PrepareScan(scan_stamp,lidar_pose,st_VehicleSpec,map,processed_lidar_generation);
+            scan_time=frame_boundary::ScanTime(st_CurrentData.st_RawLiDAR);
+            const auto map=LookupMapPoseForLidar(scan_time,lidar_pose);
+            frame_boundary::PrepareScan(scan_time,lidar_pose,st_VehicleSpec,map,processed_lidar_generation);
+            fusion_trace::Event("scan_input_selection",scan_stamp.toNSec(),[&](std::ostream& out) {
+                out << ",\"generation\":" << processed_lidar_generation
+                    << ",\"receipt_steady_ns\":" << scan_time.receipt_ns
+                    << ",\"receipt_ros_ns\":" << st_CurrentData.st_RawLiDAR.receipt_ros_ns
+                    << ",\"processing_steady_ns\":" << scan_time.processing_ns
+                    << ",\"imu_stamp_ns\":" << selected_inputs.imu_stamp_ns
+                    << ",\"imu_receipt_steady_ns\":" << selected_inputs.imu_receipt_steady_ns
+                    << ",\"can_stamp_ns\":" << selected_inputs.can_stamp_ns
+                    << ",\"can_receipt_steady_ns\":" << selected_inputs.can_receipt_steady_ns
+                    << ",\"map_reason\":" << fusion_trace::Quote(map.reason);
+            });
             if(map.valid) {
                 const Eigen::Vector3d gps=map.map_from_base.translation()+map.map_from_base.rotation()*
                     Eigen::Vector3d(st_VehicleSpec.st_GPSPos.f32_X,st_VehicleSpec.st_GPSPos.f32_Y,st_VehicleSpec.st_GPSPos.f32_Z);
@@ -546,7 +565,7 @@ void *TemporalThread(void *p_Arg)
                 st_LiDAR, lidar_pose, st_VehicleSpec);
         }
         fusion_trace::Event("lidar_process_end",
-            st_CurrentData.st_RawLiDAR.u64_Timestamp * 1000000ULL,
+            frame_boundary::SourceStamp(st_CurrentData.st_RawLiDAR).toNSec(),
             [&](std::ostream& out) {
                 out << ",\"pose_ready\":" << (pose_ready ? "true" : "false")
                     << ",\"processed\":" << (lidar_processed ? "true" : "false")

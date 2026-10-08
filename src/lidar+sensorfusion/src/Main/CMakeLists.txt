@@ -96,6 +96,11 @@ target_link_libraries(main myHeader
 
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
+  find_package(rosbag REQUIRED)
+  add_executable(lidar_continuous_replay test/lidar_continuous_replay.cpp)
+  target_include_directories(lidar_continuous_replay PRIVATE ${rosbag_INCLUDE_DIRS})
+  add_dependencies(lidar_continuous_replay ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(lidar_continuous_replay myHeader ${rosbag_LIBRARIES})
   add_rostest_gtest(test_frame_boundary_ros test/frame_boundary.test
     test/test_frame_boundary_ros.cpp test/test_runtime_globals.cpp)
   if(TARGET test_frame_boundary_ros)

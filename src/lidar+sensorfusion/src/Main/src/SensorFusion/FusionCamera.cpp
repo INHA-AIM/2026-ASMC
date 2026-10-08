@@ -635,7 +635,8 @@ static void PublishFusionDebugImage(LiDAR& st_LiDAR, CAMERA& st_Camera)
  * @brief 카메라-LiDAR 퓨전 프로세스를 총괄하는 메인 함수입니다.
  */
 void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
-                     CAMERA &st_Camera, const ros::Time& lidar_stamp)
+                     CAMERA &st_Camera, const ros::Time& lidar_stamp,
+                     const ros::WallTime& decision_time)
 {
     // RAW_YOLO_DATA remains in the public interface for legacy callers.  Live
     // ROS input is queued at YoloCallback so no intermediate result is lost
@@ -688,7 +689,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
                 out<<']';
             });
         pending_lidar.push_back(
-            {lidar_stamp, st_LiDAR.vec_Objects, ros::WallTime::now(), st_LiDAR.frame_context});
+            {lidar_stamp, st_LiDAR.vec_Objects, decision_time, st_LiDAR.frame_context});
         last_queued_lidar_stamp = lidar_stamp;
     }
 
@@ -743,7 +744,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
             yolo_stamps_ns.push_back(static_cast<int64>(frame.stamp.toNSec()));
         }
         const int64 waited_ns = static_cast<int64>(std::llround(
-            (ros::WallTime::now() - lidar_frame.queued_at).toSec() * 1e9));
+            (decision_time - lidar_frame.queued_at).toSec() * 1e9));
         const auto decision = fusion_sync::DecideMatch(
             static_cast<int64>(lidar_frame.stamp.toNSec()), yolo_stamps_ns,
             waited_ns, max_offset_ns, wait_timeout_ns);

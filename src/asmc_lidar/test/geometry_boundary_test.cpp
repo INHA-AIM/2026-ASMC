@@ -79,5 +79,28 @@ int main() {
   const auto causal=lever_history.at(time,rpy(0,0,.5),Vec::Zero());
   require(causal.valid && causal.sample_stamps==std::vector<Ns>{2600000000LL},
       "GPS received after scan was used retroactively");
+  // ROS source and steady arrivals are explicitly separate domains. A replay
+  // ROS clock lag must not be hidden by replacing the header or receipt.
+  BoundedPoseHistory dual;
+  sample.clock="ros";sample.arrival_clock="steady";sample.reference_is_gps=false;
+  for(Ns stamp:{3000000000LL,3200000000LL,3400000000LL}) {
+    sample.stamp_ns=stamp;sample.arrival_ns=stamp-2000000000LL;
+    require(dual.append(sample).empty(),"dual clock append");
+  }
+  Observation dual_time{3500000123LL,1500000100LL,1500000200LL,"ros","bridge_receive_ns","steady"};
+  require(validate_time(dual_time).empty(),"dual observation");
+  require(dual.at(dual_time,Rot::Identity(),Vec::Zero()).valid,"dual bounded pose");
+  sample.stamp_ns=3450000000LL;sample.arrival_ns=1500000150LL;
+  sample.map_from_reference.translation().x()=10000.;dual.append(sample);
+  require(dual.at(dual_time,Rot::Identity(),Vec::Zero()).sample_stamps==std::vector<Ns>{3400000000LL},"post-receipt GPS");
+  PoseHistory strict;
+  require(strict.append(sample)=="strict_pose_clock_mismatch","strict API mixed clocks");
+  require(strict.at(dual_time).reason=="strict_pose_clock_mismatch","strict query mixed clocks");
+  dual_time.processing_ns=dual_time.receipt_ns-1;
+  require(validate_time(dual_time)=="processing_before_receipt","negative processing duration");
+  dual_time.processing_ns=1600000000LL;dual_time.receipt_ns=1600000000LL;
+  sample.stamp_ns=0;sample.arrival_ns=1550000000LL;sample.valid=false;
+  require(dual.append(sample).empty(),"unknown-stamp invalid barrier");
+  require(dual.at(dual_time,Rot::Identity(),Vec::Zero()).reason=="gps_invalid","zero header must invalidate map");
   std::cout<<"geometry and bounded pose boundary tests passed\n";
 }

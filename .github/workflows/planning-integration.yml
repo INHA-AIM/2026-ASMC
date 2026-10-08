@@ -73,7 +73,7 @@ jobs:
           sed -i -e 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' \
             -e 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
           apt-get -o Acquire::Retries=3 update
-          apt-get -o Acquire::Retries=3 install -y --no-install-recommends git ca-certificates libyaml-cpp-dev libopencv-dev libpcl-dev libgeographic-dev libssl-dev python3-nose ros-noetic-rostest ros-noetic-pcl-conversions ros-noetic-tf ros-noetic-tf2-geometry-msgs ros-noetic-visualization-msgs
+          apt-get -o Acquire::Retries=3 install -y --no-install-recommends git ca-certificates libyaml-cpp-dev libopencv-dev libpcl-dev libgeographic-dev libssl-dev python3-nose ros-noetic-rostest ros-noetic-rosbag ros-noetic-pcl-conversions ros-noetic-tf ros-noetic-tf2-geometry-msgs ros-noetic-visualization-msgs
           rm -rf /var/lib/apt/lists/*
       - uses: actions/checkout@v4
         with:

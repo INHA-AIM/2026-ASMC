@@ -678,6 +678,19 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
     AssignmentProblemSolver solver;
     vector<int32> assignment;
     solver.Solve(vec_CostMatrix, assignment, AssignmentProblemSolver::optimal);
+    fusion_trace::Event("tracking_assignment",ts_CurrTime.toNSec(),[&](std::ostream& out) {
+        out << ",\"source_dt_sec\":" << f64_Time << ",\"pairs\":[";
+        bool first=true;
+        for(unsigned i=0;i<assignment.size();++i) {
+            const int j=assignment[i];
+            if(j<0 || j>=static_cast<int>(vec_NowObject.size()))continue;
+            if(!first)out<<',';first=false;
+            out << "{\"previous_id\":" << vec_Compare[i].s32_Id
+                << ",\"detection_index\":" << j << ",\"cost\":" << vec_CostMatrix[i][j]
+                << ",\"accepted\":" << (vec_CostMatrix[i][j]<st_Tracking.f32_COST_THRESHOLD?"true":"false") << '}';
+        }
+        out << ']';
+    });
 
     vector<bool> matched_now(M, false);
     vector<bool> matched_prev(N, false);

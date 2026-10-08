@@ -22,7 +22,11 @@ std::string validate_time(const Observation& t) {
   if (t.stamp_ns <= 0) return "zero_or_negative_stamp";
   if (t.clock.empty() || t.clock == "unknown") return "clock_unknown";
   if (t.stamp_provenance.empty()) return "stamp_provenance_missing";
-  if (t.receipt_ns < t.stamp_ns) return "receipt_before_stamp";
+  if (!t.receipt_clock.empty() && t.receipt_clock != t.clock &&
+      !(t.clock=="ros" && t.receipt_clock=="steady")) return "receipt_clock_unsupported";
+  if (t.receipt_clock.empty() || t.receipt_clock==t.clock) {
+    if (t.receipt_ns < t.stamp_ns) return "receipt_before_stamp";
+  } else if (t.receipt_ns <= 0) return "receipt_missing";
   if (t.processing_ns < t.receipt_ns) return "processing_before_receipt";
   return "";
 }
@@ -30,15 +34,17 @@ std::string StampGuard::accept(const Observation& t) {
   auto error = validate_time(t);
   if (!error.empty()) return error;
   if (!clock_.empty() && clock_ != t.clock) return "clock_changed";
+  if (last_ && receipt_clock_ != t.receipt_clock) return "receipt_clock_changed";
   if (last_ && t.stamp_ns == last_) return "duplicate_stamp";
   if (last_ && t.stamp_ns < last_) return "regressed_stamp";
-  last_ = t.stamp_ns; clock_ = t.clock;
+  last_ = t.stamp_ns; clock_ = t.clock; receipt_clock_=t.receipt_clock;
   return "";
 }
 PoseHistory::PoseHistory(Ns gap): max_gap_(gap) {
   if (gap <= 0) throw std::invalid_argument("max_gap_ns must be positive");
 }
 std::string PoseHistory::append(const PoseSample& s) {
+  if (!s.arrival_clock.empty() && s.arrival_clock!=s.clock) return "strict_pose_clock_mismatch";
   if (s.arrival_ns < last_arrival_) return "arrival_regression";
   if (s.stamp_ns <= 0 || s.arrival_ns < s.stamp_ns) return "pose_time_invalid";
   // Invalid/NaN samples are retained as barriers; never interpolate across them.
@@ -53,6 +59,9 @@ void PoseHistory::clear() { samples_.clear(); last_arrival_=-1; }
 PoseSelection PoseHistory::at(const Observation& t) const {
   PoseSelection out;
   out.query_stamp_ns=t.stamp_ns; out.clock=t.clock;
+  if (!t.receipt_clock.empty() && t.receipt_clock!=t.clock) {
+    out.reason="strict_pose_clock_mismatch"; return out;
+  }
   if (const auto e = validate_time(t); !e.empty()) { out.reason = e; return out; }
   std::vector<const PoseSample*> available;
   for (const auto& s : samples_)
