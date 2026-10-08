@@ -25,6 +25,8 @@
   <arg name="objects_ego_hood_filter" default="false"/>
   <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml"/>
   <arg name="objects_debug_raw" default="$(eval arg('profile') == 'debug')"/>
+  <arg name="objects_debug_masks" default="false"/>
+  <arg name="objects_views" default=""/>
   <arg name="objects_hood_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
   <arg name="start_visualization" default="$(eval arg('profile') == 'debug')"/>
   <arg name="visualization_legacy_rqt" default="false"/>
@@ -76,6 +78,8 @@
       <arg name="objects_ego_hood_filter" value="$(arg objects_ego_hood_filter)"/>
       <arg name="objects_ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>
       <arg name="objects_debug_raw" value="$(arg objects_debug_raw)"/>
+      <arg name="objects_debug_masks" value="$(arg objects_debug_masks)"/>
+      <arg name="views" value="$(arg objects_views)"/>
       <arg name="objects_hood_mask_config" value="$(arg objects_hood_mask_config)"/>
       <arg name="managed" value="$(arg managed)"/>
       <arg name="initial_mode" value="$(arg objects_initial_mode)"/>

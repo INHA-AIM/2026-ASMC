@@ -4,6 +4,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass
+from functools import partial
 
 import numpy as np
 import rospy
@@ -42,8 +43,13 @@ from asmc_camera.runtime.state import ACTIVE
 class ObjectDetectionNode:
     def __init__(self, backend=None):
         check_message_build()
-        if list(rospy.get_param("~views", ["front"])) != ["front"]:
-            raise ValueError("P2a supports views=[front] only")
+        self.views = list(rospy.get_param("~views", ["front"]))
+        if not self.views or len(set(self.views)) != len(self.views) or set(self.views)-{'front','left','right'}:
+            raise ValueError("views must contain unique front/left/right names")
+        experimental = bool(rospy.get_param('~seg_experiment', False))
+        if self.views != ['front'] and not experimental:
+            raise ValueError('multiple object views require seg_experiment=true')
+        self.debug_masks = bool(rospy.get_param('~debug_masks', False))
         groups = load_class_groups(rospy.get_param("~class_groups"))
         hood_mask = HoodMask.load(bool(rospy.get_param("~hood_mask", False)),
                                   rospy.get_param("~hood_mask_config", ""))
@@ -52,7 +58,12 @@ class ObjectDetectionNode:
         if hood_mask.enabled and ego_hood_filter.enabled:
             raise ValueError("hood input mask and ego hood post-filter are mutually exclusive")
         if backend is None:
-            backend = UltralyticsDetector(
+            if experimental:
+                from asmc_camera.detection.segmentation import SegmentationDetector
+                factory = SegmentationDetector
+            else:
+                factory = UltralyticsDetector
+            backend = factory(
                 weights=rospy.get_param("~weights"),
                 device=rospy.get_param("~device", "cuda:0"),
                 require_cuda=bool(rospy.get_param("~require_cuda", True)),
@@ -61,10 +72,18 @@ class ObjectDetectionNode:
                 expected_sha256=rospy.get_param("~expected_sha256", ""),
                 predict_overrides=rospy.get_param("~predict_overrides", {}),
                 log=rospy.loginfo,
+                model_kind=rospy.get_param('~model_kind', 'yolo'),
+                prompt_embeddings=rospy.get_param('~prompt_embeddings', ''),
             )
-        self.processor = ObjectFrameProcessor(backend, groups, hood_mask=hood_mask, ego_hood_filter=ego_hood_filter)
+        self.processors = {v: ObjectFrameProcessor(backend, groups,
+            hood_mask=hood_mask if v == 'front' else HoodMask(),
+            ego_hood_filter=ego_hood_filter if v == 'front' else EgoHoodFilter(),
+            include_masks=self.debug_masks) for v in self.views}
+        self.processor = self.processors.get('front', self.processors[self.views[0]])
         self.backend_info = dict(backend.info)
-        self.buffer = LatestFrameBuffer(["front"], batch_wait_ms=0)
+        self.buffer = LatestFrameBuffer(self.views, batch_wait_ms=0)
+        self.view_counts = {v: 0 for v in self.views}
+        self.rotation = 0
         self.stop = threading.Event()
         self.lock = threading.Lock()
         self.output_frames = self.decode_errors = self.inference_errors = self.mask_errors = self.filter_errors = self.header_errors = 0
@@ -81,11 +100,19 @@ class ObjectDetectionNode:
         self.excluded_boxes = 0
         self.diagnostics = rospy.Publisher("/perception/camera/objects/diagnostics", DiagnosticArray, queue_size=5)
         self.last_header = None
-        self.control = RosInferenceControl("yolo", ["front"], 20., on_transition=self._invalidate)
+        self.last_headers = {}
+        self.mask_publishers = {v: rospy.Publisher(
+            '/perception/camera/objects/debug/'+('instances' if v == 'front' else v+'/instances')+'/compressed',
+            CompressedImage, queue_size=1) for v in self.views} if self.debug_masks else {}
+        self.control = RosInferenceControl("yolo", self.views, 20., on_transition=self._invalidate)
         self.control.state.record('startup', model_load_ms=self.backend_info.get('model_load_ms'),
                                   dummy_warmup_ms=self.backend_info.get('warmup_ms'))
-        self.subscriber = rospy.Subscriber(rospy.get_param("~image_topic", "/image_jpeg/compressed"),
-                                           CompressedImage, self._callback, queue_size=1, buff_size=2**24)
+        topics = dict(front=rospy.get_param('~image_topic','/image_jpeg/compressed'),
+                      left='/cam_left/image_jpeg/compressed', right='/cam_right/image_jpeg/compressed')
+        topics.update(rospy.get_param('~image_topics', {}))
+        self.subscribers = [rospy.Subscriber(topics[v], CompressedImage, partial(self._callback, view=v),
+                            queue_size=1, buff_size=2**24) for v in self.views]
+        self.subscriber = self.subscribers[0]
         rospy.on_shutdown(self.shutdown)
         self.worker = threading.Thread(target=self._worker, daemon=True)
         self.monitor = threading.Thread(target=self._monitor, daemon=True)
@@ -95,37 +122,43 @@ class ObjectDetectionNode:
                       backend.info.get("device"))
 
     def _invalidate(self, mode):
-        if mode != ACTIVE and self.last_header is not None:
-            message = CameraObjectBoxArray(header=copy.deepcopy(self.last_header), valid=False)
-            self.publisher.publish(message)
-            if self.raw_publisher is not None:
-                self.raw_publisher.publish(message)
+        if mode != ACTIVE:
+            for header in self.last_headers.values():
+                message = CameraObjectBoxArray(header=copy.deepcopy(header), valid=False)
+                self.publisher.publish(message)
+                if self.raw_publisher is not None:
+                    self.raw_publisher.publish(message)
 
-    def _callback(self, message):
+    def _callback(self, message, view='front'):
         with self.lock:
             self.last_input_at = time.monotonic()
             self.latest_input_stamp_ns = message.header.stamp.to_nsec()
-            if message.header.stamp.is_zero() or message.header.frame_id != "camera_front":
+            if message.header.stamp.is_zero() or message.header.frame_id != 'camera_'+view:
                 self.header_errors += 1
-                rospy.logwarn_throttle(5, "camera objects requires nonzero source stamp and camera_front frame_id")
+                rospy.logwarn_throttle(5, "camera objects requires nonzero source stamp and matching camera view frame_id")
                 return
-        self.control.state.observe("front", message.header.stamp.to_nsec())
-        self.buffer.push(ObjectFrame(view="front", stamp=message.header.stamp,
+        self.control.state.observe(view, message.header.stamp.to_nsec())
+        self.buffer.push(ObjectFrame(view=view, stamp=message.header.stamp,
                                      frame_id=message.header.frame_id, data=bytes(message.data),
                                      received_monotonic=time.monotonic(),
                                      received_ros_ns=rospy.Time.now().to_nsec(), header=copy.deepcopy(message.header)))
 
     def _worker(self):
         while not self.stop.is_set() and not rospy.is_shutdown():
-            for frame in self.buffer.pop_batch(timeout=0.2):
-                stamps = {"front": frame.stamp.to_nsec()}
-                token = self.control.state.begin(stamps)
+            frames = self.buffer.pop_batch(timeout=0.2)
+            order = self.views[self.rotation:]+self.views[:self.rotation]
+            frames.sort(key=lambda f: order.index(f.view))
+            self.rotation = (self.rotation+1) % len(self.views)
+            for frame in frames:
+                processor = self.processors[frame.view]
+                stamps = {frame.view: frame.stamp.to_nsec()}
+                token = self.control.state.begin(stamps, per_view=len(self.views)>1)
                 if token is None:
                     continue
                 if self.raw_publisher is not None:
-                    message, raw, timings, error = self.processor.process_with_raw(frame.header, frame.data)
+                    message, raw, timings, error = processor.process_with_raw(frame.header, frame.data)
                 else:
-                    message, timings, error = self.processor.process(frame.header, frame.data)
+                    message, timings, error = processor.process(frame.header, frame.data)
                     raw = None
                 if self.stop.is_set():
                     return
@@ -138,12 +171,16 @@ class ObjectDetectionNode:
                         if self.raw_publisher is not None:
                             self.raw_publisher.publish(raw)
                         self.last_header = copy.deepcopy(frame.header)
+                        self.last_headers[frame.view] = copy.deepcopy(frame.header)
+                        if self.debug_masks and message.valid:
+                            self._publish_masks(frame, processor, message)
                         self.control.state.record('published', stamps=stamps, timings=timings,
                                                   valid=bool(message.valid))
                 with self.lock:
-                    self.filter_counts = dict(self.processor.last_counts)
+                    self.filter_counts = dict(processor.last_counts)
                     self.excluded_boxes += self.filter_counts["excluded"]
                     self.output_frames += 1
+                    self.view_counts[frame.view] += 1
                     self.latest_result_stamp_ns = frame.stamp.to_nsec()
                     self.queue_samples.append((time.monotonic() - frame.received_monotonic) * 1000)
                     elapsed_ns = rospy.Time.now().to_nsec() - frame.stamp.to_nsec()
@@ -191,7 +228,9 @@ class ObjectDetectionNode:
                 fps = (self.output_frames - previous_count) / max(now - previous_at, 1e-6)
                 previous_count, previous_at = self.output_frames, now
                 values.update(processing_fps=round(fps, 3), output_frames=self.output_frames,
-                              received_frames=self.buffer.received["front"], replaced_frames=self.buffer.replaced["front"],
+                              received_frames=sum(self.buffer.received.values()), replaced_frames=sum(self.buffer.replaced.values()),
+                              views=self.views, output_by_view=dict(self.view_counts),
+                              received_by_view=dict(self.buffer.received), replaced_by_view=dict(self.buffer.replaced),
                               decode_errors=self.decode_errors, inference_errors=self.inference_errors,
                               mask_errors=self.mask_errors,
                               header_errors=self.header_errors, duplicate_nodes=self.duplicates,
@@ -214,9 +253,26 @@ class ObjectDetectionNode:
         from std_msgs.msg import Header
         return Header(stamp=rospy.Time.now())
 
+    def _publish_masks(self, frame, processor, message):
+        publisher = self.mask_publishers[frame.view]
+        if not publisher.get_num_connections():
+            return
+        import cv2
+        from asmc_camera.detection.visualization import render_object_overlay
+        image = processor.last_image.copy()
+        for index, mask in enumerate(processor.last_masks):
+            if mask is not None:
+                color = np.array([60+(index*47)%190, 180, 60+(index*83)%190])
+                image[mask] = (image[mask]*.55+color*.45).astype(np.uint8)
+        image = render_object_overlay(image, message, processor.hood_mask)
+        ok, data = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY,80])
+        if ok:
+            publisher.publish(CompressedImage(header=copy.deepcopy(frame.header),format='jpeg',data=data.tobytes()))
+
     def shutdown(self):
         self.stop.set()
-        self.subscriber.unregister()
+        for subscriber in self.subscribers:
+            subscriber.unregister()
         self.buffer.close()
         for thread in (self.worker, self.monitor):
             if thread is not threading.current_thread():

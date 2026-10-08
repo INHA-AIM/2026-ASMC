@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import FrozenSet, Mapping, Optional
 
 
-GROUPS = ("person", "vehicle", "obstacle")
+GROUPS = ("person", "animal", "vehicle", "obstacle")
 
 
 @dataclass(frozen=True)
@@ -15,6 +15,7 @@ class ClassGroups:
     vehicle: FrozenSet[str]
     excluded: FrozenSet[str]
     default_group: str = "obstacle"
+    animal: FrozenSet[str] = frozenset()
 
     def group_of(self, source_class_name: str) -> Optional[str]:
         """Return the group for a raw label, or None when it is excluded."""
@@ -23,6 +24,8 @@ class ClassGroups:
             return None
         if key in self.person:
             return "person"
+        if key in self.animal:
+            return "animal"
         if key in self.vehicle:
             return "vehicle"
         return self.default_group
@@ -40,15 +43,18 @@ def _names(values: object, label: str) -> FrozenSet[str]:
 def load_class_groups(config: Mapping[str, object]) -> ClassGroups:
     """Build groups from the ``object_classes.yaml`` mapping."""
     groups = config.get("groups")
-    if not isinstance(groups, Mapping) or set(groups) != {"person", "vehicle"}:
-        raise ValueError("groups must define exactly person and vehicle")
+    if not isinstance(groups, Mapping) or set(groups) not in (
+        {"person", "vehicle"}, {"person", "animal", "vehicle"}
+    ):
+        raise ValueError("groups must define person and vehicle, with optional animal")
     person = _names(groups["person"], "groups.person")
     vehicle = _names(groups["vehicle"], "groups.vehicle")
+    animal = _names(groups.get("animal", []), "groups.animal")
     excluded = _names(config.get("excluded", []), "excluded")
-    overlap = (person & vehicle) | ((person | vehicle) & excluded)
+    overlap = (person & vehicle) | (person & animal) | (vehicle & animal) | ((person | vehicle | animal) & excluded)
     if overlap:
         raise ValueError("class names belong to more than one group: {}".format(sorted(overlap)))
     default_group = str(config.get("default_group", "obstacle"))
     if default_group not in GROUPS:
         raise ValueError("default_group must be one of {}".format(GROUPS))
-    return ClassGroups(person, vehicle, excluded, default_group)
+    return ClassGroups(person, vehicle, excluded, default_group, animal)

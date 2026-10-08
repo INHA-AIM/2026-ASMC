@@ -10,6 +10,25 @@ class Clock:
 
 
 class StateTest(unittest.TestCase):
+    def test_per_view_rate_is_independent_and_transition_discards_all_views(self):
+        clock=Clock()
+        state=InferenceState(['front','left','right'],managed=True,clock=clock)
+        state.request(ACTIVE,20.)
+        for view in state.views:
+            token=state.begin({view:1},per_view=True)
+            self.assertIsNotNone(token)
+            state.complete(token,{view:1})
+        self.assertIsNone(state.begin({'front':2},per_view=True))
+        clock.now+=.05
+        old=state.begin({'front':2},per_view=True)
+        self.assertIsNotNone(old)
+        state.observe('front',2)
+        state.request(PREPARE)
+        self.assertFalse(state.complete(old,{'front':2}))
+        self.assertIsNone(state.begin({'front':2},per_view=True))
+        self.assertIsNotNone(state.begin({'left':3},per_view=True))
+        self.assertIsNone(state.begin({},per_view=True))
+
     def setUp(self):
         self.clock = Clock()
         self.state = InferenceState(['front'], managed=True, clock=self.clock)

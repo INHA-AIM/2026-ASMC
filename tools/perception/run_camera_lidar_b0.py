@@ -64,10 +64,16 @@ def main():
     parser.add_argument('--objects-only', action='store_true', help='load only YOLO; requires profile C1')
     parser.add_argument('--objects-config', type=Path)
     parser.add_argument('--objects-class-groups-config', type=Path)
+    parser.add_argument('--objects-views', choices=['front', 'all'], default='front')
+    parser.add_argument('--seg-debug', action='store_true')
     args = parser.parse_args()
     if args.objects_only and args.profile != 'C1':
         parser.error('objects-only trials require C1')
     loaded_models = ['yolo'] if args.objects_only else list(NODES)
+    object_views = ['front', 'left', 'right'] if args.objects_views == 'all' else ['front']
+    model_outputs = dict(MODEL_OUTPUTS)
+    if args.objects_views == 'all':
+        model_outputs['yolo'] = ['yolo_'+v for v in object_views]
     config = yaml.safe_load(args.config.read_text())
     master_uri = urlparse(os.environ.get('ROS_MASTER_URI', ''))
     if master_uri.hostname not in ('localhost', '127.0.0.1') or master_uri.port != config['conditions']['ros_master_port']:
@@ -118,7 +124,15 @@ def main():
 
     def receive_output(name, message):
         now, stamp = time.monotonic(), message.header.stamp.to_nsec()
+        if name == 'yolo' and args.objects_views == 'all':
+            view = message.header.frame_id.removeprefix('camera_') if hasattr(str, 'removeprefix') else message.header.frame_id[len('camera_'):]
+            if view not in object_views:
+                report['failures'].append('unexpected object frame_id: '+message.header.frame_id)
+                return
+            name = 'yolo_'+view
         source = dict(yolo='front', resnet18='extra', lidar='lidar').get(name, name)
+        if name.startswith('yolo_'):
+            source = name[len('yolo_'):]
         with lock:
             matches = [arrivals[v, stamp] for v in ('front', 'left', 'right') if (v, stamp) in arrivals] if name == 'family' else (
                 [arrivals[source, stamp]] if (source, stamp) in arrivals else [])
@@ -133,7 +147,7 @@ def main():
                                    centers={str(o.id): [o.cluster_center.x, o.cluster_center.y, o.cluster_center.z] for o in message.objects},
                                    geometry=[dict(id=o.id, length=o.length, width=o.width, height=o.height,
                                                   age=o.age, miss_count=o.miss_count) for o in message.objects]))
-            elif name == 'yolo':
+            elif name == 'yolo' or name.startswith('yolo_'):
                 row['boxes'] = [dict(label=b.source_class_name, group=b.class_name, confidence=b.confidence,
                                      xyxy=[b.xmin, b.ymin, b.xmax, b.ymax]) for b in message.boxes]
 
@@ -190,6 +204,11 @@ def main():
         for topic in debug_topics:
             subscribers.append(rospy.Subscriber(topic, CompressedImage,
                 lambda m, n=topic: receive_output(n, m), queue_size=10, buff_size=2**24))
+        if args.seg_debug:
+            for v in object_views:
+                topic='/perception/camera/objects/debug/'+('instances' if v=='front' else v+'/instances')+'/compressed'
+                subscribers.append(rospy.Subscriber(topic, CompressedImage,
+                    lambda m,n=topic: receive_output(n,m), queue_size=10, buff_size=2**24))
         subscribers.append(rospy.Subscriber('/perception/camera/objects/debug/raw', CameraObjectBoxArray,
                            lambda m: receive_output('debug_raw', m), queue_size=100))
     if args.phase == 'gps':
@@ -256,6 +275,10 @@ def main():
             command.append('camera_objects_config:='+str(args.objects_config))
         if args.objects_class_groups_config:
             command.append('objects_class_groups_config:='+str(args.objects_class_groups_config))
+        if args.objects_views == 'all':
+            command.append('objects_views:=[front, left, right]')
+        if args.seg_debug:
+            command.append('objects_debug_masks:='+str(args.debug).lower())
         camera = launch('camera', command)
         for node in (NODES[m] for m in loaded_models):
             rospy.wait_for_service(node+'/set_inference_mode', timeout=60)
@@ -345,8 +368,9 @@ def main():
                     cutoff, begin = matching[0]['source_cutoff_ns'], record['call_started']
                     if traced:
                         begin = trace_trial(record, trace_rows[model])['accepted_monotonic']
-                for name in MODEL_OUTPUTS[model]:
-                    window_end = ended if args.phase == 'camera' or ended is None else input_window_end(name, inputs, ended)
+                for name in model_outputs[model]:
+                    source_name = name[len('yolo_'):] if name.startswith('yolo_') else name
+                    window_end = ended if args.phase == 'camera' or ended is None else input_window_end(source_name, inputs, ended)
                     measurement = output_report(outputs[name], begin, window_end, cutoff,
                                                 config['camera']['active_sec'] if args.phase == 'camera' else None) if begin and window_end else dict(complete=False)
                     if args.phase != 'camera':
@@ -354,7 +378,7 @@ def main():
                         measurement['window_end_monotonic'] = window_end
                         measurement['post_input_end_outputs'] = sum(r['arrival'] >= window_end for r in outputs[name]) if window_end else None
                     report['measurements'][name] = measurement
-                    report['checks'][name+'_rate'] = output_gate(name, measurement, lifecycle=args.phase == 'camera')
+                    report['checks'][name+'_rate'] = output_gate('yolo' if model=='yolo' else name, measurement, lifecycle=args.phase == 'camera')
             report['checks']['no_control_messages'] = not controls
             report['discarded_legacy_control_messages'] = len(discarded_controls)
             report['checks']['no_model_processing_errors'] = all(s.errors == 0 for s in statuses.values())
