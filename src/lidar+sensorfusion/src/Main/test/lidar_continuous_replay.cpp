@@ -26,6 +26,19 @@ IMU_DATA Convert(const sensor_msgs::Imu& m) {
     d.b_ImuReady=!m.header.stamp.isZero()&&std::isfinite(norm)&&fabs(norm-1)<=.001;
     return d;
 }
+void WriteObject(std::ostream& out,const LiDARObjectInfo& object) {
+    std::ostringstream semantic;semantic<<std::setprecision(17);
+    fusion_state_trace::Object(semantic,object);
+    auto prefix=semantic.str();prefix.pop_back();out<<prefix;
+    out<<",\"kf_initialized\":"<<(object.b_KfInitialized?"true":"false")
+       <<",\"kf_init_count\":"<<object.s32_KfInitCount<<",\"kf_ca\":[";
+    for(unsigned j=0;j<6;++j){if(j)out<<',';out<<object.Eigen_KfState_CA(j);}
+    out<<"],\"corners\":[";
+    for(unsigned j=0;j<8;++j){if(j)out<<',';const auto& q=object.OBB_Corners_Body[j];out<<'['<<q.x<<','<<q.y<<','<<q.z<<']';}
+    out<<"],\"obb\":["<<object.f32_OBB_CenterX<<','<<object.f32_OBB_CenterY<<','<<object.f32_OBB_CenterZ
+        <<','<<object.f32_OBB_Width<<','<<object.f32_OBB_Height<<','<<object.f32_OBB_YawRad<<"]}";
+}
+
 void MapInputs(GPS_IMU& local,const asmc::lidar::PoseSelection& map) {
     local.st_GPS.b_isJamming=!map.valid;
     if(map.valid) {
@@ -85,7 +98,7 @@ int main(int argc,char** argv) {
                 history.AddGps(source/1000000,gps,profile=="legacy"?0:source,profile=="legacy"?0:logical);
             }
         } else if(auto m=event.instantiate<sensor_msgs::CompressedImage>()) {
-            if(event.getTopic()=="/image_jpeg/compressed")
+            if((event.getTopic()=="/image_jpeg/compressed" || event.getTopic()=="/camera/image/compressed"))
                 BufferFusionCameraFrame(m->header.stamp,m->data);
         } else if(auto m=event.instantiate<Msg::Yolo_bbox_arr>()) {
             std::vector<BBox> boxes;
@@ -122,7 +135,7 @@ int main(int argc,char** argv) {
             output<<",\"plane_valid\":"<<(plane.valid?"true":"false")<<",\"plane\":[";
             for(unsigned i=0;i<4;++i){if(i)output<<',';output<<plane.coefficients[i];}
             output<<"],\"remaining_points\":"<<g_LidarStageProfile.ransac_points<<",\"objects\":[";
-            bool sep=false;for(const auto& object:st_LiDAR.vec_Objects){if(sep)output<<',';sep=true;fusion_state_trace::Object(output,object);}
+            bool sep=false;for(const auto& object:st_LiDAR.vec_Objects){if(sep)output<<',';sep=true;WriteObject(output,object);}
             output<<"]}\n";
         }
     }

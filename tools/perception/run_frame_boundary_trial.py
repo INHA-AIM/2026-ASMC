@@ -175,7 +175,8 @@ def main():
     (args.output/'observations.json').write_text(json.dumps(observed,indent=2)+'\n')
     (args.output/'resources.json').write_text(json.dumps(resources,indent=2)+'\n')
     if job['phase']=='realtime':
-        raw={r['stamp_ns']//1000000*1000000 for r in inputs.get('lidar',[])}
+        raw={r['stamp_ns'] if job['profile']!='legacy' else r['stamp_ns']//1000000*1000000
+             for r in inputs.get('lidar',[])}
         published=[r['stamp_ns'] for r in outputs.get('processed_roi',[])]
         report.update(raw_input_frames=len(inputs.get('lidar',[])),processed_unique_stamps_ns=sorted(set(published)),
             unprocessed_input_stamps_ns=sorted(raw-set(published)),duplicate_processed_stamps=len(published)-len(set(published)),
