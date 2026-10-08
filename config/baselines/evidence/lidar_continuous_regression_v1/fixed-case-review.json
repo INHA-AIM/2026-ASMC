@@ -1,0 +1,320 @@
+{
+  "selection": {
+    "cases": [
+      {
+        "case": "cases-primary/case-00",
+        "raw_lidar_stamp_ns": 1790654817740799665,
+        "raw_camera_stamp_ns": 1790654817721750020,
+        "source_rgb_sha256": "98b897498678afbb621a656a32329581ece1e3423522dcdfa2f0af173833335c"
+      },
+      {
+        "case": "cases-primary/case-01",
+        "raw_lidar_stamp_ns": 1790654818279032230,
+        "raw_camera_stamp_ns": 1790654818296934366,
+        "source_rgb_sha256": "c7ef329fa98cff6503217bfd7ed6a104ae13580fbc8378d818f8db3b1219b592"
+      },
+      {
+        "case": "cases-primary/case-02",
+        "raw_lidar_stamp_ns": 1790654812492887258,
+        "raw_camera_stamp_ns": 1790654812493952274,
+        "source_rgb_sha256": "a519888802dab433616e9a80aee57bc169b3d9d26a770409eb7e7b0f27fe9ca2"
+      },
+      {
+        "case": "cases-shadow/case-00",
+        "raw_lidar_stamp_ns": 1789141094585017919,
+        "raw_camera_stamp_ns": 1789141094579405307,
+        "source_rgb_sha256": "cc3bd457d45ee2868656b9bd28432148cca9b263ff27f2856db9761b153f716f"
+      },
+      {
+        "case": "cases-shadow/case-01",
+        "raw_lidar_stamp_ns": 1789141100930202722,
+        "raw_camera_stamp_ns": 1789141100941156148,
+        "source_rgb_sha256": "b465f665697a83c33fd7cd07dd640cb265bd6b8db92b4ba9ab739d0578ea896c"
+      },
+      {
+        "case": "cases-shadow/case-02",
+        "raw_lidar_stamp_ns": 1789141098896026849,
+        "raw_camera_stamp_ns": 1789141098893517732,
+        "source_rgb_sha256": "ee5047002605dc5d30c2451b9ec6d2f64e09c4cb55ad2c439f3e12e8cc6f03e9"
+      }
+    ],
+    "independent_GT": false,
+    "selection": "same six raw RGB/scan observations used by B1a, fixed before new roll comparison",
+    "usage": "qualitative review only; no recall claim"
+  },
+  "cases": [
+    {
+      "case": "cases-primary/case-00",
+      "raw_lidar_stamp_ns": 1790654817740799665,
+      "raw_camera_stamp_ns": 1790654817721750020,
+      "source_rgb_sha256": "98b897498678afbb621a656a32329581ece1e3423522dcdfa2f0af173833335c",
+      "independent_GT": false,
+      "profiles": {
+        "legacy": {
+          "voxel_points": 9535,
+          "kept_points": 6876,
+          "plane": [
+            1.475014797871998e-05,
+            -0.0076565985646943405,
+            0.999970687710821,
+            1.7510205738350775
+          ],
+          "plane_valid": true,
+          "measured_objects": 18
+        },
+        "common_pitch": {
+          "voxel_points": 9535,
+          "kept_points": 6876,
+          "plane": [
+            1.4754278903919467e-05,
+            -0.007656596702157896,
+            0.9999706877250212,
+            1.7510208122785254
+          ],
+          "plane_valid": true,
+          "measured_objects": 18
+        },
+        "common_roll_pitch": {
+          "voxel_points": 9535,
+          "kept_points": 6665,
+          "plane": [
+            0.00423562057558423,
+            -0.00950342408948147,
+            0.9999458707594703,
+            1.6370687350116557
+          ],
+          "plane_valid": true,
+          "measured_objects": 20
+        }
+      }
+    },
+    {
+      "case": "cases-primary/case-01",
+      "raw_lidar_stamp_ns": 1790654818279032230,
+      "raw_camera_stamp_ns": 1790654818296934366,
+      "source_rgb_sha256": "c7ef329fa98cff6503217bfd7ed6a104ae13580fbc8378d818f8db3b1219b592",
+      "independent_GT": false,
+      "profiles": {
+        "legacy": {
+          "voxel_points": 9655,
+          "kept_points": 6951,
+          "plane": [
+            0.00035477032535923453,
+            -0.0051967914203360464,
+            0.9999864336564519,
+            1.7538139187153157
+          ],
+          "plane_valid": true,
+          "measured_objects": 17
+        },
+        "common_pitch": {
+          "voxel_points": 9655,
+          "kept_points": 6951,
+          "plane": [
+            0.0003547632954140745,
+            -0.005196795299387796,
+            0.9999864336387871,
+            1.7538138893395006
+          ],
+          "plane_valid": true,
+          "measured_objects": 17
+        },
+        "common_roll_pitch": {
+          "voxel_points": 9655,
+          "kept_points": 6874,
+          "plane": [
+            0.00174947941336149,
+            -0.0031002079512694766,
+            0.999993663996148,
+            1.7285201239924086
+          ],
+          "plane_valid": true,
+          "measured_objects": 17
+        }
+      }
+    },
+    {
+      "case": "cases-primary/case-02",
+      "raw_lidar_stamp_ns": 1790654812492887258,
+      "raw_camera_stamp_ns": 1790654812493952274,
+      "source_rgb_sha256": "a519888802dab433616e9a80aee57bc169b3d9d26a770409eb7e7b0f27fe9ca2",
+      "independent_GT": false,
+      "profiles": {
+        "legacy": {
+          "voxel_points": 9709,
+          "kept_points": 6817,
+          "plane": [
+            0.0006344100997767662,
+            -0.007207837767434673,
+            0.9999738219566269,
+            1.7619936119908999
+          ],
+          "plane_valid": true,
+          "measured_objects": 20
+        },
+        "common_pitch": {
+          "voxel_points": 9709,
+          "kept_points": 6817,
+          "plane": [
+            0.0006344048610891409,
+            -0.007207837767458628,
+            0.9999738219599502,
+            1.7619936119967559
+          ],
+          "plane_valid": true,
+          "measured_objects": 20
+        },
+        "common_roll_pitch": {
+          "voxel_points": 9709,
+          "kept_points": 6817,
+          "plane": [
+            0.0010885632068005566,
+            -0.0011196479595280361,
+            0.9999987807085525,
+            1.762609553080327
+          ],
+          "plane_valid": true,
+          "measured_objects": 20
+        }
+      }
+    },
+    {
+      "case": "cases-shadow/case-00",
+      "raw_lidar_stamp_ns": 1789141094585017919,
+      "raw_camera_stamp_ns": 1789141094579405307,
+      "source_rgb_sha256": "cc3bd457d45ee2868656b9bd28432148cca9b263ff27f2856db9761b153f716f",
+      "independent_GT": false,
+      "profiles": {
+        "legacy": {
+          "voxel_points": 10488,
+          "kept_points": 7447,
+          "plane": [
+            -0.0011213248066459936,
+            0.0048447548062905575,
+            0.999987635414331,
+            1.7011525181429417
+          ],
+          "plane_valid": true,
+          "measured_objects": 22
+        },
+        "common_pitch": {
+          "voxel_points": 10488,
+          "kept_points": 7447,
+          "plane": [
+            -0.0011213223619223145,
+            0.00484475573760453,
+            0.9999876354125604,
+            1.7011525181399296
+          ],
+          "plane_valid": true,
+          "measured_objects": 22
+        },
+        "common_roll_pitch": {
+          "voxel_points": 10488,
+          "kept_points": 7439,
+          "plane": [
+            -0.0005872115400180257,
+            -0.004533046588950807,
+            0.9999895532810479,
+            1.6945577408290176
+          ],
+          "plane_valid": true,
+          "measured_objects": 22
+        }
+      }
+    },
+    {
+      "case": "cases-shadow/case-01",
+      "raw_lidar_stamp_ns": 1789141100930202722,
+      "raw_camera_stamp_ns": 1789141100941156148,
+      "source_rgb_sha256": "b465f665697a83c33fd7cd07dd640cb265bd6b8db92b4ba9ab739d0578ea896c",
+      "independent_GT": false,
+      "profiles": {
+        "legacy": {
+          "voxel_points": 9725,
+          "kept_points": 7037,
+          "plane": [
+            -0.005463820945884069,
+            -0.01645437833491435,
+            0.9998496887504055,
+            1.6105309912696837
+          ],
+          "plane_valid": true,
+          "measured_objects": 23
+        },
+        "common_pitch": {
+          "voxel_points": 9725,
+          "kept_points": 7037,
+          "plane": [
+            -0.00546381163343862,
+            -0.01645437274932904,
+            0.9998496888932158,
+            1.6105309914997186
+          ],
+          "plane_valid": true,
+          "measured_objects": 23
+        },
+        "common_roll_pitch": {
+          "voxel_points": 9725,
+          "kept_points": 7031,
+          "plane": [
+            -1.3119992857446153e-05,
+            -0.002976988148140679,
+            0.9999955686748975,
+            1.7545076247554197
+          ],
+          "plane_valid": true,
+          "measured_objects": 13
+        }
+      }
+    },
+    {
+      "case": "cases-shadow/case-02",
+      "raw_lidar_stamp_ns": 1789141098896026849,
+      "raw_camera_stamp_ns": 1789141098893517732,
+      "source_rgb_sha256": "ee5047002605dc5d30c2451b9ec6d2f64e09c4cb55ad2c439f3e12e8cc6f03e9",
+      "independent_GT": false,
+      "profiles": {
+        "legacy": {
+          "voxel_points": 10052,
+          "kept_points": 7179,
+          "plane": [
+            0.0004069289021174137,
+            -0.008265288316806249,
+            0.9999657591227356,
+            1.7573697078224386
+          ],
+          "plane_valid": true,
+          "measured_objects": 19
+        },
+        "common_pitch": {
+          "voxel_points": 10052,
+          "kept_points": 7179,
+          "plane": [
+            0.00040692797076369525,
+            -0.008265297629398633,
+            0.9999657590461405,
+            1.7573697076878283
+          ],
+          "plane_valid": true,
+          "measured_objects": 19
+        },
+        "common_roll_pitch": {
+          "voxel_points": 10052,
+          "kept_points": 7190,
+          "plane": [
+            0.00028888380625618587,
+            -0.0007157143555886526,
+            0.9999997021495096,
+            1.7608782056035401
+          ],
+          "plane_valid": true,
+          "measured_objects": 19
+        }
+      }
+    }
+  ],
+  "scope": "same raw source ns; legacy trace has explicit unique millisecond anchor; figures use raw centroid coordinates",
+  "acceptance": false,
+  "required_followup": "independent visible-object labels and OBB/miss review"
+}

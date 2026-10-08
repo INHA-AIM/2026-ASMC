@@ -100,15 +100,12 @@ XY 차이 p95는 각각 **0.170/0.257m**, 최대 **0.404/0.337m**였다. Ego 표
    고를 뿐 서로 다른 관측 시각 사이의 차량 움직임을 보상하지 않는다. 별도
    IMU/CAN 상대 운동 보상 실험은 이후 기하 단계에서 검토하며 GPS를 local 필수로
    만들거나 음영 내부 전역 위치 추정을 추가하지 않는다.
-   Main의 내부 `RAW_LIDAR_DATA.u64_Timestamp`는 header를 ms로 양자화한다.
-   `PrepareScan`과 `SensorPoseHistory::MapAt`는 이 source-ms 값을
-   `Observation.receipt_ns`에도 넣는다. 실제 Main callback 수신 시각을 기록한
-   값이 아니다. 따라서 현재 GPS 도착 cutoff는 scan source-ms이며 더 보수적인
-   기준이다. 원본 ns 보존·실제 callback receipt 캡처·clock 지연을 구분하기 전
-   관측 시간 계약을 완료로 표시하지 않는다. 주 bag 649개 원본 LiDAR header 모두
-   ms 미만 값이 있었고, replay observer의 ROS clock도 일부 header보다 늦게 갱신됐다.
-   원본 header를 바꾸거나 receipt를 임의로 보정해서 숨기지 않는다. 이 수정은
-   고정 baseline 이후 별도 묶음으로 시험한다.
+   기존 78회 고정 baseline에서는 source-ms를 receipt cutoff로 사용했다.
+   PR #72 후속 구현은 원본 ROS source ns와 실제 callback ROS/steady receipt 및
+   worker steady processing을 분리한다. source age와 monotonic 소요시간은 혼용하지
+   않는다. 바뀐 시간 경계·연속 재현·실제 재생 판정은
+   [연속 회귀](lidar-continuous-regression.md)에 기록한다. 기존 증거를 새 구현의
+   수신 시각 계측 증거로 소급하지 않는다. scan 노출/ray 시각과 deskew는 여전히 미구현이다.
 2. **평면/높이:** 카메라 고정 지면은 검증한 음영 ODD 밖의 경사·roll 변화까지
    보장하지 않는다. 차선 피팅 소비는 음영에 한정한다. 주 bag 높이 감사의 최대
    0.047803m 차이도 다른 bag/장비의 altitude datum 보장은 아니다.

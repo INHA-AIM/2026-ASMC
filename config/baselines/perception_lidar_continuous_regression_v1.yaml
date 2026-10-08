@@ -1,0 +1,352 @@
+schema_version: 1
+baseline_id: perception_lidar_continuous_regression_v1
+status: diagnostic_complete_acceptance_pending
+runtime_code_revision: 08dbb79
+measurement_code_revision: d235d75
+operational_adoption:
+  common_geometry_default: false
+  roll_pitch_default: false
+  velocity_validity: false
+  dynamic_validity: false
+  pr: 72
+  draft: true
+validation:
+  ros_cases: 14
+  ros_failures: 0
+  synthetic_ground_attitude_conditions: 15
+  continuous_cpu_trials: 20
+  exact_repeat_pairs: 6
+  exact_gps_contrast_pairs: 8
+  cpu_state_scope: geometry, OBB, ID, class counters and KF state; frozen logical
+    JPEG/YOLO arrivals
+  realtime_full_bag_trials: 18
+  original_ns_receipt_selection: unit/ROS tests and runtime trace; observer latency
+    is separate
+  independent_real_object_gt: unavailable
+  real_velocity_accuracy: unverified
+  final_local_checks:
+    core_ctest: 3/3 passed
+    main_aggregate: 296 tests / 0 errors / 0 failures
+    measurements_and_contracts: 46 passed
+    camera_detection: 42 passed
+    camera_runtime: 29 passed
+    serialization: 1 passed
+    documentation_default: passed
+    documentation_history: 2 pre-existing byte retention errors; same files and manifest
+      as main
+    protected_paths: camera model/calibration/runtime, messages, HD map, jamming unchanged
+      from 534ddc5
+    outer_aggregate: 533 tests / 0 errors / 1 previously known camera facade failure
+realtime:
+  profiles:
+    primary:
+      legacy:
+        repeats: 3
+        matched:
+        - 646
+        - 646
+        - 646
+        total_accounting:
+        - matched: 646
+          dropped: 1
+          pending_lidar: 1
+          pending_yolo: 1
+        - matched: 646
+          dropped: 1
+          pending_lidar: 1
+          pending_yolo: 1
+        - matched: 646
+          dropped: 1
+          pending_lidar: 1
+          pending_yolo: 1
+        maximum_interval_offset_p95_ms: 29.4
+        typed_local_wall_p95_ms:
+        - null
+        - null
+        - null
+        duplicate_processed:
+        - 0
+        - 0
+        - 0
+      common_pitch:
+        repeats: 3
+        matched:
+        - 646
+        - 646
+        - 646
+        total_accounting:
+        - matched: 646
+          dropped: 1
+          pending_lidar: 1
+          pending_yolo: 1
+        - matched: 646
+          dropped: 1
+          pending_lidar: 1
+          pending_yolo: 1
+        - matched: 646
+          dropped: 1
+          pending_lidar: 1
+          pending_yolo: 1
+        maximum_interval_offset_p95_ms: 30.7
+        typed_local_wall_p95_ms:
+        - 44.900144409621134
+        - 45.157492987345904
+        - 45.03871260676534
+        duplicate_processed:
+        - 0
+        - 0
+        - 0
+      common_roll_pitch:
+        repeats: 3
+        matched:
+        - 646
+        - 646
+        - 646
+        total_accounting:
+        - matched: 646
+          dropped: 1
+          pending_lidar: 1
+          pending_yolo: 1
+        - matched: 646
+          dropped: 1
+          pending_lidar: 1
+          pending_yolo: 1
+        - matched: 646
+          dropped: 1
+          pending_lidar: 1
+          pending_yolo: 1
+        maximum_interval_offset_p95_ms: 28.5
+        typed_local_wall_p95_ms:
+        - 45.00570858945139
+        - 45.3243205905892
+        - 45.5182682024315
+        duplicate_processed:
+        - 0
+        - 0
+        - 0
+    shadow:
+      legacy:
+        repeats: 3
+        matched:
+        - 207
+        - 207
+        - 207
+        total_accounting:
+        - matched: 207
+          dropped: 0
+          pending_lidar: 1
+          pending_yolo: 2
+        - matched: 207
+          dropped: 0
+          pending_lidar: 1
+          pending_yolo: 2
+        - matched: 207
+          dropped: 0
+          pending_lidar: 1
+          pending_yolo: 2
+        maximum_interval_offset_p95_ms: 24.7
+        typed_local_wall_p95_ms:
+        - null
+        - null
+        - null
+        duplicate_processed:
+        - 0
+        - 0
+        - 0
+      common_pitch:
+        repeats: 3
+        matched:
+        - 207
+        - 207
+        - 207
+        total_accounting:
+        - matched: 207
+          dropped: 0
+          pending_lidar: 1
+          pending_yolo: 2
+        - matched: 207
+          dropped: 0
+          pending_lidar: 1
+          pending_yolo: 2
+        - matched: 207
+          dropped: 0
+          pending_lidar: 1
+          pending_yolo: 2
+        maximum_interval_offset_p95_ms: 24.1
+        typed_local_wall_p95_ms:
+        - 47.70522369944957
+        - 48.42181875719689
+        - 46.87435140658636
+        duplicate_processed:
+        - 0
+        - 0
+        - 0
+      common_roll_pitch:
+        repeats: 3
+        matched:
+        - 207
+        - 207
+        - 207
+        total_accounting:
+        - matched: 207
+          dropped: 0
+          pending_lidar: 1
+          pending_yolo: 2
+        - matched: 207
+          dropped: 0
+          pending_lidar: 1
+          pending_yolo: 2
+        - matched: 207
+          dropped: 0
+          pending_lidar: 1
+          pending_yolo: 2
+        maximum_interval_offset_p95_ms: 24.1
+        typed_local_wall_p95_ms:
+        - 47.80057801544899
+        - 47.348592143680435
+        - 48.13318338274257
+        duplicate_processed:
+        - 0
+        - 0
+        - 0
+  scope: trace OFF; frozen YOLO; typed local/map and ROI observers included; not fresh
+    GPU model inference
+  source_latency_correction: old raw reports had zero anchors from ms/ns analysis
+    mismatch; reanalysis uses unchanged original observation records
+  offset_metric: largest interval p95, not pooled full-bag p95
+  operational_acceptance: false
+roll_comparison:
+  primary:
+    speed_jump_count_over_2mps:
+      legacy: 668
+      common_pitch: 657
+      common_roll_pitch: 599
+    comparisons:
+    - reference: legacy
+      candidate: common_pitch
+      matched_observations: 9573
+      reference_unmatched: 1
+      candidate_unmatched: 13
+      missing_transform_stamps_ns:
+      - 1790654785683737993
+      center_distance_p50_p95_m:
+      - 4.1818856705678594e-07
+      - 2.5063490196155097e-06
+      independent_object_preservation_accepted: false
+      class_difference_count: 0
+    - reference: common_pitch
+      candidate: common_roll_pitch
+      matched_observations: 8640
+      reference_unmatched: 946
+      candidate_unmatched: 932
+      missing_transform_stamps_ns: []
+      center_distance_p50_p95_m:
+      - 0.0016529776622143766
+      - 0.05057521300339552
+      independent_object_preservation_accepted: false
+      class_difference_count: 11
+  shadow:
+    speed_jump_count_over_2mps:
+      legacy: 557
+      common_pitch: 527
+      common_roll_pitch: 555
+    comparisons:
+    - reference: legacy
+      candidate: common_pitch
+      matched_observations: 3077
+      reference_unmatched: 1
+      candidate_unmatched: 1
+      missing_transform_stamps_ns: []
+      center_distance_p50_p95_m:
+      - 4.1554184457208605e-07
+      - 2.5653707249628144e-06
+      independent_object_preservation_accepted: false
+      class_difference_count: 0
+    - reference: common_pitch
+      candidate: common_roll_pitch
+      matched_observations: 2727
+      reference_unmatched: 351
+      candidate_unmatched: 358
+      missing_transform_stamps_ns: []
+      center_distance_p50_p95_m:
+      - 0.0008120221833413128
+      - 0.052597748139637746
+      independent_object_preservation_accepted: false
+      class_difference_count: 0
+synthetic:
+  legacy:
+    frames: 79
+    expected_frames: 80
+    unmatched: 99
+    straight_truth_speed_error_p50_p95_mps:
+    - 0.0007512602023780346
+    - 0.0051096081733703605
+    ground_valid_frames: 79
+    public_velocity_validity: false
+    limitation: synthetic static/moving and attitude fixture, no claim of real bag
+      speed accuracy
+    unmatched_by_object:
+      low: 70
+      vehicle: 1
+      person: 27
+      wall: 1
+  common_pitch:
+    frames: 79
+    expected_frames: 80
+    unmatched: 99
+    straight_truth_speed_error_p50_p95_mps:
+    - 2.008676528930664e-05
+    - 0.0026432705344632255
+    ground_valid_frames: 79
+    public_velocity_validity: false
+    limitation: synthetic static/moving and attitude fixture, no claim of real bag
+      speed accuracy
+    unmatched_by_object:
+      low: 70
+      vehicle: 1
+      person: 27
+      wall: 1
+  common_roll_pitch:
+    frames: 79
+    expected_frames: 80
+    unmatched: 106
+    straight_truth_speed_error_p50_p95_mps:
+    - 2.008676528930664e-05
+    - 0.0026432705344632255
+    ground_valid_frames: 79
+    public_velocity_validity: false
+    limitation: synthetic static/moving and attitude fixture, no claim of real bag
+      speed accuracy
+    unmatched_by_object:
+      low: 75
+      vehicle: 1
+      person: 28
+      wall: 2
+synthetic_limits:
+- 79/80 input frames processed; first equal-time input delivery was not ready, retained
+- speed GT only first 16 straight/no-attitude frames, measured scalar legacy speed;
+  later yaw/roll stress is diagnostic
+- constant GPS is map-ready input, not independent map-position GT
+- mutual unique center distance <1m; unmatched is not automatically complete loss
+retained_attempts:
+  ground_before_fix: 13 ROS cases, 1 failure; 24 points deleted by old-plane fallback
+  cpu_v1: tmpfs full; failed writing trace, preserved
+  cpu_v2: 20 geometry/tracker trials; JPEG topic ignored, excluded from class acceptance
+  cpu_v3: fixed JPEG input; original CLI label 73-working-v3 is incorrect; 124 runtime/config
+    sources verified against 08dbb79
+  synthetic_v1: preliminary floating geometry, excluded
+  synthetic_v2: legacy ns/ms truth lookup failed; preserved
+  outer_v1: two-package cached whitelist lacked camera target
+  outer_v2: 'ASMC_DATA absent: two HD map input errors; corrected rerun recorded'
+evidence:
+  portable_root: config/baselines/evidence/lidar_continuous_regression_v1
+  full_raw_host_root: artifacts/lidar-pr72
+  raw_manifest: config/baselines/evidence/lidar_continuous_regression_v1/raw-manifest.json
+pending:
+- 'roll candidate: 11 new primary class differences and additional synthetic unmatched
+  observations'
+- independent real object/ground labels and new loss/merge/association review
+- normal map tracking quality against legacy
+- fresh GPU inference and final subscriber cost verification
+- user direct launch review
+previous_evidence: config/baselines/perception_lidar_camera_frame_boundaries_v1.yaml

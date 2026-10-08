@@ -12,6 +12,17 @@
 **B1a 검증 인계:** [확인된 경계·공통 기반 수정·재호 후속 과제](b1a-improvement-tasks.md).
 원본 44회 증거는 보존하며, 기본 좌표·시간·GPS 경계 수정과 터널 필터의 운영 채택은 분리한다.
 
+## 읽는 순서와 검증 상태
+
+1. 이 README에서 역할·현재 구현과 후속 과제를 확인한다.
+2. [B1a 과제 목록](b1a-improvement-tasks.md)에서 재호가 먼저 고칠 작업을 선택한다.
+3. [PR #72 연속 회귀](../../handoffs/perception/lidar-continuous-regression.md)에서 시간·지면·추적 검증과 미수락 항목을 확인한다.
+4. [좌표 경계](../../handoffs/perception/lidar-camera-frame-boundaries.md)와 [외부 참고 검토](../../handoffs/perception/camera-lidar-coordinate-reference-review.md)를 세부 근거로 읽는다.
+5. [소스 README](../../../src/asmc_lidar/README.md)에서 코어 API·빌드·시험을 확인한다.
+
+`Main` 연결 구현은 opt-in이며 공통 경계와 roll 기본값은 모두 OFF다.
+현재 골격에 지면 제거·구조물 분류·OBB·tracker ROS 노드가 이전된 것은 아니다.
+
 ## 역할과 남긴 파일
 
 카메라 패키지는 `asmc_camera`다(2026-10-06 `asmc_perception`에서 이름 변경). 안승현이
@@ -69,10 +80,12 @@ YOLO 생산자를 `asmc_camera`에 opt-in 구현했다. 모델/통합 부하 검
 [기계 판독 계약](../../../config/contracts/lidar_candidate_topic_contract_v1.yaml)은
 후속 구현의 목표다. 현재 publisher 목록이 아니다.
 
-- local 객체는 LiDAR+IMU로 계속 처리한다. GPS는 map 가용성에만 사용한다.
+- 현재 Main의 local 입력은 관측 시점 유효 IMU와 차량 속도(CAN)다. 각각 age 120ms, 최대 대기 50ms이며 GPS는 기다리지 않는다. CAN 없이 처리하는 LiDAR+IMU 전용 정책은 후속 설계다.
 - scan stamp는 bridge 수신 시각이며 광선 측정 시각으로 바꾸어 설명하지 않는다.
   CPU 처리시간은 monotonic clock으로 별도 측정한다.
-- pose는 이미 도착한 동일 clock의 유효 표본으로 최대 100ms 보간하고 외삽하지 않는다.
+- 코어의 엄격 `PoseHistory` API는 동일 clock에서 최대 100ms 보간하며 외삽하지 않는다.
+  Main의 별도 `BoundedPoseHistory`는 GPS 최대 age 300ms의 제한 보정과 정상 3회 복구를 사용한다.
+  공통 경로는 ROS source ns와 steady 수신·처리 시각을 분리한다. 두 정책을 혼용하지 않는다.
   안테나와 후륜축 offset, HD맵 원점·높이, 복구 위치 점프는 ROS 어댑터에서 검증한다.
 - 절대속도 벡터는 축만 회전한다. 상대 위치 미분은 자차 병진/회전을 함께 사용한다.
   twist가 없으면 unknown이며, 0속도나 static으로 위장하지 않는다.
@@ -95,7 +108,8 @@ LiDAR + IMU → 좌표·시간 정합 → 공통 ROI/voxel·지면 처리
 ```
 
 같은 단계·설정을 일반도로→터널→복귀에 적용한다. GPS/미션 ID는 분기 조건이 아니며
-GPS는 map 변환/지도 문맥의 가용성에만 관여한다. LiDAR+IMU만으로 local 경로가 동작해야 한다.
+GPS는 map 변환/지도 문맥의 가용성에만 관여한다. 현재 Main은 LiDAR+IMU+차량 속도로
+local을 처리한다. CAN 없는 LiDAR+IMU 경로의 추적·속도 정책은 후속 설계다.
 IMU나 지면 근거가 무효이면 관련 구조물 판단도 미확정으로 내리고 실패 이유를 남긴다.
 
 ### 근거 추출과 군집 경계

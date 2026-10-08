@@ -69,7 +69,29 @@ B1a 원본·고정 재호 브랜치는 대조군으로 보존한다.
 정책을 확인하며 중복 map TF를 발행하지 않는다. KITTI stereo baseline/rectification,
 nuScenes reference LiDAR 원점을 우리 MORAI 설정으로 복사하지 않는다.
 
-시간 연결도 남은 과제다. Main은 현재 source header를 ms로 양자화하고 이를
-`receipt_ns`로도 쓴다. 원본 ns와 실제 callback receipt를 내부 context에 별도로
-보존하고 replay clock lag와 비교해야 한다. 순수 코어의 causal receipt 시험 통과를
-Main의 수신 계측 완료로 확대하지 않는다. 진행 중 고정 측정의 소스는 바꾸지 않는다.
+시간 연결은 PR #72에서 공통 경로의 원본 source ns와 실제 callback receipt를 분리했다.
+strict 100ms 보간과 Main bounded 300ms 보정을 구분하고 ROS/steady 시각을 혼용하지 않는다.
+[연속 회귀·속도 진단](../../handoffs/perception/lidar-continuous-regression.md)에서
+실제 처리 함수 재현, 지면 실패 fixture, bag 결과와 기본값 승격 보류를 확인한다.
+기존 78회 실패 증거와 고정 재호 브랜치는 그대로 보존한다.
+
+## 재호가 먼저 고를 작은 작업
+
+1. **터널 core 연결:** Main 지면 이후·군집 이전에 재호 core만 연결한다. raw YOLO 보호와
+   수평화 후 fusion 좌표를 각각 확인하고 동일 GPS 대조를 수행한다.
+2. **벽과 객체 혼합 군집:** B1a 벽 근처 보호 후보에서 깊이·연결성과 돌출부를 비교한다.
+   벽 전체 OBB 삭제 대신 객체 지지점 보존을 검증한다.
+3. **OBB·추적·속도:** `PipelineTrace.hpp`의 voxel 대응·OBB·miss·KF 초기화와 source dt로
+   군집 중심 이동, 오연결, 초기화 급변과 자세 변화를 분리한다. 속도 필터를 먼저 추가하지
+   않는다. 현재 공개 velocity/dynamic validity는 false다.
+4. **패키지 이전:** 기능을 작은 동작 보존 단위로 `asmc_lidar`에 옮긴다. 좌표 코어는
+   준비됐지만 지면·군집·tracker 노드가 이미 이전된 것은 아니다.
+
+## PR #72에서 새로 고정한 회귀 입력
+
+- 현재 지면 fit 실패 + 직전 유효 평면 + roll 10°: 기존 fallback의 점 24개 소실을 공통 경로에서 수정했다. 평면을 운반할 자세/이동 근거가 없으면 unknown으로 보존한다.
+- 노면 접촉 30cm 물체·보행자 재진입·차량·벽의 합성 입력: roll 후보의 미대응 관측이 99→106으로 증가했다. 지면 하부 삭제와 군집 합침을 따로 확인한다.
+- 고정 shadow case-01: 유지점 수는 7037→7031이지만 후보는 23→13이다. 후보 수를 차량 정답 수로 사용하지 않고 point→cluster→OBB→연관을 추적한다.
+- 주 bag의 roll 신규 분류 차이 11건, 음영 CA 속도 급변 527→555: 기존 승인 예외와 구분한다. 공개 속도 validity는 false이며 기본 roll은 OFF다.
+
+입력·결과·검증 범위는 [연속 회귀 문서](../../handoffs/perception/lidar-continuous-regression.md)와 그 baseline을 따른다.

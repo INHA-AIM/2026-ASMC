@@ -59,11 +59,13 @@ dynamic validity는 모두 false다. 이를 유효한 0속도·정적 판정으�
 기존 `PoseHistory`는 100ms 이내 bracketing 보간만 제공한다. 별도
 `BoundedPoseHistory` API는 다음 정책을 사용한다.
 
-- 현재 Main은 scan source-ms를 receipt cutoff로도 사용하며 이 시각 이전에 도착했고
-  source stamp도 scan 이전인 정상 GPS의 age는 최대 300ms다. 실제 callback receipt를
-  캡처한 값은 아니며 원본 ns stamp도 ms로 양자화된다. 순수 API의 receipt 정책과
-  Main 적용의 차이는 [시간 검토](camera-lidar-coordinate-reference-review.md#남은-한계와-후속-담당)에
-  남긴다. 실제 수신 시각·원본 ns·replay clock 검증 전 시간 계약 수락은 보류한다.
+- 공통 Main은 원본 ROS source ns, callback entry의 ROS receipt ns와 steady receipt ns,
+  worker의 steady processing ns를 구분한다. GPS는 실제 수신이 scan receipt 이전이고
+  source stamp도 scan 이전인 표본만 사용하며 age는 최대 300ms다.
+  처리 시각까지 늦게 도착한 GPS로 지난 관측의 map 가용성을 바꾸지 않는다.
+  source ROS 시각과 monotonic 시각을 서로 빼지 않는다. 기존 opt-out 경로는 ms를 유지한다.
+  엄격 API는 동일 clock만 허용하고 별도 bounded API에만 ROS/steady 조합을 제공한다.
+  구현 회귀와 재생 수락 결과는 [연속 회귀](lidar-continuous-regression.md)에 구분한다.
 - GPS 관측 당시 IMU로 안테나 offset을 제거한 뒤, 유효 scan IMU·속도로 짧은
   위치 보정을 한다. GPS 관측과 scan의 자세를 혼동하지 않는다.
 - 무효 status·0 좌표·비유한 값·잘못된 map offset은 map 가용성을 해제한다.

@@ -74,3 +74,15 @@ python3 src/asmc_msgs/test/test_message_serialization.py
 이전 연구 소스·보고서는 정리 전 커밋 `020f6c2`에 남아 있다. 선택적 복구는 별도
 checkout에서 검토한다. 예전 `unified.launch`와 `ground_compare_live.launch`는 삭제됐다.
 기존 devel에 같은 이름의 실행파일이 남아 있어도 현재 패키지의 지원 기능으로 사용하지 않는다.
+
+## 시간 API 선택
+
+`PoseHistory`는 같은 clock에서 최대 100ms bracketing 보간만 허용한다.
+`BoundedPoseHistory`는 Main의 별도 300ms 제한 보정·GPS 정상 3회 복구 정책이다.
+공통 Main은 `Observation.clock=ros`, `receipt_clock=steady`를 명시하고 source age와
+수신/처리 소요시간을 서로 다른 축에서 계산한다. strict API는 mixed clock을 거부한다.
+GPS stamp가 0인 무효 입력은 bounded API의 수신 시각 barrier로만 처리한다.
+local 준비 조건은 유효 IMU·차량 속도이며 GPS와 독립적이다.
+
+실제 지면·군집·추적 연속 재현기는 nested Main의 시험 도구이며 이 코어의 기능이 아니다.
+[연속 회귀와 재호 과제](../../docs/handoffs/perception/lidar-continuous-regression.md)를 참고한다.
