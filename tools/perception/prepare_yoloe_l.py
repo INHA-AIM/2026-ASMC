@@ -45,12 +45,15 @@ def main():
     p.add_argument('--config', type=Path, required=True)
     p.add_argument('--profile', required=True, help='profile in the supplied frozen config')
     p.add_argument('--stage', choices=['prompts','onnx','engine'], required=True)
+    p.add_argument('--scale', choices=['m','l','x'], default='l')
     a = p.parse_args()
+    if a.scale == 'x' and a.stage != 'prompts':
+        p.error('X teacher is PyTorch only; TensorRT export is outside this experiment')
     policy = yaml.safe_load(a.config.read_text())
     names = profile_names(policy, a.profile)
     a.directory.mkdir(parents=True, exist_ok=True)
     os.chdir(a.directory)
-    checkpoint = a.directory/'yoloe-26l-seg.pt'
+    checkpoint = a.directory/('yoloe-26'+a.scale+'-seg.pt')
     cache = a.directory/(a.profile+'.npz')
     onnx_path = a.directory/(a.profile+'.onnx')
     meta_path = a.directory/(a.profile+'.metadata.json')

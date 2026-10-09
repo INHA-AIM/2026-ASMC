@@ -10,10 +10,11 @@ import platform
 import subprocess
 from urllib.parse import quote
 
-from camera_data_audit import read_jsonl, save, sha
+from camera_data_audit import read_jsonl, save, sha, load_label_policy, training_names, training_label
 
 
-def report(root, curated, dataset, gallery):
+def report(root, curated, dataset, gallery, policy=None):
+    policy = policy or load_label_policy(Path(__file__).resolve().parents[2]/'config/datasets/camera_object_labels_v1.json')
     downloads = json.loads((root/'download-report.json').read_text())
     snapshots = json.loads((root/'snapshot-report.json').read_text()) if (root/'snapshot-report.json').exists() else {'projects':[]}
     source_rows = {r['project']:r for r in downloads['projects']}
@@ -44,7 +45,7 @@ def report(root, curated, dataset, gallery):
     mappings=defaultdict(Counter)
     conditions={name:Counter() for name in ('weather','tunnel','view')}
     sizes=Counter();review_basis=Counter();unresolved=0;structure_failures=0;classes=Counter();splits=Counter()
-    classes_by_split=defaultdict(Counter);negatives=Counter()
+    classes_by_split=defaultdict(Counter);negatives=Counter();subtypes=Counter()
     exact_roles=defaultdict(set)
     for row in rows:
         for ann in row['annotations']:
@@ -60,8 +61,9 @@ def report(root, curated, dataset, gallery):
         for ann in row['annotations']:
             unresolved+=ann['disposition']=='ambiguous'
             if ann['canonical']:
-                classes[ann['canonical']]+=1
-                classes_by_split[row['split']][ann['canonical']]+=1
+                classes[training_label(ann)]+=1
+                classes_by_split[row['split']][training_label(ann)]+=1
+                subtypes[ann.get('source_semantic_label',ann['canonical'])]+=1
                 x,y,x2,y2=ann['xyxy'];area=(x2-x)*(y2-y)
                 sizes['small' if area<32**2 else ('medium' if area<96**2 else 'large')]+=1
     exact_leaks=sum(len(roles)>1 for roles in exact_roles.values())
@@ -83,11 +85,12 @@ def report(root, curated, dataset, gallery):
         audit_summary=summary,export=exported,
         accepted=dict(images=sum(splits.values()),splits=dict(splits),objects=dict(classes),
             classes_by_split={k:dict(v) for k,v in classes_by_split.items()},negatives=dict(negatives),
+            semantic_subtypes=dict(subtypes),label_policy_sha256=policy.get('label_policy_file_sha256'),
             classes_in_all_splits=[c for c in classes if all(classes_by_split[s][c]>0 for s in ('train','selection','heldout'))],
             review_basis=dict(review_basis),unresolved_labels=unresolved,structure_failures=structure_failures,
             exact_pixel_leaks=exact_leaks,conditions={k:dict(v) for k,v in conditions.items()},
             bbox_area_pixels=dict(sizes),bbox_size_definition='small <32^2; medium <96^2; large >=96^2, at stored resolution'),
-        class_mapping=[dict(source=s,original_label=n,dispositions=dict(v)) for (s,n),v in sorted(mappings.items())],
+        class_mapping=[dict(source=s,original_label=n,dispositions=dict(v)) for (s,n),v in sorted(mappings.items(),key=lambda item:str(item[0]))],
         remaining=['Quarantined ambiguous/missing/composite labels require individual review.',
             'pHash candidates are unconfirmed, preserved, and cross-split candidates excluded.',
             'Absent classes are not trained; missing_target_classes lists coverage gaps.',
@@ -96,7 +99,7 @@ def report(root, curated, dataset, gallery):
     result['all_sources_inventoried']=all(s['exported_images']>0 for s in sources) and len(sources)==22
     result['reviewed_subset_ready']=bool(acquired==22 and result['all_sources_inventoried'] and exported and exported['split_ready']
         and not unresolved and not structure_failures and not exact_leaks)
-    pilot_targets=['person','dog','bicycle','car','motorcycle','bus','truck','cargo_box','wooden_box']
+    pilot_targets=policy.get('pilot_target_classes',training_names(policy))
     result['bbox_pilot_missing_evaluation_classes']=[c for c in pilot_targets if c not in result['accepted']['classes_in_all_splits']]
     result['bbox_pilot_ready']=bool(result['reviewed_subset_ready'] and not result['bbox_pilot_missing_evaluation_classes'])
     samples_path=gallery/'review/review-samples.json'
@@ -129,6 +132,8 @@ def report(root, curated, dataset, gallery):
 <h2>22개 프로젝트</h2><table><tr><th>출처</th><th>버전</th><th>확보 상태</th><th>확보 이미지·증강 포함</th><th>채택</th><th>격리</th><th>라이선스</th></tr>__SOURCES__</table>
 <h2>원본 이름 → 현재 판정</h2><p>ambiguous는 미확정, excluded는 대상 제외입니다. 개별 수정과 자동 이름 대응을 구분하는 근거는 manifest의 review_record와 원본 주석에 남습니다.</p><table><tr><th>출처</th><th>원본 라벨</th><th>정규 라벨·상태와 객체 수</th></tr>__MAPPINGS__</table>
 <h2>해석 제한</h2><p>날씨·터널·거리는 근거 없이 파일명으로 확정하지 않았습니다. 유사 이미지 수는 누출 수가 아니며, 분할을 가로지르는 미확정 후보는 채택하지 않았습니다. Capture 고정 run 분할과 원본 instance mask는 유지합니다.</p>'''
+    page=page.replace('2026-10-09',datetime.now(timezone.utc).date().isoformat())
+    page=page.replace('기존 7종 + CargoBox/WoodBox 비교 학습 평가 준비','정책에 지정된 학습 클래스의 평가 준비')
     page=page.replace('__ACCEPTED__',esc(json.dumps(result['accepted'],ensure_ascii=False,indent=2)))
     page=page.replace('__READY__',esc(result['reviewed_subset_ready'])).replace('__MISSING__',esc(exported.get('missing_target_classes',[]) if exported else 'export 대기'))
     page=page.replace('__PILOT_READY__',esc(result['bbox_pilot_ready'])).replace('__PILOT_MISSING__',esc(result['bbox_pilot_missing_evaluation_classes']))
@@ -147,7 +152,8 @@ def main():
     p.add_argument('--root',type=Path,required=True);p.add_argument('--curated',type=Path,required=True)
     p.add_argument('--dataset',type=Path);p.add_argument('--gallery',type=Path,required=True)
     p.add_argument('--baseline',type=Path)
-    args=p.parse_args();result=report(args.root,args.curated,args.dataset,args.gallery)
+    p.add_argument('--labels',type=Path,default=Path(__file__).resolve().parents[2]/'config/datasets/camera_object_labels_v1.json')
+    args=p.parse_args();result=report(args.root,args.curated,args.dataset,args.gallery,load_label_policy(args.labels))
     if args.baseline:
         import yaml
         args.baseline.parent.mkdir(parents=True,exist_ok=True)

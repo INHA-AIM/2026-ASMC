@@ -64,6 +64,35 @@ def load_label_policy(path):
     return policy
 
 
+def training_names(policy):
+    return [name for group in policy['groups'].values() for name in group]
+
+
+def semantic_names(policy):
+    return set(training_names(policy)) | set(policy.get('training_map', {}))
+
+
+def label_metadata(ann, policy):
+    """Keep semantic subtype independent of the collapsed learning vocabulary."""
+    target = ann.get('canonical')
+    training = policy.get('training_map', {}).get(target, target)
+    if training and training not in training_names(policy):
+        raise ValueError('semantic class missing from training map: ' + str(target))
+    ann.update(source_semantic_label=target, training_class=training,
+               consumer_group=next((g for g, names in policy['groups'].items() if training in names), None))
+    # An alias or a numeric source label is not proof of a MORAI API asset name.
+    ann.setdefault('morai_asset_name', None)
+    return ann
+
+
+def training_label(ann):
+    return ann.get('training_class', ann.get('canonical'))
+
+
+def review_scope_matches(decision, policy):
+    return not policy.get('review_scope') or decision.get('review_scope') == policy['review_scope']
+
+
 def classify(name, policy, source=None):
     key = normalize(name)
     project = source[9:] if source and source.startswith('roboflow:') else source
@@ -72,7 +101,7 @@ def classify(name, policy, source=None):
     # Resolve before global exclusions: one dataset's Fence is a steel barricade.
     if key in profile.get('direct', {}):
         target = profile['direct'][key]
-        if target in {n for group in policy['groups'].values() for n in group}:
+        if target in semantic_names(policy):
             return target, 'candidate'
         return None, 'ambiguous'
     if any(key in profile.get(field, {}) for field in
@@ -92,16 +121,19 @@ def resolve_source_labels(original, policy):
     """Revisit old inventory labels, preserving raw annotations and review gates."""
     source = original['source']
     project = source[9:] if source.startswith('roboflow:') else None
-    if project not in policy.get('source_profiles', {}):
-        return original
     row = copy.deepcopy(original)
     row['source_profiles_sha256'] = policy['source_profiles_sha256']
     for ann in row['annotations']:
-        target, disposition = classify(ann['original_label'], policy, source)
+        if ann.get('annotation_origin') == 'human_added':
+            label_metadata(ann, policy)
+            continue
+        target, disposition = (classify(ann['original_label'], policy, source)
+            if project in policy.get('source_profiles', {}) else (ann['canonical'], ann['disposition']))
         if (target, disposition) != (ann['canonical'], ann['disposition']):
             ann.setdefault('previous_label_resolution', dict(
                 canonical=ann['canonical'], disposition=ann['disposition']))
         ann.update(canonical=target, disposition=disposition)
+        label_metadata(ann, policy)
     return row
 
 
@@ -120,7 +152,8 @@ def source_label_summary(inventories, policy):
             for ann in row['annotations']:
                 target, disposition = classify(ann['original_label'], policy, row['source'])
                 label = source['labels'].setdefault(ann['original_label'], dict(
-                    annotations=0, canonical=target, disposition=disposition))
+                    annotations=0, canonical=target, disposition=disposition,
+                    training_class=policy.get('training_map', {}).get(target, target)))
                 label['annotations'] += 1
                 totals['annotations'] += 1
                 totals[disposition + '_annotations'] += 1
@@ -344,7 +377,9 @@ def apply_review(row, decision, policy):
         return row, False
     if decision.get('bbox_policy') != policy['bbox_policy'] or not decision.get('all_targets_annotated'):
         return row, False
-    canonical_names = {n for names in policy['groups'].values() for n in names}
+    if decision.get('requires_human_confirmation') and not decision.get('human_confirmed'):
+        return row, False
+    canonical_names = semantic_names(policy)
     overrides = {str(a['id']): a for a in decision.get('overrides', [])}
     known_ids = {a['id'] for a in row['annotations']}
     if set(overrides) - known_ids:
@@ -366,11 +401,33 @@ def apply_review(row, decision, policy):
             # Geometry errors cannot be waived by a class override.
             if 'capture_subtype_unknown' in ann['issues']:
                 ann['issues'] = [i for i in ann['issues'] if i != 'capture_subtype_unknown']
-    row['annotation_complete'] = True
+    for addition in decision.get('additions', []):
+        if str(addition['id']) in known_ids:
+            raise ValueError('duplicate added annotation ID')
+        if addition.get('canonical') not in canonical_names or not valid_box(addition['xyxy'],row['width'],row['height']):
+            raise ValueError('invalid added annotation class/geometry')
+        if not decision.get('human_confirmed'):
+            raise ValueError('added boxes require human confirmation')
+        known_ids.add(str(addition['id']))
+        row['annotations'].append(dict(id=str(addition['id']),original_label=None,original_category_id=None,
+            canonical=addition['canonical'],disposition='candidate',xyxy=addition['xyxy'],issues=[],
+            annotation_origin='human_added',reviewer=decision.get('reviewer'),source_review_sha256=digest(json.dumps(decision,sort_keys=True))))
+    for ann in row['annotations']:
+        label_metadata(ann, policy)
+    scope_matches = review_scope_matches(decision, policy)
+    row['annotation_complete'] = scope_matches
+    if scope_matches and policy.get('review_scope'):
+        row['review_scope'] = policy['review_scope']
+    if decision.get('human_confirmed'):
+        for ann in row['annotations']:
+            if ann.get('actor_review'):
+                ann['actor_review'] = dict(ann['actor_review'],human_confirmation_pending=False,
+                    confirmed_for_image_by=decision.get('reviewer'))
     row['review_record'] = {k:decision[k] for k in (
         'image_sha256','decision','all_targets_annotated','bbox_policy',
-        'reviewer','reviewed_at','notes','overrides') if k in decision}
-    return row, True
+        'reviewer','reviewed_at','notes','overrides','review_scope','additions','human_confirmed') if k in decision}
+    row['review_scope_matches'] = scope_matches
+    return row, scope_matches
 
 
 class UnionFind:
@@ -507,11 +564,16 @@ def curate(rows, policy, reviews=None):
         reviews.get(i, {}).get('decision') == 'accept'
         and reviews[i].get('all_targets_annotated')
         and reviews[i].get('bbox_policy') == policy['bbox_policy']
-        and not reviews[i].get('overrides') for i in ids)} - failed_buckets
+        and review_scope_matches(reviews[i], policy)
+        and not reviews[i].get('overrides') and not reviews[i].get('additions')
+        and not reviews[i].get('requires_human_confirmation') for i in ids)} - failed_buckets
     result = []
     for original in rows:
         row, reviewed = apply_review(original, reviews.get(original['id']), policy)
-        buckets = {row['source'] + '|' + a['original_label'] for a in row['annotations']} or {row['source'] + '|__empty__'}
+        for ann in row['annotations']:
+            label_metadata(ann, policy)
+        buckets = {row['source'] + '|' + (a['original_label'] or '__human_added__')
+                   for a in row['annotations']} or {row['source'] + '|__empty__'}
         targets={n for names in policy['groups'].values() for n in names}
         capture_verified = (row['provenance_verified'] and row['annotation_complete']
             and targets <= set(row.get('verified_target_classes',[])))
@@ -606,7 +668,8 @@ def build_gallery(rows, samples, output, policy):
         if not image_path.exists():
             os.symlink(original.resolve(), image_path)
         entries.append(dict(id=row['id'], image_sha256=row.get('image_sha256'), source=row['source'],
-            annotations=[{k:a.get(k) for k in ('id','original_label','canonical','xyxy','original_xyxy','issues')} for a in row['annotations']],
+            source_key=row.get('source_key'),
+            annotations=[{k:a.get(k) for k in ('id','original_label','original_category_id','canonical','source_semantic_label','training_class','consumer_group','morai_asset_name','xyxy','original_xyxy','issues','actor_review')} for a in row['annotations']],
             eligible=row['eligible'],reasons=row['reasons'],split=row['split'],review_record=row.get('review_record'),
             issues=row['issues'], image='images/'+image_path.name,
             width=row['width'],height=row['height']))
@@ -618,22 +681,27 @@ def build_gallery(rows, samples, output, policy):
 <input id="q" placeholder="클래스·프로젝트 검색"><input id="reviewer" placeholder="검수자 이름" value="local-browser-review"><button id="prev">이전</button><button id="next">다음</button><button id="export">검수 JSON 다운로드</button><p id="count"></p><div id="rows"></div>
 <script>let rows=[],page=0,decisions={};const names=__CANONICAL_NAMES__;const q=document.querySelector('#q');q.value=new URLSearchParams(location.search).get('q')||'';
 function draw(){const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q.value.toLowerCase()));const box=document.querySelector('#rows');box.replaceChildren();document.querySelector('#count').textContent=filtered.length+'개 / 페이지 '+(page+1);
-for(const r of filtered.slice(page*30,(page+1)*30)){const a=document.createElement('article'),p=document.createElement('pre'),canvas=document.createElement('canvas'),img=new Image();p.textContent=r.source+'\n'+r.id+'\n'+(r.eligible?'채택':'격리')+' / '+r.split+'\n'+JSON.stringify(r.review_record)+'\n'+JSON.stringify(r.annotations,null,2)+'\n'+r.reasons.join(',');canvas.width=r.width;canvas.height=r.height;canvas.style.maxWidth='100%';img.onload=()=>{const c=canvas.getContext('2d');c.drawImage(img,0,0);c.font='14px sans-serif';c.lineWidth=3;for(const ann of r.annotations){if(ann.xyxy.length!==4)continue;const [x,y,x2,y2]=ann.xyxy;c.strokeStyle=c.fillStyle=ann.canonical?'lime':'orange';c.strokeRect(x,y,x2-x,y2-y);c.fillText(ann.original_label+' -> '+ann.canonical,x,Math.max(14,y));}};img.src=r.image;a.append(p,canvas);
+for(const r of filtered.slice(page*30,(page+1)*30)){const a=document.createElement('article'),p=document.createElement('pre'),canvas=document.createElement('canvas'),img=new Image();p.textContent=r.source+'\n'+r.id+'\n'+(r.eligible?'채택':'격리')+' / '+r.split+'\n'+JSON.stringify(r.review_record)+'\n'+JSON.stringify(r.annotations,null,2)+'\n'+r.reasons.join(',');canvas.width=r.width;canvas.height=r.height;canvas.style.maxWidth='100%';img.onload=()=>{const c=canvas.getContext('2d');c.drawImage(img,0,0);c.font='14px sans-serif';c.lineWidth=3;for(const ann of r.annotations){if(ann.xyxy.length!==4)continue;const [x,y,x2,y2]=ann.xyxy;c.strokeStyle=c.fillStyle=ann.canonical?'lime':'orange';c.strokeRect(x,y,x2-x,y2-y);c.fillText(ann.original_label+' -> '+ann.canonical+' / '+ann.training_class,x,Math.max(14,y));}};img.src=r.image;a.append(p,canvas);
 const edits=[];for(const ann of r.annotations){const line=document.createElement('div'),select=document.createElement('select'),coords=document.createElement('input');line.append(document.createTextNode(ann.id+' '+ann.original_label+' → '));for(const [value,label] of [['__keep__','현재 판정 유지'],['__exclude__','대상 제외'],...names.map(n=>[n,n])]){const o=document.createElement('option');o.value=value;o.textContent=label;select.append(o);}coords.value=ann.xyxy.join(', ');coords.title='가시 영역 x1,y1,x2,y2 (원본 픽셀)';coords.style.width='240px';line.append(select,coords);a.append(line);edits.push({ann,select,coords});}
-const note=document.createElement('input');note.placeholder='검수 근거·누락·복합 객체 등';note.style.width='90%';a.append(note);
+const confirm=document.createElement('input');confirm.type='checkbox';a.append(confirm,document.createTextNode('본인이 변경 라벨·추가 박스와 누락 여부를 직접 확인했습니다. '));const additions=document.createElement('textarea');additions.placeholder='추가 박스 JSON 배열: [{"id":"new-1","canonical":"box","xyxy":[0,0,20,20]}]';additions.value='[]';a.append(additions);const note=document.createElement('input');note.placeholder='검수 근거·누락·복합 객체 등';note.style.width='90%';a.append(note);
 for(const [label,value] of [['완전 주석 승인','accept'],['거부·격리','reject']]){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{const overrides=[];for(const {ann,select,coords} of (value==='accept'?edits:[])){const xyxy=coords.value.split(',').map(v=>Number(v.trim()));if(xyxy.length!==4||xyxy.some(v=>!Number.isFinite(v))){alert('좌표 4개를 입력해 주세요.');return;}const changed=JSON.stringify(xyxy)!==JSON.stringify(ann.xyxy);if(select.value!=='__keep__'||changed){if(select.value==='__keep__'&&!ann.canonical){alert('수정 박스의 정규 클래스도 선택해 주세요.');return;}const o={id:ann.id,canonical:select.value==='__exclude__'?null:(select.value==='__keep__'?ann.canonical:select.value)};if(changed)o.xyxy=xyxy;overrides.push(o);}}
-decisions[r.id]={image_sha256:r.image_sha256,decision:value,all_targets_annotated:value==='accept',bbox_policy:'visible_extent_xyxy_exclusive',reviewer:document.querySelector('#reviewer').value,reviewed_at:new Date().toISOString(),notes:note.value,overrides};b.textContent=label+' ✓';};a.append(b);}box.append(a);}}
+let added=[];try{added=JSON.parse(additions.value);if(!Array.isArray(added))throw Error();}catch(e){alert('추가 박스 JSON 배열을 확인해 주세요.');return;}if(value==='accept'&&(added.length||overrides.length)&&!confirm.checked){alert('변경 사항을 사람이 확인한 뒤 체크해 주세요.');return;}decisions[r.id]={human_confirmed:confirm.checked,additions:value==='accept'?added:[],image_sha256:r.image_sha256,decision:value,all_targets_annotated:value==='accept',bbox_policy:'visible_extent_xyxy_exclusive',reviewer:document.querySelector('#reviewer').value,reviewed_at:new Date().toISOString(),notes:note.value,overrides};b.textContent=label+' ✓';};a.append(b);}box.append(a);}}
 q.oninput=()=>{page=0;draw()};document.querySelector('#prev').onclick=()=>{page=Math.max(0,page-1);draw()};document.querySelector('#next').onclick=()=>{page++;draw()};document.querySelector('#export').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(decisions,null,2)],{type:'application/json'}));a.download='reviews.json';a.click();URL.revokeObjectURL(a.href);};fetch('review-data.json').then(r=>r.json()).then(r=>{rows=r;draw()}).catch(()=>{document.querySelector('#count').textContent='검수 목록을 읽지 못했습니다.'});</script>'''
-    names = [name for group in policy['groups'].values() for name in group]
+    names = sorted(semantic_names(policy))
+    template = template.replace('bbox_policy:\'visible_extent_xyxy_exclusive\',reviewer:',
+        'bbox_policy:\'visible_extent_xyxy_exclusive\',review_scope:' + json.dumps(policy.get('review_scope')) + ',reviewer:')
     (output / 'index.html').write_text(template.replace('__CANONICAL_NAMES__',json.dumps(names)))
     save(output / 'review-samples.json', samples)
 
 
 def export_dataset(rows, policy, output):
     output.mkdir(parents=True, exist_ok=False)
-    accepted = [r for r in rows if r['eligible']]
+    accepted = copy.deepcopy([r for r in rows if r['eligible']])
+    for row in accepted:
+        for ann in row['annotations']:
+            label_metadata(ann, policy)
     names = [name for group in policy['groups'].values() for name in group
-             if any(a['canonical'] == name for r in accepted for a in r['annotations'])]
+             if any(training_label(a) == name for r in accepted for a in r['annotations'])]
     ids = {name:index for index,name in enumerate(names)}
     by_role = Counter()
     for role in ('train','val','test'):
@@ -653,7 +721,7 @@ def export_dataset(rows, policy, output):
             if ann['canonical'] is None:
                 continue
             x1,y1,x2,y2 = ann['xyxy'];w,h=row['width'],row['height']
-            lines.append('%d %.10f %.10f %.10f %.10f' % (ids[ann['canonical']],(x1+x2)/2/w,(y1+y2)/2/h,(x2-x1)/w,(y2-y1)/h))
+            lines.append('%d %.10f %.10f %.10f %.10f' % (ids[training_label(ann)],(x1+x2)/2/w,(y1+y2)/2/h,(x2-x1)/w,(y2-y1)/h))
         (labels / (row['id'] + '.txt')).write_text('\n'.join(lines) + ('\n' if lines else ''))
         by_role[row['split']] += 1
     import yaml
@@ -670,6 +738,7 @@ def export_dataset(rows, policy, output):
         exact_pixel_leaks=len(leaks), manifest_sha256=sha(output / 'manifest.jsonl'),
         labels_sha256=digest(json.dumps(policy, sort_keys=True)),
         training_performed=False, unknown_subtypes_exported=0,
+        semantic_subtypes=dict(Counter(a['source_semantic_label'] for r in accepted for a in r['annotations'] if training_label(a))),
         split_ready=all(by_role[role] > 0 for role in ('train','selection','heldout')),
         missing_target_classes=[n for group in policy['groups'].values() for n in group if n not in names],
         full_target_coverage=all(n in names for group in policy['groups'].values() for n in group)))
@@ -697,7 +766,7 @@ def verify_export(output):
         targets=[a for a in row['annotations'] if a['canonical']]
         if len(actual)!=len(targets):raise ValueError('export_annotation_count_changed')
         for values,ann in zip(actual,targets):
-            if len(values)!=5 or int(values[0])!=names.index(ann['canonical']):
+            if len(values)!=5 or int(values[0])!=names.index(training_label(ann)):
                 raise ValueError('export_class_order_changed')
             x,y,x2,y2=ann['xyxy'];w,h=row['width'],row['height']
             expected=[(x+x2)/2/w,(y+y2)/2/h,(x2-x)/w,(y2-y)/h]
@@ -731,7 +800,7 @@ def curate_command(args):
         subset = [r for r in rows if r['source'] == source]
         source_counts[source] = dict(images=len(subset), accepted=sum(r['eligible'] for r in subset),
             original_labels=dict(Counter(a['original_label'] for r in subset for a in r['annotations'])),
-            accepted_classes=dict(Counter(a['canonical'] for r in subset if r['eligible'] for a in r['annotations'] if a['canonical'])))
+            accepted_classes=dict(Counter(training_label(a) for r in subset if r['eligible'] for a in r['annotations'] if training_label(a))))
     save(args.output / 'audit-summary.json', dict(images=len(rows),accepted=sum(r['eligible'] for r in rows),
         quarantined=sum(not r['eligible'] for r in rows), reasons=dict(reason_counts), sources=source_counts,
         inventory_sha256={str(path):sha(path) for path in args.inventory}, reviews_sha256=sha(args.reviews) if args.reviews else None,

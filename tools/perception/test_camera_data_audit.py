@@ -370,4 +370,83 @@ class AuditTests(unittest.TestCase):
                 verify_export(root/'derived')
 
 
-if __name__=='__main__':unittest.main()
+class TaxonomyV2Tests(unittest.TestCase):
+    def setUp(self):
+        self.policy=load_label_policy(ROOT/'config/datasets/camera_object_labels_v2.json')
+
+    def test_source_numbers_and_barrier_exceptions(self):
+        from camera_data_audit import label_metadata
+        expected=[('selfcar/morai_test-t3i2r','0','traffic_drum'),
+            ('cone-z2vga/katri-q4vkc','0','car'),
+            ('cone-z2vga/katri-q4vkc','5','traffic_drum'),
+            ('jjj-nx9di/katri_new_data-xkbev','8','box'),
+            ('tooth-decay-rnacu/morai_ai_mission-fhqkh','Fence','steel_barricade'),
+            ('tooth-decay-rnacu/morai_ai_mission-fhqkh','Concrete_1','concrete_barrier'),
+            ('enzo-mdikr/my-first-project-eeree','pe barrigate','plastic_barrier')]
+        for source,name,training in expected:
+            canonical,disposition=classify(name,self.policy,'roboflow:'+source)
+            ann=label_metadata(dict(canonical=canonical),self.policy)
+            self.assertEqual(disposition,'candidate');self.assertEqual(ann['training_class'],training)
+            self.assertIsNone(ann['morai_asset_name'])
+        for name in ('4','6','9'):
+            self.assertEqual(classify(name,self.policy,'roboflow:jjj-nx9di/katri_new_data-xkbev'),(None,'ambiguous'))
+        self.assertEqual(classify('electric scooter',self.policy),(None,'excluded'))
+
+    def test_old_review_keeps_correction_without_new_scope_attestation(self):
+        item=row('wooden box');item['annotations'][0]['original_label']='box'
+        old=accept(item,overrides=[dict(id='1',canonical='wooden_box')])
+        changed,reviewed=apply_review(item,old,self.policy)
+        self.assertFalse(reviewed);self.assertFalse(changed['annotation_complete'])
+        self.assertEqual(changed['annotations'][0]['training_class'],'box')
+        self.assertEqual(changed['annotations'][0]['source_semantic_label'],'wooden_box')
+        self.assertEqual(item['annotations'][0]['canonical'],'wooden_box')
+        old['review_scope']=self.policy['review_scope']
+        changed,reviewed=apply_review(item,old,self.policy)
+        self.assertTrue(reviewed)
+
+    def test_old_sample_scope_cannot_promote_bucket(self):
+        item=row();self.policy['review']['samples_per_source_class']=1
+        result,_=curate([item],self.policy,{item['id']:accept(item)})
+        self.assertFalse(result[0]['eligible'])
+        self.assertIn('annotation_completeness_unverified',result[0]['reasons'])
+
+    def test_collapsed_export_preserves_subtypes_and_rechecks_actual_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);items=[]
+            for i,(name,split) in enumerate(zip(('cargo box','wooden box','traffic barrel'),('train','selection','heldout'))):
+                path=root/(str(i)+'.png');Image.new('RGB',(100,80),(i,0,0)).save(path)
+                item=image_facts(row(name,source='capture:'+str(i),ident=str(i),split=split))
+                item['image']=str(path);item=image_facts(item);item['issues']=[]
+                item['eligible']=True;item['split']=split;items.append(item)
+            export_dataset(items,self.policy,root/'export')
+            import yaml
+            self.assertEqual(yaml.safe_load((root/'export/data.yaml').read_text())['names'],['box','traffic_drum'])
+            exported=list(__import__('camera_data_audit').read_jsonl(root/'export/manifest.jsonl'))
+            self.assertEqual([r['annotations'][0]['source_semantic_label'] for r in exported],['cargo_box','wooden_box','traffic_barrel'])
+            self.assertEqual(verify_export(root/'export')['verified_objects'],3)
+            label=next((root/'export/labels/train').glob('*.txt'));label.write_text('1 0.2 0.25 0.2 0.25\n')
+            with self.assertRaisesRegex(ValueError,'export_class_order_changed'):verify_export(root/'export')
+
+
+class ReviewAdditionTests(unittest.TestCase):
+    def test_new_box_requires_human_and_preserves_raw_annotations(self):
+        policy=load_label_policy(ROOT/'config/datasets/camera_object_labels_v2.json')
+        item=row();decision=accept(item,review_scope=policy['review_scope'],additions=[dict(id='new-1',canonical='concrete_barrier',xyxy=[40,10,70,40])])
+        with self.assertRaisesRegex(ValueError,'human confirmation'):apply_review(item,decision,policy)
+        decision['human_confirmed']=True
+        changed,reviewed=apply_review(item,decision,policy)
+        self.assertTrue(reviewed);self.assertEqual(len(item['annotations']),1)
+        self.assertEqual(changed['annotations'][1]['annotation_origin'],'human_added')
+        curated,_=curate([item],policy,{item['id']:decision})
+        self.assertTrue(curated[0]['eligible'])
+        self.assertEqual(curated[0]['annotations'][1]['training_class'],'concrete_barrier')
+        decision['additions'][0]['id']='1'
+        with self.assertRaisesRegex(ValueError,'duplicate'):apply_review(item,decision,policy)
+
+    def test_pending_teacher_record_cannot_attest_image_completeness(self):
+        policy=load_label_policy(ROOT/'config/datasets/camera_object_labels_v2.json')
+        item=row();decision=accept(item,review_scope=policy['review_scope'],requires_human_confirmation=True)
+        self.assertFalse(apply_review(item,decision,policy)[1])
+
+if __name__ == '__main__':
+    unittest.main()

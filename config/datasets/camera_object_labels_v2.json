@@ -1,0 +1,240 @@
+{
+  "schema_version": 2,
+  "source_profiles_file": "camera_object_source_labels_v2.json",
+  "bbox_policy": "visible_extent_xyxy_exclusive",
+  "groups": {
+    "person": [
+      "person"
+    ],
+    "animal": [
+      "dog",
+      "deer"
+    ],
+    "vehicle": [
+      "bicycle",
+      "car",
+      "motorcycle",
+      "bus",
+      "truck"
+    ],
+    "obstacle": [
+      "bollard",
+      "box",
+      "concrete_barrier",
+      "steel_barricade",
+      "traffic_drum",
+      "plastic_barrier",
+      "traffic_cone",
+      "stroller"
+    ]
+  },
+  "aliases": {
+    "person": "person",
+    "pedestrian": "person",
+    "man": "person",
+    "woman": "person",
+    "child": "person",
+    "dog": "dog",
+    "deer": "deer",
+    "bicycle": "bicycle",
+    "car": "car",
+    "sedan": "car",
+    "suv": "car",
+    "mpv": "car",
+    "wagon": "car",
+    "motorcycle": "motorcycle",
+    "bus": "bus",
+    "truck": "truck",
+    "bollard": "bollard",
+    "traffic bollard": "bollard",
+    "cargo box": "cargo_box",
+    "cargobox": "cargo_box",
+    "wooden box": "wooden_box",
+    "wood box": "wooden_box",
+    "woodbox": "wooden_box",
+    "wooden crate": "wooden_box",
+    "steel barricade": "steel_barricade",
+    "traffic cone": "traffic_cone",
+    "cone": "traffic_cone",
+    "traffic barrel": "traffic_barrel",
+    "baby stroller": "stroller",
+    "stroller": "stroller",
+    "doe": "deer",
+    "scooter": "motorcycle",
+    "sportsbike": "motorcycle",
+    "box": "box",
+    "traffic drum": "traffic_drum",
+    "pe drum": "pe_drum",
+    "redbarrel": "redbarrel",
+    "yellowbarrel": "yellowbarrel",
+    "concrete barrier": "concrete_barrier",
+    "concrete barricade": "concrete_barricade",
+    "plastic road barrier": "plastic_barrier",
+    "plastic barrier": "plastic_barrier",
+    "pe firewall": "pe_firewall"
+  },
+  "excluded": [
+    "traffic light",
+    "traffic sign",
+    "road sign",
+    "speed limit sign",
+    "stop sign",
+    "lane",
+    "lane separator",
+    "guardrail",
+    "fence",
+    "building",
+    "streetlight",
+    "utility pole",
+    "speed bump",
+    "manhole cover",
+    "fire",
+    "tree",
+    "electric scooter"
+  ],
+  "ambiguous": [
+    "obstacle",
+    "vehicle",
+    "animal",
+    "barrel",
+    "drum",
+    "bike",
+    "bicycle man",
+    "barricade",
+    "road obstacle"
+  ],
+  "review": {
+    "seed": 20261009,
+    "samples_per_source_class": 50
+  },
+  "split": {
+    "seed": 20261009,
+    "ratios": [
+      0.8,
+      0.1,
+      0.1
+    ],
+    "roles": [
+      "train",
+      "selection",
+      "heldout"
+    ]
+  },
+  "review_scope": "camera_objects_v2_16",
+  "training_map": {
+    "person": "person",
+    "dog": "dog",
+    "deer": "deer",
+    "bicycle": "bicycle",
+    "car": "car",
+    "motorcycle": "motorcycle",
+    "bus": "bus",
+    "truck": "truck",
+    "bollard": "bollard",
+    "box": "box",
+    "concrete_barrier": "concrete_barrier",
+    "steel_barricade": "steel_barricade",
+    "traffic_drum": "traffic_drum",
+    "plastic_barrier": "plastic_barrier",
+    "traffic_cone": "traffic_cone",
+    "stroller": "stroller",
+    "cargo_box": "box",
+    "wooden_box": "box",
+    "traffic_barrel": "traffic_drum",
+    "pe_drum": "traffic_drum",
+    "redbarrel": "traffic_drum",
+    "yellowbarrel": "traffic_drum",
+    "concrete_barricade": "concrete_barrier",
+    "pe_firewall": "plastic_barrier"
+  },
+  "pilot_target_classes": [
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "bus",
+    "truck",
+    "bollard",
+    "box",
+    "concrete_barrier",
+    "steel_barricade",
+    "traffic_drum",
+    "plastic_barrier",
+    "traffic_cone",
+    "stroller"
+  ],
+  "asset_contract": [
+    {
+      "morai_user_spelling": "deer",
+      "training_class": "deer",
+      "consumer_group": "animal",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    },
+    {
+      "morai_user_spelling": "bicycle",
+      "training_class": "bicycle",
+      "consumer_group": "vehicle",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    },
+    {
+      "morai_user_spelling": "scooter + sportsbike",
+      "training_class": "motorcycle",
+      "consumer_group": "vehicle",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    },
+    {
+      "morai_user_spelling": "bollard",
+      "training_class": "bollard",
+      "consumer_group": "obstacle",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    },
+    {
+      "morai_user_spelling": "cargobox + woodbox",
+      "training_class": "box",
+      "consumer_group": "obstacle",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    },
+    {
+      "morai_user_spelling": "concrete_barricade + concrete-barrier",
+      "training_class": "concrete_barrier",
+      "consumer_group": "obstacle",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    },
+    {
+      "morai_user_spelling": "steel_barricade",
+      "training_class": "steel_barricade",
+      "consumer_group": "obstacle",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    },
+    {
+      "morai_user_spelling": "PE drum + redbarrel + trafficbarrel + yellowbarrel",
+      "training_class": "traffic_drum",
+      "consumer_group": "obstacle",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    },
+    {
+      "morai_user_spelling": "pe firewall",
+      "training_class": "plastic_barrier",
+      "consumer_group": "obstacle",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    },
+    {
+      "morai_user_spelling": "color cone + rubber cone",
+      "training_class": "traffic_cone",
+      "consumer_group": "obstacle",
+      "grpc_api_name": null,
+      "api_name_verified": false
+    }
+  ]
+}
