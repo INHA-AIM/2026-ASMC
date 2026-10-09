@@ -134,6 +134,7 @@ jobs:
           python3 tools/perception/check_object_visualization_ros.py --hood-mask --debug-raw
           python3 tools/perception/check_object_visualization_ros.py --hood-mask --view left
           python3 tools/perception/check_object_visualization_ros.py --hood-mask --view right
+          python3 tools/perception/check_object_mosaic_ros.py --output /tmp/object-mosaic-ros-check.json
           python3 tools/perception/check_hood_mask_ros.py
           python3 tools/perception/check_ego_hood_filter_ros.py
           python3 tools/perception/check_object_visualization_ros.py --ego-hood-filter

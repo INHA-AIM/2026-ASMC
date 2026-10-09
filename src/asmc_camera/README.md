@@ -35,8 +35,20 @@ roslaunch asmc_camera camera_coco7.launch profile:=debug
 ```
 
 ```bash
-rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
+rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
+
+좌·전방·우 YOLO 결과는 `/perception/camera/objects/debug/mosaic/compressed` 한 화면에
+나란히 표시한다. 각 칸은 원본 비율을 유지하며 source stamp·age와 차체 mask를 표시한다.
+뷰 간에는 최신 결과를 독립적으로 갱신하므로 하나의 동기 관측으로 소비하지 않는다.
+입력이0.5초 이상 오래되면 해당 칸의 박스를 지우고 STALE로 표시한다.
+합성 영상 header는 합성 시각이며 원본 관측 stamp는 각 칸에 따로 남는다.
+화면은 최대10Hz, YOLO 추론 목표는 뷰별15Hz다. rqt가 없으면 합성용 구독·디코딩을
+하지 않고, 기존 개별 뷰 토픽은 그대로 사용할 수 있다. YAML·모델·confidence는 변경하지 않는다.
+
+YOLO만 확인하려면 같은 launch에 `start_camera_lane:=false start_traffic_light:=false`를
+추가한다. 기본 debug는 TwinLite·YOLO·ResNet 모두 ACTIVE이며 LiDAR·판제·차량 제어는
+시작하지 않는다. 차선 피팅 결과의 주행 소비는 음영 ODD로 한정한다.
 
 좌우 debug 토픽은 `/perception/camera/objects/debug/left/image/compressed`,
 `/perception/camera/objects/debug/right/image/compressed`다. planning은 세 모델 STANDBY,

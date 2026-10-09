@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """YOLO overlay on the exact source image, independent of LiDAR/GPS."""
 import ast
+import math
+import threading
+import time
 import cv2
 import message_filters
 import numpy as np
@@ -9,7 +12,7 @@ from asmc_msgs.msg import CameraObjectBoxArray
 from sensor_msgs.msg import CompressedImage
 from diagnostic_msgs.msg import DiagnosticArray
 
-from asmc_camera.detection.visualization import render_object_overlay
+from asmc_camera.detection.visualization import render_object_overlay, render_object_mosaic
 from asmc_camera.detection.hood_mask import HoodMask
 from asmc_camera.detection.ego_hood_filter import EgoHoodFilter
 
@@ -115,9 +118,111 @@ class ObjectVisualizerNode:
             self.publisher.publish(CompressedImage(header=source.header,format='jpeg',data=encoded.tobytes()))
 
 
+class ObjectMosaicNode:
+    """Subscriber-lazy composition of exact-source overlays; no new inference."""
+    TOPICS = {
+        'left': '/perception/camera/objects/debug/left/image/compressed',
+        'front': '/perception/camera/objects/debug/image/compressed',
+        'right': '/perception/camera/objects/debug/right/image/compressed',
+    }
+
+    def __init__(self):
+        self.width = int(rospy.get_param('~panel_width', 640))
+        self.height = int(rospy.get_param('~panel_height', 480))
+        self.stale = float(rospy.get_param('~stale_sec', .5))
+        self.hz = float(rospy.get_param('~publish_hz', 10.))
+        self.quality = int(rospy.get_param('~jpeg_quality', 80))
+        if (self.width <= 0 or self.height <= 0 or not math.isfinite(self.stale) or self.stale <= 0 or
+                not math.isfinite(self.hz) or self.hz <= 0 or not 1 <= self.quality <= 100):
+            raise ValueError('invalid mosaic dimensions, stale_sec, publish_hz or JPEG quality')
+        self.publisher = rospy.Publisher('/perception/camera/objects/debug/mosaic/compressed',
+                                         CompressedImage, queue_size=1)
+        self.lock = threading.Lock()
+        self.latest = {}
+        self.subscribers = []
+        self.stopped = threading.Event()
+        self.thread = threading.Thread(target=self._worker, name='object-mosaic', daemon=True)
+        rospy.on_shutdown(self.close)
+        self.thread.start()
+
+    def _accept(self, message, view):
+        if message.header.frame_id != 'camera_'+view or not message.header.stamp.to_nsec():
+            rospy.logwarn_throttle(2., 'object mosaic rejected wrong camera or zero stamp')
+            return
+        with self.lock:
+            old = self.latest.get(view)
+            # Source clock rewind starts a new sequence. Freshness checks blank
+            # future old panels in the meantime; reconnect after clock restart.
+            if old and message.header.stamp <= old[0].header.stamp:
+                if old[0].header.stamp.to_sec() <= rospy.Time.now().to_sec()+.05:
+                    return
+            self.latest[view] = (message, time.monotonic())
+
+    def _unsubscribe(self):
+        subscribers, self.subscribers = self.subscribers, []
+        for subscriber in subscribers:
+            subscriber.unregister()
+        with self.lock:
+            self.latest.clear()
+
+    def _worker(self):
+        decoded, last_key = {}, None
+        try:
+            while not self.stopped.is_set() and not rospy.is_shutdown():
+                if not self.publisher.get_num_connections():
+                    self._unsubscribe()
+                    decoded.clear()
+                    last_key = None
+                else:
+                    if not self.subscribers:
+                        self.subscribers = [rospy.Subscriber(topic, CompressedImage, self._accept,
+                            callback_args=view, queue_size=1, buff_size=16 << 20)
+                            for view, topic in self.TOPICS.items()]
+                    with self.lock:
+                        latest = dict(self.latest)
+                    now, wall_now = rospy.Time.now().to_sec(), time.monotonic()
+                    key = tuple((view, item[0].header.stamp.to_nsec(),
+                        -.05 <= now-item[0].header.stamp.to_sec() <= self.stale and
+                        0 <= wall_now-item[1] <= self.stale) for view, item in sorted(latest.items()))
+                    if key != last_key:
+                        panels = {}
+                        for view, (message, received) in latest.items():
+                            stamp = message.header.stamp.to_nsec()
+                            if view not in decoded or decoded[view][0] != stamp:
+                                try:
+                                    image = cv2.imdecode(np.frombuffer(message.data, np.uint8), cv2.IMREAD_COLOR)
+                                except cv2.error:
+                                    image = None
+                                decoded[view] = (stamp, image)
+                            image = decoded[view][1]
+                            if image is not None:
+                                panels[view] = (image, message.header.stamp.to_sec(), received)
+                            else:
+                                rospy.logwarn_throttle(2., 'object mosaic cannot decode overlay JPEG')
+                        output = render_object_mosaic(panels, now, wall_now, self.width, self.height, self.stale)
+                        ok, encoded = cv2.imencode('.jpg', output, [cv2.IMWRITE_JPEG_QUALITY, self.quality])
+                        if ok:
+                            composite = CompressedImage(format='jpeg', data=encoded.tobytes())
+                            composite.header.stamp = rospy.Time.now()
+                            composite.header.frame_id = 'camera_objects_debug_mosaic'
+                            self.publisher.publish(composite)
+                        last_key = key
+                self.stopped.wait(1./self.hz)
+        finally:
+            self._unsubscribe()
+
+    def close(self):
+        self.stopped.set()
+        if threading.current_thread() is not self.thread:
+            self.thread.join(timeout=2.)
+
+
 def main():
     rospy.init_node('camera_object_visualizer')
-    ObjectVisualizerNode()
+    if rospy.get_param('~mosaic', False):
+        ObjectMosaicNode()
+    else:
+        ObjectVisualizerNode()
     rospy.spin()
 
 

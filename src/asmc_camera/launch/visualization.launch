@@ -56,6 +56,14 @@
       <param name="hood_mask_config" value="$(arg objects_right_ego_mask_config)"/>
       <param name="debug_raw" value="$(arg objects_debug_raw)"/>
     </node>
+    <node pkg="asmc_camera" type="object_visualizer_node.py" name="camera_object_mosaic"
+          output="screen" required="false">
+      <param name="mosaic" value="true"/>
+      <param name="publish_hz" value="10.0"/>
+      <param name="panel_width" value="640"/>
+      <param name="panel_height" value="480"/>
+      <param name="stale_sec" value="0.5"/>
+    </node>
   </group>
   <group if="$(arg camera_lane)">
 
