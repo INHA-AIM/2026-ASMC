@@ -1,0 +1,1682 @@
+schema_version: 1
+experiment_id: camera_yoloe_selection_v1
+date: '2026-10-09'
+status: measurement_complete_operational_selection_held
+parent_pr: 76
+parent_head: 503a44ac080083fb8cc8f6d4b5a587fb10791b5d
+branch: feat/camera-yoloe-obstacle-selection
+live_revision: e09e201ca33186deb52a62862f2a0ba045778a42
+debug_revision: e3938520b7276ba7238b7a1a15d74e4e649d18b0
+fusion_revision: 994899a5a6cf1e8bafdb0112ef144e6757464e4f
+environment:
+  host_platform: Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43
+  gpu: NVIDIA GeForce RTX 4060 Ti, 591.86, 8188 MiB
+  shared_image_id: sha256:847c0870a0df69205362c82e9ecd18e1ca7005224284f9730a810a6e39b8c5b3
+  experiment_image_id: sha256:847c0870a0df69205362c82e9ecd18e1ca7005224284f9730a810a6e39b8c5b3
+  git_revision: f74265fc92b53178fd49bcb30f3f170af0ee2093
+  operational_container: asmc-ros-noetic
+  measurement_conditions: MORAI running; desktop/browser not terminated; no GPU heavy
+    experiments concurrent with timed live trials
+operational_default_changed: false
+training_or_roboflow: false
+training_comparison_candidate:
+  model: yoloe-26l-seg
+  front_width: 1280
+  side_hw:
+  - 480
+  - 640
+  target_hz: 15
+  batch: 2plus1
+  backend: TensorRT internal FP16; FLOAT32 I/O
+  confidence: 0.4
+  prompt_profile: bollard17
+  prompts:
+  - person
+  - dog
+  - deer
+  - bicycle
+  - car
+  - truck
+  - bus
+  - motorcycle
+  - scooter
+  - electric scooter
+  - traffic bollard
+  - cargo box
+  - wooden box
+  - steel barricade
+  - traffic cone
+  - traffic barrel
+  - baby stroller
+  checkpoint_sha256: a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9
+  embedding_sha256: 066226fbb9a93fc987910e033e6a050ac7cc0686b058bbe649d90b7a797cda5e
+  engine_sha256: 5ff612e44d1c29a2856b8941581ad974bfd149a06ced2e0753ede9b4c42da45c
+  runtime_config_sha256: c32a3ef94e58fcb0f41ff7a4cf5dfec4be775676e90b27a8cf0368df8b4a1758
+  status: research candidate, not operating acceptance
+gt:
+  manifest_sha256: ed2cefea5274c3366e2514b983ace614532a3926697be5e5d2ba68c0404cf968
+  selection_frames: 2252
+  reviewed_selection_frames: 2250
+  heldout_frames: 2474
+  verified_subtypes:
+  - person
+  - car
+  - bus
+  - truck
+  missing_subtypes:
+  - dog
+  - bicycle
+  - motorcycle
+  new_obstacle_scope: qualitative RGB review; actor state is not pixel GT
+  previously_approved_exact_exclusions:
+  - image: 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000346.png
+    sha256: 1bcfa7cd5f7db7bc76839fba6f90ac2eab9c9359d7f72b0b22b21279a331e63f
+    reason: 'User: outside mission ODD'
+    scope: Only this reviewed frame excluded from supplemental operational comparison;
+      original metrics unchanged.
+  - image: 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000532.png
+    sha256: a7bd1edfff207c18019f39f70464b974d88e003748962de6313def3026738a9a
+    reason: 'User: incorrectly spawned object'
+    scope: Only this reviewed frame excluded from supplemental operational comparison;
+      original metrics unchanged.
+quality:
+- model: yoloe-26m-seg
+  width: 640
+  original_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 108
+        fp: 7
+        fn: 240
+        evaluable: true
+        f1: 0.46652267818574517
+        recall: 0.3103448275862069
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 111
+        fp: 8
+        fn: 1559
+        evaluable: true
+        f1: 0.12409167132476244
+        recall: 0.06646706586826347
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 57
+        fp: 12
+        fn: 228
+        evaluable: true
+        f1: 0.3220338983050847
+        recall: 0.2
+      truck:
+        gt: 505
+        tp: 16
+        fp: 34
+        fn: 489
+        evaluable: true
+        f1: 0.05765765765765766
+        recall: 0.031683168316831684
+    macro_f1: 0.2425764763683125
+    false_positives: 61
+    total_tp: 292
+  reviewed_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 108
+        fp: 7
+        fn: 240
+        evaluable: true
+        f1: 0.46652267818574517
+        recall: 0.3103448275862069
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 111
+        fp: 8
+        fn: 1559
+        evaluable: true
+        f1: 0.12409167132476244
+        recall: 0.06646706586826347
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 57
+        fp: 12
+        fn: 228
+        evaluable: true
+        f1: 0.3220338983050847
+        recall: 0.2
+      truck:
+        gt: 504
+        tp: 16
+        fp: 34
+        fn: 488
+        evaluable: true
+        f1: 0.05776173285198556
+        recall: 0.031746031746031744
+    macro_f1: 0.2426024951668945
+    false_positives: 61
+    total_tp: 292
+  best_threshold: 0.2
+  best_macro_f1: 0.2532675019849613
+  size_recall:
+    below10px:
+      gt: 2242
+      tp: 12
+      recall: 0.0053523639607493305
+    10to19px:
+      gt: 220
+      tp: 22
+      recall: 0.1
+    20px_or_more:
+      gt: 345
+      tp: 258
+      recall: 0.7478260869565218
+  temporal_summary:
+    not_stably_detected: 61
+    insufficient_contiguous_gt: 44
+    interpretation: 3 hits in 5 consecutive annotated source inputs; frame counts,
+      not wall seconds; visibility gaps reset window; initial acquisition is not re-entry
+  summary_sha256: 5ad814b5d78570e35e474f37e4c34a02a96039532eef0f0f71cd6a12359560a3
+  predictions_sha256: 1fd16b2d2f71545d85075362b18275e23afb7d9459fef3492097004068317e89
+- model: yoloe-26m-seg
+  width: 960
+  original_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 114
+        fp: 5
+        fn: 234
+        evaluable: true
+        f1: 0.48822269807280516
+        recall: 0.3275862068965517
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 118
+        fp: 9
+        fn: 1552
+        evaluable: true
+        f1: 0.13132999443516974
+        recall: 0.07065868263473053
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 63
+        fp: 12
+        fn: 222
+        evaluable: true
+        f1: 0.35
+        recall: 0.22105263157894736
+      truck:
+        gt: 505
+        tp: 13
+        fp: 66
+        fn: 492
+        evaluable: true
+        f1: 0.04452054794520548
+        recall: 0.02574257425742574
+    macro_f1: 0.25351831011329506
+    false_positives: 92
+    total_tp: 308
+  reviewed_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 114
+        fp: 5
+        fn: 234
+        evaluable: true
+        f1: 0.48822269807280516
+        recall: 0.3275862068965517
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 118
+        fp: 9
+        fn: 1552
+        evaluable: true
+        f1: 0.13132999443516974
+        recall: 0.07065868263473053
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 63
+        fp: 12
+        fn: 222
+        evaluable: true
+        f1: 0.35
+        recall: 0.22105263157894736
+      truck:
+        gt: 504
+        tp: 13
+        fp: 66
+        fn: 491
+        evaluable: true
+        f1: 0.044596912521440824
+        recall: 0.025793650793650792
+    macro_f1: 0.2535374012573539
+    false_positives: 92
+    total_tp: 308
+  best_threshold: 0.2
+  best_macro_f1: 0.274469943619406
+  size_recall:
+    below10px:
+      gt: 2242
+      tp: 15
+      recall: 0.006690454950936664
+    10to19px:
+      gt: 220
+      tp: 24
+      recall: 0.10909090909090909
+    20px_or_more:
+      gt: 345
+      tp: 269
+      recall: 0.7797101449275362
+  temporal_summary:
+    not_stably_detected: 62
+    insufficient_contiguous_gt: 44
+    interpretation: 3 hits in 5 consecutive annotated source inputs; frame counts,
+      not wall seconds; visibility gaps reset window; initial acquisition is not re-entry
+  summary_sha256: 94507fcd21bc957c96a26354dd39592fe04e7d5488c1edc06af228a3510f77c7
+  predictions_sha256: f95ec81597191957420ce09897808a10f6c1aa072b902e233ce8532662097e7b
+- model: yoloe-26m-seg
+  width: 1280
+  original_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 115
+        fp: 3
+        fn: 233
+        evaluable: true
+        f1: 0.49356223175965663
+        recall: 0.33045977011494254
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 124
+        fp: 4
+        fn: 1546
+        evaluable: true
+        f1: 0.13793103448275862
+        recall: 0.07425149700598803
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 68
+        fp: 17
+        fn: 217
+        evaluable: true
+        f1: 0.3675675675675676
+        recall: 0.23859649122807017
+      truck:
+        gt: 505
+        tp: 12
+        fp: 72
+        fn: 493
+        evaluable: true
+        f1: 0.04074702886247878
+        recall: 0.023762376237623763
+    macro_f1: 0.2599519656681154
+    false_positives: 96
+    total_tp: 319
+  reviewed_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 115
+        fp: 3
+        fn: 233
+        evaluable: true
+        f1: 0.49356223175965663
+        recall: 0.33045977011494254
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 124
+        fp: 4
+        fn: 1546
+        evaluable: true
+        f1: 0.13793103448275862
+        recall: 0.07425149700598803
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 68
+        fp: 17
+        fn: 217
+        evaluable: true
+        f1: 0.3675675675675676
+        recall: 0.23859649122807017
+      truck:
+        gt: 504
+        tp: 12
+        fp: 72
+        fn: 492
+        evaluable: true
+        f1: 0.04081632653061224
+        recall: 0.023809523809523808
+    macro_f1: 0.2599692900851488
+    false_positives: 96
+    total_tp: 319
+  best_threshold: 0.15
+  best_macro_f1: 0.27816690529492144
+  size_recall:
+    below10px:
+      gt: 2242
+      tp: 15
+      recall: 0.006690454950936664
+    10to19px:
+      gt: 220
+      tp: 38
+      recall: 0.17272727272727273
+    20px_or_more:
+      gt: 345
+      tp: 266
+      recall: 0.7710144927536232
+  temporal_summary:
+    not_stably_detected: 61
+    insufficient_contiguous_gt: 44
+    interpretation: 3 hits in 5 consecutive annotated source inputs; frame counts,
+      not wall seconds; visibility gaps reset window; initial acquisition is not re-entry
+  summary_sha256: 2d588b22dcf5e2f1f9e1bec920a4bd37c7f98ef05367891ae1dbb9db43bb7b4d
+  predictions_sha256: c0f5e216af346948006717d9f52730c91c3feee18b6dc62250a9c18514f81325
+- model: yoloe-26l-seg
+  width: 640
+  original_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 120
+        fp: 8
+        fn: 228
+        evaluable: true
+        f1: 0.5042016806722689
+        recall: 0.3448275862068966
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 103
+        fp: 9
+        fn: 1567
+        evaluable: true
+        f1: 0.11560044893378227
+        recall: 0.061676646706586825
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 63
+        fp: 24
+        fn: 222
+        evaluable: true
+        f1: 0.3387096774193548
+        recall: 0.22105263157894736
+      truck:
+        gt: 505
+        tp: 16
+        fp: 7
+        fn: 489
+        evaluable: true
+        f1: 0.06060606060606061
+        recall: 0.031683168316831684
+    macro_f1: 0.2547794669078666
+    false_positives: 48
+    total_tp: 302
+  reviewed_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 120
+        fp: 8
+        fn: 228
+        evaluable: true
+        f1: 0.5042016806722689
+        recall: 0.3448275862068966
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 103
+        fp: 9
+        fn: 1567
+        evaluable: true
+        f1: 0.11560044893378227
+        recall: 0.061676646706586825
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 63
+        fp: 24
+        fn: 222
+        evaluable: true
+        f1: 0.3387096774193548
+        recall: 0.22105263157894736
+      truck:
+        gt: 504
+        tp: 16
+        fp: 7
+        fn: 488
+        evaluable: true
+        f1: 0.06072106261859583
+        recall: 0.031746031746031744
+    macro_f1: 0.25480821741100046
+    false_positives: 48
+    total_tp: 302
+  best_threshold: 0.25
+  best_macro_f1: 0.26150404248556
+  size_recall:
+    below10px:
+      gt: 2242
+      tp: 10
+      recall: 0.0044603033006244425
+    10to19px:
+      gt: 220
+      tp: 28
+      recall: 0.12727272727272726
+    20px_or_more:
+      gt: 345
+      tp: 264
+      recall: 0.7652173913043478
+  temporal_summary:
+    not_stably_detected: 63
+    insufficient_contiguous_gt: 44
+    interpretation: 3 hits in 5 consecutive annotated source inputs; frame counts,
+      not wall seconds; visibility gaps reset window; initial acquisition is not re-entry
+  summary_sha256: 459fad4e075bd1f90181b17c2b9d3d4ddb9a3d97f4d94cc7134a9f219740ed5e
+  predictions_sha256: da8569564a28b18855aa2922903b454f94de55f1b3636b146b3b34cac7b94aef
+- model: yoloe-26l-seg
+  width: 960
+  original_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 122
+        fp: 8
+        fn: 226
+        evaluable: true
+        f1: 0.5104602510460251
+        recall: 0.3505747126436782
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 115
+        fp: 4
+        fn: 1555
+        evaluable: true
+        f1: 0.1285634432643935
+        recall: 0.0688622754491018
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 69
+        fp: 23
+        fn: 216
+        evaluable: true
+        f1: 0.3660477453580902
+        recall: 0.24210526315789474
+      truck:
+        gt: 505
+        tp: 16
+        fp: 26
+        fn: 489
+        evaluable: true
+        f1: 0.05850091407678245
+        recall: 0.031683168316831684
+    macro_f1: 0.2658930884363228
+    false_positives: 61
+    total_tp: 322
+  reviewed_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 122
+        fp: 8
+        fn: 226
+        evaluable: true
+        f1: 0.5104602510460251
+        recall: 0.3505747126436782
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 115
+        fp: 4
+        fn: 1555
+        evaluable: true
+        f1: 0.1285634432643935
+        recall: 0.0688622754491018
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 69
+        fp: 23
+        fn: 216
+        evaluable: true
+        f1: 0.3660477453580902
+        recall: 0.24210526315789474
+      truck:
+        gt: 504
+        tp: 16
+        fp: 26
+        fn: 488
+        evaluable: true
+        f1: 0.05860805860805861
+        recall: 0.031746031746031744
+    macro_f1: 0.26591987456914185
+    false_positives: 61
+    total_tp: 322
+  best_threshold: 0.25
+  best_macro_f1: 0.273599818349946
+  size_recall:
+    below10px:
+      gt: 2242
+      tp: 10
+      recall: 0.0044603033006244425
+    10to19px:
+      gt: 220
+      tp: 37
+      recall: 0.16818181818181818
+    20px_or_more:
+      gt: 345
+      tp: 275
+      recall: 0.7971014492753623
+  temporal_summary:
+    not_stably_detected: 62
+    insufficient_contiguous_gt: 44
+    interpretation: 3 hits in 5 consecutive annotated source inputs; frame counts,
+      not wall seconds; visibility gaps reset window; initial acquisition is not re-entry
+  summary_sha256: 5905720123586309c3c626c43bdad8b43cae7236c7296545e57cc8e8fe3ce303
+  predictions_sha256: 8370b92bea1b503685ec672fd9a94874f3322dbb2cdc24d50864a968ef195a8c
+- model: yoloe-26l-seg
+  width: 1280
+  original_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 123
+        fp: 8
+        fn: 225
+        evaluable: true
+        f1: 0.5135699373695198
+        recall: 0.35344827586206895
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 119
+        fp: 8
+        fn: 1551
+        evaluable: true
+        f1: 0.13244296048970505
+        recall: 0.07125748502994012
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 76
+        fp: 24
+        fn: 209
+        evaluable: true
+        f1: 0.3948051948051948
+        recall: 0.26666666666666666
+      truck:
+        gt: 505
+        tp: 13
+        fp: 9
+        fn: 492
+        evaluable: true
+        f1: 0.04933586337760911
+        recall: 0.02574257425742574
+    macro_f1: 0.2725384890105072
+    false_positives: 49
+    total_tp: 331
+  reviewed_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 123
+        fp: 8
+        fn: 225
+        evaluable: true
+        f1: 0.5135699373695198
+        recall: 0.35344827586206895
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 119
+        fp: 8
+        fn: 1551
+        evaluable: true
+        f1: 0.13244296048970505
+        recall: 0.07125748502994012
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 76
+        fp: 24
+        fn: 209
+        evaluable: true
+        f1: 0.3948051948051948
+        recall: 0.26666666666666666
+      truck:
+        gt: 504
+        tp: 13
+        fp: 9
+        fn: 491
+        evaluable: true
+        f1: 0.049429657794676805
+        recall: 0.025793650793650792
+    macro_f1: 0.27256193761477415
+    false_positives: 49
+    total_tp: 331
+  best_threshold: 0.2
+  best_macro_f1: 0.28035374769314947
+  size_recall:
+    below10px:
+      gt: 2242
+      tp: 12
+      recall: 0.0053523639607493305
+    10to19px:
+      gt: 220
+      tp: 46
+      recall: 0.20909090909090908
+    20px_or_more:
+      gt: 345
+      tp: 273
+      recall: 0.7913043478260869
+  temporal_summary:
+    not_stably_detected: 62
+    insufficient_contiguous_gt: 44
+    interpretation: 3 hits in 5 consecutive annotated source inputs; frame counts,
+      not wall seconds; visibility gaps reset window; initial acquisition is not re-entry
+  summary_sha256: 138027f407059c90874f183cfcde0268e2694d6f526bb00bca382278ec3c1d5b
+  predictions_sha256: b65d935a7258815d1b92a9be9ad386f370cd620d96608ee34147a5d65e1a298b
+- model: yolo26l
+  width: 1280
+  original_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 124
+        fp: 7
+        fn: 224
+        evaluable: true
+        f1: 0.5177453027139874
+        recall: 0.3563218390804598
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 141
+        fp: 10
+        fn: 1529
+        evaluable: true
+        f1: 0.15485996705107083
+        recall: 0.0844311377245509
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 1
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 65
+        fp: 6
+        fn: 220
+        evaluable: true
+        f1: 0.3651685393258427
+        recall: 0.22807017543859648
+      truck:
+        gt: 505
+        tp: 22
+        fp: 28
+        fn: 483
+        evaluable: true
+        f1: 0.07927927927927927
+        recall: 0.04356435643564356
+    macro_f1: 0.2792632720925451
+    false_positives: 52
+    total_tp: 352
+  reviewed_fixed:
+    labels:
+      person:
+        gt: 348
+        tp: 124
+        fp: 7
+        fn: 224
+        evaluable: true
+        f1: 0.5177453027139874
+        recall: 0.3563218390804598
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 141
+        fp: 10
+        fn: 1529
+        evaluable: true
+        f1: 0.15485996705107083
+        recall: 0.0844311377245509
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 1
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 65
+        fp: 6
+        fn: 220
+        evaluable: true
+        f1: 0.3651685393258427
+        recall: 0.22807017543859648
+      truck:
+        gt: 504
+        tp: 22
+        fp: 28
+        fn: 482
+        evaluable: true
+        f1: 0.07942238267148015
+        recall: 0.04365079365079365
+    macro_f1: 0.2792990479405953
+    false_positives: 52
+    total_tp: 352
+  best_threshold: 0.4
+  best_macro_f1: 0.2792990479405953
+  size_recall:
+    below10px:
+      gt: 2242
+      tp: 13
+      recall: 0.005798394290811775
+    10to19px:
+      gt: 220
+      tp: 48
+      recall: 0.21818181818181817
+    20px_or_more:
+      gt: 345
+      tp: 291
+      recall: 0.8434782608695652
+  temporal_summary:
+    not_stably_detected: 60
+    insufficient_contiguous_gt: 44
+    interpretation: 3 hits in 5 consecutive annotated source inputs; frame counts,
+      not wall seconds; visibility gaps reset window; initial acquisition is not re-entry
+  summary_sha256: 588090d564046b6b202d0bde7ba81c78893a906c40c7e0963e7765fe2c9db9bc
+  predictions_sha256: d3cc200aa9efdb7a9177f51d25ab7645e4f2c9526657bc1c751ddd9ce3dea7ff
+actual_frozen_cutoff:
+- split: selection
+  frames: 2252
+  metrics:
+    confidence: 0.4
+    labels:
+      person:
+        gt: 348
+        tp: 123
+        fp: 8
+        fn: 225
+        evaluable: true
+        f1: 0.5135699373695198
+        recall: 0.35344827586206895
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 1670
+        tp: 119
+        fp: 8
+        fn: 1551
+        evaluable: true
+        f1: 0.13244296048970505
+        recall: 0.07125748502994012
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 285
+        tp: 76
+        fp: 24
+        fn: 209
+        evaluable: true
+        f1: 0.3948051948051948
+        recall: 0.26666666666666666
+      truck:
+        gt: 505
+        tp: 13
+        fp: 9
+        fn: 492
+        evaluable: true
+        f1: 0.04933586337760911
+        recall: 0.02574257425742574
+    macro_f1: 0.2725384890105072
+    false_positives: 49
+    ignored_unknown_subtype: 64
+    mask_iou: 0.8252660559370198
+    mask_pairs: 331
+- split: heldout
+  frames: 2474
+  metrics:
+    confidence: 0.4
+    labels:
+      person:
+        gt: 1013
+        tp: 692
+        fp: 24
+        fn: 321
+        evaluable: true
+        f1: 0.8004626951995373
+        recall: 0.6831194471865746
+      dog:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bicycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      car:
+        gt: 2086
+        tp: 209
+        fp: 3
+        fn: 1877
+        evaluable: true
+        f1: 0.18189730200174065
+        recall: 0.10019175455417066
+      motorcycle:
+        gt: 0
+        tp: 0
+        fp: 0
+        fn: 0
+        evaluable: false
+        f1: null
+        recall: null
+      bus:
+        gt: 243
+        tp: 9
+        fp: 16
+        fn: 234
+        evaluable: true
+        f1: 0.06716417910447761
+        recall: 0.037037037037037035
+      truck:
+        gt: 688
+        tp: 8
+        fp: 7
+        fn: 680
+        evaluable: true
+        f1: 0.02275960170697013
+        recall: 0.011627906976744186
+    macro_f1: 0.2680709445031815
+    false_positives: 50
+    ignored_unknown_subtype: 136
+    mask_iou: 0.7262045287708159
+    mask_pairs: 918
+confidence_decision:
+  selected: 0.4
+  sweep_best: 0.2
+  reviewed_sweep_tp:
+  - 331
+  - 402
+  reviewed_sweep_fp:
+  - 49
+  - 219
+  reason: Small macro F1 increase 0.2726 to 0.2804, +71 TP versus +170 FP; reviewed
+    shop-as-bus and window-as-person cases. Preserve sweep and actual .40 reruns.
+live:
+  candidate:
+    repeats: 6
+    all_gate_passes: 4
+    hz_range:
+    - 14.55
+    - 14.9
+    five_second_hz_range:
+    - 14.0
+    - 15.2
+    p95_max_ms: 121.12026798422448
+    p99_max_ms: 141.70424900483343
+    maximum_gap_ms: 406.5734369796701
+    peak_global_vram_mib: 5507.0
+    duplicates: 0
+    reversed: 0
+    failures:
+    - job:
+        model: yoloe-26l-seg
+        width: 1280
+        confidence: 0.4
+        runtime_config: /root/ws/src/asmc_camera/config/camera/yoloe_selection/l_1280_bollard17.yaml
+        rates: all15
+        batch: 2plus1
+        profile: C6
+        repeat: 1
+        seconds: 20.0
+        full_stack: true
+        fusion_policy: unique
+        weather_requested: foggy
+      failures:
+      - yolo front supply/latency gate
+      - yolo left supply/latency gate
+      - yolo right supply/latency gate
+      - twinlite front supply gate
+      - twinlite left supply gate
+      - twinlite right supply gate
+      - resnet18 resnet18 supply gate
+      - planning objects deadline gate
+      input_arrival_diagnostics:
+        extra:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 386.35900197550654
+          pauses:
+          - begin: 320664.848355469
+            end: 320665.234714471
+            wall_gap_ms: 386.35900197550654
+            source_gap_ms: 386.327982
+        left:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 343.4981759637594
+          pauses:
+          - begin: 320664.89190962
+            end: 320665.235407796
+            wall_gap_ms: 343.4981759637594
+            source_gap_ms: 343.598842
+        right:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 375.41067600250244
+          pauses:
+          - begin: 320664.892454821
+            end: 320665.267865497
+            wall_gap_ms: 375.41067600250244
+            source_gap_ms: 375.62108
+        front:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 376.0245069861412
+          pauses:
+          - begin: 320664.893811386
+            end: 320665.269835893
+            wall_gap_ms: 376.0245069861412
+            source_gap_ms: 375.501395
+    - job:
+        model: yoloe-26l-seg
+        width: 1280
+        confidence: 0.4
+        runtime_config: /root/ws/src/asmc_camera/config/camera/yoloe_selection/l_1280_bollard17.yaml
+        rates: all15
+        batch: 2plus1
+        profile: C6
+        repeat: 2
+        seconds: 20.0
+        full_stack: true
+        fusion_policy: unique
+        weather_requested: foggy
+      failures:
+      - planning trajectory deadline gate
+      input_arrival_diagnostics:
+        left:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 112.62316995998845
+          pauses: []
+        front:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 110.62720400514081
+          pauses: []
+        right:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 113.05316002108157
+          pauses: []
+        extra:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 170.80557299777865
+          pauses: []
+  reference:
+    repeats: 6
+    all_gate_passes: 5
+    hz_range:
+    - 14.6
+    - 14.95
+    five_second_hz_range:
+    - 14.2
+    - 15.2
+    p95_max_ms: 94.05290392169265
+    p99_max_ms: 109.22201716515701
+    maximum_gap_ms: 412.7610059804283
+    peak_global_vram_mib: 5396.0
+    duplicates: 0
+    reversed: 0
+    failures:
+    - job:
+        model: yolo26l
+        width: 1280
+        confidence: 0.4
+        rates: all15
+        batch: 2plus1
+        profile: C6
+        repeat: 1
+        seconds: 20.0
+        full_stack: true
+        fusion_policy: unique
+        weather_requested: sunny
+      failures:
+      - yolo front supply/latency gate
+      - yolo left supply/latency gate
+      - yolo right supply/latency gate
+      - twinlite front supply gate
+      - twinlite left supply gate
+      - twinlite right supply gate
+      - resnet18 resnet18 supply gate
+      - planning trajectory deadline gate
+      - planning objects deadline gate
+      input_arrival_diagnostics:
+        left:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 359.3939180136658
+          pauses:
+          - begin: 320497.018320466
+            end: 320497.377714384
+            wall_gap_ms: 359.3939180136658
+            source_gap_ms: 359.354257
+        right:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 361.84227000921965
+          pauses:
+          - begin: 320497.020255759
+            end: 320497.382098029
+            wall_gap_ms: 361.84227000921965
+            source_gap_ms: 363.484621
+        front:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 345.2215100405738
+          pauses:
+          - begin: 320497.042119952
+            end: 320497.387341462
+            wall_gap_ms: 345.2215100405738
+            source_gap_ms: 345.028639
+        extra:
+          scope: Consecutive input arrivals inside ACTIVE window; diagnostic only,
+            no gate exemption
+          maximum_gap_ms: 418.330424989108
+          pauses:
+          - begin: 320496.963326403
+            end: 320497.381656828
+            wall_gap_ms: 418.330424989108
+            source_gap_ms: 418.591023
+fusion:
+- family: fusion-reference-v1
+  run: primary-unique-r1
+  passed: true
+  failed_checks: []
+  totals:
+    matched: 484
+    dropped: 11
+    pending_lidar: 1
+    pending_yolo: 1
+    fresh: 484
+    reused: 0
+  offset_p95_max_ms: 48.6
+  source_sha256: 202fdd6f40f86e64db78467f8a5997a9db32a7be96ff1452a4303a68a15bf282
+- family: fusion-reference-v1
+  run: shadow-unique-r1
+  passed: false
+  failed_checks:
+  - yolo_front_rate
+  - yolo_left_rate
+  - yolo_right_rate
+  totals:
+    matched: 173
+    dropped: 0
+    pending_lidar: 1
+    pending_yolo: 1
+    fresh: 173
+    reused: 0
+  offset_p95_max_ms: 41.9
+  source_sha256: 47c500c85acb8fac5f71e1be4cbb47a8e71d9811f3430df73f9239272c3f53a6
+- family: fusion-reference-v1
+  run: primary-unique-r2
+  passed: true
+  failed_checks: []
+  totals:
+    matched: 486
+    dropped: 10
+    pending_lidar: 2
+    pending_yolo: 1
+    fresh: 486
+    reused: 0
+  offset_p95_max_ms: 48.6
+  source_sha256: f88b415ab9c058c4138a9b433c8c39f7cd9e81bc2fb93e3df2eaae2b4b422b91
+- family: fusion-reference-v1
+  run: shadow-unique-r2
+  passed: true
+  failed_checks: []
+  totals:
+    matched: 178
+    dropped: 0
+    pending_lidar: 1
+    pending_yolo: 1
+    fresh: 178
+    reused: 0
+  offset_p95_max_ms: 29.4
+  source_sha256: f833d1da74a146ceced1ddde3262605f1443b0598b6868f2ed3ac7cb94b4427c
+- family: fusion-v1
+  run: primary-unique-r1
+  passed: true
+  failed_checks: []
+  totals:
+    matched: 474
+    dropped: 19
+    pending_lidar: 1
+    pending_yolo: 1
+    fresh: 474
+    reused: 0
+  offset_p95_max_ms: 48.8
+  source_sha256: d75608067b74048378bce385582e93e719a0703e9047942e9c2f22af21c3a882
+- family: fusion-v1
+  run: shadow-unique-r1
+  passed: true
+  failed_checks: []
+  totals:
+    matched: 174
+    dropped: 0
+    pending_lidar: 1
+    pending_yolo: 1
+    fresh: 174
+    reused: 0
+  offset_p95_max_ms: 39.2
+  source_sha256: 2db7d279a7af4e0305582bc866a91924c13a70aad7f28383b73301a1c1e6b50e
+- family: fusion-v1
+  run: primary-unique-r2
+  passed: true
+  failed_checks: []
+  totals:
+    matched: 476
+    dropped: 15
+    pending_lidar: 2
+    pending_yolo: 1
+    fresh: 476
+    reused: 0
+  offset_p95_max_ms: 48.3
+  source_sha256: 32ea684f9c904820babb9d69ce647d4784015601d58b3e44e207edfd701b6a16
+- family: fusion-v1
+  run: shadow-unique-r2
+  passed: false
+  failed_checks:
+  - yolo_front_rate
+  - yolo_left_rate
+  - yolo_right_rate
+  totals:
+    matched: 171
+    dropped: 0
+    pending_lidar: 1
+    pending_yolo: 1
+    fresh: 171
+    reused: 0
+  offset_p95_max_ms: 28.3
+  source_sha256: ebc3a3cb20a20895959ab70602669e0d6a110b9edaa49553e7cb241d54ec66e7
+fusion_class_comparison:
+- bag: primary
+  scope: Same LiDAR stamp and mutually unique 3D centers <=1mm; stable reference labels
+    are not independent GT. No inherited acceptance exception.
+  sources:
+    /results/fusion-reference-v1/primary-unique-r1/observations.json: 1d69d0fc37c3f89142c3466cc1e217429776eeea6894f1fc32c7b31558261d57
+    /results/fusion-reference-v1/primary-unique-r2/observations.json: bd903c6fc9c784eb6e7bdfa912e4dcb0c2d433495bcdbd603e450301294cc885
+    /results/fusion-v1/primary-unique-r1/observations.json: b0e6a0362f7b537d6bda18cf00bcc9a43c0fd4c10f94fe9ae5292c44587e29e6
+    /results/fusion-v1/primary-unique-r2/observations.json: e65486520b9e1127b6718f9b261243993f219024fa0aca045438b86b234c068c
+  comparison:
+    common_lidar_stamps: 328
+    old_stable: 2747
+    unmatched_common_observations: 1101
+    regressions:
+    - stamp_ns: 1790654794774000000
+      center:
+      - 19.45919496338688
+      - -492.36040944054685
+      - -0.819273595398455
+      old:
+      - 22
+      - car
+      - car
+      new:
+      - - 22
+        - car
+        - car
+      - - 22
+        - unknown
+        - unknown
+    - stamp_ns: 1790654798748000000
+      center:
+      - 18.027224312044783
+      - -493.18555515899334
+      - -0.6651596138043239
+      old:
+      - 22
+      - car
+      - car
+      new:
+      - - 22
+        - car
+        - car
+      - - 82
+        - unknown
+        - unknown
+    - stamp_ns: 1790654798832000000
+      center:
+      - 17.98911053376345
+      - -493.19642203392124
+      - -0.6307951341686067
+      old:
+      - 22
+      - car
+      - car
+      new:
+      - - 22
+        - car
+        - car
+      - - 82
+        - unknown
+        - unknown
+    - stamp_ns: 1790654813500000000
+      center:
+      - -41.548528958061
+      - -525.4043099867347
+      - -0.5657620234050919
+      old:
+      - 187
+      - car
+      - car
+      new:
+      - - 220
+        - car
+        - car
+      - - 252
+        - unknown
+        - unknown
+- bag: shadow
+  scope: Same LiDAR stamp and mutually unique 3D centers <=1mm; stable reference labels
+    are not independent GT. No inherited acceptance exception.
+  sources:
+    /results/fusion-reference-v1/shadow-unique-r1/observations.json: 018da03160417c0e3c599e50c5bd1bf4d50f9fe7acad5e29baef49736c6db804
+    /results/fusion-reference-v1/shadow-unique-r2/observations.json: 7f70c9f3cb7394658d8089bf09c933d64c917c753acb0f0fdb5ecf7cc0be1bbd
+    /results/fusion-v1/shadow-unique-r1/observations.json: c8a37a83a1039977487b287eb105498dda3d745c5d8f2976d8ae10971d29a2ef
+    /results/fusion-v1/shadow-unique-r2/observations.json: f2d9212eac8123aaedce36c52e0cfa7352285630f5cc8d2815de42a4a944912a
+  comparison:
+    common_lidar_stamps: 135
+    old_stable: 879
+    unmatched_common_observations: 876
+    regressions: []
+regression:
+  outer_build: pass
+  nested_build: pass
+  yoloe_tests: 15
+  coco7_tools_tests: 43
+  detection_tests: 75
+  contract_tests: 33
+  lidar_core_tests: 3
+  camera_tests:
+    total: 306
+    passed: 305
+    known_failed: test_planning_launches_use_the_canonical_traffic_light_model
+    reason: unchanged autonomy_no_bridges_v2.launch traffic_light=true versus expected
+      false
+  generated_ros_checks: 10
+  launches:
+  - m640 obstacle17
+  - selected l1280 bollard17
+  - selected plus TwinLite/ResNet
+hosted_ci:
+  status: blocked_before_jobs_started
+  reason: GitHub recent payments failed or spending limit; latest PR76 three check
+    annotations
+  evidence_sha256: 353f90e86df314c8927f7c9f506277d93e1dc33cc959574d8965fb20109959e2
+  stacked_pr_ci: workflows target main only; retarget and check final HEAD after PR76
+    merges
+scope:
+  messages_md5_changed: false
+  lidar_algorithms_changed: false
+  public_vehicle_control: false
+  fusion_policy: unique, 50ms, 200ms, front bbox only
+  three_view_mask_fusion: false
+skipped:
+  second_finalist: One maximum-quality finalist chosen; no extra runs to select favourable
+    results after common-input and planner gate failures. Operational selection held.
+  batch3: 640 not a finalist
+  wooden_crate: Actual prompt rerun did not recover WoodBox
+  stroller: Side detection already present; retain baby stroller
+evidence:
+  root: artifacts/camera-yoloe-selection-v1
+  final_report_sha256: 0127e1fab9f1a94d6969c1b2d7fb2f49b322d89d3fc619367a8b48426172703d
+  gallery: http://localhost:8768/
+  report: http://localhost:8768/camera-yoloe-selection-v1/final-analysis-v2/index.html
+  all_startup_and_interrupted_attempts_preserved: true
+analysis_code_sha256: 07587490160815e57d79987f858e0b4a5ce4d6eb56517524bf12c997d8db348d

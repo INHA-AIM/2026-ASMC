@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from analyze_coco7_broad_selection import score,selected_frames
 from analyze_coco7_weather import load_jsonl
+from analyze_fusion_identity import compare_stable_observations
 
 COMBINATIONS=[(f'yoloe-26{s}-seg',w) for s in ('m','l') for w in (640,960,1280)]
 EVALUATION_GROUPS={
@@ -74,7 +75,8 @@ def main():
             begin=min(active);end=begin+r['job']['seconds']
             inputs={v:input_pauses(rows,begin,end) for v,rows in json.loads((path.parent/'inputs.json').read_text()).items()}
         report['live'].append(dict(path=str(path),job=r['job'],complete=r.get('observation_window_completed',False),
-            passed=r['passed'],failures=r['failures'],measurements=r.get('measurements'),
+            passed=bool(r.get('passed',False)),
+            failures=r['failures']+([] if r.get('observation_window_completed',False) else ['incomplete observation window; not accepted']),measurements=r.get('measurements'),
             target_attainment=r.get('target_attainment'),resources=r.get('resources_startup_and_active'),planning=r.get('planning'),input_arrival_diagnostics=inputs))
     report['selected_actual_cutoff']=[]
     for name in ('selected-quality40-v1','selected-heldout40-v1'):
@@ -82,6 +84,27 @@ def main():
             s=json.loads(path.read_text())
             if s['gt_manifest_sha256']!=digest:raise ValueError('selected result uses different GT')
             report['selected_actual_cutoff'].append(dict(source=str(path),summary=s))
+    report['fusion']=[]
+    report['fusion_class_comparison']=[]
+    for family in ('fusion-reference-v1','fusion-v1'):
+        index=a.root/family/'index.json'
+        if not a.quality_only and index.exists():
+            for entry in json.loads(index.read_text()):
+                f=a.root/family/entry['path']/'report.json'
+                r=json.loads(f.read_text())
+                report['fusion'].append(dict(family=family,run=entry['path'],passed=r['passed'],
+                    failed_checks=[k for k,v in r['checks'].items() if not v],
+                    fusion=r['fusion'],measurements=r['measurements'],
+                    source_sha256=hashlib.sha256(f.read_bytes()).hexdigest()))
+    for bag in ('primary','shadow'):
+        sources=[[a.root/family/f'{bag}-unique-r{i}'/'observations.json' for i in (1,2)]
+                 for family in ('fusion-reference-v1','fusion-v1')]
+        if not a.quality_only and all(p.exists() for group in sources for p in group):
+            tracks=[[json.loads(p.read_text())['tracks'] for p in group] for group in sources]
+            report['fusion_class_comparison'].append(dict(bag=bag,
+                scope='Same LiDAR stamp and mutually unique 3D centers <=1mm; stable reference labels are not independent GT. No inherited acceptance exception.',
+                sources={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for group in sources for p in group},
+                comparison=compare_stable_observations(*tracks)))
     visual=json.loads((a.root/'spawn-visual-review-v1.json').read_text()) if (a.root/'spawn-visual-review-v1.json').exists() else dict(invalid=[])
     report['spawn_visual_review']=visual
     invalid={(r['capture'],r['asset']):r['reason'] for r in visual['invalid']}
@@ -102,11 +125,11 @@ def main():
         '<h1>YOLOE 6조합 · obstacle17 · 동일 영상 비교</h1>',
         '<p>현재 YOLO26l 기본값은 유지합니다. Capture 정량 GT에는 person/car/bus/truck만 있습니다. 신규 장애물은 동일 RGB 검토 대상이며 표의 F1에 포함되지 않습니다. 실패 실행과 planner deadline 실패도 보존합니다.</p>',
         '<p><a href="../spawn-inspection-v1/comparison.html">거리·날씨·모델을 고르는 스폰 비교 갤러리</a> · <a href="../spawn-scooter-native-v1/comparison.html">Scooter1 정상 지면 재수집</a> · <a href="../prompt-probe-v1/comparison.html">프롬프트 실제 재추론</a> · <a href="../parity-review-v1/index.html">PT/TRT 불일치 원본</a> · <a href="../spawn-source-review/index.html">검출 전 원본 장면</a> · <a href="report.json">전체 결과 JSON</a></p><p>기존 첫 수집의 Scooter1은 수치상 BBox 높이 gate를 통과했으나 영상에서 떠 있어 평가 부적합으로 보존합니다. 별도 native 지면 재수집 결과와 구분합니다. 나머지 배치도 pixel GT를 보장하지 않습니다.</p>',
-        '<table><tr><th>모델</th><th>전방</th><th>F1 @0.40</th><th>TP / FP @0.40</th><th>선정 자료 best confidence / F1</th><th>정량 GT 원본</th></tr>']
+        '<table><tr><th>모델</th><th>전방</th><th>원본2252장 F1 @0.40</th><th>기존 승인2장 제외2250장 F1 @0.40</th><th>TP / FP (2250장)</th><th>2250장 best confidence / F1</th><th>정량 GT 원본</th></tr>']
     for row in report['quality']:
-        fixed=row['fixed']['pooled'];best=row['selection_best']
+        original=row['fixed']['pooled'];fixed=row['reviewed_fixed']['pooled'];best=row['reviewed_selection_best']
         link=f'../quality-v1/{row["model"]}-{row["width"]}-selection/gallery/index.html' if row['model'].startswith('yoloe-') else '../../camera-coco7-live-v1/confidence-followup-actual40-v1/yolo26l-1280-selection/gallery/index.html'
-        page.append(f'<tr><td>{row["model"]}</td><td>{row["width"]}</td><td>{fixed["macro_f1"]:.4f}</td><td>{fixed["total_tp"]} / {fixed["false_positives"]}</td><td>{best["confidence"]:.2f} / {best["macro_f1"]:.4f}</td><td><a href="{link}">영상</a></td></tr>')
+        page.append(f'<tr><td>{row["model"]}</td><td>{row["width"]}</td><td>{original["macro_f1"]:.4f}</td><td>{fixed["macro_f1"]:.4f}</td><td>{fixed["total_tp"]} / {fixed["false_positives"]}</td><td>{best["confidence"]:.2f} / {best["pooled"]["macro_f1"]:.4f}</td><td><a href="{link}">영상</a></td></tr>')
     page+=['</table><p>Confidence sweep는 선정 자료에서만 수행했습니다. 실제 선정 cutoff 재실행·별도 heldout 검증은 원본 증거와 함께 확인합니다.</p>',
         '<h2>실시간 반복 전체</h2><table><tr><th>실행</th><th>전/좌/우 Hz</th><th>p95 최대 ms</th><th>전체 VRAM MiB</th><th>실패 이유</th></tr>']
     for row in report['live']:
@@ -122,6 +145,16 @@ def main():
     for row in report['selected_actual_cutoff']:
         s=row['summary'];t=s['thresholds'][0]
         page.append(f'<p>Actual cutoff {s["frozen_confidence"]} · {s["split"]} {s["frames"]} frames · macro F1 {t["macro_f1"]:.4f} · FP {t["false_positives"]}</p>')
+    page+=['<h2>전방 bbox fusion · 현재 YOLO26l과 새로 재생한 대조</h2>',
+        '<p>unique / ±50ms / 200ms를 유지했습니다. 매칭 쌍 수는 객체 recall이 아닙니다. 종료 pending과 실패 검사를 그대로 표시합니다. 3뷰 mask fusion이나 분류 정확도 검증으로 확대하지 않습니다.</p>',
+        '<table><tr><th>경로</th><th>실행</th><th>matched / dropped</th><th>종료 pending LiDAR / YOLO</th><th>offset p95 최대 ms</th><th>실패 검사</th></tr>']
+    for r in report['fusion']:
+        f=r['fusion'];t=f['totals']
+        page.append(f'<tr><td>{r["family"]}</td><td>{r["run"]}</td><td>{t["matched"]} / {t["dropped"]}</td><td>{t["pending_lidar"]} / {t["pending_yolo"]}</td><td>{f["offset_p95_max_ms"]}</td><td>{html.escape(str(r["failed_checks"]))}</td></tr>')
+    page+=['</table>']
+    for r in report['fusion_class_comparison']:
+        c=r['comparison']
+        page.append(f'<p>{r["bag"]}: reference-stable matched observations {c["old_stable"]}, label differences {len(c["regressions"])}, unmatched common observations {c["unmatched_common_observations"]}. 안정된 기준선도 GT가 아니며 차이 원본은 report.json에 보존합니다.</p>')
     page+=['<p>추가학습 후 우열과 운영 수락을 사전학습 비교로 보장하지 않습니다. 관측 그룹은 평가용이며 원본 프롬프트 라벨을 유지합니다.</p>']
     (a.output/'index.html').write_text(''.join(page))
     print(json.dumps(dict(quality=len(report['quality']),live=len(report['live']),spawn_cases=len(report['spawn_observations']))))
