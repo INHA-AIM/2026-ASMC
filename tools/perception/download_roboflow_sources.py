@@ -113,7 +113,13 @@ def fetch_project(project_id, root, key, attempts=3, metadata_only=False):
             write_json(pin_path, pin)
             destination = root / 'raw' / workspace / project / str(number)
             destination.mkdir(parents=True, exist_ok=True)
-            write_json(destination / 'metadata.json', metadata)
+            metadata_path=destination/'metadata.json'
+            if metadata_path.exists():
+                metadata=json.loads(metadata_path.read_text())
+                if metadata.get('version')!=number or metadata.get('source_url')!=state['url']:
+                    raise ValueError('preserved_metadata_mismatch')
+            else:
+                write_json(metadata_path, metadata)
             state.update(version=number, task=task, format=fmt, metadata=metadata,
                          raw_path=str(destination), status='metadata_ready')
             if metadata_only:
@@ -122,9 +128,12 @@ def fetch_project(project_id, root, key, attempts=3, metadata_only=False):
             receipt = destination / 'receipt.json'
             if receipt.exists():
                 previous = json.loads(receipt.read_text())
-                if archive.exists() and sha(archive) == previous['archive_sha256'] and (destination / 'export').is_dir():
-                    state.update(status='downloaded', **previous)
-                    break
+                if not archive.exists() or sha(archive)!=previous['archive_sha256']:
+                    raise ValueError('preserved_archive_changed')
+                if not (destination/'export').is_dir():
+                    extract_checked(archive,destination/'export')
+                state.update(status='downloaded', **previous)
+                break
             export = rfapi.get_version_export(key, workspace, project, number, fmt)
             deadline = time.monotonic() + 600
             while export.get('ready') is False:

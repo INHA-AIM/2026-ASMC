@@ -8,8 +8,9 @@ import zipfile
 from PIL import Image
 
 from camera_data_audit import (classify, valid_box, polygon_issues, curate, image_facts,
-    import_coco, export_dataset, apply_review, review_samples, near_duplicate_candidates)
+    import_coco, export_dataset, apply_review, review_samples, near_duplicate_candidates, build_gallery, verify_export)
 from download_roboflow_sources import latest_version, extract_checked, error_kind
+from snapshot_roboflow_projects import boxes_to_coco, search_records, dataset_records
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY = json.loads((ROOT / 'config/datasets/camera_object_labels_v1.json').read_text())
@@ -20,6 +21,7 @@ def row(name='car', source='roboflow:test/project', ident='a', split=None):
     return dict(id=ident, source=source, split_group=source, frozen_split=split,
         image='/unused/image.png', image_sha256=ident*64, pixel_sha256=ident*64,
         width=100, height=80, issues=[], annotation_complete=False, provenance_verified=False,
+        verified_target_classes=[n for names in POLICY['groups'].values() for n in names],
         annotations=[dict(id='1',original_label=name,canonical=canonical,
             disposition=disposition,xyxy=[10,10,30,30],issues=[])])
 
@@ -32,6 +34,41 @@ def accept(item, **changes):
 
 
 class DownloadTests(unittest.TestCase):
+    def test_offset_overlap_is_reconciled_and_incomplete_listing_fails(self):
+        class Project:
+            calls=0
+            def search_all(self,**kwargs):
+                self.calls+=1
+                yield [dict(id='a'),dict(id='a'),dict(id='b' if self.calls>1 else 'a')]
+        self.assertEqual({r['id'] for r in dataset_records(Project(),['id'],2)},{'a','b'})
+        with self.assertRaisesRegex(ValueError,'incomplete_source_enumeration'):
+            dataset_records(Project(),['id'],3)
+        with self.assertRaisesRegex(ValueError,'source_membership_count_changed'):
+            dataset_records(Project(),['id'],0)
+
+    def test_sdk_search_generator_yields_pages(self):
+        class Project:
+            def search_all(self,**kwargs):
+                assert kwargs['in_dataset'] is True
+                yield [dict(id='a'),dict(id='b')]
+                yield [dict(id='c')]
+        self.assertEqual([r['id'] for r in search_records(Project(),['id'])],['a','b','c'])
+
+    def test_snapshot_native_centre_coordinates_preserved(self):
+        native=dict(annotation=dict(width=640,height=480,boxes=[dict(label='5',x='626.00',y='257.00',width='26.00',height='30.00')]))
+        before=copy.deepcopy(native);categories={}
+        anns,w,h=boxes_to_coco(native,9,categories,18)
+        self.assertEqual(anns[0]['bbox'],[613,242,26,30]);self.assertEqual(categories,{'5':0})
+        self.assertEqual(native,before);self.assertEqual((w,h),(640,480))
+
+    def test_snapshot_polygon_is_native_not_fake_bbox_mask(self):
+        native=dict(annotation=dict(width=100,height=80,boxes=[dict(label='cargo box',x='20',y='20',width='20',height='20',
+            points=[dict(x='10',y='10'),dict(x='30',y='10'),dict(x='30',y='30')])]))
+        anns,_,_=boxes_to_coco(native,1,{},0)
+        self.assertEqual(anns[0]['segmentation'],[[10,10,30,10,30,30]])
+        plain=dict(annotation=dict(width=100,height=80,boxes=[dict(label='car',x='20',y='20',width='20',height='20')]))
+        self.assertNotIn('segmentation',boxes_to_coco(plain,1,{},0)[0][0])
+
     def test_latest_numeric_completed_not_lexical(self):
         items=[dict(id='w/p/9',images=10),dict(id='w/p/10',images=10),dict(id='w/p/11',images=10,generating=True)]
         self.assertEqual(latest_version(items)['id'],'w/p/10')
@@ -53,6 +90,36 @@ class DownloadTests(unittest.TestCase):
 
 
 class AuditTests(unittest.TestCase):
+    def test_rejection_keeps_review_reason_for_gallery(self):
+        original=row();decision=accept(original,decision='reject',notes='Visible barrel has no annotation')
+        result,verified=apply_review(original,decision,POLICY)
+        self.assertFalse(verified)
+        self.assertEqual(result['review_record']['notes'],decision['notes'])
+        self.assertIn('review_rejected',result['issues'])
+
+    def test_snapshot_inventory_identity_uses_native_image_id(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            data=dict(images=[dict(id=3,original_image_id='native-abc',file_name='x.png',width=100,height=80)],
+                      annotations=[],categories=[])
+            path=root/'_annotations.coco.json';path.write_text(json.dumps(data))
+            before=import_coco(root,'w/p','unversioned-snapshot',POLICY)[0]['id']
+            data['images'][0]['id']=92;path.write_text(json.dumps(data))
+            self.assertEqual(before,import_coco(root,'w/p','unversioned-snapshot',POLICY)[0]['id'])
+
+    def test_gallery_contains_reviewed_capture_and_valid_string_escapes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);path=root/'x.png';Image.new('RGB',(100,80)).save(path)
+            original=row(source='capture:run',split='selection');original['image']=str(path)
+            result,_=curate([original],POLICY,{'a':accept(original)})
+            build_gallery(result,{},root/'gallery',POLICY)
+            entries=json.loads((root/'gallery/review-data.json').read_text())
+            self.assertEqual(entries[0]['id'],'a')
+            self.assertEqual(entries[0]['review_record']['decision'],'accept')
+            page=(root/'gallery/index.html').read_text()
+            self.assertIn("r.source+'\\n'",page)
+            self.assertNotIn("r.source+'\n'",page)
+
     def test_seven_classes_and_new_names(self):
         for name in ('person','dog','bicycle','car','motorcycle','bus','truck'):
             self.assertEqual(classify(name,POLICY),(name,'candidate'))
@@ -89,6 +156,18 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(rows[0]['eligible']);self.assertEqual(original,before)
         self.assertEqual(rows[0]['annotations'][0]['xyxy'],[10,10,30,30])
 
+    def test_explicit_geometry_fix_preserves_original_and_review_proof(self):
+        original=row();original['annotations'][0]['xyxy']=[-1,10,30,30]
+        original['annotations'][0]['issues']=['invalid_bbox']
+        d=accept(original,reviewer='test',notes='visible extent inspected',
+                 overrides=[dict(id='1',canonical='car',xyxy=[0,10,30,30])])
+        result=curate([original],POLICY,{'a':d})[0][0]
+        self.assertTrue(result['eligible'])
+        self.assertEqual(result['annotations'][0]['original_xyxy'],[-1,10,30,30])
+        self.assertEqual(result['review_record']['notes'],'visible extent inspected')
+        d['overrides']=[dict(id='1',canonical='car')]
+        self.assertFalse(curate([original],POLICY,{'a':d})[0][0]['eligible'])
+
     def test_review_must_match_bytes_and_completeness(self):
         original=row()
         with self.assertRaises(ValueError):apply_review(original,accept(original,image_sha256='old'),POLICY)
@@ -124,6 +203,23 @@ class AuditTests(unittest.TestCase):
     def test_capture_complete_known_accepted(self):
         a=row(source='capture:r1',split='train');a.update(provenance_verified=True,annotation_complete=True)
         self.assertTrue(curate([a],POLICY)[0][0]['eligible'])
+
+    def test_capture_old_four_class_completeness_does_not_cover_new_obstacles(self):
+        a=row(source='capture:r1',split='train')
+        a.update(provenance_verified=True,annotation_complete=True,
+                 verified_target_classes=['person','car','truck','bus'])
+        result=curate([a],POLICY)[0][0]
+        self.assertFalse(result['eligible'])
+        self.assertIn('capture_target_scope_unverified',result['reasons'])
+        self.assertTrue(curate([a],POLICY,{'a':accept(a)})[0][0]['eligible'])
+
+    def test_external_group_apportionment_has_evaluation_groups(self):
+        originals=[row(source='roboflow:'+str(i),ident=str(i)) for i in range(20)]
+        result,_=curate(originals,POLICY)
+        from collections import Counter
+        self.assertEqual(Counter(r['split'] for r in result),dict(train=16,selection=2,heldout=2))
+        reverse,_=curate(list(reversed(originals)),POLICY)
+        self.assertEqual({r['id']:r['split'] for r in result},{r['id']:r['split'] for r in reverse})
 
     def test_capture_incomplete_not_negative(self):
         a=row(source='capture:r1',split='train');a.update(provenance_verified=True,annotation_complete=False)
@@ -191,6 +287,11 @@ class AuditTests(unittest.TestCase):
             self.assertEqual(json.loads((root/'derived/summary.json').read_text())['classes'],['car'])
             import yaml
             self.assertEqual(yaml.safe_load((root/'derived/data.yaml').read_text())['names'],['car'])
+            self.assertEqual(verify_export(root/'derived')['verified_objects'],1)
+            label_path=next((root/'derived/labels').rglob('*.txt'))
+            label_path.write_text('0 0.2000000000 0.2500000000 0.1 0.1\n')
+            with self.assertRaisesRegex(ValueError,'export_geometry_changed'):
+                verify_export(root/'derived')
 
 
 if __name__=='__main__':unittest.main()

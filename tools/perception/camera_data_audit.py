@@ -15,7 +15,7 @@ from pathlib import Path
 import random
 import re
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 
 def sha(path):
@@ -133,6 +133,8 @@ def import_coco(export, project, version, policy):
         image_counts = Counter(i['id'] for i in data['images'])
         for image in data['images']:
             issues = []
+            if image.get('native_annotation_missing'):
+                issues.append('native_annotation_missing')
             if image_counts[image['id']] > 1:
                 issues.append('duplicate_image_id')
             if duplicate_categories:
@@ -164,10 +166,12 @@ def import_coco(export, project, version, policy):
                     original_category_id=ann['category_id'], canonical=target, disposition=disposition,
                     xyxy=xyxy, native_segmentation=ann.get('segmentation'), issues=item_issues))
             source = 'roboflow:' + project
-            key = str(version) + '/' + str(annotation_path.relative_to(export)) + ':' + str(image['id'])
+            original_image_id = image.get('original_image_id',image['id'])
+            key = str(version) + '/' + str(annotation_path.relative_to(export)) + ':' + str(original_image_id)
             row = base_row(source, key, path, annotations, issues)
             row.update(width=width, height=height, version=version,
-                       annotation_path=str(annotation_path), original_split=annotation_path.parent.name)
+                       annotation_path=str(annotation_path), original_split=image.get('original_split',annotation_path.parent.name),
+                       original_image_id=original_image_id)
             # Preserve filename lineage without assuming adjacent images independent.
             stem = re.split(r'\.rf\.', Path(image['file_name']).stem)[0]
             row['augmentation_family'] = stem
@@ -199,6 +203,7 @@ def import_capture(manifest, datasets, policy):
                        issues, item['split'], item['view'])
         row.update(annotation_complete=item.get('annotation_complete', False),
                    provenance_verified=True, capture_manifest_sha256=sha(manifest) if not rows else None,
+                   verified_target_classes=item.get('verified_target_classes',[]),
                    original_annotation=item, expected_image_sha256=item.get('source_sha256',{}).get('intensity'))
         rows.append(row)
     return rows
@@ -254,6 +259,8 @@ def apply_review(row, decision, policy):
         raise ValueError('review image hash mismatch: ' + row['id'])
     if decision.get('decision') != 'accept':
         row['issues'] = row['issues'] + ['review_rejected']
+        row['review_record'] = {k:decision[k] for k in (
+            'image_sha256','decision','reviewer','reviewed_at','notes') if k in decision}
         return row, False
     if decision.get('bbox_policy') != policy['bbox_policy'] or not decision.get('all_targets_annotated'):
         return row, False
@@ -272,11 +279,17 @@ def apply_review(row, decision, policy):
             if 'xyxy' in override:
                 if not valid_box(override['xyxy'], row['width'], row['height']):
                     raise ValueError('invalid reviewed bbox')
+                ann['original_xyxy'] = ann['xyxy']
+                ann['original_issues'] = list(ann['issues'])
                 ann['xyxy'] = override['xyxy']
+                ann['issues'] = [i for i in ann['issues'] if i != 'invalid_bbox']
             # Geometry errors cannot be waived by a class override.
             if 'capture_subtype_unknown' in ann['issues']:
                 ann['issues'] = [i for i in ann['issues'] if i != 'capture_subtype_unknown']
     row['annotation_complete'] = True
+    row['review_record'] = {k:decision[k] for k in (
+        'image_sha256','decision','all_targets_annotated','bbox_policy',
+        'reviewer','reviewed_at','notes','overrides') if k in decision}
     return row, True
 
 
@@ -315,6 +328,17 @@ def assign_splits(rows, policy):
         if row.get('frozen_split'):
             frozen[groups.find(row['split_group'])].add(row['frozen_split'])
     roles = {}
+    unfrozen=sorted({groups.find(g) for g in groups.parent if not frozen[groups.find(g)]},
+                    key=lambda g:digest(str(policy['split']['seed'])+g))
+    raw_counts=[len(unfrozen)*ratio for ratio in policy['split']['ratios']]
+    counts=[int(x) for x in raw_counts]
+    for i in sorted(range(3),key=lambda i: (-(raw_counts[i]-counts[i]),i))[:len(unfrozen)-sum(counts)]:
+        counts[i]+=1
+    external_roles={}
+    start=0
+    for role,count in zip(('train','selection','heldout'),counts):
+        for root in unfrozen[start:start+count]:external_roles[root]=role
+        start+=count
     for group in groups.parent:
         root = groups.find(group)
         existing = frozen[root]
@@ -323,9 +347,7 @@ def assign_splits(rows, policy):
         elif len(existing) > 1:
             roles[root] = 'quarantine_split_conflict'
         else:
-            value = int(digest(str(policy['split']['seed']) + root)[:16], 16) / 2 ** 64
-            a, b, _ = policy['split']['ratios']
-            roles[root] = 'train' if value < a else ('selection' if value < a+b else 'heldout')
+            roles[root] = external_roles[root]
     for row in rows:
         root = groups.find(row['split_group'])
         role = roles[root]
@@ -412,7 +434,9 @@ def curate(rows, policy, reviews=None):
     for original in rows:
         row, reviewed = apply_review(original, reviews.get(original['id']), policy)
         buckets = {row['source'] + '|' + a['original_label'] for a in row['annotations']} or {row['source'] + '|__empty__'}
-        capture_verified = row['provenance_verified'] and row['annotation_complete']
+        targets={n for names in policy['groups'].values() for n in names}
+        capture_verified = (row['provenance_verified'] and row['annotation_complete']
+            and targets <= set(row.get('verified_target_classes',[])))
         bucket_verified = bool(buckets) and buckets <= approved_buckets
         reasons = list(row['issues'])
         for ann in row['annotations']:
@@ -421,6 +445,8 @@ def curate(rows, policy, reviews=None):
                 reasons.append('ambiguous_label:' + ann['original_label'])
         if not (reviewed or capture_verified or bucket_verified):
             reasons.append('visual_review_required')
+        if row['source'].startswith('capture:') and not capture_verified and not reviewed:
+            reasons.append('capture_target_scope_unverified')
         if buckets & failed_buckets and not reviewed:
             reasons.append('source_class_sample_failed')
         if not (row['annotation_complete'] or bucket_verified):
@@ -452,8 +478,17 @@ def inventory(args):
     policy = json.loads(args.labels.read_text())
     report = json.loads((args.root / 'download-report.json').read_text())
     rows, unsupported = [], []
-    for project in report['projects']:
-        if project['status'] != 'downloaded':
+    sources = {r['project']:r for r in report['projects']}
+    if (args.root / 'snapshot-report.json').exists():
+        for row in json.loads((args.root/'snapshot-report.json').read_text())['projects']:
+            if row['status'] == 'downloaded_snapshot':
+                sources[row['project']] = row
+    for project in ([] if args.capture_only else sources.values()):
+        if project['status'] not in ('downloaded','downloaded_snapshot'):
+            continue
+        if args.source_kind == 'versioned' and project['status'] != 'downloaded':
+            continue
+        if args.source_kind == 'snapshots' and project['status'] != 'downloaded_snapshot':
             continue
         incoming = import_coco(Path(project['raw_path']) / 'export', project['project'], project['version'], policy)
         if not incoming:
@@ -476,43 +511,42 @@ def inventory(args):
         labels_sha256=sha(args.labels), capture_manifest_sha256=sha(args.capture_manifest) if args.capture_manifest else None))
 
 
-def build_gallery(rows, samples, output):
+def build_gallery(rows, samples, output, policy):
     ids = {i for group in samples.values() for i in group}
     ids |= {r['id'] for r in rows if any(a['disposition'] == 'ambiguous' for a in r['annotations'])}
     # Every issue remains in JSONL; paginated galleries avoid silently truncating review.
-    chosen = [r for r in rows if r['id'] in ids or r['issues']]
+    chosen = [r for r in rows if r['id'] in ids or r['issues'] or r.get('review_record')]
     output.mkdir(parents=True, exist_ok=True)
+    (output / 'images').mkdir(exist_ok=True)
     entries = []
     for row in chosen:
         if 'missing_or_broken_image' in row['issues']:
             continue
-        image_path = output / (row['id'] + '.jpg')
+        original = Path(row['image'])
+        image_path = output / 'images' / (row['id'] + original.suffix.lower())
         if not image_path.exists():
-            with Image.open(row['image']) as im:
-                im = im.convert('RGB')
-                draw = ImageDraw.Draw(im)
-                for ann in row['annotations']:
-                    if valid_box(ann['xyxy'], *im.size):
-                        color = 'lime' if ann['canonical'] else 'orange'
-                        draw.rectangle(ann['xyxy'], outline=color, width=3)
-                        draw.text((ann['xyxy'][0], max(0, ann['xyxy'][1]-14)), ann['original_label'] + ' -> ' + str(ann['canonical']), fill=color)
-                im.thumbnail((768, 576))
-                im.save(image_path, quality=85)
+            os.symlink(original.resolve(), image_path)
         entries.append(dict(id=row['id'], image_sha256=row.get('image_sha256'), source=row['source'],
-            annotations=[{k:a.get(k) for k in ('id','original_label','canonical','xyxy','issues')} for a in row['annotations']],
-            issues=row['issues'], image=image_path.name))
+            annotations=[{k:a.get(k) for k in ('id','original_label','canonical','xyxy','original_xyxy','issues')} for a in row['annotations']],
+            eligible=row['eligible'],reasons=row['reasons'],split=row['split'],review_record=row.get('review_record'),
+            issues=row['issues'], image='images/'+image_path.name,
+            width=row['width'],height=row['height']))
     # Only JSON download; no web server writes or silent approval.
-    data = json.dumps(entries, ensure_ascii=False).replace('<', '\\u003c')
-    template = '''<!doctype html><meta charset="utf-8"><title>Roboflow 데이터 감사 · 검수 대기</title>
+    save(output / 'review-data.json', entries)
+    template = r'''<!doctype html><meta charset="utf-8"><title>Roboflow 데이터 감사 · 검수 대기</title>
 <style>body{font:16px system-ui;max-width:1200px;margin:auto}img{max-width:100%}article{border:1px solid #aaa;padding:12px;margin:15px 0}button{margin:5px}pre{white-space:pre-wrap}</style>
 <h1>Roboflow 데이터 감사 · 검수 대기</h1><p>승인: 보이는 모든 대상에 주석이 있고 박스가 가시 영역에 맞는지 확인. 불명확하면 거부/보류. 주황색은 제외 또는 미확정 라벨입니다. 사람이 검수하기 전에는 학습에서 격리됩니다.</p>
-<input id="q" placeholder="클래스·프로젝트 검색"><button id="prev">이전</button><button id="next">다음</button><button id="export">검수 JSON 다운로드</button><p id="count"></p><div id="rows"></div>
-<script>const rows=DATA;let page=0,decisions={};const q=document.querySelector('#q');
+<input id="q" placeholder="클래스·프로젝트 검색"><input id="reviewer" placeholder="검수자 이름" value="local-browser-review"><button id="prev">이전</button><button id="next">다음</button><button id="export">검수 JSON 다운로드</button><p id="count"></p><div id="rows"></div>
+<script>let rows=[],page=0,decisions={};const names=__CANONICAL_NAMES__;const q=document.querySelector('#q');q.value=new URLSearchParams(location.search).get('q')||'';
 function draw(){const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q.value.toLowerCase()));const box=document.querySelector('#rows');box.replaceChildren();document.querySelector('#count').textContent=filtered.length+'개 / 페이지 '+(page+1);
-for(const r of filtered.slice(page*30,(page+1)*30)){const a=document.createElement('article'),p=document.createElement('pre'),img=document.createElement('img');p.textContent=r.source+'\n'+r.id+'\n'+JSON.stringify(r.annotations,null,2)+'\n'+r.issues.join(',');img.src=r.image;img.loading='lazy';a.append(p,img);
-for(const [label,value] of [['완전 주석 승인','accept'],['거부·격리','reject']]){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{decisions[r.id]={image_sha256:r.image_sha256,decision:value,all_targets_annotated:value==='accept',bbox_policy:'visible_extent_xyxy_exclusive',reviewer:'local-browser-review'};b.textContent=label+' ✓';};a.append(b);}box.append(a);}}
-q.oninput=()=>{page=0;draw()};document.querySelector('#prev').onclick=()=>{page=Math.max(0,page-1);draw()};document.querySelector('#next').onclick=()=>{page++;draw()};document.querySelector('#export').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(decisions,null,2)],{type:'application/json'}));a.download='reviews.json';a.click();URL.revokeObjectURL(a.href);};draw();</script>'''
-    (output / 'index.html').write_text(template.replace('DATA', data))
+for(const r of filtered.slice(page*30,(page+1)*30)){const a=document.createElement('article'),p=document.createElement('pre'),canvas=document.createElement('canvas'),img=new Image();p.textContent=r.source+'\n'+r.id+'\n'+(r.eligible?'채택':'격리')+' / '+r.split+'\n'+JSON.stringify(r.review_record)+'\n'+JSON.stringify(r.annotations,null,2)+'\n'+r.reasons.join(',');canvas.width=r.width;canvas.height=r.height;canvas.style.maxWidth='100%';img.onload=()=>{const c=canvas.getContext('2d');c.drawImage(img,0,0);c.font='14px sans-serif';c.lineWidth=3;for(const ann of r.annotations){if(ann.xyxy.length!==4)continue;const [x,y,x2,y2]=ann.xyxy;c.strokeStyle=c.fillStyle=ann.canonical?'lime':'orange';c.strokeRect(x,y,x2-x,y2-y);c.fillText(ann.original_label+' -> '+ann.canonical,x,Math.max(14,y));}};img.src=r.image;a.append(p,canvas);
+const edits=[];for(const ann of r.annotations){const line=document.createElement('div'),select=document.createElement('select'),coords=document.createElement('input');line.append(document.createTextNode(ann.id+' '+ann.original_label+' → '));for(const [value,label] of [['__keep__','현재 판정 유지'],['__exclude__','대상 제외'],...names.map(n=>[n,n])]){const o=document.createElement('option');o.value=value;o.textContent=label;select.append(o);}coords.value=ann.xyxy.join(', ');coords.title='가시 영역 x1,y1,x2,y2 (원본 픽셀)';coords.style.width='240px';line.append(select,coords);a.append(line);edits.push({ann,select,coords});}
+const note=document.createElement('input');note.placeholder='검수 근거·누락·복합 객체 등';note.style.width='90%';a.append(note);
+for(const [label,value] of [['완전 주석 승인','accept'],['거부·격리','reject']]){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{const overrides=[];for(const {ann,select,coords} of edits){const xyxy=coords.value.split(',').map(v=>Number(v.trim()));if(xyxy.length!==4||xyxy.some(v=>!Number.isFinite(v))){alert('좌표 4개를 입력해 주세요.');return;}const changed=JSON.stringify(xyxy)!==JSON.stringify(ann.xyxy);if(select.value!=='__keep__'||changed){if(select.value==='__keep__'&&!ann.canonical){alert('수정 박스의 정규 클래스도 선택해 주세요.');return;}const o={id:ann.id,canonical:select.value==='__exclude__'?null:(select.value==='__keep__'?ann.canonical:select.value)};if(changed)o.xyxy=xyxy;overrides.push(o);}}
+decisions[r.id]={image_sha256:r.image_sha256,decision:value,all_targets_annotated:value==='accept',bbox_policy:'visible_extent_xyxy_exclusive',reviewer:document.querySelector('#reviewer').value,reviewed_at:new Date().toISOString(),notes:note.value,overrides};b.textContent=label+' ✓';};a.append(b);}box.append(a);}}
+q.oninput=()=>{page=0;draw()};document.querySelector('#prev').onclick=()=>{page=Math.max(0,page-1);draw()};document.querySelector('#next').onclick=()=>{page++;draw()};document.querySelector('#export').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(decisions,null,2)],{type:'application/json'}));a.download='reviews.json';a.click();URL.revokeObjectURL(a.href);};fetch('review-data.json').then(r=>r.json()).then(r=>{rows=r;draw()}).catch(()=>{document.querySelector('#count').textContent='검수 목록을 읽지 못했습니다.'});</script>'''
+    names = [name for group in policy['groups'].values() for name in group]
+    (output / 'index.html').write_text(template.replace('__CANONICAL_NAMES__',json.dumps(names)))
     save(output / 'review-samples.json', samples)
 
 
@@ -560,11 +594,52 @@ def export_dataset(rows, policy, output):
         split_ready=all(by_role[role] > 0 for role in ('train','selection','heldout')),
         missing_target_classes=[n for group in policy['groups'].values() for n in group if n not in names],
         full_target_coverage=all(n in names for group in policy['groups'].values() for n in group)))
+    save(output / 'verification.json', verify_export(output))
+
+
+def verify_export(output):
+    """Read the actual YOLO files back; reject stale images or remapped labels."""
+    import yaml
+    config=yaml.safe_load((output/'data.yaml').read_text())
+    names=config['names']
+    if not isinstance(names,list) or len(set(names))!=len(names):
+        raise ValueError('invalid_export_class_list')
+    rows=list(read_jsonl(output/'manifest.jsonl'))
+    pixels=defaultdict(set);images=0;objects=0
+    expected_images=set();expected_labels=set()
+    for row in rows:
+        role={'train':'train','selection':'val','heldout':'test'}[row['split']]
+        image=output/'images'/role/(row['id']+Path(row['image']).suffix.lower())
+        label=output/'labels'/role/(row['id']+'.txt')
+        if not row['eligible'] or sha(image)!=row['image_sha256']:
+            raise ValueError('export_source_changed_or_ineligible')
+        expected_images.add(image);expected_labels.add(label)
+        actual=[line.split() for line in label.read_text().splitlines() if line.strip()]
+        targets=[a for a in row['annotations'] if a['canonical']]
+        if len(actual)!=len(targets):raise ValueError('export_annotation_count_changed')
+        for values,ann in zip(actual,targets):
+            if len(values)!=5 or int(values[0])!=names.index(ann['canonical']):
+                raise ValueError('export_class_order_changed')
+            x,y,x2,y2=ann['xyxy'];w,h=row['width'],row['height']
+            expected=[(x+x2)/2/w,(y+y2)/2/h,(x2-x)/w,(y2-y)/h]
+            if any(not math.isfinite(float(v)) or abs(float(v)-e)>1e-8 for v,e in zip(values[1:],expected)):
+                raise ValueError('export_geometry_changed')
+            objects+=1
+        pixels[row['pixel_sha256']].add(row['split']);images+=1
+    if expected_images!={p for p in (output/'images').rglob('*') if p.is_file()}:
+        raise ValueError('export_image_membership_changed')
+    if expected_labels!=set((output/'labels').rglob('*.txt')):
+        raise ValueError('export_label_membership_changed')
+    if any(len(roles)>1 for roles in pixels.values()):raise ValueError('export_split_leak')
+    return dict(verified_images=images,verified_objects=objects,exact_pixel_leaks=0,
+                manifest_sha256=sha(output/'manifest.jsonl'),training_performed=False)
 
 
 def curate_command(args):
     policy = json.loads(args.labels.read_text())
-    rows = list(read_jsonl(args.inventory))
+    rows = [row for path in args.inventory for row in read_jsonl(path)]
+    if len({r['id'] for r in rows}) != len(rows):
+        raise ValueError('duplicate IDs across input inventories')
     reviews = json.loads(args.reviews.read_text()) if args.reviews else {}
     rows, samples = curate(rows, policy, reviews)
     near = near_duplicate_candidates(rows)
@@ -580,11 +655,11 @@ def curate_command(args):
             accepted_classes=dict(Counter(a['canonical'] for r in subset if r['eligible'] for a in r['annotations'] if a['canonical'])))
     save(args.output / 'audit-summary.json', dict(images=len(rows),accepted=sum(r['eligible'] for r in rows),
         quarantined=sum(not r['eligible'] for r in rows), reasons=dict(reason_counts), sources=source_counts,
-        inventory_sha256=sha(args.inventory), reviews_sha256=sha(args.reviews) if args.reviews else None,
+        inventory_sha256={str(path):sha(path) for path in args.inventory}, reviews_sha256=sha(args.reviews) if args.reviews else None,
         review_samples=sum(map(len, samples.values())), near_duplicate_pairs=len(near),
         conditions='Unverified weather/tunnel/view remain unknown'))
     if args.gallery:
-        build_gallery(rows, samples, args.gallery)
+        build_gallery(rows, samples, args.gallery, policy)
     if args.export:
         export_dataset(rows, policy, args.export)
 
@@ -597,22 +672,28 @@ def main():
     inv.add_argument('--labels', type=Path, required=True)
     inv.add_argument('--capture-manifest', type=Path)
     inv.add_argument('--capture-datasets', type=Path)
+    inv.add_argument('--capture-only', action='store_true')
+    inv.add_argument('--source-kind', choices=['all','versioned','snapshots'], default='all')
     inv.add_argument('--workers', type=int, default=2)
     inv.add_argument('--output', type=Path, required=True)
     cur = sub.add_parser('curate')
-    cur.add_argument('--inventory', type=Path, required=True)
+    cur.add_argument('--inventory', type=Path, nargs='+', required=True)
     cur.add_argument('--labels', type=Path, required=True)
     cur.add_argument('--reviews', type=Path)
     cur.add_argument('--output', type=Path, required=True)
     cur.add_argument('--gallery', type=Path)
     cur.add_argument('--export', type=Path)
+    verify=sub.add_parser('verify-export')
+    verify.add_argument('--dataset',type=Path,required=True)
     args = p.parse_args()
     if args.command == 'inventory':
         if args.capture_manifest and not args.capture_datasets:
             p.error('--capture-datasets is required with Capture')
         inventory(args)
-    else:
+    elif args.command=='curate':
         curate_command(args)
+    else:
+        print(json.dumps(verify_export(args.dataset)))
 
 
 if __name__ == '__main__':

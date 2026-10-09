@@ -144,6 +144,7 @@ MORAI 화면에 입력할 값만 필요하면
 | [camera-object-detection-handoff.md](./handoffs/perception/camera-object-detection.md) | 손재호용 YOLO 즉시 사용·경량 후보·NAS fine-tune 인수 가이드 | Active Guide |
 | [rosbag 기록·재생·평가](./operations/rosbag-evaluation.md) | Real Time UDP raw/result bag과 lineage | Active Guide |
 | [perception-dataset-labeling-split.md](./contracts/perception/dataset-labeling-split.md) | Capture 원본, mask, ignore, manifest와 split 계약 | Canonical Data Contract |
+| [카메라 객체 데이터 감사](./handoffs/perception/camera-training-data-audit.md) | Roboflow 22개 원본 확보·라벨 검수·Capture 결합·bbox 학습 export | Data Preparation Guide |
 | [perception-bev-lane-interface-plan.md](./packages/asmc_perception/bev-lane-interface-plan.md) | GT 정책, metric lane 후보, BEV/lane topology 상세 | Detailed Design Note |
 | [perception-v4-training-evaluation.md](./records/perception/twinlitenet-v4-evaluation.md) | TwinLiteNet+ v4 10/18 epoch 결과 | Experiment Record |
 | [perception-agentic-loop.md](./archive/perception/agentic-loop.md) | 초기 Loc-Aid/bake/BEV 평가 루프 아이디어 | Research Reference |
