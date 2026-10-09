@@ -1,0 +1,1459 @@
+{
+  "schema_version": 1,
+  "experiment_id": "camera_yoloe_x_teacher_v1",
+  "gt_sha256": "526f1f8f908cb8043a9ef1fb143bdc419677552e1b2613d4192a72f979ec8997",
+  "checkpoint_source": "https://github.com/ultralytics/assets/releases/download/v8.4.0/yoloe-26x-seg.pt",
+  "profiles": [
+    {
+      "profile": "base18",
+      "frames": 317,
+      "latency_ms": {
+        "p50": 24.668587022460997,
+        "p95": 42.93540441431105,
+        "p99": 64.65611896710453
+      },
+      "cuda_peak_allocated_mib": 765.10888671875,
+      "approved_classes": [],
+      "checkpoint_sha256": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+      "embedding_sha256": "e934cfcbe39cb719790cc042af9703dcafc2802aef93f18d9dd5fb520fb58486",
+      "predictions_sha256": "006a28f2092d5aa50a9f666483c3430512d85d2a1d5ec70f98ef2be9a2cb9760",
+      "summary_sha256": "170575c45ba719bdcd3dd636290e387840b5b972169a5387c5bd6404303cabf6",
+      "partial_diagnostics": [
+        {
+          "confidence": 0.1,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 29,
+              "annotated_recall": 0.14871794871794872
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 4,
+              "annotated_recall": 0.06060606060606061
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 11,
+              "annotated_recall": 0.21153846153846154
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 12,
+              "annotated_recall": 0.13953488372093023
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 93,
+              "annotated_recall": 0.8157894736842105
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.25,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 23,
+              "annotated_recall": 0.11794871794871795
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 4,
+              "annotated_recall": 0.07692307692307693
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 3,
+              "annotated_recall": 0.03488372093023256
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 89,
+              "annotated_recall": 0.7807017543859649
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.4,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 46,
+              "annotated_recall": 0.4946236559139785
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 20,
+              "annotated_recall": 0.10256410256410256
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 2,
+              "annotated_recall": 0.038461538461538464
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 1,
+              "annotated_recall": 0.011627906976744186
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 87,
+              "annotated_recall": 0.7631578947368421
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        }
+      ],
+      "complete_selection_frames": 0,
+      "complete_heldout_frames": 0
+    },
+    {
+      "profile": "rich21",
+      "frames": 317,
+      "latency_ms": {
+        "p50": 22.649038990493864,
+        "p95": 45.14864620286971,
+        "p99": 51.872048487421054
+      },
+      "cuda_peak_allocated_mib": 765.10888671875,
+      "approved_classes": [],
+      "checkpoint_sha256": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+      "embedding_sha256": "9150093f2f5d5b5014b610b61eddbbebb19102d944aa7053fea77fd3ca91181f",
+      "predictions_sha256": "6f8c1b0736e5ad6395ef9dd37121b74eef08d2087d87509b506a53a3109351ef",
+      "summary_sha256": "9cb3ab162e7c301a92cfa013cd00d42427b6374e69ba4551f2d0a07f31b4462b",
+      "partial_diagnostics": [
+        {
+          "confidence": 0.1,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 29,
+              "annotated_recall": 0.14871794871794872
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 4,
+              "annotated_recall": 0.06060606060606061
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 11,
+              "annotated_recall": 0.21153846153846154
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 11,
+              "annotated_recall": 0.12790697674418605
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 93,
+              "annotated_recall": 0.8157894736842105
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.25,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 23,
+              "annotated_recall": 0.11794871794871795
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 4,
+              "annotated_recall": 0.07692307692307693
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 3,
+              "annotated_recall": 0.03488372093023256
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 89,
+              "annotated_recall": 0.7807017543859649
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.4,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 46,
+              "annotated_recall": 0.4946236559139785
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 20,
+              "annotated_recall": 0.10256410256410256
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 2,
+              "annotated_recall": 0.038461538461538464
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 1,
+              "annotated_recall": 0.011627906976744186
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 87,
+              "annotated_recall": 0.7631578947368421
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        }
+      ],
+      "complete_selection_frames": 0,
+      "complete_heldout_frames": 0
+    },
+    {
+      "profile": "bollard21",
+      "frames": 317,
+      "latency_ms": {
+        "p50": 22.151683049742132,
+        "p95": 43.05344121530652,
+        "p99": 45.440750587731586
+      },
+      "cuda_peak_allocated_mib": 765.10888671875,
+      "approved_classes": [],
+      "checkpoint_sha256": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+      "embedding_sha256": "442b5f0dae8c1630d3091ad9174ce78b7ae6f0c9d16768e316dfeddd1d6906aa",
+      "predictions_sha256": "caff32feb19e2d6a7aa451d55f10ee5b67d5881375578cc1e6169067fb9d3f53",
+      "summary_sha256": "5fc39320e9632164888866a00a97620d8eec1950f754bd82b29fe15c0551dcfa",
+      "partial_diagnostics": [
+        {
+          "confidence": 0.1,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 29,
+              "annotated_recall": 0.14871794871794872
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 4,
+              "annotated_recall": 0.06060606060606061
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 11,
+              "annotated_recall": 0.21153846153846154
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 12,
+              "annotated_recall": 0.13953488372093023
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 93,
+              "annotated_recall": 0.8157894736842105
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.25,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 23,
+              "annotated_recall": 0.11794871794871795
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 4,
+              "annotated_recall": 0.07692307692307693
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 4,
+              "annotated_recall": 0.046511627906976744
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 89,
+              "annotated_recall": 0.7807017543859649
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.4,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 46,
+              "annotated_recall": 0.4946236559139785
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 20,
+              "annotated_recall": 0.10256410256410256
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 2,
+              "annotated_recall": 0.038461538461538464
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 2,
+              "annotated_recall": 0.023255813953488372
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 87,
+              "annotated_recall": 0.7631578947368421
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        }
+      ],
+      "complete_selection_frames": 0,
+      "complete_heldout_frames": 0
+    },
+    {
+      "profile": "plastic21",
+      "frames": 317,
+      "latency_ms": {
+        "p50": 22.652484010905027,
+        "p95": 43.11132278526202,
+        "p99": 48.060497813858056
+      },
+      "cuda_peak_allocated_mib": 764.64794921875,
+      "approved_classes": [],
+      "checkpoint_sha256": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+      "embedding_sha256": "baa6d560563a5d5ec4b318456f02bebc45b0f3d47f462d6cddd77bc8ddff2242",
+      "predictions_sha256": "ef865c4fa818aa348eaf9197d3cdac8bbda973afd059bb6d955d21da5119f88f",
+      "summary_sha256": "4255b1f84fc026886dce2f2e74de5d8b21c16201c1666985177322c5184b3703",
+      "partial_diagnostics": [
+        {
+          "confidence": 0.1,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 29,
+              "annotated_recall": 0.14871794871794872
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 4,
+              "annotated_recall": 0.06060606060606061
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 11,
+              "annotated_recall": 0.21153846153846154
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 3,
+              "annotated_recall": 0.03488372093023256
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 93,
+              "annotated_recall": 0.8157894736842105
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.25,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 23,
+              "annotated_recall": 0.11794871794871795
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 4,
+              "annotated_recall": 0.07692307692307693
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 1,
+              "annotated_recall": 0.011627906976744186
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 89,
+              "annotated_recall": 0.7807017543859649
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.4,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 46,
+              "annotated_recall": 0.4946236559139785
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 20,
+              "annotated_recall": 0.10256410256410256
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 2,
+              "annotated_recall": 0.038461538461538464
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 87,
+              "annotated_recall": 0.7631578947368421
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        }
+      ],
+      "complete_selection_frames": 0,
+      "complete_heldout_frames": 0
+    },
+    {
+      "profile": "combined21",
+      "frames": 317,
+      "latency_ms": {
+        "p50": 22.351448016706854,
+        "p95": 42.65919100726023,
+        "p99": 45.86228775326158
+      },
+      "cuda_peak_allocated_mib": 764.64794921875,
+      "approved_classes": [],
+      "checkpoint_sha256": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+      "embedding_sha256": "b3fb7d65d891c3bf142707ef03b4236e6d34b62afbf726c2bd83f9ee5f82ed14",
+      "predictions_sha256": "096b04f56a23a098c67665763b7949fb65536fffef6505b46429496913958e9d",
+      "summary_sha256": "a7bb2452d6085dcdea2a8c3df26fcf33bde3ef8d974ea2e166bdfc717f743f11",
+      "partial_diagnostics": [
+        {
+          "confidence": 0.1,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 29,
+              "annotated_recall": 0.14871794871794872
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 4,
+              "annotated_recall": 0.06060606060606061
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 11,
+              "annotated_recall": 0.21153846153846154
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 3,
+              "annotated_recall": 0.03488372093023256
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 93,
+              "annotated_recall": 0.8157894736842105
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.25,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 48,
+              "annotated_recall": 0.5161290322580645
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 23,
+              "annotated_recall": 0.11794871794871795
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 4,
+              "annotated_recall": 0.07692307692307693
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 1,
+              "annotated_recall": 0.011627906976744186
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 89,
+              "annotated_recall": 0.7807017543859649
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        },
+        {
+          "confidence": 0.4,
+          "classes": {
+            "person": {
+              "gt": 93,
+              "matched": 46,
+              "annotated_recall": 0.4946236559139785
+            },
+            "dog": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "deer": {
+              "gt": 11,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "bicycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "car": {
+              "gt": 195,
+              "matched": 20,
+              "annotated_recall": 0.10256410256410256
+            },
+            "motorcycle": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "bus": {
+              "gt": 29,
+              "matched": 4,
+              "annotated_recall": 0.13793103448275862
+            },
+            "truck": {
+              "gt": 66,
+              "matched": 1,
+              "annotated_recall": 0.015151515151515152
+            },
+            "bollard": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "box": {
+              "gt": 52,
+              "matched": 2,
+              "annotated_recall": 0.038461538461538464
+            },
+            "concrete_barrier": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "steel_barricade": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "traffic_drum": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            },
+            "plastic_barrier": {
+              "gt": 86,
+              "matched": 0,
+              "annotated_recall": 0.0
+            },
+            "traffic_cone": {
+              "gt": 114,
+              "matched": 87,
+              "annotated_recall": 0.7631578947368421
+            },
+            "stroller": {
+              "gt": 0,
+              "matched": 0,
+              "annotated_recall": null
+            }
+          },
+          "precision": null,
+          "teacher_approval": false,
+          "interpretation": "Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance."
+        }
+      ],
+      "complete_selection_frames": 0,
+      "complete_heldout_frames": 0
+    }
+  ],
+  "gpu_oom": false,
+  "simulator": "stopped",
+  "container_image": "sha256:847c0870a0df69205362c82e9ecd18e1ca7005224284f9730a810a6e39b8c5b3",
+  "network": "none",
+  "precision": "fp16",
+  "batch": 1,
+  "tensor_rt_exported": false,
+  "measured_versions": {
+    "ultralytics": "8.4.150",
+    "torch": "2.1.2+cu118"
+  },
+  "setup_failures": [
+    {
+      "reason": "Missing clip after replacing PYTHONPATH",
+      "resolution": "Retained /opt/seg-deps; no shared package installation."
+    },
+    {
+      "reason": "Generated ROS messages absent in fresh private container",
+      "resolution": "Built asmc_msgs and asmc_camera in /tmp/asmc-audit-msgs before CPU regression."
+    }
+  ],
+  "formal_teacher_acceptance": false,
+  "teacher_labels_applied": 0,
+  "approved_classes": [],
+  "selection_reason": "No complete 16-class Capture image review set in this probe. Independent actor references support diagnostics only.",
+  "deviations": [
+    "Fixed 317-frame probe from 5667 selection/heldout frames, every 20th plus independent actor references; full acceptance deferred until GT scope is complete.",
+    "Actor subtype candidates were inspected by Codex, not confirmed by a human; not approved teacher GT.",
+    "Diagnostic profiles include historically exposed heldout frames; not a fresh blind test. No confidence/vocabulary selected from heldout.",
+    "No approved classes, so no mixed Roboflow labels were assigned from teacher."
+  ],
+  "next": [
+    "Confirm independent GT subtypes and image completeness for priority classes.",
+    "Run full selection sweep, freeze vocabulary/thresholds, then heldout evaluation.",
+    "Use approved classes for one-to-one mixed-box suggestions; a human confirms every change."
+  ]
+}

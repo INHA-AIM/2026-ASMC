@@ -1,0 +1,145 @@
+{
+  "code_snapshot_commit": "e2e8c4143a7db8f53a6bc8b2d4e30427c8661925",
+  "probe_code_state": "X inference used the then-uncommitted audit tools above parent a1e3c906; e2e8c414 snapshots final tools and additional validation guards. This was a diagnostic probe, not formal teacher acceptance.",
+  "cpu_suites": {
+    "camera_data_audit": 50,
+    "camera_teacher_audit": 10,
+    "seg_measurements": 5,
+    "experiment_gallery_hub": 1,
+    "yoloe_l_measurements": 3,
+    "yoloe_l_diagnostics": 2
+  },
+  "camera_detection_ros_regression": {
+    "tests": 75,
+    "passed": true,
+    "environment": "private network-none container, generated messages built in /tmp/asmc-audit-msgs"
+  },
+  "validators": [
+    "documentation_migration",
+    "perception_contract",
+    "perception_topic_policy",
+    "git_diff_check",
+    "python_compile"
+  ],
+  "export": {
+    "images": 95,
+    "classes": [
+      "person",
+      "car",
+      "truck",
+      "box",
+      "concrete_barrier",
+      "traffic_drum"
+    ],
+    "splits": {
+      "heldout": 91,
+      "train": 3,
+      "selection": 1
+    },
+    "exact_pixel_leaks": 0,
+    "manifest_sha256": "80e775ea98d746b611e802f465ce5935d36ec4154032636c8a8a2f9f154e2fe4",
+    "labels_sha256": "3a7709890ef5ea8b84fa7ac3c09237c9255bd45ee5752dbd3b8876a5bfe52140",
+    "training_performed": false,
+    "unknown_subtypes_exported": 0,
+    "semantic_subtypes": {
+      "concrete_barricade": 98,
+      "cargo_box": 46,
+      "wooden_box": 50,
+      "traffic_barrel": 50,
+      "person": 3,
+      "truck": 1,
+      "car": 2
+    },
+    "split_ready": true,
+    "missing_target_classes": [
+      "dog",
+      "deer",
+      "bicycle",
+      "motorcycle",
+      "bus",
+      "bollard",
+      "steel_barricade",
+      "plastic_barrier",
+      "traffic_cone",
+      "stroller"
+    ],
+    "full_target_coverage": false
+  },
+  "http_checks": [
+    {
+      "path": "",
+      "status": 200
+    },
+    {
+      "path": "camera-training-data-audit-v3/",
+      "status": 200
+    },
+    {
+      "path": "camera-training-data-audit-v3/review/",
+      "status": 200
+    },
+    {
+      "path": "camera-yoloe-x-teacher-v1/",
+      "status": 200
+    },
+    {
+      "path": "camera-yoloe-x-teacher-v1/rich21-1280/",
+      "status": 200
+    },
+    {
+      "path": "camera-yoloe-x-teacher-v1/capture-gt-review/",
+      "status": 200
+    },
+    {
+      "path": "camera-training-data-audit-v3/review/images/c7b1b16722f9f38aac63bbd320e8ee65935b3d19ef1a74198a7c1676bf49a258.jpg",
+      "status": 200
+    },
+    {
+      "path": "camera-training-data-audit-v3/review/images/6f5d7e2a7d8ed1256db8ea53fcc84248c3c5c0e6445c00352de216e014167018.png",
+      "status": 200
+    },
+    {
+      "path": "camera-training-data-audit-v3/review/images/c4b79d38f54ec34295f3aa4e80fdc1713c4955a08b98b29dea5b1a21a782adaf.png",
+      "status": 200
+    },
+    {
+      "path": "camera-yoloe-x-teacher-v1/capture-gt-review/images/98de1e1ba8d5b9b2b3d4ef164c9451be87ada98c1140ec8f9a6b7803ddc630ca.png",
+      "status": 200
+    },
+    {
+      "path": "camera-yoloe-x-teacher-v1/capture-gt-review/images/5b2bc1d9c2e9c7ebf5f3d3b084cf1f249c04b3c48c6a08951650b268cd20e42d.png",
+      "status": 200
+    },
+    {
+      "path": "camera-yoloe-x-teacher-v1/capture-gt-review/images/690f50e1b6f2b57cb0c3067102ffdbd13566d269a751b2614780bb41ef32ac23.png",
+      "status": 200
+    }
+  ],
+  "javascript_syntax": {
+    "parser": "esprima==4.0.1 installed in /tmp only",
+    "pages": [
+      "camera-training-data-audit-v3/review-final/index.html",
+      "camera-yoloe-x-teacher-v1/capture-gt-review/index.html"
+    ],
+    "passed": true
+  },
+  "gallery_links": {
+    "pages": 150,
+    "local_static_links": 26655,
+    "missing": [],
+    "scope": "Static href/src/poster; dynamic gallery data and HTTP availability checked separately"
+  },
+  "tools_sha256": {
+    "camera_data_audit.py": "dae0183373a9284a511cb007d03ccf93afe49813bd3675331e738d2bde56805e",
+    "camera_teacher_audit.py": "484752362db7e6f6247757bfad3d979078f2284671e3efbaad2d9962c798c81e",
+    "prepare_capture_teacher_gt.py": "fc2050ff08ad1769bb8fd05e8259dbf0e1bf1da4740ae95a19e66f5efda9adc2",
+    "report_camera_teacher_audit.py": "ccc09d2b0d3181b8883384015c266083beae7770617679cb6aad1443957f6636",
+    "report_camera_data_audit.py": "8e6096c52249ab801ca0cee65e17b76aa71496fd22b4961bb47bb190b1d19599",
+    "prepare_yoloe_l.py": "2a7f039bb7cc9960294aaaf498c8bbc275feedc38c50cb5672d1ec7d12561aa3"
+  },
+  "text_encoder_sha256": "35d7f213e4d75f38514e4656ad3cb91158bd33e3805d8ac349f23b186f66982f",
+  "hosted_ci": "Check final pushed PR HEAD separately; previous run blocked before execution by account billing/spending limit.",
+  "training_performed": false,
+  "teacher_approved": false,
+  "operating_model_changed": false
+}

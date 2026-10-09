@@ -1,0 +1,2019 @@
+schema_version: 1
+captured_at: '2026-10-09T19:15:17.477729+00:00'
+branch: feat/camera-training-data-audit
+parent_code_commit: e2e8c4143a7db8f53a6bc8b2d4e30427c8661925
+tool_sha256:
+  download_roboflow_sources.py: 1085166f228df7fc40aea7a7c5da6fab418b30b1359445da9f9fad5ad8424740
+  snapshot_roboflow_projects.py: 41d6ba001f92ff7cd4b58f9ef0453d632411e8ee399ac5cbfe0c45fc918a99e2
+  camera_data_audit.py: dae0183373a9284a511cb007d03ccf93afe49813bd3675331e738d2bde56805e
+  report_camera_data_audit.py: 8e6096c52249ab801ca0cee65e17b76aa71496fd22b4961bb47bb190b1d19599
+scope: data acquisition, audit, reviewed bbox subset; no training or runtime changes
+python: 3.12.13
+sdk: roboflow==1.7.0
+sources:
+- project: aiv5challenge/yeonsoo-sarang
+  url: https://universe.roboflow.com/aiv5challenge/yeonsoo-sarang
+  status: downloaded
+  version: 4
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 911
+  exported_images: 2459
+  accepted: 0
+  quarantined: 2459
+  original_labels: &id001
+    person: 324
+    car: 3922
+  accepted_classes: &id002 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Fit within
+      width: '640'
+      height: '640'
+  augmentation:
+    image:
+      versions: 3
+    brightness:
+      percent: 15
+      brighten: true
+      darken: true
+    hue:
+      degrees: 10
+    flip:
+      horizontal: true
+      vertical: false
+  archive_sha256: aff8f12d38eece7bbcd643f772c91c9cff9e5433d80194c434d1a117f774be29
+  native_annotation_sha256: null
+  metadata_sha256: 14a6560424c32c617bc372547eb7a4e1ab6c3c03133ca78fdcad6de86032ecd8
+  version_policy_exception: null
+- project: battery-detection/cone-traffic-tirxp
+  url: https://universe.roboflow.com/battery-detection/cone-traffic-tirxp
+  status: downloaded
+  version: 1
+  task: instance-segmentation
+  license: CC BY 4.0
+  publisher_images: 591
+  exported_images: 591
+  accepted: 0
+  quarantined: 591
+  original_labels: &id003
+    cone: 788
+    yellow_light: 114
+    red_light: 117
+    green_light: 104
+  accepted_classes: &id004 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 1123
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      height: 640
+      width: 640
+    remap:
+      labels:
+        d:
+          omit: true
+  augmentation: {}
+  archive_sha256: ca7e8b4ee691bc09f6be2f3bef778e52cf5cc95015e0c48c31825abcfebd589a
+  native_annotation_sha256: null
+  metadata_sha256: cae85eb3e9d305c6a7bb27676acc68b43f9d850702d15b5e384bd4c6986c36ae
+  version_policy_exception: null
+- project: bicycle-man/morai-bicycle
+  url: https://universe.roboflow.com/bicycle-man/morai-bicycle
+  status: downloaded
+  version: 2
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 93
+  exported_images: 93
+  accepted: 0
+  quarantined: 93
+  original_labels: &id005
+    bicycle man: 93
+    man: 1
+  accepted_classes: &id006 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      width: 640
+      height: 640
+  augmentation: {}
+  archive_sha256: 66004dabdd87f6e2630f77ac1e8ddadfef15ebc1302ed2ff775a799f17066ee4
+  native_annotation_sha256: null
+  metadata_sha256: 0d5d1eff24d89d9b139f612612fd45958672471b17192c6b03678dac4dd7716a
+  version_policy_exception: null
+- project: cone-z2vga/katri-2-txrqf
+  url: https://universe.roboflow.com/cone-z2vga/katri-2-txrqf
+  status: downloaded_snapshot
+  version: unversioned-snapshot
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 301
+  exported_images: 301
+  accepted: 0
+  quarantined: 301
+  original_labels: &id007
+    '5': 946
+    '2': 3412
+    '6': 594
+    '0': 861
+    '1': 19
+    '4': 371
+    '7': 255
+  accepted_classes: &id008 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing: unknown
+  augmentation: unknown
+  archive_sha256: d7d790c9a8b4820d96bc3d16cc6aa5f5c9b3d7088b41f2db9dac8ea1db853449
+  native_annotation_sha256: d7d3c5ab272d2d480bd534c9159232fc137f909bcf30c20668ec00fdab8ea472
+  metadata_sha256: f923ffa3b090519ea6c3988a491cbafa4bf4385b4d2c6233329b5ed11966fc1a
+  version_policy_exception: No released public version; read-only original-image snapshot
+- project: cone-z2vga/katri-q4vkc
+  url: https://universe.roboflow.com/cone-z2vga/katri-q4vkc
+  status: downloaded
+  version: 1
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 301
+  exported_images: 301
+  accepted: 0
+  quarantined: 301
+  original_labels: &id009
+    '7': 255
+    '6': 594
+    '5': 946
+    '2': 3412
+    '4': 371
+    '0': 861
+    '1': 19
+  accepted_classes: &id010 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      height: 640
+      width: 640
+  augmentation: {}
+  archive_sha256: daa0441d361f1d819dbd0ab1760fdd9c0772eff5131bd5f82f97ac1615aadf9e
+  native_annotation_sha256: null
+  metadata_sha256: e2b94621422b20350b7a5f0820492dc5d84e376b9f374ed29831006b89506805
+  version_policy_exception: null
+- project: cone-z2vga/katri_kids-2-x5xnl
+  url: https://universe.roboflow.com/cone-z2vga/katri_kids-2-x5xnl
+  status: downloaded_snapshot
+  version: unversioned-snapshot
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 25
+  exported_images: 25
+  accepted: 0
+  quarantined: 25
+  original_labels: &id011
+    '0': 457
+    '3': 99
+    '5': 46
+    '7': 65
+  accepted_classes: &id012 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing: unknown
+  augmentation: unknown
+  archive_sha256: 426d2d1df117c004594f6306f3b3edd8eeb09ad6fc54a5ce8ed4f8b21e2b58cd
+  native_annotation_sha256: 38d22290df7c757a3b4b2a3bd8af52667002f6298cada448f9acfd8232d85326
+  metadata_sha256: 1e7a6ddea5e4f3b8cb63764d603064423b7ec9aa8724244e8e64d6446e2d686b
+  version_policy_exception: No released public version; read-only original-image snapshot
+- project: cone-z2vga/katri_kids-zblud
+  url: https://universe.roboflow.com/cone-z2vga/katri_kids-zblud
+  status: downloaded
+  version: 1
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 25
+  exported_images: 25
+  accepted: 0
+  quarantined: 25
+  original_labels: &id013
+    '0': 457
+    '3': 99
+    '5': 46
+    '7': 65
+  accepted_classes: &id014 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      height: 640
+      width: 640
+  augmentation: {}
+  archive_sha256: 19ba4688e45e41c5541d7a0789e1c6648497ee1bda7681d1f70f4a21db708f4f
+  native_annotation_sha256: null
+  metadata_sha256: 812ee30023cac598eb440c66de1fcd3e49a385325ac05ccbd86a36c0e25639f6
+  version_policy_exception: null
+- project: cone-z2vga/merge-axyff
+  url: https://universe.roboflow.com/cone-z2vga/merge-axyff
+  status: downloaded
+  version: 1
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 326
+  exported_images: 326
+  accepted: 0
+  quarantined: 326
+  original_labels: &id015
+    '2': 3412
+    '0': 1318
+    '5': 992
+    '6': 594
+    '4': 371
+    '1': 19
+    '7': 320
+    '3': 99
+  accepted_classes: &id016 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      height: 640
+      width: 640
+  augmentation: {}
+  archive_sha256: de5f70baf14e97399ed5d0318da666d7a969b7d1ca634cf14e4ac76c4f7cbf7f
+  native_annotation_sha256: null
+  metadata_sha256: 5cb7a7e155853069fc0d346c1f9f35bd04a5e4f791601bf66311a29d7cda3d88
+  version_policy_exception: null
+- project: cone-z2vga/ssibal-sjav5
+  url: https://universe.roboflow.com/cone-z2vga/ssibal-sjav5
+  status: downloaded_snapshot
+  version: unversioned-snapshot
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 304
+  exported_images: 304
+  accepted: 0
+  quarantined: 304
+  original_labels: &id017
+    '2': 3179
+    '5': 557
+    '4': 881
+    '0': 1229
+    '3': 407
+    '6': 233
+    '1': 111
+  accepted_classes: &id018 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing: unknown
+  augmentation: unknown
+  archive_sha256: e280eeae14b7dc53eb2f315d76445269c4fc44213fb65f63d3f8daba8c75e501
+  native_annotation_sha256: eca567e4c4dd9d1e6d51319492aef713e6d1d8f871c556b22abbbea41cc0f9bf
+  metadata_sha256: a517a6bd6b159490acbe42c97ba157274eceb08157a2a21436014694ebb44538
+  version_policy_exception: No released public version; read-only original-image snapshot
+- project: dh-mzmhr/animal-tohen
+  url: https://universe.roboflow.com/dh-mzmhr/animal-tohen
+  status: downloaded
+  version: 4
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 4255
+  exported_images: 10213
+  accepted: 0
+  quarantined: 10213
+  original_labels: &id019
+    animal: 11055
+  accepted_classes: &id020 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      width: '704'
+      height: '704'
+  augmentation:
+    image:
+      versions: 3
+    ninety:
+      clockwise: true
+      counter-clockwise: true
+      upside-down: false
+    flip:
+      horizontal: true
+      vertical: false
+    rotate:
+      degrees: 15
+    brightness:
+      percent: 15
+      brighten: true
+      darken: true
+    blur:
+      pixels: 2.5
+    exposure:
+      percent: 10
+    shear:
+      horizontal: 10
+      vertical: 10
+    saturation:
+      percent: 25
+  archive_sha256: cca11556e01b023c6efb586976d41bff8e425776439ed39acdf770284d6e2fd2
+  native_annotation_sha256: null
+  metadata_sha256: 4b23a0ea985f90cc3c33c73ef3b4a1518d44dac697a4a8683fb9d15a0e44ba74
+  version_policy_exception: null
+- project: enzo-mdikr/my-first-project-eeree
+  url: https://universe.roboflow.com/enzo-mdikr/my-first-project-eeree
+  status: downloaded_snapshot
+  version: unversioned-snapshot
+  task: instance-segmentation
+  license: CC BY 4.0
+  publisher_images: 1229
+  exported_images: 1229
+  accepted: 90
+  quarantined: 1139
+  original_labels: &id021
+    barrigate: 700
+    lane bar: 315
+    cargo box: 424
+    wood box: 200
+    pe drum: 795
+    speed: 214
+    pe barrigate: 397
+    motorcycle: 400
+    steel barrigate: 201
+    dog: 300
+    bollard: 399
+  accepted_classes: &id022
+    concrete_barrier: 98
+    box: 90
+    traffic_drum: 50
+  missing_native_annotations: 0
+  native_instance_annotations: 4344
+  preprocessing: unknown
+  augmentation: unknown
+  archive_sha256: c03882bdd931b6fcb18a7f6be09025c606b5c302a7a0273dcd7ffc5814334729
+  native_annotation_sha256: 133b18a143b54c130985165166a7823efc51c9643a7ca3ecc09c6aac583318e4
+  metadata_sha256: 482bb004449eef119d9a0b79e1c3bf8211f0bda53e213172a70253b97af68664
+  version_policy_exception: No released public version; read-only original-image snapshot
+- project: hl-fma/hlfma_2
+  url: https://universe.roboflow.com/hl-fma/hlfma_2
+  status: downloaded
+  version: 1
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 2273
+  exported_images: 1634
+  accepted: 0
+  quarantined: 1634
+  original_labels: &id023
+    object: 2208
+    person: 7028
+    car: 2
+  accepted_classes: &id024 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      height: 640
+      width: 640
+  augmentation: {}
+  archive_sha256: 03562683e9a9cd57d28eda015f07ed3ef862dc8886bdba53a6f94e1ad276173a
+  native_annotation_sha256: null
+  metadata_sha256: 2d209b49c1e917387bb5e1b9b98d3d34f729636748bf07040e2e94ca84954b95
+  version_policy_exception: null
+- project: hl-fma/hlfma_3
+  url: https://universe.roboflow.com/hl-fma/hlfma_3
+  status: downloaded_snapshot
+  version: unversioned-snapshot
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 6320
+  exported_images: 6320
+  accepted: 0
+  quarantined: 6320
+  original_labels: &id025
+    person: 12052
+    car: 3463
+    bus: 1601
+    truck: 1762
+    others: 2
+  accepted_classes: &id026 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing: unknown
+  augmentation: unknown
+  archive_sha256: d9482e899eaf61e92eebd3dd03fe6535e07dbe928a80ba25fb34aea9de1277e1
+  native_annotation_sha256: 44324b325235d9bc04c627e4012f4e4090cba74261ea62f94decb578e0c29e1c
+  metadata_sha256: 8f39c900d68124bc92cee73052137a29b14cd8b0b49c8720d5baccd32b2ce68d
+  version_policy_exception: No released public version; read-only original-image snapshot
+- project: jjj-nx9di/katri_new_data-xkbev
+  url: https://universe.roboflow.com/jjj-nx9di/katri_new_data-xkbev
+  status: downloaded
+  version: 2
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 2226
+  exported_images: 2215
+  accepted: 0
+  quarantined: 2215
+  original_labels: &id027
+    '6': 505
+    '5': 2635
+    '7': 1560
+    '9': 1803
+    '3': 2181
+    '0': 2162
+    '2': 501
+    '1': 1114
+    '4': 466
+    '8': 165
+  accepted_classes: &id028 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      height: 640
+      width: 640
+  augmentation: {}
+  archive_sha256: e31a5cd2c9089fca0227edddfb042badc4efadd3df71dd41824c94a214afcc4a
+  native_annotation_sha256: null
+  metadata_sha256: 19b853cb46d2e682d505c70756fa203602cc9a7869e0f74dea00eda0208c2291
+  version_policy_exception: null
+- project: mino-qjf5p/vi2re
+  url: https://universe.roboflow.com/mino-qjf5p/vi2re
+  status: downloaded
+  version: 4
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 2662
+  exported_images: 7925
+  accepted: 0
+  quarantined: 7925
+  original_labels: &id029
+    obstacle: 10714
+    car: 3274
+    person: 1092
+    4-traffic light-green: 1362
+    traffic_sign_limit30: 101
+    3-traffic light-green: 1020
+    3-traffic light-red: 444
+    4-traffic light-red: 572
+    3-traffic light-yellow: 120
+    4-traffic light-green left arrow: 39
+  accepted_classes: &id030 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 183
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      width: '640'
+      height: '480'
+  augmentation:
+    image:
+      versions: 3
+    bbflip:
+      horizontal: true
+      vertical: false
+    bbblur:
+      pixels: 2.5
+  archive_sha256: 7c400c540d8955eb420238b7d0ebfd48126d3bddaa9eb6f128d072b1be3a13a8
+  native_annotation_sha256: null
+  metadata_sha256: 0a91a1ace19a8d3c09f7ff9cd9121a1f8f433f3574fdf043dec0191536b91509
+  version_policy_exception: null
+- project: parkminseo/final-ftuy2
+  url: https://universe.roboflow.com/parkminseo/final-ftuy2
+  status: downloaded
+  version: 5
+  task: instance-segmentation
+  license: CC BY 4.0
+  publisher_images: 1817
+  exported_images: 1817
+  accepted: 0
+  quarantined: 1817
+  original_labels: &id031
+    car: 448
+    bus: 621
+    box: 391
+    human: 431
+    yellow: 488
+    green: 844
+    red: 748
+  accepted_classes: &id032 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 3971
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      width: '640'
+      height: '480'
+  augmentation: {}
+  archive_sha256: 858cb0c82a0030dbdeb676cb966547c4b1e937978929f1f8e93876df87311f8f
+  native_annotation_sha256: null
+  metadata_sha256: 373acd7918ba5adddcf3b63da1020691089a93a14d96e919ef3d6ca17e694954
+  version_policy_exception: null
+- project: s-workspace-p9mvp/morai_obstacle
+  url: https://universe.roboflow.com/s-workspace-p9mvp/morai_obstacle
+  status: downloaded
+  version: 2
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 114
+  exported_images: 114
+  accepted: 0
+  quarantined: 114
+  original_labels: &id033
+    person: 114
+  accepted_classes: &id034 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Fit (black edges) in
+      width: '512'
+      height: '512'
+  augmentation: {}
+  archive_sha256: 5b89104d747b109f0a4bf733022d53638305679611e907842217615d3c12a9b4
+  native_annotation_sha256: null
+  metadata_sha256: ea906c6ccaa946c48575d697f9265d390fa23ca1baed57581b53190bd7bf98ab
+  version_policy_exception: null
+- project: selfcar/morai_test-t3i2r
+  url: https://universe.roboflow.com/selfcar/morai_test-t3i2r
+  status: downloaded
+  version: 1
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 991
+  exported_images: 2577
+  accepted: 0
+  quarantined: 2577
+  original_labels: &id035
+    '1': 22663
+    '0': 14787
+    '2': 27084
+  accepted_classes: &id036 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      height: 640
+      width: 640
+  augmentation:
+    image:
+      versions: 3
+    noise:
+      percent: 0.81
+    exposure:
+      percent: 10
+  archive_sha256: ad313bbce51e26d9f2e357fa193c7586b09fab8e8091516fdf8f901ceb17e1a6
+  native_annotation_sha256: null
+  metadata_sha256: 4fb7a9428f16ecd8376227e02d4c7de3ffc289d5d484d4503bd5ce9eab082171
+  version_policy_exception: null
+- project: seonhyung-kim/morai-perception
+  url: https://universe.roboflow.com/seonhyung-kim/morai-perception
+  status: downloaded
+  version: 4
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 2901
+  exported_images: 4053
+  accepted: 0
+  quarantined: 4053
+  original_labels: &id037
+    vehicle: 3198
+    pedestrian: 11349
+    obstacle: 5036
+    traffic_light: 2049
+    animal: 1361
+  accepted_classes: &id038 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 3
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Fit within
+      width: '640'
+      height: '640'
+  augmentation:
+    image:
+      versions: 3
+    brightness:
+      percent: 15
+      brighten: true
+      darken: true
+    exposure:
+      percent: 10
+  archive_sha256: 562d83bfa68b7926855c3e34b8f8a1e317d8a970b6ff69b414ed580ce24a5261
+  native_annotation_sha256: null
+  metadata_sha256: 0f17e745ad6e6958a997db789a47e9f5d836ee1967104377859f1ea3de88473a
+  version_policy_exception: null
+- project: tooth-decay-rnacu/morai_ai_mission-fhqkh
+  url: https://universe.roboflow.com/tooth-decay-rnacu/morai_ai_mission-fhqkh
+  status: downloaded
+  version: 5
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 794
+  exported_images: 2374
+  accepted: 0
+  quarantined: 2374
+  original_labels: &id039
+    TL_stop: 789
+    PE: 1036
+    sign_50: 84
+    sign_30: 264
+    Concrete_2: 461
+    Concrete_1: 468
+    sign_40: 99
+    TL_go: 410
+    Obstacle_Yellow: 141
+    Fence: 36
+  accepted_classes: &id040 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      height: 640
+      width: 640
+  augmentation:
+    image:
+      versions: 3
+    flip:
+      horizontal: true
+      vertical: false
+    crop:
+      min: 0
+      percent: 20
+    rotate:
+      degrees: 10
+    shear:
+      horizontal: 10
+      vertical: 10
+    saturation:
+      percent: 30
+  archive_sha256: ba07ef56eb8908069791987a690b01e4a5a88e98d22177c8e2d867affd8e4d9e
+  native_annotation_sha256: null
+  metadata_sha256: b4585ab8cc2cf245f7b2420d5e5a9f57d7c19602ef06cc0b3f69c43d1792c474
+  version_policy_exception: null
+- project: yolo-m5lvd/detection-bzetd
+  url: https://universe.roboflow.com/yolo-m5lvd/detection-bzetd
+  status: downloaded
+  version: 2
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 357
+  exported_images: 357
+  accepted: 0
+  quarantined: 357
+  original_labels: &id041
+    Obstacle: 349
+    StreetLight: 556
+    Person: 286
+    RedTraffic: 164
+    Car: 277
+    bike: 191
+    GreenTraffic: 132
+    LeftTurnTraffic: 105
+    Bus: 75
+    Truck: 210
+  accepted_classes: &id042 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 0
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      width: 640
+      height: 640
+  augmentation: {}
+  archive_sha256: e1172203c3904b7b3a366f62e13ef6573e0d78354bd7d9bcb06ad80fb444ec77
+  native_annotation_sha256: null
+  metadata_sha256: bfdadb3404b3e28c083472d9248a3f95a4540b6d86025514a83bac6dbc0f09f1
+  version_policy_exception: null
+- project: yuna-z15io/obstcle-mi0kq
+  url: https://universe.roboflow.com/yuna-z15io/obstcle-mi0kq
+  status: downloaded
+  version: 2
+  task: object-detection
+  license: CC BY 4.0
+  publisher_images: 371
+  exported_images: 1073
+  accepted: 0
+  quarantined: 1073
+  original_labels: &id043
+    dynamic: 1423
+    static: 1215
+  accepted_classes: &id044 {}
+  missing_native_annotations: 0
+  native_instance_annotations: 9
+  preprocessing:
+    auto-orient: true
+    resize:
+      format: Stretch to
+      height: 640
+      width: 640
+  augmentation:
+    image:
+      versions: 3
+    rotate:
+      degrees: 15
+    noise:
+      percent: 0.93
+    blur:
+      pixels: 2.5
+  archive_sha256: 613bc66763e956195f3e9e36876829592513ebe2adb6644576ee55c83d4a1664
+  native_annotation_sha256: null
+  metadata_sha256: ba1cf718cee1e39965eb1567dcd40980182f00da179ecc33463ddfbd63421e4a
+  version_policy_exception: null
+source_acquisition:
+  expected: 22
+  acquired: 22
+  public_versions: 17
+  unversioned_snapshots: 5
+  complete: true
+  all_latest_public_versions_available: false
+audit_summary:
+  images: 76416
+  accepted: 95
+  quarantined: 76321
+  reasons:
+    annotation_completeness_unverified: 61074
+    visual_review_required: 76320
+    source_class_sample_failed: 14906
+    cross_split_similar_image_review: 12421
+    review_rejected: 161
+    ambiguous_label:bicycle man: 93
+    ambiguous_label:6: 986
+    ambiguous_label:4: 675
+    ambiguous_label:animal: 7942
+    ambiguous_label:object: 724
+    ambiguous_label:9: 345
+    ambiguous_label:obstacle: 4886
+    ambiguous_label:box: 112
+    ambiguous_label:vehicle: 1246
+    ambiguous_label:pedestrian: 1310
+    ambiguous_label:Obstacle_Yellow: 63
+    ambiguous_label:Obstacle: 3485
+    ambiguous_label:bike: 63
+    ambiguous_label:dynamic: 614
+    ambiguous_label:static: 634
+    invalid_bbox: 13
+    ambiguous_label:dog: 100
+    ambiguous_label:others: 2
+    capture_subtype_unknown: 5127
+    capture_target_scope_unverified: 30085
+    ambiguous_label:Vehicle: 2050
+    missing_capture_bbox_source: 19838
+    unlinked_actor_semantic_pixels: 499
+    no_visible_instance_pixels: 202
+    unverified_semantic_palette_run: 14145
+  sources:
+    capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel:
+      images: 1923
+      accepted: 0
+      original_labels:
+        Obstacle: 417
+        truck: 450
+        car: 1393
+        person: 337
+        Vehicle: 304
+        bus: 454
+      accepted_classes: {}
+    capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel:
+      images: 1554
+      accepted: 1
+      original_labels:
+        Obstacle: 257
+        person: 428
+        truck: 287
+        bus: 194
+        car: 1982
+        Vehicle: 321
+      accepted_classes:
+        person: 1
+    capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel:
+      images: 1659
+      accepted: 0
+      original_labels:
+        Obstacle: 541
+        truck: 56
+        person: 362
+        car: 2015
+        Vehicle: 148
+        bus: 210
+      accepted_classes: {}
+    capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel:
+      images: 1980
+      accepted: 1
+      original_labels:
+        person: 686
+        Obstacle: 715
+        truck: 336
+        Vehicle: 183
+        bus: 1
+        car: 1882
+      accepted_classes:
+        person: 1
+    capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel:
+      images: 1182
+      accepted: 1
+      original_labels:
+        Obstacle: 831
+        Vehicle: 229
+        person: 685
+        truck: 187
+        car: 83
+      accepted_classes:
+        person: 1
+    capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel:
+      images: 1872
+      accepted: 1
+      original_labels:
+        Obstacle: 2190
+        person: 338
+        car: 1271
+        truck: 460
+        Vehicle: 216
+        bus: 286
+      accepted_classes:
+        truck: 1
+        box: 6
+    capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel:
+      images: 2241
+      accepted: 0
+      original_labels:
+        Obstacle: 1499
+        person: 1013
+        car: 1533
+        truck: 688
+        Vehicle: 354
+        bus: 151
+      accepted_classes: {}
+    capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel:
+      images: 2118
+      accepted: 0
+      original_labels:
+        Obstacle: 1221
+        truck: 470
+        car: 1311
+        person: 1218
+        Vehicle: 106
+        bus: 176
+      accepted_classes: {}
+    capture:20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel:
+      images: 216
+      accepted: 0
+      original_labels:
+        Obstacle: 120
+        truck: 5
+        person: 50
+        car: 88
+      accepted_classes: {}
+    capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel:
+      images: 135
+      accepted: 0
+      original_labels:
+        Obstacle: 71
+        person: 57
+        truck: 8
+        car: 59
+      accepted_classes: {}
+    capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel:
+      images: 213
+      accepted: 0
+      original_labels:
+        person: 45
+        truck: 27
+        Vehicle: 40
+        car: 55
+        Obstacle: 1
+      accepted_classes: {}
+    capture:20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel:
+      images: 183
+      accepted: 0
+      original_labels:
+        truck: 45
+        car: 320
+        Obstacle: 2
+        person: 3
+        Vehicle: 35
+      accepted_classes: {}
+    capture:20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel:
+      images: 237
+      accepted: 1
+      original_labels:
+        car: 556
+        Vehicle: 339
+        bus: 93
+        person: 2
+      accepted_classes:
+        car: 2
+    capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel:
+      images: 432
+      accepted: 0
+      original_labels:
+        Vehicle: 203
+        car: 142
+        bus: 63
+        Obstacle: 45
+        person: 12
+        truck: 5
+      accepted_classes: {}
+    capture:kcity_auto_sunny_003:
+      images: 8310
+      accepted: 0
+      original_labels: {}
+      accepted_classes: {}
+    capture:kcity_drive_001:
+      images: 2874
+      accepted: 0
+      original_labels: {}
+      accepted_classes: {}
+    capture:kcity_drive_002:
+      images: 2043
+      accepted: 0
+      original_labels: {}
+      accepted_classes: {}
+    capture:kcity_drive_003:
+      images: 918
+      accepted: 0
+      original_labels: {}
+      accepted_classes: {}
+    roboflow:aiv5challenge/yeonsoo-sarang:
+      images: 2459
+      accepted: 0
+      original_labels: *id001
+      accepted_classes: *id002
+    roboflow:battery-detection/cone-traffic-tirxp:
+      images: 591
+      accepted: 0
+      original_labels: *id003
+      accepted_classes: *id004
+    roboflow:bicycle-man/morai-bicycle:
+      images: 93
+      accepted: 0
+      original_labels: *id005
+      accepted_classes: *id006
+    roboflow:cone-z2vga/katri-2-txrqf:
+      images: 301
+      accepted: 0
+      original_labels: *id007
+      accepted_classes: *id008
+    roboflow:cone-z2vga/katri-q4vkc:
+      images: 301
+      accepted: 0
+      original_labels: *id009
+      accepted_classes: *id010
+    roboflow:cone-z2vga/katri_kids-2-x5xnl:
+      images: 25
+      accepted: 0
+      original_labels: *id011
+      accepted_classes: *id012
+    roboflow:cone-z2vga/katri_kids-zblud:
+      images: 25
+      accepted: 0
+      original_labels: *id013
+      accepted_classes: *id014
+    roboflow:cone-z2vga/merge-axyff:
+      images: 326
+      accepted: 0
+      original_labels: *id015
+      accepted_classes: *id016
+    roboflow:cone-z2vga/ssibal-sjav5:
+      images: 304
+      accepted: 0
+      original_labels: *id017
+      accepted_classes: *id018
+    roboflow:dh-mzmhr/animal-tohen:
+      images: 10213
+      accepted: 0
+      original_labels: *id019
+      accepted_classes: *id020
+    roboflow:enzo-mdikr/my-first-project-eeree:
+      images: 1229
+      accepted: 90
+      original_labels: *id021
+      accepted_classes: *id022
+    roboflow:hl-fma/hlfma_2:
+      images: 1634
+      accepted: 0
+      original_labels: *id023
+      accepted_classes: *id024
+    roboflow:hl-fma/hlfma_3:
+      images: 6320
+      accepted: 0
+      original_labels: *id025
+      accepted_classes: *id026
+    roboflow:jjj-nx9di/katri_new_data-xkbev:
+      images: 2215
+      accepted: 0
+      original_labels: *id027
+      accepted_classes: *id028
+    roboflow:mino-qjf5p/vi2re:
+      images: 7925
+      accepted: 0
+      original_labels: *id029
+      accepted_classes: *id030
+    roboflow:parkminseo/final-ftuy2:
+      images: 1817
+      accepted: 0
+      original_labels: *id031
+      accepted_classes: *id032
+    roboflow:s-workspace-p9mvp/morai_obstacle:
+      images: 114
+      accepted: 0
+      original_labels: *id033
+      accepted_classes: *id034
+    roboflow:selfcar/morai_test-t3i2r:
+      images: 2577
+      accepted: 0
+      original_labels: *id035
+      accepted_classes: *id036
+    roboflow:seonhyung-kim/morai-perception:
+      images: 4053
+      accepted: 0
+      original_labels: *id037
+      accepted_classes: *id038
+    roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh:
+      images: 2374
+      accepted: 0
+      original_labels: *id039
+      accepted_classes: *id040
+    roboflow:yolo-m5lvd/detection-bzetd:
+      images: 357
+      accepted: 0
+      original_labels: *id041
+      accepted_classes: *id042
+    roboflow:yuna-z15io/obstcle-mi0kq:
+      images: 1073
+      accepted: 0
+      original_labels: *id043
+      accepted_classes: *id044
+  inventory_sha256:
+    ../data/roboflow/versioned-inventory-v1/inventory.jsonl: 934d80efd1838788f1ac355536cd610dec1b54704fd1b4de16673c4294be71b8
+    ../data/roboflow/snapshot-inventory-v2/inventory.jsonl: 73c8f2a703f229466245ed2fd7941c9ed64b8a3323f69e87d56176bf70d05a92
+    ../data/roboflow/capture-inventory-v1/inventory.jsonl: 69e212b76ce56b10f340adf43acc8ac614015c57ee6b2700d6ceb6115dc0d615
+  reviews_sha256: 45fdb0da292543cd70dbe83f3650d296d3b381636a1c5e9fd9d1ca0f3394474e
+  labels_sha256: a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698
+  source_profiles_sha256: e6832405538986a8505b832aa0f3db747a391e38be858f8ac9e936ba818aa47a
+  review_samples: 5777
+  near_duplicate_pairs: 253386
+  conditions: Unverified weather/tunnel/view remain unknown
+export:
+  images: 95
+  classes:
+  - person
+  - car
+  - truck
+  - box
+  - concrete_barrier
+  - traffic_drum
+  splits:
+    heldout: 91
+    train: 3
+    selection: 1
+  exact_pixel_leaks: 0
+  manifest_sha256: 80e775ea98d746b611e802f465ce5935d36ec4154032636c8a8a2f9f154e2fe4
+  labels_sha256: 3a7709890ef5ea8b84fa7ac3c09237c9255bd45ee5752dbd3b8876a5bfe52140
+  training_performed: false
+  unknown_subtypes_exported: 0
+  semantic_subtypes:
+    concrete_barricade: 98
+    cargo_box: 46
+    wooden_box: 50
+    traffic_barrel: 50
+    person: 3
+    truck: 1
+    car: 2
+  split_ready: true
+  missing_target_classes:
+  - dog
+  - deer
+  - bicycle
+  - motorcycle
+  - bus
+  - bollard
+  - steel_barricade
+  - plastic_barrier
+  - traffic_cone
+  - stroller
+  full_target_coverage: false
+accepted:
+  images: 95
+  splits:
+    heldout: 91
+    train: 3
+    selection: 1
+  objects:
+    concrete_barrier: 98
+    box: 96
+    traffic_drum: 50
+    person: 3
+    truck: 1
+    car: 2
+  classes_by_split:
+    heldout:
+      concrete_barrier: 98
+      box: 90
+      traffic_drum: 50
+      car: 2
+    train:
+      person: 3
+    selection:
+      truck: 1
+      box: 6
+  negatives:
+    heldout: 0
+    train: 0
+    selection: 0
+  semantic_subtypes:
+    concrete_barricade: 98
+    cargo_box: 46
+    wooden_box: 50
+    traffic_barrel: 50
+    person: 3
+    truck: 1
+    car: 2
+  label_policy_sha256: a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698
+  classes_in_all_splits: []
+  review_basis:
+    individual: 95
+  unresolved_labels: 0
+  structure_failures: 0
+  exact_pixel_leaks: 0
+  conditions:
+    weather:
+      unknown: 95
+    tunnel:
+      unknown: 95
+    view:
+      unknown: 90
+      right: 2
+      left: 3
+  bbox_area_pixels:
+    medium: 156
+    large: 10
+    small: 84
+  bbox_size_definition: small <32^2; medium <96^2; large >=96^2, at stored resolution
+class_mapping:
+- source: capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 417
+- source: capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 304
+- source: capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel
+  original_label: bus
+  dispositions:
+    bus: 454
+- source: capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel
+  original_label: car
+  dispositions:
+    car: 1393
+- source: capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel
+  original_label: person
+  dispositions:
+    person: 337
+- source: capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel
+  original_label: truck
+  dispositions:
+    truck: 450
+- source: capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 257
+- source: capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 321
+- source: capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel
+  original_label: bus
+  dispositions:
+    bus: 194
+- source: capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel
+  original_label: car
+  dispositions:
+    car: 1982
+- source: capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel
+  original_label: person
+  dispositions:
+    person: 428
+- source: capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel
+  original_label: truck
+  dispositions:
+    truck: 287
+- source: capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 541
+- source: capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 148
+- source: capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel
+  original_label: bus
+  dispositions:
+    bus: 210
+- source: capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel
+  original_label: car
+  dispositions:
+    car: 2015
+- source: capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel
+  original_label: person
+  dispositions:
+    person: 362
+- source: capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel
+  original_label: truck
+  dispositions:
+    truck: 56
+- source: capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 715
+- source: capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 183
+- source: capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel
+  original_label: bus
+  dispositions:
+    bus: 1
+- source: capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel
+  original_label: car
+  dispositions:
+    car: 1882
+- source: capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel
+  original_label: person
+  dispositions:
+    person: 686
+- source: capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel
+  original_label: truck
+  dispositions:
+    truck: 336
+- source: capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 831
+- source: capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 229
+- source: capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel
+  original_label: car
+  dispositions:
+    car: 83
+- source: capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel
+  original_label: person
+  dispositions:
+    person: 685
+- source: capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel
+  original_label: truck
+  dispositions:
+    truck: 187
+- source: capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 2178
+    cargo_box: 12
+- source: capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 216
+- source: capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel
+  original_label: bus
+  dispositions:
+    bus: 286
+- source: capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel
+  original_label: car
+  dispositions:
+    car: 1271
+- source: capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel
+  original_label: person
+  dispositions:
+    person: 338
+- source: capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel
+  original_label: truck
+  dispositions:
+    truck: 460
+- source: capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 1498
+    deer: 1
+- source: capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 354
+- source: capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel
+  original_label: bus
+  dispositions:
+    bus: 151
+- source: capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel
+  original_label: car
+  dispositions:
+    car: 1533
+- source: capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel
+  original_label: person
+  dispositions:
+    person: 1013
+- source: capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel
+  original_label: truck
+  dispositions:
+    truck: 688
+- source: capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 1221
+- source: capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 106
+- source: capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel
+  original_label: bus
+  dispositions:
+    bus: 176
+- source: capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel
+  original_label: car
+  dispositions:
+    car: 1311
+- source: capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel
+  original_label: person
+  dispositions:
+    person: 1218
+- source: capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel
+  original_label: truck
+  dispositions:
+    truck: 470
+- source: capture:20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 120
+- source: capture:20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel
+  original_label: car
+  dispositions:
+    car: 88
+- source: capture:20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel
+  original_label: person
+  dispositions:
+    person: 50
+- source: capture:20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel
+  original_label: truck
+  dispositions:
+    truck: 5
+- source: capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 71
+- source: capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel
+  original_label: car
+  dispositions:
+    car: 59
+- source: capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel
+  original_label: person
+  dispositions:
+    person: 57
+- source: capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel
+  original_label: truck
+  dispositions:
+    truck: 8
+- source: capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 1
+- source: capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 40
+- source: capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel
+  original_label: car
+  dispositions:
+    car: 55
+- source: capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel
+  original_label: person
+  dispositions:
+    person: 45
+- source: capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel
+  original_label: truck
+  dispositions:
+    truck: 27
+- source: capture:20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 2
+- source: capture:20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 35
+- source: capture:20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel
+  original_label: car
+  dispositions:
+    car: 320
+- source: capture:20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel
+  original_label: person
+  dispositions:
+    person: 3
+- source: capture:20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel
+  original_label: truck
+  dispositions:
+    truck: 45
+- source: capture:20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 339
+- source: capture:20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel
+  original_label: bus
+  dispositions:
+    bus: 93
+- source: capture:20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel
+  original_label: car
+  dispositions:
+    car: 556
+- source: capture:20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel
+  original_label: person
+  dispositions:
+    person: 2
+- source: capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 45
+- source: capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel
+  original_label: Vehicle
+  dispositions:
+    ambiguous: 203
+- source: capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel
+  original_label: bus
+  dispositions:
+    bus: 63
+- source: capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel
+  original_label: car
+  dispositions:
+    car: 142
+- source: capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel
+  original_label: person
+  dispositions:
+    person: 12
+- source: capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel
+  original_label: truck
+  dispositions:
+    truck: 5
+- source: roboflow:aiv5challenge/yeonsoo-sarang
+  original_label: car
+  dispositions:
+    car: 3922
+- source: roboflow:aiv5challenge/yeonsoo-sarang
+  original_label: person
+  dispositions:
+    person: 324
+- source: roboflow:battery-detection/cone-traffic-tirxp
+  original_label: cone
+  dispositions:
+    traffic_cone: 788
+- source: roboflow:battery-detection/cone-traffic-tirxp
+  original_label: green_light
+  dispositions:
+    excluded: 104
+- source: roboflow:battery-detection/cone-traffic-tirxp
+  original_label: red_light
+  dispositions:
+    excluded: 117
+- source: roboflow:battery-detection/cone-traffic-tirxp
+  original_label: yellow_light
+  dispositions:
+    excluded: 114
+- source: roboflow:bicycle-man/morai-bicycle
+  original_label: bicycle man
+  dispositions:
+    ambiguous: 93
+- source: roboflow:bicycle-man/morai-bicycle
+  original_label: man
+  dispositions:
+    person: 1
+- source: roboflow:cone-z2vga/katri-2-txrqf
+  original_label: '0'
+  dispositions:
+    car: 861
+- source: roboflow:cone-z2vga/katri-2-txrqf
+  original_label: '1'
+  dispositions:
+    bus: 19
+- source: roboflow:cone-z2vga/katri-2-txrqf
+  original_label: '2'
+  dispositions:
+    person: 3412
+- source: roboflow:cone-z2vga/katri-2-txrqf
+  original_label: '4'
+  dispositions:
+    ambiguous: 371
+- source: roboflow:cone-z2vga/katri-2-txrqf
+  original_label: '5'
+  dispositions:
+    pe_drum: 946
+- source: roboflow:cone-z2vga/katri-2-txrqf
+  original_label: '6'
+  dispositions:
+    ambiguous: 594
+- source: roboflow:cone-z2vga/katri-2-txrqf
+  original_label: '7'
+  dispositions:
+    bollard: 255
+- source: roboflow:cone-z2vga/katri-q4vkc
+  original_label: '0'
+  dispositions:
+    car: 861
+- source: roboflow:cone-z2vga/katri-q4vkc
+  original_label: '1'
+  dispositions:
+    bus: 19
+- source: roboflow:cone-z2vga/katri-q4vkc
+  original_label: '2'
+  dispositions:
+    person: 3412
+- source: roboflow:cone-z2vga/katri-q4vkc
+  original_label: '4'
+  dispositions:
+    ambiguous: 371
+- source: roboflow:cone-z2vga/katri-q4vkc
+  original_label: '5'
+  dispositions:
+    pe_drum: 946
+- source: roboflow:cone-z2vga/katri-q4vkc
+  original_label: '6'
+  dispositions:
+    ambiguous: 594
+- source: roboflow:cone-z2vga/katri-q4vkc
+  original_label: '7'
+  dispositions:
+    bollard: 255
+- source: roboflow:cone-z2vga/katri_kids-2-x5xnl
+  original_label: '0'
+  dispositions:
+    car: 457
+- source: roboflow:cone-z2vga/katri_kids-2-x5xnl
+  original_label: '3'
+  dispositions:
+    person: 99
+- source: roboflow:cone-z2vga/katri_kids-2-x5xnl
+  original_label: '5'
+  dispositions:
+    pe_drum: 46
+- source: roboflow:cone-z2vga/katri_kids-2-x5xnl
+  original_label: '7'
+  dispositions:
+    bollard: 65
+- source: roboflow:cone-z2vga/katri_kids-zblud
+  original_label: '0'
+  dispositions:
+    car: 457
+- source: roboflow:cone-z2vga/katri_kids-zblud
+  original_label: '3'
+  dispositions:
+    person: 99
+- source: roboflow:cone-z2vga/katri_kids-zblud
+  original_label: '5'
+  dispositions:
+    pe_drum: 46
+- source: roboflow:cone-z2vga/katri_kids-zblud
+  original_label: '7'
+  dispositions:
+    bollard: 65
+- source: roboflow:cone-z2vga/merge-axyff
+  original_label: '0'
+  dispositions:
+    car: 1318
+- source: roboflow:cone-z2vga/merge-axyff
+  original_label: '1'
+  dispositions:
+    bus: 19
+- source: roboflow:cone-z2vga/merge-axyff
+  original_label: '2'
+  dispositions:
+    person: 3412
+- source: roboflow:cone-z2vga/merge-axyff
+  original_label: '3'
+  dispositions:
+    person: 99
+- source: roboflow:cone-z2vga/merge-axyff
+  original_label: '4'
+  dispositions:
+    ambiguous: 371
+- source: roboflow:cone-z2vga/merge-axyff
+  original_label: '5'
+  dispositions:
+    pe_drum: 992
+- source: roboflow:cone-z2vga/merge-axyff
+  original_label: '6'
+  dispositions:
+    ambiguous: 594
+- source: roboflow:cone-z2vga/merge-axyff
+  original_label: '7'
+  dispositions:
+    bollard: 320
+- source: roboflow:cone-z2vga/ssibal-sjav5
+  original_label: '0'
+  dispositions:
+    car: 1229
+- source: roboflow:cone-z2vga/ssibal-sjav5
+  original_label: '1'
+  dispositions:
+    bus: 111
+- source: roboflow:cone-z2vga/ssibal-sjav5
+  original_label: '2'
+  dispositions:
+    person: 3179
+- source: roboflow:cone-z2vga/ssibal-sjav5
+  original_label: '3'
+  dispositions:
+    person: 407
+- source: roboflow:cone-z2vga/ssibal-sjav5
+  original_label: '4'
+  dispositions:
+    ambiguous: 881
+- source: roboflow:cone-z2vga/ssibal-sjav5
+  original_label: '5'
+  dispositions:
+    pe_drum: 557
+- source: roboflow:cone-z2vga/ssibal-sjav5
+  original_label: '6'
+  dispositions:
+    ambiguous: 233
+- source: roboflow:dh-mzmhr/animal-tohen
+  original_label: animal
+  dispositions:
+    ambiguous: 11055
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: barrigate
+  dispositions:
+    concrete_barricade: 691
+    excluded: 9
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: bollard
+  dispositions:
+    bollard: 399
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: cargo box
+  dispositions:
+    cargo_box: 424
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: dog
+  dispositions:
+    ambiguous: 291
+    deer: 9
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: lane bar
+  dispositions:
+    excluded: 315
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: motorcycle
+  dispositions:
+    motorcycle: 400
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: pe barrigate
+  dispositions:
+    pe_firewall: 397
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: pe drum
+  dispositions:
+    pe_drum: 745
+    traffic_barrel: 50
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: speed
+  dispositions:
+    excluded: 214
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: steel barrigate
+  dispositions:
+    steel_barricade: 201
+- source: roboflow:enzo-mdikr/my-first-project-eeree
+  original_label: wood box
+  dispositions:
+    wooden_box: 200
+- source: roboflow:hl-fma/hlfma_2
+  original_label: car
+  dispositions:
+    car: 2
+- source: roboflow:hl-fma/hlfma_2
+  original_label: object
+  dispositions:
+    ambiguous: 2208
+- source: roboflow:hl-fma/hlfma_2
+  original_label: person
+  dispositions:
+    person: 7028
+- source: roboflow:hl-fma/hlfma_3
+  original_label: bus
+  dispositions:
+    bus: 1601
+- source: roboflow:hl-fma/hlfma_3
+  original_label: car
+  dispositions:
+    car: 3463
+- source: roboflow:hl-fma/hlfma_3
+  original_label: others
+  dispositions:
+    ambiguous: 2
+- source: roboflow:hl-fma/hlfma_3
+  original_label: person
+  dispositions:
+    person: 12052
+- source: roboflow:hl-fma/hlfma_3
+  original_label: truck
+  dispositions:
+    truck: 1762
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '0'
+  dispositions:
+    car: 2162
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '1'
+  dispositions:
+    bus: 1114
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '2'
+  dispositions:
+    person: 501
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '3'
+  dispositions:
+    person: 2181
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '4'
+  dispositions:
+    ambiguous: 466
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '5'
+  dispositions:
+    pe_drum: 2635
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '6'
+  dispositions:
+    ambiguous: 505
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '7'
+  dispositions:
+    bollard: 1560
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '8'
+  dispositions:
+    cargo_box: 165
+- source: roboflow:jjj-nx9di/katri_new_data-xkbev
+  original_label: '9'
+  dispositions:
+    ambiguous: 1803
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: 3-traffic light-green
+  dispositions:
+    excluded: 1020
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: 3-traffic light-red
+  dispositions:
+    excluded: 444
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: 3-traffic light-yellow
+  dispositions:
+    excluded: 120
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: 4-traffic light-green left arrow
+  dispositions:
+    excluded: 39
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: 4-traffic light-green
+  dispositions:
+    excluded: 1362
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: 4-traffic light-red
+  dispositions:
+    excluded: 572
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: car
+  dispositions:
+    car: 3274
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: obstacle
+  dispositions:
+    ambiguous: 10696
+    cargo_box: 11
+    wooden_box: 3
+    traffic_barrel: 4
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: person
+  dispositions:
+    person: 1092
+- source: roboflow:mino-qjf5p/vi2re
+  original_label: traffic_sign_limit30
+  dispositions:
+    excluded: 101
+- source: roboflow:parkminseo/final-ftuy2
+  original_label: box
+  dispositions:
+    ambiguous: 391
+- source: roboflow:parkminseo/final-ftuy2
+  original_label: bus
+  dispositions:
+    bus: 621
+- source: roboflow:parkminseo/final-ftuy2
+  original_label: car
+  dispositions:
+    car: 448
+- source: roboflow:parkminseo/final-ftuy2
+  original_label: green
+  dispositions:
+    excluded: 844
+- source: roboflow:parkminseo/final-ftuy2
+  original_label: human
+  dispositions:
+    person: 431
+- source: roboflow:parkminseo/final-ftuy2
+  original_label: red
+  dispositions:
+    excluded: 748
+- source: roboflow:parkminseo/final-ftuy2
+  original_label: yellow
+  dispositions:
+    excluded: 488
+- source: roboflow:s-workspace-p9mvp/morai_obstacle
+  original_label: person
+  dispositions:
+    person: 114
+- source: roboflow:selfcar/morai_test-t3i2r
+  original_label: '0'
+  dispositions:
+    pe_drum: 14787
+- source: roboflow:selfcar/morai_test-t3i2r
+  original_label: '1'
+  dispositions:
+    bollard: 22663
+- source: roboflow:selfcar/morai_test-t3i2r
+  original_label: '2'
+  dispositions:
+    bollard: 27084
+- source: roboflow:seonhyung-kim/morai-perception
+  original_label: animal
+  dispositions:
+    ambiguous: 1361
+- source: roboflow:seonhyung-kim/morai-perception
+  original_label: obstacle
+  dispositions:
+    ambiguous: 5036
+- source: roboflow:seonhyung-kim/morai-perception
+  original_label: pedestrian
+  dispositions:
+    ambiguous: 11349
+- source: roboflow:seonhyung-kim/morai-perception
+  original_label: traffic_light
+  dispositions:
+    excluded: 2049
+- source: roboflow:seonhyung-kim/morai-perception
+  original_label: vehicle
+  dispositions:
+    ambiguous: 3198
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: Concrete_1
+  dispositions:
+    concrete_barricade: 468
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: Concrete_2
+  dispositions:
+    concrete_barricade: 461
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: Fence
+  dispositions:
+    steel_barricade: 36
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: Obstacle_Yellow
+  dispositions:
+    ambiguous: 141
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: PE
+  dispositions:
+    pe_drum: 1036
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: TL_go
+  dispositions:
+    excluded: 410
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: TL_stop
+  dispositions:
+    excluded: 789
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: sign_30
+  dispositions:
+    excluded: 264
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: sign_40
+  dispositions:
+    excluded: 99
+- source: roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh
+  original_label: sign_50
+  dispositions:
+    excluded: 84
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: Bus
+  dispositions:
+    bus: 75
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: Car
+  dispositions:
+    car: 277
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: GreenTraffic
+  dispositions:
+    excluded: 132
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: LeftTurnTraffic
+  dispositions:
+    excluded: 105
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: Obstacle
+  dispositions:
+    ambiguous: 349
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: Person
+  dispositions:
+    person: 286
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: RedTraffic
+  dispositions:
+    excluded: 164
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: StreetLight
+  dispositions:
+    excluded: 556
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: Truck
+  dispositions:
+    truck: 210
+- source: roboflow:yolo-m5lvd/detection-bzetd
+  original_label: bike
+  dispositions:
+    ambiguous: 191
+- source: roboflow:yuna-z15io/obstcle-mi0kq
+  original_label: dynamic
+  dispositions:
+    ambiguous: 1423
+- source: roboflow:yuna-z15io/obstcle-mi0kq
+  original_label: static
+  dispositions:
+    ambiguous: 1214
+    bus: 1
+remaining:
+- Quarantined ambiguous/missing/composite labels require individual review.
+- pHash candidates are unconfirmed, preserved, and cross-split candidates excluded.
+- Absent classes are not trained; missing_target_classes lists coverage gaps.
+- Weather, distance and tunnel status remain unknown without independent evidence.
+training_performed: false
+operating_model_changed: false
+all_sources_inventoried: true
+reviewed_subset_ready: true
+bbox_pilot_missing_evaluation_classes:
+- person
+- dog
+- deer
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+- bollard
+- box
+- concrete_barrier
+- steel_barricade
+- traffic_drum
+- plastic_barrier
+- traffic_cone
+- stroller
+bbox_pilot_ready: false
+visual_review_coverage:
+  reviewed_images: 286
+  planned_sample_buckets: 132
+  planned_unique_sample_images: 4799
+  reviewed_sample_images: 236
+  fully_reviewed_sample_buckets: 4
+  full_visual_review_complete: false
+  note: Generated samples are not completed reviews. Quarantined unresolved images
+    are not training data.
+archive_verification:
+  sha256: f929df243fa5c3585068bd1c536fe82d638a8dee4346cd0f192afa28cf2bbad4
+  verified: 22
+  total_bytes: 2911061824

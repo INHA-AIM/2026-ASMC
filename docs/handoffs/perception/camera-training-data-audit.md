@@ -3,6 +3,85 @@
 > 기준일: 2026-10-09. 사용자 지정 Roboflow 22개 프로젝트와 기존 Capture GT를 대상으로 한다.
 > 운영 모델·ROS 인터페이스·confidence·fusion·컨테이너 마운트는 변경하지 않는다.
 
+## 현재 기준 — 2026-10-10 v2 16종
+
+이 절과 [v2 라벨 정책](../../../config/datasets/camera_object_labels_v2.json),
+[v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
+아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
+**이번 PR #78에서 X teacher 검증·v3 준비를 진행한다. PR #77의 운영 실행은 수정하지 않는다.**
+최신 수치·갤러리·남은 조건은 [v3 실행 결과](#v3x-teacher-실행-결과--2026-10-10)를 먼저 읽는다.
+
+MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
+MORAI 사용자 표기는 실제 gRPC API 이름이 아니며, 미확인 API 이름은 null로 둔다.
+
+| MORAI 사용자 표기 | 학습 클래스 | 소비 그룹 |
+|---|---|---|
+| deer | deer | animal |
+| bicycle | bicycle | vehicle |
+| scooter + sportsbike | motorcycle | vehicle |
+| bollard | bollard | obstacle |
+| cargobox + woodbox | box | obstacle |
+| concrete_barricade + concrete-barrier | concrete_barrier | obstacle |
+| steel_barricade | steel_barricade | obstacle |
+| PE drum + redbarrel + trafficbarrel + yellowbarrel | traffic_drum | obstacle |
+| pe firewall | plastic_barrier | obstacle |
+| color cone + rubber cone | traffic_cone | obstacle |
+
+학습 후보 16종은 `person, dog, deer, bicycle, car, motorcycle, bus, truck,
+bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier,
+traffic_cone, stroller`다. 입식 전동 킥보드는 제외한다. 자전거와 steel barricade는 독립
+학습 클래스로 유지한다. `box`로 합쳐도 CargoBox/WoodBox의 하위 유형은 평가에 남긴다.
+
+실행 도구의 `canonical`은 검수한 세부 의미다. `training_map`을 거쳐 `training_class`와
+`consumer_group`을 생성한다. 예: `wooden_box → box → obstacle`,
+`pe_drum/traffic_barrel → traffic_drum → obstacle`. `original_label`,
+`original_category_id`, `original_xyxy`, mask와 검수 근거는 유지한다.
+`morai_asset_name`은 독립 확인 없이는 null이며 teacher가 반환한 이름과 혼동하지 않는다.
+
+**소스별 확정 대응:** Katri 여섯 소스의 0=car, 1=bus, 2/3=person,
+5=PE_Drum, 7=bollard; 4는 탑승자 복합 박스, 6은 dog/deer 혼합이다.
+jjj의 8=CargoBox→box, 9=box/concrete_barrier/steel_barricade/plastic_barrier 혼합이다.
+selfcar는 **0=PE_Drum→traffic_drum, 1/2=bollard**로 Katri와 다르다.
+Enzo의 barrigate/pe barrigate는 각각 concrete_barricade/pe_firewall 의미에서 새 학습
+클래스로 연결한다. tooth-decay의 **Fence=steel_barricade**, Concrete_1/2=concrete_barrier,
+PE=traffic_drum이다. Park의 box는 WoodBox/PE_Firewall 혼합이므로 개별 분류한다.
+그 밖의 animal, object/obstacle, vehicle, static/dynamic, 복합 탑승자는 이름만 바꾸지 않는다.
+
+### 검수·export의 범위 관리
+
+v1 검수의 종류·좌표 수정은 읽을 수 있다. 다만 새 방벽류가 추가된 v2의 완전성을 자동
+승인하지 않는다. 새 검수 JSON의 `review_scope: camera_objects_v2_16`이 같은 영상에서
+새 대상까지 확인했음을 나타낸다. 과거 기록은 덮어쓰지 않는다.
+사람이 새 박스를 추가할 때 `additions`에 새 id/canonical/xyxy를 기록하고
+`human_confirmed: true`와 검수자를 남긴다. teacher 제안은 자동 승인되지 않는다.
+
+### YOLOE-26x 검증 경로
+
+[고정 실험 설정](../../../config/experiments/camera_yoloe_x_teacher_v1.json)에 base18,
+rich21, bollard/plastic 표현의 단독·결합 대조를 기록했다. X checkpoint 전용 embedding,
+PyTorch FP16 batch1, 전방1280/측방640, 3뷰 Ego mask를 사용한다.
+1280 OOM은 failure.json에 보존하고 960을 명시적으로 별도 실행한다. TensorRT는 생성하지 않는다.
+
+[Capture GT 준비기](../../../tools/perception/prepare_capture_teacher_gt.py)는
+run·원본 종류·actor ID·연속 frame 구간으로 독립 RGB 검수 결과를 연결한다.
+같은 숫자 actor ID의 Obstacle과 Vehicle이 공존할 수 있어 run+ID만으로 합치지 않는다.
+Teacher 출력은 GT로 사용하지 않는다. actor 종류 확인만으로 영상의 누락 주석까지
+검증됐다고 판단하지 않으며, 완전성 미확인 영상은 precision·teacher 승인에서 제외한다.
+
+[평가·제안 도구](../../../tools/perception/camera_teacher_audit.py)는 selection에서
+0.40 대조와 0.10–0.70 탐색을 수행한다. 클래스별 GT/예측 각각 20개 이상,
+precision ≥95%인 후보 중 recall 최대(동률이면 높은 confidence)를 선택하고 heldout에
+고정한다. heldout에서도 같은 지원 수·precision 조건을 확인해야 teacher 클래스로 승인한다.
+세부 의미·16 학습 클래스·4 소비 그룹을 구분하고 사슴→dog는 animal 위치 검출로만 인정한다.
+
+승인된 클래스만 원본 혼합 박스와 일대일 IoU ≥0.5로 연결한다. 제안 파일은
+`decision: pending`, `requires_human_confirmation: true`를 남긴다.
+사람+자전거 복합 박스를 한 클래스의 박스로 확정하거나 두 클래스로 복제하지 않는다.
+Teacher 미검출은 빈 정답이 아니다. 모든 이름 변경·추가 박스는 사람이 최종 확인한다.
+
+진행 순서는 명확한 자료의 v2 범위 검수 → animal/6 → 숫자9 → box/object/obstacle이다.
+운영 모델·ROS 계약·차량 제어는 유지하고, 추가 수집·학습은 이번 범위 밖이다.
+
 ## 작업 경계
 
 `feat/camera-training-data-audit` / `asmc-camera-data-audit`에서 별도로 작업한다.
@@ -208,6 +287,10 @@ CargoBox·WoodBox와 기존 7종을 우선 늘린다. 혼합 `object/obstacle`, 
 
 ## 2026-10-10 후속: 원본 클래스 의미 확인과 활용 우선순위
 
+> 이 절은 v1 대응표 당시의 이력이다. 아래의 cargo_box/wooden_box/traffic_barrel과
+> 방벽 `requires_class_decision`은 현재 학습 명칭이 아니다. 현재 v2에서는 box/traffic_drum과
+> concrete_barrier/plastic_barrier로 연결하며, 상단 계약과 최신 v3 결과를 적용한다.
+
 **위 v2의 76,297개 격리는 데이터 품질 불합격 수가 아니다.** 이 중 76,291개에
 `visual_review_required`가 있었다. 숫자 이름의 의미 미확인, 미검수, 주석 범위 미확인도
 같은 격리 집계에 들어갔다. 사유는 서로 중복되므로 합산하지 않는다. 이름을 맞추기 어렵다는
@@ -340,3 +423,117 @@ python tools/perception/camera_data_audit.py verify-export \
 GitHub CI는 `recent account payments have failed or your spending limit needs to be increased`로
 job 시작 전 차단됐다. 코드 시험 실패나 기존 facade 실패와 섞지 않는다.
 PR #77의 HEAD와 runtime worktree·컨테이너 마운트는 변경하지 않았다.
+
+## v3·X teacher 실행 결과 — 2026-10-10
+
+[고정 수치·SHA](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/summary.json),
+[전체 소스 대응 집계](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/source-label-resolution-v2.json),
+[검증 기록과 코드 snapshot](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/validation.json),
+[v3 baseline](../../../config/baselines/perception_camera_training_data_v3.yaml)을 함께 읽는다.
+
+- 원본 Roboflow 46,326장·209,166개 주석에서 의미가 풀린 후보 142,103개,
+  제외 11,254개, 혼합·미확정 55,809개다. v1 inventory보다 103,340개가 추가로 해석됐다.
+  이는 증강·중복을 포함한 이름 대응 수이며 학습 승인 수가 아니다.
+- Enzo 100개 독립 RGB 검토와 기존 Capture 일부의 새 범위 재검수로 **v3 95장·250객체**를
+  생성했다. box 96(CargoBox 46/WoodBox 50), concrete_barrier 98, traffic_drum 50,
+  person 3, car 2, truck 1이다. train 3 / selection 1 / heldout 91이다.
+  기존 보수적 장면 그룹과 고정 Capture split을 옮겨 분포를 맞추지 않았다.
+- export의 클래스 ID·원본 SHA·실제 YOLO 좌표·객체 수·파일 구성 재검증을 통과했다.
+  채택 자료 미해결 라벨·구조 오류·확인된 정확 픽셀 split 누출은 각각 0이다.
+  **부분집합 생성은 통과했으나 16종 파일럿 학습은 준비되지 않았다.** 클래스와
+  train/selection/heldout별 정답이 부족하다. 과거 v2 119장을 새 범위로 무조건 승격하지 않았다.
+- 첫 v3 이관에서 v1의 콘크리트 방벽 제외 override 98개가 남아 새 대상이 누락됐다.
+  재검증에서 발견해 사용자 제공 소스 의미와 RGB 검토로 바로잡았다.
+  [실패 근거](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/migration-failure-r1.json)와
+  `curated-v3-rejected-r1` / `camera_objects_bbox_v3-rejected-r1`을 보존했다. 실패 버전은 학습에 쓰지 않는다.
+- X checkpoint SHA는 `d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639`다.
+  공식 checkpoint·encoder에서 5개 prompt embedding을 각각 생성하고 같은 317프레임을 실제 추론했다.
+  PyTorch FP16 batch1·전방1280/측방640·3뷰 mask, network-none, MORAI 종료 상태다.
+  TensorRT export·OOM·silent fallback은 없었다.
+- 기존 Capture selection/heldout 5,667프레임 중 20개 간격과 독립 actor 참고 영상으로
+  고정한 **317프레임의 초기 진단**이다. 완전한 16종 주석을 확인한 정식 GT가 이 표본에는
+  없어서 precision·전체 데이터 recall·confidence 선정·teacher 승인은 하지 않았다.
+  33개 actor 종류 참고는 Codex의 독립 RGB 검토이며 사람의 최종 확인과 구분한다.
+  과거부터 공개·평가된 heldout을 새 blind test로 부르지 않는다.
+- 부분 GT의 confidence 0.40·IoU ≥0.5 대응에서 base18/rich21 모두 box 2/52,
+  cone 87/114다. box는 0.25에서 4/52, 0.10에서도 11/52다. 이 수는 확인한 주석만의
+  위치 대응 진단이며 GT 없는 배경의 precision을 만들지 않는다.
+  상자 주석은 저장 영상에서 small(<32² pixels) 36개, medium 6개, large 10개다.
+  작은 객체가 많은 이 표본을 전체 장애물·근거리 상자 성능으로 일반화하지 않는다.
+  `doe`·`wooden crate`·`traffic drum` 추가는 이 표본의 통합 클래스 대응을 늘리지 못했다.
+  plastic barrier는 base18/rich21 1/86, bollard21 2/86, plastic21/combined21 0/86이다.
+  이 차이를 근거로 최종 vocabulary를 확정하지 않았다.
+- 승인 teacher 클래스와 teacher가 적용한 Roboflow 라벨은 **0**이다.
+  X teacher로 모든 혼합 라벨을 자동 분리할 수 있다는 가정은 지지되지 않았다.
+  정답·지원 수를 갖춘 클래스만 다시 정식 selection → 고정 heldout 검증으로 연결한다.
+  기존 원본 박스가 명확하면 이름 통일과 영상 검수를 먼저 활용하는 편이 낫다.
+
+브라우저 시작점은 `http://localhost:8768/`다. 날짜·실험 번호가 있는
+`camera-training-data-audit-v3/`와 `camera-yoloe-x-teacher-v1/`을 목차에서 선택한다.
+teacher 비교 갤러리는 원본 GT·예측 bbox를 표시하고 대응 instance mask는 NPZ에 보존했다.
+`camera-yoloe-x-teacher-v1/capture-gt-review/`는 teacher 예측 없이 독립 Capture 종류 후보와
+원본 박스만 보여 준다. `actor_review.human_confirmation_pending`이 있는 후보는 미확정이다.
+새 검수 페이지는 세부 의미·통합 학습 클래스·원본 category ID를 함께 보여 준다.
+사람 확인 체크와 새 박스 JSON 입력을 제공하며 다운로드한 기록만 다음 export에 반영한다.
+
+새 버전 생성 명령은 다음과 같다. 출력 경로가 이미 있으면 덮어쓰지 않는다.
+
+```bash
+python tools/perception/camera_data_audit.py curate \
+  --inventory "$ASMC_DATA/roboflow/versioned-inventory-v1/inventory.jsonl" \
+    "$ASMC_DATA/roboflow/snapshot-inventory-v2/inventory.jsonl" \
+    "$ASMC_DATA/roboflow/capture-inventory-v1/inventory.jsonl" \
+  --labels config/datasets/camera_object_labels_v2.json \
+  --reviews "$ASMC_DATA/roboflow/visual-review-v3-corrected/reviews.json" \
+  --output "$ASMC_DATA/roboflow/curated-v3" \
+  --export "$ASMC_DATA/dataset_versions/camera_objects_bbox_v3"
+python tools/perception/camera_data_audit.py verify-export \
+  --dataset "$ASMC_DATA/dataset_versions/camera_objects_bbox_v3"
+```
+
+[GT 준비기](../../../tools/perception/prepare_capture_teacher_gt.py)의 `--actor-reviews`는
+독립 RGB 근거·SHA·원본 종류·actor·frame 범위를, `--image-reviews`는 v2 범위의 영상 완전성
+확인 기록을 받는다. `camera_teacher_audit.py infer`는 config/profile/checkpoint/embedding을
+검사한다. 필요하면 `--image-prefix <호스트 데이터 경로> --image-root /data`로 읽기 경로만 변환한다.
+`suggest`는 검증 report와 checkpoint·prompt·config를 맞추고 기존 혼합 박스에 한해 제안한다.
+
+격리 GPU 환경의 재현 순서는 아래와 같다. checkpoint와 encoder는 실행 전에 준비하고
+고정 SHA를 확인한다. `/audit`는 이 데이터 감사 worktree의 read-only mount,
+`/prepared`는 X 전용 모델 디렉터리, `/results`는 새 실험 결과 디렉터리다.
+공유 ROS 컨테이너에는 설치하거나 덮어쓰지 않는다.
+
+```bash
+export PYTHONPATH=/opt/seg-deps:/audit/src/asmc_camera/src:$PYTHONPATH
+python3 /audit/tools/perception/prepare_yoloe_l.py \
+  --directory /prepared --scale x --stage prompts --profile rich21 \
+  --config /audit/config/experiments/camera_yoloe_x_teacher_v1.json
+python3 /audit/tools/perception/camera_teacher_audit.py infer \
+  --gt /data/roboflow/capture-teacher-gt-v1/diagnostic-sample.jsonl \
+  --weights /prepared/yoloe-26x-seg.pt --embeddings /prepared/rich21.npz \
+  --profile rich21 --front-width 1280 \
+  --hood-config /audit/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml \
+  --labels /audit/config/datasets/camera_object_labels_v2.json \
+  --config /audit/config/experiments/camera_yoloe_x_teacher_v1.json \
+  --image-prefix "$ASMC_DATA" --image-root /data \
+  --output /results/rich21-repeat-1280
+```
+
+여기서 `--image-prefix`는 manifest에 기록된 **호스트의 절대 데이터 경로**다.
+다섯 profile은 각각 새 embedding과 출력 경로로 실행한다. 이미 저장한 결과의 재집계에는
+`camera_teacher_audit.py analyze`와 `report_camera_teacher_audit.py`를 사용한다.
+전자는 checkpoint·embedding·prompt·config가 섞인 결과를 거부하고 승인 보고서에 SHA를 연결한다.
+후자는 `--root`, `--gt`, `--labels`, `--config`, `--environment`, 선택적인 `--evidence`로
+원본 예측에서 비교 표·갤러리·요약을 재생성하며 추론하지 않는다.
+`camera_teacher_audit.py review --gt ... --labels ... --config ... --output <새 경로>`는
+독립 GT 검토 화면을 재생성한다. 브라우저는 서버 파일을 쓰지 않고 확인 기록을 다운로드한다.
+
+검증은 데이터 CPU 50개·teacher CPU 10개·기존 측정/목차 6개·카메라 검출 회귀 75개가
+통과했다. 메시지가 없는 격리 환경의 첫 import 실패는 `asmc_msgs`·`asmc_camera`를
+private `/tmp` workspace에서 빌드해 해결했다. 문서 migration·계약·topic policy,
+v3 export 재검증·검수 HTML JavaScript 구문·갤러리 링크와 HTTP도 별도로 확인한다.
+Hosted CI의 계정 결제/사용 한도 차단은 로컬 시험 결과와 구분한다.
+
+남은 과제는 train/selection의 명확한 소스 검수 확대, Capture의 우선 객체 종류·완전성 사람 확인,
+animal/6 → 9 → box/object/obstacle 순의 개별 재분류다. source 라벨 의미가 확인됐다는 이유로
+새 박스·teacher 예측까지 사람이 검수했다고 기록하지 않는다. 필요한 터널·원거리·가림 자료는
+이 커버리지를 본 뒤 수집하며, 이번에는 학습이나 수집을 시작하지 않았다.

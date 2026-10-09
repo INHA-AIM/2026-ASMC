@@ -1,0 +1,871 @@
+{
+  "schema_version": 1,
+  "label_policy_sha256": "a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698",
+  "source_profiles_sha256": "e6832405538986a8505b832aa0f3db747a391e38be858f8ac9e936ba818aa47a",
+  "inventory_sha256": {
+    "../data/roboflow/versioned-inventory-v1/inventory.jsonl": "934d80efd1838788f1ac355536cd610dec1b54704fd1b4de16673c4294be71b8",
+    "../data/roboflow/snapshot-inventory-v2/inventory.jsonl": "73c8f2a703f229466245ed2fd7941c9ed64b8a3323f69e87d56176bf70d05a92"
+  },
+  "totals": {
+    "images": 46326,
+    "images_without_ambiguous_labels": 29588,
+    "annotations": 209166,
+    "candidate_annotations": 142103,
+    "excluded_annotations": 11254,
+    "ambiguous_annotations": 55809,
+    "newly_resolved_candidate_annotations": 103340
+  },
+  "sources": {
+    "roboflow:aiv5challenge/yeonsoo-sarang": {
+      "images": 2459,
+      "labels": {
+        "person": {
+          "annotations": 324,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "car": {
+          "annotations": 3922,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        }
+      }
+    },
+    "roboflow:battery-detection/cone-traffic-tirxp": {
+      "images": 591,
+      "labels": {
+        "cone": {
+          "annotations": 788,
+          "canonical": "traffic_cone",
+          "disposition": "candidate",
+          "training_class": "traffic_cone"
+        },
+        "yellow_light": {
+          "annotations": 114,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "red_light": {
+          "annotations": 117,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "green_light": {
+          "annotations": 104,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        }
+      }
+    },
+    "roboflow:bicycle-man/morai-bicycle": {
+      "images": 93,
+      "labels": {
+        "bicycle man": {
+          "annotations": 93,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "man": {
+          "annotations": 1,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        }
+      }
+    },
+    "roboflow:cone-z2vga/katri-q4vkc": {
+      "images": 301,
+      "labels": {
+        "7": {
+          "annotations": 255,
+          "canonical": "bollard",
+          "disposition": "candidate",
+          "training_class": "bollard"
+        },
+        "6": {
+          "annotations": 594,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "5": {
+          "annotations": 946,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "2": {
+          "annotations": 3412,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "4": {
+          "annotations": 371,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "0": {
+          "annotations": 861,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "1": {
+          "annotations": 19,
+          "canonical": "bus",
+          "disposition": "candidate",
+          "training_class": "bus"
+        }
+      }
+    },
+    "roboflow:cone-z2vga/katri_kids-zblud": {
+      "images": 25,
+      "labels": {
+        "0": {
+          "annotations": 457,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "3": {
+          "annotations": 99,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "5": {
+          "annotations": 46,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "7": {
+          "annotations": 65,
+          "canonical": "bollard",
+          "disposition": "candidate",
+          "training_class": "bollard"
+        }
+      }
+    },
+    "roboflow:cone-z2vga/merge-axyff": {
+      "images": 326,
+      "labels": {
+        "2": {
+          "annotations": 3412,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "0": {
+          "annotations": 1318,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "5": {
+          "annotations": 992,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "6": {
+          "annotations": 594,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "4": {
+          "annotations": 371,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "1": {
+          "annotations": 19,
+          "canonical": "bus",
+          "disposition": "candidate",
+          "training_class": "bus"
+        },
+        "7": {
+          "annotations": 320,
+          "canonical": "bollard",
+          "disposition": "candidate",
+          "training_class": "bollard"
+        },
+        "3": {
+          "annotations": 99,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        }
+      }
+    },
+    "roboflow:dh-mzmhr/animal-tohen": {
+      "images": 10213,
+      "labels": {
+        "animal": {
+          "annotations": 11055,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        }
+      }
+    },
+    "roboflow:hl-fma/hlfma_2": {
+      "images": 1634,
+      "labels": {
+        "object": {
+          "annotations": 2208,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "person": {
+          "annotations": 7028,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "car": {
+          "annotations": 2,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        }
+      }
+    },
+    "roboflow:jjj-nx9di/katri_new_data-xkbev": {
+      "images": 2215,
+      "labels": {
+        "6": {
+          "annotations": 505,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "5": {
+          "annotations": 2635,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "7": {
+          "annotations": 1560,
+          "canonical": "bollard",
+          "disposition": "candidate",
+          "training_class": "bollard"
+        },
+        "9": {
+          "annotations": 1803,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "3": {
+          "annotations": 2181,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "0": {
+          "annotations": 2162,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "2": {
+          "annotations": 501,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "1": {
+          "annotations": 1114,
+          "canonical": "bus",
+          "disposition": "candidate",
+          "training_class": "bus"
+        },
+        "4": {
+          "annotations": 466,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "8": {
+          "annotations": 165,
+          "canonical": "cargo_box",
+          "disposition": "candidate",
+          "training_class": "box"
+        }
+      }
+    },
+    "roboflow:mino-qjf5p/vi2re": {
+      "images": 7925,
+      "labels": {
+        "obstacle": {
+          "annotations": 10714,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "car": {
+          "annotations": 3274,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "person": {
+          "annotations": 1092,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "4-traffic light-green": {
+          "annotations": 1362,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "traffic_sign_limit30": {
+          "annotations": 101,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "3-traffic light-green": {
+          "annotations": 1020,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "3-traffic light-red": {
+          "annotations": 444,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "4-traffic light-red": {
+          "annotations": 572,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "3-traffic light-yellow": {
+          "annotations": 120,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "4-traffic light-green left arrow": {
+          "annotations": 39,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        }
+      }
+    },
+    "roboflow:parkminseo/final-ftuy2": {
+      "images": 1817,
+      "labels": {
+        "car": {
+          "annotations": 448,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "bus": {
+          "annotations": 621,
+          "canonical": "bus",
+          "disposition": "candidate",
+          "training_class": "bus"
+        },
+        "box": {
+          "annotations": 391,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "human": {
+          "annotations": 431,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "yellow": {
+          "annotations": 488,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "green": {
+          "annotations": 844,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "red": {
+          "annotations": 748,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        }
+      }
+    },
+    "roboflow:s-workspace-p9mvp/morai_obstacle": {
+      "images": 114,
+      "labels": {
+        "person": {
+          "annotations": 114,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        }
+      }
+    },
+    "roboflow:selfcar/morai_test-t3i2r": {
+      "images": 2577,
+      "labels": {
+        "1": {
+          "annotations": 22663,
+          "canonical": "bollard",
+          "disposition": "candidate",
+          "training_class": "bollard"
+        },
+        "0": {
+          "annotations": 14787,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "2": {
+          "annotations": 27084,
+          "canonical": "bollard",
+          "disposition": "candidate",
+          "training_class": "bollard"
+        }
+      }
+    },
+    "roboflow:seonhyung-kim/morai-perception": {
+      "images": 4053,
+      "labels": {
+        "vehicle": {
+          "annotations": 3198,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "pedestrian": {
+          "annotations": 11349,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "obstacle": {
+          "annotations": 5036,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "traffic_light": {
+          "annotations": 2049,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "animal": {
+          "annotations": 1361,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        }
+      }
+    },
+    "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh": {
+      "images": 2374,
+      "labels": {
+        "TL_stop": {
+          "annotations": 789,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "PE": {
+          "annotations": 1036,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "sign_50": {
+          "annotations": 84,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "sign_30": {
+          "annotations": 264,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "Concrete_2": {
+          "annotations": 461,
+          "canonical": "concrete_barricade",
+          "disposition": "candidate",
+          "training_class": "concrete_barrier"
+        },
+        "Concrete_1": {
+          "annotations": 468,
+          "canonical": "concrete_barricade",
+          "disposition": "candidate",
+          "training_class": "concrete_barrier"
+        },
+        "sign_40": {
+          "annotations": 99,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "TL_go": {
+          "annotations": 410,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "Obstacle_Yellow": {
+          "annotations": 141,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "Fence": {
+          "annotations": 36,
+          "canonical": "steel_barricade",
+          "disposition": "candidate",
+          "training_class": "steel_barricade"
+        }
+      }
+    },
+    "roboflow:yolo-m5lvd/detection-bzetd": {
+      "images": 357,
+      "labels": {
+        "Obstacle": {
+          "annotations": 349,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "StreetLight": {
+          "annotations": 556,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "Person": {
+          "annotations": 286,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "RedTraffic": {
+          "annotations": 164,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "Car": {
+          "annotations": 277,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "bike": {
+          "annotations": 191,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "GreenTraffic": {
+          "annotations": 132,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "LeftTurnTraffic": {
+          "annotations": 105,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "Bus": {
+          "annotations": 75,
+          "canonical": "bus",
+          "disposition": "candidate",
+          "training_class": "bus"
+        },
+        "Truck": {
+          "annotations": 210,
+          "canonical": "truck",
+          "disposition": "candidate",
+          "training_class": "truck"
+        }
+      }
+    },
+    "roboflow:yuna-z15io/obstcle-mi0kq": {
+      "images": 1073,
+      "labels": {
+        "dynamic": {
+          "annotations": 1423,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "static": {
+          "annotations": 1215,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        }
+      }
+    },
+    "roboflow:cone-z2vga/katri-2-txrqf": {
+      "images": 301,
+      "labels": {
+        "5": {
+          "annotations": 946,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "2": {
+          "annotations": 3412,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "6": {
+          "annotations": 594,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "0": {
+          "annotations": 861,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "1": {
+          "annotations": 19,
+          "canonical": "bus",
+          "disposition": "candidate",
+          "training_class": "bus"
+        },
+        "4": {
+          "annotations": 371,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "7": {
+          "annotations": 255,
+          "canonical": "bollard",
+          "disposition": "candidate",
+          "training_class": "bollard"
+        }
+      }
+    },
+    "roboflow:cone-z2vga/katri_kids-2-x5xnl": {
+      "images": 25,
+      "labels": {
+        "0": {
+          "annotations": 457,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "3": {
+          "annotations": 99,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "5": {
+          "annotations": 46,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "7": {
+          "annotations": 65,
+          "canonical": "bollard",
+          "disposition": "candidate",
+          "training_class": "bollard"
+        }
+      }
+    },
+    "roboflow:cone-z2vga/ssibal-sjav5": {
+      "images": 304,
+      "labels": {
+        "2": {
+          "annotations": 3179,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "5": {
+          "annotations": 557,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "4": {
+          "annotations": 881,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "0": {
+          "annotations": 1229,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "3": {
+          "annotations": 407,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "6": {
+          "annotations": 233,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "1": {
+          "annotations": 111,
+          "canonical": "bus",
+          "disposition": "candidate",
+          "training_class": "bus"
+        }
+      }
+    },
+    "roboflow:enzo-mdikr/my-first-project-eeree": {
+      "images": 1229,
+      "labels": {
+        "barrigate": {
+          "annotations": 700,
+          "canonical": "concrete_barricade",
+          "disposition": "candidate",
+          "training_class": "concrete_barrier"
+        },
+        "lane bar": {
+          "annotations": 315,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "cargo box": {
+          "annotations": 424,
+          "canonical": "cargo_box",
+          "disposition": "candidate",
+          "training_class": "box"
+        },
+        "wood box": {
+          "annotations": 200,
+          "canonical": "wooden_box",
+          "disposition": "candidate",
+          "training_class": "box"
+        },
+        "pe drum": {
+          "annotations": 795,
+          "canonical": "pe_drum",
+          "disposition": "candidate",
+          "training_class": "traffic_drum"
+        },
+        "speed": {
+          "annotations": 214,
+          "canonical": null,
+          "disposition": "excluded",
+          "training_class": null
+        },
+        "pe barrigate": {
+          "annotations": 397,
+          "canonical": "pe_firewall",
+          "disposition": "candidate",
+          "training_class": "plastic_barrier"
+        },
+        "motorcycle": {
+          "annotations": 400,
+          "canonical": "motorcycle",
+          "disposition": "candidate",
+          "training_class": "motorcycle"
+        },
+        "steel barrigate": {
+          "annotations": 201,
+          "canonical": "steel_barricade",
+          "disposition": "candidate",
+          "training_class": "steel_barricade"
+        },
+        "dog": {
+          "annotations": 300,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        },
+        "bollard": {
+          "annotations": 399,
+          "canonical": "bollard",
+          "disposition": "candidate",
+          "training_class": "bollard"
+        }
+      }
+    },
+    "roboflow:hl-fma/hlfma_3": {
+      "images": 6320,
+      "labels": {
+        "person": {
+          "annotations": 12052,
+          "canonical": "person",
+          "disposition": "candidate",
+          "training_class": "person"
+        },
+        "car": {
+          "annotations": 3463,
+          "canonical": "car",
+          "disposition": "candidate",
+          "training_class": "car"
+        },
+        "bus": {
+          "annotations": 1601,
+          "canonical": "bus",
+          "disposition": "candidate",
+          "training_class": "bus"
+        },
+        "truck": {
+          "annotations": 1762,
+          "canonical": "truck",
+          "disposition": "candidate",
+          "training_class": "truck"
+        },
+        "others": {
+          "annotations": 2,
+          "canonical": null,
+          "disposition": "ambiguous",
+          "training_class": null
+        }
+      }
+    }
+  },
+  "changes_training_eligibility": false,
+  "training_performed": false,
+  "interpretation": "Counts include augmentation and duplicate records. Candidate means label meaning resolved, not visually accepted or fully annotated. Old accepted/exported dataset is unchanged."
+}
