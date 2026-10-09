@@ -172,8 +172,14 @@ def import_coco(export, project, version, policy):
             row.update(width=width, height=height, version=version,
                        annotation_path=str(annotation_path), original_split=image.get('original_split',annotation_path.parent.name),
                        original_image_id=original_image_id)
+            native_path=Path(export).parent/'native'/(str(original_image_id)+'.json')
+            native_name=None
+            if version=='unversioned-snapshot' and native_path.exists():
+                native_name=json.loads(native_path.read_text()).get('name')
+            row['original_file_name']=native_name or image['file_name']
+            row['category_id_scope']='locally_derived_snapshot_coco' if native_name else 'publisher_coco_export'
             # Preserve filename lineage without assuming adjacent images independent.
-            stem = re.split(r'\.rf\.', Path(image['file_name']).stem)[0]
+            stem = re.split(r'\.rf\.', Path(row['original_file_name']).stem)[0]
             row['augmentation_family'] = stem
             rows.append(row)
     return rows
@@ -392,11 +398,9 @@ def near_duplicate_candidates(rows, distance=6):
             for previous in representatives[previous_hash]:
                 if row['split_group'] == previous['split_group'] or row.get('pixel_sha256') == previous.get('pixel_sha256'):
                     continue
-                ratio = (row['width'] / row['height']) / (previous['width'] / previous['height'])
-                if not .98 <= ratio <= 1.02:
-                    continue
                 pair = dict(a=previous['id'], b=row['id'], distance=difference,
-                            confirmed=False, same_split=row['split'] == previous['split'])
+                            confirmed=False, same_split=row['split'] == previous['split'],
+                            aspect_ratio_changed=abs((row['width']/row['height'])/(previous['width']/previous['height'])-1)>.02)
                 pairs.append(pair)
                 if not pair['same_split']:
                     for item in (row, previous):

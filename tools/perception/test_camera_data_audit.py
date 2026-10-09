@@ -260,6 +260,14 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(len(pairs),1);self.assertFalse(pairs[0]['confirmed'])
         self.assertFalse(any(r['eligible'] for r in result));self.assertEqual(len(result),2)
 
+    def test_stretched_augmentation_not_ignored_by_aspect_ratio(self):
+        a=row(source='capture:r1',split='train');b=row(source='capture:r2',ident='b',split='heldout')
+        for r in (a,b):r.update(provenance_verified=True,annotation_complete=True,phash='0000000000000000')
+        b.update(width=200,height=80)
+        result,_=curate([a,b],POLICY);pairs=near_duplicate_candidates(result)
+        self.assertEqual(len(pairs),1);self.assertTrue(pairs[0]['aspect_ratio_changed'])
+        self.assertFalse(any(r['eligible'] for r in result))
+
     def test_unsafe_coco_image_not_read(self):
         a=row();a['issues']=['unsafe_image_path'];a['image']='/etc/passwd'
         self.assertNotIn('image_sha256', {k:v for k,v in image_facts(a).items() if k not in a})
