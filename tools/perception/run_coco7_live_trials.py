@@ -28,6 +28,7 @@ def debug_masks_enabled(job):
 def debug_topics(job):
     if not job.get('debug'): return []
     topics=['/perception/camera/objects/debug/image/compressed',
+        '/perception/camera/objects/debug/mosaic/compressed',
         '/perception/camera/objects/debug/left/image/compressed',
         '/perception/camera/objects/debug/right/image/compressed',
         '/perception/camera/debug/mosaic/compressed',

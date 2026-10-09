@@ -21,6 +21,16 @@ def best_threshold(thresholds):
     return max(available,key=lambda r:(r['macro_f1'],r['confidence'])) if available else None
 
 
+def input_pauses(rows, begin, end):
+    arrivals=[r for r in rows if begin<=r['arrival']<end]
+    pairs=list(zip(arrivals,arrivals[1:]))
+    return dict(scope='Consecutive input arrivals inside ACTIVE window; diagnostic only, no gate exemption',
+        maximum_gap_ms=max([(b['arrival']-a['arrival'])*1000 for a,b in pairs],default=None),
+        pauses=[dict(begin=a['arrival'],end=b['arrival'],wall_gap_ms=(b['arrival']-a['arrival'])*1000,
+                     source_gap_ms=(b['stamp_ns']-a['stamp_ns'])/1e6)
+                for a,b in pairs if b['arrival']-a['arrival']>.25])
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--root',type=Path,required=True)
@@ -58,9 +68,20 @@ def main():
     for path in ([] if a.quality_only else sorted(a.root.glob('live-*/**/report.json'))):
         r=json.loads(path.read_text())
         if 'job' not in r:continue
+        active=[x['call_started'] for x in r['requests'] if x['mode']==2]
+        inputs={}
+        if active and (path.parent/'inputs.json').exists():
+            begin=min(active);end=begin+r['job']['seconds']
+            inputs={v:input_pauses(rows,begin,end) for v,rows in json.loads((path.parent/'inputs.json').read_text()).items()}
         report['live'].append(dict(path=str(path),job=r['job'],complete=r.get('observation_window_completed',False),
             passed=r['passed'],failures=r['failures'],measurements=r.get('measurements'),
-            target_attainment=r.get('target_attainment'),resources=r.get('resources_startup_and_active'),planning=r.get('planning')))
+            target_attainment=r.get('target_attainment'),resources=r.get('resources_startup_and_active'),planning=r.get('planning'),input_arrival_diagnostics=inputs))
+    report['selected_actual_cutoff']=[]
+    for name in ('selected-quality40-v1','selected-heldout40-v1'):
+        for path in (a.root/name).glob('*/summary.json'):
+            s=json.loads(path.read_text())
+            if s['gt_manifest_sha256']!=digest:raise ValueError('selected result uses different GT')
+            report['selected_actual_cutoff'].append(dict(source=str(path),summary=s))
     visual=json.loads((a.root/'spawn-visual-review-v1.json').read_text()) if (a.root/'spawn-visual-review-v1.json').exists() else dict(invalid=[])
     report['spawn_visual_review']=visual
     invalid={(r['capture'],r['asset']):r['reason'] for r in visual['invalid']}
@@ -95,7 +116,13 @@ def main():
         memory=(row['resources'] or {}).get('gpu_memory_mib',{}).get('maximum')
         job=row['job'];label=f'{job["model"]}/{job["width"]}/{job.get("weather_requested","")}/r{job["repeat"]}'
         page.append(f'<tr><td>{html.escape(label)}</td><td>{rates}</td><td>{max(p95) if p95 else "unavailable"}</td><td>{memory}</td><td>{html.escape(str(row["failures"]))}</td></tr>')
-    page+=['</table><p>추가학습 후 우열과 운영 수락을 사전학습 비교로 보장하지 않습니다. 관측 그룹은 평가용이며 원본 프롬프트 라벨을 유지합니다.</p>']
+    page+=['</table><h2>최종 후보 · l1280 / bollard17 / confidence 0.40</h2>',
+        '<p>운영 기본 YOLO26l은 유지합니다. 최종 반복의 실패를 면제하지 않습니다. 이름만 바꾼 실제 재추론 후 선정한 프롬프트이며 wooden box 미검출과 deer 라벨 혼동은 남아 있습니다.</p>',
+        '<p><a href="../selected-spawn-v1/comparison.html">선정 프롬프트와 YOLO26 동일 RGB 대조</a> · <a href="../prompt-bollard-v1/comparison.html">bollard / traffic bollard 대조</a> · <a href="../confidence-review-v1/index.html">0.20 / 0.40 오검출과 회복 목록</a></p>']
+    for row in report['selected_actual_cutoff']:
+        s=row['summary'];t=s['thresholds'][0]
+        page.append(f'<p>Actual cutoff {s["frozen_confidence"]} · {s["split"]} {s["frames"]} frames · macro F1 {t["macro_f1"]:.4f} · FP {t["false_positives"]}</p>')
+    page+=['<p>추가학습 후 우열과 운영 수락을 사전학습 비교로 보장하지 않습니다. 관측 그룹은 평가용이며 원본 프롬프트 라벨을 유지합니다.</p>']
     (a.output/'index.html').write_text(''.join(page))
     print(json.dumps(dict(quality=len(report['quality']),live=len(report['live']),spawn_cases=len(report['spawn_observations']))))
 
