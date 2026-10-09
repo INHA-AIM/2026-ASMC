@@ -1,0 +1,690 @@
+{
+  "status": "evaluation_completed_acceptance_blocked",
+  "model_default_promoted": false,
+  "fusion_default": "unique",
+  "selection_candidate": {
+    "model": "yolo26m-seg",
+    "front_width": 960,
+    "confidence": 0.65,
+    "batch": "2plus1",
+    "target_hz_by_view": {
+      "front": 15,
+      "left": 15,
+      "right": 15
+    },
+    "status": "not_accepted_full_mask_control_failed",
+    "selection_macro_f1": 0.20156618028553436,
+    "reason": "Higher-scoring 1280 candidates regress on the same visible close-car consecutive frames; 960 passes all three C6 all15 repeats and retains the close-car observations. Apply object-gap eligibility before macro-F1 ranking.",
+    "three_repeats_output_hz": [
+      [
+        14.9,
+        14.85,
+        14.85
+      ],
+      [
+        14.9,
+        14.95,
+        14.8
+      ],
+      [
+        14.9,
+        14.8,
+        14.85
+      ]
+    ],
+    "peak_startup_and_active_vram_mib": 5139,
+    "selection_false_positives": 3,
+    "runtime_config": "src/asmc_camera/config/camera/yolo26m_seg_coco7_three_view.yaml",
+    "engine_sha256": "0f1b980de6a8ebdfb0052a61bc771f8eaa14704238247a7ed9131161eaeed0f1"
+  },
+  "mask_ablation": {
+    "full-mask-controls-selection": {
+      "images": 2252,
+      "confidence": 0.65,
+      "new_missed": {
+        "front": 1,
+        "left": 1,
+        "right": 4
+      },
+      "recovered": {
+        "front": 0,
+        "left": 2,
+        "right": 0
+      },
+      "report_sha256": "a03f0562491b058f80d772e59dbd4f2b80cbad5b4e96890708a3c2e54a83cfa6",
+      "passed": false,
+      "exceptions_applied": false
+    },
+    "full-neutral-mask-controls-selection": {
+      "images": 2252,
+      "confidence": 0.65,
+      "new_missed": {
+        "front": 1,
+        "left": 0,
+        "right": 1
+      },
+      "recovered": {
+        "front": 1,
+        "left": 2,
+        "right": 0
+      },
+      "report_sha256": "31d51dacc26a07bca4d1e20d9d2688157d9f8d21622015fc2bf408091d11ac4a",
+      "passed": false,
+      "exceptions_applied": false
+    },
+    "neutral_selection_false_positives": 4,
+    "neutral_selection_fp_limit": 3,
+    "full-detect-mask-controls-selection": {
+      "images": 2252,
+      "confidence": 0.7,
+      "new_missed": {
+        "front": 0,
+        "left": 1,
+        "right": 1
+      },
+      "recovered": {
+        "front": 2,
+        "left": 0,
+        "right": 3
+      },
+      "report_sha256": "31eedc1d61787f611957f9935979d7226d937bc1e0a17385cc7adc7812816db4",
+      "passed": false,
+      "exceptions_applied": false,
+      "model": "yolo26m",
+      "front_width": 960
+    },
+    "full-detect-neutral-controls-selection": {
+      "images": 2252,
+      "confidence": 0.7,
+      "new_missed": {
+        "front": 0,
+        "left": 0,
+        "right": 2
+      },
+      "recovered": {
+        "front": 1,
+        "left": 0,
+        "right": 3
+      },
+      "passed": false,
+      "exceptions_applied": false,
+      "report_sha256": "269d27769dfd717f1dc5e022ee043ba122902b9520f480b31fe8ebae9e2ed03e",
+      "model": "yolo26m",
+      "front_width": 960
+    }
+  },
+  "sustained": {
+    "revision": "be4dd5a5672600db1de928821fab1d519c1a37ad",
+    "seconds": 1800,
+    "passed": false,
+    "failures": [
+      "yolo front supply/latency gate",
+      "yolo left supply/latency gate",
+      "yolo right supply/latency gate",
+      "twinlite front supply gate",
+      "twinlite left supply gate",
+      "twinlite right supply gate",
+      "resnet18 resnet18 supply gate",
+      "planning trajectory deadline gate",
+      "planning state deadline gate",
+      "planning objects deadline gate",
+      "planning control deadline gate"
+    ],
+    "streams": {
+      "right": {
+        "messages": 17974,
+        "hz": 9.985555555555555,
+        "first_second": 9,
+        "max_gap_sec": 0.4707701180013828,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "input_anchor_missing": 8,
+        "input_to_output_wall_ms": {
+          "samples": 17966,
+          "p50": 46.12600599648431,
+          "p95": 88.89500523218885,
+          "p99": 100.80283964634869,
+          "maximum": 352.3381659761071
+        },
+        "valid_ratio": 1.0,
+        "min_complete5s_hz": 9.4,
+        "windows_below9_5": 1
+      },
+      "left": {
+        "messages": 17974,
+        "hz": 9.985555555555555,
+        "first_second": 9,
+        "max_gap_sec": 0.46673680999083444,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "input_anchor_missing": 5,
+        "input_to_output_wall_ms": {
+          "samples": 17969,
+          "p50": 46.258989023044705,
+          "p95": 88.99404960684477,
+          "p99": 101.10387127380817,
+          "maximum": 350.78007297124714
+        },
+        "valid_ratio": 1.0,
+        "min_complete5s_hz": 9.4,
+        "windows_below9_5": 1
+      },
+      "front": {
+        "messages": 17974,
+        "hz": 9.985555555555555,
+        "first_second": 9,
+        "max_gap_sec": 0.4688178740325384,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "input_anchor_missing": 7,
+        "input_to_output_wall_ms": {
+          "samples": 17967,
+          "p50": 45.00118497526273,
+          "p95": 87.58890909375624,
+          "p99": 99.2146515636705,
+          "maximum": 350.9134899941273
+        },
+        "valid_ratio": 1.0,
+        "min_complete5s_hz": 9.4,
+        "windows_below9_5": 1
+      },
+      "family": {
+        "messages": 17973,
+        "hz": 9.985,
+        "first_second": 9,
+        "max_gap_sec": 0.4759367509977892,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "input_anchor_missing": 17973,
+        "input_to_output_wall_ms": {
+          "samples": 0,
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "maximum": null
+        },
+        "valid_ratio": 1.0,
+        "min_complete5s_hz": 9.4,
+        "windows_below9_5": 1
+      },
+      "resnet18": {
+        "messages": 17883,
+        "hz": 9.935,
+        "first_second": 9,
+        "max_gap_sec": 0.3997229599626735,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "input_anchor_missing": 7,
+        "input_to_output_wall_ms": {
+          "samples": 17876,
+          "p50": 56.41531047876924,
+          "p95": 91.47307999955956,
+          "p99": 102.44963722652756,
+          "maximum": 311.2108989735134
+        },
+        "valid_ratio": 0.0,
+        "min_complete5s_hz": 9.2,
+        "windows_below9_5": 6
+      },
+      "yolo_front": {
+        "messages": 26892,
+        "hz": 14.94,
+        "first_second": 14,
+        "max_gap_sec": 0.43197183503070846,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "input_anchor_missing": 9,
+        "input_to_output_wall_ms": {
+          "samples": 26883,
+          "p50": 56.10406998312101,
+          "p95": 92.13549809646793,
+          "p99": 105.5780573282391,
+          "maximum": 371.80602503940463
+        },
+        "valid_ratio": 1.0,
+        "min_complete5s_hz": 14.2,
+        "windows_below9_5": 0
+      },
+      "yolo_left": {
+        "messages": 26804,
+        "hz": 14.891111111111112,
+        "first_second": 14,
+        "max_gap_sec": 0.447420051030349,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "input_anchor_missing": 3,
+        "input_to_output_wall_ms": {
+          "samples": 26801,
+          "p50": 56.065869983285666,
+          "p95": 91.37190401088446,
+          "p99": 104.03291700640693,
+          "maximum": 372.94449598994106
+        },
+        "valid_ratio": 1.0,
+        "min_complete5s_hz": 14.0,
+        "windows_below9_5": 0
+      },
+      "yolo_right": {
+        "messages": 26802,
+        "hz": 14.89,
+        "first_second": 14,
+        "max_gap_sec": 0.4094032410066575,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "input_anchor_missing": 5,
+        "input_to_output_wall_ms": {
+          "samples": 26797,
+          "p50": 55.8114149607718,
+          "p95": 91.07054221676663,
+          "p99": 103.81763539742686,
+          "maximum": 372.4086749716662
+        },
+        "valid_ratio": 1.0,
+        "min_complete5s_hz": 13.8,
+        "windows_below9_5": 0
+      }
+    },
+    "planning": {
+      "trajectory": {
+        "messages": 35979,
+        "hz": 19.988275500256485,
+        "max_gap_sec": 0.3126655549858697,
+        "valid_messages": 35979,
+        "passed": false
+      },
+      "state": {
+        "messages": 90000,
+        "hz": 49.99985533291874,
+        "max_gap_sec": 0.2667377170291729,
+        "valid_messages": 89995,
+        "passed": false
+      },
+      "behavior": {
+        "messages": 18000,
+        "hz": 9.999971066583749,
+        "max_gap_sec": 0.3546054310281761,
+        "valid_messages": 18000,
+        "passed": true
+      },
+      "objects": {
+        "messages": 22787,
+        "hz": 12.659407816346883,
+        "max_gap_sec": 0.560686725017149,
+        "valid_messages": 22787,
+        "passed": false
+      },
+      "control": {
+        "messages": 36000,
+        "hz": 19.999942133167497,
+        "max_gap_sec": 0.30399609595770016,
+        "valid_messages": 36000,
+        "passed": false
+      },
+      "trajectory_failure_reasons": {
+        "0": 35956,
+        "3": 22,
+        "6": 1
+      }
+    },
+    "resources": {
+      "samples": 8986,
+      "gpu_utilization_percent": {
+        "samples": 8986,
+        "p50": 60.0,
+        "p95": 67.0,
+        "p99": 70.0,
+        "maximum": 79.0
+      },
+      "gpu_memory_mib": {
+        "samples": 8986,
+        "p50": 5135.0,
+        "p95": 5145.0,
+        "p99": 5160.0,
+        "maximum": 5168.0
+      }
+    },
+    "input_hz": {
+      "extra": 9.989415541569022,
+      "left": 19.918831256738542,
+      "right": 19.918275702790396,
+      "front": 19.918831256738542
+    },
+    "input_gaps": {
+      "front": {
+        "input_max_gap_sec": 0.34856290300376713,
+        "output_max_gap_sec": 0.43197183503070846,
+        "output_gaps_over250ms": 13,
+        "overlapping_upstream_gaps": 13
+      },
+      "left": {
+        "input_max_gap_sec": 0.34516142698703334,
+        "output_max_gap_sec": 0.447420051030349,
+        "output_gaps_over250ms": 12,
+        "overlapping_upstream_gaps": 12
+      },
+      "right": {
+        "input_max_gap_sec": 0.3698642210219987,
+        "output_max_gap_sec": 0.4094032410066575,
+        "output_gaps_over250ms": 12,
+        "overlapping_upstream_gaps": 12
+      }
+    },
+    "report_sha256": "b1be12348de2e0e4eed7e212ee4158d9b0d5f65d542d287a9b5285d1f8e5c2ac",
+    "rss_first_last_minute": {
+      "/Main": {
+        "early_median_mib": 214.203125,
+        "late_median_mib": 221.39453125,
+        "delta_mib": 7.19140625
+      },
+      "/behavior_planner": {
+        "early_median_mib": 201.9609375,
+        "late_median_mib": 201.95703125,
+        "delta_mib": -0.00390625
+      },
+      "/camera_bev": {
+        "early_median_mib": 124.34765625,
+        "late_median_mib": 129.5078125,
+        "delta_mib": 5.16015625
+      },
+      "/camera_bev_fusion": {
+        "early_median_mib": 88.4765625,
+        "late_median_mib": 89.94921875,
+        "delta_mib": 1.47265625
+      },
+      "/camera_lane_vectorizer": {
+        "early_median_mib": 167.0859375,
+        "late_median_mib": 171.265625,
+        "delta_mib": 4.1796875
+      },
+      "/camera_object_detector": {
+        "early_median_mib": 984.91015625,
+        "late_median_mib": 987.0,
+        "delta_mib": 2.08984375
+      },
+      "/camera_semantic_inference": {
+        "early_median_mib": 1068.4765625,
+        "late_median_mib": 1074.1953125,
+        "delta_mib": 5.71875
+      },
+      "/frenet_planner": {
+        "early_median_mib": 219.734375,
+        "late_median_mib": 219.734375,
+        "delta_mib": 0.0
+      },
+      "/mpc_controller": {
+        "early_median_mib": 12.36328125,
+        "late_median_mib": 12.3671875,
+        "delta_mib": 0.00390625
+      },
+      "/traffic_light_infer": {
+        "early_median_mib": 767.12109375,
+        "late_median_mib": 767.61328125,
+        "delta_mib": 0.4921875
+      }
+    },
+    "scope": "One uninterrupted stationary full-stack1800s trial; not three repeats or driving; every failed window retained",
+    "fusion": {
+      "total": {
+        "matched": 20617,
+        "dropped": 2266,
+        "pending_lidar": 1,
+        "pending_yolo": 2,
+        "fresh": 20617,
+        "reused": 0
+      },
+      "conserved": true,
+      "source": "intact master rosout intervals; screen shutdown tail/total; incomplete screen intervals retained separately",
+      "interval_count": 359
+    },
+    "model_errors": {
+      "resnet18": 0,
+      "yolo": 0,
+      "twinlite": 0
+    },
+    "fusion_stdout_incomplete": {
+      "total": {
+        "matched": 20617,
+        "dropped": 2266,
+        "pending_lidar": 1,
+        "pending_yolo": 2,
+        "fresh": 20617,
+        "reused": 0
+      },
+      "conserved": false,
+      "interval_count": 350
+    }
+  },
+  "drive": {
+    "revision": "55f17070e05e467e5f107ff5b9bea373a7f4ed8e",
+    "actuator": "grpc_explicit_mps",
+    "repeats": [
+      {
+        "repeat": 1,
+        "passed": true,
+        "drive_passed": true,
+        "restored": true,
+        "displacement_m": 1.2423710931052194,
+        "forward_progress_m": 1.2405955262664579,
+        "maximum_actual_kph": 1.7730082557718985,
+        "maximum_command_kph": 1.8927958224360497,
+        "reentry": {
+          "twinlite_right": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 10,
+            "max_gap_sec": 0.19385775196133181
+          },
+          "twinlite_left": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 10,
+            "max_gap_sec": 0.19442847202299163
+          },
+          "twinlite_front": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 10,
+            "max_gap_sec": 0.194069787976332
+          },
+          "yolo_left": {
+            "passed": true,
+            "hz": 14.85,
+            "first_second": 14,
+            "max_gap_sec": 0.17555629997514188
+          },
+          "yolo_right": {
+            "passed": true,
+            "hz": 14.85,
+            "first_second": 14,
+            "max_gap_sec": 0.18622687202878296
+          },
+          "yolo_front": {
+            "passed": true,
+            "hz": 14.85,
+            "first_second": 13,
+            "max_gap_sec": 0.17551065096631646
+          },
+          "resnet18": {
+            "passed": true,
+            "hz": 10.0,
+            "first_second": 10,
+            "max_gap_sec": 0.11266245902515948
+          }
+        },
+        "failures": [],
+        "report_sha256": "43d8b2bb4017cc165b74e2683a628ba8ff2911f602ad394d775e82546562bbb1"
+      },
+      {
+        "repeat": 2,
+        "passed": true,
+        "drive_passed": true,
+        "restored": true,
+        "displacement_m": 1.2503474445567784,
+        "forward_progress_m": 1.248748757755016,
+        "maximum_actual_kph": 1.7911968169938683,
+        "maximum_command_kph": 1.941851421485812,
+        "reentry": {
+          "twinlite_left": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 10,
+            "max_gap_sec": 0.18124891101615503
+          },
+          "twinlite_right": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 10,
+            "max_gap_sec": 0.17914268997265026
+          },
+          "twinlite_front": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 10,
+            "max_gap_sec": 0.17907094402471557
+          },
+          "yolo_left": {
+            "passed": true,
+            "hz": 14.85,
+            "first_second": 14,
+            "max_gap_sec": 0.18155725800897926
+          },
+          "yolo_right": {
+            "passed": true,
+            "hz": 14.95,
+            "first_second": 14,
+            "max_gap_sec": 0.14501598698552698
+          },
+          "yolo_front": {
+            "passed": true,
+            "hz": 14.95,
+            "first_second": 14,
+            "max_gap_sec": 0.1476178839802742
+          },
+          "resnet18": {
+            "passed": true,
+            "hz": 10.0,
+            "first_second": 10,
+            "max_gap_sec": 0.11053457000525668
+          }
+        },
+        "failures": [],
+        "report_sha256": "f3fc9a7fe516d45077c27fb72c9401548db9d4d1001f5e43fd58ee6c1934ae96"
+      },
+      {
+        "repeat": 3,
+        "passed": true,
+        "drive_passed": true,
+        "restored": true,
+        "displacement_m": 1.2188468067070564,
+        "forward_progress_m": 1.2173194259758917,
+        "maximum_actual_kph": 1.8837978194990517,
+        "maximum_command_kph": 1.8719477882740143,
+        "reentry": {
+          "twinlite_right": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 9,
+            "max_gap_sec": 0.1986078749760054
+          },
+          "twinlite_left": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 9,
+            "max_gap_sec": 0.1995934930164367
+          },
+          "twinlite_front": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 10,
+            "max_gap_sec": 0.19742978597059846
+          },
+          "yolo_left": {
+            "passed": true,
+            "hz": 14.9,
+            "first_second": 14,
+            "max_gap_sec": 0.18827093800064176
+          },
+          "yolo_right": {
+            "passed": true,
+            "hz": 14.95,
+            "first_second": 14,
+            "max_gap_sec": 0.16532893403200433
+          },
+          "yolo_front": {
+            "passed": true,
+            "hz": 14.9,
+            "first_second": 14,
+            "max_gap_sec": 0.15596499299863353
+          },
+          "resnet18": {
+            "passed": true,
+            "hz": 9.95,
+            "first_second": 10,
+            "max_gap_sec": 0.12670941097894683
+          }
+        },
+        "failures": [],
+        "report_sha256": "4969c197e2bc2e96af45f822841f871e23ad1a44817b8ce32b2e76b1b619093a"
+      }
+    ],
+    "all_passed": true,
+    "scope": "Low-speed capped evaluation actuator at actual planner-requested speed; no STOP override; not UDP or unchanged MPC validation; new actor spawn not part of this drive"
+  },
+  "local_regression": {
+    "revision": "55f17070e05e467e5f107ff5b9bea373a7f4ed8e",
+    "report_sha256": "25b53937b88819291a5be73ea87e442f30b11f8f79036d0cd333f774aa970bce",
+    "outer_package_tests": 563,
+    "known_facade_failures": 1,
+    "lidar_core_tests": 3,
+    "main_tests": 311,
+    "main_failures": 0,
+    "perception_tool_tests": 131,
+    "perception_tool_failures": 0,
+    "audit_tests": 51,
+    "known_main_identical_audit_errors": 1,
+    "generated_ros_checks": 5,
+    "jamming_tests": 36,
+    "jamming_failures": 0,
+    "validators": 6,
+    "scope": "All relevant local checks completed. Facade and P1-C authority errors remain; not an all-green result or GitHub CI substitute.",
+    "known_baseline_inputs": "../artifacts/camera-coco7-live-v1/final-regression/known-baseline-inputs.json"
+  },
+  "known_baseline_inputs": {
+    "base_main": "a8c4f3b9dd15edee4d5b6434934ffe52011efcb8",
+    "files": {
+      "tools/audit/build_runtime_baseline.py": {
+        "identical_to_main": true,
+        "sha256": "eeb7dd99233e13c52cf56c2ab8ea2e4ba264d8b9c986325a8de63b48dd43ef7f"
+      },
+      "tools/audit/test_build_runtime_baseline.py": {
+        "identical_to_main": true,
+        "sha256": "dd230d95dbec7c1ec20f9397a71be2a398ff0142ff1068b474aab38a62e4b26a"
+      },
+      "src/asmc_hd_map/config/kcity2025_competition_metadata.yaml": {
+        "identical_to_main": true,
+        "sha256": "0ed56169908a4f8a2e44e3ca5d09f355acdd483127f055fe0fef79b6e904b17b"
+      },
+      "src/asmc_camera/test/test_facade_contract.py": {
+        "identical_to_main": true,
+        "sha256": "8aaf84fcb62b8cc6a01651ad394cf201ab0541da41f4d4bb350df5a9019688e6"
+      },
+      "src/behavior_planner/launch/autonomy_no_bridges_v2.launch": {
+        "identical_to_main": true,
+        "sha256": "9b0f22bac4ae782ad6a7724eb07e16dfd56a5bf3d852d61bd5f8e056f856cc14"
+      }
+    }
+  },
+  "live_matrix_summary": {
+    "groups": 95,
+    "complete_passing_repeat_groups": 48,
+    "complete_failing_repeat_groups": 41,
+    "partial_groups": 6,
+    "scope": "Exploratory configurations and rejected setup variants preserved; not95 independently approved operating modes"
+  },
+  "ci": {
+    "status": "not_started_billing_restriction",
+    "annotations": "ci-billing-block-annotations.json",
+    "reason": "Account payment/spending limit blocked all jobs before any steps. No billing settings modified."
+  },
+  "raw_artifact_root": "../artifacts/camera-coco7-live-v1"
+}
