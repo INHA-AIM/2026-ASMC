@@ -14,7 +14,7 @@ def main():
     report=json.loads((root/'report.json').read_text())
     examples={}; profiles=[]
     for candidate in report['candidates']:
-        config=candidate['config']; profile=f'{config["model"]}-{config["width"]}'
+        config=candidate['config']; profile=config.get('candidate_id',f'{config["model"]}-{config["width"]}')
         profiles.append(profile); groups=defaultdict(list)
         for line in (root/profile/'predictions.jsonl').read_text().splitlines():
             row=json.loads(line)
@@ -36,7 +36,7 @@ def main():
                             original.crop((480,200,820,480)).save(root/crop)
                             entry['crops'][profile]=crop
     data=json.dumps(dict(profiles=profiles,examples=list(examples.values())),ensure_ascii=False).replace('<','\\u003c')
-    page='''<!doctype html><meta charset="utf-8"><title>COCO7 same RGB comparison</title>
+    page='''<!doctype html><meta charset="utf-8"><title>Raw detector same RGB comparison</title>
 <style>body{font:16px system-ui;margin:20px}select{font:inherit;margin:5px;max-width:95%}.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}img{width:100%}pre{white-space:pre-wrap}article{min-width:0}code{overflow-wrap:anywhere}</style>
 <h1>동일 RGB · 모델·해상도 비교</h1>
 <p>관찰용 갤러리입니다. actor 상태는 영상 정답이 아니며, 같은 라벨의 검출이 다른 객체일 수 있습니다. 빨강은 Ego mask입니다. 기존 공중 배치·스폰 실패는 별도 원본 기록에 보존합니다.</p>

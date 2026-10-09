@@ -26,7 +26,8 @@ class YoloeSelectionTest(unittest.TestCase):
         self.assertIsNone(best_threshold([]))
         self.assertEqual('animal',EVALUATION_GROUPS['deer'])
         self.assertEqual('vehicle',EVALUATION_GROUPS['scooter'])
-        self.assertEqual(17,len(EVALUATION_GROUPS))
+        self.assertEqual('obstacle',EVALUATION_GROUPS['traffic bollard'])
+        self.assertEqual(18,len(EVALUATION_GROUPS))  # original17 plus tested alternative name
 
     def test_engine_correspondence_preserves_labels_and_one_to_one_matching(self):
         ref=[dict(group='car',xyxy=[0,0,10,10])]

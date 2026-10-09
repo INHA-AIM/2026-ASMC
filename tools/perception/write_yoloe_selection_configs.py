@@ -11,9 +11,9 @@ from asmc_camera.detection.segmentation import load_prompt_embeddings
 def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def configuration(directory, scale, width, names, runtime_root):
+def configuration(directory, scale, width, names, runtime_root, profile='obstacle17'):
     checkpoint=directory/scale/f'yoloe-26{scale}-seg.pt'
-    prompts=directory/scale/'obstacle17.npz';engine=directory/scale/f'obstacle17-{width}.engine'
+    prompts=directory/scale/(profile+'.npz');engine=directory/scale/f'{profile}-{width}.engine'
     actual_names,_=load_prompt_embeddings(prompts,sha(checkpoint))
     if actual_names!=names:raise ValueError('prompt names/order differs from frozen experiment')
     # Read metadata before publishing a launch config; an arbitrary .engine is insufficient.
@@ -39,11 +39,17 @@ def main():
     p.add_argument('--directory',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--policy',type=Path,required=True)
     p.add_argument('--runtime-root',default='/data/models/camera_yoloe_selection_v1')
+    p.add_argument('--prompt-profile',default='obstacle17')
+    p.add_argument('--scales',nargs='+',choices=['m','l'],default=['m','l'])
+    p.add_argument('--widths',nargs='+',type=int,choices=[640,960,1280],default=[640,960,1280])
     a=p.parse_args();policy=yaml.safe_load(a.policy.read_text());a.output.mkdir(parents=True,exist_ok=True)
-    for scale in ('m','l'):
-        for width in (640,960,1280):
-            cfg=configuration(a.directory,scale,width,policy['prompt_profiles']['obstacle17'],a.runtime_root)
-            (a.output/f'{scale}_{width}.yaml').write_text(yaml.safe_dump(cfg,sort_keys=False))
+    from prepare_yoloe_l import profile_names
+    names=profile_names(policy,a.prompt_profile)
+    for scale in a.scales:
+        for width in a.widths:
+            cfg=configuration(a.directory,scale,width,names,a.runtime_root,a.prompt_profile)
+            suffix='_'+a.prompt_profile if a.prompt_profile!='obstacle17' else ''
+            (a.output/f'{scale}_{width}{suffix}.yaml').write_text(yaml.safe_dump(cfg,sort_keys=False))
 
 
 if __name__=='__main__':main()

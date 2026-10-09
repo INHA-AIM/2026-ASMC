@@ -13,7 +13,7 @@ COMBINATIONS=[(f'yoloe-26{s}-seg',w) for s in ('m','l') for w in (640,960,1280)]
 EVALUATION_GROUPS={
     'person':'person','dog':'animal','deer':'animal',
     **{n:'vehicle' for n in ('bicycle','car','truck','bus','motorcycle','scooter','electric scooter')},
-    **{n:'obstacle' for n in ('bollard','cargo box','wooden box','steel barricade','traffic cone','traffic barrel','baby stroller')}}
+    **{n:'obstacle' for n in ('bollard','traffic bollard','cargo box','wooden box','steel barricade','traffic cone','traffic barrel','baby stroller')}}
 
 
 def best_threshold(thresholds):
@@ -61,20 +61,26 @@ def main():
         report['live'].append(dict(path=str(path),job=r['job'],complete=r.get('observation_window_completed',False),
             passed=r['passed'],failures=r['failures'],measurements=r.get('measurements'),
             target_attainment=r.get('target_attainment'),resources=r.get('resources_startup_and_active'),planning=r.get('planning')))
-    for path in ([] if a.quality_only else sorted((a.root/'spawn-inspection-v1').glob('*/predictions.jsonl'))):
+    visual=json.loads((a.root/'spawn-visual-review-v1.json').read_text()) if (a.root/'spawn-visual-review-v1.json').exists() else dict(invalid=[])
+    report['spawn_visual_review']=visual
+    invalid={(r['capture'],r['asset']):r['reason'] for r in visual['invalid']}
+    spawn_paths=sorted(p for directory in ('spawn-inspection-v1','spawn-scooter-native-v1')
+                       for p in (a.root/directory).glob('*/predictions.jsonl'))
+    for path in ([] if a.quality_only else spawn_paths):
         groups=defaultdict(list)
         for row in load_jsonl(path):groups[row['capture_id'],row['case']].append(row)
         for (capture,case),observations in groups.items():
             labels=Counter(n for r in observations for n in {d['label'] for d in r['predictions']})
             report['spawn_observations'].append(dict(candidate=path.parent.name,capture=capture,case=case,
                 asset=observations[0]['asset'],placement=observations[0]['placement'],view=observations[0]['view'],
+                visual_rejection_reason=invalid.get((capture,observations[0]['asset']['api_name'])),
                 frames=len(observations),frames_with_label=dict(labels),
                 interpretation='Label anywhere in selected view; NOT target association or recall. Review paired gallery.'))
     (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     page=['<!doctype html><meta charset="utf-8"><title>YOLOE 6조합 비교</title><style>body{font:16px system-ui;margin:24px}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:7px}code{overflow-wrap:anywhere}</style>',
         '<h1>YOLOE 6조합 · obstacle17 · 동일 영상 비교</h1>',
         '<p>현재 YOLO26l 기본값은 유지합니다. Capture 정량 GT에는 person/car/bus/truck만 있습니다. 신규 장애물은 동일 RGB 검토 대상이며 표의 F1에 포함되지 않습니다. 실패 실행과 planner deadline 실패도 보존합니다.</p>',
-        '<p><a href="../spawn-inspection-v1/comparison.html">거리·날씨·모델을 고르는 스폰 비교 갤러리</a> · <a href="../spawn-source-review/index.html">검출 전 원본 장면</a> · <a href="report.json">전체 결과 JSON</a></p>',
+        '<p><a href="../spawn-inspection-v1/comparison.html">거리·날씨·모델을 고르는 스폰 비교 갤러리</a> · <a href="../spawn-scooter-native-v1/comparison.html">Scooter1 정상 지면 재수집</a> · <a href="../prompt-probe-v1/comparison.html">프롬프트 실제 재추론</a> · <a href="../parity-review-v1/index.html">PT/TRT 불일치 원본</a> · <a href="../spawn-source-review/index.html">검출 전 원본 장면</a> · <a href="report.json">전체 결과 JSON</a></p><p>기존 첫 수집의 Scooter1은 수치상 BBox 높이 gate를 통과했으나 영상에서 떠 있어 평가 부적합으로 보존합니다. 별도 native 지면 재수집 결과와 구분합니다. 나머지 배치도 pixel GT를 보장하지 않습니다.</p>',
         '<table><tr><th>모델</th><th>전방</th><th>F1 @0.40</th><th>TP / FP @0.40</th><th>선정 자료 best confidence / F1</th><th>정량 GT 원본</th></tr>']
     for row in report['quality']:
         fixed=row['fixed']['pooled'];best=row['selection_best']

@@ -1,14 +1,15 @@
 <launch>
   <!-- Experiment only: no changes to the selected COCO7 operational baseline. -->
-  <arg name="model" default="m" doc="m or l; explicit prepared checkpoint-specific config"/>
-  <arg name="front_width" default="960" doc="640, 960 or 1280; source image/FOV unchanged"/>
+  <arg name="model" default="l" doc="m or l; explicit prepared checkpoint-specific config"/>
+  <arg name="front_width" default="1280" doc="640, 960 or 1280; source image/FOV unchanged"/>
+  <arg name="prompt_profile" default="bollard17" doc="Selected profile for l/1280; original six-way comparison uses obstacle17"/>
   <arg name="profile" default="debug"/>
   <arg name="objects_conf_thres" default=""/>
   <arg name="start_camera_lane" default="false"/>
   <arg name="start_traffic_light" default="false"/>
   <include file="$(find asmc_camera)/launch/camera_coco7.launch">
     <arg name="profile" value="$(arg profile)"/>
-    <arg name="camera_objects_config" value="$(find asmc_camera)/config/camera/yoloe_selection/$(arg model)_$(arg front_width).yaml"/>
+    <arg name="camera_objects_config" value="$(eval find('asmc_camera')+'/config/camera/yoloe_selection/'+arg('model')+'_'+arg('front_width')+('' if arg('prompt_profile')=='obstacle17' else '_'+arg('prompt_profile'))+'.yaml')"/>
     <arg name="objects_conf_thres" value="$(arg objects_conf_thres)"/>
     <arg name="start_camera_lane" value="$(arg start_camera_lane)"/>
     <arg name="start_traffic_light" value="$(arg start_traffic_light)"/>

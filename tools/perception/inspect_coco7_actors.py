@@ -6,6 +6,7 @@ import hashlib
 import html
 import json
 import yaml
+import re
 from pathlib import Path
 
 import cv2
@@ -28,7 +29,11 @@ def main():
     p.add_argument('--batch-mode', choices=['2plus1','batch3','sequential'],default='2plus1')
     p.add_argument('--all-views',action='store_true',
                    help='Static-scene comparison using each view ordinal; source stamps remain independent')
+    p.add_argument('--assets',nargs='+',help='Exact API-name subset for a focused prompt probe; source captures remain intact')
+    p.add_argument('--visual-review',type=Path,help='Explicit rejected capture/asset fixtures; preserve them as rejected records')
     a = p.parse_args(); a.output.mkdir(parents=True, exist_ok=False)
+    visual=json.loads(a.visual_review.read_text()) if a.visual_review else dict(invalid=[])
+    invalid={(r['capture'],r['asset']):r['reason'] for r in visual['invalid']}
     masks = load_view_masks(['front', 'left', 'right'],
         HoodMask.load(True, ROOT/'src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml'), True,
         {v: ROOT/f'src/asmc_camera/config/camera/yolo_ego_mask_{v}_v1.yaml' for v in ['left', 'right']})
@@ -39,6 +44,11 @@ def main():
         if not registry.get('ego_after'):
             raise RuntimeError('capture is not finalized: '+str(capture))
         for case in registry['cases']:
+            if a.assets and case['asset']['api_name'] not in a.assets:continue
+            rejection=invalid.get((capture.parent.name+'-'+capture.name,case['asset']['api_name']))
+            if rejection:
+                rejected.append(dict(registry=str(capture),index=case['index'],reason=rejection))
+                continue
             # Preserve floating/spawn-failed fixtures in the registry and index,
             # but do not turn them into performance evidence for ground actors.
             if case.get('error') or not case.get('state') or (
@@ -60,11 +70,14 @@ def main():
                   code_sha256={str(f.relative_to(ROOT)):file_sha256(f) for f in [Path(__file__)]+
                       sorted((ROOT/'src/asmc_camera/src/asmc_camera/detection').glob('*.py'))},
                   batch_mode=a.batch_mode,all_views=a.all_views)
+    report['asset_subset']=a.assets
+    report['visual_review']=visual
     page = ['<!doctype html><meta charset="utf-8"><style>body{font:16px system-ui;margin:24px}img{max-width:95%}</style>',
-            '<h1>MORAI controlled captures · raw COCO7</h1>',
+            '<h1>MORAI controlled captures · raw detector labels</h1>',
             '<p>These are reviewed images, not pixel ground truth. A detection of the expected class may belong to another actor. Red is the Ego exclusion area.</p>']
     for config in json.loads(a.candidates.read_text()):
-        name=f'{config["model"]}-{config["width"]}'
+        name=config.get('candidate_id',f'{config["model"]}-{config["width"]}')
+        if not re.fullmatch(r'[a-zA-Z0-9_-]+',name):raise ValueError('unsafe candidate identifier')
         out=a.output/name;out.mkdir()
         weight=a.models/(config['model']+'.engine')
         if config.get('runtime_config'):
