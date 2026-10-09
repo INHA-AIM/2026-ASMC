@@ -111,7 +111,7 @@ def report(root, curated, dataset, gallery):
 <p><a href="review/index.html">검수 갤러리</a> · <a href="review/index.html?q=box">상자</a> · <a href="review/index.html?q=bicycle%20man">복합 주석</a> · <a href="review/index.html?q=사슴">사슴 라벨 수정</a> · <a href="review/index.html?q=주석되지">누락 주석 반례</a> · <a href="summary.json">전체 요약·SHA</a></p>
 <h2>채택 부분집합</h2><pre>__ACCEPTED__</pre><p>부분집합 구조 검사: __READY__. 미지원 클래스: __MISSING__. 이것은 전체 대회 객체의 학습 준비 완료를 뜻하지 않습니다.</p>
 <p>기존 7종 + CargoBox/WoodBox 비교 학습 평가 준비: __PILOT_READY__. train/selection/heldout 중 자료가 부족한 클래스: __PILOT_MISSING__.</p>
-<h2>22개 프로젝트</h2><table><tr><th>출처</th><th>버전</th><th>확보 상태</th><th>원본 view-frame</th><th>채택</th><th>격리</th><th>라이선스</th></tr>__SOURCES__</table>
+<h2>22개 프로젝트</h2><table><tr><th>출처</th><th>버전</th><th>확보 상태</th><th>확보 이미지·증강 포함</th><th>채택</th><th>격리</th><th>라이선스</th></tr>__SOURCES__</table>
 <h2>원본 이름 → 현재 판정</h2><p>ambiguous는 미확정, excluded는 대상 제외입니다. 개별 수정과 자동 이름 대응을 구분하는 근거는 manifest의 review_record와 원본 주석에 남습니다.</p><table><tr><th>출처</th><th>원본 라벨</th><th>정규 라벨·상태와 객체 수</th></tr>__MAPPINGS__</table>
 <h2>해석 제한</h2><p>날씨·터널·거리는 근거 없이 파일명으로 확정하지 않았습니다. 유사 이미지 수는 누출 수가 아니며, 분할을 가로지르는 미확정 후보는 채택하지 않았습니다. Capture 고정 run 분할과 원본 instance mask는 유지합니다.</p>'''
     page=page.replace('__ACCEPTED__',esc(json.dumps(result['accepted'],ensure_ascii=False,indent=2)))
