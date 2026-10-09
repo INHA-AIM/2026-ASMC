@@ -13,7 +13,7 @@ from prepare_yoloe_l import export_profile
 from write_yoloe_selection_configs import configuration
 from evaluate_coco7_models import evaluate
 from check_yoloe_selection_engine import compare
-from analyze_yoloe_selection import best_threshold,EVALUATION_GROUPS,input_pauses,resolution_choice
+from analyze_yoloe_selection import best_threshold,EVALUATION_GROUPS,input_pauses,resolution_choice,lifecycle_stages
 from asmc_camera.detection.batching import shapes_for_front,pack_image,ImageTransform
 from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
 from asmc_camera.detection.backend import Detection
@@ -22,6 +22,17 @@ from b0_measurements import quantiles, output_report
 
 
 class YoloeSelectionTest(unittest.TestCase):
+    def test_worker_stages_join_same_view_stamp_and_generation_only(self):
+        rows=[dict(event='input',monotonic=1.,generation=2,view='front',source_stamp_ns=100),
+              dict(event='begin',monotonic=1.01,generation=2,stamps={'front':100}),
+              dict(event='complete',monotonic=1.05,generation=2,stamps={'front':100}),
+              dict(event='complete',monotonic=1.1,generation=1,stamps={'front':100})]
+        r=lifecycle_stages(rows,1.,2.,2)
+        self.assertAlmostEqual(10.,r['front']['input_to_begin']['p50'])
+        self.assertAlmostEqual(40.,r['front']['begin_to_complete']['p50'])
+        self.assertEqual(1,r['front']['begin_to_complete']['samples'])
+        self.assertIsNone(r['left']['begin_to_complete']['p50'])
+
     def test_resolution_selection_requires_both_weather_and_all_stack_gates(self):
         quality=[dict(model='yoloe-26l-seg',width=w,reviewed_fixed=dict(pooled=dict(macro_f1=f),
             temporal_objects=[],temporal_summary=dict(not_stably_detected=2))) for w,f in [(960,.26),(1280,.27)]]

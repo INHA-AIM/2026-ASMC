@@ -55,6 +55,26 @@ def resolution_choice(quality, live):
                 reason='Eligible full-stack candidate ranked by verified macro F1, stable acquisition, latency and memory; fusion acceptance remains separate.')
 
 
+def lifecycle_stages(rows, begin, end, generation):
+    from b0_measurements import quantiles
+    received={};started={};durations=defaultdict(list)
+    for row in rows:
+        if row.get('generation')!=generation:continue
+        now=row['monotonic']
+        if row['event']=='input':received[row['view'],row['source_stamp_ns']]=now
+        elif row['event'] in ('begin','complete'):
+            for view,stamp in row['stamps'].items():
+                key=view,stamp
+                if row['event']=='begin':
+                    started[key]=now
+                    if begin<=now<end and key in received:
+                        durations[view,'input_to_begin'].append((now-received[key])*1000)
+                elif begin<=now<end and key in started:
+                    durations[view,'begin_to_complete'].append((now-started[key])*1000)
+    return {view:{stage:quantiles(durations[view,stage]) for stage in ('input_to_begin','begin_to_complete')}
+            for view in ('front','left','right')}
+
+
 def resolution_followup(root, reference, output):
     from analyze_coco7_broad_selection import confirmation_summary
     from b0_measurements import quantiles
@@ -107,6 +127,32 @@ def resolution_followup(root, reference, output):
     report['pooled_latency']=[dict(model=m,width=w,weather=weather,view=v,quantiles_ms=quantiles(values))
         for (m,w,weather,v),values in sorted(pooled.items())]
     report['decision']=resolution_choice(report['quality'],report['live'])
+    report['diagnostics']=[]
+    index=root/'diagnostic-c1'/'index.json'
+    if index.exists():
+        for entry in json.loads(index.read_text()):
+            directory=index.parent/entry['name'];r=json.loads((directory/'report.json').read_text())
+            row=dict(job=r['job'],passed=r['passed'],failures=r['failures'],measurements=r.get('measurements'),
+                timestamp_policy=r.get('timestamp_policy'),scope='C1 trace ON; not a C6 acceptance replacement')
+            req=next((v for v in r['requests'] if v['mode']==2 and v['model']=='yolo'),None)
+            if req:
+                begin=req['call_started'];end=begin+r['job']['seconds']
+                raw=json.loads((directory/'inputs.json').read_text())
+                row['input_pauses']={v:input_pauses(rows,begin,end) for v,rows in raw.items()}
+                trace=directory/'yolo.lifecycle.jsonl'
+                if trace.exists():row['worker_stages']=lifecycle_stages(load_jsonl(trace),begin,end,req['generation'])
+                row['unanchored_outputs']=[]
+                for view,rows in json.loads((directory/'outputs.json').read_text()).items():
+                    if not view.startswith('yolo_'):continue
+                    for o in rows:
+                        if not begin<=o['arrival']<end or o['input_anchor']!='missing':continue
+                        anchors=[i for i in raw.get(view[5:],[]) if i['stamp_ns']==o['stamp_ns']]
+                        row['unanchored_outputs'].append(dict(view=view,stamp_ns=o['stamp_ns'],
+                            later_input_callback_ms=[(i['arrival']-o['arrival'])*1000 for i in anchors],
+                            interpretation='Observer missing/delayed input callback; preserve invalid wall anchor and original failed gate.'))
+            report['diagnostics'].append(row)
+    sensor=root/'sensor-only'/'report.json'
+    if sensor.exists():report['sensor_only']=json.loads(sensor.read_text())
     for family in ('fusion-reference','fusion-candidate'):
         index=root/family/'index.json'
         if not index.exists():continue
@@ -144,6 +190,7 @@ def resolution_followup(root, reference, output):
                 page.append(f'<tr><td>{label}</td><td>{view}</td><td>{m["hz"]:.2f}</td><td>{latency}</td><td>{m["max_gap_sec"]*1000:.1f}</td><td>{html.escape(str(r["failures"]))}</td></tr>')
             else:page.append(f'<tr><td>{label}</td><td>{view}</td><td colspan="4">Incomplete: {html.escape(str(r["failures"]))}</td></tr>')
     page+=['</table><h2>후보 결정 · 운영 승격 별도</h2><pre>'+html.escape(json.dumps(report['decision'],ensure_ascii=False,indent=2))+'</pre>',
+           '<h2>센서 대조 · YOLO 단독 진단</h2><p>별도 관측이며 통합 반복의 실패를 면제하지 않습니다. worker begin→complete에는 전처리/후처리가 포함되고 GPU 연산만의 시간이 아닙니다.</p><pre>'+html.escape(json.dumps(report.get('sensor_only'),ensure_ascii=False,indent=2))+'</pre>',
            '<h2>Fusion 원본 판정</h2><pre>'+html.escape(json.dumps(report['fusion_class_comparison'],ensure_ascii=False,indent=2))+'</pre>']
     (output/'index.html').write_text(''.join(page))
     print(json.dumps(dict(quality=len(report['quality']),trials=len(trials),decision=report['decision'])))

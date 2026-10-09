@@ -250,3 +250,37 @@ baseline에 보존한다. 주 bag 매칭10쌍 감소 역시 연속성 개선으�
 실험 전체 baseline은 `config/baselines/perception_camera_yoloe_selection_v1.yaml`이다.
 성공・실패・원본 SHA와 선별 근거를 함께 검토한 뒤, 데이터 감사/짧은 bbox 학습
 비교로 넘어간다. 최종 운영 선정과 hosted CI는 여전히 보류다.
+
+## L·960/1280 동일 프롬프트 후속 검증 — 진행 중
+
+두 해상도를 같은 `bollard17` checkpoint/embedding, 실제 confidence0.40으로 맞췄다.
+`l_960_bollard17.yaml`과 전용 TensorRT engine을 추가했으며 기존 운영 기본값은 유지한다.
+Capture 선정2,252장 실제 재추론에서960은 TP322/FP61/F1 0.2659,
+1280은 TP331/FP49/F1 0.2725다. 새960 engine의36장 대응 시험은22/22박스가
+PyTorch와 같은 라벨로 대응했다. 두 해상도와 기준선의 정상 스폰 RGB426표본을
+[비교 갤러리](http://localhost:8768/camera-yoloe-selection-v1/followup-v1/spawn-comparison/comparison.html)에 보존했다.
+
+**통합18회·후보 확정은 아직 미완료다.** 현재 Ego는 이전 검증 위치와 다르다.
+기존9객체 fixture의 지면 검사와 위치만 조정한 probe에서도 실패가 있어 통합 시작을
+중단했다. 지면 gate를 완화하지 않았고 생성한 시험 객체는 정리했다. 계획의 Ego 유지
+조건 때문에 이전 검증 위치로 이동·복원할 사용자 승인 또는 사용자 위치 조정을
+기다린다. 실패 로그/registry와 날씨 복원 기록은 모두 남겼다.
+
+위치 이동이 필요 없는 대조는 완료했다. sensor/bridge만60초 실행했을 때250ms 이상
+입력 공백은 없었다. YOLO만 ACTIVE·다른 모델 STANDBY·trace ON의60초 진단에서는
+960이3뷰 약14.9Hz/p95 33–35ms,1280은p95 39–40ms였다. 이는 전체 C6/trace OFF
+수락 측정을 대신하지 않는다.1280 진단은 다중 카메라 입력 공백으로 실패했고,
+기준선 진단은 측정 관찰자의 입력 callback 누락/지연2건으로 wall anchor가 없었다.
+worker 이력에는 해당 stamp가 존재하므로 센서에서 프레임이 없었다고 해석하지 않는다.
+실패 gate는 유지하며 정상 통과로 바꾸지 않았다.
+
+실제 bridge의 timestamp_mode는 **receive**다. header 간격은 bridge 수신 시각이며
+MORAI 촬영 시각을 입증하지 않는다. 입력→worker begin→complete는 같은 view/stamp/
+generation으로 연결했고 GPU 연산만의 시간으로 표시하지 않는다. p50은 실행별/뷰별로
+제시하고 pooled percentile은 원본 관측을 합쳐 계산한다. 실행별 중앙값을 평균하지 않는다.
+
+[진행 중 증거](http://localhost:8768/camera-yoloe-selection-v1/followup-v1/analysis-waiting-position/index.html)와
+baseline의 `resolution_followup_v1`에서 완료/미완료를 확인한다. 도구 시험13+43개와
+계약/문서 검사5개는 통과했고 카메라306개는 기존 facade1건만 실패했다.
+다음은 순환 순서의 세구성×두날씨×3회×60초 C6 측정, 선정 후 고정 heldout,
+후보/기준선 주·음영 각2회의 fusion 비교다. Roboflow·학습·운영 승격은 진행하지 않았다.

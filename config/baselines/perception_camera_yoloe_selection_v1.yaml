@@ -1680,3 +1680,853 @@ evidence:
   report: http://localhost:8768/camera-yoloe-selection-v1/final-analysis-v2/index.html
   all_startup_and_interrupted_attempts_preserved: true
 analysis_code_sha256: 07587490160815e57d79987f858e0b4a5ce4d6eb56517524bf12c997d8db348d
+
+resolution_followup_v1:
+  status: waiting_for_test_pose_authorization
+  complete: false
+  training_candidate_finalized: false
+  operational_defaults_changed: false
+  prompt: bollard17
+  confidence: 0.4
+  requested_live_runs: 18
+  completed_c6_live_runs: 0
+  requested_active_seconds: 60
+  current_blocker: Nine-actor ground validation failed at the current Ego pose. No
+    gate relaxation or unauthorized Ego teleport. Await previous verified pose / user
+    relocation.
+  engines:
+    '960': 137ab7cccb662f1a641946e9663ef7e66ff2a3c973938c58462d1c63a886c51d
+    '1280': 5ff612e44d1c29a2856b8941581ad974bfd149a06ced2e0753ede9b4c42da45c
+  parity_l960:
+    reference: 22
+    engine: 22
+    matched: 22
+    reference_unmatched: 0
+    engine_unmatched: 0
+  quality:
+  - width: 960
+    frames: 2252
+    raw_macro_f1: 0.2658930884363228
+    reviewed:
+      labels:
+        person:
+          gt: 348
+          tp: 122
+          fp: 8
+          fn: 226
+          evaluable: true
+          f1: 0.5104602510460251
+          recall: 0.3505747126436782
+        dog:
+          gt: 0
+          tp: 0
+          fp: 0
+          fn: 0
+          evaluable: false
+          f1: null
+          recall: null
+        bicycle:
+          gt: 0
+          tp: 0
+          fp: 0
+          fn: 0
+          evaluable: false
+          f1: null
+          recall: null
+        car:
+          gt: 1670
+          tp: 115
+          fp: 4
+          fn: 1555
+          evaluable: true
+          f1: 0.1285634432643935
+          recall: 0.0688622754491018
+        motorcycle:
+          gt: 0
+          tp: 0
+          fp: 0
+          fn: 0
+          evaluable: false
+          f1: null
+          recall: null
+        bus:
+          gt: 285
+          tp: 69
+          fp: 23
+          fn: 216
+          evaluable: true
+          f1: 0.3660477453580902
+          recall: 0.24210526315789474
+        truck:
+          gt: 504
+          tp: 16
+          fp: 26
+          fn: 488
+          evaluable: true
+          f1: 0.05860805860805861
+          recall: 0.031746031746031744
+      macro_f1: 0.26591987456914185
+      false_positives: 61
+      total_tp: 322
+    mask_iou: 0.8143090489161864
+  - width: 1280
+    frames: 2252
+    raw_macro_f1: 0.2725384890105072
+    reviewed:
+      labels:
+        person:
+          gt: 348
+          tp: 123
+          fp: 8
+          fn: 225
+          evaluable: true
+          f1: 0.5135699373695198
+          recall: 0.35344827586206895
+        dog:
+          gt: 0
+          tp: 0
+          fp: 0
+          fn: 0
+          evaluable: false
+          f1: null
+          recall: null
+        bicycle:
+          gt: 0
+          tp: 0
+          fp: 0
+          fn: 0
+          evaluable: false
+          f1: null
+          recall: null
+        car:
+          gt: 1670
+          tp: 119
+          fp: 8
+          fn: 1551
+          evaluable: true
+          f1: 0.13244296048970505
+          recall: 0.07125748502994012
+        motorcycle:
+          gt: 0
+          tp: 0
+          fp: 0
+          fn: 0
+          evaluable: false
+          f1: null
+          recall: null
+        bus:
+          gt: 285
+          tp: 76
+          fp: 24
+          fn: 209
+          evaluable: true
+          f1: 0.3948051948051948
+          recall: 0.26666666666666666
+        truck:
+          gt: 504
+          tp: 13
+          fp: 9
+          fn: 491
+          evaluable: true
+          f1: 0.049429657794676805
+          recall: 0.025793650793650792
+      macro_f1: 0.27256193761477415
+      false_positives: 49
+      total_tp: 331
+    mask_iou: 0.8252660559370198
+  diagnostics:
+  - model: yolo26l
+    width: 1280
+    passed: false
+    failures:
+    - yolo left supply/latency gate
+    - yolo right supply/latency gate
+    measurements:
+      yolo_front:
+        messages: 894
+        hz: 14.9
+        valid_messages: 894
+        excluded_old_epoch_messages: 0
+        first_second: 15
+        five_second_hz:
+        - 15.0
+        - 15.0
+        - 14.8
+        - 15.2
+        - 14.8
+        - 15.0
+        - 14.6
+        - 15.0
+        - 14.6
+        - 14.8
+        - 15.2
+        - 14.8
+        max_gap_sec: 0.16688396997051314
+        first_output_sec: 0.043288109998684376
+        duplicate_stamps: 0
+        reversed_stamps: 0
+        complete: true
+        duration_sec: 60.0
+        valid_ratio: 1.0
+        source_age_ms:
+          samples: 894
+          p50: 26.401878
+          p95: 56.9888712
+          p99: 96.02073630000017
+          maximum: 153.786898
+        input_to_output_wall_ms:
+          samples: 894
+          p50: 25.761717988643795
+          p95: 54.96721957169941
+          p99: 90.37957667198523
+          maximum: 143.66844401229173
+        input_anchor_missing: 0
+        input_anchor_ambiguous: 0
+        negative_source_age: 0
+      yolo_left:
+        messages: 897
+        hz: 14.95
+        valid_messages: 897
+        excluded_old_epoch_messages: 0
+        first_second: 15
+        five_second_hz:
+        - 15.0
+        - 15.0
+        - 15.0
+        - 15.0
+        - 14.8
+        - 15.0
+        - 14.8
+        - 15.0
+        - 14.8
+        - 15.0
+        - 15.0
+        - 15.0
+        max_gap_sec: 0.15522391599370167
+        first_output_sec: 0.04334385402034968
+        duplicate_stamps: 0
+        reversed_stamps: 0
+        complete: true
+        duration_sec: 60.0
+        valid_ratio: 1.0
+        source_age_ms:
+          samples: 897
+          p50: 27.808428
+          p95: 56.47153900000002
+          p99: 97.43420588000001
+          maximum: 164.841414
+        input_to_output_wall_ms:
+          samples: 896
+          p50: 27.010906516807154
+          p95: 51.57398202572949
+          p99: 91.41255586291638
+          maximum: 146.11788594629616
+        input_anchor_missing: 1
+        input_anchor_ambiguous: 0
+        negative_source_age: 0
+      yolo_right:
+        messages: 892
+        hz: 14.866666666666667
+        valid_messages: 892
+        excluded_old_epoch_messages: 0
+        first_second: 14
+        five_second_hz:
+        - 14.8
+        - 15.0
+        - 14.8
+        - 14.8
+        - 15.0
+        - 15.0
+        - 14.8
+        - 14.8
+        - 14.6
+        - 14.8
+        - 15.0
+        - 15.0
+        max_gap_sec: 0.17008802999043837
+        first_output_sec: 0.04335021798033267
+        duplicate_stamps: 0
+        reversed_stamps: 0
+        complete: true
+        duration_sec: 60.0
+        valid_ratio: 1.0
+        source_age_ms:
+          samples: 892
+          p50: 26.920557
+          p95: 54.900574650000024
+          p99: 97.90823470000005
+          maximum: 148.553848
+        input_to_output_wall_ms:
+          samples: 891
+          p50: 26.362895965576172
+          p95: 54.0033349825535
+          p99: 91.36119149625313
+          maximum: 144.54359997762367
+        input_anchor_missing: 1
+        input_anchor_ambiguous: 0
+        negative_source_age: 0
+    worker_stages:
+      front:
+        input_to_begin:
+          samples: 894
+          p50: 0.19170300220139325
+          p95: 12.479186768177934
+          p99: 34.28085418650888
+          maximum: 78.59698799438775
+        begin_to_complete:
+          samples: 894
+          p50: 24.205003515817225
+          p95: 43.73452520230786
+          p99: 61.6543182887837
+          maximum: 90.23613802855834
+      left:
+        input_to_begin:
+          samples: 898
+          p50: 2.075074502499774
+          p95: 14.476389635819935
+          p99: 34.601464883889996
+          maximum: 78.04187596775591
+        begin_to_complete:
+          samples: 897
+          p50: 23.98121595615521
+          p95: 42.81604678835725
+          p99: 61.120482662226976
+          maximum: 93.07454800000414
+      right:
+        input_to_begin:
+          samples: 893
+          p50: 1.7104120342992246
+          p95: 17.669529386330392
+          p99: 35.06733181886396
+          maximum: 77.90519401896745
+        begin_to_complete:
+          samples: 892
+          p50: 23.823251016438007
+          p95: 43.31749884295282
+          p99: 60.33781817939602
+          maximum: 81.90478303004056
+    input_pauses:
+      left:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 115.73365103686228
+        pauses: []
+      right:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 108.83442900376394
+        pauses: []
+      front:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 109.56129198893905
+        pauses: []
+      extra:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 163.0232770112343
+        pauses: []
+    unanchored_outputs:
+    - view: yolo_left
+      stamp_ns: 1791546805957192897
+      later_input_callback_ms: []
+      interpretation: Observer missing/delayed input callback; preserve invalid wall
+        anchor and original failed gate.
+    - view: yolo_right
+      stamp_ns: 1791546805700775861
+      later_input_callback_ms:
+      - 1.3465009978972375
+      interpretation: Observer missing/delayed input callback; preserve invalid wall
+        anchor and original failed gate.
+  - model: yoloe-26l-seg
+    width: 960
+    passed: true
+    failures: []
+    measurements:
+      yolo_left:
+        messages: 891
+        hz: 14.85
+        valid_messages: 891
+        excluded_old_epoch_messages: 0
+        first_second: 14
+        five_second_hz:
+        - 14.6
+        - 15.0
+        - 14.8
+        - 15.0
+        - 14.8
+        - 15.0
+        - 14.8
+        - 14.6
+        - 14.6
+        - 15.2
+        - 15.0
+        - 14.8
+        max_gap_sec: 0.18809517397312447
+        first_output_sec: 0.0839563490008004
+        duplicate_stamps: 0
+        reversed_stamps: 0
+        complete: true
+        duration_sec: 60.0
+        valid_ratio: 1.0
+        source_age_ms:
+          samples: 891
+          p50: 25.091171
+          p95: 35.074711
+          p99: 40.99044810000001
+          maximum: 56.709528
+        input_to_output_wall_ms:
+          samples: 891
+          p50: 24.387564975768328
+          p95: 34.493675018893555
+          p99: 40.232262993231416
+          maximum: 47.73050098447129
+        input_anchor_missing: 0
+        input_anchor_ambiguous: 0
+        negative_source_age: 0
+      yolo_right:
+        messages: 891
+        hz: 14.85
+        valid_messages: 891
+        excluded_old_epoch_messages: 0
+        first_second: 14
+        five_second_hz:
+        - 14.6
+        - 15.0
+        - 14.8
+        - 15.0
+        - 14.8
+        - 15.0
+        - 14.8
+        - 14.6
+        - 14.6
+        - 15.2
+        - 15.0
+        - 14.8
+        max_gap_sec: 0.187993711035233
+        first_output_sec: 0.08400592097314075
+        duplicate_stamps: 0
+        reversed_stamps: 0
+        complete: true
+        duration_sec: 60.0
+        valid_ratio: 1.0
+        source_age_ms:
+          samples: 891
+          p50: 24.82605
+          p95: 34.7292425
+          p99: 40.6112904
+          maximum: 47.254324
+        input_to_output_wall_ms:
+          samples: 891
+          p50: 24.171768047381192
+          p95: 33.9636264834553
+          p99: 39.86804047599435
+          maximum: 43.61586202867329
+        input_anchor_missing: 0
+        input_anchor_ambiguous: 0
+        negative_source_age: 0
+      yolo_front:
+        messages: 896
+        hz: 14.933333333333334
+        valid_messages: 896
+        excluded_old_epoch_messages: 0
+        first_second: 15
+        five_second_hz:
+        - 14.8
+        - 15.0
+        - 15.0
+        - 14.8
+        - 14.8
+        - 15.2
+        - 14.6
+        - 15.0
+        - 15.0
+        - 15.0
+        - 15.0
+        - 15.0
+        max_gap_sec: 0.17812786204740405
+        first_output_sec: 0.08401226898422465
+        duplicate_stamps: 0
+        reversed_stamps: 0
+        complete: true
+        duration_sec: 60.0
+        valid_ratio: 1.0
+        source_age_ms:
+          samples: 896
+          p50: 24.073005000000002
+          p95: 33.07765775
+          p99: 38.98521649999999
+          maximum: 42.426586
+        input_to_output_wall_ms:
+          samples: 896
+          p50: 23.37823447305709
+          p95: 32.54425471823197
+          p99: 38.39744184224401
+          maximum: 41.79269797168672
+        input_anchor_missing: 0
+        input_anchor_ambiguous: 0
+        negative_source_age: 0
+    worker_stages:
+      front:
+        input_to_begin:
+          samples: 896
+          p50: 0.18694400205276906
+          p95: 10.3758404875407
+          p99: 15.040038540610096
+          maximum: 23.974395997356623
+        begin_to_complete:
+          samples: 896
+          p50: 16.89876348245889
+          p95: 31.326406227890402
+          p99: 37.114284647395834
+          maximum: 40.54222599370405
+      left:
+        input_to_begin:
+          samples: 891
+          p50: 1.9830259843729436
+          p95: 10.530876490520313
+          p99: 19.52770602074453
+          maximum: 28.874312003608793
+        begin_to_complete:
+          samples: 891
+          p50: 18.074277963023633
+          p95: 31.381586013594642
+          p99: 37.17622346011922
+          maximum: 40.378762991167605
+      right:
+        input_to_begin:
+          samples: 891
+          p50: 1.8473940435796976
+          p95: 10.508326522540301
+          p99: 18.955391680356115
+          maximum: 26.883030019234866
+        begin_to_complete:
+          samples: 891
+          p50: 18.099976994562894
+          p95: 31.419017526786774
+          p99: 37.02127328724601
+          maximum: 40.49290204420686
+    input_pauses:
+      front:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 107.24898002808914
+        pauses: []
+      left:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 109.09091198118404
+        pauses: []
+      right:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 108.52976999012753
+        pauses: []
+      extra:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 141.60702301887795
+        pauses: []
+    unanchored_outputs: []
+  - model: yoloe-26l-seg
+    width: 1280
+    passed: false
+    failures:
+    - yolo front supply/latency gate
+    - yolo left supply/latency gate
+    - yolo right supply/latency gate
+    measurements:
+      yolo_front:
+        messages: 891
+        hz: 14.85
+        valid_messages: 891
+        excluded_old_epoch_messages: 0
+        first_second: 14
+        five_second_hz:
+        - 14.6
+        - 14.6
+        - 14.8
+        - 15.0
+        - 14.8
+        - 14.6
+        - 15.0
+        - 15.0
+        - 15.0
+        - 15.0
+        - 14.8
+        - 15.0
+        max_gap_sec: 0.3256113789975643
+        first_output_sec: 0.054906877980101854
+        duplicate_stamps: 0
+        reversed_stamps: 0
+        complete: true
+        duration_sec: 60.0
+        valid_ratio: 1.0
+        source_age_ms:
+          samples: 891
+          p50: 28.293132
+          p95: 39.7263765
+          p99: 43.12646430000002
+          maximum: 322.007179
+        input_to_output_wall_ms:
+          samples: 891
+          p50: 27.56757801398635
+          p95: 39.06933049438521
+          p99: 42.3636376101058
+          maximum: 321.41512096859515
+        input_anchor_missing: 0
+        input_anchor_ambiguous: 0
+        negative_source_age: 0
+      yolo_left:
+        messages: 885
+        hz: 14.75
+        valid_messages: 885
+        excluded_old_epoch_messages: 0
+        first_second: 13
+        five_second_hz:
+        - 14.6
+        - 14.8
+        - 14.6
+        - 15.2
+        - 14.6
+        - 14.2
+        - 14.6
+        - 14.8
+        - 15.0
+        - 14.6
+        - 14.8
+        - 15.2
+        max_gap_sec: 0.4068165009957738
+        first_output_sec: 0.07725874602328986
+        duplicate_stamps: 0
+        reversed_stamps: 0
+        complete: true
+        duration_sec: 60.0
+        valid_ratio: 1.0
+        source_age_ms:
+          samples: 885
+          p50: 28.400898
+          p95: 41.27564419999998
+          p99: 45.78283315999999
+          maximum: 299.616814
+        input_to_output_wall_ms:
+          samples: 885
+          p50: 27.658815030008554
+          p95: 40.10271279839798
+          p99: 45.42688201647251
+          maximum: 299.1454300354235
+        input_anchor_missing: 0
+        input_anchor_ambiguous: 0
+        negative_source_age: 0
+      yolo_right:
+        messages: 883
+        hz: 14.716666666666667
+        valid_messages: 883
+        excluded_old_epoch_messages: 0
+        first_second: 13
+        five_second_hz:
+        - 14.6
+        - 14.6
+        - 14.6
+        - 15.2
+        - 14.6
+        - 14.2
+        - 14.6
+        - 14.6
+        - 15.0
+        - 14.8
+        - 14.6
+        - 15.2
+        max_gap_sec: 0.4067947210278362
+        first_output_sec: 0.07729605201166123
+        duplicate_stamps: 0
+        reversed_stamps: 0
+        complete: true
+        duration_sec: 60.0
+        valid_ratio: 1.0
+        source_age_ms:
+          samples: 883
+          p50: 28.06735
+          p95: 40.305614299999995
+          p99: 45.91699081999998
+          maximum: 324.194908
+        input_to_output_wall_ms:
+          samples: 883
+          p50: 27.522202988620847
+          p95: 39.75286819622852
+          p99: 45.028809806099126
+          maximum: 323.6180660314858
+        input_anchor_missing: 0
+        input_anchor_ambiguous: 0
+        negative_source_age: 0
+    worker_stages:
+      front:
+        input_to_begin:
+          samples: 891
+          p50: 0.18693896709010005
+          p95: 14.864606520859525
+          p99: 20.39807224064135
+          maximum: 278.2891549868509
+        begin_to_complete:
+          samples: 891
+          p50: 23.782339005265385
+          p95: 36.69864550465718
+          p99: 40.994117804802954
+          maximum: 308.48658102331683
+      left:
+        input_to_begin:
+          samples: 885
+          p50: 2.0612990483641624
+          p95: 16.705546795856204
+          p99: 25.278875685762603
+          maximum: 255.72812097379938
+        begin_to_complete:
+          samples: 885
+          p50: 18.67154601495713
+          p95: 36.631654179655015
+          p99: 40.90384686831385
+          maximum: 43.66709996247664
+      right:
+        input_to_begin:
+          samples: 883
+          p50: 1.8855159869417548
+          p95: 17.705845372984186
+          p99: 26.233428679406643
+          maximum: 280.36316798534244
+        begin_to_complete:
+          samples: 883
+          p50: 18.558453011792153
+          p95: 36.57272093114443
+          p99: 40.93625286128371
+          maximum: 43.46675600390881
+    input_pauses:
+      left:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 262.148755020462
+        pauses:
+        - begin: 326369.237786848
+          end: 326369.499935603
+          wall_gap_ms: 262.148755020462
+          source_gap_ms: 262.058735
+      right:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 287.0443610008806
+        pauses:
+        - begin: 326369.213332292
+          end: 326369.500376653
+          wall_gap_ms: 287.0443610008806
+          source_gap_ms: 287.102222
+      front:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 312.21202900633216
+        pauses:
+        - begin: 326369.215420685
+          end: 326369.527632714
+          wall_gap_ms: 312.21202900633216
+          source_gap_ms: 311.885595
+      extra:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 353.17154601216316
+        pauses:
+        - begin: 326369.172619096
+          end: 326369.525790642
+          wall_gap_ms: 353.17154601216316
+          source_gap_ms: 352.965832
+    unanchored_outputs: []
+  sensor_only:
+    mode: sensor_bridge_only
+    start: 326076.772951687
+    end: 326136.772951687
+    seconds: 60.0
+    complete: true
+    timestamp_policy:
+      sensor_bridge: receive
+    views:
+      left:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 108.9504259871319
+        pauses: []
+      right:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 108.465914032422
+        pauses: []
+      front:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 108.5845569614321
+        pauses: []
+      extra:
+        scope: Consecutive input arrivals inside ACTIVE window; diagnostic only, no
+          gate exemption
+        maximum_gap_ms: 166.36293201008812
+        pauses: []
+    resources:
+      samples: 300
+      gpu_available: true
+      gpu_missing_samples: 0
+      gpu_utilization_percent:
+        samples: 300
+        p50: 37.0
+        p95: 41.0
+        p99: 42.00999999999999
+        maximum: 46.0
+      gpu_memory_mib:
+        samples: 300
+        p50: 3870.0
+        p95: 3870.0
+        p99: 3870.0
+        maximum: 3870.0
+      gpu_process_memory: unavailable_not_inferred_from_global_memory
+      nodes:
+        /morai_sensor_bridge:
+          cpu_percent:
+            samples: 299
+            p50: 5.047326714492886
+            p95: 10.248642551693443
+            p99: 11.023364953293306
+            maximum: 14.714524181039348
+          rss_mib:
+            samples: 300
+            p50: 59.40625
+            p95: 59.40625
+            p99: 59.40625
+            maximum: 59.40625
+        /morai_udp_bridge:
+          cpu_percent:
+            samples: 299
+            p50: 0.0
+            p95: 0.0
+            p99: 4.955236697827394
+            maximum: 5.130125847307989
+          rss_mib:
+            samples: 300
+            p50: 39.3359375
+            p95: 39.3359375
+            p99: 39.3359375
+            maximum: 39.3359375
+    interpretation: Diagnostic control only; does not waive any failed full-stack
+      trial.
+  regression:
+    yoloe_tools: 13
+    coco7_tools: 43
+    camera_total: 306
+    camera_pass: 305
+    camera_known_facade_fail: 1
+    validators: 5
+  remaining:
+  - 18 C6 weather trials
+  - selection-frozen heldout
+  - candidate/reference fusion 8 trials
+  - final candidate decision
+  evidence:
+    report: artifacts/camera-yoloe-selection-v1/followup-v1/analysis-waiting-position/report.json
+    report_sha256: d5b1c16f4ad019fd0f18ee763585aee5bf90603c431bab7a011f9223126fe6c3
+    spawn_gallery: artifacts/camera-yoloe-selection-v1/followup-v1/spawn-comparison/comparison.html
+    gallery: http://localhost:8768/camera-yoloe-selection-v1/followup-v1/analysis-waiting-position/index.html
+    setup_and_fixture_failures_preserved: true
