@@ -627,7 +627,8 @@ ignore지만 car 34×13px와 bus 41×20px는 남는다. 이미 노출된 결과�
 새 갤러리는 `http://localhost:8768/camera-capture-size-scope-v2/`다. 생성 명령은 위 명령에서
 `--scope-config config/experiments/camera_capture_size_scope_v2.json`과 새 출력 경로를 사용한다.
 [v2 집계](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/size-scope-v2.json)는
-16/8과 24/12 결과를 함께 보존한다. 작은 박스를 회색으로 표시하는 옵션도 유지한다.
+16/8과 24/12 결과를 함께 보존한다. 제외 박스 표시는 사용자 요청에 따라 밝은 자홍색
+2px 윤곽으로 변경했다. `제외 GT도 표시 (자홍색)`을 켜면 볼 수 있다.
 
 ### PE_Firewall 자료를 먼저 활용하는 순서
 
