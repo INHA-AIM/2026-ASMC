@@ -75,7 +75,7 @@ def report(args):
         scope_config=scope_config,scope_config_sha256=sha(args.scope_config),gt_sha256=sha(args.gt),
         primary_profile=primary,geometry_counts=dict(geometry),profiles=profiles,
         geometry_counts_scope='All source GT geometry including unresolved/excluded semantic types. Per-class localization uses known target annotations only.',
-        interpretation='Known-annotation localization remains partial GT, not full recall/precision. Pixel scope is provisional, not tuned from heldout. Raw GT and old metrics are preserved.',
+        interpretation='Known-annotation localization remains partial GT, not full recall/precision. Pixel scope is provisional; previously exposed data are not a new blind evaluation. Raw GT and old metrics are preserved.',
         capture_geometry_user_confirmed=True,formal_teacher_acceptance=False,training_labels_modified=False,
         operating_results_modified=False,gpu_inference_performed=False)
     result['tool_sha256']={name:sha(Path(__file__).parent/name) for name in
@@ -92,12 +92,13 @@ def report(args):
     page='''<!doctype html><meta charset="utf-8"><title>2026-10-10 · Capture GT 크기 범위 비교</title>
 <style>body{font:16px system-ui;max-width:1400px;margin:25px auto}table{border-collapse:collapse}td,th{padding:8px;border:1px solid #ccc}article{border:1px solid #ccc;padding:12px;margin:18px 0}img{max-width:100%}button,input{font:inherit;margin:8px;padding:6px}</style>
 <h1>2026-10-10 · Capture GT 크기 범위 비교</h1><p>파랑: 크기 기준을 충족한 원본 GT · 초록: 저장된 rich21 예측(confidence 0.40) · 회색: 극소형 ignore GT. 기본 화면은 회색 박스를 숨깁니다. 세부 종류 미확정 GT는 원본 Vehicle/Obstacle 이름을 표시합니다. 정량 표는 종류가 확인된 대상만 집계합니다. 원본 이미지·GT·기존 결과는 유지합니다.</p>
-<p>긴 변 ≥16px, 짧은 변 ≥8px를 모두 만족하면 주 평가 대상입니다. 정확히 경계값이면 포함하며 원본 영상 픽셀로 비교합니다. 검출 가능 한계나 최종 수락 기준으로 확정한 값은 아닙니다.</p>
+<p>긴 변 ≥__LONG__px, 짧은 변 ≥__SHORT__px를 모두 만족하면 주 평가 대상입니다. 정확히 경계값이면 포함하며 원본 영상 픽셀로 비교합니다. 검출 가능 한계나 최종 수락 기준으로 확정한 값은 아닙니다. 이미 노출된 자료의 시각 검토용 범위이며 새로운 blind 평가가 아닙니다.</p>
 <p><a href="../index.html">전체 목차</a> · <a href="../camera-yoloe-x-teacher-v1/index.html">기존 전체 GT 진단</a> · <a href="summary.json">8/4·16/8·24/12 크기 대조 및 SHA</a></p>
 <p>아래 표는 대응 수/검토된 종류의 GT 수입니다. 제외 후 개선 비율만으로 모델이 좋아졌다고 판단하지 않으며 teacher 승인·전체 precision은 여전히 보류입니다. 거리(m)는 추정하지 않았습니다. 학습용 TXT에서는 라벨을 삭제하지 않았습니다.</p>
 <table><tr><th>prompt</th><th>box 전체→주 평가</th><th>person</th><th>car</th><th>cone</th></tr>__TABLE__</table>
 <p><label><input type="checkbox" id="show">ignore GT도 표시</label><input id="query" placeholder="box, person, run, view 검색"><button id="prev">이전</button><button id="next">다음</button></p><p id="count"></p><div id="gallery"></div>
 <script>let rows=[],page=0;const el=id=>document.getElementById(id);function draw(){const selected=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(el('query').value.toLowerCase()));el('gallery').replaceChildren();el('count').textContent=selected.length+'개 · 페이지 '+(page+1);for(const r of selected.slice(page*20,(page+1)*20)){const a=document.createElement('article'),p=document.createElement('p'),img=document.createElement('img'),link=document.createElement('a');p.textContent=r.source+' '+r.source_key+' / main '+r.main+' / ignore '+r.ignored;img.src=el('show').checked?r.all_image:r.image;link.href=img.src;link.target='_blank';link.append(img);const raw=document.createElement('a');raw.href=r.raw_image;raw.target='_blank';raw.textContent='주석 없는 원본';a.append(p,link,raw);el('gallery').append(a);}}el('show').onchange=draw;el('query').oninput=()=>{page=0;draw()};el('prev').onclick=()=>{page=Math.max(0,page-1);draw()};el('next').onclick=()=>{page++;draw()};fetch('gallery-data.json').then(r=>r.json()).then(r=>{rows=r;draw()});</script>'''
+    page=page.replace('__LONG__','%g'%scope['min_long_edge']).replace('__SHORT__','%g'%scope['min_short_edge'])
     (args.output/'index.html').write_text(page.replace('__TABLE__',''.join(table)))
     print(json.dumps(dict(frames=len(rows),geometry_counts=dict(geometry),output=str(args.output))))
     return result

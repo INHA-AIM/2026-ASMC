@@ -47,6 +47,12 @@ Enzo의 barrigate/pe barrigate는 각각 concrete_barricade/pe_firewall 의미�
 PE=traffic_drum이다. Park의 box는 WoodBox/PE_Firewall 혼합이므로 개별 분류한다.
 그 밖의 animal, object/obstacle, vehicle, static/dynamic, 복합 탑승자는 이름만 바꾸지 않는다.
 
+2026-10-10 사용자는 Roboflow 주석이 각 작성자의 의도에 맞게 정확하며, 우리 학습
+분류와 다른 의미를 해석해 활용해야 한다고 재확인했다. 자료가 불량이어서 격리한 것으로
+설명하지 않는다. 직접 대응은 기존 박스를 유지해 이름을 변환하고, 여러 종류가 합쳐진
+클래스는 목표 종류를 구분한다. 복합 박스는 원본 기준을 보존하고 필요한 경우 구성요소를
+별도로 보완한다. 이 의미 확인을 teacher가 만든 새 박스의 승인으로 확장하지 않는다.
+
 ### 검수·export의 범위 관리
 
 v1 검수의 종류·좌표 수정은 읽을 수 있다. 다만 새 방벽류가 추가된 v2의 완전성을 자동
@@ -607,3 +613,37 @@ python tools/perception/report_capture_size_scope.py \
 혼합 박스에 적용하지 않는다. 옵션이 없으면 이전 전체 GT 집계와 동일하다.
 작은 미확정 종류는 ignore 영역으로만 사용한다. 주 평가 범위 안의 미확정 종류·입력 문제나
 영상의 범위 확인은 계속 검증해야 하며, 극소형 제외를 이유로 해당 검증을 면제하지 않는다.
+
+### 사용자 화면 검토 후 24/12px 대조 — 2026-10-10
+
+사용자가 16/8px 적용 사진의 작은 박스를 보고 기준 상향을 요청했다.
+[v2 정책](../../../config/experiments/camera_capture_size_scope_v2.json)은 원본 긴 변 ≥24px
+**그리고** 짧은 변 ≥12px를 잠정 주 범위로 둔다. 기존 v1 정책·갤러리·전체 GT는 유지한다.
+원거리 자체를 제거하는 정책은 아니다. 예시 front/000180의 truck GT 17×9px·21×12px는
+ignore지만 car 34×13px와 bus 41×20px는 남는다. 이미 노출된 결과를 이용한 시각 검토용
+범위 변경이며, 더 좋은 점수를 얻었다는 이유로 모델 개선·teacher 승인으로 설명하지 않는다.
+작은 예측을 전역 삭제하지 않으며 실시간 검출·학습 export에도 이 제한을 적용하지 않는다.
+
+새 갤러리는 `http://localhost:8768/camera-capture-size-scope-v2/`다. 생성 명령은 위 명령에서
+`--scope-config config/experiments/camera_capture_size_scope_v2.json`과 새 출력 경로를 사용한다.
+[v2 집계](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/size-scope-v2.json)는
+16/8과 24/12 결과를 함께 보존한다. 작은 박스를 회색으로 표시하는 옵션도 유지한다.
+
+### PE_Firewall 자료를 먼저 활용하는 순서
+
+PE_Firewall의 학습 클래스는 `plastic_barrier`다. 현재 zero-shot의 낮은 대응은 원본
+Roboflow 박스의 오류를 뜻하지 않는다. 고정 X 진단은 부분 GT에서 rich21 기준 전체
+1/86, 16/8px 1/54, 24/12px 1/44 대응이다. 주석이 없는 상황을 포함하는 전체 recall이나
+현재 운영 YOLO의 정량 수치로 사용하지 않는다.
+
+- Enzo의 `pe barrigate` 397개 주석은 사용자 제공 의미로 직접 대응 가능하다.
+- jjj의 `9` 1,803개와 Park의 `box` 391개는 각각 여러 객체 종류가 합쳐진 원본 주석이다.
+  전부 PE_Firewall로 바꾸지 않고 방벽 사례를 개별 분류한다. 숫자는 해당 라벨의 전체
+  주석 수로, PE_Firewall 수나 중복 제거 후 독립 표본 수가 아니다.
+- 다른 `obstacle/object` 포괄 주석도 필요하면 확인하되 검증되지 않은 X 예측만으로
+  plastic_barrier 정답을 자동 생성하거나 미검출 주석을 삭제하지 않는다.
+- 위 자료의 PE 방벽을 장면·중복 계보로 정리하고, SUNNY/FOGGY·터널·거리·가림·세 뷰
+  커버리지를 확인한다. 모르는 조건은 unknown이다. 부족한 조건만 추가 수집하며 학습과
+  평가 장면을 나눈다. 현재 작업에서는 추가 수집이나 학습을 시작하지 않았다.
+
+출처와 계수는 [방벽 자료 확인](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/plastic-barrier-coverage-v1.json)에 남긴다.
