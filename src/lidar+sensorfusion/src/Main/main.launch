@@ -7,7 +7,7 @@
   <arg name="map_altitude_origin_m" default="0.0"/>
   <arg name="start_yolo" default="false"/>
   <arg name="fusion_yolo_policy" default="unique" doc="unique | bounded_reuse"/>
-  <arg name="camera_objects_conf_thres" default="0.7" doc="Match the selected producer confidence; legacy default is preserved."/>
+  <arg name="camera_objects_conf_thres" default="0.0" doc="Optional stricter adapter cutoff. Camera already filters confidence; 0 passes its accepted candidates without a hidden 0.7 gate."/>
   <!-- MORAI sends VLP-16 packets (Velodyne product ID 0x22). -->
   <arg name="lidar_port" default="9299"/>
   <!-- Keep this false when 2026-ASMC/asmc_bridge sensor node publishes

@@ -20,6 +20,34 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 
 ## 실행
 
+### 선정한 3뷰 개발 모델
+
+YOLO26m detect·전방1280·좌우640×480·TensorRT FP16·2+1 batch·뷰별15Hz·
+confidence0.50을 개발 기준으로 선정했다. `asmc-ros-noetic`의 ROS 환경에서 직접 실행한다.
+
+```bash
+roslaunch asmc_camera camera_coco7.launch profile:=debug
+```
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
+```
+
+좌우 debug 토픽은 `/perception/camera/objects/debug/left/image/compressed`,
+`/perception/camera/objects/debug/right/image/compressed`다. planning은 세 모델 STANDBY,
+debug는 ACTIVE이며 GUI는 별도로 연다. 모델·뷰별 목표 `target_hz_by_view`·생산자 최소 confidence는
+`config/camera/yolo26m_detect_coco7_three_view.yaml`에서 수정한다. 시작 컷만 바꾸려면
+`objects_conf_thres:=0.55`를 launch에 추가하고 재시작한다.
+
+판제는 메시지 confidence로 더 엄격한 소비 컷을 적용할 수 있다. LiDAR 호환 어댑터는
+`rosparam set /camera_objects_yolo_bbox_adapter/conf_thres 0.65`로 실행 중 추가 컷을
+변경하며, `0.0`으로 생산자가 보낸 후보를 모두 다시 통과시킨다. 생산자에서 버린 후보는
+복원하지 못한다. 검출 tradeoff·mask 신규 실패·판제 deadline·운영 승격 보류는
+[3뷰 모델 선정·실행 안내](../../docs/handoffs/perception/camera-three-view-coco-runtime.md)를 따른다.
+아래 기존 `perception.launch` 기본 모델은 별도 운영 수락 전까지 유지한다.
+
+### 기존 실행 프로필
+
 YOLO26s-seg·YOLOE-26s-seg의 별도 관측 실험은
 [seg 모델 선정 안내](../../docs/handoffs/perception/camera-seg-model-selection.md)를 따른다.
 전방/3뷰 mask overlay를 제공하지만 학습·운영 기본 모델·LiDAR 소비 정책은 바꾸지 않는다.

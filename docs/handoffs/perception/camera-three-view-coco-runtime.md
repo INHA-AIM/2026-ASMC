@@ -6,6 +6,132 @@
 컨테이너 `/root/ws`가 어느 worktree를 읽는지 확인한 뒤 실행한다.
 폴더명과 Git 브랜치명은 다르며, build/source만으로 마운트 대상은 바뀌지 않는다.
 
+## 최종 개발 모델과 confidence
+
+실행·추가 개발 기준 모델은 **YOLO26m detect / 전방1280 / 좌우640×480 /
+TensorRT FP16 / 2+1 batch / 뷰별15Hz / 생산자 confidence0.50**으로 결정했다.
+설정은 `src/asmc_camera/config/camera/yolo26m_detect_coco7_three_view.yaml`이다.
+원본 전방 영상은1280×720이며 tensor는736×1280이다. raw7종과3뷰 Ego mask를 유지한다.
+L-seg/960은 비교 설정으로 보존하며, 운영 기본값 승격·PR 전체 수락과 모델 결정은 구분한다.
+
+같은0.70 컷에서 SUNNY·FOGGY 각각3회, MORAI+TwinLite+ResNet+LiDAR/fusion+
+판제/제어 preview를 비교했다. 제어는 시험 토픽만 사용했고 실제 자동주행은 하지 않았다.
+
+| 후보 | 3뷰 처리율 범위 | 입력 수신→출력 wall p95 최댓값 | 전체 GPU peak VRAM |
+|---|---:|---:|---:|
+| M detect /1280 |14.75–14.95Hz|84.4ms|5322MiB|
+| L seg /960 |14.45–14.90Hz|115.5ms|5428MiB|
+
+동일0.70의 Capture selection 검수 박스 대응은 M의 TP227/FP2/macroF1 0.2000,
+L의 TP236/FP4/macroF1 0.1930이다. car/truck/person/bus만 검수 GT가 있으며
+작은 박스가 많다. L의 TP가 더 많다는 점도 보존한다. 낮은 컷0.50의 저장 결과
+screening에서는 L300/22, M282/20으로 L의 전체 대응 수가 더 많았다.
+M의 절대적인 인식 우위를 주장하지 않고, 약31ms의 통합 지연 여유·15Hz 유지·
+근거리 개와 검토한 person 오검출을 함께 고려해 선택했다. 현재 운영 fusion이
+전방 bbox를 소비하므로 seg mask의 후속 활용 이득을 이미 얻었다고 계산하지 않는다.
+
+두 후보 모두 카메라 공급 gate를 통과했지만 L은 일부5초 창에서15Hz 목표의95%에
+미달했다. 전체 스택은 두 후보 모두 trajectory deadline 실패를 유지한다.
+L은 먼 승용차에 유리했지만, 새12/30/50m 스폰에서 가까운 Dog1을 놓쳤고 Capture의
+기둥(person0.857)·차량 바퀴(person0.649) 오검출도 남았다. M은 가까운 개와 일부
+원거리 트럭에 유리했다. 새로운42개 장면에서0.70 기준 기대 라벨을5장 중3장 이상
+관측한 장면은 두 후보 모두21개였다. 이는 검토한 중앙 영역의 관찰이며 pixel GT
+recall/AP나 실제 접근 주행의 최초 검출 시각이 아니다. 거리도 Ego 스폰 anchor 기준이다.
+일부 매우 가까운 차량의 부분 관측은 두 모델 모두 놓친다. 단일 사전학습 모델로
+대회 객체 전체를 수락한 것은 아니다.
+
+confidence는 모델 결정 이후 **selection 자료에서만** 정했다.0.60의 mask 대조에서
+front/000277 차량이 OFF0.602→ON0.587로 떨어졌고,0.55에서는 front/000336 차량이
+OFF0.566→ON0.543으로 떨어졌다. 최종0.50은 이 두 전방 차량을 보존한다.
+2252 selection 프레임의 TP/FP는0.70의227/2에서 **실제0.50 추론의281/18**로 바뀐다.
+낮은 컷으로 저장한 결과를0.50 이상으로 필터링한 screening은282/20이었다.
+실제 predictor의 confidence 경계 처리와 후필터의 포함 조건은 구분하며 실제 재추론을
+최종 수치로 사용한다. FP18 중14건은 실제 객체와 겹치는 raw 라벨 혼동이며4건은
+미대응 박스다. 모두 영상으로 개별 검토하고 라벨 혼동도 FP로 유지한다.
+이 수치는 반복 프레임의 raw-label 대응이며 고유 객체 수가
+아니다. confidence는 정답 확률로 보장되지 않는다. 과거의 YOLO11m FP 상한만으로
+컷을 정하던 정책에서, 사용자가 요청한 조기 검출·근접 객체 보존을 우선한 절충으로
+변경했으며 증가한 FP를 면제하거나 삭제하지 않는다.
+
+0.50에서도 mask 신규 대응 실패는 좌측 차량1·우측의 일부만 보이는 person1건이다.
+이전 GT287 보행자 예외와 다르므로 자동 승인하지 않는다.0.60/0.55 실패도 보존한다.
+기존 heldout은 이미 과거에 열람한 자료이므로 이번에는 고정 컷의 회귀 검증으로만
+사용한다. 이 점수에 맞춰 컷을 다시 조정하지 않는다.
+
+최종0.50 설정으로 SUNNY·FOGGY 각각3회 전체 스택 preview를 다시 측정했다.
+뷰별14.70–14.95Hz, 입력 수신→출력 wall p95 최댓값84.6ms, p99 최댓값94.9ms,
+최대 공백197.1ms, 모델 로드부터 포함한 전체 GPU peak5717MiB(8188MiB의69.8%)였다.
+6회 모두 카메라 공급·15Hz 목표 gate를 통과했으며 판제 trajectory deadline은
+6회 모두 실패로 남았다. MORAI 렌더링과 사용자의 배경 작업을 포함한 해당 실행의
+관측값이며, 순수 TensorRT 연산 시간이나30분 안정성 승인으로 해석하지 않는다.
+
+최종 설정의09-21 카메라 bag·주/음영 fusion bag은 격리 master11314에서 각각1회
+연결 검사를 했다. 카메라·음영 실행은 통과했고 주 bag은14.91Hz였으나 출력 공백
+340ms로 공급 gate가 실패했다. 같은 구간 입력 최대 공백94ms, 해당 출력 wall 지연
+271ms, 리소스 조회 소요311ms가 관측됐다. VRAM 고갈은 없었으나 지연의 원인을
+GPU/OS 스케줄링으로 확정하지 않는다. 원본 실패와 `primary/gap-diagnostic.json`을 보존한다.
+두 fusion 실행 모두 단일 발행자·종료 집계·offset≤50ms는 통과했다. 한 번의 smoke를
+반복 매칭 수·분류 동등성 수락으로 확대하지 않는다.
+
+`asmc-ros-noetic` 안에서 직접 실행한다. 새 launch의 기본 profile은 planning(STANDBY)다.
+debug는 세 모델을 ACTIVE로 시작하고 debug 영상을 발행한다. rqt는 별도로 연다.
+
+```bash
+roslaunch asmc_camera camera_coco7.launch profile:=debug
+```
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
+```
+
+좌우는 `/perception/camera/objects/debug/left/image/compressed`,
+`/perception/camera/objects/debug/right/image/compressed`다.
+LiDAR는 nested 환경을 source한 별도 터미널에서 `roslaunch Main main.launch
+start_yolo:=false rviz:=false`로 연결한다. 같은 master11311을 사용한다.
+기존 `perception.launch`·`camera_objects.launch`의 YOLO11m 기본값은 전체 수락까지 유지한다.
+
+### 판제에서 조절하는 범위
+
+- **생산자 최소 컷:** 위 YAML의 `conf_thres` 또는 launch의 `objects_conf_thres`다.
+  `roslaunch asmc_camera camera_coco7.launch profile:=debug objects_conf_thres:=0.55`
+  처럼 명시한다. 개별 `camera_objects.launch`에서는 `conf_thres:=0.55`다.
+  시작 시 검증하며 재시작해야 적용된다. 실행 중 camera private param만 바꾸는 것은
+  backend hot reload가 아니다. 컷 아래에서 이미 버린 박스를 소비자가 복원할 수 없다.
+- **판제의 소비 컷:** `CameraObjectBox.confidence`를 직접 사용해 필요에 따라 더
+  엄격하게 조절한다. 현 비교 범위의0.50–0.70을 출발점으로 삼되 구간 정책은 판제가
+  결정한다. 실제 변경값은 소비 결과와 함께 검증한다.
+- **LiDAR 호환 어댑터의 추가 컷:** Main의 `camera_objects_conf_thres` 기본0.0은
+  생산자가 승인한 후보를 그대로 통과시킨다. 숨은0.7 컷으로 신규 후보를 잃지 않는다.
+  private `/camera_objects_yolo_bbox_adapter/conf_thres`는 캐시 파라미터로 실시간 변경한다.
+
+```bash
+rosparam set /camera_objects_yolo_bbox_adapter/conf_thres 0.65
+# 생산자의 후보를 다시 모두 통과
+rosparam set /camera_objects_yolo_bbox_adapter/conf_thres 0.0
+```
+
+추가 컷은 이후 수신하는 관측에 적용한다. 기존 track의 확인된 분류를 즉시 삭제하거나
+과거 결과를 재발행하지 않는다. 비유한 값·범위 밖 값은 거부하고 어댑터 입력을 보류한다.
+관측 header·좌표·MD5·50ms 매칭·200ms 대기·unique 기본 정책은 유지한다.
+
+비교 증거는 artifacts의 `finalist-decision-*`, `finalist-selected-*`에 모은다.
+`finalist-decision-analysis-v1.json`은 두 모델의 같은 컷 비교와 모든 반복의 실패를
+함께 담는다. 비교 갤러리는 `finalist-decision-inspection07-v1/comparison.html`,
+최종 컷은 `finalist-decision-inspection50-v3/comparison.html`, mask 대조는
+`finalist-selected-mask-controls50-v3/index.html`, FP 전수 검토는
+`finalist-selected-confidence-review50-v3/index.html`이다. 로컬 gallery server8766에서 연다.
+후속 모델은 이 M-detect 기준선과 동일 입력으로 비교한다.
+
+최종 증거와 원본 SHA 목록은
+[`finalist_model_decision.json`](../../../config/baselines/evidence/camera_coco7_live_v1/finalist_model_decision.json)에 고정했다.
+바깥/nested 빌드, 관련 단위·계약 시험176개와 validator6개는 통과했다.
+실제 ROS 어댑터의 컷 상승·복구·무효값 보류는 XML1개 시험(실패0·오류0)으로 확인했다.
+초기 `--text` 시험의 seq assertion 실패와 실행기 경로/검사 오류도 원본에 보존한다.
+ROS publisher마다 seq를 새로 붙이므로 wire에서는 원본 stamp·frame_id를 검사하며,
+순수 변환 시험에서는 복사한 전체 header를 검사한다. facade17개 중 기존1건 실패와
+P1-C7개 중 기존1건 오류는 그대로 남아 있다. GitHub CI는 조직 billing 제한 해소 전
+통과로 표시하지 않는다. PR#76은 Draft를 유지한다.
+
 ## 구현과 수락 상태
 
 구현과 비교 시험은 완료했으며 운영 수락은 보류 중이다. 기존 기본 모델을

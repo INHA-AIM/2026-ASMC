@@ -7,6 +7,7 @@ from asmc_camera.detection.batching import pack_image, shapes_for_front
 from asmc_camera.detection.classes import load_class_groups
 from asmc_camera.detection.messages import build_box_array
 from asmc_camera.detection.yolo_batch_backend import COCO7
+from asmc_camera.detection.confidence import validate_confidence
 from asmc_camera.runtime.state import InferenceState, ACTIVE
 
 
@@ -54,6 +55,32 @@ class Coco7RuntimeTest(unittest.TestCase):
         with self.assertRaises(ValueError): shapes_for_front(1000)
         with self.assertRaises(ValueError):
             InferenceState(['front'],target_hz_by_view={'left':10})
+
+    def test_confidence_rejects_nonfinite_and_invalid_parameters(self):
+        for value in [True, False, None, 'invalid', float('nan'), float('inf'), -.01, 1.01]:
+            with self.assertRaises(ValueError): validate_confidence(value)
+        for value in [0., .55, .6, .7, 1., '0.60']:
+            self.assertEqual(float(value), validate_confidence(value))
+
+    def test_selected_launch_override_follows_config_and_adapter_has_no_hidden_cut(self):
+        from pathlib import Path
+        import xml.etree.ElementTree as ET
+        import yaml
+        package = Path(__file__).resolve().parents[2]
+        root = ET.parse(package/'launch/camera_objects.launch').getroot()
+        node = root.find('node')
+        override = next(p for p in node.findall('param') if p.get('name') == 'conf_thres')
+        self.assertGreater(list(node).index(override), next(i for i,p in enumerate(node)
+                           if p.tag == 'rosparam' and p.get('file') == '$(arg config)'))
+        self.assertEqual('double', override.get('type'))
+        main = ET.parse(package.parent/'lidar+sensorfusion/src/Main/main.launch').getroot()
+        self.assertEqual('0.0', next(p.get('default') for p in main.findall('arg')
+                                   if p.get('name') == 'camera_objects_conf_thres'))
+        config = yaml.safe_load((package/'config/camera/yolo26m_detect_coco7_three_view.yaml').read_text())
+        self.assertEqual(list(COCO7), config['allowed_names'])
+        self.assertEqual('source', config['label_mode'])
+        self.assertEqual(.5, config['conf_thres'])
+        self.assertEqual({'front':15.,'left':15.,'right':15.},config['target_hz_by_view'])
 
 
 if __name__=='__main__': unittest.main()

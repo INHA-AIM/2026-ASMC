@@ -63,6 +63,8 @@ def provenance(models, engine, revision):
     files = sorted(set(ROOT.glob('tools/perception/*.py')) | set(ROOT.glob('src/asmc_camera/src/asmc_camera/**/*.py')) |
                    set(ROOT.glob('src/asmc_camera/config/camera/*.yaml')) |
                    set(ROOT.glob('src/lidar+sensorfusion/src/Main/src/**/*.*')) |
+                   set(ROOT.glob('src/lidar+sensorfusion/src/Main/scripts/*.py')) |
+                   set(ROOT.glob('src/lidar+sensorfusion/src/Main/**/*.launch')) |
                    set(ROOT.glob('src/asmc_camera/launch/*.launch')))
     hashes = {str(f.relative_to(ROOT)): hashlib.sha256(f.read_bytes()).hexdigest() for f in files if f.is_file()}
     if len(revision)!=40 or any(c not in '0123456789abcdef' for c in revision):

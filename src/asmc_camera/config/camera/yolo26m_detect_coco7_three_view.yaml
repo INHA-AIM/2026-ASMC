@@ -1,0 +1,18 @@
+# Selected development model. Deployment acceptance and global default promotion
+# remain separate: see the finalist decision and unresolved gates in the handoff.
+weights: /data/models/camera_coco7_v1/yolo26m.engine
+expected_sha256: 44066f58ca37e95487ddc5b69207c5d5e2c15ef3699e0a62a966552b0cfc1877
+runtime_backend: tensorrt
+task: detect
+batched_runtime: true
+label_mode: source
+views: [front, left, right]
+front_width: 1280
+batch_mode: 2plus1
+batch_wait_ms: 10.0
+target_hz: 15.0
+target_hz_by_view: {front: 15.0, left: 15.0, right: 15.0}
+conf_thres: 0.50
+allowed_names: [person, dog, bicycle, car, motorcycle, bus, truck]
+device: cuda:0
+require_cuda: true

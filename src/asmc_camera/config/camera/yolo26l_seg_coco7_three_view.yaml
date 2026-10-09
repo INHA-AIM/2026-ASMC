@@ -1,0 +1,17 @@
+# Comparison alternative; not the selected execution model or global default.
+weights: /data/models/camera_coco7_v1/yolo26l-seg.engine
+expected_sha256: 75e557f53dfe932971e04470426a36ac0d1dec888da3a9dec3443e807d017523
+runtime_backend: tensorrt
+task: segment
+batched_runtime: true
+label_mode: source
+views: [front, left, right]
+front_width: 960
+batch_mode: 2plus1
+batch_wait_ms: 10.0
+target_hz: 15.0
+target_hz_by_view: {front: 15.0, left: 15.0, right: 15.0}
+conf_thres: 0.60
+allowed_names: [person, dog, bicycle, car, motorcycle, bus, truck]
+device: cuda:0
+require_cuda: true

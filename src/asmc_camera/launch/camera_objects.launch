@@ -3,6 +3,7 @@
   <arg name="initial_mode" default="0"/>
   <arg name="target_hz" default="20.0"/>
   <arg name="config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <arg name="conf_thres" default="" doc="Optional startup confidence override; empty keeps the config value. Restart to lower the producer cutoff."/>
   <arg name="class_groups_config" default="$(find asmc_camera)/config/camera/object_classes.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
   <arg name="objects_side_ego_mask" default="true"/>
@@ -20,6 +21,7 @@
     <param name="initial_mode" value="$(arg initial_mode)"/>
     <param name="target_hz" value="$(arg target_hz)"/>
     <rosparam command="load" file="$(arg config)" subst_value="true"/>
+    <param name="conf_thres" value="$(arg conf_thres)" type="double" if="$(eval arg('conf_thres') != '')"/>
     <rosparam command="load" file="$(arg class_groups_config)"/>
     <param name="hood_mask" type="bool" value="$(arg objects_hood_mask)"/>
     <param name="side_ego_mask" type="bool" value="$(arg objects_side_ego_mask)"/>

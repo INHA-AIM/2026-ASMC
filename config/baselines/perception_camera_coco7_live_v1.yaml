@@ -999,3 +999,30 @@ range_batch_followup:
   original_setup_and_measurement_failures_preserved: true
   owned_actor_cleanup: 42 range actors + 18 live fixture actors; all exact owned IDs removed
   final_environment: SUNNY; Ego unchanged; no public control publishers; bridge and master retained
+
+final_model_decision:
+  summary: config/baselines/evidence/camera_coco7_live_v1/finalist_model_decision.json
+  summary_sha256: 415e26ce80cc304989eb0a5f99104cd2b6371a9bc9493a980d5354a14442a1d0
+  model: YOLO26m detect
+  front_width: 1280
+  side_input_hw:
+  - 480
+  - 640
+  batch: 2plus1
+  target_hz_each_view: 15.0
+  producer_confidence: 0.5
+  development_model_selected: true
+  global_default_promoted: false
+  camera_supply_trials_passed: 6
+  whole_stack_trials_failed: 6
+  new_side_mask_misses:
+    left: 1
+    right: 1
+  consumer_threshold_runtime_param: /camera_objects_yolo_bbox_adapter/conf_thres
+  consumer_threshold_default: 0.0
+  retained_failures:
+  - new side mask misses
+  - planning trajectory deadline
+  - prior confidence60/55 mask regressions
+  - offline driver path collision; resumed separately
+  - existing long-run/drive/CI acceptance blockers

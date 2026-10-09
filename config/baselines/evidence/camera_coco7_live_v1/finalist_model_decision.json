@@ -1,0 +1,5628 @@
+{
+  "schema_version": 1,
+  "status": "development_model_selected_deployment_acceptance_blocked",
+  "source_base_revision": "ebaa0c166e14f2914bba0449c1006e16671bb0af",
+  "selected": {
+    "model": "yolo26m",
+    "task": "detect",
+    "front_tensor_hw": [
+      736,
+      1280
+    ],
+    "side_tensor_hw": [
+      480,
+      640
+    ],
+    "batch": "2plus1",
+    "target_hz_each_view": 15.0,
+    "confidence": 0.5,
+    "engine_sha256": "44066f58ca37e95487ddc5b69207c5d5e2c15ef3699e0a62a966552b0cfc1877",
+    "runtime_container": "asmc-ros-noetic",
+    "global_default_promoted": false,
+    "fusion_policy": "unique"
+  },
+  "rationale": "M is selected for lower integrated latency, steadier15Hz and reviewed dog/person false-positive tradeoffs; L remains better in some distant-car scenes. No universal accuracy dominance claimed. Current operational fusion consumes front boxes, not segmentation masks.",
+  "fair_model_comparison_confidence": 0.7,
+  "fair_live": [
+    {
+      "weather": "sunny",
+      "model": "yolo26m",
+      "width": 1280,
+      "complete": true,
+      "trials": 3,
+      "failures": [
+        {
+          "repeat": 1,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "whole_stack_passed": false,
+      "camera_supply_passed": true,
+      "target_15hz_passed": true,
+      "hz_min": 14.75,
+      "hz_max": 14.95,
+      "wall_p95_ms_max": 76.00274395081215,
+      "wall_p99_ms_max": 96.43864063429646,
+      "maximum_gap_ms": 185.92446896946058,
+      "peak_whole_vram_mib": 5300.0
+    },
+    {
+      "weather": "sunny",
+      "model": "yolo26l-seg",
+      "width": 960,
+      "complete": true,
+      "trials": 3,
+      "failures": [
+        {
+          "repeat": 1,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "whole_stack_passed": false,
+      "camera_supply_passed": true,
+      "target_15hz_passed": false,
+      "hz_min": 14.55,
+      "hz_max": 14.9,
+      "wall_p95_ms_max": 112.02566277352163,
+      "wall_p99_ms_max": 129.7564780083485,
+      "maximum_gap_ms": 187.28979799197987,
+      "peak_whole_vram_mib": 5412.0
+    },
+    {
+      "weather": "foggy",
+      "model": "yolo26m",
+      "width": 1280,
+      "complete": true,
+      "trials": 3,
+      "failures": [
+        {
+          "repeat": 1,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "whole_stack_passed": false,
+      "camera_supply_passed": true,
+      "target_15hz_passed": true,
+      "hz_min": 14.85,
+      "hz_max": 14.95,
+      "wall_p95_ms_max": 84.43982733879238,
+      "wall_p99_ms_max": 103.56961318990213,
+      "maximum_gap_ms": 173.52893500356004,
+      "peak_whole_vram_mib": 5322.0
+    },
+    {
+      "weather": "foggy",
+      "model": "yolo26l-seg",
+      "width": 960,
+      "complete": true,
+      "trials": 3,
+      "failures": [
+        {
+          "repeat": 1,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "whole_stack_passed": false,
+      "camera_supply_passed": true,
+      "target_15hz_passed": false,
+      "hz_min": 14.45,
+      "hz_max": 14.9,
+      "wall_p95_ms_max": 115.48244777077343,
+      "wall_p99_ms_max": 134.89483674580694,
+      "maximum_gap_ms": 216.70832694508135,
+      "peak_whole_vram_mib": 5428.0
+    }
+  ],
+  "confidence_choice": {
+    "selection_only": true,
+    "previously_viewed_heldout_regression_only": true,
+    "priority": "Earlier/close-object detection with an explicit retained FP tradeoff; not an FP-bound pass or maximum-F1 claim."
+  },
+  "final_live": [
+    {
+      "weather": "sunny",
+      "trials": 3,
+      "camera_supply_passed": true,
+      "whole_stack_passed": false,
+      "failures": [
+        {
+          "repeat": 1,
+          "failures": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "failures": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "failures": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "target15_passed": true,
+      "hz_range": [
+        14.7,
+        14.95
+      ],
+      "input_receive_to_output_receive_wall_p95_ms_max": 83.06362546863964,
+      "input_receive_to_output_receive_wall_p99_ms_max": 91.58693751785906,
+      "max_output_gap_ms": 197.04469497082755,
+      "peak_whole_gpu_mib": 5717.0
+    },
+    {
+      "weather": "foggy",
+      "trials": 3,
+      "camera_supply_passed": true,
+      "whole_stack_passed": false,
+      "failures": [
+        {
+          "repeat": 1,
+          "failures": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "failures": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "failures": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "target15_passed": true,
+      "hz_range": [
+        14.85,
+        14.95
+      ],
+      "input_receive_to_output_receive_wall_p95_ms_max": 84.59809313062577,
+      "input_receive_to_output_receive_wall_p99_ms_max": 94.93686888425142,
+      "max_output_gap_ms": 173.6320299678482,
+      "peak_whole_gpu_mib": 5663.0
+    }
+  ],
+  "selection": {
+    "frames": 2252,
+    "threshold": {
+      "confidence": 0.5,
+      "labels": {
+        "person": {
+          "gt": 348,
+          "tp": 118,
+          "fp": 2,
+          "fn": 230,
+          "evaluable": true,
+          "f1": 0.5042735042735043,
+          "recall": 0.3390804597701149
+        },
+        "dog": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "bicycle": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "car": {
+          "gt": 1670,
+          "tp": 107,
+          "fp": 2,
+          "fn": 1563,
+          "evaluable": true,
+          "f1": 0.12029229904440697,
+          "recall": 0.06407185628742515
+        },
+        "motorcycle": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "bus": {
+          "gt": 285,
+          "tp": 44,
+          "fp": 6,
+          "fn": 241,
+          "evaluable": true,
+          "f1": 0.2626865671641791,
+          "recall": 0.1543859649122807
+        },
+        "truck": {
+          "gt": 505,
+          "tp": 12,
+          "fp": 8,
+          "fn": 493,
+          "evaluable": true,
+          "f1": 0.045714285714285714,
+          "recall": 0.023762376237623763
+        }
+      },
+      "macro_f1": 0.233241664049094,
+      "false_positives": 18,
+      "ignored_unknown_subtype": 70,
+      "mask_iou": null,
+      "mask_pairs": 0
+    },
+    "matched": 281,
+    "missing_gt_classes": [
+      "dog",
+      "bicycle",
+      "motorcycle"
+    ],
+    "gt_manifest_sha256": "ed2cefea5274c3366e2514b983ace614532a3926697be5e5d2ba68c0404cf968",
+    "actual_predictor_confidence": 0.5
+  },
+  "heldout_regression": {
+    "frames": 2474,
+    "threshold": {
+      "confidence": 0.5,
+      "labels": {
+        "person": {
+          "gt": 1013,
+          "tp": 546,
+          "fp": 7,
+          "fn": 467,
+          "evaluable": true,
+          "f1": 0.6973180076628352,
+          "recall": 0.5389930898321816
+        },
+        "dog": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "bicycle": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "car": {
+          "gt": 2086,
+          "tp": 188,
+          "fp": 2,
+          "fn": 1898,
+          "evaluable": true,
+          "f1": 0.16520210896309315,
+          "recall": 0.09012464046021093
+        },
+        "motorcycle": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "bus": {
+          "gt": 243,
+          "tp": 9,
+          "fp": 3,
+          "fn": 234,
+          "evaluable": true,
+          "f1": 0.07058823529411765,
+          "recall": 0.037037037037037035
+        },
+        "truck": {
+          "gt": 688,
+          "tp": 4,
+          "fp": 3,
+          "fn": 684,
+          "evaluable": true,
+          "f1": 0.011510791366906475,
+          "recall": 0.005813953488372093
+        }
+      },
+      "macro_f1": 0.23615478582173813,
+      "false_positives": 15,
+      "ignored_unknown_subtype": 132,
+      "mask_iou": null,
+      "mask_pairs": 0
+    },
+    "matched": 747,
+    "missing_gt_classes": [
+      "dog",
+      "bicycle",
+      "motorcycle"
+    ],
+    "gt_manifest_sha256": "ed2cefea5274c3366e2514b983ace614532a3926697be5e5d2ba68c0404cf968",
+    "actual_predictor_confidence": 0.5
+  },
+  "final_mask": {
+    "images": 2252,
+    "confidence": 0.5,
+    "new_missed": {
+      "front": 0,
+      "left": 1,
+      "right": 1
+    },
+    "recovered": {
+      "front": 0,
+      "left": 0,
+      "right": 0
+    },
+    "differences": [
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000333.png",
+        "view": "left",
+        "new_missed_actor_ids": [
+          "18"
+        ],
+        "recovered_actor_ids": [],
+        "annotations": [
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              487.3794,
+              217.3224,
+              640.0,
+              287.8549
+            ],
+            "actor_id": "18",
+            "rgba": [
+              144,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 7486,
+            "xyxy": [
+              487,
+              217,
+              640,
+              288
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [],
+        "off": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.5039061903953552,
+            "xyxy": [
+              487.4375,
+              216.15625,
+              640.0,
+              284.5625
+            ]
+          }
+        ]
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000116.png",
+        "view": "right",
+        "new_missed_actor_ids": [
+          "33"
+        ],
+        "recovered_actor_ids": [],
+        "annotations": [
+          {
+            "gt_source_label": "Pedestrian",
+            "source_xyxy": [
+              0.0007820129,
+              215.3771,
+              7.535763,
+              233.8872
+            ],
+            "actor_id": "33",
+            "rgba": [
+              0,
+              164,
+              0,
+              255
+            ],
+            "source_class_name": "person",
+            "group": "person",
+            "semantic_rgb": [
+              98,
+              2,
+              255
+            ],
+            "visible_pixels": 69,
+            "xyxy": [
+              0,
+              216,
+              7,
+              234
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Pedestrian",
+            "source_xyxy": [
+              18.4738,
+              209.4963,
+              36.63542,
+              231.5958
+            ],
+            "actor_id": "3",
+            "rgba": [
+              0,
+              123,
+              0,
+              255
+            ],
+            "source_class_name": "person",
+            "group": "person",
+            "semantic_rgb": [
+              98,
+              2,
+              255
+            ],
+            "visible_pixels": 191,
+            "xyxy": [
+              19,
+              210,
+              36,
+              232
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "person",
+            "confidence": 0.7074048519134521,
+            "xyxy": [
+              19.921875,
+              209.5625,
+              35.46875,
+              232.15625
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "person",
+            "confidence": 0.697608470916748,
+            "xyxy": [
+              19.953125,
+              209.59375,
+              35.4375,
+              232.203125
+            ]
+          },
+          {
+            "source_class_name": "person",
+            "confidence": 0.5058591365814209,
+            "xyxy": [
+              0.0078125,
+              215.5,
+              7.3515625,
+              233.5625
+            ]
+          }
+        ]
+      }
+    ],
+    "interpretation": "verified GT matches only; approved front exception is not automatically applied to another actor/frame or a side view"
+  },
+  "fp_review": {
+    "confidence": 0.5,
+    "scope": "All class-aware box-GT FP; cross-label overlaps distinguished, not excused.",
+    "false_positives": [
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000067.png",
+        "box": {
+          "source_class_name": "car",
+          "confidence": 0.6548952460289001,
+          "xyxy": [
+            455.78125,
+            322.4375,
+            532.1875,
+            394.65625
+          ],
+          "group": "car"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "truck"
+        ],
+        "rendered": "000.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000123.png",
+        "box": {
+          "source_class_name": "person",
+          "confidence": 0.690976619720459,
+          "xyxy": [
+            781.5859375,
+            326.34375,
+            790.19921875,
+            398.40625
+          ],
+          "group": "person"
+        },
+        "kind": "unmatched_box",
+        "overlapping_gt_labels": [],
+        "rendered": "001.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000220.png",
+        "box": {
+          "source_class_name": "bus",
+          "confidence": 0.5370416045188904,
+          "xyxy": [
+            817.78125,
+            336.46875,
+            846.84375,
+            352.87109375
+          ],
+          "group": "bus"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "car"
+        ],
+        "rendered": "002.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000270.png",
+        "box": {
+          "source_class_name": "car",
+          "confidence": 0.5039061903953552,
+          "xyxy": [
+            764.61328125,
+            335.98046875,
+            777.9296875,
+            340.640625
+          ],
+          "group": "car"
+        },
+        "kind": "unmatched_box",
+        "overlapping_gt_labels": [],
+        "rendered": "003.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000271.png",
+        "box": {
+          "source_class_name": "truck",
+          "confidence": 0.6334109306335449,
+          "xyxy": [
+            543.0625,
+            329.21875,
+            590.6171875,
+            358.59375
+          ],
+          "group": "truck"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "car"
+        ],
+        "rendered": "004.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000278.png",
+        "box": {
+          "source_class_name": "truck",
+          "confidence": 0.7994424104690552,
+          "xyxy": [
+            0.0,
+            328.5,
+            145.5625,
+            419.984375
+          ],
+          "group": "truck"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "car"
+        ],
+        "rendered": "005.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000319.png",
+        "box": {
+          "source_class_name": "truck",
+          "confidence": 0.5058591365814209,
+          "xyxy": [
+            608.625,
+            337.0859375,
+            651.71875,
+            369.09375
+          ],
+          "group": "truck"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "car"
+        ],
+        "rendered": "006.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000065.png",
+        "box": {
+          "source_class_name": "bus",
+          "confidence": 0.6688798069953918,
+          "xyxy": [
+            553.125,
+            202.03125,
+            623.15625,
+            238.59375
+          ],
+          "group": "bus"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "truck"
+        ],
+        "rendered": "007.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000066.png",
+        "box": {
+          "source_class_name": "bus",
+          "confidence": 0.6893061399459839,
+          "xyxy": [
+            550.5,
+            202.484375,
+            619.59375,
+            239.515625
+          ],
+          "group": "bus"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "truck"
+        ],
+        "rendered": "008.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000068.png",
+        "box": {
+          "source_class_name": "bus",
+          "confidence": 0.697608470916748,
+          "xyxy": [
+            527.8125,
+            205.21875,
+            592.625,
+            239.453125
+          ],
+          "group": "bus"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "truck"
+        ],
+        "rendered": "009.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000071.png",
+        "box": {
+          "source_class_name": "bus",
+          "confidence": 0.6113821864128113,
+          "xyxy": [
+            470.140625,
+            198.5,
+            538.0,
+            247.421875
+          ],
+          "group": "bus"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "truck"
+        ],
+        "rendered": "010.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000273.png",
+        "box": {
+          "source_class_name": "truck",
+          "confidence": 0.5234203934669495,
+          "xyxy": [
+            529.875,
+            209.7890625,
+            578.03125,
+            225.7421875
+          ],
+          "group": "truck"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "car"
+        ],
+        "rendered": "011.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000275.png",
+        "box": {
+          "source_class_name": "truck",
+          "confidence": 0.6495788097381592,
+          "xyxy": [
+            461.03125,
+            209.484375,
+            506.953125,
+            226.97265625
+          ],
+          "group": "truck"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "car"
+        ],
+        "rendered": "012.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000277.png",
+        "box": {
+          "source_class_name": "truck",
+          "confidence": 0.7476164698600769,
+          "xyxy": [
+            400.0,
+            209.640625,
+            448.03125,
+            229.1484375
+          ],
+          "group": "truck"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "car"
+        ],
+        "rendered": "013.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000278.png",
+        "box": {
+          "source_class_name": "truck",
+          "confidence": 0.6001884341239929,
+          "xyxy": [
+            377.03125,
+            211.78125,
+            426.875,
+            231.8671875
+          ],
+          "group": "truck"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "car"
+        ],
+        "rendered": "014.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000283.png",
+        "box": {
+          "source_class_name": "truck",
+          "confidence": 0.6406351923942566,
+          "xyxy": [
+            127.5625,
+            205.828125,
+            256.96875,
+            248.625
+          ],
+          "group": "truck"
+        },
+        "kind": "overlapping_verified_object",
+        "overlapping_gt_labels": [
+          "car"
+        ],
+        "rendered": "015.jpg"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000596.png",
+        "box": {
+          "source_class_name": "person",
+          "confidence": 0.5898343920707703,
+          "xyxy": [
+            610.109375,
+            311.96875,
+            639.78125,
+            357.9375
+          ],
+          "group": "person"
+        },
+        "kind": "unmatched_box",
+        "overlapping_gt_labels": [],
+        "rendered": "016.jpg"
+      },
+      {
+        "image": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel/frames/intensity/right/000006.png",
+        "box": {
+          "source_class_name": "bus",
+          "confidence": 0.6224589347839355,
+          "xyxy": [
+            449.625,
+            94.125,
+            639.5,
+            249.5625
+          ],
+          "group": "bus"
+        },
+        "kind": "unmatched_box",
+        "overlapping_gt_labels": [],
+        "rendered": "017.jpg"
+      }
+    ],
+    "total_tp": 281,
+    "fp_kinds": {
+      "overlapping_verified_object": 14,
+      "unmatched_box": 4
+    }
+  },
+  "earlier_confidence60_failures": {
+    "images": 2252,
+    "confidence": 0.6,
+    "new_missed": {
+      "front": 1,
+      "left": 0,
+      "right": 0
+    },
+    "recovered": {
+      "front": 2,
+      "left": 0,
+      "right": 0
+    },
+    "differences": [
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000264.png",
+        "view": "front",
+        "new_missed_actor_ids": [],
+        "recovered_actor_ids": [
+          "22"
+        ],
+        "annotations": [
+          {
+            "gt_source_label": "Bus",
+            "source_xyxy": [
+              815.97,
+              322.5814,
+              869.5105,
+              357.5385
+            ],
+            "actor_id": "22",
+            "rgba": [
+              195,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 1471,
+            "xyxy": [
+              816,
+              324,
+              869,
+              357
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              903.8901,
+              337.381,
+              932.8682,
+              351.9411
+            ],
+            "actor_id": "44",
+            "rgba": [
+              72,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 321,
+            "xyxy": [
+              904,
+              338,
+              933,
+              352
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              986.3451,
+              339.0396,
+              1005.51,
+              348.0067
+            ],
+            "actor_id": "18",
+            "rgba": [
+              236,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 135,
+            "xyxy": [
+              986,
+              339,
+              1005,
+              348
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              1101.408,
+              338.7965,
+              1112.952,
+              346.683
+            ],
+            "actor_id": "36",
+            "rgba": [
+              154,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "Vehicle",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              2,
+              2
+            ],
+            "visible_pixels": 66,
+            "xyxy": [
+              1101,
+              340,
+              1113,
+              347
+            ],
+            "subtype_verified": false
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              1085.171,
+              334.4064,
+              1099.562,
+              346.1696
+            ],
+            "actor_id": "46",
+            "rgba": [
+              41,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 138,
+            "xyxy": [
+              1086,
+              334,
+              1100,
+              346
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              1123.911,
+              339.7603,
+              1131.977,
+              344.2222
+            ],
+            "actor_id": "20",
+            "rgba": [
+              144,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 29,
+            "xyxy": [
+              1124,
+              340,
+              1132,
+              344
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              1153.384,
+              340.204,
+              1160.978,
+              344.4635
+            ],
+            "actor_id": "24",
+            "rgba": [
+              103,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 27,
+            "xyxy": [
+              1153,
+              340,
+              1161,
+              344
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              1157.756,
+              340.1066,
+              1164.408,
+              343.8033
+            ],
+            "actor_id": "32",
+            "rgba": [
+              31,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 11,
+            "xyxy": [
+              1159,
+              340,
+              1164,
+              344
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Truck",
+            "source_xyxy": [
+              1179.76,
+              338.1333,
+              1188.757,
+              343.9653
+            ],
+            "actor_id": "37",
+            "rgba": [
+              246,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "truck",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              90,
+              90
+            ],
+            "visible_pixels": 46,
+            "xyxy": [
+              1180,
+              338,
+              1189,
+              344
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              1168.679,
+              340.1133,
+              1173.766,
+              343.0848
+            ],
+            "actor_id": "16",
+            "rgba": [
+              205,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 14,
+            "xyxy": [
+              1169,
+              340,
+              1174,
+              343
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Truck",
+            "source_xyxy": [
+              1174.261,
+              336.6492,
+              1182.709,
+              343.2818
+            ],
+            "actor_id": "58",
+            "rgba": [
+              62,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "truck",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              90,
+              90
+            ],
+            "visible_pixels": 21,
+            "xyxy": [
+              1174,
+              337,
+              1182,
+              343
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              1193.246,
+              340.4449,
+              1197.09,
+              342.5381
+            ],
+            "actor_id": "25",
+            "rgba": [
+              113,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 6,
+            "xyxy": [
+              1193,
+              340,
+              1197,
+              342
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "bus",
+            "confidence": 0.603931725025177,
+            "xyxy": [
+              815.609375,
+              323.5390625,
+              869.71875,
+              356.734375
+            ]
+          }
+        ],
+        "off": []
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000277.png",
+        "view": "front",
+        "new_missed_actor_ids": [
+          "27"
+        ],
+        "recovered_actor_ids": [],
+        "annotations": [
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              0.001556396,
+              321.2613,
+              234.3161,
+              410.7469
+            ],
+            "actor_id": "27",
+            "rgba": [
+              164,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 15476,
+            "xyxy": [
+              0,
+              321,
+              234,
+              410
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Bus",
+            "source_xyxy": [
+              563.1514,
+              314.2509,
+              614.5562,
+              366.0652
+            ],
+            "actor_id": "22",
+            "rgba": [
+              62,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 2133,
+            "xyxy": [
+              563,
+              315,
+              615,
+              366
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              601.8654,
+              336.6376,
+              619.3676,
+              349.6171
+            ],
+            "actor_id": "44",
+            "rgba": [
+              236,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 72,
+            "xyxy": [
+              610,
+              337,
+              619,
+              349
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              614.4695,
+              337.7703,
+              625.1199,
+              344.8562
+            ],
+            "actor_id": "18",
+            "rgba": [
+              103,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 43,
+            "xyxy": [
+              616,
+              338,
+              625,
+              345
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              642.3176,
+              333.2258,
+              650.6933,
+              343.0422
+            ],
+            "actor_id": "46",
+            "rgba": [
+              82,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 61,
+            "xyxy": [
+              643,
+              333,
+              650,
+              343
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              654.6759,
+              336.6873,
+              661.8365,
+              343.2372
+            ],
+            "actor_id": "36",
+            "rgba": [
+              21,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "Vehicle",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              2,
+              2
+            ],
+            "visible_pixels": 28,
+            "xyxy": [
+              655,
+              337,
+              661,
+              343
+            ],
+            "subtype_verified": false
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              648.2893,
+              337.6014,
+              652.7449,
+              340.9025
+            ],
+            "actor_id": "20",
+            "rgba": [
+              11,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 7,
+            "xyxy": [
+              650,
+              338,
+              653,
+              341
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              665.5344,
+              337.8517,
+              670.1599,
+              341.2073
+            ],
+            "actor_id": "24",
+            "rgba": [
+              226,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 11,
+            "xyxy": [
+              666,
+              338,
+              670,
+              341
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              658.826,
+              337.6688,
+              662.5939,
+              340.4559
+            ],
+            "actor_id": "32",
+            "rgba": [
+              195,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 3,
+            "xyxy": [
+              661,
+              338,
+              663,
+              340
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Truck",
+            "source_xyxy": [
+              661.0007,
+              334.9653,
+              665.6022,
+              340.0438
+            ],
+            "actor_id": "58",
+            "rgba": [
+              185,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "truck",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              90,
+              90
+            ],
+            "visible_pixels": 15,
+            "xyxy": [
+              661,
+              335,
+              666,
+              340
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Truck",
+            "source_xyxy": [
+              671.7004,
+              336.0342,
+              676.0842,
+              340.5028
+            ],
+            "actor_id": "37",
+            "rgba": [
+              113,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "truck",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              90,
+              90
+            ],
+            "visible_pixels": 12,
+            "xyxy": [
+              672,
+              336,
+              676,
+              340
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "bus",
+            "confidence": 0.7704628705978394,
+            "xyxy": [
+              562.078125,
+              315.25,
+              613.4375,
+              365.65625
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "bus",
+            "confidence": 0.7773003578186035,
+            "xyxy": [
+              562.03125,
+              315.25,
+              613.4375,
+              365.6875
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.6020615696907043,
+            "xyxy": [
+              1.25,
+              321.8125,
+              234.625,
+              411.28125
+            ]
+          }
+        ]
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000314.png",
+        "view": "front",
+        "new_missed_actor_ids": [],
+        "recovered_actor_ids": [
+          "18"
+        ],
+        "annotations": [
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              1194.438,
+              345.3039,
+              1279.998,
+              428.0554
+            ],
+            "actor_id": "36",
+            "rgba": [
+              236,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "Vehicle",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              2,
+              2
+            ],
+            "visible_pixels": 4930,
+            "xyxy": [
+              1194,
+              345,
+              1280,
+              428
+            ],
+            "subtype_verified": false
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              699.1632,
+              295.5084,
+              790.2682,
+              387.7402
+            ],
+            "actor_id": "46",
+            "rgba": [
+              82,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 6875,
+            "xyxy": [
+              699,
+              296,
+              790,
+              387
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              621.3079,
+              336.775,
+              650.5371,
+              357.642
+            ],
+            "actor_id": "18",
+            "rgba": [
+              62,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 448,
+            "xyxy": [
+              621,
+              337,
+              650,
+              357
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              691.1918,
+              335.919,
+              702.527,
+              344.0618
+            ],
+            "actor_id": "24",
+            "rgba": [
+              185,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 60,
+            "xyxy": [
+              691,
+              336,
+              703,
+              344
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              638.1526,
+              335.5215,
+              644.7314,
+              340.4159
+            ],
+            "actor_id": "20",
+            "rgba": [
+              226,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 5,
+            "xyxy": [
+              639,
+              336,
+              644,
+              337
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "bus",
+            "confidence": 0.85584956407547,
+            "xyxy": [
+              699.9375,
+              296.625,
+              787.75,
+              386.6875
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.644224226474762,
+            "xyxy": [
+              1194.234375,
+              344.78125,
+              1279.5,
+              427.578125
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.6020615696907043,
+            "xyxy": [
+              621.765625,
+              336.453125,
+              649.0,
+              357.46875
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "bus",
+            "confidence": 0.8548837900161743,
+            "xyxy": [
+              699.875,
+              296.625,
+              787.75,
+              386.6875
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.6424316167831421,
+            "xyxy": [
+              1194.25,
+              344.8125,
+              1279.4375,
+              427.5625
+            ]
+          }
+        ]
+      }
+    ],
+    "interpretation": "verified GT matches only; approved front exception is not automatically applied to another actor/frame or a side view"
+  },
+  "earlier_confidence55_screening_failures": {
+    "images": 2252,
+    "confidence": 0.55,
+    "new_missed": {
+      "front": 2,
+      "left": 1,
+      "right": 0
+    },
+    "recovered": {
+      "front": 1,
+      "left": 0,
+      "right": 0
+    },
+    "differences": [
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000262.png",
+        "view": "front",
+        "new_missed_actor_ids": [],
+        "recovered_actor_ids": [
+          "22"
+        ],
+        "annotations": [
+          {
+            "gt_source_label": "Bus",
+            "source_xyxy": [
+              859.4459,
+              325.0167,
+              917.3422,
+              358.8944
+            ],
+            "actor_id": "22",
+            "rgba": [
+              21,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 1548,
+            "xyxy": [
+              859,
+              325,
+              917,
+              359
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              952.615,
+              340.2194,
+              986.6449,
+              355.6197
+            ],
+            "actor_id": "44",
+            "rgba": [
+              154,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 378,
+            "xyxy": [
+              953,
+              341,
+              987,
+              355
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              1069.291,
+              343.1381,
+              1093.098,
+              352.9345
+            ],
+            "actor_id": "18",
+            "rgba": [
+              62,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 179,
+            "xyxy": [
+              1069,
+              343,
+              1093,
+              353
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              1209.583,
+              339.5834,
+              1228.049,
+              352.7413
+            ],
+            "actor_id": "46",
+            "rgba": [
+              41,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 196,
+            "xyxy": [
+              1210,
+              340,
+              1228,
+              353
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              1228.525,
+              344.609,
+              1243.408,
+              353.4767
+            ],
+            "actor_id": "36",
+            "rgba": [
+              236,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "Vehicle",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              2,
+              2
+            ],
+            "visible_pixels": 85,
+            "xyxy": [
+              1229,
+              346,
+              1243,
+              353
+            ],
+            "subtype_verified": false
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              1268.691,
+              346.2238,
+              1279.33,
+              351.3853
+            ],
+            "actor_id": "20",
+            "rgba": [
+              226,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 46,
+            "xyxy": [
+              1269,
+              346,
+              1279,
+              351
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "bus",
+            "confidence": 0.5563995242118835,
+            "xyxy": [
+              859.3046875,
+              326.140625,
+              917.28125,
+              356.75
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "bus",
+            "confidence": 0.5409238338470459,
+            "xyxy": [
+              859.3125,
+              326.140625,
+              917.25,
+              356.75
+            ]
+          }
+        ]
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000310.png",
+        "view": "front",
+        "new_missed_actor_ids": [
+          "18"
+        ],
+        "recovered_actor_ids": [],
+        "annotations": [
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              816.7603,
+              331.7377,
+              866.7485,
+              367.7916
+            ],
+            "actor_id": "36",
+            "rgba": [
+              236,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "Vehicle",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              2,
+              2
+            ],
+            "visible_pixels": 1260,
+            "xyxy": [
+              817,
+              333,
+              867,
+              367
+            ],
+            "subtype_verified": false
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              676.1686,
+              317.3285,
+              714.4531,
+              359.4367
+            ],
+            "actor_id": "46",
+            "rgba": [
+              82,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 1323,
+            "xyxy": [
+              676,
+              317,
+              714,
+              359
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              630.2686,
+              336.3096,
+              652.6071,
+              352.0519
+            ],
+            "actor_id": "18",
+            "rgba": [
+              62,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 275,
+            "xyxy": [
+              630,
+              336,
+              653,
+              352
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.7786496877670288,
+            "xyxy": [
+              815.6875,
+              335.65625,
+              867.03125,
+              367.484375
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.5486736297607422,
+            "xyxy": [
+              632.59765625,
+              336.35546875,
+              650.625,
+              348.6015625
+            ]
+          },
+          {
+            "source_class_name": "bus",
+            "confidence": 0.4474601149559021,
+            "xyxy": [
+              676.53125,
+              317.375,
+              714.46875,
+              358.375
+            ]
+          },
+          {
+            "source_class_name": "truck",
+            "confidence": 0.3328525424003601,
+            "xyxy": [
+              676.421875,
+              317.171875,
+              714.5625,
+              358.3125
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.7799931764602661,
+            "xyxy": [
+              815.6875,
+              335.6875,
+              867.03125,
+              367.4921875
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.5525398850440979,
+            "xyxy": [
+              632.58984375,
+              336.35546875,
+              650.6171875,
+              348.609375
+            ]
+          },
+          {
+            "source_class_name": "bus",
+            "confidence": 0.4455294609069824,
+            "xyxy": [
+              676.53125,
+              317.34375,
+              714.46875,
+              358.375
+            ]
+          },
+          {
+            "source_class_name": "truck",
+            "confidence": 0.34158164262771606,
+            "xyxy": [
+              676.421875,
+              317.171875,
+              714.5625,
+              358.3125
+            ]
+          }
+        ]
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000336.png",
+        "view": "front",
+        "new_missed_actor_ids": [
+          "18"
+        ],
+        "recovered_actor_ids": [],
+        "annotations": [
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              0.0006103516,
+              399.4444,
+              226.3277,
+              607.699
+            ],
+            "actor_id": "18",
+            "rgba": [
+              144,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 33528,
+            "xyxy": [
+              0,
+              397,
+              226,
+              613
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.542863130569458,
+            "xyxy": [
+              0.75,
+              396.84375,
+              226.0,
+              565.75
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.5660187602043152,
+            "xyxy": [
+              0.625,
+              396.84375,
+              226.0,
+              565.375
+            ]
+          }
+        ]
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000275.png",
+        "view": "left",
+        "new_missed_actor_ids": [
+          "27"
+        ],
+        "recovered_actor_ids": [],
+        "annotations": [
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              460.599,
+              209.8032,
+              506.7622,
+              227.219
+            ],
+            "actor_id": "27",
+            "rgba": [
+              164,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 596,
+            "xyxy": [
+              461,
+              210,
+              507,
+              227
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "truck",
+            "confidence": 0.6495788097381592,
+            "xyxy": [
+              461.03125,
+              209.484375,
+              506.953125,
+              226.97265625
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.517570972442627,
+            "xyxy": [
+              460.8125,
+              209.484375,
+              506.875,
+              226.8125
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "truck",
+            "confidence": 0.6261249780654907,
+            "xyxy": [
+              461.0625,
+              209.46875,
+              506.9609375,
+              227.0078125
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.5736782550811768,
+            "xyxy": [
+              460.8359375,
+              209.484375,
+              506.875,
+              226.859375
+            ]
+          }
+        ]
+      }
+    ],
+    "interpretation": "verified GT matches only; approved front exception is not automatically applied to another actor/frame or a side view"
+  },
+  "all_threshold_mask_screening": [
+    {
+      "confidence": 0.25,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000066.png",
+          "view": "left",
+          "actor_id": "57",
+          "label": "truck",
+          "xyxy": [
+            551,
+            202,
+            630,
+            239
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000067.png",
+          "view": "left",
+          "actor_id": "57",
+          "label": "truck",
+          "xyxy": [
+            541,
+            202,
+            618,
+            240
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000222.png",
+          "view": "right",
+          "actor_id": "44",
+          "label": "car",
+          "xyxy": [
+            0,
+            221,
+            23,
+            234
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000222.png",
+          "view": "right",
+          "actor_id": "18",
+          "label": "car",
+          "xyxy": [
+            115,
+            212,
+            143,
+            220
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000223.png",
+          "view": "right",
+          "actor_id": "18",
+          "label": "car",
+          "xyxy": [
+            99,
+            205,
+            135,
+            214
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000313.png",
+          "view": "right",
+          "actor_id": "46",
+          "label": "bus",
+          "xyxy": [
+            0,
+            197,
+            35,
+            232
+          ]
+        }
+      ]
+    },
+    {
+      "confidence": 0.3,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000069.png",
+          "view": "left",
+          "actor_id": "57",
+          "label": "truck",
+          "xyxy": [
+            509,
+            199,
+            583,
+            241
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000222.png",
+          "view": "right",
+          "actor_id": "44",
+          "label": "car",
+          "xyxy": [
+            0,
+            221,
+            23,
+            234
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000222.png",
+          "view": "right",
+          "actor_id": "18",
+          "label": "car",
+          "xyxy": [
+            115,
+            212,
+            143,
+            220
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000223.png",
+          "view": "right",
+          "actor_id": "18",
+          "label": "car",
+          "xyxy": [
+            99,
+            205,
+            135,
+            214
+          ]
+        }
+      ]
+    },
+    {
+      "confidence": 0.35,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000267.png",
+          "view": "front",
+          "actor_id": "22",
+          "label": "bus",
+          "xyxy": [
+            762,
+            324,
+            810,
+            361
+          ]
+        }
+      ]
+    },
+    {
+      "confidence": 0.4,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000290.png",
+          "view": "front",
+          "actor_id": "22",
+          "label": "bus",
+          "xyxy": [
+            821,
+            7,
+            1280,
+            720
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000065.png",
+          "view": "left",
+          "actor_id": "57",
+          "label": "truck",
+          "xyxy": [
+            554,
+            201,
+            633,
+            238
+          ]
+        }
+      ]
+    },
+    {
+      "confidence": 0.45,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000249.png",
+          "view": "front",
+          "actor_id": "22",
+          "label": "bus",
+          "xyxy": [
+            913,
+            330,
+            960,
+            349
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000319.png",
+          "view": "front",
+          "actor_id": "18",
+          "label": "car",
+          "xyxy": [
+            608,
+            337,
+            652,
+            369
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000234.png",
+          "view": "left",
+          "actor_id": "15",
+          "label": "car",
+          "xyxy": [
+            190,
+            210,
+            223,
+            219
+          ]
+        }
+      ]
+    },
+    {
+      "confidence": 0.5,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000333.png",
+          "view": "left",
+          "actor_id": "18",
+          "label": "car",
+          "xyxy": [
+            487,
+            217,
+            640,
+            288
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000116.png",
+          "view": "right",
+          "actor_id": "33",
+          "label": "person",
+          "xyxy": [
+            0,
+            216,
+            7,
+            234
+          ]
+        }
+      ]
+    },
+    {
+      "confidence": 0.55,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000310.png",
+          "view": "front",
+          "actor_id": "18",
+          "label": "car",
+          "xyxy": [
+            630,
+            336,
+            653,
+            352
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000336.png",
+          "view": "front",
+          "actor_id": "18",
+          "label": "car",
+          "xyxy": [
+            0,
+            397,
+            226,
+            613
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000275.png",
+          "view": "left",
+          "actor_id": "27",
+          "label": "car",
+          "xyxy": [
+            461,
+            210,
+            507,
+            227
+          ]
+        }
+      ]
+    },
+    {
+      "confidence": 0.6,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000277.png",
+          "view": "front",
+          "actor_id": "27",
+          "label": "car",
+          "xyxy": [
+            0,
+            321,
+            234,
+            410
+          ]
+        }
+      ]
+    },
+    {
+      "confidence": 0.65,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000321.png",
+          "view": "front",
+          "actor_id": "18",
+          "label": "car",
+          "xyxy": [
+            609,
+            338,
+            666,
+            380
+          ]
+        }
+      ]
+    },
+    {
+      "confidence": 0.7,
+      "losses": [
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000233.png",
+          "view": "left",
+          "actor_id": "15",
+          "label": "car",
+          "xyxy": [
+            241,
+            214,
+            267,
+            222
+          ]
+        },
+        {
+          "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000292.png",
+          "view": "right",
+          "actor_id": "22",
+          "label": "bus",
+          "xyxy": [
+            260,
+            76,
+            640,
+            398
+          ]
+        }
+      ]
+    }
+  ],
+  "initial_offline50_path_collision": {
+    "commands": [
+      {
+        "command": [
+          "/usr/bin/python3",
+          "tools/perception/inspect_coco7_actors.py",
+          "--captures",
+          "/results/finalist-decision-spawns-v1/sunny",
+          "/results/finalist-decision-spawns-v1/foggy",
+          "--models",
+          "/data/models/camera_coco7_v1",
+          "--candidates",
+          "/results/finalist-decision-candidates-0.50-v3.json",
+          "--all-views",
+          "--output",
+          "/results/finalist-decision-inspection50-v3"
+        ],
+        "return_code": 0
+      },
+      {
+        "command": [
+          "/usr/bin/python3",
+          "tools/perception/evaluate_coco7_models.py",
+          "--gt",
+          "/results/gt-v2",
+          "--datasets",
+          "/data/datasets",
+          "--models",
+          "/data/models/camera_coco7_v1",
+          "--output",
+          "/results/finalist-selected-selection-v1",
+          "--split",
+          "selection",
+          "--model",
+          "yolo26m",
+          "--width",
+          "1280",
+          "--frozen-confidence",
+          ".5",
+          "--predict-confidence",
+          ".5"
+        ],
+        "return_code": 1
+      }
+    ],
+    "source_revision": "ebaa0c166e14f2914bba0449c1006e16671bb0af",
+    "confidence_frozen": 0.5
+  },
+  "resumed_offline50": {
+    "commands": [
+      {
+        "command": [
+          "/usr/bin/python3",
+          "tools/perception/evaluate_coco7_models.py",
+          "--gt",
+          "/results/gt-v2",
+          "--datasets",
+          "/data/datasets",
+          "--models",
+          "/data/models/camera_coco7_v1",
+          "--output",
+          "/results/finalist-selected-selection50-v3",
+          "--split",
+          "selection",
+          "--model",
+          "yolo26m",
+          "--width",
+          "1280",
+          "--frozen-confidence",
+          ".5",
+          "--predict-confidence",
+          ".5"
+        ],
+        "return_code": 0
+      },
+      {
+        "command": [
+          "/usr/bin/python3",
+          "tools/perception/evaluate_coco7_models.py",
+          "--gt",
+          "/results/gt-v2",
+          "--datasets",
+          "/data/datasets",
+          "--models",
+          "/data/models/camera_coco7_v1",
+          "--output",
+          "/results/finalist-selected-mask-off50-v3",
+          "--split",
+          "selection",
+          "--model",
+          "yolo26m",
+          "--width",
+          "1280",
+          "--frozen-confidence",
+          ".5",
+          "--predict-confidence",
+          ".5",
+          "--ego-mask-off"
+        ],
+        "return_code": 0
+      },
+      {
+        "command": [
+          "/usr/bin/python3",
+          "tools/perception/evaluate_coco7_models.py",
+          "--gt",
+          "/results/gt-v2",
+          "--datasets",
+          "/data/datasets",
+          "--models",
+          "/data/models/camera_coco7_v1",
+          "--output",
+          "/results/finalist-selected-heldout50-v3",
+          "--split",
+          "heldout",
+          "--model",
+          "yolo26m",
+          "--width",
+          "1280",
+          "--frozen-confidence",
+          ".5",
+          "--predict-confidence",
+          ".5"
+        ],
+        "return_code": 0
+      },
+      {
+        "command": [
+          "/usr/bin/python3",
+          "tools/perception/analyze_coco7_mask_control.py",
+          "--gt",
+          "/results/gt-v2/frames.jsonl",
+          "--on",
+          "/results/finalist-selected-selection50-v3/yolo26m-1280-selection/predictions.jsonl",
+          "--off",
+          "/results/finalist-selected-mask-off50-v3/yolo26m-1280-selection/predictions.jsonl",
+          "--datasets",
+          "/data/datasets",
+          "--confidence",
+          ".5",
+          "--output",
+          "/results/finalist-selected-mask-controls50-v3"
+        ],
+        "return_code": 0
+      },
+      {
+        "command": [
+          "/usr/bin/python3",
+          "tools/perception/review_coco7_confidence.py",
+          "--gt",
+          "/results/gt-v2",
+          "--predictions",
+          "/results/finalist-selected-selection50-v3/yolo26m-1280-selection/predictions.jsonl",
+          "--datasets",
+          "/data/datasets",
+          "--confidence",
+          ".5",
+          "--output",
+          "/results/finalist-selected-confidence-review50-v3"
+        ],
+        "return_code": 0
+      },
+      {
+        "command": [
+          "/usr/bin/python3",
+          "tools/perception/render_coco7_actor_comparison.py",
+          "/results/finalist-decision-inspection50-v3"
+        ],
+        "return_code": 0
+      }
+    ],
+    "source_revision": "ebaa0c166e14f2914bba0449c1006e16671bb0af",
+    "confidence_frozen": 0.5,
+    "complete": true
+  },
+  "weather_actor_restoration": {
+    "original_weather": "WEATHER_TYPE_SUNNY",
+    "candidates": [
+      {
+        "model": "yolo26m",
+        "width": 1280,
+        "confidence": 0.5
+      }
+    ],
+    "runs": [
+      {
+        "weather": "sunny",
+        "observed_before": "WEATHER_TYPE_SUNNY",
+        "exit_code": 1,
+        "observed_after": "WEATHER_TYPE_SUNNY"
+      },
+      {
+        "weather": "foggy",
+        "observed_before": "WEATHER_TYPE_FOGGY",
+        "exit_code": 1,
+        "observed_after": "WEATHER_TYPE_FOGGY"
+      }
+    ],
+    "preview_control_only": true,
+    "revision": "ebaa0c166e14f2914bba0449c1006e16671bb0af",
+    "restored_weather": "WEATHER_TYPE_SUNNY",
+    "restoration_errors": []
+  },
+  "limitations": [
+    "Capture verified GT has no dog/bicycle/motorcycle boxes; many existing GT boxes are tiny. Raw-label counts are repeated frame observations, not unique objects.",
+    "Spawn scenes have no independent pixel GT; central expected-label presence is qualitative, not recall/AP or moving first-detection time.",
+    "Two new side mask misses remain; previous approved front person exception is not reused.",
+    "Planner trajectory deadline gate fails in every finalC6 run; no public driving command was sent.",
+    "Short repeated trials and bag smoke do not replace30-minute whole-stack acceptance.",
+    "Previously viewed heldout is regression-only; no new unbiased holdout claim."
+  ],
+  "qualitative_spawn_comparison": [
+    {
+      "confidence": 0.7,
+      "model": "yolo26m-1280",
+      "cases_3of5": 21,
+      "cases": 42,
+      "details": [
+        {
+          "weather": "sunny",
+          "case": 0,
+          "asset": "2014_Kia_K7",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 1,
+          "asset": "2014_Kia_K7",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 2,
+          "asset": "2014_Kia_K7",
+          "placement": "front50",
+          "hits": 2,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 3,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 4,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 5,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 6,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 7,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 8,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 9,
+          "asset": "Man1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 10,
+          "asset": "Man1",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 11,
+          "asset": "Man1",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 12,
+          "asset": "Dog1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 13,
+          "asset": "Dog1",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 14,
+          "asset": "Dog1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 15,
+          "asset": "Bicycle_city",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 16,
+          "asset": "Bicycle_city",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 17,
+          "asset": "Bicycle_city",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 18,
+          "asset": "SportBike",
+          "placement": "front12",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 19,
+          "asset": "SportBike",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 20,
+          "asset": "SportBike",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 0,
+          "asset": "2014_Kia_K7",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 1,
+          "asset": "2014_Kia_K7",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 2,
+          "asset": "2014_Kia_K7",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 3,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 4,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 5,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 6,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 7,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 8,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 9,
+          "asset": "Man1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 10,
+          "asset": "Man1",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 11,
+          "asset": "Man1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 12,
+          "asset": "Dog1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 13,
+          "asset": "Dog1",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 14,
+          "asset": "Dog1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 15,
+          "asset": "Bicycle_city",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 16,
+          "asset": "Bicycle_city",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 17,
+          "asset": "Bicycle_city",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 18,
+          "asset": "SportBike",
+          "placement": "front12",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 19,
+          "asset": "SportBike",
+          "placement": "front30",
+          "hits": 2,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 20,
+          "asset": "SportBike",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        }
+      ]
+    },
+    {
+      "confidence": 0.7,
+      "model": "yolo26l-seg-960",
+      "cases_3of5": 21,
+      "cases": 42,
+      "details": [
+        {
+          "weather": "sunny",
+          "case": 0,
+          "asset": "2014_Kia_K7",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 1,
+          "asset": "2014_Kia_K7",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 2,
+          "asset": "2014_Kia_K7",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 3,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 4,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 5,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 6,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 7,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 8,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 9,
+          "asset": "Man1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 10,
+          "asset": "Man1",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 11,
+          "asset": "Man1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 12,
+          "asset": "Dog1",
+          "placement": "front12",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 13,
+          "asset": "Dog1",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 14,
+          "asset": "Dog1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 15,
+          "asset": "Bicycle_city",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 16,
+          "asset": "Bicycle_city",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 17,
+          "asset": "Bicycle_city",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 18,
+          "asset": "SportBike",
+          "placement": "front12",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 19,
+          "asset": "SportBike",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 20,
+          "asset": "SportBike",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 0,
+          "asset": "2014_Kia_K7",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 1,
+          "asset": "2014_Kia_K7",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 2,
+          "asset": "2014_Kia_K7",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 3,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 4,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 5,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 6,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 7,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 8,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 9,
+          "asset": "Man1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 10,
+          "asset": "Man1",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 11,
+          "asset": "Man1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 12,
+          "asset": "Dog1",
+          "placement": "front12",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 13,
+          "asset": "Dog1",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 14,
+          "asset": "Dog1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 15,
+          "asset": "Bicycle_city",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 16,
+          "asset": "Bicycle_city",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 17,
+          "asset": "Bicycle_city",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 18,
+          "asset": "SportBike",
+          "placement": "front12",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 19,
+          "asset": "SportBike",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 20,
+          "asset": "SportBike",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        }
+      ]
+    },
+    {
+      "confidence": 0.5,
+      "model": "yolo26m-1280",
+      "cases_3of5": 26,
+      "cases": 42,
+      "details": [
+        {
+          "weather": "sunny",
+          "case": 0,
+          "asset": "2014_Kia_K7",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 1,
+          "asset": "2014_Kia_K7",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 2,
+          "asset": "2014_Kia_K7",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 3,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 4,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 5,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 6,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 7,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 8,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 9,
+          "asset": "Man1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 10,
+          "asset": "Man1",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 11,
+          "asset": "Man1",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 12,
+          "asset": "Dog1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 13,
+          "asset": "Dog1",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 14,
+          "asset": "Dog1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 15,
+          "asset": "Bicycle_city",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 16,
+          "asset": "Bicycle_city",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 17,
+          "asset": "Bicycle_city",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 18,
+          "asset": "SportBike",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 19,
+          "asset": "SportBike",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 20,
+          "asset": "SportBike",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 0,
+          "asset": "2014_Kia_K7",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 1,
+          "asset": "2014_Kia_K7",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 2,
+          "asset": "2014_Kia_K7",
+          "placement": "front50",
+          "hits": 2,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 3,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 4,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 5,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front50",
+          "hits": 1,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 6,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 7,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front30",
+          "hits": 3,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 8,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 9,
+          "asset": "Man1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 10,
+          "asset": "Man1",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 11,
+          "asset": "Man1",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 12,
+          "asset": "Dog1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 13,
+          "asset": "Dog1",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 14,
+          "asset": "Dog1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 15,
+          "asset": "Bicycle_city",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 16,
+          "asset": "Bicycle_city",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 17,
+          "asset": "Bicycle_city",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 18,
+          "asset": "SportBike",
+          "placement": "front12",
+          "hits": 2,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 19,
+          "asset": "SportBike",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 20,
+          "asset": "SportBike",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        }
+      ]
+    },
+    {
+      "confidence": 0.5,
+      "model": "yolo26l-seg-960",
+      "cases_3of5": 28,
+      "cases": 42,
+      "details": [
+        {
+          "weather": "sunny",
+          "case": 0,
+          "asset": "2014_Kia_K7",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 1,
+          "asset": "2014_Kia_K7",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 2,
+          "asset": "2014_Kia_K7",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 3,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 4,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 5,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 6,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 7,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 8,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 9,
+          "asset": "Man1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 10,
+          "asset": "Man1",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 11,
+          "asset": "Man1",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 12,
+          "asset": "Dog1",
+          "placement": "front12",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 13,
+          "asset": "Dog1",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 14,
+          "asset": "Dog1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 15,
+          "asset": "Bicycle_city",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 16,
+          "asset": "Bicycle_city",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 17,
+          "asset": "Bicycle_city",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 18,
+          "asset": "SportBike",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 19,
+          "asset": "SportBike",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "sunny",
+          "case": 20,
+          "asset": "SportBike",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 0,
+          "asset": "2014_Kia_K7",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 1,
+          "asset": "2014_Kia_K7",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 2,
+          "asset": "2014_Kia_K7",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 3,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 4,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 5,
+          "asset": "2013_Hyundai_Xcient(P520)",
+          "placement": "front50",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 6,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 7,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 8,
+          "asset": "2016_Hyundai_Universe",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 9,
+          "asset": "Man1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 10,
+          "asset": "Man1",
+          "placement": "front30",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 11,
+          "asset": "Man1",
+          "placement": "front50",
+          "hits": 4,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 12,
+          "asset": "Dog1",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 13,
+          "asset": "Dog1",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 14,
+          "asset": "Dog1",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 15,
+          "asset": "Bicycle_city",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 16,
+          "asset": "Bicycle_city",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 17,
+          "asset": "Bicycle_city",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 18,
+          "asset": "SportBike",
+          "placement": "front12",
+          "hits": 5,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 19,
+          "asset": "SportBike",
+          "placement": "front30",
+          "hits": 0,
+          "frames": 5
+        },
+        {
+          "weather": "foggy",
+          "case": 20,
+          "asset": "SportBike",
+          "placement": "front50",
+          "hits": 0,
+          "frames": 5
+        }
+      ]
+    }
+  ],
+  "bag_smoke": [
+    {
+      "label": "camera",
+      "passed": true,
+      "checks": {
+        "objects_target_rates_match_runtime": true,
+        "standby_no_compute": true,
+        "other_models_standby": true,
+        "requested_model_nodes_only": true,
+        "yolo_front_rate": true,
+        "yolo_left_rate": true,
+        "yolo_right_rate": true,
+        "no_control_messages": true,
+        "no_model_processing_errors": true,
+        "gpu_sample_available": true
+      },
+      "failures": [],
+      "measurements": {
+        "yolo_front": {
+          "messages": 298,
+          "hz": 14.896709039892837,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.13423075899481773,
+          "first_output_sec": 0.0589122959645465,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.004418372001965,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 22.7049965,
+            "p95": 32.692235249999996,
+            "p99": 37.56993071999999,
+            "maximum": 39.948557
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 27.129122521728277,
+            "p95": 36.2970360845793,
+            "p99": 39.63576309790365,
+            "maximum": 48.32318500848487
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0,
+          "explicit_minimum_hz": 9.5
+        },
+        "yolo_left": {
+          "messages": 295,
+          "hz": 14.746742170363714,
+          "valid_messages": 295,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.6,
+            14.8
+          ],
+          "max_gap_sec": 0.13810921099502593,
+          "first_output_sec": 0.03175507299602032,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.004418372001965,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 295,
+            "p50": 23.573349,
+            "p95": 35.2871598,
+            "p99": 39.28817884,
+            "maximum": 40.798996
+          },
+          "input_to_output_wall_ms": {
+            "samples": 295,
+            "p50": 27.484808990266174,
+            "p95": 38.12153567560017,
+            "p99": 43.481299513950944,
+            "maximum": 47.99397400347516
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0,
+          "explicit_minimum_hz": 9.5
+        },
+        "yolo_right": {
+          "messages": 299,
+          "hz": 14.946697996402543,
+          "valid_messages": 299,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            15.0,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.14297521399566904,
+          "first_output_sec": 0.03171642200322822,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.004418372001965,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 299,
+            "p50": 23.710381,
+            "p95": 35.1548499,
+            "p99": 39.074556499999986,
+            "maximum": 55.393596
+          },
+          "input_to_output_wall_ms": {
+            "samples": 299,
+            "p50": 28.582070022821426,
+            "p95": 38.62155341776088,
+            "p99": 42.49096020590513,
+            "maximum": 57.307694980408996
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0,
+          "explicit_minimum_hz": 9.5
+        }
+      },
+      "fusion": null,
+      "classification_or_count_acceptance": "computed_across_repeats_by_matrix_analysis",
+      "scope": "One final-config connectivity/contract smoke; not repeated strict fusion non-regression acceptance."
+    },
+    {
+      "label": "primary",
+      "passed": false,
+      "checks": {
+        "objects_target_rates_match_runtime": true,
+        "other_models_standby": true,
+        "requested_model_nodes_only": true,
+        "yolo_rate": false,
+        "no_control_messages": true,
+        "no_model_processing_errors": true,
+        "gpu_sample_available": true,
+        "single_bbox_publisher": true,
+        "fusion_complete_accounting": true,
+        "fusion_offset": true
+      },
+      "failures": [],
+      "measurements": {
+        "yolo": {
+          "messages": 729,
+          "hz": 14.909138834560004,
+          "valid_messages": 729,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.2,
+            14.8,
+            14.4
+          ],
+          "max_gap_sec": 0.3404473609989509,
+          "first_output_sec": 0.042345208988990635,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 48.89618428598624,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 729,
+            "p50": 12.56431,
+            "p95": 22.065842800000002,
+            "p99": 25.572115680000003,
+            "maximum": 270.497266
+          },
+          "input_to_output_wall_ms": {
+            "samples": 729,
+            "p50": 16.305901983287185,
+            "p95": 24.679588177241385,
+            "p99": 27.254276133608087,
+            "maximum": 270.7793289446272
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0,
+          "window_basis": "corresponding_camera_input_availability",
+          "window_end_monotonic": 306291.267184701,
+          "post_input_end_outputs": 1,
+          "explicit_minimum_hz": 9.5
+        }
+      },
+      "fusion": {
+        "intervals": [
+          {
+            "kind": "5s",
+            "matched": 60,
+            "dropped": 6,
+            "median_ms": 18.3,
+            "p95_ms": 45.6,
+            "max_ms": 49.0
+          },
+          {
+            "kind": "5s",
+            "matched": 60,
+            "dropped": 7,
+            "median_ms": 18.4,
+            "p95_ms": 48.6,
+            "max_ms": 49.9
+          },
+          {
+            "kind": "5s",
+            "matched": 56,
+            "dropped": 2,
+            "median_ms": 19.0,
+            "p95_ms": 48.6,
+            "max_ms": 49.7
+          },
+          {
+            "kind": "5s",
+            "matched": 40,
+            "dropped": 0,
+            "median_ms": 18.5,
+            "p95_ms": 47.3,
+            "max_ms": 47.4
+          },
+          {
+            "kind": "5s",
+            "matched": 41,
+            "dropped": 0,
+            "median_ms": 18.3,
+            "p95_ms": 46.6,
+            "max_ms": 49.2
+          },
+          {
+            "kind": "5s",
+            "matched": 42,
+            "dropped": 0,
+            "median_ms": 18.2,
+            "p95_ms": 47.6,
+            "max_ms": 48.7
+          },
+          {
+            "kind": "5s",
+            "matched": 42,
+            "dropped": 0,
+            "median_ms": 18.5,
+            "p95_ms": 45.8,
+            "max_ms": 46.9
+          },
+          {
+            "kind": "5s",
+            "matched": 48,
+            "dropped": 0,
+            "median_ms": 18.8,
+            "p95_ms": 47.0,
+            "max_ms": 48.4
+          },
+          {
+            "kind": "5s",
+            "matched": 60,
+            "dropped": 2,
+            "median_ms": 19.1,
+            "p95_ms": 47.5,
+            "max_ms": 48.8
+          },
+          {
+            "kind": "tail",
+            "matched": 41,
+            "dropped": 1,
+            "median_ms": 18.7,
+            "p95_ms": 48.7,
+            "max_ms": 49.1
+          }
+        ],
+        "totals": {
+          "matched": 490,
+          "dropped": 18,
+          "pending_lidar": 1,
+          "pending_yolo": 0,
+          "fresh": 490,
+          "reused": 0
+        },
+        "accounting_complete": true,
+        "offset_p95_max_ms": 48.7,
+        "raw_lidar_frames": 649,
+        "processed_observation_source": "unfiltered tracked_objects_map: once per successfully processed stamp",
+        "skip_timeout_reasons": "unavailable_without_trace_diagnostic",
+        "duplicate_processed_stamps": 0,
+        "pending_end": {
+          "pending_lidar": 1,
+          "pending_yolo": 0
+        },
+        "raw_lidar_stamps_ns_summary": {
+          "count": 649,
+          "sha256_of_ordered_json": "bb755ab36bbd3bdd9d931ca73be41efc926cb2c438fe6b5319cbedd03546fb87"
+        },
+        "published_processed_lidar_stamps_ns_summary": {
+          "count": 510,
+          "sha256_of_ordered_json": "8f67e33f22ae2f547fecae18a2b6e030a045b96ee92174ed16e76600f8ba7d37"
+        },
+        "unpublished_raw_lidar_stamps_ns_summary": {
+          "count": 139,
+          "sha256_of_ordered_json": "fb34861ea3a84e36fb3d50318742f15ef0927b7f7d659b2cac5534dfb4c5b144"
+        }
+      },
+      "classification_or_count_acceptance": "computed_across_repeats_by_matrix_analysis",
+      "scope": "One final-config connectivity/contract smoke; not repeated strict fusion non-regression acceptance."
+    },
+    {
+      "label": "shadow",
+      "passed": true,
+      "checks": {
+        "objects_target_rates_match_runtime": true,
+        "other_models_standby": true,
+        "requested_model_nodes_only": true,
+        "yolo_rate": true,
+        "no_control_messages": true,
+        "no_model_processing_errors": true,
+        "gpu_sample_available": true,
+        "single_bbox_publisher": true,
+        "fusion_complete_accounting": true,
+        "fusion_offset": true
+      },
+      "failures": [],
+      "measurements": {
+        "yolo": {
+          "messages": 368,
+          "hz": 14.933911520698125,
+          "valid_messages": 368,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            15.0,
+            14.8,
+            14.8
+          ],
+          "max_gap_sec": 0.12806991604156792,
+          "first_output_sec": 0.016896445013117045,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 24.64190306002274,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 368,
+            "p50": 11.745899999999999,
+            "p95": 20.767513149999996,
+            "p99": 23.9613624,
+            "maximum": 26.188434
+          },
+          "input_to_output_wall_ms": {
+            "samples": 368,
+            "p50": 15.472078026505187,
+            "p95": 23.76061754184775,
+            "p99": 25.34157885878812,
+            "maximum": 27.06019999459386
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0,
+          "window_basis": "corresponding_camera_input_availability",
+          "window_end_monotonic": 306326.287791265,
+          "post_input_end_outputs": 1,
+          "explicit_minimum_hz": 9.5
+        }
+      },
+      "fusion": {
+        "intervals": [
+          {
+            "kind": "5s",
+            "matched": 44,
+            "dropped": 0,
+            "median_ms": 3.5,
+            "p95_ms": 27.4,
+            "max_ms": 27.7
+          },
+          {
+            "kind": "5s",
+            "matched": 39,
+            "dropped": 0,
+            "median_ms": 10.8,
+            "p95_ms": 26.1,
+            "max_ms": 28.0
+          },
+          {
+            "kind": "5s",
+            "matched": 32,
+            "dropped": 0,
+            "median_ms": 6.5,
+            "p95_ms": 26.9,
+            "max_ms": 27.0
+          },
+          {
+            "kind": "5s",
+            "matched": 33,
+            "dropped": 0,
+            "median_ms": 11.2,
+            "p95_ms": 26.1,
+            "max_ms": 41.0
+          },
+          {
+            "kind": "tail",
+            "matched": 36,
+            "dropped": 0,
+            "median_ms": 3.6,
+            "p95_ms": 28.6,
+            "max_ms": 30.1
+          }
+        ],
+        "totals": {
+          "matched": 184,
+          "dropped": 0,
+          "pending_lidar": 0,
+          "pending_yolo": 1,
+          "fresh": 184,
+          "reused": 0
+        },
+        "accounting_complete": true,
+        "offset_p95_max_ms": 28.6,
+        "raw_lidar_frames": 208,
+        "processed_observation_source": "unfiltered tracked_objects_map: once per successfully processed stamp",
+        "skip_timeout_reasons": "unavailable_without_trace_diagnostic",
+        "duplicate_processed_stamps": 0,
+        "pending_end": {
+          "pending_lidar": 0,
+          "pending_yolo": 1
+        },
+        "raw_lidar_stamps_ns_summary": {
+          "count": 208,
+          "sha256_of_ordered_json": "9372c56e0ecebe381dce71ad772eaf1b8c5945b6083c6c1de3fdc2c0a37d8b8d"
+        },
+        "published_processed_lidar_stamps_ns_summary": {
+          "count": 184,
+          "sha256_of_ordered_json": "ae195d990621adc16371f5005945c247122841291062d11064619ad19f44c280"
+        },
+        "unpublished_raw_lidar_stamps_ns_summary": {
+          "count": 24,
+          "sha256_of_ordered_json": "6cac2e1941f2ed80a638e1d0acb13f5af7423b46882771cde6f4a094f913d90f"
+        }
+      },
+      "classification_or_count_acceptance": "computed_across_repeats_by_matrix_analysis",
+      "scope": "One final-config connectivity/contract smoke; not repeated strict fusion non-regression acceptance."
+    }
+  ],
+  "bag_gap_diagnostic": {
+    "output_gaps_over_250ms": [
+      {
+        "seconds": 0.3404473609989509,
+        "before_stamp": 1790654826338160276,
+        "after_stamp": 1790654826421874523,
+        "upstream_camera_gaps": []
+      }
+    ],
+    "input_max_gap_sec": 0.09406956197926775,
+    "interpretation": "Association only. Original yolo_rate gate remains failed; no favorable rerun replaces it.",
+    "output_wall_latency_before_ms": 13.959576957859099,
+    "output_wall_latency_after_ms": 270.7793289446272,
+    "source_stamp_step_ms": 83.714247,
+    "resource_samples_near_gap": [
+      {
+        "arrival": 306282.887669251,
+        "gpu": {
+          "utilization_percent": 35.0,
+          "memory_used_mib": 4432.0,
+          "memory_total_mib": 8188.0
+        },
+        "nodes": {
+          "/camera_object_detector": {
+            "pid": 1047,
+            "cpu_percent": 15.460615889644602,
+            "rss_mib": 943.94921875
+          },
+          "/Main": {
+            "pid": 1201,
+            "cpu_percent": 123.69874460715667,
+            "rss_mib": 225.859375
+          }
+        },
+        "sampling_ms": 49.51458401046693
+      },
+      {
+        "arrival": 306283.08779466,
+        "gpu": {
+          "utilization_percent": 0.0,
+          "memory_used_mib": 4432.0,
+          "memory_total_mib": 8188.0
+        },
+        "nodes": {
+          "/camera_object_detector": {
+            "pid": 1047,
+            "cpu_percent": 75.84938684364026,
+            "rss_mib": 943.94921875
+          },
+          "/Main": {
+            "pid": 1201,
+            "cpu_percent": 121.37059968379498,
+            "rss_mib": 234.109375
+          }
+        },
+        "sampling_ms": 310.78201497439295
+      },
+      {
+        "arrival": 306283.398596078,
+        "gpu": {
+          "utilization_percent": 0.0,
+          "memory_used_mib": 4432.0,
+          "memory_total_mib": 8188.0
+        },
+        "nodes": {
+          "/camera_object_detector": {
+            "pid": 1047,
+            "cpu_percent": 63.60155641968031,
+            "rss_mib": 943.94921875
+          },
+          "/Main": {
+            "pid": 1201,
+            "cpu_percent": 105.50060986142,
+            "rss_mib": 225.859375
+          }
+        },
+        "sampling_ms": 47.39840602269396
+      },
+      {
+        "arrival": 306283.598711974,
+        "gpu": {
+          "utilization_percent": 40.0,
+          "memory_used_mib": 4437.0,
+          "memory_total_mib": 8188.0
+        },
+        "nodes": {
+          "/camera_object_detector": {
+            "pid": 1047,
+            "cpu_percent": 29.675217795006866,
+            "rss_mib": 943.94921875
+          },
+          "/Main": {
+            "pid": 1201,
+            "cpu_percent": 113.75717665575722,
+            "rss_mib": 225.859375
+          }
+        },
+        "sampling_ms": 49.44640403846279
+      }
+    ],
+    "causal_conclusion": "A resource query also took310ms and GPU samples read0%; this suggests a shared scheduling/query stall but does not establish its cause. No memory exhaustion observed."
+  },
+  "regression": {
+    "initial": [
+      {
+        "name": "outer-build",
+        "command": [
+          "bash",
+          "-lc",
+          "cd /root/ws && source /opt/ros/noetic/setup.bash && ./scripts/build_ws.sh -j2 -l2 -DCATKIN_ENABLE_TESTING=ON -DCATKIN_WHITELIST_PACKAGES="
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "nested-build",
+        "command": [
+          "bash",
+          "-lc",
+          "cd /root/ws && source /opt/ros/noetic/setup.bash && source devel/setup.bash && cd src/lidar+sensorfusion && catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=ON -DCATKIN_WHITELIST_PACKAGES=Main\\;Msg\\;morai_msgs"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "coco-tools",
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tools/perception",
+          "-p",
+          "test_coco7*.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "detection",
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "src/asmc_camera/test/detection",
+          "-p",
+          "test_*.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "runtime",
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "src/asmc_camera/test/runtime",
+          "-p",
+          "test_*.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "messages",
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "src/asmc_msgs/test",
+          "-p",
+          "test_*.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "adapter-unit",
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "src/lidar+sensorfusion/src/Main/test",
+          "-p",
+          "test_camera_objects_adapter.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "validator-bridge_profiles",
+        "command": [
+          "/usr/bin/python3",
+          "tools/audit/validate_bridge_profiles.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "validator-p1b_contract",
+        "command": [
+          "/usr/bin/python3",
+          "tools/audit/validate_p1b_contract.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "validator-perception_contract",
+        "command": [
+          "/usr/bin/python3",
+          "tools/audit/validate_perception_contract.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "validator-perception_topic_policy",
+        "command": [
+          "/usr/bin/python3",
+          "tools/audit/validate_perception_topic_policy.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "validator-perception_runtime_acceptance",
+        "command": [
+          "/usr/bin/python3",
+          "tools/audit/validate_perception_runtime_acceptance.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "validator-traffic_light_parity",
+        "command": [
+          "/usr/bin/python3",
+          "tools/audit/validate_traffic_light_parity.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "facade-baseline",
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "src/asmc_camera/test",
+          "-p",
+          "test_package_facade.py"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "adapter-rostest",
+        "command": [
+          "rostest",
+          "--reuse-master",
+          "Main",
+          "camera_objects_adapter.test",
+          "--text"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "selected-default",
+        "command": [
+          "roslaunch",
+          "--dump-params",
+          "asmc_camera",
+          "camera_coco7.launch",
+          "profile:=debug"
+        ],
+        "return_code": 0,
+        "passed": true
+      },
+      {
+        "name": "selected-conf-override",
+        "command": [
+          "roslaunch",
+          "--dump-params",
+          "asmc_camera",
+          "camera_coco7.launch",
+          "profile:=debug",
+          "objects_conf_thres:=0.55"
+        ],
+        "return_code": 0,
+        "passed": true
+      }
+    ],
+    "supplement": [
+      {
+        "name": "actual-facade",
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "src/asmc_camera/test",
+          "-p",
+          "test_facade_contract.py"
+        ],
+        "return_code": 1
+      },
+      {
+        "name": "audit-contract-tests",
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "tools/audit/test_p1b_contract.py",
+          "tools/audit/test_perception_contract.py",
+          "tools/audit/test_perception_topic_policy.py",
+          "tools/audit/test_perception_runtime_acceptance.py"
+        ],
+        "return_code": 0
+      },
+      {
+        "name": "p1c-baseline",
+        "command": [
+          "/usr/bin/python3",
+          "tools/audit/audit_p1c_authority.py"
+        ],
+        "return_code": 2
+      },
+      {
+        "name": "selected-default",
+        "command": [
+          "roslaunch",
+          "--dump-params",
+          "asmc_camera",
+          "camera_coco7.launch",
+          "profile:=debug"
+        ],
+        "return_code": 0
+      },
+      {
+        "name": "selected-conf-override",
+        "command": [
+          "roslaunch",
+          "--dump-params",
+          "asmc_camera",
+          "camera_coco7.launch",
+          "profile:=debug",
+          "objects_conf_thres:=0.55"
+        ],
+        "return_code": 0
+      }
+    ],
+    "launch_values": {
+      "passed": true,
+      "complete": true,
+      "confidence_default": 0.5,
+      "confidence_override": 0.55,
+      "scalar_hz": 15.0,
+      "view_hz": 15.0
+    },
+    "protocol_corrections": {
+      "initial_facade_pattern": "test_package_facade.py discovered zero tests; not a passing facade result",
+      "initial_launch_assertion": "scalar target20 vs view targets15; wrapper corrected to explicit15 and real dumps rechecked",
+      "prior_logs_preserved": true
+    },
+    "initial_adapter_text_mode": "Exit0 did not signify success; internal seq assertion failed. Original log preserved. Compare stamp/frame on ROS wire; pure convert checks full header. Final test uses XML without --text.",
+    "known_failures": [
+      "facade17tests1failure duplicate traffic-light producer setting",
+      "P1-C7tests1error metadata invalid authority status"
+    ],
+    "no_tests_is_not_a_pass": true,
+    "actual_test_counts": {
+      "coco_tools": {
+        "tests": 33,
+        "passed": true
+      },
+      "detection": {
+        "tests": 72,
+        "passed": true
+      },
+      "runtime": {
+        "tests": 31,
+        "passed": true
+      },
+      "messages": {
+        "tests": 1,
+        "passed": true
+      },
+      "adapter_unit": {
+        "tests": 6,
+        "passed": true
+      },
+      "contract_tests": {
+        "tests": 33,
+        "passed": true
+      },
+      "facade": {
+        "tests": 17,
+        "passed": false
+      },
+      "p1c": {
+        "tests": 7,
+        "passed": false
+      }
+    },
+    "final_adapter_ros_xml": {
+      "path": "finalist-adapter-xml50-v4/Main/rosunit-camera_objects_adapter_test.xml",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    }
+  },
+  "environment_final": {
+    "weather": "WEATHER_TYPE_SUNNY",
+    "ego": {
+      "actorInfo": {
+        "id": {
+          "value": "Ego"
+        },
+        "objectType": "OBJECT_TYPE_VEHICLE"
+      },
+      "boundingBox": {
+        "extent": {
+          "x": 1.0804173946380615,
+          "y": 2.3175039291381836,
+          "z": 0.8220231533050537
+        },
+        "location": {
+          "x": -129.2498321533203,
+          "y": -423.8207092285156,
+          "z": 29.336048126220703
+        },
+        "rotation": {
+          "x": -359.5919189453125,
+          "y": 0.14889904856681824,
+          "z": 61.26165771484375
+        }
+      },
+      "transform": {
+        "location": {
+          "x": -130.01893615722656,
+          "y": -425.1418151855469,
+          "z": 28.886507034301758
+        },
+        "rotation": {
+          "x": -359.5919189453125,
+          "y": 0.14889904856681824,
+          "z": 61.26165771484375
+        }
+      },
+      "velocity": {
+        "x": 6.734793714713305e-06,
+        "y": -1.2858971786045004e-05,
+        "z": 2.6195398277195636e-06
+      },
+      "angularVelocity": {
+        "x": 1.652369974181056e-08,
+        "y": 4.718676791526377e-07,
+        "z": 3.3367687137797475e-06
+      },
+      "acceleration": {
+        "x": 9.041046723723412e-06,
+        "y": -0.00016912735009100288,
+        "z": -0.0003513488336466253
+      },
+      "vehicleState": {
+        "gearMode": "GEAR_MODE_P",
+        "currentLinkInfo": {
+          "id": {
+            "value": "A2256W000748"
+          },
+          "waypointIdx": 7
+        },
+        "remainingDistance": -1.0,
+        "isPassDesPos": true,
+        "tlId": {
+          "value": "Not Detected"
+        },
+        "tlColor": "TL_COLOR_NOT_DETECTED"
+      },
+      "globalVelocity": {
+        "x": 1.013523387882742e-06,
+        "y": 7.157613254094031e-06,
+        "z": -1.285744656343013e-05
+      }
+    },
+    "ego_control_mode": 1,
+    "ego_position_error_m": 0.0,
+    "public_control_publishers": {},
+    "use_sim_time": false,
+    "nodes": [
+      "/base_to_velodyne",
+      "/gps_imu_vehicle_state_adapter",
+      "/morai_sensor_bridge",
+      "/morai_udp_bridge",
+      "/rosout"
+    ]
+  },
+  "evidence": [
+    {
+      "path": "finalist-decision-analysis-v1.json",
+      "sha256": "602d5198f6b34d4f26c81a2f8ff390f04f33234c7cccf36ab1be428001eec3a9"
+    },
+    {
+      "path": "finalist-decision-selected-live50-v3/sunny/yolo26m-1280-all15-2plus1-C6-r1/report.json",
+      "sha256": "8986e6287d4308c8d5364c327811aea038e6dbc79619986d5fd168669fc623e3"
+    },
+    {
+      "path": "finalist-decision-selected-live50-v3/sunny/yolo26m-1280-all15-2plus1-C6-r2/report.json",
+      "sha256": "0dc3cb868a148bd19ff2d3316537b40dc99a48603f34948574707855de3549f5"
+    },
+    {
+      "path": "finalist-decision-selected-live50-v3/sunny/yolo26m-1280-all15-2plus1-C6-r3/report.json",
+      "sha256": "640cd72200c352dfc9e82b084913d45ccc948bf296a38c52b9c561a93bc61ecd"
+    },
+    {
+      "path": "finalist-decision-selected-live50-v3/foggy/yolo26m-1280-all15-2plus1-C6-r1/report.json",
+      "sha256": "48b33d007c7d7be6a4542a90c72af8e3f37ecb2652351e0482f92d647e317c5d"
+    },
+    {
+      "path": "finalist-decision-selected-live50-v3/foggy/yolo26m-1280-all15-2plus1-C6-r2/report.json",
+      "sha256": "e17a2b9ada222d157c032700e5779a03fac703dd9b4f60b1faae96375ed933c7"
+    },
+    {
+      "path": "finalist-decision-selected-live50-v3/foggy/yolo26m-1280-all15-2plus1-C6-r3/report.json",
+      "sha256": "75192b1695e934f383296785736db5f6afb6b54e947d9c269541a9b46d2ab78f"
+    },
+    {
+      "path": "finalist-selected-selection50-v3/yolo26m-1280-selection/summary.json",
+      "sha256": "f47a5af9473044455b69a09a3439955fe6b7efd1c986a20d9f0f8fec26cb918e"
+    },
+    {
+      "path": "finalist-selected-heldout50-v3/yolo26m-1280-heldout/summary.json",
+      "sha256": "e46eceae0b1519b302a3f8b17ad48f3990a32e68ce7a8b863ec057a91a36e387"
+    },
+    {
+      "path": "finalist-selected-mask-controls50-v3/report.json",
+      "sha256": "5f83b14bee701749acb28272b643fded57a2b49f48efc586c6c60978c1805ae9"
+    },
+    {
+      "path": "finalist-selected-confidence-review50-v3/report.json",
+      "sha256": "f3eb61a63bf97de96917d1e0934ae1818ffa4af5da92d5ce90b57bfb0bfc0518"
+    },
+    {
+      "path": "finalist-selected-mask-controls-v1/report.json",
+      "sha256": "1c381081a641e6c7320faad0bfe8d5feb67032b38e8e38f0af4abae5c52ef5f0"
+    },
+    {
+      "path": "finalist-selected-mask-controls55-screening-v2/report.json",
+      "sha256": "adb8c4c336bc67c7b0183990765b42650d28172505ec4cb5f523d1710a2dc899"
+    },
+    {
+      "path": "finalist-confidence-mask-thresholds-v2.json",
+      "sha256": "6efe9020f62218226fe2200fbfd4fcf770ba7635879e2d7c45e5f92d794c1050"
+    },
+    {
+      "path": "finalist-decision-offline-protocol50-v3.json",
+      "sha256": "a2f2f641b828032b38b86b595d58f2dbede482efa08bcd9a824faa0b16e761f1"
+    },
+    {
+      "path": "finalist-decision-offline-protocol50-resume-v3.json",
+      "sha256": "717e86dc0c65e1e8f1f1d211ae19ee9c9e889002a7cf54278e261cf6742e3751"
+    },
+    {
+      "path": "finalist-decision-selected-live50-v3/weather-protocol.json",
+      "sha256": "1439690b21a7fe01b9f340b19b0c9279b71db50ec40cc922a2aaaaa9784d45b4"
+    },
+    {
+      "path": "finalist-decision-inspection07-v1/report.json",
+      "sha256": "9501e2cc6aa10a741d93e6373326ba4c6b79192b577b0410fc4bea70659b5af9"
+    },
+    {
+      "path": "finalist-decision-inspection07-v1/yolo26m-1280/predictions.jsonl",
+      "sha256": "fbcdfc4cc2fce5738011488e72587292bf8cf4277fa66a0f786730f14e22eaaa"
+    },
+    {
+      "path": "finalist-decision-inspection07-v1/yolo26l-seg-960/predictions.jsonl",
+      "sha256": "3524c5d42499f64b0324017c032d105c952354464c25c4f18d97950847cc9293"
+    },
+    {
+      "path": "finalist-decision-inspection50-v3/report.json",
+      "sha256": "b8068fb233097ef2deb3d00583595da91670c627a694f3639c4bcfb6220d9ed0"
+    },
+    {
+      "path": "finalist-decision-inspection50-v3/yolo26m-1280/predictions.jsonl",
+      "sha256": "5a08707847fc7b37d3aa1a28a02e90f50e753952e3bb8889778349ac41b24509"
+    },
+    {
+      "path": "finalist-decision-inspection50-v3/yolo26l-seg-960/predictions.jsonl",
+      "sha256": "f8170b852f23f38a1c7999c651cb11e1121a7bb79b9df5990ec86c495304591b"
+    },
+    {
+      "path": "finalist-selected-bag50-v3/index.json",
+      "sha256": "73459624f97f384e0d62ebda880ec7727f8fb9f2c090807090a2fd2a8840e65e"
+    },
+    {
+      "path": "finalist-selected-bag50-v3/camera/report.json",
+      "sha256": "2d90baa3703ca3beae809c5e104f0886aa9968e1ad64fff97a87aa7ecd1aff8f"
+    },
+    {
+      "path": "finalist-selected-bag50-v3/primary/report.json",
+      "sha256": "86f1cd9a377c1d4295b282f88d07aa019b1f272bcdfba75f829fefa6d4325a36"
+    },
+    {
+      "path": "finalist-selected-bag50-v3/shadow/report.json",
+      "sha256": "72ce3f27f3af53dd6cb714b76675135f16a1ecc925f4988e6cd80fb8131d9886"
+    },
+    {
+      "path": "finalist-selected-bag50-v3/primary/gap-diagnostic.json",
+      "sha256": "1da16f98b6e2893d7563c1da5b8f785729496f37544d3d7e8ef87e33899f4cd5"
+    },
+    {
+      "path": "finalist-regression50-v3/index.json",
+      "sha256": "792682c10b0dd031e3f608fec2bb888df182d49dadb7eef3a7d0484195fde243"
+    },
+    {
+      "path": "finalist-regression-supplement50-v3/index.json",
+      "sha256": "a36bc7144129e41eb8152b0385e2d11757627739da1b319b62f3b7d2f5c7d06a"
+    },
+    {
+      "path": "finalist-regression-supplement50-v3/launch-effective-values.json",
+      "sha256": "b7c8777ca0101b8d3a8a4bafcdf2318b292b51dd32d92808190923adbae91470"
+    },
+    {
+      "path": "finalist-regression-supplement50-v3/initial_protocol_limitations.json",
+      "sha256": "1ea7d12e79ea9f7d4720ee7b3071f79dece6f6a80f884dc7c70fed21a8c857b2"
+    },
+    {
+      "path": "finalist-regression50-v3/coco-tools.log",
+      "sha256": "b8cc0821a57e5052be6cd9de5791de1c187816b343140cd2bc21ae943fa2cae8"
+    },
+    {
+      "path": "finalist-regression50-v3/detection.log",
+      "sha256": "f7bffcbeed4c5ad1fd4d0f52fde12a02f90bc991b6a71792eb99ff20b0985c5a"
+    },
+    {
+      "path": "finalist-regression50-v3/runtime.log",
+      "sha256": "e3cfbd0ded1299f98fd06a2212f036fbe4f4b32465d171ecf1cb597610f629f9"
+    },
+    {
+      "path": "finalist-regression50-v3/messages.log",
+      "sha256": "c346f1228fe88f4ab3cb336ffa610dc3a34ec7c7bb7d05df7a1c222f2d928881"
+    },
+    {
+      "path": "finalist-regression50-v3/adapter-unit.log",
+      "sha256": "62cfbeb2911bb226088bfb0918eb4b05008ea70b20bce854ee2ca8a564bd37a5"
+    },
+    {
+      "path": "finalist-regression-supplement50-v3/audit-contract-tests.log",
+      "sha256": "aa6485bae21fdae722c74b5d217c88a79440dbb649d3fe8f81fa2457d914e456"
+    },
+    {
+      "path": "finalist-regression-supplement50-v3/actual-facade.log",
+      "sha256": "f6d67f297412f88d4267d2b5d7b27e8f3fea68193bbd7f84c5c1e5cbe5c8664a"
+    },
+    {
+      "path": "finalist-regression-supplement50-v3/actual-p1c-baseline.log",
+      "sha256": "56e845ec09bf0f7d4b079d167016676fe00f4fb7bbfc417238f3c1a2edf90851"
+    },
+    {
+      "path": "finalist-adapter-xml50-v4/Main/rosunit-camera_objects_adapter_test.xml",
+      "sha256": "2a98488d2f619c58806874a6f4ef71d5ae4ead6d4bbf1fd0c8f1d9487d786433"
+    },
+    {
+      "path": "finalist-regression50-v3/adapter-rostest.log",
+      "sha256": "121b912621a113e5add51b58defa2400b31df8d7d5110af2a5a516ad082d0e38"
+    },
+    {
+      "path": "finalist-regression50-v3.log",
+      "sha256": "e9b79daece949d4b22652542cec6f91452741d2cf73ae83be37020b483cc20d0"
+    },
+    {
+      "path": "finalist-decision-offline50-v3.log",
+      "sha256": "50ecbe53e3d011b2c55d947a7c735562d1513e38d3adfbbbd5e2ffa77e2b2e60"
+    },
+    {
+      "path": "finalist-regression-supplement50-v3/actual-p1c-baseline.log",
+      "sha256": "56e845ec09bf0f7d4b079d167016676fe00f4fb7bbfc417238f3c1a2edf90851"
+    },
+    {
+      "path": "finalist-adapter-xml50-v4.log",
+      "sha256": "147f06fdb688c0d7e77ac0bdc61648bb2c97096977229d60c383cd5fd7f69f06"
+    },
+    {
+      "path": "finalist-environment-final-v3.json",
+      "sha256": "589e3d20f4c88bad363496bf60792863fcdfe62835464b431758148831c857eb"
+    }
+  ],
+  "selected_config_sha256": "e24baff1b9011214b001eb8e91e3ee0579c59ccad2f9ee73214221221c9949ad"
+}

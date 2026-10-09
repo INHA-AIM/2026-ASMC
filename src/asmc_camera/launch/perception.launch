@@ -20,6 +20,7 @@
   <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="start_camera_objects" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="camera_objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <arg name="objects_conf_thres" default="" doc="Optional startup cutoff override; consumers can use box.confidence for stricter live filtering."/>
   <arg name="objects_class_groups_config" default="$(find asmc_camera)/config/camera/object_classes.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
   <arg name="objects_side_ego_mask" default="true"/>
@@ -76,6 +77,7 @@
   <group if="$(arg start_camera_objects)">
     <include file="$(find asmc_camera)/launch/camera_objects.launch">
       <arg name="config" value="$(arg camera_objects_config)"/>
+      <arg name="conf_thres" value="$(arg objects_conf_thres)"/>
       <arg name="class_groups_config" value="$(arg objects_class_groups_config)"/>
       <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
       <arg name="objects_side_ego_mask" value="$(arg objects_side_ego_mask)"/>

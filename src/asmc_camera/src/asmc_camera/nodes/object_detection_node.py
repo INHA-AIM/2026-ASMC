@@ -18,6 +18,7 @@ from asmc_camera.detection.processor import ObjectFrameProcessor
 from asmc_camera.detection.hood_mask import HoodMask, load_view_masks
 from asmc_camera.detection.ego_hood_filter import EgoHoodFilter
 from asmc_camera.detection.ultralytics_backend import UltralyticsDetector
+from asmc_camera.detection.confidence import validate_confidence
 
 
 EXPECTED_MD5 = {CameraObjectBox: "34412c90553e06734f1acade77c8e1e3",
@@ -43,6 +44,7 @@ from asmc_camera.runtime.state import ACTIVE
 class ObjectDetectionNode:
     def __init__(self, backend=None):
         check_message_build()
+        confidence = validate_confidence(rospy.get_param("~conf_thres", 0.7))
         self.views = list(rospy.get_param("~views", ["front"]))
         if not self.views or len(set(self.views)) != len(self.views) or set(self.views)-{'front','left','right'}:
             raise ValueError("views must contain unique front/left/right names")
@@ -87,7 +89,7 @@ class ObjectDetectionNode:
                 weights=rospy.get_param("~weights"),
                 device=rospy.get_param("~device", "cuda:0"),
                 require_cuda=bool(rospy.get_param("~require_cuda", True)),
-                conf_thres=float(rospy.get_param("~conf_thres", 0.7)),
+                conf_thres=confidence,
                 allowed_names=rospy.get_param("~allowed_names", ["bus", "truck", "person", "car"]),
                 expected_sha256=rospy.get_param("~expected_sha256", ""),
                 predict_overrides=rospy.get_param("~predict_overrides", {}),

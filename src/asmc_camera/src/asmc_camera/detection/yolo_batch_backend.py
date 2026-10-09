@@ -7,6 +7,7 @@ import numpy as np
 from .batching import batch_groups, pack_image, shapes_for_front
 from .segmentation import SegmentationFrame, select_result
 from .ultralytics_backend import cuda_preflight, file_sha256, DetectorStartupError
+from .confidence import validate_confidence
 
 COCO7 = ('person', 'dog', 'bicycle', 'car', 'motorcycle', 'bus', 'truck')
 
@@ -22,7 +23,7 @@ class BatchedYoloDetector:
         import ultralytics
         from ultralytics import YOLO
         self.torch, self.device = torch, device
-        self.task, self.conf = task, float(conf_thres)
+        self.task, self.conf = task, validate_confidence(conf_thres)
         self.mode, self.shapes = batch_mode, shapes_for_front(front_width)
         batch_groups(['front', 'left', 'right'], batch_mode)
         self.allowed = list(allowed_names)

@@ -1,0 +1,19 @@
+<launch>
+  <!-- Selected development configuration; global perception.launch defaults are
+       retained until the independent deployment gates are accepted. No GUI. -->
+  <arg name="profile" default="planning" doc="planning: resident STANDBY | debug: ACTIVE + debug publishers | idle: no models"/>
+  <arg name="objects_conf_thres" default=""/>
+  <arg name="camera_objects_config" default="$(find asmc_camera)/config/camera/yolo26m_detect_coco7_three_view.yaml"/>
+  <arg name="start_camera_lane" default="$(eval arg('profile') in ['planning', 'debug'])"/>
+  <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning', 'debug'])"/>
+  <arg name="start_visualization" default="$(eval arg('profile') == 'debug')"/>
+  <include file="$(find asmc_camera)/launch/perception.launch">
+    <arg name="profile" value="$(arg profile)"/>
+    <arg name="camera_objects_config" value="$(arg camera_objects_config)"/>
+    <arg name="objects_conf_thres" value="$(arg objects_conf_thres)"/>
+    <arg name="objects_target_hz" value="15.0"/>
+    <arg name="start_camera_lane" value="$(arg start_camera_lane)"/>
+    <arg name="start_traffic_light" value="$(arg start_traffic_light)"/>
+    <arg name="start_visualization" value="$(arg start_visualization)"/>
+  </include>
+</launch>

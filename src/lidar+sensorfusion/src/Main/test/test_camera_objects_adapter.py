@@ -53,6 +53,15 @@ class AdapterTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "stale outer asmc_msgs"):
             adapter.check_message_build("old")
 
+    def test_consumer_cutoff_can_pass_producer_results_or_filter_more(self):
+        message = self.message()
+        message.boxes = [CameraObjectBox(xmin=1, ymin=2, xmax=20, ymax=30,
+            source_class_name='car', confidence=.60, confidence_valid=True)]
+        self.assertEqual(1, adapter.convert(message, conf_thres=0.).objc)
+        self.assertEqual(0, adapter.convert(message, conf_thres=.65).objc)
+        for bad in [True, None, -1, 1.01, float('nan'), float('inf'), 'bad']:
+            with self.assertRaises(ValueError): adapter.convert(message, conf_thres=bad)
+
     def test_seven_raw_labels_and_explicit_legacy_four(self):
         message = self.message()
         message.boxes = [CameraObjectBox(xmin=1, ymin=2, xmax=20, ymax=30,

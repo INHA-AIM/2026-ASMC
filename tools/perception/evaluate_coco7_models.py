@@ -65,11 +65,15 @@ def main():
     p.add_argument('--ego-mask-off', action='store_true', help='Explicit original-input control, including all side GT frames')
     p.add_argument('--frozen-confidence', type=float, choices=CONFIDENCES,
                    help='Evaluate only the selection-frozen confidence; never sweep heldout data')
+    p.add_argument('--predict-confidence', type=float, choices=CONFIDENCES, default=.25,
+                   help='Actual predictor cutoff; use the frozen value to validate actual selected inference')
     add_mask_profile(p)
     a = p.parse_args(); a.output.mkdir(parents=True, exist_ok=True)
     if a.split=='heldout' and a.frozen_confidence is None:
         p.error('heldout requires --frozen-confidence fixed on selection data')
     confidences=[a.frozen_confidence] if a.frozen_confidence is not None else CONFIDENCES
+    if a.predict_confidence > min(confidences):
+        p.error('predictor cutoff cannot exceed an evaluated threshold')
     display_confidence=a.frozen_confidence if a.frozen_confidence is not None else .7
     manifest = a.gt/'frames.jsonl'
     rows = [json.loads(line) for line in manifest.read_text().splitlines()]
@@ -83,7 +87,7 @@ def main():
             out.mkdir(); (out/'gallery').mkdir()
             engine = a.models/(model+'.engine')
             detector = BatchedYoloDetector(weights=str(engine), expected_sha256=file_sha256(engine),
-                runtime_backend='tensorrt', task='segment' if 'seg' in model else 'detect', front_width=width, conf_thres=.25)
+                runtime_backend='tensorrt', task='segment' if 'seg' in model else 'detect', front_width=width, conf_thres=a.predict_confidence)
             counts = {c: {label: Counter() for label in COCO7} for c in confidences}
             mask_ious = {c: [] for c in confidences}
             if 'seg' in model: (out/'masks').mkdir()
