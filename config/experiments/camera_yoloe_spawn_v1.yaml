@@ -1,0 +1,41 @@
+representatives:
+- api_name: Deer1
+  actor_type: pedestrian
+  expected_label: deer
+  source: live GetAvailableObject; image identity requires review
+- api_name: CargoBox
+  actor_type: obstacle
+  expected_label: cargo box
+  source: live GetAvailableObject; image identity requires review
+- api_name: WoodBox
+  actor_type: obstacle
+  expected_label: wooden box
+  source: live GetAvailableObject; image identity requires review
+- api_name: Bollard01
+  actor_type: obstacle
+  expected_label: bollard
+  source: live GetAvailableObject; image identity requires review
+- api_name: Steel_Barricade
+  actor_type: obstacle
+  expected_label: steel barricade
+  source: live GetAvailableObject; image identity requires review
+- api_name: TrafficBarrel
+  actor_type: obstacle
+  expected_label: traffic barrel
+  source: live GetAvailableObject; image identity requires review
+- api_name: Rubber_Cone
+  actor_type: obstacle
+  expected_label: traffic cone
+  source: live GetAvailableObject; image identity requires review
+- api_name: BabyStroller1
+  actor_type: obstacle
+  expected_label: baby stroller
+  source: live GetAvailableObject; image identity requires review
+- api_name: Scooter1
+  actor_type: obstacle
+  expected_label: scooter
+  source: live GetAvailableObject; image identity requires review
+- api_name: ElectricScooter1
+  actor_type: obstacle
+  expected_label: electric scooter
+  source: live GetAvailableObject; image identity requires review

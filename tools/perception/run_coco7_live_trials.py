@@ -61,7 +61,7 @@ def deadline_report(rows, begin, end, maximum_gap, minimum_hz):
 def provenance(models, engine, revision):
     # Include dirty source digests: HEAD alone does not identify an experiment.
     files = sorted(set(ROOT.glob('tools/perception/*.py')) | set(ROOT.glob('src/asmc_camera/src/asmc_camera/**/*.py')) |
-                   set(ROOT.glob('src/asmc_camera/config/camera/*.yaml')) |
+                   set(ROOT.glob('src/asmc_camera/config/camera/**/*.yaml')) |
                    set(ROOT.glob('src/lidar+sensorfusion/src/Main/src/**/*.*')) |
                    set(ROOT.glob('src/lidar+sensorfusion/src/Main/scripts/*.py')) |
                    set(ROOT.glob('src/lidar+sensorfusion/src/Main/**/*.launch')) |
@@ -80,7 +80,8 @@ def provenance(models, engine, revision):
     return dict(head=revision,
                 source_sha256=hashes, engine_sha256=hashlib.sha256(engine.read_bytes()).hexdigest(),
                 built_binaries=binaries,
-                model_provenance={f.name:json.loads(f.read_text()) for f in models.glob(engine.stem+'*.json')},
+                model_provenance={str(f):json.loads(f.read_text()) for f in
+                    sorted(set(models.glob(engine.stem+'*.json')) | set(engine.parent.glob(engine.stem+'*.json')))},
                 renderer='MORAI left running with user sensor/render settings; preset not independently verified',
                 windows_background_cpu_ram='unavailable; global NVIDIA GPU includes simulator and desktop')
 
@@ -165,7 +166,9 @@ def main():
             running={n for section in graph for _,names in section for n in names}
             if running & set(NODES.values()):raise RuntimeError('existing model launch; refusing duplicate inference')
             if rospy.get_param('/use_sim_time',False):raise RuntimeError('live trial requires wall ROS time')
-            model=j['model']; engine=a.models/(model+'.engine')
+            model=j['model']
+            custom=yaml.safe_load(Path(j['runtime_config']).read_text()) if j.get('runtime_config') else None
+            engine=Path(custom['weights']) if custom else a.models/(model+'.engine')
             if not engine.is_file():raise RuntimeError('missing engine '+str(engine))
             report['provenance']=provenance(a.models,engine,a.revision)
             config=dict(weights=str(engine),expected_sha256=hashlib.sha256(engine.read_bytes()).hexdigest(),
@@ -174,6 +177,10 @@ def main():
                 allowed_names=['person','dog','bicycle','car','motorcycle','bus','truck'],
                 conf_thres=j.get('confidence',.7),device='cuda:0',require_cuda=True,views=['front','left','right'],
                 target_hz_by_view=RATES[j['rates']])
+            if custom:
+                if custom.get('label_mode')!='source' or custom.get('front_width')!=j['width'] or custom.get('model_id')!=j['model']:
+                    raise ValueError('custom experiment must preserve raw labels and selected width')
+                config=dict(custom,conf_thres=j.get('confidence',.4),target_hz_by_view=RATES[j['rates']],batch_mode=j['batch'])
             (out/'runtime.yaml').write_text(yaml.safe_dump(config));report['runtime']=config
             topics=dict(front='/image_jpeg/compressed',left='/cam_left/image_jpeg/compressed',right='/cam_right/image_jpeg/compressed',extra='/cam_extra/image_jpeg/compressed')
             for view,topic in topics.items():subs.append(rospy.Subscriber(topic,CompressedImage,lambda m,v=view:receive_input(v,m),queue_size=100,buff_size=2**24))

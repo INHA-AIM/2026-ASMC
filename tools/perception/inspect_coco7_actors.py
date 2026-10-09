@@ -5,6 +5,7 @@ import gc
 import hashlib
 import html
 import json
+import yaml
 from pathlib import Path
 
 import cv2
@@ -12,6 +13,7 @@ import numpy as np
 from asmc_camera.detection.hood_mask import HoodMask, load_view_masks
 from asmc_camera.detection.ultralytics_backend import file_sha256
 from asmc_camera.detection.yolo_batch_backend import BatchedYoloDetector
+from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -54,6 +56,9 @@ def main():
                 raise RuntimeError('valid fixture has no selected-view RGB: '+str(capture)+'/'+str(case['index']))
     report = dict(scope='qualitative identical-image comparison; no pixel GT, recall, or actor association claimed',
                   rejected_fixtures=rejected, candidates=[], masks={v: m.info for v,m in masks.items()},
+                  capture_manifest_sha256={str(c):file_sha256(c/'capture.json') for c in a.captures},
+                  code_sha256={str(f.relative_to(ROOT)):file_sha256(f) for f in [Path(__file__)]+
+                      sorted((ROOT/'src/asmc_camera/src/asmc_camera/detection').glob('*.py'))},
                   batch_mode=a.batch_mode,all_views=a.all_views)
     page = ['<!doctype html><meta charset="utf-8"><style>body{font:16px system-ui;margin:24px}img{max-width:95%}</style>',
             '<h1>MORAI controlled captures · raw COCO7</h1>',
@@ -62,13 +67,20 @@ def main():
         name=f'{config["model"]}-{config["width"]}'
         out=a.output/name;out.mkdir()
         weight=a.models/(config['model']+'.engine')
-        detector=BatchedYoloDetector(weights=str(weight),expected_sha256=file_sha256(weight),
-            runtime_backend='tensorrt', task='segment' if 'seg' in config['model'] else 'detect',
-            front_width=config['width'],conf_thres=config['confidence'],batch_mode=a.batch_mode)
+        if config.get('runtime_config'):
+            cfg=yaml.safe_load(Path(config['runtime_config']).read_text())
+            cfg.update(conf_thres=config['confidence'],batch_mode=a.batch_mode)
+            if cfg.get('front_width')!=config['width'] or cfg.get('model_id')!=config['model']:raise ValueError('candidate/config width mismatch')
+            detector=BatchedSegmentationDetector(**cfg)
+        else:
+            detector=BatchedYoloDetector(weights=str(weight),expected_sha256=file_sha256(weight),
+                runtime_backend='tensorrt', task='segment' if 'seg' in config['model'] else 'detect',
+                front_width=config['width'],conf_thres=config['confidence'],batch_mode=a.batch_mode)
         page.append(f'<h2>{html.escape(name)} · conf {config["confidence"]}</h2>')
         results=[]
         with (out/'predictions.jsonl').open('w') as handle:
             for capture,case,frames in fixtures:
+                capture_id=capture.parent.name+'-'+capture.name
                 records=[]
                 for n,row in enumerate(frames):
                     image_path=capture/row['image']
@@ -90,9 +102,13 @@ def main():
                         result=detector.infer_images({view:masks[view].apply(image)},[view])[view]
                     boxes=[dict(label=d.source_class_name,confidence=d.confidence,
                                 xyxy=[d.xmin,d.ymin,d.xmax,d.ymax]) for d in result.detections]
-                    record=dict(registry=str(capture),case=case['index'],asset=case['asset'],
+                    record=dict(registry=str(capture),capture_id=capture_id,case=case['index'],asset=case['asset'],
                         placement=case.get('placement'),**row,predictions=boxes,
                         batch_source_sha256=batch_sha,batch_mode=a.batch_mode)
+                    if result.masks and all(m is not None for m in result.masks):
+                        mask_name=f'{capture_id}-{case["index"]:03}-{n:02}.npz'
+                        np.savez_compressed(out/mask_name,masks=np.packbits(np.stack(result.masks),axis=2),width=image.shape[1])
+                        record['mask_file']=mask_name
                     handle.write(json.dumps(record)+'\n');records.append(record)
                     if n in {0,len(frames)//2,len(frames)-1}:
                         render=image.copy();ego,_=masks[view].geometry(*image.shape[:2])
@@ -104,10 +120,10 @@ def main():
                             cv2.rectangle(render,tuple(xy[:2]),tuple(xy[2:]),(0,255,0),1)
                             cv2.putText(render,f'{detection.source_class_name} {detection.confidence:.2f}',
                                 (max(0,xy[0]),max(14,xy[1])),cv2.FONT_HERSHEY_SIMPLEX,.45,(0,255,0),1)
-                        filename=f'{capture.name}-{case["index"]:03}-{n:02}.jpg'
+                        filename=f'{capture_id}-{case["index"]:03}-{n:02}.jpg'
                         cv2.imwrite(str(out/filename),render)
                         page.append(f'<figure><figcaption>{html.escape(case["asset"]["api_name"])} / {html.escape(str(case.get("placement")))} / {view} / {n}</figcaption><img loading="lazy" src="{name}/{filename}"></figure>')
-                results.append(dict(registry=str(capture),case=case['index'],asset=case['asset'],
+                results.append(dict(registry=str(capture),capture_id=capture_id,case=case['index'],asset=case['asset'],
                     frames=len(records),interpretation='inspect raw predictions; no quantitative hit assignment'))
         report['candidates'].append(dict(config=config,backend=detector.info,fixtures=results))
         (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')

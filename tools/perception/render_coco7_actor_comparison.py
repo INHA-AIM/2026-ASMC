@@ -18,7 +18,7 @@ def main():
         profiles.append(profile); groups=defaultdict(list)
         for line in (root/profile/'predictions.jsonl').read_text().splitlines():
             row=json.loads(line)
-            groups[(Path(row['registry']).name,row['case'])].append(row)
+            groups[(row.get('capture_id',Path(row['registry']).name),row['case'])].append(row)
         for (capture,case),rows in groups.items():
             for index in sorted({0,len(rows)//2,len(rows)-1}):
                 row=rows[index]
