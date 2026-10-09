@@ -162,3 +162,57 @@ baseline은 소스별 원본/채택/격리 수, 주석 종류, SHA, 클래스 �
 `reviewed_subset_ready`는 채택된 작은 부분집합의 구조·분할 검사이며,
 `bbox_pilot_ready`는 기존 7종과 CargoBox/WoodBox의 train/selection/heldout 확보 여부다.
 두 판정을 섞지 않는다. 후자가 false이면 필요한 클래스·분할의 개별 검수를 먼저 늘린다.
+
+## 2026-10-10 결과와 아직 남은 감사
+
+[고정 baseline](../../../config/baselines/perception_camera_training_data_audit_v1.yaml)에 소스별 표와 SHA를 기록했다.
+22개 원본 확보는 완료했다. 17개는 최신 공개 버전, 5개는 발행 버전이 없는 native 스냅샷이다.
+공개 버전 22개가 존재한다고 표시하지 않는다. 보존 archive 22개의 SHA를 재검증했고 총 2,911,061,824 bytes다.
+외부 이미지 46,326개(증강·중복 포함)와 Capture 30,090 view-frame, 총 76,416개를 구조 검사했다.
+
+실제 개별 검수는 286장이다. 생성한 소스×클래스 표본은 132묶음·고유 4,799장이며,
+그중 검수한 표본은 236장이다. 표본 생성과 검수 완료를 혼동하지 않는다.
+확인 부족·미검수·누락·혼합 주석·구조 오류·중복 충돌·cross-split 유사 후보는 학습에서 격리했다.
+**전체 수동 라벨 감사는 미완료이며 검증된 부분집합만 제공한다.**
+
+최종 경로는 `$ASMC_DATA/roboflow/curated-v2`와
+`$ASMC_DATA/dataset_versions/camera_objects_bbox_v2`다. v1 및 그 이전 중간 결과는 보존하지만
+`SUPERSEDED.txt`로 후속 학습 사용을 막았다. 재실행은 새 출력 버전으로 만들고 기존 디렉터리를 덮어쓰지 않는다.
+
+| 항목 | 최종 결과 |
+|---|---|
+| 채택 이미지 / 객체 | 119 / 213 |
+| train / selection / heldout 이미지 | 16 / 1 / 102 |
+| 미확정 라벨 / 채택 자료 구조 오류 / 확인된 pixel split 누출 | 0 / 0 / 0 |
+| 채택 정답 | person 12, dog 18, deer 10, car 3, bus 2, truck 1, cargo_box 62, wooden_box 52, traffic_barrel 53 |
+| 전체 격리 | 76,297 이미지 기록 |
+| pHash 유사 후보 | 251,062쌍; 확정 중복 수가 아니며 원본 보존 |
+| 학습·운영 모델 변경 | 없음 |
+
+종횡비를 바꾼 증강본 검사에서 2장을 추가 격리했다. 동일 픽셀 복제본의 0.5px 이하 반올림 차이는
+원본 RGB 대조와 개별 수정 기록으로 통일했으며, 단순히 박스가 더 많은 주석을 선택하지 않았다.
+Capture의 기존 `annotation_complete`가 가까운 배럴·볼라드까지 포함하지 않는 반례도 보존했다.
+번호 없는 스냅샷의 조회·다운로드는 여러 도구 수정 단계에 걸쳐 수행했다. 원본 archive·native JSON SHA를
+수집 증거로 삼고, baseline의 코드 commit/SHA는 최종 감사·export 구현을 고정한다.
+
+**비교 학습 준비는 보류다.** 검수된 자료가 heldout에 편중됐고 모든 split에 정답이 있는 클래스는
+현재 CargoBox뿐이다. WoodBox는 train 2개·heldout 50개이고 selection 정답이 없다.
+기존 7종의 일부도 train 또는 평가 정답이 없다. seed·Capture split을 바꾸거나 heldout을 train으로
+이동시켜 수량을 맞추지 않는다. 없는 클래스의 정답을 빈 파일로 만들지도 않는다.
+
+다음 검수는 미확정 자료를 전부 사용하기보다 train/selection에 배정된 소스의
+CargoBox·WoodBox와 기존 7종을 우선 늘린다. 혼합 `object/obstacle`, 숫자 이름,
+사람+자전거 복합 박스와 주석 누락은 개별 수정하거나 계속 격리한다.
+새 검수 JSON으로 v3을 만들고 `bbox_pilot_ready`를 다시 검사한 뒤 두 모델의 짧은 bbox 학습으로 넘어간다.
+
+```bash
+python tools/perception/camera_data_audit.py verify-export \
+  --dataset "$ASMC_DATA/dataset_versions/camera_objects_bbox_v2"
+```
+
+검증: CPU 시험 37개, 문서 migration, perception contract/topic policy 검사 통과.
+실제 생성 YOLO 파일을 다시 읽어 이미지 SHA·클래스 ID·좌표·객체 수·파일 구성·split을 확인했다.
+검수 HTML의 JavaScript 구문과 로컬 HTTP 경로도 확인한다.
+GitHub CI는 `recent account payments have failed or your spending limit needs to be increased`로
+job 시작 전 차단됐다. 코드 시험 실패나 기존 facade 실패와 섞지 않는다.
+PR #77의 HEAD와 runtime worktree·컨테이너 마운트는 변경하지 않았다.
