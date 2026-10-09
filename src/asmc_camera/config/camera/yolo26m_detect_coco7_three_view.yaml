@@ -1,5 +1,5 @@
-# Selected development model. Deployment acceptance and global default promotion
-# remain separate: see the finalist decision and unresolved gates in the handoff.
+# Earlier finalist selection; retained as a lower-latency comparison/rollback.
+# The current development default is yolo26l_detect_coco7_three_view.yaml.
 weights: /data/models/camera_coco7_v1/yolo26m.engine
 expected_sha256: 44066f58ca37e95487ddc5b69207c5d5e2c15ef3699e0a62a966552b0cfc1877
 runtime_backend: tensorrt

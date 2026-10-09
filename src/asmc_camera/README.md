@@ -22,7 +22,11 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 
 ### 선정한 3뷰 개발 모델
 
-YOLO26m detect·전방1280·좌우640×480·TensorRT FP16·2+1 batch·뷰별15Hz·
+[실험 갤러리 통합 목차](http://localhost:8768/)에서 카메라·LiDAR 비교를 함께 확인한다.
+8개 M/L·detect/seg·960/1280 비교와 최종 선정 근거는
+[3뷰 인계 문서](../../docs/handoffs/perception/camera-three-view-coco-runtime.md)를 따른다.
+
+YOLO26l detect·전방1280·좌우640×480·TensorRT FP16·2+1 batch·뷰별15Hz·
 confidence0.50을 개발 기준으로 선정했다. `asmc-ros-noetic`의 ROS 환경에서 직접 실행한다.
 
 ```bash
@@ -36,7 +40,7 @@ rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
 좌우 debug 토픽은 `/perception/camera/objects/debug/left/image/compressed`,
 `/perception/camera/objects/debug/right/image/compressed`다. planning은 세 모델 STANDBY,
 debug는 ACTIVE이며 GUI는 별도로 연다. 모델·뷰별 목표 `target_hz_by_view`·생산자 최소 confidence는
-`config/camera/yolo26m_detect_coco7_three_view.yaml`에서 수정한다. 시작 컷만 바꾸려면
+`config/camera/yolo26l_detect_coco7_three_view.yaml`에서 수정한다. 시작 컷만 바꾸려면
 `objects_conf_thres:=0.55`를 launch에 추가하고 재시작한다.
 
 판제는 메시지 confidence로 더 엄격한 소비 컷을 적용할 수 있다. LiDAR 호환 어댑터는

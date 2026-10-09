@@ -3,7 +3,7 @@
        retained until the independent deployment gates are accepted. No GUI. -->
   <arg name="profile" default="planning" doc="planning: resident STANDBY | debug: ACTIVE + debug publishers | idle: no models"/>
   <arg name="objects_conf_thres" default=""/>
-  <arg name="camera_objects_config" default="$(find asmc_camera)/config/camera/yolo26m_detect_coco7_three_view.yaml"/>
+  <arg name="camera_objects_config" default="$(find asmc_camera)/config/camera/yolo26l_detect_coco7_three_view.yaml"/>
   <arg name="start_camera_lane" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="start_visualization" default="$(eval arg('profile') == 'debug')"/>

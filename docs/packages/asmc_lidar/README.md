@@ -27,6 +27,10 @@
 
 ## 재호: PR #72 반영 후 비교 갤러리 먼저 보기
 
+현재 개발 PC에서는 [전체 실험 갤러리 목차](http://localhost:8768/)의 `lidar-pr72`에서
+LiDAR 비교와 카메라 모델 비교를 함께 찾을 수 있다. 이 주소는 로컬 artifact 서버이며,
+다른 PC에서의 재현·인계에는 아래 저장소에 포함한 갤러리와 실행 안내를 사용한다.
+
 PR #72가 반영된 checkout에서
 `config/baselines/evidence/lidar_continuous_regression_v1/user-review/index.html`을
 파일 탐색기에서 브라우저로 연다. HTML·사진·GIF·상태/속도 JSON을 모두 Git에 포함했으므로

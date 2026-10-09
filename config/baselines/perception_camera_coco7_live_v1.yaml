@@ -1001,6 +1001,7 @@ range_batch_followup:
   final_environment: SUNNY; Ego unchanged; no public control publishers; bridge and master retained
 
 final_model_decision:
+  superseded_by: broad_model_decision
   summary: config/baselines/evidence/camera_coco7_live_v1/finalist_model_decision.json
   summary_sha256: 415e26ce80cc304989eb0a5f99104cd2b6371a9bc9493a980d5354a14442a1d0
   model: YOLO26m detect
@@ -1026,3 +1027,53 @@ final_model_decision:
   - prior confidence60/55 mask regressions
   - offline driver path collision; resumed separately
   - existing long-run/drive/CI acceptance blockers
+
+broad_model_decision:
+  summary: config/baselines/evidence/camera_coco7_live_v1/broad_model_decision.json
+  summary_sha256: 0d149a3b2926e7b6c6bbd3714b13babaf9b967e33d913b819f17bdbbdce6ac17
+  model: YOLO26l detect
+  runtime_config: src/asmc_camera/config/camera/yolo26l_detect_coco7_three_view.yaml
+  engine_sha256: 95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f
+  front_width: 1280
+  side_hw: [480, 640]
+  batch: 2plus1
+  target_hz_each_view: 15.0
+  producer_confidence: 0.50
+  development_default_selected: true
+  global_operational_default_promoted: false
+  all_eight_combinations_screened: true
+  c6_screen_trials: 8
+  c6_confirmation_trials: 12
+  selected_camera_supply_passed: 6
+  selected_15hz_target_passed: 6
+  selected_whole_stack_failed: 6
+  selected_output_hz_range: [14.75, 14.90]
+  selected_wall_p95_ms_max: 95.58823722181842
+  selected_wall_p99_ms_max: 109.48612566804535
+  selected_maximum_gap_ms: 201.6825140453875
+  selected_peak_whole_vram_mib_confirmation: 5514
+  selected_peak_whole_vram_mib_including_screen: 5753
+  vram_upper_limit_percent: 90
+  selected_duplicate_or_reversed_stamps: 0
+  actual_selection_frames: 2252
+  actual_selection_tp: 326
+  actual_selection_fp: 27
+  reviewed_exclusions_exact_frames: 2
+  original_excluded_evidence_preserved: true
+  actual_previously_viewed_heldout_frames: 2474
+  actual_previously_viewed_heldout_tp: 899
+  actual_previously_viewed_heldout_fp: 34
+  mask_all_views_default: true
+  zero_new_class_misses_passed: false
+  new_class_misses: {front: 1, left: 1, right: 0}
+  new_miss_review: front car label lost but truck geometry persists; left truck box lost
+  mask_policy: user preference for Ego suppression; original failures retained, no blanket waiver
+  regression_unique_tests: {coco7: 41, detection: 72}
+  contract_validators_passed: 4
+  actual_default_launch_standby_smoke_passed: true
+  gallery_hub: http://localhost:8768/
+  remaining_gates:
+  - common planning trajectory deadline failures
+  - new model repeated fusion and long-run/drive acceptance
+  - organization CI billing rejection at zero steps
+  - historical known facade and input-authority baseline failures

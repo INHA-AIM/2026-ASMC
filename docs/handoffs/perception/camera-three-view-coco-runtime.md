@@ -6,7 +6,119 @@
 컨테이너 `/root/ws`가 어느 worktree를 읽는지 확인한 뒤 실행한다.
 폴더명과 Git 브랜치명은 다르며, build/source만으로 마운트 대상은 바뀌지 않는다.
 
-## 최종 개발 모델과 confidence
+## 현재 기본 모델: 8개 조합 재검토
+
+현재 개발 기본값은 **YOLO26l detect / 전방1280 / 좌우640×480 / TensorRT FP16 /
+2+1 batch / 뷰별15Hz / confidence0.50**이다.
+`camera_coco7.launch`가 `config/camera/yolo26l_detect_coco7_three_view.yaml`을 선택한다.
+기존 M detect 설정과 M/L seg 비교 설정은 재현·롤백용으로 보존한다.
+
+초기 M-seg/960 추천은 당시의 높은 confidence·기존 FP 상한·근접 차량 보존과
+3회 통합15Hz 결과, 향후 mask 활용 가능성을 함께 고려한 잠정안이었다.
+그 후 mask ON/OFF에서 신규 누락이 확인돼 운영 수락되지 않았다. 뒤이은 M detect/1280
+추천도 M detect/1280과 L-seg/960의 비교 결과였다. 이번에는 그 두 후보에 한정하지 않고
+M/L × detect/seg ×960/1280 **8개 조합을 같은0.50 기준으로 다시 비교**했다.
+과거 추천을 모든 조건의 최적 모델이었다고 해석하지 않는다.
+
+Capture selection2252프레임의 기존 실제0.25 추론 결과를 재사용해0.50에서 선별했다.
+사용자가 운영 비교에서 제외한 기둥·잘못 스폰한 차량 바퀴는 RGB SHA로 고정한
+정확히2장만 제외했다. 같은 실행의 다른 프레임·종류 전체를 제외하지 않았고
+원본 점수와 실패 이미지는 변경하지 않았다. 아래는 **2250장 보조 비교**다.
+
+| 모델 | 전방 너비 | TP | FP | macro F1 | 이번 C6 선별 YOLO wall p95 최댓값 |
+|---|---:|---:|---:|---:|---:|
+| M detect |960|285|22|0.2265|74.6ms|
+| M detect |1280|282|20|0.2335|73.3ms|
+| L detect |960|318|21|0.2563|89.8ms|
+| **L detect** |**1280**|**326**|**28**|**0.2676**|**88.4ms**|
+| M seg |960|278|24|0.2359|91.2ms|
+| M seg |1280|250|19|0.2362|98.3ms|
+| L seg |960|300|20|0.2372|102.5ms|
+| L seg |1280|315|53|0.2485|104.2ms|
+
+TP/FP는 프레임별 class-aware IoU≥0.5 대응이다. 검수 GT는 person/car/bus/truck만 있으며,
+dog/bicycle/motorcycle의 AP를 이 자료로 주장하지 않는다. GT2807개 중2242개는
+높이10px 미만이다. 높이20px 이상 recall은 L detect/1280이81.4%, M detect/1280이74.5%다.
+평균 F1을 대회 전체 객체 정확도라고 확대하지 않는다.
+
+공통으로 안정 검출된 Capture 객체에서 L detect/1280은 M detect/1280보다
+8개는 먼저,16개는 같은 입력,1개는 늦게 안정 검출했다. L-seg/960과는8/17/2개다.
+이는 연속 주석 입력5개 중3회 대응의 source frame 기준이며 wall 시간 비교가 아니다.
+두 모델에서 서로 다른 객체 집합의 평균 최초 검출 시간을 직접 비교하지 않는다.
+
+같은 SUNNY/FOGGY의12·30·50m 정지 스폰42개 장면을 각5장·3뷰2+1으로 실제 재추론했다.
+전방 중앙 검토 영역에 기대 라벨이3장 이상 관측된 장면은 L detect/96030개,
+L detect/128029개, M detect/128026개, L-seg/96028개다. 해당 박스가 배치한 actor에
+정확히 속하는 pixel GT가 아니므로 recall/AP로 쓰지 않는다. 개·자전거·이륜차의
+원거리 미검출은 남고, 추가학습 전 모든 대회 객체를 지원한다고 하지 않는다.
+
+8개 조합은 MORAI+TwinLite+ResNet+LiDAR/fusion+판제/제어 preview에서 각1회 선별했다.
+이후 유력한 L detect/960·1280만 SUNNY/FOGGY 각각3회 반복했다. 더 낮은 품질·더 큰
+비용의 후보까지 전체 반복을 확대하지 않았다. L detect 두 구성은12회 모두 카메라 공급과
+15Hz 목표를 통과했다. L detect/1280의6회는14.75–14.90Hz, wall p95≤95.6ms,
+p99≤109.5ms, 최대 공백201.7ms, 중복·역행 stamp0이었다. 전체 VRAM peak는
+6회5514MiB, 앞선 선별까지 포함하면5753MiB로90% 상한 이내다. L detect/960은
+14.75–14.95Hz·p95≤91.4ms였다. 이 정도 지연 차이보다 검수 검출률·조기 검출을 우선했다.
+원래150/200ms gate를 완화하지 않아도 후보가 들어왔으며 미래 최적화 효과를 가정해
+실패를 통과로 바꾸지 않았다.
+
+L-seg/1280 선별의 출력 공백 약398ms에는 센서 입력 공백341–358ms도 겹쳤다.
+이를 seg 모델의 계산 과부하로 확정하지 않는다. 품질·오검출·비용의 종합 근거로
+추가 반복 우선순위를 낮췄다. M detect/960의 첫1초 TwinLite8개 실패도 원본에 남긴다.
+모든8개 선별과12회 확인에서 판제 trajectory deadline은 실패했다. 따라서 이 선정은
+**카메라 개발 기본값이며 전체 스택 운영 수락은 보류**다. 카메라 외 실패의 원인을
+완전히 분리했다거나30분 연속 실행을 통과했다고 주장하지 않는다.
+
+최종 실제0.50 재추론은 원본2252 selection 프레임에서 TP326/FP27/macroF1 0.267638이었다.
+Capture 정답 평가는 뷰별 단일 입력이고, 실제3뷰2+1 경로는 스폰 재추론·통합 실행으로
+별도 확인했다. 동기화된 측방 GT의 batch1/2 완전 동등성을 증명한 것은 아니다.
+두 검토 프레임 제외2250장에서는 TP326/FP27/macroF1 0.267669였다. 저장된0.25 결과를
+후필터링한 선별표의 FP28과 실제 predictor 경계 처리는 구분한다. FP27 중17개는
+다른 검수 라벨의 객체와 겹쳤고10개는 미대응 박스였다. 잘못된 raw 라벨도 FP로 유지한다.
+이미 이전에 열람한 heldout2474장에서는 고정0.50으로 TP899/FP34/macroF1 0.268085였다.
+이 자료는 새 독립 최종 시험이 아니라 회귀 확인이며 모델·컷 재선정에 사용하지 않았다.
+
+같은2252장의 mask ON/OFF에서 class-aware 신규 실패는 전방1·좌측1·우측0이다.
+전방000323의 차량은 OFF의 car0.510이 컷 아래로 떨어지고 ON에서 같은 위치의
+truck0.535가 남았다. 따라서 객체 박스 자체 소실과 라벨 소실을 구분한다.
+좌측000067의 truck0.547은 ON에서 사라졌다. 반대로 전방 대응1개는 회복됐다.
+**신규 라벨 누락0 조건은 통과하지 않았다.** 다만 사용자가 요청한 자차 오검출 억제
+우선순위로3뷰 mask ON을 유지하고 두 실패를 이미지와 원본 예측으로 남긴다.
+이를 과거 보행자 예외의 자동 적용이나 모든 후속 누락의 면제로 해석하지 않는다.
+
+최신 원본 SHA·집계·판정은 [8개 조합 선정 증거](../../../config/baselines/evidence/camera_coco7_live_v1/broad_model_decision.json)에 모았다.
+
+### 갤러리 한곳에서 보기
+
+[통합 갤러리 목차](http://localhost:8768/)에서 검색·실험 종류 필터로 카메라와 LiDAR
+갤러리를 모두 찾는다. [8개 조합 요약](http://localhost:8768/camera-coco7-live-v1/broad-model-summary-v1/index.html)과
+[같은 RGB 모델 비교](http://localhost:8768/camera-coco7-live-v1/broad-model-spawn-inspection50-v1/comparison.html)를
+최근 링크에 둔다. 기존8766/8767 개별 주소는 유지한다. 재생성은 저장소에서
+`python3 tools/perception/build_experiment_gallery_hub.py --artifacts ../artifacts`다.
+서버 재시작은 같은 위치에서 `python3 -m http.server 8768 --bind 127.0.0.1 --directory ../artifacts`다.
+로컬 artifact가 없는 다른 PC에는 원본 증거 파일도 별도로 전달해야 한다.
+
+### 직접 실행·confidence
+
+```bash
+roslaunch asmc_camera camera_coco7.launch profile:=debug
+```
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
+```
+
+컨테이너·bridge는 별도로 준비한다. planning은 세 모델 STANDBY, debug는 ACTIVE다.
+차선 피팅 결과의 주행 소비는 계속 음영 ODD로 한정한다. 판제는 구간과 소비를 결정한다.
+`objects_conf_thres:=0.55`로 생산자 시작 컷을 바꾸거나 YAML의 `conf_thres`를 수정한다.
+0.50은 조기 검출과 FP의 절충값이며 selection macro F1의 수학적 최대라고 하지 않는다.
+0.30 부근 F1은 더 높지만 FP가 크게 증가한다. 판제의 메시지 소비 컷과 어댑터 추가 컷은
+독립적이고, 생산자가 제거한 낮은 confidence 결과를 소비자에서 복원할 수는 없다.
+3뷰 차체 mask는 기본 ON이다. 자차 오검출을 억제하는 사용자 선택을 유지하고,
+새 모델의 ON/OFF 차이도 최신 증거에 남긴다. 이전 누락 예외로 신규 실패를 지우지 않는다.
+기존 `perception.launch`의 운영 모델 기본값은 독립 수락 전까지 유지한다.
+
+## 이전 두 후보 선정 기록 — 아래 결과는 보존하며 현재 기본값은 위 절을 따른다
 
 실행·추가 개발 기준 모델은 **YOLO26m detect / 전방1280 / 좌우640×480 /
 TensorRT FP16 / 2+1 batch / 뷰별15Hz / 생산자 confidence0.50**으로 결정했다.
