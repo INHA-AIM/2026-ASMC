@@ -13,13 +13,22 @@ from prepare_yoloe_l import export_profile
 from write_yoloe_selection_configs import configuration
 from evaluate_coco7_models import evaluate
 from check_yoloe_selection_engine import compare
-from analyze_yoloe_selection import best_threshold,EVALUATION_GROUPS
+from analyze_yoloe_selection import best_threshold,EVALUATION_GROUPS,input_pauses
 from asmc_camera.detection.batching import shapes_for_front,pack_image,ImageTransform
 from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
 from asmc_camera.detection.backend import Detection
 
 
 class YoloeSelectionTest(unittest.TestCase):
+    def test_input_pause_diagnostics_exclude_stale_rows_and_keep_source_time_separate(self):
+        rows=[dict(arrival=t,stamp_ns=ns) for t,ns in
+              [(1.,0),(10.1,100_000_000),(10.5,150_000_000),(10.55,200_000_000),(30.,300_000_000)]]
+        report=input_pauses(rows,10.,20.)
+        self.assertAlmostEqual(400.,report['maximum_gap_ms'])
+        self.assertEqual(1,len(report['pauses']))
+        self.assertEqual(50.,report['pauses'][0]['source_gap_ms'])
+        self.assertIsNone(input_pauses(rows,15.,20.)['maximum_gap_ms'])
+
     def test_selection_tie_and_evaluation_only_groups(self):
         thresholds=[dict(confidence=.2,macro_f1=.5),dict(confidence=.4,macro_f1=.5),dict(confidence=.7,macro_f1=None)]
         self.assertEqual(.4,best_threshold(thresholds)['confidence'])
