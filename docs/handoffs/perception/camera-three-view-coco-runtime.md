@@ -187,6 +187,21 @@ Ultralytics 8.4.150 / TensorRT 10.13.0.35 이미지다. 바깥 workspace를 먼�
 메시지 MD5와 `/vehicle/state` 50Hz, 세 카메라 20Hz·camera4 10Hz 입력을 확인했다.
 컨테이너 재생성 전 셸에서는 나와 다시 진입한다.
 
+실제 팀 주행에서는 YOLO·TwinLite·ResNet·Main·판제 노드를 이 컨테이너의
+서로 다른 터미널에서 실행한다. 추가 추론 컨테이너는 필요하지 않다. 같은
+workspace source와 master를 사용하며 TensorRT engine은 `/data/models/camera_coco7_v1`에서
+읽는다. 별도 검증 컨테이너는 재현·네트워크 격리에 사용한 시험 환경이다.
+이미지 이름에 YOLOE가 포함돼 있어도 일반 YOLO detect/seg backend를 함께 제공한다.
+표준 `docker/ros-noetic/Dockerfile`에도 동일 CUDA11 TensorRT·export 의존성을
+`requirements-yolo-runtime.txt`로 고정한다. 팀 표준 ROS 이미지를 다시 빌드할 때
+추론 의존성도 함께 설치되며 별도 컨테이너로 YOLO를 분리하지 않는다.
+설치 블록은 팀 ROS 기본 이미지 위에서 기존 공식 wheel 캐시를 재사용해
+실제 빌드하고 CUDA 연산·detect/seg 예열·3뷰 추론을 확인했다. upstream
+`ros:noetic`부터의 전체 재빌드는2.3GB PyTorch 재다운로드 단계에서 중단했다.
+새 설치 블록 검증과 전체 upstream 이미지 재빌드 완료를 구분한다.
+팀원 장비에서는 해당 장비의 TensorRT/CUDA 환경에서 engine을 재생성하고 SHA를
+설정한다. 4060 Ti에서 만든 engine의 다른 GPU 호환성을 전제하지 않는다.
+
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
@@ -245,6 +260,19 @@ debug OFF의 headless 공급 수락과 GUI 디버그 성능을 구분한다.
 python3 tools/perception/verify_coco7_runtime.py --seconds 20 --minimum-hz 9.5
 ```
 
+9.5Hz는 **10Hz 목표 프로필**의 공급 허용치이며 LiDAR 주기와 일치해야 하는
+물리적 조건이 아니다. 8/9Hz를 별도 목표로 시험할 수 있지만 기존 실패를
+9.5Hz에서 낮춰 통과 처리하지 않는다. 새 관측 지연·객체 공백·fusion의 시간
+대응과 분류 이력을 함께 평가한다. 낮은 주기용 합격 기준은 별도 프로필에서 정한다.
+
+이상적인 균일 입력에서도 8Hz/9Hz 영상의 최근접 시간차 최댓값은 각각62.5ms/
+55.6ms다. 현재 ±50ms matcher에서는 시간 위상에 따라 대응하지 못하는 LiDAR
+관측이 생긴다. unique는 카메라 관측을 한 번만 소비하므로12Hz LiDAR 대비
+8/9Hz 영상의 대응 횟수 상한은 약67%/75%다. 이는 손실 없는 이상적 입력의
+계산 예시이며 실제 시험 결과가 아니다. bounded_reuse는 같은 관측의 기하
+연관을 다시 검사하지만 새로운 영상으로 만들거나 허용 offset을 늘리지 않는다.
+TwinLite와 YOLO의 추론 주기는 독립적이다.
+
 전체 스택 계산 시험의 `coco7_preview_stack.launch`는 명령을 `/evaluation/ctrl_cmd*`로
 격리한다. 실제 주행은 별도 gate·저속 시험이며 preview 성공으로 대체하지 않는다.
 `drive_coco7_preview.py`는 이미 준비된 전체 preview를 5km/h 이하에서 확인하는
@@ -277,6 +305,66 @@ km/h 숫자를 그대로 전달하자 실제 속도가 약3.6배로 접근했고
 원래 MPC actuator의 수락으로 확대하지 않는다. 운영 bridge 단위는 변경하지
 않았다. `drive-grpc-mps-summary.json`이 세 실행과 모든 stream의 결과다.
 
+## Sunny·foggy 재검토
+
+날씨별 [추가 검토 요약](../../../config/baselines/evidence/camera_coco7_live_v1/weather_followup_summary.json)은
+기존 전체 비교를 sunny/foggy로 분리한다. `analyze_coco7_weather.py`는 동일
+RGB SHA·완전한 GT와 예측 coverage를 확인하고 원래 confidence를 유지한다.
+Capture 날씨는 run 이름의 태그이며 독립적인 날씨 telemetry는 저장돼 있지 않다.
+반면 새 실시간 시험은 각 suite 전후 gRPC GetWeather로 날씨를 확인했다.
+
+별도 heldout 2,474프레임에서 selection에서 고정한 confidence를 재사용했다.
+Sunny는 car/person/bus, foggy는 car/person/bus/truck의 GT가 있어 서로 다른
+날씨의 macro F1을 직접 비교하지 않는다. dog/bicycle/motorcycle은 평가 불가다.
+
+| 후보 | confidence | sunny macro F1 / FP | foggy macro F1 / FP |
+|---|---:|---:|---:|
+| YOLO11m /960 |0.70|0.0429 /0|0.1072 /1|
+| YOLO26m detect /960 |0.70|0.0623 /0|0.1607 /2|
+| YOLO26m detect /1280 |0.70|0.0662 /0|0.1869 /1|
+| YOLO26m-seg /960 |0.65|0.0502 /0|0.1846 /4|
+
+검증 GT의 픽셀 높이 중앙값은 sunny2px/foggy4px이며 sunny529/647개,
+foggy2,213/3,383개가10px 미만이다. 낮은 점수를 해석할 때 이 분포를 함께
+본다. 작은 GT를 평가에서 삭제해 통과로 바꾸지 않았다. sunny selection은
+143개 중141개가10px 미만이고 모든 후보의0.7 검출 TP가0이었다. 이 선정
+자료만으로 sunny 모델을 확정하지 않는다. 새로운 heldout 결과로 confidence를
+다시 조정하거나 기존 모델의 학습용 자료로 사용하지 않는다.
+
+L detect/1280은 foggy **selection**에서0.2479/FP6으로 고정0.7의 최고
+점수였다. M detect/1280의0.2157/FP2보다 점수는 높지만 기준선 FP5를
+초과했고 최적화한 전체 스택 반복·장시간 검증을 완료하지 않았다. 이를
+M 후보의 heldout 점수와 직접 비교하거나 연산 한도 내 최적 모델로 확정하지 않는다.
+L-seg/1280은 같은 selection에서 FP27이었다. 모델 크기만으로 승격하지 않는다.
+
+현재 충분히 비교한 후보에서는 **detect M/1280이 bbox 품질·지연의 우선 후보,
+seg M/960은 mask 활용 후보**다. 앞서960에서만 잡힌 가까운 차량 반례와
+mask 신규 누락도 유지한다. 이 판단은 운영 기본값 승격이 아니다.
+
+### 같은 주행용 컨테이너의 날씨별 전체 스택 시험
+
+실제 `asmc-ros-noetic`에서 MORAI·TwinLite3뷰·ResNet·LiDAR/fusion·판제/제어
+계산을 함께 실행했다. 2+1 batch·세 뷰15Hz·debug OFF·unique 정책으로 각
+모델×날씨를3회 측정했으며, 생성한9개 fixture actor만 정리하고 원래 SUNNY로
+복원했다. 공개 차량 제어 발행은 하지 않고 `/evaluation/ctrl_cmd`를 사용했다.
+
+| 후보·날씨 | 실제 뷰별 Hz 범위 | wall p95 최댓값 | 전체 VRAM peak |
+|---|---:|---:|---:|
+| M detect/1280·sunny |14.85–14.95|71.7ms|5051MiB|
+| M detect/1280·foggy |14.85–14.95|84.4ms|5112MiB|
+| M-seg/960·sunny |14.75–14.90|93.7ms|5197MiB|
+| M-seg/960·foggy |14.65–14.90|102.4ms|5205MiB|
+
+두 후보의 모델 공급·지연·VRAM 기준은12회 모두 통과했다. **전체 스택은12회
+모두 실패**했으며 판제 trajectory 최대 공백270–333ms가250ms 기준을 초과했다.
+모델 성능 통과로 판제 deadline이나 이전30분 실패를 면제하지 않는다.
+
+원본은 `weather-live-shared-v1/sunny` 및 `weather-live-shared-foggy-v2/foggy`다.
+v1 driver는 측정기의 수락 실패 종료 코드1을 실행 오류로 취급해 sunny6회 후
+멈췄으며 기록을 보존하고 foggy6회를 v2에서 이어갔다. 복원 직후 GetWeather가
+이전 foggy를 반환한 v2 실패도 유지한다. 후속 독립 RPC의 SUNNY 확인은
+`weather-restoration-recovery-v1.json`에 있다. 이 실패들은 성공으로 덮어쓰지 않는다.
+
 ## 이후
 
 ### 최종 회귀와 CI
@@ -297,6 +385,12 @@ jamming의 --text 종료 코드만으로 판정하지 않고 내부 unittest의 
 GitHub CI는 결제/사용 한도 제한으로 job의 첫 step부터 실행되지 못했다.
 과거 HEAD의 CI 성공이나 로컬 회귀로 최종 CI 통과를 대체하지 않는다.
 PR은 Draft이며 기본 모델·재사용 정책의 수락과 CI 확인이 남아 있다.
+
+GitHub의 실제 annotation은 `The job was not started because recent account payments
+have failed or your spending limit needs to be increased`이며 job의 steps는 비어 있다.
+조직 owner/billing manager가 [조직 Billing](https://github.com/organizations/INHAautonav/settings/billing)의
+결제 상태와 Actions budget을 확인해야 한다. 정상화 후 실패한 workflow를 재실행한다.
+이 PR에서는 결제·예산·필수 검사 설정을 변경하지 않는다.
 Git에 포함한 [최종 요약](../../../config/baselines/evidence/camera_coco7_live_v1/final_acceptance_summary.json)
 과 baseline에서 원본 증거 경로·SHA·성공·실패를 확인한다.
 

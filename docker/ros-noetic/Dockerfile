@@ -61,6 +61,15 @@ RUN pip3 install --no-cache-dir -r /tmp/requirements-lbc.txt && \
     rm -f /tmp/requirements-*.txt && \
     python3 -c "from scipy.spatial import cKDTree; import cv2; import numpy; import h5py; import pyproj"
 
+# General YOLO detect/seg inference and engine export run in this same ROS
+# container. The separate training/measurement containers are not required
+# for team driving. Match the shared RTX40 runtime; do not auto-install during
+# a live launch or silently substitute another TensorRT/CUDA version.
+COPY requirements-yolo-runtime.txt /tmp/requirements-yolo-runtime.txt
+RUN pip3 install --no-cache-dir -r /tmp/requirements-yolo-runtime.txt && \
+    python3 -c "import tensorrt; assert tensorrt.__version__ == '10.13.0.35'; import onnx, onnxslim, pynvml" && \
+    rm -f /tmp/requirements-yolo-runtime.txt
+
 RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "[ -f /root/ws/devel/setup.bash ] && source /root/ws/devel/setup.bash" >> /root/.bashrc && \
     echo "export LANG=en_US.UTF-8" >> /root/.bashrc && \

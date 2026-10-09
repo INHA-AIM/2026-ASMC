@@ -1,0 +1,3364 @@
+{
+  "schema_version": 1,
+  "status": "reviewed_not_operationally_accepted",
+  "shared_container": "asmc-ros-noetic",
+  "live_weather_rpc_verified_before_and_after": true,
+  "thresholds_retuned": false,
+  "quality_scope": "Capture run-name sunny/foggy tags; unknown subtype regions ignored; no dog/bicycle/motorcycle pixel GT; macro F1 is not full competition recall",
+  "quality": {
+    "selection": {
+      "gt_geometry": {
+        "foggy": {
+          "gt_objects": 2665,
+          "median_pixel_height": 3,
+          "below_10_pixels": 2101
+        },
+        "sunny": {
+          "gt_objects": 143,
+          "median_pixel_height": 1,
+          "below_10_pixels": 141
+        }
+      },
+      "models": [
+        {
+          "model": "yolo11m",
+          "front_width": 1280,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.18203012153421708,
+              "false_positives": 5,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo11m",
+          "front_width": 640,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.1556798593848044,
+              "false_positives": 1,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo11m",
+          "front_width": 960,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.17111799312323783,
+              "false_positives": 3,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26l",
+          "front_width": 1280,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.2478617234719039,
+              "false_positives": 6,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26l",
+          "front_width": 640,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.2192848670004262,
+              "false_positives": 4,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26l",
+          "front_width": 960,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.22673480467817692,
+              "false_positives": 4,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26l-seg",
+          "front_width": 1280,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.21703885127083525,
+              "false_positives": 27,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26l-seg",
+          "front_width": 640,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.18249886496957818,
+              "false_positives": 4,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26l-seg",
+          "front_width": 960,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.20802750611470164,
+              "false_positives": 4,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m",
+          "front_width": 1280,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.21570622521311095,
+              "false_positives": 2,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m",
+          "front_width": 640,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.1909028722763455,
+              "false_positives": 2,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m",
+          "front_width": 960,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.20407449803600736,
+              "false_positives": 2,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m-seg",
+          "front_width": 1280,
+          "confidence": 0.65,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.2220247024750236,
+              "false_positives": 5,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m-seg",
+          "front_width": 1280,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.2006291659260576,
+              "false_positives": 1,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m-seg",
+          "front_width": 640,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.17980677019038174,
+              "false_positives": 2,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m-seg",
+          "front_width": 960,
+          "confidence": 0.65,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.216699401729618,
+              "false_positives": 3,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m-seg",
+          "front_width": 960,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2036,
+              "macro_f1": 0.19765236394022803,
+              "false_positives": 1,
+              "gt": {
+                "person": 298,
+                "car": 1582,
+                "bus": 285,
+                "truck": 500
+              }
+            },
+            "sunny": {
+              "frames": 216,
+              "macro_f1": 0.0,
+              "false_positives": 0,
+              "gt": {
+                "person": 50,
+                "car": 88,
+                "truck": 5
+              }
+            }
+          }
+        }
+      ]
+    },
+    "heldout": {
+      "gt_geometry": {
+        "foggy": {
+          "gt_objects": 3383,
+          "median_pixel_height": 4,
+          "below_10_pixels": 2213
+        },
+        "sunny": {
+          "gt_objects": 647,
+          "median_pixel_height": 2,
+          "below_10_pixels": 529
+        }
+      },
+      "models": [
+        {
+          "model": "yolo11m",
+          "front_width": 960,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2238,
+              "macro_f1": 0.10715832444634528,
+              "false_positives": 1,
+              "gt": {
+                "person": 1011,
+                "car": 1533,
+                "bus": 151,
+                "truck": 688
+              }
+            },
+            "sunny": {
+              "frames": 236,
+              "macro_f1": 0.04286520022560631,
+              "false_positives": 0,
+              "gt": {
+                "person": 2,
+                "car": 553,
+                "bus": 92
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m",
+          "front_width": 1280,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2238,
+              "macro_f1": 0.18694727882191114,
+              "false_positives": 1,
+              "gt": {
+                "person": 1011,
+                "car": 1533,
+                "bus": 151,
+                "truck": 688
+              }
+            },
+            "sunny": {
+              "frames": 236,
+              "macro_f1": 0.06623235613463627,
+              "false_positives": 0,
+              "gt": {
+                "person": 2,
+                "car": 553,
+                "bus": 92
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m",
+          "front_width": 960,
+          "confidence": 0.7,
+          "weather": {
+            "foggy": {
+              "frames": 2238,
+              "macro_f1": 0.16065481269658588,
+              "false_positives": 2,
+              "gt": {
+                "person": 1011,
+                "car": 1533,
+                "bus": 151,
+                "truck": 688
+              }
+            },
+            "sunny": {
+              "frames": 236,
+              "macro_f1": 0.06229508196721312,
+              "false_positives": 0,
+              "gt": {
+                "person": 2,
+                "car": 553,
+                "bus": 92
+              }
+            }
+          }
+        },
+        {
+          "model": "yolo26m-seg",
+          "front_width": 960,
+          "confidence": 0.65,
+          "weather": {
+            "foggy": {
+              "frames": 2238,
+              "macro_f1": 0.18458541621630686,
+              "false_positives": 4,
+              "gt": {
+                "person": 1011,
+                "car": 1533,
+                "bus": 151,
+                "truck": 688
+              }
+            },
+            "sunny": {
+              "frames": 236,
+              "macro_f1": 0.05016722408026756,
+              "false_positives": 0,
+              "gt": {
+                "person": 2,
+                "car": 553,
+                "bus": 92
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "live_trials": [
+    {
+      "path": "weather-live-shared-v1/sunny/yolo26m-1280-all15-2plus1-C6-r1/report.json",
+      "report_sha256": "e1d3cd74c38198a16af1068fb45b532412257d8a0607bfe7a1c0b4153fd50687",
+      "weather": "sunny",
+      "job": {
+        "model": "yolo26m",
+        "width": 1280,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 1,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "sunny"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.16487140301615,
+          "first_output_sec": 0.08630273898597807,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 46.73624,
+            "p95": 70.36380779999999,
+            "p99": 81.25938404000009,
+            "maximum": 108.159304
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 45.91030202573165,
+            "p95": 69.70122558996081,
+            "p99": 80.56806037435315,
+            "maximum": 107.16534801758826
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.16484794800635427,
+          "first_output_sec": 0.08635356597369537,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 46.844005,
+            "p95": 66.04147019999999,
+            "p99": 78.80231848000001,
+            "maximum": 93.226909
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 46.077872975729406,
+            "p95": 65.35326761659235,
+            "p99": 78.28746421728285,
+            "maximum": 85.56446502916515
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.16477956000017002,
+          "first_output_sec": 0.08637379197170958,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 48.401595,
+            "p95": 72.35150339999998,
+            "p99": 83.79675908,
+            "maximum": 91.139555
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 47.455618041567504,
+            "p95": 71.72724419506265,
+            "p99": 80.80447628861299,
+            "maximum": 87.95779099455103
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5051.0,
+      "planning": {
+        "trajectory": {
+          "messages": 388,
+          "hz": 19.393010788040012,
+          "max_gap_sec": 0.26968498300993815,
+          "valid_messages": 388,
+          "passed": false
+        },
+        "state": {
+          "messages": 1001,
+          "hz": 50.03196855368054,
+          "max_gap_sec": 0.023770847008563578,
+          "valid_messages": 1001,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.996397313422685,
+          "max_gap_sec": 0.12093353603268042,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 253,
+          "hz": 12.645442601479697,
+          "max_gap_sec": 0.13413686194689944,
+          "valid_messages": 253,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.99279462684537,
+          "max_gap_sec": 0.059009668009821326,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 388,
+          "3": 0
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-v1/sunny/yolo26m-1280-all15-2plus1-C6-r2/report.json",
+      "report_sha256": "82d54b5619372205ebed47ad2828cb84162cf52b7b9cc7c8041a1aa6764af69d",
+      "weather": "sunny",
+      "job": {
+        "model": "yolo26m",
+        "width": 1280,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 2,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "sunny"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.16216434200759977,
+          "first_output_sec": 0.08316029200796038,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 46.8547345,
+            "p95": 68.55149274999998,
+            "p99": 77.66226042999996,
+            "maximum": 82.240582
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 45.85179849527776,
+            "p95": 67.94017656648064,
+            "p99": 77.33163006778337,
+            "maximum": 80.77143999980763
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.1450653539504856,
+          "first_output_sec": 0.08317973499651998,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 47.958135,
+            "p95": 68.53876099999998,
+            "p99": 78.27690084000001,
+            "maximum": 81.916093
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 47.03680198872462,
+            "p95": 67.97128421021623,
+            "p99": 77.81135260825978,
+            "maximum": 81.41981100197881
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.16113953100284562,
+          "first_output_sec": 0.08309307700255886,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 45.412779,
+            "p95": 70.81049749999998,
+            "p99": 79.88111792999992,
+            "maximum": 85.715771
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 44.70194748137146,
+            "p95": 69.89981543738392,
+            "p99": 79.2777694319374,
+            "maximum": 84.82451998861507
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5051.0,
+      "planning": {
+        "trajectory": {
+          "messages": 392,
+          "hz": 19.59106413948422,
+          "max_gap_sec": 0.3330483909812756,
+          "valid_messages": 392,
+          "passed": false
+        },
+        "state": {
+          "messages": 1001,
+          "hz": 50.02718164189721,
+          "max_gap_sec": 0.02821406495058909,
+          "valid_messages": 1001,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.995440887491949,
+          "max_gap_sec": 0.11915684601990506,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 256,
+          "hz": 12.794164335989695,
+          "max_gap_sec": 0.1235240149544552,
+          "valid_messages": 256,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.990881774983897,
+          "max_gap_sec": 0.0546894270228222,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 390,
+          "3": 1,
+          "4": 1
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-v1/sunny/yolo26m-1280-all15-2plus1-C6-r3/report.json",
+      "report_sha256": "9858268f37ce8d1b41b2b47e396498339f5d60d0075ba358e71cda92ebb1d3ca",
+      "weather": "sunny",
+      "job": {
+        "model": "yolo26m",
+        "width": 1280,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 3,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "sunny"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.95,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 299,
+          "hz": 14.95,
+          "valid_messages": 299,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.2,
+            14.8,
+            15.2
+          ],
+          "max_gap_sec": 0.16203366999980062,
+          "first_output_sec": 0.08245979400817305,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 299,
+            "p50": 47.623873,
+            "p95": 70.0075628,
+            "p99": 82.72755217999996,
+            "maximum": 96.478462
+          },
+          "input_to_output_wall_ms": {
+            "samples": 299,
+            "p50": 46.995670010801405,
+            "p95": 69.40993380267174,
+            "p99": 82.19646759796885,
+            "maximum": 94.39943701727316
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.16195981000782922,
+          "first_output_sec": 0.08251187100540847,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 48.738718500000004,
+            "p95": 67.08042599999999,
+            "p99": 75.87645809999998,
+            "maximum": 79.03862
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 48.04937349399552,
+            "p95": 66.57268674171064,
+            "p99": 74.78193762653972,
+            "maximum": 78.5084719536826
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.17603828897699714,
+          "first_output_sec": 0.08252380305202678,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 49.194216499999996,
+            "p95": 71.0313801,
+            "p99": 79.33563702999993,
+            "maximum": 88.48977
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 48.50264100241475,
+            "p95": 70.30151256185489,
+            "p99": 78.60034089069806,
+            "maximum": 87.98558096168563
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5028.0,
+      "planning": {
+        "trajectory": {
+          "messages": 388,
+          "hz": 19.38786575812999,
+          "max_gap_sec": 0.30410819803364575,
+          "valid_messages": 388,
+          "passed": false
+        },
+        "state": {
+          "messages": 1001,
+          "hz": 50.01869490692814,
+          "max_gap_sec": 0.03043429699027911,
+          "valid_messages": 1001,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.99374523614948,
+          "max_gap_sec": 0.12499897199450061,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 255,
+          "hz": 12.742025176090586,
+          "max_gap_sec": 0.13952253200113773,
+          "valid_messages": 255,
+          "passed": true
+        },
+        "control": {
+          "messages": 401,
+          "hz": 20.037459198479706,
+          "max_gap_sec": 0.058403867995366454,
+          "valid_messages": 401,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 386,
+          "3": 1,
+          "4": 1
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-v1/sunny/yolo26m-seg-960-all15-2plus1-C6-r1/report.json",
+      "report_sha256": "4cc68a7a1f53da54a149b85a2aa21c09c0e0c98387c5a7a742da0fb76dc059a8",
+      "weather": "sunny",
+      "job": {
+        "model": "yolo26m-seg",
+        "width": 960,
+        "confidence": 0.65,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 1,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "sunny"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.2,
+            14.8
+          ],
+          "max_gap_sec": 0.15947016602149233,
+          "first_output_sec": 0.09767033398384228,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 55.3710465,
+            "p95": 87.65331499999999,
+            "p99": 97.58594568999999,
+            "maximum": 106.811285
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 54.65283602825366,
+            "p95": 86.61822642607147,
+            "p99": 97.06002496764994,
+            "maximum": 106.01306904572994
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.1595594640239142,
+          "first_output_sec": 0.0976865979610011,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 55.1797155,
+            "p95": 86.13197794999998,
+            "p99": 96.54212771,
+            "maximum": 107.663154
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 54.58398748305626,
+            "p95": 85.60158594045788,
+            "p99": 96.23909330635797,
+            "maximum": 107.24825598299503
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.2,
+            14.6
+          ],
+          "max_gap_sec": 0.1937816459685564,
+          "first_output_sec": 0.0975734029780142,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 56.028366,
+            "p95": 87.76831659999999,
+            "p99": 97.32138628000001,
+            "maximum": 108.271361
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 55.34276302205399,
+            "p95": 87.3418212053366,
+            "p99": 96.27486039884391,
+            "maximum": 107.724309025798
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5142.0,
+      "planning": {
+        "trajectory": {
+          "messages": 391,
+          "hz": 19.54381881001963,
+          "max_gap_sec": 0.3118583059986122,
+          "valid_messages": 391,
+          "passed": false
+        },
+        "state": {
+          "messages": 1000,
+          "hz": 49.984191329973484,
+          "max_gap_sec": 0.02551482804119587,
+          "valid_messages": 1000,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.996838265994697,
+          "max_gap_sec": 0.11953403399093077,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 253,
+          "hz": 12.64600040648329,
+          "max_gap_sec": 0.13551644998369738,
+          "valid_messages": 253,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.993676531989394,
+          "max_gap_sec": 0.061487703991588205,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 390,
+          "3": 1
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-v1/sunny/yolo26m-seg-960-all15-2plus1-C6-r2/report.json",
+      "report_sha256": "eec758094ffc296d92f41003e0d75e1a7d6639b65b95a48f40303cdfdc7cc50f",
+      "weather": "sunny",
+      "job": {
+        "model": "yolo26m-seg",
+        "width": 960,
+        "confidence": 0.65,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 2,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "sunny"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17832199699478224,
+          "first_output_sec": 0.07272985501913354,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 56.791067,
+            "p95": 91.8623448,
+            "p99": 97.60943324000004,
+            "maximum": 102.689028
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 55.98883196944371,
+            "p95": 91.11250982386991,
+            "p99": 96.95534022524954,
+            "maximum": 102.10454097250476
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.6,
+            15.2,
+            15.0
+          ],
+          "max_gap_sec": 0.1540011190227233,
+          "first_output_sec": 0.07276273099705577,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 57.0532085,
+            "p95": 90.27329664999998,
+            "p99": 101.11865243999999,
+            "maximum": 115.96632
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 56.276820541825145,
+            "p95": 89.58743472176137,
+            "p99": 100.70931868918704,
+            "maximum": 115.44644401874393
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            15.0,
+            15.2
+          ],
+          "max_gap_sec": 0.18695693998597562,
+          "first_output_sec": 0.07277293503284454,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 55.5520055,
+            "p95": 89.63521674999998,
+            "p99": 97.08806034999988,
+            "maximum": 103.606939
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 54.62079046992585,
+            "p95": 89.00066520145627,
+            "p99": 96.68483188084781,
+            "maximum": 103.18838199600577
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5152.0,
+      "planning": {
+        "trajectory": {
+          "messages": 392,
+          "hz": 19.592638479496742,
+          "max_gap_sec": 0.314804280991666,
+          "valid_messages": 392,
+          "passed": false
+        },
+        "state": {
+          "messages": 1001,
+          "hz": 50.031201831572034,
+          "max_gap_sec": 0.02719125902513042,
+          "valid_messages": 1001,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.996244122192214,
+          "max_gap_sec": 0.11811983300140128,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 255,
+          "hz": 12.745211255795073,
+          "max_gap_sec": 0.15473705099429935,
+          "valid_messages": 255,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.99248824438443,
+          "max_gap_sec": 0.06212144298478961,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 391,
+          "3": 0,
+          "4": 1
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-v1/sunny/yolo26m-seg-960-all15-2plus1-C6-r3/report.json",
+      "report_sha256": "64a7bbcfe30d83b03c18fb1b1d86a0d58514d1af57feb5f964c5414f60f3e67c",
+      "weather": "sunny",
+      "job": {
+        "model": "yolo26m-seg",
+        "width": 960,
+        "confidence": 0.65,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 3,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "sunny"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.75,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.8,
+          "met": false
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 13,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            15.2
+          ],
+          "max_gap_sec": 0.14081710303435102,
+          "first_output_sec": 0.12778921698918566,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 56.952715,
+            "p95": 94.66702994999997,
+            "p99": 117.81157028999992,
+            "maximum": 125.374317
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 56.07407499337569,
+            "p95": 93.42453773133457,
+            "p99": 117.24113609117913,
+            "maximum": 124.8175340006128
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 295,
+          "hz": 14.75,
+          "valid_messages": 295,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 13,
+          "five_second_hz": [
+            14.4,
+            14.8,
+            14.6,
+            15.2
+          ],
+          "max_gap_sec": 0.1669886910240166,
+          "first_output_sec": 0.1278566470136866,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 295,
+            "p50": 56.515216,
+            "p95": 90.9072632,
+            "p99": 105.36291618000003,
+            "maximum": 122.737408
+          },
+          "input_to_output_wall_ms": {
+            "samples": 295,
+            "p50": 55.85344199789688,
+            "p95": 90.49630369408987,
+            "p99": 104.94010195368904,
+            "maximum": 122.20044899731874
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 296,
+          "hz": 14.8,
+          "valid_messages": 296,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 13,
+          "five_second_hz": [
+            14.2,
+            15.0,
+            14.8,
+            15.2
+          ],
+          "max_gap_sec": 0.1808355149696581,
+          "first_output_sec": 0.12773507297970355,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 296,
+            "p50": 56.824565,
+            "p95": 94.4613815,
+            "p99": 117.49656275000002,
+            "maximum": 126.036644
+          },
+          "input_to_output_wall_ms": {
+            "samples": 296,
+            "p50": 56.24053900828585,
+            "p95": 93.72214651375543,
+            "p99": 117.09161914186555,
+            "maximum": 125.34481100738049
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5197.0,
+      "planning": {
+        "trajectory": {
+          "messages": 392,
+          "hz": 19.592166609992596,
+          "max_gap_sec": 0.30345243896590546,
+          "valid_messages": 392,
+          "passed": false
+        },
+        "state": {
+          "messages": 1000,
+          "hz": 49.980016862226016,
+          "max_gap_sec": 0.03230084403185174,
+          "valid_messages": 1000,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.996003372445204,
+          "max_gap_sec": 0.12245023198192939,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 252,
+          "hz": 12.594964249280956,
+          "max_gap_sec": 0.1397833800292574,
+          "valid_messages": 252,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.992006744890407,
+          "max_gap_sec": 0.05899349396349862,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 390,
+          "3": 1,
+          "4": 1
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-foggy-v2/foggy/yolo26m-1280-all15-2plus1-C6-r1/report.json",
+      "report_sha256": "6a79ad59beeb29ca43b8181155e7d65c8d4f04c65a361c717a3586684285f6db",
+      "weather": "foggy",
+      "job": {
+        "model": "yolo26m",
+        "width": 1280,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 1,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "foggy"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.16563918499741703,
+          "first_output_sec": 0.09156329696998,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 49.753904000000006,
+            "p95": 76.492238,
+            "p99": 94.81143213,
+            "maximum": 98.761797
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 49.151565006468445,
+            "p95": 75.81859132624231,
+            "p99": 94.32811218721326,
+            "maximum": 98.06043200660497
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.1645552180125378,
+          "first_output_sec": 0.09165612200740725,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 49.850106499999995,
+            "p95": 77.3015499,
+            "p99": 96.39498938,
+            "maximum": 101.580143
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 48.962285509333014,
+            "p95": 76.66632938489784,
+            "p99": 95.79036712646484,
+            "maximum": 101.09012702014297
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.1589540209970437,
+          "first_output_sec": 0.09167176502523944,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 50.2539875,
+            "p95": 79.4235587,
+            "p99": 96.90691240999996,
+            "maximum": 103.0128
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 49.47352150338702,
+            "p95": 78.8814442261355,
+            "p99": 96.35551295476031,
+            "maximum": 102.26584400516003
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5112.0,
+      "planning": {
+        "trajectory": {
+          "messages": 392,
+          "hz": 19.592303735580447,
+          "max_gap_sec": 0.2944021099829115,
+          "valid_messages": 392,
+          "passed": false
+        },
+        "state": {
+          "messages": 1000,
+          "hz": 49.98036667239911,
+          "max_gap_sec": 0.025166384992189705,
+          "valid_messages": 1000,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.99607333447982,
+          "max_gap_sec": 0.12070867203874514,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 256,
+          "hz": 12.794973868134171,
+          "max_gap_sec": 0.1319559759576805,
+          "valid_messages": 256,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.99214666895964,
+          "max_gap_sec": 0.05688558699330315,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 390,
+          "3": 1,
+          "4": 1
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-foggy-v2/foggy/yolo26m-1280-all15-2plus1-C6-r2/report.json",
+      "report_sha256": "4b10596b9db3575fb47990b535c363ebd0ad26c5e9b87979bbee8cc81c657dfa",
+      "weather": "foggy",
+      "job": {
+        "model": "yolo26m",
+        "width": 1280,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 2,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "foggy"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.14561155601404607,
+          "first_output_sec": 0.09601936402032152,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 49.0108735,
+            "p95": 78.4073945,
+            "p99": 85.20658457999998,
+            "maximum": 92.759848
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 48.434404510771856,
+            "p95": 77.66455122618936,
+            "p99": 84.63767192966769,
+            "maximum": 92.18566899653524
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17238344199722633,
+          "first_output_sec": 0.09563313605030999,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 49.120903,
+            "p95": 79.80737639999998,
+            "p99": 86.65166844,
+            "maximum": 91.816902
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 47.75485000573099,
+            "p95": 78.66174041992052,
+            "p99": 85.7445833575912,
+            "maximum": 91.10896300990134
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.2,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.1732773759867996,
+          "first_output_sec": 0.09597077802754939,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 49.4352575,
+            "p95": 80.75771395,
+            "p99": 87.68654590999998,
+            "maximum": 95.406771
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 48.384587513282895,
+            "p95": 79.82266122999134,
+            "p99": 87.06503147666805,
+            "maximum": 94.86178599763662
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5102.0,
+      "planning": {
+        "trajectory": {
+          "messages": 387,
+          "hz": 19.343573728198514,
+          "max_gap_sec": 0.30447273404570296,
+          "valid_messages": 387,
+          "passed": false
+        },
+        "state": {
+          "messages": 1000,
+          "hz": 49.98339464650779,
+          "max_gap_sec": 0.024228430003859103,
+          "valid_messages": 1000,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.996678929301558,
+          "max_gap_sec": 0.12300292402505875,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 253,
+          "hz": 12.64579884556647,
+          "max_gap_sec": 0.14383392198942602,
+          "valid_messages": 253,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.993357858603115,
+          "max_gap_sec": 0.05866713199065998,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 387,
+          "3": 0
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-foggy-v2/foggy/yolo26m-1280-all15-2plus1-C6-r3/report.json",
+      "report_sha256": "9bd285896e6abf4ea906c81176926540340945f68f53febba1e736e646ec0021",
+      "weather": "foggy",
+      "job": {
+        "model": "yolo26m",
+        "width": 1280,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 3,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "foggy"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.95,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 299,
+          "hz": 14.95,
+          "valid_messages": 299,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.17062133399304003,
+          "first_output_sec": 0.04989964095875621,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 299,
+            "p50": 52.072048,
+            "p95": 85.5541235,
+            "p99": 95.23963942,
+            "maximum": 113.406658
+          },
+          "input_to_output_wall_ms": {
+            "samples": 299,
+            "p50": 50.835602974984795,
+            "p95": 84.39273291151041,
+            "p99": 94.27495444309898,
+            "maximum": 112.75285802548751
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            15.2,
+            14.8
+          ],
+          "max_gap_sec": 0.19197122700279579,
+          "first_output_sec": 0.07532873295713216,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 50.215006,
+            "p95": 77.97341359999999,
+            "p99": 94.17566340000002,
+            "maximum": 97.946405
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 48.67118800757453,
+            "p95": 77.4121069582179,
+            "p99": 93.67234015371652,
+            "maximum": 97.00503200292587
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.1745329659897834,
+          "first_output_sec": 0.04996770899742842,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 49.730777,
+            "p95": 69.89045159999998,
+            "p99": 87.44331288000004,
+            "maximum": 102.180243
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 49.03325898339972,
+            "p95": 69.34533381136133,
+            "p99": 86.8277400475927,
+            "maximum": 101.72958998009562
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5088.0,
+      "planning": {
+        "trajectory": {
+          "messages": 387,
+          "hz": 19.344647269388282,
+          "max_gap_sec": 0.28954147797776386,
+          "valid_messages": 387,
+          "passed": false
+        },
+        "state": {
+          "messages": 1000,
+          "hz": 49.98616865475009,
+          "max_gap_sec": 0.02796309598488733,
+          "valid_messages": 1000,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.997233730950017,
+          "max_gap_sec": 0.12376553099602461,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 256,
+          "hz": 12.796459175616022,
+          "max_gap_sec": 0.12899048603139818,
+          "valid_messages": 256,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.994467461900033,
+          "max_gap_sec": 0.05680746695725247,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 387,
+          "3": 0,
+          "4": 0
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-foggy-v2/foggy/yolo26m-seg-960-all15-2plus1-C6-r1/report.json",
+      "report_sha256": "92730325506530bf4dbdb8b0cbbeac876ab708b6dccf565e1d443f03723d6941",
+      "weather": "foggy",
+      "job": {
+        "model": "yolo26m-seg",
+        "width": 960,
+        "confidence": 0.65,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 1,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "foggy"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.8,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.65,
+          "met": false
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            15.2
+          ],
+          "max_gap_sec": 0.15730119997169822,
+          "first_output_sec": 0.09857600001851097,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 61.411142,
+            "p95": 103.38159769999997,
+            "p99": 126.3708283699999,
+            "maximum": 135.98299
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 60.715154017088935,
+            "p95": 102.44881097169124,
+            "p99": 125.70792112441258,
+            "maximum": 135.1147040259093
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 296,
+          "hz": 14.8,
+          "valid_messages": 296,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.17843495396664366,
+          "first_output_sec": 0.09858732699649408,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 296,
+            "p50": 59.979676999999995,
+            "p95": 95.51173475,
+            "p99": 120.55226565000001,
+            "maximum": 137.771607
+          },
+          "input_to_output_wall_ms": {
+            "samples": 296,
+            "p50": 59.221869480097666,
+            "p95": 94.14622548501939,
+            "p99": 119.72112803196069,
+            "maximum": 137.29380100267008
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 293,
+          "hz": 14.65,
+          "valid_messages": 293,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            14.2,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.17565519001800567,
+          "first_output_sec": 0.09850054100388661,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 293,
+            "p50": 58.720589,
+            "p95": 93.4276102,
+            "p99": 115.54310767999993,
+            "maximum": 121.259689
+          },
+          "input_to_output_wall_ms": {
+            "samples": 293,
+            "p50": 58.147790026851,
+            "p95": 92.76700703194365,
+            "p99": 115.10702953208232,
+            "maximum": 120.25243003154173
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5180.0,
+      "planning": {
+        "trajectory": {
+          "messages": 388,
+          "hz": 19.393604798817353,
+          "max_gap_sec": 0.2668317870120518,
+          "valid_messages": 388,
+          "passed": false
+        },
+        "state": {
+          "messages": 1000,
+          "hz": 49.98351752272514,
+          "max_gap_sec": 0.026658193964976817,
+          "valid_messages": 1000,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.996703504545028,
+          "max_gap_sec": 0.11682514095446095,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 255,
+          "hz": 12.74579696829491,
+          "max_gap_sec": 0.1356090379995294,
+          "valid_messages": 255,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.993407009090056,
+          "max_gap_sec": 0.057794765976723284,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 388,
+          "3": 0,
+          "5": 0
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-foggy-v2/foggy/yolo26m-seg-960-all15-2plus1-C6-r2/report.json",
+      "report_sha256": "31d15b69870b2e756bf72589a5296198e6ee0c3301f3f179ce16b22e180c054c",
+      "weather": "foggy",
+      "job": {
+        "model": "yolo26m-seg",
+        "width": 960,
+        "confidence": 0.65,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 2,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "foggy"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.8,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 13,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.2,
+            14.8
+          ],
+          "max_gap_sec": 0.1478806040249765,
+          "first_output_sec": 0.1254245699965395,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 58.6140155,
+            "p95": 91.63562039999997,
+            "p99": 107.05455734999997,
+            "maximum": 122.736931
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 58.16398101160303,
+            "p95": 91.020534033305,
+            "p99": 106.3594978756737,
+            "maximum": 121.67584500275552
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 13,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.19084678700892255,
+          "first_output_sec": 0.12531506398227066,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 59.430361,
+            "p95": 92.6616184,
+            "p99": 100.96111356000019,
+            "maximum": 124.296665
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 58.627424004953355,
+            "p95": 92.29893595911562,
+            "p99": 100.4240139480682,
+            "maximum": 123.46215103752911
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 296,
+          "hz": 14.8,
+          "valid_messages": 296,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 13,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            14.8,
+            14.8
+          ],
+          "max_gap_sec": 0.21340835996670648,
+          "first_output_sec": 0.12540661595994607,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 296,
+            "p50": 59.2391485,
+            "p95": 92.99147125,
+            "p99": 100.8175379000001,
+            "maximum": 124.722004
+          },
+          "input_to_output_wall_ms": {
+            "samples": 296,
+            "p50": 58.28418297460303,
+            "p95": 92.52397400268819,
+            "p99": 100.0635396776489,
+            "maximum": 123.18485701689497
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5177.0,
+      "planning": {
+        "trajectory": {
+          "messages": 385,
+          "hz": 19.242662797731043,
+          "max_gap_sec": 0.25814861099934205,
+          "valid_messages": 385,
+          "passed": false
+        },
+        "state": {
+          "messages": 1001,
+          "hz": 50.03092327410071,
+          "max_gap_sec": 0.02559242898132652,
+          "valid_messages": 1001,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.996188466353788,
+          "max_gap_sec": 0.12328508397331461,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 253,
+          "hz": 12.645178409937541,
+          "max_gap_sec": 0.1397975420113653,
+          "valid_messages": 253,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.992376932707575,
+          "max_gap_sec": 0.057463395001832396,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 385,
+          "3": 0
+        }
+      }
+    },
+    {
+      "path": "weather-live-shared-foggy-v2/foggy/yolo26m-seg-960-all15-2plus1-C6-r3/report.json",
+      "report_sha256": "674f81a1c38d3bb53b6c87bf0abd4c0563a5af552fe40dbd870f35fb26a080cd",
+      "weather": "foggy",
+      "job": {
+        "model": "yolo26m-seg",
+        "width": 960,
+        "confidence": 0.65,
+        "rates": "all15",
+        "batch": "2plus1",
+        "profile": "C6",
+        "repeat": 3,
+        "seconds": 20,
+        "full_stack": true,
+        "fusion_policy": "unique",
+        "weather_requested": "foggy"
+      },
+      "whole_stack_passed": false,
+      "failures": [
+        "planning trajectory deadline gate"
+      ],
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.75,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.75,
+          "met": true
+        }
+      },
+      "measurements": {
+        "front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 13,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.15641365596093237,
+          "first_output_sec": 0.11267350398702547,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 62.7832415,
+            "p95": 103.03448399999999,
+            "p99": 118.35660966999995,
+            "maximum": 127.616167
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 61.62400101311505,
+            "p95": 101.36983652773775,
+            "p99": 117.60344139009244,
+            "maximum": 125.69596897810698
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "left": {
+          "messages": 295,
+          "hz": 14.75,
+          "valid_messages": 295,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 13,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            15.0,
+            14.6
+          ],
+          "max_gap_sec": 0.1853846070007421,
+          "first_output_sec": 0.11260590399615467,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 295,
+            "p50": 60.235978,
+            "p95": 96.44024370000001,
+            "p99": 112.44639894000001,
+            "maximum": 116.185665
+          },
+          "input_to_output_wall_ms": {
+            "samples": 295,
+            "p50": 59.674075979273766,
+            "p95": 95.68454979453236,
+            "p99": 110.9661035623867,
+            "maximum": 115.62261101789773
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "right": {
+          "messages": 295,
+          "hz": 14.75,
+          "valid_messages": 295,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.1724606630159542,
+          "first_output_sec": 0.11265436001121998,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 295,
+            "p50": 60.442448,
+            "p95": 96.31061580000002,
+            "p99": 115.95656344,
+            "maximum": 127.498866
+          },
+          "input_to_output_wall_ms": {
+            "samples": 295,
+            "p50": 59.75083803059533,
+            "p95": 95.39434232283385,
+            "p99": 115.38310708594508,
+            "maximum": 126.94500404177234
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "peak_vram_mib": 5205.0,
+      "planning": {
+        "trajectory": {
+          "messages": 391,
+          "hz": 19.542730928793148,
+          "max_gap_sec": 0.3251971829449758,
+          "valid_messages": 391,
+          "passed": false
+        },
+        "state": {
+          "messages": 1000,
+          "hz": 49.98140902504642,
+          "max_gap_sec": 0.02688886399846524,
+          "valid_messages": 1000,
+          "passed": true
+        },
+        "behavior": {
+          "messages": 200,
+          "hz": 9.996281805009282,
+          "max_gap_sec": 0.1187465749680996,
+          "valid_messages": 200,
+          "passed": true
+        },
+        "objects": {
+          "messages": 256,
+          "hz": 12.795240710411882,
+          "max_gap_sec": 0.13898066099500284,
+          "valid_messages": 256,
+          "passed": true
+        },
+        "control": {
+          "messages": 400,
+          "hz": 19.992563610018564,
+          "max_gap_sec": 0.058396945998538285,
+          "valid_messages": 400,
+          "passed": true
+        },
+        "trajectory_failure_reasons": {
+          "0": 388,
+          "3": 2,
+          "5": 1
+        }
+      }
+    }
+  ],
+  "artifacts": {
+    "sunny-foggy-selection-v2.json": "f606a29b349c32e42f2de4e3bb0c128e7c38863adca98659c266d81e1cdd0b5e",
+    "sunny-foggy-heldout-frozen.json": "b6796128a08bdf4458c336b9828e72216887a351b97883ad08feb0025a874f39",
+    "weather-live-driver.py": "f00f569b0a61f6909e024d883d41353cd44f85e999039f49952ec12e5bc131ad",
+    "weather-live-foggy-driver-v2.py": "a2581a207b431c4b41fa69aa537e20e2af6309bcd0f5796a81a2e153e87d60a9",
+    "weather-restoration-recovery-v1.json": "4813cdca75d3ef5a23354b07e24d5d55c797018adeea4699e571e399efd41a92",
+    "weather-live-shared-v1/weather-protocol.json": "52b885452bd4cb142136abd95d943ad67f19af96c5d5a75f6500a3d58c3abbd5",
+    "weather-live-shared-v1/owned-actors.json": "d8dc4c4170ab3f0e575e80510b600f6b739706c1d3bbcbe2e8d5f59de0709b81",
+    "weather-live-shared-foggy-v2/weather-protocol.json": "af54395205445d74e27d12117f9c22876a5a856bde6e8b7879a1dd3dd0fdce40",
+    "weather-live-shared-foggy-v2/owned-actors.json": "69b7f2bd8ca546b2e933696647da3fdc7caeb9416f3f60102b20d75a862ea80a",
+    "standard-ros-trt-smoke.json": "4680f64a996c99200596a50068a13732343b55f1f4c12b525b83b3c8e63f5628",
+    "standard-ros-trt-smoke.log": "43e28175e1c98795f3dc32d5f30d758d10a5e5733e2e49b03b7796ed9f3dc409",
+    "standard-ros-trt-cached-layer-build-v2.log": "c8e2be793857bbc0f3f040b609e55f5d9a08b67e8246ea4a989a76fede4fd808",
+    "weather-followup-regression.log": "804b08aea60c7439888f18a182b0407b6308041d526395575dc535393d95525d",
+    "standard-ros-trt-build.log": "240b7b3160ade0a601407fd8b7e140f33d36505398dbbb97a2e64c6b9fa53f38",
+    "standard-ros-trt-layer-build.log": "182d1ee4c5063c331be059c7e2eceb49c723fc1175cb2040309212c52d967316",
+    "standard-ros-trt-layer-build-v2.log": "c3a35fb58c00dc94385a20c1ea0434df0eff4e63a0e268454c82470b16d56ad8",
+    "standard-ros-trt-cached-layer-build.log": "15c5034033bedbae8d35f10d369855b4a5547c08e92815d30495e596362f547d"
+  },
+  "ci_block": "GitHub billing/payment/spending-limit annotation; zero executed steps",
+  "restoration": {
+    "owned_actor_cleanup": true,
+    "sunny_suite_driver_exit_1": "All six measurement windows completed; whole-stack rejection stopped v1 before foggy. Preserved and continued in v2.",
+    "v2_immediate_weather_restore_mismatch": "Asynchronous GetWeather returned foggy immediately after SetWeather; failure preserved. Recovery RPC independently confirmed original SUNNY.",
+    "recovery": {
+      "scope": "Verify restoration after asynchronous SetWeather; original v2 mismatch preserved",
+      "observations": [
+        {
+          "time": 1791519083.163129,
+          "weather": "WEATHER_TYPE_SUNNY"
+        }
+      ],
+      "restored": true
+    },
+    "cleanup_proof": [
+      {
+        "root": "weather-live-shared-v1",
+        "created": 9,
+        "deleted": 9,
+        "exact_owned_ids": true
+      },
+      {
+        "root": "weather-live-shared-foggy-v2",
+        "created": 9,
+        "deleted": 9,
+        "exact_owned_ids": true
+      }
+    ]
+  },
+  "container_dependency_check": {
+    "standard_dependency_layer_build_passed": true,
+    "base": "asmc/ros-noetic:dev",
+    "base_image_id": "sha256:1ecd9f50491565cad32e32980bb5df5b48487f470440cb66c9ec3b8dc5c11400",
+    "test_image_id": "sha256:a9334ae170f72c6cf4c831804d16776dc80565b103c6fa5a1d8a0a5b26b18359",
+    "smoke": {
+      "torch": "2.1.2+cu118",
+      "tensorrt": "10.13.0.35",
+      "cuda_operation": true,
+      "models": [
+        {
+          "name": "yolo26m",
+          "engine_sha256": "44066f58ca37e95487ddc5b69207c5d5e2c15ef3699e0a62a966552b0cfc1877",
+          "views": [
+            "front",
+            "left",
+            "right"
+          ],
+          "model_info": {
+            "backend": "tensorrt",
+            "model_kind": "yolo",
+            "task": "detect",
+            "weights": "/models/yolo26m.engine",
+            "weights_sha256": "44066f58ca37e95487ddc5b69207c5d5e2c15ef3699e0a62a966552b0cfc1877",
+            "allowed_names": [
+              "person",
+              "dog",
+              "bicycle",
+              "car",
+              "motorcycle",
+              "bus",
+              "truck"
+            ],
+            "batch_mode": "2plus1",
+            "shapes": {
+              "front": [
+                736,
+                1280
+              ],
+              "left": [
+                480,
+                640
+              ],
+              "right": [
+                480,
+                640
+              ]
+            },
+            "device": "cuda:0",
+            "model_device": "cuda:0",
+            "ultralytics": "8.4.150",
+            "torch": "2.1.2+cu118",
+            "conf_thres": 0.7,
+            "model_load_ms": 0.49460999434813857,
+            "warmup_ms": 772.1648080041632,
+            "head": "one-to-many",
+            "masks_materialized": false,
+            "tensorrt": "10.13.0.35",
+            "input_fp16": false,
+            "export_metadata": {
+              "description": "Ultralytics YOLO26m model trained on /home/lq/codes/ultralytics/ultralytics/cfg/datasets/coco.yaml",
+              "author": "Ultralytics",
+              "date": "2026-10-09T04:01:03.008776+09:00",
+              "version": "8.4.150",
+              "license": "AGPL-3.0 License (https://ultralytics.com/license)",
+              "docs": "https://docs.ultralytics.com",
+              "stride": 32,
+              "task": "detect",
+              "head": "Detect",
+              "batch": 1,
+              "imgsz": [
+                736,
+                1280
+              ],
+              "names": {
+                "0": "person",
+                "1": "bicycle",
+                "2": "car",
+                "3": "motorcycle",
+                "4": "airplane",
+                "5": "bus",
+                "6": "train",
+                "7": "truck",
+                "8": "boat",
+                "9": "traffic light",
+                "10": "fire hydrant",
+                "11": "stop sign",
+                "12": "parking meter",
+                "13": "bench",
+                "14": "bird",
+                "15": "cat",
+                "16": "dog",
+                "17": "horse",
+                "18": "sheep",
+                "19": "cow",
+                "20": "elephant",
+                "21": "bear",
+                "22": "zebra",
+                "23": "giraffe",
+                "24": "backpack",
+                "25": "umbrella",
+                "26": "handbag",
+                "27": "tie",
+                "28": "suitcase",
+                "29": "frisbee",
+                "30": "skis",
+                "31": "snowboard",
+                "32": "sports ball",
+                "33": "kite",
+                "34": "baseball bat",
+                "35": "baseball glove",
+                "36": "skateboard",
+                "37": "surfboard",
+                "38": "tennis racket",
+                "39": "bottle",
+                "40": "wine glass",
+                "41": "cup",
+                "42": "fork",
+                "43": "knife",
+                "44": "spoon",
+                "45": "bowl",
+                "46": "banana",
+                "47": "apple",
+                "48": "sandwich",
+                "49": "orange",
+                "50": "broccoli",
+                "51": "carrot",
+                "52": "hot dog",
+                "53": "pizza",
+                "54": "donut",
+                "55": "cake",
+                "56": "chair",
+                "57": "couch",
+                "58": "potted plant",
+                "59": "bed",
+                "60": "dining table",
+                "61": "toilet",
+                "62": "tv",
+                "63": "laptop",
+                "64": "mouse",
+                "65": "remote",
+                "66": "keyboard",
+                "67": "cell phone",
+                "68": "microwave",
+                "69": "oven",
+                "70": "toaster",
+                "71": "sink",
+                "72": "refrigerator",
+                "73": "book",
+                "74": "clock",
+                "75": "vase",
+                "76": "scissors",
+                "77": "teddy bear",
+                "78": "hair drier",
+                "79": "toothbrush"
+              },
+              "args": {
+                "data": null,
+                "batch": 3,
+                "fraction": 1.0,
+                "quantize": 16,
+                "nms": null,
+                "dynamic": true,
+                "simplify": true,
+                "opset": 17
+              },
+              "channels": 3,
+              "end2end": false,
+              "dynamic": true
+            }
+          },
+          "scope": "CUDA load/warmup/three-view empty-image inference; not accuracy or performance acceptance"
+        },
+        {
+          "name": "yolo26m-seg",
+          "engine_sha256": "0f1b980de6a8ebdfb0052a61bc771f8eaa14704238247a7ed9131161eaeed0f1",
+          "views": [
+            "front",
+            "left",
+            "right"
+          ],
+          "model_info": {
+            "backend": "tensorrt",
+            "model_kind": "yolo",
+            "task": "segment",
+            "weights": "/models/yolo26m-seg.engine",
+            "weights_sha256": "0f1b980de6a8ebdfb0052a61bc771f8eaa14704238247a7ed9131161eaeed0f1",
+            "allowed_names": [
+              "person",
+              "dog",
+              "bicycle",
+              "car",
+              "motorcycle",
+              "bus",
+              "truck"
+            ],
+            "batch_mode": "2plus1",
+            "shapes": {
+              "front": [
+                544,
+                960
+              ],
+              "left": [
+                480,
+                640
+              ],
+              "right": [
+                480,
+                640
+              ]
+            },
+            "device": "cuda:0",
+            "model_device": "cuda:0",
+            "ultralytics": "8.4.150",
+            "torch": "2.1.2+cu118",
+            "conf_thres": 0.7,
+            "model_load_ms": 0.41056599002331495,
+            "warmup_ms": 221.98509197914973,
+            "head": "one-to-many",
+            "masks_materialized": true,
+            "tensorrt": "10.13.0.35",
+            "input_fp16": false,
+            "export_metadata": {
+              "description": "Ultralytics YOLO26m-seg model trained on /home/lq/codes/ultralytics/ultralytics/cfg/datasets/coco.yaml",
+              "author": "Ultralytics",
+              "date": "2026-10-09T04:05:32.015223+09:00",
+              "version": "8.4.150",
+              "license": "AGPL-3.0 License (https://ultralytics.com/license)",
+              "docs": "https://docs.ultralytics.com",
+              "stride": 32,
+              "task": "segment",
+              "head": "Segment26",
+              "batch": 1,
+              "imgsz": [
+                736,
+                1280
+              ],
+              "names": {
+                "0": "person",
+                "1": "bicycle",
+                "2": "car",
+                "3": "motorcycle",
+                "4": "airplane",
+                "5": "bus",
+                "6": "train",
+                "7": "truck",
+                "8": "boat",
+                "9": "traffic light",
+                "10": "fire hydrant",
+                "11": "stop sign",
+                "12": "parking meter",
+                "13": "bench",
+                "14": "bird",
+                "15": "cat",
+                "16": "dog",
+                "17": "horse",
+                "18": "sheep",
+                "19": "cow",
+                "20": "elephant",
+                "21": "bear",
+                "22": "zebra",
+                "23": "giraffe",
+                "24": "backpack",
+                "25": "umbrella",
+                "26": "handbag",
+                "27": "tie",
+                "28": "suitcase",
+                "29": "frisbee",
+                "30": "skis",
+                "31": "snowboard",
+                "32": "sports ball",
+                "33": "kite",
+                "34": "baseball bat",
+                "35": "baseball glove",
+                "36": "skateboard",
+                "37": "surfboard",
+                "38": "tennis racket",
+                "39": "bottle",
+                "40": "wine glass",
+                "41": "cup",
+                "42": "fork",
+                "43": "knife",
+                "44": "spoon",
+                "45": "bowl",
+                "46": "banana",
+                "47": "apple",
+                "48": "sandwich",
+                "49": "orange",
+                "50": "broccoli",
+                "51": "carrot",
+                "52": "hot dog",
+                "53": "pizza",
+                "54": "donut",
+                "55": "cake",
+                "56": "chair",
+                "57": "couch",
+                "58": "potted plant",
+                "59": "bed",
+                "60": "dining table",
+                "61": "toilet",
+                "62": "tv",
+                "63": "laptop",
+                "64": "mouse",
+                "65": "remote",
+                "66": "keyboard",
+                "67": "cell phone",
+                "68": "microwave",
+                "69": "oven",
+                "70": "toaster",
+                "71": "sink",
+                "72": "refrigerator",
+                "73": "book",
+                "74": "clock",
+                "75": "vase",
+                "76": "scissors",
+                "77": "teddy bear",
+                "78": "hair drier",
+                "79": "toothbrush"
+              },
+              "args": {
+                "data": null,
+                "batch": 3,
+                "fraction": 1.0,
+                "quantize": 16,
+                "nms": null,
+                "dynamic": true,
+                "simplify": true,
+                "opset": 17
+              },
+              "channels": 3,
+              "end2end": false,
+              "dynamic": true
+            }
+          },
+          "scope": "CUDA load/warmup/three-view empty-image inference; not accuracy or performance acceptance"
+        }
+      ]
+    },
+    "fresh_ros_noetic_base_rebuild_completed": false,
+    "scope": "Exact pinned dependency installation and import checks on team ROS base, reusing prior official wheel cache; fresh upstream-base rebuild cancelled during 2.3GB torch download. Shared driving container preserved."
+  },
+  "regression": {
+    "new_weather_tests": 4,
+    "existing_evaluation_tests": 18,
+    "contract_validators": 2,
+    "environment_failure_preserved": "Initial test invocation replaced ROS PYTHONPATH and could not import rosbag; corrected invocation preserves the sourced ROS PYTHONPATH."
+  }
+}

@@ -936,3 +936,28 @@ final_regression:
 final_acceptance_summary:
   path: config/baselines/evidence/camera_coco7_live_v1/final_acceptance_summary.json
   sha256: b57b17c76d3d4d995e62a00a3503fbd24c8f1a211847a3df1f49d3aca67c73e5
+
+weather_followup:
+  summary: config/baselines/evidence/camera_coco7_live_v1/weather_followup_summary.json
+  summary_sha256: 99c7ff2f5342f9662a289a5e04bf0e14039631d317f8738b9af672b95fffedab
+  weather_quality_source: Capture run-name tags; thresholds frozen before heldout
+  live_weather_source: gRPC GetWeather before and after each suite
+  live_container: asmc-ros-noetic
+  models: [yolo26m-1280, yolo26m-seg-960]
+  target_hz_each_view: 15
+  live_repeats_each_model_weather: 3
+  live_trials: 12
+  model_supply_failures: 0
+  whole_stack_failures: 12
+  failure_reason: planning trajectory maximum gap exceeded 250ms
+  model_default_promoted: false
+  weather_restored: SUNNY confirmed by independent recovery RPC
+  original_driver_failures_preserved: true
+  interpretation: Detect m/1280 is the measured bbox candidate; seg m/960 is the mask candidate.
+    Not a best-of-all-models claim or operating acceptance. Larger l lacks optimized whole-stack confirmation.
+  source_quality_artifacts:
+  - sunny-foggy-selection-v2.json
+  - sunny-foggy-heldout-frozen.json
+  live_artifacts:
+  - weather-live-shared-v1/sunny
+  - weather-live-shared-foggy-v2/foggy
