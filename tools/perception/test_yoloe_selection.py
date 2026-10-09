@@ -13,7 +13,7 @@ from prepare_yoloe_l import export_profile
 from write_yoloe_selection_configs import configuration
 from evaluate_coco7_models import evaluate
 from check_yoloe_selection_engine import compare
-from analyze_yoloe_selection import best_threshold,EVALUATION_GROUPS,input_pauses
+from analyze_yoloe_selection import best_threshold,EVALUATION_GROUPS,input_pauses,resolution_choice
 from asmc_camera.detection.batching import shapes_for_front,pack_image,ImageTransform
 from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
 from asmc_camera.detection.backend import Detection
@@ -22,6 +22,28 @@ from b0_measurements import quantiles, output_report
 
 
 class YoloeSelectionTest(unittest.TestCase):
+    def test_resolution_selection_requires_both_weather_and_all_stack_gates(self):
+        quality=[dict(model='yoloe-26l-seg',width=w,reviewed_fixed=dict(pooled=dict(macro_f1=f),
+            temporal_objects=[],temporal_summary=dict(not_stably_detected=2))) for w,f in [(960,.26),(1280,.27)]]
+        live=[dict(candidate=dict(model='yoloe-26l-seg',width=w),weather=weather,whole_stack_passed=True,
+            wall_p95_ms_max=100.,peak_whole_vram_mib=5500.) for w in (960,1280) for weather in ('sunny','foggy')]
+        self.assertEqual(1280,resolution_choice(quality,live)['selected']['width'])
+        live[-1]['whole_stack_passed']=False
+        self.assertEqual(960,resolution_choice(quality,live)['selected']['width'])
+        live[0]['whole_stack_passed']=False
+        self.assertIsNone(resolution_choice(quality,live)['selected'])
+        self.assertIsNone(resolution_choice(quality,[])['selected'])
+
+    def test_fixture_override_keeps_nine_models_and_rejects_foreign_models(self):
+        from coco7_scene import FIXTURE,load_fixture
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'fixture.json'
+            rows=[list(row) for row in FIXTURE];rows[4][3]=2.
+            path.write_text(json.dumps(rows))
+            self.assertEqual(2.,load_fixture(path)[4][3])
+            rows[4][1]='unknown';path.write_text(json.dumps(rows))
+            with self.assertRaises(ValueError):load_fixture(path)
+
     def test_three_candidate_cycles_balance_each_position_without_changing_legacy_order(self):
         candidates=['baseline','960','1280']
         rounds=[candidate_order(candidates,r,'cyclic') for r in (1,2,3)]

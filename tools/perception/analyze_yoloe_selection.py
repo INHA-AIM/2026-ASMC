@@ -32,13 +32,135 @@ def input_pauses(rows, begin, end):
                 for a,b in pairs if b['arrival']-a['arrival']>.25])
 
 
+
+def resolution_choice(quality, live):
+    """All six full-stack trials must pass; never inherit another run's waiver."""
+    eligible=[]
+    for q in quality:
+        if not q['model'].startswith('yoloe-'):continue
+        rows=[r for r in live if r['candidate']['model']==q['model'] and r['candidate']['width']==q['width']]
+        if len(rows)==2 and {r['weather'] for r in rows}=={'sunny','foggy'} and all(r['whole_stack_passed'] for r in rows):
+            eligible.append(q)
+    if not eligible:return dict(selected=None,reason='No YOLOE resolution passed all six integrated trials; hold selection and deployment.')
+    def rank(q):
+        observations=q['reviewed_fixed']['temporal_objects']
+        stable=[o['stable_input_delay'] for o in observations if o.get('first_stable_frame') is not None]
+        windows=[r for r in live if r['candidate']['model']==q['model'] and r['candidate']['width']==q['width']]
+        return (-q['reviewed_fixed']['pooled']['macro_f1'],
+                q['reviewed_fixed']['temporal_summary']['not_stably_detected'],
+                sum(stable)/len(stable) if stable else float('inf'),
+                max(r['wall_p95_ms_max'] for r in windows),max(r['peak_whole_vram_mib'] for r in windows))
+    q=min(eligible,key=rank)
+    return dict(selected=dict(model=q['model'],width=q['width'],confidence=.4,prompt='bollard17'),
+                reason='Eligible full-stack candidate ranked by verified macro F1, stable acquisition, latency and memory; fusion acceptance remains separate.')
+
+
+def resolution_followup(root, reference, output):
+    from analyze_coco7_broad_selection import confirmation_summary
+    from b0_measurements import quantiles
+    output.mkdir(parents=True,exist_ok=False)
+    manifest=reference/'gt-v2/frames.jsonl'
+    gt_rows=[r for r in load_jsonl(manifest) if r['split']=='selection' and r['annotation_complete']]
+    exclusions=json.loads((reference/'broad-model-conditions-v1.json').read_text())['reviewed_exclusions']
+    candidates=json.loads((root/'candidates.json').read_text())
+    report=dict(scope='Same bollard17/checkpoint/confidence; 60-second C6 integrated trials. Verified GT has only person/car/bus/truck.',
+        operational_defaults_changed=False,training=False,roboflow=False,quality=[],trials=[],live=[],fusion=[],fusion_class_comparison=[],
+        percentile_definition='Per-run/view quantiles and explicitly pooled raw latency observations. Never average per-run medians.',
+        source_time_warning='Receive-stamped ROS headers identify bridge publication times; do not prove simulator capture outages.',
+        gt_manifest_sha256=hashlib.sha256(manifest.read_bytes()).hexdigest())
+    for width in (960,1280):
+        path=root/f'quality{width}-selection'/f'yoloe-26l-seg-{width}-selection'
+        summary=json.loads((path/'summary.json').read_text())
+        if summary['gt_manifest_sha256']!=report['gt_manifest_sha256']:raise ValueError('GT manifest mismatch')
+        predictions=load_jsonl(path/'predictions.jsonl')
+        gt,p=selected_frames(gt_rows,predictions,[])
+        reviewed,rp=selected_frames(gt_rows,predictions,exclusions)
+        report['quality'].append(dict(model='yoloe-26l-seg',width=width,frames=len(gt_rows),fixed=score(gt,p,.4),
+            reviewed_fixed=score(reviewed,rp,.4),summary=summary,summary_sha256=hashlib.sha256((path/'summary.json').read_bytes()).hexdigest()))
+    trials=[];pooled=defaultdict(list)
+    for weather in ('sunny','foggy'):
+        index=root/'live60'/weather/'index.json'
+        if not index.exists():continue
+        for entry in json.loads(index.read_text()):
+            directory=index.parent/entry['name']
+            r=json.loads((directory/'report.json').read_text());trials.append(r)
+            row=dict(path=str(directory),job=r['job'],complete=r.get('observation_window_completed',False),
+                passed=r.get('passed',False),failures=r['failures'],timestamp_policy=r.get('timestamp_policy'),
+                measurements=r.get('measurements'),planning=r.get('planning'),target_attainment=r.get('target_attainment'),
+                resources=r.get('resources_startup_and_active'),inputs={},
+                sha256=hashlib.sha256((directory/'report.json').read_bytes()).hexdigest())
+            requests=[v for v in r['requests'] if v['mode']==2 and v['model']=='yolo']
+            if requests:
+                req=requests[-1];begin=req['call_started'];end=begin+r['job']['seconds']
+                if (directory/'inputs.json').exists():
+                    row['inputs']={v:input_pauses(data,begin,end) for v,data in json.loads((directory/'inputs.json').read_text()).items()}
+                status=json.loads((directory/'status.json').read_text())
+                cutoffs={s['source_cutoff_ns'] for s in status if s['model']=='yolo' and s['generation']==req['generation']}
+                if row['complete'] and len(cutoffs)==1:
+                    cutoff=next(iter(cutoffs))
+                    for view,outputs in json.loads((directory/'outputs.json').read_text()).items():
+                        if not view.startswith('yolo_'):continue
+                        values=[o['wall_latency_ms'] for o in outputs if begin<=o['arrival']<end and o['stamp_ns']>cutoff and o.get('wall_latency_ms') is not None]
+                        pooled[r['job']['model'],r['job']['width'],weather,view].extend(values)
+            report['trials'].append(row)
+    report['live']=confirmation_summary(trials,candidates)
+    report['pooled_latency']=[dict(model=m,width=w,weather=weather,view=v,quantiles_ms=quantiles(values))
+        for (m,w,weather,v),values in sorted(pooled.items())]
+    report['decision']=resolution_choice(report['quality'],report['live'])
+    for family in ('fusion-reference','fusion-candidate'):
+        index=root/family/'index.json'
+        if not index.exists():continue
+        for entry in json.loads(index.read_text()):
+            path=index.parent/entry['path']/'report.json'
+            if not path.exists():
+                report['fusion'].append(dict(family=family,run=entry['path'],complete=False,entry=entry));continue
+            r=json.loads(path.read_text())
+            report['fusion'].append(dict(family=family,run=entry['path'],complete=True,passed=r['passed'],
+                failed_checks=[k for k,v in r['checks'].items() if not v],fusion=r['fusion'],measurements=r['measurements']))
+    for bag in ('primary','shadow'):
+        sources=[[root/family/f'{bag}-unique-r{i}'/'observations.json' for i in (1,2)]
+                 for family in ('fusion-reference','fusion-candidate')]
+        if all(p.exists() for group in sources for p in group):
+            tracks=[[json.loads(p.read_text())['tracks'] for p in group] for group in sources]
+            report['fusion_class_comparison'].append(dict(bag=bag,comparison=compare_stable_observations(*tracks),
+                scope='Same stamp and mutually unique centers <=1mm; stable baseline is not GT; no inherited exceptions.'))
+    (output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
+    page=['<!doctype html><meta charset="utf-8"><title>YOLOE L 960/1280 최종 통합 비교</title>',
+        '<style>body{font:16px system-ui;margin:24px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:7px}pre{white-space:pre-wrap}</style>',
+        '<h1>YOLOE L · 동일 bollard17 · 960/1280 · 60초 통합 반복</h1>',
+        '<p>운영 기본 YOLO26l은 유지합니다. 검증 GT는 person/car/bus/truck만 있으며 신규 장애물은 관찰용입니다. p50은 실행별 평균의 중앙값으로 계산하지 않습니다.</p>',
+        '<p><a href="../spawn-comparison/comparison.html">동일 스폰 RGB 비교</a> · <a href="report.json">전체 결과</a> · <a href="../../../index.html">갤러리 목차</a></p>',
+        '<h2>동일 Capture 품질</h2><table><tr><th>전방</th><th>원본 F1</th><th>승인2장 제외 F1</th><th>TP / FP</th><th>mask IoU</th></tr>']
+    for q in report['quality']:
+        fixed=q['reviewed_fixed']['pooled']
+        page.append(f'<tr><td>{q["width"]}</td><td>{q["fixed"]["pooled"]["macro_f1"]:.4f}</td><td>{fixed["macro_f1"]:.4f}</td><td>{fixed["total_tp"]} / {fixed["false_positives"]}</td><td>{q["summary"]["thresholds"][0]["mask_iou"]}</td></tr>')
+    page+=['</table><h2>실행별 · 뷰별 지연</h2><table><tr><th>구성 / 날씨 / 반복</th><th>뷰</th><th>Hz</th><th>p50 / p95 / p99 ms</th><th>최대 공백 ms</th><th>실패</th></tr>']
+    for r in report['trials']:
+        job=r['job'];label=f'{job["model"]}/{job["width"]}/{job["weather_requested"]}/r{job["repeat"]}'
+        for view in ('front','left','right'):
+            m=(r['measurements'] or {}).get('yolo_'+view)
+            if m:
+                q=m['input_to_output_wall_ms'];latency=' / '.join(f'{q[k]:.1f}' if q[k] is not None else 'NA' for k in ('p50','p95','p99'))
+                page.append(f'<tr><td>{label}</td><td>{view}</td><td>{m["hz"]:.2f}</td><td>{latency}</td><td>{m["max_gap_sec"]*1000:.1f}</td><td>{html.escape(str(r["failures"]))}</td></tr>')
+            else:page.append(f'<tr><td>{label}</td><td>{view}</td><td colspan="4">Incomplete: {html.escape(str(r["failures"]))}</td></tr>')
+    page+=['</table><h2>후보 결정 · 운영 승격 별도</h2><pre>'+html.escape(json.dumps(report['decision'],ensure_ascii=False,indent=2))+'</pre>',
+           '<h2>Fusion 원본 판정</h2><pre>'+html.escape(json.dumps(report['fusion_class_comparison'],ensure_ascii=False,indent=2))+'</pre>']
+    (output/'index.html').write_text(''.join(page))
+    print(json.dumps(dict(quality=len(report['quality']),trials=len(trials),decision=report['decision'])))
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--root',type=Path,required=True)
     p.add_argument('--reference',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--resolution-followup',action='store_true',help='Analyze matched bollard17 960/1280 and 60-second trials')
     p.add_argument('--quality-only',action='store_true',help='Freeze quality screening before timed trials; do not read partial live/spawn files')
-    a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
+    a=p.parse_args()
+    if a.resolution_followup:
+        resolution_followup(a.root,a.reference,a.output)
+        return
+    a.output.mkdir(parents=True,exist_ok=False)
     manifest=a.reference/'gt-v2/frames.jsonl';digest=hashlib.sha256(manifest.read_bytes()).hexdigest()
     rows=[r for r in load_jsonl(manifest) if r['split']=='selection' and r['annotation_complete']]
     report=dict(gt_manifest_sha256=digest,frames=len(rows),quality=[],live=[],spawn_observations=[],

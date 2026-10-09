@@ -33,6 +33,7 @@ def main():
     p.add_argument('--seconds', type=float, default=20.)
     p.add_argument('--profile', choices=['C1', 'C6'], default='C6')
     p.add_argument('--order', choices=['alternate', 'cyclic'], default='alternate')
+    p.add_argument('--fixture', type=Path, help='Recorded placement offsets for the same nine actors')
     p.add_argument('--weather', nargs='+', choices=['sunny', 'foggy'], default=['sunny', 'foggy'])
     p.add_argument('--grpc-host', default='host.docker.internal')
     a = p.parse_args()
@@ -64,8 +65,10 @@ def main():
 
     save()
     try:
-        subprocess.run([sys.executable, str(ROOT/'tools/perception/coco7_scene.py'), 'create',
-                        '--registry', str(registry), '--grpc-host', a.grpc_host], check=True)
+        create=[sys.executable, str(ROOT/'tools/perception/coco7_scene.py'), 'create',
+                '--registry', str(registry), '--grpc-host', a.grpc_host]
+        if a.fixture:create+=['--fixture',str(a.fixture)]
+        subprocess.run(create, check=True)
         actors = json.loads(registry.read_text())['actors']
         if len(actors) != 9 or any(not r.get('created') or r.get('error') for r in actors):
             raise RuntimeError('incomplete owned-actor fixture')
