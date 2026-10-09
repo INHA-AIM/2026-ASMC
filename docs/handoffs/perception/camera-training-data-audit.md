@@ -67,6 +67,9 @@ run·원본 종류·actor ID·연속 frame 구간으로 독립 RGB 검수 결과
 같은 숫자 actor ID의 Obstacle과 Vehicle이 공존할 수 있어 run+ID만으로 합치지 않는다.
 Teacher 출력은 GT로 사용하지 않는다. actor 종류 확인만으로 영상의 누락 주석까지
 검증됐다고 판단하지 않으며, 완전성 미확인 영상은 precision·teacher 승인에서 제외한다.
+2026-10-10 사용자 확인에 따라 Capture GT의 기하 정확성과 극소형 객체의 평가 범위를
+구분한다. 작은 박스라는 이유로 잘못된 GT로 판정하지 않는다. `Vehicle/Obstacle`의 세부
+학습 종류 미확정은 별개이며 [픽셀 범위 후속](#capture-극소형-gt-평가-범위--2026-10-10)을 적용한다.
 
 [평가·제안 도구](../../../tools/perception/camera_teacher_audit.py)는 selection에서
 0.40 대조와 0.10–0.70 탐색을 수행한다. 클래스별 GT/예측 각각 20개 이상,
@@ -537,3 +540,70 @@ Hosted CI의 계정 결제/사용 한도 차단은 로컬 시험 결과와 구�
 animal/6 → 9 → box/object/obstacle 순의 개별 재분류다. source 라벨 의미가 확인됐다는 이유로
 새 박스·teacher 예측까지 사람이 검수했다고 기록하지 않는다. 필요한 터널·원거리·가림 자료는
 이 커버리지를 본 뒤 수집하며, 이번에는 학습이나 수집을 시작하지 않았다.
+
+## Capture 극소형 GT 평가 범위 — 2026-10-10
+
+사용자는 Capture GT가 정확하지만 먼 객체의 박스가 점처럼 표시된다는 것을 확인했다.
+원본 GT를 삭제하지 않고 평가·표시에서 극소형 객체를 `ignore`로 분리한다.
+[크기 정책](../../../config/experiments/camera_capture_size_scope_v1.json)은
+원본 영상 픽셀 기준 긴 변 ≥16px **그리고** 짧은 변 ≥8px를 주 평가 대상으로 둔다.
+정확히 경계값이면 포함한다. 원거리 m cutoff는 추정하지 않는다. tensor 960/1280으로
+후보를 바꿔도 동일 원본 영상의 대상 집합이 바뀌지 않으며 실시간 검출을 크기로 삭제하지 않는다.
+
+이 값은 잠정 분석 범위이며 모델의 검출 가능 한계·운영 수락 기준이 아니다.
+8/4px, 24/12px 대조와 전체 GT 결과를 같이 보존한다. 이미 노출된 selection/heldout을
+사용한 사후 진단이므로 새로운 blind 평가나 이 결과에 맞춘 threshold 선정으로 설명하지 않는다.
+
+- 기존 317프레임·같은 저장 예측을 CPU로 재집계했다. 추가 GPU 추론은 하지 않았다.
+- 원본의 전체 종류 GT 738개 중 크기 충족 306개·극소형 432개다. 이 기하 집계에는
+  종류 미확정·제외 종류도 포함된다. 아래 정량 표는 알려진 학습 대상의 부분 주석만 사용한다.
+- confidence 0.40·IoU ≥0.5에서 base18/rich21의 결과는 다음과 같다.
+
+| 학습 클래스 | 전체 GT 대응/수 | 주 평가 GT 대응/수 | 극소형 ignore |
+|---|---|---|---|
+| person | 46/93 | 33/34 | 59 |
+| car | 20/195 | 20/37 | 158 |
+| box | 2/52 | 2/29 | 23 |
+| traffic_cone | 87/114 | 81/87 | 27 |
+
+사람·차량의 기존 전체 비율은 극소형 GT의 영향을 크게 받았다. 상자는 크기 범위를
+분리해도 대응 수가 낮아 추가학습·오분류 검토 대상으로 남는다. 분모가 바뀐 비율 상승을
+모델 자체의 개선으로 주장하지 않는다. 세부 GT가 미확정인 항목은 전체 precision/recall과
+teacher 승인에 사용하지 않는 동작을 유지한다.
+
+주 평가 GT를 먼저 일대일 매칭하고, 미대응 예측이 ignore GT 안에 충분히 들어간 경우에만
+FP 집계에서 제외한다. 기준은 `intersection / prediction_area ≥0.5`다. 작은 GT를 덮는
+거대한 잘못된 박스나 배경의 작은 FP는 면제하지 않으며, 주 평가 대상의 중복 검출도 FP로 남는다.
+이는 이번 도구의 ignore 규칙이며 [COCO 평가 구현](https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocotools/cocoeval.py)의
+면적별 집계와 동일한 지표라고 표시하지 않는다.
+
+학습용 export는 바꾸지 않았다. 일반 [YOLO TXT 형식](https://docs.ultralytics.com/datasets/detect/)
+의 객체별 class/xywh 라벨을 지우는 것만으로 학습 loss가 그 영역을 ignore하지 않는다.
+극소형 대상이 보이는 영상을 라벨 없는 negative로 바꾸지 않는다. 학습 시에는 원본 양성
+라벨을 유지하는 대조부터 시작하고, 필요한 경우 loss ignore를 별도로 구현·검증한다.
+
+[집계 증거](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/size-scope-v1.json)와
+`http://localhost:8768/camera-capture-size-scope-v1/`에서 비교한다. 회색 ignore 박스는
+기본 숨김이며 체크로 표시할 수 있다. 원본 이미지를 따로 열 수 있고 이전 갤러리는 보존한다.
+
+```bash
+python tools/perception/report_capture_size_scope.py \
+  --gt "$ASMC_DATA/roboflow/capture-teacher-gt-v1/diagnostic-sample.jsonl" \
+  --inference-root "$ASMC_ARTIFACTS/camera-yoloe-x-teacher-v1" \
+  --config config/experiments/camera_yoloe_x_teacher_v1.json \
+  --labels config/datasets/camera_object_labels_v2.json \
+  --scope-config config/experiments/camera_capture_size_scope_v1.json \
+  --output "$ASMC_ARTIFACTS/camera-capture-size-scope-v1"
+```
+
+출력 경로는 새 경로여야 한다. 픽셀 경계, 불량 GT 기하의 숨김 방지, 작은 배경 FP,
+큰 오검출 면제 방지, 주 평가 매칭 우선과 중복 검출을 CPU 시험으로 검사한다.
+후속 검증은 teacher CPU 16개·기존 데이터 CPU 50개, 문서 migration·계약, JavaScript 구문과
+갤러리 HTTP 확인을 통과했다. 범위 옵션 없는 재집계는 저장된 rich21 전체 GT 결과의 11개
+분석 필드와 정확히 같았다. 기존 GPU 추론·학습 export를 다시 실행하지 않았다.
+`camera_teacher_audit.py analyze --scope-config <크기 정책> --scope-profile main16x8`도
+같은 범위로 집계할 수 있다. 결과에는 범위·정책 SHA를 기록한다. 극소형 GT는 teacher
+승인의 최소 표본 수에 포함하지 않으며, 해당 범위로 승인된 teacher를 원본의 더 작은
+혼합 박스에 적용하지 않는다. 옵션이 없으면 이전 전체 GT 집계와 동일하다.
+작은 미확정 종류는 ignore 영역으로만 사용한다. 주 평가 범위 안의 미확정 종류·입력 문제나
+영상의 범위 확인은 계속 검증해야 하며, 극소형 제외를 이유로 해당 검증을 면제하지 않는다.

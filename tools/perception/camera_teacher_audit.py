@@ -15,22 +15,27 @@ from camera_data_audit import (load_label_policy, label_metadata, read_jsonl, sa
     sha, training_names, training_label, write_jsonl)
 
 
-def complete_gt(row, policy):
-    scope = row.get('review_scope') == policy.get('review_scope') or set(training_names(policy)) <= set(row.get('verified_target_classes', []))
-    return bool(scope and row.get('annotation_complete') and not row.get('issues')
+def complete_gt(row, policy, scope=None):
+    from capture_size_scope import partition
+    verified_scope = row.get('review_scope') == policy.get('review_scope') or set(training_names(policy)) <= set(row.get('verified_target_classes', []))
+    main,_=partition(row['annotations'],scope)
+    return bool(verified_scope and row.get('annotation_complete') and not row.get('issues')
                 and all(not a.get('issues') and a.get('disposition') != 'ambiguous'
-                        and not a.get('actor_review',{}).get('human_confirmation_pending') for a in row['annotations']))
+                        and not a.get('actor_review',{}).get('human_confirmation_pending') for a in main))
 
 
-def annotated_localization(rows, predictions, policy, confidence):
+def annotated_localization(rows, predictions, policy, confidence, scope=None):
     """Partial GT diagnostic: only confirmed annotations; no precision or approval."""
     from seg_measurements import match_boxes
+    from capture_size_scope import partition
     counts={n:Counter(gt=0,matched=0) for n in training_names(policy)}
     for row in rows:
         gt=[label_metadata(dict(a),policy) for a in row['annotations'] if a.get('canonical') and not a.get('issues')]
+        gt,ignored=partition(gt,scope)
         pred=[p for p in predictions[row['id']]['predictions'] if p['confidence']>=confidence]
         pairs=match_boxes([dict(a,group=a['training_class']) for a in gt],[dict(a,group=a['training_class']) for a in pred],.5)
         for a in gt:counts[a['training_class']].update(gt=1)
+        for a in ignored:counts[a['training_class']].update(ignored_gt=1)
         for r,_,_ in pairs:counts[gt[r]['training_class']].update(matched=1)
     return dict(confidence=confidence,classes={n:dict(c,annotated_recall=c['matched']/c['gt'] if c['gt'] else None) for n,c in counts.items()},
         precision=None,teacher_approval=False,interpretation='Partial annotation diagnostic, including independently inspected actor candidates still pending human confirmation. Not dataset recall/precision or teacher acceptance.')
@@ -44,38 +49,47 @@ def prediction_label(prompt, policy):
     return label_metadata(dict(canonical=canonical, source_prompt=prompt), policy)
 
 
-def metrics(rows, predictions, policy, thresholds, level='training_class'):
+def metrics(rows, predictions, policy, thresholds, level='training_class', scope=None):
     from seg_measurements import match_boxes
+    from capture_size_scope import partition, ignored_prediction_indices
     counts = {name: Counter(gt=0, predictions=0, tp=0, fp=0, fn=0) for name in training_names(policy)}
     if level == 'consumer_group':
         counts = {g: Counter(gt=0, predictions=0, tp=0, fp=0, fn=0) for g in policy['groups']}
     elif level == 'source_semantic_label':
         counts = {}
-    evaluated = 0
+    evaluated = 0;ignored_untyped=0
     for row in rows:
-        if not complete_gt(row, policy):
+        if not complete_gt(row, policy,scope):
             continue
         if row['id'] not in predictions:
             raise ValueError('missing prediction for complete GT: ' + row['id'])
         evaluated += 1
-        gt = [label_metadata(dict(a), policy) for a in row['annotations'] if a.get('canonical')]
+        gt = [label_metadata(dict(a), policy) for a in row['annotations'] if a.get('canonical') or a.get('disposition')=='ambiguous']
         raw = predictions[row['id']]['predictions']
         pred = [dict(p) for p in raw if p['confidence'] >= thresholds.get(p['training_class'], 1.01)]
         gt = [dict(a, group=a[level]) for a in gt]
         pred = [dict(a, group=a[level]) for a in pred]
+        gt,ignored=partition(gt,scope)
         pairs = match_boxes(gt, pred, .5)
+        ignored_indices=ignored_prediction_indices(pred,ignored,{c for _,c,_ in pairs},scope)
         for a in gt: counts.setdefault(a['group'], Counter()).update(gt=1)
-        for a in pred: counts.setdefault(a['group'], Counter()).update(predictions=1)
+        for index,a in enumerate(pred):
+            counts.setdefault(a['group'],Counter()).update(**{'ignored_predictions' if index in ignored_indices else 'predictions':1})
+        for a in ignored:
+            if a['group'] is None:ignored_untyped+=1
+            else:counts.setdefault(a['group'],Counter()).update(ignored_gt=1)
         for r, c, _ in pairs: counts[gt[r]['group']].update(tp=1)
     for name, c in counts.items():
         tp, n, total = c['tp'], c['predictions'], c['gt']
         c.update(fp=n-tp, fn=total-tp)
         counts[name] = dict(c, precision=tp/n if n else None, recall=tp/total if total else None,
                            evaluable=bool(total))
-    return dict(evaluated_frames=evaluated, excluded_frames=len(rows)-evaluated, classes=counts)
+    result=dict(evaluated_frames=evaluated, excluded_frames=len(rows)-evaluated, classes=counts)
+    if scope is not None:result['ignored_untyped_gt']=ignored_untyped
+    return result
 
 
-def analyze(gt, predictions, policy, config):
+def analyze(gt, predictions, policy, config, scope=None):
     predictions = list(predictions)
     by_id = {r['id']: r for r in predictions}
     if len(by_id) != len(predictions):
@@ -90,7 +104,7 @@ def analyze(gt, predictions, policy, config):
     heldout = [r for r in gt if r.get('split', r.get('frozen_split')) == 'heldout']
     sweeps = {}
     for value in config['confidence_sweep']:
-        sweeps[value] = metrics(selection, by_id, policy, {c:value for c in training_names(policy)})
+        sweeps[value] = metrics(selection, by_id, policy, {c:value for c in training_names(policy)},scope=scope)
     thresholds, states = {}, {}
     for name in training_names(policy):
         eligible = [(c, result['classes'][name]) for c, result in sweeps.items()
@@ -103,27 +117,31 @@ def analyze(gt, predictions, policy, config):
             states[name] = dict(selection_threshold=c, status='heldout_pending')
         else:
             states[name] = dict(status='selection_insufficient_support_or_precision', approved=False)
-    held = metrics(heldout, by_id, policy, thresholds)
+    held = metrics(heldout, by_id, policy, thresholds,scope=scope)
     for name, threshold in thresholds.items():
         c = held['classes'][name]
         ok = bool(c['gt'] >= config['minimum_gt'] and c['predictions'] >= config['minimum_predictions']
                   and c['precision'] >= config['minimum_precision'])
         states[name].update(approved=ok, status='approved' if ok else 'heldout_insufficient_support_or_precision')
     fixed = {name:config['fixed_confidence'] for name in training_names(policy)}
-    return dict(schema_version=1, selection_sweep=[dict(confidence=c, **r) for c,r in sweeps.items()],
+    result=dict(schema_version=1, selection_sweep=[dict(confidence=c, **r) for c,r in sweeps.items()],
         heldout_frozen_thresholds=held, teacher_classes=states,
-        fixed_selection={level:metrics(selection,by_id,policy,fixed,level) for level in
+        fixed_selection={level:metrics(selection,by_id,policy,fixed,level,scope) for level in
             ('source_semantic_label','training_class','consumer_group')},
-        fixed_heldout={level:metrics(heldout,by_id,policy,fixed,level) for level in
+        fixed_heldout={level:metrics(heldout,by_id,policy,fixed,level,scope) for level in
             ('source_semantic_label','training_class','consumer_group')},
         approved_classes=[n for n,s in states.items() if s.get('approved')],
-        partial_gt_diagnostic=annotated_localization(gt,by_id,policy,config['fixed_confidence']),
+        partial_gt_diagnostic=annotated_localization(gt,by_id,policy,config['fixed_confidence'],scope),
         interpretation='No GT/low support is not approval. Source semantic, training and consumer scores are separate. Heldout never retunes thresholds.',
         training_performed=False, labels_modified=False)
+    if scope is not None:result['evaluation_scope']=dict(scope)
+    return result
 
 
 def suggest(rows, predictions, approval, policy):
     from seg_measurements import match_boxes
+    from capture_size_scope import in_scope,validate_scope
+    scope=validate_scope(approval['evaluation_scope']) if approval.get('evaluation_scope') else None
     approved = approval['teacher_classes']
     result = []
     for row in rows:
@@ -138,6 +156,7 @@ def suggest(rows, predictions, approval, policy):
         profile = policy['source_profiles'].get((row['source'][9:] if row['source'].startswith('roboflow:') else row['source']), {})
         from camera_data_audit import normalize
         ambiguous = [a for a in row['annotations'] if a['disposition']=='ambiguous'
+                     and in_scope(a,scope)
                      and normalize(a['original_label']) not in profile.get('composite', {})]
         candidates = [p for p in predicted['predictions'] if approved.get(p['training_class'],{}).get('approved')
                       and p['confidence'] >= approved[p['training_class']]['selection_threshold']]
@@ -152,6 +171,7 @@ def suggest(rows, predictions, approval, policy):
                 original_label=a['original_label'],original_category_id=a.get('original_category_id'),original_xyxy=a['xyxy'],
                 proposed_training_class=p['training_class'],proposed_semantic_label=p['source_semantic_label'],
                 teacher_prompt=p['source_prompt'],teacher_confidence=p['confidence'],iou=overlap,
+                teacher_evaluation_scope=scope,teacher_evaluation_scope_sha256=approval.get('evaluation_scope_sha256'),
                 requires_human_confirmation=True,decision='pending',source=row['source']))
     return result
 
@@ -264,6 +284,7 @@ def main():
     p.add_argument('--image-prefix',type=Path);p.add_argument('--image-root',type=Path)
     p=sub.add_parser('review');p.add_argument('--gt',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p=sub.add_parser('analyze');p.add_argument('--gt',type=Path,required=True);p.add_argument('--predictions',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--scope-config',type=Path);p.add_argument('--scope-profile')
     p=sub.add_parser('suggest');p.add_argument('--inventory',type=Path,required=True);p.add_argument('--predictions',type=Path,required=True);p.add_argument('--approval',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     for p in sub.choices.values():
         p.add_argument('--labels',type=Path,required=True);p.add_argument('--config',type=Path,required=True)
@@ -285,8 +306,17 @@ def main():
         return
     predictions=list(read_jsonl(args.predictions))
     if args.command=='analyze':
-        result=analyze(list(read_jsonl(args.gt)),predictions,policy,config)
+        scope=None;scope_profile=None
+        if args.scope_config:
+            from capture_size_scope import validate_scope
+            scopes=json.loads(args.scope_config.read_text())
+            if scopes['coordinate_space']!='original_image_pixels':raise ValueError('unsupported scope coordinates')
+            scope_profile=args.scope_profile or scopes['primary_profile']
+            scope=validate_scope(scopes['profiles'][scope_profile])
+        elif args.scope_profile:parser.error('scope-profile requires scope-config')
+        result=analyze(list(read_jsonl(args.gt)),predictions,policy,config,scope)
         result.update(analysis_provenance(predictions,config,policy,args.config,args.gt,args.predictions))
+        if scope is not None:result.update(evaluation_scope_sha256=sha(args.scope_config),evaluation_scope_profile=scope_profile)
         save(args.output,result)
     else:
         approval=json.loads(args.approval.read_text())

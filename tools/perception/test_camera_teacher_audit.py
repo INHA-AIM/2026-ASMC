@@ -87,6 +87,78 @@ class TeacherTests(unittest.TestCase):
         self.assertFalse(complete_gt(gt[0],self.policy))
         self.assertEqual(analyze(gt,pred,self.policy,self.config)['approved_classes'],[])
 
+    def test_pixel_scope_boundaries_and_bad_geometry(self):
+        from capture_size_scope import in_scope,validate_scope
+        scope=validate_scope(dict(min_long_edge=16,min_short_edge=8,ignore_prediction_ioa=.5))
+        self.assertTrue(in_scope(dict(xyxy=[0,0,16,8]),scope))
+        self.assertTrue(in_scope(dict(xyxy=[0,0,8,16]),scope))
+        self.assertFalse(in_scope(dict(xyxy=[0,0,15.99,8]),scope))
+        self.assertFalse(in_scope(dict(xyxy=[0,0,16,7.99]),scope))
+        with self.assertRaisesRegex(ValueError,'geometry'):in_scope(dict(xyxy=[0,0,0,2]),scope)
+        with self.assertRaisesRegex(ValueError,'scope'):validate_scope(dict(min_long_edge=8,min_short_edge=16))
+
+    def test_tiny_gt_is_ignore_not_false_negative_or_false_positive(self):
+        from camera_teacher_audit import metrics,annotated_localization
+        scope=dict(min_long_edge=16,min_short_edge=8,ignore_prediction_ioa=.5)
+        gt,pred=self.fixtures(1)
+        for r in gt:r['annotations'][0]['xyxy']=[0,0,2,2]
+        for r in pred:r['predictions'][0]['xyxy']=[0,0,2,2]
+        before=copy.deepcopy(gt)
+        c=metrics(gt,{p['id']:p for p in pred},self.policy,{'deer':.4},scope=scope)['classes']['deer']
+        self.assertEqual((c['gt'],c['predictions'],c['fp'],c['fn']),(0,0,0,0))
+        self.assertEqual((c['ignored_gt'],c['ignored_predictions']),(2,2))
+        partial=annotated_localization(gt,{p['id']:p for p in pred},self.policy,.4,scope)
+        self.assertEqual(partial['classes']['deer']['gt'],0)
+        self.assertIsNone(partial['precision']);self.assertFalse(partial['teacher_approval'])
+        self.assertEqual(gt,before)
+
+    def test_small_background_false_positive_and_oversized_box_are_not_excused(self):
+        from camera_teacher_audit import metrics
+        scope=dict(min_long_edge=16,min_short_edge=8,ignore_prediction_ioa=.5)
+        gt,pred=self.fixtures(1)
+        for r in gt:r['annotations'][0]['xyxy']=[0,0,2,2]
+        pred[0]['predictions'][0]['xyxy']=[40,40,42,42]
+        pred[1]['predictions'][0]['xyxy']=[0,0,100,100]
+        c=metrics(gt,{p['id']:p for p in pred},self.policy,{'deer':.4},scope=scope)['classes']['deer']
+        self.assertEqual((c['gt'],c['predictions'],c['fp']),(0,2,2))
+
+    def test_primary_match_takes_priority_and_duplicates_still_count(self):
+        from camera_teacher_audit import metrics
+        scope=dict(min_long_edge=16,min_short_edge=8,ignore_prediction_ioa=.5)
+        gt,pred=self.fixtures(1)
+        for r in gt:r['annotations'].append(dict(r['annotations'][0],xyxy=[0,0,20,2]))
+        for r in pred:r['predictions']*=2
+        c=metrics(gt,{p['id']:p for p in pred},self.policy,{'deer':.4},scope=scope)['classes']['deer']
+        self.assertEqual((c['gt'],c['tp'],c['fp'],c['ignored_gt']),(2,2,2,2))
+
+    def test_size_scoped_approval_cannot_use_tiny_support_or_propose_tiny_boxes(self):
+        scope=dict(min_long_edge=16,min_short_edge=8,ignore_prediction_ioa=.5)
+        gt,pred=self.fixtures()
+        approval=analyze(gt,pred,self.policy,self.config,scope)
+        self.assertEqual(approval['approved_classes'],['deer'])
+        tiny=copy.deepcopy(pred[0]);tiny['image_sha256']='sha';tiny['predictions'][0]['xyxy']=[0,0,2,2]
+        row=dict(id='tiny',source='roboflow:cone-z2vga/katri-q4vkc',image_sha256='sha',annotations=[
+            dict(id='a',original_label='6',canonical=None,disposition='ambiguous',xyxy=[0,0,2,2])])
+        self.assertEqual(suggest([row],{'tiny':tiny},approval,self.policy),[])
+        for r in gt:r['annotations'][0]['xyxy']=[0,0,2,2]
+        for r in pred:r['predictions'][0]['xyxy']=[0,0,2,2]
+        self.assertEqual(analyze(gt,pred,self.policy,self.config,scope)['approved_classes'],[])
+
+    def test_unresolved_tiny_annotation_is_ignore_but_large_unresolved_blocks_frame(self):
+        from camera_teacher_audit import metrics
+        scope=dict(min_long_edge=16,min_short_edge=8,ignore_prediction_ioa=.5)
+        gt,pred=self.fixtures(1)
+        for row in gt:row['annotations'].append(dict(canonical=None,disposition='ambiguous',xyxy=[40,40,42,42],issues=['capture_subtype_unknown']))
+        for row in pred:row['predictions'].append(dict(prediction_label('car',self.policy),xyxy=[40,40,42,42],confidence=.6))
+        result=metrics(gt,{p['id']:p for p in pred},self.policy,{'deer':.4,'car':.4},scope=scope)
+        self.assertEqual(result['evaluated_frames'],2)
+        self.assertEqual(result['ignored_untyped_gt'],2)
+        self.assertEqual(result['classes']['car']['fp'],0)
+        self.assertEqual(result['classes']['deer']['tp'],2)
+        gt[0]['annotations'][1]['xyxy']=[40,40,60,60]
+        self.assertFalse(complete_gt(gt[0],self.policy,scope))
+        self.assertFalse(complete_gt(gt[1],self.policy))
+
     def test_suggestions_do_not_edit_labels_or_split_composites(self):
         gt,pred=self.fixtures();approval=analyze(gt,pred,self.policy,self.config)
         ann=dict(id='7',original_label='6',disposition='ambiguous',canonical=None,xyxy=[0,0,20,20])
