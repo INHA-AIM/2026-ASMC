@@ -17,6 +17,14 @@ def ann(label, verified=True):
 
 
 class Coco7EvaluationTest(unittest.TestCase):
+    def test_grpc_diagnostic_speed_unit_and_ceiling_are_explicit(self):
+        from drive_coco7_preview import grpc_speed_mps
+        self.assertEqual(0.,grpc_speed_mps(0.))
+        self.assertAlmostEqual(1.,grpc_speed_mps(3.6))
+        self.assertAlmostEqual(5/3.6,grpc_speed_mps(5.))
+        for invalid in (-1.,5.01,float('nan'),float('inf')):
+            with self.assertRaises(ValueError):grpc_speed_mps(invalid)
+
     def test_reused_image_origin_cannot_be_replaced_by_a_future_lidar_update(self):
         from analyze_fusion_trace import object_state
         obj=dict(id=7)

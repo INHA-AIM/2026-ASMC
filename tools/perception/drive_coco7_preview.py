@@ -82,6 +82,13 @@ def speed_command(preview, trajectory):
     return min(5., max(0., velocity*3.6))
 
 
+def grpc_speed_mps(command_kph):
+    """Explicit SDK diagnostic conversion; ROS/UDP CtrlCmd remains km/h."""
+    if not math.isfinite(command_kph) or not 0 <= command_kph <= 5:
+        raise ValueError('bounded diagnostic speed must be0..5km/h')
+    return command_kph / 3.6
+
+
 def main():
     from capture_coco7_actors import grpc, ActorStub, ObjectInfo, OBJECT_TYPE_VEHICLE, MessageToDict
     from morai.actor.actor_set_pb2 import VehicleControlModeParam, VehicleGear, SetTransformParam, SetVelocityParam
@@ -120,6 +127,7 @@ def main():
                 bridge_control_destination=dict(ip=rospy.get_param('/morai_udp_bridge/cmd_ip',None),
                                                 port=rospy.get_param('/morai_udp_bridge/cmd_port',None)),
                 actuator_transport=a.actuator_transport,
+                actuator_velocity_unit='m/s' if a.actuator_transport=='grpc' else 'km/h',
                 actuator_policy=a.actuator_transport+' type2 speed capped at5km/h from valid trajectory; preview steering; MPC actuator conversion is explicit',
                 actor_restore_scope='Ego pose/gear/control mode only; other actors untouched')
     def save(): (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
@@ -149,11 +157,12 @@ def main():
         if a.actuator_transport=='udp':
             publisher.publish(command)
         else:
-            # Mirror the repository CtrlCmd bridge's speed convention. The SDK
-            # documents normalized steering; retain the same max steering as UDP.
+            # SDK proto omits the speed unit. The retained initial diagnostic
+            # approached3.6x the km/h number; test an explicit m/s conversion.
+            # Keep actual motion guards and the same normalized steering as UDP.
             steer=max(-1.,min(1.,math.degrees(command.steering)/40.))
             response=actors.ControlVehicle(VehicleCtrlCmd(actor_info=ego,
-                long_cmd_type=command.longlCmdType,velocity=command.velocity,
+                long_cmd_type=command.longlCmdType,velocity=grpc_speed_mps(command.velocity),
                 throttle=command.accel,brake=command.brake,steer=steer),timeout=.3)
             if response.status!=1:raise RuntimeError('gRPC actuator command rejected: '+str(response))
     try:
