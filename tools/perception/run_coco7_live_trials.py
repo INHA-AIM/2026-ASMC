@@ -150,7 +150,7 @@ def main():
         report=dict(job=j, failures=[],requests=[], preparation={}, observation_window_completed=False,
                     interpretation='MORAI rendering active; wall input arrival anchors; no driving')
         arrivals={};inputs=defaultdict(list);outputs=defaultdict(list);statuses={};status_rows=[];diagnostics=[];controls=[];bbox=[];planning=defaultdict(list);debug_rows=defaultdict(list)
-        lock=threading.RLock();subs=[];processes=[];handles=[];sampler=None;begin=end=None
+        lock=threading.RLock();subs=[];processes=[];handles=[];sampler=None;begin=end=None;trace_parameters={}
         def save(): (out/'report.json').write_text(json.dumps(report,indent=2)+'\n')
         def receive_input(view,msg):
             now=time.monotonic(); stamp=msg.header.stamp.to_nsec()
@@ -203,6 +203,12 @@ def main():
             running={n for section in graph for _,names in section for n in names}
             if running & set(NODES.values()):raise RuntimeError('existing model launch; refusing duplicate inference')
             if rospy.get_param('/use_sim_time',False):raise RuntimeError('live trial requires wall ROS time')
+            report['trace_enabled']=bool(j.get('diagnostic_trace',False))
+            if report['trace_enabled']:
+                for owner,node in NODES.items():
+                    param=node+'/lifecycle_trace_path'
+                    trace_parameters[param]=rospy.get_param(param,None)
+                    rospy.set_param(param,str(out/(owner+'.lifecycle.jsonl')))
             report['timestamp_policy']=dict(
                 sensor_bridge=rospy.get_param('/morai_sensor_bridge/timestamp_mode','unknown'),
                 udp_bridge=rospy.get_param('/morai_udp_bridge/timestamp_mode','unknown'),
@@ -343,6 +349,10 @@ def main():
                 if not samples or max(r['memory_used_mib']/r['memory_total_mib'] for r in samples)>.9:
                     report['failures'].append('GPU memory unavailable or above 90%');report['passed']=False
             for child in reversed(processes):stop(child)
+            for param,previous in trace_parameters.items():
+                if previous is None:
+                    if rospy.has_param(param):rospy.delete_param(param)
+                else:rospy.set_param(param,previous)
             for handle in handles:handle.close()
             for sub in subs:sub.unregister()
             for filename,rows in [('inputs',dict(inputs)),('outputs',dict(outputs)),('status',status_rows),('diagnostics',diagnostics),('controls',controls),('bbox',bbox),('planning',dict(planning)),('debug',dict(debug_rows))]:
