@@ -9,9 +9,10 @@
 이 작업은 YOLOE의 추가학습 후보를 고르는 실험이며 운영 기본 모델을 바꾸지 않는다.
 현재 기준선은 YOLO26l detect・전방1280・좌우640×480・3뷰15Hz・2+1 batch・confidence0.40이다.
 작업 브랜치는 `feat/camera-yoloe-obstacle-selection`, worktree와 공유 컨테이너는 유지한다.
-PR #76은 GitHub 계정 billing 제한으로 hosted CI가 시작되지 않아 병합 대기 중이다.
-따라서 이 브랜치는 #76의 사용자 확인 기록 커밋 `503a44ac` 위에 쌓는다. main 기준으로
-병합됐다고 표시하지 않으며, #76 병합 후 기준을 옮긴다.
+PR #76은 사용자 승인에 따라 2026-10-09 CLI로 merge commit `92553d02`에 병합했다.
+병합 대상 HEAD는 `503a44ac`이며, hosted CI가 billing 제한으로 시작되지 않았다는
+기록은 유지한다. CI 통과로 표시하지 않는다. 후속 PR #77은 main으로 기준을 옮기고
+해당 merge commit을 작업 브랜치에 반영했다. YOLOE 운영 승격은 여전히 보류다.
 
 ## 고정 비교
 
@@ -208,8 +209,9 @@ ROS가 숫자 launch 인자를 int로 바꾸므로 설정 파일명에서는 명
 
 GitHub hosted CI는 #76 HEAD503a44ac의3개 annotation 모두 결제/사용 한도 때문에
 job이 시작되지 않았다고 보고한다. 코드 실패로 위장하거나 검사를 우회하지 않는다.
-이번 PR은 #76 위의 Draft이며 main으로 retarget한 최종 HEAD에서 hosted CI 확인이
-필요하다. 로컬 검증을 hosted CI 통과로 대신 표시하지 않는다.
+PR #76은 위 제한을 안내한 뒤 사용자 승인으로 일반 CLI 병합했다. #77은 main 기준
+Draft로 유지하며 최종 HEAD에서 hosted CI 확인이 필요하다. 로컬 검증을 hosted CI
+통과로 대신 표시하지 않는다.
 
 ## 전방 bbox fusion 대조와 해석
 
