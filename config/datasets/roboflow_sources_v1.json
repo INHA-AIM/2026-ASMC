@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "version_policy": "latest_public_only",
+  "workers": 2,
+  "max_attempts": 3,
+  "split_seed": 20261009,
+  "projects": [
+    "selfcar/morai_test-t3i2r",
+    "cone-z2vga/katri-q4vkc",
+    "cone-z2vga/katri-2-txrqf",
+    "cone-z2vga/merge-axyff",
+    "battery-detection/cone-traffic-tirxp",
+    "jjj-nx9di/katri_new_data-xkbev",
+    "seonhyung-kim/morai-perception",
+    "s-workspace-p9mvp/morai_obstacle",
+    "cone-z2vga/katri_kids-zblud",
+    "cone-z2vga/katri_kids-2-x5xnl",
+    "cone-z2vga/ssibal-sjav5",
+    "mino-qjf5p/vi2re",
+    "yuna-z15io/obstcle-mi0kq",
+    "yolo-m5lvd/detection-bzetd",
+    "bicycle-man/morai-bicycle",
+    "parkminseo/final-ftuy2",
+    "tooth-decay-rnacu/morai_ai_mission-fhqkh",
+    "dh-mzmhr/animal-tohen",
+    "aiv5challenge/yeonsoo-sarang",
+    "enzo-mdikr/my-first-project-eeree",
+    "hl-fma/hlfma_2",
+    "hl-fma/hlfma_3"
+  ]
+}
