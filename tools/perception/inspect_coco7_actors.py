@@ -23,6 +23,9 @@ def main():
     p.add_argument('--candidates', type=Path, required=True,
                    help='JSON list of model/width/confidence chosen on selection GT')
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--batch-mode', choices=['2plus1','batch3','sequential'],default='2plus1')
+    p.add_argument('--all-views',action='store_true',
+                   help='Static-scene comparison using each view ordinal; source stamps remain independent')
     a = p.parse_args(); a.output.mkdir(parents=True, exist_ok=False)
     masks = load_view_masks(['front', 'left', 'right'],
         HoodMask.load(True, ROOT/'src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml'), True,
@@ -31,6 +34,8 @@ def main():
     rejected = []
     for capture in a.captures:
         registry = json.loads((capture/'capture.json').read_text())
+        if not registry.get('ego_after'):
+            raise RuntimeError('capture is not finalized: '+str(capture))
         for case in registry['cases']:
             # Preserve floating/spawn-failed fixtures in the registry and index,
             # but do not turn them into performance evidence for ground actors.
@@ -45,8 +50,11 @@ def main():
                             key=lambda r: r['source_stamp_ns'])
             if frames:
                 fixtures.append((capture, case, frames))
+            else:
+                raise RuntimeError('valid fixture has no selected-view RGB: '+str(capture)+'/'+str(case['index']))
     report = dict(scope='qualitative identical-image comparison; no pixel GT, recall, or actor association claimed',
-                  rejected_fixtures=rejected, candidates=[], masks={v: m.info for v,m in masks.items()})
+                  rejected_fixtures=rejected, candidates=[], masks={v: m.info for v,m in masks.items()},
+                  batch_mode=a.batch_mode,all_views=a.all_views)
     page = ['<!doctype html><meta charset="utf-8"><style>body{font:16px system-ui;margin:24px}img{max-width:95%}</style>',
             '<h1>MORAI controlled captures · raw COCO7</h1>',
             '<p>These are reviewed images, not pixel ground truth. A detection of the expected class may belong to another actor. Red is the Ego exclusion area.</p>']
@@ -56,7 +64,7 @@ def main():
         weight=a.models/(config['model']+'.engine')
         detector=BatchedYoloDetector(weights=str(weight),expected_sha256=file_sha256(weight),
             runtime_backend='tensorrt', task='segment' if 'seg' in config['model'] else 'detect',
-            front_width=config['width'],conf_thres=config['confidence'])
+            front_width=config['width'],conf_thres=config['confidence'],batch_mode=a.batch_mode)
         page.append(f'<h2>{html.escape(name)} · conf {config["confidence"]}</h2>')
         results=[]
         with (out/'predictions.jsonl').open('w') as handle:
@@ -67,11 +75,24 @@ def main():
                     if file_sha256(image_path)!=row['sha256']:
                         raise RuntimeError('source SHA mismatch '+str(image_path))
                     image=cv2.imread(str(image_path));view=row['view']
-                    result=detector.infer_images({view:masks[view].apply(image)},[view])[view]
+                    batch_sha={view:row['sha256']}
+                    if a.all_views:
+                        images={}
+                        for camera in ('front','left','right'):
+                            sources=sorted([r for r in case['frames'] if r['view']==camera],key=lambda r:r['source_stamp_ns'])
+                            if len(sources)!=len(frames):raise RuntimeError('incomplete static three-view fixture')
+                            source=sources[n];path=capture/source['image']
+                            if file_sha256(path)!=source['sha256']:raise RuntimeError('batch RGB SHA mismatch')
+                            images[camera]=masks[camera].apply(cv2.imread(str(path)))
+                            batch_sha[camera]=source['sha256']
+                        result=detector.infer_images(images,['front','left','right'])[view]
+                    else:
+                        result=detector.infer_images({view:masks[view].apply(image)},[view])[view]
                     boxes=[dict(label=d.source_class_name,confidence=d.confidence,
                                 xyxy=[d.xmin,d.ymin,d.xmax,d.ymax]) for d in result.detections]
                     record=dict(registry=str(capture),case=case['index'],asset=case['asset'],
-                        placement=case.get('placement'),**row,predictions=boxes)
+                        placement=case.get('placement'),**row,predictions=boxes,
+                        batch_source_sha256=batch_sha,batch_mode=a.batch_mode)
                     handle.write(json.dumps(record)+'\n');records.append(record)
                     if n in {0,len(frames)//2,len(frames)-1}:
                         render=image.copy();ego,_=masks[view].geometry(*image.shape[:2])

@@ -365,6 +365,117 @@ v1 driver는 측정기의 수락 실패 종료 코드1을 실행 오류로 취�
 이전 foggy를 반환한 v2 실패도 유지한다. 후속 독립 RPC의 SUNNY 확인은
 `weather-restoration-recovery-v1.json`에 있다. 이 실패들은 성공으로 덮어쓰지 않는다.
 
+## 거리·batch 비교 후속 (2026-10-09)
+
+FLOP/s는 설정한 처리율에서 필요한 산술 연산량의 추정이다. 실제 backend
+시간 순위는 메모리 접근, TensorRT tactic, 호출·전송·NMS와 seg mask 복원에
+따라 달라진다. 공식 YOLO26 표는 unused branch를 제거한 NMS-free 모델의
+수치다. 현재 고정한 one-to-many/NMS 경로와 같은 graph라고 간주하지 않는다.
+[공식 모델 표](https://docs.ultralytics.com/models/yolo26/)
+
+`benchmark_coco7_batches.py`로 실제 3뷰 RGB를 고정해 네 모델×세 전방
+너비×세 batch 방식×3회, 총108회 측정했다. 각 회차는 예열 후40 cycle이며
+MORAI는 실행 중이었다. 표는 각 회차의 cycle wall p50을3회 평균한 ms다.
+세 영상 packing, model.predict의 전처리·NMS, 원본 좌표/mask 복원을 포함한다.
+JPEG decode·ROS 발행·다른 모델 ACTIVE 부하는 포함하지 않는다. 순수 GPU
+kernel 시간이나 실제 카메라 Hz로 해석하지 않는다. 반복 재사용한 RGB는
+고정 입력 benchmark이며 운영에서 결과를 재발행한 것이 아니다.
+
+| 모델 | 2+1/640 | 2+1/960 | 2+1/1280 | batch3/640 |
+|---|---:|---:|---:|---:|
+| YOLO26m detect |21.92|24.43|26.19|17.01|
+| YOLO26l detect |26.60|27.88|31.47|19.03|
+| YOLO26m seg |28.57|31.93|34.54|24.01|
+| YOLO26l seg |31.92|36.18|40.78|26.89|
+
+전방640의 tensor는384×640, 측방은480×640이다. batch3는 모두480×640으로
+패딩해2+1보다7.14% 많은 픽셀을 처리하지만 호출 감소로16–28% 빨랐다.
+960은37.84%,1280은81.58% 더 많은 픽셀을 처리한다. 960에서는 두 방식의
+시간이 거의 같았고,1280에서는 batch3가31–43% 느렸다. 엔진은 기존 dynamic
+FP16 engine이며 최적 shape는 batch2/480×640이다. 전용 engine을 재생성한
+최적값이라고 주장하지 않는다. head/confidence0.7/차체 mask는 고정했다.
+
+`capture_coco7_ranges.py`는7종 대표 에셋을 SUNNY/FOGGY에서20·40·60m에
+정지 배치했다. 요청 거리는 Ego anchor에서 spawn anchor까지이며 실제3D
+bbox 중심 거리는 각 case에 별도로 기록한다. 센서 원점으로부터의 정확한
+거리가 아니다.42개 모두 높이 gate를 통과했고 원본 영상을 검토해 중앙의
+객체가 보이는 것을 확인했다. Ego 이동0m·gear 동일, 생성 객체만 정리하고
+gRPC 응답을 재확인해 원래 SUNNY로 복원했다.630 JPEG의 source stamp·SHA를
+보존했다. 주행 중 최초 검출 거리나 전체 에셋 recall 시험은 아니다.
+
+동일 전방5프레임을12개 모델/해상도에 confidence0.7과0.25로 각각 실제
+재추론했다. 넓은 중앙 검토 영역(570,230)–(685,455)에서 예상 라벨이5프레임
+중3개 이상 있었던 장면 수는 다음과 같다. 이 영역은 수동 검토한 검색 영역이며
+정밀 GT box/mask가 아니다. 정량 AP·recall이나 독립적인 오검출 수락으로
+해석하지 않는다. 다른 위치의 같은 라벨로 성공을 대신하지 않는다.
+
+| 모델 | conf0.7: 640/960/1280 | conf0.25: 640/960/1280 |
+|---|---:|---:|
+| M detect |11/15/17|19/24/25|
+| L detect |13/16/16|23/24/29|
+| M seg |10/11/12|19/22/28|
+| L seg |10/15/15|19/25/22|
+
+각 분모는42장면이다.0.25는 원인 분리를 위한 대조이며 운영 confidence를
+낮추거나 최종 값으로 선정한 것이 아니다. 큰 모델·해상도가 모든 사례에서
+좋지 않다. 예컨대 conf0.7에서 M detect/1280은40m person을 두 날씨 모두
+5/5회 검출했지만60m는0/5였다. L seg/960은 car를60m에서 두 날씨 모두
+5/5 검출했다. FOGGY40m bus를 truck으로 반환하는 후보도 있다. 개·자전거의
+40–60m 검출은0.25에서도 대부분 실패했다. 세부 라벨·미검출·공백 개선에는
+데이터 기반 검증·추가학습이 필요하며 규모 확대만으로 해결됐다고 판단하지 않는다.
+
+일반 품질 비교는 전방 단독 tensor를 사용한다.640 batch3에서는 전방 패딩
+높이도 달라지므로 실제 정지3뷰를 넣은 별도 비교와 새 입력15Hz 시험을 구분한다.
+촬영된3뷰는 같은 정지 장면의 ordinal로 연결하며 source stamp가 같은 동시
+영상이라고 표시하지 않는다. 운영 메시지·모델·fusion 기본값은 바꾸지 않았다.
+
+실제640 batch3 패딩으로 같은 정지3뷰를 넣으면 conf0.7의3/5 장면 수는
+M detect11·L detect13·M seg8·L seg11이다. 전방 단독 tensor 대비 M seg는
+SUNNY40m truck이5/5→0/5, FOGGY40m truck이4/5→1/5로 감소했다. 반대로
+추가 검출된 사례도 보존했다. padding/batch 조건이 출력에 영향을 주므로
+단독 품질 표와 batch3 운영 출력을 동일하다고 가정하지 않는다.
+
+`asmc-ros-noetic`에서 MORAI를 유지한 C1 12회도 완료했다. TwinLite·ResNet은
+로드된 STANDBY, YOLO만 ACTIVE이며 full-stack 수락 시험이 아니다.
+
+| 640/batch3 후보 | 뷰별 평균 Hz 범위 | wall p95 최댓값 | PASS/3 | 최대 공백 |
+|---|---:|---:|---:|---:|
+| M detect |14.80–14.90|30.7ms|3|177ms|
+| L detect |14.70–14.90|35.9ms|2|275ms|
+| M seg |14.80–14.95|40.9ms|3|180ms|
+| L seg |14.50–14.90|48.9ms|2|536ms|
+
+모델 오류·중복/역행 stamp는0이며 최대 ACTIVE 전체 VRAM5567MiB다.
+평균 Hz만으로10/12 PASS를12/12로 표시하지 않는다. L detect r2 전방
+275ms 공백은266ms 입력 공백과 겹쳤다. L seg r3는 ACTIVE 첫1초에8개씩
+출력했고 첫 출력 지연536ms, 입력 최대 공백465–494ms였다. 입력 header
+stamp 차이도 같은 규모였으므로 측정 subscriber 도착 시각만의 지연과는
+구분된다. 이것만으로 MORAI 렌더링·bridge·스케줄링의 원인을 확정하거나
+모델 수락 실패를 면제하지 않는다. 정상 출력 사이의 간격과 첫/끝 endpoint
+공백을 구분하며 원본 gate는 둘 다 유지한다.
+
+새 측정/기존 COCO 시험28개·검출 회귀70개와 계약·문서 검사3개가 통과했다.
+운영 코어·메시지를 바꾸지 않아 전체 build를 반복하지 않았다. 이전 facade와
+CI 결제 제한은 별도 미해결 상태이며 이 시험으로 통과 처리하지 않는다.
+[Git에 보존한 요약](../../../config/baselines/evidence/camera_coco7_live_v1/range_batch_followup_summary.json)에
+42장면별 각 모델의 결과 수, 실제 거리,108회 timing,12회 live 판정과 원본
+SHA가 있다. 원본 입력/출력/리소스는 `batch3-live-640-v2/trials`와
+`range-batch3-live-input-gaps-v1.json`에 보존한다.
+
+브라우저에서 객체·날씨·거리·모델을 고르고 중앙 확대를 켜 확인한다.
+
+- [거리 비교(conf0.7)](http://localhost:8766/range-model-inspection-v2/comparison.html)
+- [거리 비교(conf0.25)](http://localhost:8766/range-model-inspection-low25-v1/comparison.html)
+- [실제640 batch3 비교(conf0.7)](http://localhost:8766/range-batch3-640-inspection07-v1/comparison.html)
+
+원본은 `range-captures-v1/sunny`, `range-captures-v2/foggy`,
+`range-model-inspection-v2`, `range-model-inspection-low25-v1`,
+`batch-range-benchmark-v2`다. 첫 날씨 enum 비교 오류, 완료 전 registry를 읽어
+FOGGY 마지막 case가 빠진 inspection-v1, batch post 타이머의 미세한 차이를
+오류로 취급한 benchmark-v1, source 패키지가 생성 ROS msg를 가린 첫 live
+startup 실패도 보존한다. 완료된 capture와 모델 pairing·SHA·중복 stamp를
+검사하도록 보강했으며 실패를 성공 결과로 덮어쓰지 않는다.
+
 ## 이후
 
 ### 최종 회귀와 CI

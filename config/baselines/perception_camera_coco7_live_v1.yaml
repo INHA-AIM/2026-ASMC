@@ -961,3 +961,41 @@ weather_followup:
   live_artifacts:
   - weather-live-shared-v1/sunny
   - weather-live-shared-foggy-v2/foggy
+
+range_batch_followup:
+  summary: config/baselines/evidence/camera_coco7_live_v1/range_batch_followup_summary.json
+  summary_sha256: aca4011350166f95ad408cfe4e831d9fb89fe24352f4bce072b09fdf643cfa9c
+  base_revision: 82d9c2749dd473418d86e4e4d393c6de96fd469e
+  source_digests: ../artifacts/camera-coco7-live-v1/range-batch-source-v1.json
+  live_container: asmc-ros-noetic
+  weather: [SUNNY, FOGGY]
+  stationary_range_cases: 42
+  requested_forward_spawn_anchor_m: [20, 40, 60]
+  exact_camera_range_claimed: false
+  pixel_gt_available: false
+  source_jpegs: 630
+  quality_confidences: [0.7, 0.25]
+  quality_default_changed: false
+  batch_trials: 108
+  batch_cycles_each: 40
+  batch_timing_scope: fixed RGB full backend wall demand; no JPEG decode or ROS publication
+  front640_batch3_speed_improvement_percent: [22.4, 28.5, 16.0, 15.8]
+  model_order: [yolo26m, yolo26l, yolo26m-seg, yolo26l-seg]
+  front1280_batch3: slower than 2plus1 by 31-43 percent due to side padding
+  live_profile: C1
+  other_models: loaded STANDBY
+  live_target_hz_each_view: 15
+  live_trials: 12
+  live_passed: 10
+  live_failed: 2
+  live_peak_active_whole_gpu_mib: 5567
+  failures:
+  - L detect r2 front output gap 275ms; overlapping camera input gap 266ms
+  - L seg r3 ACTIVE initial gap 536ms; input gaps 465-494ms; first second output 8 each view
+  batch_quality_warning: M seg/640 batch3 lost reviewed truck observations at 40m relative to front-only 2plus1
+  model_default_promoted: false
+  fusion_default_changed: false
+  regression: COCO tools 28 + detection 70 + validators 3 passed
+  original_setup_and_measurement_failures_preserved: true
+  owned_actor_cleanup: 42 range actors + 18 live fixture actors; all exact owned IDs removed
+  final_environment: SUNNY; Ego unchanged; no public control publishers; bridge and master retained

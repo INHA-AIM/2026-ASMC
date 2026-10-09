@@ -37,9 +37,19 @@ def main():
     p.add_argument('--limit', type=int, default=0)
     p.add_argument('--asset', nargs='+', help='Exact available catalogue API names')
     p.add_argument('--placements', action='store_true', help='Front 20/12/6m and left/right 7m')
+    p.add_argument('--front-distances', type=float, nargs='+',
+                   help='Explicit positive forward spawn-anchor distances in metres; replaces placements')
+    p.add_argument('--capture-views', choices=['front', 'left', 'right'], nargs='+',
+                   default=['front', 'left', 'right'])
     p.add_argument('--frames-per-view', type=int, default=2)
     p.add_argument('--grpc-host', default='host.docker.internal')
-    a = p.parse_args(); a.output.mkdir(parents=True, exist_ok=True)
+    a = p.parse_args()
+    if a.front_distances and (a.placements or any(not math.isfinite(d) or d <= 0 for d in a.front_distances)
+                              or len(set(a.front_distances)) != len(a.front_distances)):
+        p.error('front distances must be finite, positive, unique and used without --placements')
+    if a.frames_per_view < 1 or len(set(a.capture_views)) != len(a.capture_views):
+        p.error('positive frame count and unique capture views required')
+    a.output.mkdir(parents=True, exist_ok=False)
     channel = grpc.insecure_channel(a.grpc_host+':7789')
     simulator, actors = SimulatorStub(channel), ActorStub(channel)
     available = simulator.GetAvailableObject(CategoryObstacles(vehicle=True,pedestrian=True,obstacle=True),timeout=10)
@@ -58,7 +68,7 @@ def main():
     import rospy
     from sensor_msgs.msg import CompressedImage
     rospy.init_node('coco7_owned_actor_capture',anonymous=True)
-    if any(t=='/ctrl_cmd' and ns for t,ns in rosgraph.Master('/coco7_capture').getSystemState()[0]):
+    if any(t in ('/ctrl_cmd', '/ctrl_cmd_0') and ns for t,ns in rosgraph.Master('/coco7_capture').getSystemState()[0]):
         raise RuntimeError('stationary capture requires no public control publisher')
     ego_info=ObjectInfo(object_type=OBJECT_TYPE_VEHICLE);ego_info.id.value='Ego'
     initial=actors.GetActorState(ego_info,timeout=10)
@@ -72,10 +82,17 @@ def main():
     owned=[]
     try:
         valid=[r for r in report['catalogue_validation'] if r['available']]
-        if a.asset: valid=[r for r in valid if r['api_name'] in a.asset]
+        if a.asset:
+            valid=[r for r in valid if r['api_name'] in a.asset]
+            missing=set(a.asset)-{r['api_name'] for r in valid}
+            if missing:raise RuntimeError('requested assets unavailable: '+str(sorted(missing)))
         if a.limit: valid=valid[:a.limit]
         placements=[('front20',20.,0.)] if not a.placements else [
             ('front20',20.,0.),('front12',12.,0.),('front6',6.,0.),('left7',0.,7.),('right7',0.,-7.)]
+        if a.front_distances:
+            placements=[(f'front{distance:g}',distance,0.) for distance in a.front_distances]
+        report['capture_arguments']=dict(front_distances=a.front_distances, views=a.capture_views,
+                                         frames_per_view=a.frames_per_view)
         jobs=[(r,label,forward,lateral) for r in valid for label,forward,lateral in placements]
         for index,(row,placement,forward,lateral) in enumerate(jobs):
             info=ObjectInfo(object_type=types[row['actor_type']],client_key='coco7_evaluation')
@@ -85,7 +102,8 @@ def main():
             pose.location.y += forward*math.sin(yaw)+lateral*math.cos(yaw)
             pose.location.z += 5
             spawn=ActorSpawnInfo(actor_info=info,model_name=row['api_name'],label='coco7 evaluation',transform=pose)
-            case=dict(index=index,asset=row,placement=placement,actor_id=info.id.value,frames=[],placement_review='pending',pixel_gt=False)
+            case=dict(index=index,asset=row,placement=placement,actor_id=info.id.value,frames=[],placement_review='pending',pixel_gt=False,
+                      requested_forward_anchor_m=forward,requested_lateral_anchor_m=lateral)
             report['cases'].append(case)
             try:
                 request=(VehicleSpawnParam(spawn_info=spawn,pause=True) if row['actor_type']=='vehicle' else
@@ -115,6 +133,8 @@ def main():
                 time.sleep(.4)
                 settled=actors.GetActorState(info,timeout=10)
                 case['state']=MessageToDict(settled)
+                case['bbox_center_distance_from_ego_anchor_m']=math.sqrt(sum(
+                    (getattr(settled.bounding_box.location,k)-getattr(initial.transform.location,k))**2 for k in 'xyz'))
                 case['ground_bottom_error_m']=(settled.bounding_box.location.z-settled.bounding_box.extent.z)-ground
                 if abs(case['ground_bottom_error_m'])>.2:
                     raise RuntimeError('asset placement height not validated')
@@ -122,6 +142,7 @@ def main():
                     case['vehicle_spec']=MessageToDict(actors.GetVehicleSpec(info,timeout=10))
                     case['resolved_option']=actors.GetOptionName(info,timeout=10).value
                 for view,topic in topics.items():
+                    if view not in a.capture_views: continue
                     for repeat in range(a.frames_per_view):
                         msg=rospy.wait_for_message(topic,CompressedImage,timeout=5)
                         image=cv2.imdecode(np.frombuffer(msg.data,np.uint8),1)

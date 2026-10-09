@@ -64,3 +64,22 @@ confidence_sweep:
 - 0.65
 - 0.7
 final_stability_minutes: 30
+range_batch_followup:
+  models: [yolo26m, yolo26l, yolo26m-seg, yolo26l-seg]
+  weather: [SUNNY, FOGGY]
+  forward_spawn_anchor_distances_m: [20, 40, 60]
+  selected_front_frames_each_case: 5
+  capture_views: [front, left, right]
+  quality_confidences: [0.7, 0.25]
+  target_region_review_xyxy: [570, 230, 685, 455]
+  quality_scope: qualitative reviewed region label presence; no pixel GT or AP/recall
+  benchmark_cycles_each_repeat: 40
+  benchmark_repeats: 3
+  benchmark_modes: [sequential, 2plus1, batch3]
+  benchmark_scope: fixed real RGB backend wall demand with MORAI rendering; not ROS Hz
+  live_profile: C1
+  live_front_width: 640
+  live_batch: batch3
+  live_target_hz_each_view: 15
+  live_seconds_each_trial: 20
+  live_repeats: 3
