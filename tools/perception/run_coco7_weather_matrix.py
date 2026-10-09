@@ -11,6 +11,13 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'tools/grpc_inha_univ/src/proto'))
 
 
+def candidate_order(candidates, repeat, policy):
+    if policy == 'cyclic':
+        offset = (repeat-1) % len(candidates)
+        return candidates[offset:]+candidates[:offset]
+    return candidates if repeat % 2 else list(reversed(candidates))
+
+
 def main():
     import grpc
     from morai.environment.environment_pb2_grpc import EnvironmentStub
@@ -25,6 +32,7 @@ def main():
     p.add_argument('--repeats', type=int, default=3)
     p.add_argument('--seconds', type=float, default=20.)
     p.add_argument('--profile', choices=['C1', 'C6'], default='C6')
+    p.add_argument('--order', choices=['alternate', 'cyclic'], default='alternate')
     p.add_argument('--weather', nargs='+', choices=['sunny', 'foggy'], default=['sunny', 'foggy'])
     p.add_argument('--grpc-host', default='host.docker.internal')
     a = p.parse_args()
@@ -37,7 +45,7 @@ def main():
     api = EnvironmentStub(grpc.insecure_channel(a.grpc_host+':7789'))
     original = api.GetWeather(Empty(), timeout=5)
     report = dict(original_weather=WeatherType.Name(original.type), candidates=candidates,
-                  runs=[], preview_control_only=True, revision=a.revision)
+                  runs=[], preview_control_only=True, revision=a.revision, order=a.order)
     registry = a.output/'owned-actors.json'
 
     def save():
@@ -69,7 +77,7 @@ def main():
             save()
             jobs = []
             for repeat in range(1, a.repeats+1):
-                order = candidates if repeat % 2 else list(reversed(candidates))
+                order = candidate_order(candidates, repeat, a.order)
                 for c in order:
                     jobs.append(dict(c, rates='all15', batch='2plus1', profile=a.profile,
                                      repeat=repeat, seconds=a.seconds, full_stack=a.profile == 'C6',

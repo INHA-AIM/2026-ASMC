@@ -167,6 +167,10 @@ def main():
             running={n for section in graph for _,names in section for n in names}
             if running & set(NODES.values()):raise RuntimeError('existing model launch; refusing duplicate inference')
             if rospy.get_param('/use_sim_time',False):raise RuntimeError('live trial requires wall ROS time')
+            report['timestamp_policy']=dict(
+                sensor_bridge=rospy.get_param('/morai_sensor_bridge/timestamp_mode','unknown'),
+                udp_bridge=rospy.get_param('/morai_udp_bridge/timestamp_mode','unknown'),
+                interpretation='Receive stamps are bridge timestamps, not simulator acquisition timestamps. Input/output wall anchors use monotonic time.')
             model=j['model']
             custom=yaml.safe_load(Path(j['runtime_config']).read_text()) if j.get('runtime_config') else None
             engine=Path(custom['weights']) if custom else a.models/(model+'.engine')

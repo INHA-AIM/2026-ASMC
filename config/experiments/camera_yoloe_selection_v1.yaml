@@ -19,6 +19,24 @@ prompt_profiles:
   - traffic cone
   - traffic barrel
   - baby stroller
+  bollard17:
+  - person
+  - dog
+  - deer
+  - bicycle
+  - car
+  - truck
+  - bus
+  - motorcycle
+  - scooter
+  - electric scooter
+  - traffic bollard
+  - cargo box
+  - wooden box
+  - steel barricade
+  - traffic cone
+  - traffic barrel
+  - baby stroller
 models:
 - yoloe-26m-seg
 - yoloe-26l-seg
@@ -67,6 +85,24 @@ maximum_gap_ms: 250
 training: false
 roboflow: false
 operational_defaults_changed: false
+resolution_followup:
+  experiment_id: camera_yoloe_resolution_followup_v1
+  prompt_profile: bollard17
+  candidates:
+  - {model: yolo26l, width: 1280}
+  - {model: yoloe-26l-seg, width: 960}
+  - {model: yoloe-26l-seg, width: 1280}
+  repeats_per_weather: 3
+  active_seconds: 60
+  profile: C6
+  confidence: 0.4
+  debug: false
+  trace: false
+  order: cyclic
+  minimum_complete_five_second_hz: 9.5
+  target_attainment_ratio: 0.95
+  training: false
+  roboflow: false
 output_policy: raw prompt labels; four groups evaluation only
 fusion:
   policy: unique

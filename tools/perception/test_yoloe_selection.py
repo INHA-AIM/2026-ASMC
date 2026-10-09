@@ -17,9 +17,34 @@ from analyze_yoloe_selection import best_threshold,EVALUATION_GROUPS,input_pause
 from asmc_camera.detection.batching import shapes_for_front,pack_image,ImageTransform
 from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
 from asmc_camera.detection.backend import Detection
+from run_coco7_weather_matrix import candidate_order
+from b0_measurements import quantiles, output_report
 
 
 class YoloeSelectionTest(unittest.TestCase):
+    def test_three_candidate_cycles_balance_each_position_without_changing_legacy_order(self):
+        candidates=['baseline','960','1280']
+        rounds=[candidate_order(candidates,r,'cyclic') for r in (1,2,3)]
+        for position in range(3):
+            self.assertEqual(set(candidates),{r[position] for r in rounds})
+        self.assertEqual(candidates,candidate_order(candidates,1,'alternate'))
+        self.assertEqual(candidates[::-1],candidate_order(candidates,2,'alternate'))
+
+    def test_latency_percentiles_use_observations_not_mean_of_run_medians(self):
+        runs=[[10.,10.,10.],[100.]]
+        self.assertEqual(10.,quantiles(sum(runs,[]))['p50'])
+        self.assertNotEqual(55.,quantiles(sum(runs,[]))['p50'])
+        self.assertIsNone(quantiles([])['p50'])
+
+    def test_latency_excludes_old_generation_and_incomplete_windows_fail(self):
+        rows=[dict(arrival=t,stamp_ns=stamp,valid=True,wall_latency_ms=latency,
+                   source_age_ms=latency,input_anchor='matched')
+              for t,stamp,latency in [(10.1,100,999.),(10.2,101,40.),(10.3,102,60.),(11.,103,500.)]]
+        report=output_report(rows,10.,10.5,100,1.)
+        self.assertFalse(report['complete'])
+        self.assertEqual(50.,report['input_to_output_wall_ms']['p50'])
+        self.assertEqual(2,report['input_to_output_wall_ms']['samples'])
+
     def test_input_pause_diagnostics_exclude_stale_rows_and_keep_source_time_separate(self):
         rows=[dict(arrival=t,stamp_ns=ns) for t,ns in
               [(1.,0),(10.1,100_000_000),(10.5,150_000_000),(10.55,200_000_000),(30.,300_000_000)]]
