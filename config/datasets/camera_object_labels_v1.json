@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "source_profiles_file": "camera_object_source_labels_v1.json",
   "bbox_policy": "visible_extent_xyxy_exclusive",
   "groups": {
     "person": ["person"],

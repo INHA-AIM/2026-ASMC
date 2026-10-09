@@ -8,12 +8,14 @@ import zipfile
 from PIL import Image
 
 from camera_data_audit import (classify, valid_box, polygon_issues, curate, image_facts,
-    import_coco, export_dataset, apply_review, review_samples, near_duplicate_candidates, build_gallery, verify_export)
+    import_coco, export_dataset, apply_review, review_samples, near_duplicate_candidates, build_gallery, verify_export,
+    load_label_policy, resolve_source_labels, source_label_summary, normalize)
 from download_roboflow_sources import latest_version, extract_checked, error_kind
 from snapshot_roboflow_projects import boxes_to_coco, search_records, dataset_records
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY = json.loads((ROOT / 'config/datasets/camera_object_labels_v1.json').read_text())
+SOURCE_POLICY = load_label_policy(ROOT / 'config/datasets/camera_object_labels_v1.json')
 
 
 def row(name='car', source='roboflow:test/project', ident='a', split=None):
@@ -90,6 +92,72 @@ class DownloadTests(unittest.TestCase):
 
 
 class AuditTests(unittest.TestCase):
+    def test_source_numeric_meanings_do_not_leak_between_projects(self):
+        self.assertEqual(classify('0',SOURCE_POLICY,'roboflow:cone-z2vga/katri-q4vkc'),('car','candidate'))
+        self.assertEqual(classify('0',SOURCE_POLICY,'roboflow:selfcar/morai_test-t3i2r'),('traffic_barrel','candidate'))
+        self.assertEqual(classify('0',SOURCE_POLICY,'roboflow:other/project'),(None,'ambiguous'))
+        self.assertEqual(classify('2',SOURCE_POLICY,'roboflow:cone-z2vga/katri-q4vkc'),('person','candidate'))
+        self.assertEqual(classify('3',SOURCE_POLICY,'roboflow:cone-z2vga/katri_kids-zblud'),('person','candidate'))
+
+    def test_source_fence_override_is_physical_barricade_only_in_that_source(self):
+        self.assertEqual(classify('Fence',SOURCE_POLICY,'roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh'),('steel_barricade','candidate'))
+        self.assertEqual(classify('Fence',SOURCE_POLICY,'roboflow:other/project'),(None,'excluded'))
+        self.assertEqual(classify('human',SOURCE_POLICY,'roboflow:parkminseo/final-ftuy2'),('person','candidate'))
+        self.assertEqual(classify('red',SOURCE_POLICY,'roboflow:parkminseo/final-ftuy2'),(None,'excluded'))
+
+    def test_source_mixed_and_composite_boxes_never_auto_expand(self):
+        for source,label in (('jjj-nx9di/katri_new_data-xkbev','9'),('cone-z2vga/merge-axyff','4'),
+                             ('cone-z2vga/merge-axyff','6'),('parkminseo/final-ftuy2','box'),
+                             ('enzo-mdikr/my-first-project-eeree','dog'),('yuna-z15io/obstcle-mi0kq','dynamic')):
+            self.assertEqual(classify(label,SOURCE_POLICY,'roboflow:'+source),(None,'ambiguous'))
+        self.assertEqual(classify('dog',SOURCE_POLICY,'roboflow:other/project'),('dog','candidate'))
+
+    def test_source_resolution_preserves_geometry_raw_ids_and_review_requirement(self):
+        original=row('0',source='roboflow:selfcar/morai_test-t3i2r')
+        original['annotations'][0]['original_category_id']=19  # derived ID differs from label 0
+        before=copy.deepcopy(original)
+        resolved=resolve_source_labels(original,SOURCE_POLICY)
+        self.assertEqual(original,before)
+        self.assertEqual(resolved['annotations'][0]['canonical'],'traffic_barrel')
+        for key in ('xyxy','original_label','original_category_id','id'):
+            self.assertEqual(resolved['annotations'][0][key],original['annotations'][0][key])
+        result,_=curate([resolved],SOURCE_POLICY)
+        self.assertFalse(result[0]['eligible'])
+        self.assertIn('visual_review_required',result[0]['reasons'])
+        self.assertNotIn('ambiguous_label:0',result[0]['reasons'])
+
+    def test_source_class_expansion_requires_explicit_training_scope(self):
+        source='roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh'
+        self.assertEqual(classify('Concrete_1',SOURCE_POLICY,source),(None,'ambiguous'))
+        policy=copy.deepcopy(SOURCE_POLICY)
+        policy['source_profiles']['test/project']={'direct':{'box':'unconfigured_class'}}
+        self.assertEqual(classify('box',policy,'roboflow:test/project'),(None,'ambiguous'))
+
+    def test_all_22_source_profiles_have_normalized_nonconflicting_rules(self):
+        sources=json.loads((ROOT/'config/datasets/roboflow_sources_v1.json').read_text())
+        self.assertEqual(set(SOURCE_POLICY['source_profiles']),set(sources['projects']))
+        for profile in SOURCE_POLICY['source_profiles'].values():
+            keys=[]
+            for field in ('direct','mixed','composite','requires_class_decision','excluded'):
+                for key in profile.get(field,{}):
+                    self.assertEqual(key,normalize(key));keys.append(key)
+            self.assertEqual(len(keys),len(set(keys)))
+
+    def test_source_summary_counts_resolution_without_claiming_accepted_images(self):
+        rows=[row('0',source='roboflow:selfcar/morai_test-t3i2r'),
+              row('6',source='roboflow:cone-z2vga/merge-axyff',ident='b'),
+              row('red',source='roboflow:parkminseo/final-ftuy2',ident='c')]
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'inventory.jsonl'
+            path.write_text(''.join(json.dumps(r)+'\n' for r in rows))
+            report=source_label_summary([path],SOURCE_POLICY)
+        self.assertEqual(report['totals']['images'],3)
+        self.assertEqual(report['totals']['newly_resolved_candidate_annotations'],1)
+        self.assertEqual(report['totals']['ambiguous_annotations'],1)
+        self.assertEqual(report['totals']['excluded_annotations'],1)
+        self.assertFalse(report['changes_training_eligibility'])
+        self.assertNotIn('accepted',report['totals'])
+
     def test_rejection_keeps_review_reason_for_gallery(self):
         original=row();decision=accept(original,decision='reject',notes='Visible barrel has no annotation')
         result,verified=apply_review(original,decision,POLICY)

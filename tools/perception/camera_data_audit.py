@@ -5,6 +5,7 @@ Raw assets never change. Unreviewed external labels, incomplete images, unknown
 subtypes and ambiguous composites are quarantined rather than assumed negative.
 """
 import argparse
+import copy
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
@@ -52,14 +53,87 @@ def normalize(name):
     return re.sub(r'\s+', ' ', str(name).strip().lower().replace('_', ' ').replace('-', ' '))
 
 
-def classify(name, policy):
+def load_label_policy(path):
+    path = Path(path)
+    policy = json.loads(path.read_text())
+    policy['label_policy_file_sha256'] = sha(path)
+    if policy.get('source_profiles_file'):
+        source_path = path.parent / policy['source_profiles_file']
+        policy['source_profiles'] = json.loads(source_path.read_text())['profiles']
+        policy['source_profiles_sha256'] = sha(source_path)
+    return policy
+
+
+def classify(name, policy, source=None):
     key = normalize(name)
+    project = source[9:] if source and source.startswith('roboflow:') else source
+    profile = policy.get('source_profiles', {}).get(project, {})
+    # Dataset class names, not publisher/derived category IDs, carry these meanings.
+    # Resolve before global exclusions: one dataset's Fence is a steel barricade.
+    if key in profile.get('direct', {}):
+        target = profile['direct'][key]
+        if target in {n for group in policy['groups'].values() for n in group}:
+            return target, 'candidate'
+        return None, 'ambiguous'
+    if any(key in profile.get(field, {}) for field in
+           ('mixed', 'composite', 'requires_class_decision')):
+        return None, 'ambiguous'
+    if key in profile.get('excluded', []):
+        return None, 'excluded'
     target = policy['aliases'].get(key)
     if target:
         return target, 'candidate'
     if key in policy['excluded'] or re.fullmatch(r'[34]? ?traffic light.*', key) or key.endswith(' light'):
         return None, 'excluded'
     return None, 'ambiguous'
+
+
+def resolve_source_labels(original, policy):
+    """Revisit old inventory labels, preserving raw annotations and review gates."""
+    source = original['source']
+    project = source[9:] if source.startswith('roboflow:') else None
+    if project not in policy.get('source_profiles', {}):
+        return original
+    row = copy.deepcopy(original)
+    row['source_profiles_sha256'] = policy['source_profiles_sha256']
+    for ann in row['annotations']:
+        target, disposition = classify(ann['original_label'], policy, source)
+        if (target, disposition) != (ann['canonical'], ann['disposition']):
+            ann.setdefault('previous_label_resolution', dict(
+                canonical=ann['canonical'], disposition=ann['disposition']))
+        ann.update(canonical=target, disposition=disposition)
+    return row
+
+
+def source_label_summary(inventories, policy):
+    """Count semantic resolution separately from visual acceptance; no media writes."""
+    sources = {}
+    totals = Counter()
+    for path in inventories:
+        for row in read_jsonl(path):
+            if not row['source'].startswith('roboflow:'):
+                continue
+            source = sources.setdefault(row['source'], dict(images=0, labels={}))
+            source['images'] += 1
+            totals['images'] += 1
+            ambiguous = False
+            for ann in row['annotations']:
+                target, disposition = classify(ann['original_label'], policy, row['source'])
+                label = source['labels'].setdefault(ann['original_label'], dict(
+                    annotations=0, canonical=target, disposition=disposition))
+                label['annotations'] += 1
+                totals['annotations'] += 1
+                totals[disposition + '_annotations'] += 1
+                if disposition == 'candidate' and ann['disposition'] != 'candidate':
+                    totals['newly_resolved_candidate_annotations'] += 1
+                ambiguous |= disposition == 'ambiguous'
+            if not ambiguous:
+                totals['images_without_ambiguous_labels'] += 1
+    return dict(schema_version=1, label_policy_sha256=policy.get('label_policy_file_sha256'),
+        source_profiles_sha256=policy.get('source_profiles_sha256'),
+        inventory_sha256={str(p):sha(p) for p in inventories}, totals=dict(totals), sources=sources,
+        changes_training_eligibility=False, training_performed=False,
+        interpretation='Counts include augmentation and duplicate records. Candidate means label meaning resolved, not visually accepted or fully annotated. Old accepted/exported dataset is unchanged.')
 
 
 def phash(image):
@@ -155,7 +229,7 @@ def import_coco(export, project, version, policy):
                 if name is None:
                     issues.append('unknown_category_id')
                     name = '__unknown_category__'
-                target, disposition = classify(name, policy)
+                target, disposition = classify(name, policy, 'roboflow:' + project)
                 box = ann.get('bbox', [])
                 xyxy = [box[0], box[1], box[0] + box[2], box[1] + box[3]] if len(box) == 4 else []
                 item_issues = [] if valid_box(xyxy, width, height) else ['invalid_bbox']
@@ -479,7 +553,7 @@ def curate(rows, policy, reviews=None):
 
 
 def inventory(args):
-    policy = json.loads(args.labels.read_text())
+    policy = load_label_policy(args.labels)
     report = json.loads((args.root / 'download-report.json').read_text())
     rows, unsupported = [], []
     sources = {r['project']:r for r in report['projects']}
@@ -512,7 +586,8 @@ def inventory(args):
                     print('inventoried', count, flush=True)
     save(args.output / 'inventory-summary.json', dict(images=len(rows),
         unsupported=unsupported, source_report_sha256=sha(args.root / 'download-report.json'),
-        labels_sha256=sha(args.labels), capture_manifest_sha256=sha(args.capture_manifest) if args.capture_manifest else None))
+        labels_sha256=sha(args.labels), source_profiles_sha256=policy.get('source_profiles_sha256'),
+        capture_manifest_sha256=sha(args.capture_manifest) if args.capture_manifest else None))
 
 
 def build_gallery(rows, samples, output, policy):
@@ -640,8 +715,8 @@ def verify_export(output):
 
 
 def curate_command(args):
-    policy = json.loads(args.labels.read_text())
-    rows = [row for path in args.inventory for row in read_jsonl(path)]
+    policy = load_label_policy(args.labels)
+    rows = [resolve_source_labels(row, policy) for path in args.inventory for row in read_jsonl(path)]
     if len({r['id'] for r in rows}) != len(rows):
         raise ValueError('duplicate IDs across input inventories')
     reviews = json.loads(args.reviews.read_text()) if args.reviews else {}
@@ -660,6 +735,7 @@ def curate_command(args):
     save(args.output / 'audit-summary.json', dict(images=len(rows),accepted=sum(r['eligible'] for r in rows),
         quarantined=sum(not r['eligible'] for r in rows), reasons=dict(reason_counts), sources=source_counts,
         inventory_sha256={str(path):sha(path) for path in args.inventory}, reviews_sha256=sha(args.reviews) if args.reviews else None,
+        labels_sha256=sha(args.labels), source_profiles_sha256=policy.get('source_profiles_sha256'),
         review_samples=sum(map(len, samples.values())), near_duplicate_pairs=len(near),
         conditions='Unverified weather/tunnel/view remain unknown'))
     if args.gallery:
@@ -689,6 +765,10 @@ def main():
     cur.add_argument('--export', type=Path)
     verify=sub.add_parser('verify-export')
     verify.add_argument('--dataset',type=Path,required=True)
+    summary=sub.add_parser('source-label-summary', help='Resolve source meanings without accepting images or training')
+    summary.add_argument('--inventory',type=Path,nargs='+',required=True)
+    summary.add_argument('--labels',type=Path,required=True)
+    summary.add_argument('--output',type=Path,required=True)
     args = p.parse_args()
     if args.command == 'inventory':
         if args.capture_manifest and not args.capture_datasets:
@@ -696,6 +776,10 @@ def main():
         inventory(args)
     elif args.command=='curate':
         curate_command(args)
+    elif args.command=='source-label-summary':
+        if args.output.exists():
+            p.error('output already exists; preserve previous evidence')
+        save(args.output,source_label_summary(args.inventory,load_label_policy(args.labels)))
     else:
         print(json.dumps(verify_export(args.dataset)))
 
