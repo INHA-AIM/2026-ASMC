@@ -81,7 +81,7 @@ class Coco7RuntimeTest(unittest.TestCase):
         config = yaml.safe_load((package/path.replace('$(find asmc_camera)/', '')).read_text())
         self.assertEqual(list(COCO7), config['allowed_names'])
         self.assertEqual('source', config['label_mode'])
-        self.assertEqual(.5, config['conf_thres'])
+        self.assertEqual(.4, config['conf_thres'])
         self.assertEqual({'front':15.,'left':15.,'right':15.},config['target_hz_by_view'])
 
 

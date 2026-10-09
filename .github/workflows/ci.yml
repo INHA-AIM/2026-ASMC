@@ -84,6 +84,8 @@ jobs:
           python3 -m unittest discover -s tools/perception -p 'test_coco7_range_batches.py'
           python3 -m unittest discover -s tools/perception -p 'test_coco7_finalists.py'
           python3 -m unittest discover -s tools/perception -p 'test_coco7_broad_selection.py'
+          python3 -m unittest discover -s tools/perception -p 'test_coco7_confidence_followup.py'
+          python3 -m unittest discover -s tools/perception -p 'test_experiment_gallery_hub.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_coco_measurements.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_coco_matrix.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_seg_gt.py'

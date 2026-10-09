@@ -1029,6 +1029,7 @@ final_model_decision:
   - existing long-run/drive/CI acceptance blockers
 
 broad_model_decision:
+  confidence_superseded_by: confidence_followup
   summary: config/baselines/evidence/camera_coco7_live_v1/broad_model_decision.json
   summary_sha256: 0d149a3b2926e7b6c6bbd3714b13babaf9b967e33d913b819f17bdbbdce6ac17
   model: YOLO26l detect
@@ -1077,3 +1078,38 @@ broad_model_decision:
   - new model repeated fusion and long-run/drive acceptance
   - organization CI billing rejection at zero steps
   - historical known facade and input-authority baseline failures
+
+confidence_followup:
+  summary: config/baselines/evidence/camera_coco7_live_v1/confidence_followup_decision.json
+  summary_sha256: 16cf9b8f8a6ddc7194d8ef5310065c561b4a2bf7ee10e1f231f458cbb272eee9
+  model: YOLO26l detect
+  producer_confidence: 0.40
+  prior_yolo11m_confidence: 0.70
+  development_default_selected: true
+  operational_default_promoted: false
+  reviewed_selection_frames: 2250
+  original_selection_frames: 2252
+  reviewed_tp: 352
+  reviewed_fp: 52
+  reviewed_macro_f1: 0.2792990479405953
+  gained_tp_vs_actual_050: 26
+  added_fp_vs_actual_050: 25
+  lost_tp_vs_actual_050: 0
+  camera_supply_trials_passed: 5
+  camera_supply_trials_failed: 1
+  whole_stack_trials_failed: 6
+  output_hz_range: [14.65, 14.95]
+  wall_p95_ms_max: 97.74320321157573
+  maximum_gap_ms: 319.2972479737364
+  peak_whole_vram_mib: 5541
+  new_mask_class_misses: {front: 1, left: 1, right: 0}
+  new_mask_observations_differ_from_050: true
+  local_tests: {coco7: 43, gallery: 1, detection: 72}
+  contract_validators_passed: 4
+  gallery_hub_pages: 104
+  gallery_fixed_ids_and_kst: true
+  remaining_gates:
+  - SUNNY r3 all-model gap with concurrent input gaps; not waived
+  - planning trajectory deadline in all six trials
+  - camera-side unmatched FP including tunnel background truck
+  - previous repeated fusion, long-run, driving and CI billing blockers

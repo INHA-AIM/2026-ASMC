@@ -27,7 +27,8 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 [3뷰 인계 문서](../../docs/handoffs/perception/camera-three-view-coco-runtime.md)를 따른다.
 
 YOLO26l detect·전방1280·좌우640×480·TensorRT FP16·2+1 batch·뷰별15Hz·
-confidence0.50을 개발 기준으로 선정했다. `asmc-ros-noetic`의 ROS 환경에서 직접 실행한다.
+confidence0.40을 개발 기준으로 선정했다. 0.50 대비 검수 정답26개 회복·FP25개 추가를
+확인했고 전체 오검출 이미지는 인계 문서의 confidence 갤러리에 보존한다. `asmc-ros-noetic`의 ROS 환경에서 직접 실행한다.
 
 ```bash
 roslaunch asmc_camera camera_coco7.launch profile:=debug

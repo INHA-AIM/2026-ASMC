@@ -12,7 +12,7 @@ batch_mode: 2plus1
 batch_wait_ms: 10.0
 target_hz: 15.0
 target_hz_by_view: {front: 15.0, left: 15.0, right: 15.0}
-conf_thres: 0.50
+conf_thres: 0.40
 allowed_names: [person, dog, bicycle, car, motorcycle, bus, truck]
 device: cuda:0
 require_cuda: true

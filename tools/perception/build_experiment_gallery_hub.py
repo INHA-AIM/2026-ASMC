@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build one local catalogue of existing experiment pages, without changing them."""
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import html
 from html.parser import HTMLParser
 import json
@@ -32,6 +32,37 @@ def catalogue(root, output):
             pages.append(dict(group=relative.parts[0], path=relative.as_posix(),
                               href=quote(relative.as_posix(), safe='/'), title=title.strip()[:180]))
     return sorted(pages, key=lambda row: (row['group'], row['path']))
+
+
+def number_pages(root, pages):
+    """Keep identifiers and first registered file times stable across rebuilds.
+
+    Historic experiments have no uniformly recorded start time. File times are
+    explicitly labelled as gallery times, never represented as sensor/run times.
+    Removed entries remain reserved so an old bookmarked ID is never reused.
+    """
+    registry_path = root/'gallery-identifiers.json'
+    registry = json.loads(registry_path.read_text()) if registry_path.exists() else {}
+    used = [v['number'] for v in registry.values()]
+    if len(used) != len(set(used)):
+        raise ValueError('duplicate persistent gallery identifier')
+    number = max(used, default=0)
+    new = sorted((p for p in pages if p['path'] not in registry),
+                 key=lambda p: ((root/p['path']).stat().st_mtime, p['path']))
+    for row in new:
+        number += 1
+        timestamp = datetime.fromtimestamp((root/row['path']).stat().st_mtime, timezone.utc)
+        registry[row['path']] = dict(number=number, timestamp=timestamp.isoformat(),
+            time_basis='gallery_file_mtime_at_first_registration')
+    for row in pages:
+        metadata = registry[row['path']]
+        timestamp = datetime.fromisoformat(metadata['timestamp']).astimezone(timezone(timedelta(hours=9), 'KST'))
+        row.update(metadata)
+        row['experiment_id'] = 'E%03d' % metadata['number']
+        row['original_title'] = row['title']
+        row['title'] = '[%s · %s KST] %s' % (row['experiment_id'], timestamp.strftime('%Y-%m-%d %H:%M'), row['title'])
+    registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=2)+'\n')
+    return sorted(pages, key=lambda p: (p['timestamp'], p['number']), reverse=True)
 
 
 def check_local_links(root, pages):
@@ -71,14 +102,15 @@ def main():
     if not root.is_dir():
         parser.error('artifacts directory does not exist')
     output = root/'index.html'
-    pages = catalogue(root, output)
+    pages = number_pages(root, catalogue(root, output))
     data = json.dumps(pages, ensure_ascii=False).replace('<', '\\u003c')
-    featured = [('8개 조합 최종 선정', 'camera-coco7-live-v1/broad-model-summary-v1/index.html'),
+    featured = [('confidence 0.30/0.40/0.50 오검출 비교', 'camera-coco7-live-v1/confidence-followup-v3/index.html'),
+                ('8개 조합 최종 선정', 'camera-coco7-live-v1/broad-model-summary-v1/index.html'),
                 ('8개 모델 동일 RGB', 'camera-coco7-live-v1/broad-model-spawn-inspection50-v1/comparison.html'),
                 ('선정 모델 차체 mask 대조', 'camera-coco7-live-v1/broad-model-selected-mask-controls50-v1/index.html'),
                 ('기존 COCO7 실험', 'camera-coco7-live-v1/index.html')]
     featured_html = ' · '.join('<a href="'+quote(path, safe='/')+'" target="_blank" rel="noopener">'+
-        html.escape(label)+'</a>' for label, path in featured if (root/path).is_file())
+        html.escape(next((p['title'] for p in pages if p['path']==path),label))+'</a>' for label, path in featured if (root/path).is_file())
     updated = datetime.now(timezone.utc).astimezone().isoformat(timespec='seconds')
     document = '''<!doctype html><html lang="ko"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>ASMC 실험 갤러리 목차</title>
@@ -95,7 +127,7 @@ h2{font-size:22px;margin-top:30px}.tag{font-size:13px;color:#506277;margin-left:
 small{color:#506277}#empty{padding:20px}</style>
 <main><h1>ASMC 실험 갤러리 목차</h1>
 <p>카메라 모델·거리·mask·학습 자료와 LiDAR 비교 갤러리를 한곳에서 찾습니다.
-모든 링크는 새 탭으로 열립니다. 과거 실패와 이전 후보도 포함하며, 갤러리의 존재가 운영 수락을 뜻하지 않습니다.</p>
+E 번호는 고정된 갤러리 식별자이며 최신 시각순으로 정렬합니다. 표기 시각은 최초 등록 당시 HTML 파일의 생성·수정 시각(KST)으로, 실험 시작 시각은 아닙니다. 모든 링크는 새 탭으로 열립니다. 과거 실패와 이전 후보도 포함하며, 갤러리의 존재가 운영 수락을 뜻하지 않습니다.</p>
 <div class="latest"><b>최근 모델 비교</b> · FEATURED
 </div><div class="filters"><input id="query" type="search" placeholder="모델·거리·mask·실험 경로 검색" aria-label="갤러리 검색">
 <select id="group" aria-label="실험 종류"><option value="">모든 실험</option></select></div>
@@ -106,11 +138,11 @@ const groups=[...new Set(rows.map(r=>r.group))];
 for(const group of groups){const option=document.createElement('option');option.value=group;option.textContent=group;byId('group').append(option);}
 function draw(){const query=byId('query').value.trim().toLowerCase(),group=byId('group').value;
  const visible=rows.filter(r=>(!group||r.group===group)&&(!query||(r.title+' '+r.path).toLowerCase().includes(query)));
- const container=byId('pages');container.replaceChildren();let last;
- for(const row of visible){if(last!==row.group){const h=document.createElement('h2');h.textContent=row.group;container.append(h);last=row.group;}
+ const container=byId('pages');container.replaceChildren();
+ for(const row of visible){
   const article=document.createElement('article'),link=document.createElement('a'),path=document.createElement('code');
   link.href=row.href;link.target='_blank';link.rel='noopener';link.textContent=row.title||row.path;
-  path.textContent=row.path;article.append(link,path);container.append(article);}
+  path.textContent=row.group+' · '+row.path;article.append(link,path);container.append(article);}
  byId('count').textContent=visible.length+' / '+rows.length+'개 페이지';byId('empty').hidden=visible.length>0;}
 byId('query').addEventListener('input',draw);byId('group').addEventListener('change',draw);draw();</script></html>'''
     output.write_text(document.replace('UPDATED', updated).replace('FEATURED', featured_html).replace('DATA', data), encoding='utf-8')

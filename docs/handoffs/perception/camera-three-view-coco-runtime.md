@@ -6,10 +6,71 @@
 컨테이너 `/root/ws`가 어느 worktree를 읽는지 확인한 뒤 실행한다.
 폴더명과 Git 브랜치명은 다르며, build/source만으로 마운트 대상은 바뀌지 않는다.
 
+## Confidence 후속 선정과 M detect/1280 대비 차이
+
+모델·해상도·batch는 L detect/1280·3뷰15Hz·2+1을 유지하고, 생산자 컷만
+**0.50에서0.40으로 변경**했다. 기존 YOLO11m 설정은0.70·전방·4클래스였으므로
+숫자 컷이 같은 검출 품질을 뜻하지 않는다. 아래 M/L 비교는 이전 동일0.25 추론을
+동일0.50으로 후필터링한2250장 결과와 같은 회차 C6 선별값이다.
+
+| 지표 | M detect/1280 | L detect/1280 | 차이 |
+|---|---:|---:|---:|
+| TP |282|326|+44 (+15.6%)|
+| FP |20|28|+8|
+| macro F1 |0.2335|0.2676|+0.0342|
+| 높이20px 이상 GT recall |74.5%|81.4%|+7.0%p|
+| 동일 회차 C6 wall p95 최댓값 |73.3ms|88.4ms|+15.1ms|
+| 동일 회차 전체 VRAM peak |5570MiB|5753MiB|+183MiB|
+| 공통 안정 검출 객체의 최초 시점 |기준|먼저8·동일16·늦게1|추가 획득2|
+
+L1280을 각각 실제 predictor 컷0.30·0.40으로2252장 재추론했다. 기존 실제0.50과
+같은 GT·weight·mask·RGB SHA를 확인했다. 아래 표는 사용자가 검토한 정확히2장만
+제외한2250장 결과이며 원본2252장 점수도 보존한다. TP/FP는 프레임별 박스 수다.
+
+| 실제 predictor 컷 | TP | FP | precision | macro F1 | 높이20px 이상 recall |
+|---|---:|---:|---:|---:|---:|
+| 0.50 |326|27|92.4%|0.2677|81.4%|
+| **0.40** |**352**|**52**|**87.1%**|**0.2793**|**84.3%**|
+| 0.30 |369|89|80.6%|0.2867|87.0%|
+
+0.40은0.50의 정답을 잃지 않고26개를 회복하지만 FP25개가 추가된다.
+추가 FP는 다른 검수 라벨과 겹치는13개·중복1개·GT 미대응11개다.
+전체52개는 라벨 혼동28·중복3·미대응21개다. 미대응을 모두 배경이라고 확정하지
+않으며, 예를 들어 먼 사람 검출이 GT와 IoU0.5를 못 넘은 사례도 있다.
+0.30은0.50 대비 정답43개 회복·FP62개 추가다. 수학적 F1은0.30이 가장 높지만
+0.40을 조기 검출과 오검출의 개발 절충값으로 선택했다.
+
+[전체 오검출·회복 정답 갤러리](http://localhost:8768/camera-coco7-live-v1/confidence-followup-v3/index.html)는
+컷·오류 종류·0.50 대비 추가 여부로 필터한다. 모든 FP와 회복 GT를 보여주며,
+[터널 배경 truck0.402](http://localhost:8768/camera-coco7-live-v1/confidence-followup-v3/0166.jpg)은
+판제에서 단순 클래스·confidence만으로 사용하기 어려운 사례다. 이 실패를 카메라
+측 후속 보완 대상으로 남긴다. 근거리 실제 객체를 함께 지울 수 있는 크기·위치 규칙은
+추가하지 않았다. 이번 컷 선정으로 전체 스택 운영 수락이나 FP 안전성을 주장하지 않는다.
+
+0.40 C6 확인은 SUNNY/FOGGY 각3회다. YOLO14.65–14.95Hz, p95≤97.7ms,
+전체 GPU peak5541MiB, 중복·역행0이었다. 카메라 공급은5/6회 통과하고,
+SUNNY r3은 YOLO 최대 공백319.3ms·TwinLite427.6ms·ResNet356.5ms로 실패했다.
+같은 ACTIVE 약4.3초 지점에서 전방/측방 입력 공백288.7/350.2/266.5ms,
+camera4 입력386.8ms, resource sampler 호출356.0ms가 겹쳤다. 입력 stamp 간격도
+늘었으므로 단순 YOLO 연산 과부하로 확정하지 않는다. cutoff가 원인이 아니라고
+입증한 것도 아니다. 모든 실행의 판제 trajectory deadline 실패와 이 신규 공백을
+보존하고 **0.40은 개발 선정, 전체 운영 수락은 보류**한다. 반복을 선별해6/6 통과로
+표시하거나 공백 gate를 완화하지 않았다.
+
+동일0.40 mask ON/OFF2252장에서는 전방1·좌측1·우측0 신규 class-aware 누락과
+전방1·좌측1 회복이 있었다. 전방000270은 car0.404가 사라지고 truck0.510이
+동일 형상에 남은 라벨 누락이며, 좌측000233은 높이11px 차량 박스 소실이다.
+이는 이전0.50의 실패2장과 다른 관측이며 따로 보존한다. 사용자 선택에 따라 mask ON을
+유지하되 신규 실패0 수락은 주장하지 않는다. 고정0.40으로 이미 열람한 heldout2474장도
+재확인해 TP977/FP68/macroF1 0.280890이었다(이전0.50 TP899/FP34/F1 0.268085).
+이것은 컷 선정 후 회귀이며 새로운 독립 시험 자료가 아니고 재튜닝에 쓰지 않았다.
+
+최신 수치·원본 SHA·실패는 [confidence 후속 증거](../../../config/baselines/evidence/camera_coco7_live_v1/confidence_followup_decision.json)를 따른다.
+
 ## 현재 기본 모델: 8개 조합 재검토
 
 현재 개발 기본값은 **YOLO26l detect / 전방1280 / 좌우640×480 / TensorRT FP16 /
-2+1 batch / 뷰별15Hz / confidence0.50**이다.
+2+1 batch / 뷰별15Hz / confidence0.40**이다.
 `camera_coco7.launch`가 `config/camera/yolo26l_detect_coco7_three_view.yaml`을 선택한다.
 기존 M detect 설정과 M/L seg 비교 설정은 재현·롤백용으로 보존한다.
 
@@ -93,7 +154,9 @@ truck0.535가 남았다. 따라서 객체 박스 자체 소실과 라벨 소실�
 [통합 갤러리 목차](http://localhost:8768/)에서 검색·실험 종류 필터로 카메라와 LiDAR
 갤러리를 모두 찾는다. [8개 조합 요약](http://localhost:8768/camera-coco7-live-v1/broad-model-summary-v1/index.html)과
 [같은 RGB 모델 비교](http://localhost:8768/camera-coco7-live-v1/broad-model-spawn-inspection50-v1/comparison.html)를
-최근 링크에 둔다. 기존8766/8767 개별 주소는 유지한다. 재생성은 저장소에서
+최근 링크에 둔다. 각 제목의 E 번호는 재생성해도 바뀌지 않는다.
+시각은 최초 목차 등록 당시 갤러리 HTML의 수정 시각을 KST로 고정한 것으로,
+실험 시작 시간·bag source stamp와 구분한다. 최신 갤러리 시각순으로 정렬한다. 기존8766/8767 개별 주소는 유지한다. 재생성은 저장소에서
 `python3 tools/perception/build_experiment_gallery_hub.py --artifacts ../artifacts`다.
 서버 재시작은 같은 위치에서 `python3 -m http.server 8768 --bind 127.0.0.1 --directory ../artifacts`다.
 로컬 artifact가 없는 다른 PC에는 원본 증거 파일도 별도로 전달해야 한다.
@@ -111,8 +174,8 @@ rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
 컨테이너·bridge는 별도로 준비한다. planning은 세 모델 STANDBY, debug는 ACTIVE다.
 차선 피팅 결과의 주행 소비는 계속 음영 ODD로 한정한다. 판제는 구간과 소비를 결정한다.
 `objects_conf_thres:=0.55`로 생산자 시작 컷을 바꾸거나 YAML의 `conf_thres`를 수정한다.
-0.50은 조기 검출과 FP의 절충값이며 selection macro F1의 수학적 최대라고 하지 않는다.
-0.30 부근 F1은 더 높지만 FP가 크게 증가한다. 판제의 메시지 소비 컷과 어댑터 추가 컷은
+현재0.40은 위의 실제 재추론으로 선정한 개발 절충값이다. 이전0.50 선정의 원본 증거는 유지한다.
+0.30의 F1은 더 높지만 FP가 크게 증가한다. 판제의 메시지 소비 컷과 어댑터 추가 컷은
 독립적이고, 생산자가 제거한 낮은 confidence 결과를 소비자에서 복원할 수는 없다.
 3뷰 차체 mask는 기본 ON이다. 자차 오검출을 억제하는 사용자 선택을 유지하고,
 새 모델의 ON/OFF 차이도 최신 증거에 남긴다. 이전 누락 예외로 신규 실패를 지우지 않는다.
