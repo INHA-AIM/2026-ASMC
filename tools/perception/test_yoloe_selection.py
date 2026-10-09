@@ -89,6 +89,7 @@ class YoloeSelectionTest(unittest.TestCase):
             header('car')
             cfg=configuration(root,'m',640,['car'],'/models')
             self.assertEqual('source',cfg['label_mode'])
+            self.assertFalse(cfg['batched_runtime'])  # Override the preceding COCO launch's private parameter.
             header('truck')
             with self.assertRaises(ValueError):configuration(root,'m',640,['car'],'/models')
             header('car');checkpoint.write_bytes(b'l-checkpoint')

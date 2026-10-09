@@ -129,8 +129,10 @@ def main():
                 # Pedestrian Spawn snaps to the ground. In this MORAI build its
                 # SetTransform z is ground-relative, unlike vehicle/obstacle.
                 # Preserve that native placement rather than adding world z.
-                if row['actor_type']=='pedestrian':
+                native_ground=(row['actor_type']=='pedestrian' or row.get('height_policy')=='native_spawn_ground_snap')
+                if native_ground:
                     case['height_policy']='native pedestrian spawn ground snap; no SetTransform'
+                    if row['actor_type']!='pedestrian':case['height_policy']='explicit native obstacle ground snap; bbox height unreliable; visual review required'
                 else:
                     result=actors.SetTransform(SetTransformParam(actor_info=info,transform=pose),timeout=10)
                     if result.status!=1: raise RuntimeError(str(result))
@@ -142,7 +144,10 @@ def main():
                 case['bbox_center_distance_from_ego_anchor_m']=math.sqrt(sum(
                     (getattr(settled.bounding_box.location,k)-getattr(initial.transform.location,k))**2 for k in 'xyz'))
                 case['ground_bottom_error_m']=(settled.bounding_box.location.z-settled.bounding_box.extent.z)-ground
-                if abs(case['ground_bottom_error_m'])>.2:
+                case['placement_height_error_m']=(settled.transform.location.z-ground if
+                    row.get('height_policy')=='native_spawn_ground_snap' else case['ground_bottom_error_m'])
+                case['placement_height_gate_basis']='native_ground_anchor' if row.get('height_policy')=='native_spawn_ground_snap' else 'bbox_bottom'
+                if abs(case['placement_height_error_m'])>.2:
                     raise RuntimeError('asset placement height not validated')
                 if row['actor_type']=='vehicle':
                     case['vehicle_spec']=MessageToDict(actors.GetVehicleSpec(info,timeout=10))

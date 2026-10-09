@@ -8,6 +8,7 @@ model_kind: yoloe
 runtime_backend: tensorrt
 seg_experiment: true
 batched_experiment: true
+batched_runtime: false
 task: segment
 front_width: 960
 batch_mode: 2plus1

@@ -42,7 +42,7 @@ def main():
             # Preserve floating/spawn-failed fixtures in the registry and index,
             # but do not turn them into performance evidence for ground actors.
             if case.get('error') or not case.get('state') or (
-                    abs(case.get('ground_bottom_error_m', 0)) > .2):
+                    abs(case.get('placement_height_error_m',case.get('ground_bottom_error_m', 0))) > .2):
                 rejected.append(dict(registry=str(capture), index=case['index'],
                                      reason=case.get('error', 'ground placement failed')))
                 continue

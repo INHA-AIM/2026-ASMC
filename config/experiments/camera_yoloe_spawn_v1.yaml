@@ -35,6 +35,8 @@ representatives:
   actor_type: obstacle
   expected_label: scooter
   source: live GetAvailableObject; image identity requires review
+  height_policy: native_spawn_ground_snap
+  height_note: GetActorState bbox bottom is below visible wheels; corrected world-z floats this asset. Native anchor and RGB must both be reviewed.
 - api_name: ElectricScooter1
   actor_type: obstacle
   expected_label: electric scooter

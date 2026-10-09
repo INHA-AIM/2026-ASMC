@@ -26,33 +26,42 @@ def main():
     p.add_argument('--root',type=Path,required=True)
     p.add_argument('--reference',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--quality-only',action='store_true',help='Freeze quality screening before timed trials; do not read partial live/spawn files')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
     manifest=a.reference/'gt-v2/frames.jsonl';digest=hashlib.sha256(manifest.read_bytes()).hexdigest()
     rows=[r for r in load_jsonl(manifest) if r['split']=='selection' and r['annotation_complete']]
     report=dict(gt_manifest_sha256=digest,frames=len(rows),quality=[],live=[],spawn_observations=[],
         evaluation_groups=EVALUATION_GROUPS,
         scope='Four verified COCO7 subtypes in Capture; new obstacles are qualitative observations, not recall. No operational promotion.')
+    conditions=json.loads((a.reference/'broad-model-conditions-v1.json').read_text())
+    exclusions=conditions['reviewed_exclusions']
+    report['previously_user_reviewed_exclusions']=exclusions
     sources=[(m,w,a.root/'quality-v1'/f'{m}-{w}-selection') for m,w in COMBINATIONS]
     sources += [('yolo26l',1280,a.reference/'confidence-followup-actual40-v1/yolo26l-1280-selection')]
     for model,width,directory in sources:
         s=json.loads((directory/'summary.json').read_text())
         if s['gt_manifest_sha256']!=digest:raise ValueError('different GT manifest')
         gt,predictions=selected_frames(rows,load_jsonl(directory/'predictions.jsonl'),[])
+        reviewed_gt,reviewed_predictions=selected_frames(rows,predictions,exclusions)
         best=best_threshold(s['thresholds'])
         fixed=score(gt,predictions,.4)
+        reviewed_scores=[score(reviewed_gt,reviewed_predictions,t['confidence']) for t in s['thresholds']]
+        reviewed_best=max(reviewed_scores,key=lambda t:(t['pooled']['macro_f1'],t['confidence']))
         report['quality'].append(dict(model=model,width=width,frames=s['frames'],
             predictor_cutoff=s['model']['conf_thres'],fixed=fixed,selection_best=best,
             selected=score(gt,predictions,best['confidence']) if best else None,
+            reviewed_fixed=score(reviewed_gt,reviewed_predictions,.4),
+            reviewed_selection_best=reviewed_best,reviewed_thresholds=reviewed_scores,
             thresholds=s['thresholds'],latency_ms=s['latency_ms'],
             summary_sha256=hashlib.sha256((directory/'summary.json').read_bytes()).hexdigest(),
             predictions_sha256=hashlib.sha256((directory/'predictions.jsonl').read_bytes()).hexdigest()))
-    for path in sorted(a.root.glob('live-*/**/report.json')):
+    for path in ([] if a.quality_only else sorted(a.root.glob('live-*/**/report.json'))):
         r=json.loads(path.read_text())
         if 'job' not in r:continue
         report['live'].append(dict(path=str(path),job=r['job'],complete=r.get('observation_window_completed',False),
             passed=r['passed'],failures=r['failures'],measurements=r.get('measurements'),
             target_attainment=r.get('target_attainment'),resources=r.get('resources_startup_and_active'),planning=r.get('planning')))
-    for path in sorted((a.root/'spawn-inspection-v1').glob('*/predictions.jsonl')):
+    for path in ([] if a.quality_only else sorted((a.root/'spawn-inspection-v1').glob('*/predictions.jsonl'))):
         groups=defaultdict(list)
         for row in load_jsonl(path):groups[row['capture_id'],row['case']].append(row)
         for (capture,case),observations in groups.items():

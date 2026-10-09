@@ -28,7 +28,7 @@ def configuration(directory, scale, width, names, runtime_root):
     base=str(Path(runtime_root)/scale)
     return dict(model_id=f'yoloe-26{scale}-seg',weights=base+'/'+engine.name,expected_sha256=sha(engine),source_checkpoint_sha256=sha(checkpoint),
         expected_prompt_sha256=sha(prompts),prompt_embeddings=base+'/'+prompts.name,
-        model_kind='yoloe',runtime_backend='tensorrt',seg_experiment=True,batched_experiment=True,
+        model_kind='yoloe',runtime_backend='tensorrt',seg_experiment=True,batched_experiment=True,batched_runtime=False,
         task='segment',front_width=width,batch_mode='2plus1',batch_wait_ms=10.,label_mode='source',
         allowed_names=names,conf_thres=.4,device='cuda:0',require_cuda=True,views=['front','left','right'],
         target_hz_by_view=dict(front=15.,left=15.,right=15.))
