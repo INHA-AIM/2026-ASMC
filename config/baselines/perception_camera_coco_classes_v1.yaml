@@ -1,0 +1,450 @@
+schema_version: 1
+experiment_id: camera_coco_classes_v1
+base_main: a8c4f3b9dd15edee4d5b6434934ffe52011efcb8
+implementation_head: fb8fb4d469ebb3a7905f703bc7bb17528db0b78f
+status: experiment_complete_not_promoted
+operational_defaults_changed: false
+all_classes_default_promoted: false
+legacy_bbox_allowed_names:
+- bus
+- truck
+- person
+- car
+camera_object_array_md5: 310c671afb3693e7909db6453d115b79
+validation:
+  detection_unit_tests:
+    tests: 46
+    failures: 0
+  measurement_unit_tests:
+    tests: 8
+    failures: 0
+  actual_ros_worker_and_adapter_profiles:
+  - baseline
+  - all
+  actual_ros_worker_and_adapter_passed: true
+  expanded_launch_nodes:
+  - /camera_object_detector
+  - /camera_object_visualizer
+  baseline_debug_off_nodes:
+  - /camera_object_detector
+  protected_runtime_paths_unchanged: true
+  outer_workspace:
+    tests: 537
+    errors: 0
+    failures: 1
+    known_facade_failure: test_planning_launches_use_the_canonical_traffic_light_model
+  jamming_retry:
+    tests: 94
+    errors: 0
+    failures: 0
+  main_nested:
+    tests: 296
+    errors: 0
+    failures: 0
+  vendor_expanded_scope:
+    tests: 377
+    failures: 18
+    scope: includes Main and third-party Velodyne
+    required_pcap_files_missing: true
+    driver_exits_and_hz_diagnostic_timeouts_preserved: true
+    vendor_code_changed: false
+    accepted_as_pass: false
+  contract_validators_passed: true
+  final_ci:
+    authority: GitHub PR73 checks on final HEAD
+    required_jobs:
+    - catkin-build
+    - planning-catkin-build
+    - validated-lidar-build
+measurements:
+  exact_regression:
+    status: pass
+    frames: 3514
+    exact_frames: 3514
+    errors: []
+    boundary_exceptions: []
+    weight_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+    bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+    bag_sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+    legacy_source_sha256: 1cd5c1053245f3d3efbb63aac3cc311572bbbd51622b1ccd25976dd67a943cde
+    python: "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]"
+    interpreter: /usr/bin/python3
+    torch: 2.1.2+cu118
+    ultralytics: 8.4.150
+    gpu: NVIDIA GeForce RTX 4060 Ti
+    backend:
+      backend: ultralytics
+      weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+      weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+      device: cuda:0
+      model_device: cuda:0
+      ultralytics: 8.4.150
+      torch: 2.1.2+cu118
+      conf_thres: 0.7
+      allowed_names:
+      - bus
+      - truck
+      - person
+      - car
+      predict_overrides:
+        iou: 0.7
+        max_det: 300
+        agnostic_nms: false
+      warmup_ms: 901.6
+      model_load_ms: 347.5929179985542
+    hood_mask: false
+    duration_sec: 70.47723135098931
+    latency:
+      old_ms:
+        p50: 8.294230516185053
+        p95: 14.579364082601385
+      new_ms:
+        p50: 7.483391513233073
+        p95: 13.989695395866873
+  same_frame_class_expansion:
+    models:
+      baseline:
+        backend: ultralytics
+        weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+        weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+        device: cuda:0
+        model_device: cuda:0
+        ultralytics: 8.4.150
+        torch: 2.1.2+cu118
+        conf_thres: 0.7
+        allowed_names:
+        - bus
+        - truck
+        - person
+        - car
+        predict_overrides:
+          iou: 0.7
+          max_det: 300
+          agnostic_nms: false
+        warmup_ms: 515.3
+        model_load_ms: 337.12934897630475
+      all:
+        backend: ultralytics
+        weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+        weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+        device: cuda:0
+        model_device: cuda:0
+        ultralytics: 8.4.150
+        torch: 2.1.2+cu118
+        conf_thres: 0.7
+        allowed_names:
+        - person
+        - bicycle
+        - car
+        - motorcycle
+        - airplane
+        - bus
+        - train
+        - truck
+        - boat
+        - traffic light
+        - fire hydrant
+        - stop sign
+        - parking meter
+        - bench
+        - bird
+        - cat
+        - dog
+        - horse
+        - sheep
+        - cow
+        - elephant
+        - bear
+        - zebra
+        - giraffe
+        - backpack
+        - umbrella
+        - handbag
+        - tie
+        - suitcase
+        - frisbee
+        - skis
+        - snowboard
+        - sports ball
+        - kite
+        - baseball bat
+        - baseball glove
+        - skateboard
+        - surfboard
+        - tennis racket
+        - bottle
+        - wine glass
+        - cup
+        - fork
+        - knife
+        - spoon
+        - bowl
+        - banana
+        - apple
+        - sandwich
+        - orange
+        - broccoli
+        - carrot
+        - hot dog
+        - pizza
+        - donut
+        - cake
+        - chair
+        - couch
+        - potted plant
+        - bed
+        - dining table
+        - toilet
+        - tv
+        - laptop
+        - mouse
+        - remote
+        - keyboard
+        - cell phone
+        - microwave
+        - oven
+        - toaster
+        - sink
+        - refrigerator
+        - book
+        - clock
+        - vase
+        - scissors
+        - teddy bear
+        - hair drier
+        - toothbrush
+        predict_overrides:
+          iou: 0.7
+          max_det: 300
+          agnostic_nms: false
+        warmup_ms: 108.4
+        model_load_ms: 317.2572950134054
+    mask:
+      enabled: true
+      config_sha256: 4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403
+      polygon_normalized:
+      - - 0.051562
+        - 0.998611
+      - - 0.947656
+        - 0.998611
+      - - 0.821875
+        - 0.888889
+      - - 0.786719
+        - 0.863889
+      - - 0.748437
+        - 0.843056
+      - - 0.650781
+        - 0.816667
+      - - 0.539844
+        - 0.806944
+      - - 0.377344
+        - 0.8125
+      - - 0.313281
+        - 0.823611
+      - - 0.257031
+        - 0.840278
+      - - 0.2125
+        - 0.863889
+      - - 0.177344
+        - 0.888889
+    experiment_config_sha256: 21fd6593baf4afb886b6ca3ff572dac7e90728a02330e07297bca29957f32876
+    bags:
+      camera:
+        frames: 3514
+        label_counts:
+          traffic light: 294
+          train: 27
+          bench: 4
+        common_label_exact_frames: 3514
+        common_label_difference_frames: 0
+        gallery_selection:
+          bench:
+          - 1661
+          - 2056
+          - 2057
+          traffic light:
+          - 950
+          - 1030
+          - 1179
+          - 1626
+          train:
+          - 1645
+          - 1681
+          - 1682
+          - 2741
+        expected_frames: 3514
+      primary:
+        frames: 979
+        label_counts:
+          truck: 2
+          car: 330
+        common_label_exact_frames: 979
+        common_label_difference_frames: 0
+        gallery_selection: {}
+        expected_frames: null
+      shadow:
+        frames: 494
+        label_counts: {}
+        common_label_exact_frames: 494
+        common_label_difference_frames: 0
+        gallery_selection: {}
+        expected_frames: null
+    gt:
+      gt287:
+        frames: 287
+        manifest_sha256: f5f763395ddcef3da6904a1de22729b9d6923622890faff10a5761fea19a053d
+        counts:
+          gt_person: 386
+          baseline_matches: 195
+          all_matches: 195
+          new_misses: 0
+          gt_vehicle: 540
+        new_miss_frames: []
+        scope: existing person/vehicle GT; new COCO categories lack independent GT
+      challenges39:
+        frames: 39
+        manifest_sha256: b96a282ce59b23371194577ad6dcbcf239bcd30c0c5c1bbb2b29560975829249
+        counts:
+          gt_vehicle: 24
+          baseline_matches: 18
+          all_matches: 18
+          new_misses: 0
+        new_miss_frames: []
+        scope: existing person/vehicle GT; new COCO categories lack independent GT
+    gallery_review: pending_user_review
+    semantics: class coverage experiment; not camera-only driving acceptance
+    inference_ms:
+      baseline:
+        samples: 5313
+        p50: 7.638333016075194
+        p95: 14.273215405410154
+        p99: 15.523907822789624
+        maximum: 23.576323001179844
+      all:
+        samples: 5313
+        p50: 7.640550989890471
+        p95: 14.176189014688134
+        p99: 15.60611536493525
+        maximum: 19.254122977145016
+    complete: true
+  matrix:
+    protocol_complete: true
+    expected_trials: 20
+    completed_trials: 20
+    performance_passed_trials: 20
+    performance_failed_trials: []
+    stamp_duplicate_total: 0
+    stamp_reverse_total: 0
+    profiles:
+      baseline-no-debug:
+        hz:
+        - 19.84271910117573
+        - 19.793481025942473
+        - 19.897043181987094
+        wall_latency_p95_ms:
+        - 25.807164213620126
+        - 25.833572501142044
+        - 25.910342698625755
+        gpu_utilization_p95_percent:
+        - 40.0
+        - 40.0
+        - 40.0
+        gpu_global_memory_max_mib:
+        - 2518.0
+        - 2579.0
+        - 2586.0
+        all_passed: true
+      baseline-debug:
+        hz:
+        - 19.894134217512313
+        - 19.895154471481746
+        - 19.895192016506535
+        wall_latency_p95_ms:
+        - 23.324606151436452
+        - 23.673616950691212
+        - 23.85126430162927
+        gpu_utilization_p95_percent:
+        - 41.05
+        - 38.0
+        - 42.05
+        gpu_global_memory_max_mib:
+        - 2614.0
+        - 2609.0
+        - 2560.0
+        all_passed: true
+      all-no-debug:
+        hz:
+        - 19.89273567621761
+        - 19.896106899900854
+        - 19.89797740242195
+        wall_latency_p95_ms:
+        - 24.92248629860114
+        - 26.245156965160277
+        - 24.277926559443586
+        gpu_utilization_p95_percent:
+        - 40.14999999999999
+        - 40.0
+        - 42.05
+        gpu_global_memory_max_mib:
+        - 2613.0
+        - 2574.0
+        - 2658.0
+        all_passed: true
+      all-debug:
+        hz:
+        - 19.89463325753051
+        - 19.894557950112087
+        - 19.844488310459596
+        wall_latency_p95_ms:
+        - 24.294103404099587
+        - 24.177006092213556
+        - 25.93142039841041
+        gpu_utilization_p95_percent:
+        - 41.0
+        - 39.05
+        - 41.0
+        gpu_global_memory_max_mib:
+        - 2577.0
+        - 2581.0
+        - 2597.0
+        all_passed: true
+    fusion:
+      primary:
+        baseline_matched:
+        - 646
+        - 647
+        all_matched:
+        - 646
+        - 646
+        old_stable_observations: 7703
+        new_stable_classification_differences: 0
+        unmatched_common_observations: 1908
+        common_processed_lidar_stamps: 648
+        offset_p95_max_ms: 34.5
+        matched_at_least_baseline_lower_bound: true
+        matched_at_least_best_baseline: false
+        classification_gate_pass: true
+      shadow:
+        baseline_matched:
+        - 207
+        - 207
+        all_matched:
+        - 207
+        - 207
+        old_stable_observations: 1889
+        new_stable_classification_differences: 0
+        unmatched_common_observations: 1163
+        common_processed_lidar_stamps: 208
+        offset_p95_max_ms: 24.8
+        matched_at_least_baseline_lower_bound: true
+        matched_at_least_best_baseline: true
+        classification_gate_pass: true
+limitations:
+- New COCO labels lack independent GT in the current bags.
+- Infrastructure/coarse obstacle classification does not authorize avoidance.
+- Existing fixed hood-mask loss exception does not cover class-expansion losses.
+- PR72 common geometry and roll remain OFF for this comparison.
+- Primary all repeats match the baseline lower bound but are one pair below the best baseline run.
+- Stable class gate excludes unmatched observations and is not independent object recall.
+- COCO expansion does not detect the unsupported shadow-bag obstacles at confidence 0.7.
+evidence: config/baselines/evidence/camera_coco_classes_v1

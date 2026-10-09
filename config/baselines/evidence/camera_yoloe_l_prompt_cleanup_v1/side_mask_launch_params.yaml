@@ -1,0 +1,173 @@
+/camera_object_detector/allowed_names:
+- person
+- dog
+- deer
+- animal
+- bicycle
+- car
+- truck
+- bus
+- motorcycle
+- scooter
+- electric scooter
+- bollard
+- box
+- cargo box
+- wooden box
+- wooden crate
+- cardboard box
+- pallet
+- concrete barrier
+- road barrier
+- plastic road barrier
+- steel barricade
+- barricade
+- lane separator
+- traffic cone
+- traffic barrel
+- barrel
+- drum
+- road sign
+- speed limit sign
+- stop sign
+- traffic light
+- speed bump
+- manhole cover
+- baby stroller
+- stroller
+- tree
+- streetlight
+- utility pole
+- guardrail
+- fence
+- fire
+/camera_object_detector/batch_mode: 2plus1
+/camera_object_detector/batch_wait_ms: 10
+/camera_object_detector/batched_experiment: true
+/camera_object_detector/class_groups/default_group: obstacle
+/camera_object_detector/class_groups/excluded: []
+/camera_object_detector/class_groups/groups/animal:
+- bird
+- cat
+- dog
+- horse
+- sheep
+- cow
+- elephant
+- bear
+- zebra
+- giraffe
+- deer
+- animal
+/camera_object_detector/class_groups/groups/person:
+- person
+- pedestrian
+/camera_object_detector/class_groups/groups/vehicle:
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+- train
+- vehicle
+- sedan
+- suv
+- mpv
+- wagon
+- electric scooter
+- scooter
+/camera_object_detector/conf_thres: 0.7
+/camera_object_detector/debug_masks: true
+/camera_object_detector/debug_raw: false
+/camera_object_detector/device: cuda:0
+/camera_object_detector/ego_hood_filter: false
+/camera_object_detector/ego_hood_filter_config: /root/ws/src/asmc_camera/config/camera/yolo_ego_hood_filter_v1.yaml
+/camera_object_detector/expected_prompt_sha256: 15e87fd9192435e26da45261be5f7dc5ae1a9b64062385ef88db013f888b4225
+/camera_object_detector/expected_sha256: 88a6c7518cf43acd80a724b01be7d776c884f6575c7bd47e4f4c0fe26d99a165
+/camera_object_detector/hood_mask: true
+/camera_object_detector/hood_mask_config: /root/ws/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml
+/camera_object_detector/image_topic: /image_jpeg/compressed
+/camera_object_detector/initial_mode: 2
+/camera_object_detector/managed: true
+/camera_object_detector/model_kind: yoloe
+/camera_object_detector/prompt_embeddings: /data/models/camera_yoloe_l_v1/rich42.npz
+/camera_object_detector/require_cuda: true
+/camera_object_detector/runtime_backend: tensorrt
+/camera_object_detector/seg_experiment: true
+/camera_object_detector/side_ego_mask: true
+/camera_object_detector/side_ego_mask_configs/left: /root/ws/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml
+/camera_object_detector/side_ego_mask_configs/right: /root/ws/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml
+/camera_object_detector/source_checkpoint_sha256: a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9
+/camera_object_detector/target_hz: 20.0
+/camera_object_detector/views:
+- front
+- left
+- right
+/camera_object_detector/weights: /data/models/camera_yoloe_l_v1/rich42.engine
+/camera_object_visualizer/allowed_names:
+- person
+- dog
+- deer
+- animal
+- bicycle
+- car
+- truck
+- bus
+- motorcycle
+- scooter
+- electric scooter
+- bollard
+- box
+- cargo box
+- wooden box
+- wooden crate
+- cardboard box
+- pallet
+- concrete barrier
+- road barrier
+- plastic road barrier
+- steel barricade
+- barricade
+- lane separator
+- traffic cone
+- traffic barrel
+- barrel
+- drum
+- road sign
+- speed limit sign
+- stop sign
+- traffic light
+- speed bump
+- manhole cover
+- baby stroller
+- stroller
+- tree
+- streetlight
+- utility pole
+- guardrail
+- fence
+- fire
+/camera_object_visualizer/batch_mode: 2plus1
+/camera_object_visualizer/batch_wait_ms: 10
+/camera_object_visualizer/batched_experiment: true
+/camera_object_visualizer/conf_thres: 0.7
+/camera_object_visualizer/debug_raw: false
+/camera_object_visualizer/device: cuda:0
+/camera_object_visualizer/ego_hood_filter: false
+/camera_object_visualizer/ego_hood_filter_config: /root/ws/src/asmc_camera/config/camera/yolo_ego_hood_filter_v1.yaml
+/camera_object_visualizer/expected_prompt_sha256: 15e87fd9192435e26da45261be5f7dc5ae1a9b64062385ef88db013f888b4225
+/camera_object_visualizer/expected_sha256: 88a6c7518cf43acd80a724b01be7d776c884f6575c7bd47e4f4c0fe26d99a165
+/camera_object_visualizer/hood_mask: true
+/camera_object_visualizer/hood_mask_config: /root/ws/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml
+/camera_object_visualizer/image_topic: /image_jpeg/compressed
+/camera_object_visualizer/model_kind: yoloe
+/camera_object_visualizer/prompt_embeddings: /data/models/camera_yoloe_l_v1/rich42.npz
+/camera_object_visualizer/require_cuda: true
+/camera_object_visualizer/runtime_backend: tensorrt
+/camera_object_visualizer/seg_experiment: true
+/camera_object_visualizer/source_checkpoint_sha256: a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9
+/camera_object_visualizer/views:
+- front
+- left
+- right
+/camera_object_visualizer/weights: /data/models/camera_yoloe_l_v1/rich42.engine

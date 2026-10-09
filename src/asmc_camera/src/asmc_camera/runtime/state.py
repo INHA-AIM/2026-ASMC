@@ -10,7 +10,8 @@ STANDBY, PREPARE, ACTIVE = range(3)
 
 class InferenceState:
     def __init__(self, views, managed=False, initial_mode=STANDBY, target_hz=10.,
-                 warmed_up=True, freshness_sec=.35, clock=time.monotonic, trace=None):
+                 warmed_up=True, freshness_sec=.35, clock=time.monotonic, trace=None,
+                 target_hz_by_view=None):
         self.views = tuple(views)
         if not self.views or initial_mode not in (STANDBY, PREPARE, ACTIVE):
             raise ValueError('invalid views or initial mode')
@@ -22,12 +23,18 @@ class InferenceState:
         self.managed = managed
         self.mode = initial_mode if managed else ACTIVE
         self.target_hz, self.warmed_up = target_hz, warmed_up
+        self.target_hz_by_view = dict(target_hz_by_view or {})
+        if (set(self.target_hz_by_view)-set(self.views) or
+                any(not math.isfinite(v) or not 0 < v <= 120
+                    for v in self.target_hz_by_view.values())):
+            raise ValueError('invalid per-view target rates')
         self.generation = 0
         self.latest_input = {v: 0 for v in self.views}
         self.latest_output = {v: 0 for v in self.views}
         self.completed_at = {v: -float('inf') for v in self.views}
         self.hits = {v: 0 for v in self.views}
         self.cutoff, self.last_source, self.next_at = 0, 0, 0.
+        self.next_by_view = {v: 0. for v in self.views}
         self.samples = deque(maxlen=200)
         self.successful_batches = self.errors = 0
         self.last_output_valid = False
@@ -56,6 +63,7 @@ class InferenceState:
         self.completed_at = {v: -float('inf') for v in self.views}
         self.samples.clear()
         self.next_at = 0.
+        self.next_by_view = {v: 0. for v in self.views}
         self.last_output_valid = False
 
     def request(self, mode, target_hz=0.):
@@ -65,10 +73,13 @@ class InferenceState:
             if not math.isfinite(target_hz) or target_hz < 0 or target_hz > 120:
                 return False, self.generation, 'target_hz_must_be_zero_or_in_(0,120]'
             target = target_hz or self.target_hz
-            if self.managed and mode == self.mode and target == self.target_hz:
+            if (self.managed and mode == self.mode and target == self.target_hz
+                    and (not target_hz or not self.target_hz_by_view)):
                 return True, self.generation, 'unchanged'
             self.managed = True
             self.mode, self.target_hz = mode, target
+            if target_hz:
+                self.target_hz_by_view.clear()
             self.generation += 1
             self.cutoff = max(self.latest_input.values())
             self._reset()
@@ -76,22 +87,29 @@ class InferenceState:
             self.record('request_accepted', target_hz=target, source_cutoff_ns=self.cutoff)
             return True, self.generation, 'accepted_not_ready'
 
-    def begin(self, stamps):
+    def begin(self, stamps, per_view=False):
         with self.lock:
             now = self.clock()
-            if self.mode == STANDBY or (self.managed and now + .002 < self.next_at):
-                if self.mode != STANDBY:
-                    self.record('rate_wait', stamps=stamps, deadline=self.next_at)
-                return None
             if not stamps or any(v not in self.views or n <= 0 for v, n in stamps.items()):
+                return None
+            deadline = max((self.next_by_view.get(v, 0.) for v in stamps), default=0.) if per_view else self.next_at
+            if self.mode == STANDBY or (self.managed and now + .002 < deadline):
+                if self.mode != STANDBY:
+                    self.record('rate_wait', stamps=stamps, deadline=deadline)
                 return None
             if self.managed and any(n <= self.cutoff or n <= self.latest_output[v]
                                     for v, n in stamps.items()):
                 return None
             if self.managed:
-                self.next_at = (now + 1. / self.target_hz if not self.next_at
-                                else max(self.next_at + 1. / self.target_hz, now + .001))
-            self.record('begin', stamps=stamps, deadline=self.next_at)
+                if per_view:
+                    for view in stamps:
+                        old = self.next_by_view[view]
+                        hz = self.target_hz_by_view.get(view, self.target_hz)
+                        self.next_by_view[view] = now + 1./hz if not old else max(old+1./hz, now+.001)
+                else:
+                    self.next_at = (now + 1. / self.target_hz if not self.next_at
+                                    else max(self.next_at + 1. / self.target_hz, now + .001))
+            self.record('begin', stamps=stamps, deadline=deadline, per_view=per_view)
             return self.generation
 
     @contextmanager

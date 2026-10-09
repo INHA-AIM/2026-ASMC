@@ -11,6 +11,7 @@ import unittest
 import cv2
 import numpy as np
 import rospy
+import rospkg
 import rostest
 from asmc_msgs.msg import LaneBoundaryFamily
 from diagnostic_msgs.msg import DiagnosticArray
@@ -31,7 +32,7 @@ class LaneChangeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rospy.init_node('bbox_change_integration')
-        cls.camera=load_calibration_snapshot('/root/ws/src/asmc_camera/config/bev/cameras_v2.yaml')[1]['front']
+        cls.camera=load_calibration_snapshot(Path(rospkg.RosPack().get_path('asmc_camera'))/'config/bev/cameras_v2.yaml')[1]['front']
         cls.jpeg=cv2.imencode('.jpg',np.zeros((720,1280,3),dtype=np.uint8))[1].tobytes()
         cls.lane_pub=rospy.Publisher('/perception/lane/boundary_family',LaneBoundaryFamily,queue_size=1)
         cls.image_pub=rospy.Publisher('/image_jpeg/compressed',CompressedImage,queue_size=1)
@@ -52,6 +53,7 @@ class LaneChangeTest(unittest.TestCase):
         self.log=open('/tmp/'+self._testMethodName+'-bbox-change.log','w')
         self.process=subprocess.Popen(['roslaunch','lane_boundary_adapter','camera_bbox_lane_change.launch',
             'use_rviz:=false','enable_control:=true','control_topic:=/bbox_change_test/command',
+            'ego_mask_enabled:=false',
             'lane_change_timeout:='+('10.0' if self._testMethodName.startswith('test_ignore') else '5.0'),
             *([] if self._testMethodName.startswith(('test_ignore','test_repeat')) else ['ignore_bbox_during_lane_change:=false']),
             *([] if self._testMethodName.startswith('test_repeat') else

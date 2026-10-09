@@ -1,0 +1,967 @@
+Scanning dependencies of target clean_test_results_lane_boundary_adapter
+[  0%] Built target _catkin_empty_exported_target
+[  0%] Built target rosgraph_msgs_generate_messages_py
+[  0%] Built target gtest
+[  0%] Built target geometry_msgs_generate_messages_cpp
+Removing test result files from '/tmp/boundary_build/test_results/lane_boundary_adapter'
+- removing '/tmp/boundary_build/test_results/lane_boundary_adapter/rosunit-camera_bbox_lane_integration.xml'
+- removing '/tmp/boundary_build/test_results/lane_boundary_adapter/rosunit-camera_bbox_lane_change_integration.xml'
+- removing '/tmp/boundary_build/test_results/lane_boundary_adapter/rostest-test_camera_bbox_lane_change.xml'
+- removing '/tmp/boundary_build/test_results/lane_boundary_adapter/rosunit-camera_bbox_clipped.xml'
+- removing '/tmp/boundary_build/test_results/lane_boundary_adapter/rostest-test_camera_bbox_lane.xml'
+- removing '/tmp/boundary_build/test_results/lane_boundary_adapter/gtest-boundary_family_adapter_test.xml'
+- removing '/tmp/boundary_build/test_results/lane_boundary_adapter/gtest-lane_boundary_adapter_test.xml'
+- removing '/tmp/boundary_build/test_results/lane_boundary_adapter/rostest-test_camera_bbox_clipped.xml'
+- removing '/tmp/boundary_build/test_results/lane_boundary_adapter/nosetests-test.test_rviz_launch_contract.py.xml'
+[  0%] Built target clean_test_results_lane_boundary_adapter
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_HdMapMeta
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_CompetitionCheckpointArray
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_FrenetFeedback
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LaneMarking
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_PlanFeedback
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LidarObjectArray
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_BehaviorCommand
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LaneArray
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LaneBoundaryFamilyMember
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LaneMarkingArray
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_DrivableArea
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_TrajectoryPoint
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LaneBoundaryObservationArray
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LaneBoundaryObservation
+[  0%] Built target geometry_msgs_generate_messages_py
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LaneBoundaryFamily
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_MissionZoneArray
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_MissionZone
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_DetectedObjectArray
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_DetectedObject
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LidarObject
+[  0%] Built target std_msgs_generate_messages_py
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_BehaviorContext
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_Trajectory
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_CompetitionCheckpoint
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_VehicleState
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_DrivableAreaArray
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_TrafficLightDetection
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_TrackedObject
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_TrackedObjectArray
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_CameraObjectBox
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_CameraObjectBoxArray
+[  0%] Built target std_msgs_generate_messages_nodejs
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_Lane
+[  0%] Built target geometry_msgs_generate_messages_nodejs
+[  0%] Built target std_msgs_generate_messages_eus
+[  0%] Built target _asmc_msgs_generate_messages_check_deps_LaneAssociation
+[  0%] Built target geometry_msgs_generate_messages_eus
+[  0%] Built target std_msgs_generate_messages_cpp
+[  0%] Built target std_msgs_generate_messages_lisp
+[  0%] Built target geometry_msgs_generate_messages_lisp
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultInjectionCtrlSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSyncModeRemoveObjectSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SkidSteer6wUGVCtrlCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SkateboardCtrlCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SyncModeSetGear
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SyncModeCtrlCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MapSpecIndex
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SyncModeCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ObjectStatusListExtended
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SyncModeInfo
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultInjection_Tire
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SyncModeAddObject
+[  0%] Built target _morai_msgs_generate_messages_check_deps_VehicleCollisionData
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SkidSteer6wUGVStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_NpcGhostInfo
+[  0%] Built target _morai_msgs_generate_messages_check_deps_WheelControl
+[  0%] Built target _morai_msgs_generate_messages_check_deps_PRCtrlCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultInjection_Response
+[  0%] Built target _morai_msgs_generate_messages_check_deps_VehicleSpecIndex
+[  0%] Built target _morai_msgs_generate_messages_check_deps_Lamps
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SyncModeScenarioLoad
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ERP42Info
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SensorPosControl
+[  0%] Built target _morai_msgs_generate_messages_check_deps_VehicleCollision
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SkateboardStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSyncModeCmdSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSimProcHandle
+[  0%] Built target _morai_msgs_generate_messages_check_deps_TrafficLight
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultStatusInfo
+[  0%] Built target _morai_msgs_generate_messages_check_deps_IntscnTL
+[  0%] Built target _morai_msgs_generate_messages_check_deps_NpcGhostCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultInjectionSensorSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ObjectStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_IntersectionStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_GPSMessage
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SyncModeCmdResponse
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SVADC
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiScenarioLoadSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SyncModeRemoveObject
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SaveSensorData
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ExternalForce
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiEventCmdSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_Obstacle
+[  0%] Built target _morai_msgs_generate_messages_check_deps_PRStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ObjectStatusExtended
+[  0%] Built target _morai_msgs_generate_messages_check_deps_AttachmentDeviceState
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ReplayInfo
+[  0%] Built target _morai_msgs_generate_messages_check_deps_EgoVehicleStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_VehicleSpec
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MapSpec
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultStatusInfo_Sensor
+[  0%] Built target _morai_msgs_generate_messages_check_deps_CtrlCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MultiPlayEventRequest
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SetTrafficLight
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultInjection_Sensor
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ManipulatorControl
+[  0%] Built target _morai_msgs_generate_messages_check_deps_WoowaDillyEventCmdSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_RPY
+[  0%] Built target _morai_msgs_generate_messages_check_deps_EventInfo
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSimProcStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ScenarioLoad
+[  0%] Built target _morai_msgs_generate_messages_check_deps_GripperState
+[  0%] Built target _morai_msgs_generate_messages_check_deps_WaitForTick
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiTLInfo
+[  0%] Built target _morai_msgs_generate_messages_check_deps_EgoVehicleStatusExtended
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ObjectStatusList
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MultiEgoSetting
+[  0%] Built target _morai_msgs_generate_messages_check_deps_WaitForTickResponse
+[  0%] Built target _morai_msgs_generate_messages_check_deps_IntersectionControl
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSrvResponse
+[  0%] Built target _morai_msgs_generate_messages_check_deps_CollisionData
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiTLIndex
+[  0%] Built target _morai_msgs_generate_messages_check_deps_DillyCmdResponse
+[  0%] Built target _morai_msgs_generate_messages_check_deps_DillyCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_RadarDetection
+[  0%] Built target _morai_msgs_generate_messages_check_deps_WoowaDillyStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultStatusInfo_Overall
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultInjection_Controller
+[  0%] Built target _morai_msgs_generate_messages_check_deps_VelocityCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultStatusInfo_Vehicle
+[  0%] Built target _morai_msgs_generate_messages_check_deps_GVStateCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_Obstacles
+[  0%] Built target _morai_msgs_generate_messages_check_deps_Transforms
+[  0%] Built target _morai_msgs_generate_messages_check_deps_GVDirectCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_GhostMessage
+[  0%] Built target _morai_msgs_generate_messages_check_deps_RobotOutput
+[  0%] Built target _morai_msgs_generate_messages_check_deps_TOF
+[  0%] Built target _morai_msgs_generate_messages_check_deps_RobotState
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSimProcSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_Conveyor
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MultiPlayEventSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSyncModeSLSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSyncModeSetGearSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MultiPlayEventResponse
+[  0%] Built target _morai_msgs_generate_messages_check_deps_GetTrafficLightStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_PREvent
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ShipCtrlCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ShipState
+[  0%] Built target _morai_msgs_generate_messages_check_deps_GeoVector3Message
+[  0%] Built target _morai_msgs_generate_messages_check_deps_RobotPose
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MSITCustomMessage
+[  0%] Built target _morai_msgs_generate_messages_check_deps_EgoNoisyStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_CMDConveyor
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiMapSpecSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_ENU
+[  0%] Built target _morai_msgs_generate_messages_check_deps_EgoDetailStatus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_RadarDetections
+[  0%] Built target _morai_msgs_generate_messages_check_deps_XYZ
+[  0%] Built target _morai_msgs_generate_messages_check_deps_SyncModeResultResponse
+[  0%] Built target _morai_msgs_generate_messages_check_deps_Competition
+[  0%] Built target _morai_msgs_generate_messages_check_deps_FaultInjectionTireSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiTLInfoSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_UGVServeSkidCtrlCmd
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiVehicleSpecSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSyncModeCtrlCmdSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiWaitForTickSrv
+[  0%] Built target sensor_msgs_generate_messages_nodejs
+[  0%] Built target sensor_msgs_generate_messages_py
+[  0%] Built target sensor_msgs_generate_messages_lisp
+[  0%] Built target sensor_msgs_generate_messages_eus
+[  0%] Built target _morai_msgs_generate_messages_check_deps_PREventSrv
+[  0%] Built target _morai_msgs_generate_messages_check_deps_MoraiSyncModeAddObjectSrv
+[  0%] Built target sensor_msgs_generate_messages_cpp
+[  0%] Built target visualization_msgs_generate_messages_eus
+[  0%] Built target visualization_msgs_generate_messages_nodejs
+[  0%] Built target visualization_msgs_generate_messages_py
+[  0%] Built target visualization_msgs_generate_messages_cpp
+[  0%] Built target visualization_msgs_generate_messages_lisp
+[  0%] Built target roscpp_generate_messages_lisp
+[  0%] Built target roscpp_generate_messages_py
+[  0%] Built target rosgraph_msgs_generate_messages_nodejs
+[  0%] Built target diagnostic_msgs_generate_messages_cpp
+[  0%] Built target rosgraph_msgs_generate_messages_lisp
+[  0%] Built target diagnostic_msgs_generate_messages_nodejs
+[  0%] Built target diagnostic_msgs_generate_messages_py
+[  0%] Built target roscpp_generate_messages_eus
+[  0%] Built target roscpp_generate_messages_nodejs
+[  0%] Built target roscpp_generate_messages_cpp
+[  0%] Built target rosgraph_msgs_generate_messages_cpp
+[  0%] Built target rosgraph_msgs_generate_messages_eus
+[  0%] Built target diagnostic_msgs_generate_messages_lisp
+[  0%] Built target diagnostic_msgs_generate_messages_eus
+Scanning dependencies of target clean_test_results_asmc_msgs
+Removing test result files from '/tmp/boundary_build/test_results/asmc_msgs'
+- removing '/tmp/boundary_build/test_results/asmc_msgs/nosetests-test.test_message_serialization.py.xml'
+[  0%] Built target clean_test_results_asmc_msgs
+[  0%] Built target _lane_boundary_adapter_generate_messages_check_deps_CameraBBoxFrame
+[  0%] Built target _lane_boundary_adapter_generate_messages_check_deps_CameraBBoxLaneResult
+[  0%] Built target _lane_boundary_adapter_generate_messages_check_deps_CameraBBox
+Scanning dependencies of target clean_test_results_asmc_camera
+Scanning dependencies of target clean_test_results_asmc_hd_map
+[  8%] Built target asmc_msgs_generate_messages_nodejs
+[  7%] Built target asmc_msgs_generate_messages_py
+Removing test result files from '/tmp/boundary_build/test_results/asmc_camera'
+- removing '/tmp/boundary_build/test_results/asmc_camera/nosetests-test.runtime.xml'
+- removing '/tmp/boundary_build/test_results/asmc_camera/nosetests-test.test_traffic_light_visualization.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_camera/nosetests-test.camera.xml'
+- removing '/tmp/boundary_build/test_results/asmc_camera/nosetests-test.bev.xml'
+- removing '/tmp/boundary_build/test_results/asmc_camera/nosetests-test.test_facade_contract.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_camera/nosetests-test.test_traffic_light_contract.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_camera/nosetests-test.detection.xml'
+Removing test result files from '/tmp/boundary_build/test_results/asmc_hd_map'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_route_curation.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_semantic_query.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_compact_drivable.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_schema.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_drivable_area_audit_workspace.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_observed.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_live_pose.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_competition_metadata.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_development_visualization.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_scoring_ros.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_review_context.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_compact_drivable_workspace.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_frames.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_operational_map.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_runtime_bundle.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_nominal.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_review_bundle.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_planning_export.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_current_builder.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_context_publisher.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_drivable_area_audit.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_correspondence.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_observed_builder.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_corridor.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_legacy_adoption.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_map_overlay.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_hybrid_completion.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_local_crop.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_route_reference.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_local_runtime.py.xml'
+- removing '/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_lane_association.py.xml'
+[  8%] Built target clean_test_results_asmc_camera
+[ 12%] Built target asmc_msgs_generate_messages_cpp
+[ 16%] Built target asmc_msgs_generate_messages_eus
+[ 16%] Built target clean_test_results_asmc_hd_map
+[ 21%] Built target asmc_msgs_generate_messages_lisp
+[ 35%] Built target morai_msgs_generate_messages_nodejs
+[ 51%] Built target morai_msgs_generate_messages_py
+[ 67%] Built target morai_msgs_generate_messages_cpp
+[ 70%] Built target lane_boundary_adapter_generate_messages_nodejs
+[ 83%] Built target morai_msgs_generate_messages_lisp
+[ 97%] Built target morai_msgs_generate_messages_eus
+[ 97%] Built target lane_boundary_adapter_generate_messages_cpp
+[ 97%] Built target lane_boundary_adapter_generate_messages_py
+[ 98%] Built target lane_boundary_adapter_generate_messages_eus
+[ 98%] Built target lane_boundary_adapter_generate_messages_lisp
+[ 98%] Built target lane_boundary_adapter
+[ 98%] Built target boundary_family_adapter_test
+[ 98%] Built target lane_boundary_adapter_test
+[ 98%] Built target camera_bbox_lane_change_node
+[100%] Built target camera_bbox_lane_node
+[100%] Built target tests
+Scanning dependencies of target _run_tests_lane_boundary_adapter_gtest_boundary_family_adapter_test
+Scanning dependencies of target _run_tests_lane_boundary_adapter_rostest_test_camera_bbox_lane.test
+Scanning dependencies of target _run_tests_lane_boundary_adapter_gtest_lane_boundary_adapter_test
+Scanning dependencies of target _run_tests_lane_boundary_adapter_nosetests_test.test_rviz_launch_contract.py
+[==========] Running 16 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 16 tests from LaneBoundaryAdapterTest
+[ RUN      ] LaneBoundaryAdapterTest.BuildsTwoOrderedStripsWithoutSemanticRoles
+[       OK ] LaneBoundaryAdapterTest.BuildsTwoOrderedStripsWithoutSemanticRoles (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.VehicleProjectionMayLieInLeftStrip
+[       OK ] LaneBoundaryAdapterTest.VehicleProjectionMayLieInLeftStrip (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.AcceptsAConsistentPartialObservation
+[       OK ] LaneBoundaryAdapterTest.AcceptsAConsistentPartialObservation (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.AcceptsDynamicSharedOrderReference
+[       OK ] LaneBoundaryAdapterTest.AcceptsDynamicSharedOrderReference (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.RejectsDifferentOrderReferencesInOneFrame
+[       OK ] LaneBoundaryAdapterTest.RejectsDifferentOrderReferencesInOneFrame (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.RejectsPairsWithoutYellowBoundaryInThisOdd
+[       OK ] LaneBoundaryAdapterTest.RejectsPairsWithoutYellowBoundaryInThisOdd (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.InfersDegradedCenterFromTwoWhiteOuterBoundaries
+[       OK ] LaneBoundaryAdapterTest.InfersDegradedCenterFromTwoWhiteOuterBoundaries (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.RejectsWhitePairThatCannotDescribeTwoLanes
+[       OK ] LaneBoundaryAdapterTest.RejectsWhitePairThatCannotDescribeTwoLanes (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.RejectsInvalidOrdering
+[       OK ] LaneBoundaryAdapterTest.RejectsInvalidOrdering (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.RejectsWrongContractIdentifiers
+[       OK ] LaneBoundaryAdapterTest.RejectsWrongContractIdentifiers (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.DistinguishesValidEmptyFromInvalidMetadata
+[       OK ] LaneBoundaryAdapterTest.DistinguishesValidEmptyFromInvalidMetadata (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.RejectsMalformedBoundaryAndDuplicateIds
+[       OK ] LaneBoundaryAdapterTest.RejectsMalformedBoundaryAndDuplicateIds (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.RejectsImplausibleOrCrossingStrips
+[       OK ] LaneBoundaryAdapterTest.RejectsImplausibleOrCrossingStrips (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.PreservesParallelCurvatureInCenterline
+[       OK ] LaneBoundaryAdapterTest.PreservesParallelCurvatureInCenterline (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.ClipsLegacyDisplayTailsToDeclaredValidRange
+[       OK ] LaneBoundaryAdapterTest.ClipsLegacyDisplayTailsToDeclaredValidRange (0 ms)
+[ RUN      ] LaneBoundaryAdapterTest.ValidatesAdapterConfiguration
+[       OK ] LaneBoundaryAdapterTest.ValidatesAdapterConfiguration (0 ms)
+[----------] 16 tests from LaneBoundaryAdapterTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 16 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 16 tests.
+[==========] Running 11 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 2 tests from BoundaryFamilyAdapterConfigTest
+[ RUN      ] BoundaryFamilyAdapterConfigTest.AcceptsDefaultConfiguration
+[       OK ] BoundaryFamilyAdapterConfigTest.AcceptsDefaultConfiguration (0 ms)
+[ RUN      ] BoundaryFamilyAdapterConfigTest.RejectsInvalidRanges
+[       OK ] BoundaryFamilyAdapterConfigTest.RejectsInvalidRanges (0 ms)
+[----------] 2 tests from BoundaryFamilyAdapterConfigTest (0 ms total)
+
+[----------] 9 tests from BoundaryFamilyAdapterTest
+[ RUN      ] BoundaryFamilyAdapterTest.BuildsTwoObservedStrips
+[       OK ] BoundaryFamilyAdapterTest.BuildsTwoObservedStrips (0 ms)
+[ RUN      ] BoundaryFamilyAdapterTest.LocallyInferredIntervalsAreSeparateAndScaled
+[       OK ] BoundaryFamilyAdapterTest.LocallyInferredIntervalsAreSeparateAndScaled (0 ms)
+[ RUN      ] BoundaryFamilyAdapterTest.InvalidSamplesCreateHardGaps
+[       OK ] BoundaryFamilyAdapterTest.InvalidSamplesCreateHardGaps (0 ms)
+[ RUN      ] BoundaryFamilyAdapterTest.EntirelyInferredMemberIsNotScaledTwice
+[       OK ] BoundaryFamilyAdapterTest.EntirelyInferredMemberIsNotScaledTwice (0 ms)
+[ RUN      ] BoundaryFamilyAdapterTest.FreshProducerRejectionProducesNoGeometry
+[       OK ] BoundaryFamilyAdapterTest.FreshProducerRejectionProducesNoGeometry (0 ms)
+[ RUN      ] BoundaryFamilyAdapterTest.RejectsMalformedSampleStateArray
+[       OK ] BoundaryFamilyAdapterTest.RejectsMalformedSampleStateArray (0 ms)
+[ RUN      ] BoundaryFamilyAdapterTest.RejectsUnexpectedContractIdentity
+[       OK ] BoundaryFamilyAdapterTest.RejectsUnexpectedContractIdentity (0 ms)
+[ RUN      ] BoundaryFamilyAdapterTest.RejectsFamilyOutsideConsumerRoi
+[       OK ] BoundaryFamilyAdapterTest.RejectsFamilyOutsideConsumerRoi (0 ms)
+[ RUN      ] BoundaryFamilyAdapterTest.NeverUsesSamplesOutsideProducerValidRange
+[       OK ] BoundaryFamilyAdapterTest.NeverUsesSamplesOutsideProducerValidRange (0 ms)
+[----------] 9 tests from BoundaryFamilyAdapterTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 11 tests from 2 test suites ran. (0 ms total)
+[  PASSED  ] 11 tests.
+-- run_tests.py: execute commands
+  /tmp/boundary_devel/lib/lane_boundary_adapter/lane_boundary_adapter_test --gtest_output=xml:/tmp/boundary_build/test_results/lane_boundary_adapter/gtest-lane_boundary_adapter_test.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/lane_boundary_adapter/gtest-lane_boundary_adapter_test.xml"
+-- run_tests.py: execute commands
+  /tmp/boundary_devel/lib/lane_boundary_adapter/boundary_family_adapter_test --gtest_output=xml:/tmp/boundary_build/test_results/lane_boundary_adapter/gtest-boundary_family_adapter_test.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/lane_boundary_adapter/gtest-boundary_family_adapter_test.xml"
+[100%] Built target _run_tests_lane_boundary_adapter_gtest_boundary_family_adapter_test
+[100%] Built target _run_tests_lane_boundary_adapter_gtest_lane_boundary_adapter_test
+Scanning dependencies of target _run_tests_lane_boundary_adapter_rostest_test_camera_bbox_lane_change.test
+Scanning dependencies of target _run_tests_lane_boundary_adapter_rostest_test_camera_bbox_clipped.test
+..
+----------------------------------------------------------------------
+Ran 2 tests in 0.006s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/lane_boundary_adapter
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/jamming_lane_boundary_adapter/test/test_rviz_launch_contract.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/lane_boundary_adapter/nosetests-test.test_rviz_launch_contract.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/lane_boundary_adapter/nosetests-test.test_rviz_launch_contract.py.xml"
+[100%] Built target _run_tests_lane_boundary_adapter_nosetests_test.test_rviz_launch_contract.py
+Scanning dependencies of target _run_tests_asmc_msgs_nosetests_test.test_message_serialization.py
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.003s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_msgs
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_msgs/test/test_message_serialization.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_msgs/nosetests-test.test_message_serialization.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_msgs/nosetests-test.test_message_serialization.py.xml"
+[100%] Built target _run_tests_asmc_msgs_nosetests_test.test_message_serialization.py
+Scanning dependencies of target _run_tests_asmc_camera_nosetests_test.test_traffic_light_visualization.py
+Traceback (most recent call last):
+  File "/tmp/boundary_devel/lib/lane_boundary_adapter/camera_bbox_frame_bridge.py", line 15, in <module>
+    exec(compile(fh.read(), python_script, 'exec'), context)
+  File "/tmp/boundary_ws/src/jamming_lane_boundary_adapter/scripts/camera_bbox_frame_bridge.py", line 9, in <module>
+    from Msg.msg import Yolo_bbox_arr
+ModuleNotFoundError: No module named 'Msg'
+Traceback (most recent call last):
+  File "/tmp/boundary_devel/lib/lane_boundary_adapter/camera_bbox_frame_bridge.py", line 15, in <module>
+    exec(compile(fh.read(), python_script, 'exec'), context)
+  File "/tmp/boundary_ws/src/jamming_lane_boundary_adapter/scripts/camera_bbox_frame_bridge.py", line 9, in <module>
+    from Msg.msg import Yolo_bbox_arr
+ModuleNotFoundError: No module named 'Msg'
+Traceback (most recent call last):
+  File "/root/ws/src/jamming_lane_boundary_adapter/test/test_camera_bbox_lane.py", line 13, in <module>
+    from Msg.msg import Yolo_bbox, Yolo_bbox_arr
+ModuleNotFoundError: No module named 'Msg'
+Traceback (most recent call last):
+  File "/root/ws/src/jamming_lane_boundary_adapter/test/test_camera_bbox_clipped.py", line 8, in <module>
+    from Msg.msg import Yolo_bbox
+ModuleNotFoundError: No module named 'Msg'
+Traceback (most recent call last):
+  File "/root/ws/src/jamming_lane_boundary_adapter/test/test_camera_bbox_lane_change.py", line 21, in <module>
+    from Msg.msg import Yolo_bbox,Yolo_bbox_arr
+ModuleNotFoundError: No module named 'Msg'
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.038s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_camera
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_camera/test/test_traffic_light_visualization.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_camera/nosetests-test.test_traffic_light_visualization.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_camera/nosetests-test.test_traffic_light_visualization.py.xml"
+[100%] Built target _run_tests_asmc_camera_nosetests_test.test_traffic_light_visualization.py
+Scanning dependencies of target _run_tests_asmc_camera_nosetests_test.detection
+... logging to /root/.ros/log/rostest-9b828b86d822-227717.log
+[ROSUNIT] Outputting test results to /tmp/boundary_build/test_results/lane_boundary_adapter/rostest-test_camera_bbox_lane_change.xml
+[Testcase: testcamera_bbox_lane_change_integration] ... FAILURE!
+FAILURE: False is not true : test [camera_bbox_lane_change_integration] did not generate test results
+  File "/usr/lib/python3.8/unittest/case.py", line 60, in testPartExecutor
+    yield
+  File "/usr/lib/python3.8/unittest/case.py", line 676, in run
+    self._callTestMethod(testMethod)
+  File "/usr/lib/python3.8/unittest/case.py", line 633, in _callTestMethod
+    method()
+  File "/opt/ros/noetic/lib/python3/dist-packages/rostest/runner.py", line 164, in fn
+    self.assertTrue(os.path.isfile(test_file), "test [%s] did not generate test results"%test_name)
+  File "/usr/lib/python3.8/unittest/case.py", line 765, in assertTrue
+    raise self.failureException(msg)
+--------------------------------------------------------------------------------
+
+[ROSTEST]-----------------------------------------------------------------------
+
+[testcamera_bbox_lane_change_integration][failed]
+
+SUMMARY
+[1;31m * RESULT: FAIL[0m
+ * TESTS: 0
+ * ERRORS: 0
+[1;31m * FAILURES: 1[0m
+
+ERROR: The following tests failed to run:
+ * testcamera_bbox_lane_change_integration
+
+rostest log file is in /root/.ros/log/rostest-9b828b86d822-227717.log
+.....-- run_tests.py: execute commands
+  /usr/bin/python3 /opt/ros/noetic/share/rostest/cmake/../../../bin/rostest --pkgdir=/tmp/boundary_ws/src/jamming_lane_boundary_adapter --package=lane_boundary_adapter --results-filename test_camera_bbox_lane_change.xml --results-base-dir "/tmp/boundary_build/test_results" /tmp/boundary_ws/src/jamming_lane_boundary_adapter/test/camera_bbox_lane_change.test 
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/lane_boundary_adapter/rostest-test_camera_bbox_lane_change.xml"
+...........[100%] Built target _run_tests_lane_boundary_adapter_rostest_test_camera_bbox_lane_change.test
+..............Scanning dependencies of target _run_tests_asmc_camera_nosetests_test.bev
+... logging to /root/.ros/log/rostest-9b828b86d822-227690.log
+[ROSUNIT] Outputting test results to /tmp/boundary_build/test_results/lane_boundary_adapter/rostest-test_camera_bbox_lane.xml
+[Testcase: testcamera_bbox_lane_integration] ... FAILURE!
+FAILURE: False is not true : test [camera_bbox_lane_integration] did not generate test results
+  File "/usr/lib/python3.8/unittest/case.py", line 60, in testPartExecutor
+    yield
+  File "/usr/lib/python3.8/unittest/case.py", line 676, in run
+    self._callTestMethod(testMethod)
+  File "/usr/lib/python3.8/unittest/case.py", line 633, in _callTestMethod
+    method()
+  File "/opt/ros/noetic/lib/python3/dist-packages/rostest/runner.py", line 164, in fn
+    self.assertTrue(os.path.isfile(test_file), "test [%s] did not generate test results"%test_name)
+  File "/usr/lib/python3.8/unittest/case.py", line 765, in assertTrue
+    raise self.failureException(msg)
+--------------------------------------------------------------------------------
+
+[ROSTEST]-----------------------------------------------------------------------
+
+[testcamera_bbox_lane_integration][failed]
+
+SUMMARY
+[1;31m * RESULT: FAIL[0m
+ * TESTS: 0
+ * ERRORS: 0
+[1;31m * FAILURES: 1[0m
+
+ERROR: The following tests failed to run:
+ * testcamera_bbox_lane_integration
+
+rostest log file is in /root/.ros/log/rostest-9b828b86d822-227690.log
+...... logging to /root/.ros/log/rostest-9b828b86d822-227718.log
+[ROSUNIT] Outputting test results to /tmp/boundary_build/test_results/lane_boundary_adapter/rostest-test_camera_bbox_clipped.xml
+[Testcase: testcamera_bbox_clipped] ... FAILURE!
+FAILURE: False is not true : test [camera_bbox_clipped] did not generate test results
+  File "/usr/lib/python3.8/unittest/case.py", line 60, in testPartExecutor
+    yield
+  File "/usr/lib/python3.8/unittest/case.py", line 676, in run
+    self._callTestMethod(testMethod)
+  File "/usr/lib/python3.8/unittest/case.py", line 633, in _callTestMethod
+    method()
+  File "/opt/ros/noetic/lib/python3/dist-packages/rostest/runner.py", line 164, in fn
+    self.assertTrue(os.path.isfile(test_file), "test [%s] did not generate test results"%test_name)
+  File "/usr/lib/python3.8/unittest/case.py", line 765, in assertTrue
+    raise self.failureException(msg)
+--------------------------------------------------------------------------------
+
+[ROSTEST]-----------------------------------------------------------------------
+
+[testcamera_bbox_clipped][failed]
+
+SUMMARY
+[1;31m * RESULT: FAIL[0m
+ * TESTS: 0
+ * ERRORS: 0
+[1;31m * FAILURES: 1[0m
+
+ERROR: The following tests failed to run:
+ * testcamera_bbox_clipped
+
+rostest log file is in /root/.ros/log/rostest-9b828b86d822-227718.log
+-- run_tests.py: execute commands
+  /usr/bin/python3 /opt/ros/noetic/share/rostest/cmake/../../../bin/rostest --pkgdir=/tmp/boundary_ws/src/jamming_lane_boundary_adapter --package=lane_boundary_adapter --results-filename test_camera_bbox_lane.xml --results-base-dir "/tmp/boundary_build/test_results" /tmp/boundary_ws/src/jamming_lane_boundary_adapter/test/camera_bbox_lane.test 
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/lane_boundary_adapter/rostest-test_camera_bbox_lane.xml"
+[100%] Built target _run_tests_lane_boundary_adapter_rostest_test_camera_bbox_lane.test
+Scanning dependencies of target _run_tests_asmc_camera_nosetests_test.runtime
+-- run_tests.py: execute commands
+  /usr/bin/python3 /opt/ros/noetic/share/rostest/cmake/../../../bin/rostest --pkgdir=/tmp/boundary_ws/src/jamming_lane_boundary_adapter --package=lane_boundary_adapter --results-filename test_camera_bbox_clipped.xml --results-base-dir "/tmp/boundary_build/test_results" /tmp/boundary_ws/src/jamming_lane_boundary_adapter/test/camera_bbox_clipped.test 
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/lane_boundary_adapter/rostest-test_camera_bbox_clipped.xml"
+[100%] Built target _run_tests_lane_boundary_adapter_rostest_test_camera_bbox_clipped.test
+Scanning dependencies of target _run_tests_asmc_camera_nosetests_test.test_traffic_light_contract.py
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_camera
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_camera/test/test_traffic_light_contract.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_camera/nosetests-test.test_traffic_light_contract.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_camera/nosetests-test.test_traffic_light_contract.py.xml"
+[100%] Built target _run_tests_asmc_camera_nosetests_test.test_traffic_light_contract.py
+....Scanning dependencies of target _run_tests_asmc_camera_nosetests_test.test_facade_contract.py
+........................................................................F.........
+======================================================================
+FAIL: test_planning_launches_use_the_canonical_traffic_light_model (test_facade_contract.PerceptionFacadeContractTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/boundary_ws/src/asmc_camera/test/test_facade_contract.py", line 420, in test_planning_launches_use_the_canonical_traffic_light_model
+    self.assertEqual(
+AssertionError: 'false' != 'true'
+- false
++ true
+ : autonomy_no_bridges_v2.launch must not start a duplicate perception producer
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.108s
+
+FAILED (failures=1)
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_camera
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_camera/test/test_facade_contract.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_camera/nosetests-test.test_facade_contract.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_camera/nosetests-test.test_facade_contract.py.xml"
+[100%] Built target _run_tests_asmc_camera_nosetests_test.test_facade_contract.py
+Scanning dependencies of target _run_tests_asmc_camera_nosetests_test.camera
+...........
+----------------------------------------------------------------------
+Ran 7 tests in 0.155s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_camera
+  /usr/bin/nosetests3 -P --process-timeout=60 --where=/tmp/boundary_ws/src/asmc_camera/test/camera --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_camera/nosetests-test.camera.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_camera/nosetests-test.camera.xml"
+[100%] Built target _run_tests_asmc_camera_nosetests_test.camera
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_lane_association.py
+...........
+----------------------------------------------------------------------
+Ran 46 tests in 1.587s
+
+OK
+........
+----------------------------------------------------------------------
+Ran 7 tests in 0.005s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_lane_association.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_lane_association.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_lane_association.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_lane_association.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_compact_drivable_workspace.py
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_camera
+  /usr/bin/nosetests3 -P --process-timeout=60 --where=/tmp/boundary_ws/src/asmc_camera/test/detection --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_camera/nosetests-test.detection.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_camera/nosetests-test.detection.xml"
+[100%] Built target _run_tests_asmc_camera_nosetests_test.detection
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_compact_drivable.py
+.........
+----------------------------------------------------------------------
+Ran 8 tests in 0.003s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_compact_drivable.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_compact_drivable.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_compact_drivable.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_compact_drivable.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_runtime_bundle.py
+..................................................................................................
+----------------------------------------------------------------------
+Ran 9 tests in 0.499s
+
+OK
+..-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_runtime_bundle.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_runtime_bundle.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_runtime_bundle.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_runtime_bundle.py
+..Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_scoring_ros.py
+....................
+----------------------------------------------------------------------
+Ran 172 tests in 2.640s
+
+OK
+......-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_camera
+  /usr/bin/nosetests3 -P --process-timeout=60 --where=/tmp/boundary_ws/src/asmc_camera/test/bev --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_camera/nosetests-test.bev.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_camera/nosetests-test.bev.xml"
+[100%] Built target _run_tests_asmc_camera_nosetests_test.bev
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_route_curation.py
+.........
+----------------------------------------------------------------------
+Ran 29 tests in 2.792s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_camera
+  /usr/bin/nosetests3 -P --process-timeout=60 --where=/tmp/boundary_ws/src/asmc_camera/test/runtime --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_camera/nosetests-test.runtime.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_camera/nosetests-test.runtime.xml"
+[100%] Built target _run_tests_asmc_camera_nosetests_test.runtime
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_legacy_adoption.py
+..
+----------------------------------------------------------------------
+Ran 1 test in 0.192s
+
+OK
+.-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_scoring_ros.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_scoring_ros.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_scoring_ros.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_scoring_ros.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_review_bundle.py
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 1.894s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_compact_drivable_workspace.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_compact_drivable_workspace.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_compact_drivable_workspace.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_compact_drivable_workspace.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_planning_export.py
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.004s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_planning_export.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_planning_export.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_planning_export.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_planning_export.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_context_publisher.py
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.004s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_context_publisher.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_context_publisher.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_context_publisher.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_context_publisher.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_route_reference.py
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_route_reference.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_route_reference.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_route_reference.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_route_reference.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_local_runtime.py
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 0.007s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_local_runtime.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_local_runtime.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_local_runtime.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_local_runtime.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_observed_builder.py
+.....
+----------------------------------------------------------------------
+Ran 3 tests in 5.240s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_review_bundle.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_review_bundle.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_review_bundle.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_review_bundle.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_operational_map.py
+........
+----------------------------------------------------------------------
+Ran 4 tests in 7.724s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_route_curation.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_route_curation.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_route_curation.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_route_curation.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_development_visualization.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.615s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_development_visualization.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_development_visualization.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_development_visualization.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_development_visualization.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_review_context.py
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_review_context.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_review_context.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_review_context.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_review_context.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_drivable_area_audit_workspace.py
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.326s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_drivable_area_audit_workspace.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_drivable_area_audit_workspace.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_drivable_area_audit_workspace.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_drivable_area_audit_workspace.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_hybrid_completion.py
+.
+----------------------------------------------------------------------
+Ran 1 test in 4.017s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_hybrid_completion.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_hybrid_completion.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_hybrid_completion.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_hybrid_completion.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_competition_metadata.py
+..................
+----------------------------------------------------------------------
+Ran 18 tests in 0.468s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_competition_metadata.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_competition_metadata.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_competition_metadata.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_competition_metadata.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_frames.py
+..
+----------------------------------------------------------------------
+Ran 2 tests in 0.005s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_frames.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_frames.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_frames.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_frames.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_local_crop.py
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.031s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_local_crop.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_local_crop.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_local_crop.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_local_crop.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_correspondence.py
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.006s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_correspondence.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_correspondence.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_correspondence.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_correspondence.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_schema.py
+..
+----------------------------------------------------------------------
+Ran 2 tests in 0.000s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_schema.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_schema.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_schema.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_schema.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_semantic_query.py
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.002s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_semantic_query.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_semantic_query.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_semantic_query.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_semantic_query.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_live_pose.py
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_live_pose.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_live_pose.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_live_pose.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_live_pose.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_map_overlay.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.002s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_map_overlay.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_map_overlay.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_map_overlay.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_map_overlay.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_corridor.py
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.007s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_corridor.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_corridor.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_corridor.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_corridor.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_nominal.py
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.004s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_nominal.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_nominal.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_nominal.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_nominal.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_current_builder.py
+..
+----------------------------------------------------------------------
+Ran 2 tests in 19.349s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_legacy_adoption.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_legacy_adoption.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_legacy_adoption.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_legacy_adoption.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_observed.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.009s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_observed.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_observed.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_observed.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_observed.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests_test.test_drivable_area_audit.py
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.002s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_drivable_area_audit.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_drivable_area_audit.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_drivable_area_audit.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_drivable_area_audit.py
+Scanning dependencies of target _run_tests_lane_boundary_adapter_nosetests
+[100%] Built target _run_tests_lane_boundary_adapter_nosetests
+Scanning dependencies of target _run_tests_lane_boundary_adapter_gtest
+[100%] Built target _run_tests_lane_boundary_adapter_gtest
+Scanning dependencies of target _run_tests_lane_boundary_adapter_rostest
+[100%] Built target _run_tests_lane_boundary_adapter_rostest
+Scanning dependencies of target _run_tests_asmc_msgs_nosetests
+[100%] Built target _run_tests_asmc_msgs_nosetests
+Scanning dependencies of target _run_tests_asmc_camera_nosetests
+[100%] Built target _run_tests_asmc_camera_nosetests
+Scanning dependencies of target _run_tests_lane_boundary_adapter
+[100%] Built target _run_tests_lane_boundary_adapter
+Scanning dependencies of target _run_tests_asmc_msgs
+[100%] Built target _run_tests_asmc_msgs
+Scanning dependencies of target _run_tests_asmc_camera
+[100%] Built target _run_tests_asmc_camera
+.
+----------------------------------------------------------------------
+Ran 2 tests in 5.078s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_current_builder.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_current_builder.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_current_builder.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_current_builder.py
+...
+----------------------------------------------------------------------
+Ran 4 tests in 76.520s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_observed_builder.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_observed_builder.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_observed_builder.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_observed_builder.py
+.
+----------------------------------------------------------------------
+Ran 7 tests in 161.838s
+
+OK
+-- run_tests.py: execute commands
+  "/usr/bin/cmake" -E make_directory /tmp/boundary_build/test_results/asmc_hd_map
+  /usr/bin/nosetests3 -P --process-timeout=60 /tmp/boundary_ws/src/asmc_hd_map/test/test_operational_map.py --with-xunit --xunit-file=/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_operational_map.py.xml
+-- run_tests.py: verify result "/tmp/boundary_build/test_results/asmc_hd_map/nosetests-test.test_operational_map.py.xml"
+[100%] Built target _run_tests_asmc_hd_map_nosetests_test.test_operational_map.py
+Scanning dependencies of target _run_tests_asmc_hd_map_nosetests
+[100%] Built target _run_tests_asmc_hd_map_nosetests
+Scanning dependencies of target _run_tests_asmc_hd_map
+[100%] Built target _run_tests_asmc_hd_map
+Scanning dependencies of target run_tests
+[100%] Built target run_tests
+Base path: /tmp/boundary_ws
+Source space: /tmp/boundary_ws/src
+Build space: /tmp/boundary_build
+Devel space: /tmp/boundary_devel
+Install space: /tmp/boundary_ws/install
+####
+#### Running command: "make cmake_check_build_system" in "/tmp/boundary_build"
+####
+####
+#### Running command: "make run_tests -j4" in "/tmp/boundary_build"
+####

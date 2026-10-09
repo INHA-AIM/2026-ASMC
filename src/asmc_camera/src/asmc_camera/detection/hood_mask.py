@@ -9,11 +9,35 @@ import numpy as np
 import yaml
 
 
+def load_view_masks(views, front_mask, side_enabled=False, side_configs=None):
+    """Reuse exclusion geometry while keeping each camera's calibration separate."""
+    if not views or len(set(views)) != len(views) or set(views)-{'front', 'left', 'right'}:
+        raise ValueError('ego masks require unique front/left/right views')
+    masks = {view: front_mask if view == 'front' else HoodMask() for view in views}
+    if side_enabled:
+        if not isinstance(side_configs, dict) or set(side_configs)-{'left', 'right'}:
+            raise ValueError('side ego mask configs must map left/right to their own files')
+        for view in views:
+            if view == 'front':
+                continue
+            if not side_configs.get(view):
+                raise ValueError('missing ego mask config for ' + view)
+            masks[view] = HoodMask.load(True, side_configs[view])
+    return masks
+
+
 class HoodMask:
-    def __init__(self, polygon=None, config_sha256=""):
+    def __init__(self, polygon=None, config_sha256="", fill_bgr=(0,0,0), inset_pixels=0):
         self.enabled = polygon is not None
         self.config_sha256 = config_sha256
         self.polygon = self._validate(polygon) if self.enabled else ()
+        if (not isinstance(fill_bgr,(tuple,list)) or len(fill_bgr)!=3 or
+                any(isinstance(v,bool) or not isinstance(v,int) or not 0<=v<=255 for v in fill_bgr)):
+            raise ValueError('hood mask fill_bgr requires three integer channels in [0,255]')
+        self.fill_bgr=tuple(fill_bgr)
+        if isinstance(inset_pixels,bool) or not isinstance(inset_pixels,int) or not 0<=inset_pixels<=16:
+            raise ValueError('hood mask inset_pixels must be an integer in [0,16]')
+        self.inset_pixels=inset_pixels
         self._cache = {}
         self._lock = threading.Lock()
         self._last_geometry = {}
@@ -55,9 +79,14 @@ class HoodMask:
             return cls()
         raw = Path(config_path).read_bytes()
         config = yaml.safe_load(raw)
-        if not isinstance(config, dict) or config.get("version") != 1 or set(config) != {"version", "polygon"}:
-            raise ValueError("hood mask config requires version: 1 and polygon only")
-        return cls(config["polygon"], hashlib.sha256(raw).hexdigest())
+        if not isinstance(config,dict): raise ValueError('hood mask config must be a mapping')
+        if config.get('version')==1 and set(config)=={'version','polygon'}:
+            fill=(0,0,0)
+        elif config.get('version')==2 and set(config) in ({'version','polygon','fill_bgr'},{'version','polygon','fill_bgr','inset_pixels'}):
+            fill=config['fill_bgr']
+        else:
+            raise ValueError('hood mask config requires version1/polygon or version2/polygon/fill_bgr')
+        return cls(config["polygon"], hashlib.sha256(raw).hexdigest(),fill,config.get('inset_pixels',0))
 
     def geometry(self, height, width):
         if height < 1 or width < 1:
@@ -66,12 +95,21 @@ class HoodMask:
         with self._lock:
             if key not in self._cache:
                 pixels = np.array([(min(width-1, int(x*width)), min(height-1, int(y*height)))
-                                   for x,y in self.polygon], dtype=np.int32)
+                                   for x,y in self.polygon], dtype=np.int32).reshape(-1,2)
                 bitmap = np.zeros((height,width), dtype=np.uint8)
-                cv2.fillPoly(bitmap, [pixels], 1)
+                if self.enabled:
+                    cv2.fillPoly(bitmap, [pixels], 1)
+                    if self.inset_pixels:
+                        size=2*self.inset_pixels+1
+                        bitmap=cv2.erode(bitmap,np.ones((size,size),np.uint8))
                 excluded = int(np.count_nonzero(bitmap))
-                if excluded == 0 or excluded == height*width:
+                if self.enabled and (excluded == 0 or excluded == height*width):
                     raise ValueError("hood mask raster leaves no excluded or observable pixels")
+                if self.enabled and self.inset_pixels:
+                    contours,_=cv2.findContours(bitmap,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+                    if len(contours)!=1:
+                        raise ValueError('inset mask is disconnected; refusing to silently omit components')
+                    pixels=contours[0][:,0,:]
                 bitmap = bitmap.astype(bool)
                 bitmap.setflags(write=False)
                 pixels.setflags(write=False)
@@ -94,10 +132,13 @@ class HoodMask:
         self.geometry(*image.shape[:2])
         with self._lock:
             visible = self._cache[image.shape[:2]][3]
-        return cv2.copyTo(image, visible)
+        if self.fill_bgr==(0,0,0): return cv2.copyTo(image, visible)
+        result=np.empty_like(image);result[:]=self.fill_bgr
+        return cv2.copyTo(image,visible,result)
 
     @property
     def info(self):
         with self._lock:
             return dict(enabled=self.enabled, config_sha256=self.config_sha256,
+                        fill_bgr=list(self.fill_bgr),inset_pixels=self.inset_pixels,
                         polygon_normalized=[list(p) for p in self.polygon], **self._last_geometry)

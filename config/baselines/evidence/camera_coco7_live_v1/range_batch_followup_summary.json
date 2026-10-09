@@ -1,0 +1,7415 @@
+{
+  "base_revision": "82d9c2749dd473418d86e4e4d393c6de96fd469e",
+  "scope": "backend demand + stationary range observations + C1 live batch3; not whole-stack or operating approval",
+  "batch_runs": 108,
+  "batch_cycles_each": 40,
+  "batch_repeats": 3,
+  "batches": [
+    {
+      "model": "yolo26l",
+      "width": 640,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 26.5994528211498,
+      "p95_ms_max": 34.912170364987105,
+      "p50_ms_repeats": [
+        25.14289048849605,
+        26.972979481797665,
+        27.682488493155688
+      ],
+      "mean_predict_ms": 22.788173564670917,
+      "mean_mask_transfer_ms": 2.5350391937536187,
+      "peak_whole_gpu_mib": 4611.08984375,
+      "tensor_pixels": 860160
+    },
+    {
+      "model": "yolo26l",
+      "width": 640,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 19.031961157452315,
+      "p95_ms_max": 26.298504683654752,
+      "p50_ms_repeats": [
+        19.767752470215783,
+        19.122238009003922,
+        18.20589299313724
+      ],
+      "mean_predict_ms": 15.628209860490946,
+      "mean_mask_transfer_ms": 2.457317998535776,
+      "peak_whole_gpu_mib": 4610.83984375,
+      "tensor_pixels": 921600
+    },
+    {
+      "model": "yolo26l",
+      "width": 640,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 31.130094323695328,
+      "p95_ms_max": 40.43311399582308,
+      "p50_ms_repeats": [
+        30.29419548693113,
+        30.529111973010004,
+        32.56697551114485
+      ],
+      "mean_predict_ms": 27.579036713480793,
+      "mean_mask_transfer_ms": 2.6827576676926888,
+      "peak_whole_gpu_mib": 4610.37109375,
+      "tensor_pixels": 860160
+    },
+    {
+      "model": "yolo26l",
+      "width": 960,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 27.881859830813482,
+      "p95_ms_max": 35.6376750714844,
+      "p50_ms_repeats": [
+        27.578228007769212,
+        27.853058476466686,
+        28.21429300820455
+      ],
+      "mean_predict_ms": 24.05194012632516,
+      "mean_mask_transfer_ms": 2.5555442611221224,
+      "peak_whole_gpu_mib": 4612.18359375,
+      "tensor_pixels": 1136640
+    },
+    {
+      "model": "yolo26l",
+      "width": 960,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 27.869671010800328,
+      "p95_ms_max": 32.870685987290926,
+      "p50_ms_repeats": [
+        27.267231518635526,
+        28.28976250020787,
+        28.052019013557583
+      ],
+      "mean_predict_ms": 23.473309459222946,
+      "mean_mask_transfer_ms": 2.370255643230242,
+      "peak_whole_gpu_mib": 4629.93359375,
+      "tensor_pixels": 1566720
+    },
+    {
+      "model": "yolo26l",
+      "width": 960,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 33.093375978448115,
+      "p95_ms_max": 43.85672242788132,
+      "p50_ms_repeats": [
+        32.85724046872929,
+        32.389711966970935,
+        34.03317549964413
+      ],
+      "mean_predict_ms": 28.94725334335817,
+      "mean_mask_transfer_ms": 2.6784523768583313,
+      "peak_whole_gpu_mib": 4612.12109375,
+      "tensor_pixels": 1136640
+    },
+    {
+      "model": "yolo26l",
+      "width": 1280,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 31.469288660446182,
+      "p95_ms_max": 39.4457466842141,
+      "p50_ms_repeats": [
+        31.498508993536234,
+        30.644254497019574,
+        32.26510249078274
+      ],
+      "mean_predict_ms": 27.629981839466684,
+      "mean_mask_transfer_ms": 2.495566717698239,
+      "peak_whole_gpu_mib": 4624.30859375,
+      "tensor_pixels": 1556480
+    },
+    {
+      "model": "yolo26l",
+      "width": 1280,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 41.3314089916336,
+      "p95_ms_max": 52.03261442075018,
+      "p50_ms_repeats": [
+        40.11680549592711,
+        42.63315798016265,
+        41.24426349881105
+      ],
+      "mean_predict_ms": 38.1994017365893,
+      "mean_mask_transfer_ms": 2.4074529123026878,
+      "peak_whole_gpu_mib": 4658.18359375,
+      "tensor_pixels": 2826240
+    },
+    {
+      "model": "yolo26l",
+      "width": 1280,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 36.112882992407926,
+      "p95_ms_max": 47.91845900763292,
+      "p50_ms_repeats": [
+        36.182855983497575,
+        35.10940901469439,
+        37.046383979031816
+      ],
+      "mean_predict_ms": 32.96092931947593,
+      "mean_mask_transfer_ms": 2.6217750239690454,
+      "peak_whole_gpu_mib": 4624.12109375,
+      "tensor_pixels": 1556480
+    },
+    {
+      "model": "yolo26l-seg",
+      "width": 640,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 31.918086169753224,
+      "p95_ms_max": 40.801793112768785,
+      "p50_ms_repeats": [
+        32.791349018225446,
+        31.402600492583588,
+        31.560308998450637
+      ],
+      "mean_predict_ms": 26.48904844633459,
+      "mean_mask_transfer_ms": 4.825466161613197,
+      "peak_whole_gpu_mib": 4664.80859375,
+      "tensor_pixels": 860160
+    },
+    {
+      "model": "yolo26l-seg",
+      "width": 640,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 26.891406179250527,
+      "p95_ms_max": 32.67500818183179,
+      "p50_ms_repeats": [
+        26.039055519504473,
+        28.119877009885386,
+        26.515286008361727
+      ],
+      "mean_predict_ms": 20.810794927335035,
+      "mean_mask_transfer_ms": 4.75417212631631,
+      "peak_whole_gpu_mib": 4673.24609375,
+      "tensor_pixels": 921600
+    },
+    {
+      "model": "yolo26l-seg",
+      "width": 640,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 38.00487182646369,
+      "p95_ms_max": 48.2161136722425,
+      "p50_ms_repeats": [
+        38.12589152948931,
+        37.3695969756227,
+        38.51912697427906
+      ],
+      "mean_predict_ms": 32.71264494445253,
+      "mean_mask_transfer_ms": 4.843056975611641,
+      "peak_whole_gpu_mib": 4664.80859375,
+      "tensor_pixels": 860160
+    },
+    {
+      "model": "yolo26l-seg",
+      "width": 960,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 36.17872116349948,
+      "p95_ms_max": 45.4267703637015,
+      "p50_ms_repeats": [
+        35.72590701514855,
+        35.631291480967775,
+        37.17896499438211
+      ],
+      "mean_predict_ms": 29.649248492205516,
+      "mean_mask_transfer_ms": 5.455367067285503,
+      "peak_whole_gpu_mib": 4671.87109375,
+      "tensor_pixels": 1136640
+    },
+    {
+      "model": "yolo26l-seg",
+      "width": 960,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 36.61726333666593,
+      "p95_ms_max": 46.15890592103824,
+      "p50_ms_repeats": [
+        36.92606199183501,
+        36.66411151061766,
+        36.261616507545114
+      ],
+      "mean_predict_ms": 29.85204042585489,
+      "mean_mask_transfer_ms": 5.770637847793599,
+      "peak_whole_gpu_mib": 4689.96484375,
+      "tensor_pixels": 1566720
+    },
+    {
+      "model": "yolo26l-seg",
+      "width": 960,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 41.05913883540779,
+      "p95_ms_max": 51.51123788964469,
+      "p50_ms_repeats": [
+        40.94557400094345,
+        41.24076699372381,
+        40.99107551155612
+      ],
+      "mean_predict_ms": 34.1083531093318,
+      "mean_mask_transfer_ms": 5.540457516811633,
+      "peak_whole_gpu_mib": 4671.30859375,
+      "tensor_pixels": 1136640
+    },
+    {
+      "model": "yolo26l-seg",
+      "width": 1280,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 40.775645504860826,
+      "p95_ms_max": 49.08245766710024,
+      "p50_ms_repeats": [
+        38.96260799956508,
+        41.735164501005784,
+        41.62916401401162
+      ],
+      "mean_predict_ms": 34.83556170006826,
+      "mean_mask_transfer_ms": 4.820861839592301,
+      "peak_whole_gpu_mib": 4684.24609375,
+      "tensor_pixels": 1556480
+    },
+    {
+      "model": "yolo26l-seg",
+      "width": 1280,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 57.44634383396866,
+      "p95_ms_max": 66.53115375083871,
+      "p50_ms_repeats": [
+        56.73075851518661,
+        58.49498248426244,
+        57.11329050245695
+      ],
+      "mean_predict_ms": 50.33366601661934,
+      "mean_mask_transfer_ms": 5.49640629615169,
+      "peak_whole_gpu_mib": 4752.18359375,
+      "tensor_pixels": 2826240
+    },
+    {
+      "model": "yolo26l-seg",
+      "width": 1280,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 45.8556601855283,
+      "p95_ms_max": 59.089350825524875,
+      "p50_ms_repeats": [
+        44.58611202426255,
+        47.167047508992255,
+        45.81382102333009
+      ],
+      "mean_predict_ms": 40.44915328753026,
+      "mean_mask_transfer_ms": 4.824524290355233,
+      "peak_whole_gpu_mib": 4682.05859375,
+      "tensor_pixels": 1556480
+    },
+    {
+      "model": "yolo26m",
+      "width": 640,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 21.915707824518904,
+      "p95_ms_max": 28.478552767774087,
+      "p50_ms_repeats": [
+        22.068120480980724,
+        22.207777510629967,
+        21.47122548194602
+      ],
+      "mean_predict_ms": 17.872070822825965,
+      "mean_mask_transfer_ms": 2.45830559094126,
+      "peak_whole_gpu_mib": 4588.55859375,
+      "tensor_pixels": 860160
+    },
+    {
+      "model": "yolo26m",
+      "width": 640,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 17.007821317141254,
+      "p95_ms_max": 54.8408059374196,
+      "p50_ms_repeats": [
+        14.771382004255429,
+        16.55862497864291,
+        19.693456968525425
+      ],
+      "mean_predict_ms": 17.464670082457207,
+      "mean_mask_transfer_ms": 2.535124698867245,
+      "peak_whole_gpu_mib": 4636.8984375,
+      "tensor_pixels": 921600
+    },
+    {
+      "model": "yolo26m",
+      "width": 640,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 26.110622013220564,
+      "p95_ms_max": 32.51614869514014,
+      "p50_ms_repeats": [
+        25.815190514549613,
+        25.856001011561602,
+        26.660674513550475
+      ],
+      "mean_predict_ms": 22.36549961574686,
+      "mean_mask_transfer_ms": 2.5318409515117914,
+      "peak_whole_gpu_mib": 4586.43359375,
+      "tensor_pixels": 860160
+    },
+    {
+      "model": "yolo26m",
+      "width": 960,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 24.42751482400733,
+      "p95_ms_max": 30.710591032402586,
+      "p50_ms_repeats": [
+        23.134223476517946,
+        24.40549951279536,
+        25.742821482708678
+      ],
+      "mean_predict_ms": 19.831398759561125,
+      "mean_mask_transfer_ms": 2.486009831773117,
+      "peak_whole_gpu_mib": 4584.18359375,
+      "tensor_pixels": 1136640
+    },
+    {
+      "model": "yolo26m",
+      "width": 960,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 24.12737182263906,
+      "p95_ms_max": 28.809636773075905,
+      "p50_ms_repeats": [
+        24.291112989885733,
+        23.784066492225975,
+        24.306935985805467
+      ],
+      "mean_predict_ms": 19.874576573298935,
+      "mean_mask_transfer_ms": 2.3202286329857693,
+      "peak_whole_gpu_mib": 4602.18359375,
+      "tensor_pixels": 1566720
+    },
+    {
+      "model": "yolo26m",
+      "width": 960,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 27.86688650182138,
+      "p95_ms_max": 51.623540031141566,
+      "p50_ms_repeats": [
+        27.070856012869626,
+        27.287117001833394,
+        29.242686490761116
+      ],
+      "mean_predict_ms": 24.19963435822865,
+      "mean_mask_transfer_ms": 2.6143357948361277,
+      "peak_whole_gpu_mib": 4595.95703125,
+      "tensor_pixels": 1136640
+    },
+    {
+      "model": "yolo26m",
+      "width": 1280,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 26.193474487323936,
+      "p95_ms_max": 31.700391104095615,
+      "p50_ms_repeats": [
+        27.113843971164897,
+        25.56685046874918,
+        25.899729022057727
+      ],
+      "mean_predict_ms": 22.116737162771944,
+      "mean_mask_transfer_ms": 2.3843008253606968,
+      "peak_whole_gpu_mib": 4594.37109375,
+      "tensor_pixels": 1556480
+    },
+    {
+      "model": "yolo26m",
+      "width": 1280,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 36.38769317573557,
+      "p95_ms_max": 48.14209092000964,
+      "p50_ms_repeats": [
+        36.061908496776596,
+        35.20980750909075,
+        37.89136352133937
+      ],
+      "mean_predict_ms": 32.99021886390013,
+      "mean_mask_transfer_ms": 2.3086847436691946,
+      "peak_whole_gpu_mib": 4630.37109375,
+      "tensor_pixels": 2826240
+    },
+    {
+      "model": "yolo26m",
+      "width": 1280,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 30.182862499107916,
+      "p95_ms_max": 40.773503374657594,
+      "p50_ms_repeats": [
+        30.171171994879842,
+        30.488163989502937,
+        29.889251512940973
+      ],
+      "mean_predict_ms": 26.526165767669834,
+      "mean_mask_transfer_ms": 2.4780336030138037,
+      "peak_whole_gpu_mib": 4593.99609375,
+      "tensor_pixels": 1556480
+    },
+    {
+      "model": "yolo26m-seg",
+      "width": 640,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 28.568362157481413,
+      "p95_ms_max": 35.387606293079436,
+      "p50_ms_repeats": [
+        28.54591197683476,
+        29.039817512966692,
+        28.119356982642785
+      ],
+      "mean_predict_ms": 23.568228619600024,
+      "mean_mask_transfer_ms": 4.013612644242433,
+      "peak_whole_gpu_mib": 4654.43359375,
+      "tensor_pixels": 860160
+    },
+    {
+      "model": "yolo26m-seg",
+      "width": 640,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 24.012304658147816,
+      "p95_ms_max": 30.023945446009748,
+      "p50_ms_repeats": [
+        23.23888600221835,
+        23.98137198179029,
+        24.81665599043481
+      ],
+      "mean_predict_ms": 18.72132625770367,
+      "mean_mask_transfer_ms": 4.115461346615727,
+      "peak_whole_gpu_mib": 4654.30859375,
+      "tensor_pixels": 921600
+    },
+    {
+      "model": "yolo26m-seg",
+      "width": 640,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 32.78306465169104,
+      "p95_ms_max": 44.02204784564673,
+      "p50_ms_repeats": [
+        32.07254299195483,
+        32.35138350282796,
+        33.92526746029034
+      ],
+      "mean_predict_ms": 27.9981877290993,
+      "mean_mask_transfer_ms": 4.097127993979181,
+      "peak_whole_gpu_mib": 4654.43359375,
+      "tensor_pixels": 860160
+    },
+    {
+      "model": "yolo26m-seg",
+      "width": 960,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 31.928976842512686,
+      "p95_ms_max": 41.84420113742817,
+      "p50_ms_repeats": [
+        32.33273248770274,
+        31.65269602322951,
+        31.80150201660581
+      ],
+      "mean_predict_ms": 25.305896582237136,
+      "mean_mask_transfer_ms": 5.278965226413372,
+      "peak_whole_gpu_mib": 4653.08984375,
+      "tensor_pixels": 1136640
+    },
+    {
+      "model": "yolo26m-seg",
+      "width": 960,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 32.52343317338576,
+      "p95_ms_max": 43.22363553219474,
+      "p50_ms_repeats": [
+        32.50991049571894,
+        32.590899034403265,
+        32.46948999003507
+      ],
+      "mean_predict_ms": 25.274587567158353,
+      "mean_mask_transfer_ms": 5.941079486607729,
+      "peak_whole_gpu_mib": 4674.30859375,
+      "tensor_pixels": 1566720
+    },
+    {
+      "model": "yolo26m-seg",
+      "width": 960,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 35.5941099987831,
+      "p95_ms_max": 44.47845623653848,
+      "p50_ms_repeats": [
+        34.63200500118546,
+        35.408534517046064,
+        36.741790478117764
+      ],
+      "mean_predict_ms": 28.92976731818635,
+      "mean_mask_transfer_ms": 5.310152672852079,
+      "peak_whole_gpu_mib": 4654.30859375,
+      "tensor_pixels": 1136640
+    },
+    {
+      "model": "yolo26m-seg",
+      "width": 1280,
+      "batch": "2plus1",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 34.53627032771086,
+      "p95_ms_max": 42.64868373866193,
+      "p50_ms_repeats": [
+        34.033000498311594,
+        34.205325500806794,
+        35.37048498401418
+      ],
+      "mean_predict_ms": 29.06429271194308,
+      "mean_mask_transfer_ms": 4.418888670625165,
+      "peak_whole_gpu_mib": 4666.93359375,
+      "tensor_pixels": 1556480
+    },
+    {
+      "model": "yolo26m-seg",
+      "width": 1280,
+      "batch": "batch3",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 49.30810783601677,
+      "p95_ms_max": 60.64385276695248,
+      "p50_ms_repeats": [
+        50.25349001516588,
+        49.760455993236974,
+        47.91037749964744
+      ],
+      "mean_predict_ms": 43.974637831949316,
+      "mean_mask_transfer_ms": 4.864398700980625,
+      "peak_whole_gpu_mib": 4700.80859375,
+      "tensor_pixels": 2826240
+    },
+    {
+      "model": "yolo26m-seg",
+      "width": 1280,
+      "batch": "sequential",
+      "completed_repeats": 3,
+      "requested_repeats": 3,
+      "failures": [],
+      "p50_ms_mean": 39.06287599238567,
+      "p95_ms_max": 49.16800203209277,
+      "p50_ms_repeats": [
+        39.50231848284602,
+        38.97680147201754,
+        38.70950802229345
+      ],
+      "mean_predict_ms": 34.20203865534859,
+      "mean_mask_transfer_ms": 4.5820605344488285,
+      "peak_whole_gpu_mib": 4666.93359375,
+      "tensor_pixels": 1556480
+    }
+  ],
+  "range_scope": "reviewed broad target-region label presence; no pixel GT, recall, AP, or moving approach timing",
+  "ranges_conf07": {
+    "cases": [
+      {
+        "weather": "sunny",
+        "case": 0,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 21.334805465597018,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 1,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 41.332725659015516,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 2,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 61.33184110275193,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 3,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.74677615642272,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 4,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.716262200504765,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 5,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.70560846976122,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 6,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.81777246750376,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 7,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.796129227923636,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 8,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.786644077374135,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 9,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.999118288693882,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 10,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.99569614831522,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 11,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.9944581826622,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 12,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.946669069527317,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 13,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.94666634613839,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 14,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.94665700835465,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 15,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.455737283232402,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 16,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.45561301176385,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 17,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.455550588375246,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 18,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.012936128580552,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 19,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.010106694611814,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 20,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.00914280573046,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 0,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 21.334809133186134,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 1,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 41.332725659015516,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 2,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 61.33120607009582,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 3,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.746786721921193,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 4,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.71758150892804,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 5,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.70421750609531,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 6,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.81777246750376,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 7,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.796129227923636,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 8,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.78597700018838,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 9,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.999118288693882,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 10,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.99569614831522,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 11,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.9944581826622,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 12,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.946669069527317,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 13,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.94666634613839,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 14,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.946657006198166,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 15,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.455737283232402,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 16,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.45561301176385,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 17,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.455550588375246,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 18,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.012936128580552,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 19,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.010106694611814,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 20,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.00914280573046,
+        "frames": 5
+      }
+    ],
+    "profiles": [
+      {
+        "name": "yolo26m-640",
+        "model": "yolo26m",
+        "width": 640,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26m-960",
+        "model": "yolo26m",
+        "width": 960,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26m-1280",
+        "model": "yolo26m",
+        "width": 1280,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26l-640",
+        "model": "yolo26l",
+        "width": 640,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26l-960",
+        "model": "yolo26l",
+        "width": 960,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26l-1280",
+        "model": "yolo26l",
+        "width": 1280,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26m-seg-640",
+        "model": "yolo26m-seg",
+        "width": 640,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26m-seg-960",
+        "model": "yolo26m-seg",
+        "width": 960,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26m-seg-1280",
+        "model": "yolo26m-seg",
+        "width": 1280,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26l-seg-640",
+        "model": "yolo26l-seg",
+        "width": 640,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26l-seg-960",
+        "model": "yolo26l-seg",
+        "width": 960,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26l-seg-1280",
+        "model": "yolo26l-seg",
+        "width": 1280,
+        "confidence": 0.7
+      }
+    ],
+    "expected_label_frame_counts": {
+      "yolo26m-640": [
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        4,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yolo26m-960": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        4,
+        0,
+        5,
+        4,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yolo26m-1280": [
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        4,
+        0,
+        5,
+        4,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0
+      ],
+      "yolo26l-640": [
+        0,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        3,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "yolo26l-960": [
+        0,
+        2,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        4,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yolo26l-1280": [
+        1,
+        0,
+        0,
+        5,
+        5,
+        3,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        3,
+        0,
+        5,
+        5,
+        4,
+        5,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "yolo26m-seg-640": [
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        1,
+        0,
+        5,
+        4,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yolo26m-seg-960": [
+        0,
+        2,
+        5,
+        3,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        3,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0
+      ],
+      "yolo26m-seg-1280": [
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        1,
+        0,
+        5,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        1,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26l-seg-640": [
+        5,
+        5,
+        5,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        5,
+        5,
+        0,
+        1,
+        2,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yolo26l-seg-960": [
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yolo26l-seg-1280": [
+        5,
+        5,
+        5,
+        5,
+        4,
+        0,
+        5,
+        0,
+        0,
+        5,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        2,
+        0,
+        5,
+        0,
+        0,
+        5,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0
+      ]
+    },
+    "three_of_five_scene_counts": {
+      "yolo26m-640": 11,
+      "yolo26m-960": 15,
+      "yolo26m-1280": 17,
+      "yolo26l-640": 13,
+      "yolo26l-960": 16,
+      "yolo26l-1280": 16,
+      "yolo26m-seg-640": 10,
+      "yolo26m-seg-960": 11,
+      "yolo26m-seg-1280": 12,
+      "yolo26l-seg-640": 10,
+      "yolo26l-seg-960": 15,
+      "yolo26l-seg-1280": 15
+    },
+    "other_region_labels": [
+      {
+        "profile": "yolo26m-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 1,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      }
+    ]
+  },
+  "ranges_conf025": {
+    "cases": [
+      {
+        "weather": "sunny",
+        "case": 0,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 21.334805465597018,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 1,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 41.332725659015516,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 2,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 61.33184110275193,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 3,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.74677615642272,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 4,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.716262200504765,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 5,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.70560846976122,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 6,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.81777246750376,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 7,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.796129227923636,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 8,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.786644077374135,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 9,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.999118288693882,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 10,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.99569614831522,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 11,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.9944581826622,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 12,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.946669069527317,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 13,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.94666634613839,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 14,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.94665700835465,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 15,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.455737283232402,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 16,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.45561301176385,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 17,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.455550588375246,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 18,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.012936128580552,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 19,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.010106694611814,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 20,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.00914280573046,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 0,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 21.334809133186134,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 1,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 41.332725659015516,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 2,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 61.33120607009582,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 3,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.746786721921193,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 4,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.71758150892804,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 5,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.70421750609531,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 6,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.81777246750376,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 7,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.796129227923636,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 8,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.78597700018838,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 9,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.999118288693882,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 10,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.99569614831522,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 11,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.9944581826622,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 12,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.946669069527317,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 13,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.94666634613839,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 14,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.946657006198166,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 15,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.455737283232402,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 16,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.45561301176385,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 17,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.455550588375246,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 18,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.012936128580552,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 19,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.010106694611814,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 20,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.00914280573046,
+        "frames": 5
+      }
+    ],
+    "profiles": [
+      {
+        "name": "yolo26m-640",
+        "model": "yolo26m",
+        "width": 640,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26m-960",
+        "model": "yolo26m",
+        "width": 960,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26m-1280",
+        "model": "yolo26m",
+        "width": 1280,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26l-640",
+        "model": "yolo26l",
+        "width": 640,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26l-960",
+        "model": "yolo26l",
+        "width": 960,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26l-1280",
+        "model": "yolo26l",
+        "width": 1280,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26m-seg-640",
+        "model": "yolo26m-seg",
+        "width": 640,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26m-seg-960",
+        "model": "yolo26m-seg",
+        "width": 960,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26m-seg-1280",
+        "model": "yolo26m-seg",
+        "width": 1280,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26l-seg-640",
+        "model": "yolo26l-seg",
+        "width": 640,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26l-seg-960",
+        "model": "yolo26l-seg",
+        "width": 960,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26l-seg-1280",
+        "model": "yolo26l-seg",
+        "width": 1280,
+        "confidence": 0.25
+      }
+    ],
+    "expected_label_frame_counts": {
+      "yolo26m-640": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        4,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26m-960": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        2,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        3,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        0
+      ],
+      "yolo26m-1280": [
+        5,
+        5,
+        4,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        1,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        3,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        1,
+        2,
+        0,
+        0,
+        3,
+        0,
+        0,
+        5,
+        3,
+        0
+      ],
+      "yolo26l-640": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26l-960": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        2,
+        0,
+        0,
+        1,
+        0,
+        0,
+        5,
+        1,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26l-1280": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        2,
+        0,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        4,
+        0
+      ],
+      "yolo26m-seg-640": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        2,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26m-seg-960": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        2,
+        5,
+        2,
+        0,
+        5,
+        5,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        0
+      ],
+      "yolo26m-seg-1280": [
+        4,
+        5,
+        5,
+        5,
+        5,
+        4,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        3,
+        5,
+        5,
+        0,
+        5,
+        5,
+        3,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        2,
+        2
+      ],
+      "yolo26l-seg-640": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26l-seg-960": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        1,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26l-seg-1280": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        5,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        1,
+        5,
+        0,
+        1,
+        5,
+        5,
+        2,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        5,
+        5,
+        0
+      ]
+    },
+    "three_of_five_scene_counts": {
+      "yolo26m-640": 19,
+      "yolo26m-960": 24,
+      "yolo26m-1280": 25,
+      "yolo26l-640": 23,
+      "yolo26l-960": 24,
+      "yolo26l-1280": 29,
+      "yolo26m-seg-640": 19,
+      "yolo26m-seg-960": 22,
+      "yolo26m-seg-1280": 28,
+      "yolo26l-seg-640": 19,
+      "yolo26l-seg-960": 25,
+      "yolo26l-seg-1280": 22
+    },
+    "other_region_labels": [
+      {
+        "profile": "yolo26m-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 12,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 20,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 33,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 20,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 25,
+        "labels": [
+          "car"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 29,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 33,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-960",
+        "case_row": 41,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 1,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 2,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 20,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 23,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 29,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 33,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 40,
+        "labels": [
+          "bicycle",
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-1280",
+        "case_row": 41,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 0,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 12,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 29,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 33,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 12,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 33,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-960",
+        "case_row": 41,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 1,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 20,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 29,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-1280",
+        "case_row": 41,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 0,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 25,
+        "labels": [
+          "car"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 33,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-960",
+        "case_row": 41,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 0,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 1,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 29,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-1280",
+        "case_row": 41,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 20,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 29,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-960",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 5,
+        "labels": [
+          "car"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 12,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 20,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 29,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 33,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 40,
+        "labels": [
+          "bicycle",
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-1280",
+        "case_row": 41,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      }
+    ]
+  },
+  "range_batch3_conf07": {
+    "cases": [
+      {
+        "weather": "sunny",
+        "case": 0,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 21.334805465597018,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 1,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 41.332725659015516,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 2,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 61.33184110275193,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 3,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.74677615642272,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 4,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.716262200504765,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 5,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.70560846976122,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 6,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.81777246750376,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 7,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.796129227923636,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 8,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.786644077374135,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 9,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.999118288693882,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 10,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.99569614831522,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 11,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.9944581826622,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 12,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.946669069527317,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 13,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.94666634613839,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 14,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.94665700835465,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 15,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.455737283232402,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 16,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.45561301176385,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 17,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.455550588375246,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 18,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.012936128580552,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 19,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.010106694611814,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 20,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.00914280573046,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 0,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 21.334809133186134,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 1,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 41.332725659015516,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 2,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 61.33120607009582,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 3,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.746786721921193,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 4,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.71758150892804,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 5,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.70421750609531,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 6,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.81777246750376,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 7,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.796129227923636,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 8,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.78597700018838,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 9,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.999118288693882,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 10,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.99569614831522,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 11,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.9944581826622,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 12,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.946669069527317,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 13,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.94666634613839,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 14,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.946657006198166,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 15,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.455737283232402,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 16,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.45561301176385,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 17,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.455550588375246,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 18,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.012936128580552,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 19,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.010106694611814,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 20,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.00914280573046,
+        "frames": 5
+      }
+    ],
+    "profiles": [
+      {
+        "name": "yolo26m-640",
+        "model": "yolo26m",
+        "width": 640,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26l-640",
+        "model": "yolo26l",
+        "width": 640,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26m-seg-640",
+        "model": "yolo26m-seg",
+        "width": 640,
+        "confidence": 0.7
+      },
+      {
+        "name": "yolo26l-seg-640",
+        "model": "yolo26l-seg",
+        "width": 640,
+        "confidence": 0.7
+      }
+    ],
+    "expected_label_frame_counts": {
+      "yolo26m-640": [
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yolo26l-640": [
+        0,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26m-seg-640": [
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        1,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yolo26l-seg-640": [
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "three_of_five_scene_counts": {
+      "yolo26m-640": 11,
+      "yolo26l-640": 13,
+      "yolo26m-seg-640": 8,
+      "yolo26l-seg-640": 11
+    },
+    "other_region_labels": [
+      {
+        "profile": "yolo26m-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      }
+    ]
+  },
+  "range_batch3_conf025": {
+    "cases": [
+      {
+        "weather": "sunny",
+        "case": 0,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 21.334805465597018,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 1,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 41.332725659015516,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 2,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 61.33184110275193,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 3,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.74677615642272,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 4,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.716262200504765,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 5,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.70560846976122,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 6,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.81777246750376,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 7,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.796129227923636,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 8,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.786644077374135,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 9,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.999118288693882,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 10,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.99569614831522,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 11,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.9944581826622,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 12,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.946669069527317,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 13,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.94666634613839,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 14,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.94665700835465,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 15,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.455737283232402,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 16,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.45561301176385,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 17,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.455550588375246,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 18,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.012936128580552,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 19,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.010106694611814,
+        "frames": 5
+      },
+      {
+        "weather": "sunny",
+        "case": 20,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.00914280573046,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 0,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 21.334809133186134,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 1,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 41.332725659015516,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 2,
+        "asset": "2014_Kia_K7",
+        "expected_label": "car",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 61.33120607009582,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 3,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.746786721921193,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 4,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.71758150892804,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 5,
+        "asset": "2013_Hyundai_Xcient(P520)",
+        "expected_label": "truck",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.70421750609531,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 6,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 22.81777246750376,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 7,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 42.796129227923636,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 8,
+        "asset": "2016_Hyundai_Universe",
+        "expected_label": "bus",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 62.78597700018838,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 9,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.999118288693882,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 10,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.99569614831522,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 11,
+        "asset": "Man1",
+        "expected_label": "person",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.9944581826622,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 12,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 19.946669069527317,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 13,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 39.94666634613839,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 14,
+        "asset": "Dog1",
+        "expected_label": "dog",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 59.946657006198166,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 15,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.455737283232402,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 16,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.45561301176385,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 17,
+        "asset": "Bicycle_city",
+        "expected_label": "bicycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.455550588375246,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 18,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front20",
+        "requested_forward_anchor_m": 20.0,
+        "bbox_center_distance_from_ego_anchor_m": 20.012936128580552,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 19,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front40",
+        "requested_forward_anchor_m": 40.0,
+        "bbox_center_distance_from_ego_anchor_m": 40.010106694611814,
+        "frames": 5
+      },
+      {
+        "weather": "foggy",
+        "case": 20,
+        "asset": "SportBike",
+        "expected_label": "motorcycle",
+        "placement": "front60",
+        "requested_forward_anchor_m": 60.0,
+        "bbox_center_distance_from_ego_anchor_m": 60.00914280573046,
+        "frames": 5
+      }
+    ],
+    "profiles": [
+      {
+        "name": "yolo26m-640",
+        "model": "yolo26m",
+        "width": 640,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26l-640",
+        "model": "yolo26l",
+        "width": 640,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26m-seg-640",
+        "model": "yolo26m-seg",
+        "width": 640,
+        "confidence": 0.25
+      },
+      {
+        "name": "yolo26l-seg-640",
+        "model": "yolo26l-seg",
+        "width": 640,
+        "confidence": 0.25
+      }
+    ],
+    "expected_label_frame_counts": {
+      "yolo26m-640": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26l-640": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        2,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26m-seg-640": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "yolo26l-seg-640": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ]
+    },
+    "three_of_five_scene_counts": {
+      "yolo26m-640": 18,
+      "yolo26l-640": 22,
+      "yolo26m-seg-640": 21,
+      "yolo26l-seg-640": 19
+    },
+    "other_region_labels": [
+      {
+        "profile": "yolo26m-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 12,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-640",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 29,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 33,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-640",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26m-seg-640",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 7,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 8,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 18,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 19,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 28,
+        "labels": [
+          "truck"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 39,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      },
+      {
+        "profile": "yolo26l-seg-640",
+        "case_row": 40,
+        "labels": [
+          "person"
+        ],
+        "interpretation": "co-occurrence or label confusion; not automatically an FP"
+      }
+    ]
+  },
+  "live_trials": [
+    {
+      "name": "yolo26m-640-all15-batch3-C1-r1",
+      "job": {
+        "model": "yolo26m",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 1,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_right": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.6,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.17400411900598556,
+          "first_output_sec": 0.02914070599945262,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 22.400856,
+            "p95": 29.8769476,
+            "p99": 32.35540336000004,
+            "maximum": 42.814255
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 21.7756389756687,
+            "p95": 29.00860618101433,
+            "p99": 31.53520107967783,
+            "maximum": 42.33298503095284
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.17490374500630423,
+          "first_output_sec": 0.02936454996233806,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 21.392465,
+            "p95": 28.641593749999995,
+            "p99": 30.601925159999954,
+            "maximum": 41.135073
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 20.596272515831515,
+            "p95": 27.974032209021967,
+            "p99": 29.82543286401773,
+            "maximum": 39.85845803981647
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.6,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.1747708740294911,
+          "first_output_sec": 0.02940547396428883,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 23.368121,
+            "p95": 30.0256728,
+            "p99": 31.737318160000036,
+            "maximum": 43.052673
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 22.650183993391693,
+            "p95": 29.253308777697384,
+            "p99": 30.9553095698357,
+            "maximum": 42.096848017536104
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 4999.0,
+      "whole_peak_vram_mib": 4999.0,
+      "report_sha256": "cb45356a4b867d88a3ade22cfe78c1c0c3ba413ade4c2c3732c058799b030c85"
+    },
+    {
+      "name": "yolo26l-640-all15-batch3-C1-r1",
+      "job": {
+        "model": "yolo26l",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 1,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.17438245500670746,
+          "first_output_sec": 0.09152807103237137,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 23.666143499999997,
+            "p95": 31.847715199999996,
+            "p99": 36.290308859999946,
+            "maximum": 45.60113
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 22.949256526771933,
+            "p95": 31.338244542712346,
+            "p99": 35.9542984864674,
+            "maximum": 44.909254007507116
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.8,
+            14.8
+          ],
+          "max_gap_sec": 0.17400360002648085,
+          "first_output_sec": 0.09161137498449534,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 25.372267,
+            "p95": 33.2408424,
+            "p99": 38.26241428000003,
+            "maximum": 46.856403
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 24.83876998303458,
+            "p95": 32.76557883946225,
+            "p99": 37.780094544868945,
+            "maximum": 46.19924398139119
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_right": {
+          "messages": 296,
+          "hz": 14.8,
+          "valid_messages": 296,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.2,
+            14.6,
+            14.8
+          ],
+          "max_gap_sec": 0.1747878209571354,
+          "first_output_sec": 0.09163207502570003,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 296,
+            "p50": 23.287058000000002,
+            "p95": 31.94451325,
+            "p99": 36.982393900000005,
+            "maximum": 46.627999
+          },
+          "input_to_output_wall_ms": {
+            "samples": 296,
+            "p50": 22.6961494772695,
+            "p95": 31.13535273587331,
+            "p99": 36.49701434187592,
+            "maximum": 45.93265900621191
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.8,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 5042.0,
+      "whole_peak_vram_mib": 5042.0,
+      "report_sha256": "1cb3eb55edc9c4bfa81d236e51898ae00aab5c8b12cea625456b155f68a12672"
+    },
+    {
+      "name": "yolo26m-seg-640-all15-batch3-C1-r1",
+      "job": {
+        "model": "yolo26m-seg",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 1,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_front": {
+          "messages": 299,
+          "hz": 14.95,
+          "valid_messages": 299,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.15484753699274734,
+          "first_output_sec": 0.06571189500391483,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 299,
+            "p50": 24.453401,
+            "p95": 37.97674150000001,
+            "p99": 44.71729723999995,
+            "maximum": 49.451113
+          },
+          "input_to_output_wall_ms": {
+            "samples": 299,
+            "p50": 23.861792986281216,
+            "p95": 37.52687128144317,
+            "p99": 43.90529098687689,
+            "maximum": 49.02955301804468
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_right": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            14.8,
+            15.2
+          ],
+          "max_gap_sec": 0.15933963598217815,
+          "first_output_sec": 0.10614119697129354,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 27.205706,
+            "p95": 40.230417,
+            "p99": 49.79395908,
+            "maximum": 57.420969
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 26.560752012301236,
+            "p95": 39.60481700487435,
+            "p99": 49.25645374227315,
+            "maximum": 56.95836094673723
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 296,
+          "hz": 14.8,
+          "valid_messages": 296,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 13,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.16898278199369088,
+          "first_output_sec": 0.10618265299126506,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 296,
+            "p50": 27.48549,
+            "p95": 40.4785275,
+            "p99": 50.206935800000004,
+            "maximum": 58.992624
+          },
+          "input_to_output_wall_ms": {
+            "samples": 296,
+            "p50": 26.93764347350225,
+            "p95": 39.80858903378248,
+            "p99": 49.60046496416908,
+            "maximum": 58.43030399410054
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.95,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.8,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 5109.0,
+      "whole_peak_vram_mib": 5109.0,
+      "report_sha256": "70fb26b22f12fe00b2d3fb945e10027e01c3efab1edc7c5f3745466a4f5d3841"
+    },
+    {
+      "name": "yolo26l-seg-640-all15-batch3-C1-r1",
+      "job": {
+        "model": "yolo26l-seg",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 1,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            15.2
+          ],
+          "max_gap_sec": 0.18079009401844814,
+          "first_output_sec": 0.05413324397522956,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 28.3589365,
+            "p95": 45.772957749999996,
+            "p99": 49.79074053999992,
+            "maximum": 66.052913
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 27.591467020101845,
+            "p95": 45.08876691979821,
+            "p99": 49.07616469659834,
+            "maximum": 64.91606700001284
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 295,
+          "hz": 14.75,
+          "valid_messages": 295,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            14.6,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.1817254669731483,
+          "first_output_sec": 0.05425788398133591,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 295,
+            "p50": 32.68671,
+            "p95": 50.014400900000005,
+            "p99": 55.90793132,
+            "maximum": 68.639994
+          },
+          "input_to_output_wall_ms": {
+            "samples": 295,
+            "p50": 31.96655202191323,
+            "p95": 48.8728019176051,
+            "p99": 55.41328318417072,
+            "maximum": 68.1217479868792
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_right": {
+          "messages": 296,
+          "hz": 14.8,
+          "valid_messages": 296,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17853796802228317,
+          "first_output_sec": 0.0542778359958902,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 296,
+            "p50": 32.3923825,
+            "p95": 49.6410125,
+            "p99": 55.50342755000002,
+            "maximum": 68.245172
+          },
+          "input_to_output_wall_ms": {
+            "samples": 296,
+            "p50": 31.481287500355393,
+            "p95": 48.548930513788946,
+            "p99": 55.10149869951421,
+            "maximum": 67.52758601214737
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.75,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.8,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 5117.0,
+      "whole_peak_vram_mib": 5117.0,
+      "report_sha256": "097f961fb4a986f1d8d0bc084e4e9b24f78a3fb227a273a4862ecd228e500098"
+    },
+    {
+      "name": "yolo26l-640-all15-batch3-C1-r2",
+      "job": {
+        "model": "yolo26l",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 2,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": false,
+      "failures": [
+        "yolo front supply/latency gate"
+      ],
+      "measurements": {
+        "yolo_left": {
+          "messages": 295,
+          "hz": 14.75,
+          "valid_messages": 295,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.4,
+            14.6,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.2000632340204902,
+          "first_output_sec": 0.03608999203424901,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 295,
+            "p50": 23.385764,
+            "p95": 36.36445990000001,
+            "p99": 46.80538648000002,
+            "maximum": 58.286906
+          },
+          "input_to_output_wall_ms": {
+            "samples": 295,
+            "p50": 22.822375991381705,
+            "p95": 35.84578006411903,
+            "p99": 46.13180046202616,
+            "maximum": 57.758554990869015
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_right": {
+          "messages": 294,
+          "hz": 14.7,
+          "valid_messages": 294,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.2,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.19999166403431445,
+          "first_output_sec": 0.03617277700686827,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 294,
+            "p50": 24.9453775,
+            "p95": 35.98884305000002,
+            "p99": 51.21066328999996,
+            "maximum": 73.041439
+          },
+          "input_to_output_wall_ms": {
+            "samples": 294,
+            "p50": 24.31283798068762,
+            "p95": 35.578323114896214,
+            "p99": 50.71430452575438,
+            "maximum": 72.1216180245392
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_front": {
+          "messages": 295,
+          "hz": 14.75,
+          "valid_messages": 295,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.2,
+            15.0,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.2753760420018807,
+          "first_output_sec": 0.03618103504413739,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 295,
+            "p50": 23.618698,
+            "p95": 34.63072820000001,
+            "p99": 45.595507020000014,
+            "maximum": 71.092844
+          },
+          "input_to_output_wall_ms": {
+            "samples": 295,
+            "p50": 22.862554993480444,
+            "p95": 34.03684851946309,
+            "p99": 45.06492756539957,
+            "maximum": 70.38498303154483
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.75,
+          "met": false
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.75,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.7,
+          "met": false
+        }
+      },
+      "active_peak_vram_mib": 5567.0,
+      "whole_peak_vram_mib": 5567.0,
+      "report_sha256": "d96317398a130c9db60b2101e4c7f59196accd7bd7b2e54edf8725acc4e45e52"
+    },
+    {
+      "name": "yolo26m-seg-640-all15-batch3-C1-r2",
+      "job": {
+        "model": "yolo26m-seg",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 2,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_right": {
+          "messages": 299,
+          "hz": 14.95,
+          "valid_messages": 299,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            15.0,
+            15.0,
+            14.6,
+            15.2
+          ],
+          "max_gap_sec": 0.1484723900211975,
+          "first_output_sec": 0.04520373995183036,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 299,
+            "p50": 28.001547,
+            "p95": 41.803574499999996,
+            "p99": 44.88246409999999,
+            "maximum": 48.245191
+          },
+          "input_to_output_wall_ms": {
+            "samples": 299,
+            "p50": 27.390361006837338,
+            "p95": 40.86168486974203,
+            "p99": 44.37944863922893,
+            "maximum": 47.77760501019657
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.16272245696745813,
+          "first_output_sec": 0.045321195968426764,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 26.771069,
+            "p95": 40.750611199999994,
+            "p99": 45.61187975999997,
+            "maximum": 49.841642
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 26.101826020749286,
+            "p95": 40.20805342879611,
+            "p99": 45.04022109438662,
+            "maximum": 49.200968991499394
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.18046006001532078,
+          "first_output_sec": 0.0453386299777776,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 26.849747,
+            "p95": 40.4586312,
+            "p99": 43.80278588000003,
+            "maximum": 53.254128
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 26.107022014912218,
+            "p95": 39.778804569505155,
+            "p99": 43.38781389174986,
+            "maximum": 52.694945014081895
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.95,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 5248.0,
+      "whole_peak_vram_mib": 5248.0,
+      "report_sha256": "57c896b760c9fed3a0d10be79e0d3aff1f7f4700ffed562addea7429f1f2d8b9"
+    },
+    {
+      "name": "yolo26l-seg-640-all15-batch3-C1-r2",
+      "job": {
+        "model": "yolo26l-seg",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 2,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_right": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.15926791197853163,
+          "first_output_sec": 0.03650509502040222,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 28.563977,
+            "p95": 41.8468946,
+            "p99": 47.134723640000004,
+            "maximum": 48.058987
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 27.891886013094336,
+            "p95": 40.99599982146173,
+            "p99": 46.711353459395475,
+            "maximum": 47.5943639758043
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.16233839298365638,
+          "first_output_sec": 0.03657265199581161,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 27.909398,
+            "p95": 42.2234888,
+            "p99": 46.32740460999999,
+            "maximum": 52.396059
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 27.297960477881134,
+            "p95": 41.347280133049935,
+            "p99": 45.79032701498363,
+            "maximum": 51.605368964374065
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.18005334201734513,
+          "first_output_sec": 0.03658028703648597,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 28.900743,
+            "p95": 43.3251497,
+            "p99": 48.452500619999995,
+            "maximum": 54.707527
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 28.43733603367582,
+            "p95": 42.612299942993545,
+            "p99": 47.86493307503406,
+            "maximum": 54.34349202550948
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 5242.0,
+      "whole_peak_vram_mib": 5242.0,
+      "report_sha256": "cba2462ea2ba72fd97be5623a06573027aa6d7607b74700c5261091c6e12fcff"
+    },
+    {
+      "name": "yolo26m-640-all15-batch3-C1-r2",
+      "job": {
+        "model": "yolo26m",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 2,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_left": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17333060299279168,
+          "first_output_sec": 0.07866700895829126,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 23.532152,
+            "p95": 28.6144262,
+            "p99": 34.198656080000035,
+            "maximum": 39.044141
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 22.873202979099005,
+            "p95": 27.860896196216345,
+            "p99": 33.51868743309755,
+            "maximum": 38.64933701697737
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_right": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.2,
+            15.0,
+            14.6
+          ],
+          "max_gap_sec": 0.16540353000164032,
+          "first_output_sec": 0.07872931897873059,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 22.378921,
+            "p95": 27.8647898,
+            "p99": 33.66420680000004,
+            "maximum": 38.824319
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 21.840939996764064,
+            "p95": 27.40622677374631,
+            "p99": 33.04966505384077,
+            "maximum": 38.21873903507367
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.16620430996408686,
+          "first_output_sec": 0.07874743698630482,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 21.951317500000002,
+            "p95": 27.085077799999997,
+            "p99": 31.917968469999927,
+            "maximum": 37.318707
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 21.316908998414874,
+            "p95": 26.53296930657234,
+            "p99": 31.426425350946303,
+            "maximum": 36.85136802960187
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 5120.0,
+      "whole_peak_vram_mib": 5120.0,
+      "report_sha256": "208848cab9e323df926a01b107e41e5df943de1ec8f29d56cbbac2dbad103f6c"
+    },
+    {
+      "name": "yolo26m-seg-640-all15-batch3-C1-r3",
+      "job": {
+        "model": "yolo26m-seg",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 3,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_right": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.15280641801655293,
+          "first_output_sec": 0.045625053986441344,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 25.477886,
+            "p95": 36.8499274,
+            "p99": 43.04707504000004,
+            "maximum": 46.002626
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 24.81613401323557,
+            "p95": 36.31600160151719,
+            "p99": 42.42777965264398,
+            "maximum": 45.525134017225355
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_front": {
+          "messages": 299,
+          "hz": 14.95,
+          "valid_messages": 299,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.2
+          ],
+          "max_gap_sec": 0.13886290899245068,
+          "first_output_sec": 0.08395390800433233,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 299,
+            "p50": 26.329995,
+            "p95": 38.64982080000002,
+            "p99": 44.692392979999966,
+            "maximum": 49.58725
+          },
+          "input_to_output_wall_ms": {
+            "samples": 299,
+            "p50": 25.68136400077492,
+            "p95": 38.139688811497784,
+            "p99": 44.056829562177846,
+            "maximum": 49.04543899465352
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.15204058203380555,
+          "first_output_sec": 0.08403949602507055,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 27.9474255,
+            "p95": 40.8833742,
+            "p99": 46.48624691999993,
+            "maximum": 52.330971
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 27.30032047838904,
+            "p95": 40.34927108732517,
+            "p99": 45.95845708565314,
+            "maximum": 51.844811998307705
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.95,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 5218.0,
+      "whole_peak_vram_mib": 5218.0,
+      "report_sha256": "b7f89e31f29ecaadc5372aa76fccf608726bb78edb534a191c5d016cde381edd"
+    },
+    {
+      "name": "yolo26l-seg-640-all15-batch3-C1-r3",
+      "job": {
+        "model": "yolo26l-seg",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 3,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": false,
+      "failures": [
+        "yolo front supply/latency gate",
+        "yolo left supply/latency gate",
+        "yolo right supply/latency gate"
+      ],
+      "measurements": {
+        "yolo_right": {
+          "messages": 290,
+          "hz": 14.5,
+          "valid_messages": 290,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 8,
+          "five_second_hz": [
+            13.6,
+            15.0,
+            14.8,
+            14.6
+          ],
+          "max_gap_sec": 0.5360796920140274,
+          "first_output_sec": 0.5360796920140274,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 290,
+            "p50": 30.738592,
+            "p95": 45.8297967,
+            "p99": 51.126625200000014,
+            "maximum": 498.647452
+          },
+          "input_to_output_wall_ms": {
+            "samples": 290,
+            "p50": 30.18521546619013,
+            "p95": 45.30263981141616,
+            "p99": 50.60059397481383,
+            "maximum": 497.93818697799
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_front": {
+          "messages": 291,
+          "hz": 14.55,
+          "valid_messages": 291,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 8,
+          "five_second_hz": [
+            13.6,
+            15.0,
+            14.8,
+            14.8
+          ],
+          "max_gap_sec": 0.5362621790263802,
+          "first_output_sec": 0.5362621790263802,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 291,
+            "p50": 28.808355,
+            "p95": 44.149876,
+            "p99": 49.35080950000001,
+            "maximum": 496.423006
+          },
+          "input_to_output_wall_ms": {
+            "samples": 291,
+            "p50": 28.163154027424753,
+            "p95": 43.53900198475458,
+            "p99": 48.65563129424119,
+            "maximum": 495.91472902102396
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 292,
+          "hz": 14.6,
+          "valid_messages": 292,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 8,
+          "five_second_hz": [
+            13.6,
+            15.2,
+            14.8,
+            14.8
+          ],
+          "max_gap_sec": 0.5362834020052105,
+          "first_output_sec": 0.5362834020052105,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 292,
+            "p50": 30.555605999999997,
+            "p95": 45.8400129,
+            "p99": 50.60624816999998,
+            "maximum": 498.204708
+          },
+          "input_to_output_wall_ms": {
+            "samples": 292,
+            "p50": 30.034819501452148,
+            "p95": 45.399396313587204,
+            "p99": 49.77607725712002,
+            "maximum": 497.5760909728706
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.55,
+          "met": false
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.6,
+          "met": false
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.5,
+          "met": false
+        }
+      },
+      "active_peak_vram_mib": 5226.0,
+      "whole_peak_vram_mib": 5226.0,
+      "report_sha256": "a87b7e4c77c34074cef8d6786d58d1635b97e81b64bdf0359dc846f9d339d8ff"
+    },
+    {
+      "name": "yolo26m-640-all15-batch3-C1-r3",
+      "job": {
+        "model": "yolo26m",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 3,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_front": {
+          "messages": 297,
+          "hz": 14.85,
+          "valid_messages": 297,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17697862401837483,
+          "first_output_sec": 0.05765934695955366,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 297,
+            "p50": 21.690607,
+            "p95": 29.0729042,
+            "p99": 36.388273400000024,
+            "maximum": 39.030075
+          },
+          "input_to_output_wall_ms": {
+            "samples": 297,
+            "p50": 21.054851997178048,
+            "p95": 28.277479996904727,
+            "p99": 35.658022409770666,
+            "maximum": 38.49849401740357
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            15.0,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.17233104101615027,
+          "first_output_sec": 0.05780372297158465,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 23.0761765,
+            "p95": 31.325114199999998,
+            "p99": 39.865968139999985,
+            "maximum": 42.948484
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 22.36645750235766,
+            "p95": 30.40460307092871,
+            "p99": 36.94054836989373,
+            "maximum": 42.39547497127205
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_right": {
+          "messages": 296,
+          "hz": 14.8,
+          "valid_messages": 296,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.6
+          ],
+          "max_gap_sec": 0.17267638799967244,
+          "first_output_sec": 0.057822700997348875,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 296,
+            "p50": 23.6718655,
+            "p95": 31.50028025,
+            "p99": 39.98224730000001,
+            "maximum": 48.344373
+          },
+          "input_to_output_wall_ms": {
+            "samples": 296,
+            "p50": 23.122804501326755,
+            "p95": 30.689988037920557,
+            "p99": 37.00587613566316,
+            "maximum": 42.800839990377426
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.85,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.8,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 5121.0,
+      "whole_peak_vram_mib": 5121.0,
+      "report_sha256": "936cbcd65cfc17e0f9d9a44981b6ca6fc46bd862fd743696614c6137f5762ae9"
+    },
+    {
+      "name": "yolo26l-640-all15-batch3-C1-r3",
+      "job": {
+        "model": "yolo26l",
+        "width": 640,
+        "confidence": 0.7,
+        "rates": "all15",
+        "batch": "batch3",
+        "profile": "C1",
+        "repeat": 3,
+        "seconds": 20,
+        "full_stack": false,
+        "fusion_policy": "unique"
+      },
+      "passed": true,
+      "failures": [],
+      "measurements": {
+        "yolo_right": {
+          "messages": 296,
+          "hz": 14.8,
+          "valid_messages": 296,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.4,
+            15.0,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17022567702224478,
+          "first_output_sec": 0.05256437201751396,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 296,
+            "p50": 22.2946405,
+            "p95": 28.99372575,
+            "p99": 33.21067080000001,
+            "maximum": 40.312767
+          },
+          "input_to_output_wall_ms": {
+            "samples": 296,
+            "p50": 21.60499949241057,
+            "p95": 28.595791998668574,
+            "p99": 32.774752084515065,
+            "maximum": 39.84388196840882
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_front": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.1419140340294689,
+          "first_output_sec": 0.05264346901094541,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 22.8105785,
+            "p95": 28.88165735,
+            "p99": 33.08065621,
+            "maximum": 39.23297
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 22.065531491534784,
+            "p95": 28.3122197171906,
+            "p99": 32.61807248345576,
+            "maximum": 37.9454760113731
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        },
+        "yolo_left": {
+          "messages": 298,
+          "hz": 14.9,
+          "valid_messages": 298,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.17378251504851505,
+          "first_output_sec": 0.05265196500113234,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "complete": true,
+          "duration_sec": 20.0,
+          "valid_ratio": 1.0,
+          "source_age_ms": {
+            "samples": 298,
+            "p50": 23.6445665,
+            "p95": 30.456233049999994,
+            "p99": 34.776108689999965,
+            "maximum": 41.971445
+          },
+          "input_to_output_wall_ms": {
+            "samples": 298,
+            "p50": 22.96434951131232,
+            "p95": 29.832099724444557,
+            "p99": 34.17247170815241,
+            "maximum": 41.33763903519139
+          },
+          "input_anchor_missing": 0,
+          "input_anchor_ambiguous": 0,
+          "negative_source_age": 0
+        }
+      },
+      "target_attainment": {
+        "front": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "left": {
+          "target_hz": 15.0,
+          "observed_hz": 14.9,
+          "met": true
+        },
+        "right": {
+          "target_hz": 15.0,
+          "observed_hz": 14.8,
+          "met": true
+        }
+      },
+      "active_peak_vram_mib": 5143.0,
+      "whole_peak_vram_mib": 5143.0,
+      "report_sha256": "dc87fcf6f70f3d2c8b5cb0005d3d9c07408adb8546c6976c2905db862abaf2ce"
+    }
+  ],
+  "live_completed": 12,
+  "live_passed": 10,
+  "model_defaults_changed": false,
+  "cleanup": [
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v1/sunny/capture.json",
+      "owned_count": 21,
+      "removed_count": 21,
+      "exact_cleanup": true,
+      "ego_translation_delta_m": 0.0,
+      "ego_gear_unchanged": true,
+      "sha256": "880d42127bdd573ccd4741935e3a70a6d040917565548692ba864b0cbe17d7a7"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v2/foggy/capture.json",
+      "owned_count": 21,
+      "removed_count": 21,
+      "exact_cleanup": true,
+      "ego_translation_delta_m": 0.0,
+      "ego_gear_unchanged": true,
+      "sha256": "a71d63671956187eff835297fda3fca0de3708f22cb42f40ed786733447b457c"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/batch3-live-640-v1/owned-actors.json",
+      "owned_count": 9,
+      "removed_count": 9,
+      "exact_cleanup": true,
+      "ego_translation_delta_m": null,
+      "ego_gear_unchanged": null,
+      "sha256": "0fd9031233f03353624a5c889af278829642f5536de921f85fcf11381604ad7c"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/batch3-live-640-v2/owned-actors.json",
+      "owned_count": 9,
+      "removed_count": 9,
+      "exact_cleanup": true,
+      "ego_translation_delta_m": null,
+      "ego_gear_unchanged": null,
+      "sha256": "568aad9cdcd1fd485e901610f93d0a79605cdccc3f4a8c28ce3b856b8944422e"
+    }
+  ],
+  "regression": {
+    "coco7_tests": 28,
+    "detection_tests": 70,
+    "validators": 3,
+    "passed": true
+  },
+  "predecessor_failures_preserved": [
+    "range-captures-v1 weather enum driver",
+    "range-model-inspection-v1 partial fixture",
+    "batch-range-benchmark-v1 post timer guard",
+    "batch3-live-640-v1 ROS package shadowing"
+  ],
+  "evidence": [
+    {
+      "path": "../artifacts/camera-coco7-live-v1/batch-range-benchmark-v2/report.json",
+      "sha256": "745529c42ad2d377a7b7cfeae0a2edf13ce3d4ef577e59733cd9087d0bd0ca4b"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-model-inspection-v2/report.json",
+      "sha256": "45f37cc2d715afbdaa9d5ac277ed25dc976efe0821ee131bc63156fa6d382458"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v1/sunny/capture.json",
+      "sha256": "880d42127bdd573ccd4741935e3a70a6d040917565548692ba864b0cbe17d7a7"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v2/foggy/capture.json",
+      "sha256": "a71d63671956187eff835297fda3fca0de3708f22cb42f40ed786733447b457c"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/batch-range-benchmark-v2/report.json",
+      "sha256": "745529c42ad2d377a7b7cfeae0a2edf13ce3d4ef577e59733cd9087d0bd0ca4b"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-model-inspection-low25-v1/report.json",
+      "sha256": "038d42c09c564ad484f106fa2bc54b0fb2a86f49a0eecf011190059bf1556473"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v1/sunny/capture.json",
+      "sha256": "880d42127bdd573ccd4741935e3a70a6d040917565548692ba864b0cbe17d7a7"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v2/foggy/capture.json",
+      "sha256": "a71d63671956187eff835297fda3fca0de3708f22cb42f40ed786733447b457c"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/batch-range-benchmark-v2/report.json",
+      "sha256": "745529c42ad2d377a7b7cfeae0a2edf13ce3d4ef577e59733cd9087d0bd0ca4b"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-batch3-640-inspection07-v1/report.json",
+      "sha256": "e0b4929114997017d3ba8b03457a51af1cdafed4353a7c1886ca46264409208f"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v1/sunny/capture.json",
+      "sha256": "880d42127bdd573ccd4741935e3a70a6d040917565548692ba864b0cbe17d7a7"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v2/foggy/capture.json",
+      "sha256": "a71d63671956187eff835297fda3fca0de3708f22cb42f40ed786733447b457c"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/batch-range-benchmark-v2/report.json",
+      "sha256": "745529c42ad2d377a7b7cfeae0a2edf13ce3d4ef577e59733cd9087d0bd0ca4b"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-batch3-640-inspection25-v1/report.json",
+      "sha256": "d4b5d78c708c1000ae4c5d514c1b296d46d4fffb6d093485c2912a200dc0e1ae"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v1/sunny/capture.json",
+      "sha256": "880d42127bdd573ccd4741935e3a70a6d040917565548692ba864b0cbe17d7a7"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v2/foggy/capture.json",
+      "sha256": "a71d63671956187eff835297fda3fca0de3708f22cb42f40ed786733447b457c"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-batch-source-v1.json",
+      "sha256": "e693b43c89596ded90ef291ed0351635680b2cfb9c69cfae765cf277f09ce712"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-batch3-live-input-gaps-v1.json",
+      "sha256": "63a7f86b676128442ca8d6c01af48358992d0a8e613d026ac5f0b4cfe6d0e12e"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-batch-final-environment-v1.json",
+      "sha256": "d7d3c5de7d924066c7373a914b60c51407bacd24d03e785ad331bb8de336098c"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v1/protocol.json",
+      "sha256": "ace2faa3b95f05bb7adbf658133c69bdf80fae88d461d2994d3fb9cc2c9a36ed"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-captures-v2/protocol.json",
+      "sha256": "bfc65a5679f27cb99bc663c3c0c0aa7e44ca775ade1e20e54271aee33f46c2d2"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/batch-range-benchmark-v1/report.json",
+      "sha256": "b38aa09e941468bbdfef138e5fc929f91557dcf9b5abc6df765037629808e49c"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/batch3-live-640-v1/driver.json",
+      "sha256": "f6e654e99819bf2f6482dbb5fdb49ee35d970015d77a18dd27fafb4f896eb17e"
+    },
+    {
+      "path": "../artifacts/camera-coco7-live-v1/range-batch-followup-regression.log",
+      "sha256": "02e0ff8a88bbd882220eb6b727e54fc71d54fa070db1e722dfdaffa3e3e573dd"
+    }
+  ]
+}

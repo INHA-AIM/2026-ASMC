@@ -1,0 +1,142 @@
+[
+  {
+    "phase": "camera",
+    "classes": "baseline",
+    "bag_id": "camera",
+    "repeat": 1,
+    "debug": false
+  },
+  {
+    "phase": "camera",
+    "classes": "all",
+    "bag_id": "camera",
+    "repeat": 1,
+    "debug": false
+  },
+  {
+    "phase": "camera",
+    "classes": "baseline",
+    "bag_id": "camera",
+    "repeat": 1,
+    "debug": true
+  },
+  {
+    "phase": "camera",
+    "classes": "all",
+    "bag_id": "camera",
+    "repeat": 1,
+    "debug": true
+  },
+  {
+    "phase": "camera",
+    "classes": "all",
+    "bag_id": "camera",
+    "repeat": 2,
+    "debug": false
+  },
+  {
+    "phase": "camera",
+    "classes": "baseline",
+    "bag_id": "camera",
+    "repeat": 2,
+    "debug": false
+  },
+  {
+    "phase": "camera",
+    "classes": "all",
+    "bag_id": "camera",
+    "repeat": 2,
+    "debug": true
+  },
+  {
+    "phase": "camera",
+    "classes": "baseline",
+    "bag_id": "camera",
+    "repeat": 2,
+    "debug": true
+  },
+  {
+    "phase": "camera",
+    "classes": "baseline",
+    "bag_id": "camera",
+    "repeat": 3,
+    "debug": false
+  },
+  {
+    "phase": "camera",
+    "classes": "all",
+    "bag_id": "camera",
+    "repeat": 3,
+    "debug": false
+  },
+  {
+    "phase": "camera",
+    "classes": "baseline",
+    "bag_id": "camera",
+    "repeat": 3,
+    "debug": true
+  },
+  {
+    "phase": "camera",
+    "classes": "all",
+    "bag_id": "camera",
+    "repeat": 3,
+    "debug": true
+  },
+  {
+    "phase": "fusion",
+    "classes": "baseline",
+    "bag_id": "primary",
+    "repeat": 1,
+    "debug": false
+  },
+  {
+    "phase": "fusion",
+    "classes": "all",
+    "bag_id": "primary",
+    "repeat": 1,
+    "debug": false
+  },
+  {
+    "phase": "fusion",
+    "classes": "baseline",
+    "bag_id": "shadow",
+    "repeat": 1,
+    "debug": false
+  },
+  {
+    "phase": "fusion",
+    "classes": "all",
+    "bag_id": "shadow",
+    "repeat": 1,
+    "debug": false
+  },
+  {
+    "phase": "fusion",
+    "classes": "all",
+    "bag_id": "primary",
+    "repeat": 2,
+    "debug": false
+  },
+  {
+    "phase": "fusion",
+    "classes": "baseline",
+    "bag_id": "primary",
+    "repeat": 2,
+    "debug": false
+  },
+  {
+    "phase": "fusion",
+    "classes": "all",
+    "bag_id": "shadow",
+    "repeat": 2,
+    "debug": false
+  },
+  {
+    "phase": "fusion",
+    "classes": "baseline",
+    "bag_id": "shadow",
+    "repeat": 2,
+    "debug": false
+  }
+]

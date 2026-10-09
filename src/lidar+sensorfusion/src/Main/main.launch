@@ -5,7 +5,9 @@
   <arg name="lidar_mount_config" default="$(find asmc_lidar)/config/autonav_v3.yaml"/>
   <arg name="fusion_camera_config" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <arg name="map_altitude_origin_m" default="0.0"/>
-  <arg name="start_yolo" default="true"/>
+  <arg name="start_yolo" default="false"/>
+  <arg name="fusion_yolo_policy" default="unique" doc="unique | bounded_reuse"/>
+  <arg name="camera_objects_conf_thres" default="0.0" doc="Optional stricter adapter cutoff. Camera already filters confidence; 0 passes its accepted candidates without a hidden 0.7 gate."/>
   <!-- MORAI sends VLP-16 packets (Velodyne product ID 0x22). -->
   <arg name="lidar_port" default="9299"/>
   <!-- Keep this false when 2026-ASMC/asmc_bridge sensor node publishes
@@ -243,6 +245,7 @@
     <!-- Sensor poses and camera intrinsics come from setting.yaml. The C++
          node still accepts private ROS-parameter overrides for fine tuning. -->
     <param name="fusion_iou_threshold" value="0.25"/>
+    <param name="fusion_yolo_policy" value="$(arg fusion_yolo_policy)"/>
     <param name="fusion_max_time_offset_sec"
            value="$(arg fusion_max_time_offset_sec)"/>
     <param name="fusion_sync_wait_timeout_sec"
@@ -271,7 +274,9 @@
   </node>
 
   <node unless="$(arg start_yolo)" name="camera_objects_yolo_bbox_adapter" pkg="Main"
-        type="camera_objects_yolo_bbox_adapter.py" output="screen" required="false"/>
+        type="camera_objects_yolo_bbox_adapter.py" output="screen" required="false">
+    <param name="conf_thres" value="$(arg camera_objects_conf_thres)"/>
+  </node>
   </group>
 
   <node if="$(arg rviz)" name="sensor_fusion_rviz" pkg="rviz" type="rviz"

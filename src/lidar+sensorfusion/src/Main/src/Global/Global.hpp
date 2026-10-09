@@ -536,6 +536,8 @@ struct LiDARObjectInfo
     std::string last_seen_class = "unknown";
     int continuity_counter = 0;    
     int class_miss_counter = 0;
+    uint64 camera_observation_ns = 0;
+    uint64 camera_observation_epoch = 0;
     bool is_class_locked = false; 
 
     pcl::PointIndices* objPoints;

@@ -90,6 +90,8 @@ class UltralyticsDetector:
         expected_sha256: str = "",
         predict_overrides: Optional[Mapping[str, object]] = None,
         log=print,
+        model_kind: str = "yolo",
+        prompt_embeddings: str = "",
     ) -> None:
         import torch
         import ultralytics
@@ -116,7 +118,16 @@ class UltralyticsDetector:
         }
 
         load_started = time.perf_counter()
-        self.model = YOLO(str(weights_path))
+        if model_kind == "yoloe":
+            from ultralytics import YOLOE
+            from asmc_camera.detection.segmentation import load_prompt_embeddings
+            self.model = YOLOE(str(weights_path))
+            names, embeddings = load_prompt_embeddings(prompt_embeddings, self.weights_sha256)
+            self.model.set_classes(names, torch.as_tensor(embeddings))
+        elif model_kind == "yolo":
+            self.model = YOLO(str(weights_path))
+        else:
+            raise DetectorStartupError("unsupported model_kind: %s" % model_kind)
         try:
             self.model.fuse()
         except Exception:
@@ -139,6 +150,8 @@ class UltralyticsDetector:
         warmup_ms = self._warmup()
         self.info = {
             "backend": "ultralytics",
+            "model_kind": model_kind,
+            "prompt_embeddings_sha256": file_sha256(Path(prompt_embeddings)) if prompt_embeddings else "",
             "weights": str(weights_path),
             "weights_sha256": self.weights_sha256,
             "device": self.device,

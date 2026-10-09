@@ -15,6 +15,8 @@ inline void Copy(const LiDARObjectInfo& source, LiDARObjectInfo& target,
     target.last_seen_class = source.last_seen_class;
     target.continuity_counter = source.continuity_counter;
     target.class_miss_counter = source.class_miss_counter;
+    target.camera_observation_ns = source.camera_observation_ns;
+    target.camera_observation_epoch = source.camera_observation_epoch;
     target.is_class_locked = unlock ? false : source.is_class_locked;
 }
 

@@ -1,5 +1,7 @@
 # 카메라 객체 검출 인수 가이드 — 손재호
 
+> **2026-10-09 통합 작업:** [3뷰 COCO7 실행·모델 선정](camera-three-view-coco-runtime.md)을 현재 시작점으로 사용합니다. 아래 기존 실험과 실패 증거는 보존합니다.
+
 > **문서 상태:** Active Guide / Handoff
 > **Handoff 허브:** [README.md](../README.md)
 > **Perception 경계:** [Perception 개발·통합 가이드](../../packages/asmc_perception/README.md)
@@ -7,6 +9,8 @@
 > **대상:** LiDAR·센서융합 담당 손재호, 카메라 담당 안승현
 > **범위:** 기존 detector 즉시 사용, 경량 후보 선택, NAS Capture 데이터 fine-tune 준비
 > **현재 구현:** [P2a 생산자·어댑터](camera-objects-p2a.md). 학습·모델 선택·동시 부하는 후속 단계
+> **2026-10-08 카메라 다음 단계:** [YOLO11m COCO 클래스 확대](camera-coco-class-expansion.md)는
+> 기존 네 클래스 기본값과 LiDAR 호환 정책을 유지하는 별도 80종 관측 실험이다.
 
 > **2026-10-07 후속 연구:** [카메라와 LiDAR 장애물 융합 분석](camera-lidar-fusion-study.md)에
 > YOLO26 detect/seg, 공개 데이터·가중치, 터널 객체 분리와 full-stack 부하 비교를 정리했다.

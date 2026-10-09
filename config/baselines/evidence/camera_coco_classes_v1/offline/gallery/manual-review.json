@@ -1,0 +1,24 @@
+{
+  "method": "Codex visual inspection of original-image comparison; not independent GT recall",
+  "cases": [
+    {
+      "image": "camera-01645.jpg",
+      "label": "train",
+      "finding": "false positive: static building/container facade, not a train",
+      "operational_implication": "Do not consume the coarse vehicle group alone for avoidance."
+    },
+    {
+      "image": "camera-02056.jpg",
+      "label": "bench",
+      "finding": "false positive: roadside metal guardrail, not a bench",
+      "operational_implication": "Infrastructure needs source-label and geometry review, not coarse obstacle approval."
+    },
+    {
+      "image": "camera-00950.jpg",
+      "label": "traffic light",
+      "finding": "visually consistent with a signal head in this sample; no independent box GT",
+      "operational_implication": "ResNet color/state inference remains separate."
+    }
+  ],
+  "remaining_cases": "pending user review"
+}

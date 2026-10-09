@@ -1,0 +1,71 @@
+{
+  "scope": "Visualization only, no model/threshold/input/control changes",
+  "topic": "/perception/camera/objects/debug/mosaic/compressed",
+  "order": [
+    "left",
+    "front",
+    "right"
+  ],
+  "size": [
+    1920,
+    532
+  ],
+  "publish_hz_max": 10,
+  "stale_sec": 0.5,
+  "asynchronous_per_view": true,
+  "subscriber_lazy": true,
+  "ros_checks": {
+    "checks": {
+      "no_subscriptions_without_viewer": true,
+      "missing_views_blank": true,
+      "layout_and_header": true,
+      "stale_view_isolated": true,
+      "wrong_camera_rejected": true,
+      "bad_jpeg_does_not_stop_worker": true,
+      "viewer_close_unsubscribes": true,
+      "worker_stops": true
+    },
+    "passed": true,
+    "master": "http://127.0.0.1:11316"
+  },
+  "live_smoke": {
+    "scope": "Live debug rendering smoke only; no timed model performance or driving acceptance.",
+    "command": [
+      "roslaunch",
+      "asmc_camera",
+      "camera_coco7.launch",
+      "profile:=debug"
+    ],
+    "passed": true,
+    "views": {
+      "camera_front": 104,
+      "camera_left": 105,
+      "camera_right": 103
+    },
+    "mosaic_messages_in_5_seconds": 47,
+    "shape": [
+      532,
+      1920,
+      3
+    ],
+    "header_frame_id": "camera_objects_debug_mosaic",
+    "conf_thres": 0.4,
+    "weights": "/data/models/camera_coco7_v1/yolo26l.engine",
+    "use_sim_time": false
+  },
+  "regression": {
+    "detection": 75,
+    "topic_policy_tests": 3,
+    "contract_validators": 4
+  },
+  "source_sha256": {
+    "src/asmc_camera/src/asmc_camera/nodes/object_visualizer_node.py": "f4010a379870c84279baeebcf641336fccee121ea76b6dda5503f66fe0943eec",
+    "src/asmc_camera/src/asmc_camera/detection/visualization.py": "49889562ca8f4f4e1903ebe875eb031c49fc8210f91c9edbc95e99b777f6c088",
+    "src/asmc_camera/launch/visualization.launch": "9a7c58b3241bfa3134b81dfd795a8e8a21cd59e95137b5b2ac2adda1686632d7",
+    "tools/perception/check_object_mosaic_ros.py": "36c859a4b12136b6cdfe72f797977ee1d9125b8f3e45b5c1f2f2664a08c60cad",
+    "config/contracts/perception_topic_policy_v1.yaml": "a8b017fa9e3a45669e9419f481ca2644fc6f7aa4327f9abe4503d293b37ba354",
+    "../artifacts/camera-coco7-live-v1/object-mosaic-live-smoke-v1/report.json": "380c76a6352efa1742caac62cb9fdb5db310b3f4966964813aafd1a4d260d3f6",
+    "../artifacts/camera-coco7-live-v1/object-mosaic-live-smoke-v1/mosaic.jpg": "a48777459607312c2d9016cb8ec691a2562d7d93a1cd41859e701881674fa78c",
+    "../artifacts/camera-coco7-live-v1/object-mosaic-ros-check-v1.json": "c65dad38237a52b9fd7c86983f32d32f14da4be7504f2233d67b2fc193468594"
+  }
+}

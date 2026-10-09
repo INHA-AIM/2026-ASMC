@@ -1,0 +1,87 @@
+{
+  "engine_sha256": "3deda735ef5762acca97ece884fa94911a5bc9a236be3a0ec79913d566cff70e",
+  "tensorrt": "10.13.0.35",
+  "io": [
+    {
+      "name": "images",
+      "dtype": "DataType.FLOAT",
+      "shape": [
+        -1,
+        3,
+        -1,
+        -1
+      ]
+    },
+    {
+      "name": "output0",
+      "dtype": "DataType.FLOAT",
+      "shape": [
+        -1,
+        63,
+        -1
+      ]
+    },
+    {
+      "name": "output1",
+      "dtype": "DataType.FLOAT",
+      "shape": [
+        -1,
+        32,
+        -1,
+        -1
+      ]
+    }
+  ],
+  "minimum": [
+    1,
+    3,
+    480,
+    640
+  ],
+  "optimum": [
+    2,
+    3,
+    480,
+    640
+  ],
+  "maximum": [
+    3,
+    3,
+    736,
+    1280
+  ],
+  "internal_precision": "FP16 enabled; I/O dtype recorded separately",
+  "workspace_bytes": 1073741824,
+  "profile": "base27",
+  "names": [
+    "person",
+    "dog",
+    "deer",
+    "animal",
+    "bicycle",
+    "car",
+    "truck",
+    "bus",
+    "motorcycle",
+    "scooter",
+    "electric scooter",
+    "bollard",
+    "cargo box",
+    "wooden box",
+    "concrete barrier",
+    "plastic road barrier",
+    "steel barricade",
+    "lane separator",
+    "traffic barrel",
+    "road sign",
+    "speed limit sign",
+    "speed bump",
+    "baby stroller",
+    "tree",
+    "streetlight",
+    "manhole cover",
+    "fire"
+  ],
+  "stage": "engine",
+  "elapsed_sec": 240.8849878119945
+}

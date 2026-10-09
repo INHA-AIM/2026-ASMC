@@ -1,0 +1,1115 @@
+schema_version: 1
+baseline_id: perception_camera_coco7_live_v1
+status: evaluation_completed_acceptance_blocked
+base_main: a8c4f3b9dd15edee4d5b6434934ffe52011efcb8
+integration_branch: feat/camera-three-view-coco-runtime
+source_labels:
+- person
+- dog
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+all_ego_masks: true
+gpu: RTX 4060 Ti 8188 MiB
+morai_rendering: running
+max_vram_fraction: 0.9
+model_default_promotion: pending
+fusion_policy_default: unique
+backend_parity:
+  source_report_sha256: 714f8dd95e3bf0de408ca56cd86db0bd27975a79fe3e87cca8f968b1578172b8
+  sample_comparisons: 270
+  failures: 0
+  side_mask_controls: 45
+  new_side_mask_misses: 0
+  side_overlap_frames:
+  - 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000230.png
+  - 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000229.png
+  - 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000290.png
+  side_mask_controls_scope: 45 selected backend controls only; not full selection mask acceptance
+screening:
+  trials: 45
+  failures: 6
+  purpose: exploratory; minimum feasibility is separate from target20; early runner source not individually
+    pinned
+gt:
+  selection_complete_frames: 2252
+  heldout_complete_frames: 2474
+  missing_verified_classes:
+  - dog
+  - bicycle
+  - motorcycle
+pending:
+- default_promotion
+- mask_acceptance_or_alternative_model
+- long_run_supply_gaps_and_planning_deadlines
+- UDP_control_receive_configuration_and_actual_5kmh_trial
+- GitHub_CI_billing_unblock
+- main_P1C_authority_baseline_mismatch
+artifacts: ../artifacts/camera-coco7-live-v1
+model_directory: ../data/models/camera_coco7_v1
+optimized_runtime:
+  description: Box tensors transferred once; unsubscribed TwinLite image serialization skipped; output
+    parity rechecked
+  shared_default_promoted: false
+completed_measurement_sets:
+  live-rates-output-optimized:
+    trials: 36
+    failed: 3
+    index_sha256: 26e1b31877c1099455bc598643e045c82b777cc4b5a895112e4e8d321ad537c3
+    failed_trials:
+    - yolo26m-seg-960-all20-2plus1-C1-r1
+    - yolo26m-seg-960-all10-2plus1-C1-r1
+    - yolo26m-seg-960-all10-2plus1-C1-r2
+  live-concurrent-output-optimized:
+    trials: 36
+    failed: 4
+    index_sha256: 2f92bfacfe2333176df8be56b2a3af0c93411ac3724fac0b69daf6163bde29e7
+    failed_trials:
+    - yolo26m-960-all10-2plus1-C4-r1
+    - yolo26m-seg-960-all10-2plus1-C4-r2
+    - yolo26m-1280-all10-2plus1-C1-r3
+    - yolo26m-960-all10-2plus1-C5-r3
+  live-seg1280-output-optimized-v2:
+    trials: 12
+    failed: 2
+    index_sha256: 167ba3a054a27ac07f96d48faeab448c91da7b1c3eb79031bd6b79dc445ea768
+    failed_trials:
+    - yolo26m-seg-1280-all10-2plus1-C1-r2
+    - yolo26m-seg-1280-all10-2plus1-C6-r2
+  live-batch-output-optimized:
+    trials: 18
+    failed: 4
+    index_sha256: af5195b30724bfe5e3b592e8e5dbb711c59dc3a31b06bd771e14e244f9d2b4eb
+    failed_trials:
+    - yolo26m-seg-1280-all10-sequential-C6-r1
+    - yolo26m-seg-960-all10-batch3-C6-r2
+    - yolo26m-seg-1280-all10-batch3-C6-r2
+    - yolo26m-1280-all10-batch3-C6-r3
+  live-finalist-full-stack-rates:
+    trials: 9
+    failed: 1
+    index_sha256: 55c026b17bb5d03f2d8ce1d930ebb50fb3cfc0c301dffb3a43bf71d397bd8cc1
+    failed_trials:
+    - yolo26m-seg-960-front20_side10-2plus1-C6-r2
+  live-finalist-debug:
+    trials: 3
+    failed: 3
+    index_sha256: 914ca992e4c6bef23ea461eba2135019b5fba6ee77084222c8d14e1537abcb32
+    failed_trials:
+    - yolo26m-seg-960-all15-2plus1-C6-r1-debug
+    - yolo26m-seg-960-all15-2plus1-C6-r2-debug
+    - yolo26m-seg-960-all15-2plus1-C6-r3-debug
+near_object_diagnostic:
+  gallery: ../artifacts/camera-coco7-live-v1/near-object-gallery/index.html
+  case: 'foggy front 000227–000229: 960 finds close car; 1280 m-seg misses even at0.25 in both PyTorch
+    and TensorRT'
+  interpretation: Resolution/model effect, not proven TensorRT conversion error; all original failures
+    retained
+selection_candidate:
+  model: yolo26m-seg
+  front_width: 960
+  confidence: 0.65
+  batch: 2plus1
+  target_hz_by_view:
+    front: 15
+    left: 15
+    right: 15
+  status: not_accepted_full_mask_control_failed
+  selection_macro_f1: 0.20156618028553436
+  reason: Higher-scoring 1280 candidates regress on the same visible close-car consecutive frames; 960
+    passes all three C6 all15 repeats and retains the close-car observations. Apply object-gap eligibility
+    before macro-F1 ranking.
+  three_repeats_output_hz:
+  - - 14.9
+    - 14.85
+    - 14.85
+  - - 14.9
+    - 14.95
+    - 14.8
+  - - 14.9
+    - 14.8
+    - 14.85
+  peak_startup_and_active_vram_mib: 5139
+  selection_false_positives: 3
+  runtime_config: src/asmc_camera/config/camera/yolo26m_seg_coco7_three_view.yaml
+  engine_sha256: 0f1b980de6a8ebdfb0052a61bc771f8eaa14704238247a7ed9131161eaeed0f1
+mask_ablation:
+  full-mask-controls-selection:
+    images: 2252
+    confidence: 0.65
+    new_missed:
+      front: 1
+      left: 1
+      right: 4
+    recovered:
+      front: 0
+      left: 2
+      right: 0
+    report_sha256: a03f0562491b058f80d772e59dbd4f2b80cbad5b4e96890708a3c2e54a83cfa6
+    passed: false
+    exceptions_applied: false
+  full-neutral-mask-controls-selection:
+    images: 2252
+    confidence: 0.65
+    new_missed:
+      front: 1
+      left: 0
+      right: 1
+    recovered:
+      front: 1
+      left: 2
+      right: 0
+    report_sha256: 31d51dacc26a07bca4d1e20d9d2688157d9f8d21622015fc2bf408091d11ac4a
+    passed: false
+    exceptions_applied: false
+  neutral_selection_false_positives: 4
+  neutral_selection_fp_limit: 3
+  full-detect-mask-controls-selection:
+    images: 2252
+    confidence: 0.7
+    new_missed:
+      front: 0
+      left: 1
+      right: 1
+    recovered:
+      front: 2
+      left: 0
+      right: 3
+    report_sha256: 31eedc1d61787f611957f9935979d7226d937bc1e0a17385cc7adc7812816db4
+    passed: false
+    exceptions_applied: false
+    model: yolo26m
+    front_width: 960
+  full-detect-neutral-controls-selection:
+    images: 2252
+    confidence: 0.7
+    new_missed:
+      front: 0
+      left: 0
+      right: 2
+    recovered:
+      front: 1
+      left: 0
+      right: 3
+    passed: false
+    exceptions_applied: false
+    report_sha256: 269d27769dfd717f1dc5e022ee043ba122902b9520f480b31fe8ebae9e2ed03e
+    model: yolo26m
+    front_width: 960
+frozen_heldout:
+- artifact: quality-heldout-frozen/yolo26m-seg-960-heldout
+  frames: 2474
+  confidence: 0.65
+  macro_f1: 0.17751780260998587
+  false_positives: 4
+  mask_iou: 0.7528355087527436
+  summary_sha256: 4c957b1ef2da29b0827b56e39d29a29eb271bb043b55f56c66e889f4d6195af6
+  used_for_retuning: false
+- artifact: baseline-heldout-frozen/yolo11m-960-heldout
+  frames: 2474
+  confidence: 0.7
+  macro_f1: 0.09997315953994369
+  false_positives: 1
+  mask_iou: null
+  summary_sha256: af7c36ccc533b57d0e6e5d82d31ceb7c0327139b3b03b56ebd3714d24418b9b7
+  used_for_retuning: false
+controlled_actor_comparison:
+  artifact: actor-model-gallery/index.html
+  same_source_rgb: true
+  ground_valid_fixtures: 97
+  rejected_fixtures: 21
+  pixel_gt: false
+  recall_claimed: false
+  models:
+  - yolo26m-960@0.7
+  - yolo26m-seg-960@0.65
+rejected_protocol_runs:
+- artifact: fusion-coco7-10hz
+  reason: requested10Hz but per-view15Hz overrides; original retained, excluded from10Hz inference
+fusion_before_empty_fix:
+  artifact: fusion-coco7-10hz-v2
+  interrupted_after_confirmed_defect: true
+  complete: false
+  index_sha256: 429c1b023ac2c562b561424c6666816c66e7850d990f6e8f76ef2cca628a2c01
+  completed_trials:
+  - job:
+      bag_id: primary
+      policy: unique
+      repeat: 1
+      diagnostic: false
+    passed: true
+    totals:
+      matched: 397
+      dropped: 105
+      pending_lidar: 1
+      pending_yolo: 0
+      fresh: 397
+      reused: 0
+  - job:
+      bag_id: primary
+      policy: bounded_reuse
+      repeat: 1
+      diagnostic: false
+    passed: true
+    totals:
+      matched: 365
+      dropped: 137
+      pending_lidar: 1
+      pending_yolo: 2
+      fresh: 326
+      reused: 39
+  - job:
+      bag_id: shadow
+      policy: unique
+      repeat: 1
+      diagnostic: false
+    passed: false
+    totals:
+      matched: 168
+      dropped: 9
+      pending_lidar: 1
+      pending_yolo: 1
+      fresh: 168
+      reused: 0
+  - job:
+      bag_id: shadow
+      policy: bounded_reuse
+      repeat: 1
+      diagnostic: false
+    passed: true
+    totals:
+      matched: 36
+      dropped: 144
+      pending_lidar: 1
+      pending_yolo: 2
+      fresh: 36
+      reused: 0
+  reason: latest empty barrier incorrectly excluded earlier normal empty observations; fixed with real
+    matcher regression
+  main_tests_after_fix: 311
+external_paths_relative_to: repository_checkout
+fusion_10hz_corrected:
+  artifact: fusion-coco7-10hz-v3
+  measured_trials: 12
+  failed_trials:
+  - shadow-bounded_reuse-r3
+  policy_comparison_sha256: f51042b24691ecc270aca9bcf3d932437a8d9359aaa19c273c61dc8e4f688536
+  default_promotion: false
+  reason: One output gap failure and one new stable common classification difference; original failures
+    retained
+  bags:
+    primary:
+      matched:
+        unique:
+        - 404
+        - 394
+        - 400
+        bounded_reuse:
+        - 455
+        - 455
+        - 457
+      stable_common_observations: 2512
+      new_stable_classification_differences: 1
+      unmatched_common_observations: 784
+    shadow:
+      matched:
+        unique:
+        - 173
+        - 171
+        - 169
+        bounded_reuse:
+        - 173
+        - 174
+        - 167
+      stable_common_observations: 1001
+      new_stable_classification_differences: 0
+      unmatched_common_observations: 807
+fusion_15hz:
+  artifact: fusion-coco7-15hz
+  measured_trials: 12
+  failed_trials:
+  - primary-unique-r2
+  policy_comparison_sha256: b6af267625f20346d584bbb3d5a1e0cd7bb2ef7ac3113a556103c35624c1aa49
+  default_promotion: false
+  bags:
+    primary:
+      matched:
+        unique:
+        - 477
+        - 466
+        - 473
+        bounded_reuse:
+        - 478
+        - 478
+        - 484
+      stable_common_observations: 2206
+      new_stable_classification_differences: 0
+      unmatched_common_observations: 804
+    shadow:
+      matched:
+        unique:
+        - 177
+        - 178
+        - 175
+        bounded_reuse:
+        - 176
+        - 178
+        - 178
+      stable_common_observations: 936
+      new_stable_classification_differences: 0
+      unmatched_common_observations: 734
+  reason: No stable class differences here; unique r2 has >250ms output gaps; full-stack reuse r1 also
+    fails. No policy promoted.
+legacy_full_frame_regression:
+  report: legacy3514-latest.json
+  report_sha256: c2596ec8ca10781a7b7a7f2fe831ef9fed5aa1484866f00f886158417d3c8af8
+  status: pass
+  frames: 3514
+  exact_frames: 3514
+  boundary_exceptions: 0
+  hood_mask: false
+  scope: legacy 4-class PyTorch wire-equivalence; separate from COCO7 model selection
+shared_environment:
+  container: asmc-ros-noetic
+  image: asmc/camera-yoloe-l:ultralytics8.4.150-trt10.13.0.35
+  workspace_mount: asmc-camera-objects:/root/ws
+  outer_build: shared-outer-build.log
+  nested_build: shared-nested-build.log
+  environment_report: shared-environment-check.json
+  input_report: shared-input-check.json
+  vehicle_state_topic: /vehicle/state
+  previous_probe: 'shared-input-check-v1.json: wrong preview-only topic before preview launch; preserved
+    as setup failure'
+fusion_trace_checks:
+- experiment: fusion-coco7-10hz-v3
+  trial: primary-bounded_reuse-r1-trace
+  passed: true
+  report_sha256: 02e8ff3b51adb32e0da5c9c5c2adcb026f399f9b0da4a0c7c8b791a18d666301
+- experiment: fusion-coco7-10hz-v3
+  trial: primary-unique-r1-trace
+  passed: true
+  report_sha256: 63d6115a162fe931ff6c899380b87c8067c18f13b41b3688ee995f8a2744409f
+- experiment: fusion-coco7-10hz-v3
+  trial: shadow-bounded_reuse-r1-trace
+  passed: true
+  report_sha256: 81d4e57c7a36a123b06f32f319f45f5121229d98233ca8696a13ffb3f4dc535b
+- experiment: fusion-coco7-10hz-v3
+  trial: shadow-unique-r1-trace
+  passed: true
+  report_sha256: 8ac6ba7a602821675ec9305eb8ea393ff4221d5bf916d1516512060bef3b2393
+- experiment: fusion-coco7-15hz
+  trial: primary-bounded_reuse-r1-trace
+  passed: true
+  report_sha256: fbd451b29b3ee32d756a7b7fb79f7042c4d88c3b0aa0354a773f624f08d75eed
+- experiment: fusion-coco7-15hz
+  trial: primary-unique-r1-trace
+  passed: true
+  report_sha256: 529d9b5b3e7ce287646d365a33e4f6290842c4fc6fd9cffa8eed0ada5c49afab
+- experiment: fusion-coco7-15hz
+  trial: shadow-bounded_reuse-r1-trace
+  passed: true
+  report_sha256: b02e0d8a4199312b7cc8468b8341a9f78fb3028aef8b3517f3d96ea3b07a0af3
+- experiment: fusion-coco7-15hz
+  trial: shadow-unique-r1-trace
+  passed: true
+  report_sha256: 46fe5e914ee05990383aa771405a85e48982770de7a0e69dab768d509977164a
+actor_comparison_all_models:
+  artifact: actor-all-models-fixed07
+  profiles: 15
+  valid_fixtures_per_profile: 97
+  rejected_fixtures_preserved: 21
+  same_rgb_gallery_samples: 214
+  comparison_gallery: actor-all-models-fixed07/comparison.html
+  confidence: 0.7
+  pixel_gt: false
+  scope: qualitative comparison only; expected-class detection is not guaranteed actor association or
+    recall
+acceptance_blockers:
+- New mask misses without approval
+- Occasional output gaps over250ms
+- Dog/bicycle/motorcycle lack independently verified pixel GT
+- Standard debug planning trajectory deadlines fail in two repeats
+- Latest CI did not start due GitHub billing restriction
+- 30min complete but all streams have out-of-bound output gaps and planning deadline misses
+- UDP verified forward drive unavailable; gRPC evaluation path passes at actual1–2km/h
+full_stack_reuse:
+  artifact: live-finalist-reuse-v3
+  repeats: 3
+  failed_repeats:
+  - 1
+  default_promotion: false
+  reason: Three-model supply gaps and planning objects deadline in r1; r2/r3 preserved as passing trials.
+debug_output_comparison:
+  standard6:
+    artifact: live-finalist-debug-standard6
+    repeats: 3
+    model_supply_passes: 3
+    whole_stack_passes: 1
+    failed_repeats:
+    - 1
+    - 3
+    reason: Planning trajectory deadline
+  with_instance_masks9:
+    artifact: live-finalist-debug
+    repeats: 3
+    whole_stack_passes: 0
+  rqt_processes_started: false
+  scope: Actual subscribers receive all enabled compressed debug images; separate from headless acceptance.
+drive_experiments:
+  initial:
+    artifact: drive-reentry-r1
+    passed: false
+    reason: Planner STOP; restoration gear/yaw mismatch; further owned repeats interrupted.
+  recovery:
+    report: ego-restoration-recovery.json
+    report_sha256: 84e26387a719cb72f8003c8545e857572ba938fd4fe31103975f3fd708abcb24
+    passed: true
+    scope: Original Ego pose/P gear/keyboard mode and stationary state; original pause state unavailable,
+      explicitly resumed.
+  udp_clearroad:
+    artifact: drive-clearroad-v2
+    repeats: 3
+    passed: false
+    original_restoration_passes: 3
+    reason: Positive speed command did not produce verified forward motion; small reverse movement is
+      not successful drive.
+  udp_windows_host:
+    artifact: drive-host-control-v3
+    repeats: 3
+    passed: false
+    original_restoration_passes: 3
+    bridge_cmd_ip: host.docker.internal
+    reason: Reverse-motion guard stops each run; UDP delivery not proven by sendto success.
+  reentry_measurement_fix: Signal absence valid=false is a planning verdict, separate from processing
+    supply; preserve original failed reports, check stale and supply independently in new trials.
+  grpc_unconverted:
+    artifact: drive-grpc-v1
+    passed: false
+    restored: true
+    reason: SDK unit unspecified; direct ROS km/h number produced speed ceiling stop; raw failure retained.
+  grpc_explicit_mps:
+    revision: 55f17070e05e467e5f107ff5b9bea373a7f4ed8e
+    actuator: grpc_explicit_mps
+    repeats:
+    - repeat: 1
+      passed: true
+      drive_passed: true
+      restored: true
+      displacement_m: 1.2423710931052194
+      forward_progress_m: 1.2405955262664579
+      maximum_actual_kph: 1.7730082557718985
+      maximum_command_kph: 1.8927958224360497
+      reentry:
+        twinlite_right:
+          passed: true
+          hz: 9.95
+          first_second: 10
+          max_gap_sec: 0.19385775196133181
+        twinlite_left:
+          passed: true
+          hz: 9.95
+          first_second: 10
+          max_gap_sec: 0.19442847202299163
+        twinlite_front:
+          passed: true
+          hz: 9.95
+          first_second: 10
+          max_gap_sec: 0.194069787976332
+        yolo_left:
+          passed: true
+          hz: 14.85
+          first_second: 14
+          max_gap_sec: 0.17555629997514188
+        yolo_right:
+          passed: true
+          hz: 14.85
+          first_second: 14
+          max_gap_sec: 0.18622687202878296
+        yolo_front:
+          passed: true
+          hz: 14.85
+          first_second: 13
+          max_gap_sec: 0.17551065096631646
+        resnet18:
+          passed: true
+          hz: 10.0
+          first_second: 10
+          max_gap_sec: 0.11266245902515948
+      failures: []
+      report_sha256: 43d8b2bb4017cc165b74e2683a628ba8ff2911f602ad394d775e82546562bbb1
+    - repeat: 2
+      passed: true
+      drive_passed: true
+      restored: true
+      displacement_m: 1.2503474445567784
+      forward_progress_m: 1.248748757755016
+      maximum_actual_kph: 1.7911968169938683
+      maximum_command_kph: 1.941851421485812
+      reentry:
+        twinlite_left:
+          passed: true
+          hz: 9.95
+          first_second: 10
+          max_gap_sec: 0.18124891101615503
+        twinlite_right:
+          passed: true
+          hz: 9.95
+          first_second: 10
+          max_gap_sec: 0.17914268997265026
+        twinlite_front:
+          passed: true
+          hz: 9.95
+          first_second: 10
+          max_gap_sec: 0.17907094402471557
+        yolo_left:
+          passed: true
+          hz: 14.85
+          first_second: 14
+          max_gap_sec: 0.18155725800897926
+        yolo_right:
+          passed: true
+          hz: 14.95
+          first_second: 14
+          max_gap_sec: 0.14501598698552698
+        yolo_front:
+          passed: true
+          hz: 14.95
+          first_second: 14
+          max_gap_sec: 0.1476178839802742
+        resnet18:
+          passed: true
+          hz: 10.0
+          first_second: 10
+          max_gap_sec: 0.11053457000525668
+      failures: []
+      report_sha256: f3fc9a7fe516d45077c27fb72c9401548db9d4d1001f5e43fd58ee6c1934ae96
+    - repeat: 3
+      passed: true
+      drive_passed: true
+      restored: true
+      displacement_m: 1.2188468067070564
+      forward_progress_m: 1.2173194259758917
+      maximum_actual_kph: 1.8837978194990517
+      maximum_command_kph: 1.8719477882740143
+      reentry:
+        twinlite_right:
+          passed: true
+          hz: 9.95
+          first_second: 9
+          max_gap_sec: 0.1986078749760054
+        twinlite_left:
+          passed: true
+          hz: 9.95
+          first_second: 9
+          max_gap_sec: 0.1995934930164367
+        twinlite_front:
+          passed: true
+          hz: 9.95
+          first_second: 10
+          max_gap_sec: 0.19742978597059846
+        yolo_left:
+          passed: true
+          hz: 14.9
+          first_second: 14
+          max_gap_sec: 0.18827093800064176
+        yolo_right:
+          passed: true
+          hz: 14.95
+          first_second: 14
+          max_gap_sec: 0.16532893403200433
+        yolo_front:
+          passed: true
+          hz: 14.9
+          first_second: 14
+          max_gap_sec: 0.15596499299863353
+        resnet18:
+          passed: true
+          hz: 9.95
+          first_second: 10
+          max_gap_sec: 0.12670941097894683
+      failures: []
+      report_sha256: 4969c197e2bc2e96af45f822841f871e23ad1a44817b8ce32b2e76b1b619093a
+    all_passed: true
+    scope: Low-speed capped evaluation actuator at actual planner-requested speed; no STOP override; not
+      UDP or unchanged MPC validation; new actor spawn not part of this drive
+ci:
+  status: not_started_billing_restriction
+  annotations: ci-billing-block-annotations.json
+  reason: Account payment/spending limit blocked all jobs before any steps. No billing settings modified.
+sustained_30min:
+  revision: be4dd5a5672600db1de928821fab1d519c1a37ad
+  seconds: 1800
+  passed: false
+  failures:
+  - yolo front supply/latency gate
+  - yolo left supply/latency gate
+  - yolo right supply/latency gate
+  - twinlite front supply gate
+  - twinlite left supply gate
+  - twinlite right supply gate
+  - resnet18 resnet18 supply gate
+  - planning trajectory deadline gate
+  - planning state deadline gate
+  - planning objects deadline gate
+  - planning control deadline gate
+  streams:
+    right:
+      messages: 17974
+      hz: 9.985555555555555
+      first_second: 9
+      max_gap_sec: 0.4707701180013828
+      duplicate_stamps: 0
+      reversed_stamps: 0
+      input_anchor_missing: 8
+      input_to_output_wall_ms:
+        samples: 17966
+        p50: 46.12600599648431
+        p95: 88.89500523218885
+        p99: 100.80283964634869
+        maximum: 352.3381659761071
+      valid_ratio: 1.0
+      min_complete5s_hz: 9.4
+      windows_below9_5: 1
+    left:
+      messages: 17974
+      hz: 9.985555555555555
+      first_second: 9
+      max_gap_sec: 0.46673680999083444
+      duplicate_stamps: 0
+      reversed_stamps: 0
+      input_anchor_missing: 5
+      input_to_output_wall_ms:
+        samples: 17969
+        p50: 46.258989023044705
+        p95: 88.99404960684477
+        p99: 101.10387127380817
+        maximum: 350.78007297124714
+      valid_ratio: 1.0
+      min_complete5s_hz: 9.4
+      windows_below9_5: 1
+    front:
+      messages: 17974
+      hz: 9.985555555555555
+      first_second: 9
+      max_gap_sec: 0.4688178740325384
+      duplicate_stamps: 0
+      reversed_stamps: 0
+      input_anchor_missing: 7
+      input_to_output_wall_ms:
+        samples: 17967
+        p50: 45.00118497526273
+        p95: 87.58890909375624
+        p99: 99.2146515636705
+        maximum: 350.9134899941273
+      valid_ratio: 1.0
+      min_complete5s_hz: 9.4
+      windows_below9_5: 1
+    family:
+      messages: 17973
+      hz: 9.985
+      first_second: 9
+      max_gap_sec: 0.4759367509977892
+      duplicate_stamps: 0
+      reversed_stamps: 0
+      input_anchor_missing: 17973
+      input_to_output_wall_ms:
+        samples: 0
+        p50: null
+        p95: null
+        p99: null
+        maximum: null
+      valid_ratio: 1.0
+      min_complete5s_hz: 9.4
+      windows_below9_5: 1
+    resnet18:
+      messages: 17883
+      hz: 9.935
+      first_second: 9
+      max_gap_sec: 0.3997229599626735
+      duplicate_stamps: 0
+      reversed_stamps: 0
+      input_anchor_missing: 7
+      input_to_output_wall_ms:
+        samples: 17876
+        p50: 56.41531047876924
+        p95: 91.47307999955956
+        p99: 102.44963722652756
+        maximum: 311.2108989735134
+      valid_ratio: 0.0
+      min_complete5s_hz: 9.2
+      windows_below9_5: 6
+    yolo_front:
+      messages: 26892
+      hz: 14.94
+      first_second: 14
+      max_gap_sec: 0.43197183503070846
+      duplicate_stamps: 0
+      reversed_stamps: 0
+      input_anchor_missing: 9
+      input_to_output_wall_ms:
+        samples: 26883
+        p50: 56.10406998312101
+        p95: 92.13549809646793
+        p99: 105.5780573282391
+        maximum: 371.80602503940463
+      valid_ratio: 1.0
+      min_complete5s_hz: 14.2
+      windows_below9_5: 0
+    yolo_left:
+      messages: 26804
+      hz: 14.891111111111112
+      first_second: 14
+      max_gap_sec: 0.447420051030349
+      duplicate_stamps: 0
+      reversed_stamps: 0
+      input_anchor_missing: 3
+      input_to_output_wall_ms:
+        samples: 26801
+        p50: 56.065869983285666
+        p95: 91.37190401088446
+        p99: 104.03291700640693
+        maximum: 372.94449598994106
+      valid_ratio: 1.0
+      min_complete5s_hz: 14.0
+      windows_below9_5: 0
+    yolo_right:
+      messages: 26802
+      hz: 14.89
+      first_second: 14
+      max_gap_sec: 0.4094032410066575
+      duplicate_stamps: 0
+      reversed_stamps: 0
+      input_anchor_missing: 5
+      input_to_output_wall_ms:
+        samples: 26797
+        p50: 55.8114149607718
+        p95: 91.07054221676663
+        p99: 103.81763539742686
+        maximum: 372.4086749716662
+      valid_ratio: 1.0
+      min_complete5s_hz: 13.8
+      windows_below9_5: 0
+  planning:
+    trajectory:
+      messages: 35979
+      hz: 19.988275500256485
+      max_gap_sec: 0.3126655549858697
+      valid_messages: 35979
+      passed: false
+    state:
+      messages: 90000
+      hz: 49.99985533291874
+      max_gap_sec: 0.2667377170291729
+      valid_messages: 89995
+      passed: false
+    behavior:
+      messages: 18000
+      hz: 9.999971066583749
+      max_gap_sec: 0.3546054310281761
+      valid_messages: 18000
+      passed: true
+    objects:
+      messages: 22787
+      hz: 12.659407816346883
+      max_gap_sec: 0.560686725017149
+      valid_messages: 22787
+      passed: false
+    control:
+      messages: 36000
+      hz: 19.999942133167497
+      max_gap_sec: 0.30399609595770016
+      valid_messages: 36000
+      passed: false
+    trajectory_failure_reasons:
+      '0': 35956
+      '3': 22
+      '6': 1
+  input_hz:
+    extra: 9.989415541569022
+    left: 19.918831256738542
+    right: 19.918275702790396
+    front: 19.918831256738542
+  rss_first_last_minute:
+    /Main:
+      early_median_mib: 214.203125
+      late_median_mib: 221.39453125
+      delta_mib: 7.19140625
+    /behavior_planner:
+      early_median_mib: 201.9609375
+      late_median_mib: 201.95703125
+      delta_mib: -0.00390625
+    /camera_bev:
+      early_median_mib: 124.34765625
+      late_median_mib: 129.5078125
+      delta_mib: 5.16015625
+    /camera_bev_fusion:
+      early_median_mib: 88.4765625
+      late_median_mib: 89.94921875
+      delta_mib: 1.47265625
+    /camera_lane_vectorizer:
+      early_median_mib: 167.0859375
+      late_median_mib: 171.265625
+      delta_mib: 4.1796875
+    /camera_object_detector:
+      early_median_mib: 984.91015625
+      late_median_mib: 987.0
+      delta_mib: 2.08984375
+    /camera_semantic_inference:
+      early_median_mib: 1068.4765625
+      late_median_mib: 1074.1953125
+      delta_mib: 5.71875
+    /frenet_planner:
+      early_median_mib: 219.734375
+      late_median_mib: 219.734375
+      delta_mib: 0.0
+    /mpc_controller:
+      early_median_mib: 12.36328125
+      late_median_mib: 12.3671875
+      delta_mib: 0.00390625
+    /traffic_light_infer:
+      early_median_mib: 767.12109375
+      late_median_mib: 767.61328125
+      delta_mib: 0.4921875
+  model_errors:
+    resnet18: 0
+    yolo: 0
+    twinlite: 0
+  report_sha256: b1be12348de2e0e4eed7e212ee4158d9b0d5f65d542d287a9b5285d1f8e5c2ac
+  scope: One uninterrupted stationary full-stack1800s trial; not three repeats or driving; every failed
+    window retained
+  resource_summary:
+    peak_vram_mib: 5168.0
+    gpu_utilization_p95: 67.0
+    no_oom: true
+  fusion:
+    total:
+      matched: 20617
+      dropped: 2266
+      pending_lidar: 1
+      pending_yolo: 2
+      fresh: 20617
+      reused: 0
+    conserved: true
+    intact_rosout_intervals: 359
+    source: intact master rosout intervals; screen shutdown tail/total; incomplete screen intervals retained
+      separately
+  input_gap_association:
+    front:
+      input_max_gap_sec: 0.34856290300376713
+      output_max_gap_sec: 0.43197183503070846
+      output_gaps_over250ms: 13
+      overlapping_upstream_gaps: 13
+    left:
+      input_max_gap_sec: 0.34516142698703334
+      output_max_gap_sec: 0.447420051030349
+      output_gaps_over250ms: 12
+      overlapping_upstream_gaps: 12
+    right:
+      input_max_gap_sec: 0.3698642210219987
+      output_max_gap_sec: 0.4094032410066575
+      output_gaps_over250ms: 12
+      overlapping_upstream_gaps: 12
+  interpretation: Long-run output failures remain; all oversized YOLO output gaps overlap upstream camera
+    gaps, association is not root-cause proof. Normal invalid traffic-light verdicts are distinct from
+    processing failures.
+final_regression:
+  revision: 55f17070e05e467e5f107ff5b9bea373a7f4ed8e
+  report_sha256: 25b53937b88819291a5be73ea87e442f30b11f8f79036d0cd333f774aa970bce
+  outer_package_tests: 563
+  known_facade_failures: 1
+  lidar_core_tests: 3
+  main_tests: 311
+  main_failures: 0
+  perception_tool_tests: 131
+  perception_tool_failures: 0
+  audit_tests: 51
+  known_main_identical_audit_errors: 1
+  generated_ros_checks: 5
+  jamming_tests: 36
+  jamming_failures: 0
+  validators: 6
+  scope: All relevant local checks completed. Facade and P1-C authority errors remain; not an all-green
+    result or GitHub CI substitute.
+  known_baseline_inputs: ../artifacts/camera-coco7-live-v1/final-regression/known-baseline-inputs.json
+final_acceptance_summary:
+  path: config/baselines/evidence/camera_coco7_live_v1/final_acceptance_summary.json
+  sha256: b57b17c76d3d4d995e62a00a3503fbd24c8f1a211847a3df1f49d3aca67c73e5
+
+weather_followup:
+  summary: config/baselines/evidence/camera_coco7_live_v1/weather_followup_summary.json
+  summary_sha256: 99c7ff2f5342f9662a289a5e04bf0e14039631d317f8738b9af672b95fffedab
+  weather_quality_source: Capture run-name tags; thresholds frozen before heldout
+  live_weather_source: gRPC GetWeather before and after each suite
+  live_container: asmc-ros-noetic
+  models: [yolo26m-1280, yolo26m-seg-960]
+  target_hz_each_view: 15
+  live_repeats_each_model_weather: 3
+  live_trials: 12
+  model_supply_failures: 0
+  whole_stack_failures: 12
+  failure_reason: planning trajectory maximum gap exceeded 250ms
+  model_default_promoted: false
+  weather_restored: SUNNY confirmed by independent recovery RPC
+  original_driver_failures_preserved: true
+  interpretation: Detect m/1280 is the measured bbox candidate; seg m/960 is the mask candidate.
+    Not a best-of-all-models claim or operating acceptance. Larger l lacks optimized whole-stack confirmation.
+  source_quality_artifacts:
+  - sunny-foggy-selection-v2.json
+  - sunny-foggy-heldout-frozen.json
+  live_artifacts:
+  - weather-live-shared-v1/sunny
+  - weather-live-shared-foggy-v2/foggy
+
+range_batch_followup:
+  summary: config/baselines/evidence/camera_coco7_live_v1/range_batch_followup_summary.json
+  summary_sha256: aca4011350166f95ad408cfe4e831d9fb89fe24352f4bce072b09fdf643cfa9c
+  base_revision: 82d9c2749dd473418d86e4e4d393c6de96fd469e
+  source_digests: ../artifacts/camera-coco7-live-v1/range-batch-source-v1.json
+  live_container: asmc-ros-noetic
+  weather: [SUNNY, FOGGY]
+  stationary_range_cases: 42
+  requested_forward_spawn_anchor_m: [20, 40, 60]
+  exact_camera_range_claimed: false
+  pixel_gt_available: false
+  source_jpegs: 630
+  quality_confidences: [0.7, 0.25]
+  quality_default_changed: false
+  batch_trials: 108
+  batch_cycles_each: 40
+  batch_timing_scope: fixed RGB full backend wall demand; no JPEG decode or ROS publication
+  front640_batch3_speed_improvement_percent: [22.4, 28.5, 16.0, 15.8]
+  model_order: [yolo26m, yolo26l, yolo26m-seg, yolo26l-seg]
+  front1280_batch3: slower than 2plus1 by 31-43 percent due to side padding
+  live_profile: C1
+  other_models: loaded STANDBY
+  live_target_hz_each_view: 15
+  live_trials: 12
+  live_passed: 10
+  live_failed: 2
+  live_peak_active_whole_gpu_mib: 5567
+  failures:
+  - L detect r2 front output gap 275ms; overlapping camera input gap 266ms
+  - L seg r3 ACTIVE initial gap 536ms; input gaps 465-494ms; first second output 8 each view
+  batch_quality_warning: M seg/640 batch3 lost reviewed truck observations at 40m relative to front-only 2plus1
+  model_default_promoted: false
+  fusion_default_changed: false
+  regression: COCO tools 28 + detection 70 + validators 3 passed
+  original_setup_and_measurement_failures_preserved: true
+  owned_actor_cleanup: 42 range actors + 18 live fixture actors; all exact owned IDs removed
+  final_environment: SUNNY; Ego unchanged; no public control publishers; bridge and master retained
+
+final_model_decision:
+  superseded_by: broad_model_decision
+  summary: config/baselines/evidence/camera_coco7_live_v1/finalist_model_decision.json
+  summary_sha256: 415e26ce80cc304989eb0a5f99104cd2b6371a9bc9493a980d5354a14442a1d0
+  model: YOLO26m detect
+  front_width: 1280
+  side_input_hw:
+  - 480
+  - 640
+  batch: 2plus1
+  target_hz_each_view: 15.0
+  producer_confidence: 0.5
+  development_model_selected: true
+  global_default_promoted: false
+  camera_supply_trials_passed: 6
+  whole_stack_trials_failed: 6
+  new_side_mask_misses:
+    left: 1
+    right: 1
+  consumer_threshold_runtime_param: /camera_objects_yolo_bbox_adapter/conf_thres
+  consumer_threshold_default: 0.0
+  retained_failures:
+  - new side mask misses
+  - planning trajectory deadline
+  - prior confidence60/55 mask regressions
+  - offline driver path collision; resumed separately
+  - existing long-run/drive/CI acceptance blockers
+
+broad_model_decision:
+  confidence_superseded_by: confidence_followup
+  summary: config/baselines/evidence/camera_coco7_live_v1/broad_model_decision.json
+  summary_sha256: 0d149a3b2926e7b6c6bbd3714b13babaf9b967e33d913b819f17bdbbdce6ac17
+  model: YOLO26l detect
+  runtime_config: src/asmc_camera/config/camera/yolo26l_detect_coco7_three_view.yaml
+  engine_sha256: 95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f
+  front_width: 1280
+  side_hw: [480, 640]
+  batch: 2plus1
+  target_hz_each_view: 15.0
+  producer_confidence: 0.50
+  development_default_selected: true
+  global_operational_default_promoted: false
+  all_eight_combinations_screened: true
+  c6_screen_trials: 8
+  c6_confirmation_trials: 12
+  selected_camera_supply_passed: 6
+  selected_15hz_target_passed: 6
+  selected_whole_stack_failed: 6
+  selected_output_hz_range: [14.75, 14.90]
+  selected_wall_p95_ms_max: 95.58823722181842
+  selected_wall_p99_ms_max: 109.48612566804535
+  selected_maximum_gap_ms: 201.6825140453875
+  selected_peak_whole_vram_mib_confirmation: 5514
+  selected_peak_whole_vram_mib_including_screen: 5753
+  vram_upper_limit_percent: 90
+  selected_duplicate_or_reversed_stamps: 0
+  actual_selection_frames: 2252
+  actual_selection_tp: 326
+  actual_selection_fp: 27
+  reviewed_exclusions_exact_frames: 2
+  original_excluded_evidence_preserved: true
+  actual_previously_viewed_heldout_frames: 2474
+  actual_previously_viewed_heldout_tp: 899
+  actual_previously_viewed_heldout_fp: 34
+  mask_all_views_default: true
+  zero_new_class_misses_passed: false
+  new_class_misses: {front: 1, left: 1, right: 0}
+  new_miss_review: front car label lost but truck geometry persists; left truck box lost
+  mask_policy: user preference for Ego suppression; original failures retained, no blanket waiver
+  regression_unique_tests: {coco7: 41, detection: 72}
+  contract_validators_passed: 4
+  actual_default_launch_standby_smoke_passed: true
+  gallery_hub: http://localhost:8768/
+  remaining_gates:
+  - common planning trajectory deadline failures
+  - new model repeated fusion and long-run/drive acceptance
+  - organization CI billing rejection at zero steps
+  - historical known facade and input-authority baseline failures
+
+confidence_followup:
+  summary: config/baselines/evidence/camera_coco7_live_v1/confidence_followup_decision.json
+  summary_sha256: 16cf9b8f8a6ddc7194d8ef5310065c561b4a2bf7ee10e1f231f458cbb272eee9
+  model: YOLO26l detect
+  producer_confidence: 0.40
+  prior_yolo11m_confidence: 0.70
+  development_default_selected: true
+  operational_default_promoted: false
+  reviewed_selection_frames: 2250
+  original_selection_frames: 2252
+  reviewed_tp: 352
+  reviewed_fp: 52
+  reviewed_macro_f1: 0.2792990479405953
+  gained_tp_vs_actual_050: 26
+  added_fp_vs_actual_050: 25
+  lost_tp_vs_actual_050: 0
+  camera_supply_trials_passed: 5
+  camera_supply_trials_failed: 1
+  whole_stack_trials_failed: 6
+  output_hz_range: [14.65, 14.95]
+  wall_p95_ms_max: 97.74320321157573
+  maximum_gap_ms: 319.2972479737364
+  peak_whole_vram_mib: 5541
+  new_mask_class_misses: {front: 1, left: 1, right: 0}
+  new_mask_observations_differ_from_050: true
+  local_tests: {coco7: 43, gallery: 1, detection: 72}
+  contract_validators_passed: 4
+  gallery_hub_pages: 104
+  gallery_fixed_ids_and_kst: true
+  remaining_gates:
+  - SUNNY r3 all-model gap with concurrent input gaps; not waived
+  - planning trajectory deadline in all six trials
+  - camera-side unmatched FP including tunnel background truck
+  - previous repeated fusion, long-run, driving and CI billing blockers

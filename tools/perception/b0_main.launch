@@ -1,5 +1,7 @@
 <launch>
   <arg name="fusion_trace_path" default=""/>
+  <arg name="fusion_yolo_policy" default="unique"/>
+  <arg name="camera_objects_conf_thres" default="0.7"/>
   <!-- Existing Main ParseCAN publishes a legacy control stub even in
        perception-only mode. Quarantine it in the test master only. -->
   <group>
@@ -10,6 +12,8 @@
       <arg name="rviz" value="false"/>
       <arg name="start_velodyne_driver" value="false"/>
       <arg name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
+      <arg name="fusion_yolo_policy" value="$(arg fusion_yolo_policy)"/>
+      <arg name="camera_objects_conf_thres" value="$(arg camera_objects_conf_thres)"/>
     </include>
   </group>
 </launch>

@@ -1,0 +1,9 @@
+# RTX40 / Python3.8: versions used in the shared asmc-ros-noetic trials.
+# CUDA11 matches torch2.1.2+cu118. Engines still need target-device validation.
+--extra-index-url https://pypi.nvidia.com
+tensorrt-cu11==10.13.0.35
+nvidia-cuda-runtime-cu11==11.8.89
+nvidia-ml-py==13.610.43
+# Engine export; installed at image build time, not during live inference.
+onnx==1.17.0
+onnxslim==0.1.82

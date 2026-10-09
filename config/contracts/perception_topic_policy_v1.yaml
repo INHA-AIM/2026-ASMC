@@ -102,15 +102,21 @@ topic_families:
   - id: camera_objects_visualization
     topics:
       - {pattern: /perception/camera/objects/debug/image/compressed, type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/camera/objects/debug/left/image/compressed, type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/camera/objects/debug/right/image/compressed, type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/camera/objects/debug/mosaic/compressed, type: sensor_msgs/CompressedImage}
     producer:
       file: src/asmc_camera/src/asmc_camera/nodes/object_visualizer_node.py
-      anchors: ["'/perception/camera/objects/debug/image/compressed'"]
+      anchors: ["'/perception/camera/objects/debug/image/compressed'",
+                "'/perception/camera/objects/debug/left/image/compressed'",
+                "'/perception/camera/objects/debug/right/image/compressed'",
+                "'/perception/camera/objects/debug/mosaic/compressed'"]
     consumers: []
     bag_profiles: []
     classification: debug_opt_in
     current_mode: visualization_launch_and_subscriber_lazy
     p5b_action: keep
-    rationale: Exact source frame YOLO overlay; independent of LiDAR and GPS, without operational message changes.
+    rationale: Exact source frame per-view YOLO overlays and subscriber-lazy left/front/right debug mosaic; source times stay per panel, with missing/stale views blanked. Independent of LiDAR and GPS.
 
   - id: camera_objects_debug_raw
     topics:

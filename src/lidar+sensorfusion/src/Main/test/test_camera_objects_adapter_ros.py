@@ -45,6 +45,34 @@ class AdapterRosTest(unittest.TestCase):
             time.sleep(0.02)
         self.assertEqual(2, len(received))
         self.assertEqual(0, received[-1].objc)
+
+        # The planner can tighten and restore the consumer cutoff without
+        # restarting inference. Invalid parameter updates must withhold input.
+        message.boxes = [CameraObjectBox(xmin=1, ymin=2, xmax=20, ymax=30,
+            source_class_name='car', confidence=.60, confidence_valid=True)]
+        for threshold, stamp, count in [(.65, 44, 0), (.55, 45, 1)]:
+            rospy.set_param('/camera_objects_yolo_bbox_adapter/conf_thres', threshold)
+            time.sleep(.2)
+            before = len(received)
+            message.header.stamp = rospy.Time(stamp)
+            publisher.publish(message)
+            deadline = time.monotonic()+5
+            while len(received) == before and time.monotonic() < deadline:
+                time.sleep(.02)
+            self.assertEqual(before+1, len(received))
+            self.assertEqual(count, received[-1].objc)
+            # rospy assigns a transport sequence for each publisher. The pure
+            # conversion test checks the copied header; wire identity is stamp
+            # and frame_id across this separate publisher.
+            self.assertEqual(message.header.stamp, received[-1].header.stamp)
+            self.assertEqual(message.header.frame_id, received[-1].header.frame_id)
+        rospy.set_param('/camera_objects_yolo_bbox_adapter/conf_thres', 1.1)
+        time.sleep(.2)
+        before = len(received)
+        message.header.stamp = rospy.Time(46)
+        publisher.publish(message)
+        time.sleep(.25)
+        self.assertEqual(before, len(received))
         subscriber.unregister()
 
 

@@ -1,0 +1,22 @@
+{
+  "samples": 144,
+  "models": {
+    "yolo26": {
+      "boxes": 15,
+      "box_points": 2387,
+      "mask_points": 1925
+    },
+    "yoloe": {
+      "boxes": 16,
+      "box_points": 2127,
+      "mask_points": 1749
+    }
+  },
+  "coordinate": "raw velodyne -> fixed lidar mount -> base_link -> front optical; no leveling inverse",
+  "calibration_sha256": "86d36e10f5ca1f9b32d201b3222e4328a63d9ff1452b49defec07c7b2ca806ec",
+  "sensors_sha256": "4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f",
+  "operational_fusion_changed": false,
+  "gt_accuracy_evaluable": false,
+  "scope": "offline nearest raw scan within 50ms; 1s camera samples; no arrival policy, depth visibility or GT semantic labels",
+  "warning": "fewer points can remove object points; support reduction is not wall-removal or object-preservation accuracy"
+}

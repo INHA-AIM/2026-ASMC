@@ -17,8 +17,11 @@ def build_box_array(
     valid: bool,
     detections: Iterable[Detection],
     groups: ClassGroups,
+    label_mode: str = "group",
 ) -> CameraObjectBoxArray:
-    """Keep detector order; drop labels whose group is excluded."""
+    """Keep detector order; source profiles preserve the detector vocabulary."""
+    if label_mode not in ("group", "source"):
+        raise ValueError("label_mode must be group or source")
     message = CameraObjectBoxArray()
     message.header = header
     message.image_width = int(image_width)
@@ -27,7 +30,8 @@ def build_box_array(
     if not valid:
         return message
     for detection in detections:
-        group = groups.group_of(detection.source_class_name)
+        group = (detection.source_class_name if label_mode == "source"
+                 else groups.group_of(detection.source_class_name))
         if group is None:
             continue
         box = CameraObjectBox()

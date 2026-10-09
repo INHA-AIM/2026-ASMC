@@ -1,0 +1,24 @@
+[
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 1,
+    "debug": false,
+    "diagnostic": true,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "fusion",
+    "bag_id": "primary",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 1,
+    "debug": false,
+    "diagnostic": true,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  }
+]

@@ -22,7 +22,7 @@ jobs:
             -e 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
           apt-get -o Acquire::Retries=3 update
           apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
-            git ca-certificates libyaml-cpp-dev libssl-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-nose \
+            git ca-certificates libyaml-cpp-dev libssl-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-pil python3-nose \
             ros-noetic-tf ros-noetic-tf2-ros ros-noetic-rostest
           rm -rf /var/lib/apt/lists/*
 
@@ -78,6 +78,24 @@ jobs:
           python3 -m unittest tools/perception/test_hood_evaluation.py
           python3 -m unittest tools/perception/test_lifecycle_measurements.py
           python3 -m unittest tools/perception/test_b0_measurements.py
+          python3 -m unittest tools/perception/test_coco7_evaluation.py
+          python3 -m unittest discover -s tools/perception -p 'test_coco7_weather.py'
+          python3 -m unittest discover -s tools/perception -p 'test_coco7_batch_benchmark.py'
+          python3 -m unittest discover -s tools/perception -p 'test_coco7_range_batches.py'
+          python3 -m unittest discover -s tools/perception -p 'test_coco7_finalists.py'
+          python3 -m unittest discover -s tools/perception -p 'test_coco7_broad_selection.py'
+          python3 -m unittest discover -s tools/perception -p 'test_coco7_confidence_followup.py'
+          python3 -m unittest discover -s tools/perception -p 'test_experiment_gallery_hub.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_coco_measurements.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_coco_matrix.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_seg_gt.py'
+          python3 -m unittest discover -s tools/perception -p 'test_seg_measurements.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_seg_matrix.py'
+          python3 -m unittest discover -s tools/perception -p 'test_seg_lidar_support.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_seg_accuracy.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_mission_classes.py'
+          python3 -m unittest discover -s tools/perception -p 'test_yoloe_l_measurements.py'
+          python3 -m unittest discover -s tools/perception -p 'test_yoloe_l_diagnostics.py'
           python3 -m unittest tools/perception/test_b1a_protocol.py
           python3 -m unittest tools/perception/test_frame_boundary_measurements.py
           python3 -m unittest tools/perception/test_lidar_continuous_measurements.py
@@ -96,10 +114,27 @@ jobs:
           core_pid=$!
           trap 'kill "$core_pid" 2>/dev/null || true' EXIT
           python3 tools/perception/check_inference_control_ros.py
+          python3 tools/perception/check_camera_coco_ros.py --profile baseline
+          python3 tools/perception/check_camera_coco_ros.py --profile all
+          python3 tools/perception/check_camera_seg_ros.py
+          python3 tools/perception/check_camera_seg_ros.py --batched
+          roslaunch --nodes asmc_camera camera_objects_coco_experiment.launch classes:=all
+          roslaunch --nodes asmc_camera camera_objects_coco_experiment.launch classes:=baseline debug:=false
+          roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yolo26 views:=front debug:=false
+          roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yoloe views:=all debug:=false
+          roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yolo26 classes:=mission debug:=false
+          roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yoloe classes:=mission views:=all debug:=false
+          roslaunch --nodes asmc_camera camera_objects_yoloe_l_experiment.launch debug:=false
+          roslaunch --nodes asmc_camera camera_objects_yoloe_l_experiment.launch prompt_profile:=base27 batch_mode:=batch3 debug:=false
+          roslaunch --nodes asmc_camera camera_objects_three_view_experiment.launch debug:=false
+          roslaunch --nodes asmc_camera camera_objects_three_view_experiment.launch debug:=true
           python3 tools/perception/check_region_example_ros.py
           python3 tools/perception/check_object_visualization_ros.py
           python3 tools/perception/check_object_visualization_ros.py --hood-mask
           python3 tools/perception/check_object_visualization_ros.py --hood-mask --debug-raw
+          python3 tools/perception/check_object_visualization_ros.py --hood-mask --view left
+          python3 tools/perception/check_object_visualization_ros.py --hood-mask --view right
+          python3 tools/perception/check_object_mosaic_ros.py --output /tmp/object-mosaic-ros-check.json
           python3 tools/perception/check_hood_mask_ros.py
           python3 tools/perception/check_ego_hood_filter_ros.py
           python3 tools/perception/check_object_visualization_ros.py --ego-hood-filter

@@ -1,0 +1,57 @@
+{
+  "selected": "2plus1",
+  "ranking": "lowest worst-view p95 across all three repetitions, tie peak whole VRAM",
+  "modes": {
+    "2plus1": [
+      {
+        "passed": true,
+        "worst_view_p95": 38.5593858,
+        "peak_vram": 3337.0
+      },
+      {
+        "passed": true,
+        "worst_view_p95": 39.270060449999995,
+        "peak_vram": 3343.0
+      },
+      {
+        "passed": true,
+        "worst_view_p95": 40.0619914,
+        "peak_vram": 3340.0
+      }
+    ],
+    "sequential": [
+      {
+        "passed": true,
+        "worst_view_p95": 53.228459449999995,
+        "peak_vram": 3326.0
+      },
+      {
+        "passed": true,
+        "worst_view_p95": 45.680138,
+        "peak_vram": 3336.0
+      },
+      {
+        "passed": true,
+        "worst_view_p95": 42.72093009999999,
+        "peak_vram": 3327.0
+      }
+    ],
+    "batch3": [
+      {
+        "passed": true,
+        "worst_view_p95": 70.1094884,
+        "peak_vram": 3381.0
+      },
+      {
+        "passed": true,
+        "worst_view_p95": 69.57907874999998,
+        "peak_vram": 3385.0
+      },
+      {
+        "passed": true,
+        "worst_view_p95": 71.23739780000001,
+        "peak_vram": 3384.0
+      }
+    ]
+  }
+}

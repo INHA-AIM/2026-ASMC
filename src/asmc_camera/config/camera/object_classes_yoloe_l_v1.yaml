@@ -1,0 +1,34 @@
+class_groups:
+  groups:
+    person:
+    - person
+    - pedestrian
+    animal:
+    - bird
+    - cat
+    - dog
+    - horse
+    - sheep
+    - cow
+    - elephant
+    - bear
+    - zebra
+    - giraffe
+    - deer
+    - animal
+    vehicle:
+    - bicycle
+    - car
+    - motorcycle
+    - bus
+    - truck
+    - train
+    - vehicle
+    - sedan
+    - suv
+    - mpv
+    - wagon
+    - electric scooter
+    - scooter
+  default_group: obstacle
+  excluded: []

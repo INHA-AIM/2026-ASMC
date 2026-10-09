@@ -1,24 +1,27 @@
 # 카메라 런타임 단계별 개발 계획
 
 > **상태:** P2a 이전 수락 완료. PR #69 모델별 준비·출력 수락 및 분류 차이 2건의 사용자 승인 완료. 기존 실패 이력과 P2a 분류 차이 1건의 예외를 보존.
-> **기준일:** 2026-10-07
-> **코드 기준:** PR #65가 병합된 main `af253c3575c1e704e70511c2a2033ec15e33299a`
+> **기준일:** 2026-10-08
+> **P2a 당시 코드 기준:** PR #65가 병합된 main `af253c3575c1e704e70511c2a2033ec15e33299a`
 > **P2a 당시 통합 기준:** 컨트롤러 PR #67의 main `c5d0b78`. 당시 P2a 검출·LiDAR·HD맵 실행 경로는 동일했다.
 > **수락:** 사용자 승인으로 PR #68을 main `7aed612`에 병합. CPU 재현과 최신 GPU 검증을 함께 근거로 삼으며
 > 알려진 실행 변동을 허용한 결정과 원래 엄격한 실패 판정은 구분한다.
 > **후속 기준:** PR #69는 `4074b43`으로 병합됐고, 연구 문서 merge main은 `3b142b1`이다.
-> 현재 B0는 [통합 부하 기준선](camera-lidar-b0.md)을 따르며 운영 모델·주기·fusion 정책은 유지한다.
+> B0(PR #70)·B1a(PR #71)·공통 좌표/시간 기반(PR #72)은 병합됐다. 현재 main은 `a8c4f3b`다.
+> 현재 PR #73은 [YOLO11m COCO 관측 비교](camera-coco-class-expansion.md)이며 운영 기본값은 유지한다.
 > **실행 환경:** 개발 RTX 4060 Ti, 대회 RTX 4070 SUPER, ROS Noetic GPU 컨테이너
 > **관련 인수:** [음영 카메라](shadow-camera.md), [객체 검출](camera-object-detection.md), [HD맵 소비](../hd-map/planning-consumption-v1.md)
 
 카메라 rename, 전방 YOLO 이전과 모델별 실행 상태는 PR #69까지 병합됐다.
-현재 작업은 연구 문서 main `3b142b1`에서 시작한 B0 통합 부하·실패 기준선이다.
+현재 작업은 main `a8c4f3b`에서 시작한 PR #73 COCO 클래스 확대 비교다.
+다음 허용 클래스·네 그룹·학습 설계는 [MORAI 객체 범위와 분류](../competition/obstacle-assets-and-labels.md)를 따른다.
+animal 추가와 신규 MORAI 학습은 미구현이며, PR #72 공통 경계/roll 기본값은 OFF다.
 전체 순서는 아래에 보존하고 2단계 구현·검증은 [P2a 사용·검증 안내](camera-objects-p2a.md)에서 관리한다. 뒤 단계의 주기, 카메라 수, 동기화 허용값,
 backend는 측정과 해당 단계의 상세 계획을 거쳐 결정한다.
 
 ## 현재 코드와 이전 계획의 위치
 
-main에는 HD맵 PR #64와 사용자가 병합한
+다음 문단은 rename 재검증 당시의 이력이다. 당시 main에는 HD맵 PR #64와 사용자가 병합한
 [복원 PR #65](https://github.com/INHAautonav/2026-ASMC/pull/65)가 포함돼 있으며
 카메라 패키지는 `asmc_camera`다. 로컬 main도 `af253c3`으로 fast-forward했다.
 병합의 두 부모는 최신 HD맵 main `81e556d`와 실행 검증한 카메라 HEAD `7612f97`이다.
@@ -31,7 +34,10 @@ HD 코드·메시지·HD runtime pins와 관련 규정 문서는 `81e556d` 대�
 Claude의 `feat/camera-object-producer` 메시지 커밋 `dc57f1e`와 미커밋 검출 라이브러리는
 P2a에 흡수했다. [흡수 SHA 기록](../../../config/baselines/perception_claude_work_absorption_v1.json)을
 보존하고 원본 작업 worktree·로컬 브랜치는 정리했다. 현재 작업은
-`feat/camera-performance-comparison`과 `asmc-camera-objects`이며 재현 브랜치는 별도로 유지한다.
+`feat/camera-coco-class-expansion`과 `asmc-camera-objects`이며 재현 브랜치는 별도로 유지한다.
+폴더는 Git worktree이고 브랜치 이름과 다르다. `2026-ASMC`는 main 기준 확인용,
+`asmc-camera-verify`는 과거 재현용이다. 구현·문서·빌드는 현재 작업 worktree에서 진행하고
+병합 후 main을 동기화한다. 현재 PR 변경을 이미 main에 반영된 것으로 설명하지 않는다.
 
 다음 목록은 P2a 완료 당시의 기준선이다. 후속 실행 상태 구현은 위 3단계 안내를 따른다.
 

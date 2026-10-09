@@ -15,7 +15,8 @@ class RosInferenceControl:
             views, managed=bool(rospy.get_param('~managed', False)),
             initial_mode=int(rospy.get_param('~initial_mode', STANDBY)),
             target_hz=float(rospy.get_param('~target_hz', default_hz)), warmed_up=warmed_up,
-            trace=self.trace if self.trace.path is not None else None)
+            trace=self.trace if self.trace.path is not None else None,
+            target_hz_by_view=rospy.get_param('~target_hz_by_view', {}))
         self.state.record('control_ready', loaded=True, warmed_up=bool(warmed_up))
         self.on_transition = on_transition
         self.pipeline = None

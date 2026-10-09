@@ -21,10 +21,14 @@ def parse_fusion_logs(logs):
     intervals = [{"kind": kind, "matched": int(m), "dropped": int(d),
                   "median_ms": float(median), "p95_ms": float(p95), "max_ms": float(maximum)}
                  for kind, m, d, median, p95, maximum in re.findall(pattern, logs)]
-    totals = re.findall(r"Fusion sync total: matched=(\d+) dropped=(\d+) pending lidar/yolo=(\d+)/(\d+)", logs)
+    totals = re.findall(r"Fusion sync total: matched=(\d+) dropped=(\d+)(?: fresh=(\d+) reused=(\d+))? pending lidar/yolo=(\d+)/(\d+)", logs)
     total = ({"matched": int(totals[0][0]), "dropped": int(totals[0][1]),
-              "pending_lidar": int(totals[0][2]), "pending_yolo": int(totals[0][3])}
+              "pending_lidar": int(totals[0][4]), "pending_yolo": int(totals[0][5])}
              if len(totals) == 1 else None)
+    if total is not None and totals[0][2]:
+        total.update(fresh=int(totals[0][2]), reused=int(totals[0][3]))
     complete = (total is not None and sum(row["kind"] == "tail" for row in intervals) == 1
                 and all(sum(row[key] for row in intervals) == total[key] for key in ("matched", "dropped")))
+    if total is not None and 'fresh' in total:
+        complete = complete and total['fresh']+total['reused']==total['matched']
     return intervals, total, complete

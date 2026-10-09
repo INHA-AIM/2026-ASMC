@@ -1,0 +1,8 @@
+# Experimental consumer groups. Object kind does not determine movement or avoidance.
+class_groups:
+  groups:
+    person: [person, pedestrian]
+    animal: [bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe, deer]
+    vehicle: [bicycle, car, motorcycle, bus, truck, train, vehicle, sedan, suv, mpv, wagon, electric scooter]
+  default_group: obstacle
+  excluded: []

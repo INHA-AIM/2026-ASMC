@@ -1,0 +1,12 @@
+{
+  "source_report_sha256": "714f8dd95e3bf0de408ca56cd86db0bd27975a79fe3e87cca8f968b1578172b8",
+  "sample_comparisons": 270,
+  "failures": 0,
+  "side_mask_controls": 45,
+  "new_side_mask_misses": 0,
+  "side_overlap_frames": [
+    "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000230.png",
+    "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000229.png",
+    "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000290.png"
+  ]
+}

@@ -1,0 +1,1094 @@
+{
+  "calibration_split": "train only",
+  "geometric_validation_splits": [
+    "train",
+    "selection"
+  ],
+  "inference_performed": false,
+  "source_manifest_sha256": "ed2cefea5274c3366e2514b983ace614532a3926697be5e5d2ba68c0404cf968",
+  "method": "Black semantic AND instance corner component, RGB-confirmed; 1px dilation and 0.75px contour simplification",
+  "views": {
+    "left": {
+      "config_sha256": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+      "calibration_samples": 36,
+      "image_width": 640,
+      "image_height": 480,
+      "excluded_pixels": 40658,
+      "excluded_fraction": 0.13235026041666667,
+      "calibration_silhouette_pixels": 39847,
+      "missed_silhouette_pixels": 0,
+      "pixels_outside_sample_union": 811,
+      "GT_frames_with_masks_checked": 2231,
+      "GT_annotations_checked": 5101,
+      "visible_actor_pixel_overlap_by_group": {
+        "obstacle": 1345,
+        "vehicle": 2942,
+        "person": 4
+      },
+      "overlap_cases": [
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000236",
+          "actor": "2",
+          "pixels": 18
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000515",
+          "actor": "29",
+          "pixels": 8
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000516",
+          "actor": "29",
+          "pixels": 15
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000262",
+          "actor": "18",
+          "pixels": 8
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000263",
+          "actor": "18",
+          "pixels": 48
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000264",
+          "actor": "18",
+          "pixels": 45
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000265",
+          "actor": "18",
+          "pixels": 24
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000460",
+          "actor": "42",
+          "pixels": 17
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000469",
+          "actor": "43",
+          "pixels": 30
+        },
+        {
+          "run": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+          "frame": "000470",
+          "actor": "14",
+          "pixels": 88
+        },
+        {
+          "run": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+          "frame": "000471",
+          "actor": "14",
+          "pixels": 78
+        },
+        {
+          "run": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+          "frame": "000277",
+          "actor": "15",
+          "pixels": 4
+        },
+        {
+          "run": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+          "frame": "000387",
+          "actor": "56",
+          "pixels": 14
+        },
+        {
+          "run": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+          "frame": "000388",
+          "actor": "56",
+          "pixels": 24
+        },
+        {
+          "run": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+          "frame": "000352",
+          "actor": "16",
+          "pixels": 52
+        },
+        {
+          "run": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+          "frame": "000355",
+          "actor": "18",
+          "pixels": 46
+        },
+        {
+          "run": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+          "frame": "000358",
+          "actor": "19",
+          "pixels": 17
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000069",
+          "actor": "14",
+          "pixels": 94
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000072",
+          "actor": "51",
+          "pixels": 85
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000081",
+          "actor": "13",
+          "pixels": 96
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000089",
+          "actor": "56",
+          "pixels": 53
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000230",
+          "actor": "44",
+          "pixels": 8
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000475",
+          "actor": "15",
+          "pixels": 319
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000518",
+          "actor": "15",
+          "pixels": 2395
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000536",
+          "actor": "15",
+          "pixels": 64
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000575",
+          "actor": "29",
+          "pixels": 26
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000576",
+          "actor": "17",
+          "pixels": 21
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000577",
+          "actor": "64",
+          "pixels": 5
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000577",
+          "actor": "22",
+          "pixels": 2
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000578",
+          "actor": "27",
+          "pixels": 45
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000578",
+          "actor": "22",
+          "pixels": 23
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000579",
+          "actor": "22",
+          "pixels": 80
+        },
+        {
+          "run": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+          "frame": "000120",
+          "actor": "47",
+          "pixels": 66
+        },
+        {
+          "run": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+          "frame": "000285",
+          "actor": "57",
+          "pixels": 50
+        },
+        {
+          "run": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+          "frame": "000291",
+          "actor": "57",
+          "pixels": 18
+        },
+        {
+          "run": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+          "frame": "000407",
+          "actor": "18",
+          "pixels": 14
+        },
+        {
+          "run": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+          "frame": "000408",
+          "actor": "18",
+          "pixels": 58
+        },
+        {
+          "run": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+          "frame": "000409",
+          "actor": "18",
+          "pixels": 98
+        },
+        {
+          "run": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel",
+          "frame": "000034",
+          "actor": "2",
+          "pixels": 135
+        }
+      ],
+      "sources": [
+        {
+          "image": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "82bb293997b3e936fab8f74fab01710a7fddb922025244ee6f6ce39d4aa6d470",
+            "semantic": "d3aff04c5fd7ed209e486b548e741827d9692e3938557c866b68c767b3753a5f",
+            "instance": "9f20a03c736f0c1a85fea8a190d09f87d42eff01fb75f395b4a0a6fd49cfa5d1"
+          }
+        },
+        {
+          "image": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/left/000320.png",
+          "source_sha256": {
+            "intensity": "aec49044be320dff7876286aca8845dea99cb1977fc2c0037d97b59993e5024a",
+            "semantic": "615d86881fc0f5fe53e27999a740c36f4de88688445372555b35f2bb0c2fe0c2",
+            "instance": "0a30eb1457360ac04dd75ea6a0573e05b8a9c524367d2ad581ce636dedcdf172"
+          }
+        },
+        {
+          "image": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/left/000640.png",
+          "source_sha256": {
+            "intensity": "06dd1d58c69212d0bc385af609b2f49a04e0f3e1269493dad3a0e648b9518375",
+            "semantic": "5acda5063a095604136bf1453aa40a329b978bf4f3aa8d652f2e86fee98a7be7",
+            "instance": "e2bdd006831b397f065376982db8c3774a03ca0103b6dc1fa3a0e977ab950630"
+          }
+        },
+        {
+          "image": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "1579e8cbe746e5ee369bc22cb469d84fe5f04873eee0594b4bf3d9ad3919b8d3",
+            "semantic": "901a0081f0326b3d1e5a82519b6696bcd26458c951ac1b57eb4af641fb99a0e6",
+            "instance": "494710f99b2660626463e48cd5e83109df09dfffe51ce94c36ef9c20214b51f0"
+          }
+        },
+        {
+          "image": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/left/000267.png",
+          "source_sha256": {
+            "intensity": "78da6c2d57e28f4c7ecd6292379d24457e0e5e65817a06df2b3cf93c9f7d12fb",
+            "semantic": "356ea9fc843bd9892a399101f7bb3f4b6091e10894b01469cac8ff5c1de5bffe",
+            "instance": "395b007588e972b0e9b9c2e441862c691b665263c1c75a1b957fcdf83e6d2b7a"
+          }
+        },
+        {
+          "image": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/left/000525.png",
+          "source_sha256": {
+            "intensity": "e48d332ba9d6fbc356138684ec4fea27693d8bd236b40a645efa7294ec87e72a",
+            "semantic": "308be05906bb5af946719b7eacc99cc8914e9dbf634eb503dbce373ad1260ff1",
+            "instance": "b8efaf02d20319447017da3e47ad14be803d0308b043ae5b5e9fbb12a9081bf8"
+          }
+        },
+        {
+          "image": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "3916f7da503327790707f1e90773f948ebb44e703511fb600f48749038e3a97c",
+            "semantic": "b30907035de1d4508098f8ce824605503924ce48cd35ce33d016e076203b6ecc",
+            "instance": "65a66dfdde550f6cca1d57cafe6927528f97b7513875920c116e8f345411ca7f"
+          }
+        },
+        {
+          "image": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/left/000276.png",
+          "source_sha256": {
+            "intensity": "5bdfab16cb25c14937451c8f6fc1dbfae9745927a9d90bfe6457b365c4b76e07",
+            "semantic": "dc4aa8d06937ed7684eeb0a0a9ce229f4c40c899f1a85d1e99702c5aedefedd5",
+            "instance": "94308f80cb738c641eb6b33add66d3e8f61c4afd4ac25e05a378d3226e3f86ab"
+          }
+        },
+        {
+          "image": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/left/000552.png",
+          "source_sha256": {
+            "intensity": "f64da17ef5e80296fb0e077598bef4de5274b48ecc1ca31b1992ab9d1cab06bb",
+            "semantic": "50a0dc773deac7c731311a517109c1d106ea358cc9336275f6edd69c6c041eea",
+            "instance": "a9cd54fededc3e28ca19d52fc8b94b81f09f38dc331a3ecaee64000d795287a4"
+          }
+        },
+        {
+          "image": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "a43a9940bd54400ddb1a6a9066906ef1bc5baab0b833a54210c35380b6814b1b",
+            "semantic": "9d5a02d0b384bd22460090fd6c255db4d393430f9f68306a282c72c61b75ed4c",
+            "instance": "5f1f05a24c004b141ab73c3e3c9058e54ae1e59021d5f19175e2e819d283a03a"
+          }
+        },
+        {
+          "image": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel/frames/intensity/left/000330.png",
+          "source_sha256": {
+            "intensity": "1d7e25cef84cfca123e8f98643cff5bd604a0745945dd8b2884d7af8b66e6b33",
+            "semantic": "eb260b6454d0ca8825e35885a50a1630a6361e6bc365b136a542264cbe6ff59d",
+            "instance": "e0bf51e6c2b13a0ed3195b2d41e7a7977120742f49876c335beb045bf3aa9cba"
+          }
+        },
+        {
+          "image": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel/frames/intensity/left/000659.png",
+          "source_sha256": {
+            "intensity": "c7938e58e6bb556cc8528308d08d99d86599a68765a696373024d729bba0a512",
+            "semantic": "1a6ad49abe57c7f0b93124a2dbbf140ddbf52256adf806c792f460845163996e",
+            "instance": "73c77587c70d4c0ef8a394863c243162eafa6bb587eb3af77a1d1913994052f4"
+          }
+        },
+        {
+          "image": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "4bb37111be8c1afbb4df6a7c080d99722a7e4cb5e8471d74d7001f088ac0ad04",
+            "semantic": "472ae9bfed1e74c6d45f34f8087e6e875b15f920e93805a22f3328fd4188d668",
+            "instance": "ab1a8c200c6ec5d4832e4498873d6df86873170643f7ffda3309797dba998c93"
+          }
+        },
+        {
+          "image": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/left/000197.png",
+          "source_sha256": {
+            "intensity": "fc2be497ea2fef232fb234752177def9ab9c7af5c1579a4d36780a6e4af67ec6",
+            "semantic": "ac32190a3d908834487bb898bac6f9f139522c934c03b753ba2f4fc063a4355e",
+            "instance": "b8ee8cfd3d0df8fb89f1891dcf89d4a489af7b8195ecd20a9456e778be2e18b7"
+          }
+        },
+        {
+          "image": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/left/000393.png",
+          "source_sha256": {
+            "intensity": "28443d0f594e625648893077b85bb45e54d99261ed6dfae4059ca18f4f89d09a",
+            "semantic": "0c2e23250dc8e5b139d7e89b0b5b9461171e80bb772253076807c7b9e6ebbfdd",
+            "instance": "8f7bda6c63bd889a9876f509ed618cec6f1a192f8dbb99b8c935862abf57d26f"
+          }
+        },
+        {
+          "image": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "51e00ddc0eaae90af3df10b802e3eab779a5bc0d3e88cec5fc01cb0367151005",
+            "semantic": "16b5de89fd36770eca256600646215126b9cd0cf6af0f3ebf9439a4213730695",
+            "instance": "70e268d44fd6a613b9a4e80ea2a14ec33a2f7f3b47e645e9efe6b1d434de2b94"
+          }
+        },
+        {
+          "image": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel/frames/intensity/left/000353.png",
+          "source_sha256": {
+            "intensity": "923da69ba2a82eaccd28dbf10e45a98c171639c1662cb4a00c65728781fce345",
+            "semantic": "ecef1bc570797ad4fafd8ab02b99e89490f3a0e48f17f30e6dadb765f7dfd092",
+            "instance": "79d0a04a7ec69672327a355c2171c67daa5a310d95bbea586be4b6917b6e9c54"
+          }
+        },
+        {
+          "image": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel/frames/intensity/left/000705.png",
+          "source_sha256": {
+            "intensity": "a52fbf7e2edcc5440c1a9674e6711a79c104b8d6b5c72555ceb536423bfeca7b",
+            "semantic": "7f32d6ee0fa9c4c782e053835e1c3ff8682f16cfc8d875f54771b264d48dbf87",
+            "instance": "02b1d8ada42e04efe795c35740c725f8d210219fd5af8760b5a56803d93d0d2d"
+          }
+        },
+        {
+          "image": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "7bdab45b04e4bebacf50feb178854675082102b641a64aaee3bd3ebe156d9320",
+            "semantic": "1240c3b768f47bcc58a7fe3a1149c16194e56e5f3fbaf56fe0ffd0dcb815ee03",
+            "instance": "eb1ddde03cf17c365024f8e7468caf64391f562e65d84932ef8f6c5e4c369752"
+          }
+        },
+        {
+          "image": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/frames/intensity/left/000022.png",
+          "source_sha256": {
+            "intensity": "1130e228b5bf44eb579ae9b2661fb1758d05d2f61ea2eeb2eaad2ca2d5cfc674",
+            "semantic": "c63ab9d1e9997e4c118b622fa993d602b8835e896917200c807cc8ac11ec398d",
+            "instance": "362f569174e4945667dffbc17253e705272c2f3e30050d99ed00ae0fac1ab4cc"
+          }
+        },
+        {
+          "image": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/frames/intensity/left/000044.png",
+          "source_sha256": {
+            "intensity": "a49c9353227e5fcdb35be4174d47339b4ec7c460307b2eaa1e92f369ad00dbc4",
+            "semantic": "312f661cb9a38adbdbfe7c46715021a2aea10673ffba2c8c3bc807296e0abc19",
+            "instance": "b8ee8cfd3d0df8fb89f1891dcf89d4a489af7b8195ecd20a9456e778be2e18b7"
+          }
+        },
+        {
+          "image": "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "854edfabbe0be81ae9926a74789c8c6ef4da34ca429ea2f0f6a7e0a0743146dc",
+            "semantic": "ea42753d650ba838a3b69b4c3dfe003838f4bc19d8240da16eef45aa7b85b605",
+            "instance": "a7e0ce3dd9f43f775f80616e6e09af4392cc8968ac3745ed918d921f2d877d80"
+          }
+        },
+        {
+          "image": "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel/frames/intensity/left/000035.png",
+          "source_sha256": {
+            "intensity": "3faaaa0ea31eb2b8bc2a4c6f33e27065d89128db43599fb8d6e88d87084c98a1",
+            "semantic": "b6bd9b4e03ed57983a25a12676a19ffc7eb64d2c09bf2c074a14c142410df8a7",
+            "instance": "13759e40fea62afa20af2a5bced4cd9d9de5911f00fad994b0a426e77b22aaed"
+          }
+        },
+        {
+          "image": "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel/frames/intensity/left/000070.png",
+          "source_sha256": {
+            "intensity": "610bd6200e45a0a6054abd4dbb7d0d4205d641bac0aa5e5433da09d89a4be844",
+            "semantic": "f40ad0529949367fe0406d6c5dc0ad3c614125c0e2ab0b8ee8d06982e155837f",
+            "instance": "8fce77f992ce7bdb923693e047cf20d434f05ec614b5d1b10f4227ea8144046a"
+          }
+        },
+        {
+          "image": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "b7321b737ea716c9a8b45770b4db35146c591be73bbdcfe93f0775098dbd581e",
+            "semantic": "2ff9df523a2ebd9ffea747724f2124625feb8e1c03c8c9200f3aeeb13be1e143",
+            "instance": "bfc83608f186a09fdb16f9570dbb304b31db4470b94e5d14b2d548c5d460fbea"
+          }
+        },
+        {
+          "image": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/frames/intensity/left/000072.png",
+          "source_sha256": {
+            "intensity": "d366ec6d124258cb1b37c45fcd6ec7b61672cec572d09a68d216997dbaed5683",
+            "semantic": "829b729ae9c5711ac10bbbac9b21c4a7fcf26487857d46b5a7266b0accd7e45b",
+            "instance": "4c9f5076dc7bcfc6626aeaaad20b7d5f78c5e291d16335097c8b66a3f6b1a1b2"
+          }
+        },
+        {
+          "image": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/frames/intensity/left/000143.png",
+          "source_sha256": {
+            "intensity": "a7cd147a21f81b902334ece22b3f21355162fe96d36c6f0148a6bec8e3e7e854",
+            "semantic": "fdfcec895abe92231f0341483cbac8b1da075d9c92acf864ba8b362a46fc9ff5",
+            "instance": "e6fb8412c7cf8b2342352163e281ffddce9de0396154f8c4a5ba6347b3e57933"
+          }
+        },
+        {
+          "image": "kcity_auto_sunny_003/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "bebfea37fe225e1bdab0e5ebfd3f3f2cb401dc57f61f86e49dd72e823a0cb5c8",
+            "semantic": "c1f13aa62373cbd81b1c22663d49661516bd74a088d23160cc679642f0bb495f",
+            "instance": "42d1dcf9c940af50b3a26b95639a7d7c01735fd2c7b3d6feff93c345da5199a1"
+          }
+        },
+        {
+          "image": "kcity_auto_sunny_003/frames/intensity/left/001385.png",
+          "source_sha256": {
+            "intensity": "43385701ef3de49480f4367c3fed6ce5075c6ee1a20a70c6e99037e420c56f4c",
+            "semantic": "dbbd6ffd96aec747555d2054c23acdb5d1740a6ab3d2ba035259bae3aedea833",
+            "instance": "e4f8ac8212d96d3fadfef075799ba20e71f333f6d22545bf6fa1ec34d6c95525"
+          }
+        },
+        {
+          "image": "kcity_auto_sunny_003/frames/intensity/left/002769.png",
+          "source_sha256": {
+            "intensity": "02c85f82d9114733a8a5d45bb782d83a157446f4ee71cd21da90bb1344d9a76c",
+            "semantic": "15ea194eb01f5e91161d4994ad9fb03f991d589d3de2fd8b541b60c1fa785b8b",
+            "instance": "69223f5604744a7d117e2631ee8b6542f6ef115158c4eb36ef132148946d1e99"
+          }
+        },
+        {
+          "image": "kcity_drive_001/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "92a20dd3b668de78aa90753bdb9d897db2d7084ade084a1a91216c5d29587229",
+            "semantic": "51c3f64ade61f3b1eaff044cff14dff65e3ce868ed653324a6a827ad0f55c321",
+            "instance": "094499a98b6dfc3c6cf3274de44afabbd0b57285a0a3511c031bd0d1ba2a26de"
+          }
+        },
+        {
+          "image": "kcity_drive_001/frames/intensity/left/000479.png",
+          "source_sha256": {
+            "intensity": "ac8e4d1e05f1a804545e0250da509b6f8ef137aaad0b44f9a194bba55a0c69b5",
+            "semantic": "e00ac2d19e130a88f71d44819069f8e171447d7a0bd3959663bb50d8a605a272",
+            "instance": "a08963fb8f8cb2c09aea7345e40e001f7078d007743bf3eaa95798a1e014876b"
+          }
+        },
+        {
+          "image": "kcity_drive_001/frames/intensity/left/000957.png",
+          "source_sha256": {
+            "intensity": "9d72a3872bf515df6b377f684e9aeef7eda90a97a911968c5a0988bf3759cf26",
+            "semantic": "4287393d9c84d58840f69746c133c0ba3cc834277d4e41cf6f0adb5ce20cf5df",
+            "instance": "e783989a08ca6c969b01035a1a89095b80a9e86ff40ddfa43995b345f837dc14"
+          }
+        },
+        {
+          "image": "kcity_drive_002/frames/intensity/left/000000.png",
+          "source_sha256": {
+            "intensity": "f955381f63580ef71a09555aef1c0701e91615f16e9d909beeb857d5b214ba6d",
+            "semantic": "76119cf0857c3ec82f0a62fb15f2101e675934fb847a8023fe9994b88726ee83",
+            "instance": "496ba5bb88b1378b6e3bf8efad7f020a13a5eb18d24b9d87ef06f9258479fe4c"
+          }
+        },
+        {
+          "image": "kcity_drive_002/frames/intensity/left/000340.png",
+          "source_sha256": {
+            "intensity": "80532f7c5795b2813434906d118210e1bcdb1c44a81147f6480f90a27b8daaf4",
+            "semantic": "4761e582e636432aa8062d786c7c4a695b27007fe017eb2180af83b916c69abd",
+            "instance": "dc3f3d3ea92c81180c276ef9615031a8093f5d1423af579decab699b1d341618"
+          }
+        },
+        {
+          "image": "kcity_drive_002/frames/intensity/left/000680.png",
+          "source_sha256": {
+            "intensity": "026f663d54a8a4503492bd61abb543b3dc07bdff104556428d6b183085b09a6b",
+            "semantic": "77fd060fb4530d0f796623437ad150fbb03022da60b7adf48706bba44b72b383",
+            "instance": "2651201203ca12afd5f49c1f21f76a3d35403d590aa0b1f8a408b577768c99d7"
+          }
+        }
+      ]
+    },
+    "right": {
+      "config_sha256": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b",
+      "calibration_samples": 36,
+      "image_width": 640,
+      "image_height": 480,
+      "excluded_pixels": 40706,
+      "excluded_fraction": 0.13250651041666667,
+      "calibration_silhouette_pixels": 39891,
+      "missed_silhouette_pixels": 0,
+      "pixels_outside_sample_union": 815,
+      "GT_frames_with_masks_checked": 2785,
+      "GT_annotations_checked": 8953,
+      "visible_actor_pixel_overlap_by_group": {
+        "person": 4485,
+        "vehicle": 253,
+        "obstacle": 294
+      },
+      "overlap_cases": [
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000118",
+          "actor": "3",
+          "pixels": 254
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000119",
+          "actor": "3",
+          "pixels": 167
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000120",
+          "actor": "3",
+          "pixels": 291
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000121",
+          "actor": "3",
+          "pixels": 1345
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000122",
+          "actor": "3",
+          "pixels": 2280
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000123",
+          "actor": "3",
+          "pixels": 10
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000124",
+          "actor": "3",
+          "pixels": 34
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000132",
+          "actor": "3",
+          "pixels": 11
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000142",
+          "actor": "3",
+          "pixels": 26
+        },
+        {
+          "run": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+          "frame": "000143",
+          "actor": "3",
+          "pixels": 41
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000263",
+          "actor": "18",
+          "pixels": 20
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000264",
+          "actor": "18",
+          "pixels": 25
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000265",
+          "actor": "18",
+          "pixels": 23
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000266",
+          "actor": "18",
+          "pixels": 16
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000267",
+          "actor": "18",
+          "pixels": 14
+        },
+        {
+          "run": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+          "frame": "000268",
+          "actor": "18",
+          "pixels": 4
+        },
+        {
+          "run": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+          "frame": "000470",
+          "actor": "15",
+          "pixels": 11
+        },
+        {
+          "run": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+          "frame": "000471",
+          "actor": "15",
+          "pixels": 14
+        },
+        {
+          "run": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+          "frame": "000477",
+          "actor": "42",
+          "pixels": 2
+        },
+        {
+          "run": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+          "frame": "000478",
+          "actor": "43",
+          "pixels": 25
+        },
+        {
+          "run": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+          "frame": "000480",
+          "actor": "45",
+          "pixels": 24
+        },
+        {
+          "run": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+          "frame": "000174",
+          "actor": "46",
+          "pixels": 6
+        },
+        {
+          "run": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+          "frame": "000271",
+          "actor": "140001",
+          "pixels": 10
+        },
+        {
+          "run": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+          "frame": "000272",
+          "actor": "140001",
+          "pixels": 16
+        },
+        {
+          "run": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+          "frame": "000279",
+          "actor": "15",
+          "pixels": 14
+        },
+        {
+          "run": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+          "frame": "000385",
+          "actor": "56",
+          "pixels": 4
+        },
+        {
+          "run": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+          "frame": "000386",
+          "actor": "56",
+          "pixels": 18
+        },
+        {
+          "run": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+          "frame": "000145",
+          "actor": "15",
+          "pixels": 12
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000229",
+          "actor": "44",
+          "pixels": 1
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000290",
+          "actor": "22",
+          "pixels": 73
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000430",
+          "actor": "19",
+          "pixels": 1
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000576",
+          "actor": "63",
+          "pixels": 54
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000576",
+          "actor": "28",
+          "pixels": 8
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000577",
+          "actor": "28",
+          "pixels": 55
+        },
+        {
+          "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+          "frame": "000578",
+          "actor": "28",
+          "pixels": 95
+        },
+        {
+          "run": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+          "frame": "000405",
+          "actor": "18",
+          "pixels": 6
+        },
+        {
+          "run": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+          "frame": "000406",
+          "actor": "18",
+          "pixels": 13
+        },
+        {
+          "run": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+          "frame": "000481",
+          "actor": "42",
+          "pixels": 9
+        }
+      ],
+      "sources": [
+        {
+          "image": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "a1f8d57a2d42eead9187056a4ef8b1e6b6dd3230858664d1d9452c7cd07eca30",
+            "semantic": "2982a4cf5c3bb08b983fa357c708ca8b32468a09cf4f2ffa9045dc93a16707db",
+            "instance": "6c9e118ec94c4c0cee5a06bc05fe0afb884f25b57157f8389b5757393958fde1"
+          }
+        },
+        {
+          "image": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/right/000320.png",
+          "source_sha256": {
+            "intensity": "acee4e11df9650313380a460d717902397d40997591741679e0e3fe694718a43",
+            "semantic": "c223b729cf479a1e3f7cfb8af3e449f8ae1de179e3fba8aab0f3bea2f9ecfb65",
+            "instance": "6af52a8aded9b7975283b18e0118f0683e160d909e19f19c109905671bf2e16e"
+          }
+        },
+        {
+          "image": "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/right/000640.png",
+          "source_sha256": {
+            "intensity": "44e560a92abfb6e93a86181a48b176c55d3164d1731f3e230483850658be2203",
+            "semantic": "26f34f58839a2c4e0799ad1c67bfd1da0bb5ab0bff2ecbc1d58fb810fd28e41a",
+            "instance": "a941834499aa9fec38fe1202b77008045f17a5fd2c2bc74fbc848374c8592d93"
+          }
+        },
+        {
+          "image": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "1a6808075cdc73bd5a582caab0af82ee15d7dd88f631ea165c37d2918614fc7b",
+            "semantic": "5b68f604448194f602c52d6978aad3ffd14db893bec3c46a09091d810ce9d812",
+            "instance": "512ff1615c95ff2bfc492b0b4ef9699789229c25bcd7341f174a07f51e51a46e"
+          }
+        },
+        {
+          "image": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/right/000267.png",
+          "source_sha256": {
+            "intensity": "40941bb0de5a12f05509db73e3b58ebf9e37878dee057316cadbc033f8c28b79",
+            "semantic": "6fd3e38ebfe82bae3861dc2bd5d88c816e714aa41c7e59e4d0583df0c7d2215f",
+            "instance": "b811a7c89d88cce57dbf28486d2c8a8b8fb946df35a668bfb5740581c164ebd8"
+          }
+        },
+        {
+          "image": "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/right/000525.png",
+          "source_sha256": {
+            "intensity": "20cf2406eeef47381d99083e9c4b844f6eec7950fe01b24a4d912fb40ee5045b",
+            "semantic": "06378d36e2fef12412e627a7a2b00e98e614f5ae6306c113a76f47e1fd6e6681",
+            "instance": "cde75ef8c2b48994089c0928bb259e9e1386e47bcb60d6004489bce3b02f60f3"
+          }
+        },
+        {
+          "image": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "c62392c6a880333ecc887e85aebeed1d324a277d16d32c3bdee63200937d729b",
+            "semantic": "3a6780950e02e382db401d6ddd29464c783bc21e422c9b9a2701fad634d20f55",
+            "instance": "7b61748bd878181d3f0a7ee102e3b8163be8c00fe710ace5bd152e63e7eddf3f"
+          }
+        },
+        {
+          "image": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/right/000276.png",
+          "source_sha256": {
+            "intensity": "442e46e2fdd67e29a337959c60c86af06b959bf655bce9d692442c3f49df232e",
+            "semantic": "58e7cabe830f78912710555f5f304db29d6cb36ea4991e994c4ec2a21fbc1a1d",
+            "instance": "c808cef4fe3ab8bd6413ea62acd1c87b94a73696c4082922657d11fbb9a53599"
+          }
+        },
+        {
+          "image": "20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/right/000552.png",
+          "source_sha256": {
+            "intensity": "7d0ee8a7494577bd70ecdc9c3320f3bf888dbad74908961b6004465f7901de6f",
+            "semantic": "b23004fb7481497aba269286b00543df5f0118c8f33e1ccee384e6eb6ba99aed",
+            "instance": "343ed0cadac3d3da1a02863b3cacd2f6b7f30d39741f822c68bf2f6815b854ef"
+          }
+        },
+        {
+          "image": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "42c1410f8d1cff5863bf0ebe16439b5e3c4f35a1174c0829eb1efbe350e42368",
+            "semantic": "1f2052f9f2c147285f3066cb411c2580ce0e713bd097c84b3cba296a7ead196d",
+            "instance": "08c5578675b80e08972d610f553928c427d783a14a14e5db4d0c173b5e32e315"
+          }
+        },
+        {
+          "image": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel/frames/intensity/right/000330.png",
+          "source_sha256": {
+            "intensity": "694af86f9c25045ac46aff53eb88c2433f5a6647aa7efb0089c99d7aef8762b8",
+            "semantic": "c210bf45a06bd56b92b4d0e927f40e39b536c7491770a399eb6ec6f43ac0362b",
+            "instance": "9ccc8b48ef5d8abb46b2d6d51550b8684daaca40677aa94d6f1e6ac19a8b3d02"
+          }
+        },
+        {
+          "image": "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel/frames/intensity/right/000659.png",
+          "source_sha256": {
+            "intensity": "568691b2b4ccf32585a8e169a9808772675782306ebf2b0c63b2922d9b00a86a",
+            "semantic": "67aa2a2089fa02165e160066bc7754e91f96479ae1f23ebf35dadf16e90889d5",
+            "instance": "f3e618a8f2d22445918f9b80aa9a37d8d07192317d68342e77f7e67fc6f7d56c"
+          }
+        },
+        {
+          "image": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "f8817e349eb5346ac88bbcc0412f22e039bed408157ba5920d79e9ad9bad6651",
+            "semantic": "7d8dfe2b80b67147f957fbc3589f5f7d28ef7f9dc063e772526327e60c60f37a",
+            "instance": "fd72c7f1a4e2f94afbfd2832272309f5c629a2137e41c15b57acbb1099a1f6a6"
+          }
+        },
+        {
+          "image": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/right/000197.png",
+          "source_sha256": {
+            "intensity": "f172fbd0a8eaf283ac3b11704625885398831a4168b11cbd826d4f3f110be159",
+            "semantic": "b63935691d41372cc3ddf6ce89479e768b493f56fa8f866156801cd1a768af12",
+            "instance": "7a47537101739333f60cedb0b01152d2ecfdcfce6f3ff138c0c6f296ad887e72"
+          }
+        },
+        {
+          "image": "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/right/000393.png",
+          "source_sha256": {
+            "intensity": "5f58bcdaa64a1457a96d5d0d24b6e6df19d8ca63e1b933bc8a4e77a1f87cc812",
+            "semantic": "583e6cc2f66bdf62c3bcb30a26bff4d60d44f650df55ebd1e86dd979583efad6",
+            "instance": "9af1e79bb569733619da78bc013d18d987e5ef70b8f12d24aae4f7953dbad414"
+          }
+        },
+        {
+          "image": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "951a07677450d14e61429248cc8334458f810ec0d0ac307d935700eb371f5e61",
+            "semantic": "2ba6e7e4fb44c7c43f6f29da92cd4bbc714dc7b13a49b3a6fefbafe6c3e864da",
+            "instance": "0e03637b0344c2a78ca1b0159597f6639057d77dcee3b42dcf7f741b728a69c8"
+          }
+        },
+        {
+          "image": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel/frames/intensity/right/000353.png",
+          "source_sha256": {
+            "intensity": "3ea9fe52828d4c1b36621bee41d8793bceb4ea958fc64a61c007610db367d222",
+            "semantic": "320f64934c8271f32004ea2e3c735646a614dba85c3dfa3371794d18da0a5bae",
+            "instance": "5859e1bd57b7ea1d9c06bd2cf3da885af934d95e056afd422580a0ac946e657d"
+          }
+        },
+        {
+          "image": "20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel/frames/intensity/right/000705.png",
+          "source_sha256": {
+            "intensity": "9bd8786131f13be3ba841a58047537ebc60ab4f4c3a1988ec801d481ec7696d9",
+            "semantic": "28c228af8a4d46d52b46118258cf7e573109f4263f4fb5577f24d718690382d5",
+            "instance": "311bf20490b5660a95028a88537c75359bf845e994cc1c3f0cf00687970d30dd"
+          }
+        },
+        {
+          "image": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "3025975c829c4d023d00c26ba389a38f7ddab5f150ef9b057a44577feca6473a",
+            "semantic": "70244900f02ad274e25aaed71837bb43ac6b3fbcb8e9cc199520af38c3d050e4",
+            "instance": "12d9a1b6f65bdf2a18bcb9e7aafd95123cdf0f116d0cd5ed567806ee5b2de6c7"
+          }
+        },
+        {
+          "image": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/frames/intensity/right/000022.png",
+          "source_sha256": {
+            "intensity": "8cd9b437c1e1b4a7ce700a0563edc8d6dfda5a89f480b6b6006d772827cc9d8f",
+            "semantic": "0ff86505ab3b9719642c5936d289ef2b498b63a313f105e693cf58417c33034e",
+            "instance": "af44f2acca0df56509f5dfcf7eb74114dc4cadcf0c0af85d7cd68111ab4b4b93"
+          }
+        },
+        {
+          "image": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/frames/intensity/right/000044.png",
+          "source_sha256": {
+            "intensity": "fae0cf3f87e3d8b5ea1803b5076487823256242e6e437d4bdf8ba1b533d3ce71",
+            "semantic": "09d9a68de3c41cda4273f1d9c8d31dec1259940d72c8fed9b674695df80b1d5f",
+            "instance": "7c1bd7631d28e257de9603c166a5ed056dd669f3ba8ae4f7d73e90611c21bb9e"
+          }
+        },
+        {
+          "image": "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "b561a2ffa9292a718db3e5551bf6ed740dedd3cf7f285d136e723812913a1e0a",
+            "semantic": "71c9d76be61267d87d3af236569756ab0cf73c03370d7ad9bc869e93b48b9128",
+            "instance": "21353fc58992393b945109e28ee7fcc804a61a156e9e010e46f9fd34115c76c1"
+          }
+        },
+        {
+          "image": "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel/frames/intensity/right/000035.png",
+          "source_sha256": {
+            "intensity": "9028330963f3aab46896e80e9e4185772e73c89ca2aae98749c9921330e23880",
+            "semantic": "8f65d7e091b315efcbacfd22e05cbb79aee4f341ea18031e34c1f1fcdb076d49",
+            "instance": "2cd75a0188d41364812927cc278bec1a19cf0f1aadc568dd1f24adce5233e833"
+          }
+        },
+        {
+          "image": "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel/frames/intensity/right/000070.png",
+          "source_sha256": {
+            "intensity": "c0d47dddaf9a8e7aaa741032da0b3e56d3cb068ec57f9168e2d78e377ba6979e",
+            "semantic": "c3a92e7a4f65acb384e68b40b5494c44b7d205a4863698c9ce2fca62deb725d7",
+            "instance": "3275162134f6d36ae924bf08608d78e22efe4b365601fc0029390d88e99a6eff"
+          }
+        },
+        {
+          "image": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "d53352997f12207c45532421153c68073cb14f26dd2b15dd56933a2f48d4006b",
+            "semantic": "d0892327e8e8376919f214fe1dc964e2f6e94f638badc87e7044e38b8f55fc78",
+            "instance": "6ac20140d71bd38fa16cb779ec082def0034a4ed984c43a9cc1281cdea881b6e"
+          }
+        },
+        {
+          "image": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/frames/intensity/right/000072.png",
+          "source_sha256": {
+            "intensity": "de5f8aedde06e51b75629a9e2e666e5a307ecdc1f6ca350d3cfdab831aba07b8",
+            "semantic": "0df3f872a717ee638a8b5ac5183ab1a2b72a564dddee4f8f844955146a637255",
+            "instance": "84486a06a10f640817869d9ccc9c7a14c42eab01cae242293d2289be5ba2fda0"
+          }
+        },
+        {
+          "image": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/frames/intensity/right/000143.png",
+          "source_sha256": {
+            "intensity": "263e87733f5227d6cfba9b9da0d8184f51ae175b9ec24500cb4327c82de14024",
+            "semantic": "1b97e36d3d31dc1d9571d8a8c16f71d338448fe23e16e1da7367e18b4ef3482c",
+            "instance": "33e1b243b65666c95b4b66ed1fa6987ec11efe24dbed35028f89f12f5000814d"
+          }
+        },
+        {
+          "image": "kcity_auto_sunny_003/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "56ceed476b20d8fda99ee79150c989f15a3d44bc00002ff0ff5e3f3d7dc5761d",
+            "semantic": "390aa03a5da10bbc225b50fcea29c42f57467c90efeac65b9a02b4dabfd93b25",
+            "instance": "247ef042dc87376ece13738ab3a3756f9b85ec814b51ac04d536ed7fd2c50db9"
+          }
+        },
+        {
+          "image": "kcity_auto_sunny_003/frames/intensity/right/001385.png",
+          "source_sha256": {
+            "intensity": "78f4023931f3598fff7991f146df87f9c2bb10a7ae2dde8526825f433acca837",
+            "semantic": "c5845f5c8be3c39a0b187e158a0fff10cfb852cf59f44ee9b96dbb357e3ce25f",
+            "instance": "fd1deb5515eed4bb5dbb3c38a603e9c68c9726e05932c42ca8f6ed5f57f236e8"
+          }
+        },
+        {
+          "image": "kcity_auto_sunny_003/frames/intensity/right/002769.png",
+          "source_sha256": {
+            "intensity": "a457715af008c47be45932293ba83ef5dd9cbb24dffd2f6b8fabc41c851bd06b",
+            "semantic": "e054f72c6f210bc735f88adb4c64f7bdf3ae9be9b1bbca80e1be173f7063daef",
+            "instance": "61052ac424ede09d6d5895aa210895ccbd103b93973f6f505dc632877bc6b2d6"
+          }
+        },
+        {
+          "image": "kcity_drive_001/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "ad341d13454b19f6b81700e9c6055edd40833843226b185da46b09bb60370d03",
+            "semantic": "9619a17f6191df25309f9376832da3414d4fb6ecbaa48093ba82a7a69c0099fc",
+            "instance": "941b0bfc5d5d8462615a81072eca7562152177038e4f3d264c60d8a6c09fa5a6"
+          }
+        },
+        {
+          "image": "kcity_drive_001/frames/intensity/right/000479.png",
+          "source_sha256": {
+            "intensity": "7684ada3bc8f4aff1722648a346d3527ffd83874216dd5861dfc43dede132085",
+            "semantic": "40d24c967e300fcba6c2e7409dfde337cca7a3d664880d6e2488d2f0c7fb3b57",
+            "instance": "4379394d7c0ef35b5ea289bebaeb15a44d8032309992a448b254a637ef0e6481"
+          }
+        },
+        {
+          "image": "kcity_drive_001/frames/intensity/right/000957.png",
+          "source_sha256": {
+            "intensity": "732e9e521392ac61b05a600b4d14068a8f8346696dd62e91d751a4f110269113",
+            "semantic": "07dfcd3b18861086236b140ef6604580e11d1a02c57c678b4fbffbd39922340c",
+            "instance": "1752b138c4eefca6b28a79e2189a638082c8bc9bf342b57ef7444f3992846d78"
+          }
+        },
+        {
+          "image": "kcity_drive_002/frames/intensity/right/000000.png",
+          "source_sha256": {
+            "intensity": "2d53d30e8084e71ac9e3535664c41f97dc6bfa5d900fc09e7f7156deb2df5579",
+            "semantic": "4096c27ed1a14518ae99224e58159afcc8de35449f6c158e8c9f28b2bb38d788",
+            "instance": "7f579e07657de232d59fd45fc50492b0712f1d6db6c91e8c3aeee33e39cbe858"
+          }
+        },
+        {
+          "image": "kcity_drive_002/frames/intensity/right/000340.png",
+          "source_sha256": {
+            "intensity": "c4508551309f67e8e649fdc15c2be8d67bd43b1013e884401137bc47d31d3f44",
+            "semantic": "0febf896379678350ddde6cb3eb537cff479010cf1f663172f27f174e130132d",
+            "instance": "25c3f1b7a53dca95ce7b84b10b7bc3664a890fafbc1eb167390e2cbf45aebcdf"
+          }
+        },
+        {
+          "image": "kcity_drive_002/frames/intensity/right/000680.png",
+          "source_sha256": {
+            "intensity": "5590055b97b051615da8b98e693b42ef2d5bd331d46cb81eb278f634bcc70739",
+            "semantic": "8dca8f882aeec075b3f00ac182ff60fb3f976b8dafd2311dc83b580c0458f375",
+            "instance": "d5c96a4e87e912f56bf799f93e97fc4854d6e1ada5ce39f14efbbd036995ac0a"
+          }
+        }
+      ]
+    }
+  }
+}

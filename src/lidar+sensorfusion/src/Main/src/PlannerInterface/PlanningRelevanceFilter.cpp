@@ -36,7 +36,7 @@ bool HasKnownVehicleSemantics(const PlannerObject& object) {
     const std::string yolo = NormalizeLabel(object.yolo_class);
     const auto vehicle_label = [](const std::string& label) {
         return label == "car" || label == "vehicle" || label == "truck" ||
-               label == "bus" || label == "motorcycle";
+               label == "bus" || label == "motorcycle" || label == "bicycle";
     };
     return vehicle_label(classification) || vehicle_label(yolo);
 }
@@ -93,7 +93,7 @@ PlanningRelevanceDecision PlanningRelevanceFilter::Evaluate(
         decision.reason = "upstream_filter_drop";
         return decision;
     }
-    if (IsPedestrian(object)) {
+    if (IsPedestrian(object) || NormalizeLabel(object.yolo_class) == "dog") {
         decision.reason = "pedestrian_immediate_keep";
         return decision;
     }

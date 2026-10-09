@@ -20,6 +20,55 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 
 ## 실행
 
+### 선정한 3뷰 개발 모델
+
+[실험 갤러리 통합 목차](http://localhost:8768/)에서 카메라·LiDAR 비교를 함께 확인한다.
+8개 M/L·detect/seg·960/1280 비교와 최종 선정 근거는
+[3뷰 인계 문서](../../docs/handoffs/perception/camera-three-view-coco-runtime.md)를 따른다.
+
+YOLO26l detect·전방1280·좌우640×480·TensorRT FP16·2+1 batch·뷰별15Hz·
+confidence0.40을 개발 기준으로 선정했다. 0.50 대비 검수 정답26개 회복·FP25개 추가를
+확인했고 전체 오검출 이미지는 인계 문서의 confidence 갤러리에 보존한다. `asmc-ros-noetic`의 ROS 환경에서 직접 실행한다.
+
+```bash
+roslaunch asmc_camera camera_coco7.launch profile:=debug
+```
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
+```
+
+좌·전방·우 YOLO 결과는 `/perception/camera/objects/debug/mosaic/compressed` 한 화면에
+나란히 표시한다. 각 칸은 원본 비율을 유지하며 source stamp·age와 차체 mask를 표시한다.
+뷰 간에는 최신 결과를 독립적으로 갱신하므로 하나의 동기 관측으로 소비하지 않는다.
+입력이0.5초 이상 오래되면 해당 칸의 박스를 지우고 STALE로 표시한다.
+합성 영상 header는 합성 시각이며 원본 관측 stamp는 각 칸에 따로 남는다.
+화면은 최대10Hz, YOLO 추론 목표는 뷰별15Hz다. rqt가 없으면 합성용 구독·디코딩을
+하지 않고, 기존 개별 뷰 토픽은 그대로 사용할 수 있다. YAML·모델·confidence는 변경하지 않는다.
+
+YOLO만 확인하려면 같은 launch에 `start_camera_lane:=false start_traffic_light:=false`를
+추가한다. 기본 debug는 TwinLite·YOLO·ResNet 모두 ACTIVE이며 LiDAR·판제·차량 제어는
+시작하지 않는다. 차선 피팅 결과의 주행 소비는 음영 ODD로 한정한다.
+
+좌우 debug 토픽은 `/perception/camera/objects/debug/left/image/compressed`,
+`/perception/camera/objects/debug/right/image/compressed`다. planning은 세 모델 STANDBY,
+debug는 ACTIVE이며 GUI는 별도로 연다. 모델·뷰별 목표 `target_hz_by_view`·생산자 최소 confidence는
+`config/camera/yolo26l_detect_coco7_three_view.yaml`에서 수정한다. 시작 컷만 바꾸려면
+`objects_conf_thres:=0.55`를 launch에 추가하고 재시작한다.
+
+판제는 메시지 confidence로 더 엄격한 소비 컷을 적용할 수 있다. LiDAR 호환 어댑터는
+`rosparam set /camera_objects_yolo_bbox_adapter/conf_thres 0.65`로 실행 중 추가 컷을
+변경하며, `0.0`으로 생산자가 보낸 후보를 모두 다시 통과시킨다. 생산자에서 버린 후보는
+복원하지 못한다. 검출 tradeoff·mask 신규 실패·판제 deadline·운영 승격 보류는
+[3뷰 모델 선정·실행 안내](../../docs/handoffs/perception/camera-three-view-coco-runtime.md)를 따른다.
+아래 기존 `perception.launch` 기본 모델은 별도 운영 수락 전까지 유지한다.
+
+### 기존 실행 프로필
+
+YOLO26s-seg·YOLOE-26s-seg의 별도 관측 실험은
+[seg 모델 선정 안내](../../docs/handoffs/perception/camera-seg-model-selection.md)를 따른다.
+전방/3뷰 mask overlay를 제공하지만 학습·운영 기본 모델·LiDAR 소비 정책은 바꾸지 않는다.
+
 기본 `perception.launch`는 모델을 실행하지 않는 idle 프로필이다. bridge·컨테이너와
 GUI는 별도로 준비하고, ROS 환경을 읽은 터미널에서 다음 중 하나를 직접 실행한다.
 
@@ -87,7 +136,26 @@ LiDAR의 호환 어댑터가 기존 `/YOLO/BBox`로 변환하며 기본 `start_y
 객체만 검사할 때는 `python3 scripts/verify_perception_runtime.py --camera-objects --no-camera-lane`을 쓴다.
 모델·MD5·CPU/GPU·진단·롤백·증거는 [P2a 안내](../../docs/handoffs/perception/camera-objects-p2a.md)를 따른다.
 
+### YOLO11m COCO 80종 관측 실험
+
+기본 네 클래스는 유지한다. 전방 YOLO와 객체 overlay만 ACTIVE로 확인하려면 다음을
+실행한다. 신호등·정지표지판도 원본 라벨로 제공하지만 coarse obstacle 그룹이 판제의
+회피 대상 확정을 의미하지는 않는다. ResNet 신호 상태 판정과도 구분한다.
+
+```bash
+roslaunch asmc_camera camera_objects_coco_experiment.launch classes:=all
+```
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
+```
+
+이전 launch를 종료하고 `classes:=baseline`으로 바꾸면 네 클래스·같은 보넷 mask를
+비교한다. 이 launch는 TwinLite/BEV/차선·ResNet·LiDAR·rqt를 자동 실행하지 않는다.
+설정 파일·소비 경계·고정 비교와 검증 상태는 [클래스 확대 안내](../../docs/handoffs/perception/camera-coco-class-expansion.md)를 따른다.
+
 ### `camera_bev`와 `camera_bev_fusion`
+
 
 `camera_bev` 노드는 front/left/right 카메라의 semantic probability·road-marking을
 카메라별 calibration으로 `base_link` 평면에 각각 투영한다. 출력은
@@ -417,3 +485,10 @@ canonical adapter와 message 전환을 진행한다.
 역변환·장착 변환·local/map 출력과 원본 박스의 fusion은 Main의
 [공통 경계 어댑터](../../docs/handoffs/perception/lidar-camera-frame-boundaries.md)가 담당한다.
 구간 활성화·결과 소비·차선 주행 모드는 판제가 결정한다.
+
+## YOLOE-l 3뷰 첫 실행 실험
+
+별도 [42종/27종·TensorRT batch 실험 안내](../../docs/handoffs/perception/camera-yoloe-l-first-run.md)를
+따른다. `camera_objects_yoloe_l_experiment.launch`는 준비된 실험 runtime에서만 실행하며,
+기존 운영 YOLO11m 기본값을 변경하지 않는다. 원본 이름과 네 소비 그룹을 보존하고,
+공식 l checkpoint의 one-to-many head·동일 NMS를 PyTorch/TensorRT에 사용한다.

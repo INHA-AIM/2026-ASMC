@@ -1,0 +1,25 @@
+<launch>
+  <!-- Model selection only. No lane/traffic-light/vehicle-control nodes by default. -->
+  <arg name="model" default="yolo26" doc="yolo26 | yoloe"/>
+  <arg name="classes" default="all" doc="all | mission (confirmed seven COCO labels)"/>
+  <arg name="views" default="front" doc="front | all"/>
+  <arg name="debug" default="true"/>
+  <arg name="initial_mode" default="2"/>
+  <arg name="target_hz" default="20.0"/>
+  <arg name="objects_hood_mask" default="true"/>
+  <include file="$(find asmc_camera)/launch/perception.launch">
+    <arg name="profile" value="planning"/>
+    <arg name="start_camera_lane" value="false"/>
+    <arg name="start_traffic_light" value="false"/>
+    <arg name="start_camera_objects" value="true"/>
+    <arg name="start_visualization" value="false"/>
+    <arg name="objects_debug_masks" value="$(arg debug)"/>
+    <arg name="objects_debug_raw" value="false"/>
+    <arg name="objects_initial_mode" value="$(arg initial_mode)"/>
+    <arg name="objects_target_hz" value="$(arg target_hz)"/>
+    <arg name="objects_views" value="$(eval {'front':'[front]', 'all':'[front, left, right]'}[arg('views')])"/>
+    <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
+    <arg name="camera_objects_config" value="$(eval find('asmc_camera')+'/config/camera/'+{'yolo26':'yolo26s','yoloe':'yoloe26s'}[arg('model')]+'_seg'+{'all':'','mission':'_mission'}[arg('classes')]+'_experiment.yaml')"/>
+    <arg name="objects_class_groups_config" value="$(eval find('asmc_camera')+'/config/camera/'+{'all':'object_classes_seg_experiment.yaml','mission':'object_classes_mission_v1.yaml'}[arg('classes')])"/>
+  </include>
+</launch>

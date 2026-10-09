@@ -1,0 +1,3342 @@
+{
+  "rich42": {
+    "counters": {
+      "matched_to_missed": 72,
+      "label_transitions": 24,
+      "GT_with_duplicate_prediction": 35
+    },
+    "labels": {
+      "traffic barrel": 137,
+      "concrete barrier": 68,
+      "traffic light": 994,
+      "lane separator": 417,
+      "guardrail": 182,
+      "utility pole": 13,
+      "speed bump": 42,
+      "cargo box": 75,
+      "truck": 43,
+      "wooden box": 9,
+      "bus": 132,
+      "person": 143,
+      "cardboard box": 2,
+      "plastic road barrier": 5,
+      "stop sign": 2,
+      "car": 236,
+      "speed limit sign": 7,
+      "road sign": 15,
+      "traffic cone": 860,
+      "fence": 2,
+      "streetlight": 1,
+      "barrel": 1,
+      "bollard": 2
+    },
+    "actors": [
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "2",
+        "first_visible_frame": 0,
+        "first_detected_frame": 56,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "3",
+        "first_visible_frame": 2,
+        "first_detected_frame": 100,
+        "matched_to_missed": 2,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "13",
+        "first_visible_frame": 2,
+        "first_detected_frame": 75,
+        "matched_to_missed": 2,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "31",
+        "first_visible_frame": 3,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "38",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "35",
+        "first_visible_frame": 12,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "20",
+        "first_visible_frame": 17,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "29",
+        "first_visible_frame": 36,
+        "first_detected_frame": 459,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "1",
+        "first_visible_frame": 51,
+        "first_detected_frame": 221,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "14",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "50",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "51",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "57",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "53",
+        "first_visible_frame": 69,
+        "first_detected_frame": 76,
+        "matched_to_missed": 0,
+        "label_transitions": 3
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "54",
+        "first_visible_frame": 69,
+        "first_detected_frame": 81,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "52",
+        "first_visible_frame": 70,
+        "first_detected_frame": 77,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "55",
+        "first_visible_frame": 71,
+        "first_detected_frame": 81,
+        "matched_to_missed": 1,
+        "label_transitions": 2
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "56",
+        "first_visible_frame": 71,
+        "first_detected_frame": 86,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "30",
+        "first_visible_frame": 108,
+        "first_detected_frame": 108,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "21",
+        "first_visible_frame": 108,
+        "first_detected_frame": 108,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "33",
+        "first_visible_frame": 108,
+        "first_detected_frame": 108,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "22",
+        "first_visible_frame": 134,
+        "first_detected_frame": 244,
+        "matched_to_missed": 2,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "43",
+        "first_visible_frame": 137,
+        "first_detected_frame": 171,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "15",
+        "first_visible_frame": 145,
+        "first_detected_frame": 447,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "40",
+        "first_visible_frame": 151,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "27",
+        "first_visible_frame": 151,
+        "first_detected_frame": 270,
+        "matched_to_missed": 8,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "37",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "58",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "25",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "18",
+        "first_visible_frame": 177,
+        "first_detected_frame": 213,
+        "matched_to_missed": 5,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "60",
+        "first_visible_frame": 178,
+        "first_detected_frame": 216,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "44",
+        "first_visible_frame": 180,
+        "first_detected_frame": 221,
+        "matched_to_missed": 2,
+        "label_transitions": 4
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "48",
+        "first_visible_frame": 222,
+        "first_detected_frame": 224,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "36",
+        "first_visible_frame": 237,
+        "first_detected_frame": 299,
+        "matched_to_missed": 3,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "46",
+        "first_visible_frame": 237,
+        "first_detected_frame": 305,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "24",
+        "first_visible_frame": 263,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "32",
+        "first_visible_frame": 263,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "16",
+        "first_visible_frame": 263,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "19",
+        "first_visible_frame": 385,
+        "first_detected_frame": 385,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "17",
+        "first_visible_frame": 448,
+        "first_detected_frame": 449,
+        "matched_to_missed": 3,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "28",
+        "first_visible_frame": 453,
+        "first_detected_frame": 453,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "63",
+        "first_visible_frame": 460,
+        "first_detected_frame": 461,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "64",
+        "first_visible_frame": 464,
+        "first_detected_frame": 465,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "65",
+        "first_visible_frame": 477,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "2",
+        "first_visible_frame": 1,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "3",
+        "first_visible_frame": 1,
+        "first_detected_frame": 130,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "14",
+        "first_visible_frame": 65,
+        "first_detected_frame": 66,
+        "matched_to_missed": 2,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "50",
+        "first_visible_frame": 65,
+        "first_detected_frame": 71,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "51",
+        "first_visible_frame": 65,
+        "first_detected_frame": 69,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "57",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 3,
+        "label_transitions": 2
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "56",
+        "first_visible_frame": 65,
+        "first_detected_frame": 88,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "13",
+        "first_visible_frame": 70,
+        "first_detected_frame": 80,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "53",
+        "first_visible_frame": 71,
+        "first_detected_frame": 78,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "52",
+        "first_visible_frame": 71,
+        "first_detected_frame": 79,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "54",
+        "first_visible_frame": 71,
+        "first_detected_frame": 83,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "55",
+        "first_visible_frame": 72,
+        "first_detected_frame": 86,
+        "matched_to_missed": 0,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "30",
+        "first_visible_frame": 104,
+        "first_detected_frame": 104,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "21",
+        "first_visible_frame": 104,
+        "first_detected_frame": 104,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "33",
+        "first_visible_frame": 124,
+        "first_detected_frame": 124,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "38",
+        "first_visible_frame": 160,
+        "first_detected_frame": 270,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "40",
+        "first_visible_frame": 160,
+        "first_detected_frame": 271,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "60",
+        "first_visible_frame": 160,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "27",
+        "first_visible_frame": 161,
+        "first_detected_frame": 271,
+        "matched_to_missed": 4,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "18",
+        "first_visible_frame": 162,
+        "first_detected_frame": 330,
+        "matched_to_missed": 2,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "44",
+        "first_visible_frame": 163,
+        "first_detected_frame": 230,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "1",
+        "first_visible_frame": 165,
+        "first_detected_frame": 225,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "37",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "58",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "25",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "48",
+        "first_visible_frame": 222,
+        "first_detected_frame": 225,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "15",
+        "first_visible_frame": 233,
+        "first_detected_frame": 233,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "22",
+        "first_visible_frame": 277,
+        "first_detected_frame": 576,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "17",
+        "first_visible_frame": 448,
+        "first_detected_frame": 576,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "29",
+        "first_visible_frame": 459,
+        "first_detected_frame": 576,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "64",
+        "first_visible_frame": 464,
+        "first_detected_frame": 576,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "65",
+        "first_visible_frame": 477,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "66",
+        "first_visible_frame": 494,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "13",
+        "first_visible_frame": 2,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "31",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "38",
+        "first_visible_frame": 8,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "35",
+        "first_visible_frame": 11,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "20",
+        "first_visible_frame": 17,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "2",
+        "first_visible_frame": 21,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "3",
+        "first_visible_frame": 22,
+        "first_detected_frame": 110,
+        "matched_to_missed": 2,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "18",
+        "first_visible_frame": 27,
+        "first_detected_frame": 220,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "29",
+        "first_visible_frame": 36,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "1",
+        "first_visible_frame": 45,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "42",
+        "first_visible_frame": 74,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "21",
+        "first_visible_frame": 112,
+        "first_detected_frame": 112,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "33",
+        "first_visible_frame": 112,
+        "first_detected_frame": 114,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "30",
+        "first_visible_frame": 117,
+        "first_detected_frame": 117,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "22",
+        "first_visible_frame": 137,
+        "first_detected_frame": 264,
+        "matched_to_missed": 2,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "43",
+        "first_visible_frame": 138,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "40",
+        "first_visible_frame": 151,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "27",
+        "first_visible_frame": 152,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "15",
+        "first_visible_frame": 160,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "36",
+        "first_visible_frame": 177,
+        "first_detected_frame": 309,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "25",
+        "first_visible_frame": 178,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "37",
+        "first_visible_frame": 179,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "58",
+        "first_visible_frame": 179,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "44",
+        "first_visible_frame": 190,
+        "first_detected_frame": 225,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "60",
+        "first_visible_frame": 194,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "24",
+        "first_visible_frame": 199,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "32",
+        "first_visible_frame": 199,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "16",
+        "first_visible_frame": 200,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "46",
+        "first_visible_frame": 221,
+        "first_detected_frame": 313,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "57",
+        "first_visible_frame": 242,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "48",
+        "first_visible_frame": 270,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "50",
+        "first_visible_frame": 324,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "51",
+        "first_visible_frame": 324,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "14",
+        "first_visible_frame": 325,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "53",
+        "first_visible_frame": 328,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "56",
+        "first_visible_frame": 330,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "52",
+        "first_visible_frame": 331,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "54",
+        "first_visible_frame": 334,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "55",
+        "first_visible_frame": 334,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "19",
+        "first_visible_frame": 392,
+        "first_detected_frame": 424,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "63",
+        "first_visible_frame": 575,
+        "first_detected_frame": 577,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "28",
+        "first_visible_frame": 576,
+        "first_detected_frame": 578,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "65",
+        "first_visible_frame": 598,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "2",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "38",
+        "first_visible_frame": 0,
+        "first_detected_frame": 4,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "3",
+        "first_visible_frame": 2,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "31",
+        "first_visible_frame": 3,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "20",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "18",
+        "first_visible_frame": 5,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "23",
+        "first_visible_frame": 54,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "27",
+        "first_visible_frame": 55,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "13",
+        "first_visible_frame": 65,
+        "first_detected_frame": 66,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "left",
+        "actor_id": "2",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "left",
+        "actor_id": "3",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "31",
+        "first_visible_frame": 3,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "20",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "38",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "18",
+        "first_visible_frame": 9,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "2",
+        "first_visible_frame": 29,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "3",
+        "first_visible_frame": 29,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "1",
+        "first_visible_frame": 31,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "23",
+        "first_visible_frame": 41,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "27",
+        "first_visible_frame": 63,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "13",
+        "first_visible_frame": 65,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "31",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "44",
+        "first_visible_frame": 1,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "18",
+        "first_visible_frame": 5,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "40",
+        "first_visible_frame": 9,
+        "first_detected_frame": 9,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "16",
+        "first_visible_frame": 10,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "30",
+        "first_visible_frame": 10,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "20",
+        "first_visible_frame": 11,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "38",
+        "first_visible_frame": 11,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "1",
+        "first_visible_frame": 14,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "13",
+        "first_visible_frame": 15,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "46",
+        "first_visible_frame": 15,
+        "first_detected_frame": 44,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "42",
+        "first_visible_frame": 20,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "42",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "13",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "1",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "46",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "44",
+        "first_visible_frame": 1,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "31",
+        "first_visible_frame": 1,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "18",
+        "first_visible_frame": 3,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "40",
+        "first_visible_frame": 5,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "30",
+        "first_visible_frame": 6,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "20",
+        "first_visible_frame": 8,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "38",
+        "first_visible_frame": 8,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "16",
+        "first_visible_frame": 8,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "2",
+        "first_visible_frame": 31,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "3",
+        "first_visible_frame": 34,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "44",
+        "first_visible_frame": 7,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "3",
+        "first_visible_frame": 7,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "16",
+        "first_visible_frame": 15,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "20",
+        "first_visible_frame": 16,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "38",
+        "first_visible_frame": 16,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "30",
+        "first_visible_frame": 18,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "40",
+        "first_visible_frame": 19,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "42",
+        "first_visible_frame": 26,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "13",
+        "first_visible_frame": 27,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "46",
+        "first_visible_frame": 28,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "1",
+        "first_visible_frame": 32,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "27",
+        "first_visible_frame": 32,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "33",
+        "first_visible_frame": 32,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "25",
+        "first_visible_frame": 54,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "23",
+        "first_visible_frame": 54,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      }
+    ],
+    "timing_unit": "Capture frame index; no invented wall/source timestamps",
+    "GT_subtype_unverified_not_scored_as_box_type": true
+  },
+  "base27": {
+    "counters": {
+      "matched_to_missed": 59,
+      "label_transitions": 23,
+      "GT_with_duplicate_prediction": 21
+    },
+    "labels": {
+      "traffic barrel": 141,
+      "concrete barrier": 129,
+      "lane separator": 440,
+      "speed bump": 43,
+      "cargo box": 75,
+      "truck": 43,
+      "wooden box": 9,
+      "bus": 131,
+      "person": 144,
+      "plastic road barrier": 5,
+      "car": 237,
+      "speed limit sign": 7,
+      "road sign": 15,
+      "streetlight": 1,
+      "bollard": 2
+    },
+    "actors": [
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "2",
+        "first_visible_frame": 0,
+        "first_detected_frame": 56,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "3",
+        "first_visible_frame": 2,
+        "first_detected_frame": 100,
+        "matched_to_missed": 2,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "13",
+        "first_visible_frame": 2,
+        "first_detected_frame": 75,
+        "matched_to_missed": 2,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "31",
+        "first_visible_frame": 3,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "38",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "35",
+        "first_visible_frame": 12,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "20",
+        "first_visible_frame": 17,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "29",
+        "first_visible_frame": 36,
+        "first_detected_frame": 575,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "1",
+        "first_visible_frame": 51,
+        "first_detected_frame": 221,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "14",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "50",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "51",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "57",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "53",
+        "first_visible_frame": 69,
+        "first_detected_frame": 76,
+        "matched_to_missed": 0,
+        "label_transitions": 3
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "54",
+        "first_visible_frame": 69,
+        "first_detected_frame": 81,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "52",
+        "first_visible_frame": 70,
+        "first_detected_frame": 77,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "55",
+        "first_visible_frame": 71,
+        "first_detected_frame": 81,
+        "matched_to_missed": 1,
+        "label_transitions": 2
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "56",
+        "first_visible_frame": 71,
+        "first_detected_frame": 86,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "30",
+        "first_visible_frame": 108,
+        "first_detected_frame": 108,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "21",
+        "first_visible_frame": 108,
+        "first_detected_frame": 108,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "33",
+        "first_visible_frame": 108,
+        "first_detected_frame": 108,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "22",
+        "first_visible_frame": 134,
+        "first_detected_frame": 244,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "43",
+        "first_visible_frame": 137,
+        "first_detected_frame": 171,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "15",
+        "first_visible_frame": 145,
+        "first_detected_frame": 481,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "40",
+        "first_visible_frame": 151,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "27",
+        "first_visible_frame": 151,
+        "first_detected_frame": 270,
+        "matched_to_missed": 3,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "37",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "58",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "25",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "18",
+        "first_visible_frame": 177,
+        "first_detected_frame": 213,
+        "matched_to_missed": 5,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "60",
+        "first_visible_frame": 178,
+        "first_detected_frame": 216,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "44",
+        "first_visible_frame": 180,
+        "first_detected_frame": 221,
+        "matched_to_missed": 2,
+        "label_transitions": 4
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "48",
+        "first_visible_frame": 222,
+        "first_detected_frame": 224,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "36",
+        "first_visible_frame": 237,
+        "first_detected_frame": 299,
+        "matched_to_missed": 3,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "46",
+        "first_visible_frame": 237,
+        "first_detected_frame": 305,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "24",
+        "first_visible_frame": 263,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "32",
+        "first_visible_frame": 263,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "16",
+        "first_visible_frame": 263,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "19",
+        "first_visible_frame": 385,
+        "first_detected_frame": 385,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "17",
+        "first_visible_frame": 448,
+        "first_detected_frame": 576,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "28",
+        "first_visible_frame": 453,
+        "first_detected_frame": 577,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "63",
+        "first_visible_frame": 460,
+        "first_detected_frame": 576,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "64",
+        "first_visible_frame": 464,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "front",
+        "actor_id": "65",
+        "first_visible_frame": 477,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "2",
+        "first_visible_frame": 1,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "3",
+        "first_visible_frame": 1,
+        "first_detected_frame": 130,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "14",
+        "first_visible_frame": 65,
+        "first_detected_frame": 66,
+        "matched_to_missed": 2,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "50",
+        "first_visible_frame": 65,
+        "first_detected_frame": 71,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "51",
+        "first_visible_frame": 65,
+        "first_detected_frame": 69,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "57",
+        "first_visible_frame": 65,
+        "first_detected_frame": 65,
+        "matched_to_missed": 3,
+        "label_transitions": 3
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "56",
+        "first_visible_frame": 65,
+        "first_detected_frame": 88,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "13",
+        "first_visible_frame": 70,
+        "first_detected_frame": 80,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "53",
+        "first_visible_frame": 71,
+        "first_detected_frame": 78,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "52",
+        "first_visible_frame": 71,
+        "first_detected_frame": 79,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "54",
+        "first_visible_frame": 71,
+        "first_detected_frame": 83,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "55",
+        "first_visible_frame": 72,
+        "first_detected_frame": 86,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "30",
+        "first_visible_frame": 104,
+        "first_detected_frame": 104,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "21",
+        "first_visible_frame": 104,
+        "first_detected_frame": 104,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "33",
+        "first_visible_frame": 124,
+        "first_detected_frame": 124,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "38",
+        "first_visible_frame": 160,
+        "first_detected_frame": 270,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "40",
+        "first_visible_frame": 160,
+        "first_detected_frame": 271,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "60",
+        "first_visible_frame": 160,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "27",
+        "first_visible_frame": 161,
+        "first_detected_frame": 271,
+        "matched_to_missed": 3,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "18",
+        "first_visible_frame": 162,
+        "first_detected_frame": 330,
+        "matched_to_missed": 2,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "44",
+        "first_visible_frame": 163,
+        "first_detected_frame": 230,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "1",
+        "first_visible_frame": 165,
+        "first_detected_frame": 225,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "37",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "58",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "25",
+        "first_visible_frame": 176,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "48",
+        "first_visible_frame": 222,
+        "first_detected_frame": 225,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "15",
+        "first_visible_frame": 233,
+        "first_detected_frame": 233,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "22",
+        "first_visible_frame": 277,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "17",
+        "first_visible_frame": 448,
+        "first_detected_frame": 577,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "29",
+        "first_visible_frame": 459,
+        "first_detected_frame": 576,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "64",
+        "first_visible_frame": 464,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "65",
+        "first_visible_frame": 477,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "left",
+        "actor_id": "66",
+        "first_visible_frame": 494,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "13",
+        "first_visible_frame": 2,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "31",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "38",
+        "first_visible_frame": 8,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "35",
+        "first_visible_frame": 11,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "20",
+        "first_visible_frame": 17,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "2",
+        "first_visible_frame": 21,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "3",
+        "first_visible_frame": 22,
+        "first_detected_frame": 110,
+        "matched_to_missed": 2,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "18",
+        "first_visible_frame": 27,
+        "first_detected_frame": 220,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "29",
+        "first_visible_frame": 36,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "1",
+        "first_visible_frame": 45,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "42",
+        "first_visible_frame": 74,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "21",
+        "first_visible_frame": 112,
+        "first_detected_frame": 112,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "33",
+        "first_visible_frame": 112,
+        "first_detected_frame": 114,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "30",
+        "first_visible_frame": 117,
+        "first_detected_frame": 117,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "22",
+        "first_visible_frame": 137,
+        "first_detected_frame": 264,
+        "matched_to_missed": 2,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "43",
+        "first_visible_frame": 138,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "40",
+        "first_visible_frame": 151,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "27",
+        "first_visible_frame": 152,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "15",
+        "first_visible_frame": 160,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "36",
+        "first_visible_frame": 177,
+        "first_detected_frame": 309,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "25",
+        "first_visible_frame": 178,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "37",
+        "first_visible_frame": 179,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "58",
+        "first_visible_frame": 179,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "44",
+        "first_visible_frame": 190,
+        "first_detected_frame": 225,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "60",
+        "first_visible_frame": 194,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "24",
+        "first_visible_frame": 199,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "32",
+        "first_visible_frame": 199,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "16",
+        "first_visible_frame": 200,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "46",
+        "first_visible_frame": 221,
+        "first_detected_frame": 313,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "57",
+        "first_visible_frame": 242,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "48",
+        "first_visible_frame": 270,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "50",
+        "first_visible_frame": 324,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "51",
+        "first_visible_frame": 324,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "14",
+        "first_visible_frame": 325,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "53",
+        "first_visible_frame": 328,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "56",
+        "first_visible_frame": 330,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "52",
+        "first_visible_frame": 331,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "54",
+        "first_visible_frame": 334,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "55",
+        "first_visible_frame": 334,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "19",
+        "first_visible_frame": 392,
+        "first_detected_frame": 424,
+        "matched_to_missed": 1,
+        "label_transitions": 1
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "63",
+        "first_visible_frame": 575,
+        "first_detected_frame": 577,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "28",
+        "first_visible_frame": 576,
+        "first_detected_frame": 578,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+        "view": "right",
+        "actor_id": "65",
+        "first_visible_frame": 598,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "2",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "38",
+        "first_visible_frame": 0,
+        "first_detected_frame": 4,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "3",
+        "first_visible_frame": 2,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "31",
+        "first_visible_frame": 3,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "20",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "18",
+        "first_visible_frame": 5,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "23",
+        "first_visible_frame": 54,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "27",
+        "first_visible_frame": 55,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "front",
+        "actor_id": "13",
+        "first_visible_frame": 65,
+        "first_detected_frame": 66,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "left",
+        "actor_id": "2",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "left",
+        "actor_id": "3",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "31",
+        "first_visible_frame": 3,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "20",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "38",
+        "first_visible_frame": 4,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "18",
+        "first_visible_frame": 9,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "2",
+        "first_visible_frame": 29,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "3",
+        "first_visible_frame": 29,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "1",
+        "first_visible_frame": 31,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "23",
+        "first_visible_frame": 41,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "27",
+        "first_visible_frame": 63,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel",
+        "view": "right",
+        "actor_id": "13",
+        "first_visible_frame": 65,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "31",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "44",
+        "first_visible_frame": 1,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "18",
+        "first_visible_frame": 5,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "40",
+        "first_visible_frame": 9,
+        "first_detected_frame": 9,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "16",
+        "first_visible_frame": 10,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "30",
+        "first_visible_frame": 10,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "20",
+        "first_visible_frame": 11,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "38",
+        "first_visible_frame": 11,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "1",
+        "first_visible_frame": 14,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "13",
+        "first_visible_frame": 15,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "46",
+        "first_visible_frame": 15,
+        "first_detected_frame": 44,
+        "matched_to_missed": 1,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "front",
+        "actor_id": "42",
+        "first_visible_frame": 20,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "42",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "13",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "1",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "46",
+        "first_visible_frame": 0,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "44",
+        "first_visible_frame": 1,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "31",
+        "first_visible_frame": 1,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "18",
+        "first_visible_frame": 3,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "40",
+        "first_visible_frame": 5,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "30",
+        "first_visible_frame": 6,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "20",
+        "first_visible_frame": 8,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "38",
+        "first_visible_frame": 8,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "16",
+        "first_visible_frame": 8,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "2",
+        "first_visible_frame": 31,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "left",
+        "actor_id": "3",
+        "first_visible_frame": 34,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "44",
+        "first_visible_frame": 7,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "3",
+        "first_visible_frame": 7,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "16",
+        "first_visible_frame": 15,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "20",
+        "first_visible_frame": 16,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "38",
+        "first_visible_frame": 16,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "30",
+        "first_visible_frame": 18,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "40",
+        "first_visible_frame": 19,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "42",
+        "first_visible_frame": 26,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "13",
+        "first_visible_frame": 27,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "46",
+        "first_visible_frame": 28,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "1",
+        "first_visible_frame": 32,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "27",
+        "first_visible_frame": 32,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "33",
+        "first_visible_frame": 32,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "25",
+        "first_visible_frame": 54,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      },
+      {
+        "run": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+        "view": "right",
+        "actor_id": "23",
+        "first_visible_frame": 54,
+        "first_detected_frame": null,
+        "matched_to_missed": 0,
+        "label_transitions": 0
+      }
+    ],
+    "timing_unit": "Capture frame index; no invented wall/source timestamps",
+    "GT_subtype_unverified_not_scored_as_box_type": true
+  }
+}

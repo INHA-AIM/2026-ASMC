@@ -47,6 +47,8 @@ struct Parameters {
     double min_contact_overlap_ratio = 0.10; // 접촉 영역 폭 중 각 차로와 겹쳐야 하는 최소 비율. 둘 다 넘으면 BOTH.
     int min_contact_support_rows = 3;     // 두 차로가 동시에 관측되는 최소 영상 row 수.
     double bottom_clip_px = 3.0;           // [px] 영상 하단 잘린 BBOX의 접점은 UNKNOWN.
+    bool ego_mask_enabled = false;
+    std::string ego_mask_config;
     double hood_crop_bottom_ratio = 0.0; // [0,0.5) YOLO 하단 제외 비율. launch에서 detector와 같은 값 전달.
     double clipped_track_max_gap = 0.25;  // [s] 같은 물체를 연속 관측했다고 보는 최대 frame 간격.
     double clipped_track_max_age = 3.0;   // [s] 마지막 정상 접점 이후 잘린 박스를 추적할 최대 시간. 갱신하지 않음.
@@ -75,6 +77,8 @@ struct Camera {
     double ground_z = 0.0;
     double slope_x = 0.0, slope_y = 0.0;
 } camera;
+std::vector<cv::Point2d> ego_polygon;
+cv::Mat ego_bitmap;
 
 struct LaneFrame {
     ros::Time stamp;
@@ -119,6 +123,23 @@ int selectOwnLane(const Context& context);
 bool projectPoint(const Point& point, cv::Point2d& pixel);
 std::vector<LaneQuad> projectLanes(const Context& context);
 std::vector<std::pair<double, double>> laneIntervals(const std::vector<LaneQuad>& quads, int lane, double row);
+bool maskOccludesContact(const lane_boundary_adapter::CameraBBox& box) {
+    if (!params.ego_mask_enabled) return false;
+    if (ego_bitmap.rows != camera.height || ego_bitmap.cols != camera.width) {
+        ego_bitmap = cv::Mat::zeros(camera.height, camera.width, CV_8U);
+        std::vector<cv::Point> pixels;
+        for (const auto& p : ego_polygon)
+            pixels.emplace_back(std::min(camera.width-1, static_cast<int>(p.x*camera.width)),
+                                std::min(camera.height-1, static_cast<int>(p.y*camera.height)));
+        cv::fillPoly(ego_bitmap, std::vector<std::vector<cv::Point>>{pixels}, cv::Scalar(1));
+    }
+    const int x0=std::max(0, static_cast<int>(box.xmin));
+    const int x1=std::min(camera.width, static_cast<int>(std::ceil(box.xmax)));
+    const int y0=std::max(0, static_cast<int>(box.ymax-params.contact_band_height_px));
+    const int y1=std::min(camera.height, static_cast<int>(std::ceil(box.ymax+params.contact_row_tolerance_px)));
+    return x1>x0 && y1>y0 && cv::countNonZero(ego_bitmap(cv::Rect(x0,y0,x1-x0,y1-y0)))>0;
+}
+
 uint8_t classifyBox(const lane_boundary_adapter::CameraBBox& box, const std::vector<LaneQuad>& quads,
                     int own_lane, std::string& reason);
 void publishResult(Result result);
@@ -382,6 +403,9 @@ uint8_t classifyBox(const lane_boundary_adapter::CameraBBox& box, const std::vec
     if (box.xmin < 0 || box.ymin < 0 || box.xmax > camera.width || box.ymax > camera.height ||
         box.xmin >= box.xmax || box.ymin >= box.ymax) {
         reason = "invalid_bbox_coordinates"; return Result::UNKNOWN;
+    }
+    if (maskOccludesContact(box)) {
+        reason = "bottom_contact_occluded_by_ego_mask"; return Result::UNKNOWN;
     }
     const int detector_height = static_cast<int>(camera.height * (1.0 - params.hood_crop_bottom_ratio));
     if (params.hood_crop_bottom_ratio > 0 && box.ymax >= detector_height - params.bottom_clip_px) {
@@ -673,7 +697,21 @@ void publishImage(cv::Mat image, const std_msgs::Header& header, const Result& r
 void loadParameters(ros::NodeHandle& nh) {
 #define PARAM(name) nh.param(#name, params.name, params.name)
     PARAM(reference_lane_topic); PARAM(reference_timeout);
-    PARAM(hood_crop_bottom_ratio);
+    PARAM(hood_crop_bottom_ratio); PARAM(ego_mask_enabled); PARAM(ego_mask_config);
+    if (params.ego_mask_enabled) {
+        if (params.hood_crop_bottom_ratio != 0) throw std::runtime_error("ego mask and legacy crop are mutually exclusive");
+        const auto cfg = YAML::LoadFile(params.ego_mask_config);
+        const auto points = cfg["polygon"];
+        if (!points.IsSequence() || points.size()<3) throw std::runtime_error("invalid ego mask polygon");
+        for (const auto& point : points) {
+            if (!point.IsSequence() || point.size()!=2) throw std::runtime_error("invalid ego mask point");
+            const double x=point[0].as<double>(), y=point[1].as<double>();
+            if (!std::isfinite(x) || !std::isfinite(y) || x<0 || x>1 || y<0 || y>1)
+                throw std::runtime_error("ego mask points must be normalized finite coordinates");
+            ego_polygon.emplace_back(x,y);
+        }
+        if (std::abs(cv::contourArea(std::vector<cv::Point2f>(ego_polygon.begin(),ego_polygon.end())))<=0) throw std::runtime_error("degenerate ego mask");
+    }
     PARAM(clipped_track_max_gap); PARAM(clipped_track_max_age); PARAM(clipped_track_min_iou);
     PARAM(clipped_track_min_overlap); PARAM(clipped_track_max_other_overlap); PARAM(clipped_track_confirm_frames);
     PARAM(contact_band_height_px); PARAM(contact_row_tolerance_px);

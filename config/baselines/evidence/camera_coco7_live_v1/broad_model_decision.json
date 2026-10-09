@@ -1,0 +1,6588 @@
+{
+  "schema": "camera_coco7_broad_model_decision_v1",
+  "parent_revision": "cdbd6167d20935563309ca6f4e03981bcc0bab52",
+  "scope": "Development default only; all8 quality and C6 screen, two finalists confirmed. No whole-stack deployment acceptance.",
+  "supersedes": "finalist_model_decision.json; historical original retained",
+  "selected": {
+    "model": "yolo26l",
+    "task": "detect",
+    "front_width": 1280,
+    "side_hw": [
+      480,
+      640
+    ],
+    "batch": "2plus1",
+    "target_hz_each_view": 15.0,
+    "confidence": 0.5,
+    "engine_sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+    "config": "src/asmc_camera/config/camera/yolo26l_detect_coco7_three_view.yaml",
+    "launch": "camera_coco7.launch",
+    "mask_all_views": true,
+    "label_mode": "source",
+    "development_default_selected": true,
+    "global_operational_default_promoted": false
+  },
+  "reasons": [
+    "Highest reviewed selection macro F1, best >=20px verified-box recall among8 at common0.50",
+    "Same-actor acquisition earlier than M-detect/1280 and L-seg/960 in8 pairs each; exceptions retained",
+    "L-detect/960 wins one qualitative static scene but reviewed GT and paired acquisition favor1280; measured latency difference small",
+    "All6 selected SUNNY/FOGGY camera-supply and15Hz windows pass with existing150/200ms gates; no hypothetical optimization credit",
+    "Current production fusion consumes front boxes; seg masks have no demonstrated operational benefit in this comparison"
+  ],
+  "stop_rule": "All8 screened once; repeat only L-detect960/1280 three times per weather. Stop additional model combinations after quality and load confirmation.",
+  "quality_screen": {
+    "method": "Saved actual0.25 predictions thresholded at0.50, source-identical reviewed2250frames; actual winner cutoff validated separately",
+    "rows": [
+      {
+        "model": "yolo26m",
+        "width": 960,
+        "frames": 2250,
+        "tp": 285,
+        "fp": 22,
+        "macro_f1": 0.22650814479290127,
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 3,
+            "recall": 0.0013380909901873326
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 23,
+            "recall": 0.10454545454545454
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 259,
+            "recall": 0.7507246376811594
+          }
+        },
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 118,
+            "fp": 2,
+            "fn": 230,
+            "evaluable": true,
+            "f1": 0.5042735042735043,
+            "recall": 0.3390804597701149
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 118,
+            "fp": 2,
+            "fn": 1552,
+            "evaluable": true,
+            "f1": 0.1318435754189944,
+            "recall": 0.07065868263473053
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 36,
+            "fp": 5,
+            "fn": 249,
+            "evaluable": true,
+            "f1": 0.22085889570552147,
+            "recall": 0.12631578947368421
+          },
+          "truck": {
+            "gt": 504,
+            "tp": 13,
+            "fp": 13,
+            "fn": 491,
+            "evaluable": true,
+            "f1": 0.04905660377358491,
+            "recall": 0.025793650793650792
+          }
+        },
+        "engine_sha256": "44066f58ca37e95487ddc5b69207c5d5e2c15ef3699e0a62a966552b0cfc1877",
+        "live_p95_ms": 74.56032821210101,
+        "live_p99_ms": 84.87326082075015,
+        "live_hz_min": 14.75,
+        "live_hz_max": 14.85,
+        "live_peak_vram_mib": 5482.0,
+        "live_failures": [
+          "twinlite front supply gate",
+          "twinlite left supply gate",
+          "twinlite right supply gate",
+          "planning trajectory deadline gate"
+        ]
+      },
+      {
+        "model": "yolo26m",
+        "width": 1280,
+        "frames": 2250,
+        "tp": 282,
+        "fp": 20,
+        "macro_f1": 0.2334839406175701,
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 3,
+            "recall": 0.0013380909901873326
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 22,
+            "recall": 0.1
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 257,
+            "recall": 0.744927536231884
+          }
+        },
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 118,
+            "fp": 2,
+            "fn": 230,
+            "evaluable": true,
+            "f1": 0.5042735042735043,
+            "recall": 0.3390804597701149
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 108,
+            "fp": 2,
+            "fn": 1562,
+            "evaluable": true,
+            "f1": 0.12134831460674157,
+            "recall": 0.06467065868263473
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 44,
+            "fp": 6,
+            "fn": 241,
+            "evaluable": true,
+            "f1": 0.2626865671641791,
+            "recall": 0.1543859649122807
+          },
+          "truck": {
+            "gt": 504,
+            "tp": 12,
+            "fp": 10,
+            "fn": 492,
+            "evaluable": true,
+            "f1": 0.045627376425855515,
+            "recall": 0.023809523809523808
+          }
+        },
+        "engine_sha256": "44066f58ca37e95487ddc5b69207c5d5e2c15ef3699e0a62a966552b0cfc1877",
+        "live_p95_ms": 73.28574170242064,
+        "live_p99_ms": 83.4333728521596,
+        "live_hz_min": 14.8,
+        "live_hz_max": 14.95,
+        "live_peak_vram_mib": 5570.0,
+        "live_failures": [
+          "planning trajectory deadline gate"
+        ]
+      },
+      {
+        "model": "yolo26l",
+        "width": 960,
+        "frames": 2250,
+        "tp": 318,
+        "fp": 21,
+        "macro_f1": 0.2562828794879514,
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 8,
+            "recall": 0.003568242640499554
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 31,
+            "recall": 0.1409090909090909
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 279,
+            "recall": 0.808695652173913
+          }
+        },
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 120,
+            "fp": 3,
+            "fn": 228,
+            "evaluable": true,
+            "f1": 0.5095541401273885,
+            "recall": 0.3448275862068966
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 128,
+            "fp": 3,
+            "fn": 1542,
+            "evaluable": true,
+            "f1": 0.14214325374791784,
+            "recall": 0.07664670658682635
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 51,
+            "fp": 1,
+            "fn": 234,
+            "evaluable": true,
+            "f1": 0.3026706231454006,
+            "recall": 0.17894736842105263
+          },
+          "truck": {
+            "gt": 504,
+            "tp": 19,
+            "fp": 14,
+            "fn": 485,
+            "evaluable": true,
+            "f1": 0.07076350093109869,
+            "recall": 0.037698412698412696
+          }
+        },
+        "engine_sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+        "live_p95_ms": 89.83071721158922,
+        "live_p99_ms": 110.12284058844679,
+        "live_hz_min": 14.85,
+        "live_hz_max": 14.9,
+        "live_peak_vram_mib": 5520.0,
+        "live_failures": [
+          "planning trajectory deadline gate"
+        ]
+      },
+      {
+        "model": "yolo26l",
+        "width": 1280,
+        "frames": 2250,
+        "tp": 326,
+        "fp": 28,
+        "macro_f1": 0.26763811808146193,
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 8,
+            "recall": 0.003568242640499554
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 37,
+            "recall": 0.16818181818181818
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 281,
+            "recall": 0.8144927536231884
+          }
+        },
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 120,
+            "fp": 3,
+            "fn": 228,
+            "evaluable": true,
+            "f1": 0.5095541401273885,
+            "recall": 0.3448275862068966
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 126,
+            "fp": 5,
+            "fn": 1544,
+            "evaluable": true,
+            "f1": 0.1399222654081066,
+            "recall": 0.07544910179640718
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 62,
+            "fp": 3,
+            "fn": 223,
+            "evaluable": true,
+            "f1": 0.35428571428571426,
+            "recall": 0.21754385964912282
+          },
+          "truck": {
+            "gt": 504,
+            "tp": 18,
+            "fp": 17,
+            "fn": 486,
+            "evaluable": true,
+            "f1": 0.06679035250463822,
+            "recall": 0.03571428571428571
+          }
+        },
+        "engine_sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+        "live_p95_ms": 88.38370727607983,
+        "live_p99_ms": 103.33026071777567,
+        "live_hz_min": 14.8,
+        "live_hz_max": 14.95,
+        "live_peak_vram_mib": 5753.0,
+        "live_failures": [
+          "planning trajectory deadline gate"
+        ]
+      },
+      {
+        "model": "yolo26m-seg",
+        "width": 960,
+        "frames": 2250,
+        "tp": 278,
+        "fp": 24,
+        "macro_f1": 0.235852076405132,
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 0,
+            "recall": 0.0
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 18,
+            "recall": 0.08181818181818182
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 260,
+            "recall": 0.7536231884057971
+          }
+        },
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 117,
+            "fp": 4,
+            "fn": 231,
+            "evaluable": true,
+            "f1": 0.4989339019189765,
+            "recall": 0.33620689655172414
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 99,
+            "fp": 8,
+            "fn": 1571,
+            "evaluable": true,
+            "f1": 0.11142374788970175,
+            "recall": 0.0592814371257485
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 45,
+            "fp": 5,
+            "fn": 240,
+            "evaluable": true,
+            "f1": 0.26865671641791045,
+            "recall": 0.15789473684210525
+          },
+          "truck": {
+            "gt": 504,
+            "tp": 17,
+            "fp": 7,
+            "fn": 487,
+            "evaluable": true,
+            "f1": 0.06439393939393939,
+            "recall": 0.03373015873015873
+          }
+        },
+        "engine_sha256": "0f1b980de6a8ebdfb0052a61bc771f8eaa14704238247a7ed9131161eaeed0f1",
+        "live_p95_ms": 91.15709298930597,
+        "live_p99_ms": 100.55381268903147,
+        "live_hz_min": 14.8,
+        "live_hz_max": 14.9,
+        "live_peak_vram_mib": 5702.0,
+        "live_failures": [
+          "planning trajectory deadline gate"
+        ]
+      },
+      {
+        "model": "yolo26m-seg",
+        "width": 1280,
+        "frames": 2250,
+        "tp": 250,
+        "fp": 19,
+        "macro_f1": 0.23621538495059716,
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 0,
+            "recall": 0.0
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 15,
+            "recall": 0.06818181818181818
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 235,
+            "recall": 0.6811594202898551
+          }
+        },
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 119,
+            "fp": 3,
+            "fn": 229,
+            "evaluable": true,
+            "f1": 0.5063829787234042,
+            "recall": 0.34195402298850575
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 63,
+            "fp": 2,
+            "fn": 1607,
+            "evaluable": true,
+            "f1": 0.07262247838616714,
+            "recall": 0.03772455089820359
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 53,
+            "fp": 5,
+            "fn": 232,
+            "evaluable": true,
+            "f1": 0.30903790087463556,
+            "recall": 0.18596491228070175
+          },
+          "truck": {
+            "gt": 504,
+            "tp": 15,
+            "fp": 9,
+            "fn": 489,
+            "evaluable": true,
+            "f1": 0.056818181818181816,
+            "recall": 0.02976190476190476
+          }
+        },
+        "engine_sha256": "0f1b980de6a8ebdfb0052a61bc771f8eaa14704238247a7ed9131161eaeed0f1",
+        "live_p95_ms": 98.25535008858424,
+        "live_p99_ms": 118.38456906902135,
+        "live_hz_min": 14.85,
+        "live_hz_max": 14.9,
+        "live_peak_vram_mib": 5712.0,
+        "live_failures": [
+          "planning trajectory deadline gate"
+        ]
+      },
+      {
+        "model": "yolo26l-seg",
+        "width": 960,
+        "frames": 2250,
+        "tp": 300,
+        "fp": 20,
+        "macro_f1": 0.23723644065882893,
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 6,
+            "recall": 0.0026761819803746653
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 32,
+            "recall": 0.14545454545454545
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 262,
+            "recall": 0.7594202898550725
+          }
+        },
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 117,
+            "fp": 3,
+            "fn": 231,
+            "evaluable": true,
+            "f1": 0.5,
+            "recall": 0.33620689655172414
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 127,
+            "fp": 7,
+            "fn": 1543,
+            "evaluable": true,
+            "f1": 0.14079822616407983,
+            "recall": 0.07604790419161676
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 44,
+            "fp": 7,
+            "fn": 241,
+            "evaluable": true,
+            "f1": 0.2619047619047619,
+            "recall": 0.1543859649122807
+          },
+          "truck": {
+            "gt": 504,
+            "tp": 12,
+            "fp": 3,
+            "fn": 492,
+            "evaluable": true,
+            "f1": 0.046242774566473986,
+            "recall": 0.023809523809523808
+          }
+        },
+        "engine_sha256": "75e557f53dfe932971e04470426a36ac0d1dec888da3a9dec3443e807d017523",
+        "live_p95_ms": 102.49824560014531,
+        "live_p99_ms": 117.43327402975414,
+        "live_hz_min": 14.8,
+        "live_hz_max": 14.85,
+        "live_peak_vram_mib": 5729.0,
+        "live_failures": [
+          "planning trajectory deadline gate"
+        ]
+      },
+      {
+        "model": "yolo26l-seg",
+        "width": 1280,
+        "frames": 2250,
+        "tp": 315,
+        "fp": 53,
+        "macro_f1": 0.24848305902153933,
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 6,
+            "recall": 0.0026761819803746653
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 42,
+            "recall": 0.19090909090909092
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 267,
+            "recall": 0.7739130434782608
+          }
+        },
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 117,
+            "fp": 3,
+            "fn": 231,
+            "evaluable": true,
+            "f1": 0.5,
+            "recall": 0.33620689655172414
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 135,
+            "fp": 7,
+            "fn": 1535,
+            "evaluable": true,
+            "f1": 0.1490066225165563,
+            "recall": 0.08083832335329341
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 54,
+            "fp": 7,
+            "fn": 231,
+            "evaluable": true,
+            "f1": 0.31213872832369943,
+            "recall": 0.18947368421052632
+          },
+          "truck": {
+            "gt": 504,
+            "tp": 9,
+            "fp": 36,
+            "fn": 495,
+            "evaluable": true,
+            "f1": 0.03278688524590164,
+            "recall": 0.017857142857142856
+          }
+        },
+        "engine_sha256": "75e557f53dfe932971e04470426a36ac0d1dec888da3a9dec3443e807d017523",
+        "live_p95_ms": 104.18694255640729,
+        "live_p99_ms": 124.10233814967788,
+        "live_hz_min": 14.6,
+        "live_hz_max": 14.65,
+        "live_peak_vram_mib": 5729.0,
+        "live_failures": [
+          "yolo front supply/latency gate",
+          "yolo left supply/latency gate",
+          "yolo right supply/latency gate",
+          "twinlite front supply gate",
+          "twinlite left supply gate",
+          "twinlite right supply gate",
+          "resnet18 resnet18 supply gate",
+          "planning trajectory deadline gate",
+          "planning objects deadline gate"
+        ]
+      }
+    ],
+    "missing_gt_classes": [
+      "dog",
+      "bicycle",
+      "motorcycle"
+    ],
+    "tiny_gt_warning": "2242/2807 reviewed GT boxes below10px high; not full competition recall",
+    "reviewed_exclusions": [
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000346.png",
+        "sha256": "1bcfa7cd5f7db7bc76839fba6f90ac2eab9c9359d7f72b0b22b21279a331e63f",
+        "reason": "User: outside mission ODD",
+        "scope": "Only this reviewed frame excluded from supplemental operational comparison; original metrics unchanged."
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000532.png",
+        "sha256": "a7bd1edfff207c18019f39f70464b974d88e003748962de6313def3026738a9a",
+        "reason": "User: incorrectly spawned object",
+        "scope": "Only this reviewed frame excluded from supplemental operational comparison; original metrics unchanged."
+      }
+    ],
+    "batch_scope": "Capture box GT uses per-view inference. Identical three-view2+1 spawn replay and C6 runtime validate the actual batch path separately; no complete synchronized side-view batch GT equivalence claim."
+  },
+  "paired_temporal": {
+    "method": "Same run/view/actor; first3hits in5 consecutive annotated source inputs, source-frame comparisons not elapsed wall time",
+    "rows": [
+      {
+        "other_model": "yolo26m",
+        "other_width": 1280,
+        "common_acquired_objects": 25,
+        "selected_earlier": 8,
+        "same_source_frame": 16,
+        "selected_later": 1,
+        "selected_only_acquired": 2,
+        "other_only_acquired": 0
+      },
+      {
+        "other_model": "yolo26l",
+        "other_width": 960,
+        "common_acquired_objects": 26,
+        "selected_earlier": 2,
+        "same_source_frame": 23,
+        "selected_later": 1,
+        "selected_only_acquired": 1,
+        "other_only_acquired": 0
+      },
+      {
+        "other_model": "yolo26l-seg",
+        "other_width": 960,
+        "common_acquired_objects": 27,
+        "selected_earlier": 8,
+        "same_source_frame": 17,
+        "selected_later": 2,
+        "selected_only_acquired": 0,
+        "other_only_acquired": 0
+      }
+    ]
+  },
+  "spawn_presence": {
+    "scope": "Qualitative expected-label presence intersecting fixed front ROI570,230,685,455; not pixel-GT recall or actor assignment; distances are12/30/50m Ego anchor offsets",
+    "rows": [
+      {
+        "model": "yolo26m",
+        "width": 960,
+        "cases": [
+          {
+            "weather": "sunny",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          }
+        ],
+        "stable_presence": 27,
+        "total_cases": 42,
+        "weather": {
+          "sunny": 14,
+          "foggy": 13
+        }
+      },
+      {
+        "model": "yolo26m",
+        "width": 1280,
+        "cases": [
+          {
+            "weather": "sunny",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              false,
+              true,
+              false,
+              false,
+              true
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              true,
+              false,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              false,
+              false,
+              true,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          }
+        ],
+        "stable_presence": 26,
+        "total_cases": 42,
+        "weather": {
+          "sunny": 14,
+          "foggy": 12
+        }
+      },
+      {
+        "model": "yolo26l",
+        "width": 960,
+        "cases": [
+          {
+            "weather": "sunny",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              true,
+              true,
+              true,
+              false
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          }
+        ],
+        "stable_presence": 30,
+        "total_cases": 42,
+        "weather": {
+          "sunny": 15,
+          "foggy": 15
+        }
+      },
+      {
+        "model": "yolo26l",
+        "width": 1280,
+        "cases": [
+          {
+            "weather": "sunny",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              false,
+              true,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          }
+        ],
+        "stable_presence": 29,
+        "total_cases": 42,
+        "weather": {
+          "sunny": 14,
+          "foggy": 15
+        }
+      },
+      {
+        "model": "yolo26m-seg",
+        "width": 960,
+        "cases": [
+          {
+            "weather": "sunny",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              true,
+              true,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              false,
+              false,
+              true,
+              true,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          }
+        ],
+        "stable_presence": 26,
+        "total_cases": 42,
+        "weather": {
+          "sunny": 14,
+          "foggy": 12
+        }
+      },
+      {
+        "model": "yolo26m-seg",
+        "width": 1280,
+        "cases": [
+          {
+            "weather": "sunny",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          }
+        ],
+        "stable_presence": 28,
+        "total_cases": 42,
+        "weather": {
+          "sunny": 14,
+          "foggy": 14
+        }
+      },
+      {
+        "model": "yolo26l-seg",
+        "width": 960,
+        "cases": [
+          {
+            "weather": "sunny",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              false,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          }
+        ],
+        "stable_presence": 28,
+        "total_cases": 42,
+        "weather": {
+          "sunny": 14,
+          "foggy": 14
+        }
+      },
+      {
+        "model": "yolo26l-seg",
+        "width": 1280,
+        "cases": [
+          {
+            "weather": "sunny",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "sunny",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "sunny",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 0,
+            "placement": "front12",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 1,
+            "placement": "front30",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 2,
+            "placement": "front50",
+            "asset": "2014_Kia_K7",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 3,
+            "placement": "front12",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 4,
+            "placement": "front30",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 5,
+            "placement": "front50",
+            "asset": "2013_Hyundai_Xcient(P520)",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 6,
+            "placement": "front12",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 7,
+            "placement": "front30",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 8,
+            "placement": "front50",
+            "asset": "2016_Hyundai_Universe",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 9,
+            "placement": "front12",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 10,
+            "placement": "front30",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 11,
+            "placement": "front50",
+            "asset": "Man1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 12,
+            "placement": "front12",
+            "asset": "Dog1",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 13,
+            "placement": "front30",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 14,
+            "placement": "front50",
+            "asset": "Dog1",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 15,
+            "placement": "front12",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 16,
+            "placement": "front30",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 17,
+            "placement": "front50",
+            "asset": "Bicycle_city",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 18,
+            "placement": "front12",
+            "asset": "SportBike",
+            "hit_inputs": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "three_of_five": true
+          },
+          {
+            "weather": "foggy",
+            "case": 19,
+            "placement": "front30",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          },
+          {
+            "weather": "foggy",
+            "case": 20,
+            "placement": "front50",
+            "asset": "SportBike",
+            "hit_inputs": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "three_of_five": false
+          }
+        ],
+        "stable_presence": 27,
+        "total_cases": 42,
+        "weather": {
+          "sunny": 13,
+          "foggy": 14
+        }
+      }
+    ]
+  },
+  "confirmation": [
+    {
+      "candidate": {
+        "model": "yolo26l",
+        "width": 960,
+        "confidence": 0.5
+      },
+      "weather": "sunny",
+      "complete": true,
+      "camera_supply_passed": true,
+      "whole_stack_passed": false,
+      "target_15hz_passed": true,
+      "failures": [
+        {
+          "repeat": 1,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "hz_min": 14.8,
+      "hz_max": 14.95,
+      "wall_p95_ms_max": 79.74376709898934,
+      "wall_p99_ms_max": 86.93453760584816,
+      "maximum_gap_ms": 201.05031703133136,
+      "duplicate_stamps": 0,
+      "reversed_stamps": 0,
+      "peak_whole_vram_mib": 5520.0
+    },
+    {
+      "candidate": {
+        "model": "yolo26l",
+        "width": 960,
+        "confidence": 0.5
+      },
+      "weather": "foggy",
+      "complete": true,
+      "camera_supply_passed": true,
+      "whole_stack_passed": false,
+      "target_15hz_passed": true,
+      "failures": [
+        {
+          "repeat": 1,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "hz_min": 14.75,
+      "hz_max": 14.95,
+      "wall_p95_ms_max": 91.4398635184625,
+      "wall_p99_ms_max": 98.28066226618824,
+      "maximum_gap_ms": 198.35737597895786,
+      "duplicate_stamps": 0,
+      "reversed_stamps": 0,
+      "peak_whole_vram_mib": 5565.0
+    },
+    {
+      "candidate": {
+        "model": "yolo26l",
+        "width": 1280,
+        "confidence": 0.5
+      },
+      "weather": "sunny",
+      "complete": true,
+      "camera_supply_passed": true,
+      "whole_stack_passed": false,
+      "target_15hz_passed": true,
+      "failures": [
+        {
+          "repeat": 1,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "hz_min": 14.85,
+      "hz_max": 14.9,
+      "wall_p95_ms_max": 95.58823722181842,
+      "wall_p99_ms_max": 109.48612566804535,
+      "maximum_gap_ms": 201.6825140453875,
+      "duplicate_stamps": 0,
+      "reversed_stamps": 0,
+      "peak_whole_vram_mib": 5457.0
+    },
+    {
+      "candidate": {
+        "model": "yolo26l",
+        "width": 1280,
+        "confidence": 0.5
+      },
+      "weather": "foggy",
+      "complete": true,
+      "camera_supply_passed": true,
+      "whole_stack_passed": false,
+      "target_15hz_passed": true,
+      "failures": [
+        {
+          "repeat": 1,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 2,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        },
+        {
+          "repeat": 3,
+          "reasons": [
+            "planning trajectory deadline gate"
+          ]
+        }
+      ],
+      "hz_min": 14.75,
+      "hz_max": 14.9,
+      "wall_p95_ms_max": 92.0882593956776,
+      "wall_p99_ms_max": 104.70750408014285,
+      "maximum_gap_ms": 189.77562803775072,
+      "duplicate_stamps": 0,
+      "reversed_stamps": 0,
+      "peak_whole_vram_mib": 5514.0
+    }
+  ],
+  "actual_selected": {
+    "original_frames": 2252,
+    "original_scores": [
+      {
+        "confidence": 0.5,
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 120,
+            "fp": 3,
+            "fn": 228,
+            "evaluable": true,
+            "f1": 0.5095541401273885,
+            "recall": 0.3448275862068966
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 126,
+            "fp": 5,
+            "fn": 1544,
+            "evaluable": true,
+            "f1": 0.1399222654081066,
+            "recall": 0.07544910179640718
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 62,
+            "fp": 3,
+            "fn": 223,
+            "evaluable": true,
+            "f1": 0.35428571428571426,
+            "recall": 0.21754385964912282
+          },
+          "truck": {
+            "gt": 505,
+            "tp": 18,
+            "fp": 16,
+            "fn": 487,
+            "evaluable": true,
+            "f1": 0.06679035250463822,
+            "recall": 0.03564356435643564
+          }
+        },
+        "macro_f1": 0.26763811808146193,
+        "false_positives": 27,
+        "ignored_unknown_subtype": 75,
+        "mask_iou": null,
+        "mask_pairs": 0
+      }
+    ],
+    "reviewed_frames": 2250,
+    "reviewed_scores": {
+      "labels": {
+        "person": {
+          "gt": 348,
+          "tp": 120,
+          "fp": 3,
+          "fn": 228,
+          "evaluable": true,
+          "f1": 0.5095541401273885,
+          "recall": 0.3448275862068966
+        },
+        "dog": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "bicycle": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "car": {
+          "gt": 1670,
+          "tp": 126,
+          "fp": 5,
+          "fn": 1544,
+          "evaluable": true,
+          "f1": 0.1399222654081066,
+          "recall": 0.07544910179640718
+        },
+        "motorcycle": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "bus": {
+          "gt": 285,
+          "tp": 62,
+          "fp": 3,
+          "fn": 223,
+          "evaluable": true,
+          "f1": 0.35428571428571426,
+          "recall": 0.21754385964912282
+        },
+        "truck": {
+          "gt": 504,
+          "tp": 18,
+          "fp": 16,
+          "fn": 486,
+          "evaluable": true,
+          "f1": 0.06691449814126393,
+          "recall": 0.03571428571428571
+        }
+      },
+      "macro_f1": 0.26766915449061834,
+      "false_positives": 27,
+      "total_tp": 326
+    },
+    "fp_kinds": {
+      "unmatched_box": 10,
+      "overlapping_verified_object": 17
+    },
+    "confidence_policy": "0.50 balances early coverage and FP; not the mathematical F1 maximum.0.30 increases FP substantially. Planner may raise its own consumption cutoff; lowering producer floor requires restart."
+  },
+  "heldout_regression": {
+    "frames": 2474,
+    "scores": [
+      {
+        "confidence": 0.5,
+        "labels": {
+          "person": {
+            "gt": 1013,
+            "tp": 643,
+            "fp": 15,
+            "fn": 370,
+            "evaluable": true,
+            "f1": 0.7695990424895273,
+            "recall": 0.6347482724580454
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 2086,
+            "tp": 237,
+            "fp": 8,
+            "fn": 1849,
+            "evaluable": true,
+            "f1": 0.20334620334620335,
+            "recall": 0.11361457334611696
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 243,
+            "tp": 9,
+            "fp": 1,
+            "fn": 234,
+            "evaluable": true,
+            "f1": 0.07114624505928854,
+            "recall": 0.037037037037037035
+          },
+          "truck": {
+            "gt": 688,
+            "tp": 10,
+            "fp": 10,
+            "fn": 678,
+            "evaluable": true,
+            "f1": 0.02824858757062147,
+            "recall": 0.014534883720930232
+          }
+        },
+        "macro_f1": 0.2680850196164102,
+        "false_positives": 34,
+        "ignored_unknown_subtype": 168,
+        "mask_iou": null,
+        "mask_pairs": 0
+      }
+    ],
+    "independence": "Previously viewed heldout reused as fixed0.50 regression, never tuned here"
+  },
+  "mask_control": {
+    "images": 2252,
+    "new_missed": {
+      "front": 1,
+      "left": 1,
+      "right": 0
+    },
+    "recovered": {
+      "front": 1,
+      "left": 0,
+      "right": 0
+    },
+    "zero_new_class_misses_passed": false,
+    "selected_on": true,
+    "selection_reason": "User prefers Ego suppression despite small reviewed losses; no blanket waiver",
+    "reviewed_losses": [
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000323.png",
+        "actor_ids": [
+          "18"
+        ],
+        "interpretation": "front car raw label lost; overlapping truck persists"
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000067.png",
+        "actor_ids": [
+          "57"
+        ],
+        "interpretation": "left truck box lost"
+      }
+    ]
+  },
+  "default_launch_smoke": {
+    "command": [
+      "roslaunch",
+      "asmc_camera",
+      "camera_coco7.launch",
+      "profile:=planning"
+    ],
+    "status": {
+      "traffic_light_infer": {
+        "model": "resnet18",
+        "requested_mode": 0,
+        "mode": 0,
+        "loaded": true,
+        "warmed_up": true,
+        "prepared": false,
+        "target_hz": 10.0,
+        "reason": "standby"
+      },
+      "camera_object_detector": {
+        "model": "yolo",
+        "requested_mode": 0,
+        "mode": 0,
+        "loaded": true,
+        "warmed_up": true,
+        "prepared": false,
+        "target_hz": 15.0,
+        "reason": "standby"
+      },
+      "camera_semantic_inference": {
+        "model": "twinlite",
+        "requested_mode": 0,
+        "mode": 0,
+        "loaded": true,
+        "warmed_up": true,
+        "prepared": false,
+        "target_hz": 10.0,
+        "reason": "standby"
+      }
+    },
+    "params": {
+      "weights": "/data/models/camera_coco7_v1/yolo26l.engine",
+      "expected_sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+      "conf_thres": 0.5,
+      "front_width": 1280,
+      "target_hz_by_view": {
+        "front": 15.0,
+        "left": 15.0,
+        "right": 15.0
+      },
+      "hood_mask": true,
+      "side_ego_mask": true,
+      "label_mode": "source"
+    },
+    "public_control_publishers": [],
+    "passed": true
+  },
+  "environment": [
+    {
+      "experiment": "broad-model-screen-live-v1",
+      "owned_actors": 9,
+      "cleaned": 9,
+      "restored_weather": "WEATHER_TYPE_SUNNY",
+      "ego_before": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE"
+        },
+        "boundingBox": {
+          "extent": {
+            "x": 1.0804173946380615,
+            "y": 2.3175039291381836,
+            "z": 0.8220231533050537
+          },
+          "location": {
+            "x": -129.2498321533203,
+            "y": -423.8207092285156,
+            "z": 29.33604621887207
+          },
+          "rotation": {
+            "x": -359.5919189453125,
+            "y": 0.1488862931728363,
+            "z": 61.26165771484375
+          }
+        },
+        "transform": {
+          "location": {
+            "x": -130.01893615722656,
+            "y": -425.1418151855469,
+            "z": 28.886505126953125
+          },
+          "rotation": {
+            "x": -359.5919189453125,
+            "y": 0.1488862931728363,
+            "z": 61.26165771484375
+          }
+        },
+        "velocity": {
+          "x": -1.2943974070367403e-05,
+          "y": 0.0001396164152538404,
+          "z": -2.7913422400160925e-06
+        },
+        "angularVelocity": {
+          "x": -2.7201531338505447e-06,
+          "y": 5.553811206482351e-07,
+          "z": -7.20797834219411e-06
+        },
+        "acceleration": {
+          "x": -0.00010997625940945,
+          "y": -1.4215765986591578e-06,
+          "z": 0.00019240898836869746
+        },
+        "vehicleState": {
+          "gearMode": "GEAR_MODE_P",
+          "currentLinkInfo": {
+            "id": {
+              "value": "A2256W000748"
+            },
+            "waypointIdx": 7
+          },
+          "remainingDistance": -1.0,
+          "isPassDesPos": true,
+          "tlId": {
+            "value": "Not Detected"
+          },
+          "tlColor": "TL_COLOR_NOT_DETECTED"
+        },
+        "globalVelocity": {
+          "x": -3.0311964565044036e-06,
+          "y": -1.2783945749106351e-05,
+          "z": 0.0001396261650370434
+        }
+      },
+      "ego_after": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE"
+        },
+        "boundingBox": {
+          "extent": {
+            "x": 1.0804173946380615,
+            "y": 2.3175039291381836,
+            "z": 0.8220231533050537
+          },
+          "location": {
+            "x": -129.24984741210938,
+            "y": -423.8207092285156,
+            "z": 29.336044311523438
+          },
+          "rotation": {
+            "x": -359.5919189453125,
+            "y": 0.14891403913497925,
+            "z": 61.26165771484375
+          }
+        },
+        "transform": {
+          "location": {
+            "x": -130.01893615722656,
+            "y": -425.1418151855469,
+            "z": 28.886505126953125
+          },
+          "rotation": {
+            "x": -359.5919189453125,
+            "y": 0.14891403913497925,
+            "z": 61.26165771484375
+          }
+        },
+        "velocity": {
+          "x": 6.9134216573729645e-06,
+          "y": 3.158720937790349e-05,
+          "z": -5.147515366843436e-06
+        },
+        "angularVelocity": {
+          "x": 3.741915861610323e-06,
+          "y": 4.7115463530644774e-07,
+          "z": 1.3872850104235113e-06
+        },
+        "acceleration": {
+          "x": 5.544420673686545e-06,
+          "y": -6.697225671814522e-06,
+          "z": 6.710972229484469e-05
+        },
+        "vehicleState": {
+          "gearMode": "GEAR_MODE_P",
+          "currentLinkInfo": {
+            "id": {
+              "value": "A2256W000748"
+            },
+            "waypointIdx": 7
+          },
+          "remainingDistance": -1.0,
+          "isPassDesPos": true,
+          "tlId": {
+            "value": "Not Detected"
+          },
+          "tlColor": "TL_COLOR_NOT_DETECTED"
+        },
+        "globalVelocity": {
+          "x": 8.155318937497213e-06,
+          "y": 3.3598603295104112e-06,
+          "z": 3.153167199343443e-05
+        }
+      }
+    },
+    {
+      "experiment": "broad-model-finalists-live50-v1",
+      "owned_actors": 9,
+      "cleaned": 9,
+      "restored_weather": "WEATHER_TYPE_SUNNY",
+      "ego_before": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE"
+        },
+        "boundingBox": {
+          "extent": {
+            "x": 1.0804173946380615,
+            "y": 2.3175039291381836,
+            "z": 0.8220231533050537
+          },
+          "location": {
+            "x": -129.2498321533203,
+            "y": -423.8207092285156,
+            "z": 29.336048126220703
+          },
+          "rotation": {
+            "x": -359.5919189453125,
+            "y": 0.1489008665084839,
+            "z": 61.26165771484375
+          }
+        },
+        "transform": {
+          "location": {
+            "x": -130.01893615722656,
+            "y": -425.1418151855469,
+            "z": 28.886505126953125
+          },
+          "rotation": {
+            "x": -359.5919189453125,
+            "y": 0.1489008665084839,
+            "z": 61.26165771484375
+          }
+        },
+        "velocity": {
+          "x": 2.6028194497484947e-06,
+          "y": -8.663202606840059e-05,
+          "z": -8.95007724466268e-06
+        },
+        "angularVelocity": {
+          "x": 4.3760082917287946e-06,
+          "y": 4.867615643888712e-07,
+          "z": -1.9035724108107388e-06
+        },
+        "acceleration": {
+          "x": -1.9548970158211887e-05,
+          "y": 0.00013814007979817688,
+          "z": -0.00019298623374197632
+        },
+        "vehicleState": {
+          "gearMode": "GEAR_MODE_P",
+          "currentLinkInfo": {
+            "id": {
+              "value": "A2256W000748"
+            },
+            "waypointIdx": 7
+          },
+          "remainingDistance": -1.0,
+          "isPassDesPos": true,
+          "tlId": {
+            "value": "Not Detected"
+          },
+          "tlColor": "TL_COLOR_NOT_DETECTED"
+        },
+        "globalVelocity": {
+          "x": 8.402057574130595e-06,
+          "y": -2.1199598450039048e-06,
+          "z": -8.670004899613559e-05
+        }
+      },
+      "ego_after": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE"
+        },
+        "boundingBox": {
+          "extent": {
+            "x": 1.0804173946380615,
+            "y": 2.3175039291381836,
+            "z": 0.8220231533050537
+          },
+          "location": {
+            "x": -129.24984741210938,
+            "y": -423.8207092285156,
+            "z": 29.33604621887207
+          },
+          "rotation": {
+            "x": -359.5919189453125,
+            "y": 0.14892178773880005,
+            "z": 61.26165771484375
+          }
+        },
+        "transform": {
+          "location": {
+            "x": -130.01893615722656,
+            "y": -425.1418151855469,
+            "z": 28.886507034301758
+          },
+          "rotation": {
+            "x": -359.5919189453125,
+            "y": 0.14892178773880005,
+            "z": 61.26165771484375
+          }
+        },
+        "velocity": {
+          "x": 1.465420973545406e-05,
+          "y": 5.507233800017275e-05,
+          "z": 2.4085570657916833e-06
+        },
+        "angularVelocity": {
+          "x": 2.25752592086792e-06,
+          "y": 4.435278242453933e-07,
+          "z": 7.199167157523334e-06
+        },
+        "acceleration": {
+          "x": 5.890624379389919e-06,
+          "y": -4.528993486019317e-06,
+          "z": 6.675824988633394e-05
+        },
+        "vehicleState": {
+          "gearMode": "GEAR_MODE_P",
+          "currentLinkInfo": {
+            "id": {
+              "value": "A2256W000748"
+            },
+            "waypointIdx": 7
+          },
+          "remainingDistance": -1.0,
+          "isPassDesPos": true,
+          "tlId": {
+            "value": "Not Detected"
+          },
+          "tlColor": "TL_COLOR_NOT_DETECTED"
+        },
+        "globalVelocity": {
+          "x": 5.673145096807275e-06,
+          "y": 1.3814561498293187e-05,
+          "z": 5.504982254933566e-05
+        }
+      }
+    }
+  ],
+  "regression": {
+    "coco7_tests": 41,
+    "detection_tests": 72,
+    "final_analysis_tests": 8,
+    "contract_validators": 4,
+    "full_build_reused_from_parent": true,
+    "reason": "No compiled or generated-message code changed; final launch and config checked in shared runtime",
+    "setup_failure": "optional converter absent before any launch; retried with direct field serialization, no package install"
+  },
+  "unresolved": [
+    "All8 screen and12confirmation trials retain planning trajectory deadline failures; not isolated to YOLO and not excused",
+    "No new30minute or real-drive acceptance; earlier failures remain",
+    "Selected L model repeated fusion count/class equivalence not accepted; older M bag smoke is historical only",
+    "New mask class losses retained; not a zero-loss acceptance",
+    "CI is blocked by organization billing/0steps; existing facade and input-authority baseline failures remain"
+  ],
+  "source_sha256": {
+    "gt-v2/frames.jsonl": "ed2cefea5274c3366e2514b983ace614532a3926697be5e5d2ba68c0404cf968",
+    "broad-model-conditions-v1.json": "14af4b26109a12752b62edcb2ff2979d8bb69a836a82beadec9553e69557daa0",
+    "quality/yolo26m-960-selection/summary.json": "32be5a1d129dcf6d31407da50e8e250f03970295a7a795d7cb3b420b81429ac4",
+    "quality/yolo26m-960-selection/predictions.jsonl": "5ab3ea6f17b0a11ac93d22af7df2cd2e947ee9ae8a491e0da3b9b0d0234916e9",
+    "quality/yolo26m-1280-selection/summary.json": "3a8e190f30263f7f1adad6a2c6f387f995ffe81f4f95c16b67fca053e8cd03ae",
+    "quality/yolo26m-1280-selection/predictions.jsonl": "4e20a13911dcd60ac24103ee076997e875614c6476a02ef11c58bb9f03edb084",
+    "quality/yolo26l-960-selection/summary.json": "6d88b3fc7d4bbb68bfb124fbd215e191c03689129ebbda46fca8fd89e3b15775",
+    "quality/yolo26l-960-selection/predictions.jsonl": "5d759e6b3ce7ecab419b1fdf76584dd2b729a5bf5a7320d5cf29e54edde991eb",
+    "quality/yolo26l-1280-selection/summary.json": "f729f4430adfe8d97b65e1cce14ed6293d7e2fc2af481127cfe4cfbff36a7093",
+    "quality/yolo26l-1280-selection/predictions.jsonl": "6f9eb3813843b71387e674581243f61f9ea52b51e1130aba5a0c7f9eabddddd7",
+    "quality/yolo26m-seg-960-selection/summary.json": "447bf3d795d41315960f89da7c5ef00561b62d72010237d863134896253a3304",
+    "quality/yolo26m-seg-960-selection/predictions.jsonl": "ba1822ac62491c6f1bbb7af45fee190c55d32b354ba9b737677316d2509e1cfb",
+    "quality/yolo26m-seg-1280-selection/summary.json": "1d5580efa6a5a000dfcca09b9a76d5134ca615c55803dbba6b4b6a7276a7c7be",
+    "quality/yolo26m-seg-1280-selection/predictions.jsonl": "5581910c3c116fbad20a523937036fa95d4a8c3f7df0366dc95ab210a31d48b0",
+    "quality/yolo26l-seg-960-selection/summary.json": "8e593edf19bf7004aadbd5e6cbf32e00e3a52a7283cc73519951220c52783c18",
+    "quality/yolo26l-seg-960-selection/predictions.jsonl": "788ebc39da2534276acef314e8a2ce80080074b0c74931fede56669ae422c876",
+    "quality/yolo26l-seg-1280-selection/summary.json": "3c77a79ab3ff5da90e8884577c80c1796932b9bfa7b1a5fce7a8180ead826543",
+    "quality/yolo26l-seg-1280-selection/predictions.jsonl": "dfe9c15951f06666092de37b2374f551fd6cb229a9c9c354b46aa9bcf089cfe3",
+    "broad-model-screen-live-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/report.json": "a4ee45e15ce014585a5980aa9a13dc4fe7f25c781a803fa9110e0534c5778b93",
+    "broad-model-screen-live-v1/sunny/yolo26l-960-all15-2plus1-C6-r1/report.json": "44fb767b0832c860fd64ad123e7a43d295a52462304a8db3d172650ada06ed7e",
+    "broad-model-screen-live-v1/sunny/yolo26l-seg-1280-all15-2plus1-C6-r1/report.json": "bd676bb32832136650aa4cbf61ffbbe3f6d83cfd86ed93f73594144ecd284c7f",
+    "broad-model-screen-live-v1/sunny/yolo26l-seg-960-all15-2plus1-C6-r1/report.json": "c4e889a0e1850acf80df268c5c73203409ce0d269a392e83e49e2f17489d8e16",
+    "broad-model-screen-live-v1/sunny/yolo26m-1280-all15-2plus1-C6-r1/report.json": "5c495bbcd9a23199ae894241242f7a5811f3cf37703f85ca827921bed134b985",
+    "broad-model-screen-live-v1/sunny/yolo26m-960-all15-2plus1-C6-r1/report.json": "aecc60ee3deeddfd3da7ed667b8b0d36eea7b997e22eaf709e299ca64746cecf",
+    "broad-model-screen-live-v1/sunny/yolo26m-seg-1280-all15-2plus1-C6-r1/report.json": "0afc65235ebe69d60312914a5f2b6c8cafc16d9769134e43842b90366c6a4303",
+    "broad-model-screen-live-v1/sunny/yolo26m-seg-960-all15-2plus1-C6-r1/report.json": "940e2298abe0f68b45e38f38af4b00fc0bd6d195c2f257f2aaeb7e27a0c8170c",
+    "broad-model-finalists50-v1.json": "cd12369204a9584fd7d22035af838c2cd07c689237b9f71480e568f2340f2f13",
+    "broad-model-finalists-live50-v1/weather-protocol.json": "91360323dc7ed3795998cd0c4cb391f1dc2be2378781df5463383d0f14fcfd54",
+    "broad-model-finalists-live50-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/report.json": "305562d978f560a5072abaeddc1c09bf872b440e06d44aeef4d050a5c7bff932",
+    "broad-model-finalists-live50-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/report.json": "604e47d1e6db4e614438a74ea322268858513eb616ecbf656e8be7d80dca49de",
+    "broad-model-finalists-live50-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/report.json": "1c1d3c4e780d4140705ba28ce95411481ab2e423aa73a4615fc2e84095ca5fa1",
+    "broad-model-finalists-live50-v1/foggy/yolo26l-960-all15-2plus1-C6-r1/report.json": "86247d5520a986cc983075f43aebb9769349629a3381ab21564730c9bf5b4d37",
+    "broad-model-finalists-live50-v1/foggy/yolo26l-960-all15-2plus1-C6-r2/report.json": "2d83768267d4cd15e2846692135881223ac186a196886d319b0eb02b0e8f1559",
+    "broad-model-finalists-live50-v1/foggy/yolo26l-960-all15-2plus1-C6-r3/report.json": "8d03c387cb3538e3cffb1a6f47b187192c42bfe1ed6fb8e950329cc6ed40907d",
+    "broad-model-finalists-live50-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/report.json": "efe3e37af7628c626ba5009037cd850f21c75e61b1a43f78cfd263e4d32886a8",
+    "broad-model-finalists-live50-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/report.json": "b59f24cb7eef2a5766742adfa3864df9200fbeb77bad0e02b651643719051e4d",
+    "broad-model-finalists-live50-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/report.json": "e569bec8d4165e4c3c8def8dd90ba55ff5d1cc2444400abe7612e15bf6f091e2",
+    "broad-model-finalists-live50-v1/sunny/yolo26l-960-all15-2plus1-C6-r1/report.json": "f8ba1947422f32196759e5ed52273900c2c44871a284908717055b3ab8ad2e65",
+    "broad-model-finalists-live50-v1/sunny/yolo26l-960-all15-2plus1-C6-r2/report.json": "374fa2fc84664a10651593e93839288ffff150cd497042900b94faf30a3f5780",
+    "broad-model-finalists-live50-v1/sunny/yolo26l-960-all15-2plus1-C6-r3/report.json": "df3d963878a6c1da77e119f3d297401e849556c8a340a790ac58b9a55b581357",
+    "broad-model-selected-selection50-v1/yolo26l-1280-selection/summary.json": "fb1eb3796854f0e0875488b93c99e6e815f56745895d8ea75bcaf731364d005c",
+    "broad-model-selected-selection50-v1/yolo26l-1280-selection/predictions.jsonl": "6ffe392b15b8aaffdce6fab00ce61100a7b0f1f63c2fec44c7bfa7ff4f60fc09",
+    "broad-model-spawn-inspection50-v1/yolo26m-960/predictions.jsonl": "131c5fd30efd15bbd788607c14e3469048f54117cd1bf7af517203a62eeff954",
+    "broad-model-spawn-inspection50-v1/yolo26m-1280/predictions.jsonl": "5a08707847fc7b37d3aa1a28a02e90f50e753952e3bb8889778349ac41b24509",
+    "broad-model-spawn-inspection50-v1/yolo26l-960/predictions.jsonl": "761cea596c7b0af5f6e7c52c41e7cd16e3199d82730a64f68b6c269f15315ab4",
+    "broad-model-spawn-inspection50-v1/yolo26l-1280/predictions.jsonl": "ae6f50c966de6f23c03f0a19c6064369e4552c7facd346d6bb95b11f66f92336",
+    "broad-model-spawn-inspection50-v1/yolo26m-seg-960/predictions.jsonl": "95626df73161107b8e0d75fcbce87933b2ec595a97c257a1978d90ee47b04bbe",
+    "broad-model-spawn-inspection50-v1/yolo26m-seg-1280/predictions.jsonl": "d389227bed98abfda8a8986260f1e1828d7ae968961f4ee1421aaab295d0cef6",
+    "broad-model-spawn-inspection50-v1/yolo26l-seg-960/predictions.jsonl": "f8170b852f23f38a1c7999c651cb11e1121a7bb79b9df5990ec86c495304591b",
+    "broad-model-spawn-inspection50-v1/yolo26l-seg-1280/predictions.jsonl": "1d65d7dd7180a9168df52c7b4a719a0a52c79a0efe309417487bcd585918883e",
+    "broad-model-quality-selection-v3.json": "c0d26229d74caf5848bddc8e9255c2dae93debeafb886cf74753d07a8e6d5949",
+    "broad-model-selected-mask-off50-v1/yolo26l-1280-selection/summary.json": "dada0b544f51d593cf9cf68e3b552edc003f84a16522d3b714074cbbab465e58",
+    "broad-model-selected-mask-off50-v1/yolo26l-1280-selection/predictions.jsonl": "af452d2e55add3a796c30956af10dc0bf4d2bd8d8167cbfd9ab9e888da7adb79",
+    "broad-model-selected-heldout50-v1/yolo26l-1280-heldout/summary.json": "389fd5202915352cf43917b76574ebba1cea5b272a283d3c042eea41abf51ce8",
+    "broad-model-selected-heldout50-v1/yolo26l-1280-heldout/predictions.jsonl": "1cadb46024736643fabb2c9af8ac86d2c606ed4e5b77d736384c5e6e295f2e23",
+    "broad-model-selected-actual-driver-v1.json": "2d2cc4166a8cee24dea2f5084114436171d883b8196379c430d70d999f52f238",
+    "broad-model-selected-mask-controls50-v1/report.json": "d4dc1d4edfbb9b80d5e09f721f5ded7f1408593cf0b71297e952c843f32f1578",
+    "broad-model-selected-confidence-review50-v1/report.json": "7fc6131c4394648d45f0f38da8fd4a9912152bc26ae39b363ac789b919b61ed7",
+    "broad-model-selected-default-launch-smoke-v1.json": "706ebf74a340d5ca65565a34c9dfda7229ec92981e8c319f89d1e0999090fa1f",
+    "broad-model-selected-default-launch-setup-failure-v1.json": "1edbcca797f9e487699a4d2cb134c5208406c096b006a1be75205268b2f83d42",
+    "broad-model-selected-launch-params-v1.yaml": "9e1ef2be42fd2f1423922173815bc49f410219b7ab3f123af3e74ca9dfaae2b0",
+    "broad-model-contract-validation-v1.log": "7c9c0ba2d4e7aa4dc7936b9a509258bd21235f9a256db003db0891e1de9ca9f4",
+    "broad-model-regression-coco7-v1.log": "b2617678de1762bb59bb7cc8c6604e8c9e8a3fc6c94a176783215cc5f560324b",
+    "broad-model-regression-detection-v1.log": "d24d753609dcfbecb6d5733c94aec156b5d879158ac9a537c173170e328789a6",
+    "broad-model-regression-analysis-final-v1.log": "698d16d7b93c4bd9707d3cfacda6fb1e0fea99ed0cda6e69bedc42772940540a",
+    "broad-model-screen-live-v1/weather-protocol.json": "cc8325bc17096225f59428a0d19317bbc90b6bc59456a73d38de9d244f2d9da7",
+    "broad-model-screen-live-v1/owned-actors.json": "991f1bee684f5361d2d8734b700f77f2464e5ef4823350d466bd2f4d91467443",
+    "broad-model-finalists-live50-v1/owned-actors.json": "73cd73dd1cd17b5226382f65c2708291021cb709a0d5a6fab100f608c3011491",
+    "broad-model-gallery-history-link-repair-v1.json": "52d4fd15ef3c27b0cc10fd5e0607c0b917e73eabd66413f143a602c19186ae2e",
+    "broad-model-gallery-link-check-v1.json": "9c87ae8ce1d34d5a4e30fed0c8bca5f0234d9ddc8d71e36e14e48f58dfd453be"
+  },
+  "source_extensions_sha256": {
+    "tools/perception/analyze_coco7_broad_selection.py": "3b16a939e11597bdf8967e7568a7453d6cfce1cc1b3bcb86b0a0a592b2558627",
+    "tools/perception/build_experiment_gallery_hub.py": "604867a0ca4468c2f88ff6493f6a12d1a998c74fc9734753e52e180437242108",
+    "tools/perception/test_coco7_broad_selection.py": "e82a1e5a3cacf54e6f90e3f09d7f08792c18ed35ced39c6ffabdf8bdb80a501c",
+    "src/asmc_camera/config/camera/yolo26l_detect_coco7_three_view.yaml": "41e30115081e491bab8cbd60f6d6b0a1e06ffa82fdcc9545c2994a9e92f9855d",
+    "src/asmc_camera/launch/camera_coco7.launch": "ab6ca34b09c3c75638f73a013ca6ceb7776a701e7a383c239df005a84474d515"
+  },
+  "gallery_validation": {
+    "pages": 97,
+    "local_static_links": 17459,
+    "missing": [],
+    "scope": "Static href/src/poster; dynamic gallery data and HTTP availability checked separately"
+  }
+}

@@ -1,0 +1,28 @@
+# Opt-in mission output filter; original all-class profile remains separate.
+# YOLOE still uses the pinned 89-name embedding cache; this is not a 7-prompt benchmark.
+views:
+- front
+image_topic: /image_jpeg/compressed
+weights: $(optenv ASMC_SEG_MODELS /data/models/camera_seg_v1)/yoloe-26s-seg.pt
+expected_sha256: 48f24206bc8680d60cbbfa296b0140da849669b9515058b72f5a945142df0654
+device: cuda:0
+require_cuda: true
+conf_thres: 0.7
+allowed_names:
+- person
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+- dog
+predict_overrides:
+  iou: 0.7
+  max_det: 300
+  agnostic_nms: false
+  imgsz: 640
+  half: false
+  end2end: true
+seg_experiment: true
+model_kind: yoloe
+prompt_embeddings: $(optenv ASMC_SEG_MODELS /data/models/camera_seg_v1)/prompts-v1.npz

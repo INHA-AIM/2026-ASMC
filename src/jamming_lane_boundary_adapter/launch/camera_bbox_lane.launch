@@ -4,7 +4,9 @@
   <arg name="min_contact_overlap_ratio" default="0.10"/>
   <arg name="min_contact_support_rows" default="3"/>
   <!-- 차로 판정 / 표시 전용. 주행 명령은 발행하지 않는다. -->
-  <arg name="hood_crop_bottom_ratio" default="0.21"/>
+  <arg name="ego_mask_enabled" default="$(eval float(arg('hood_crop_bottom_ratio')) == 0)"/>
+  <arg name="ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
+  <arg name="hood_crop_bottom_ratio" default="0.0"/>
   <arg name="use_rviz" default="true"/>
   <arg name="image_topic" default="/image_jpeg/compressed"/>
   <arg name="bbox_topic" default="/planning/camera_bbox_lane/yolo"/>
@@ -23,6 +25,8 @@
   </node>
   <node pkg="lane_boundary_adapter" type="camera_bbox_lane_node"
         name="camera_bbox_lane" output="screen" required="true">
+    <param name="ego_mask_enabled" type="bool" value="$(arg ego_mask_enabled)"/>
+    <param name="ego_mask_config" value="$(arg ego_mask_config)"/>
     <param name="hood_crop_bottom_ratio" value="$(arg hood_crop_bottom_ratio)"/>
     <param name="contact_band_height_px" value="$(arg contact_band_height_px)"/>
     <param name="contact_row_tolerance_px" value="$(arg contact_row_tolerance_px)"/>

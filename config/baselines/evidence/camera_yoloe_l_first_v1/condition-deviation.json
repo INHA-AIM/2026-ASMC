@@ -1,0 +1,13 @@
+{
+  "trial": "camera-camera-base27-2plus1-C1-r1",
+  "issue": "concurrent CPU gallery rendering during first 6.16 seconds of ACTIVE",
+  "eligible_for_clean_performance": false,
+  "raw_metric_result_preserved": true,
+  "active_start_unix": 1791469918.4775,
+  "gallery_finish_unix": 1791469924.638289,
+  "clock_anchor": {
+    "unix": 1791470011.3249176,
+    "monotonic": 249447.426328398
+  },
+  "replacement": "same predeclared condition, repeat 4; repeats 2/3/4 define clean triplicate"
+}

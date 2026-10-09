@@ -27,6 +27,10 @@
 
 ## 재호: PR #72 반영 후 비교 갤러리 먼저 보기
 
+현재 개발 PC에서는 [전체 실험 갤러리 목차](http://localhost:8768/)의 `lidar-pr72`에서
+LiDAR 비교와 카메라 모델 비교를 함께 찾을 수 있다. 이 주소는 로컬 artifact 서버이며,
+다른 PC에서의 재현·인계에는 아래 저장소에 포함한 갤러리와 실행 안내를 사용한다.
+
 PR #72가 반영된 checkout에서
 `config/baselines/evidence/lidar_continuous_regression_v1/user-review/index.html`을
 파일 탐색기에서 브라우저로 연다. HTML·사진·GIF·상태/속도 JSON을 모두 Git에 포함했으므로
@@ -51,6 +55,8 @@ python3 -m http.server 8767 --bind 127.0.0.1 \
 군집 평균·OBB 중심·필터 위치를 구분하고 시간/초기화/연결 → 구조물·군집 → 일관된
 관측 위치 → 불확실성/연결 순서로 비교한다. Autoware 공개 구현과 연구 논문은
 참고 후보이며 우리 센서에서 실행·성능 검증된 대안처럼 취급하지 않는다.
+운영진이 답변한 후륜축 속도 GT와 현재 브릿지의 km/h 단위는
+[속도 GT 인계](b1a-improvement-tasks.md#morai-속도-gt-기준--2026-10-06-전달-qa-반영)에서 확인한다.
 
 **PR #72 병합 범위:** 공통 좌표·시간 코어, Main의 opt-in 연결, 회귀 도구·증거와
 인계 자료다. 공통 경계/roll 기본값 OFF와 공개 속도/동정적 validity false를 유지한다.

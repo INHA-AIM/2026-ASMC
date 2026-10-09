@@ -1,0 +1,4550 @@
+{
+  "created_utc": "2026-10-09T07:41:14.822525+00:00",
+  "scope": "Actual predictor cutoffs; original metrics retained; exact two reviewed frames excluded only in supplemental metrics.",
+  "original_frames": 2252,
+  "exclusions": [
+    {
+      "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000346.png",
+      "sha256": "1bcfa7cd5f7db7bc76839fba6f90ac2eab9c9359d7f72b0b22b21279a331e63f",
+      "reason": "User: outside mission ODD",
+      "scope": "Only this reviewed frame excluded from supplemental operational comparison; original metrics unchanged."
+    },
+    {
+      "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000532.png",
+      "sha256": "a7bd1edfff207c18019f39f70464b974d88e003748962de6313def3026738a9a",
+      "reason": "User: incorrectly spawned object",
+      "scope": "Only this reviewed frame excluded from supplemental operational comparison; original metrics unchanged."
+    }
+  ],
+  "source_sha256": {
+    "../artifacts/camera-coco7-live-v1/confidence-followup-v3/report.json": "3f7e9da8cbd700e69ab5f751246d10032461ea98be14a5d7ccc303b517712893",
+    "../artifacts/camera-coco7-live-v1/broad-model-conditions-v1.json": "14af4b26109a12752b62edcb2ff2979d8bb69a836a82beadec9553e69557daa0",
+    "../artifacts/camera-coco7-live-v1/gt-v2/frames.jsonl": "ed2cefea5274c3366e2514b983ace614532a3926697be5e5d2ba68c0404cf968",
+    "../artifacts/camera-coco7-live-v1/broad-model-quality-selection-v3.json": "c0d26229d74caf5848bddc8e9255c2dae93debeafb886cf74753d07a8e6d5949",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-mask-controls40-v1/report.json": "d1b61f136e22b0c1fc55a2547b231ddf5120ee988f8b7b561db204166c3fec5d",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-default-smoke-v1.json": "08aa902440b7bf709179d503328970d780e2dca6f76e6712ad0d6c55b6300182",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-default-mask-parameters-v1.json": "b38352bc8f516a90dd16b916ef0105b5740b8f5ea645a255fb9a374d6ec54924",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-frozen-candidate-v1.json": "5916b67050b49816cdd1cb2353d4b6d2679a867802276e760d44b33fdc74224e",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-gallery-test-v2.log": "2299339565fdc7c4fedeb54e99b181ba53b821f77194926422cc7df3301ba0ee",
+    "../artifacts/gallery-identifiers.json": "ac4a94174d46ba2c806c54af9c14411a85834b56eff6260684e4b1ba30ccb464",
+    "config/baselines/evidence/camera_coco7_live_v1/broad_model_decision.json": "0d149a3b2926e7b6c6bbd3714b13babaf9b967e33d913b819f17bdbbdce6ac17",
+    "src/asmc_camera/config/camera/yolo11m_coco.yaml": "be81e882062d3accd1b0f06b6bef768e7f47d4b73af3f0f2c128866914f80c07",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-actual30-v1/yolo26l-1280-selection/summary.json": "5a9c02d47d421d48d3cc7bf0f650185ed9c8e795a05283268bcbb0b2e6838efb",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-actual30-v1/yolo26l-1280-selection/predictions.jsonl": "5707d9da8b275f0e9a1785c22cba52ecaa79845cdb0707f9f50fd4cc3ce55bcc",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-actual40-v1/yolo26l-1280-selection/summary.json": "588090d564046b6b202d0bde7ba81c78893a906c40c7e0963e7765fe2c9db9bc",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-actual40-v1/yolo26l-1280-selection/predictions.jsonl": "d3cc200aa9efdb7a9177f51d25ab7645e4f2c9526657bc1c751ddd9ce3dea7ff",
+    "../artifacts/camera-coco7-live-v1/broad-model-selected-selection50-v1/yolo26l-1280-selection/summary.json": "fb1eb3796854f0e0875488b93c99e6e815f56745895d8ea75bcaf731364d005c",
+    "../artifacts/camera-coco7-live-v1/broad-model-selected-selection50-v1/yolo26l-1280-selection/predictions.jsonl": "6ffe392b15b8aaffdce6fab00ce61100a7b0f1f63c2fec44c7bfa7ff4f60fc09",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-mask-off40-v1/yolo26l-1280-selection/summary.json": "f250bbf6c48e07943b410eca9a9bb29a813c058578f77671630cb499ff48378c",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-mask-off40-v1/yolo26l-1280-selection/predictions.jsonl": "14448a5854dacc84212caffb0a2af3cd465eb73332fa8640ba597976d6396bad",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-heldout40-v1/yolo26l-1280-heldout/summary.json": "1917237873b30bff2125b4caab3425723051a9a87eb79c34db059351951dd12f",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-heldout40-v1/yolo26l-1280-heldout/predictions.jsonl": "dff58c2f90b5932d50504bb262998ca865b86c35029dd062755eba10d5d3d131",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny-jobs.json": "67eabc471cb5560b9e28d63c56b848e479512242caa687fd9e1fae93f90336bd",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/weather-protocol.json": "38bce5502c1063ae4835b385c4e0f1c08b308e3c6780626fc832e081c16f82c7",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy-jobs.json": "756e975ea462ed51dbfdf41a6714d4c3688c2587ca5959655170ceed9647f96f",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/owned-actors.json": "f6fd7f05a3a7ee62fca86c2d77951e92183ea16b7312e1d714e41f7b02986bae",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/protocol.json": "67eabc471cb5560b9e28d63c56b848e479512242caa687fd9e1fae93f90336bd",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/index.json": "750f3c62e010fa0028fe8bd541cc27fc9eaa7220727d0a6be21efe661699e6bf",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/protocol.json": "756e975ea462ed51dbfdf41a6714d4c3688c2587ca5959655170ceed9647f96f",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/index.json": "982452734445d1b5b5f83622e3ee6bbd1ae4826726091b2c96f07ffa1dd648fc",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/status.json": "3a935f1b8eb5254c21a6cbc93492c10a92c7f1a9f578b5ccce6ee8dfd4c125d9",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/planning.json": "943d8b8c02a290560d5026960f4de6e3efd43d8539b45aeeba2fa406a24becd1",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/resources.json": "c9dc48e3f70a5441e3e3586c381d31012c2fb5ca5e5c2d3f63fcf742469ccd37",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/debug.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/controls.json": "ab9ee0f7006a1420a5ae51d807bd730268e2ec7ba4c48886254e868aad2ec997",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/bbox.json": "ada733cfcebb44ca8e264bf23dd518e6e2672bd755ae35e10da7f884ac7b14f9",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/inputs.json": "89956f9c9bef70a556d09557f62f5054490f795ea975297235d9e98d845562f0",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/outputs.json": "318dd28aa162dda0a9cce7068969f8ecfb33de9d6fc95e7ddb58db00ed1c6a89",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/report.json": "3147c90ef9c1ca7666a4b004f4dd2fff2e52572020c1c243b1b04c89ecbc8a6b",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/diagnostics.json": "4b5823dbb847226cef9c72938147df30560106d9499bbebf4e965843dedf120c",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/status.json": "513f71b04889f6f2c573983c587777a783e6b91235e4cab1b52cc8c70df60642",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/planning.json": "5e0feeb13dd7ea54b071961f20b02ca7b8095e170fd00e5a484f31ef8d692722",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/resources.json": "915a7d171ae389dc266ffd9a0e4a563c2e628cec73eca762b6cc6320ed8f7fe5",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/debug.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/controls.json": "a569cdff983bcc50044bdda050fed2d813d7aa10de9500163cdbb77a5364e5ac",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/bbox.json": "5f7e524b7e9afb0120cf52e71ea331f4e99c9321fb2a5d5eb57faa7d4037389a",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/inputs.json": "d9a42be6784957b001c3a100de509c3a80cb26ec4cceca29c8e3316c39fb4e3c",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/outputs.json": "93f8d9fbcc4976a8e1d6609f50dbf9c7e0947414da13a15d99ab1e0fb8e8fc32",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/report.json": "9ee7624f5117a10a3680b335dc0522183b17a23e62b717849829602718c2e2bf",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/diagnostics.json": "d2a0adb4803c8a4a2394d85b8b6acd714aa941a812f448d1690208fbdb2b48c6",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/status.json": "e37da0100691b5bb1741dd7cbcae49b5d08fb1911dfd52fa8a49efdc1394a576",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/planning.json": "5f5627bac992ee25e0fdc88f5e48499aa3dd27277e68bc4b91b26a89b800bccd",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/resources.json": "c97825748c64f16f9b94d6847186e46731cb99addb08324bf5445abfce018d9d",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/debug.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/controls.json": "90e88a2129e2ebf8f3007e17af784950feaa8bfbd41111ea2ab1f3118a39bf77",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/bbox.json": "8892a70d501cb45dc88ce4c4bb8ff548435389345ad47ff1c5dccf5bdcb8722c",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/inputs.json": "680c0f82d08e437226c21cab8c0760b5cddd281f028f6dc379fa0c495e8ca4b5",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/outputs.json": "61c20c6ef80d0161e5db010e95b47f078d2ecc279abc1ab1ce6ebc06b3d4f337",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/report.json": "8325b394bc4c1ef6ce5eab0eb729841873874632d8c94831eabc9caefb557538",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/diagnostics.json": "75aba12de8a008db8fba2ca96bceae48ed2fbdd2f95f0661ee43eda9e9b3e3c2",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/status.json": "010f0aabdfe38fdf0d1f56e224d46a002889b911abc9b04c60d92cb72b31bc0e",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/planning.json": "99c2c8ac56842a3df2fb657c8a623f3a3a6d35007beb74fd614c5a70c1cfa6ce",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/resources.json": "8b833a73aa7f3895ad8674baa5d2cd6fba88862892207d3c1dd45cddee35cf6e",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/debug.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/controls.json": "60a8cf812ae4d494be4167f6f8ac3ad46f28d7b557239f8cb2a59cb7ae75cba5",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/bbox.json": "c150373b49fa98a9610c603191503a76a856e23a41ac12fe2cab1d646ccc2c2b",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/inputs.json": "b35f79b4033ea92df83726000880824f4c2dcca47bd86594cb39f595f4c80700",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/outputs.json": "25f4cb0160750f89a3fde0e7f8059bb3b5dc4044d1f884b91d1b202c0e5607a2",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/report.json": "e9fb9e8f9f25e4239357b1f07b1e368ec765b7dc510c7615e2bd67cc2af6cc84",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/diagnostics.json": "26b9c42da307fc25a21853cac83fd823741b253a914c6ff2ea3d4ffa5c80758d",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/status.json": "81df81fd3c03a3edd8b0b5106f3e8b0336ddcc25609e700a050b936ba1097ee6",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/planning.json": "a7f8619363df7752bf2c3585dc76f6eec365336e6fb6234ed90f68752cecfd06",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/resources.json": "9aa0557f65a8d3b97599019987ddf868abe2a28021f352867a536a1a18b9c8a0",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/debug.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/controls.json": "90fb5f889e577292e7511bbe2fb671e18db0a977bafd4b6924fba4bcd3e50663",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/bbox.json": "0b033f09361057f29e4db4c5f5c7854f15c705febc0d85eb3df11c2a6cd3ab46",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/inputs.json": "33a2638de0c27f73bff5f31505566aeb1f44205f8babd124dba63bc9ab93e36d",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/outputs.json": "0a0c5fe12bc925a03a1ece8b2a06935b711df530ebbe72b057e5d05d51b2a207",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/report.json": "7f3badba4a46ba23636ee9f558b71b1f06d7ab2254b8c4dcf4100bd8b567fea2",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/diagnostics.json": "ce59df47a2791ef5a4417ebe99d01b5672ca0bc496bdb6453544ba8e2d87de00",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/status.json": "106e5fbd21170a1dd3458ccdd4e6b604f9339eae7f696f825d927d065066479c",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/planning.json": "406096267e0fd6ef5c4f4a62beb216dc3f6affffa5942a0b931d02af1de7b7ac",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/resources.json": "a7bf380b40189a52e6fb3a99d97cc5f08ae58c68d8be8666b7d90c61386788d2",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/debug.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/controls.json": "8016ea7176b3cd0ca8b0d06147ed43b06f884cc663e717a99b46f6ca707c6923",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/bbox.json": "d6917c053e56e89e460df5494c751f5841b68142b4910be0ae84cfeef5fd5150",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/inputs.json": "d2afc4305de9cc39928394c99efcaca93c904c005ac8f2501b7ff1e40c832d11",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/outputs.json": "f21a2deceed7f5eb27c9dafd038ba5f5d114187e2beb221f733a4f6d1e645332",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/report.json": "9a6436b81966605ab3eb3d9a7a7540758f3931e5758b543a41d12cdcc1c7badc",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/diagnostics.json": "8e3a81ccf7e76f99733b4c00a7e74e7662031741f4203a6c390ed3a638c819f5",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/runtime.yaml": "5d6c235c358d84f4dee934dfbaa61339779a834d819a6fc3445c205d39fe1e8f",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/runtime.yaml": "5d6c235c358d84f4dee934dfbaa61339779a834d819a6fc3445c205d39fe1e8f",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/runtime.yaml": "5d6c235c358d84f4dee934dfbaa61339779a834d819a6fc3445c205d39fe1e8f",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/runtime.yaml": "5d6c235c358d84f4dee934dfbaa61339779a834d819a6fc3445c205d39fe1e8f",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/runtime.yaml": "5d6c235c358d84f4dee934dfbaa61339779a834d819a6fc3445c205d39fe1e8f",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/runtime.yaml": "5d6c235c358d84f4dee934dfbaa61339779a834d819a6fc3445c205d39fe1e8f",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-check-6-v1.log": "304c687fd6bd5dc345b496cecaef0d96506971bf411f2308caf4afdbd37e7291",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-check-2-v1.log": "95e7958002bd608a4a61a1290f2ae9900a0a01d2db17ab6cddffafc3f2c98233",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-check-3-v1.log": "eb798e2c1bde310a0c200862750e651e0a6aded23d90844d229e501a1ce7aae1",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-check-4-v1.log": "c6273abf27afb48a0f8219ed6cc168ff51a6900b5be26a47e100d568745f5121",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-check-5-v1.log": "054bf676634521f31d4a5cf8d6249c46522e424fc363ab104921ed9f30ab27ea",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-check-1-v1.log": "4bef1d25147508860de0787a4d3a5539524c47caf5ebe20b9694f4d96012695c",
+    "../artifacts/camera-coco7-live-v1/confidence-followup-check-0-v1.log": "82dea339af8d30b03f466c9c60b5fe177208e3b5a7fc7aff99a295b8a1df1a82"
+  },
+  "thresholds": [
+    {
+      "confidence": 0.3,
+      "original": {
+        "confidence": 0.3,
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 125,
+            "fp": 13,
+            "fn": 223,
+            "evaluable": true,
+            "f1": 0.51440329218107,
+            "recall": 0.35919540229885055
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 150,
+            "fp": 20,
+            "fn": 1520,
+            "evaluable": true,
+            "f1": 0.16304347826086957,
+            "recall": 0.08982035928143713
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 1,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 72,
+            "fp": 10,
+            "fn": 213,
+            "evaluable": true,
+            "f1": 0.3923705722070845,
+            "recall": 0.25263157894736843
+          },
+          "truck": {
+            "gt": 505,
+            "tp": 22,
+            "fp": 45,
+            "fn": 483,
+            "evaluable": true,
+            "f1": 0.07692307692307693,
+            "recall": 0.04356435643564356
+          }
+        },
+        "macro_f1": 0.28668510489302523,
+        "false_positives": 89,
+        "ignored_unknown_subtype": 78,
+        "mask_iou": null,
+        "mask_pairs": 0
+      },
+      "reviewed": {
+        "confidence": 0.3,
+        "pooled": {
+          "labels": {
+            "person": {
+              "gt": 348,
+              "tp": 125,
+              "fp": 13,
+              "fn": 223,
+              "evaluable": true,
+              "f1": 0.51440329218107,
+              "recall": 0.35919540229885055
+            },
+            "dog": {
+              "gt": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "evaluable": false,
+              "f1": null,
+              "recall": null
+            },
+            "bicycle": {
+              "gt": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "evaluable": false,
+              "f1": null,
+              "recall": null
+            },
+            "car": {
+              "gt": 1670,
+              "tp": 150,
+              "fp": 20,
+              "fn": 1520,
+              "evaluable": true,
+              "f1": 0.16304347826086957,
+              "recall": 0.08982035928143713
+            },
+            "motorcycle": {
+              "gt": 0,
+              "tp": 0,
+              "fp": 1,
+              "fn": 0,
+              "evaluable": false,
+              "f1": null,
+              "recall": null
+            },
+            "bus": {
+              "gt": 285,
+              "tp": 72,
+              "fp": 10,
+              "fn": 213,
+              "evaluable": true,
+              "f1": 0.3923705722070845,
+              "recall": 0.25263157894736843
+            },
+            "truck": {
+              "gt": 504,
+              "tp": 22,
+              "fp": 45,
+              "fn": 482,
+              "evaluable": true,
+              "f1": 0.07705779334500876,
+              "recall": 0.04365079365079365
+            }
+          },
+          "macro_f1": 0.2867187839985082,
+          "false_positives": 89,
+          "total_tp": 369
+        },
+        "weather": {
+          "foggy": {
+            "labels": {
+              "person": {
+                "gt": 298,
+                "tp": 125,
+                "fp": 12,
+                "fn": 173,
+                "evaluable": true,
+                "f1": 0.5747126436781609,
+                "recall": 0.41946308724832215
+              },
+              "dog": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bicycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "car": {
+                "gt": 1582,
+                "tp": 149,
+                "fp": 20,
+                "fn": 1433,
+                "evaluable": true,
+                "f1": 0.17018846373500857,
+                "recall": 0.09418457648546144
+              },
+              "motorcycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 1,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bus": {
+                "gt": 285,
+                "tp": 72,
+                "fp": 10,
+                "fn": 213,
+                "evaluable": true,
+                "f1": 0.3923705722070845,
+                "recall": 0.25263157894736843
+              },
+              "truck": {
+                "gt": 499,
+                "tp": 21,
+                "fp": 45,
+                "fn": 478,
+                "evaluable": true,
+                "f1": 0.0743362831858407,
+                "recall": 0.04208416833667335
+              }
+            },
+            "macro_f1": 0.3029019907015237,
+            "false_positives": 88
+          },
+          "sunny": {
+            "labels": {
+              "person": {
+                "gt": 50,
+                "tp": 0,
+                "fp": 1,
+                "fn": 50,
+                "evaluable": true,
+                "f1": 0.0,
+                "recall": 0.0
+              },
+              "dog": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bicycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "car": {
+                "gt": 88,
+                "tp": 1,
+                "fp": 0,
+                "fn": 87,
+                "evaluable": true,
+                "f1": 0.02247191011235955,
+                "recall": 0.011363636363636364
+              },
+              "motorcycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bus": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "truck": {
+                "gt": 5,
+                "tp": 1,
+                "fp": 0,
+                "fn": 4,
+                "evaluable": true,
+                "f1": 0.3333333333333333,
+                "recall": 0.2
+              }
+            },
+            "macro_f1": 0.11860174781523096,
+            "false_positives": 1
+          }
+        },
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 16,
+            "recall": 0.007136485280999108
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 53,
+            "recall": 0.2409090909090909
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 300,
+            "recall": 0.8695652173913043
+          }
+        },
+        "temporal_summary": {
+          "not_stably_detected": 60,
+          "insufficient_contiguous_gt": 44,
+          "interpretation": "3 hits in 5 consecutive annotated source inputs; frame counts, not wall seconds; visibility gaps reset window; initial acquisition is not re-entry"
+        }
+      },
+      "fp_kinds": {
+        "wrong_label_overlap": 38,
+        "unmatched_box": 44,
+        "duplicate_overlap": 7
+      },
+      "gained_gt_vs_050": 43,
+      "lost_gt_vs_050": 0,
+      "added_fp_vs_050": 62
+    },
+    {
+      "confidence": 0.4,
+      "original": {
+        "confidence": 0.4,
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 124,
+            "fp": 7,
+            "fn": 224,
+            "evaluable": true,
+            "f1": 0.5177453027139874,
+            "recall": 0.3563218390804598
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 141,
+            "fp": 10,
+            "fn": 1529,
+            "evaluable": true,
+            "f1": 0.15485996705107083,
+            "recall": 0.0844311377245509
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 1,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 65,
+            "fp": 6,
+            "fn": 220,
+            "evaluable": true,
+            "f1": 0.3651685393258427,
+            "recall": 0.22807017543859648
+          },
+          "truck": {
+            "gt": 505,
+            "tp": 22,
+            "fp": 28,
+            "fn": 483,
+            "evaluable": true,
+            "f1": 0.07927927927927927,
+            "recall": 0.04356435643564356
+          }
+        },
+        "macro_f1": 0.2792632720925451,
+        "false_positives": 52,
+        "ignored_unknown_subtype": 77,
+        "mask_iou": null,
+        "mask_pairs": 0
+      },
+      "reviewed": {
+        "confidence": 0.4,
+        "pooled": {
+          "labels": {
+            "person": {
+              "gt": 348,
+              "tp": 124,
+              "fp": 7,
+              "fn": 224,
+              "evaluable": true,
+              "f1": 0.5177453027139874,
+              "recall": 0.3563218390804598
+            },
+            "dog": {
+              "gt": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "evaluable": false,
+              "f1": null,
+              "recall": null
+            },
+            "bicycle": {
+              "gt": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "evaluable": false,
+              "f1": null,
+              "recall": null
+            },
+            "car": {
+              "gt": 1670,
+              "tp": 141,
+              "fp": 10,
+              "fn": 1529,
+              "evaluable": true,
+              "f1": 0.15485996705107083,
+              "recall": 0.0844311377245509
+            },
+            "motorcycle": {
+              "gt": 0,
+              "tp": 0,
+              "fp": 1,
+              "fn": 0,
+              "evaluable": false,
+              "f1": null,
+              "recall": null
+            },
+            "bus": {
+              "gt": 285,
+              "tp": 65,
+              "fp": 6,
+              "fn": 220,
+              "evaluable": true,
+              "f1": 0.3651685393258427,
+              "recall": 0.22807017543859648
+            },
+            "truck": {
+              "gt": 504,
+              "tp": 22,
+              "fp": 28,
+              "fn": 482,
+              "evaluable": true,
+              "f1": 0.07942238267148015,
+              "recall": 0.04365079365079365
+            }
+          },
+          "macro_f1": 0.2792990479405953,
+          "false_positives": 52,
+          "total_tp": 352
+        },
+        "weather": {
+          "foggy": {
+            "labels": {
+              "person": {
+                "gt": 298,
+                "tp": 124,
+                "fp": 6,
+                "fn": 174,
+                "evaluable": true,
+                "f1": 0.5794392523364486,
+                "recall": 0.4161073825503356
+              },
+              "dog": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bicycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "car": {
+                "gt": 1582,
+                "tp": 141,
+                "fp": 10,
+                "fn": 1441,
+                "evaluable": true,
+                "f1": 0.16272360069244085,
+                "recall": 0.08912768647281921
+              },
+              "motorcycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 1,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bus": {
+                "gt": 285,
+                "tp": 65,
+                "fp": 6,
+                "fn": 220,
+                "evaluable": true,
+                "f1": 0.3651685393258427,
+                "recall": 0.22807017543859648
+              },
+              "truck": {
+                "gt": 499,
+                "tp": 21,
+                "fp": 28,
+                "fn": 478,
+                "evaluable": true,
+                "f1": 0.07664233576642336,
+                "recall": 0.04208416833667335
+              }
+            },
+            "macro_f1": 0.2959934320302889,
+            "false_positives": 51
+          },
+          "sunny": {
+            "labels": {
+              "person": {
+                "gt": 50,
+                "tp": 0,
+                "fp": 1,
+                "fn": 50,
+                "evaluable": true,
+                "f1": 0.0,
+                "recall": 0.0
+              },
+              "dog": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bicycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "car": {
+                "gt": 88,
+                "tp": 0,
+                "fp": 0,
+                "fn": 88,
+                "evaluable": true,
+                "f1": 0.0,
+                "recall": 0.0
+              },
+              "motorcycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bus": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "truck": {
+                "gt": 5,
+                "tp": 1,
+                "fp": 0,
+                "fn": 4,
+                "evaluable": true,
+                "f1": 0.3333333333333333,
+                "recall": 0.2
+              }
+            },
+            "macro_f1": 0.1111111111111111,
+            "false_positives": 1
+          }
+        },
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 13,
+            "recall": 0.005798394290811775
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 48,
+            "recall": 0.21818181818181817
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 291,
+            "recall": 0.8434782608695652
+          }
+        },
+        "temporal_summary": {
+          "not_stably_detected": 60,
+          "insufficient_contiguous_gt": 44,
+          "interpretation": "3 hits in 5 consecutive annotated source inputs; frame counts, not wall seconds; visibility gaps reset window; initial acquisition is not re-entry"
+        }
+      },
+      "fp_kinds": {
+        "wrong_label_overlap": 28,
+        "unmatched_box": 21,
+        "duplicate_overlap": 3
+      },
+      "gained_gt_vs_050": 26,
+      "lost_gt_vs_050": 0,
+      "added_fp_vs_050": 25
+    },
+    {
+      "confidence": 0.5,
+      "original": {
+        "confidence": 0.5,
+        "labels": {
+          "person": {
+            "gt": 348,
+            "tp": 120,
+            "fp": 3,
+            "fn": 228,
+            "evaluable": true,
+            "f1": 0.5095541401273885,
+            "recall": 0.3448275862068966
+          },
+          "dog": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bicycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "car": {
+            "gt": 1670,
+            "tp": 126,
+            "fp": 5,
+            "fn": 1544,
+            "evaluable": true,
+            "f1": 0.1399222654081066,
+            "recall": 0.07544910179640718
+          },
+          "motorcycle": {
+            "gt": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "evaluable": false,
+            "f1": null,
+            "recall": null
+          },
+          "bus": {
+            "gt": 285,
+            "tp": 62,
+            "fp": 3,
+            "fn": 223,
+            "evaluable": true,
+            "f1": 0.35428571428571426,
+            "recall": 0.21754385964912282
+          },
+          "truck": {
+            "gt": 505,
+            "tp": 18,
+            "fp": 16,
+            "fn": 487,
+            "evaluable": true,
+            "f1": 0.06679035250463822,
+            "recall": 0.03564356435643564
+          }
+        },
+        "macro_f1": 0.26763811808146193,
+        "false_positives": 27,
+        "ignored_unknown_subtype": 75,
+        "mask_iou": null,
+        "mask_pairs": 0
+      },
+      "reviewed": {
+        "confidence": 0.5,
+        "pooled": {
+          "labels": {
+            "person": {
+              "gt": 348,
+              "tp": 120,
+              "fp": 3,
+              "fn": 228,
+              "evaluable": true,
+              "f1": 0.5095541401273885,
+              "recall": 0.3448275862068966
+            },
+            "dog": {
+              "gt": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "evaluable": false,
+              "f1": null,
+              "recall": null
+            },
+            "bicycle": {
+              "gt": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "evaluable": false,
+              "f1": null,
+              "recall": null
+            },
+            "car": {
+              "gt": 1670,
+              "tp": 126,
+              "fp": 5,
+              "fn": 1544,
+              "evaluable": true,
+              "f1": 0.1399222654081066,
+              "recall": 0.07544910179640718
+            },
+            "motorcycle": {
+              "gt": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "evaluable": false,
+              "f1": null,
+              "recall": null
+            },
+            "bus": {
+              "gt": 285,
+              "tp": 62,
+              "fp": 3,
+              "fn": 223,
+              "evaluable": true,
+              "f1": 0.35428571428571426,
+              "recall": 0.21754385964912282
+            },
+            "truck": {
+              "gt": 504,
+              "tp": 18,
+              "fp": 16,
+              "fn": 486,
+              "evaluable": true,
+              "f1": 0.06691449814126393,
+              "recall": 0.03571428571428571
+            }
+          },
+          "macro_f1": 0.26766915449061834,
+          "false_positives": 27,
+          "total_tp": 326
+        },
+        "weather": {
+          "foggy": {
+            "labels": {
+              "person": {
+                "gt": 298,
+                "tp": 120,
+                "fp": 3,
+                "fn": 178,
+                "evaluable": true,
+                "f1": 0.5700712589073634,
+                "recall": 0.40268456375838924
+              },
+              "dog": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bicycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "car": {
+                "gt": 1582,
+                "tp": 126,
+                "fp": 5,
+                "fn": 1456,
+                "evaluable": true,
+                "f1": 0.14711033274956217,
+                "recall": 0.07964601769911504
+              },
+              "motorcycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bus": {
+                "gt": 285,
+                "tp": 62,
+                "fp": 3,
+                "fn": 223,
+                "evaluable": true,
+                "f1": 0.35428571428571426,
+                "recall": 0.21754385964912282
+              },
+              "truck": {
+                "gt": 499,
+                "tp": 18,
+                "fp": 16,
+                "fn": 481,
+                "evaluable": true,
+                "f1": 0.0675422138836773,
+                "recall": 0.036072144288577156
+              }
+            },
+            "macro_f1": 0.28475237995657926,
+            "false_positives": 27
+          },
+          "sunny": {
+            "labels": {
+              "person": {
+                "gt": 50,
+                "tp": 0,
+                "fp": 0,
+                "fn": 50,
+                "evaluable": true,
+                "f1": 0.0,
+                "recall": 0.0
+              },
+              "dog": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bicycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "car": {
+                "gt": 88,
+                "tp": 0,
+                "fp": 0,
+                "fn": 88,
+                "evaluable": true,
+                "f1": 0.0,
+                "recall": 0.0
+              },
+              "motorcycle": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "bus": {
+                "gt": 0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "evaluable": false,
+                "f1": null,
+                "recall": null
+              },
+              "truck": {
+                "gt": 5,
+                "tp": 0,
+                "fp": 0,
+                "fn": 5,
+                "evaluable": true,
+                "f1": 0.0,
+                "recall": 0.0
+              }
+            },
+            "macro_f1": 0.0,
+            "false_positives": 0
+          }
+        },
+        "size_recall": {
+          "below10px": {
+            "gt": 2242,
+            "tp": 8,
+            "recall": 0.003568242640499554
+          },
+          "10to19px": {
+            "gt": 220,
+            "tp": 37,
+            "recall": 0.16818181818181818
+          },
+          "20px_or_more": {
+            "gt": 345,
+            "tp": 281,
+            "recall": 0.8144927536231884
+          }
+        },
+        "temporal_summary": {
+          "not_stably_detected": 61,
+          "insufficient_contiguous_gt": 44,
+          "interpretation": "3 hits in 5 consecutive annotated source inputs; frame counts, not wall seconds; visibility gaps reset window; initial acquisition is not re-entry"
+        }
+      },
+      "fp_kinds": {
+        "unmatched_box": 10,
+        "duplicate_overlap": 2,
+        "wrong_label_overlap": 15
+      },
+      "gained_gt_vs_050": 0,
+      "lost_gt_vs_050": 0,
+      "added_fp_vs_050": 0
+    }
+  ],
+  "comparison_signature": {
+    "engine_sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+    "backend": "tensorrt",
+    "task": "detect",
+    "width": 1280,
+    "split": "selection",
+    "masks": {
+      "front": {
+        "enabled": true,
+        "config_sha256": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "fill_bgr": [
+          0,
+          0,
+          0
+        ],
+        "inset_pixels": 0,
+        "polygon_normalized": [
+          [
+            0.051562,
+            0.998611
+          ],
+          [
+            0.947656,
+            0.998611
+          ],
+          [
+            0.821875,
+            0.888889
+          ],
+          [
+            0.786719,
+            0.863889
+          ],
+          [
+            0.748437,
+            0.843056
+          ],
+          [
+            0.650781,
+            0.816667
+          ],
+          [
+            0.539844,
+            0.806944
+          ],
+          [
+            0.377344,
+            0.8125
+          ],
+          [
+            0.313281,
+            0.823611
+          ],
+          [
+            0.257031,
+            0.840278
+          ],
+          [
+            0.2125,
+            0.863889
+          ],
+          [
+            0.177344,
+            0.888889
+          ]
+        ],
+        "image_width": 1280,
+        "image_height": 720,
+        "polygon_pixels": [
+          [
+            65,
+            718
+          ],
+          [
+            1212,
+            718
+          ],
+          [
+            1052,
+            640
+          ],
+          [
+            1007,
+            622
+          ],
+          [
+            957,
+            607
+          ],
+          [
+            832,
+            588
+          ],
+          [
+            691,
+            580
+          ],
+          [
+            483,
+            585
+          ],
+          [
+            400,
+            592
+          ],
+          [
+            328,
+            605
+          ],
+          [
+            272,
+            622
+          ],
+          [
+            227,
+            640
+          ]
+        ],
+        "excluded_pixels": 114058
+      },
+      "left": {
+        "enabled": true,
+        "config_sha256": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "fill_bgr": [
+          0,
+          0,
+          0
+        ],
+        "inset_pixels": 0,
+        "polygon_normalized": [
+          [
+            0.9985937500000001,
+            0.5877083333333334
+          ],
+          [
+            0.9360937500000001,
+            0.6252083333333334
+          ],
+          [
+            0.90796875,
+            0.6502083333333334
+          ],
+          [
+            0.88453125,
+            0.6502083333333334
+          ],
+          [
+            0.86890625,
+            0.660625
+          ],
+          [
+            0.86109375,
+            0.6689583333333334
+          ],
+          [
+            0.85484375,
+            0.6647916666666667
+          ],
+          [
+            0.85328125,
+            0.6522916666666667
+          ],
+          [
+            0.84859375,
+            0.6397916666666668
+          ],
+          [
+            0.83921875,
+            0.6272916666666667
+          ],
+          [
+            0.8282812500000001,
+            0.6210416666666667
+          ],
+          [
+            0.7970312500000001,
+            0.6106250000000001
+          ],
+          [
+            0.79078125,
+            0.6106250000000001
+          ],
+          [
+            0.78296875,
+            0.6064583333333334
+          ],
+          [
+            0.7579687500000001,
+            0.6022916666666667
+          ],
+          [
+            0.7564062500000001,
+            0.6002083333333333
+          ],
+          [
+            0.7423437500000001,
+            0.6002083333333333
+          ],
+          [
+            0.72203125,
+            0.6106250000000001
+          ],
+          [
+            0.71578125,
+            0.6189583333333334
+          ],
+          [
+            0.71265625,
+            0.635625
+          ],
+          [
+            0.7267187500000001,
+            0.654375
+          ],
+          [
+            0.80171875,
+            0.6960416666666667
+          ],
+          [
+            0.82515625,
+            0.6939583333333333
+          ],
+          [
+            0.8360937500000001,
+            0.685625
+          ],
+          [
+            0.84078125,
+            0.6877083333333334
+          ],
+          [
+            0.8439062500000001,
+            0.6939583333333333
+          ],
+          [
+            0.8267187500000001,
+            0.7147916666666667
+          ],
+          [
+            0.7189062500000001,
+            0.785625
+          ],
+          [
+            0.71578125,
+            0.7897916666666667
+          ],
+          [
+            0.65796875,
+            0.8293750000000001
+          ],
+          [
+            0.61890625,
+            0.8460416666666667
+          ],
+          [
+            0.61265625,
+            0.8522916666666667
+          ],
+          [
+            0.57203125,
+            0.879375
+          ],
+          [
+            0.5689062500000001,
+            0.8835416666666667
+          ],
+          [
+            0.54859375,
+            0.8960416666666667
+          ],
+          [
+            0.54078125,
+            0.904375
+          ],
+          [
+            0.53453125,
+            0.9064583333333334
+          ],
+          [
+            0.45640625,
+            0.966875
+          ],
+          [
+            0.44546875,
+            0.973125
+          ],
+          [
+            0.42671875000000004,
+            0.998125
+          ],
+          [
+            0.9985937500000001,
+            0.998125
+          ]
+        ],
+        "image_width": 640,
+        "image_height": 480,
+        "polygon_pixels": [
+          [
+            639,
+            282
+          ],
+          [
+            599,
+            300
+          ],
+          [
+            581,
+            312
+          ],
+          [
+            566,
+            312
+          ],
+          [
+            556,
+            317
+          ],
+          [
+            551,
+            321
+          ],
+          [
+            547,
+            319
+          ],
+          [
+            546,
+            313
+          ],
+          [
+            543,
+            307
+          ],
+          [
+            537,
+            301
+          ],
+          [
+            530,
+            298
+          ],
+          [
+            510,
+            293
+          ],
+          [
+            506,
+            293
+          ],
+          [
+            501,
+            291
+          ],
+          [
+            485,
+            289
+          ],
+          [
+            484,
+            288
+          ],
+          [
+            475,
+            288
+          ],
+          [
+            462,
+            293
+          ],
+          [
+            458,
+            297
+          ],
+          [
+            456,
+            305
+          ],
+          [
+            465,
+            314
+          ],
+          [
+            513,
+            334
+          ],
+          [
+            528,
+            333
+          ],
+          [
+            535,
+            329
+          ],
+          [
+            538,
+            330
+          ],
+          [
+            540,
+            333
+          ],
+          [
+            529,
+            343
+          ],
+          [
+            460,
+            377
+          ],
+          [
+            458,
+            379
+          ],
+          [
+            421,
+            398
+          ],
+          [
+            396,
+            406
+          ],
+          [
+            392,
+            409
+          ],
+          [
+            366,
+            422
+          ],
+          [
+            364,
+            424
+          ],
+          [
+            351,
+            430
+          ],
+          [
+            346,
+            434
+          ],
+          [
+            342,
+            435
+          ],
+          [
+            292,
+            464
+          ],
+          [
+            285,
+            467
+          ],
+          [
+            273,
+            479
+          ],
+          [
+            639,
+            479
+          ]
+        ],
+        "excluded_pixels": 40658
+      },
+      "right": {
+        "enabled": true,
+        "config_sha256": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b",
+        "fill_bgr": [
+          0,
+          0,
+          0
+        ],
+        "inset_pixels": 0,
+        "polygon_normalized": [
+          [
+            0.00015625,
+            0.5877083333333334
+          ],
+          [
+            0.00015625,
+            0.998125
+          ],
+          [
+            0.57203125,
+            0.998125
+          ],
+          [
+            0.5532812500000001,
+            0.973125
+          ],
+          [
+            0.54234375,
+            0.966875
+          ],
+          [
+            0.46421875,
+            0.9064583333333334
+          ],
+          [
+            0.45796875000000004,
+            0.904375
+          ],
+          [
+            0.45015625000000004,
+            0.8960416666666667
+          ],
+          [
+            0.42984375,
+            0.8835416666666667
+          ],
+          [
+            0.42671875000000004,
+            0.879375
+          ],
+          [
+            0.40953125,
+            0.8689583333333334
+          ],
+          [
+            0.37984375,
+            0.8460416666666667
+          ],
+          [
+            0.34078125,
+            0.8293750000000001
+          ],
+          [
+            0.28296875,
+            0.7897916666666667
+          ],
+          [
+            0.27984375,
+            0.785625
+          ],
+          [
+            0.19546875,
+            0.7314583333333334
+          ],
+          [
+            0.17828125,
+            0.7147916666666667
+          ],
+          [
+            0.16421875,
+            0.7085416666666667
+          ],
+          [
+            0.15484375,
+            0.6939583333333333
+          ],
+          [
+            0.15796875,
+            0.6877083333333334
+          ],
+          [
+            0.16265625,
+            0.685625
+          ],
+          [
+            0.17359375,
+            0.6939583333333333
+          ],
+          [
+            0.19703125,
+            0.6960416666666667
+          ],
+          [
+            0.27203125,
+            0.654375
+          ],
+          [
+            0.28609375,
+            0.635625
+          ],
+          [
+            0.28453125,
+            0.623125
+          ],
+          [
+            0.27671875,
+            0.6106250000000001
+          ],
+          [
+            0.25640625,
+            0.6002083333333333
+          ],
+          [
+            0.24234375,
+            0.6002083333333333
+          ],
+          [
+            0.24078125,
+            0.6022916666666667
+          ],
+          [
+            0.22359374999999998,
+            0.604375
+          ],
+          [
+            0.17046875,
+            0.6210416666666667
+          ],
+          [
+            0.15953124999999999,
+            0.6272916666666667
+          ],
+          [
+            0.15015625,
+            0.6397916666666668
+          ],
+          [
+            0.14546874999999998,
+            0.6522916666666667
+          ],
+          [
+            0.14390624999999999,
+            0.6647916666666667
+          ],
+          [
+            0.13765624999999998,
+            0.6689583333333334
+          ],
+          [
+            0.12984374999999998,
+            0.660625
+          ],
+          [
+            0.11421875,
+            0.6502083333333334
+          ],
+          [
+            0.09078125000000001,
+            0.6502083333333334
+          ],
+          [
+            0.05171875,
+            0.6168750000000001
+          ],
+          [
+            0.02359375,
+            0.598125
+          ]
+        ],
+        "image_width": 640,
+        "image_height": 480,
+        "polygon_pixels": [
+          [
+            0,
+            282
+          ],
+          [
+            0,
+            479
+          ],
+          [
+            366,
+            479
+          ],
+          [
+            354,
+            467
+          ],
+          [
+            347,
+            464
+          ],
+          [
+            297,
+            435
+          ],
+          [
+            293,
+            434
+          ],
+          [
+            288,
+            430
+          ],
+          [
+            275,
+            424
+          ],
+          [
+            273,
+            422
+          ],
+          [
+            262,
+            417
+          ],
+          [
+            243,
+            406
+          ],
+          [
+            218,
+            398
+          ],
+          [
+            181,
+            379
+          ],
+          [
+            179,
+            377
+          ],
+          [
+            125,
+            351
+          ],
+          [
+            114,
+            343
+          ],
+          [
+            105,
+            340
+          ],
+          [
+            99,
+            333
+          ],
+          [
+            101,
+            330
+          ],
+          [
+            104,
+            329
+          ],
+          [
+            111,
+            333
+          ],
+          [
+            126,
+            334
+          ],
+          [
+            174,
+            314
+          ],
+          [
+            183,
+            305
+          ],
+          [
+            182,
+            299
+          ],
+          [
+            177,
+            293
+          ],
+          [
+            164,
+            288
+          ],
+          [
+            155,
+            288
+          ],
+          [
+            154,
+            289
+          ],
+          [
+            143,
+            290
+          ],
+          [
+            109,
+            298
+          ],
+          [
+            102,
+            301
+          ],
+          [
+            96,
+            307
+          ],
+          [
+            93,
+            313
+          ],
+          [
+            92,
+            319
+          ],
+          [
+            88,
+            321
+          ],
+          [
+            83,
+            317
+          ],
+          [
+            73,
+            312
+          ],
+          [
+            58,
+            312
+          ],
+          [
+            33,
+            296
+          ],
+          [
+            15,
+            287
+          ]
+        ],
+        "excluded_pixels": 40706
+      }
+    },
+    "ultralytics": "8.4.150",
+    "tensorrt": "10.13.0.35"
+  },
+  "gallery_scope": "All FP and recovered GT at each cutoff are preserved in the source report and HTML.",
+  "schema_version": 1,
+  "model": "YOLO26l detect",
+  "selected_confidence": 0.4,
+  "previous_confidence": 0.5,
+  "parent_head": "23a9671c05bd5d417c99c0a49521745c58f026e3",
+  "runtime_revision_note": "Parent HEAD plus source hashes in trial provenance; configuration/tools/docs were uncommitted during measurements.",
+  "selection_scope": "Development camera_coco7 entrypoint only; global operational defaults remain unchanged.",
+  "decision": "0.40 recovers26 class-aware TP with25 additional FP relative to0.50. 0.30 maximizes selection macroF1 but adds62 FP, so0.40 is the development tradeoff.",
+  "old_yolo11m_confidence": 0.7,
+  "old_yolo11m_classes": [
+    "bus",
+    "truck",
+    "person",
+    "car"
+  ],
+  "fair_m_l_comparison": {
+    "scope": "Same2250 reviewed selection frames; saved0.25 predictions thresholded at0.50; same C6 screen phase.",
+    "m": {
+      "tp": 282,
+      "fp": 20,
+      "macro_f1": 0.233484,
+      "recall_20px": 0.7449275,
+      "wall_p95_ms": 73.286,
+      "peak_whole_vram_mib": 5570
+    },
+    "l": {
+      "tp": 326,
+      "fp": 28,
+      "macro_f1": 0.267638,
+      "recall_20px": 0.8144928,
+      "wall_p95_ms": 88.384,
+      "peak_whole_vram_mib": 5753
+    },
+    "paired_stable_acquisition": {
+      "earlier": 8,
+      "tied": 16,
+      "later": 1,
+      "l_only": 2,
+      "m_only": 0,
+      "time_basis": "consecutive annotated source inputs, not seconds"
+    }
+  },
+  "manual_fp_review": [
+    {
+      "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000427.png",
+      "cut": 0.4,
+      "rendered": "confidence-followup-v3/0166.jpg",
+      "finding": "Bright tunnel background returned as truck0.402; camera-side followup candidate, not excused."
+    },
+    {
+      "rendered": "confidence-followup-v3/0179.jpg",
+      "finding": "Distant person GT correspondence/localization failure is not necessarily hallucinated background."
+    }
+  ],
+  "live": {
+    "trials": [
+      {
+        "path": "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r1/report.json",
+        "job": {
+          "model": "yolo26l",
+          "width": 1280,
+          "confidence": 0.4,
+          "rates": "all15",
+          "batch": "2plus1",
+          "profile": "C6",
+          "repeat": 1,
+          "seconds": 20.0,
+          "full_stack": true,
+          "fusion_policy": "unique",
+          "weather_requested": "foggy"
+        },
+        "failures": [
+          "planning trajectory deadline gate"
+        ],
+        "passed": false,
+        "camera_supply_passed": true,
+        "measurements": {
+          "yolo_right": {
+            "messages": 297,
+            "hz": 14.85,
+            "valid_messages": 297,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.8,
+              14.8,
+              14.8,
+              15.0
+            ],
+            "max_gap_sec": 0.16244609898421913,
+            "first_output_sec": 0.10106896696379408,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 297,
+              "p50": 57.582379,
+              "p95": 92.36731559999998,
+              "p99": 104.43522412000003,
+              "maximum": 108.074904
+            },
+            "input_to_output_wall_ms": {
+              "samples": 297,
+              "p50": 56.87374697299674,
+              "p95": 91.75051118945701,
+              "p99": 103.75209967605772,
+              "maximum": 107.59168595541269
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_front": {
+            "messages": 298,
+            "hz": 14.9,
+            "valid_messages": 298,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.6,
+              15.2,
+              14.8,
+              15.0
+            ],
+            "max_gap_sec": 0.15596190601354465,
+            "first_output_sec": 0.10129033797420561,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 298,
+              "p50": 58.4290035,
+              "p95": 92.1152711,
+              "p99": 102.4882965,
+              "maximum": 104.148149
+            },
+            "input_to_output_wall_ms": {
+              "samples": 298,
+              "p50": 57.57458650623448,
+              "p95": 91.40755017579067,
+              "p99": 101.79862868099008,
+              "maximum": 103.67230395786464
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_left": {
+            "messages": 298,
+            "hz": 14.9,
+            "valid_messages": 298,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.6,
+              15.2,
+              14.8,
+              15.0
+            ],
+            "max_gap_sec": 0.15325732296332717,
+            "first_output_sec": 0.10135528596583754,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 298,
+              "p50": 58.18069,
+              "p95": 92.88096469999998,
+              "p99": 104.87081739999996,
+              "maximum": 107.115507
+            },
+            "input_to_output_wall_ms": {
+              "samples": 298,
+              "p50": 57.26092797704041,
+              "p95": 92.17706051713319,
+              "p99": 104.29306003963575,
+              "maximum": 105.90385599061847
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "target_attainment": {
+          "front": {
+            "target_hz": 15.0,
+            "observed_hz": 14.9,
+            "met": true
+          },
+          "left": {
+            "target_hz": 15.0,
+            "observed_hz": 14.9,
+            "met": true
+          },
+          "right": {
+            "target_hz": 15.0,
+            "observed_hz": 14.85,
+            "met": true
+          }
+        },
+        "peak_whole_vram_mib": 5488.0
+      },
+      {
+        "path": "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r2/report.json",
+        "job": {
+          "model": "yolo26l",
+          "width": 1280,
+          "confidence": 0.4,
+          "rates": "all15",
+          "batch": "2plus1",
+          "profile": "C6",
+          "repeat": 2,
+          "seconds": 20.0,
+          "full_stack": true,
+          "fusion_policy": "unique",
+          "weather_requested": "foggy"
+        },
+        "failures": [
+          "planning trajectory deadline gate"
+        ],
+        "passed": false,
+        "camera_supply_passed": true,
+        "measurements": {
+          "yolo_right": {
+            "messages": 296,
+            "hz": 14.8,
+            "valid_messages": 296,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 15,
+            "five_second_hz": [
+              14.8,
+              14.6,
+              14.8,
+              15.0
+            ],
+            "max_gap_sec": 0.17732620297465473,
+            "first_output_sec": 0.06830706197069958,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 296,
+              "p50": 50.251603,
+              "p95": 75.45900375000001,
+              "p99": 91.30337170000006,
+              "maximum": 107.796908
+            },
+            "input_to_output_wall_ms": {
+              "samples": 296,
+              "p50": 49.619398021604866,
+              "p95": 74.89854149753228,
+              "p99": 90.73345863434957,
+              "maximum": 103.94534794613719
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_front": {
+            "messages": 297,
+            "hz": 14.85,
+            "valid_messages": 297,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              14.8,
+              14.8,
+              15.0
+            ],
+            "max_gap_sec": 0.18552286800695583,
+            "first_output_sec": 0.06841591000556946,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 297,
+              "p50": 55.087566,
+              "p95": 94.62418579999996,
+              "p99": 108.06863716000011,
+              "maximum": 123.472214
+            },
+            "input_to_output_wall_ms": {
+              "samples": 297,
+              "p50": 54.41777204396203,
+              "p95": 94.08414657227692,
+              "p99": 107.5120223267005,
+              "maximum": 122.6613320177421
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_left": {
+            "messages": 295,
+            "hz": 14.75,
+            "valid_messages": 295,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 15,
+            "five_second_hz": [
+              14.6,
+              15.0,
+              14.8,
+              14.6
+            ],
+            "max_gap_sec": 0.17858148401137441,
+            "first_output_sec": 0.0684335709665902,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 295,
+              "p50": 51.664114,
+              "p95": 84.46073520000002,
+              "p99": 94.00377778000001,
+              "maximum": 101.920604
+            },
+            "input_to_output_wall_ms": {
+              "samples": 295,
+              "p50": 51.08734697569162,
+              "p95": 83.97155720740558,
+              "p99": 93.2927976618521,
+              "maximum": 101.45307204220444
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "target_attainment": {
+          "front": {
+            "target_hz": 15.0,
+            "observed_hz": 14.85,
+            "met": true
+          },
+          "left": {
+            "target_hz": 15.0,
+            "observed_hz": 14.75,
+            "met": true
+          },
+          "right": {
+            "target_hz": 15.0,
+            "observed_hz": 14.8,
+            "met": true
+          }
+        },
+        "peak_whole_vram_mib": 5541.0
+      },
+      {
+        "path": "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/foggy/yolo26l-1280-all15-2plus1-C6-r3/report.json",
+        "job": {
+          "model": "yolo26l",
+          "width": 1280,
+          "confidence": 0.4,
+          "rates": "all15",
+          "batch": "2plus1",
+          "profile": "C6",
+          "repeat": 3,
+          "seconds": 20.0,
+          "full_stack": true,
+          "fusion_policy": "unique",
+          "weather_requested": "foggy"
+        },
+        "failures": [
+          "planning trajectory deadline gate"
+        ],
+        "passed": false,
+        "camera_supply_passed": true,
+        "measurements": {
+          "yolo_right": {
+            "messages": 298,
+            "hz": 14.9,
+            "valid_messages": 298,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.6,
+              15.0,
+              15.0,
+              15.0
+            ],
+            "max_gap_sec": 0.1672765000257641,
+            "first_output_sec": 0.10540420201141387,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 298,
+              "p50": 57.29424899999999,
+              "p95": 91.68360214999998,
+              "p99": 108.46231705999996,
+              "maximum": 122.947932
+            },
+            "input_to_output_wall_ms": {
+              "samples": 298,
+              "p50": 56.79278148454614,
+              "p95": 90.74071526702025,
+              "p99": 107.96599252440497,
+              "maximum": 115.87517196312547
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_front": {
+            "messages": 298,
+            "hz": 14.9,
+            "valid_messages": 298,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.6,
+              15.0,
+              15.0,
+              15.0
+            ],
+            "max_gap_sec": 0.16764208901440725,
+            "first_output_sec": 0.10548853198997676,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 298,
+              "p50": 57.485223500000004,
+              "p95": 91.45492384999999,
+              "p99": 106.98930755999997,
+              "maximum": 120.601892
+            },
+            "input_to_output_wall_ms": {
+              "samples": 298,
+              "p50": 56.47613250766881,
+              "p95": 90.85320114099885,
+              "p99": 106.63752631982787,
+              "maximum": 113.48634999012575
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_left": {
+            "messages": 298,
+            "hz": 14.9,
+            "valid_messages": 298,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.6,
+              15.0,
+              15.0,
+              15.0
+            ],
+            "max_gap_sec": 0.167700712045189,
+            "first_output_sec": 0.10550022398820147,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 298,
+              "p50": 57.223797000000005,
+              "p95": 91.78379824999999,
+              "p99": 107.63265191999996,
+              "maximum": 124.190092
+            },
+            "input_to_output_wall_ms": {
+              "samples": 298,
+              "p50": 56.713609490543604,
+              "p95": 91.1468931037234,
+              "p99": 106.90352102334141,
+              "maximum": 117.22546996315941
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "target_attainment": {
+          "front": {
+            "target_hz": 15.0,
+            "observed_hz": 14.9,
+            "met": true
+          },
+          "left": {
+            "target_hz": 15.0,
+            "observed_hz": 14.9,
+            "met": true
+          },
+          "right": {
+            "target_hz": 15.0,
+            "observed_hz": 14.9,
+            "met": true
+          }
+        },
+        "peak_whole_vram_mib": 5541.0
+      },
+      {
+        "path": "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r1/report.json",
+        "job": {
+          "model": "yolo26l",
+          "width": 1280,
+          "confidence": 0.4,
+          "rates": "all15",
+          "batch": "2plus1",
+          "profile": "C6",
+          "repeat": 1,
+          "seconds": 20.0,
+          "full_stack": true,
+          "fusion_policy": "unique",
+          "weather_requested": "sunny"
+        },
+        "failures": [
+          "planning trajectory deadline gate"
+        ],
+        "passed": false,
+        "camera_supply_passed": true,
+        "measurements": {
+          "yolo_front": {
+            "messages": 297,
+            "hz": 14.85,
+            "valid_messages": 297,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              14.8,
+              15.0,
+              14.8
+            ],
+            "max_gap_sec": 0.19813328102463856,
+            "first_output_sec": 0.046786625985987484,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 297,
+              "p50": 56.313515,
+              "p95": 90.3417104,
+              "p99": 99.24344056000001,
+              "maximum": 109.808683
+            },
+            "input_to_output_wall_ms": {
+              "samples": 297,
+              "p50": 55.380993988364935,
+              "p95": 89.56954180030152,
+              "p99": 98.48385316319764,
+              "maximum": 109.03607297223061
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_left": {
+            "messages": 296,
+            "hz": 14.8,
+            "valid_messages": 296,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.6,
+              15.0,
+              15.0,
+              14.6
+            ],
+            "max_gap_sec": 0.18063799297669902,
+            "first_output_sec": 0.09840220503974706,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 296,
+              "p50": 56.372046499999996,
+              "p95": 92.8608775,
+              "p99": 101.42332280000001,
+              "maximum": 112.692356
+            },
+            "input_to_output_wall_ms": {
+              "samples": 296,
+              "p50": 55.646272987360135,
+              "p95": 92.32577921648044,
+              "p99": 100.70403373392766,
+              "maximum": 111.56590300379321
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_right": {
+            "messages": 294,
+            "hz": 14.7,
+            "valid_messages": 294,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.6,
+              15.0,
+              15.0,
+              14.2
+            ],
+            "max_gap_sec": 0.18464024300919846,
+            "first_output_sec": 0.09843582700705156,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 294,
+              "p50": 55.2951095,
+              "p95": 92.62934945,
+              "p99": 98.88679288999998,
+              "maximum": 112.219333
+            },
+            "input_to_output_wall_ms": {
+              "samples": 294,
+              "p50": 54.53050901996903,
+              "p95": 91.85846137697808,
+              "p99": 98.16450749291106,
+              "maximum": 111.21068598004058
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "target_attainment": {
+          "front": {
+            "target_hz": 15.0,
+            "observed_hz": 14.85,
+            "met": true
+          },
+          "left": {
+            "target_hz": 15.0,
+            "observed_hz": 14.8,
+            "met": true
+          },
+          "right": {
+            "target_hz": 15.0,
+            "observed_hz": 14.7,
+            "met": false
+          }
+        },
+        "peak_whole_vram_mib": 5488.0
+      },
+      {
+        "path": "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r2/report.json",
+        "job": {
+          "model": "yolo26l",
+          "width": 1280,
+          "confidence": 0.4,
+          "rates": "all15",
+          "batch": "2plus1",
+          "profile": "C6",
+          "repeat": 2,
+          "seconds": 20.0,
+          "full_stack": true,
+          "fusion_policy": "unique",
+          "weather_requested": "sunny"
+        },
+        "failures": [
+          "planning trajectory deadline gate"
+        ],
+        "passed": false,
+        "camera_supply_passed": true,
+        "measurements": {
+          "yolo_left": {
+            "messages": 297,
+            "hz": 14.85,
+            "valid_messages": 297,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              14.8,
+              14.8
+            ],
+            "max_gap_sec": 0.1879262889851816,
+            "first_output_sec": 0.07417592301499099,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 297,
+              "p50": 54.728746,
+              "p95": 87.6759056,
+              "p99": 106.27287864,
+              "maximum": 113.392591
+            },
+            "input_to_output_wall_ms": {
+              "samples": 297,
+              "p50": 54.2449009953998,
+              "p95": 86.99575762730092,
+              "p99": 105.74148235609755,
+              "maximum": 112.66504897503182
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_right": {
+            "messages": 298,
+            "hz": 14.9,
+            "valid_messages": 298,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              15.0,
+              14.8
+            ],
+            "max_gap_sec": 0.15390961297089234,
+            "first_output_sec": 0.0742117470363155,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 298,
+              "p50": 54.28803,
+              "p95": 86.35817809999999,
+              "p99": 101.57178093999991,
+              "maximum": 109.392404
+            },
+            "input_to_output_wall_ms": {
+              "samples": 298,
+              "p50": 53.52388299070299,
+              "p95": 85.89899307698943,
+              "p99": 101.15067899867418,
+              "maximum": 108.79450297215953
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_front": {
+            "messages": 299,
+            "hz": 14.95,
+            "valid_messages": 299,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              14.8,
+              15.0,
+              15.2
+            ],
+            "max_gap_sec": 0.1413557580090128,
+            "first_output_sec": 0.07422139903064817,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 299,
+              "p50": 57.58524,
+              "p95": 94.49253080000007,
+              "p99": 106.83826439999997,
+              "maximum": 130.938291
+            },
+            "input_to_output_wall_ms": {
+              "samples": 299,
+              "p50": 56.98751797899604,
+              "p95": 93.80745291709907,
+              "p99": 104.77234876365398,
+              "maximum": 129.6750549809076
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "target_attainment": {
+          "front": {
+            "target_hz": 15.0,
+            "observed_hz": 14.95,
+            "met": true
+          },
+          "left": {
+            "target_hz": 15.0,
+            "observed_hz": 14.85,
+            "met": true
+          },
+          "right": {
+            "target_hz": 15.0,
+            "observed_hz": 14.9,
+            "met": true
+          }
+        },
+        "peak_whole_vram_mib": 5488.0
+      },
+      {
+        "path": "../artifacts/camera-coco7-live-v1/confidence-followup-live40-v1/sunny/yolo26l-1280-all15-2plus1-C6-r3/report.json",
+        "job": {
+          "model": "yolo26l",
+          "width": 1280,
+          "confidence": 0.4,
+          "rates": "all15",
+          "batch": "2plus1",
+          "profile": "C6",
+          "repeat": 3,
+          "seconds": 20.0,
+          "full_stack": true,
+          "fusion_policy": "unique",
+          "weather_requested": "sunny"
+        },
+        "failures": [
+          "yolo front supply/latency gate",
+          "yolo left supply/latency gate",
+          "yolo right supply/latency gate",
+          "twinlite front supply gate",
+          "twinlite left supply gate",
+          "twinlite right supply gate",
+          "resnet18 resnet18 supply gate",
+          "planning trajectory deadline gate",
+          "planning objects deadline gate"
+        ],
+        "passed": false,
+        "camera_supply_passed": false,
+        "measurements": {
+          "yolo_left": {
+            "messages": 293,
+            "hz": 14.65,
+            "valid_messages": 293,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.0,
+              15.0,
+              14.8,
+              14.8
+            ],
+            "max_gap_sec": 0.318203266011551,
+            "first_output_sec": 0.09950393397593871,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 293,
+              "p50": 56.553602,
+              "p95": 98.54316659999999,
+              "p99": 119.42645971999993,
+              "maximum": 355.783224
+            },
+            "input_to_output_wall_ms": {
+              "samples": 293,
+              "p50": 55.654107010923326,
+              "p95": 97.74320321157573,
+              "p99": 118.85262432740993,
+              "maximum": 355.1689999876544
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_right": {
+            "messages": 293,
+            "hz": 14.65,
+            "valid_messages": 293,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.2,
+              15.0,
+              14.6,
+              14.8
+            ],
+            "max_gap_sec": 0.3181681230198592,
+            "first_output_sec": 0.09954978298628703,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 293,
+              "p50": 56.251287,
+              "p95": 96.40207299999997,
+              "p99": 118.97780415999992,
+              "maximum": 367.090464
+            },
+            "input_to_output_wall_ms": {
+              "samples": 293,
+              "p50": 55.695590970572084,
+              "p95": 95.9006364108063,
+              "p99": 118.440356447827,
+              "maximum": 366.2911779829301
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "yolo_front": {
+            "messages": 294,
+            "hz": 14.7,
+            "valid_messages": 294,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.2,
+              15.0,
+              15.0,
+              14.6
+            ],
+            "max_gap_sec": 0.3192972479737364,
+            "first_output_sec": 0.09956904198043048,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 20.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 294,
+              "p50": 56.848526,
+              "p95": 97.02669385000003,
+              "p99": 116.61543826999997,
+              "maximum": 363.758802
+            },
+            "input_to_output_wall_ms": {
+              "samples": 294,
+              "p50": 56.244178529595956,
+              "p95": 96.50005479052199,
+              "p99": 116.13402028742709,
+              "maximum": 362.2950079734437
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "target_attainment": {
+          "front": {
+            "target_hz": 15.0,
+            "observed_hz": 14.7,
+            "met": false
+          },
+          "left": {
+            "target_hz": 15.0,
+            "observed_hz": 14.65,
+            "met": false
+          },
+          "right": {
+            "target_hz": 15.0,
+            "observed_hz": 14.65,
+            "met": false
+          }
+        },
+        "peak_whole_vram_mib": 5489.0
+      }
+    ],
+    "camera_supply_passed": 5,
+    "whole_stack_passed": 0,
+    "hz_min": 14.65,
+    "hz_max": 14.95,
+    "wall_p95_ms_max": 97.74320321157573,
+    "wall_p99_ms_max": 118.85262432740993,
+    "max_gap_ms": 319.2972479737364,
+    "duplicate_stamps": 0,
+    "reversed_stamps": 0,
+    "peak_whole_vram_mib": 5541.0,
+    "vram_upper_limit_percent": 90,
+    "failure_context": {
+      "run": "sunny/r3",
+      "active_offset_sec": 4.3,
+      "input_max_gap_ms": {
+        "front": 288.717747,
+        "left": 350.13175,
+        "right": 266.618729,
+        "camera4": 386.919976
+      },
+      "resource_sampler_max_ms": 355.98612000467256,
+      "interpretation": "Concurrent source/arrival input gaps and all-model output gaps; not proven to be cutoff-specific, GPU overload, or observer-only delay. Failed acceptance preserved."
+    }
+  },
+  "mask_control": {
+    "images": 2252,
+    "confidence": 0.4,
+    "new_missed": {
+      "front": 1,
+      "left": 1,
+      "right": 0
+    },
+    "recovered": {
+      "front": 1,
+      "left": 1,
+      "right": 0
+    },
+    "differences": [
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000270.png",
+        "view": "front",
+        "new_missed_actor_ids": [
+          "27"
+        ],
+        "recovered_actor_ids": [],
+        "annotations": [
+          {
+            "gt_source_label": "Bus",
+            "source_xyxy": [
+              709.079,
+              318.9361,
+              754.9913,
+              358.8229
+            ],
+            "actor_id": "22",
+            "rgba": [
+              103,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 1447,
+            "xyxy": [
+              709,
+              320,
+              755,
+              359
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              591.8285,
+              330.9198,
+              633.2238,
+              358.2298
+            ],
+            "actor_id": "27",
+            "rgba": [
+              164,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 861,
+            "xyxy": [
+              592,
+              331,
+              633,
+              358
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              762.999,
+              336.0201,
+              782.5663,
+              349.139
+            ],
+            "actor_id": "44",
+            "rgba": [
+              236,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 201,
+            "xyxy": [
+              763,
+              336,
+              783,
+              349
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              790.7535,
+              337.1855,
+              803.099,
+              344.7705
+            ],
+            "actor_id": "18",
+            "rgba": [
+              144,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 78,
+            "xyxy": [
+              791,
+              337,
+              803,
+              345
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              834.0887,
+              332.9627,
+              843.4327,
+              342.9449
+            ],
+            "actor_id": "46",
+            "rgba": [
+              82,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 76,
+            "xyxy": [
+              834,
+              333,
+              843,
+              343
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              846.9727,
+              336.6595,
+              854.7181,
+              343.3262
+            ],
+            "actor_id": "36",
+            "rgba": [
+              62,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "Vehicle",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              2,
+              2
+            ],
+            "visible_pixels": 36,
+            "xyxy": [
+              847,
+              337,
+              854,
+              343
+            ],
+            "subtype_verified": false
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              863.4339,
+              337.736,
+              868.5059,
+              341.2349
+            ],
+            "actor_id": "24",
+            "rgba": [
+              11,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 12,
+            "xyxy": [
+              864,
+              338,
+              868,
+              341
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Truck",
+            "source_xyxy": [
+              876.797,
+              335.9508,
+              881.691,
+              340.6913
+            ],
+            "actor_id": "37",
+            "rgba": [
+              113,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "truck",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              90,
+              90
+            ],
+            "visible_pixels": 18,
+            "xyxy": [
+              877,
+              336,
+              882,
+              341
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              861.6582,
+              337.554,
+              865.8734,
+              340.5262
+            ],
+            "actor_id": "32",
+            "rgba": [
+              195,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 4,
+            "xyxy": [
+              862,
+              338,
+              864,
+              340
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Truck",
+            "source_xyxy": [
+              866.7618,
+              334.7106,
+              871.8562,
+              340.0739
+            ],
+            "actor_id": "58",
+            "rgba": [
+              226,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "truck",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              90,
+              90
+            ],
+            "visible_pixels": 17,
+            "xyxy": [
+              867,
+              335,
+              872,
+              340
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              846.6345,
+              337.3911,
+              851.7423,
+              340.9467
+            ],
+            "actor_id": "20",
+            "rgba": [
+              52,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 1,
+            "xyxy": [
+              847,
+              338,
+              848,
+              339
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              872.6017,
+              337.736,
+              875.0336,
+              339.3785
+            ],
+            "actor_id": "25",
+            "rgba": [
+              21,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 2,
+            "xyxy": [
+              873,
+              338,
+              875,
+              339
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "bus",
+            "confidence": 0.7969253063201904,
+            "xyxy": [
+              708.5625,
+              320.65625,
+              754.7109375,
+              358.5625
+            ]
+          },
+          {
+            "source_class_name": "truck",
+            "confidence": 0.5097644925117493,
+            "xyxy": [
+              591.9375,
+              331.0859375,
+              633.4296875,
+              357.53125
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.4397474527359009,
+            "xyxy": [
+              764.48046875,
+              335.7421875,
+              777.3203125,
+              340.71875
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "bus",
+            "confidence": 0.7905300855636597,
+            "xyxy": [
+              708.5625,
+              320.640625,
+              754.7109375,
+              358.609375
+            ]
+          },
+          {
+            "source_class_name": "truck",
+            "confidence": 0.5117166638374329,
+            "xyxy": [
+              591.9375,
+              331.09375,
+              633.4296875,
+              357.53125
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.43782347440719604,
+            "xyxy": [
+              764.4765625,
+              335.7421875,
+              777.390625,
+              340.7421875
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.4035666584968567,
+            "xyxy": [
+              591.71875,
+              330.953125,
+              633.25,
+              357.6796875
+            ]
+          }
+        ]
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000305.png",
+        "view": "front",
+        "new_missed_actor_ids": [],
+        "recovered_actor_ids": [
+          "46"
+        ],
+        "annotations": [
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              958.2189,
+              342.3679,
+              1279.99,
+              705.7344
+            ],
+            "actor_id": "44",
+            "rgba": [
+              113,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 72547,
+            "xyxy": [
+              958,
+              342,
+              1280,
+              704
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              782.2272,
+              337.655,
+              801.6857,
+              355.1383
+            ],
+            "actor_id": "36",
+            "rgba": [
+              195,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "Vehicle",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              2,
+              2
+            ],
+            "visible_pixels": 245,
+            "xyxy": [
+              782,
+              339,
+              802,
+              355
+            ],
+            "subtype_verified": false
+          },
+          {
+            "gt_source_label": "Vehicle",
+            "source_xyxy": [
+              727.2317,
+              328.516,
+              746.9961,
+              352.0023
+            ],
+            "actor_id": "46",
+            "rgba": [
+              82,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "bus",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              105,
+              105
+            ],
+            "visible_pixels": 372,
+            "xyxy": [
+              727,
+              329,
+              747,
+              352
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              700.3103,
+              338.8436,
+              716.5292,
+              350.2501
+            ],
+            "actor_id": "18",
+            "rgba": [
+              21,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 132,
+            "xyxy": [
+              700,
+              339,
+              716,
+              350
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "SUV",
+            "source_xyxy": [
+              745.5538,
+              339.4198,
+              753.1818,
+              344.9366
+            ],
+            "actor_id": "24",
+            "rgba": [
+              144,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              75,
+              75
+            ],
+            "visible_pixels": 28,
+            "xyxy": [
+              746,
+              340,
+              753,
+              345
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              707.8563,
+              338.4459,
+              713.4369,
+              342.5723
+            ],
+            "actor_id": "20",
+            "rgba": [
+              185,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 3,
+            "xyxy": [
+              709,
+              338,
+              712,
+              339
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.8872013092041016,
+            "xyxy": [
+              958.5,
+              344.375,
+              1279.5,
+              695.375
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.47268345952033997,
+            "xyxy": [
+              701.7109375,
+              338.359375,
+              715.40234375,
+              346.5625
+            ]
+          },
+          {
+            "source_class_name": "bus",
+            "confidence": 0.4054486155509949,
+            "xyxy": [
+              728.015625,
+              328.984375,
+              746.328125,
+              350.9296875
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.9019226431846619,
+            "xyxy": [
+              958.375,
+              344.25,
+              1279.5,
+              695.5
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.47852879762649536,
+            "xyxy": [
+              701.734375,
+              338.3515625,
+              715.38671875,
+              346.46875
+            ]
+          }
+        ]
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000226.png",
+        "view": "left",
+        "new_missed_actor_ids": [],
+        "recovered_actor_ids": [
+          "18"
+        ],
+        "annotations": [
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              585.8032,
+              213.5829,
+              639.9964,
+              228.937
+            ],
+            "actor_id": "18",
+            "rgba": [
+              246,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 534,
+            "xyxy": [
+              586,
+              214,
+              640,
+              229
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              285.0557,
+              210.6906,
+              307.1777,
+              222.6434
+            ],
+            "actor_id": "1",
+            "rgba": [
+              154,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 204,
+            "xyxy": [
+              285,
+              211,
+              307,
+              222
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              378.6312,
+              211.2486,
+              401.9781,
+              218.0107
+            ],
+            "actor_id": "48",
+            "rgba": [
+              164,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 83,
+            "xyxy": [
+              379,
+              211,
+              402,
+              218
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.7279752492904663,
+            "xyxy": [
+              284.0078125,
+              210.3828125,
+              307.04296875,
+              222.21875
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.6460129022598267,
+            "xyxy": [
+              378.546875,
+              210.609375,
+              402.28125,
+              217.765625
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.4416731297969818,
+            "xyxy": [
+              586.09375,
+              213.53125,
+              639.65625,
+              229.21875
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.7386703491210938,
+            "xyxy": [
+              283.96875,
+              210.390625,
+              307.0546875,
+              222.2265625
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.6477978229522705,
+            "xyxy": [
+              378.546875,
+              210.625,
+              402.2890625,
+              217.75
+            ]
+          }
+        ]
+      },
+      {
+        "image": "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000233.png",
+        "view": "left",
+        "new_missed_actor_ids": [
+          "48"
+        ],
+        "recovered_actor_ids": [],
+        "annotations": [
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              414.4711,
+              216.2758,
+              503.2825,
+              258.9276
+            ],
+            "actor_id": "44",
+            "rgba": [
+              103,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 2819,
+            "xyxy": [
+              414,
+              216,
+              503,
+              259
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              90.62813,
+              213.7926,
+              148.475,
+              225.464
+            ],
+            "actor_id": "48",
+            "rgba": [
+              164,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 440,
+            "xyxy": [
+              91,
+              214,
+              148,
+              225
+            ],
+            "subtype_verified": true
+          },
+          {
+            "gt_source_label": "Sedan",
+            "source_xyxy": [
+              240.5753,
+              214.0157,
+              266.721,
+              221.6777
+            ],
+            "actor_id": "15",
+            "rgba": [
+              246,
+              0,
+              0,
+              255
+            ],
+            "source_class_name": "car",
+            "group": "vehicle",
+            "semantic_rgb": [
+              255,
+              60,
+              60
+            ],
+            "visible_pixels": 143,
+            "xyxy": [
+              241,
+              214,
+              267,
+              222
+            ],
+            "subtype_verified": true
+          }
+        ],
+        "on": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.9161110520362854,
+            "xyxy": [
+              413.25,
+              215.625,
+              503.265625,
+              258.28125
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.7490874528884888,
+            "xyxy": [
+              240.5703125,
+              213.40625,
+              266.921875,
+              221.25
+            ]
+          }
+        ],
+        "off": [
+          {
+            "source_class_name": "car",
+            "confidence": 0.9130566120147705,
+            "xyxy": [
+              413.0625,
+              215.78125,
+              503.21875,
+              258.2578125
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.7461398243904114,
+            "xyxy": [
+              240.5703125,
+              213.390625,
+              266.9375,
+              221.265625
+            ]
+          },
+          {
+            "source_class_name": "car",
+            "confidence": 0.43014732003211975,
+            "xyxy": [
+              91.84375,
+              213.28125,
+              147.125,
+              226.359375
+            ]
+          }
+        ]
+      }
+    ],
+    "interpretation": "verified GT matches only; approved front exception is not automatically applied to another actor/frame or a side view"
+  },
+  "previously_viewed_heldout": {
+    "frames": 2474,
+    "result": {
+      "confidence": 0.4,
+      "labels": {
+        "person": {
+          "gt": 1013,
+          "tp": 693,
+          "fp": 28,
+          "fn": 320,
+          "evaluable": true,
+          "f1": 0.7993079584775087,
+          "recall": 0.684106614017769
+        },
+        "dog": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "bicycle": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "car": {
+          "gt": 2086,
+          "tp": 264,
+          "fp": 17,
+          "fn": 1822,
+          "evaluable": true,
+          "f1": 0.22306717363751585,
+          "recall": 0.12655800575263662
+        },
+        "motorcycle": {
+          "gt": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "evaluable": false,
+          "f1": null,
+          "recall": null
+        },
+        "bus": {
+          "gt": 243,
+          "tp": 9,
+          "fp": 3,
+          "fn": 234,
+          "evaluable": true,
+          "f1": 0.07058823529411765,
+          "recall": 0.037037037037037035
+        },
+        "truck": {
+          "gt": 688,
+          "tp": 11,
+          "fp": 20,
+          "fn": 677,
+          "evaluable": true,
+          "f1": 0.030598052851182198,
+          "recall": 0.015988372093023256
+        }
+      },
+      "macro_f1": 0.2808903550650811,
+      "false_positives": 68,
+      "ignored_unknown_subtype": 183,
+      "mask_iou": null,
+      "mask_pairs": 0
+    },
+    "scope": "Fixed0.40 regression after selection; not independent final holdout or tuning input."
+  },
+  "startup_smoke": {
+    "scope": "Actual default selected YOLO engine/confidence/masks/standby; other models disabled only for startup smoke.",
+    "status": {
+      "mode": 0,
+      "requested_mode": 0,
+      "loaded": true,
+      "warmed_up": true,
+      "managed": true,
+      "target_hz": 15.0
+    },
+    "parameters": {
+      "weights": "/data/models/camera_coco7_v1/yolo26l.engine",
+      "conf_thres": 0.4,
+      "views": [
+        "front",
+        "left",
+        "right"
+      ],
+      "front_width": 1280,
+      "batch_mode": "2plus1",
+      "target_hz_by_view": {
+        "front": 15.0,
+        "left": 15.0,
+        "right": 15.0
+      },
+      "hood_mask_enabled": null
+    },
+    "passed": true
+  },
+  "mask_parameter_check": {
+    "scope": "Parameters retained from the completed default launch smoke",
+    "parameters": {
+      "hood_mask": true,
+      "side_ego_mask": true,
+      "side_ego_mask_configs": {
+        "left": "/root/ws/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml",
+        "right": "/root/ws/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml"
+      },
+      "conf_thres": 0.4,
+      "views": [
+        "front",
+        "left",
+        "right"
+      ]
+    },
+    "passed": true
+  },
+  "environment_restoration": {
+    "original_weather": "WEATHER_TYPE_SUNNY",
+    "candidates": [
+      {
+        "model": "yolo26l",
+        "width": 1280,
+        "confidence": 0.4
+      }
+    ],
+    "runs": [
+      {
+        "weather": "sunny",
+        "observed_before": "WEATHER_TYPE_SUNNY",
+        "exit_code": 1,
+        "observed_after": "WEATHER_TYPE_SUNNY"
+      },
+      {
+        "weather": "foggy",
+        "observed_before": "WEATHER_TYPE_FOGGY",
+        "exit_code": 1,
+        "observed_after": "WEATHER_TYPE_FOGGY"
+      }
+    ],
+    "preview_control_only": true,
+    "revision": "23a9671c05bd5d417c99c0a49521745c58f026e3",
+    "restored_weather": "WEATHER_TYPE_SUNNY",
+    "restoration_errors": []
+  },
+  "owned_actors": {
+    "created": 9,
+    "cleaned": 9
+  },
+  "local_validation": {
+    "coco7_tests": 43,
+    "gallery_tests": 1,
+    "detection_tests": 72,
+    "contract_validators": 4,
+    "initial_gallery_test_failure": "Python3.8 lacks zoneinfo; replaced with stdlib fixed KST timezone and passed retry; original failure log retained.",
+    "compiled_or_message_changes": false,
+    "known_parent_failures": "Facade, input authority, fusion, long-run and driving gates preserved; not rerun or waived by confidence change."
+  },
+  "gallery": {
+    "hub": "http://localhost:8768/",
+    "confidence": "http://localhost:8768/camera-coco7-live-v1/confidence-followup-v3/index.html",
+    "identifiers": "Persistent E numbers; first registered HTML file mtime fixed as KST gallery timestamp, not execution start.",
+    "http": {
+      "pages": 104,
+      "passed": true,
+      "results": [
+        {
+          "path": "camera-coco7-live-v1/confidence-followup-mask-controls40-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/confidence-followup-v3/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/confidence-followup-heldout40-v1/yolo26l-1280-heldout/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/confidence-followup-mask-off40-v1/yolo26l-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/confidence-followup-v2/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/confidence-followup-actual40-v1/yolo26l-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/confidence-followup-actual30-v1/yolo26l-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/analysis-history-20261009T090726/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/broad-model-summary-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/broad-model-selected-confidence-review50-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/broad-model-selected-mask-controls50-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/broad-model-selected-heldout50-v1/yolo26l-1280-heldout/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/broad-model-selected-mask-off50-v1/yolo26l-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/broad-model-selected-selection50-v1/yolo26l-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/broad-model-spawn-inspection50-v1/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/broad-model-spawn-inspection50-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-decision-inspection50-v3/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-confidence-review50-v3/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-mask-controls50-v3/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-heldout50-v3/yolo26m-1280-heldout/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-mask-off50-v3/yolo26m-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-selection50-v3/yolo26m-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-decision-inspection50-v3/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-m-confidence50-review-v2/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-mask-controls55-screening-v2/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-mask-off-sweep-v2/yolo26m-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-decision-inspection60-v1/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-decision-inspection25-v1/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-decision-inspection07-v1/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-confidence-review-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-mask-controls-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-heldout-v1/yolo26m-1280-heldout/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-mask-off-v1/yolo26m-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-selected-selection-v1/yolo26m-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-decision-inspection60-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-decision-inspection25-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-decision-inspection07-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-l-confidence-review-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/finalist-m-confidence-review-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-batch3-640-inspection25-v1/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-batch3-640-inspection07-v1/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-model-inspection-low25-v1/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-model-inspection-v2/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-batch3-640-inspection25-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-batch3-640-inspection07-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-model-inspection-low25-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-model-inspection-v2/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-model-inspection-v1/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/range-model-inspection-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/detect-heldout-weather-frozen/yolo26m-1280-heldout/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/detect-heldout-weather-frozen/yolo26m-960-heldout/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/actor-all-models-fixed07/comparison.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/actor-all-models-fixed07/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/actor-model-gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/full-detect-neutral-controls-selection/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/detect-neutral-frozen/yolo26m-960-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/full-detect-mask-controls-selection/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/detect-mask-off-frozen/yolo26m-960-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/full-neutral-mask-controls-selection/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality-neutral-selection/yolo26m-seg-960-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/mask-fill-selection-inward8/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/mask-fill-selection-inward4/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/mask-fill-selection/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/baseline-heldout-frozen/yolo11m-960-heldout/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality-heldout-frozen/yolo26m-seg-960-heldout/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/full-mask-controls-selection/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality-mask-off-frozen-v2/yolo26m-seg-960-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/near-object-gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26l-seg-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26l-seg-960-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26l-seg-640-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26m-seg-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26m-seg-960-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26m-seg-640-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26l-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26l-960-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26l-640-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26m-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26m-960-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo26m-640-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo11m-1280-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo11m-960-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco7-live-v1/quality/yolo11m-640-selection/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/prompt-cleanup-v1/side-ego-mask-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/prompt-cleanup-v1/audit-rich42-v2/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/prompt-cleanup-v1/audit-rich42/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/comparison-gallery-trt-030/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/quality-base27-tensorrt/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/quality-rich42-tensorrt/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/comparison-gallery-030/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/comparison-gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/quality-base27-pytorch/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-yoloe-l-first-v1/quality-rich42-pytorch-v2/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-seg/mask-support-v1/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-seg/comparison-gallery-v1/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-seg/accuracy/baseline/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-seg/accuracy/yoloe/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-seg/accuracy/yolo26/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-training-audit/20261008/index.html",
+          "status": 200
+        },
+        {
+          "path": "camera-coco/offline-v1/gallery/index.html",
+          "status": 200
+        },
+        {
+          "path": "lidar-pr72/user-review-v4/index.html",
+          "status": 200
+        },
+        {
+          "path": "lidar-pr72/user-review-v3/index.html",
+          "status": 200
+        },
+        {
+          "path": "lidar-pr72/user-review-v2/index.html",
+          "status": 200
+        }
+      ]
+    },
+    "static_links": {
+      "pages": 104,
+      "local_static_links": 18615,
+      "missing": [],
+      "scope": "Static href/src/poster; dynamic gallery data and HTTP availability checked separately"
+    }
+  },
+  "source_extensions_sha256": {
+    "tools/perception/analyze_coco7_confidence_followup.py": "d91b3f519d1fb702e911bbefe9140ed8f5cdd40c9a469505114cff5bd1fb3865",
+    "tools/perception/build_experiment_gallery_hub.py": "d74a7be2336d240d539e5c1f9fc7f0f6c6542ce53cebf0acad58cd83a7b4bc82",
+    "tools/perception/test_coco7_confidence_followup.py": "b62e4c182b352b32e1baa37ed4c92e3b532db3b53fc56442674f2a764bf8f662",
+    "tools/perception/test_experiment_gallery_hub.py": "6c8da4564e9cab3d8412fd59350884ca4254a644693f1126efd9f8b1a62678e8",
+    "src/asmc_camera/config/camera/yolo26l_detect_coco7_three_view.yaml": "b00a9fede384301489c1b7a82ec6f51e17f745f25131b64076600872807a37cf",
+    ".github/workflows/ci.yml": "54957879e63ec3a37f9891b56dd85a5c798b7f2df950e9bbc289262397539c7f"
+  }
+}

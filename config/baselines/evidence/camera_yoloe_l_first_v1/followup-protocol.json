@@ -1,0 +1,242 @@
+[
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "base27",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/base27.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "base27",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/base27.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "base27",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/base27.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C4",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C5",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 1,
+    "debug": true,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C4",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C5",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 2,
+    "debug": true,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C4",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C5",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 3,
+    "debug": true,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "fusion",
+    "bag_id": "primary",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "fusion",
+    "bag_id": "shadow",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "fusion",
+    "bag_id": "primary",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "fusion",
+    "bag_id": "shadow",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "fusion",
+    "bag_id": "primary",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  },
+  {
+    "phase": "fusion",
+    "bag_id": "shadow",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C6",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/rich42.yaml"
+  }
+]

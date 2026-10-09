@@ -61,7 +61,22 @@ def main():
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--diagnostic', action='store_true')
     parser.add_argument('--gps-gap', action='store_true')
+    parser.add_argument('--objects-only', action='store_true', help='load only YOLO; requires profile C1')
+    parser.add_argument('--objects-config', type=Path)
+    parser.add_argument('--objects-class-groups-config', type=Path)
+    parser.add_argument('--objects-views', choices=['front', 'all'], default='front')
+    parser.add_argument('--objects-side-ego-mask', action='store_true')
+    parser.add_argument('--seg-debug', action='store_true')
+    parser.add_argument('--fusion-yolo-policy',choices=['unique','bounded_reuse'],default='unique')
+    parser.add_argument('--objects-min-rate',type=float,help='Explicit new experiment gate; absent retains historical 18Hz')
     args = parser.parse_args()
+    if args.objects_only and args.profile != 'C1':
+        parser.error('objects-only trials require C1')
+    loaded_models = ['yolo'] if args.objects_only else list(NODES)
+    object_views = ['front', 'left', 'right'] if args.objects_views == 'all' else ['front']
+    model_outputs = dict(MODEL_OUTPUTS)
+    if args.objects_views == 'all':
+        model_outputs['yolo'] = ['yolo_'+v for v in object_views]
     config = yaml.safe_load(args.config.read_text())
     master_uri = urlparse(os.environ.get('ROS_MASTER_URI', ''))
     if master_uri.hostname not in ('localhost', '127.0.0.1') or master_uri.port != config['conditions']['ros_master_port']:
@@ -91,9 +106,11 @@ def main():
     traced = args.diagnostic or args.phase == 'gps'
     report = dict(schema_version=1, profile=args.profile, phase=args.phase, bag_id=args.bag_id,
                   bag=bag_path, bag_duration_sec=bag_seconds, repeat=args.repeat,
-                  all_models_loaded=True, active_models=active_models, trace_enabled=traced,
+                  all_models_loaded=not args.objects_only, loaded_models=loaded_models, active_models=active_models, trace_enabled=traced,
                   camera_debug=args.debug, main_intrinsic_fusion_debug=args.phase != 'camera',
                   gps_gap=args.gps_gap, commands=commands, failures=[], checks={},
+                  fusion_yolo_policy=args.fusion_yolo_policy,
+                  explicit_objects_minimum_hz=args.objects_min_rate,
                   source_config_sha256=hashlib.sha256(args.config.read_bytes()).hexdigest(),
                   timing_anchor='server_acceptance' if traced else 'rpc_start_conservative')
     report['execution_source_sha256'] = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
@@ -112,7 +129,15 @@ def main():
 
     def receive_output(name, message):
         now, stamp = time.monotonic(), message.header.stamp.to_nsec()
+        if name == 'yolo' and args.objects_views == 'all':
+            view = message.header.frame_id.removeprefix('camera_') if hasattr(str, 'removeprefix') else message.header.frame_id[len('camera_'):]
+            if view not in object_views:
+                report['failures'].append('unexpected object frame_id: '+message.header.frame_id)
+                return
+            name = 'yolo_'+view
         source = dict(yolo='front', resnet18='extra', lidar='lidar').get(name, name)
+        if name.startswith('yolo_'):
+            source = name[len('yolo_'):]
         with lock:
             matches = [arrivals[v, stamp] for v in ('front', 'left', 'right') if (v, stamp) in arrivals] if name == 'family' else (
                 [arrivals[source, stamp]] if (source, stamp) in arrivals else [])
@@ -127,7 +152,7 @@ def main():
                                    centers={str(o.id): [o.cluster_center.x, o.cluster_center.y, o.cluster_center.z] for o in message.objects},
                                    geometry=[dict(id=o.id, length=o.length, width=o.width, height=o.height,
                                                   age=o.age, miss_count=o.miss_count) for o in message.objects]))
-            elif name == 'yolo':
+            elif name == 'yolo' or name.startswith('yolo_'):
                 row['boxes'] = [dict(label=b.source_class_name, group=b.class_name, confidence=b.confidence,
                                      xyxy=[b.xmin, b.ymin, b.xmax, b.ymax]) for b in message.boxes]
 
@@ -163,7 +188,8 @@ def main():
     topics.update({v: ('/perception/camera/'+v+'/road_marking/class_id', Image) for v in ('front', 'left', 'right')})
     for name, (topic, kind) in topics.items():
         subscribers.append(rospy.Subscriber(topic, kind, lambda m, n=name: receive_output(n, m), queue_size=100, buff_size=2**24))
-    for model, node in NODES.items():
+    for model in loaded_models:
+        node = NODES[model]
         rospy.set_param(node+'/lifecycle_trace_path', str(args.output/(model+'.lifecycle.jsonl')) if traced else '')
         subscribers.append(rospy.Subscriber(node+'/inference_status', InferenceStatus,
                            lambda m, n=model: receive_status(n, m), queue_size=100))
@@ -183,6 +209,11 @@ def main():
         for topic in debug_topics:
             subscribers.append(rospy.Subscriber(topic, CompressedImage,
                 lambda m, n=topic: receive_output(n, m), queue_size=10, buff_size=2**24))
+        if args.seg_debug:
+            for v in object_views:
+                topic='/perception/camera/objects/debug/'+('instances' if v=='front' else v+'/instances')+'/compressed'
+                subscribers.append(rospy.Subscriber(topic, CompressedImage,
+                    lambda m,n=topic: receive_output(n,m), queue_size=10, buff_size=2**24))
         subscribers.append(rospy.Subscriber('/perception/camera/objects/debug/raw', CameraObjectBoxArray,
                            lambda m: receive_output('debug_raw', m), queue_size=100))
     if args.phase == 'gps':
@@ -231,7 +262,7 @@ def main():
             raise RuntimeError('request rejected: '+str(row))
         return row
     def loaded():
-        return all(m in statuses and statuses[m].loaded and statuses[m].warmed_up for m in NODES)
+        return all(m in statuses and statuses[m].loaded and statuses[m].warmed_up for m in loaded_models)
     try:
         launch_start = time.monotonic()
         initial = {m: 2 if m in active_models and args.phase != 'camera' else 0 for m in NODES}
@@ -243,13 +274,41 @@ def main():
         command += ['lane_target_hz:='+str(config['conditions']['target_hz']['twinlite']),
                     'objects_target_hz:='+str(config['conditions']['target_hz']['yolo']),
                     'traffic_light_hz:='+str(config['conditions']['target_hz']['resnet18'])]
+        if args.objects_only:
+            command += ['start_camera_lane:=false', 'start_traffic_light:=false']
+        if args.objects_config:
+            command.append('camera_objects_config:='+str(args.objects_config))
+        if args.objects_class_groups_config:
+            command.append('objects_class_groups_config:='+str(args.objects_class_groups_config))
+        if args.objects_views == 'all':
+            command.append('objects_views:=[front, left, right]')
+        if args.objects_side_ego_mask:
+            command.append('objects_side_ego_mask:=true')
+        if args.seg_debug:
+            command.append('objects_debug_masks:='+str(args.debug).lower())
         camera = launch('camera', command)
-        for node in NODES.values():
+        for node in (NODES[m] for m in loaded_models):
             rospy.wait_for_service(node+'/set_inference_mode', timeout=60)
         wait(loaded, 'all resident models loaded and dummy warmed', 60)
         report['load_dummy_warmup_sec'] = time.monotonic()-launch_start
+        if args.objects_config:
+            runtime = yaml.safe_load(args.objects_config.read_text())
+            report['objects_runtime'] = runtime
+            report['objects_runtime_sha256'] = hashlib.sha256(args.objects_config.read_bytes()).hexdigest()
+            expected_rates = runtime.get('target_hz_by_view')
+            if expected_rates is not None:
+                effective_rates = rospy.get_param(NODES['yolo']+'/target_hz_by_view', {})
+                report['effective_objects_target_hz_by_view'] = effective_rates
+                report['checks']['objects_target_rates_match_runtime'] = effective_rates == expected_rates
+                if effective_rates != expected_rates:
+                    raise RuntimeError('effective object view rates differ from pinned runtime')
         if args.phase != 'camera':
-            main_command = ['roslaunch', str(Path(__file__).resolve().with_name('b0_main.launch'))]
+            adapter_confidence = (yaml.safe_load(args.objects_config.read_text()).get('conf_thres', .7)
+                                  if args.objects_config else .7)
+            report['adapter_confidence'] = adapter_confidence
+            main_command = ['roslaunch', str(Path(__file__).resolve().with_name('b0_main.launch')),
+                            'fusion_yolo_policy:='+args.fusion_yolo_policy,
+                            'camera_objects_conf_thres:='+str(adapter_confidence)]
             if traced:
                 main_command.append('fusion_trace_path:='+str(args.output/'fusion.jsonl'))
             main_process = launch('main', main_command)
@@ -261,7 +320,8 @@ def main():
             play += ['/gps:=/b0/source/gps', '/gps/fix:=/b0/source/gps/fix']
         playback = launch('bag', play)
         if args.phase == 'camera':
-            wait(lambda: all(inputs[v] for v in IMAGE_TOPICS), 'four input cameras', 10)
+            expected_views = ['front'] if args.objects_only else list(IMAGE_TOPICS)
+            wait(lambda: all(inputs[v] for v in expected_views), 'required input cameras', 10)
             time.sleep(config['camera']['standby_sec'])
             report['checks']['standby_no_compute'] = all(s.successful_batches == 0 for s in statuses.values())
             prepare = [request(m, 1) for m in active_models]
@@ -298,7 +358,11 @@ def main():
         if args.phase == 'camera':
             ended = time.monotonic()
         with lock:
-            report['checks']['other_models_standby'] = all(statuses[m].mode == 0 for m in NODES if m not in active_models)
+            report['checks']['other_models_standby'] = all(statuses[m].mode == 0 for m in loaded_models if m not in active_models)
+            graph_nodes = {node for entries in master.getSystemState()
+                           for _, publishers in entries for node in publishers}
+            report['checks']['requested_model_nodes_only'] = (not args.objects_only or
+                all(NODES[m] not in graph_nodes for m in NODES if m not in loaded_models))
     except Exception as exc:
         report['failures'].append(str(exc))
     finally:
@@ -311,7 +375,7 @@ def main():
             subscriber.unregister()
         trace_rows = {}
         if traced:
-            for model in NODES:
+            for model in loaded_models:
                 path = args.output/(model+'.lifecycle.jsonl')
                 trace_rows[model] = [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
             report['checks']['complete_model_traces'] = all(trace_integrity(rows) for rows in trace_rows.values())
@@ -327,8 +391,9 @@ def main():
                     cutoff, begin = matching[0]['source_cutoff_ns'], record['call_started']
                     if traced:
                         begin = trace_trial(record, trace_rows[model])['accepted_monotonic']
-                for name in MODEL_OUTPUTS[model]:
-                    window_end = ended if args.phase == 'camera' or ended is None else input_window_end(name, inputs, ended)
+                for name in model_outputs[model]:
+                    source_name = name[len('yolo_'):] if name.startswith('yolo_') else name
+                    window_end = ended if args.phase == 'camera' or ended is None else input_window_end(source_name, inputs, ended)
                     measurement = output_report(outputs[name], begin, window_end, cutoff,
                                                 config['camera']['active_sec'] if args.phase == 'camera' else None) if begin and window_end else dict(complete=False)
                     if args.phase != 'camera':
@@ -336,7 +401,11 @@ def main():
                         measurement['window_end_monotonic'] = window_end
                         measurement['post_input_end_outputs'] = sum(r['arrival'] >= window_end for r in outputs[name]) if window_end else None
                     report['measurements'][name] = measurement
-                    report['checks'][name+'_rate'] = output_gate(name, measurement, lifecycle=args.phase == 'camera')
+                    report['checks'][name+'_rate'] = output_gate('yolo' if model=='yolo' else name, measurement, lifecycle=args.phase == 'camera')
+                    if model=='yolo' and args.objects_min_rate is not None:
+                        from run_coco7_live_trials import measurement_gate
+                        report['checks'][name+'_rate']=measurement_gate(measurement,args.objects_min_rate)
+                        measurement['explicit_minimum_hz']=args.objects_min_rate
             report['checks']['no_control_messages'] = not controls
             report['discarded_legacy_control_messages'] = len(discarded_controls)
             report['checks']['no_model_processing_errors'] = all(s.errors == 0 for s in statuses.values())
@@ -344,7 +413,7 @@ def main():
             report['resource_sampler_cost_ms'] = __import__('b0_measurements').quantiles([r['sampling_ms'] for r in resource_rows])
             report['resources']['all_phases'] = resource_report(resource_rows)
             report['last_diagnostics'] = diagnostics[-1] if diagnostics else None
-            report['last_statuses'] = {m: next((r for r in reversed(status_rows) if r['model'] == m), None) for m in NODES}
+            report['last_statuses'] = {m: next((r for r in reversed(status_rows) if r['model'] == m), None) for m in loaded_models}
             report['checks']['gpu_sample_available'] = report['resources']['gpu_available']
             if args.phase != 'camera':
                 main_log = (args.output/'main.log').read_text()

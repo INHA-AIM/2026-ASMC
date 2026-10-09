@@ -8,6 +8,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import rospy
+import rospkg
 import rostest
 from asmc_msgs.msg import LaneBoundaryFamily
 from Msg.msg import Yolo_bbox, Yolo_bbox_arr
@@ -25,7 +26,7 @@ class BboxLaneTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rospy.init_node('bbox_lane_test')
-        cls.camera = load_calibration_snapshot('/root/ws/src/asmc_camera/config/bev/cameras_v2.yaml')[1]['front']
+        cls.camera = load_calibration_snapshot(Path(rospkg.RosPack().get_path('asmc_camera'))/'config/bev/cameras_v2.yaml')[1]['front']
         cls.result = cls.overlay = None
         cls.lane_pub = rospy.Publisher('/perception/lane/boundary_family', LaneBoundaryFamily, queue_size=1)
         cls.image_pub = rospy.Publisher('/bbox_test/image', CompressedImage, queue_size=1)

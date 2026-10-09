@@ -1,0 +1,290 @@
+{
+  "schema_version": 1,
+  "profile": "C1",
+  "phase": "camera",
+  "bag_id": "camera",
+  "bag": "/data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag",
+  "bag_duration_sec": 176.05691480636597,
+  "repeat": 2,
+  "all_models_loaded": false,
+  "loaded_models": [
+    "yolo"
+  ],
+  "active_models": [
+    "yolo"
+  ],
+  "trace_enabled": false,
+  "camera_debug": true,
+  "main_intrinsic_fusion_debug": false,
+  "gps_gap": false,
+  "commands": [
+    {
+      "label": "camera",
+      "argv": [
+        "roslaunch",
+        "asmc_camera",
+        "perception.launch",
+        "profile:=planning",
+        "start_visualization:=true",
+        "objects_debug_raw:=true",
+        "lane_enable_shared_family_debug:=true",
+        "traffic_light_wait_first:=0",
+        "lane_initial_mode:=0",
+        "objects_initial_mode:=0",
+        "traffic_light_initial_mode:=0",
+        "lane_target_hz:=10.0",
+        "objects_target_hz:=20.0",
+        "traffic_light_hz:=10.0",
+        "start_camera_lane:=false",
+        "start_traffic_light:=false",
+        "camera_objects_config:=/root/ws/src/asmc_camera/config/camera/yolo11m_coco_all.yaml",
+        "objects_class_groups_config:=/root/ws/src/asmc_camera/config/camera/object_classes_coco_all.yaml"
+      ],
+      "launched_monotonic": 218232.554965183,
+      "pid": 247225
+    },
+    {
+      "label": "bag",
+      "argv": [
+        "rosbag",
+        "play",
+        "/data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag",
+        "--clock",
+        "--quiet",
+        "--rate=1.0",
+        "--delay=1.0",
+        "--start=44.0",
+        "--duration=42.0"
+      ],
+      "launched_monotonic": 218235.272464107,
+      "pid": 247360
+    }
+  ],
+  "failures": [],
+  "checks": {
+    "standby_no_compute": true,
+    "other_models_standby": true,
+    "requested_model_nodes_only": true,
+    "yolo_rate": true,
+    "no_control_messages": true,
+    "no_model_processing_errors": true,
+    "gpu_sample_available": true
+  },
+  "source_config_sha256": "21fd6593baf4afb886b6ca3ff572dac7e90728a02330e07297bca29957f32876",
+  "timing_anchor": "rpc_start_conservative",
+  "execution_source_sha256": {
+    "run_camera_lidar_b0.py": "7eeac282af127f52791a8ed55a19b410d11b53e96e7e85149e9e2dd66d127a0c",
+    "run_b0_matrix.py": "430408d47d27a458b08368f63b3865fb4bcb8eea96a7b3525e12cc4f52a50b56",
+    "analyze_b0_matrix.py": "46e014c969a48be0f5e476941dcdb7e24590a7da875fe7b97b9ef82cca7e4636",
+    "b0_resources.py": "8dd75a6320a071885b191824774ba9691bc3400c5a57801c988ae89208d32c48",
+    "test_b0_measurements.py": "e1b989e6bde35e0e80b1c64bc7f72dd5e51f8cbc74b68aadedd19967f4aac889",
+    "b0_measurements.py": "87dc41de3c58da3d81699913e41d1ddd28e94a70921679320e508c3411eaf395"
+  },
+  "load_dummy_warmup_sec": 2.7170616099901963,
+  "prepare_ready_monotonic": 218238.915905264,
+  "common_active_started": 218238.918900208,
+  "measurements": {
+    "yolo": {
+      "messages": 398,
+      "hz": 19.894557950112087,
+      "valid_messages": 398,
+      "excluded_old_epoch_messages": 0,
+      "first_second": 19,
+      "five_second_hz": [
+        19.8,
+        20.0,
+        19.8,
+        20.0
+      ],
+      "max_gap_sec": 0.1123082309786696,
+      "first_output_sec": 0.033993270015344024,
+      "duplicate_stamps": 0,
+      "reversed_stamps": 0,
+      "complete": true,
+      "duration_sec": 20.005470892996527,
+      "valid_ratio": 1.0,
+      "source_age_ms": {
+        "samples": 398,
+        "p50": 15.052642500000001,
+        "p95": 21.660720599999998,
+        "p99": 23.821699349999978,
+        "maximum": 33.811287
+      },
+      "input_to_output_wall_ms": {
+        "samples": 398,
+        "p50": 19.794850988546386,
+        "p95": 24.177006092213556,
+        "p99": 26.186033458507136,
+        "maximum": 37.74936599074863
+      },
+      "input_anchor_missing": 0,
+      "input_anchor_ambiguous": 0,
+      "negative_source_age": 0
+    }
+  },
+  "discarded_legacy_control_messages": 0,
+  "resources": {
+    "samples": 100,
+    "gpu_available": true,
+    "gpu_missing_samples": 0,
+    "gpu_utilization_percent": {
+      "samples": 100,
+      "p50": 27.5,
+      "p95": 39.05,
+      "p99": 43.050000000000026,
+      "maximum": 48.0
+    },
+    "gpu_memory_mib": {
+      "samples": 100,
+      "p50": 2531.0,
+      "p95": 2580.0,
+      "p99": 2581.0,
+      "maximum": 2581.0
+    },
+    "gpu_process_memory": "unavailable_not_inferred_from_global_memory",
+    "nodes": {
+      "/camera_object_detector": {
+        "cpu_percent": {
+          "samples": 100,
+          "p50": 39.89621382070439,
+          "p95": 54.06867321375007,
+          "p99": 59.31338225338913,
+          "maximum": 59.46742785388541
+        },
+        "rss_mib": {
+          "samples": 100,
+          "p50": 1031.46875,
+          "p95": 1031.609375,
+          "p99": 1031.62546875,
+          "maximum": 1031.671875
+        }
+      }
+    },
+    "all_phases": {
+      "samples": 140,
+      "gpu_available": true,
+      "gpu_missing_samples": 0,
+      "gpu_utilization_percent": {
+        "samples": 140,
+        "p50": 21.5,
+        "p95": 38.05000000000001,
+        "p99": 41.83000000000004,
+        "maximum": 48.0
+      },
+      "gpu_memory_mib": {
+        "samples": 140,
+        "p50": 2522.0,
+        "p95": 2580.0,
+        "p99": 2580.61,
+        "maximum": 2581.0
+      },
+      "gpu_process_memory": "unavailable_not_inferred_from_global_memory",
+      "nodes": {
+        "/camera_object_detector": {
+          "cpu_percent": {
+            "samples": 132,
+            "p50": 39.87613684900675,
+            "p95": 96.80414036979982,
+            "p99": 101.64445409022574,
+            "maximum": 105.2434401109531
+          },
+          "rss_mib": {
+            "samples": 133,
+            "p50": 1031.44140625,
+            "p95": 1031.609375,
+            "p99": 1031.68515625,
+            "maximum": 1031.796875
+          }
+        }
+      }
+    }
+  },
+  "resource_sampler_cost_ms": {
+    "samples": 140,
+    "p50": 31.927886011544615,
+    "p95": 44.70960560283858,
+    "p99": 53.500566300645005,
+    "maximum": 72.677844989812
+  },
+  "last_diagnostics": {
+    "arrival": 218259.156604904,
+    "status": [
+      {
+        "level": 0,
+        "message": "running",
+        "values": {
+          "backend": "ultralytics",
+          "weights": "/tmp/boundary_ws/src/asmc_camera/models/object_detection/yolo11m.pt",
+          "weights_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+          "device": "cuda:0",
+          "model_device": "cuda:0",
+          "ultralytics": "8.4.150",
+          "torch": "2.1.2+cu118",
+          "conf_thres": "0.7",
+          "allowed_names": "['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']",
+          "predict_overrides": "{'iou': 0.7, 'max_det': 300, 'agnostic_nms': False}",
+          "warmup_ms": "452.6",
+          "model_load_ms": "687.98606202472",
+          "hood_mask_enabled": "True",
+          "hood_mask_config_sha256": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+          "hood_mask_polygon_normalized": "[[0.051562, 0.998611], [0.947656, 0.998611], [0.821875, 0.888889], [0.786719, 0.863889], [0.748437, 0.843056], [0.650781, 0.816667], [0.539844, 0.806944], [0.377344, 0.8125], [0.313281, 0.823611], [0.257031, 0.840278], [0.2125, 0.863889], [0.177344, 0.888889]]",
+          "hood_mask_image_width": "1280",
+          "hood_mask_image_height": "720",
+          "hood_mask_polygon_pixels": "[[65, 718], [1212, 718], [1052, 640], [1007, 622], [957, 607], [832, 588], [691, 580], [483, 585], [400, 592], [328, 605], [272, 622], [227, 640]]",
+          "hood_mask_excluded_pixels": "114058",
+          "ego_hood_filter_enabled": "False",
+          "ego_hood_filter_config_sha256": "",
+          "ego_hood_filter_source_class_names": "['car']",
+          "ego_hood_filter_min_width_ratio": "0.6",
+          "ego_hood_filter_min_center_y_ratio": "0.85",
+          "ego_hood_filter_min_bottom_ratio": "0.95",
+          "debug_raw_enabled": "True",
+          "ego_hood_filter_last_counts": "{'raw': 3, 'kept': 3, 'excluded': 0}",
+          "ego_hood_filter_excluded_total": "0",
+          "filter_errors": "0",
+          "processing_fps": "14.979",
+          "output_frames": "402",
+          "received_frames": "447",
+          "replaced_frames": "0",
+          "decode_errors": "0",
+          "inference_errors": "0",
+          "mask_errors": "0",
+          "header_errors": "0",
+          "duplicate_nodes": "[]",
+          "latest_input_stamp_ns": "1789980380595441818",
+          "latest_result_stamp_ns": "1789980380595441818",
+          "input_silence_sec": "0.266",
+          "end_to_end_p50_ms": "14.9487295",
+          "end_to_end_p95_ms": "21.7612029",
+          "queue_to_output_p50_ms": "19.86182750260923",
+          "queue_to_output_p95_ms": "24.438637154526077",
+          "average_stage_ms": "{'decode_ms': 2.477, 'hood_mask_ms': 0.374, 'inference_ms': 15.319, 'preprocess_ms': 0.881, 'postprocess_ms': 0.899, 'ego_hood_filter_ms': 0.002}"
+        }
+      }
+    ]
+  },
+  "last_statuses": {
+    "yolo": {
+      "model": "yolo",
+      "arrival": 218259.181981053,
+      "ros_ns": 1789980380626947908,
+      "mode": 2,
+      "generation": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "prepared": true,
+      "pipeline_ready": true,
+      "successful_batches": 402,
+      "errors": 0,
+      "reason": "running",
+      "processing_hz": 19.84090747547652,
+      "source_cutoff_ns": 1789980360616449832
+    }
+  },
+  "passed": true,
+  "classification_or_count_acceptance": "computed_across_repeats_by_matrix_analysis",
+  "execution_return_codes": {
+    "camera": 0,
+    "bag": 0
+  }
+}

@@ -29,6 +29,7 @@ def main():
     parser.add_argument('--hood-mask',action='store_true')
     parser.add_argument('--ego-hood-filter',action='store_true')
     parser.add_argument('--debug-raw',action='store_true')
+    parser.add_argument('--view',choices=['front','left','right'],default='front')
     args=parser.parse_args()
     debug_raw=args.debug_raw or args.ego_hood_filter
     master=rosgraph.Master('/object_overlay_preflight')
@@ -38,15 +39,24 @@ def main():
     wait(ready,'master ready',15)
     master.setParam('/use_sim_time',False)
     rospy.init_node('object_overlay_ros_check',anonymous=True)
+    frame_id='camera_'+args.view
+    wrong_frame_id='camera_left' if args.view=='front' else 'camera_front'
+    debug_topic='/perception/camera/objects/debug/'+('' if args.view=='front' else args.view+'/')+'image/compressed'
+    image_topic='/image_jpeg/compressed' if args.view=='front' else '/cam_'+args.view+'/image_jpeg/compressed'
+    rospy.set_param('~view',args.view)
+    rospy.set_param('~image_topic',image_topic)
+    rospy.set_param('~debug_topic',debug_topic)
     rospy.set_param('~hood_mask',args.hood_mask)
     rospy.set_param('~ego_hood_filter',args.ego_hood_filter)
     rospy.set_param('~debug_raw',debug_raw)
     rospy.set_param('~ego_hood_filter_config',str(Path(__file__).resolve().parents[2]/'src/asmc_camera/config/camera/yolo_ego_hood_filter_v1.yaml'))
-    rospy.set_param('~hood_mask_config',str(Path(__file__).resolve().parents[2]/'src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml'))
+    mask_name='yolo_hood_mask_v1.yaml' if args.view=='front' else 'yolo_ego_mask_'+args.view+'_v1.yaml'
+    rospy.set_param('~hood_mask_config',str(Path(__file__).resolve().parents[2]/'src/asmc_camera/config/camera'/mask_name))
     visualizer=ObjectVisualizerNode()
     diagnostic_publisher=rospy.Publisher('/perception/camera/objects/diagnostics',DiagnosticArray,queue_size=1,latch=True)
     def profile(enabled,sha):
         diagnostic_publisher.publish(DiagnosticArray(status=[DiagnosticStatus(name='camera_objects/inference',values=[
+            KeyValue(key='ego_mask_by_view',value=str({args.view:dict(enabled=enabled,config_sha256=sha)})),
             KeyValue(key='hood_mask_enabled',value=str(enabled)),KeyValue(key='hood_mask_config_sha256',value=sha),
             KeyValue(key='ego_hood_filter_enabled',value=str(args.ego_hood_filter)),
             KeyValue(key='ego_hood_filter_config_sha256',value=visualizer.ego_hood_filter.config_sha256),
@@ -54,8 +64,8 @@ def main():
     profile(args.hood_mask,visualizer.hood_mask.config_sha256)
     wait(lambda:visualizer.producer_profile is not None,'matching producer diagnostic')
     outputs=[]
-    subscription=rospy.Subscriber('/perception/camera/objects/debug/image/compressed',CompressedImage,outputs.append,queue_size=10)
-    images=rospy.Publisher('/image_jpeg/compressed',CompressedImage,queue_size=5)
+    subscription=rospy.Subscriber(debug_topic,CompressedImage,outputs.append,queue_size=10)
+    images=rospy.Publisher(image_topic,CompressedImage,queue_size=5)
     objects=rospy.Publisher('/perception/camera/objects',CameraObjectBoxArray,queue_size=5)
     raw_publisher=(rospy.Publisher('/perception/camera/objects/debug/raw',CameraObjectBoxArray,queue_size=5)
                    if debug_raw else None)
@@ -70,7 +80,7 @@ def main():
     jpeg=cv2.imencode('.jpg',np.zeros((160,240,3),np.uint8))[1].tobytes()
     checks={}
     def pair(seq):
-        h=Header(seq=seq,stamp=rospy.Time.now(),frame_id='camera_front')
+        h=Header(seq=seq,stamp=rospy.Time.now(),frame_id=frame_id)
         return CompressedImage(header=h,format='jpeg',data=jpeg),CameraObjectBoxArray(header=copy.deepcopy(h),image_width=240,image_height=160,valid=True)
     image,result=pair(1)
     result.boxes=[CameraObjectBox(xmin=60,ymin=70,xmax=140,ymax=130,class_name='vehicle',source_class_name='car',confidence=.9,confidence_valid=True)]
@@ -83,7 +93,7 @@ def main():
     image,result=pair(3);result.header.stamp+=rospy.Duration(.01)
     images.publish(image);publish(result);time.sleep(.2)
     checks['different_stamp_not_drawn']=len(outputs)==2
-    image,result=pair(4);result.header.frame_id='camera_left'
+    image,result=pair(4);result.header.frame_id=wrong_frame_id
     images.publish(image);publish(result);time.sleep(.2)
     checks['different_camera_not_drawn']=len(outputs)==2
     image,result=pair(5);result.image_width=1280
@@ -94,7 +104,9 @@ def main():
     wait(lambda:len(outputs)==3,'invalid result displayed');checks['invalid_result_displayed']=(outputs[-1].header.stamp==image.header.stamp and outputs[-1].header.frame_id==image.header.frame_id)
     if args.hood_mask:
         decoded=cv2.imdecode(np.frombuffer(outputs[-1].data,np.uint8),1)
-        checks['mask_shading_original_dimensions']=decoded.shape==(160,240,3) and int(decoded[150,180,2])>int(decoded[150,180,0])+20
+        bitmap,_=visualizer.hood_mask.geometry(160,240)
+        ys,xs=np.nonzero(bitmap);y=int(ys[-1]);row_xs=xs[ys==y];x=int(row_xs[len(row_xs)//2])
+        checks['mask_shading_original_dimensions']=decoded.shape==(160,240,3) and int(decoded[y,x,2])>int(decoded[y,x,0])+20
         profile(True,'different-configuration')
         wait(lambda:visualizer.producer_profile[1]=='different-configuration','different mask diagnostic')
         image,result=pair(7);images.publish(image);publish(result);time.sleep(.2)
@@ -111,7 +123,7 @@ def main():
     if debug_raw:
         count=len(outputs);image,result=pair(9);objects.publish(result);images.publish(image);time.sleep(.2)
         checks['raw_same_frame_required']=len(outputs)==count
-        count=len(outputs);image,result=pair(10);raw=copy.deepcopy(result);raw.header.frame_id='camera_left'
+        count=len(outputs);image,result=pair(10);raw=copy.deepcopy(result);raw.header.frame_id=wrong_frame_id
         raw_publisher.publish(raw);objects.publish(result);images.publish(image);time.sleep(.2)
         checks['wrong_raw_camera_rejected']=len(outputs)==count
         image,result=pair(11);raw=copy.deepcopy(result);raw.header.stamp+=rospy.Duration(.01)

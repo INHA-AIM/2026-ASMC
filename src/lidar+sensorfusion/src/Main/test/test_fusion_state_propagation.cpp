@@ -61,9 +61,11 @@ TEST(FusionStatePropagation, CopiesOnlyClassificationAndPreservesLockSemantics) 
     source.str_ObjectClass = "car"; source.str_YoloClass = "truck";
     source.last_seen_class = "person"; source.continuity_counter = 2;
     source.class_miss_counter = 1; source.is_class_locked = true;
+    source.camera_observation_ns=123; source.camera_observation_epoch=9;
     target.s32_Id = 9; target.f32_CoreX = 100; target.s32_MissCount = 4;
     fusion_state::Copy(source, target);
     EXPECT_EQ(state(source), state(target));
+    EXPECT_EQ(123u,target.camera_observation_ns); EXPECT_EQ(9u,target.camera_observation_epoch);
     EXPECT_EQ(9, target.s32_Id); EXPECT_EQ(100, target.f32_CoreX);
     EXPECT_EQ(4, target.s32_MissCount);
     fusion_state::Copy(source, target, true);
@@ -102,4 +104,22 @@ TEST(FusionStatePropagation, NegativeControlLosingCarryChangesContinuousResult) 
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
+}
+
+TEST(FusionStatePropagation, ReuseAfterHistoryCopyCannotIncrementConfirmationOrMiss) {
+    LiDARObjectInfo previous, live, historical;
+    previous.s32_Id=live.s32_Id=historical.s32_Id=7;
+    ASSERT_TRUE(fusion_class::BeginObservation(previous,100,1));
+    fusion_class::Observe(previous,"dog","dog",5,3);
+    fusion_state::Copy(previous,live);
+    fusion_state::Copy(live,historical,true);
+    EXPECT_FALSE(fusion_class::BeginObservation(historical,100,1));
+    EXPECT_EQ(1,historical.continuity_counter);
+    fusion_class::Miss(historical,3);
+    fusion_state::Copy(historical,previous);
+    EXPECT_FALSE(fusion_class::BeginObservation(previous,100,1));
+    EXPECT_EQ(1,previous.class_miss_counter);
+    ASSERT_TRUE(fusion_class::BeginObservation(previous,200,1));
+    fusion_class::Miss(previous,3);
+    EXPECT_EQ(2,previous.class_miss_counter);
 }

@@ -1,11 +1,38 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <vector>
 
 namespace fusion_sync {
+
+// A newly admitted normal empty result invalidates older nonempty evidence,
+// including while an older LiDAR snapshot is still waiting for association.
+template <class Frames>
+std::uint64_t LatestEmptyStamp(const Frames& frames) {
+    std::uint64_t barrier = 0;
+    for (const auto& frame : frames)
+        if (frame.boxes.empty()) barrier = std::max(barrier, frame.stamp.toNSec());
+    return barrier;
+}
+
+template <class Frame>
+std::int64_t EligibleObservationStamp(const Frame& frame, std::uint64_t empty_barrier) {
+    // Empty observations are valid geometry/time matches too. Suppressing
+    // every older stamp starves a waiting LiDAR snapshot in empty scenes.
+    if (!frame.boxes.empty() && frame.stamp.toNSec() < empty_barrier) return 0;
+    return static_cast<std::int64_t>(frame.stamp.toNSec());
+}
+
+template <class Frames>
+bool ConsumeMatchedFrame(Frames& frames, std::size_t index, bool reusable) {
+    const bool used_before = frames.at(index).consumed;
+    if (reusable) frames.at(index).consumed = true;
+    else frames.erase(frames.begin() + index);
+    return used_before;
+}
 
 enum class MatchAction {
     Wait,
@@ -34,6 +61,7 @@ inline MatchDecision DecideMatch(
 
     for (std::size_t index = 0; index < yolo_stamps_ns.size(); ++index) {
         const std::int64_t stamp_ns = yolo_stamps_ns[index];
+        if (stamp_ns <= 0) continue;  // An invalidated observation is never a candidate.
         if (stamp_ns >= lidar_stamp_ns) has_future_frame = true;
         const std::int64_t offset_ns = stamp_ns >= lidar_stamp_ns
             ? stamp_ns - lidar_stamp_ns

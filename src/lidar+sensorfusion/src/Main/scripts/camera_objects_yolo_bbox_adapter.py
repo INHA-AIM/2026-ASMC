@@ -9,7 +9,19 @@ from Msg.msg import Yolo_bbox, Yolo_bbox_arr
 
 
 EXPECTED_MD5 = "310c671afb3693e7909db6453d115b79"
-ALLOWED_NAMES = ("bus", "truck", "person", "car")
+ALLOWED_NAMES = ("person", "dog", "bicycle", "car", "motorcycle", "bus", "truck")
+
+
+def validate_threshold(value):
+    if isinstance(value, bool):
+        raise ValueError('adapter confidence must be finite and in [0,1]')
+    try:
+        threshold = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('adapter confidence must be finite and in [0,1]') from exc
+    if not math.isfinite(threshold) or not 0 <= threshold <= 1:
+        raise ValueError('adapter confidence must be finite and in [0,1]')
+    return threshold
 
 
 def check_message_build(actual=None):
@@ -20,6 +32,7 @@ def check_message_build(actual=None):
 
 
 def convert(message, allowed_names=ALLOWED_NAMES, conf_thres=0.7):
+    conf_thres = validate_threshold(conf_thres)
     if (not message.valid or message.header.frame_id != "camera_front"
             or message.header.stamp.is_zero() or not message.image_width or not message.image_height):
         return None
@@ -45,11 +58,24 @@ def main():
         rospy.logfatal(str(exc))
         raise SystemExit(1)
     allowed = rospy.get_param("~allowed_names", list(ALLOWED_NAMES))
-    threshold = float(rospy.get_param("~conf_thres", 0.7))
+    threshold = validate_threshold(rospy.get_param("~conf_thres", 0.0))
+    # Cache subscription avoids a master RPC on every camera callback. This is
+    # an additional consumer cutoff; it cannot recover boxes cut by the producer.
+    rospy.set_param("~conf_thres", threshold)
+    last_threshold = threshold
     publisher = rospy.Publisher("/YOLO/BBox", Yolo_bbox_arr, queue_size=5)
 
     def callback(message):
-        result = convert(message, allowed, threshold)
+        nonlocal last_threshold
+        try:
+            current = validate_threshold(rospy.get_param_cached("~conf_thres", threshold))
+        except (ValueError, rospy.ROSException) as exc:
+            rospy.logerr_throttle(5, "camera object adapter withheld input: invalid consumer cutoff: %s", exc)
+            return
+        if current != last_threshold:
+            rospy.loginfo("camera object adapter consumer cutoff changed: %.3f -> %.3f", last_threshold, current)
+            last_threshold = current
+        result = convert(message, allowed, current)
         if result is not None:
             publisher.publish(result)
         else:
