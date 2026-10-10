@@ -9,7 +9,7 @@
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
 **이번 PR #78은 v5 대량 활용 train 확장과 v4 검수 자료를 제공한다. 운영 실행은 수정하지 않는다.**
-최신 수치·적용 정책은 [v5 상자·방벽 보강 결과](#상자방벽-혼합-라벨-보강과-capture-활용--2026-10-11-v5-obstacles-r1)를 먼저 읽는다.
+최신 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
 아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
@@ -1152,3 +1152,89 @@ Roboflow 박스의 오류를 뜻하지 않는다. 고정 X 진단은 부분 GT�
   평가 장면을 나눈다. 현재 작업에서는 추가 수집이나 학습을 시작하지 않았다.
 
 출처와 계수는 [방벽 자료 확인](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/plastic-barrier-coverage-v1.json)에 남긴다.
+
+## Capture actor 연결 보강 — 2026-10-11 v5-capture-r1
+
+**Capture만 보강했다. 샘플링 변경·추가 수집·GPU 추론·학습·운영 변경은 하지 않았다.**
+기존 v5-obstacles-r1의 17,631장에 Capture train **4,867장·13,315객체**를 추가했다.
+Capture는 5→**4,872장**, 전체는 **22,498장·127,334객체**다. Roboflow 17,626장은
+변경하지 않았다. train은 16,851→**21,718장**, selection 113장·heldout 667장은 그대로다.
+이전 채택 자료의 annotation·품질 구분과 Capture 12/3/3 run 배정을 유지한다.
+
+| 학습 클래스 | 이번 Capture 추가 객체 | 전체 객체 |
+|---|---:|---:|
+| box | 802 | 1,470 |
+| traffic_drum | 363 | 18,520 |
+| traffic_cone | 584 | 1,372 |
+| concrete_barrier | 36 | 2,196 |
+| bicycle | 249 | 249 |
+| dog | 106 | 136 |
+| person | 2,312 | 24,566 |
+| car | 6,719 | 18,676 |
+| bus | 945 | 4,214 |
+| truck | 1,199 | 3,229 |
+
+`plastic_barrier` 585개·`steel_barricade` 505개·`deer` 24개는 이번에 늘지 않았다.
+`stroller`는 여전히 없다. 있는 자료를 다른 종류로 바꾸어 부족 클래스를 채우지 않았다.
+15종의 양성 자료가 있다는 것과 독립적인 16종 평가 준비 완료를 구분한다.
+
+### 연결 근거와 한계
+
+- train의 미확정 actor를 run·원본 category·actor ID·연속 frame 구간으로 나눴다.
+  40프레임 초과 재등장은 별도 구간이며, run/category가 다른 같은 숫자 ID는 연결하지 않는다.
+- 167구간 중 RGB 종류 검토가 가능한 72구간의 가까운/앞/뒤 영상을 확인해 **70구간**을
+  연결했다. 실제 채택 영상에는 67구간·2,494개 종류 확정 annotation이 사용됐다.
+  나머지 추가 객체는 이미 종류가 명확한 원본 GT다. 95개의 극소형/불명확 구간과
+  두 미확정 종류는 teacher나 인접 run의 ID로 추정하지 않았다.
+- `Obstacle` semantic의 공통 색만으로 상자·드럼·동물을 나누지 않았다. RGB에서 확인한
+  종류를 원본 actor에 연결하고 GT bbox·mask·annotation ID를 보존했다.
+- 자전거 탑승 장면은 **별도 person GT와 Vehicle bicycle GT/mask**가 있는 것을 확인했다.
+  사람과 자전거를 합친 큰 박스를 두 번 복제한 자료가 아니다. 자전거의 원본 범위를 유지한다.
+- foggy 5pm run의 Obstacle 15는 초기 frame 74의 RGB가 bicycle 모습이므로 drum을
+  84 이후로만 연결했다. Obstacle 57 dog는 265–303만 연결하고 다른 장면이 보이는
+  376까지 전파하지 않았다. 원인은 확정하지 않았으며 추가 확인 사진을 보존했다.
+- 새 자료는 전방 2,096장·좌 1,251장·우 1,520장, 9개 train run에서 나왔다.
+  run 이름 기준 SUNNY 4,078장·FOGGY 789장이다. 프레임별 터널 여부는 unknown이다.
+  인접 프레임의 정보는 상관되므로 이를 4,867개의 독립 장면으로 해석하지 않는다.
+- RGB 검토용 최소 면적 250px²는 **검토할 근거 영상 선택 기준**이며 학습 필터가 아니다.
+  종류가 연결된 영상의 작은 양성 GT는 export에 남는다. 표시 정책도 학습 필터가 아니다.
+- 모든 포함 영상의 16종 누락 주석을 전수 확인했다는 뜻은 아니다. 사용자 허용 v5 breadth
+  정책을 유지하며 `complete_target_annotation_asserted=false`로 기록한다. 알려진 미확정
+  actor가 남는 영상·빈/누락 GT·기존 기하 문제·평가 유사 영상은 새 train에 넣지 않았다.
+
+[고정 설정](../../../config/experiments/camera_training_data_v5_capture.json),
+[결과와 split별 수량](../../../config/baselines/perception_camera_training_data_v5_capture.yaml),
+[actor별 원본 SHA·구간 근거](../../../config/baselines/evidence/camera_training_data_v5_capture/actor-source-evidence.json),
+[실제 YOLO 파일 재검증](../../../config/baselines/evidence/camera_training_data_v5_capture/verification.json)을 연결한다.
+전체 22,498장·127,334객체의 클래스 ID·기하·원본 파일 SHA를 재검증했고 pixel split 누출은 0이다.
+이것은 라벨 의미 정확도나 모델 성능 개선 수치가 아니다.
+
+갤러리: `http://localhost:8768/camera-training-data-audit-v5-capture/`.
+actor RGB 15개 시트와 원본→학습 라벨 110개 비교를 기존 날짜·E 번호 목차에 연결했다.
+이미지·mask·전체 manifest는 로컬 데이터 영역에 있고 Git에는 도구·설정·압축된 근거만 남긴다.
+
+### 재현
+
+상위 workspace에서 `ASMC_DATA`·`ASMC_ARTIFACTS`를 지정하고 감사 worktree에서 실행한다.
+출력 경로가 이미 있으면 새 revision 경로를 사용한다. 원본·이전 export를 덮어쓰지 않는다.
+
+```bash
+python tools/perception/prepare_capture_training_data.py render \
+  --previous "$ASMC_DATA/roboflow/curated-v5-obstacles-r1/curated.jsonl" \
+  --output "$ASMC_ARTIFACTS/camera-training-data-audit-v5-capture/actor-review"
+python tools/perception/prepare_capture_training_data.py bind \
+  --previous "$ASMC_DATA/roboflow/curated-v5-obstacles-r1/curated.jsonl" \
+  --intervals "$ASMC_ARTIFACTS/camera-training-data-audit-v5-capture/actor-review/intervals.json" \
+  --decisions config/baselines/evidence/camera_training_data_v5_capture/actor-decisions.json \
+  --output "$ASMC_ARTIFACTS/camera-training-data-audit-v5-capture/actor-reviews.json"
+python tools/perception/prepare_capture_training_data.py export \
+  --previous "$ASMC_DATA/roboflow/curated-v5-obstacles-r1/curated.jsonl" \
+  --labels config/datasets/camera_object_labels_v2.json \
+  --reviews "$ASMC_ARTIFACTS/camera-training-data-audit-v5-capture/actor-reviews.json" \
+  --output "$ASMC_DATA/roboflow/curated-v5-capture-r1" \
+  --export "$ASMC_DATA/dataset_versions/camera_objects_bbox_v5-capture-r1"
+```
+
+다음 작업에서 run·소스·클래스 분포와 고정 평가 커버리지를 확인해 학습 샘플링을 정한다.
+그 뒤 동일 bbox 자료로 YOLO26l detect/YOLOE detection의 짧은 비교 학습을 한다.
+이번 Capture 보강을 그 작업들의 완료나 운영 모델 교체로 설명하지 않는다.
