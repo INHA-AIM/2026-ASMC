@@ -16,8 +16,28 @@
     "yolo26l_started_commit": "4ab7cc9bcf034c9fdffa4e9e6039f15405f0c71f",
     "yolo26l_loaded_trainer_sha256": "5693ea87be36379f988aa069a011f0468c69adac07d510c275274d4e6b43604e",
     "later_edits": "validation, resume, reporting and evaluator fixes; original fresh-run training settings unchanged",
-    "yoloe26l": "source SHA recorded at actual process start"
+    "yoloe26l": "source SHA recorded at actual process start",
+    "yoloe26l_loaded_trainer_sha256": "13e3019ea10d6291a4626856ead6e1a0551245c66523a3ede6dd28d8cb1d57bb"
   },
   "container_image_id": "sha256:847c0870a0df69205362c82e9ecd18e1ca7005224284f9730a810a6e39b8c5b3",
-  "pip_freeze_sha256": "b8749c91ea57903496362766f2c5b276b83d8eb732e1fdaf8344a37d7954c216"
+  "pip_freeze_sha256": "b8749c91ea57903496362766f2c5b276b83d8eb732e1fdaf8344a37d7954c216",
+  "completed_training": {
+    "yolo26l": {
+      "completed_epochs": 17,
+      "completed_batches": 34000,
+      "wall_seconds": 9394.27515673096,
+      "sample_order_sha256": "2c9d2088ab523205e3c7a3f159451fa08e7f03109bf03b67642aa735ff301a75",
+      "actual_head": "Detect",
+      "parameters": 26201016,
+      "trainable_parameters": 26201016,
+      "amp_enabled": true,
+      "actual_batch": 4
+    },
+    "optimizer_checkpoint_cpu_check": {
+      "epoch": 16,
+      "optimizer_present": true,
+      "ema_updates": 8500
+    },
+    "quality_evaluation": "pending matched YOLOE completion; native metric columns are placeholders"
+  }
 }
