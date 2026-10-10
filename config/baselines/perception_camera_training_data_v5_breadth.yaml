@@ -1,0 +1,153 @@
+schema_version: 1
+experiment: camera_training_data_v5_breadth
+date: '2026-10-11'
+scope: User-authorized source-mapped training expansion; accept vehicle subclass noise
+  and unverified completeness
+configuration: config/experiments/camera_training_data_v5_breadth.json
+verification: config/baselines/evidence/camera_training_data_v5_breadth/verification.json
+acquisition:
+  projects: 22
+  exported_roboflow_images: 46326
+  public_version_projects: 17
+  snapshot_projects: 5
+  includes_augmentations_and_cross_project_duplicates: true
+previous:
+  images: 5013
+  objects: 73030
+  splits:
+    train: 4233
+    selection: 113
+    heldout: 667
+  manifest_sha256: a528b775b8709cb40b4cd8869924948af78f1b7dd0f1ea988c97b05b78882be9
+current:
+  schema_version: 1
+  policy: user_authorized_breadth_training_v1
+  previous_curated_sha256: bb88c0dce7e13cd1b5231a349ce1b87701af9345b358a2c82a7ef8599cbd234d
+  config_sha256: 355c7abff9f2f600414c88b8eab5302218b579d338aed17a111a04fff2a3dd23
+  labels_sha256: a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698
+  reviews_sha256: 6e03e441cb7d3e4576f8e726f1823f9698f6bfede153c7090b679ce50613f7b5
+  source_profiles_sha256: e6832405538986a8505b832aa0f3db747a391e38be858f8ac9e936ba818aa47a
+  previous_images: 5013
+  images: 17465
+  roboflow_images: 17460
+  capture_images: 5
+  objects: 113288
+  splits:
+    train: 16685
+    selection: 113
+    heldout: 667
+  objects_by_class:
+    person: 22155
+    car: 11942
+    traffic_cone: 788
+    dog: 30
+    deer: 24
+    traffic_drum: 17901
+    bollard: 50950
+    concrete_barrier: 2029
+    bus: 3267
+    steel_barricade: 441
+    plastic_barrier: 548
+    box: 592
+    truck: 2030
+    motorcycle: 591
+  quality_tiers:
+    previous_reviewed_subset: 5013
+    source_mapped_breadth_training: 12452
+  evaluation_membership_and_labels_unchanged: true
+  original_geometry_changes: 0
+  existing_split_changes: 0
+  previous_accepted_lost: 0
+  strict_quality_equivalent: false
+  training_performed: false
+  runtime_changes: false
+  pilot_usable: true
+  all_16_classes_covered: false
+  new_images: 12452
+  new_objects: 40258
+  new_by_source:
+    roboflow:aiv5challenge/yeonsoo-sarang: 1767
+    roboflow:battery-detection/cone-traffic-tirxp: 284
+    roboflow:hl-fma/hlfma_2: 906
+    roboflow:jjj-nx9di/katri_new_data-xkbev: 1109
+    roboflow:mino-qjf5p/vi2re: 2325
+    roboflow:parkminseo/final-ftuy2: 800
+    roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh: 353
+    roboflow:yolo-m5lvd/detection-bzetd: 161
+    roboflow:yuna-z15io/obstcle-mi0kq: 1
+    roboflow:hl-fma/hlfma_3: 4746
+  new_classes:
+    car: 11203
+    traffic_cone: 691
+    person: 21267
+    traffic_drum: 1231
+    bollard: 700
+    bus: 2469
+    concrete_barrier: 608
+    box: 116
+    steel_barricade: 21
+    plastic_barrier: 31
+    truck: 1919
+    motorcycle: 2
+  rejected_training_candidates:
+    empty_annotations: 5764
+    split_or_duplicate_review: 1343
+    excluded_only_not_assumed_negative: 3909
+    unresolved_mixed_or_composite: 14766
+    known_mixed_source_label: 534
+    invalid_geometry: 10
+    exact_pixel_duplicate: 926
+  new_images_with_previous_individual_review_failure: 129
+  new_images_with_previous_sample_failure: 6718
+  complete_target_annotation_asserted: false
+objects_by_split:
+  train:
+    person: 22043
+    car: 11940
+    traffic_cone: 788
+    dog: 30
+    deer: 24
+    traffic_drum: 17481
+    bollard: 50551
+    concrete_barrier: 1779
+    bus: 3267
+    steel_barricade: 240
+    plastic_barrier: 432
+    box: 383
+    truck: 2029
+    motorcycle: 191
+  selection:
+    person: 112
+    truck: 1
+    box: 6
+  heldout:
+    concrete_barrier: 250
+    box: 203
+    traffic_drum: 420
+    plastic_barrier: 116
+    motorcycle: 400
+    steel_barricade: 201
+    bollard: 399
+    car: 2
+remaining_roboflow_images:
+  empty_annotation_unverified: 5764
+  split_or_duplicate_review: 3231
+  excluded_only: 3909
+  unresolved_mixed_or_composite: 14967
+  known_mixed_source_label: 524
+  fixed_evaluation_not_expanded: 461
+  invalid_geometry: 10
+export_manifest_sha256: 0543630ead6d05931818479c7b37718fb5b8c814bba114651fb4bb3c2cd88370
+tool_sha256: 0c744115a5e1074eaeb52c1f3a814982a77085ec34315c5a36b9428e732ed937
+local_dataset: data/dataset_versions/camera_objects_bbox_v5-breadth-r1
+local_artifacts: artifacts/camera-training-data-audit-v5-breadth
+teacher_approved: false
+training_performed: false
+runtime_changes: false
+strict_comparison_training_ready: false
+remaining:
+- Unresolved mixed and rider composite boxes deferred; no filename or teacher truth.
+- Bicycle and stroller absent; independent selection support sparse.
+- Later pilot must measure new-obstacle gains, original-class regressions and false
+  positives; volume alone is not a quality result.
+- Use source/class balance in later pilot; bollard/drum and person/car dominate.

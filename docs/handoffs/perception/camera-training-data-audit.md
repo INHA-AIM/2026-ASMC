@@ -8,8 +8,9 @@
 이 절과 [v2 라벨 정책](../../../config/datasets/camera_object_labels_v2.json),
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
-**이번 PR #78은 v4 bbox 부분집합·검수 병목 보고까지 진행한다. 운영 실행은 수정하지 않는다.**
-최신 수치·갤러리·남은 조건은 [동물·오토바이 보강 결과](#동물오토바이-보강과-수량--2026-10-11-coverage-r1)를 먼저 읽는다.
+**이번 PR #78은 v5 대량 활용 train 확장과 v4 검수 자료를 제공한다. 운영 실행은 수정하지 않는다.**
+최신 수치·적용 정책은 [v5 대량 활용 결과](#대량-활용-train-확장--2026-10-11-v5-breadth-r1)를 먼저 읽는다.
+아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
 MORAI 사용자 표기는 실제 gRPC API 이름이 아니며, 미확인 API 이름은 null로 둔다.
@@ -96,9 +97,83 @@ Teacher 미검출은 빈 정답이 아니다. 모든 이름 변경·추가 박�
 운영 모델·ROS 계약·차량 제어는 유지하고, 추가 수집·학습은 이번 범위 밖이다.
 
 
+## 대량 활용 train 확장 — 2026-10-11 v5-breadth-r1
+
+사용자는 car에 bus/truck이 섞인 차량 세부 분류는 대회에 큰 문제가 없으며,
+쉬운 수정만 유지하고 직접 대응 자료를 대량 활용하도록 결정했다. 이에 **표본 하나의
+오류로 소스 전체를 보류하는 조건과 16종 주석 완전성 조건을 train 확장에서 해제**했다.
+원본 박스·소스별 의미를 사용하고, 이미 독립 RGB로 확인한 종류 수정은 반영한다.
+새 자료 전체를 다시 시각 검수했다고 표현하지 않는다. 신호등·표지판 등의 제외 주석은
+학습 txt에서 제거한다. 제외 주석과 대상 주석이 함께 있는 영상은 대상 주석을 활용한다.
+
+[고정 설정](../../../config/experiments/camera_training_data_v5_breadth.json),
+[실행 도구](../../../tools/perception/prepare_camera_breadth_dataset.py),
+[결과표](../../../config/baselines/perception_camera_training_data_v5_breadth.yaml),
+[실제 YOLO 파일 검증](../../../config/baselines/evidence/camera_training_data_v5_breadth/verification.json),
+[대량 활용 갤러리](http://localhost:8768/camera-training-data-audit-v5-breadth/index.html)를 참조한다.
+전체 [갤러리 목차](http://localhost:8768/)에도 고정 E 번호·날짜로 등록한다.
+
+| 수량 | v4-coverage-r1 | v5-breadth-r1 |
+|---|---:|---:|
+| 전체 이미지 | 5,013 | **17,465** |
+| Roboflow / Capture | 5,008 / 5 | **17,460 / 5** |
+| 객체 주석 | 73,030 | **113,288** |
+| train | 4,233 | **16,685** |
+| selection / heldout | 113 / 667 | **113 / 667** |
+
+train에 **12,452장·40,258객체**를 추가했다. 전체 데이터는 3.48배이며 train은 3.94배다.
+새 자료에는 aiv5challenge 1,767장, hl-fma_2 906장, hl-fma_3 4,746장,
+jjj 1,109장, mino 2,325장, Park 800장, battery 284장, tooth-decay 353장,
+detection-bzetd 161장, yuna 1장이 포함된다. 소스 약칭의 전체 이름은 결과표에 있다.
+
+기존 5,013장은 `previous_reviewed_subset`, 새 12,452장은
+`source_mapped_breadth_training`으로 manifest에 구분한다. 새 자료 중 기존 묶음 표본
+실패와 관련된 6,718장, 개별 reject 기록이 있던 129장도 포함했다. 검수 결과를 삭제한
+것이 아니라 사용자가 허용한 품질 정책을 적용한 것이며, 원래 보류 이유·검수 판정도 남긴다.
+새 자료의 `complete_target_annotation_asserted=false`다. 미주석 대상 객체가 있을 수 있어
+기존 엄격 검수 자료와 같은 품질로 설명하지 않는다. 차종 혼입을 허용하더라도 dog/deer,
+box/방벽 혼합 등을 임의의 클래스에 넣지는 않는다.
+
+| 기존 46,326장 중 아직 미포함인 Roboflow 자료 | 이미지 수 |
+|---|---:|
+| 종류 미확정 혼합·탑승자 복합 박스 | 14,967 |
+| 빈 주석으로 대상 부재 미확인 | 5,764 |
+| 제외 라벨만 있는 영상 | 3,909 |
+| 중복 대표·분할 충돌 검토 | 3,231 |
+| tooth-decay PE의 드럼/사각 방벽 혼합 | 524 |
+| 고정 평가 그룹이므로 train에 추가하지 않은 자료 | 461 |
+| 잘못된 박스 좌표 | 10 |
+| 합계 | **28,866** |
+
+위 표는 이미지별 우선 사유로 중복 없이 집계했다. 원본은 모두 유지한다. 제외 라벨만
+있는 영상과 빈 주석을 자동 negative로 쓰지 않는다. tooth-decay의 PE처럼 실제로 다른
+형상이 섞인 주석은 개별 확인된 변경만 반영한다. Teacher와 파일명으로 혼합 정답을
+확정하지 않는다. 기존 박스 좌표·16종 ID·원본 split·평가 영상과 라벨은 변경 0이며,
+실제 파일 재검증에서 17,465장·113,288객체, exact pixel split 누출 0을 확인했다.
+
+재현 명령은 worktree에서 실행한다. 경로는 상위 workspace의 로컬 자료 영역이며
+출력 디렉터리는 새 이름을 사용한다. 기존 산출물이 있으면 덮어쓰지 않는다.
+
+```bash
+PYTHONPATH=tools/perception ../data/roboflow/.venv/bin/python tools/perception/prepare_camera_breadth_dataset.py \
+  --previous ../data/roboflow/curated-v4-coverage-r1/curated.jsonl \
+  --reviews ../data/roboflow/visual-review-v4-coverage-r1/reviews.json \
+  --labels config/datasets/camera_object_labels_v2.json \
+  --config config/experiments/camera_training_data_v5_breadth.json \
+  --output ../data/roboflow/curated-v5-breadth-r1-reproduced \
+  --export ../data/dataset_versions/camera_objects_bbox_v5-breadth-r1-reproduced \
+  --gallery ../artifacts/camera-training-data-audit-v5-breadth-reproduced
+```
+
+학습·GPU 실행·운영 모델 변경은 아직 하지 않았다. v5는 **대량 활용 파일럿에 사용할
+수 있는 부분집합**이며, 독립 평가가 모든 16종을 덮는 비교 학습 준비 완료와 구분한다.
+bicycle·stroller는 여전히 비어 있다. 다음 학습에서는 소스·클래스별 샘플링을 정하고,
+기존 v4와 v5의 신규 장애물 개선·기존 객체 회귀·오검출을 같은 고정 평가 자료로 확인한다.
+데이터 수 증가 자체를 성능 향상으로 보고하지 않는다.
+
 ## 동물·오토바이 보강과 수량 — 2026-10-11 coverage-r1
 
-최신 부분집합은 `data/dataset_versions/camera_objects_bbox_v4-coverage-r1`이다.
+이전 엄격 검수 부분집합은 `data/dataset_versions/camera_objects_bbox_v4-coverage-r1`이다.
 [고정 설정](../../../config/experiments/camera_training_data_v4_coverage.json),
 [결과표](../../../config/baselines/perception_camera_training_data_v4_coverage.yaml),
 [실제 YOLO 파일 검증](../../../config/baselines/evidence/camera_training_data_v4_coverage/verification.json),

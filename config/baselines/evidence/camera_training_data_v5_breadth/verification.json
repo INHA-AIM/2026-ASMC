@@ -1,0 +1,16 @@
+{
+  "verified_images": 17465,
+  "verified_objects": 113288,
+  "exact_pixel_leaks": 0,
+  "manifest_sha256": "0543630ead6d05931818479c7b37718fb5b8c814bba114651fb4bb3c2cd88370",
+  "training_performed": false,
+  "evaluation_membership_and_labels_unchanged": true,
+  "original_geometry_changes": 0,
+  "existing_split_changes": 0,
+  "previous_accepted_lost": 0,
+  "previous_manifest_sha256": "a528b775b8709cb40b4cd8869924948af78f1b7dd0f1ea988c97b05b78882be9",
+  "strict_quality_equivalent": false,
+  "complete_target_annotation_asserted": false,
+  "local_regression_tests": 92,
+  "documentation_and_contract_validators": 4
+}
