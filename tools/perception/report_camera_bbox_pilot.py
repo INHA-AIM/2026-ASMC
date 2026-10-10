@@ -88,6 +88,10 @@ def build(args):
                   'TensorRT·전체 스택 지연·fusion 검증은 이번 파일럿 이후'])
     state=args.output/'paired-r1/comparison.json'
     if state.exists():summary['comparison']=json.loads(state.read_text())
+    recovery=args.output/'paired-r1/comparison-equal-epoch.json'
+    if recovery.exists():
+        summary['original_comparison']=summary['comparison']
+        summary['comparison']=json.loads(recovery.read_text())
     galleries=[]
     for folder in sorted((args.output/'paired-r1').glob('*-after-*')):
         path=folder/'evaluation.json'
@@ -157,7 +161,7 @@ def build(args):
 <style>body{font:16px sans-serif;max-width:1200px;margin:32px auto;background:#111827;color:#e5e7eb}a{color:#67e8f9}td,th{border:1px solid #4b5563;padding:8px}table{border-collapse:collapse}pre{white-space:pre-wrap}img{max-width:100%}</style>
 <a href="../index.html">전체 실험 목차</a><h1>2026-10-11 · bbox 비교학습</h1>
 <p>원본 22,498장 보존. 파일럿 train 8,000장·selection 300장·heldout 300장. 16종 ID와 모든 원본 대상 박스 유지.</p>
-<p>YOLO26l detection / YOLOE-26l detection. 960·AMP·batch4·유효 batch16·17epoch, 직렬 실행. 운영 모델 변경 없음.</p>
+<p>YOLO26l detection / YOLOE-26l detection. 960·AMP·batch4·유효 batch16·17epoch 배정, 직렬 실행. 예산 중단 시 동일 완료 epoch checkpoint만 비교하고 원래 실패는 보존합니다. 운영 모델 변경 없음.</p>
 <h2>현재 진행</h2><pre id="progress">읽는 중…</pre>
 <p>학습 중에는 MORAI/실시간 모델을 함께 실행하지 않습니다. 아래 시간은 학습 시간이며 통합 자율주행 지연이 아닙니다.</p>
 <h2>학습 이미지 등장 수</h2><table><tr><th>클래스</th><th>원본 train</th><th>파일럿</th></tr>'''+table+'''</table>
@@ -168,7 +172,7 @@ def build(args):
 <h2>오프라인 PT batch1 지연 (ms)</h2><p>평가 이미지의 여러 뷰·해상도를 합친 분포입니다. 실제 3뷰 TensorRT 통합 지연이나 배포 동률 판정값이 아닙니다.</p><table><tr><th>설정</th><th>p50</th><th>p95</th><th>p99</th></tr>'''+latency_table+'''</table>
 <h2>결과·실패 사례</h2><ul>'''+''.join(galleries)+'''</ul><a href="report.json">전체 집계 JSON</a>
 <script>
-async function update(){let text='';try{const c=await(await fetch('paired-r1/comparison.json?t='+Date.now())).json();text+=JSON.stringify({status:c.status,stage:c.stage,batch:c.batch,epochs:c.epochs,wall_seconds:c.wall_seconds},null,2)+'\\n';
+async function update(){let text='';try{let c;for(const file of ['comparison-equal-epoch.json','comparison.json']){const response=await fetch('paired-r1/'+file+'?t='+Date.now());if(response.ok){c=await response.json();break;}}text+=JSON.stringify({status:c.status,stage:c.stage,batch:c.batch,epochs:c.epochs,wall_seconds:c.wall_seconds},null,2)+'\\n';
 for(const model of ['yolo26l','yoloe26l']){try{const r=await(await fetch('paired-r1/'+model+'/run.json?t='+Date.now())).json();text+=model+' '+JSON.stringify({status:r.status,batches:r.completed_batches,last_epoch:r.last_epoch,loss:r.last_loss,wall_seconds:r.wall_seconds})+'\\n';}catch{ text+=model+' 대기\\n';}}
 }catch{text='학습 준비 중';}document.getElementById('progress').textContent=text;}update();setInterval(update,30000);
 </script>''')

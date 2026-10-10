@@ -7,9 +7,19 @@ from train_camera_bbox_pilot import common_epochs,validate_resume,sha,accumulati
 from evaluate_camera_bbox_pilot import summarize,scoped_complete,evaluation_weights
 from report_camera_bbox_pilot import compare
 from camera_bbox_temporal import prepare,analyze
+from run_camera_bbox_comparison import validate_equal_training
 
 
 class TrainingTest(unittest.TestCase):
+    def test_budget_stop_only_equal_complete_checkpoint_is_comparable(self):
+        a=dict(status='complete',completed_epochs=17,config_sha256='c',manifest_sha256='d',batch=4,epochs=17)
+        b=dict(a,status='budget_stopped',completed_epochs=16)
+        validate_equal_training([a,b],16)
+        with self.assertRaisesRegex(ValueError,'not complete'):validate_equal_training([a,b],17)
+        with self.assertRaisesRegex(ValueError,'sufficiently'):validate_equal_training([a,b],4)
+        with self.assertRaisesRegex(ValueError,'failed/OOM'):validate_equal_training([a,dict(b,status='failed')],16)
+        with self.assertRaisesRegex(ValueError,'identity'):validate_equal_training([a,dict(b,batch=2)],16)
+
     def test_common_budget(self):
         self.assertEqual(common_epochs([500,600]),15)
         self.assertEqual(common_epochs([100,150]),20)

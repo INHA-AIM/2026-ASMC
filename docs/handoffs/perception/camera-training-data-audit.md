@@ -1283,6 +1283,14 @@ YOLOE는 detection YAML + seg checkpoint + PE trainer이며 mask head는 학습�
 학습 클래스별 영어 표현 하나를 고정해 fused head에 반영한다. 이 결과는 임의의 새 prompt를
 추가할 수 있는 원래 open-vocabulary checkpoint와 구분한다. freeze=None으로 전체 파라미터를 학습한다.
 
+실제 GPU/배경 부하로 사전 예상보다 느려져도 모델당 3시간 예산을 늘리지 않는다.
+예산 중단이면 원래 실패를 보존하고, 두 후보 모두 완료한 동일 epoch의 checkpoint만
+추가 평가할 수 있다. 더 진행한 후보의 이후 업데이트는 사용하지 않는다. 비교 전 각 checkpoint의
+epoch·optimizer update를 CPU로 검사하고, [CPU sampler 재현기](../../../tools/perception/verify_camera_bbox_order.py)의
+hash가 실제 학습 전체/부분 순서와 일치해야 공통 prefix 순서를 인정한다. 이는 파일 순서 검증이며
+증강 RNG의 비트 단위 일치를 주장하지 않는다. 최소 5epoch 미달·OOM·실패 checkpoint는 이 경로로 수락하지 않는다.
+원래 `comparison.json`은 남기고 별도 `comparison-equal-epoch.json`에 비교 학습량과 이유를 기록한다.
+
 [예산/클래스 설정](../../../config/experiments/camera_bbox_pilot_v1.json),
 [사전 측정과 실패 기록](../../../config/baselines/evidence/camera_bbox_pilot_training_v1/smoke.json),
 [직렬 실행기](../../../tools/perception/run_camera_bbox_comparison.py),
