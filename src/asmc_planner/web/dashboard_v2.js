@@ -736,9 +736,9 @@
     try {
       const noCache = {cache: 'no-store'};
       const [linkData, nodeData, routeText] = await Promise.all([
-        fetch('../src/config/link_set.json', noCache).then(response => response.json()),
-        fetch('../src/config/node_set.json', noCache).then(response => response.json()),
-        fetch('../src/config/route_links_1.yaml', noCache).then(response => response.text())
+        fetch('../config/behavior/link_set.json', noCache).then(response => response.json()),
+        fetch('../config/behavior/node_set.json', noCache).then(response => response.json()),
+        fetch('../config/behavior/route_links_1.yaml', noCache).then(response => response.text())
       ]);
       data.links = Array.isArray(linkData) ? linkData : linkData.links;
       data.nodes = Array.isArray(nodeData) ? nodeData : nodeData.nodes;
