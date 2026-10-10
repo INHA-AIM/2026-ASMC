@@ -162,6 +162,12 @@ def infer(args):
         latency_kind='offline PyTorch batch1 inference wall; not integrated runtime or TensorRT',
         p50_ms=float(np.percentile(latencies,50)),p95_ms=float(np.percentile(latencies,95)),
         p99_ms=float(np.percentile(latencies,99)),ignored_non_target_predictions=dict(ignored_names)))
+    inference=json.loads((args.output/'inference.json').read_text())
+    inference['latency_by_view']={view:dict(count=len(values),p50_ms=float(np.percentile(values,50)),
+        p95_ms=float(np.percentile(values,95)),p99_ms=float(np.percentile(values,99)))
+        for view in sorted({p['view'] for p in predictions})
+        for values in [[p['wall_ms'] for p in predictions if p['view']==view]]}
+    save(args.output/'inference.json',inference)
     # Selection is the only threshold search. Heldout uses the frozen choice.
     selection=[r for r in rows if r['split']=='selection'];heldout=[r for r in rows if r['split']=='heldout']
     def preds(part):return [p for p in predictions if p['id'] in {r['id'] for r in part}]

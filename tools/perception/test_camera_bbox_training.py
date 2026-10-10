@@ -101,6 +101,9 @@ class TrainingTest(unittest.TestCase):
         r=compare(evaluations)
         self.assertEqual(r['status'],'selection_deferred')
         self.assertIn('person',r['comparisons'][0]['selected_old_regression_failures'])
+        evaluations['a-after-960']['selected_heldout_accepted']=dict(classes={'person':dict(gt=100,tp=91)})
+        evaluations['a-after-960']['control']['heldout']['accepted']['classes']['person']['tp']=87
+        self.assertIsNotNone(compare(evaluations)['provisional_candidate'])
         # Improving a weaker YOLOE baseline must not hide a regression from
         # the current YOLO26l / 1280 reference.
         evaluations={'yolo26l-before-1280':evaluation(90),

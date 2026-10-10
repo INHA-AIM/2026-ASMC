@@ -59,15 +59,20 @@ def compare(evaluations):
             supported_new_classes=[n for n,c in classes.items() if n in NEW_CLASSES and c.get('complete_gt',0)>=20],
             old_recall=old,old_regression_failures=bad,old_regression_unresolved=uncertain,
             old_recall_reference=reference_key,
+            confidence_selection_supported_new_classes=[n for n,c in after.get('selected_selection',{}).get('classes',{}).items()
+                if n in NEW_CLASSES and c.get('complete_gt',0)>=20],
             confidence_control=.4,selection_confidence=after['selection_confidence']))
         comparisons[-1]['complete_fp_after']=sum(c.get('complete_fp',0) for c in classes.values())
+        comparisons[-1]['complete_fp_selected']=sum(c.get('complete_fp',0) for c in selected_classes.values())
         comparisons[-1]['complete_fp_before']=sum(c.get('complete_fp',0) for c in before['control']['heldout']['class']['classes'].values())
-    candidates=[c for c in comparisons if c['new_macro_f1'] is not None and not c['old_regression_failures']
+    # .40 is a calibration-controlled comparison. Eligibility uses the
+    # selection-frozen confidence, compared with today's .40 reference.
+    candidates=[c for c in comparisons if c['selected_new_macro_f1'] is not None
         and not c['selected_old_regression_failures']]
-    selected=max(candidates,key=lambda c:c['new_macro_f1']) if candidates else None
+    selected=max(candidates,key=lambda c:c['selected_new_macro_f1']) if candidates else None
     return dict(comparisons=comparisons,provisional_candidate=selected,
         within_one_percentage_point=[c['configuration'] for c in candidates
-            if selected and selected['new_macro_f1']-c['new_macro_f1']<=.01+1e-12],
+            if selected and selected['selected_new_macro_f1']-c['selected_new_macro_f1']<=.01+1e-12],
         status='provisional_requires_missing_GT_and_deployment_checks' if selected else 'selection_deferred',
         heldout_usage='fixed comparative pilot diagnostic, already inspected; not a fresh final deployment test',
         tie_policy='<=1pp needs TensorRT deployment latency/VRAM; offline PT latency is not a deployment tie-break')
@@ -141,7 +146,9 @@ def build(args):
         for name,count in frequencies['image_frequency_before'].items())
     comparison_table=''.join('<tr><td>'+html.escape(c['configuration'])+'</td><td>'+
         (f"{c['new_macro_f1']:.3f}" if c['new_macro_f1'] is not None else '평가 불가')+
-        '</td><td>'+html.escape(str(c['old_recall']))+'</td><td>'+html.escape(str(c['old_regression_failures']))+'</td></tr>'
+        '</td><td>'+(f"{c['selected_new_macro_f1']:.3f}" if c['selected_new_macro_f1'] is not None else '평가 불가')+
+        '</td><td>'+str(c['selection_confidence'])+'</td><td>'+html.escape(str(c['selected_old_recall']))+
+        '</td><td>'+html.escape(str(c['selected_old_regression_failures']))+'</td></tr>'
         for c in summary['selection']['comparisons'])
     latency_table=''.join(f'<tr><td>{html.escape(name)}</td><td>{v["p50_ms"]:.1f}</td><td>{v["p95_ms"]:.1f}</td><td>{v["p99_ms"]:.1f}</td></tr>'
         for name,v in summary['inference'].items())
@@ -156,7 +163,7 @@ def build(args):
 <h2>학습 이미지 등장 수</h2><table><tr><th>클래스</th><th>원본 train</th><th>파일럿</th></tr>'''+table+'''</table>
 <h2>평가 범위</h2><p>selection 신규 객체는 box 6개뿐입니다. animal heldout은 deer 1개입니다. 소표본과 미지원 종류를 지원 완료로 해석하지 않습니다. 부분 주석 영상은 recall-only이며 precision/FP/F1을 만들지 않습니다. 같은 run·증강 계보는 독립 장면 수가 아닙니다.</p>
 <p>희소 클래스 자료 전부·상자 1,007장·콘크리트 방벽 844장·철제 방벽 145장·PE 방벽149장 포함. Capture 1,268장. 나머지 원본 자료는 본학습 후보용으로 보존.</p>
-<h2>비교 결과</h2><table><tr><th>설정</th><th>신규 객체 macro F1 (.40)</th><th>기존 객체 recall</th><th>2%p 회귀 실패</th></tr>'''+comparison_table+'''</table>
+<h2>비교 결과</h2><table><tr><th>설정</th><th>신규 F1 (.40)</th><th>신규 F1 (선정 confidence)</th><th>confidence</th><th>선정 confidence의 기존 recall</th><th>2%p 회귀 실패</th></tr>'''+comparison_table+'''</table>
 <p>고정 heldout의 파일럿 비교이며 새로운 독립 최종 시험이 아닙니다. GT가 충분한 종류만 macro에 포함합니다. 1%p 내 동률은 TensorRT 통합 지연·VRAM 확인 전 확정하지 않습니다.</p>
 <h2>오프라인 PT batch1 지연 (ms)</h2><p>평가 이미지의 여러 뷰·해상도를 합친 분포입니다. 실제 3뷰 TensorRT 통합 지연이나 배포 동률 판정값이 아닙니다.</p><table><tr><th>설정</th><th>p50</th><th>p95</th><th>p99</th></tr>'''+latency_table+'''</table>
 <h2>결과·실패 사례</h2><ul>'''+''.join(galleries)+'''</ul><a href="report.json">전체 집계 JSON</a>
