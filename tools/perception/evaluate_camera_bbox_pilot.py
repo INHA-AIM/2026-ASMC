@@ -66,12 +66,12 @@ def summarize(rows,predictions,confidence,level='class',pixel_scope=False):
         result[name]=dict(c,precision=precision,recall=recall,f1=f1,
             annotated_recall=c['tp']/c['gt'] if c['gt'] else None,
             complete_fp=n-tp,complete_fn=gt-tp,independent_source_groups=len(groups[name]),
-            sufficient_sample=gt>=20 and len(groups[name])>=2)
+            sufficient_sample=gt>=20,source_generalization_limited=len(groups[name])<2)
     scores=[c['f1'] for c in result.values() if c['sufficient_sample'] and c['f1'] is not None]
     return dict(confidence=confidence,classes=result,macro_f1=sum(scores)/len(scores) if scores else None,
         complete_images=sum(r.get('evaluation_scope')=='complete' for r in rows),
         partial_images=sum(r.get('evaluation_scope')!='complete' for r in rows),
-        macro_policy='>=20 complete GT and >=2 frozen source/run groups; others diagnostic',
+        macro_policy='>=20 complete GT; source/run correlation separately flagged, not independent-scene claims',
         pixel_scope='vehicle 24/12px, other 16/8px' if pixel_scope else 'all original GT')
 
 

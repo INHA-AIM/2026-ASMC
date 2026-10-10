@@ -51,7 +51,7 @@ Planning/Control package-group guide와 handoff index를 추가했으며 기존 
 | [Planning/Control 개발 가이드](../packages/planning-control/README.md) | package 책임, current/legacy 경계와 변경 gate |
 | [Planning/Control 운영 규약](../operations/planning-control.md) | build, launch, topic 관측과 fail-safe |
 | [Handoff index](../handoffs/README.md) | active/deployment/legacy 상태와 인수 문서 탐색 |
-| [Behavior README](../../src/behavior_planner/README.md) | v1/v2 I/O, local map와 실행 |
+| [Planner README](../../src/asmc_planner/README.md) | v1/v2 I/O, local map와 실행 |
 | [MPC README](../../src/asmc_controller/README.md) | I/O, state provenance와 fail-safe |
 
 ## 명확히 한 제한
