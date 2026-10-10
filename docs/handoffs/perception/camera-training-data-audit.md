@@ -9,7 +9,7 @@
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
 **이번 PR #78은 v4 bbox 부분집합·검수 병목 보고까지 진행한다. 운영 실행은 수정하지 않는다.**
-최신 수치·갤러리·남은 조건은 [직접 대응 자료 확대 결과](#직접-대응-자료-검수와-일괄-포함--2026-10-10)를 먼저 읽는다.
+최신 수치·갤러리·남은 조건은 [혼합 상자·방벽 재분류 결과](#혼합-상자방벽-개별-재분류--2026-10-11)를 먼저 읽는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
 MORAI 사용자 표기는 실제 gRPC API 이름이 아니며, 미확인 API 이름은 null로 둔다.
@@ -93,6 +93,77 @@ Teacher 미검출은 빈 정답이 아니다. 모든 이름 변경·추가 박�
 진행 순서는 명확한 자료의 v2 범위 검수 → animal/6 → 숫자9 → box/object/obstacle이다.
 운영 모델·ROS 계약·차량 제어는 유지하고, 추가 수집·학습은 이번 범위 밖이다.
 
+
+## 혼합 상자·방벽 개별 재분류 — 2026-10-11
+
+최신 데이터는 `data/dataset_versions/camera_objects_bbox_v4-mixed-r3`다.
+[실험 설정](../../../config/experiments/camera_training_data_v4_mixed.json),
+[결과표](../../../config/baselines/perception_camera_training_data_v4_mixed.yaml),
+[실제 파일·분할·SHA 검증](../../../config/baselines/evidence/camera_training_data_v4_mixed/verification.json)을 함께 참조한다.
+[수정 전후 갤러리](http://localhost:8768/camera-training-data-audit-v4-mixed-review/mixed-review.html)는
+[전체 실험 목차](http://localhost:8768/)에도 날짜·고정 E 번호로 연결했다.
+
+207장을 독립 RGB 검수해 156장·1,032객체를 추가했다. 총 **4,679장·68,678객체**이며
+train 3,899장 / selection 113장 / heldout 667장이다. 기존 채택 소실·split 이동·원본
+박스 좌표 변경·확인된 split 누출은 모두 0이다. 작은 양성 GT를 제외하지 않았으며
+teacher 예측을 정답으로 사용하거나 사람이 검수했다고 주장하지 않는다.
+
+| 학습 클래스 | 이전 train 객체 | 현재 train 객체 | 현재 전체 객체 |
+|---|---:|---:|---:|
+| box | 0 | 99 | 308 |
+| plastic_barrier | 0 | 317 | 433 |
+| steel_barricade | 36 | 85 | 286 |
+| concrete_barrier | 134 | 211 | 461 |
+
+**원본 클래스 묶음 전체를 승인하지 않고 개별 annotation ID를 수정했다.**
+
+- Park `box`: 전체 112장 검수, 82장 채택. 나무상자와 흰색/주황색 PE 방벽을
+  각각 `wooden_box→box`, `pe_firewall→plastic_barrier`로 연결했다. 좁은 옆면도
+  드럼으로 간주하지 않았다. 원본 `bus`로 표시된 검은 덤프트럭·나무 적재함 화물트럭은
+  해당 영상에서만 `truck`으로 수정했다. 다른 소스의 bus 정책은 유지한다.
+- JJJ 숫자 `9`: 345장 중 0–31번 32장 검수, 24장 채택. 콘크리트·철제 방책·
+  나무상자·PE 방벽을 박스별로 분리했다. 직접 대응인 `8→cargo_box→box`는 유지했다.
+  생성만 한 나머지 313장은 검수 완료나 승인 수에 넣지 않았다.
+- Tooth `Obstacle_Yellow`: 전체 63장 검수, 50장 채택. 나무 무늬 상자,
+  노란 원통 드럼, 열린 A형 철제 방책을 각각 box/traffic_drum/steel_barricade로
+  분리했다. 같은 영상의 원통 PE·콘크리트도 함께 확인했다. 사각 방벽까지 섞인
+  Tooth의 전체 `PE` 묶음에 대한 일괄 승인은 유지하지 않는다.
+
+**검수한 51장은 개별 보완 대기다.** 여러 상자·트럭을 한 박스로 묶은 경우,
+차량·사람의 별도 주석이 필요한 경우, 줄무늬 패널의 종류나 극소형 하위 유형을
+판별하지 못한 경우다. 작은 크기 자체가 탈락 기준은 아니며, 확인되지 않은 이름을
+붙이지 않았다. 보류 기록의 제안 overrides는 export에 반영하지 않는다.
+미검수 313장과 검수 후 보류 51장을 구분한다.
+
+같은 프로젝트에서 반복 촬영한 장면을 새로운 독립 평가 자료로 취급하지 않았다.
+이번 추가 자료는 기존 train 그룹이며 Enzo heldout을 train으로 옮기지 않았다.
+box는 세 split에 존재하지만 나머지 클래스의 selection이 부족하고,
+dog/deer/bicycle/stroller는 여전히 채택 자료가 없다. 볼라드·드럼 편중도 남아 있어
+**16종 비교 학습 준비 완료는 아니다.** 다음 검수는 JJJ 나머지 → 복합·누락 박스
+보완 → 동물/자전거/유모차와 독립 selection 확보 순서다.
+
+원본·v3·v4·direct-r2·중간 mixed/r2와 검수 기록은 보존했다. mixed/r2는 확대 검수
+중 추가 드럼 종류·덤프트럭 의미가 정정되기 전의 중간 결과로, 학습에 사용하지 않는다.
+최종 `new-decisions-r3.json`과 합친 `visual-review-v4-mixed-r3/reviews.json`의 SHA는
+검증 파일에 고정했다. 운영 모델·ROS·confidence·GPU·학습은 변경하지 않았다.
+
+검수 도구는 기존 준비기를 확장했다. `--all-images`는 고정 50장 표본 대신 해당
+소스·클래스의 전체 영상을 생성하고 `--crop-label`은 원본 annotation ID와 픽셀 크기를
+표시한 확대 영상을 추가한다. **영상 생성은 자동 승인이 아니다.** 예:
+
+```bash
+python3 tools/perception/prepare_camera_direct_review.py \
+  --curated "$ASMC_DATA/roboflow/curated-v4-direct-r2" \
+  --bucket 'roboflow:parkminseo/final-ftuy2|box' \
+  --all-images --crop-label box --output /tmp/park-review-new
+```
+
+[수정 전후 보고기](../../../tools/perception/report_camera_label_changes.py)는 저장된
+검수 기록과 실제 curate 결과를 비교한다. source SHA·split·원본 좌표가 달라지면
+보존됐다고 표시하지 않는다. 초록은 실제 채택, 주황은 보완 대기이며 원본 라벨과
+최종 학습 라벨을 나란히 보여준다. 실제 YOLO 파일을 다시 읽어 4,679장·68,678객체를
+검증했고 관련 CPU 시험 84개·문서/인지 계약 validator가 통과했다.
+Hosted CI는 최종 HEAD에서 별도로 확인하며 로컬 시험 통과를 hosted 통과로 표시하지 않는다.
 
 ## 직접 대응 자료 검수와 일괄 포함 — 2026-10-10
 
