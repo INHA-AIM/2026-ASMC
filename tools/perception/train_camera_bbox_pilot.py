@@ -75,6 +75,8 @@ def run(args):
             raise ValueError('checkpoint has no resumable optimizer/epoch')
         if previous.get('budget_exceeded') and ckpt['epoch']>=previous.get('last_epoch',0):
             raise ValueError('budget-stopped last epoch is partial; resume preceding complete epoch checkpoint')
+        history=args.output/'resume-history';history.mkdir(exist_ok=True)
+        save(history/(sha(state)+'.json'),previous)
         del ckpt
     started=time.monotonic(); batches=[];epoch_times=[];order=hashlib.sha256()
     record=dict(**identity,stage='smoke' if args.smoke_batches else 'training',status='starting',
@@ -82,6 +84,7 @@ def run(args):
         python=platform.python_version(),torch=torch.__version__,ultralytics=ultralytics.__version__,
         cuda=torch.version.cuda,gpu=torch.cuda.get_device_name(0),text_names=cfg['text_names'],
         canonical_names=names,resume_checkpoint=str(args.resume) if args.resume else None,
+        resume_checkpoint_sha256=sha(args.resume) if args.resume else None,
         resume_policy='epoch-boundary optimizer restore; unfinished epoch is replayed',
         intended_effective_batch=settings['nbs'],sample_order_sha256=None,
         errors=[],runtime_changes=False)

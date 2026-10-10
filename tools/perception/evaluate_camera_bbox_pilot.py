@@ -163,7 +163,9 @@ def infer(args):
     chosen=max(available,key=lambda s:(s['macro_f1'],s['confidence']))['confidence'] if available else .4
     save(args.output/'evaluation.json',dict(selection_confidence=chosen,
         threshold_selection_available=bool(available),selection_sweep=sweep,
+        selected_selection=summarize(selection,preds(selection),chosen,pixel_scope=True),
         selected_heldout=summarize(heldout,preds(heldout),chosen,pixel_scope=True),
+        selected_heldout_accepted=summarize(heldout,preds(heldout),chosen,'accepted',pixel_scope=True),
         control={role:{level:summarize(part,preds(part),.4,level,pixel_scope=True)
             for level in ('class','accepted')} for role,part in [('selection',selection),('heldout',heldout)]},
         all_gt_control={role:summarize(part,preds(part),.4) for role,part in [('selection',selection),('heldout',heldout)]},
