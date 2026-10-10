@@ -11,7 +11,8 @@ from camera_data_audit import read_jsonl,save,sha
 from evaluate_camera_bbox_pilot import frame_counts
 
 
-NEW_CLASSES={'bollard','box','concrete_barrier','steel_barricade','traffic_drum','plastic_barrier','traffic_cone'}
+NEW_CLASSES={'deer','bollard','box','concrete_barrier','steel_barricade','traffic_drum',
+             'plastic_barrier','traffic_cone','stroller'}
 
 
 def compare(evaluations):
@@ -34,7 +35,7 @@ def compare(evaluations):
             delta=tp/gt-btp/bgt if gt and bgt else None
             old[group]=dict(gt=gt,before=btp/bgt if bgt else None,after=tp/gt if gt else None,delta=delta)
             if gt<20:uncertain.append(group)
-            elif delta is not None and delta<-.02:bad.append(group)
+            elif delta is not None and delta<-.02-1e-12:bad.append(group)
         selected_classes=after.get('selected_heldout',{}).get('classes',classes)
         selected_scores=[c['f1'] for n,c in selected_classes.items() if n in NEW_CLASSES
             and c.get('complete_gt',0)>=20 and c['f1'] is not None]
@@ -45,7 +46,7 @@ def compare(evaluations):
             tp=sum(selected_accepted.get(n,{}).get('tp',0) for n in labels)
             baseline=old[group]['before'];delta=tp/gt-baseline if gt and baseline is not None else None
             selected_old[group]=dict(gt=gt,after=tp/gt if gt else None,delta_from_pretrained_control=delta)
-            if gt>=20 and delta is not None and delta<-.02:selected_bad.append(group)
+            if gt>=20 and delta is not None and delta<-.02-1e-12:selected_bad.append(group)
         comparisons.append(dict(configuration=key,new_macro_f1=sum(scores)/len(scores) if scores else None,
             selected_new_macro_f1=sum(selected_scores)/len(selected_scores) if selected_scores else None,
             selected_old_recall=selected_old,selected_old_regression_failures=selected_bad,
@@ -59,7 +60,7 @@ def compare(evaluations):
     selected=max(candidates,key=lambda c:c['new_macro_f1']) if candidates else None
     return dict(comparisons=comparisons,provisional_candidate=selected,
         within_one_percentage_point=[c['configuration'] for c in candidates
-            if selected and selected['new_macro_f1']-c['new_macro_f1']<=.01],
+            if selected and selected['new_macro_f1']-c['new_macro_f1']<=.01+1e-12],
         status='provisional_requires_missing_GT_and_deployment_checks' if selected else 'selection_deferred',
         heldout_usage='fixed comparative pilot diagnostic, already inspected; not a fresh final deployment test',
         tie_policy='<=1pp needs TensorRT deployment latency/VRAM; offline PT latency is not a deployment tie-break')
@@ -69,7 +70,7 @@ def build(args):
     args.output.mkdir(parents=True,exist_ok=True)
     sampling=json.loads((args.dataset/'sampling.json').read_text())
     rows=[r for r in read_jsonl(args.dataset/'manifest.jsonl') if r['split']!='train']
-    summary=dict(dataset=sampling,comparison=None,evaluations={},selection=None,
+    summary=dict(dataset=sampling,comparison=None,evaluations={},inference={},temporal={},selection=None,
         blockers=['selection 신규 장애물 GT 부족', 'animal heldout GT 1개: 2%p 회귀 판정 불가',
                   'stroller 학습/평가 자료 없음', 'sparse eval: 실제 시간적 공백·최초 안정 검출 미측정',
                   'TensorRT·전체 스택 지연·fusion 검증은 이번 파일럿 이후'])
@@ -83,7 +84,11 @@ def build(args):
         # Record before/after without rewriting the evaluated GT.
         before=args.output/'paired-r1'/folder.name.replace('-after-','-before-')
         if (before/'evaluation.json').exists():summary['evaluations'][before.name]=json.loads((before/'evaluation.json').read_text())
+        for evaluated in (folder,before):
+            for filename,key in [('inference.json','inference'),('temporal.json','temporal')]:
+                if (evaluated/filename).exists():summary[key][evaluated.name]=json.loads((evaluated/filename).read_text())
         predictions={p['id']:p for p in read_jsonl(folder/'predictions.jsonl')}
+        original_predictions={p['id']:p for p in read_jsonl(before/'predictions.jsonl')} if (before/'predictions.jsonl').exists() else {}
         examples=[];counts=Counter()
         for row in rows:
             pred=predictions[row['id']]['predictions']
@@ -99,18 +104,28 @@ def build(args):
             cards=[]
             for row,pred,kind in examples:
                 with Image.open(row['image']) as original:
-                    image=original.convert('RGB');draw=ImageDraw.Draw(image)
-                    for ann in row['annotations']:
-                        if not ann.get('training_class'):continue
-                        box=ann['xyxy'];draw.rectangle(box,outline='#00e8ff',width=2)
-                        draw.text((box[0],max(0,box[1]-12)),ann['training_class'],fill='#00e8ff')
-                    for p in pred:
-                        if p['confidence']<.4:continue
-                        box=p['xyxy'];draw.rectangle(box,outline='#ff4aaa',width=2)
-                        draw.text((box[0],box[1]+2),f"{p['class_name']} {p['confidence']:.2f}",fill='#ff4aaa')
-                    ImageOps.contain(image,(960,720)).save(destination/(row['id']+'.jpg'),quality=90)
+                    panels=[]
+                    for title,boxes in [('before',original_predictions.get(row['id'],{}).get('predictions',[])),('after',pred)]:
+                        image=original.convert('RGB');draw=ImageDraw.Draw(image)
+                        for ann in row['annotations']:
+                            if not ann.get('training_class'):continue
+                            box=ann['xyxy'];w=box[2]-box[0];h=box[3]-box[1]
+                            long,short=(24,12) if ann['training_class'] in ('car','truck','bus') else (16,8)
+                            scoped=max(w,h)>=long and min(w,h)>=short
+                            color='#00e8ff' if scoped else '#ffb000'
+                            draw.rectangle(box,outline=color,width=2)
+                            if scoped:draw.text((box[0],max(0,box[1]-12)),ann['training_class'],fill=color)
+                        for p in boxes:
+                            if p['confidence']<.4:continue
+                            box=p['xyxy'];draw.rectangle(box,outline='#ff4aaa',width=2)
+                            draw.text((box[0],box[1]+2),f"{p['class_name']} {p['confidence']:.2f}",fill='#ff4aaa')
+                        panel=Image.new('RGB',(image.width,image.height+24),'#111827')
+                        panel.paste(image,(0,24));ImageDraw.Draw(panel).text((8,5),title,fill='white');panels.append(panel)
+                    joined=Image.new('RGB',(panels[0].width*2,panels[0].height))
+                    joined.paste(panels[0],(0,0));joined.paste(panels[1],(panels[0].width,0))
+                    ImageOps.contain(joined,(1920,900)).save(destination/(row['id']+'.jpg'),quality=90)
                 cards.append(f'<article><p>{kind} · {html.escape(row["source"])} · {row["split"]} · {row["evaluation_scope"]}</p><img src="{row["id"]}.jpg"></article>')
-            (destination/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>bbox pilot '+folder.name+'</title><a href="../../index.html">실험 목차</a><p>cyan 원본 GT / pink confidence .40 검출. partial GT의 미대응 검출은 FP가 아닙니다.</p>'+''.join(cards))
+            (destination/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>2026-10-11 · bbox pilot '+folder.name+'</title><style>body{font:16px sans-serif;background:#111827;color:white}img{max-width:100%}a{color:cyan}</style><a href="../../index.html">실험 목차</a><p>왼쪽 before / 오른쪽 after. cyan 평가 크기 GT / amber 작은 원본 GT / pink confidence .40 검출. 원본 RGB 위에 표시하며 추론에는 알려진 뷰의 Ego mask를 적용했습니다. partial GT의 미대응 검출은 FP가 아닙니다.</p>'+''.join(cards))
             galleries.append(f'<li><a href="gallery/{folder.name}/index.html">{folder.name} GT·오검출·누락</a></li>')
     summary['selection']=compare(summary['evaluations'])
     save(args.output/'report.json',summary)
@@ -121,6 +136,8 @@ def build(args):
         (f"{c['new_macro_f1']:.3f}" if c['new_macro_f1'] is not None else '평가 불가')+
         '</td><td>'+html.escape(str(c['old_recall']))+'</td><td>'+html.escape(str(c['old_regression_failures']))+'</td></tr>'
         for c in summary['selection']['comparisons'])
+    latency_table=''.join(f'<tr><td>{html.escape(name)}</td><td>{v["p50_ms"]:.1f}</td><td>{v["p95_ms"]:.1f}</td><td>{v["p99_ms"]:.1f}</td></tr>'
+        for name,v in summary['inference'].items())
     (args.output/'index.html').write_text('''<!doctype html><meta charset="utf-8">
 <title>2026-10-11 · bbox 파일럿: 샘플링·YOLO26l/YOLOE 비교</title>
 <style>body{font:16px sans-serif;max-width:1200px;margin:32px auto;background:#111827;color:#e5e7eb}a{color:#67e8f9}td,th{border:1px solid #4b5563;padding:8px}table{border-collapse:collapse}pre{white-space:pre-wrap}img{max-width:100%}</style>
@@ -134,6 +151,7 @@ def build(args):
 <p>희소 클래스 자료 전부·상자 1,007장·콘크리트 방벽 844장·철제 방벽 145장·PE 방벽149장 포함. Capture 1,268장. 나머지 원본 자료는 본학습 후보용으로 보존.</p>
 <h2>비교 결과</h2><table><tr><th>설정</th><th>신규 객체 macro F1 (.40)</th><th>기존 객체 recall</th><th>2%p 회귀 실패</th></tr>'''+comparison_table+'''</table>
 <p>고정 heldout의 파일럿 비교이며 새로운 독립 최종 시험이 아닙니다. GT가 충분한 종류만 macro에 포함합니다. 1%p 내 동률은 TensorRT 통합 지연·VRAM 확인 전 확정하지 않습니다.</p>
+<h2>오프라인 PT batch1 지연 (ms)</h2><p>평가 이미지의 여러 뷰·해상도를 합친 분포입니다. 실제 3뷰 TensorRT 통합 지연이나 배포 동률 판정값이 아닙니다.</p><table><tr><th>설정</th><th>p50</th><th>p95</th><th>p99</th></tr>'''+latency_table+'''</table>
 <h2>결과·실패 사례</h2><ul>'''+''.join(galleries)+'''</ul><a href="report.json">전체 집계 JSON</a>
 <script>
 async function update(){let text='';try{const c=await(await fetch('paired-r1/comparison.json?t='+Date.now())).json();text+=JSON.stringify({status:c.status,stage:c.stage,batch:c.batch,epochs:c.epochs,wall_seconds:c.wall_seconds},null,2)+'\\n';
