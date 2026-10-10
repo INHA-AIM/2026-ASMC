@@ -2,7 +2,7 @@
 
 > **문서 상태:** Active Reference — 팀 리뷰 후 Canonical 승격 여부를 결정한다.
 > **현재 package 경계:** [Planning/Control 개발 가이드](./README.md)
-> **범위:** `src/frenet_planner/`, `src/asmc_controller/` 코드를 수정할 때 지켜야 하는
+> **범위:** `src/asmc_planner/`, `src/asmc_controller/` 코드를 수정할 때 지켜야 하는
 > 아키텍처 규칙. 알고리즘 파라미터 튜닝 가이드가 아니다.
 > **기준 시점:** `Fix/yuntae-planner` 브랜치, Commit E(트래잭토리 provenance 수정 +
 > 이 문서 추가) 시점의 실제 코드 구조.
@@ -267,7 +267,7 @@ verification complete, MORAI full-course validation pending" 같은 정확한
 
 ## 관련 문서
 
-- [src/frenet_planner/README.md](../../../src/frenet_planner/README.md) — Frenet 모듈 진입점
+- [src/asmc_planner/README.md](../../../src/asmc_planner/README.md) — Frenet 모듈 진입점
 - [src/interfaces/README.md](../../../src/interfaces/README.md) — 공용 ROS 계약(canonical topic, timestamp, fail-safe)
 - [fsm-frenet-interface-v2.md](../../contracts/planning/fsm-frenet-v2.md) — FSM↔Frenet v2 계약 고정 문서
 - [architecture-overview.md](../../architecture/system-overview.md) — 팀 전체 아키텍처 요약(일부 항목은 이 문서 기준 시점보다 오래됐을 수 있다 - 충돌 시 실제 코드를 우선한다)

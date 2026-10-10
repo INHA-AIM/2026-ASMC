@@ -70,8 +70,7 @@ def provenance(models, engine, revision):
     if len(revision)!=40 or any(c not in '0123456789abcdef' for c in revision):
         raise ValueError('full host checkout revision required')
     binaries={}
-    for relative in ('Main/main','frenet_planner/frenet_planner_node',
-                     'behavior_planner/behavior_node','asmc_controller/mpc_controller_node'):
+    for relative in ('Main/main','asmc_planner/asmc_planner_node','asmc_controller/mpc_controller_node'):
         for prefix in os.environ.get('CMAKE_PREFIX_PATH','').split(':'):
             path=Path(prefix)/'lib'/relative
             if path.is_file():
@@ -157,7 +156,7 @@ def main():
             if not reply.accepted:raise RuntimeError('mode request rejected '+model)
             return row
         try:
-            sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],list(NODES.values())+['/camera_bev','/camera_bev_fusion','/camera_lane_vectorizer','/Main','/behavior_planner','/frenet_planner','/mpc_controller'],system_metrics=True)
+            sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],list(NODES.values())+['/camera_bev','/camera_bev_fusion','/camera_lane_vectorizer','/Main','/asmc_planner','/mpc_controller'],system_metrics=True)
             sampler.start()
             graph=master.getSystemState()
             if any(topic in ('/ctrl_cmd','/ctrl_cmd_0') and names for topic,names in graph[0]):

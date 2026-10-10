@@ -4,6 +4,13 @@
 파일 상단에 모든 인자와 설명을 두고 같은 파일에 main을 둔다.
 외부 LiDAR 모듈은 수정하지 않는다. 이 패키지의 구형 카메라 추종·LiDAR 회피 구현은 정리했다.
 
+통합 모드에서는 `/planning/mode` (`std_msgs/UInt8`, NORMAL=0,
+JAMMING=1)를 구독한다. NORMAL 동안 카메라/BBOX 관측은 갱신하지만
+주행 주기와 차선변경 타이머/상태 전이는 멈추며 주행 명령을 발행하지 않는다.
+JAMMING 진입 시 이전에 실행되지 않은 명령의 차선변경 진행률과 타이머를
+초기화하고 새 카메라 frame으로 실제 차로를 다시 확인한다. 실제 제어 출력은
+`/ctrl_cmd/jamming`이며 통합 selector만 `/ctrl_cmd`를 발행한다.
+
 ## 동작
 
 기본 `ignore_bbox_during_lane_change=true`: 차선변경 시작 조건을 통과한 후부터 이동 완료까지는
@@ -56,13 +63,16 @@ BBOX 기반 속도 상한도 이 구간에서는 제외하며 변경 속도/곡�
 ## 실행
 
 브리지, 카메라 차선 인식, GPU YOLO는 켜둔다.
-같은 `/ctrl_cmd`를 발행하는 다른 controller와 BBOX 관측 전용 launch는 종료한다.
-이 launch가 BBOX 판정 노드도 함께 실행한다. GPU detector는 중복 실행하지 않는다.
+통합 운용은 `roslaunch asmc_planner mode_control_integration.launch`를 사용한다.
+아래 레거시 단독 launch는 `/planning/mode=1`의 권위 있는 publisher와
+별도의 selector가 없으면 생산 `/ctrl_cmd`를 내보내지 않는다. 같은 `/ctrl_cmd`를
+발행하는 다른 controller와 BBOX 관측 전용 launch는 종료한다. 이 launch가
+BBOX 판정 노드도 함께 실행한다. GPU detector는 중복 실행하지 않는다.
 
 GPU YOLO가 아직 안 켜져 있으면:
 
 ```bash
-docker exec -it asmc-perception-train bash -lc '
+docker exec -it asmc-ros-noetic bash -lc '
 source /opt/ros/noetic/setup.bash &&
 source /root/ws/devel/setup.bash &&
 source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&
@@ -70,7 +80,7 @@ roslaunch lane_boundary_adapter camera_bbox_detector.launch
 '
 ```
 
-차선 추종 + BBOX 차선변경 + RViz (**실제 /ctrl_cmd 발행**):
+차선 추종 + BBOX 차선변경 + RViz (**JAMMING 모드에서 `/ctrl_cmd/jamming` 발행**):
 
 ```bash
 docker exec -it -e DISPLAY="$DISPLAY" asmc-ros-noetic bash -lc '

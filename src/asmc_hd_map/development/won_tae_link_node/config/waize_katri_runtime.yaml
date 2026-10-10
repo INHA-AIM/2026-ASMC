@@ -1,0 +1,283 @@
+# 링크·노드 기반 BEV 정적 레이어 베이크 설정
+# 맵: behavior_planner 판본 (data_source 웨이즈원, 2025-10-23)
+#
+# 주의: R_KR_PG_KATRI 는 local_origin 이 다른 별개 맵이다. 섞지 말 것.
+
+map_id: waize_katri_2025-10-23
+
+# 저장소 루트 기준 상대 경로
+source:
+  link_set: src/asmc_planner/config/behavior/link_set.json
+  node_set: src/asmc_planner/config/behavior/node_set.json
+  global_info: src/asmc_planner/config/behavior/global_info.json
+
+geometry:
+  # 나란한 차로가 노드 한 점으로 모이는 구간(부챗살)의 중심선을 이웃 차로와
+  # 평행한 위치로 되돌린다. 지우면 차선이 뚝 끊기므로 되돌리는 쪽을 쓴다.
+  # 교차로에서 직진/좌회전이 갈라지는 것은 정상이라 건드리지 않는다.
+  # 도로와 차선이 같은 중심선을 써야 차선이 도로 밖으로 나가지 않는다.
+  fix_node_pinch: true
+  # 차선을 도로 바깥으로 넘어가지 않게 자른다 (도로 축소분과 함께 적용).
+  clip_lane_to_road: true
+  # 정지선도 같은 이유로 자른다. 정지선 길이는 차로 폭(3.5 m)인데 도로는
+  # drivable.outer_trim_m 만큼 깎여 있어, 끄면 양끝이 도로 밖으로 나간다
+  # (trim 0.3 에서 8개 중 3개의 우측 끝, 459 px 중 20 px). 방향 계산과 무관하다.
+  clip_stopline_to_road: true
+
+grid:
+  pixels_per_meter: 5.0
+  margin_m: 50.0
+
+drivable:
+  # 링크에 width_start 가 없을 때만 쓰는 폴백. 이 맵은 634개 전부 3.5 m.
+  close_kernel_px: 5
+  # 인접 차로 통로 사이에 남는 '가느다란' 틈만 메운다. 폭 기준이지 면적 기준이 아니다.
+  # 면적으로 거르면 교차로 코너의 인도 섬(48~58 m^2)이 임계값 근처에 몰려 있어
+  # 같은 교차로의 네 모서리가 일부만 메워진다. 인도 섬은 내접반경 2.8 m 이상으로
+  # 뭉툭하므로 폭으로 가르면 확실히 남는다.
+  fill_gaps_max_width_m: 2.0
+  # 링크가 갈라지는 지점의 작은 삼각형 틈은 반경이 1 m 를 살짝 넘어(1.16 m)
+  # 폭 조건만으로는 안 걸린다. 아주 작으면 모양과 무관하게 메운다.
+  # 20 m^2 미만 구멍 38개는 전부 내접반경 1.88 m 이하라 인도 섬이 아니다.
+  fill_gaps_max_area_m2: 20.0
+  # 합류부에서 끝나는 차로를 더 이어 그려 계단을 완만하게 만드는 옵션.
+  # 기본은 0 (끔) — 링크에 없는 도로를 만들어내기 때문이다. 실제로 10 m 로 두면
+  # 합류부에서 도로 폭이 3.5 m -> 7.0 m 로 부풀어, 시뮬에 없는 차로가 생긴다.
+  # 켜려면 실제 노면과 대조해가며 아주 작은 값으로만 쓸 것.
+  merge_taper_m: 0.0
+  # 도로 최외곽을 이만큼 안쪽으로 깎는다. 차선(2 px = 0.40 m) 의 바깥쪽에서 이 양만큼
+  # 잘라내고 도로도 같은 양만큼 줄여, 둘의 바깥 끝이 맞는다.
+  #   0.20 m = 차선의 1/2 자르기
+  #   0.30 m = 차선의 3/4 자르기   <- 현재
+  #   0.40 m = 차선 전부 자르기
+  # 차로와 차로 사이는 도로가 이어져 있어 영향을 받지 않는다. 0 이면 끔.
+  outer_trim_m: 0.3
+  # 주행가능영역에서 뺄 링크. live_check.py --collect-links 로 모은 목록.
+  # 동측 순환로(오벌 포함) 18개와 주행 수집으로 추가한 링크 6개.
+  exclude_links: &excluded_links
+    - A2256W000010   # (64,348)->(77,257)
+    - A2256W000429   # (77,257)->(77,89)
+    - A2256W000433   # (77,89)->(78,7)
+    - A2256W000421   # (78,7)->(79,-143)
+    - A2256W000425   # (79,-143)->(79,-218) 1차로
+    - A2256W000424   # (79,-218)->(80,-366)
+    - A2256W000426   # (80,-366)->(80,-406)
+    - A2256W000447   # (80,-406)->(81,-505) 1차로
+    - A2256W000546   # 오벌 1328 m 1차로
+    - A2256W000444   # (75,-406)->(77,-505) 2차로
+    - A2256W000028   # (47,-480)->(77,-505) 진입
+    - A2256W000543   # 오벌 1347 m 2차로
+    - A2256W000407   # (74,324)->(61,369)
+    - A2256W000405   # (61,369)->(52,390) 교차로
+    - A2256W000637   # (68,382)->(57,368) 교차로
+    - A2256W000089   # (68,382)->(52,390) 교차로
+    - A2256W000428   # (78,324)->(68,382)
+    - A2256W000413   # (52,390)->(-63,522)
+    - A2256W000179   # 주행 수집: (67,7)->(64,-143)
+    - A2256W001105   # 주행 수집: (64,-143)->(-41,-383)
+    - A2256W000149   # 주행 수집: (-106,322)->(-104,289)
+    - A2256W000741   # 주행 수집: (-104,289)->(-2,114), road 4000891 lane 1
+    - A2256W000738   # 주행 수집: (-150,338)->(-108,289)
+    - A2256W000740   # 주행 수집: (-108,289)->(-5,114), road 4000891 lane 2
+
+lane:
+  resample_step_m: 0.5
+  line_width_m: 0.15
+  min_thickness_px: 2
+  # link_type=1 링크(정지선에서 출발)는 정지선 쪽 끝에서 이만큼을 교차로로 보고
+  # 잘라낸 뒤 나머지에 차선을 긋는다. 통째로 버리면 교차로를 한참 지난 구간의
+  # 차선까지 사라진다. 기본 30 m 는 실측 교차로 횡단 거리(최대 32.3 m) 기준.
+  skip_intersection: true
+  intersection_clear_m: 30.0
+  # 평균 곡률반경이 이보다 작은 링크(U턴·급커넥터)도 제외한다. 주행 궤적이지
+  # 도색 차선이 아니라서, 오프셋하면 차 앞에 부채꼴 가짜 차선이 생긴다.
+  # 총 회전각으로 거르면 안 된다 — 오벌(1186 m, 334도)까지 지워진다.
+  min_avg_radius_m: 10.0
+  # 도로 최외곽을 깎으면(drivable.outer_trim_m) 그쪽 차선도 같이 안쪽으로 옮겨
+  # 두께를 보존한다. 이동량 = outer_trim_m + 선두께/2. 차로 사이 선은 안 옮긴다.
+  # false 로 두면 옮기지 않고 잘라내기만 한다 (두께가 반쪽 남는다).
+  follow_outer_trim: true
+  # 차선에서 뺄 링크. 주행가능영역과 같은 목록을 쓴다 (다르게 하려면 따로 적을 것).
+  exclude_links: *excluded_links
+  # 이진 단일 클래스 파이프라인이므로 기본은 전부 실선.
+  dashed_on_lane_change: false
+  dash_m: 3.0
+  gap_m: 5.0
+
+# 최종 차선은 직접 수집한 것만 사용한다. 링크 기반 차선은 검증용 lane_prior에만 보존한다.
+observed_lane:
+  enabled: true
+  keep_prior: false
+  # collect 시각화와 동일하게 좌/우 경계를 도로 안쪽으로 보정한다.
+  inward_offset_m: 0.03
+  tangent_half_window: 3
+  # 실측 좌·우 경계 사이를 road에 합쳐, 기존 링크 폭이 좁은 구간도 실제 경계를 포함한다.
+  fill_road_between_sides: true
+  # 실측선 양쪽에 링크가 있으면 내부 차선으로 보고 road를 유지한다. 한쪽에만
+  # 링크가 있고 반대쪽에서 기존 road 외곽이 가까이 끝날 때만 그 외측과 외곽 차선
+  # 도색 폭 자체를 주행가능영역에서 제거한다.
+  trim_outer_road: true
+  outer_trim:
+    link_probe_offset_m: 1.75
+    link_tolerance_m: 1.0
+    boundary_search_m: 1.5
+    cut_depth_m: 2.0
+    # 합류·소멸부의 인접 링크 탐색 오차가 차로 중심까지 자르지 못하게 보호한다.
+    protect_link_core_width_m: 1.0
+    # A411 소멸차로는 단일 경계가 링크 중심 쪽으로 붙는 구간에서 외곽선으로
+    # 오판되어 차로 내부 1.6 m가 잘렸다. 이 링크의 원래 road와 겹치는 절단분만
+    # 복구한다(새 영역을 임의로 생성하지 않음).
+    restore_links: [A2256W000411]
+    restore_link_width_scale: 1.0
+    sample_step_m: 0.25
+    min_run_m: 1.0
+  line_width_m: 0.15
+  # 5 px/m에서는 1 px=0.2 m가 실제 0.15 m 도색 폭에 가장 가깝다.
+  min_thickness_px: 1
+  # 실측선에서 이 거리 안에 있는 기존 lane 픽셀만 제거한다.
+  # 차로 간격 3.5 m보다 충분히 작아 인접 차선은 보존한다.
+  replace_radius_m: 0.8
+  max_point_gap_m: 1.5
+  max_time_gap_sec: 0.5
+  # A432->A427과 A153->A451 사이의 방추형 구조물. 두 실측 흰선이 동시에
+  # 존재하는 구간만 polygon으로 묶어 최종 road에서 제거한다.
+  road_exclusions_between_boundaries:
+    - name: split_island_432_427__153_451
+      link_chains:
+        - [A2256W000432, A2256W000427]
+        - [A2256W000153, A2256W000451]
+      boundaries:
+        - {source: hi_middle_left.csv, side: LEFT, color: WHITE}
+        - {source: hi_middel_right.csv, side: RIGHT, color: WHITE}
+  sources:
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/start_point.csv
+      action: replace
+      side_colors: {LEFT: YELLOW, RIGHT: WHITE}
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/second_point.csv
+      action: replace
+      side_colors: {LEFT: YELLOW, RIGHT: WHITE}
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/third_point.csv
+      action: replace
+      side_colors: {LEFT: YELLOW, RIGHT: WHITE}
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/5.csv
+      action: replace
+      side_colors: {LEFT: YELLOW, RIGHT: WHITE}
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/6.csv
+      action: replace
+      side_colors: {LEFT: YELLOW, RIGHT: WHITE}
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/7.csv
+      action: replace
+      side_colors: {LEFT: YELLOW, RIGHT: WHITE}
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/fourth_point.csv
+      action: replace
+      side_colors: {LEFT: YELLOW, RIGHT: WHITE}
+    # 세 원본 수집이 합쳐진 파일. 수집 구간 사이를 road polygon으로 잇지 않는다.
+    # 색상은 CSV 기록을 그대로 사용한다(LEFT에도 WHITE 구간이 있음).
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/ro_merge3.csv
+      action: replace
+      group_column: source_dataset
+      # A2256W000304 왼쪽 황색선의 1.784 m GPS 표본 점프만 연결한다.
+      # 시간 간격 0.1 s이며, 다음 실제 분리 구간은 5.66 m라 영향을 받지 않는다.
+      max_point_gap_by_lane: {LEFT_YELLOW: 2.0}
+      # A2256W000146 오른쪽 흰선처럼 가까운 분할점은 접선 방향까지 일치할 때만
+      # 연결한다. 같은 구간에 역방향으로 섞인 점들은 방향 검사에서 제외된다.
+      bridge_segment_gaps_by_lane: {RIGHT_WHITE: 2.0}
+      bridge_max_heading_deg: 20.0
+      # A2256W000146 오른쪽 흰선: 정상 선분 사이에 역방향 노이즈 선분 하나가 끼어
+      # 자동 연결이 불가능한 마지막 1픽셀 공백을 원본 좌표 두 점으로 잇는다.
+      manual_bridges:
+        - side: RIGHT
+          color: WHITE
+          points:
+            - [-93.66374005882352, 324.58804294117647]
+            - [-92.767451, 325.120738]
+    # 고속도로 실측 흰선. 모두 단일 측면 파일이므로 서로 억지로 polygon을 만들지
+    # 않고, 링크가 양쪽에 있는 중앙 경계는 outer-road trim 대상에서 자동 제외한다.
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middle_left.csv
+      action: replace
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right.csv
+      action: replace
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right2.csv
+      action: replace
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right3.csv
+      action: replace
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_left.csv
+      action: replace
+      # 2.07~4.07 m 공백 중 앞·뒤 접선이 20도 이내로 같은 네 곳만 연결한다.
+      bridge_segment_gaps_by_lane: {LEFT_WHITE: 4.2}
+      bridge_max_heading_deg: 20.0
+      # A2256W000846 왼쪽 흰선: 수집 끝점 노이즈 때문에 접선 검사를 통과하지 못한
+      # 3.706 m 공백. 링크 경계 접선과는 양끝 모두 5도 이내로 일치한다.
+      manual_bridges:
+        - side: LEFT
+          color: WHITE
+          points:
+            - [63.192968, 275.005653]
+            - [63.253443, 271.300543]
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_right.csv
+      action: replace
+      # 연속 0.1초 표본 사이의 1.635 m 점프 하나만 연결한다.
+      max_point_gap_by_lane: {RIGHT_WHITE: 2.0}
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_left.csv
+      action: replace
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middel_right.csv
+      action: replace
+    # 터널 진입부에서 직접 수집한 왼쪽 노란 경계선.
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/turnel_left.csv
+      action: replace
+      side_colors: {LEFT: YELLOW}
+    # 종점부 양쪽 경계. 정차 중 0.6~1.1초 timestamp 공백은 좌표상 7 cm
+    # 이하이므로 두 파일에만 시간 허용치를 늘려 연속선으로 유지한다.
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_right.csv
+      action: replace
+      side_colors: {RIGHT: WHITE}
+      max_time_gap_sec: 1.2
+    - path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_left2.csv
+      action: replace
+      side_colors: {LEFT: YELLOW}
+      max_time_gap_sec: 1.2
+      # turnel_left 끝점과 end_left2 시작점 사이의 6.194 m 미수집 구간.
+      # 연결선 방향은 양쪽 원본 접선과 5도 이내로 일치한다.
+      manual_bridges:
+        - side: LEFT
+          color: YELLOW
+          points:
+            - [41.853279, -480.344789]
+            - [36.977966, -484.165560]
+
+stopline:
+  line_width_m: 0.4
+  min_thickness_px: 2
+  length_scale: 1.0
+  # 같은 진입부의 정지선 노드들이 이루는 직선을 정지선 방향으로 쓴다.
+  # 끄면 각 노드의 링크 접선에 수직하게 그리는데, 정지선 직전에 휘는 차로
+  # (우회전 차로 등) 에서 정지선이 기울어진다.
+  align_across_lanes: true
+  group_radius_m: 12.0
+  # 이 두 차로만 중심 간격(4.05 m)이 폭(3.5 m)보다 넓어 접합부가 가늘다.
+  # 두 노드 중심 사이를 같은 정지선 두께로 연결한다. 다른 정지선은 변경하지 않는다.
+  connect_node_groups:
+    - [A1256W000593, A1256W000742]
+  # --- 일부만 굽고 싶을 때 (기본은 150개 전부) ---
+  # 방향 계산에는 선택되지 않은 이웃 노드도 쓰므로, 한 줄에서 하나만 골라도
+  # 각도가 어긋나지 않는다. 노드 id 는 `bake_map.py --list-stoplines` 로 본다.
+  #
+  include_nodes:            # 이 노드들만 그린다 (live_check --collect 로 수집)
+    - A1256W000682          # (-93.97, -255.75)  TL=C1256W000077
+    - A1256W000807          # (-59.83, -155.39)  TL=C1256W000091
+    - A1256W000208          # (-60.16,  -34.51)  TL=C1256W000016
+    - A1256W000757          # (-60.88,   79.31)  TL=C1256W000123  ┐ 같은 정지선의
+    - A1256W000582          # (-57.66,   79.21)  TL=C1256W000123  ┘ 두 차로
+    - A1256W000742          # (-12.69,   98.93)  TL=C1256W000052  ┐ 같은 정지선의
+    - A1256W000593          # (-12.70,   94.88)  TL=C1256W000052  ┘ 두 차로
+    - A1256W000709          # (-99.31,  317.80)  TL=-
+  # exclude_nodes:            # 이 노드들만 뺀다
+  #   - A1256W000001
+  # only_with_traffic_light: true   # 신호등이 물린 것만 (69개)
+  # route_yaml: src/asmc_planner/config/behavior/route_links.yaml
+  #                           # 이 경로 위의 정지선만 (7개). --stopline-route 로도 지정 가능
+
+output:
+  h5: src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5
+  overlay_png: src/asmc_hd_map/development/won_tae_link_node/out/overlay.png
+  overlay_max_px: 2000

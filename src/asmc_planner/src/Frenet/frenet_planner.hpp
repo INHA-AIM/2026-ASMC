@@ -1,0 +1,1282 @@
+#pragma once
+
+#include "Execution/ManeuverState.hpp"
+#include <string>
+#include <vector>
+#include <memory>
+#include <unordered_map>
+#include <chrono>
+
+#include "Frenet/Map/AvoidRoadMap.hpp"
+#include "Frenet/Maneuver/Merge/RoundaboutMerge.hpp"
+#include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
+#include "Frenet/Common/BehaviorTypes.hpp"
+#include "Frenet/Common/CartesianTypes.hpp"
+#include "Frenet/Common/FrenetTypes.hpp"
+#include "Frenet/Common/ObjectTypes.hpp"
+#include "Frenet/Common/PlannerCommand.hpp"
+#include "Frenet/Config/ConfigLoader.hpp"
+#include "Frenet/Config/ConfigValidator.hpp"
+#include "Frenet/Config/FrenetConfig.hpp"
+#include "Frenet/Reference/Reference.hpp"
+#include "Frenet/Generator/GeneratorConfig.hpp"
+#include "Frenet/Generator/CandidateCombiner.hpp"
+#include "Frenet/Evaluation/Cost.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
+#include "Frenet/Math/FrenetConverter.hpp"
+#include "Frenet/Pipeline/PlannerConfigBundle.hpp"
+#include "Frenet/Pipeline/TrajectoryPipeline.hpp"
+#include "Frenet/Speed/SpeedProfiler.hpp"
+#include "Frenet/Speed/MergeAccelerationMemory.hpp"
+#include "Frenet/visualization/planner_debug_writer.hpp"
+
+// Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
+// 외부 FSM이 이미 결정한 PlannerCommand를 받아 실행한다(IsSupportedExternalMode의
+// whitelist가 진입 가능 모드를 제한한다). "어떤 행동을 할 것인가"는 FSM의
+// 책임이고, 이 클래스는 그 행동을 어떻게 trajectory로 만들지만 담당한다.
+class FrenetPlanner {
+public:
+    void BindExecutionState(asmc_planner::execution::ManeuverState& state) { execution_.bind(state); }
+    // Plan() 실패 원인. 호출자(ROS node)가 "이전 궤적 재사용"과 "즉시 정지"를
+    // 구분하려면 일시적 생성 실패와 명령 자체의 결함이 분리되어야 한다.
+    // TRANSIENT_GENERATION_FAILURE만 재사용 대상이다.
+    enum class PlanFailureReason {
+        NONE,
+        COLLISION_BLOCKED,
+        // 이번 사이클에서만 유효 후보를 못 만든 경우(수치적/일시적).
+        TRANSIENT_GENERATION_FAILURE,
+        // 모드 자체는 지원하지만 필드 값이 잘못된 경우
+        // (STOP인데 stop_position 미지정, 음수/NaN 속도 등).
+        INVALID_COMMAND,
+        // 외부 command로 아직 열지 않은 모드.
+        UNSUPPORTED_BEHAVIOR,
+        NOT_INITIALIZED,
+        // FSM이 지정한 대상 객체를 유효하게 확보할 수 없다(FOLLOW leader,
+        // AVOID 장애물). node가 "FOLLOW인데 실패했으니 아마 leader가
+        // 사라졌겠지"라고 추측하면 계약 9.2절의 원칙을 깬다 - core가 정확한
+        // 사유를 준다.
+        TARGET_OBJECT_LOST,
+    };
+
+    // yaml_path: config/params.yaml
+    bool Init(const std::string& yaml_path);
+
+    // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING /
+    // STOP / EMERGENCY / FOLLOWING / AVOID / LANE_CHANGE_LEFT /
+    // LANE_CHANGE_RIGHT이며(IsSupportedExternalMode 참고), MERGE는 core
+    // 구현이 있어도 UNSUPPORTED_BEHAVIOR로 거부한다(R6-D: production에서
+    // MERGE로 도달하는 caller가 없다는 것을 감사로 확인했고, FSM 계약이
+    // 별도로 확정되기 전까지 이 결정을 바꾸지 않는다).
+    // obstacles의 각 TrackedObject는 authoritative 8 corners(perception의
+    // obb_corners)를 이미 채운 상태여야 한다 - Planner는 center/dimension
+    // 으로 geometry를 재생성하지 않는다. corners 없이 들어온 객체를 걸러
+    // 내는 책임은 message_converter의 ConvertDetectedObjects에 있다.
+    bool Plan(const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
+              const PlannerCommand& command, CartesianPath& out_path);
+
+    struct MergePrepareResult {
+        bool candidate_valid = false, ready = false, maneuver_completed = false;
+        std::uint64_t epoch = 0;
+        double entry_time = -1, exit_time = -1, progress = 0;
+        std::size_t generated = 0, valid = 0;
+        int blocking_object_id = -1;
+        CartesianPath candidate_path;
+    };
+    bool roundabout_merge_enabled() const { return roundabout_merge_cfg_.enabled && roundabout_zone_.valid; }
+    const RoundaboutMergeZone& roundabout_zone() const { return roundabout_zone_; }
+    bool PlanRoundaboutMerge(const CartesianState& ego,
+        const std::vector<TrackedObject>& obstacles, const PlannerCommand& command,
+        double planning_time, double observation_stamp, CartesianPath& out_path,
+        MergePrepareResult& result);
+    bool CanCommitRoundaboutMerge(const MergePrepareResult& result) const;
+    void ApplyRoundaboutMergeCommit(const MergePrepareResult& result);
+    void ResetRoundaboutMerge(bool preserve_exit_prediction = false);
+    void ObserveRoundaboutExit(const std::vector<TrackedObject>& objects, double stamp);
+    void RevokeRoundaboutReadiness();
+    bool roundabout_merge_committed() const { return execution_->merge.committed; }
+    const MergePrepareResult& last_roundabout_result() const { return last_roundabout_result_; }
+
+    // Cartesian 점을 reference line의 종방향 좌표 s로 투영한다.
+    // 외부 STOP 명령의 (stop_x, stop_y)를 PlannerCommand.stop_position으로
+    // 바꾸는 데 쓴다 - message_converter는 RefLine을 모르므로 이 변환을 할 수
+    // 없다. s_hint는 FindClosestS의 탐색창 힌트로 그대로 전달된다: 트랙이
+    // 자기 자신과 가까워지는 구간에서 최근접점이 다른 구간으로 튀는 것을
+    // 막으려면 현재 위치 근방으로 탐색을 제한해야 한다(ref_line.hpp 주석 참고).
+    // 투영점이 실제 목표점에서 stop_cfg_.max_lateral_offset보다 멀면 이 경로에
+    // 대한 정지 지점이 아니라고 보고 false를 반환한다.
+    bool ProjectPointToS(double x, double y, double s_hint, double& out_s) const;
+
+    // Cartesian 점을 reference line의 (s, d)로 투영한다 (D6-1a).
+    //
+    // ===== 왜 ProjectPointToS를 재사용하지 않는가 =====
+    //
+    // 그 함수는 이름과 달리 **STOP 전용**이다:
+    //   - 탐색창이 stop_cfg_.projection_search_window에 묶여 있다
+    //   - 허용 횡거리가 stop_cfg_.max_lateral_offset에 묶여 있다
+    //   - d를 반환하지 않는다
+    //
+    // AVOID target pose는 d가 핵심이다(어느 쪽으로 얼마나 비켜갈지). 그리고
+    // AVOID의 허용 횡거리는 STOP의 것과 같을 이유가 없다 - STOP은 "정지선이
+    // 이 경로 위에 있는가"를 묻고, AVOID는 "회피 목표점이 이 경로 근방인가"를
+    // 묻는다.
+    //
+    // 그래서 STOP config를 AVOID에 끌어오거나 ProjectPointToS에 d 출력을
+    // 덧붙이는 대신, 두 용도의 공통 primitive를 아래에 두고 ProjectPointToS는
+    // 그 wrapper로 남긴다. D4에서 MORAI로 검증한 STOP 투영 동작은 바뀌지
+    // 않는다.
+    //
+    // search_window / max_lateral_distance는 호출자가 정한다. 어느 쪽이든
+    // 유한하지 않거나 0 이하면 false다.
+    bool ProjectPointToFrenet(double x, double y, double s_hint,
+                              double search_window, double max_lateral_distance,
+                              double& out_s, double& out_d) const;
+
+    // Ego Cartesian 위치의 s. 노드가 ProjectPointToS의 s_hint를 얻는 용도.
+    bool ProjectEgoToS(const CartesianState& ego, double& out_s) const;
+
+    // reference line의 s 지점 진행방향(yaw). 읽기 전용 조회다.
+    //
+    // 용도: v2 STOP의 target pose heading 검증(계약 3.4절 4항). 현재 투영
+    // 방어는 s_hint + projection_search_window + max_lateral_offset뿐이라,
+    // 왕복 구간이 max_lateral_offset 이내로 나란히 지나가면 **진행 방향이
+    // 반대인 구간에 목표가 붙을 수 있다.**
+    //
+    // 이 검증을 ProjectPointToS 안에 넣지 않은 이유: 그 함수는 v1 STOP도
+    // 쓰고 있어서, v2 보강을 하려다 C4에서 검증한 v1 동작까지 바뀐다.
+    // core는 "s -> reference yaw" 조회만 제공하고, "이 heading 차이가 허용
+    // 가능한가"라는 v2 계약 판단은 ROS 계층이 한다.
+    //
+    // s가 reference line 범위를 벗어나거나 결과가 유한하지 않으면 false.
+    bool ReferenceHeadingAt(double s, double& out_heading) const;
+
+    // Plan()이 반환하는 CartesianPath의 샘플 간격 [s] (params.yaml의 planner.dt).
+    // MPC 쪽에서 이 값을 알아야 시간 기준으로 재샘플링해 궤적 추종(time-aligned
+    // tracking)을 할 수 있다 (frenet_planner.cpp의 dt와 mpc_params.dt가 서로
+    // 달라서 그냥 index를 맞춰 쓸 수 없음).
+    double sample_dt() const { return path_cfg_.dt; }
+
+    // 진단용: 매 Plan() 호출마다 갱신되는 현재 d(차선 중앙 기준 오프셋)/d_dot(횡방향
+    // 속도). 횡방향 오차가 조향 포화 때문인지(모델/액추에이션 문제) 아니면 여유가
+    // 있는데도 못 줄이는지(모델 불일치) 구분하려고 main.cpp 로그에서 steer_norm과
+    // 같이 찍어본다.
+    double last_d() const { return last_d_; }
+    double last_d_dot() const { return last_d_dot_; }
+    BehaviorState last_mode() const { return last_mode_; }
+    double last_target_speed() const { return last_target_speed_; }
+    double last_raw_speed_cap() const { return last_raw_speed_cap_; }
+    double last_profiled_acceleration() const {
+        return last_profiled_acceleration_;
+    }
+    bool speed_profiler_initialized() const {
+        return speed_profiler_.initialized();
+    }
+    double last_base_target_speed() const {
+        return last_base_target_speed_;
+    }
+    double last_candidate_curvature_speed_cap() const {
+        return last_candidate_curvature_speed_cap_;
+    }
+    double last_candidate_max_abs_curvature() const {
+        return last_candidate_max_abs_curvature_;
+    }
+    double last_candidate_max_lateral_accel() const {
+        return last_candidate_max_lateral_accel_;
+    }
+    int last_candidate_aware_regenerations() const {
+        return last_candidate_aware_regenerations_;
+    }
+
+    // 외부 STOP이 HOLD 단계에 도달했는지. ROS 계층이 "정지 완료"를 판단하는
+    // 데 쓴다.
+    //
+    // 이 getter가 필요한 이유: HOLD 진입 조건은 stop_cfg_의 position/speed
+    // tolerance로 core 안에서 결정된다. node가 그 조건을 다시 구현해 "아마
+    // HOLD일 것"이라고 추측하면 두 곳의 판정이 어긋난다. 이미 계산된 실행
+    // 상태를 읽기만 한다 - planner 동작은 바뀌지 않는다.
+    bool stop_holding() const {
+        return execution_->stop_phase == StopExecutionPhase::HOLD;
+    }
+
+    // v2 FOLLOW가 실제로 추종 중인 leader ID. FrenetFeedback.active_leader_id
+    // 용이다. node가 command.primary_object_id를 그대로 되돌려 보내면
+    // "지정했다"와 "실제로 추종 중이다"를 구분할 수 없다 - 확보에 실패한
+    // 사이클에도 ID가 나가게 된다(계약 9.2절).
+    int active_leader_id() const {
+        return execution_->follow.active ? execution_->follow.leader_id : -1;
+    }
+
+    // v2 AVOID가 실제로 확보한 회피 대상 ID (D6-1). active_leader_id()와 같은
+    // 이유로 존재한다 - 지정만 된 ID와 확보된 ID를 구분해야 한다.
+    int active_avoid_target_id() const {
+        return execution_->avoid.active ? execution_->avoid.obstacle_id : -1;
+    }
+
+    // v2 AVOID 대상이 유예(미관측) 중인 사이클 수. 진단·회귀 검증용이다.
+    int avoid_missing_cycles() const { return execution_->avoid.missing_cycles; }
+
+    // v2 AVOID가 확보한 대상의 Frenet 위치. active_avoid_target_id()가 -1이면
+    // 의미가 없다.
+    double avoid_target_s() const { return v2_avoidance_.obstacle_s; }
+    double avoid_target_d() const { return v2_avoidance_.obstacle_d; }
+
+    // v2 AVOID에 대해 FSM이 요청한 방향. mode=AVOID 하나로는 구분할 수 없어
+    // 별도 필드로 보존한다(계약 3.3절).
+    LateralDirection avoid_requested_direction() const {
+        return execution_->avoid.requested_direction;
+    }
+
+    // FSM이 target pose로 지정한 회피 목표의 Frenet 값 (D6-1a).
+    //
+    // has_...가 false이면 pose가 없었거나 투영이 실패한 것이다. 그때는
+    // 장애물 geometry와 요청 방향으로 목표를 계산한다(D6-2).
+    //
+    // d는 음수가 유효하므로 -1.0 sentinel을 쓸 수 없다 - 유효성은 플래그로만
+    // 판단한다(계약 1.3절과 같은 이유).
+    bool avoid_has_requested_target_d() const {
+        return v2_avoidance_.has_requested_target_d;
+    }
+    double avoid_requested_target_d() const {
+        return v2_avoidance_.requested_target_d;
+    }
+    double avoid_requested_target_s() const {
+        return v2_avoidance_.requested_target_s;
+    }
+
+    // 이번 사이클에 평가할 회피 목표 d 목록 (D6-2a). 확보에 실패했으면
+    // count()가 0이다. D6-2b가 이 목록으로 후보를 만든다.
+    int avoid_target_count() const { return v2_avoid_targets_.count; }
+    double avoid_target_candidate(int index) const {
+        if (index < 0 || index >= v2_avoid_targets_.count) return 0.0;
+        return v2_avoid_targets_.candidates[index];
+    }
+    bool avoid_target_from_pose() const {
+        return v2_avoid_targets_.from_target_pose;
+    }
+    // 방향 요청과 target pose가 모순인지. 명령 결함이 아니므로 여기서
+    // 거부하지 않고, 후보 생성 결과(WAITING)로 드러난다(계약 3.3.4절).
+    bool avoid_direction_conflict() const {
+        return v2_avoid_targets_.direction_conflict;
+    }
+
+    PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
+    const std::vector<CartesianPath>& last_candidate_paths() const {
+        return last_candidate_paths_;
+    }
+    const std::vector<bool>& last_candidate_validity() const {
+        return last_candidate_validity_;
+    }
+
+    // 이번 PlanInternal 호출이 무엇을 하려는지 (D6-2b).
+    //
+    // AvoidPrepareResult* 가 nullptr인지로 mode를 암묵적으로 표현하지 않는다.
+    // 그러면 나중에 진단용으로 포인터만 넘겨도 동작이 바뀐다. 입력/제어축과
+    // 출력축을 명시적으로 분리한다:
+    //
+    //   purpose               무슨 계산을 할지
+    //   AvoidPrepareResult*   그 계산 결과를 내보냄
+    //   out_path              실제 MPC로 보낼 궤적
+    //
+    // ROS의 execution_request enum을 core로 가져오지 않는다 - core는
+    // handshake를 모르고, "준비만 하는 계산"이라는 것만 안다.
+    enum class ExternalPlanningPurpose {
+        NORMAL,
+        AVOID_PREPARE,
+        AVOID_COMMITTED,
+        LANE_CHANGE_PREPARE,
+        LANE_CHANGE_COMMITTED,
+    };
+
+    // AVOID PREPARE 한 사이클의 결과 (계약 5.2절).
+    //
+    // ===== candidate_path와 maintenance path는 다른 것이다 =====
+    //
+    // candidate_path      "AVOID를 실행해도 되는가"의 근거. MPC로 보내지 않는다.
+    // out_path(별도 인자)  "지금 MPC가 실제로 따라갈 것". 유지 궤적이다.
+    //
+    // 타입 수준에서 분리해 두는 이유는, 실수로 candidate를 발행하면 FSM이
+    // EXECUTE를 보내기 전에 횡이동이 시작되기 때문이다.
+    struct AvoidPrepareResult {
+        // 요청한 AVOID용 새 유효 후보를 만들었는가. FrenetFeedback.plan_valid로
+        // 나가는 값이다. **PrepareAvoid()의 반환값과 다른 축이다**(아래 주석).
+        bool candidate_valid = false;
+
+        // ego가 저속 구간(< kLowSpeedFallbackV)인가. **후보 성공 여부와
+        // 무관한 순수 상황 정보다.**
+        //
+        // ===== 이름을 low_speed_waiting에서 바꾼 이유 (D6-2c) =====
+        //
+        // 이전 이름은 "저속 때문에 후보를 만들지 못했다"로 읽힌다. 그런데
+        // 값은 candidate 평가 전에 ego.v만 보고 정해지므로,
+        //   ego = 0.4 m/s + candidate_valid = true
+        // 인 상황에서 "waiting인데 후보는 유효"라는 모순이 나온다.
+        //
+        // 현재 테스트 환경에서는 저속 후보가 실제로 막혀 드러나지 않았지만,
+        // 이름이 상태 판단에 쓰이도록 유혹한다. 그래서 상황 정보로 이름을
+        // 바꾸고, **execution_state는 candidate_valid만으로 정한다**:
+        //   candidate_valid=true  -> READY
+        //   candidate_valid=false -> WAITING
+        // 이 필드는 진단·로그에만 쓴다.
+        bool low_speed_context = false;
+
+        // strict safety margin 후보는 없었지만, 즉시 SHIFT해야 하는 저속
+        // 상황에서 실제 OBB 비충돌·횡이격 증가 복구 후보를 확보했는가.
+        // PREPARE 결과가 COMMIT될 때 context latch로 전달한다.
+        bool escape_recovery_required = false;
+        // A valid distance-based lateral candidate was selected. This controls
+        // generator continuity only; it grants no collision-check exception.
+        bool spatial_candidate_selected = false;
+        // Map-aware candidate locks the SHIFT station independently of ego speed.
+        double map_entry_s = 0.0;
+        double map_transition_distance = 0.0;
+
+        // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
+        // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
+        double ego_speed_mps = 0.0;
+
+        // 요청 방향과 target pose가 모순인가. 이 경우에도 candidate_valid는
+        // false여야 한다 - 충돌 검사에만 맡기면 안 된다(헤더 아래 주석).
+        bool direction_conflict = false;
+
+        // target pose가 ego 후방이라 회피 목표로 쓸 수 없는가.
+        bool target_behind_ego = false;
+
+        // 이번 사이클에 선택된 목표 d. candidate_valid일 때만 의미가 있다.
+        // **여기까지가 PREPARE의 범위다** - v2_avoidance_.target_d에 lock하지
+        // 않는다. NONE이면 사이클마다 좌/우가 바뀔 수 있고, FSM이 EXECUTE를
+        // 주지 않았으므로 그것이 정상이다. lock은 D6-3의 COMMIT에서 한다.
+        double selected_target_d = 0.0;
+
+        // 평가한 AVOID 후보. 진단·검증용이며 MPC로 보내지 않는다.
+        CartesianPath candidate_path;
+
+        // FrenetFeedback 진단 필드용.
+        std::size_t generated_candidate_count = 0;
+        std::size_t valid_candidate_count = 0;
+        double selected_cost = -1.0;
+        int blocking_object_id = -1;
+
+        // post-COMMIT lifecycle 결과. PREPARE에서는 sentinel/false다.
+        bool maneuver_completed = false;
+        double maneuver_progress = -1.0;
+    };
+
+    // AVOID PREPARE 한 사이클을 수행한다 (계약 5.2절).
+    //
+    // ===== 반환값의 의미 =====
+    //
+    // **"실제로 내보낼 maintenance_path를 유효하게 만들었는가"**다.
+    // AVOID 후보의 성공 여부는 result.candidate_valid이며 별개 축이다.
+    // 두 값을 다시 묶으면 D6-0에서 분리한 plan_valid / trajectory_source를
+    // 되돌리는 셈이다(계약 8.3.1절).
+    //
+    //   maintenance 성공 + 후보 성공  -> true,  candidate_valid=true   READY
+    //   maintenance 성공 + 후보 막힘  -> true,  candidate_valid=false  WAITING
+    //   maintenance 실패             -> false                        안전정지
+    bool PrepareAvoid(const CartesianState& ego,
+                      const std::vector<TrackedObject>& obstacles,
+                      const PlannerCommand& command,
+                      CartesianPath& maintenance_path,
+                      AvoidPrepareResult& result);
+
+    // COMMIT 이후 잠긴 AVOID geometry를 새 collision snapshot으로 실행한다.
+    // target observation/request pose는 더 이상 기동 지속 조건이 아니다.
+    bool PlanCommittedAvoid(
+        const CartesianState& ego,
+        const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& command, CartesianPath& out_path,
+        AvoidPrepareResult& result);
+
+    // AVOID COMMIT의 core precondition을 mutation 없이 검사한다 (D6-3a1).
+    //
+    // node는 candidate 변환을 끝낸 뒤 이 검사를 통과해야 manager를
+    // COMMITTED로 올릴 수 있다. single-threaded planning tick 안에서는 이
+    // 검사와 ApplyAvoidCommit() 사이에 core 상태를 바꾸는 호출이 없으므로,
+    // preflight 뒤의 apply는 같은 조건으로 실패하지 않는다.
+    bool CanCommitAvoid(const AvoidPrepareResult& result) const;
+
+    // CanCommitAvoid()가 성공한 결과를 적용한다. 이 단계에는 실패 반환이
+    // 없다. ROS coordinator가 manager를 COMMITTED로 올린 뒤 core apply가
+    // 거부되어 두 상태가 갈라지는 경로를 타입 수준에서 없앤다.
+    void ApplyAvoidCommit(const AvoidPrepareResult& result);
+
+    // 재검증을 통과한 AVOID 후보를 core 단독으로 확정하는 호환 API다.
+    //
+    // ===== 호출 시점이 계약이다 =====
+    //
+    // ROS node는 이 함수를 manager 승격 뒤 호출하지 않고 위의 preflight와
+    // 실패 없는 apply를 분리해 쓴다. 전체 호출 순서는 다음이어야 한다:
+    //
+    //   1. PrepareAvoid()로 현재 snapshot 재평가
+    //   2. result.candidate_valid 확인
+    //   3. candidate_path -> ROS Trajectory 변환 성공 확인
+    //   4. CanCommitAvoid() 성공
+    //   5. NotifyCommitted() 성공
+    //   6. ApplyAvoidCommit()
+    //   7. 궤적 캐시 저장 + publish
+    //
+    // 5번보다 먼저 3·4번을 확인해야 하는 이유는 D6-0a와 같다. COMMIT을 먼저
+    // 올리고 변환이 실패하면
+    //   Feedback = COMMITTED AVOID
+    //   MPC      = 직전 PREPARE의 중앙 maintenance
+    // 라는 불일치가 생긴다.
+    //
+    // 이 시점에 target_d와 회피 방향을 처음 lock한다. PREPARE에서는
+    // 사이클마다 좌/우가 바뀔 수 있으므로 lock하지 않았다. COMMIT 뒤 OBB가
+    // 커지면 geometry 기반 목표는 같은 방향 바깥쪽으로만 확장될 수 있다.
+    //
+    // 반환값은 실제로 lock했는지다. candidate_valid가 false인 결과를 넘기면
+    // false를 돌려주고 아무것도 바꾸지 않는다 - 확보하지 않은 목표를
+    // 잠그지 않는다.
+    bool CommitAvoid(const AvoidPrepareResult& result);
+
+    // v2 AVOID가 COMMIT되었는지. COMMIT 이후에는 target resolver 대신 잠긴
+    // context로 기동을 완주한다(계약 8.2.1절).
+    bool avoid_committed() const { return execution_->avoid.committed; }
+
+    // COMMIT된 현재 목표 d [m]. OBB 관측이 커지면 같은 회피 방향 바깥쪽으로
+    // 확장될 수 있다. avoid_committed()가 false이면 의미가 없다.
+    double avoid_locked_target_d() const { return v2_avoidance_.target_d; }
+
+    // COMMIT 시점의 ego d [m]. maneuver_progress를 (start_d -> target_d)
+    // 구간의 진행률로 계산하는 데 쓴다(D6-3c).
+    double avoid_start_d() const { return v2_avoidance_.start_d; }
+
+    bool avoid_completed() const { return execution_->avoid.completed; }
+    bool avoid_tracking() const {
+        return execution_->avoid.active && execution_->avoid.committed &&
+               execution_->avoid.phase == AvoidPhase::TRACKING;
+    }
+    double avoid_maneuver_progress() const {
+        return v2_avoidance_.maneuver_progress;
+    }
+    // committed AVOID가 strict safety margin에서 막힌 뒤, 실제 OBB
+    // 비충돌·횡이격 증가 조건으로 제한된 저속 탈출을 수행 중인지.
+    bool avoid_escape_recovery_active() const {
+        return v2_avoidance_.escape_recovery_active;
+    }
+
+    // v2 AVOID의 내부 실행 단계 이름. 진단·검증용 문자열이다. 내부 enum을
+    // 공개하지 않기 위해 이름으로 돌려준다.
+    const char* avoid_phase_name() const;
+
+    // 외부 AVOID 상태를 전부 비운다 (D6-3a).
+    //
+    // ===== 왜 별도 API가 필요한가 =====
+    //
+    // v2 AVOID context reset은 PlanInternal에서 "다른 mode가 들어왔을 때"만
+    // 일어난다. 그런데 CANCEL이 성공하면 manager는 planner를 아예 호출하지
+    // 않는다(planning_target=NONE). 그래서
+    //
+    //   AVOID id=20 PREPARE   -> 21 확보
+    //   AVOID id=20 CANCEL    -> manager만 IDLE, planner 호출 없음
+    //   AVOID id=22 target=21 -> 21이 없어도 stale context로 GRACE
+    //
+    // 가 된다. 첫 binding 실패인데 유예를 받는 D5-2와 같은 구조다.
+    //
+    // COMMITTED/EXECUTING에서 CANCEL이 거부되면(TOO_LATE_TO_CANCEL) 이
+    // 함수를 **절대 호출하면 안 된다** - 진행 중인 기동의 잠긴 목표가
+    // 사라진다.
+    void ResetExternalAvoidance();
+
+    // =========================================================================
+    // v2 LANE_CHANGE
+    //
+    // AVOID의 PREPARE/COMMIT/lifecycle 패턴을 재사용한다. 차이는:
+    //   - 회피 대상 객체가 없다.
+    //   - 좌/우가 mode(LANE_CHANGE_LEFT/RIGHT)로 이미 갈리므로 좌/우 후보
+    //     경쟁이 필요 없다 - 후보는 항상 하나뿐이다.
+    //   - 목표 d 도달 후 COMPLETED로 올리지 않는다. 이 검증 단계에는 새
+    //     차선으로 참조선을 바꿔줄 Route/GlobalPath 연동이 없으므로,
+    //     "완료"를 선언해도 FSM이 다음에 뭘 해야 하는지 알려줄 새 기준선이
+    //     없다 - 대신 HOLD_TARGET_LANE으로 전환해 잠긴 target_d를 유지한
+    //     채 계속 전진한다(LaneChangePhase 주석 참고).
+    // =========================================================================
+
+    // LANE_CHANGE PREPARE 한 사이클의 결과. AvoidPrepareResult와 같은 이유로
+    // candidate/maintenance 두 출력을 분리한다(헤더 AvoidPrepareResult 주석
+    // 참고) - candidate_path는 진단용이며 MPC로 보내지 않는다.
+    struct LaneChangePrepareResult {
+        bool candidate_valid = false;
+        bool low_speed_context = false;
+
+        double selected_target_d = 0.0;
+        CartesianPath candidate_path;
+
+        std::size_t generated_candidate_count = 0;
+        std::size_t valid_candidate_count = 0;
+        double selected_cost = -1.0;
+        int blocking_object_id = -1;
+
+        // target d 도달 후 HOLD_TARGET_LANE으로 전환했는가. AVOID의
+        // maneuver_completed와 이름은 비슷하지만 의미가 다르다 - manager를
+        // COMPLETED로 올리는 신호가 아니라 진단/로그용이다.
+        bool reached_target_lane = false;
+        double maneuver_progress = -1.0;
+    };
+
+    // LANE_CHANGE PREPARE 한 사이클을 수행한다. AVOID의 PrepareAvoid()와
+    // 동일한 반환값 의미다 - "maintenance_path를 유효하게 만들었는가"이며
+    // candidate 성공 여부는 result.candidate_valid로 별도로 나간다.
+    bool PrepareLaneChange(const CartesianState& ego,
+                           const std::vector<TrackedObject>& obstacles,
+                           const PlannerCommand& command,
+                           CartesianPath& maintenance_path,
+                           LaneChangePrepareResult& result);
+
+    // COMMIT 이후 잠긴 LANE_CHANGE geometry를 새 collision snapshot으로
+    // 실행한다. AVOID의 PlanCommittedAvoid()와 동일한 계약이다.
+    bool PlanCommittedLaneChange(
+        const CartesianState& ego,
+        const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& command, CartesianPath& out_path,
+        LaneChangePrepareResult& result);
+
+    // COMMIT core precondition을 mutation 없이 검사한다. CanCommitAvoid()와
+    // 동일한 계약 - node는 candidate 변환을 끝낸 뒤 이 검사를 통과해야
+    // manager를 COMMITTED로 올릴 수 있다.
+    bool CanCommitLaneChange(const LaneChangePrepareResult& result) const;
+
+    // CanCommitLaneChange()가 성공한 결과를 적용한다. 실패 반환이 없다
+    // (ApplyAvoidCommit()과 동일한 계약).
+    void ApplyLaneChangeCommit(const LaneChangePrepareResult& result);
+
+    bool lane_change_committed() const { return execution_->lane_change.committed; }
+    double lane_change_locked_target_d() const {
+        return v2_lane_change_.target_d;
+    }
+    double lane_change_start_d() const { return v2_lane_change_.start_d; }
+    bool lane_change_holding_target_lane() const {
+        return execution_->lane_change.phase == LaneChangePhase::HOLD_TARGET_LANE;
+    }
+    double lane_change_maneuver_progress() const {
+        return v2_lane_change_.maneuver_progress;
+    }
+
+    // 외부 LANE_CHANGE 상태를 전부 비운다. ResetExternalAvoidance()와 동일한
+    // 이유로 필요하다 - CANCEL 성공 시 manager는 planner를 호출하지 않으므로
+    // 별도 API가 필요하다.
+    void ResetExternalLaneChange();
+
+private:
+    bool PlanInternal(const CartesianState& ego,
+                      const std::vector<TrackedObject>& obstacles,
+                      const PlannerCommand* external_command,
+                      ExternalPlanningPurpose purpose,
+                      CartesianPath& out_path,
+                      AvoidPrepareResult* avoid_prepare_result,
+                      LaneChangePrepareResult* lane_change_prepare_result =
+                          nullptr);
+
+    // PlanInternal의 모든 모드가 공유하는 준비 단계의 결과 (§3).
+    // Cartesian->Frenet 변환, object tracking/yaw-rate 추정, target speed
+    // 해석/연속성까지만 담는다 - 모드별 dispatch(EMERGENCY/AVOID prepare/
+    // 저속 fallback/KEEP-FOLLOW-STOP switch)는 이 구조체가 만들어진 뒤
+    // PlanInternal이 담당한다.
+    struct PlanningContext {
+        double s = 0.0;
+        double s_dot = 0.0;
+        double s_ddot = 0.0;
+        double d = 0.0;
+        double d_prime = 0.0;
+        double d_pprime = 0.0;
+        // obstacles와 같은 객체 집합이지만 yaw_rate만 연속 관측으로 갱신한
+        // 사본이다 - motion 예측과 collision geometry 양쪽에 그대로 쓴다
+        // (병렬 vector로 나누지 않는다).
+        std::vector<TrackedObject> predicted_obstacles;
+        double resolved_target_speed = 0.0;
+    };
+
+    // Plan()이 validation -> 공용 준비 -> switch(mode) -> Process() -> 공용
+    // 후처리로 읽히게 하는 "공용 준비" 단계 (§3). ref_loaded_ 확인 이후,
+    // 그리고 EMERGENCY/AVOID 대상 확보/저속 fallback 등 모드별 분기보다
+    // 먼저 PlanInternal이 호출한다 - 이 함수 자체는 실패하지 않는다(입력이
+    // 이미 유효하다고 가정). 외부 command가 바뀔 때의 v2 FOLLOW/AVOID
+    // context reset도 여기서 처리한다 - 아래 모드별 early-return(EMERGENCY
+    // 등)보다 반드시 먼저 실행되어야 하므로(호출부 주석이 아니라 여기
+    // 순서 자체가 계약이다).
+    PlanningContext PreparePlanningContext(
+        const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& external_command);
+
+    // KEEP/FOLLOW/STOP이 공유하는 candidate 생성 -> 곡률/충돌 필터 ->
+    // cost 평가 -> 최적 후보 선택 -> Cartesian 변환 pipeline. 정의는
+    // Maneuver/Keep.cpp에 있다(파일이 KEEP 전용이라서가 아니라, KEEP이
+    // 이 pipeline을 그대로 위임하는 가장 단순한 모드라서 그 진입점 옆에
+    // 본체를 뒀다 - Follow.cpp/Stop.cpp의 FollowProcess/StopProcess도
+    // 이 함수를 그대로 호출한다). AVOID/EMERGENCY는 각자 전용 Process
+    // (AvoidProcess/EmergencyStopProcess)로 분리되어 있고, KEEP/FOLLOW/
+    // STOP은 이 공용 pipeline 위에 각자의 얇은 Process(KeepProcess/
+    // FollowProcess/StopProcess)가 모드별 준비 작업만 하고 이 함수로
+    // 위임하는 구조다 - candidate 생성/필터/비용/로깅 자체는 세 모드가
+    // 정말로 동일하므로 pipeline 자체를 셋으로 쪼개지 않는다.
+    //
+    // PlanInternal이 EMERGENCY/AVOID PREPARE-COMMITTED/저속 fallback을
+    // 모두 걸러낸 뒤, FrenetState start까지 만든 시점에만 호출한다 -
+    // Cartesian->Frenet 변환과 object tracking/prediction을 중복
+    // 수행하지 않기 위해서다(계약 12.7.1절과 같은 이유). 직접 호출하지 말고
+    // KeepProcess/FollowProcess/StopProcess를 통해서만 들어온다.
+    bool ExecuteManeuverPipeline(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double s_dot, double s_ddot,
+        double d_dot, double d_ddot,
+        const std::vector<TrackedObject>& obstacles,
+        const std::vector<TrackedObject>& predicted_obstacles,
+        double resolved_target_speed, const PlannerCommand& external_command,
+        CartesianPath& out_path);
+
+    // 외부 LANE_KEEPING 전용 진입점. 모드별 준비 작업이 없으므로 공용
+    // pipeline을 그대로 위임한다 - PlanInternal의 switch(mode)가 KEEP일 때
+    // 부르는 자리를 명확히 하기 위한 이름이다(§6, Plan()이 validation ->
+    // 공용 준비 -> switch(mode) -> Process() -> 공용 후처리로 읽히게 한다).
+    bool KeepProcess(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double s_dot, double s_ddot,
+        double d_dot, double d_ddot,
+        const std::vector<TrackedObject>& obstacles,
+        const std::vector<TrackedObject>& predicted_obstacles,
+        double resolved_target_speed, const PlannerCommand& external_command,
+        CartesianPath& out_path);
+
+    // 외부 FOLLOWING 전용 진입점. FSM이 지정한 대상(target_object_id)만
+    // 확보한다 - nearest-object 자동 선택/handoff는 하지 않는다(계약 D1
+    // 0.1절 B 분류). 대상을 확보하지 못하면(TARGET_OBJECT_LOST) 공용
+    // pipeline을 부르지 않고 바로 실패를 보고한다.
+    bool FollowProcess(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double s_dot, double s_ddot,
+        double d_dot, double d_ddot,
+        const std::vector<TrackedObject>& obstacles,
+        const std::vector<TrackedObject>& predicted_obstacles,
+        double resolved_target_speed, const PlannerCommand& external_command,
+        CartesianPath& out_path);
+
+    // 외부 STOP 전용 진입점. UpdateExternalStopExecution으로 APPROACH/
+    // BRAKING/HOLD phase를 갱신한 뒤, HOLD면 공용 pipeline을 거치지 않고
+    // 0속도 유지 궤적을 직접 반환한다. APPROACH/BRAKING은 공용 pipeline에
+    // 위임한다(Stop.cpp의 cmd.mode 내부 전환 주석 참고 - 외부에 보고되는
+    // last_mode_/stop_.phase는 항상 STOP으로 유지된다).
+    bool StopProcess(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double s_dot, double s_ddot,
+        double d_dot, double d_ddot,
+        const std::vector<TrackedObject>& obstacles,
+        const std::vector<TrackedObject>& predicted_obstacles,
+        double resolved_target_speed, const PlannerCommand& external_command,
+        CartesianPath& out_path);
+
+    // 정의: Maneuver/Avoid/AvoidLifecycle.cpp (R6-F1).
+    double EffectiveAvoidShiftStartDistance(double ego_speed,
+                                            double ego_d) const;
+    double EffectiveAvoidShiftStartDistance(double ego_speed,
+                                            double ego_d,
+                                            double target_d) const;
+    void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
+                                       double ego_speed,
+                                       AvoidPrepareResult& result);
+
+    // ---------------------------------------------------------------------
+    // v2 LANE_CHANGE 내부. Maneuver/Avoid/의 대응 함수와 같은 역할 분리를
+    // 따른다 - commit/lifecycle은 LaneChangeLifecycle.cpp, target 캡처/
+    // maintenance/orchestration은 LaneChange.cpp (R6-F2).
+    // ---------------------------------------------------------------------
+    //
+    // authoritative execution target(target_d)은 Behavior/FSM이 MGeo Link
+    // centerline에서 뽑아 넣은 target_pose_map을 node가 현재 RefLine에
+    // 투영한 값이다(command.target_pose_projection_d) - Behavior는 이미
+    // adjacent-lane 허용 여부와 실제 목표 차선 형상을 알고 있으므로, core가
+    // lane_width 같은 근사치로 그 정보를 다시 추정하지 않는다. node는 이
+    // 값을 core에 넘기기 전에 방향/헤딩이 명령과 모순되지 않는지만
+    // 검증한다 - core는 검증을 통과한 값을 그대로 신뢰한다.
+
+    using LaneChangePhase = asmc_planner::execution::LaneChangePhase;
+
+    struct LaneChangeContext {
+
+        // mode(LANE_CHANGE_LEFT/RIGHT)가 이미 방향을 정하므로 좌/우 자체
+        // 판단에는 쓰지 않는다. 진단·피드백용으로만 보존한다.
+
+        // 차선 변경을 시작한 시점(첫 PREPARE 사이클)의 ego d. target_d
+        // 계산에는 더 이상 쓰이지 않는다(target_d는 투영된 target_pose_map
+        // 값) - maneuver_progress가 "시작 d에서 target_d까지 얼마나
+        // 왔는가"를 계산하는 기준점으로만 남는다.
+        double start_d = 0.0;
+        // 잠긴 실행 목표. PrepareExternalLaneChangeTarget이 이 transaction의
+        // 첫 PREPARE 사이클에 command.target_pose_projection_d로 채운다.
+        double target_d = 0.0;
+
+
+        // localization jitter로 되돌아가지 않도록 이전 값 이상으로만
+        // 갱신한다(AVOID의 maneuver_progress와 동일한 정책).
+        double maneuver_progress = 0.0;
+    };
+
+    // 새 LANE_CHANGE transaction의 target_d를 확보한다. target_pose_map
+    // 투영은 이 함수가 아니라 node가 이미 끝내고 방향/헤딩 검증까지 마친
+    // 뒤 command.target_pose_projection_*로 실어 보낸다 - 여기서는 "이
+    // 명령이 core에 처음 들어온 사이클인가"만 보고 그 값을 target_d로 한
+    // 번 잠그고, start_d(진행률 계산용 기준점)를 기록한다.
+    //
+    // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로 전달한다.
+    //
+    // 정의: Maneuver/LaneChange/LaneChange.cpp (R6-F2).
+    bool PrepareExternalLaneChangeTarget(
+        double ego_s, double ego_d, const PlannerCommand& command,
+        bool lane_change_prepare, bool lane_change_committed);
+
+    // LANE_CHANGE PREPARE/COMMITTED 실행 전체. AvoidProcess와 동일한 구조다.
+    // 정의: Maneuver/LaneChange/LaneChange.cpp (R6-F2).
+    bool LaneChangeProcess(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double resolved_target_speed,
+        const std::vector<TrackedObject>& predicted_collision_obstacles,
+        const PlannerCommand& command, bool lane_change_prepare,
+        bool lane_change_committed, CartesianPath& out_path,
+        LaneChangePrepareResult& result);
+
+    // LANE_CHANGE PREPARE의 유지 궤적. BuildAvoidMaintenancePath와 동일한
+    // 3단계 우선순위(충돌 검사를 통과한 현재 차선 유지 -> 종방향 감속 ->
+    // 0속도 hold, §9) - 로직을 복제하지 않고 그대로 재사용한다.
+    // 정의: Maneuver/LaneChange/LaneChange.cpp (R6-F2).
+    bool BuildLaneChangeMaintenancePath(
+        const CartesianState& ego, const FrenetState& start,
+        const PlannerCommand& base_command,
+        const std::vector<TrackedObject>& collision_obstacles,
+        CartesianPath& out_path) const;
+
+    // 위치+속도+heading 정렬을 모두 만족하면 SHIFT -> HOLD_TARGET_LANE으로
+    // 전환하고 progress를 갱신한다. UpdateCommittedAvoidLifecycle과 같은
+    // 역할 분리이지만 obstacle clearance(PASS)에 대응하는 단계가 없다 -
+    // 지나쳐야 할 장애물이 없으므로 위치 도달이 곧 HOLD 전환 조건이다.
+    // 정의: Maneuver/LaneChange/LaneChangeLifecycle.cpp (R6-F2).
+    void UpdateCommittedLaneChangeLifecycle(double ego_s, double ego_d,
+                                            double ego_d_dot, double ego_yaw,
+                                            LaneChangePrepareResult& result);
+
+    // AVOID PREPARE의 유지 궤적을 만든다 (D6-2b).
+    //
+    // ===== 왜 단순 KEEP이면 안 되는가 =====
+    //
+    // AVOID 대상은 같은 corridor에 있다. 그래서 중앙 KEEP 후보가 그 장애물
+    // 때문에 충돌 검사에서 전부 탈락할 수 있다. 즉
+    //
+    //   AVOID candidate valid = true      (옆으로 비켜가면 안전)
+    //   maintenance KEEP      = 없음      (직진하면 부딪힌다)
+    //
+    // 가 정상적으로 발생한다. 그렇다고 AVOID candidate를 발행하면 계약 5.2절
+    // 위반이므로, 종방향으로 물러나는 대안이 필요하다.
+    //
+    // 우선순위:
+    //   1. 충돌 검사를 통과한 KEEP/유지 궤적
+    //   2. GenerateDecelToZeroPath (종방향 감속)
+    //   3. 현재 위치 0속도 hold
+    //
+    // 저속(ego.v < kLowSpeedFallbackV)에서는 1번 대신 crawl을 쓴다. 무조건
+    // 정지시키면
+    //   0.3 m/s -> WAITING -> stop -> 0 m/s -> WAITING -> stop ...
+    // 로 자기잠금이 되어 영원히 READY에 도달하지 못한다. crawl도 반드시
+    // 충돌 검사를 통과해야 하며(PlanLowSpeedFallback 자체는 충돌 필터를
+    // 타지 않는다), 막히면 2번/3번으로 내려간다.
+    //
+    // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
+    bool BuildAvoidMaintenancePath(
+        const CartesianState& ego, const FrenetState& start,
+        const PlannerCommand& base_command,
+        const std::vector<TrackedObject>& collision_obstacles,
+        CartesianPath& out_path) const;
+
+    // 현재 위치에서 0속도로 정지 유지하는 한 점 궤적. STOP HOLD와 같은 형태다.
+    // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1) - LaneChange.cpp도 이 helper를
+    // 공유한다(AVOID 전용 로직이 아니다).
+    void BuildZeroSpeedHoldPath(const CartesianState& ego, double s,
+                                CartesianPath& out_path) const;
+
+    // 외부(v2) AVOID target 확보 + 이번 cycle 후보 생성에 쓸 target list
+    // 준비 (D6-2a, AVOID A2). PlanInternal의 external EMERGENCY 분기
+    // 다음, purpose/mode 일치 guard보다 앞에서 호출된다 - 순서를 바꾸면
+    // 안 된다(저속 fallback보다 반드시 위여야 한다는 계약 12.7.2절 근거는
+    // 호출부 주석 참고).
+    //
+    // avoid_committed(purpose==AVOID_COMMITTED)와 execution_->avoid.committed
+    // (core context가 이미 COMMIT되어 target_d가 잠겼는가)는 서로 다른
+    // 축이다 - 이 함수 안에서도 하나로 합치지 않는다.
+    //
+    // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로
+    // 전달한다(TARGET_OBJECT_LOST, NORMAL purpose에서의
+    // UNSUPPORTED_BEHAVIOR). 그 외엔 true.
+    //
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
+    bool PrepareExternalAvoidTargets(
+        double ego_s, const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& command, bool avoid_prepare, bool avoid_committed);
+
+    // 외부(v2) AVOID PREPARE/COMMITTED 실행 전체 (D6-2b/D6-3, AVOID A3b).
+    // PlanInternal이 FrenetState start를 만든 직후, avoid_prepare ||
+    // avoid_committed일 때 그대로 호출하고 이 함수의 반환값을 그대로
+    // return한다.
+    //
+    // 계약 5.2절: candidate("AVOID를 실행해도 되는가", result.candidate_valid)와
+    // maintenance(out_path, "지금 MPC가 따라갈 것")는 절대 같은 것으로
+    // 취급하지 않는다 - PREPARE의 반환값은 candidate_valid가 아니라
+    // maintenance 성공 여부다.
+    //
+    // avoid_prepare(purpose==AVOID_PREPARE), avoid_committed
+    // (purpose==AVOID_COMMITTED), execution_->avoid.committed(core context
+    // lock 여부)는 서로 다른 세 축이며 이 함수 안에서도 합치지 않는다.
+    //
+    // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
+    AvoidRoadMap avoid_road_map_;
+    RoundaboutMergeConfig roundabout_merge_cfg_;
+    RoundaboutMergeZone roundabout_zone_;
+    double roundabout_preferred_d_ = 0;
+    MergeAccelerationMemory roundabout_acceleration_memory_;
+    bool roundabout_bridge_active_ = false, roundabout_bridge_used_ = false;
+    double roundabout_bridge_start_time_ = 0, roundabout_bridge_travel_ = 0;
+    double roundabout_bridge_settled_ = 0, roundabout_bridge_x_ = 0, roundabout_bridge_y_ = 0;
+    int roundabout_safe_observations_ = 0;
+    double roundabout_last_observation_ = -1, roundabout_last_entry_ = -1;
+    std::uint64_t roundabout_epoch_ = 0;
+    MergePrepareResult last_roundabout_result_;
+
+    bool MapAvoidProcess(const CartesianState& ego, const FrenetState& start,
+        double s, double d, double speed, const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& command, bool prepare, bool committed,
+        CartesianPath& output, AvoidPrepareResult& result);
+    bool AvoidProcess(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double resolved_target_speed,
+        const std::vector<TrackedObject>& predicted_collision_obstacles,
+        const PlannerCommand& command, bool avoid_prepare, bool avoid_committed,
+        CartesianPath& out_path, AvoidPrepareResult& result);
+
+    // TRACKING은 외부 AVOID 모드가 아니다. 정적 장애물 ID/방향만
+    // 미리 잠그고 주행은 LANE_KEEPING을 계속하는 내부 상태다.
+    // TRACKING=global-path approach, SHIFT=회피측 횡이동,
+    // PASS=장애물 옆 통과, RETURN=global path(d=0) 복귀.
+    using AvoidPhase = asmc_planner::execution::AvoidPhase;
+
+    struct AvoidanceContext {
+        // BehaviorCommand에 고정된 논리 ID와 현재 perception 관측 ID를
+        // 분리한다. tracker ID가 바뀌어도 wire transaction은 유지한다.
+        double obstacle_s = 0.0;
+        double obstacle_d = 0.0;
+        double obstacle_width = 0.0;
+        double obstacle_length = 0.0;
+        // OBB가 경로와 비스듬히 놓이면 raw width/length는 각각 횡/종방향
+        // 점유폭이 아니다. 현재 ref 접선/법선에 투영한 실제 반폭을 보존한다.
+        double obstacle_lateral_half_extent = 0.0;
+        double obstacle_longitudinal_half_extent = 0.0;
+        double target_d = 0.0;
+
+        // 대상의 일시적 미관측 누적. PREPARE와 COMMIT 후 TRACKING에서
+        // avoid_cfg_.dropout_grace_cycles를 넘으면 대상 소실로 판정한다.
+        // SHIFT/PASS/RETURN은 중간 급복귀를 막기 위해 이 값으로 끊지 않는다.
+
+        // 기동 시작 시점의 ego d. maneuver_progress를 (start_d -> target_d)
+        // 구간의 진행률로 계산하기 위해 필요하다(D6-4에서 사용).
+        double start_d = 0.0;
+        // Legacy entry remains locked. Map-aware retiming requires a blocked
+        // nominal plan and no measured lateral bypass motion.
+        double shift_entry_distance = 0.0;
+        double map_entry_s = 0.0;
+        double map_transition_distance = 0.0;
+        // Measured lateral motion, rather than the nominal SHIFT/PASS label,
+        // locks the entry against being postponed during an actual bypass.
+        double map_lateral_origin_d = 0.0;
+        bool map_lateral_started = false;
+        // Actual travel budget survives replanning while the body is outside.
+        bool map_recovery_active = false;
+        double map_recovery_last_s = 0.0;
+        double map_recovery_travel_m = 0.0;
+        double map_recovery_overlap_limit_m = 0.0;
+        double map_recovery_settled_travel_m = 0.0;
+        CartesianPath map_recovery_path;
+        double map_recovery_path_target_d = 0.0;
+        // Per-maneuver, accepted speed-profile history. Reset with the context;
+        // failed plans invalidate it rather than advancing an unchecked path.
+        bool map_speed_profile_valid = false;
+        std::chrono::steady_clock::time_point map_speed_profile_at{};
+        // Keep an accepted spatial lateral profile through SHIFT/RETURN even
+        // when launch speed crosses the normal generator boundary.
+        bool spatial_lateral_active = false;
+
+        // FSM이 요청한 방향. NONE이면 Frenet이 좌/우를 고른다.
+
+        // FSM이 target pose로 준 회피 목표를 Frenet으로 투영한 값 (D6-1a).
+        // AVOID의 target pose는 선택 사항이므로 없을 수 있다.
+        // 0.0은 유효한 d이므로 유효성은 플래그로만 판단한다.
+        bool has_requested_target_d = false;
+        double requested_target_d = 0.0;
+        double requested_target_s = 0.0;
+
+        // EXECUTE 재검증을 통과해 목표를 확정했는가 (D6-3a).
+        //
+        // true이면 회피 방향과 target_d / start_d가 확정되며, 후보 생성은
+        // 현재 target_d를 **정확히** 겨냥한다(lateral tolerance 0).
+        // geometry 기반 target_d는 새 OBB가 커질 때 같은 방향 바깥쪽으로만
+        // 확장될 수 있다. PREPARE에서는 항상 false다.
+
+        // 저속 SHIFT에서 공용 margin-recovery 판정을 사용한 후보가
+        // 승인되었는가. 이 값은 충돌 예외를 켜는 phase gate가 아니라,
+        // 속도가 low_speed_fallback_v를 넘어도 PASS 진입까지 거리 기반
+        // 후보 생성기를 유지해 출발/정지 진동을 막는 generator latch다.
+        bool escape_recovery_active = false;
+
+        // 완료 후에도 새 command_id가 올 때까지 context를 보존한다.
+        double maneuver_progress = 0.0;
+    };
+
+    struct FollowingContext {
+        double leader_s = 0.0;
+        double leader_d = 0.0;
+        double leader_speed = 0.0;
+        double leader_accel = 0.0;
+        int missing_cycles = 0;
+    };
+
+    // 외부 STOP 명령의 내부 실행 단계. 외부 BehaviorState::STOP과는 다른
+    // 개념이다 - mode는 계속 STOP이고, 그 안에서 어떤 종방향 후보 생성기를
+    // 쓸지가 이 phase로 갈린다.
+    //   APPROACH: 정지 목표가 제동거리 밖. 속도만 낮추며 접근(velocity keeping).
+    //   BRAKING : 제동거리 안. exact-stop quintic 생성.
+    //   HOLD    : 목표 도달 + 저속. 0속도 유지.
+    using StopExecutionPhase = asmc_planner::execution::StopExecutionPhase;
+
+    struct StopContext {
+        // 이 context가 추종 중인 정지 목표 s. 목표가 크게 바뀌면 새 명령으로
+        // 보고 phase를 리셋한다.
+        double target_s = std::numeric_limits<double>::quiet_NaN();
+        bool target_valid = false;
+        // 이번 planning cycle의 남은 거리와 속도로 계산한 일반 STOP 감속도.
+        // BRAKING fallback도 같은 값을 사용해 정상 후보와 실패 경로의 제동
+        // 강도가 서로 달라지지 않게 한다.
+        double commanded_decel = 0.0;
+    };
+
+    struct ObjectTrack {
+        double heading = 0.0;
+        double yaw_rate = 0.0;
+        int missing_cycles = 0;
+    };
+
+    // 저속(ego.v < kLowSpeedFallbackV) 전용 fallback: CartesianToFrenet/FrenetToCartesian의
+    // d_prime = d_dot/s_dot 계산은 s_dot(≈속도)로 나누는 구조라 저속에서 수학적으로
+    // 특이점을 가진다("고속 모드 전용" - frenet_converter.cpp 주석 참고). 그 특이점 있는
+    // 경계조건으로 만든 quintic 후보가 정지 근처를 지나 실제로 움직이기 시작하는
+    // 시점에 억지로 꺾인 모양이 되어 곡률필터에 걸리는 문제가 실측으로 확인됐다.
+    // 저속에서는 이 경계조건 역산 자체를 안 쓰고, s/d를 직접(시간에 따라 완만하게)
+    // 설계해 ComputeGeometricPath로만 렌더링한다 - 나누기가 전혀 없어 특이점이 없다.
+    // 활성 AVOID가 있으면 중앙이 아니라 저장된 회피 target_d를 유지/추종한다.
+    bool PlanLowSpeedFallback(const CartesianState& ego, double s, double d, double target_d,
+                              CartesianPath& out_path, double duration_s = 2.0,
+                              double speed_cap =
+                                  std::numeric_limits<double>::infinity(),
+                              double transition_distance_override = -1.0,
+                              double minimum_path_distance = -1.0) const;
+
+    // KEEP 저속 fallback은 정상 후보 파이프라인의 FilterByCurvature를 거치지
+    // 않는다. 현재 d에서 중앙으로 복귀하는 기본 거리로 경로를 만든 뒤 최종
+    // Cartesian kappa를 직접 검사하고, 한계를 넘으면 횡복귀 거리를 늘려
+    // 최소한의 feasible 경로를 다시 찾는다. 급커브에서는 중앙 복귀 자체가
+    // 당장 불가능할 수 있으므로 마지막에는 현재 d 유지 경로를 검사한다.
+    bool PlanCurvatureFeasibleKeepLowSpeedFallback(
+        const CartesianState& ego, double s, double d,
+        double resolved_target_speed, CartesianPath& out_path,
+        double duration_s = 2.0) const;
+
+    // FSM이 지정한 FOLLOW 대상의 확보 결과.
+    enum class FollowTargetStatus {
+        // 이번 사이클에 대상을 관측하고 검증까지 통과했다.
+        VALID,
+        // 관측되지 않았지만 직전에 확보한 상태가 있어 유예 중이다.
+        GRACE,
+        // 대상을 쓸 수 없다. 관측 자체가 없거나(첫 binding 실패), 관측되었지만
+        // 차선/방향/범위를 벗어났거나, 유예를 초과했다.
+        LOST,
+    };
+
+    // FSM이 지정한 대상 객체를 확보한다. **selector가 아니라 resolver다.**
+    //
+    //   selector: "누구를 따라갈까?"                  -> v2에서 금지
+    //   resolver: "FSM이 15번을 지정했다. 유효한가?"   -> 이 함수
+    //
+    // 같은 차선의 가장 가까운 차량을 스스로 고르지 않는다 - 대상 선택
+    // 권한은 FSM에 있다(docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류).
+    //
+    // 더 가까운 차량이 나타나도 무시한다. 자동 handoff는 FSM이 지시한 대상을
+    // 추종 중이라고 오인하게 만든다. 그 차량과 충돌 위험이 있으면 충돌
+    // 필터가 COLLISION_BLOCKED로 막고, 대상 변경은 FSM이 새 command_id로
+    // 결정한다.
+    //
+    // 검증 기준은 legacy와 동일하다(진행 방향, 같은 차선, 전방, 탐색 범위).
+    // 유예 중에는 직전 속도로 leader_s를 예측한다.
+    FollowTargetStatus ResolveExternalFollowTarget(
+        double ego_s, int target_object_id,
+        const std::vector<TrackedObject>& obstacles,
+        FollowingContext& context) const;
+
+    // external KEEP의 no-valid-candidate 분기에서 저속 근방일 때만 호출되는
+    // crawl fallback 실행부(fix/yuntae-frenet-speed-continuity Phase 5). 호출
+    // 여부 판단(external_keep/속도 문턱/COLLISION_BLOCKED 제외)은 PlanInternal이
+    // 그대로 유지한다 - STOP fail-safe 등 같은 분기의 다른 공용 실패 처리와
+    // 뒤섞이지 않게 하기 위함이며, 이 함수는 "이미 호출하기로 결정된 뒤" 실제
+    // crawl 경로 생성과 last_failure_reason_ 갱신만 담당한다.
+    bool PlanExternalKeepLowSpeedFallback(const CartesianState& ego, double s,
+                                          double d, double resolved_target_speed,
+                                          CartesianPath& out_path);
+
+    // 외부 EMERGENCY_STOP 실행부. 후보 파이프라인을 건너뛰고 직접 감속한다.
+    // 호출 위치(v2 FOLLOW/AVOID context reset 다음, 저속 fallback/AVOID 대상
+    // 확보보다 먼저)는 PlanInternal이 그대로 유지한다 - 이 함수는 gate 판단
+    // 없이, 이미 EMERGENCY로 확정된 뒤의 실행(감속 경로 생성/state 갱신/
+    // 5-cycle 로그)만 담당한다. 자세한 배경은 PlanInternal 호출부 주석 참고.
+    bool EmergencyStopProcess(const CartesianState& ego, double s, double d,
+                                    double s_dot, CartesianPath& out_path);
+
+    // 외부 STOP의 APPROACH/BRAKING/HOLD phase 전이와 그에 따른 cmd 조정
+    // (target 변경 감지 -> phase reset, braking 진입거리 latch, HOLD 진입
+    // 판정, APPROACH/BRAKING 각각의 target_speed/mode 조정)을 그대로
+    // 옮긴 것이다. execution_->stop_phase/target_s/target_valid를 직접 갱신한다.
+    //
+    // 주의: APPROACH에서 cmd.mode를 LANE_KEEPING으로 바꾸지만(candidate
+    // 생성만 velocity keeping에 위임하기 위함) 이 함수 반환 이후
+    // PlanInternal이 last_mode_ = STOP으로 별도 유지한다 - 그 진단용
+    // ordering은 이 함수가 아니라 호출부 책임이므로 여기서 last_mode_를
+    // 건드리지 않는다.
+    void UpdateExternalStopExecution(double s, double s_dot, PlannerCommand& cmd,
+                                      double& out_stop_distance);
+
+    // 외부 STOP이 HOLD phase에 도달했을 때의 0속도 1-point 궤적 출력부.
+    // 호출 gate(external_stop_mode && phase==HOLD)는 PlanInternal에 유지한다.
+    void PlanExternalStopHold(const CartesianState& ego, double s,
+                              CartesianPath& out_path) const;
+
+    // 외부 STOP BRAKING에서 후보가 0개일 때의 fail-safe 실행부(그 자리에서
+    // 감속해 정지하는 decel-to-zero 궤적). 호출 gate(phase==BRAKING &&
+    // COLLISION_BLOCKED 아님)는 common no-valid 분기에 강하게 결합되어
+    // 있으므로 PlanInternal에 유지한다.
+    void PlanExternalStopBrakingFallback(double s, double d, double s_dot,
+                                         double stop_distance,
+                                         CartesianPath& out_path);
+
+    // 외부 STOP은 절대 후진하지 않는다 - 선택된 Cartesian 궤적에서 속도가
+    // 처음 음수가 되는 지점 이후를 잘라내고 마지막 점의 v/a를 0으로 만든다.
+    // 호출 gate(external_stop_mode)는 PlanInternal에 유지한다.
+    void TrimExternalStopReverseTrajectory(CartesianPath& selected_cartesian) const;
+
+    // FSM이 지정한 AVOID 대상의 확보 결과. FollowTargetStatus와 같은 세 값을
+    // 쓰지만, 두 행동의 판정 기준이 앞으로 갈릴 수 있으므로 타입을 나눈다.
+    enum class AvoidTargetStatus { VALID, GRACE, LOST };
+
+    // FSM이 지정한 회피 대상을 확보한다. **selector가 아니라 resolver다.**
+    //
+    // 모든 객체 탐색 -> 같은 차선 -> 저속/정지 -> 가장 가까운 것 -> 좌/우
+    // 방향까지 자동 결정하는 acquisition을 스스로 하지 않는다 - 그 권한은
+    // 전부 FSM에 있다(docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
+    //
+    // ===== 속도 조건을 쓰지 않는 이유 =====
+    //
+    // legacy에는 fabs(s_dot) <= avoid_cfg_.trigger_max_speed(0.5 m/s) 조건이
+    // 있다. 그 config의 설명 자체가 "이 속도 이하만 정지 장애물로 간주(그
+    // 이상은 Following이 처리)"이므로, 이것은 **AVOID인가 FOLLOW인가를
+    // planner가 분류하는 policy**다.
+    //
+    // FSM이 AVOID object=15를 지정했는데 Frenet이 "15가 0.7 m/s니까 나는
+    // FOLLOW로 보겠다"고 하면 행동 선택에 다시 개입하는 셈이다. D5에서
+    // min_leader_speed를 제거한 것과 정확히 같은 이유다.
+    //
+    // 따라서 여기서 검증하는 것은 다음뿐이다:
+    //   ID 일치 / 전방 / 같은 corridor / 탐색 범위 / geometry 정상
+    //
+    // 탐색거리는 legacy AVOID와 같은 방식으로 확장한다. config 값을 그대로
+    // 쓰면 충돌 lookahead보다 짧아져, 장애물을 회피 대상으로 등록하기 전에
+    // 충돌 필터가 중앙 후보를 모두 제거해 속도가 급락한다.
+    //
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
+    AvoidTargetStatus ResolveExternalAvoidTarget(
+        double ego_s, int target_object_id,
+        const std::vector<TrackedObject>& obstacles,
+        AvoidanceContext& context) const;
+
+    // 기존 target geometry와 유일하게 일치하는 현재 관측만 반환한다.
+    // nullptr은 일치 없음과 모호한 복수 일치를 모두 뜻하며, 호출자는 기존
+    // dropout/fail-safe 정책을 그대로 적용한다.
+    const TrackedObject* FindSpatialAvoidReplacement(
+        double ego_s, const std::vector<TrackedObject>& obstacles,
+        const AvoidanceContext& context) const;
+
+    // 현재 OBB를 route s/d와 접선/법선 반폭으로 다시 투영한다. COMMIT 뒤
+    // geometry 기반 목표는 안전한 바깥 방향으로만 확장하고 안쪽으로 줄이지
+    // 않는다. FSM이 명시한 target pose는 authoritative이므로 건드리지 않는다.
+    void RefreshAvoidObservation(double ego_s, const TrackedObject& object,
+                                 AvoidanceContext& context,
+                                 bool refresh_committed_target) const;
+
+    // v2 AVOID 대상의 유효 탐색거리 [m]. resolver와 진단 출력이 공유한다.
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
+    double EffectiveAvoidDetectionDistance() const;
+
+    // 확보한 대상에 대해 평가할 회피 목표 d를 정한다 (D6-2a).
+    //
+    // ===== 두 갈래 =====
+    //
+    //   target pose 있음 (has_avoid_target_d)
+    //     -> 그 d가 authoritative lateral goal이다. FSM이 목표점을 준 것을
+    //        Frenet이 geometry로 덮어쓰면 계약 3.3.3절 위반이다.
+    //
+    //   target pose 없음
+    //     -> legacy의 검증된 geometry 계산을 재사용한다:
+    //          clearance = 0.5*자차폭 + OBB의 route-normal 반폭
+    //                      + safety_margin + 0.3
+    //          left  = obstacle_d + clearance
+    //          right = obstacle_d - clearance
+    //        legacy가 begin_avoidance에서 쓰는 식과 동일하다. 고정 ±5 m
+    //        (avoid_offset)가 아니라 장애물의 실제 횡위치를 반영하므로
+    //        불필요하게 멀리 이동하지 않는다.
+    //
+    // ===== 방향 =====
+    //
+    //   LEFT   왼쪽 후보만 평가
+    //   RIGHT  오른쪽 후보만 평가
+    //   NONE   양쪽 평가 후 valid/cost로 Frenet이 선택
+    //
+    // legacy처럼 항상 양쪽을 만든 뒤 방향을 고르면, LEFT를 받았는데 RIGHT로
+    // 가는 계약 위반이 된다(계약 3.3.1절).
+    //
+    // 이 함수는 **평가할 후보 목록만** 돌려준다. 어느 쪽이 실제로 안전한지는
+    // D6-2b의 후보 생성/충돌 검사가 판정한다.
+    struct AvoidTargetPlan {
+        // 평가할 목표 d. count가 1이면 [0]만, 2이면 [0]=left, [1]=right.
+        double candidates[2] = {0.0, 0.0};
+        int count = 0;
+        // 목표가 FSM의 target pose에서 왔는지. 진단·피드백용이다.
+        bool from_target_pose = false;
+        // 방향 요청과 target pose가 모순되는지 (예: LEFT인데 pose가 장애물
+        // 오른쪽).
+        //
+        // **충돌 검사에만 맡기면 안 된다** (D6-2b). LEFT 요청에 오른쪽 -4 m
+        // pose는 물리적으로 아주 안전할 수 있어 충돌 검사가 CLEAR를 준다.
+        // 그대로 READY로 올라가면 FSM은 LEFT를 명령했는데 Frenet은 RIGHT
+        // 후보를 준비한 계약 위반이 된다.
+        //
+        // 그래서 D6-2b가 이 값을 후보 차단 사유로 쓴다. 다만 명령 결함이
+        // 아니므로 INVALID_COMMAND가 아니라 WAITING이다(계약 3.3.4절).
+        bool direction_conflict = false;
+    };
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
+    AvoidTargetPlan DecideAvoidTargets(const AvoidanceContext& context,
+                                       LateralDirection direction) const;
+
+
+    // 현재 상태에서 그 자리에 정지하는 감속 궤적을 직접 만든다.
+    //
+    // 후보 생성 -> 곡률 필터 -> 충돌 필터 파이프라인을 타지 않는다. 두 곳에서
+    // 공유한다:
+    //   1. STOP BRAKING에서 후보가 0개인 경우의 fail-safe. 정지 목표가 아주
+    //      가까우면 exact-stop quintic이 가속도 한계를 넘어 전부 탈락한다.
+    //      여기서 실패를 반환하면 노드가 이전 궤적을 재사용해 정지 목표를
+    //      지나쳐 계속 주행한다 - STOP에서 가장 위험한 실패 방향이다.
+    //   2. 외부 EMERGENCY_STOP. BehaviorCommand는 목표점 없이
+    //      (has_target_pose=false) 즉시 긴급정지를 지시하므로 정지 목표
+    //      계산 소유권이 Frenet에 있다(계약 8.1절). 긴급정지에서 "후보가
+    //      없어서 못 멈춤"이라는 실패 방향 자체를 제거하는 것이 목적이다.
+    //
+    // 프로파일: v(t) = max(0, v0 - decel*t), s는 사다리꼴 적분, d는 현재
+    // 오프셋 유지(정지 직전이라 횡방향 기동을 하지 않는다).
+    // 모든 샘플에서 v >= 0이고 마지막 샘플은 v = 0이다.
+    // Fresh collision- and road-checked braking fallback for blocked KEEP.
+    // Includes the stopped footprint through the reactive prediction horizon.
+    bool PlanCollisionBrakingPath(const CartesianState& ego, double s, double d,
+                                 const std::vector<TrackedObject>& obstacles,
+                                 CartesianPath& out_path) const;
+
+    bool GenerateDecelToZeroPath(double s, double d, double s_dot,
+                                 CartesianPath& out_path) const;
+
+    // 일반 저속 fallback의 크롤링 가속 프로파일은 limits_.low_speed_crawl_accel/
+    // low_speed_min_creep_speed/low_speed_crawl_speed_cap이다. 회전교차로
+    // MERGE는 이 프로파일을 쓰지 않고 정상 MERGE 후보 생성기로 처리한다.
+    // max_curvature로 만들 수 있는 대칭 S-curve의 종방향 길이를 보수적으로
+    // 근사한다. 저속 fallback과 AVOID SHIFT 시작거리가 같은 값을 사용한다.
+    double LowSpeedLateralTransitionDistance(double from_d,
+                                              double to_d) const;
+
+    // ExecuteManeuverPipeline이 참조하는 config 11종을 값 복사 없이 참조로
+    // 묶어 반환한다 - Pipeline/TrajectoryPipeline으로 이 함수를 분리하기
+    // 위한 선행 작업(R3 1/4단계)이며, 이 시점에는 아직 pipeline 내부에서
+    // 개별 멤버 접근 대신 이 번들을 통해서만 읽도록 바꾸는 순수 구조
+    // 이동만 한다.
+    PlannerConfigBundle MakePipelineConfigBundle() const;
+
+    RefLine ref_;
+    ReferenceConfig ref_config_{};
+    PathGeneratorConfig path_cfg_{};
+    KinematicLimits limits_{};
+    CostWeights cost_weights_{};
+    VehicleShape vehicle_shape_{};
+    CollisionCheckConfig collision_cfg_{};
+    CurveSpeedConfig curve_speed_cfg_{};
+    FollowingConfig following_cfg_{};
+    AvoidConfig avoid_cfg_{};
+    LaneChangeConfig lane_change_cfg_{};
+    StopConfig stop_cfg_{};
+    EmergencyStopConfig emergency_stop_cfg_{};
+    MergeConfig merge_cfg_{};
+    HighwayMergeConfig highway_merge_cfg_{};
+    PlannerVisualizationConfig visualization_cfg_{};
+    ObjectTrackingConfig object_tracking_cfg_{};
+    std::unique_ptr<PlannerDebugWriter> debug_writer_;
+    double wheelbase_;
+    double lane_width_;
+    // [s] 이 값은 caller(ROS node의 planning/frequency)의 실제 replanning
+    // 주기를 나타낸다. path_cfg_.dt(trajectory 샘플 간격)와는 다른 개념이다
+    // - 절대 섞어 쓰지 않는다(fix/yuntae-frenet-speed-continuity Phase 2).
+    double replanning_period_s_;
+    // [m/s^2] normal KEEP SpeedProfiler의 양의 가속도 한계. 기존
+    // parameter의 물리 단위와 tuning 값을 그대로 이어받는다.
+    double max_target_speed_accel_;
+    bool ref_loaded_ = false;
+
+    // 직전 사이클의 s (FindClosestS 탐색범위 힌트용 - ref_line.hpp 주석 참고,
+    // 트랙이 자기 자신과 가까운 구간에서 최근접점이 엉뚱한 s로 튀는 문제 방지).
+    double last_s_ = 0.0;
+    bool has_last_s_ = false;
+    double last_d_ = 0.0;
+    double last_d_dot_ = 0.0;
+    BehaviorState last_mode_ = LANE_KEEPING;
+    // 실제 longitudinal candidate generation에 사용한 scalar target. 낮아진
+    // cap은 즉시 반영되고, cap 상승만 SpeedProfiler가 점진적으로 복구한다.
+    double last_target_speed_ = 0.0;
+    // true external KEEP 진단. base는 reference curvature/external cap까지,
+    // raw는 selected Cartesian candidate cap까지 반영한다.
+    double last_base_target_speed_ = 0.0;
+    double last_raw_speed_cap_ = 0.0;
+    double last_profiled_acceleration_ = 0.0;
+    double last_candidate_curvature_speed_cap_ = -1.0;
+    double last_candidate_max_abs_curvature_ = -1.0;
+    double last_candidate_max_lateral_accel_ = -1.0;
+    int last_candidate_aware_regenerations_ = 0;
+    SpeedProfiler speed_profiler_;
+    PlanFailureReason last_failure_reason_ = PlanFailureReason::NONE;
+    std::vector<CartesianPath> last_candidate_paths_;
+    std::vector<bool> last_candidate_validity_;
+
+    // 모드 전환(LANE_KEEPING/FOLLOWING/AVOID) 시점만 로그로 찍기 위한 이전 사이클 값.
+    BehaviorState prev_mode_ = LANE_KEEPING;
+    asmc_planner::execution::ManeuverExecution execution_;
+    StopContext stop_{};
+    // 외부 command(v2) 전용 FOLLOW 상태.
+    FollowingContext v2_following_{};
+    // 외부 command(v2) 전용 AVOID 상태 (D6-1).
+    AvoidanceContext v2_avoidance_{};
+
+    // 이번 사이클에 평가할 v2 AVOID 목표 d 목록 (D6-2a). D6-2b의 후보
+    // 생성기가 소비한다. 확보에 실패하면 count=0으로 비워진다.
+    AvoidTargetPlan v2_avoid_targets_{};
+
+    // 외부 command(v2) 전용 LANE_CHANGE 상태.
+    LaneChangeContext v2_lane_change_{};
+    std::unordered_map<int, ObjectTrack> object_tracks_{};
+    RoundaboutPrediction roundabout_prediction_{};
+    bool roundabout_exit_prediction_active_=false;
+    double roundabout_exit_prediction_until_=-1;
+};

@@ -16,6 +16,7 @@ add_message_files(
   LaneBoundaryObservationArray.msg
   LaneBoundaryFamilyMember.msg
   LaneBoundaryFamily.msg
+  UrbanFeatureDebug.msg
   BehaviorContext.msg
   TrajectoryPoint.msg
   Trajectory.msg

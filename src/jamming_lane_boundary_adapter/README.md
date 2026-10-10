@@ -34,7 +34,8 @@ strip/centerline segment로 변환한다. independent pilot과
 
 기존 shared-family monitor와 별도로 core를 재사용하는 BBOX 차선변경 노드를 제공한다.
 `camera_bbox_lane_change.launch`는 기본값이 preview이고, `enable_control:=true`일 때만
-MORAI `/ctrl_cmd`를 발행한다. `camera_bbox_detector.launch`의 YOLO 출력과 외부 차선 인식의
+JAMMING 모드에서 `/ctrl_cmd/jamming`을 발행한다. 통합 selector만 MORAI용
+`/ctrl_cmd`를 발행한다. `camera_bbox_detector.launch`의 YOLO 출력과 외부 차선 인식의
 `/perception/lane/boundary_family`를 소비한다. 실행·튜닝은
 [카메라 차선 변경 안내](CAMERA_BBOX_LANE_CHANGE.md)를 따른다.
 음영구간 on/off, route 의미, camera drivable threshold, LiDAR occupancy 차감과 fallback은 이

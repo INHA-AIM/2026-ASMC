@@ -21,8 +21,8 @@
 |---|---|---|
 | 공용 message | `src/asmc_msgs/` | 통합 주관, 소비 파트 공동 리뷰 |
 | HD Map | `src/asmc_hd_map/` | 안승현; planning consumer 변경 시 판제 리뷰 |
-| Behavior | `src/behavior_planner/` | 정윤태·양서준 |
-| Frenet | `src/frenet_planner/` | 이강태·정윤태 |
+| Behavior | `src/asmc_planner/` | 정윤태·양서준 |
+| Frenet | `src/asmc_planner/` | 이강태·정윤태 |
 | MPC | `src/asmc_controller/` | 정윤태·양서준 |
 | Planning adapter | `src/jamming_lane_boundary_adapter/` | 통합·판제 공동; 판제 consumer 흡수 후 삭제 gate |
 | UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../packages/asmc_bridge/README.md) | 이강태·안승현, planning consumer 공동 리뷰 |
@@ -33,7 +33,7 @@
 | Scenario/gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | 공용 infra | `docker/`, `.github/`, `docs/`, `scripts/` 공용 진입점 | 통합 리뷰 필수 |
 
-`src/planner/`는 현재 경로가 아니다. 판제 Frenet 정본은 `src/frenet_planner/`다.
+`src/planner/`는 현재 경로가 아니다. 판제 Frenet 정본은 `src/asmc_planner/`다.
 
 ## 통합 중인 경계
 

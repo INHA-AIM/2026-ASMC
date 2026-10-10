@@ -1,0 +1,22 @@
+<launch>
+  <!-- Candidate single-package path: replaces both legacy planner nodes.
+       Input producers and controller are launched separately. -->
+  <arg name="state_topic" default="/vehicle/state"/>
+  <arg name="behavior_objects_topic" default="/Object_topic"/>
+  <arg name="objects_input_type" default="morai"/>
+  <arg name="planning_objects_topic" default="/planning/objects"/>
+  <arg name="avoid_path_margin_m" default="0.4"/>
+  <rosparam ns="behavior_planner" command="load"
+            file="$(find asmc_planner)/config/behavior/behavior_params.yaml"
+            subst_value="true"/>
+  <param name="/behavior_planner/avoid/path_margin_m" value="$(arg avoid_path_margin_m)"/>
+  <param name="/behavior_planner/interface_version" value="v2"/>
+  <param name="/behavior_planner/objects/input_type" value="$(arg objects_input_type)"/>
+  <param name="/behavior_planner/topics/ego" value="$(arg state_topic)"/>
+  <param name="/behavior_planner/topics/objects" value="$(arg behavior_objects_topic)"/>
+  <param name="/frenet_planner/planner/config_path" value="$(find asmc_planner)/config/frenet/params.yaml"/>
+  <node pkg="asmc_planner" type="asmc_planner_node" name="asmc_planner" output="screen">
+    <remap from="/vehicle/state" to="$(arg state_topic)"/>
+    <remap from="/perception/objects" to="$(arg planning_objects_topic)"/>
+  </node>
+</launch>

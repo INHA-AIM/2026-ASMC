@@ -6,7 +6,7 @@ sources:
   input_audit:
     path: src/asmc_hd_map/config/kcity2025_drivable_area_input_audit.yaml
   current_link_set:
-    path: src/behavior_planner/src/config/link_set.json
+    path: src/asmc_planner/config/behavior/link_set.json
   reviewed_lane_markings:
     path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
   competition_metadata:

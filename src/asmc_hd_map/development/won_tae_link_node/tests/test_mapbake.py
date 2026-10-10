@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 PKG_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = PKG_ROOT.parents[1]
+REPO_ROOT = PKG_ROOT.parents[3]
 sys.path.insert(0, str(PKG_ROOT))
 
 from mapbake.io_mgeo import load_link_node
@@ -27,7 +27,7 @@ from mapbake.topology import (
     resample_polyline,
 )
 
-CONFIG_DIR = REPO_ROOT / 'src' / 'behavior_planner' / 'src' / 'config'
+CONFIG_DIR = REPO_ROOT / 'src' / 'asmc_planner' / 'config' / 'behavior'
 LINK_JSON = CONFIG_DIR / 'link_set.json'
 NODE_JSON = CONFIG_DIR / 'node_set.json'
 GINFO_JSON = CONFIG_DIR / 'global_info.json'
@@ -860,7 +860,7 @@ def test_route_selection_picks_stop_lines_on_that_route(data):
     import sys as _sys
     _sys.path.insert(0, str(PKG_ROOT))
     from bake_map import stop_line_nodes_on_route
-    route = REPO_ROOT / 'src/behavior_planner/src/config/route_links.yaml'
+    route = REPO_ROOT / 'src/asmc_planner/config/behavior/route_links.yaml'
     if not route.is_file():
         pytest.skip('route yaml 없음')
     ids = stop_line_nodes_on_route(data, route)

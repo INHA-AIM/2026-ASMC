@@ -37,7 +37,7 @@ inputs:
   official_checkpoints: $ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_checkpoints.json
   official_global_path: $ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_global_path.txt
   current_link_set: $ASMC_DATA/R_KR_PG_K-city_2025/link_set.json
-  route_links: src/behavior_planner/src/config/route_links_1.yaml
+  route_links: src/asmc_planner/config/behavior/route_links_1.yaml
   reviewed_hd_map: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
 
 # P1-A/P1-C frozen inputs. A changed organizer file or reviewed map must be

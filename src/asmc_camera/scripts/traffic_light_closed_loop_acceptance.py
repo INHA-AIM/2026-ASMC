@@ -16,7 +16,7 @@ import time
 import rospy
 
 from asmc_msgs.msg import BehaviorCommand, TrafficLightDetection, VehicleState
-from behavior_planner.msg import UrbanFeatureDebug
+from asmc_msgs.msg import UrbanFeatureDebug
 
 
 class AcceptanceFailure(RuntimeError):

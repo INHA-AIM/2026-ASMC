@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     const MPCParams params = LoadParamsForNode(private_nh);
 
     std::string trajectory_topic = "/planning/trajectory";
-    std::string control_topic = "/ctrl_cmd";
+    std::string control_topic = "/ctrl_cmd/normal";
     std::string behavior_command_topic = "/behavior/command_v2";
     std::string vehicle_state_topic = "/vehicle/state";
     private_nh.param("topics/trajectory", trajectory_topic, trajectory_topic);

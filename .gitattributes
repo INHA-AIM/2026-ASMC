@@ -9,3 +9,7 @@ src/asmc_hd_map/**/*.h5 binary
 # MORAI UI exports use CRLF on Windows. Preserve their importable source bytes
 # and treat CR as part of the line ending when Git checks whitespace.
 config/morai/**/*.json whitespace=cr-at-eol
+# Preserve organizer map bytes (including CRLF) for frozen SHA256 provenance.
+src/asmc_planner/config/behavior/link_set.json -text whitespace=cr-at-eol
+src/asmc_planner/config/behavior/node_set.json -text whitespace=cr-at-eol
+src/asmc_planner/config/behavior/global_info.json -text whitespace=cr-at-eol

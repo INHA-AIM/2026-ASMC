@@ -92,15 +92,14 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
 
     def test_standalone_signal_launch_defaults(self):
         for name, default in (
-            ("autonomy_no_bridges.launch", "false"),
             ("autonomy_no_bridges_v2.launch", "true"),
         ):
-            launch = ET.parse(REPO_ROOT / "src/behavior_planner/launch" / name).getroot()
+            launch = ET.parse(REPO_ROOT / "src/asmc_planner/launch" / name).getroot()
             _validate_planning_signal_launch(launch, name, default)
 
     def signal_launch(self):
         return ET.parse(
-            REPO_ROOT / "src/behavior_planner/launch/autonomy_no_bridges_v2.launch"
+            REPO_ROOT / "src/asmc_planner/launch/autonomy_no_bridges_v2.launch"
         ).getroot()
 
     def test_v2_signal_default_cannot_be_disabled_silently(self):
