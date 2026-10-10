@@ -9,7 +9,7 @@
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
 **이번 PR #78은 v4 bbox 부분집합·검수 병목 보고까지 진행한다. 운영 실행은 수정하지 않는다.**
-최신 수치·갤러리·남은 조건은 [혼합 상자·방벽 재분류 결과](#혼합-상자방벽-개별-재분류--2026-10-11)를 먼저 읽는다.
+최신 수치·갤러리·남은 조건은 [JJJ 전체 검수 결과](#jjj-혼합-라벨-전체-검수--2026-10-11-r4)를 먼저 읽는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
 MORAI 사용자 표기는 실제 gRPC API 이름이 아니며, 미확인 API 이름은 null로 둔다.
@@ -40,7 +40,9 @@ traffic_cone, stroller`다. 입식 전동 킥보드는 제외한다. 자전거�
 
 **소스별 확정 대응:** Katri 여섯 소스의 0=car, 1=bus, 2/3=person,
 5=PE_Drum, 7=bollard; 4는 탑승자 복합 박스, 6은 dog/deer 혼합이다.
-jjj의 8=CargoBox→box, 9=box/concrete_barrier/steel_barricade/plastic_barrier 혼합이다.
+jjj의 8은 CargoBox→box가 기본 의미이나, 이번 RGB 검수에서 PE 방벽·철제·콘크리트
+예외 5개 주석을 확인했다. 소스 전체의 8 대응을 바꾸지 않고 annotation ID별로 정정한다.
+9는 box/concrete_barrier/steel_barricade/plastic_barrier 혼합이다.
 selfcar는 **0=PE_Drum→traffic_drum, 1/2=bollard**로 Katri와 다르다.
 Enzo의 barrigate/pe barrigate는 각각 concrete_barricade/pe_firewall 의미에서 새 학습
 클래스로 연결한다. tooth-decay의 **Fence=steel_barricade**, Concrete_1/2=concrete_barrier,
@@ -94,9 +96,60 @@ Teacher 미검출은 빈 정답이 아니다. 모든 이름 변경·추가 박�
 운영 모델·ROS 계약·차량 제어는 유지하고, 추가 수집·학습은 이번 범위 밖이다.
 
 
+## JJJ 혼합 라벨 전체 검수 — 2026-10-11 r4
+
+최신 부분집합은 `data/dataset_versions/camera_objects_bbox_v4-mixed-r4`다.
+[고정 설정](../../../config/experiments/camera_training_data_v4_jjj.json),
+[결과표](../../../config/baselines/perception_camera_training_data_v4_jjj.yaml),
+[실제 파일·분할·SHA 검증](../../../config/baselines/evidence/camera_training_data_v4_jjj/verification.json)을
+함께 참조한다. [최신 검수 갤러리](http://localhost:8768/camera-training-data-audit-v4-jjj-review/jjj-review.html)는
+[전체 실험 목차](http://localhost:8768/)에서 날짜·E 번호로 찾을 수 있다.
+
+이번에는 JJJ의 미검수 **313장을 모두 검토**했다. 앞선 32장과 합하면 345장 전체의
+검토가 끝났으며 채택 255장·개별 보완 90장이다. 신규 231장·3,898객체를 포함하고,
+기존 채택 영상 1장의 원본 8번 주석도 정정했다. 총 **4,910장·72,576객체**이며
+train 4,130장 / selection 113장 / heldout 667장이다.
+
+| 학습 클래스 | 이전 train 객체 | 현재 train 객체 | 현재 전체 객체 |
+|---|---:|---:|---:|
+| box | 99 | 265 | 474 |
+| plastic_barrier | 317 | 401 | 517 |
+| steel_barricade | 85 | 219 | 420 |
+| concrete_barrier | 211 | 1,171 | 1,421 |
+
+전체 영상과 원본 annotation ID를 표시한 **9번 확대 박스 1,803개·8번 165개**를 확인했다.
+열린 A형 철제 프레임, 연속된 받침이 있는 콘크리트 패널, 나무 무늬 상자,
+흰색/주황색 사각 PE 방벽을 구분했다. 줄무늬만 보고 철제로 분류하지 않았다.
+확인되지 않은 작은 옆면·동물 종류는 보완 목록에 남겼다. 크기 자체가 제외 조건은 아니다.
+
+원본 8번의 개별 예외는 1628/4107→pe_firewall, 4108/6605→steel_barricade,
+4508→concrete_barricade다. 이 중 6605/4508이 있는 영상은 다른 누락·복합 박스 때문에
+보류 상태여서 제안 이름을 export하지 않았다. 기존 8→cargo_box 규칙을 다른 영상에
+일괄 교체하거나 다른 소스의 숫자 의미를 바꾸지 않았다.
+
+[JJJ 보완 목록](http://localhost:8768/camera-training-data-audit-v4-jjj-review/pending-worklist.json)은
+90장 각각에 원본 ID·SHA·분할·사유와 다음 작업 종류를 기록한다. 사람+자전거 복합 박스는
+구성요소 주석이 필요하고, 미주석 대상이 있는 영상은 해당 박스를 보완해야 한다.
+일부 원본 박스는 아래쪽 반사 패딩까지 포함하여 가시 영역 기준의 좌표 수정이 필요하다.
+이런 영상에서 주석을 임의로 지우거나 진짜 negative로 바꾸지 않았다.
+실제 좌표 수정·박스 추가는 기존 검수 계약에 따른 별도 확인 대상으로 남긴다.
+Park 30장·Tooth-yellow 13장의 이전 보완 기록도 유지했다.
+
+실제 YOLO 이미지·라벨 파일을 다시 읽어 고정 16종 ID·좌표·객체 수·SHA를 확인했다.
+기존 split 이동·채택 소실·원본 좌표 변경·채택 자료의 미해결 라벨·구조 오류·확인된
+split 누출은 모두 0이다. 원본과 r3를 보존하고 새 검수 기록과 export를 별도로 만들었다.
+Teacher 예측·사람 검수 여부를 추정해 승인하지 않았으며 작은 양성 GT도 유지했다.
+
+**16종 비교 학습 준비는 아직 보류다.** dog/deer/bicycle/stroller 자료와 train의 motorcycle,
+대부분 클래스의 독립 selection이 부족하다. 볼라드·드럼 편중도 남아 있다. 다음은 기존
+자료의 동물·자전거·오토바이/유모차를 검수하고, 독립성이 확인된 새 그룹에서 부족한 평가
+분할을 확보하는 순서다. 기존 평가 그룹을 train으로 옮기지 않는다. 신규 수집·학습·운영
+추론 변경은 시작하지 않았다.
+
 ## 혼합 상자·방벽 개별 재분류 — 2026-10-11
 
-최신 데이터는 `data/dataset_versions/camera_objects_bbox_v4-mixed-r3`다.
+아래는 앞선 r3 결과다. 당시 데이터 `data/dataset_versions/camera_objects_bbox_v4-mixed-r3`와
+검수 증거는 보존하며, 최신 결과는 위 r4 절을 따른다.
 [실험 설정](../../../config/experiments/camera_training_data_v4_mixed.json),
 [결과표](../../../config/baselines/perception_camera_training_data_v4_mixed.yaml),
 [실제 파일·분할·SHA 검증](../../../config/baselines/evidence/camera_training_data_v4_mixed/verification.json)을 함께 참조한다.

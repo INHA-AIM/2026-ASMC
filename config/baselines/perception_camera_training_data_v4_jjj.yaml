@@ -1,0 +1,129 @@
+schema_version: 1
+experiment: camera_training_data_v4_jjj
+date: '2026-10-11'
+scope: Finish JJJ mixed-label RGB review; per-annotation class corrections, unchanged
+  geometry and frozen splits
+configuration: config/experiments/camera_training_data_v4_jjj.json
+verification: config/baselines/evidence/camera_training_data_v4_jjj/verification.json
+previous:
+  images: 4679
+  objects: 68678
+  train_images: 3899
+  train_objects:
+    box: 99
+    plastic_barrier: 317
+    steel_barricade: 85
+    concrete_barrier: 211
+current:
+  images: 4910
+  objects: 72576
+  splits:
+    train: 4130
+    selection: 113
+    heldout: 667
+  objects_by_class:
+    person: 751
+    car: 717
+    traffic_cone: 97
+    traffic_drum: 16656
+    bollard: 50250
+    concrete_barrier: 1421
+    bus: 791
+    steel_barricade: 420
+    plastic_barrier: 517
+    box: 474
+    truck: 82
+    motorcycle: 400
+  objects_by_split:
+    train:
+      person: 639
+      car: 715
+      traffic_cone: 97
+      traffic_drum: 16236
+      bollard: 49851
+      concrete_barrier: 1171
+      bus: 791
+      steel_barricade: 219
+      plastic_barrier: 401
+      box: 265
+      truck: 81
+    selection:
+      person: 112
+      truck: 1
+      box: 6
+    heldout:
+      concrete_barrier: 250
+      box: 203
+      traffic_drum: 420
+      plastic_barrier: 116
+      motorcycle: 400
+      steel_barricade: 201
+      bollard: 399
+      car: 2
+  semantic_subtypes:
+    person: 751
+    car: 717
+    traffic_cone: 97
+    pe_drum: 16656
+    bollard: 50250
+    concrete_barricade: 1421
+    bus: 791
+    steel_barricade: 420
+    pe_firewall: 517
+    wooden_box: 260
+    cargo_box: 214
+    truck: 82
+    motorcycle: 400
+reviewed_whole_jjj_images: 345
+new_context_images: 313
+new_decisions:
+  accept: 232
+  pending: 82
+whole_jjj_decisions:
+  pending: 90
+  accept: 255
+new_admitted_images: 231
+new_existing_image_corrections: 1
+admitted_override_counts:
+  pe_firewall: 86
+  concrete_barricade: 962
+  wooden_box: 69
+  steel_barricade: 136
+original_8_exception_annotation_ids:
+- '1628'
+- '4107'
+- '4108'
+- '4508'
+- '6605'
+accepted_unresolved_labels: 0
+accepted_structure_failures: 0
+exact_pixel_leaks: 0
+existing_split_changes: 0
+previous_accepted_lost: 0
+original_geometry_changes: 0
+local_dataset: data/dataset_versions/camera_objects_bbox_v4-mixed-r4
+local_artifacts: artifacts/camera-training-data-audit-v4-jjj-review
+gallery: http://localhost:8768/camera-training-data-audit-v4-jjj-review/jjj-review.html
+pending_worklist: artifacts/camera-training-data-audit-v4-jjj-review/pending-worklist.json
+missing_classes:
+- dog
+- deer
+- bicycle
+- stroller
+comparison_training_ready: false
+remaining:
+- JJJ review complete for 345 images; 90 pending individual geometry/subtype corrections.
+- Park 30 and Tooth-yellow 13 previously pending images remain unchanged.
+- Independent selection coverage and class balance incomplete; no evaluation group
+  moved to train.
+- Dog/deer/bicycle/stroller and train motorcycle coverage remain missing.
+teacher_approved: false
+training_performed: false
+runtime_changes: false
+pending_reason_category_counts:
+  subtype_or_identity_review: 18
+  composite_geometry: 18
+  missing_target_annotation: 43
+  visible_extent_geometry: 19
+  merged_geometry: 2
+pending_reason_categories_can_overlap: true
