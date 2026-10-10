@@ -89,6 +89,7 @@ def run(args):
         del ckpt
     started=time.monotonic(); batches=[];epoch_times=[];order=hashlib.sha256()
     record=dict(**identity,stage='smoke' if args.smoke_batches else 'training',status='starting',
+        trainer_source_sha256=sha(__file__),data_yaml_sha256=sha(args.dataset/'data.yaml'),
         started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
         python=platform.python_version(),torch=torch.__version__,ultralytics=ultralytics.__version__,
         cuda=torch.version.cuda,gpu=torch.cuda.get_device_name(0),text_names=cfg['text_names'],

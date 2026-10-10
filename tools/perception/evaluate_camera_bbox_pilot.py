@@ -146,6 +146,7 @@ def infer(args):
             stream.write(json.dumps(item)+'\n');stream.flush();predictions.append(item)
     import numpy as np
     save(args.output/'inference.json',dict(weights_sha256=sha(actual_weights),
+        evaluator_source_sha256=sha(__file__),
         requested_weights=str(args.weights),requested_weights_sha256=sha(args.weights),
         actual_weights=str(actual_weights),baseline_kind=baseline_kind,
         manifest_sha256=sha(args.dataset/'manifest.jsonl'),config_sha256=sha(args.config),
