@@ -630,6 +630,21 @@ ignore지만 car 34×13px와 bus 41×20px는 남는다. 이미 노출된 결과�
 16/8과 24/12 결과를 함께 보존한다. 제외 박스 표시는 사용자 요청에 따라 밝은 자홍색
 2px 윤곽으로 변경했다. `제외 GT도 표시 (자홍색)`을 켜면 볼 수 있다.
 
+후속 사용자 요청에 따라 같은 v2 갤러리의 **표시만** 클래스별로 구분한다.
+[표시 정책](../../../config/experiments/camera_capture_display_scope_v1.json)은
+car/bus/truck에 24/12px, 사람·다른 작은 객체·종류 미확정 GT에 16/8px를 적용한다.
+종류 미확정 Vehicle을 임의로 car로 간주하지 않는다. 파란 박스는 표시 대상이며,
+자홍색 박스는 표시에서 숨긴 GT다. 표시 대상과 평가 대상이 다를 수 있으므로 각 프레임에
+표시/숨김 수와 공통 평가 대상/ignore 수를 따로 안내한다. `숨긴 GT도 표시 (자홍색)`으로
+확인한다. 기존 표·평가 manifest는 공통 24/12px 그대로이며 학습 export도 바꾸지 않는다.
+재생성 시 `--display-config config/experiments/camera_capture_display_scope_v1.json`을 추가한다.
+출력의 `display-policy.json`·`display-scope.jsonl`은 표시만의 정책·annotation ID를 기록한다.
+
+원본 GT 보존은 해당 영상을 학습에 채택할 때 정확한 작은 양성 박스도 함께 유지한다는
+뜻이다. 모든 Capture 프레임을 무조건 학습에 사용한다는 뜻은 아니며, 학습에 넣을
+장면·중복·클래스/크기별 표본 분포는 별도로 선정한다. 표시 제한을 학습 라벨 삭제로
+전달하지 않는다.
+
 ### PE_Firewall 자료를 먼저 활용하는 순서
 
 PE_Firewall의 학습 클래스는 `plastic_barrier`다. 현재 zero-shot의 낮은 대응은 원본
