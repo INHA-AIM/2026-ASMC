@@ -96,6 +96,7 @@ jobs:
           python3 -m unittest discover -s tools/perception -p 'test_camera_mission_classes.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_data_audit.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_data_readiness.py'
+          python3 -m unittest discover -s tools/perception -p 'test_prepare_camera_direct_review.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_teacher_audit.py'
           python3 -m unittest discover -s tools/perception -p 'test_yoloe_l_measurements.py'
           python3 -m unittest discover -s tools/perception -p 'test_yoloe_l_diagnostics.py'

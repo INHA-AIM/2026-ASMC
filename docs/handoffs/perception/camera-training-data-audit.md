@@ -9,7 +9,7 @@
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
 **이번 PR #78은 v4 bbox 부분집합·검수 병목 보고까지 진행한다. 운영 실행은 수정하지 않는다.**
-최신 수치·갤러리·남은 조건은 [v4 실행 결과](#v4-자료-활용-확대--2026-10-10)를 먼저 읽는다.
+최신 수치·갤러리·남은 조건은 [직접 대응 자료 확대 결과](#직접-대응-자료-검수와-일괄-포함--2026-10-10)를 먼저 읽는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
 MORAI 사용자 표기는 실제 gRPC API 이름이 아니며, 미확인 API 이름은 null로 둔다.
@@ -44,7 +44,9 @@ jjj의 8=CargoBox→box, 9=box/concrete_barrier/steel_barricade/plastic_barrier 
 selfcar는 **0=PE_Drum→traffic_drum, 1/2=bollard**로 Katri와 다르다.
 Enzo의 barrigate/pe barrigate는 각각 concrete_barricade/pe_firewall 의미에서 새 학습
 클래스로 연결한다. tooth-decay의 **Fence=steel_barricade**, Concrete_1/2=concrete_barrier,
-PE=traffic_drum이다. Park의 box는 WoodBox/PE_Firewall 혼합이므로 개별 분류한다.
+PE는 원통 드럼으로 확인한 주석만 traffic_drum으로 연결한다. 새 RGB 검수에서 같은 PE에
+사각 PE 방벽도 확인했으므로 이 소스의 PE 묶음은 승인하지 않는다. Park의 box는
+WoodBox/PE_Firewall 혼합이므로 개별 분류한다.
 그 밖의 animal, object/obstacle, vehicle, static/dynamic, 복합 탑승자는 이름만 바꾸지 않는다.
 
 2026-10-10 사용자는 Roboflow 주석이 각 작성자의 의도에 맞게 정확하며, 우리 학습
@@ -92,11 +94,79 @@ Teacher 미검출은 빈 정답이 아니다. 모든 이름 변경·추가 박�
 운영 모델·ROS 계약·차량 제어는 유지하고, 추가 수집·학습은 이번 범위 밖이다.
 
 
+## 직접 대응 자료 검수와 일괄 포함 — 2026-10-10
+
+사용자의 직접 대응 자료 포함 지시에 따라 고정 표본 RGB와 원본 박스를 확인했다.
+**통과 묶음은 표본 몇 장만 남기는 대신 해당 소스·원본 클래스 자료 전체에 승인 범위를
+적용했다.** 다만 같은 영상의 다른 대상 라벨, 구조·중복·고정 분할 검사도 통과해야 한다.
+원본 박스·클래스는 수정하지 않고 새 export에서 16종 이름으로 대응했다.
+
+[고정 설정](../../../config/experiments/camera_training_data_v4_direct.json),
+[최신 baseline](../../../config/baselines/perception_camera_training_data_v4_direct.yaml),
+[파일 재검증·표본 SHA 증거](../../../config/baselines/evidence/camera_training_data_v4_direct/verification.json)를
+기준으로 한다. 로컬 데이터는 `data/dataset_versions/camera_objects_bbox_v4-direct-r2`다.
+[결과 시작점](http://localhost:8768/camera-training-data-audit-v4-direct-review/index.html),
+[실제 RGB 표본과 보류 사례](http://localhost:8768/camera-training-data-audit-v4-direct-review/direct-review.html),
+[소스×클래스 진행표](http://localhost:8768/camera-training-data-audit-v4-direct-review/review/progress.html)를
+[기존 목차](http://localhost:8768/)에서 날짜·E 번호로 찾을 수 있다.
+
+| 자료 | 이미지 | 객체 | train / selection / heldout |
+|---|---:|---:|---|
+| 직전 v4 보존본 | 527 | 973 | 344 / 1 / 182 |
+| 직접 대응 확대본 | **4,523** | **67,646** | **3,743 / 113 / 667** |
+
+이번 검수 기록은 중복을 제거한 RGB 1,047장: 승인 898, 문제 확인 103, 보류 46이다.
+Codex의 독립 RGB 검수이며 사람이 확인했다는 뜻으로 `human_confirmed`를 기록하지 않았다.
+원본 이미지·표본 시트 SHA와 패널 번호를 결정에 연결했다. Round 1–3은 전 패널을,
+Round 4는 0–55만 확인했다. 생성됐지만 확인하지 않은 나머지 패널은 검수 완료가 아니다.
+전체 132개 소스×원본 클래스 묶음은 승인 14, 표본 문제 확인 13, 미완료/보류 105다.
+승인 14에는 함께 등장하는 제외 라벨 `speed/lane bar` 2개가 포함되며, 이를 학습 대상으로
+추가한 것은 아니다. 22개 소스의 전체 검수가 끝났다고 표시하지 않는다.
+
+### 포함한 자료와 개별 예외
+
+- Selfcar 0=드럼·1/2=볼라드: 세 묶음의 고정 표본이 통과했다. 구조·중복 검사 후
+  2,548장을 포함했다. 서로 다른 소스의 숫자 ID를 같은 의미로 해석하지 않았다.
+- Enzo: WoodBox·볼라드·오토바이/좌식 scooter·철제 바리케이드·PE 드럼 묶음과
+  개별 정상 이미지를 포함해 총 666장이다. CargoBox·콘크리트·PE 방벽도 포함되지만,
+  dog/deer 혼합이나 가장자리 방벽 미주석 장면은 보류했다. 전부 기존 heldout을 유지했다.
+- hl-fma_3: bus 묶음은 통과했다. person/car/truck의 정상 개별 이미지를 더해 677장이다.
+  일부 장면의 미주석 상자·PE 방벽·자전거 및 car로 묶인 경트럭은 개별 수정 대상으로 남겼다.
+- s-workspace person은 중복 검사 후 112장, Tooth의 확인된 콘크리트·철제 방책·원통 드럼은
+  134장, Battery cone은 정상 개별 이미지 40장을 포함했다. 기존 aiv5 341장과 Capture 5장도 유지했다.
+- **Tooth PE 예외:** 원통 드럼 외 사각 PE 방벽이 같은 라벨에 섞여 있었다.
+  `PE→traffic_drum`을 묶음 전체에 적용하지 않는다. Round 3의 248/283/327은 보류했다.
+  원통으로 확인한 개별 이미지만 채택하며 방벽은 다음 재분류에서 plastic_barrier로 확인한다.
+- Battery의 콘 박스는 직접 대응하지만 일부 장면에 주석 없는 적백 체크 원통 물체가 있다.
+  해당 물체의 목표 종류와 누락 박스를 확인하기 전 관련 장면은 보류했다.
+  원본 작성자의 콘·신호등 수집 목적에 맞는 주석과 우리 16종의 완전성을 구분한다.
+
+### 분할·검증과 남은 병목
+
+실제 YOLO 파일 4,523장·67,646객체의 좌표·고정 ID·이미지 SHA를 재검증했다.
+채택 자료의 미해결 라벨·구조 오류·확인된 split 누출은 0이며, 기존 76,416개 입력의
+split 변경과 이전 v4 채택 자료 소실도 0이다. v3/v4 원본 manifest SHA를 다시 확인했다.
+작은 양성 GT와 Capture 12/3/3 run 분할을 유지했다. 표본 표시 기준은 학습 필터가 아니다.
+
+현재 12종이 존재하지만 dog/deer/bicycle/stroller는 아직 채택 자료가 없고,
+box·plastic_barrier·motorcycle은 train이 0이다. Enzo heldout을 학습으로 옮기지 않는다.
+다음은 jjj 9·Park box 등 기존 train 혼합 라벨을 분리하고, animal 및 탑승자 복합 박스를
+검수해 부족한 종류와 독립 평가 자료를 채우는 순서다. 볼라드 49,505객체·드럼 15,339객체가
+많으므로 파일 수만 보고 준비 완료로 판단하지 않으며, 파일럿 전에 클래스·장면 균형을 정한다.
+**구조적으로 사용 가능한 확대 부분집합이며 16종 비교 학습 준비 완료는 아니다.**
+PR #78은 Draft로 유지한다. 추가 수집·학습·운영 모델·ROS·GPU 환경은 변경하지 않았다.
+
+[표본 생성기](../../../tools/perception/prepare_camera_direct_review.py)는 기존 고정 seed 표본을
+RGB 시트와 SHA manifest로 렌더링할 뿐 승인 결정을 만들지 않는다. 검수 기록은 로컬에
+별도 보존하며 기존 `camera_data_audit.py curate --bbox-only --fixed-class-order`에
+새 reviews와 이전 v4 `--split-manifest`를 전달했다. 재실행은 기존 산출물을 덮어쓰지 않도록
+새 output/export 경로를 사용한다. engine·teacher는 직접 대응 자료의 채택 조건이 아니다.
+
 ## v4 자료 활용 확대 — 2026-10-10
 
 [고정 실행 설정](../../../config/experiments/camera_training_data_v4.json),
 [실행 baseline](../../../config/baselines/perception_camera_training_data_v4.yaml),
-[검증 증거](../../../config/baselines/evidence/camera_training_data_v4/verification.json)가 최신 상태다.
+[검증 증거](../../../config/baselines/evidence/camera_training_data_v4/verification.json)는 직전 v4의 고정 보존본이다.
 로컬 [결과·검수 시작점](http://localhost:8768/camera-training-data-audit-v4/index.html)과
 [소스×클래스 진행표](http://localhost:8768/camera-training-data-audit-v4/review/progress.html)는
 기존 [갤러리 목차](http://localhost:8768/)에도 날짜·E 번호로 연결한다.
