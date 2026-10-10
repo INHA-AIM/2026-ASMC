@@ -1238,3 +1238,32 @@ python tools/perception/prepare_capture_training_data.py export \
 다음 작업에서 run·소스·클래스 분포와 고정 평가 커버리지를 확인해 학습 샘플링을 정한다.
 그 뒤 동일 bbox 자료로 YOLO26l detect/YOLOE detection의 짧은 비교 학습을 한다.
 이번 Capture 보강을 그 작업들의 완료나 운영 모델 교체로 설명하지 않는다.
+
+
+## bbox 파일럿 샘플링 — 2026-10-11
+
+원본 v5-capture-r1 22,498장과 split은 유지했다. 별도 파일럿은 train 8,000장과
+selection/heldout 각각 300장이다. 원본의 작은 양성 GT와 이미지에 속한 모든 대상 박스를 보존한다.
+단일 소스/run 최대 2,000장, Capture 최대 3,200장이고 seed는 20261011이다.
+희소 클래스의 등장 이미지와 box/방벽류를 먼저 고르고, 나머지는 이미지 등장 빈도의
+역제곱근 가중치로 선택한다. 증강 family와 Capture 40-frame 구간은 상관관계 집계이며 독립 장면 GT가 아니다.
+
+[설정](../../../config/experiments/camera_bbox_pilot_v1.json),
+[원본·파일럿 SHA와 분포](../../../config/baselines/evidence/camera_bbox_pilot_v1/sampling.json),
+[YOLO 파일 재검증](../../../config/baselines/evidence/camera_bbox_pilot_v1/verification.json),
+[샘플링 도구](../../../tools/perception/prepare_camera_bbox_pilot.py)를 연결한다.
+
+평가본은 원래 evaluation partition 안에서만 보강했다. cross-split 유사 영상·기하 문제·
+누락 원본 GT는 제외하고, 세부 이름이 확정되지 않은 박스는 원본에 남긴다.
+16종 누락 검수 근거가 없는 영상은 recall-only다. 미대응 검출을 FP로 계산하지 않는다.
+selection의 신규 장애물 GT 부족과 heldout의 개별 종류 소표본은 남아 있으며,
+파일럿 export 성공을 전체 16종 모델 선정의 충분한 평가 근거로 설명하지 않는다.
+
+```bash
+python tools/perception/prepare_camera_bbox_pilot.py \
+  --config config/experiments/camera_bbox_pilot_v1.json \
+  --data-root "$ASMC_DATA" \
+  --output "$ASMC_DATA/dataset_versions/camera_objects_bbox_pilot_v1-r4"
+```
+
+학습은 이 결과를 포함한 별도 브랜치에서 직렬 실행한다. 운영 모델과 ROS 설정은 변경하지 않는다.
