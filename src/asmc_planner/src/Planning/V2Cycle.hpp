@@ -506,7 +506,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
             failed.detail = "cannot project ego onto the reference line";
             port.has_last_v2_trajectory_ = false;
-            asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 port.stopReferenceVehicle(snapshot), port.trajectoryDt(),
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             port.trajectory_pub_.publish(stop);
@@ -851,7 +851,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             failed.execution_state = port.command_manager_.execution_state();
             failed.result_code = result_code;
             failed.detail = detail;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 port.stopReferenceVehicle(snapshot), port.trajectoryDt(),
                 terminal_target_lost
                     ? asmc_msgs::Trajectory::FAILURE_INVALID_INPUT
