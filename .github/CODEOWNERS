@@ -14,8 +14,6 @@
 /src/data_collection/                  @ahnsh03 @sonshiny
 
 # Planning and control
-/src/behavior_planner/                 @yuntae12-sudo @yangseojun
-/src/frenet_planner/                   @kante2 @yuntae12-sudo
 /src/asmc_controller/                   @yuntae12-sudo @yangseojun
 /src/lane_boundary_adapter/            @ahnsh03 @yuntae12-sudo @kante2
 
@@ -34,3 +32,5 @@
 /tools/grpc_inha_univ/                 @wkddnjsxo
 /tools/audit/                          @ahnsh03
 /tools/perception_eval/                @ahnsh03 @sonshiny
+
+/src/asmc_planner/ @yuntae12-sudo @yangseojun @kante2

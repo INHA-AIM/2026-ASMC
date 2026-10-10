@@ -12,15 +12,15 @@
 
 | 프로젝트 | 담당 | 빌드 |
 |---|---|---|
-| `src/frenet_planner/` | 이강태 | Catkin, C++17 ROS runtime + core |
+| `src/asmc_planner/` | 이강태 | Catkin, C++17 ROS runtime + core |
 | `src/asmc_controller/` | 정윤태·양서준 | Catkin, C++17 ROS runtime + core |
-| `src/behavior_planner/` | 정윤태·양서준 | Catkin, v2 Behavior/FSM runtime |
+| `src/asmc_planner/` | 정윤태·양서준 | Catkin, v2 Behavior/FSM runtime |
 | `src/jamming_lane_boundary_adapter/` | 안승현·판제 공동 검토 | Catkin, C++17, monitor + opt-in 카메라 추종 |
 
 ```bash
 ./scripts/build_ws.sh
 source devel/setup.bash
-roslaunch behavior_planner autonomy_no_bridges_v2.launch
+roslaunch asmc_planner autonomy_no_bridges_v2.launch
 ```
 
 위 launch는 개발 `/Object_topic` adapter를 사용하므로 본선 sensor-only launch가 아니다.

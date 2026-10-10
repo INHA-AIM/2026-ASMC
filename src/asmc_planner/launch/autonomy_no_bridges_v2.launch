@@ -9,7 +9,7 @@
   <arg name="lidar_source_policy" default="validated_lidar"/>
   <arg name="avoid_path_margin_m" default="0.4"/>
   <arg name="traffic_light" default="true"
-       doc="Starts signal inference; false does not disable planner signal rules."/>
+       doc="Set false only when an external traffic-light producer is running; false does not disable planner signal rules."/>
   <arg name="traffic_light_device" default="auto"/>
   <arg name="camera_topic" default="/cam_extra/image_jpeg/compressed"/>
   <arg name="expected_config_sha256"

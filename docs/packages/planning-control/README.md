@@ -1,5 +1,10 @@
 # Planning/Control 개발 가이드
 
+> 현재 planner production package는 `asmc_planner` 하나다. Behavior → Execution →
+> Frenet은 내부 C++ 구조와 직접 호출로 연결한다. 기존 planner ROS topic은
+> 외부 관측·controller 호환 계약으로 유지하며, 두 legacy 패키지는 제거되었다.
+
+
 > **문서 역할:** Active Package-Group Guide — 현재 Behavior·Frenet·MPC 경계와 변경 gate
 >
 > **현재 상태:** MORAI 외부 경계는 UDP, 팀 PC 내부 Behavior→Frenet→MPC는 ROS1/catkin
@@ -13,8 +18,8 @@
 
 | 역할 | 현재 경로 | runtime |
 |---|---|---|
-| Behavior/FSM | `src/behavior_planner/` | ROS node, v2 command가 현재 경로; v1 호환 가능 |
-| Frenet trajectory | `src/frenet_planner/` | ROS node + transport-independent C++ core |
+| Behavior/FSM | `src/asmc_planner/` | ROS node, v2 command가 현재 경로; v1 호환 가능 |
+| Frenet trajectory | `src/asmc_planner/` | ROS node + transport-independent C++ core |
 | MPC control | `src/asmc_controller/` | ROS node + transport-independent C++ core |
 | state source | `src/asmc_bridge/src/vehicle_state/` | GPS/IMU→`asmc_msgs/VehicleState` |
 | MORAI bridge | `src/asmc_bridge/` | 외부 UDP↔내부 ROS |

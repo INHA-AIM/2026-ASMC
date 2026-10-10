@@ -113,7 +113,7 @@ compatibility:
   removed_packages: [camera_semantic_perception, drivable_bev, traffic_light]
   oracle_inputs_allowed: false
   planning_consumer:
-    package: behavior_planner
+    package: asmc_planner
     canonical_topic: /perception/traffic_light/detection
     legacy_fallback_topic: /traffic_light/state
     invalid_or_stale_policy: unknown_without_fallback
