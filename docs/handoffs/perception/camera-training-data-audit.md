@@ -1304,6 +1304,8 @@ YOLOE는 detection YAML + seg checkpoint + PE trainer이며 mask head는 학습�
   기존 사람/차량 recall 회귀가 가려지므로 평가기가 원본 SHA를 확인해 사전학습 head를 선택한다.
   YOLOE의 학습 전 결과는 같은 detection 구조와 16종 text embedding을 준비한 뒤 fine-tuning
   직전에 저장한 checkpoint다. `inference.json`에 요청/실제 weight SHA와 기준선 종류를 모두 남긴다.
+  두 후보의 기존 객체 회귀 gate는 현재 기준 모델인 YOLO26l/1280/.40과 비교한다. YOLOE가
+  자기 사전학습 결과보다 개선됐다는 이유만으로 기존 운영 인식보다 낮은 recall을 면제하지 않는다.
 - 재개 시 모델·데이터/config/초기 가중치 SHA·batch·전체 epoch를 검사한다. 파일 손실·중단은
   마지막 완전 epoch에서 재개하며, 중단 epoch의 동일한 증강 RNG까지 비트 단위 복구한다고 주장하지 않는다.
 - 알려진 평가 한계: selection 신규 객체 box 6개, heldout animal은 deer 1개, stroller 0개다.

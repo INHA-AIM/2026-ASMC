@@ -101,6 +101,13 @@ class TrainingTest(unittest.TestCase):
         r=compare(evaluations)
         self.assertEqual(r['status'],'selection_deferred')
         self.assertIn('person',r['comparisons'][0]['selected_old_regression_failures'])
+        # Improving a weaker YOLOE baseline must not hide a regression from
+        # the current YOLO26l / 1280 reference.
+        evaluations={'yolo26l-before-1280':evaluation(90),
+            'yoloe26l-before-960':evaluation(70),'yoloe26l-after-960':evaluation(87)}
+        r=compare(evaluations)
+        self.assertEqual(r['status'],'selection_deferred')
+        self.assertEqual(r['comparisons'][0]['old_recall_reference'],'yolo26l-before-1280')
 
     def test_native_capture_only_tiny_unknown_is_still_partial(self):
         anns=[dict(canonical='car',xyxy=[0,0,60,30],disposition='candidate',issues=[]),

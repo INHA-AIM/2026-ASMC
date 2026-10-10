@@ -22,11 +22,17 @@ def compare(evaluations):
         if '-after-' not in key:continue
         before=evaluations.get(key.replace('-after-','-before-'))
         if not before:continue
+        # Regression is against today's deployed model/resolution, not a
+        # weaker candidate's own pretrained result. Retain each before/after
+        # evaluation separately for describing the fine-tuning gain.
+        reference_key='yolo26l-before-1280'
+        reference=evaluations.get(reference_key,before)
+        if reference is before and reference_key not in evaluations:reference_key=key.replace('-after-','-before-')
         classes=after['control']['heldout']['class']['classes']
         scores=[c['f1'] for n,c in classes.items() if n in NEW_CLASSES and c.get('complete_gt',0)>=20 and c['f1'] is not None]
         old={};bad=[];uncertain=[]
         aa=after['control']['heldout']['accepted']['classes']
-        bb=before['control']['heldout']['accepted']['classes']
+        bb=reference['control']['heldout']['accepted']['classes']
         for group,labels in [('person',['person']),('animal',['animal']),('vehicle',['motor_vehicle','bicycle','motorcycle'])]:
             gt=sum(aa.get(n,{}).get('gt',0) for n in labels)
             tp=sum(aa.get(n,{}).get('tp',0) for n in labels)
@@ -52,6 +58,7 @@ def compare(evaluations):
             selected_old_recall=selected_old,selected_old_regression_failures=selected_bad,
             supported_new_classes=[n for n,c in classes.items() if n in NEW_CLASSES and c.get('complete_gt',0)>=20],
             old_recall=old,old_regression_failures=bad,old_regression_unresolved=uncertain,
+            old_recall_reference=reference_key,
             confidence_control=.4,selection_confidence=after['selection_confidence']))
         comparisons[-1]['complete_fp_after']=sum(c.get('complete_fp',0) for c in classes.values())
         comparisons[-1]['complete_fp_before']=sum(c.get('complete_fp',0) for c in before['control']['heldout']['class']['classes'].values())
