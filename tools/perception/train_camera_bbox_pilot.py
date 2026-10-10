@@ -95,7 +95,7 @@ def run(args):
         cuda=torch.version.cuda,gpu=torch.cuda.get_device_name(0),text_names=cfg['text_names'],
         canonical_names=names,resume_checkpoint=str(args.resume) if args.resume else None,
         resume_checkpoint_sha256=sha(args.resume) if args.resume else None,
-        resume_policy='epoch-boundary optimizer restore; unfinished epoch is replayed',
+        resume_policy='epoch-boundary optimizer restore; loader reconstructed; file/augmentation RNG continuity not claimed',
         intended_effective_batch=settings['nbs'],sample_order_sha256=None,
         errors=[],runtime_changes=False)
     save(state,record)

@@ -19,6 +19,7 @@ class TrainingTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'sufficiently'):validate_equal_training([a,b],4)
         with self.assertRaisesRegex(ValueError,'failed/OOM'):validate_equal_training([a,dict(b,status='failed')],16)
         with self.assertRaisesRegex(ValueError,'identity'):validate_equal_training([a,dict(b,batch=2)],16)
+        with self.assertRaisesRegex(ValueError,'full-chain'):validate_equal_training([a,dict(b,resume_checkpoint='epoch0.pt')],16)
 
     def test_common_budget(self):
         self.assertEqual(common_epochs([500,600]),15)

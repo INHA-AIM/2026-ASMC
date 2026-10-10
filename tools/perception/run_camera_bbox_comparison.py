@@ -13,6 +13,7 @@ def validate_equal_training(records,epoch,minimum=5):
     if len(records)!=2 or epoch<minimum:raise ValueError('two sufficiently trained candidates required')
     reference=records[0]
     for r in records:
+        if r.get('resume_checkpoint'):raise ValueError('resumed stream needs full-chain order proof')
         if r['status'] not in ('complete','budget_stopped'):
             raise ValueError('failed/OOM training is not an equal-checkpoint comparison')
         if r.get('completed_epochs',0)<epoch:raise ValueError('requested epoch is not complete in both runs')

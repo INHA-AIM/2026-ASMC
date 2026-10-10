@@ -1322,6 +1322,8 @@ hash가 실제 학습 전체/부분 순서와 일치해야 공통 prefix 순서�
   기존 객체 recall을 사용한다. .40에서의 calibration 차이를 실제 선택 confidence의 회귀와 혼동하지 않는다.
 - 재개 시 모델·데이터/config/초기 가중치 SHA·batch·전체 epoch를 검사한다. 파일 손실·중단은
   마지막 완전 epoch에서 재개하며, 중단 epoch의 동일한 증강 RNG까지 비트 단위 복구한다고 주장하지 않는다.
+  기본 loader는 재생성되므로 원래 파일 순서의 연속 복구도 주장하지 않는다. 비교 후보는 fresh 실행이며,
+  여러 재개 구간을 합친 순서 근거 없이 fresh 후보와 입력 순서가 같았다고 승인하지 않는다.
 - 알려진 평가 한계: selection 신규 객체 box 6개, heldout animal은 deer 1개, stroller 0개다.
   공통 GT 평가와 허용된 car/bus/truck·dog/deer 상위 의미 평가를 분리한다.
 - 완전 주석 검수 근거가 있는 영상만 precision/F1에 쓴다. 나머지는 annotated recall이다.
