@@ -4,7 +4,7 @@ topics:
   vehicle_state: /vehicle/state
 
 publish_topics:
-  control: /ctrl_cmd
+  control: /ctrl_cmd/normal
 
 timeouts:
   trajectory: 0.25

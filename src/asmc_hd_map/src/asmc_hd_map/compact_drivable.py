@@ -22,6 +22,7 @@ import cv2
 import numpy as np
 import yaml
 
+from .asset_paths import current_source_path, recorded_source_path
 from .runtime_bundle import geometry_sha256
 
 
@@ -50,7 +51,7 @@ def load_yaml(path: Path) -> Mapping[str, Any]:
 
 
 def _path(repo_root: Path, spec: Mapping[str, Any]) -> Path:
-    value = (repo_root / str(spec["path"])).resolve()
+    value = (repo_root / current_source_path(str(spec["path"]))).resolve()
     if not value.is_file():
         raise CompactDrivableError("missing source: %s" % value)
     return value
@@ -100,7 +101,7 @@ def _parse_h5(repo_root: Path, path: Path) -> Dict[str, Any]:
             "offset": np.asarray(handle.attrs["world_offset_in_meters"], dtype=np.float64)[:2],
             "map_id": str(handle.attrs.get("map_id", "")),
             "sha256": sha256_file(path),
-            "path": str(path.relative_to(repo_root)),
+            "path": recorded_source_path(str(path.relative_to(repo_root))),
         }
 
 
@@ -989,7 +990,7 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
             ),
         },
         "sources": {
-            name: {"path": str(path.relative_to(repo_root)), "sha256": sha256_file(path)}
+            name: {"path": recorded_source_path(str(path.relative_to(repo_root))), "sha256": sha256_file(path)}
             for name, path in sorted(paths.items())
         },
         "limitations": [

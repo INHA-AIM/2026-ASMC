@@ -6,9 +6,9 @@ map_id: kcity2025_hd_candidate_v1
 # deliberately not copied into this package until a reviewed layer is promoted.
 sources:
   current:
-    global_info: src/behavior_planner/src/config/global_info.json
-    link_set: src/behavior_planner/src/config/link_set.json
-    node_set: src/behavior_planner/src/config/node_set.json
+    global_info: src/asmc_planner/config/behavior/global_info.json
+    link_set: src/asmc_planner/config/behavior/link_set.json
+    node_set: src/asmc_planner/config/behavior/node_set.json
     # Organizer-provided competition route.  It defines the driven corridor
     # and route station only; it is not treated as lane-boundary ground truth.
     route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt

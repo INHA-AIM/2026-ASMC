@@ -95,8 +95,8 @@ compatibility_topics:
     retire_gate: hd_map_filter_parity_and_all_consumers_use_asmc_msgs
 
 consumer_bindings:
-  behavior_planner:
-    implementation: src/behavior_planner/src/signal/ros_traffic_light_provider.cpp
+  asmc_planner:
+    implementation: src/asmc_planner/src/Parser/Traffic/ros_traffic_light_provider.cpp
     canonical_topic: /perception/traffic_light/detection
     compatibility_topic: /traffic_light/state
     selection_policy: typed_authoritative_after_first_message

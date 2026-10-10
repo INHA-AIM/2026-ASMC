@@ -15,13 +15,12 @@ consumer_handoff:
     producer_owner: asmc_camera
     canonical_topic: /perception/traffic_light/detection
     compatibility_topic: /traffic_light/state
-    consumer_node: /behavior_planner
+    consumer_node: /asmc_planner
     selection_policy: typed_authoritative_after_first_message
     invalid_or_stale_policy: unknown_without_legacy_fallback
     # Historical v1 opt-in policy; standalone v2 starts signal inference only.
     planning_launch_starts_producer_by_default: false
     planning_launch_signal_defaults:
-      autonomy_no_bridges.launch: false
       autonomy_no_bridges_v2.launch: true
     compatibility_retirement: deferred_until_all_consumers_are_typed
     evidence:
@@ -223,9 +222,9 @@ optional_consumer_gates:
   planning_traffic_light:
     topics:
       - pattern: /perception/traffic_light/detection
-        subscribers: [/behavior_planner]
+        subscribers: [/asmc_planner]
       - pattern: /traffic_light/state
-        subscribers: [/behavior_planner]
+        subscribers: [/asmc_planner]
   lane_adapter:
     topics:
       - pattern: /perception/lane/boundary_family
@@ -267,17 +266,17 @@ static_bindings:
     anchors:
       - pkg="asmc_camera" type="semantic_inference_node.py"
   - id: planning_traffic_light_topics
-    file: src/behavior_planner/src/node/behavior_node.cpp
+    file: src/asmc_planner/src/Parser/BehaviorInput.cpp
     anchors:
       - /perception/traffic_light/detection
       - /traffic_light/state
   - id: planning_traffic_light_provider
-    file: src/behavior_planner/src/signal/ros_traffic_light_provider.cpp
+    file: src/asmc_planner/src/Parser/Traffic/ros_traffic_light_provider.cpp
     anchors:
       - typed_subscriber_ = nh.subscribe
       - legacy_subscriber_ = nh.subscribe
   - id: planning_traffic_light_config
-    file: src/behavior_planner/src/config/behavior_params.yaml
+    file: src/asmc_planner/config/behavior/behavior_params.yaml
     anchors:
       - 'typed_topic: "/perception/traffic_light/detection"'
       - 'topic: "/traffic_light/state"'

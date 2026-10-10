@@ -8,12 +8,9 @@
        test, this launch publishes /ctrl_cmd through Frenet and MPC.  It never
        starts a bridge, so an already verified asmc_bridge instance is required.
        Use only with the simulator in a controlled test scene. -->
-  <node pkg="frenet_planner" type="empty_objects_test_publisher"
+  <node pkg="asmc_planner" type="empty_objects_test_publisher"
         name="traffic_light_acceptance_empty_objects" output="screen"/>
-  <include file="$(find behavior_planner)/launch/behavior_node_v2.launch">
-    <arg name="dashboard" value="false"/>
-  </include>
-  <include file="$(find frenet_planner)/launch/frenet_planner.launch"/>
+  <include file="$(find asmc_planner)/launch/planner_v2.launch"/>
   <!-- Keep MPC output physically isolated until the acceptance node captures
        the original Ego state and opens its explicit forwarding gate. -->
   <group>

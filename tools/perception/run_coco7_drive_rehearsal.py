@@ -148,7 +148,7 @@ def main():
                     lambda m:output('resnet18','extra',m), queue_size=50))
         subs.append(rospy.Subscriber('/planning/trajectory', Trajectory,
                     lambda m:trajectories.append((time.monotonic(), m.valid)), queue_size=20))
-        sampler = ResourceSampler(os.environ['ROS_MASTER_URI'], list(NODES.values())+['/Main','/frenet_planner','/mpc_controller'], system_metrics=True)
+        sampler = ResourceSampler(os.environ['ROS_MASTER_URI'], list(NODES.values())+['/Main','/asmc_planner','/mpc_controller'], system_metrics=True)
         sampler.start()
         launch(['roslaunch','asmc_camera','perception.launch','profile:=planning',
                 'camera_objects_config:='+str(a.runtime),'objects_views:=[front, left, right]',

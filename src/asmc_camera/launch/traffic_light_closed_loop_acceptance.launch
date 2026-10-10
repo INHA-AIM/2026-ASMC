@@ -5,10 +5,10 @@
        default="/tmp/asmc_traffic_light_closed_loop_acceptance.json"/>
   <arg name="timeout_s" default="12.0"/>
 
-  <node pkg="behavior_planner" type="behavior_node"
+  <node pkg="asmc_planner" type="asmc_behavior_acceptance_node"
         name="traffic_light_acceptance_behavior" output="screen" required="true">
     <rosparam command="load"
-              file="$(find behavior_planner)/src/config/behavior_params.yaml"
+              file="$(find asmc_planner)/config/behavior/behavior_params.yaml"
               subst_value="true"/>
     <param name="interface_version" value="v2"/>
     <param name="topics/ego" value="/acceptance/vehicle_state"/>

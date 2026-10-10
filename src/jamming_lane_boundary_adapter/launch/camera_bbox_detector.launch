@@ -9,8 +9,10 @@
   <arg name="weights" default="$(find Main)/YOLOWeight/yolo11m.pt"/>
   <arg name="device" default="cuda:0"/>
   <arg name="conf_thres" default="0.7"/>
-  <arg name="python" default="/opt/asmc-py39/bin/python3"/>
-  <arg name="dependencies" default="/opt/camera-bbox-deps"/>
+  <!-- The standard RTX 40 ROS image provides CUDA PyTorch and Ultralytics
+       through system Python. RTX 50 may override this with its inference venv. -->
+  <arg name="python" default="/usr/bin/python3"/>
+  <arg name="dependencies" default=""/>
   <node unless="$(eval arg('detector_source') == 'legacy')" pkg="Main"
         type="camera_objects_yolo_bbox_adapter.py" name="jamming_camera_objects_adapter" output="screen">
     <remap from="/YOLO/BBox" to="$(arg bbox_topic)"/>

@@ -17,6 +17,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
 import numpy as np
 import yaml
 
+from .asset_paths import current_source_path, recorded_source_path
 from .runtime_bundle import geometry_sha256
 
 
@@ -46,7 +47,7 @@ def _load_json(path: Path) -> Any:
 def _source_paths(repo_root: Path, config: Mapping[str, Any]) -> Dict[str, Path]:
     result: Dict[str, Path] = {}
     for name, spec in (config.get("sources") or {}).items():
-        path = (repo_root / str(spec["path"])).resolve()
+        path = (repo_root / current_source_path(str(spec["path"]))).resolve()
         if not path.is_file():
             raise DrivableAreaAuditError("missing %s: %s" % (name, path))
         actual = sha256_file(path)
@@ -435,7 +436,7 @@ def build_drivable_area_input_audit(repo_root: Path, source_config: Path) -> Dic
     sources = {}
     for name, path in sorted(paths.items()):
         sources[name] = {
-            "path": str(path.relative_to(repo_root)),
+            "path": recorded_source_path(str(path.relative_to(repo_root))),
             "sha256": sha256_file(path),
             "bytes": int(path.stat().st_size),
         }

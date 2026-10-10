@@ -10,7 +10,7 @@ inputs:
   competition_metadata: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
   compact_drivable: src/asmc_hd_map/config/kcity2025_compact_drivable_map.json
   compact_grid: src/asmc_hd_map/config/kcity2025_compact_drivable_grid.npz
-  mgeo_link_set: src/behavior_planner/src/config/link_set.json
+  mgeo_link_set: src/asmc_planner/config/behavior/link_set.json
 
 # Actor links farther than this from their zone's route span are reported as
 # warnings, not errors.

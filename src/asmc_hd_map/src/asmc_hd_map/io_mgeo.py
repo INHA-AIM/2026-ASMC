@@ -13,6 +13,9 @@ import numpy as np
 from .geometry import resample_polyline
 
 
+from .asset_paths import current_source_path, recorded_source_path
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -27,7 +30,7 @@ def load_json(path: Path):
 
 
 def resolve_source(repo_root: Path, raw: str) -> Path:
-    expanded = Path(os.path.expandvars(os.path.expanduser(raw)))
+    expanded = Path(os.path.expandvars(os.path.expanduser(current_source_path(raw))))
     return expanded if expanded.is_absolute() else (repo_root / expanded).resolve()
 
 
@@ -72,8 +75,8 @@ def source_record(repo_root: Path, configured_path: str, path: Path) -> dict:
         # but a developer-specific absolute home directory is never serialized.
         display = f"<external-data>/{path.name}"
     return {
-        "configured_path": configured_path,
-        "resolved_display": display,
+        "configured_path": recorded_source_path(configured_path),
+        "resolved_display": recorded_source_path(display),
         "sha256": sha256_file(path),
         "bytes": path.stat().st_size,
     }

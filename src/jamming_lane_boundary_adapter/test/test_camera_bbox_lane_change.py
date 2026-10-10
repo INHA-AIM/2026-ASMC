@@ -21,7 +21,7 @@ from lane_boundary_adapter.msg import CameraBBoxLaneResult
 from morai_msgs.msg import CtrlCmd
 from Msg.msg import Yolo_bbox,Yolo_bbox_arr
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import Header,Bool,Int8
+from std_msgs.msg import Header,Bool,Int8,UInt8
 from visualization_msgs.msg import MarkerArray,Marker
 
 spec=importlib.util.spec_from_file_location('fixture',str(Path(__file__).with_name('lane_family_fixture.py')))
@@ -31,13 +31,17 @@ fixture=importlib.util.module_from_spec(spec);spec.loader.exec_module(fixture)
 class LaneChangeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        rospy.init_node('bbox_change_integration')
+        if not rospy.core.is_initialized():
+            rospy.init_node('bbox_change_integration')
         cls.camera=load_calibration_snapshot(Path(rospkg.RosPack().get_path('asmc_camera'))/'config/bev/cameras_v2.yaml')[1]['front']
         cls.jpeg=cv2.imencode('.jpg',np.zeros((720,1280,3),dtype=np.uint8))[1].tobytes()
         cls.lane_pub=rospy.Publisher('/perception/lane/boundary_family',LaneBoundaryFamily,queue_size=1)
         cls.image_pub=rospy.Publisher('/image_jpeg/compressed',CompressedImage,queue_size=1)
         cls.box_pub=rospy.Publisher('/planning/camera_bbox_lane/yolo',Yolo_bbox_arr,queue_size=1)
         cls.stop_pub=rospy.Publisher('/planning/camera_bbox_lane_change/emergency_stop',Bool,queue_size=1)
+        # The legacy ACTIVE algorithm is exercised under its required mode.
+        cls.mode_pub=rospy.Publisher('/planning/mode',UInt8,queue_size=1,latch=True)
+        cls.mode_pub.publish(UInt8(1))
         cls.command=cls.diag=cls.target=cls.classification=None
         cls.subscribers=[]
         for topic,typ,attribute in [('/bbox_change_test/command',CtrlCmd,'command'),

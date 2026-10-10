@@ -2,7 +2,7 @@
 """링크·노드(MGeo)에서 BEV 정적 레이어를 굽는 CLI.
 
     python3 src/asmc_hd_map/development/won_tae_link_node/bake_map.py
-    python3 src/asmc_hd_map/development/won_tae_link_node/bake_map.py --config src/asmc_hd_map/development/won_tae_link_node/config/waize_katri.yaml
+    python3 src/asmc_hd_map/development/won_tae_link_node/bake_map.py --config src/asmc_hd_map/development/won_tae_link_node/config/waize_katri_runtime.yaml
     python3 src/asmc_hd_map/development/won_tae_link_node/bake_map.py --ppm 4 --no-overlay
 
 주행가능영역 / 차선 / 정지선 세 레이어를 이진(0/255)으로 굽고 H5 로 저장한 뒤,
@@ -34,8 +34,8 @@ from mapbake.raster import RasterGrid, compute_bounds
 from mapbake.topology import lane_pinch_corrections
 from mapbake.writer import write_h5
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CONFIG = Path(__file__).resolve().parent / 'config' / 'waize_katri.yaml'
+REPO_ROOT = Path(__file__).resolve().parents[4]
+DEFAULT_CONFIG = Path(__file__).resolve().parent / 'config' / 'waize_katri_runtime.yaml'
 
 
 def _resolve(p: str) -> Path:
