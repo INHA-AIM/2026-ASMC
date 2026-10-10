@@ -9,7 +9,7 @@
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
 **이번 PR #78은 v5 대량 활용 train 확장과 v4 검수 자료를 제공한다. 운영 실행은 수정하지 않는다.**
-최신 수치·적용 정책은 [v5 대량 활용 결과](#대량-활용-train-확장--2026-10-11-v5-breadth-r1)를 먼저 읽는다.
+최신 수치·적용 정책은 [v5 상자·방벽 보강 결과](#상자방벽-혼합-라벨-보강과-capture-활용--2026-10-11-v5-obstacles-r1)를 먼저 읽는다.
 아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
@@ -96,6 +96,70 @@ Teacher 미검출은 빈 정답이 아니다. 모든 이름 변경·추가 박�
 진행 순서는 명확한 자료의 v2 범위 검수 → animal/6 → 숫자9 → box/object/obstacle이다.
 운영 모델·ROS 계약·차량 제어는 유지하고, 추가 수집·학습은 이번 범위 밖이다.
 
+
+## 상자·방벽 혼합 라벨 보강과 Capture 활용 — 2026-10-11 v5-obstacles-r1
+
+[고정 실험](../../../config/experiments/camera_training_data_v5_obstacle_reinforcement.json),
+[선정·명시적 RGB 판정 변환 도구](../../../tools/perception/prepare_camera_obstacle_review.py),
+[결과표](../../../config/baselines/perception_camera_training_data_v5_obstacles.yaml),
+[파일 검증](../../../config/baselines/evidence/camera_training_data_v5_obstacles/verification.json),
+[Capture 종류 증거](../../../config/baselines/evidence/camera_training_data_v5_obstacles/capture-subtype-evidence.json)를 참조한다.
+[보강 갤러리](http://localhost:8768/camera-training-data-audit-v5-obstacles/index.html)에서
+원본 RGB 확대 시트와 193장 이름 수정 전후·채택 판정을 볼 수 있다.
+
+tooth-decay 96장, hl-fma_2 64장, jjj 33장의 **객체 확대 516개**를 실제 RGB로 확인했다.
+이는 영상의 모든 객체·주석 완전성을 검수했다는 뜻이 아니다. 16개 확대 박스는 종류를
+확정하지 않고 남겼다. 같은 영상의 다른 혼합·복합 라벨까지 해소된 경우만 반영해
+**166장·731객체**를 추가했다(tooth 93장, hl-fma_2 62장, jjj 11장).
+남은 27장에는 tiny subtype 외에도 탑승자 복합·dog/deer 혼합 주석이 있다.
+
+| 학습 클래스 | 이전 전체 객체 | 현재 전체 객체 | 현재 train 객체 |
+|---|---:|---:|---:|
+| box | 592 | **668** | **459** |
+| plastic_barrier | 548 | **585** | **469** |
+| steel_barricade | 441 | **505** | **304** |
+| concrete_barrier | 2,029 | **2,160** | **1,910** |
+| traffic_drum | 17,901 | **18,157** | **17,737** |
+
+`object`의 나무 무늬 상자/검정·노랑 개방형 철제 방책/원통 드럼을 각각
+wooden_box→box, steel_barricade, traffic_drum으로 연결했다. tooth의 PE에서 구멍·연결부가
+있는 사각 플라스틱 방벽은 plastic_barrier, 원통과 반사띠가 확인되는 객체는 traffic_drum이다.
+jjj의 9에서도 콘크리트 방벽·상자·철제·PE 방벽을 주석별로 나눴다. 다른 미검토 영상이나
+파일명으로 종류를 자동 전파하지 않는다. 기존 보류 제안은 새 RGB 판정 없이 승격하지 않는다.
+
+최신 산출물은 `data/dataset_versions/camera_objects_bbox_v5-obstacles-r1`이다.
+**17,631장·114,019객체**(Roboflow 17,626 + Capture 5)이며
+**train/selection/heldout = 16,851/113/667**이다. 원본 박스·16종 ID·평가 라벨·분할
+변경 0, 기존 채택 소실 0, exact pixel split 누출 0을 확인했다. 기존 v5의 품질 tier도 유지해
+이전 대량 자료를 엄격 검수 완료 자료로 잘못 승격하지 않는다. 관련 CPU 회귀는 97개다.
+원본·v4·v5-breadth와 이전 검수 기록을 보존했다.
+
+### Capture에 장애물이 있었는데 적게 활용한 이유
+
+현재 Capture 인벤토리의 원본 라벨은 Obstacle 7,910개, Vehicle 2,478개 외에도
+car 12,690, person 5,236, truck 3,024, bus 1,628개가 있다. **Capture 전체가 종류 미상인
+것은 아니다.** 다만 Obstacle의 박스·instance actor ID·semantic 대분류 색상은 세부
+에셋명과 다르다. 인벤토리의 **Obstacle 7,910개 모두** source_class_name은 Obstacle,
+semantic은 `[236,255,2]`로 같아 이 정보만으로 box/방벽/드럼을 확정할 수 없다.
+확인한 예시 run의 manifest/state에는 IMU·GPS가 연결돼 있고 객체 모델명을 actor에
+연결한 목록은 확인되지 않았다.
+
+장애물 종류 미확정과 예전의 엄격한 영상 완전성 조건이 겹쳤고, 이번 대량 확장 도구는
+Roboflow train을 대상으로 하므로 Capture는 아직 5장이다. GT 박스가 부정확하거나
+Capture를 학습에 사용할 수 없다는 뜻이 아니다. RGB에서 종류를 확인해 **run + 원본
+category + actor ID + 등장 구간**에 연결하면 기존 박스·mask를 활용할 수 있다.
+actor ID는 run/category 사이에서 재사용되므로 ID 하나만으로 전체 run에 전파하지 않는다.
+
+### 다음은 짧은 비교 학습
+
+현재 규모는 **부분집합 파일럿을 시작할 수 있는 상태**다. 전체 Roboflow 혼합 주석과
+Capture를 모두 정리할 때까지 기다리지 않는다. 다음 작업에서는 이 export를 고정하고
+소스·클래스별 샘플링으로 bollard/drum·person/car의 압도적인 비중을 조정한다.
+YOLO26l detect와 YOLOE 후보의 짧은 학습을 비교해 box·plastic/steel/concrete 방벽 개선,
+기존 차량·사람·강아지 회귀, 오검출·검출 공백과 배포 지연으로 본학습 모델 하나를 정한다.
+bicycle/stroller는 아직 비어 있고 독립 selection 커버리지가 부족한 종류는 성능 판단을
+보류한다. 이 결손을 모든 학습 시험의 중단 조건으로 삼지는 않는다. 이번 작업은 실제
+학습·추가 수집·운영 모델 변경을 수행하지 않았다.
 
 ## 대량 활용 train 확장 — 2026-10-11 v5-breadth-r1
 

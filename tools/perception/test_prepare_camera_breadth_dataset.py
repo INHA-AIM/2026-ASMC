@@ -100,6 +100,14 @@ class BreadthDatasetTests(unittest.TestCase):
         result, _ = expand([old, new], self.policy, {})
         self.assertFalse(result[1]['eligible'])
 
+    def test_later_reinforcement_does_not_upgrade_prior_breadth_quality(self):
+        old = self.row(eligible=True)
+        old['admission_tier'] = 'source_mapped_breadth_training'
+        old['breadth_quality'] = dict(complete_target_annotation_asserted=False)
+        result, _ = expand([old], self.policy, {})
+        self.assertEqual(result[0]['admission_tier'], old['admission_tier'])
+        self.assertEqual(result[0]['breadth_quality'], old['breadth_quality'])
+
 
 if __name__ == '__main__':
     unittest.main()

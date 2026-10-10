@@ -22,7 +22,7 @@ def expand(rows, policy, reviews, config=None):
     rejected = Counter()
     for row in result:
         if row['eligible']:
-            row['admission_tier'] = 'previous_reviewed_subset'
+            row.setdefault('admission_tier', 'previous_reviewed_subset')
             continue
         if not row['source'].startswith('roboflow:') or row['split'] != 'train':
             continue

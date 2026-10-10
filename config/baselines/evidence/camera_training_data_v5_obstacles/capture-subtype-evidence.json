@@ -1,0 +1,50 @@
+{
+  "original_label_counts": {
+    "Obstacle": 7910,
+    "truck": 3024,
+    "car": 12690,
+    "person": 5236,
+    "Vehicle": 2478,
+    "bus": 1628
+  },
+  "example": [
+    {
+      "source": "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+      "source_key": "front/000000",
+      "annotations": [
+        {
+          "original_label": "Obstacle",
+          "actor_id": "2",
+          "canonical": null
+        },
+        {
+          "original_label": "truck",
+          "actor_id": "18",
+          "canonical": "truck"
+        }
+      ],
+      "original_semantic": [
+        [
+          236,
+          255,
+          2
+        ],
+        [
+          255,
+          90,
+          90
+        ]
+      ]
+    }
+  ],
+  "interpretation": "Obstacle category and actor ID are available; obstacle asset subtype is not established by semantic color or instance ID. Some person/vehicle subtypes already known; Capture-wide conversion has not been completed.",
+  "capture_images_currently_admitted": 5,
+  "teacher_truth_used": false,
+  "obstacle_semantic_rgb_counts": {
+    "236,255,2": 7910
+  },
+  "obstacle_source_class_name_counts": {
+    "Obstacle": 7910
+  },
+  "raw_run_inspection_scope": "Example run 20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel manifest/state; not an exhaustive search of all raw run files"
+}

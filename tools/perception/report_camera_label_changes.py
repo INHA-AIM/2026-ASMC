@@ -43,7 +43,8 @@ def report(previous, curated, decisions, output):
             draw.text((4, 3), title+' | '+source['split'], fill='black', font=font)
             draw.text((4, 23), ident[:16]+' | '+source['source'][9:], fill='black', font=font)
             for ann in source['annotations']:
-                label = str(ann['original_label']) if source is old else ann.get('training_class') or 'excluded'
+                label = str(ann['original_label']) if source is old else ann.get('training_class') or (
+                    'unresolved' if ann.get('disposition') == 'ambiguous' else 'excluded')
                 xy = ann['xyxy']
                 rect = [xy[0]*scale, xy[1]*scale+42, xy[2]*scale, xy[3]*scale+42]
                 color = '#ff00ff' if source is old else '#00ff66' if new['eligible'] else '#ffae00'
