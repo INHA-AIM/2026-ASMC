@@ -363,6 +363,35 @@ def review_samples(rows, policy):
     return samples
 
 
+def bucket_review_states(rows, policy, reviews, samples):
+    by_id = {r['id']: r for r in rows}
+    states = {}
+    for bucket, ids in samples.items():
+        verified = []
+        rejected = []
+        for ident in ids:
+            decision = reviews.get(ident, {})
+            annotations={a['id']:a for a in by_id[ident]['annotations']}
+            changed=bool(decision.get('additions')) or any(
+                str(o['id']) not in annotations or o.get('canonical')!=annotations[str(o['id'])]['canonical']
+                or ('xyxy' in o and o['xyxy']!=annotations[str(o['id'])]['xyxy'])
+                for o in decision.get('overrides',[]))
+            if decision.get('image_sha256') != by_id[ident].get('image_sha256'):
+                continue
+            if decision.get('decision') == 'reject':
+                rejected.append(ident)
+            if (decision.get('decision') == 'accept' and decision.get('all_targets_annotated')
+                    and decision.get('bbox_policy') == policy['bbox_policy']
+                    and review_scope_matches(decision, policy)
+                    and not changed
+                    and (not decision.get('requires_human_confirmation') or decision.get('human_confirmed'))):
+                verified.append(ident)
+        states[bucket] = dict(sample_ids=ids, verified_ids=verified, rejected_ids=rejected,
+            approved=bool(ids) and len(verified) == len(ids) and not rejected,
+            state='failed_sample' if rejected else ('approved' if ids and len(verified)==len(ids) else 'pending'))
+    return states
+
+
 def apply_review(row, decision, policy):
     row = dict(row)
     row['annotations'] = [dict(ann) for ann in row['annotations']]
@@ -371,9 +400,9 @@ def apply_review(row, decision, policy):
     if decision.get('image_sha256') != row.get('image_sha256'):
         raise ValueError('review image hash mismatch: ' + row['id'])
     if decision.get('decision') != 'accept':
-        row['issues'] = row['issues'] + ['review_rejected']
+        row['issues'] = row['issues'] + ['review_pending' if decision.get('decision') == 'pending' else 'review_rejected']
         row['review_record'] = {k:decision[k] for k in (
-            'image_sha256','decision','reviewer','reviewed_at','notes') if k in decision}
+            'image_sha256','decision','reviewer','reviewed_at','notes','evidence') if k in decision}
         return row, False
     if decision.get('bbox_policy') != policy['bbox_policy'] or not decision.get('all_targets_annotated'):
         return row, False
@@ -415,6 +444,16 @@ def apply_review(row, decision, policy):
     for ann in row['annotations']:
         label_metadata(ann, policy)
     scope_matches = review_scope_matches(decision, policy)
+    if (row['source'].startswith('capture:') and scope_matches
+            and decision.get('bbox_geometry_verified') and decision.get('human_confirmed')
+            and 'missing_capture_bbox_source' not in row['issues']
+            and row['annotations'] and all(valid_box(a['xyxy'],row['width'],row['height']) for a in row['annotations'])):
+        # An independent RGB/bbox check may resolve an absent instance association;
+        # never waive missing source files, invalid boxes or subtype uncertainty here.
+        optional=[i for i in row['issues'] if i=='no_visible_instance_pixels']
+        row['auxiliary_segmentation_issues']=sorted(set(row.get('auxiliary_segmentation_issues',[])+optional))
+        row['issues']=[i for i in row['issues'] if i!='no_visible_instance_pixels']
+        row['bbox_geometry_verified']=True
     row['annotation_complete'] = scope_matches
     if scope_matches and policy.get('review_scope'):
         row['review_scope'] = policy['review_scope']
@@ -425,7 +464,7 @@ def apply_review(row, decision, policy):
                     confirmed_for_image_by=decision.get('reviewer'))
     row['review_record'] = {k:decision[k] for k in (
         'image_sha256','decision','all_targets_annotated','bbox_policy',
-        'reviewer','reviewed_at','notes','overrides','review_scope','additions','human_confirmed') if k in decision}
+        'reviewer','reviewed_at','notes','overrides','review_scope','additions','human_confirmed','bbox_geometry_verified','evidence') if k in decision}
     row['review_scope_matches'] = scope_matches
     return row, scope_matches
 
@@ -558,15 +597,9 @@ def curate(rows, policy, reviews=None):
     reviews = reviews or {}
     samples = review_samples(rows, policy)
     # One failed sample quarantines its source/class bucket until full review.
-    failed_buckets = {bucket for bucket, ids in samples.items()
-                      if any(reviews.get(i, {}).get('decision') == 'reject' for i in ids)}
-    approved_buckets = {bucket for bucket, ids in samples.items() if ids and all(
-        reviews.get(i, {}).get('decision') == 'accept'
-        and reviews[i].get('all_targets_annotated')
-        and reviews[i].get('bbox_policy') == policy['bbox_policy']
-        and review_scope_matches(reviews[i], policy)
-        and not reviews[i].get('overrides') and not reviews[i].get('additions')
-        and not reviews[i].get('requires_human_confirmation') for i in ids)} - failed_buckets
+    states = bucket_review_states(rows, policy, reviews, samples)
+    failed_buckets = {bucket for bucket, state in states.items() if state['rejected_ids']}
+    approved_buckets = {bucket for bucket, state in states.items() if state['approved']}
     result = []
     for original in rows:
         row, reviewed = apply_review(original, reviews.get(original['id']), policy)
@@ -652,7 +685,7 @@ def inventory(args):
         capture_manifest_sha256=sha(args.capture_manifest) if args.capture_manifest else None))
 
 
-def build_gallery(rows, samples, output, policy):
+def build_gallery(rows, samples, output, policy, progress=None):
     ids = {i for group in samples.values() for i in group}
     ids |= {r['id'] for r in rows if any(a['disposition'] == 'ambiguous' for a in r['annotations'])}
     # Every issue remains in JSONL; paginated galleries avoid silently truncating review.
@@ -677,31 +710,34 @@ def build_gallery(rows, samples, output, policy):
     save(output / 'review-data.json', entries)
     template = r'''<!doctype html><meta charset="utf-8"><title>Roboflow 데이터 감사 · 검수 대기</title>
 <style>body{font:16px system-ui;max-width:1200px;margin:auto}img{max-width:100%}article{border:1px solid #aaa;padding:12px;margin:15px 0}button{margin:5px}pre{white-space:pre-wrap}</style>
-<h1>Roboflow 데이터 감사 · 검수 대기</h1><p>승인: 보이는 모든 대상에 주석이 있고 박스가 가시 영역에 맞는지 확인. 불명확하면 거부/보류. 주황색은 제외 또는 미확정 라벨입니다. 사람이 검수하기 전에는 학습에서 격리됩니다.</p>
+<h1>Roboflow 데이터 감사 · 검수 대기</h1><p><a href="progress.html">소스·클래스별 검수 진행표</a></p><p>승인: 보이는 모든 대상에 주석이 있고 박스가 가시 영역에 맞는지 확인. 불명확하면 거부/보류. 주황색은 제외 또는 미확정 라벨, 자홍 점선은 수정 전 원본 박스입니다. 사람이 검수하기 전에는 학습에서 격리됩니다.</p>
 <input id="q" placeholder="클래스·프로젝트 검색"><input id="reviewer" placeholder="검수자 이름" value="local-browser-review"><button id="prev">이전</button><button id="next">다음</button><button id="export">검수 JSON 다운로드</button><p id="count"></p><div id="rows"></div>
-<script>let rows=[],page=0,decisions={};const names=__CANONICAL_NAMES__;const q=document.querySelector('#q');q.value=new URLSearchParams(location.search).get('q')||'';
-function draw(){const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q.value.toLowerCase()));const box=document.querySelector('#rows');box.replaceChildren();document.querySelector('#count').textContent=filtered.length+'개 / 페이지 '+(page+1);
-for(const r of filtered.slice(page*30,(page+1)*30)){const a=document.createElement('article'),p=document.createElement('pre'),canvas=document.createElement('canvas'),img=new Image();p.textContent=r.source+'\n'+r.id+'\n'+(r.eligible?'채택':'격리')+' / '+r.split+'\n'+JSON.stringify(r.review_record)+'\n'+JSON.stringify(r.annotations,null,2)+'\n'+r.reasons.join(',');canvas.width=r.width;canvas.height=r.height;canvas.style.maxWidth='100%';img.onload=()=>{const c=canvas.getContext('2d');c.drawImage(img,0,0);c.font='14px sans-serif';c.lineWidth=3;for(const ann of r.annotations){if(ann.xyxy.length!==4)continue;const [x,y,x2,y2]=ann.xyxy;c.strokeStyle=c.fillStyle=ann.canonical?'lime':'orange';c.strokeRect(x,y,x2-x,y2-y);c.fillText(ann.original_label+' -> '+ann.canonical+' / '+ann.training_class,x,Math.max(14,y));}};img.src=r.image;a.append(p,canvas);
-const edits=[];for(const ann of r.annotations){const line=document.createElement('div'),select=document.createElement('select'),coords=document.createElement('input');line.append(document.createTextNode(ann.id+' '+ann.original_label+' → '));for(const [value,label] of [['__keep__','현재 판정 유지'],['__exclude__','대상 제외'],...names.map(n=>[n,n])]){const o=document.createElement('option');o.value=value;o.textContent=label;select.append(o);}coords.value=ann.xyxy.join(', ');coords.title='가시 영역 x1,y1,x2,y2 (원본 픽셀)';coords.style.width='240px';line.append(select,coords);a.append(line);edits.push({ann,select,coords});}
-const confirm=document.createElement('input');confirm.type='checkbox';a.append(confirm,document.createTextNode('본인이 변경 라벨·추가 박스와 누락 여부를 직접 확인했습니다. '));const additions=document.createElement('textarea');additions.placeholder='추가 박스 JSON 배열: [{"id":"new-1","canonical":"box","xyxy":[0,0,20,20]}]';additions.value='[]';a.append(additions);const note=document.createElement('input');note.placeholder='검수 근거·누락·복합 객체 등';note.style.width='90%';a.append(note);
-for(const [label,value] of [['완전 주석 승인','accept'],['거부·격리','reject']]){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{const overrides=[];for(const {ann,select,coords} of (value==='accept'?edits:[])){const xyxy=coords.value.split(',').map(v=>Number(v.trim()));if(xyxy.length!==4||xyxy.some(v=>!Number.isFinite(v))){alert('좌표 4개를 입력해 주세요.');return;}const changed=JSON.stringify(xyxy)!==JSON.stringify(ann.xyxy);if(select.value!=='__keep__'||changed){if(select.value==='__keep__'&&!ann.canonical){alert('수정 박스의 정규 클래스도 선택해 주세요.');return;}const o={id:ann.id,canonical:select.value==='__exclude__'?null:(select.value==='__keep__'?ann.canonical:select.value)};if(changed)o.xyxy=xyxy;overrides.push(o);}}
-let added=[];try{added=JSON.parse(additions.value);if(!Array.isArray(added))throw Error();}catch(e){alert('추가 박스 JSON 배열을 확인해 주세요.');return;}if(value==='accept'&&(added.length||overrides.length)&&!confirm.checked){alert('변경 사항을 사람이 확인한 뒤 체크해 주세요.');return;}decisions[r.id]={human_confirmed:confirm.checked,additions:value==='accept'?added:[],image_sha256:r.image_sha256,decision:value,all_targets_annotated:value==='accept',bbox_policy:'visible_extent_xyxy_exclusive',reviewer:document.querySelector('#reviewer').value,reviewed_at:new Date().toISOString(),notes:note.value,overrides};b.textContent=label+' ✓';};a.append(b);}box.append(a);}}
-q.oninput=()=>{page=0;draw()};document.querySelector('#prev').onclick=()=>{page=Math.max(0,page-1);draw()};document.querySelector('#next').onclick=()=>{page++;draw()};document.querySelector('#export').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(decisions,null,2)],{type:'application/json'}));a.download='reviews.json';a.click();URL.revokeObjectURL(a.href);};fetch('review-data.json').then(r=>r.json()).then(r=>{rows=r;draw()}).catch(()=>{document.querySelector('#count').textContent='검수 목록을 읽지 못했습니다.'});</script>'''
+<script>let rows=[],page=0,decisions={},bucketIds=null;const names=__CANONICAL_NAMES__;const q=document.querySelector('#q');q.value=new URLSearchParams(location.search).get('q')||'';
+function draw(){const filtered=rows.filter(r=>(!bucketIds||bucketIds.has(r.id))&&JSON.stringify(r).toLowerCase().includes(q.value.toLowerCase()));const box=document.querySelector('#rows');box.replaceChildren();document.querySelector('#count').textContent=filtered.length+'개 / 페이지 '+(page+1);
+for(const r of filtered.slice(page*30,(page+1)*30)){const a=document.createElement('article'),p=document.createElement('pre'),canvas=document.createElement('canvas'),img=new Image();p.textContent=r.source+'\n'+r.id+'\n'+(r.eligible?'채택':'격리')+' / '+r.split+'\n'+JSON.stringify(r.review_record)+'\n'+JSON.stringify(r.annotations,null,2)+'\n'+r.reasons.join(',');canvas.width=r.width;canvas.height=r.height;canvas.style.maxWidth='100%';img.onload=()=>{const c=canvas.getContext('2d');c.drawImage(img,0,0);c.font='14px sans-serif';c.lineWidth=3;for(const ann of r.annotations){if(ann.xyxy.length!==4)continue;if(ann.original_xyxy){const [a,b,d,e]=ann.original_xyxy;c.strokeStyle='#ff00b8';c.setLineDash([6,4]);c.strokeRect(a,b,d-a,e-b);c.setLineDash([]);}const [x,y,x2,y2]=ann.xyxy;c.strokeStyle=c.fillStyle=ann.canonical?'lime':'orange';c.strokeRect(x,y,x2-x,y2-y);c.fillText(ann.original_label+' -> '+ann.canonical+' / '+ann.training_class,x,Math.max(14,y));}};img.src=r.image;a.append(p,canvas);
+const edits=[];for(const ann of r.annotations){const line=document.createElement('div'),select=document.createElement('select'),coords=document.createElement('input');line.append(document.createTextNode(ann.id+' '+ann.original_label+' → 세부 종류 '));for(const [value,label] of [['__keep__','현재 판정 유지'],['__exclude__','대상 제외'],...names.map(n=>[n,n])]){const o=document.createElement('option');o.value=value;o.textContent=label;select.append(o);}coords.value=ann.xyxy.join(', ');coords.title='가시 영역 x1,y1,x2,y2 (원본 픽셀)';coords.style.width='240px';line.append(select,coords);a.append(line);edits.push({ann,select,coords});}
+const confirm=document.createElement('input');confirm.type='checkbox';a.append(confirm,document.createTextNode('본인이 변경 라벨·추가 박스와 누락 여부를 직접 확인했습니다. '));const geometry=document.createElement('input');geometry.type='checkbox';if(r.source.startsWith('capture:'))a.append(geometry,document.createTextNode('instance 연결과 별도로 RGB·원본 bbox 기하를 확인했습니다. '));const additions=document.createElement('textarea');additions.placeholder='추가 박스 JSON 배열: [{"id":"new-1","canonical":"box","xyxy":[0,0,20,20]}]';additions.value='[]';a.append(additions);const note=document.createElement('input');note.placeholder='검수 근거·누락·복합 객체 등';note.style.width='90%';a.append(note);
+for(const [label,value] of [['완전 주석 승인','accept'],['검수 보류','pending'],['문제 확인','reject']]){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{const overrides=[];for(const {ann,select,coords} of (value==='accept'?edits:[])){const xyxy=coords.value.split(',').map(v=>Number(v.trim()));if(xyxy.length!==4||xyxy.some(v=>!Number.isFinite(v))){alert('좌표 4개를 입력해 주세요.');return;}const changed=JSON.stringify(xyxy)!==JSON.stringify(ann.xyxy);if(select.value!=='__keep__'||changed){if(select.value==='__keep__'&&!ann.canonical){alert('수정 박스의 정규 클래스도 선택해 주세요.');return;}const o={id:ann.id,canonical:select.value==='__exclude__'?null:(select.value==='__keep__'?ann.canonical:select.value)};if(changed)o.xyxy=xyxy;overrides.push(o);}}
+let added=[];try{added=JSON.parse(additions.value);if(!Array.isArray(added))throw Error();}catch(e){alert('추가 박스 JSON 배열을 확인해 주세요.');return;}if(value==='accept'&&(added.length||overrides.length)&&!confirm.checked){alert('변경 사항을 사람이 확인한 뒤 체크해 주세요.');return;}decisions[r.id]={bbox_geometry_verified:geometry.checked,human_confirmed:confirm.checked,additions:value==='accept'?added:[],image_sha256:r.image_sha256,decision:value,all_targets_annotated:value==='accept',bbox_policy:'visible_extent_xyxy_exclusive',reviewer:document.querySelector('#reviewer').value,reviewed_at:new Date().toISOString(),notes:note.value,overrides};b.textContent=label+' ✓';};a.append(b);}box.append(a);}}
+q.oninput=()=>{page=0;draw()};document.querySelector('#prev').onclick=()=>{page=Math.max(0,page-1);draw()};document.querySelector('#next').onclick=()=>{page++;draw()};document.querySelector('#export').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(decisions,null,2)],{type:'application/json'}));a.download='reviews.json';a.click();URL.revokeObjectURL(a.href);};Promise.all([fetch('review-data.json').then(r=>r.json()),fetch('review-samples.json').then(r=>r.json())]).then(([r,s])=>{rows=r;const bucket=new URLSearchParams(location.search).get('bucket');if(bucket)bucketIds=new Set(s[bucket]||[]);draw()}).catch(()=>{document.querySelector('#count').textContent='검수 목록을 읽지 못했습니다.'});</script>'''
     names = sorted(semantic_names(policy))
     template = template.replace('bbox_policy:\'visible_extent_xyxy_exclusive\',reviewer:',
         'bbox_policy:\'visible_extent_xyxy_exclusive\',review_scope:' + json.dumps(policy.get('review_scope')) + ',reviewer:')
     (output / 'index.html').write_text(template.replace('__CANONICAL_NAMES__',json.dumps(names)))
     save(output / 'review-samples.json', samples)
+    from camera_data_readiness import readiness_report, progress_gallery
+    progress_gallery(progress or readiness_report(rows,policy,
+        {r['id']:r['review_record'] for r in rows if r.get('review_record')},samples),output)
 
 
-def export_dataset(rows, policy, output):
+def export_dataset(rows, policy, output, fixed_class_order=False):
     output.mkdir(parents=True, exist_ok=False)
     accepted = copy.deepcopy([r for r in rows if r['eligible']])
     for row in accepted:
         for ann in row['annotations']:
             label_metadata(ann, policy)
-    names = [name for group in policy['groups'].values() for name in group
-             if any(training_label(a) == name for r in accepted for a in r['annotations'])]
+    present = {training_label(a) for r in accepted for a in r['annotations'] if training_label(a)}
+    names = [name for name in training_names(policy) if fixed_class_order or name in present]
     ids = {name:index for index,name in enumerate(names)}
     by_role = Counter()
     for role in ('train','val','test'):
@@ -740,8 +776,10 @@ def export_dataset(rows, policy, output):
         training_performed=False, unknown_subtypes_exported=0,
         semantic_subtypes=dict(Counter(a['source_semantic_label'] for r in accepted for a in r['annotations'] if training_label(a))),
         split_ready=all(by_role[role] > 0 for role in ('train','selection','heldout')),
-        missing_target_classes=[n for group in policy['groups'].values() for n in group if n not in names],
-        full_target_coverage=all(n in names for group in policy['groups'].values() for n in group)))
+        missing_target_classes=[n for n in training_names(policy) if n not in present],
+        full_target_coverage=all(n in present for n in training_names(policy)),
+        class_order_policy='fixed_target_order' if fixed_class_order else 'present_classes_only',
+        class_order_sha256=digest(json.dumps(names)),present_classes=[n for n in names if n in present]))
     save(output / 'verification.json', verify_export(output))
 
 
@@ -752,6 +790,10 @@ def verify_export(output):
     names=config['names']
     if not isinstance(names,list) or len(set(names))!=len(names):
         raise ValueError('invalid_export_class_list')
+    summary=json.loads((output/'summary.json').read_text())
+    if summary.get('class_order_policy')=='fixed_target_order':
+        if names!=summary['classes'] or digest(json.dumps(names))!=summary['class_order_sha256']:
+            raise ValueError('export_fixed_class_order_changed')
     rows=list(read_jsonl(output/'manifest.jsonl'))
     pixels=defaultdict(set);images=0;objects=0
     expected_images=set();expected_labels=set()
@@ -788,6 +830,11 @@ def curate_command(args):
     rows = [resolve_source_labels(row, policy) for path in args.inventory for row in read_jsonl(path)]
     if len({r['id'] for r in rows}) != len(rows):
         raise ValueError('duplicate IDs across input inventories')
+    from camera_data_readiness import bbox_rows, preserve_splits, readiness_report
+    if getattr(args,'bbox_only',False):
+        rows=bbox_rows(rows)
+    if getattr(args,'split_manifest',None):
+        rows=preserve_splits(rows,list(read_jsonl(args.split_manifest)))
     reviews = json.loads(args.reviews.read_text()) if args.reviews else {}
     rows, samples = curate(rows, policy, reviews)
     near = near_duplicate_candidates(rows)
@@ -806,11 +853,15 @@ def curate_command(args):
         inventory_sha256={str(path):sha(path) for path in args.inventory}, reviews_sha256=sha(args.reviews) if args.reviews else None,
         labels_sha256=sha(args.labels), source_profiles_sha256=policy.get('source_profiles_sha256'),
         review_samples=sum(map(len, samples.values())), near_duplicate_pairs=len(near),
+        previous_split_manifest_sha256=sha(args.split_manifest) if getattr(args,'split_manifest',None) else None,
+        bbox_only=getattr(args,'bbox_only',False),
         conditions='Unverified weather/tunnel/view remain unknown'))
+    progress=readiness_report(rows,policy,reviews,samples)
+    save(args.output/'review-progress.json',progress)
     if args.gallery:
-        build_gallery(rows, samples, args.gallery, policy)
+        build_gallery(rows, samples, args.gallery, policy,progress)
     if args.export:
-        export_dataset(rows, policy, args.export)
+        export_dataset(rows, policy, args.export,getattr(args,'fixed_class_order',False))
 
 
 def main():
@@ -832,6 +883,9 @@ def main():
     cur.add_argument('--output', type=Path, required=True)
     cur.add_argument('--gallery', type=Path)
     cur.add_argument('--export', type=Path)
+    cur.add_argument('--bbox-only', action='store_true', help='Separate optional segmentation diagnostics from bbox eligibility')
+    cur.add_argument('--fixed-class-order', action='store_true', help='Keep every target class ID even when absent')
+    cur.add_argument('--split-manifest', type=Path, help='Preserve previously assigned image/scene splits')
     verify=sub.add_parser('verify-export')
     verify.add_argument('--dataset',type=Path,required=True)
     summary=sub.add_parser('source-label-summary', help='Resolve source meanings without accepting images or training')

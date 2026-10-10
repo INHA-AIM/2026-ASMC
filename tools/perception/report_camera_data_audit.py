@@ -13,6 +13,18 @@ from urllib.parse import quote
 from camera_data_audit import read_jsonl, save, sha, load_label_policy, training_names, training_label
 
 
+def review_coverage(rows, samples):
+    touched={r['id'] for r in rows if r.get('review_record')}
+    completed={r['id'] for r in rows if r.get('review_record',{}).get('decision') in ('accept','reject')}
+    sample_ids={i for ids in samples.values() for i in ids}
+    return dict(reviewed_images=len(completed),started_images=len(touched),pending_images=len(touched-completed),
+        planned_sample_buckets=len(samples),planned_unique_sample_images=len(sample_ids),
+        reviewed_sample_images=len(sample_ids & completed),
+        fully_reviewed_sample_buckets=sum(set(ids)<=completed for ids in samples.values()),
+        full_visual_review_complete=bool(samples and sample_ids<=completed),
+        note='Pending records and generated samples are not completed reviews. Completed rejection does not approve a bucket.')
+
+
 def report(root, curated, dataset, gallery, policy=None):
     policy = policy or load_label_policy(Path(__file__).resolve().parents[2]/'config/datasets/camera_object_labels_v1.json')
     downloads = json.loads((root/'download-report.json').read_text())
@@ -57,7 +69,7 @@ def report(root, curated, dataset, gallery, policy=None):
         negatives[row['split']]+=not any(a['canonical'] for a in row['annotations'])
         exact_roles[row['pixel_sha256']].add(row['split'])
         structure_failures+=bool(row['issues'] or any(a['issues'] for a in row['annotations']))
-        for field in conditions:conditions[field][str(row.get(field,'unknown'))]+=1
+        for field in conditions:conditions[field][str(row[field]) if row.get(field) is not None else 'unknown']+=1
         for ann in row['annotations']:
             unresolved+=ann['disposition']=='ambiguous'
             if ann['canonical']:
@@ -69,7 +81,7 @@ def report(root, curated, dataset, gallery, policy=None):
     exact_leaks=sum(len(roles)>1 for roles in exact_roles.values())
     acquired=sum(r['status'] in ('downloaded','downloaded_snapshot') for r in source_rows.values())
     tools=Path(__file__).resolve().parent
-    code={p.name:sha(p) for p in [tools/'download_roboflow_sources.py',tools/'snapshot_roboflow_projects.py',tools/'camera_data_audit.py',Path(__file__)]}
+    code={p.name:sha(p) for p in [tools/'download_roboflow_sources.py',tools/'snapshot_roboflow_projects.py',tools/'camera_data_audit.py',tools/'camera_data_readiness.py',Path(__file__)]}
     try:
         commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=tools,text=True).strip()
     except subprocess.CalledProcessError:
@@ -104,14 +116,16 @@ def report(root, curated, dataset, gallery, policy=None):
     result['bbox_pilot_ready']=bool(result['reviewed_subset_ready'] and not result['bbox_pilot_missing_evaluation_classes'])
     samples_path=gallery/'review/review-samples.json'
     samples=json.loads(samples_path.read_text()) if samples_path.exists() else {}
-    reviewed={r['id'] for r in rows if r.get('review_record')}
-    sample_ids={i for ids in samples.values() for i in ids}
-    result['visual_review_coverage']=dict(reviewed_images=len(reviewed),
-        planned_sample_buckets=len(samples),planned_unique_sample_images=len(sample_ids),
-        reviewed_sample_images=len(sample_ids & reviewed),
-        fully_reviewed_sample_buckets=sum(set(ids)<=reviewed for ids in samples.values()),
-        full_visual_review_complete=bool(samples and sample_ids<=reviewed),
-        note='Generated samples are not completed reviews. Quarantined unresolved images are not training data.')
+    result['visual_review_coverage']=review_coverage(rows,samples)
+    progress_path=curated/'review-progress.json'
+    if progress_path.exists():
+        progress=json.loads(progress_path.read_text())
+        result['readiness']=dict(structurally_usable_subset=bool(exported and exported['images']
+            and not unresolved and not structure_failures and not exact_leaks),
+            target_split_coverage=progress['target_split_coverage'],comparison_training_ready=result['bbox_pilot_ready'],
+            missing_class_splits=progress['missing_class_splits'],source_pixel_size_bins=progress['source_pixel_size_bins'],
+            approved_sample_buckets=[r['bucket'] for r in progress['buckets'] if r['sample']['approved']],
+            progress_sha256=sha(progress_path),teacher_approved=False)
     archive_proof=root/'archive-verification-v1.json'
     if archive_proof.exists():
         result['archive_verification']=dict(sha256=sha(archive_proof),
@@ -134,6 +148,9 @@ def report(root, curated, dataset, gallery, policy=None):
 <h2>해석 제한</h2><p>날씨·터널·거리는 근거 없이 파일명으로 확정하지 않았습니다. 유사 이미지 수는 누출 수가 아니며, 분할을 가로지르는 미확정 후보는 채택하지 않았습니다. Capture 고정 run 분할과 원본 instance mask는 유지합니다.</p>'''
     page=page.replace('2026-10-09',datetime.now(timezone.utc).date().isoformat())
     page=page.replace('기존 7종 + CargoBox/WoodBox 비교 학습 평가 준비','정책에 지정된 학습 클래스의 평가 준비')
+    page=page.replace('<h2>채택 부분집합</h2>','<p><a href="review/progress.html">소스·클래스별 검수 진행표 / 부족 split</a></p><h2>채택 부분집합</h2>')
+    if (gallery/'review-evidence/index.html').exists():
+        page=page.replace('<h2>채택 부분집합</h2>','<p><a href="review-evidence/index.html">이번 RGB 표본 검수 근거·실패 사례</a></p><h2>채택 부분집합</h2>')
     page=page.replace('__ACCEPTED__',esc(json.dumps(result['accepted'],ensure_ascii=False,indent=2)))
     page=page.replace('__READY__',esc(result['reviewed_subset_ready'])).replace('__MISSING__',esc(exported.get('missing_target_classes',[]) if exported else 'export 대기'))
     page=page.replace('__PILOT_READY__',esc(result['bbox_pilot_ready'])).replace('__PILOT_MISSING__',esc(result['bbox_pilot_missing_evaluation_classes']))

@@ -8,8 +8,8 @@
 이 절과 [v2 라벨 정책](../../../config/datasets/camera_object_labels_v2.json),
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
-**이번 PR #78에서 X teacher 검증·v3 준비를 진행한다. PR #77의 운영 실행은 수정하지 않는다.**
-최신 수치·갤러리·남은 조건은 [v3 실행 결과](#v3x-teacher-실행-결과--2026-10-10)를 먼저 읽는다.
+**이번 PR #78은 v4 bbox 부분집합·검수 병목 보고까지 진행한다. 운영 실행은 수정하지 않는다.**
+최신 수치·갤러리·남은 조건은 [v4 실행 결과](#v4-자료-활용-확대--2026-10-10)를 먼저 읽는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
 MORAI 사용자 표기는 실제 gRPC API 이름이 아니며, 미확인 API 이름은 null로 둔다.
@@ -90,6 +90,109 @@ Teacher 미검출은 빈 정답이 아니다. 모든 이름 변경·추가 박�
 
 진행 순서는 명확한 자료의 v2 범위 검수 → animal/6 → 숫자9 → box/object/obstacle이다.
 운영 모델·ROS 계약·차량 제어는 유지하고, 추가 수집·학습은 이번 범위 밖이다.
+
+
+## v4 자료 활용 확대 — 2026-10-10
+
+[고정 실행 설정](../../../config/experiments/camera_training_data_v4.json),
+[실행 baseline](../../../config/baselines/perception_camera_training_data_v4.yaml),
+[검증 증거](../../../config/baselines/evidence/camera_training_data_v4/verification.json)가 최신 상태다.
+로컬 [결과·검수 시작점](http://localhost:8768/camera-training-data-audit-v4/index.html)과
+[소스×클래스 진행표](http://localhost:8768/camera-training-data-audit-v4/review/progress.html)는
+기존 [갤러리 목차](http://localhost:8768/)에도 날짜·E 번호로 연결한다.
+
+| 자료 | 이미지 | 객체 | train / selection / heldout |
+|---|---:|---:|---|
+| v3 보존본 | 95 | 250 | 3 / 1 / 91 |
+| v4 고정 16종 부분집합 | 527 | 973 | 344 / 1 / 182 |
+
+v4는 실제 YOLO 파일 재읽기에서 좌표·클래스·객체 수·이미지 SHA가 일치하고,
+채택 자료의 미해결 라벨·구조 오류·확인된 split 누출은 0이다.
+16종 ID는 자료 유무와 관계없이 위 순서의 0–15로 고정한다. 현재 채택 자료는 9종이며,
+**구조적으로 사용 가능한 부분집합이지 두 모델 비교 학습 준비 완료가 아니다.**
+모든 16종이 세 split에 있는 조건을 만족하지 못하므로 PR #78은 Draft로 유지한다.
+학습·추가 수집·운영 모델 변경은 수행하지 않았다.
+
+### 실제 RGB 검수와 묶음 승인
+
+이번에 233장의 원본 RGB/박스를 추가 확인했다. 165장 승인, 26장 문제 확인,
+42장 보류다. 이는 중복·split 검사를 거치기 전 검수 판정 수이며 export 증가 수와 다르다.
+aiv5 person의 고정 50장 표본 묶음을 승인했고, Enzo WoodBox·PE_Drum은
+기존 수정 기록과 새 RGB 확인을 바탕으로 개별 채택했다. 명확한 원본 라벨은 teacher 검증 없이 박스를 유지하고 이름만 대응한다.
+개별 수정·승인은 묶음의 실패와 별도로 처리하되 구조·중복·분할 검사는 그대로 적용한다.
+표본은 SHA·scope·bbox 정책에 결합한다. 이전의 효과 없는 명칭 override는 확인 이력을
+보존하면서 검증 표본으로 인정하며, 실제 종류/좌표 변경·박스 추가 표본으로 묶음을 승격하지 않는다.
+
+- Enzo PE 방벽: 고정 50장 중 대부분 정상이다. 27번에서는 오른쪽 가장자리의 흰 PE
+  방벽 주석이 빠져 있어 이 이미지만 보류했다. PE 원본 397주석(중복 전) 중 v4에는
+  116주석이 채택됐으나 모두 기존 heldout이다. 방벽 자료가 전혀 없다는 뜻이 아니다.
+- Enzo cargo box: 미완료 표본 9장에는 dog/deer 혼합과 왼쪽 노란 steel barricade의
+  누락 주석이 함께 있어 보류했다. 기존 정상 CargoBox/WoodBox 채택 자료는 유지했다.
+- aiv5 person: 표본 50장은 원본 의미·박스가 맞아 묶음을 승인했다. 같은 소스 car에는
+  bus/truck이 섞여 있어 car 묶음은 승인하지 않았고 명확한 승용차 이미지만 개별 채택했다.
+  이것은 작성자의 넓은 vehicle 의미와 우리 세부 종류의 차이다.
+- jjj 8=CargoBox는 직접 대응 가능하지만 같은 이미지의 9에는 WoodBox·콘크리트·철제·
+  PE 방벽이 함께 있다. 첫 32장 확인에서 이를 기록했다. 생성된 50장 전부를 완료로
+  표시하지 않으며, 8번 박스만 골라 나머지를 누락 정답으로 만들지 않는다.
+
+검수 UI는 원본 라벨/category ID/박스·세부 종류·학습 클래스·소비 그룹을 함께 보여준다.
+수정 전 박스는 자홍 점선이며 승인/보류/문제 확인을 구분한다. JSON 다운로드 후 새
+검수 버전으로 합친다. 변경 라벨·추가 박스는 사람이 확인하고, 미승인 X teacher 결과는
+참고일 뿐 정답이나 삭제 근거가 아니다. 기존 원본·v3·v4 첫 실행(r1)과 검수 파일은 보존했다.
+
+### Capture bbox와 작은 정답
+
+`--bbox-only`는 polygon/RLE·semantic 연결 진단을 보조 segmentation 진단으로 분리한다.
+RGB·박스 기하·누락 BBox 파일·세부 종류·완전성 검사는 남긴다. Capture bbox가 정확하다는
+사용자 확인과 `Obstacle/Vehicle` 세부 종류 확인은 별개다. instance 연결이 없는 경우에도
+사람이 RGB/원본 bbox를 독립 확인하고 `bbox_geometry_verified`·`human_confirmed`를
+기록하면 연결 진단만 분리할 수 있다. 이 절차로 BBox 파일 누락이나 잘못된 좌표를 면제하지 않는다.
+
+학습 export에는 작은 양성 정답을 제거하지 않았다. v4의 973객체에는 16/8px 미만
+203개, 16/8 이상·24/12 미만 129개가 포함된다(긴 변/짧은 변, 원본 해상도 기준).
+차량 24/12px·기타 16/8px 갤러리 표시와 공통 평가 범위는 학습 필터가 아니다.
+1×1px 양성 보존·고정 ID·기존 v3 호환을 CPU 시험과 실제 파일 재검증으로 확인했다.
+
+### 남은 준비 병목과 작업 순서
+
+- box 110객체, plastic_barrier 116객체를 확보했지만 train은 0이다. Enzo heldout을
+  옮기지 말고 jjj 9, Park box 등 기존 train 혼합 자료를 개별 분류·검수하는 것이 우선이다.
+- motorcycle/steel_barricade/concrete_barrier/traffic_drum도 현재 heldout 위주다.
+  명확한 숫자·Fence·PE 라벨 소스에서 부족한 split의 표본 검수를 먼저 이어간다.
+- dog/deer/bicycle/bus/bollard/traffic_cone/stroller는 현재 채택 자료가 0이다.
+  원본 확보량 0을 뜻하지 않는다. animal/6, 탑승자 복합, 명확한 bus/콘/볼라드
+  소스의 진행표를 이용해 수정·승인 범위를 늘린다.
+- person은 train327객체, car는 train49·heldout2, truck은 selection1이다.
+  기존 7종 보존용으로도 독립 평가 자료가 더 필요하다.
+- 날씨·터널·거리·뷰는 독립 근거가 없으면 unknown이다. 클래스·하위 유형·split별
+  수치와 원본 픽셀 크기는 `review-progress.json`에 남긴다. 실제 GT 정확도나 충분한
+  학습량을 단순 커버리지로 보장하지 않는다.
+
+기존 평가 그룹과 Capture 12/3/3 run은 고정한다. 중복/증강/연속 장면은 같은 그룹에
+두며, 새로운 독립 그룹에만 seed20261009의 80/10/10을 적용한다. 기존 자료 검수 후에도
+부족한 PE_Firewall·상자·터널·FOGGY·가림·거리 조건만 추가 수집 목록으로 좁힌다.
+그다음 같은 고정 bbox 데이터로 YOLO26l detect와 YOLOE detection의 짧은 비교 학습을 진행한다.
+
+### 재현 명령
+
+상위 workspace 데이터가 `$ASMC_DATA`이고 작업 저장소에서 실행하는 경우다.
+이미 존재하는 출력 디렉터리는 덮어쓰지 않고 새 버전 경로를 사용한다.
+
+```bash
+python tools/perception/camera_data_audit.py curate \
+  --inventory "$ASMC_DATA/roboflow/versioned-inventory-v1/inventory.jsonl" \
+    "$ASMC_DATA/roboflow/snapshot-inventory-v2/inventory.jsonl" \
+    "$ASMC_DATA/roboflow/capture-inventory-v1/inventory.jsonl" \
+  --labels config/datasets/camera_object_labels_v2.json \
+  --reviews "$ASMC_DATA/roboflow/visual-review-v4/reviews.json" \
+  --bbox-only --fixed-class-order \
+  --split-manifest "$ASMC_DATA/roboflow/curated-v3/curated.jsonl" \
+  --output "$ASMC_DATA/roboflow/curated-v4" \
+  --gallery /path/to/artifacts/camera-training-data-audit-v4/review \
+  --export "$ASMC_DATA/dataset_versions/camera_objects_bbox_v4"
+python tools/perception/camera_data_audit.py verify-export \
+  --dataset "$ASMC_DATA/dataset_versions/camera_objects_bbox_v4"
+```
 
 ## 작업 경계
 
