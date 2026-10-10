@@ -91,5 +91,48 @@ int main(){
     expect(history.ConservativeOccupancies({object}).empty(),"inconsistent fragment location invalidates retained body use");
     object.y=0;object.length=4.5;object.width=1.9;object.geometry_valid=false;observe(600.6,.6);
     expect(history.ConservativeOccupancies({object}).empty(),"invalid current geometry cannot authorize a remembered body");
+    // A smooth velocity-heading fit can still be wrong: position observations
+    // keep moving faster while reported speed decays and invents a tight turn.
+    history.Reset();object.id=20;object.length=4.5;object.width=1.9;
+    object.geometry_valid=true;object.motion_state=ObjectMotionState::DYNAMIC;
+    for(int i=0;i<6;++i){double q=i*.1;object.x=20+6*q;object.y=0;
+        object.vx=2*std::cos(-.9*q);object.vy=2*std::sin(-.9*q);observe(700+q,1);}
+    const auto disputed=history.ApproachOccupancies({object});
+    expect(disputed.size()==2&&std::fabs(disputed[0].vx-6)<1e-8&&
+        std::fabs(disputed[0].vy)<1e-8&&disputed[0].yaw_rate==0,
+        "position-supported continued motion replaces a disputed velocity decay for approach checks");
+    expect(disputed.size()==2&&disputed[1].vx==object.vx&&disputed[1].vy==object.vy&&
+        std::fabs(disputed[1].yaw_rate+.9)<1e-6&&disputed[1].turn_prediction_duration<=.5,
+        "the original velocity and provisional turn remain a bounded additional safety hypothesis");
+    expect(history.UncertainNear(20,0)==20&&!history.MovingAwayReliable(20,0,0),
+        "a disputed velocity fit cannot authorize departure or a passed-vehicle certificate");
+    expect(disputed.size()==2&&disputed[0].corners[0].x==object.corners[0].x&&
+        disputed[1].corners[0].y==object.corners[0].y,
+        "motion refinement preserves authoritative perception corners in both hypotheses");
+    observe(700.5,1);
+    expect(history.ApproachOccupancies({object}).size()==2,
+        "reusing an observation cannot wash away disputed motion");
+    object.motion_state=ObjectMotionState::LOW_THREAT;object.vx=object.vy=0;observe(700.6,1);
+    expect(history.ApproachOccupancies({object}).size()==1&&
+        history.ApproachOccupancies({object})[0].yaw_rate==0,
+        "a stationary classification clears the positional velocity refinement");
+    history.Reset();object.id=21;object.motion_state=ObjectMotionState::DYNAMIC;
+    for(int i=0;i<6;++i){double q=i*.1;object.x=20+6*std::sin(.3*q)/.3;
+        object.y=6*(1-std::cos(.3*q))/.3;
+        object.vx=6*std::cos(.3*q);object.vy=6*std::sin(.3*q);observe(710+q,1);}
+    auto matching=object;matching.yaw_rate=history.Rate(21);
+    const auto stable=history.ApproachOccupancies({matching});
+    expect(stable.size()==1&&std::fabs(stable[0].yaw_rate-.3)<1e-6&&
+        stable[0].vx==object.vx&&stable[0].vy==object.vy,
+        "consistent real circular motion retains its original long-horizon turn prediction");
+    expect(history.UncertainNear(20,0)<0,
+        "consistent full-body circular history still satisfies the original confidence gate");
+    object.id=22;history.Reset();
+    for(int i=0;i<6;++i){object.x=20+6*i*.1+(i%2?2:-2);object.y=0;
+        object.vx=2;object.vy=0;observe(720+i*.1,1);}
+    auto fragment_input=object;fragment_input.yaw_rate=history.Rate(22);
+    expect(history.ApproachOccupancies({fragment_input}).size()==1,
+        "large fragment-centre jumps cannot fabricate a positional velocity correction");
     return failures?1:0;
 }
+

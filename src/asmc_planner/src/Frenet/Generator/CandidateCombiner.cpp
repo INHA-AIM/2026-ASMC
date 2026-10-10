@@ -5,6 +5,7 @@
 
 #include "Frenet/Generator/LateralGenerator.hpp"
 #include "Frenet/Generator/LongitudinalGenerator.hpp"
+#include "Frenet/Generator/SpatialStop.hpp"
 
 std::vector<FrenetPath> CombineLateralLongitudinal(const std::vector<FrenetPath>& lateral_set,
                                                     const std::vector<FrenetPath>& longitudinal_set) {
@@ -288,8 +289,11 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
             // StopConfig.delta_s_override를 그대로 옮겨 채운 값).
             PathGeneratorConfig stop_delta_cfg = cfg;
             stop_delta_cfg.delta_s = request.stop.terminal_offset;
-            longitudinal_set = GenerateStoppingCandidates(
-                start, request.stop.stop_s, stop_delta_cfg);
+            longitudinal_set = request.stop.spatial_profile
+                ? GenerateSpatialStoppingCandidates(start, request.stop.stop_s,
+                    request.stop.cruise_speed, request.stop.comfortable_decel,
+                    stop_delta_cfg, limits, request.stop.acceleration_limit)
+                : GenerateStoppingCandidates(start, request.stop.stop_s, stop_delta_cfg);
             break;
         }
 
@@ -331,3 +335,4 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
 
     return combined;
 }
+

@@ -1,6 +1,9 @@
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Generator/LongitudinalGenerator.hpp"
+#include "Frenet/Generator/SpatialStop.hpp"
+#include "Frenet/Generator/StoppingLateralGeometry.hpp"
+#include "Frenet/Math/FrenetConverter.hpp"
 #include "Frenet/Speed/CurveSpeed.hpp"
 #include "Frenet/Math/Polynomial.hpp"
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
@@ -50,7 +53,10 @@ bool AlignWaitingApproach(const RefLine& ref,const CartesianState& ego,
     const double first=(1-origin.kappa*d)*std::tan(std::remainder(ego.yaw-origin.theta,2*M_PI));
     const double last=(1-goal.kappa*target_d)*std::tan(std::remainder(heading-goal.theta,2*M_PI));
     if(!std::isfinite(first)||!std::isfinite(last))return false;
-    const auto lateral=MakeQuintic(d,first,0,target_d,last,0,span);
+    double ps,pv,pa,pd,prime,second;
+    CartesianToFrenet(ref,ego,ps,pv,pa,pd,prime,second,&s,5);
+    if(!std::isfinite(second))return false;
+    const auto lateral=MakeQuintic(d,first,second,target_d,last,0,span);
     for(size_t i=0;i<stations.size();++i){
         const auto rp=Interpolate(ref,stations[i]);
         const double q=std::clamp(stations[i]-s,0.0,span);
@@ -77,50 +83,94 @@ bool MakeFrontierWaitingPath(const RefLine& ref,const CartesianState& ego,
     const FrenetState& start,double s,double d,double stop_s,double cap,
     const AvoidRoadMap& road,const VehicleShape& shape,const KinematicLimits& limits,
     const CollisionCheckConfig& collision,const std::vector<TrackedObject>& objects,
-    double service_decel,double dt,double horizon,CartesianPath& selected) {
+    double service_decel,double comfortable_decel,double approach_accel,double measured_s_accel,
+    double dt,double horizon,double target_d,double initial_second,double lateral_tolerance,CartesianPath& selected) {
     const double span=stop_s-s;
     if(span<.15||span>45)return false;
     const auto origin=Interpolate(ref,s);
     const double slope=(1-origin.kappa*d)*std::tan(std::remainder(ego.yaw-origin.theta,2*M_PI));
     if(!std::isfinite(slope))return false;
-    const auto lateral=MakeQuintic(d,slope,0,0,0,0,span);
+    const auto lateral_geometries=MakeStoppingLateralGeometries(d,slope,initial_second,
+        target_d,span,ego.v,limits);
+    if(lateral_geometries.empty())return false;
     PathGeneratorConfig grid{};grid.dt=dt;grid.delta_s={0,0,0};
     grid.time_horizon={2,std::min(8.0,horizon),.5};
     auto boundary=start;
+    // Match the service-brake generator's non-reversing boundary policy.
+    // A measured brake near standstill may require more jerk to unwind than
+    // the remaining speed permits; do not rebuild every candidate in reverse.
+    if(boundary.s_dd<0)boundary.s_dd=std::max(boundary.s_dd,
+        -std::sqrt(2*limits.max_longitudinal_jerk*std::max(0.0,boundary.s_d)));
     if(ego.v<.1&&boundary.s_dd<0)boundary.s_dd=0;
     auto motions=GenerateStoppingCandidates(boundary,stop_s,grid);
     double best=std::numeric_limits<double>::infinity();
     auto evaluate=[&](const decltype(motions)::value_type& motion,bool partial=false){
-        CartesianPath path;bool valid=!motion.s.empty();double effort=0;
-        for(size_t i=0;i<motion.s.size()&&valid;++i){
-            if(motion.s[i]<s-1e-6||motion.s[i]>stop_s+1e-6||motion.s_d[i]<-1e-6||
-               (i&&motion.s[i]<motion.s[i-1]-1e-6)||
-               std::fabs(motion.s_ddd[i])>limits.max_longitudinal_jerk) {valid=false;break;}
-            const auto rp=Interpolate(ref,motion.s[i]);const double q=std::clamp(motion.s[i]-s,0.0,span);
-            const auto point=FrenetToCartesian(rp,motion.s[i],motion.s_d[i],motion.s_dd[i],
-                EvalPos(lateral,q),EvalVel(lateral,q),EvalAcc(lateral,q));
-            const double brake_bound=std::max(service_decel,std::max(0.0,-ego.a));
-            if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits.max_curvature||
-               point.v>std::max(cap,ego.v)+.05||point.a>limits.max_longitudinal_accel||
-               point.a < -brake_bound||point.v*point.v*std::fabs(point.kappa)>limits.max_lateral_accel)
-                {valid=false;break;}
-            path.x.push_back(point.x);path.y.push_back(point.y);path.yaw.push_back(point.yaw);
-            path.kappa.push_back(point.kappa);path.v.push_back(point.v);path.a.push_back(point.a);
-            effort+=point.a*point.a*dt;
+        for(const auto& geometry:lateral_geometries) {
+            const auto& lateral=geometry.polynomial;
+            CartesianPath path;bool valid=!motion.s.empty();double effort=0;
+            double curvature_effort=0,curvature_change=0;
+            double previous_curvature=ego.kappa;
+            for(size_t i=0;i<motion.s.size()&&valid;++i){
+                if(motion.s[i]<s-1e-6||motion.s[i]>stop_s+1e-6||motion.s_d[i]<-1e-6||
+                   (i&&motion.s[i]<motion.s[i-1]-1e-6)||
+                   std::fabs(motion.s_ddd[i])>limits.max_longitudinal_jerk+1e-6) {valid=false;break;}
+                const auto rp=Interpolate(ref,motion.s[i]);const double q=std::clamp(motion.s[i]-s,0.0,geometry.distance);
+                const auto point=FrenetToCartesian(rp,motion.s[i],motion.s_d[i],motion.s_dd[i],
+                    EvalPos(lateral,q),EvalVel(lateral,q),EvalAcc(lateral,q));
+                const double brake_bound=std::max(service_decel,std::max(0.0,-ego.a));
+                if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits.max_curvature||
+                   point.v>std::max(cap,ego.v)+.05||point.a>limits.max_longitudinal_accel||
+                   point.a < -brake_bound||point.v*point.v*std::fabs(point.kappa)>limits.max_lateral_accel)
+                    {valid=false;break;}
+                path.x.push_back(point.x);path.y.push_back(point.y);path.yaw.push_back(point.yaw);
+                path.kappa.push_back(point.kappa);path.v.push_back(point.v);path.a.push_back(point.a);
+                effort+=point.a*point.a*dt;
+                const double travel=(i?std::hypot(path.x[i]-path.x[i-1],path.y[i]-path.y[i-1]):0);
+                curvature_effort+=point.kappa*point.kappa*travel;
+                curvature_change+=std::fabs(point.kappa-previous_curvature);
+                previous_curvature=point.kappa;
+            }
+            if(!valid)continue;
+            path.v.back()=0;path.a.back()=0;
+            if(!road.EvaluatePath(path,shape,dt).drivable||
+               !CartesianTrajectoryClear(path,objects,shape,collision,dt))continue;
+            // Rank only fully certified paths. Penalize steering effort/change
+            // before centering within the ordinary STOP tolerance. Larger offsets
+            // retain the centering preference; partial stops still reward progress.
+            const double offset_penalty=std::fabs(geometry.target_d)<=lateral_tolerance
+                ?.01*std::fabs(geometry.target_d):std::fabs(geometry.target_d);
+            const double tracking=curvature_effort+curvature_change+offset_penalty;
+            const double cost=partial?-(motion.s.back()-s)+.01*motion.t.back()+tracking:
+                motion.t.back()+.1*effort+tracking;
+            if(cost<best){best=cost;selected=std::move(path);}
         }
-        if(!valid)return;
-        path.v.back()=0;path.a.back()=0;
-        CartesianPath aligned;
-        if(AlignWaitingApproach(ref,ego,road,shape,limits,stop_s,s,d,service_decel,dt,path,aligned))
-            path=std::move(aligned);
-        if(!road.EvaluatePath(path,shape,dt).drivable||
-           !CartesianTrajectoryClear(path,objects,shape,collision,dt))return;
-        const double cost=partial?-(motion.s.back()-s)+.01*motion.t.back():motion.t.back()+.1*effort;
-        if(cost<best){best=cost;selected=std::move(path);}
     };
+    // Reuse ordinary STOP's distance-native longitudinal calculation without
+    // changing that generator or its caller. A longer horizon samples the same
+    // braking profile, rather than postponing the necessary deceleration.
+    auto stopping_limits=limits;
+    stopping_limits.max_longitudinal_accel=std::max(limits.max_longitudinal_accel,service_decel);
+    stopping_limits.boundary_condition_accel_fraction=1;
+    auto spatial_boundary=boundary;
+    spatial_boundary.s_dd=std::clamp(measured_s_accel,
+        -stopping_limits.max_longitudinal_accel,
+        std::min(limits.max_longitudinal_accel,approach_accel));
+    // Preserve achieved service braking only in the new shared profile. Legacy
+    // waiting alternatives keep their original initial boundary unchanged.
+    if(spatial_boundary.s_dd<0)spatial_boundary.s_dd=std::max(spatial_boundary.s_dd,
+        -std::sqrt(2*limits.max_longitudinal_jerk*std::max(0.0,spatial_boundary.s_d)));
+    if(ego.v<.1&&spatial_boundary.s_dd<0)spatial_boundary.s_dd=0;
+    auto spatial_grid=grid;
+    spatial_grid.time_horizon={horizon,horizon,.5};
+    const auto spatial=GenerateSpatialStoppingCandidates(spatial_boundary,stop_s,cap,
+        comfortable_decel,spatial_grid,stopping_limits,approach_accel);
+    for(const auto& motion:spatial) {
+        // PREPARE must publish the complete stop, including the stationary tail.
+        if(!motion.s_d.empty()&&motion.s_d.back()<=.05)evaluate(motion);
+    }
+    if(!selected.x.empty())return true;
     for(const auto& motion:motions)evaluate(motion);
     if(!selected.x.empty())return true;
-    if(motions.empty())return false;
     const double max_duration=std::min(10.0,horizon);
     // Decelerate to a low rolling speed, then stop at the same frontier.
     // Keeping both stages in the checked output avoids an unchecked coast
@@ -133,7 +183,7 @@ bool MakeFrontierWaitingPath(const RefLine& ref,const CartesianState& ego,
             const double join_s=EvalPos(approach,slow_time);
             if(join_s>=stop_s-.15)continue;
             for(double stop_time=2.0;slow_time+stop_time<=max_duration+1e-6;stop_time+=1.0) {
-                auto motion=motions.front();
+                FrenetPath motion{};
                 motion.t.clear();motion.s.clear();motion.s_d.clear();
                 motion.s_dd.clear();motion.s_ddd.clear();
                 const auto finish=MakeQuintic(join_s,crawl,0,stop_s,0,0,stop_time);
@@ -171,7 +221,7 @@ bool MakeFrontierWaitingPath(const RefLine& ref,const CartesianState& ego,
                 const double end_s=EvalPos(brake,brake_time);
                 const double total=slow_time+cruise_time+brake_time;
                 if(end_s>stop_s||end_s<s+.5||total>max_duration)continue;
-                auto motion=motions.front();motion.t.clear();motion.s.clear();motion.s_d.clear();
+                FrenetPath motion{};motion.t.clear();motion.s.clear();motion.s_d.clear();
                 motion.s_dd.clear();motion.s_ddd.clear();
                 const int steps=static_cast<int>(std::ceil(total/dt));
                 for(int i=0;i<=steps;++i) {
@@ -191,6 +241,34 @@ bool MakeFrontierWaitingPath(const RefLine& ref,const CartesianState& ego,
                 evaluate(motion,true);
             }
         }
+    }
+    if(!selected.x.empty())return true;
+    // Direct stops fill the gap between frontier arrival and strongest braking.
+    // Duration determines the stop position. The stationary tail is checked to
+    // the same horizon, so stopping early cannot hide a later collision.
+    std::vector<double> durations;
+    // At the non-reversing braking boundary, only the exact jerk-release
+    // duration can stop monotonically. A coarse half-second grid misses it.
+    if(boundary.s_dd<0) {
+        const double release=-2*boundary.s_d/boundary.s_dd;
+        if(release>0&&release<=max_duration)durations.push_back(release);
+    }
+    for(double duration=.5;duration<=max_duration+1e-6;duration+=.5)durations.push_back(duration);
+    for(double duration:durations) {
+        const auto brake=MakeQuartic(boundary.s,boundary.s_d,boundary.s_dd,0,0,duration);
+        const double end_s=EvalPos(brake,duration);
+        if(end_s<=s+1e-6||end_s>stop_s)continue;
+        FrenetPath motion{};motion.t.clear();motion.s.clear();motion.s_d.clear();
+        motion.s_dd.clear();motion.s_ddd.clear();
+        const int steps=static_cast<int>(std::ceil(max_duration/dt));
+        for(int i=0;i<=steps;++i) {
+            const double t=std::min(i*dt,max_duration),q=std::min(t,duration);
+            motion.t.push_back(t);motion.s.push_back(EvalPos(brake,q));
+            motion.s_d.push_back(t<duration?EvalVel(brake,q):0);
+            motion.s_dd.push_back(t<duration?EvalAcc(brake,q):0);
+            motion.s_ddd.push_back(t<duration?EvalJerk(brake,q):0);
+        }
+        evaluate(motion,true);
     }
     return !selected.x.empty();
 }
@@ -402,6 +480,8 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         object_tracking_cfg_.yaw_rate_clamp_rad_s);
     for(auto& object:ctx.predicted_obstacles)
         object.yaw_rate=roundabout_prediction_.Rate(object.id);
+    if(!execution_->merge.committed)
+        ctx.predicted_obstacles=roundabout_prediction_.ApproachOccupancies(ctx.predicted_obstacles);
     last_s_=ctx.s;last_d_=ctx.d;has_last_s_=true;
     double dd,ddd;ArcDerivToTimeDeriv(ctx.s_dot,ctx.s_ddot,ctx.d_prime,ctx.d_pprime,dd,ddd);
     auto start=ClampInitialBoundaryState(ctx.s,ctx.s_dot,ctx.s_ddot,ctx.d,dd,ddd,limits_);
@@ -656,10 +736,19 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     // checks approach/hold independently from the complete departure candidate.
     PlannerCommand waiting=command;waiting.mode=STOP;waiting.has_target_speed=true;
     waiting.target_speed=cap;waiting.stop_position=roundabout_zone_.stop_s;
+    const bool lateral_hold=StopLateralHoldAllowed(ctx.s_dot,ctx.d,
+        stop_cfg_.lateral_hold_speed,stop_cfg_.lateral_error_tolerance);
+    const double waiting_d=lateral_hold?ctx.d:0;
+    // This target preference does not authorize an unsafe offset. Both terminal
+    // choices still pass the original road, collision and physical constraints.
+    waiting.has_stop_lateral_hold=lateral_hold;
+    waiting.stop_lateral_hold_d=waiting_d;
     bool ok=MakeFrontierWaitingPath(ref_,ego,start,ctx.s,ctx.d,
         roundabout_zone_.stop_s,cap,avoid_road_map_,vehicle_shape_,limits_,collision_cfg_,
-        ctx.predicted_obstacles,stop_cfg_.max_service_decel,path_cfg_.dt,
-        roundabout_merge_cfg_.max_horizon,out_path);
+        ctx.predicted_obstacles,stop_cfg_.max_service_decel,stop_cfg_.comfortable_decel,
+        stop_cfg_.reapproach_accel,ctx.s_ddot,path_cfg_.dt,
+        roundabout_merge_cfg_.max_horizon,waiting_d,ctx.d_pprime,
+        stop_cfg_.lateral_error_tolerance,out_path);
     if(!ok)ok=StopProcess(ego,start,ctx.s,ctx.d,start.s_d,start.s_dd,start.d_d,start.d_dd,
         obstacles,ctx.predicted_obstacles,cap,waiting,out_path);
     // The legacy STOP fallback may produce an overshooting horizon. Never
@@ -713,4 +802,5 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     last_roundabout_result_=result;
     return ok;
 }
+
 

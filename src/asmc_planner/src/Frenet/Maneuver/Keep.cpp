@@ -16,6 +16,7 @@
  */
 
 #include "Frenet/frenet_planner.hpp"
+#include "Frenet/Generator/StoppingLateralGeometry.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -26,6 +27,7 @@
 
 #include "Frenet/Evaluation/Cost.hpp"
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
+#include "Frenet/Math/FrenetConverter.hpp"
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
 #include "Frenet/Speed/CurveSpeed.hpp"
 
@@ -132,12 +134,16 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     double stop_distance = 0.0;
     if (external_stop_mode) {
         UpdateExternalStopExecution(s, s_dot, cmd, stop_distance);
+        if (!roundabout_waiting && execution_->stop_phase == StopExecutionPhase::BRAKING &&
+            s_dot <= cfg.stop.speed_tolerance &&
+            stop_distance > cfg.stop.position_tolerance)
+            stop_.reapproaching = true;
         // 정지 직전에 이미 차선 중심 허용 범위 안이라면 d=0까지 억지로
         // 붙이지 않는다. 현재 d를 종단 목표로 고정하되 lateral quintic의
         // 종단 d_dot/d_ddot=0 조건은 유지되므로 차체는 경로 방향으로 곧게
         // 정렬된다. 허용 범위 밖이거나 속도가 높으면 기존 d=0 복귀 그대로다.
-        if (!roundabout_waiting && std::fabs(s_dot) <= cfg.stop.lateral_hold_speed &&
-            std::fabs(d) <= cfg.stop.lateral_error_tolerance) {
+        if (!roundabout_waiting && StopLateralHoldAllowed(s_dot, d, cfg.stop.lateral_hold_speed,
+                                   cfg.stop.lateral_error_tolerance)) {
             cmd.has_stop_lateral_hold = true;
             cmd.stop_lateral_hold_d = d;
         }
@@ -198,7 +204,12 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             }
             const double object_front_gap =
                 object_gap - 0.5 * std::max(0.0, object.length);
-            if (!std::isfinite(object_front_gap) ||
+            // Projection/wrap must not exclude an object overlapping the
+            // current body (e.g. object_s == s rounded slightly backward).
+            const bool overlaps_current_body = CheckObstacleOverlap(
+                MakeEgoFootprint(ego, cfg.vehicle_shape, cfg.collision.safety_margin),
+                geometry::ZRange{}, object, 0.0);
+            if (overlaps_current_body || !std::isfinite(object_front_gap) ||
                 object_front_gap <= protected_distance) {
                 stop_scoped_collision_obstacles.push_back(object);
             }
@@ -289,6 +300,21 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         // VELOCITY_KEEPING 요청이다.
         request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
     }
+    const bool spatial_stop = external_stop_mode && !roundabout_waiting;
+    if (spatial_stop) {
+        // Buffer belongs to the actual endpoint, not only the diagnostic cap.
+        // Keep the external target fixed across replanning.
+        request.longitudinal_mode = LongitudinalMode::STOPPING;
+        const double track_length = ref_.points.empty() ? 0.0 : ref_.points.back().s;
+        request.stop.stop_s = s + std::max(0.0,
+            ForwardArcDistance(s, stop_.target_s, track_length) - cfg.stop.stop_buffer);
+        request.stop.terminal_offset = {0.0,0.0,0.0};
+        request.stop.spatial_profile = true;
+        request.stop.comfortable_decel = cfg.stop.comfortable_decel;
+        request.stop.cruise_speed = stop_.reapproaching
+            ? std::min(resolved_target_speed, cfg.stop.reapproach_speed) : resolved_target_speed;
+        request.stop.acceleration_limit = cfg.stop.reapproach_accel;
+    }
     const double lateral_cost_target = cmd.has_stop_lateral_hold
         ? cmd.stop_lateral_hold_d : 0.0;
     const double base_resolved_target_speed = cmd.target_speed;
@@ -331,11 +357,33 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         is_true_external_keep ? 1 + kMaxCandidateAwareRegenerations : 1;
     constexpr double kRegenerationEpsilon = 1e-9;
     double selected_planning_s_dd = start.s_dd;
+    double stop_boundary_acceleration = start.s_dd;
+    if (spatial_stop) {
+        // PlanInternal's shared start is already clamped to the KEEP limits.
+        // Recover the measured Frenet acceleration only for this STOP policy.
+        double ps, pv, pa, pd, dp, dpp;
+        CartesianToFrenet(ref_, ego, ps, pv, pa, pd, dp, dpp,
+                         &s, ref_config_.ego_projection_search_window);
+        if (std::isfinite(pa)) stop_boundary_acceleration = pa;
+    }
 
     std::vector<FrenetPath> candidates;
     for (int generation_pass = 0;
          generation_pass < generation_pass_limit; ++generation_pass) {
         FrenetState pass_start = start;
+        if (spatial_stop) {
+            // Retain achieved braking instead of resetting it to the KEEP
+            // boundary cap. Project only an unreleasable low-speed boundary.
+            const double jerk = maneuver_limits.max_longitudinal_jerk *
+                maneuver_limits.boundary_condition_accel_fraction;
+            const double brake_limit = std::min(
+                maneuver_limits.max_longitudinal_accel *
+                    maneuver_limits.boundary_condition_accel_fraction,
+                std::sqrt(2.0 * jerk * std::max(0.0, start.s_d)));
+            pass_start.s_dd = std::clamp(stop_boundary_acceleration, -brake_limit,
+                cfg.limits.max_longitudinal_accel *
+                    cfg.limits.boundary_condition_accel_fraction);
+        }
         request.target_speed = final_applied_target_speed;
         if (is_true_external_keep) {
             CurveSpeedConfig envelope_curve_config = cfg.curve_speed;
@@ -436,6 +484,38 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                         cmd.target_object_id, leader_s, leader_speed, gap, desired_gap);
         }
         prev_mode_ = cmd.mode;
+    }
+
+    if (external_stop_mode) {
+        const auto filter_stop_road = [&]() {
+            for (auto& candidate : candidates) {
+                if (!candidate.valid) continue;
+                const auto cart = ConvertToCartesianPath(candidate, ref_, geometry_mode);
+                if (!avoid_road_map_.EvaluateRecoveryPath(
+                        cart, vehicle_shape_, cfg.path.dt).drivable) {
+                    candidate.valid = false;
+                    candidate.rejection_reason = RejectionReason::ROAD_BOUNDARY;
+                }
+            }
+        };
+        filter_stop_road();
+        if (!SelectBestStoppingPath(candidates)) {
+            FrenetState spatial_start = start;
+            spatial_start.s_dd = selected_planning_s_dd;
+            AppendExternalStopSpatialCandidates(ego, spatial_start, request,
+                maneuver_limits, planning_collision_obstacles, candidates);
+            filter_stop_road();
+            if (spatial_stop && !SelectBestStoppingPath(candidates)) {
+                // Search configured earlier endpoints only when the nominal
+                // buffered endpoint is unsafe. Avoid redundant full-body checks
+                // of five nearly identical stops on every normal cycle.
+                request.stop.terminal_offset = cfg.stop.delta_s_override;
+                AppendExternalStopSpatialCandidates(ego, spatial_start, request,
+                    maneuver_limits, planning_collision_obstacles, candidates);
+                filter_stop_road();
+            }
+            EvaluateCosts(candidates, cfg.cost_weights, lateral_cost_target);
+        }
     }
 
     // 안전성 필터를 통과한 후보만 valid로 남아 있다. 외부 STOP에서는 그
@@ -547,17 +627,13 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                                 cmd.target_object_id == blocker_id ? 1 : 0);
             }
         }
-        // STOP BRAKING에서 후보가 0개인 것은 흔한 상황이다. 정지 목표가
-        // 아주 가까우면(예: 5m/s에서 3m 앞) exact-stop quintic이 가속도
-        // 한계를 넘어 전부 탈락한다. 여기서 false를 반환하면 노드가 이전
-        // 궤적을 재사용해 정지 목표를 지나쳐 계속 주행하게 된다 - STOP에서
-        // 가장 위험한 실패 방향이다. 충돌 차단이 아닌 경우에 한해 그 자리에서
-        // 감속해 정지하는 fail-safe 궤적을 직접 만들어 반환한다.
-        if (external_stop_mode &&
-            execution_->stop_phase == StopExecutionPhase::BRAKING &&
-            last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
-            PlanExternalStopBrakingFallback(s, d, s_dot, stop_distance, out_path);
-            return true;
+        // A blocked nominal path is not proof that every braking path is
+        // blocked. Try a fresh steerable brake using the same STOP collision
+        // scope. Publish nothing unchecked; explicit failure forbids reuse.
+        if (external_stop_mode) {
+            return PlanExternalStopBrakingFallback(ego, s, d, stop_distance,
+                lateral_cost_target, planning_collision_obstacles, out_path,
+                spatial_stop);
         }
 
         // 외부 KEEP의 low-speed boundary candidate starvation
@@ -732,3 +808,4 @@ bool FrenetPlanner::KeepProcess(
         predicted_obstacles, resolved_target_speed, external_command,
         out_path);
 }
+

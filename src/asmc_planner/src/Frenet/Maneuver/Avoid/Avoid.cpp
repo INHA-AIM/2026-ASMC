@@ -481,7 +481,8 @@ bool FrenetPlanner::AvoidProcess(
                     v2_avoidance_.spatial_lateral_active = true;
                 }
                 out_path = std::move(selected);
-                UpdateCommittedAvoidLifecycle(s, d, ego.v, result);
+                UpdateCommittedAvoidLifecycle(s, d, ego.v, result,
+                    CanHandoffAvoidToKeep(ego,s,d,predicted_collision_obstacles));
                 last_failure_reason_ = PlanFailureReason::NONE;
                 return true;
             }
@@ -710,7 +711,8 @@ bool FrenetPlanner::AvoidProcess(
             return false;
         }
         out_path = result.candidate_path;
-        UpdateCommittedAvoidLifecycle(s, d, ego.v, result);
+        UpdateCommittedAvoidLifecycle(s, d, ego.v, result,
+                    CanHandoffAvoidToKeep(ego,s,d,predicted_collision_obstacles));
         last_failure_reason_ = PlanFailureReason::NONE;
         return true;
     }
@@ -755,3 +757,4 @@ bool FrenetPlanner::AvoidProcess(
     last_failure_reason_ = PlanFailureReason::NONE;
     return true;
 }
+

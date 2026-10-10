@@ -11,7 +11,7 @@
 // the vehicle's direction of travel. Keep at most eight fresh sensor samples
 // and fit unwrapped velocity direction against their actual timestamps.
 class RoundaboutPrediction {
-    struct Sample { double t, direction, speed, length, width; };
+    struct Sample { double t, direction, speed, length, width, x, y; };
     struct BodySample { double t, half_length, half_width; };
     struct Track {
         std::deque<Sample> samples;
@@ -72,7 +72,7 @@ public:
             double direction=std::atan2(object.vy,object.vx);
             if(!track.samples.empty())direction=track.samples.back().direction+
                 std::remainder(direction-track.samples.back().direction,2*M_PI);
-            track.samples.push_back({stamp,direction,speed,object.length,object.width});
+            track.samples.push_back({stamp,direction,speed,object.length,object.width,object.x,object.y});
             while(track.samples.size()>8||stamp-track.samples.front().t>.8)
                 track.samples.pop_front();
             double mt=0,ma=0;
@@ -92,6 +92,8 @@ public:
             }
             track.reliable=track.samples.size()>=4&&stamp-track.samples.front().t>=.25&&
                 residual<=.20&&std::fabs(fit)<=clamp&&max_speed-min_speed<=2;
+            double position_vx=0,position_vy=0;
+            if(DisputedVelocity(track,position_vx,position_vy))track.reliable=false;
             // Fresh whole-body observations establish a conservative size.
             // Width variation is normal for LiDAR; it enlarges occupancy rather
             // than erasing otherwise reliable motion. History is bounded by
@@ -123,6 +125,72 @@ public:
     }
     double Rate(int id) const {
         const auto it=tracks_.find(id);return it==tracks_.end()?0:it->second.rate;
+    }
+    // Fit translation independently from reported velocity. A fragment may
+    // shift within the body, so require bounded position residuals and actual
+    // travel before using this as an additional motion estimate. Geometry is
+    // never replaced, and the departure confidence gate is not relaxed.
+    bool PositionVelocity(const Track& track,double& vx,double& vy,double& error) const {
+        if(track.samples.size()<4||track.samples.back().t-track.samples.front().t<.25)return false;
+        double mt=0,mx=0,my=0;
+        for(const auto& p:track.samples){mt+=p.t-track.stamp;mx+=p.x;my+=p.y;}
+        mt/=track.samples.size();mx/=track.samples.size();my/=track.samples.size();
+        double xx=0,xy=0,tt=0;
+        for(const auto& p:track.samples){const double t=p.t-track.stamp-mt;
+            tt+=t*t;xx+=t*(p.x-mx);xy+=t*(p.y-my);}
+        if(tt<1e-9)return false;
+        vx=xx/tt;vy=xy/tt;
+        if(std::hypot(vx,vy)*(track.samples.back().t-track.samples.front().t)<.5)return false;
+        double residual_squared=0;
+        for(const auto& p:track.samples) {
+            const double t=p.t-track.stamp-mt;
+            const double residual=std::hypot(p.x-mx-vx*t,p.y-my-vy*t);
+            if(residual>.5)return false;
+            residual_squared+=residual*residual;
+        }
+        // A longer, less noisy history supports a tighter velocity comparison.
+        // This is a fit-consistency band, not a probabilistic safety guarantee.
+        error=std::max(.5,2*std::sqrt(residual_squared/((track.samples.size()-2)*tt)));
+        return std::isfinite(vx)&&std::isfinite(vy)&&std::isfinite(error);
+    }
+    bool DisputedVelocity(const Track& track,double& vx,double& vy) const {
+        double error=0;
+        return PositionVelocity(track,vx,vy,error)&&std::hypot(vx,vy)>track.speed+error&&
+            std::hypot(vx-track.vx,vy-track.vy)>error;
+    }
+    // PREPARE checks both position-supported translation and a short sensor
+    // velocity/turn hypothesis. A disputed fit cannot extrapolate a tight loop
+    // for the entire stopping horizon. All original corners and margins remain.
+    std::vector<TrackedObject> ApproachOccupancies(const std::vector<TrackedObject>& objects) const {
+        std::vector<TrackedObject> result;
+        result.reserve(objects.size()*2);
+        for(const auto& object:objects) {
+            auto primary=object;
+            const auto it=tracks_.find(object.id);
+            if(it==tracks_.end()){result.push_back(primary);continue;}
+            const auto& track=it->second;
+            double vx=0,vy=0;
+            // Use the positional fit only when it contradicts an apparent
+            // velocity decay: the observed centre still travels substantially
+            // faster. A changing visible fragment can move its centre in the
+            // opposite direction, so a slower position fit does not replace
+            // the sensor's faster collision hypothesis.
+            const bool disputed=DisputedVelocity(track,vx,vy);
+            if(!disputed){result.push_back(primary);continue;}
+            primary.vx=vx;primary.vy=vy;primary.speed=std::hypot(vx,vy);
+            // Translation is supported, but these observations do not support
+            // the reported heading-change fit. Keep both straight translation
+            // and a short-turn sensor-velocity hypothesis in the safety check.
+            primary.yaw_rate=0;
+            result.push_back(primary);
+            auto alternative=object;
+            alternative.yaw_rate=track.rate;
+            alternative.turn_prediction_duration=std::min(.5,
+                track.samples.back().t-track.samples.front().t);
+            alternative.continuation_vx=primary.vx;alternative.continuation_vy=primary.vy;
+            result.push_back(alternative);
+        }
+        return result;
     }
     // Additional planning occupancy, never a replacement for authoritative
     // perception corners. Use it in every precommit collision/time-gap model
@@ -170,3 +238,4 @@ public:
         return -1;
     }
 };
+

@@ -188,7 +188,9 @@ planner:
   # 낮추고, 제동거리 안에 들어왔을 때 BRAKING에서 정지 다항식을 생성한다.
   # 초기 개발값이며 실차/MORAI 튜닝 대상이다.
   stop:
-    comfortable_decel: 1.5     # [m/s^2] APPROACH 감속 프로파일과 BRAKING 전환거리
+    comfortable_decel: 1.5      # [m/s^2] ordinary STOP braking
+    reapproach_speed: 1.0       # [m/s] restart before the same ordinary STOP target
+    reapproach_accel: 0.5       # [m/s^2] positive acceleration; braking stays unchanged
     # [m/s^2] 늦게 인식한 일반 STOP의 최대 서비스 제동. 현재 MPC의
     # constraints.acceleration.max_reverse=-5.0과 맞춘 값이다. 이를 넘는
     # 위험은 Behavior의 EMERGENCY_STOP(brake=1.0) 정책이 담당한다.
@@ -380,7 +382,8 @@ planner:
 
   # --- CollisionCheckConfig (collision_checker.hpp) -----------
   collision_check:
-    safety_margin: 0.5
+    # Minimum Euclidean XY clearance from physical vehicle footprint to OBB.
+    safety_margin: 0.45
     margin_growth_rate: 0.1
     reactive_lookahead: 8.0
 
@@ -406,3 +409,4 @@ roundabout_merge:
   speed_cap_mps: 6.944444444444445
   preview_distance_m: 45.0
   max_horizon_s: 10.0
+

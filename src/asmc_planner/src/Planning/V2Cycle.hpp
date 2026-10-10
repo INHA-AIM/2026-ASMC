@@ -506,7 +506,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
             failed.detail = "cannot project ego onto the reference line";
             port.has_last_v2_trajectory_ = false;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 port.stopReferenceVehicle(snapshot), port.trajectoryDt(),
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             port.trajectory_pub_.publish(stop);
@@ -859,6 +859,14 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                                        COLLISION_BLOCKED
                            ? asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED
                            : asmc_msgs::Trajectory::FAILURE_GENERATION));
+            asmc_msgs::Trajectory braking;
+            if (!terminal_target_lost && committed_path.x.size() > 1 &&
+                ConvertCartesianPath(committed_path, port.planner_.sample_dt(),
+                                     snapshot.vehicle, braking) == ConversionStatus::OK &&
+                !braking.points.empty()) {
+                braking.failure_reason = stop.failure_reason;
+                stop = std::move(braking);
+            }
             port.trajectory_pub_.publish(stop);
             // Refresh the RViz/dashboard snapshot on the failing cycle as
             // well.  Otherwise the last valid candidate remains visible while
@@ -1755,3 +1763,4 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     return true;
 }
 }
+

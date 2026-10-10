@@ -100,8 +100,20 @@ int main() {
     Expect(frenet_planner_ros::ConvertVehicleState(vehicle, state) ==
                ConversionStatus::OK &&
                state.x == 1.0 && state.y == 2.0 && state.yaw == 0.3 &&
-               state.v == 4.0 && state.a == 0.5 && state.kappa == 0.0,
+               state.v == 4.0 && state.a == 0.5 &&
+               std::fabs(state.kappa - 0.025) < 1e-12,
            "vehicle fields map to CartesianState");
+
+    vehicle.speed = 0.0;
+    vehicle.yaw_rate = 1e-4;
+    Expect(frenet_planner_ros::ConvertVehicleState(vehicle, state) ==
+               ConversionStatus::OK && state.kappa == 0.0,
+           "stationary IMU noise does not become infinite curvature");
+    vehicle = MakeVehicle();
+    vehicle.yaw_rate = -0.1;
+    Expect(frenet_planner_ros::ConvertVehicleState(vehicle, state) ==
+               ConversionStatus::OK && std::fabs(state.kappa + 0.025) < 1e-12,
+           "right-turn curvature retains its sign");
 
     vehicle.valid = false;
     Expect(frenet_planner_ros::ConvertVehicleState(vehicle, state) ==
@@ -384,3 +396,4 @@ int main() {
     }
     return 1;
 }
+
