@@ -24,6 +24,25 @@ def scoped_complete(row,pixel_scope):
     return row.get('evaluation_scope')=='complete'
 
 
+def evaluation_weights(requested, cfg, policy='pretrained'):
+    """A freshly resized COCO classification head is not a pretrained baseline."""
+    requested=Path(requested)
+    if requested.name!='initial.pt' or policy=='initialization':
+        return requested,'training_initialization' if requested.name=='initial.pt' else 'trained_checkpoint'
+    run_path=requested.parent/'run.json'
+    record=json.loads(run_path.read_text())
+    if record['before_training_checkpoint']['sha256']!=sha(requested):
+        raise ValueError('initial checkpoint provenance mismatch')
+    if record['model_key']=='yolo26l':
+        dataset=Path(json.loads((requested.parent.parent/'comparison.json').read_text())['dataset'])
+        # dataset_versions/<version> is directly below the original data root.
+        pretrained=dataset.parents[1]/cfg['models']['yolo26l']
+        if sha(pretrained)!=record['initial_weights_sha256']:
+            raise ValueError('pretrained baseline weight changed')
+        return pretrained,'original_COCO80_pretrained; fixed16 random head is not a baseline'
+    return requested,'pretrained_YOLOE_detect_with_fixed16_text_embeddings; before fine-tuning'
+
+
 def frame_counts(row,predictions,confidence,level='class',pixel_scope=False):
     name=accepted_name if level=='accepted' else lambda n:n
     predictions=[dict(p,group=name(p['class_name'])) for p in predictions if p['confidence']>=confidence]
@@ -100,7 +119,8 @@ def infer(args):
     args.output.mkdir(parents=True,exist_ok=False)
     masks={view:HoodMask.load(True,repo/'src/asmc_camera/config/camera'/file) for view,file in
         [('front','yolo_hood_mask_v1.yaml'),('left','yolo_ego_mask_left_v1.yaml'),('right','yolo_ego_mask_right_v1.yaml')]}
-    model=YOLO(str(args.weights),task='detect')
+    actual_weights,baseline_kind=evaluation_weights(args.weights,cfg,args.baseline_policy)
+    model=YOLO(str(actual_weights),task='detect')
     if 'Segment' in type(model.model.model[-1]).__name__:raise ValueError('not detection-only checkpoint')
     predictions=[];latencies=[];ignored_names=Counter()
     # Warm up once; timing is offline PT inference, never whole-stack latency.
@@ -125,7 +145,9 @@ def infer(args):
                 wall_ms=ms,view=view,ego_mask_applied=view in masks)
             stream.write(json.dumps(item)+'\n');stream.flush();predictions.append(item)
     import numpy as np
-    save(args.output/'inference.json',dict(weights_sha256=sha(args.weights),
+    save(args.output/'inference.json',dict(weights_sha256=sha(actual_weights),
+        requested_weights=str(args.weights),requested_weights_sha256=sha(args.weights),
+        actual_weights=str(actual_weights),baseline_kind=baseline_kind,
         manifest_sha256=sha(args.dataset/'manifest.jsonl'),config_sha256=sha(args.config),
         temporal_manifest_sha256=sha(temporal_path) if temporal else None,
         front_width=args.front_width,side_shape=[480,640],head=type(model.model.model[-1]).__name__,
@@ -160,4 +182,6 @@ if __name__=='__main__':
     p.add_argument('--config',required=True,type=Path);p.add_argument('--dataset',required=True,type=Path)
     p.add_argument('--weights',required=True,type=Path);p.add_argument('--output',required=True,type=Path)
     p.add_argument('--front-width',required=True,type=int,choices=[960,1280])
+    p.add_argument('--baseline-policy',choices=['pretrained','initialization'],default='pretrained',
+        help='compare original pretrained COCO head, not the freshly resized random classification head')
     infer(p.parse_args())

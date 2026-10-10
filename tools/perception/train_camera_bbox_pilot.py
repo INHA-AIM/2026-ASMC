@@ -56,6 +56,8 @@ def run(args):
         raise ValueError('pre-stage official AMP-check checkpoint; no in-run downloads')
 
     cfg=json.loads(args.config.read_text()); settings=cfg['training']
+    if args.batch not in settings['batch_candidates'] or settings['nbs']%args.batch:
+        raise ValueError('batch must preserve the common effective batch exactly')
     data=yaml.safe_load((args.dataset/'data.yaml').read_text());names=data['names']
     if len(names)!=16 or len(cfg['text_names'])!=16:raise ValueError('fixed 16-class contract required')
     weights=args.data_root/cfg['models'][args.model]

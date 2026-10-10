@@ -1,7 +1,10 @@
 import copy
+import json
+from pathlib import Path
+import tempfile
 import unittest
-from train_camera_bbox_pilot import common_epochs,validate_resume
-from evaluate_camera_bbox_pilot import summarize,scoped_complete
+from train_camera_bbox_pilot import common_epochs,validate_resume,sha
+from evaluate_camera_bbox_pilot import summarize,scoped_complete,evaluation_weights
 from report_camera_bbox_pilot import compare
 from camera_bbox_temporal import prepare,analyze
 
@@ -12,6 +15,26 @@ class TrainingTest(unittest.TestCase):
         self.assertEqual(common_epochs([100,150]),20)
         self.assertLess(common_epochs([2500,2000]),5)
         with self.assertRaises(ValueError):common_epochs([0,100])
+
+    def test_coco_baseline_does_not_evaluate_random_resized_head(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);dataset=root/'data/dataset_versions/pilot';dataset.mkdir(parents=True)
+            paired=root/'paired';run=paired/'yolo26l';run.mkdir(parents=True)
+            initial=run/'initial.pt';initial.write_bytes(b'random sixteen class head')
+            pretrained=root/'data/models/coco.pt';pretrained.parent.mkdir();pretrained.write_bytes(b'COCO head')
+            (paired/'comparison.json').write_text(json.dumps(dict(dataset=str(dataset))))
+            record=dict(model_key='yolo26l',initial_weights_sha256=sha(pretrained),
+                before_training_checkpoint=dict(sha256=sha(initial)))
+            (run/'run.json').write_text(json.dumps(record))
+            cfg=dict(models=dict(yolo26l='models/coco.pt'))
+            actual,kind=evaluation_weights(initial,cfg)
+            self.assertEqual(actual,pretrained);self.assertIn('COCO80',kind)
+            self.assertEqual(evaluation_weights(initial,cfg,'initialization')[0],initial)
+            record['model_key']='yoloe26l';(run/'run.json').write_text(json.dumps(record))
+            self.assertEqual(evaluation_weights(initial,cfg)[0],initial)
+            record['model_key']='yolo26l';(run/'run.json').write_text(json.dumps(record))
+            pretrained.write_bytes(b'changed')
+            with self.assertRaisesRegex(ValueError,'changed'):evaluation_weights(initial,cfg)
 
     def test_resume_bindings_and_smoke_rejected(self):
         r=dict(model_key='yolo26l',manifest_sha256='a',config_sha256='b',initial_weights_sha256='c',batch=4,epochs=10)
