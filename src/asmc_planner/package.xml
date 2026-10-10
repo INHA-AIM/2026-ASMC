@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>asmc_planner</name>
+  <version>0.1.0</version>
+  <description>Integrated Behavior, Execution, Frenet and Planning with ROS adapters.</description>
+  <maintainer email="autonav@todo.todo">Autonav</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>gencpp</build_depend>
+  <depend>planning_inputs</depend>
+  <depend>morai_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>yaml-cpp</depend>
+  <depend>asmc_msgs</depend>
+  <depend>roscpp</depend>
+  <exec_depend>asmc_controller</exec_depend>
+  <exec_depend>asmc_camera</exec_depend>
+  <exec_depend>lane_boundary_adapter</exec_depend>
+  <export/>
+</package>

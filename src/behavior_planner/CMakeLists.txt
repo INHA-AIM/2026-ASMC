@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.0.2)
 project(behavior_planner)
 
 add_compile_options(-std=c++17 -Wall -Wextra)
-find_package(catkin REQUIRED COMPONENTS planning_inputs asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_generation)
+find_package(catkin REQUIRED COMPONENTS asmc_planner planning_inputs asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_generation)
 find_package(yaml-cpp REQUIRED)
 
 add_message_files(FILES UrbanFeatureDebug.msg)
 generate_messages(DEPENDENCIES std_msgs)
 
-catkin_package(CATKIN_DEPENDS planning_inputs asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_runtime)
+catkin_package(CATKIN_DEPENDS asmc_planner planning_inputs asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_runtime)
 # Preserve the requested src/<area> layout while exposing conventional
 # behavior_planner/<area>/... include paths to this target.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -17,30 +17,9 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
   ${CMAKE_CURRENT_BINARY_DIR}/include/behavior_planner)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include ${catkin_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIRS})
 
-set(BEHAVIOR_NODE_SOURCES
-  src/main.cpp src/node/behavior_node.cpp src/node/morai_msg_converter.cpp
-  src/node/detected_msg_converter.cpp
-  src/map/mgeo_loader.cpp src/map/route_manager.cpp
-  src/feature/feature_builder.cpp src/feature/object_projector.cpp
-  src/rule/hard_rule_filter.cpp
-  src/decision/behavior_decision.cpp src/decision/behavior_scorer.cpp
-  src/decision/fsm.cpp src/decision/transition_condition.cpp
-  src/context/msg_converter.cpp
-  src/context/v2_command_manager.cpp
-  src/signal/mock_traffic_light_provider.cpp
-  src/signal/ros_traffic_light_provider.cpp
-  src/global/utils.cpp src/global/data_logger.cpp
-  src/visualization/behavior_visualization.cpp)
-file(GLOB_RECURSE BEHAVIOR_INTERNAL_HEADERS CONFIGURE_DEPENDS
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp")
-# The requested source layout is exposed through a generated include symlink.
-# Explicit object dependencies ensure every translation unit is rebuilt when an
-# internal struct header changes, preventing stale ABI layouts in incremental builds.
-set_property(SOURCE ${BEHAVIOR_NODE_SOURCES} APPEND PROPERTY
-  OBJECT_DEPENDS "${BEHAVIOR_INTERNAL_HEADERS}")
-add_executable(behavior_node ${BEHAVIOR_NODE_SOURCES} ${BEHAVIOR_INTERNAL_HEADERS})
+add_executable(behavior_node src/main.cpp)
 add_dependencies(behavior_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(behavior_node ${catkin_LIBRARIES} yaml-cpp)
+target_link_libraries(behavior_node asmc_planner_ros_adapters ${catkin_LIBRARIES} yaml-cpp)
 
 install(TARGETS behavior_node RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 catkin_install_python(PROGRAMS
@@ -54,26 +33,27 @@ install(DIRECTORY launch src/config web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTI
 
 if(CATKIN_ENABLE_TESTING)
   add_executable(roundabout_transaction_test test/roundabout_transaction_test.cpp
-    src/decision/fsm.cpp src/context/v2_command_manager.cpp
-    src/feature/feature_builder.cpp src/feature/object_projector.cpp
-    src/map/mgeo_loader.cpp src/map/route_manager.cpp
-    src/decision/behavior_decision.cpp src/decision/behavior_scorer.cpp
-    src/rule/hard_rule_filter.cpp)
+
+
+
+
+    )
   add_dependencies(roundabout_transaction_test ${catkin_EXPORTED_TARGETS})
   target_link_libraries(roundabout_transaction_test ${catkin_LIBRARIES} yaml-cpp)
   add_test(NAME roundabout_transaction_test COMMAND roundabout_transaction_test)
 
   catkin_add_gtest(fsm_command_binding_test
     test/fsm_command_binding_test.cpp
-    src/decision/fsm.cpp)
+    )
   if(TARGET fsm_command_binding_test)
+    target_link_libraries(fsm_command_binding_test asmc_planner_behavior_core)
     target_include_directories(fsm_command_binding_test PRIVATE
       ${CMAKE_CURRENT_BINARY_DIR}/include)
   endif()
 
   catkin_add_gtest(detected_msg_converter_test
     test/detected_msg_converter_test.cpp
-    src/node/detected_msg_converter.cpp)
+    )
   if(TARGET detected_msg_converter_test)
     add_dependencies(detected_msg_converter_test
       ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -84,13 +64,12 @@ if(CATKIN_ENABLE_TESTING)
 
   catkin_add_gtest(behavior_logic_test
     test/behavior_logic_test.cpp
-    src/context/msg_converter.cpp
-    src/context/v2_command_manager.cpp
-    src/rule/hard_rule_filter.cpp
-    src/decision/fsm.cpp
-    src/signal/ros_traffic_light_provider.cpp
-    src/decision/behavior_scorer.cpp
-    src/decision/behavior_decision.cpp)
+
+
+
+
+
+    )
   if(TARGET behavior_logic_test)
     add_dependencies(behavior_logic_test
       ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -101,9 +80,9 @@ if(CATKIN_ENABLE_TESTING)
 
   catkin_add_gtest(route_signal_movement_test
     test/route_signal_movement_test.cpp
-    src/map/mgeo_loader.cpp
-    src/map/route_manager.cpp
-    src/global/utils.cpp)
+
+
+    )
   if(TARGET route_signal_movement_test)
     add_dependencies(route_signal_movement_test
       ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -117,11 +96,11 @@ if(CATKIN_ENABLE_TESTING)
 
   catkin_add_gtest(feature_builder_avoid_test
     test/feature_builder_avoid_test.cpp
-    src/map/mgeo_loader.cpp
-    src/map/route_manager.cpp
-    src/feature/feature_builder.cpp
-    src/feature/object_projector.cpp
-    src/global/utils.cpp)
+
+
+
+
+    )
   if(TARGET feature_builder_avoid_test)
     add_dependencies(feature_builder_avoid_test
       ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

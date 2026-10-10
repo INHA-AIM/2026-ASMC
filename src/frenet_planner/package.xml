@@ -10,6 +10,7 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <depend>asmc_msgs</depend>
+  <depend>asmc_planner</depend>
   <depend>planning_inputs</depend>
   <depend>morai_msgs</depend>
   <depend>roscpp</depend>
@@ -19,7 +20,6 @@
 
   <!-- Launch-only dependencies for obstacle-free MORAI KEEP verification. -->
   <exec_depend>asmc_bridge</exec_depend>
-  <exec_depend>behavior_planner</exec_depend>
   <exec_depend>asmc_controller</exec_depend>
 
   <export/>

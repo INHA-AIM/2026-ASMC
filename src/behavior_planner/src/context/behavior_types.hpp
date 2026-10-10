@@ -1,21 +1,2 @@
 #pragma once
-#include <cstdint>
-namespace behavior_planner {
-enum class TrafficLightState : uint8_t { UNKNOWN=0, RED=1, YELLOW=2, GREEN=3 };
-// Signal movement governing traversal of a selected MGeo route link. This is
-// separate from adjacent-lane LEFT_CHANGE/RIGHT_CHANGE behavior.
-enum class SignalMovement : uint8_t { UNKNOWN=0, STRAIGHT=1, LEFT=2, LEFT_UNPROTECTED=3, RIGHT_UNPROTECTED=4, UTURN=5 };
-enum class ObjectType : uint8_t { UNKNOWN=0, VEHICLE=1, PEDESTRIAN=2, STATIC_OBSTACLE=3 };
-// Perception이 확정한 시간적 운동 상태. ObjectType(semantic class)과
-// 독립적이며 Behavior/Frenet이 각자 다시 동정적을 추정하지 않는다.
-enum class MotionState : uint8_t {
-  UNKNOWN=0,
-  LOW_THREAT=1,
-  DYNAMIC_PENDING=2,
-  DYNAMIC=3
-};
-enum class BehaviorType : uint8_t { KEEP=0, FOLLOW=1, LEFT_CHANGE=2, RIGHT_CHANGE=3, STOP=4, YIELD=5, EMERGENCY_STOP=6, AVOID=7, MERGE=8 };
-enum class BehaviorState : uint8_t { KEEP_LANE=0, FOLLOW=1, LEFT_CHANGE_PREPARE=2, LEFT_CHANGE_EXECUTE=3, RIGHT_CHANGE_PREPARE=4, RIGHT_CHANGE_EXECUTE=5, STOP=6, EMERGENCY_STOP=7, AVOID_PREPARE=8, AVOID_EXECUTE=9, MERGE_PREPARE=10, MERGE_EXECUTE=11 };
-enum class ManeuverPhase : uint8_t { NONE=0, PREPARE=1, EXECUTE=2, COMMITTED=3, COMPLETE=4, FAILED=5, CANCELLED=6 };
-}
-
+#include "Behavior/Context/behavior_types.hpp"

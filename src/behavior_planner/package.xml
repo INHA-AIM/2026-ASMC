@@ -6,6 +6,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>message_generation</build_depend>
   <depend>asmc_msgs</depend>
+  <depend>asmc_planner</depend>
   <depend>planning_inputs</depend>
   <depend>roscpp</depend><depend>std_msgs</depend><depend>geometry_msgs</depend>
   <depend>rospy</depend>
@@ -19,9 +20,7 @@
   <exec_depend>rviz</exec_depend>
   <!-- P4-C3 runtime producer and P4-C6 model artifact live here. -->
   <exec_depend>asmc_camera</exec_depend>
-  <exec_depend>frenet_planner</exec_depend>
   <exec_depend>asmc_controller</exec_depend>
   <exec_depend>asmc_bridge</exec_depend>
   <export/>
 </package>
-

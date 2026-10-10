@@ -4,6 +4,7 @@ project(frenet_planner)
 add_compile_options(-std=c++17 -O2)
 
 find_package(catkin REQUIRED COMPONENTS
+  asmc_planner
   planning_inputs
   asmc_msgs
   morai_msgs
@@ -16,7 +17,7 @@ find_package(yaml-cpp REQUIRED)
 catkin_package(
   INCLUDE_DIRS src
   LIBRARIES frenet_planner_core
-  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp sensor_msgs visualization_msgs
+  CATKIN_DEPENDS asmc_planner planning_inputs asmc_msgs morai_msgs roscpp sensor_msgs visualization_msgs
 )
 
 include_directories(
@@ -26,127 +27,28 @@ include_directories(
   ${YAML_CPP_INCLUDE_DIRS}
 )
 
-# Geometry primitives are kept separate so the existing foundation test can
-# exercise them without pulling in the complete planner.
-add_library(frenet_geometry
-  src/frenet_planner/Geometry/PolygonUtils.cpp
-)
-target_include_directories(frenet_geometry PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
+# Keep the in-workspace geometry target name while the implementation lives in
+# asmc_planner. This target contributes no second copy of the code.
+add_library(frenet_geometry INTERFACE)
+target_link_libraries(frenet_geometry INTERFACE asmc_planner_frenet_core)
 
 # Transport-independent planner core (candidate generation, maneuver
 # processes, cost/collision evaluation). ROS callback and networking code
 # must not be added here - that lives in frenet_planner_message_converter
 # and the frenet_planner_node executable below.
-add_library(frenet_planner_core
-  src/frenet_planner/frenet_planner.cpp
-  src/frenet_planner/Pipeline/TrajectoryPipeline.cpp
-  src/frenet_planner/Maneuver/ManeuverUtils.cpp
-  src/frenet_planner/Maneuver/Follow.cpp
-  src/frenet_planner/Maneuver/Keep.cpp
-  src/frenet_planner/Maneuver/Stop.cpp
-  src/frenet_planner/Map/AvoidRoadMap.cpp
-  src/frenet_planner/Maneuver/Avoid/MapAvoid.cpp
-  src/frenet_planner/Maneuver/Avoid/Avoid.cpp
-  src/frenet_planner/Maneuver/Avoid/AvoidTargetResolver.cpp
-  src/frenet_planner/Maneuver/Avoid/AvoidLifecycle.cpp
-  src/frenet_planner/Maneuver/LaneChange/LaneChange.cpp
-  src/frenet_planner/Maneuver/LaneChange/LaneChangeLifecycle.cpp
-  src/frenet_planner/Maneuver/Merge/MergeGapEvaluator.cpp
-  src/frenet_planner/Maneuver/Merge/RoundaboutMerge.cpp
-  src/frenet_planner/Maneuver/Merge/RoundaboutExecution.cpp
-  src/frenet_planner/Config/ConfigLoader.cpp
-  src/frenet_planner/Config/ConfigValidator.cpp
-  src/frenet_planner/visualization/planner_debug_writer.cpp
-  src/frenet_planner/Reference/Reference.cpp
-  src/frenet_planner/Generator/SamplingUtils.cpp
-  src/frenet_planner/Generator/LateralGenerator.cpp
-  src/frenet_planner/Generator/LongitudinalGenerator.cpp
-  src/frenet_planner/Generator/CandidateCombiner.cpp
-  src/frenet_planner/Generator/BoundaryConditionPolicy.cpp
-  src/frenet_planner/Evaluation/KinematicFilter.cpp
-  src/frenet_planner/Speed/CurveSpeed.cpp
-  src/frenet_planner/Speed/SpeedProfiler.cpp
-  src/frenet_planner/Speed/TargetSpeedResolver.cpp
-  src/frenet_planner/Evaluation/Cost.cpp
-  src/frenet_planner/Evaluation/CollisionChecker.cpp
-  src/frenet_planner/Math/Polynomial.cpp
-  src/frenet_planner/Math/FrenetConverter.cpp
-)
-add_dependencies(frenet_planner_core
-  ${catkin_EXPORTED_TARGETS}
-)
-target_compile_definitions(frenet_planner_core PRIVATE
-  FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
-)
-target_link_libraries(frenet_planner_core
-  frenet_geometry
-  yaml-cpp
-)
-
-# ROS runtime with input validation, command-based Plan() invocation,
-# fail-safe handling, and trajectory/feedback publication.
-add_library(frenet_planner_message_converter
-  src/Runtime/message_converter.cpp
-)
-add_dependencies(frenet_planner_message_converter
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(frenet_planner_message_converter
-  frenet_geometry
-  ${catkin_LIBRARIES}
-)
-
-# v2 인터페이스 어댑터. D3-1은 enum 매핑만 담고, D3-2에서 validation과
-# fingerprint가 여기에 추가된다. FSM 계약 경계이므로 planner core가 아니라
-# ROS 계층에 둔다 (docs/contracts/planning/fsm-frenet-v2.md 12.8절).
-add_library(frenet_behavior_command_adapter
-  src/Runtime/behavior_command_adapter.cpp
-)
-add_dependencies(frenet_behavior_command_adapter
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(frenet_behavior_command_adapter
-  ${catkin_LIBRARIES}
-)
-
-# v2 transaction 관리. adapter가 stateless인 것과 달리 이쪽은 명령들 사이의
-# 관계(transaction / terminal latch / preemption)를 갖는 stateful 계층이다
-# (docs/contracts/planning/fsm-frenet-v2.md 12.8절).
-add_library(frenet_command_execution_manager
-  src/Runtime/command_execution_manager.cpp
-)
-add_dependencies(frenet_command_execution_manager
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(frenet_command_execution_manager
-  frenet_behavior_command_adapter
-  ${catkin_LIBRARIES}
-)
-
-add_executable(frenet_planner_node
-  src/Runtime/main.cpp
-  src/Runtime/frenet_planner_node.cpp
-  src/Runtime/input_snapshot.cpp
-  src/Runtime/v2_planning.cpp
-  src/Runtime/target_projection.cpp
-  src/Runtime/output_publisher.cpp
-  src/Runtime/debug_marker_publisher.cpp
-  src/Runtime/feedback_builder.cpp
-  src/Runtime/RuntimeConfig.cpp
-)
-add_dependencies(frenet_planner_node
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(frenet_planner_node
-  frenet_planner_message_converter
-  frenet_command_execution_manager
-  frenet_behavior_command_adapter
-  frenet_planner_core
-  yaml-cpp
-  ${catkin_LIBRARIES}
-)
+# Legacy target names forward to the single implementation in asmc_planner.
+add_library(frenet_planner_core src/compatibility.cpp)
+target_link_libraries(frenet_planner_core asmc_planner_frenet_core)
+add_library(frenet_planner_message_converter src/compatibility.cpp)
+target_link_libraries(frenet_planner_message_converter asmc_planner_ros_adapters)
+add_library(frenet_behavior_command_adapter src/compatibility.cpp)
+target_link_libraries(frenet_behavior_command_adapter asmc_planner_ros_adapters)
+add_library(frenet_command_execution_manager INTERFACE)
+target_link_libraries(frenet_command_execution_manager INTERFACE
+  asmc_planner_execution_core frenet_behavior_command_adapter)
+add_executable(frenet_planner_node src/Runtime/main.cpp)
+add_dependencies(frenet_planner_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(frenet_planner_node asmc_planner_ros_adapters ${catkin_LIBRARIES})
 
 # D4-4: v2 ROS 인터페이스 통합 회귀. 실행 중인 roscore와 frenet_planner_node가
 # 필요하므로 add_test()에 등록하지 않는다(catkin_make run_tests가 자동으로
@@ -559,7 +461,6 @@ if(CATKIN_ENABLE_TESTING)
 endif()
 
 install(TARGETS
-    frenet_geometry
     frenet_planner_core
     frenet_planner_message_converter
     frenet_behavior_command_adapter
@@ -585,4 +486,3 @@ install(PROGRAMS tools/planner_visualizer.py
 install(DIRECTORY config launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
-
