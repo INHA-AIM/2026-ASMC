@@ -104,8 +104,10 @@ def summarize(rows,predictions,confidence,level='class',pixel_scope=False):
 
 
 def infer(args):
+    started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
     import cv2
     import torch
+    import ultralytics
     from ultralytics import YOLO
     sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'src/asmc_camera/src'))
     from asmc_camera.detection.hood_mask import HoodMask
@@ -126,6 +128,7 @@ def infer(args):
     # Warm up once; timing is offline PT inference, never whole-stack latency.
     first=cv2.imread(rows[0]['image'])
     model.predict(first,imgsz=args.front_width,device=0,quantize=16,conf=.1,nms=False,verbose=False)
+    if not model.predictor.model.fp16:raise RuntimeError('evaluation silently disabled FP16')
     with (args.output/'predictions.jsonl').open('w') as stream:
         for row in inference_rows:
             if sha(row['image'])!=row['image_sha256']:raise ValueError('evaluation source changed')
@@ -147,6 +150,9 @@ def infer(args):
     import numpy as np
     save(args.output/'inference.json',dict(weights_sha256=sha(actual_weights),
         evaluator_source_sha256=sha(__file__),
+        started_utc=started_utc,finished_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
+        torch=torch.__version__,ultralytics=ultralytics.__version__,opencv=cv2.__version__,
+        cuda=torch.version.cuda,gpu=torch.cuda.get_device_name(0),actual_fp16=model.predictor.model.fp16,
         requested_weights=str(args.weights),requested_weights_sha256=sha(args.weights),
         actual_weights=str(actual_weights),baseline_kind=baseline_kind,
         manifest_sha256=sha(args.dataset/'manifest.jsonl'),config_sha256=sha(args.config),

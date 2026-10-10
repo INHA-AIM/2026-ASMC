@@ -13,7 +13,7 @@
     "sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
   },
   "training_source_provenance": {
-    "yolo26l_started_commit": "4ab7cc9b",
+    "yolo26l_started_commit": "4ab7cc9bcf034c9fdffa4e9e6039f15405f0c71f",
     "yolo26l_loaded_trainer_sha256": "5693ea87be36379f988aa069a011f0468c69adac07d510c275274d4e6b43604e",
     "later_edits": "validation, resume, reporting and evaluator fixes; original fresh-run training settings unchanged",
     "yoloe26l": "source SHA recorded at actual process start"
