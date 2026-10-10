@@ -55,7 +55,7 @@ def evaluate_equal_checkpoint(args):
     try:
         for model,r in zip(('yolo26l','yoloe26l'),records):
             checkpoint=root/model/'fit/weights'/f'epoch{epoch-1}.pt'
-            code='import sys,json,torch;d=torch.load(sys.argv[1],map_location="cpu");print(json.dumps(dict(epoch=d["epoch"],updates=d["updates"],optimizer_present=d.get("optimizer") is not None,head=type(d["ema"].model[-1]).__name__)))'
+            code='import sys,json,torch;d=torch.load(sys.argv[1],map_location="cpu");steps=[float(s["step"]) for s in d["optimizer"]["state"].values() if "step" in s];print(json.dumps(dict(epoch=d["epoch"],updates=d["updates"],optimizer_present=d.get("optimizer") is not None,head=type(d["ema"].model[-1]).__name__,optimizer_step_min=min(steps),optimizer_step_max=max(steps),scaler=d.get("scaler"))))'
             command=['docker','exec',args.container,'/usr/bin/python3','-c',code,str(checkpoint)]
             metadata=json.loads(subprocess.check_output(command,text=True))
             expected=epoch*r['batches_per_epoch']*r['batch']//cfg['training']['nbs']
@@ -63,6 +63,7 @@ def evaluate_equal_checkpoint(args):
                 raise ValueError('checkpoint epoch/optimizer update amount differs')
             if metadata['head'] not in ('Detect','YOLOEDetect'):raise ValueError('not a bbox checkpoint')
             record.setdefault('checkpoints',{})[model]=dict(path=str(checkpoint),sha256=sha(checkpoint),**metadata)
+            record['checkpoints'][model]['amp_skipped_update_attempts']=expected-metadata['optimizer_step_max']
             save(state,record)
         for model in ('yolo26l','yoloe26l'):
             for width in (960,1280):

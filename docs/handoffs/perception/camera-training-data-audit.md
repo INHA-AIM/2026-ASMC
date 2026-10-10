@@ -1305,6 +1305,10 @@ hash가 실제 학습 전체/부분 순서와 일치해야 공통 prefix 순서�
 
 - native validation을 끄고 외부 평가로 통일했다. `results.csv`의 precision/recall/mAP 0은
   미측정 placeholder이며 실제 검출률 0이 아니다. 정확도는 외부 `evaluation.json`에서 읽는다.
+- checkpoint의 `updates`는 EMA 갱신/optimizer step 시도 카운터다. 실제 AdamW state의 `step`과
+  구분한다. 첫 YOLO26l의 17epoch는 EMA 8,500회·실제 AdamW 8,491회였으며 AMP에서 9회가 생략됐다.
+  생략을 숨기거나 실제 update와 동일하다고 설명하지 않는다. 동일 epoch/입력 순서로 비교하면서
+  각 모델의 실제 step·scaler를 함께 보고한다. 재개 시험은 optimizer state와 scaler 복구도 확인한다.
 - main 학습은 사전 측정 가중치를 버리고 다시 시작한다. 200 batch checkpoint는 partial epoch라
   재개에 쓰지 않는다. 원본 epoch별 checkpoint의 optimizer·EMA·누적 업데이트를 보존한다.
 - 학습 전 YOLO26 평가에는 원래 COCO80 사전학습 checkpoint를 사용한다. 16종으로 교체한

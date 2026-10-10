@@ -36,7 +36,12 @@
     "optimizer_checkpoint_cpu_check": {
       "epoch": 16,
       "optimizer_present": true,
-      "ema_updates": 8500
+      "ema_updates": 8500,
+      "optimizer_step_min": 8491,
+      "optimizer_step_max": 8491,
+      "amp_skipped_update_attempts": 9,
+      "scaler_scale": 1024,
+      "updates_meaning": "EMA/optimizer step attempts, not successful AdamW steps"
     },
     "quality_evaluation": "pending matched YOLOE completion; native metric columns are placeholders"
   }

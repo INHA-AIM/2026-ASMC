@@ -125,6 +125,13 @@ def run(args):
             parameters=sum(p.numel() for p in t.model.parameters()),amp_enabled=t.amp,
             actual_task=t.args.task,actual_head=type(t.model.model[-1]).__name__,
             actual_args=vars(t.args),dataset_cache_sha256=None)
+        steps=[float(s['step']) for s in t.optimizer.state.values() if 'step' in s]
+        moment=next((s['exp_avg'] for s in t.optimizer.state.values() if 'exp_avg' in s),None)
+        record['optimizer_at_start']=dict(state_slots=len(t.optimizer.state),
+            step_min=min(steps) if steps else 0,step_max=max(steps) if steps else 0,
+            first_moment_sha256=hashlib.sha256(moment.detach().cpu().float().numpy().tobytes()).hexdigest() if moment is not None else None,
+            ema_updates=t.ema.updates,scaler_scale=t.scaler.get_scale(),
+            head_fused=getattr(t.model.model[-1],'is_fused',None))
         if len(t.train_loader)%(settings['nbs']//args.batch):
             raise ValueError('epoch must end on an optimizer boundary for complete-epoch resume')
         if not t.amp:raise RuntimeError('AMP silently disabled')
