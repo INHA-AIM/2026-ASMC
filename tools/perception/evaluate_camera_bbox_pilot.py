@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""One-to-one bbox evaluation; partial GT never supplies precision/FP/F1."""
+import argparse
+from collections import Counter,defaultdict
+import json
+from pathlib import Path
+import sys
+import time
+
+from camera_data_audit import read_jsonl,save,sha,training_label
+from seg_measurements import match_boxes
+from capture_size_scope import ignored_prediction_indices
+
+
+def accepted_name(name):
+    if name in ('car','truck','bus'):return 'motor_vehicle'
+    if name in ('dog','deer'):return 'animal'
+    return name
+
+
+def frame_counts(row,predictions,confidence,level='class',pixel_scope=False):
+    name=accepted_name if level=='accepted' else lambda n:n
+    predictions=[dict(p,group=name(p['class_name'])) for p in predictions if p['confidence']>=confidence]
+    gt=[];ignored=[]
+    for a in row['annotations']:
+        label=training_label(a)
+        if not label:ignored.append(a);continue
+        box=a['xyxy'];w=box[2]-box[0];h=box[3]-box[1]
+        long,short=(24,12) if label in ('car','truck','bus') else (16,8)
+        if pixel_scope and (max(w,h)<long or min(w,h)<short):
+            ignored.append(a);continue
+        gt.append(dict(a,group=name(label)))
+    pairs=match_boxes(gt,predictions,.5)
+    excluded=ignored_prediction_indices(predictions,ignored,{p for _,p,_ in pairs},
+        dict(ignore_prediction_ioa=.5))
+    counts=defaultdict(Counter)
+    complete=row.get('evaluation_scope')=='complete'
+    for a in gt:counts[a['group']]['gt']+=1
+    for g,p,_ in pairs:counts[gt[g]['group']]['tp']+=1
+    if complete:
+        for a in gt:counts[a['group']]['complete_gt']+=1
+        for g,p,_ in pairs:counts[gt[g]['group']]['complete_tp']+=1
+        for i,p in enumerate(predictions):
+            if i not in excluded:counts[p['group']]['complete_predictions']+=1
+    for a in ignored:
+        if training_label(a):counts[name(training_label(a))]['ignored_gt']+=1
+    return counts,pairs
+
+
+def summarize(rows,predictions,confidence,level='class',pixel_scope=False):
+    by_id={p['id']:p for p in predictions}
+    if len(by_id)!=len(predictions) or set(by_id)!={r['id'] for r in rows}:
+        raise ValueError('prediction membership mismatch')
+    counts=defaultdict(Counter);groups=defaultdict(set)
+    for row in rows:
+        pred=by_id[row['id']]
+        if pred['image_sha256']!=row['image_sha256']:raise ValueError('prediction image SHA mismatch')
+        c,_=frame_counts(row,pred['predictions'],confidence,level,pixel_scope)
+        for name,v in c.items():counts[name].update(v);groups[name].add(row['split_group'])
+    result={}
+    for name,c in counts.items():
+        tp=c['complete_tp'];n=c['complete_predictions'];gt=c['complete_gt']
+        precision=tp/n if n else 0.0 if gt else None
+        recall=tp/gt if gt else None
+        f1=2*tp/(n+gt) if gt else None
+        result[name]=dict(c,precision=precision,recall=recall,f1=f1,
+            annotated_recall=c['tp']/c['gt'] if c['gt'] else None,
+            complete_fp=n-tp,complete_fn=gt-tp,independent_source_groups=len(groups[name]),
+            sufficient_sample=gt>=20 and len(groups[name])>=2)
+    scores=[c['f1'] for c in result.values() if c['sufficient_sample'] and c['f1'] is not None]
+    return dict(confidence=confidence,classes=result,macro_f1=sum(scores)/len(scores) if scores else None,
+        complete_images=sum(r.get('evaluation_scope')=='complete' for r in rows),
+        partial_images=sum(r.get('evaluation_scope')!='complete' for r in rows),
+        macro_policy='>=20 complete GT and >=2 frozen source/run groups; others diagnostic',
+        pixel_scope='vehicle 24/12px, other 16/8px' if pixel_scope else 'all original GT')
+
+
+def infer(args):
+    import cv2
+    import torch
+    from ultralytics import YOLO
+    sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'src/asmc_camera/src'))
+    from asmc_camera.detection.hood_mask import HoodMask
+    repo=Path(__file__).resolve().parents[2]
+    cfg=json.loads(args.config.read_text())
+    names=list(json.loads((args.dataset/'summary.json').read_text())['classes'])
+    rows=[r for r in read_jsonl(args.dataset/'manifest.jsonl') if r['split'] in ('selection','heldout')]
+    args.output.mkdir(parents=True,exist_ok=False)
+    masks={view:HoodMask.load(True,repo/'src/asmc_camera/config/camera'/file) for view,file in
+        [('front','yolo_hood_mask_v1.yaml'),('left','yolo_ego_mask_left_v1.yaml'),('right','yolo_ego_mask_right_v1.yaml')]}
+    model=YOLO(str(args.weights),task='detect')
+    if 'Segment' in type(model.model.model[-1]).__name__:raise ValueError('not detection-only checkpoint')
+    predictions=[];latencies=[];ignored_names=Counter()
+    # Warm up once; timing is offline PT inference, never whole-stack latency.
+    first=cv2.imread(rows[0]['image'])
+    model.predict(first,imgsz=args.front_width,device=0,quantize=16,conf=.1,nms=False,verbose=False)
+    with (args.output/'predictions.jsonl').open('w') as stream:
+        for row in rows:
+            if sha(row['image'])!=row['image_sha256']:raise ValueError('evaluation source changed')
+            image=cv2.imread(row['image']);view=row.get('view','unknown')
+            if view in masks:image=masks[view].apply(image)
+            size=(480,640) if view in ('left','right') else args.front_width
+            torch.cuda.synchronize();started=time.monotonic()
+            r=model.predict(image,imgsz=size,device=0,quantize=16,conf=.1,iou=.7,max_det=300,
+                            nms=False,rect=True,verbose=False)[0]
+            torch.cuda.synchronize();ms=(time.monotonic()-started)*1000;latencies.append(ms)
+            boxes=[]
+            for box in r.boxes.cpu():
+                label=str(r.names[int(box.cls.item())]).replace(' ','_')
+                if label not in names:ignored_names[label]+=1;continue
+                boxes.append(dict(class_name=label,confidence=float(box.conf.item()),xyxy=box.xyxy[0].tolist()))
+            item=dict(id=row['id'],image_sha256=row['image_sha256'],predictions=boxes,
+                wall_ms=ms,view=view,ego_mask_applied=view in masks)
+            stream.write(json.dumps(item)+'\n');stream.flush();predictions.append(item)
+    import numpy as np
+    save(args.output/'inference.json',dict(weights_sha256=sha(args.weights),
+        manifest_sha256=sha(args.dataset/'manifest.jsonl'),config_sha256=sha(args.config),
+        front_width=args.front_width,side_shape=[480,640],head=type(model.model.model[-1]).__name__,
+        mask_shas={k:v.config_sha256 for k,v in masks.items()},unknown_view_mask_policy='no assumed mask',
+        latency_kind='offline PyTorch batch1 inference wall; not integrated runtime or TensorRT',
+        p50_ms=float(np.percentile(latencies,50)),p95_ms=float(np.percentile(latencies,95)),
+        p99_ms=float(np.percentile(latencies,99)),ignored_non_target_predictions=dict(ignored_names)))
+    # Selection is the only threshold search. Heldout uses the frozen choice.
+    selection=[r for r in rows if r['split']=='selection'];heldout=[r for r in rows if r['split']=='heldout']
+    def preds(part):return [p for p in predictions if p['id'] in {r['id'] for r in part}]
+    sweep=[summarize(selection,preds(selection),round(.1+.05*i,2),pixel_scope=True) for i in range(13)]
+    available=[s for s in sweep if s['macro_f1'] is not None]
+    chosen=max(available,key=lambda s:(s['macro_f1'],s['confidence']))['confidence'] if available else .4
+    save(args.output/'evaluation.json',dict(selection_confidence=chosen,
+        threshold_selection_available=bool(available),selection_sweep=sweep,
+        selected_heldout=summarize(heldout,preds(heldout),chosen,pixel_scope=True),
+        control={role:{level:summarize(part,preds(part),.4,level,pixel_scope=True)
+            for level in ('class','accepted')} for role,part in [('selection',selection),('heldout',heldout)]},
+        all_gt_control={role:summarize(part,preds(part),.4) for role,part in [('selection',selection),('heldout',heldout)]},
+        temporal_metrics=dict(status='not_evaluable_from_sparse_sample',
+            reason='sampled frame order is not a continuous sensor stream; no invented detection time/gap')))
+
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--config',required=True,type=Path);p.add_argument('--dataset',required=True,type=Path)
+    p.add_argument('--weights',required=True,type=Path);p.add_argument('--output',required=True,type=Path)
+    p.add_argument('--front-width',required=True,type=int,choices=[960,1280])
+    infer(p.parse_args())
