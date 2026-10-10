@@ -2,6 +2,7 @@ import copy
 import unittest
 from train_camera_bbox_pilot import common_epochs,validate_resume
 from evaluate_camera_bbox_pilot import summarize
+from report_camera_bbox_pilot import compare
 
 
 class TrainingTest(unittest.TestCase):
@@ -46,6 +47,20 @@ class TrainingTest(unittest.TestCase):
         self.assertEqual(row,original)
         pred['image_sha256']='wrong'
         with self.assertRaises(ValueError):summarize([row],[pred],.4)
+
+    def test_candidate_recall_gate_and_missing_animal_gt(self):
+        def evaluation(tp):
+            return dict(selection_confidence=.4,control=dict(heldout=dict(
+                **{'class':dict(classes={'box':dict(complete_gt=25,f1=.8,complete_fp=2)})},
+                accepted=dict(classes={'person':dict(gt=100,tp=tp)}))))
+        evaluations={'a-before-960':evaluation(90),'a-after-960':evaluation(87)}
+        r=compare(evaluations)
+        self.assertEqual(r['status'],'selection_deferred')
+        self.assertIn('person',r['comparisons'][0]['old_regression_failures'])
+        evaluations['a-after-960']=evaluation(91)
+        r=compare(evaluations)
+        self.assertIsNotNone(r['provisional_candidate'])
+        self.assertIn('animal',r['provisional_candidate']['old_regression_unresolved'])
 
 
 if __name__=='__main__':unittest.main()

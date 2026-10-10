@@ -66,10 +66,13 @@ def run(args):
     state=args.output/'run.json'
     if state.exists() and not args.resume:raise ValueError('existing run requires explicit --resume')
     if args.resume:
-        validate_resume(json.loads(state.read_text()),identity)
+        previous=json.loads(state.read_text())
+        validate_resume(previous,identity)
         ckpt=torch.load(args.resume,map_location='cpu')
         if ckpt.get('epoch',-1)<0 or ckpt.get('optimizer') is None:
             raise ValueError('checkpoint has no resumable optimizer/epoch')
+        if previous.get('budget_exceeded') and ckpt['epoch']>=previous.get('last_epoch',0):
+            raise ValueError('budget-stopped last epoch is partial; resume preceding complete epoch checkpoint')
         del ckpt
     started=time.monotonic(); batches=[];epoch_times=[];order=hashlib.sha256()
     record=dict(**identity,stage='smoke' if args.smoke_batches else 'training',status='starting',
@@ -84,6 +87,13 @@ def run(args):
 
     class TextBBoxTrainer(YOLOEPETrainer):
         def get_model(self,*a,**kw):
+            weights=kw.get('weights')
+            if weights is not None and getattr(weights.model[-1],'is_fused',False):
+                # PE checkpoints already contain the learned class convolutions.
+                # Re-embedding would discard these and reprta was removed at fuse.
+                if weights.model[-1].nc!=len(names) or list(weights.names.values())!=names:
+                    raise ValueError('fused resume vocabulary differs from dataset')
+                return deepcopy(weights).float()
             original=self.data['names']
             self.data['names']=dict(enumerate(cfg['text_names']))
             try:model=super().get_model(*a,**kw)
@@ -137,6 +147,8 @@ def run(args):
             resumable_checkpoint=str(t.last),completed_batches=len(batches),
             wall_seconds=time.monotonic()-started)
         save(state,record)
+        if args.stop_after_epoch and t.epoch+1>=args.stop_after_epoch:
+            record['epoch_boundary_pause']=True;t.stop=True;save(state,record)
     model=YOLO(str(args.resume or weights)) if args.model=='yolo26l' else (
         YOLOE(str(args.resume)) if args.resume else YOLOE('yoloe-26l.yaml').load(str(weights)))
     for event,cb in [('on_train_start',train_start),('on_train_batch_start',batch_start),
@@ -171,8 +183,10 @@ def run(args):
         if args.resume:kwargs['resume']=str(args.resume)
         model.train(trainer=PilotTrainer,**kwargs)
         settled=batches[20:] or batches
-        record.update(status='budget_stopped' if record.get('budget_exceeded') else 'complete',
-            completed_batches=len(batches),completed_epochs=0 if args.smoke_batches else record.get('last_epoch',-1)+1,
+        record.update(status='budget_stopped' if record.get('budget_exceeded') else
+            'paused_at_epoch' if record.get('epoch_boundary_pause') else 'complete',
+            completed_batches=len(batches),completed_epochs=0 if args.smoke_batches else
+                record.get('last_epoch',-1)+1-int(bool(record.get('budget_exceeded'))),
             smoke_complete=bool(args.smoke_batches and len(batches)==args.smoke_batches),
             batch_seconds=sum(settled)/len(settled),wall_seconds=time.monotonic()-started,
             sample_order_sha256=order.hexdigest(),gpu_peak_allocated_bytes=torch.cuda.max_memory_allocated(),
@@ -196,4 +210,5 @@ if __name__=='__main__':
     p.add_argument('--batch',type=int,required=True);p.add_argument('--epochs',type=int,default=20)
     p.add_argument('--smoke-batches',type=int,default=0);p.add_argument('--max-seconds',type=float,default=10800)
     p.add_argument('--resume',type=Path)
+    p.add_argument('--stop-after-epoch',type=int,help='explicit epoch-boundary pause for recovery testing')
     print(json.dumps(run(p.parse_args()),ensure_ascii=False,indent=2))

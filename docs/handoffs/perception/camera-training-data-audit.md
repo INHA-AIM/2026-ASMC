@@ -9,7 +9,7 @@
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
 **이번 PR #78은 v5 대량 활용 train 확장과 v4 검수 자료를 제공한다. 운영 실행은 수정하지 않는다.**
-최신 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
+최신 샘플링은 [bbox 파일럿](#bbox-파일럿-샘플링--2026-10-11), 전체 자료 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
 아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
@@ -1267,3 +1267,50 @@ python tools/perception/prepare_camera_bbox_pilot.py \
 ```
 
 학습은 이 결과를 포함한 별도 브랜치에서 직렬 실행한다. 운영 모델과 ROS 설정은 변경하지 않는다.
+
+
+## bbox 비교학습 — 2026-10-11 PR #80
+
+최신 main 835d56e3와 #78의 샘플링을 포함한 `feat/camera-bbox-pilot-training`에서 작업한다.
+폴더는 기존 `asmc-camera-data-audit`를 유지하며 실시간 `asmc-camera-objects` 마운트를 변경하지 않는다.
+학습은 `asmc-camera-bbox-pilot` network-none 컨테이너, 고정 Ultralytics 8.4.150 / Torch 2.1.2+cu118에서 직렬 실행한다.
+공유 ROS Python은 수정하지 않는다. MORAI/실시간 GPU 모델과 학습을 겹치지 않는다.
+
+두 모델은 960·batch4·AMP에서 200 batch씩 사전 측정을 통과했다.
+YOLO26l epoch 예상 528.20초, YOLOE bbox 477.03초에 20% 여유를 넣어 같은 17epoch를 배정했다.
+유효 batch16, AdamW LR .001 / decay .0005, 동일 증강·seed·이미지 순서를 사용한다.
+YOLOE는 detection YAML + seg checkpoint + PE trainer이며 mask head는 학습하지 않는다.
+학습 클래스별 영어 표현 하나를 고정해 fused head에 반영한다. 이 결과는 임의의 새 prompt를
+추가할 수 있는 원래 open-vocabulary checkpoint와 구분한다. freeze=None으로 전체 파라미터를 학습한다.
+
+[예산/클래스 설정](../../../config/experiments/camera_bbox_pilot_v1.json),
+[사전 측정과 실패 기록](../../../config/baselines/evidence/camera_bbox_pilot_training_v1/smoke.json),
+[직렬 실행기](../../../tools/perception/run_camera_bbox_comparison.py),
+[학습·재개](../../../tools/perception/train_camera_bbox_pilot.py),
+[평가기](../../../tools/perception/evaluate_camera_bbox_pilot.py)를 연결한다.
+
+진행 갤러리: `http://localhost:8768/camera-bbox-pilot-v1/`. 30초마다 로컬 상태를 읽는다.
+`artifacts/camera-bbox-pilot-v1/paired-r1/comparison.json`과 모델별 `run.json`이 실제 진행 기록이다.
+현재 학습이 진행 중이므로 완료·선정·배포 수락을 주장하지 않는다.
+
+### 결과와 재개 해석
+
+- native validation을 끄고 외부 평가로 통일했다. `results.csv`의 precision/recall/mAP 0은
+  미측정 placeholder이며 실제 검출률 0이 아니다. 정확도는 외부 `evaluation.json`에서 읽는다.
+- main 학습은 사전 측정 가중치를 버리고 다시 시작한다. 200 batch checkpoint는 partial epoch라
+  재개에 쓰지 않는다. 원본 epoch별 checkpoint의 optimizer·EMA·누적 업데이트를 보존한다.
+- 재개 시 모델·데이터/config/초기 가중치 SHA·batch·전체 epoch를 검사한다. 파일 손실·중단은
+  마지막 완전 epoch에서 재개하며, 중단 epoch의 동일한 증강 RNG까지 비트 단위 복구한다고 주장하지 않는다.
+- 알려진 평가 한계: selection 신규 객체 box 6개, heldout animal은 deer 1개, stroller 0개다.
+  공통 GT 평가와 허용된 car/bus/truck·dog/deer 상위 의미 평가를 분리한다.
+- 완전 주석 검수 근거가 있는 영상만 precision/F1에 쓴다. 나머지는 annotated recall이다.
+  같은 소스/run의 많은 영상은 독립 장면 증거가 아니며 별도로 표시한다.
+- sparse 평가본으로 실제 최초 안정 검출·공백 ms를 만들지 않는다. 이후 연속 영상/통합 시험에서 확인한다.
+- PT batch1 평가 지연은 TensorRT 3뷰/통합 지연과 다르다. 학습 중 VRAM도 배포 VRAM이 아니다.
+- 고정 heldout은 이번 비교에 노출된 자료다. 본학습 후 새로운 독립 최종 시험으로 재포장하지 않는다.
+
+본학습 후보는 신규 장애물 개선·기존 객체 회귀·오검출을 검토한 뒤 정한다.
+1%p 내 동률이면 TensorRT 배포 지연/VRAM 확인 전 확정하지 않는다.
+이후 부족 조건만 보강 → 한 모델 본학습 → TensorRT·3뷰 배포 → 전방 fusion/4그룹 소비 계약 →
+MORAI 전체 스택 반복·30분 연속 → 팀 실행/복구 문서 순서다.
+3뷰/mask fusion과 TwinLite BEV 자세 보정은 별도 후속 확장이다.
