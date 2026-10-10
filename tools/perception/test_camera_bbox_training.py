@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from train_camera_bbox_pilot import common_epochs,validate_resume,sha
+from train_camera_bbox_pilot import common_epochs,validate_resume,sha,accumulation_threshold
 from evaluate_camera_bbox_pilot import summarize,scoped_complete,evaluation_weights
 from report_camera_bbox_pilot import compare
 from camera_bbox_temporal import prepare,analyze
@@ -15,6 +15,15 @@ class TrainingTest(unittest.TestCase):
         self.assertEqual(common_epochs([100,150]),20)
         self.assertLess(common_epochs([2500,2000]),5)
         with self.assertRaises(ValueError):common_epochs([0,100])
+
+    def test_resume_first_optimizer_update_keeps_effective_batch(self):
+        last=-1;updates=[]
+        for index in range(8):
+            ni=2000+index
+            threshold=accumulation_threshold(16,4,1,2000,index)
+            if ni-last>=threshold:updates.append(index);last=ni
+        self.assertEqual(updates,[3,7])
+        self.assertEqual(accumulation_threshold(16,4,0,2000),4)
 
     def test_coco_baseline_does_not_evaluate_random_resized_head(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -85,6 +94,10 @@ class TrainingTest(unittest.TestCase):
         r=compare(evaluations)
         self.assertIsNotNone(r['provisional_candidate'])
         self.assertIn('animal',r['provisional_candidate']['old_regression_unresolved'])
+        evaluations['a-after-960']['selected_heldout_accepted']=dict(classes={'person':dict(gt=100,tp=80)})
+        r=compare(evaluations)
+        self.assertEqual(r['status'],'selection_deferred')
+        self.assertIn('person',r['comparisons'][0]['selected_old_regression_failures'])
 
     def test_native_capture_only_tiny_unknown_is_still_partial(self):
         anns=[dict(canonical='car',xyxy=[0,0,60,30],disposition='candidate',issues=[]),

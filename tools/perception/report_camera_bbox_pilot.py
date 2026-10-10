@@ -35,13 +35,27 @@ def compare(evaluations):
             old[group]=dict(gt=gt,before=btp/bgt if bgt else None,after=tp/gt if gt else None,delta=delta)
             if gt<20:uncertain.append(group)
             elif delta is not None and delta<-.02:bad.append(group)
+        selected_classes=after.get('selected_heldout',{}).get('classes',classes)
+        selected_scores=[c['f1'] for n,c in selected_classes.items() if n in NEW_CLASSES
+            and c.get('complete_gt',0)>=20 and c['f1'] is not None]
+        selected_old={};selected_bad=[]
+        selected_accepted=after.get('selected_heldout_accepted',{}).get('classes',aa)
+        for group,labels in [('person',['person']),('animal',['animal']),('vehicle',['motor_vehicle','bicycle','motorcycle'])]:
+            gt=sum(selected_accepted.get(n,{}).get('gt',0) for n in labels)
+            tp=sum(selected_accepted.get(n,{}).get('tp',0) for n in labels)
+            baseline=old[group]['before'];delta=tp/gt-baseline if gt and baseline is not None else None
+            selected_old[group]=dict(gt=gt,after=tp/gt if gt else None,delta_from_pretrained_control=delta)
+            if gt>=20 and delta is not None and delta<-.02:selected_bad.append(group)
         comparisons.append(dict(configuration=key,new_macro_f1=sum(scores)/len(scores) if scores else None,
+            selected_new_macro_f1=sum(selected_scores)/len(selected_scores) if selected_scores else None,
+            selected_old_recall=selected_old,selected_old_regression_failures=selected_bad,
             supported_new_classes=[n for n,c in classes.items() if n in NEW_CLASSES and c.get('complete_gt',0)>=20],
             old_recall=old,old_regression_failures=bad,old_regression_unresolved=uncertain,
             confidence_control=.4,selection_confidence=after['selection_confidence']))
         comparisons[-1]['complete_fp_after']=sum(c.get('complete_fp',0) for c in classes.values())
         comparisons[-1]['complete_fp_before']=sum(c.get('complete_fp',0) for c in before['control']['heldout']['class']['classes'].values())
-    candidates=[c for c in comparisons if c['new_macro_f1'] is not None and not c['old_regression_failures']]
+    candidates=[c for c in comparisons if c['new_macro_f1'] is not None and not c['old_regression_failures']
+        and not c['selected_old_regression_failures']]
     selected=max(candidates,key=lambda c:c['new_macro_f1']) if candidates else None
     return dict(comparisons=comparisons,provisional_candidate=selected,
         within_one_percentage_point=[c['configuration'] for c in candidates

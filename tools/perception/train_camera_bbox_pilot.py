@@ -41,6 +41,15 @@ def validate_resume(record, current):
         if record.get(key)!=current.get(key):raise ValueError('resume identity mismatch: '+key)
 
 
+def accumulation_threshold(nbs,batch,start_epoch,batches_per_epoch,resume_index=None):
+    accumulate=nbs//batch
+    if resume_index is not None and resume_index<accumulate-1:
+        # Native loop resets its local last_opt_step=-1 even on resume, while
+        # ni continues at start_epoch*nb. Prevent a one-microbatch first update.
+        return start_epoch*batches_per_epoch+resume_index+2
+    return accumulate
+
+
 def run(args):
     import torch
     import ultralytics
@@ -115,6 +124,8 @@ def run(args):
             parameters=sum(p.numel() for p in t.model.parameters()),amp_enabled=t.amp,
             actual_task=t.args.task,actual_head=type(t.model.model[-1]).__name__,
             actual_args=vars(t.args),dataset_cache_sha256=None)
+        if len(t.train_loader)%(settings['nbs']//args.batch):
+            raise ValueError('epoch must end on an optimizer boundary for complete-epoch resume')
         if not t.amp:raise RuntimeError('AMP silently disabled')
         if t.batch_size!=args.batch:raise RuntimeError('silent batch change')
         if t.args.task!='detect' or 'Segment' in type(t.model.model[-1]).__name__:
@@ -169,7 +180,8 @@ def run(args):
                 # evaluator separates complete GT from recall-only annotations.
                 return self.metrics,0.0
             def preprocess_batch(self,batch):
-                self.accumulate=max(1,settings['nbs']//args.batch)
+                self.accumulate=accumulation_threshold(settings['nbs'],args.batch,self.start_epoch,
+                    len(self.train_loader),len(batches) if args.resume else None)
                 self.batch=batch
                 order.update(('\n'.join(map(str,batch.get('im_file',[])))+'\n').encode())
                 return super().preprocess_batch(batch)
