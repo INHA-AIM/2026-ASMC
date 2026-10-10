@@ -18,13 +18,21 @@ def accepted_name(name):
     return name
 
 
+def scoped_complete(row,pixel_scope):
+    # Accurate actor boxes do not prove exhaustive labels for fixed map props.
+    # Tiny unresolved actors alone cannot promote a partial image to full GT.
+    return row.get('evaluation_scope')=='complete'
+
+
 def frame_counts(row,predictions,confidence,level='class',pixel_scope=False):
     name=accepted_name if level=='accepted' else lambda n:n
     predictions=[dict(p,group=name(p['class_name'])) for p in predictions if p['confidence']>=confidence]
     gt=[];ignored=[]
     for a in row['annotations']:
         label=training_label(a)
-        if not label:ignored.append(a);continue
+        if not label:
+            if a.get('disposition')!='excluded':ignored.append(a)
+            continue
         box=a['xyxy'];w=box[2]-box[0];h=box[3]-box[1]
         long,short=(24,12) if label in ('car','truck','bus') else (16,8)
         if pixel_scope and (max(w,h)<long or min(w,h)<short):
@@ -34,7 +42,7 @@ def frame_counts(row,predictions,confidence,level='class',pixel_scope=False):
     excluded=ignored_prediction_indices(predictions,ignored,{p for _,p,_ in pairs},
         dict(ignore_prediction_ioa=.5))
     counts=defaultdict(Counter)
-    complete=row.get('evaluation_scope')=='complete'
+    complete=scoped_complete(row,pixel_scope)
     for a in gt:counts[a['group']]['gt']+=1
     for g,p,_ in pairs:counts[gt[g]['group']]['tp']+=1
     if complete:
@@ -69,8 +77,9 @@ def summarize(rows,predictions,confidence,level='class',pixel_scope=False):
             sufficient_sample=gt>=20,source_generalization_limited=len(groups[name])<2)
     scores=[c['f1'] for c in result.values() if c['sufficient_sample'] and c['f1'] is not None]
     return dict(confidence=confidence,classes=result,macro_f1=sum(scores)/len(scores) if scores else None,
-        complete_images=sum(r.get('evaluation_scope')=='complete' for r in rows),
-        partial_images=sum(r.get('evaluation_scope')!='complete' for r in rows),
+        complete_images=sum(scoped_complete(r,pixel_scope) for r in rows),
+        partial_images=sum(not scoped_complete(r,pixel_scope) for r in rows),
+        scoped_native_capture_images=sum(r.get('evaluation_scope')!='complete' and scoped_complete(r,pixel_scope) for r in rows),
         macro_policy='>=20 complete GT; source/run correlation separately flagged, not independent-scene claims',
         pixel_scope='vehicle 24/12px, other 16/8px' if pixel_scope else 'all original GT')
 
@@ -85,6 +94,9 @@ def infer(args):
     cfg=json.loads(args.config.read_text())
     names=list(json.loads((args.dataset/'summary.json').read_text())['classes'])
     rows=[r for r in read_jsonl(args.dataset/'manifest.jsonl') if r['split'] in ('selection','heldout')]
+    temporal_path=args.dataset/'temporal-probe.jsonl'
+    temporal=list(read_jsonl(temporal_path)) if temporal_path.exists() else []
+    inference_rows=list({r['id']:r for r in rows+temporal}.values())
     args.output.mkdir(parents=True,exist_ok=False)
     masks={view:HoodMask.load(True,repo/'src/asmc_camera/config/camera'/file) for view,file in
         [('front','yolo_hood_mask_v1.yaml'),('left','yolo_ego_mask_left_v1.yaml'),('right','yolo_ego_mask_right_v1.yaml')]}
@@ -95,7 +107,7 @@ def infer(args):
     first=cv2.imread(rows[0]['image'])
     model.predict(first,imgsz=args.front_width,device=0,quantize=16,conf=.1,nms=False,verbose=False)
     with (args.output/'predictions.jsonl').open('w') as stream:
-        for row in rows:
+        for row in inference_rows:
             if sha(row['image'])!=row['image_sha256']:raise ValueError('evaluation source changed')
             image=cv2.imread(row['image']);view=row.get('view','unknown')
             if view in masks:image=masks[view].apply(image)
@@ -115,6 +127,7 @@ def infer(args):
     import numpy as np
     save(args.output/'inference.json',dict(weights_sha256=sha(args.weights),
         manifest_sha256=sha(args.dataset/'manifest.jsonl'),config_sha256=sha(args.config),
+        temporal_manifest_sha256=sha(temporal_path) if temporal else None,
         front_width=args.front_width,side_shape=[480,640],head=type(model.model.model[-1]).__name__,
         mask_shas={k:v.config_sha256 for k,v in masks.items()},unknown_view_mask_policy='no assumed mask',
         latency_kind='offline PyTorch batch1 inference wall; not integrated runtime or TensorRT',
@@ -133,7 +146,13 @@ def infer(args):
             for level in ('class','accepted')} for role,part in [('selection',selection),('heldout',heldout)]},
         all_gt_control={role:summarize(part,preds(part),.4) for role,part in [('selection',selection),('heldout',heldout)]},
         temporal_metrics=dict(status='not_evaluable_from_sparse_sample',
-            reason='sampled frame order is not a continuous sensor stream; no invented detection time/gap')))
+            reason='sparse accuracy samples have no continuous sensor timing')))
+    if temporal:
+        from camera_bbox_temporal import analyze
+        save(args.output/'temporal.json',dict(
+            control={level:analyze(temporal,predictions,.4,level) for level in ('class','accepted')},
+            selected={level:analyze(temporal,predictions,chosen,level) for level in ('class','accepted')},
+            manifest_sha256=sha(temporal_path),threshold_selected_on_sparse_selection_only=True))
 
 
 if __name__=='__main__':

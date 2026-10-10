@@ -1,8 +1,9 @@
 import copy
 import unittest
 from train_camera_bbox_pilot import common_epochs,validate_resume
-from evaluate_camera_bbox_pilot import summarize
+from evaluate_camera_bbox_pilot import summarize,scoped_complete
 from report_camera_bbox_pilot import compare
+from camera_bbox_temporal import prepare,analyze
 
 
 class TrainingTest(unittest.TestCase):
@@ -61,6 +62,38 @@ class TrainingTest(unittest.TestCase):
         r=compare(evaluations)
         self.assertIsNotNone(r['provisional_candidate'])
         self.assertIn('animal',r['provisional_candidate']['old_regression_unresolved'])
+
+    def test_native_capture_only_tiny_unknown_is_still_partial(self):
+        anns=[dict(canonical='car',xyxy=[0,0,60,30],disposition='candidate',issues=[]),
+              dict(canonical=None,xyxy=[100,100,102,102],disposition='ambiguous',issues=['capture_subtype_unknown'])]
+        row=dict(source='capture:run',annotations=anns,provenance_verified=True,
+            annotation_complete=True,issues=[],original_annotation=dict(bbox_file_present=True,annotations=anns))
+        self.assertFalse(scoped_complete(row,True));self.assertFalse(scoped_complete(row,False))
+        anns[1]['xyxy']=[100,100,120,120]
+        self.assertFalse(scoped_complete(row,True))
+        anns[1]['xyxy']=[100,100,102,102];row['source']='roboflow:source'
+        self.assertFalse(scoped_complete(row,True))
+
+    def test_excluded_infrastructure_is_not_an_ignore_region(self):
+        row=dict(id='a',image_sha256='sha',split_group='run',evaluation_scope='complete',annotations=[
+            dict(canonical='person',xyxy=[0,0,20,20]),
+            dict(canonical=None,disposition='excluded',xyxy=[30,30,60,60])])
+        pred=dict(id='a',image_sha256='sha',predictions=[dict(class_name='box',confidence=.6,xyxy=[30,30,60,60])])
+        self.assertEqual(summarize([row],[pred],.4)['classes']['box']['complete_fp'],1)
+
+    def test_temporal_requires_consecutive_inputs_and_one_to_one(self):
+        rows=[];pred=[]
+        for i in range(6):
+            rows.append(dict(id=str(i),image_sha256=str(i),source='capture:run',view='front',
+                source_key=f'front/{i:06d}',split='heldout',reasons=[],issues=[],
+                annotations=[dict(canonical='car',actor_id='7',original_label='car',xyxy=[0,0,60,30])]))
+            boxes=[dict(class_name='car',confidence=.8,xyxy=[0,0,60,30])]*2 if i in [0,2,4] else []
+            pred.append(dict(id=str(i),image_sha256=str(i),predictions=boxes))
+        frozen=prepare(rows);r=analyze(frozen,pred,.4)['segments'][0]
+        self.assertEqual(r['first_stable_window_end_frame'],4)
+        self.assertEqual(r['matched_inputs'],3)
+        self.assertEqual(r['largest_miss_streak_inputs'],1)
+        self.assertFalse(prepare(rows[:2]+rows[3:]))
 
 
 if __name__=='__main__':unittest.main()

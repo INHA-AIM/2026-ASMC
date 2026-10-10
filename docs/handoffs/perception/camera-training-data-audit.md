@@ -1314,3 +1314,18 @@ YOLOE는 detection YAML + seg checkpoint + PE trainer이며 mask head는 학습�
 이후 부족 조건만 보강 → 한 모델 본학습 → TensorRT·3뷰 배포 → 전방 fusion/4그룹 소비 계약 →
 MORAI 전체 스택 반복·30분 연속 → 팀 실행/복구 문서 순서다.
 3뷰/mask fusion과 TwinLite BEV 자세 보정은 별도 후속 확장이다.
+
+
+### 연속 입력 참고 평가
+
+정확도 selection/heldout 300/300장은 그대로다. 별도 [연속 입력 고정 목록 요약](../../../config/baselines/evidence/camera_bbox_pilot_training_v1/temporal-probe.json)은
+기존 evaluation run에서만 고른 120장이다. 알려진 actor가 평가 크기 범위에서 이어지고
+frame index가 실제로 연속인 구간만 쓴다. 원본 박스·분할을 수정하지 않으며 confidence 선정에 사용하지 않는다.
+[준비·분석기](../../../tools/perception/camera_bbox_temporal.py)는 5개 연속 저장 입력 중 3개 IoU .5 대응을
+만족한 최초 window 끝 frame과 최대 누락 입력 개수를 보고한다. 이 구간 밖 최초 등장이나
+실제 ms 지연·live 센서 연속성을 입증하지 않는다. 별도 GT가 없는 신규 장애물의 연속성도 평가 완료로 만들지 않는다.
+
+[Capture RGB 범위 점검](http://localhost:8768/camera-bbox-pilot-v1/native-gt-review/)에서는
+actor GT의 기하 정확성과 전체 시설물 주석 완전성을 구분했다. 작은 미확정 actor만 남았다는
+이유로 Capture를 자동 full-GT로 승격하지 않는다. 반대로 실제 완전 주석 영상에서는
+제외된 신호등/표지판 위치의 잘못된 box 검출을 ignore로 면제하지 않는다.
