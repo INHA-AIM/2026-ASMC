@@ -9,7 +9,7 @@
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
 **이번 PR #78은 v4 bbox 부분집합·검수 병목 보고까지 진행한다. 운영 실행은 수정하지 않는다.**
-최신 수치·갤러리·남은 조건은 [JJJ 전체 검수 결과](#jjj-혼합-라벨-전체-검수--2026-10-11-r4)를 먼저 읽는다.
+최신 수치·갤러리·남은 조건은 [동물·오토바이 보강 결과](#동물오토바이-보강과-수량--2026-10-11-coverage-r1)를 먼저 읽는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
 MORAI 사용자 표기는 실제 gRPC API 이름이 아니며, 미확인 API 이름은 null로 둔다.
@@ -96,9 +96,62 @@ Teacher 미검출은 빈 정답이 아니다. 모든 이름 변경·추가 박�
 운영 모델·ROS 계약·차량 제어는 유지하고, 추가 수집·학습은 이번 범위 밖이다.
 
 
+## 동물·오토바이 보강과 수량 — 2026-10-11 coverage-r1
+
+최신 부분집합은 `data/dataset_versions/camera_objects_bbox_v4-coverage-r1`이다.
+[고정 설정](../../../config/experiments/camera_training_data_v4_coverage.json),
+[결과표](../../../config/baselines/perception_camera_training_data_v4_coverage.yaml),
+[실제 YOLO 파일 검증](../../../config/baselines/evidence/camera_training_data_v4_coverage/verification.json),
+[검수 갤러리](http://localhost:8768/camera-training-data-audit-v4-coverage-review/coverage-review.html)를
+참조한다. 아래 mixed-r4와 원본·검수 기록은 그대로 보존했다.
+
+| 수량의 의미 | 이미지 수 |
+|---|---:|
+| Roboflow 22개 자료의 로컬 확보 파일 | 46,326 |
+| 그중 현재 bbox 학습용 데이터에 채택한 Roboflow | 5,008 |
+| 함께 채택한 Capture | 5 |
+| 현재 정리한 데이터 전체 | **5,013** |
+| train / selection / heldout | **4,233 / 113 / 667** |
+
+46,326장은 증강본·프로젝트 간 중복을 포함하며 고유 원본 장면 수가 아니다.
+17개 프로젝트는 공개 버전 export, 5개는 공개 snapshot이다. 22개의 최신 버전을
+모두 확보했다고 표현하지 않는다. Capture 전체 인벤토리 30,090장은 별도이며,
+현재 채택된 5장과 혼동하지 않는다. 위 수량은 학습을 이미 수행한 수가 아니다.
+
+이번에는 전체 RGB **189장**을 검토했다. animal-tohen 50장과 dog/deer 원본 박스 확대,
+detection-bzetd의 bike 63장과 bike/Obstacle 확대, bicycle-man 표본 50장,
+Enzo dog 100장 중 처음 24장, hl-fma others 2장이다. Enzo 나머지 76장은 검수 시트를
+생성했지만 이번에 검토했다고 세지 않는다. 이름 수정 수락 105장 중 2장은 기존 평가
+영상과 유사해 보류했고, 실제 **103장·454객체**를 train에 추가했다.
+총 객체는 **73,030개**다. 새 객체는 motorcycle 189, person 137, dog 30, truck 29,
+deer 24, car 22, traffic_drum 14, bus 7, box 2다.
+
+- `animal`은 원본 RGB에서 dog/deer를 개별 구분했다. 작은 양성 GT와 증강 원본은 유지했다.
+- detection-bzetd의 `bike`는 검토한 영상에서 탑승자 없는 오토바이·스쿠터다.
+  `motorcycle`로 연결하며 다른 소스의 bike에 같은 규칙을 적용하지 않는다.
+- 같은 소스 `Obstacle`은 대부분 드럼이지만 주석 120은 나무상자다. 개별 ID와
+  이미지 SHA로 수정하며 이미지 간 annotation ID가 같다고 같은 객체로 합치지 않는다.
+- bicycle-man의 박스는 사람+자전거 전체를 포함하며 같은 영상의 차·콘 등이 빠져 있다.
+  원본 의도대로 유효한 복합 주석이지만 우리의 분리 기준에는 구성요소와 다른 대상
+  주석 보완이 필요하다. 같은 박스를 person/bicycle 두 개로 복제하지 않는다.
+- Enzo dog에는 사슴이 함께 들어 있고 앞쪽 주황/검정 철제 방책 주석이 없다.
+  이름만 고쳐 채택하지 않았다. hl-fma `others` 두 장은 유모차가 아닌 나무상자이며,
+  그중 한 장은 다른 큰 부분 상자가 미주석이라 보류했다.
+
+[이번 보완 목록](http://localhost:8768/camera-training-data-audit-v4-coverage-review/pending-worklist.json)에
+미채택 86장의 사유를 남겼다. 기존 채택 소실·split 이동·원본 좌표 변경·확인된 분할
+누출은 모두 0이다. 새 자료의 이름 수정에 teacher 예측을 정답으로 사용하지 않았다.
+
+dog/deer train과 motorcycle train은 보강됐지만 독립 selection과 bicycle/stroller는
+여전히 부족하다. 전체는 14/16종이며 16종 비교 학습 준비 완료가 아니다.
+볼라드·드럼 편중도 남아 있어 다음 학습 단계에서 클래스별 표본 균형을 확인해야 한다.
+다음 보완은 자전거 복합 박스·동물 평가 영상의 누락 주석을 먼저 해결하고,
+유모차 자료와 독립 평가 장면을 확인하는 것이다. 평가 자료를 train으로 옮기지 않는다.
+학습·추가 수집·GPU 실행·운영 추론 변경은 수행하지 않았다.
+
 ## JJJ 혼합 라벨 전체 검수 — 2026-10-11 r4
 
-최신 부분집합은 `data/dataset_versions/camera_objects_bbox_v4-mixed-r4`다.
+이전 부분집합은 `data/dataset_versions/camera_objects_bbox_v4-mixed-r4`다.
 [고정 설정](../../../config/experiments/camera_training_data_v4_jjj.json),
 [결과표](../../../config/baselines/perception_camera_training_data_v4_jjj.yaml),
 [실제 파일·분할·SHA 검증](../../../config/baselines/evidence/camera_training_data_v4_jjj/verification.json)을
