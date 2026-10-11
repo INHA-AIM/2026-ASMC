@@ -1,11 +1,11 @@
-"""Opt-in YOLOE-l batch runtime. Exported engines retain their baked names."""
+"""Opt-in YOLOE batch runtime. Exported engines retain their baked names."""
 import json
 import time
 from pathlib import Path
 
 import numpy as np
 
-from .batching import SHAPES, batch_groups, pack_image
+from .batching import SHAPES, batch_groups, pack_image, shapes_for_front
 from .segmentation import SegmentationFrame, load_prompt_embeddings, select_result
 from .ultralytics_backend import cuda_preflight, file_sha256, DetectorStartupError
 
@@ -16,15 +16,16 @@ class BatchedSegmentationDetector:
     def __init__(self, weights, prompt_embeddings, conf_thres=.7, allowed_names=(),
                  expected_sha256='', device='cuda:0', require_cuda=True,
                  batch_mode='2plus1', runtime_backend='tensorrt',
-                 source_checkpoint_sha256='',expected_prompt_sha256='', **unused):
+                 source_checkpoint_sha256='',expected_prompt_sha256='', front_width=1280, **unused):
         import torch
         import ultralytics
         from ultralytics import YOLO, YOLOE
         self.torch, self.device = torch, device
         self.mode, self.conf = batch_mode, float(conf_thres)
+        self.shapes = shapes_for_front(front_width)
         batch_groups(['front', 'left', 'right'], batch_mode)
         if not require_cuda or not device.startswith('cuda'):
-            raise DetectorStartupError('YOLOE-l study requires CUDA; no CPU fallback')
+            raise DetectorStartupError('YOLOE study requires CUDA; no CPU fallback')
         ok, report = cuda_preflight(torch, device)
         if not ok:
             raise DetectorStartupError(report)
@@ -52,7 +53,7 @@ class BatchedSegmentationDetector:
             self.model = YOLOE(str(path))
             self.model.set_classes(names, torch.as_tensor(embeddings))
             if self.model.model.model[-1].end2end:
-                raise DetectorStartupError('expected official YOLOE-l one-to-many checkpoint head')
+                raise DetectorStartupError('expected official YOLOE one-to-many checkpoint head')
             self.model.fuse()
             self.model.to(device)
         else:
@@ -71,7 +72,7 @@ class BatchedSegmentationDetector:
             raise DetectorStartupError('runtime changed the official one-to-many head')
         self.info = dict(backend=runtime_backend, model_kind='yoloe', weights=str(path),
             weights_sha256=actual, prompt_embeddings_sha256=file_sha256(Path(prompt_embeddings)),
-            prompt_names=self.names_list, batch_mode=batch_mode, shapes=SHAPES,
+            prompt_names=self.names_list, batch_mode=batch_mode, shapes=self.shapes,
             device=device, model_device=device, ultralytics=ultralytics.__version__,
             torch=torch.__version__, conf_thres=self.conf, model_load_ms=load_ms,
             warmup_ms=(time.monotonic()-warm)*1000, masks_materialized=True)
@@ -85,8 +86,9 @@ class BatchedSegmentationDetector:
         from ultralytics.utils.ops import scale_masks
         results_by_view = {}
         for group in batch_groups(order, self.mode):
-            common = SHAPES['front'] if self.mode == 'batch3' else None
-            prepared = [pack_image(images[v], v, common) for v in group]
+            common = (max(self.shapes[v][0] for v in group),
+                      max(self.shapes[v][1] for v in group)) if self.mode == 'batch3' else None
+            prepared = [pack_image(images[v], v, common, self.shapes) for v in group]
             tensor_hw = prepared[0][0].shape[:2]
             if any(p.shape[:2] != tensor_hw for p,_ in prepared):
                 raise ValueError('inconsistent batch shapes')

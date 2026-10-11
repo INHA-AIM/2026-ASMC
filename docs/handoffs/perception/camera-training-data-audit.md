@@ -1267,3 +1267,22 @@ python tools/perception/prepare_camera_bbox_pilot.py \
 ```
 
 학습은 이 결과를 포함한 별도 브랜치에서 직렬 실행한다. 운영 모델과 ROS 설정은 변경하지 않는다.
+
+## 2026-10-11 PR #78 병합 범위와 main 통합
+
+사용자 승인으로 hosted CI billing 제한 상태에서도 데이터·감사·샘플링 도구를 main에
+병합한다. 미확인 자료까지 완전한 GT로 수락하거나 운영 모델을 교체하는 병합은 아니다.
+채택 tier와 소스별 허용 혼입, 미완전 주석, 평가 부족과 stroller 미지원은 유지한다.
+#80의 두 모델 파일럿은 별도 작업이며 이 PR에서 학습 수락을 주장하지 않는다.
+
+#77 병합 main `c8ce3f55`를 반영했다. 공유 준비 도구는 m/l의 640/960/1280·variant
+export와 X teacher의 PyTorch-only 제한을 모두 유지한다. X ONNX/engine 차단 및
+전방·측방 입력 profile 경계 시험을 추가했다. 데이터·샘플링·준비 도구 CPU 시험
+117개와 perception 계약/토픽/runtime validator 및 문서 migration 검사 4개가 통과했다.
+#77에서 확인한 카메라 전체 306개 중 main의 기존 facade 1건 실패는 별도로 유지한다.
+해당 runtime 및 launch는 이 PR에서 변경하지 않는다. hosted CI를 통과로 표시하지 않는다.
+
+현재 v5-capture-r1의 실제 YOLO 이미지/라벨을 다시 읽어 22,498장·127,334객체,
+픽셀 해시 기준 split 누출 0을 확인했다. manifest SHA는
+`63cc3539294a7035d537073b77cac08b7672107b13483418dac402de2c794a3b`다.
+이는 파일·좌표·ID·split 검증이며 모든 주석의 영상 의미 정확도를 보증하지 않는다.

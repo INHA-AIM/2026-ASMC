@@ -20,11 +20,24 @@ FIXTURE = [('vehicle','2014_Kia_K7',20.,0.),
 TYPES = dict(vehicle=OBJECT_TYPE_VEHICLE,pedestrian=OBJECT_TYPE_PEDESTRIAN,obstacle=OBJECT_TYPE_OBSTACLE)
 
 
+def load_fixture(path):
+    if path is None:
+        return FIXTURE
+    rows=json.loads(path.read_text())
+    if len(rows)!=len(FIXTURE):raise ValueError('fixture must preserve all nine actor types/models')
+    if [(r[0],r[1]) for r in rows]!=[(r[0],r[1]) for r in FIXTURE]:
+        raise ValueError('fixture must preserve actor types/models and order')
+    if any(len(r)!=4 or not all(math.isfinite(float(x)) and abs(float(x))<=100 for x in r[2:]) for r in rows):
+        raise ValueError('invalid fixture offset')
+    return rows
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('operation',choices=['create','cleanup'])
     p.add_argument('--registry',type=Path,required=True)
     p.add_argument('--grpc-host',default='host.docker.internal')
+    p.add_argument('--fixture',type=Path,help='Explicit offsets for the same nine models; ground gate unchanged')
     a=p.parse_args();channel=grpc.insecure_channel(a.grpc_host+':7789')
     actors=ActorStub(channel)
     if a.operation=='cleanup':
@@ -45,9 +58,11 @@ def main():
     ground=ego.bounding_box.location.z-ego.bounding_box.extent.z
     report=dict(ego_before=MessageToDict(ego),actors=[],pixel_gt=False,height_gate_m=.2,
                 scope='stationary compute load fixture; not automatic driving or pixel ground truth')
+    fixture=load_fixture(a.fixture)
+    report['fixture']=fixture
     a.registry.parent.mkdir(parents=True,exist_ok=True)
     def save():a.registry.write_text(json.dumps(report,indent=2)+'\n')
-    for kind,model,forward,lateral in FIXTURE:
+    for kind,model,forward,lateral in fixture:
         info=ObjectInfo(object_type=TYPES[kind],client_key='coco7_fixture');info.id.value='coco7_fixture_'+uuid.uuid4().hex[:12]
         row=dict(id=info.id.value,type=kind,model=model,forward_m=forward,lateral_m=lateral,created=False)
         report['actors'].append(row);save()

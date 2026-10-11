@@ -1,0 +1,45 @@
+model_id: yoloe-26m-seg
+weights: /data/models/camera_yoloe_selection_v1/m/obstacle17-960.engine
+expected_sha256: 4e420637b27e17bc1c55b6c956f1ee428383c67b957b10a7e5d6996d4df2a95d
+source_checkpoint_sha256: 585f5ec9028fd358035da8d860c27c56be285a795cba2076fba536a4391c2c83
+expected_prompt_sha256: be92d2f3f6663d2179a5e5412e5aa75d77a172283575013f5c930cc473a8efcb
+prompt_embeddings: /data/models/camera_yoloe_selection_v1/m/obstacle17.npz
+model_kind: yoloe
+runtime_backend: tensorrt
+seg_experiment: true
+batched_experiment: true
+batched_runtime: false
+task: segment
+front_width: 960
+batch_mode: 2plus1
+batch_wait_ms: 10.0
+label_mode: source
+allowed_names:
+- person
+- dog
+- deer
+- bicycle
+- car
+- truck
+- bus
+- motorcycle
+- scooter
+- electric scooter
+- bollard
+- cargo box
+- wooden box
+- steel barricade
+- traffic cone
+- traffic barrel
+- baby stroller
+conf_thres: 0.4
+device: cuda:0
+require_cuda: true
+views:
+- front
+- left
+- right
+target_hz_by_view:
+  front: 15.0
+  left: 15.0
+  right: 15.0

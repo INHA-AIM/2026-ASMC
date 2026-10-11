@@ -33,6 +33,8 @@ def main():
     p.add_argument('--revision',required=True)
     p.add_argument('--repeats',type=int,default=3)
     p.add_argument('--target-hz',type=float,default=10.,help='Uniform YOLO rate; keep identical for both policies')
+    p.add_argument('--policies',nargs='+',choices=['unique','bounded_reuse'],default=['unique','bounded_reuse'])
+    p.add_argument('--skip-diagnostic',action='store_true',help='Keep acceptance runs only; do not silently replace trace-OFF measurements')
     a=p.parse_args()
     if not 0<a.target_hz<=20: p.error('target Hz must be in (0,20]')
     if os.environ.get('ROS_MASTER_URI')!='http://127.0.0.1:11314':p.error('isolated ROS master11314 required')
@@ -49,8 +51,9 @@ def main():
     (a.output/'provenance.json').write_text(json.dumps(provenance(a.models,engine,a.revision),indent=2)+'\n')
     result=[]
     jobs=[dict(bag_id=bag,policy=policy,repeat=r,diagnostic=False) for r in range(1,a.repeats+1)
-          for bag in ('primary','shadow') for policy in ('unique','bounded_reuse')]
-    jobs += [dict(bag_id=bag,policy=policy,repeat=1,diagnostic=True) for bag in ('primary','shadow') for policy in ('unique','bounded_reuse')]
+          for bag in ('primary','shadow') for policy in a.policies]
+    if not a.skip_diagnostic:
+        jobs += [dict(bag_id=bag,policy=policy,repeat=1,diagnostic=True) for bag in ('primary','shadow') for policy in a.policies]
     for job in jobs:
         label='{bag_id}-{policy}-r{repeat}'.format(**job)+('-trace' if job['diagnostic'] else '')
         core=child=None
