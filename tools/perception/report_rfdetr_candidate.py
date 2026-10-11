@@ -11,16 +11,56 @@ from evaluate_rfdetr_candidate import seven_rows,validate_saved_evaluation
 from diagnose_camera_bbox_regression import diagnose_frame
 
 
+def frame_changes(baseline,candidate):
+    """Diagnostic matching inserts TPs first; join GT identity, never list order."""
+    before={r['annotation_index']:r for r in baseline}
+    after={r['annotation_index']:r for r in candidate}
+    if set(before)!=set(after):raise ValueError('comparison GT membership mismatch')
+    return [dict(baseline=before[k],candidate=after[k]) for k in sorted(before)
+            if before[k]['category']!=after[k]['category']]
+
+
+def integrated_reports(matrices):
+    """Keep run/view percentiles separate; never average run medians or hide failures."""
+    result=[]
+    for matrix in matrices:
+        protocol=json.loads((matrix/'weather-protocol.json').read_text())
+        if protocol.get('restoration_errors') or not protocol.get('restored_weather'):
+            raise ValueError('live matrix weather restoration incomplete')
+        for path in sorted(matrix.glob('*/*/report.json')):
+            report=json.loads(path.read_text())
+            if not report.get('observation_window_completed'):
+                raise ValueError('incomplete live window cannot be a timing comparison')
+            views={k[5:]:v
+                   for k,v in report['measurements'].items() if k.startswith('yolo_')}
+            if set(views)!={'front','left','right'} or any(not v['complete'] for v in views.values()):
+                raise ValueError('live comparison requires three complete views')
+            diagnostic_path=path.parent/'diagnostics.json'
+            diagnostics=json.loads(diagnostic_path.read_text()) if diagnostic_path.exists() else []
+            object_diagnostics=[v for row in diagnostics for v in row.get('values',[])
+                                if 'model_kind' in v]
+            result.append(dict(path=str(path),report_sha256=sha(path),job=report['job'],
+                runtime=report.get('runtime',{}),
+                passed=report['passed'],failures=report['failures'],views=views,
+                input_hz=report['input_hz'],planning=report['planning'],
+                other_models={k:v for k,v in report['measurements'].items() if not k.startswith('yolo_')},
+                resources=report['resources'],startup_resources=report['resources_startup_and_active'],
+                weather_restored=protocol['restored_weather'],timestamp_policy=report['timestamp_policy'],
+                object_diagnostics_last=object_diagnostics[-1] if object_diagnostics else None))
+    return result
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--dataset',type=Path,required=True);p.add_argument('--baseline',type=Path,required=True)
     p.add_argument('--candidate',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--parity-report',type=Path,help='Exact candidate engine numerical qualification evidence')
+    p.add_argument('--live-matrices',type=Path,nargs='*',default=[],help='Completed diagnostic weather matrices')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
     rows=seven_rows([r for r in read_jsonl(a.dataset/'manifest.jsonl') if r['split'] in ('selection','heldout')])
     bp={r['id']:r for r in read_jsonl(a.baseline/'predictions.jsonl')}
     cp={r['id']:r for r in read_jsonl(a.candidate/'predictions.jsonl')}
-    validate_saved_evaluation(a.dataset,a.baseline,rows,list(bp.values()))
+    baseline_info=validate_saved_evaluation(a.dataset,a.baseline,rows,list(bp.values()))
     candidate_info=validate_saved_evaluation(a.dataset,a.candidate,rows,list(cp.values()))
     parity=json.loads(a.parity_report.read_text()) if a.parity_report else None
     if parity and parity['model_sha256']!=candidate_info['weights_sha256']:
@@ -31,7 +71,7 @@ def main():
     failures=[];picked=[]
     for r in rows:
         b=diagnose_frame(r,bp[r['id']]['predictions'],.4);c=diagnose_frame(r,cp[r['id']]['predictions'],.4)
-        changes=[dict(baseline=x,candidate=y) for x,y in zip(b,c) if x['category']!=y['category']]
+        changes=frame_changes(b,c)
         if changes:failures.append(dict(id=r['id'],split=r['split'],view=r.get('view'),changes=changes))
         if changes:picked.append((r,changes))
     # Keep all changes in machine-readable evidence; bound only preview images.
@@ -67,6 +107,11 @@ def main():
         parity=parity,parity_report_sha256=sha(a.parity_report) if a.parity_report else None,
         runtime_accepted=False,
         scope='same RGB at confidence .40; GT original, only known COCO7; no new labels/training')
+    report['integrated_runs']=integrated_reports(a.live_matrices)
+    for run in report['integrated_runs']:
+        info=candidate_info if run['job']['model'].startswith('rfdetr-') else baseline_info
+        if run['runtime'].get('expected_sha256')!=info['weights_sha256']:
+            raise ValueError('live/offline engine SHA mismatch')
     save(a.output/'comparison.json',report)
     parity_blocks=[]
     if parity:
@@ -110,10 +155,22 @@ MORAI 포함 통합 지연은 이 페이지에서 측정하지 않았습니다. 
 오토바이 heldout은 단일 소스에 편중돼 있으며 일부 클래스는 평가 자료가 없습니다. 오프라인 추론 시간은 통합 지연이 아닙니다.</p>
 <table><tr><th>분할</th><th>클래스</th><th>GT</th><th>YOLO TP</th><th>RF TP</th><th>RF F1 (완전 GT만)</th></tr>%s</table>
 <p><a href="comparison.json">전체 지표·confidence 탐색·변경 목록</a></p>%s%s</html>'''%(''.join(table),''.join(parity_blocks),''.join(blocks))
+    live_rows=[]
+    for run in report['integrated_runs']:
+        for view in ('front','left','right'):
+            v=run['views'][view];lat=v['input_to_output_wall_ms']
+            live_rows.append('<tr><td>%s</td><td>%s</td><td>%s</td><td>%.2f</td><td>%.1f / %.1f / %.1f</td><td>%.1f</td><td>%s</td></tr>'%
+                (html.escape(run['job']['weather_requested']),html.escape(run['job']['model']),view,v['hz'],
+                 lat['p50'],lat['p95'],lat['p99'],v['max_gap_sec']*1000,
+                 html.escape(', '.join(run['failures']) or '측정 gate 통과')))
+    if live_rows:
+        document=document.replace('</table>','</table><h2>MORAI 포함 통합 진단</h2><p>날씨별 60초 선별 실행. 반복 수락이나 주행 수락이 아닙니다. 입력 callback 수신→출력 수신 wall 지연이며 렌더링·센서 취득부터의 지연이 아닙니다. 실패·뷰별 원본 percentile을 보존하며 실행별 p50을 평균하지 않습니다.</p><table><tr><th>날씨</th><th>모델</th><th>뷰</th><th>Hz</th><th>p50 / p95 / p99 ms</th><th>최대 공백 ms</th><th>실행 판정</th></tr>'+''.join(live_rows)+'</table>',1)
     qualification=('FP16 수치 일치 기준 미달' if parity and not parity['passed'] else
                    '수치 일치 통과, 통합·품질 수락은 별도' if parity else '수치 일치 검증 근거 미첨부')
     (a.output/'index.html').write_text(document.replace('CANDIDATE_KIND',html.escape(candidate_label)).replace(
-        'QUALIFICATION',qualification),encoding='utf-8')
+        'QUALIFICATION',qualification).replace('MORAI 포함 통합 지연은 이 페이지에서 측정하지 않았습니다.',
+        'MORAI 포함 통합 진단을 아래에 별도로 기록했습니다.' if live_rows else
+        'MORAI 포함 통합 지연은 이 페이지에서 측정하지 않았습니다.'),encoding='utf-8')
     print(json.dumps(dict(changed_frames=len(failures),preview_images=len(selected),gallery=str(a.output))))
 
 

@@ -12,6 +12,7 @@ from asmc_camera.detection.rfdetr_core import COCO7,COCO7_IDS,MEAN,STD,decode,gr
 from evaluate_rfdetr_candidate import next_step,quality_gate,seven_rows,validate_saved_evaluation
 from camera_data_audit import sha
 from check_rfdetr_parity import compare
+from report_rfdetr_candidate import frame_changes,integrated_reports
 from asmc_camera.detection.backend import Detection
 
 
@@ -91,6 +92,32 @@ class RFDetrTest(unittest.TestCase):
         before=copy.deepcopy(r);out=seven_rows(r)
         self.assertEqual(r,before);self.assertEqual(out[0]['annotations'][0]['disposition'],'excluded')
         self.assertEqual(out[0]['annotations'][1]['training_class'],'person')
+
+    def test_gallery_pairs_same_gt_when_diagnostic_insertion_order_changes(self):
+        before=[dict(annotation_index=0,category='correct'),dict(annotation_index=1,category='correct')]
+        after=[dict(annotation_index=1,category='correct'),dict(annotation_index=0,category='confidence_below_threshold')]
+        changes=frame_changes(before,after)
+        self.assertEqual(len(changes),1)
+        self.assertEqual(changes[0]['baseline']['annotation_index'],0)
+        self.assertEqual(changes[0]['candidate']['annotation_index'],0)
+        with self.assertRaises(ValueError):frame_changes(before,after[:1])
+
+    def test_live_report_preserves_failed_windows_and_individual_percentiles(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);run=root/'sunny'/'rf';run.mkdir(parents=True)
+            protocol=dict(restoration_errors=[],restored_weather='CLOUDY')
+            (root/'weather-protocol.json').write_text(json.dumps(protocol))
+            report=dict(observation_window_completed=True,passed=False,failures=['latency'],job={},
+                measurements={'yolo_'+v:dict(complete=True,input_to_output_wall_ms=dict(p50=123.4))
+                              for v in ('front','left','right')},input_hz={},planning={},
+                resources={},resources_startup_and_active={},timestamp_policy={})
+            path=run/'report.json';path.write_text(json.dumps(report))
+            data=integrated_reports([root]);self.assertFalse(data[0]['passed'])
+            self.assertEqual(data[0]['views']['front']['input_to_output_wall_ms']['p50'],123.4)
+            report['observation_window_completed']=False;path.write_text(json.dumps(report))
+            with self.assertRaises(ValueError):integrated_reports([root])
+            protocol['restoration_errors']=['failed'];(root/'weather-protocol.json').write_text(json.dumps(protocol))
+            with self.assertRaises(ValueError):integrated_reports([root])
 
     def test_saved_evaluation_rejects_stale_split_missing_or_wrong_rgb(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "created_utc": "2026-10-11T06:49:20.458997+00:00",
-  "status": "selection_deferred",
+  "status": "analysis_complete_rf_not_selected",
   "operating_model_changed": false,
   "training_performed": false,
   "source": {
@@ -1016,16 +1016,759 @@
     }
   ],
   "integrated_measurement": {
-    "status": "pending_simulator_restart",
-    "runs_completed": 0,
-    "p50_ms": null,
-    "p95_ms": null,
-    "p99_ms": null,
-    "vram_percent": null,
-    "reason": "MORAI is stopped; user restart question pending. Offline group times are not integrated ROS latencies."
+    "status": "diagnostic_complete_not_accepted",
+    "runs_completed": 5,
+    "evidence": "config/baselines/evidence/camera_rfdetr_selection_v1/integrated-screen-summary.json",
+    "scope": "60-second diagnostic screens, not final three-repeat acceptance or driving test; per-view percentiles kept per run, not averaged",
+    "vram_cap_percent": 90,
+    "weather": [
+      "SUNNY",
+      "FOGGY"
+    ],
+    "public_control_published": false,
+    "actors_spawned": 0,
+    "weather_restored": "CLOUDY",
+    "runs": [
+      {
+        "model": "rfdetr-l-704",
+        "weather": "sunny",
+        "passed": false,
+        "failures": [
+          "yolo front supply/latency gate",
+          "yolo left supply/latency gate",
+          "yolo right supply/latency gate"
+        ],
+        "views": {
+          "left": {
+            "messages": 606,
+            "hz": 10.1,
+            "valid_messages": 606,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 9,
+            "five_second_hz": [
+              9.4,
+              10.6,
+              9.6,
+              10.2,
+              10.2,
+              9.8,
+              11.0,
+              10.6,
+              9.8,
+              9.0,
+              10.4,
+              10.6
+            ],
+            "max_gap_sec": 0.2189002349623479,
+            "first_output_sec": 0.1554135899641551,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 606,
+              "p50": 127.16913199999999,
+              "p95": 173.3019945,
+              "p99": 205.09520725000013,
+              "maximum": 250.641823
+            },
+            "input_to_output_wall_ms": {
+              "samples": 606,
+              "p50": 126.30351400002837,
+              "p95": 172.8249492298346,
+              "p99": 203.9091851911509,
+              "maximum": 240.84843299351633
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "right": {
+            "messages": 608,
+            "hz": 10.133333333333333,
+            "valid_messages": 608,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 9,
+            "five_second_hz": [
+              9.4,
+              10.6,
+              9.6,
+              10.2,
+              10.2,
+              9.8,
+              11.0,
+              10.8,
+              9.8,
+              9.0,
+              10.4,
+              10.8
+            ],
+            "max_gap_sec": 0.2181493389653042,
+            "first_output_sec": 0.15545887500047684,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 608,
+              "p50": 125.1777415,
+              "p95": 174.94964554999999,
+              "p99": 203.23092004,
+              "maximum": 250.412464
+            },
+            "input_to_output_wall_ms": {
+              "samples": 608,
+              "p50": 124.33920151670463,
+              "p95": 174.08361252455506,
+              "p99": 202.60402035084553,
+              "maximum": 233.86126896366477
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "front": {
+            "messages": 607,
+            "hz": 10.116666666666667,
+            "valid_messages": 607,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 9,
+            "five_second_hz": [
+              9.4,
+              10.6,
+              9.6,
+              10.2,
+              10.2,
+              9.8,
+              11.0,
+              10.8,
+              9.8,
+              9.0,
+              10.4,
+              10.6
+            ],
+            "max_gap_sec": 0.21865905600134283,
+            "first_output_sec": 0.1554729649797082,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 607,
+              "p50": 127.255201,
+              "p95": 173.2089041,
+              "p99": 201.49730702000016,
+              "maximum": 239.896774
+            },
+            "input_to_output_wall_ms": {
+              "samples": 607,
+              "p50": 126.15591596113518,
+              "p95": 172.32080087414943,
+              "p99": 200.76446613064053,
+              "maximum": 236.9570599985309
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4342.0
+      },
+      {
+        "model": "yolo26l",
+        "weather": "sunny",
+        "passed": true,
+        "failures": [],
+        "views": {
+          "right": {
+            "messages": 893,
+            "hz": 14.883333333333333,
+            "valid_messages": 893,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.6,
+              15.0,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              14.8
+            ],
+            "max_gap_sec": 0.1726116460049525,
+            "first_output_sec": 0.02862333902157843,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 893,
+              "p50": 45.059204,
+              "p95": 64.0547758,
+              "p99": 79.06540848000003,
+              "maximum": 91.864824
+            },
+            "input_to_output_wall_ms": {
+              "samples": 893,
+              "p50": 44.27124198991805,
+              "p95": 63.26665057567879,
+              "p99": 78.6601001233794,
+              "maximum": 91.23012603959069
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "front": {
+            "messages": 896,
+            "hz": 14.933333333333334,
+            "valid_messages": 896,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              15.0
+            ],
+            "max_gap_sec": 0.1819704389781691,
+            "first_output_sec": 0.08038064796710387,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 896,
+              "p50": 44.2239045,
+              "p95": 65.66470874999999,
+              "p99": 77.8881789,
+              "maximum": 87.495088
+            },
+            "input_to_output_wall_ms": {
+              "samples": 896,
+              "p50": 43.436054984340444,
+              "p95": 64.32845024392009,
+              "p99": 77.08794321515596,
+              "maximum": 86.78499003872275
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "left": {
+            "messages": 895,
+            "hz": 14.916666666666666,
+            "valid_messages": 895,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              14.8,
+              14.8,
+              15.2,
+              14.8,
+              15.0
+            ],
+            "max_gap_sec": 0.1820137540344149,
+            "first_output_sec": 0.08043386699864641,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 895,
+              "p50": 45.648575,
+              "p95": 66.1840197,
+              "p99": 80.21803845999995,
+              "maximum": 90.050698
+            },
+            "input_to_output_wall_ms": {
+              "samples": 895,
+              "p50": 45.01823300961405,
+              "p95": 65.30668089399113,
+              "p99": 79.70472274697381,
+              "maximum": 89.50900298077613
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4342.0
+      },
+      {
+        "model": "rfdetr-l-704",
+        "weather": "foggy",
+        "passed": false,
+        "failures": [
+          "yolo front supply/latency gate",
+          "yolo left supply/latency gate",
+          "yolo right supply/latency gate"
+        ],
+        "views": {
+          "right": {
+            "messages": 681,
+            "hz": 11.35,
+            "valid_messages": 681,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 11,
+            "five_second_hz": [
+              11.8,
+              11.6,
+              11.0,
+              11.4,
+              11.4,
+              11.4,
+              11.2,
+              11.4,
+              11.0,
+              11.2,
+              11.6,
+              11.2
+            ],
+            "max_gap_sec": 0.1797067429870367,
+            "first_output_sec": 0.0994987859739922,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 681,
+              "p50": 112.975836,
+              "p95": 159.693957,
+              "p99": 174.6539112000001,
+              "maximum": 248.623848
+            },
+            "input_to_output_wall_ms": {
+              "samples": 681,
+              "p50": 112.16471897205338,
+              "p95": 159.2088380130008,
+              "p99": 174.16761318454527,
+              "maximum": 247.9358339915052
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "front": {
+            "messages": 681,
+            "hz": 11.35,
+            "valid_messages": 681,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 11,
+            "five_second_hz": [
+              11.8,
+              11.6,
+              11.0,
+              11.4,
+              11.4,
+              11.4,
+              11.2,
+              11.4,
+              11.0,
+              11.2,
+              11.6,
+              11.2
+            ],
+            "max_gap_sec": 0.17929687799187377,
+            "first_output_sec": 0.0995796819915995,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 681,
+              "p50": 113.928557,
+              "p95": 159.833431,
+              "p99": 172.55086860000014,
+              "maximum": 246.540546
+            },
+            "input_to_output_wall_ms": {
+              "samples": 681,
+              "p50": 113.1896140286699,
+              "p95": 158.80184201523662,
+              "p99": 171.32959138834863,
+              "maximum": 245.81005302025005
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "left": {
+            "messages": 679,
+            "hz": 11.316666666666666,
+            "valid_messages": 679,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 10,
+            "five_second_hz": [
+              11.6,
+              11.6,
+              11.0,
+              11.4,
+              11.4,
+              11.4,
+              11.2,
+              11.4,
+              11.0,
+              11.0,
+              11.6,
+              11.2
+            ],
+            "max_gap_sec": 0.17950791597831994,
+            "first_output_sec": 0.12980813201284036,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 679,
+              "p50": 114.848853,
+              "p95": 159.27774950000003,
+              "p99": 171.14305528,
+              "maximum": 221.443653
+            },
+            "input_to_output_wall_ms": {
+              "samples": 679,
+              "p50": 114.38542400719598,
+              "p95": 158.32127323374158,
+              "p99": 169.54204802867025,
+              "maximum": 220.818963018246
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4045.0
+      },
+      {
+        "model": "yolo26l",
+        "weather": "foggy",
+        "passed": false,
+        "failures": [
+          "yolo front supply/latency gate",
+          "yolo left supply/latency gate",
+          "yolo right supply/latency gate",
+          "twinlite front supply gate",
+          "twinlite left supply gate",
+          "twinlite right supply gate",
+          "resnet18 resnet18 supply gate"
+        ],
+        "views": {
+          "left": {
+            "messages": 883,
+            "hz": 14.716666666666667,
+            "valid_messages": 883,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.4,
+              14.6,
+              14.8,
+              14.8,
+              15.2,
+              14.6,
+              14.8,
+              14.8,
+              14.8,
+              14.4,
+              14.8,
+              14.6
+            ],
+            "max_gap_sec": 0.33229178498731926,
+            "first_output_sec": 0.04873011895688251,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 883,
+              "p50": 39.24942,
+              "p95": 62.6925226,
+              "p99": 77.09373039999993,
+              "maximum": 323.044062
+            },
+            "input_to_output_wall_ms": {
+              "samples": 883,
+              "p50": 38.35835895733908,
+              "p95": 61.95409420761278,
+              "p99": 75.46801733435127,
+              "maximum": 322.51048798207194
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "right": {
+            "messages": 886,
+            "hz": 14.766666666666667,
+            "valid_messages": 886,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.8,
+              14.6,
+              14.8,
+              15.0,
+              15.0,
+              14.6,
+              15.0,
+              15.0,
+              15.0,
+              14.0,
+              14.8,
+              14.6
+            ],
+            "max_gap_sec": 0.35181187198031694,
+            "first_output_sec": 0.10289560497039929,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 886,
+              "p50": 46.04315750000001,
+              "p95": 71.0088615,
+              "p99": 79.14487079999999,
+              "maximum": 323.383808
+            },
+            "input_to_output_wall_ms": {
+              "samples": 886,
+              "p50": 45.40296451887116,
+              "p95": 70.41662198025733,
+              "p99": 78.61733135650866,
+              "maximum": 322.7848560200073
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "front": {
+            "messages": 889,
+            "hz": 14.816666666666666,
+            "valid_messages": 889,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.8,
+              14.8,
+              14.8,
+              15.0,
+              15.2,
+              14.6,
+              14.8,
+              15.2,
+              14.8,
+              14.2,
+              14.8,
+              14.8
+            ],
+            "max_gap_sec": 0.3521589969750494,
+            "first_output_sec": 0.1031815999886021,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 889,
+              "p50": 45.009137,
+              "p95": 69.58093620000001,
+              "p99": 77.45848588,
+              "maximum": 321.663141
+            },
+            "input_to_output_wall_ms": {
+              "samples": 889,
+              "p50": 44.08832604531199,
+              "p95": 68.75651744194329,
+              "p99": 76.27829595003277,
+              "maximum": 321.00270997034386
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4207.0
+      },
+      {
+        "model": "yolo26l",
+        "weather": "foggy",
+        "passed": true,
+        "failures": [],
+        "views": {
+          "front": {
+            "messages": 896,
+            "hz": 14.933333333333334,
+            "valid_messages": 896,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              15.0
+            ],
+            "max_gap_sec": 0.17448807699838653,
+            "first_output_sec": 0.07462348300032318,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 896,
+              "p50": 42.9348945,
+              "p95": 58.64560575,
+              "p99": 69.49316234999998,
+              "maximum": 79.815149
+            },
+            "input_to_output_wall_ms": {
+              "samples": 896,
+              "p50": 42.13426451315172,
+              "p95": 57.67537048086524,
+              "p99": 68.91593831242062,
+              "maximum": 79.1713329963386
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "left": {
+            "messages": 896,
+            "hz": 14.933333333333334,
+            "valid_messages": 896,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              14.8,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              15.0
+            ],
+            "max_gap_sec": 0.19613016699440777,
+            "first_output_sec": 0.07471192197408527,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 896,
+              "p50": 43.849349000000004,
+              "p95": 60.6561305,
+              "p99": 72.84027395,
+              "maximum": 81.911564
+            },
+            "input_to_output_wall_ms": {
+              "samples": 896,
+              "p50": 42.99633149639703,
+              "p95": 60.15364178165328,
+              "p99": 71.88906245864925,
+              "maximum": 80.62564104329795
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "right": {
+            "messages": 892,
+            "hz": 14.866666666666667,
+            "valid_messages": 892,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              14.8,
+              14.6,
+              15.2,
+              14.6,
+              15.0,
+              14.8
+            ],
+            "max_gap_sec": 0.17420359596144408,
+            "first_output_sec": 0.07472654397133738,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 892,
+              "p50": 43.022394500000004,
+              "p95": 57.96685235000001,
+              "p99": 66.48126815,
+              "maximum": 76.783895
+            },
+            "input_to_output_wall_ms": {
+              "samples": 892,
+              "p50": 42.28547550155781,
+              "p95": 57.06209669297097,
+              "p99": 65.87738435540815,
+              "maximum": 76.25647203531116
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4129.0
+      }
+    ]
   },
   "tests": {
-    "rf_cpu": 14,
+    "rf_cpu": 16,
     "detection_cpu": 75,
     "runtime_cpu": 31,
     "ros_overlay_build": "passed in asmc-ros-noetic; shared install unchanged",
@@ -1035,43 +1778,44 @@
     "weather_cpu": 4
   },
   "decision": {
-    "current": "keep operating YOLO26l; no RF training selection",
+    "current": "keep operating YOLO26l; RF not added to current retraining candidates",
     "reasons": [
       "strict FP16 decoded box parity failed",
       "heldout person annotated recall 24/26 ->22/26 exceeds 2pp drop limit",
       "selection bus 22/27 ->17/27; separate from heldout acceptance",
-      "no integrated timing acceptance"
+      "RF L704 mixed-precision integrated p95 158-174ms and 10.1-11.4Hz; misses p95/15Hz targets; SUNNY 5s windows down to9.0Hz"
     ],
     "skipped": [
       {
         "experiment": "SUNNY/FOGGY three-repeat final RF/YOLO matrix",
-        "reason": "numerical correctness prerequisite failed; scale/resolution change would conflate conversion and model effects"
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
       },
       {
         "experiment": "RF L640/M576",
-        "reason": "numerical correctness prerequisite failed; scale/resolution change would conflate conversion and model effects"
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
       },
       {
         "experiment": "RF rectangular960",
-        "reason": "numerical correctness prerequisite failed; scale/resolution change would conflate conversion and model effects"
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
       },
       {
         "experiment": "YOLO26x640",
-        "reason": "numerical correctness prerequisite failed; scale/resolution change would conflate conversion and model effects"
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
       },
       {
         "experiment": "RF-DETR-XL560",
-        "reason": "numerical correctness prerequisite failed; scale/resolution change would conflate conversion and model effects"
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
       }
     ],
-    "next": "Resolve RF mixed-precision parity before ranking and conditional scale comparisons; execute one full-stack diagnostic after simulator restart."
+    "next": "Validated teacher drafts and targeted annotation/replay/diversity fixes, then small YOLO26l/YOLOE bbox retraining comparison. RF optional later after parity and preprocessing work; no current runtime promotion."
   },
   "galleries": {
     "hub": "http://localhost:8768/",
-    "latest": "http://localhost:8768/camera-rfdetr-selection-v1/trt-diagnostic-gallery-v2/",
+    "latest": "http://localhost:8768/camera-rfdetr-selection-v1/final-analysis-v1/",
     "pt_diagnostic": "http://localhost:8768/camera-rfdetr-selection-v1/pt-diagnostic-gallery/",
-    "latest_experiment_id": "E216"
+    "latest_experiment_id": "E218"
   },
   "local_evidence": "artifacts/camera-rfdetr-selection-v1/",
-  "runtime_overlay": "data/runtime_archive/rfdetr-preflight-v1/"
+  "runtime_overlay": "data/runtime_archive/rfdetr-preflight-v1/",
+  "gallery_correction": "Per-GT change text now joins annotation_index instead of list order; 675-image aggregate quality counts unchanged. Older diagnostic galleries retained with correction notice."
 }
