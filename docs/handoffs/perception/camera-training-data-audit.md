@@ -3,7 +3,9 @@
 > 기준일: 2026-10-09. 사용자 지정 Roboflow 22개 프로젝트와 기존 Capture GT를 대상으로 한다.
 > 운영 모델·ROS 인터페이스·confidence·fusion·컨테이너 마운트는 변경하지 않는다.
 
-최신 저장 위치·재개 방법과 로컬 teacher 보강은 [v6 작업](#로컬-teacher와-저장-버전--2026-10-11-v6)을 먼저 확인한다.
+최신 채택본과 실행 방법은 [v7 기존 자료 채택 확대](#기존-자료-채택-확대--2026-10-11-v7)를 먼저 확인한다.
+다음 구현은 [MPC 자동 수집 파일럿](camera-mpc-object-collection-pilot.md)이며 아직 실행하지 않았다.
+이전 저장 위치·로컬 teacher 비교는 [v6 작업](#로컬-teacher와-저장-버전--2026-10-11-v6)에 보존한다.
 
 ## 현재 기준 — 2026-10-10 v2 16종
 
@@ -2346,3 +2348,121 @@ selection의 PE12장과 PE가 없는 대조12장을 고정했다. 평가 범위 
 
 브라우저에서 `artifacts/camera-teacher-v6/pe-prompt-diagnosis-r1/index.html`의 같은 RGB,
 원본21종/단일 text/visual prompt 결과와 Enzo12장 표본을 비교할 수 있다.
+
+## 기존 자료 채택 확대 — 2026-10-11 v7
+
+**현재 채택본은 `camera_objects_bbox_v7-adoption-r2`, 23,264장·129,630객체다.**
+부모 v6-r4의22,631장·127,645객체와 모든 split/group을 그대로 보존했다.
+[집계·보존 증거](../../../config/baselines/evidence/camera_data_expansion_v7/summary.json),
+[실제 YOLO 파일 재검증](../../../config/baselines/evidence/camera_data_expansion_v7/verification.json),
+[채택기](../../../tools/perception/camera_data_expansion_v7.py),
+[새 채택 예외 정책](../../../config/datasets/camera_object_adoption_v7.json)을 참조한다.
+운영 추론·ROS 인터페이스·bridge·스폰·주행·녹화·학습은 이번에 변경/실행하지 않았다.
+
+| 구분 | v6-r4 | v7-r2 | 증가 |
+|---|---:|---:|---:|
+| 전체 이미지 | 22,631 | 23,264 | 633 |
+| 전체 대상 객체 | 127,645 | 129,630 | 1,985 |
+| train 이미지 | 21,851 | 22,023 | 172 |
+| selection 이미지 | 113 | 113 | 0 |
+| heldout 이미지 | 667 | 1,128 | 461 |
+
+### 직접 대응 → 혼합 재분류 → 기존 teacher 검수 재사용
+
+Enzo의 의미가 직접 대응하는 pending463장에 대해 **소스×원본 클래스별 seed20261009,
+최대50장, 고유268장**의 실제 RGB를 검수했다. 포함된 PE 방벽·상자·드럼·콘크리트 방벽의
+원본 박스를 활용했다. 기존 중복/대표본 제한2장은 유지하고 **461장·1,325객체**를 추가했다.
+이 소스 전체는 이전부터 heldout이다. 따라서 PE142장의 증가도 **평가 보강**이며 train 증가로
+설명하지 않는다. 이번에 본 heldout은 새로 숨겨진 최종 시험이 아니다. 묶음 표본 통과와
+모든 개별 영상의 완전 GT 확인도 구분해 `review_basis=source_class_sample`을 남긴다.
+
+혼합 라벨은 실제 RGB와 annotation ID가 표시된 확대 영상을 확인해 **mino76장,
+tooth92장, jjj2장**을 train에 추가했다. Mino의 `obstacle`은 cargo/wood box·drum·
+콘크리트 방벽으로 나누고, tooth의 `Obstacle_Yellow`는 WoodBox와 노란 drum으로 나눴다.
+**tooth의 같은 `PE` 라벨에 원통 드럼과 사각 PE_Firewall이 공존**하므로 새 묶음 일괄
+승인을 차단하고 주석별로 traffic_drum/plastic_barrier를 부여한다. v2 원본 규칙과 과거
+채택본은 덮어쓰지 않는다. jjj9의 미확정 흰색 방벽4주석은 PE_Firewall로 확인했다.
+모든 원본 박스와 작은 정확한 양성 GT를 유지했고, v7에서 새 annotation ID는 만들지 않았다.
+
+기존 AIM/bag 유사 장면 보류 중 부족 종류13장을 대상으로 **모든 대응35쌍**의 RGB를
+다시 확인했다. 배경은 같지만 배치 물체가 다른 AIM 상자1장·철제 방벽1장은 복원했다.
+같은 배치 또는 독립성 미확인인 나머지11장은 유지했다. 다른 근접 후보도 미검수 상태를
+유지하며 전체74장 중72장은 여전히 보류다. 21개 부족 후보 전체700쌍의 검수가 끝났다는
+뜻이 아니다. pHash만으로 실제 누출을 확정하거나 한 쌍의 통과로 나머지를 면제하지 않는다.
+기존 teacher 원본·개별 검수 결과를 재사용했고 새 추론·미승인 teacher 자동 채택은 없다.
+
+| 대상 클래스 | 추가 train 등장 이미지 | 추가 heldout 등장 이미지 | 전체 객체 증가 |
+|---|---:|---:|---:|
+| box | 58 | 319 | 459 |
+| plastic_barrier | 18 | 142 | 303 |
+| concrete_barrier | 105 | 222 | 535 |
+| steel_barricade | 2 | 0 | 2 |
+| traffic_drum | 126 | 236 | 679 |
+| bollard | 2 | 0 | 7 |
+
+한 이미지에 여러 종류가 있어 클래스별 이미지 수를 더하면633이 되지 않는다.
+수량 증가를 독립 장면 증가로 해석하지 않는다. 소스/run 그룹 수와 검증된 독립 장면 수를
+분리하며 현재 독립 장면 수는 미확인이다. 확인하지 않은 날씨·터널·뷰는 unknown으로 남긴다.
+
+천으로 덮인 물체·여러 물체를 합친 박스·tiny PE 종류 불명29개 검토 사례는 보류 기록에
+남겼다. jjj의 탑승자 복합·dog/deer 혼합과 기존 숫자9 미완료19장도 이름만 바꿔 채택하지
+않았다. 이는 원본 라벨이 불량하다는 뜻이 아니라 목표16종으로 분리하는 확인이 남았다는
+뜻이다. 동일 픽셀·같은 split group 충돌은 검수로 면제할 수 없고, 새 후보의 모든 반대
+split pHash≤6 대응을 확인한다. 이번 채택본의 exact-pixel split 누출은0이며, 모든 장면의
+계보 독립성이 입증됐다는 뜻은 아니다.
+
+### 저장·재현·갤러리
+
+```text
+data/roboflow/
+  expansion-v7-reviews-r1/            # 고정 표본·개별 RGB 수정·보류 근거
+  expansion-v7-reviews-r2/            # 유사 장면 35쌍 재검토, 2장 복원
+  curated-v7-adoption-r1/             # 631장 추가한 중간 부모, 보존
+  curated-v7-adoption-r2/             # 최종 통합 기록·summary·coverage
+data/dataset_versions/
+  camera_objects_bbox_v7-adoption-r2/ # data.yaml·manifest·검증·image symlink·YOLO labels
+  camera_objects_versions.json       # current_adopted와 부모 SHA/검증 상태
+artifacts/camera-data-expansion-v7/   # 원본 검수 시트·확대·전후·유사 장면 비교
+```
+
+상위 workspace의 data/artifacts이며 실행 worktree 내부의 별도 원본이 아니다.
+이미지는 원본을 가리키는 symlink다. 원본·이전 revision을 삭제하지 않는다.
+Git에는 도구·정책·요약·문서만 포함한다. 클래스 규칙 v2와 데이터 v7은 별도 버전이다.
+
+재생성은 저장된 검수 패키지를 사용해 **새 경로**로 실행한다. 예:
+
+```bash
+python3 tools/perception/camera_data_expansion_v7.py \
+  --parent ../data/roboflow/curated-v6-teacher-r4/curated.jsonl \
+  --reviews ../data/roboflow/expansion-v7-reviews-r1/reviews.json \
+  --output /tmp/asmc-v7-r1-reproduce \
+  --dataset /tmp/asmc-v7-r1-dataset
+```
+
+r2는 r1의 curated를 부모로 사용하고 `expansion-v7-reviews-r2/reviews.json` 및
+`--near-reviews ../data/roboflow/expansion-v7-reviews-r2/near-reviews.json`을 지정한다.
+부모·이미지 SHA, 고정 표본 구성, source/class 검수, 기존 채택 불변,16종 ID, 원본 박스,
+정확한 작은 GT, 실제 파일·정규 좌표·이미지 SHA와 split 누출을 검사한다.
+
+[갤러리 전체 목차](http://localhost:8768/index.html),
+[v7 요약·검수 진입점](http://localhost:8768/camera-data-expansion-v7/index.html),
+[633장 원본/변환 비교](http://localhost:8768/camera-data-expansion-v7/final-adopted/index.html)를
+제공한다. E 번호와 등록 시각은 기존 목차에 붙이며 실험 시작 시각으로 해석하지 않는다.
+
+CPU 검사는 기존 데이터 전용 `../data/roboflow/.venv/bin/python`으로 실행한다.
+호스트 기본 Python의 SciPy 미설치 오류는 코드 실패와 구분한다. 관련 데이터/teacher/갤러리
+회귀, perception 계약과 문서 검사를 실행하고 로컬 결과를 증거에 남긴다. Hosted CI의
+결제 차단/네트워크 미확인은 통과로 표시하지 않는다. PR #81은 Draft를 유지한다.
+
+### 다음 구현으로 넘길 부족 조건
+
+train 등장 이미지는 PE 방벽172장·철제 방벽178장·사슴61장·이륜차69장·자전거230장,
+상자1,109장이다. stroller는0장이다. 평가 selection의 클래스 커버리지가 여전히 부족하며
+이번 증가가 학습 준비·회귀 해결을 뜻하지 않는다. 기존 Capture12/3/3과 평가 분할을
+train으로 옮기지 않는다.
+
+[MPC 수집 파일럿](camera-mpc-object-collection-pilot.md)에 최신 등장 이미지 기반
+**장애물10+희소 객체2 배분**, bridge GT/추가 LiDAR 수신, Object 파싱 한계, 시각·actor
+연결, 지면 높이·기준점 검증, raw→Capture 전환과 SUNNY/FOGGY13시 파일럿을 명시했다.
+파일럿 통과 후 전체 경로의11/13/15시6회 주행으로 확장한다. 수집 후 샘플링·비교 재학습으로
+이어가며 이번에는 자동 수집을 시작하지 않는다.

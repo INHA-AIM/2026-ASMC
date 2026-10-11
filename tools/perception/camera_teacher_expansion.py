@@ -859,8 +859,10 @@ def admission_gallery(args):
             figures.append('<figure><figcaption>%s</figcaption><a href="images/%s"><img loading="lazy" src="images/%s"></a></figure>'%(side,filename,filename))
         cards.append('<article><h3>%d · %s · %s</h3><div class="grid">%s</div><details><summary>검수 근거·원본 actor 기록</summary><pre>%s</pre></details></article>'%(
             index,html.escape(row['source']),html.escape(row['source_key']),''.join(figures),
-            html.escape(json.dumps(dict(review=row.get('teacher_review'),actor_model_priors=row.get('actor_model_priors')),ensure_ascii=False,indent=2))))
-    (args.output/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>2026-10-11 · v6 bbox labels before / after</title><style>body{font:15px system-ui}.grid{display:grid;grid-template-columns:repeat(2,1fr)}figure{margin:4px}img{max-width:100%}pre{white-space:pre-wrap}article{border-top:1px solid #aaa}</style><h1>2026-10-11 · v6 bbox labels before / after</h1><a href="../../index.html">실험 목차</a><p>왼쪽: 주황 원본 주석 / 분홍 teacher 제안(confidence≥0.15). 오른쪽: 개별 RGB 검수 후 채택한 학습 라벨. Teacher 미검출은 빈 정답이 아닙니다. 신규 채택 __COUNT__장. 원본 데이터·기존 평가 split은 유지했습니다.</p>'.replace('__COUNT__',str(len(after)))+''.join(cards))
+            html.escape(json.dumps(dict(review=row.get('teacher_review'),basis=row.get('review_basis'),
+                cohort=row.get('direct_cohort_evidence'),actor_model_priors=row.get('actor_model_priors')),ensure_ascii=False,indent=2))))
+    title=html.escape(getattr(args,'title',None) or '2026-10-11 · v6 bbox labels before / after')
+    (args.output/'index.html').write_text(('<!doctype html><meta charset="utf-8"><title>__TITLE__</title><style>body{font:15px system-ui}.grid{display:grid;grid-template-columns:repeat(2,1fr)}figure{margin:4px}img{max-width:100%}pre{white-space:pre-wrap}article{border-top:1px solid #aaa}</style><h1>__TITLE__</h1><a href="../../index.html">실험 목차</a><p>왼쪽: 주황 원본 주석 / 분홍 teacher 제안(confidence≥0.15, 제공된 경우). 오른쪽: 고정 표본 묶음 검수 또는 개별 RGB 검수로 채택한 학습 라벨. 검수 방식은 각 근거에 표시합니다. Teacher 미검출은 빈 정답이 아닙니다. 신규 채택 __COUNT__장. 원본 데이터·기존 평가 split은 유지했습니다.</p>'.replace('__COUNT__',str(len(after))).replace('__TITLE__',title))+''.join(cards))
 
 
 def main():
@@ -897,7 +899,8 @@ def main():
         if name=='coverage':p.add_argument('--parent',type=Path)
         if name=='admission-gallery':
             p.add_argument('--before',type=Path,required=True);p.add_argument('--after',type=Path,required=True)
-            p.add_argument('--predictions',type=Path,nargs='+',required=True)
+            p.add_argument('--predictions',type=Path,nargs='*',default=[])
+            p.add_argument('--title')
         if name=='gallery':p.add_argument('--predictions',type=Path)
     args=parser.parse_args()
     functions={'inventory':inventory,'samples':samples,'prepare-gt':prepare_gt,'aim-queue':aim_queue,'bag-queue':bag_queue,'infer':run_inference,'compare':compare,'export':export,'registry':registry,'coverage':coverage,'gallery':gallery,'comparison-gallery':comparison_gallery,'admission-gallery':admission_gallery}
