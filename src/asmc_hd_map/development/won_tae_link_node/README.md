@@ -1,3 +1,7 @@
+> Ownership cleanup: use `config/waize_katri_runtime.yaml` for live builds.
+> `config/waize_katri.yaml` is retained byte-for-byte as the pinned historical
+> bake snapshot referenced by the operational-map source manifest.
+
 # link_node — 링크·노드 기반 BEV 정적 레이어 베이커
 
 MGeo `link_set.json` + `node_set.json`과 직접 수집한 GPS/LiDAR 차선 CSV로
@@ -12,7 +16,7 @@ MGeo `link_set.json` + `node_set.json`과 직접 수집한 GPS/LiDAR 차선 CSV�
 
 ## 최신 운영 요약
 
-- 기준 설정: `src/asmc_hd_map/development/won_tae_link_node/config/waize_katri.yaml`
+- 기준 설정: `src/asmc_hd_map/development/won_tae_link_node/config/waize_katri_runtime.yaml`
 - 실측 CSV: `src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/`의 19개 파일
 - 최신·유일한 운영 H5: `src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5`
 - 라이다용 주행가능영역: `src/asmc_hd_map/development/won_tae_link_node/out/road_mask.png` + `road_mask.yaml`
@@ -29,11 +33,11 @@ cd /home/jang/2026-ASMC
 
 # 현재 운영 설정으로 road/lane/stopline과 라이다용 PNG를 모두 다시 생성
 python3 src/asmc_hd_map/development/won_tae_link_node/bake_map.py \
-  --config src/asmc_hd_map/development/won_tae_link_node/config/waize_katri.yaml
+  --config src/asmc_hd_map/development/won_tae_link_node/config/waize_katri_runtime.yaml
 
 # 검증 PNG가 필요 없을 때
 python3 src/asmc_hd_map/development/won_tae_link_node/bake_map.py \
-  --config src/asmc_hd_map/development/won_tae_link_node/config/waize_katri.yaml --no-overlay
+  --config src/asmc_hd_map/development/won_tae_link_node/config/waize_katri_runtime.yaml --no-overlay
 
 # 변경 후 회귀검증
 python3 -m pytest -q src/asmc_hd_map/development/won_tae_link_node/tests
@@ -52,7 +56,7 @@ python3 -m pytest -q src/asmc_hd_map/development/won_tae_link_node/tests
 
 ## 맵
 
-`src/behavior_planner/src/config/` 의 판본을 쓴다 (`data_source` 웨이즈원, 2025-10-23).
+`src/asmc_planner/config/behavior/` 의 판본을 쓴다 (`data_source` 웨이즈원, 2025-10-23).
 
 > ⚠️ 저장소에는 좌표계가 다른 MGeo 맵이 하나 더 있다. `R_KR_PG_KATRI/` 는
 > `local_origin_in_global` 이 약 **(-135, -1509) m** 어긋난 별개 측량본이고,
@@ -156,7 +160,7 @@ bounds `x[-404.5, 112.4] y[-775.0, 571.2]`, ppm 5 에서 **3085 × 7232 px**.
 시각화와 같은 `inward_offset_m: 0.03` 보정을 먼저 적용한다.
 
 현재 사용하는 CSV 19개는 모두 `src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/`에 함께 보관한다.
-새 CSV를 적용할 때도 이 폴더에 복사한 뒤 `waize_katri.yaml`의 `observed_lane.sources`
+새 CSV를 적용할 때도 이 폴더에 복사한 뒤 `waize_katri_runtime.yaml`의 `observed_lane.sources`
 에 **저장소 상대경로**로 추가한다. `/home/jang/lane_data/...` 같은 개인 절대경로를
 설정에 다시 넣지 않는다.
 
@@ -347,7 +351,7 @@ python3 src/asmc_hd_map/development/won_tae_link_node/bake_map.py --list-stoplin
 
 ```bash
 python3 src/asmc_hd_map/development/won_tae_link_node/bake_map.py \
-    --stopline-route src/behavior_planner/src/config/route_links.yaml
+    --stopline-route src/asmc_planner/config/behavior/route_links.yaml
 # [stopline] route route_links.yaml 위의 정지선 7개만 굽습니다
 ```
 
@@ -434,7 +438,7 @@ attrs:
 > 방향이 틀렸다면 선 전체가 어긋난다. 이 오진을 막으려고
 > `test_stopline_clip_removes_ends_left_outside_by_outer_trim` 을 박아뒀다.
 
-`overlay.png` 는 [behavior_planner 대시보드](../../../behavior_planner/web/index.html)와
+`overlay.png` 는 [asmc_planner 대시보드](../../../asmc_planner/web/index.html)와
 같은 맵이므로 눈으로 직접 대조할 수 있다.
 
 ## 시각화
@@ -865,7 +869,7 @@ score = dm.obb_inside_ratio(cx, cy, length_m, width_m, yaw_deg)
 ### 반드시 알아야 할 것
 
 **0. 정지선은 8개만 구워져 있다.** 이 맵의 정지선 노드는 150개인데, 현재
-`config/waize_katri.yaml` 의 `stopline.include_nodes` 가 **경로 검증용으로 주행하며
+`config/waize_katri_runtime.yaml` 의 `stopline.include_nodes` 가 **경로 검증용으로 주행하며
 모은 8개**로 한정되어 있다. 대회 경로가 확정돼서 고른 게 아니라 그 시점 주행 구간의
 것이므로 **임시 상태**다. 전체가 필요하면 `include_nodes` 를 비우고 다시 구우면
 150개가 다 나온다. (라이다 조회는 `road` 레이어만 쓰므로 실사용에는 영향이 없다 —
@@ -885,7 +889,7 @@ road에서 의도적으로 잘라냈다. 정확한 경계 검증은 `0.0`, 일�
 CSV가 없는 구간은 여전히 링크 기반 근사치다.
 
 **4. 제외된 구간이 있다.** 현재 링크 24개를 뺀 상태다. 거기 객체는 전부 '밖'으로
-판정된다. 목록은 `config/waize_katri.yaml`의 `drivable.exclude_links`에 있다.
+판정된다. 목록은 `config/waize_katri_runtime.yaml`의 `drivable.exclude_links`에 있다.
 
 **5. 하드 게이트로 쓰지 말 것.** 객체를 버리는 판단에 쓰면 되돌릴 수 없다.
 계산 범위를 좁히는 용도로 쓰고, `obb_inside_ratio()` 점수를 넘겨 최종 판단은
@@ -1109,7 +1113,7 @@ GT 정답률을 검증한 것은 아니다.
 src/asmc_hd_map/development/won_tae_link_node/
 ├── bake_map.py                 CLI (로드 → 베이크 → 지표 → H5/PNG)
 ├── live_check.py               MORAI 실주행 대조 (Ego UDP / ROS / demo)
-├── config/waize_katri.yaml     소스 경로와 레이어 파라미터
+├── config/waize_katri_runtime.yaml     소스 경로와 레이어 파라미터
 ├── data/observed_lanes/        베이크에 사용하는 실측 차선 CSV 19개
 ├── out/
 │   ├── link_node_map.h5        최신 운영 H5

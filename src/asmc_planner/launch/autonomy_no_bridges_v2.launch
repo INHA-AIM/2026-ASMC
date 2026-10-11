@@ -1,0 +1,57 @@
+<launch>
+  <!-- Integrated planner, input adapters and controller. Bridges and Main
+       remain separately managed. This wrapper currently supports LiDAR input. -->
+  <arg name="objects_source" default="lidar" doc="Supported source: lidar"/>
+  <arg name="state_source" default="gps_imu" doc="gps_imu or external"/>
+  <arg name="state_topic" default="/planning/vehicle/state"/>
+  <arg name="canonical_objects_topic" default="/planning/objects"/>
+  <arg name="lidar_input_topic" default="/last_lidar"/>
+  <arg name="lidar_source_policy" default="validated_lidar"/>
+  <arg name="avoid_path_margin_m" default="0.4"/>
+  <arg name="traffic_light" default="true"
+       doc="Set false only when an external traffic-light producer is running; false does not disable planner signal rules."/>
+  <arg name="traffic_light_device" default="auto"/>
+  <arg name="camera_topic" default="/cam_extra/image_jpeg/compressed"/>
+  <arg name="expected_config_sha256"
+       default="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
+  <arg name="calibration_file" default="$(find asmc_camera)/config/bev/cameras_v2.yaml"/>
+  <arg name="traffic_light_checkpoint"
+       default="$(find asmc_camera)/models/traffic_light/best.pt"/>
+
+  <!-- Dictionary lookup rejects unsupported sources during launch loading. -->
+  <include if="$(eval {'gps_imu': True, 'external': False}[arg('state_source')])"
+           file="$(find planning_inputs)/launch/vehicle_state.launch">
+    <arg name="state_topic" value="$(arg state_topic)"/>
+  </include>
+  <include file="$(eval find('planning_inputs') + '/launch/' + {'lidar': 'objects.launch'}[arg('objects_source')])">
+    <arg name="input_topic" value="$(arg lidar_input_topic)"/>
+    <arg name="source_policy" value="$(arg lidar_source_policy)"/>
+    <arg name="state_topic" value="$(arg state_topic)"/>
+    <arg name="output_topic" value="$(arg canonical_objects_topic)"/>
+  </include>
+
+  <group if="$(arg traffic_light)">
+    <node pkg="asmc_camera" type="traffic_light_node.py"
+          name="traffic_light_infer" output="screen" required="true"
+          args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg camera_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --typed-topic /perception/traffic_light/detection --device $(arg traffic_light_device)"/>
+  </group>
+  <include file="$(find asmc_planner)/launch/planner_v2.launch">
+    <arg name="state_topic" value="$(arg state_topic)"/>
+    <arg name="objects_input_type" value="detected"/>
+    <arg name="behavior_objects_topic" value="$(arg canonical_objects_topic)"/>
+    <arg name="planning_objects_topic" value="$(arg canonical_objects_topic)"/>
+    <arg name="avoid_path_margin_m" value="$(arg avoid_path_margin_m)"/>
+  </include>
+  <include file="$(find asmc_controller)/launch/controller.launch">
+    <arg name="state_topic" value="$(arg state_topic)"/>
+  </include>
+  <node pkg="asmc_planner" type="asmc_control_selector_node"
+        name="asmc_control_selector" output="screen" required="true"/>
+  <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
+    <arg name="enable_control" value="true"/>
+    <arg name="control_topic" value="/ctrl_cmd/jamming"/>
+    <arg name="expected_config_sha256" value="$(arg expected_config_sha256)"/>
+    <arg name="calibration_file" value="$(arg calibration_file)"/>
+    <arg name="use_rviz" value="false"/>
+  </include>
+</launch>

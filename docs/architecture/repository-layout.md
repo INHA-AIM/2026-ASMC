@@ -1,5 +1,10 @@
 # 저장소 레이아웃·파트 격리
 
+> 현재 planner production package는 `asmc_planner` 하나다. Behavior → Execution →
+> Frenet은 내부 C++ 구조와 직접 호출로 연결한다. 기존 planner ROS topic은
+> 외부 관측·controller 호환 계약으로 유지하며, 두 legacy 패키지는 제거되었다.
+
+
 > **문서 역할:** Active Reference — 실제 코드 위치와 ownership 요약
 > **문서 허브:** [README.md](../README.md)
 > **최종 수정:** 2026-09-21
@@ -63,9 +68,9 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 
 | 패키지 | 경로 | 담당 | GitHub |
 |--------|------|------|--------|
-| Behavior planner | `src/behavior_planner/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
+| Behavior planner | `src/asmc_planner/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
 | MPC (`mpc_controller_node`, ROS+core) | `src/asmc_controller/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
-| Frenet planner (`frenet_planner_node`, ROS+core) | `src/frenet_planner/` | 이강태 | @kante2 |
+| Frenet planner (`frenet_planner_node`, ROS+core) | `src/asmc_planner/` | 이강태 | @kante2 |
 | MORAI bridge | `src/asmc_bridge/` | 이강태·안승현 | @kante2 · @ahnsh03 |
 
 현재 개발 경계는 [Planning/Control guide](../packages/planning-control/README.md), 실행 흐름은
@@ -130,9 +135,9 @@ rename하고, `lidar+sensorfusion`의 기능은 손재호가 수정사항을 반
 
 | 경로 | @yuntae12-sudo<br>정윤태 | @yangseojun<br>양서준 | @kante2<br>이강태 | @ahnsh03<br>안승현 | @wkddnjsxo<br>장원태 | @sonshiny<br>손재호 |
 |------|--------|--------|--------|--------|--------|--------|
-| `src/behavior_planner/` | ✅ | ✅ | 👀 | 👀 | — | — |
+| `src/asmc_planner/` | ✅ | ✅ | 👀 | 👀 | — | — |
 | `src/asmc_controller/` | ✅ | ✅ | 👀 | 👀 | — | — |
-| `src/frenet_planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
+| `src/asmc_planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
 | `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
 | `tools/research/lbc_teacher_bev/` | — | — | — | ✅ | — | — |
 | `scripts/rosbridge.sh` | 👀 | 👀 | 👀 | ✅ | — | — |
@@ -169,7 +174,7 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../../.github/CODEOWNERS)
 
 | 모듈 | ASMC 경로 |
 |------|-----------|
-| Behavior / Frenet / MPC | `src/behavior_planner/`, `frenet_planner/`, `asmc_controller/` (v2 ROS 연결) |
+| Behavior / Frenet / MPC | `src/asmc_planner/`, `frenet_planner/`, `asmc_controller/` (v2 ROS 연결) |
 | Camera lane/drivable/traffic | `src/asmc_camera/` |
 | LiDAR/3D perception | `src/lidar+sensorfusion/` |
 | 공통 BEV | camera v3는 `src/asmc_camera/`; 전역 map/LiDAR 결합 규격은 합의 중 |

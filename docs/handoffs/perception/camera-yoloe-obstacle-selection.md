@@ -251,7 +251,7 @@ baseline에 보존한다. 주 bag 매칭10쌍 감소 역시 연속성 개선으�
 성공・실패・원본 SHA와 선별 근거를 함께 검토한 뒤, 데이터 감사/짧은 bbox 학습
 비교로 넘어간다. 최종 운영 선정과 hosted CI는 여전히 보류다.
 
-## L·960/1280 동일 프롬프트 후속 검증 — 진행 중
+## L·960/1280 동일 프롬프트 후속 검증 — 미완료 증거 보존
 
 두 해상도를 같은 `bollard17` checkpoint/embedding, 실제 confidence0.40으로 맞췄다.
 `l_960_bollard17.yaml`과 전용 TensorRT engine을 추가했으며 기존 운영 기본값은 유지한다.
@@ -284,3 +284,24 @@ baseline의 `resolution_followup_v1`에서 완료/미완료를 확인한다. 도
 계약/문서 검사5개는 통과했고 카메라306개는 기존 facade1건만 실패했다.
 다음은 순환 순서의 세구성×두날씨×3회×60초 C6 측정, 선정 후 고정 heldout,
 후보/기준선 주·음영 각2회의 fusion 비교다. Roboflow·학습·운영 승격은 진행하지 않았다.
+
+
+## 2026-10-11 PR #77 병합 범위
+
+사용자는 hosted CI 결제/사용 한도 차단을 확인하고 CLI 병합을 승인했다.
+실험 코드·설정·성공/실패 증거를 main에 반영하는 범위이며, 위 18회 후속 통합 반복,
+최종 운영 선정과 fusion 보류가 완료됐다는 의미는 아니다. 운영 기본값은 기존
+YOLO26l detect·전방1280·3뷰15Hz·confidence0.40이며 실험 launch만 opt-in이다.
+Roboflow 정리는 #78, 짧은 비교학습은 #80에서 별도로 이어진다.
+
+main `835d56e3`를 반영하면서 ResourceSampler의 판제 노드 이름을
+`/asmc_planner`로 통합하고 기존 bridge 계측은 유지했다. 판제 rename으로 깨진 문서
+링크 3개도 수정했다. 카메라/판제의 기존 운영 launch와 메시지 정의는 바꾸지 않았다.
+
+이 병합 트리에서 YOLOE/기존 비교·갤러리 도구 65개와 계약 validator 3개·문서 migration
+검사를 통과했다. 기존 ROS 컨테이너의 전체 카메라 시험은 306개 중 305개 통과다.
+남은 facade 시험은 main과 동일한 `asmc_planner/launch/autonomy_no_bridges_v2.launch`의
+`traffic_light=true`에 대한 기존 실패다. 해당 파일과 시험의 main 대비 차이는 0이다.
+처음 실행 시 source 패키지를 생성 메시지보다 앞에 둔 PYTHONPATH 오류 2개는 경로를
+정정한 재실행에서 없어졌다. GPU 실행·차량 제어·새 통합 수락 측정은 수행하지 않았다.
+hosted CI annotation은 job 실행 전 billing/spending limit 차단이며 CI 통과로 기록하지 않는다.

@@ -363,7 +363,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         nodes = {(item.get("pkg"), item.get("type")) for item in launch.iter("node")}
         self.assertEqual(
             {
-                ("behavior_planner", "behavior_node"),
+                ("asmc_planner", "asmc_behavior_acceptance_node"),
                 ("asmc_camera", "traffic_light_closed_loop_acceptance.py"),
             },
             nodes,
@@ -380,8 +380,8 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             / "traffic_light_vehicle_acceptance_stack.launch"
         ).getroot()
         rendered = ET.tostring(launch, encoding="unicode")
-        self.assertIn("behavior_node_v2.launch", rendered)
-        self.assertIn("frenet_planner.launch", rendered)
+        self.assertIn("planner_v2.launch", rendered)
+        self.assertNotIn("frenet_planner.launch", rendered)
         self.assertIn("controller.launch", rendered)
         self.assertNotIn("asmc_bridge", rendered)
         self.assertIn("traffic_light_vehicle_acceptance.py", rendered)
@@ -408,9 +408,9 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         )
 
     def test_planning_launches_use_the_canonical_traffic_light_model(self):
-        behavior_root = REPO_ROOT / "src" / "behavior_planner"
+        behavior_root = REPO_ROOT / "src" / "asmc_planner"
         expected = "$(find asmc_camera)/models/traffic_light/best.pt"
-        for name in ("autonomy_no_bridges.launch", "autonomy_no_bridges_v2.launch"):
+        for name in ("autonomy_no_bridges_v2.launch",):
             launch = ET.parse(behavior_root / "launch" / name).getroot()
             arguments = {
                 item.get("name"): item.get("default", "")

@@ -5,9 +5,9 @@
   <arg name="min_contact_overlap_ratio" default="0.10"/>
   <arg name="min_contact_support_rows" default="3"/>
   <!-- BBOX 판정 + 장애물에 따른 반복 차선변경. GPU detector와 카메라 차선 인식은 별도 실행. -->
+  <arg name="hood_crop_bottom_ratio" default="0.0"/>
   <arg name="ego_mask_enabled" default="$(eval float(arg('hood_crop_bottom_ratio')) == 0)"/>
   <arg name="ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
-  <arg name="hood_crop_bottom_ratio" default="0.0"/>
   <arg name="enable_control" default="false"/>
   <arg name="lookahead_distance" default="8.0"/>
   <arg name="target_speed_kph" default="20.0"/>
@@ -42,7 +42,7 @@
   <arg name="inferred_confidence_scale" default="0.60"/>
   <arg name="expected_config_sha256" default="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
   <arg name="input_topic" default="/perception/lane/boundary_family"/>
-  <arg name="control_topic" default="/ctrl_cmd"/>
+  <arg name="control_topic" default="/ctrl_cmd/jamming"/>
   <arg name="preview_topic" default="/planning/camera_bbox_lane_change/control_preview"/>
   <arg name="target_topic" default="/planning/camera_bbox_lane_change/target"/>
   <arg name="markers_topic" default="/planning/camera_bbox_lane_change/markers"/>

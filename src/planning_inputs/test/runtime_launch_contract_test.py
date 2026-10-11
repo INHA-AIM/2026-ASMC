@@ -8,7 +8,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 class LaunchContracts(unittest.TestCase):
     def test_standalone_signal_producer(self):
-        tree = ET.parse(ROOT / 'src/behavior_planner/launch/autonomy_no_bridges_v2.launch')
+        tree = ET.parse(ROOT / 'src/asmc_planner/launch/autonomy_no_bridges_v2.launch')
         args = {arg.get('name'): arg.get('default') for arg in tree.findall('arg')}
         self.assertEqual(args['traffic_light'], 'true')
         group = tree.find("group[@if='$(arg traffic_light)']")

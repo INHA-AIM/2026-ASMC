@@ -427,7 +427,7 @@ class RouteCurationTest(unittest.TestCase):
             )
 
             link_set = json.loads(
-                (self.repo_root / "src/behavior_planner/src/config/link_set.json").read_text()
+                (self.repo_root / "src/asmc_planner/config/behavior/link_set.json").read_text()
             )
             a318 = np.asarray(next(
                 row["points"] for row in link_set if row["idx"] == "A2256W000318"

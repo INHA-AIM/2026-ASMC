@@ -39,7 +39,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from mapbake.raster import RasterGrid
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_H5 = Path(__file__).resolve().parent / 'out' / 'link_node_map.h5'
 
 # --- MORAI Ego UDP 패킷 (src/asmc_bridge/scripts/morai_udp_bridge.py 와 동일) ---

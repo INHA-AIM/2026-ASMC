@@ -187,7 +187,7 @@ def _validate_p5_closeout(
         "producer_owner": "asmc_camera",
         "canonical_topic": "/perception/traffic_light/detection",
         "compatibility_topic": "/traffic_light/state",
-        "consumer_node": "/behavior_planner",
+        "consumer_node": "/asmc_planner",
         "selection_policy": "typed_authoritative_after_first_message",
         "invalid_or_stale_policy": "unknown_without_legacy_fallback",
         "planning_launch_starts_producer_by_default": False,
@@ -225,7 +225,6 @@ def _validate_p5_closeout(
             )
 
     expected_defaults = {
-        "autonomy_no_bridges.launch": "false",
         "autonomy_no_bridges_v2.launch": "true",
     }
     if traffic.get("planning_launch_signal_defaults") != {
@@ -234,7 +233,7 @@ def _validate_p5_closeout(
         raise AcceptanceContractError("planning signal launch defaults changed")
     for launch_name, default in expected_defaults.items():
         launch = ET.parse(
-            repo_root / "src/behavior_planner/launch" / launch_name
+            repo_root / "src/asmc_planner/launch" / launch_name
         ).getroot()
         _validate_planning_signal_launch(launch, launch_name, default)
 

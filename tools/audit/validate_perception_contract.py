@@ -290,7 +290,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
             raise ContractError(f"compatibility topic lacks retire gate: {topic}")
 
     bindings = _mapping(contract.get("consumer_bindings"), "consumer_bindings")
-    behavior = _mapping(bindings.get("behavior_planner"), "behavior binding")
+    behavior = _mapping(bindings.get("asmc_planner"), "behavior binding")
     expected_binding = {
         "canonical_topic": "/perception/traffic_light/detection",
         "compatibility_topic": "/traffic_light/state",
@@ -304,7 +304,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
             )
 
     behavior_config_path = (
-        repo_root / "src/behavior_planner/src/config/behavior_params.yaml"
+        repo_root / "src/asmc_planner/config/behavior/behavior_params.yaml"
     )
     behavior_config = _mapping(
         yaml.safe_load(behavior_config_path.read_text(encoding="utf-8")),
@@ -318,9 +318,9 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
     if traffic_config.get("topic") != expected_binding["compatibility_topic"]:
         raise ContractError("behavior planner compatibility topic drifted")
 
-    for filename in ("autonomy_no_bridges.launch", "autonomy_no_bridges_v2.launch"):
+    for filename in ("autonomy_no_bridges_v2.launch",):
         behavior_launch = ET.parse(
-            repo_root / "src/behavior_planner/launch" / filename
+            repo_root / "src/asmc_planner/launch" / filename
         ).getroot()
         nodes = {
             (item.get("pkg"), item.get("type"))

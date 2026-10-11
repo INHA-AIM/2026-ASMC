@@ -1,0 +1,4 @@
+<launch>
+  <test pkg="lane_boundary_adapter" type="test_camera_bbox_inactive_lifecycle.py"
+        test-name="camera_bbox_inactive_lifecycle" time-limit="65"/>
+</launch>

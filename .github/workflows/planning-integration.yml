@@ -4,8 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'src/behavior_planner/**'
-      - 'src/frenet_planner/**'
+      - 'src/asmc_planner/**'
       - 'src/asmc_controller/**'
       - 'src/planning_inputs/**'
       - 'src/lidar+sensorfusion/src/Main/**'
@@ -42,7 +41,7 @@ jobs:
         with:
           node-version: '20'
       - name: Check dashboard motion rendering
-        run: node src/behavior_planner/test/dashboard_motion_test.js
+        run: node src/asmc_planner/tests/behavior/dashboard_motion_test.js
       - name: Build ROS workspace
         run: |
           source /opt/ros/noetic/setup.bash

@@ -5,10 +5,10 @@ map_id: kcity2025_competition_corridor_nominal_v1
 # This first baseline is current-map only.  Do not add legacy KATRI or observed
 # lane paths here; those inputs belong to the later calibration stage.
 sources:
-  current_global_info: src/behavior_planner/src/config/global_info.json
-  current_link_set: src/behavior_planner/src/config/link_set.json
-  current_node_set: src/behavior_planner/src/config/node_set.json
-  route_links: src/behavior_planner/src/config/route_links_1.yaml
+  current_global_info: src/asmc_planner/config/behavior/global_info.json
+  current_link_set: src/asmc_planner/config/behavior/link_set.json
+  current_node_set: src/asmc_planner/config/behavior/node_set.json
+  route_links: src/asmc_planner/config/behavior/route_links_1.yaml
   organizer_route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
 
 route:

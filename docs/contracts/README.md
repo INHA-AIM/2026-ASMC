@@ -11,7 +11,7 @@
 | ROS1 공용 message, HD Map topic | [HD Map topic v1](./hd-map/topic-v1.md) | Frozen Interface | `config/contracts/hd_map_topic_contract_v1.yaml`, `src/asmc_msgs/msg/` |
 | HD Map 실행·판제 소비·RViz | [HD Map runtime v1](./hd-map/runtime-v1.md) | Active Runtime | `src/asmc_hd_map/` |
 | 체크포인트·미션·속도 구간 | [K-City metadata v1](./competition/kcity2025-metadata-v1.md) | Frozen Metadata | `src/asmc_hd_map/config/kcity2025_competition_metadata*.yaml` |
-| Behavior/FSM ↔ Frenet | [FSM↔Frenet v2](./planning/fsm-frenet-v2.md) | Frozen Interface | `BehaviorCommand.msg`, `FrenetFeedback.msg`, `src/frenet_planner/` |
+| Behavior/FSM ↔ Frenet | [FSM↔Frenet v2](./planning/fsm-frenet-v2.md) | Frozen Interface | `BehaviorCommand.msg`, `FrenetFeedback.msg`, `src/asmc_planner/` |
 | 인지 원본·라벨·split | [dataset 계약](./perception/dataset-labeling-split.md) | Canonical Data Contract | versioned manifest와 `$ASMC_DATA` artifact |
 | 인지 runtime typed topic | [Perception runtime v1](./perception/runtime-v1.md) | Frozen Additive Interface | `config/contracts/perception_runtime_topic_contract_v1.yaml`, `src/asmc_msgs/msg/` |
 | 인지 runtime/debug 발행 정책 | [P5-A topic 감사](../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit | `config/contracts/perception_topic_policy_v1.yaml` |

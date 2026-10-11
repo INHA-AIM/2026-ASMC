@@ -19,7 +19,7 @@
 >
 > **빠른 읽기:** 현재 wire/runtime 계약은 1~11절, 12절은 D0~D10 구현 rollout의 역사와
 > 완료 기준이다. 현재 지원 maneuver와 실행법은
-> [`src/frenet_planner/README.md`](../../../src/frenet_planner/README.md)를 우선한다.
+> [`src/asmc_planner/README.md`](../../../src/asmc_planner/README.md)를 우선한다.
 
 ---
 
