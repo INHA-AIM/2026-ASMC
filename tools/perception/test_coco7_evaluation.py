@@ -56,8 +56,9 @@ class Coco7EvaluationTest(unittest.TestCase):
         self.assertEqual([],debug_topics(dict(model='yolo26m-seg',debug=False)))
         masks=debug_topics(dict(model='yolo26m-seg',debug=True))
         standard=debug_topics(dict(model='yolo26m-seg',debug=True,debug_masks=False))
-        self.assertEqual(9,len(set(masks)))
-        self.assertEqual(6,len(set(standard)))
+        self.assertEqual(10,len(set(masks)))
+        self.assertEqual(7,len(set(standard)))
+        self.assertIn('/perception/camera/objects/debug/mosaic/compressed',standard)
         self.assertFalse(any('/instances/' in t for t in standard))
         self.assertEqual(standard,debug_topics(dict(model='yolo26m',debug=True)))
 

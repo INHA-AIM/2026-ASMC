@@ -8,9 +8,11 @@
 이 절과 [v2 라벨 정책](../../../config/datasets/camera_object_labels_v2.json),
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
-**이번 PR #78은 v5 대량 활용 train 확장과 v4 검수 자료를 제공한다. 운영 실행은 수정하지 않는다.**
+**PR #78의 데이터·샘플링은 main에 병합됐다. 현재 #80의 bbox 파일럿은 Draft이며 운영 실행은 수정하지 않는다.**
 최신 결과는 [16epoch 비교 결과](#16epoch-비교-결과--본학습-후보-선정-보류), 샘플링은 [bbox 파일럿](#bbox-파일럿-샘플링--2026-10-11), 전체 자료 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
 아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
+2026-10-11 추가 검토는 [teacher 대안과 RF-DETR](#2026-10-11-teacher-대안과-rf-detr-검토), 병합 범위는 [#78 main 통합](#2026-10-11-pr-78-병합-범위와-main-통합)을 따른다.
+
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
 MORAI 사용자 표기는 실제 gRPC API 이름이 아니며, 미확인 API 이름은 null로 둔다.
@@ -1433,3 +1435,133 @@ Hosted CI는 결제 제한으로 job이 시작되지 않은 기록과 구분한�
 YOLOE bbox/1280을 우선 재검토할 근거가 있지만 본학습 후보로 승인하지 않았다.
 원인 해결 뒤 한 모델 본학습 → TensorRT/3뷰 → 전방 fusion → 전체 스택 30분 → 팀 문서 순서다.
 이번 실행에서는 추가 수집·본학습·운영 교체를 시작하지 않았다.
+## 2026-10-11 PR #78 병합 범위와 main 통합
+
+사용자 승인으로 hosted CI billing 제한 상태에서도 데이터·감사·샘플링 도구를 main에
+병합한다. 미확인 자료까지 완전한 GT로 수락하거나 운영 모델을 교체하는 병합은 아니다.
+채택 tier와 소스별 허용 혼입, 미완전 주석, 평가 부족과 stroller 미지원은 유지한다.
+#80의 두 모델 파일럿은 별도 작업이며 이 PR에서 학습 수락을 주장하지 않는다.
+
+#77 병합 main `c8ce3f55`를 반영했다. 공유 준비 도구는 m/l의 640/960/1280·variant
+export와 X teacher의 PyTorch-only 제한을 모두 유지한다. X ONNX/engine 차단 및
+전방·측방 입력 profile 경계 시험을 추가했다. 데이터·샘플링·준비 도구 CPU 시험
+117개와 perception 계약/토픽/runtime validator 및 문서 migration 검사 4개가 통과했다.
+#77에서 확인한 카메라 전체 306개 중 main의 기존 facade 1건 실패는 별도로 유지한다.
+해당 runtime 및 launch는 이 PR에서 변경하지 않는다. hosted CI를 통과로 표시하지 않는다.
+
+현재 v5-capture-r1의 실제 YOLO 이미지/라벨을 다시 읽어 22,498장·127,334객체,
+픽셀 해시 기준 split 누출 0을 확인했다. manifest SHA는
+`63cc3539294a7035d537073b77cac08b7672107b13483418dac402de2c794a3b`다.
+이는 파일·좌표·ID·split 검증이며 모든 주석의 영상 의미 정확도를 보증하지 않는다.
+
+## 2026-10-11 teacher 대안과 RF-DETR 검토
+
+**현재 결론:** Grounding DINO를 YOLOE-X의 보완 teacher로 검증할 가치는 있지만,
+두 모델의 MORAI 정확도 우열은 아직 측정하지 않았다. SAM 2는 박스/점으로 마스크를
+만들고 영상에서 전파하는 모델이며 객체 이름을 결정하는 검출기가 아니다.
+RF-DETR은 추가학습 가능한 별도 실시간 배포 후보다. 이 세 역할을 혼동하지 않는다.
+이번에는 참고 소스와 코드·문서만 확인했으며 새 추론·자동 라벨·추가학습은 실행하지 않았다.
+
+### 라벨 보강 이력과 원본 GT 우선
+
+[YOLOE-X 원본 결과](../../../config/baselines/evidence/camera_yoloe_x_teacher_v1/summary.json)는
+`formal_teacher_acceptance=false`, `approved_classes=[]`, `teacher_labels_applied=0`이다.
+X를 시험한 사실과 X 예측을 정답으로 적용한 사실은 다르다. 현재 학습 자료는 원본 라벨의
+소스별 의미 해석·RGB 검토와 Capture actor 연결로 정리했다. 이 기록은 변경하지 않았다.
+
+- **Capture:** 정확한 bbox·instance·semantic과 actor 대응을 우선한다. coarse 종류가
+  미확정인 경우 teacher는 해당 원본 박스의 이름 후보만 제안한다. 정확한 GT 박스를
+  새 예측으로 대체하거나 미검출 객체를 지우지 않는다.
+- **Roboflow:** 직접 대응 라벨은 이름 변환만으로 사용한다. 혼합 박스에만 teacher의
+  개별 이름/분리 제안을 적용하고 원본 박스·출처·검수 이력을 보존한다.
+- **bag:** RGB에서 bbox 초안 생성이 가능하다. Ego mask, 중복 장면, 작은 대상,
+  미검출과 불완전 주석을 확인하며 teacher 무검출을 빈 정답으로 만들지 않는다.
+- **AIM:** `/mnt/d/asmc_aim/dataset` 존재를 다시 확인했다. 기존 감사의 RGB 417,435개는
+  semantic/instance/2D bbox GT 미확인 상태이며 이번에 전수 재감사한 수가 아니다.
+  dynamic_obstacle 하위 lap에는 CAMERA_1~4·capture_contract가 있다. camera4 rear와
+  우리 신호등 camera4를 구분한다. 파일 수와 독립 장면 수, 새 클래스 커버리지는 다르다.
+  검수한 세션 표본부터 사용하고 원본·선정/평가 split과 센서 보정을 보존한다.
+
+### Grounding DINO + SAM 2를 사용한다면
+
+[Grounding DINO](https://github.com/IDEA-Research/GroundingDINO)는 text-conditioned bbox를,
+[SAM 2](https://github.com/facebookresearch/sam2)는 prompt로 instance mask와 영상 전파를
+제공한다. [공식 연결 예제](https://github.com/IDEA-Research/Grounded-SAM-2)는 detector의
+box/name을 SAM 2에 공급한다. 잘못된 이름과 누락은 SAM 2만으로 해결되지 않는다.
+박스 학습에서는 먼저 Grounding DINO 단독 검출과 YOLOE-X를 비교하고, 마스크·가림
+검토·연속 영상 주석 전파에 실익이 있을 때 SAM 2를 추가하는 순서가 적절하다.
+
+다음 시험은 고정 selection RGB·정확한 기존 GT와 같은 16종 대응표를 사용한다.
+box의 CargoBox/WoodBox, plastic_barrier의 PE_Firewall, 철제/콘크리트 방벽, drum,
+사람/이륜차·원거리·FOGGY·터널을 구분한다. 같은 이름으로 합칠 학습 클래스도 원래
+하위 유형별 검출 누락을 남긴다. class/IoU 일대일 precision·recall, 중복, 누락,
+검수 수정량과 처리 시간을 비교한다. GT가 없는 종류는 사례 검토로 남긴다.
+클래스별 충분한 표본에서 검증한 teacher만 초안을 일괄 생성하고, 불일치·새 박스·
+변경 이름은 검수한다. 두 teacher가 일치한다는 것만으로 정답 승인을 대신하지 않는다.
+
+로컬 Grounding DINO checkpoint 예제와 GD1.5/1.6/DINO-X cloud API 예제는 구분한다.
+후자 API를 무료 로컬 checkpoint로 가정하지 않는다. 8GB GPU에서는 큰 detector와
+SAM 2를 순차 실행하거나 작은 묶음으로 처리하는 후보가 적절하지만 OOM·속도는 미측정이다.
+영상 전파는 새로 등장하는 객체를 놓칠 수 있어 주기적 재검출·검수가 필요하다.
+
+### RF-DETR 고정 소스와 시스템 적합성
+
+공식 [roboflow/rf-detr](https://github.com/roboflow/rf-detr)를 상위 workspace의
+`external/baselines/RF-DETR`에 shallow clone했다. 원본 develop checkout SHA는
+`eca736acab9f6fe93f2cbc82a1d9f6edfb53f0ea`, pyproject는 `1.12.0.dev`다.
+확인 시점 [stable 1.11.2](https://github.com/roboflow/rf-detr/releases/tag/1.11.2)와
+개발 소스를 구분한다. vendor/submodule·ROS 의존성으로 추가하지 않았고 checkout은 깨끗하다.
+설치·가중치 다운로드·학습·4060 Ti GPU 측정은 하지 않았다.
+
+공식 README의 COCO detection 비교는 다음과 같다. **Roboflow 자체 측정의 T4,
+TensorRT FP16, batch1, 서로 다른 기본 해상도**이며 우리 전체 스택 wall latency가 아니다.
+
+| 후보 | 기본 tensor | COCO AP50:95 | GPU latency ms | 배포 파라미터 M |
+|---|---|---:|---:|---:|
+| RF-DETR S | 512×512 | 53.0 | 3.5 | 32.1 |
+| RF-DETR M | 576×576 | 54.7 | 4.4 | 33.7 |
+| RF-DETR L | 704×704 | 56.5 | 6.8 | 33.9 |
+| YOLO26 L (공식 비교행) | 640×640 | 54.1 | 5.7 | 25.3 |
+
+이 표로 MORAI 인식률·우리 1280 입력 지연·3뷰15Hz 달성을 예측하지 않는다.
+서로 다른 모델군의 S/M/L 이름도 같은 크기를 뜻하지 않는다. 모델 탐색을 추가한다면
+**RF-DETR S/M의 배포 비용을 먼저 선별**하고 L은 품질 대조로 남기는 것이 현재 4060 Ti
+자원과 일정에 맞는 검토 순서다. 이 판단은 시험 우선순위이지 후보 선정 결과가 아니다.
+
+읽은 연결 지점과 필요한 검증은 다음과 같다.
+
+- `src/rfdetr/config.py`, `detr.py`: DINOv2 기반 pretrained closed-set 검출이다.
+  text prompt로 MORAI 신규 이름을 추가하는 모델이 아니며 동일 16종 bbox 추가학습이 필요하다.
+  COCO sparse category slots와 실제 80종 개수를 혼동하지 않는다.
+- `detr.py:predict`, `models/postprocess.py`: RGB·ImageNet normalize와 기본 square resize다.
+  develop의 `(H,W)` 인자는 patch×window 나눗셈 제약이 있다. batch를 지원하지만
+  현재 YOLO의 종횡비 보존 letterbox와 같은 전처리가 아니다. 원본 좌표 복원과
+  camera calibration 계약을 유지하고 같은 RGB·작은 객체에서 실제 품질을 확인한다.
+- `docs/exports/onnx.md`, `tensorrt.md`: ONNX/TRT export·dynamic batch 경로가 있다.
+  raw normalized cxcywh와 logits를 올바르게 decode하고 COCO/custom background slot,
+  출력 이름·sigmoid·top-k·클래스 ID를 검증한다. NMS-free를 중복 검출 없음으로 해석하지 않는다.
+  실제 전방1280/960·좌우640, batch2+1/3은 engine shape·출력 대응·지연 시험이 필요하다.
+- `docs/learn/train/dataset-formats.md`: COCO 및 YOLO 형식 학습 경로가 있어 기존
+  bbox 데이터 재사용 후보로 적합하다. ID/누락 주석·split 검증은 그대로 필요하다.
+- `pyproject.toml`: develop은 Python>=3.10·Torch>=2.2·Transformers>=5.1을 요구한다.
+  기존 Noetic Python3.8/Torch2.1.2를 덮어쓰지 않는다. 준비/학습 환경은 격리하고
+  실제 배포는 `asmc-ros-noetic`의 TensorRT backend 등 호환 경로를 검증한다.
+- 코드와 Apache-designated N/S/M/L은 Apache-2.0이다. Plus A/F/P/XL/2XL detection은
+  PML-1.0으로 구분한다. 다른 모델군의 라이선스까지 일괄 Apache로 안내하지 않는다.
+
+### 다음 작업의 우선순위
+
+#77은 `c8ce3f55`, #78은 `9092491a`로 main에 병합했다. 현재 #80에 두 병합을 반영하되
+파일럿의 person/motorcycle 회귀와 기존 통합 보류를 유지한다. #80은 병합하지 않았다.
+
+1. 기존 파일럿의 사람·이륜차 회귀와 평가/샘플링을 먼저 점검한다. 새 모델을 쓰는 것만으로
+   미완전 라벨·소스 편중·forgetting을 해결했다고 가정하지 않는다.
+2. 같은 selection 표본에서 YOLOE-X 대 Grounding DINO의 신규 장애물 초안 품질을 비교한다.
+   성능이 입증된 클래스와 부족 조건만 bag/AIM/Capture 의미 보강에 적용한다.
+3. 정리된 공통 bbox 데이터로 기존 두 후보의 작은 재파일럿을 우선한다. RF-DETR은
+   같은 평가본의 사전학습·TRT 자원 선별이 유망할 때만 짧은 비교학습 후보로 추가한다.
+   이번 분석을 새 GPU 실행·전체 AIM 라벨링·세 번째 본학습의 완료로 표시하지 않는다.
+
+main 동기화·문서 보강 후 현재 브랜치의 데이터/파일럿/준비 도구 CPU 시험 130개와
+문서 migration·perception 계약 검사를 통과했다. 기존 실험 launch/default와 메시지는
+변경하지 않았다. 공유 ROS의 Python3.8.10·Torch2.1.2+cu118도 읽기 전용으로 확인했다.

@@ -105,6 +105,7 @@ jobs:
           python3 -m unittest discover -s tools/perception -p 'test_camera_label_changes.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_teacher_audit.py'
           python3 -m unittest discover -s tools/perception -p 'test_yoloe_l_measurements.py'
+          python3 -m unittest discover -s tools/perception -p 'test_yoloe_selection.py'
           python3 -m unittest discover -s tools/perception -p 'test_yoloe_l_diagnostics.py'
           python3 -m unittest tools/perception/test_b1a_protocol.py
           python3 -m unittest tools/perception/test_frame_boundary_measurements.py
@@ -138,6 +139,8 @@ jobs:
           roslaunch --nodes asmc_camera camera_objects_yoloe_l_experiment.launch prompt_profile:=base27 batch_mode:=batch3 debug:=false
           roslaunch --nodes asmc_camera camera_objects_three_view_experiment.launch debug:=false
           roslaunch --nodes asmc_camera camera_objects_three_view_experiment.launch debug:=true
+          roslaunch --nodes asmc_camera camera_yoloe_experiment.launch model:=m front_width:=640 prompt_profile:=obstacle17
+          roslaunch --nodes asmc_camera camera_yoloe_experiment.launch model:=l front_width:=1280 start_camera_lane:=true start_traffic_light:=true
           python3 tools/perception/check_region_example_ros.py
           python3 tools/perception/check_object_visualization_ros.py
           python3 tools/perception/check_object_visualization_ros.py --hood-mask
