@@ -1,0 +1,11 @@
+{
+  "images": 120,
+  "manifest_sha256": "ecc48e73ab2a8566a4dcdbc380b5d0811877a1b4248892872693036009e23206",
+  "original_curated_sha256": "33523378869f1f03b465c245810fe1b3b4f10e82ee90f3930d228a2d7ec1e374",
+  "source_splits_only": [
+    "selection",
+    "heldout"
+  ],
+  "training_membership_changed": false,
+  "evaluation_kind": "additional temporal recall diagnostic; not sparse accuracy/threshold selection"
+}

@@ -1,0 +1,2957 @@
+{
+  "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+  "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+  "cache_hashes": {
+    "yolo26l-before-960": {
+      "inference.json": "e7733c5d536bd5f6e8db02516f158f02f52ef1837911abf58f43340546a7ea48",
+      "predictions.jsonl": "89d664ed3bff7211146d80a5e84b514044f414bb48491048ed2a65811cbb213c",
+      "evaluation.json": "4535f914f5f9ae221d4451a594de3dae55f86c8f26ef2ad3d940c3a6ec965d6c"
+    },
+    "yolo26l-after-960": {
+      "inference.json": "5c80ce462ce3003706db8799f28c53708619b51e31345e73a388ad0f3daad600",
+      "predictions.jsonl": "b0c2a767661f1f73f4c9d42bb72b906dcf4896007f453e36b92975e1983fdbc7",
+      "evaluation.json": "87df3f5aac3623eb76b134dc685f3357730f6b9883979034cd55d2ed92ed26ab"
+    },
+    "yolo26l-before-1280": {
+      "inference.json": "77d546faa5192a6cf9ab627597ff28c4d6ac27a65810c826c2db3c7090facb89",
+      "predictions.jsonl": "23c3a01bff914509daf05022df439cca6e1631726ec06366c1bf560df630d899",
+      "evaluation.json": "334a2c05dddc2ac3bd06752bc3a9961af234cb52ed733a5b3891b9aa42ba6c74"
+    },
+    "yolo26l-after-1280": {
+      "inference.json": "6b86ade823bf31e720af544ee345fe1eed8b37617b4d4247c84446c107a916e8",
+      "predictions.jsonl": "e1ed5dbce292f3b72d18464d248a35ad211b4f44e15383352059b45af3d137d3",
+      "evaluation.json": "cdb103ee1b67c4df69dc039dfd52b7a8845db3157e38cd6fca4e317529f8d204"
+    },
+    "yoloe26l-before-960": {
+      "inference.json": "680ee012bf4d5a044c43df78919e8f42ac6c389d6630033f8e3cbfdec798cf65",
+      "predictions.jsonl": "683b8b2a59abb31b76f9ce169c4ffc7ad10acf7f74d435140660d78d4874c5e6",
+      "evaluation.json": "75db43acf494a1683dcc9496b7cfc29cdae059452d3ce503fd7d4a791565c5a9"
+    },
+    "yoloe26l-after-960": {
+      "inference.json": "6a23de5bf79197e18a22238c5bce51243cee6d67da261ec97b4812389f6a8737",
+      "predictions.jsonl": "b299d64aa3a759bda4516afeeaafd98cc694f1b525bdbfb037cd1ea18ad7bb0c",
+      "evaluation.json": "9ccbb71414b82eaa1f1332932c75b9a42d36790dfe7c50e8cd2f9876517cc9ab"
+    },
+    "yoloe26l-before-1280": {
+      "inference.json": "e8c4519e1155b69260fca34b0aa762dfa1495e9b72d4755eacf5653c096dba5d",
+      "predictions.jsonl": "872ae85010c8a56ac5bc742ef8a566389c3961ad00cce5137370471abc13e7ff",
+      "evaluation.json": "2f16bbb60cb1451fed1164da9262dab0c60305e8e653af8e0bb86d52e4982e54"
+    },
+    "yoloe26l-after-1280": {
+      "inference.json": "c5e2229db19f753c391aea225f65486f41dbb157b27c9776b0b73983ec467bec",
+      "predictions.jsonl": "f099d32f8230337718945982da445c272a3e49b704851a22d32527a77132e30b",
+      "evaluation.json": "f0973090f96a7b932299c983a8f7e52fc434e38a760f84618e6fe266089f86a0"
+    }
+  },
+  "training_distribution": {
+    "person": {
+      "images": 2759,
+      "objects": 9261,
+      "sources": {
+        "roboflow:aiv5challenge/yeonsoo-sarang": 81,
+        "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel": 134,
+        "roboflow:parkminseo/final-ftuy2": 182,
+        "roboflow:hl-fma/hlfma_3": 956,
+        "roboflow:jjj-nx9di/katri_new_data-xkbev": 183,
+        "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel": 244,
+        "roboflow:hl-fma/hlfma_2": 372,
+        "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel": 161,
+        "roboflow:mino-qjf5p/vi2re": 123,
+        "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel": 146,
+        "roboflow:yolo-m5lvd/detection-bzetd": 73,
+        "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel": 70,
+        "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel": 22,
+        "capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel": 4,
+        "capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel": 8
+      },
+      "sizes": {
+        "tiny": 2838,
+        "medium": 3718,
+        "small": 1168,
+        "large": 1537
+      },
+      "views": {
+        "unknown": 1970,
+        "left": 247,
+        "front": 480,
+        "right": 62
+      },
+      "declared_complete": 193,
+      "augmentation_families": 2759,
+      "split_groups": 15,
+      "occlusion": "unknown; not inferred from bbox size",
+      "scene_independence": "augmentation family/group counts do not establish independent scenes"
+    },
+    "motorcycle": {
+      "images": 63,
+      "objects": 191,
+      "sources": {
+        "roboflow:yolo-m5lvd/detection-bzetd": 63
+      },
+      "sizes": {
+        "small": 103,
+        "medium": 84,
+        "large": 4
+      },
+      "views": {
+        "unknown": 63
+      },
+      "declared_complete": 61,
+      "augmentation_families": 63,
+      "split_groups": 1,
+      "occlusion": "unknown; not inferred from bbox size",
+      "scene_independence": "augmentation family/group counts do not establish independent scenes"
+    },
+    "car": {
+      "images": 2121,
+      "objects": 4998,
+      "sources": {
+        "roboflow:aiv5challenge/yeonsoo-sarang": 466,
+        "roboflow:hl-fma/hlfma_3": 522,
+        "roboflow:jjj-nx9di/katri_new_data-xkbev": 385,
+        "roboflow:mino-qjf5p/vi2re": 248,
+        "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel": 32,
+        "roboflow:parkminseo/final-ftuy2": 138,
+        "roboflow:yolo-m5lvd/detection-bzetd": 77,
+        "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel": 81,
+        "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel": 78,
+        "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel": 25,
+        "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel": 60,
+        "capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel": 3,
+        "capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel": 2,
+        "capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel": 2,
+        "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel": 2
+      },
+      "sizes": {
+        "large": 1136,
+        "small": 1437,
+        "tiny": 546,
+        "medium": 1879
+      },
+      "views": {
+        "unknown": 1836,
+        "right": 103,
+        "left": 33,
+        "front": 149
+      },
+      "declared_complete": 147,
+      "augmentation_families": 2121,
+      "split_groups": 15,
+      "occlusion": "unknown; not inferred from bbox size",
+      "scene_independence": "augmentation family/group counts do not establish independent scenes"
+    },
+    "bicycle": {
+      "images": 227,
+      "objects": 249,
+      "sources": {
+        "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel": 27,
+        "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel": 136,
+        "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel": 45,
+        "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel": 19
+      },
+      "sizes": {
+        "tiny": 21,
+        "medium": 99,
+        "small": 98,
+        "large": 31
+      },
+      "views": {
+        "left": 89,
+        "front": 100,
+        "right": 38
+      },
+      "declared_complete": 0,
+      "augmentation_families": 227,
+      "split_groups": 4,
+      "occlusion": "unknown; not inferred from bbox size",
+      "scene_independence": "augmentation family/group counts do not establish independent scenes"
+    }
+  },
+  "regression_comparisons": 1137,
+  "regression_images": 99,
+  "unknown_view_policy": "no assumed mask",
+  "partial_gt_policy": "recall only; unmatched detections never FP",
+  "confidence_floor": 0.1,
+  "thresholds_frozen": true,
+  "runtime_changes": false,
+  "metrics": {
+    "yolo26l-before-960": {
+      "selection": {
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 88,
+              "position_missing_at_saved_floor": 14,
+              "confidence_below_threshold": 5
+            },
+            "motorcycle": {}
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 88,
+              "complete_gt": 21,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7619047619047619,
+              "f1": 0.8648648648648649,
+              "annotated_recall": 0.822429906542056,
+              "complete_fp": 0,
+              "complete_fn": 5,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 90,
+              "complete_gt": 42,
+              "complete_tp": 17,
+              "complete_predictions": 17,
+              "precision": 1.0,
+              "recall": 0.40476190476190477,
+              "f1": 0.576271186440678,
+              "annotated_recall": 0.45685279187817257,
+              "complete_fp": 0,
+              "complete_fn": 25,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        },
+        "0.5": {
+          "classes": {
+            "person": {
+              "correct": 87,
+              "position_missing_at_saved_floor": 14,
+              "confidence_below_threshold": 6
+            },
+            "motorcycle": {}
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 87,
+              "complete_gt": 21,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7619047619047619,
+              "f1": 0.8648648648648649,
+              "annotated_recall": 0.8130841121495327,
+              "complete_fp": 0,
+              "complete_fn": 5,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 88,
+              "complete_gt": 42,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "precision": 1.0,
+              "recall": 0.38095238095238093,
+              "f1": 0.5517241379310345,
+              "annotated_recall": 0.4467005076142132,
+              "complete_fp": 0,
+              "complete_fn": 26,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        }
+      },
+      "heldout": {
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 24,
+              "box_localization_error": 1,
+              "position_missing_at_saved_floor": 1
+            },
+            "motorcycle": {
+              "correct": 120,
+              "confidence_below_threshold": 17,
+              "other_class": 1
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "person",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 24,
+              "ignored_gt": 25,
+              "complete_predictions": 5,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.9230769230769231,
+              "complete_fp": 5,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 120,
+              "complete_gt": 62,
+              "complete_tp": 54,
+              "complete_predictions": 57,
+              "precision": 0.9473684210526315,
+              "recall": 0.8709677419354839,
+              "f1": 0.907563025210084,
+              "annotated_recall": 0.8695652173913043,
+              "complete_fp": 3,
+              "complete_fn": 8,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 24,
+              "complete_predictions": 5,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.47058823529411764,
+              "complete_fp": 5,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 120,
+              "complete_gt": 62,
+              "complete_tp": 54,
+              "complete_predictions": 57,
+              "precision": 0.9473684210526315,
+              "recall": 0.8709677419354839,
+              "f1": 0.907563025210084,
+              "annotated_recall": 0.8695652173913043,
+              "complete_fp": 3,
+              "complete_fn": 8,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        },
+        "0.5": {
+          "classes": {
+            "person": {
+              "correct": 22,
+              "box_localization_error": 1,
+              "confidence_below_threshold": 2,
+              "position_missing_at_saved_floor": 1
+            },
+            "motorcycle": {
+              "correct": 109,
+              "confidence_below_threshold": 28,
+              "other_class": 1
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "person",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 22,
+              "ignored_gt": 25,
+              "complete_predictions": 2,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.8461538461538461,
+              "complete_fp": 2,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 109,
+              "complete_gt": 62,
+              "complete_tp": 48,
+              "complete_predictions": 50,
+              "precision": 0.96,
+              "recall": 0.7741935483870968,
+              "f1": 0.8571428571428571,
+              "annotated_recall": 0.7898550724637681,
+              "complete_fp": 2,
+              "complete_fn": 14,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 22,
+              "complete_predictions": 2,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.43137254901960786,
+              "complete_fp": 2,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 109,
+              "complete_gt": 62,
+              "complete_tp": 48,
+              "complete_predictions": 50,
+              "precision": 0.96,
+              "recall": 0.7741935483870968,
+              "f1": 0.8571428571428571,
+              "annotated_recall": 0.7898550724637681,
+              "complete_fp": 2,
+              "complete_fn": 14,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        }
+      }
+    },
+    "yolo26l-after-960": {
+      "selection": {
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 87,
+              "position_missing_at_saved_floor": 9,
+              "confidence_below_threshold": 7,
+              "box_localization_error": 3,
+              "other_class": 1
+            },
+            "motorcycle": {}
+          },
+          "confusion": [
+            {
+              "gt": "person",
+              "prediction": "bicycle",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 87,
+              "complete_gt": 21,
+              "complete_tp": 17,
+              "complete_predictions": 19,
+              "ignored_gt": 90,
+              "precision": 0.8947368421052632,
+              "recall": 0.8095238095238095,
+              "f1": 0.85,
+              "annotated_recall": 0.8130841121495327,
+              "complete_fp": 2,
+              "complete_fn": 4,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 106,
+              "complete_gt": 42,
+              "complete_tp": 27,
+              "complete_predictions": 29,
+              "precision": 0.9310344827586207,
+              "recall": 0.6428571428571429,
+              "f1": 0.7605633802816901,
+              "annotated_recall": 0.5380710659898477,
+              "complete_fp": 2,
+              "complete_fn": 15,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        },
+        "0.45": {
+          "classes": {
+            "person": {
+              "correct": 86,
+              "position_missing_at_saved_floor": 10,
+              "confidence_below_threshold": 8,
+              "box_localization_error": 2,
+              "other_class": 1
+            },
+            "motorcycle": {}
+          },
+          "confusion": [
+            {
+              "gt": "person",
+              "prediction": "bicycle",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 86,
+              "complete_gt": 21,
+              "complete_tp": 17,
+              "complete_predictions": 17,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.8095238095238095,
+              "f1": 0.8947368421052632,
+              "annotated_recall": 0.8037383177570093,
+              "complete_fp": 0,
+              "complete_fn": 4,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 103,
+              "complete_gt": 42,
+              "complete_tp": 25,
+              "complete_predictions": 25,
+              "precision": 1.0,
+              "recall": 0.5952380952380952,
+              "f1": 0.746268656716418,
+              "annotated_recall": 0.5228426395939086,
+              "complete_fp": 0,
+              "complete_fn": 17,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        }
+      },
+      "heldout": {
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 20,
+              "position_missing_at_saved_floor": 4,
+              "confidence_below_threshold": 2
+            },
+            "motorcycle": {
+              "other_class": 80,
+              "confidence_below_threshold": 16,
+              "position_missing_at_saved_floor": 39,
+              "correct": 3
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "car",
+              "count": 80
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 20,
+              "ignored_gt": 25,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.7692307692307693,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "complete_gt": 62,
+              "tp": 3,
+              "complete_tp": 2,
+              "complete_predictions": 2,
+              "precision": 1.0,
+              "recall": 0.03225806451612903,
+              "f1": 0.0625,
+              "annotated_recall": 0.021739130434782608,
+              "complete_fp": 0,
+              "complete_fn": 60,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 21,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.4117647058823529,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "complete_gt": 62,
+              "tp": 3,
+              "complete_tp": 2,
+              "complete_predictions": 2,
+              "precision": 1.0,
+              "recall": 0.03225806451612903,
+              "f1": 0.0625,
+              "annotated_recall": 0.021739130434782608,
+              "complete_fp": 0,
+              "complete_fn": 60,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        },
+        "0.45": {
+          "classes": {
+            "person": {
+              "correct": 20,
+              "position_missing_at_saved_floor": 4,
+              "confidence_below_threshold": 2
+            },
+            "motorcycle": {
+              "other_class": 78,
+              "confidence_below_threshold": 19,
+              "position_missing_at_saved_floor": 39,
+              "correct": 2
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "car",
+              "count": 78
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 20,
+              "ignored_gt": 25,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.7692307692307693,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "complete_gt": 62,
+              "tp": 2,
+              "complete_tp": 2,
+              "complete_predictions": 2,
+              "precision": 1.0,
+              "recall": 0.03225806451612903,
+              "f1": 0.0625,
+              "annotated_recall": 0.014492753623188406,
+              "complete_fp": 0,
+              "complete_fn": 60,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 21,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.4117647058823529,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "complete_gt": 62,
+              "tp": 2,
+              "complete_tp": 2,
+              "complete_predictions": 2,
+              "precision": 1.0,
+              "recall": 0.03225806451612903,
+              "f1": 0.0625,
+              "annotated_recall": 0.014492753623188406,
+              "complete_fp": 0,
+              "complete_fn": 60,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        }
+      }
+    },
+    "yolo26l-before-1280": {
+      "selection": {
+        "0.3": {
+          "classes": {
+            "person": {
+              "correct": 90,
+              "position_missing_at_saved_floor": 15,
+              "confidence_below_threshold": 2
+            },
+            "motorcycle": {}
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 90,
+              "complete_gt": 21,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7619047619047619,
+              "f1": 0.8648648648648649,
+              "annotated_recall": 0.8411214953271028,
+              "complete_fp": 0,
+              "complete_fn": 5,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 91,
+              "complete_gt": 42,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "precision": 1.0,
+              "recall": 0.38095238095238093,
+              "f1": 0.5517241379310345,
+              "annotated_recall": 0.4619289340101523,
+              "complete_fp": 0,
+              "complete_fn": 26,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        },
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 87,
+              "position_missing_at_saved_floor": 15,
+              "confidence_below_threshold": 5
+            },
+            "motorcycle": {}
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 87,
+              "complete_gt": 21,
+              "complete_tp": 15,
+              "complete_predictions": 15,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7142857142857143,
+              "f1": 0.8333333333333334,
+              "annotated_recall": 0.8130841121495327,
+              "complete_fp": 0,
+              "complete_fn": 6,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 88,
+              "complete_gt": 42,
+              "complete_tp": 15,
+              "complete_predictions": 15,
+              "precision": 1.0,
+              "recall": 0.35714285714285715,
+              "f1": 0.5263157894736842,
+              "annotated_recall": 0.4467005076142132,
+              "complete_fp": 0,
+              "complete_fn": 27,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        }
+      },
+      "heldout": {
+        "0.3": {
+          "classes": {
+            "person": {
+              "correct": 24,
+              "box_localization_error": 1,
+              "position_missing_at_saved_floor": 1
+            },
+            "motorcycle": {
+              "correct": 130,
+              "other_class": 2,
+              "confidence_below_threshold": 5,
+              "box_localization_error": 1
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "person",
+              "count": 2
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 24,
+              "ignored_gt": 25,
+              "complete_predictions": 5,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.9230769230769231,
+              "complete_fp": 5,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 130,
+              "complete_gt": 62,
+              "complete_tp": 56,
+              "complete_predictions": 63,
+              "precision": 0.8888888888888888,
+              "recall": 0.9032258064516129,
+              "f1": 0.896,
+              "annotated_recall": 0.9420289855072463,
+              "complete_fp": 7,
+              "complete_fn": 6,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 24,
+              "complete_predictions": 5,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.47058823529411764,
+              "complete_fp": 5,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 130,
+              "complete_gt": 62,
+              "complete_tp": 56,
+              "complete_predictions": 63,
+              "precision": 0.8888888888888888,
+              "recall": 0.9032258064516129,
+              "f1": 0.896,
+              "annotated_recall": 0.9420289855072463,
+              "complete_fp": 7,
+              "complete_fn": 6,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        },
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 24,
+              "box_localization_error": 1,
+              "position_missing_at_saved_floor": 1
+            },
+            "motorcycle": {
+              "correct": 126,
+              "other_class": 3,
+              "confidence_below_threshold": 8,
+              "box_localization_error": 1
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "person",
+              "count": 3
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 24,
+              "ignored_gt": 25,
+              "complete_predictions": 3,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.9230769230769231,
+              "complete_fp": 3,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 126,
+              "complete_gt": 62,
+              "complete_tp": 53,
+              "complete_predictions": 58,
+              "precision": 0.9137931034482759,
+              "recall": 0.8548387096774194,
+              "f1": 0.8833333333333333,
+              "annotated_recall": 0.9130434782608695,
+              "complete_fp": 5,
+              "complete_fn": 9,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 24,
+              "complete_predictions": 3,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.47058823529411764,
+              "complete_fp": 3,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 126,
+              "complete_gt": 62,
+              "complete_tp": 53,
+              "complete_predictions": 58,
+              "precision": 0.9137931034482759,
+              "recall": 0.8548387096774194,
+              "f1": 0.8833333333333333,
+              "annotated_recall": 0.9130434782608695,
+              "complete_fp": 5,
+              "complete_fn": 9,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        }
+      }
+    },
+    "yolo26l-after-1280": {
+      "selection": {
+        "0.25": {
+          "classes": {
+            "person": {
+              "correct": 86,
+              "position_missing_at_saved_floor": 9,
+              "confidence_below_threshold": 10,
+              "box_localization_error": 1,
+              "other_class": 1
+            },
+            "motorcycle": {}
+          },
+          "confusion": [
+            {
+              "gt": "person",
+              "prediction": "bicycle",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 86,
+              "complete_gt": 21,
+              "complete_tp": 15,
+              "complete_predictions": 15,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7142857142857143,
+              "f1": 0.8333333333333334,
+              "annotated_recall": 0.8037383177570093,
+              "complete_fp": 0,
+              "complete_fn": 6,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 110,
+              "complete_gt": 42,
+              "complete_tp": 27,
+              "complete_predictions": 27,
+              "precision": 1.0,
+              "recall": 0.6428571428571429,
+              "f1": 0.782608695652174,
+              "annotated_recall": 0.5583756345177665,
+              "complete_fp": 0,
+              "complete_fn": 15,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        },
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 82,
+              "position_missing_at_saved_floor": 9,
+              "confidence_below_threshold": 14,
+              "box_localization_error": 1,
+              "other_class": 1
+            },
+            "motorcycle": {}
+          },
+          "confusion": [
+            {
+              "gt": "person",
+              "prediction": "bicycle",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 82,
+              "complete_gt": 21,
+              "complete_tp": 14,
+              "complete_predictions": 14,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "annotated_recall": 0.7663551401869159,
+              "complete_fp": 0,
+              "complete_fn": 7,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 96,
+              "complete_gt": 42,
+              "complete_tp": 20,
+              "complete_predictions": 20,
+              "precision": 1.0,
+              "recall": 0.47619047619047616,
+              "f1": 0.6451612903225806,
+              "annotated_recall": 0.4873096446700508,
+              "complete_fp": 0,
+              "complete_fn": 22,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        }
+      },
+      "heldout": {
+        "0.25": {
+          "classes": {
+            "person": {
+              "correct": 21,
+              "position_missing_at_saved_floor": 4,
+              "other_class": 1
+            },
+            "motorcycle": {
+              "other_class": 97,
+              "correct": 4,
+              "position_missing_at_saved_floor": 28,
+              "confidence_below_threshold": 9
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "car",
+              "count": 96
+            },
+            {
+              "gt": "person",
+              "prediction": "truck",
+              "count": 1
+            },
+            {
+              "gt": "motorcycle",
+              "prediction": "traffic_drum",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 21,
+              "ignored_gt": 25,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.8076923076923077,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 4,
+              "complete_gt": 62,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "annotated_recall": 0.028985507246376812,
+              "complete_fp": 0,
+              "complete_fn": 62,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 22,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.43137254901960786,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 4,
+              "complete_gt": 62,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "annotated_recall": 0.028985507246376812,
+              "complete_fp": 0,
+              "complete_fn": 62,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        },
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 20,
+              "position_missing_at_saved_floor": 4,
+              "confidence_below_threshold": 2
+            },
+            "motorcycle": {
+              "other_class": 86,
+              "correct": 4,
+              "position_missing_at_saved_floor": 28,
+              "confidence_below_threshold": 20
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "car",
+              "count": 86
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 20,
+              "ignored_gt": 25,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.7692307692307693,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 4,
+              "complete_gt": 62,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "annotated_recall": 0.028985507246376812,
+              "complete_fp": 0,
+              "complete_fn": 62,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 21,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.4117647058823529,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 4,
+              "complete_gt": 62,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "annotated_recall": 0.028985507246376812,
+              "complete_fp": 0,
+              "complete_fn": 62,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        }
+      }
+    },
+    "yoloe26l-before-960": {
+      "selection": {
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 94,
+              "position_missing_at_saved_floor": 10,
+              "confidence_below_threshold": 3
+            },
+            "motorcycle": {}
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 94,
+              "complete_gt": 21,
+              "complete_tp": 16,
+              "complete_predictions": 19,
+              "ignored_gt": 90,
+              "precision": 0.8421052631578947,
+              "recall": 0.7619047619047619,
+              "f1": 0.8,
+              "annotated_recall": 0.8785046728971962,
+              "complete_fp": 3,
+              "complete_fn": 5,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 100,
+              "complete_gt": 42,
+              "complete_tp": 18,
+              "complete_predictions": 21,
+              "precision": 0.8571428571428571,
+              "recall": 0.42857142857142855,
+              "f1": 0.5714285714285714,
+              "annotated_recall": 0.5076142131979695,
+              "complete_fp": 3,
+              "complete_fn": 24,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        },
+        "0.7": {
+          "classes": {
+            "person": {
+              "correct": 83,
+              "position_missing_at_saved_floor": 10,
+              "confidence_below_threshold": 14
+            },
+            "motorcycle": {}
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 83,
+              "complete_gt": 21,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7619047619047619,
+              "f1": 0.8648648648648649,
+              "annotated_recall": 0.7757009345794392,
+              "complete_fp": 0,
+              "complete_fn": 5,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 86,
+              "complete_gt": 42,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "precision": 1.0,
+              "recall": 0.38095238095238093,
+              "f1": 0.5517241379310345,
+              "annotated_recall": 0.4365482233502538,
+              "complete_fp": 0,
+              "complete_fn": 26,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        }
+      },
+      "heldout": {
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 24,
+              "position_missing_at_saved_floor": 2
+            },
+            "motorcycle": {
+              "correct": 137,
+              "other_class": 1
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "person",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 24,
+              "ignored_gt": 25,
+              "complete_predictions": 6,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.9230769230769231,
+              "complete_fp": 6,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 137,
+              "complete_gt": 62,
+              "complete_tp": 61,
+              "complete_predictions": 65,
+              "precision": 0.9384615384615385,
+              "recall": 0.9838709677419355,
+              "f1": 0.9606299212598425,
+              "annotated_recall": 0.9927536231884058,
+              "complete_fp": 4,
+              "complete_fn": 1,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 24,
+              "complete_predictions": 6,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.47058823529411764,
+              "complete_fp": 6,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 137,
+              "complete_gt": 62,
+              "complete_tp": 61,
+              "complete_predictions": 65,
+              "precision": 0.9384615384615385,
+              "recall": 0.9838709677419355,
+              "f1": 0.9606299212598425,
+              "annotated_recall": 0.9927536231884058,
+              "complete_fp": 4,
+              "complete_fn": 1,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        },
+        "0.7": {
+          "classes": {
+            "person": {
+              "correct": 21,
+              "confidence_below_threshold": 3,
+              "position_missing_at_saved_floor": 2
+            },
+            "motorcycle": {
+              "correct": 115,
+              "confidence_below_threshold": 23
+            }
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 21,
+              "ignored_gt": 25,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.8076923076923077,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 115,
+              "complete_gt": 62,
+              "complete_tp": 50,
+              "complete_predictions": 50,
+              "precision": 1.0,
+              "recall": 0.8064516129032258,
+              "f1": 0.8928571428571429,
+              "annotated_recall": 0.8333333333333334,
+              "complete_fp": 0,
+              "complete_fn": 12,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 21,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.4117647058823529,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 115,
+              "complete_gt": 62,
+              "complete_tp": 50,
+              "complete_predictions": 50,
+              "precision": 1.0,
+              "recall": 0.8064516129032258,
+              "f1": 0.8928571428571429,
+              "annotated_recall": 0.8333333333333334,
+              "complete_fp": 0,
+              "complete_fn": 12,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        }
+      }
+    },
+    "yoloe26l-after-960": {
+      "selection": {
+        "0.1": {
+          "classes": {
+            "person": {
+              "correct": 94,
+              "position_missing_at_saved_floor": 8,
+              "other_class": 3,
+              "box_localization_error": 2
+            },
+            "motorcycle": {}
+          },
+          "confusion": [
+            {
+              "gt": "person",
+              "prediction": "bicycle",
+              "count": 2
+            },
+            {
+              "gt": "person",
+              "prediction": "deer",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 94,
+              "complete_gt": 21,
+              "complete_tp": 18,
+              "complete_predictions": 22,
+              "ignored_gt": 90,
+              "precision": 0.8181818181818182,
+              "recall": 0.8571428571428571,
+              "f1": 0.8372093023255814,
+              "annotated_recall": 0.8785046728971962,
+              "complete_fp": 4,
+              "complete_fn": 3,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 127,
+              "complete_gt": 42,
+              "complete_tp": 33,
+              "complete_predictions": 37,
+              "precision": 0.8918918918918919,
+              "recall": 0.7857142857142857,
+              "f1": 0.8354430379746836,
+              "annotated_recall": 0.6446700507614214,
+              "complete_fp": 4,
+              "complete_fn": 9,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        },
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 83,
+              "position_missing_at_saved_floor": 8,
+              "confidence_below_threshold": 11,
+              "other_class": 3,
+              "box_localization_error": 2
+            },
+            "motorcycle": {}
+          },
+          "confusion": [
+            {
+              "gt": "person",
+              "prediction": "deer",
+              "count": 3
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 83,
+              "complete_gt": 21,
+              "complete_tp": 14,
+              "complete_predictions": 15,
+              "ignored_gt": 90,
+              "precision": 0.9333333333333333,
+              "recall": 0.6666666666666666,
+              "f1": 0.7777777777777778,
+              "annotated_recall": 0.7757009345794392,
+              "complete_fp": 1,
+              "complete_fn": 7,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 102,
+              "complete_gt": 42,
+              "complete_tp": 23,
+              "complete_predictions": 24,
+              "precision": 0.9583333333333334,
+              "recall": 0.5476190476190477,
+              "f1": 0.696969696969697,
+              "annotated_recall": 0.5177664974619289,
+              "complete_fp": 1,
+              "complete_fn": 19,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        }
+      },
+      "heldout": {
+        "0.1": {
+          "classes": {
+            "person": {
+              "correct": 22,
+              "position_missing_at_saved_floor": 4
+            },
+            "motorcycle": {
+              "other_class": 77,
+              "correct": 14,
+              "position_missing_at_saved_floor": 46,
+              "box_localization_error": 1
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "car",
+              "count": 76
+            },
+            {
+              "gt": "motorcycle",
+              "prediction": "concrete_barrier",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 22,
+              "ignored_gt": 25,
+              "complete_predictions": 1,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.8461538461538461,
+              "complete_fp": 1,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 14,
+              "complete_gt": 62,
+              "complete_tp": 4,
+              "complete_predictions": 4,
+              "precision": 1.0,
+              "recall": 0.06451612903225806,
+              "f1": 0.12121212121212122,
+              "annotated_recall": 0.10144927536231885,
+              "complete_fp": 0,
+              "complete_fn": 58,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 22,
+              "complete_predictions": 1,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.43137254901960786,
+              "complete_fp": 1,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 14,
+              "complete_gt": 62,
+              "complete_tp": 4,
+              "complete_predictions": 4,
+              "precision": 1.0,
+              "recall": 0.06451612903225806,
+              "f1": 0.12121212121212122,
+              "annotated_recall": 0.10144927536231885,
+              "complete_fp": 0,
+              "complete_fn": 58,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        },
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 20,
+              "position_missing_at_saved_floor": 4,
+              "confidence_below_threshold": 2
+            },
+            "motorcycle": {
+              "other_class": 70,
+              "confidence_below_threshold": 12,
+              "correct": 9,
+              "position_missing_at_saved_floor": 47
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "car",
+              "count": 70
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 20,
+              "ignored_gt": 25,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.7692307692307693,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 9,
+              "complete_gt": 62,
+              "complete_tp": 4,
+              "complete_predictions": 4,
+              "precision": 1.0,
+              "recall": 0.06451612903225806,
+              "f1": 0.12121212121212122,
+              "annotated_recall": 0.06521739130434782,
+              "complete_fp": 0,
+              "complete_fn": 58,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 20,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.39215686274509803,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 9,
+              "complete_gt": 62,
+              "complete_tp": 4,
+              "complete_predictions": 4,
+              "precision": 1.0,
+              "recall": 0.06451612903225806,
+              "f1": 0.12121212121212122,
+              "annotated_recall": 0.06521739130434782,
+              "complete_fp": 0,
+              "complete_fn": 58,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        }
+      }
+    },
+    "yoloe26l-before-1280": {
+      "selection": {
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 92,
+              "position_missing_at_saved_floor": 13,
+              "confidence_below_threshold": 2
+            },
+            "motorcycle": {}
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 92,
+              "complete_gt": 21,
+              "complete_tp": 15,
+              "complete_predictions": 16,
+              "ignored_gt": 90,
+              "precision": 0.9375,
+              "recall": 0.7142857142857143,
+              "f1": 0.8108108108108109,
+              "annotated_recall": 0.8598130841121495,
+              "complete_fp": 1,
+              "complete_fn": 6,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 96,
+              "complete_gt": 42,
+              "complete_tp": 16,
+              "complete_predictions": 17,
+              "precision": 0.9411764705882353,
+              "recall": 0.38095238095238093,
+              "f1": 0.5423728813559322,
+              "annotated_recall": 0.4873096446700508,
+              "complete_fp": 1,
+              "complete_fn": 26,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        },
+        "0.5": {
+          "classes": {
+            "person": {
+              "correct": 87,
+              "position_missing_at_saved_floor": 13,
+              "confidence_below_threshold": 7
+            },
+            "motorcycle": {}
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 87,
+              "complete_gt": 21,
+              "complete_tp": 15,
+              "complete_predictions": 15,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7142857142857143,
+              "f1": 0.8333333333333334,
+              "annotated_recall": 0.8130841121495327,
+              "complete_fp": 0,
+              "complete_fn": 6,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 90,
+              "complete_gt": 42,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "precision": 1.0,
+              "recall": 0.38095238095238093,
+              "f1": 0.5517241379310345,
+              "annotated_recall": 0.45685279187817257,
+              "complete_fp": 0,
+              "complete_fn": 26,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        }
+      },
+      "heldout": {
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 24,
+              "position_missing_at_saved_floor": 2
+            },
+            "motorcycle": {
+              "correct": 137,
+              "confidence_below_threshold": 1
+            }
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 24,
+              "ignored_gt": 25,
+              "complete_predictions": 4,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.9230769230769231,
+              "complete_fp": 4,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 137,
+              "complete_gt": 62,
+              "complete_tp": 62,
+              "complete_predictions": 63,
+              "precision": 0.9841269841269841,
+              "recall": 1.0,
+              "f1": 0.992,
+              "annotated_recall": 0.9927536231884058,
+              "complete_fp": 1,
+              "complete_fn": 0,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 24,
+              "complete_predictions": 4,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.47058823529411764,
+              "complete_fp": 4,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 137,
+              "complete_gt": 62,
+              "complete_tp": 62,
+              "complete_predictions": 63,
+              "precision": 0.9841269841269841,
+              "recall": 1.0,
+              "f1": 0.992,
+              "annotated_recall": 0.9927536231884058,
+              "complete_fp": 1,
+              "complete_fn": 0,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        },
+        "0.5": {
+          "classes": {
+            "person": {
+              "correct": 24,
+              "position_missing_at_saved_floor": 2
+            },
+            "motorcycle": {
+              "correct": 136,
+              "confidence_below_threshold": 2
+            }
+          },
+          "confusion": [],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 24,
+              "ignored_gt": 25,
+              "complete_predictions": 1,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.9230769230769231,
+              "complete_fp": 1,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 136,
+              "complete_gt": 62,
+              "complete_tp": 61,
+              "complete_predictions": 61,
+              "precision": 1.0,
+              "recall": 0.9838709677419355,
+              "f1": 0.991869918699187,
+              "annotated_recall": 0.9855072463768116,
+              "complete_fp": 0,
+              "complete_fn": 1,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 24,
+              "complete_predictions": 1,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.47058823529411764,
+              "complete_fp": 1,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 136,
+              "complete_gt": 62,
+              "complete_tp": 61,
+              "complete_predictions": 61,
+              "precision": 1.0,
+              "recall": 0.9838709677419355,
+              "f1": 0.991869918699187,
+              "annotated_recall": 0.9855072463768116,
+              "complete_fp": 0,
+              "complete_fn": 1,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        }
+      }
+    },
+    "yoloe26l-after-1280": {
+      "selection": {
+        "0.2": {
+          "classes": {
+            "person": {
+              "correct": 85,
+              "position_missing_at_saved_floor": 13,
+              "other_class": 4,
+              "box_localization_error": 2,
+              "confidence_below_threshold": 3
+            },
+            "motorcycle": {}
+          },
+          "confusion": [
+            {
+              "gt": "person",
+              "prediction": "deer",
+              "count": 3
+            },
+            {
+              "gt": "person",
+              "prediction": "steel_barricade",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 85,
+              "complete_gt": 21,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7619047619047619,
+              "f1": 0.8648648648648649,
+              "annotated_recall": 0.794392523364486,
+              "complete_fp": 0,
+              "complete_fn": 5,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 107,
+              "complete_gt": 42,
+              "complete_tp": 26,
+              "complete_predictions": 26,
+              "precision": 1.0,
+              "recall": 0.6190476190476191,
+              "f1": 0.7647058823529411,
+              "annotated_recall": 0.5431472081218274,
+              "complete_fp": 0,
+              "complete_fn": 16,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        },
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 80,
+              "position_missing_at_saved_floor": 13,
+              "confidence_below_threshold": 11,
+              "box_localization_error": 2,
+              "other_class": 1
+            },
+            "motorcycle": {}
+          },
+          "confusion": [
+            {
+              "gt": "person",
+              "prediction": "deer",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 107,
+              "tp": 80,
+              "complete_gt": 21,
+              "complete_tp": 15,
+              "complete_predictions": 15,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7142857142857143,
+              "f1": 0.8333333333333334,
+              "annotated_recall": 0.7476635514018691,
+              "complete_fp": 0,
+              "complete_fn": 6,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          },
+          "all_gt": {
+            "person": {
+              "gt": 197,
+              "tp": 97,
+              "complete_gt": 42,
+              "complete_tp": 22,
+              "complete_predictions": 22,
+              "precision": 1.0,
+              "recall": 0.5238095238095238,
+              "f1": 0.6875,
+              "annotated_recall": 0.49238578680203043,
+              "complete_fp": 0,
+              "complete_fn": 20,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {}
+          }
+        }
+      },
+      "heldout": {
+        "0.2": {
+          "classes": {
+            "person": {
+              "correct": 21,
+              "position_missing_at_saved_floor": 4,
+              "confidence_below_threshold": 1
+            },
+            "motorcycle": {
+              "other_class": 92,
+              "position_missing_at_saved_floor": 39,
+              "correct": 4,
+              "confidence_below_threshold": 3
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "car",
+              "count": 90
+            },
+            {
+              "gt": "motorcycle",
+              "prediction": "plastic_barrier",
+              "count": 1
+            },
+            {
+              "gt": "motorcycle",
+              "prediction": "traffic_drum",
+              "count": 1
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 21,
+              "ignored_gt": 25,
+              "complete_predictions": 1,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.8076923076923077,
+              "complete_fp": 1,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "complete_gt": 62,
+              "tp": 4,
+              "complete_tp": 1,
+              "complete_predictions": 1,
+              "precision": 1.0,
+              "recall": 0.016129032258064516,
+              "f1": 0.031746031746031744,
+              "annotated_recall": 0.028985507246376812,
+              "complete_fp": 0,
+              "complete_fn": 61,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 21,
+              "complete_predictions": 1,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.4117647058823529,
+              "complete_fp": 1,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "complete_gt": 62,
+              "tp": 4,
+              "complete_tp": 1,
+              "complete_predictions": 1,
+              "precision": 1.0,
+              "recall": 0.016129032258064516,
+              "f1": 0.031746031746031744,
+              "annotated_recall": 0.028985507246376812,
+              "complete_fp": 0,
+              "complete_fn": 61,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        },
+        "0.4": {
+          "classes": {
+            "person": {
+              "correct": 19,
+              "position_missing_at_saved_floor": 4,
+              "confidence_below_threshold": 3
+            },
+            "motorcycle": {
+              "other_class": 84,
+              "position_missing_at_saved_floor": 39,
+              "correct": 2,
+              "confidence_below_threshold": 13
+            }
+          },
+          "confusion": [
+            {
+              "gt": "motorcycle",
+              "prediction": "car",
+              "count": 84
+            }
+          ],
+          "exact": {
+            "person": {
+              "gt": 26,
+              "tp": 19,
+              "ignored_gt": 25,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.7307692307692307,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "complete_gt": 62,
+              "tp": 2,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "annotated_recall": 0.014492753623188406,
+              "complete_fp": 0,
+              "complete_fn": 62,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "all_gt": {
+            "person": {
+              "gt": 51,
+              "tp": 19,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.37254901960784315,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "complete_gt": 62,
+              "tp": 2,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "annotated_recall": 0.014492753623188406,
+              "complete_fp": 0,
+              "complete_fn": 62,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "metadata": {
+    "yolo26l-before-960": {
+      "weights_sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "evaluator_source_sha256": "7a8781b47dcc021832f6a09ba9d4e0a06f254921dce3d2a3f35dc7ceb333e580",
+      "started_utc": "2026-10-11T01:05:26Z",
+      "finished_utc": "2026-10-11T01:05:45Z",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150",
+      "opencv": "5.0.0",
+      "cuda": "11.8",
+      "gpu": "NVIDIA GeForce RTX 4060 Ti",
+      "actual_fp16": true,
+      "requested_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/initial.pt",
+      "requested_weights_sha256": "6093766efa34da2fd84f0e2044a7321ae920cbe26c2568abef2ecc4158f5b3f0",
+      "actual_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_coco7_v1/yolo26l.pt",
+      "baseline_kind": "original_COCO80_pretrained; fixed16 random head is not a baseline",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "temporal_manifest_sha256": "ecc48e73ab2a8566a4dcdbc380b5d0811877a1b4248892872693036009e23206",
+      "front_width": 960,
+      "side_shape": [
+        480,
+        640
+      ],
+      "head": "Detect",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "unknown_view_mask_policy": "no assumed mask",
+      "latency_kind": "offline PyTorch batch1 inference wall; not integrated runtime or TensorRT",
+      "p50_ms": 16.3229139870964,
+      "p95_ms": 26.446388190379366,
+      "p99_ms": 28.820670003769916,
+      "latency_by_view": {
+        "front": {
+          "count": 174,
+          "p50_ms": 16.31914751487784,
+          "p95_ms": 27.21945622761268,
+          "p99_ms": 29.9802388157696
+        },
+        "left": {
+          "count": 64,
+          "p50_ms": 15.326721011660993,
+          "p95_ms": 26.035383547423404,
+          "p99_ms": 29.62355099676642
+        },
+        "right": {
+          "count": 166,
+          "p50_ms": 15.19889899645932,
+          "p95_ms": 26.46076747623738,
+          "p99_ms": 28.961641859495998
+        },
+        "unknown": {
+          "count": 271,
+          "p50_ms": 16.663320013321936,
+          "p95_ms": 25.9222605091054,
+          "p99_ms": 27.49945209361613
+        }
+      }
+    },
+    "yolo26l-after-960": {
+      "weights_sha256": "e8fc33d204ae338411abd929ffd5716c4995e368da881e32951a9ef4b40179ac",
+      "evaluator_source_sha256": "7a8781b47dcc021832f6a09ba9d4e0a06f254921dce3d2a3f35dc7ceb333e580",
+      "started_utc": "2026-10-11T01:05:46Z",
+      "finished_utc": "2026-10-11T01:06:02Z",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150",
+      "opencv": "5.0.0",
+      "cuda": "11.8",
+      "gpu": "NVIDIA GeForce RTX 4060 Ti",
+      "actual_fp16": true,
+      "requested_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/fit/weights/epoch15.pt",
+      "requested_weights_sha256": "e8fc33d204ae338411abd929ffd5716c4995e368da881e32951a9ef4b40179ac",
+      "actual_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/fit/weights/epoch15.pt",
+      "baseline_kind": "trained_checkpoint",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "temporal_manifest_sha256": "ecc48e73ab2a8566a4dcdbc380b5d0811877a1b4248892872693036009e23206",
+      "front_width": 960,
+      "side_shape": [
+        480,
+        640
+      ],
+      "head": "Detect",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "unknown_view_mask_policy": "no assumed mask",
+      "latency_kind": "offline PyTorch batch1 inference wall; not integrated runtime or TensorRT",
+      "p50_ms": 14.122941007371992,
+      "p95_ms": 24.540314381010823,
+      "p99_ms": 26.677848875988268,
+      "latency_by_view": {
+        "front": {
+          "count": 174,
+          "p50_ms": 14.371510507771745,
+          "p95_ms": 25.951935088960454,
+          "p99_ms": 27.347701701801274
+        },
+        "left": {
+          "count": 64,
+          "p50_ms": 13.23062801384367,
+          "p95_ms": 24.48975518345832,
+          "p99_ms": 26.68009791988879
+        },
+        "right": {
+          "count": 166,
+          "p50_ms": 12.95101546566002,
+          "p95_ms": 24.159365508239716,
+          "p99_ms": 25.814170719240792
+        },
+        "unknown": {
+          "count": 271,
+          "p50_ms": 14.85493901418522,
+          "p95_ms": 22.478318511275575,
+          "p99_ms": 26.04263788089156
+        }
+      }
+    },
+    "yolo26l-before-1280": {
+      "weights_sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "evaluator_source_sha256": "7a8781b47dcc021832f6a09ba9d4e0a06f254921dce3d2a3f35dc7ceb333e580",
+      "started_utc": "2026-10-11T01:06:03Z",
+      "finished_utc": "2026-10-11T01:06:21Z",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150",
+      "opencv": "5.0.0",
+      "cuda": "11.8",
+      "gpu": "NVIDIA GeForce RTX 4060 Ti",
+      "actual_fp16": true,
+      "requested_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/initial.pt",
+      "requested_weights_sha256": "6093766efa34da2fd84f0e2044a7321ae920cbe26c2568abef2ecc4158f5b3f0",
+      "actual_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_coco7_v1/yolo26l.pt",
+      "baseline_kind": "original_COCO80_pretrained; fixed16 random head is not a baseline",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "temporal_manifest_sha256": "ecc48e73ab2a8566a4dcdbc380b5d0811877a1b4248892872693036009e23206",
+      "front_width": 1280,
+      "side_shape": [
+        480,
+        640
+      ],
+      "head": "Detect",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "unknown_view_mask_policy": "no assumed mask",
+      "latency_kind": "offline PyTorch batch1 inference wall; not integrated runtime or TensorRT",
+      "p50_ms": 17.775722022634,
+      "p95_ms": 27.579986210912466,
+      "p99_ms": 28.93867415259592,
+      "latency_by_view": {
+        "front": {
+          "count": 174,
+          "p50_ms": 15.985194506356493,
+          "p95_ms": 25.263585124048404,
+          "p99_ms": 27.290410128771335
+        },
+        "left": {
+          "count": 64,
+          "p50_ms": 13.10853601898998,
+          "p95_ms": 21.631545908167013,
+          "p99_ms": 25.776513681630604
+        },
+        "right": {
+          "count": 166,
+          "p50_ms": 12.910458986880258,
+          "p95_ms": 24.202447762945667,
+          "p99_ms": 25.60684147465508
+        },
+        "unknown": {
+          "count": 271,
+          "p50_ms": 21.53980900766328,
+          "p95_ms": 28.136517998063937,
+          "p99_ms": 30.57713240268642
+        }
+      }
+    },
+    "yolo26l-after-1280": {
+      "weights_sha256": "e8fc33d204ae338411abd929ffd5716c4995e368da881e32951a9ef4b40179ac",
+      "evaluator_source_sha256": "7a8781b47dcc021832f6a09ba9d4e0a06f254921dce3d2a3f35dc7ceb333e580",
+      "started_utc": "2026-10-11T01:06:22Z",
+      "finished_utc": "2026-10-11T01:06:40Z",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150",
+      "opencv": "5.0.0",
+      "cuda": "11.8",
+      "gpu": "NVIDIA GeForce RTX 4060 Ti",
+      "actual_fp16": true,
+      "requested_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/fit/weights/epoch15.pt",
+      "requested_weights_sha256": "e8fc33d204ae338411abd929ffd5716c4995e368da881e32951a9ef4b40179ac",
+      "actual_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/fit/weights/epoch15.pt",
+      "baseline_kind": "trained_checkpoint",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "temporal_manifest_sha256": "ecc48e73ab2a8566a4dcdbc380b5d0811877a1b4248892872693036009e23206",
+      "front_width": 1280,
+      "side_shape": [
+        480,
+        640
+      ],
+      "head": "Detect",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "unknown_view_mask_policy": "no assumed mask",
+      "latency_kind": "offline PyTorch batch1 inference wall; not integrated runtime or TensorRT",
+      "p50_ms": 17.566335038281977,
+      "p95_ms": 27.52146270358935,
+      "p99_ms": 30.179705182090395,
+      "latency_by_view": {
+        "front": {
+          "count": 174,
+          "p50_ms": 15.808879979886115,
+          "p95_ms": 23.364815581589937,
+          "p99_ms": 25.744351721950817
+        },
+        "left": {
+          "count": 64,
+          "p50_ms": 13.499988534022123,
+          "p95_ms": 25.1770963310264,
+          "p99_ms": 29.489447597879913
+        },
+        "right": {
+          "count": 166,
+          "p50_ms": 13.77909496659413,
+          "p95_ms": 25.593179001589306,
+          "p99_ms": 29.9553801276488
+        },
+        "unknown": {
+          "count": 271,
+          "p50_ms": 21.671561000403017,
+          "p95_ms": 28.147922013886273,
+          "p99_ms": 30.365828314097612
+        }
+      }
+    },
+    "yoloe26l-before-960": {
+      "weights_sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+      "evaluator_source_sha256": "7a8781b47dcc021832f6a09ba9d4e0a06f254921dce3d2a3f35dc7ceb333e580",
+      "started_utc": "2026-10-11T01:06:41Z",
+      "finished_utc": "2026-10-11T01:06:58Z",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150",
+      "opencv": "5.0.0",
+      "cuda": "11.8",
+      "gpu": "NVIDIA GeForce RTX 4060 Ti",
+      "actual_fp16": true,
+      "requested_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/initial.pt",
+      "requested_weights_sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+      "actual_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/initial.pt",
+      "baseline_kind": "pretrained_YOLOE_detect_with_fixed16_text_embeddings; before fine-tuning",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "temporal_manifest_sha256": "ecc48e73ab2a8566a4dcdbc380b5d0811877a1b4248892872693036009e23206",
+      "front_width": 960,
+      "side_shape": [
+        480,
+        640
+      ],
+      "head": "YOLOEDetect",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "unknown_view_mask_policy": "no assumed mask",
+      "latency_kind": "offline PyTorch batch1 inference wall; not integrated runtime or TensorRT",
+      "p50_ms": 14.21752100577578,
+      "p95_ms": 23.109223105711852,
+      "p99_ms": 27.952938268426802,
+      "latency_by_view": {
+        "front": {
+          "count": 174,
+          "p50_ms": 13.563931977842003,
+          "p95_ms": 19.910314923617985,
+          "p99_ms": 25.628277382929824
+        },
+        "left": {
+          "count": 64,
+          "p50_ms": 13.700843002879992,
+          "p95_ms": 23.856520926347,
+          "p99_ms": 25.237201178097163
+        },
+        "right": {
+          "count": 166,
+          "p50_ms": 13.203991518821567,
+          "p95_ms": 23.518032510764897,
+          "p99_ms": 28.271359993959763
+        },
+        "unknown": {
+          "count": 271,
+          "p50_ms": 15.800510998815298,
+          "p95_ms": 23.006156989140436,
+          "p99_ms": 28.46379908733071
+        }
+      }
+    },
+    "yoloe26l-after-960": {
+      "weights_sha256": "fa728a90fe2a21ef5df97275ef20b74e648ef61f39cf8c94341950cb417def54",
+      "evaluator_source_sha256": "7a8781b47dcc021832f6a09ba9d4e0a06f254921dce3d2a3f35dc7ceb333e580",
+      "started_utc": "2026-10-11T01:06:58Z",
+      "finished_utc": "2026-10-11T01:07:15Z",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150",
+      "opencv": "5.0.0",
+      "cuda": "11.8",
+      "gpu": "NVIDIA GeForce RTX 4060 Ti",
+      "actual_fp16": true,
+      "requested_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/fit/weights/epoch15.pt",
+      "requested_weights_sha256": "fa728a90fe2a21ef5df97275ef20b74e648ef61f39cf8c94341950cb417def54",
+      "actual_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/fit/weights/epoch15.pt",
+      "baseline_kind": "trained_checkpoint",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "temporal_manifest_sha256": "ecc48e73ab2a8566a4dcdbc380b5d0811877a1b4248892872693036009e23206",
+      "front_width": 960,
+      "side_shape": [
+        480,
+        640
+      ],
+      "head": "YOLOEDetect",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "unknown_view_mask_policy": "no assumed mask",
+      "latency_kind": "offline PyTorch batch1 inference wall; not integrated runtime or TensorRT",
+      "p50_ms": 15.148804988712072,
+      "p95_ms": 22.691502887755632,
+      "p99_ms": 27.354873445583504,
+      "latency_by_view": {
+        "front": {
+          "count": 174,
+          "p50_ms": 14.464974490692839,
+          "p95_ms": 23.31389684404711,
+          "p99_ms": 27.22966680303216
+        },
+        "left": {
+          "count": 64,
+          "p50_ms": 13.59456850332208,
+          "p95_ms": 20.023192971711964,
+          "p99_ms": 24.319388588774014
+        },
+        "right": {
+          "count": 166,
+          "p50_ms": 13.46810199902393,
+          "p95_ms": 23.117109754821286,
+          "p99_ms": 27.529875523759983
+        },
+        "unknown": {
+          "count": 271,
+          "p50_ms": 16.10512100160122,
+          "p95_ms": 22.680504014715552,
+          "p99_ms": 26.84024649788629
+        }
+      }
+    },
+    "yoloe26l-before-1280": {
+      "weights_sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+      "evaluator_source_sha256": "7a8781b47dcc021832f6a09ba9d4e0a06f254921dce3d2a3f35dc7ceb333e580",
+      "started_utc": "2026-10-11T01:07:16Z",
+      "finished_utc": "2026-10-11T01:07:35Z",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150",
+      "opencv": "5.0.0",
+      "cuda": "11.8",
+      "gpu": "NVIDIA GeForce RTX 4060 Ti",
+      "actual_fp16": true,
+      "requested_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/initial.pt",
+      "requested_weights_sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+      "actual_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/initial.pt",
+      "baseline_kind": "pretrained_YOLOE_detect_with_fixed16_text_embeddings; before fine-tuning",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "temporal_manifest_sha256": "ecc48e73ab2a8566a4dcdbc380b5d0811877a1b4248892872693036009e23206",
+      "front_width": 1280,
+      "side_shape": [
+        480,
+        640
+      ],
+      "head": "YOLOEDetect",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "unknown_view_mask_policy": "no assumed mask",
+      "latency_kind": "offline PyTorch batch1 inference wall; not integrated runtime or TensorRT",
+      "p50_ms": 18.148400995414704,
+      "p95_ms": 30.038426385726776,
+      "p99_ms": 32.10765070281923,
+      "latency_by_view": {
+        "front": {
+          "count": 174,
+          "p50_ms": 17.237917985767126,
+          "p95_ms": 24.819718755315986,
+          "p99_ms": 30.544915986829444
+        },
+        "left": {
+          "count": 64,
+          "p50_ms": 13.024097483139485,
+          "p95_ms": 18.68984923639799,
+          "p99_ms": 23.64430818124674
+        },
+        "right": {
+          "count": 166,
+          "p50_ms": 14.326703501865268,
+          "p95_ms": 24.4984362507239,
+          "p99_ms": 26.465965903480537
+        },
+        "unknown": {
+          "count": 271,
+          "p50_ms": 23.826810996979475,
+          "p95_ms": 31.21183451730758,
+          "p99_ms": 39.38198501127795
+        }
+      }
+    },
+    "yoloe26l-after-1280": {
+      "weights_sha256": "fa728a90fe2a21ef5df97275ef20b74e648ef61f39cf8c94341950cb417def54",
+      "evaluator_source_sha256": "7a8781b47dcc021832f6a09ba9d4e0a06f254921dce3d2a3f35dc7ceb333e580",
+      "started_utc": "2026-10-11T01:07:36Z",
+      "finished_utc": "2026-10-11T01:07:55Z",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150",
+      "opencv": "5.0.0",
+      "cuda": "11.8",
+      "gpu": "NVIDIA GeForce RTX 4060 Ti",
+      "actual_fp16": true,
+      "requested_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/fit/weights/epoch15.pt",
+      "requested_weights_sha256": "fa728a90fe2a21ef5df97275ef20b74e648ef61f39cf8c94341950cb417def54",
+      "actual_weights": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/fit/weights/epoch15.pt",
+      "baseline_kind": "trained_checkpoint",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "temporal_manifest_sha256": "ecc48e73ab2a8566a4dcdbc380b5d0811877a1b4248892872693036009e23206",
+      "front_width": 1280,
+      "side_shape": [
+        480,
+        640
+      ],
+      "head": "YOLOEDetect",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "unknown_view_mask_policy": "no assumed mask",
+      "latency_kind": "offline PyTorch batch1 inference wall; not integrated runtime or TensorRT",
+      "p50_ms": 18.939149973448366,
+      "p95_ms": 30.06672741030343,
+      "p99_ms": 32.56076029734686,
+      "latency_by_view": {
+        "front": {
+          "count": 174,
+          "p50_ms": 17.339036479825154,
+          "p95_ms": 25.442873893189244,
+          "p99_ms": 27.91249392612373
+        },
+        "left": {
+          "count": 64,
+          "p50_ms": 14.274763001594692,
+          "p95_ms": 25.191646031453256,
+          "p99_ms": 27.206895565032024
+        },
+        "right": {
+          "count": 166,
+          "p50_ms": 14.209112530807033,
+          "p95_ms": 24.70623273984529,
+          "p99_ms": 28.147760586580258
+        },
+        "unknown": {
+          "count": 271,
+          "p50_ms": 23.431391979102045,
+          "p95_ms": 30.897052492946386,
+          "p99_ms": 32.94737937976607
+        }
+      }
+    }
+  },
+  "paired_threshold_policy": "same frozen confidence in before and after, including original selection thresholds",
+  "draft_correction": {
+    "prior_comparisons": 1138,
+    "corrected_comparisons": 1137,
+    "reason": "draft before .40 mixed with after selection thresholds; fixed .40 metrics unchanged",
+    "preserved_artifact": "intermediate-threshold-mismatch.tar.gz"
+  }
+}

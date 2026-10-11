@@ -1,0 +1,17 @@
+{
+  "experiment_id": "camera_bbox_regression_v1",
+  "seed": 20261011,
+  "dataset": "data/dataset_versions/camera_objects_bbox_pilot_v1-r4",
+  "paired": "artifacts/camera-bbox-pilot-v1/paired-r1",
+  "output": "artifacts/camera-bbox-regression-v1",
+  "pilot_config": "config/experiments/camera_bbox_pilot_v1.json",
+  "classes": ["person", "dog", "deer", "bicycle", "car", "motorcycle", "bus", "truck", "bollard", "box", "concrete_barrier", "steel_barricade", "traffic_drum", "plastic_barrier", "traffic_cone", "stroller"],
+  "completed_epochs": [0, 1, 4, 8, 16],
+  "control_confidence": 0.40,
+  "iou": 0.5,
+  "localization_iou_floor": 0.1,
+  "additional_review_limit": 200,
+  "gpu_budget_seconds": 3600,
+  "runtime_changes": false,
+  "training_allowed": false
+}

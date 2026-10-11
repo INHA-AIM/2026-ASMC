@@ -1,0 +1,52 @@
+{
+  "status": "complete",
+  "checks": [
+    {
+      "run": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/run.json",
+      "status": "complete",
+      "batches": 34000,
+      "actual_sha256": "2c9d2088ab523205e3c7a3f159451fa08e7f03109bf03b67642aa735ff301a75",
+      "expected_sha256": "2c9d2088ab523205e3c7a3f159451fa08e7f03109bf03b67642aa735ff301a75",
+      "matched": true
+    },
+    {
+      "run": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/run.json",
+      "status": "budget_stopped",
+      "batches": 33356,
+      "actual_sha256": "7f95353a2ddbab06de6f9c7a62a18cc8ab6aa62c94b405469418a36d808076aa",
+      "expected_sha256": "7f95353a2ddbab06de6f9c7a62a18cc8ab6aa62c94b405469418a36d808076aa",
+      "matched": true
+    }
+  ],
+  "prefix_sha256": {
+    "epoch:1": "4b6e1c8a84acba654a290b3d42913c44c3adf666e5c16408bd611de97c14690d",
+    "epoch:2": "7fc370c8477445b384e2c9307b690851a702c318f0c03b749d73b3b13a44b8aa",
+    "epoch:3": "c190745fe15a8e4d255bc084cea9b5602168c3481fd2c6668657c5d10e4b9044",
+    "epoch:4": "dc4a245612690457d78bdcf65fd3e8ea70178c7a26bcdac025a4b4d1a605ed8d",
+    "epoch:5": "2c33145525604f31c53218b4048558c2c17ed5c85c28aabeb054ccb56e822bd2",
+    "epoch:6": "8336fafcd8335b7eab8dc308ba459ec8cac3e1b61022f57f50cb1913e537ddc8",
+    "epoch:7": "d452684233052cf865faf3219601d4db5abd166ec7547f8e3b8c52c93eada325",
+    "epoch:8": "54e60343b2f7a003b0e63ad84459a14cd92f9f7f065deeab54059caa0473bc23",
+    "epoch:9": "4710ae6b4fc720a6c26b11ca69ce6dc40441e4eaeedd0130b35b77f7441aa205",
+    "epoch:10": "516508bad0222bfca6afcb87bd457452bebc97c3d921187798f07a32ceb3c37c",
+    "epoch:11": "d6037b753803f086b6fbe40ec54e15f7f91b219face6ee6d3ef14b800202541d",
+    "epoch:12": "617b2277259a453ac9c9fbcf463d87fd6fdc699df99654d19abe8e3027d0dfa6",
+    "epoch:13": "c023813a4a2bed218e4cbdbd840d02ce67ce53b8166a6aef30774e09b9ea6143",
+    "epoch:14": "81a80f5fb5116baf00c26d7d5fc77a48e1457dfdd61da2292e2d85b1cbb438d0",
+    "epoch:15": "bced50d6acda25be0062de6033e5b5d880c8c9769073932dcb3e549f9a560ace",
+    "epoch:16": "08c114ca2d01528e4cf6d00ae921e7f8a8b39bf63d5ebf956e35ff62564bb450",
+    "33356": "7f95353a2ddbab06de6f9c7a62a18cc8ab6aa62c94b405469418a36d808076aa",
+    "34000": "2c9d2088ab523205e3c7a3f159451fa08e7f03109bf03b67642aa735ff301a75",
+    "epoch:17": "2c9d2088ab523205e3c7a3f159451fa08e7f03109bf03b67642aa735ff301a75"
+  },
+  "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+  "cache_sha256": "5f411f292f95ad6c762c620f4ef7e55a775fc4974965a8e01058ffa60f6a5a10",
+  "seed": 20261011,
+  "batch": 4,
+  "batches_per_epoch": 2000,
+  "verifier_source_sha256": "35bb4df5405a6c502586f940124a8794fe21bdc3603c058ccc37ed625cbc4a52",
+  "torch": "2.1.2+cu118",
+  "ultralytics": "8.4.150",
+  "gpu_context": false,
+  "augmentation_reproducibility": "not claimed; file order only"
+}

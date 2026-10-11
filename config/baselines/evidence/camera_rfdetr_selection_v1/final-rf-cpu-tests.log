@@ -1,0 +1,21 @@
+test_batch_correspondence_and_empty_result (test_rfdetr_candidate.RFDetrTest.test_batch_correspondence_and_empty_result) ... ok
+test_default_launch_resets_backend_before_experiment_override (test_rfdetr_candidate.RFDetrTest.test_default_launch_resets_backend_before_experiment_override) ... ok
+test_early_stop_and_conditional_fallbacks (test_rfdetr_candidate.RFDetrTest.test_early_stop_and_conditional_fallbacks) ... ok
+test_engine_runtime_mapping_shape_and_batch_metadata (test_rfdetr_candidate.RFDetrTest.test_engine_runtime_mapping_shape_and_batch_metadata) ... ok
+test_filter_does_not_mutate_original_gt_or_hide_unsupported_objects (test_rfdetr_candidate.RFDetrTest.test_filter_does_not_mutate_original_gt_or_hide_unsupported_objects) ... ok
+test_gallery_pairs_same_gt_when_diagnostic_insertion_order_changes (test_rfdetr_candidate.RFDetrTest.test_gallery_pairs_same_gt_when_diagnostic_insertion_order_changes) ... ok
+test_global_top300_before_seven_class_filter (test_rfdetr_candidate.RFDetrTest.test_global_top300_before_seven_class_filter) ... ok
+test_invalid_outputs_are_not_empty_normal_observations (test_rfdetr_candidate.RFDetrTest.test_invalid_outputs_are_not_empty_normal_observations) ... ok
+test_live_report_preserves_failed_windows_and_individual_percentiles (test_rfdetr_candidate.RFDetrTest.test_live_report_preserves_failed_windows_and_individual_percentiles) ... ok
+test_parity_class_error_and_duplicate_are_not_matches (test_rfdetr_candidate.RFDetrTest.test_parity_class_error_and_duplicate_are_not_matches) ... ok
+test_parity_duplicate_query_pairing_uses_both_fixed_tolerances (test_rfdetr_candidate.RFDetrTest.test_parity_duplicate_query_pairing_uses_both_fixed_tolerances) ... ok
+test_quality_threshold_and_small_sample_cannot_pass (test_rfdetr_candidate.RFDetrTest.test_quality_threshold_and_small_sample_cannot_pass) ... ok
+test_rgb_normalization_and_complete_fov (test_rfdetr_candidate.RFDetrTest.test_rgb_normalization_and_complete_fov) ... ok
+test_saved_evaluation_rejects_stale_split_missing_or_wrong_rgb (test_rfdetr_candidate.RFDetrTest.test_saved_evaluation_rejects_stale_split_missing_or_wrong_rgb) ... ok
+test_sparse_coco_ids_background_and_original_coordinates (test_rfdetr_candidate.RFDetrTest.test_sparse_coco_ids_background_and_original_coordinates) ... ok
+test_stopped_view_does_not_block_other_batches (test_rfdetr_candidate.RFDetrTest.test_stopped_view_does_not_block_other_batches) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.021s
+
+OK

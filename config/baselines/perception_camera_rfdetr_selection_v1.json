@@ -1,0 +1,1844 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-10-11T06:49:20.458997+00:00",
+  "status": "analysis_complete_rf_not_selected",
+  "operating_model_changed": false,
+  "training_performed": false,
+  "source": {
+    "url": "https://github.com/roboflow/rf-detr",
+    "sha": "eca736acab9f6fe93f2cbc82a1d9f6edfb53f0ea",
+    "license": "Apache-2.0 for M/L; XL Plus not installed or accepted"
+  },
+  "candidate": {
+    "model": "RF-DETR-L detection 2026",
+    "checkpoint": "rf-detr-large-2026.pth",
+    "checkpoint_sha256": "0f4e20e19a99c0f8a62b5685f57f6c8b5c371c59081feda6752a0561a79ccf38",
+    "shape": [
+      704,
+      704
+    ],
+    "batch": "3 with profiles 1/2/3",
+    "precision": "FP16 backbone; transformer/head/box math FP32",
+    "engine_sha256": "5607135a858440df3d5d0114f637933603f6c58a20f9cfb241ae4c93684ad668",
+    "runtime": "TensorRT 10.13.0.35 / asmc-ros-noetic Python3.8",
+    "confidence_control": 0.4
+  },
+  "baseline": {
+    "model": "YOLO26l detection",
+    "front": [
+      736,
+      1280
+    ],
+    "sides": [
+      480,
+      640
+    ],
+    "batch": "2plus1",
+    "target_hz": 15,
+    "confidence": 0.4,
+    "engine_sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+    "head": "actual operating one2many NMS; old pilot before cache not reused"
+  },
+  "dataset": {
+    "path": "data/dataset_versions/camera_objects_bbox_pilot_v1-r4",
+    "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+    "images_evaluated": 675,
+    "selection_images": 300,
+    "heldout_images": 300,
+    "unique_temporal_additional_images": 75,
+    "splits_unchanged": true,
+    "gt_scope": "existing vehicle24/12px; others16/8px; raw GT unchanged; partial GT recall-only",
+    "limits": [
+      "motorcycle selection absent",
+      "motorcycle heldout single Enzo source",
+      "person heldout predominantly one FOGGY Capture run",
+      "dog/bicycle and several other classes lack sufficient evaluation"
+    ]
+  },
+  "parity": {
+    "passed": false,
+    "batch_sizes": [
+      1,
+      2,
+      3
+    ],
+    "reference_groups": 16,
+    "thresholds": [
+      0.4,
+      0.6,
+      0.7
+    ],
+    "failures": [
+      {
+        "reference_group": "300",
+        "image_in_batch": 1,
+        "threshold": 0.4,
+        "class_name": "person",
+        "iou": 0.9682689318114567,
+        "confidence_delta": 0.0152243971824646,
+        "reference_xyxy": [
+          669.0808176994324,
+          329.3707635998726,
+          695.0602650642395,
+          384.41204756498337
+        ],
+        "candidate_xyxy": [
+          668.5929691791534,
+          329.40580397844315,
+          695.2781856060028,
+          384.1403290629387
+        ],
+        "reference_confidence": 0.7802867889404297,
+        "candidate_confidence": 0.7955111861228943
+      },
+      {
+        "reference_group": "300",
+        "image_in_batch": 1,
+        "threshold": 0.6,
+        "class_name": "person",
+        "iou": 0.9682689318114567,
+        "confidence_delta": 0.0152243971824646,
+        "reference_xyxy": [
+          669.0808176994324,
+          329.3707635998726,
+          695.0602650642395,
+          384.41204756498337
+        ],
+        "candidate_xyxy": [
+          668.5929691791534,
+          329.40580397844315,
+          695.2781856060028,
+          384.1403290629387
+        ],
+        "reference_confidence": 0.7802867889404297,
+        "candidate_confidence": 0.7955111861228943
+      },
+      {
+        "reference_group": "300",
+        "image_in_batch": 1,
+        "threshold": 0.7,
+        "class_name": "person",
+        "iou": 0.9682689318114567,
+        "confidence_delta": 0.0152243971824646,
+        "reference_xyxy": [
+          669.0808176994324,
+          329.3707635998726,
+          695.0602650642395,
+          384.41204756498337
+        ],
+        "candidate_xyxy": [
+          668.5929691791534,
+          329.40580397844315,
+          695.2781856060028,
+          384.1403290629387
+        ],
+        "reference_confidence": 0.7802867889404297,
+        "candidate_confidence": 0.7955111861228943
+      }
+    ],
+    "unique_failure_images": 1,
+    "failure_visual": "deer incorrectly predicted as person; small FP16/PT box boundary difference",
+    "onnx_fp32_control_passed": true,
+    "trt_fp32_diagnostic_passed": true,
+    "full_fp32_not_a_fp16_candidate": true,
+    "low_threshold_010_failures_preserved": true
+  },
+  "models": {
+    "yolo26l-runtime": {
+      "inference_sha256": "86981f634ce1e55f056dff931acdec7666def1f8ad5e55089319565ec65e0959",
+      "predictions_sha256": "4846d7d79456de11c8213a106a094ec705f7869f4a6ecf8f54d497a550ac25ce",
+      "images": 675,
+      "weights_sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "control": {
+        "selection": {
+          "confidence": 0.4,
+          "classes": {
+            "person": {
+              "gt": 107,
+              "tp": 92,
+              "complete_gt": 21,
+              "complete_tp": 16,
+              "complete_predictions": 16,
+              "ignored_gt": 90,
+              "precision": 1.0,
+              "recall": 0.7619047619047619,
+              "f1": 0.8648648648648649,
+              "annotated_recall": 0.8598130841121495,
+              "complete_fp": 0,
+              "complete_fn": 5,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "car": {
+              "complete_predictions": 35,
+              "ignored_gt": 235,
+              "gt": 38,
+              "tp": 29,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.7631578947368421,
+              "complete_fp": 35,
+              "complete_fn": 0,
+              "independent_source_groups": 4,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "bus": {
+              "gt": 27,
+              "tp": 22,
+              "ignored_gt": 36,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.8148148148148148,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 1,
+              "sufficient_sample": false,
+              "source_generalization_limited": true
+            },
+            "truck": {
+              "ignored_gt": 69,
+              "gt": 15,
+              "tp": 7,
+              "complete_gt": 1,
+              "complete_tp": 1,
+              "complete_predictions": 3,
+              "precision": 0.3333333333333333,
+              "recall": 1.0,
+              "f1": 0.5,
+              "annotated_recall": 0.4666666666666667,
+              "complete_fp": 2,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            }
+          },
+          "macro_f1": 0.8648648648648649,
+          "complete_images": 43,
+          "partial_images": 257,
+          "scoped_native_capture_images": 0,
+          "macro_policy": ">=20 complete GT; source/run correlation separately flagged, not independent-scene claims",
+          "pixel_scope": "vehicle 24/12px, other 16/8px"
+        },
+        "heldout": {
+          "confidence": 0.4,
+          "classes": {
+            "car": {
+              "ignored_gt": 202,
+              "complete_predictions": 61,
+              "gt": 2,
+              "tp": 2,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 1.0,
+              "complete_fp": 61,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "bus": {
+              "ignored_gt": 93,
+              "gt": 1,
+              "tp": 1,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 1.0,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "truck": {
+              "ignored_gt": 183,
+              "complete_predictions": 1,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": null,
+              "complete_fp": 1,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "person": {
+              "gt": 26,
+              "tp": 24,
+              "ignored_gt": 25,
+              "complete_predictions": 11,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.9230769230769231,
+              "complete_fp": 11,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 127,
+              "complete_gt": 62,
+              "complete_tp": 58,
+              "complete_predictions": 64,
+              "precision": 0.90625,
+              "recall": 0.9354838709677419,
+              "f1": 0.9206349206349206,
+              "annotated_recall": 0.9202898550724637,
+              "complete_fp": 6,
+              "complete_fn": 4,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "macro_f1": 0.9206349206349206,
+          "complete_images": 70,
+          "partial_images": 230,
+          "scoped_native_capture_images": 0,
+          "macro_policy": ">=20 complete GT; source/run correlation separately flagged, not independent-scene claims",
+          "pixel_scope": "vehicle 24/12px, other 16/8px"
+        }
+      },
+      "selected_confidence": 0.5,
+      "quality_gate": null,
+      "quality_gate_selection": null,
+      "geometry_at_040": {
+        "selection": {
+          "person": {
+            "gt": 107,
+            "tp": 92,
+            "recall": 0.8598130841121495
+          },
+          "bus": {
+            "gt": 27,
+            "tp": 23,
+            "recall": 0.8518518518518519
+          },
+          "car": {
+            "gt": 38,
+            "tp": 32,
+            "recall": 0.8421052631578947
+          },
+          "truck": {
+            "gt": 15,
+            "tp": 7,
+            "recall": 0.4666666666666667
+          }
+        },
+        "heldout": {
+          "person": {
+            "gt": 26,
+            "tp": 24,
+            "recall": 0.9230769230769231
+          },
+          "motorcycle": {
+            "gt": 138,
+            "tp": 134,
+            "recall": 0.9710144927536232
+          },
+          "bus": {
+            "gt": 1,
+            "tp": 1,
+            "recall": 1.0
+          },
+          "car": {
+            "gt": 2,
+            "tp": 2,
+            "recall": 1.0
+          }
+        }
+      }
+    },
+    "rf-l704-pt-final": {
+      "inference_sha256": "be3ac06c49234ccdd44c2a3f5afe374bb0c1f7d2ac945941425891f43cf35d2d",
+      "predictions_sha256": "82d86fb500ad6b8b41ff96f8c9c606154b114eecef5f6214f9452b575792d608",
+      "images": 675,
+      "weights_sha256": "0f4e20e19a99c0f8a62b5685f57f6c8b5c371c59081feda6752a0561a79ccf38",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "control": {
+        "selection": {
+          "confidence": 0.4,
+          "classes": {
+            "person": {
+              "gt": 107,
+              "tp": 94,
+              "complete_gt": 21,
+              "complete_tp": 17,
+              "complete_predictions": 19,
+              "ignored_gt": 90,
+              "precision": 0.8947368421052632,
+              "recall": 0.8095238095238095,
+              "f1": 0.85,
+              "annotated_recall": 0.8785046728971962,
+              "complete_fp": 2,
+              "complete_fn": 4,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "bus": {
+              "gt": 27,
+              "tp": 17,
+              "ignored_gt": 36,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.6296296296296297,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 1,
+              "sufficient_sample": false,
+              "source_generalization_limited": true
+            },
+            "car": {
+              "ignored_gt": 235,
+              "gt": 38,
+              "tp": 29,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.7631578947368421,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "truck": {
+              "ignored_gt": 69,
+              "gt": 15,
+              "tp": 8,
+              "complete_gt": 1,
+              "complete_tp": 1,
+              "complete_predictions": 1,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "annotated_recall": 0.5333333333333333,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            }
+          },
+          "macro_f1": 0.85,
+          "complete_images": 43,
+          "partial_images": 257,
+          "scoped_native_capture_images": 0,
+          "macro_policy": ">=20 complete GT; source/run correlation separately flagged, not independent-scene claims",
+          "pixel_scope": "vehicle 24/12px, other 16/8px"
+        },
+        "heldout": {
+          "confidence": 0.4,
+          "classes": {
+            "car": {
+              "ignored_gt": 202,
+              "complete_predictions": 70,
+              "gt": 2,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.0,
+              "complete_fp": 70,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "bus": {
+              "ignored_gt": 93,
+              "gt": 1,
+              "tp": 1,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 1.0,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "truck": {
+              "ignored_gt": 183,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": null,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 1,
+              "sufficient_sample": false,
+              "source_generalization_limited": true
+            },
+            "person": {
+              "gt": 26,
+              "tp": 22,
+              "ignored_gt": 25,
+              "complete_predictions": 4,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.8461538461538461,
+              "complete_fp": 4,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 136,
+              "complete_gt": 62,
+              "complete_tp": 60,
+              "complete_predictions": 61,
+              "precision": 0.9836065573770492,
+              "recall": 0.967741935483871,
+              "f1": 0.975609756097561,
+              "annotated_recall": 0.9855072463768116,
+              "complete_fp": 1,
+              "complete_fn": 2,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "macro_f1": 0.975609756097561,
+          "complete_images": 70,
+          "partial_images": 230,
+          "scoped_native_capture_images": 0,
+          "macro_policy": ">=20 complete GT; source/run correlation separately flagged, not independent-scene claims",
+          "pixel_scope": "vehicle 24/12px, other 16/8px"
+        }
+      },
+      "selected_confidence": 0.6,
+      "quality_gate": {
+        "control": {
+          "passed": false,
+          "macro_classes": [
+            "motorcycle"
+          ],
+          "baseline_macro_f1": 0.9206349206349206,
+          "candidate_macro_f1": 0.975609756097561,
+          "macro_delta": 0.05497483546264037,
+          "annotated_recall_deltas": {
+            "person": -0.07692307692307698,
+            "motorcycle": 0.0652173913043479
+          },
+          "unassessed": [
+            "dog",
+            "bicycle",
+            "car",
+            "bus",
+            "truck"
+          ],
+          "source_independence": "existing source concentration preserved; not seven-class generalization acceptance"
+        },
+        "selected": {
+          "passed": false,
+          "macro_classes": [
+            "motorcycle"
+          ],
+          "baseline_macro_f1": 0.9206349206349206,
+          "candidate_macro_f1": 0.9310344827586207,
+          "macro_delta": 0.010399562123700079,
+          "annotated_recall_deltas": {
+            "person": -0.15384615384615385,
+            "motorcycle": -0.06521739130434778
+          },
+          "unassessed": [
+            "dog",
+            "bicycle",
+            "car",
+            "bus",
+            "truck"
+          ],
+          "source_independence": "existing source concentration preserved; not seven-class generalization acceptance"
+        }
+      },
+      "quality_gate_selection": {
+        "control": {
+          "passed": false,
+          "macro_classes": [
+            "person"
+          ],
+          "baseline_macro_f1": 0.8648648648648649,
+          "candidate_macro_f1": 0.85,
+          "macro_delta": -0.014864864864864935,
+          "annotated_recall_deltas": {
+            "person": 0.01869158878504673,
+            "car": 0.0,
+            "bus": -0.18518518518518512
+          },
+          "unassessed": [
+            "dog",
+            "bicycle",
+            "motorcycle",
+            "truck"
+          ],
+          "source_independence": "existing source concentration preserved; not seven-class generalization acceptance"
+        },
+        "selected": {
+          "passed": false,
+          "macro_classes": [
+            "person"
+          ],
+          "baseline_macro_f1": 0.8648648648648649,
+          "candidate_macro_f1": 0.8947368421052632,
+          "macro_delta": 0.02987197724039825,
+          "annotated_recall_deltas": {
+            "person": -0.01869158878504673,
+            "car": -0.1842105263157895,
+            "bus": -0.2592592592592592
+          },
+          "unassessed": [
+            "dog",
+            "bicycle",
+            "motorcycle",
+            "truck"
+          ],
+          "source_independence": "existing source concentration preserved; not seven-class generalization acceptance"
+        }
+      },
+      "geometry_at_040": {
+        "selection": {
+          "person": {
+            "gt": 107,
+            "tp": 94,
+            "recall": 0.8785046728971962
+          },
+          "bus": {
+            "gt": 27,
+            "tp": 19,
+            "recall": 0.7037037037037037
+          },
+          "car": {
+            "gt": 38,
+            "tp": 30,
+            "recall": 0.7894736842105263
+          },
+          "truck": {
+            "gt": 15,
+            "tp": 8,
+            "recall": 0.5333333333333333
+          }
+        },
+        "heldout": {
+          "person": {
+            "gt": 26,
+            "tp": 22,
+            "recall": 0.8461538461538461
+          },
+          "motorcycle": {
+            "gt": 138,
+            "tp": 138,
+            "recall": 1.0
+          },
+          "bus": {
+            "gt": 1,
+            "tp": 1,
+            "recall": 1.0
+          },
+          "car": {
+            "gt": 2,
+            "tp": 0,
+            "recall": 0.0
+          }
+        }
+      }
+    },
+    "rf-l704-trt-diagnostic": {
+      "inference_sha256": "1b0a2e8cabfb16b4207d0916290209fb215e31637f846f7b7aac72e06eb51213",
+      "predictions_sha256": "13312224215eaaf00754cbb83f8e85dacd5cab81dc8f345bb21a109b2ef32ca3",
+      "images": 675,
+      "weights_sha256": "5607135a858440df3d5d0114f637933603f6c58a20f9cfb241ae4c93684ad668",
+      "mask_shas": {
+        "front": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+        "left": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+        "right": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+      },
+      "control": {
+        "selection": {
+          "confidence": 0.4,
+          "classes": {
+            "person": {
+              "gt": 107,
+              "tp": 94,
+              "complete_gt": 21,
+              "complete_tp": 17,
+              "complete_predictions": 19,
+              "ignored_gt": 90,
+              "precision": 0.8947368421052632,
+              "recall": 0.8095238095238095,
+              "f1": 0.85,
+              "annotated_recall": 0.8785046728971962,
+              "complete_fp": 2,
+              "complete_fn": 4,
+              "independent_source_groups": 4,
+              "sufficient_sample": true,
+              "source_generalization_limited": false
+            },
+            "bus": {
+              "gt": 27,
+              "tp": 17,
+              "ignored_gt": 36,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.6296296296296297,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 1,
+              "sufficient_sample": false,
+              "source_generalization_limited": true
+            },
+            "car": {
+              "ignored_gt": 235,
+              "gt": 38,
+              "tp": 29,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.7631578947368421,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "truck": {
+              "ignored_gt": 69,
+              "gt": 15,
+              "tp": 8,
+              "complete_gt": 1,
+              "complete_tp": 1,
+              "complete_predictions": 1,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "annotated_recall": 0.5333333333333333,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            }
+          },
+          "macro_f1": 0.85,
+          "complete_images": 43,
+          "partial_images": 257,
+          "scoped_native_capture_images": 0,
+          "macro_policy": ">=20 complete GT; source/run correlation separately flagged, not independent-scene claims",
+          "pixel_scope": "vehicle 24/12px, other 16/8px"
+        },
+        "heldout": {
+          "confidence": 0.4,
+          "classes": {
+            "car": {
+              "ignored_gt": 202,
+              "complete_predictions": 70,
+              "gt": 2,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.0,
+              "complete_fp": 70,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "bus": {
+              "ignored_gt": 93,
+              "gt": 1,
+              "tp": 1,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 1.0,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 2,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "truck": {
+              "ignored_gt": 183,
+              "precision": null,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": null,
+              "complete_fp": 0,
+              "complete_fn": 0,
+              "independent_source_groups": 1,
+              "sufficient_sample": false,
+              "source_generalization_limited": true
+            },
+            "person": {
+              "gt": 26,
+              "tp": 22,
+              "ignored_gt": 25,
+              "complete_predictions": 4,
+              "precision": 0.0,
+              "recall": null,
+              "f1": null,
+              "annotated_recall": 0.8461538461538461,
+              "complete_fp": 4,
+              "complete_fn": 0,
+              "independent_source_groups": 3,
+              "sufficient_sample": false,
+              "source_generalization_limited": false
+            },
+            "motorcycle": {
+              "gt": 138,
+              "tp": 136,
+              "complete_gt": 62,
+              "complete_tp": 60,
+              "complete_predictions": 61,
+              "precision": 0.9836065573770492,
+              "recall": 0.967741935483871,
+              "f1": 0.975609756097561,
+              "annotated_recall": 0.9855072463768116,
+              "complete_fp": 1,
+              "complete_fn": 2,
+              "independent_source_groups": 1,
+              "sufficient_sample": true,
+              "source_generalization_limited": true
+            }
+          },
+          "macro_f1": 0.975609756097561,
+          "complete_images": 70,
+          "partial_images": 230,
+          "scoped_native_capture_images": 0,
+          "macro_policy": ">=20 complete GT; source/run correlation separately flagged, not independent-scene claims",
+          "pixel_scope": "vehicle 24/12px, other 16/8px"
+        }
+      },
+      "selected_confidence": 0.6,
+      "quality_gate": {
+        "control": {
+          "passed": false,
+          "macro_classes": [
+            "motorcycle"
+          ],
+          "baseline_macro_f1": 0.9206349206349206,
+          "candidate_macro_f1": 0.975609756097561,
+          "macro_delta": 0.05497483546264037,
+          "annotated_recall_deltas": {
+            "person": -0.07692307692307698,
+            "motorcycle": 0.0652173913043479
+          },
+          "unassessed": [
+            "dog",
+            "bicycle",
+            "car",
+            "bus",
+            "truck"
+          ],
+          "source_independence": "existing source concentration preserved; not seven-class generalization acceptance"
+        },
+        "selected": {
+          "passed": false,
+          "macro_classes": [
+            "motorcycle"
+          ],
+          "baseline_macro_f1": 0.9206349206349206,
+          "candidate_macro_f1": 0.9310344827586207,
+          "macro_delta": 0.010399562123700079,
+          "annotated_recall_deltas": {
+            "person": -0.15384615384615385,
+            "motorcycle": -0.05797101449275355
+          },
+          "unassessed": [
+            "dog",
+            "bicycle",
+            "car",
+            "bus",
+            "truck"
+          ],
+          "source_independence": "existing source concentration preserved; not seven-class generalization acceptance"
+        }
+      },
+      "quality_gate_selection": {
+        "control": {
+          "passed": false,
+          "macro_classes": [
+            "person"
+          ],
+          "baseline_macro_f1": 0.8648648648648649,
+          "candidate_macro_f1": 0.85,
+          "macro_delta": -0.014864864864864935,
+          "annotated_recall_deltas": {
+            "person": 0.01869158878504673,
+            "car": 0.0,
+            "bus": -0.18518518518518512
+          },
+          "unassessed": [
+            "dog",
+            "bicycle",
+            "motorcycle",
+            "truck"
+          ],
+          "source_independence": "existing source concentration preserved; not seven-class generalization acceptance"
+        },
+        "selected": {
+          "passed": false,
+          "macro_classes": [
+            "person"
+          ],
+          "baseline_macro_f1": 0.8648648648648649,
+          "candidate_macro_f1": 0.8947368421052632,
+          "macro_delta": 0.02987197724039825,
+          "annotated_recall_deltas": {
+            "person": -0.01869158878504673,
+            "car": -0.1842105263157895,
+            "bus": -0.2592592592592592
+          },
+          "unassessed": [
+            "dog",
+            "bicycle",
+            "motorcycle",
+            "truck"
+          ],
+          "source_independence": "existing source concentration preserved; not seven-class generalization acceptance"
+        }
+      },
+      "geometry_at_040": {
+        "selection": {
+          "person": {
+            "gt": 107,
+            "tp": 94,
+            "recall": 0.8785046728971962
+          },
+          "bus": {
+            "gt": 27,
+            "tp": 19,
+            "recall": 0.7037037037037037
+          },
+          "car": {
+            "gt": 38,
+            "tp": 30,
+            "recall": 0.7894736842105263
+          },
+          "truck": {
+            "gt": 15,
+            "tp": 8,
+            "recall": 0.5333333333333333
+          }
+        },
+        "heldout": {
+          "person": {
+            "gt": 26,
+            "tp": 22,
+            "recall": 0.8461538461538461
+          },
+          "motorcycle": {
+            "gt": 138,
+            "tp": 138,
+            "recall": 1.0
+          },
+          "bus": {
+            "gt": 1,
+            "tp": 1,
+            "recall": 1.0
+          },
+          "car": {
+            "gt": 2,
+            "tp": 0,
+            "recall": 0.0
+          }
+        }
+      }
+    }
+  },
+  "engine_attempts": [
+    {
+      "directory": "data/models/camera_rfdetr_v1/l/704-v1",
+      "engine_sha256": "3622d35e6e0df8bf48a19004f8952798817d37f49f6cc0997e431f11a6b478a6",
+      "policy": null,
+      "fp16_enabled": true,
+      "protected_layers": 0
+    },
+    {
+      "directory": "data/models/camera_rfdetr_v1/l/704-v2-no-tf32",
+      "engine_sha256": "36c6b157a603a41d7a7477390f73031bbbe900c19e825cfe281ef26dd240b9db",
+      "policy": "fp16-no-tf32",
+      "fp16_enabled": true,
+      "protected_layers": 0
+    },
+    {
+      "directory": "data/models/camera_rfdetr_v1/l/704-v3-stable",
+      "engine_sha256": "1b85bda6513ae33f0d483d73720b1406fb1790eccc60f0c89d64579334b06956",
+      "policy": "fp16-stable",
+      "fp16_enabled": true,
+      "protected_layers": 77
+    },
+    {
+      "directory": "data/models/camera_rfdetr_v1/l/704-v4-fp32-diagnostic",
+      "engine_sha256": "b1bd18618c966d78e5b2ba3ec000d4ec6247172a33402b936f47a9fab277f32d",
+      "policy": "fp32-diagnostic",
+      "fp16_enabled": false,
+      "protected_layers": 0
+    },
+    {
+      "directory": "data/models/camera_rfdetr_v1/l/704-v5-decoder-fp32",
+      "engine_sha256": "27145576e6318bab5c0b3d6cc53f452e466aa1efac5bac38d0fc6813d0f05eca",
+      "policy": "fp16-decoder-fp32",
+      "fp16_enabled": true,
+      "protected_layers": 567
+    },
+    {
+      "directory": "data/models/camera_rfdetr_v1/l/704-v6-output-fp32",
+      "engine_sha256": "5607135a858440df3d5d0114f637933603f6c58a20f9cfb241ae4c93684ad668",
+      "policy": "fp16-decoder-fp32",
+      "fp16_enabled": true,
+      "protected_layers": 497
+    }
+  ],
+  "integrated_measurement": {
+    "status": "diagnostic_complete_not_accepted",
+    "runs_completed": 5,
+    "evidence": "config/baselines/evidence/camera_rfdetr_selection_v1/integrated-screen-summary.json",
+    "scope": "60-second diagnostic screens, not final three-repeat acceptance or driving test; per-view percentiles kept per run, not averaged",
+    "vram_cap_percent": 90,
+    "weather": [
+      "SUNNY",
+      "FOGGY"
+    ],
+    "public_control_published": false,
+    "actors_spawned": 0,
+    "weather_restored": "CLOUDY",
+    "runs": [
+      {
+        "model": "rfdetr-l-704",
+        "weather": "sunny",
+        "passed": false,
+        "failures": [
+          "yolo front supply/latency gate",
+          "yolo left supply/latency gate",
+          "yolo right supply/latency gate"
+        ],
+        "views": {
+          "left": {
+            "messages": 606,
+            "hz": 10.1,
+            "valid_messages": 606,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 9,
+            "five_second_hz": [
+              9.4,
+              10.6,
+              9.6,
+              10.2,
+              10.2,
+              9.8,
+              11.0,
+              10.6,
+              9.8,
+              9.0,
+              10.4,
+              10.6
+            ],
+            "max_gap_sec": 0.2189002349623479,
+            "first_output_sec": 0.1554135899641551,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 606,
+              "p50": 127.16913199999999,
+              "p95": 173.3019945,
+              "p99": 205.09520725000013,
+              "maximum": 250.641823
+            },
+            "input_to_output_wall_ms": {
+              "samples": 606,
+              "p50": 126.30351400002837,
+              "p95": 172.8249492298346,
+              "p99": 203.9091851911509,
+              "maximum": 240.84843299351633
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "right": {
+            "messages": 608,
+            "hz": 10.133333333333333,
+            "valid_messages": 608,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 9,
+            "five_second_hz": [
+              9.4,
+              10.6,
+              9.6,
+              10.2,
+              10.2,
+              9.8,
+              11.0,
+              10.8,
+              9.8,
+              9.0,
+              10.4,
+              10.8
+            ],
+            "max_gap_sec": 0.2181493389653042,
+            "first_output_sec": 0.15545887500047684,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 608,
+              "p50": 125.1777415,
+              "p95": 174.94964554999999,
+              "p99": 203.23092004,
+              "maximum": 250.412464
+            },
+            "input_to_output_wall_ms": {
+              "samples": 608,
+              "p50": 124.33920151670463,
+              "p95": 174.08361252455506,
+              "p99": 202.60402035084553,
+              "maximum": 233.86126896366477
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "front": {
+            "messages": 607,
+            "hz": 10.116666666666667,
+            "valid_messages": 607,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 9,
+            "five_second_hz": [
+              9.4,
+              10.6,
+              9.6,
+              10.2,
+              10.2,
+              9.8,
+              11.0,
+              10.8,
+              9.8,
+              9.0,
+              10.4,
+              10.6
+            ],
+            "max_gap_sec": 0.21865905600134283,
+            "first_output_sec": 0.1554729649797082,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 607,
+              "p50": 127.255201,
+              "p95": 173.2089041,
+              "p99": 201.49730702000016,
+              "maximum": 239.896774
+            },
+            "input_to_output_wall_ms": {
+              "samples": 607,
+              "p50": 126.15591596113518,
+              "p95": 172.32080087414943,
+              "p99": 200.76446613064053,
+              "maximum": 236.9570599985309
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4342.0
+      },
+      {
+        "model": "yolo26l",
+        "weather": "sunny",
+        "passed": true,
+        "failures": [],
+        "views": {
+          "right": {
+            "messages": 893,
+            "hz": 14.883333333333333,
+            "valid_messages": 893,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.6,
+              15.0,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              14.8
+            ],
+            "max_gap_sec": 0.1726116460049525,
+            "first_output_sec": 0.02862333902157843,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 893,
+              "p50": 45.059204,
+              "p95": 64.0547758,
+              "p99": 79.06540848000003,
+              "maximum": 91.864824
+            },
+            "input_to_output_wall_ms": {
+              "samples": 893,
+              "p50": 44.27124198991805,
+              "p95": 63.26665057567879,
+              "p99": 78.6601001233794,
+              "maximum": 91.23012603959069
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "front": {
+            "messages": 896,
+            "hz": 14.933333333333334,
+            "valid_messages": 896,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              15.0
+            ],
+            "max_gap_sec": 0.1819704389781691,
+            "first_output_sec": 0.08038064796710387,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 896,
+              "p50": 44.2239045,
+              "p95": 65.66470874999999,
+              "p99": 77.8881789,
+              "maximum": 87.495088
+            },
+            "input_to_output_wall_ms": {
+              "samples": 896,
+              "p50": 43.436054984340444,
+              "p95": 64.32845024392009,
+              "p99": 77.08794321515596,
+              "maximum": 86.78499003872275
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "left": {
+            "messages": 895,
+            "hz": 14.916666666666666,
+            "valid_messages": 895,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              14.8,
+              14.8,
+              15.2,
+              14.8,
+              15.0
+            ],
+            "max_gap_sec": 0.1820137540344149,
+            "first_output_sec": 0.08043386699864641,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 895,
+              "p50": 45.648575,
+              "p95": 66.1840197,
+              "p99": 80.21803845999995,
+              "maximum": 90.050698
+            },
+            "input_to_output_wall_ms": {
+              "samples": 895,
+              "p50": 45.01823300961405,
+              "p95": 65.30668089399113,
+              "p99": 79.70472274697381,
+              "maximum": 89.50900298077613
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4342.0
+      },
+      {
+        "model": "rfdetr-l-704",
+        "weather": "foggy",
+        "passed": false,
+        "failures": [
+          "yolo front supply/latency gate",
+          "yolo left supply/latency gate",
+          "yolo right supply/latency gate"
+        ],
+        "views": {
+          "right": {
+            "messages": 681,
+            "hz": 11.35,
+            "valid_messages": 681,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 11,
+            "five_second_hz": [
+              11.8,
+              11.6,
+              11.0,
+              11.4,
+              11.4,
+              11.4,
+              11.2,
+              11.4,
+              11.0,
+              11.2,
+              11.6,
+              11.2
+            ],
+            "max_gap_sec": 0.1797067429870367,
+            "first_output_sec": 0.0994987859739922,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 681,
+              "p50": 112.975836,
+              "p95": 159.693957,
+              "p99": 174.6539112000001,
+              "maximum": 248.623848
+            },
+            "input_to_output_wall_ms": {
+              "samples": 681,
+              "p50": 112.16471897205338,
+              "p95": 159.2088380130008,
+              "p99": 174.16761318454527,
+              "maximum": 247.9358339915052
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "front": {
+            "messages": 681,
+            "hz": 11.35,
+            "valid_messages": 681,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 11,
+            "five_second_hz": [
+              11.8,
+              11.6,
+              11.0,
+              11.4,
+              11.4,
+              11.4,
+              11.2,
+              11.4,
+              11.0,
+              11.2,
+              11.6,
+              11.2
+            ],
+            "max_gap_sec": 0.17929687799187377,
+            "first_output_sec": 0.0995796819915995,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 681,
+              "p50": 113.928557,
+              "p95": 159.833431,
+              "p99": 172.55086860000014,
+              "maximum": 246.540546
+            },
+            "input_to_output_wall_ms": {
+              "samples": 681,
+              "p50": 113.1896140286699,
+              "p95": 158.80184201523662,
+              "p99": 171.32959138834863,
+              "maximum": 245.81005302025005
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "left": {
+            "messages": 679,
+            "hz": 11.316666666666666,
+            "valid_messages": 679,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 10,
+            "five_second_hz": [
+              11.6,
+              11.6,
+              11.0,
+              11.4,
+              11.4,
+              11.4,
+              11.2,
+              11.4,
+              11.0,
+              11.0,
+              11.6,
+              11.2
+            ],
+            "max_gap_sec": 0.17950791597831994,
+            "first_output_sec": 0.12980813201284036,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 679,
+              "p50": 114.848853,
+              "p95": 159.27774950000003,
+              "p99": 171.14305528,
+              "maximum": 221.443653
+            },
+            "input_to_output_wall_ms": {
+              "samples": 679,
+              "p50": 114.38542400719598,
+              "p95": 158.32127323374158,
+              "p99": 169.54204802867025,
+              "maximum": 220.818963018246
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4045.0
+      },
+      {
+        "model": "yolo26l",
+        "weather": "foggy",
+        "passed": false,
+        "failures": [
+          "yolo front supply/latency gate",
+          "yolo left supply/latency gate",
+          "yolo right supply/latency gate",
+          "twinlite front supply gate",
+          "twinlite left supply gate",
+          "twinlite right supply gate",
+          "resnet18 resnet18 supply gate"
+        ],
+        "views": {
+          "left": {
+            "messages": 883,
+            "hz": 14.716666666666667,
+            "valid_messages": 883,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.4,
+              14.6,
+              14.8,
+              14.8,
+              15.2,
+              14.6,
+              14.8,
+              14.8,
+              14.8,
+              14.4,
+              14.8,
+              14.6
+            ],
+            "max_gap_sec": 0.33229178498731926,
+            "first_output_sec": 0.04873011895688251,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 883,
+              "p50": 39.24942,
+              "p95": 62.6925226,
+              "p99": 77.09373039999993,
+              "maximum": 323.044062
+            },
+            "input_to_output_wall_ms": {
+              "samples": 883,
+              "p50": 38.35835895733908,
+              "p95": 61.95409420761278,
+              "p99": 75.46801733435127,
+              "maximum": 322.51048798207194
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "right": {
+            "messages": 886,
+            "hz": 14.766666666666667,
+            "valid_messages": 886,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.8,
+              14.6,
+              14.8,
+              15.0,
+              15.0,
+              14.6,
+              15.0,
+              15.0,
+              15.0,
+              14.0,
+              14.8,
+              14.6
+            ],
+            "max_gap_sec": 0.35181187198031694,
+            "first_output_sec": 0.10289560497039929,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 886,
+              "p50": 46.04315750000001,
+              "p95": 71.0088615,
+              "p99": 79.14487079999999,
+              "maximum": 323.383808
+            },
+            "input_to_output_wall_ms": {
+              "samples": 886,
+              "p50": 45.40296451887116,
+              "p95": 70.41662198025733,
+              "p99": 78.61733135650866,
+              "maximum": 322.7848560200073
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "front": {
+            "messages": 889,
+            "hz": 14.816666666666666,
+            "valid_messages": 889,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 13,
+            "five_second_hz": [
+              14.8,
+              14.8,
+              14.8,
+              15.0,
+              15.2,
+              14.6,
+              14.8,
+              15.2,
+              14.8,
+              14.2,
+              14.8,
+              14.8
+            ],
+            "max_gap_sec": 0.3521589969750494,
+            "first_output_sec": 0.1031815999886021,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 889,
+              "p50": 45.009137,
+              "p95": 69.58093620000001,
+              "p99": 77.45848588,
+              "maximum": 321.663141
+            },
+            "input_to_output_wall_ms": {
+              "samples": 889,
+              "p50": 44.08832604531199,
+              "p95": 68.75651744194329,
+              "p99": 76.27829595003277,
+              "maximum": 321.00270997034386
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4207.0
+      },
+      {
+        "model": "yolo26l",
+        "weather": "foggy",
+        "passed": true,
+        "failures": [],
+        "views": {
+          "front": {
+            "messages": 896,
+            "hz": 14.933333333333334,
+            "valid_messages": 896,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              15.0
+            ],
+            "max_gap_sec": 0.17448807699838653,
+            "first_output_sec": 0.07462348300032318,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 896,
+              "p50": 42.9348945,
+              "p95": 58.64560575,
+              "p99": 69.49316234999998,
+              "maximum": 79.815149
+            },
+            "input_to_output_wall_ms": {
+              "samples": 896,
+              "p50": 42.13426451315172,
+              "p95": 57.67537048086524,
+              "p99": 68.91593831242062,
+              "maximum": 79.1713329963386
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "left": {
+            "messages": 896,
+            "hz": 14.933333333333334,
+            "valid_messages": 896,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              14.8,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              15.0,
+              15.0,
+              15.0
+            ],
+            "max_gap_sec": 0.19613016699440777,
+            "first_output_sec": 0.07471192197408527,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 896,
+              "p50": 43.849349000000004,
+              "p95": 60.6561305,
+              "p99": 72.84027395,
+              "maximum": 81.911564
+            },
+            "input_to_output_wall_ms": {
+              "samples": 896,
+              "p50": 42.99633149639703,
+              "p95": 60.15364178165328,
+              "p99": 71.88906245864925,
+              "maximum": 80.62564104329795
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          },
+          "right": {
+            "messages": 892,
+            "hz": 14.866666666666667,
+            "valid_messages": 892,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 14,
+            "five_second_hz": [
+              14.8,
+              15.0,
+              15.0,
+              14.8,
+              14.8,
+              15.0,
+              14.8,
+              14.6,
+              15.2,
+              14.6,
+              15.0,
+              14.8
+            ],
+            "max_gap_sec": 0.17420359596144408,
+            "first_output_sec": 0.07472654397133738,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0,
+            "complete": true,
+            "duration_sec": 60.0,
+            "valid_ratio": 1.0,
+            "source_age_ms": {
+              "samples": 892,
+              "p50": 43.022394500000004,
+              "p95": 57.96685235000001,
+              "p99": 66.48126815,
+              "maximum": 76.783895
+            },
+            "input_to_output_wall_ms": {
+              "samples": 892,
+              "p50": 42.28547550155781,
+              "p95": 57.06209669297097,
+              "p99": 65.87738435540815,
+              "maximum": 76.25647203531116
+            },
+            "input_anchor_missing": 0,
+            "input_anchor_ambiguous": 0,
+            "negative_source_age": 0
+          }
+        },
+        "whole_vram_peak_mib": 4129.0
+      }
+    ]
+  },
+  "tests": {
+    "rf_cpu": 16,
+    "detection_cpu": 75,
+    "runtime_cpu": 31,
+    "ros_overlay_build": "passed in asmc-ros-noetic; shared install unchanged",
+    "ros_standby_smoke": "passed: actual ROS factory loaded+warmed STANDBY, 0 errors, 0 outputs",
+    "hosted_ci": "billing blocked; not passed",
+    "default_backend_reset": "passed: RF standby followed by default YOLO standby on same master; only model_kind cleared",
+    "weather_cpu": 4
+  },
+  "decision": {
+    "current": "keep operating YOLO26l; RF not added to current retraining candidates",
+    "reasons": [
+      "strict FP16 decoded box parity failed",
+      "heldout person annotated recall 24/26 ->22/26 exceeds 2pp drop limit",
+      "selection bus 22/27 ->17/27; separate from heldout acceptance",
+      "RF L704 mixed-precision integrated p95 158-174ms and 10.1-11.4Hz; misses p95/15Hz targets; SUNNY 5s windows down to9.0Hz"
+    ],
+    "skipped": [
+      {
+        "experiment": "SUNNY/FOGGY three-repeat final RF/YOLO matrix",
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
+      },
+      {
+        "experiment": "RF L640/M576",
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
+      },
+      {
+        "experiment": "RF rectangular960",
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
+      },
+      {
+        "experiment": "YOLO26x640",
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
+      },
+      {
+        "experiment": "RF-DETR-XL560",
+        "reason": "Quality and FP16 parity prerequisites failed; integrated diagnostic also misses timing targets. Stop this candidate without extending the model/export search in the current development window."
+      }
+    ],
+    "next": "Validated teacher drafts and targeted annotation/replay/diversity fixes, then small YOLO26l/YOLOE bbox retraining comparison. RF optional later after parity and preprocessing work; no current runtime promotion."
+  },
+  "galleries": {
+    "hub": "http://localhost:8768/",
+    "latest": "http://localhost:8768/camera-rfdetr-selection-v1/final-analysis-v1/",
+    "pt_diagnostic": "http://localhost:8768/camera-rfdetr-selection-v1/pt-diagnostic-gallery/",
+    "latest_experiment_id": "E218"
+  },
+  "local_evidence": "artifacts/camera-rfdetr-selection-v1/",
+  "runtime_overlay": "data/runtime_archive/rfdetr-preflight-v1/",
+  "gallery_correction": "Per-GT change text now joins annotation_index instead of list order; 675-image aggregate quality counts unchanged. Older diagnostic galleries retained with correction notice.",
+  "m_followup": {
+    "status": "analysis_complete_rf_m_runtime_feasible_not_selected",
+    "evidence": "config/baselines/evidence/camera_rfdetr_selection_v1/m576-followup.json",
+    "engine_sha256": "e8facbcbefd17e7836e6b1721961a0902d16dbcfee55c090cabb4d9a6ce9aa73",
+    "shape": [
+      576,
+      576
+    ],
+    "parity_passed": false,
+    "quality_control_passed": false,
+    "integrated_measurement_completed": true,
+    "operating_model_changed": false,
+    "full_stack_windows": 5,
+    "sensor_control_windows": 1,
+    "runtime_diagnostic_passed": true,
+    "decision": {
+      "operating": "retain YOLO26l1280/.40/3view15Hz/2plus1",
+      "retraining": "Do not add RF to immediate small bbox training comparison; focus YOLO26l/YOLOE and regression fixes",
+      "rf_m": "Runtime-feasible reserve candidate; no trained accuracy conclusion",
+      "unresolved": "FOGGY sensor delivery stalls; location between simulator/network/bridge unknown; lane geometry hash refusal remains separate"
+    },
+    "gallery": "http://localhost:8768/camera-rfdetr-selection-v1/m-followup-final-v2/"
+  }
+}

@@ -1,0 +1,3054 @@
+{
+  "kind": "tensorrt",
+  "thresholds": [
+    0.4,
+    0.6,
+    0.7
+  ],
+  "fp32_diagnostic": false,
+  "model_sha256": "5607135a858440df3d5d0114f637933603f6c58a20f9cfb241ae4c93684ad668",
+  "reference_sha256": "47290116c10a9d9b69693a2b93e82689795f4f266715f37ff4a627c99c4663ef",
+  "batch_sizes": [
+    1,
+    2,
+    3
+  ],
+  "passed": false,
+  "records": [
+    {
+      "key": "0",
+      "batch": 3,
+      "raw_box_max_error": 1.2724617719650269,
+      "raw_logit_max_error": 4.672565937042236,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9986777210746495,
+              "confidence_delta": 0.00013786554336547852,
+              "reference_xyxy": [
+                376.24354362487793,
+                235.0939655303955,
+                392.46495246887207,
+                288.1435832977295
+              ],
+              "candidate_xyxy": [
+                376.23437118530273,
+                235.1011791229248,
+                392.45947647094727,
+                288.12849617004395
+              ],
+              "reference_confidence": 0.8668136596679688,
+              "candidate_confidence": 0.8669515252113342
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9901365097869036,
+              "confidence_delta": 0.0020737946033477783,
+              "reference_xyxy": [
+                328.3472146987915,
+                244.0706434249878,
+                334.840163230896,
+                269.15903186798096
+              ],
+              "candidate_xyxy": [
+                328.3827748298645,
+                244.08309173583984,
+                334.862464427948,
+                269.14652252197266
+              ],
+              "reference_confidence": 0.454800009727478,
+              "candidate_confidence": 0.4568738043308258
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "bus",
+              "iou": 0.9993798637922823,
+              "confidence_delta": 0.001545727252960205,
+              "reference_xyxy": [
+                47.31794357299805,
+                179.7206962108612,
+                179.68721389770508,
+                258.69650959968567
+              ],
+              "candidate_xyxy": [
+                47.37827777862549,
+                179.71432328224182,
+                179.68636989593506,
+                258.7026250362396
+              ],
+              "reference_confidence": 0.8368451595306396,
+              "candidate_confidence": 0.8352994322776794
+            },
+            {
+              "class_name": "car",
+              "iou": 0.9993882096894743,
+              "confidence_delta": 7.76052474975586e-05,
+              "reference_xyxy": [
+                357.6804041862488,
+                213.13272178173065,
+                434.26013231277466,
+                243.54244530200958
+              ],
+              "candidate_xyxy": [
+                357.6863217353821,
+                213.12839806079865,
+                434.24505949020386,
+                243.54839980602264
+              ],
+              "reference_confidence": 0.8546128273010254,
+              "candidate_confidence": 0.8545352220535278
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9986777210746495,
+              "confidence_delta": 0.00013786554336547852,
+              "reference_xyxy": [
+                376.24354362487793,
+                235.0939655303955,
+                392.46495246887207,
+                288.1435832977295
+              ],
+              "candidate_xyxy": [
+                376.23437118530273,
+                235.1011791229248,
+                392.45947647094727,
+                288.12849617004395
+              ],
+              "reference_confidence": 0.8668136596679688,
+              "candidate_confidence": 0.8669515252113342
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "bus",
+              "iou": 0.9993798637922823,
+              "confidence_delta": 0.001545727252960205,
+              "reference_xyxy": [
+                47.31794357299805,
+                179.7206962108612,
+                179.68721389770508,
+                258.69650959968567
+              ],
+              "candidate_xyxy": [
+                47.37827777862549,
+                179.71432328224182,
+                179.68636989593506,
+                258.7026250362396
+              ],
+              "reference_confidence": 0.8368451595306396,
+              "candidate_confidence": 0.8352994322776794
+            },
+            {
+              "class_name": "car",
+              "iou": 0.9993882096894743,
+              "confidence_delta": 7.76052474975586e-05,
+              "reference_xyxy": [
+                357.6804041862488,
+                213.13272178173065,
+                434.26013231277466,
+                243.54244530200958
+              ],
+              "candidate_xyxy": [
+                357.6863217353821,
+                213.12839806079865,
+                434.24505949020386,
+                243.54839980602264
+              ],
+              "reference_confidence": 0.8546128273010254,
+              "candidate_confidence": 0.8545352220535278
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9986777210746495,
+              "confidence_delta": 0.00013786554336547852,
+              "reference_xyxy": [
+                376.24354362487793,
+                235.0939655303955,
+                392.46495246887207,
+                288.1435832977295
+              ],
+              "candidate_xyxy": [
+                376.23437118530273,
+                235.1011791229248,
+                392.45947647094727,
+                288.12849617004395
+              ],
+              "reference_confidence": 0.8668136596679688,
+              "candidate_confidence": 0.8669515252113342
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "bus",
+              "iou": 0.9993798637922823,
+              "confidence_delta": 0.001545727252960205,
+              "reference_xyxy": [
+                47.31794357299805,
+                179.7206962108612,
+                179.68721389770508,
+                258.69650959968567
+              ],
+              "candidate_xyxy": [
+                47.37827777862549,
+                179.71432328224182,
+                179.68636989593506,
+                258.7026250362396
+              ],
+              "reference_confidence": 0.8368451595306396,
+              "candidate_confidence": 0.8352994322776794
+            },
+            {
+              "class_name": "car",
+              "iou": 0.9993882096894743,
+              "confidence_delta": 7.76052474975586e-05,
+              "reference_xyxy": [
+                357.6804041862488,
+                213.13272178173065,
+                434.26013231277466,
+                243.54244530200958
+              ],
+              "candidate_xyxy": [
+                357.6863217353821,
+                213.12839806079865,
+                434.24505949020386,
+                243.54839980602264
+              ],
+              "reference_confidence": 0.8546128273010254,
+              "candidate_confidence": 0.8545352220535278
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "12",
+      "batch": 3,
+      "raw_box_max_error": 1.0885978937149048,
+      "raw_logit_max_error": 4.565679550170898,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9991164952635956,
+              "confidence_delta": 0.0005129575729370117,
+              "reference_xyxy": [
+                192.28437662124634,
+                190.64974665641785,
+                240.69597005844116,
+                300.8765709400177
+              ],
+              "candidate_xyxy": [
+                192.31160640716553,
+                190.62836050987244,
+                240.6957483291626,
+                300.89011788368225
+              ],
+              "reference_confidence": 0.9333829879760742,
+              "candidate_confidence": 0.9328700304031372
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9983888381303391,
+              "confidence_delta": 0.0018216967582702637,
+              "reference_xyxy": [
+                0.09326457977294922,
+                215.16949653625488,
+                12.92542576789856,
+                240.82165718078613
+              ],
+              "candidate_xyxy": [
+                0.09845614433288574,
+                215.1586166024208,
+                12.917826175689697,
+                240.81674426794052
+              ],
+              "reference_confidence": 0.8165135383605957,
+              "candidate_confidence": 0.818335235118866
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9974049157679942,
+              "confidence_delta": 6.23464584350586e-05,
+              "reference_xyxy": [
+                26.088781356811523,
+                208.62863212823868,
+                46.34085178375244,
+                237.25901931524277
+              ],
+              "candidate_xyxy": [
+                26.112067699432373,
+                208.6318302154541,
+                46.33012056350708,
+                237.23596572875977
+              ],
+              "reference_confidence": 0.763481616973877,
+              "candidate_confidence": 0.7634192705154419
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9991164952635956,
+              "confidence_delta": 0.0005129575729370117,
+              "reference_xyxy": [
+                192.28437662124634,
+                190.64974665641785,
+                240.69597005844116,
+                300.8765709400177
+              ],
+              "candidate_xyxy": [
+                192.31160640716553,
+                190.62836050987244,
+                240.6957483291626,
+                300.89011788368225
+              ],
+              "reference_confidence": 0.9333829879760742,
+              "candidate_confidence": 0.9328700304031372
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9983888381303391,
+              "confidence_delta": 0.0018216967582702637,
+              "reference_xyxy": [
+                0.09326457977294922,
+                215.16949653625488,
+                12.92542576789856,
+                240.82165718078613
+              ],
+              "candidate_xyxy": [
+                0.09845614433288574,
+                215.1586166024208,
+                12.917826175689697,
+                240.81674426794052
+              ],
+              "reference_confidence": 0.8165135383605957,
+              "candidate_confidence": 0.818335235118866
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9974049157679942,
+              "confidence_delta": 6.23464584350586e-05,
+              "reference_xyxy": [
+                26.088781356811523,
+                208.62863212823868,
+                46.34085178375244,
+                237.25901931524277
+              ],
+              "candidate_xyxy": [
+                26.112067699432373,
+                208.6318302154541,
+                46.33012056350708,
+                237.23596572875977
+              ],
+              "reference_confidence": 0.763481616973877,
+              "candidate_confidence": 0.7634192705154419
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9991164952635956,
+              "confidence_delta": 0.0005129575729370117,
+              "reference_xyxy": [
+                192.28437662124634,
+                190.64974665641785,
+                240.69597005844116,
+                300.8765709400177
+              ],
+              "candidate_xyxy": [
+                192.31160640716553,
+                190.62836050987244,
+                240.6957483291626,
+                300.89011788368225
+              ],
+              "reference_confidence": 0.9333829879760742,
+              "candidate_confidence": 0.9328700304031372
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9983888381303391,
+              "confidence_delta": 0.0018216967582702637,
+              "reference_xyxy": [
+                0.09326457977294922,
+                215.16949653625488,
+                12.92542576789856,
+                240.82165718078613
+              ],
+              "candidate_xyxy": [
+                0.09845614433288574,
+                215.1586166024208,
+                12.917826175689697,
+                240.81674426794052
+              ],
+              "reference_confidence": 0.8165135383605957,
+              "candidate_confidence": 0.818335235118866
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9974049157679942,
+              "confidence_delta": 6.23464584350586e-05,
+              "reference_xyxy": [
+                26.088781356811523,
+                208.62863212823868,
+                46.34085178375244,
+                237.25901931524277
+              ],
+              "candidate_xyxy": [
+                26.112067699432373,
+                208.6318302154541,
+                46.33012056350708,
+                237.23596572875977
+              ],
+              "reference_confidence": 0.763481616973877,
+              "candidate_confidence": 0.7634192705154419
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "15",
+      "batch": 3,
+      "raw_box_max_error": 1.1487020254135132,
+      "raw_logit_max_error": 4.928169250488281,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9984682378566875,
+              "confidence_delta": 0.0003860592842102051,
+              "reference_xyxy": [
+                239.96593856811523,
+                243.80337142944336,
+                258.7406349182129,
+                299.8406105041504
+              ],
+              "candidate_xyxy": [
+                239.95810222625732,
+                243.79728317260742,
+                258.7587556838989,
+                299.8382148742676
+              ],
+              "reference_confidence": 0.8160874843597412,
+              "candidate_confidence": 0.815701425075531
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9984682378566875,
+              "confidence_delta": 0.0003860592842102051,
+              "reference_xyxy": [
+                239.96593856811523,
+                243.80337142944336,
+                258.7406349182129,
+                299.8406105041504
+              ],
+              "candidate_xyxy": [
+                239.95810222625732,
+                243.79728317260742,
+                258.7587556838989,
+                299.8382148742676
+              ],
+              "reference_confidence": 0.8160874843597412,
+              "candidate_confidence": 0.815701425075531
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9984682378566875,
+              "confidence_delta": 0.0003860592842102051,
+              "reference_xyxy": [
+                239.96593856811523,
+                243.80337142944336,
+                258.7406349182129,
+                299.8406105041504
+              ],
+              "candidate_xyxy": [
+                239.95810222625732,
+                243.79728317260742,
+                258.7587556838989,
+                299.8382148742676
+              ],
+              "reference_confidence": 0.8160874843597412,
+              "candidate_confidence": 0.815701425075531
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "24",
+      "batch": 3,
+      "raw_box_max_error": 1.006672739982605,
+      "raw_logit_max_error": 9.44693374633789,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.999803047243035,
+              "confidence_delta": 0.004739344120025635,
+              "reference_xyxy": [
+                423.58484148979187,
+                211.35551869869232,
+                444.03295636177063,
+                268.5971885919571
+              ],
+              "candidate_xyxy": [
+                423.5850155353546,
+                211.34649217128754,
+                444.0329349040985,
+                268.5988909006119
+              ],
+              "reference_confidence": 0.5232064723968506,
+              "candidate_confidence": 0.518467128276825
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9992836774788456,
+              "confidence_delta": 0.008037656545639038,
+              "reference_xyxy": [
+                0.8982658386230469,
+                281.4074492454529,
+                366.58090591430664,
+                476.4717507362366
+              ],
+              "candidate_xyxy": [
+                0.8494377136230469,
+                281.39058351516724,
+                366.65605545043945,
+                476.5285563468933
+              ],
+              "reference_confidence": 0.46733078360557556,
+              "candidate_confidence": 0.4753684401512146
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9986251042080788,
+              "confidence_delta": 0.00031238794326782227,
+              "reference_xyxy": [
+                238.81298780441284,
+                329.56130504608154,
+                270.4188847541809,
+                424.9604845046997
+              ],
+              "candidate_xyxy": [
+                238.82031202316284,
+                329.567146897316,
+                270.4309010505676,
+                424.8934453725815
+              ],
+              "reference_confidence": 0.8700988292694092,
+              "candidate_confidence": 0.870411217212677
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9959924589563556,
+              "confidence_delta": 0.001350700855255127,
+              "reference_xyxy": [
+                730.2437329292297,
+                321.5924245119095,
+                759.4118762016296,
+                387.40987479686737
+              ],
+              "candidate_xyxy": [
+                730.2117419242859,
+                321.62375539541245,
+                759.4720959663391,
+                387.43519216775894
+              ],
+              "reference_confidence": 0.8120821714401245,
+              "candidate_confidence": 0.8134328722953796
+            },
+            {
+              "class_name": "person",
+              "iou": 0.989267247980945,
+              "confidence_delta": 0.0013037323951721191,
+              "reference_xyxy": [
+                704.1391009092331,
+                334.66666728258133,
+                718.9021283388138,
+                365.8108851313591
+              ],
+              "candidate_xyxy": [
+                704.0599524974823,
+                334.6083064377308,
+                718.856612443924,
+                365.7955603301525
+              ],
+              "reference_confidence": 0.6693102121353149,
+              "candidate_confidence": 0.6706139445304871
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9986251042080788,
+              "confidence_delta": 0.00031238794326782227,
+              "reference_xyxy": [
+                238.81298780441284,
+                329.56130504608154,
+                270.4188847541809,
+                424.9604845046997
+              ],
+              "candidate_xyxy": [
+                238.82031202316284,
+                329.567146897316,
+                270.4309010505676,
+                424.8934453725815
+              ],
+              "reference_confidence": 0.8700988292694092,
+              "candidate_confidence": 0.870411217212677
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9959924589563556,
+              "confidence_delta": 0.001350700855255127,
+              "reference_xyxy": [
+                730.2437329292297,
+                321.5924245119095,
+                759.4118762016296,
+                387.40987479686737
+              ],
+              "candidate_xyxy": [
+                730.2117419242859,
+                321.62375539541245,
+                759.4720959663391,
+                387.43519216775894
+              ],
+              "reference_confidence": 0.8120821714401245,
+              "candidate_confidence": 0.8134328722953796
+            },
+            {
+              "class_name": "person",
+              "iou": 0.989267247980945,
+              "confidence_delta": 0.0013037323951721191,
+              "reference_xyxy": [
+                704.1391009092331,
+                334.66666728258133,
+                718.9021283388138,
+                365.8108851313591
+              ],
+              "candidate_xyxy": [
+                704.0599524974823,
+                334.6083064377308,
+                718.856612443924,
+                365.7955603301525
+              ],
+              "reference_confidence": 0.6693102121353149,
+              "candidate_confidence": 0.6706139445304871
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9986251042080788,
+              "confidence_delta": 0.00031238794326782227,
+              "reference_xyxy": [
+                238.81298780441284,
+                329.56130504608154,
+                270.4188847541809,
+                424.9604845046997
+              ],
+              "candidate_xyxy": [
+                238.82031202316284,
+                329.567146897316,
+                270.4309010505676,
+                424.8934453725815
+              ],
+              "reference_confidence": 0.8700988292694092,
+              "candidate_confidence": 0.870411217212677
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9959924589563556,
+              "confidence_delta": 0.001350700855255127,
+              "reference_xyxy": [
+                730.2437329292297,
+                321.5924245119095,
+                759.4118762016296,
+                387.40987479686737
+              ],
+              "candidate_xyxy": [
+                730.2117419242859,
+                321.62375539541245,
+                759.4720959663391,
+                387.43519216775894
+              ],
+              "reference_confidence": 0.8120821714401245,
+              "candidate_confidence": 0.8134328722953796
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "3",
+      "batch": 3,
+      "raw_box_max_error": 1.1112645864486694,
+      "raw_logit_max_error": 3.7500228881835938,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "300",
+      "batch": 3,
+      "raw_box_max_error": 0.9970312714576721,
+      "raw_logit_max_error": 6.745799541473389,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9993956163519649,
+              "confidence_delta": 0.001033395528793335,
+              "reference_xyxy": [
+                0.182647705078125,
+                280.3291440010071,
+                367.57076263427734,
+                476.58188581466675
+              ],
+              "candidate_xyxy": [
+                0.24080276489257812,
+                280.3712725639343,
+                367.5111198425293,
+                476.5683102607727
+              ],
+              "reference_confidence": 0.4379028081893921,
+              "candidate_confidence": 0.4389362037181854
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": false,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9990133241202059,
+              "confidence_delta": 0.00016129016876220703,
+              "reference_xyxy": [
+                422.37802267074585,
+                321.4987403154373,
+                466.49885416030884,
+                419.1364163160324
+              ],
+              "candidate_xyxy": [
+                422.36512660980225,
+                321.4919489622116,
+                466.47444248199463,
+                419.1293889284134
+              ],
+              "reference_confidence": 0.8881900906562805,
+              "candidate_confidence": 0.8880288004875183
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9682689318114567,
+              "confidence_delta": 0.0152243971824646,
+              "reference_xyxy": [
+                669.0808176994324,
+                329.3707635998726,
+                695.0602650642395,
+                384.41204756498337
+              ],
+              "candidate_xyxy": [
+                668.5929691791534,
+                329.40580397844315,
+                695.2781856060028,
+                384.1403290629387
+              ],
+              "reference_confidence": 0.7802867889404297,
+              "candidate_confidence": 0.7955111861228943
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9957015473448736,
+              "confidence_delta": 0.001600801944732666,
+              "reference_xyxy": [
+                343.6961078643799,
+                321.83626145124435,
+                373.3961009979248,
+                384.48567420244217
+              ],
+              "candidate_xyxy": [
+                343.7064743041992,
+                321.8472343683243,
+                373.4792709350586,
+                384.4236749410629
+              ],
+              "reference_confidence": 0.7758658528327942,
+              "candidate_confidence": 0.7742650508880615
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9966695588782305,
+              "confidence_delta": 0.0049291253089904785,
+              "reference_xyxy": [
+                721.6176843643188,
+                326.41363620758057,
+                735.3142309188843,
+                383.3808374404907
+              ],
+              "candidate_xyxy": [
+                721.6007524728775,
+                326.41181498765945,
+                735.33467233181,
+                383.3477684855461
+              ],
+              "reference_confidence": 0.7664559483528137,
+              "candidate_confidence": 0.7615268230438232
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9988152527309636,
+              "confidence_delta": 0.004552006721496582,
+              "reference_xyxy": [
+                0.15390396118164062,
+                280.19007682800293,
+                367.38061904907227,
+                476.5689754486084
+              ],
+              "candidate_xyxy": [
+                0.14562606811523438,
+                280.02614736557007,
+                367.33903884887695,
+                476.61131143569946
+              ],
+              "reference_confidence": 0.4224673807621002,
+              "candidate_confidence": 0.41791537404060364
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": false,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9990133241202059,
+              "confidence_delta": 0.00016129016876220703,
+              "reference_xyxy": [
+                422.37802267074585,
+                321.4987403154373,
+                466.49885416030884,
+                419.1364163160324
+              ],
+              "candidate_xyxy": [
+                422.36512660980225,
+                321.4919489622116,
+                466.47444248199463,
+                419.1293889284134
+              ],
+              "reference_confidence": 0.8881900906562805,
+              "candidate_confidence": 0.8880288004875183
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9682689318114567,
+              "confidence_delta": 0.0152243971824646,
+              "reference_xyxy": [
+                669.0808176994324,
+                329.3707635998726,
+                695.0602650642395,
+                384.41204756498337
+              ],
+              "candidate_xyxy": [
+                668.5929691791534,
+                329.40580397844315,
+                695.2781856060028,
+                384.1403290629387
+              ],
+              "reference_confidence": 0.7802867889404297,
+              "candidate_confidence": 0.7955111861228943
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9957015473448736,
+              "confidence_delta": 0.001600801944732666,
+              "reference_xyxy": [
+                343.6961078643799,
+                321.83626145124435,
+                373.3961009979248,
+                384.48567420244217
+              ],
+              "candidate_xyxy": [
+                343.7064743041992,
+                321.8472343683243,
+                373.4792709350586,
+                384.4236749410629
+              ],
+              "reference_confidence": 0.7758658528327942,
+              "candidate_confidence": 0.7742650508880615
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9966695588782305,
+              "confidence_delta": 0.0049291253089904785,
+              "reference_xyxy": [
+                721.6176843643188,
+                326.41363620758057,
+                735.3142309188843,
+                383.3808374404907
+              ],
+              "candidate_xyxy": [
+                721.6007524728775,
+                326.41181498765945,
+                735.33467233181,
+                383.3477684855461
+              ],
+              "reference_confidence": 0.7664559483528137,
+              "candidate_confidence": 0.7615268230438232
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": false,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9990133241202059,
+              "confidence_delta": 0.00016129016876220703,
+              "reference_xyxy": [
+                422.37802267074585,
+                321.4987403154373,
+                466.49885416030884,
+                419.1364163160324
+              ],
+              "candidate_xyxy": [
+                422.36512660980225,
+                321.4919489622116,
+                466.47444248199463,
+                419.1293889284134
+              ],
+              "reference_confidence": 0.8881900906562805,
+              "candidate_confidence": 0.8880288004875183
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9682689318114567,
+              "confidence_delta": 0.0152243971824646,
+              "reference_xyxy": [
+                669.0808176994324,
+                329.3707635998726,
+                695.0602650642395,
+                384.41204756498337
+              ],
+              "candidate_xyxy": [
+                668.5929691791534,
+                329.40580397844315,
+                695.2781856060028,
+                384.1403290629387
+              ],
+              "reference_confidence": 0.7802867889404297,
+              "candidate_confidence": 0.7955111861228943
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9957015473448736,
+              "confidence_delta": 0.001600801944732666,
+              "reference_xyxy": [
+                343.6961078643799,
+                321.83626145124435,
+                373.3961009979248,
+                384.48567420244217
+              ],
+              "candidate_xyxy": [
+                343.7064743041992,
+                321.8472343683243,
+                373.4792709350586,
+                384.4236749410629
+              ],
+              "reference_confidence": 0.7758658528327942,
+              "candidate_confidence": 0.7742650508880615
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9966695588782305,
+              "confidence_delta": 0.0049291253089904785,
+              "reference_xyxy": [
+                721.6176843643188,
+                326.41363620758057,
+                735.3142309188843,
+                383.3808374404907
+              ],
+              "candidate_xyxy": [
+                721.6007524728775,
+                326.41181498765945,
+                735.33467233181,
+                383.3477684855461
+              ],
+              "reference_confidence": 0.7664559483528137,
+              "candidate_confidence": 0.7615268230438232
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "306",
+      "batch": 3,
+      "raw_box_max_error": 1.1427513360977173,
+      "raw_logit_max_error": 5.410257339477539,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9995608079504098,
+              "confidence_delta": 0.0037673115730285645,
+              "reference_xyxy": [
+                2.020244598388672,
+                367.29684233665466,
+                638.796329498291,
+                477.31993317604065
+              ],
+              "candidate_xyxy": [
+                2.0688629150390625,
+                367.3018741607666,
+                638.8420104980469,
+                477.2929286956787
+              ],
+              "reference_confidence": 0.7790107727050781,
+              "candidate_confidence": 0.7827780842781067
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.998353349238952,
+              "confidence_delta": 0.0025379061698913574,
+              "reference_xyxy": [
+                0.19535064697265625,
+                280.0919437408447,
+                367.4687194824219,
+                476.63947105407715
+              ],
+              "candidate_xyxy": [
+                0.08955001831054688,
+                280.28472661972046,
+                367.54796981811523,
+                476.60736322402954
+              ],
+              "reference_confidence": 0.41672998666763306,
+              "candidate_confidence": 0.4192678928375244
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9994071181022901,
+              "confidence_delta": 0.001379460096359253,
+              "reference_xyxy": [
+                1.9345283508300781,
+                367.8164863586426,
+                639.2815208435059,
+                477.31287002563477
+              ],
+              "candidate_xyxy": [
+                1.9987106323242188,
+                367.78036236763,
+                639.261589050293,
+                477.3272502422333
+              ],
+              "reference_confidence": 0.4852924942970276,
+              "candidate_confidence": 0.48391303420066833
+            },
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9991341482453839,
+              "confidence_delta": 0.0009232163429260254,
+              "reference_xyxy": [
+                139.2978048324585,
+                252.79933869838715,
+                237.21025943756104,
+                312.31586515903473
+              ],
+              "candidate_xyxy": [
+                139.28594589233398,
+                252.78293251991272,
+                237.2395133972168,
+                312.32603430747986
+              ],
+              "reference_confidence": 0.8926567435264587,
+              "candidate_confidence": 0.8917335271835327
+            },
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9994773562453261,
+              "confidence_delta": 0.0014797449111938477,
+              "reference_xyxy": [
+                302.2727298736572,
+                269.8608595132828,
+                374.9669551849365,
+                313.7120050191879
+              ],
+              "candidate_xyxy": [
+                302.2785544395447,
+                269.86581444740295,
+                374.9839425086975,
+                313.70779395103455
+              ],
+              "reference_confidence": 0.7835497260093689,
+              "candidate_confidence": 0.7850294709205627
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9930854676822672,
+              "confidence_delta": 0.00180855393409729,
+              "reference_xyxy": [
+                428.98655980825424,
+                250.901947170496,
+                435.03878504037857,
+                263.3578298985958
+              ],
+              "candidate_xyxy": [
+                428.96421045064926,
+                250.91765329241753,
+                435.02695471048355,
+                263.3573444187641
+              ],
+              "reference_confidence": 0.4585123360157013,
+              "candidate_confidence": 0.456703782081604
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9995608079504098,
+              "confidence_delta": 0.0037673115730285645,
+              "reference_xyxy": [
+                2.020244598388672,
+                367.29684233665466,
+                638.796329498291,
+                477.31993317604065
+              ],
+              "candidate_xyxy": [
+                2.0688629150390625,
+                367.3018741607666,
+                638.8420104980469,
+                477.2929286956787
+              ],
+              "reference_confidence": 0.7790107727050781,
+              "candidate_confidence": 0.7827780842781067
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9991341482453839,
+              "confidence_delta": 0.0009232163429260254,
+              "reference_xyxy": [
+                139.2978048324585,
+                252.79933869838715,
+                237.21025943756104,
+                312.31586515903473
+              ],
+              "candidate_xyxy": [
+                139.28594589233398,
+                252.78293251991272,
+                237.2395133972168,
+                312.32603430747986
+              ],
+              "reference_confidence": 0.8926567435264587,
+              "candidate_confidence": 0.8917335271835327
+            },
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9994773562453261,
+              "confidence_delta": 0.0014797449111938477,
+              "reference_xyxy": [
+                302.2727298736572,
+                269.8608595132828,
+                374.9669551849365,
+                313.7120050191879
+              ],
+              "candidate_xyxy": [
+                302.2785544395447,
+                269.86581444740295,
+                374.9839425086975,
+                313.70779395103455
+              ],
+              "reference_confidence": 0.7835497260093689,
+              "candidate_confidence": 0.7850294709205627
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9995608079504098,
+              "confidence_delta": 0.0037673115730285645,
+              "reference_xyxy": [
+                2.020244598388672,
+                367.29684233665466,
+                638.796329498291,
+                477.31993317604065
+              ],
+              "candidate_xyxy": [
+                2.0688629150390625,
+                367.3018741607666,
+                638.8420104980469,
+                477.2929286956787
+              ],
+              "reference_confidence": 0.7790107727050781,
+              "candidate_confidence": 0.7827780842781067
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9991341482453839,
+              "confidence_delta": 0.0009232163429260254,
+              "reference_xyxy": [
+                139.2978048324585,
+                252.79933869838715,
+                237.21025943756104,
+                312.31586515903473
+              ],
+              "candidate_xyxy": [
+                139.28594589233398,
+                252.78293251991272,
+                237.2395133972168,
+                312.32603430747986
+              ],
+              "reference_confidence": 0.8926567435264587,
+              "candidate_confidence": 0.8917335271835327
+            },
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9994773562453261,
+              "confidence_delta": 0.0014797449111938477,
+              "reference_xyxy": [
+                302.2727298736572,
+                269.8608595132828,
+                374.9669551849365,
+                313.7120050191879
+              ],
+              "candidate_xyxy": [
+                302.2785544395447,
+                269.86581444740295,
+                374.9839425086975,
+                313.70779395103455
+              ],
+              "reference_confidence": 0.7835497260093689,
+              "candidate_confidence": 0.7850294709205627
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "312",
+      "batch": 3,
+      "raw_box_max_error": 1.042123556137085,
+      "raw_logit_max_error": 5.261795520782471,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9997525946754964,
+              "confidence_delta": 0.0037522614002227783,
+              "reference_xyxy": [
+                0.21640777587890625,
+                280.29293060302734,
+                367.43343353271484,
+                476.6113471984863
+              ],
+              "candidate_xyxy": [
+                0.20006179809570312,
+                280.2876305580139,
+                367.4220848083496,
+                476.6398215293884
+              ],
+              "reference_confidence": 0.427489697933197,
+              "candidate_confidence": 0.42373743653297424
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9992293276411146,
+              "confidence_delta": 0.0010277032852172852,
+              "reference_xyxy": [
+                1.4407539367675781,
+                367.69556879997253,
+                638.4192085266113,
+                477.63360142707825
+              ],
+              "candidate_xyxy": [
+                1.5178680419921875,
+                367.66774892807007,
+                638.2611465454102,
+                477.6172471046448
+              ],
+              "reference_confidence": 0.6502892971038818,
+              "candidate_confidence": 0.6492615938186646
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9992293276411146,
+              "confidence_delta": 0.0010277032852172852,
+              "reference_xyxy": [
+                1.4407539367675781,
+                367.69556879997253,
+                638.4192085266113,
+                477.63360142707825
+              ],
+              "candidate_xyxy": [
+                1.5178680419921875,
+                367.66774892807007,
+                638.2611465454102,
+                477.6172471046448
+              ],
+              "reference_confidence": 0.6502892971038818,
+              "candidate_confidence": 0.6492615938186646
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "315",
+      "batch": 3,
+      "raw_box_max_error": 1.084401249885559,
+      "raw_logit_max_error": 4.634561538696289,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9977423920053994,
+              "confidence_delta": 0.002428710460662842,
+              "reference_xyxy": [
+                6.078246235847473,
+                212.71040618419647,
+                19.182037711143494,
+                237.3237830400467
+              ],
+              "candidate_xyxy": [
+                6.089757680892944,
+                212.69451677799225,
+                19.17916178703308,
+                237.31106221675873
+              ],
+              "reference_confidence": 0.6907792687416077,
+              "candidate_confidence": 0.6932079792022705
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9988697999611009,
+              "confidence_delta": 0.0008355975151062012,
+              "reference_xyxy": [
+                0.06945401430130005,
+                207.53132343292236,
+                10.025552213191986,
+                240.59979915618896
+              ],
+              "candidate_xyxy": [
+                0.07278621196746826,
+                207.52881467342377,
+                10.03135859966278,
+                240.6043392419815
+              ],
+              "reference_confidence": 0.6510738134384155,
+              "candidate_confidence": 0.6519094109535217
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9993644609158959,
+              "confidence_delta": 0.0050827860832214355,
+              "reference_xyxy": [
+                0.5490684509277344,
+                280.3394150733948,
+                366.5326118469238,
+                476.2894606590271
+              ],
+              "candidate_xyxy": [
+                0.5582809448242188,
+                280.27587890625,
+                366.49608612060547,
+                476.32604598999023
+              ],
+              "reference_confidence": 0.4860469698905945,
+              "candidate_confidence": 0.48096418380737305
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9995368987589712,
+              "confidence_delta": 0.006591916084289551,
+              "reference_xyxy": [
+                1.7564201354980469,
+                367.9122483730316,
+                638.2342720031738,
+                477.0875608921051
+              ],
+              "candidate_xyxy": [
+                1.6513824462890625,
+                367.92469024658203,
+                638.3023834228516,
+                477.0791244506836
+              ],
+              "reference_confidence": 0.4266525208950043,
+              "candidate_confidence": 0.4200606048107147
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.999720493937155,
+              "confidence_delta": 0.0013456344604492188,
+              "reference_xyxy": [
+                1.7860984802246094,
+                367.3058223724365,
+                639.383716583252,
+                477.3071765899658
+              ],
+              "candidate_xyxy": [
+                1.7058372497558594,
+                367.30024337768555,
+                639.3577003479004,
+                477.31401443481445
+              ],
+              "reference_confidence": 0.8734910488128662,
+              "candidate_confidence": 0.8748366832733154
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9977423920053994,
+              "confidence_delta": 0.002428710460662842,
+              "reference_xyxy": [
+                6.078246235847473,
+                212.71040618419647,
+                19.182037711143494,
+                237.3237830400467
+              ],
+              "candidate_xyxy": [
+                6.089757680892944,
+                212.69451677799225,
+                19.17916178703308,
+                237.31106221675873
+              ],
+              "reference_confidence": 0.6907792687416077,
+              "candidate_confidence": 0.6932079792022705
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9988697999611009,
+              "confidence_delta": 0.0008355975151062012,
+              "reference_xyxy": [
+                0.06945401430130005,
+                207.53132343292236,
+                10.025552213191986,
+                240.59979915618896
+              ],
+              "candidate_xyxy": [
+                0.07278621196746826,
+                207.52881467342377,
+                10.03135859966278,
+                240.6043392419815
+              ],
+              "reference_confidence": 0.6510738134384155,
+              "candidate_confidence": 0.6519094109535217
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.999720493937155,
+              "confidence_delta": 0.0013456344604492188,
+              "reference_xyxy": [
+                1.7860984802246094,
+                367.3058223724365,
+                639.383716583252,
+                477.3071765899658
+              ],
+              "candidate_xyxy": [
+                1.7058372497558594,
+                367.30024337768555,
+                639.3577003479004,
+                477.31401443481445
+              ],
+              "reference_confidence": 0.8734910488128662,
+              "candidate_confidence": 0.8748366832733154
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.999720493937155,
+              "confidence_delta": 0.0013456344604492188,
+              "reference_xyxy": [
+                1.7860984802246094,
+                367.3058223724365,
+                639.383716583252,
+                477.3071765899658
+              ],
+              "candidate_xyxy": [
+                1.7058372497558594,
+                367.30024337768555,
+                639.3577003479004,
+                477.31401443481445
+              ],
+              "reference_confidence": 0.8734910488128662,
+              "candidate_confidence": 0.8748366832733154
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "348",
+      "batch": 3,
+      "raw_box_max_error": 1.1670836210250854,
+      "raw_logit_max_error": 4.512484073638916,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9994252571625304,
+              "confidence_delta": 0.0043479204177856445,
+              "reference_xyxy": [
+                1.6453170776367188,
+                367.56213426589966,
+                639.3783950805664,
+                477.34829664230347
+              ],
+              "candidate_xyxy": [
+                1.6861724853515625,
+                367.5438666343689,
+                639.4369506835938,
+                477.3205590248108
+              ],
+              "reference_confidence": 0.8785961270332336,
+              "candidate_confidence": 0.874248206615448
+            },
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9983968251157418,
+              "confidence_delta": 9.47713851928711e-05,
+              "reference_xyxy": [
+                257.08398938179016,
+                240.59342622756958,
+                287.8169047832489,
+                283.0282473564148
+              ],
+              "candidate_xyxy": [
+                257.0847737789154,
+                240.54518043994904,
+                287.8116190433502,
+                283.01675498485565
+              ],
+              "reference_confidence": 0.7047421932220459,
+              "candidate_confidence": 0.704647421836853
+            },
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9962003087016086,
+              "confidence_delta": 0.0036368966102600098,
+              "reference_xyxy": [
+                327.7751177549362,
+                265.8415013551712,
+                342.36556828022003,
+                287.293683886528
+              ],
+              "candidate_xyxy": [
+                327.79505014419556,
+                265.8688509464264,
+                342.36684560775757,
+                287.27062582969666
+              ],
+              "reference_confidence": 0.5573908090591431,
+              "candidate_confidence": 0.5537539124488831
+            },
+            {
+              "class_name": "person",
+              "iou": 0.9965805975202872,
+              "confidence_delta": 0.000459134578704834,
+              "reference_xyxy": [
+                326.76776587963104,
+                250.10845094919205,
+                343.8319808244705,
+                279.6846207976341
+              ],
+              "candidate_xyxy": [
+                326.7570799589157,
+                250.09181320667267,
+                343.80963146686554,
+                279.65719878673553
+              ],
+              "reference_confidence": 0.574518620967865,
+              "candidate_confidence": 0.5740594863891602
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9996941223310687,
+              "confidence_delta": 0.002292633056640625,
+              "reference_xyxy": [
+                2.5867462158203125,
+                367.57354974746704,
+                639.4982147216797,
+                477.3012900352478
+              ],
+              "candidate_xyxy": [
+                2.546863555908203,
+                367.58599519729614,
+                639.4840812683105,
+                477.28947401046753
+              ],
+              "reference_confidence": 0.8670545816421509,
+              "candidate_confidence": 0.8693472146987915
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9994252571625304,
+              "confidence_delta": 0.0043479204177856445,
+              "reference_xyxy": [
+                1.6453170776367188,
+                367.56213426589966,
+                639.3783950805664,
+                477.34829664230347
+              ],
+              "candidate_xyxy": [
+                1.6861724853515625,
+                367.5438666343689,
+                639.4369506835938,
+                477.3205590248108
+              ],
+              "reference_confidence": 0.8785961270332336,
+              "candidate_confidence": 0.874248206615448
+            },
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9983968251157418,
+              "confidence_delta": 9.47713851928711e-05,
+              "reference_xyxy": [
+                257.08398938179016,
+                240.59342622756958,
+                287.8169047832489,
+                283.0282473564148
+              ],
+              "candidate_xyxy": [
+                257.0847737789154,
+                240.54518043994904,
+                287.8116190433502,
+                283.01675498485565
+              ],
+              "reference_confidence": 0.7047421932220459,
+              "candidate_confidence": 0.704647421836853
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9996941223310687,
+              "confidence_delta": 0.002292633056640625,
+              "reference_xyxy": [
+                2.5867462158203125,
+                367.57354974746704,
+                639.4982147216797,
+                477.3012900352478
+              ],
+              "candidate_xyxy": [
+                2.546863555908203,
+                367.58599519729614,
+                639.4840812683105,
+                477.28947401046753
+              ],
+              "reference_confidence": 0.8670545816421509,
+              "candidate_confidence": 0.8693472146987915
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9994252571625304,
+              "confidence_delta": 0.0043479204177856445,
+              "reference_xyxy": [
+                1.6453170776367188,
+                367.56213426589966,
+                639.3783950805664,
+                477.34829664230347
+              ],
+              "candidate_xyxy": [
+                1.6861724853515625,
+                367.5438666343689,
+                639.4369506835938,
+                477.3205590248108
+              ],
+              "reference_confidence": 0.8785961270332336,
+              "candidate_confidence": 0.874248206615448
+            },
+            {
+              "class_name": "motorcycle",
+              "iou": 0.9983968251157418,
+              "confidence_delta": 9.47713851928711e-05,
+              "reference_xyxy": [
+                257.08398938179016,
+                240.59342622756958,
+                287.8169047832489,
+                283.0282473564148
+              ],
+              "candidate_xyxy": [
+                257.0847737789154,
+                240.54518043994904,
+                287.8116190433502,
+                283.01675498485565
+              ],
+              "reference_confidence": 0.7047421932220459,
+              "candidate_confidence": 0.704647421836853
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "car",
+              "iou": 0.9996941223310687,
+              "confidence_delta": 0.002292633056640625,
+              "reference_xyxy": [
+                2.5867462158203125,
+                367.57354974746704,
+                639.4982147216797,
+                477.3012900352478
+              ],
+              "candidate_xyxy": [
+                2.546863555908203,
+                367.58599519729614,
+                639.4840812683105,
+                477.28947401046753
+              ],
+              "reference_confidence": 0.8670545816421509,
+              "candidate_confidence": 0.8693472146987915
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "36",
+      "batch": 3,
+      "raw_box_max_error": 1.348848581314087,
+      "raw_logit_max_error": 5.2259016036987305,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9992942782070804,
+              "confidence_delta": 0.0025545358657836914,
+              "reference_xyxy": [
+                274.8286247253418,
+                281.6402864456177,
+                640.0,
+                476.4677381515503
+              ],
+              "candidate_xyxy": [
+                274.7858428955078,
+                281.704158782959,
+                640.0,
+                476.4169120788574
+              ],
+              "reference_confidence": 0.5077416300773621,
+              "candidate_confidence": 0.5051870942115784
+            },
+            {
+              "class_name": "truck",
+              "iou": 0.999683189723684,
+              "confidence_delta": 0.0001735687255859375,
+              "reference_xyxy": [
+                409.84970569610596,
+                182.23472356796265,
+                544.6682691574097,
+                269.44544076919556
+              ],
+              "candidate_xyxy": [
+                409.8562288284302,
+                182.23564267158508,
+                544.680438041687,
+                269.43081736564636
+              ],
+              "reference_confidence": 0.955642819404602,
+              "candidate_confidence": 0.9554692506790161
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "truck",
+              "iou": 0.999683189723684,
+              "confidence_delta": 0.0001735687255859375,
+              "reference_xyxy": [
+                409.84970569610596,
+                182.23472356796265,
+                544.6682691574097,
+                269.44544076919556
+              ],
+              "candidate_xyxy": [
+                409.8562288284302,
+                182.23564267158508,
+                544.680438041687,
+                269.43081736564636
+              ],
+              "reference_confidence": 0.955642819404602,
+              "candidate_confidence": 0.9554692506790161
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "truck",
+              "iou": 0.999683189723684,
+              "confidence_delta": 0.0001735687255859375,
+              "reference_xyxy": [
+                409.84970569610596,
+                182.23472356796265,
+                544.6682691574097,
+                269.44544076919556
+              ],
+              "candidate_xyxy": [
+                409.8562288284302,
+                182.23564267158508,
+                544.680438041687,
+                269.43081736564636
+              ],
+              "reference_confidence": 0.955642819404602,
+              "candidate_confidence": 0.9554692506790161
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "6",
+      "batch": 3,
+      "raw_box_max_error": 1.004346251487732,
+      "raw_logit_max_error": 4.381476402282715,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9975276866042995,
+              "confidence_delta": 0.0026650428771972656,
+              "reference_xyxy": [
+                274.23635482788086,
+                281.8164610862732,
+                639.680118560791,
+                476.5071702003479
+              ],
+              "candidate_xyxy": [
+                273.8718032836914,
+                281.7636966705322,
+                639.851188659668,
+                476.36298179626465
+              ],
+              "reference_confidence": 0.5999888777732849,
+              "candidate_confidence": 0.5973238348960876
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "69",
+      "batch": 3,
+      "raw_box_max_error": 1.343275547027588,
+      "raw_logit_max_error": 4.910332679748535,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9994815447048044,
+              "confidence_delta": 0.002726912498474121,
+              "reference_xyxy": [
+                273.62829208374023,
+                281.62415742874146,
+                640.0,
+                476.81700468063354
+              ],
+              "candidate_xyxy": [
+                273.5031318664551,
+                281.61179780960083,
+                640.0,
+                476.7948031425476
+              ],
+              "reference_confidence": 0.4277527928352356,
+              "candidate_confidence": 0.4250258803367615
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "9",
+      "batch": 3,
+      "raw_box_max_error": 1.0193328857421875,
+      "raw_logit_max_error": 5.149180889129639,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9985385218010417,
+              "confidence_delta": 0.001459658145904541,
+              "reference_xyxy": [
+                252.44550609588623,
+                244.03022956848145,
+                262.3290910720825,
+                265.3191661834717
+              ],
+              "candidate_xyxy": [
+                252.4417281150818,
+                244.02440452575684,
+                262.32664346694946,
+                265.30726051330566
+              ],
+              "reference_confidence": 0.6200417876243591,
+              "candidate_confidence": 0.6215014457702637
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9976232634998597,
+              "confidence_delta": 0.01687520742416382,
+              "reference_xyxy": [
+                274.69783782958984,
+                279.5699429512024,
+                640.0,
+                476.89093351364136
+              ],
+              "candidate_xyxy": [
+                274.57319259643555,
+                279.215190410614,
+                640.0,
+                476.93881273269653
+              ],
+              "reference_confidence": 0.5594871640205383,
+              "candidate_confidence": 0.5426119565963745
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9982294842844464,
+              "confidence_delta": 0.0001798868179321289,
+              "reference_xyxy": [
+                322.9632525444031,
+                229.51011085510254,
+                338.5994305610657,
+                286.5399990081787
+              ],
+              "candidate_xyxy": [
+                322.95963287353516,
+                229.5036792755127,
+                338.62093353271484,
+                286.5430736541748
+              ],
+              "reference_confidence": 0.8705861568450928,
+              "candidate_confidence": 0.8707660436630249
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9985385218010417,
+              "confidence_delta": 0.001459658145904541,
+              "reference_xyxy": [
+                252.44550609588623,
+                244.03022956848145,
+                262.3290910720825,
+                265.3191661834717
+              ],
+              "candidate_xyxy": [
+                252.4417281150818,
+                244.02440452575684,
+                262.32664346694946,
+                265.30726051330566
+              ],
+              "reference_confidence": 0.6200417876243591,
+              "candidate_confidence": 0.6215014457702637
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9982294842844464,
+              "confidence_delta": 0.0001798868179321289,
+              "reference_xyxy": [
+                322.9632525444031,
+                229.51011085510254,
+                338.5994305610657,
+                286.5399990081787
+              ],
+              "candidate_xyxy": [
+                322.95963287353516,
+                229.5036792755127,
+                338.62093353271484,
+                286.5430736541748
+              ],
+              "reference_confidence": 0.8705861568450928,
+              "candidate_confidence": 0.8707660436630249
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 2
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9982294842844464,
+              "confidence_delta": 0.0001798868179321289,
+              "reference_xyxy": [
+                322.9632525444031,
+                229.51011085510254,
+                338.5994305610657,
+                286.5399990081787
+              ],
+              "candidate_xyxy": [
+                322.95963287353516,
+                229.5036792755127,
+                338.62093353271484,
+                286.5430736541748
+              ],
+              "reference_confidence": 0.8705861568450928,
+              "candidate_confidence": 0.8707660436630249
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 2
+        }
+      ]
+    },
+    {
+      "key": "b1",
+      "batch": 1,
+      "raw_box_max_error": 0.9873763918876648,
+      "raw_logit_max_error": 4.469991683959961,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9985503379121171,
+              "confidence_delta": 0.00020462274551391602,
+              "reference_xyxy": [
+                376.2435417175293,
+                235.0939655303955,
+                392.4649543762207,
+                288.1435832977295
+              ],
+              "candidate_xyxy": [
+                376.2327947616577,
+                235.10402297973633,
+                392.46086978912354,
+                288.1251640319824
+              ],
+              "reference_confidence": 0.8668137192726135,
+              "candidate_confidence": 0.8666090965270996
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9985503379121171,
+              "confidence_delta": 0.00020462274551391602,
+              "reference_xyxy": [
+                376.2435417175293,
+                235.0939655303955,
+                392.4649543762207,
+                288.1435832977295
+              ],
+              "candidate_xyxy": [
+                376.2327947616577,
+                235.10402297973633,
+                392.46086978912354,
+                288.1251640319824
+              ],
+              "reference_confidence": 0.8668137192726135,
+              "candidate_confidence": 0.8666090965270996
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9985503379121171,
+              "confidence_delta": 0.00020462274551391602,
+              "reference_xyxy": [
+                376.2435417175293,
+                235.0939655303955,
+                392.4649543762207,
+                288.1435832977295
+              ],
+              "candidate_xyxy": [
+                376.2327947616577,
+                235.10402297973633,
+                392.46086978912354,
+                288.1251640319824
+              ],
+              "reference_confidence": 0.8668137192726135,
+              "candidate_confidence": 0.8666090965270996
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        }
+      ]
+    },
+    {
+      "key": "b2",
+      "batch": 2,
+      "raw_box_max_error": 0.9958401322364807,
+      "raw_logit_max_error": 4.469996452331543,
+      "thresholds": [
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.998550194333052,
+              "confidence_delta": 0.00020438432693481445,
+              "reference_xyxy": [
+                376.24354457855225,
+                235.09396171569824,
+                392.46495151519775,
+                288.14358711242676
+              ],
+              "candidate_xyxy": [
+                376.2327947616577,
+                235.10402297973633,
+                392.46086978912354,
+                288.1251640319824
+              ],
+              "reference_confidence": 0.8668134808540344,
+              "candidate_confidence": 0.8666090965270996
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.9892462067085589,
+              "confidence_delta": 0.0003314018249511719,
+              "reference_xyxy": [
+                328.3472137451172,
+                244.0706491470337,
+                334.8401641845703,
+                269.15902614593506
+              ],
+              "candidate_xyxy": [
+                328.38298416137695,
+                244.08261108398438,
+                334.8696403503418,
+                269.1518859863281
+              ],
+              "reference_confidence": 0.4548000991344452,
+              "candidate_confidence": 0.454468697309494
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.4,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.998550194333052,
+              "confidence_delta": 0.00020438432693481445,
+              "reference_xyxy": [
+                376.24354457855225,
+                235.09396171569824,
+                392.46495151519775,
+                288.14358711242676
+              ],
+              "candidate_xyxy": [
+                376.2327947616577,
+                235.10402297973633,
+                392.46086978912354,
+                288.1251640319824
+              ],
+              "reference_confidence": 0.8668134808540344,
+              "candidate_confidence": 0.8666090965270996
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.6,
+          "image_in_batch": 1
+        },
+        {
+          "passed": true,
+          "matches": [
+            {
+              "class_name": "person",
+              "iou": 0.998550194333052,
+              "confidence_delta": 0.00020438432693481445,
+              "reference_xyxy": [
+                376.24354457855225,
+                235.09396171569824,
+                392.46495151519775,
+                288.14358711242676
+              ],
+              "candidate_xyxy": [
+                376.2327947616577,
+                235.10402297973633,
+                392.46086978912354,
+                288.1251640319824
+              ],
+              "reference_confidence": 0.8668134808540344,
+              "candidate_confidence": 0.8666090965270996
+            }
+          ],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 0
+        },
+        {
+          "passed": true,
+          "matches": [],
+          "unmatched": [],
+          "threshold": 0.7,
+          "image_in_batch": 1
+        }
+      ]
+    }
+  ]
+}

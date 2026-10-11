@@ -1,0 +1,1160 @@
+{
+  "torch": "2.1.2+cu118",
+  "ultralytics": "8.4.150",
+  "models": {
+    "yolo26l": {
+      "original_sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "initial_sha256": "6093766efa34da2fd84f0e2044a7321ae920cbe26c2568abef2ecc4158f5b3f0",
+      "original_head": "Detect",
+      "initial_head": "Detect",
+      "initial_names": [
+        "person",
+        "dog",
+        "deer",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "bus",
+        "truck",
+        "bollard",
+        "box",
+        "concrete_barrier",
+        "steel_barricade",
+        "traffic_drum",
+        "plastic_barrier",
+        "traffic_cone",
+        "stroller"
+      ],
+      "text_names": [
+        "person",
+        "dog",
+        "deer",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "bus",
+        "truck",
+        "bollard",
+        "box",
+        "concrete barrier",
+        "steel barricade",
+        "traffic drum",
+        "plastic barrier",
+        "traffic cone",
+        "stroller"
+      ],
+      "head_is_fused": null,
+      "class_rows": [
+        {
+          "tensor": "model.23.cv3.0.2.weight",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.weight",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.weight",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.weight",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.weight",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.weight",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.weight",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.bias",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.bias",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.bias",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.bias",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.bias",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.bias",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.0.2.bias",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.weight",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.weight",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.weight",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.weight",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.weight",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.weight",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.weight",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.bias",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.bias",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.bias",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.bias",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.bias",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.bias",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.1.2.bias",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.weight",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.weight",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.weight",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.weight",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.weight",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.weight",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.weight",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.bias",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.bias",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.bias",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.bias",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.bias",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.bias",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.cv3.2.2.bias",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.weight",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.weight",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.weight",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.weight",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.weight",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.weight",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.weight",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.bias",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.bias",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.bias",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.bias",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.bias",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.bias",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.0.2.bias",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.weight",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.weight",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.weight",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.weight",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.weight",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.weight",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.weight",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.bias",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.bias",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.bias",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.bias",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.bias",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.bias",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.1.2.bias",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.weight",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.weight",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.weight",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.weight",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.weight",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.weight",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.weight",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.bias",
+          "label": "person",
+          "original_id": 0,
+          "target_id": 0,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.bias",
+          "label": "dog",
+          "original_id": 16,
+          "target_id": 1,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.bias",
+          "label": "bicycle",
+          "original_id": 1,
+          "target_id": 3,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.bias",
+          "label": "car",
+          "original_id": 2,
+          "target_id": 4,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.bias",
+          "label": "motorcycle",
+          "original_id": 3,
+          "target_id": 5,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.bias",
+          "label": "bus",
+          "original_id": 5,
+          "target_id": 6,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        },
+        {
+          "tensor": "model.23.one2one_cv3.2.2.bias",
+          "label": "truck",
+          "original_id": 7,
+          "target_id": 7,
+          "shape_compatible": true,
+          "equal_fp16": true,
+          "max_abs": 0.0
+        }
+      ],
+      "compatible_equal_tensors": 1080,
+      "compatible_changed_tensors": [],
+      "non_directly_comparable_tensors": [
+        "model.23.cv3.0.2.weight",
+        "model.23.cv3.0.2.bias",
+        "model.23.cv3.1.2.weight",
+        "model.23.cv3.1.2.bias",
+        "model.23.cv3.2.2.weight",
+        "model.23.cv3.2.2.bias",
+        "model.23.one2one_cv3.0.2.weight",
+        "model.23.one2one_cv3.0.2.bias",
+        "model.23.one2one_cv3.1.2.weight",
+        "model.23.one2one_cv3.1.2.bias",
+        "model.23.one2one_cv3.2.2.weight",
+        "model.23.one2one_cv3.2.2.bias"
+      ],
+      "checkpoints": [
+        {
+          "completed_epochs": 0,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/initial.pt",
+          "sha256": "6093766efa34da2fd84f0e2044a7321ae920cbe26c2568abef2ecc4158f5b3f0",
+          "head": "Detect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": null,
+          "ema_updates": null,
+          "amp_scale": null
+        },
+        {
+          "completed_epochs": 1,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/fit/weights/epoch0.pt",
+          "sha256": "1c0ebdf4d2de347a34c92a0cd44993c195b41547f1404163f7e15ab16872ffe5",
+          "head": "Detect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": 493.0,
+          "ema_updates": 500,
+          "amp_scale": 512.0
+        },
+        {
+          "completed_epochs": 4,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/fit/weights/epoch3.pt",
+          "sha256": "abe90badb4aaed86cd8a0be5d5994a5206c33ed8a35d27688eb2ed73927538e9",
+          "head": "Detect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": 1993.0,
+          "ema_updates": 2000,
+          "amp_scale": 512.0
+        },
+        {
+          "completed_epochs": 8,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/fit/weights/epoch7.pt",
+          "sha256": "da7344ef5741b99491233ee5a4928440c175af870bbb5a2db964037ca1b0c446",
+          "head": "Detect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": 3993.0,
+          "ema_updates": 4000,
+          "amp_scale": 1024.0
+        },
+        {
+          "completed_epochs": 16,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yolo26l/fit/weights/epoch15.pt",
+          "sha256": "e8fc33d204ae338411abd929ffd5716c4995e368da881e32951a9ef4b40179ac",
+          "head": "Detect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": 7991.0,
+          "ema_updates": 8000,
+          "amp_scale": 1024.0
+        }
+      ],
+      "initial_training_args_cls_remap": true
+    },
+    "yoloe26l": {
+      "original_sha256": "a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9",
+      "initial_sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+      "original_head": "YOLOESegment26",
+      "initial_head": "YOLOEDetect",
+      "initial_names": [
+        "person",
+        "dog",
+        "deer",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "bus",
+        "truck",
+        "bollard",
+        "box",
+        "concrete_barrier",
+        "steel_barricade",
+        "traffic_drum",
+        "plastic_barrier",
+        "traffic_cone",
+        "stroller"
+      ],
+      "text_names": [
+        "person",
+        "dog",
+        "deer",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "bus",
+        "truck",
+        "bollard",
+        "box",
+        "concrete barrier",
+        "steel barricade",
+        "traffic drum",
+        "plastic barrier",
+        "traffic cone",
+        "stroller"
+      ],
+      "head_is_fused": true,
+      "class_rows": [],
+      "compatible_equal_tensors": 1080,
+      "compatible_changed_tensors": [],
+      "non_directly_comparable_tensors": [
+        "model.23.cv3.0.2.weight",
+        "model.23.cv3.0.2.bias",
+        "model.23.cv3.1.2.weight",
+        "model.23.cv3.1.2.bias",
+        "model.23.cv3.2.2.weight",
+        "model.23.cv3.2.2.bias",
+        "model.23.one2one_cv3.0.2.weight",
+        "model.23.one2one_cv3.0.2.bias",
+        "model.23.one2one_cv3.1.2.weight",
+        "model.23.one2one_cv3.1.2.bias",
+        "model.23.one2one_cv3.2.2.weight",
+        "model.23.one2one_cv3.2.2.bias"
+      ],
+      "checkpoints": [
+        {
+          "completed_epochs": 0,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/initial.pt",
+          "sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+          "head": "YOLOEDetect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": null,
+          "ema_updates": null,
+          "amp_scale": null
+        },
+        {
+          "completed_epochs": 1,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/fit/weights/epoch0.pt",
+          "sha256": "bf80ffde1d3b65cae8096633acb0b1c6d51cb0e6573609d1af88be9c8f9ccbbc",
+          "head": "YOLOEDetect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": 492.0,
+          "ema_updates": 500,
+          "amp_scale": 256.0
+        },
+        {
+          "completed_epochs": 4,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/fit/weights/epoch3.pt",
+          "sha256": "b780b9e313be2f349da805894c086707f66e972ac04219b06bd648b5a885409e",
+          "head": "YOLOEDetect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": 1992.0,
+          "ema_updates": 2000,
+          "amp_scale": 256.0
+        },
+        {
+          "completed_epochs": 8,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/fit/weights/epoch7.pt",
+          "sha256": "193d3f26fbff35531ba2cf10d68fc579f8e0ba38e3565e63452697f305ed005a",
+          "head": "YOLOEDetect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": 3992.0,
+          "ema_updates": 4000,
+          "amp_scale": 512.0
+        },
+        {
+          "completed_epochs": 16,
+          "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-pilot-v1/paired-r1/yoloe26l/fit/weights/epoch15.pt",
+          "sha256": "fa728a90fe2a21ef5df97275ef20b74e648ef61f39cf8c94341950cb417def54",
+          "head": "YOLOEDetect",
+          "names": [
+            "person",
+            "dog",
+            "deer",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "bus",
+            "truck",
+            "bollard",
+            "box",
+            "concrete_barrier",
+            "steel_barricade",
+            "traffic_drum",
+            "plastic_barrier",
+            "traffic_cone",
+            "stroller"
+          ],
+          "optimizer_step_max": 7990.0,
+          "ema_updates": 8000,
+          "amp_scale": 512.0
+        }
+      ],
+      "initial_training_args_cls_remap": true
+    }
+  },
+  "remap_source_sha256": "b32b2a7dc3902f7b66d6ee283b59e74a6f03fe010510b87cea104ca108a04485"
+}

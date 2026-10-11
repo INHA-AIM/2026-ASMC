@@ -1,0 +1,39 @@
+{
+  "related_cpu_tests": 125,
+  "status": "pass",
+  "suite": [
+    "camera_data_audit",
+    "camera_data_readiness",
+    "direct_review",
+    "breadth_dataset",
+    "obstacle_review",
+    "capture_training_data",
+    "bbox_pilot",
+    "bbox_training",
+    "label_changes",
+    "teacher_audit"
+  ],
+  "checks": [
+    "documentation_migration",
+    "handoff_local_file_links",
+    "perception_contract",
+    "perception_topic_policy",
+    "perception_runtime_acceptance",
+    "git_diff_check"
+  ],
+  "real_gpu_training": "both candidates completed >=16 full epochs; YOLOE original 17-epoch request budget_stopped; original failure retained",
+  "actual_resume": "both models restored optimizer/EMA/scaler and completed subsequent epoch; resume-proof.json",
+  "hosted_ci": {
+    "observed_head": "aa3c01f4cd15e82c36a8a8cfec8bdeaeb3619b1f",
+    "conclusion": "FAILURE",
+    "job_started": false,
+    "reason": "recent account payments failed or spending limit must be increased",
+    "url": "https://github.com/INHAautonav/2026-ASMC/actions/runs/38095536338/job/114340545426",
+    "scope": "local success does not replace hosted CI; final pushed HEAD checked separately"
+  },
+  "runtime_promoted": false,
+  "gallery_local_link_check": {
+    "pages": 9,
+    "status": "pass"
+  }
+}

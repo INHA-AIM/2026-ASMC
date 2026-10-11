@@ -1,0 +1,10 @@
+<launch>
+  <arg name="profile" default="planning"/>
+  <arg name="camera_objects_config" doc="Required SHA-bound RF-DETR runtime YAML produced by the experiment"/>
+  <arg name="objects_conf_thres" default=""/>
+  <include file="$(find asmc_camera)/launch/camera_coco7.launch">
+    <arg name="profile" value="$(arg profile)"/>
+    <arg name="camera_objects_config" value="$(arg camera_objects_config)"/>
+    <arg name="objects_conf_thres" value="$(arg objects_conf_thres)"/>
+  </include>
+</launch>

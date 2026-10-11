@@ -1,0 +1,18 @@
+{
+  "cpu_tests": 140,
+  "cpu_status": "passed",
+  "validators": [
+    "documentation_migration",
+    "perception_contract",
+    "perception_topic_policy",
+    "perception_runtime_acceptance"
+  ],
+  "validator_status": "passed",
+  "runtime_changes": false,
+  "ros_build_rerun": false,
+  "known_facade_failure": "previous unrelated planner traffic_light default; not altered or reclassified",
+  "hosted_ci": "billing-blocked; not a code pass",
+  "tool_sha256": "62e36338065c030f3086c49f8a9ccb5535fa08615bcf5429194a50b4699ea380",
+  "evaluator_sha256": "23e13b423d2c9e8b2fb44e9fc5016f2c2037f456b695f7efffd129373acb2647",
+  "hosted_ci_evidence": "check-run 114373448999 annotation: job not started due to payments/spending limit"
+}

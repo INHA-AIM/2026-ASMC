@@ -1,0 +1,99 @@
+{
+  "probes": {
+    "yolo26l-b4": {
+      "model_key": "yolo26l",
+      "status": "failed",
+      "completed_batches": 0,
+      "smoke_complete": null,
+      "actual_head": null,
+      "trainable_parameters": null,
+      "parameters": null,
+      "batch": 4,
+      "batch_seconds": null,
+      "epoch_seconds_estimate": null,
+      "gpu_peak_allocated_bytes": null,
+      "gpu_peak_reserved_bytes": null,
+      "wall_seconds": 1.2145234540221281,
+      "errors": [
+        {
+          "type": "OSError",
+          "message": "[Errno 30] Read-only file system: 'weights'"
+        }
+      ],
+      "initial_weights_sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150"
+    },
+    "yolo26l-b4-r2": {
+      "model_key": "yolo26l",
+      "status": "failed",
+      "completed_batches": 0,
+      "smoke_complete": null,
+      "actual_head": null,
+      "trainable_parameters": null,
+      "parameters": null,
+      "batch": 4,
+      "batch_seconds": null,
+      "epoch_seconds_estimate": null,
+      "gpu_peak_allocated_bytes": null,
+      "gpu_peak_reserved_bytes": null,
+      "wall_seconds": 1.1719354130327702,
+      "errors": [
+        {
+          "type": "OSError",
+          "message": "[Errno 30] Read-only file system: 'weights'"
+        }
+      ],
+      "initial_weights_sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150"
+    },
+    "yolo26l-b4-r3": {
+      "model_key": "yolo26l",
+      "status": "complete",
+      "completed_batches": 200,
+      "smoke_complete": true,
+      "actual_head": "Detect",
+      "trainable_parameters": 26201016,
+      "parameters": 26201016,
+      "batch": 4,
+      "batch_seconds": 0.2640985493244241,
+      "epoch_seconds_estimate": 528.1970986488483,
+      "gpu_peak_allocated_bytes": 6834216960,
+      "gpu_peak_reserved_bytes": 7138705408,
+      "wall_seconds": 78.2878767560469,
+      "errors": [],
+      "initial_weights_sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150"
+    },
+    "yoloe26l-b4": {
+      "model_key": "yoloe26l",
+      "status": "complete",
+      "completed_batches": 200,
+      "smoke_complete": true,
+      "actual_head": "YOLOEDetect",
+      "trainable_parameters": 26201016,
+      "parameters": 26201016,
+      "batch": 4,
+      "batch_seconds": 0.2385131948837726,
+      "epoch_seconds_estimate": 477.0263897675452,
+      "gpu_peak_allocated_bytes": 6825080320,
+      "gpu_peak_reserved_bytes": 7130316800,
+      "wall_seconds": 54.453928689006716,
+      "errors": [],
+      "initial_weights_sha256": "a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9",
+      "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+      "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+      "torch": "2.1.2+cu118",
+      "ultralytics": "8.4.150"
+    }
+  },
+  "semantics": "200 batches are not a complete epoch; smoke weights are discarded"
+}

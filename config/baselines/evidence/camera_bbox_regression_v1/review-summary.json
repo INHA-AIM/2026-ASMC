@@ -1,0 +1,349 @@
+{
+  "reviewed_utc": "2026-10-11T03:33:07.710892+00:00",
+  "motorcycle_images": 63,
+  "motorcycle_annotations": 191,
+  "risk_images": 200,
+  "new_miss_images": 99,
+  "unique_review_images": 362,
+  "notes": [
+    "All 63 training full images and all 191 unpainted motorcycle crops inspected. No systematic motorcycle-to-car conversion observed; some tiny crops cannot independently establish subtype.",
+    "All 99 regression RGB/GT images inspected; Enzo motorcycle GT visibly corresponds to black/red scooters. No confirmed label change required for these cases.",
+    "200 deterministic source-stratified risk images inspected; component-label omissions confirmed. Small objects in full sheets do not establish exhaustive annotation completeness.",
+    "Existing car/bus/truck mixing retained under user acceptance; no wholesale correction.",
+    "Unknown view does not receive an assumed ego mask; same cached mask hashes checked before/after.",
+    "Review does not prove sampling/LR causality and does not authorize runtime promotion."
+  ],
+  "issues": [
+    {
+      "id": "10e19a9494496c3f1fc39aec01396c6ac0f4cd540156e65eb44ca3566e9c8a89",
+      "image_sha256": "24fbb765f819322863fefa7cc35f0390509d0942509d4fef0b03fdb2aef79d30",
+      "source": "roboflow:hl-fma/hlfma_2",
+      "status": "confirmed_visible_bicycle_without_separate_bicycle_annotation",
+      "action": "add component bicycle bbox; verify rider visible extent separately",
+      "proposed_boxes": null,
+      "applied": false,
+      "original_annotation_complete": false
+    },
+    {
+      "id": "be10a1c7931644d4e4fe1bf84d1c00d111dfa6edad9f4db552f58d30361e746f",
+      "image_sha256": "652cdd164ef76aba05d67ec764bb97a9b38c9a16a596d98f6cf00baa4ba336dc",
+      "source": "roboflow:yolo-m5lvd/detection-bzetd",
+      "status": "confirmed_visible_bicycle_without_separate_bicycle_annotation",
+      "action": "add component bicycle bbox; verify rider visible extent separately",
+      "proposed_boxes": null,
+      "applied": false,
+      "original_annotation_complete": false
+    },
+    {
+      "id": "c87a4c87f3c7990794dbfb546b1e361933d75fbbc418d74a1fd50fdb9933b059",
+      "image_sha256": "66ea17a34e62c29fbda64f693ddba5af36a4a62869df76427e6f59d39c4c675b",
+      "source": "roboflow:hl-fma/hlfma_3",
+      "status": "confirmed_visible_bicycle_without_separate_bicycle_annotation",
+      "action": "add component bicycle bbox; verify rider visible extent separately",
+      "proposed_boxes": null,
+      "applied": false,
+      "original_annotation_complete": false
+    },
+    {
+      "id": "0ec3e85dcddea7fef953f8860e045bac5f8c473c7805d054b1261f20c8a95ca8",
+      "image_sha256": "dc1c3fc0a9369eb0ffc4d0386bba73ed713bc7bfe9a9eb04cb1cd757380a4ff9",
+      "source": "roboflow:hl-fma/hlfma_3",
+      "status": "confirmed_visible_bicycle_without_separate_bicycle_annotation",
+      "action": "add component bicycle bbox; verify rider visible extent separately",
+      "proposed_boxes": null,
+      "applied": false,
+      "original_annotation_complete": false
+    },
+    {
+      "id": "240f228133d704030b082d969e712a8b5c869236efa4fc6d29a02f5e974fdb0c",
+      "image_sha256": "47660a0de74789d501e7abf4ab1091126d1470a9f4a93dc567f72405a04a8076",
+      "source": "roboflow:hl-fma/hlfma_2",
+      "status": "confirmed_visible_bicycle_without_separate_bicycle_annotation",
+      "action": "add component bicycle bbox; verify rider visible extent separately",
+      "proposed_boxes": null,
+      "applied": false,
+      "original_annotation_complete": false
+    },
+    {
+      "id": "fb63f778b098c61b2ca807be897bfc8959e57b438b316a84fc47cae5c5456921",
+      "image_sha256": "1a30082c527571f4fe6237ec729921c2e05569fd427f3436a41a0f151ff9ed35",
+      "source": "roboflow:hl-fma/hlfma_2",
+      "status": "confirmed_visible_bicycle_without_separate_bicycle_annotation",
+      "action": "add component bicycle bbox; verify rider visible extent separately",
+      "proposed_boxes": null,
+      "applied": false,
+      "original_annotation_complete": false
+    },
+    {
+      "id": "cd1eb8d57b6ebe404f2c8b0a07c3ba7516b04b5de6b3d2c0b55a914d0405b797",
+      "image_sha256": "3fdb504ea1dbe54503c910d9f3b41e8eadf61689595cfed06b6f1c747380a1f6",
+      "source": "roboflow:yolo-m5lvd/detection-bzetd",
+      "status": "confirmed_multiple_visible_people_and_motorcycles_unannotated",
+      "action": "complete all visible target annotations before supervised reuse",
+      "proposed_boxes": null,
+      "applied": false,
+      "original_annotation_complete": false
+    }
+  ],
+  "dataset_changes_applied": 0,
+  "confirmed_exact_label_rewrites": [],
+  "pending_component_annotations": 7,
+  "sheets": [
+    {
+      "sheet": "motorcycle-train-01.jpg",
+      "sha256": "9985e74396f77af6279e00b42b35113e43e7d543c0e7cc0997d22ff71f779024",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "motorcycle-train-02.jpg",
+      "sha256": "00c1f475950b0978404b3386315dd9d8f0a764e4f62f979d95832e2a4881178c",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "motorcycle-train-03.jpg",
+      "sha256": "cd71590fee609a2617a583dc6e81d4e1671716bc1148e49bbf52aabfdd239cce",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "motorcycle-train-04.jpg",
+      "sha256": "2e00b75268811f54d743bb9c978d00688dedf349a23df03b68947616822e42eb",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "motorcycle-train-05.jpg",
+      "sha256": "74a59bc6327eaf7494c016dd8a1c0e4223af72ccb38349420a9e57e8cf8ad253",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "motorcycle-train-06.jpg",
+      "sha256": "81bd735f6f31adb2634d08677d2108441c0a8ec828d14b04827a190d2be8be8d",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 3
+    },
+    {
+      "sheet": "risk-train-01.jpg",
+      "sha256": "4202b992ab823384f8b6f7475d4266f3f00b4105fed713cacbcd0910d6daac94",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-02.jpg",
+      "sha256": "d2cd0167b8ad08c61352c4a2e93f387550be1560d2788c02d42fd202eba5df3c",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-03.jpg",
+      "sha256": "5b55f2568e57519aa33a0ace8a9e8ce614afe2066946800f97a66c0cf48f6029",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-04.jpg",
+      "sha256": "86387e52b535dee85bca0144b4427b75a7e23321b873d01c96f9785bfa496b58",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-05.jpg",
+      "sha256": "c8fc9eaa29c2e12e0d6ab5fb57d5ffebeb233e3282aa37b9b96d1f106a1f6513",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-06.jpg",
+      "sha256": "84045a6ac61e823eb8b272e19ee49730d4c0e1a5f4a439cfca8926157c4e88e4",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-07.jpg",
+      "sha256": "4f66f33e0d03cb9fd517131df10a57a96d3d3611532aaa1cf89202d4aff26605",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-08.jpg",
+      "sha256": "52695257320cbb7fda417423459bc8cba512cf072ccb70579912a172a0af572a",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-09.jpg",
+      "sha256": "26cf2c0ba2d47785c6e35e1e041ee8cbfc8125cfbd4bc51e8cbea8527199e63b",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-10.jpg",
+      "sha256": "6b1c225f4031eb4cbf6599b3e85df884d46d6b5e8e1b528db646305dada10b3d",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-11.jpg",
+      "sha256": "ec35a7d4541e34ccaa517e97db099a689a7ea9107f9173cd4e74e446e0efd205",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-12.jpg",
+      "sha256": "24037c4544e92cf41ebf768cb930c7cb70210aa81fbf2fb8f7ab09510b8d091e",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-13.jpg",
+      "sha256": "63f90574daf71c71f3cdf8e8d2fa1b54a6e5cc2fbe734af3b91567c76da0649a",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-14.jpg",
+      "sha256": "faabeeb11286715d3d6d98780faf74a840b2972c5496b4dbb45efa1c4f5d8e9c",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-15.jpg",
+      "sha256": "5aae6888cae4eccbb33dfa1c6a6a5f82dca510db3102e3e8cd7250cb7bc56061",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-16.jpg",
+      "sha256": "b6c367d76077c45bed9194b609b803b7a3dc60a8dbb19eb4ab5d26947f9452e6",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "risk-train-17.jpg",
+      "sha256": "4707ce1ea1e65c1f0a7d0422b3570d855f7b90cccf6ce0791c72bf9bc1861783",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 8
+    },
+    {
+      "sheet": "new-misses-01.jpg",
+      "sha256": "5727f7ff014f5cb8c168d82451774c982ad7db71df5c76cdb70647168a153499",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "new-misses-02.jpg",
+      "sha256": "4383b036ffc7feb421f510a6eff8fd15f8dea093c194069172518774be851877",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "new-misses-03.jpg",
+      "sha256": "8e5bb446dc6e0a8d9aeab30129d407b15a2c53f968482f6d1a69c9c07827269e",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "new-misses-04.jpg",
+      "sha256": "f1207b1cd08b24972e70c422f7f279784eee733ce3554d13f2b6385c913a009a",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "new-misses-05.jpg",
+      "sha256": "76d6e95ec71fdc15984c19a89fca7a95e4d1b48544697f28138f3016a1576387",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "new-misses-06.jpg",
+      "sha256": "691effd794cf63b39fbc56ae47dc3c2b806d1b674162fa0c66cdd1beef9ea9df",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "new-misses-07.jpg",
+      "sha256": "006685577f93f0d985c88bcf75c051ce20b149673766a559e3e7e19213b6c656",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "new-misses-08.jpg",
+      "sha256": "1d6d417c6ef7bb93c296c59de6856b9e19d2f8f8479aa9917a666b38a8cc746d",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 12
+    },
+    {
+      "sheet": "new-misses-09.jpg",
+      "sha256": "a5fd9d604616b66f146b0a3acd44cdd0b7d6c65ba4b7c86fb494c51ae93d9811",
+      "reviewer": "Codex RGB visual inspection",
+      "human_confirmed": false,
+      "status": "visually_inspected_not_exhaustive_annotation_certification",
+      "image_count": 3
+    }
+  ]
+}
