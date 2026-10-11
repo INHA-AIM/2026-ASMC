@@ -1,5 +1,7 @@
 # `asmc_camera` runtime
 
+YOLOE 장애물 후보 비교 결과와 운영 수락 보류 사유는 [m/l·640/960/1280 실험 인계](../../docs/handoffs/perception/camera-yoloe-obstacle-selection.md)를 참고한다. 현재 COCO7 기본 모델은 유지한다.
+
 > **상태:** P4-C6 — camera/BEV/lane/traffic runtime·offline·training 패키지 통합 완료
 
 분산된 camera semantic, metric BEV/lane과 traffic-light를 하나의 인지 실행 경계로 조합한다.

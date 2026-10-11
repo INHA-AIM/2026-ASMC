@@ -104,7 +104,9 @@ def main():
     output = root/'index.html'
     pages = number_pages(root, catalogue(root, output))
     data = json.dumps(pages, ensure_ascii=False).replace('<', '\\u003c')
-    featured = [('confidence 0.30/0.40/0.50 오검출 비교', 'camera-coco7-live-v1/confidence-followup-v3/index.html'),
+    featured = [('YOLOE 6조합·최종 반복·fusion', 'camera-yoloe-selection-v1/final-analysis-v2/index.html'),
+                ('YOLOE 선정 프롬프트 동일 RGB', 'camera-yoloe-selection-v1/selected-spawn-v1/comparison.html'),
+                ('confidence 0.30/0.40/0.50 오검출 비교', 'camera-coco7-live-v1/confidence-followup-v3/index.html'),
                 ('8개 조합 최종 선정', 'camera-coco7-live-v1/broad-model-summary-v1/index.html'),
                 ('8개 모델 동일 RGB', 'camera-coco7-live-v1/broad-model-spawn-inspection50-v1/comparison.html'),
                 ('선정 모델 차체 mask 대조', 'camera-coco7-live-v1/broad-model-selected-mask-controls50-v1/index.html'),
