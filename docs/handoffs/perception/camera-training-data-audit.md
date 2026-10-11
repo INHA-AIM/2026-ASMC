@@ -12,6 +12,7 @@
 최신 결과는 [16epoch 비교 결과](#16epoch-비교-결과--본학습-후보-선정-보류), 샘플링은 [bbox 파일럿](#bbox-파일럿-샘플링--2026-10-11), 전체 자료 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
 아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
 2026-10-11 추가 검토는 [teacher 대안과 RF-DETR](#2026-10-11-teacher-대안과-rf-detr-검토), 병합 범위는 [#78 main 통합](#2026-10-11-pr-78-병합-범위와-main-통합)을 따른다.
+최신 후속 범위는 [bbox·AIM 세 폴더·RF-DETR 선별](#2026-10-11-후속-합의--bbox-우선aim-범위rf-detr-선별)을 먼저 확인한다.
 
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
@@ -1565,3 +1566,80 @@ TensorRT FP16, batch1, 서로 다른 기본 해상도**이며 우리 전체 스�
 main 동기화·문서 보강 후 현재 브랜치의 데이터/파일럿/준비 도구 CPU 시험 130개와
 문서 migration·perception 계약 검사를 통과했다. 기존 실험 launch/default와 메시지는
 변경하지 않았다. 공유 ROS의 Python3.8.10·Torch2.1.2+cu118도 읽기 전용으로 확인했다.
+
+## 2026-10-11 후속 합의 — bbox 우선·AIM 범위·RF-DETR 선별
+
+이 절은 앞 절의 후속 순서를 구체화한다. **작은 재학습 전에 RF-DETR의 사전학습
+검출 품질과 3뷰 배포 비용부터 선별**한다. 운영 기본값은 그대로이고 새 GPU 시험이나
+추가학습을 이번 문서 정리에서 실행한 것은 아니다.
+
+### YOLOE bbox에 mask는 필수가 아니다
+
+[공식 detection fine-tuning](https://docs.ultralytics.com/models/yoloe/#train-usage)은
+같은 scale의 `yoloe-26l.yaml`에 `yoloe-26l-seg.pt`를 불러오고 `YOLOEPETrainer`를
+사용한다. class+bbox GT로 학습할 수 있다. 우리 기존 파일럿은 이 경로를 사용했고,
+`train_camera_bbox_pilot.py`가 detect task와 segmentation head 부재를 검사한다.
+이름이 seg인 원본 checkpoint를 사용했다는 이유로 mask GT가 필요한 것은 아니다.
+seg 모델 자체를 mask 출력까지 학습하는 경우에는 실제 instance mask/polygon 정답이
+필요하다. bbox를 가짜 mask로 바꾸지 않는다. SAM 2는 현재 bbox 준비의 필수 항목에서
+제외하고, 필요해지면 mask 주석이나 영상 전파 보조로 별도 검증한다. 이미 있는
+Capture instance/semantic GT는 보존한다. PE 학습 후 고정 클래스 head와 임의 prompt를
+바꿀 수 있는 원본 open-vocabulary 모델도 구분한다.
+
+### AIM 대상은 세 폴더로 제한
+
+대상 root는 `/mnt/d/asmc_aim/dataset`이며 사용자가 지정한 다음 폴더만 살핀다.
+기존 417,435개 전체 RGB 집계를 이 세 폴더의 학습 가능 수로 재사용하지 않는다.
+
+| 폴더 | 현재 처리 정책 |
+|---|---|
+| `static_010101` | 정적 장애물·클래스별 대표 세션 표본부터 감사 |
+| `dynamic_obstacle` | 사람·이륜차 포함 동적 객체와 원거리·가림 표본 우선 |
+| `tunnel_static_obstacle` | NAS 다운로드 진행 중. 전송이 끝난 세션만 별도 확인 후 감사 |
+
+2026-10-11에 세 경로의 존재만 확인했다. tunnel 폴더가 존재하거나 원본에서 복사된
+`.NAS_TRANSFER_COMPLETE.json`이 있다는 사실만으로 로컬 다운로드 완료를 판정하지 않는다.
+복사 중인 파일은 hash/label/export 대상으로 열지 않는다. 전송 완료 세션의 파일 수·
+manifest/크기·SHA를 확인하고 이후 고정 snapshot으로 사용한다. NAS 전송은 변경하거나
+중지하지 않는다. 세 폴더 밖 lap·rear camera4는 이번 자동 학습 후보에 확대하지 않는다.
+
+### RF-DETR M/L과 YOLO26x의 자원 판단
+
+현재 고정 RF-DETR 소스의 `RFDETRMediumConfig`와 `RFDETRLargeConfig`는
+DINOv2-windowed-small, hidden256, decoder4, patch16, windows2와 300 queries를
+공유한다. 기본 입력/positional encoding 및 가중치는 다르다. M=576²/L=704²의
+공식 지연 차이를 같은 960/1280 tensor의 모델 구조 차이로 단정하지 않는다.
+현재 L checkpoint는 `rf-detr-large-2026.pth`다. 과거의 deprecated
+DINOv2-base `rf-detr-large.pth`와 혼용하지 않는다.
+
+[Ultralytics detection 표](https://docs.ultralytics.com/models/yolo26/#performance-metrics)의
+640 기준 FLOPs는 YOLO26l=86.8B, YOLO26x=194.4B로 약 2.24배다. 이는 같은 입력의
+연산 규모 대조이며 4060 Ti 지연·VRAM이 정확히 2.24배라는 뜻은 아니다. X는 우선
+오프라인 품질 상한/teacher 후보로 두고, 실시간 3뷰 후보보다 낮은 실행 우선순위를 둔다.
+RF-DETR-L은 YOLO26x처럼 큰 scale이라는 이유만으로 제외하지 않는다.
+
+### 재학습 전에 수행할 제한된 비교
+
+1. 사람·이륜차 회귀 원인 점검과 기존 선정 GT의 유효 범위를 확인한다.
+2. YOLO26l 현재 기준선 대 RF-DETR M/L detection의 **기존 COCO 7종**을 비교한다.
+   같은 RGB·3뷰 mask·원본 좌표와 기존 selection/heldout 분할을 쓴다. pretrained
+   RF-DETR로 신규 box/PE_Firewall을 지원한다고 평가하거나 신규 16종 우열을 확정하지 않는다.
+3. RF 기본 입력 M576²/L704²는 빠른 선별용으로 확인한다. 실배포 비교는 전방
+   544×960/736×1280, 좌우480×640에서 M/L을 실제 추론·export한다. shape 제약과
+   resize/letterbox 정책을 명시하고 원본 시야·좌표 복원을 검증한다. 기본 square와
+   rectangle의 품질 변화도 남긴다. static shape별 engine과 좌우batch2+전방1을 우선한다.
+4. PT/ONNX/TRT bbox·class·confidence 대응을 확인한 뒤 같은 FP16 TRT 조건의 지연을
+   비교한다. PT RF-DETR와 TRT YOLO의 숫자로 모델 우열을 결정하지 않는다. 15Hz 입력에서
+   전처리·decode·batch 대기·후처리 포함 p50/p95/p99·공백·VRAM을 기록한다.
+5. 품질·자원이 명백히 열세인 조합은 이유를 남기고 통합 반복을 생략한다. 유망 후보만
+   MORAI+TwinLite+ResNet+LiDAR/fusion+판제 preview에서 검사한다. 기존 지연/공급과
+   VRAM90% 기준, 현재 운영 baseline은 유지한다. RF-L 또는 YOLO-X의 부담 여부는
+   이 실측 전에는 미확정이다. X는 M/L에서 의미 있는 부족이 남을 때 제한 대조한다.
+6. 그다음 YOLOE-X/Grounding DINO의 초안 품질 검증·자료 보강과 작은 재학습으로
+   연결한다. RF 후보가 선별을 통과하면 같은 고정 bbox 데이터의 짧은 학습 비교에
+   포함할 수 있다. COCO 기본 성능 선별만으로 신규 MORAI 장애물 학습 후 우열을 선언하지 않는다.
+
+측정용 환경/engine 준비와 실제 `asmc-ros-noetic`의 3뷰 운영 연결은 분리해 검증한다.
+RF-DETR의 최신 develop을 공유 Python에 설치하지 않는다. checkpoint·라이브러리 버전·
+preprocessing·engine SHA를 고정하고 실패·OOM·생략 사유를 보존한다. 이번 추가에서는
+학습 데이터·모델·ROS 메시지·실행 기본값과 GPU 실행을 변경하지 않았다.
