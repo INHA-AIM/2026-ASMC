@@ -1,6 +1,6 @@
 {
   "date": "2026-10-12",
-  "status": "collection_validation_in_progress",
+  "status": "collection_interrupted_simulator_crash",
   "pr80_merge": "c862ff071c1178110ab937e50e618602cb1dbd04",
   "branch": "feat/capture-route-collection",
   "base_dependency": "PR #81",
@@ -124,7 +124,7 @@
   "selected_speed_kph": 30,
   "checks": {
     "capture_cpu": 20,
-    "native_gt_export_cpu": 5,
+    "native_gt_export_cpu": 7,
     "bbox_training_cpu": 13,
     "teacher_expansion_cpu": 22,
     "overlay_build": "passed",
@@ -132,14 +132,16 @@
     "hosted_ci": "not run: GitHub account billing/spending limit",
     "perception_contract": "passed",
     "documentation_migration": "passed",
-    "p1b_contract": "existing main mismatch: UrbanFeatureDebug unregistered; no message changes in this branch"
+    "p1b_contract": "existing main mismatch: UrbanFeatureDebug unregistered; no message changes in this branch",
+    "collection_guard_cpu": 3
   },
   "evidence_root": "data/capture-pilot-preflight-20261011",
   "gallery": "http://localhost:8768/capture-route-pilot-r2-20261011/",
   "remaining": [
-    "120 stage visual review and runtime gate",
-    "SUNNY/FOGGY x 11/13/15 full laps",
-    "final source-kind/RGBA-verified Capture exports and coverage summary"
+    "restart MORAI and verify fresh actors, sensors and Capture RGB/GT",
+    "repeat SUNNY15 degraded data and FOGGY11/13/15",
+    "execute balanced second layout if time/resources permit",
+    "review remaining rotations and export valid native GT subsets"
   ],
   "ground_calibration": {
     "assets": 28,
@@ -254,7 +256,7 @@
     "active": 115,
     "numeric_gate_passed": true,
     "visual_gate_passed": true,
-    "status": "first 104-actor SUNNY 11 lap completed; augmented 114-actor rotated six-condition collection in progress",
+    "status": "114 reviewed paused actors; four full runtime passes, rendered data acceptance differs",
     "run_id": "route_pp_30_20261011T163237_854",
     "runtime_inspection_passed": true,
     "approved_active": 104,
@@ -289,7 +291,7 @@
       "deer": 6,
       "motorcycle": 6
     },
-    "status": "implementation and collection in progress",
+    "status": "interrupted: Simulator crash at 2026-10-11T18:40:03Z",
     "tunnel_new_observed": 11,
     "tunnel_new_retained": 10,
     "active_actors": 114,
@@ -297,6 +299,39 @@
     "static_pause_stability_max_drift_m": 0,
     "physics_off_rejected": "native bbox pivot offsets lost; preserved failed trial, restored physics and native poses",
     "tunnel_gallery": "artifacts/capture-tunnel-interior-review-r1-20261012/index.html",
-    "rotated_collection_report": "data/collection-evidence-20261012/route120-six-rotated-r1.json"
+    "rotated_collection_report": "data/collection-evidence-20261012/route120-six-rotated-r1.json",
+    "runtime_passed_conditions": [
+      "sunny:11",
+      "sunny:13",
+      "sunny:15",
+      "foggy:11"
+    ],
+    "successful_capture_rpcs_four_full_laps": 3892,
+    "complete_three_view_file_records": 3789,
+    "nonconstant_three_view_records": 2593,
+    "acceptance_correction": "data/collection-evidence-20261012/rotated-collection-acceptance-correction-r1.json",
+    "render_failed_conditions": [
+      "sunny:15 (partial)",
+      "foggy:11",
+      "foggy:13 (partial crashed run)"
+    ],
+    "second_layout_spawned": false,
+    "first_rotated_subset": {
+      "images": 2404,
+      "objects": 29871,
+      "independent_verification_passed": true,
+      "merged_with_v7": false,
+      "training_ready": false
+    },
+    "native_asset_types": 26,
+    "target_classes": 11,
+    "memory_crash": {
+      "physical_used_percent": 99,
+      "system_commit_mb": 130835,
+      "system_commit_limit_mb": 130835,
+      "stack": "UnityEngine.ImageConversion.EncodeToPNG",
+      "resource_growth_cause": "hypothesis; repeated Capture accumulation not isolated causally"
+    },
+    "restore_after_crash_verified": false
   }
 }

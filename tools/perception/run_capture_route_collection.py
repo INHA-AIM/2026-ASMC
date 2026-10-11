@@ -65,7 +65,7 @@ def reset_stopped_ego(actors, ego, saved):
     return report
 
 
-def trial(data,controller,speed,ledger,layout,captures=30,seconds=120,parent='',inspection_only=False):
+def trial(data,controller,speed,ledger,layout,captures=30,seconds=120,parent='',inspection_only=False,abort_file=None):
     run=make_run_id('route_'+controller+'_'+str(speed))
     command=['roslaunch','data_collection','capture_route_collection.launch',
         'controller:='+controller,'target_kph:='+str(speed),'run_id:='+run,'data_root:='+str(data),
@@ -76,7 +76,16 @@ def trial(data,controller,speed,ledger,layout,captures=30,seconds=120,parent='',
     log=data/'capture_runs'/(run+'.log');log.parent.mkdir(parents=True,exist_ok=True)
     with log.open('w') as stream:
         process=subprocess.Popen(command,stdout=stream,stderr=subprocess.STDOUT,start_new_session=True)
-        try:process.wait(timeout=seconds+30)
+        abort_reason=None
+        try:
+            end=time.monotonic()+seconds+30
+            while process.poll() is None:
+                if abort_file and abort_file.exists():
+                    abort_reason=abort_file.read_text()
+                    raise subprocess.TimeoutExpired(command,seconds)
+                if time.monotonic()>=end:raise subprocess.TimeoutExpired(command,seconds)
+                try:process.wait(timeout=1)
+                except subprocess.TimeoutExpired:pass
         except subprocess.TimeoutExpired:
             import os
             os.killpg(process.pid,signal.SIGINT)
@@ -101,6 +110,8 @@ def trial(data,controller,speed,ledger,layout,captures=30,seconds=120,parent='',
     restoration = json.loads((folder/'restoration.json').read_text()) if (folder/'restoration.json').exists() else {}
     validation['actuator_restoration'] = restoration
     validation['passed'] = collection_trial_passed(validation, summary, captures, restoration, process.returncode)
+    if abort_reason is not None:
+        validation.update(passed=False,collection_guard_abort=abort_reason)
     return validation
 
 
@@ -127,6 +138,11 @@ def main():
     p.add_argument('--stop-after-current-file',type=Path,
                    help='If this file exists between laps, preserve progress and stop before the next lap')
     p.add_argument('--deadline-utc',help='ISO timestamp; do not start a lap without its 30-minute stop/restore budget')
+    p.add_argument('--abort-file',type=Path,help='Memory monitor requests graceful termination of the owned trial')
+    p.add_argument('--max-laps-per-session',type=int,default=2,choices=(1,2),
+                   help='Bound repeated Capture resource accumulation; restart MORAI between sessions')
+    p.add_argument('--conditions',nargs='+',choices=['sunny:11','sunny:13','sunny:15','foggy:11','foggy:13','foggy:15'],
+                   help='Explicit remaining conditions in a fresh report; already collected runs remain immutable')
     a=p.parse_args()
     deadline=datetime.fromisoformat(a.deadline_utc.replace('Z','+00:00')) if a.deadline_utc else None
     if deadline and deadline.tzinfo is None:raise ValueError('deadline must include a timezone')
@@ -180,33 +196,40 @@ def main():
     current_ledger=a.ledger;condition_index=0
     report['rotation_step_deg']=a.rotation_step_deg;report['layout_revisions']=[]
     try:
-        for weather_name,code in ((('sunny',0),) if a.operation=='inspect' else (('sunny',0),('foggy',2))):
-            for hour in ((13,) if a.operation=='inspect' else (11,13,15)):
-                if deadline and datetime.now(timezone.utc)+timedelta(seconds=1830)>deadline:
-                    report['stopped_before_deadline']=a.deadline_utc;save();return 2
-                if a.stop_after_current_file and a.stop_after_current_file.exists():
-                    report['stopped_between_laps']=True;save();return 2
-                if condition_index and a.rotation_step_deg:
-                    revision=a.output.parent/(a.output.stem+'-layouts')/('lap-%02d.jsonl'%condition_index)
-                    subprocess.run([sys.executable,str(ROOT/'tools/perception/rotate_capture_route_layout.py'),
-                        '--ledger',str(current_ledger),'--output',str(revision),'--degrees',str(a.rotation_step_deg),
-                        '--grpc-host',a.grpc_host],check=True)
-                    current_ledger=revision
-                    report['layout_revisions'].append(str(revision));save()
-                for method,request in ((environment.SetWeather,Weather(type=code,instantly=True)),
-                                       (environment.SetTime,SimulationTime(hour=hour,instantly=True))):
-                    if method(request,timeout=5).status!=1:raise RuntimeError('environment change rejected')
-                time.sleep(2)
-                if environment.GetWeather(Empty(),timeout=5).type!=code or environment.GetTime(Empty(),timeout=5).hour!=hour:
-                    raise RuntimeError('environment change not verified')
-                reset()
-                result=trial(a.data_root,pilot['controller'],pilot['selected_speed_kph'],current_ledger,a.layout_id,0,1800,
-                             inspection_only=a.operation=='inspect')
-                result.update(weather=weather_name,hour=hour,spawn_ledger=str(current_ledger),
-                              rotation_step_index=condition_index,nominal_rotation_deg=condition_index*a.rotation_step_deg)
-                report['runs'].append(result);save()
-                if not result['passed']:raise RuntimeError('condition failed; evidence retained')
-                condition_index+=1
+        conditions=['sunny:13'] if a.operation=='inspect' else (a.conditions or [w+':'+str(h) for w in ('sunny','foggy') for h in (11,13,15)])
+        if len(set(conditions))!=len(conditions):raise ValueError('duplicate collection conditions')
+        report['requested_conditions']=conditions;save()
+        for condition in conditions:
+            weather_name,hour=condition.split(':');hour=int(hour);code={'sunny':0,'foggy':2}[weather_name]
+            if condition_index>=a.max_laps_per_session:
+                report['stopped_for_session_limit']=a.max_laps_per_session;save();return 2
+            if a.abort_file and a.abort_file.exists():
+                report['guard_abort_before_lap']=a.abort_file.read_text();save();return 2
+            if deadline and datetime.now(timezone.utc)+timedelta(seconds=1830)>deadline:
+                report['stopped_before_deadline']=a.deadline_utc;save();return 2
+            if a.stop_after_current_file and a.stop_after_current_file.exists():
+                report['stopped_between_laps']=True;save();return 2
+            if condition_index and a.rotation_step_deg:
+                revision=a.output.parent/(a.output.stem+'-layouts')/('lap-%02d.jsonl'%condition_index)
+                subprocess.run([sys.executable,str(ROOT/'tools/perception/rotate_capture_route_layout.py'),
+                    '--ledger',str(current_ledger),'--output',str(revision),'--degrees',str(a.rotation_step_deg),
+                    '--grpc-host',a.grpc_host],check=True)
+                current_ledger=revision
+                report['layout_revisions'].append(str(revision));save()
+            for method,request in ((environment.SetWeather,Weather(type=code,instantly=True)),
+                                   (environment.SetTime,SimulationTime(hour=hour,instantly=True))):
+                if method(request,timeout=5).status!=1:raise RuntimeError('environment change rejected')
+            time.sleep(2)
+            if environment.GetWeather(Empty(),timeout=5).type!=code or environment.GetTime(Empty(),timeout=5).hour!=hour:
+                raise RuntimeError('environment change not verified')
+            reset()
+            result=trial(a.data_root,pilot['controller'],pilot['selected_speed_kph'],current_ledger,a.layout_id,0,1800,
+                         inspection_only=a.operation=='inspect',abort_file=a.abort_file)
+            result.update(weather=weather_name,hour=hour,spawn_ledger=str(current_ledger),
+                          rotation_step_index=condition_index,nominal_rotation_deg=condition_index*a.rotation_step_deg)
+            report['runs'].append(result);save()
+            if not result['passed']:raise RuntimeError('condition failed; evidence retained')
+            condition_index+=1
         report['completed']=True;save()
     except Exception as exc:
         report['failure']=str(exc);save();raise

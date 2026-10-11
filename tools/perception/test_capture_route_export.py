@@ -4,11 +4,17 @@ from pathlib import Path
 import tempfile
 import numpy as np
 from PIL import Image
-from export_capture_route_bbox import convert
+from export_capture_route_bbox import convert, validate_rendered_rgb
 from verify_capture_route_dataset import verify_pair, evaluation_hashes
 
 
 class CaptureRouteExportTest(unittest.TestCase):
+    def test_blank_rgb_is_rejected_even_if_gt_files_exist(self):
+        image=Image.new('RGB',(8,8),'black')
+        with self.assertRaisesRegex(ValueError,'render failure'):validate_rendered_rgb(image)
+        image.putpixel((1,1),(1,2,3))
+        validate_rendered_rgb(image)
+
     def test_visible_components_and_invisible_raw_box(self):
         instance=np.zeros((20,20,4),np.uint8);semantic=np.zeros((20,20,3),np.uint8)
         instance[3:8,4:9]=[0,0,82,255];semantic[3:8,4:9]=[236,255,2]
@@ -22,6 +28,17 @@ class CaptureRouteExportTest(unittest.TestCase):
         self.assertEqual(result[0]['canonical'],'stroller')
         self.assertEqual(result[0]['xyxy'],[4,3,9,8])
         self.assertEqual(result[0]['source_xyxy'],[1,1,10,10])
+
+    def test_strided_rgba_preserves_alpha_identity_and_edge_pixels(self):
+        raw=np.zeros((8,12,4),np.uint8);inst=raw[:,::2];sem=np.zeros((8,6,3),np.uint8)
+        inst[2:5,3:6]=[1,2,3,255];inst[7,0]=[1,2,3,254]
+        boxes=[dict(actor_id='9',gt_source_label='Obstacle',rgba=[1,2,3,255])]
+        ledger=[dict(native_ids=['9'],placement_approved=True,identity_approved=True,
+            target_class='box',api_name='WoodBox',native_source_classes={'9':{'Obstacle':'box'}},
+            native_rgba={'9':{'Obstacle':[1,2,3,255]}})]
+        result=convert(inst,sem,boxes,ledger)
+        self.assertEqual(result[0]['xyxy'],[3,2,6,5])
+        self.assertEqual(result[0]['visible_pixels'],9)
 
     def test_missing_visible_object_rejects_frame(self):
         inst=np.zeros((10,10,4),np.uint8);sem=np.zeros((10,10,3),np.uint8)

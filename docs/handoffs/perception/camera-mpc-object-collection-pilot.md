@@ -240,3 +240,56 @@ SHA와 디코딩 픽셀을 다시 확인한다. 고정 v7 selection/heldout의 �
 ```bash
 python3 tools/perception/verify_capture_route_dataset.py --dataset ../data/dataset_versions/CAPTURE_SUBSET --frozen-manifest ../data/dataset_versions/camera_objects_bbox_v7-adoption-r2/manifest.jsonl --output ../data/collection-evidence-20261012/NEW_VERIFICATION.json
 ```
+
+### 2026-10-12 회전·터널 보완과 수집 중단
+
+회차 사이 owned actor를 60°씩 회전하고 실제 native 자세를 새 ledger에 기록했다.
+첫 회전 배치의 114개 actor·11개 목표 종류·26개 에셋을 RGB로 확인했다.
+터널 오른쪽은 기존 횡간격 5m 대신 3.35m 후보를 시험해 10개를 유지했다.
+주행 여유 기준을 충족하지 못한 PE 방벽 1개는 제거했으며 기준을 완화하지 않았다.
+벽 인접 부분 가림은 보존한다. 실제 벽 교차 여부가 불명확한 반례를 완전히 검증했다고
+안내하지 않는다. 구조물이 가리는 부분을 포함한 native 투영 박스와 실제 가시 instance
+박스는 다르며, 학습 export에는 후자를 사용하고 원본 박스를 별도로 보존한다.
+
+SUNNY 11/13/15시와 FOGGY 11시의 **주행·복원 검사**는 완료했다. 성공 Capture RPC는
+3,892회, 세 뷰 필수 파일이 존재하는 기록은 3,789회다. 그러나 영상 검사에서 SUNNY
+15시의 229개 기록에 적어도 한 뷰의 상수 RGB가 있고, FOGGY 11시는 모든 기록에서
+한 뷰 이상이 검은 화면이다. 주행 통과와 데이터 수락을 분리한다. 세 뷰 모두 상수 이미지가
+아닌 SUNNY 기록은 2,593회이며, 이 수 역시 전체 주석 검수 완료를 뜻하지 않는다.
+
+첫 60° SUNNY 11시 조건만 별도로 검수·변환해 **2,404장·29,871객체**를 생성했다.
+실제 YOLO 재읽기, SHA·좌표·고정 ID·중복 및 고정 평가본 누출 검사는 통과했다.
+v7에 병합하거나 학습 샘플링을 조정한 상태는 아니다. 나머지 회전 조건은 원본과 실패
+기록을 보존하며 검수 대기다. 검은 이미지를 학습용 negative로 사용하지 않는다.
+
+2026-10-12 03:40 KST FOGGY 13시 Capture 중 Simulator가 종료됐다.
+Unity crash 기록은 물리 메모리 99%, 시스템 commit 130,835/130,835MB와
+`ImageConversion.EncodeToPNG` 스택을 남겼다. 직전에는 graphics resource ID 초과와
+CopyTexture 오류가 있었다. 반복 Capture 자원 누적은 근거 있는 가설이며 분리 대조로
+확정한 원인은 아니다. 종료 후 차량·환경 복원은 gRPC 단절로 **검증하지 못했다**.
+FOGGY 13/15시, FOGGY 11시 재수집과 SUNNY 15시 손상 구간 보완은 남아 있다.
+두 번째 균형 배치 120개는 계획만 만들었으며 생성·수집하지 않았다.
+
+재실행 후에는 actor ID를 그대로 신뢰하지 않고 새 세대·native 상태·센서와 정차 Capture를
+확인한다. 한 Simulator 세션의 주행은 `--max-laps-per-session 2`로 제한한다.
+`--conditions foggy:11 foggy:13`처럼 남은 조건만 새 보고서에서 실행할 수 있다.
+각 세션의 첫 ledger 방향은 별도로 준비하고, 이후 회차 사이에만 60° 추가 회전한다.
+기존 정상/실패 보고서를 수정해 재시도를 성공으로 바꾸지 않는다.
+
+호스트의 `monitor_capture_memory.py`는 Windows 메모리를 읽어 JSONL로 기록한다.
+Simulator private memory 16GiB 또는 시스템 commit 65%에서 다음 회차를 막고,
+32GiB·85% 또는 가용 물리 메모리 512MB 미만에서는 `--abort-file`을 생성한다.
+동일 파일을 전달받은 실행기는 자신이 만든 제어 자식만 SIGINT로 종료하고 복원을 시도한다.
+이 임계값은 이번 고갈 이후의 보수적 예방 설정이며 장시간 실환경 수락 결과는 아니다.
+센서 경로와 capture_runs 경로를 주면 성공 RPC의 세 뷰 RGB도 검사한다. 상수 이미지나
+연속된 telemetry 실패에서는 수집을 중단한다. 사용자 Windows 프로세스는 종료하지 않는다.
+모니터와 실행기에는 호스트·컨테이너에서 **같은 파일**을 가리키는 경로를 전달한다.
+
+```bash
+../data/roboflow/.venv/bin/python3 tools/perception/monitor_capture_memory.py --output ../data/collection-evidence-20261012/NEW_SESSION_MEMORY.jsonl --stop-after-current-file ../data/collection-evidence-20261012/NEW_SESSION.stop --abort-file ../data/collection-evidence-20261012/NEW_SESSION.abort --sensor-root /mnt/c/MoraiLauncher_Win/SensorData --capture-runs-root ../data/capture_runs --max-seconds 3600
+```
+
+상태·실패 영상은 `http://localhost:8768/capture-collection-20261012/`와
+`http://localhost:8768/capture-render-integrity-20261012/`에서 확인한다.
+로컬 메모리 조회와 중단 신호 CPU 시험은 통과했지만 재시작 후 실제 주행 중단·복원 시험은
+아직 수행하지 않았다. Hosted CI의 결제 제한과 함께 미완료 항목으로 남긴다.

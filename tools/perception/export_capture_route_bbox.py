@@ -17,14 +17,22 @@ from data_collection.capture_collection import CLASSES,native_annotation_class
 from prepare_camera_seg_gt import parse_bbox,sha,SEMANTIC
 
 
+def validate_rendered_rgb(image):
+    if all(lo==hi for lo,hi in image.convert('RGB').getextrema()):
+        raise ValueError('constant RGB texture: Capture render failure, not a negative')
+
+
 def convert(instance,semantic,boxes,ledger):
     if instance.ndim!=3 or instance.shape[2]!=4 or semantic.shape!=instance.shape[:2]+(3,):
         raise ValueError('native GT dimensions/channels mismatch')
     annotations=[];linked=np.zeros(instance.shape[:2],bool)
+    packed=(np.ascontiguousarray(instance).view(np.uint32).reshape(instance.shape[:2])
+            if instance.dtype==np.uint8 else None)
     colors=Counter(tuple(r['rgba']) for r in boxes)
     for box in boxes:
         if colors[tuple(box['rgba'])]!=1:raise ValueError('duplicate instance color')
-        mask=np.all(instance==box['rgba'],axis=2)
+        mask=(packed==np.asarray(box['rgba'],dtype=np.uint8).view(np.uint32).item()
+              if packed is not None else np.all(instance==box['rgba'],axis=2))
         ys,xs=np.nonzero(mask)
         # MORAI also reports fully occluded native boxes. Preserve them as raw evidence,
         # but there is no visible positive rectangle to export.
@@ -70,6 +78,7 @@ def main():
                 for relative in selected:
                     if sha(a.run/relative)!=frame['sha256'][relative]:raise ValueError('source SHA mismatch')
                 image=Image.open(rgb).convert('RGB');image.load()
+                validate_rendered_rgb(image)
                 pixel_sha=hashlib.sha256(image.tobytes()).hexdigest()
                 if pixel_sha in seen:
                     quarantine.append(dict(key=key,reason='exact_pixel_duplicate_within_layout'));continue
