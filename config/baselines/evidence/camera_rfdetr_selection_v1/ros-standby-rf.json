@@ -1,0 +1,96 @@
+{
+  "scope": "ROS factory/STANDBY startup only; no ACTIVE throughput or full-stack acceptance",
+  "effective_model_kind": "rfdetr",
+  "statuses": [
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    },
+    {
+      "loaded": true,
+      "warmed_up": true,
+      "mode": 0,
+      "generation": 0,
+      "errors": 0,
+      "reason": "standby"
+    }
+  ],
+  "output_count": 0,
+  "passed": true
+}

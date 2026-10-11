@@ -1799,7 +1799,95 @@ MORAI·실시간 추론 종료 확인 없이 이 인자를 사용하지 않는�
 Hosted CI 결제 한도 차단과 기존 facade 실패는 별도 사항이며 이 진단이 해소했다고 주장하지 않는다.
 추론/ROS 코드가 바뀌지 않아 운영 빌드·전체 스택 수락을 다시 수행한 것으로 표시하지 않는다.
 
-**다음 순서:** 현재 YOLO26l 대 RF-DETR M/L의 사전학습 기존7종 비교 → 낮춘 해상도
-YOLO26x/RF-DETR-XL 선별 → 유망 구성만3뷰·전체 스택 부하 → 검증 teacher 초안·자료 보강 →
+**다음 순서:** RF-DETR L2026·704·batch3를 현재 YOLO26l과 먼저 비교한다. 품질·통합 부하가
+충분하면 M·다른 해상도·X/XL은 생략한다. 조건부 후보만 추가한 뒤 검증 teacher 초안·자료 보강 →
 작은 재학습 비교. AIM은 합의한3폴더만 사용하며 다운로드 중인 터널 폴더는 완료 확인 전 제외한다.
 이번 진단 완료는 recall 회복·본학습 후보 선정·운영 승격·#80 병합 승인이 아니다.
+
+### RF-DETR 사전학습 비교 — 실행 경계
+
+설정의 단일 기준은 `config/experiments/camera_rfdetr_selection_v1.json`이다.
+공식 소스는 `external/baselines/RF-DETR`의
+`eca736acab9f6fe93f2cbc82a1d9f6edfb53f0ea`이며 L 가중치는
+`rf-detr-large-2026.pth`이다. 구형 `rf-detr-large.pth`와 혼용하지 않는다.
+원본 checkout은 수정하지 않고 별도 snapshot·Python≥3.10 환경에서 SDK/ONNX를 준비한다.
+ROS Python3.8의 패키지는 유지하며 실제 추론은 `asmc-ros-noetic`에서 SDK 없이
+TensorRT10.13.0.35를 사용한다. 기존 worktree·마운트·운영 launch 기본값은 유지한다.
+
+- 준비: `tools/perception/prepare_rfdetr_candidate.py`의 `onnx` → `engine`.
+  checkpoint·ONNX·engine SHA와 실제 shape·batch profile을 보존한다.
+- parity: `evaluate_rfdetr_candidate.py infer --kind rfdetr-pt`가 만든 batch1/2/3
+  reference를 `check_rfdetr_parity.py --kind onnx|tensorrt`로 검사한다.
+  클래스별 일대일 IoU≥0.98·confidence 차이≤0.02와 임계값 경계 이동을 구분한다.
+- 품질: 같은 evaluator의 `yolo-trt`와 `rfdetr-trt` 결과를 `analyze`로 집계한다.
+  기존 파일럿의 YOLO head와 현재 운영 engine의 head가 다르므로 예전 before 캐시를
+  현재 운영 기준선으로 재사용하지 않는다. confidence0.40 기준선을 유지하고 RF confidence는
+  selection에서만 선정한다. heldout에서 재튜닝하지 않는다.
+- 비교: `report_rfdetr_candidate.py`는 원본 GT/운영 YOLO/RF 결과와 모든 변경 목록을
+  보존한다. 미리보기 수만 제한하며 작은 GT나 원본 데이터를 삭제하지 않는다.
+- 통합: 기존 `run_coco7_live_trials.py`를 사용한다. 날씨 반복은
+  `run_coco7_weather_matrix.py --no-spawn --seconds 60 --repeats 3`으로 기존 actor를
+  유지하고 모델별 batch를 적용한다. 기존 날씨는 복원하며 공개 제어를 발행하지 않는다.
+
+RF는 전체 시야를 square resize하고 RGB·ImageNet 정규화를 사용한다. YOLO letterbox와
+동일한 전처리라고 표현하지 않는다. 공식 sigmoid/global top300을 **먼저** 선택한 뒤 sparse
+COCO category ID 1/2/3/4/6/8/18을 원본7종으로 제한한다. 추가 NMS나 소비 그룹 매핑은 없다.
+원본 좌표 복원과 실제 batch1/2/3을 검사하며 중단 뷰를 기다리지 않는다.
+
+현재 heldout의 오토바이는 단일 소스에 편중되고 일부 클래스의 GT는 매우 적다.
+완전 GT≥20인 클래스의 macro F1과 주석된 객체 recall을 구분하고, 부분 GT의 미대응
+검출을 FP로 세지 않는다. 이 자료 통과를 COCO7 전체의 독립 장면 수락으로 해석하지 않는다.
+오프라인 group 추론 시간은 MORAI·다른 모델이 실행되는 input→output 지연이 아니다.
+
+기존 카메라 worker·PREPARE·세대 무효화·Ego mask·메시지 MD5·전방 unique fusion은 유지한다.
+실험 launch는 `camera_rfdetr_experiment.launch`이며 SHA가 고정된 생성 runtime 설정을
+`camera_objects_config:=...`로 명시해야 한다. 기본 파일을 바꿔 운영 모델을 교체하지 않는다.
+학습·teacher 라벨링·추가 수집은 이 비교에 포함하지 않는다. 완료 여부와 실제 측정치는
+`config/baselines/perception_camera_rfdetr_selection_v1.json` 및 연결된 증거를 기준으로 확인한다.
+
+### RF-DETR L704 첫 실행 결과 — 후보 확정 보류 (2026-10-11)
+
+공식 L2026 checkpoint의 MD5와 SHA를 확인하고, 기존 split 그대로 selection300장·heldout300장과
+temporal 자료를 합친 **고유675장**에 실제 재추론했다. TensorRT10.13.0.35 engine은 별도 환경에서
+만들었으며 `asmc-ros-noetic`의 Python3.8에서 RF SDK 없이 기존 ROS factory로 로드·예열했다.
+STANDBY 시험은 오류0·발행0으로 통과했다. 이는 ACTIVE 처리율·MORAI 통합 수락 시험이 아니다.
+
+| confidence0.40 / 같은 RGB·mask·평가 범위 | 현재 YOLO26l | RF L704 PT / TensorRT 진단 |
+|---|---:|---:|
+| heldout person TP/GT | 24/26 | 22/26 |
+| heldout motorcycle TP/GT | 127/138 | 136/138 |
+| selection person TP/GT | 92/107 | 94/107 |
+| selection bus TP/GT | 22/27 | 17/27 |
+| selection car TP/GT | 29/38 | 29/38 |
+
+사람 heldout recall은7.69%p 감소하여2%p 기준을 넘는다. 오토바이는6.52%p 늘었지만 단일
+Enzo 소스에 편중돼 있다. 완전 GT가 충분한 heldout macro F1은 사실상 오토바이 한 클래스의
+값이므로7종 전체 우위로 설명하지 않는다. selection에서 선정한 RF confidence0.60도 heldout
+사람20/26·오토바이119/138로 회귀 기준을 통과하지 못했다. heldout을 보고 임계값을 다시 바꾸지 않았다.
+
+수치 변환 검증은 **FP32 PT(TF32 OFF)→ONNX 통과, FP32 TensorRT 진단 통과, FP16 후보 미달**이다.
+plain FP16·TF32 OFF·정규화 연산 보호·decoder 보호 등6개 engine과 실패를 모두 보존했다.
+최종 혼합 정밀도는 backbone FP16, transformer/head/box 연산 FP32다. 첫12장만 검사하면
+confidence0.40/0.60/0.70에서 통과했으나, 클래스·뷰를 보강한16개 batch군(실제 batch1/2/3)에서
+동일 박스1건의 IoU0.9683·confidence 차이0.0152가 남았다. IoU0.98 기준을 면제하지 않았다.
+원본을 확인하면 사슴을 person으로 오검출한 박스다. 모델 오분류와 FP16 경계 차이를 구분한다.
+confidence0.10에서 발생한 추가 수치 차이도 이전 증거에 보존한다.
+
+[비교·실패 갤러리](http://localhost:8768/camera-rfdetr-selection-v1/trt-diagnostic-gallery-v2/)는
+원본 GT/운영 YOLO/RF를 나란히 표시하고, 수치 미달 박스의 확대 영상과 전체 변경41장을 연결한다.
+미리보기46장만 제한하며 전체 예측675장은 보존한다. [전체 목차](http://localhost:8768/)에는 고정
+E 번호·등록 시각을 붙였다. 핵심 지표·수치 검증·ROS smoke는
+[요약 증거](../../../config/baselines/evidence/camera_rfdetr_selection_v1/)에 있다.
+
+**판정은 현재 YOLO 유지·RF 학습 후보 선정 보류**다. 수치 일치 선행조건이 실패했으므로 최종
+SUNNY/FOGGY 반복과 M·다른 해상도·X/XL 선별은 진행하지 않았다. 변환 문제를 모델 크기 문제로
+간주해 다음 모델로 자동 이동하지 않는다. 전체 스택 진단은 MORAI 재실행 알림을 기다리고 있으며
+아직 p50/p95/p99·VRAM·15Hz 충족 수치를 제출하지 않는다. 저장 영상의 offline group 시간은
+ROS 통합 지연도, 서로 다른 batch 스케줄의 공정한 속도 비교도 아니다.
+
+운영 default와 weight·confidence·ROS MD5·unique fusion은 유지한다. RF 실험 뒤 같은 master에서
+기본 YOLO launch를 실행해도 backend가 남지 않도록 `model_kind`만 초기화한 뒤 config를
+로드한다. RF/YOLOE 설정은 명시한 종류를 사용하고, 없는 설정은 node의 YOLO 기본값을 쓴다.
+외부에서 주입하는 trace 등 다른 파라미터는 지우지 않는다.
+공통 카메라 검출75개·runtime31개와 RF 전용14개 CPU 시험, ROS overlay 빌드를 통과했다.
+Hosted CI 결제 차단과 기존 facade 실패는 해소된 것으로 표시하지 않는다. #80은 Draft를 유지한다.

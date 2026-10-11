@@ -36,6 +36,7 @@ def main():
     p.add_argument('--fixture', type=Path, help='Recorded placement offsets for the same nine actors')
     p.add_argument('--weather', nargs='+', choices=['sunny', 'foggy'], default=['sunny', 'foggy'])
     p.add_argument('--grpc-host', default='host.docker.internal')
+    p.add_argument('--no-spawn', action='store_true', help='Use existing sensor scene; never create actors')
     a = p.parse_args()
     if a.repeats < 1 or a.seconds < 5:
         p.error('positive repeat count and complete 5-second windows required')
@@ -46,7 +47,7 @@ def main():
     api = EnvironmentStub(grpc.insecure_channel(a.grpc_host+':7789'))
     original = api.GetWeather(Empty(), timeout=5)
     report = dict(original_weather=WeatherType.Name(original.type), candidates=candidates,
-                  runs=[], preview_control_only=True, revision=a.revision, order=a.order)
+                  runs=[], preview_control_only=True, revision=a.revision, order=a.order, no_spawn=a.no_spawn)
     registry = a.output/'owned-actors.json'
 
     def save():
@@ -68,10 +69,11 @@ def main():
         create=[sys.executable, str(ROOT/'tools/perception/coco7_scene.py'), 'create',
                 '--registry', str(registry), '--grpc-host', a.grpc_host]
         if a.fixture:create+=['--fixture',str(a.fixture)]
-        subprocess.run(create, check=True)
-        actors = json.loads(registry.read_text())['actors']
-        if len(actors) != 9 or any(not r.get('created') or r.get('error') for r in actors):
-            raise RuntimeError('incomplete owned-actor fixture')
+        if not a.no_spawn:
+            subprocess.run(create, check=True)
+            actors = json.loads(registry.read_text())['actors']
+            if len(actors) != 9 or any(not r.get('created') or r.get('error') for r in actors):
+                raise RuntimeError('incomplete owned-actor fixture')
         for label, code in [('sunny', 0), ('foggy', 2)]:
             if label not in a.weather:
                 continue
@@ -82,7 +84,7 @@ def main():
             for repeat in range(1, a.repeats+1):
                 order = candidate_order(candidates, repeat, a.order)
                 for c in order:
-                    jobs.append(dict(c, rates='all15', batch='2plus1', profile=a.profile,
+                    jobs.append(dict(c, rates='all15', batch=c.get('batch','2plus1'), profile=a.profile,
                                      repeat=repeat, seconds=a.seconds, full_stack=a.profile == 'C6',
                                      fusion_policy='unique', weather_requested=label))
             jf = a.output/(label+'-jobs.json')

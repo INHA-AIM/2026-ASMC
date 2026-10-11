@@ -1,0 +1,9 @@
+test_frozen_confidence_and_missing_classes (test_coco7_weather.WeatherEvidenceTests) ... ok
+test_missing_duplicate_and_wrong_rgb_fail (test_coco7_weather.WeatherEvidenceTests) ... ok
+test_weather_is_explicit (test_coco7_weather.WeatherEvidenceTests) ... ok
+test_weather_strata_do_not_share_objects_or_false_positives (test_coco7_weather.WeatherEvidenceTests) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+OK

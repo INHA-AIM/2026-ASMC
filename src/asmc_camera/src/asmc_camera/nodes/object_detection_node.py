@@ -68,7 +68,10 @@ class ObjectDetectionNode:
             if batched and not (experimental or production_batch):
                 raise ValueError('batched runtime requires seg_experiment=true')
             if batched:
-                if production_batch:
+                if rospy.get_param('~model_kind', 'yolo') == 'rfdetr':
+                    from asmc_camera.detection.rfdetr_backend import RFDetrBackend
+                    factory = RFDetrBackend
+                elif production_batch:
                     from asmc_camera.detection.yolo_batch_backend import BatchedYoloDetector
                     factory = BatchedYoloDetector
                 else:
@@ -85,6 +88,10 @@ class ObjectDetectionNode:
                          runtime_backend=rospy.get_param('~runtime_backend', 'tensorrt'),
                          source_checkpoint_sha256=rospy.get_param('~source_checkpoint_sha256',''),
                          expected_prompt_sha256=rospy.get_param('~expected_prompt_sha256','')) if batched else {}
+            if rospy.get_param('~model_kind', 'yolo') == 'rfdetr':
+                if not batched:
+                    raise ValueError('RF-DETR requires opt-in batch runtime')
+                extra['rfdetr_input_shapes'] = rospy.get_param('~rfdetr_input_shapes', None)
             backend = factory(
                 weights=rospy.get_param("~weights"),
                 device=rospy.get_param("~device", "cuda:0"),
