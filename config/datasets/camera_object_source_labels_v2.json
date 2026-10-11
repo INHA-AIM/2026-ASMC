@@ -1,0 +1,421 @@
+{
+  "schema_version": 2,
+  "recorded_on": "2026-10-10",
+  "provenance": "User-supplied Roboflow source/asset meanings in this conversation; visual discrepancies explicitly retained in profile notes.",
+  "application": "Resolve source meaning into semantic subtype, then training_map into 16 classes. This is not image completeness or geometry approval. Original labels/category IDs remain unchanged.",
+  "unlisted_labels": "Use existing global policy; numeric meanings never carry across projects.",
+  "profiles": {
+    "cone-z2vga/katri-q4vkc": {
+      "direct": {
+        "0": "car",
+        "1": "bus",
+        "2": "person",
+        "3": "person",
+        "5": "pe_drum",
+        "7": "bollard"
+      },
+      "mixed": {
+        "6": [
+          "dog",
+          "deer"
+        ]
+      },
+      "composite": {
+        "4": [
+          "person",
+          "bicycle"
+        ]
+      }
+    },
+    "cone-z2vga/katri-2-txrqf": {
+      "direct": {
+        "0": "car",
+        "1": "bus",
+        "2": "person",
+        "3": "person",
+        "5": "pe_drum",
+        "7": "bollard"
+      },
+      "mixed": {
+        "6": [
+          "dog",
+          "deer"
+        ]
+      },
+      "composite": {
+        "4": [
+          "person",
+          "bicycle"
+        ]
+      }
+    },
+    "cone-z2vga/katri_kids-2-x5xnl": {
+      "direct": {
+        "0": "car",
+        "1": "bus",
+        "2": "person",
+        "3": "person",
+        "5": "pe_drum",
+        "7": "bollard"
+      },
+      "mixed": {
+        "6": [
+          "dog",
+          "deer"
+        ]
+      },
+      "composite": {
+        "4": [
+          "person",
+          "bicycle"
+        ]
+      }
+    },
+    "cone-z2vga/katri_kids-zblud": {
+      "direct": {
+        "0": "car",
+        "1": "bus",
+        "2": "person",
+        "3": "person",
+        "5": "pe_drum",
+        "7": "bollard"
+      },
+      "mixed": {
+        "6": [
+          "dog",
+          "deer"
+        ]
+      },
+      "composite": {
+        "4": [
+          "person",
+          "bicycle"
+        ]
+      }
+    },
+    "cone-z2vga/merge-axyff": {
+      "direct": {
+        "0": "car",
+        "1": "bus",
+        "2": "person",
+        "3": "person",
+        "5": "pe_drum",
+        "7": "bollard"
+      },
+      "mixed": {
+        "6": [
+          "dog",
+          "deer"
+        ]
+      },
+      "composite": {
+        "4": [
+          "person",
+          "bicycle"
+        ]
+      }
+    },
+    "cone-z2vga/ssibal-sjav5": {
+      "direct": {
+        "0": "car",
+        "1": "bus",
+        "2": "person",
+        "3": "person",
+        "5": "pe_drum",
+        "7": "bollard"
+      },
+      "mixed": {
+        "6": [
+          "dog",
+          "deer"
+        ]
+      },
+      "composite": {
+        "4": [
+          "person",
+          "bicycle"
+        ]
+      }
+    },
+    "jjj-nx9di/katri_new_data-xkbev": {
+      "direct": {
+        "0": "car",
+        "1": "bus",
+        "2": "person",
+        "3": "person",
+        "5": "pe_drum",
+        "7": "bollard",
+        "8": "cargo_box"
+      },
+      "mixed": {
+        "6": [
+          "dog",
+          "deer"
+        ],
+        "9": [
+          "wooden_box",
+          "concrete_barricade",
+          "steel_barricade",
+          "pe_firewall"
+        ]
+      },
+      "composite": {
+        "4": [
+          "person",
+          "bicycle"
+        ]
+      }
+    },
+    "aiv5challenge/yeonsoo-sarang": {
+      "direct": {
+        "car": "car",
+        "person": "person"
+      },
+      "notes": [
+        "User confirms current MORAI domain match; annotation completeness still needs source sampling."
+      ]
+    },
+    "battery-detection/cone-traffic-tirxp": {
+      "direct": {
+        "cone": "traffic_cone"
+      },
+      "excluded": [
+        "red light",
+        "green light",
+        "yellow light"
+      ],
+      "notes": [
+        "Keep real polygons; do not synthesize masks from boxes."
+      ]
+    },
+    "bicycle-man/morai-bicycle": {
+      "composite": {
+        "bicycle man": [
+          "person",
+          "bicycle"
+        ]
+      },
+      "notes": [
+        "Combined rider box needs separately drawn component boxes or an explicitly agreed rider class, never two duplicated boxes."
+      ]
+    },
+    "dh-mzmhr/animal-tohen": {
+      "mixed": {
+        "animal": [
+          "dog",
+          "deer"
+        ]
+      }
+    },
+    "enzo-mdikr/my-first-project-eeree": {
+      "direct": {
+        "cargo box": "cargo_box",
+        "wood box": "wooden_box",
+        "bollard": "bollard",
+        "motorcycle": "motorcycle",
+        "steel barrigate": "steel_barricade",
+        "pe drum": "pe_drum",
+        "barrigate": "concrete_barricade",
+        "pe barrigate": "pe_firewall"
+      },
+      "mixed": {
+        "dog": [
+          "dog",
+          "deer"
+        ]
+      },
+      "excluded": [
+        "speed",
+        "lane bar"
+      ],
+      "notes": [
+        "Names generally match assets per user; earlier RGB review found deer labeled dog, so that bucket still needs subtype correction. Concrete/plastic barrier subtype must be visually confirmed."
+      ]
+    },
+    "hl-fma/hlfma_2": {
+      "direct": {
+        "person": "person",
+        "car": "car",
+        "truck": "truck",
+        "bus": "bus"
+      },
+      "mixed": {
+        "object": [
+          "cargo_box",
+          "wooden_box",
+          "pe_drum",
+          "steel_barricade"
+        ]
+      },
+      "notes": [
+        "Downloaded metadata has object, and earlier RGB review showed several physical types; do not bulk rename object."
+      ]
+    },
+    "hl-fma/hlfma_3": {
+      "direct": {
+        "person": "person",
+        "car": "car",
+        "truck": "truck",
+        "bus": "bus"
+      },
+      "mixed": {
+        "others": [
+          "unknown"
+        ]
+      }
+    },
+    "mino-qjf5p/vi2re": {
+      "direct": {
+        "car": "car",
+        "person": "person"
+      },
+      "mixed": {
+        "obstacle": [
+          "unknown_morai_obstacle"
+        ]
+      },
+      "excluded": [
+        "traffic sign limit30"
+      ]
+    },
+    "parkminseo/final-ftuy2": {
+      "direct": {
+        "human": "person",
+        "car": "car",
+        "bus": "bus"
+      },
+      "mixed": {
+        "box": [
+          "wooden_box",
+          "pe_firewall"
+        ]
+      },
+      "excluded": [
+        "red",
+        "green",
+        "yellow"
+      ]
+    },
+    "s-workspace-p9mvp/morai_obstacle": {
+      "direct": {
+        "person": "person"
+      },
+      "notes": [
+        "Low priority for additional training volume; use diverse examples for regression/replay."
+      ]
+    },
+    "selfcar/morai_test-t3i2r": {
+      "direct": {
+        "0": "pe_drum",
+        "1": "bollard",
+        "2": "bollard"
+      },
+      "notes": [
+        "Source label 0 is PE_Drum, unlike Katri label 0=car; labels 1/2 preserve bollard01/bollard04 in original_label."
+      ]
+    },
+    "seonhyung-kim/morai-perception": {
+      "composite": {
+        "pedestrian": [
+          "person",
+          "bicycle"
+        ],
+        "pedstrain": [
+          "person",
+          "bicycle"
+        ]
+      },
+      "mixed": {
+        "animal": [
+          "dog",
+          "deer"
+        ],
+        "vehicle": [
+          "car",
+          "bus",
+          "truck",
+          "motorcycle",
+          "bicycle"
+        ],
+        "obstacle": [
+          "unknown_morai_obstacle"
+        ]
+      },
+      "excluded": [
+        "traffic light"
+      ],
+      "notes": [
+        "Metadata spelling is pedestrian; user also supplied pedstrain. Human-containing box subtype must be inspected. Vehicle candidates are possibilities, not verified per-image labels."
+      ]
+    },
+    "tooth-decay-rnacu/morai_ai_mission-fhqkh": {
+      "direct": {
+        "fence": "steel_barricade",
+        "pe": "pe_drum",
+        "concrete 1": "concrete_barricade",
+        "concrete 2": "concrete_barricade"
+      },
+      "mixed": {
+        "obstacle yellow": [
+          "unknown_box",
+          "steel_barricade",
+          "pe_drum",
+          "wooden_box"
+        ]
+      },
+      "excluded": [
+        "sign",
+        "tl",
+        "sign 30",
+        "sign 40",
+        "sign 50",
+        "tl go",
+        "tl stop"
+      ],
+      "notes": [
+        "Fence here means the MORAI steel barricade, not scene fencing. Concrete_1/2 preserve asset variants in original_label."
+      ]
+    },
+    "yolo-m5lvd/detection-bzetd": {
+      "direct": {
+        "bus": "bus",
+        "car": "car",
+        "truck": "truck",
+        "person": "person"
+      },
+      "mixed": {
+        "obstacle": [
+          "unknown_morai_obstacle"
+        ],
+        "bike": [
+          "bicycle",
+          "motorcycle"
+        ]
+      },
+      "excluded": [
+        "traffic",
+        "streetlight",
+        "leftturntraffic",
+        "redtraffic",
+        "greentraffic"
+      ]
+    },
+    "yuna-z15io/obstcle-mi0kq": {
+      "mixed": {
+        "dynamic": [
+          "person",
+          "car",
+          "bus",
+          "truck",
+          "unknown_vehicle"
+        ],
+        "static": [
+          "unknown_morai_obstacle"
+        ]
+      },
+      "notes": [
+        "Motion-category labels cannot substitute for physical object type; relabel existing boxes."
+      ]
+    }
+  }
+}

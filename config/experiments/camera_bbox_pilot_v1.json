@@ -1,0 +1,23 @@
+{
+  "experiment_id": "camera_bbox_pilot_v1",
+  "seed": 20261011,
+  "source_dataset": "dataset_versions/camera_objects_bbox_v5-capture-r1",
+  "source_curated": "roboflow/curated-v5-capture-r1/curated.jsonl",
+  "label_policy": "config/datasets/camera_object_labels_v2.json",
+  "max_train_images": 8000,
+  "fallback_train_images": 4000,
+  "max_eval_images_per_split": 300,
+  "rare_image_threshold": 300,
+  "source_fraction_cap": 0.25,
+  "capture_fraction_cap": 0.40,
+  "priority_classes": ["box", "plastic_barrier", "steel_barricade", "concrete_barrier"],
+  "models": {
+    "yolo26l": "models/camera_coco7_v1/yolo26l.pt",
+    "yoloe26l": "models/camera_yoloe_selection_v1/l/yoloe-26l-seg.pt"
+  },
+  "text_names": ["person", "dog", "deer", "bicycle", "car", "motorcycle", "bus", "truck", "bollard", "box", "concrete barrier", "steel barricade", "traffic drum", "plastic barrier", "traffic cone", "stroller"],
+  "training": {"imgsz": 960, "batch_candidates": [4, 2, 1], "nbs": 16, "amp": true, "optimizer": "AdamW", "lr0": 0.001, "weight_decay": 0.0005, "freeze": null, "epochs_max": 20, "epochs_min": 5, "smoke_batches": 200, "budget_seconds": 21600, "per_model_budget_seconds": 10800, "epoch_margin": 1.2},
+  "evaluation": {"conf_control": 0.40, "conf_min": 0.10, "conf_max": 0.70, "conf_step": 0.05, "iou": 0.5, "old_recall_drop_limit": 0.02, "f1_tie": 0.01, "minimum_gt": 20},
+  "runtime_changes": false,
+  "original_data_mutations": false
+}

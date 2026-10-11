@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "experiment_id": "camera_capture_size_scope_v2",
+  "coordinate_space": "original_image_pixels",
+  "primary_profile": "coarse24x12",
+  "profiles": {
+    "point8x4": {"min_long_edge": 8, "min_short_edge": 4, "ignore_prediction_ioa": 0.5},
+    "main16x8": {"min_long_edge": 16, "min_short_edge": 8, "ignore_prediction_ioa": 0.5},
+    "coarse24x12": {"min_long_edge": 24, "min_short_edge": 12, "ignore_prediction_ioa": 0.5}
+  },
+  "selection": "Provisional visual-analysis scope increased at the user's request after inspecting the 16/8 gallery. Prior results were already exposed. Not a blind evaluation, proven detectability limit or operating acceptance threshold.",
+  "distance_policy": "No guessed metric distance cutoff; use source-image box size consistently across models.",
+  "prediction_policy": "Match main GT first. Only unmatched predictions mostly within ignored GT can be ignored; do not globally drop small predictions.",
+  "training_policy": "Preserve all original GT. Evaluation ignore is not a YOLO TXT training ignore flag. Do not delete tiny positive labels or convert tiny-only images into negatives.",
+  "previous_scope": "config/experiments/camera_capture_size_scope_v1.json",
+  "original_inference_config": "config/experiments/camera_yoloe_x_teacher_v1.json"
+}

@@ -1,0 +1,891 @@
+{
+  "schema_version": 1,
+  "experiment": "camera_training_data_v4",
+  "v4": {
+    "verified_images": 527,
+    "verified_objects": 973,
+    "exact_pixel_leaks": 0,
+    "manifest_sha256": "6c0d91ede16ceaf42971d1bcbbf9a515a7e9055466f4f6a68650bceded9ccfd4",
+    "training_performed": false
+  },
+  "v3_unchanged": {
+    "verified_images": 95,
+    "verified_objects": 250,
+    "exact_pixel_leaks": 0,
+    "manifest_sha256": "80e775ea98d746b611e802f465ce5935d36ec4154032636c8a8a2f9f154e2fe4",
+    "training_performed": false
+  },
+  "existing_split_changes": 0,
+  "previous_accepted_lost": 0,
+  "new_rgb_reviews": {
+    "accept": 165,
+    "pending": 42,
+    "reject": 26
+  },
+  "new_rgb_review_images": 233,
+  "reviews_sha256": "81e0aa3c2577b92a1d0a5b64f76b4acd289e325b22b1b620b51d7cfcf26078b4",
+  "previous_reviews_sha256": "45fdb0da292543cd70dbe83f3650d296d3b381636a1c5e9fd9d1ca0f3394474e",
+  "prior_split_registry_sha256": "595f1a60129f08875b71f5e355389a4bbc3b4cd1d9de62dd7c8f1b4ec8214a9c",
+  "v4_curated_sha256": "04d6b53131f3d776d8c9437a3432c86adcea3fb7f16d576e27d908cf0c0ef8c0",
+  "experiment_config_sha256": "a2adb01a8592978091c280d3adae95e4da2c24e097b430520340ecbdb880fb7d",
+  "label_policy_sha256": "a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698",
+  "source_policy_sha256": "e6832405538986a8505b832aa0f3db747a391e38be858f8ac9e936ba818aa47a",
+  "progress_sha256": "85bed6c79be602731883b9684c818272a1797689fc83c498807671d5e083971e",
+  "classes": {
+    "person": {
+      "train": {
+        "images": 321,
+        "objects": 327,
+        "groups": 4,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 321
+          },
+          "tunnel": {
+            "unknown": 321
+          },
+          "view": {
+            "unknown": 318,
+            "right": 2,
+            "left": 1
+          },
+          "distance": {
+            "unknown": 321
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "at_least24x12": 91,
+          "below16x8": 186,
+          "16x8_to24x12": 50
+        }
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      }
+    },
+    "dog": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      }
+    },
+    "deer": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      }
+    },
+    "bicycle": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      }
+    },
+    "car": {
+      "train": {
+        "images": 23,
+        "objects": 49,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 23
+          },
+          "tunnel": {
+            "unknown": 23
+          },
+          "view": {
+            "unknown": 23
+          },
+          "distance": {
+            "unknown": 23
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "16x8_to24x12": 16,
+          "at_least24x12": 31,
+          "below16x8": 2
+        }
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 1,
+        "objects": 2,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 1
+          },
+          "tunnel": {
+            "unknown": 1
+          },
+          "view": {
+            "left": 1
+          },
+          "distance": {
+            "unknown": 1
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "at_least24x12": 1,
+          "16x8_to24x12": 1
+        }
+      }
+    },
+    "motorcycle": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 19,
+        "objects": 38,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 19
+          },
+          "tunnel": {
+            "unknown": 19
+          },
+          "view": {
+            "unknown": 19
+          },
+          "distance": {
+            "unknown": 19
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "at_least24x12": 38
+        }
+      }
+    },
+    "bus": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      }
+    },
+    "truck": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 1,
+        "objects": 1,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 1
+          },
+          "tunnel": {
+            "unknown": 1
+          },
+          "view": {
+            "left": 1
+          },
+          "distance": {
+            "unknown": 1
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "at_least24x12": 1
+        }
+      },
+      "heldout": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      }
+    },
+    "bollard": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      }
+    },
+    "box": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 1,
+        "objects": 6,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 1
+          },
+          "tunnel": {
+            "unknown": 1
+          },
+          "view": {
+            "left": 1
+          },
+          "distance": {
+            "unknown": 1
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "16x8_to24x12": 1,
+          "below16x8": 5
+        }
+      },
+      "heldout": {
+        "images": 104,
+        "objects": 104,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 104
+          },
+          "tunnel": {
+            "unknown": 104
+          },
+          "view": {
+            "unknown": 104
+          },
+          "distance": {
+            "unknown": 104
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "at_least24x12": 88,
+          "16x8_to24x12": 6,
+          "below16x8": 10
+        }
+      }
+    },
+    "concrete_barrier": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 88,
+        "objects": 112,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 88
+          },
+          "tunnel": {
+            "unknown": 88
+          },
+          "view": {
+            "unknown": 88
+          },
+          "distance": {
+            "unknown": 88
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "at_least24x12": 112
+        }
+      }
+    },
+    "steel_barricade": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 19,
+        "objects": 19,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 19
+          },
+          "tunnel": {
+            "unknown": 19
+          },
+          "view": {
+            "unknown": 19
+          },
+          "distance": {
+            "unknown": 19
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "at_least24x12": 19
+        }
+      }
+    },
+    "traffic_drum": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 141,
+        "objects": 199,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 141
+          },
+          "tunnel": {
+            "unknown": 141
+          },
+          "view": {
+            "unknown": 141
+          },
+          "distance": {
+            "unknown": 141
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "16x8_to24x12": 55,
+          "at_least24x12": 144
+        }
+      }
+    },
+    "plastic_barrier": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 58,
+        "objects": 116,
+        "groups": 1,
+        "conditions_by_image": {
+          "weather": {
+            "unknown": 58
+          },
+          "tunnel": {
+            "unknown": 58
+          },
+          "view": {
+            "unknown": 58
+          },
+          "distance": {
+            "unknown": 58
+          }
+        },
+        "source_pixel_sizes_by_object": {
+          "at_least24x12": 116
+        }
+      }
+    },
+    "traffic_cone": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      }
+    },
+    "stroller": {
+      "train": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "selection": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      },
+      "heldout": {
+        "images": 0,
+        "objects": 0,
+        "groups": 0,
+        "conditions_by_image": {
+          "weather": {},
+          "tunnel": {},
+          "view": {},
+          "distance": {}
+        },
+        "source_pixel_sizes_by_object": {}
+      }
+    }
+  },
+  "semantic_subtypes": {
+    "person": {
+      "train": 327
+    },
+    "car": {
+      "train": 49,
+      "heldout": 2
+    },
+    "concrete_barricade": {
+      "heldout": 112
+    },
+    "cargo_box": {
+      "heldout": 40,
+      "selection": 6
+    },
+    "wooden_box": {
+      "heldout": 64
+    },
+    "traffic_barrel": {
+      "heldout": 50
+    },
+    "pe_drum": {
+      "heldout": 149
+    },
+    "pe_firewall": {
+      "heldout": 116
+    },
+    "motorcycle": {
+      "heldout": 38
+    },
+    "steel_barricade": {
+      "heldout": 19
+    },
+    "truck": {
+      "selection": 1
+    }
+  },
+  "missing_class_splits": {
+    "person": [
+      "selection",
+      "heldout"
+    ],
+    "dog": [
+      "train",
+      "selection",
+      "heldout"
+    ],
+    "deer": [
+      "train",
+      "selection",
+      "heldout"
+    ],
+    "bicycle": [
+      "train",
+      "selection",
+      "heldout"
+    ],
+    "car": [
+      "selection"
+    ],
+    "motorcycle": [
+      "train",
+      "selection"
+    ],
+    "bus": [
+      "train",
+      "selection",
+      "heldout"
+    ],
+    "truck": [
+      "train",
+      "heldout"
+    ],
+    "bollard": [
+      "train",
+      "selection",
+      "heldout"
+    ],
+    "box": [
+      "train"
+    ],
+    "concrete_barrier": [
+      "train",
+      "selection"
+    ],
+    "steel_barricade": [
+      "train",
+      "selection"
+    ],
+    "traffic_drum": [
+      "train",
+      "selection"
+    ],
+    "plastic_barrier": [
+      "train",
+      "selection"
+    ],
+    "traffic_cone": [
+      "train",
+      "selection",
+      "heldout"
+    ],
+    "stroller": [
+      "train",
+      "selection",
+      "heldout"
+    ]
+  },
+  "source_pixel_sizes": {
+    "at_least24x12": 641,
+    "16x8_to24x12": 129,
+    "below16x8": 203
+  },
+  "approved_sample_buckets": [
+    "roboflow:aiv5challenge/yeonsoo-sarang|person"
+  ],
+  "teacher_approved": false,
+  "training_performed": false,
+  "collection_started": false,
+  "runtime_changes": false,
+  "structurally_usable_subset": true,
+  "comparison_training_ready": false,
+  "prior_v4_checkpoint_preserved": true,
+  "reporting_correction": "Bucket diagnostics now compare the original source mapping and pre-edit geometry. Post-edit values previously overstated Enzo bucket approvals; admission/export counts were unaffected.",
+  "local_artifacts": "artifacts/camera-training-data-audit-v4",
+  "local_data": "data/dataset_versions/camera_objects_bbox_v4"
+}

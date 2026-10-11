@@ -1,0 +1,134 @@
+{
+  "config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+  "source_manifest_sha256": "63cc3539294a7035d537073b77cac08b7672107b13483418dac402de2c794a3b",
+  "source_curated_sha256": "33523378869f1f03b465c245810fe1b3b4f10e82ee90f3930d228a2d7ec1e374",
+  "pilot_manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+  "train": {
+    "requested": 8000,
+    "selected": 8000,
+    "image_frequency_before": {
+      "person": 6810,
+      "truck": 2690,
+      "car": 8268,
+      "bus": 3842,
+      "bollard": 2295,
+      "plastic_barrier": 149,
+      "bicycle": 227,
+      "concrete_barrier": 844,
+      "motorcycle": 63,
+      "traffic_drum": 1486,
+      "traffic_cone": 618,
+      "box": 1007,
+      "steel_barricade": 145,
+      "deer": 21,
+      "dog": 125
+    },
+    "image_frequency_after": {
+      "traffic_drum": 888,
+      "concrete_barrier": 844,
+      "person": 2759,
+      "steel_barricade": 145,
+      "truck": 1021,
+      "car": 2121,
+      "bicycle": 227,
+      "plastic_barrier": 149,
+      "bus": 1713,
+      "bollard": 971,
+      "box": 1007,
+      "dog": 125,
+      "traffic_cone": 374,
+      "motorcycle": 63,
+      "deer": 21
+    },
+    "rare_classes": [
+      "bicycle",
+      "deer",
+      "dog",
+      "motorcycle",
+      "plastic_barrier",
+      "steel_barricade"
+    ],
+    "rare_images_not_selected": {
+      "bicycle": 0,
+      "deer": 0,
+      "dog": 0,
+      "motorcycle": 0,
+      "plastic_barrier": 0,
+      "steel_barricade": 0
+    },
+    "source_images": {
+      "roboflow:dh-mzmhr/animal-tohen": 41,
+      "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel": 283,
+      "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel": 117,
+      "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel": 28,
+      "roboflow:yolo-m5lvd/detection-bzetd": 181,
+      "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel": 239,
+      "roboflow:parkminseo/final-ftuy2": 526,
+      "roboflow:jjj-nx9di/katri_new_data-xkbev": 933,
+      "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel": 239,
+      "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh": 585,
+      "roboflow:hl-fma/hlfma_2": 423,
+      "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel": 340,
+      "capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel": 14,
+      "roboflow:mino-qjf5p/vi2re": 378,
+      "roboflow:hl-fma/hlfma_3": 2000,
+      "roboflow:selfcar/morai_test-t3i2r": 844,
+      "roboflow:aiv5challenge/yeonsoo-sarang": 547,
+      "roboflow:battery-detection/cone-traffic-tirxp": 274,
+      "capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel": 5,
+      "capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel": 3
+    },
+    "capture_images": 1268,
+    "source_cap": 2000,
+    "capture_cap": 3200,
+    "lineage_groups": 6634,
+    "correlated_extra_images": 1366,
+    "blocked_attempts": {
+      "source_or_capture_cap": 909
+    },
+    "all_target_boxes_preserved": true
+  },
+  "evaluation_candidate_rejections": {
+    "invalid_or_no_resolved_gt": 277,
+    "leak_or_missing_source": 5847
+  },
+  "verification": {
+    "images": 8600,
+    "pixel_leaks": 0,
+    "group_leaks": 0,
+    "original_annotations_preserved": true
+  },
+  "evaluation": {
+    "selection": {
+      "images": 300,
+      "complete_images": 43,
+      "class_gt": {
+        "person": 197,
+        "bus": 63,
+        "car": 273,
+        "truck": 84,
+        "box": 6
+      }
+    },
+    "heldout": {
+      "images": 300,
+      "complete_images": 70,
+      "class_gt": {
+        "car": 204,
+        "bus": 94,
+        "truck": 183,
+        "person": 51,
+        "deer": 1,
+        "plastic_barrier": 70,
+        "traffic_drum": 180,
+        "concrete_barrier": 43,
+        "box": 43,
+        "bollard": 60,
+        "motorcycle": 138,
+        "steel_barricade": 69
+      }
+    }
+  },
+  "seed": 20261011,
+  "unselected_training_images": 13718
+}

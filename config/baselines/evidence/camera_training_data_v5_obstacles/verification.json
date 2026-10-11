@@ -1,0 +1,15 @@
+{
+  "verified_images": 17631,
+  "verified_objects": 114019,
+  "exact_pixel_leaks": 0,
+  "manifest_sha256": "8fb929e30e83c2af5fb35c8b62baca1c065a459d4a92474c15e5691e77550e1a",
+  "training_performed": false,
+  "evaluation_membership_and_labels_unchanged": true,
+  "original_geometry_changes": 0,
+  "previous_accepted_lost": 0,
+  "existing_split_changes": 0,
+  "prior_breadth_quality_tiers_preserved": true,
+  "teacher_truth_used": false,
+  "local_regression_tests": 97,
+  "complete_target_annotation_asserted": false
+}

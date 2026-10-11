@@ -1,0 +1,84 @@
+{
+  "cpu_tests": {
+    "data_audit": 50,
+    "data_readiness": 10,
+    "teacher_audit": 16,
+    "gallery_hub": 1,
+    "total": 77,
+    "passed": true
+  },
+  "documentation": "passed",
+  "perception_contract": "passed",
+  "perception_topic_policy": "passed",
+  "perception_runtime_acceptance": "passed",
+  "javascript": "v4 review and gallery hub parsed",
+  "py_compile": "passed",
+  "http": {
+    "http": [
+      {
+        "path": "",
+        "status": 200,
+        "bytes": 80678
+      },
+      {
+        "path": "camera-training-data-audit-v4/index.html",
+        "status": 200,
+        "bytes": 32851
+      },
+      {
+        "path": "camera-training-data-audit-v4/review/progress.html",
+        "status": 200,
+        "bytes": 58602
+      },
+      {
+        "path": "camera-training-data-audit-v4/review/index.html",
+        "status": 200,
+        "bytes": 6598
+      },
+      {
+        "path": "camera-training-data-audit-v4/review-evidence/index.html",
+        "status": 200,
+        "bytes": 4635
+      }
+    ],
+    "pages": [
+      {
+        "id": "E158",
+        "path": "camera-training-data-audit-v4/index.html"
+      },
+      {
+        "id": "E157",
+        "path": "camera-training-data-audit-v4/review-evidence/index.html"
+      },
+      {
+        "id": "E156",
+        "path": "camera-training-data-audit-v4/review/progress.html"
+      },
+      {
+        "id": "E155",
+        "path": "camera-training-data-audit-v4/review/index.html"
+      },
+      {
+        "id": "E154",
+        "path": "camera-training-data-audit-v4/review-r1/progress.html"
+      },
+      {
+        "id": "E153",
+        "path": "camera-training-data-audit-v4/review-r1/index.html"
+      }
+    ],
+    "link_check": {
+      "pages": 158,
+      "local_static_links": 27007,
+      "missing": [],
+      "scope": "Static href/src/poster; dynamic gallery data and HTTP availability checked separately"
+    }
+  },
+  "hosted_ci": {
+    "observed_head": "de299a50555a6365e6c41a89e2a0c23a4dde55c6",
+    "run": 38054850548,
+    "status": "not_started_billing_blocked",
+    "message": "The job was not started because recent account payments have failed or your spending limit needs to be increased.",
+    "latest_head_recheck": "Recorded in PR after push; this file preserves pre-push observation."
+  }
+}

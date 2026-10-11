@@ -1,0 +1,145 @@
+schema_version: 1
+experiment: camera_training_data_v5_capture
+date: '2026-10-11'
+configuration: config/experiments/camera_training_data_v5_capture.json
+previous:
+  images: 17631
+  capture_images: 5
+  objects: 114019
+  splits:
+    train: 16851
+    selection: 113
+    heldout: 667
+current:
+  previous_curated_sha256: 3712f0628a45a66334226d23648a66a431ab2e07beabc2d7d312f575706ce211
+  actor_reviews_sha256: 294221397d043ed87d9e19349e18506e26bf8a678a18cd8822b9d483b488233d
+  label_policy_sha256: a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698
+  images: 22498
+  roboflow_images: 17626
+  capture_images: 4872
+  objects: 127334
+  splits:
+    train: 21718
+    selection: 113
+    heldout: 667
+  objects_by_class:
+    person: 24566
+    car: 18676
+    traffic_cone: 1372
+    dog: 136
+    deer: 24
+    steel_barricade: 505
+    box: 1470
+    traffic_drum: 18520
+    bollard: 51001
+    concrete_barrier: 2196
+    bus: 4214
+    plastic_barrier: 585
+    truck: 3229
+    motorcycle: 591
+    bicycle: 249
+  quality_tiers:
+    previous_reviewed_subset: 5013
+    source_mapped_breadth_training: 12618
+    capture_actor_rgb_breadth_training: 4867
+  actor_intervals_reviewed: 70
+  evaluation_membership_and_labels_unchanged: true
+  original_geometry_changes: 0
+  previous_accepted_lost: 0
+  training_size_filter: false
+  complete_target_annotation_asserted: false
+  teacher_truth_used: false
+  training_performed: false
+  sampling_changed: false
+  runtime_changes: false
+  new_images: 4867
+  new_objects: 13315
+  new_classes:
+    box: 802
+    truck: 1199
+    car: 6719
+    person: 2312
+    bus: 945
+    bicycle: 249
+    traffic_cone: 584
+    concrete_barrier: 36
+    traffic_drum: 363
+    dog: 106
+  new_by_run:
+    capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel: 1071
+    capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel: 785
+    capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel: 974
+    capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel: 1191
+    capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel: 145
+    capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel: 595
+    capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel: 18
+    capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel: 57
+    capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel: 31
+  new_by_view:
+    front: 2096
+    left: 1251
+    right: 1520
+  new_actor_resolved_objects: 2494
+  rejected_capture_candidates:
+    unresolved_actor_in_image: 620
+    empty_or_missing_gt_not_negative: 13045
+    split_or_duplicate_review: 5728
+    existing_geometry_or_individual_review_issue: 160
+coverage:
+  capture_new_by_weather_provenance:
+    SUNNY: 4078
+    FOGGY: 789
+  weather_basis: original capture run name; no per-frame weather GT
+  tunnel_coverage: unknown; run names do not attest per-frame tunnel membership
+  new_actor_identity_intervals: 67
+  objects_by_split:
+    train:
+      person: 24454
+      car: 18674
+      traffic_cone: 1372
+      dog: 136
+      deer: 24
+      steel_barricade: 304
+      box: 1261
+      traffic_drum: 18100
+      bollard: 50602
+      concrete_barrier: 1946
+      bus: 4214
+      plastic_barrier: 469
+      truck: 3228
+      motorcycle: 191
+      bicycle: 249
+    selection:
+      person: 112
+      truck: 1
+      box: 6
+    heldout:
+      concrete_barrier: 250
+      box: 203
+      traffic_drum: 420
+      plastic_barrier: 116
+      motorcycle: 400
+      steel_barricade: 201
+      bollard: 399
+      car: 2
+  missing_classes:
+  - stroller
+  independent_16_class_evaluation_ready: false
+verification: config/baselines/evidence/camera_training_data_v5_capture/verification.json
+actor_evidence: config/baselines/evidence/camera_training_data_v5_capture/actor-source-evidence.json
+local_dataset: data/dataset_versions/camera_objects_bbox_v5-capture-r1
+local_artifacts: artifacts/camera-training-data-audit-v5-capture
+remaining:
+- stroller absent; deer/plastic/steel unchanged by Capture reinforcement.
+- Fixed evaluation split has sparse 16-class coverage; training data volume is not
+  an accuracy result.
+- Source/class sampling and training not started.
+- Adjacent frames are correlated; source/run-aware balancing and evaluation required.
+local_checks:
+  cpu_tests_passed: 107
+  documentation_contract_validators_passed: 4
+  final_tool_reproduces_saved_curated_rows: true
+  gallery_pages: 202
+  gallery_static_missing_links: 0
+  gallery_http_status: 200
+  hosted_ci: check new pushed HEAD; previous HEAD blocked by GitHub billing

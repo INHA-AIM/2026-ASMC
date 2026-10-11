@@ -1,0 +1,115 @@
+schema_version: 1
+experiment: camera_training_data_v4_direct
+date: '2026-10-10'
+scope: Fixed-sample direct source mapping review and bulk admission; no training/runtime
+  changes
+configuration: config/experiments/camera_training_data_v4_direct.json
+verification: config/baselines/evidence/camera_training_data_v4_direct/verification.json
+previous:
+  images: 527
+  objects: 973
+  splits:
+    train: 344
+    selection: 1
+    heldout: 182
+current:
+  images: 4523
+  objects: 67646
+  splits:
+    train: 3743
+    selection: 113
+    heldout: 667
+  objects_by_class:
+    person: 515
+    car: 207
+    traffic_cone: 97
+    bollard: 49505
+    traffic_drum: 15339
+    concrete_barrier: 384
+    steel_barricade: 237
+    box: 209
+    plastic_barrier: 116
+    motorcycle: 400
+    bus: 633
+    truck: 4
+  objects_by_split:
+    train:
+      person: 403
+      car: 205
+      traffic_cone: 97
+      bollard: 49106
+      traffic_drum: 14919
+      concrete_barrier: 134
+      steel_barricade: 36
+      bus: 633
+      truck: 3
+    selection:
+      person: 112
+      truck: 1
+      box: 6
+    heldout:
+      concrete_barrier: 250
+      box: 203
+      traffic_drum: 420
+      plastic_barrier: 116
+      motorcycle: 400
+      steel_barricade: 201
+      bollard: 399
+      car: 2
+  semantic_subtypes:
+    person: 515
+    car: 207
+    traffic_cone: 97
+    bollard: 49505
+    pe_drum: 15339
+    concrete_barricade: 384
+    steel_barricade: 237
+    cargo_box: 103
+    wooden_box: 106
+    pe_firewall: 116
+    motorcycle: 400
+    bus: 633
+    truck: 4
+source_images:
+  aiv5challenge/yeonsoo-sarang: 341
+  battery-detection/cone-traffic-tirxp: 40
+  enzo-mdikr/my-first-project-eeree: 666
+  hl-fma/hlfma_3: 677
+  s-workspace-p9mvp/morai_obstacle: 112
+  selfcar/morai_test-t3i2r: 2548
+  tooth-decay-rnacu/morai_ai_mission-fhqkh: 134
+review_images: 1047
+review_decisions:
+  accept: 898
+  reject: 103
+  pending: 46
+bucket_states:
+  pending: 105
+  approved: 14
+  failed_sample: 13
+accepted_unresolved_labels: 0
+accepted_structure_failures: 0
+existing_split_changes: 0
+previous_accepted_lost: 0
+exact_pixel_leaks: 0
+all_16_classes_present: false
+comparison_training_ready: false
+missing_classes:
+- dog
+- deer
+- bicycle
+- stroller
+next_tasks:
+- Reclassify jjj 9 and Park box for box/plastic_barrier train data; retain frozen
+  Enzo heldout.
+- Split animal/dog/deer mixtures and rider composite boxes with reviewed labels.
+- Repair missing target annotations in affected hl-fma and cone scenes; tooth PE contains
+  both cylindrical drums and rectangular plastic barriers.
+- Review remaining source-class buckets, expand independent evaluation coverage and
+  balance training before pilot.
+local_dataset: data/dataset_versions/camera_objects_bbox_v4-direct-r2
+local_artifacts: artifacts/camera-training-data-audit-v4-direct-review
+gallery: http://localhost:8768/camera-training-data-audit-v4-direct-review/index.html
+teacher_approved: false
+training_performed: false
+runtime_changes: false

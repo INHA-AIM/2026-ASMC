@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "experiment_id": "camera_training_data_v5_obstacle_reinforcement",
+  "date": "2026-10-11",
+  "previous_curated": "roboflow/curated-v5-breadth-r1/curated.jsonl",
+  "previous_reviews": "roboflow/visual-review-v4-coverage-r1/reviews.json",
+  "admission_config": "config/experiments/camera_training_data_v5_breadth.json",
+  "label_policy": "config/datasets/camera_object_labels_v2.json",
+  "seed": 20261011,
+  "selection": [
+    {"source": "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh", "labels": ["PE", "Obstacle_Yellow"], "limit": 96},
+    {"source": "roboflow:hl-fma/hlfma_2", "labels": ["object"], "limit": 64},
+    {"source": "roboflow:jjj-nx9di/katri_new_data-xkbev", "labels": ["9"], "limit": 64}
+  ],
+  "geometry_changes_allowed": false,
+  "class_changes_require_rgb_inspection": true,
+  "complete_target_annotation_asserted": false,
+  "teacher_truth_allowed": false,
+  "training_performed": false,
+  "runtime_changes": false
+}

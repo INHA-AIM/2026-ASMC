@@ -1,0 +1,76 @@
+{
+  "teacher_cpu_tests": 16,
+  "data_cpu_regression_tests": 50,
+  "unscoped_analysis_exact_fields": 11,
+  "javascript_parser": "esprima==4.0.1",
+  "javascript_syntax_passed": true,
+  "http_checks": [
+    {
+      "path": "",
+      "status": 200
+    },
+    {
+      "path": "summary.json",
+      "status": 200
+    },
+    {
+      "path": "gallery-data.json",
+      "status": 200
+    },
+    {
+      "path": "evaluation-scope.jsonl",
+      "status": 200
+    },
+    {
+      "path": "images/0000-main.jpg",
+      "status": 200
+    },
+    {
+      "path": "images/0000-all.jpg",
+      "status": 200
+    },
+    {
+      "path": "raw/98de1e1ba8d5b9b2b3d4ef164c9451be87ada98c1140ec8f9a6b7803ddc630ca.png",
+      "status": 200
+    },
+    {
+      "path": "images/0158-main.jpg",
+      "status": 200
+    },
+    {
+      "path": "images/0158-all.jpg",
+      "status": 200
+    },
+    {
+      "path": "raw/5b2bc1d9c2e9c7ebf5f3d3b084cf1f249c04b3c48c6a08951650b268cd20e42d.png",
+      "status": 200
+    },
+    {
+      "path": "images/0316-main.jpg",
+      "status": 200
+    },
+    {
+      "path": "images/0316-all.jpg",
+      "status": 200
+    },
+    {
+      "path": "raw/690f50e1b6f2b57cb0c3067102ffdbd13566d269a751b2614780bb41ef32ac23.png",
+      "status": 200
+    }
+  ],
+  "validators": [
+    "documentation_migration",
+    "perception_contract",
+    "git_diff_check",
+    "python_compile"
+  ],
+  "scope_config_sha256": "0b93d431bdb1dbd2d1448dd458bee8aeec8dcebbc513acb5312a04bf4535ef57",
+  "tools_sha256": {
+    "capture_size_scope.py": "552ba8e37e3b2cff5c6ac8c435ad285080eadd8172d34899a75db9ccdc0e1c20",
+    "camera_teacher_audit.py": "4e34dab502ad621cfbe83c22590f27b0ac66f196fb6802010e3ba873d33de754",
+    "report_capture_size_scope.py": "1ccb06f6de633665dab313f789f1f8751c7f6a4bd62b86aa8e66b731197c1b7e"
+  },
+  "gpu_inference_performed": false,
+  "training_export_changed": false,
+  "formal_teacher_approval": false
+}

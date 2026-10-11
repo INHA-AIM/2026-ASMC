@@ -1,0 +1,136 @@
+schema_version: 1
+experiment: camera_training_data_v5_obstacle_reinforcement
+date: '2026-10-11'
+configuration: config/experiments/camera_training_data_v5_obstacle_reinforcement.json
+admission_configuration: config/experiments/camera_training_data_v5_breadth.json
+previous:
+  images: 17465
+  objects: 113288
+  splits:
+    train: 16685
+    selection: 113
+    heldout: 667
+current:
+  schema_version: 1
+  policy: user_authorized_breadth_training_v1
+  previous_curated_sha256: 2c1fe9358b9b2ce161cc0aaf9b71c44f980ec53c038043361e5a9f223523517e
+  config_sha256: 355c7abff9f2f600414c88b8eab5302218b579d338aed17a111a04fff2a3dd23
+  labels_sha256: a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698
+  reviews_sha256: 04ed80d22e9b78b90ea3cbd949a23bf227e01a1abea14406b90f891fb47c83c0
+  source_profiles_sha256: e6832405538986a8505b832aa0f3db747a391e38be858f8ac9e936ba818aa47a
+  previous_images: 17465
+  images: 17631
+  roboflow_images: 17626
+  capture_images: 5
+  objects: 114019
+  splits:
+    train: 16851
+    selection: 113
+    heldout: 667
+  objects_by_class:
+    person: 22254
+    car: 11957
+    traffic_cone: 788
+    dog: 30
+    deer: 24
+    steel_barricade: 505
+    box: 668
+    traffic_drum: 18157
+    bollard: 51001
+    concrete_barrier: 2160
+    bus: 3269
+    plastic_barrier: 585
+    truck: 2030
+    motorcycle: 591
+  quality_tiers:
+    previous_reviewed_subset: 5013
+    source_mapped_breadth_training: 12618
+  evaluation_membership_and_labels_unchanged: true
+  original_geometry_changes: 0
+  existing_split_changes: 0
+  previous_accepted_lost: 0
+  strict_quality_equivalent: false
+  training_performed: false
+  runtime_changes: false
+  pilot_usable: true
+  all_16_classes_covered: false
+  new_images: 166
+  new_objects: 731
+  new_by_source:
+    roboflow:hl-fma/hlfma_2: 62
+    roboflow:jjj-nx9di/katri_new_data-xkbev: 11
+    roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh: 93
+  new_classes:
+    steel_barricade: 64
+    box: 76
+    traffic_drum: 256
+    person: 99
+    bollard: 51
+    concrete_barrier: 131
+    car: 15
+    bus: 2
+    plastic_barrier: 37
+  rejected_training_candidates:
+    empty_annotations: 5764
+    split_or_duplicate_review: 1343
+    excluded_only_not_assumed_negative: 3909
+    unresolved_mixed_or_composite: 14693
+    known_mixed_source_label: 441
+    invalid_geometry: 10
+    exact_pixel_duplicate: 926
+  new_images_with_previous_individual_review_failure: 0
+  new_images_with_previous_sample_failure: 85
+  complete_target_annotation_asserted: false
+objects_by_split:
+  train:
+    person: 22142
+    car: 11955
+    traffic_cone: 788
+    dog: 30
+    deer: 24
+    steel_barricade: 304
+    box: 459
+    traffic_drum: 17737
+    bollard: 50602
+    concrete_barrier: 1910
+    bus: 3269
+    plastic_barrier: 469
+    truck: 2029
+    motorcycle: 191
+  selection:
+    person: 112
+    truck: 1
+    box: 6
+  heldout:
+    concrete_barrier: 250
+    box: 203
+    traffic_drum: 420
+    plastic_barrier: 116
+    motorcycle: 400
+    steel_barricade: 201
+    bollard: 399
+    car: 2
+inspection:
+  images: 193
+  annotation_crops: 516
+  unresolved_crops: 16
+  reviewer: Codex independent RGB annotation crop inspection; not human confirmation
+  complete_image_inspection: false
+  selection_sha256: b3dc7778adb57d252c77e3d4bb9bcd3fb4aa9f1e81129ff3538dcf03f32f90a3
+  samples_sha256: a25183cb91854995bcaf5aba4b0c9cf8a65aee8f5452d20b3e429e0d709fe745
+  crop_decisions_sha256: 46a4bec58b5215a3dc03bae5e16dda741c71e73117384cf834e94092ff72de33
+verification: config/baselines/evidence/camera_training_data_v5_obstacles/verification.json
+export_manifest_sha256: 8fb929e30e83c2af5fb35c8b62baca1c065a459d4a92474c15e5691e77550e1a
+local_dataset: data/dataset_versions/camera_objects_bbox_v5-obstacles-r1
+local_artifacts: artifacts/camera-training-data-audit-v5-obstacles
+training_performed: false
+collection_started: false
+runtime_changes: false
+pilot_usable: true
+full_16_class_independent_evaluation_ready: false
+remaining:
+- bicycle/stroller absent; selection coverage sparse.
+- Unresolved tiny/composite boxes remain deferred; no label propagation to unseen
+  images.
+- Source/class balancing and fixed evaluation needed for short pilot; no accuracy
+  improvement claim yet.
