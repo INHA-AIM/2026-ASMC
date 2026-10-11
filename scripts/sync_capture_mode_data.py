@@ -42,6 +42,7 @@ def parse_args():
     )
     parser.add_argument("--data-root", default=str(default_data_root()))
     parser.add_argument("--jobs", type=int, default=4)
+    parser.add_argument("--profile", choices=("legacy18", "bbox3", "bbox3_partial"), default="legacy18")
     parser.add_argument(
         "--exclude-sequence",
         action="append",
@@ -105,10 +106,11 @@ def main():
                 records, excluded_records = select_records(
                     source_records, excluded_sequences=excluded_sequences
                 )
-                _, total_bytes = preflight_run(
+                frames, total_bytes = preflight_run(
                     args.sensor_root,
                     records,
                     validate_png=not args.skip_png_check,
+                    profile=args.profile,
                 )
                 result = {
                     "run_id": run_id,
@@ -119,7 +121,7 @@ def main():
                     "excluded_sequences": [
                         int(record["sequence"]) for record in excluded_records
                     ],
-                    "file_count": len(records) * 18,
+                    "file_count": sum(len(entries) for _, entries in frames),
                     "source_bytes": total_bytes,
                 }
             else:
@@ -131,6 +133,7 @@ def main():
                     jobs=args.jobs,
                     validate_png=not args.skip_png_check,
                     excluded_sequences=excluded_sequences,
+                    profile=args.profile,
                 )
                 result["status"] = "sync_complete"
             print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))

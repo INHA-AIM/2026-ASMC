@@ -21,6 +21,7 @@ catkin_package()
 if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_capture_mode.py)
   catkin_add_nosetests(test/test_capture_sync.py)
+  catkin_add_nosetests(test/test_capture_collection.py)
   catkin_add_nosetests(test/test_mask_baker.py)
   catkin_add_nosetests(test/test_perception_curation.py)
   catkin_add_nosetests(test/test_perception_dataset.py)
@@ -30,6 +31,7 @@ endif()
 catkin_install_python(PROGRAMS
   scripts/sync_collector_node.py
   scripts/capture_mode_collector_node.py
+  scripts/capture_route_collector_node.py
   scripts/bag_recorder_node.py
   scripts/bag_replay_node.py
   scripts/audit_rosbag_run.py

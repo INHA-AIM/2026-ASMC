@@ -732,6 +732,8 @@ def registry(args):
             verification=json.loads(verification.read_text()) if verification.exists() else None,
             parent_provenance=provenance_data or None,
             frozen=True,status='current_adopted' if directory.name==args.current else
+                'reviewed_capture_subset_not_merged' if summary.get('dataset_role')=='capture_subset' and summary.get('source_run_restore_passed') is True else
+                'diagnostic_capture_subset_not_merged' if summary.get('dataset_role')=='capture_subset' else
                 'superseded_intermediate' if directory.name in superseded else 'historical_not_current'))
     if args.current not in {e['version'] for e in entries}:raise ValueError('current dataset version missing')
     if args.current in superseded or superseded-{e['version'] for e in entries}:

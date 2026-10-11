@@ -9,6 +9,7 @@ It intentionally has no ROS dependency so it can run directly from WSL.
 from __future__ import print_function
 
 import json
+import hashlib
 import os
 import shutil
 import struct
@@ -108,8 +109,10 @@ def png_hw(path):
     return int(height), int(width)
 
 
-def frame_sources(sensor_root, record):
-    """Return all 18 expected source files for one capture record."""
+def frame_sources(sensor_root, record, profile="legacy18"):
+    """bbox3 requires three-view RGB/semantic/instance/BBox; extras are optional."""
+    if profile not in ("legacy18", "bbox3", "bbox3_partial"):
+        raise CaptureSyncError("unknown Capture profile: " + str(profile))
     sensor_root = Path(sensor_root)
     custom_name = str(record["custom_name"])
     sources = []
@@ -121,40 +124,48 @@ def frame_sources(sensor_root, record):
                     "view": view,
                     "modality": modality,
                     "expected_hw": expected_hw,
+                    "required": profile == "legacy18" or (view != "traffic_light" and modality != "depth"),
                     "path": sensor_root
                     / sensor_dir
                     / "{}_{}.png".format(custom_name, source_suffix),
                 }
             )
+        if profile in ("bbox3", "bbox3_partial"):
+            sources.append(dict(kind="bbox", view=view, required=profile == "bbox3" and view != "traffic_light",
+                                path=sensor_root / sensor_dir / (custom_name + "_BBox2D.txt")))
     for sensor_dir, name in STATE_SENSORS:
         sources.append(
             {
                 "kind": "state",
                 "name": name,
+                "required": profile == "legacy18",
                 "path": sensor_root / sensor_dir / "{}.txt".format(custom_name),
             }
         )
     return sources
 
 
-def preflight_run(sensor_root, records, validate_png=True):
+def preflight_run(sensor_root, records, validate_png=True, profile="legacy18"):
     """Validate completeness, file sizes, and native camera dimensions."""
     frames = []
     total_bytes = 0
     errors = []
     for record in records:
-        entries = frame_sources(sensor_root, record)
+        entries = frame_sources(sensor_root, record, profile)
+        present = []
         for entry in entries:
             path = entry["path"]
             try:
                 size = path.stat().st_size
             except FileNotFoundError:
-                errors.append("missing: {}".format(path))
+                if entry["required"]:
+                    errors.append("missing: {}".format(path))
                 continue
-            if size <= 0:
+            if size <= 0 and entry["kind"] != "bbox":
                 errors.append("empty: {}".format(path))
                 continue
             entry["size"] = int(size)
+            present.append(entry)
             total_bytes += size
             if validate_png and entry["kind"] == "image":
                 try:
@@ -168,7 +179,7 @@ def preflight_run(sensor_root, records, validate_png=True):
                             path, entry["expected_hw"], actual_hw
                         )
                     )
-        frames.append((record, entries))
+        frames.append((record, present))
     if errors:
         preview = "\n".join(errors[:20])
         suffix = "\n... {} more".format(len(errors) - 20) if len(errors) > 20 else ""
@@ -184,18 +195,32 @@ def _destination_path(run_root, sequence, entry):
     stem = "{:06d}".format(int(sequence))
     if entry["kind"] == "image":
         return run_root / "frames" / entry["modality"] / entry["view"] / (stem + ".png")
+    if entry["kind"] == "bbox":
+        return run_root / "frames" / "bbox" / entry["view"] / (stem + ".txt")
     return run_root / "state" / entry["name"] / (stem + ".txt")
 
 
 def _copy_atomic(source, destination):
-    if destination.exists() and destination.stat().st_size == source.stat().st_size:
+    if destination.exists() and destination.stat().st_size == source.stat().st_size and file_sha(source) == file_sha(destination):
         return "skipped", source.stat().st_size
     temporary = destination.with_name(destination.name + ".part")
     if temporary.exists():
         temporary.unlink()
-    shutil.copy2(str(source), str(temporary))
+    # DrvFs copy_file_range/sendfile can exhaust kernel allocation while copying
+    # thousands of Windows Capture files. Bound userspace memory per worker.
+    with source.open('rb') as incoming, temporary.open('wb') as outgoing:
+        shutil.copyfileobj(incoming, outgoing, length=256 * 1024)
+    shutil.copystat(str(source), str(temporary))
     os.replace(str(temporary), str(destination))
     return "copied", source.stat().st_size
+
+
+def file_sha(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _write_json_atomic(path, value):
@@ -222,6 +247,7 @@ def sync_run(
     jobs=4,
     validate_png=True,
     excluded_sequences=None,
+    profile="legacy18",
 ):
     """Preflight and resumably copy one run. Source files are never deleted."""
     capture_dir = Path(capture_root) / run_id
@@ -246,7 +272,7 @@ def sync_run(
     records, excluded_records = select_records(
         source_records, excluded_sequences=excluded_sequences
     )
-    frames, total_bytes = preflight_run(sensor_root, records, validate_png=validate_png)
+    frames, total_bytes = preflight_run(sensor_root, records, validate_png=validate_png, profile=profile)
     run_root = Path(dataset_root) / run_id
     run_root.mkdir(parents=True, exist_ok=True)
 
@@ -257,7 +283,9 @@ def sync_run(
         sequence = int(record["sequence"])
         paths = {modality: {} for _, modality in MODALITIES}
         paths["state"] = {}
+        paths["bbox"] = {}
         source_files = []
+        hashes = {}
         for entry in entries:
             destination = _destination_path(run_root, sequence, entry)
             directories.add(destination.parent)
@@ -265,8 +293,11 @@ def sync_run(
             relative = destination.relative_to(run_root).as_posix()
             if entry["kind"] == "image":
                 paths[entry["modality"]][entry["view"]] = relative
+            elif entry["kind"] == "bbox":
+                paths["bbox"][entry["view"]] = relative
             else:
                 paths["state"][entry["name"]] = relative
+            hashes[relative] = file_sha(entry["path"])
             source_files.append(str(entry["path"]))
         manifest_rows.append(
             {
@@ -292,6 +323,9 @@ def sync_run(
                 "state_snapshot": record.get("state"),
                 "paths": paths,
                 "source_files": source_files,
+                "sha256": hashes,
+                "capture_profile": profile,
+                "missing_bbox_views": [v for v in ("front", "left", "right") if v not in paths["bbox"]] if profile != "legacy18" else None,
                 "valid": True,
             }
         )
@@ -327,9 +361,15 @@ def sync_run(
             if index % 1000 == 0 or index == len(futures):
                 print("[sync] {}/{} files".format(index, len(futures)), flush=True)
 
+    for row in manifest_rows:
+        for relative, expected in row["sha256"].items():
+            if file_sha(run_root / relative) != expected:
+                raise CaptureSyncError("copy hash mismatch: " + relative)
+
     lineage_dir = run_root / "lineage"
     lineage_dir.mkdir(parents=True, exist_ok=True)
-    for name in ("meta.json", "summary.json", "capture_manifest.jsonl"):
+    for name in ("meta.json", "summary.json", "capture_manifest.jsonl", "spawn-ledger.jsonl", "validation.json",
+                 "collection.json", "control.jsonl", "restoration.json"):
         source = capture_dir / name
         if source.is_file():
             _copy_atomic(source, lineage_dir / name)
@@ -352,7 +392,9 @@ def sync_run(
             }
             for record in excluded_records
         ],
-        "files_per_frame": 18,
+        "files_per_frame": 18 if profile == "legacy18" else sorted(set(len(entries) for _, entries in frames)),
+        "capture_profile": profile,
+        "bbox_missing_view_count": sum(len(row["missing_bbox_views"] or []) for row in manifest_rows),
         "source_bytes": total_bytes,
         "camera_views": {
             view: {"sensor_dir": sensor_dir, "height": hw[0], "width": hw[1]}
@@ -375,6 +417,7 @@ def sync_run(
     return {
         "run_id": run_id,
         "run_root": str(run_root),
+        "bbox_missing_view_count": dataset_meta["bbox_missing_view_count"],
         "frame_count": len(frames),
         "source_successful_frame_count": len(source_records),
         "excluded_frame_count": len(excluded_records),

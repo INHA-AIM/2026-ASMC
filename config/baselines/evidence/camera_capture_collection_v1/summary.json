@@ -1,0 +1,238 @@
+{
+  "date": "2026-10-12",
+  "status": "collection_validation_in_progress",
+  "pr80_merge": "c862ff071c1178110ab937e50e618602cb1dbd04",
+  "branch": "feat/capture-route-collection",
+  "base_dependency": "PR #81",
+  "operating_model_changed": false,
+  "stationary_gt_subset": {
+    "images": 9,
+    "objects": 57,
+    "classes": {
+      "person": 21,
+      "stroller": 12,
+      "plastic_barrier": 6,
+      "steel_barricade": 6,
+      "traffic_cone": 6,
+      "deer": 6
+    },
+    "quarantined": 0,
+    "fixed_class_ids": [
+      "person",
+      "dog",
+      "deer",
+      "bicycle",
+      "car",
+      "motorcycle",
+      "bus",
+      "truck",
+      "bollard",
+      "box",
+      "concrete_barrier",
+      "steel_barricade",
+      "traffic_drum",
+      "plastic_barrier",
+      "traffic_cone",
+      "stroller"
+    ],
+    "split": "train",
+    "split_group": "gt_pilot6_20261011",
+    "original_eval_splits_unchanged": true,
+    "training_ready": false,
+    "reason": "new Capture subset only; merge with frozen v7 and resample before training"
+  },
+  "pilot": [
+    {
+      "run_id": "route_pp_5_20261011T151702_055",
+      "controller": "pp",
+      "target_kph": 5.0,
+      "passed": true,
+      "cte_p95_m": 0.208515572541686,
+      "cte_max_m": 0.21045134384550584,
+      "actual_speed_max_kph": 4.984317621294851,
+      "actual_speed_p50_kph": 4.970546838284816,
+      "seconds_at_80pct_target": 16.06790271768113,
+      "capture_summary": {
+        "attempted": 30,
+        "closed_at_utc": "2026-10-11T15:17:34.457+00:00",
+        "effective_capture_hz": 1.0012,
+        "failed": 0,
+        "rpc_latency": {
+          "count": 30,
+          "max_ms": 570.346,
+          "p50_ms": 538.36,
+          "p95_ms": 560.803
+        },
+        "run_id": "route_pp_5_20261011T151702_055",
+        "skipped_motion": 0,
+        "succeeded": 30
+      }
+    },
+    {
+      "run_id": "route_pp_20_20261011T151738_831",
+      "controller": "pp",
+      "target_kph": 20.0,
+      "passed": true,
+      "cte_p95_m": 0.19922528776534956,
+      "cte_max_m": 0.21342704267681986,
+      "actual_speed_max_kph": 19.95339836542939,
+      "actual_speed_p50_kph": 19.921102037096773,
+      "seconds_at_80pct_target": 12.046250988950483,
+      "capture_summary": {
+        "attempted": 30,
+        "closed_at_utc": "2026-10-11T15:18:11.294+00:00",
+        "effective_capture_hz": 0.9993,
+        "failed": 0,
+        "rpc_latency": {
+          "count": 30,
+          "max_ms": 588.101,
+          "p50_ms": 534.325,
+          "p95_ms": 562.9
+        },
+        "run_id": "route_pp_20_20261011T151738_831",
+        "skipped_motion": 0,
+        "succeeded": 30
+      }
+    },
+    {
+      "run_id": "route_pp_30_20261011T151816_142",
+      "controller": "pp",
+      "target_kph": 30.0,
+      "passed": true,
+      "cte_p95_m": 0.1997297813815422,
+      "cte_max_m": 0.21189428082196893,
+      "actual_speed_max_kph": 29.821517967666516,
+      "actual_speed_p50_kph": 19.159061979112753,
+      "seconds_at_80pct_target": 7.207320188963784,
+      "capture_summary": {
+        "attempted": 30,
+        "closed_at_utc": "2026-10-11T15:18:48.687+00:00",
+        "effective_capture_hz": 0.9979,
+        "failed": 0,
+        "rpc_latency": {
+          "count": 30,
+          "max_ms": 609.726,
+          "p50_ms": 543.234,
+          "p95_ms": 568.019
+        },
+        "run_id": "route_pp_30_20261011T151816_142",
+        "skipped_motion": 0,
+        "succeeded": 30
+      }
+    }
+  ],
+  "selected_speed_kph": 30,
+  "checks": {
+    "capture_cpu": 19,
+    "native_gt_export_cpu": 5,
+    "bbox_training_cpu": 13,
+    "teacher_expansion_cpu": 22,
+    "overlay_build": "passed",
+    "nested_lidar_build": "passed",
+    "hosted_ci": "not run: GitHub account billing/spending limit",
+    "perception_contract": "passed",
+    "documentation_migration": "passed",
+    "p1b_contract": "existing main mismatch: UrbanFeatureDebug unregistered; no message changes in this branch"
+  },
+  "evidence_root": "data/capture-pilot-preflight-20261011",
+  "gallery": "http://localhost:8768/capture-route-pilot-r2-20261011/",
+  "remaining": [
+    "120 stage visual review and runtime gate",
+    "SUNNY/FOGGY x 11/13/15 full laps",
+    "final source-kind/RGBA-verified Capture exports and coverage summary"
+  ],
+  "ground_calibration": {
+    "assets": 28,
+    "excluded": [
+      "RedBarrel"
+    ],
+    "configuration": "config/morai/capture_asset_ground_v1.json"
+  },
+  "route12_subset": {
+    "images": 902,
+    "objects": 1811,
+    "classes": {
+      "person": 543,
+      "stroller": 269,
+      "plastic_barrier": 371,
+      "steel_barricade": 214,
+      "deer": 178,
+      "traffic_cone": 90,
+      "concrete_barrier": 146
+    },
+    "quarantined": 841,
+    "fixed_class_ids": [
+      "person",
+      "dog",
+      "deer",
+      "bicycle",
+      "car",
+      "motorcycle",
+      "bus",
+      "truck",
+      "bollard",
+      "box",
+      "concrete_barrier",
+      "steel_barricade",
+      "traffic_drum",
+      "plastic_barrier",
+      "traffic_cone",
+      "stroller"
+    ],
+    "split": "train",
+    "split_group": "route12_20261012",
+    "original_eval_splits_unchanged": true,
+    "training_ready": false,
+    "reason": "new Capture subset only; merge with frozen v7 and resample before training",
+    "status": "superseded: source-kind and instance-color revalidation in r2"
+  },
+  "route12_source": {
+    "captures": 583,
+    "complete_mandatory_records": 581,
+    "excluded_missing_instance": [
+      421,
+      556
+    ],
+    "missing_bbox_views": 722,
+    "forward_progress_m": 2178.06,
+    "cte_p95_m": 0.245475,
+    "cte_max_m": 0.44809,
+    "runtime_acceptance": false,
+    "reason": "Original restoration.json stopped=false; native GT subset kept as diagnostic, independent label/SHA/eval leakage check passed"
+  },
+  "stage60": {
+    "planned": 60,
+    "live": 57,
+    "all_api_records": 58,
+    "all_live_ids_present": true,
+    "all_live_numeric_gate": true,
+    "visual_gate_passed": false,
+    "source_ledger_sha256": "30ea458881532a4a1866d61990f242ef8c2dba4ca2775c55f42cc92bc5e56999",
+    "tracking_run": "route_pp_30_20261011T155937_637",
+    "tracking_passed": true,
+    "runtime_acceptance": false,
+    "reason": "stop restore failed and old aggregator ignored it; preserved correction; repeating with stable restore gate",
+    "placement_review": {
+      "approved": 49,
+      "rejected_and_removed": 8,
+      "gallery": "artifacts/capture-route60-review-final-20261012/index.html"
+    },
+    "repeat": {
+      "run_id": "route_pp_30_20261011T161630_349",
+      "captures": 678,
+      "cte_p95_m": 0.249187,
+      "cte_max_m": 0.438491,
+      "runtime_acceptance": true,
+      "active_reviewed": 49
+    }
+  },
+  "stage120": {
+    "planned": 120,
+    "spawned": 118,
+    "active": 115,
+    "numeric_gate_passed": true,
+    "visual_gate_passed": false,
+    "status": "full-route inspection in progress",
+    "run_id": "route_pp_30_20261011T163237_854"
+  }
+}
