@@ -12,6 +12,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <morai_msgs/CtrlCmd.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/UInt8.h>
 #include <visualization_msgs/MarkerArray.h>
 
 #include <algorithm>
@@ -88,7 +89,7 @@ struct Parameters {
     // 차선 경계 입력(base_link).
     std::string input_topic = "/perception/lane/boundary_family";
     // MORAI UDP bridge 주행 명령.
-    std::string control_topic = "/ctrl_cmd";
+    std::string control_topic = "/ctrl_cmd/jamming";
     // 계산 결과 확인.
     std::string preview_topic = "/planning/camera_bbox_lane_change/control_preview";
     // 유효한 lookahead 목표점.
@@ -212,7 +213,11 @@ struct LaneChangeState {
 } change_state;
 
 ros::Subscriber bbox_subscriber;
+ros::Subscriber mode_subscriber;
 ros::Publisher reference_lane_publisher;
+bool mode_active = false;
+bool mode_received = false;
+bool await_activation_bbox = false;
 
 void bboxCallback(const BboxResult::ConstPtr& message);
 std::string bboxStopReason();
@@ -225,6 +230,7 @@ bool buildRoadBoundedChangePath(const LaneChain& lane, std::vector<FamilyPoint2d
 bool pathInsideRoad(const std::vector<FamilyPoint2d>& path);
 void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>& path);
 void validateLaneChangeParameters();
+void modeCallback(const std_msgs::UInt8::ConstPtr& message);
 
 
 struct RosInterface {
@@ -297,11 +303,17 @@ int main(int argc, char** argv) {
         ros::WallRate control_rate(params.control_rate);
         while (ros::ok() && !shutdown_requested) {
             ros::spinOnce();
-            cameraLaneFollowingProcess();
+            if (mode_active) {
+                cameraLaneFollowingProcess();
+            } else {
+                // Sensor callbacks still refresh observations. The control loop
+                // owns every actuation-dependent lane-change transition/timer.
+                publishDiagnostics(false, "inactive_mode", makeStopCommand());
+            }
             control_rate.sleep();
         }
 
-        if (ros::ok()) {
+        if (ros::ok() && mode_active) {
             publishShutdownStop();
         }
         ros::shutdown();
@@ -314,6 +326,69 @@ int main(int argc, char** argv) {
 }
 
 namespace {
+
+void resetActuationLifecycle() {
+    // A previous calculated command may never have reached the vehicle.
+    // Re-select the physically observed lane on fresh camera frames.
+    follower_state.locked_lane = -1;
+    follower_state.pending_lane = -1;
+    follower_state.confirmation_count = 0;
+    follower_state.target_ready = false;
+    follower_state.stop_reason = "confirming_own_lane";
+    follower_state.selected_lane = LaneChain{};
+    follower_state.target_point = FamilyPoint2d{};
+    follower_state.last_steering = 0.0;
+    follower_state.last_control_time = ros::SteadyTime::now();
+
+    // Keep latest camera/BBOX observations, but never credit frames received
+    // before activation toward a new lane-change decision.
+    change_state.path.clear();
+    change_state.decision_sequence = change_state.bbox_sequence;
+    change_state.obstacle_hits = 0;
+    change_state.clear_hits = 0;
+    change_state.target_lane = -1;
+    change_state.changing = false;
+    change_state.change_failed = false;
+    change_state.change_failure_reason.clear();
+    change_state.timing_updated_at = follower_state.last_control_time;
+    change_state.drive_time_sec = 0.0;
+    change_state.pause_time_sec = 0.0;
+    change_state.last_command_driving = false;
+    change_state.completion_hits = 0;
+    change_state.completion_stamp = ros::Time();
+    change_state.change_started = ros::SteadyTime();
+    change_state.completed_at = ros::SteadyTime();
+    change_state.has_completed = false;
+    change_state.maximum_path_curvature = 0.0;
+    // The classifier may still hold a recently published reference lane from
+    // the previous driving episode. Discard labels made against that reference.
+    change_state.bbox_valid = false;
+    change_state.bbox_error = "waiting_for_bbox_after_activation";
+    await_activation_bbox = true;
+    std_msgs::Int8 automatic_lane;
+    automatic_lane.data = -1;
+    reference_lane_publisher.publish(automatic_lane);
+}
+
+void modeCallback(const std_msgs::UInt8::ConstPtr& message) {
+    if (!message) return;
+    mode_received = true;
+    const bool next_active = message->data == 1;
+    if (message->data != 0 && message->data != 1) {
+        ROS_ERROR_THROTTLE(1.0, "Jamming node rejected unknown planning mode %u",
+                           static_cast<unsigned>(message->data));
+    }
+    if (next_active == mode_active) return;
+    mode_active = next_active;
+    if (mode_active) {
+        resetActuationLifecycle();
+    } else {
+        std_msgs::Int8 automatic_lane;
+        automatic_lane.data = -1;
+        reference_lane_publisher.publish(automatic_lane);
+    }
+    ROS_WARN("Jamming control lifecycle %s", mode_active ? "ACTIVE" : "INACTIVE");
+}
 
 // ============================================================================
 // 5. MAIN PROCESS: 한 주기의 차로 추종 흐름
@@ -489,7 +564,7 @@ morai_msgs::CtrlCmd makeFollowingCommand(double dt) {
 void publishControlCommand(const morai_msgs::CtrlCmd& command) {
     ros_interface.preview_pub.publish(command);
 
-    if (params.enable_control) {
+    if (params.enable_control && mode_active) {
         ros_interface.control_pub.publish(command);
     }
 }
@@ -922,6 +997,8 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "bbox_input_error", change_state.bbox_error);
 
     addDiagnosticValue(status, "enable_control", params.enable_control ? "true" : "false");
+    addDiagnosticValue(status, "mode_received", mode_received ? "true" : "false");
+    addDiagnosticValue(status, "mode_active", mode_active ? "true" : "false");
     addDiagnosticValue(status, "active_lane", std::to_string(follower_state.locked_lane));
     addDiagnosticValue(status, "clipped_obstacle_tracking", change_state.clipped_association ? "true" : "false");
     addDiagnosticValue(status, "locked_lane", std::to_string(follower_state.locked_lane));
@@ -989,6 +1066,7 @@ void initializeRosInterface(ros::NodeHandle& nh) {
     ros_interface.diagnostic_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(params.diagnostics_topic, 1);
     ros_interface.lane_sub = nh.subscribe(params.input_topic, 1, laneBoundaryCallback);
     ros_interface.stop_sub = nh.subscribe(params.emergency_stop_topic, 1, emergencyStopCallback);
+    mode_subscriber = nh.subscribe("/planning/mode", 1, modeCallback);
     follower_state.last_control_time = ros::SteadyTime::now();
 
     ROS_WARN("Camera lane follower: control=%s lookahead_x=%.2fm speed=%.1fkm/h. "
@@ -1178,6 +1256,11 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
         message->assignments.size() != message->boxes.size() || message->box_reasons.size() != message->boxes.size() || message->clipped_association.size() != message->boxes.size()) {
         reject("invalid_bbox_lane_contract"); return;
     }
+    if (await_activation_bbox &&
+        (follower_state.locked_lane < 0 ||
+         message->own_lane != follower_state.locked_lane)) {
+        reject("waiting_for_bbox_matching_observed_lane"); return;
+    }
     int own = BboxResult::NO_DETECTION, adjacent = BboxResult::NO_DETECTION;
     bool deferred_far = false;
     bool clipped_association = false;
@@ -1207,6 +1290,7 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
     change_state.bbox_received = change_state.bbox_valid = true;
     change_state.bbox_error.clear();
     change_state.bbox_sequence++;
+    await_activation_bbox = false;
 }
 
 std::string bboxStopReason() {

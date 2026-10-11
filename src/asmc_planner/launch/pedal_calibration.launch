@@ -1,0 +1,27 @@
+<launch>
+  <!-- Run only with the autonomy/MPC launch stopped, in a clear flat area. -->
+  <arg name="armed" default="false"/>
+  <arg name="mode" default="brake"/>
+  <arg name="pedal" default="0.2"/>
+  <arg name="target_speed_mps" default="10.0"/>
+  <arg name="approach_accel" default="0.25"/>
+  <arg name="max_speed_mps" default="12.0"/>
+  <arg name="max_trial_time_s" default="45.0"/>
+  <arg name="pre_roll_s" default="2.0"/>
+  <arg name="coast_before_brake_s" default="0.5"/>
+  <arg name="bag_path" default=""/>
+
+  <node pkg="asmc_planner" type="pedal_calibration_node.py"
+        name="pedal_calibration" output="screen" required="true">
+    <param name="armed" value="$(arg armed)"/>
+    <param name="mode" value="$(arg mode)"/>
+    <param name="pedal" value="$(arg pedal)"/>
+    <param name="target_speed_mps" value="$(arg target_speed_mps)"/>
+    <param name="approach_accel" value="$(arg approach_accel)"/>
+    <param name="max_speed_mps" value="$(arg max_speed_mps)"/>
+    <param name="max_trial_time_s" value="$(arg max_trial_time_s)"/>
+    <param name="pre_roll_s" value="$(arg pre_roll_s)"/>
+    <param name="coast_before_brake_s" value="$(arg coast_before_brake_s)"/>
+    <param name="bag_path" value="$(arg bag_path)"/>
+  </node>
+</launch>

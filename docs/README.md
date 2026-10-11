@@ -218,7 +218,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [TwinLite training](../src/asmc_camera/training/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
 | [BEV 개발 이력](../src/asmc_camera/docs/bev-development-history.md) | 3-camera fused metric BEV, 범위 audit와 calibration/live gate |
 | [data_collection](../src/data_collection/README.md) | Capture, sync, mask/cache와 dataset 실행법 |
-| [frenet_planner](../src/frenet_planner/README.md) | Frenet Planner 책임, runtime I/O, core 폴더 지도, 빌드/테스트 |
+| [frenet_planner](../src/asmc_planner/README.md) | Frenet Planner 책임, runtime I/O, core 폴더 지도, 빌드/테스트 |
 | [interfaces](../src/interfaces/README.md) | provisional topic과 합의된 계약의 승격 위치 |
 | [jamming_lane_boundary_adapter](../src/jamming_lane_boundary_adapter/README.md) | 카메라 metric 경계를 판제와 검토하는 read-only C++ consumer pilot |
 | [integration](../src/integration/README.md) | UDP bridge와 내부 ROS 진입점 |

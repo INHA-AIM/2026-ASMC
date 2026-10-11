@@ -122,7 +122,7 @@ def parse_args(argv: Optional[Sequence[str]] = None):
     parser.add_argument(
         "--require-planning",
         action="store_true",
-        help="require behavior_planner subscriptions to typed and legacy traffic light",
+        help="require asmc_planner subscriptions to typed and legacy traffic light",
     )
     parser.add_argument(
         "--require-lane-adapter",

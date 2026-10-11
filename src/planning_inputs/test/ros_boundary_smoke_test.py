@@ -36,9 +36,9 @@ def require(predicate, description, timeout=30):
 
 def main():
     launch = subprocess.Popen([
-        'roslaunch', 'behavior_planner', 'autonomy_no_bridges_v2.launch',
+        'roslaunch', 'asmc_planner', 'autonomy_no_bridges_v2.launch',
         'objects_source:=lidar', 'lidar_source_policy:=main_raw',
-        'lidar_input_topic:=/lidar/tracked_objects_map', 'dashboard:=false', 'traffic_light:=false'], start_new_session=True)
+        'lidar_input_topic:=/lidar/tracked_objects_map', 'traffic_light:=false'], start_new_session=True)
     extra_processes = []
     try:
         master = rosgraph.Master('/planning_boundary_test')
@@ -48,14 +48,14 @@ def main():
         def subscriptions():
             return dict(master.getSystemState()[1])
 
-        require(lambda: {'/behavior_planner', '/frenet_planner',
+        require(lambda: {'/asmc_planner',
                          '/mpc_controller'}.issubset(set(
                              subscriptions().get('/planning/vehicle/state', []))),
                 'Behavior, Frenet and MPC share private vehicle state')
-        require(lambda: {'/behavior_planner', '/frenet_planner'}.issubset(set(
+        require(lambda: {'/asmc_planner'}.issubset(set(
                     subscriptions().get('/planning/objects', []))),
                 'Behavior and Frenet subscribe to private objects')
-        assert '/frenet_planner' not in subscriptions().get('/perception/objects', [])
+        assert '/asmc_planner' not in subscriptions().get('/perception/objects', [])
         print('PASS Frenet does not consume frozen public DetectedObject type', flush=True)
 
         received = []

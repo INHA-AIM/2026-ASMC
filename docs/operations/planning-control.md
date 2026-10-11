@@ -62,44 +62,30 @@ source devel/setup.bash
 ./scripts/udp_bridge.sh
 ```
 
-터미널 2에서 v2 planning chain을 실행한다.
+터미널 2에서 통합 planner와 controller를 실행한다. LiDAR와 카메라 중계기는 별도로 실행한다.
 
 ```bash
 cd /root/ws
 source devel/setup.bash
-roslaunch behavior_planner autonomy_no_bridges_v2.launch
+roslaunch asmc_planner autonomy_no_bridges_v2.launch objects_source:=lidar traffic_light:=false
 ```
 
-이 launch는 다음을 함께 시작한다.
+- `asmc_planner` 내부에서 Behavior → Execution → Frenet을 직접 호출한다.
+- `/planning/vehicle/state`, `/planning/objects`는 planner와 MPC의 입력이다.
+- Behavior 10 Hz, Planning 20 Hz 및 controller/jamming selector 계약은 유지한다.
+- 신호 인식은 `traffic_light` 기본값 `true`이며, 외부 producer가 실행 중이면 `false`로 둔다.
+- 공개 debug 메시지는 `asmc_msgs/UrbanFeatureDebug`다.
 
-- GPS/IMU 또는 개발 Ego source 기반 `vehicle_state`
-- `/Object_topic`→`/perception/objects` 임시 adapter
-- Behavior v2, Frenet과 MPC
-- 신호등 typed/legacy consumer; camera inference producer는 기본으로 시작하지 않음
-
-신호등 producer는 별도 `asmc_camera` runtime이 소유한다. 독립 planning 호환 시험에서만
-아래처럼 명시적으로 켤 수 있으며, perception launch와 동시에 켜지 않는다.
-
-```bash
-roslaunch behavior_planner autonomy_no_bridges_v2.launch \
-  traffic_light:=true dashboard:=false
-```
-
-이것은 개발용 launch다. `/Object_topic`은 privileged simulator oracle이므로 본선 허용
-LiDAR perception으로 교체되기 전에는 competition launch로 사용하지 않는다.
-
-## 4. Component·호환 smoke
+## 4. Component·회귀 검증
 
 | 명령 | 용도 | 주의 |
 |---|---|---|
-| `roslaunch behavior_planner behavior_node_v2.launch` | Behavior v2 단독 | 입력/feedback 별도 필요 |
-| `roslaunch frenet_planner frenet_planner.launch` | Frenet 단독 | state/object/command 별도 필요 |
+| `roslaunch asmc_planner planner_v2.launch` | 통합 planner 단독 | state/object 입력 별도 필요 |
 | `roslaunch asmc_controller controller.launch` | MPC 단독 | 입력 없으면 STOP이 정상 |
-| `roslaunch frenet_planner keep_morai_no_obstacles.launch` | obstacle-free KEEP E2E | perception 미사용, production gate 아님 |
-| `roslaunch behavior_planner autonomy_no_bridges.launch` | v1 호환 smoke | 현재 v2 production 계약 아님 |
+| `rosrun asmc_planner v2_ros_regression_test` | 명시적 회귀시험 | 별도의 ROS master와 시험 입력 필요 |
 
-v1과 v2 node를 동시에 띄워 같은 output topic에 중복 publisher를 만들지 않는다. 같은
-`/vehicle/state`, `/ctrl_cmd`와 `map→base_link`도 authoritative producer를 하나만 둔다.
+같은 production topic에는 authoritative publisher 하나만 실행한다. `behavior_planner`와
+`frenet_planner` 패키지는 제거되었다. 기존 ROS 파라미터 namespace는 유지한다.
 
 ## 5. 현재 topic 계약
 
@@ -172,7 +158,7 @@ Frenet은 catkin package 단위 `run_tests_frenet_planner` target을 등록하�
 directory에 25개 CTest를 등록한다. `catkin_test_results`는 결과 경로 하나씩 집계한다.
 
 `v2_ros_regression_test`는 살아 있는 `roscore`와 Frenet node가 필요해 자동 CTest에 포함되지
-않는다. 실행법은 `src/frenet_planner/tests/v2_ros_regression_test.cpp`의 상단 주석을 따른다.
+않는다. 실행법은 `src/asmc_planner/tests/frenet/v2_ros_regression_test.cpp`의 상단 주석을 따른다.
 
 MORAI를 실제로 돌리지 않았다면 unit/static 결과와 full-course 미검증 상태를 분리해 보고한다.
 

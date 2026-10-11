@@ -12,7 +12,7 @@ Planning 전체 경계는 [Planning/Control 개발 가이드](../../docs/package
 | subscribe | `/planning/trajectory` | `asmc_msgs/Trajectory` | Frenet reference |
 | subscribe | `/vehicle/state` | `asmc_msgs/VehicleState` | 유일한 현재 x0 |
 | subscribe | `/behavior/command_v2` | `asmc_msgs/BehaviorCommand` | emergency override |
-| publish | `/ctrl_cmd` | `morai_msgs/CtrlCmd` | MORAI bridge가 UDP로 전송 |
+| publish | `/ctrl_cmd/normal` | `morai_msgs/CtrlCmd` | Mode selector가 NORMAL에서 `/ctrl_cmd`로 전달 |
 
 `Trajectory.ego_at_plan`은 trajectory provenance 검증용이며 현재 vehicle state로 재사용하지
 않는다. reference start offset은 trajectory와 최신 vehicle source time의 차이로 계산한다.

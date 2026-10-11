@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="asmc_planner" type="asmc_control_selector_node"
+        name="asmc_control_selector" required="true"/>
+  <test pkg="asmc_planner" type="control_selector_test.py"
+        test-name="control_selector_test" time-limit="45"/>
+</launch>

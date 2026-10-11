@@ -527,7 +527,7 @@ topic_families:
       file: src/asmc_camera/src/asmc_camera/nodes/traffic_light_node.py
       anchors: ['parser.add_argument("--typed-topic", default="/perception/traffic_light/detection")']
     consumers:
-      - file: src/behavior_planner/src/node/behavior_node.cpp
+      - file: src/asmc_planner/src/Parser/BehaviorInput.cpp
         anchor: '"/perception/traffic_light/detection"'
     bag_profiles: []
     classification: canonical_runtime
@@ -543,7 +543,7 @@ topic_families:
       file: src/asmc_camera/src/asmc_camera/nodes/traffic_light_node.py
       anchors: ['parser.add_argument("--state-topic", default="/traffic_light/state")', 'parser.add_argument("--detail-topic", default="/traffic_light/detail")']
     consumers:
-      - file: src/behavior_planner/src/node/behavior_node.cpp
+      - file: src/asmc_planner/src/Parser/BehaviorInput.cpp
         anchor: 'std::string traffic_light_legacy_topic = "/traffic_light/state";'
     bag_profiles: []
     classification: compatibility
