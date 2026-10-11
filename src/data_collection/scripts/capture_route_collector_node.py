@@ -266,7 +266,7 @@ class CaptureRouteCollector(CaptureModeCollector):
         if self.command_pub:
             for _ in range(3):
                 self.command_pub.publish(CtrlCmd(longlCmdType=1,brake=1.));time.sleep(.05)
-        if self.control_thread and self.control_thread is not threading.current_thread():self.control_thread.join(timeout=1.)
+        if self.control_thread and self.control_thread.is_alive() and self.control_thread is not threading.current_thread():self.control_thread.join(timeout=1.)
         if hasattr(self,'samples_stream') and not self.samples_stream.closed:
             self.samples_stream.close()
             ctes=sorted(r['cte_m'] for r in self.samples if not r['capture_active'])
@@ -321,5 +321,8 @@ if __name__=='__main__':
     node=None
     try:
         node=CaptureRouteCollector.__new__(CaptureRouteCollector);node.__init__();node.run()
+    except Exception as exc:
+        if node:node.fatal=node.fatal or 'collection_exception: '+str(exc)
+        raise
     finally:
         if node:node.close()

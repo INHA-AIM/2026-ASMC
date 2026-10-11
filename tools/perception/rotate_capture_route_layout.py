@@ -26,19 +26,24 @@ def main():
     p.add_argument('--degrees', type=float, default=60.)
     p.add_argument('--grpc-host', default='host.docker.internal')
     p.add_argument('--route', type=Path, default=ROOT/'R_KR_PG_KATRI/2026_molit_comp_global_path.txt')
+    p.add_argument('--pause-static', action='store_true', help='Pause owned static actors while preserving physics and native bbox offsets')
+    p.add_argument('--restore-reviewed-static', action='store_true', help='Restore reviewed poses after physical drift; requires --pause-static')
+    p.add_argument('--inspection-only', action='store_true', help='Freeze numeric-only pending placements at zero rotation for RGB review')
     a = p.parse_args()
+    if a.restore_reviewed_static and not a.pause_static:p.error('pose restoration requires explicit static pause')
+    if a.inspection_only and (not a.pause_static or a.degrees!=0):p.error('pending placements allow only zero-degree static freeze')
     if a.output.exists() or not math.isfinite(a.degrees) or abs(a.degrees)>60:
         raise ValueError('new ledger and finite rotation of at most 60 degrees required')
     import grpc
-    from google.protobuf.json_format import MessageToDict
+    from google.protobuf.json_format import MessageToDict, ParseDict
     from morai.actor.actor_pb2_grpc import ActorStub
-    from morai.actor.actor_set_pb2 import SetTransformParam
+    from morai.actor.actor_set_pb2 import SetTransformParam, EnableActor
     from morai.actor.actor_get_pb2 import GetAllActorsFilter
     from morai.common.object_info_pb2 import ObjectInfo
     from morai.common.enum_pb2 import OBJECT_TYPE_VEHICLE, OBJECT_TYPE_OBSTACLE, OBJECT_TYPE_PEDESTRIAN
     rows=[json.loads(l) for l in a.ledger.read_text().splitlines() if l.strip()]
     active=[r for r in rows if r.get('created') and not r.get('removed')]
-    if not active or any(not r.get('placement_approved') or not r.get('geometry_gate') for r in active):
+    if not active or any((not r.get('placement_approved') and not a.inspection_only) or not r.get('geometry_gate') for r in active):
         raise ValueError('only a reviewed, numerically accepted layout can rotate')
     points=[tuple(map(float,l.split()[:3])) for l in a.route.read_text().splitlines() if l.strip()]
     channel=grpc.insecure_channel(a.grpc_host+':7789');actors=ActorStub(channel)
@@ -51,7 +56,7 @@ def main():
             raise ValueError('unowned actor')
         info=ObjectInfo(object_type=types[r['actor_type']],client_key=r['client_key']);info.id.value=r['id']
         state=actors.GetActorState(info,timeout=3)
-        if state.actor_info.id.value!=r['id'] or any(abs(getattr(state.transform.location,k)-r['settled_location'][k])>.2 for k in 'xyz'):
+        if state.actor_info.id.value!=r['id'] or (not a.restore_reviewed_static and any(abs(getattr(state.transform.location,k)-r['settled_location'][k])>.2 for k in 'xyz')):
             raise ValueError('stale actor identity or position: '+r['id'])
         states[r['id']]=state;infos[r['id']]=info
     all_states=actors.GetAllActorsState(GetAllActorsFilter(vehicle=True,pedestrian=True,obstacle=True),timeout=5)
@@ -62,23 +67,48 @@ def main():
     a.output.parent.mkdir(parents=True,exist_ok=True)
     journal=a.output.with_suffix('.mutations.jsonl')
     if journal.exists():raise ValueError('rotation journal already exists; inspect it before retry')
+    def set_native_pose(key, target, row):
+        request=SetTransformParam(actor_info=infos[key],transform=target)
+        # This MORAI build treats pedestrian SetTransform z as ground-relative.
+        # Spawn/GetActorState use map z. Never send the map height as that offset.
+        if row['actor_type']=='pedestrian':
+            request.transform.location.z=target.location.z-row['state_after_identity_settling']['transform']['location']['z']
+        response=actors.SetTransform(request,timeout=3)
+        if response.status!=1:raise RuntimeError('actor rotation rejected')
+        time.sleep(.08)
+        actual=actors.GetActorState(infos[key],timeout=3)
+        delta=(actual.transform.rotation.z-target.rotation.z+180)%360-180
+        if row['actor_type']=='pedestrian' and 0.05 < abs(delta) <= 5:
+            request.transform.rotation.z-=delta
+            if actors.SetTransform(request,timeout=3).status!=1:raise RuntimeError('bounded pedestrian yaw correction rejected')
+            time.sleep(.08)
+            actual=actors.GetActorState(infos[key],timeout=3)
+        return actual
     changed=[]
+    by_id={r['id']:r for r in active}
     with journal.open('x',buffering=1) as stream:
         try:
             for r in active:
                 before=states[r['id']];desired=copy.deepcopy(before.transform)
+                if a.restore_reviewed_static:
+                    ParseDict(r['state_after_identity_settling']['transform'],desired)
                 desired.rotation.z=(desired.rotation.z+a.degrees)%360
                 stream.write(json.dumps(dict(id=r['id'],before=MessageToDict(before,preserving_proto_field_name=True),
                     requested=MessageToDict(desired,preserving_proto_field_name=True)))+'\n')
                 changed.append(r['id'])
-                response=actors.SetTransform(SetTransformParam(actor_info=infos[r['id']],transform=desired),timeout=3)
-                if response.status!=1:raise RuntimeError('actor rotation rejected')
-                time.sleep(.08)
-                actual=actors.GetActorState(infos[r['id']],timeout=3)
+                if a.pause_static:
+                    # Physics-off loses native bbox pivot offsets in this build.
+                    # Restore it, then pause only the owned static actor.
+                    for method, enabled in ((actors.SetPhysics,True),(actors.SetPause,True)):
+                        response=method(EnableActor(actor_info=infos[r['id']],enable=enabled),timeout=3)
+                        if response.status!=1:raise RuntimeError('owned static pause rejected')
+                    r['static_pause_enabled']=True
+                    r['static_physics_frozen']=False
+                actual=set_native_pose(r['id'],desired,r)
                 radius=math.hypot(actual.bounding_box.extent.x,actual.bounding_box.extent.y)
                 center=(actual.bounding_box.location.x,actual.bounding_box.location.y)
                 if yaw_error(actual.transform.rotation.z,desired.rotation.z)>2 or any(
-                    abs(getattr(actual.transform.location,k)-getattr(before.transform.location,k))>.2 for k in 'xyz'):
+                    abs(getattr(actual.transform.location,k)-getattr(desired.location,k))>.2 for k in 'xyz'):
                     raise RuntimeError('rotation pose mismatch: '+r['id'])
                 if not footprint_clear(points,center,radius,occupied):
                     raise RuntimeError('rotated footprint clearance failed: '+r['id'])
@@ -92,16 +122,22 @@ def main():
                     actual_yaw_deg=r['yaw_deg'],parent_ledger_sha256=hashlib.sha256(a.ledger.read_bytes()).hexdigest(),
                     post_capture_rgb_review_pending=True))
                 stream.write(json.dumps(dict(id=r['id'],verified=MessageToDict(actual,preserving_proto_field_name=True)))+'\n')
+            time.sleep(.5)
+            for r in active:
+                actual=actors.GetActorState(infos[r['id']],timeout=3)
+                if any(abs(getattr(actual.transform.location,k)-r['settled_location'][k])>.02 for k in 'xyz'):
+                    raise RuntimeError('static pose did not remain stable: '+r['id'])
         except BaseException:
             errors=[]
             for key in reversed(changed):
                 try:
-                    response=actors.SetTransform(SetTransformParam(actor_info=infos[key],transform=states[key].transform),timeout=3)
-                    if response.status!=1:raise RuntimeError('rollback rejected')
-                    state=actors.GetActorState(infos[key],timeout=3)
-                    if yaw_error(state.transform.rotation.z,states[key].transform.rotation.z)>2:raise RuntimeError('rollback yaw mismatch')
+                    state=set_native_pose(key,states[key].transform,by_id[key])
+                    if yaw_error(state.transform.rotation.z,states[key].transform.rotation.z)>2 or any(
+                        abs(getattr(state.transform.location,k)-getattr(states[key].transform.location,k))>.2 for k in 'xyz'):
+                        raise RuntimeError('rollback pose mismatch')
                 except Exception as exc:errors.append(dict(id=key,error=str(exc)))
-            stream.write(json.dumps(dict(rollback_attempted=changed,rollback_errors=errors))+'\n')
+            stream.write(json.dumps(dict(rollback_attempted=changed,rollback_errors=errors,
+                owned_static_pause_remains_enabled=bool(a.pause_static)))+'\n')
             raise
         finally:channel.close()
     a.output.write_text(''.join(json.dumps(r)+'\n' for r in rows))

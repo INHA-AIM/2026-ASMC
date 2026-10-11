@@ -254,13 +254,20 @@
     "active": 115,
     "numeric_gate_passed": true,
     "visual_gate_passed": true,
-    "status": "first SUNNY 11 lap collecting; subsequent laps held for user-requested rotation and tunnel relocation",
+    "status": "first 104-actor SUNNY 11 lap completed; augmented 114-actor rotated six-condition collection in progress",
     "run_id": "route_pp_30_20261011T163237_854",
     "runtime_inspection_passed": true,
     "approved_active": 104,
     "rejected_and_removed": 11,
     "inspection_captures": 1003,
-    "inspection_cte_p95_m": 0.245689
+    "inspection_cte_p95_m": 0.245689,
+    "first_sunny11": {
+      "run_id": "route_pp_30_20261011T165501_139",
+      "captures": 936,
+      "cte_p95_m": 0.242939,
+      "cte_max_m": 0.429526,
+      "runtime_acceptance": true
+    }
   },
   "user_collection_extension": {
     "available_hours": 6,
@@ -282,6 +289,14 @@
       "deer": 6,
       "motorcycle": 6
     },
-    "status": "implementation and collection in progress"
+    "status": "implementation and collection in progress",
+    "tunnel_new_observed": 11,
+    "tunnel_new_retained": 10,
+    "active_actors": 114,
+    "first_rotation_verified_degrees": 60,
+    "static_pause_stability_max_drift_m": 0,
+    "physics_off_rejected": "native bbox pivot offsets lost; preserved failed trial, restored physics and native poses",
+    "tunnel_gallery": "artifacts/capture-tunnel-interior-review-r1-20261012/index.html",
+    "rotated_collection_report": "data/collection-evidence-20261012/route120-six-rotated-r1.json"
   }
 }

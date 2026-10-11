@@ -137,6 +137,15 @@ python3 tools/perception/run_capture_route_collection.py collect --pilot-results
 회전별 ledger를 불변 revision으로 남기며, 새 방향의 RGB 구조물 겹침은 라벨 채택 전에 검수한다.
 동일 배치의 방향·날씨 변형은 계속 같은 train split 그룹이다.
 
+이 빌드에서는 `SetPhysics(false)`가 native bbox의 pivot offset을 잃는 반례가 있어
+수집 객체의 물리를 끄지 않는다. `--pause-static --restore-reviewed-static`으로
+검수한 native 자세를 복원하고 수집 actor만 pause한다. Ego는 이 고정 대상에 포함하지 않는다.
+Pedestrian `SetTransform`의 z는 ground-relative이고 조회/스폰 z는 map 높이인
+차이도 실제 Deer1 시험으로 확인했다. 회전 도구는 이 차이를 변환하고 5° 이내 yaw
+편차에만 1회 보정한 뒤 원래 2°/0.2m 허용값으로 검증한다. 물리 OFF 시험과 실패
+rollback 기록은 삭제하지 않으며, 복원 후 새 ledger로만 수집을 재개한다.
+
+
 `--stop-after-current-file PATH`는 해당 파일이 생기면 현재 바퀴의 정상 종료 후 멈춘다.
 `--deadline-utc 2026-10-11T23:00:00Z`처럼 시각을 지정하면 30분 주행/복원 여유가
 없는 새 바퀴를 시작하지 않는다. 진행 중단 시 소유 자식 제어기도 함께 종료하고 환경을 복원한다.
