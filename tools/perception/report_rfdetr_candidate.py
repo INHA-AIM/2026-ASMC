@@ -56,7 +56,19 @@ def main():
     p.add_argument('--candidate',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--parity-report',type=Path,help='Exact candidate engine numerical qualification evidence')
     p.add_argument('--live-matrices',type=Path,nargs='*',default=[],help='Completed diagnostic weather matrices')
+    p.add_argument('--candidate-label',default='RF-DETR L704',help='Explicit model/shape label; never infer scale from speed')
+    p.add_argument('--sensor-control',type=Path,help='Completed sensor/bridge-only report.json')
+    p.add_argument('--sensor-weather-protocol',type=Path,help='Weather restoration proof for sensor-only control')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
+    sensor=None
+    if a.sensor_control:
+        if not a.sensor_weather_protocol:p.error('sensor control requires weather restoration proof')
+        sensor=json.loads(a.sensor_control.read_text())
+        weather=json.loads(a.sensor_weather_protocol.read_text())
+        if not sensor.get('complete') or weather.get('restoration_errors') or not weather.get('restored_weather'):
+            raise ValueError('incomplete sensor control or weather restoration')
+        sensor=dict(report=sensor,weather=weather,report_sha256=sha(a.sensor_control),
+                    weather_sha256=sha(a.sensor_weather_protocol))
     rows=seven_rows([r for r in read_jsonl(a.dataset/'manifest.jsonl') if r['split'] in ('selection','heldout')])
     bp={r['id']:r for r in read_jsonl(a.baseline/'predictions.jsonl')}
     cp={r['id']:r for r in read_jsonl(a.candidate/'predictions.jsonl')}
@@ -67,7 +79,7 @@ def main():
         raise ValueError('gallery parity engine SHA mismatch')
     be=json.loads((a.baseline/'evaluation.json').read_text());ce=json.loads((a.candidate/'evaluation.json').read_text())
     kind=json.loads((a.candidate/'inference.json').read_text())['kind']
-    candidate_label='RF-DETR TensorRT diagnostic' if kind=='rfdetr-trt' else 'RF-DETR PyTorch diagnostic'
+    candidate_label=a.candidate_label+(' TensorRT diagnostic' if kind=='rfdetr-trt' else ' PyTorch diagnostic')
     failures=[];picked=[]
     for r in rows:
         b=diagnose_frame(r,bp[r['id']]['predictions'],.4);c=diagnose_frame(r,cp[r['id']]['predictions'],.4)
@@ -104,10 +116,12 @@ def main():
              html.escape(json.dumps(changes,ensure_ascii=False,indent=2))))
     report=dict(created_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),baseline=be,candidate=ce,
         changed_frames=failures,preview_images=len(selected),candidate_kind=kind,
+        candidate_label=a.candidate_label,
         parity=parity,parity_report_sha256=sha(a.parity_report) if a.parity_report else None,
         runtime_accepted=False,
         scope='same RGB at confidence .40; GT original, only known COCO7; no new labels/training')
     report['integrated_runs']=integrated_reports(a.live_matrices)
+    report['sensor_control']=sensor
     for run in report['integrated_runs']:
         info=candidate_info if run['job']['model'].startswith('rfdetr-') else baseline_info
         if run['runtime'].get('expected_sha256')!=info['weights_sha256']:
@@ -145,9 +159,9 @@ def main():
             b=be['control'][role]['classes'].get(name,{});c=ce['control'][role]['classes'].get(name,{})
             table.append('<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>'%
                 (role,name,b.get('gt',0),b.get('tp',0),c.get('tp',0),html.escape(str(c.get('f1')))))
-    document='''<!doctype html><html lang="ko"><meta charset="utf-8"><title>RF-DETR L704 / YOLO26l 동일 RGB 비교</title>
+    document='''<!doctype html><html lang="ko"><meta charset="utf-8"><title>CANDIDATE_TITLE / YOLO26l 동일 RGB 비교</title>
 <style>body{font:16px system-ui;margin:24px;background:#edf2f7;color:#142535}img{width:100%%}article{background:white;padding:16px;margin:24px 0}pre{white-space:pre-wrap}td,th{padding:8px;border:1px solid #aaa}</style>
-<a href="../../index.html">전체 실험 목차</a><h1>RF-DETR L704 / YOLO26l 동일 RGB 비교</h1>
+<a href="../../index.html">전체 실험 목차</a><h1>CANDIDATE_TITLE / YOLO26l 동일 RGB 비교</h1>
 <p style="background:#ffe0a3;padding:16px"><strong>진단용 · 운영 미수락</strong> — QUALIFICATION.
 MORAI 포함 통합 지연은 이 페이지에서 측정하지 않았습니다. 품질·속도 순위나 운영 교체 승인을 뜻하지 않습니다.</p>
 <p>좌: 원본 GT · 중앙: 현재 YOLO26l TensorRT · 우: CANDIDATE_KIND. confidence 0.40.
@@ -165,9 +179,11 @@ MORAI 포함 통합 지연은 이 페이지에서 측정하지 않았습니다. 
                  html.escape(', '.join(run['failures']) or '측정 gate 통과')))
     if live_rows:
         document=document.replace('</table>','</table><h2>MORAI 포함 통합 진단</h2><p>날씨별 60초 선별 실행. 반복 수락이나 주행 수락이 아닙니다. 입력 callback 수신→출력 수신 wall 지연이며 렌더링·센서 취득부터의 지연이 아닙니다. 실패·뷰별 원본 percentile을 보존하며 실행별 p50을 평균하지 않습니다.</p><table><tr><th>날씨</th><th>모델</th><th>뷰</th><th>Hz</th><th>p50 / p95 / p99 ms</th><th>최대 공백 ms</th><th>실행 판정</th></tr>'+''.join(live_rows)+'</table>',1)
+    if sensor:
+        document=document.replace('</table>','</table><h2>센서·bridge만 실행한 대조</h2><p>추론 없이 관측한 입력 공백입니다. MORAI와 bridge 중 원인 위치는 확정하지 않았으며, 원래 통합 실행의 실패를 면제하지 않습니다.</p><pre>'+html.escape(json.dumps(sensor['report']['views'],ensure_ascii=False,indent=2))+'</pre>',1)
     qualification=('FP16 수치 일치 기준 미달' if parity and not parity['passed'] else
                    '수치 일치 통과, 통합·품질 수락은 별도' if parity else '수치 일치 검증 근거 미첨부')
-    (a.output/'index.html').write_text(document.replace('CANDIDATE_KIND',html.escape(candidate_label)).replace(
+    (a.output/'index.html').write_text(document.replace('CANDIDATE_TITLE',html.escape(a.candidate_label)).replace('CANDIDATE_KIND',html.escape(candidate_label)).replace(
         'QUALIFICATION',qualification).replace('MORAI 포함 통합 지연은 이 페이지에서 측정하지 않았습니다.',
         'MORAI 포함 통합 진단을 아래에 별도로 기록했습니다.' if live_rows else
         'MORAI 포함 통합 지연은 이 페이지에서 측정하지 않았습니다.'),encoding='utf-8')

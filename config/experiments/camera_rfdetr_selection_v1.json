@@ -23,5 +23,36 @@
   "training_allowed": false,
   "runtime_promotion_allowed": false,
   "selection_rule": "quality gate then quality difference >1pp; ties p95 then VRAM then retain existing YOLO",
-  "conditional_order": {"compute_failure": ["l-640-batch3", "m-576-batch3"], "confirmed_batch_wait_failure": ["l-704-2plus1"], "small_object_quality_failure_with_resource_headroom": ["l-front960-sides640-2plus1"], "remaining_failure": ["yolo26x-common640", "rfdetr-xl-common560"]}
+  "conditional_order": {"compute_failure": ["l-640-batch3", "m-576-batch3"], "confirmed_batch_wait_failure": ["l-704-2plus1"], "small_object_quality_failure_with_resource_headroom": ["l-front960-sides640-2plus1"], "remaining_failure": ["yolo26x-common640", "rfdetr-xl-common560"]},
+  "requested_followup": {
+    "model": "RF-DETR Medium detection",
+    "checkpoint": "rf-detr-medium.pth",
+    "shape": [
+      576,
+      576
+    ],
+    "batch": "batch3",
+    "confidence": 0.4,
+    "purpose": "Check whether smaller native input reduces CPU preprocessing and integrated latency relative to operating YOLO26l; previous L decision and failures remain preserved.",
+    "precision_policy_first": "fp16-decoder-fp32",
+    "quality_input": "same frozen 675 saved RGB images; no heldout threshold tuning",
+    "full_stack_diagnostic_seconds": 60,
+    "no_scale_grid_or_training": true,
+    "diagnostic_repeats_per_weather": 1,
+    "weather_order": {
+      "SUNNY": [
+        "m576",
+        "yolo26l"
+      ],
+      "FOGGY": [
+        "yolo26l",
+        "m576"
+      ]
+    },
+    "additional_controls": [
+      "FOGGY YOLO 60s after shared output gap failure",
+      "FOGGY sensor_bridge_only 60s after repeated shared gap failure"
+    ],
+    "final_three_repeat_acceptance_performed": false
+  }
 }

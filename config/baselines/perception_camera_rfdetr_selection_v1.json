@@ -1817,5 +1817,28 @@
   },
   "local_evidence": "artifacts/camera-rfdetr-selection-v1/",
   "runtime_overlay": "data/runtime_archive/rfdetr-preflight-v1/",
-  "gallery_correction": "Per-GT change text now joins annotation_index instead of list order; 675-image aggregate quality counts unchanged. Older diagnostic galleries retained with correction notice."
+  "gallery_correction": "Per-GT change text now joins annotation_index instead of list order; 675-image aggregate quality counts unchanged. Older diagnostic galleries retained with correction notice.",
+  "m_followup": {
+    "status": "analysis_complete_rf_m_runtime_feasible_not_selected",
+    "evidence": "config/baselines/evidence/camera_rfdetr_selection_v1/m576-followup.json",
+    "engine_sha256": "e8facbcbefd17e7836e6b1721961a0902d16dbcfee55c090cabb4d9a6ce9aa73",
+    "shape": [
+      576,
+      576
+    ],
+    "parity_passed": false,
+    "quality_control_passed": false,
+    "integrated_measurement_completed": true,
+    "operating_model_changed": false,
+    "full_stack_windows": 5,
+    "sensor_control_windows": 1,
+    "runtime_diagnostic_passed": true,
+    "decision": {
+      "operating": "retain YOLO26l1280/.40/3view15Hz/2plus1",
+      "retraining": "Do not add RF to immediate small bbox training comparison; focus YOLO26l/YOLOE and regression fixes",
+      "rf_m": "Runtime-feasible reserve candidate; no trained accuracy conclusion",
+      "unresolved": "FOGGY sensor delivery stalls; location between simulator/network/bridge unknown; lane geometry hash refusal remains separate"
+    },
+    "gallery": "http://localhost:8768/camera-rfdetr-selection-v1/m-followup-final-v2/"
+  }
 }
