@@ -2298,3 +2298,51 @@ AIM/bag 세 모델 비교, **v6 bbox labels before / after**를 연다. localhos
 다음 우선순위는 보류74장의 실제 계보/근접 영상 검토, 부족한 plastic_barrier·box·이륜차의
 유효 독립 장면 확보, 기존 person/vehicle 회귀 방지 샘플링이다. stroller는 여전히 미지원이다.
 이번 v6은 구조적으로 검증된 부분집합이며 학습·운영 모델 교체나 전체 클래스 지원 수락이 아니다.
+
+### PE Firewall 후속 진단 — 2026-10-11
+
+사용자의 "프롬프트 문제인가 / 보강량이 너무 적다"는 피드백으로 **기존 자료만** 추가 대조했다.
+운영 모델·기존21종 설정·v6-r4 라벨은 변경하지 않았다. 결과와 입력/실행 스크립트 SHA는
+[PE 진단 증거](../../../config/baselines/evidence/camera_local_teacher_v6/pe-prompt-diagnosis.json)에 있다.
+
+selection의 PE12장과 PE가 없는 대조12장을 고정했다. 평가 범위 안 PE GT는35개이며
+반복 관측을 포함한다. 같은 Capture run이므로 독립 장면 검증이나 새 heldout이 아니다.
+
+| 방법 | confidence | PE 일대일 TP / GT | PE 없는 대조 중 검출된 이미지 |
+|---|---:|---:|---:|
+| DINO-L 기존21종, 정상 plastic_barrier 이름 | 0.40 | 0 / 35 | 0 / 12 |
+| DINO-L 단일 `plastic barrier` | 0.40 | 8 / 35 | 2 / 12 |
+| YOLOE-X visual prompt | 0.40 | 6 / 35 | 0 / 12 |
+| DINO-L 단일 `plastic barrier` | 0.10 | 27 / 35 | 12 / 12 |
+
+기존21종 DINO-L도0.10에서 **이름 무시 기하 대응26/35**, 정상 plastic 이름15/35였다.
+즉 위치 제안을 전혀 못 만드는 상태는 아니다. 다른 이름·낮은 confidence·다중 프롬프트
+문맥이 함께 작용한다. `plastic road barrier`, `orange road barrier`, `water filled barrier`,
+`water-filled traffic barrier`, `plastic jersey barrier`, `traffic barricade`, `road barrier`도
+각각 단독 실제 추론했다. 이름을 구체화하면 항상 개선되는 것은 아니었다. threshold만
+낮추면 대조 배경 오검출이 크게 증가한다. 위 대조 수는 FP 박스 수나 precision이 아니다.
+
+[공식 YOLOE visual prompt](https://docs.ultralytics.com/models/yoloe/#predict-usage)는
+단어 대신 참조 RGB의 bbox를 사용한다. 이번에는 대상24장 밖의 같은 run에 있는 orange PE
+박스1개를 예시로 주고 X에서 실제 실행했다. 출력 `object0`의 의미는 그 참조 PE이며,
+학습 클래스 `plastic_barrier`와 연결할 수 있다. 아직 다른 run/날씨 일반화나 자동 보강
+승인으로 확대하지 않는다. SAM·추가 학습·새 다운로드·TensorRT 생성은 필요하지 않았다.
+
+보강133장은 대량 라벨링 완료로 볼 수 없다. 기존 자료에는 이미 plastic_barrier591객체가
+있고, Enzo의 직접 대응 PE142장은 **이름이 모호해서가 아니라** 주석 완전성/RGB 검수가
+미완료여서 보류됐다. 이번 고정 표본12장에서 PE·drum의 직접 대응과 원본 박스 활용
+가능성을 확인했지만, 아직 최대50장 cohort 검수 완료나142장 채택을 뜻하지 않는다.
+
+자료 활용 우선순위는 다음과 같이 유지/구체화한다.
+
+1. Enzo 등 명확한 PE/box/drum 라벨은 기존 박스를 보존하고 source×class 묶음 표본 검수로
+   채택한다. 이 경로에 open-vocabulary teacher의 자동 승인 기준을 요구하지 않는다.
+2. 혼합 클래스는 독립적으로 실제 종류를 확인한 actor/연속 등장 구간·시각적으로 같은
+   묶음부터 검수한다. 잘못된 teacher 이름은 위치 제안과 분리해 개별/묶음 근거로 수정한다.
+3. pHash 보류74장은 실제 RGB·계보로 확인한다. 비슷한 터널 배경만으로 확정 중복 판정하지
+   않고, 실제 평가 누출을 확인한 후보만 제외한다. 기존 frozen split은 유지한다.
+4. 신규 bbox는 단일 종류별 DINO와 YOLOE visual prompt를 라벨 초안 후보로 활용한다.
+   누락된 다른 대상 객체·잘못된 박스·미검출을 검토하며, 예측을 무조건 정답으로 쓰지 않는다.
+
+브라우저에서 `artifacts/camera-teacher-v6/pe-prompt-diagnosis-r1/index.html`의 같은 RGB,
+원본21종/단일 text/visual prompt 결과와 Enzo12장 표본을 비교할 수 있다.

@@ -1,0 +1,468 @@
+{
+  "date": "2026-10-11",
+  "scope": "Selection-only prompt diagnosis: 12 PE frames plus 12 no-PE contrast frames; 35 in-scope PE boxes. Same source/run; not heldout generalization or automatic-label approval.",
+  "original_21_prompts": [
+    {
+      "model": "yoloe-x-gt-r4",
+      "confidence": 0.1,
+      "named": true,
+      "GT": 35,
+      "TP": 5,
+      "negative_images_with_predictions": 0,
+      "matched_original_phrases": {
+        "plastic barrier": 5
+      }
+    },
+    {
+      "model": "yoloe-x-gt-r4",
+      "confidence": 0.1,
+      "named": false,
+      "GT": 35,
+      "TP": 11,
+      "negative_images_with_predictions": null,
+      "matched_original_phrases": {
+        "plastic barrier": 4,
+        "cargo box": 5,
+        "concrete barrier": 2
+      }
+    },
+    {
+      "model": "yoloe-x-gt-r4",
+      "confidence": 0.2,
+      "named": true,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": 0,
+      "matched_original_phrases": {}
+    },
+    {
+      "model": "yoloe-x-gt-r4",
+      "confidence": 0.2,
+      "named": false,
+      "GT": 35,
+      "TP": 7,
+      "negative_images_with_predictions": null,
+      "matched_original_phrases": {
+        "concrete barrier": 7
+      }
+    },
+    {
+      "model": "yoloe-x-gt-r4",
+      "confidence": 0.4,
+      "named": true,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": 0,
+      "matched_original_phrases": {}
+    },
+    {
+      "model": "yoloe-x-gt-r4",
+      "confidence": 0.4,
+      "named": false,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": null,
+      "matched_original_phrases": {}
+    },
+    {
+      "model": "gdino-b-gt-r4",
+      "confidence": 0.1,
+      "named": true,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": 0,
+      "matched_original_phrases": {}
+    },
+    {
+      "model": "gdino-b-gt-r4",
+      "confidence": 0.1,
+      "named": false,
+      "GT": 35,
+      "TP": 19,
+      "negative_images_with_predictions": null,
+      "matched_original_phrases": {
+        "": 19
+      }
+    },
+    {
+      "model": "gdino-b-gt-r4",
+      "confidence": 0.2,
+      "named": true,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": 0,
+      "matched_original_phrases": {}
+    },
+    {
+      "model": "gdino-b-gt-r4",
+      "confidence": 0.2,
+      "named": false,
+      "GT": 35,
+      "TP": 4,
+      "negative_images_with_predictions": null,
+      "matched_original_phrases": {
+        "": 4
+      }
+    },
+    {
+      "model": "gdino-b-gt-r4",
+      "confidence": 0.4,
+      "named": true,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": 0,
+      "matched_original_phrases": {}
+    },
+    {
+      "model": "gdino-b-gt-r4",
+      "confidence": 0.4,
+      "named": false,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": null,
+      "matched_original_phrases": {}
+    },
+    {
+      "model": "gdino-l-gt-r4-eager",
+      "confidence": 0.1,
+      "named": true,
+      "GT": 35,
+      "TP": 15,
+      "negative_images_with_predictions": 5,
+      "matched_original_phrases": {
+        "plastic barrier": 15
+      }
+    },
+    {
+      "model": "gdino-l-gt-r4-eager",
+      "confidence": 0.1,
+      "named": false,
+      "GT": 35,
+      "TP": 26,
+      "negative_images_with_predictions": null,
+      "matched_original_phrases": {
+        "wooden box": 1,
+        "truck": 2,
+        "concrete barrier": 10,
+        "traffic cone": 1,
+        "traffic drum": 2,
+        "plastic barrier": 7,
+        "steel barricade": 2,
+        "car": 1
+      }
+    },
+    {
+      "model": "gdino-l-gt-r4-eager",
+      "confidence": 0.2,
+      "named": true,
+      "GT": 35,
+      "TP": 4,
+      "negative_images_with_predictions": 1,
+      "matched_original_phrases": {
+        "plastic barrier": 4
+      }
+    },
+    {
+      "model": "gdino-l-gt-r4-eager",
+      "confidence": 0.2,
+      "named": false,
+      "GT": 35,
+      "TP": 10,
+      "negative_images_with_predictions": null,
+      "matched_original_phrases": {
+        "concrete barrier": 2,
+        "plastic barrier": 3,
+        "steel barricade": 1,
+        "truck": 3,
+        "car": 1
+      }
+    },
+    {
+      "model": "gdino-l-gt-r4-eager",
+      "confidence": 0.4,
+      "named": true,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": 0,
+      "matched_original_phrases": {}
+    },
+    {
+      "model": "gdino-l-gt-r4-eager",
+      "confidence": 0.4,
+      "named": false,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": null,
+      "matched_original_phrases": {}
+    }
+  ],
+  "DINO_L_single_prompts": [
+    {
+      "prompt": "plastic barrier",
+      "confidence": 0.1,
+      "GT": 35,
+      "TP": 27,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "plastic barrier",
+      "confidence": 0.2,
+      "GT": 35,
+      "TP": 13,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "plastic barrier",
+      "confidence": 0.4,
+      "GT": 35,
+      "TP": 8,
+      "negative_images_with_predictions": 2,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "plastic road barrier",
+      "confidence": 0.1,
+      "GT": 35,
+      "TP": 23,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "plastic road barrier",
+      "confidence": 0.2,
+      "GT": 35,
+      "TP": 14,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "plastic road barrier",
+      "confidence": 0.4,
+      "GT": 35,
+      "TP": 5,
+      "negative_images_with_predictions": 6,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "orange road barrier",
+      "confidence": 0.1,
+      "GT": 35,
+      "TP": 20,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "orange road barrier",
+      "confidence": 0.2,
+      "GT": 35,
+      "TP": 8,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "orange road barrier",
+      "confidence": 0.4,
+      "GT": 35,
+      "TP": 7,
+      "negative_images_with_predictions": 5,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "water filled barrier",
+      "confidence": 0.1,
+      "GT": 35,
+      "TP": 19,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "water filled barrier",
+      "confidence": 0.2,
+      "GT": 35,
+      "TP": 9,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "water filled barrier",
+      "confidence": 0.4,
+      "GT": 35,
+      "TP": 0,
+      "negative_images_with_predictions": 0,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "water-filled traffic barrier",
+      "confidence": 0.1,
+      "GT": 35,
+      "TP": 16,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "water-filled traffic barrier",
+      "confidence": 0.2,
+      "GT": 35,
+      "TP": 9,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "water-filled traffic barrier",
+      "confidence": 0.4,
+      "GT": 35,
+      "TP": 5,
+      "negative_images_with_predictions": 3,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "plastic jersey barrier",
+      "confidence": 0.1,
+      "GT": 35,
+      "TP": 15,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "plastic jersey barrier",
+      "confidence": 0.2,
+      "GT": 35,
+      "TP": 11,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "plastic jersey barrier",
+      "confidence": 0.4,
+      "GT": 35,
+      "TP": 9,
+      "negative_images_with_predictions": 6,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "traffic barricade",
+      "confidence": 0.1,
+      "GT": 35,
+      "TP": 20,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "traffic barricade",
+      "confidence": 0.2,
+      "GT": 35,
+      "TP": 13,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "traffic barricade",
+      "confidence": 0.4,
+      "GT": 35,
+      "TP": 9,
+      "negative_images_with_predictions": 5,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "road barrier",
+      "confidence": 0.1,
+      "GT": 35,
+      "TP": 28,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "road barrier",
+      "confidence": 0.2,
+      "GT": 35,
+      "TP": 18,
+      "negative_images_with_predictions": 12,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    },
+    {
+      "prompt": "road barrier",
+      "confidence": 0.4,
+      "GT": 35,
+      "TP": 7,
+      "negative_images_with_predictions": 2,
+      "negative_images": 12,
+      "scope": "selection-only small probe; not heldout precision or automatic-label approval"
+    }
+  ],
+  "YOLOE_X_visual_prompt": [
+    {
+      "confidence": 0.1,
+      "GT": 35,
+      "TP": 6,
+      "negative_images_with_predictions": 0,
+      "negative_images": 12
+    },
+    {
+      "confidence": 0.2,
+      "GT": 35,
+      "TP": 6,
+      "negative_images_with_predictions": 0,
+      "negative_images": 12
+    },
+    {
+      "confidence": 0.4,
+      "GT": 35,
+      "TP": 6,
+      "negative_images_with_predictions": 0,
+      "negative_images": 12
+    }
+  ],
+  "visual_reference": {
+    "id": "4466485048f7f7e973f5b0d25c9f16a0e06d0b013ef55f957846fab7f02f11bc",
+    "image": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel/frames/intensity/left/000171.png",
+    "image_sha256": "af7ae6e0c8a65a9faf81b7df9d97735c33af8d694d77ba5e58643bddc4791fad",
+    "xyxy": [
+      327,
+      248,
+      411,
+      336
+    ]
+  },
+  "training_plastic_barrier_objects": 591,
+  "pending_direct_enzo_PE_images": 142,
+  "pending_direct_reason": "annotation_completeness_unverified / visual_review_required, not unknown class meaning",
+  "inspected_direct_Enzo_sample": 12,
+  "direct_sample_status": "Original PE and drum mappings visually supported. Twelve images are not the required 50-image source cohort approval, and the 142 images have not been added in this diagnosis.",
+  "dataset_unchanged": "v6-teacher-r4",
+  "automatic_labels_added": 0,
+  "official_visual_prompt_docs": "https://docs.ultralytics.com/models/yoloe/#predict-usage",
+  "pins": {
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-pe-prompt-probe-r1/frames.jsonl": "66a6932733a0e2cd0b1b13d022d379dff40b317d8c736641bfbfa6341e696a71",
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-pe-prompt-probe-r1/text-results.json": "e62b2e3068d9aed3132ed23da4ecb32f645a57fe3828d525909a549fb92c83d4",
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-pe-prompt-probe-r1/visual-results.json": "0eec94ea03eb4736f840e9e5abad43b6b4272573cdd07ccf8265ecf4f3bb1ff5",
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-pe-prompt-probe-r1/original-comparison.json": "db94e9b047f41c155c00ba482d6bf17583d24aa0bc686da714110682d9118d58",
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/probe_pe_prompts_r1.py": "6c9aa5160ca01f34eeebb8b8628fffd57910f8c82dd6d9a41f30b720c38202fb",
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/probe_pe_visual_r1.py": "1316119c06fa3018ccad331a041454128017358b0418ac7cb2fc164b5104b3bc",
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/pe_original_comparison_r1.py": "1c338ebb4920c680f530622596f0552549381106e4b887bc08b01510fc1ac131"
+  }
+}
