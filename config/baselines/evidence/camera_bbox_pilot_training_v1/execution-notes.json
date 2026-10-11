@@ -43,6 +43,24 @@
       "scaler_scale": 1024,
       "updates_meaning": "EMA/optimizer step attempts, not successful AdamW steps"
     },
-    "quality_evaluation": "pending matched YOLOE completion; native metric columns are placeholders"
-  }
+    "quality_evaluation": "complete at verified equal 16 epochs; see results.json; both candidates fail existing-object regression gate",
+    "yoloe26l": {
+      "status": "budget_stopped",
+      "completed_epochs": 16,
+      "completed_batches": 33356,
+      "wall_seconds": 10802.635354015976,
+      "sample_order_sha256": "7f95353a2ddbab06de6f9c7a62a18cc8ab6aa62c94b405469418a36d808076aa",
+      "actual_head": "YOLOEDetect",
+      "parameters": 26201016,
+      "trainable_parameters": 26201016,
+      "amp_enabled": true,
+      "actual_batch": 4
+    }
+  },
+  "common_comparison_epochs": 16,
+  "original_requested_epochs": 17,
+  "original_budget_stop_preserved": true,
+  "sampler_proof_sha256": "f0f63f33ab21736af707201cf0d848783a558190af68b7d1c55fca43ae50b5fb",
+  "resume_proof_sha256": "d5541ea2a7de1ae520100dc8d6bf9a324aba458b000c6db758aa5e6748d10a49",
+  "total_main_training_seconds": 20196.910510746937
 }

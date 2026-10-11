@@ -9,10 +9,37 @@ import shutil
 
 from camera_data_audit import read_jsonl,save,sha
 from evaluate_camera_bbox_pilot import frame_counts
+from camera_data_audit import training_label
+from seg_measurements import match_boxes
 
 
 NEW_CLASSES={'deer','bollard','box','concrete_barrier','steel_barricade','traffic_drum',
              'plastic_barrier','traffic_cone','stroller'}
+
+
+def label_confusion(rows, predictions, confidence):
+    """Geometry-only diagnostic, never an alternative TP/recall acceptance."""
+    counts=Counter();unmatched=Counter();totals=Counter()
+    for row in rows:
+        gt=[]
+        for annotation in row['annotations']:
+            label=training_label(annotation)
+            if not label:continue
+            x1,y1,x2,y2=annotation['xyxy'];w=x2-x1;h=y2-y1
+            long,short=(24,12) if label in ('car','bus','truck') else (16,8)
+            if max(w,h)<long or min(w,h)<short:continue
+            gt.append(dict(annotation,group='geometry',label=label));totals[label]+=1
+        pred=[dict(p,group='geometry') for p in predictions[row['id']]['predictions']
+              if p['confidence']>=confidence]
+        pairs=match_boxes(gt,pred,.5)
+        matched=set()
+        for g,p,_ in pairs:
+            matched.add(g);counts[(gt[g]['label'],pred[p]['class_name'])]+=1
+        for index,a in enumerate(gt):
+            if index not in matched:unmatched[a['label']]+=1
+    return dict(confidence=confidence,counts=[dict(gt=g,prediction=p,count=n)
+        for (g,p),n in sorted(counts.items())],unmatched_gt=dict(unmatched),gt=dict(totals),
+        scope='one-to-one IoU>=.5 ignoring names for diagnosis only; wrong names still fail class recall')
 
 
 def compare(evaluations):
@@ -62,6 +89,9 @@ def compare(evaluations):
             confidence_selection_supported_new_classes=[n for n,c in after.get('selected_selection',{}).get('classes',{}).items()
                 if n in NEW_CLASSES and c.get('complete_gt',0)>=20],
             confidence_control=.4,selection_confidence=after['selection_confidence']))
+        comparisons[-1]['selected_old_recall_by_class']={n:dict(gt=c.get('gt',0),tp=c.get('tp',0),
+            annotated_recall=c.get('annotated_recall')) for n,c in selected_classes.items()
+            if n in ('person','dog','deer','bicycle','car','bus','truck','motorcycle')}
         comparisons[-1]['complete_fp_after']=sum(c.get('complete_fp',0) for c in classes.values())
         comparisons[-1]['complete_fp_selected']=sum(c.get('complete_fp',0) for c in selected_classes.values())
         comparisons[-1]['complete_fp_before']=sum(c.get('complete_fp',0) for c in before['control']['heldout']['class']['classes'].values())
@@ -82,7 +112,7 @@ def build(args):
     args.output.mkdir(parents=True,exist_ok=True)
     sampling=json.loads((args.dataset/'sampling.json').read_text())
     rows=[r for r in read_jsonl(args.dataset/'manifest.jsonl') if r['split']!='train']
-    summary=dict(dataset=sampling,comparison=None,evaluations={},inference={},temporal={},selection=None,
+    summary=dict(dataset=sampling,comparison=None,evaluations={},inference={},temporal={},selection=None,label_confusion={},
         blockers=['selection 신규 장애물 GT 부족', 'animal heldout GT 1개: 2%p 회귀 판정 불가',
                   'stroller 학습/평가 자료 없음', 'sparse eval: 실제 시간적 공백·최초 안정 검출 미측정',
                   'TensorRT·전체 스택 지연·fusion 검증은 이번 파일럿 이후'])
@@ -105,44 +135,50 @@ def build(args):
                 if (evaluated/filename).exists():summary[key][evaluated.name]=json.loads((evaluated/filename).read_text())
         predictions={p['id']:p for p in read_jsonl(folder/'predictions.jsonl')}
         original_predictions={p['id']:p for p in read_jsonl(before/'predictions.jsonl')} if (before/'predictions.jsonl').exists() else {}
-        examples=[];counts=Counter()
-        for row in rows:
-            pred=predictions[row['id']]['predictions']
-            c,pairs=frame_counts(row,pred,.4,pixel_scope=True)
-            missed=any(v['gt']>v['tp'] for v in c.values())
-            fp=any(v['complete_predictions']>v['complete_tp'] for v in c.values())
-            kind='FP' if fp else 'miss' if missed else 'matched'
-            if counts[kind]>=12:continue
-            counts[kind]+=1;examples.append((row,pred,kind))
-        if examples:
-            from PIL import Image,ImageDraw,ImageOps
-            destination=args.output/'gallery'/folder.name;destination.mkdir(parents=True,exist_ok=True)
-            cards=[]
-            for row,pred,kind in examples:
-                with Image.open(row['image']) as original:
-                    panels=[]
-                    for title,boxes in [('before',original_predictions.get(row['id'],{}).get('predictions',[])),('after',pred)]:
-                        image=original.convert('RGB');draw=ImageDraw.Draw(image)
-                        for ann in row['annotations']:
-                            if not ann.get('training_class'):continue
-                            box=ann['xyxy'];w=box[2]-box[0];h=box[3]-box[1]
-                            long,short=(24,12) if ann['training_class'] in ('car','truck','bus') else (16,8)
-                            scoped=max(w,h)>=long and min(w,h)>=short
-                            color='#00e8ff' if scoped else '#ffb000'
-                            draw.rectangle(box,outline=color,width=2)
-                            if scoped:draw.text((box[0],max(0,box[1]-12)),ann['training_class'],fill=color)
-                        for p in boxes:
-                            if p['confidence']<.4:continue
-                            box=p['xyxy'];draw.rectangle(box,outline='#ff4aaa',width=2)
-                            draw.text((box[0],box[1]+2),f"{p['class_name']} {p['confidence']:.2f}",fill='#ff4aaa')
-                        panel=Image.new('RGB',(image.width,image.height+24),'#111827')
-                        panel.paste(image,(0,24));ImageDraw.Draw(panel).text((8,5),title,fill='white');panels.append(panel)
-                    joined=Image.new('RGB',(panels[0].width*2,panels[0].height))
-                    joined.paste(panels[0],(0,0));joined.paste(panels[1],(panels[0].width,0))
-                    ImageOps.contain(joined,(1920,900)).save(destination/(row['id']+'.jpg'),quality=90)
-                cards.append(f'<article><p>{kind} · {html.escape(row["source"])} · {row["split"]} · {row["evaluation_scope"]}</p><img src="{row["id"]}.jpg"></article>')
-            (destination/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>2026-10-11 · bbox pilot '+folder.name+'</title><style>body{font:16px sans-serif;background:#111827;color:white}img{max-width:100%}a{color:cyan}</style><a href="../../index.html">실험 목차</a><p>왼쪽 before / 오른쪽 after. cyan 평가 크기 GT / amber 작은 원본 GT / pink confidence .40 검출. 원본 RGB 위에 표시하며 추론에는 알려진 뷰의 Ego mask를 적용했습니다. partial GT의 미대응 검출은 FP가 아닙니다.</p>'+''.join(cards))
-            galleries.append(f'<li><a href="gallery/{folder.name}/index.html">{folder.name} GT·오검출·누락</a></li>')
+        heldout=[r for r in rows if r['split']=='heldout']
+        summary['label_confusion'][folder.name]=dict(
+            control=label_confusion(heldout,predictions,.4),
+            selected=label_confusion(heldout,predictions,summary['evaluations'][folder.name]['selection_confidence']))
+        for profile,threshold in [('control',.4),('selected',summary['evaluations'][folder.name]['selection_confidence'])]:
+            examples=[];counts=Counter()
+            for row in rows:
+                pred=predictions[row['id']]['predictions']
+                c,pairs=frame_counts(row,pred,threshold,pixel_scope=True)
+                missed=any(v['gt']>v['tp'] for v in c.values())
+                fp=any(v['complete_predictions']>v['complete_tp'] for v in c.values())
+                kind='FP' if fp else 'miss' if missed else 'matched'
+                if counts[kind]>=12:continue
+                counts[kind]+=1;examples.append((row,pred,kind))
+            if examples:
+                from PIL import Image,ImageDraw,ImageOps
+                gallery_name=folder.name if profile=='control' else folder.name+'-selected'
+                destination=args.output/'gallery'/gallery_name;destination.mkdir(parents=True,exist_ok=True)
+                cards=[]
+                for row,pred,kind in examples:
+                    with Image.open(row['image']) as original:
+                        panels=[]
+                        for title,boxes,cut in [('before .40',original_predictions.get(row['id'],{}).get('predictions',[]),.4),(f'after {threshold:.2f}',pred,threshold)]:
+                            image=original.convert('RGB');draw=ImageDraw.Draw(image)
+                            for ann in row['annotations']:
+                                if not ann.get('training_class'):continue
+                                box=ann['xyxy'];w=box[2]-box[0];h=box[3]-box[1]
+                                long,short=(24,12) if ann['training_class'] in ('car','truck','bus') else (16,8)
+                                scoped=max(w,h)>=long and min(w,h)>=short
+                                color='#00e8ff' if scoped else '#ffb000'
+                                draw.rectangle(box,outline=color,width=2)
+                                if scoped:draw.text((box[0],max(0,box[1]-12)),ann['training_class'],fill=color)
+                            for p in boxes:
+                                if p['confidence']<cut:continue
+                                box=p['xyxy'];draw.rectangle(box,outline='#ff4aaa',width=2)
+                                draw.text((box[0],box[1]+2),f"{p['class_name']} {p['confidence']:.2f}",fill='#ff4aaa')
+                            panel=Image.new('RGB',(image.width,image.height+24),'#111827')
+                            panel.paste(image,(0,24));ImageDraw.Draw(panel).text((8,5),title,fill='white');panels.append(panel)
+                        joined=Image.new('RGB',(panels[0].width*2,panels[0].height))
+                        joined.paste(panels[0],(0,0));joined.paste(panels[1],(panels[0].width,0))
+                        ImageOps.contain(joined,(1920,900)).save(destination/(row['id']+'.jpg'),quality=90)
+                    cards.append(f'<article><p>{kind} · {html.escape(row["source"])} · {row["split"]} · {row["evaluation_scope"]}</p><img src="{row["id"]}.jpg"></article>')
+                (destination/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>2026-10-11 · bbox pilot '+gallery_name+'</title><style>body{font:16px sans-serif;background:#111827;color:white}img{max-width:100%}a{color:cyan}</style><a href="../../index.html">실험 목차</a><p>왼쪽 before / 오른쪽 after. cyan 평가 크기 GT / amber 작은 원본 GT / pink 검출(각 패널 제목의 confidence). 원본 RGB 위에 표시하며 추론에는 알려진 뷰의 Ego mask를 적용했습니다. partial GT의 미대응 검출은 FP가 아닙니다.</p>'+''.join(cards))
+                galleries.append(f'<li><a href="gallery/{gallery_name}/index.html">{gallery_name} GT·오검출·누락</a></li>')
     summary['selection']=compare(summary['evaluations'])
     save(args.output/'report.json',summary)
     frequencies=sampling['train']
@@ -156,6 +192,9 @@ def build(args):
         for c in summary['selection']['comparisons'])
     latency_table=''.join(f'<tr><td>{html.escape(name)}</td><td>{v["p50_ms"]:.1f}</td><td>{v["p95_ms"]:.1f}</td><td>{v["p99_ms"]:.1f}</td></tr>'
         for name,v in summary['inference'].items())
+    reference=summary['evaluations'].get('yolo26l-before-1280',{}).get('control',{}).get('heldout',{}).get('class',{}).get('classes',{})
+    coverage=', '.join(f'{name} {reference.get(name,{}).get("gt",0)}개'
+        for name in ('car','bus','truck','bicycle','motorcycle'))
     (args.output/'index.html').write_text('''<!doctype html><meta charset="utf-8">
 <title>2026-10-11 · bbox 파일럿: 샘플링·YOLO26l/YOLOE 비교</title>
 <style>body{font:16px sans-serif;max-width:1200px;margin:32px auto;background:#111827;color:#e5e7eb}a{color:#67e8f9}td,th{border:1px solid #4b5563;padding:8px}table{border-collapse:collapse}pre{white-space:pre-wrap}img{max-width:100%}</style>
@@ -169,6 +208,7 @@ def build(args):
 <p>희소 클래스 자료 전부·상자 1,007장·콘크리트 방벽 844장·철제 방벽 145장·PE 방벽149장 포함. Capture 1,268장. 나머지 원본 자료는 본학습 후보용으로 보존.</p>
 <h2>비교 결과</h2><table><tr><th>설정</th><th>신규 F1 (.40)</th><th>신규 F1 (선정 confidence)</th><th>confidence</th><th>선정 confidence의 기존 recall</th><th>2%p 회귀 실패</th></tr>'''+comparison_table+'''</table>
 <p>고정 heldout의 파일럿 비교이며 새로운 독립 최종 시험이 아닙니다. GT가 충분한 종류만 macro에 포함합니다. 1%p 내 동률은 TensorRT 통합 지연·VRAM 확인 전 확정하지 않습니다.</p>
+<p>평가 크기 범위의 vehicle GT: '''+html.escape(coverage)+'''. 집계 실패를 표본이 부족한 승용차·버스·트럭 전체의 회귀로 일반화하지 않습니다. 신규 macro F1은 완전 GT 20개 이상인 종류만 포함하며 소스 다양성은 별도 확인합니다. selection의 신규 GT 부족도 그대로 보류 사유입니다.</p>
 <h2>오프라인 PT batch1 지연 (ms)</h2><p>평가 이미지의 여러 뷰·해상도를 합친 분포입니다. 실제 3뷰 TensorRT 통합 지연이나 배포 동률 판정값이 아닙니다.</p><table><tr><th>설정</th><th>p50</th><th>p95</th><th>p99</th></tr>'''+latency_table+'''</table>
 <h2>결과·실패 사례</h2><ul>'''+''.join(galleries)+'''</ul><a href="report.json">전체 집계 JSON</a>
 <script>

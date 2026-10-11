@@ -5,12 +5,22 @@ import tempfile
 import unittest
 from train_camera_bbox_pilot import common_epochs,validate_resume,sha,accumulation_threshold
 from evaluate_camera_bbox_pilot import summarize,scoped_complete,evaluation_weights
-from report_camera_bbox_pilot import compare
+from report_camera_bbox_pilot import compare,label_confusion
 from camera_bbox_temporal import prepare,analyze
 from run_camera_bbox_comparison import validate_equal_training
 
 
 class TrainingTest(unittest.TestCase):
+    def test_geometry_confusion_diagnostic_does_not_excuse_wrong_name_or_box(self):
+        row=dict(id='a',annotations=[dict(canonical='motorcycle',xyxy=[0,0,30,30]),
+            dict(canonical='person',xyxy=[100,0,120,40])])
+        pred=dict(a=dict(predictions=[dict(class_name='car',confidence=.9,xyxy=[0,0,30,30]),
+            dict(class_name='person',confidence=.9,xyxy=[200,0,220,40])]))
+        diagnosis=label_confusion([row],pred,.4)
+        self.assertEqual(diagnosis['counts'],[dict(gt='motorcycle',prediction='car',count=1)])
+        self.assertEqual(diagnosis['unmatched_gt'],dict(person=1))
+        self.assertEqual(diagnosis['gt'],dict(motorcycle=1,person=1))
+
     def test_budget_stop_only_equal_complete_checkpoint_is_comparable(self):
         a=dict(status='complete',completed_epochs=17,config_sha256='c',manifest_sha256='d',batch=4,epochs=17)
         b=dict(a,status='budget_stopped',completed_epochs=16)

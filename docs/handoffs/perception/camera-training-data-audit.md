@@ -9,7 +9,7 @@
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
 **이번 PR #78은 v5 대량 활용 train 확장과 v4 검수 자료를 제공한다. 운영 실행은 수정하지 않는다.**
-최신 샘플링은 [bbox 파일럿](#bbox-파일럿-샘플링--2026-10-11), 전체 자료 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
+최신 결과는 [16epoch 비교 결과](#16epoch-비교-결과--본학습-후보-선정-보류), 샘플링은 [bbox 파일럿](#bbox-파일럿-샘플링--2026-10-11), 전체 자료 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
 아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
 
 MORAI 에셋명 / 원본 데이터 라벨 / 추론 prompt / 학습 클래스 / 소비 그룹을 별도로 보존한다.
@@ -1299,7 +1299,7 @@ hash가 실제 학습 전체/부분 순서와 일치해야 공통 prefix 순서�
 
 진행 갤러리: `http://localhost:8768/camera-bbox-pilot-v1/`. 30초마다 로컬 상태를 읽는다.
 `artifacts/camera-bbox-pilot-v1/paired-r1/comparison.json`과 모델별 `run.json`이 실제 진행 기록이다.
-현재 학습이 진행 중이므로 완료·선정·배포 수락을 주장하지 않는다.
+위 절은 시작 시 배정과 검증 정책이다. 실제 종료·동일 학습량 비교와 후보 판정은 아래 최신 결과에 기록한다.
 
 ### 결과와 재개 해석
 
@@ -1352,3 +1352,84 @@ frame index가 실제로 연속인 구간만 쓴다. 원본 박스·분할을 �
 actor GT의 기하 정확성과 전체 시설물 주석 완전성을 구분했다. 작은 미확정 actor만 남았다는
 이유로 Capture를 자동 full-GT로 승격하지 않는다. 반대로 실제 완전 주석 영상에서는
 제외된 신호등/표지판 위치의 잘못된 box 검출을 ignore로 면제하지 않는다.
+
+### 16epoch 비교 결과 — 본학습 후보 선정 보류
+
+2026-10-11에 두 모델의 bbox 파일럿과 8개 학습 전/후·해상도 평가를 마쳤다.
+[수치·SHA·클래스별 결과](../../../config/baselines/evidence/camera_bbox_pilot_training_v1/results.json),
+[동일 입력 순서 증거](../../../config/baselines/evidence/camera_bbox_pilot_training_v1/sampler-proof-ab.json),
+[실제 재개 증거](../../../config/baselines/evidence/camera_bbox_pilot_training_v1/resume-proof.json)를 연결한다.
+사진은 [전체 실험 목차](http://localhost:8768/) → [bbox 파일럿](http://localhost:8768/camera-bbox-pilot-v1/)에서 확인한다.
+각 모델의 `.40` 대조와 selection에서 정한 confidence의 갤러리를 별도로 제공한다.
+
+**두 후보 모두 기존 객체 recall 회귀 기준을 넘어서 본학습 후보 확정을 보류한다.**
+운영 기본 YOLO26l detect/1280/.40과 ROS 인터페이스는 변경하지 않았다.
+YOLOE/1280이 아래 신규 네 종류에서 우세했지만 기존 객체 회귀를 면제하지 않는다.
+
+- 총 8,000장, 960/AMP/batch4/nbs16, 같은 학습 정책과 입력 순서다.
+- A는 17epoch를 9,394.3초에 완료했다. B는 10,802.6초에 예산 중단되어 16epoch와
+  17번째의 일부만 처리했다. 총 주 학습은 20,196.9초(약 5시간 37분)다.
+- 원래 17epoch 실행의 실패와 B의 부분 checkpoint를 보존한다. 품질 결과를 보기 전에 정한
+  예산 중단 정책에 따라 **양쪽 epoch15.pt, 즉 완전한 16epoch**만 비교했다.
+  A의 17번째와 B의 부분 17번째 업데이트는 비교에서 제외했다. 원래 동일 17epoch LR 일정은 유지했다.
+- 두 실제 전체/부분 입력 hash가 CPU 재현과 일치한다. 공통 16epoch prefix도 같다.
+  이는 파일 순서 증거이며 GPU 증강의 비트 단위 동일성을 뜻하지 않는다.
+- 선택 checkpoint는 각 EMA 시도 8,000회, 실제 AdamW A 7,991회/B 7,990회다.
+  AMP 생략 9/10회와 scaler를 공개한다. 정상 완료를 AMP 생략 0회와 혼동하지 않는다.
+
+| 후보 / 전방 너비 | selection confidence | 신규 macro F1 | person recall | motorcycle recall | 전방 PT p50 / p95 / p99 ms |
+|---|---:|---:|---:|---:|---|
+| YOLO26l / 960 | .45 | 65.54% | 20/26, 76.92% | 2/138, 1.45% | 14.37 / 25.95 / 27.35 |
+| YOLO26l / 1280 | .25 | 65.65% | 21/26, 80.77% | 4/138, 2.90% | 15.81 / 23.36 / 25.74 |
+| YOLOE-26l bbox / 960 | .10 | 77.11% | 22/26, 84.62% | 14/138, 10.14% | 14.46 / 23.31 / 27.23 |
+| YOLOE-26l bbox / 1280 | .20 | 82.61% | 21/26, 80.77% | 4/138, 2.90% | 17.34 / 25.44 / 27.91 |
+
+표의 정확도는 고정 heldout, confidence는 selection에서만 정했다. 신규 macro는 완전 GT가
+20개 이상인 **traffic_drum·concrete_barrier·box·steel_barricade 네 종류**다.
+각 종류가 같은 소스의 연속/유사 장면에 편중되어 있어 대회 전체 일반화 정확도가 아니다.
+선정 selection의 신규 GT 자체가 적으므로 신규 클래스 confidence 검증 완료로 표시하지 않는다.
+PT 지연은 오프라인 FP16/batch1의 알려진 전방 뷰 174개 표본이다. TensorRT 2+1 batch나
+MORAI·다른 모델·판제 동시 실행 지연이 아니다. 측방/unknown 뷰 지연은 증거 JSON에 별도 기록한다.
+
+현재 YOLO26l/1280/.40 기준선의 person은 24/26(92.31%), motorcycle은 126/138(91.30%)이다.
+차량 집계 GT 141개 중 138개가 motorcycle이고 car 2개·bus 1개뿐이다. 따라서 집계 하락을
+승용차·버스·트럭 전체의 성능 저하로 일반화하지 않는다. animal GT도 deer 1개뿐이다.
+
+[대표 오토바이 오분류 사진](http://localhost:8768/camera-bbox-pilot-v1/gallery/yoloe26l-after-1280/1eb600d6bcf6a934046aca250f6d788886b492b836ad1b37735ed95fee570d28.jpg)에서는
+학습 전 motorcycle이 학습 후 높은 confidence의 car로 바뀐다. selection confidence의
+기하만 검사한 일대일 IoU≥.5 진단에서 motorcycle→car는 A/1280 96개, B/1280 90개다.
+이 진단은 위치 검출과 이름 실패를 구분하기 위한 것이며 오분류를 TP로 면제하지 않는다.
+학습 motorcycle은 63장·191주석으로 단일 소스 `yolo-m5lvd/detection-bzetd`에만 있다.
+그 RGB 표본에서는 실제 이륜차가 확인됐다. 소스·외형 다양성 부족, 다른 라벨의 혼입,
+희소 클래스 학습·망각이 원인 후보이며, 이번 통계만으로 한 원인을 확정하지 않는다.
+
+완전 GT 70장에서는 .40의 전체 FP가 A/1280 61개, B/1280 50개였다.
+selection confidence에서는 각각 74/71개다. partial GT의 미대응 예측을 FP에 넣지 않았다.
+신규 클래스 FP도 함께 있으므로 COCO만 지원하는 기준선과 전체 FP 수를 같은 지원 범위의
+오검출률처럼 단순 비교하지 않는다. 원본 클래스별 수치를 증거에 남긴다.
+
+별도 연속 Capture 120장은 29개 actor 구간/224 actor-input 쌍을 제공했다.
+선정 confidence에서 안정 window가 있는 구간은 A/1280 23개, B/1280 27개였고 최대 누락은
+6/4 입력이다. 저장 입력 index 기준 참고 지표이며 실제 Hz·ms·최초 시야 진입 지연이 아니다.
+미지원 신규 장애물의 연속 검출을 이 숫자로 승인하지 않는다.
+
+학습 중 전체 GPU VRAM peak는 A 7,890MiB/B 7,884MiB(8,188MiB의 약 96.4/96.3%)였다.
+Windows·배경 사용을 포함한 학습 계측이며 운영의 90% 배포 여유 기준을 통과했다는 뜻이 아니다.
+2개 GPU utilization 표본은 미지원으로 남겼다. OOM·silent batch 감소는 없었다.
+
+재개는 별도 256장 train fixture에서 모델별 1epoch 후 일시정지→2epoch 완료를 실제 확인했다.
+optimizer 558개 state slot·1차 moment SHA·scaler·EMA가 복구됐고,
+AdamW는 A 10→26/B 7→23으로 이어졌다. YOLOE fused detection head도 유지됐다.
+[검증기](../../../tools/perception/verify_camera_bbox_resume.py)는 checkpoint와 run 기록을 다시 검사한다.
+main 비교는 재개 없이 실행했으며, 재개 시험을 main 입력 순서 연속성 증거로 사용하지 않는다.
+
+로컬 관련 CPU 시험 125개, 문서·perception 계약·토픽·런타임 validator가 통과했다.
+Hosted CI는 결제 제한으로 job이 시작되지 않은 기록과 구분한다. #80은 Draft이며 #78 의존성과
+#77 미완료 통합 검증은 유지한다.
+
+다음 작업은 대량 추가 수집·본학습에 앞서 **이륜차와 사람 회귀 원인 점검 및 고정 평가 자료 보강**이다.
+기존 자료의 motorcycle↔car/bicycle 혼입과 복합 박스부터 확인하고, 기존 객체 유지용 자료의
+소스 다양성·샘플링·학습률 변경을 통제한 작은 재파일럿을 계획한다. 신규 장애물 기준으로는
+YOLOE bbox/1280을 우선 재검토할 근거가 있지만 본학습 후보로 승인하지 않았다.
+원인 해결 뒤 한 모델 본학습 → TensorRT/3뷰 → 전방 fusion → 전체 스택 30분 → 팀 문서 순서다.
+이번 실행에서는 추가 수집·본학습·운영 교체를 시작하지 않았다.

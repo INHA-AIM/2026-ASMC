@@ -1,0 +1,46 @@
+{
+  "status": "pass",
+  "models": {
+    "yolo26l": {
+      "status": "pass",
+      "paused_epoch": 1,
+      "resumed_complete_epoch": 2,
+      "fixture_manifest_sha256": "a45865d01d30c83cf918b7a534ac0e01df0b946ec60ca3eee25956da4aa49459",
+      "batch": 4,
+      "optimizer_state_slots": 558,
+      "adamw_steps_before": 10.0,
+      "adamw_steps_after": 26.0,
+      "restored_first_moment_sha256": "28e6dd097a225f7da230bb4600e326328cd767eaf2d0a267f710836a459bb7ed",
+      "restored_scaler_scale": 1024.0,
+      "ema_attempts_before": 16,
+      "ema_attempts_after": 32,
+      "head_fused": null,
+      "before_checkpoint_sha256": "4f9768d37a6c2a027fc78b7e28367232224bdec37e4c95c884d5105cab061e05",
+      "after_checkpoint_sha256": "bf297d4a9b9b068cadcd4e2523a598d287e5e6a628bcee7d196052aff6e07a60",
+      "run_sha256": "f53688315b58c351a09ef6032fbd40f98a4fc485eb93dd2393da20090df9bcbe",
+      "history_sha256": "347609c5dad37ed95ed74015e98529ce1a6e6591f813c8be27ac4658a5dbe46c",
+      "trainer_source_sha256": "933068926e508c2f2ad94037f860b16123c087d41e9d13f349a5f6fd4b566543"
+    },
+    "yoloe26l": {
+      "status": "pass",
+      "paused_epoch": 1,
+      "resumed_complete_epoch": 2,
+      "fixture_manifest_sha256": "a45865d01d30c83cf918b7a534ac0e01df0b946ec60ca3eee25956da4aa49459",
+      "batch": 4,
+      "optimizer_state_slots": 558,
+      "adamw_steps_before": 7.0,
+      "adamw_steps_after": 23.0,
+      "restored_first_moment_sha256": "9349ff43e02494ae24388e6b7442745fdc141580d95978028afef46d1dac777c",
+      "restored_scaler_scale": 128.0,
+      "ema_attempts_before": 16,
+      "ema_attempts_after": 32,
+      "head_fused": true,
+      "before_checkpoint_sha256": "919cbb09a936af7af50eb3078521d4fb26e1c619aaadeb23354fcb41e3b14cc7",
+      "after_checkpoint_sha256": "4b9053dd13683a89fdf4cc528aa31161dab2dff3ee171145930f73ac2762f555",
+      "run_sha256": "7cb04c62578f133d14debac3350f30dd34fa9109e35ccb9c730f9d62bdbd2a98",
+      "history_sha256": "db86fe574bf4c68130f58ba9afd438cd52d208ae66a5570bb873fdbc73d4b3b9",
+      "trainer_source_sha256": "933068926e508c2f2ad94037f860b16123c087d41e9d13f349a5f6fd4b566543"
+    }
+  },
+  "scope": "actual optimizer/EMA/scaler/fused-head restore and continued updates; not bitwise data/augmentation RNG continuity"
+}
