@@ -1,0 +1,20 @@
+# Dedicated Python 3.8 / torch 2.1.2+cu118 image only; never install in shared ROS.
+# Torch/Ultralytics/OpenCV/Numpy come from the pinned teacher container image.
+transformers==4.44.2
+huggingface-hub==0.26.5
+tokenizers==0.19.1
+safetensors==0.5.3
+mmengine==0.10.7
+mmcv @ https://download.openmmlab.com/mmcv/dist/cu118/torch2.1.0/mmcv-2.1.0-cp38-cp38-manylinux1_x86_64.whl
+yapf==0.40.2
+addict==2.4.0
+pycocotools==2.0.7
+terminaltables==3.1.10
+rich==13.9.4
+termcolor==2.4.0
+markdown-it-py==3.0.0
+mdurl==0.1.2
+importlib-metadata==8.5.0
+zipp==3.20.2
+platformdirs==4.3.6
+tomli==2.0.1

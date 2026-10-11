@@ -1,0 +1,501 @@
+{
+  "classes": {
+    "person": {
+      "images": 6934,
+      "objects": 24633,
+      "new_images": 12,
+      "new_objects": 67,
+      "splits": {
+        "train": 6822,
+        "selection": 112
+      },
+      "recording_groups": 17,
+      "source_projects": 17,
+      "source_subtypes": {
+        "unconfirmed:person": 24633
+      },
+      "views": {
+        "unknown": 5307,
+        "front": 943,
+        "left": 459,
+        "right": 225
+      },
+      "weather": {
+        "unknown": 6934
+      },
+      "tunnel": {
+        "unknown": 6934
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "dog": {
+      "images": 131,
+      "objects": 143,
+      "new_images": 6,
+      "new_objects": 7,
+      "splits": {
+        "train": 131
+      },
+      "recording_groups": 5,
+      "source_projects": 5,
+      "source_subtypes": {
+        "unconfirmed:dog": 142,
+        "dog_variant_unconfirmed": 1
+      },
+      "views": {
+        "unknown": 27,
+        "front": 67,
+        "left": 32,
+        "right": 5
+      },
+      "weather": {
+        "unknown": 131
+      },
+      "tunnel": {
+        "unknown": 130,
+        "False": 1
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "deer": {
+      "images": 61,
+      "objects": 68,
+      "new_images": 40,
+      "new_objects": 44,
+      "splits": {
+        "train": 61
+      },
+      "recording_groups": 2,
+      "source_projects": 2,
+      "source_subtypes": {
+        "unconfirmed:deer": 68
+      },
+      "views": {
+        "unknown": 61
+      },
+      "weather": {
+        "unknown": 61
+      },
+      "tunnel": {
+        "unknown": 61
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "bicycle": {
+      "images": 230,
+      "objects": 252,
+      "new_images": 3,
+      "new_objects": 3,
+      "splits": {
+        "train": 230
+      },
+      "recording_groups": 6,
+      "source_projects": 6,
+      "source_subtypes": {
+        "unconfirmed:bicycle": 249,
+        "bicycle_variant_unconfirmed": 3
+      },
+      "views": {
+        "front": 103,
+        "left": 89,
+        "right": 38
+      },
+      "weather": {
+        "unknown": 230
+      },
+      "tunnel": {
+        "unknown": 227,
+        "False": 3
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "car": {
+      "images": 8281,
+      "objects": 18700,
+      "new_images": 12,
+      "new_objects": 24,
+      "splits": {
+        "train": 8280,
+        "heldout": 1
+      },
+      "recording_groups": 17,
+      "source_projects": 17,
+      "source_subtypes": {
+        "unconfirmed:car": 18700
+      },
+      "views": {
+        "unknown": 5587,
+        "front": 1104,
+        "left": 434,
+        "right": 1156
+      },
+      "weather": {
+        "unknown": 8281
+      },
+      "tunnel": {
+        "unknown": 8281
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "motorcycle": {
+      "images": 269,
+      "objects": 597,
+      "new_images": 6,
+      "new_objects": 6,
+      "splits": {
+        "train": 69,
+        "heldout": 200
+      },
+      "recording_groups": 6,
+      "source_projects": 6,
+      "source_subtypes": {
+        "unconfirmed:motorcycle": 591,
+        "Scooter": 6
+      },
+      "views": {
+        "unknown": 263,
+        "front": 6
+      },
+      "weather": {
+        "unknown": 269
+      },
+      "tunnel": {
+        "unknown": 263,
+        "False": 6
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "bus": {
+      "images": 3844,
+      "objects": 4216,
+      "new_images": 2,
+      "new_objects": 2,
+      "splits": {
+        "train": 3844
+      },
+      "recording_groups": 10,
+      "source_projects": 10,
+      "source_subtypes": {
+        "unconfirmed:bus": 4216
+      },
+      "views": {
+        "unknown": 3039,
+        "front": 327,
+        "left": 158,
+        "right": 320
+      },
+      "weather": {
+        "unknown": 3844
+      },
+      "tunnel": {
+        "unknown": 3844
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "truck": {
+      "images": 2693,
+      "objects": 3232,
+      "new_images": 2,
+      "new_objects": 3,
+      "splits": {
+        "train": 2692,
+        "selection": 1
+      },
+      "recording_groups": 12,
+      "source_projects": 12,
+      "source_subtypes": {
+        "unconfirmed:truck": 3232
+      },
+      "views": {
+        "unknown": 1779,
+        "front": 354,
+        "left": 86,
+        "right": 474
+      },
+      "weather": {
+        "unknown": 2693
+      },
+      "tunnel": {
+        "unknown": 2693
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "bollard": {
+      "images": 2496,
+      "objects": 51002,
+      "new_images": 1,
+      "new_objects": 1,
+      "splits": {
+        "train": 2296,
+        "heldout": 200
+      },
+      "recording_groups": 3,
+      "source_projects": 3,
+      "source_subtypes": {
+        "unconfirmed:bollard": 51002
+      },
+      "views": {
+        "unknown": 2496
+      },
+      "weather": {
+        "unknown": 2496
+      },
+      "tunnel": {
+        "unknown": 2496
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "box": {
+      "images": 1255,
+      "objects": 1522,
+      "new_images": 44,
+      "new_objects": 52,
+      "splits": {
+        "train": 1051,
+        "heldout": 203,
+        "selection": 1
+      },
+      "recording_groups": 20,
+      "source_projects": 20,
+      "source_subtypes": {
+        "unconfirmed:wooden_box": 1172,
+        "unconfirmed:box": 82,
+        "unconfirmed:cargo_box": 264,
+        "CargoBox": 2,
+        "WoodBox": 2
+      },
+      "views": {
+        "unknown": 448,
+        "front": 394,
+        "left": 348,
+        "right": 65
+      },
+      "weather": {
+        "unknown": 1253,
+        "sunny": 2
+      },
+      "tunnel": {
+        "unknown": 1251,
+        "False": 2,
+        "True": 2
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "concrete_barrier": {
+      "images": 1026,
+      "objects": 2202,
+      "new_images": 4,
+      "new_objects": 6,
+      "splits": {
+        "train": 848,
+        "heldout": 178
+      },
+      "recording_groups": 6,
+      "source_projects": 6,
+      "source_subtypes": {
+        "unconfirmed:concrete_barricade": 2098,
+        "unconfirmed:concrete_barrier": 104
+      },
+      "views": {
+        "unknown": 990,
+        "front": 18,
+        "left": 11,
+        "right": 7
+      },
+      "weather": {
+        "unknown": 1026
+      },
+      "tunnel": {
+        "unknown": 1026
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "steel_barricade": {
+      "images": 376,
+      "objects": 536,
+      "new_images": 31,
+      "new_objects": 31,
+      "splits": {
+        "train": 176,
+        "heldout": 200
+      },
+      "recording_groups": 6,
+      "source_projects": 6,
+      "source_subtypes": {
+        "unconfirmed:steel_barricade": 534,
+        "steel_barricade_variant_unconfirmed": 2
+      },
+      "views": {
+        "unknown": 374,
+        "front": 2
+      },
+      "weather": {
+        "unknown": 376
+      },
+      "tunnel": {
+        "unknown": 374,
+        "False": 2
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "traffic_drum": {
+      "images": 1897,
+      "objects": 18579,
+      "new_images": 49,
+      "new_objects": 59,
+      "splits": {
+        "train": 1535,
+        "heldout": 362
+      },
+      "recording_groups": 14,
+      "source_projects": 14,
+      "source_subtypes": {
+        "unconfirmed:traffic_drum": 617,
+        "unconfirmed:pe_drum": 17955,
+        "unconfirmed:traffic_barrel": 3,
+        "traffic_drum_variant_unconfirmed": 4
+      },
+      "views": {
+        "unknown": 1762,
+        "front": 77,
+        "right": 50,
+        "left": 8
+      },
+      "weather": {
+        "unknown": 1897
+      },
+      "tunnel": {
+        "unknown": 1893,
+        "False": 4
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "plastic_barrier": {
+      "images": 212,
+      "objects": 591,
+      "new_images": 5,
+      "new_objects": 6,
+      "splits": {
+        "train": 154,
+        "heldout": 58
+      },
+      "recording_groups": 7,
+      "source_projects": 7,
+      "source_subtypes": {
+        "unconfirmed:pe_firewall": 548,
+        "unconfirmed:plastic_barrier": 39,
+        "PE_Firewall_Orange": 4
+      },
+      "views": {
+        "unknown": 208,
+        "front": 2,
+        "left": 2
+      },
+      "weather": {
+        "unknown": 212
+      },
+      "tunnel": {
+        "unknown": 208,
+        "True": 4
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "traffic_cone": {
+      "images": 618,
+      "objects": 1372,
+      "new_images": 0,
+      "new_objects": 0,
+      "splits": {
+        "train": 618
+      },
+      "recording_groups": 4,
+      "source_projects": 4,
+      "source_subtypes": {
+        "unconfirmed:traffic_cone": 1372
+      },
+      "views": {
+        "unknown": 324,
+        "front": 152,
+        "left": 108,
+        "right": 34
+      },
+      "weather": {
+        "unknown": 618
+      },
+      "tunnel": {
+        "unknown": 618
+      },
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "coverage_only_not_training_acceptance"
+    },
+    "stroller": {
+      "images": 0,
+      "objects": 0,
+      "new_images": 0,
+      "new_objects": 0,
+      "splits": {},
+      "recording_groups": 0,
+      "source_projects": 0,
+      "source_subtypes": {},
+      "views": {},
+      "weather": {},
+      "tunnel": {},
+      "exact_asset_subtype_requires_separate_evidence": true,
+      "support_status": "no_data"
+    }
+  },
+  "images": 22631,
+  "objects": 127645,
+  "new_images": 133,
+  "parent_accepted_rows_unchanged": true,
+  "parent_sha256": "33523378869f1f03b465c245810fe1b3b4f10e82ee90f3930d228a2d7ec1e374",
+  "curated_sha256": "a87d7c7d28f08bca4869b707a43ba04837e07aec1ae981332c6d3c6759126cdf",
+  "labels_sha256": "a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698",
+  "training_performed": false,
+  "group_count_limitation": "Recording/split groups are not a verified independent-scene count. Repeated routes/actors and unknown lineage require review.",
+  "pending_reasons": {
+    "annotation_completeness_unverified": 42252,
+    "visual_review_required": 52856,
+    "source_class_sample_failed": 5144,
+    "cross_split_similar_image_review": 12421,
+    "review_pending": 136,
+    "ambiguous_label:bicycle man": 93,
+    "ambiguous_label:6": 958,
+    "ambiguous_label:4": 673,
+    "ambiguous_label:animal": 7885,
+    "ambiguous_label:object": 627,
+    "review_rejected": 125,
+    "ambiguous_label:9": 21,
+    "ambiguous_label:obstacle": 4879,
+    "breadth_exact_pixel_representative_preserved": 926,
+    "ambiguous_label:vehicle": 1246,
+    "ambiguous_label:pedestrian": 1310,
+    "ambiguous_label:Obstacle_Yellow": 10,
+    "ambiguous_label:Obstacle": 2267,
+    "ambiguous_label:dynamic": 611,
+    "ambiguous_label:static": 633,
+    "invalid_bbox": 13,
+    "ambiguous_label:dog": 100,
+    "ambiguous_label:Vehicle": 1473,
+    "capture_subtype_unknown": 3355,
+    "capture_target_scope_unverified": 25218,
+    "missing_capture_bbox_source": 19838,
+    "no_visible_instance_pixels": 202,
+    "teacher_proposal_review_required": 5721,
+    "v6_cross_split_similar_image_requires_review": 74
+  }
+}

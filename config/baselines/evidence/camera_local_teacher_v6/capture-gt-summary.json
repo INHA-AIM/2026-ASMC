@@ -1,0 +1,23 @@
+{
+  "frames": 1653,
+  "teacher_split_groups": 14,
+  "original_dataset_splits_unchanged": true,
+  "teacher_derived_gt": false,
+  "source_sha256": "33523378869f1f03b465c245810fe1b3b4f10e82ee90f3930d228a2d7ec1e374",
+  "complete_in_scope_images": 1254,
+  "scope": "independent actor names; complete original Capture geometry required for full-image precision",
+  "classes": {
+    "bus": 415,
+    "truck": 544,
+    "box": 442,
+    "car": 252,
+    "person": 1296,
+    "bicycle": 217,
+    "traffic_cone": 576,
+    "concrete_barrier": 63,
+    "traffic_drum": 406,
+    "dog": 86,
+    "deer": 1,
+    "plastic_barrier": 169
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "checked_at": "2026-10-11T10:44:51.068383+00:00",
+  "related_cpu_tests": 120,
+  "related_test_modules": [
+    "test_camera_data_audit",
+    "test_camera_data_readiness",
+    "test_camera_teacher_audit",
+    "test_camera_teacher_expansion",
+    "test_prepare_capture_training_data",
+    "test_camera_bbox_pilot",
+    "test_experiment_gallery_hub",
+    "test_seg_measurements"
+  ],
+  "documentation_migration": "passed",
+  "validators": [
+    "validate_perception_contract.py",
+    "validate_perception_topic_policy.py",
+    "validate_perception_runtime_acceptance.py"
+  ],
+  "source_checkouts_clean": true,
+  "actual_dataset_verification": "export-verification.json",
+  "runner_sha256": "d55a734197530d654764a639e49c3d65e4a5be7bd7bce3a6316cff6354edaf81",
+  "hosted_CI": {
+    "parent_PR": 80,
+    "head_sha": "6ba99be62782e6a4cdd2e18fcf766914a5fd8643",
+    "run_id": 38124324340,
+    "check_run_id": 114425400103,
+    "status": "job_not_started_billing",
+    "annotation": "The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the Billing & plans section in your settings",
+    "local_checks_are_not_hosted_CI": true
+  },
+  "ROS_operating_change": false,
+  "training_performed": false,
+  "contract_cpu_tests": 27,
+  "total_distinct_cpu_tests": 147,
+  "gallery_pages_checked": 10,
+  "gallery_broken_local_links": 0,
+  "local_gallery_http": 200,
+  "gallery_index_E_numbers": "E222-E231"
+}
