@@ -48,6 +48,7 @@ def main():
     p.add_argument('--calibrate-native-pivot',action='store_true',help='Stationary six-object probes only; skip bbox-bottom correction and require visual calibration')
     p.add_argument('--ground-calibration',type=Path,default=ROOT/'config/morai/capture_asset_ground_v1.json')
     p.add_argument('--only-native-id',action='append',default=[],help='Cleanup only these owned native roots; repeat to select')
+    p.add_argument('--pause-static',action='store_true',help='Pause owned collection actors after native physics settling; keep physics and GT bbox offsets')
     p.add_argument('--allocation-policy',type=Path,help='Frozen image-presence and known asset-pool policy for a new layout')
     p.add_argument('--station-phase',type=float,default=.5,help='Placement phase in [0,1) within each route interval')
     p.add_argument('--side-phase',type=int,choices=(0,1),default=0)
@@ -78,7 +79,7 @@ def main():
     from morai.common.enum_pb2 import OBJECT_TYPE_VEHICLE,OBJECT_TYPE_OBSTACLE,OBJECT_TYPE_PEDESTRIAN
     from morai.common.type_pb2 import Transform,Vector3
     from morai.actor.actor_spawn_pb2 import ActorSpawnInfo,ObstacleSpawnParam,PedestrianSpawnParam
-    from morai.actor.actor_set_pb2 import SetTransformParam
+    from morai.actor.actor_set_pb2 import SetTransformParam, EnableActor
     channel=grpc.insecure_channel(a.grpc_host+':7789',options=[('grpc.max_receive_message_length',64<<20)])
     actors=ActorStub(channel);sim=SimulatorStub(channel)
     rows=[json.loads(line) for line in a.ledger.read_text().splitlines() if line.strip()]
@@ -145,6 +146,10 @@ def main():
             if reply.status!=1:row['reason']='spawn_rejected';save(a.ledger,rows);continue
             time.sleep(.2);state=actors.GetActorState(info,timeout=5)
             time.sleep(.2);state=actors.GetActorState(info,timeout=5)
+            if a.pause_static:
+                if actors.SetPause(EnableActor(actor_info=info,enable=True),timeout=3).status!=1:
+                    raise RuntimeError('owned static pause rejected')
+                row['static_pause_enabled']=True
             row['state']=MessageToDict(state,preserving_proto_field_name=True)
             row['settled_location']={k:getattr(state.transform.location,k) for k in 'xyz'}
             radius=math.hypot(state.bounding_box.extent.x,state.bounding_box.extent.y)

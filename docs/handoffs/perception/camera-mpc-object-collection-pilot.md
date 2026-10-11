@@ -141,7 +141,7 @@ python3 tools/perception/run_capture_route_collection.py collect --pilot-results
 수집 객체의 물리를 끄지 않는다. `--pause-static --restore-reviewed-static`으로
 검수한 native 자세를 복원하고 수집 actor만 pause한다. Ego는 이 고정 대상에 포함하지 않는다.
 Pedestrian `SetTransform`의 z는 ground-relative이고 조회/스폰 z는 map 높이인
-차이도 실제 Deer1 시험으로 확인했다. 회전 도구는 이 차이를 변환하고 5° 이내 yaw
+차이도 실제 Deer1 시험으로 확인했다. 회전 도구는 이 차이를 변환하고 native 조회에서 5° 이내 yaw
 편차에만 1회 보정한 뒤 원래 2°/0.2m 허용값으로 검증한다. 물리 OFF 시험과 실패
 rollback 기록은 삭제하지 않으며, 복원 후 새 ledger로만 수집을 재개한다.
 

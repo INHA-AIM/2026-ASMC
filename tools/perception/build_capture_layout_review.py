@@ -16,9 +16,11 @@ def main():
     p.add_argument('--ledger',type=Path,required=True)
     p.add_argument('--sensor-root',type=Path,default=Path('/mnt/c/MoraiLauncher_Win/SensorData'))
     p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--ground-calibration',type=Path,default=Path(__file__).resolve().parents[2]/'config/morai/capture_asset_ground_v1.json')
     a=p.parse_args()
     if a.output.exists():raise ValueError('choose a new immutable review snapshot')
     rows=[json.loads(l) for l in a.ledger.read_text().splitlines() if l.strip()]
+    calibration=json.loads(a.ground_calibration.read_text())['assets']
     parents={str(n):r for r in rows for n in r.get('native_ids',[]) if r.get('created') and not r.get('removed')}
     manifest=(a.run/'capture_manifest.jsonl').read_bytes()
     records=[json.loads(l) for l in manifest.splitlines() if l.strip()]
@@ -33,6 +35,8 @@ def main():
             pixels=None; color_counts=None
             for b in boxes:
                 if b['actor_id'] not in parents:continue
+                expected=calibration[parents[b['actor_id']]['api_name']]['components']['0']['gt_source_label']
+                if b['gt_source_label']!=expected:continue
                 x1,y1,x2,y2=b['source_xyxy'];score=max(0,x2-x1)*max(0,y2-y1)
                 # Review visibility only; this does not filter training GT.
                 if score < 64:continue
@@ -68,6 +72,7 @@ def main():
         thumb=image.copy();thumb.thumbnail((640,360));tile=Image.new('RGB',(640,390),'#101827');tile.paste(thumb,(0,30));ImageDraw.Draw(tile).text((5,5),caption,fill='white');thumbs.append(tile)
         snapshots.append(dict(native_id=native,api_name=row['api_name'],record=item['record'],
             visible_pixels=item['visible_pixels'],fully_inside_image=item['fully_inside_image'],
+            expected_parent_source_label=calibration[row['api_name']]['components']['0']['gt_source_label'],
             rgb_sha256=hashlib.sha256(Path(item['rgb']).read_bytes()).hexdigest(),native_boxes=item['boxes']))
     if thumbs:
         sheet=Image.new('RGB',(1280,390*((len(thumbs)+1)//2)),'#101827')

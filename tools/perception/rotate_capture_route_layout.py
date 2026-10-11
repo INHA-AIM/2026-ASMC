@@ -78,9 +78,9 @@ def main():
         time.sleep(.08)
         actual=actors.GetActorState(infos[key],timeout=3)
         delta=(actual.transform.rotation.z-target.rotation.z+180)%360-180
-        if row['actor_type']=='pedestrian' and 0.05 < abs(delta) <= 5:
+        if 0.05 < abs(delta) <= 5:
             request.transform.rotation.z-=delta
-            if actors.SetTransform(request,timeout=3).status!=1:raise RuntimeError('bounded pedestrian yaw correction rejected')
+            if actors.SetTransform(request,timeout=3).status!=1:raise RuntimeError('bounded native yaw correction rejected')
             time.sleep(.08)
             actual=actors.GetActorState(infos[key],timeout=3)
         return actual
