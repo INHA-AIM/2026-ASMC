@@ -48,6 +48,10 @@ def main():
     p.add_argument('--layout-id',required=True)
     a=p.parse_args()
     if not a.layout_id or a.output.exists():raise ValueError('new output version and nonempty layout ID required')
+    collection_path=a.run/'lineage/collection.json'
+    if not collection_path.exists():collection_path=a.run/'collection.json'
+    if collection_path.exists() and json.loads(collection_path.read_text()).get('layout_id')!=a.layout_id:
+        raise ValueError('layout ID differs from source collection; preserve the actual split group')
     ledger=[json.loads(l) for l in a.ledger.read_text().splitlines() if l.strip()]
     frames=[json.loads(l) for l in (a.run/'manifest.jsonl').read_text().splitlines() if l.strip()]
     a.output.mkdir(parents=True);a.gallery.mkdir(parents=True,exist_ok=True)

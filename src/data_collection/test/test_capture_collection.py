@@ -82,6 +82,16 @@ class CollectionTest(unittest.TestCase):
         self.assertGreater(sum(c=='plastic_barrier' for c,a in rows),sum(c=='bollard' for c,a in rows))
         self.assertTrue(all(c not in ('car','dog','person') for c,a in rows))
 
+    def test_new_layout_uses_explicit_updated_presence_and_asset_pool(self):
+        from data_collection.capture_collection import PRESENCE,ASSETS
+        presence=dict(PRESENCE,stroller=1200)
+        pools={k:tuple(a for a in v if a!='RedBarrel') for k,v in ASSETS.items()}
+        rows=allocation(120,presence,pools,1)
+        self.assertLess(sum(c=='stroller' for c,a in rows),sum(c=='stroller' for c,a in allocation(120)))
+        self.assertNotIn('RedBarrel',[a for c,a in rows])
+        self.assertEqual(rows,allocation(120,presence,pools,1))
+        with self.assertRaises(ValueError):allocation(120,{'box':1},pools)
+
     def test_full_footprint_and_other_route_segment(self):
         route=[(0,0,0),(100,0,0),(100,10,0),(0,10,0)]
         self.assertFalse(footprint_clear(route,(50,2),1,[]))

@@ -20,13 +20,14 @@ def save(path, rows):
     temp.replace(path)
 
 
-def plan(points, count):
+def plan(points, count, policy=None, phase=.5, side_phase=0):
     length=sum(math.hypot(b[0]-a[0],b[1]-a[1]) for a,b in zip(points,points[1:]))
     rows=[]
-    for i,(label,asset) in enumerate(allocation(count)):
-        station=(i+.5)*length/count
+    policy=policy or {}
+    for i,(label,asset) in enumerate(allocation(count,policy.get('presence'),policy.get('asset_pools'),policy.get('asset_offset',0))):
+        station=(i+phase)*length/count
         point,yaw=route_sample(points,station)
-        offset=(1 if i%2==0 else -1)*5.
+        offset=(1 if (i+side_phase)%2==0 else -1)*5.
         rows.append(dict(slot=i,station_m=station,target_class=label,api_name=asset,
             actor_type='pedestrian' if label=='deer' else 'obstacle',
             route_surface_z=point[2],yaw_deg=math.degrees(yaw),
@@ -47,15 +48,23 @@ def main():
     p.add_argument('--calibrate-native-pivot',action='store_true',help='Stationary six-object probes only; skip bbox-bottom correction and require visual calibration')
     p.add_argument('--ground-calibration',type=Path,default=ROOT/'config/morai/capture_asset_ground_v1.json')
     p.add_argument('--only-native-id',action='append',default=[],help='Cleanup only these owned native roots; repeat to select')
+    p.add_argument('--allocation-policy',type=Path,help='Frozen image-presence and known asset-pool policy for a new layout')
+    p.add_argument('--station-phase',type=float,default=.5,help='Placement phase in [0,1) within each route interval')
+    p.add_argument('--side-phase',type=int,choices=(0,1),default=0)
     a=p.parse_args()
     if a.only_native_id and a.operation!='cleanup':p.error('--only-native-id is restricted to cleanup')
+    if not 0<=a.station_phase<1:p.error('--station-phase must be in [0,1)')
     if a.near_ego and a.count!=6:p.error('near-ego is restricted to the six-object pilot')
     if a.calibrate_native_pivot and (not a.near_ego or a.count!=6):p.error('pivot calibration requires stationary near-ego six-object probes')
     points=[tuple(map(float,line.split()[:3])) for line in a.route.read_text().splitlines() if line.strip()]
     if a.operation=='plan':
         if a.ledger.exists():raise RuntimeError('ledger exists; choose a new layout ID')
-        a.ledger.parent.mkdir(parents=True,exist_ok=True);rows=plan(points,a.count)
+        policy=json.loads(a.allocation_policy.read_text()) if a.allocation_policy else None
+        a.ledger.parent.mkdir(parents=True,exist_ok=True);rows=plan(points,a.count,policy,a.station_phase,a.side_phase)
         for r in rows:r['route_sha256']=hashlib.sha256(a.route.read_bytes()).hexdigest()
+        for r in rows:
+            r['station_phase']=a.station_phase;r['side_phase']=a.side_phase
+            if a.allocation_policy:r['allocation_policy_sha256']=hashlib.sha256(a.allocation_policy.read_bytes()).hexdigest()
         save(a.ledger,rows);print(json.dumps(dict(planned=len(rows),ledger=str(a.ledger))))
         return
     sys.path.insert(0,str(ROOT/'tools/grpc_inha_univ/src/proto'))

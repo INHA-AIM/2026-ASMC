@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 import uuid
+from datetime import datetime, timezone, timedelta
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'tools/grpc_inha_univ/src/proto'))
@@ -82,6 +83,15 @@ def trial(data,controller,speed,ledger,layout,captures=30,seconds=120,parent='',
             try:process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid,signal.SIGTERM);process.wait(timeout=10)
+        except BaseException:
+            # A user interruption must also stop this owned child controller.
+            import os
+            if process.poll() is None:
+                os.killpg(process.pid,signal.SIGINT)
+                try:process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid,signal.SIGTERM);process.wait(timeout=10)
+            raise
     validation=json.loads((folder/'validation.json').read_text()) if (folder/'validation.json').exists() else dict(
         controller=controller,tracking_passed=False,exit_reason='node_failed_before_validation')
     summary=json.loads((folder/'summary.json').read_text()) if (folder/'summary.json').exists() else {}
@@ -112,7 +122,14 @@ def main():
     p.add_argument('--controller',choices=('mpc','pp'),default='mpc',help='PP is explicit after a preserved MPC diagnosis')
     p.add_argument('--pilot-results',type=Path)
     p.add_argument('--start-pose',type=Path,help='Saved stopped Ego state; reset before each trial/lap')
+    p.add_argument('--rotation-step-deg',type=int,choices=(0,60),default=0,
+                   help='Rotate owned actors by 60 degrees between completed laps')
+    p.add_argument('--stop-after-current-file',type=Path,
+                   help='If this file exists between laps, preserve progress and stop before the next lap')
+    p.add_argument('--deadline-utc',help='ISO timestamp; do not start a lap without its 30-minute stop/restore budget')
     a=p.parse_args()
+    deadline=datetime.fromisoformat(a.deadline_utc.replace('Z','+00:00')) if a.deadline_utc else None
+    if deadline and deadline.tzinfo is None:raise ValueError('deadline must include a timezone')
     if a.output.exists():raise RuntimeError('choose a new immutable trial report')
     a.output.parent.mkdir(parents=True,exist_ok=True)
     report=dict(operation=a.operation,runs=[],layout_id=a.layout_id,completed=False)
@@ -160,9 +177,22 @@ def main():
     start=pilot['start_pose']
     original_weather=environment.GetWeather(Empty(),timeout=5);original_time=environment.GetTime(Empty(),timeout=5)
     report.update(original_weather=MessageToDict(original_weather),original_time=MessageToDict(original_time));save()
+    current_ledger=a.ledger;condition_index=0
+    report['rotation_step_deg']=a.rotation_step_deg;report['layout_revisions']=[]
     try:
         for weather_name,code in ((('sunny',0),) if a.operation=='inspect' else (('sunny',0),('foggy',2))):
             for hour in ((13,) if a.operation=='inspect' else (11,13,15)):
+                if deadline and datetime.now(timezone.utc)+timedelta(seconds=1830)>deadline:
+                    report['stopped_before_deadline']=a.deadline_utc;save();return 2
+                if a.stop_after_current_file and a.stop_after_current_file.exists():
+                    report['stopped_between_laps']=True;save();return 2
+                if condition_index and a.rotation_step_deg:
+                    revision=a.output.parent/(a.output.stem+'-layouts')/('lap-%02d.jsonl'%condition_index)
+                    subprocess.run([sys.executable,str(ROOT/'tools/perception/rotate_capture_route_layout.py'),
+                        '--ledger',str(current_ledger),'--output',str(revision),'--degrees',str(a.rotation_step_deg),
+                        '--grpc-host',a.grpc_host],check=True)
+                    current_ledger=revision
+                    report['layout_revisions'].append(str(revision));save()
                 for method,request in ((environment.SetWeather,Weather(type=code,instantly=True)),
                                        (environment.SetTime,SimulationTime(hour=hour,instantly=True))):
                     if method(request,timeout=5).status!=1:raise RuntimeError('environment change rejected')
@@ -170,11 +200,13 @@ def main():
                 if environment.GetWeather(Empty(),timeout=5).type!=code or environment.GetTime(Empty(),timeout=5).hour!=hour:
                     raise RuntimeError('environment change not verified')
                 reset()
-                result=trial(a.data_root,pilot['controller'],pilot['selected_speed_kph'],a.ledger,a.layout_id,0,1800,
+                result=trial(a.data_root,pilot['controller'],pilot['selected_speed_kph'],current_ledger,a.layout_id,0,1800,
                              inspection_only=a.operation=='inspect')
-                result.update(weather=weather_name,hour=hour)
+                result.update(weather=weather_name,hour=hour,spawn_ledger=str(current_ledger),
+                              rotation_step_index=condition_index,nominal_rotation_deg=condition_index*a.rotation_step_deg)
                 report['runs'].append(result);save()
                 if not result['passed']:raise RuntimeError('condition failed; evidence retained')
+                condition_index+=1
         report['completed']=True;save()
     except Exception as exc:
         report['failure']=str(exc);save();raise

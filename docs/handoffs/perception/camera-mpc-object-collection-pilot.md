@@ -130,6 +130,24 @@ roslaunch data_collection capture_route_collection.launch controller:=pp target_
 python3 tools/perception/run_capture_route_collection.py collect --pilot-results /data/capture-pilot-preflight-20261011/pilot-pp-corner-r1.json --ledger /data/capture_layouts/APPROVED_LAYOUT/spawn-ledger.jsonl --layout-id APPROVED_LAYOUT --output /data/capture_runs/unique_collection_report.json
 ```
 
+2026-10-12 추가 요청에 따라 방향 다양화에는 `--rotation-step-deg 60`을 사용한다.
+같은 배치의 여섯 조건에서 상대 방향은 0/60/120/180/240/300°다. 정차한 회차 사이에만
+소유 actor를 회전하며, 실제 위치·방향·높이와 전체 footprint 간격을 다시 검사한다.
+변경 전 자세를 mutation journal에 저장하고 실패하면 원래 자세로 되돌린 뒤 주행을 시작하지 않는다.
+회전별 ledger를 불변 revision으로 남기며, 새 방향의 RGB 구조물 겹침은 라벨 채택 전에 검수한다.
+동일 배치의 방향·날씨 변형은 계속 같은 train split 그룹이다.
+
+`--stop-after-current-file PATH`는 해당 파일이 생기면 현재 바퀴의 정상 종료 후 멈춘다.
+`--deadline-utc 2026-10-11T23:00:00Z`처럼 시각을 지정하면 30분 주행/복원 여유가
+없는 새 바퀴를 시작하지 않는다. 진행 중단 시 소유 자식 제어기도 함께 종료하고 환경을 복원한다.
+
+터널 오른쪽의 기존 5m 횡방향 배치는 벽 바깥에서 하단이 가려진 반례가 있었다.
+안쪽 약 3.35m 후보를 별도로 생성해 전체 footprint·접지·RGB를 검사한다. 유효한 가림은
+수집하되 벽 관통·지지점 불명확을 유용한 가림으로 간주하지 않는다.
+다음 세트는 새로 확보한 클래스 등장 이미지 수를 반영한 `--allocation-policy`와
+`--station-phase`, `--side-phase`로 종류·위치·좌우를 바꾼다. 기존 세트의 반복 사진을
+독립 장면 증가로 보고하지 않는다. 확인된 접지 실패 RedBarrel은 새 계획의 에셋 풀에서 명시 제외한다.
+
 회차 사이에 Ego만 정차 확인 후 저장 시작 자세로 복귀시키고 위치/방향을 검증한다.
 이 MORAI 빌드의 작은 SetTransform yaw 편차에는 5° 이내 오차에 한해 1회 보정하며 허용 오차를 늘리지 않는다.
 종료 시 정지를 확인한 뒤 원래 gear/control mode를 복원한다. 날씨·시간은 반복 실행기가 복원한다.

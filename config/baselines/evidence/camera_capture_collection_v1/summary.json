@@ -123,7 +123,7 @@
   ],
   "selected_speed_kph": 30,
   "checks": {
-    "capture_cpu": 19,
+    "capture_cpu": 20,
     "native_gt_export_cpu": 5,
     "bbox_training_cpu": 13,
     "teacher_expansion_cpu": 22,
@@ -224,6 +224,28 @@
       "cte_max_m": 0.438491,
       "runtime_acceptance": true,
       "active_reviewed": 49
+    },
+    "reviewed_subset": {
+      "images": 1673,
+      "objects": 10984,
+      "classes": {
+        "person": 3905,
+        "stroller": 1910,
+        "plastic_barrier": 1278,
+        "traffic_cone": 503,
+        "steel_barricade": 903,
+        "deer": 490,
+        "box": 292,
+        "traffic_drum": 247,
+        "motorcycle": 573,
+        "bicycle": 152,
+        "bollard": 211,
+        "concrete_barrier": 520
+      },
+      "quarantined": 334,
+      "split_group": "route60_20261012",
+      "source_run_restore_passed": true,
+      "independent_yolo_sha_and_eval_leakage": "passed"
     }
   },
   "stage120": {
@@ -231,8 +253,35 @@
     "spawned": 118,
     "active": 115,
     "numeric_gate_passed": true,
-    "visual_gate_passed": false,
-    "status": "full-route inspection in progress",
-    "run_id": "route_pp_30_20261011T163237_854"
+    "visual_gate_passed": true,
+    "status": "first SUNNY 11 lap collecting; subsequent laps held for user-requested rotation and tunnel relocation",
+    "run_id": "route_pp_30_20261011T163237_854",
+    "runtime_inspection_passed": true,
+    "approved_active": 104,
+    "rejected_and_removed": 11,
+    "inspection_captures": 1003,
+    "inspection_cte_p95_m": 0.245689
+  },
+  "user_collection_extension": {
+    "available_hours": 6,
+    "deadline_utc": "2026-10-11T23:00:00Z",
+    "requested_rotation_degrees_per_lap": 60,
+    "right_tunnel_previous_offset_m": 5,
+    "right_tunnel_new_candidate_offset_m": 3.35,
+    "second_layout_plan_count": 120,
+    "new_second_layout_distribution": {
+      "steel_barricade": 15,
+      "plastic_barrier": 14,
+      "traffic_cone": 14,
+      "stroller": 13,
+      "box": 13,
+      "bicycle": 8,
+      "concrete_barrier": 12,
+      "traffic_drum": 10,
+      "bollard": 9,
+      "deer": 6,
+      "motorcycle": 6
+    },
+    "status": "implementation and collection in progress"
   }
 }

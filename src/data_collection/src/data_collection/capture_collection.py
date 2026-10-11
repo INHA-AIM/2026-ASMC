@@ -46,20 +46,26 @@ def motion_summary(samples, target_kph):
         speed_achieved=reached_seconds>=3 and progress>5)
 
 
-def allocation(count):
+def allocation(count, presence=None, asset_pools=None, asset_offset=0):
     """Deterministic largest-deficit allocation; unavailable assets stay unfilled."""
     if count not in (6, 12, 60, 120, 240):
         raise ValueError('use a staged layout size: 6/12/60/120/240')
+    presence = PRESENCE if presence is None else presence
+    asset_pools = ASSETS if asset_pools is None else asset_pools
+    if set(presence)!=set(PRESENCE) or any(not math.isfinite(float(v)) or v<0 for v in presence.values()):
+        raise ValueError('complete nonnegative collection class presence required')
+    if set(asset_pools)!=set(ASSETS) or any(not pool or set(pool)-set(ASSETS[k]) for k,pool in asset_pools.items()):
+        raise ValueError('explicit known asset pools required')
     rare_count = round(count / 6)
     result = []
     for pool, total in ((tuple(k for k in PRESENCE if k not in ('deer', 'motorcycle', 'bicycle')), count-rare_count),
                         (('deer', 'motorcycle', 'bicycle'), rare_count)):
-        weights = {k: 1 / math.sqrt(max(PRESENCE[k], 50)) for k in pool}
+        weights = {k: 1 / math.sqrt(max(presence[k], 50)) for k in pool}
         norm = sum(weights.values()); used = {k: 0 for k in pool}
         for i in range(total):
             label = max(pool, key=lambda k: ((i+1)*weights[k]/norm-used[k], k))
             used[label] += 1
-            result.append((label, ASSETS[label][(used[label]-1) % len(ASSETS[label])]))
+            result.append((label, asset_pools[label][(used[label]-1+asset_offset) % len(asset_pools[label])]))
     # Interleave rare objects around the whole route instead of placing them all at its end.
     obstacles, rare = result[:count-rare_count], result[count-rare_count:]
     output = []

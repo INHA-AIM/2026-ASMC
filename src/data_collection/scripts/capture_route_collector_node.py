@@ -156,6 +156,9 @@ class CaptureRouteCollector(CaptureModeCollector):
             actual=self.actors.GetActorState(info,timeout=3)
             if actual.actor_info.id.value!=row['id'] or any(abs(getattr(actual.transform.location,k)-row['settled_location'][k])>.2 for k in 'xyz'):
                 raise RuntimeError('reviewed actor moved or ownership changed: '+row['id'])
+            expected_yaw=row.get('state_after_identity_settling',row.get('state',{})).get('transform',{}).get('rotation',{}).get('z',0.)
+            if abs((actual.transform.rotation.z-expected_yaw+180)%360-180)>2:
+                raise RuntimeError('reviewed actor orientation changed: '+row['id'])
         self.original_mode=self.actors.GetVehicleControlMode(self.ego_info,timeout=3).mode
         self.original_gear=initial.vehicle_state.gear_mode
         self.actuator_prepared=True
