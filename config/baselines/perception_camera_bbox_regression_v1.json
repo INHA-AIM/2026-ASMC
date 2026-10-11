@@ -1,0 +1,56 @@
+{
+  "experiment_id": "camera_bbox_regression_v1",
+  "status": "diagnosis_complete; retraining/runtime_selection_deferred",
+  "runtime_promoted": false,
+  "new_training": false,
+  "dataset_mutations": 0,
+  "manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+  "pilot_config_sha256": "18d3efd28639303b0af229a097f00839c592f891b24922840224a51cde434b0f",
+  "gpu_reevaluation_seconds": 149.75293441105168,
+  "completed_epochs": [
+    0,
+    1,
+    4,
+    8,
+    16
+  ],
+  "fixed_confidence": 0.4,
+  "original_selected_confidences_preserved": true,
+  "classes": [
+    "person",
+    "motorcycle"
+  ],
+  "gallery": "http://localhost:8768/camera-bbox-regression-v1/",
+  "evidence": "config/baselines/evidence/camera_bbox_regression_v1",
+  "review": {
+    "motorcycle_images": 63,
+    "motorcycle_annotations": 191,
+    "risk_images": 200,
+    "regression_images": 99,
+    "pending_component_annotations": 7,
+    "regression_comparisons": 1137
+  },
+  "conclusions": {
+    "confirmed": [
+      "initial COCO7 classification rows transferred exactly",
+      "ID/text/provenance/mask checks passed",
+      "regression starts within first complete epoch",
+      "motorcycle commonly becomes car",
+      "visible component annotations missing in reviewed train samples",
+      "motorcycle training and evaluation each source-concentrated"
+    ],
+    "hypotheses": [
+      "imbalance/domain diversity/incomplete annotations contribute to forgetting",
+      "full fine-tuning/LR/augmentation contribute to early changes"
+    ],
+    "unresolved": [
+      "relative causal effects require independent training controls",
+      "independent motorcycle selection scenes lacking",
+      "original text embedding bit-identity not reconstructed from fused head"
+    ]
+  },
+  "next": "pretrained YOLO26l versus RF-DETR M/L; lower-resolution X/XL screening before retraining",
+  "hosted_ci": "billing-blocked, distinct from local checks",
+  "gallery_experiment_number": "E213",
+  "cpu_tests_passed": 140
+}

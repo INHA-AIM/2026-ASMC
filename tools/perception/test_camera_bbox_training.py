@@ -46,11 +46,11 @@ class TrainingTest(unittest.TestCase):
         self.assertEqual(updates,[3,7])
         self.assertEqual(accumulation_threshold(16,4,0,2000),4)
 
-    def test_coco_baseline_does_not_evaluate_random_resized_head(self):
+    def test_coco_baseline_is_distinct_from_training_initialization(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);dataset=root/'data/dataset_versions/pilot';dataset.mkdir(parents=True)
             paired=root/'paired';run=paired/'yolo26l';run.mkdir(parents=True)
-            initial=run/'initial.pt';initial.write_bytes(b'random sixteen class head')
+            initial=run/'initial.pt';initial.write_bytes(b'fixed sixteen class initialization')
             pretrained=root/'data/models/coco.pt';pretrained.parent.mkdir();pretrained.write_bytes(b'COCO head')
             (paired/'comparison.json').write_text(json.dumps(dict(dataset=str(dataset))))
             record=dict(model_key='yolo26l',initial_weights_sha256=sha(pretrained),

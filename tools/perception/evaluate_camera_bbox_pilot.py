@@ -25,7 +25,7 @@ def scoped_complete(row,pixel_scope):
 
 
 def evaluation_weights(requested, cfg, policy='pretrained'):
-    """A freshly resized COCO classification head is not a pretrained baseline."""
+    """Keep the original COCO baseline distinct from a remapped initialization."""
     requested=Path(requested)
     if requested.name!='initial.pt' or policy=='initialization':
         return requested,'training_initialization' if requested.name=='initial.pt' else 'trained_checkpoint'
@@ -39,7 +39,7 @@ def evaluation_weights(requested, cfg, policy='pretrained'):
         pretrained=dataset.parents[1]/cfg['models']['yolo26l']
         if sha(pretrained)!=record['initial_weights_sha256']:
             raise ValueError('pretrained baseline weight changed')
-        return pretrained,'original_COCO80_pretrained; fixed16 random head is not a baseline'
+        return pretrained,'original_COCO80_pretrained; fixed16 initialization is a separate diagnostic'
     return requested,'pretrained_YOLOE_detect_with_fixed16_text_embeddings; before fine-tuning'
 
 
@@ -116,7 +116,7 @@ def infer(args):
     names=list(json.loads((args.dataset/'summary.json').read_text())['classes'])
     rows=[r for r in read_jsonl(args.dataset/'manifest.jsonl') if r['split'] in ('selection','heldout')]
     temporal_path=args.dataset/'temporal-probe.jsonl'
-    temporal=list(read_jsonl(temporal_path)) if temporal_path.exists() else []
+    temporal=list(read_jsonl(temporal_path)) if temporal_path.exists() and not getattr(args,'skip_temporal',False) else []
     inference_rows=list({r['id']:r for r in rows+temporal}.values())
     args.output.mkdir(parents=True,exist_ok=False)
     masks={view:HoodMask.load(True,repo/'src/asmc_camera/config/camera'/file) for view,file in
@@ -171,11 +171,14 @@ def infer(args):
     # Selection is the only threshold search. Heldout uses the frozen choice.
     selection=[r for r in rows if r['split']=='selection'];heldout=[r for r in rows if r['split']=='heldout']
     def preds(part):return [p for p in predictions if p['id'] in {r['id'] for r in part}]
-    sweep=[summarize(selection,preds(selection),round(.1+.05*i,2),pixel_scope=True) for i in range(13)]
+    frozen=getattr(args,'fixed_confidence',None)
+    sweep=[summarize(selection,preds(selection),value,pixel_scope=True)
+        for value in ([frozen] if frozen is not None else [round(.1+.05*i,2) for i in range(13)])]
     available=[s for s in sweep if s['macro_f1'] is not None]
     chosen=max(available,key=lambda s:(s['macro_f1'],s['confidence']))['confidence'] if available else .4
     save(args.output/'evaluation.json',dict(selection_confidence=chosen,
-        threshold_selection_available=bool(available),selection_sweep=sweep,
+        threshold_selection_available=bool(available) and frozen is None,
+        threshold_policy='frozen diagnostic; no threshold search' if frozen is not None else 'selection-only search',selection_sweep=sweep,
         selected_selection=summarize(selection,preds(selection),chosen,pixel_scope=True),
         selected_heldout=summarize(heldout,preds(heldout),chosen,pixel_scope=True),
         selected_heldout_accepted=summarize(heldout,preds(heldout),chosen,'accepted',pixel_scope=True),
@@ -198,5 +201,7 @@ if __name__=='__main__':
     p.add_argument('--weights',required=True,type=Path);p.add_argument('--output',required=True,type=Path)
     p.add_argument('--front-width',required=True,type=int,choices=[960,1280])
     p.add_argument('--baseline-policy',choices=['pretrained','initialization'],default='pretrained',
-        help='compare original pretrained COCO head, not the freshly resized random classification head')
+        help='original pretrained baseline or actual fixed-class training initialization')
+    p.add_argument('--fixed-confidence',type=float,default=None)
+    p.add_argument('--skip-temporal',action='store_true',help='diagnostic accuracy only; preserve the original temporal results')
     infer(p.parse_args())

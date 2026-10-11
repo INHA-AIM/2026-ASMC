@@ -1,0 +1,813 @@
+[
+  {
+    "model": "yolo26l",
+    "completed_epochs": 0,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 87,
+    "geometry_tp": 87,
+    "categories": {
+      "correct": 87,
+      "position_missing_at_saved_floor": 15,
+      "confidence_below_threshold": 5
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.872314453125,
+    "checkpoint_sha256": "6093766efa34da2fd84f0e2044a7321ae920cbe26c2568abef2ecc4158f5b3f0",
+    "optimizer_step_max": null,
+    "ema_updates": null,
+    "amp_scale": null
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 0,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "6093766efa34da2fd84f0e2044a7321ae920cbe26c2568abef2ecc4158f5b3f0",
+    "optimizer_step_max": null,
+    "ema_updates": null,
+    "amp_scale": null
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 0,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 24,
+    "geometry_tp": 24,
+    "categories": {
+      "correct": 24,
+      "box_localization_error": 1,
+      "position_missing_at_saved_floor": 1
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.886474609375,
+    "checkpoint_sha256": "6093766efa34da2fd84f0e2044a7321ae920cbe26c2568abef2ecc4158f5b3f0",
+    "optimizer_step_max": null,
+    "ema_updates": null,
+    "amp_scale": null
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 0,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 126,
+    "geometry_tp": 129,
+    "categories": {
+      "correct": 126,
+      "other_class": 3,
+      "confidence_below_threshold": 8,
+      "box_localization_error": 1
+    },
+    "confusion": {
+      "person": 3
+    },
+    "geometry_confidence_median": 0.7744140625,
+    "checkpoint_sha256": "6093766efa34da2fd84f0e2044a7321ae920cbe26c2568abef2ecc4158f5b3f0",
+    "optimizer_step_max": null,
+    "ema_updates": null,
+    "amp_scale": null
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 1,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 64,
+    "geometry_tp": 64,
+    "categories": {
+      "correct": 64,
+      "position_missing_at_saved_floor": 26,
+      "confidence_below_threshold": 16,
+      "box_localization_error": 1
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.647705078125,
+    "checkpoint_sha256": "1c0ebdf4d2de347a34c92a0cd44993c195b41547f1404163f7e15ab16872ffe5",
+    "optimizer_step_max": 493.0,
+    "ema_updates": 500,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 1,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "1c0ebdf4d2de347a34c92a0cd44993c195b41547f1404163f7e15ab16872ffe5",
+    "optimizer_step_max": 493.0,
+    "ema_updates": 500,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 1,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 13,
+    "geometry_tp": 13,
+    "categories": {
+      "correct": 13,
+      "confidence_below_threshold": 5,
+      "position_missing_at_saved_floor": 8
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.713134765625,
+    "checkpoint_sha256": "1c0ebdf4d2de347a34c92a0cd44993c195b41547f1404163f7e15ab16872ffe5",
+    "optimizer_step_max": 493.0,
+    "ema_updates": 500,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 1,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 0,
+    "geometry_tp": 5,
+    "categories": {
+      "confidence_below_threshold": 37,
+      "position_missing_at_saved_floor": 88,
+      "other_class": 5,
+      "box_localization_error": 8
+    },
+    "confusion": {
+      "car": 3,
+      "person": 2
+    },
+    "geometry_confidence_median": 0.19317626953125,
+    "checkpoint_sha256": "1c0ebdf4d2de347a34c92a0cd44993c195b41547f1404163f7e15ab16872ffe5",
+    "optimizer_step_max": 493.0,
+    "ema_updates": 500,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 4,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 59,
+    "geometry_tp": 59,
+    "categories": {
+      "correct": 59,
+      "position_missing_at_saved_floor": 22,
+      "confidence_below_threshold": 24,
+      "box_localization_error": 2
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.673828125,
+    "checkpoint_sha256": "abe90badb4aaed86cd8a0be5d5994a5206c33ed8a35d27688eb2ed73927538e9",
+    "optimizer_step_max": 1993.0,
+    "ema_updates": 2000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 4,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "abe90badb4aaed86cd8a0be5d5994a5206c33ed8a35d27688eb2ed73927538e9",
+    "optimizer_step_max": 1993.0,
+    "ema_updates": 2000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 4,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 14,
+    "geometry_tp": 14,
+    "categories": {
+      "correct": 14,
+      "confidence_below_threshold": 7,
+      "position_missing_at_saved_floor": 5
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.73095703125,
+    "checkpoint_sha256": "abe90badb4aaed86cd8a0be5d5994a5206c33ed8a35d27688eb2ed73927538e9",
+    "optimizer_step_max": 1993.0,
+    "ema_updates": 2000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 4,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 5,
+    "geometry_tp": 60,
+    "categories": {
+      "confidence_below_threshold": 47,
+      "correct": 5,
+      "position_missing_at_saved_floor": 31,
+      "other_class": 55
+    },
+    "confusion": {
+      "car": 52,
+      "traffic_drum": 3
+    },
+    "geometry_confidence_median": 0.445556640625,
+    "checkpoint_sha256": "abe90badb4aaed86cd8a0be5d5994a5206c33ed8a35d27688eb2ed73927538e9",
+    "optimizer_step_max": 1993.0,
+    "ema_updates": 2000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 8,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 72,
+    "geometry_tp": 73,
+    "categories": {
+      "correct": 72,
+      "position_missing_at_saved_floor": 14,
+      "confidence_below_threshold": 14,
+      "box_localization_error": 6,
+      "other_class": 1
+    },
+    "confusion": {
+      "bollard": 1
+    },
+    "geometry_confidence_median": 0.77734375,
+    "checkpoint_sha256": "da7344ef5741b99491233ee5a4928440c175af870bbb5a2db964037ca1b0c446",
+    "optimizer_step_max": 3993.0,
+    "ema_updates": 4000,
+    "amp_scale": 1024.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 8,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "da7344ef5741b99491233ee5a4928440c175af870bbb5a2db964037ca1b0c446",
+    "optimizer_step_max": 3993.0,
+    "ema_updates": 4000,
+    "amp_scale": 1024.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 8,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 18,
+    "geometry_tp": 18,
+    "categories": {
+      "correct": 18,
+      "confidence_below_threshold": 3,
+      "position_missing_at_saved_floor": 5
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.77734375,
+    "checkpoint_sha256": "da7344ef5741b99491233ee5a4928440c175af870bbb5a2db964037ca1b0c446",
+    "optimizer_step_max": 3993.0,
+    "ema_updates": 4000,
+    "amp_scale": 1024.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 8,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 0,
+    "geometry_tp": 85,
+    "categories": {
+      "other_class": 85,
+      "confidence_below_threshold": 19,
+      "position_missing_at_saved_floor": 34
+    },
+    "confusion": {
+      "car": 82,
+      "person": 3
+    },
+    "geometry_confidence_median": 0.6259765625,
+    "checkpoint_sha256": "da7344ef5741b99491233ee5a4928440c175af870bbb5a2db964037ca1b0c446",
+    "optimizer_step_max": 3993.0,
+    "ema_updates": 4000,
+    "amp_scale": 1024.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 16,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 82,
+    "geometry_tp": 83,
+    "categories": {
+      "correct": 82,
+      "position_missing_at_saved_floor": 9,
+      "confidence_below_threshold": 14,
+      "box_localization_error": 1,
+      "other_class": 1
+    },
+    "confusion": {
+      "bicycle": 1
+    },
+    "geometry_confidence_median": 0.8388671875,
+    "checkpoint_sha256": "e8fc33d204ae338411abd929ffd5716c4995e368da881e32951a9ef4b40179ac",
+    "optimizer_step_max": 7991.0,
+    "ema_updates": 8000,
+    "amp_scale": 1024.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 16,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "e8fc33d204ae338411abd929ffd5716c4995e368da881e32951a9ef4b40179ac",
+    "optimizer_step_max": 7991.0,
+    "ema_updates": 8000,
+    "amp_scale": 1024.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 16,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 20,
+    "geometry_tp": 20,
+    "categories": {
+      "correct": 20,
+      "position_missing_at_saved_floor": 4,
+      "confidence_below_threshold": 2
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.87841796875,
+    "checkpoint_sha256": "e8fc33d204ae338411abd929ffd5716c4995e368da881e32951a9ef4b40179ac",
+    "optimizer_step_max": 7991.0,
+    "ema_updates": 8000,
+    "amp_scale": 1024.0
+  },
+  {
+    "model": "yolo26l",
+    "completed_epochs": 16,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 4,
+    "geometry_tp": 90,
+    "categories": {
+      "other_class": 86,
+      "correct": 4,
+      "position_missing_at_saved_floor": 28,
+      "confidence_below_threshold": 20
+    },
+    "confusion": {
+      "car": 86
+    },
+    "geometry_confidence_median": 0.771240234375,
+    "checkpoint_sha256": "e8fc33d204ae338411abd929ffd5716c4995e368da881e32951a9ef4b40179ac",
+    "optimizer_step_max": 7991.0,
+    "ema_updates": 8000,
+    "amp_scale": 1024.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 0,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 92,
+    "geometry_tp": 92,
+    "categories": {
+      "correct": 92,
+      "position_missing_at_saved_floor": 13,
+      "confidence_below_threshold": 2
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.786865234375,
+    "checkpoint_sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+    "optimizer_step_max": null,
+    "ema_updates": null,
+    "amp_scale": null
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 0,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+    "optimizer_step_max": null,
+    "ema_updates": null,
+    "amp_scale": null
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 0,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 24,
+    "geometry_tp": 24,
+    "categories": {
+      "correct": 24,
+      "position_missing_at_saved_floor": 2
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.85205078125,
+    "checkpoint_sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+    "optimizer_step_max": null,
+    "ema_updates": null,
+    "amp_scale": null
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 0,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 137,
+    "geometry_tp": 137,
+    "categories": {
+      "correct": 137,
+      "confidence_below_threshold": 1
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.8779296875,
+    "checkpoint_sha256": "040ee6f3732c410caabbc4471d42ccd3e56500eebd51f55b1354f702e1a7bb8d",
+    "optimizer_step_max": null,
+    "ema_updates": null,
+    "amp_scale": null
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 1,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 12,
+    "geometry_tp": 15,
+    "categories": {
+      "position_missing_at_saved_floor": 64,
+      "confidence_below_threshold": 25,
+      "correct": 12,
+      "other_class": 3,
+      "box_localization_error": 3
+    },
+    "confusion": {
+      "bollard": 3
+    },
+    "geometry_confidence_median": 0.2962646484375,
+    "checkpoint_sha256": "bf80ffde1d3b65cae8096633acb0b1c6d51cb0e6573609d1af88be9c8f9ccbbc",
+    "optimizer_step_max": 492.0,
+    "ema_updates": 500,
+    "amp_scale": 256.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 1,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "bf80ffde1d3b65cae8096633acb0b1c6d51cb0e6573609d1af88be9c8f9ccbbc",
+    "optimizer_step_max": 492.0,
+    "ema_updates": 500,
+    "amp_scale": 256.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 1,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 2,
+    "geometry_tp": 2,
+    "categories": {
+      "position_missing_at_saved_floor": 21,
+      "confidence_below_threshold": 3,
+      "correct": 2
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.244384765625,
+    "checkpoint_sha256": "bf80ffde1d3b65cae8096633acb0b1c6d51cb0e6573609d1af88be9c8f9ccbbc",
+    "optimizer_step_max": 492.0,
+    "ema_updates": 500,
+    "amp_scale": 256.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 1,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 0,
+    "geometry_tp": 40,
+    "categories": {
+      "other_class": 40,
+      "confidence_below_threshold": 40,
+      "position_missing_at_saved_floor": 57,
+      "box_localization_error": 1
+    },
+    "confusion": {
+      "car": 40
+    },
+    "geometry_confidence_median": 0.3992919921875,
+    "checkpoint_sha256": "bf80ffde1d3b65cae8096633acb0b1c6d51cb0e6573609d1af88be9c8f9ccbbc",
+    "optimizer_step_max": 492.0,
+    "ema_updates": 500,
+    "amp_scale": 256.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 4,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 59,
+    "geometry_tp": 59,
+    "categories": {
+      "correct": 59,
+      "position_missing_at_saved_floor": 24,
+      "confidence_below_threshold": 23,
+      "box_localization_error": 1
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.680908203125,
+    "checkpoint_sha256": "b780b9e313be2f349da805894c086707f66e972ac04219b06bd648b5a885409e",
+    "optimizer_step_max": 1992.0,
+    "ema_updates": 2000,
+    "amp_scale": 256.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 4,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "b780b9e313be2f349da805894c086707f66e972ac04219b06bd648b5a885409e",
+    "optimizer_step_max": 1992.0,
+    "ema_updates": 2000,
+    "amp_scale": 256.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 4,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 13,
+    "geometry_tp": 13,
+    "categories": {
+      "correct": 13,
+      "confidence_below_threshold": 7,
+      "position_missing_at_saved_floor": 6
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.750732421875,
+    "checkpoint_sha256": "b780b9e313be2f349da805894c086707f66e972ac04219b06bd648b5a885409e",
+    "optimizer_step_max": 1992.0,
+    "ema_updates": 2000,
+    "amp_scale": 256.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 4,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 3,
+    "geometry_tp": 45,
+    "categories": {
+      "other_class": 42,
+      "confidence_below_threshold": 80,
+      "position_missing_at_saved_floor": 12,
+      "box_localization_error": 1,
+      "correct": 3
+    },
+    "confusion": {
+      "car": 17,
+      "person": 25
+    },
+    "geometry_confidence_median": 0.320068359375,
+    "checkpoint_sha256": "b780b9e313be2f349da805894c086707f66e972ac04219b06bd648b5a885409e",
+    "optimizer_step_max": 1992.0,
+    "ema_updates": 2000,
+    "amp_scale": 256.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 8,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 78,
+    "geometry_tp": 78,
+    "categories": {
+      "correct": 78,
+      "position_missing_at_saved_floor": 13,
+      "confidence_below_threshold": 15,
+      "box_localization_error": 1
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.69189453125,
+    "checkpoint_sha256": "193d3f26fbff35531ba2cf10d68fc579f8e0ba38e3565e63452697f305ed005a",
+    "optimizer_step_max": 3992.0,
+    "ema_updates": 4000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 8,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "193d3f26fbff35531ba2cf10d68fc579f8e0ba38e3565e63452697f305ed005a",
+    "optimizer_step_max": 3992.0,
+    "ema_updates": 4000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 8,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 18,
+    "geometry_tp": 18,
+    "categories": {
+      "correct": 18,
+      "position_missing_at_saved_floor": 4,
+      "confidence_below_threshold": 3,
+      "box_localization_error": 1
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.712890625,
+    "checkpoint_sha256": "193d3f26fbff35531ba2cf10d68fc579f8e0ba38e3565e63452697f305ed005a",
+    "optimizer_step_max": 3992.0,
+    "ema_updates": 4000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 8,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 3,
+    "geometry_tp": 80,
+    "categories": {
+      "other_class": 77,
+      "correct": 3,
+      "confidence_below_threshold": 47,
+      "position_missing_at_saved_floor": 10,
+      "box_localization_error": 1
+    },
+    "confusion": {
+      "car": 77
+    },
+    "geometry_confidence_median": 0.4931640625,
+    "checkpoint_sha256": "193d3f26fbff35531ba2cf10d68fc579f8e0ba38e3565e63452697f305ed005a",
+    "optimizer_step_max": 3992.0,
+    "ema_updates": 4000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 16,
+    "split": "selection",
+    "gt_class": "person",
+    "gt": 107,
+    "class_tp": 80,
+    "geometry_tp": 81,
+    "categories": {
+      "correct": 80,
+      "position_missing_at_saved_floor": 13,
+      "confidence_below_threshold": 11,
+      "box_localization_error": 2,
+      "other_class": 1
+    },
+    "confusion": {
+      "deer": 1
+    },
+    "geometry_confidence_median": 0.865966796875,
+    "checkpoint_sha256": "fa728a90fe2a21ef5df97275ef20b74e648ef61f39cf8c94341950cb417def54",
+    "optimizer_step_max": 7990.0,
+    "ema_updates": 8000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 16,
+    "split": "selection",
+    "gt_class": "motorcycle",
+    "gt": 0,
+    "class_tp": 0,
+    "geometry_tp": 0,
+    "categories": {},
+    "confusion": {},
+    "geometry_confidence_median": null,
+    "checkpoint_sha256": "fa728a90fe2a21ef5df97275ef20b74e648ef61f39cf8c94341950cb417def54",
+    "optimizer_step_max": 7990.0,
+    "ema_updates": 8000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 16,
+    "split": "heldout",
+    "gt_class": "person",
+    "gt": 26,
+    "class_tp": 19,
+    "geometry_tp": 19,
+    "categories": {
+      "correct": 19,
+      "position_missing_at_saved_floor": 4,
+      "confidence_below_threshold": 3
+    },
+    "confusion": {},
+    "geometry_confidence_median": 0.882568359375,
+    "checkpoint_sha256": "fa728a90fe2a21ef5df97275ef20b74e648ef61f39cf8c94341950cb417def54",
+    "optimizer_step_max": 7990.0,
+    "ema_updates": 8000,
+    "amp_scale": 512.0
+  },
+  {
+    "model": "yoloe26l",
+    "completed_epochs": 16,
+    "split": "heldout",
+    "gt_class": "motorcycle",
+    "gt": 138,
+    "class_tp": 2,
+    "geometry_tp": 86,
+    "categories": {
+      "other_class": 84,
+      "position_missing_at_saved_floor": 39,
+      "correct": 2,
+      "confidence_below_threshold": 13
+    },
+    "confusion": {
+      "car": 84
+    },
+    "geometry_confidence_median": 0.70263671875,
+    "checkpoint_sha256": "fa728a90fe2a21ef5df97275ef20b74e648ef61f39cf8c94341950cb417def54",
+    "optimizer_step_max": 7990.0,
+    "ema_updates": 8000,
+    "amp_scale": 512.0
+  }
+]

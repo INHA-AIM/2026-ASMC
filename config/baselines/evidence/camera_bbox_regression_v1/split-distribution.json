@@ -1,0 +1,72 @@
+{
+  "train": {
+    "images": 8000,
+    "declared_complete": 752,
+    "labels": {
+      "person": {
+        "all_gt": 9261,
+        "sources": {
+          "roboflow:aiv5challenge/yeonsoo-sarang": 82,
+          "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel": 136,
+          "roboflow:parkminseo/final-ftuy2": 311,
+          "roboflow:hl-fma/hlfma_3": 3881,
+          "roboflow:jjj-nx9di/katri_new_data-xkbev": 1015,
+          "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel": 382,
+          "roboflow:hl-fma/hlfma_2": 2513,
+          "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel": 161,
+          "roboflow:mino-qjf5p/vi2re": 123,
+          "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel": 194,
+          "roboflow:yolo-m5lvd/detection-bzetd": 209,
+          "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel": 187,
+          "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel": 55,
+          "capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel": 4,
+          "capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel": 8
+        }
+      },
+      "motorcycle": {
+        "all_gt": 191,
+        "sources": {
+          "roboflow:yolo-m5lvd/detection-bzetd": 191
+        }
+      }
+    }
+  },
+  "selection": {
+    "images": 300,
+    "declared_complete": 245,
+    "labels": {
+      "person": {
+        "all_gt": 197,
+        "sources": {
+          "roboflow:s-workspace-p9mvp/morai_obstacle": 94,
+          "capture:20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel": 8,
+          "capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel": 94,
+          "capture:20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel": 1
+        }
+      },
+      "motorcycle": {
+        "all_gt": 0,
+        "sources": {}
+      }
+    }
+  },
+  "heldout": {
+    "images": 300,
+    "declared_complete": 190,
+    "labels": {
+      "person": {
+        "all_gt": 51,
+        "sources": {
+          "capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel": 50,
+          "capture:20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel": 1
+        }
+      },
+      "motorcycle": {
+        "all_gt": 138,
+        "sources": {
+          "roboflow:enzo-mdikr/my-first-project-eeree": 138
+        }
+      }
+    }
+  }
+}

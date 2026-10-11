@@ -9,7 +9,7 @@
 [v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
 **PR #78의 데이터·샘플링은 main에 병합됐다. 현재 #80의 bbox 파일럿은 Draft이며 운영 실행은 수정하지 않는다.**
-최신 결과는 [16epoch 비교 결과](#16epoch-비교-결과--본학습-후보-선정-보류), 샘플링은 [bbox 파일럿](#bbox-파일럿-샘플링--2026-10-11), 전체 자료 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
+최신 결과는 [사람·이륜차 회귀 진단](#2026-10-11-사람이륜차-회귀-진단--재학습-없음)과 [16epoch 비교 결과](#16epoch-비교-결과--본학습-후보-선정-보류), 샘플링은 [bbox 파일럿](#bbox-파일럿-샘플링--2026-10-11), 전체 자료 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
 아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
 2026-10-11 추가 검토는 [teacher 대안과 RF-DETR](#2026-10-11-teacher-대안과-rf-detr-검토), 병합 범위는 [#78 main 통합](#2026-10-11-pr-78-병합-범위와-main-통합)을 따른다.
 최신 후속 범위는 [bbox·AIM 세 폴더·RF-DETR 선별](#2026-10-11-후속-합의--bbox-우선aim-범위rf-detr-선별)을 먼저 확인한다.
@@ -1315,8 +1315,9 @@ hash가 실제 학습 전체/부분 순서와 일치해야 공통 prefix 순서�
 - main 학습은 사전 측정 가중치를 버리고 다시 시작한다. 200 batch checkpoint는 partial epoch라
   재개에 쓰지 않는다. 원본 epoch별 checkpoint의 optimizer·EMA·누적 업데이트를 보존한다.
 - 학습 전 YOLO26 평가에는 원래 COCO80 사전학습 checkpoint를 사용한다. 16종으로 교체한
-  무작위 분류 head의 `initial.pt`는 초기화 재현용으로만 보존한다. 이 head를 기준선으로 쓰면
-  기존 사람/차량 recall 회귀가 가려지므로 평가기가 원본 SHA를 확인해 사전학습 head를 선택한다.
+  고정 16종의 `initial.pt`는 학습 초기화 진단으로 별도 보존한다. 아래 회귀 진단에서 기존
+  7종의 weight/bias가 이름별로 정확히 전이됐음을 확인했다. 이전의 “무작위 head” 설명은
+  정정한다. 운영 기준선은 여전히 원본 COCO80 checkpoint이며 평가기가 원본 SHA를 확인한다.
   YOLOE의 학습 전 결과는 같은 detection 구조와 16종 text embedding을 준비한 뒤 fine-tuning
   직전에 저장한 checkpoint다. `inference.json`에 요청/실제 weight SHA와 기준선 종류를 모두 남긴다.
   두 후보의 기존 객체 회귀 gate는 현재 기준 모델인 YOLO26l/1280/.40과 비교한다. YOLOE가
@@ -1643,3 +1644,162 @@ RF-DETR-L은 YOLO26x처럼 큰 scale이라는 이유만으로 제외하지 않�
 RF-DETR의 최신 develop을 공유 Python에 설치하지 않는다. checkpoint·라이브러리 버전·
 preprocessing·engine SHA를 고정하고 실패·OOM·생략 사유를 보존한다. 이번 추가에서는
 학습 데이터·모델·ROS 메시지·실행 기본값과 GPU 실행을 변경하지 않았다.
+
+## 2026-10-11 사람·이륜차 회귀 진단 — 재학습 없음
+
+**회귀는 실제이며 첫 epoch부터 나타난다. 클래스 ID 오류·전이 head 전체 초기화로
+설명할 수 없다.** #80은 Draft를 유지하며 본학습·운영 교체는 보류한다.
+다음 작업은 재학습에 앞선 사전학습 모델 비교다. 이 절은 위의 “작은 재파일럿 먼저”라는
+과거 후속 순서를 대체한다.
+
+진입점은 [diagnose_camera_bbox_regression.py](../../../tools/perception/diagnose_camera_bbox_regression.py),
+조건은 [camera_bbox_regression_v1.json](../../../config/experiments/camera_bbox_regression_v1.json),
+요약은 [회귀 baseline](../../../config/baselines/perception_camera_bbox_regression_v1.json)이다.
+원본·split·v5/pilot export·기존 예측·가중치와 운영 설정은 그대로 보존했다.
+새 학습·teacher 라벨링·추가 수집·TensorRT 생성은 수행하지 않았다.
+
+### 평가 경로와 전이 확인
+
+- 기존 before/after × 960/1280의 8개 예측 캐시를 재사용했다. 데이터/config/model SHA,
+  RGB SHA, 고정 16종 ID·canonical/text 순서, mask SHA, 뷰와 입력 크기·예측 멤버십을 확인했다.
+  unknown 뷰에는 임의 차체 mask를 적용하지 않는다. cached evaluator SHA와 이번 도구 SHA는
+  별도로 보존하며 동일 코드로 생성됐다고 표시하지 않는다.
+- confidence **.40 고정 대조**와 기존 selection 선정값을 분리했다. heldout을 보고
+  confidence를 재선정하지 않았다. 중간 epoch는 .40 고정으로만 추론했다.
+- 클래스 일치 일대일 IoU≥.5와 이름을 무시한 기하 대응을 분리한다. 진단 범주는
+  정확 검출 → 다른 이름의 IoU≥.5 → .10≤confidence<임계값 → IoU .1–.5 위치 오류 →
+  저장 예측 범위에서 위치 미검출 순이다. `.10` 미만 예측은 저장돼 있지 않아
+  완전 미검출과 구별하지 못한다. 클래스가 맞는 대응을 먼저 고정하고 잔여 기하 대응도
+  일대일로 할당하므로 동일 예측을 여러 GT의 성공으로 세지 않는다.
+- 부분 GT에서는 미대응 검출을 FP로 세지 않는다. 차량 24/12px·나머지16/8px 평가 범위와
+  모든 원본 GT 결과를 각각 보존했다. 작은 GT나 mask 표시 설정을 학습 export에 전달하지 않았다.
+- Ultralytics8.4.150의 이름별 전이를 실제 tensor로 확인했다. YOLO26l의 기존 7종에 대해
+  `cv3`·`one2one_cv3`의 3개 scale weight/bias **84항목 모두 원본과 FP16 완전 일치**다.
+  person/motorcycle 각각12항목도 같으며 shape가 호환되는 나머지1080tensor도 같다.
+  이전 문서·도구 설명의 “고정16종은 무작위 head” 주장은 정정했다. 원본 COCO80 기준선과
+  고정16종 초기화 결과는 계속 구분한다.
+- YOLOE의 초기 모델은 실제 `YOLOEDetect`, fused=True, canonical/text 16종 순서가 맞다.
+  원본 seg와 직접 비교할 수 있는1080tensor는 같고 fused terminal convolution은 shape·표현이
+  달라 원본 seg의 클래스 행과 직접 동일 비교하지 않는다. 초기 motorcycle137/138 검출도
+  확인했으므로 처음부터 motorcycle 이름이 car에 연결된 상태는 아니다. text encoder의
+  중간 embedding을 저장된 terminal convolution만으로 비트 단위 복원했다고 주장하지 않는다.
+
+### 동일 .40에서의 학습 중 변화
+
+전방1280·측방640, 같은 mask, scoped heldout 기준이다. epoch0은 학습 직전 `initial.pt`이며
+epoch1/4/8/16은 각각 `epoch0/3/7/15.pt`다. 부분17epoch는 배제했다.
+
+| 모델 | 완료 epoch | person 정확 TP/26 | motorcycle 정확 TP/138 | motorcycle 기하 대응/138 | 그중 car 오분류 |
+|---|---:|---:|---:|---:|---:|
+| YOLO26l | 0 | 24 | 126 | 129 | 0 |
+| YOLO26l | 1 | 13 | 0 | 5 | 3 |
+| YOLO26l | 4 | 14 | 5 | 60 | 52 |
+| YOLO26l | 8 | 18 | 0 | 85 | 82 |
+| YOLO26l | 16 | 20 | 4 | 90 | 86 |
+| YOLOE bbox | 0 | 24 | 137 | 137 | 0 |
+| YOLOE bbox | 1 | 2 | 0 | 40 | 40 |
+| YOLOE bbox | 4 | 13 | 3 | 45 | 17 |
+| YOLOE bbox | 8 | 18 | 3 | 80 | 77 |
+| YOLOE bbox | 16 | 19 | 2 | 86 | 84 |
+
+기하 대응은 정확한 이름의 성공을 뜻하지 않는다. YOLO26l epoch0의 다른 이름3개는
+person이며 epoch4에는 traffic_drum3개도 있다. YOLOE epoch4에는 person25개도 있다.
+
+기존 선정 confidence에서는 YOLO26l1280/.25와 YOLOE1280/.20가 모두
+person21/26·motorcycle4/138이다. .40 결과와 섞지 않는다. 960의 .40에서는 두 모델의
+person20/26, motorcycle은 각각3/138·9/138이다. 해상도만 낮춰 회귀가 해결되지는 않는다.
+
+학습 전 정확 TP였던 객체만 추린 **1280/.40 heldout 신규 누락**은 다음과 같다.
+
+| 모델·클래스 | 신규 누락 | 다른 클래스 | 낮은 confidence | 저장 범위에서 위치 미검출 |
+|---|---:|---:|---:|---:|
+| YOLO26l person | 4 | 0 | 2 | 2 |
+| YOLO26l motorcycle | 122 | 85 | 17 | 20 |
+| YOLOE person | 6 | 0 | 3 | 3 |
+| YOLOE motorcycle | 135 | 84 | 13 | 38 |
+
+YOLOE person은 신규 누락6개와 새 성공1개가 함께 있어 합계가24→19다.
+신규 누락은 모델별 학습 전 결과와 비교하며, 운영 수락의 공통 기준선은 원본YOLO26l1280/.40로 유지한다.
+
+GPU 재평가는 MORAI·실시간 추론이 없는 상태의 전용 network-none 컨테이너에서
+8개 누락 checkpoint만 직렬 수행했다. 총149.75초이며 3600초 제한 이내다.
+최종16epoch는 저장 결과를 재사용했다. 이 시간과 PT batch1 지연을 전체 스택 지연으로 사용하지 않는다.
+
+기존 loss/LR·optimizer/EMA/AMP 기록도 연결했다. 1epoch/16epoch의 실제 AdamW step은
+YOLO26l493/7991, YOLOE492/7990이며 EMA update는 두 후보500/8000이다.
+전체 AMP 생략9/10회를 보존했지만 이것만으로 회귀의 원인이라고 확정하지 않는다.
+두 모델 cls loss는 첫 epoch2.059/1.626에서16epoch.556/.577로 감소했다.
+학습 loss 감소는 heldout recall 보존의 증거가 아니다. native validation의0은 비활성화 placeholder다.
+
+### 라벨·다양성 검토와 별도 수정 후보
+
+- 이륜차 train **63장·191박스 전부**의 RGB와 원본→학습 이름, 모든 이륜차 crop을 확인했다.
+  원본 `bike`가 motorcycle로 대응하며 대부분 스포츠바이크·스쿠터다. 일괄 car 오변환은
+  관찰되지 않았다. 작은 crop 일부의 세부 subtype을 독립 확인했다고 표시하지 않는다.
+- 191개 중 long-side<32px는103개, medium84개, large4개다. 단일
+  `yolo-m5lvd/detection-bzetd` 소스63장이고, family63개가 독립 장면63개를 뜻하지 않는다.
+  시각적으로 같은 배치·교차로·형상이 반복된다.
+- 사람 train2759장·9261박스는15 source/run에 있으나 unknown 뷰1970장이다.
+  min-side<8px는2838박스이며 작은 양성 GT는 그대로 보존했다. 크기만으로
+  가림 상태를 추정하지 않는다. 사람 수가 많다는 사실만으로 충분한 다양성·주석 완전성을 보장하지 않는다.
+- 소스별 고정 seed round-robin으로 추가200장을 검토했다. hl-fma와 detection-bzetd의
+  자전거 탑승자 영상에서 **보이는 자전거에 별도 bicycle 박스가 없는 사례6장**, 이륜차 학습의
+  `cd1eb8d57b6e…`에서 다수 사람·이륜차 누락1장을 확인했다. 원본 annotation_complete=false
+  상태도 함께 보존한다. 이들은 새로 깨끗한 GT로 승인하지 않았다.
+- 수정 후보는 `visual-review.json`의7개 image SHA와 `issues`에 모았다. 자전거 component
+  박스 추가와 사람의 visible extent 확인, 누락 대상 보완이 필요하다. 확정할 수 없는 새 박스를
+  임의 생성하지 않았으며 **실제 라벨 변경0개**다. car/bus/truck 혼입 전수 정정으로 확대하지 않는다.
+- train8000장 중 annotation_complete=true는752장이다. 나머지는 완전성이 입증되지 않았다는
+  뜻이며 모두 잘못됐다는 의미는 아니다. 다만 stock detector 학습에서 보이는 미주석 객체가
+  배경으로 취급될 수 있는 위험은 위의 실제 누락 사례로 확인했다.
+- 신규 회귀 영상99장 전체의 원본 RGB·GT를 검토했다. Enzo의 motorcycle은 실제 검정/빨강
+  스쿠터를 가리킨다. 이 평가 사례에서 확정된 클래스명 정정은 없다. selection에는 motorcycle GT가
+  없고 heldout138개는 모두 Enzo 소스다. 같은 배치의 반복 영상이므로138개 독립 장면으로 해석하지 않는다.
+  사람 heldout도 주로 한 FOGGY Capture run에 편중된다. 다른 환경 일반화는 추가 대조가 필요하다.
+
+시각 검수자는 Codex이고 human_confirmed=false다. 전체 이미지/주석 crop을 본 사실과
+모든 대상의 exhaustiveness를 인증하는 것은 구분한다. v5와 원본을 덮어쓰지 않았다.
+
+### 원인 판정과 다음 독립 대조
+
+| 판정 | 내용 |
+|---|---|
+| 확인됨 | ID/text 순서·초기7종 전이·평가 SHA/mask 일치, 첫 epoch 회귀, motorcycle→car, 일부 누락 주석, 소스/장면 편중 |
+| 근거 있는 가설 | 희소·유사 장면과 불완전 주석이 기존 표현 망각/분류 혼동을 유도했을 가능성; full fine-tuning·초기 학습률·증강의 영향 |
+| 추가 대조 필요 | 샘플링·LR·head/backbone 업데이트·증강 각각의 인과 기여, 미주석 영역 보완 효과, 다른 독립 이륜차 장면 성능 |
+
+다음 재학습에서는 우선 확인된 component/누락 주석을 보완하고 기존 객체 replay의 장면
+다양성을 확보한다. 그다음 샘플링과 LR을 한 번에 바꾸지 말고 각각 대조한다. 더 강한 평활화나
+confidence 하향만으로 분류 회귀를 해결했다고 판단하지 않는다. 이번에는 이 대조 학습을 실행하지 않았다.
+
+### 재현·갤러리·수락 상태
+
+[회귀 비교 갤러리](http://localhost:8768/camera-bbox-regression-v1/)에는 epoch 곡선,
+32개 검수 시트·191개 이륜차 crop, before TP→after FN 전체1137개 대조를 보존했다.
+1137은 모델·해상도·threshold별 반복 대조 수이며 고유 실패 영상은99장이다.
+선정 confidence 대조도 학습 전·후에 같은 임계값을 적용했다. 초안에서 before .40과
+after 선정값을 섞었던1138개 대조는 수정 사유와 함께 로컬
+`intermediate-threshold-mismatch.tar.gz`에 보존하며 최종 집계에 사용하지 않는다.
+[전체 목차](http://localhost:8768/)의 날짜·고정 E 번호로 연결한다.
+원본 예측·새 epoch 출력·검수 기록은 `artifacts/camera-bbox-regression-v1/`이며,
+Git에는 [요약 증거](../../../config/baselines/evidence/camera_bbox_regression_v1/)만 기록한다.
+
+```bash
+python tools/perception/diagnose_camera_bbox_regression.py audit --root /absolute/path/to/parent-workspace
+python tools/perception/diagnose_camera_bbox_regression.py weights --root /absolute/path/to/parent-workspace
+python tools/perception/diagnose_camera_bbox_regression.py report --root /absolute/path/to/parent-workspace
+```
+
+`audit/report`는 기존 오프라인 가상환경, `weights`는 고정 Ultralytics8.4.150 환경에서 실행한다.
+`epochs`는 동일 환경에서 `--gpu-idle-confirmed`를 명시해야 하며 기존 출력 폴더를 재사용하지 않는다.
+MORAI·실시간 추론 종료 확인 없이 이 인자를 사용하지 않는다. 기존 캐시를 지우지 말고 새
+`--output`을 지정해 재현하며, 중단/실패 출력은 완전한 epoch 결과로 집계하지 않는다.
+
+관련 CPU140개와 문서 migration·perception 계약/토픽/runtime 검사를 통과했다.
+Hosted CI 결제 한도 차단과 기존 facade 실패는 별도 사항이며 이 진단이 해소했다고 주장하지 않는다.
+추론/ROS 코드가 바뀌지 않아 운영 빌드·전체 스택 수락을 다시 수행한 것으로 표시하지 않는다.
+
+**다음 순서:** 현재 YOLO26l 대 RF-DETR M/L의 사전학습 기존7종 비교 → 낮춘 해상도
+YOLO26x/RF-DETR-XL 선별 → 유망 구성만3뷰·전체 스택 부하 → 검증 teacher 초안·자료 보강 →
+작은 재학습 비교. AIM은 합의한3폴더만 사용하며 다운로드 중인 터널 폴더는 완료 확인 전 제외한다.
+이번 진단 완료는 recall 회복·본학습 후보 선정·운영 승격·#80 병합 승인이 아니다.
