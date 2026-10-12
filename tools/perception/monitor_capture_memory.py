@@ -43,13 +43,26 @@ def check_render(sensor_root, record):
     if Path(custom).name != custom:
         raise ValueError('invalid Capture name')
     bad = []
+    invalid = []
+    metrics = {}
     for sensor in ('CAMERA_1', 'CAMERA_2', 'CAMERA_3'):
         path = sensor_root / sensor / (custom + '_Intensity.png')
         with Image.open(path) as im:
-            extrema = im.convert('RGB').getextrema()
+            rgb = im.convert('RGB')
+            extrema = rgb.getextrema()
+            colors = rgb.getcolors(maxcolors=256)
+            binary = None
+            if colors is not None:
+                binary_pixels = sum(n for n, color in colors
+                                    if color in ((0, 0, 0), (255, 255, 255)))
+                binary = binary_pixels / float(rgb.width * rgb.height)
+            metrics[sensor] = dict(palette_at_most_256=colors is not None,
+                                   binary_fraction=binary)
+            if binary is not None and binary >= .98:
+                invalid.append(sensor)
         if all(lo == hi for lo, hi in extrema):
             bad.append(sensor)
-    return dict(custom_name=custom, constant_views=bad)
+    return dict(custom_name=custom, constant_views=bad, invalid_palette_views=invalid, palette_metrics=metrics)
 
 
 def main():
@@ -90,8 +103,8 @@ def main():
                         records = [json.loads(line) for line in latest.read_text().splitlines()]
                         if len(records) >= 3 and records[-3].get('success'):
                             row['render'] = check_render(a.sensor_root, records[-3])
-                            if row['render']['constant_views']:
-                                row.update(action='abort',reason='constant RGB texture after successful Capture RPC')
+                            if row['render']['constant_views'] or row['render']['invalid_palette_views']:
+                                row.update(action='abort',reason='constant or binary low-palette RGB texture after successful Capture RPC')
                 errors = 0
             except (OSError, subprocess.SubprocessError, ValueError, KeyError) as exc:
                 errors += 1

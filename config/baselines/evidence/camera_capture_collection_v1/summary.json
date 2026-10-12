@@ -352,44 +352,257 @@
   },
   "resume": {
     "deadline_utc": "2026-10-12T04:03:38Z",
-    "status": "collecting foggy15; first three resumed laps passed",
-    "same_simulator_headroom_decision": "data/collection-evidence-20261012/resume-session2-headroom-decision-r1.json",
+    "status": "paused: layout1 remaining four conditions complete; layout2 sunny11/sunny13 complete; sunny15 aborted on invalid RGB; stationary retry failed; awaiting Simulator restart",
+    "same_simulator_headroom_decision": "data/collection-evidence-20261012/resume-session3-headroom-decision-r1.json",
     "pedestrian_drift_evidence": "data/collection-evidence-20261012/resume-post-foggy11-pose-drift-r1.json",
-    "pedestrian_workaround": "recreate only owned Deer1 actors for each 60-degree change; new native IDs require fresh RGB review",
+    "pedestrian_workaround": "recreate owned deer/dog actors for each 60-degree change; independent new native ID and RGB review",
     "completed_runs": [
       {
-        "condition": "sunny15",
-        "run_id": "route_pp_30_20261012T000801_713",
-        "capture_succeeded": 871,
-        "tracking_passed": true,
-        "cte_p95_m": 0.2482744487470909,
-        "cte_max_m": 0.431623099824399,
-        "export_images": 2248,
-        "export_objects": 28274,
-        "independent_verification": true
-      },
-      {
         "condition": "foggy11",
+        "layout_id": "route120_20261012",
         "run_id": "route_pp_30_20261012T002633_929",
         "capture_succeeded": 839,
-        "tracking_passed": true,
+        "passed": true,
         "cte_p95_m": 0.24400471881880378,
         "cte_max_m": 0.46023014354064923,
-        "export_images": 2053,
-        "export_objects": 25558,
-        "independent_verification": true
+        "runtime_report": "data/collection-evidence-20261012/resume-foggy11-collection-r1.json"
       },
       {
         "condition": "foggy13",
+        "layout_id": "route120_20261012",
         "run_id": "route_pp_30_20261012T004938_383",
         "capture_succeeded": 825,
-        "tracking_passed": true,
+        "passed": true,
         "cte_p95_m": 0.2469389584346223,
         "cte_max_m": 0.4531799211814558,
-        "export_images": 2015,
-        "export_objects": 25433,
-        "independent_verification": true
+        "runtime_report": "data/collection-evidence-20261012/resume-foggy13-collection-r1.json"
+      },
+      {
+        "condition": "foggy15",
+        "layout_id": "route120_20261012",
+        "run_id": "route_pp_30_20261012T010508_040",
+        "capture_succeeded": 855,
+        "passed": true,
+        "cte_p95_m": 0.24198859216845395,
+        "cte_max_m": 0.44694946911528394,
+        "runtime_report": "data/collection-evidence-20261012/resume-foggy15-collection-r1.json"
+      },
+      {
+        "condition": "sunny11",
+        "layout_id": "route180_layout2_20261012",
+        "run_id": "route_pp_30_20261012T012837_666",
+        "capture_succeeded": 1206,
+        "passed": true,
+        "cte_p95_m": 0.2451487363997891,
+        "cte_max_m": 0.43558682906031176,
+        "runtime_report": "data/collection-evidence-20261012/resume-layout2-sunny11-collection-r1.json"
+      },
+      {
+        "condition": "sunny13",
+        "layout_id": "route180_layout2_20261012",
+        "run_id": "route_pp_30_20261012T015240_422",
+        "capture_succeeded": 1242,
+        "passed": true,
+        "cte_p95_m": 0.2458107037547212,
+        "cte_max_m": 0.4118000024208595,
+        "runtime_report": "data/collection-evidence-20261012/resume-layout2-sunny13-collection-r1.json"
+      },
+      {
+        "condition": "sunny15",
+        "layout_id": "route120_20261012",
+        "run_id": "route_pp_30_20261012T000801_713",
+        "capture_succeeded": 871,
+        "passed": true,
+        "cte_p95_m": 0.2482744487470909,
+        "cte_max_m": 0.431623099824399,
+        "runtime_report": "data/collection-evidence-20261012/resume-sunny15-inspection-r1.json"
       }
-    ]
+    ],
+    "updated_utc": "2026-10-12T02:51:41.050424+00:00",
+    "latest_annotation_policy_subsets": [
+      {
+        "dataset": "camera_objects_bbox_capture_route60_infant_v3",
+        "images": 1673,
+        "objects": 10110,
+        "excluded_stroller_infant_annotations": 874,
+        "manifest_sha256": "e2691e3e66679a5dc07cbba1f3ba1e239f413f0c46b84001bea344adabc3f97f",
+        "role": "proposed independently verified Capture subset; current v7 unchanged"
+      },
+      {
+        "dataset": "camera_objects_bbox_capture_route120_angle060_infant_v2",
+        "images": 2404,
+        "objects": 27611,
+        "excluded_stroller_infant_annotations": 2260,
+        "manifest_sha256": "83303080c3e05f1160404a0d1e49901e494b994f0eeb7c0b15a47e333e5e54a3",
+        "role": "proposed independently verified Capture subset; current v7 unchanged"
+      },
+      {
+        "dataset": "camera_objects_bbox_capture_resume_sunny15_r2",
+        "images": 2248,
+        "objects": 26156,
+        "excluded_stroller_infant_annotations": 2118,
+        "manifest_sha256": "d44cc395ac37e0a2321771c965c2acac46effc175896ee56637c8d6787c67b31",
+        "role": "proposed independently verified Capture subset; current v7 unchanged"
+      },
+      {
+        "dataset": "camera_objects_bbox_capture_resume_foggy11_r2",
+        "images": 2053,
+        "objects": 23425,
+        "excluded_stroller_infant_annotations": 2133,
+        "manifest_sha256": "640147ce320096d5df45a7c589115b8b05e66f18b8062546fd32845e686f6053",
+        "role": "proposed independently verified Capture subset; current v7 unchanged"
+      },
+      {
+        "dataset": "camera_objects_bbox_capture_resume_foggy13_r2",
+        "images": 2015,
+        "objects": 23328,
+        "excluded_stroller_infant_annotations": 2105,
+        "manifest_sha256": "66a3d464f446b4338d5d8c00f77293395be5b752ec08a6ccca9b1f00769a40e0",
+        "role": "proposed independently verified Capture subset; current v7 unchanged"
+      },
+      {
+        "dataset": "camera_objects_bbox_capture_resume_foggy15_r1",
+        "images": 2242,
+        "objects": 25881,
+        "excluded_stroller_infant_annotations": 1664,
+        "manifest_sha256": "187e69b91d98fea8a7dab131d701be1eca21cb4967cad58791e3ec1963a9497a",
+        "role": "proposed independently verified Capture subset; current v7 unchanged"
+      },
+      {
+        "dataset": "camera_objects_bbox_capture_resume_layout2_sunny11_r1",
+        "images": 3106,
+        "objects": 44012,
+        "excluded_stroller_infant_annotations": 1062,
+        "manifest_sha256": "be21a30b223a48d3506908956da455a2b781daa2346672b735a2a3ee392f0b13",
+        "role": "proposed independently verified Capture subset; current v7 unchanged"
+      },
+      {
+        "dataset": "camera_objects_bbox_capture_resume_layout2_sunny13_r1",
+        "images": 3167,
+        "objects": 44945,
+        "excluded_stroller_infant_annotations": 1359,
+        "manifest_sha256": "f77ca3d35c1d19ded082d9dfc570d7b27382e95929a907cbbcb7e3d2534f1799",
+        "role": "proposed independently verified Capture subset; current v7 unchanged"
+      },
+      {
+        "dataset": "camera_objects_bbox_capture_resume_layout2_sunny15_partial_r1",
+        "images": 2347,
+        "objects": 32872,
+        "excluded_stroller_infant_annotations": 1050,
+        "manifest_sha256": "48b62b246cdce8278865fd97361ebdd6a07da194c46a7839b199eaf5271e1735",
+        "role": "independently verified partial Capture subset; full lap failed; current v7 unchanged",
+        "full_lap_passed": false,
+        "provenance": "partial-run-provenance.json"
+      }
+    ],
+    "memory_query_timeout": "one query timed out at 01:55:37 UTC; following queries healthy; existing stop flag preserved; new monitor decision required after current lap",
+    "actual_layout2": {
+      "planned": 180,
+      "active": 171,
+      "rejected_removed": 9,
+      "all_observed_rgb_reviewed": 171,
+      "class_cap": 0.15,
+      "source_stock": "data/collection-evidence-20261012/pre-layout2-class-stock-r3.json"
+    },
+    "local_tests": {
+      "allocation": 12,
+      "capture_export": 8,
+      "pedestrian_recreation": 2,
+      "memory_guard": 4,
+      "hosted_ci": "billing blocked; not counted as passed"
+    },
+    "failed_runs": [
+      {
+        "condition": "sunny15",
+        "layout_id": "route180_layout2_20261012",
+        "run_id": "route_pp_30_20261012T021730_277",
+        "capture_succeeded": 1095,
+        "passed": false,
+        "cte_p95_m": 0.24979346112304882,
+        "cte_max_m": 0.4116880664607204,
+        "runtime_report": "data/collection-evidence-20261012/resume-layout2-sunny15-collection-r1.json"
+      }
+    ],
+    "render_failure": {
+      "integrity": "data/collection-evidence-20261012/layout2-sunny15-rgb-integrity-r1.json",
+      "stationary_retry": "data/collection-evidence-20261012/render-recovery-stationary-probe-r1.json",
+      "abort": "data/collection-evidence-20261012/resume-session4.abort",
+      "full_lap_passed": false,
+      "normal_rgb_records": 1073,
+      "invalid_rgb_records": 22,
+      "memory_cause": "not established; Simulator private memory about 6.2 GiB"
+    },
+    "actual_label_stock": {
+      "evidence": "data/collection-evidence-20261012/post-layout2-sunny15-partial-stock-r1.json",
+      "unique_proposed_train_images": 43278,
+      "pixel_hash_duplicates": 0,
+      "annotation_conflicts": 0,
+      "frozen_evaluation_overlap": 0,
+      "merged_training_export": false,
+      "independent_scene_count": "not established by frame counts",
+      "train_objects": 384535,
+      "class_images": {
+        "person": 23031,
+        "car": 8280,
+        "traffic_cone": 9482,
+        "dog": 5756,
+        "deer": 11382,
+        "steel_barricade": 13010,
+        "box": 13130,
+        "traffic_drum": 8204,
+        "bollard": 10171,
+        "concrete_barrier": 12431,
+        "bus": 3844,
+        "plastic_barrier": 13692,
+        "truck": 2692,
+        "motorcycle": 11148,
+        "bicycle": 8245,
+        "stroller": 14080
+      },
+      "class_objects": {
+        "person": 78187,
+        "car": 18698,
+        "traffic_cone": 13108,
+        "dog": 10694,
+        "deer": 18628,
+        "steel_barricade": 21990,
+        "box": 19470,
+        "traffic_drum": 26504,
+        "bollard": 61273,
+        "concrete_barrier": 20209,
+        "bus": 4216,
+        "plastic_barrier": 27452,
+        "truck": 3231,
+        "motorcycle": 18162,
+        "bicycle": 13787,
+        "stroller": 28926
+      }
+    },
+    "collection_asset_policy": {
+      "vehicles": "permitted if shortage confirmed; not added to current obstacle/pedestrian layout; vehicle API path still requires implementation",
+      "exclude": [
+        "road signs",
+        "trees",
+        "fire",
+        "road infrastructure"
+      ],
+      "footprint": "no ego path obstruction or physical overlap with other actors",
+      "natural_occlusion": "allowed without intersecting footprints"
+    },
+    "partial_rgb_salvage": {
+      "normal_rgb_records": 1073,
+      "normal_rgb_and_mandatory_files": 1050,
+      "observed_roots": 157,
+      "approved_visible_support_roots": 154,
+      "pending_small_or_missing_support_roots": [
+        156,
+        158,
+        161
+      ],
+      "images": 2347,
+      "objects": 32872,
+      "independent_verification_passed": true,
+      "full_lap_passed": false
+    }
   }
 }

@@ -52,5 +52,27 @@ class CollectionGuardTest(unittest.TestCase):
                 im.save(root/sensor/'test_Intensity.png')
             self.assertEqual(check_render(root,{'custom_name':'test'})['constant_views'],['CAMERA_2'])
 
+    def test_binary_palette_corruption_is_rejected_without_constant_frame(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            for sensor in ('CAMERA_1','CAMERA_2','CAMERA_3'):
+                (root/sensor).mkdir()
+                im=Image.new('RGB',(100,100),'white')
+                for x in range(50):im.putpixel((x,50),(0,0,0))
+                im.putpixel((60,60),(1,2,3))
+                im.save(root/sensor/'test_Intensity.png')
+            result=check_render(root,{'custom_name':'test'})
+            self.assertEqual(result['constant_views'],[])
+            self.assertEqual(result['invalid_palette_views'],['CAMERA_1','CAMERA_2','CAMERA_3'])
+            # A normal non-binary camera palette remains eligible.
+            for sensor in ('CAMERA_1','CAMERA_2','CAMERA_3'):
+                im=Image.new('RGB',(100,100))
+                im.putdata([(x,y,160) for y in range(100) for x in range(100)])
+                im.save(root/sensor/'test_Intensity.png')
+            result=check_render(root,{'custom_name':'test'})
+            self.assertEqual(result['invalid_palette_views'],[])
+            self.assertEqual(result['constant_views'],[])
+
 
 if __name__=='__main__':unittest.main()
