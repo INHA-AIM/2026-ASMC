@@ -1,6 +1,6 @@
 {
   "date": "2026-10-12",
-  "status": "collection_interrupted_simulator_crash",
+  "status": "collection_resumed_20261012T000338Z",
   "pr80_merge": "c862ff071c1178110ab937e50e618602cb1dbd04",
   "branch": "feat/capture-route-collection",
   "base_dependency": "PR #81",
@@ -332,6 +332,22 @@
       "stack": "UnityEngine.ImageConversion.EncodeToPNG",
       "resource_growth_cause": "hypothesis; repeated Capture accumulation not isolated causally"
     },
-    "restore_after_crash_verified": false
+    "restore_after_crash_verified": false,
+    "resume": {
+      "requested_hours": 4,
+      "started_utc": "2026-10-12T00:03:38Z",
+      "deadline_utc": "2026-10-12T04:03:38Z",
+      "fresh_generation_actors": 114,
+      "sensor_capture_preflight": "RGB/semantic/instance and native BBox confirmed",
+      "sunny15_run": "route_pp_30_20261012T000801_713",
+      "sunny15_captures": 871,
+      "sunny15_runtime_passed": true,
+      "sunny15_cte_p95_m": 0.2482744487470909,
+      "sunny15_cte_max_m": 0.431623099824399,
+      "new_actor_rgb_reviewed": 114,
+      "foggy11_status": "collecting",
+      "evidence": "data/collection-evidence-20261012/resume-four-hours-r1.json",
+      "model_training_started": false
+    }
   }
 }

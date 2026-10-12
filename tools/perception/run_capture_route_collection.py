@@ -143,6 +143,8 @@ def main():
                    help='Bound repeated Capture resource accumulation; restart MORAI between sessions')
     p.add_argument('--conditions',nargs='+',choices=['sunny:11','sunny:13','sunny:15','foggy:11','foggy:13','foggy:15'],
                    help='Explicit remaining conditions in a fresh report; already collected runs remain immutable')
+    p.add_argument('--inspection-only',action='store_true',
+                   help='Collect explicit weather conditions for new actor/rotation RGB review; no placement approval implied')
     a=p.parse_args()
     deadline=datetime.fromisoformat(a.deadline_utc.replace('Z','+00:00')) if a.deadline_utc else None
     if deadline and deadline.tzinfo is None:raise ValueError('deadline must include a timezone')
@@ -224,7 +226,7 @@ def main():
                 raise RuntimeError('environment change not verified')
             reset()
             result=trial(a.data_root,pilot['controller'],pilot['selected_speed_kph'],current_ledger,a.layout_id,0,1800,
-                         inspection_only=a.operation=='inspect',abort_file=a.abort_file)
+                         inspection_only=a.operation=='inspect' or a.inspection_only,abort_file=a.abort_file)
             result.update(weather=weather_name,hour=hour,spawn_ledger=str(current_ledger),
                           rotation_step_index=condition_index,nominal_rotation_deg=condition_index*a.rotation_step_deg)
             report['runs'].append(result);save()
