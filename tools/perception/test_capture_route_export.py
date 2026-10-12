@@ -29,6 +29,20 @@ class CaptureRouteExportTest(unittest.TestCase):
         self.assertEqual(result[0]['xyxy'],[4,3,9,8])
         self.assertEqual(result[0]['source_xyxy'],[1,1,10,10])
 
+    def test_only_stroller_infant_is_excluded_with_pixels_still_resolved(self):
+        inst=np.zeros((12,12,4),np.uint8);sem=np.zeros((12,12,3),np.uint8)
+        boxes=[];typed={};colors={}
+        for i,(native,kind,label) in enumerate([('1','Pedestrian','person'),('10001','Obstacle','stroller'),('10002','Pedestrian','person')]):
+            rgba=[0,0,i+1,255];inst[2:4,1+i*3:3+i*3]=rgba;sem[2:4,1+i*3:3+i*3]=[98,2,255]
+            boxes.append(dict(actor_id=native,gt_source_label=kind,rgba=rgba))
+            typed[native]={kind:label};colors[native]={kind:rgba}
+        ledger=[dict(native_ids=['1','10001','10002'],placement_approved=True,identity_approved=True,
+            target_class='stroller',api_name='BabyStroller1',native_source_classes=typed,native_rgba=colors)]
+        excluded=[];result=convert(inst,sem,boxes,ledger,excluded_annotations=excluded)
+        self.assertEqual([x['actor_id'] for x in result],['1','10001'])
+        self.assertEqual([x['actor_id'] for x in excluded],['10002'])
+        self.assertEqual(len(convert(inst,sem,boxes,ledger,exclude_stroller_infants=False)),3)
+
     def test_strided_rgba_preserves_alpha_identity_and_edge_pixels(self):
         raw=np.zeros((8,12,4),np.uint8);inst=raw[:,::2];sem=np.zeros((8,6,3),np.uint8)
         inst[2:5,3:6]=[1,2,3,255];inst[7,0]=[1,2,3,254]

@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "policy": "exclude_verified_stroller_infant_component2_v2",
+  "source_gt_preserved": true,
+  "exclude": {
+    "assets": [
+      "BabyStroller1",
+      "BabyStroller2",
+      "BabyStroller3"
+    ],
+    "component_code": 2,
+    "source_kind": "Pedestrian",
+    "training_class": "person",
+    "requires_verified_native_id_and_rgba": true
+  },
+  "retain": [
+    "adult pushing stroller",
+    "stroller",
+    "all other verified target objects"
+  ],
+  "negative_policy": "infant-only images require separate complete-empty review",
+  "training_sampling": "frame balance is separate from independent scene diversity"
+}

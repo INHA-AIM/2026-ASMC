@@ -16,7 +16,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--run',type=Path,required=True,help='Synced Capture dataset')
     p.add_argument('--ledger',type=Path,required=True)
-    p.add_argument('--calibration',type=Path,default=ROOT/'config/morai/capture_asset_ground_v1.json')
+    p.add_argument('--calibration',type=Path,default=ROOT/'config/morai/capture_asset_ground_v2.json')
     p.add_argument('--output',type=Path,required=True)
     a=p.parse_args()
     if a.output.exists():raise ValueError('new immutable ledger revision required')

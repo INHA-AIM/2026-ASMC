@@ -51,8 +51,9 @@ MPC 경로는 수집 목표 속도 이하로만 제한하며, 이를 변경 없�
 traffic_cone 618, concrete_barrier 953, box 1,109, traffic_drum 1,661, bollard 2,298,
 deer 61, motorcycle 69, bicycle 230이다. 120개 중 장애물 100개·희소 객체 20개를
 `1/sqrt(max(등장 이미지 수,50))`로 배분하고 하위 에셋을 순환한다.
-사람·일반 차량·강아지·표지판·나무·불·입식 전동 킥보드는 새로 스폰하지 않는다.
-유모차 에셋에 포함된 사람/어린이는 실제 GT에서 person으로 보존한다.
+이 표는 첫 배치 이전 스냅샷이다. 이후 배치는 검증한 Capture 부분집합을 포함해 실제 YOLO train 파일의 클래스별 등장 이미지 수를 다시 집계한다.
+사용자의 최신 승인에 따라 차량·트럭·버스도 부족할 때 배치할 수 있다. 표지판·나무·불·구조물·입식 전동 킥보드는 제외한다.
+유모차를 미는 성인은 person으로 유지하고, 유모차 안 아기만 person에서 제외한다. 원본 GT는 보존한다.
 
 장부에 정확한 API 이름, 목표 클래스, native ID, client key, 생성 세대, 위치·회전·크기를 기록한다.
 GetAllActorsState는 actor 수를 20개로 자르지 않는다. 순차 기록도 120/240개 전부 보존한다.
@@ -140,9 +141,7 @@ python3 tools/perception/run_capture_route_collection.py collect --pilot-results
 이 빌드에서는 `SetPhysics(false)`가 native bbox의 pivot offset을 잃는 반례가 있어
 수집 객체의 물리를 끄지 않는다. `--pause-static --restore-reviewed-static`으로
 검수한 native 자세를 복원하고 수집 actor만 pause한다. Ego는 이 고정 대상에 포함하지 않는다.
-Pedestrian `SetTransform`의 z는 ground-relative이고 조회/스폰 z는 map 높이인
-차이도 실제 Deer1 시험으로 확인했다. 회전 도구는 이 차이를 변환하고 native 조회에서 5° 이내 yaw
-편차에만 1회 보정한 뒤 원래 2°/0.2m 허용값으로 검증한다. 물리 OFF 시험과 실패
+Pedestrian `SetTransform`은 즉시 조회에서 정상 높이여도 Capture 주행 후 z=0으로 변하는 반례가 재개 FOGGY11의 Deer1 9개에서 확인됐다. map z를 직접 보내면 지면 높이가 중복되는 시험 결과도 보존했다. 따라서 사슴의 직접 회전을 차단하고 `rotate_capture_with_pedestrian_respawn.py`로 소유 사슴만 제거·재생성한다. 새 native ID는 새 GT 검수를 요구하며 기존 승인을 복사하지 않는다. 다른 장애물은 기존 회전·높이 검사를 유지한다. 물리 OFF 시험과 실패
 rollback 기록은 삭제하지 않으며, 복원 후 새 ledger로만 수집을 재개한다.
 
 
@@ -312,3 +311,22 @@ SUNNY15 재수집은 871 Capture·오류 0, 횡오차 p95 0.248m·최대 0.432m�
 
 원본 복사는 완료된 run만 처리하며 상수 RGB·필수 파일 누락을 사유와 함께 제외한다.
 새 주행과 회전 영상의 학습 채택은 별도 검수·GT 변환 단계다. 추가학습·운영 변경은 하지 않는다.
+
+### 두 번째 배치와 주석 정책 v2
+
+`capture_annotation_policy_v2.json`은 실제 native GT로 확인된 BabyStroller1/2/3의
+아기 component 2만 제외한다. 성인 component 0과 유모차 component 1은 유지한다.
+원본 GT·이전 export는 그대로 두고 새 export/revision에 제외 주석과 근거를 남긴다.
+과거 기록의 person 수에는 아기가 포함됐으므로 최신 정책 집계와 직접 합하지 않는다.
+
+`pre-layout2-class-stock-r3.json`은 YOLO 라벨을 다시 읽은 집계다. 이 스냅샷에서
+dog는 train 등장 이미지 131장으로 차량보다 부족했다. 두 번째 배치는 180개를 계획하고
+클래스당 최대 15%, 등장 이미지 수 역제곱근으로 12종 전체를 배분했다.
+171개가 높이·footprint 검사를 통과했고 9개는 제거했다. Dog1/2는 별도 정차 RGB·GT
+검수 후 calibration v2에 추가했다. Ped_Pet1은 사람+개 복합 에셋이므로 dog로 묶지 않는다.
+차량·트럭은 기존 stock이 더 충분해 이번 배치에 억지로 추가하지 않았다.
+
+평균 배치 간격은 약 12.1m이며, 의도한 부분 가림 쌍은 한 쌍이다. 객체 전체의
+점유 영역을 겹치게 만들지는 않는다. 터널 우측 일부는 경로 기준 3.6m로 당기고
+큰 에셋은 터널 밖의 동일 클래스 슬롯과 교환했다. 숫자 검사 통과와 실제 RGB 접지
+승인은 별개다. 새 ID와 회전마다 Capture 영상을 다시 검수한다.

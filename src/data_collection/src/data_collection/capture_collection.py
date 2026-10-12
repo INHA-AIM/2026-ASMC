@@ -46,16 +46,39 @@ def motion_summary(samples, target_kph):
         speed_achieved=reached_seconds>=3 and progress>5)
 
 
-def allocation(count, presence=None, asset_pools=None, asset_offset=0):
+def allocation(count, presence=None, asset_pools=None, asset_offset=0, balance_all=False, max_class_share=None):
     """Deterministic largest-deficit allocation; unavailable assets stay unfilled."""
-    if count not in (6, 12, 60, 120, 240):
-        raise ValueError('use a staged layout size: 6/12/60/120/240')
+    if count not in (6, 12, 60, 120, 180, 240):
+        raise ValueError('use a staged layout size: 6/12/60/120/180/240')
     presence = PRESENCE if presence is None else presence
     asset_pools = ASSETS if asset_pools is None else asset_pools
-    if set(presence)!=set(PRESENCE) or any(not math.isfinite(float(v)) or v<0 for v in presence.values()):
+    expected=set(PRESENCE)|({'dog'} if balance_all and 'dog' in presence else set())
+    known=dict(ASSETS,dog=('Dog1','Dog2'))
+    if set(presence)!=expected or any(not math.isfinite(float(v)) or v<0 for v in presence.values()):
         raise ValueError('complete nonnegative collection class presence required')
-    if set(asset_pools)!=set(ASSETS) or any(not pool or set(pool)-set(ASSETS[k]) for k,pool in asset_pools.items()):
+    if set(asset_pools)!=expected or any(not pool or set(pool)-set(known[k]) for k,pool in asset_pools.items()):
         raise ValueError('explicit known asset pools required')
+    if balance_all:
+        weights={k:1/math.sqrt(max(presence[k],50)) for k in presence}
+        norm=sum(weights.values());prob={k:v/norm for k,v in weights.items()}
+        if max_class_share is not None:
+            cap=math.floor(count*max_class_share)/count
+            if not math.isfinite(cap) or cap*len(prob)<1:raise ValueError('infeasible class share cap')
+            fixed={};remaining=set(prob)
+            while remaining:
+                scale=(1-sum(fixed.values()))/sum(weights[k] for k in remaining)
+                above={k for k in remaining if weights[k]*scale>cap}
+                if not above:
+                    fixed.update({k:weights[k]*scale for k in remaining});break
+                fixed.update({k:cap for k in above});remaining-=above
+            prob=fixed
+        used={k:0 for k in presence};result=[]
+        for i in range(count):
+            eligible=[k for k in presence if max_class_share is None or used[k]<math.floor(count*max_class_share)]
+            label=max(eligible,key=lambda k:((i+1)*prob[k]-used[k],k))
+            used[label]+=1
+            result.append((label,asset_pools[label][(used[label]-1+asset_offset)%len(asset_pools[label])]))
+        return result
     rare_count = round(count / 6)
     result = []
     for pool, total in ((tuple(k for k in PRESENCE if k not in ('deer', 'motorcycle', 'bicycle')), count-rare_count),

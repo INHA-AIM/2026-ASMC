@@ -22,7 +22,7 @@ def validate_rendered_rgb(image):
         raise ValueError('constant RGB texture: Capture render failure, not a negative')
 
 
-def convert(instance,semantic,boxes,ledger):
+def convert(instance,semantic,boxes,ledger,exclude_stroller_infants=True,excluded_annotations=None):
     if instance.ndim!=3 or instance.shape[2]!=4 or semantic.shape!=instance.shape[:2]+(3,):
         raise ValueError('native GT dimensions/channels mismatch')
     annotations=[];linked=np.zeros(instance.shape[:2],bool)
@@ -38,6 +38,16 @@ def convert(instance,semantic,boxes,ledger):
         # but there is no visible positive rectangle to export.
         if not len(xs):continue
         label,subtype=native_annotation_class(box['actor_id'],ledger,box['gt_source_label'],box['rgba'])
+        linked|=mask
+        infant=label=='person' and subtype in ('BabyStroller1','BabyStroller2','BabyStroller3') and any(
+            r.get('api_name')==subtype and r.get('native_ids') and str(r['native_ids'][0]).isdecimal() and
+            str(box['actor_id'])==str(int(r['native_ids'][0])*10000+2) for r in ledger)
+        if exclude_stroller_infants and infant:
+            if excluded_annotations is not None:
+                excluded_annotations.append(dict(box,canonical=label,subtype=subtype,
+                    xyxy=[int(xs.min()),int(ys.min()),int(xs.max()+1),int(ys.max()+1)],
+                    visible_pixels=len(xs),reason='user_policy_exclude_stroller_infant_only'))
+            continue
         annotations.append(dict(box,canonical=label,subtype=subtype,
             xyxy=[int(xs.min()),int(ys.min()),int(xs.max()+1),int(ys.max()+1)],visible_pixels=len(xs)))
         linked|=mask
@@ -54,6 +64,7 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--gallery',type=Path,required=True)
     p.add_argument('--layout-id',required=True)
+    p.add_argument('--include-stroller-infants-legacy',action='store_true',help='Reproduce historical exports; current default excludes only verified stroller infant component 2')
     a=p.parse_args()
     if not a.layout_id or a.output.exists():raise ValueError('new output version and nonempty layout ID required')
     collection_path=a.run/'lineage/collection.json'
@@ -65,7 +76,7 @@ def main():
     a.output.mkdir(parents=True);a.gallery.mkdir(parents=True,exist_ok=True)
     images=a.output/'images/train';labels=a.output/'labels/train'
     images.mkdir(parents=True);labels.mkdir(parents=True)
-    rows=[];quarantine=[];seen=set();counts=Counter();cards=[]
+    rows=[];quarantine=[];seen=set();counts=Counter();cards=[];excluded_count=0
     for frame in frames:
         for view in ('front','left','right'):
             key='{}_{}_{:06d}'.format(frame['run_id'],view,frame['frame_id'])
@@ -86,7 +97,8 @@ def main():
                 semantic=np.array(Image.open(a.run/paths['semantic'][view]).convert('RGB'))
                 if instance.shape[:2]!=(image.height,image.width):raise ValueError('RGB/GT dimensions mismatch')
                 boxes=parse_bbox((a.run/paths['bbox'][view]).read_text(encoding='utf-8-sig'))
-                anns=convert(instance,semantic,boxes,ledger)
+                excluded=[]
+                anns=convert(instance,semantic,boxes,ledger,not a.include_stroller_infants_legacy,excluded)
                 if not anns:raise ValueError('negative requires separate complete-empty review')
                 lines=[]
                 for ann in anns:
@@ -105,15 +117,19 @@ def main():
                 rows.append(dict(key=key,split='train',split_group=a.layout_id,layout_id=a.layout_id,
                     source_run=frame['run_id'],frame_id=frame['frame_id'],view=view,image_sha256=sha(rgb),
                     pixel_sha256=pixel_sha,source_manifest_sha256=sha(a.run/'manifest.jsonl'),
-                    ledger_sha256=sha(a.ledger),annotation_sha256=sha(label_path),annotations=anns,
+                    ledger_sha256=sha(a.ledger),annotation_sha256=sha(label_path),annotations=anns,excluded_annotations=excluded,
                     source_native_boxes=boxes, invisible_native_actor_ids=[b['actor_id'] for b in boxes
                         if b['actor_id'] not in {ann['actor_id'] for ann in anns}]))
+                excluded_count+=len(excluded)
                 draw=ImageDraw.Draw(image)
+                for ann in excluded:
+                    draw.rectangle(ann['xyxy'],outline='#ff5ca8',width=2)
+                    draw.text(ann['xyxy'][:2],'excluded stroller infant',fill='#ff5ca8')
                 for ann in anns:
                     draw.rectangle(ann['xyxy'],outline='#22ee88',width=2)
                     draw.text(ann['xyxy'][:2],ann['canonical']+' id='+ann['actor_id'],fill='#22ee88')
                 image.save(a.gallery/(key+'.jpg'))
-                cards.append('<article><h3>'+html.escape(key)+'</h3><img src="'+key+'.jpg"></article>')
+                cards.append('<article><h3>'+html.escape(key)+'</h3><img loading="lazy" decoding="async" src="'+key+'.jpg"></article>')
             except (KeyError,ValueError,OSError) as exc:
                 # A rejected image cannot remain discoverable as an orphan train pair.
                 for rejected in (images/(key+'.png'),labels/(key+'.txt')):
@@ -127,6 +143,9 @@ def main():
         fixed_class_ids=list(CLASSES),split='train',split_group=a.layout_id,
         original_eval_splits_unchanged=True,training_ready=False,
         reason='new Capture subset only; merge with frozen v7 and resample before training')
+    summary['annotation_policy']='legacy_include_stroller_infants' if a.include_stroller_infants_legacy else 'exclude_verified_stroller_infant_component2_v2'
+    summary['excluded_stroller_infant_annotations']=excluded_count
+    summary['annotation_policy_sha256']=sha(ROOT/'config/datasets/capture_annotation_policy_v2.json')
     runtime_evidence={}
     for name in ('validation.json','restoration.json','collection.json'):
         path=a.run/'lineage'/name

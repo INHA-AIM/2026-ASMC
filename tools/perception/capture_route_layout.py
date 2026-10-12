@@ -24,12 +24,12 @@ def plan(points, count, policy=None, phase=.5, side_phase=0):
     length=sum(math.hypot(b[0]-a[0],b[1]-a[1]) for a,b in zip(points,points[1:]))
     rows=[]
     policy=policy or {}
-    for i,(label,asset) in enumerate(allocation(count,policy.get('presence'),policy.get('asset_pools'),policy.get('asset_offset',0))):
+    for i,(label,asset) in enumerate(allocation(count,policy.get('presence'),policy.get('asset_pools'),policy.get('asset_offset',0),policy.get('balance_all_classes',False),policy.get('max_class_share'))):
         station=(i+phase)*length/count
         point,yaw=route_sample(points,station)
         offset=(1 if (i+side_phase)%2==0 else -1)*5.
         rows.append(dict(slot=i,station_m=station,target_class=label,api_name=asset,
-            actor_type='pedestrian' if label=='deer' else 'obstacle',
+            actor_type='pedestrian' if label in ('deer','dog') else 'obstacle',
             route_surface_z=point[2],yaw_deg=math.degrees(yaw),
             location=dict(x=point[0]-offset*math.sin(yaw),y=point[1]+offset*math.cos(yaw),z=point[2]),
             created=False,placement_approved=False,identity_approved=False,
@@ -46,7 +46,7 @@ def main():
     p.add_argument('--grpc-host',default='host.docker.internal')
     p.add_argument('--near-ego',action='store_true',help='Six-object stationary GT/height pilot only')
     p.add_argument('--calibrate-native-pivot',action='store_true',help='Stationary six-object probes only; skip bbox-bottom correction and require visual calibration')
-    p.add_argument('--ground-calibration',type=Path,default=ROOT/'config/morai/capture_asset_ground_v1.json')
+    p.add_argument('--ground-calibration',type=Path,default=ROOT/'config/morai/capture_asset_ground_v2.json')
     p.add_argument('--only-native-id',action='append',default=[],help='Cleanup only these owned native roots; repeat to select')
     p.add_argument('--pause-static',action='store_true',help='Pause owned collection actors after native physics settling; keep physics and GT bbox offsets')
     p.add_argument('--allocation-policy',type=Path,help='Frozen image-presence and known asset-pool policy for a new layout')

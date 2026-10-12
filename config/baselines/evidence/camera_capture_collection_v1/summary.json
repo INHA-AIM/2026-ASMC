@@ -349,5 +349,47 @@
       "evidence": "data/collection-evidence-20261012/resume-four-hours-r1.json",
       "model_training_started": false
     }
+  },
+  "resume": {
+    "deadline_utc": "2026-10-12T04:03:38Z",
+    "status": "collecting foggy15; first three resumed laps passed",
+    "same_simulator_headroom_decision": "data/collection-evidence-20261012/resume-session2-headroom-decision-r1.json",
+    "pedestrian_drift_evidence": "data/collection-evidence-20261012/resume-post-foggy11-pose-drift-r1.json",
+    "pedestrian_workaround": "recreate only owned Deer1 actors for each 60-degree change; new native IDs require fresh RGB review",
+    "completed_runs": [
+      {
+        "condition": "sunny15",
+        "run_id": "route_pp_30_20261012T000801_713",
+        "capture_succeeded": 871,
+        "tracking_passed": true,
+        "cte_p95_m": 0.2482744487470909,
+        "cte_max_m": 0.431623099824399,
+        "export_images": 2248,
+        "export_objects": 28274,
+        "independent_verification": true
+      },
+      {
+        "condition": "foggy11",
+        "run_id": "route_pp_30_20261012T002633_929",
+        "capture_succeeded": 839,
+        "tracking_passed": true,
+        "cte_p95_m": 0.24400471881880378,
+        "cte_max_m": 0.46023014354064923,
+        "export_images": 2053,
+        "export_objects": 25558,
+        "independent_verification": true
+      },
+      {
+        "condition": "foggy13",
+        "run_id": "route_pp_30_20261012T004938_383",
+        "capture_succeeded": 825,
+        "tracking_passed": true,
+        "cte_p95_m": 0.2469389584346223,
+        "cte_max_m": 0.4531799211814558,
+        "export_images": 2015,
+        "export_objects": 25433,
+        "independent_verification": true
+      }
+    ]
   }
 }

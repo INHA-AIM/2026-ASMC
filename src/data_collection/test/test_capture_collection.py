@@ -74,6 +74,20 @@ class CollectionTest(unittest.TestCase):
         for i,r in enumerate(rows):r.update(station_m=i*.3,speed_mps=20/3.6 if i==50 else 0)
         self.assertFalse(motion_summary(rows,20)['speed_achieved'])
 
+    def test_dense_balanced_layout_caps_new_rare_class_and_is_reproducible(self):
+        from data_collection.capture_collection import PRESENCE,ASSETS
+        presence=dict(PRESENCE,dog=131)
+        pools=dict(ASSETS,dog=('Dog1','Dog2'))
+        rows=allocation(180,presence,pools,2,balance_all=True,max_class_share=.15)
+        self.assertEqual(len(rows),180)
+        self.assertEqual(rows,allocation(180,presence,pools,2,balance_all=True,max_class_share=.15))
+        from collections import Counter
+        counts=Counter(c for c,a in rows)
+        self.assertEqual(set(counts),set(presence))
+        self.assertLessEqual(max(counts.values()),27)
+        with self.assertRaisesRegex(ValueError,'infeasible'):
+            allocation(180,presence,pools,balance_all=True,max_class_share=.01)
+
     def test_allocation_over_twenty_and_balance(self):
         rows=allocation(120)
         self.assertEqual(rows,allocation(120))

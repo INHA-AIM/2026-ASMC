@@ -45,6 +45,8 @@ def main():
     active=[r for r in rows if r.get('created') and not r.get('removed')]
     if not active or any((not r.get('placement_approved') and not a.inspection_only) or not r.get('geometry_gate') for r in active):
         raise ValueError('only a reviewed, numerically accepted layout can rotate')
+    if a.degrees and any(r['actor_type']=='pedestrian' for r in active):
+        raise ValueError('pedestrian SetTransform can drift after Capture; use rotate_capture_with_pedestrian_respawn.py')
     points=[tuple(map(float,l.split()[:3])) for l in a.route.read_text().splitlines() if l.strip()]
     channel=grpc.insecure_channel(a.grpc_host+':7789');actors=ActorStub(channel)
     ego=ObjectInfo(object_type=OBJECT_TYPE_VEHICLE);ego.id.value='Ego'

@@ -16,7 +16,7 @@ def main():
     p.add_argument('--ledger',type=Path,required=True)
     p.add_argument('--sensor-root',type=Path,default=Path('/mnt/c/MoraiLauncher_Win/SensorData'))
     p.add_argument('--output',type=Path,required=True)
-    p.add_argument('--ground-calibration',type=Path,default=Path(__file__).resolve().parents[2]/'config/morai/capture_asset_ground_v1.json')
+    p.add_argument('--ground-calibration',type=Path,default=Path(__file__).resolve().parents[2]/'config/morai/capture_asset_ground_v2.json')
     a=p.parse_args()
     if a.output.exists():raise ValueError('choose a new immutable review snapshot')
     rows=[json.loads(l) for l in a.ledger.read_text().splitlines() if l.strip()]
@@ -74,9 +74,9 @@ def main():
         draw.rectangle(visible_xyxy,outline='#00dfff',width=2)
         name='actor_'+native+'.jpg';image.save(a.output/name)
         caption=row['api_name']+' native='+native+' view='+item['view']+' (native boxes; NOT approved labels)'
-        cards.append('<article><h2>'+html.escape(caption)+'</h2><img src="'+name+'"></article>')
+        cards.append('<article><h2>'+html.escape(caption)+'</h2><img loading="lazy" decoding="async" src="'+name+'"></article>')
         thumb=image.copy();thumb.thumbnail((640,360));tile=Image.new('RGB',(640,390),'#101827');tile.paste(thumb,(0,30));ImageDraw.Draw(tile).text((5,5),caption,fill='white');thumbs.append(tile)
-        snapshots.append(dict(native_id=native,api_name=row['api_name'],record=item['record'],
+        snapshots.append(dict(native_id=native,api_name=row['api_name'],record=item['record'],view=item['view'],
             visible_pixels=item['visible_pixels'],fully_inside_image=item['fully_inside_image'],parent_visible_xyxy=visible_xyxy,
             expected_parent_source_label=calibration[row['api_name']]['components']['0']['gt_source_label'],
             rgb_sha256=hashlib.sha256(Path(item['rgb']).read_bytes()).hexdigest(),native_boxes=item['boxes']))
