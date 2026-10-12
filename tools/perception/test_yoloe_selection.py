@@ -46,7 +46,22 @@ class YoloeSelectionTest(unittest.TestCase):
         self.assertIsNone(resolution_choice(quality,[])['selected'])
 
     def test_fixture_override_keeps_nine_models_and_rejects_foreign_models(self):
-        from coco7_scene import FIXTURE,load_fixture
+        import builtins
+        import importlib.util
+        original_import = builtins.__import__
+
+        def without_simulator_sdk(name, *args, **kwargs):
+            if name in ('capture_coco7_actors', 'grpc') or name.startswith('morai.'):
+                raise ModuleNotFoundError('simulator SDK must not be needed for fixture validation')
+            return original_import(name, *args, **kwargs)
+
+        spec = importlib.util.spec_from_file_location(
+            'coco7_scene_fixture_test', Path(__file__).with_name('coco7_scene.py'))
+        scene = importlib.util.module_from_spec(spec)
+        with patch('builtins.__import__', side_effect=without_simulator_sdk):
+            spec.loader.exec_module(scene)
+            self.assertEqual(9, len(scene.load_fixture(None)))
+        FIXTURE, load_fixture = scene.FIXTURE, scene.load_fixture
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'fixture.json'
             rows=[list(row) for row in FIXTURE];rows[4][3]=2.
