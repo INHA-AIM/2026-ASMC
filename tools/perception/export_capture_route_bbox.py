@@ -15,11 +15,7 @@ ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'src/data_collection/src'))
 from data_collection.capture_collection import CLASSES,native_annotation_class
 from prepare_camera_seg_gt import parse_bbox,sha,SEMANTIC
-
-
-def validate_rendered_rgb(image):
-    if all(lo==hi for lo,hi in image.convert('RGB').getextrema()):
-        raise ValueError('constant RGB texture: Capture render failure, not a negative')
+from capture_rgb_quality import validate_rendered_rgb
 
 
 def convert(instance,semantic,boxes,ledger,exclude_stroller_infants=True,excluded_annotations=None):

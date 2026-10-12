@@ -604,5 +604,31 @@
       "independent_verification_passed": true,
       "full_lap_passed": false
     }
+  },
+  "resume2": {
+    "started_utc": "2026-10-12T03:21:25Z",
+    "deadline_utc": "2026-10-12T05:21:25Z",
+    "simulator_pid": 15496,
+    "status": "FOGGY11 collecting; per-run review/export pending",
+    "restart_capture_check": "data/collection-evidence-20261012/restart1221-capture-validation-r1.json",
+    "layout": "data/capture_layouts/route180_layout2_restart1221/combined-r1.jsonl",
+    "active_actors": 188,
+    "dog": 27,
+    "truck": 10,
+    "bus": 7,
+    "vehicle_rejected_removed": 3,
+    "static_position_check": "data/collection-evidence-20261012/resume2-post-capture-static-stability-r1.json",
+    "vehicle_native_gt_kinds": [
+      "Truck",
+      "Bus"
+    ],
+    "calibration": "config/morai/capture_asset_ground_v3.json",
+    "tiny_gt_audit": "data/collection-evidence-20261012/capture-tiny-gt-audit-r2.json",
+    "tiny_gt_labels_changed": false,
+    "tiny_gt_ignore_implemented": false,
+    "local_tests": 29,
+    "hosted_ci": "billing blocked; not counted as passed",
+    "public_control_published": false,
+    "operating_model_changed": false
   }
 }

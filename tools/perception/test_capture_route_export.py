@@ -13,7 +13,22 @@ class CaptureRouteExportTest(unittest.TestCase):
         image=Image.new('RGB',(8,8),'black')
         with self.assertRaisesRegex(ValueError,'render failure'):validate_rendered_rgb(image)
         image.putpixel((1,1),(1,2,3))
+        with self.assertRaisesRegex(ValueError,'render failure'):validate_rendered_rgb(image)
+        image.putdata([(x,y,100) for y in range(8) for x in range(8)])
         validate_rendered_rgb(image)
+
+    def test_native_truck_and_bus_names_do_not_require_vehicle_alias(self):
+        inst=np.zeros((20,20,4),np.uint8);sem=np.zeros((20,20,3),np.uint8)
+        for kind,label,color in [('Truck','truck',[255,90,90]),('Bus','bus',[255,105,105])]:
+            inst[3:15,4:18]=[0,0,42,255];sem[3:15,4:18]=color
+            boxes=[dict(actor_id='172',gt_source_label=kind,rgba=[0,0,42,255],source_xyxy=[4,3,18,15])]
+            ledger=[dict(native_ids=['172'],placement_approved=True,identity_approved=True,
+                target_class=label,api_name='checked-vehicle',native_source_classes={'172':{kind:label}},
+                native_rgba={'172':{kind:[0,0,42,255]}})]
+            result=convert(inst,sem,boxes,ledger)
+            self.assertEqual(result[0]['canonical'],label)
+            boxes[0]['gt_source_label']='Vehicle'
+            with self.assertRaises(ValueError):convert(inst,sem,boxes,ledger)
 
     def test_visible_components_and_invisible_raw_box(self):
         instance=np.zeros((20,20,4),np.uint8);semantic=np.zeros((20,20,3),np.uint8)

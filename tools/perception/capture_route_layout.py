@@ -78,12 +78,12 @@ def main():
     from morai.common.object_info_pb2 import ObjectInfo
     from morai.common.enum_pb2 import OBJECT_TYPE_VEHICLE,OBJECT_TYPE_OBSTACLE,OBJECT_TYPE_PEDESTRIAN
     from morai.common.type_pb2 import Transform,Vector3
-    from morai.actor.actor_spawn_pb2 import ActorSpawnInfo,ObstacleSpawnParam,PedestrianSpawnParam
+    from morai.actor.actor_spawn_pb2 import ActorSpawnInfo,ObstacleSpawnParam,PedestrianSpawnParam,VehicleSpawnParam
     from morai.actor.actor_set_pb2 import SetTransformParam, EnableActor
     channel=grpc.insecure_channel(a.grpc_host+':7789',options=[('grpc.max_receive_message_length',64<<20)])
     actors=ActorStub(channel);sim=SimulatorStub(channel)
     rows=[json.loads(line) for line in a.ledger.read_text().splitlines() if line.strip()]
-    types={'pedestrian':OBJECT_TYPE_PEDESTRIAN,'obstacle':OBJECT_TYPE_OBSTACLE}
+    types={'pedestrian':OBJECT_TYPE_PEDESTRIAN,'obstacle':OBJECT_TYPE_OBSTACLE,'vehicle':OBJECT_TYPE_VEHICLE}
     ego=ObjectInfo(object_type=OBJECT_TYPE_VEHICLE);ego.id.value='Ego'
     current=actors.GetActorState(ego,timeout=5)
     if sum(getattr(current.global_velocity,k)**2 for k in 'xyz')>.01:
@@ -111,8 +111,9 @@ def main():
         return
     if any(r.get('created') for r in rows):raise RuntimeError('creation cannot overwrite a used ledger')
     calibration=json.loads(a.ground_calibration.read_text())['assets'] if a.ground_calibration.exists() else {}
-    available=sim.GetAvailableObject(CategoryObstacles(pedestrian=True,obstacle=True),timeout=5)
-    pools=dict(pedestrian=set(available.pedestrian),obstacle=set(available.obstacle))
+    available=sim.GetAvailableObject(CategoryObstacles(vehicle=True,pedestrian=True,obstacle=True),timeout=5)
+    pools=dict(pedestrian=set(available.pedestrian),obstacle=set(available.obstacle),
+               vehicle=set(available.surround_vehicle))
     original=actors.GetAllActorsState(GetAllActorsFilter(vehicle=True,pedestrian=True,obstacle=True),timeout=5)
     occupied=[(s.bounding_box.location.x,s.bounding_box.location.y,
         math.hypot(s.bounding_box.extent.x,s.bounding_box.extent.y)) for s in original.states]
@@ -131,21 +132,43 @@ def main():
             save(a.ledger,rows)
             if row['api_name'] not in pools[row['actor_type']]:
                 row['reason']='api_asset_unavailable';save(a.ledger,rows);continue
-            if not a.calibrate_native_pivot and row['api_name'] not in calibration:
+            vehicle=row['actor_type']=='vehicle'
+            if not vehicle and not a.calibrate_native_pivot and row['api_name'] not in calibration:
                 row['reason']='asset_pivot_not_calibrated';save(a.ledger,rows);continue
-            pivot_offset=float(row.get('calibration_origin_above_ground_m',0)) if a.calibrate_native_pivot else calibration[row['api_name']]['origin_above_ground_m']
+            pivot_offset=0 if vehicle else (float(row.get('calibration_origin_above_ground_m',0)) if a.calibrate_native_pivot else calibration[row['api_name']]['origin_above_ground_m'])
             row['pivot_offset_m']=pivot_offset
-            if not a.calibrate_native_pivot:row['ground_calibration_sha256']=hashlib.sha256(a.ground_calibration.read_bytes()).hexdigest()
+            if not a.calibrate_native_pivot and not vehicle:
+                row['ground_calibration_sha256']=hashlib.sha256(a.ground_calibration.read_bytes()).hexdigest()
             info=ObjectInfo(object_type=types[row['actor_type']],client_key=client);info.id.value=row['id']
             pose=Transform(location=Vector3(**row['location']),rotation=Vector3(z=row['yaw_deg']))
             pose.location.z+=pivot_offset
             spawn=ActorSpawnInfo(actor_info=info,model_name=row['api_name'],label=client,transform=pose)
-            request=PedestrianSpawnParam(spawn_info=spawn,velocity=0,start_action=False) if row['actor_type']=='pedestrian' else ObstacleSpawnParam(spawn_info=spawn,scale=Vector3(x=1,y=1,z=1))
+            request=(VehicleSpawnParam(spawn_info=spawn,velocity=0,pause=True) if vehicle else
+                PedestrianSpawnParam(spawn_info=spawn,velocity=0,start_action=False) if row['actor_type']=='pedestrian' else
+                ObstacleSpawnParam(spawn_info=spawn,scale=Vector3(x=1,y=1,z=1)))
             reply=getattr(actors,'Spawn'+row['actor_type'].title())(request,timeout=5)
             row['spawn_response']=MessageToDict(reply);row['created']=reply.status==1;save(a.ledger,rows)
             if reply.status!=1:row['reason']='spawn_rejected';save(a.ledger,rows);continue
             time.sleep(.2);state=actors.GetActorState(info,timeout=5)
             time.sleep(.2);state=actors.GetActorState(info,timeout=5)
+            if vehicle:
+                if actors.SetAI(EnableActor(actor_info=info,enable=False),timeout=3).status!=1:
+                    raise RuntimeError('owned collection vehicle AI disable rejected')
+                # Vehicle SetTransform is world-relative. Derive each model's
+                # anchor offset from its actual native bbox; RGB approval is separate.
+                bottom=state.bounding_box.location.z-state.bounding_box.extent.z
+                delta=row['route_surface_z']-bottom
+                if not math.isfinite(delta) or abs(delta)>5:
+                    raise RuntimeError('vehicle support alignment exceeds measured 5m bound')
+                target=Transform();target.CopyFrom(state.transform);target.location.z+=delta
+                row['vehicle_support_alignment']=dict(before=MessageToDict(state,preserving_proto_field_name=True),
+                    requested=MessageToDict(target,preserving_proto_field_name=True),delta_z_m=delta,
+                    basis='native bbox support aligned to local route estimate; RGB terrain review required')
+                if actors.SetTransform(SetTransformParam(actor_info=info,transform=target),timeout=3).status!=1:
+                    raise RuntimeError('owned vehicle support alignment rejected')
+                time.sleep(.4);state=actors.GetActorState(info,timeout=5)
+                pivot_offset=state.transform.location.z-row['route_surface_z']
+                row['pivot_offset_m']=pivot_offset
             if a.pause_static:
                 if actors.SetPause(EnableActor(actor_info=info,enable=True),timeout=3).status!=1:
                     raise RuntimeError('owned static pause rejected')
@@ -158,7 +181,7 @@ def main():
             row['height_error_m']=state.bounding_box.location.z-state.bounding_box.extent.z-row['route_surface_z']
             row['bbox_bottom_error_m']=row['height_error_m']
             row['height_error_m']=state.transform.location.z-pivot_offset-row['route_surface_z']
-            row['geometry_gate']=row['footprint_clear'] and abs(row['height_error_m'])<=.2
+            row['geometry_gate']=row['footprint_clear'] and abs(row['bbox_bottom_error_m'] if vehicle else row['height_error_m'])<=.2
             if a.calibrate_native_pivot:
                 row.update(stationary_calibration_only=True,geometry_gate=False,
                            reason='native_origin_pivot_pending_visual_review')
@@ -178,7 +201,7 @@ def main():
             row['footprint_clear']=footprint_clear(points,center,radius,occupied)
             row['bbox_bottom_error_m']=state.bounding_box.location.z-state.bounding_box.extent.z-row['route_surface_z']
             row['height_error_m']=state.transform.location.z-pivot_offset-row['route_surface_z']
-            row['geometry_gate']=row['footprint_clear'] and abs(row['height_error_m'])<=.2
+            row['geometry_gate']=row['footprint_clear'] and abs(row['bbox_bottom_error_m'] if vehicle else row['height_error_m'])<=.2
             if len(matches)==1:
                 row['native_ids']=[matches[0].actor_info.id.value]
                 row['identity_approved']=True

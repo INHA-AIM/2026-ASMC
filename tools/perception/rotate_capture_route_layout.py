@@ -52,7 +52,7 @@ def main():
     ego=ObjectInfo(object_type=OBJECT_TYPE_VEHICLE);ego.id.value='Ego'
     if sum(getattr(actors.GetActorState(ego,timeout=3).global_velocity,k)**2 for k in 'xyz')>.01:
         raise RuntimeError('rotation requires stopped Ego')
-    states={};infos={};types={'obstacle':OBJECT_TYPE_OBSTACLE,'pedestrian':OBJECT_TYPE_PEDESTRIAN}
+    states={};infos={};types={'obstacle':OBJECT_TYPE_OBSTACLE,'pedestrian':OBJECT_TYPE_PEDESTRIAN,'vehicle':OBJECT_TYPE_VEHICLE}
     for r in active:
         if not r['id'].startswith('capture_'+r['generation']+'_') or not r['client_key'].startswith('capture_'):
             raise ValueError('unowned actor')

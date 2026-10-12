@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 import subprocess
 import time
+from capture_rgb_quality import rgb_metrics
 
 GIB = 1024 ** 3
 QUERY = r"""
@@ -48,19 +49,11 @@ def check_render(sensor_root, record):
     for sensor in ('CAMERA_1', 'CAMERA_2', 'CAMERA_3'):
         path = sensor_root / sensor / (custom + '_Intensity.png')
         with Image.open(path) as im:
-            rgb = im.convert('RGB')
-            extrema = rgb.getextrema()
-            colors = rgb.getcolors(maxcolors=256)
-            binary = None
-            if colors is not None:
-                binary_pixels = sum(n for n, color in colors
-                                    if color in ((0, 0, 0), (255, 255, 255)))
-                binary = binary_pixels / float(rgb.width * rgb.height)
-            metrics[sensor] = dict(palette_at_most_256=colors is not None,
-                                   binary_fraction=binary)
-            if binary is not None and binary >= .98:
+            quality = rgb_metrics(im)
+            metrics[sensor] = quality
+            if quality['invalid_binary_palette']:
                 invalid.append(sensor)
-        if all(lo == hi for lo, hi in extrema):
+        if quality['constant']:
             bad.append(sensor)
     return dict(custom_name=custom, constant_views=bad, invalid_palette_views=invalid, palette_metrics=metrics)
 
