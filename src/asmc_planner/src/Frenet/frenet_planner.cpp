@@ -148,6 +148,7 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
             roundabout_merge_cfg_.speed_cap = merge["speed_cap_mps"].as<double>(25.0/3.6);
             roundabout_merge_cfg_.max_horizon = merge["max_horizon_s"].as<double>(10.0);
             roundabout_merge_cfg_.preview_distance = merge["preview_distance_m"].as<double>(45.0);
+            roundabout_merge_cfg_.speed_measurement_error = merge["speed_measurement_error_mps"].as<double>(5.0);
             roundabout_merge_cfg_.source_link = merge["source_link"].as<std::string>(roundabout_merge_cfg_.source_link);
             roundabout_merge_cfg_.target_link = merge["target_link"].as<std::string>(roundabout_merge_cfg_.target_link);
             roundabout_merge_cfg_.stop_node = merge["stop_node"].as<std::string>(roundabout_merge_cfg_.stop_node);
@@ -155,6 +156,7 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
             if (!std::isfinite(roundabout_merge_cfg_.speed_cap) || roundabout_merge_cfg_.speed_cap <= 0 ||
                 !std::isfinite(roundabout_merge_cfg_.max_horizon) || roundabout_merge_cfg_.max_horizon < path_cfg_.time_horizon.max ||
                 roundabout_merge_cfg_.max_horizon > 10 || roundabout_merge_cfg_.conflict_links.empty() ||
+                !std::isfinite(roundabout_merge_cfg_.speed_measurement_error) || roundabout_merge_cfg_.speed_measurement_error <= 0 ||
                 !std::isfinite(roundabout_merge_cfg_.preview_distance) || roundabout_merge_cfg_.preview_distance <= 0)
                 throw std::runtime_error("invalid roundabout merge configuration");
             if (!avoid_road_map_.enabled()) throw std::runtime_error("roundabout MERGE requires the HD map");

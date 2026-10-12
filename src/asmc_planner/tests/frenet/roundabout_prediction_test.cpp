@@ -9,14 +9,14 @@ int main(){
     TrackedObject object{};object.id=1;object.x=2;object.y=2;
     object.length=4.5;object.width=1.9;object.geometry_valid=true;
     object.motion_state=ObjectMotionState::DYNAMIC;
-    auto observe=[&](double stamp,double clamp) {
+    auto observe=[&](double stamp,double clamp,double speed_error=1.0) {
         const double angle=std::atan2(object.vy,object.vx),c=std::cos(angle),sn=std::sin(angle);
         for(int i=0;i<8;++i) {
             const double dx=(i%4==0||i%4==3)?-object.length/2:object.length/2;
             const double dy=i%4<2?-object.width/2:object.width/2;
             object.corners[i]={object.x+dx*c-dy*sn,object.y+dx*sn+dy*c,double(i/4)};
         }
-        history.Observe({object},stamp,clamp);
+        history.Observe({object},stamp,clamp,speed_error);
     };
     const double times[]{0,.07,.19,.30,.42};
     for(double t:times){
@@ -196,6 +196,43 @@ int main(){
         intermediate_hit|=CheckObstacleOverlap(footprint,{},predicted,3);
     expect(endpoints_clear&&intermediate_hit,
         "intermediate turn models catch a physical collision missed by the old three endpoints");
+    // LiDAR absolute speed error and two-observation spread are different.
+    // Keep direction/body certificates and independent position disagreement.
+    object.id=40;object.length=4.5;object.width=1.9;object.vy=0;
+    history.Reset();
+    for(int i=0;i<8;++i){object.x=6*i*.1;object.y=0;object.vx=i%2?8:4;observe(900+i*.1,1);}
+    expect(history.UncertainNear(0,0)==40,
+        "legacy two-metre-per-second spread policy rejects noisy but straight body observations");
+    history.Reset();
+    for(int i=0;i<8;++i){object.x=6*i*.1;object.vx=i%2?8:4;observe(900+i*.1,1,5);}
+    expect(history.UncertainNear(0,0)<0,
+        "configured speed error permits observed spread without bypassing motion direction or body gates");
+    auto speed_bounds=history.WithObservedSpeedRanges({object});
+    expect(speed_bounds.size()==1&&speed_bounds[0].prediction_min_speed==4&&
+        speed_bounds[0].prediction_max_speed==8&&speed_bounds[0].vx==8,
+        "departure interval retains the observed extrema and original measured velocity");
+    object.x=object.y=0;object.yaw_rate=0;
+    for(int i=0;i<8;++i)object.corners[i]={i%4==0||i%4==3?-2.25:2.25,
+        i%4<2?-.95:.95,double(i/4)};
+    auto interval=history.WithObservedSpeedRanges({object})[0];
+    ego.x=12;ego.y=0;
+    const auto middle_footprint=MakeEgoFootprint(ego,{.2,.2,-1},0);
+    auto slow=object;slow.vx=4;
+    expect(!CheckObstacleOverlap(middle_footprint,{},slow,2)&&
+        !CheckObstacleOverlap(middle_footprint,{},object,2)&&
+        CheckObstacleOverlap(middle_footprint,{},interval,2),
+        "continuous speed sweep catches intermediate arrival missed by both endpoint speeds");
+    auto unchanged=object;unchanged.prediction_min_speed=unchanged.prediction_max_speed=8;
+    expect(PredictObstacleFootprint(unchanged,2).size()==PredictObstacleFootprint(object,2).size()&&
+        CheckObstacleOverlap(middle_footprint,{},unchanged,2)==CheckObstacleOverlap(middle_footprint,{},object,2),
+        "zero-width speed interval preserves nominal collision prediction");
+    interval.motion_state=ObjectMotionState::LOW_THREAT;
+    expect(PredictObstacleFootprint(interval,2).size()==PredictObstacleFootprint(object,0).size(),
+        "stationary confirmed obstacles never acquire speed uncertainty motion");
+    history.Reset();
+    for(int i=0;i<8;++i){object.x=6*i*.1;object.vx=i%2?14:2;observe(901+i*.1,1,5);}
+    expect(history.UncertainNear(0,0)==40,
+        "spread beyond the configured error allowance still revokes departure confidence");
     return failures?1:0;
 }
 

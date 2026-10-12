@@ -436,7 +436,8 @@ void FrenetPlanner::ObserveRoundaboutExit(const std::vector<TrackedObject>& obje
     if(!std::isfinite(stamp)||stamp>roundabout_exit_prediction_until_) {
         roundabout_exit_prediction_active_=false;roundabout_prediction_.Reset();return;
     }
-    roundabout_prediction_.Observe(objects,stamp,object_tracking_cfg_.yaw_rate_clamp_rad_s);
+    roundabout_prediction_.Observe(objects,stamp,object_tracking_cfg_.yaw_rate_clamp_rad_s,
+        roundabout_merge_cfg_.speed_measurement_error);
 }
 void FrenetPlanner::RevokeRoundaboutReadiness() {
     if (execution_->merge.committed) return;
@@ -477,7 +478,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     last_profiled_acceleration_=0.0;
     auto ctx=PreparePlanningContext(ego,obstacles,command);
     roundabout_prediction_.Observe(obstacles,observation_stamp,
-        object_tracking_cfg_.yaw_rate_clamp_rad_s);
+        object_tracking_cfg_.yaw_rate_clamp_rad_s,roundabout_merge_cfg_.speed_measurement_error);
     for(auto& object:ctx.predicted_obstacles)
         object.yaw_rate=roundabout_prediction_.Rate(object.id);
     auto departure_obstacles=ctx.predicted_obstacles;
@@ -489,7 +490,8 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         // Expand once per planning cycle for the final departure certificate,
         // not per candidate or as a Cartesian product of vehicle motions.
         departure_obstacles=RoundaboutPrediction::ExpandTurnModels(
-            departure_obstacles,object_tracking_cfg_.yaw_rate_clamp_rad_s);
+            roundabout_prediction_.WithObservedSpeedRanges(departure_obstacles),
+            object_tracking_cfg_.yaw_rate_clamp_rad_s);
     }
     last_s_=ctx.s;last_d_=ctx.d;has_last_s_=true;
     double dd,ddd;ArcDerivToTimeDeriv(ctx.s_dot,ctx.s_ddot,ctx.d_prime,ctx.d_pprime,dd,ddd);
@@ -672,11 +674,17 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         if(it==obstacles.end())return false;
         VehicleShape bound=vehicle_shape_;bound.length=std::max(6.0,it->length);
         bound.width=std::max(3.0,it->width);bound.rear_overhang=bound.length/2;
+        const double speed=std::hypot(it->vx,it->vy);
+        const auto speed_range=roundabout_prediction_.ObservedSpeedRange(id,speed);
+        const double speed_spread=std::max(speed-speed_range.first,speed_range.second-speed);
         for(double rate:RoundaboutPrediction::TurnModelRates(
                 roundabout_prediction_.Rate(id),object_tracking_cfg_.yaw_rate_clamp_rad_s)) {
             CartesianState pose{};pose.x=it->x;pose.y=it->y;pose.yaw=std::atan2(it->vy,it->vx);
             for(double t=0;t<=2.0;t+=.1) {
-                if(roundabout_zone_.Overlaps(pose,bound,collision_cfg_.safety_margin))return false;
+                // A passed-vehicle certificate must remain clear for the
+                // observed speed interval, not just its latest point estimate.
+                if(roundabout_zone_.Overlaps(pose,bound,
+                    collision_cfg_.safety_margin+speed_spread*t))return false;
                 const double angle=pose.yaw+.05*rate;
                 pose.x+=.1*std::hypot(it->vx,it->vy)*std::cos(angle);
                 pose.y+=.1*std::hypot(it->vx,it->vy)*std::sin(angle);pose.yaw+=.1*rate;

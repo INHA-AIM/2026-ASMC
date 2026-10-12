@@ -89,7 +89,8 @@ public:
         return expanded;
     }
     void Reset() { tracks_.clear(); stamp_=-1; }
-    void Observe(const std::vector<TrackedObject>& objects,double stamp,double clamp) {
+    void Observe(const std::vector<TrackedObject>& objects,double stamp,double clamp,
+                 double speed_measurement_error=1.0) {
         if(!std::isfinite(stamp))return;
         if(stamp<stamp_-1e-6)Reset();
         if(stamp<=stamp_+1e-6)return;
@@ -137,7 +138,9 @@ public:
                 min_speed=std::min(min_speed,sample.speed);max_speed=std::max(max_speed,sample.speed);
             }
             track.reliable=track.samples.size()>=4&&stamp-track.samples.front().t>=.25&&
-                residual<=.20&&std::fabs(fit)<=clamp&&max_speed-min_speed<=2;
+                residual<=.20&&std::fabs(fit)<=clamp&&
+                std::isfinite(speed_measurement_error)&&speed_measurement_error>0&&
+                max_speed-min_speed<=2*speed_measurement_error;
             double position_vx=0,position_vy=0;
             if(DisputedVelocity(track,position_vx,position_vy))track.reliable=false;
             // Fresh whole-body observations establish a conservative size.
@@ -170,6 +173,26 @@ public:
     }
     double Rate(int id) const {
         const auto it=tracks_.find(id);return it==tracks_.end()?0:it->second.rate;
+    }
+    std::pair<double,double> ObservedSpeedRange(int id,double nominal) const {
+        double low=nominal,high=nominal;
+        const auto it=tracks_.find(id);
+        if(it!=tracks_.end()&&stamp_-it->second.stamp<=1e-6)
+            for(const auto& sample:it->second.samples) {
+                low=std::min(low,sample.speed);high=std::max(high,sample.speed);
+            }
+        return {low,high};
+    }
+    std::vector<TrackedObject> WithObservedSpeedRanges(
+        const std::vector<TrackedObject>& objects) const {
+        auto bounded=objects;
+        for(auto& object:bounded) {
+            const double speed=std::hypot(object.vx,object.vy);
+            if(object.motion_state==ObjectMotionState::LOW_THREAT||speed<.5)continue;
+            const auto range=ObservedSpeedRange(object.id,speed);
+            object.prediction_min_speed=range.first;object.prediction_max_speed=range.second;
+        }
+        return bounded;
     }
     // Fit translation independently from reported velocity. A fragment may
     // shift within the body, so require bounded position residuals and actual

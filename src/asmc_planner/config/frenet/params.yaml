@@ -409,4 +409,7 @@ roundabout_merge:
   speed_cap_mps: 6.944444444444445
   preview_distance_m: 45.0
   max_horizon_s: 10.0
+  # [m/s] Preliminary LiDAR error allowance, not a certified 2-D error bound.
+  # The history spread gate is twice this value (opposite-signed errors).
+  speed_measurement_error_mps: 5.0
 

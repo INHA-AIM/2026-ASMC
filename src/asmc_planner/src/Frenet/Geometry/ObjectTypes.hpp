@@ -44,6 +44,12 @@ struct TrackedObject {
     double continuation_vx = std::numeric_limits<double>::quiet_NaN();
     double continuation_vy = std::numeric_limits<double>::quiet_NaN();
 
+    // Optional departure-only speed interval. NaNs preserve ordinary point
+    // prediction. Its swept footprint covers intermediate speeds continuously;
+    // these internal fields do not change the ROS message/wire contract.
+    double prediction_min_speed = std::numeric_limits<double>::quiet_NaN();
+    double prediction_max_speed = std::numeric_limits<double>::quiet_NaN();
+
     // ---- 아래는 충돌검사용 authoritative geometry (구 TrackedObstacle) ----
     geometry::Corners8 corners{};
     bool geometry_valid = false;

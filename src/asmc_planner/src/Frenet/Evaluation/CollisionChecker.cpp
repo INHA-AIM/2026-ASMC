@@ -259,6 +259,26 @@ geometry::Polygon2D PredictObstacleFootprint(
     const TrackedObject& obstacle, double prediction_time) {
     if (!obstacle.geometry_valid || !std::isfinite(obstacle.vx) ||
         !std::isfinite(obstacle.vy) || !std::isfinite(prediction_time)) return {};
+    const double speed=std::hypot(obstacle.vx,obstacle.vy);
+    if(obstacle.motion_state!=ObjectMotionState::LOW_THREAT&&speed>1e-6&&
+       (std::isfinite(obstacle.prediction_min_speed)||std::isfinite(obstacle.prediction_max_speed))) {
+        const double low=obstacle.prediction_min_speed,high=obstacle.prediction_max_speed;
+        if(!std::isfinite(low)||!std::isfinite(high)||low<0||low>speed||high<speed)return {};
+        geometry::Polygon2D points;
+        for(double bounded_speed:{low,high}) {
+            auto bounded=obstacle;
+            bounded.vx*=bounded_speed/speed;bounded.vy*=bounded_speed/speed;
+            const auto pose=PredictTrackedObjectPose(bounded,prediction_time);
+            const auto corners=geometry::TranslateCorners(obstacle.corners,
+                pose.x-obstacle.x,pose.y-obstacle.y,1.0);
+            const auto xy=geometry::ProjectCornersToXY(corners);
+            points.insert(points.end(),xy.begin(),xy.end());
+        }
+        // Constant-turn translation (including fixed continuation velocity)
+        // is affine in initial speed. The endpoint hull covers every speed
+        // between them, avoiding sparse-speed sampling holes.
+        return geometry::ComputeConvexHull(points);
+    }
     const PredictedObjectPose pose =
         PredictTrackedObjectPose(obstacle, prediction_time);
     const geometry::Corners8 predicted = geometry::TranslateCorners(
@@ -280,8 +300,11 @@ bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
     geometry::ZRange obstacle_z;
     if (obstacle.z_valid) obstacle_z = geometry::ComputeZRange(predicted);
     if (!geometry::CheckZOverlap(ego_z, obstacle_z)) return false;
-    const geometry::Polygon2D footprint = geometry::ComputeConvexHull(
-        geometry::ProjectCornersToXY(predicted));
+    const bool speed_interval=obstacle.motion_state!=ObjectMotionState::LOW_THREAT&&
+        (std::isfinite(obstacle.prediction_min_speed)||std::isfinite(obstacle.prediction_max_speed));
+    const geometry::Polygon2D footprint = speed_interval
+        ? PredictObstacleFootprint(obstacle,prediction_time)
+        : geometry::ComputeConvexHull(geometry::ProjectCornersToXY(predicted));
     return geometry::CheckConvexPolygonOverlapSAT(ego_footprint, footprint);
 }
 
