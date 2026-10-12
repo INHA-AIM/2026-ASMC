@@ -54,6 +54,8 @@ def main():
     p.add_argument('--side-phase',type=int,choices=(0,1),default=0)
     a=p.parse_args()
     if a.only_native_id and a.operation!='cleanup':p.error('--only-native-id is restricted to cleanup')
+    if a.operation=='create' and not a.ground_calibration.is_file():
+        raise FileNotFoundError('ground calibration must exist before actor creation: '+str(a.ground_calibration))
     if not 0<=a.station_phase<1:p.error('--station-phase must be in [0,1)')
     if a.near_ego and a.count!=6:p.error('near-ego is restricted to the six-object pilot')
     if a.calibrate_native_pivot and (not a.near_ego or a.count!=6):p.error('pivot calibration requires stationary near-ego six-object probes')

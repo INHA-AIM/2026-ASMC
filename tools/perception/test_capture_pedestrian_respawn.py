@@ -42,4 +42,29 @@ class RespawnTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'RGB approval'):target.main()
                 run.assert_not_called()
 
+    def test_vehicle_uses_fresh_spawn_instead_of_transform_rotation(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td);src=root/'original.jsonl';out=root/'rotation'
+            rows=[dict(created=True,removed=False,geometry_gate=True,placement_approved=True,
+                       slot=slot,api_name=name,target_class=cls,actor_type=kind,yaw_deg=30,
+                       location={'x':slot*20,'y':10,'z':28},route_surface_z=28,id='old-'+kind)
+                  for slot,name,cls,kind in [(1,'2016_Hyundai_Universe','bus','vehicle'),(2,'WoodBox','box','obstacle')]]
+            src.write_text(''.join(json.dumps(r)+'\n' for r in rows))
+            def fake_run(cmd,check):
+                ledger=Path(cmd[cmd.index('--ledger')+1])
+                records=[json.loads(l) for l in ledger.read_text().splitlines()]
+                if Path(cmd[1]).name=='rotate_capture_route_layout.py':
+                    self.assertEqual([r['actor_type'] for r in records],['obstacle'])
+                    self.assertIn('--pause-static',cmd)
+                    Path(cmd[cmd.index('--output')+1]).write_text(ledger.read_text())
+                elif cmd[2]=='create':
+                    self.assertEqual([r['actor_type'] for r in records],['vehicle'])
+                    self.assertEqual(records[0]['yaw_deg'],90)
+                    self.assertFalse(records[0]['placement_approved'])
+                    records[0].update(id='new-bus',created=True,native_ids=['42'])
+                    ledger.write_text(''.join(json.dumps(r)+'\n' for r in records))
+            with patch('sys.argv',['tool','--ledger',str(src),'--output-dir',str(out)]),patch.object(target.subprocess,'run',side_effect=fake_run):
+                target.main()
+            self.assertEqual(json.loads((out/'combined.jsonl').read_text().splitlines()[0])['id'],'new-bus')
+
 if __name__=='__main__':unittest.main()

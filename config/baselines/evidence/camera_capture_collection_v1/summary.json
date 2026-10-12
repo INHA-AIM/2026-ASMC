@@ -1,6 +1,6 @@
 {
   "date": "2026-10-12",
-  "status": "collection_resumed_20261012T000338Z",
+  "status": "collection_active_after_restart1308",
   "pr80_merge": "c862ff071c1178110ab937e50e618602cb1dbd04",
   "branch": "feat/capture-route-collection",
   "base_dependency": "PR #81",
@@ -609,7 +609,7 @@
     "started_utc": "2026-10-12T03:21:25Z",
     "deadline_utc": "2026-10-12T05:21:25Z",
     "simulator_pid": 15496,
-    "status": "FOGGY11 collecting; per-run review/export pending",
+    "status": "FOGGY11 verified; fresh-generation SUNNY15 collecting after user restart",
     "restart_capture_check": "data/collection-evidence-20261012/restart1221-capture-validation-r1.json",
     "layout": "data/capture_layouts/route180_layout2_restart1221/combined-r1.jsonl",
     "active_actors": 188,
@@ -626,9 +626,72 @@
     "tiny_gt_audit": "data/collection-evidence-20261012/capture-tiny-gt-audit-r2.json",
     "tiny_gt_labels_changed": false,
     "tiny_gt_ignore_implemented": false,
-    "local_tests": 29,
+    "local_tests": 30,
     "hosted_ci": "billing blocked; not counted as passed",
     "public_control_published": false,
-    "operating_model_changed": false
+    "operating_model_changed": false,
+    "foggy11": {
+      "successful_captures": 1307,
+      "rpc_errors": 0,
+      "complete_raw_frames": 1297,
+      "mandatory_missing_frames": 10,
+      "rgb_pattern_failures": 0,
+      "images": 3455,
+      "objects": 51424,
+      "independent_verification_passed": true,
+      "observed_approved_roots": 187,
+      "unobserved_root": 157,
+      "class_images": {
+        "truck": 933,
+        "bus": 999,
+        "dog": 2201
+      },
+      "class_images_short4_long8_at_tensor960": {
+        "truck": 806,
+        "bus": 836,
+        "dog": 843
+      },
+      "cte_p95_m": 0.2495842957289099,
+      "cte_max_m": 0.46096164579463333
+    },
+    "sunny15_failure": {
+      "run_id": "route_pp_30_20261012T040232_223",
+      "successful_captures": 34,
+      "failed_captures": 1,
+      "full_lap_passed": false,
+      "restoration_verified": false,
+      "reason": "Simulator process absent; preceding memory and RGB telemetry normal; cause not established"
+    },
+    "vehicle_rotation_recovery": {
+      "native_set_transform_stability_failed": true,
+      "rollback_errors": 0,
+      "path": "data/collection-evidence-20261012/resume2-layout2-sunny15-recovery-r1",
+      "active_truck": 10,
+      "active_bus": 6,
+      "recreate_vehicle_before_next_orientation": true
+    },
+    "aggregate_proposed_train": {
+      "images": 46733,
+      "objects": 435959,
+      "pixel_duplicates": 0,
+      "annotation_conflicts": 0,
+      "frozen_eval_overlap": 0,
+      "merged_export": false,
+      "inventory": "data/collection-evidence-20261012/post-resume2-foggy11-stock-r1.json"
+    },
+    "restart1308": {
+      "pid": 14796,
+      "reported_possible_other_login": true,
+      "cause_confirmed": false,
+      "validation": "data/collection-evidence-20261012/restart1308-capture-validation-r1.json",
+      "layout": "data/capture_layouts/route180_layout2_restart1308/combined-r1.jsonl",
+      "active_actors": 185,
+      "truck": 10,
+      "bus": 6,
+      "dog": 27,
+      "post_capture_location_change_max_m": 0.0,
+      "monitor_session": 6,
+      "original_deadline_preserved": true
+    }
   }
 }

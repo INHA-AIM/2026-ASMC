@@ -69,6 +69,10 @@ def main():
         raise ValueError('layout ID differs from source collection; preserve the actual split group')
     ledger=[json.loads(l) for l in a.ledger.read_text().splitlines() if l.strip()]
     frames=[json.loads(l) for l in (a.run/'manifest.jsonl').read_text().splitlines() if l.strip()]
+    # These immutable inputs are shared by every row. Hash once, then verify
+    # again before committing the export manifest instead of rereading per view.
+    source_manifest_sha=sha(a.run/'manifest.jsonl')
+    ledger_sha=sha(a.ledger)
     a.output.mkdir(parents=True);a.gallery.mkdir(parents=True,exist_ok=True)
     images=a.output/'images/train';labels=a.output/'labels/train'
     images.mkdir(parents=True);labels.mkdir(parents=True)
@@ -112,8 +116,8 @@ def main():
                 counts.update(ann['canonical'] for ann in anns)
                 rows.append(dict(key=key,split='train',split_group=a.layout_id,layout_id=a.layout_id,
                     source_run=frame['run_id'],frame_id=frame['frame_id'],view=view,image_sha256=sha(rgb),
-                    pixel_sha256=pixel_sha,source_manifest_sha256=sha(a.run/'manifest.jsonl'),
-                    ledger_sha256=sha(a.ledger),annotation_sha256=sha(label_path),annotations=anns,excluded_annotations=excluded,
+                    pixel_sha256=pixel_sha,source_manifest_sha256=source_manifest_sha,
+                    ledger_sha256=ledger_sha,annotation_sha256=sha(label_path),annotations=anns,excluded_annotations=excluded,
                     source_native_boxes=boxes, invisible_native_actor_ids=[b['actor_id'] for b in boxes
                         if b['actor_id'] not in {ann['actor_id'] for ann in anns}]))
                 excluded_count+=len(excluded)
@@ -131,6 +135,8 @@ def main():
                 for rejected in (images/(key+'.png'),labels/(key+'.txt')):
                     if rejected.exists() or rejected.is_symlink():rejected.unlink()
                 quarantine.append(dict(key=key,reason=str(exc)))
+    if sha(a.run/'manifest.jsonl')!=source_manifest_sha or sha(a.ledger)!=ledger_sha:
+        raise ValueError('immutable source manifest or ledger changed during export')
     (a.output/'manifest.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in rows))
     (a.output/'quarantine.json').write_text(json.dumps(quarantine,indent=2))
     (a.output/'data.yaml').write_text('path: '+str(a.output.resolve())+'\ntrain: images/train\nnames:\n'+
