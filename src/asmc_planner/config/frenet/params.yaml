@@ -92,13 +92,15 @@ planner:
     ego_projection_search_window: 30.0
 
   # --- Object tracking (frenet_planner.cpp PreparePlanningContext) --
-  # TrackedObject 연속 heading으로 yaw-rate를 추정/보관한다. 회전교차로/
-  # 합류에서 순환 차량의 곡선 예측(Merge.cpp)에 쓰인다.
+  # 실제 관측 시각의 속도 방향과 위치 이동으로 회전율을 검증한다.
+  # OBB 사각형 방향의 수렴은 차량 회전으로 사용하지 않는다.
   object_tracking:
     # [rad/s] 관측된 yaw-rate 절대값 상한(UDP heading 양자화/순간 점프 억제).
     yaw_rate_clamp_rad_s: 1.0
-    # 지수평활 계수 - 새 관측치에 주는 가중치.
-    yaw_rate_smoothing_alpha: 0.2
+    # 기존 YAML 호환을 위해 유지하는 이전 추정기의 설정.
+    yaw_rate_smoothing_alpha: 0.2  # legacy configuration compatibility
+    # [rad] 약 2.9도보다 작은 방향 변화는 장기 회전으로 외삽하지 않는다.
+    min_motion_direction_change_rad: 0.05
     # [cycles] 이 사이클 수 넘게 관측되지 않은 객체 트랙을 제거한다.
     missing_cycles_eviction: 20
 

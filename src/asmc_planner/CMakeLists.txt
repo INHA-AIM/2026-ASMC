@@ -514,6 +514,11 @@ if(CATKIN_ENABLE_TESTING)
   add_executable(roundabout_merge_shadow tools/frenet/roundabout_merge_shadow.cpp)
   target_link_libraries(roundabout_merge_shadow asmc_planner_frenet_core yaml-cpp)
 
+  add_executable(observed_motion_test tests/frenet/observed_motion_test.cpp)
+  target_include_directories(observed_motion_test PRIVATE src)
+  target_link_libraries(observed_motion_test asmc_planner_frenet_core)
+  add_test(NAME observed_motion_test COMMAND observed_motion_test)
+
   foreach(merge_test roundabout_candidate_test roundabout_execution_test roundabout_prediction_test)
     add_executable(${merge_test} tests/frenet/${merge_test}.cpp)
     target_link_libraries(${merge_test} asmc_planner_frenet_core yaml-cpp)

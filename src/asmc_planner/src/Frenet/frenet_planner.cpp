@@ -732,27 +732,23 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
     last_s_ = ctx.s;
     has_last_s_ = true;
 
-    // ObjectInfo의 연속 heading으로 yaw-rate를 추정한다. MORAI 객체의 heading은
-    // 회전교차로에서 계속 변하므로 이를 보존해야 접선 직선 예측의 누락을 피할 수 있다.
+    // The OBB angle can converge while a car drives straight. Fit motion
+    // direction on unique sensor frames using their actual timestamps.
+    const double observation_time = std::isfinite(object_observation_time_) &&
+        object_observation_time_ >= 0 ? object_observation_time_ :
+        std::max(0.0, object_motion_time_) + replanning_period_s_;
+    if (observation_time < object_motion_time_ - 1e-6) {
+        object_tracks_.clear();v2_following_=FollowingContext{};execution_.resetFollow();
+    }
+    object_motion_time_ = observation_time;
     std::unordered_map<int, double> object_yaw_rates;
     for (auto& item : object_tracks_) ++item.second.missing_cycles;
     for (const auto& obj : obstacles) {
-        auto it = object_tracks_.find(obj.id);
-        if (it == object_tracks_.end()) {
-            object_tracks_[obj.id] = ObjectTrack{obj.heading, 0.0, 0};
-        } else {
-            const double measured = std::remainder(obj.heading - it->second.heading,
-                                                    2.0 * M_PI) / replanning_period_s_;
-            // UDP heading 양자화/순간 점프를 억제하고 차량 수준의 yaw-rate로 제한한다.
-            const double bounded = clip(measured,
-                                        -object_tracking_cfg_.yaw_rate_clamp_rad_s,
-                                        object_tracking_cfg_.yaw_rate_clamp_rad_s);
-            const double alpha = object_tracking_cfg_.yaw_rate_smoothing_alpha;
-            it->second.yaw_rate = (1.0 - alpha) * it->second.yaw_rate + alpha * bounded;
-            it->second.heading = obj.heading;
-            it->second.missing_cycles = 0;
-        }
-        object_yaw_rates[obj.id] = object_tracks_[obj.id].yaw_rate;
+        auto& track = object_tracks_[obj.id];
+        track.Observe(obj, observation_time, object_tracking_cfg_.yaw_rate_clamp_rad_s,
+            object_tracking_cfg_.min_motion_direction_change_rad);
+        track.missing_cycles = 0;
+        object_yaw_rates[obj.id] = track.yaw_rate;
     }
     for (auto it = object_tracks_.begin(); it != object_tracks_.end();) {
         if (it->second.missing_cycles > object_tracking_cfg_.missing_cycles_eviction)

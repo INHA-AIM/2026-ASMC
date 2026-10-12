@@ -20,6 +20,8 @@ struct ObjectTrackingConfig {
     double yaw_rate_smoothing_alpha;
     // [cycles] 이 사이클 수 넘게 관측되지 않은 객체 트랙을 제거한다.
     int missing_cycles_eviction;
+    // [rad] Minimum velocity-direction change supported by a fresh history.
+    double min_motion_direction_change_rad = .05;
 };
 
 // =========================================================

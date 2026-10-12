@@ -338,6 +338,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     port.has_stop_reference_vehicle_ = true;
 
     std::vector<TrackedObject> objects;
+    port.planner_.SetObjectObservationTime(context.perception.header.stamp.toSec());
     if (ConvertDetectedObjects(context.perception, objects) !=
         ConversionStatus::OK) {
         CommandAcceptance failed = acceptance;

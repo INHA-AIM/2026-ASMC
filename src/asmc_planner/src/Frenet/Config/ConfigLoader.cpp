@@ -85,6 +85,10 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/object_tracking/yaw_rate_clamp_rad_s",     object_tracking_cfg.yaw_rate_clamp_rad_s);
     REQUIRE("planner/object_tracking/yaw_rate_smoothing_alpha", object_tracking_cfg.yaw_rate_smoothing_alpha);
     REQUIRE("planner/object_tracking/missing_cycles_eviction",  object_tracking_cfg.missing_cycles_eviction);
+    // Preserve existing user YAMLs; the committed YAML explicitly sets this.
+    object_tracking_cfg.min_motion_direction_change_rad = .05;
+    if(root["planner"]["object_tracking"]["min_motion_direction_change_rad"])
+        REQUIRE("planner/object_tracking/min_motion_direction_change_rad", object_tracking_cfg.min_motion_direction_change_rad);
 
     REQUIRE("planner/path_generator/lateral_d1/min",   path_cfg.lateral_d1.min);
     REQUIRE("planner/path_generator/lateral_d1/max",   path_cfg.lateral_d1.max);

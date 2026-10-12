@@ -8,6 +8,7 @@
 #include <chrono>
 
 #include "Frenet/Map/AvoidRoadMap.hpp"
+#include "Frenet/Geometry/ObservedMotion.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutMerge.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
 #include "Frenet/Common/BehaviorTypes.hpp"
@@ -36,6 +37,8 @@
 // 책임이고, 이 클래스는 그 행동을 어떻게 trajectory로 만들지만 담당한다.
 class FrenetPlanner {
 public:
+    // Actual perception timestamp; empty frames carry time too.
+    void SetObjectObservationTime(double time) { object_observation_time_=time; }
     void BindExecutionState(asmc_planner::execution::ManeuverState& state) { execution_.bind(state); }
     // Plan() 실패 원인. 호출자(ROS node)가 "이전 궤적 재사용"과 "즉시 정지"를
     // 구분하려면 일시적 생성 실패와 명령 자체의 결함이 분리되어야 한다.
@@ -948,6 +951,7 @@ private:
     };
 
     struct FollowingContext {
+        bool recent_binding = false; // Explicit ID handoff resolved from history.
         double leader_s = 0.0;
         double leader_d = 0.0;
         double leader_speed = 0.0;
@@ -975,11 +979,7 @@ private:
         double commanded_decel = 0.0;
     };
 
-    struct ObjectTrack {
-        double heading = 0.0;
-        double yaw_rate = 0.0;
-        int missing_cycles = 0;
-    };
+    using ObjectTrack = ObservedObjectMotion;
 
     // 저속(ego.v < kLowSpeedFallbackV) 전용 fallback: CartesianToFrenet/FrenetToCartesian의
     // d_prime = d_dot/s_dot 계산은 s_dot(≈속도)로 나누는 구조라 저속에서 수학적으로
@@ -1304,6 +1304,7 @@ private:
 
     // 외부 command(v2) 전용 LANE_CHANGE 상태.
     LaneChangeContext v2_lane_change_{};
+    double object_observation_time_ = -1, object_motion_time_ = -1;
     std::unordered_map<int, ObjectTrack> object_tracks_{};
     RoundaboutPrediction roundabout_prediction_{};
     bool roundabout_exit_prediction_active_=false;

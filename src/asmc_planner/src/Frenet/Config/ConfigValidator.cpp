@@ -105,6 +105,13 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         return false;
     }
 
+    if (!CheckPositiveFinite(object_tracking_cfg.min_motion_direction_change_rad,
+                              "planner/object_tracking/min_motion_direction_change_rad", error_message) ||
+        object_tracking_cfg.min_motion_direction_change_rad > 3.141592653589793) {
+        error_message="planner/object_tracking/min_motion_direction_change_rad must be in (0, pi]";
+        return false;
+    }
+
     // --- path_generator ---
     if (!CheckRange(path_cfg.lateral_d1, "planner/path_generator/lateral_d1", error_message))
         return false;
