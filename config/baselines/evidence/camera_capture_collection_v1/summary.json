@@ -1,6 +1,6 @@
 {
   "date": "2026-10-12",
-  "status": "collection_active_after_restart1308",
+  "status": "collection_finished_all_latest_subsets_independently_verified_not_yet_merged_or_trained",
   "pr80_merge": "c862ff071c1178110ab937e50e618602cb1dbd04",
   "branch": "feat/capture-route-collection",
   "base_dependency": "PR #81",
@@ -693,5 +693,177 @@
       "monitor_session": 6,
       "original_deadline_preserved": true
     }
+  },
+  "resume3": {
+    "sunny15": {
+      "run_id": "route_pp_30_20261012T041158_084",
+      "capture_success": 1234,
+      "rpc_failures": 0,
+      "complete_source_records": 1209,
+      "missing_mandatory_record_exclusions": 25,
+      "invalid_rgb_patterns": 0,
+      "approved_roots": 185,
+      "export_images": 3195,
+      "export_objects": 44861,
+      "independent_verification_passed": true,
+      "frozen_evaluation_hash_overlap": 0,
+      "stroller_infant_annotations_excluded": 1199,
+      "cte_p95_m": 0.24403400161649208,
+      "cte_max_m": 0.45960562770789287,
+      "stop_and_restore_passed": true,
+      "class_images": {
+        "truck": 936,
+        "bus": 969,
+        "dog": 2076
+      },
+      "class_images_tensor960_short4_long8": {
+        "truck": 814,
+        "bus": 841,
+        "dog": 995
+      }
+    },
+    "foggy13": {
+      "run_id": "route_pp_30_20261012T044315_300",
+      "status": "independently_verified",
+      "rotation_degrees": 60,
+      "active_roots": 184,
+      "class_roots": {
+        "truck": 9,
+        "bus": 6,
+        "dog": 27
+      },
+      "numeric_geometry_passed": true,
+      "native_static_max_axis_delta_m": 0,
+      "capture_success": 1337,
+      "rpc_failures": 0,
+      "cte_p95_m": 0.2515760749368555,
+      "cte_max_m": 0.4302876588689598,
+      "stop_and_restore_passed": true,
+      "observed_roots": 184,
+      "placement_reviewed_roots": 184,
+      "last_capture_utc": "2026-10-12T05:07:16.911+00:00",
+      "complete_source_records": 1313,
+      "missing_mandatory_record_exclusions": 24,
+      "invalid_rgb_patterns": 0,
+      "export_images": 3483,
+      "export_objects": 49189,
+      "independent_verification_passed": true,
+      "frozen_evaluation_hash_overlap": 0,
+      "stroller_infant_annotations_excluded": 1455,
+      "quarantined_view_records": 456,
+      "manifest_sha256": "d7b34a4299de0522748225cf0228732f119a6b1101591131d46100c737979e62"
+    },
+    "interim_stock": {
+      "images": 49928,
+      "objects": 480820,
+      "status": "proposed train inventory, not merged export or training",
+      "frozen_evaluation_hash_overlap": 0,
+      "pixel_duplicates": 0,
+      "annotation_conflicts": 0
+    }
+  },
+  "collection_end": {
+    "deadline_utc": "2026-10-12T05:21:25+00:00",
+    "last_capture_utc": "2026-10-12T05:07:16.911+00:00",
+    "owned_actor_cleanup_remaining": 0,
+    "remaining_actor_count": 1,
+    "remaining_actor": "Ego",
+    "ego_stopped": true,
+    "weather_time_gear_mode_restore_verified": true,
+    "monitor6_intentionally_stopped": true,
+    "monitor6_stop_abort_flags_present": false
+  },
+  "final_verified_stock": {
+    "train_images": 53411,
+    "train_objects": 530009,
+    "frozen_evaluation_images_separate": 1241,
+    "all_latest_capture_images": 31388,
+    "all_latest_capture_objects": 403814,
+    "class_train_images": {
+      "person": 30055,
+      "car": 8280,
+      "traffic_cone": 14566,
+      "dog": 12324,
+      "deer": 17105,
+      "steel_barricade": 18321,
+      "box": 18554,
+      "traffic_drum": 12557,
+      "bollard": 14877,
+      "concrete_barrier": 18653,
+      "bus": 6809,
+      "plastic_barrier": 19093,
+      "truck": 5479,
+      "motorcycle": 16874,
+      "bicycle": 14665,
+      "stroller": 19494
+    },
+    "class_train_objects": {
+      "person": 101399,
+      "car": 18698,
+      "traffic_cone": 20024,
+      "dog": 22178,
+      "deer": 28786,
+      "steel_barricade": 29246,
+      "box": 27514,
+      "traffic_drum": 32161,
+      "bollard": 67914,
+      "concrete_barrier": 31300,
+      "bus": 11711,
+      "plastic_barrier": 35466,
+      "truck": 12960,
+      "motorcycle": 28490,
+      "bicycle": 25504,
+      "stroller": 36658
+    },
+    "pixel_hash_duplicate_records": 0,
+    "annotation_conflicts": 0,
+    "frozen_evaluation_hash_overlap": 0,
+    "near_duplicate_leakage_not_claimed": true,
+    "aggregate_inventory_sha256": "ada08cec6ca372d8b0ea29ed7bcf96c7a3d90669babcda2a24555afcdf8e7f74",
+    "existing_v7_unchanged": true,
+    "merged_training_export_created": false,
+    "sampling_or_training_performed": false
+  },
+  "last_two_hour_collection": {
+    "completed_laps": 3,
+    "conditions": [
+      "FOGGY11",
+      "SUNNY15",
+      "FOGGY13"
+    ],
+    "successful_capture_rpcs_in_complete_laps": 3878,
+    "complete_source_records": 3819,
+    "mandatory_record_exclusions": 59,
+    "export_images": 10133,
+    "export_objects": 145474,
+    "class_images": {
+      "truck": {
+        "any": 2787,
+        "non_point": 2567,
+        "small_or_larger": 2408
+      },
+      "bus": {
+        "any": 2965,
+        "non_point": 2694,
+        "small_or_larger": 2543
+      },
+      "dog": {
+        "any": 6568,
+        "non_point": 4109,
+        "small_or_larger": 3069
+      }
+    },
+    "stroller_infant_annotations_excluded": 4045,
+    "failed_interrupted_run_successful_rpcs_preserved_not_counted": 34,
+    "rgb_integrity_pattern_exclusions": 0,
+    "sample_counts_not_independent_scene_counts": true
+  },
+  "local_verification": {
+    "capture_collection_unit_tests": 12,
+    "capture_tools_unit_tests": 18,
+    "documentation_migration": "passed",
+    "diff_whitespace": "passed",
+    "hosted_ci_checks_present_at_review": 0,
+    "hosted_ci_not_counted_as_passed": true
   }
 }
