@@ -18,6 +18,7 @@
 #include <cstdio>
 
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
+#include "Frenet/Geometry/PolygonUtils.hpp"
 
 // 저속 fallback은 시간 대신 이동거리 기준 cosine smoothstep으로 d를 복귀시킨다.
 // 양 끝의 d'가 0이므로 정지 근처에서도 급격한 횡이동과 곡률 spike가 생기지 않는다.
@@ -85,6 +86,7 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
         const bool in_range = gap > 0.0 && gap <= search_limit;
 
         if (same_direction && same_lane && in_range) {
+            context.recent_binding = false;
             execution_.observeFollowTarget(target_object_id);
             context.leader_s = ego_s + gap;
             context.leader_d = object_d;
@@ -99,6 +101,32 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
         // (계약 8.2절).
         context = FollowingContext{};
         execution_.resetFollow();
+        return FollowTargetStatus::LOST;
+    }
+
+    // An explicit handoff can race one sensor frame: the new requested ID
+    // was observed recently but is absent from this snapshot. Bind only that
+    // ID from its own fresh history, never choose a replacement ourselves.
+    const auto recent = object_tracks_.find(target_object_id);
+    const double grace_seconds = following_cfg_.dropout_grace_cycles * replanning_period_s_;
+    if (execution_->follow.active && execution_->follow.leader_id != target_object_id &&
+        recent != object_tracks_.end() && recent->second.last.geometry_valid &&
+        object_motion_time_ >= recent->second.stamp &&
+        object_motion_time_ - recent->second.stamp <= grace_seconds) {
+        auto cached = recent->second.last;
+        cached.yaw_rate = recent->second.yaw_rate;
+        const auto pose = PredictTrackedObjectPose(cached, object_motion_time_ - recent->second.stamp);
+        cached.corners = geometry::TranslateCorners(cached.corners,
+            pose.x-cached.x, pose.y-cached.y, 1.0);
+        cached.x=pose.x;cached.y=pose.y;
+        auto with_requested = obstacles;
+        with_requested.push_back(cached);
+        if (ResolveExternalFollowTarget(ego_s,target_object_id,with_requested,context) ==
+            FollowTargetStatus::VALID) {
+            context.recent_binding = true;
+            execution_.observeFollowMissing(following_cfg_.dropout_grace_cycles);
+            return FollowTargetStatus::GRACE;
+        }
         return FollowTargetStatus::LOST;
     }
 
@@ -164,6 +192,21 @@ bool FrenetPlanner::FollowProcess(
     // leader motion만 상속시켜 같은 물체의 추가 점유로 충돌 검사한다.
     std::vector<TrackedObject> follow_collision_obstacles =
         predicted_obstacles;
+    // New history-based bindings must include their cached geometry in the
+    // collision check. Existing same-ID dropout target semantics stay intact.
+    if (status == FollowTargetStatus::GRACE && v2_following_.recent_binding) {
+        const auto history=object_tracks_.find(cmd.target_object_id);
+        if(history!=object_tracks_.end() && history->second.last.geometry_valid &&
+           object_motion_time_>=history->second.stamp &&
+           object_motion_time_-history->second.stamp<=
+               following_cfg_.dropout_grace_cycles*replanning_period_s_) {
+            auto cached=history->second.last;cached.yaw_rate=history->second.yaw_rate;
+            const auto pose=PredictTrackedObjectPose(cached,object_motion_time_-history->second.stamp);
+            cached.corners=geometry::TranslateCorners(cached.corners,pose.x-cached.x,pose.y-cached.y,1.0);
+            cached.x=pose.x;cached.y=pose.y;
+            follow_collision_obstacles.push_back(cached);
+        }
+    }
     SynchronizeFollowLeaderFragments(cmd.target_object_id,
                                      follow_collision_obstacles);
 
@@ -171,3 +214,4 @@ bool FrenetPlanner::FollowProcess(
         ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
         follow_collision_obstacles, resolved_target_speed, cmd, out_path);
 }
+

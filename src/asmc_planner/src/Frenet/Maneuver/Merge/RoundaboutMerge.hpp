@@ -15,6 +15,9 @@ struct RoundaboutMergeConfig {
     double preview_distance = 45.0;
     double max_horizon = 10.0;
     double confirmation_time_tolerance = .6;
+    // Preliminary absolute speed-error allowance. Two samples may differ by
+    // twice this amount; this is separate from the departure time-gap policy.
+    double speed_measurement_error = 5.0;
 };
 
 struct RoundaboutMergeZone {

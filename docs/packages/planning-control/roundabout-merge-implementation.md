@@ -84,7 +84,7 @@ runtime에서는 안전정지 출력 대상이다. 이 수치를 숨기거나 �
 해석하지 않는다. 기록 속 ego는 기존 KEEP/FOLLOW 동작으로 이동했기 때문에
 새 MERGE의 실제 감속·대기·출발 후 관측은 재현되지 않는다.
 
-재현 도구는 `src/frenet_planner/tools/roundabout_execution_shadow.cpp`다.
+재현 도구는 `src/asmc_planner/tools/frenet/roundabout_execution_shadow.cpp`다.
 외부 decoded bag을 `extract_merge_shadow_frames.py`로 변환한 frame JSON과
 경로가 해석된 parameter YAML을 입력한다.
 
@@ -98,8 +98,8 @@ roundabout_execution_shadow frames.json resolved_params.yaml > shadow.log
 ## 실제 적용 전 남은 확인
 
 실제 ROS 환경에서 pull 후 catkin 빌드하고 노드를 재시작해야 한다.
-`src/frenet_planner/config/params.yaml`과
-`src/behavior_planner/src/config/behavior_params.yaml`의
+`src/asmc_planner/config/frenet/params.yaml`과
+`src/asmc_planner/config/behavior/behavior_params.yaml`의
 `roundabout_merge.enabled`는 모두 켜져 있다. 다른 parameter 파일을 사용하는
 launch라면 해당 파일에도 동일 설정이 필요하다. 한 노드만 켜는 방식은 사용하지 않는다.
 
@@ -424,3 +424,146 @@ recovered one previously failed output with no newly failed outputs or READY
 changes. It does not establish closed-loop elimination of the observed stops;
 many states remain blocked by the existing collision predictions. Diagnostic
 copies and recorded inputs are not committed.
+
+## PREPARE braking with disputed object velocity
+
+Approach prediction now cross-checks reported object velocity against a bounded
+least-squares fit of fresh observed centres (at most eight samples/0.8 s). It
+requires at least four samples over 0.25 s, 0.5 m of motion and centre residuals
+within 0.5 m. Only a position-supported velocity substantially faster than the
+reported velocity is treated as a disputed velocity decay. Its comparison band
+comes from the position-fit residual and time span, with a 0.5 m/s floor; it is
+not a probabilistic safety guarantee. A slower fragment-centre fit does not
+replace the faster sensor hypothesis.
+
+A disputed fit cannot certify entry or a passed vehicle. During PREPARE,
+collision checks include both position-supported translation and the original
+sensor velocity/turn for at most the observed history span, capped at 0.5 s,
+followed continuously by the position-supported velocity. Both copies retain
+the original OBB corners and existing collision margins. Consistent motion,
+committed traversal prediction, perception topics and configured gaps remain
+unchanged. Internal prediction fields default to the existing constant-turn
+model and are not ROS message fields.
+
+If frontier and slow-approach candidates fail, direct stopping durations are
+also searched before the strongest service-brake fallback. They retain the
+current pose/speed, remain behind the frontier, check jerk/acceleration/curvature,
+road and all object hypotheses, and include a stationary tail to the same
+maximum horizon. Near standstill, the non-reversing acceleration boundary and
+its exact jerk-release duration are included rather than relying only on a
+half-second grid. A failed collision check still cannot authorize departure.
+
+Standalone regression: 36 core suites / 938 assertions pass, including real
+circular motion, disputed velocity, fragment-centre jumps, stationary objects,
+near-term prediction continuity, blocked-frontier braking and non-reversing
+near-standstill stopping. ROS-generated message/transport tests and a full
+catkin build are not available in this analysis environment.
+
+Fixed-input comparisons with original objects, observation timestamps and
+measured initial state:
+
+| Recording | MERGE inputs | Previous failures | New failures | Newly failing inputs |
+| --- | ---: | ---: | ---: | ---: |
+| 20261010-163557 | 148 | 19 | 18 | 0 |
+| 20261010-164058 | 186 | 11 | 4 | 0 |
+| 20261010-155213 | 520 | 32 | 30 | 0 |
+
+The two latest recordings both produce valid waiting outputs for every input
+when objects are removed as a diagnostic only. No newly READY input is observed
+in the three comparisons. Residual failures with objects remain; this change
+does not establish closed-loop elimination of abrupt stops, and the separate
+pre-stop steering oscillation has not been changed. Simulator driving must
+still verify the resulting stop approach and departure timing.
+
+## 2026-10-10: 일반 STOP 계산을 재사용하는 MERGE 대기 제동
+
+PREPARE 대기는 일반 STOP의 `GenerateSpatialStoppingCandidates`를 먼저 호출한다.
+공통 생성기와 일반 STOP의 기존 호출 경로는 수정하지 않았다. 현재 속도·가속도와
+남은 경계 거리로 하나의 제동 프로파일을 정하므로, horizon 선택 때문에 제동이
+반복해서 뒤로 밀리는 것을 줄인다. 후륜 기준 대기 위치는 그대로이며 일반 STOP의
+stop buffer나 장애물 제외 정책을 복사하지 않는다. MERGE의 지도·차체·곡률·횡가속·
+jerk·전체 객체 충돌 검사와 정지 방향 정렬을 통과한 완전 정지 궤적만 사용한다.
+공유 프로파일이 거절되면 기존 느린 접근/직접 정지/안전 정지 경로로 돌아간다.
+현재 PREPARE 제동 경계에는 실측 Frenet 가속도를 공급하여 일반 주행용 초기 경계
+클램프가 이미 이뤄진 서비스 제동을 버리지 않게 한다. 가속도·비역주행 경계는
+공유 생성기의 한계 및 기존 서비스 제동 한계로 제한한다.
+
+제어기는 기존 일반 STOP 응답 보정을 회전교차로 `MERGE + PREPARE`에만 재사용한다.
+일반 STOP / 회전교차로 대기 / 비적용의 범위를 구분하며 전환 때 추정기를 초기화한다.
+EXECUTE·CANCEL·고주로 MERGE·KEEP·FOLLOW·AVOID 및 고정 안전 제동은 보정 범위에
+들어가지 않는다. 일반 STOP의 보정 계산과 파라미터, MPC solver는 변경하지 않았다.
+이 보정에는 기존 양의 가속도 상한도 포함되므로 대기 위치 재접근의 급출발을 제한한다.
+
+동일 관측 입력과 객체를 유지한 PREPARE 재생 실패는 145900:24→24,
+155213:30→25, 163557:18→18, 164058:4→4, 200113:23→21이었다. 새 실패와 새 READY는
+없었다. 200113의 최초 실패 입력(164.131초)은 경계까지 정렬된 다점 정지 궤적을
+생성했다. 고정 입력에는 이전 실행에서 누적된 속도·방향 오차가 그대로 남기 때문에
+폐루프 개선을 보장하는 결과는 아니다. 객체와 경계로 막힌 실패는 여전히 남는다.
+일반 STOP 세 bag의 306개 입력에서 비교한 계획 출력은 실행 시간을 제외하고 동일했다.
+standalone core 36개 suite, 추가 대기 정렬 및 제어 적용 범위/응답 시험으로 회귀를
+검증했다. 전체 catkin build 및 실제 MORAI 주행은 이 환경에서 실행하지 못했다.
+
+## 2026-10-10: STOP 횡방향 계산을 공유하는 MERGE 대기 정렬
+
+일반 STOP의 중심선/현재 횡위치 두 종단 목표와 전체/짧은 정렬 거리 계산을
+`Generator/StoppingLateralGeometry.hpp`로 추출했다. 일반 STOP의 후보 순서,
+다항식 경계값, 선택 방식과 파라미터는 유지한다. 저속 횡위치 유지 조건도 같은
+함수로 공유한다. `lateral_hold_speed=1.0m/s`, `lateral_error_tolerance=0.25m`를
+늘려야 한다는 일관된 bag 근거가 없어 두 값은 변경하지 않았다.
+
+MERGE PREPARE는 최대 네 가지 횡방향 형상을 각 제동 프로파일에 결합한다.
+시작 횡방향 2차 미분은 실제 곡률에서 변환된 값을 사용하고, 최종 지도 기반
+방향 정렬에서도 그 값을 유지한다. 저속이며 허용 횡오차 안이면 현재 d를
+목표로 우선하며, 안전 검사를 통과한 후보는 곡률 제곱의 거리 적분과 곡률
+변화량으로 순위를 매긴다. 허용 범위 안의 작은 횡오차에는 약한 비용을,
+범위 밖에는 더 큰 중심선 복귀 비용을 둔다. 후보를 평가하는 동안 같은
+방향 정렬을 반복하지 않고 선택한 출력에 기존 지도 방향 정렬을 적용한다.
+큰 횡오차에서의 중심선 복귀와 작은 횡오차에서의 조향 연속성을 함께 검증했다.
+
+기존 후륜 대기 경계, 정지 유지 latch, 회전 객체 예측, 진입 gap/신뢰도/READY
+계약과 충돌·주행영역·곡률·횡가속·종가속·jerk 한계는 변경하지 않았다.
+일반 STOP 및 KEEP/FOLLOW/AVOID, MERGE EXECUTE, MPC 설정도 변경하지 않았다.
+
+검증: standalone core 36 suites / 946 assertions 통과. 일반 STOP 세 bag의
+306개 입력에서 결과 성공 여부와 전체 x/y/yaw/kappa/v/a 배열 해시가 동일했다.
+MERGE 여섯 bag 1,466개 고정 입력에서 새 실패와 새 READY는 없었다. 기록된
+마지막 오차를 그대로 재사용하므로 기존 실패 100개는 유지되며 폐루프 해결을
+주장하지 않는다. 212224 bag 162.015초 입력에서는 최대 곡률 0.16855→0.06776/m,
+0.5초 뒤 계획 헤딩 89.25→82.66도로 바뀌어 중심선 복귀를 위한 역방향 굴곡을
+줄였다. 실제 정지 헤딩과 잔여 안전 정지는 MORAI 재주행 검증이 필요하다.
+전체 ROS/catkin build와 센서-제어 폐루프 시험은 이 환경에서 실행하지 못했다.
+
+## 2026-10-10: integrated main ownership port
+
+Port the validated `549e458` behavior onto main `835d56e` and its single
+`asmc_planner` production owner. Removed legacy packages stay removed.
+Frenet retains geometry and safety calculations; phase and completion updates
+use the existing Execution owner. The bound-state regression also verifies
+that an independent execution snapshot cannot reset the production owner.
+Measured vehicle curvature is connected in `Parser/PlanningInput.cpp`; a
+certified braking path from a blocked AVOID transaction is forwarded by
+`Planning/V2Cycle.hpp` with the blocked feedback retained.
+
+Main's mode detection, normal/jamming command selector, launch wiring, sensor
+producers, message definitions and HD-map assets remain unchanged. Preserve
+normal controller output on `/ctrl_cmd/normal`; the selector remains the
+final `/ctrl_cmd` publisher. The only Frenet YAML changes from main are the
+validated 0.45 m physical clearance and ordinary STOP reapproach speed/accel.
+
+Validation: 36 standalone core suites / 955 assertions and 63 controller
+response/acceleration-limit assertions pass. Ordinary STOP preserves full
+x/y/yaw/kappa/v/a hashes across 306 recorded inputs. Roundabout MERGE preserves
+full path hashes, candidate validity, READY, completion and failure results
+across 1,764 inputs from eight bags, including the bound production Execution
+owner. Local HD-map blobs match main exactly. Full catkin/ROS build and
+closed-loop MORAI driving of this integrated revision remain unexecuted in
+this environment. No claim of new safety clearance or performance improvement
+is made by the structural port.
+
+Two AVOID bag histories (474 inputs until completion) also retain candidate
+validity, blocker, target offset, candidate count, path length, phase and
+completion outputs with a controlled search clock/budget diagnostic. This
+diagnostic removes wall-clock scheduling variability and is not a production
+latency or closed-loop tracking test. The original 15-commit history remains
+in `backup/avoid-stop-merge-validated-20261010` at `549e458`; the structural
+port is recorded as one integration commit on the latest main base.

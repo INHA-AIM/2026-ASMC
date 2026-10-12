@@ -8,6 +8,7 @@
 #include <chrono>
 
 #include "Frenet/Map/AvoidRoadMap.hpp"
+#include "Frenet/Geometry/ObservedMotion.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutMerge.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
 #include "Frenet/Common/BehaviorTypes.hpp"
@@ -36,6 +37,8 @@
 // 책임이고, 이 클래스는 그 행동을 어떻게 trajectory로 만들지만 담당한다.
 class FrenetPlanner {
 public:
+    // Actual perception timestamp; empty frames carry time too.
+    void SetObjectObservationTime(double time) { object_observation_time_=time; }
     void BindExecutionState(asmc_planner::execution::ManeuverState& state) { execution_.bind(state); }
     // Plan() 실패 원인. 호출자(ROS node)가 "이전 궤적 재사용"과 "즉시 정지"를
     // 구분하려면 일시적 생성 실패와 명령 자체의 결함이 분리되어야 한다.
@@ -328,6 +331,10 @@ public:
         // Map-aware candidate locks the SHIFT station independently of ego speed.
         double map_entry_s = 0.0;
         double map_transition_distance = 0.0;
+        // Accepted spatial return stations survive observation changes/replanning.
+        bool map_return_schedule_valid = false;
+        double map_return_start_s = 0.0;
+        double map_return_end_s = 0.0;
 
         // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
         // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
@@ -654,7 +661,7 @@ private:
     // BRAKING/HOLD phase를 갱신한 뒤, HOLD면 공용 pipeline을 거치지 않고
     // 0속도 유지 궤적을 직접 반환한다. APPROACH/BRAKING은 공용 pipeline에
     // 위임한다(Stop.cpp의 cmd.mode 내부 전환 주석 참고 - 외부에 보고되는
-    // last_mode_/stop_.phase는 항상 STOP으로 유지된다).
+    // last_mode_/execution_->stop_phase는 항상 STOP으로 유지된다).
     bool StopProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double s_dot, double s_ddot,
@@ -672,7 +679,12 @@ private:
                                             double target_d) const;
     void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
                                        double ego_speed,
-                                       AvoidPrepareResult& result);
+                                       AvoidPrepareResult& result,
+                                       bool keep_handoff_safe = false);
+
+    // Read-only KEEP preview and all-static-object forward corridor gate.
+    bool CanHandoffAvoidToKeep(const CartesianState& ego, double s, double d,
+                              const std::vector<TrackedObject>& obstacles) const;
 
     // ---------------------------------------------------------------------
     // v2 LANE_CHANGE 내부. Maneuver/Avoid/의 대응 함수와 같은 역할 분리를
@@ -841,6 +853,10 @@ private:
         double s, double d, double speed, const std::vector<TrackedObject>& obstacles,
         const PlannerCommand& command, bool prepare, bool committed,
         CartesianPath& output, AvoidPrepareResult& result);
+    bool PlanAvoidReconnection(const CartesianState& ego, double s, double d,
+        double speed, double initial_a, const std::vector<TrackedObject>& obstacles,
+        bool committed, CartesianPath& output, AvoidPrepareResult& result,
+        std::chrono::steady_clock::time_point deadline);
     bool AvoidProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
@@ -879,10 +895,19 @@ private:
         double shift_entry_distance = 0.0;
         double map_entry_s = 0.0;
         double map_transition_distance = 0.0;
+        // Accepted spatial return stations survive observation changes/replanning.
+        bool map_return_schedule_valid = false;
+        double map_return_start_s = 0.0;
+        double map_return_end_s = 0.0;
         // Measured lateral motion, rather than the nominal SHIFT/PASS label,
-        // locks the entry against being postponed during an actual bypass.
+        // locks the entry and side against changes during an actual bypass.
+        // Before it starts, only NONE without a target pose may reselect a
+        // blocked side; explicit FSM direction/pose remains authoritative.
         double map_lateral_origin_d = 0.0;
         bool map_lateral_started = false;
+        // Enumeration progress only: no unchecked path/geometry crosses cycles.
+        std::size_t map_search_cursor = 0;
+        std::size_t map_reconnection_cursor = 0;
         // Actual travel budget survives replanning while the body is outside.
         bool map_recovery_active = false;
         double map_recovery_last_s = 0.0;
@@ -926,6 +951,7 @@ private:
     };
 
     struct FollowingContext {
+        bool recent_binding = false; // Explicit ID handoff resolved from history.
         double leader_s = 0.0;
         double leader_d = 0.0;
         double leader_speed = 0.0;
@@ -946,17 +972,14 @@ private:
         // 보고 phase를 리셋한다.
         double target_s = std::numeric_limits<double>::quiet_NaN();
         bool target_valid = false;
+        bool reapproaching = false;
         // 이번 planning cycle의 남은 거리와 속도로 계산한 일반 STOP 감속도.
         // BRAKING fallback도 같은 값을 사용해 정상 후보와 실패 경로의 제동
         // 강도가 서로 달라지지 않게 한다.
         double commanded_decel = 0.0;
     };
 
-    struct ObjectTrack {
-        double heading = 0.0;
-        double yaw_rate = 0.0;
-        int missing_cycles = 0;
-    };
+    using ObjectTrack = ObservedObjectMotion;
 
     // 저속(ego.v < kLowSpeedFallbackV) 전용 fallback: CartesianToFrenet/FrenetToCartesian의
     // d_prime = d_dot/s_dot 계산은 s_dot(≈속도)로 나누는 구조라 저속에서 수학적으로
@@ -1050,13 +1073,20 @@ private:
     void PlanExternalStopHold(const CartesianState& ego, double s,
                               CartesianPath& out_path) const;
 
-    // 외부 STOP BRAKING에서 후보가 0개일 때의 fail-safe 실행부(그 자리에서
-    // 감속해 정지하는 decel-to-zero 궤적). 호출 gate(phase==BRAKING &&
-    // COLLISION_BLOCKED 아님)는 common no-valid 분기에 강하게 결합되어
-    // 있으므로 PlanInternal에 유지한다.
-    void PlanExternalStopBrakingFallback(double s, double d, double s_dot,
-                                         double stop_distance,
-                                         CartesianPath& out_path);
+    // Final STOP fallback after target-preserving spatial alternatives. A new
+    // steerable brake must pass road/collision checks; failure blocks reuse.
+    bool PlanExternalStopBrakingFallback(
+        const CartesianState& ego, double s, double d, double stop_distance,
+        double target_d, const std::vector<TrackedObject>& obstacles,
+        CartesianPath& out_path, bool preserve_service_braking = false);
+
+    // Keep STOP's existing longitudinal targets/time grid, but parameterize
+    // lateral alignment by distance so braking does not change the road shape.
+    void AppendExternalStopSpatialCandidates(
+        const CartesianState& ego, const FrenetState& start,
+        const TrajectoryRequest& request, const KinematicLimits& limits,
+        const std::vector<TrackedObject>& obstacles,
+        std::vector<FrenetPath>& candidates) const;
 
     // 외부 STOP은 절대 후진하지 않는다 - 선택된 Cartesian 궤적에서 속도가
     // 처음 음수가 되는 지점 이후를 잘라내고 마지막 점의 v/a를 0으로 만든다.
@@ -1171,11 +1201,7 @@ private:
     //
     // 후보 생성 -> 곡률 필터 -> 충돌 필터 파이프라인을 타지 않는다. 두 곳에서
     // 공유한다:
-    //   1. STOP BRAKING에서 후보가 0개인 경우의 fail-safe. 정지 목표가 아주
-    //      가까우면 exact-stop quintic이 가속도 한계를 넘어 전부 탈락한다.
-    //      여기서 실패를 반환하면 노드가 이전 궤적을 재사용해 정지 목표를
-    //      지나쳐 계속 주행한다 - STOP에서 가장 위험한 실패 방향이다.
-    //   2. 외부 EMERGENCY_STOP. BehaviorCommand는 목표점 없이
+    //   외부 EMERGENCY_STOP. BehaviorCommand는 목표점 없이
     //      (has_target_pose=false) 즉시 긴급정지를 지시하므로 정지 목표
     //      계산 소유권이 Frenet에 있다(계약 8.1절). 긴급정지에서 "후보가
     //      없어서 못 멈춤"이라는 실패 방향 자체를 제거하는 것이 목적이다.
@@ -1187,7 +1213,10 @@ private:
     // Includes the stopped footprint through the reactive prediction horizon.
     bool PlanCollisionBrakingPath(const CartesianState& ego, double s, double d,
                                  const std::vector<TrackedObject>& obstacles,
-                                 CartesianPath& out_path) const;
+                                 CartesianPath& out_path,
+                                 double service_decel = 0.0,
+                                 double target_d = 0.0,
+                                 double lateral_distance = 0.0) const;
 
     bool GenerateDecelToZeroPath(double s, double d, double s_dot,
                                  CartesianPath& out_path) const;
@@ -1275,8 +1304,10 @@ private:
 
     // 외부 command(v2) 전용 LANE_CHANGE 상태.
     LaneChangeContext v2_lane_change_{};
+    double object_observation_time_ = -1, object_motion_time_ = -1;
     std::unordered_map<int, ObjectTrack> object_tracks_{};
     RoundaboutPrediction roundabout_prediction_{};
     bool roundabout_exit_prediction_active_=false;
     double roundabout_exit_prediction_until_=-1;
 };
+

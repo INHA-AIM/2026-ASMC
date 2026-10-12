@@ -242,6 +242,7 @@ bool MotionClassifier::DirectionConsistent(
 }
 
 void MotionClassifier::ResetDecision(TrackState& track) const {
+    track.warmup.clear();
     track.accepted.clear();
     track.observations.clear();
     track.candidates.clear();
@@ -604,12 +605,6 @@ void MotionClassifier::UpdateImpl(
 
         track.consecutive_misses = 0;
         ++track.valid_observations;
-        if (track.valid_observations <= config_.warmup_observations) {
-            track.state = MotionState::Unknown;
-            WriteDiagnostics(track, object);
-            continue;
-        }
-
         VelocitySample sample;
         sample.stamp_sec = stamp.toSec();
         sample.vx_kph = static_cast<double>(object.f32_AbsVx) * kMpsToKph;
@@ -622,9 +617,34 @@ void MotionClassifier::UpdateImpl(
                 &sample.obb_min_e, &sample.obb_max_e,
                 &sample.obb_min_n, &sample.obb_max_n);
         }
+        if (track.valid_observations <= config_.warmup_observations) {
+            track.state = MotionState::Unknown;
+            if(sample.obb_bounds_valid && gps_imu && vehicle) {
+                const auto velocity=RotateLidarVectorToMap(
+                    {object.f32_AbsVx,object.f32_AbsVy,0},*gps_imu,*vehicle);
+                track.warmup.push_back({sample.stamp_sec,sample.obb_min_e,sample.obb_max_e,
+                    sample.obb_min_n,sample.obb_max_n,velocity.x,velocity.y});
+                while(track.warmup.size()>3)track.warmup.pop_front();
+                if(track.previously_dynamic && motion_evidence::Certify(track.warmup,
+                        config_.edge_agreement_tolerance_m,config_.velocity_jump_kph/kMpsToKph,
+                        config_.longitudinal_threshold_kph/kMpsToKph,config_.direction_cosine_min)) {
+                    // Geometry supports motion, but full Dynamic confirmation
+                    // still follows the ordinary history/evidence policy.
+                    track.state=MotionState::DynamicPending;
+                    track.decision_vx_kph=sample.vx_kph;
+                    track.decision_vy_kph=sample.vy_kph;
+                    track.decision_speed_kph=std::hypot(sample.vx_kph,sample.vy_kph);
+                }
+            } else track.warmup.clear();
+            WriteDiagnostics(track, object);
+            object.motion_valid=track.state!=MotionState::Unknown;
+            continue;
+        }
+        track.warmup.clear();
         AppendObservation(track, sample);
         UpdateAcceptedHistory(track, sample);
         UpdateDecision(track, sample);
+        if(track.state==MotionState::Dynamic)track.previously_dynamic=true;
         WriteDiagnostics(track, object);
         object.motion_valid=track.state!=MotionState::Unknown;
     }
@@ -646,3 +666,4 @@ void MotionClassifier::InvalidateMapHistory(std::vector<LiDARObjectInfo>& object
         WriteDiagnostics(TrackState{},object);
     }
 }
+

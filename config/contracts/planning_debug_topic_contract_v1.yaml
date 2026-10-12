@@ -1,0 +1,84 @@
+schema_version: 1
+contract_id: asmc_planning_debug_topic_contract_v1
+status: frozen
+compatibility_policy: additive_only
+messages:
+  asmc_msgs/UrbanFeatureDebug:
+    md5: d580427cda75afcf15d8e92237fb6743
+    required_fields:
+    - header
+    - selected_behavior
+    - behavior_state
+    - enable_keep
+    - enable_follow
+    - enable_left_change
+    - enable_right_change
+    - enable_avoid
+    - enable_stop
+    - enable_emergency_stop
+    - planned_stop
+    - force_stop
+    - emergency_stop
+    - forbid_left_change
+    - forbid_right_change
+    - desired_speed
+    - has_max_speed
+    - max_speed
+    - has_stop_target
+    - stop_x
+    - stop_y
+    - target_link_id
+    - candidate_link_ids
+    - keep_score
+    - follow_score
+    - left_change_score
+    - right_change_score
+    - avoid_score
+    - stop_score
+    - emergency_stop_score
+    - decision_reason
+    - hard_rule_reason
+    - current_link_id
+    - route_required_link_id
+    - ego_s
+    - ego_d
+    - ego_speed
+    - vehicle_state_source
+    - vehicle_state_valid
+    - has_front_vehicle
+    - front_gap
+    - front_relative_speed
+    - front_ttc
+    - left_lane_safe
+    - right_lane_safe
+    - left_front_gap
+    - left_rear_gap
+    - right_front_gap
+    - right_rear_gap
+    - has_stop_line
+    - distance_to_stop_line
+    - intersection_approach_active
+    - intersection_approach_activation_distance
+    - intersection_approach_speed_limit
+    - traffic_light_id
+    - traffic_light_state
+    - traffic_light_raw_label
+    - traffic_light_recently_visible
+    - has_required_movement
+    - required_movement
+    - related_signal
+    - signal_controlled_link_id
+    - distance_to_signal_movement
+    - pedestrian_risk
+    - static_obstacle_ahead
+    - avoidance_object_id
+    - emergency_risk
+    - min_ttc
+    - predicted_front_ttc
+    - required_deceleration
+topics:
+  /behavior/feature_debug:
+    type: asmc_msgs/UrbanFeatureDebug
+    md5: d580427cda75afcf15d8e92237fb6743
+    producer: asmc_planner
+    purpose: Urban behavior selection and planning diagnostics; not a control command.

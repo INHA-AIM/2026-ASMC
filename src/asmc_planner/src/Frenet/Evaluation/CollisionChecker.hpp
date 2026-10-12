@@ -28,7 +28,7 @@ struct VehicleShape {
 };
 
 struct CollisionCheckConfig {
-    double safety_margin;       // 기본 안전마진 [m] (자차 폭/길이에 사방으로 더해짐)
+    double safety_margin;       // 공용 궤적 검사에서 실제 차체–OBB의 최단 XY 이격 [m]
     // 미확정/동적 객체의 시간 불확실성 증가율 [m/s]. LOW_THREAT 정적
     // 객체에는 safety_margin만 적용한다.
     double margin_growth_rate;
@@ -103,3 +103,4 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
                         int margin_recovery_object_id = -1);
 
 #endif
+

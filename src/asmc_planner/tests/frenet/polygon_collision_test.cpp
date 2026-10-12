@@ -133,6 +133,30 @@ int main() {
                std::fabs(turning_pose.y - expected_turn_radius) < 1e-9,
            "turn-rate prediction rotates the vx/vy vector, not OBB heading");
 
+    auto provisional=turning;provisional.turn_prediction_duration=.5;
+    const auto first_turn=PredictTrackedObjectPose(turning,.5);
+    const auto short_turn=PredictTrackedObjectPose(provisional,.5);
+    Expect(std::hypot(first_turn.x-short_turn.x,first_turn.y-short_turn.y)<1e-9,
+           "bounded turn preserves the original near-term motion exactly");
+    const auto tangent=PredictTrackedObjectPose(provisional,2);
+    const double end_angle=turning.yaw_rate*.5;
+    Expect(std::fabs(tangent.x-first_turn.x-1.5*std::cos(end_angle))<1e-9&&
+           std::fabs(tangent.y-first_turn.y-1.5*std::sin(end_angle))<1e-9,
+           "an expired provisional turn continues along its tangent instead of looping");
+    provisional.continuation_vx=3;provisional.continuation_vy=1;
+    const auto translated=PredictTrackedObjectPose(provisional,2);
+    Expect(std::fabs(translated.x-first_turn.x-4.5)<1e-9&&
+           std::fabs(translated.y-first_turn.y-1.5)<1e-9,
+           "a bounded sensor turn transitions continuously to position-supported velocity");
+    provisional.yaw_rate=0;
+    const auto linear=PredictTrackedObjectPose(provisional,2);
+    Expect(std::fabs(linear.x-5)<1e-9&&std::fabs(linear.y-1.5)<1e-9,
+           "zero-turn sensor velocity uses the same bounded continuation policy");
+    provisional.motion_state=ObjectMotionState::LOW_THREAT;
+    const auto fixture=PredictTrackedObjectPose(provisional,2);
+    Expect(std::fabs(fixture.x-provisional.x)<1e-9&&std::fabs(fixture.y-provisional.y)<1e-9,
+           "LOW_THREAT ignores both provisional and continuation velocity");
+
     TrackedObject low_threat = moving;
     low_threat.motion_state = ObjectMotionState::LOW_THREAT;
     Expect(!CheckObstacleOverlap(ego_footprint, {}, low_threat, 2.0),
@@ -267,7 +291,9 @@ int main() {
     const CollisionCheckConfig growing_margin_cfg{0.5, 2.0, 1.0};
     const TrackedObject later_margin_target = MakeObstacle(-1.5, 2.6);
     CartesianPath later_outward_escape;
-    later_outward_escape.x = {0.0, 1.0, 2.0};
+    // At sample 1 the corner gaps are 0.4/0.5 m: Euclidean
+    // clearance is about 0.64 m, inside the growing 0.7 m margin.
+    later_outward_escape.x = {0.0, 0.9, 2.0};
     later_outward_escape.y = {0.0, 0.1, 0.2};
     later_outward_escape.yaw = {0.0, 0.0, 0.0};
     Expect(!CartesianTrajectoryClear(
@@ -323,6 +349,41 @@ int main() {
     stationary_path.x = {0.0, 0.0, 0.0};
     stationary_path.y = {0.0, 0.0, 0.0};
     stationary_path.yaw = {0.0, 0.0, 0.0};
+    // A 0.5 m Euclidean margin must not become 0.71 m at a corner.
+    const CollisionCheckConfig fixed_margin_cfg{0.5, 0.0, 1.0};
+    const TrackedObject diagonal_clear = MakeObstacle(2.4, 2.4);
+    Expect(CheckObstacleOverlap(expanded, {}, diagonal_clear, 0.0),
+           "legacy rectangular expansion blocks a diagonally separated object");
+    Expect(CartesianTrajectoryClear(stationary_path, {diagonal_clear},
+               ego_shape, fixed_margin_cfg, 0.1),
+           "Euclidean margin accepts corner clearance above 0.5 m");
+    Expect(!CartesianTrajectoryClear(stationary_path,
+               {MakeObstacle(2.3, 2.3)}, ego_shape, fixed_margin_cfg, 0.1),
+           "Euclidean margin rejects corner clearance below 0.5 m");
+    Expect(!CartesianTrajectoryClear(stationary_path,
+               {MakeObstacle(2.5, 0.0)}, ego_shape, fixed_margin_cfg, 0.1),
+           "contact with the Euclidean margin boundary remains blocked");
+    const CollisionCheckConfig zero_margin_cfg{0.0, 0.0, 1.0};
+    Expect(!CartesianTrajectoryClear(stationary_path, {overlapping},
+               ego_shape, zero_margin_cfg, 0.1),
+           "zero margin never permits physical body overlap");
+    Expect(!CartesianTrajectoryClear(stationary_path, {invalid},
+               ego_shape, zero_margin_cfg, 0.1),
+           "distance-based checking rejects invalid geometry");
+    CartesianPath rotated_stationary = stationary_path;
+    rotated_stationary.yaw.assign(3, 0.7);
+    const double rotated_x = 2.4 * (std::cos(0.7) - std::sin(0.7));
+    const double rotated_y = 2.4 * (std::sin(0.7) + std::cos(0.7));
+    Expect(CartesianTrajectoryClear(rotated_stationary,
+               {MakeObstacle(rotated_x, rotated_y, 0.0, 0.0, 0.7)},
+               ego_shape, fixed_margin_cfg, 0.1),
+           "Euclidean corner clearance is invariant under joint rotation");
+    std::vector<FrenetPath> diagonal_frenet{MakePath({0.0, 0.0, 0.0})};
+    FilterByCollision(diagonal_frenet, straight_ref,
+                      {MakeObstacle(12.4, 2.4)}, ego_shape, fixed_margin_cfg);
+    Expect(diagonal_frenet.front().valid,
+           "normal Frenet candidates share the Euclidean margin check");
+
     TrackedObject static_margin_object = MakeObstacle(0.0, 2.7);
     static_margin_object.motion_state = ObjectMotionState::LOW_THREAT;
     Expect(CartesianTrajectoryClear(
@@ -346,3 +407,4 @@ int main() {
     }
     return 1;
 }
+

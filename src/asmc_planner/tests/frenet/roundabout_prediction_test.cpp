@@ -1,4 +1,5 @@
 #include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
 #include <cmath>
 #include <iostream>
 int main(){
@@ -8,14 +9,14 @@ int main(){
     TrackedObject object{};object.id=1;object.x=2;object.y=2;
     object.length=4.5;object.width=1.9;object.geometry_valid=true;
     object.motion_state=ObjectMotionState::DYNAMIC;
-    auto observe=[&](double stamp,double clamp) {
+    auto observe=[&](double stamp,double clamp,double speed_error=1.0) {
         const double angle=std::atan2(object.vy,object.vx),c=std::cos(angle),sn=std::sin(angle);
         for(int i=0;i<8;++i) {
             const double dx=(i%4==0||i%4==3)?-object.length/2:object.length/2;
             const double dy=i%4<2?-object.width/2:object.width/2;
             object.corners[i]={object.x+dx*c-dy*sn,object.y+dx*sn+dy*c,double(i/4)};
         }
-        history.Observe({object},stamp,clamp);
+        history.Observe({object},stamp,clamp,speed_error);
     };
     const double times[]{0,.07,.19,.30,.42};
     for(double t:times){
@@ -91,5 +92,147 @@ int main(){
     expect(history.ConservativeOccupancies({object}).empty(),"inconsistent fragment location invalidates retained body use");
     object.y=0;object.length=4.5;object.width=1.9;object.geometry_valid=false;observe(600.6,.6);
     expect(history.ConservativeOccupancies({object}).empty(),"invalid current geometry cannot authorize a remembered body");
+    // A smooth velocity-heading fit can still be wrong: position observations
+    // keep moving faster while reported speed decays and invents a tight turn.
+    history.Reset();object.id=20;object.length=4.5;object.width=1.9;
+    object.geometry_valid=true;object.motion_state=ObjectMotionState::DYNAMIC;
+    for(int i=0;i<6;++i){double q=i*.1;object.x=20+6*q;object.y=0;
+        object.vx=2*std::cos(-.9*q);object.vy=2*std::sin(-.9*q);observe(700+q,1);}
+    const auto disputed=history.ApproachOccupancies({object});
+    expect(disputed.size()==2&&std::fabs(disputed[0].vx-6)<1e-8&&
+        std::fabs(disputed[0].vy)<1e-8&&disputed[0].yaw_rate==0,
+        "position-supported continued motion replaces a disputed velocity decay for approach checks");
+    expect(disputed.size()==2&&disputed[1].vx==object.vx&&disputed[1].vy==object.vy&&
+        std::fabs(disputed[1].yaw_rate+.9)<1e-6&&disputed[1].turn_prediction_duration<=.5,
+        "the original velocity and provisional turn remain a bounded additional safety hypothesis");
+    expect(history.UncertainNear(20,0)==20&&!history.MovingAwayReliable(20,0,0),
+        "a disputed velocity fit cannot authorize departure or a passed-vehicle certificate");
+    expect(disputed.size()==2&&disputed[0].corners[0].x==object.corners[0].x&&
+        disputed[1].corners[0].y==object.corners[0].y,
+        "motion refinement preserves authoritative perception corners in both hypotheses");
+    observe(700.5,1);
+    expect(history.ApproachOccupancies({object}).size()==2,
+        "reusing an observation cannot wash away disputed motion");
+    object.motion_state=ObjectMotionState::LOW_THREAT;object.vx=object.vy=0;observe(700.6,1);
+    expect(history.ApproachOccupancies({object}).size()==1&&
+        history.ApproachOccupancies({object})[0].yaw_rate==0,
+        "a stationary classification clears the positional velocity refinement");
+    history.Reset();object.id=21;object.motion_state=ObjectMotionState::DYNAMIC;
+    for(int i=0;i<6;++i){double q=i*.1;object.x=20+6*std::sin(.3*q)/.3;
+        object.y=6*(1-std::cos(.3*q))/.3;
+        object.vx=6*std::cos(.3*q);object.vy=6*std::sin(.3*q);observe(710+q,1);}
+    auto matching=object;matching.yaw_rate=history.Rate(21);
+    const auto stable=history.ApproachOccupancies({matching});
+    expect(stable.size()==1&&std::fabs(stable[0].yaw_rate-.3)<1e-6&&
+        stable[0].vx==object.vx&&stable[0].vy==object.vy,
+        "consistent real circular motion retains its original long-horizon turn prediction");
+    expect(history.UncertainNear(20,0)<0,
+        "consistent full-body circular history still satisfies the original confidence gate");
+    object.id=22;history.Reset();
+    for(int i=0;i<6;++i){object.x=20+6*i*.1+(i%2?2:-2);object.y=0;
+        object.vx=2;object.vy=0;observe(720+i*.1,1);}
+    auto fragment_input=object;fragment_input.yaw_rate=history.Rate(22);
+    expect(history.ApproachOccupancies({fragment_input}).size()==1,
+        "large fragment-centre jumps cannot fabricate a positional velocity correction");
+    // A long horizontal strip from a partly visible vehicle was previously
+    // mistaken for a whole body despite only 16 cm of vertical evidence.
+    history.Reset();object.id=30;object.length=3.47;object.width=1.34;
+    object.height=1.5;object.x=2;object.y=2;object.vx=5;object.vy=0;
+    for(int j=0;j<5;++j) {
+        object.x=2+.5*j;
+        for(int i=0;i<8;++i) {
+            object.corners[i]={object.x+(i%4==0||i%4==3?-1.735:1.735),
+                object.y+(i%4<2?-.67:.67),.16*(i/4)};
+        }
+        history.Observe({object},800+j*.1,1);
+    }
+    expect(history.UncertainNear(0,0)==30&&history.ConservativeOccupancies({object}).empty(),
+        "a low measured strip cannot establish a whole-body certificate even with nominal height metadata");
+    const auto low_models=RoundaboutPrediction::ExpandTurnModels({object},1);
+    expect(!low_models.empty()&&low_models.front().id==30&&
+        low_models.front().corners[4].z==object.corners[4].z,
+        "uncertified low fragments remain authoritative collision observations");
+    for(int j=5;j<10;++j){object.x=2+.5*j;observe(800+j*.1,1);}
+    expect(history.UncertainNear(0,0)<0&&!history.ConservativeOccupancies({object}).empty(),
+        "fresh real vertical body evidence restores confidence without requiring a new ID");
+    const auto rates=RoundaboutPrediction::TurnModelRates(.7,1);
+    const auto negative=RoundaboutPrediction::TurnModelRates(-.7,1);
+    bool interior=false,mirror=rates.size()==negative.size(),bounded=rates.size()<=13;
+    for(double endpoint:{0.0,.55,.7,.85})
+        bounded&=std::any_of(rates.begin(),rates.end(),[&](double value){return std::fabs(value-endpoint)<1e-9;});
+    for(size_t i=0;i<rates.size();++i){
+        interior|=rates[i]>.15&&rates[i]<.4;
+        bounded&=rates[i]>=-1&&rates[i]<=1;
+        if(i)bounded&=rates[i]-rates[i-1]<=.15+1e-9;
+        if(mirror)mirror&=std::fabs(rates[i]+negative[negative.size()-1-i])<1e-9;
+    }
+    expect(interior&&mirror&&bounded,
+        "bounded turn coverage includes moderate rotation between straight and the fitted turn in either direction");
+    auto second=object;second.id=31;second.yaw_rate=-.7;object.yaw_rate=.7;
+    const auto independent=RoundaboutPrediction::ExpandTurnModels({object,second},1);
+    expect(independent.size()==rates.size()+negative.size(),
+        "multiple vehicles add model checks linearly rather than multiplying motion combinations");
+    object.vx=object.vy=0;object.yaw_rate=.7;
+    expect(RoundaboutPrediction::ExpandTurnModels({object},1).size()==1,
+        "stationary observations do not acquire invented motion models");
+    expect(RoundaboutPrediction::TurnModelRates(NAN,1)==std::vector<double>{0},
+        "nonfinite turn estimates cannot create invalid model rates");
+    // Independent geometric counterexample: a moderate turn reaches the ego
+    // in three seconds, while straight and fitted +/-0.15 endpoints miss it.
+    object.x=object.y=0;object.vx=5;object.vy=0;object.yaw_rate=.7;
+    object.motion_state=ObjectMotionState::DYNAMIC;object.geometry_valid=true;
+    for(int i=0;i<8;++i)object.corners[i]={i%4==0||i%4==3?-1.735:1.735,
+        i%4<2?-.67:.67,double(i/4)};
+    auto moderate=object;moderate.yaw_rate=.25;
+    const auto arrival=PredictTrackedObjectPose(moderate,3);
+    CartesianState ego{};ego.x=arrival.x;ego.y=arrival.y;
+    const auto footprint=MakeEgoFootprint(ego,{1.9,4.635,-1},0);
+    bool endpoints_clear=true,intermediate_hit=false;
+    for(double rate:{0.0,.55,.85}){
+        auto predicted=object;predicted.yaw_rate=rate;
+        endpoints_clear&=!CheckObstacleOverlap(footprint,{},predicted,3);
+    }
+    for(const auto& predicted:RoundaboutPrediction::ExpandTurnModels({object},1))
+        intermediate_hit|=CheckObstacleOverlap(footprint,{},predicted,3);
+    expect(endpoints_clear&&intermediate_hit,
+        "intermediate turn models catch a physical collision missed by the old three endpoints");
+    // LiDAR absolute speed error and two-observation spread are different.
+    // Keep direction/body certificates and independent position disagreement.
+    object.id=40;object.length=4.5;object.width=1.9;object.vy=0;
+    history.Reset();
+    for(int i=0;i<8;++i){object.x=6*i*.1;object.y=0;object.vx=i%2?8:4;observe(900+i*.1,1);}
+    expect(history.UncertainNear(0,0)==40,
+        "legacy two-metre-per-second spread policy rejects noisy but straight body observations");
+    history.Reset();
+    for(int i=0;i<8;++i){object.x=6*i*.1;object.vx=i%2?8:4;observe(900+i*.1,1,5);}
+    expect(history.UncertainNear(0,0)<0,
+        "configured speed error permits observed spread without bypassing motion direction or body gates");
+    auto speed_bounds=history.WithObservedSpeedRanges({object});
+    expect(speed_bounds.size()==1&&speed_bounds[0].prediction_min_speed==4&&
+        speed_bounds[0].prediction_max_speed==8&&speed_bounds[0].vx==8,
+        "departure interval retains the observed extrema and original measured velocity");
+    object.x=object.y=0;object.yaw_rate=0;
+    for(int i=0;i<8;++i)object.corners[i]={i%4==0||i%4==3?-2.25:2.25,
+        i%4<2?-.95:.95,double(i/4)};
+    auto interval=history.WithObservedSpeedRanges({object})[0];
+    ego.x=12;ego.y=0;
+    const auto middle_footprint=MakeEgoFootprint(ego,{.2,.2,-1},0);
+    auto slow=object;slow.vx=4;
+    expect(!CheckObstacleOverlap(middle_footprint,{},slow,2)&&
+        !CheckObstacleOverlap(middle_footprint,{},object,2)&&
+        CheckObstacleOverlap(middle_footprint,{},interval,2),
+        "continuous speed sweep catches intermediate arrival missed by both endpoint speeds");
+    auto unchanged=object;unchanged.prediction_min_speed=unchanged.prediction_max_speed=8;
+    expect(PredictObstacleFootprint(unchanged,2).size()==PredictObstacleFootprint(object,2).size()&&
+        CheckObstacleOverlap(middle_footprint,{},unchanged,2)==CheckObstacleOverlap(middle_footprint,{},object,2),
+        "zero-width speed interval preserves nominal collision prediction");
+    interval.motion_state=ObjectMotionState::LOW_THREAT;
+    expect(PredictObstacleFootprint(interval,2).size()==PredictObstacleFootprint(object,0).size(),
+        "stationary confirmed obstacles never acquire speed uncertainty motion");
+    history.Reset();
+    for(int i=0;i<8;++i){object.x=6*i*.1;object.vx=i%2?14:2;observe(901+i*.1,1,5);}
+    expect(history.UncertainNear(0,0)==40,
+        "spread beyond the configured error allowance still revokes departure confidence");
     return failures?1:0;
 }
+

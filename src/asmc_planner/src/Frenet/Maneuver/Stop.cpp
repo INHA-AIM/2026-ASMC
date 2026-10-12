@@ -13,6 +13,7 @@
  */
 
 #include "Frenet/frenet_planner.hpp"
+#include "Frenet/Generator/StoppingLateralGeometry.hpp"
 
 #include <algorithm>
 #include <array>
@@ -20,14 +21,19 @@
 #include <cstdio>
 
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
+#include "Frenet/Generator/LongitudinalGenerator.hpp"
+#include "Frenet/Generator/SpatialStop.hpp"
+#include "Frenet/Evaluation/KinematicFilter.hpp"
+#include "Frenet/Math/FrenetConverter.hpp"
 #include "Frenet/Math/Polynomial.hpp"
 
 
 bool FrenetPlanner::PlanCollisionBrakingPath(
     const CartesianState& ego, double s, double d,
-    const std::vector<TrackedObject>& obstacles, CartesianPath& out_path) const {
+    const std::vector<TrackedObject>& obstacles, CartesianPath& out_path,
+    double service_decel, double target_d, double lateral_distance) const {
     const double dt = path_cfg_.dt;
-    const double accel = limits_.max_longitudinal_accel;
+    const double accel = std::max(limits_.max_longitudinal_accel, service_decel);
     const double jerk = limits_.max_longitudinal_jerk;
     if (!std::isfinite(ego.v) || !std::isfinite(ego.a) || ego.v <= .1 ||
         accel <= 0 || jerk <= 0 || dt <= 0 || std::fabs(ego.a) > accel)
@@ -65,8 +71,18 @@ bool FrenetPlanner::PlanCollisionBrakingPath(
         std::tan(std::remainder(ego.yaw-rp0.theta, 2*M_PI));
     if (!std::isfinite(slope)) return false;
     // Same gradual centering distance as AVOID's braking maintenance path.
-    const double settle = std::max(10.0, std::min(25.0, ego.v*2.5));
-    const auto lateral = MakeQuintic(d, slope, 0, 0, 0, 0, settle);
+    const double settle = lateral_distance > 0.0 ? lateral_distance
+        : std::max(10.0, std::min(25.0, ego.v*2.5));
+    double initial_second = 0.0;
+    if (service_decel > 0.0) {
+        double ps, pv, pa, pd, dp, dpp;
+        CartesianToFrenet(ref_, ego, ps, pv, pa, pd, dp, dpp,
+                         &s, ref_config_.ego_projection_search_window);
+        initial_second = dpp;
+    }
+    if (!std::isfinite(initial_second)) return false;
+    const auto lateral = MakeQuintic(d, slope, initial_second,
+                                     target_d, 0, 0, settle);
     const double duration = std::max(end+dt, collision_cfg_.reactive_lookahead);
     if (!std::isfinite(duration) || duration/dt > 1000) return false;
     const int count = static_cast<int>(std::ceil(duration/dt));
@@ -91,8 +107,17 @@ bool FrenetPlanner::PlanCollisionBrakingPath(
         path.kappa.push_back(point.kappa);path.v.push_back(v);path.a.push_back(a);
     }
     path.x[0]=ego.x;path.y[0]=ego.y;path.yaw[0]=ego.yaw;path.kappa[0]=ego.kappa;
-    if (!avoid_road_map_.EvaluateRecoveryPath(path,vehicle_shape_,dt).drivable ||
-        !CartesianTrajectoryClear(path,obstacles,vehicle_shape_,collision_cfg_,dt)) return false;
+    const bool road_clear =
+        avoid_road_map_.EvaluateRecoveryPath(path,vehicle_shape_,dt).drivable;
+    const auto collision = EvaluateCartesianTrajectorySafety(
+        path, obstacles, vehicle_shape_, collision_cfg_, dt);
+    if (!road_clear || !collision.clear) {
+        if (service_decel > 0.0)
+            std::printf("[FrenetPlanner-STOP] braking rejected: road=%d blocker=%d time=%.2f\n",
+                        road_clear ? 1 : 0, collision.blocking_object_id,
+                        collision.blocking_sample_index * dt);
+        return false;
+    }
     out_path=std::move(path);
     return true;
 }
@@ -132,6 +157,7 @@ void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
         execution_.resetStopTarget();
         stop_.target_s = cmd.stop_position;
         stop_.target_valid = true;
+        stop_.reapproaching = false;
     }
 
     const double comfortable_decel = std::max(0.1, stop_cfg_.comfortable_decel);
@@ -172,7 +198,7 @@ void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
         // 선택용 내부 scratch 값이다(PlannerCommand.hpp 알려진 예외 참고).
         // LANE_KEEPING으로 바꾸는 것은 ResolveManeuver에 velocity keeping
         // 생성기를 쓰라고 지시하는 것뿐이고, 실제 STOP 여부는 last_mode_와
-        // stop_.phase가 그대로 STOP으로 보고한다 - 외부에서 관측 가능한 어떤
+        // execution_->stop_phase가 그대로 STOP으로 보고한다 - 외부에서 관측 가능한 어떤
         // 값도 STOP에서 KEEP으로 바뀌지 않는다.
         cmd.mode = LANE_KEEPING;
     } else if (execution_->stop_phase == StopExecutionPhase::BRAKING) {
@@ -203,16 +229,135 @@ void FrenetPlanner::PlanExternalStopHold(const CartesianState& ego, double s,
     out_path.a.assign(1, 0.0);
 }
 
-void FrenetPlanner::PlanExternalStopBrakingFallback(double s, double d,
-                                                     double s_dot,
-                                                     double stop_distance,
-                                                     CartesianPath& out_path) {
-    GenerateDecelToZeroPath(s, d, s_dot, out_path);
-    const double v0 = std::max(0.0, s_dot);
-    std::printf("[FrenetPlanner-STOP] BRAKING fail-safe: no candidate, "
-                "emitting decel-to-zero path (s=%.2f v=%.2f dist=%.2f)\n",
-                s, v0, stop_distance);
+bool FrenetPlanner::PlanExternalStopBrakingFallback(
+    const CartesianState& ego, double s, double d, double stop_distance,
+    double target_d, const std::vector<TrackedObject>& obstacles,
+    CartesianPath& out_path, bool preserve_service_braking) {
+    // This is the final fallback, after target-preserving spatial STOP
+    // candidates. Do not publish an unchecked constant-d path or pretend that
+    // stopping early means the requested target has been reached (no HOLD latch).
+    const double settle = std::max(1.0, std::min(
+        std::max(1.0, stop_distance), std::max(10.0, ego.v * 2.5)));
+    CartesianState braking_ego = ego;
+    // Ordinary distance-native STOP retains achieved service braking. Legacy
+    // roundabout waiting keeps its existing boundary policy.
+    // At very low speed a stronger negative boundary cannot be released to
+    // a=0 with the jerk limit before v=0, and would demand reverse motion.
+    // Limit only that infeasible boundary; keep the measured state untouched.
+    const double boundary_limit = limits_.max_longitudinal_accel *
+        limits_.boundary_condition_accel_fraction;
+    const double release_limit = std::sqrt(2.0 *
+        limits_.max_longitudinal_jerk * std::max(0.0, ego.v));
+    const double braking_limit = preserve_service_braking
+        ? std::max(limits_.max_longitudinal_accel, stop_cfg_.max_service_decel)
+        : boundary_limit;
+    braking_ego.a = std::clamp(ego.a,
+        -std::min(braking_limit, release_limit), boundary_limit);
+    // This fallback is a braking request, not a request to repeat observed
+    // throttle. Keep the achieved negative boundary; release positive memory.
+    if (preserve_service_braking) braking_ego.a = std::min(0.0,braking_ego.a);
+    if (!PlanCollisionBrakingPath(braking_ego, s, d, obstacles, out_path,
+                                  stop_cfg_.max_service_decel, target_d, settle)) {
+        out_path = {};
+        // Explicit safety failure forbids runtime reuse of an older path.
+        last_failure_reason_ = PlanFailureReason::COLLISION_BLOCKED;
+        return false;
+    }
+    if (preserve_service_braking && stop_distance >= 0.0) {
+        double hint = s;
+        for (std::size_t i=0; i<out_path.x.size(); ++i) {
+            hint = FindClosestS(ref_,out_path.x[i],out_path.y[i],&hint,5);
+            if (hint > s + stop_distance + 0.02) {
+                // The strongest checked service stop cannot meet this late
+                // target. Keep its braking/steering rather than replacing it
+                // with an unchecked straight stop. Never report goal arrival.
+                std::printf("[FrenetPlanner-STOP] unavoidable service-stop overrun: "
+                    "target_s=%.2f brake_s=%.2f\n",s+stop_distance,hint);
+                break;
+            }
+        }
+    }
+    last_candidate_paths_.push_back(out_path);
+    last_candidate_validity_.push_back(true);
+    std::printf("[FrenetPlanner-STOP] checked steerable braking: "
+                "s=%.2f v=%.2f target_distance=%.2f samples=%zu\n",
+                s, ego.v, stop_distance, out_path.v.size());
     last_failure_reason_ = PlanFailureReason::NONE;
+    return true;
+}
+
+void FrenetPlanner::AppendExternalStopSpatialCandidates(
+    const CartesianState& ego, const FrenetState& start,
+    const TrajectoryRequest& request, const KinematicLimits& limits,
+    const std::vector<TrackedObject>& obstacles,
+    std::vector<FrenetPath>& candidates) const {
+    PathGeneratorConfig generator = path_cfg_;
+    std::vector<FrenetPath> longitudinal;
+    if (request.longitudinal_mode == LongitudinalMode::STOPPING) {
+        generator.delta_s = request.stop.terminal_offset;
+        longitudinal = request.stop.spatial_profile
+            ? GenerateSpatialStoppingCandidates(start, request.stop.stop_s,
+                request.stop.cruise_speed, request.stop.comfortable_decel,
+                generator, limits, request.stop.acceleration_limit)
+            : GenerateStoppingCandidates(start, request.stop.stop_s, generator);
+    } else {
+        longitudinal = GenerateVelocityKeepingCandidates(start, request.target_speed, generator);
+    }
+    FilterLongitudinalByKinematicLimits(longitudinal, limits);
+    double ps, pv, pa, pd, slope, second;
+    CartesianToFrenet(ref_, ego, ps, pv, pa, pd, slope, second,
+                     &start.s, ref_config_.ego_projection_search_window);
+    if (!std::isfinite(slope) || !std::isfinite(second)) return;
+
+    std::vector<FrenetPath> spatial;
+    for (const auto& lon : longitudinal) {
+        if (!lon.valid || lon.s.size() < 2) continue;
+        const double span = lon.s.back() - start.s;
+        if (!std::isfinite(span) || span <= 1e-3) continue;
+        // Preserve the ordinary STOP candidate order and values while sharing
+        // the same bounded geometry generation with MERGE waiting.
+        for (const auto& geometry : MakeStoppingLateralGeometries(start.d,
+                slope, second, request.lateral.target_d, span, ego.v, limits)) {
+            const auto& lateral = geometry.polynomial;
+            const double distance = geometry.distance;
+            FrenetPath path = lon;
+            path.d.clear(); path.d_d.clear(); path.d_dd.clear();
+            path.jerk_cost_lat = 0.0;
+            for (std::size_t i = 0; i < lon.s.size(); ++i) {
+                const double u = std::max(0.0, std::min(distance, lon.s[i] - start.s));
+                const double dp = EvalVel(lateral, u), dpp = EvalAcc(lateral, u);
+                path.d.push_back(EvalPos(lateral, u));
+                path.d_d.push_back(dp * lon.s_d[i]);
+                path.d_dd.push_back(dpp * lon.s_d[i] * lon.s_d[i] + dp * lon.s_dd[i]);
+                if (i) {
+                    const double dt = lon.t[i] - lon.t[i-1];
+                    const double jerk = (path.d_dd[i] - path.d_dd[i-1]) / dt;
+                    path.jerk_cost_lat += jerk * jerk * dt;
+                }
+            }
+            spatial.push_back(std::move(path));
+        }
+    }
+    FilterLateralByAcceleration(spatial, limits);
+    FilterByCurvature(spatial, ref_, limits, CartesianGeometryMode::GEOMETRIC_YAW_CURVATURE);
+    for (auto& path : spatial) {
+        if (!path.valid) continue;
+        const auto cart = ConvertToCartesianPath(
+            path, ref_, CartesianGeometryMode::GEOMETRIC_YAW_CURVATURE);
+        for (std::size_t i=0; i<cart.v.size(); ++i) {
+            if (!std::isfinite(cart.v[i]) || !std::isfinite(cart.a[i]) ||
+                cart.v[i] < -1e-6 ||
+                std::fabs(cart.a[i]) > limits.max_longitudinal_accel + 1e-6 ||
+                cart.v[i]*cart.v[i]*std::fabs(cart.kappa[i]) > limits.max_lateral_accel + 1e-6) {
+                path.valid = false;
+                path.rejection_reason = RejectionReason::CURVATURE;
+                break;
+            }
+        }
+    }
+    FilterByCollision(spatial, ref_, obstacles, vehicle_shape_, collision_cfg_);
+    candidates.insert(candidates.end(), std::make_move_iterator(spatial.begin()),
+                       std::make_move_iterator(spatial.end()));
 }
 
 void FrenetPlanner::TrimExternalStopReverseTrajectory(
@@ -255,4 +400,5 @@ bool FrenetPlanner::StopProcess(
         predicted_obstacles, resolved_target_speed, external_command,
         out_path);
 }
+
 

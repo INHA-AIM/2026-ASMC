@@ -63,6 +63,27 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     loadInto(root, "control_mapping/brake/pedal", p.brake_pedal_lut);
     loadInto(root, "control_mapping/brake/response_mps2",
              p.brake_response_lut);
+    auto& response = p.stop_brake_response;
+    loadInto(root, "control_mapping/stop_brake_response/enabled", response.enabled);
+    loadInto(root, "control_mapping/stop_brake_response/acceleration_limit", response.acceleration_limit);
+    loadInto(root, "control_mapping/stop_brake_response/acceleration_minimum_request", response.acceleration_minimum_request);
+    loadInto(root, "control_mapping/stop_brake_response/learning_time_constant", response.learning_time_constant);
+    loadInto(root, "control_mapping/stop_brake_response/response_time_constant", response.response_time_constant);
+    loadInto(root, "control_mapping/stop_brake_response/minimum_gain", response.minimum_gain);
+    loadInto(root, "control_mapping/stop_brake_response/maximum_gain", response.maximum_gain);
+    loadInto(root, "control_mapping/stop_brake_response/minimum_request", response.minimum_request);
+    loadInto(root, "control_mapping/stop_brake_response/minimum_speed", response.minimum_speed);
+    if (!std::isfinite(response.acceleration_limit) || response.acceleration_limit <= 0 ||
+        !std::isfinite(response.acceleration_minimum_request) || response.acceleration_minimum_request <= 0 ||
+        !std::isfinite(response.learning_time_constant) || response.learning_time_constant <= 0 ||
+        !std::isfinite(response.response_time_constant) || response.response_time_constant <= 0 ||
+        !std::isfinite(response.minimum_gain) || response.minimum_gain <= 0 || response.minimum_gain > 1 ||
+        !std::isfinite(response.maximum_gain) || response.maximum_gain < 1 ||
+        !std::isfinite(response.minimum_request) || response.minimum_request <= 0 ||
+        !std::isfinite(response.minimum_speed) || response.minimum_speed <= 0) {
+        std::printf("[MPC] Invalid STOP brake response settings; compensation disabled\n");
+        response = StopBrakeResponseConfig{};
+    }
     loadInto(root, "constraints/velocity/min",       p.vel_min);
     loadInto(root, "constraints/velocity/max",       p.vel_max);
 
@@ -134,3 +155,4 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     std::printf("[MPC] Calibrated nonlinear pedal mapping: %s\n",
                 p.use_calibrated_pedal_mapping ? "enabled" : "disabled");
 }
+

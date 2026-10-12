@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from PIL import Image
 
@@ -81,6 +82,18 @@ class DirectReviewTests(unittest.TestCase):
             self.assertFalse(manifest['decisions_generated'])
             self.assertFalse((root/'out/reviews.json').exists())
             self.assertEqual(sha(image), before)
+
+    def test_legacy_pillow_without_resampling_keeps_crop_metadata(self):
+        class LegacyImageAPI:
+            NEAREST = getattr(Image, 'Resampling', Image).NEAREST
+
+            def __getattr__(self, name):
+                if name == 'Resampling':
+                    raise AttributeError(name)
+                return getattr(Image, name)
+
+        with mock.patch('prepare_camera_direct_review.Image', LegacyImageAPI()):
+            self.test_all_images_includes_unsampled_rows_once_and_keeps_annotation_ids()
 
     def test_all_images_does_not_include_other_source_with_same_label(self):
         with tempfile.TemporaryDirectory() as d:

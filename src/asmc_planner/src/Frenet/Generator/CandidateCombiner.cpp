@@ -5,6 +5,34 @@
 
 #include "Frenet/Generator/LateralGenerator.hpp"
 #include "Frenet/Generator/LongitudinalGenerator.hpp"
+#include "Frenet/Generator/SpatialStop.hpp"
+
+namespace {
+// Keep the normal search unchanged. Only when every longitudinal candidate
+// violates kinematics, try intermediate acceleration targets in bounded work.
+// All recovered candidates still enter the common curvature/collision filters.
+std::vector<FrenetPath> FeasibleFollow(
+    const FrenetState& start,double leader_s,double leader_speed,double leader_accel,
+    double time_gap,double min_gap,double target_speed,double gap_gain,
+    const PathGeneratorConfig& cfg,const KinematicLimits& limits) {
+    const auto generate=[&](double speed) {
+        auto paths=GenerateFollowingCandidates(start,leader_s,leader_speed,
+            leader_accel,time_gap,min_gap,speed,gap_gain,cfg);
+        FilterLongitudinalByKinematicLimits(paths,limits);
+        return paths;
+    };
+    const auto usable=[](const auto& paths) {
+        return std::any_of(paths.begin(),paths.end(),[](const auto& p){return p.valid;});
+    };
+    auto paths=generate(target_speed);
+    if(usable(paths)||target_speed<=start.s_d)return paths;
+    for(double fraction:{.75,.5,.25}) {
+        auto reduced=generate(start.s_d+fraction*(target_speed-start.s_d));
+        if(usable(reduced))return reduced;
+    }
+    return paths;
+}
+}
 
 std::vector<FrenetPath> CombineLateralLongitudinal(const std::vector<FrenetPath>& lateral_set,
                                                     const std::vector<FrenetPath>& longitudinal_set) {
@@ -100,10 +128,10 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
 
     switch (cmd.mode) {
         case FOLLOWING:
-            longitudinal_set = GenerateFollowingCandidates(start, cmd.leader_s, cmd.leader_speed,
+            longitudinal_set = FeasibleFollow(start, cmd.leader_s, cmd.leader_speed,
                                                             cmd.leader_accel, cmd.time_gap,
                                                             cmd.min_gap, cmd.target_speed,
-                                                            cmd.gap_gain, cfg);
+                                                            cmd.gap_gain, cfg, limits);
             break;
 
         case STOP:
@@ -274,11 +302,11 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
 
     switch (request.longitudinal_mode) {
         case LongitudinalMode::FOLLOWING:
-            longitudinal_set = GenerateFollowingCandidates(
+            longitudinal_set = FeasibleFollow(
                 start, request.following.leader_s, request.following.leader_speed,
                 request.following.leader_accel, request.following.time_gap,
                 request.following.min_gap, request.target_speed,
-                request.following.gap_gain, cfg);
+                request.following.gap_gain, cfg, limits);
             break;
 
         case LongitudinalMode::STOPPING: {
@@ -288,8 +316,11 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
             // StopConfig.delta_s_override를 그대로 옮겨 채운 값).
             PathGeneratorConfig stop_delta_cfg = cfg;
             stop_delta_cfg.delta_s = request.stop.terminal_offset;
-            longitudinal_set = GenerateStoppingCandidates(
-                start, request.stop.stop_s, stop_delta_cfg);
+            longitudinal_set = request.stop.spatial_profile
+                ? GenerateSpatialStoppingCandidates(start, request.stop.stop_s,
+                    request.stop.cruise_speed, request.stop.comfortable_decel,
+                    stop_delta_cfg, limits, request.stop.acceleration_limit)
+                : GenerateStoppingCandidates(start, request.stop.stop_s, stop_delta_cfg);
             break;
         }
 
@@ -331,3 +362,4 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
 
     return combined;
 }
+
