@@ -438,7 +438,7 @@ attrs:
 > 방향이 틀렸다면 선 전체가 어긋난다. 이 오진을 막으려고
 > `test_stopline_clip_removes_ends_left_outside_by_outer_trim` 을 박아뒀다.
 
-`overlay.png` 는 [behavior_planner 대시보드](../../../behavior_planner/web/index.html)와
+`overlay.png` 는 [asmc_planner 대시보드](../../../asmc_planner/web/index.html)와
 같은 맵이므로 눈으로 직접 대조할 수 있다.
 
 ## 시각화

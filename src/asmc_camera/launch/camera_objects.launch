@@ -20,6 +20,9 @@
     <param name="managed" value="$(arg managed)"/>
     <param name="initial_mode" value="$(arg initial_mode)"/>
     <param name="target_hz" value="$(arg target_hz)"/>
+    <!-- Clear only a stale backend selector; preserve externally set traces.
+         The config may select RF/YOLOE; otherwise the node defaults to YOLO. -->
+    <rosparam command="delete" param="model_kind"/>
     <rosparam command="load" file="$(arg config)" subst_value="true"/>
     <param name="conf_thres" value="$(arg conf_thres)" type="double" if="$(eval arg('conf_thres') != '')"/>
     <rosparam command="load" file="$(arg class_groups_config)"/>

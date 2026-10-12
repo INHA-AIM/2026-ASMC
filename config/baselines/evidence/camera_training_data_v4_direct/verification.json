@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "experiment": "camera_training_data_v4_direct",
+  "verification": {
+    "verified_images": 4523,
+    "verified_objects": 67646,
+    "exact_pixel_leaks": 0,
+    "manifest_sha256": "8aa52c7ead190c5c1f38ff3e12feedea23cac2f20d59f6467fc47011c9aad799",
+    "training_performed": false
+  },
+  "previous_v4": {
+    "verified_images": 527,
+    "verified_objects": 973,
+    "exact_pixel_leaks": 0,
+    "manifest_sha256": "6c0d91ede16ceaf42971d1bcbbf9a515a7e9055466f4f6a68650bceded9ccfd4",
+    "training_performed": false
+  },
+  "previous_v3": {
+    "verified_images": 95,
+    "verified_objects": 250,
+    "exact_pixel_leaks": 0,
+    "manifest_sha256": "80e775ea98d746b611e802f465ce5935d36ec4154032636c8a8a2f9f154e2fe4",
+    "training_performed": false
+  },
+  "existing_split_changes": 0,
+  "previous_accepted_lost": 0,
+  "source_and_sheet_sha_verified_for_reviews": 1047,
+  "individual_rgb_reviews": {
+    "accept": 898,
+    "reject": 103,
+    "pending": 46
+  },
+  "rounds": [
+    {
+      "round": "round1",
+      "generated_samples": 400,
+      "reviewed_samples": 400,
+      "manifest_sha256": "68388fd5a838814c5f2ff3530062c3f7ff821d10ee3eb579e3ea6fc5159b7745",
+      "decisions": {
+        "accept": 315,
+        "reject": 85
+      }
+    },
+    {
+      "round": "round2",
+      "generated_samples": 274,
+      "reviewed_samples": 239,
+      "manifest_sha256": "f2d644b5f0d6a794180be08111d4101a71237c86ed85c0ead16836f19df7eadd",
+      "decisions": {
+        "accept": 239
+      }
+    },
+    {
+      "round": "round3",
+      "generated_samples": 352,
+      "reviewed_samples": 352,
+      "manifest_sha256": "8c85bc708917f3f3232ae3565febb0201cf62fcad23848183691c7df385c5638",
+      "decisions": {
+        "accept": 304,
+        "pending": 30,
+        "reject": 18
+      }
+    },
+    {
+      "round": "round4",
+      "generated_samples": 194,
+      "reviewed_samples": 56,
+      "manifest_sha256": "9c2e379c075ca7e4ab0bb383c15f24fa602869c778a94da9a3958145ee085a72",
+      "decisions": {
+        "pending": 16,
+        "accept": 40
+      }
+    }
+  ],
+  "reviewer": "Codex independent RGB inspection; no claim of human confirmation",
+  "original_geometry_changed": false,
+  "teacher_truth_used": false,
+  "review_decisions_sha256": "262157304c86559b89dab778d23755d1709c99e834e379f5c7166ba4b323d872",
+  "reviews_sha256": "0d10b94a88e4ad472ecf1239ccf624b7b7c0fb031fbbff9fcd7b9dd5a326a95b",
+  "curated_sha256": "71ff18452f6137ddbed59e6749dd009b5f3efefe3ae8ea5163a1a3c741415cfe",
+  "previous_split_registry_sha256": "04d6b53131f3d776d8c9437a3432c86adcea3fb7f16d576e27d908cf0c0ef8c0",
+  "progress_sha256": "a1ef95909d9e13486f8433ee9a93621a0fef8f30eea4e8027e7eed93a65d271e",
+  "bucket_states": {
+    "pending": 105,
+    "approved": 14,
+    "failed_sample": 13
+  },
+  "approved_sample_buckets": [
+    "roboflow:enzo-mdikr/my-first-project-eeree|wood box",
+    "roboflow:enzo-mdikr/my-first-project-eeree|bollard",
+    "roboflow:enzo-mdikr/my-first-project-eeree|motorcycle",
+    "roboflow:enzo-mdikr/my-first-project-eeree|pe drum",
+    "roboflow:enzo-mdikr/my-first-project-eeree|steel barrigate",
+    "roboflow:selfcar/morai_test-t3i2r|0",
+    "roboflow:selfcar/morai_test-t3i2r|1",
+    "roboflow:selfcar/morai_test-t3i2r|2",
+    "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh|Fence",
+    "roboflow:aiv5challenge/yeonsoo-sarang|person",
+    "roboflow:hl-fma/hlfma_3|bus",
+    "roboflow:s-workspace-p9mvp/morai_obstacle|person",
+    "roboflow:enzo-mdikr/my-first-project-eeree|lane bar",
+    "roboflow:enzo-mdikr/my-first-project-eeree|speed"
+  ],
+  "accepted_unresolved_labels": 0,
+  "accepted_structure_failures": 0,
+  "accepted_cross_split_near_duplicate_issues": 0,
+  "comparison_training_ready": false,
+  "training_performed": false,
+  "collection_started": false,
+  "runtime_changes": false
+}

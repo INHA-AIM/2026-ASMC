@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "purpose": "Gallery presentation only; does not change evaluation scope, training GT or operating predictions.",
+  "coordinate_space": "original_image_pixels",
+  "default_profile": "main16x8",
+  "class_profiles": {
+    "car": "coarse24x12",
+    "bus": "coarse24x12",
+    "truck": "coarse24x12"
+  },
+  "unresolved_types": "Use the default display profile; do not guess a fine-grained vehicle class.",
+  "scope_definitions": "Profiles are resolved from the supplied evaluation scope config. Both long and short edge thresholds must pass."
+}

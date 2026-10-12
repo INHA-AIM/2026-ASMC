@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "experiment_id": "camera_training_data_v4_direct",
+  "date": "2026-10-10",
+  "label_policy": "config/datasets/camera_object_labels_v2.json",
+  "source_policy": "config/datasets/camera_object_source_labels_v2.json",
+  "inventories": [
+    "roboflow/versioned-inventory-v1/inventory.jsonl",
+    "roboflow/snapshot-inventory-v2/inventory.jsonl",
+    "roboflow/capture-inventory-v1/inventory.jsonl"
+  ],
+  "reviews": "roboflow/visual-review-v4-direct-r2/reviews.json",
+  "split_registry": "roboflow/curated-v4/curated.jsonl",
+  "seed": 20261009,
+  "sample_images_per_source_class": 50,
+  "new_independent_group_split": [
+    0.8,
+    0.1,
+    0.1
+  ],
+  "capture_runs": {
+    "train": 12,
+    "selection": 3,
+    "heldout": 3
+  },
+  "bbox_only": true,
+  "fixed_class_order": true,
+  "class_order": [
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "bus",
+    "truck",
+    "bollard",
+    "box",
+    "concrete_barrier",
+    "steel_barricade",
+    "traffic_drum",
+    "plastic_barrier",
+    "traffic_cone",
+    "stroller"
+  ],
+  "tiny_positive_gt": "preserve; display and evaluation scope are not export filters",
+  "output": "dataset_versions/camera_objects_bbox_v4-direct-r2",
+  "teacher_approved": false,
+  "teacher_truth_allowed": false,
+  "training_performed": false,
+  "collection_started": false,
+  "runtime_changes": false,
+  "curated": "roboflow/curated-v4-direct-r2",
+  "sample_renderer": "tools/perception/prepare_camera_direct_review.py",
+  "reviewer": "Codex independent RGB inspection; not human confirmation",
+  "sample_evidence": [
+    {
+      "manifest": "artifacts/camera-training-data-audit-v4-direct-review/round1/samples.json",
+      "sha256": "68388fd5a838814c5f2ff3530062c3f7ff821d10ee3eb579e3ea6fc5159b7745",
+      "generated_panels": 400,
+      "buckets": [
+        "roboflow:selfcar/morai_test-t3i2r|0",
+        "roboflow:selfcar/morai_test-t3i2r|1",
+        "roboflow:selfcar/morai_test-t3i2r|2",
+        "roboflow:hl-fma/hlfma_3|bus",
+        "roboflow:hl-fma/hlfma_3|car",
+        "roboflow:hl-fma/hlfma_3|person",
+        "roboflow:hl-fma/hlfma_3|truck",
+        "roboflow:s-workspace-p9mvp/morai_obstacle|person"
+      ]
+    },
+    {
+      "manifest": "artifacts/camera-training-data-audit-v4-direct-review/round2/samples.json",
+      "sha256": "f2d644b5f0d6a794180be08111d4101a71237c86ed85c0ead16836f19df7eadd",
+      "generated_panels": 274,
+      "buckets": [
+        "roboflow:enzo-mdikr/my-first-project-eeree|wood box",
+        "roboflow:enzo-mdikr/my-first-project-eeree|bollard",
+        "roboflow:enzo-mdikr/my-first-project-eeree|motorcycle",
+        "roboflow:enzo-mdikr/my-first-project-eeree|steel barrigate",
+        "roboflow:enzo-mdikr/my-first-project-eeree|lane bar",
+        "roboflow:enzo-mdikr/my-first-project-eeree|speed"
+      ]
+    },
+    {
+      "manifest": "artifacts/camera-training-data-audit-v4-direct-review/round3/samples.json",
+      "sha256": "8c85bc708917f3f3232ae3565febb0201cf62fcad23848183691c7df385c5638",
+      "generated_panels": 352,
+      "buckets": [
+        "roboflow:enzo-mdikr/my-first-project-eeree|cargo box",
+        "roboflow:enzo-mdikr/my-first-project-eeree|barrigate",
+        "roboflow:enzo-mdikr/my-first-project-eeree|pe barrigate",
+        "roboflow:enzo-mdikr/my-first-project-eeree|pe drum",
+        "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh|Concrete_1",
+        "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh|Concrete_2",
+        "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh|PE",
+        "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh|Fence"
+      ]
+    },
+    {
+      "manifest": "artifacts/camera-training-data-audit-v4-direct-review/round4/samples.json",
+      "sha256": "9c2e379c075ca7e4ab0bb383c15f24fa602869c778a94da9a3958145ee085a72",
+      "generated_panels": 194,
+      "buckets": [
+        "roboflow:battery-detection/cone-traffic-tirxp|cone",
+        "roboflow:battery-detection/cone-traffic-tirxp|yellow_light",
+        "roboflow:battery-detection/cone-traffic-tirxp|red_light",
+        "roboflow:battery-detection/cone-traffic-tirxp|green_light"
+      ]
+    }
+  ],
+  "review_decisions_sha256": "262157304c86559b89dab778d23755d1709c99e834e379f5c7166ba4b323d872",
+  "partially_reviewed_round": "round4: panels 0-55 only; remaining generated panels are not decisions"
+}

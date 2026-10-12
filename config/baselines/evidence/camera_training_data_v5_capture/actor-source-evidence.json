@@ -1,0 +1,3654 @@
+[
+  {
+    "source": "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "2",
+    "first_frame": 0,
+    "last_frame": 237,
+    "canonical": "wooden_box",
+    "evidence_image_sha256": "14867e0a06dfdbc52e5fac110bdbc41cb117325406cd3e8a6a398b57da8c119e",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval.",
+    "review_interval_index": 0,
+    "evidence": [
+      {
+        "row_id": "8dc2152198e2b12d8c572694f654bfd2d12b5b395b4e8bfa5590d44e15e02866",
+        "annotation_id": "0",
+        "image_sha256": "14867e0a06dfdbc52e5fac110bdbc41cb117325406cd3e8a6a398b57da8c119e",
+        "source_key": "front/000088",
+        "xyxy": [
+          93,
+          361,
+          358,
+          556
+        ]
+      },
+      {
+        "row_id": "99c8d52b3763a661e361f8a440ca74529a620636d0987e978b030537477c957c",
+        "annotation_id": "0",
+        "image_sha256": "3faa350b7ddd8e0154aaa29b31e8288b15a984948e24d701f9ed8aaa35065c4d",
+        "source_key": "front/000069",
+        "xyxy": [
+          450,
+          334,
+          465,
+          344
+        ]
+      },
+      {
+        "row_id": "2d3686f1ccecbc8547ccf6d54597b8eece25de3c6fa3abde0410b090323578ea",
+        "annotation_id": "0",
+        "image_sha256": "d2f083d50b8e209fafd4f429418a707cea3d8e4e6565d700f6d3a6f099f09f85",
+        "source_key": "left/000237",
+        "xyxy": [
+          0,
+          233,
+          211,
+          457
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "23",
+    "first_frame": 59,
+    "last_frame": 88,
+    "canonical": "bus",
+    "evidence_image_sha256": "c6efdd853c39f7ebaada97d2f41a1f7964c284da294db7970fe88326bbca52fd",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bus body/windows visible in independent RGB.",
+    "review_interval_index": 3,
+    "evidence": [
+      {
+        "row_id": "85d22e7758d88e8db06180b5974c4d77dde937495beaecf263e9d8c8e098a7f2",
+        "annotation_id": "2",
+        "image_sha256": "c6efdd853c39f7ebaada97d2f41a1f7964c284da294db7970fe88326bbca52fd",
+        "source_key": "front/000070",
+        "xyxy": [
+          1235,
+          329,
+          1268,
+          338
+        ]
+      },
+      {
+        "row_id": "ed2f44736d8b320c5e336281ea2f9d1eb8a600ef377566caacb46e47359350ac",
+        "annotation_id": "1",
+        "image_sha256": "849aa292f7986532427cdbed876ec79836925e92f185625c2736979bfb75e1b7",
+        "source_key": "front/000068",
+        "xyxy": [
+          1112,
+          335,
+          1138,
+          342
+        ]
+      },
+      {
+        "row_id": "54ad53c0c67a4938ba1a79f96a8400c2d9289e1fc5cf8b129659c1bfc51eecff",
+        "annotation_id": "0",
+        "image_sha256": "28b5083bfe252db1c0107374d8ff2ee801ed2fe7f3e0cd443cc0d20f33f21d02",
+        "source_key": "right/000085",
+        "xyxy": [
+          562,
+          213,
+          574,
+          216
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "31",
+    "first_frame": 302,
+    "last_frame": 354,
+    "canonical": "bus",
+    "evidence_image_sha256": "27cc78b1fb3793914aebfa79c5b575859acd17815d84a1a69d8492fccadf370a",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bus body/windows visible in independent RGB.",
+    "review_interval_index": 6,
+    "evidence": [
+      {
+        "row_id": "2814394f40560e2c792868db8f4e0a8ac115362856a952cd31e92db2222e9a58",
+        "annotation_id": "0",
+        "image_sha256": "27cc78b1fb3793914aebfa79c5b575859acd17815d84a1a69d8492fccadf370a",
+        "source_key": "front/000323",
+        "xyxy": [
+          1229,
+          335,
+          1260,
+          346
+        ]
+      },
+      {
+        "row_id": "7efeffd397cdf78cdee9416fa3843122f2b0429af9328c215bf4450ab9bf8780",
+        "annotation_id": "4",
+        "image_sha256": "40c911b1697acd1b0ab0902f01c1dfa828766b5674b5dcfa90e79cef8f404732",
+        "source_key": "front/000304",
+        "xyxy": [
+          27,
+          322,
+          44,
+          328
+        ]
+      },
+      {
+        "row_id": "c264e3259880ec84124fbab2cfa4f47c641773a198c13a7be65b0a3cdd726719",
+        "annotation_id": "0",
+        "image_sha256": "6a95f43e7874afec9ce18254ce159799548dea788a337f016cb70138526a996c",
+        "source_key": "right/000334",
+        "xyxy": [
+          561,
+          213,
+          588,
+          218
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "40",
+    "first_frame": 435,
+    "last_frame": 527,
+    "canonical": "car",
+    "evidence_image_sha256": "c758c2036358f57a61dc0ff760911d30394630bbbe7b8368c5d11252a91028cc",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Passenger car/SUV visible; vehicle model name not inferred.",
+    "review_interval_index": 10,
+    "evidence": [
+      {
+        "row_id": "d4b77590626e9d8493d3fb539f4ed172f627538ca29293e6e52491d37316b892",
+        "annotation_id": "1",
+        "image_sha256": "c758c2036358f57a61dc0ff760911d30394630bbbe7b8368c5d11252a91028cc",
+        "source_key": "front/000511",
+        "xyxy": [
+          728,
+          330,
+          786,
+          371
+        ]
+      },
+      {
+        "row_id": "18f861248dbfd499483abefde9c03b466a0b8897480f2a5533a26482e8216628",
+        "annotation_id": "1",
+        "image_sha256": "262b34daf66a18f014840d8f1ebd66a742c763dc6ac9ae5e3711cc21e88c1da7",
+        "source_key": "front/000459",
+        "xyxy": [
+          473,
+          338,
+          520,
+          369
+        ]
+      },
+      {
+        "row_id": "d4b77590626e9d8493d3fb539f4ed172f627538ca29293e6e52491d37316b892",
+        "annotation_id": "1",
+        "image_sha256": "c758c2036358f57a61dc0ff760911d30394630bbbe7b8368c5d11252a91028cc",
+        "source_key": "front/000511",
+        "xyxy": [
+          728,
+          330,
+          786,
+          371
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "2",
+    "first_frame": 0,
+    "last_frame": 85,
+    "canonical": "wooden_box",
+    "evidence_image_sha256": "fda4a045bb1b173e97fe8bd329a2a3498a65d4579bc220e45aca7ad6a1ffef7d",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval.",
+    "review_interval_index": 12,
+    "evidence": [
+      {
+        "row_id": "9285512e8122ecac84f5a06e3154f136ba2bc93e06fcdd9e8c1395d75032da8f",
+        "annotation_id": "0",
+        "image_sha256": "fda4a045bb1b173e97fe8bd329a2a3498a65d4579bc220e45aca7ad6a1ffef7d",
+        "source_key": "front/000083",
+        "xyxy": [
+          961,
+          367,
+          1280,
+          605
+        ]
+      },
+      {
+        "row_id": "a75ad719711be63edd35888defe2a24a881c499b98bc44d97bbd55bab0bf1f20",
+        "annotation_id": "0",
+        "image_sha256": "928952aab881a0124510397ff735ffeb433ea44725cdf739ee213e015ed3d351",
+        "source_key": "front/000016",
+        "xyxy": [
+          425,
+          339,
+          431,
+          343
+        ]
+      },
+      {
+        "row_id": "9285512e8122ecac84f5a06e3154f136ba2bc93e06fcdd9e8c1395d75032da8f",
+        "annotation_id": "0",
+        "image_sha256": "fda4a045bb1b173e97fe8bd329a2a3498a65d4579bc220e45aca7ad6a1ffef7d",
+        "source_key": "front/000083",
+        "xyxy": [
+          961,
+          367,
+          1280,
+          605
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "43",
+    "first_frame": 448,
+    "last_frame": 470,
+    "canonical": "wooden_box",
+    "evidence_image_sha256": "d13f3c94a80fdf7bc100ed28f08871777cdfafadfc29197bce40df1594361e80",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval.",
+    "review_interval_index": 16,
+    "evidence": [
+      {
+        "row_id": "3c9d960ac4ee4b628068edb9204185d83cbebd168de22b0fffd8db0bd1640cb7",
+        "annotation_id": "0",
+        "image_sha256": "d13f3c94a80fdf7bc100ed28f08871777cdfafadfc29197bce40df1594361e80",
+        "source_key": "left/000470",
+        "xyxy": [
+          0,
+          333,
+          122,
+          460
+        ]
+      },
+      {
+        "row_id": "365d4b2ecc590f243b750ca35c30a0e07525745cffc28243d0db7cf43fe3b568",
+        "annotation_id": "1",
+        "image_sha256": "9f790dbb36fc14915d61e30ddea80eac6d77e1ee1a03aec3ee7ad914866546cb",
+        "source_key": "front/000456",
+        "xyxy": [
+          580,
+          353,
+          593,
+          359
+        ]
+      },
+      {
+        "row_id": "3c9d960ac4ee4b628068edb9204185d83cbebd168de22b0fffd8db0bd1640cb7",
+        "annotation_id": "0",
+        "image_sha256": "d13f3c94a80fdf7bc100ed28f08871777cdfafadfc29197bce40df1594361e80",
+        "source_key": "left/000470",
+        "xyxy": [
+          0,
+          333,
+          122,
+          460
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "27",
+    "first_frame": 148,
+    "last_frame": 148,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "f16ba4dceae83e326264b5b90026d6fe054ac7bc28f99d6d4f83078073c15fe7",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 19,
+    "evidence": [
+      {
+        "row_id": "b272c20ad76935fdc88b1298a4b352b1054a46346b267a95918753331d0eb9e0",
+        "annotation_id": "0",
+        "image_sha256": "f16ba4dceae83e326264b5b90026d6fe054ac7bc28f99d6d4f83078073c15fe7",
+        "source_key": "front/000148",
+        "xyxy": [
+          0,
+          477,
+          30,
+          584
+        ]
+      },
+      {
+        "row_id": "b272c20ad76935fdc88b1298a4b352b1054a46346b267a95918753331d0eb9e0",
+        "annotation_id": "0",
+        "image_sha256": "f16ba4dceae83e326264b5b90026d6fe054ac7bc28f99d6d4f83078073c15fe7",
+        "source_key": "front/000148",
+        "xyxy": [
+          0,
+          477,
+          30,
+          584
+        ]
+      },
+      {
+        "row_id": "b272c20ad76935fdc88b1298a4b352b1054a46346b267a95918753331d0eb9e0",
+        "annotation_id": "0",
+        "image_sha256": "f16ba4dceae83e326264b5b90026d6fe054ac7bc28f99d6d4f83078073c15fe7",
+        "source_key": "front/000148",
+        "xyxy": [
+          0,
+          477,
+          30,
+          584
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "39",
+    "first_frame": 143,
+    "last_frame": 180,
+    "canonical": "bus",
+    "evidence_image_sha256": "82f2fce0143d69d3b9ad0557c50baa917eaf1a3cd03c5b6980b048c19f1b0859",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bus body/windows visible in independent RGB.",
+    "review_interval_index": 21,
+    "evidence": [
+      {
+        "row_id": "1f90d6ed2c24e0b6edbcc0b6915869c7eb053bd13c116069147d8277cea2528f",
+        "annotation_id": "0",
+        "image_sha256": "82f2fce0143d69d3b9ad0557c50baa917eaf1a3cd03c5b6980b048c19f1b0859",
+        "source_key": "front/000179",
+        "xyxy": [
+          126,
+          336,
+          158,
+          347
+        ]
+      },
+      {
+        "row_id": "8825eb7b23a08e95689650af815d5f929f91baf559f8fd17ff2bb02a0179fde9",
+        "annotation_id": "0",
+        "image_sha256": "1c358bb9242361b65371921a36ab94e2078227970d8e8d2f0f4e6e2d69b7ed90",
+        "source_key": "front/000164",
+        "xyxy": [
+          1055,
+          341,
+          1071,
+          347
+        ]
+      },
+      {
+        "row_id": "1f90d6ed2c24e0b6edbcc0b6915869c7eb053bd13c116069147d8277cea2528f",
+        "annotation_id": "0",
+        "image_sha256": "82f2fce0143d69d3b9ad0557c50baa917eaf1a3cd03c5b6980b048c19f1b0859",
+        "source_key": "front/000179",
+        "xyxy": [
+          126,
+          336,
+          158,
+          347
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "500001",
+    "first_frame": 127,
+    "last_frame": 170,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "efd1f136f934d24f5ad36688cb140750d4d45a5d23fcaf5619b86991eb408670",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 22,
+    "evidence": [
+      {
+        "row_id": "691911d1945eb8b4a616d6946d440708a50bd8b68ebf0d4b1a801fe24673c293",
+        "annotation_id": "1",
+        "image_sha256": "efd1f136f934d24f5ad36688cb140750d4d45a5d23fcaf5619b86991eb408670",
+        "source_key": "right/000137",
+        "xyxy": [
+          408,
+          267,
+          640,
+          427
+        ]
+      },
+      {
+        "row_id": "1d237fccf03b9bb275e6c3fd163f44b0557d96000a8b9c1a8a76777fb8836a6c",
+        "annotation_id": "1",
+        "image_sha256": "cf87705331e1b0bb09b8489d7e7ca67d0e718af288dec618e21578dfe58f5b8f",
+        "source_key": "front/000127",
+        "xyxy": [
+          897,
+          397,
+          1011,
+          574
+        ]
+      },
+      {
+        "row_id": "691911d1945eb8b4a616d6946d440708a50bd8b68ebf0d4b1a801fe24673c293",
+        "annotation_id": "1",
+        "image_sha256": "efd1f136f934d24f5ad36688cb140750d4d45a5d23fcaf5619b86991eb408670",
+        "source_key": "right/000137",
+        "xyxy": [
+          408,
+          267,
+          640,
+          427
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "510001",
+    "first_frame": 127,
+    "last_frame": 215,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "266feae1021b7d6357ea3596956c2cccb4bb784f90b785a8e0623f3dc1c67dbf",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 24,
+    "evidence": [
+      {
+        "row_id": "8f1c8281618564c2ecf49238108c8236c6764251149dc290d885dee7ce326225",
+        "annotation_id": "1",
+        "image_sha256": "266feae1021b7d6357ea3596956c2cccb4bb784f90b785a8e0623f3dc1c67dbf",
+        "source_key": "front/000147",
+        "xyxy": [
+          183,
+          384,
+          288,
+          505
+        ]
+      },
+      {
+        "row_id": "0fd90973de1239fa76cf73aecc4d4bc85834cf92abee7b6d8f16b17c39c3e060",
+        "annotation_id": "4",
+        "image_sha256": "0bb7af0b7102705e374dbdf4076f029ce13ab1dd0092cf09c1008471f259f848",
+        "source_key": "front/000136",
+        "xyxy": [
+          555,
+          348,
+          567,
+          369
+        ]
+      },
+      {
+        "row_id": "8f1c8281618564c2ecf49238108c8236c6764251149dc290d885dee7ce326225",
+        "annotation_id": "1",
+        "image_sha256": "266feae1021b7d6357ea3596956c2cccb4bb784f90b785a8e0623f3dc1c67dbf",
+        "source_key": "front/000147",
+        "xyxy": [
+          183,
+          384,
+          288,
+          505
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "520001",
+    "first_frame": 127,
+    "last_frame": 184,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "fecdea225c8a70696408b04c364dafd654e9d2acc1fb1c41dde1076d00a60f30",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 27,
+    "evidence": [
+      {
+        "row_id": "d124b666200ca0556f4e7e58c95f4933b986025af958070368546f090545d7a7",
+        "annotation_id": "1",
+        "image_sha256": "fecdea225c8a70696408b04c364dafd654e9d2acc1fb1c41dde1076d00a60f30",
+        "source_key": "front/000144",
+        "xyxy": [
+          932,
+          392,
+          1050,
+          549
+        ]
+      },
+      {
+        "row_id": "0fd90973de1239fa76cf73aecc4d4bc85834cf92abee7b6d8f16b17c39c3e060",
+        "annotation_id": "2",
+        "image_sha256": "0bb7af0b7102705e374dbdf4076f029ce13ab1dd0092cf09c1008471f259f848",
+        "source_key": "front/000136",
+        "xyxy": [
+          724,
+          353,
+          743,
+          388
+        ]
+      },
+      {
+        "row_id": "d124b666200ca0556f4e7e58c95f4933b986025af958070368546f090545d7a7",
+        "annotation_id": "1",
+        "image_sha256": "fecdea225c8a70696408b04c364dafd654e9d2acc1fb1c41dde1076d00a60f30",
+        "source_key": "front/000144",
+        "xyxy": [
+          932,
+          392,
+          1050,
+          549
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "15",
+    "first_frame": 441,
+    "last_frame": 473,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "94e4f34d6181e866d56bb8c3b379b5e1c666326ea944c5416d72952ac11c8bf8",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 31,
+    "evidence": [
+      {
+        "row_id": "82948271e376bb2908a0c26168e046f5a5ac90d92071d183b0bd7da2915c61bb",
+        "annotation_id": "1",
+        "image_sha256": "94e4f34d6181e866d56bb8c3b379b5e1c666326ea944c5416d72952ac11c8bf8",
+        "source_key": "front/000471",
+        "xyxy": [
+          1171,
+          527,
+          1280,
+          720
+        ]
+      },
+      {
+        "row_id": "785edbee250c2f9f6715829160123cdf2fd447ebfab406b5a3706fadc0c1fbfa",
+        "annotation_id": "0",
+        "image_sha256": "3fd813b639fc3cbeccad76e49ff83a096d7c52776306a75c5871980b56fdde7b",
+        "source_key": "front/000442",
+        "xyxy": [
+          787,
+          345,
+          796,
+          358
+        ]
+      },
+      {
+        "row_id": "82948271e376bb2908a0c26168e046f5a5ac90d92071d183b0bd7da2915c61bb",
+        "annotation_id": "1",
+        "image_sha256": "94e4f34d6181e866d56bb8c3b379b5e1c666326ea944c5416d72952ac11c8bf8",
+        "source_key": "front/000471",
+        "xyxy": [
+          1171,
+          527,
+          1280,
+          720
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "2",
+    "first_frame": 0,
+    "last_frame": 95,
+    "canonical": "wooden_box",
+    "evidence_image_sha256": "df7e57c406ed7ebb22397fdfb980e5a2f23d17dfe7aea8af79c514581b8d52f4",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval.",
+    "review_interval_index": 32,
+    "evidence": [
+      {
+        "row_id": "54f5baac5b2bf73f342f02125466551597c91301b07968ddb19e835a3780f9fe",
+        "annotation_id": "0",
+        "image_sha256": "df7e57c406ed7ebb22397fdfb980e5a2f23d17dfe7aea8af79c514581b8d52f4",
+        "source_key": "front/000095",
+        "xyxy": [
+          574,
+          340,
+          607,
+          366
+        ]
+      },
+      {
+        "row_id": "190e168c66a92de64f364cb51b91b4ef63712681a9fa8d376f0ba4e11be2397d",
+        "annotation_id": "0",
+        "image_sha256": "a20d1659b6127dd1d8f013d3c5e561ee894f165f5446f1deb55e83442f853505",
+        "source_key": "front/000016",
+        "xyxy": [
+          435,
+          335,
+          441,
+          339
+        ]
+      },
+      {
+        "row_id": "54f5baac5b2bf73f342f02125466551597c91301b07968ddb19e835a3780f9fe",
+        "annotation_id": "0",
+        "image_sha256": "df7e57c406ed7ebb22397fdfb980e5a2f23d17dfe7aea8af79c514581b8d52f4",
+        "source_key": "front/000095",
+        "xyxy": [
+          574,
+          340,
+          607,
+          366
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "32",
+    "first_frame": 467,
+    "last_frame": 479,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "057414a2a9dc06e3913c1d8e1a676597703fa5dd2a1441ccb9340eb44c82f4cc",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 33,
+    "evidence": [
+      {
+        "row_id": "8bbd7ea207e8f1831a6f846113f99c4ca5828810040fc39293cbe6d26e337743",
+        "annotation_id": "0",
+        "image_sha256": "057414a2a9dc06e3913c1d8e1a676597703fa5dd2a1441ccb9340eb44c82f4cc",
+        "source_key": "front/000476",
+        "xyxy": [
+          1026,
+          469,
+          1102,
+          588
+        ]
+      },
+      {
+        "row_id": "5f0d84b5bad9b9191cbc03e219a56aede4b40ddae0bd10136e538f324e2a0944",
+        "annotation_id": "2",
+        "image_sha256": "c6498be3daddea27c1c75421edca996fed24eeaf0c801c13f3b6adc07546df1f",
+        "source_key": "front/000470",
+        "xyxy": [
+          682,
+          376,
+          701,
+          405
+        ]
+      },
+      {
+        "row_id": "8bbd7ea207e8f1831a6f846113f99c4ca5828810040fc39293cbe6d26e337743",
+        "annotation_id": "0",
+        "image_sha256": "057414a2a9dc06e3913c1d8e1a676597703fa5dd2a1441ccb9340eb44c82f4cc",
+        "source_key": "front/000476",
+        "xyxy": [
+          1026,
+          469,
+          1102,
+          588
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "42",
+    "first_frame": 467,
+    "last_frame": 479,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "d30fc72b16bdc9c62e83f84b41ac088496bac174ae322ba691399197659be513",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 34,
+    "evidence": [
+      {
+        "row_id": "4755c5a8038f83fe22374b13a6cbfd09d2d42ab5c68833b0228cbef74596b808",
+        "annotation_id": "0",
+        "image_sha256": "d30fc72b16bdc9c62e83f84b41ac088496bac174ae322ba691399197659be513",
+        "source_key": "front/000477",
+        "xyxy": [
+          1029,
+          490,
+          1116,
+          632
+        ]
+      },
+      {
+        "row_id": "82948271e376bb2908a0c26168e046f5a5ac90d92071d183b0bd7da2915c61bb",
+        "annotation_id": "3",
+        "image_sha256": "94e4f34d6181e866d56bb8c3b379b5e1c666326ea944c5416d72952ac11c8bf8",
+        "source_key": "front/000471",
+        "xyxy": [
+          622,
+          376,
+          640,
+          404
+        ]
+      },
+      {
+        "row_id": "4755c5a8038f83fe22374b13a6cbfd09d2d42ab5c68833b0228cbef74596b808",
+        "annotation_id": "0",
+        "image_sha256": "d30fc72b16bdc9c62e83f84b41ac088496bac174ae322ba691399197659be513",
+        "source_key": "front/000477",
+        "xyxy": [
+          1029,
+          490,
+          1116,
+          632
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "43",
+    "first_frame": 467,
+    "last_frame": 480,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "1a3b6cd2a0d9e2c6e3ad00b274e2024e73e7a22ea42f923fe02a6a2b6d6c4a9e",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 35,
+    "evidence": [
+      {
+        "row_id": "79ed511a4baa246641addc7068d0f1018356c5d8ad948f37eb058c6dee812f12",
+        "annotation_id": "0",
+        "image_sha256": "1a3b6cd2a0d9e2c6e3ad00b274e2024e73e7a22ea42f923fe02a6a2b6d6c4a9e",
+        "source_key": "right/000480",
+        "xyxy": [
+          509,
+          341,
+          611,
+          478
+        ]
+      },
+      {
+        "row_id": "82948271e376bb2908a0c26168e046f5a5ac90d92071d183b0bd7da2915c61bb",
+        "annotation_id": "4",
+        "image_sha256": "94e4f34d6181e866d56bb8c3b379b5e1c666326ea944c5416d72952ac11c8bf8",
+        "source_key": "front/000471",
+        "xyxy": [
+          585,
+          372,
+          602,
+          398
+        ]
+      },
+      {
+        "row_id": "79ed511a4baa246641addc7068d0f1018356c5d8ad948f37eb058c6dee812f12",
+        "annotation_id": "0",
+        "image_sha256": "1a3b6cd2a0d9e2c6e3ad00b274e2024e73e7a22ea42f923fe02a6a2b6d6c4a9e",
+        "source_key": "right/000480",
+        "xyxy": [
+          509,
+          341,
+          611,
+          478
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "45",
+    "first_frame": 467,
+    "last_frame": 481,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "5f4618566fcbe4935e5b1550f25ae82e5051be283640428f6f213b5b88012aa0",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 36,
+    "evidence": [
+      {
+        "row_id": "11d11bba37b0c943433d04af9df126ef864918a01a5de338855099ae965ea868",
+        "annotation_id": "0",
+        "image_sha256": "5f4618566fcbe4935e5b1550f25ae82e5051be283640428f6f213b5b88012aa0",
+        "source_key": "front/000480",
+        "xyxy": [
+          1023,
+          541,
+          1075,
+          647
+        ]
+      },
+      {
+        "row_id": "7d701df3e1593a26fe245488847d0f3d2bdc36922acb043e468f22cfd5b10cc4",
+        "annotation_id": "4",
+        "image_sha256": "7d37649408b87805e6e9ed0ca02956134726af51650bbe4ef0262afcb46976a3",
+        "source_key": "front/000472",
+        "xyxy": [
+          524,
+          368,
+          537,
+          390
+        ]
+      },
+      {
+        "row_id": "11d11bba37b0c943433d04af9df126ef864918a01a5de338855099ae965ea868",
+        "annotation_id": "0",
+        "image_sha256": "5f4618566fcbe4935e5b1550f25ae82e5051be283640428f6f213b5b88012aa0",
+        "source_key": "front/000480",
+        "xyxy": [
+          1023,
+          541,
+          1075,
+          647
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "46",
+    "first_frame": 96,
+    "last_frame": 110,
+    "canonical": "concrete_barrier",
+    "evidence_image_sha256": "ec9a8c6441a6d4131e1e6b33764f8c7316efcb0ac8afc8f997ee3b93b17f6b21",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Solid concrete barrier and footing visible.",
+    "review_interval_index": 37,
+    "evidence": [
+      {
+        "row_id": "e3c4b6c93be86c4391fea7bcc477eddf7acff0a8cd8dafb94ae12edb068363f2",
+        "annotation_id": "0",
+        "image_sha256": "ec9a8c6441a6d4131e1e6b33764f8c7316efcb0ac8afc8f997ee3b93b17f6b21",
+        "source_key": "front/000108",
+        "xyxy": [
+          0,
+          447,
+          320,
+          584
+        ]
+      },
+      {
+        "row_id": "cf02187c60a18f14967cf41660e345f5b8cf48bfec2fa4493d2b5bd7db19347b",
+        "annotation_id": "1",
+        "image_sha256": "8155b90773efe8fa10a183ff93bbe4002abfb65e6465d26d9d5a99dcf0cb7f80",
+        "source_key": "front/000101",
+        "xyxy": [
+          557,
+          360,
+          606,
+          381
+        ]
+      },
+      {
+        "row_id": "e3c4b6c93be86c4391fea7bcc477eddf7acff0a8cd8dafb94ae12edb068363f2",
+        "annotation_id": "0",
+        "image_sha256": "ec9a8c6441a6d4131e1e6b33764f8c7316efcb0ac8afc8f997ee3b93b17f6b21",
+        "source_key": "front/000108",
+        "xyxy": [
+          0,
+          447,
+          320,
+          584
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "47",
+    "first_frame": 96,
+    "last_frame": 109,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "e8e3be3b1ab2126d405e2615fd98d4485b4a06f5f0568904604d5ef9aec934f7",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 42,
+    "evidence": [
+      {
+        "row_id": "08a2709979221d32e6b51771adb65d17acbb178856fcd0d8c74c6ccbc9a68c38",
+        "annotation_id": "0",
+        "image_sha256": "e8e3be3b1ab2126d405e2615fd98d4485b4a06f5f0568904604d5ef9aec934f7",
+        "source_key": "left/000109",
+        "xyxy": [
+          82,
+          308,
+          171,
+          419
+        ]
+      },
+      {
+        "row_id": "cf02187c60a18f14967cf41660e345f5b8cf48bfec2fa4493d2b5bd7db19347b",
+        "annotation_id": "0",
+        "image_sha256": "8155b90773efe8fa10a183ff93bbe4002abfb65e6465d26d9d5a99dcf0cb7f80",
+        "source_key": "front/000101",
+        "xyxy": [
+          593,
+          364,
+          604,
+          385
+        ]
+      },
+      {
+        "row_id": "08a2709979221d32e6b51771adb65d17acbb178856fcd0d8c74c6ccbc9a68c38",
+        "annotation_id": "0",
+        "image_sha256": "e8e3be3b1ab2126d405e2615fd98d4485b4a06f5f0568904604d5ef9aec934f7",
+        "source_key": "left/000109",
+        "xyxy": [
+          82,
+          308,
+          171,
+          419
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "48",
+    "first_frame": 96,
+    "last_frame": 112,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "93a63400192b36932ece1b7daace3d9dd54501593f7eefe7b1d54d4fd56c3be9",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 45,
+    "evidence": [
+      {
+        "row_id": "3f303cd0a4b4d0443d51ede41a8e2d6dcfd26039bd39eeb36c677d3ad8145dfc",
+        "annotation_id": "0",
+        "image_sha256": "93a63400192b36932ece1b7daace3d9dd54501593f7eefe7b1d54d4fd56c3be9",
+        "source_key": "front/000111",
+        "xyxy": [
+          60,
+          499,
+          188,
+          661
+        ]
+      },
+      {
+        "row_id": "8e063636006c44717a4acf7fa4104570388e10febd35735bd35b6fc7e1372e6c",
+        "annotation_id": "2",
+        "image_sha256": "5cc6d4afa21e24352de45a0e35a7ce2a340d7f3c7019c8e02ee99cc0d152eb5a",
+        "source_key": "front/000103",
+        "xyxy": [
+          551,
+          357,
+          554,
+          364
+        ]
+      },
+      {
+        "row_id": "3f303cd0a4b4d0443d51ede41a8e2d6dcfd26039bd39eeb36c677d3ad8145dfc",
+        "annotation_id": "0",
+        "image_sha256": "93a63400192b36932ece1b7daace3d9dd54501593f7eefe7b1d54d4fd56c3be9",
+        "source_key": "front/000111",
+        "xyxy": [
+          60,
+          499,
+          188,
+          661
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "49",
+    "first_frame": 467,
+    "last_frame": 484,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "c9278a27680cf855563dae7e5ecd75378d0aaeba3a537f811d0bbe0ee9113a54",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 50,
+    "evidence": [
+      {
+        "row_id": "b83a45cc4af16fd89e8f903cba477a2f12150d8db830e306642de2a5894cc8d0",
+        "annotation_id": "0",
+        "image_sha256": "c9278a27680cf855563dae7e5ecd75378d0aaeba3a537f811d0bbe0ee9113a54",
+        "source_key": "right/000484",
+        "xyxy": [
+          519,
+          364,
+          628,
+          480
+        ]
+      },
+      {
+        "row_id": "7d701df3e1593a26fe245488847d0f3d2bdc36922acb043e468f22cfd5b10cc4",
+        "annotation_id": "5",
+        "image_sha256": "7d37649408b87805e6e9ed0ca02956134726af51650bbe4ef0262afcb46976a3",
+        "source_key": "front/000472",
+        "xyxy": [
+          519,
+          360,
+          528,
+          376
+        ]
+      },
+      {
+        "row_id": "b83a45cc4af16fd89e8f903cba477a2f12150d8db830e306642de2a5894cc8d0",
+        "annotation_id": "0",
+        "image_sha256": "c9278a27680cf855563dae7e5ecd75378d0aaeba3a537f811d0bbe0ee9113a54",
+        "source_key": "right/000484",
+        "xyxy": [
+          519,
+          364,
+          628,
+          480
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "55",
+    "first_frame": 467,
+    "last_frame": 487,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "dee907a945e6d071056dd42fc9187937d2e8215b7ed51646f48127d008759061",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 51,
+    "evidence": [
+      {
+        "row_id": "bc03e4200b70a6ad60f5dfc3daa2a2c2da7792455e5409e7cdd942f24285b52b",
+        "annotation_id": "0",
+        "image_sha256": "dee907a945e6d071056dd42fc9187937d2e8215b7ed51646f48127d008759061",
+        "source_key": "front/000486",
+        "xyxy": [
+          876,
+          467,
+          937,
+          576
+        ]
+      },
+      {
+        "row_id": "7d701df3e1593a26fe245488847d0f3d2bdc36922acb043e468f22cfd5b10cc4",
+        "annotation_id": "6",
+        "image_sha256": "7d37649408b87805e6e9ed0ca02956134726af51650bbe4ef0262afcb46976a3",
+        "source_key": "front/000472",
+        "xyxy": [
+          525,
+          354,
+          531,
+          365
+        ]
+      },
+      {
+        "row_id": "bc03e4200b70a6ad60f5dfc3daa2a2c2da7792455e5409e7cdd942f24285b52b",
+        "annotation_id": "0",
+        "image_sha256": "dee907a945e6d071056dd42fc9187937d2e8215b7ed51646f48127d008759061",
+        "source_key": "front/000486",
+        "xyxy": [
+          876,
+          467,
+          937,
+          576
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "56",
+    "first_frame": 467,
+    "last_frame": 491,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "08c2a54e8a52fdf951d9a94a0504f40e37991e91d60e730d75825902b4581249",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 52,
+    "evidence": [
+      {
+        "row_id": "1e3809319fa5c11be5bac3b3226e14b2b91df1b2abe6d957e843eb57f25dc014",
+        "annotation_id": "0",
+        "image_sha256": "08c2a54e8a52fdf951d9a94a0504f40e37991e91d60e730d75825902b4581249",
+        "source_key": "front/000490",
+        "xyxy": [
+          899,
+          419,
+          940,
+          486
+        ]
+      },
+      {
+        "row_id": "7d701df3e1593a26fe245488847d0f3d2bdc36922acb043e468f22cfd5b10cc4",
+        "annotation_id": "7",
+        "image_sha256": "7d37649408b87805e6e9ed0ca02956134726af51650bbe4ef0262afcb46976a3",
+        "source_key": "front/000472",
+        "xyxy": [
+          530,
+          350,
+          534,
+          357
+        ]
+      },
+      {
+        "row_id": "1e3809319fa5c11be5bac3b3226e14b2b91df1b2abe6d957e843eb57f25dc014",
+        "annotation_id": "0",
+        "image_sha256": "08c2a54e8a52fdf951d9a94a0504f40e37991e91d60e730d75825902b4581249",
+        "source_key": "front/000490",
+        "xyxy": [
+          899,
+          419,
+          940,
+          486
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "180001",
+    "first_frame": 200,
+    "last_frame": 202,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "21e967c97462fb8c6122cd12245f512e11429df4ad5ac17f27798a8dd44f12e6",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 53,
+    "evidence": [
+      {
+        "row_id": "77500f18f3fa58909520022509c41f25cce44cb72ab70a93f9b15fa31ab01d5e",
+        "annotation_id": "1",
+        "image_sha256": "21e967c97462fb8c6122cd12245f512e11429df4ad5ac17f27798a8dd44f12e6",
+        "source_key": "front/000201",
+        "xyxy": [
+          907,
+          346,
+          968,
+          432
+        ]
+      },
+      {
+        "row_id": "65607ffda0bfa089a0b3df84cf1d427a48a827b84f267a3c0ba1fae369a53c5b",
+        "annotation_id": "1",
+        "image_sha256": "253a3bccba4c68ee89a5d5d891c5a179f8380e81a7fc27f4a8868b354ccfe0a9",
+        "source_key": "front/000200",
+        "xyxy": [
+          672,
+          336,
+          697,
+          388
+        ]
+      },
+      {
+        "row_id": "0f4e34b10829c3beeb7c0b0e79775037cdf1923032acda1700131552305fc778",
+        "annotation_id": "1",
+        "image_sha256": "d22b250b807f5c3eb07c37b943a0b99e6fcf979c228c6b621d9219805199d931",
+        "source_key": "right/000202",
+        "xyxy": [
+          128,
+          215,
+          150,
+          239
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "34",
+    "first_frame": 320,
+    "last_frame": 326,
+    "canonical": "car",
+    "evidence_image_sha256": "8a4512d73e887781f0caaad6fe48eadd29eeb8ccd0a2411deb48a46bdb671d03",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Passenger car/SUV visible; vehicle model name not inferred.",
+    "review_interval_index": 55,
+    "evidence": [
+      {
+        "row_id": "7d16f9a424c3133e81d4ec53c18d5c25793c48dc39afb20fe51b361aa9a8b4df",
+        "annotation_id": "0",
+        "image_sha256": "8a4512d73e887781f0caaad6fe48eadd29eeb8ccd0a2411deb48a46bdb671d03",
+        "source_key": "left/000326",
+        "xyxy": [
+          0,
+          212,
+          86,
+          243
+        ]
+      },
+      {
+        "row_id": "620fef137fea88cadc5b8ff05d5d264bedc9d03ce5b7f72bde5e157ac357c393",
+        "annotation_id": "1",
+        "image_sha256": "f2b3f921dce46010bd451215bf27fcbe24c3eb499fc45a83432d213d3b9a11c0",
+        "source_key": "left/000320",
+        "xyxy": [
+          350,
+          211,
+          361,
+          225
+        ]
+      },
+      {
+        "row_id": "7d16f9a424c3133e81d4ec53c18d5c25793c48dc39afb20fe51b361aa9a8b4df",
+        "annotation_id": "0",
+        "image_sha256": "8a4512d73e887781f0caaad6fe48eadd29eeb8ccd0a2411deb48a46bdb671d03",
+        "source_key": "left/000326",
+        "xyxy": [
+          0,
+          212,
+          86,
+          243
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "45",
+    "first_frame": 215,
+    "last_frame": 252,
+    "canonical": "bus",
+    "evidence_image_sha256": "ec1eda6603d62dd7d013770807f78fd83c4061016bb3382c32f90e966c0e89fd",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bus body/windows visible in independent RGB.",
+    "review_interval_index": 59,
+    "evidence": [
+      {
+        "row_id": "01a53192e1afe2939907c682d751bf63fdd2d051098e742f13923eb7050e881e",
+        "annotation_id": "0",
+        "image_sha256": "ec1eda6603d62dd7d013770807f78fd83c4061016bb3382c32f90e966c0e89fd",
+        "source_key": "front/000240",
+        "xyxy": [
+          1204,
+          339,
+          1236,
+          351
+        ]
+      },
+      {
+        "row_id": "5487a7c989e068835672e80cbba573eff38d8bb80af4af9e2de361bc55f0bf9f",
+        "annotation_id": "1",
+        "image_sha256": "b8fd1615bfa52d08a14245e5e3b45f2f8cd9d7a2882702b758f262744f9be96d",
+        "source_key": "front/000231",
+        "xyxy": [
+          126,
+          347,
+          142,
+          354
+        ]
+      },
+      {
+        "row_id": "01a53192e1afe2939907c682d751bf63fdd2d051098e742f13923eb7050e881e",
+        "annotation_id": "0",
+        "image_sha256": "ec1eda6603d62dd7d013770807f78fd83c4061016bb3382c32f90e966c0e89fd",
+        "source_key": "front/000240",
+        "xyxy": [
+          1204,
+          339,
+          1236,
+          351
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "510001",
+    "first_frame": 202,
+    "last_frame": 256,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "ba5d5ed75fb66392d2466f7cf6e394b89f5290d9c43246f461a26f2e2b34d484",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 61,
+    "evidence": [
+      {
+        "row_id": "28e3dd9263e3e91d8381c88fe41214196158fb90c5da4c8b0c00066bea717ba4",
+        "annotation_id": "1",
+        "image_sha256": "ba5d5ed75fb66392d2466f7cf6e394b89f5290d9c43246f461a26f2e2b34d484",
+        "source_key": "front/000206",
+        "xyxy": [
+          1037,
+          387,
+          1170,
+          516
+        ]
+      },
+      {
+        "row_id": "28e3dd9263e3e91d8381c88fe41214196158fb90c5da4c8b0c00066bea717ba4",
+        "annotation_id": "1",
+        "image_sha256": "ba5d5ed75fb66392d2466f7cf6e394b89f5290d9c43246f461a26f2e2b34d484",
+        "source_key": "front/000206",
+        "xyxy": [
+          1037,
+          387,
+          1170,
+          516
+        ]
+      },
+      {
+        "row_id": "45c3662bbd8029b2700dedcff642b36213ebfa4c57c42651aaee94c73927022f",
+        "annotation_id": "1",
+        "image_sha256": "ba456670a5cd11e13b96316d1823cf6e045207a06c54e81fec07e5a10702d8ad",
+        "source_key": "left/000246",
+        "xyxy": [
+          149,
+          216,
+          153,
+          218
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "2",
+    "first_frame": 0,
+    "last_frame": 156,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "874212537cd6f3852c0cc28ab58eb21361545e3e20a007f65510ac3e10684e04",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 64,
+    "evidence": [
+      {
+        "row_id": "45627938e822d47ed164f450609c7928a0e962fe71a6d19cab6633996bc1a50c",
+        "annotation_id": "0",
+        "image_sha256": "874212537cd6f3852c0cc28ab58eb21361545e3e20a007f65510ac3e10684e04",
+        "source_key": "front/000148",
+        "xyxy": [
+          424,
+          398,
+          455,
+          456
+        ]
+      },
+      {
+        "row_id": "7acbb73f4b8a42f0c16255411335f34da435c2e90cc3c8861d26486adcb1e744",
+        "annotation_id": "0",
+        "image_sha256": "7c87e142d00409803e579917736934da5add2bdf737d53890ce6e9e2a19f73d6",
+        "source_key": "front/000026",
+        "xyxy": [
+          418,
+          337,
+          424,
+          341
+        ]
+      },
+      {
+        "row_id": "45627938e822d47ed164f450609c7928a0e962fe71a6d19cab6633996bc1a50c",
+        "annotation_id": "0",
+        "image_sha256": "874212537cd6f3852c0cc28ab58eb21361545e3e20a007f65510ac3e10684e04",
+        "source_key": "front/000148",
+        "xyxy": [
+          424,
+          398,
+          455,
+          456
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "20",
+    "first_frame": 116,
+    "last_frame": 175,
+    "canonical": "wooden_box",
+    "evidence_image_sha256": "7257e8000af10d4f5c8d988eae9ad3a7a5838d5379c49495a840142cea56c385",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval.",
+    "review_interval_index": 65,
+    "evidence": [
+      {
+        "row_id": "fcc413e955baf59051a2a3a2869c6da36dcf82ae89ae8a45467b45520cec7b39",
+        "annotation_id": "1",
+        "image_sha256": "7257e8000af10d4f5c8d988eae9ad3a7a5838d5379c49495a840142cea56c385",
+        "source_key": "front/000172",
+        "xyxy": [
+          1106,
+          378,
+          1280,
+          553
+        ]
+      },
+      {
+        "row_id": "336bd98b20acafe5db062093efb36524bf714f18c00e64102a7fcdd170662fe5",
+        "annotation_id": "0",
+        "image_sha256": "a50ac464d30e838ae8c6d63aa6edcdba0a73d9a57bce949a0b19c575383ee1ab",
+        "source_key": "front/000117",
+        "xyxy": [
+          546,
+          341,
+          561,
+          354
+        ]
+      },
+      {
+        "row_id": "fcc413e955baf59051a2a3a2869c6da36dcf82ae89ae8a45467b45520cec7b39",
+        "annotation_id": "1",
+        "image_sha256": "7257e8000af10d4f5c8d988eae9ad3a7a5838d5379c49495a840142cea56c385",
+        "source_key": "front/000172",
+        "xyxy": [
+          1106,
+          378,
+          1280,
+          553
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "27",
+    "first_frame": 135,
+    "last_frame": 166,
+    "canonical": "dog",
+    "evidence_image_sha256": "94396009f262af05ad08b65e67c02b2319780bd0ceab2c3935df0adcf2c6f556",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used.",
+    "review_interval_index": 69,
+    "evidence": [
+      {
+        "row_id": "81b42e79ce968692c0c813b05111ccc159473e9021f1c8dd6e806235e89f3443",
+        "annotation_id": "0",
+        "image_sha256": "94396009f262af05ad08b65e67c02b2319780bd0ceab2c3935df0adcf2c6f556",
+        "source_key": "front/000163",
+        "xyxy": [
+          56,
+          426,
+          101,
+          508
+        ]
+      },
+      {
+        "row_id": "1320f71b42b053368ecf0c003dfc579d4420cfbf24e6cada2da093a798fdbae7",
+        "annotation_id": "0",
+        "image_sha256": "6ef11c0e1360beaa797d8b18befbb17c26ec1a3b45c2038f867b4522ba61e1ec",
+        "source_key": "front/000135",
+        "xyxy": [
+          498,
+          357,
+          505,
+          375
+        ]
+      },
+      {
+        "row_id": "81b42e79ce968692c0c813b05111ccc159473e9021f1c8dd6e806235e89f3443",
+        "annotation_id": "0",
+        "image_sha256": "94396009f262af05ad08b65e67c02b2319780bd0ceab2c3935df0adcf2c6f556",
+        "source_key": "front/000163",
+        "xyxy": [
+          56,
+          426,
+          101,
+          508
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "28",
+    "first_frame": 143,
+    "last_frame": 163,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "d4a96111a3b026166ca733eac2031ad2df47dfbf8c9c4b2a7974b9fc1d3e8c7e",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 72,
+    "evidence": [
+      {
+        "row_id": "8a6805a0f9bc8f6f4139c6a39ec64b21e5fe1cef8de728ccf09cddcf90b71de6",
+        "annotation_id": "0",
+        "image_sha256": "d4a96111a3b026166ca733eac2031ad2df47dfbf8c9c4b2a7974b9fc1d3e8c7e",
+        "source_key": "front/000159",
+        "xyxy": [
+          0,
+          392,
+          50,
+          470
+        ]
+      },
+      {
+        "row_id": "de54ef853c71005d5b2a077a9c4da44333cdf005dbf3e4e17f990a466f3ddfaf",
+        "annotation_id": "0",
+        "image_sha256": "88fefb818f5899313d2fdc986fb4fb42344fe3add47fba40e9b31f7e682be3ae",
+        "source_key": "front/000144",
+        "xyxy": [
+          408,
+          376,
+          426,
+          410
+        ]
+      },
+      {
+        "row_id": "8a6805a0f9bc8f6f4139c6a39ec64b21e5fe1cef8de728ccf09cddcf90b71de6",
+        "annotation_id": "0",
+        "image_sha256": "d4a96111a3b026166ca733eac2031ad2df47dfbf8c9c4b2a7974b9fc1d3e8c7e",
+        "source_key": "front/000159",
+        "xyxy": [
+          0,
+          392,
+          50,
+          470
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "35",
+    "first_frame": 151,
+    "last_frame": 175,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "d59aa417164c1741398b7e6f408d09a70ef1f374f466aca5fb9e1e5693c6f449",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 76,
+    "evidence": [
+      {
+        "row_id": "bb2a12e2869939f25b39ec43748f7b1a4b4e67eb9f637315092c19c4da0798d9",
+        "annotation_id": "0",
+        "image_sha256": "d59aa417164c1741398b7e6f408d09a70ef1f374f466aca5fb9e1e5693c6f449",
+        "source_key": "front/000173",
+        "xyxy": [
+          1051,
+          451,
+          1143,
+          569
+        ]
+      },
+      {
+        "row_id": "d4919999cd0e1d3b10fe89162df14cc8ada2be3cc73bb226bbffec7393d2bb53",
+        "annotation_id": "4",
+        "image_sha256": "cd861530c0b6e566ba7912068d7a901e94fec60790aab8042959e5eeedebdeb6",
+        "source_key": "front/000153",
+        "xyxy": [
+          531,
+          346,
+          535,
+          354
+        ]
+      },
+      {
+        "row_id": "bb2a12e2869939f25b39ec43748f7b1a4b4e67eb9f637315092c19c4da0798d9",
+        "annotation_id": "0",
+        "image_sha256": "d59aa417164c1741398b7e6f408d09a70ef1f374f466aca5fb9e1e5693c6f449",
+        "source_key": "front/000173",
+        "xyxy": [
+          1051,
+          451,
+          1143,
+          569
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "36",
+    "first_frame": 152,
+    "last_frame": 173,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "7257e8000af10d4f5c8d988eae9ad3a7a5838d5379c49495a840142cea56c385",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 79,
+    "evidence": [
+      {
+        "row_id": "fcc413e955baf59051a2a3a2869c6da36dcf82ae89ae8a45467b45520cec7b39",
+        "annotation_id": "0",
+        "image_sha256": "7257e8000af10d4f5c8d988eae9ad3a7a5838d5379c49495a840142cea56c385",
+        "source_key": "front/000172",
+        "xyxy": [
+          1087,
+          480,
+          1203,
+          628
+        ]
+      },
+      {
+        "row_id": "87bdefeb42dfc666346c5af29fb56102b88d75bb5257e4117a07186e0fde16d5",
+        "annotation_id": "3",
+        "image_sha256": "df915c6e913df71a438f4778e0fa847c472e93483ec585d2b6bec05216a38ddf",
+        "source_key": "front/000158",
+        "xyxy": [
+          520,
+          339,
+          524,
+          348
+        ]
+      },
+      {
+        "row_id": "fcc413e955baf59051a2a3a2869c6da36dcf82ae89ae8a45467b45520cec7b39",
+        "annotation_id": "0",
+        "image_sha256": "7257e8000af10d4f5c8d988eae9ad3a7a5838d5379c49495a840142cea56c385",
+        "source_key": "front/000172",
+        "xyxy": [
+          1087,
+          480,
+          1203,
+          628
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "37",
+    "first_frame": 154,
+    "last_frame": 171,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "de7b1522a4c3dda756b1834b24e6d3e03c87d80d10f9bba3bbf54dbea601e297",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 83,
+    "evidence": [
+      {
+        "row_id": "93d34999918f1b93bb79a2279752b0548978fccefc7ba0527dce0817458532e4",
+        "annotation_id": "0",
+        "image_sha256": "de7b1522a4c3dda756b1834b24e6d3e03c87d80d10f9bba3bbf54dbea601e297",
+        "source_key": "front/000170",
+        "xyxy": [
+          1177,
+          513,
+          1280,
+          702
+        ]
+      },
+      {
+        "row_id": "87bdefeb42dfc666346c5af29fb56102b88d75bb5257e4117a07186e0fde16d5",
+        "annotation_id": "2",
+        "image_sha256": "df915c6e913df71a438f4778e0fa847c472e93483ec585d2b6bec05216a38ddf",
+        "source_key": "front/000158",
+        "xyxy": [
+          539,
+          341,
+          544,
+          351
+        ]
+      },
+      {
+        "row_id": "93d34999918f1b93bb79a2279752b0548978fccefc7ba0527dce0817458532e4",
+        "annotation_id": "0",
+        "image_sha256": "de7b1522a4c3dda756b1834b24e6d3e03c87d80d10f9bba3bbf54dbea601e297",
+        "source_key": "front/000170",
+        "xyxy": [
+          1177,
+          513,
+          1280,
+          702
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "46",
+    "first_frame": 157,
+    "last_frame": 175,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "b924e81ce3985ee25d83fc458af1064a8f0f86247afae3b59c4ca1f8cb8d0c8c",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 86,
+    "evidence": [
+      {
+        "row_id": "b5ca5c932214bc617f035cc95cc62b2b67a4f5365176f73809468c872c752b4b",
+        "annotation_id": "0",
+        "image_sha256": "b924e81ce3985ee25d83fc458af1064a8f0f86247afae3b59c4ca1f8cb8d0c8c",
+        "source_key": "front/000174",
+        "xyxy": [
+          1049,
+          490,
+          1173,
+          653
+        ]
+      },
+      {
+        "row_id": "fe098f74c1df0d4391991a281658dfcae3d34e3d5c49d81a948bf5b5e178fcba",
+        "annotation_id": "5",
+        "image_sha256": "eb7f1573fb70f404781881e398241d99e4c56e58e593fe35806f4764c623b504",
+        "source_key": "front/000161",
+        "xyxy": [
+          441,
+          349,
+          446,
+          359
+        ]
+      },
+      {
+        "row_id": "b5ca5c932214bc617f035cc95cc62b2b67a4f5365176f73809468c872c752b4b",
+        "annotation_id": "0",
+        "image_sha256": "b924e81ce3985ee25d83fc458af1064a8f0f86247afae3b59c4ca1f8cb8d0c8c",
+        "source_key": "front/000174",
+        "xyxy": [
+          1049,
+          490,
+          1173,
+          653
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "130001",
+    "first_frame": 204,
+    "last_frame": 209,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "916104adea8eb63288db2fd085b459160abef3af1bda3b5ae39b7b4c663cd154",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 89,
+    "evidence": [
+      {
+        "row_id": "26a7041ce3b89e96f50d81ab1117aa6e1475e81e4856265456e12b011cf45c3e",
+        "annotation_id": "1",
+        "image_sha256": "916104adea8eb63288db2fd085b459160abef3af1bda3b5ae39b7b4c663cd154",
+        "source_key": "front/000204",
+        "xyxy": [
+          109,
+          378,
+          224,
+          493
+        ]
+      },
+      {
+        "row_id": "26a7041ce3b89e96f50d81ab1117aa6e1475e81e4856265456e12b011cf45c3e",
+        "annotation_id": "1",
+        "image_sha256": "916104adea8eb63288db2fd085b459160abef3af1bda3b5ae39b7b4c663cd154",
+        "source_key": "front/000204",
+        "xyxy": [
+          109,
+          378,
+          224,
+          493
+        ]
+      },
+      {
+        "row_id": "813ca3b67114de2fec112b3ec642b5ef89e8b6e8f0abc4194f4a93b868f1986c",
+        "annotation_id": "1",
+        "image_sha256": "4d79f34ebba4639447927ff6da61d02142428ba2a9b8c4bdb004665aceb997b5",
+        "source_key": "front/000209",
+        "xyxy": [
+          385,
+          347,
+          409,
+          385
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "140001",
+    "first_frame": 209,
+    "last_frame": 352,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "2b89f59bbd82344aee180d28f84fc0498dc8b29b93938ea21280be80b9df6aa3",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 90,
+    "evidence": [
+      {
+        "row_id": "37502897606af56a30c6c0dba285164010db8c767eab2cc712f0ba79a4121d58",
+        "annotation_id": "1",
+        "image_sha256": "2b89f59bbd82344aee180d28f84fc0498dc8b29b93938ea21280be80b9df6aa3",
+        "source_key": "front/000272",
+        "xyxy": [
+          1019,
+          402,
+          1249,
+          630
+        ]
+      },
+      {
+        "row_id": "abbfd6525ac0a615d9d06d22b2b81ec50ebde7d2cc85dfa2df422d52fa4cb1c7",
+        "annotation_id": "1",
+        "image_sha256": "d322270a2ea36a05b7be178baf342b014aafed0b650f34ff5d5859ae3b00267c",
+        "source_key": "front/000210",
+        "xyxy": [
+          393,
+          347,
+          413,
+          381
+        ]
+      },
+      {
+        "row_id": "37502897606af56a30c6c0dba285164010db8c767eab2cc712f0ba79a4121d58",
+        "annotation_id": "1",
+        "image_sha256": "2b89f59bbd82344aee180d28f84fc0498dc8b29b93938ea21280be80b9df6aa3",
+        "source_key": "front/000272",
+        "xyxy": [
+          1019,
+          402,
+          1249,
+          630
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "3",
+    "first_frame": 275,
+    "last_frame": 275,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "a1fc86b5d18197a722a66af531f359b4811b6db3a08ef4933be35edbd83e6336",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 93,
+    "evidence": [
+      {
+        "row_id": "6b61c2d27976e9e7b161ac9afadad72289ca5954698cbf2d1f2067ddc9001613",
+        "annotation_id": "0",
+        "image_sha256": "a1fc86b5d18197a722a66af531f359b4811b6db3a08ef4933be35edbd83e6336",
+        "source_key": "right/000275",
+        "xyxy": [
+          581,
+          290,
+          640,
+          357
+        ]
+      },
+      {
+        "row_id": "6b61c2d27976e9e7b161ac9afadad72289ca5954698cbf2d1f2067ddc9001613",
+        "annotation_id": "0",
+        "image_sha256": "a1fc86b5d18197a722a66af531f359b4811b6db3a08ef4933be35edbd83e6336",
+        "source_key": "right/000275",
+        "xyxy": [
+          581,
+          290,
+          640,
+          357
+        ]
+      },
+      {
+        "row_id": "6b61c2d27976e9e7b161ac9afadad72289ca5954698cbf2d1f2067ddc9001613",
+        "annotation_id": "0",
+        "image_sha256": "a1fc86b5d18197a722a66af531f359b4811b6db3a08ef4933be35edbd83e6336",
+        "source_key": "right/000275",
+        "xyxy": [
+          581,
+          290,
+          640,
+          357
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "1",
+    "first_frame": 317,
+    "last_frame": 324,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "4fff5aad6715681505ccab8b37f0b05ba322534f36b97538a0c892bcb13288a9",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 96,
+    "evidence": [
+      {
+        "row_id": "5222f870f91579cd9cf729914a828b2f3f66f488225196ad034974f092a8c586",
+        "annotation_id": "0",
+        "image_sha256": "4fff5aad6715681505ccab8b37f0b05ba322534f36b97538a0c892bcb13288a9",
+        "source_key": "front/000317",
+        "xyxy": [
+          646,
+          333,
+          665,
+          360
+        ]
+      },
+      {
+        "row_id": "5222f870f91579cd9cf729914a828b2f3f66f488225196ad034974f092a8c586",
+        "annotation_id": "0",
+        "image_sha256": "4fff5aad6715681505ccab8b37f0b05ba322534f36b97538a0c892bcb13288a9",
+        "source_key": "front/000317",
+        "xyxy": [
+          646,
+          333,
+          665,
+          360
+        ]
+      },
+      {
+        "row_id": "7a6a70ac93377055bb2bc992486093f65a545cd60f21f58a70b92ce1b33ffb08",
+        "annotation_id": "2",
+        "image_sha256": "a1cac6eaacf1082d14bf22b27623abc7c38169d8d9270053c8afda709cd18546",
+        "source_key": "front/000323",
+        "xyxy": [
+          674,
+          324,
+          681,
+          331
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "13",
+    "first_frame": 319,
+    "last_frame": 351,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "4ef05ece2bd87e88b2bc7576baf7a08d9bbd1c7fa1ef8e1ae8c7d600ce4b6efa",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 97,
+    "evidence": [
+      {
+        "row_id": "a7e5b3232c56220c30f5ae997f4386bc3472e98261a3624a7f0371341901cd23",
+        "annotation_id": "0",
+        "image_sha256": "4ef05ece2bd87e88b2bc7576baf7a08d9bbd1c7fa1ef8e1ae8c7d600ce4b6efa",
+        "source_key": "front/000350",
+        "xyxy": [
+          248,
+          417,
+          330,
+          543
+        ]
+      },
+      {
+        "row_id": "a0d7aa7a061b5fbe85646d2d5addaeb905414cf04ea4e783cde5115eed0ec7ea",
+        "annotation_id": "0",
+        "image_sha256": "3cc26cd4d3615acfda5336f675a3425675d802b787b3e1603d98ffdcc5d32eb8",
+        "source_key": "front/000319",
+        "xyxy": [
+          668,
+          330,
+          685,
+          355
+        ]
+      },
+      {
+        "row_id": "a7e5b3232c56220c30f5ae997f4386bc3472e98261a3624a7f0371341901cd23",
+        "annotation_id": "0",
+        "image_sha256": "4ef05ece2bd87e88b2bc7576baf7a08d9bbd1c7fa1ef8e1ae8c7d600ce4b6efa",
+        "source_key": "front/000350",
+        "xyxy": [
+          248,
+          417,
+          330,
+          543
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "16",
+    "first_frame": 320,
+    "last_frame": 353,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "1e333d70ff9522168d2d01a0d34bd4d052fa09343e8072b635a96a3e6cff8844",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 98,
+    "evidence": [
+      {
+        "row_id": "c712a12dc1bd474061bea8caaf1cd2791ac9e9970096ecacaeca4d11b8b58515",
+        "annotation_id": "0",
+        "image_sha256": "1e333d70ff9522168d2d01a0d34bd4d052fa09343e8072b635a96a3e6cff8844",
+        "source_key": "left/000353",
+        "xyxy": [
+          0,
+          293,
+          146,
+          480
+        ]
+      },
+      {
+        "row_id": "04a07847da7be8e35ff21793fc5403a5b8b56242ed9c5f7be00e3a9dda17fa4f",
+        "annotation_id": "1",
+        "image_sha256": "abc86c6970911eadcb17a1fc2e17f74ce41153c46eaeaff18d5f565c7cc0dbfa",
+        "source_key": "front/000320",
+        "xyxy": [
+          702,
+          325,
+          714,
+          343
+        ]
+      },
+      {
+        "row_id": "c712a12dc1bd474061bea8caaf1cd2791ac9e9970096ecacaeca4d11b8b58515",
+        "annotation_id": "0",
+        "image_sha256": "1e333d70ff9522168d2d01a0d34bd4d052fa09343e8072b635a96a3e6cff8844",
+        "source_key": "left/000353",
+        "xyxy": [
+          0,
+          293,
+          146,
+          480
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "17",
+    "first_frame": 321,
+    "last_frame": 356,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "09c3168ca07ea4cb52971792fd8848a5c6ec3b434a03254f747ec3e1d19f6035",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 99,
+    "evidence": [
+      {
+        "row_id": "1e3042ece3abe1c01a484e9e1db4d1daeecc66b4175a4ec52ae6eb50bca9d093",
+        "annotation_id": "0",
+        "image_sha256": "09c3168ca07ea4cb52971792fd8848a5c6ec3b434a03254f747ec3e1d19f6035",
+        "source_key": "left/000356",
+        "xyxy": [
+          90,
+          279,
+          209,
+          428
+        ]
+      },
+      {
+        "row_id": "8811a2ac99ec9f437a2d8cd159bca9942b28c85d43190a8e9aa8329ced57bd8c",
+        "annotation_id": "3",
+        "image_sha256": "640887ac5dd725f132fbb10344ef4df72a721519ca6f45e594ce556c4473fc47",
+        "source_key": "front/000321",
+        "xyxy": [
+          705,
+          321,
+          707,
+          326
+        ]
+      },
+      {
+        "row_id": "1e3042ece3abe1c01a484e9e1db4d1daeecc66b4175a4ec52ae6eb50bca9d093",
+        "annotation_id": "0",
+        "image_sha256": "09c3168ca07ea4cb52971792fd8848a5c6ec3b434a03254f747ec3e1d19f6035",
+        "source_key": "left/000356",
+        "xyxy": [
+          90,
+          279,
+          209,
+          428
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "18",
+    "first_frame": 322,
+    "last_frame": 355,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "f4747accc0021bde25a5ff826de61e73854b6487da680ca81ea10689c8ba1e2b",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 100,
+    "evidence": [
+      {
+        "row_id": "78c5585bc428ad1d7b9268799b51168afc6e84e20834d9ca504464006f864d48",
+        "annotation_id": "0",
+        "image_sha256": "f4747accc0021bde25a5ff826de61e73854b6487da680ca81ea10689c8ba1e2b",
+        "source_key": "front/000355",
+        "xyxy": [
+          129,
+          463,
+          270,
+          680
+        ]
+      },
+      {
+        "row_id": "b9bf488c2551e365023495fb77ff8abecd30e5a0dc0b21b36e566754878bd7bc",
+        "annotation_id": "4",
+        "image_sha256": "8aa79450f4b29f9eb01b298c1fc3b70b25df81fdfc9d2e881531782898961a51",
+        "source_key": "front/000322",
+        "xyxy": [
+          706,
+          321,
+          713,
+          326
+        ]
+      },
+      {
+        "row_id": "78c5585bc428ad1d7b9268799b51168afc6e84e20834d9ca504464006f864d48",
+        "annotation_id": "0",
+        "image_sha256": "f4747accc0021bde25a5ff826de61e73854b6487da680ca81ea10689c8ba1e2b",
+        "source_key": "front/000355",
+        "xyxy": [
+          129,
+          463,
+          270,
+          680
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "19",
+    "first_frame": 323,
+    "last_frame": 358,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "f754f99bd6e4accc96c35bb010645a60775f34214babf77cf703746099466174",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 101,
+    "evidence": [
+      {
+        "row_id": "c626a92fa4cc3ee5031a6bffb9ddc84396866b694105f21c554f86d1eeb97792",
+        "annotation_id": "0",
+        "image_sha256": "f754f99bd6e4accc96c35bb010645a60775f34214babf77cf703746099466174",
+        "source_key": "front/000358",
+        "xyxy": [
+          366,
+          430,
+          458,
+          593
+        ]
+      },
+      {
+        "row_id": "7a6a70ac93377055bb2bc992486093f65a545cd60f21f58a70b92ce1b33ffb08",
+        "annotation_id": "3",
+        "image_sha256": "a1cac6eaacf1082d14bf22b27623abc7c38169d8d9270053c8afda709cd18546",
+        "source_key": "front/000323",
+        "xyxy": [
+          714,
+          319,
+          719,
+          327
+        ]
+      },
+      {
+        "row_id": "c626a92fa4cc3ee5031a6bffb9ddc84396866b694105f21c554f86d1eeb97792",
+        "annotation_id": "0",
+        "image_sha256": "f754f99bd6e4accc96c35bb010645a60775f34214babf77cf703746099466174",
+        "source_key": "front/000358",
+        "xyxy": [
+          366,
+          430,
+          458,
+          593
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "20",
+    "first_frame": 0,
+    "last_frame": 67,
+    "canonical": "wooden_box",
+    "evidence_image_sha256": "27dc94cbee142363dbbdd6b3ad49525ef191040bfb2f5492ee8a5a20075bb564",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval.",
+    "review_interval_index": 102,
+    "evidence": [
+      {
+        "row_id": "764f531a3a7a5e330b6302662b08ef06b118e09c51cf489be95696cb4d3a847c",
+        "annotation_id": "3",
+        "image_sha256": "27dc94cbee142363dbbdd6b3ad49525ef191040bfb2f5492ee8a5a20075bb564",
+        "source_key": "front/000057",
+        "xyxy": [
+          596,
+          321,
+          617,
+          339
+        ]
+      },
+      {
+        "row_id": "72df462829554324faf389e62525b2d08cccaafba487153f4a6e29799e8821ef",
+        "annotation_id": "4",
+        "image_sha256": "0e3cfe487ae53f82bafeb91744d3afd017c2b9b742441660d9eba0313d2ab85c",
+        "source_key": "front/000012",
+        "xyxy": [
+          409,
+          331,
+          414,
+          335
+        ]
+      },
+      {
+        "row_id": "764f531a3a7a5e330b6302662b08ef06b118e09c51cf489be95696cb4d3a847c",
+        "annotation_id": "3",
+        "image_sha256": "27dc94cbee142363dbbdd6b3ad49525ef191040bfb2f5492ee8a5a20075bb564",
+        "source_key": "front/000057",
+        "xyxy": [
+          596,
+          321,
+          617,
+          339
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "27",
+    "first_frame": 2,
+    "last_frame": 61,
+    "canonical": "dog",
+    "evidence_image_sha256": "27dc94cbee142363dbbdd6b3ad49525ef191040bfb2f5492ee8a5a20075bb564",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used.",
+    "review_interval_index": 103,
+    "evidence": [
+      {
+        "row_id": "764f531a3a7a5e330b6302662b08ef06b118e09c51cf489be95696cb4d3a847c",
+        "annotation_id": "0",
+        "image_sha256": "27dc94cbee142363dbbdd6b3ad49525ef191040bfb2f5492ee8a5a20075bb564",
+        "source_key": "front/000057",
+        "xyxy": [
+          353,
+          366,
+          377,
+          418
+        ]
+      },
+      {
+        "row_id": "9a3300890e1a7ca53ef19f96a794be1e6ff8e9236e8e003e36686e7b4a03249e",
+        "annotation_id": "1",
+        "image_sha256": "e366ac8048992874578b5641538083e7a9282f52fbe95bc289f0bd46cae02637",
+        "source_key": "front/000018",
+        "xyxy": [
+          1077,
+          331,
+          1078,
+          335
+        ]
+      },
+      {
+        "row_id": "764f531a3a7a5e330b6302662b08ef06b118e09c51cf489be95696cb4d3a847c",
+        "annotation_id": "0",
+        "image_sha256": "27dc94cbee142363dbbdd6b3ad49525ef191040bfb2f5492ee8a5a20075bb564",
+        "source_key": "front/000057",
+        "xyxy": [
+          353,
+          366,
+          377,
+          418
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "28",
+    "first_frame": 2,
+    "last_frame": 62,
+    "canonical": "traffic_cone",
+    "evidence_image_sha256": "2f55d6be513084351ef6c5e0b46f2ac21b0a0646de9e4621c267bb13542cd54b",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Tapered traffic cone with square rubber foot visible.",
+    "review_interval_index": 104,
+    "evidence": [
+      {
+        "row_id": "98622fee823bab0bda4bf48d54b7030b0e3826f037aa6abba418e88e0de85e6b",
+        "annotation_id": "0",
+        "image_sha256": "2f55d6be513084351ef6c5e0b46f2ac21b0a0646de9e4621c267bb13542cd54b",
+        "source_key": "front/000054",
+        "xyxy": [
+          0,
+          435,
+          57,
+          528
+        ]
+      },
+      {
+        "row_id": "bb129dd859da2921db2d4cbc8524ebc11e66cf8e8468a7de103f65fa828ae717",
+        "annotation_id": "0",
+        "image_sha256": "f88627ebcc1db02cfd36589a7424a61956cc529b56e497b57e0aef6f64f8bfff",
+        "source_key": "front/000029",
+        "xyxy": [
+          983,
+          345,
+          985,
+          349
+        ]
+      },
+      {
+        "row_id": "98622fee823bab0bda4bf48d54b7030b0e3826f037aa6abba418e88e0de85e6b",
+        "annotation_id": "0",
+        "image_sha256": "2f55d6be513084351ef6c5e0b46f2ac21b0a0646de9e4621c267bb13542cd54b",
+        "source_key": "front/000054",
+        "xyxy": [
+          0,
+          435,
+          57,
+          528
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "140001",
+    "first_frame": 0,
+    "last_frame": 166,
+    "canonical": "bicycle",
+    "evidence_image_sha256": "0fb69cb0cd1d0cafc1026474a6fbdd3dce010cb4f2e196df1ab9bc60da795b07",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box.",
+    "review_interval_index": 109,
+    "evidence": [
+      {
+        "row_id": "a29b749ebf47594ac3b9f7a84cf30dc50de45e3c23dfa718c157d44893f5ed81",
+        "annotation_id": "1",
+        "image_sha256": "0fb69cb0cd1d0cafc1026474a6fbdd3dce010cb4f2e196df1ab9bc60da795b07",
+        "source_key": "right/000140",
+        "xyxy": [
+          450,
+          243,
+          640,
+          455
+        ]
+      },
+      {
+        "row_id": "6a072f514c1ccb1cbff24bbce29f1d58edd6fcabd92fd7275afe5f0c423dcb94",
+        "annotation_id": "8",
+        "image_sha256": "483ff8f1f7be8a7f43f84e64f27f87bb65316e43a0f48c064720bbc319b6d2f1",
+        "source_key": "front/000045",
+        "xyxy": [
+          361,
+          338,
+          366,
+          342
+        ]
+      },
+      {
+        "row_id": "a29b749ebf47594ac3b9f7a84cf30dc50de45e3c23dfa718c157d44893f5ed81",
+        "annotation_id": "1",
+        "image_sha256": "0fb69cb0cd1d0cafc1026474a6fbdd3dce010cb4f2e196df1ab9bc60da795b07",
+        "source_key": "right/000140",
+        "xyxy": [
+          450,
+          243,
+          640,
+          455
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "15",
+    "first_frame": 84,
+    "last_frame": 119,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "cb474e40f179628fe37aafb76a67ecd546ea05af6e905cc37ee0b25282082cd6",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified. Early frame 74 shows bicycles in the cited box: do not propagate across this inconsistent boundary; only frames 84 onward reviewed as drum.",
+    "review_interval_index": 112,
+    "evidence": [
+      {
+        "row_id": "94960d29fc2011a80c8fcfc819fb83b91aa93865ee01e54748b5af9d30d0d8fd",
+        "annotation_id": "0",
+        "image_sha256": "cb474e40f179628fe37aafb76a67ecd546ea05af6e905cc37ee0b25282082cd6",
+        "source_key": "left/000119",
+        "xyxy": [
+          0,
+          307,
+          78,
+          480
+        ]
+      },
+      {
+        "row_id": "94960d29fc2011a80c8fcfc819fb83b91aa93865ee01e54748b5af9d30d0d8fd",
+        "annotation_id": "0",
+        "image_sha256": "cb474e40f179628fe37aafb76a67ecd546ea05af6e905cc37ee0b25282082cd6",
+        "source_key": "left/000119",
+        "xyxy": [
+          0,
+          307,
+          78,
+          480
+        ]
+      },
+      {
+        "row_id": "19c6468743cf45f1582f600e438639e52a1c6721606169ead2ef4827985a0d9f",
+        "annotation_id": "0",
+        "image_sha256": "77fa2aba1d738547599a35ad6c0ef963447c34e9cb16d453f8b14569085931c0",
+        "source_key": "left/000084",
+        "xyxy": [
+          601,
+          231,
+          640,
+          260
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "16",
+    "first_frame": 74,
+    "last_frame": 112,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "dad86f56d690519685c0aaf3427503f2a38495dcc47fc186bd65e465ac8b21eb",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 116,
+    "evidence": [
+      {
+        "row_id": "735d74ac49f1b29239e079dd771ecc59d413b464d478b08df49f9551284b3051",
+        "annotation_id": "0",
+        "image_sha256": "dad86f56d690519685c0aaf3427503f2a38495dcc47fc186bd65e465ac8b21eb",
+        "source_key": "front/000111",
+        "xyxy": [
+          0,
+          465,
+          58,
+          720
+        ]
+      },
+      {
+        "row_id": "c59a71972a85baa5f6754f9631c3b3b844263d0733bd077b929bfa02935c3e74",
+        "annotation_id": "0",
+        "image_sha256": "658e9a419413759816572bcf81c74d682bc01a92dbaaffd8bf0494662fc81046",
+        "source_key": "front/000078",
+        "xyxy": [
+          386,
+          382,
+          437,
+          455
+        ]
+      },
+      {
+        "row_id": "735d74ac49f1b29239e079dd771ecc59d413b464d478b08df49f9551284b3051",
+        "annotation_id": "0",
+        "image_sha256": "dad86f56d690519685c0aaf3427503f2a38495dcc47fc186bd65e465ac8b21eb",
+        "source_key": "front/000111",
+        "xyxy": [
+          0,
+          465,
+          58,
+          720
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "2",
+    "first_frame": 0,
+    "last_frame": 103,
+    "canonical": "box",
+    "evidence_image_sha256": "74cc0b677c2130a1a19266a5c9d7f64bafa4f3c8380a0c0c437aec38420face8",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Closed rectangular box visible in fog; exact box asset subtype not asserted.",
+    "review_interval_index": 119,
+    "evidence": [
+      {
+        "row_id": "a24662c5505ba2f12fdc508092565894f02d02523903a9e4688a45cd073b91d3",
+        "annotation_id": "0",
+        "image_sha256": "74cc0b677c2130a1a19266a5c9d7f64bafa4f3c8380a0c0c437aec38420face8",
+        "source_key": "front/000061",
+        "xyxy": [
+          531,
+          339,
+          556,
+          359
+        ]
+      },
+      {
+        "row_id": "774eff608b31326235f9e9b05a0d652576d907bbb5284c3129a06c54801f4351",
+        "annotation_id": "0",
+        "image_sha256": "e56cc14038a10ce85d991126564faa31d90738dc903c4409279c6b1f64131b7e",
+        "source_key": "front/000032",
+        "xyxy": [
+          1042,
+          342,
+          1051,
+          348
+        ]
+      },
+      {
+        "row_id": "97864821731f3ee7173a797724b248f5bbf82fcff348f0f7ff59cfb56aa1159e",
+        "annotation_id": "0",
+        "image_sha256": "d63703168972e55ea9f7da338d9443a509f2b7844c8073417eca41a3e8fee6a1",
+        "source_key": "front/000070",
+        "xyxy": [
+          531,
+          339,
+          556,
+          359
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "20",
+    "first_frame": 255,
+    "last_frame": 271,
+    "canonical": "dog",
+    "evidence_image_sha256": "d57f53e477dfdb389f090b3a3e27029bf01c51437ee8cbb89b5a977fcd6bb62a",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used. Frame 254 is unclear; retained interval begins at visible dog frame 255.",
+    "review_interval_index": 120,
+    "evidence": [
+      {
+        "row_id": "8351fb8845482e528c66fb0ecef18587717388d379e27f8162030b5637b755f4",
+        "annotation_id": "0",
+        "image_sha256": "d57f53e477dfdb389f090b3a3e27029bf01c51437ee8cbb89b5a977fcd6bb62a",
+        "source_key": "front/000263",
+        "xyxy": [
+          622,
+          395,
+          636,
+          436
+        ]
+      },
+      {
+        "row_id": "09075309454882a7f5537a73c79d0925534e02a6c49954b23c6f55fabbd08cc0",
+        "annotation_id": "0",
+        "image_sha256": "19acef33f5a2e67beb5dc64689160631f8e2a0bb4a4c70236343744a10f3f1a4",
+        "source_key": "front/000260",
+        "xyxy": [
+          456,
+          432,
+          475,
+          462
+        ]
+      },
+      {
+        "row_id": "3c751c43022f5f6bac6841542802cc229d937090b547ae980ef951012831f9cd",
+        "annotation_id": "1",
+        "image_sha256": "7e77ad068cd59832c768612220e0ba9e0d53333d46d173d804745c2e88d9658f",
+        "source_key": "front/000271",
+        "xyxy": [
+          497,
+          364,
+          507,
+          385
+        ]
+      },
+      {
+        "row_id": "7f8f4fd46ab194e17f476b1f9ab532e0cec0584c8a6bf517c7b93aab5ad3426a",
+        "annotation_id": "0",
+        "image_sha256": "25ab7b10802ff017c43acb4b47b0aaf0503d8637136cf53df2f701f19e0079f7",
+        "source_key": "front/000255",
+        "xyxy": [
+          644,
+          381,
+          654,
+          410
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "200001",
+    "first_frame": 246,
+    "last_frame": 252,
+    "canonical": "dog",
+    "evidence_image_sha256": "f0ec1c407d4092a5d0a45d2f2f2b5302b51d217ec03a322cb78ef58a50140ba1",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used.",
+    "review_interval_index": 121,
+    "evidence": [
+      {
+        "row_id": "a4948aaa40e060c9e381c7885dc08e0d9e2efdb355fa43f4def5a4af814e33d8",
+        "annotation_id": "1",
+        "image_sha256": "f0ec1c407d4092a5d0a45d2f2f2b5302b51d217ec03a322cb78ef58a50140ba1",
+        "source_key": "front/000251",
+        "xyxy": [
+          389,
+          392,
+          415,
+          430
+        ]
+      },
+      {
+        "row_id": "9a430005dd58a0f69915a6b63f7df57c68b80e012c41186008eb40659e2c2e05",
+        "annotation_id": "1",
+        "image_sha256": "997b8b3c5a2713b0c7a49810d976c93416a746aba93a7ae83d3ac492e42d2c0a",
+        "source_key": "front/000246",
+        "xyxy": [
+          467,
+          395,
+          488,
+          434
+        ]
+      },
+      {
+        "row_id": "037cecbbdba8bb952d0e94a6a347319fb487f7f7bff56a09b04c9b2a15e575ba",
+        "annotation_id": "1",
+        "image_sha256": "b9d80f170c735c825b6fba56af94218b042f9710c0e216714d265f06587e0ea6",
+        "source_key": "front/000252",
+        "xyxy": [
+          737,
+          382,
+          749,
+          411
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "26",
+    "first_frame": 574,
+    "last_frame": 608,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "a7d60266b5ecd860953ce5f17c1d7e3926b7cbc8f90dece4fd77d277d78eb7d8",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 122,
+    "evidence": [
+      {
+        "row_id": "c14a7c3a2c6309d4a02dfc2974a3027ff34e5abfeda9e16a9298927f1b9f7831",
+        "annotation_id": "0",
+        "image_sha256": "a7d60266b5ecd860953ce5f17c1d7e3926b7cbc8f90dece4fd77d277d78eb7d8",
+        "source_key": "front/000576",
+        "xyxy": [
+          532,
+          367,
+          563,
+          416
+        ]
+      },
+      {
+        "row_id": "c14a7c3a2c6309d4a02dfc2974a3027ff34e5abfeda9e16a9298927f1b9f7831",
+        "annotation_id": "0",
+        "image_sha256": "a7d60266b5ecd860953ce5f17c1d7e3926b7cbc8f90dece4fd77d277d78eb7d8",
+        "source_key": "front/000576",
+        "xyxy": [
+          532,
+          367,
+          563,
+          416
+        ]
+      },
+      {
+        "row_id": "573a35e66c66264ac1c8e5840950875a8a3bdaae2ffea148540e00da99d574c8",
+        "annotation_id": "0",
+        "image_sha256": "bba104580b7a5415b99aa0e0c72be3369dccd0ca051eec3389ba257626a401f3",
+        "source_key": "front/000589",
+        "xyxy": [
+          704,
+          362,
+          732,
+          406
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "31",
+    "first_frame": 575,
+    "last_frame": 655,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "53810742b62fa7afb4e72b386bee60bffca39cd416c4cf48fd88a9f30ef6fcca",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 123,
+    "evidence": [
+      {
+        "row_id": "d770b06a0cadedf731912b9c66f1a0c8b4383e7612946be2e2402aed4353510a",
+        "annotation_id": "1",
+        "image_sha256": "53810742b62fa7afb4e72b386bee60bffca39cd416c4cf48fd88a9f30ef6fcca",
+        "source_key": "front/000652",
+        "xyxy": [
+          988,
+          407,
+          1067,
+          526
+        ]
+      },
+      {
+        "row_id": "c14a7c3a2c6309d4a02dfc2974a3027ff34e5abfeda9e16a9298927f1b9f7831",
+        "annotation_id": "1",
+        "image_sha256": "a7d60266b5ecd860953ce5f17c1d7e3926b7cbc8f90dece4fd77d277d78eb7d8",
+        "source_key": "front/000576",
+        "xyxy": [
+          573,
+          358,
+          595,
+          394
+        ]
+      },
+      {
+        "row_id": "d770b06a0cadedf731912b9c66f1a0c8b4383e7612946be2e2402aed4353510a",
+        "annotation_id": "1",
+        "image_sha256": "53810742b62fa7afb4e72b386bee60bffca39cd416c4cf48fd88a9f30ef6fcca",
+        "source_key": "front/000652",
+        "xyxy": [
+          988,
+          407,
+          1067,
+          526
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "32",
+    "first_frame": 577,
+    "last_frame": 656,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "2e996b3dfc206dc28345cea46ea3da1932fec4a73f6e044e3a9572b4e5c9c45e",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 124,
+    "evidence": [
+      {
+        "row_id": "cccc8357bc2c337c93b21907283d9cac5b36daf8f575a2eabd965d797f3eb5d1",
+        "annotation_id": "0",
+        "image_sha256": "2e996b3dfc206dc28345cea46ea3da1932fec4a73f6e044e3a9572b4e5c9c45e",
+        "source_key": "front/000655",
+        "xyxy": [
+          1203,
+          489,
+          1280,
+          720
+        ]
+      },
+      {
+        "row_id": "58fc06d1c581d420f004cd708b6abedbb66c1fdd0802b9ab90042576ad429471",
+        "annotation_id": "2",
+        "image_sha256": "1e263ff24f63f8b8ca9cecc3845fc1522770549c3e83ad69406291d2ced1e43e",
+        "source_key": "front/000577",
+        "xyxy": [
+          627,
+          350,
+          641,
+          374
+        ]
+      },
+      {
+        "row_id": "cccc8357bc2c337c93b21907283d9cac5b36daf8f575a2eabd965d797f3eb5d1",
+        "annotation_id": "0",
+        "image_sha256": "2e996b3dfc206dc28345cea46ea3da1932fec4a73f6e044e3a9572b4e5c9c45e",
+        "source_key": "front/000655",
+        "xyxy": [
+          1203,
+          489,
+          1280,
+          720
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "36",
+    "first_frame": 590,
+    "last_frame": 654,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "53810742b62fa7afb4e72b386bee60bffca39cd416c4cf48fd88a9f30ef6fcca",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 125,
+    "evidence": [
+      {
+        "row_id": "d770b06a0cadedf731912b9c66f1a0c8b4383e7612946be2e2402aed4353510a",
+        "annotation_id": "0",
+        "image_sha256": "53810742b62fa7afb4e72b386bee60bffca39cd416c4cf48fd88a9f30ef6fcca",
+        "source_key": "front/000652",
+        "xyxy": [
+          1110,
+          432,
+          1231,
+          602
+        ]
+      },
+      {
+        "row_id": "2a36e1464b020ed6c0b7b9618a9bcff6cbdc589f3aca5d799ae127a69e0e57ce",
+        "annotation_id": "0",
+        "image_sha256": "d2fb7199198470eee8e59359cdd3c7b3d88274c4c30e3996d8a4aa95bfdc6a9f",
+        "source_key": "front/000590",
+        "xyxy": [
+          680,
+          356,
+          702,
+          390
+        ]
+      },
+      {
+        "row_id": "d770b06a0cadedf731912b9c66f1a0c8b4383e7612946be2e2402aed4353510a",
+        "annotation_id": "0",
+        "image_sha256": "53810742b62fa7afb4e72b386bee60bffca39cd416c4cf48fd88a9f30ef6fcca",
+        "source_key": "front/000652",
+        "xyxy": [
+          1110,
+          432,
+          1231,
+          602
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "40",
+    "first_frame": 608,
+    "last_frame": 686,
+    "canonical": "concrete_barrier",
+    "evidence_image_sha256": "70fd3a8d500abc7341209571560783ce4589bf25881f93aef704036e729b2fc0",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Solid concrete barrier and footing visible.",
+    "review_interval_index": 126,
+    "evidence": [
+      {
+        "row_id": "50bd909c6b20921909aad2450a59a17d1f27dbeb8eab404f738cb10d7d7be353",
+        "annotation_id": "0",
+        "image_sha256": "70fd3a8d500abc7341209571560783ce4589bf25881f93aef704036e729b2fc0",
+        "source_key": "front/000657",
+        "xyxy": [
+          1018,
+          377,
+          1195,
+          612
+        ]
+      },
+      {
+        "row_id": "e2a62cea77725ac99699101297fb194781265d66a93d3f80cae69f201d7caa70",
+        "annotation_id": "3",
+        "image_sha256": "453644f60711bb465ac55c60af7994c40102fec45b1667728b34518bd5206cf5",
+        "source_key": "front/000609",
+        "xyxy": [
+          640,
+          338,
+          664,
+          364
+        ]
+      },
+      {
+        "row_id": "50bd909c6b20921909aad2450a59a17d1f27dbeb8eab404f738cb10d7d7be353",
+        "annotation_id": "0",
+        "image_sha256": "70fd3a8d500abc7341209571560783ce4589bf25881f93aef704036e729b2fc0",
+        "source_key": "front/000657",
+        "xyxy": [
+          1018,
+          377,
+          1195,
+          612
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "44",
+    "first_frame": 86,
+    "last_frame": 110,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "42763c6e1248132b6d569f9d3b6a018888377e3e53166c345f44b688af7c0584",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 127,
+    "evidence": [
+      {
+        "row_id": "b8f4ef7af653b5f0a3b5be2ed2d1d4542312d65fe5aa22e318106dbb533ef49e",
+        "annotation_id": "0",
+        "image_sha256": "42763c6e1248132b6d569f9d3b6a018888377e3e53166c345f44b688af7c0584",
+        "source_key": "front/000109",
+        "xyxy": [
+          396,
+          382,
+          456,
+          483
+        ]
+      },
+      {
+        "row_id": "b2aa7b87e094d72b61e821d5ba10dbbc43c5536f462fa3048438750d53ab4bac",
+        "annotation_id": "0",
+        "image_sha256": "6f487f0d1dbaf18ce4e1d94f476b253800f0bf699b725ae2eb406e62af077d6c",
+        "source_key": "front/000087",
+        "xyxy": [
+          515,
+          369,
+          549,
+          420
+        ]
+      },
+      {
+        "row_id": "b8f4ef7af653b5f0a3b5be2ed2d1d4542312d65fe5aa22e318106dbb533ef49e",
+        "annotation_id": "0",
+        "image_sha256": "42763c6e1248132b6d569f9d3b6a018888377e3e53166c345f44b688af7c0584",
+        "source_key": "front/000109",
+        "xyxy": [
+          396,
+          382,
+          456,
+          483
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "45",
+    "first_frame": 90,
+    "last_frame": 115,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "a3a2c5886516ec1bfe8eddf074ebe8b068227b3bbe5d241246670a935e3bd1bf",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 130,
+    "evidence": [
+      {
+        "row_id": "e1cf0d88a42601ce7b325e70599a819becd42cbdefea61e10b7433b1328ddfe7",
+        "annotation_id": "0",
+        "image_sha256": "a3a2c5886516ec1bfe8eddf074ebe8b068227b3bbe5d241246670a935e3bd1bf",
+        "source_key": "left/000115",
+        "xyxy": [
+          0,
+          301,
+          91,
+          480
+        ]
+      },
+      {
+        "row_id": "fe1048e5d503a56f0a5a6c3c30452333967ef05b5a0ddf726751b7c9b7bb3d07",
+        "annotation_id": "2",
+        "image_sha256": "bd122983417b294d50215a9dbfa3e0a50c5b02480b90307312e91328ee5c4017",
+        "source_key": "front/000091",
+        "xyxy": [
+          562,
+          349,
+          575,
+          371
+        ]
+      },
+      {
+        "row_id": "e1cf0d88a42601ce7b325e70599a819becd42cbdefea61e10b7433b1328ddfe7",
+        "annotation_id": "0",
+        "image_sha256": "a3a2c5886516ec1bfe8eddf074ebe8b068227b3bbe5d241246670a935e3bd1bf",
+        "source_key": "left/000115",
+        "xyxy": [
+          0,
+          301,
+          91,
+          480
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "46",
+    "first_frame": 100,
+    "last_frame": 118,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "eae6805b0c40e3066ad3d0f2c2969fe6118b13565c4f7cbb0917dd7fd642c35f",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 134,
+    "evidence": [
+      {
+        "row_id": "9a79af2d979a75d639b043eedba5aa034c3962a17225d3ef7f393759fce7a597",
+        "annotation_id": "0",
+        "image_sha256": "eae6805b0c40e3066ad3d0f2c2969fe6118b13565c4f7cbb0917dd7fd642c35f",
+        "source_key": "front/000116",
+        "xyxy": [
+          27,
+          433,
+          154,
+          609
+        ]
+      },
+      {
+        "row_id": "222780f1829c208ae665220566318164b6af9a7afef550e051c8184f8891541e",
+        "annotation_id": "3",
+        "image_sha256": "449053df108ad587e688000cd9a9822c2c58c3a7607b2feaee64e3c40ebc2e15",
+        "source_key": "front/000100",
+        "xyxy": [
+          536,
+          346,
+          545,
+          362
+        ]
+      },
+      {
+        "row_id": "9a79af2d979a75d639b043eedba5aa034c3962a17225d3ef7f393759fce7a597",
+        "annotation_id": "0",
+        "image_sha256": "eae6805b0c40e3066ad3d0f2c2969fe6118b13565c4f7cbb0917dd7fd642c35f",
+        "source_key": "front/000116",
+        "xyxy": [
+          27,
+          433,
+          154,
+          609
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "47",
+    "first_frame": 102,
+    "last_frame": 121,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "6957887ab7f426e46a9d28d0401366f83ff5b7b16e150c277532d1bdd2697906",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 137,
+    "evidence": [
+      {
+        "row_id": "e0368b5c117fc1fbafa91faac287f6f55c3c5ec41e6a12d7d0de1dcb49040ea0",
+        "annotation_id": "0",
+        "image_sha256": "6957887ab7f426e46a9d28d0401366f83ff5b7b16e150c277532d1bdd2697906",
+        "source_key": "front/000120",
+        "xyxy": [
+          0,
+          496,
+          197,
+          720
+        ]
+      },
+      {
+        "row_id": "7345c071b1bb17a09c9866f04accc5b4abf34ad176f7c3bf2eb57c7a2f2246ee",
+        "annotation_id": "5",
+        "image_sha256": "aca2e9c9f86830d9b20f48f4724fe40de4227f69340483eb878708d0497ca139",
+        "source_key": "front/000103",
+        "xyxy": [
+          545,
+          344,
+          553,
+          355
+        ]
+      },
+      {
+        "row_id": "e0368b5c117fc1fbafa91faac287f6f55c3c5ec41e6a12d7d0de1dcb49040ea0",
+        "annotation_id": "0",
+        "image_sha256": "6957887ab7f426e46a9d28d0401366f83ff5b7b16e150c277532d1bdd2697906",
+        "source_key": "front/000120",
+        "xyxy": [
+          0,
+          496,
+          197,
+          720
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "48",
+    "first_frame": 104,
+    "last_frame": 121,
+    "canonical": "traffic_drum",
+    "evidence_image_sha256": "93dd47f869e3153fcad3c281c0d229ecd7874b034cb584e767c60b7fff85c09b",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified.",
+    "review_interval_index": 141,
+    "evidence": [
+      {
+        "row_id": "dcdb93ccaec9d581633665623ff8454c91a8ba8900d34b6598a48a71898d341d",
+        "annotation_id": "1",
+        "image_sha256": "93dd47f869e3153fcad3c281c0d229ecd7874b034cb584e767c60b7fff85c09b",
+        "source_key": "left/000121",
+        "xyxy": [
+          128,
+          262,
+          202,
+          354
+        ]
+      },
+      {
+        "row_id": "c749b0d3eac9cd30bd6b50d4bac1d87b871ca11feb3525800c620d63ff91e776",
+        "annotation_id": "5",
+        "image_sha256": "973f47d5a5416495dcfe1508f4fed613758dd9b4d58d250384ca5063d0a3b318",
+        "source_key": "front/000104",
+        "xyxy": [
+          532,
+          344,
+          539,
+          356
+        ]
+      },
+      {
+        "row_id": "dcdb93ccaec9d581633665623ff8454c91a8ba8900d34b6598a48a71898d341d",
+        "annotation_id": "1",
+        "image_sha256": "93dd47f869e3153fcad3c281c0d229ecd7874b034cb584e767c60b7fff85c09b",
+        "source_key": "left/000121",
+        "xyxy": [
+          128,
+          262,
+          202,
+          354
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "57",
+    "first_frame": 265,
+    "last_frame": 303,
+    "canonical": "dog",
+    "evidence_image_sha256": "7a15efbfa837af251956bcbbdfaab8c56045c6f46cf05818b46567b32f88f4b3",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used. Later frame 376 contains a different scene at this actor location; no propagation beyond frame 303.",
+    "review_interval_index": 147,
+    "evidence": [
+      {
+        "row_id": "de24723832ceae49452b57868160918d722752b1e41e57bc9583ac77179f295f",
+        "annotation_id": "0",
+        "image_sha256": "7a15efbfa837af251956bcbbdfaab8c56045c6f46cf05818b46567b32f88f4b3",
+        "source_key": "front/000285",
+        "xyxy": [
+          385,
+          467,
+          502,
+          573
+        ]
+      },
+      {
+        "row_id": "a4d2f3b3f75eeef5422f63060ed511e39f532556bfd467a6c794567bdc475155",
+        "annotation_id": "1",
+        "image_sha256": "fdded50948a2707d9fd0b7df674bbd1ac5df4ef962a22cfb56f1637147091bf9",
+        "source_key": "front/000265",
+        "xyxy": [
+          880,
+          388,
+          900,
+          420
+        ]
+      },
+      {
+        "row_id": "a8af674752db3efe0faac2be39d7797987c38527cbcd8b3da180d9dd2fac6e3f",
+        "annotation_id": "0",
+        "image_sha256": "5fdbfa140c69cd3a81810d9c9c6cf9123850e8fc8491ba12be9233e71902b213",
+        "source_key": "right/000303",
+        "xyxy": [
+          539,
+          279,
+          640,
+          351
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "26",
+    "first_frame": 625,
+    "last_frame": 625,
+    "canonical": "truck",
+    "evidence_image_sha256": "e7d370dd900988e65c8ce15beefcb751b5486dc9e7695ba723378485caead5d3",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Box truck body/chassis visible in RGB; no vehicle model inference.",
+    "review_interval_index": 151,
+    "evidence": [
+      {
+        "row_id": "019406123cb696f3d8c321bb1135b234b4e3cc2b096fbc5346a3df2f659273f1",
+        "annotation_id": "0",
+        "image_sha256": "e7d370dd900988e65c8ce15beefcb751b5486dc9e7695ba723378485caead5d3",
+        "source_key": "front/000625",
+        "xyxy": [
+          73,
+          106,
+          580,
+          453
+        ]
+      },
+      {
+        "row_id": "019406123cb696f3d8c321bb1135b234b4e3cc2b096fbc5346a3df2f659273f1",
+        "annotation_id": "0",
+        "image_sha256": "e7d370dd900988e65c8ce15beefcb751b5486dc9e7695ba723378485caead5d3",
+        "source_key": "front/000625",
+        "xyxy": [
+          73,
+          106,
+          580,
+          453
+        ]
+      },
+      {
+        "row_id": "a1396d164a9074f8092b021a96f3b4eeb971e76ffd7d56a498baf5ff52cf20e9",
+        "annotation_id": "0",
+        "image_sha256": "90c9c715d2e88c9e9ad53c1c48c1eab430fae452e39ad656a92c401bb79c407b",
+        "source_key": "left/000625",
+        "xyxy": [
+          415,
+          102,
+          640,
+          258
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "41",
+    "first_frame": 625,
+    "last_frame": 627,
+    "canonical": "truck",
+    "evidence_image_sha256": "8cc759099d56a14d7f99cef2fc01f301ce73ce0940d7cfb38c43309ba0ad6984",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Box truck body/chassis visible in RGB; no vehicle model inference.",
+    "review_interval_index": 153,
+    "evidence": [
+      {
+        "row_id": "a6c71ca04c292bbb1fcd4f7392b696f3890b11403f686f28f12114f10f55e6d2",
+        "annotation_id": "0",
+        "image_sha256": "8cc759099d56a14d7f99cef2fc01f301ce73ce0940d7cfb38c43309ba0ad6984",
+        "source_key": "front/000626",
+        "xyxy": [
+          105,
+          161,
+          495,
+          422
+        ]
+      },
+      {
+        "row_id": "019406123cb696f3d8c321bb1135b234b4e3cc2b096fbc5346a3df2f659273f1",
+        "annotation_id": "1",
+        "image_sha256": "e7d370dd900988e65c8ce15beefcb751b5486dc9e7695ba723378485caead5d3",
+        "source_key": "front/000625",
+        "xyxy": [
+          274,
+          393,
+          324,
+          422
+        ]
+      },
+      {
+        "row_id": "d8bcee22ad48dadb7e49743b918379ef8f0dd6bde187cf17b2f961a94d2158b6",
+        "annotation_id": "0",
+        "image_sha256": "5c5bb2c07bb3e4834c401a9736c635765378f5fd56e6ed9b5f9295a47c862fed",
+        "source_key": "front/000627",
+        "xyxy": [
+          105,
+          161,
+          495,
+          422
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "50",
+    "first_frame": 411,
+    "last_frame": 463,
+    "canonical": "car",
+    "evidence_image_sha256": "88f8cd0b80b48c0c716f67ca0b9cf2b87069d1309c59a46671fbfe765febe0c9",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Passenger car/SUV visible; vehicle model name not inferred.",
+    "review_interval_index": 154,
+    "evidence": [
+      {
+        "row_id": "decc20c7aef82d60294d0c79628a608bf9513ceb67b7624d33aa24d138cb586d",
+        "annotation_id": "0",
+        "image_sha256": "88f8cd0b80b48c0c716f67ca0b9cf2b87069d1309c59a46671fbfe765febe0c9",
+        "source_key": "right/000463",
+        "xyxy": [
+          200,
+          223,
+          384,
+          326
+        ]
+      },
+      {
+        "row_id": "47a6fcc10746aecf9dcaa5054fd497486b0c02f6c7a8816f23f72ab74de82def",
+        "annotation_id": "1",
+        "image_sha256": "d5f26278dde2729eec66b66f2d9ef3ea1ae35eb5a203245f90dd871fd236f11a",
+        "source_key": "front/000425",
+        "xyxy": [
+          1127,
+          339,
+          1161,
+          351
+        ]
+      },
+      {
+        "row_id": "decc20c7aef82d60294d0c79628a608bf9513ceb67b7624d33aa24d138cb586d",
+        "annotation_id": "0",
+        "image_sha256": "88f8cd0b80b48c0c716f67ca0b9cf2b87069d1309c59a46671fbfe765febe0c9",
+        "source_key": "right/000463",
+        "xyxy": [
+          200,
+          223,
+          384,
+          326
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel",
+    "original_label": "Obstacle",
+    "actor_id": "2",
+    "first_frame": 0,
+    "last_frame": 35,
+    "canonical": "wooden_box",
+    "evidence_image_sha256": "ad29c539c3206805af96b1b0097e50f32819b0aaf01f79fb856fd3f0c4817ba1",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval.",
+    "review_interval_index": 155,
+    "evidence": [
+      {
+        "row_id": "ca3dc72e059c9f1a0ee83fc3ab1a25b9dd15eeff59ae7936c6651e9d5b78e167",
+        "annotation_id": "0",
+        "image_sha256": "ad29c539c3206805af96b1b0097e50f32819b0aaf01f79fb856fd3f0c4817ba1",
+        "source_key": "front/000034",
+        "xyxy": [
+          0,
+          382,
+          301,
+          720
+        ]
+      },
+      {
+        "row_id": "b5765ca7bec80cfb70a8a420bd3f1fff447df31aa0a47f3d434ef67d1422edcf",
+        "annotation_id": "0",
+        "image_sha256": "d60ee910f8199e8f79fb4163233c7effa0d62881abe6df283491250d1151854e",
+        "source_key": "front/000011",
+        "xyxy": [
+          503,
+          336,
+          513,
+          342
+        ]
+      },
+      {
+        "row_id": "ca3dc72e059c9f1a0ee83fc3ab1a25b9dd15eeff59ae7936c6651e9d5b78e167",
+        "annotation_id": "0",
+        "image_sha256": "ad29c539c3206805af96b1b0097e50f32819b0aaf01f79fb856fd3f0c4817ba1",
+        "source_key": "front/000034",
+        "xyxy": [
+          0,
+          382,
+          301,
+          720
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "20",
+    "first_frame": 0,
+    "last_frame": 67,
+    "canonical": "car",
+    "evidence_image_sha256": "fb34a910b65cb00269f026364035ce18d111a7844b01d55f37a6e6371b5d0d9f",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Passenger car/SUV visible; vehicle model name not inferred.",
+    "review_interval_index": 162,
+    "evidence": [
+      {
+        "row_id": "5adbedd50dfd9e5bfafcd6b1a228d812cdda6688db1011c9aae7e575cac20fa4",
+        "annotation_id": "0",
+        "image_sha256": "fb34a910b65cb00269f026364035ce18d111a7844b01d55f37a6e6371b5d0d9f",
+        "source_key": "front/000067",
+        "xyxy": [
+          417,
+          330,
+          517,
+          403
+        ]
+      },
+      {
+        "row_id": "1eba315b7bba77c3e6a6ac1336c1b0fb13bafa9c62cf91f0573c2a921006da04",
+        "annotation_id": "0",
+        "image_sha256": "1f12fd615a3658be67559120c1f2c69c797e1a01d68b1b4da09f963de663f7c2",
+        "source_key": "front/000000",
+        "xyxy": [
+          554,
+          345,
+          578,
+          363
+        ]
+      },
+      {
+        "row_id": "5adbedd50dfd9e5bfafcd6b1a228d812cdda6688db1011c9aae7e575cac20fa4",
+        "annotation_id": "0",
+        "image_sha256": "fb34a910b65cb00269f026364035ce18d111a7844b01d55f37a6e6371b5d0d9f",
+        "source_key": "front/000067",
+        "xyxy": [
+          417,
+          330,
+          517,
+          403
+        ]
+      }
+    ]
+  },
+  {
+    "source": "capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel",
+    "original_label": "Vehicle",
+    "actor_id": "36",
+    "first_frame": 0,
+    "last_frame": 26,
+    "canonical": "car",
+    "evidence_image_sha256": "39bdbaf7a62ae44483567eaa621c6799a8a2f2e944b942ae30d6de212801b2f7",
+    "reviewer": "Codex independent Capture RGB inspection",
+    "teacher_derived": false,
+    "human_confirmed": false,
+    "notes": "Passenger car/SUV visible; vehicle model name not inferred.",
+    "review_interval_index": 165,
+    "evidence": [
+      {
+        "row_id": "558b2fc100a9dc1f9de60fb9b51c60e1b6db23d2e3d4f6bb687a32b17c53663b",
+        "annotation_id": "0",
+        "image_sha256": "39bdbaf7a62ae44483567eaa621c6799a8a2f2e944b942ae30d6de212801b2f7",
+        "source_key": "front/000004",
+        "xyxy": [
+          0,
+          302,
+          426,
+          603
+        ]
+      },
+      {
+        "row_id": "558b2fc100a9dc1f9de60fb9b51c60e1b6db23d2e3d4f6bb687a32b17c53663b",
+        "annotation_id": "0",
+        "image_sha256": "39bdbaf7a62ae44483567eaa621c6799a8a2f2e944b942ae30d6de212801b2f7",
+        "source_key": "front/000004",
+        "xyxy": [
+          0,
+          302,
+          426,
+          603
+        ]
+      },
+      {
+        "row_id": "7a08e887da288828e22aaa65fe6aef783683ea16ff979378fda2fffa0be938d0",
+        "annotation_id": "0",
+        "image_sha256": "7131b9f52c22a27af273f90cbd10dce9a242f1cc1f6f0f6d3d39aeddc8e8fc5b",
+        "source_key": "front/000022",
+        "xyxy": [
+          905,
+          308,
+          1280,
+          607
+        ]
+      }
+    ]
+  }
+]

@@ -37,7 +37,8 @@ class LaunchModesTest(unittest.TestCase):
     def test_yolo_debug_can_run_without_lane_traffic_lidar_or_gps(self):
         config=self.config('profile:=debug','start_camera_lane:=false','start_traffic_light:=false')
         self.assertEqual({'camera_object_detector','camera_object_visualizer',
-                          'camera_object_visualizer_left','camera_object_visualizer_right'},
+                          'camera_object_visualizer_left','camera_object_visualizer_right',
+                          'camera_object_mosaic'},
                          {n.name for n in config.nodes})
 
     def test_model_exclusion_and_initial_mode_override_are_independent(self):

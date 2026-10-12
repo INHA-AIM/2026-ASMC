@@ -1,0 +1,66 @@
+{
+  "initial_training_code_commit": "4ab7cc9b",
+  "main_base": "835d56e3d62d132ba7928ed3578e7d142bebb3c3",
+  "sampling_commit": "e5c9d814",
+  "notes": [
+    "current train started from committed fresh-start implementation; subsequent training edits only affect resume/pause handling",
+    "native results.csv precision/recall/mAP zeros are placeholders: native validation intentionally disabled; use external evaluation.json",
+    "200-batch smoke is a partial epoch, not a completed training epoch; historical yolo26l-b4-r3 completed_epochs=1 is an untrusted native-loop label",
+    "smoke checkpoints are never resumed or used in the main comparison"
+  ],
+  "official_amp_check": {
+    "path": "data/models/camera_bbox_pilot_v1/amp-check/yolo26n.pt",
+    "sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+  },
+  "training_source_provenance": {
+    "yolo26l_started_commit": "4ab7cc9bcf034c9fdffa4e9e6039f15405f0c71f",
+    "yolo26l_loaded_trainer_sha256": "5693ea87be36379f988aa069a011f0468c69adac07d510c275274d4e6b43604e",
+    "later_edits": "validation, resume, reporting and evaluator fixes; original fresh-run training settings unchanged",
+    "yoloe26l": "source SHA recorded at actual process start",
+    "yoloe26l_loaded_trainer_sha256": "13e3019ea10d6291a4626856ead6e1a0551245c66523a3ede6dd28d8cb1d57bb"
+  },
+  "container_image_id": "sha256:847c0870a0df69205362c82e9ecd18e1ca7005224284f9730a810a6e39b8c5b3",
+  "pip_freeze_sha256": "b8749c91ea57903496362766f2c5b276b83d8eb732e1fdaf8344a37d7954c216",
+  "completed_training": {
+    "yolo26l": {
+      "completed_epochs": 17,
+      "completed_batches": 34000,
+      "wall_seconds": 9394.27515673096,
+      "sample_order_sha256": "2c9d2088ab523205e3c7a3f159451fa08e7f03109bf03b67642aa735ff301a75",
+      "actual_head": "Detect",
+      "parameters": 26201016,
+      "trainable_parameters": 26201016,
+      "amp_enabled": true,
+      "actual_batch": 4
+    },
+    "optimizer_checkpoint_cpu_check": {
+      "epoch": 16,
+      "optimizer_present": true,
+      "ema_updates": 8500,
+      "optimizer_step_min": 8491,
+      "optimizer_step_max": 8491,
+      "amp_skipped_update_attempts": 9,
+      "scaler_scale": 1024,
+      "updates_meaning": "EMA/optimizer step attempts, not successful AdamW steps"
+    },
+    "quality_evaluation": "complete at verified equal 16 epochs; see results.json; both candidates fail existing-object regression gate",
+    "yoloe26l": {
+      "status": "budget_stopped",
+      "completed_epochs": 16,
+      "completed_batches": 33356,
+      "wall_seconds": 10802.635354015976,
+      "sample_order_sha256": "7f95353a2ddbab06de6f9c7a62a18cc8ab6aa62c94b405469418a36d808076aa",
+      "actual_head": "YOLOEDetect",
+      "parameters": 26201016,
+      "trainable_parameters": 26201016,
+      "amp_enabled": true,
+      "actual_batch": 4
+    }
+  },
+  "common_comparison_epochs": 16,
+  "original_requested_epochs": 17,
+  "original_budget_stop_preserved": true,
+  "sampler_proof_sha256": "f0f63f33ab21736af707201cf0d848783a558190af68b7d1c55fca43ae50b5fb",
+  "resume_proof_sha256": "d5541ea2a7de1ae520100dc8d6bf9a324aba458b000c6db758aa5e6748d10a49",
+  "total_main_training_seconds": 20196.910510746937
+}

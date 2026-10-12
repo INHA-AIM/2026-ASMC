@@ -28,6 +28,7 @@ def debug_masks_enabled(job):
 def debug_topics(job):
     if not job.get('debug'): return []
     topics=['/perception/camera/objects/debug/image/compressed',
+        '/perception/camera/objects/debug/mosaic/compressed',
         '/perception/camera/objects/debug/left/image/compressed',
         '/perception/camera/objects/debug/right/image/compressed',
         '/perception/camera/debug/mosaic/compressed',
@@ -58,10 +59,41 @@ def deadline_report(rows, begin, end, maximum_gap, minimum_hz):
                 passed=bool(kept) and gap<=maximum_gap and len(kept)/(end-begin)>=minimum_hz)
 
 
+def sensor_only_trial(output, seconds):
+    """Read the existing bridge without starting models, actors or control."""
+    import rospy
+    from sensor_msgs.msg import CompressedImage
+    from diagnostic_msgs.msg import DiagnosticArray
+    from analyze_yoloe_selection import input_pauses
+    inputs=defaultdict(list);diagnostics=[];subs=[]
+    topics=dict(front='/image_jpeg/compressed',left='/cam_left/image_jpeg/compressed',
+                right='/cam_right/image_jpeg/compressed',extra='/cam_extra/image_jpeg/compressed')
+    for view,topic in topics.items():
+        subs.append(rospy.Subscriber(topic,CompressedImage,lambda m,v=view:inputs[v].append(
+            dict(arrival=time.monotonic(),stamp_ns=m.header.stamp.to_nsec())),queue_size=100,buff_size=2**24))
+    subs.append(rospy.Subscriber('/diagnostics',DiagnosticArray,lambda m:diagnostics.append(dict(
+        arrival=time.monotonic(),values=[dict(name=s.name,**{v.key:v.value for v in s.values})
+            for s in m.status if s.name.startswith(('morai_sensor_bridge/','morai_udp_bridge/'))])),queue_size=20))
+    sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],['/morai_sensor_bridge','/morai_udp_bridge'],system_metrics=True)
+    sampler.start();begin=time.monotonic();end=begin+seconds
+    try:
+        while time.monotonic()<end and not rospy.is_shutdown():time.sleep(.1)
+    finally:
+        completed=time.monotonic()>=end
+        samples=sampler.close()
+        for s in subs:s.unregister()
+        report=dict(mode='sensor_bridge_only',start=begin,end=end,seconds=seconds,complete=completed,
+            timestamp_policy=dict(sensor_bridge=rospy.get_param('/morai_sensor_bridge/timestamp_mode','unknown')),
+            views={v:input_pauses(rows,begin,end) for v,rows in inputs.items()},resources=resource_report(samples),
+            interpretation='Diagnostic control only; does not waive any failed full-stack trial.')
+        for filename,data in [('report',report),('inputs',dict(inputs)),('diagnostics',diagnostics),('resources',samples)]:
+            (output/(filename+'.json')).write_text(json.dumps(data,indent=2)+'\n')
+
+
 def provenance(models, engine, revision):
     # Include dirty source digests: HEAD alone does not identify an experiment.
     files = sorted(set(ROOT.glob('tools/perception/*.py')) | set(ROOT.glob('src/asmc_camera/src/asmc_camera/**/*.py')) |
-                   set(ROOT.glob('src/asmc_camera/config/camera/*.yaml')) |
+                   set(ROOT.glob('src/asmc_camera/config/camera/**/*.yaml')) |
                    set(ROOT.glob('src/lidar+sensorfusion/src/Main/src/**/*.*')) |
                    set(ROOT.glob('src/lidar+sensorfusion/src/Main/scripts/*.py')) |
                    set(ROOT.glob('src/lidar+sensorfusion/src/Main/**/*.launch')) |
@@ -79,7 +111,8 @@ def provenance(models, engine, revision):
     return dict(head=revision,
                 source_sha256=hashes, engine_sha256=hashlib.sha256(engine.read_bytes()).hexdigest(),
                 built_binaries=binaries,
-                model_provenance={f.name:json.loads(f.read_text()) for f in models.glob(engine.stem+'*.json')},
+                model_provenance={str(f):json.loads(f.read_text()) for f in
+                    sorted(set(models.glob(engine.stem+'*.json')) | set(engine.parent.glob(engine.stem+'*.json')))},
                 renderer='MORAI left running with user sensor/render settings; preset not independently verified',
                 windows_background_cpu_ram='unavailable; global NVIDIA GPU includes simulator and desktop')
 
@@ -100,9 +133,14 @@ def main():
     p.add_argument('--models',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--revision',required=True,help='Full host checkout SHA; container does not mount worktree Git metadata')
+    p.add_argument('--sensor-only-seconds',type=float,help='Read existing sensors without launching models or preview')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
     jobs=json.loads(a.jobs.read_text());(a.output/'protocol.json').write_text(json.dumps(jobs,indent=2)+'\n')
     rospy.init_node('coco7_live_measurements',anonymous=True)
+    if a.sensor_only_seconds is not None:
+        if a.sensor_only_seconds<5:p.error('sensor-only measurement requires at least five seconds')
+        sensor_only_trial(a.output,a.sensor_only_seconds)
+        return
     master=rosgraph.Master('/coco7_trial')
     index=[]
     for j in jobs:
@@ -111,7 +149,7 @@ def main():
         report=dict(job=j, failures=[],requests=[], preparation={}, observation_window_completed=False,
                     interpretation='MORAI rendering active; wall input arrival anchors; no driving')
         arrivals={};inputs=defaultdict(list);outputs=defaultdict(list);statuses={};status_rows=[];diagnostics=[];controls=[];bbox=[];planning=defaultdict(list);debug_rows=defaultdict(list)
-        lock=threading.RLock();subs=[];processes=[];handles=[];sampler=None;begin=end=None
+        lock=threading.RLock();subs=[];processes=[];handles=[];sampler=None;begin=end=None;trace_parameters={}
         def save(): (out/'report.json').write_text(json.dumps(report,indent=2)+'\n')
         def receive_input(view,msg):
             now=time.monotonic(); stamp=msg.header.stamp.to_nsec()
@@ -156,7 +194,7 @@ def main():
             if not reply.accepted:raise RuntimeError('mode request rejected '+model)
             return row
         try:
-            sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],list(NODES.values())+['/camera_bev','/camera_bev_fusion','/camera_lane_vectorizer','/Main','/asmc_planner','/mpc_controller'],system_metrics=True)
+            sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],list(NODES.values())+['/camera_bev','/camera_bev_fusion','/camera_lane_vectorizer','/Main','/asmc_planner','/mpc_controller','/morai_sensor_bridge','/morai_udp_bridge'],system_metrics=True)
             sampler.start()
             graph=master.getSystemState()
             if any(topic in ('/ctrl_cmd','/ctrl_cmd_0') and names for topic,names in graph[0]):
@@ -164,7 +202,19 @@ def main():
             running={n for section in graph for _,names in section for n in names}
             if running & set(NODES.values()):raise RuntimeError('existing model launch; refusing duplicate inference')
             if rospy.get_param('/use_sim_time',False):raise RuntimeError('live trial requires wall ROS time')
-            model=j['model']; engine=a.models/(model+'.engine')
+            report['trace_enabled']=bool(j.get('diagnostic_trace',False))
+            if report['trace_enabled']:
+                for owner,node in NODES.items():
+                    param=node+'/lifecycle_trace_path'
+                    trace_parameters[param]=rospy.get_param(param,None)
+                    rospy.set_param(param,str(out/(owner+'.lifecycle.jsonl')))
+            report['timestamp_policy']=dict(
+                sensor_bridge=rospy.get_param('/morai_sensor_bridge/timestamp_mode','unknown'),
+                udp_bridge=rospy.get_param('/morai_udp_bridge/timestamp_mode','unknown'),
+                interpretation='Receive stamps are bridge timestamps, not simulator acquisition timestamps. Input/output wall anchors use monotonic time.')
+            model=j['model']
+            custom=yaml.safe_load(Path(j['runtime_config']).read_text()) if j.get('runtime_config') else None
+            engine=Path(custom['weights']) if custom else a.models/(model+'.engine')
             if not engine.is_file():raise RuntimeError('missing engine '+str(engine))
             report['provenance']=provenance(a.models,engine,a.revision)
             config=dict(weights=str(engine),expected_sha256=hashlib.sha256(engine.read_bytes()).hexdigest(),
@@ -173,6 +223,10 @@ def main():
                 allowed_names=['person','dog','bicycle','car','motorcycle','bus','truck'],
                 conf_thres=j.get('confidence',.7),device='cuda:0',require_cuda=True,views=['front','left','right'],
                 target_hz_by_view=RATES[j['rates']])
+            if custom:
+                if custom.get('label_mode')!='source' or custom.get('front_width')!=j['width'] or custom.get('model_id')!=j['model']:
+                    raise ValueError('custom experiment must preserve raw labels and selected width')
+                config=dict(custom,conf_thres=j.get('confidence',.4),target_hz_by_view=RATES[j['rates']],batch_mode=j['batch'])
             (out/'runtime.yaml').write_text(yaml.safe_dump(config));report['runtime']=config
             topics=dict(front='/image_jpeg/compressed',left='/cam_left/image_jpeg/compressed',right='/cam_right/image_jpeg/compressed',extra='/cam_extra/image_jpeg/compressed')
             for view,topic in topics.items():subs.append(rospy.Subscriber(topic,CompressedImage,lambda m,v=view:receive_input(v,m),queue_size=100,buff_size=2**24))
@@ -183,6 +237,9 @@ def main():
             subs.append(rospy.Subscriber('/perception/lane/boundary_family',LaneBoundaryFamily,lambda m:receive_output('family',m),queue_size=100))
             for model,node in NODES.items():subs.append(rospy.Subscriber(node+'/inference_status',InferenceStatus,lambda m,n=model:receive_status(n,m),queue_size=100))
             subs.append(rospy.Subscriber('/perception/camera/objects/diagnostics',DiagnosticArray,lambda m:diagnostics.append(dict(arrival=time.monotonic(),values=[{v.key:v.value for v in s.values} for s in m.status])),queue_size=100))
+            subs.append(rospy.Subscriber('/diagnostics',DiagnosticArray,lambda m:diagnostics.append(dict(
+                arrival=time.monotonic(),kind='bridge',values=[dict(name=s.name,**{v.key:v.value for v in s.values})
+                    for s in m.status if s.name.startswith(('morai_sensor_bridge/','morai_udp_bridge/'))])),queue_size=20))
             if j.get('debug'):
                 # Consume debug outputs without GUI/recording. Subscriber-aware
                 # publishers must really encode images for the ON cost trial.
@@ -291,6 +348,10 @@ def main():
                 if not samples or max(r['memory_used_mib']/r['memory_total_mib'] for r in samples)>.9:
                     report['failures'].append('GPU memory unavailable or above 90%');report['passed']=False
             for child in reversed(processes):stop(child)
+            for param,previous in trace_parameters.items():
+                if previous is None:
+                    if rospy.has_param(param):rospy.delete_param(param)
+                else:rospy.set_param(param,previous)
             for handle in handles:handle.close()
             for sub in subs:sub.unregister()
             for filename,rows in [('inputs',dict(inputs)),('outputs',dict(outputs)),('status',status_rows),('diagnostics',diagnostics),('controls',controls),('bbox',bbox),('planning',dict(planning)),('debug',dict(debug_rows))]:

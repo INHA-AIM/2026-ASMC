@@ -1,0 +1,92 @@
+{
+  "experiment_id": "camera_yoloe_prompt_probe_v1",
+  "scope": "Same checkpoint PyTorch lexical probe on visible failed assets. No engine or operating default change until a useful replacement is demonstrated.",
+  "models": [
+    "yoloe-26l-seg"
+  ],
+  "front_width": 1280,
+  "confidence": 0.4,
+  "prompt_profiles": {
+    "obstacle17": [
+      "person",
+      "dog",
+      "deer",
+      "bicycle",
+      "car",
+      "truck",
+      "bus",
+      "motorcycle",
+      "scooter",
+      "electric scooter",
+      "bollard",
+      "cargo box",
+      "wooden box",
+      "steel barricade",
+      "traffic cone",
+      "traffic barrel",
+      "baby stroller"
+    ],
+    "crate17": [
+      "person",
+      "dog",
+      "deer",
+      "bicycle",
+      "car",
+      "truck",
+      "bus",
+      "motorcycle",
+      "scooter",
+      "electric scooter",
+      "bollard",
+      "cargo box",
+      "wooden crate",
+      "steel barricade",
+      "traffic cone",
+      "traffic barrel",
+      "baby stroller"
+    ],
+    "focused17": [
+      "person",
+      "dog",
+      "deer",
+      "bicycle",
+      "car",
+      "truck",
+      "bus",
+      "motorcycle",
+      "scooter",
+      "electric scooter",
+      "traffic bollard",
+      "cargo box",
+      "wooden crate",
+      "steel barricade",
+      "traffic cone",
+      "traffic barrel",
+      "stroller"
+    ],
+    "bollard17": [
+      "person",
+      "dog",
+      "deer",
+      "bicycle",
+      "car",
+      "truck",
+      "bus",
+      "motorcycle",
+      "scooter",
+      "electric scooter",
+      "traffic bollard",
+      "cargo box",
+      "wooden box",
+      "steel barricade",
+      "traffic cone",
+      "traffic barrel",
+      "baby stroller"
+    ]
+  },
+  "assets": [
+    "WoodBox",
+    "Bollard01",
+    "BabyStroller1"
+  ]
+}

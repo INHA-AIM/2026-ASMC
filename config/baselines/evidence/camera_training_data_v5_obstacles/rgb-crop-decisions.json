@@ -1,0 +1,33 @@
+{
+  "samples_sha256": "a25183cb91854995bcaf5aba4b0c9cf8a65aee8f5452d20b3e429e0d709fe745",
+  "annotation_crops_sha256": "865dde4e50fe81cf965bbd22a61ddf050f5893c9483cc03667ad6b0400a84cd9",
+  "codes": {
+    "0": "P C C B ? ? ? D D D S D B S D B D P P D S B S D D D D D B B C C",
+    "1": "C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C",
+    "2": "C C C C D B S P D D D D D D D D S B C C C C C C C C C C C D D D",
+    "3": "D D D D B P ? S C D C C D B D D S B D D D C D S D B D D D B S D",
+    "4": "S B B C S C P P B S D S P P D ? D D D P D B S D D C C C D D D S",
+    "5": "B D B D D P C C C C C D P D C C D D B S S D D D B D S B C C B C",
+    "6": "C C ? ? ? D B S D D S B D D D B S D D D P D S B S D D B S D P D",
+    "7": "D D B S D C C ? D B S D D D B S C C C ? D B D P C B C P D B S C",
+    "8": "B S S P C P B P P P D B S D D S D D B S B S D D D D ? ? ? ? D S",
+    "9": "B S ? B D S D P P D D D C C D D D B D D D D D P P D S B B D S D",
+    "10": "B S D S B B C C C D D B S B D C C C C C D D D P D D B S D B D S",
+    "11": "S D D ? D C C C C C D B S C C C B S D D D B S C C C C C D D D S",
+    "12": "B D D D B S S C B S D C C C C P D S D P P D D D B S D B D S D D",
+    "13": "D C C C C C B S D D C C C D D D C P D D B B D D D S B B D D D C",
+    "14": "C D S P S D B P D D C C C C D D B S D D P C D P D S B D D D S D",
+    "15": "B D B S D P D P D S B D D B B S B D P D D D P B S D B D S D P P",
+    "16": "D D D D"
+  },
+  "legend": {
+    "B": "wooden_box",
+    "C": "concrete_barrier",
+    "S": "steel_barricade",
+    "D": "traffic_drum",
+    "P": "plastic_barrier",
+    "unresolved": "?"
+  },
+  "basis": "Independent RGB crop inspection, not teacher prediction or human confirmation",
+  "images_complete": false
+}

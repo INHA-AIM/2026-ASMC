@@ -1,0 +1,125 @@
+schema_version: 1
+experiment: camera_training_data_v4_mixed
+date: '2026-10-11'
+scope: Individual RGB relabeling of mixed boxes; unchanged geometry and frozen splits
+configuration: config/experiments/camera_training_data_v4_mixed.json
+verification: config/baselines/evidence/camera_training_data_v4_mixed/verification.json
+previous:
+  images: 4523
+  objects: 67646
+  train_images: 3743
+  train_objects:
+    box: 0
+    plastic_barrier: 0
+    steel_barricade: 36
+    concrete_barrier: 134
+current:
+  images: 4679
+  objects: 68678
+  splits:
+    train: 3899
+    selection: 113
+    heldout: 667
+  objects_by_class:
+    person: 610
+    car: 262
+    traffic_cone: 97
+    traffic_drum: 15536
+    steel_barricade: 286
+    bollard: 49557
+    box: 308
+    concrete_barrier: 461
+    plastic_barrier: 433
+    bus: 646
+    truck: 82
+    motorcycle: 400
+  objects_by_split:
+    train:
+      person: 498
+      car: 260
+      traffic_cone: 97
+      traffic_drum: 15116
+      steel_barricade: 85
+      bollard: 49158
+      box: 99
+      concrete_barrier: 211
+      plastic_barrier: 317
+      bus: 646
+      truck: 81
+    selection:
+      person: 112
+      truck: 1
+      box: 6
+    heldout:
+      concrete_barrier: 250
+      box: 203
+      traffic_drum: 420
+      plastic_barrier: 116
+      motorcycle: 400
+      steel_barricade: 201
+      bollard: 399
+      car: 2
+  semantic_subtypes:
+    person: 610
+    car: 262
+    traffic_cone: 97
+    pe_drum: 15536
+    steel_barricade: 286
+    bollard: 49557
+    wooden_box: 192
+    concrete_barricade: 461
+    cargo_box: 116
+    pe_firewall: 433
+    bus: 646
+    truck: 82
+    motorcycle: 400
+review_images: 207
+individual_decisions:
+  accept: 156
+  pending: 51
+source_review_images:
+  park: 112
+  jjj: 32
+  tooth-yellow: 63
+source_admitted_images:
+  park: 82
+  jjj: 24
+  tooth-yellow: 50
+admitted_override_counts:
+  pe_firewall: 317
+  truck: 78
+  wooden_box: 86
+  concrete_barricade: 50
+  steel_barricade: 49
+  pe_drum: 40
+accepted_unresolved_labels: 0
+accepted_structure_failures: 0
+exact_pixel_leaks: 0
+existing_split_changes: 0
+previous_accepted_lost: 0
+original_geometry_changes: 0
+local_dataset: data/dataset_versions/camera_objects_bbox_v4-mixed-r3
+local_artifacts: artifacts/camera-training-data-audit-v4-mixed-review
+gallery: http://localhost:8768/camera-training-data-audit-v4-mixed-review/mixed-review.html
+missing_classes:
+- dog
+- deer
+- bicycle
+- stroller
+comparison_training_ready: false
+remaining:
+- 'JJJ 9: 32/345 images reviewed; 313 generated frames not reviewed.'
+- '51 reviewed images pending: merged/missing geometry, uncertain solid striped panel
+  or tiny subtype.'
+- Park bus is dump/cargo truck; corrected only within reviewed per-image records,
+  no global bus alias.
+- Selection coverage and class balance incomplete; Enzo heldout not moved to train.
+- Tooth PE remains mixed; source bucket is not globally approved.
+superseded_local_runs:
+- run: v4-mixed
+  reason: Initial labels superseded by r3; not for training.
+- run: v4-mixed-r2
+  reason: Dark Park bus labels resolved as dump trucks in r3; not for training.
+teacher_approved: false
+training_performed: false
+runtime_changes: false

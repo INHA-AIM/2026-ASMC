@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "source_profiles_file": "camera_object_source_labels_v1.json",
+  "bbox_policy": "visible_extent_xyxy_exclusive",
+  "groups": {
+    "person": ["person"],
+    "animal": ["dog", "deer"],
+    "vehicle": ["bicycle", "car", "motorcycle", "bus", "truck", "electric_scooter"],
+    "obstacle": ["bollard", "cargo_box", "wooden_box", "steel_barricade", "traffic_cone", "traffic_barrel", "stroller"]
+  },
+  "aliases": {
+    "person": "person", "pedestrian": "person", "man": "person", "woman": "person", "child": "person",
+    "dog": "dog", "deer": "deer", "bicycle": "bicycle", "car": "car", "sedan": "car", "suv": "car", "mpv": "car", "wagon": "car",
+    "motorcycle": "motorcycle", "bus": "bus", "truck": "truck", "electric scooter": "electric_scooter",
+    "bollard": "bollard", "traffic bollard": "bollard", "cargo box": "cargo_box", "cargobox": "cargo_box",
+    "wooden box": "wooden_box", "wood box": "wooden_box", "woodbox": "wooden_box", "wooden crate": "wooden_box",
+    "steel barricade": "steel_barricade", "traffic cone": "traffic_cone", "cone": "traffic_cone",
+    "traffic barrel": "traffic_barrel", "baby stroller": "stroller", "stroller": "stroller"
+  },
+  "excluded": ["traffic light", "traffic sign", "road sign", "speed limit sign", "stop sign", "lane", "lane separator", "guardrail", "fence", "building", "streetlight", "utility pole", "speed bump", "manhole cover", "fire", "tree"],
+  "ambiguous": ["obstacle", "vehicle", "animal", "box", "barrel", "drum", "scooter", "bike", "bicycle man", "barricade", "road obstacle", "concrete barrier", "plastic road barrier"],
+  "review": {"seed": 20261009, "samples_per_source_class": 50},
+  "split": {"seed": 20261009, "ratios": [0.8, 0.1, 0.1], "roles": ["train", "selection", "heldout"]}
+}

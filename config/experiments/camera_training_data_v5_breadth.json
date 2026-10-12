@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "experiment_id": "camera_training_data_v5_breadth",
+  "date": "2026-10-11",
+  "admission_policy": "user_authorized_breadth_training_v1",
+  "label_policy": "config/datasets/camera_object_labels_v2.json",
+  "previous_curated": "roboflow/curated-v4-coverage-r1/curated.jsonl",
+  "reviews": "roboflow/visual-review-v4-coverage-r1/reviews.json",
+  "curated": "roboflow/curated-v5-breadth-r1",
+  "output": "dataset_versions/camera_objects_bbox_v5-breadth-r1",
+  "train_expansion_only": true,
+  "vehicle_subclass_noise_accepted": true,
+  "complete_target_annotation_asserted": false,
+  "failed_source_sample_blocks_whole_source": false,
+  "unresolved_mixed_boxes": "defer image unless independently inspected class-only overrides resolve all boxes",
+  "excluded_annotations": "omit; do not assume excluded-only or unannotated images are negatives",
+  "individual_label_review": {
+    "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh": ["pe"]
+  },
+  "preserve": ["original sources", "strict v4", "fixed class IDs", "evaluation membership and labels", "box geometry", "existing split assignments"],
+  "teacher_truth_allowed": false,
+  "training_performed": false,
+  "runtime_changes": false
+}

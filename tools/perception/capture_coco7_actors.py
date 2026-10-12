@@ -33,9 +33,11 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--catalogue', type=Path, default=ROOT/'config/morai/object_spawn_catalog_v1.yaml')
+    p.add_argument('--extra-representatives', type=Path, help='Frozen experiment asset list; base catalogue preserved')
     p.add_argument('--inventory-only', action='store_true')
     p.add_argument('--limit', type=int, default=0)
     p.add_argument('--asset', nargs='+', help='Exact available catalogue API names')
+    p.add_argument('--side-only', action='store_true', help='Only left/right 7m controlled placements')
     p.add_argument('--placements', action='store_true', help='Front 20/12/6m and left/right 7m')
     p.add_argument('--front-distances', type=float, nargs='+',
                    help='Explicit positive forward spawn-anchor distances in metres; replaces placements')
@@ -44,6 +46,7 @@ def main():
     p.add_argument('--frames-per-view', type=int, default=2)
     p.add_argument('--grpc-host', default='host.docker.internal')
     a = p.parse_args()
+    if a.side_only and (a.placements or a.front_distances):p.error('side-only cannot combine with front placements')
     if a.front_distances and (a.placements or any(not math.isfinite(d) or d <= 0 for d in a.front_distances)
                               or len(set(a.front_distances)) != len(a.front_distances)):
         p.error('front distances must be finite, positive, unique and used without --placements')
@@ -55,10 +58,12 @@ def main():
     available = simulator.GetAvailableObject(CategoryObstacles(vehicle=True,pedestrian=True,obstacle=True),timeout=10)
     policy = yaml.safe_load(a.catalogue.read_text())
     rows = policy['vehicles']+policy['coco7_representatives']
+    if a.extra_representatives:
+        rows += yaml.safe_load(a.extra_representatives.read_text())['representatives']
     pools = dict(vehicle=set(available.surround_vehicle),pedestrian=set(available.pedestrian),obstacle=set(available.obstacle))
     report = dict(available=MessageToDict(available),catalogue_sha256=hashlib.sha256(a.catalogue.read_bytes()).hexdigest(),
         catalogue_validation=[dict(r,available=r['api_name'] in pools[r['actor_type']]) for r in rows],
-        cases=[],cleanup=[],pixel_ground_truth=False)
+        cases=[],cleanup=[],pixel_ground_truth=False,extra_representatives_sha256=hashlib.sha256(a.extra_representatives.read_bytes()).hexdigest() if a.extra_representatives else None)
     def save(): (a.output/'capture.json').write_text(json.dumps(report,indent=2)+'\n')
     save()
     if a.inventory_only: return
@@ -89,6 +94,7 @@ def main():
         if a.limit: valid=valid[:a.limit]
         placements=[('front20',20.,0.)] if not a.placements else [
             ('front20',20.,0.),('front12',12.,0.),('front6',6.,0.),('left7',0.,7.),('right7',0.,-7.)]
+        if a.side_only:placements=[('left7',0.,7.),('right7',0.,-7.)]
         if a.front_distances:
             placements=[(f'front{distance:g}',distance,0.) for distance in a.front_distances]
         report['capture_arguments']=dict(front_distances=a.front_distances, views=a.capture_views,
@@ -123,8 +129,10 @@ def main():
                 # Pedestrian Spawn snaps to the ground. In this MORAI build its
                 # SetTransform z is ground-relative, unlike vehicle/obstacle.
                 # Preserve that native placement rather than adding world z.
-                if row['actor_type']=='pedestrian':
+                native_ground=(row['actor_type']=='pedestrian' or row.get('height_policy')=='native_spawn_ground_snap')
+                if native_ground:
                     case['height_policy']='native pedestrian spawn ground snap; no SetTransform'
+                    if row['actor_type']!='pedestrian':case['height_policy']='explicit native obstacle ground snap; bbox height unreliable; visual review required'
                 else:
                     result=actors.SetTransform(SetTransformParam(actor_info=info,transform=pose),timeout=10)
                     if result.status!=1: raise RuntimeError(str(result))
@@ -136,7 +144,10 @@ def main():
                 case['bbox_center_distance_from_ego_anchor_m']=math.sqrt(sum(
                     (getattr(settled.bounding_box.location,k)-getattr(initial.transform.location,k))**2 for k in 'xyz'))
                 case['ground_bottom_error_m']=(settled.bounding_box.location.z-settled.bounding_box.extent.z)-ground
-                if abs(case['ground_bottom_error_m'])>.2:
+                case['placement_height_error_m']=(settled.transform.location.z-ground if
+                    row.get('height_policy')=='native_spawn_ground_snap' else case['ground_bottom_error_m'])
+                case['placement_height_gate_basis']='native_ground_anchor' if row.get('height_policy')=='native_spawn_ground_snap' else 'bbox_bottom'
+                if abs(case['placement_height_error_m'])>.2:
                     raise RuntimeError('asset placement height not validated')
                 if row['actor_type']=='vehicle':
                     case['vehicle_spec']=MessageToDict(actors.GetVehicleSpec(info,timeout=10))

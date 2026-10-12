@@ -1,0 +1,182 @@
+schema_version: 1
+experiment: camera_training_data_v4_coverage
+date: '2026-10-11'
+scope: Independent RGB relabel of mixed dog/deer and bike; coverage reinforcement
+  with frozen geometry/splits
+configuration: config/experiments/camera_training_data_v4_coverage.json
+verification: config/baselines/evidence/camera_training_data_v4_coverage/verification.json
+acquisition:
+  projects: 22
+  exported_roboflow_images: 46326
+  includes_augmentations_and_cross_project_duplicates: true
+  public_version_projects: 17
+  snapshot_projects: 5
+previous:
+  images: 4910
+  objects: 72576
+  splits:
+    train: 4130
+    selection: 113
+    heldout: 667
+current:
+  images: 5013
+  roboflow_images: 5008
+  capture_images: 5
+  objects: 73030
+  splits:
+    train: 4233
+    selection: 113
+    heldout: 667
+  objects_by_class:
+    person: 888
+    car: 739
+    traffic_cone: 97
+    dog: 30
+    deer: 24
+    traffic_drum: 16670
+    bollard: 50250
+    concrete_barrier: 1421
+    bus: 798
+    steel_barricade: 420
+    plastic_barrier: 517
+    box: 476
+    truck: 111
+    motorcycle: 589
+  objects_by_split:
+    train:
+      person: 776
+      car: 737
+      traffic_cone: 97
+      dog: 30
+      deer: 24
+      traffic_drum: 16250
+      bollard: 49851
+      concrete_barrier: 1171
+      bus: 798
+      steel_barricade: 219
+      plastic_barrier: 401
+      box: 267
+      truck: 110
+      motorcycle: 189
+    selection:
+      person: 112
+      truck: 1
+      box: 6
+    heldout:
+      concrete_barrier: 250
+      box: 203
+      traffic_drum: 420
+      plastic_barrier: 116
+      motorcycle: 400
+      steel_barricade: 201
+      bollard: 399
+      car: 2
+reviewed_images: 189
+new_admitted_images: 103
+new_admitted_objects: 454
+new_classes:
+  dog: 30
+  deer: 24
+  motorcycle: 189
+  bus: 7
+  truck: 29
+  car: 22
+  person: 137
+  traffic_drum: 14
+  box: 2
+new_sources:
+  roboflow:dh-mzmhr/animal-tohen: 41
+  roboflow:yolo-m5lvd/detection-bzetd: 61
+  roboflow:hl-fma/hlfma_3: 1
+visually_accepted_but_split_blocked: 2
+reviewed_not_exported: 86
+accepted_unresolved_labels: 0
+accepted_structure_failures: 0
+exact_pixel_leaks: 0
+existing_split_changes: 0
+previous_accepted_lost: 0
+original_geometry_changes: 0
+local_dataset: data/dataset_versions/camera_objects_bbox_v4-coverage-r1
+local_artifacts: artifacts/camera-training-data-audit-v4-coverage-review
+gallery: http://localhost:8768/camera-training-data-audit-v4-coverage-review/coverage-review.html
+missing_classes:
+- bicycle
+- stroller
+readiness:
+  structurally_usable_subset: true
+  target_split_coverage: false
+  comparison_training_ready: false
+  missing_class_splits:
+    person:
+    - heldout
+    dog:
+    - selection
+    - heldout
+    deer:
+    - selection
+    - heldout
+    bicycle:
+    - train
+    - selection
+    - heldout
+    car:
+    - selection
+    motorcycle:
+    - selection
+    bus:
+    - selection
+    - heldout
+    truck:
+    - heldout
+    bollard:
+    - selection
+    concrete_barrier:
+    - selection
+    steel_barricade:
+    - selection
+    traffic_drum:
+    - selection
+    plastic_barrier:
+    - selection
+    traffic_cone:
+    - selection
+    - heldout
+    stroller:
+    - train
+    - selection
+    - heldout
+  source_pixel_size_bins:
+    at_least24x12: 21054
+    16x8_to24x12: 10527
+    below16x8: 41449
+  approved_sample_buckets:
+  - roboflow:enzo-mdikr/my-first-project-eeree|wood box
+  - roboflow:enzo-mdikr/my-first-project-eeree|bollard
+  - roboflow:enzo-mdikr/my-first-project-eeree|motorcycle
+  - roboflow:enzo-mdikr/my-first-project-eeree|pe drum
+  - roboflow:enzo-mdikr/my-first-project-eeree|steel barrigate
+  - roboflow:selfcar/morai_test-t3i2r|0
+  - roboflow:selfcar/morai_test-t3i2r|1
+  - roboflow:selfcar/morai_test-t3i2r|2
+  - roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh|Fence
+  - roboflow:aiv5challenge/yeonsoo-sarang|person
+  - roboflow:hl-fma/hlfma_3|bus
+  - roboflow:s-workspace-p9mvp/morai_obstacle|person
+  - roboflow:enzo-mdikr/my-first-project-eeree|lane bar
+  - roboflow:enzo-mdikr/my-first-project-eeree|speed
+  progress_sha256: ea3e1395efef0945625cde027c17e1391e9e63138f105c34c2340dce3a64e5e5
+  teacher_approved: false
+remaining:
+- Dog/deer and motorcycle training now populated; independent selection coverage remains
+  missing.
+- Bicycle-man sample 50/93 has combined rider boxes and unlabeled co-occurring targets;
+  retain pending component work.
+- Enzo dog sample 24/100 has mixed deer labels and unannotated foreground steel barricade;
+  remaining 76 images not inspected in this round.
+- No admitted stroller example; two hl-fma others images are wooden crates, not strollers.
+- Bollard/drum dominance requires a class-balanced training sampler in the next training
+  stage.
+teacher_approved: false
+training_performed: false
+runtime_changes: false
+comparison_training_ready: false

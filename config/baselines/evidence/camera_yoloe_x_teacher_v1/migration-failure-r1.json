@@ -1,0 +1,8 @@
+{
+  "reason": "Legacy v1 exclusion overrides unintentionally suppressed source-labeled concrete barriers in first scope migration.",
+  "removed_legacy_exclusion_overrides": 98,
+  "first_dataset_valid_for_training": false,
+  "first_manifest_sha256": "3423416aa1057675a66997627eae4297708dd6f5cf433b907a0f0bfecf87f009",
+  "corrected_reviews_sha256": "45fdb0da292543cd70dbe83f3650d296d3b381636a1c5e9fd9d1ca0f3394474e",
+  "failed_execution_preserved": true
+}

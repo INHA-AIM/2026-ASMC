@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "intervals_sha256": "b807deaeb9d2986e05b3fac36885009283fc9bebfd942838851e7776a49afdac",
+  "reviewer": "Codex independent Capture RGB inspection",
+  "human_confirmed": false,
+  "teacher_truth_used": false,
+  "decisions": [
+    {
+      "index": 0,
+      "canonical": "wooden_box",
+      "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval."
+    },
+    {
+      "index": 3,
+      "canonical": "bus",
+      "notes": "Bus body/windows visible in independent RGB."
+    },
+    {
+      "index": 6,
+      "canonical": "bus",
+      "notes": "Bus body/windows visible in independent RGB."
+    },
+    {
+      "index": 10,
+      "canonical": "car",
+      "notes": "Passenger car/SUV visible; vehicle model name not inferred."
+    },
+    {
+      "index": 12,
+      "canonical": "wooden_box",
+      "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval."
+    },
+    {
+      "index": 16,
+      "canonical": "wooden_box",
+      "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval."
+    },
+    {
+      "index": 19,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 21,
+      "canonical": "bus",
+      "notes": "Bus body/windows visible in independent RGB."
+    },
+    {
+      "index": 22,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 24,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 27,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 31,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 32,
+      "canonical": "wooden_box",
+      "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval."
+    },
+    {
+      "index": 33,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 34,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 35,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 36,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 37,
+      "canonical": "concrete_barrier",
+      "notes": "Solid concrete barrier and footing visible."
+    },
+    {
+      "index": 42,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 45,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 50,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 51,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 52,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 53,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 55,
+      "canonical": "car",
+      "notes": "Passenger car/SUV visible; vehicle model name not inferred."
+    },
+    {
+      "index": 59,
+      "canonical": "bus",
+      "notes": "Bus body/windows visible in independent RGB."
+    },
+    {
+      "index": 61,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 64,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 65,
+      "canonical": "wooden_box",
+      "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval."
+    },
+    {
+      "index": 69,
+      "canonical": "dog",
+      "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used."
+    },
+    {
+      "index": 72,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 76,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 79,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 83,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 86,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 89,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 90,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 93,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 96,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 97,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 98,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 99,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 100,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 101,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 102,
+      "canonical": "wooden_box",
+      "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval."
+    },
+    {
+      "index": 103,
+      "canonical": "dog",
+      "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used."
+    },
+    {
+      "index": 104,
+      "canonical": "traffic_cone",
+      "notes": "Tapered traffic cone with square rubber foot visible."
+    },
+    {
+      "index": 109,
+      "canonical": "bicycle",
+      "notes": "Bicycle wheels/frame visible. Rider has a separate person GT where visible; the original Vehicle box/mask represents the bicycle, not a duplicated rider box."
+    },
+    {
+      "index": 112,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified. Early frame 74 shows bicycles in the cited box: do not propagate across this inconsistent boundary; only frames 84 onward reviewed as drum.",
+      "first_frame": 84,
+      "additional_evidence_keys": [
+        "left/000084"
+      ]
+    },
+    {
+      "index": 116,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 119,
+      "canonical": "box",
+      "notes": "Closed rectangular box visible in fog; exact box asset subtype not asserted."
+    },
+    {
+      "index": 120,
+      "canonical": "dog",
+      "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used. Frame 254 is unclear; retained interval begins at visible dog frame 255.",
+      "first_frame": 255,
+      "additional_evidence_keys": [
+        "front/000255"
+      ]
+    },
+    {
+      "index": 121,
+      "canonical": "dog",
+      "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used."
+    },
+    {
+      "index": 122,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 123,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 124,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 125,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 126,
+      "canonical": "concrete_barrier",
+      "notes": "Solid concrete barrier and footing visible."
+    },
+    {
+      "index": 127,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 130,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 134,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 137,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 141,
+      "canonical": "traffic_drum",
+      "notes": "Cylindrical traffic drum with circular lid/striped body visible; preserve color subtype only when verified."
+    },
+    {
+      "index": 147,
+      "canonical": "dog",
+      "notes": "Dog appearance visible in RGB; no dog/deer teacher grouping used. Later frame 376 contains a different scene at this actor location; no propagation beyond frame 303.",
+      "last_frame": 303
+    },
+    {
+      "index": 151,
+      "canonical": "truck",
+      "notes": "Box truck body/chassis visible in RGB; no vehicle model inference."
+    },
+    {
+      "index": 153,
+      "canonical": "truck",
+      "notes": "Box truck body/chassis visible in RGB; no vehicle model inference."
+    },
+    {
+      "index": 154,
+      "canonical": "car",
+      "notes": "Passenger car/SUV visible; vehicle model name not inferred."
+    },
+    {
+      "index": 155,
+      "canonical": "wooden_box",
+      "notes": "Rigid wooden box/crate visible; source RGB reviewed across the interval."
+    },
+    {
+      "index": 162,
+      "canonical": "car",
+      "notes": "Passenger car/SUV visible; vehicle model name not inferred."
+    },
+    {
+      "index": 165,
+      "canonical": "car",
+      "notes": "Passenger car/SUV visible; vehicle model name not inferred."
+    }
+  ],
+  "unresolved_notes": {
+    "111": "Tiny partial black fragment; subtype unresolved.",
+    "144": "Small ground-level attachment beside person; exact object subtype unresolved.",
+    "tiny_intervals": "95 intervals have no practical RGB subtype evidence; not labeled by proximity or across run/gap."
+  }
+}

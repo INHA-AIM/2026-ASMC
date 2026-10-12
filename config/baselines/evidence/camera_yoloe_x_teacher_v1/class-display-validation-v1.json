@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "frames": 317,
+  "display_policy": {
+    "schema_version": 1,
+    "purpose": "Gallery presentation only; does not change evaluation scope, training GT or operating predictions.",
+    "coordinate_space": "original_image_pixels",
+    "default_profile": "main16x8",
+    "class_profiles": {
+      "car": "coarse24x12",
+      "bus": "coarse24x12",
+      "truck": "coarse24x12"
+    },
+    "unresolved_types": "Use the default display profile; do not guess a fine-grained vehicle class.",
+    "scope_definitions": "Profiles are resolved from the supplied evaluation scope config. Both long and short edge thresholds must pass."
+  },
+  "display_policy_sha256": "03fc6719bb5f153f493fcfbd8482e62b5a12af18b59381878ad88abb31d4f56b",
+  "display_geometry_counts": {
+    "shown_gt": 283,
+    "hidden_gt": 455
+  },
+  "evaluation_geometry_counts": {
+    "all_gt": 738,
+    "main_gt": 204,
+    "ignored_gt": 534
+  },
+  "evaluation_manifest_byte_identical": true,
+  "evaluation_profiles_exact": true,
+  "source_gt_sha256": "526f1f8f908cb8043a9ef1fb143bdc419677552e1b2613d4192a72f979ec8997",
+  "tool_sha256": {
+    "report_capture_size_scope.py": "b118e8c1be7650b4eff3636c7718ae6fc0be3f768918cc960841e561aa6e30fd",
+    "capture_size_scope.py": "552ba8e37e3b2cff5c6ac8c435ad285080eadd8172d34899a75db9ccdc0e1c20",
+    "camera_teacher_audit.py": "4e34dab502ad621cfbe83c22590f27b0ac66f196fb6802010e3ba873d33de754"
+  },
+  "class_boundaries_checked": true,
+  "unknown_types_use_default": true,
+  "input_immutability_checked": true,
+  "javascript_syntax_checked": true,
+  "training_labels_modified": false,
+  "operating_results_modified": false,
+  "gpu_inference_performed": false
+}

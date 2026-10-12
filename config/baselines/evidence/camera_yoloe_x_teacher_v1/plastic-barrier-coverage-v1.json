@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-10",
+  "source_resolution_sha256": "a3968c846bc49faa66c0130902669d82ed379fad1305a0a5e4239879e6b5d9ed",
+  "source_policy_sha256": "e6832405538986a8505b832aa0f3db747a391e38be858f8ac9e936ba818aa47a",
+  "source_inventory_sha256": {
+    "../data/roboflow/versioned-inventory-v1/inventory.jsonl": "934d80efd1838788f1ac355536cd610dec1b54704fd1b4de16673c4294be71b8",
+    "../data/roboflow/snapshot-inventory-v2/inventory.jsonl": "73c8f2a703f229466245ed2fd7941c9ed64b8a3323f69e87d56176bf70d05a92"
+  },
+  "entries": [
+    {
+      "source": "roboflow:enzo-mdikr/my-first-project-eeree",
+      "original_label": "pe barrigate",
+      "annotations": 397,
+      "canonical": "pe_firewall",
+      "disposition": "candidate",
+      "training_class": "plastic_barrier",
+      "meaning": "Direct PE_Firewall mapping"
+    },
+    {
+      "source": "roboflow:jjj-nx9di/katri_new_data-xkbev",
+      "original_label": "9",
+      "annotations": 1803,
+      "canonical": null,
+      "disposition": "ambiguous",
+      "training_class": null,
+      "meaning": "Mixed original class; count is not PE_Firewall count"
+    },
+    {
+      "source": "roboflow:parkminseo/final-ftuy2",
+      "original_label": "box",
+      "annotations": 391,
+      "canonical": null,
+      "disposition": "ambiguous",
+      "training_class": null,
+      "meaning": "Mixed original class; count is not PE_Firewall count"
+    }
+  ],
+  "interpretation": "Original author intent is user-confirmed. Counts are original annotations before deduplication, not independent training samples. Direct source meaning is distinct from teacher-generated box approval.",
+  "training_class": "plastic_barrier",
+  "morai_user_asset": "pe_firewall",
+  "plan": [
+    "Use directly mapped existing annotations first",
+    "Reclassify mixed boxes by their actual type",
+    "Inspect weather/tunnel/distance/occlusion/view coverage and record unknowns",
+    "Collect only uncovered conditions before training"
+  ],
+  "new_collection_started": false,
+  "training_started": false
+}

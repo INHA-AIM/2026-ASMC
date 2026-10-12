@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "cpu_tests": {
+    "data": 50,
+    "readiness": 10,
+    "teacher": 16,
+    "gallery": 1,
+    "direct_review": 3,
+    "total": 80,
+    "result": "passed"
+  },
+  "validators": {
+    "documentation_migration": "passed",
+    "perception_contract": "passed",
+    "perception_runtime_acceptance": "passed"
+  },
+  "git_diff_check": "passed",
+  "gallery_static_links": {
+    "pages": 166,
+    "local_static_links": 27323,
+    "missing": [],
+    "scope": "Static href/src/poster; dynamic gallery data and HTTP availability checked separately"
+  },
+  "served_direct_review_http_status": 200,
+  "tool_and_config_sha256": {
+    "tools/perception/prepare_camera_direct_review.py": "4e5e09ed754bdfcf58e288b8554be6c69c00f57f516b16309f5b4b4ab4f68734",
+    "tools/perception/test_prepare_camera_direct_review.py": "ab94f2dc068200ac9249f4f82802118e3020f716b6524ad22025addc46127b26",
+    "tools/perception/camera_data_audit.py": "7e6c060cedb90694b5ed9f8b21f276b06940349c069a2d886723409e787c5f73",
+    "tools/perception/camera_data_readiness.py": "5b2ed0e134820e4b0193b3d66f0928e7ade0cf33b65283e8a84c7300b6cb867b",
+    "tools/perception/report_camera_data_audit.py": "34b63761c0cb940c9873e5d47ef30c330c77da34593d713e0feb949aac9f2663",
+    "config/experiments/camera_training_data_v4_direct.json": "863076912a2c864db872dca05e983e52bb7f42f19663ca29e722043e785a7d1a",
+    "config/datasets/camera_object_labels_v2.json": "a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698",
+    "config/datasets/camera_object_source_labels_v2.json": "e6832405538986a8505b832aa0f3db747a391e38be858f8ac9e936ba818aa47a"
+  },
+  "hosted_ci": {
+    "last_inspected_head": "dac618a365e55fa3b80aeae3fd8bef83a7b56897",
+    "status": "failed before job execution: account billing/spending limit; new HEAD checked separately in PR",
+    "url": "https://github.com/INHAautonav/2026-ASMC/actions/runs/38057088462/job/114227669839"
+  },
+  "gpu_or_ros_runtime_changed": false
+}

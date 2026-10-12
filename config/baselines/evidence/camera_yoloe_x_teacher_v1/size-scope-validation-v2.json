@@ -1,0 +1,29 @@
+{
+  "teacher_cpu_tests": 16,
+  "data_cpu_regression_tests": 50,
+  "validators": [
+    "documentation_migration",
+    "perception_contract",
+    "git_diff_check"
+  ],
+  "javascript_syntax_passed": true,
+  "previous_all_gt_and_sensitivity_results_exact": true,
+  "previous_prediction_provenance_exact": true,
+  "frames": 317,
+  "geometry_counts": {
+    "all_gt": 738,
+    "main_gt": 204,
+    "ignored_gt": 534
+  },
+  "source_gt_sha256": "526f1f8f908cb8043a9ef1fb143bdc419677552e1b2613d4192a72f979ec8997",
+  "policy_sha256": "64506449fde356c5e329f60848ba3e8595060551a9e62e7a6a89b2230f12e6bb",
+  "tool_sha256": {
+    "report_capture_size_scope.py": "0b553933ff7bbf5928dc5c9079ce390d62d5c0da69fee58341fe72384d4b8ad8",
+    "capture_size_scope.py": "552ba8e37e3b2cff5c6ac8c435ad285080eadd8172d34899a75db9ccdc0e1c20",
+    "camera_teacher_audit.py": "4e34dab502ad621cfbe83c22590f27b0ac66f196fb6802010e3ba873d33de754"
+  },
+  "user_requested_visual_scope_change": true,
+  "gpu_inference_performed": false,
+  "training_labels_modified": false,
+  "operating_results_modified": false
+}
