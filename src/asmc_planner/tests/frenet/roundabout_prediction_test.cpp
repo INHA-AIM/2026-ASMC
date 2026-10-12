@@ -1,4 +1,5 @@
 #include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
 #include <cmath>
 #include <iostream>
 int main(){
@@ -133,6 +134,68 @@ int main(){
     auto fragment_input=object;fragment_input.yaw_rate=history.Rate(22);
     expect(history.ApproachOccupancies({fragment_input}).size()==1,
         "large fragment-centre jumps cannot fabricate a positional velocity correction");
+    // A long horizontal strip from a partly visible vehicle was previously
+    // mistaken for a whole body despite only 16 cm of vertical evidence.
+    history.Reset();object.id=30;object.length=3.47;object.width=1.34;
+    object.height=1.5;object.x=2;object.y=2;object.vx=5;object.vy=0;
+    for(int j=0;j<5;++j) {
+        object.x=2+.5*j;
+        for(int i=0;i<8;++i) {
+            object.corners[i]={object.x+(i%4==0||i%4==3?-1.735:1.735),
+                object.y+(i%4<2?-.67:.67),.16*(i/4)};
+        }
+        history.Observe({object},800+j*.1,1);
+    }
+    expect(history.UncertainNear(0,0)==30&&history.ConservativeOccupancies({object}).empty(),
+        "a low measured strip cannot establish a whole-body certificate even with nominal height metadata");
+    const auto low_models=RoundaboutPrediction::ExpandTurnModels({object},1);
+    expect(!low_models.empty()&&low_models.front().id==30&&
+        low_models.front().corners[4].z==object.corners[4].z,
+        "uncertified low fragments remain authoritative collision observations");
+    for(int j=5;j<10;++j){object.x=2+.5*j;observe(800+j*.1,1);}
+    expect(history.UncertainNear(0,0)<0&&!history.ConservativeOccupancies({object}).empty(),
+        "fresh real vertical body evidence restores confidence without requiring a new ID");
+    const auto rates=RoundaboutPrediction::TurnModelRates(.7,1);
+    const auto negative=RoundaboutPrediction::TurnModelRates(-.7,1);
+    bool interior=false,mirror=rates.size()==negative.size(),bounded=rates.size()<=13;
+    for(double endpoint:{0.0,.55,.7,.85})
+        bounded&=std::any_of(rates.begin(),rates.end(),[&](double value){return std::fabs(value-endpoint)<1e-9;});
+    for(size_t i=0;i<rates.size();++i){
+        interior|=rates[i]>.15&&rates[i]<.4;
+        bounded&=rates[i]>=-1&&rates[i]<=1;
+        if(i)bounded&=rates[i]-rates[i-1]<=.15+1e-9;
+        if(mirror)mirror&=std::fabs(rates[i]+negative[negative.size()-1-i])<1e-9;
+    }
+    expect(interior&&mirror&&bounded,
+        "bounded turn coverage includes moderate rotation between straight and the fitted turn in either direction");
+    auto second=object;second.id=31;second.yaw_rate=-.7;object.yaw_rate=.7;
+    const auto independent=RoundaboutPrediction::ExpandTurnModels({object,second},1);
+    expect(independent.size()==rates.size()+negative.size(),
+        "multiple vehicles add model checks linearly rather than multiplying motion combinations");
+    object.vx=object.vy=0;object.yaw_rate=.7;
+    expect(RoundaboutPrediction::ExpandTurnModels({object},1).size()==1,
+        "stationary observations do not acquire invented motion models");
+    expect(RoundaboutPrediction::TurnModelRates(NAN,1)==std::vector<double>{0},
+        "nonfinite turn estimates cannot create invalid model rates");
+    // Independent geometric counterexample: a moderate turn reaches the ego
+    // in three seconds, while straight and fitted +/-0.15 endpoints miss it.
+    object.x=object.y=0;object.vx=5;object.vy=0;object.yaw_rate=.7;
+    object.motion_state=ObjectMotionState::DYNAMIC;object.geometry_valid=true;
+    for(int i=0;i<8;++i)object.corners[i]={i%4==0||i%4==3?-1.735:1.735,
+        i%4<2?-.67:.67,double(i/4)};
+    auto moderate=object;moderate.yaw_rate=.25;
+    const auto arrival=PredictTrackedObjectPose(moderate,3);
+    CartesianState ego{};ego.x=arrival.x;ego.y=arrival.y;
+    const auto footprint=MakeEgoFootprint(ego,{1.9,4.635,-1},0);
+    bool endpoints_clear=true,intermediate_hit=false;
+    for(double rate:{0.0,.55,.85}){
+        auto predicted=object;predicted.yaw_rate=rate;
+        endpoints_clear&=!CheckObstacleOverlap(footprint,{},predicted,3);
+    }
+    for(const auto& predicted:RoundaboutPrediction::ExpandTurnModels({object},1))
+        intermediate_hit|=CheckObstacleOverlap(footprint,{},predicted,3);
+    expect(endpoints_clear&&intermediate_hit,
+        "intermediate turn models catch a physical collision missed by the old three endpoints");
     return failures?1:0;
 }
 

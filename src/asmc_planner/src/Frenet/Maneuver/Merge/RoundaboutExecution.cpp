@@ -480,8 +480,17 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         object_tracking_cfg_.yaw_rate_clamp_rad_s);
     for(auto& object:ctx.predicted_obstacles)
         object.yaw_rate=roundabout_prediction_.Rate(object.id);
-    if(!execution_->merge.committed)
+    auto departure_obstacles=ctx.predicted_obstacles;
+    if(!execution_->merge.committed) {
         ctx.predicted_obstacles=roundabout_prediction_.ApproachOccupancies(ctx.predicted_obstacles);
+        departure_obstacles=ctx.predicted_obstacles;
+        const auto bodies=roundabout_prediction_.ConservativeOccupancies(obstacles);
+        departure_obstacles.insert(departure_obstacles.end(),bodies.begin(),bodies.end());
+        // Expand once per planning cycle for the final departure certificate,
+        // not per candidate or as a Cartesian product of vehicle motions.
+        departure_obstacles=RoundaboutPrediction::ExpandTurnModels(
+            departure_obstacles,object_tracking_cfg_.yaw_rate_clamp_rad_s);
+    }
     last_s_=ctx.s;last_d_=ctx.d;has_last_s_=true;
     double dd,ddd;ArcDerivToTimeDeriv(ctx.s_dot,ctx.s_ddot,ctx.d_prime,ctx.d_pprime,dd,ddd);
     auto start=ClampInitialBoundaryState(ctx.s,ctx.s_dot,ctx.s_ddot,ctx.d,dd,ddd,limits_);
@@ -663,10 +672,9 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         if(it==obstacles.end())return false;
         VehicleShape bound=vehicle_shape_;bound.length=std::max(6.0,it->length);
         bound.width=std::max(3.0,it->width);bound.rear_overhang=bound.length/2;
-        for(double change:{0.0,-.15,.15}) {
+        for(double rate:RoundaboutPrediction::TurnModelRates(
+                roundabout_prediction_.Rate(id),object_tracking_cfg_.yaw_rate_clamp_rad_s)) {
             CartesianState pose{};pose.x=it->x;pose.y=it->y;pose.yaw=std::atan2(it->vy,it->vx);
-            const double rate=change==0?0:std::clamp(roundabout_prediction_.Rate(id)+change,
-                -object_tracking_cfg_.yaw_rate_clamp_rad_s,object_tracking_cfg_.yaw_rate_clamp_rad_s);
             for(double t=0;t<=2.0;t+=.1) {
                 if(roundabout_zone_.Overlaps(pose,bound,collision_cfg_.safety_margin))return false;
                 const double angle=pose.yaw+.05*rate;
@@ -685,24 +693,18 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     bool early_departure_clear=uncertain<0&&(ego.v<=.1||ego.a>=-.5)&&
         planning_time-observation_stamp<=.25&&observation_stamp<=planning_time+.05;
     if(uncertain>=0)result.blocking_object_id=uncertain;
-    if(result.candidate_valid&&early_departure_clear){
-        // Confidence carried through partial visibility is valid only when the
-        // last full body's conservative occupancy passes the same gap checks.
-        const auto body_bounds=roundabout_prediction_.ConservativeOccupancies(obstacles);
-        for(double perturbation:{0.0,-.15,.15}){
-            auto alternative=ctx.predicted_obstacles;
-            alternative.insert(alternative.end(),body_bounds.begin(),body_bounds.end());
-            for(auto& object:alternative)object.yaw_rate=perturbation==0||std::hypot(object.vx,object.vy)<.5?0:
-                std::clamp(object.yaw_rate+perturbation,
-                    -object_tracking_cfg_.yaw_rate_clamp_rad_s,object_tracking_cfg_.yaw_rate_clamp_rad_s);
-            const auto conservative=CheckRoundaboutCandidate(result.candidate_path,roundabout_zone_,
-                alternative,vehicle_shape_,collision_cfg_,path_cfg_.dt,merge_cfg_.min_front_time_gap,
-                merge_cfg_.min_rear_time_gap,true);
-            if(!conservative.safe){
-                early_departure_clear=false;
-                if(conservative.blocking_object_id>=0)result.blocking_object_id=conservative.blocking_object_id;
-                break;
-            }
+    // Preserve the candidate search and waiting/braking semantics. The extra
+    // turn models certify only departure authority, once for the selected
+    // candidate, bounding the gap scan without changing frontier approach or
+    // multiplying every generation attempt by the additional models.
+    if(result.candidate_valid&&early_departure_clear) {
+        const auto conservative=CheckRoundaboutCandidate(result.candidate_path,
+            roundabout_zone_,departure_obstacles,vehicle_shape_,collision_cfg_,
+            path_cfg_.dt,merge_cfg_.min_front_time_gap,merge_cfg_.min_rear_time_gap,true);
+        if(!conservative.safe) {
+            early_departure_clear=false;
+            if(conservative.blocking_object_id>=0)
+                result.blocking_object_id=conservative.blocking_object_id;
         }
     }
     if(!result.candidate_valid||!early_departure_clear) {

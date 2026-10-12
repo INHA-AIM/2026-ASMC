@@ -5,6 +5,7 @@
 #include <deque>
 #include <functional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // Roundabout-only history. OBB orientation describes a visible fragment, not
@@ -33,6 +34,19 @@ class RoundaboutPrediction {
         }
         return (max_x-min_x)*(max_y-min_y)>1e-6;
     }
+    static bool WholeBodyObserved(const TrackedObject& object) {
+        if(!GeometryUsable(object)||!std::isfinite(object.length)||
+           !std::isfinite(object.width)||object.length<3||object.width<1.2)return false;
+        // Departure confidence only: keep low fragments as collision objects,
+        // but do not let a long tyre/ground strip certify a complete vehicle.
+        // Measured corner height cannot be replaced by nominal metadata.
+        double low=INFINITY,high=-INFINITY;
+        for(const auto& p:object.corners) {
+            if(!std::isfinite(p.z))return false;
+            low=std::min(low,p.z);high=std::max(high,p.z);
+        }
+        return high-low>=.5;
+    }
     static bool BodyContainsObservation(const Track& track,const TrackedObject& object,double stamp) {
         if(track.body_stamp<0||stamp-track.body_stamp>1.0||!GeometryUsable(object))return false;
         const double angle=std::atan2(track.vy,track.vx),c=std::cos(angle),s=std::sin(angle);
@@ -42,6 +56,38 @@ class RoundaboutPrediction {
             std::fabs(-dx*s+dy*c)<=track.half_width+growth;
     }
 public:
+    // Include the continuum's interior between straight travel and the
+    // fitted turn band. Preserve the original endpoints, with at most thirteen
+    // samples per object; never construct
+    // combinations across vehicles. Collision checking is object-separable.
+    static std::vector<double> TurnModelRates(double rate,double clamp) {
+        if(!std::isfinite(rate)||!std::isfinite(clamp)||clamp<=0)return {0};
+        rate=std::clamp(rate,-clamp,clamp);
+        const double low=std::min(0.0,std::max(-clamp,rate-.15));
+        const double high=std::max(0.0,std::min(clamp,rate+.15));
+        const int steps=static_cast<int>(std::clamp(std::ceil((high-low)/.15),1.0,8.0));
+        std::vector<double> rates{0,rate,std::max(-clamp,rate-.15),
+            std::min(clamp,rate+.15)};
+        for(int i=0;i<=steps;++i)rates.push_back(low+(high-low)*i/steps);
+        std::sort(rates.begin(),rates.end());
+        rates.erase(std::unique(rates.begin(),rates.end(),
+            [](double a,double b){return std::fabs(a-b)<1e-9;}),rates.end());
+        return rates;
+    }
+    static std::vector<TrackedObject> ExpandTurnModels(
+        const std::vector<TrackedObject>& objects,double clamp) {
+        std::vector<TrackedObject> expanded;
+        for(const auto& object:objects) {
+            if(std::hypot(object.vx,object.vy)<.5) {
+                expanded.push_back(object);continue;
+            }
+            for(double rate:TurnModelRates(object.yaw_rate,clamp)) {
+                auto alternative=object;alternative.yaw_rate=rate;
+                expanded.push_back(std::move(alternative));
+            }
+        }
+        return expanded;
+    }
     void Reset() { tracks_.clear(); stamp_=-1; }
     void Observe(const std::vector<TrackedObject>& objects,double stamp,double clamp) {
         if(!std::isfinite(stamp))return;
@@ -100,8 +146,7 @@ public:
             // eight body samples and one second, independently of motion fit.
             while(!track.bodies.empty()&&stamp-track.bodies.front().t>1.0)
                 track.bodies.pop_front();
-            if(GeometryUsable(object)&&std::isfinite(object.length)&&std::isfinite(object.width)&&
-               object.length>=3&&object.width>=1.2) {
+            if(WholeBodyObserved(object)) {
                 const double angle=std::atan2(object.vy,object.vx),c=std::cos(angle),s=std::sin(angle);
                 double half_length=object.length/2,half_width=object.width/2;
                 for(const auto& p:object.corners) {
