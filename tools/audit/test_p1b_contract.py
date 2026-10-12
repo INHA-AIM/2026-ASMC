@@ -30,9 +30,9 @@ class P1BContractTest(unittest.TestCase):
 
     def test_repository_contract_is_valid(self):
         result = validate_contract(REPO_ROOT, self.contract, self.baseline)
-        self.assertEqual(result["message_count"], 32)
+        self.assertEqual(result["message_count"], 33)
         self.assertEqual(result["contract_message_count"], 25)
-        self.assertEqual(result["registered_message_count"], 32)
+        self.assertEqual(result["registered_message_count"], 33)
         self.assertEqual(result["legacy_message_count"], 13)
         self.assertEqual(result["new_message_count"], 12)
         self.assertEqual(result["topic_count"], 11)
@@ -50,6 +50,16 @@ class P1BContractTest(unittest.TestCase):
             for type_name, expected in contract[section].items():
                 with self.subTest(type=type_name):
                     self.assertEqual(md5s[type_name.split("/")[-1]], expected)
+
+    def test_planning_debug_md5_matches_message_sources(self):
+        contract = yaml.safe_load((REPO_ROOT / "config/contracts/planning_debug_topic_contract_v1.yaml").read_text())
+        definition = contract["messages"]["asmc_msgs/UrbanFeatureDebug"]
+        self.assertEqual(ros1_md5("UrbanFeatureDebug", self.specs), definition["md5"])
+        fields = {field.name for field in self.specs["UrbanFeatureDebug"].fields}
+        self.assertTrue(set(definition["required_fields"]).issubset(fields))
+        topic = contract["topics"]["/behavior/feature_debug"]
+        self.assertEqual(topic["type"], "asmc_msgs/UrbanFeatureDebug")
+        self.assertEqual(topic["md5"], definition["md5"])
 
     def test_new_message_ros_md5_is_frozen(self):
         md5s = all_message_md5(self.specs)
@@ -80,3 +90,4 @@ class P1BContractTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
