@@ -1,0 +1,60 @@
+{
+  "capture_spatial": {
+    "id": "fb99494e53f4c39b71a1022bf9ff7f1f27439908ed4a53483b1aac3541000895",
+    "loss_finite": true,
+    "heads": {
+      "one2many": {
+        "background_gradient_l1": 24438.40234375,
+        "nonzero_background_class_sites": 122192
+      },
+      "one2one": {
+        "background_gradient_l1": 6109.6015625,
+        "nonzero_background_class_sites": 122192
+      }
+    }
+  },
+  "roboflow_known_class": {
+    "id": "597287f8e8b8893d5fcff638b9adc4dff2ec684dfd3ffdde471b93e2cf595e32",
+    "loss_finite": true,
+    "heads": {
+      "one2many": {
+        "background_gradient_l1": 129.60000610351562,
+        "nonzero_background_class_sites": 648
+      },
+      "one2one": {
+        "background_gradient_l1": 32.849998474121094,
+        "nonzero_background_class_sites": 657
+      }
+    }
+  },
+  "complete": {
+    "id": "e959ddb70bced5909c24990d52c87146f05abbec2f7d4cd4b26bb0d47d7fd847",
+    "loss_finite": true,
+    "heads": {
+      "one2many": {
+        "background_gradient_l1": 60448.0078125,
+        "nonzero_background_class_sites": 302240
+      },
+      "one2one": {
+        "background_gradient_l1": 15119.203125,
+        "nonzero_background_class_sites": 302384
+      }
+    }
+  },
+  "negative": {
+    "id": "background_kcity_auto_sunny_003_front_002479",
+    "loss_finite": true,
+    "heads": {
+      "one2many": {
+        "background_gradient_l1": 60480.00390625,
+        "nonzero_background_class_sites": 302400
+      },
+      "one2one": {
+        "background_gradient_l1": 15120.0009765625,
+        "nonzero_background_class_sites": 302400
+      }
+    }
+  },
+  "optimizer_updates": 0,
+  "synthetic_model_not_accuracy_test": true
+}

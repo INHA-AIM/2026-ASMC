@@ -25,10 +25,18 @@ def main():
     p.add_argument('--directory', type=Path, required=True)
     p.add_argument('--model', choices=MODELS, required=True)
     p.add_argument('--stage', choices=['onnx', 'engine'], required=True)
+    p.add_argument('--checkpoint', type=Path, help='Pinned fine-tuned checkpoint; copied without modifying source')
+    p.add_argument('--head-profile', choices=['legacy_coco7','mission16_one2one_nms'], default='legacy_coco7')
     args = p.parse_args()
     directory = args.directory.resolve()
     directory.mkdir(parents=True, exist_ok=True)
     checkpoint = directory/(args.model+'.pt')
+    if args.checkpoint and args.stage == 'onnx':
+        import shutil
+        if checkpoint.exists() and sha(checkpoint) != sha(args.checkpoint):
+            raise ValueError('refusing to overwrite another checkpoint')
+        if not checkpoint.exists(): shutil.copy2(args.checkpoint, checkpoint)
+    mission = args.head_profile == 'mission16_one2one_nms'
     started = time.monotonic()
     if args.stage == 'onnx':
         import torch
@@ -37,7 +45,7 @@ def main():
         model = YOLO(str(checkpoint), task=MODELS[args.model])
         # nms=None exports raw one-to-many outputs; predictor performs class-aware NMS.
         exported = Path(model.export(format='onnx', dynamic=True, batch=1,
-            imgsz=[736,1280], device=0, nms=None, opset=17, simplify=True))
+            imgsz=[736,1280], device=0, nms=False if mission else None, opset=17, simplify=True))
         import onnx
         graph = onnx.load(str(exported))
         metadata = {item.key: item.value for item in graph.metadata_props}
@@ -47,7 +55,7 @@ def main():
         for key in ('stride', 'batch', 'channels'):
             if key in metadata:
                 metadata[key] = int(metadata[key])
-        if metadata.get('end2end'):
+        if bool(metadata.get('end2end')) != mission:
             raise RuntimeError('export changed one-to-many head')
         (directory/(args.model+'.metadata.json')).write_text(json.dumps(metadata, indent=2)+'\n')
         record = dict(checkpoint_sha256=sha(checkpoint), onnx_sha256=sha(exported),
@@ -87,7 +95,7 @@ def main():
             minimum=[1,3,384,640], optimum=[2,3,480,640], maximum=[3,3,736,1280],
             fp16_enabled=True, workspace_bytes=1024**3, metadata=metadata)
     record.update(model=args.model, task=MODELS[args.model], stage=args.stage,
-                  elapsed_sec=time.monotonic()-started)
+                  elapsed_sec=time.monotonic()-started, head_profile=args.head_profile)
     (directory/(args.model+'.'+args.stage+'.provenance.json')).write_text(json.dumps(record, indent=2)+'\n')
     print(json.dumps(record), flush=True)
 

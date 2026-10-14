@@ -1,0 +1,463 @@
+{
+  "dataset": "camera_objects_bbox_v10-resplit-r2",
+  "dataset_metadata_sha256": "70f4846287e556c6fc33575326b547f1bf5450615071100b30495d7affc85fca",
+  "generated_utc": "2026-10-13T06:32:03.928238+00:00",
+  "splits": {
+    "train": {
+      "images": 39391,
+      "completeness": {
+        "complete": 1408,
+        "partial": 34983,
+        "reviewed_negative": 3000
+      },
+      "source_families": {
+        "aim": 70,
+        "bag": 2,
+        "capture": 21416,
+        "roboflow": 17903
+      },
+      "mask_on": 21488,
+      "known_view_mask_off": 0,
+      "positive": 148778,
+      "ignore": 230546
+    },
+    "selection": {
+      "images": 212,
+      "completeness": {
+        "complete": 212
+      },
+      "source_families": {
+        "capture": 212
+      },
+      "mask_on": 212,
+      "known_view_mask_off": 0,
+      "positive": 475,
+      "ignore": 701
+    },
+    "heldout": {
+      "images": 116,
+      "completeness": {
+        "complete": 116
+      },
+      "source_families": {
+        "capture": 74,
+        "roboflow": 42
+      },
+      "mask_on": 74,
+      "known_view_mask_off": 0,
+      "positive": 445,
+      "ignore": 721
+    }
+  },
+  "coverage": [
+    {
+      "class_name": "person",
+      "train": {
+        "positive": 30213,
+        "images": 12501,
+        "ignore": 36442,
+        "groups": 12
+      },
+      "epoch_image_exposures": 13589,
+      "selection": {
+        "positive": 116,
+        "ignore": 222,
+        "images": 80,
+        "groups": 2
+      },
+      "heldout": {
+        "positive": 63,
+        "ignore": 165,
+        "images": 48,
+        "groups": 2
+      }
+    },
+    {
+      "class_name": "dog",
+      "train": {
+        "positive": 4536,
+        "images": 4468,
+        "ignore": 17262,
+        "groups": 10
+      },
+      "epoch_image_exposures": 4859,
+      "selection": {
+        "positive": 22,
+        "images": 21,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 21,
+        "images": 16,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "deer",
+      "train": {
+        "positive": 4738,
+        "images": 4629,
+        "ignore": 15045,
+        "groups": 5
+      },
+      "epoch_image_exposures": 5122,
+      "selection": {
+        "ignore": 18,
+        "positive": 22,
+        "images": 22,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 24,
+        "images": 23,
+        "ignore": 61,
+        "groups": 2
+      }
+    },
+    {
+      "class_name": "bicycle",
+      "train": {
+        "positive": 6108,
+        "images": 5871,
+        "ignore": 16352,
+        "groups": 9
+      },
+      "epoch_image_exposures": 6509,
+      "selection": {
+        "positive": 22,
+        "images": 21,
+        "ignore": 5,
+        "groups": 2
+      },
+      "heldout": {
+        "ignore": 11,
+        "positive": 22,
+        "images": 22,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "car",
+      "train": {
+        "positive": 11449,
+        "images": 5467,
+        "ignore": 284,
+        "groups": 7
+      },
+      "epoch_image_exposures": 5486,
+      "selection": {
+        "positive": 39,
+        "ignore": 51,
+        "images": 28,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 35,
+        "images": 21,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "motorcycle",
+      "train": {
+        "positive": 5178,
+        "images": 4862,
+        "ignore": 15271,
+        "groups": 9
+      },
+      "epoch_image_exposures": 5395,
+      "selection": {
+        "ignore": 31,
+        "positive": 21,
+        "images": 21,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 43,
+        "ignore": 38,
+        "images": 19,
+        "groups": 2
+      }
+    },
+    {
+      "class_name": "bus",
+      "train": {
+        "positive": 7185,
+        "images": 5212,
+        "ignore": 3453,
+        "groups": 6
+      },
+      "epoch_image_exposures": 5519,
+      "selection": {
+        "positive": 22,
+        "images": 21,
+        "ignore": 11,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 22,
+        "images": 21,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "truck",
+      "train": {
+        "positive": 7214,
+        "images": 3871,
+        "ignore": 4265,
+        "groups": 4
+      },
+      "epoch_image_exposures": 4300,
+      "selection": {
+        "positive": 20,
+        "images": 20,
+        "ignore": 8,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 29,
+        "images": 24,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "bollard",
+      "train": {
+        "positive": 30166,
+        "images": 4617,
+        "ignore": 33636,
+        "groups": 4
+      },
+      "epoch_image_exposures": 4827,
+      "selection": {
+        "ignore": 17,
+        "positive": 21,
+        "images": 21,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 20,
+        "ignore": 27,
+        "images": 20,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "box",
+      "train": {
+        "positive": 4950,
+        "images": 4639,
+        "ignore": 12469,
+        "groups": 16
+      },
+      "epoch_image_exposures": 5051,
+      "selection": {
+        "ignore": 28,
+        "positive": 27,
+        "images": 19,
+        "groups": 1
+      },
+      "heldout": {
+        "ignore": 44,
+        "positive": 22,
+        "images": 21,
+        "groups": 2
+      }
+    },
+    {
+      "class_name": "concrete_barrier",
+      "train": {
+        "positive": 7536,
+        "images": 6151,
+        "ignore": 16420,
+        "groups": 6
+      },
+      "epoch_image_exposures": 6688,
+      "selection": {
+        "ignore": 27,
+        "positive": 22,
+        "images": 22,
+        "groups": 2
+      },
+      "heldout": {
+        "ignore": 32,
+        "positive": 22,
+        "images": 22,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "steel_barricade",
+      "train": {
+        "positive": 5590,
+        "images": 5417,
+        "ignore": 9106,
+        "groups": 10
+      },
+      "epoch_image_exposures": 5967,
+      "selection": {
+        "positive": 20,
+        "images": 20,
+        "ignore": 51,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 23,
+        "images": 23,
+        "ignore": 70,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "traffic_drum",
+      "train": {
+        "positive": 13755,
+        "images": 4088,
+        "ignore": 16068,
+        "groups": 11
+      },
+      "epoch_image_exposures": 4480,
+      "selection": {
+        "positive": 26,
+        "images": 16,
+        "ignore": 15,
+        "groups": 2
+      },
+      "heldout": {
+        "positive": 23,
+        "images": 16,
+        "ignore": 12,
+        "groups": 2
+      }
+    },
+    {
+      "class_name": "plastic_barrier",
+      "train": {
+        "positive": 4262,
+        "images": 3842,
+        "ignore": 12194,
+        "groups": 9
+      },
+      "epoch_image_exposures": 4518,
+      "selection": {
+        "ignore": 67,
+        "positive": 26,
+        "images": 26,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 27,
+        "images": 27,
+        "ignore": 102,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "traffic_cone",
+      "train": {
+        "positive": 3006,
+        "images": 2713,
+        "ignore": 10763,
+        "groups": 3
+      },
+      "epoch_image_exposures": 3529,
+      "selection": {
+        "positive": 27,
+        "images": 16,
+        "ignore": 50,
+        "groups": 2
+      },
+      "heldout": {
+        "ignore": 38,
+        "positive": 21,
+        "images": 21,
+        "groups": 1
+      }
+    },
+    {
+      "class_name": "stroller",
+      "train": {
+        "positive": 2892,
+        "images": 2892,
+        "ignore": 11516,
+        "groups": 3
+      },
+      "epoch_image_exposures": 3688,
+      "selection": {
+        "positive": 22,
+        "ignore": 100,
+        "images": 22,
+        "groups": 1
+      },
+      "heldout": {
+        "positive": 28,
+        "ignore": 121,
+        "images": 27,
+        "groups": 1
+      }
+    }
+  ],
+  "balance": {
+    "images": 39391,
+    "exposures": 41728,
+    "class_image_frequency": {
+      "deer": 4629,
+      "dog": 4468,
+      "box": 4639,
+      "bicycle": 5871,
+      "motorcycle": 4862,
+      "traffic_drum": 4088,
+      "steel_barricade": 5417,
+      "stroller": 2892,
+      "person": 12501,
+      "plastic_barrier": 3842,
+      "car": 5467,
+      "truck": 3871,
+      "bus": 5212,
+      "traffic_cone": 2713,
+      "concrete_barrier": 6151,
+      "bollard": 4617
+    },
+    "class_exposures": {
+      "truck": 4300,
+      "bus": 5519,
+      "car": 5486,
+      "person": 13589,
+      "bollard": 4827,
+      "box": 5051,
+      "concrete_barrier": 6688,
+      "traffic_drum": 4480,
+      "motorcycle": 5395,
+      "steel_barricade": 5967,
+      "plastic_barrier": 4518,
+      "bicycle": 6509,
+      "deer": 5122,
+      "dog": 4859,
+      "stroller": 3688,
+      "traffic_cone": 3529
+    },
+    "maximum_repeats": 2,
+    "all_images_included": true,
+    "batch_group_collisions": 4,
+    "optimizer_alignment": 16,
+    "alignment_extra_images": 15,
+    "correlation_groups": 13235,
+    "independent_scene_count_claimed": false,
+    "order_sha256": "da81564fdc96aca890c9eec7f93ad3e3cc8210fb367daadedaf3020fa51f68dd"
+  },
+  "reviewed_gt_minimum": 20,
+  "independent_scene_sufficiency": false,
+  "primary_eval_reviews": {
+    "selection": {
+      "accept": 212,
+      "defer": 14
+    },
+    "heldout": {
+      "accept": 116,
+      "defer": 13
+    }
+  },
+  "original_sources_immutable": true,
+  "operational_changes": false
+}

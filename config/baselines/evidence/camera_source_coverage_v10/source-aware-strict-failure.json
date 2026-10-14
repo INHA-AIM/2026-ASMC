@@ -1,0 +1,7 @@
+{
+  "status": "infeasible",
+  "solver_message": "The problem is infeasible. (HiGHS Status 8: model_status is Infeasible; primal_status is None)",
+  "selection_minimum": 20,
+  "heldout_preserved": true,
+  "capture_vehicle_train_minimum": 1000
+}

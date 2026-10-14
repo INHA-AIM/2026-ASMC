@@ -3,9 +3,362 @@
 > 기준일: 2026-10-09. 사용자 지정 Roboflow 22개 프로젝트와 기존 Capture GT를 대상으로 한다.
 > 운영 모델·ROS 인터페이스·confidence·fusion·컨테이너 마운트는 변경하지 않는다.
 
-최신 채택본과 실행 방법은 [v7 기존 자료 채택 확대](#기존-자료-채택-확대--2026-10-11-v7)를 먼저 확인한다.
-다음 구현은 [MPC 자동 수집 파일럿](camera-mpc-object-collection-pilot.md)이며 아직 실행하지 않았다.
+최신 평가 자료는 [16종 검수 평가본](#16종-검수-평가본--2026-10-13)이다.
+이전 v8 본학습은 epoch 4에서 보존했고, 배경 손실을 수정한 v9 본학습이 새로 진행 중이다.
+평가본 구성 단계에서는 학습을 재시작하지 않았으며, 이후 사용자 승인으로
+[배경 손실 수정·v9 본학습](#배경-손실-수정전체-본학습-재시작--2026-10-13)을 시작했다.
+[v8 본학습](#v8-yolo26l-본학습--2026-10-12-실행-중)의 시작 기록은 아래에 보존한다.
+[Capture 자동 수집](camera-mpc-object-collection-pilot.md)과 데이터 전처리를 완료하고,
+YOLO26l 가중치 본학습을 진행 중이다. 운영 교체·PR 병합은 하지 않았다.
 이전 저장 위치·로컬 teacher 비교는 [v6 작업](#로컬-teacher와-저장-버전--2026-10-11-v6)에 보존한다.
+
+## 16종 검수 평가본 — 2026-10-13
+
+사용자 요청으로 `data/dataset_versions/camera_objects_bbox_validation16_v1-r2`를 생성했다.
+**150장·양성 322개·ignore 33개**, 모든 이미지는 목표 16종 전체의 누락 여부를 검토한
+complete 평가 자료다. train 53,588장과 파일 SHA·디코딩 픽셀 SHA·source/run·split group을
+대조했으며 일치 자료는 없다. 원본과 기존 split, 618장 진단 자료는 변경하지 않았다.
+
+| 클래스 | 등장 이미지 | 양성 박스 | 소스/run 그룹 |
+|---|---:|---:|---:|
+| person | 22 | 22 | 3 |
+| dog | 12 | 12 | 8 |
+| deer | 12 | 12 | 3 |
+| bicycle | 12 | 12 | 6 |
+| car | 24 | 44 | 3 |
+| motorcycle | 13 | 23 | 4 |
+| bus | 11 | 15 | 1 |
+| truck | 12 | 14 | 2 |
+| bollard | 8 | 16 | 1 |
+| box | 18 | 50 | 4 |
+| concrete_barrier | 11 | 14 | 2 |
+| steel_barricade | 13 | 13 | 3 |
+| traffic_drum | 25 | 33 | 1 |
+| plastic_barrier | 9 | 17 | 2 |
+| traffic_cone | 12 | 12 | 1 |
+| stroller | 13 | 13 | 2 |
+
+소스는 Roboflow 45장 / AIM 46장 / Capture 59장이다. 설정 기록으로 확인한 SUNNY 53장,
+FOGGY 52장과 설정 미상의 시각적 맑음 23장·안개 22장을 **구분**한다.
+Roboflow 하늘에 구름이 있다는 이유로 SUNNY 또는 CLOUDY로 단정하지 않는다.
+박스 숫자를 맞추려고 복제·증강하지 않았고, 한 이미지의 모든 대상 주석을 유지했다.
+완전한 클래스×날씨×소스 균형이나 독립 장면 충족을 의미하지 않는다.
+버스·볼라드·드럼·콘은 소스/run 그룹이 하나이며, 콘은 SUNNY뿐이다.
+그룹 수는 독립 장면 수의 상한이다. 같은 교차로·배치의 연속 사진은 독립 표본이 아니다.
+
+검수 및 누출 방지:
+
+- 직접 대응 Roboflow 원본 박스를 유지했다. AIM dog/deer/bicycle은 기존 teacher로 후보를
+  찾은 뒤 RGB와 actor inventory로 확인했으며, 사슴의 dog 제안을 deer로 수정했다.
+  따라서 이 쉬운 객체 패널로 teacher의 무편향 recall을 주장하지 않는다.
+- 터널 유모차는 teacher가 사람만 제안해 원본 해상도에서 adult/stroller를 직접 분리했다.
+  유모차 안의 아기는 person에서 제외했다. 네 영상은 하나의 encounter다.
+- 구 Capture의 WoodBox actor 13,50–56은 각각 가장 크게 보이는 RGB로 종류를 확인하고
+  native instance bbox를 추가했다. dense map drum/barrier 및 잘못 배치한 대형 트럭은 제외했다.
+- 이미 학습한 route60/120/180 배치는 제외했다. 미사용 초기 route12 중 나중에 재사용된
+  BabyStroller3(native ID 9/90001/90002)가 보이는 영상도 제외했다.
+  r1은 이 추가 검사 이전의 초안이므로 평가에 쓰지 않는다. **r2만 설정에 고정**했다.
+- 캐시가 있는 train 22,914장에 pHash 근접 검사를 추가했다. 거리 ≤6의 34쌍을 모두
+  비교해 같은 맵 배경이지만 객체/배치/시점이 다른 사례임을 확인했다.
+  캐시 없는 최근 수집분까지 pHash 전수 검사를 했다고 보고하지 않는다.
+- 실제 YOLO 파일·ignore sidecar를 재읽고, 합성 정답 예측을 넣어 평가기의 16종 GT 개수와
+  ignore 제외가 일치함을 CPU로 확인했다. 모델의 성능 평가 결과가 아니다.
+
+기존 `macro_f1`의 GT≥20 정책은 유지하고 `macro_f1_fixed16`을 추가했다.
+16종 모두 complete GT가 있을 때 전체 클래스 F1을 같은 비중으로 평균한다.
+소표본 목록을 함께 반환하며 이 수치를 2%p 회귀 자동 중단 기준에 바로 연결하지 않는다.
+현재 구성은 16종 **개발 진단용**으로 사용할 수 있지만 최종 배포 수락/새로운 비공개 시험을
+대체하지 않는다. 기존 heldout에서 이미 살펴본 자료의 이력도 유지했다.
+
+재현 입력은 `artifacts/camera-validation16-v1/review/reviewed-records-r2.jsonl`,
+도구는 `tools/perception/prepare_camera_validation16.py`, 설정은
+`config/experiments/camera_bbox_validation16_v1.json`이다. evidence의 summary/audit에 SHA를 고정했다.
+데이터 폴더의 `reservation.json`은 다음 train 통합에서 제외할 source/group/hash 목록이다.
+일반 학습으로 잘못 쓰지 않도록 data.yaml의 train 경로는 의도적으로 유효하지 않다.
+
+갤러리: **E307** `http://localhost:8768/camera-validation16-v1/gallery-r2/index.html`.
+클래스 필터가 있으며 녹색 양성·자홍색 ignore를 표시한다. 목차에서도 날짜/E 번호로 찾을 수 있다.
+기존 618장과 frozen training supervisor는 자동 교체하지 않았다. 학습 재개 판단 전
+초기 기준선과 epoch 4를 이 평가본의 동일 confidence 0.40으로 비교하는 것이 다음 단계다.
+이 작업에서는 새 GPU 추론·optimizer update·운영 모델 변경을 수행하지 않았다.
+
+
+## 배경 손실 수정·전체 본학습 재시작 — 2026-10-13
+
+**작은 GT·ignore·거리 분석(같은 날, 학습 유지):** `analyze_camera_small_supervision.py`로 train 53,588장의 주석 전체를 집계하고, source×view당 고정 hash 표본 최대 8장(총 581장)의 배경 grid와 ignore feature-cell 겹침을 확인했다. 추가 양성 제외 후보(원본과 960 양쪽 검사)는 짧은 변/면적 4/32에서 47,444개, 4/64에서 83,009개, 6/64에서 92,108개, 8/128에서 128,608개다. 2epoch 저장 예측에 같은 크기 필터를 사후 적용하면 FP/TP 제거가 각각 254/3, 429/6, 472/7, 574/14다. 이는 원래 GT를 고정한 출력 필터 민감도이며 해당 정책으로 재학습한 성능이 아니다. 현재 FP 976개 중 작은 것만 제거해도 상당수 FP가 남는다.
+
+581장 표본에서 ignore 교차 footprint는 tensor 면적 기준 stride8/16/32 평균 0.0396/0.1026/0.2915%다. 이미 허용된 semantic-safe 배경에서 ignore 때문에 추가 차단된 비중은 stride8 평균 약 0.000036%p, stride16/32는 0이었다. 따라서 tiny-ignore의 cell 확장이 넓은 배경 손실 제거의 주원인이라는 가설은 현재 표본에서 지지되지 않는다. 이 수치는 assignment의 정상 양성 우선 복원을 제외한 기하 분석이며 모든 train의 실제 gradient 분포를 측정한 것이 아니다. 미확인 semantic 영역·건물 등은 원래 safe grid 바깥인 별도 문제다.
+
+SHA가 일치하는 검수 ledger와 같은 run의 Capture 요청 직전 Ego 상태(age≤0.2s)를 연결했다. 직접 native ID가 연결된 양성 147,478개 중 약 80m 밖은 39,937개(27.1%), 120m 밖은 17,643개다. 양성 115,424개는 거리 미확인으로 남겼다. 거리는 static actor pivot과 요청 시점 Ego의 3D 거리이며 노출 시점 광학 depth·날씨별 가시거리가 아니다. 복합 actor ID를 추정 연결하거나 depth PNG encoding을 추측하지 않았다. RGB 크롭에서 안개 속 작은 물체의 식별 곤란과 같은 크기라도 명암/형상 차이가 확인되어, 일괄 거리 cutoff는 채택하지 않았다.
+
+**판정:** 현재 학습을 계속한다. 4/32는 후속 대조 후보지만 즉시 양성 삭제·배경 강제화·ignore 범위 축소를 승인할 증거는 부족하다. 아직 수렴하지 않은 1/2epoch 저장 결과의 관찰이므로 4epoch 이후에도 같은 평가 규칙으로 비교한다. 향후 확정된 데이터/손실 변경은 새 immutable 데이터 revision과 새 run에서 현재 체크포인트를 출발점으로 사용하고 기존 optimizer 이력과 정책 경계를 명시한다. 데이터가 바뀐 것을 동일 실행의 단순 resume로 숨기지 않는다. 공식 사전학습부터 재시작은 기존 가중치의 잘못된 학습이 회복되지 않는 증거가 있을 때 판단한다.
+
+근거와 원본 크기/3배 확대 갤러리: `artifacts/camera-small-supervision-analysis-20261013-r3/`. `summary.json`, `grid-sample.jsonl`, `evaluation-sensitivity.json`, `crop-index.json`과 실행 도구 snapshot을 보존했다. r1은 직접 run ledger SHA 불일치로 거리 미확인, r2는 SHA 고정 검수 ledger 연결, r3는 운영 차체 mask와 실제 OpenCV resize를 적용한 크롭이다. 정량 통계와 v9 학습 데이터는 변경하지 않았다.
+
+**09:13 KST 재개:** 2epoch 평가 후 person/motorcycle의 연속 회귀로 자동 일시정지됐으나, 사용자가 멈추지 말고 학습을 계속하도록 지시했다. `--continue-on-regression`으로 회귀는 경고·평가 기록만 남기고 정지하지 않는다. `last.pt`의 완료 2epoch에서 3epoch로 재개했으며 optimizer/EMA 및 E2E loss schedule updates=2 복원을 확인했다. 데이터·학습 인자·40epoch 일정과 원래 첫 24시간 종료 시각(10월 14일 04:08 KST)은 유지한다. 각 epoch 저장·4epoch 및 이후 4epoch 간격 평가와 오류 중단은 유지한다. 실행 컨테이너는 `asmc-camera-main-v9-resume-r2`, 변경 전 상태·supervisor와 재개 SHA 근거는 본학습 산출물의 `resume-20261013T001314Z/`에 보존했다. 운영 승격 조건은 완화하지 않았다.
+
+사용자가 전수 검사 후 짧은 재학습 대조 없이 본학습 재시작을 승인했다. `camera_objects_bbox_v9-background-r3`은 v8의 train 53,588장·양성 262,902개·ignore 261,415개를 유지한다. 기존 selection/heldout 소속과 새 16종 개발 평가본의 train 제외도 유지했다.
+
+**전수 검사 범위:** train+기존 평가 54,829장 전부의 RGB 파일 SHA/디코딩 픽셀·크기·render 품질·모든 박스/고정 클래스 ID·실제 YOLO 라벨을 확인했다. 사용 가능한 Capture semantic/instance/BBox의 동기 파일 SHA와 원본 GT 크기·양성 actor 가시성도 재검사했다. 구조/정합성 격리 0장, 확인된 split 누출 0이다. 모든 RGB의 의미를 사람이 한 장씩 검수했다는 주장은 하지 않는다. 위험 대표 30장의 RGB/GT/배경 영역 overlay를 별도로 검토했다.
+
+**수정 정책:** 전체 partial 이미지를 complete로 바꾸지 않았다. Capture 36,444장(검수 negative 2,000장 포함)은 semantic의 도로/차선/보도/하늘 및 정확히 연결된 정상 객체 instance 영역에 배경 BCE를 허용한다. 미확인 standing object/building/etc, ego, padding, 극소/ignore 객체 영역은 보수적으로 제외한다. 8px feature cell의 모든 픽셀이 안전해야 허용하고 stride16/32도 안전 영역을 다시 축소한다. GT 없는 partial 16,144장은 문서화된 정답 박스 내부에서 해당 클래스의 비할당 cell에만 억제 손실을 허용한다. 다른 미주석 클래스 전체를 배경으로 보지 않는다. 기존 complete Roboflow 1,000장은 일반적인 배경 손실을 유지한다.
+
+영역별 배경 grid는 NPZ sidecar와 SHA로 보존하고 loader가 letterbox/반전과 함께 전달한다. 두 E2E head에서 ignore 우선 제외와 정상 양성 우선 적용을 유지한다. CPU 회귀 45개 통과, 실제 v9 Capture/RF/complete/negative 표본을 읽은 CPU backward에서도 배경 gradient 복원을 확인했다(합성 모델·optimizer update 0; 정확도 시험은 아님). v9의 GT 기반 safe cell 평균은 960 tensor의 47.77%이며, 실제 배경 손실 양은 head 할당·ignore에 따라 달라진다.
+
+**본학습:** `artifacts/camera-bbox-main-v9/run-20261013-r1/`, 컨테이너 `asmc-camera-main-v9-r1`. 공식 YOLO26l 사전학습 가중치에서 새로 시작하며 기존 4epoch 가중치는 보존했다. imgsz960·batch4·유효 batch16·AMP·AdamW/LR0.001·40epoch 최대 일정·첫 24시간 budget를 유지한다. GPU 200batch 사전 점검을 통과했으며 점검 가중치는 본학습에 사용하지 않았다. 모든 유효 train 이미지를 epoch마다 사용하고 최대 2회 반복한다. 본학습 오류/유한 손실과 첫 진행 기록을 확인했다.
+
+주 평가는 검수한 16종 150장, 기존 618장은 별도 회귀 진단이다. Confidence0.40에서 1/2/4epoch와 이후 4epoch마다 평가한다. 소표본 신규 클래스도 개발용 평균에서 누락하지 않으며 소표본 상태를 명시한다. 기존 충분한 표본 클래스의 recall 회귀 감시는 유지한다. checkpoint·optimizer·EMA·scheduler 재개와 E2E loss schedule epoch 일치를 검사한다. 평가 성능은 아직 새 학습 epoch 완료 전이므로 개선을 확정하지 않는다. 운영 모델/ROS/fusion과 PR 병합은 변경하지 않았다.
+
+근거: `config/baselines/evidence/camera_background_spatial_v2/`. 전수 검사 manifest: `artifacts/camera-background-full-audit-20261013-r2/audit.jsonl`. v9-r1은 초기 원본 manifest 경로 불일치의 실패 초안, r2는 전수 감사 산출물, r3은 절대 경로 metadata로 고정한 본학습 버전이다. 원본 manifest와 다른 중단 Capture는 SHA가 정확히 일치하는 기존 `-rgb-verified-r1` snapshot으로 확인했으며 실패 증거도 보존했다.
+
+[전수 감사·배경 영역 갤러리](http://localhost:8768/camera-background-full-audit-20261013-r2/index.html) · [v9 본학습 실시간](http://localhost:8768/camera-bbox-main-v9/run-20261013-r1/live.html)
+
+## 배경 손실 점검 — 2026-10-13
+
+CPU 실제 forward/backward로 두 E2E head를 검사했다. Partial은 `keep = foreground`가 되어 비할당 위치의 BCE gradient가 0이다. 같은 합성 입력의 complete에서는 one2many/one2one 배경 gradient L1이 48/12, partial에서는 0/0이었다. 양성 gradient는 유지됐다. 검수 negative의 배경 gradient, stride-cell ignore와 정상 양성 우선 처리도 정상이며 기존 LossTests 7개가 통과했다. 수치는 합성 입력 검사이며 실제 학습 gradient 평균이 아니다.
+
+| 자료 | partial | complete | reviewed negative |
+|---|---:|---:|---:|
+| Capture | 34,441 | 3 | 2,000 |
+| Roboflow | 16,118 | 1,000 | 0 |
+| AIM | 24 | 0 | 0 |
+| bag | 2 | 0 | 0 |
+
+최근 Capture 30,674장은 전체 16종 검수 메타데이터가 없어서 partial이다. 코드상 complete에는 annotation_complete와 명시적 full16 accept/all_targets_annotated 기록이 모두 필요하다. 스폰 actor의 native GT 정확성과 고정 맵 객체까지 포함한 전체 주석 완전성은 다르므로 모두 complete로 바꾸지 않았다.
+
+확인된 문제는 계획대로 구현된 image-level partial 정책이 양성 장면 대부분에서 배경·중복 억제 학습까지 제거한다는 점이다. 오검출의 유력한 기전이지만 실제 기여도와 단독 원인은 재학습 대조 없이는 확정하지 않는다. 무주석 배경 2,000장만으로 객체 주변 중복 억제를 대신할 수 있다고 가정하지 않는다.
+
+다음 수정은 Capture 소스/run별 누락 검사 후 확실한 묶음을 새 revision에서 complete로 승인하고, 제한된 불확실 영역만 ignore로 남기는 방향이다. 검수되지 않은 전체 배경을 negative로 켜지 않는다. 이후 작은 대조로 확인한다. 이번에는 원본·v8·학습 코드·가중치를 변경하거나 학습을 재개하지 않았다. 상세 근거는 `config/baselines/evidence/camera_background_loss_v1/`와 `artifacts/camera-background-loss-audit-20261013/`에 보존했다.
+
+## 16종 평가 후 재개 판정 — 2026-10-13 03:45 KST
+
+사용자의 조건부 재개 요청에 따라 원본 기준선과 4epoch를 새 150장 평가본에서 실제 GPU 평가했다. Confidence 0.40, 전방1280/측방640, 기존 mask를 고정했다.
+
+| 경로 | 기준선 TP / FP | 4epoch TP / FP | 기준선 / 4epoch 16종 macro F1 |
+|---|---:|---:|---:|
+| 기존 NMS-free | 99 / 18 | 282 / 9,479 | 0.3396 / 0.0677 |
+| 별도 NMS 대조 | 101 / 18 | 270 / 962 | 0.3466 / 0.3886 |
+
+새 클래스 검출은 증가했지만 중복·오검출이 많아 **변경 없는 장시간 재개는 보류**한다. NMS 대조는 다른 head 경로를 사용하며 기존 결과를 대체하지 않는다. 16종 평균은 COCO에 없는 클래스의 0점도 포함하므로 기존 7종 보존을 따로 확인해야 한다. NMS-free의 person 19/22·motorcycle 20/23은 기준선과 같지만 오검출까지 해결됐다는 뜻은 아니다.
+
+Train의 partial 50,585장(94.4%), complete 1,003장, reviewed_negative 2,000장을 확인했다. Partial은 비할당 배경 분류 손실이 제외된다. 배경·중복 억제 부족의 원인 후보이며 인과관계는 아직 확정하지 않았다. 두 head의 E2ELoss 학습은 확인했다. 다음은 Capture/소스별 주석 완전성 및 배경 손실 노출·E2E schedule 재개 검사와 작은 대조다. 일괄 complete 전환은 하지 않는다.
+
+학습 컨테이너는 기존 paused_regression 상태를 유지하고 optimizer update·운영 변경은 하지 않았다. 원본 예측·SHA·NMS 대조와 사례는 `artifacts/camera-validation16-resume-20261013/`, 판정은 evidence `resume-decision-20261013.json`이다.
+
+## v8 YOLO26l 본학습 — 2026-10-12 실행 중
+
+사용자 합의로 YOLO26l detection 하나를 먼저 본학습한다. YOLOE는 개선이 부족할 때
+검토하며 운영 모델·ROS 계약·fusion 정책과 #81/#82의 미병합 상태는 유지한다.
+
+- 데이터는 `camera_objects_bbox_v8-pretrain-r1`, train 53,588장·양성 262,902개·ignore 261,415개다.
+  매 epoch 전체를 포함하고 최대 2회 반복한다. epoch 0은 60,816노출/15,204batch다.
+- 공식 YOLO26l 원본 가중치에서 고정 16종으로 시작한다. 이전 회귀 가중치를 사용하지 않는다.
+  이름별 기존 7종 분류 행 전이를 실제 로그에서 확인했다. 전체 26,201,016개 파라미터를 학습한다.
+- imgsz960, batch4, 유효 batch16, AMP, AdamW/lr0.001/weight decay0.0005, warmup1,
+  seed20261011과 v8 ignore/partial·Ego mask·증강 정책을 고정한다.
+- `asmc-camera-main-v8-r1`은 공유 컨테이너와 같은 고정 이미지의 독립 학습 컨테이너다.
+  data와 D 드라이브 AIM 원본은 읽기 전용, 네트워크는 격리했다. 실제 코드는 실행 폴더의
+  `code/`에 복사하고 SHA를 기록했다. 학습 중 worktree 수정은 실행 코드에 반영되지 않는다.
+- 시작 2026-10-12 19:43 KST, 첫 실행 종료 시한 2026-10-13 19:43 KST다.
+  최대 40epoch 일정을 고정하며 시간 부족 시 완전한 epoch에서 저장한다. 다음 epoch 예상시간의
+  1.2배와 평가 여유 600초가 남아야 다음 epoch를 시작한다. 완료 epoch 수는 실제 기록을 따른다.
+- GPU 200batch 점검은 batch4/AMP로 통과했다. optimizer step 50회 중 초기 AMP scale 조정으로
+  6회 생략, 유한 gradient 44회를 기록했다. 비유한 loss·OOM은 없었다. 점검 가중치는 폐기하고
+  본학습은 원본에서 다시 시작했다. CPU 관련 검사 38개 통과, hosted CI는 별도 상태다.
+
+본학습 실행 위치는 `artifacts/camera-bbox-main-v8/run-20261012-r1/`이다.
+`supervisor.json`은 전체 진행, `main/run.json`은 25batch마다 갱신되는 실제 진행이다.
+`main/fit/weights/epochN.pt`는 optimizer·scaler·EMA·실제 학습 모델·scheduler를 보존한다.
+재개 시 EMA가 아닌 실제 학습 모델을 복원하고 optimizer step·EMA update 일치를 확인한다.
+실제 재개 검증은 첫 epoch 완료 이후 기록되며 사전 CPU 검사만으로 완료했다고 표시하지 않는다.
+
+중간 평가 618장은 v8 selection과 과거 파일럿의 selection/heldout 600장을 중복 제거해 구성했다.
+파생 진단 manifest에서만 evaluation role을 부여하며 원본 split은 변경하지 않았다.
+Train 이미지/픽셀/계보 누출 0, complete121장/partial497장이다. person204·motorcycle138 GT로
+기존 회귀를 확인한다. dog/bicycle/traffic_cone/stroller GT가 없고 deer1개이므로 해당 종류의
+일반화·회귀 검증 완료를 주장하지 않는다. 과거에 여러 번 본 평가 자료이며 blind test가 아니다.
+
+1/2/4epoch 및 이후 4epoch마다 confidence0.40에서 외부 평가한다. 기존 7종 중 GT20개 이상인
+클래스 recall이 원본 기준선보다 2%p 넘게 감소한 상태가 두 점검 연속이면 자동 중단한다.
+Partial GT는 recall만, complete GT20개 이상 신규 클래스만 macro F1에 포함한다.
+회귀 조건을 통과한 최고 점수를 `best-development.pt`로 보존한다. stock `best.pt`와 다르다.
+이 결과는 본학습 후보이며 운영 교체는 TensorRT·3뷰 통합·전방 fusion·독립 MORAI 주행 시험 후다.
+
+2026-10-12 23:16 KST에 초기 회복 가능성을 확인하기 위해 2epoch 체크포인트에서 한 차례
+재개했다. 1/2epoch 평가에서 motorcycle recall은 116/138 → 90/138로 원본 126/138보다
+낮아 자동 중단됐지만, person은 87/204 → 139/204, car는 18/148 → 57/148로 회복했다.
+손실 NaN·OOM·재개 상태 오류는 확인되지 않았으며, batch4·누적4회·유효 batch16,
+AdamW·초기 LR0.001·warmup1epoch와 고정 데이터/코드는 그대로 유지한다.
+다음 평가 지점은 4epoch다. 기존 연속 회귀 중단 규칙과 최초 24시간 종료 시각
+(2026-10-13 19:43 KST)은 변경하지 않았다. 이 재개는 초기 중단을 검토한 한 차례의
+계속 실행이며, 이륜차 회귀·많은 오검출의 해결이나 최종 수렴을 확인한 것이 아니다.
+중단 직전 상태와 판단은 실행 폴더의 `continuation-history/` 및
+[재개 근거](../../../config/baselines/evidence/camera_bbox_main_v8/continuation-after-epoch2.json)에 보존했다.
+
+실행 진입점은 [본학습 감독기](../../../tools/perception/run_camera_bbox_main.py),
+[고정 설정](../../../config/experiments/camera_bbox_main_v8.json),
+[학습기](../../../tools/perception/train_camera_bbox_pilot.py)다. 기존 인자를 유지하면서 학습기에
+`--epoch-budget`, `--reserve-seconds`를 추가했다. 일반 YOLO CLI는 v8에 사용할 수 없다.
+
+[실시간 진행](http://localhost:8768/camera-bbox-main-v8/run-20261012-r1/live.html)과
+[평가·실패 갤러리](http://localhost:8768/camera-bbox-main-v8/run-20261012-r1/index.html)는
+[전체 목차](http://localhost:8768/)에서 접근한다. GPU batch 시간은 데이터 로딩을 포함한
+전체 epoch wall 시간과 다르며, 초기 예상만으로 15–20epoch 완료를 확정하지 않는다.
+
+## v8 전처리·전체 통합 — 2026-10-12
+
+현재 worktree는 `asmc-camera-data-audit`, 브랜치는 `feat/capture-route-collection`이다.
+기존 v7과 최신 승인 Capture 12개 부분집합의 train 후보 53,411장·530,009주석을 입력으로
+사용했다. 이전 8,000장 파일럿 제한과 소스별 채택 상한은 v8에 적용하지 않는다.
+#81·#82는 이번 작업에서 병합하지 않는다. 운영 기본 모델·ROS 계약과 현재 마운트는 유지한다.
+
+| 결과 | 수량 |
+|---|---:|
+| 유효 양성 이미지 | 51,588 |
+| 검수 후 추가한 배경 이미지 | 2,000 |
+| 최종 train | **53,588** |
+| train 양성 / ignore / 제외 주석 | **262,902 / 261,415 / 2,358** |
+| 양성이 없어 별도 보관한 후보 이미지 | 1,823 |
+| selection / heldout | **113 / 1,128** — 기존 소속 유지 |
+| epoch 0 노출 이미지 | 60,816 — 전체 포함, 이미지당 최대 2회 |
+
+ignore 객체도 원본·manifest·sidecar에 보존한다. 양성이 없는 1,823장을 빈 정답으로
+전환하지 않았으므로 위 train 주석 수에는 이 별도 보관본의 주석이 포함되지 않는다.
+완전 가림 native box는 이전 Capture 변환부터 양성으로 내보내지 않으며 원본 GT와 부모
+manifest에 남아 있다. 유모차의 확인된 아기 component만 person에서 제외하는 정책도 유지한다.
+
+| 학습 클래스 | 원본 등장 이미지 | 유효 양성 이미지 | 반복 후 노출 |
+|---|---:|---:|---:|
+| person | 30,055 | 23,019 | 25,691 |
+| dog | 12,324 | 7,281 | 8,868 |
+| deer | 17,105 | 10,310 | 11,988 |
+| bicycle | 14,665 | 9,530 | 11,214 |
+| car | 8,280 | 7,517 | 8,704 |
+| motorcycle | 16,874 | 9,337 | 10,868 |
+| bus | 6,809 | 6,244 | 8,067 |
+| truck | 5,479 | 4,882 | 6,773 |
+| bollard | 14,877 | 6,743 | 8,164 |
+| box | 18,554 | 9,754 | 11,238 |
+| concrete_barrier | 18,653 | 11,200 | 13,014 |
+| steel_barricade | 18,321 | 13,010 | 14,798 |
+| traffic_drum | 12,557 | 6,036 | 7,617 |
+| plastic_barrier | 19,093 | 11,197 | 12,809 |
+| traffic_cone | 14,566 | 6,345 | 7,842 |
+| stroller | 19,494 | 11,260 | 12,560 |
+
+여러 클래스가 함께 있는 이미지는 각각에 집계하므로 열 합계는 전체 이미지 수와 다르다.
+같은 Capture 연속 구간·증강 계보·배치의 여러 날씨를 독립 장면으로 세지 않는다.
+세부 종류·출처·뷰·split·계보·크기 집계는
+[coverage 증거](../../../config/baselines/evidence/camera_pretrain_v8/coverage.json)에 있다.
+날씨는 54,827장 unknown, 2장 sunny이며 터널 여부도 기존 행에서 확인되지 않아 unknown이다.
+배경 외형으로 날씨·터널을 추측해 커버리지를 부풀리지 않는다.
+
+### 전처리와 supervision
+
+[전처리 정책](../../../config/datasets/camera_pretrain_policy_v1.json)은 원본 영상 또는 960 tensor
+중 한쪽이라도 짧은 변 `<2px` 또는 면적 `<16px²`이면 ignore로 지정한다. Capture 가시 instance
+픽셀 `<4`도 ignore다. 경계값 자체는 통과한다. 부분 가림은 가시 instance를 감싸는 bbox를
+사용하고, 낮은 픽셀 점유율만으로 얇은 자전거·철제 방벽을 제거하지 않는다.
+차체 mask 후 남은 instance 픽셀로 bbox를 재계산하며 부분 겹침만으로 양성 전체를 삭제하지 않는다.
+갤러리의 차량 24/12px·기타 16/8px 표시 기준은 v8 학습과 새 평가에 적용하지 않는다.
+
+RGB 검사에서 **actor semantic GT에 없는 고정 지도 드럼·방벽**이 확인됐다.
+정확한 actor GT와 16종 전체의 주석 완전성은 구분한다. 새 Capture는 확인된 양성을 유지하면서
+partial로 사용한다. 명시적인 전체 16종 RGB 검수 근거가 있는 이미지에만 complete를 부여한다.
+
+| train 이미지 상태 | 수량 | 손실 |
+|---|---:|---|
+| complete | 1,003 | 일반 양성·배경 손실, ignore cell의 배경 BCE 제외 |
+| partial | 50,585 | assign된 양성의 분류·박스 손실, 미주석 배경 BCE 제외 |
+| reviewed_negative | 2,000 | 검수한 빈 영상의 배경 BCE 유지 |
+
+미세 ignore도 feature stride cell과의 교차로 적용한다. 정상 양성 foreground가 겹치면 양성을
+우선한다. YOLO26·YOLOE detection의 one-to-many와 one-to-one 모두에 같은 처리를 연결하며
+원래 assigner·E2E 가중치 스케줄·box/DFL 계산은 유지한다. 공유 Ultralytics 설치는 수정하지 않는다.
+
+배경 후보 14,145장 중 run×view 12묶음에서 각 50장, 총 600장을 RGB로 확인했다.
+문제가 없었던 5묶음은 묶음 채택하고, 지도 물체가 보인 7묶음은 확인한 개별 영상만 사용했다.
+최종 2,000장은 exact 중복과 평가 계보를 다시 검사했다. GT 부재만으로 모두 배경이라고
+처리하지 않았으며 검수 주체·표본·22개 예외·SHA는 `background-reviews.json`에 기록했다.
+
+### 입력과 epoch 순서
+
+[전용 학습 설정](../../../config/experiments/camera_bbox_pretrain_v8.json)은 `imgsz=960`,
+`rect=False`, `multi_scale=0`이다. 전방1280×720은 960×540과 위아래210px padding,
+측방640×480은 960×720과 위아래120px padding으로 들어간다. 카메라마다 별도 학습 표본이며
+운영 2+1 batch와 다르다. 뷰가 확인된 자료만 운영 Ego mask를 적용한다.
+unknown 뷰 18,357장에는 mask를 추정하지 않는다.
+
+HSV와 수평 반전만 유지하고 Mosaic·MixUp·CopyPaste·임의 회전·이동·축소는 끈다.
+양성·ignore 좌표를 동일하게 resize/padding/반전한다. 클래스별 **유효 양성 등장 이미지 수**의
+역제곱근으로 최대 한 번 추가 반복하며 seed `20261011`을 고정한다. 기본 사용량은 모든 이미지
+1회다. optimizer 경계 재개를 위해 epoch 길이는 유효 batch 16의 배수로 맞추고 반복 상한을
+지킨다. epoch 0의 batch 내 같은 correlation group 충돌은 7건으로 기록하며 완전 분산으로
+과장하지 않는다. epoch별 순서는 달라지되 총 길이는 일정하다.
+
+### 저장·검증·후속 학습 연결
+
+```text
+data/dataset_versions/
+├── camera_objects_bbox_v8-positive-stage-r1/ # 양성 준비 단계, 학습 불가
+└── camera_objects_bbox_v8-pretrain-r1/       # 최종 통합본
+    ├── data.yaml                            # 고정 16종 ID
+    ├── manifest.jsonl                       # 원본·클래스·supervision·출처
+    ├── labels/{train,val,test}/             # 양성 YOLO bbox만
+    ├── supervision/{train,val,test}/        # ignore와 완전성 정보
+    ├── images/{train,val,test}/             # 원본 symlink
+    ├── epoch-000-order.jsonl
+    ├── exclusions.jsonl                    # ignore-only 등 별도 보관
+    ├── policy.json / background-reviews.json
+    ├── pretrain.json / summary.json / verification.json
+    └── _SUCCESS                             # 최종 metadata SHA
+```
+
+원본 이미지·이전 버전은 수정하지 않았다. 일반 CLI 차단 전의 검증본은 `camera_objects_bbox_v8-pretrain-r1-before-cli-guard`로 보존했다.
+초기 픽셀 해시 형식 불일치 실패본도
+`camera_objects_bbox_v8-pretrain-r1-incomplete-hash-diagnostic`으로 보존했다.
+구형 v7의 dimensions+RGB 해시와 새 Capture의 RGB-only 해시를 각각 검증한 뒤 공통 해시로
+통일했다. 성공 검증은 실제 YOLO·sidecar 재읽기, 모든 RGB SHA, split/계보 누출, 부모 manifest
+불변성을 포함한다. 확인된 구조 오류·미해결 클래스·split 누출은 0이다.
+
+현재 worktree에서 다음은 **읽기 전용 재검증**이다. 보고서를 지정하면 기존 파일을 덮어쓰지 않는다.
+
+```bash
+python3 tools/perception/verify_camera_pretrain.py \
+  --dataset ../data/dataset_versions/camera_objects_bbox_v8-pretrain-r1 --rgb-sha
+```
+
+`prepare_camera_pretrain.py`는 고정 inventory의 부모 버전에서 새 양성 stage를 생성하고,
+`prepare_camera_backgrounds.py`가 제안한 표본의 승인 기록을 `finalize_camera_pretrain.py`가
+결합한다. 모두 새 output 경로를 요구한다. `report_camera_pretrain.py --dataset … --output …`로
+원본/유효/반복과 계보 커버리지를 재집계할 수 있다.
+
+후속 학습은 `train_camera_bbox_pilot.py --pretrain`과 위 v8 설정을 사용한다. 기본 학습기로
+`data.yaml`에는 기본 YOLO CLI의 경로 검사를 실패시키는 보호 경로를 둔다. 실제 입력은 전용
+trainer가 검증 manifest에서 읽는다. 기존 실행 진입점은 `--pretrain`이 없으면
+GPU 패키지 import 전에 차단한다. 최종 `_SUCCESS`, metadata·manifest·정책 SHA, 클래스 순서와
+원본 경로도 검사한다. 검증한 버전은 **Ultralytics 8.4.150**이다.
+YOLOE는 기존 detection YAML과 PE trainer를 유지하며 segmentation 학습을 시작하지 않는다.
+
+학습 컨테이너에는 workspace data와 **`/mnt/d/asmc_aim/dataset` 원본 경로의 읽기 전용 마운트**가
+필요하다. 현재 `asmc-ros-noetic`에 D 드라이브가 없어 전체 loader preflight가 실패하는 것을
+확인했다. 이번에 공유 마운트는 바꾸지 않았고 데이터가 빠진 상태에서 학습하도록 fallback하지
+않는다. CPU 검증은 /tmp의 격리 코드와 실제 v8 5개 표본으로 수행했다.
+중간 체크포인트는 `evaluate_camera_bbox_pilot.py --selection-only`로 heldout을 읽지 않고
+확인하며 최종 검증에서만 heldout을 사용한다. 재개는 기존 epoch 경계 정책과 v8 metadata SHA를
+묶는다. 증강 RNG의 완전한 연속성까지 보장한다고 표시하지 않는다.
+
+로컬 손실·입력·기존 회귀 **60개 통과**, optimizer update **0**이다. hosted CI 결제/한도 차단은
+로컬 통과와 구분하며 이 작업에서 hosted CI 성공을 주장하지 않는다.
+precision/F1은 complete GT에서만 계산한다. selection의 충분한 GT는 person에 편중됐으며,
+다수 종류는 heldout에 없거나 partial뿐이다. **학습 입력 준비 완료와 16종 배포 평가 준비 완료는
+다르다.** 후속 selection 보강 없이 전체 16종 성능을 확정할 수 없다.
+
+[E300 전처리 갤러리](http://localhost:8768/camera-coco7-live-v1/v8-pretrain-20261012/index.html)는
+양성·극소 ignore·차체 mask·partial·배경과 배경 채택에서 제외한 지도 물체 예외를 보여준다.
+전체 목차는 [기존 갤러리 주소](http://localhost:8768/)를 사용한다.
+요약·재검증·커버리지는 [v8 증거](../../../config/baselines/evidence/camera_pretrain_v8/summary.json)에
+고정하며 다음 단계는 가중치 재학습과 중간 selection 평가다.
 
 ## 현재 기준 — 2026-10-10 v2 16종
 
@@ -2475,3 +2828,576 @@ PR #80은 main에 병합했다(`c862ff07`). 기존 v7 자료는 보존했다.
 남은 조건을 모았다. 정차 native GT 검증 부분집합은 9장·57객체다. 검토 전용 주행과
 수락된 학습 자료를 구분하며 전체 경로 여섯 조건 완료로 표시하지 않는다.
 이번 변경은 별도 `feat/capture-route-collection`에서 진행한다. 학습·운영 기본 모델 변경은 없다.
+
+## 2026-10-13 — 크기·배경·거리 분석과 전체 재분할 후보
+
+사용자 요청에 따라 **새 정책 적용 전 분석만** 수행했다. 진행 중인 v9 학습, 원본 GT,
+학습 손실과 운영 설정은 변경하지 않았다. 사용자는 새 분할을 위해 필요하면 원본
+사전학습 가중치에서 다시 시작하는 것을 허용했다. 현재 체크포인트를 새 test에 평가해
+독립 시험이라고 설명해서는 안 된다.
+
+도구는 `tools/perception/review_camera_supervision_policy.py`다. `base`, `scan`,
+`partition`, `resplit`, `panels`, `refine`, `evaluate`, `report` 단계를 제공한다.
+산출물은 상위 workspace의 `artifacts/camera-supervision-policy-review-20261013-r2/`다.
+r1은 빈 양성 TXT 직렬화 검사 실패를 보존한 미완료 실행이며, r2는 이를 수정했다.
+scan의 느린 색상 비교는 정확한 RGB palette histogram으로 교체하고 기존 로그에서
+재개했다. GPU 추론·optimizer update·실제 데이터 정책 적용은 수행하지 않았다.
+
+### 1. 4px/64px² 양성 후보의 영향
+
+원본과 square960 letterbox 모두에서 짧은 변≥4px **그리고** 면적≥64px²인 현재 양성을
+유지한다. 경계값은 통과한다. 기존 ignore를 양성으로 승격하거나 배경으로 바꾸지 않는다.
+현재 전체 양성262,902개 중83,009개(31.6%), Capture양성158,573개 중60,024개(37.9%)가
+양성 제외 후보다. 학습 GT를 실제로 수정하지 않은 반사실적 집계다.
+
+거리 연결이 가능한 현재 양성147,478개에서:
+
+| 거리 근사 | 양성 | 제외 후보 | 비율 |
+| --- | ---: | ---: | ---: |
+| 0–20m | 31,005 | 255 | 0.8% |
+| 20–40m | 32,962 | 3,938 | 11.9% |
+| 40–60m | 25,525 | 9,260 | 36.3% |
+| 60m 이상 | 57,986 | 42,555 | 73.4% |
+
+60m 미만에서도15.0%가 제외된다. 따라서 크기 기준을60m 거리 cutoff나 안개 가시거리와
+동일하게 취급하지 않는다. 같은 run의 SHA 고정 ledger, 정확한 native actor ID,
+요청 시각 Ego age≤0.2초만 연결했다. 객체 기준점–Ego 3D거리이며 노출 시각의
+optical depth가 아니다. 거리 미상115,424개는 추정하지 않았다.
+
+### 2. 배경 확보와 손실 영역 확대 가능량
+
+사용자는 일반/auto Capture의 상당수가 차선용 무스폰 주행이며, comp에서는 미션 바깥에
+장애물이 없다고 설명했다. 메타데이터의 `capture_backend_requested=auto`는 호출 방식이라
+그 값만으로 무스폰을 확정하지 않는다. run 종류와 semantic GT를 함께 사용했다.
+
+60,764개 RGB/GT 경로를 검사했다. 무스폰 후보4개 run의14,145장 전부와 comp의5,679장이
+차체 밖 대상 semantic 픽셀0이었다. 총19,824장은 **RGB 묶음 검수용 배경 후보**이며
+자동 채택이 아니다. BBox 파일 부재와 teacher 미검출을 배경 근거로 사용하지 않았다.
+현재 분할·현재 train 중복을 제외한 신규 train 후보는15,436장이다. 전체 재분할안을
+따르면 신규 배경 후보의 역할은 train12,679장·selection5,145장으로 달라진다.
+
+현재 Capture train36,444장에 대해 건물·도로 경계·노면 표식·교통 표지판·신호등의
+semantic 영역을 추가하는 후보를 계산했다. 기존 ignore와 새 크기 ignore, 정상 양성
+박스의 위치를 고려했다. `standing_object`·`etc`·포괄 Obstacle은 자동 배경에 넣지 않았다.
+배경 면적은 보수적인 stride8 cell의 기하 집계이며 실제 assignment/gradient 크기는 아니다.
+padding과 차체를 제외한 분모와 전체960 tensor 분모를 모두 저장했다.
+추가 배경 cell2,732,080개가 가능하지만, 이 수정만으로 오검출이 해결된다고 결론내리지 않는다.
+새 배경 이미지를 모두 학습에 추가해야 한다는 뜻도 아니다.
+
+raw-only 자료의 split은 기존18개 Capture run 분할을 따른다. 현재 학습에 이미 포함된
+자료의 영역 집계는 실제 active manifest 소속을 따른다. 두 기준의 차이를 숨기지 않는다.
+날씨는 명시된 수집 기록16개 run에서 복원하고 근거 SHA를 남겼다. 기록에 없는 조건이나
+터널 여부는 unknown이다. 구름/밝기만 보고 날씨를 추정하지 않았다.
+
+### 3. 기존 예측의 거리별 recall과 오검출
+
+기존150장 평가본의 baseline·1/2/4epoch 저장 예측을 confidence0.40으로 재집계했다.
+원래 GT 범위와4px/64px² 후보 범위를 함께 보존했다. 새 GT 범위에서 점수가 높아지는
+것을 재학습 개선으로 해석하지 않는다. 원래 범위의 FP는18/1,620/976/505개다.
+4epoch 후보 범위에서는492개이지만 이는 ignore 범위 변경에 따른 평가 효과다.
+
+전체322개 GT 중 거리 연결은34개뿐이다(0–20m23개·20–40m7개·40–60m4개).
+그중 여러 종류는 기존 COCO 모델의 미지원 종류라 전체를 기존7종 성능으로 설명하지 않는다.
+거리 미상288개는 별도로 표시한다. 미대응 예측에는 정답 거리가 없으므로 FP에
+임의의 거리를 부여하지 않는다. 해당 평가본으로 전체16종60m 검출 성능을 수락할 수 없다.
+Capture FP의 semantic 박스 중심점도 집계했지만 박스 전체의 배경 판정은 아니다.
+
+### val/test 동일 기준과 새 전체 분할
+
+기존 평가본에 같은 크기 후보를 적용한 별도 export, 완전 주석만 사용한 균형 진단 묶음,
+기존 train과의 ID/파일/픽셀/그룹 격리 검사를 만들었다. 기존16종 selection이 기존 test의
+Enzo 프로젝트와 comp_sample_b_seg05 run을 이미 사용했으므로 기존 test 전체를 새로운
+독립 heldout으로 표시할 수 없다. 기존 소속과 원본 결과는 보존한다.
+
+사용자 승인에 따른 **전체 재분할 후보**는 다음과 같다. 현재 학습에는 적용하지 않았다.
+
+| 역할 후보 | 이미지 | 16종 양성 존재 | ignore만 남아 학습 양성으로 넣지 않을 후보 |
+| --- | ---: | --- | ---: |
+| train | 38,846 | 모두 있음 | 455 |
+| selection | 5,144 | 모두 있음 | 1,028 |
+| heldout | 10,943 | 모두 있음 | 419 |
+
+원본 데이터와150장 검수본을 ID별로 결합해54,933장의 후보를 만들었다. 같은 스폰 layout의
+날씨 반복, 같은 comp 시나리오 가족, 관련 숫자 라벨 Katri 소스를 그룹으로 유지한다.
+train최소60%, val/test최소5%·최대30%, train종류별100박스·val/test종류별20박스 이상을
+조건으로 평가 자료량을 최소화한 그룹 배정이다. 정확한80/10/10보다 누출 방지를 우선했다.
+출처가 불명확한 모든 유사 장면의 계보까지 확인했다는 의미는 아니다.
+
+전체 평가 후보에서 클래스·날씨·뷰·연속 구간을 고려한 검수 패널은 val131장·test96장이다.
+동일 correlation group 최대2장으로 제한한다. val 일부 클래스는20GT 미만이며 소표본이다.
+모든 공존 주석과 ignore를 유지하며 박스를 버리거나 같은 박스를 복제해 균형을 맞추지 않는다.
+두 패널 중 partial은 각각128장·71장이다. 따라서 **최종 평가 준비 완료가 아니며** 전체16종
+누락 검수를 통과하기 전 precision/F1에 사용하지 않는다. 그룹당2장 제한 없는 이전
+148장·89장 패널도 비교용으로 보존했다.
+
+현재 학습은 새 test의 일부를 이미 보았다. 새 분할을 사용하면 원본 사전학습 가중치에서
+새 run으로 시작해야 한다. 과거 사람의 검토/개발 노출 이력은 새 학습 시작으로 없어지지 않는다.
+다음 작업은 평가 패널의 image-wide16종 검수와 배경 검수, 실제 supervision 계약 검증 후
+새 학습 데이터 버전을 확정하는 것이다. 학습 재시작은 이번 분석에서 수행하지 않았다.
+
+갤러리: `http://localhost:8768/camera-supervision-policy-review-20261013-r2/index.html`.
+정책·거리·배경·새 분할·클래스별 분포 JSON과 원본 overlay를 같은 페이지에 연결했다.
+
+
+## 2026-10-13 · v10 재분할·전처리 확정 및 사전학습부터 재시작
+
+현재 채택 데이터는 `data/dataset_versions/camera_objects_bbox_v10-resplit-r2`다. `r1`은 legacy bbox-only 검수 영상의 semantic SHA 미존재를 발견해 준비에 실패한 산출물이며 `_SUCCESS`가 없고 학습에 사용하지 않았다. r2는 검수 완료 bbox와 선택적 segmentation 연결을 구분한다. 원본, 이전 버전, 실패 증거를 보존했다.
+
+- Train **39,391장·양성 148,778개·ignore 230,546개**. Val **212장·475개 양성**, test **116장·445개 양성**.
+- 같은 Capture 객체 배치의 날씨 반복, 연속 구간, 확인된 Roboflow 증강/복제 계보를 분할 단위로 묶었다. 기존 53,588장의 train을 그대로 유지하지 않은 이유는 평가 독립성을 위한 전체 그룹 재분할이다. ignore-only train 후보 455장은 보관하고, 기존 2,000장 외 검수된 배경 1,000장을 추가했다.
+- 평가 reserve pool은 selection 5,144장 / heldout 10,943장으로 유지한다. 이번 주 평가본에 뽑히지 않은 예약 영상을 train으로 되돌리지 않는다. 과거 학습/검토 이력이 있는 이미지가 포함되므로 새로운 비공개 시험이라고 표현하지 않는다. 새 가중치는 원본 pretrained에서 다시 시작한다.
+- Train의 완전 주석 1,408장, partial 34,983장, 검수된 negative 3,000장이다. partial은 확인된 박스 자체가 틀렸다는 뜻이 아니라 **전체 16종의 누락 없음까지 보증되지 않았다**는 뜻이다. 확인된 semantic 배경과 기존 클래스 한정 손실 범위를 사용하며 나머지를 일괄 배경 정답으로 만들지 않는다.
+
+| 학습 클래스 | Train 등장 이미지 | 양성 박스 | Epoch 0 노출 이미지 | Val GT | Test GT |
+|---|---:|---:|---:|---:|---:|
+| `person` | 12,501 | 30,213 | 13,589 | 116 | 63 |
+| `dog` | 4,468 | 4,536 | 4,859 | 22 | 21 |
+| `deer` | 4,629 | 4,738 | 5,122 | 22 | 24 |
+| `bicycle` | 5,871 | 6,108 | 6,509 | 22 | 22 |
+| `car` | 5,467 | 11,449 | 5,486 | 39 | 35 |
+| `motorcycle` | 4,862 | 5,178 | 5,395 | 21 | 43 |
+| `bus` | 5,212 | 7,185 | 5,519 | 22 | 22 |
+| `truck` | 3,871 | 7,214 | 4,300 | 20 | 29 |
+| `bollard` | 4,617 | 30,166 | 4,827 | 21 | 20 |
+| `box` | 4,639 | 4,950 | 5,051 | 27 | 22 |
+| `concrete_barrier` | 6,151 | 7,536 | 6,688 | 22 | 22 |
+| `steel_barricade` | 5,417 | 5,590 | 5,967 | 20 | 23 |
+| `traffic_drum` | 4,088 | 13,755 | 4,480 | 26 | 23 |
+| `plastic_barrier` | 3,842 | 4,262 | 4,518 | 26 | 27 |
+| `traffic_cone` | 2,713 | 3,006 | 3,529 | 27 | 21 |
+| `stroller` | 2,892 | 2,892 | 3,688 | 22 | 28 |
+
+### 균형 판단
+
+사람 등장 이미지가 콘의 약 4.6배다. 볼라드는 30,166박스지만 등장 이미지는 4,617장이므로 박스 수로 과도하게 반복하지 않는다. 모든 유효 학습 이미지를 매 epoch 최소 한 번 사용하고, 역제곱근 빈도 가중치로 희소 종류를 이미지당 최대 2회 노출한다. Epoch 0은 41,728회 노출이며, 반복 후 사람/콘 노출 차이는 약 3.9배다. 흔한 클래스 제거로 균형을 맞추지 않았다. 각 클래스 최소 2,713장과 신규 16종을 확보했으나 장면 독립성과 실전 인식 성능을 보장하는 수치는 아니다.
+
+Val/test는 종류별 GT가 각각 20개 이상이다. 355개 후보 패널을 Codex가 RGB·원본 GT와 대조했고 애매한 사례는 원본 크기로 확인했다. Val 14장/test 13장은 누락된 고정 드럼·방벽, 비정상 스폰, amodal 박스, 약 90도 증강 등의 이유로 주 평가에서 보류했다. 기존 GT를 teacher 결과로 덮어쓰지 않았다. 많은 종류가 1~2개 배치/소스 그룹에 의존하므로 일반화·통계적 회귀 판단에는 제한이 있다.
+
+### 전처리·배경 정책
+
+- 16종과 train/val/test 모두 **원본 영상 또는 square 960 tensor에서 짧은 변 <4px OR 면적 <64px²**이면 ignore. 경계값은 유지한다. Capture 가시 instance 픽셀 <4개도 ignore다. 거리 60m cutoff는 적용하지 않는다.
+- 전방 1280×720→960×540, 측방 640×480→960×720 후 각각 960×960 padding. 원본 기준도 확인하므로 측방 영상을 확대해 원래 극소 객체가 양성으로 되살아나지 않는다. class별 갤러리 24/12px·16/8px 제한은 학습/평가에 사용하지 않는다.
+- 뷰가 확인된 21,488개 train 이미지에는 Ego mask가 모두 적용된다. 미확인 Roboflow 17,903장은 추정 mask를 적용하지 않는다. 전체 평가에서도 같은 mask SHA를 검사한다.
+- 정확한 작은 실제 객체를 negative로 바꾸지 않는다. Ignore와 positive가 겹치면 정상 positive를 우선한다. 부분 가림의 보이는 instance 박스와 원본 하위 유형은 보존한다. 유모차 안 아기는 별도 person 양성이 아니다.
+- 기존 안전 semantic 배경에 `building, road_edge, road_sign, traffic_sign, traffic_light`를 추가했다. `etc`, `standing_object`, 포괄 `Obstacle`은 승인하지 않았다. 총 1,814,205개 안전 grid cell이 추가됐으며 이는 전체 이미지 수나 독립 배경 장면 수가 아니다.
+- 무스폰 Capture라도 지도 고정 드럼·방벽이 보여 이미지 전체를 background로 승인하지 않았다. 추가 negative는 기존 source×view 50장 검수에서 통과한 묶음만 사용하고, 제외 사례와 중복을 제거했다. 3,000장은 train의 약 7.6%다.
+- 색상/수평반전만 유지, mosaic/mixup/회전/이동/축소는 OFF. 양성·ignore·안전 배경 grid를 같은 변환으로 이동한다.
+
+### 검증과 실행
+
+실제 39,719장 RGB SHA·디코딩 픽셀 SHA, 원본/YOLO 라벨·sidecar·고정 ID·좌표·분할/계보를 검사했고 확인된 충돌은 0이다. 18,072개 Roboflow train 후보와 최종 평가 328장의 perceptual hash 비교에서 나온 19쌍은 전부 영상으로 확인했으며 동일 도로의 다른 차량 배치/위치여서 중복으로 확정하지 않았다. 이 검사가 모든 미기록 계보의 독립성을 증명하지는 않는다.
+
+고정 학습 컨테이너에서 실제 로더로 source/view/완전성/16종을 포함한 122개 입력을 검사했다. 실제 960 image·bbox·ignore·safe grid·반전·collate와 전체 순서/최대 2회/재현성을 통과했다. 두 활성 검출 head의 background/ignore gradient, partial/negative, 양성 우선 및 기존 complete 손실 일치 CPU 시험 23개가 통과했다. 관련 정책/평가/분할 회귀 39개도 통과했다. 데이터 준비 중 optimizer update는 하지 않았다.
+
+기존 v9는 full E8까지 계산 후 기존 평가본과 회귀 진단본으로 평가·SHA를 보존한다. 감독 PID1은 host Docker STOP 신호로 `Tsl`, 계산 자식은 `Rl`인 것을 확인했다. 같은 namespace 안의 init STOP 요청만으로는 정지되지 않아 상태를 확인하고 host 신호로 보정했다. 기존 frozen 코드는 수정하지 않았다.
+
+새 실행은 `artifacts/camera-bbox-main-v10/run-20261013-r1`에 고정했다. `transition.json`이 현재 상태의 근거다. `_EVALUATED`와 새 데이터/검증 SHA가 모두 통과할 때만 기존 컨테이너를 종료하고 새 컨테이너 `asmc-camera-main-v10-r1`을 시작한다. 공식 `data/models/camera_coco7_v1/yolo26l.pt`에서 시작하며 v9 model/EMA/optimizer를 재개하지 않는다. Baseline과 200-batch smoke 후 smoke 가중치를 버리고 본학습한다. 960 / AMP / AdamW LR0.001 / batch4→2→1 / 유효16 / 최대40epoch·첫24시간이다. 초기 회귀는 사용자 승인대로 경고만 남기며 자동 중단하지 않고, 오류·예산 경계는 유지한다.
+
+중간 선택에는 새 val 212장만 사용한다. 이전 618장은 새 train과 겹칠 수 있어 새 선택 기준에서 제거하고 v9 역사 자료로만 보존했다. Test 116장은 중간 평가에 넣지 않는다. 운영 모델·ROS/fusion·PR 병합 상태는 변경하지 않았다.
+
+- [분포·검수 갤러리](http://localhost:8768/camera-dataset-v10-review-20261013-r1/index.html)
+- [새 학습 상태](http://localhost:8768/camera-bbox-main-v10/run-20261013-r1/live.html)
+- [실험 목차](http://localhost:8768/index.html)
+- 설정: `config/datasets/camera_pretrain_policy_v3.json`, `config/experiments/camera_bbox_main_v10.json`.
+- 도구: `prepare_camera_pretrain_v10.py`, `report_camera_pretrain_v10.py`, `finish_camera_epoch_boundary.py`, `transition_camera_pretrained.py`.
+- 로컬 상세 증거: `artifacts/camera-dataset-v10-review-20261013-r1/`; Git 요약: `config/baselines/evidence/camera_pretrain_v10/`.
+- Hosted CI는 기존 결제 한도 차단과 구분하며 이번에 실행 성공했다고 보고하지 않는다.
+
+
+## 2026-10-13 · v9 E8 완료 평가와 warm-start 판단
+
+v9 E8 저장/평가는 16:19 KST에 완료됐고, 기존 승인에 따른 자동 전환으로 v10이 16:20 KST부터 baseline/smoke 후 본학습을 시작했다. 사용자의 E8 선행 검토 요청을 확인한 뒤 v10은 500 batch 지점에서 Docker pause로 동결했다. 완료 epoch는 없었으며 초기화 방식은 원본 pretrained다. 평가가 끝난 뒤 이 방식을 유지해 unpause한다.
+
+같은 150장·confidence0.40에서 전체16 macro F1은 E1 22.41%, E2 38.28%, E4 49.85%, E8 61.13%였다. 신규9종(소표본 포함) macro F1은 33.11→50.48→57.57→66.27%, 기존 기준 FP는1620→976→505→332로 개선됐다. 그러나 motorcycle recall은 원본20/23→E4 14/23→E8 7/23, person은 원본19/22→E8 17/22로 회귀가 남았다. 신규 클래스 대부분 GT20개 미만이므로 점수는 개발 진단이며 배포 수락이 아니다.
+
+기존 예측을 재사용해 4px/64px²로 재집계하면 E8 fixed16 F1은61.97%, FP309이고 motorcycle recall은 동일30.4%다. 원래 잘 잡던 충분히 큰 motorcycle→car, person→box/deer 사례를 원본 영상으로 확인했다. 단순 극소 GT 필터만으로 회귀가 해소된다고 보지 않는다. 이 재집계는 기존150장의 주석 완전성을 새로 보증하는 결과가 아니다.
+
+중요: 새 val212장 중207장, test116장 모두가 v9 train과 ID/fileSHA/pixelSHA 기준 정확히 겹친다. E8를 v10 초기 가중치로 쓰면 새 분할의 평가 독립성을 잃는다. 이어 학습은 기술적으로 가능하고 최종 성능 향상을 배제할 수 없으나, 이 경우 학습 이력 전체와 독립인 평가본을 다시 마련해야 한다. E8는 보존하고 공식 pretrained 시작을 유지한다. 새 시작 자체가 회귀 해소를 보장하지 않으며 예정된1/2/4epoch 평가로 확인한다. 초기 회귀 자동 중단은 사용자 요청대로 비활성 상태를 유지한다.
+
+[평가·비교 갤러리](http://localhost:8768/camera-epoch8-decision-20261013-r1/index.html) · 로컬 원본 assessment.json/decision.json 보존. 새 GPU 재추론·threshold 재선정·가중치 변경은 하지 않았다.
+
+
+## 2026-10-13 · 본학습 live 화면 개편
+
+`report_camera_bbox_main.py`와 `templates/camera_training_live.html`이 동일한 `live.html` 주소에 반응형 현황 화면을 생성한다. 학습 프로세스·frozen code·가중치는 바꾸지 않는다. 실제 dataset summary와 supervisor/main JSON을 사용하며 v8 수량을 하드코딩하지 않는다.
+
+현재 epoch/전체 일정 진행률, 최근 batch 기준 epoch ETA, 중단 시간 포함 경과 시간, 처리율, 학습 프로세스 최대 예약/할당 VRAM, 평가 F1 추이·클래스별 recall/precision/F1·회귀 경고를 표시한다. 브라우저가 관측한 loss는 경로별 localStorage에 최대480개를 보존하며 첫 접속 이전 이력을 꾸며 표시하지 않는다. 15초 갱신, 3분 갱신 중단 경고, 평가/일시정지 상태에서는 ETA 숨김. 시각은 Asia/Seoul로 고정한다.
+
+데스크톱1440px/모바일430px headless Chrome 렌더링을 확인했다. 처음 epoch, epoch 경계, E4에서 E5 재개, E8 종료, main 기록 없음 5개 진행률 시나리오를 실제 JS로 확인했다. 테스트는 /tmp 임시 문서이며 생산 페이지에는 합성 평가 자료를 넣지 않았다. GPU 가속을 끈 별도 브라우저 프로필을 사용했다.
+
+실행: `python3 tools/perception/report_camera_bbox_main.py --run <run> --dataset <dataset>`
+
+
+## 2026-10-13 · ASMC 실험 목록 개편
+
+[ASMC 실험 목록](http://localhost:8768/index.html)의 제목과 탐색 구조를 정리했다. 최근 본학습·현재 데이터 검수·이전 학습 평가·운영 모델 선정 근거를 상단에 연결하며, 기본은 원본 폴더별 작업 묶음이다. 분야·등록 날짜·검색·정렬·전체 페이지 보기와 페이지 나누기를 제공한다. 검색 조건은 URL에 보존한다.
+
+기존 E 번호·최초 등록 시각·상세 주소는 유지한다. 등록 시각은 실험 시작 시각이 아니며, 과거 실패와 보류 기록도 펼쳐볼 수 있다. `build_experiment_gallery_hub.py`가 `templates/experiment_catalogue.html`과 함께 HTML·목록 JSON·링크 검사 보고서를 생성한다. v9 종료 갤러리의 누락된 상위 목차를 복구했으며 보관된 원본 갤러리는 수정하지 않았다. 학습 실행 설정과 가중치는 변경하지 않는다.
+
+재생성: `python3 tools/perception/build_experiment_gallery_hub.py --artifacts ../artifacts`
+
+
+## 2026-10-13 18:50 KST · v10 E2 차량 회귀 진단
+
+학습은 중단하지 않았다. E2 selection212/conf0.40에서 car0/39, bus6/22, truck11/20; baseline은21/39,12/22,7/20. 초기화 직후 차량 TP와 예측 수는 baseline과 같고, E1/E2 car는 저장된 conf≥0.10에도 출력0이다. 이름 무관 일대일IoU≥0.5 대응에서 car는 truck11/bus6/motorcycle7/미대응15. 마스크와 겹치는 GT는 car2/39, bus0/22, truck1/20이므로 직접 마스킹만으로 설명되지 않는다. 학습 전후 동일 mask/input SHA다.
+
+Train car11,449 양성 중11,400개가 Roboflow(99.6%), Capture49개. 최근 Capture는 bus3,984/7,185, truck5,373/7,214다. 과거 aiv5 car의 bus/truck 혼입은 알려져 있으나 현재 전체 혼입률은 미확정이다. 고정 source별 최대4개 car박스22개를 RGB 확인했으며 극소/가림은 확정하지 않았다. 혼입과 소스·외형 분포 차이, 초기 적응/손실 영향은 원인 후보로 구분한다. car 미출력을 초기 적응으로 자동 면제하지 않으며 예정 E4 점검에서 회복 여부를 확인한다.
+
+[진단·학습 전후 갤러리](http://localhost:8768/camera-v10-vehicle-diagnostic-20261013-r1/index.html). 저장 예측 CPU 재집계만 수행했고 라벨·split·weights·frozen 학습 코드는 유지했다.
+
+
+## 2026-10-13 · comp 차량 감소 원인과 지도 고정 드럼 확인
+
+car 99.6% Roboflow의 직접적인 데이터 구성 원인을 추적했다. `resplit_group()`이 comp_sample 전체 날씨/주행을 한 계보로 묶고 solver가 selection으로 예약했으며 comp_sample_b만 train이다. v9 train comp_sample에는 car 양성3,500개가 있었다. 새4px/64px² 정책의 예약 selection comp_sample은3,715장/car양성2,155·ignore3,606개이고, 실제 채택 평가 패널은112장/car양성39개다. Capture train car는 comp_sample_b41장·49양성만 남았다. 데이터 부재가 아니라 누출 방지 분할에서 source×class train 보존을 충분히 검토하지 못한 편중이다. 양성 수만으로 분할 품질을 설명하지 않는다. 현재 데이터/학습을 변경하지 않았고, 예약 평가본을 몰래 train에 돌리지 않는다.
+
+고정 드럼: train route_pp_30_20261012T032742_843 front001028/001050/001070의 톨게이트 전 오른쪽 드럼을 RGB/semantic/저장 grid로 확인했다. semantic standing_object이며 partial/known_class_background=false, 오른쪽 standing_object와 교차하는8px셀605/427/472 중 safe background는 모두0이다. 확인 표본은 배경 오검출 손실로 억제하지 않으나 양성 학습은 누락된다. 모든 소스나 reviewed_negative 전체에 대한 보장은 아니다. 지도 고정 여부와 무관하게 실제 traffic_drum 외형은 같은 목표 클래스 양성으로 보강하는 것이 일관적이다. standing_object 전체 변환은 금지한다. 일부 val/test 후보에는 고정 드럼 누락 보류가 이미 기록돼 있다. 상세 근거는 기존 차량 진단 갤러리의 추가 추적과 JSON을 참조한다.
+
+## 2026-10-13 · 출처별 재감사와 고주로 지도 고정 드럼 보강
+
+사용자 지시대로 v10 실행을 중단하거나 활성 데이터·split·frozen 학습 코드를 수정하지 않았다. E4 평가는 기존 실행에서 진행한다. 이번 결과는 데이터 구성 문제를 확인한 것이며 단독 회귀 원인으로 확정한 것은 아니다.
+
+- Train car 11,449박스 중 Capture49/Roboflow11,400. RF 상위 소스는 aiv5 3,643, hlfma_3 3,463, jjj2,037, mino1,912. RF의 정확한 차종 에셋 커버리지는 미확인이다. car 클래스명을 서로 다른 차량 모델 수로 세지 않는다.
+- 예약 comp_sample3,715장/car2,155양성의 native GT: Sedan1,362/SUV384/Wagon93/MPV73/Vehicle224/unknown19. 실제 API 모델명은 미확인이나 여러 차체 종류는 확인된다. comp_sample 전체를 selection 계보로 묶은 결과가 현재 Capture car 부족의 직접 원인이다.
+- bus7,185 중 Capture3,995/RF3,190. Capture Universe2016 3,984개라 같은 에셋·배치 반복에 집중한다. truck7,214 중 Capture5,374/RF1,840; HD65/Porter2/Xcient P520/P540/Mixer의 5종5,373개를 확인했다. 최대 단일 소스 양성 비중은 bollard87.7%, traffic_drum60.6%로 다른 종류의 편중도 함께 남긴다.
+- 소스 보존 분할 진단: comp_sample→train, comp_sample_b→selection, heldout고정, Capture차량별 train≥1,000 및 평가클래스별≥20은 selection dog 제약으로 불가능. dog≥10으로 완화한 **소표본 진단안만** 저장했다. train후보41,578장/car13,212개 중 Capture2,155, selection후보2,412장/dog10개. 미승인·미export이며 실제 평가 RGB 검수와 독립 dog 평가 보강이 필요하다. 현재 실행이 본 영상이 새 selection에 포함되므로 채택 시 공식 사전가중치에서 새 실행해야 한다. 새로운 무결점 heldout이라고 주장하지 않는다.
+
+고정 드럼 라벨은 `data/roboflow/fixed-map-drums-reviewed-r2/`에 **immutable patch**로 저장했다. 기존 주석·분할·원본을 유지하고 ID로 병합하는 자료이며 단독 data.yaml은 제공하지 않는다. r1과 원본 제안도 보존했다.
+
+- GPS구역·standing_object semantic·RGB색/형상으로 882장/5,179개 제안. standing_object 전체를 drum으로 변환하지 않는다. 고정 instance ID는 개체 구별에 쓸 수 없어 서로 이어진 영역은 인위적으로 나누지 않는다.
+- 소스별 최대50장, 20소스/637crop을 Codex가 RGB로 확인했다(사람 검수 승인으로 표시하지 않음). ego를 동일하게 적용한 component 정합성을 재검사하고 연결·가림·모호한 색상 영역을 보류했다.
+- 채택 **861장/3,888박스**, 현재train444장/+1,891; selection예약120장/+715; heldout예약297장/+1,282. 보류1,291제안. 원래 partial 이미지는 partial이며 모든 목표 클래스 완전성을 주장하지 않는다. 12px 제한은 이번 묶음 제안의 RGB 종류 확인 기준이고 학습4px/64px² 정책이나 기존 작은 GT를 변경하지 않는다.
+- 잘못된 reviewed_negative6장을 RGB로 확인했다. 1장은 partial+양성으로 보강,5장은 `quarantine-removals.json`에 배경 채택 철회로 기록했다. 실행 중 데이터에는 미적용이다.
+- 전체 reviewed_negative3,000장 semantic전수 검사: 기존target픽셀0,standing_object존재2,945장(16픽셀이상연결영역2,900장),SHA불일치0. 이는 대부분 기둥 등일 수 있어 오류2,945장으로 해석하지 않는다. 하지만 semantic에 일반actor종류가 없다는 근거만으로 full negative를 주장할 수 없다. 향후 배경 제안기는 standing_object가 있으면 RGB검수/partial경로로 넘기도록 보완했다. 기존 partial3표본의 드럼 safe background0 결과와 reviewed_negative누락6건을 구분한다.
+
+CPU 신규6시험, v10기존8시험 통과. 실제 patch YOLO/sidecar/원본SHA/기존주석/분할계보/링크 재검증 통과. 추가 spatial-loss 회귀는 host 데이터venv에 torch가 없어 실행불가였으며 통과로 표시하지 않는다(이번 변경에 loss 수정 없음). 현재 학습의 GPU를 사용하지 않았다. 새 수집은 시작하지 않았다.
+
+[출처·차종·드럼 보강 갤러리](http://localhost:8768/camera-source-coverage-v10-20261013-r1/index.html). 기존 ASMC 실험 목록에 날짜/E번호로 연결한다. 추가 수집은 우선 comp차량 재활용과 미사용자료 확인 후, 미확인 차체/차종·독립 dog 평가·희소 각도/거리/FOGGY에 한정한다. 모든 대회 차종이 이미 있다는 주장은 하지 않는다.
+
+재현(상위 workspace에서, output은 새 revision을 사용):
+
+```bash
+PY=data/roboflow/.venv/bin/python
+TOOLS=asmc-camera-data-audit/tools/perception
+$PY $TOOLS/audit_camera_source_coverage.py --dataset data/dataset_versions/camera_objects_bbox_v10-resplit-r2 --output artifacts/camera-source-coverage-v10-20261013-r2
+$PY $TOOLS/audit_camera_negative_semantic.py --dataset data/dataset_versions/camera_objects_bbox_v10-resplit-r2 --output artifacts/camera-source-coverage-v10-20261013-r2/negative-semantic-audit.json
+$PY $TOOLS/prepare_fixed_map_drums.py --dataset data/dataset_versions/camera_objects_bbox_v10-resplit-r2 --output data/roboflow/fixed-map-drums-v2
+# RGB검수 ledger를 고정한 뒤 export_fixed_map_drums.py의 --review로 전달한다.
+```
+
+## 2026-10-13 · v11 Capture 차량 복원 준비와 E4 판단
+
+사용자가 Capture 차량 복원·데이터 재구성을 승인했고, 기존 학습을 교체할지 여부는 E4 후 판단하도록 했다. 실행 중 v10 데이터·가중치·설정은 수정하지 않았다. E4 자동 평가 뒤 기존 supervisor가 다음 epoch를 진행하는 상태를 유지했다. 새 학습 실행이나 PR 병합은 하지 않는다.
+
+새 데이터는 `data/dataset_versions/camera_objects_bbox_v11-capture-restored-r2/`이며, `_SUCCESS`와 별도 verification/loader proof가 모두 있을 때만 구조 검증 완료다. r1은 오래된 `provenance.review_record`와 새 top-level review 형식 차이로 export가 중단됐고 `_FAILED.json`으로 보존한다. r2는 기존 evidence 또는 image SHA와 full16 scope가 확인된 경우에만 검수 기록을 연결한다. 단순히 complete 플래그만 승격하지 않는다.
+
+- comp_sample 계보를 train으로 복원하고 comp_sample_b·Park·지정 AIM 계보를 selection으로 예약했다. heldout의 116장과 정답은 그대로 유지했다. 동일 run/계보를 잘라 train/val에 나누지 않는다.
+- 기존 comp 중 양성 또는 유효한 배경 학습이 가능한 2,913장을 train에 복원한다. ignore-only는 빈 정답으로 사용하지 않는다.
+- train 41,345장/양성154,611개/ignore234,208개. car는11,449→13,212개, 그중Capture49→2,155개. source별 RF/Capture 분포를 별도 보고한다.
+- 새 train에 map-fixed traffic_drum 2,309박스를 병합했다. 기존 train 보강 외에 이번에 복원한 comp 계보의 보강분도 포함한다. 원본과 이전 patch는 유지한다.
+- 이전 negative 중 standing_object가 있는 2,939장은 partial spatial-background-only로 전환한다. 이 영역을 drum으로 일괄 라벨링하지 않으며 기존 loss/loader의 safe semantic grid만 사용한다. 명확한 full negative55장, 잘못된negative5장제외/1장양성보강. 새로운 손실 수식은 추가하지 않는다.
+- 16종 ID·4px/64px²(원본과960)·Ego mask·기존 양성/ignore·이미지당최대2회 반복은 유지한다. 모든유효train을 매epoch 최소1회 사용한다.
+- selection: 기존complete100장 + 개별RGB검수complete94장 + partial11장 =205장. 추가 후보113장 중8장은 중복/불명확한 주석으로 보류한다. partial은 recall용이며 미대응검출을 FP로 세지 않는다. dog10개 및 일부차량의 표본/독립장면 부족은 해결된 것으로 표시하지 않는다.
+- 새 selection47장은 현재v10 train에 포함됐던 자료다. 이어학습하면 이 자료는 개발진단용이며 독립평가로 주장할 수 없다. 공식 사전학습 가중치에서 새로 학습해야 새 selection의 train독립성을 확보할 수 있다. 기존heldout을 대신 반복선정용으로 사용하지 않는다.
+
+E4는 기존selection212/conf0.40에서 car0/39, bus3/22, truck10/20, person99/116, motorcycle20/21이다. E2→E4 신규9종macroF1 0.42990→0.44616, fixed16macroF1 0.32786→0.33387. 차량회귀가 남아 있고 새selection의 노출문제가 있으므로 **새v11 + 공식사전가중치 시작을 권장**한다. 이 결과만으로 이어학습이 절대회복불가라고 주장하지 않는다. 실제교체는 사용자의 다음결정까지 보류한다.
+
+관련 도구: `prepare_camera_capture_restoration.py`가 기존v10 export를 재사용해 구성하고 `verify_camera_capture_restoration.py`가 원본/heldout/예약계보/반복상한/배경전달을 독립검사한다. GPU를 숨긴 기존 frozen trainer의 spatial-loss CPU시험7개가 통과했다(optimizer update 없음). 준비후 같은 frozen loader로 새 데이터 표본과 batch연결을 확인한다. [복원·분포·E4 갤러리](http://localhost:8768/camera-capture-restoration-v11-20261013-r1/index.html).
+
+### 2026-10-13 — v9·v10 회고: 새 학습 전 검토 (실행 설정 변경 없음)
+
+[E329 보충 회고](http://localhost:8768/camera-capture-restoration-v11-20261013-r1/retrospective.html)에 저장 결과·입력 SHA·권고를 연결했다. 새 학습은 시작하지 않았고 현재 v10 실행은 유지했다. 아래 권고는 적용 완료 항목과 구분한다.
+
+- **클래스 수 자체를 원인으로 확정하지 않는다.** v9도 동일 16종이며 car는 사전19/44→E8 38/44로 증가했다. 그러나 FP1→101, F1 59.38%→41.53%로 정밀도가 악화됐다. 새 클래스 추가 중 기존 표현이 약해질 가능성과 라벨/소스 편중을 구분한다. 초기화 직후 차량 결과는 사전 가중치와 일치했으므로 기존 클래스가 모두 무작위 초기화됐다는 설명은 배제한다.
+- **전체 점수 상승이 회귀 해결을 뜻하지 않는다.** v9 신규9종 macro F1은 E1 33.11%→E8 66.27%지만 motorcycle은 E4 14/23→E8 7/23(사전20/23). v10 E4 person은 사전과 같은99/116이지만 FP19→469, F1 84.62%→28.95%. 다음 선정은 recall 외에 precision/F1·FP와 클래스별 혼동을 함께 확인해야 한다.
+- v9의150장과 v10의212장은 평가 구성·크기 기준이 다르다. 두 총점으로 버전 우열 또는4px/64px²의 인과효과를 주장하지 않는다. v9 E8에 새 크기 기준만 적용한 재집계는 fixed16 F1 +0.83%p이고 motorcycle recall은 그대로다.
+- 확인된 데이터 문제는 comp_sample의 평가 예약으로 Capture train car가49개만 남은 것과 map-fixed drum 미주석/잘못된 negative다. v11 복원 이후 Capture car2,155/13,212개(16.31%)이며, 모든 출처·차종 다양성이 충족된 것으로 표시하지 않는다.
+- **새 버전도 partial 비중이 높다:** 39,839/41,345장(96.36%). 이는 배경 손실이 전혀 없다는 뜻이 아니다. safe semantic cell 및 확인된 클래스 박스 내부 감독이 이미 있고, 실제 학습 gradient의 출처·클래스 비중은 아직 측정하지 않았다. complete로 확정 가능한 검수 묶음과 안전 배경을 우선 보완하되 partial 전체를 complete로 올리지 않는다. standing_object를 일괄 background로 처리하지 않는다.
+- 차량 분류를 소비 단계에서 vehicle로 묶어도, 학습에서 같은 외형을 car/bus/truck으로 상충되게 감독하는 효과가 없어지지는 않는다. 사용자 승인한 대량 활용은 유지하되, 새 학습 전 주요 직접 대응 소스와 Capture 복원 자료에서 명백한 차량 오분류·누락·복합박스에 한정한 점검을 권장한다. 전체 오분류율은 아직 측정하지 않았다.
+- 유지 권고: 16종·공식 사전 가중치·3뷰 Ego mask·4px/64px² ignore·양성 우선·계보 분할·전체 데이터 활용. 실제 v9/v10의960/batch4/nbs16/AMP/AdamW lr0=.001/warmup1/약한 증강은 동일하며, 학습률이나 해상도가 주원인이라는 대조 증거가 없어 우선 유지한다. 복원 후에도 붕괴가 지속될 때만 낮은 LR 또는 단계적 freeze를 별도 한 변수 대조로 검토한다.
+- 감시 권고(미구현): 초기화 및E1/2/4/이후2epoch마다 기존 클래스 TP/FP/precision/F1·신규 macro·기하 대응/이름 혼동·감독 셀/gradient 통계를 기록한다. 단일 초반 점검으로 즉시 탈락시키지 않되 지속적인 클래스 소실을 총점으로 면제하지 않는다. 새 selection의 complete GT dog10/bus14/truck12와 독립 장면 부족을 명시하고, heldout을 반복 선정용으로 전용하지 않는다.
+
+공식 [Ultralytics fine-tuning 문서](https://docs.ultralytics.com/guides/finetuning-guide/)의 이름별 가중치 전이와 사전학습 활용을 참고하되 실제 고정8.4.150 실행 증거를 우선한다. [ICCV2017 incremental detection](https://arxiv.org/abs/1708.06977)은 망각 가능성과 지식 보존의 필요성을 뒷받침하지만, 기존 자료도 함께 쓰는 본 프로젝트의 개별 회귀 원인을 증명하지는 않는다. 이번 검토에서 distillation·새 손실·학습률 변경은 구현하지 않았다.
+
+### 2026-10-13 — v11 학습 전 차량 라벨·확실한 배경 보완
+
+복원 r2를 보존하고 `camera_objects_bbox_v11-preflight-r3`의 개별 검수, 이어 `camera_objects_bbox_v11-preflight-r4`의 상충 중복 정리를 수행했다. 최종 준비본은 **r4**, metadata SHA `54d46da76f15d74e3938f96dd2c578ec3bd4a076df985a562b125082e8a7abc6`다. 새 학습·기존 학습 설정 변경·운영 교체·PR 병합은 하지 않았다. `camera_objects_versions.json`의 prepared_candidate만 갱신하며 current_training/current_adopted는 유지한다.
+
+- Train **41,345장·양성154,537개·ignore234,208개**. 양성 감소74개는 같은 물체에 중복된 학습 주석을 제외한 결과다. 원본 주석·좌표는 manifest에 남긴다. selection205/heldout116의 이미지·정답은 부모와 완전히 동일하다.
+- 차량 후보216주석을 개별 검토해 car→bus19개, car→plastic_barrier1개를 수정했다. 후속 교차검사에서 JJJ73장의 서로 다른 클래스 IoU≥0.95 중복74쌍을 모두 시각 검토하고 올바른 박스 하나씩 유지했다. PE 방벽에 붙은 traffic_drum2개도 plastic_barrier로 수정했다. RF train의 해당 상충 쌍은74→0이다. 전체 미검수 라벨의 오류율 또는 중복이 모두 해결됐다는 주장은 하지 않는다.
+- 배경 후보96장 중86장을 원본 RGB의16종 부재와 고정 semantic의 대상 픽셀 부재로 확인했다. 모호한 맵 구조물10장은 partial 유지. Capture 차량24장 중22장은 full16 주석 완전성을 확인하고 complete로 승격했으며, 미주석 맵 drum이 있는2장은 partial 유지했다. 표본 결과를 다른 이미지에 자동 전파하지 않았다.
+- Train 감독 상태는 complete1,473 / reviewed_negative141 / partial39,731이다. partial은 기존 safe semantic grid·확인된 양성 감독을 유지한다. 새로운 background loss 수식·완화된 ignore 정책은 추가하지 않았다. 미검수 standing_object 영역을 일괄 배경으로 만들지 않는다.
+- `prepare_camera_preflight_revision.py`는 원본 SHA·개별 annotation identity를 고정하고 train 변경만 허용한다. 중복 제외는 다른 positive keeper와 IoU≥0.95·검수된 목표 이름 일치를 요구한다. 독립 사본과 RGB symlink를 사용해 부모 파일을 수정하지 않는다.
+- 다음 실행 설정 `config/experiments/camera_bbox_main_v11.json`은 공식 사전학습 재시작,16종/960/AMP/AdamW/기존 증강·Ego mask·4px64를 유지한다. E1/2/4 이후2epoch 간격 평가를 준비했다. 충분한 complete GT가 있는 기존 클래스의 precision5%p 또는 F1 2%p 초과 하락은 체크포인트 우선 선정을 보류한다. 이는 학습 자동중단과 별개이며 초반 한 번의 하락으로 학습을 종료하지 않는다. 기존 recall pause 정책은 별도로 남아 있다.
+- complete selection dog10/bus14/truck12와 장면 다양성 한계는 남는다. 부분 GT에 FP를 부여하거나 heldout을 반복 선정에 사용하지 않는다. v10이 새 selection47장을 이미 본 이력이 있어 새 config는 원본 사전학습 시작만 허용한다.
+
+[**E331 · 차량·배경 학습 전 준비 갤러리**](http://localhost:8768/camera-v11-preflight-20261013-r1/index.html)에 수정·유지·보류 사례와 원본/수정 검수 기록, 구조 검사, CPU loader 증거를 연결했다. 전수 시각 검수나 성능 개선 검증을 완료한 것은 아니다. 학습 개선 효과는 다음 실행에서 확인한다.
+
+최종 검증: 관련 CPU 회귀19개, frozen 양 head spatial-loss CPU시험7개, r3 실제 loader4사례와 r4 loader2사례(2×3×960×960), 전수 YOLO/sidecar/hash/계보 검사 통과. GPU/optimizer update는0이다. 원본 RGB 전체 SHA 재계산은 하지 않았으며 변경한 이미지의 SHA와 기존 고정 provenance를 검증했다. 저장한 요약 증거는 `config/baselines/evidence/camera_v11_preflight/`다.
+
+#### 밴/버스 경계 재검토
+
+car→bus로 바꾼19주석의 원본 검수 패널을 재확인했다. 승객용 쏠라티 계열로 보이는 미니버스와 대형 coach로 판단해 수정은 유지한다. 정확한 MORAI API 에셋명·좌석 수는 확인하지 않았으므로 외형 추정과 확정 정보를 구분한다. [현대 공식 쏠라티](https://www.hyundai.com/kr/ko/c/products/bus/solati)의 승객용15/16인승 버스 분류는 이 경계의 참고이며 COCO가 모든 밴을 bus로 정한다는 근거는 아니다. 승용 MPV/일반 미니밴은 car를 유지하며 높은 차체·측창 유무만으로 bus 일괄 변환하지 않는다. 데이터 수정 없이 검토 기록 `artifacts/camera-v11-preflight-20261013-r1/van-bus-review.json`을 추가했다. 미검수 영상 전체에 동일 분류가 일관되게 적용됐다는 의미는 아니다.
+
+### 2026-10-13 · v10 종료 → v11 새 본학습 시작
+
+사용자의 명시적 요청으로 `asmc-camera-main-v10-r1`을 종료했다. 완전한 epoch5(`epoch4.pt`) 체크포인트와 마지막 정식 epoch4 평가를 보존했다. 종료 grace 이후 컨테이너 exit137이며 중간 작업을 새 학습에 사용하지 않는다. 종료 기록과 checkpoint SHA는 v10 run의 `operator-closeout-v11/result.json`에 있다.
+
+새 실행은 `artifacts/camera-bbox-main-v11/run-20261013-r1/`, 컨테이너 `asmc-camera-main-v11-r1`이다. 데이터는 `camera_objects_bbox_v11-preflight-r4`, 초기 가중치는 공식 YOLO26l detect(`9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26`)이며 v10 가중치/optimizer resume는 하지 않는다. 코드·설정은 실행별 복사본으로 고정했다. 원본 데이터/AIM은 읽기 전용, network none, 기존 고정 이미지·Ultralytics 환경을 사용한다.
+
+- selection205장(complete194/partial11)만 평가한다. legacy 평가본이나 heldout116장은 중간 평가에 합치지 않는다. 평가 구성의 train SHA/pixel/계보 누출0을 확인했다. `prepare_evaluation`은 legacy가 생략되면 selection만 준비하도록 기존 경로를 확장했다.
+- 960·batch4부터200batch 사전 점검, AMP/AdamW/lr0=.001/nbs16/40epoch schedule/첫24시간 예산. 점검 가중치는 버리고 본학습은 공식 원본에서 다시 시작한다. 모든41,345장 사용, epoch0 노출43,904장, 최대2회 반복.
+- E1/2/4 이후2epoch 평가. `--continue-on-regression`으로 기존 사용자 의도대로 회귀만으로 학습을 자동 중단하지 않는다. 기존 클래스 precision/F1·recall 악화는 기록하고 좋은 후보 선정 조건은 유지한다. OOM/비유한 손실/기타 오류와 시간 예산 중단은 유지한다.
+- 데이터 목록의 current_training만 v11로 갱신했고 current_adopted 및 운영 모델은 유지한다. PR 병합·운영 교체는 없다.
+
+[**v11 실시간 학습 현황**](http://localhost:8768/camera-bbox-main-v11/run-20261013-r1/live.html)에서 진행률·손실·클래스별 지표를 확인한다. [실험 목록](http://localhost:8768/)의 최근 본학습에도 연결한다. 실제 점검/시작 증거는 실행 폴더의 `supervisor.json`, `smoke-b4/run.json`, `main/run.json`을 따른다.
+
+시작 확인:200batch/batch4 점검 통과 후 원본 가중치에서 main1epoch 시작. 초기 본학습75batch 이상, 유한gradient와 오류0을 확인했다. AMP 초기 skip은 별도 카운터에 보존하며 이후 증가를 감시한다. 점검 epoch 추정3,036초(약51분)이며 실제 epoch 완료 전 추정이다. `launch-verification.json`에 원본 가중치 SHA·resume 없음·manifest SHA·초기 손실을 기록했다.
+
+### 2026-10-14 · v11 E14 종료 후 loss·LR 검토와 별도 분기
+
+사용자 요청에 따라 원본 v11은 완전한 E14까지 학습·평가한 뒤 보존한다. 기존 supervisor만 `SIGSTOP`으로 대기시켰고 `--stop-after-epoch 14`인 trainer는 계속 실행한다. `operator-closeout/_EVALUATED`는 체크포인트·평가 기록의 SHA 검증 뒤에만 생성한다. 이 표식만으로 시각 검토 완료를 뜻하지 않는다. 기존 frozen trainer/데이터/loss는 수정하지 않는다.
+
+[loss·LR 및 실패 장면 검토](http://localhost:8768/camera-v11-epoch14-review-20261014-r1/index.html)에 실제 학습 CSV와 고정 selection205장의 그래프·GT/E8/E12/E14 비교를 연결한다. E14 평가 전에는 pending으로 표시한다. heldout116장은 사용하지 않는다.
+
+- 원래 LR은 E8 .00082675 → E10 .00077725 → E12 .00072775이며 40epoch 선형 스케줄이다. 첫 epoch 이후 warmup은 종료돼 있다. 이 값이 부적절하다는 인과관계는 아직 확인하지 않았다.
+- 실제 기준은 `E2ELoss`의 one-to-many/one-to-one 가중합이며, CSV의 loss items는 one-to-one 값이다. box gain7.5/cls.5/auxiliary1.5, 원래 target-score 정규화와 assignment 설정을 유지한다. partial/ignore BCE만 두 head에 동일하게 연결한다. 기존 가중치나 loss schedule이 전부 재초기화됐다는 근거는 없다.
+- 기존 frozen 코드의 CPU loss 회귀17개 통과. 정상 양성 우선, ignore/partial 배경 제외, 확인된 semantic 배경·클래스 내부 감독을 검사했다. 모든 실제 라벨·semantic이 정확하다는 증명으로 확대하지 않는다.
+- E8→E12에서 놓친 버스5개는 Park 소스의 가까운 대형 coach 장면이며, 트럭3개는 상자 뒤 적재 트럭의 연속 장면이다. 작은 GT만의 문제나 전부 car로 이름이 바뀐 현상은 아니다. 상자 여러 개를 하나로 묶는 장면도 있다. 같은 소스의 연속 장면·bus/truck 소표본 한계를 유지한다.
+
+시각 검토 후 첫 분기는 E8의 학습 모델·AdamW 상태·EMA를 복원하고 LR만 낮춘다. E9 첫 LR .0002, E10 약 .0001938이며 기존 선형 감쇠 형태와 40epoch head 가중치 일정을 유지한다. `run_camera_lr_branch.py`는 명시적인 검토 gate, 체크포인트·데이터·설정 SHA와 E14 평가 완료를 요구한다. 원본 E8→E10의 optimizer/EMA/head 시작 상태 및 입력 순서를 대조하며, 같은 selection/conf0.40으로 분기 E9/E10을 평가한다. 정확한 augmentation RNG 연속성은 주장하지 않는다. 이 문단은 실행 계획이며 실제 시작/완료는 별도 `branch.json`에 따른다. 운영 모델·데이터·PR 병합에는 변화가 없다.
+
+#### E14 평가 후 최신 결정 — 기존 설정 E16까지 관찰, LR 분기 보류
+
+사용자가 일시 악화 뒤 회복 가능성을 고려해 기존 설정 유지도 검토하도록 요청했다. E14를 완료·평가했고, fixed16 F1은 E12 **47.85868% → E14 47.85836%**로 사실상 동일하다. person F1 39.60→42.64, bus33.33→38.10, box63.41→70.27은 개선됐지만 truck34.78→31.58, car44.44→43.24는 악화됐다. 이는 local minimum 탈출의 증거가 아니며 뚜렷한 전체 반등도 아니다.
+
+한 번 더 같은 조건의 관찰 구간을 확보하기 위해 **E14 optimizer/EMA/scheduler를 복원해 E16까지만** 기존 설정으로 재개했다. 원본 PID1 supervisor는 계속 대기 상태이며 별도 bounded trainer와 `operator-closeout-e16/` 감시기가 E16에서 평가·정지한다. E14 기록은 `operator-closeout/`에 그대로 남는다. 두 감시 경로를 혼동하거나 PID1을 `SIGCONT`해 중복 실행하지 않는다. 데이터·loss·confidence·LR 감쇠 설정은 변경하지 않았다. LR 분기는 아직 시작하지 않았다.
+
+같은 selection205/conf0.40에서 사전학습 가중치의 기존7종 F1은 person82.57%, dog86.96%, bicycle66.67%, car80.00%, motorcycle57.14%, bus75.00%, truck47.06%; 7종 macro70.77%다. complete GT만 F1에 사용하며 dog10/bus14/truck12개는 소표본이다. COCO 공식 벤치마크 수치가 아니다. 초기 가중치 SHA는 위 공식 가중치와 일치한다.
+
+새 기록은 검토 갤러리의 `decision-at14.json`, `run-record-at14.json`, `pretrained-seven-class-baseline.json`, `failure-geometry.json`에 있다. 상자 뒤 적재 차량으로 보이는 대상의 주석이 빠졌을 가능성이 있는 Park1장도 `evaluation-review-followup.json`에 별도 표시했다. 동결 GT는 변경하지 않았으며 해당 이미지에서는 초기/E8/E12의 truck 예측이 없어 기존 FP를 변경하지 않는다. 이 관찰을 모든 평가 라벨의 오류로 확대하지 않는다.
+
+
+### 2026-10-14 · v11 val 크기 정책·출처 전수 감사
+
+사용자 요청으로 현재 고정 selection205장을 읽기 전용으로 감사했다. 도구는 `tools/perception/audit_camera_validation_scope.py`, 증거는 `artifacts/camera-v11-val-audit-20261014-r1/`에 보존했다. [전체 val 검수 갤러리](http://localhost:8768/camera-v11-val-audit-20261014-r1/index.html)는 출처·클래스·뷰 필터와 ignore 표시 전환을 제공한다. 학습·라벨·분할·고정 평가본·운영 설정은 변경하지 않았다.
+
+- 원본 및 square960 letterbox에서 짧은 변4px 미만 또는 면적64px² 미만이면 ignore이며 경계값은 통과한다. Capture instance 가시 픽셀4개 미만도 ignore다. 거리 컷은 없다. frozen policy 함수로 양성359개를 재계산해 위반0, ignore800개, excluded2개를 확인했다. 실제 YOLO 라벨·평가기 GT 수·부모 주석·원본 SHA 불일치0, train과 SHA/픽셀해시/분할 그룹 중복0이다. heldout116장은 예측 없이 주석 크기만 검사해 양성445개 위반0을 확인했다. 이는 모든 이미지의 주석 완전성을 시각 검수했다는 뜻은 아니다.
+- 전체 출처는 Capture158(77.07%), Roboflow36(17.56%), AIM11(5.37%)이다. Capture는 전부 `route_pp_30_20261011T161630_349` 한 run, Roboflow는 전부 `parkminseo/final-ftuy2` 한 프로젝트다. car22/bus16/truck14/box21 양성은 모두 이 Roboflow 소스다. F1에 쓰는 complete GT는 각각20/14/12/18개다.
+- Capture158장 중138장은 같은 뷰의 ±5 Capture index 안에 다른 선정 이미지가 있다. 자전거19개는 actor1개, 드럼20개는 actor2개다. index 간격을 초로 해석하거나 기록된 correlation group을 독립 장면 수로 간주하지 않는다. 날씨195장, 터널 여부194장이 unknown이라 환경 균형도 입증되지 않았다.
+- 현재 E14 결과 갤러리는 오류 수 상위32장(Capture30/Roboflow2), E8→E12 실패 비교는14장(Roboflow11/Capture3)이다. 대표성 있는 무작위 표본이 아니다. 이전 갤러리는 ignore 박스도 표시하므로 작은 박스가 보인다는 사실이 양성 기준 누락을 뜻하지 않는다. 8×8 또는4×16 박스는 기준을 통과하며 작은 예측 박스에도 별도 표시 컷은 없다.
+
+결론: 크기 정책 누락보다 출처·actor·연속 장면 편중이 확인됐다. 현재 평가본은 동일 장면의 체크포인트 비교를 위해 보존하되, 다양한 대회 조건의 성능 또는 LR의 인과관계를 확정하는 근거로는 부족하다. 다음에는 학습에 사용되지 않은 출처/run/actor/장면 그룹에서 차량·상자와 다른 조건을 보강한 별도 평가본을 검수하고 동일 후보 체크포인트를 재평가한다. 이번 감사에서 신규 평가본 구성이나 데이터 재분할은 실행하지 않았다.
+
+
+#### v11 val205 전체 최고/최신 체크포인트 시각 비교
+
+사용자 요청으로 [전체 비교 갤러리](http://localhost:8768/camera-v11-val-checkpoints-20261014-r1/index.html)를 추가했다. 생성 시점의 최신 완성 체크포인트는 E14(`epoch13.pt`), 평가된 v11 체크포인트 중 fixed16 macro F1 최고는 E8(`epoch7.pt`)이다. 같은 selection205장·confidence0.40에서 각각47.85836%/52.56640%다. GPU FP16 저장 예측을 재사용했으며 CPU/GPU 재추론이나 학습 중단은 하지 않았다. 최신이라는 표시는 이 갤러리의 고정 생성 시점 기준이다.
+
+`build_camera_checkpoint_comparison.py`는 frozen evaluator로 전205장 membership·영상 SHA·checkpoint SHA·mask·설정 일치와 F1 재집계를 확인한다. 최고는 이번 v11에서 평가된 epoch들 사이의 전체16종 macro 기준으로, 배포 수락 또는 회귀 없는 후보 선정과 다르다. 전205장에 GT/최고/최신615개 패널을 생성하고 별도 모델 보기·클래스/출처/뷰 필터·확대를 제공한다. 실제 추론과 같은 차체 mask를 적용하며 GT ignore는 그림에서 숨긴다. partial 영상의 미대응 예측을 FP로 표시하지 않는다. provenance.json과 comparison.json에 선택 근거·원본 예측 SHA·클래스/프레임 집계를 보존했다.
+
+
+#### 기존 설정 학습 계속 — E16 자동 재개 연결
+
+전체 val205의 E8/E14 결과를 확인한 사용자가 계속 학습을 승인했다. 데이터·loss·LR·optimizer·EMA·960/batch4를 유지한다. 진행 중인 E15→E16 trainer와 평가 감시기는 그대로 두고, `continue_after_epoch16.py`가 E16 평가 완료 marker/SHA·프로세스 종료·완전한 checkpoint를 확인한 후 frozen supervisor로 재진입한다. PID1은 계속 suspended이며 SIGCONT하지 않는다. 중복 controller는 flock으로 차단한다. 기존40epoch 일정·첫24시간 deadline·2epoch 평가를 유지하고 회귀 지표만으로 자동 정지하지 않는다. 오류·OOM·비유한 손실·시간 예산 정지는 유지한다.
+
+대기 상태와 승인·검증 기록은 run의 `operator-continue-after-e16/`에 있다. E16 이후 실제 재개 여부는 이 폴더의 started.json/state.json과 main/run.json으로 확인한다. 이번 설정 시점에는 E15가 계속 실행 중이며 이후 재개를 이미 실행했다고 표시하지 않는다. LR 분기·운영 모델 교체는 하지 않았다.
+
+
+#### 2026-10-14 · E20 학습 중 E19 전체 val CPU 진단
+
+E16 평가 후 기존 supervisor로 정상 재개했고 E18 평가 후 E20까지 학습 중이다. 데이터·LR·loss·운영 모델을 변경하지 않았다. 요청 시점의 최신 완성 checkpoint E19(epoch18.pt)를 CPU2스레드·낮은 우선순위·FP32로 val205장 전수 추론했다(약99초). frozen 평가기·4/64 GT·confidence.40·전방1280/측방640·3뷰mask를 유지했다. 결과는 run의 operator-epoch019-cpu/에 있으며 정식 GPU FP16 epoch 기록에는 합치지 않았다.
+
+[전체 E19 결과 및 E8 비교](http://localhost:8768/camera-v11-val-epoch19-20261014-r1/index.html?mode=latest): E8 GPU fixed16 F1 52.5664%, E18 GPU47.9745%, E19 CPU47.8470%. E19 complete GT 기준 bus5/14·truck3/12, box13/18·drum20/20·bollard21/21이다. 여러 중복 박스가 같은 위치에 그려져 시각적으로는 몇 개의 정상 박스만 보이는 사례가 있다. #86은 TP3/FP17인데20개 예측이 주로 같은 세 위치에 겹친다.
+
+저장 예측의 동일 클래스 greedy 중복 억제 진단에서 E19 IoU>.9는 F1 66.31%, IoU>.7는73.48%(complete FP581→94)다. E8은 같은 .7 진단에서74.21%, E18은72.95%다. 원래 평가·예측을 보존하며 이 값을 정식 배포 성능 또는 기존 지표 수정으로 취급하지 않는다. 실제 inference/export head와 NMS 연결, 이웃 객체 억제·통합 지연은 아직 검증하지 않았다. checkpoint 저장 상태의 model/head end2end=False, one2one head 존재와 evaluator nms=False→설치 predictor의 end2end=True 연결을 확인했으므로 학습된 head와 배포 head 대응을 별도 확인해야 한다. 이 관찰만으로 원인이 확정되거나 학습을 중단해야 한다고 판단하지 않았다.
+
+갤러리는 최고기록 E8 FP16/최신요청 E19 FP32 차이를 명시한다. 615개 GT/예측 패널과 headless Chrome 단독205장 렌더링을 확인했다. 보강 검증 전에는 운영 승격하지 않는다.
+
+
+### 2026-10-14 · 과거 전체 출력 중복 재평가와 loss/LR 판단 갱신
+
+사용자 요청으로 [과거 본학습·파일럿 재평가](http://localhost:8768/camera-post-nms-reevaluation-20261014-r1/index.html)를 추가했다. v8/v9/v10/v11·YOLO26/YOLOE 파일럿과 pretrained/initial 기준선을 포함한42개 저장 추론 묶음을 처리했다(E20 포함). 원래 중복을 FP로 센 것은 정상 평가이며 기존 evaluation.json/supervisor.json을 고치지 않았다. `same_class_nms_v1`: confidence.40, 같은 클래스의 IoU>.7만 낮은 confidence부터 억제(동점 원본 순서), 서로 다른 클래스는 유지한다. GT/ignore와 일대일 IoU>=.5 대응·partial 처리도 유지한다. 이 출력 후처리 정책을 적용한 별도 지표를 추가했으며 운영 backend/export는 변경하지 않았다.
+
+각 원본 평가의 TP/FP 계산용 수치를 먼저 재현하고, 동일 evaluator/manifest SHA에 연결해 다시 집계했다. v8/v9/v10/v11 live.html은 원본/중복 억제 선택, 두 곡선·클래스 수치·후처리 기준선을 표시한다. 원본 점수를 보존하고 정식 epoch 지표만 live에 넣었다(E19 CPU는 별도 결과표). 45초 간격의 CPU 보고 감시기가 새 평가 파일을 읽어 최대8시간 자동 갱신한다. PID/상태는 `watch-process.json`, `watch-state.json`; 학습 supervisor와 별개다.
+
+동일 v11 selection205에서 원본→NMS16 F1: E8 52.57→74.21%, E12 47.86→70.93%, E14 47.86→71.16%, E16 47.74→71.82%, E18 47.97→72.95%, E20 48.60→72.69%. E19 CPU는47.85→73.48%로 GPU와 정밀도를 구분한다. E20 complete FP562→101, E8은533→121이며 두 epoch에서 TP 감소0이다. 모든 과거 실행을 합치면 NMS로 TP가 줄어든 사례도42건(반복 실험·분할 포함)이 있으므로 무조건 정확도가 개선된다고 설명하지 않는다. `tp-loss-cases.json`에 보존한다. v11 E4 motorcycle1개도 감소했다.
+
+E8→E20 NMS F1은 person77.48→78.18, motorcycle87.18→81.08, car75.00→64.00, bus66.67→41.67, truck58.33→31.58, box70.27→76.47, concrete_barrier44.44→75.86, stroller72.73→79.17이다. 전체는 E8보다1.52%p 낮고 E12 이후 일부 회복했지만 차량 하위 클래스 누락은 여전하다. v9 E8 NMS77.36%, v10 E4 44.36%는 서로 다른 GT manifest에서 얻은 값이므로 v11과 직접 우열을 매기지 않는다.
+
+원인 점검: 실제 deepcopy된 backend에서 nms=False는 one2one/end2end=True/cv2제거를, nms=True는 one2many/end2end=False를 선택한다. checkpoint에 저장된 end2end=False만으로 잘못된 head가 평가됐다고 판단하면 안 된다. 양 head 각120개 tensor 중102개가 initial→E19에서 변경됐다. 같은3장면의 NMS-free 출력 수20/17/3과 one2many+NMS 출력3/3/3을 확인했다. nms=True는 head 자체도 바꾸므로 이번 post-NMS 재집계와 동등하다고 설명하지 않는다. `head-audit-cpu.json`에 설치 소스·출력 근거를 보존한다.
+
+학습 data의 complete1473/partial39731/reviewed_negative141(총41345), known_class_background=True15809를 확인했다. partial96.1%에서 미확인·ignore 영역의 배경 BCE가 제한돼 중복·오검출 억제 신호가 약해질 수 있다는 가설은 남지만, semantic 안전 배경과 클래스 내부 배경 감독이 있으므로 배경 손실 전체가 꺼졌다고 설명하지 않는다. LR/가중치 배분을 원인으로 확정할 독립 대조는 없다. 화면에서 같은 위치에 겹친 박스와 다른 클래스 혼동·진짜 배경 FP를 구분한다. 학습은 계속하며 loss/LR·배포 모델·fusion은 바꾸지 않았다.
+
+검증: NMS 단위시험5개, deterministic100박스 torchvision batched_nms 대조, 전42실험 원본 수치 재현, 실제 live Chrome 렌더링 통과. 부분 GT/ignore/TP 손실 추적 및 고정 source SHA를 유지한다. 저장된 후보(conf>=.1,max_det300)에 대한 사후 처리이므로 native 전체 후보에서 NMS를 하는 실험과 다르며, TensorRT/실시간 검증은 후속 작업이다.
+
+## 2026-10-14 · E345/E346 · v11 E8/E22 배포 시험 인계
+
+이 절이 이번 배포 시험의 시작점이다. 이전 v8~v11 학습·실패 원본은 보존한다.
+운영 COCO7 기본값은 유지하며, 새 16종 모델은 별도의 실험 launch로 실행한다.
+
+### 확정한 분류 계약
+
+| 소비 그룹 | 원본 학습 클래스 |
+|---|---|
+| vehicle | car, bus, truck |
+| dynamic_obstacle | person, dog, deer, bicycle, stroller |
+| static_obstacle | motorcycle, bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier, traffic_cone |
+
+사용자가 SportBike의 정적 특성과 자전거·유모차가 사람과 함께 움직일 수 있음을 확인했다.
+이 그룹은 대회 ODD에서의 이동 가능성/사용 목적이며, 실제 운동 상태가 아니다.
+CameraObjectBox.class_name에는 그룹, source_class_name에는 원본 16종 이름을 넣는다.
+원본 confidence·source header·좌표·카메라 ID를 유지한다. 미등록 이름은 static으로
+대체하지 않는다. 16종 가중치의 ID 순서가 다르면 로딩을 거부한다.
+
+Main은 `camera_class_profile:=mission16_v1`에서만 새 정규화를 사용한다. BBox wire에는
+원본 이름을 유지하며 Main이 같은 대응으로 그룹을 계산한다. `classification`과
+`yolo_class`가 그룹/원본 이름을 각각 보존하고 `is_dynamic`·속도는 기존 LiDAR 추적
+결과를 유지한다. 카메라 confidence는 원본 카메라 토픽에 남으며 confidence 필드가
+없는 기존 fusion 메시지에 임의의 값을 덧붙이지 않는다.
+
+planning_inputs의 최종 DetectedObject는 숫자형 vehicle/pedestrian/unknown만 지원한다.
+공개 MD5를 유지하기 위해 vehicle은 vehicle 타입, 원본 person은 기존 pedestrian 타입,
+나머지 두 obstacle 그룹은 일반 unknown 타입으로 전달하되 객체·기하·운동 상태를 버리지 않는다. 원본/그룹 문자열이 필요한
+판제 검토는 `/lidar/tracked_objects_map` 및 validated tracked companion을 함께 사용한다.
+unknown 숫자 타입을 '객체 없음' 또는 '정적'으로 해석하면 안 된다.
+
+### 학습 종료와 후보 고정
+
+승인된 구현 시작 시 E22 저장·평가는 끝났고 감독기가 다음 구간을 시작한 상태였다.
+감독기 PID1422를 SIGSTOP하고 그 뒤 학습 worker PID2120을 SIGINT했다. 기존 PID1도
+정지 상태를 유지한다. 후속 부분 epoch는 후보로 사용하지 않는다. 재개하려면 새 승인과
+명시적 pinned checkpoint가 필요하며 두 감독기를 SIGCONT하지 않는다.
+
+| 후보 | 파일 | SHA-256 |
+|---|---|---|
+| E8 | epoch7.pt | 6d5f4f0645b855bf66f0b0fa9d86b690d7659027e419d3b894d40c046ff89f70 |
+| E22 | epoch21.pt | f4d7c82b92bc15926caf712c92c9f936cb497f8639c959a6fdfc165b278f4928 |
+
+두 파일의 내부 epoch·EMA·optimizer를 확인했다. LR 일정은 원래40epoch 그대로다.
+중단 전 상태와 결과는 `artifacts/camera-bbox-main-v11/run-20261013-r1/operator-closeout-e22/`에 보존한다.
+
+### 같은 val205의 고정 조건 비교
+
+Confidence0.40, 원본 클래스별 NMS IoU>0.70, 일대일 IoU>=0.5, 원래 positive/ignore와
+partial 처리 유지. 그룹 후 NMS는 하지 않는다. 원본 raw 집계를 재현한 뒤 재집계했다.
+
+| 후보 | 16종 macro F1 | 3그룹 macro F1 |
+|---|---:|---:|
+| E8 | 74.21% | 74.96% |
+| E22 | 71.19% | 70.38% |
+
+GT-only 우선 후보는 E8이다. 이 val은 반복 사용한 개발 평가본이며 독립 시험이 아니다.
+표본이 적은 bus/truck과 소스 편중을 숨기지 않는다. E346 갤러리와 전체 JSON은
+`artifacts/camera-deployment-e8-e22-20261014-r1/`에 있다.
+
+### 실행 경로·동일성 검사
+
+기존 batched backend에 opt-in `head_profile: mission16_one2one_nms`를 추가했다.
+원본 체크포인트에서 predictor가 head를 선택하기 전에 `.fuse()`하면 one2one을
+제거할 수 있어 이 경로에서는 사전 fuse를 하지 않는다. 설치 패키지를 수정하지 않았다.
+`nms=False` one2one 출력에 명시적 same-class NMS를 적용한다. legacy one2many COCO7는 유지한다.
+
+E8 engine은 TensorRT10.13.0.35 FP16 tactic, dynamic batch1~3으로 생성했다.
+engine binding은 FP32이며 FP16 연산 engine과 입력 dtype을 혼동하지 않는다.
+48장 PyTorch FP32 원본 대조에서99개 대응 IoU>=0.98·confidence 차이<=0.02를 통과했다.
+confidence0.40 경계에서 미대응1개는 별도 기록했다. FP16 PyTorch 비교의25개 차이/실패도
+보존하며 FP16 좌표 반올림과 NMS 선택 때문에 기존 저장 예측과 완전히 동일하다고 주장하지 않는다.
+검증 파일은 `/data/runtime/camera-mission16-v1/engine-parity*.json`이다.
+
+### 단계 상태와 다음 판단
+
+- 완료: 학습 중단, E8/E22 고정, val205 비교 갤러리, 세 그룹 opt-in 구현, engine 생성.
+- 완료: 카메라 detection CPU/ROS79시험, fusion class policy8시험, 격리 overlay 빌드.
+- 완료: 두 후보×primary/shadow×2회 bag 비교(8회), 선정 E8 TensorRT×두 bag×2회 검증(4회).
+- 미승격: MORAI 렌더링과 전체 ACTIVE 스택·실제 주행·30분 연속 수락.
+- 후속: confidence/NMS 조정. 차량 자체 누락이 남을 때만 COCO·자료 보완/재학습 검토.
+
+주 bag48.9초와 음영 bag24.8초 모두 전방·좌우·LiDAR를 포함한다. 시험은 독립11314
+master, unique·50ms·200ms와 단일BBox 발행자를 유지한다. Main의 legacy control stub은
+시험 토픽으로 remap한다. bag에는 독립적인 연속 객체 GT가 없어 전체 recall이나
+최초 안정 검출의 정답 기준 점수를 만들지 않는다. 동일 stamp 결과 갤러리로 비교한다.
+모든 rate/gap 실패를 보존하며 짧은 시작 공백도 자동 면제하지 않는다.
+
+실행본은 기존 마운트를 바꾸지 않은 `/data/runtime/camera-mission16-v1` 격리 overlay다.
+`asmc-ros-noetic`에서 nested/devel/setup.bash를 source하면 변경된 camera/Main을 사용한다.
+`camera_mission16.launch`는 3뷰15Hz·전방1280·2+1·Ego mask ON이며 lane/resnet은 기본OFF다.
+전체 스택에서는 기존 담당 launch로 해당 모델을 활성화하며 같은 노드를 중복 실행하지 않는다.
+운영 COCO7 복구는 기존 workspace의 setup과 camera_coco7.launch를 사용한다.
+
+### 최종 후보와 bag 결과 — 2026-10-14
+
+실시간 주행 시험 후보로 **E8**을 선정한다. val205의 3그룹 macro F1이 E22보다
+4.58%p 높고, 16종 macro F1도 3.02%p 높다. 두 bag은 독립 GT가 없어 정량 품질 순위를
+추가하지 않는다. 일부 터널 상자는 E22만 검출하는 반례가 있어 갤러리에 보존했다.
+
+버스·트럭의 동일 조건 비교는 아래와 같다. 완전 주석 GT는 각각14개·12개이며,
+학습 전후의 이름 F1이다. 전체 차량 일반화 성능을 확정하는 표본으로 해석하지 않는다.
+
+| 모델 | bus F1 | truck F1 |
+|---|---:|---:|
+| 공식 사전학습 YOLO26l | 78.26% | 47.06% |
+| v11 E8 | 66.67% | 58.33% |
+| v11 E22 | 28.57% | 35.29% |
+
+v11의 트럭 최고값은 E6/E8 동률이다. 버스는 사전학습 대비 회귀가 남아 있다.
+그룹화로 차량 자체의 누락을 해결했다고 주장하지 않는다.
+
+TensorRT E8의 4회 bag 실행은 모두 기존 처리 기준을 통과했다. 아래는 **실행별
+통계의 최소~최대**이며, p50의 평균이나 모든 실행을 합친 percentile이 아니다.
+지연은 입력 수신→출력 wall 시간이다.
+
+| 뷰 | 새 출력 Hz | p50 ms | p95 ms | p99 ms | 최대 공백 ms |
+|---|---:|---:|---:|---:|---:|
+| 전방 | 14.97 | 33.35–34.05 | 42.39–45.43 | 47.43–53.16 | 130.77–134.46 |
+| 좌측 | 14.93–14.97 | 34.48–35.78 | 42.61–44.30 | 50.07–54.51 | 137.28–145.49 |
+| 우측 | 14.81–14.91 | 33.63–35.05 | 41.21–44.78 | 50.81–54.42 | 137.26–173.27 |
+
+완전한5초 창 최소는 전방/좌측14.8Hz, 우측14.6Hz다. 9.5Hz 최소 조건을 통과했으나
+모든 창이 정확히15Hz였다고 표시하지 않는다. 전체 GPU peak1966/8188MiB(24.01%),
+중복·역행 stamp0, 공개 제어 메시지0, BBox 단일 발행자를 확인했다.
+TwinLite·ResNet은 로드된 STANDBY였으므로 전체 ACTIVE와 MORAI 렌더링 수락을 대신하지 않는다.
+
+PyTorch 후보 비교에서는 E8 shadow-r1 최대255.5ms, E22 primary-r1/r2와 shadow-r2의
+최대251.1–270.2ms 공백 실패가 있었다. 원본 report와 실패 판정을 유지한다.
+TensorRT 전방 fusion은 primary matched531/533, dropped25/23, shadow matched193/192,
+dropped0/0이다. drop·종료 시 pending을 감추지 않으며 서로 다른 처리 완료 프레임 수를
+검출 품질 개선으로 해석하지 않는다. unique, offset±50ms, wait200ms는 유지했다.
+
+최종 로컬 확인: detection79, runtime31, fusion policy8, planning group conversion2,
+group evaluation3시험 통과. 최종 overlay 빌드·launch 파라미터 해석 통과.
+공개 msg/srv와 MD5 정의는 변경하지 않았다. Hosted CI는 이번 로컬 시험과 별개이며
+결제 제한을 해소하거나 CI 성공으로 표시하지 않았다. 기존 PR은 병합하지 않았다.
+
+### 직접 실행 — 실험 프로필
+
+기존 카메라 YOLO 생산자를 종료하고, `asmc-ros-noetic` 터미널에서 실행한다.
+bridge·MORAI 연결은 기존 설정을 사용한다. 이 launch는 차량 제어를 실행하지 않는다.
+
+```bash
+docker exec -it asmc-ros-noetic bash
+source /data/runtime/camera-mission16-v1/nested/devel/setup.bash
+roslaunch asmc_camera camera_mission16.launch profile:=debug objects_conf_thres:=0.40
+```
+
+별도 터미널의 좌/전방/우 시각화:
+
+```bash
+docker exec -it asmc-ros-noetic bash
+source /data/runtime/camera-mission16-v1/nested/devel/setup.bash
+rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
+```
+
+Confidence는 launch 인자로 설정하며 변경 시험에서는 detector를 재시작한다. NMS0.70은
+YAML의 `nms_iou`로 고정했다. 지금은 값을 바꿔 수락한 것이 아니므로 별도 저장 영상 대조가 필요하다.
+기존 Main을 사용한다면 같은 overlay에서 `start_yolo:=false camera_class_profile:=mission16_v1`을
+지정해야 한다. legacy Main을 그대로 둔 채 카메라 그룹만 바꾸지 않는다. adapter cutoff는
+기본0.0으로 카메라에서 수락한 confidence를 재차0.7로 자르지 않는다.
+숫자 판제 타입은 person의 pedestrian 호환을 유지하고, 그 외 장애물의 unknown 타입에도
+기하와 속도를 보존한다. 원본16종과 세 그룹 문자열은 tracked companion에서 확인한다.
+
+실제 주행에서 버스·차량 누락과 터널 상자·배경 오검출을 먼저 확인한 뒤
+confidence/NMS 대조로 이어간다. 운영 기본값 승격, 전체 ACTIVE 스택 및30분 연속 시험은 남아 있다.
+
+실험 목록: http://localhost:8768/ · 후보 비교: http://localhost:8768/camera-deployment-e8-e22-20261014-r1/
+Bag 비교: http://localhost:8768/camera-deployment-e8-e22-20261014-r1/bag-review/
+목록 재생성 시 신규 페이지 링크는 정상이며, 과거 보존 갤러리의 부모 링크2개 누락은 기존 증거로 기록한다.

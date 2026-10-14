@@ -1,0 +1,303 @@
+{
+  "dataset": "camera_objects_bbox_v11-capture-restored-r2",
+  "metadata_sha256": "72413c1459fa2d3fe8eeff85104170856490d19ee8b9a5ecd5aaf708aab3ae5b",
+  "splits": {
+    "train": {
+      "images": 41345,
+      "completeness": {
+        "complete": 1451,
+        "partial": 39839,
+        "reviewed_negative": 55
+      },
+      "positive": {
+        "deer": 4738,
+        "dog": 4602,
+        "box": 5161,
+        "motorcycle": 5178,
+        "bicycle": 6336,
+        "traffic_drum": 16233,
+        "steel_barricade": 5590,
+        "person": 31028,
+        "stroller": 2892,
+        "plastic_barrier": 4097,
+        "car": 13212,
+        "traffic_cone": 3277,
+        "concrete_barrier": 7570,
+        "bollard": 30166,
+        "bus": 7029,
+        "truck": 7502
+      },
+      "complete_positive": {
+        "deer": 12,
+        "dog": 25,
+        "bicycle": 32,
+        "motorcycle": 195,
+        "box": 472,
+        "steel_barricade": 319,
+        "person": 398,
+        "stroller": 13,
+        "car": 773,
+        "traffic_cone": 110,
+        "concrete_barrier": 1425,
+        "traffic_drum": 2034,
+        "plastic_barrier": 211,
+        "bollard": 1933,
+        "truck": 31,
+        "bus": 262
+      }
+    },
+    "selection": {
+      "images": 205,
+      "completeness": {
+        "complete": 194,
+        "partial": 11
+      },
+      "positive": {
+        "traffic_cone": 20,
+        "person": 52,
+        "stroller": 25,
+        "steel_barricade": 20,
+        "motorcycle": 21,
+        "plastic_barrier": 35,
+        "concrete_barrier": 20,
+        "deer": 22,
+        "bollard": 21,
+        "traffic_drum": 20,
+        "bicycle": 20,
+        "car": 22,
+        "box": 21,
+        "truck": 14,
+        "bus": 16,
+        "dog": 10
+      },
+      "complete_positive": {
+        "traffic_cone": 16,
+        "person": 52,
+        "stroller": 25,
+        "steel_barricade": 20,
+        "motorcycle": 21,
+        "plastic_barrier": 35,
+        "concrete_barrier": 13,
+        "deer": 22,
+        "bollard": 21,
+        "traffic_drum": 20,
+        "bicycle": 20,
+        "car": 20,
+        "box": 18,
+        "truck": 12,
+        "bus": 14,
+        "dog": 10
+      }
+    },
+    "heldout": {
+      "images": 116,
+      "completeness": {
+        "complete": 116
+      },
+      "positive": {
+        "traffic_drum": 23,
+        "plastic_barrier": 27,
+        "bollard": 20,
+        "steel_barricade": 23,
+        "deer": 24,
+        "person": 63,
+        "stroller": 28,
+        "motorcycle": 43,
+        "box": 22,
+        "bicycle": 22,
+        "concrete_barrier": 22,
+        "bus": 22,
+        "truck": 29,
+        "car": 35,
+        "traffic_cone": 21,
+        "dog": 21
+      },
+      "complete_positive": {
+        "traffic_drum": 23,
+        "plastic_barrier": 27,
+        "bollard": 20,
+        "steel_barricade": 23,
+        "deer": 24,
+        "person": 63,
+        "stroller": 28,
+        "motorcycle": 43,
+        "box": 22,
+        "bicycle": 22,
+        "concrete_barrier": 22,
+        "bus": 22,
+        "truck": 29,
+        "car": 35,
+        "traffic_cone": 21,
+        "dog": 21
+      }
+    }
+  },
+  "coverage": [
+    {
+      "class_name": "person",
+      "old_train": 30213,
+      "train": 31028,
+      "old_capture": 8859,
+      "capture": 10008,
+      "val": 52,
+      "val_complete": 52,
+      "test": 63
+    },
+    {
+      "class_name": "dog",
+      "old_train": 4536,
+      "train": 4602,
+      "old_capture": 4523,
+      "capture": 4599,
+      "val": 10,
+      "val_complete": 10,
+      "test": 21
+    },
+    {
+      "class_name": "deer",
+      "old_train": 4738,
+      "train": 4738,
+      "old_capture": 4696,
+      "capture": 4696,
+      "val": 22,
+      "val_complete": 22,
+      "test": 24
+    },
+    {
+      "class_name": "bicycle",
+      "old_train": 6108,
+      "train": 6336,
+      "old_capture": 6093,
+      "capture": 6322,
+      "val": 20,
+      "val_complete": 20,
+      "test": 22
+    },
+    {
+      "class_name": "car",
+      "old_train": 11449,
+      "train": 13212,
+      "old_capture": 49,
+      "capture": 2155,
+      "val": 22,
+      "val_complete": 20,
+      "test": 35
+    },
+    {
+      "class_name": "motorcycle",
+      "old_train": 5178,
+      "train": 5178,
+      "old_capture": 4769,
+      "capture": 4769,
+      "val": 21,
+      "val_complete": 21,
+      "test": 43
+    },
+    {
+      "class_name": "bus",
+      "old_train": 7185,
+      "train": 7029,
+      "old_capture": 3995,
+      "capture": 4366,
+      "val": 16,
+      "val_complete": 14,
+      "test": 22
+    },
+    {
+      "class_name": "truck",
+      "old_train": 7214,
+      "train": 7502,
+      "old_capture": 5374,
+      "capture": 5748,
+      "val": 14,
+      "val_complete": 12,
+      "test": 29
+    },
+    {
+      "class_name": "bollard",
+      "old_train": 30166,
+      "train": 30166,
+      "old_capture": 2175,
+      "capture": 2175,
+      "val": 21,
+      "val_complete": 21,
+      "test": 20
+    },
+    {
+      "class_name": "box",
+      "old_train": 4950,
+      "train": 5161,
+      "old_capture": 3815,
+      "capture": 4103,
+      "val": 21,
+      "val_complete": 18,
+      "test": 22
+    },
+    {
+      "class_name": "concrete_barrier",
+      "old_train": 7536,
+      "train": 7570,
+      "old_capture": 4843,
+      "capture": 4877,
+      "val": 20,
+      "val_complete": 13,
+      "test": 22
+    },
+    {
+      "class_name": "steel_barricade",
+      "old_train": 5590,
+      "train": 5590,
+      "old_capture": 5051,
+      "capture": 5051,
+      "val": 20,
+      "val_complete": 20,
+      "test": 23
+    },
+    {
+      "class_name": "traffic_drum",
+      "old_train": 13755,
+      "train": 16233,
+      "old_capture": 2019,
+      "capture": 4497,
+      "val": 20,
+      "val_complete": 20,
+      "test": 23
+    },
+    {
+      "class_name": "plastic_barrier",
+      "old_train": 4262,
+      "train": 4097,
+      "old_capture": 3517,
+      "capture": 3517,
+      "val": 35,
+      "val_complete": 35,
+      "test": 27
+    },
+    {
+      "class_name": "traffic_cone",
+      "old_train": 3006,
+      "train": 3277,
+      "old_capture": 2395,
+      "capture": 2666,
+      "val": 20,
+      "val_complete": 16,
+      "test": 21
+    },
+    {
+      "class_name": "stroller",
+      "old_train": 2892,
+      "train": 2892,
+      "old_capture": 2888,
+      "capture": 2888,
+      "val": 25,
+      "val_complete": 25,
+      "test": 28
+    }
+  ],
+  "restored_comp_images": 2913,
+  "train_new_drum_boxes": 2309,
+  "spatial_background_only_images": 2939,
+  "new_selection_seen_by_current_model": 47,
+  "evaluation_limitations": "Small sample or narrow source/scene coverage remains; partial frames contribute recall only.",
+  "training_started": false
+}

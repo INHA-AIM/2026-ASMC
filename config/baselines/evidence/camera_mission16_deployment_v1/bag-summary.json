@@ -1,0 +1,1253 @@
+[
+  {
+    "phase": "compare",
+    "trial": "e22-primary-r1",
+    "views": {
+      "yolo_front": {
+        "hz": 14.908594381725205,
+        "five_second_hz": [
+          14.4,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          14.8,
+          15.0,
+          15.2
+        ],
+        "p50": 41.41459602396935,
+        "p95": 62.69601481035352,
+        "p99": 78.0380931240507,
+        "gap_ms": 259.03686400852166,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.92968194585257,
+        "five_second_hz": [
+          14.6,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          14.8,
+          15.0
+        ],
+        "p50": 41.68680400471203,
+        "p95": 62.591558808344416,
+        "p99": 79.3196548242122,
+        "gap_ms": 259.1153740067966,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.847838450259369,
+        "five_second_hz": [
+          14.2,
+          14.8,
+          15.0,
+          15.0,
+          14.8,
+          15.0,
+          14.8,
+          15.0,
+          15.0
+        ],
+        "p50": 41.63645151129458,
+        "p95": 62.35644374828553,
+        "p99": 80.2687417526613,
+        "gap_ms": 259.1251379926689,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 27.906692721055204,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": false,
+    "failed_checks": [
+      "yolo_front_rate",
+      "yolo_left_rate",
+      "yolo_right_rate"
+    ],
+    "fusion": {
+      "totals": {
+        "matched": 516,
+        "dropped": 24,
+        "pending_lidar": 2,
+        "pending_yolo": 1,
+        "fresh": 516,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 49.4,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 2,
+        "pending_yolo": 1
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 7514
+      },
+      {
+        "group": "vehicle",
+        "source": "car",
+        "observations": 124
+      },
+      {
+        "group": "vehicle",
+        "source": "bus",
+        "observations": 5
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 50
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "compare",
+    "trial": "e22-primary-r2",
+    "views": {
+      "yolo_front": {
+        "hz": 14.908874269198138,
+        "five_second_hz": [
+          14.2,
+          15.0,
+          15.0,
+          15.0,
+          14.8,
+          15.2,
+          15.0,
+          15.0,
+          15.0
+        ],
+        "p50": 40.392703987890854,
+        "p95": 60.83548000897281,
+        "p99": 69.50201835250486,
+        "gap_ms": 270.2423260197975,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.889345592432399,
+        "five_second_hz": [
+          14.2,
+          15.0,
+          15.0,
+          15.0,
+          14.8,
+          15.2,
+          15.0,
+          15.0,
+          15.0
+        ],
+        "p50": 41.79663049580995,
+        "p95": 61.6464896404068,
+        "p99": 70.11791227530921,
+        "gap_ms": 270.0134530023206,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.827741593116787,
+        "five_second_hz": [
+          14.4,
+          14.8,
+          15.0,
+          14.8,
+          14.4,
+          15.2,
+          14.8,
+          15.0,
+          15.0
+        ],
+        "p50": 40.81351001514122,
+        "p95": 60.750712192384526,
+        "p99": 71.29835027619264,
+        "gap_ms": 270.08169700275175,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 26.795310210063505,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": false,
+    "failed_checks": [
+      "yolo_front_rate",
+      "yolo_left_rate",
+      "yolo_right_rate"
+    ],
+    "fusion": {
+      "totals": {
+        "matched": 516,
+        "dropped": 24,
+        "pending_lidar": 1,
+        "pending_yolo": 1,
+        "fresh": 516,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 48.9,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 1,
+        "pending_yolo": 1
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 7539
+      },
+      {
+        "group": "vehicle",
+        "source": "car",
+        "observations": 123
+      },
+      {
+        "group": "vehicle",
+        "source": "bus",
+        "observations": 7
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 49
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "compare",
+    "trial": "e22-shadow-r1",
+    "views": {
+      "yolo_front": {
+        "hz": 14.852021222460602,
+        "five_second_hz": [
+          14.4,
+          15.0,
+          15.0,
+          15.0
+        ],
+        "p50": 40.585391005151905,
+        "p95": 60.857499491248745,
+        "p99": 73.01171699509727,
+        "gap_ms": 246.94412999087945,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.8524119699998,
+        "five_second_hz": [
+          14.4,
+          14.8,
+          15.2,
+          14.8
+        ],
+        "p50": 41.18983101216145,
+        "p95": 60.745543480152264,
+        "p99": 71.24343249161036,
+        "gap_ms": 247.77538201306015,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.730550528265793,
+        "five_second_hz": [
+          14.2,
+          14.8,
+          15.0,
+          15.0
+        ],
+        "p50": 39.93455198360607,
+        "p95": 59.525071989628465,
+        "p99": 69.35234334669073,
+        "gap_ms": 249.14592001005076,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 26.917440156326332,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": true,
+    "failed_checks": [],
+    "fusion": {
+      "totals": {
+        "matched": 189,
+        "dropped": 0,
+        "pending_lidar": 1,
+        "pending_yolo": 1,
+        "fresh": 189,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 28.3,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 1,
+        "pending_yolo": 1
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 2793
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 5
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "compare",
+    "trial": "e22-shadow-r2",
+    "views": {
+      "yolo_front": {
+        "hz": 14.892358553601488,
+        "five_second_hz": [
+          14.4,
+          15.0,
+          14.8,
+          15.2
+        ],
+        "p50": 41.86853999271989,
+        "p95": 61.94107859046198,
+        "p99": 79.20369552273763,
+        "gap_ms": 251.06657700962387,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.8519599604353,
+        "five_second_hz": [
+          14.4,
+          14.8,
+          15.0,
+          15.0
+        ],
+        "p50": 42.0353624940617,
+        "p95": 61.40775649691932,
+        "p99": 78.10432570549906,
+        "gap_ms": 251.09019700903445,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.689405096382934,
+        "five_second_hz": [
+          14.0,
+          14.8,
+          15.0,
+          15.0
+        ],
+        "p50": 40.59429801418446,
+        "p95": 58.98091266280971,
+        "p99": 67.72146310424428,
+        "gap_ms": 251.09491500188597,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 26.819736199316075,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": false,
+    "failed_checks": [
+      "yolo_front_rate",
+      "yolo_left_rate",
+      "yolo_right_rate"
+    ],
+    "fusion": {
+      "totals": {
+        "matched": 185,
+        "dropped": 2,
+        "pending_lidar": 1,
+        "pending_yolo": 2,
+        "fresh": 185,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 27.7,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 1,
+        "pending_yolo": 2
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 2696
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 5
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "compare",
+    "trial": "e8-primary-r1",
+    "views": {
+      "yolo_front": {
+        "hz": 14.908777458748656,
+        "five_second_hz": [
+          14.4,
+          15.0,
+          14.8,
+          15.0,
+          15.0,
+          15.0,
+          14.8,
+          15.0,
+          15.2
+        ],
+        "p50": 40.79469299176708,
+        "p95": 60.667263396317146,
+        "p99": 69.67063815216538,
+        "gap_ms": 248.28091499512084,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.930144748761055,
+        "five_second_hz": [
+          14.4,
+          15.0,
+          14.8,
+          15.0,
+          15.0,
+          15.2,
+          15.0,
+          14.8,
+          15.0
+        ],
+        "p50": 42.50690349726938,
+        "p95": 61.90344170463503,
+        "p99": 74.36492819600979,
+        "gap_ms": 248.34375598584302,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.889007558166895,
+        "five_second_hz": [
+          14.6,
+          14.8,
+          15.0,
+          14.8,
+          14.8,
+          15.2,
+          14.8,
+          15.0,
+          15.0
+        ],
+        "p50": 41.22192399518099,
+        "p95": 60.64452195423655,
+        "p99": 72.05157172953477,
+        "gap_ms": 248.46643200726248,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 27.796775769418662,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": true,
+    "failed_checks": [],
+    "fusion": {
+      "totals": {
+        "matched": 520,
+        "dropped": 20,
+        "pending_lidar": 1,
+        "pending_yolo": 1,
+        "fresh": 520,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 47.9,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 1,
+        "pending_yolo": 1
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 7438
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 59
+      },
+      {
+        "group": "vehicle",
+        "source": "car",
+        "observations": 127
+      },
+      {
+        "group": "vehicle",
+        "source": "bus",
+        "observations": 3
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "compare",
+    "trial": "e8-primary-r2",
+    "views": {
+      "yolo_front": {
+        "hz": 14.949778420661335,
+        "five_second_hz": [
+          14.4,
+          15.2,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          14.8,
+          15.2,
+          15.0
+        ],
+        "p50": 41.62775698932819,
+        "p95": 61.20885651034769,
+        "p99": 70.160483501968,
+        "gap_ms": 240.16640198533423,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.95069299084094,
+        "five_second_hz": [
+          14.4,
+          15.2,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0
+        ],
+        "p50": 43.49239400471561,
+        "p95": 63.49377200240269,
+        "p99": 73.45391030830798,
+        "gap_ms": 240.27958599617705,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.848211903279049,
+        "five_second_hz": [
+          14.2,
+          14.8,
+          15.0,
+          15.0,
+          14.8,
+          15.0,
+          14.8,
+          15.0,
+          15.0
+        ],
+        "p50": 41.198919992893934,
+        "p95": 59.25670223950874,
+        "p99": 71.12489026621915,
+        "gap_ms": 240.3609589964617,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 26.893014167073765,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": true,
+    "failed_checks": [],
+    "fusion": {
+      "totals": {
+        "matched": 523,
+        "dropped": 20,
+        "pending_lidar": 2,
+        "pending_yolo": 1,
+        "fresh": 523,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 48.6,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 2,
+        "pending_yolo": 1
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 7515
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 74
+      },
+      {
+        "group": "vehicle",
+        "source": "car",
+        "observations": 123
+      },
+      {
+        "group": "vehicle",
+        "source": "bus",
+        "observations": 4
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "compare",
+    "trial": "e8-shadow-r1",
+    "views": {
+      "yolo_front": {
+        "hz": 14.852528627233063,
+        "five_second_hz": [
+          14.4,
+          15.0,
+          15.0,
+          15.0
+        ],
+        "p50": 40.78256599314045,
+        "p95": 64.87378651218023,
+        "p99": 88.51953094417703,
+        "gap_ms": 245.26454601436853,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.852741887305614,
+        "five_second_hz": [
+          14.2,
+          15.2,
+          15.0,
+          15.0
+        ],
+        "p50": 40.36891149007715,
+        "p95": 64.04866177035728,
+        "p99": 90.93979196040897,
+        "gap_ms": 245.32316101249307,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.731076376832934,
+        "five_second_hz": [
+          14.0,
+          15.2,
+          14.8,
+          15.0
+        ],
+        "p50": 40.337105019716546,
+        "p95": 59.328720477060415,
+        "p99": 77.47602928546256,
+        "gap_ms": 255.46029198449105,
+        "gate": false,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 26.85637518319492,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": false,
+    "failed_checks": [
+      "yolo_right_rate"
+    ],
+    "fusion": {
+      "totals": {
+        "matched": 191,
+        "dropped": 0,
+        "pending_lidar": 1,
+        "pending_yolo": 1,
+        "fresh": 191,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 38.5,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 1,
+        "pending_yolo": 1
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 2812
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 4
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "compare",
+    "trial": "e8-shadow-r2",
+    "views": {
+      "yolo_front": {
+        "hz": 14.892674549999757,
+        "five_second_hz": [
+          14.4,
+          15.0,
+          15.0,
+          15.0
+        ],
+        "p50": 40.39440999622457,
+        "p95": 58.65963829564862,
+        "p99": 70.04808624158609,
+        "gap_ms": 249.68115499359556,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.852334326684954,
+        "five_second_hz": [
+          14.4,
+          15.0,
+          15.0,
+          14.8
+        ],
+        "p50": 41.5468974824762,
+        "p95": 58.138596250500996,
+        "p99": 67.16969695989985,
+        "gap_ms": 249.80423401575536,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.689924608946363,
+        "five_second_hz": [
+          14.0,
+          15.0,
+          14.8,
+          15.0
+        ],
+        "p50": 40.35508901870344,
+        "p95": 57.650305051356554,
+        "p99": 67.94544725969891,
+        "gap_ms": 249.927413999103,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 26.893014167073765,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": true,
+    "failed_checks": [],
+    "fusion": {
+      "totals": {
+        "matched": 193,
+        "dropped": 0,
+        "pending_lidar": 1,
+        "pending_yolo": 2,
+        "fresh": 193,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 28.3,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 1,
+        "pending_yolo": 2
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 2838
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "engine",
+    "trial": "e8-primary-r1",
+    "views": {
+      "yolo_front": {
+        "hz": 14.970629769364676,
+        "five_second_hz": [
+          15.0,
+          14.8,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          14.8,
+          15.2,
+          15.0
+        ],
+        "p50": 33.35288599191699,
+        "p95": 42.388021710212364,
+        "p99": 47.427038724708865,
+        "gap_ms": 133.91854998189956,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.971586596840526,
+        "five_second_hz": [
+          15.0,
+          14.8,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0
+        ],
+        "p50": 35.087261989247054,
+        "p95": 43.427389956195846,
+        "p99": 50.48830356710824,
+        "gap_ms": 144.86627498990856,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.889514912709659,
+        "five_second_hz": [
+          15.0,
+          14.6,
+          15.0,
+          14.8,
+          14.8,
+          15.0,
+          14.8,
+          15.0,
+          15.0
+        ],
+        "p50": 34.51005600800272,
+        "p95": 44.34620294778142,
+        "p99": 50.943630765541485,
+        "gap_ms": 152.35303799272515,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 23.974108451392283,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": true,
+    "failed_checks": [],
+    "fusion": {
+      "totals": {
+        "matched": 531,
+        "dropped": 25,
+        "pending_lidar": 0,
+        "pending_yolo": 0,
+        "fresh": 531,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 48.8,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 0,
+        "pending_yolo": 0
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 7724
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 81
+      },
+      {
+        "group": "vehicle",
+        "source": "car",
+        "observations": 129
+      },
+      {
+        "group": "vehicle",
+        "source": "bus",
+        "observations": 3
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "engine",
+    "trial": "e8-primary-r2",
+    "views": {
+      "yolo_front": {
+        "hz": 14.970071466548688,
+        "five_second_hz": [
+          15.0,
+          14.8,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          14.8,
+          15.2,
+          15.0
+        ],
+        "p50": 33.960607994231395,
+        "p95": 42.88486814766657,
+        "p99": 49.360370622307535,
+        "gap_ms": 134.4630050007254,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.970973101764468,
+        "five_second_hz": [
+          15.0,
+          14.8,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0
+        ],
+        "p50": 35.77762401255313,
+        "p95": 44.30493820982523,
+        "p99": 54.50827252498142,
+        "gap_ms": 145.49075000104494,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.90939746967459,
+        "five_second_hz": [
+          15.0,
+          14.6,
+          15.0,
+          14.8,
+          14.8,
+          15.0,
+          14.8,
+          15.0,
+          15.0
+        ],
+        "p50": 35.05235799821094,
+        "p95": 44.77807119255886,
+        "p99": 52.740058891940905,
+        "gap_ms": 173.26997700729407,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 24.010747435271128,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": true,
+    "failed_checks": [],
+    "fusion": {
+      "totals": {
+        "matched": 533,
+        "dropped": 23,
+        "pending_lidar": 2,
+        "pending_yolo": 1,
+        "fresh": 533,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 48.8,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 2,
+        "pending_yolo": 1
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 7760
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 64
+      },
+      {
+        "group": "vehicle",
+        "source": "car",
+        "observations": 129
+      },
+      {
+        "group": "vehicle",
+        "source": "bus",
+        "observations": 3
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "engine",
+    "trial": "e8-shadow-r1",
+    "views": {
+      "yolo_front": {
+        "hz": 14.974006703320349,
+        "five_second_hz": [
+          15.0,
+          15.0,
+          15.0,
+          14.8
+        ],
+        "p50": 34.051071997964755,
+        "p95": 45.434275217121474,
+        "p99": 51.175435199402266,
+        "gap_ms": 130.77148198499344,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.933760577140296,
+        "five_second_hz": [
+          15.0,
+          14.8,
+          15.0,
+          14.8
+        ],
+        "p50": 34.48293749534059,
+        "p95": 42.60932198812952,
+        "p99": 50.07176286686445,
+        "gap_ms": 137.28477401309647,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.852418798780743,
+        "five_second_hz": [
+          14.8,
+          15.0,
+          15.0,
+          14.8
+        ],
+        "p50": 33.62931551237125,
+        "p95": 41.212792246369645,
+        "p99": 50.81198150146526,
+        "gap_ms": 137.2551140084397,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 23.900830483634586,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": true,
+    "failed_checks": [],
+    "fusion": {
+      "totals": {
+        "matched": 193,
+        "dropped": 0,
+        "pending_lidar": 1,
+        "pending_yolo": 1,
+        "fresh": 193,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 29.4,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 1,
+        "pending_yolo": 1
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 2852
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 5
+      }
+    ],
+    "control_messages": 0
+  },
+  {
+    "phase": "engine",
+    "trial": "e8-shadow-r2",
+    "views": {
+      "yolo_front": {
+        "hz": 14.97364036028514,
+        "five_second_hz": [
+          15.0,
+          15.0,
+          15.0,
+          14.8
+        ],
+        "p50": 33.72025099815801,
+        "p95": 45.22484380286188,
+        "p99": 53.16466265823692,
+        "gap_ms": 131.1230470018927,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_left": {
+        "hz": 14.933478199059033,
+        "five_second_hz": [
+          15.0,
+          14.8,
+          15.0,
+          14.8
+        ],
+        "p50": 34.75786600029096,
+        "p95": 43.8441122052609,
+        "p99": 52.33750783780121,
+        "gap_ms": 139.16177401551977,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      },
+      "yolo_right": {
+        "hz": 14.811489044416469,
+        "five_second_hz": [
+          14.8,
+          14.8,
+          15.0,
+          14.8
+        ],
+        "p50": 34.39362300559878,
+        "p95": 42.498528194846585,
+        "p99": 54.42074327496812,
+        "gap_ms": 159.90860998863354,
+        "gate": true,
+        "duplicates": 0,
+        "reverse": 0
+      }
+    },
+    "vram": {
+      "maximum_percent": 23.937469467513434,
+      "within_90_percent": true,
+      "scope": "whole GPU, all recorded phases; not process-only VRAM"
+    },
+    "original_pass": true,
+    "failed_checks": [],
+    "fusion": {
+      "totals": {
+        "matched": 192,
+        "dropped": 0,
+        "pending_lidar": 1,
+        "pending_yolo": 1,
+        "fresh": 192,
+        "reused": 0
+      },
+      "offset_p95_max_ms": 40.2,
+      "accounting_complete": true,
+      "pending_end": {
+        "pending_lidar": 1,
+        "pending_yolo": 1
+      },
+      "duplicate_processed_stamps": 0
+    },
+    "fused_labels": [
+      {
+        "group": "unknown",
+        "source": "unknown",
+        "observations": 2813
+      },
+      {
+        "group": "static_obstacle",
+        "source": "box",
+        "observations": 5
+      }
+    ],
+    "control_messages": 0
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "status": "diagnosis_complete_training_stays_paused",
+  "confirmed": [
+    "partial keeps only assigned foreground anchors for BCE in both heads",
+    "complete background and reviewed negatives keep gradients; ignore excludes intersecting cells; positives win",
+    "50585 of 53588 train images partial",
+    "capture partial 34441; capture complete 3; additional capture reviewed_negative 2000",
+    "30674 recent capture images have no full16 review metadata; native GT correctness alone does not pass completeness gate"
+  ],
+  "interpretation": "Loss follows planned semantics, but broad image-level masking removes duplicate/background suppression on nearly all positive scenes. Strong causal mechanism, empirical contribution not isolated by training ablation.",
+  "not_confirmed": [
+    "all partial Capture images have exhaustive target annotations",
+    "background loss suppression is sole cause of FP",
+    "long unchanged training will or will not recover"
+  ],
+  "checks": {
+    "CPU_loss_tests": 7,
+    "passed": 7,
+    "optimizer_updates": 0,
+    "GPU_training": false
+  },
+  "recommended_next": [
+    "Review source/run blocks of native Capture for unmapped actors, fixed-map target props and missing targets",
+    "Promote only verified full16 groups in new dataset revision; retain bounded ignore for uncertain areas",
+    "Keep truly partial images as auxiliary data; ensure complete positive scenes supply background and duplicate supervision",
+    "Run small fixed-validation controlled training before long continuation; preserve epoch4 and initial pretrained checkpoints"
+  ]
+}

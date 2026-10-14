@@ -1,0 +1,51 @@
+{
+  "classes": [
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "bus",
+    "truck",
+    "bollard",
+    "box",
+    "concrete_barrier",
+    "steel_barricade",
+    "traffic_drum",
+    "plastic_barrier",
+    "traffic_cone",
+    "stroller"
+  ],
+  "images": 618,
+  "gt": {
+    "person": 204,
+    "deer": 1,
+    "bus": 57,
+    "plastic_barrier": 70,
+    "traffic_drum": 180,
+    "concrete_barrier": 43,
+    "box": 49,
+    "bollard": 60,
+    "motorcycle": 138,
+    "steel_barricade": 69,
+    "truck": 57,
+    "car": 148
+  },
+  "supervision": {
+    "complete": 121,
+    "partial": 497
+  },
+  "original_splits": {
+    "selection": 318,
+    "heldout": 300
+  },
+  "parent_manifest_sha256": "3708a4854908a6fcfff1d1647210a50ff7dc0661b88405eac75804fffb9e6c37",
+  "legacy_manifest_sha256": "7653c108e2fd4d9651f3acfd9da0e5cd6559e4cc7456de50a2ecb4c44fd3c1e5",
+  "diagnostic_manifest_sha256": "77a2b5dce256aa36f1525d4fae627b4eb90473263f618bb367e70cf6e263229f",
+  "excluded": [],
+  "dataset_splits_changed": false,
+  "blind_test": false,
+  "train_leaks": 0,
+  "policy": "v8 positive/ignore/mask; no display cutoffs; previously inspected data"
+}

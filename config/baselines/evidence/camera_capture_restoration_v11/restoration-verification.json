@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "images": 41666,
+  "failures": [],
+  "checks": [
+    "all source RGB SHA and decoded pixel hashes during preparation",
+    "actual YOLO labels and supervision sidecars",
+    "fixed16 IDs and coordinates",
+    "source links",
+    "frozen split and lineage separation",
+    "immutable parents"
+  ],
+  "near_duplicate_scene_independence_claimed": false,
+  "heldout_labels_and_images_unchanged": true,
+  "full_reserved_isolation": true,
+  "positive_policy_consistent": true,
+  "spatial_background_only_images": 2939,
+  "capture_train_car_boxes": 2155,
+  "selection_seen_by_current_model": 47,
+  "all_train_images_used": true,
+  "training_started": false
+}

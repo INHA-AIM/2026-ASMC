@@ -88,6 +88,9 @@ class ObjectDetectionNode:
                          runtime_backend=rospy.get_param('~runtime_backend', 'tensorrt'),
                          source_checkpoint_sha256=rospy.get_param('~source_checkpoint_sha256',''),
                          expected_prompt_sha256=rospy.get_param('~expected_prompt_sha256','')) if batched else {}
+            if production_batch:
+                extra.update(head_profile=rospy.get_param('~head_profile', 'legacy_coco7'),
+                             nms_iou=rospy.get_param('~nms_iou', .7))
             if rospy.get_param('~model_kind', 'yolo') == 'rfdetr':
                 if not batched:
                     raise ValueError('RF-DETR requires opt-in batch runtime')

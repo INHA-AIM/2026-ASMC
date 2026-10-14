@@ -1,4 +1,5 @@
 <launch>
+  <arg name="camera_class_profile" default="legacy"/>
   <!-- Opt-in common geometry; roll promotion is a separate acceptance gate. -->
   <arg name="enable_common_geometry" default="false"/>
   <arg name="lidar_level_roll" default="false"/>
@@ -116,6 +117,7 @@
     <param name="enable_common_geometry" value="$(arg enable_common_geometry)"/>
     <param name="lidar_level_roll" value="$(arg lidar_level_roll)"/>
     <param name="lidar_mount_config" value="$(arg lidar_mount_config)"/>
+    <param name="camera_class_profile" value="$(arg camera_class_profile)"/>
     <param name="fusion_camera_config" value="$(arg fusion_camera_config)"/>
     <param name="map_altitude_origin_m" value="$(arg map_altitude_origin_m)"/>
     <!-- Main's legacy parser asks for /Competition_topic. The 2026-ASMC
@@ -276,6 +278,7 @@
   <node unless="$(arg start_yolo)" name="camera_objects_yolo_bbox_adapter" pkg="Main"
         type="camera_objects_yolo_bbox_adapter.py" output="screen" required="false">
     <param name="conf_thres" value="$(arg camera_objects_conf_thres)"/>
+    <param name="class_profile" value="$(arg camera_class_profile)"/>
   </node>
   </group>
 

@@ -21,6 +21,8 @@ def accepted_name(name):
 def scoped_complete(row,pixel_scope):
     # Accurate actor boxes do not prove exhaustive labels for fixed map props.
     # Tiny unresolved actors alone cannot promote a partial image to full GT.
+    if 'supervision' in row:
+        return row['supervision'] in ('complete','reviewed_negative')
     return row.get('evaluation_scope')=='complete'
 
 
@@ -48,13 +50,16 @@ def frame_counts(row,predictions,confidence,level='class',pixel_scope=False):
     predictions=[dict(p,group=name(p['class_name'])) for p in predictions if p['confidence']>=confidence]
     gt=[];ignored=[]
     for a in row['annotations']:
+        if a.get('supervision')=='excluded':continue
+        if a.get('supervision')=='ignore':
+            ignored.append(a);continue
         label=training_label(a)
         if not label:
             if a.get('disposition')!='excluded':ignored.append(a)
             continue
         box=a['xyxy'];w=box[2]-box[0];h=box[3]-box[1]
         long,short=(24,12) if label in ('car','truck','bus') else (16,8)
-        if pixel_scope and (max(w,h)<long or min(w,h)<short):
+        if pixel_scope and 'supervision' not in row and (max(w,h)<long or min(w,h)<short):
             ignored.append(a);continue
         gt.append(dict(a,group=name(label)))
     pairs=match_boxes(gt,predictions,.5)
@@ -95,12 +100,21 @@ def summarize(rows,predictions,confidence,level='class',pixel_scope=False):
             complete_fp=n-tp,complete_fn=gt-tp,independent_source_groups=len(groups[name]),
             sufficient_sample=gt>=20,source_generalization_limited=len(groups[name])<2)
     scores=[c['f1'] for c in result.values() if c['sufficient_sample'] and c['f1'] is not None]
+    # Keep the historical >=20-GT score unchanged. The reviewed fixed16 panel
+    # must also expose every class, without silently dropping rare classes.
+    from camera_pretrain_policy import CLASSES
+    fixed16=[result.get(c,{}).get('f1') for c in CLASSES]
     return dict(confidence=confidence,classes=result,macro_f1=sum(scores)/len(scores) if scores else None,
+        macro_f1_fixed16=(sum(fixed16)/len(CLASSES) if all(v is not None for v in fixed16) else None),
+        fixed16_small_sample_classes=[c for c in CLASSES if not result.get(c,{}).get('sufficient_sample',False)],
+        fixed16_macro_policy='All 16 complete-GT classes equally weighted; descriptive when low-sample/source-limited. Not a statistically calibrated regression gate.',
         complete_images=sum(scoped_complete(r,pixel_scope) for r in rows),
         partial_images=sum(not scoped_complete(r,pixel_scope) for r in rows),
         scoped_native_capture_images=sum(r.get('evaluation_scope')!='complete' and scoped_complete(r,pixel_scope) for r in rows),
         macro_policy='>=20 complete GT; source/run correlation separately flagged, not independent-scene claims',
-        pixel_scope='vehicle 24/12px, other 16/8px' if pixel_scope else 'all original GT')
+        pixel_scope=('manifest frozen positive/ignore policy; no legacy display threshold' if
+            any('supervision' in r for r in rows) else
+            'vehicle 24/12px, other 16/8px' if pixel_scope else 'all original GT'))
 
 
 def infer(args):
@@ -115,12 +129,21 @@ def infer(args):
     cfg=json.loads(args.config.read_text())
     names=list(json.loads((args.dataset/'summary.json').read_text())['classes'])
     rows=[r for r in read_jsonl(args.dataset/'manifest.jsonl') if r['split'] in ('selection','heldout')]
+    if getattr(args,'selection_only',False):rows=[r for r in rows if r['split']=='selection']
+    if (args.dataset/'pretrain.json').exists():
+        from camera_pretrain_policy import validate_dataset_contract,resolve_data_path
+        meta=validate_dataset_contract(args.dataset,ignore_aware=True)
+        rows=[dict(r,image=str(resolve_data_path(r['image'],args.dataset,meta['original_data_root']))) for r in rows]
     temporal_path=args.dataset/'temporal-probe.jsonl'
-    temporal=list(read_jsonl(temporal_path)) if temporal_path.exists() and not getattr(args,'skip_temporal',False) else []
+    temporal=list(read_jsonl(temporal_path)) if temporal_path.exists() and not (
+        getattr(args,'skip_temporal',False) or getattr(args,'selection_only',False)) else []
     inference_rows=list({r['id']:r for r in rows+temporal}.values())
     args.output.mkdir(parents=True,exist_ok=False)
     masks={view:HoodMask.load(True,repo/'src/asmc_camera/config/camera'/file) for view,file in
         [('front','yolo_hood_mask_v1.yaml'),('left','yolo_ego_mask_left_v1.yaml'),('right','yolo_ego_mask_right_v1.yaml')]}
+    for row in rows:
+        if row.get('ego_mask_applied') and row['mask_config_sha256']!=masks[row['view']].config_sha256:
+            raise ValueError('evaluation Ego mask differs from frozen dataset')
     actual_weights,baseline_kind=evaluation_weights(args.weights,cfg,args.baseline_policy)
     model=YOLO(str(actual_weights),task='detect')
     if 'Segment' in type(model.model.model[-1]).__name__:raise ValueError('not detection-only checkpoint')
@@ -197,6 +220,7 @@ def infer(args):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--selection-only',action='store_true',help='intermediate checkpoint evaluation; do not inspect heldout')
     p.add_argument('--config',required=True,type=Path);p.add_argument('--dataset',required=True,type=Path)
     p.add_argument('--weights',required=True,type=Path);p.add_argument('--output',required=True,type=Path)
     p.add_argument('--front-width',required=True,type=int,choices=[960,1280])

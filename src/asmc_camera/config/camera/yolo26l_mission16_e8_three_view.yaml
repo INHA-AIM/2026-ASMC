@@ -1,0 +1,40 @@
+task: detect
+batched_runtime: true
+label_mode: group
+head_profile: mission16_one2one_nms
+nms_iou: 0.7
+views:
+- front
+- left
+- right
+front_width: 1280
+batch_mode: 2plus1
+batch_wait_ms: 10.0
+target_hz: 15.0
+target_hz_by_view:
+  front: 15.0
+  left: 15.0
+  right: 15.0
+conf_thres: 0.4
+allowed_names:
+- person
+- dog
+- deer
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+- bollard
+- box
+- concrete_barrier
+- steel_barricade
+- traffic_drum
+- plastic_barrier
+- traffic_cone
+- stroller
+device: cuda:0
+require_cuda: true
+weights: /data/models/camera_mission16_v11_e8/yolo26l.engine
+runtime_backend: tensorrt
+expected_sha256: c9dc3ca826c9fffa4705da4e31b7ff65c913a50b9658f4d74a7079d08df21f97

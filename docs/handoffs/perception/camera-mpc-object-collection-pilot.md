@@ -3,6 +3,9 @@
 기준: 2026-10-12. [기존 자료 v7](camera-training-data-audit.md#기존-자료-채택-확대--2026-10-11-v7)를 보존한다.
 수집 전용 구현이며 운영 모델·공개 ROS 메시지·대회용 GT 정책은 변경하지 않는다.
 
+수집 후 최신 통합 상태는 [v8 학습 전처리](camera-training-data-audit.md#v8-전처리전체-통합--2026-10-12)에
+있다. 아래 v7 수치는 수집 당시의 배분 기준이며 최신 학습 재고와 구분한다.
+
 ## 이번에 구현한 경로
 
 Capture UI를 켜고 **gRPC Capture 1Hz·단일 요청**으로 RGB·Semantic·Instance·native BBox를 저장한다.
