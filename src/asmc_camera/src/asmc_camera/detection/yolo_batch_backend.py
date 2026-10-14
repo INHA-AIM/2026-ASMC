@@ -18,7 +18,7 @@ class BatchedYoloDetector:
     def __init__(self, weights, expected_sha256, allowed_names=COCO7,
                  conf_thres=.7, device='cuda:0', require_cuda=True,
                  runtime_backend='pytorch', task='detect', front_width=1280,
-                 batch_mode='2plus1', head_profile='legacy_coco7', nms_iou=.7, inference_quantize=16, **unused):
+                 batch_mode='2plus1', head_profile='legacy_coco7', nms_iou=.5, inference_quantize=16, **unused):
         import torch
         import ultralytics
         from ultralytics import YOLO

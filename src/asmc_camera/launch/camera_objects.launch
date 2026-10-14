@@ -1,6 +1,6 @@
 <launch>
   <arg name="component_config" default=""/>
-  <arg name="nms_iou" default="0.70"/>
+  <arg name="nms_iou" default="0.50"/>
   <arg name="node_name" default="camera_object_detector"/>
   <arg name="managed" default="true"/>
   <arg name="initial_mode" default="0"/>

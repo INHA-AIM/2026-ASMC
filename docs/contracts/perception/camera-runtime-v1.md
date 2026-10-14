@@ -19,6 +19,10 @@ roslaunch asmc_camera camera.launch mode:=active
 
 공개 옵션은 `mode:=off/standby/active`, `models:=all` 또는 쉼표로 연결한
 `objects,lane,traffic_light`, `detector:=e8/pretrained`, `confidence`, `nms_iou`다.
+현재 정본은 YOLO15Hz·TwinLite15Hz·ResNet10Hz, confidence0.40·동일 클래스 NMS0.50이다.
+YOLO/TwinLite의 완전한5초 창 최소10Hz와 목표15Hz의95% 달성은 별도로 보고한다.
+입력이 끊기면 목표를15Hz로 높여도 결과 공급을 보장할 수 없다.
+같은 목표 Hz는 같은 입력 프레임·발행 위상을 의미하지 않으며 소비자는 원본 stamp로 연결한다.
 `off`는 모델과 차선 downstream을 만들지 않는다. 이미 다른 launch로 실행 중인 노드를
 종료하는 명령은 아니다. `standby`는 모델 로드·dummy 예열 이후 입력 추론 없이 대기한다.
 PREPARE는 서비스로 요청한다. ACTIVE는 새로운 영상만 처리하며 결과 재발행으로 Hz를 높이지 않는다.

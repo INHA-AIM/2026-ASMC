@@ -17,7 +17,8 @@
   <arg name="objects_node_name" default="camera_object_detector"/>
   <arg name="lane_node_name" default="camera_semantic_inference"/>
   <arg name="traffic_node_name" default="traffic_light_infer"/>
-  <arg name="objects_nms_iou" default="0.70"/>
+  <arg name="objects_nms_iou" default="0.50"/>
+  <arg name="lane_fusion_max_hz" default="10.0"/>
   <arg name="managed" default="$(eval {'idle': True, 'planning': True, 'debug': True, 'legacy': False}[arg('profile')])"/>
   <arg name="lane_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)"/>
   <arg name="objects_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)"/>
@@ -139,6 +140,7 @@
       <rosparam command="load" file="$(arg bev_grid_config)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
       <rosparam command="load" file="$(find asmc_camera)/config/bev/fusion.yaml"/>
+      <param name="max_fused_hz" value="$(arg lane_fusion_max_hz)"/>
       <rosparam param="views">[front, left, right]</rosparam>
       <param name="publish_debug_metadata"
              value="$(arg publish_bev_debug_metadata)"/>

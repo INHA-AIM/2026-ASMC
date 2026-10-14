@@ -37,6 +37,7 @@ def measurements(rows, start, end, target):
         report['target_hz'] = hz
         report['target_95pct_pass'] = bool(report['five_second_hz']) and min(report['five_second_hz']) >= hz*.95
         report['minimum_9_5_pass'] = bool(report['five_second_hz']) and min(report['five_second_hz']) >= 9.5
+        report['minimum_10_pass'] = bool(report['five_second_hz']) and min(report['five_second_hz']) >= 10.
         report['timing_pass'] = bool(times) and report['wall_ms']['p95'] <= 150 and report['wall_ms']['p99'] <= 200 and report['max_gap_sec'] <= .25
         reports[key] = report
     return reports
@@ -49,7 +50,7 @@ def main():
     from asmc_camera.msg import InferenceStatus
     from asmc_camera.srv import SetInferenceMode
     from sensor_msgs.msg import Image, CompressedImage
-    from asmc_msgs.msg import CameraObjectBoxArray
+    from asmc_msgs.msg import CameraObjectBoxArray, LaneBoundaryFamily
     from diagnostic_msgs.msg import DiagnosticArray
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--variant', choices=('R0', 'R1', 'R2'), required=True)
@@ -59,17 +60,23 @@ def main():
     p.add_argument('--lane-hz', type=float, default=10)
     p.add_argument('--saved-input', type=Path, help='JSON {front,left,right,extra: [JPEG path,...]}')
     p.add_argument('--gui', action='store_true', help='Visualization publishers with connected sinks')
+    p.add_argument('--view-models', default='all', help='view.launch models selection; recorded separately from inference ACTIVE roles')
     p.add_argument('--qt', action='store_true', help='Also open the actual rqt viewer for this trial')
     p.add_argument('--nms-iou', type=float, default=.7)
+    p.add_argument('--confidence', type=float, default=.4)
+    p.add_argument('--lane-batch-wait-ms', type=float)
+    p.add_argument('--fusion-hz', type=float)
     p.add_argument('--legacy-lidar-root', type=Path)
     a = p.parse_args()
+    # roslaunch starts node processes in ROS_HOME; probes need an absolute path.
+    a.output = a.output.resolve()
     a.output.mkdir(parents=True, exist_ok=False)
     rospy.init_node('camera_runtime_comparison', anonymous=True)
     package = Path(rospkg.RosPack().get_path('asmc_camera'))
     root = Path(__file__).resolve().parents[2]
     legacy = dict(objects='/camera_object_detector', lane='/camera_semantic_inference', traffic_light='/traffic_light_infer')
     active = a.active.split(',')
-    status, status_rows, diagnostics, subscribers, outputs = {}, [], [], [], []
+    status, status_rows, diagnostics, subscribers, outputs, families = {}, [], [], [], [], []
     def receive_status(role, message):
         status[role] = message
         status_rows.append(dict(role=role,at=time.monotonic(),generation=message.generation,mode=message.mode,
@@ -81,15 +88,25 @@ def main():
         lambda m: outputs.append(dict(frame=m.header.frame_id, stamp=m.header.stamp.to_nsec(), seq=m.header.seq,
             valid=m.valid, boxes=[dict(label=b.source_class_name, group=b.class_name, confidence=b.confidence,
                                     xyxy=[b.xmin,b.ymin,b.xmax,b.ymax]) for b in m.boxes])), queue_size=30))
+    subscribers.append(rospy.Subscriber('/perception/lane/boundary_family', LaneBoundaryFamily,
+        lambda m: families.append(dict(at=time.monotonic(),stamp=m.header.stamp.to_nsec(),
+            valid=m.valid,reason=m.status_reason)),queue_size=30))
     # Keep the same normal lane consumers as the real stack. No GUI consumers
     # are added unless explicitly requested, so lazy output stays comparable.
-    for topic in ('/perception/camera/objects/diagnostics', '/perception/camera/diagnostics', '/morai_sensor_bridge/diagnostics'):
+    for topic in ('/perception/camera/objects/diagnostics', '/perception/camera/diagnostics', '/morai_sensor_bridge/diagnostics',
+                  '/perception/bev/diagnostics', '/perception/bev/debug/diagnostics', '/perception/lane/diagnostics'):
         subscribers.append(rospy.Subscriber(topic, DiagnosticArray, lambda m: diagnostics.append(
             dict(at=time.monotonic(), statuses=[dict(name=s.name, values={v.key:v.value for v in s.values}) for s in m.status])), queue_size=10))
     launch = package/'launch'/('perception.launch' if a.variant == 'R0' else '_runtime.launch')
     args = ['profile:=planning', 'objects_debug_raw:=false', 'lane_enable_shared_family_debug:=false',
             'lane_target_hz:='+str(a.lane_hz), 'traffic_light_device:=cuda'] if a.variant == 'R0' else [
             'mode:=standby', 'implementation:='+('shared' if a.variant == 'R2' else 'separate'), 'lane_hz:='+str(a.lane_hz), 'nms_iou:='+str(a.nms_iou)]
+    if a.variant != 'R0':
+        args += ['confidence:='+str(a.confidence)]
+        if a.lane_batch_wait_ms is not None:
+            args += ['lane_batch_wait_ms:='+str(a.lane_batch_wait_ms)]
+        if a.fusion_hz is not None:
+            args += ['lane_fusion_hz:='+str(a.fusion_hz)]
     probe = root/'tools/perception/camera_runtime_probe.py'
     class MeasuredLaunch(roslaunch.parent.ROSLaunchParent):
         def _load_config(self):
@@ -123,6 +140,7 @@ def main():
     main_process = qt_process = None
     sampler, report, start, end = None, dict(variant=a.variant, active=active, lane_hz=a.lane_hz,
         saved_input=str(a.saved_input) if a.saved_input else None, gui=a.qt, visualization_sinks=a.gui, nms_iou=a.nms_iou, failures=[],
+        confidence=a.confidence, view_models=a.view_models if a.gui else None,
         timestamp_mode=rospy.get_param('/morai_sensor_bridge/timestamp_mode','unset (bridge default receive)'),
         use_sim_time=rospy.get_param('/use_sim_time',False),
         latency_definition='Actual model/broker compressed input callback entry -> ROS publish return; monotonic wall.',
@@ -133,6 +151,8 @@ def main():
         report['source_sha256'] = hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()
         (a.output/'source-hashes.json').write_text(json.dumps(hashes,indent=2))
         parent.start()
+        report['effective_lane_batch_wait_ms'] = rospy.get_param('/camera_lane/batch_wait_ms',None)
+        report['effective_fusion_hz'] = rospy.get_param('/camera_bev_fusion/max_fused_hz',None)
         deadline = time.monotonic()+120
         while not all(r in status and status[r].loaded and status[r].warmed_up for r in legacy):
             if time.monotonic() > deadline:
@@ -153,10 +173,14 @@ def main():
         if a.gui:
             # Start only visualization and connect compressed debug sinks. The
             # sink cost is recorded separately from a real rqt window's cost.
-            view_launch = roslaunch.parent.ROSLaunchParent(parent.run_id, [str(package/'launch/view.launch')])
+            view_launch = roslaunch.parent.ROSLaunchParent(parent.run_id,
+                [(str(package/'launch/view.launch'), ['models:='+a.view_models])])
             view_launch.start()
-            for topic in ('/perception/camera/objects/debug/mosaic/compressed', '/perception/camera/debug/mosaic/compressed',
-                          '/perception/traffic_light/debug/image/compressed'):
+            debug_topics = dict(objects='/perception/camera/objects/debug/mosaic/compressed',
+                lane='/perception/camera/debug/mosaic/compressed', traffic_light='/perception/traffic_light/debug/image/compressed')
+            for role, topic in debug_topics.items():
+                if a.view_models != 'all' and role not in a.view_models.split(','):
+                    continue
                 subscribers.append(rospy.Subscriber(topic, CompressedImage, lambda m: None, queue_size=1))
         if a.legacy_lidar_root:
             env = dict(os.environ)
@@ -221,8 +245,16 @@ def main():
         rows = []
         for path in a.output.glob('*.jsonl'):
             rows.extend(dict(json.loads(s), probe=path.stem) for s in path.read_text().splitlines() if s)
+        if start is not None and not rows:
+            report['failures'].append('missing model measurement traces; no latency/supply claim')
         if start is not None:
             report['streams'] = measurements(rows, start, end, 15)
+            required = dict(objects='/perception/camera/objects:',
+                lane='/perception/camera/front/road_marking/class_id:',
+                traffic_light='/perception/traffic_light/detection:')
+            for role in active:
+                if not any(key.startswith(required[role]) for key in report['streams']):
+                    report['failures'].append('missing fresh measured output for '+role)
             report['input'] = {frame:rate_report([(r['at'],r['stamp'],True) for r in rows if r['event']=='input' and r['probe']+':'+r['frame']==frame],start,end)
                                for frame in {r['probe']+':'+r['frame'] for r in rows if r['event']=='input'}}
             for key, stream in report['streams'].items():
@@ -234,6 +266,18 @@ def main():
         (a.output/'boxes.json').write_text(json.dumps(outputs))
         (a.output/'statuses.json').write_text(json.dumps(status_rows))
         (a.output/'diagnostics.json').write_text(json.dumps(diagnostics))
+        (a.output/'lane-families.json').write_text(json.dumps(families))
+        if start is not None:
+            report['lane_family'] = rate_report([(r['at'],r['stamp'],True) for r in families],start,end)
+            active_families = [r for r in families if start <= r['at'] < end]
+            report['lane_family']['fit_valid_count'] = sum(r['valid'] for r in active_families)
+            inputs = {}
+            for row in rows:
+                if row['event']=='input' and 'camera_lane' in row['probe']:
+                    inputs[row['stamp']] = min(row['at'],inputs.get(row['stamp'],row['at']))
+            times = [(r['at']-inputs[r['stamp']])*1000 for r in active_families if r['stamp'] in inputs]
+            report['lane_family']['input_to_subscriber_ms'] = {f'p{q}':percentile(times,q) for q in (50,95,99)}
+            report['lane_family']['latency_sample_count'] = len(times)
         (a.output/'report.json').write_text(json.dumps(report, indent=2)+'\n')
         print('RESULT '+json.dumps(report.get('resources', report['failures'])), flush=True)
     return int(bool(report['failures']))

@@ -28,5 +28,5 @@ allowed_names:
 device: cuda:0
 require_cuda: true
 head_profile: legacy_coco7
-nms_iou: 0.7
+nms_iou: 0.5
 deployment_profile: pretrained_coco7

@@ -2,7 +2,7 @@ task: detect
 batched_runtime: true
 label_mode: group
 head_profile: mission16_one2one_nms
-nms_iou: 0.7
+nms_iou: 0.5
 views:
 - front
 - left

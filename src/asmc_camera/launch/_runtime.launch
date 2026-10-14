@@ -2,9 +2,11 @@
   <!-- Internal comparison entrypoint. Public callers use camera.launch. -->
   <arg name="mode" default="standby"/><arg name="models" default="all"/>
   <arg name="detector" default="e8"/><arg name="confidence" default="0.40"/>
-  <arg name="nms_iou" default="0.70"/>
+  <arg name="nms_iou" default="0.50"/>
   <arg name="implementation" default="separate" doc="separate | shared; experimental until accepted"/>
-  <arg name="lane_hz" default="10.0"/>
+  <arg name="lane_hz" default="15.0"/>
+  <arg name="lane_batch_wait_ms" default="20.0"/>
+  <arg name="lane_fusion_hz" default="$(arg lane_hz)"/>
   <arg name="profile" default="$(eval {'off':'idle','standby':'planning','active':'debug'}[arg('mode')])"/>
   <arg name="selection" default="$(eval ['objects','lane','traffic_light'] if arg('models') == 'all' else arg('models').split(','))"/>
   <arg name="valid_models" default="$(eval {True: True}[arg('models') == 'all' or (arg('models') != '' and arg('models').replace('objects','').replace('traffic_light','').replace('lane','').replace(',','') == '' and len(arg('models').split(',')) == arg('models').split(',').count('objects') + arg('models').split(',').count('lane') + arg('models').split(',').count('traffic_light') and arg('models').split(',').count('objects') &lt;= 1 and arg('models').split(',').count('lane') &lt;= 1 and arg('models').split(',').count('traffic_light') &lt;= 1)])"/>
@@ -28,6 +30,8 @@
     <arg name="objects_conf_thres" value="$(arg confidence)"/>
     <arg name="objects_nms_iou" value="$(arg nms_iou)"/>
     <arg name="lane_target_hz" value="$(arg lane_hz)"/>
+    <arg name="camera_batch_wait_ms" value="$(arg lane_batch_wait_ms)"/>
+    <arg name="lane_fusion_max_hz" value="$(arg lane_fusion_hz)"/>
     <arg name="objects_component_config" value="$(find asmc_camera)/config/camera/objects_runtime.yaml"/>
     <arg name="lane_component_config" value="$(find asmc_camera)/config/camera/lane_runtime.yaml"/>
     <arg name="traffic_component_config" value="$(find asmc_camera)/config/camera/traffic_light_runtime.yaml"/>
@@ -48,6 +52,7 @@
       <rosparam command="load" file="$(find asmc_camera)/config/camera/twinlite_medium.yaml" ns="components/lane"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/lane_runtime.yaml" ns="components/lane" subst_value="true"/>
       <param name="components/lane/target_hz" value="$(arg lane_hz)"/>
+      <param name="components/lane/batch_wait_ms" value="$(arg lane_batch_wait_ms)"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/traffic_light_runtime.yaml" ns="components/traffic_light" subst_value="true"/>
     </node>
   </group>

@@ -19,7 +19,9 @@ class CameraEntrypointsTest(unittest.TestCase):
         for node in ('camera_objects', 'camera_lane', 'camera_traffic_light'):
             self.assertEqual(config.params['/' + node + '/initial_mode'].value, 0)
         self.assertEqual(config.params['/camera_objects/conf_thres'].value, .4)
-        self.assertEqual(config.params['/camera_objects/nms_iou'].value, .7)
+        self.assertEqual(config.params['/camera_objects/nms_iou'].value, .5)
+        self.assertEqual(config.params['/camera_lane/target_hz'].value, 15.)
+        self.assertEqual(config.params['/camera_bev_fusion/max_fused_hz'].value, 15.)
         self.assertEqual(config.params['/camera_objects/model_kind'].value, 'yolo')
 
     def test_off_has_no_producers(self):
@@ -39,7 +41,7 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertIn('camera_lane_vectorizer', names)
         self.assertFalse({'camera_objects', 'camera_lane', 'camera_traffic_light'} & names)
         self.assertEqual(config.params['/camera_runtime/models'].value, ['objects', 'lane', 'traffic_light'])
-        self.assertEqual(config.params['/camera_runtime/components/lane/target_hz'].value, 10.)
+        self.assertEqual(config.params['/camera_runtime/components/lane/target_hz'].value, 15.)
 
     def test_models_order_and_pretrained_selection(self):
         config = self.config('camera.launch', 'models:=traffic_light,objects', 'detector:=pretrained')

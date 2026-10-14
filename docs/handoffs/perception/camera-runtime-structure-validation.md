@@ -1,5 +1,8 @@
 # 카메라 실행 구조·계약·후처리 검증 — 2026-10-14–15
 
+현재 기본값과 후속 검증은 [15Hz·confidence 후속 기록](camera-rate-confidence-followup.md)을 따른다.
+아래 E347의 결정·수치는 기본 NMS0.70/TwinLite10Hz였던 변경 전 기록으로 보존한다.
+
 실행 정본은 [카메라 실행·3뷰 관측 계약](../../contracts/perception/camera-runtime-v1.md)이다.
 이번 변경은 카메라 생산자와 공용 메시지에 한정한다. 기존 E8/사전학습 가중치와
 원본16종→세 그룹·3뷰 mask를 유지한다. 학습·수집·판제 정책·asmc_lidar 연결은 변경하지 않는다.

@@ -8,21 +8,22 @@ entrypoints:
     default_models: all
     default_detector: e8
     confidence: 0.40
-    nms_iou: 0.70
+    nms_iou: 0.50
     implementation: separate
   view:
     launch: view.launch
     starts_inference: false
 observation_contract: config/contracts/camera_object_observation_v1.yaml
-postprocessing_candidate: {confidence: 0.40, nms_iou: 0.50, exclusive_names: false}
-# The candidate is an explicit startup override; the agreed 0.70 default stays.
+postprocessing_default: {confidence: 0.40, nms_iou: 0.50, exclusive_names: false}
 launch_profiles:
   default: idle
   idle: {load_models: false, inference: false, visualization: false}
   planning: {load_models: true, managed: true, initial_mode: STANDBY, visualization: false}
   debug: {load_models: true, managed: true, initial_mode: ACTIVE, visualization: true}
   legacy: {camera_lane: true, camera_objects: false, traffic_light: false, managed: false}
-model_target_hz: {twinlite: 10.0, yolo: 15.0, resnet18: 10.0}
+model_target_hz: {twinlite: 15.0, yolo: 15.0, resnet18: 10.0}
+minimum_supply_hz: {twinlite: 10.0, yolo: 10.0, resnet18: 9.5}
+# Target15Hz and >=10Hz supply are separate; source interruptions are not waived.
 activation_owner: planning
 # Component flags select node creation. A loaded managed model's service controls inference.
 

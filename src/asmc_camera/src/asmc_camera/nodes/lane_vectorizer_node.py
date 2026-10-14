@@ -67,6 +67,7 @@ from asmc_camera.bev.spline_fitting import fit_lane_tracks_with_audit
 
 
 from asmc_camera.runtime.ros_control import LaneEpochGate
+from asmc_camera.runtime.latest_work import LatestWork
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,7 @@ class _ViewFrame:
     class_id: np.ndarray
     confidence: np.ndarray
     decode_copy_ms: float
+    generation: object = None
 
 
 RUNTIME_PROFILE_SCHEMA = "asmc-lane-runtime-profile-1.2.0"
@@ -409,8 +411,11 @@ class LaneVectorizerNode:
             raise ValueError("lane vector synchronization settings are invalid")
 
         self.buffers = {view: deque() for view in self.views}
+        self.buffer_generation = None
         self.buffer_lock = threading.Lock()
         self.processing_lock = threading.Lock()
+        self.fit_work = LatestWork()
+        self.fit_stop = threading.Event()
         self.inputs = {view: 0 for view in self.views}
         self.pair_errors = {view: 0 for view in self.views}
         self.queue_drops = {view: 0 for view in self.views}
@@ -486,6 +491,9 @@ class LaneVectorizerNode:
             queue_size=10,
         )
 
+        self.fit_worker = threading.Thread(target=self._fit_worker, name='lane-fit', daemon=True)
+        self.fit_worker.start()
+        rospy.on_shutdown(self._shutdown)
         self.subscribers = []
         self.synchronizers = []
         for view in self.views:
@@ -522,6 +530,12 @@ class LaneVectorizerNode:
         )
 
     def _runtime_invalidate(self):
+        if hasattr(self, 'fit_work'):
+            self.fit_work.clear()
+        if hasattr(self, 'buffer_lock'):
+            with self.buffer_lock:
+                for queue in self.buffers.values():
+                    queue.clear()
         if self.last_runtime_header is not None and hasattr(self, "boundary_family_publisher"):
             message = LaneBoundaryFamily()
             message.header = self.last_runtime_header
@@ -530,8 +544,9 @@ class LaneVectorizerNode:
             self.boundary_family_publisher.publish(message)
 
     def _view_callback(self, view, class_message, confidence_message):
-        if not self.epoch_gate.allows(class_message.header.stamp):
-            return
+        # Do not wait for the fit's epoch lock in a transport callback. Tag
+        # receipt now; the worker checks generation and cutoff under that lock.
+        generation = self.epoch_gate.generation
         self.inputs[view] += 1
         stamps = (
             int(class_message.header.stamp.to_nsec()),
@@ -557,9 +572,16 @@ class LaneVectorizerNode:
             class_id,
             confidence,
             decode_copy_ms,
+            generation,
         )
         ready = None
         with self.buffer_lock:
+            if generation != self.epoch_gate.generation:
+                return
+            if generation != self.buffer_generation:
+                for old_queue in self.buffers.values():
+                    old_queue.clear()
+                self.buffer_generation = generation
             queue = self.buffers[view]
             if len(queue) >= self.queue_size:
                 queue.popleft()
@@ -567,7 +589,26 @@ class LaneVectorizerNode:
             queue.append(frame)
             ready = self._take_synchronized_locked()
         if ready is not None:
-            self._process(ready)
+            self.fit_work.offer(ready)
+
+    def _fit_worker(self):
+        while not self.fit_stop.is_set():
+            frames = self.fit_work.pop()
+            if frames is None or self.fit_stop.is_set():
+                return
+            try:
+                self._process(frames)
+            except Exception as exc:
+                if self.fit_stop.is_set() or rospy.is_shutdown():
+                    return
+                self.errors += 1
+                rospy.logerr_throttle(2., 'lane-fit worker failed: %s', exc)
+
+    def _shutdown(self):
+        self.fit_stop.set()
+        self.fit_work.close()
+        if self.fit_worker is not threading.current_thread():
+            self.fit_worker.join(timeout=2.)
 
     def _take_synchronized_locked(self):
         while all(self.buffers[view] for view in self.views):
@@ -586,6 +627,10 @@ class LaneVectorizerNode:
 
     def _process(self, frames):
         with self.processing_lock, self.epoch_gate.lock:
+            if self.fit_stop.is_set():
+                return
+            if self.epoch_gate.enabled and any(f.generation != self.epoch_gate.generation for f in frames.values()):
+                return
             if not all(self.epoch_gate.allows(f.header.stamp) for f in frames.values()):
                 return
             if self.epoch_gate.enabled and self.runtime_generation != self.epoch_gate.generation:
@@ -731,6 +776,8 @@ class LaneVectorizerNode:
                     frame_id=self.frame_id,
                 )
                 if self.boundary_family_candidate_enabled:
+                    if self.fit_stop.is_set():
+                        return
                     family_output = build_boundary_family_output(
                         shared_family,
                         status_reason=self.last_shared_family_audit.get(
@@ -1639,6 +1686,7 @@ class LaneVectorizerNode:
             "inputs_by_view": self.inputs,
             "pair_errors_by_view": self.pair_errors,
             "queue_drops_by_view": self.queue_drops,
+            "pending_fit_replacements": self.fit_work.replaced,
             "sync_rejected": self.sync_rejected,
             "outputs": self.outputs,
             "errors": self.errors,

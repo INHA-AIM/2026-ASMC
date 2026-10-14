@@ -3,6 +3,8 @@
 YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 소유합니다.
 실행은 `camera.launch`, 시각화는 `view.launch`를 사용합니다.
 기본 객체 모델은 YOLO26l v11 E8, 사전학습 YOLO26l도 실행 시 선택할 수 있습니다.
+현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
+YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합니다. 같은 목표 Hz가 같은 영상 시각을 보장하지는 않습니다.
 
 ```bash
 # asmc-ros-noetic에서 빌드한 workspace 환경을 source한 뒤
@@ -23,6 +25,7 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 새 제어 경로·기존 alias·원본16종/세 그룹·관측 freshness를 정리했습니다.
 [모델 설치와 소비 규칙](../../docs/handoffs/perception/camera-mission16-deployment.md),
 [실측·후처리 선정](../../docs/handoffs/perception/camera-runtime-structure-validation.md)을 함께 확인하세요.
+[15Hz·confidence 후속 검증](../../docs/handoffs/perception/camera-rate-confidence-followup.md)에 최신 결정과 이전 실패를 정리했습니다.
 판제는 구간·활성화·소비를 결정하며 차선의 주행 소비는 음영 ODD에 한정합니다.
 
 세부 모델·입력·mask 설정은 `config/camera/*_runtime.yaml`과 선택한 모델 프로필 YAML에서 관리합니다.

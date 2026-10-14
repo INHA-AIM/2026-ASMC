@@ -66,8 +66,14 @@ def main():
             if a.saved_input:
                 command += ['--saved-input',str(a.saved_input)]
             command += ['--nms-iou',str(job.get('nms_iou',.7))]
+            command += ['--confidence',str(job.get('confidence',.4))]
+            if 'lane_batch_wait_ms' in job:
+                command += ['--lane-batch-wait-ms',str(job['lane_batch_wait_ms'])]
+            if 'fusion_hz' in job:
+                command += ['--fusion-hz',str(job['fusion_hz'])]
             if job.get('gui'):
                 command += ['--gui']
+                command += ['--view-models',job.get('view_models','all')]
             if job.get('qt'):
                 command += ['--qt']
             if job.get('legacy_lidar_root'):

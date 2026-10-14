@@ -22,6 +22,7 @@ class RuntimeMeasurementsTest(unittest.TestCase):
         self.assertAlmostEqual(result['wall_ms']['p95'],54.15)
         self.assertFalse(result['target_95pct_pass'])
         self.assertTrue(result['minimum_9_5_pass'])
+        self.assertFalse(result['minimum_10_pass'])
         self.assertEqual(result['duplicate_stamps'],0)
         rows.append(dict(rows[10],at=5.85))
         result = next(iter(measurements(rows,0,5.9,15).values()))
