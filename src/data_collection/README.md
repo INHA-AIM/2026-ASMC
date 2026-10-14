@@ -1,6 +1,6 @@
 # data_collection — Capture·rosbag·동기화·인지 데이터셋
 
-**2026-10-14 PR #81/#82 통합 준비:** Capture 자동 수집·GT 변환 도구는 명시 실행용이다.
+**2026-10-14 PR #81/#82 main 통합:** Capture 자동 수집·GT 변환 도구는 명시 실행용이다.
 일반 카메라/판제 launch나 패키지 빌드로 스폰·주행·녹화가 시작되지 않는다.
 [현재 범위·데이터 구분](../../docs/handoffs/perception/camera-data-integration-prep.md)을 먼저 확인한다.
 현재 E8 모델은 별도 배포이며, E드라이브 전환·전처리/본학습 도구는 다음 작업 단위다.
