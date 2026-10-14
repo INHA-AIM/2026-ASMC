@@ -64,5 +64,18 @@ E드라이브 경로 및 전체 에셋을 포괄하는 새 수집 계획을 수�
 ## 병합 전 확인
 
 최신 main과 결합한 도구·ROS 계약·문서 링크·수집 CPU 회귀와 hosted CI를 확인한다.
-현재 runtime/모델 설정이 main과 동일한지도 대조한다. 로컬 검사와 hosted CI 상태는 별도 기록한다.
+현재 runtime/모델 설정이 main과 동일한지도 대조한다.
+#82에서는 수집 구현·launch·ground 교정 설정을 실제로 포함하며, 초기 설계만 존재한 #81 상태와 구분한다. 로컬 검사와 hosted CI 상태는 별도 기록한다.
 사용자 검토 전에는 PR 병합·Draft 해제·스폰·차량 제어·학습을 실행하지 않는다.
+
+## #82 검토할 실행 경로
+
+- [Capture coordinator](../../../src/data_collection/scripts/capture_route_collector_node.py): 단일 요청·freshness·제어 소유권·중단/종료 기록.
+- [수집 launch](../../../src/data_collection/launch/capture_route_collection.launch): 명시 실행 시만 동작. 기본 MPC·gRPC·20km/h·30 Capture이며 PP 대체는 별도 새 run이다.
+- [배치/실행 정책](../../../src/data_collection/src/data_collection/capture_collection.py), [반복 실행기](../../../tools/perception/run_capture_route_collection.py): 목표 달성·중단·최대 두 바퀴·기한과 실제 지원 에셋 검사.
+- [GT export](../../../tools/perception/export_capture_route_bbox.py), [독립 재검증](../../../tools/perception/verify_capture_route_dataset.py): native ID·가시 instance·원본 SHA·고정16종·평가본 중복 검사.
+- [종료 시점 요약](../../../config/baselines/evidence/camera_capture_collection_v1/summary.json)의 `final_verified_stock`·`collection_end`·`last_two_hour_collection`을 사용한다.
+  상위 `remaining`은 초기 장애 발생 시 기록이며 최신 실행 지시가 아니다.
+
+전체6조건의 주행 통과 기록과 정상 영상/GT의 채택은 별개다. 마지막 세 회차만도10,133장·145,474개
+주석을 보강했지만 수집량을 클래스별 독립 장면 수나 후속 학습 성능 보장으로 사용하지 않는다.
