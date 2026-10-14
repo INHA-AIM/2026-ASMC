@@ -1,5 +1,7 @@
 # LiDAR + camera sensor fusion
 
+**2026-10-14 current camera contract:** [E8 deployment, model choice and three groups](../../docs/handoffs/perception/camera-mission16-deployment.md). Main defaults to `start_yolo:=false camera_class_profile:=mission16_v1`; camera E8 runs in the outer workspace.
+
 > **역할:** Active Standalone Guide — 독립 nested catkin workspace의 build·runtime·검증
 >
 > Phase 4 통합 경계와 중복 package 제거 gate는
@@ -61,13 +63,13 @@ source devel/setup.bash
 ./start_main.sh
 ```
 
-### Opt-in camera-owned YOLO producer
+### Camera-owned YOLO producer
 
 Build/source outer `asmc_msgs` before this nested workspace. Start the camera
 producer in a separate sourced outer terminal:
 
 ```bash
-roslaunch asmc_camera camera_objects.launch
+roslaunch asmc_camera perception.launch profile:=debug start_camera_lane:=false start_traffic_light:=false
 ```
 
 In the nested terminal (outer setup first, nested setup second):
@@ -78,17 +80,18 @@ roslaunch Main main.launch start_yolo:=false rviz:=false
 
 This selects `camera_objects_yolo_bbox_adapter.py` instead of legacy YOLO.
 The adapter checks the outer message MD5 at startup, accepts valid front-camera
-results, and retains the old four labels, confidence 0.7, box order, integer
+results, and retains the raw 16/7-class labels, configured confidence cutoff, box order, integer
 coordinates and source header on `/YOLO/BBox`. Valid empty results are forwarded;
 invalid/side/zero-stamp results are withheld. Only one bbox publisher may run.
-Stop the new camera producer and restart Main with `start_yolo:=true` to roll back.
+For full legacy rollback, stop the new producer and restart Main with `start_yolo:=true camera_class_profile:=legacy`.
 GUI/bridge are separate. See [P2a guide](../../docs/handoffs/perception/camera-objects-p2a.md)
 and [evidence](../../config/baselines/perception_camera_objects_parity_v1.yaml).
 
 To run LiDAR-only, launch with `enable_sensor_fusion:=false`.
 
-Fusion outputs only `person`, `car`, or `unknown`; YOLO `truck` and `bus` are
-mapped to `car`. The YOLO result carries the source image timestamp. Each
+Fusion classification defaults to `vehicle`, `dynamic_obstacle`, `static_obstacle`, or `unknown`,
+while `yolo_class` preserves the original camera name. `camera_class_profile:=legacy` restores
+the old normalization. Motion is independent of this grouping. The YOLO result carries the source image timestamp. Each
 LiDAR object frame waits at most 200 ms for the nearest source-stamped YOLO
 result and consumes that result exactly once, only when the timestamp offset
 is at most 50 ms. The limit is not relaxed on timeout. Every 5 seconds,

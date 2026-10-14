@@ -11,6 +11,7 @@
     <arg name="profile" value="$(arg profile)"/>
     <arg name="camera_objects_config" value="$(arg camera_objects_config)"/>
     <arg name="objects_conf_thres" value="$(arg objects_conf_thres)"/>
+    <arg name="objects_class_groups_config" value="$(find asmc_camera)/config/camera/object_classes.yaml"/>
     <arg name="objects_target_hz" value="15.0"/>
     <arg name="start_camera_lane" value="$(arg start_camera_lane)"/>
     <arg name="start_traffic_light" value="$(arg start_traffic_light)"/>

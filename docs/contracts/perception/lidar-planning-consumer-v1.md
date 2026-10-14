@@ -1,5 +1,11 @@
 # LiDAR → 판단제어 공통 소비 계약
 
+**2026-10-14 카메라 분류:** Main의 `camera_class_profile` 기본은 `mission16_v1`입니다.
+tracked `classification`은3그룹, `yolo_class`는원본 이름입니다. 기존 numeric planning enum은 유지되며
+unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비 계약](../../handoffs/perception/camera-mission16-deployment.md)을
+함께 확인합니다. 좌표·시간·운동의 기존 기준은 그대로 적용합니다.
+
+
 > 상태: **LiDAR 이전 구현용 계약, 카메라 객체 생산자 opt-in 구현**. `asmc_lidar`는 좌표·시간 라이브러리
 > 골격이며 검출/추적/ROS 어댑터는 손재호의 후속 구현이다. 기존 주행은 원본
 > `lidar+sensorfusion`을 사용한다. [인계 계획](../../packages/asmc_lidar/README.md)과

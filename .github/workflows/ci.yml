@@ -74,6 +74,8 @@ jobs:
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
+          python3 -m unittest discover -s tools/perception -p 'test_camera_model_release.py'
+          python3 -m unittest discover -s src/asmc_camera/test -p 'test_facade_contract.py'
           python3 -m unittest discover -s src/asmc_camera/test/detection -p 'test_*.py'
           python3 -m unittest tools/perception/test_hood_evaluation.py
           python3 -m unittest tools/perception/test_lifecycle_measurements.py

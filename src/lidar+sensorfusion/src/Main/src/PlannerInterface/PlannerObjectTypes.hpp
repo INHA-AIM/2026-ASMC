@@ -17,7 +17,7 @@ struct PlannerObject {
     std::int32_t id = -1;
     std::int16_t type = 0;
     std::string classification;
-    // YOLO 원본 라벨. classification이 car/person/unknown으로 접힌 값인 반면
+    // YOLO 원본 라벨. classification이 선택한 소비 그룹으로 접힌 값인 반면
     // 이쪽은 truck/bus까지 구분된다.
     std::string yolo_class = "unknown";
     bool is_dynamic = false;

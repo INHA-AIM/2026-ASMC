@@ -139,6 +139,13 @@ std::uint8_t ConvertClassification(const std::string& source,
     if (supported) *supported = true;
     return kObjectPedestrian;
   }
+  // The frozen numeric enum has only vehicle/pedestrian/unknown. Keep all
+  // geometry and motion for the two obstacle groups; raw strings remain on
+  // tracked_objects_map and the validated tracked companion topic.
+  if (label == "dynamic_obstacle" || label == "static_obstacle") {
+    if (supported) *supported = true;
+    return kObjectUnknown;
+  }
   if (label.empty() || label == "unknown" || label == "unclassified") {
     if (supported) *supported = true;
     return kObjectUnknown;
@@ -248,7 +255,8 @@ ConversionStatus ConvertTrackedObjects(
 
     bool supported_classification = true;
     const std::uint8_t object_type =
-        ConvertClassification(source.classification,
+        ConvertClassification(source.classification == "dynamic_obstacle" &&
+                                  source.yolo_class == "person" ? "person" : source.classification,
                               &supported_classification);
     if (!supported_classification) {
       ++converted_stats.unsupported_classification;

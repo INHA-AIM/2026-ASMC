@@ -1,0 +1,24 @@
+class_groups:
+  profile: mission16_v1
+  groups:
+    vehicle:
+    - car
+    - bus
+    - truck
+    dynamic_obstacle:
+    - person
+    - dog
+    - deer
+    - bicycle
+    - stroller
+    static_obstacle:
+    - motorcycle
+    - bollard
+    - box
+    - concrete_barrier
+    - steel_barricade
+    - traffic_drum
+    - plastic_barrier
+    - traffic_cone
+  default_group: unknown
+  excluded: []

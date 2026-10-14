@@ -1,0 +1,20 @@
+{
+  "training": "stopped; complete E22 retained; later partial excluded",
+  "selection": "E8 experimental driving candidate",
+  "bag": "8 candidate comparisons and 4 TensorRT trials complete",
+  "engine": "FP32 PyTorch reference parity passed: 48 images, 99 matches, 1 threshold boundary; FP16 differences retained",
+  "runtime": "not promoted; full ACTIVE + MORAI + independent driving acceptance pending",
+  "limitations": [
+    "No continuous independent object GT in bag; no bag-wide recall or stable detection claim",
+    "TwinLite/ResNet loaded STANDBY in these trials",
+    "Numeric planning enum remains vehicle/pedestrian/unknown; raw/group available on tracked companion",
+    "E8 misses some tunnel boxes detected by E22"
+  ],
+  "tests": {
+    "camera_detection": 79,
+    "camera_runtime": 31,
+    "fusion_policy": 8,
+    "planning_group": 2,
+    "group_evaluation": 3
+  }
+}

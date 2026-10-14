@@ -1,0 +1,32 @@
+weights: $(optenv ASMC_MODELS_ROOT /data/models)/camera_coco7_v1/yolo26l.engine
+expected_sha256: 95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f
+runtime_backend: tensorrt
+task: detect
+batched_runtime: true
+label_mode: group
+views:
+- front
+- left
+- right
+front_width: 1280
+batch_mode: 2plus1
+batch_wait_ms: 10.0
+target_hz: 15.0
+target_hz_by_view:
+  front: 15.0
+  left: 15.0
+  right: 15.0
+conf_thres: 0.4
+allowed_names:
+- person
+- dog
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+device: cuda:0
+require_cuda: true
+head_profile: legacy_coco7
+nms_iou: 0.7
+deployment_profile: pretrained_coco7

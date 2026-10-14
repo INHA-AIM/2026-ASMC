@@ -69,6 +69,8 @@ def main():
     parser.add_argument('--seg-debug', action='store_true')
     parser.add_argument('--fusion-yolo-policy',choices=['unique','bounded_reuse'],default='unique')
     parser.add_argument('--objects-min-rate',type=float,help='Explicit new experiment gate; absent retains historical 18Hz')
+    parser.add_argument('--camera-class-profile', choices=['legacy','mission16_v1'], default='legacy')
+    parser.add_argument('--record-boxes', action='store_true', help='Persist raw class/group/confidence for offline quality review')
     args = parser.parse_args()
     if args.objects_only and args.profile != 'C1':
         parser.error('objects-only trials require C1')
@@ -209,7 +211,7 @@ def main():
         for topic in debug_topics:
             subscribers.append(rospy.Subscriber(topic, CompressedImage,
                 lambda m, n=topic: receive_output(n, m), queue_size=10, buff_size=2**24))
-        if args.seg_debug:
+        if args.seg_debug or args.record_boxes:
             for v in object_views:
                 topic='/perception/camera/objects/debug/'+('instances' if v=='front' else v+'/instances')+'/compressed'
                 subscribers.append(rospy.Subscriber(topic, CompressedImage,
@@ -284,7 +286,7 @@ def main():
             command.append('objects_views:=[front, left, right]')
         if args.objects_side_ego_mask:
             command.append('objects_side_ego_mask:=true')
-        if args.seg_debug:
+        if args.seg_debug or args.record_boxes:
             command.append('objects_debug_masks:='+str(args.debug).lower())
         camera = launch('camera', command)
         for node in (NODES[m] for m in loaded_models):
@@ -311,6 +313,7 @@ def main():
                             'camera_objects_conf_thres:='+str(adapter_confidence)]
             if traced:
                 main_command.append('fusion_trace_path:='+str(args.output/'fusion.jsonl'))
+            main_command.append('camera_class_profile:='+args.camera_class_profile)
             main_process = launch('main', main_command)
             wait(lambda: len(dict(master.getSystemState()[0]).get('/YOLO/BBox', [])) == 1, 'single adapter publisher', 30)
         play = ['rosbag', 'play', bag_path, '--clock', '--quiet', '--rate=1.0', '--delay=1.0']

@@ -18,7 +18,7 @@ class BatchedYoloDetector:
     def __init__(self, weights, expected_sha256, allowed_names=COCO7,
                  conf_thres=.7, device='cuda:0', require_cuda=True,
                  runtime_backend='pytorch', task='detect', front_width=1280,
-                 batch_mode='2plus1', **unused):
+                 batch_mode='2plus1', head_profile='legacy_coco7', nms_iou=.7, inference_quantize=16, **unused):
         import torch
         import ultralytics
         from ultralytics import YOLO
@@ -27,8 +27,17 @@ class BatchedYoloDetector:
         self.mode, self.shapes = batch_mode, shapes_for_front(front_width)
         batch_groups(['front', 'left', 'right'], batch_mode)
         self.allowed = list(allowed_names)
-        if task not in ('detect', 'segment') or set(self.allowed) != set(COCO7):
-            raise DetectorStartupError('closed-set runtime requires exactly COCO7 and detect/segment')
+        from .mission import CLASSES
+        self.mission = head_profile == 'mission16_one2one_nms'
+        if head_profile not in ('legacy_coco7', 'mission16_one2one_nms'):
+            raise DetectorStartupError('unknown head profile')
+        self.inference_quantize = inference_quantize
+        self.nms_iou = float(nms_iou)
+        if not 0 <= self.nms_iou <= 1:
+            raise DetectorStartupError('invalid NMS IoU')
+        expected_names = CLASSES if self.mission else COCO7
+        if task not in ('detect', 'segment') or set(self.allowed) != set(expected_names) or (self.mission and task != 'detect'):
+            raise DetectorStartupError('runtime vocabulary/task differs from the selected head profile')
         if not require_cuda or not device.startswith('cuda'):
             raise DetectorStartupError('three-view runtime requires CUDA; no CPU fallback')
         ok, report = cuda_preflight(torch, device)
@@ -45,7 +54,10 @@ class BatchedYoloDetector:
         start = time.monotonic()
         self.model = YOLO(str(path), task=task)
         if runtime_backend == 'pytorch':
-            self.model.fuse()
+            # The checkpoint stores end2end=False. Fuse only after predictor
+            # selects the requested head, otherwise one2one can be deleted.
+            if not self.mission:
+                self.model.fuse()
             self.model.to(device)
         if runtime_backend == 'tensorrt':
             # Reading names through YOLO.names creates a predictor with default
@@ -58,14 +70,16 @@ class BatchedYoloDetector:
                 if not 0 < metadata_size < 1024*1024:
                     raise DetectorStartupError('invalid engine metadata size')
                 metadata = json.loads(handle.read(metadata_size))
-            if metadata.get('end2end') is not False or metadata.get('task') != task:
+            if metadata.get('end2end') is not self.mission or metadata.get('task') != task:
                 raise DetectorStartupError('engine task/head metadata mismatch')
             self.names = {int(k): v for k, v in metadata['names'].items()}
         else:
             self.names = self.model.names
         self.allowed_ids = [i for i, name in self.names.items() if name in self.allowed]
-        if len(self.allowed_ids) != len(COCO7):
-            raise DetectorStartupError('checkpoint vocabulary does not contain COCO7')
+        if len(self.allowed_ids) != len(expected_names):
+            raise DetectorStartupError('checkpoint vocabulary does not contain the selected allowed names')
+        if self.mission and tuple(self.names[i] for i in sorted(self.names)) != CLASSES:
+            raise DetectorStartupError('mission16 checkpoint class ID order differs')
         load_ms = (time.monotonic()-start)*1000
         warm = time.monotonic()
         for views in (['front'], ['left'], ['left', 'right'], ['front', 'left', 'right']):
@@ -73,15 +87,15 @@ class BatchedYoloDetector:
             self.infer_images(images, views)
         runtime = self.model.predictor.model
         expected_format = 'engine' if runtime_backend == 'tensorrt' else 'pt'
-        if runtime.device.type != 'cuda' or runtime.format != expected_format or runtime.end2end:
-            raise DetectorStartupError('runtime device/format/head differs from one-to-many profile')
+        if runtime.device.type != 'cuda' or runtime.format != expected_format or bool(runtime.end2end) != self.mission:
+            raise DetectorStartupError('runtime device/format/head differs from the selected profile')
         self.info = dict(backend=runtime_backend, model_kind='yolo', task=task,
             weights=str(path), weights_sha256=actual, allowed_names=self.allowed,
             batch_mode=batch_mode, shapes=self.shapes, device=device, model_device=device,
             ultralytics=ultralytics.__version__, torch=torch.__version__,
             conf_thres=self.conf, model_load_ms=load_ms,
             warmup_ms=(time.monotonic()-warm)*1000,
-            head='one-to-many', masks_materialized=task == 'segment')
+            head='one-to-one + external same-class NMS' if self.mission else 'one-to-many', nms_iou=self.nms_iou, masks_materialized=task == 'segment')
         if runtime_backend == 'tensorrt':
             import tensorrt
             self.info.update(tensorrt=tensorrt.__version__, input_fp16=runtime.fp16,
@@ -99,8 +113,9 @@ class BatchedYoloDetector:
             start = time.monotonic()
             results = list(self.model.predict([p for p, _ in packed], stream=False,
                 verbose=False, conf=self.conf, classes=self.allowed_ids,
-                iou=.7, max_det=300, agnostic_nms=False,
-                imgsz=list(tensor_hw), rect=False, nms=True, device=self.device))
+                iou=self.nms_iou, max_det=300, agnostic_nms=False,
+                imgsz=list(tensor_hw), rect=False, nms=not self.mission, device=self.device,
+                **({"quantize": self.inference_quantize} if self.mission else {})))
             self.torch.cuda.synchronize(self.device)
             inference_ms = (time.monotonic()-start)*1000
             if len(results) != len(group):
@@ -111,6 +126,14 @@ class BatchedYoloDetector:
                 if self.task == 'segment' and getattr(result, 'masks', None) is not None:
                     bitmap = (scale_masks(result.masks.data[None], tensor_hw)[0] > .5).cpu().numpy()
                 detections, masks = select_result(result, result.names, self.allowed, self.conf, bitmap)
+                if self.mission:
+                    from .output_nms import suppress
+                    indexed = [dict(class_name=d.source_class_name, confidence=d.confidence,
+                                    xyxy=[d.xmin,d.ymin,d.xmax,d.ymax], index=i)
+                               for i,d in enumerate(detections)]
+                    kept, _ = suppress(indexed, self.conf, self.nms_iou)
+                    detections, masks = ([detections[p['index']] for p in kept],
+                                         [masks[p['index']] for p in kept])
                 if self.task == 'segment' and any(m is None for m in masks):
                     raise ValueError('segmentation result missing instance mask')
                 output[view] = SegmentationFrame(
