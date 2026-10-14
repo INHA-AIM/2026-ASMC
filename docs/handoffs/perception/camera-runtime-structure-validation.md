@@ -63,6 +63,11 @@ side batch의 같은 시간값을 두 뷰에서 합산하지 않는다.
 동일 source header와 callback 공백을 확인했다. MORAI 렌더링 또는 bridge 중 어느 원인인지는
 단정하지 않는다. 원래 실패와 센서-only/YOLO-only 대조는 모두 보존한다.
 
+같은 날씨에서 센서·bridge만 120초씩 실행한 대조의 최대 입력 공백은 SUNNY
+143.4ms·FOGGY166.6ms였다. YOLO만 ACTIVE, 나머지 모델은 로드된 STANDBY인
+60초 대조에서도 최대 공백은155–186ms로 긴 중단이 재현되지 않았다.
+세 모델 동시 실행과의 관계를 추가로 확인해야 하며, 이 대조가 원래 두 실패를 면제하지는 않는다.
+
 GPU 수치는 MORAI와 배경 프로그램을 포함한 전체 VRAM이다. CPU·system RAM은 Linux guest 범위이며
 Windows 프로그램의 CPU/RAM을 모두 계측한 것으로 설명하지 않는다. 합산 RSS에는 공유 페이지가 포함될 수 있다.
 문서·브라우저 등 사용자 작업은 종료하지 않았다.
@@ -98,7 +103,8 @@ alias의 동일 상태를 검사했다. 입력 프레임에 수신 세대를 붙
 stamp 역행 시 이전 pending frame이 새 세대로 다시 채택되는 경계를 막았다. 신호등도 입력 callback에서
 세대를 관측해 오래된 staged frame을 차단한다.
 
-- 카메라 CPU 회귀313개, 별도 runtime47개, metric4개 및 계약·generated ROS 경계 시험.
+- 카메라 CPU 회귀313개, 별도 runtime48개, metric4개, 계약27개 및 generated ROS 경계 시험.
+- 최종 입력 세대 경계 코드로 독립 ROS master에서 모드·alias·관측 metadata·입력 중단11항목을 재확인했다.
 - 실제 catkin build, launch 해석, 읽기 전용 cache·mask 격리·2슬롯 상한·고정 class ID.
 - PREPARE/ACTIVE/STANDBY, 정상 빈 결과·decode 오류·입력 중단·frozen clock·오래된 세대·fatal CUDA 모의 시험.
 - Hosted CI는 PR의 실제 결과를 별도로 기록한다. 로컬 통과로 대체하지 않는다.

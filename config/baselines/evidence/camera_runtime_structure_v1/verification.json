@@ -1,0 +1,66 @@
+{
+  "logs": {
+    "camera_cpu": {
+      "path": "data/runtime/camera-structure-v1/all-camera-tests-final.log",
+      "sha256": "a8715332a59a0ba029c6facc084a60c356907625564ec85663e4a52be90ee97b",
+      "count": 313,
+      "passed": true
+    },
+    "runtime_cpu": {
+      "path": "data/runtime/camera-structure-v1/runtime-tests-final.log",
+      "sha256": "7ef500533ee78b9e2d5be0d9ca64af8970ac0901967853b9efad35e12b136f2a",
+      "count": 48,
+      "passed": true
+    },
+    "contracts_cpu": {
+      "path": "artifacts/camera-runtime-structure-20261014-r1/contract-tests-final.log",
+      "sha256": "417387797a51a8cc42dcdcdc24d6c2b6937d5bfaf3079a0d46110a2bffb7c5ce",
+      "count": 27,
+      "passed": true
+    },
+    "documentation": {
+      "path": "artifacts/camera-runtime-structure-20261014-r1/documentation-tests.log",
+      "sha256": "099e7fbe63cd70a945033bbd11715b7e0c6a7f207ea94e3909788135ecda3efb",
+      "count": null,
+      "passed": true
+    },
+    "ros_boundary_final": {
+      "path": "artifacts/camera-runtime-structure-20261014-r1/ros-boundary-final.log",
+      "sha256": "6cc881509aba61f16d8edadafa116efe6aac252247f64ec61b379cffac87e7f5",
+      "count": 11,
+      "passed": true
+    },
+    "measurement_cpu": {
+      "path": "artifacts/camera-runtime-structure-20261014-r1/measurement-tests-final.log",
+      "sha256": "5d8a174d448d59185fd227bcbab9c964e39b10a9c2e28965972cfb0c833dd854",
+      "count": 4,
+      "passed": true
+    },
+    "generated_ros_regression": {
+      "path": "artifacts/camera-runtime-structure-20261014-r1/ros-regression-final.log",
+      "sha256": "721a51a02121f03b7202a1b1fec5b75b834e3626207b139c58496f158e25fc38",
+      "count": 5,
+      "passed": true
+    }
+  },
+  "legacy_message_files_changed": false,
+  "new_message": "asmc_msgs/CameraObjectObservation",
+  "new_message_md5": "fbddb8fe0071685b60811037c0302106",
+  "full_live_supply_acceptance": false,
+  "training_or_vehicle_control_performed": false,
+  "gt_detection_retention": {
+    "selection": {
+      "lost": 0,
+      "gained": 0,
+      "manifest_sha256": "f6e06e8da47184063333d02d3c1c4a4d091559f35361a9fab0c85e879353ba01",
+      "predictions_sha256": "a70c2f857424a0ca17a2acd6e84bae064a961e5bf62ac25de57aa5656a6b6c89"
+    },
+    "heldout": {
+      "lost": 0,
+      "gained": 0,
+      "manifest_sha256": "cc973c159a348aaf3df0f2e40aa0fa5e575569c52196cac7054c645cb3cc68bb",
+      "predictions_sha256": "f37070e287c63899fe9c9d2b82bdc09e9729a1c99cac7ba78a89e59aa03617b4"
+    }
+  },
+  "hosted_ci": "pending submission; local checks are independent"
+}

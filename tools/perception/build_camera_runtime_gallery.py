@@ -78,7 +78,7 @@ def main():
 <p>기본은 R1 독립 프로세스 · YOLO15Hz/TwinLite10Hz/ResNet10Hz · E8 · confidence0.40/NMS0.70입니다.
 최종 기본 반복의 두 회차는 상류 입력 공백으로 전체 공급 수락에 실패했습니다. 자동 면제하지 않으며 sensor/bridge 대조와 후속 확인을 구분합니다. 공유 R2는 지연 악화로 채택하지 않았습니다. TwinLite15Hz는 SUNNY 한 5초 창14.2Hz로 목표14.25Hz에 미달하여 기본 승격하지 않았습니다.
 NMS0.50은 E8 대조 설정이며 교차 클래스 억제는 제외했습니다. 이 결과는 판제/asmc_lidar 연결이나 공동 자율주행 수락이 아닙니다.</p>
-<p><a href="summary.json">전체 근거 JSON</a> · <a href="trials.csv">뷰·회차별 CSV</a> · <a href="runtime-postprocessing-final.json">104개 후처리 조합</a> · <a href="runtime-heldout-final.json">고정 설정 확인</a> · <a href="nms-gt-retention.json">GT 검출 유지 확인</a></p>
+<p><a href="summary.json">전체 근거 JSON</a> · <a href="trials.csv">뷰·회차별 CSV</a> · <a href="runtime-postprocessing-final.json">104개 후처리 조합</a> · <a href="runtime-heldout-final.json">고정 설정 확인</a> · <a href="nms-gt-retention-r3.json">GT 검출 유지 확인</a></p>
 <h2>품질 — 기존 개발 평가본</h2><p>16종·3그룹 모두 일대일 IoU≥0.5. 정상 GT 우선, ignore·partial 구분. selection205는 반복 사용한 개발본이고 heldout116도 새 미공개 시험으로 설명하지 않습니다.
 입력 packing·FP16·mask·clipping 전 tensor NMS를 실제 실행과 일치시켰습니다. 뷰 미확인 영상에는 mask를 추정 적용하지 않습니다.
 이전 PyTorch 동적 입력 평가와 특히 unknown 뷰의 tensor shape가 달라 수치를 직접 비교하지 않습니다. 희소 클래스·소스 편중의 한계는 JSON에 보존합니다.</p>
