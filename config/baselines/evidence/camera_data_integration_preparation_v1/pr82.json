@@ -1,0 +1,55 @@
+{
+  "recorded_utc": "2026-10-14T12:06:09.822127+00:00",
+  "base_main": "c70e5d7aa2193839d40b47961b03b3b71ba30655",
+  "included_pr81": "da263667951a374e0e3404f7652018b5b5f6e5ef",
+  "scope": "Capture collection/export tools, integration docs and CI coverage; no main merge",
+  "local_cpu_tests": {
+    "teacher_expansion_and_v7_and_capture_tools": 52,
+    "capture_collection_mode_sync": 21,
+    "total": 73
+  },
+  "ros_noetic": {
+    "container": "asmc-ros-noetic",
+    "isolated_workspace": "/data/runtime/pr81-pr82-prep-v1",
+    "data_collection_catkin_build": "passed",
+    "package_test_summary": {
+      "tests": 45,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    "launch_resolution": "roslaunch --nodes: /capture_ego_state and /capture_route_collector; no nodes started"
+  },
+  "overlap_note": "ROS package tests overlap with CPU capture tests; counts must not be added as distinct cases.",
+  "contracts": {
+    "P1B": "passed, 33 registered checks",
+    "perception": "passed",
+    "topic_policy": "passed, 32 families",
+    "documentation_migration": "passed"
+  },
+  "runtime_comparison_against_main": {
+    "paths": [
+      "src/asmc_camera",
+      "src/lidar+sensorfusion",
+      "src/planning_inputs",
+      "src/asmc_controller",
+      "src/asmc_planner",
+      "config/models",
+      "config/contracts"
+    ],
+    "diff": "identical"
+  },
+  "original_worktree_protection": {
+    "files_fingerprinted": 151,
+    "head_unchanged": true,
+    "status_unchanged": true,
+    "files_changed": 0
+  },
+  "dataset_mutated": false,
+  "new_collection_started": false,
+  "training_started": false,
+  "uncommitted_training_work_imported": false,
+  "hosted_ci": "pending updated PR checks; local tests do not imply hosted pass",
+  "historical_collection_evidence": "preserved; root remaining is historical, final_verified_stock and collection_end are final summary",
+  "review_status": "Draft; no main merge in this task"
+}

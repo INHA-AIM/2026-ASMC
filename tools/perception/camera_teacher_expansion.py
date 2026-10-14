@@ -722,6 +722,7 @@ def registry(args):
     for path in sorted(args.root.glob('camera_objects_bbox*/summary.json')):
         summary=json.loads(path.read_text());directory=path.parent
         verification=directory/'verification.json'
+        runtime_review=directory/'runtime-evidence-review-r2.json'
         curated=args.root.parent/'roboflow'/('curated-'+directory.name.replace('camera_objects_bbox_','',1))
         provenance_paths=[p for p in (curated/'summary.json',curated/'capture-summary.json') if p.exists()]
         provenance_data=[dict(path=str(p),sha256=sha(p),record=json.loads(p.read_text())) for p in provenance_paths]
@@ -730,9 +731,13 @@ def registry(args):
             images=summary.get('images'),classes=summary.get('classes'),splits=summary.get('splits'),
             labels_sha256=summary.get('labels_sha256'),curated=str(curated/'curated.jsonl') if curated.exists() else None,
             verification=json.loads(verification.read_text()) if verification.exists() else None,
+            runtime_evidence_review=dict(path=str(runtime_review),sha256=sha(runtime_review)) if runtime_review.exists() else None,
             parent_provenance=provenance_data or None,
             frozen=True,status='current_adopted' if directory.name==args.current else
-                'superseded_intermediate' if directory.name in superseded else 'historical_not_current'))
+                'superseded_intermediate' if directory.name in superseded else
+                'reviewed_capture_subset_not_merged' if summary.get('dataset_role')=='capture_subset' and summary.get('source_run_restore_passed') is True else
+                'diagnostic_capture_subset_not_merged' if summary.get('dataset_role')=='capture_subset' else
+                'historical_not_current'))
     if args.current not in {e['version'] for e in entries}:raise ValueError('current dataset version missing')
     if args.current in superseded or superseded-{e['version'] for e in entries}:
         raise ValueError('invalid superseded version list')

@@ -1,5 +1,10 @@
 # data_collection — Capture·rosbag·동기화·인지 데이터셋
 
+**2026-10-14 PR #81/#82 main 통합:** Capture 자동 수집·GT 변환 도구는 명시 실행용이다.
+일반 카메라/판제 launch나 패키지 빌드로 스폰·주행·녹화가 시작되지 않는다.
+[현재 범위·데이터 구분](../../docs/handoffs/perception/camera-data-integration-prep.md)을 먼저 확인한다.
+현재 E8 모델은 별도 배포이며, E드라이브 전환·전처리/본학습 도구는 다음 작업 단위다.
+
 > **역할:** Active Package Guide — 현재 수집·bag·dataset 재현 절차
 >
 > 인지 전체 경계는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md),
@@ -32,6 +37,19 @@ Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론�
 
 이 README에는 실행 절차를 두고, palette/ignore/split 같은 정책과 현재 run 구성은
 데이터 계약 문서에서 관리한다.
+
+## 장애물 자동 수집 Capture 파일럿
+
+실행·게이트·저장 구조의 시작점은 [Capture 자동 수집 인계](../../docs/handoffs/perception/camera-mpc-object-collection-pilot.md)다.
+`capture_route_collection.launch`는 기존 MPC/PP와 개발 Ego pose를 연결한 **수집 전용** 경로다.
+운영 추론이나 GT bridge 기본값을 변경하지 않는다. 기본 actuator는 gRPC이고,
+PP는 Pure Pursuit + P 속도 제어다. 실제 5/20/30km/h Capture 파일럿과 전체 경로 추종 결과, 실패·수정 근거를 인계에 기록한다.
+
+오프라인 복사는 `sync_capture_mode_data.py --profile bbox3`를 사용하면 세 뷰의 RGB·semantic·instance·BBox를 필수로 검사하고
+나머지 Depth·네 번째 카메라·GPS/IMU는 존재할 때 보존한다. 기본 `legacy18` 계약은 유지한다.
+BBox 파일 부재는 빈 정답이 아니다. `bbox3_partial`은 이를 명시적으로 기록하면서 RGB·semantic·instance를 보존한다.
+복사 SHA 검증과 실제 이미지 decode/native GT 검증은 별개다. 완료된 주행의 검수·부분집합 생성은
+`tools/perception/finalize_capture_route_data.py`로 재현한다.
 
 ## MORAI 모드와 기록 방식 구분
 
@@ -631,3 +649,5 @@ Capture Mode 동기화본 → native target → TwinLite cache → run-based dat
 과거 YOLOPv3 WP와 Bronze/Silver/Gold 수집 설계는 현재 계획이 아니다. 현재 구현 순서와
 후속 gate는 [인지 통합 로드맵](../../docs/packages/asmc_perception/roadmap.md), native 원본·mask·split
 규칙은 [데이터셋 계약](../../docs/contracts/perception/dataset-labeling-split.md)을 따른다.
+
+`--profile bbox3_partial`은 뷰별 BBox 누락을 명시하면서 원본 RGB/GT를 복사한다. 누락 뷰는 bbox export에서 보류하고 negative로 만들지 않는다.

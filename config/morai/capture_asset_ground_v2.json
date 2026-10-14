@@ -1,0 +1,512 @@
+{
+  "version": 2,
+  "date": "2026-10-12",
+  "scope": "stationary local-road pivot calibration; every route placement still needs RGB/ground review",
+  "assets": {
+    "BabyStroller1": {
+      "api_name": "BabyStroller1",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        },
+        "1": {
+          "gt_source_label": "Obstacle",
+          "canonical": "stroller"
+        },
+        "2": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch5_20261012.jsonl",
+      "source_ledger_sha256": "bf68b7df8a5ab925951e44e88b76a85755cfd69e02a2afb682ba4e0320be960b",
+      "gallery": "artifacts/capture-pivot6-batch5-review-20261012/index.html",
+      "review_snapshot_sha256": "288a9d34fdbd374ac1dbb5d0a5165a6c5c5d7c3d9e9384698293c4cb8884f130"
+    },
+    "PE_Firewall_Orange": {
+      "api_name": "PE_Firewall_Orange",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "plastic_barrier"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_20261012.jsonl",
+      "source_ledger_sha256": "6269b1870780aefd0939226c02894b3985712395a73296bfdca692bc6611c6b0",
+      "gallery": "artifacts/capture-pivot6-review-r1-20261012/index.html",
+      "review_snapshot_sha256": "0b83c2651fbad33656917d8efca11d6517224fa83fd858f0326855928bd1c23c"
+    },
+    "Steel_Barricade": {
+      "api_name": "Steel_Barricade",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "steel_barricade"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch3_20261012.jsonl",
+      "source_ledger_sha256": "976ca6a0a18a57b3a91d3588c43471c24d26c47a77a76b22762b5fde872bffb1",
+      "gallery": "artifacts/capture-pivot6-batch3-review-20261012/index.html",
+      "review_snapshot_sha256": "f237ac4ab24fa428b9a833129b2b14e8b78dbdef0e09c978f00d64adcd26f42e"
+    },
+    "Color_Cone": {
+      "api_name": "Color_Cone",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "traffic_cone"
+        }
+      },
+      "review": "Initial six-object native pivot and visible instance RGB review",
+      "source_ledger": "data/collection-evidence-20261012/gt_pilot6_20261011.jsonl",
+      "source_ledger_sha256": "ebaffc41782e3f130123ab8e985e1ab214e223d072d50c4edd6ef82a39239868",
+      "gallery": "artifacts/capture-route-pilot-r2-20261011/index.html",
+      "source_gt_manifest_sha256": "76acf821cbf00eea18c952c9d82b7832ec0c1f271e8c8add4bb844d3622388fd"
+    },
+    "BabyStroller2": {
+      "api_name": "BabyStroller2",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        },
+        "1": {
+          "gt_source_label": "Obstacle",
+          "canonical": "stroller"
+        },
+        "2": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch5_20261012.jsonl",
+      "source_ledger_sha256": "bf68b7df8a5ab925951e44e88b76a85755cfd69e02a2afb682ba4e0320be960b",
+      "gallery": "artifacts/capture-pivot6-batch5-review-20261012/index.html",
+      "review_snapshot_sha256": "288a9d34fdbd374ac1dbb5d0a5165a6c5c5d7c3d9e9384698293c4cb8884f130"
+    },
+    "Deer1": {
+      "api_name": "Deer1",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "deer"
+        }
+      },
+      "review": "Initial six-object native pivot and visible instance RGB review",
+      "source_ledger": "data/collection-evidence-20261012/gt_pilot6_20261011.jsonl",
+      "source_ledger_sha256": "ebaffc41782e3f130123ab8e985e1ab214e223d072d50c4edd6ef82a39239868",
+      "gallery": "artifacts/capture-route-pilot-r2-20261011/index.html",
+      "source_gt_manifest_sha256": "76acf821cbf00eea18c952c9d82b7832ec0c1f271e8c8add4bb844d3622388fd"
+    },
+    "CargoBox": {
+      "api_name": "CargoBox",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "box"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_20261012.jsonl",
+      "source_ledger_sha256": "6269b1870780aefd0939226c02894b3985712395a73296bfdca692bc6611c6b0",
+      "gallery": "artifacts/capture-pivot6-review-r1-20261012/index.html",
+      "review_snapshot_sha256": "0b83c2651fbad33656917d8efca11d6517224fa83fd858f0326855928bd1c23c"
+    },
+    "WoodBox": {
+      "api_name": "WoodBox",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "box"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_20261012.jsonl",
+      "source_ledger_sha256": "6269b1870780aefd0939226c02894b3985712395a73296bfdca692bc6611c6b0",
+      "gallery": "artifacts/capture-pivot6-review-r1-20261012/index.html",
+      "review_snapshot_sha256": "0b83c2651fbad33656917d8efca11d6517224fa83fd858f0326855928bd1c23c"
+    },
+    "Scooter1": {
+      "api_name": "Scooter1",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Vehicle",
+          "canonical": "motorcycle"
+        },
+        "1": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_20261012.jsonl",
+      "source_ledger_sha256": "6269b1870780aefd0939226c02894b3985712395a73296bfdca692bc6611c6b0",
+      "gallery": "artifacts/capture-pivot6-review-r1-20261012/index.html",
+      "review_snapshot_sha256": "0b83c2651fbad33656917d8efca11d6517224fa83fd858f0326855928bd1c23c"
+    },
+    "PE_Drum": {
+      "api_name": "PE_Drum",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "traffic_drum"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch5_20261012.jsonl",
+      "source_ledger_sha256": "bf68b7df8a5ab925951e44e88b76a85755cfd69e02a2afb682ba4e0320be960b",
+      "gallery": "artifacts/capture-pivot6-batch5-review-20261012/index.html",
+      "review_snapshot_sha256": "288a9d34fdbd374ac1dbb5d0a5165a6c5c5d7c3d9e9384698293c4cb8884f130"
+    },
+    "Concrete_Barricade02": {
+      "api_name": "Concrete_Barricade02",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "concrete_barrier"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_20261012.jsonl",
+      "source_ledger_sha256": "6269b1870780aefd0939226c02894b3985712395a73296bfdca692bc6611c6b0",
+      "gallery": "artifacts/capture-pivot6-review-r1-20261012/index.html",
+      "review_snapshot_sha256": "0b83c2651fbad33656917d8efca11d6517224fa83fd858f0326855928bd1c23c"
+    },
+    "Scooter2": {
+      "api_name": "Scooter2",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Vehicle",
+          "canonical": "motorcycle"
+        },
+        "1": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch2_20261012.jsonl",
+      "source_ledger_sha256": "d6f722509190411d6690dc4bd51963c9c92432fd8b510b665155b63fac09ae41",
+      "gallery": "artifacts/capture-pivot6-batch2-review-20261012/index.html",
+      "review_snapshot_sha256": "3b300080442baf424c461cd08f20db19e04f661782ac1c34d06d219a0125189c"
+    },
+    "SportBike": {
+      "api_name": "SportBike",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Vehicle",
+          "canonical": "motorcycle"
+        },
+        "1": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch2_20261012.jsonl",
+      "source_ledger_sha256": "d6f722509190411d6690dc4bd51963c9c92432fd8b510b665155b63fac09ae41",
+      "gallery": "artifacts/capture-pivot6-batch2-review-20261012/index.html",
+      "review_snapshot_sha256": "3b300080442baf424c461cd08f20db19e04f661782ac1c34d06d219a0125189c"
+    },
+    "Bicycle_city": {
+      "api_name": "Bicycle_city",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "bicycle"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch2_20261012.jsonl",
+      "source_ledger_sha256": "d6f722509190411d6690dc4bd51963c9c92432fd8b510b665155b63fac09ae41",
+      "gallery": "artifacts/capture-pivot6-batch2-review-20261012/index.html",
+      "review_snapshot_sha256": "3b300080442baf424c461cd08f20db19e04f661782ac1c34d06d219a0125189c"
+    },
+    "Bicycle_mountain": {
+      "api_name": "Bicycle_mountain",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "bicycle"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch2_20261012.jsonl",
+      "source_ledger_sha256": "d6f722509190411d6690dc4bd51963c9c92432fd8b510b665155b63fac09ae41",
+      "gallery": "artifacts/capture-pivot6-batch2-review-20261012/index.html",
+      "review_snapshot_sha256": "3b300080442baf424c461cd08f20db19e04f661782ac1c34d06d219a0125189c"
+    },
+    "TrafficBarrel": {
+      "api_name": "TrafficBarrel",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "traffic_drum"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch2_20261012.jsonl",
+      "source_ledger_sha256": "d6f722509190411d6690dc4bd51963c9c92432fd8b510b665155b63fac09ae41",
+      "gallery": "artifacts/capture-pivot6-batch2-review-20261012/index.html",
+      "review_snapshot_sha256": "3b300080442baf424c461cd08f20db19e04f661782ac1c34d06d219a0125189c"
+    },
+    "YellowBarrel": {
+      "api_name": "YellowBarrel",
+      "origin_above_ground_m": 0.65,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "traffic_drum"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch3_20261012.jsonl",
+      "source_ledger_sha256": "976ca6a0a18a57b3a91d3588c43471c24d26c47a77a76b22762b5fde872bffb1",
+      "gallery": "artifacts/capture-pivot6-batch3-review-20261012/index.html",
+      "review_snapshot_sha256": "f237ac4ab24fa428b9a833129b2b14e8b78dbdef0e09c978f00d64adcd26f42e"
+    },
+    "Rubber_Cone": {
+      "api_name": "Rubber_Cone",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "traffic_cone"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch3_20261012.jsonl",
+      "source_ledger_sha256": "976ca6a0a18a57b3a91d3588c43471c24d26c47a77a76b22762b5fde872bffb1",
+      "gallery": "artifacts/capture-pivot6-batch3-review-20261012/index.html",
+      "review_snapshot_sha256": "f237ac4ab24fa428b9a833129b2b14e8b78dbdef0e09c978f00d64adcd26f42e"
+    },
+    "Concrete_Barricade01": {
+      "api_name": "Concrete_Barricade01",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "concrete_barrier"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch3_20261012.jsonl",
+      "source_ledger_sha256": "976ca6a0a18a57b3a91d3588c43471c24d26c47a77a76b22762b5fde872bffb1",
+      "gallery": "artifacts/capture-pivot6-batch3-review-20261012/index.html",
+      "review_snapshot_sha256": "f237ac4ab24fa428b9a833129b2b14e8b78dbdef0e09c978f00d64adcd26f42e"
+    },
+    "concrete-barrier": {
+      "api_name": "concrete-barrier",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "concrete_barrier"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch3_20261012.jsonl",
+      "source_ledger_sha256": "976ca6a0a18a57b3a91d3588c43471c24d26c47a77a76b22762b5fde872bffb1",
+      "gallery": "artifacts/capture-pivot6-batch3-review-20261012/index.html",
+      "review_snapshot_sha256": "f237ac4ab24fa428b9a833129b2b14e8b78dbdef0e09c978f00d64adcd26f42e"
+    },
+    "PE_Firewall_White": {
+      "api_name": "PE_Firewall_White",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "plastic_barrier"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch3_20261012.jsonl",
+      "source_ledger_sha256": "976ca6a0a18a57b3a91d3588c43471c24d26c47a77a76b22762b5fde872bffb1",
+      "gallery": "artifacts/capture-pivot6-batch3-review-20261012/index.html",
+      "review_snapshot_sha256": "f237ac4ab24fa428b9a833129b2b14e8b78dbdef0e09c978f00d64adcd26f42e"
+    },
+    "BabyStroller3": {
+      "api_name": "BabyStroller3",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        },
+        "1": {
+          "gt_source_label": "Obstacle",
+          "canonical": "stroller"
+        },
+        "2": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch4_20261012.jsonl",
+      "source_ledger_sha256": "cdac1365074632e589b5c064212c12bd46c96d5b6bec9341e0a329e323d11f51",
+      "gallery": "artifacts/capture-pivot6-batch4-review-20261012/index.html",
+      "review_snapshot_sha256": "d3e0a527f28dcd2834ee7eac8c96208113205e7b9fcc07abab4ba7a89a778808"
+    },
+    "Bike1": {
+      "api_name": "Bike1",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Vehicle",
+          "canonical": "bicycle"
+        },
+        "1": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch4_20261012.jsonl",
+      "source_ledger_sha256": "cdac1365074632e589b5c064212c12bd46c96d5b6bec9341e0a329e323d11f51",
+      "gallery": "artifacts/capture-pivot6-batch4-review-20261012/index.html",
+      "review_snapshot_sha256": "d3e0a527f28dcd2834ee7eac8c96208113205e7b9fcc07abab4ba7a89a778808"
+    },
+    "Bike2": {
+      "api_name": "Bike2",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Vehicle",
+          "canonical": "bicycle"
+        },
+        "1": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch4_20261012.jsonl",
+      "source_ledger_sha256": "cdac1365074632e589b5c064212c12bd46c96d5b6bec9341e0a329e323d11f51",
+      "gallery": "artifacts/capture-pivot6-batch4-review-20261012/index.html",
+      "review_snapshot_sha256": "d3e0a527f28dcd2834ee7eac8c96208113205e7b9fcc07abab4ba7a89a778808"
+    },
+    "Bike3": {
+      "api_name": "Bike3",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Vehicle",
+          "canonical": "bicycle"
+        },
+        "1": {
+          "gt_source_label": "Pedestrian",
+          "canonical": "person"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch4_20261012.jsonl",
+      "source_ledger_sha256": "cdac1365074632e589b5c064212c12bd46c96d5b6bec9341e0a329e323d11f51",
+      "gallery": "artifacts/capture-pivot6-batch4-review-20261012/index.html",
+      "review_snapshot_sha256": "d3e0a527f28dcd2834ee7eac8c96208113205e7b9fcc07abab4ba7a89a778808"
+    },
+    "Sportbike_01": {
+      "api_name": "Sportbike_01",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "motorcycle"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch4_20261012.jsonl",
+      "source_ledger_sha256": "cdac1365074632e589b5c064212c12bd46c96d5b6bec9341e0a329e323d11f51",
+      "gallery": "artifacts/capture-pivot6-batch4-review-20261012/index.html",
+      "review_snapshot_sha256": "d3e0a527f28dcd2834ee7eac8c96208113205e7b9fcc07abab4ba7a89a778808"
+    },
+    "Bollard01": {
+      "api_name": "Bollard01",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "bollard"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch5_20261012.jsonl",
+      "source_ledger_sha256": "bf68b7df8a5ab925951e44e88b76a85755cfd69e02a2afb682ba4e0320be960b",
+      "gallery": "artifacts/capture-pivot6-batch5-review-20261012/index.html",
+      "review_snapshot_sha256": "288a9d34fdbd374ac1dbb5d0a5165a6c5c5d7c3d9e9384698293c4cb8884f130"
+    },
+    "Bollard04": {
+      "api_name": "Bollard04",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "bollard"
+        }
+      },
+      "review": "RGB-reviewed native pivot; per-route placement approval remains required",
+      "source_ledger": "data/collection-evidence-20261012/pivot6_batch5_20261012.jsonl",
+      "source_ledger_sha256": "bf68b7df8a5ab925951e44e88b76a85755cfd69e02a2afb682ba4e0320be960b",
+      "gallery": "artifacts/capture-pivot6-batch5-review-20261012/index.html",
+      "review_snapshot_sha256": "288a9d34fdbd374ac1dbb5d0a5165a6c5c5d7c3d9e9384698293c4cb8884f130"
+    },
+    "Dog1": {
+      "api_name": "Dog1",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "dog"
+        }
+      },
+      "review": "Stationary RGB Dog1/Dog2 support inspected; each route placement still requires fresh review",
+      "source_ledger": "data/capture_layouts/dog6_probe_20261012/spawn-ledger.jsonl",
+      "source_ledger_sha256": "32b7a788e43698054ea2bd4fb8f90f44ce1e4a303c67d6b8f286efc7a8b73936",
+      "gallery": "artifacts/capture-dog6-review-r1-20261012/index.html",
+      "review_snapshot_sha256": "0f1d3b16687e865ef5785df7f8b7bca1124c815d99de60e4b7dc034a44ccfaf0"
+    },
+    "Dog2": {
+      "api_name": "Dog2",
+      "origin_above_ground_m": 0,
+      "components": {
+        "0": {
+          "gt_source_label": "Obstacle",
+          "canonical": "dog"
+        }
+      },
+      "review": "Stationary RGB Dog1/Dog2 support inspected; each route placement still requires fresh review",
+      "source_ledger": "data/capture_layouts/dog6_probe_20261012/spawn-ledger.jsonl",
+      "source_ledger_sha256": "32b7a788e43698054ea2bd4fb8f90f44ce1e4a303c67d6b8f286efc7a8b73936",
+      "gallery": "artifacts/capture-dog6-review-r1-20261012/index.html",
+      "review_snapshot_sha256": "0f1d3b16687e865ef5785df7f8b7bca1124c815d99de60e4b7dc034a44ccfaf0"
+    }
+  },
+  "excluded_assets": {
+    "RedBarrel": {
+      "reason": "fell below ground at native origin and +0.65 m; no supported placement",
+      "evidence": "data/collection-evidence-20261012/pivot6_batch5_20261012.jsonl"
+    }
+  },
+  "parent_calibration_sha256": "1ad9a72fc8e12dd8dd7f1cbe494b01c948c7ec76c01771f311957c372da61c3d"
+}

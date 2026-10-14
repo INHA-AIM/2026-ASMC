@@ -248,6 +248,12 @@ class CaptureModeCollector(object):
             return False
         return True
 
+    def before_capture(self, record):
+        """Optional coordinator hook; the ordinary collector never controls Ego."""
+
+    def after_capture(self, record):
+        """Optional recovery hook, invoked even for a failed RPC."""
+
     def run(self):
         seq = 0
         consecutive_failures = 0
@@ -279,11 +285,13 @@ class CaptureModeCollector(object):
                 "custom_name": custom_name,
                 "requested_at_utc": utc_now_iso(),
                 "request_wall_time_ns": time.time_ns(),
+                "request_monotonic_ns": time.monotonic_ns(),
                 "ros_time_ns": int(rospy.Time.now().to_nsec()),
                 "state": snapshot,
                 "success": False,
             }
             try:
+                self.before_capture(record)
                 if self.dry_run:
                     result = {
                         "success": True,
@@ -305,7 +313,9 @@ class CaptureModeCollector(object):
 
             record["completed_at_utc"] = utc_now_iso()
             record["completed_wall_time_ns"] = time.time_ns()
+            record["completed_monotonic_ns"] = time.monotonic_ns()
             self.writer.write_capture(record)
+            self.after_capture(record)
             if record.get("success"):
                 consecutive_failures = 0
                 rospy.loginfo(

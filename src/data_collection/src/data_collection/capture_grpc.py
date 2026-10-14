@@ -104,6 +104,7 @@ class MoraiCaptureClient(object):
             "grpc_custom_message": str(getattr(response, "custom_message", "")),
             "rpc_latency_ms": round(latency_ms, 3),
             "morai_sim_time_raw": sim_time_raw,
+            "morai_sim_time_relation": "queried_before_save_rpc_not_exposure_timestamp",
             "morai_sim_time_unit": "us" if sim_time_raw is not None else None,
             "morai_sim_time_ns": (
                 int(sim_time_raw) * 1000 if sim_time_raw is not None else None

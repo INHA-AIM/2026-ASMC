@@ -1,0 +1,39 @@
+<launch>
+  <arg name="controller" default="mpc"/>
+  <arg name="actuator_transport" default="grpc"/>
+  <arg name="inspection_only" default="false"/>
+  <arg name="target_kph" default="20"/>
+  <arg name="max_captures" default="30"/>
+  <arg name="max_seconds" default="1800"/>
+  <arg name="run_id" default=""/>
+  <arg name="parent_run" default=""/>
+  <arg name="layout_id" default=""/>
+  <arg name="spawn_ledger" default=""/>
+  <arg name="data_root" default="/data"/>
+  <arg name="grpc_address" default="host.docker.internal"/>
+  <arg name="route" default="$(find data_collection)/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"/>
+  <node pkg="asmc_bridge" type="ego_vehicle_state_dev_node" name="capture_ego_state" output="screen">
+    <param name="publish_topic" value="/collection/vehicle/state"/>
+  </node>
+  <!-- The coordinator exclusively owns normal control. The selector is separate. -->
+  <node pkg="data_collection" type="capture_route_collector_node.py"
+        name="capture_route_collector" output="screen" required="true">
+    <param name="controller" value="$(arg controller)"/>
+    <param name="actuator_transport" value="$(arg actuator_transport)"/>
+    <param name="inspection_only" value="$(arg inspection_only)"/>
+    <param name="target_kph" value="$(arg target_kph)" type="double"/>
+    <param name="max_captures" value="$(arg max_captures)"/>
+    <param name="max_seconds" value="$(arg max_seconds)"/>
+    <param name="run_id" value="$(arg run_id)"/>
+    <param name="parent_run" value="$(arg parent_run)"/>
+    <param name="layout_id" value="$(arg layout_id)"/>
+    <param name="spawn_ledger" value="$(arg spawn_ledger)"/>
+    <param name="data_root" value="$(arg data_root)"/>
+    <param name="grpc_address" value="$(arg grpc_address)"/>
+    <param name="backend" value="grpc"/>
+    <param name="capture_hz" value="1.0"/>
+    <param name="require_ego" value="true"/>
+    <param name="only_when_moving" value="true"/>
+    <param name="route" value="$(arg route)"/>
+  </node>
+</launch>

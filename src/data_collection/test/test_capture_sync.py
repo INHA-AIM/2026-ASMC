@@ -24,6 +24,16 @@ def write_fake_png(path, height, width):
 
 
 class CaptureSyncTest(unittest.TestCase):
+    def test_partial_bbox_preserves_missing_views_without_empty_labels(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);sensor,data,capture=self.make_run(root)
+            (sensor/'CAMERA_1/run_001_000000_BBox2D.txt').write_text('native GT\n')
+            result=sync_run(sensor,data/'capture_runs',data/'datasets','run_001',profile='bbox3_partial',jobs=1)
+            row=json.loads((data/'datasets/run_001/manifest.jsonl').read_text().splitlines()[0])
+            self.assertEqual(row['missing_bbox_views'],['left','right'])
+            self.assertNotIn('left',row['paths']['bbox'])
+            self.assertEqual(result['bbox_missing_view_count'],2)
+
     def make_run(self, root, run_id="run_001"):
         sensor_root = root / "SensorData"
         data_root = root / "data"
@@ -89,6 +99,29 @@ class CaptureSyncTest(unittest.TestCase):
             records = load_successful_records(capture_dir / "capture_manifest.jsonl")
             with self.assertRaises(CaptureSyncError):
                 preflight_run(sensor_root, records)
+
+    def test_bbox_profile_requires_native_boxes_and_optional_extras(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            sensor_root,data_root,capture_dir=self.make_run(root)
+            records=load_successful_records(capture_dir/'capture_manifest.jsonl')
+            with self.assertRaises(CaptureSyncError):
+                preflight_run(sensor_root,records,profile='bbox3')
+            for sensor,view,hw in CAMERAS[:3]:
+                (sensor_root/sensor/'run_001_000000_BBox2D.txt').write_text('')
+                (sensor_root/sensor/'run_001_000000_Depth.png').unlink()
+            for path in (sensor_root/'CAMERA_4').iterdir():path.unlink()
+            for sensor,name in STATE_SENSORS:
+                (sensor_root/sensor/'run_001_000000.txt').unlink()
+            result=sync_run(sensor_root,data_root/'capture_runs',data_root/'datasets','run_001',profile='bbox3',jobs=1)
+            self.assertEqual(result['file_count'],12)
+            dest=data_root/'datasets/run_001'
+            self.assertTrue((dest/'frames/bbox/front/000000.txt').is_file())
+            # Same-size corruption must not survive a resumed copy.
+            image=dest/'frames/intensity/front/000000.png'
+            image.write_bytes(b'x'*image.stat().st_size)
+            sync_run(sensor_root,data_root/'capture_runs',data_root/'datasets','run_001',profile='bbox3',jobs=1)
+            self.assertEqual(image.read_bytes(),(sensor_root/'CAMERA_1/run_001_000000_Intensity.png').read_bytes())
 
     def test_explicit_exclusion_keeps_lineage_and_skips_incomplete_capture(self):
         with tempfile.TemporaryDirectory() as tmp:
