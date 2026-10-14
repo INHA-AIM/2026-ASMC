@@ -1,0 +1,718 @@
+{
+  "runs": [
+    {
+      "run": "yoloe-x-gt-r4",
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-runs/yoloe-x-gt-r4",
+      "binding": {
+        "model": "yoloe_x",
+        "files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/yoloe-26x-seg.pt": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/combined21.npz": "b3fb7d65d891c3bf142707ef03b4236e6d34b62afbf726c2bd83f9ee5f82ed14"
+        },
+        "config_sha256": "27789aa254e1645cf8d75b78a9dcc13a83882cc857c1ff122886c329ef16b455",
+        "source_commit": null,
+        "preprocessing_profile": "native",
+        "prompts": [
+          "person",
+          "dog",
+          "deer",
+          "doe",
+          "bicycle",
+          "car",
+          "truck",
+          "bus",
+          "motorcycle",
+          "scooter",
+          "bollard",
+          "cargo box",
+          "wooden box",
+          "wooden crate",
+          "concrete barrier",
+          "plastic barrier",
+          "steel barricade",
+          "traffic cone",
+          "traffic barrel",
+          "traffic drum",
+          "baby stroller"
+        ],
+        "bbox_only": true,
+        "mask_files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+        },
+        "input_manifest_sha256": "35ee9ab1042d7c95cc4dbcd207f7dfe520d33fa4b475e28cef8816ac9c736914"
+      },
+      "summary": {
+        "completed": 1653,
+        "expected": 1653,
+        "complete": true,
+        "remaining": 0,
+        "elapsed_this_session_seconds": 20.283540634962264,
+        "reused_predictions": 1259,
+        "predictions_sha256": "e140be54cd5f97543746a5e8e725f855f26667582040e28f6af6f552973049f2",
+        "training_performed": false
+      },
+      "predictions_sha256": "e140be54cd5f97543746a5e8e725f855f26667582040e28f6af6f552973049f2",
+      "execution_sessions": [
+        {
+          "started_at": "2026-10-11T09:54:46.681930+00:00",
+          "code_sha256": {
+            "camera_teacher_expansion.py": "d31281844ea9ead5f8f4771fd2a1bd4eeb15cff525290885bcf88dd9d261e7fd",
+            "local_teacher_backend.py": "e86c4502917ea126cc46f9b493a81d923c1f8e0782f1aa1c5249048c1801dabf"
+          },
+          "packages": {
+            "torch": "2.1.2+cu118",
+            "transformers": null,
+            "ultralytics": "8.4.150",
+            "mmcv": null,
+            "mmengine": null,
+            "numpy": "1.24.4",
+            "opencv-python": "5.0.0.93"
+          },
+          "offline": true
+        }
+      ],
+      "offline_model_processing_ms": {
+        "new_predictions": 394,
+        "p50": 38.35062854341231,
+        "p95": 42.6245600450784,
+        "includes_preprocess_and_postprocess": true,
+        "includes_source_decode_or_mask": false,
+        "not_live_ROS_latency": true
+      }
+    },
+    {
+      "run": "gdino-b-gt-r4",
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-runs/gdino-b-gt-r4",
+      "binding": {
+        "model": "gdino_b",
+        "files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/config.json": "eda416dae6f49419ff831b1c190ec430a060b19aae688dbaf2425a075b650608",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/model.safetensors": "5548f844c928c4b6f411fa8cbcc2bfa8dbbba437cb1d513975519f93c2a9ed21",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/preprocessor_config.json": "8454179ba95e2ad22947835aad7b45862a601fc0055ab88bf1ee70892d3aea60",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/special_tokens_map.json": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/tokenizer_config.json": "d40ab645b68211910b9170d22433d43186a6ec8ee6fd10ba170524b25bf4fb56",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+        },
+        "config_sha256": "27789aa254e1645cf8d75b78a9dcc13a83882cc857c1ff122886c329ef16b455",
+        "source_commit": null,
+        "preprocessing_profile": "native",
+        "prompts": [
+          "person",
+          "dog",
+          "deer",
+          "doe",
+          "bicycle",
+          "car",
+          "truck",
+          "bus",
+          "motorcycle",
+          "scooter",
+          "bollard",
+          "cargo box",
+          "wooden box",
+          "wooden crate",
+          "concrete barrier",
+          "plastic barrier",
+          "steel barricade",
+          "traffic cone",
+          "traffic barrel",
+          "traffic drum",
+          "baby stroller"
+        ],
+        "bbox_only": true,
+        "mask_files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+        },
+        "input_manifest_sha256": "35ee9ab1042d7c95cc4dbcd207f7dfe520d33fa4b475e28cef8816ac9c736914"
+      },
+      "summary": {
+        "completed": 1653,
+        "expected": 1653,
+        "complete": true,
+        "remaining": 0,
+        "elapsed_this_session_seconds": 138.82677185098873,
+        "reused_predictions": 1259,
+        "predictions_sha256": "ba916cabc38b83dbcc932e118c162819fdab3e57fbb3ddb03571f9cc918b4761",
+        "training_performed": false
+      },
+      "predictions_sha256": "ba916cabc38b83dbcc932e118c162819fdab3e57fbb3ddb03571f9cc918b4761",
+      "execution_sessions": [
+        {
+          "started_at": "2026-10-11T09:55:09.514875+00:00",
+          "code_sha256": {
+            "camera_teacher_expansion.py": "d31281844ea9ead5f8f4771fd2a1bd4eeb15cff525290885bcf88dd9d261e7fd",
+            "local_teacher_backend.py": "e86c4502917ea126cc46f9b493a81d923c1f8e0782f1aa1c5249048c1801dabf"
+          },
+          "packages": {
+            "torch": "2.1.2+cu118",
+            "transformers": "4.44.2",
+            "ultralytics": "8.4.150",
+            "mmcv": "2.1.0",
+            "mmengine": "0.10.7",
+            "numpy": "1.24.4",
+            "opencv-python": "5.0.0.93"
+          },
+          "offline": true
+        }
+      ],
+      "offline_model_processing_ms": {
+        "new_predictions": 394,
+        "p50": 329.6069075295236,
+        "p95": 372.7681856340496,
+        "includes_preprocess_and_postprocess": true,
+        "includes_source_decode_or_mask": false,
+        "not_live_ROS_latency": true
+      }
+    },
+    {
+      "run": "gdino-l-gt-r4-eager",
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-runs/gdino-l-gt-r4-eager",
+      "binding": {
+        "model": "mm_gdino_l",
+        "files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding_dino_swin-l_pretrain_obj365_goldg-34dcdc53.pth": "34dcdc535a0eb020deda881fe8b4c49b324defe764d85f94d8282fb287cd0208",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/external/baselines/mmdetection/configs/mm_grounding_dino/grounding_dino_swin-l_pretrain_obj365_goldg.py": "3aa0b514bf2c615087e8cf082d1b46a00003086230cf702b6d8c0d23ec96a4ea",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/bert-base-uncased/config.json": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/bert-base-uncased/tokenizer.json": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/bert-base-uncased/tokenizer_config.json": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/bert-base-uncased/model.safetensors": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3"
+        },
+        "config_sha256": "27789aa254e1645cf8d75b78a9dcc13a83882cc857c1ff122886c329ef16b455",
+        "source_commit": "cfd5d3a985b0249de009b67d04f37263e11cdf3d",
+        "preprocessing_profile": "native",
+        "prompts": [
+          "person",
+          "dog",
+          "deer",
+          "doe",
+          "bicycle",
+          "car",
+          "truck",
+          "bus",
+          "motorcycle",
+          "scooter",
+          "bollard",
+          "cargo box",
+          "wooden box",
+          "wooden crate",
+          "concrete barrier",
+          "plastic barrier",
+          "steel barricade",
+          "traffic cone",
+          "traffic barrel",
+          "traffic drum",
+          "baby stroller"
+        ],
+        "bbox_only": true,
+        "mask_files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+        },
+        "input_manifest_sha256": "35ee9ab1042d7c95cc4dbcd207f7dfe520d33fa4b475e28cef8816ac9c736914"
+      },
+      "summary": {
+        "completed": 1653,
+        "expected": 1653,
+        "complete": true,
+        "remaining": 0,
+        "elapsed_this_session_seconds": 1264.1373671889887,
+        "reused_predictions": 0,
+        "predictions_sha256": "eed4dd9cf1d32488cc56bda29d709e872ca802a59389c97f92e69dd9698e3cee",
+        "training_performed": false
+      },
+      "predictions_sha256": "eed4dd9cf1d32488cc56bda29d709e872ca802a59389c97f92e69dd9698e3cee",
+      "execution_sessions": null,
+      "offline_model_processing_ms": {
+        "new_predictions": 1653,
+        "p50": 771.7718529747799,
+        "p95": 791.6350634302944,
+        "includes_preprocess_and_postprocess": true,
+        "includes_source_decode_or_mask": false,
+        "not_live_ROS_latency": true
+      }
+    },
+    {
+      "run": "yoloe-x-mixed-samples-r1",
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-runs/yoloe-x-mixed-samples-r1",
+      "binding": {
+        "model": "yoloe_x",
+        "files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/yoloe-26x-seg.pt": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/combined21.npz": "b3fb7d65d891c3bf142707ef03b4236e6d34b62afbf726c2bd83f9ee5f82ed14"
+        },
+        "config_sha256": "27789aa254e1645cf8d75b78a9dcc13a83882cc857c1ff122886c329ef16b455",
+        "preprocessing_profile": "native",
+        "prompts": [
+          "person",
+          "dog",
+          "deer",
+          "doe",
+          "bicycle",
+          "car",
+          "truck",
+          "bus",
+          "motorcycle",
+          "scooter",
+          "bollard",
+          "cargo box",
+          "wooden box",
+          "wooden crate",
+          "concrete barrier",
+          "plastic barrier",
+          "steel barricade",
+          "traffic cone",
+          "traffic barrel",
+          "traffic drum",
+          "baby stroller"
+        ],
+        "bbox_only": true,
+        "input_manifest_sha256": "c66c473b803e23fcccc411ec0ddd999b4e0a497eb365617b51438e45c56b83cb"
+      },
+      "summary": {
+        "completed": 973,
+        "expected": 973,
+        "complete": true,
+        "remaining": 0,
+        "elapsed_this_session_seconds": 35.86855165398447,
+        "predictions_sha256": "369334ffb658a5532dc58156262eae94db9f318c2900065ca7bb46d5ad7aae9c",
+        "training_performed": false
+      },
+      "predictions_sha256": "369334ffb658a5532dc58156262eae94db9f318c2900065ca7bb46d5ad7aae9c",
+      "execution_sessions": null,
+      "offline_model_processing_ms": {
+        "new_predictions": 973,
+        "p50": 22.657992027234286,
+        "p95": 41.31278059212491,
+        "includes_preprocess_and_postprocess": true,
+        "includes_source_decode_or_mask": false,
+        "not_live_ROS_latency": true
+      }
+    },
+    {
+      "run": "yoloe-x-aim-screen-r3",
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-runs/yoloe-x-aim-screen-r3",
+      "binding": {
+        "model": "yoloe_x",
+        "files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/yoloe-26x-seg.pt": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/combined21.npz": "b3fb7d65d891c3bf142707ef03b4236e6d34b62afbf726c2bd83f9ee5f82ed14"
+        },
+        "config_sha256": "27789aa254e1645cf8d75b78a9dcc13a83882cc857c1ff122886c329ef16b455",
+        "source_commit": null,
+        "preprocessing_profile": "native",
+        "prompts": [
+          "person",
+          "dog",
+          "deer",
+          "doe",
+          "bicycle",
+          "car",
+          "truck",
+          "bus",
+          "motorcycle",
+          "scooter",
+          "bollard",
+          "cargo box",
+          "wooden box",
+          "wooden crate",
+          "concrete barrier",
+          "plastic barrier",
+          "steel barricade",
+          "traffic cone",
+          "traffic barrel",
+          "traffic drum",
+          "baby stroller"
+        ],
+        "bbox_only": true,
+        "mask_files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+        },
+        "input_manifest_sha256": "ad0454c5ff7fc05f81dfb1e9f005b98b7f2a966c1681095e705182d63652b06c"
+      },
+      "summary": {
+        "completed": 5328,
+        "expected": 5328,
+        "complete": true,
+        "remaining": 0,
+        "elapsed_this_session_seconds": 319.3466045620153,
+        "reused_predictions": 0,
+        "predictions_sha256": "125e9b508a7398343165d87b0ae31ef74ae0d9bf0f2c8278d291d08ebd4f9c40",
+        "training_performed": false
+      },
+      "predictions_sha256": "125e9b508a7398343165d87b0ae31ef74ae0d9bf0f2c8278d291d08ebd4f9c40",
+      "execution_sessions": [
+        {
+          "started_at": "2026-10-11T09:57:30.831642+00:00",
+          "code_sha256": {
+            "camera_teacher_expansion.py": "d31281844ea9ead5f8f4771fd2a1bd4eeb15cff525290885bcf88dd9d261e7fd",
+            "local_teacher_backend.py": "e86c4502917ea126cc46f9b493a81d923c1f8e0782f1aa1c5249048c1801dabf"
+          },
+          "packages": {
+            "torch": "2.1.2+cu118",
+            "transformers": null,
+            "ultralytics": "8.4.150",
+            "mmcv": null,
+            "mmengine": null,
+            "numpy": "1.24.4",
+            "opencv-python": "5.0.0.93"
+          },
+          "offline": true
+        }
+      ],
+      "offline_model_processing_ms": {
+        "new_predictions": 5328,
+        "p50": 21.84349251911044,
+        "p95": 42.679673788370565,
+        "includes_preprocess_and_postprocess": true,
+        "includes_source_decode_or_mask": false,
+        "not_live_ROS_latency": true
+      }
+    },
+    {
+      "run": "yoloe-x-bag-screen-r1",
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-runs/yoloe-x-bag-screen-r1",
+      "binding": {
+        "model": "yoloe_x",
+        "files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/yoloe-26x-seg.pt": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/combined21.npz": "b3fb7d65d891c3bf142707ef03b4236e6d34b62afbf726c2bd83f9ee5f82ed14"
+        },
+        "config_sha256": "27789aa254e1645cf8d75b78a9dcc13a83882cc857c1ff122886c329ef16b455",
+        "source_commit": null,
+        "preprocessing_profile": "native",
+        "prompts": [
+          "person",
+          "dog",
+          "deer",
+          "doe",
+          "bicycle",
+          "car",
+          "truck",
+          "bus",
+          "motorcycle",
+          "scooter",
+          "bollard",
+          "cargo box",
+          "wooden box",
+          "wooden crate",
+          "concrete barrier",
+          "plastic barrier",
+          "steel barricade",
+          "traffic cone",
+          "traffic barrel",
+          "traffic drum",
+          "baby stroller"
+        ],
+        "bbox_only": true,
+        "mask_files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+        },
+        "input_manifest_sha256": "3ead3a67782ff3a4f63376e3858f5fa1103f3d0600f45fbb7def3db8d94cccd9"
+      },
+      "summary": {
+        "completed": 500,
+        "expected": 500,
+        "complete": true,
+        "remaining": 0,
+        "elapsed_this_session_seconds": 17.958012204035185,
+        "reused_predictions": 0,
+        "predictions_sha256": "4a01dac3bca19bbdc81a3af2bb77ea8d994dcbc5c96fef0d9ec3b17a0835b883",
+        "training_performed": false
+      },
+      "predictions_sha256": "4a01dac3bca19bbdc81a3af2bb77ea8d994dcbc5c96fef0d9ec3b17a0835b883",
+      "execution_sessions": [
+        {
+          "started_at": "2026-10-11T10:02:51.357205+00:00",
+          "code_sha256": {
+            "camera_teacher_expansion.py": "d31281844ea9ead5f8f4771fd2a1bd4eeb15cff525290885bcf88dd9d261e7fd",
+            "local_teacher_backend.py": "e86c4502917ea126cc46f9b493a81d923c1f8e0782f1aa1c5249048c1801dabf"
+          },
+          "packages": {
+            "torch": "2.1.2+cu118",
+            "transformers": null,
+            "ultralytics": "8.4.150",
+            "mmcv": null,
+            "mmengine": null,
+            "numpy": "1.24.4",
+            "opencv-python": "5.0.0.93"
+          },
+          "offline": true
+        }
+      ],
+      "offline_model_processing_ms": {
+        "new_predictions": 500,
+        "p50": 21.32792951306328,
+        "p95": 40.935198796796605,
+        "includes_preprocess_and_postprocess": true,
+        "includes_source_decode_or_mask": false,
+        "not_live_ROS_latency": true
+      }
+    },
+    {
+      "run": "yoloe-x-focused-r1",
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-runs/yoloe-x-focused-r1",
+      "binding": {
+        "model": "yoloe_x",
+        "files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/yoloe-26x-seg.pt": "d08d390a08f98195f7c87807839fe4ff93a5491645fef1bc3bf0700efafdd639",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/camera_yoloe_teacher_v1/combined21.npz": "b3fb7d65d891c3bf142707ef03b4236e6d34b62afbf726c2bd83f9ee5f82ed14"
+        },
+        "config_sha256": "27789aa254e1645cf8d75b78a9dcc13a83882cc857c1ff122886c329ef16b455",
+        "source_commit": null,
+        "preprocessing_profile": "native",
+        "prompts": [
+          "person",
+          "dog",
+          "deer",
+          "doe",
+          "bicycle",
+          "car",
+          "truck",
+          "bus",
+          "motorcycle",
+          "scooter",
+          "bollard",
+          "cargo box",
+          "wooden box",
+          "wooden crate",
+          "concrete barrier",
+          "plastic barrier",
+          "steel barricade",
+          "traffic cone",
+          "traffic barrel",
+          "traffic drum",
+          "baby stroller"
+        ],
+        "bbox_only": true,
+        "mask_files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+        },
+        "input_manifest_sha256": "74c4e6974615864642232e9aa96039f3b761d6b7c8895e9a3097cdaf34274b96"
+      },
+      "summary": {
+        "completed": 231,
+        "expected": 231,
+        "complete": true,
+        "remaining": 0,
+        "elapsed_this_session_seconds": 4.978654677979648,
+        "reused_predictions": 183,
+        "predictions_sha256": "4e3412a799f7764ad3795477aef5b41fd53adf37fee9237229b26e480be65524",
+        "training_performed": false
+      },
+      "predictions_sha256": "4e3412a799f7764ad3795477aef5b41fd53adf37fee9237229b26e480be65524",
+      "execution_sessions": [
+        {
+          "started_at": "2026-10-11T10:04:32.180389+00:00",
+          "code_sha256": {
+            "camera_teacher_expansion.py": "d31281844ea9ead5f8f4771fd2a1bd4eeb15cff525290885bcf88dd9d261e7fd",
+            "local_teacher_backend.py": "e86c4502917ea126cc46f9b493a81d923c1f8e0782f1aa1c5249048c1801dabf"
+          },
+          "packages": {
+            "torch": "2.1.2+cu118",
+            "transformers": null,
+            "ultralytics": "8.4.150",
+            "mmcv": null,
+            "mmengine": null,
+            "numpy": "1.24.4",
+            "opencv-python": "5.0.0.93"
+          },
+          "offline": true
+        }
+      ],
+      "offline_model_processing_ms": {
+        "new_predictions": 48,
+        "p50": 20.547881489619613,
+        "p95": 43.2834504841594,
+        "includes_preprocess_and_postprocess": true,
+        "includes_source_decode_or_mask": false,
+        "not_live_ROS_latency": true
+      }
+    },
+    {
+      "run": "gdino-b-focused-r1",
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-runs/gdino-b-focused-r1",
+      "binding": {
+        "model": "gdino_b",
+        "files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/config.json": "eda416dae6f49419ff831b1c190ec430a060b19aae688dbaf2425a075b650608",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/model.safetensors": "5548f844c928c4b6f411fa8cbcc2bfa8dbbba437cb1d513975519f93c2a9ed21",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/preprocessor_config.json": "8454179ba95e2ad22947835aad7b45862a601fc0055ab88bf1ee70892d3aea60",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/special_tokens_map.json": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/tokenizer_config.json": "d40ab645b68211910b9170d22433d43186a6ec8ee6fd10ba170524b25bf4fb56",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding-dino-base/vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+        },
+        "config_sha256": "27789aa254e1645cf8d75b78a9dcc13a83882cc857c1ff122886c329ef16b455",
+        "source_commit": null,
+        "preprocessing_profile": "native",
+        "prompts": [
+          "person",
+          "dog",
+          "deer",
+          "doe",
+          "bicycle",
+          "car",
+          "truck",
+          "bus",
+          "motorcycle",
+          "scooter",
+          "bollard",
+          "cargo box",
+          "wooden box",
+          "wooden crate",
+          "concrete barrier",
+          "plastic barrier",
+          "steel barricade",
+          "traffic cone",
+          "traffic barrel",
+          "traffic drum",
+          "baby stroller"
+        ],
+        "bbox_only": true,
+        "mask_files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+        },
+        "input_manifest_sha256": "74c4e6974615864642232e9aa96039f3b761d6b7c8895e9a3097cdaf34274b96"
+      },
+      "summary": {
+        "completed": 231,
+        "expected": 231,
+        "complete": true,
+        "remaining": 0,
+        "elapsed_this_session_seconds": 87.05823553795926,
+        "reused_predictions": 0,
+        "predictions_sha256": "ae2a7c36f974541dcbf67aa52434d0e3fd14d466b3902c9b150e93a79fe217ac",
+        "training_performed": false
+      },
+      "predictions_sha256": "ae2a7c36f974541dcbf67aa52434d0e3fd14d466b3902c9b150e93a79fe217ac",
+      "execution_sessions": [
+        {
+          "started_at": "2026-10-11T10:04:39.471978+00:00",
+          "code_sha256": {
+            "camera_teacher_expansion.py": "d31281844ea9ead5f8f4771fd2a1bd4eeb15cff525290885bcf88dd9d261e7fd",
+            "local_teacher_backend.py": "e86c4502917ea126cc46f9b493a81d923c1f8e0782f1aa1c5249048c1801dabf"
+          },
+          "packages": {
+            "torch": "2.1.2+cu118",
+            "transformers": "4.44.2",
+            "ultralytics": "8.4.150",
+            "mmcv": "2.1.0",
+            "mmengine": "0.10.7",
+            "numpy": "1.24.4",
+            "opencv-python": "5.0.0.93"
+          },
+          "offline": true
+        }
+      ],
+      "offline_model_processing_ms": {
+        "new_predictions": 231,
+        "p50": 331.4116600085981,
+        "p95": 370.2228360052686,
+        "includes_preprocess_and_postprocess": true,
+        "includes_source_decode_or_mask": false,
+        "not_live_ROS_latency": true
+      }
+    },
+    {
+      "run": "gdino-l-focused-r1",
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-runs/gdino-l-focused-r1",
+      "binding": {
+        "model": "mm_gdino_l",
+        "files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/grounding_dino_swin-l_pretrain_obj365_goldg-34dcdc53.pth": "34dcdc535a0eb020deda881fe8b4c49b324defe764d85f94d8282fb287cd0208",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/external/baselines/mmdetection/configs/mm_grounding_dino/grounding_dino_swin-l_pretrain_obj365_goldg.py": "3aa0b514bf2c615087e8cf082d1b46a00003086230cf702b6d8c0d23ec96a4ea",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/bert-base-uncased/config.json": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/bert-base-uncased/tokenizer.json": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/bert-base-uncased/tokenizer_config.json": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/bert-base-uncased/model.safetensors": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3"
+        },
+        "config_sha256": "27789aa254e1645cf8d75b78a9dcc13a83882cc857c1ff122886c329ef16b455",
+        "source_commit": "cfd5d3a985b0249de009b67d04f37263e11cdf3d",
+        "preprocessing_profile": "native",
+        "prompts": [
+          "person",
+          "dog",
+          "deer",
+          "doe",
+          "bicycle",
+          "car",
+          "truck",
+          "bus",
+          "motorcycle",
+          "scooter",
+          "bollard",
+          "cargo box",
+          "wooden box",
+          "wooden crate",
+          "concrete barrier",
+          "plastic barrier",
+          "steel barricade",
+          "traffic cone",
+          "traffic barrel",
+          "traffic drum",
+          "baby stroller"
+        ],
+        "bbox_only": true,
+        "mask_files_sha256": {
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml": "690b92cf8545b912eb69980a517064ddc0e9d9df1ddb73323803ec0e809dd9f5",
+          "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/asmc-camera-data-audit/src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml": "90d05ed3e75b881910547d1aecb2805cfd8a58667272a37fb57416aafdc7d74b"
+        },
+        "input_manifest_sha256": "74c4e6974615864642232e9aa96039f3b761d6b7c8895e9a3097cdaf34274b96"
+      },
+      "summary": {
+        "completed": 231,
+        "expected": 231,
+        "complete": true,
+        "remaining": 0,
+        "elapsed_this_session_seconds": 185.35704933397938,
+        "reused_predictions": 0,
+        "predictions_sha256": "fb31f97f939090e156bd5c7d9d852d7f409baee9a5ba69dae45d29964341bf77",
+        "training_performed": false
+      },
+      "predictions_sha256": "fb31f97f939090e156bd5c7d9d852d7f409baee9a5ba69dae45d29964341bf77",
+      "execution_sessions": [
+        {
+          "started_at": "2026-10-11T10:06:08.855743+00:00",
+          "code_sha256": {
+            "camera_teacher_expansion.py": "d31281844ea9ead5f8f4771fd2a1bd4eeb15cff525290885bcf88dd9d261e7fd",
+            "local_teacher_backend.py": "e86c4502917ea126cc46f9b493a81d923c1f8e0782f1aa1c5249048c1801dabf"
+          },
+          "packages": {
+            "torch": "2.1.2+cu118",
+            "transformers": "4.44.2",
+            "ultralytics": "8.4.150",
+            "mmcv": "2.1.0",
+            "mmengine": "0.10.7",
+            "numpy": "1.24.4",
+            "opencv-python": "5.0.0.93"
+          },
+          "offline": true
+        }
+      ],
+      "offline_model_processing_ms": {
+        "new_predictions": 231,
+        "p50": 772.4779529962689,
+        "p95": 795.058521500323,
+        "includes_preprocess_and_postprocess": true,
+        "includes_source_decode_or_mask": false,
+        "not_live_ROS_latency": true
+      }
+    }
+  ],
+  "limitation": "Initial MM-L GT run started before execution-session source snapshots were added. Runtime model/config binding exists; do not retroactively assert a runner source hash. Subsequent focused MM-L run records executed source hashes and packages. Reused prediction times are not newly measured throughput."
+}

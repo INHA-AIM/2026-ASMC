@@ -1,0 +1,11 @@
+{
+  "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/curated-v5-capture-r1/curated.jsonl": "33523378869f1f03b465c245810fe1b3b4f10e82ee90f3930d228a2d7ec1e374",
+  "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/curated-v6-teacher-r1/curated.jsonl": "35153274994aa814ee042aed10e845d75c82fbec8f327e6b9ecc5c7703999a97",
+  "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-admission-r4/reviews.json": "7e7a40ff674caa8ea5faba9b496913f6b04b0f72b4883994c96a959b6a34cb2b",
+  "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-admission-r4/frames.jsonl": "82051268495a1ea5008ba20c58dc84b29a0a69d2f89c46c9b1b320fe3b1b4856",
+  "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-mixed-individual-reviews-r2/reviews.json": "505aeefe4f553092e1988ca9efb3b7c3943aa5457a40cfe21f97e2bed2832e27",
+  "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-independent-actor-reviews-r1/actor-reviews.json": "050991a21b4ffaf2522e42bd22fc50e5a5b8b0fbd06c0df158591ef985be57c4",
+  "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-gt-r4/frames.jsonl": "35ee9ab1042d7c95cc4dbcd207f7dfe520d33fa4b475e28cef8816ac9c736914",
+  "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-focused-r1/frames.jsonl": "74c4e6974615864642232e9aa96039f3b761d6b7c8895e9a3097cdaf34274b96",
+  "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/models/teacher_v6/mmcv-2.1.0-cp38-cp38-manylinux1_x86_64.whl": "6a30ef3bd01a06306bf0b7568ed30739a5e7f726dd3da3fd993eb8f36109a926"
+}

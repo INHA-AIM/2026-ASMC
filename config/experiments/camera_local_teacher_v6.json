@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "prompts": ["person", "dog", "deer", "doe", "bicycle", "car", "truck", "bus", "motorcycle", "scooter", "bollard", "cargo box", "wooden box", "wooden crate", "concrete barrier", "plastic barrier", "steel barricade", "traffic cone", "traffic barrel", "traffic drum", "baby stroller"],
+  "models": {
+    "yoloe_x": {"checkpoint": "camera_yoloe_teacher_v1/yoloe-26x-seg.pt", "embeddings": "camera_yoloe_teacher_v1/combined21.npz", "front_width": 1280, "side_width": 640},
+    "gdino_b": {"repository": "IDEA-Research/grounding-dino-base", "short_edge": 800, "long_edge": 1333, "text_threshold": 0.30},
+    "mm_gdino_l": {"checkpoint_url": "https://download.openmmlab.com/mmdetection/v3.0/mm_grounding_dino/grounding_dino_swin-l_pretrain_obj365_goldg/grounding_dino_swin-l_pretrain_obj365_goldg-34dcdc53.pth", "checkpoint": "grounding_dino_swin-l_pretrain_obj365_goldg-34dcdc53.pth", "config": "configs/mm_grounding_dino/grounding_dino_swin-l_pretrain_obj365_goldg.py", "short_edge": 800, "long_edge": 1333}
+  },
+  "confidence_sweep": [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70],
+  "fixed_confidence": 0.40,
+  "minimum_precision": 0.95,
+  "minimum_gt": 20,
+  "minimum_predictions": 20,
+  "minimum_scenes": 3,
+  "iou_threshold": 0.5,
+  "sample_seed": 20261009,
+  "review_sample_images": 50,
+  "aim_folders": ["static_010101", "dynamic_obstacle", "tunnel_static_obstacle"],
+  "views": {"CAMERA_1": "front", "CAMERA_2": "left", "CAMERA_3": "right"},
+  "screen_hz": 1,
+  "expansion_hz": 2,
+  "oom_contrast": {"short_edge": 640, "long_edge": 1024, "yolo_front_width": 960},
+  "checkpoint_hours": 8,
+  "training_performed": false,
+  "cloud_api": false
+}

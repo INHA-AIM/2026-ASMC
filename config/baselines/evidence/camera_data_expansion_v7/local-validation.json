@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-11",
+  "python": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/.venv/bin/python",
+  "cpu_tests": {
+    "data": 72,
+    "teacher": 38,
+    "gallery_hub": 1,
+    "total": 111,
+    "new_adoption_tests": 12,
+    "status": "passed"
+  },
+  "perception_contract": "passed: 3 messages, 3 canonical topics, 4 compatibility topics, 12 guarded configs",
+  "documentation_migration": "passed",
+  "new_pilot_doc_local_links": "passed",
+  "git_diff_check": "passed",
+  "gallery": {
+    "pages": 241,
+    "local_static_links": 41588,
+    "missing": 0,
+    "overview": "E240",
+    "before_after": "E239",
+    "similarity_review": "E241",
+    "http": {
+      "root": 200,
+      "v7_overview": 200,
+      "v7_before_after": 200
+    }
+  },
+  "hosted_ci": {
+    "current_pr_checks": "no checks reported on feat/camera-teacher-data-expansion",
+    "known_parent_account_billing_block": true,
+    "status": "not verified; local checks are not hosted CI"
+  },
+  "collection_started": false,
+  "training_performed": false
+}

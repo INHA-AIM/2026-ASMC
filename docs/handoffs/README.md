@@ -10,6 +10,7 @@ consumer가 어떤 freshness·quality·fallback을 검사해야 하는지, 어�
 
 | 생산자→소비자 | 문서 | 상태 |
 |---|---|---|
+| Camera 자료·수집 도구 통합 | [PR81/82 준비·데이터 구분](./perception/camera-data-integration-prep.md) | 최신 main 반영 준비; Draft, 미병합; 원본/학습 재고/배포 모델 구분 |
 | Camera 16종→LiDAR·판제 | [E8 배포·모델 선택·세 그룹](./perception/camera-mission16-deployment.md) | 현재 개발 기본; 전 구간 강건성·전체 ACTIVE 수락은 후속 |
 | Camera 배포 이후 | [최적화·문서·E드라이브 수집·후속 학습](./perception/camera-deployment-roadmap-20261014.md) | 순차 후속 계획; 이번에 수집/학습 미실행 |
 | Camera lane/BEV→Planning | [음영 camera v3](./perception/shadow-camera.md) | Active, read-only adapter 인수 완료; deployment 미승인 |

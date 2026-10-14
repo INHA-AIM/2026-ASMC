@@ -1,0 +1,40 @@
+{
+  "parent_curated_sha256": "35153274994aa814ee042aed10e845d75c82fbec8f327e6b9ecc5c7703999a97",
+  "reviews_sha256": "7e7a40ff674caa8ea5faba9b496913f6b04b0f72b4883994c96a959b6a34cb2b",
+  "parent_curated": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/curated-v6-teacher-r1/curated.jsonl",
+  "reviews_path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/roboflow/teacher-v6-admission-r4/reviews.json",
+  "labels_sha256": "a9e045479b0d3082e21824758c3a4ad4b134e9eaf916c2c5bd009083884df698",
+  "source_profiles_sha256": "e6832405538986a8505b832aa0f3db747a391e38be858f8ac9e936ba818aa47a",
+  "batch_reports": [],
+  "previous_images": 22598,
+  "images": 22631,
+  "new_images": 33,
+  "objects": 127645,
+  "classes": {
+    "person": 24633,
+    "car": 18700,
+    "traffic_cone": 1372,
+    "dog": 143,
+    "deer": 68,
+    "steel_barricade": 536,
+    "box": 1522,
+    "traffic_drum": 18579,
+    "bollard": 51002,
+    "concrete_barrier": 2202,
+    "bus": 4216,
+    "plastic_barrier": 591,
+    "truck": 3232,
+    "motorcycle": 597,
+    "bicycle": 252
+  },
+  "training_performed": false,
+  "existing_v5_quality_tiers_preserved": true,
+  "dataset": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_v6-teacher-r4",
+  "verification": {
+    "verified_images": 22631,
+    "verified_objects": 127645,
+    "exact_pixel_leaks": 0,
+    "manifest_sha256": "c8b3c405ed1b63e32df1d000f871eb0bb22abe53027aa5a76c145c6dc994355c",
+    "training_performed": false
+  }
+}

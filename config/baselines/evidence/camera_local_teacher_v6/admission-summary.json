@@ -1,0 +1,66 @@
+{
+  "current": "camera_objects_bbox_v6-teacher-r4",
+  "parent_v5": {
+    "images": 22498,
+    "objects": 127334
+  },
+  "new_images": 133,
+  "new_objects": 311,
+  "new_images_by_source_kind": {
+    "roboflow": 100,
+    "aim": 22,
+    "bag": 11
+  },
+  "new_verified_negatives": 9,
+  "new_by_split": {
+    "train": 133
+  },
+  "individually_reviewed_new_AIM_and_bag": 107,
+  "reviewed_pending_images": 74,
+  "reviewed_pending_by_source_kind": {
+    "aim": 58,
+    "bag": 16
+  },
+  "pending_reason": "Perceptual similarity to protected evaluation inputs; candidate matches, not confirmed duplicates. Original source and reviewed labels retained.",
+  "bag_user_confirmation": "Orange frame with black/yellow diagonal stripes at tunnel entrance is fixed structure outside the object asset list. Excluded per user. No global concrete_barrier -> box alias.",
+  "bag_review": {
+    "reviewed": 27,
+    "positive": 10,
+    "verified_negative": 17,
+    "pending_indices": [
+      12,
+      17,
+      18,
+      23,
+      24,
+      26,
+      27,
+      28,
+      33,
+      36,
+      37,
+      38
+    ],
+    "pending_reason": "Additional gray container or uncertain distant object needs independent type/completeness evidence; not treated as empty",
+    "user_confirmed_structure_not_target": true
+  },
+  "intermediate_versions": {
+    "r1": "Roboflow 100 independently reviewed images added; retained as cumulative parent",
+    "r2": "AIM first export, source-subtype metadata corrected in later revision",
+    "r3": "Unadopted rebuild: new pending evaluation candidates would remove two existing Robo admissions; not used as final",
+    "r4": "Cumulative r1 parent preserved, corrected AIM provenance, bag RGB review and frozen split gates"
+  },
+  "AIM_snapshot": {
+    "images": 163269,
+    "sessions": 187,
+    "completed_sessions": 179,
+    "screened_frames": 5328,
+    "screened_sessions": 148,
+    "remaining_not_automatically_labeled": true
+  },
+  "bag_screened_frames": 500,
+  "training_performed": false,
+  "operation_changed": false,
+  "teacher_automatic_labeling_approved": false,
+  "teacher_scene_gate": "Recording runs are not automatically independent scenes; statistical candidates need explicit scene verification and source cohort review."
+}

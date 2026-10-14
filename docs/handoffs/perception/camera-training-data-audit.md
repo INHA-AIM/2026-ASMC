@@ -3,12 +3,23 @@
 > 기준일: 2026-10-09. 사용자 지정 Roboflow 22개 프로젝트와 기존 Capture GT를 대상으로 한다.
 > 운영 모델·ROS 인터페이스·confidence·fusion·컨테이너 마운트는 변경하지 않는다.
 
-## 현재 기준 — 2026-10-10 v2 16종
+**2026-10-14 통합 준비:** 이 문서는 PR #81의 v6/v7 자료 정리와 이전 파일럿 기록이다.
+[v7 기존 자료 채택 확대](#기존-자료-채택-확대--2026-10-11-v7)는 보존된 데이터 버전이며 최신 본학습 자료 전체를 뜻하지 않는다.
+Capture 자동 수집은 PR #82에서 이미 구현·실행했고, [수집 인계](camera-mpc-object-collection-pilot.md)에 기록한다.
+현재 main의 개발 기본은 PR #84의 [v11 E8 배포 계약](camera-mission16-deployment.md)이다.
+이번 #81/#82 준비는 모델·데이터를 다시 생성하거나 교체하지 않는다. 범위와 최신 분류는
+[통합 준비·데이터 구분](camera-data-integration-prep.md)을 먼저 읽는다.
+이전 저장 위치·로컬 teacher 비교는 [v6 작업](#로컬-teacher와-저장-버전--2026-10-11-v6)에 보존한다.
 
+## 보존된 v2 데이터 정책 — 2026-10-10, 16종
+
+학습 클래스16종과 원본 의미 대응은 유지한다. 아래 소비 그룹 열과 manifest의 `consumer_group`은
+당시 데이터 분석용4그룹이며 현재 runtime의3그룹과 구분한다. 현재 소비 매핑은
+[배포 계약](camera-mission16-deployment.md)과 `object_classes_mission16_v1.yaml`을 따른다.
 이 절과 [v2 라벨 정책](../../../config/datasets/camera_object_labels_v2.json),
-[v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
+[v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)는 당시 데이터 변환 기준이다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
-**PR #78의 데이터·샘플링은 main에 병합됐다. 현재 #80의 bbox 파일럿은 Draft이며 운영 실행은 수정하지 않는다.**
+**PR #78/#80은 main에 병합됐다. 아래 bbox 파일럿·회귀 진단은 과거 실험이며, 현재 E8 배포 상태와 구분한다.**
 최신 결과는 [사람·이륜차 회귀 진단](#2026-10-11-사람이륜차-회귀-진단--재학습-없음)과 [16epoch 비교 결과](#16epoch-비교-결과--본학습-후보-선정-보류), 샘플링은 [bbox 파일럿](#bbox-파일럿-샘플링--2026-10-11), 전체 자료 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
 아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
 2026-10-11 추가 검토는 [teacher 대안과 RF-DETR](#2026-10-11-teacher-대안과-rf-detr-검토), 병합 범위는 [#78 main 통합](#2026-10-11-pr-78-병합-범위와-main-통합)을 따른다.
@@ -2054,3 +2065,411 @@ YOLO26l/YOLOE bbox에 집중한다. 이는 RF 학습 후 성능의 결론이 아
 5. 전방 bbox fusion·모드 전환·실행/복구 안내와 전체 스택30분 시험을 마친다. 위 FOGGY 입력
    공백과 차선 geometry hash 거부는 통합 수락 전에 별도로 해결한다. 3뷰/mask fusion과
    TwinLite BEV 자세 보정은 후속 확장으로 유지한다. #80은 결과·제한을 보존한 Draft다.
+
+
+## 로컬 teacher와 저장 버전 — 2026-10-11 v6
+
+이번 작업은 `feat/camera-teacher-data-expansion`에서 진행한다. #80의 진단 기준과 원본을
+이어받으며 운영 YOLO26l·ROS 메시지·fusion·차량 제어를 변경하지 않는다. 학습과 새
+MORAI 수집은 수행하지 않는다. v5와 파일럿 체크포인트는 그대로 보존한다.
+
+### 저장 위치와 버전 선택
+
+상위 workspace의 `data/dataset_versions/camera_objects_versions.json`이 단일 버전 목록이다.
+`current_adopted`는 **학습 자료의 채택 버전**이며 운영 가중치 선택이나 학습 완료를 뜻하지
+않는다. 각 항목에 실제 경로, manifest/정책 SHA, 검증 결과와 부모 통합 기록을 연결한다.
+과거 버전에서 부모 정보가 없으면 null로 표시하며 추정하지 않는다.
+
+```text
+data/
+├── roboflow/raw/<workspace>/<project>/<version>/export/  # 원본 보존
+├── roboflow/curated-v5-capture-r1/                       # 이전 22,498장
+├── roboflow/teacher-v6-inventory-r1/                     # 기존 자료·AIM 현황
+├── roboflow/teacher-v6-independent-actor-reviews-r1/     # 독립 RGB 확인
+├── roboflow/teacher-v6-gt-r4/                            # teacher 검증 정답
+├── roboflow/teacher-v6-aim-screen-r3/                    # AIM 대표 프레임 큐
+├── roboflow/teacher-v6-bag-screen-r1/                    # 장애물 bag 대표 RGB
+├── roboflow/teacher-v6-runs/<model>-<input>-<revision>/   # 원본 예측·binding·실패
+├── roboflow/teacher-v6-mixed-individual-reviews-r2/      # 이름 수정 근거
+├── roboflow/curated-v6-teacher-r4/                       # 채택·보류·부모 SHA
+├── dataset_versions/camera_objects_bbox_v6-teacher-r4/ # 실제 YOLO export
+└── models/teacher_v6/                                   # 공개 B/L 가중치·별도 의존성
+```
+
+Capture 원본은 `data/capture_runs`, `data/capture_batches`와 기존 변환된 `data/datasets`
+등의 실제 manifest 경로를 사용한다. 폴더 이름만으로 새 원본 경로를 만들거나 이동하지 않는다.
+AIM 원본은 `/mnt/d/asmc_aim/dataset/{static_010101,dynamic_obstacle,tunnel_static_obstacle}`만
+읽는다. 전용 컨테이너에서는 `/aim`을 read-only mount하며 같은 절대 원본 경로의 별칭도 제공한다.
+
+export의 이미지는 **원본을 가리키는 심볼릭 링크**, labels는 새 YOLO bbox 파일이다.
+export 폴더만 복사하면 원본 RGB는 따라가지 않는다. 원본 삭제·이동은 링크를 끊는다.
+이식할 때는 manifest의 원본도 함께 보존하거나 별도 복사본과 SHA 검증을 준비해야 한다.
+`val=selection`, `test=heldout`이다. 클래스 정책 v2와 데이터 단계 v6는 독립 버전이고,
+`r`은 수정본이다. 기존 산출물을 덮어쓰지 않으며 새 판단에는 새 revision을 사용한다.
+
+### 공식 로컬 모델과 실행 범위
+
+[고정 설정](../../../config/experiments/camera_local_teacher_v6.json)을 모든 입력에 사용한다.
+YOLOE-X는 기존 checkpoint 전용 combined21 embedding을 확인한다. B는
+`IDEA-Research/grounding-dino-base`, L은 **OpenMMLab MM Grounding DINO Swin-L**의
+`grounding_dino_swin-l_pretrain_obj365_goldg-34dcdc53.pth`다. 원래 GroundingDINO의
+T/B 목록과 MM의 L을 같은 구현으로 표현하지 않는다. 미완전 학습 표시의 pretrain_all은
+사용하지 않는다. Pro 1.5/1.6 API·이미지 외부 전송은 사용하지 않는다.
+
+공식 참고 checkout은 상위 `external/baselines/{GroundingDINO,mmdetection}`에 있으며
+vendor/submodule/ROS 의존성이 아니다. 원본 소스는 수정하지 않았다. 실제 SHA·라이선스·
+가중치 pin은 [v6 증거](../../../config/baselines/evidence/camera_local_teacher_v6/)에 기록한다.
+
+[준비기](../../../tools/perception/prepare_local_teachers.py)는 공식 파일의 revision/LFS SHA를
+검증하고 끊긴 공개 다운로드를 Range로 재개한다. 같은 파일의 동시 쓰기를 잠금으로 막는다.
+설치는 `data/models/teacher_v6/python-deps`와 전용 `asmc-camera-teacher-v6`에 한정한다.
+공유 `asmc-ros-noetic` 패키지를 덮어쓰지 않는다. 준비 완료 후 컨테이너의 bridge를 분리하고
+HF/Transformers offline 플래그로 추론한다. ROS master나 공개 제어 토픽을 사용하지 않는다.
+
+B/L은 공식 resize(짧은 변 800·긴 변 최대 1333), batch1로 시작한다. L은 추론에 불필요한
+학습용 gradient-checkpoint wrapper를 끄고, MM의 3-D 문장 attention mask를 지원하는
+BERT eager 경로를 사용한다. 가중치·문장 mask·모델 구조는 바꾸지 않는다. 초기 fairscale/
+SDPA 호환 실패는 로그에 보존한다. OOM은 별도 실패로 기록하고 640/1024 대비를 명시한다.
+조용히 CPU·작은 모델·축소 입력으로 전환하지 않는다.
+
+### 검증 정답과 채택 근거를 구분한다
+
+Capture는 원본의 정확한 bbox 기하와 actor 종류를 별도로 확인한다. run·원본 category·
+actor ID·연속 frame 구간의 앞/뒤 RGB를 검토한다. **같은 actor ID가 구간 안에서 다른 물체로
+바뀐 사례가 있어 ID만으로 종류를 전파하지 않는다.** 새 35개 구간은 상자·콘·PE 방벽·차량의
+독립 RGB 기록이며 이전 v5나 최종 모델 평가 정답을 수정하지 않는다.
+
+teacher 검증의 selection/heldout은 whole Capture run 기준의 별도 역할이다. 각 행의
+`dataset_split`에 원래 12/3/3 분할을 보존한다. 이 자료를 새로 숨겨진 최종 모델 시험이라고
+설명하지 않는다. 종류 미해결 객체가 평가 범위에 있으면 full-image precision에서 제외한다.
+크기 범위 16/8px는 이번 teacher 평가에만 적용하며 작은 정확한 학습 GT는 그대로 둔다.
+
+새 박스용 전체 영상 정밀도와 **기존 정확한 박스의 이름 보조**를 별도로 집계한다.
+후자는 이름 무시 일대일 IoU≥0.5로 원래 박스에 연결된 예측만 평가하며, 미대응 예측을 새
+정답으로 채택하지 않는다. 잘못된 `concrete barrier` 이름을 RGB에서 WoodBox로 확인한
+경우 그 주석만 box로 바꾼다. concrete barrier 전체를 box로 바꾸는 alias는 만들지 않는다.
+원본 phrase·confidence·native bbox·원본 주석·수정 근거를 유지한다.
+
+selection에서 confidence를 고르고 heldout에서는 고정한다. precision≥95%, GT/예측
+각20개와 독립 장면3개가 부족하면 자동 승인을 보류한다. 불완전 GT의 미대응 검출을 FP로
+세지 않는다. 이륜차·deer 등 GT가 적은 종류를 소표본 결과로 지원 완료 표시하지 않는다.
+
+### 큐·검수·export·재개
+
+[진입점](../../../tools/perception/camera_teacher_expansion.py)의 명령은 다음과 같다.
+
+| 명령 | 결과 |
+|---|---|
+| inventory | Roboflow/Capture 채택·혼합 라벨과 AIM 다운로드/actor 현황 |
+| prepare-gt | 독립 actor RGB 근거와 원본 bbox를 사용한 teacher 검증 입력 |
+| samples | train의 source×원본 클래스별 seed 고정 표본 |
+| aim-queue | 완료된 세션의 원본 frame association과 3뷰 대표 입력 |
+| bag-queue | 명시적으로 지정한 장애물 녹화의 1초 간격 RGB |
+| infer | 원본 phrase·bbox·SHA·실패·처리 시간; 중단 후 재개 |
+| compare | 고정 0.4와 confidence 탐색·고정 heldout·두 승인 범위 |
+| export | 독립 검수/검증된 묶음을 반영한 고정16종 YOLO와 재읽기 검증 |
+| registry | 단일 데이터 버전 목록·중간 revision 대체 상태 |
+| coverage | 클래스/하위 유형/뷰/날씨/분할별 보강량·부모 보존 검사 |
+| comparison-gallery | 같은 RGB의 독립 GT/원본 주석과 세 teacher 비교 |
+| admission-gallery | 원본 이름·teacher 오류와 채택 라벨 전후 비교 |
+| gallery | GT·원본 teacher 제안 비교 페이지 |
+
+AIM actor 목록은 **보일 가능성**의 근거이며 영상 GT가 아니다. 원본 association에서
+camera 파일을 읽고 단순 파일 정렬과 frame index를 연결하지 않는다. rear는 제외한다.
+`training_visible=false` 등 원본 생산자 플래그도 보존한다. 로컬 파일 수가 맞지 않는 터널
+세션은 재확인 전 보류한다. download 중인 폴더 전체를 완료했다고 간주하지 않는다.
+대표 프레임은 시작·중간·끝을 넓게 보되, 인접 사진 수를 독립 장면 수로 부풀리지 않는다.
+
+첫 8시간은 진행 집계 시점이며 강제 종료 시간이 아니다. 실행 큐의 predictions.jsonl에
+완료된 행을 flush하고 이미지·모델·prompt·설정 binding을 검사해 재개한다. 끊긴 마지막
+JSON append는 원본 복사본을 남기고 복구하며 중간 행 손상은 거부한다. 이미 같은 RGB를
+추론한 결과는 `--reuse`로 모델/전처리/픽셀 SHA를 확인해 계보와 함께 재사용할 수 있다.
+새 실행이라고 세지 않으며 기존 예측은 덮어쓰지 않는다.
+
+묶음 채택은 검증된 종류에만 source/조건 cohort를 고정하고 최대50장 seed 표본≥95%를
+확인한 뒤 수행한다. 실패 표본과 복합 박스는 개별 수정 또는 보류한다. teacher 미검출을
+negative로 만들지 않는다. 직접 대응 라벨은 teacher 승인이 필요 없고 기존 박스를 유지한다.
+새 revision은 기존 evaluation·채택 v5를 보존하며 새 후보의 exact/pHash 분할 충돌을 검사한다.
+
+### 완료 결과 — 채택 v6-r4
+
+현재 채택본은 **22,631장·127,645객체**, train **21,851장**, selection **113장**,
+heldout **667장**이다. v5의22,498장·127,334객체와 기존 평가 분할을 모두 보존했다.
+새로운 **133장·311객체**는 Roboflow 혼합100장, AIM22장, bag11장이다.
+bag11장에는 WoodBox 양성2장과 전체 RGB를 검토한 구조물-only negative9장이 포함된다.
+정확한 작은 양성 GT는 학습 export에서 유지했다. 16종 ID는 고정이며 stroller 자료는0이다.
+
+| 보강 학습 클래스 | 새로 포함된 이미지 | 객체 증가 |
+|---|---:|---:|
+| person / car | 12 / 12 | 67 / 24 |
+| dog / deer | 6 / 40 | 7 / 44 |
+| bicycle / motorcycle | 3 / 6 | 3 / 6 |
+| bus / truck | 2 / 2 | 2 / 3 |
+| box | 44 | 52 |
+| steel_barricade / concrete_barrier | 31 / 4 | 31 / 6 |
+| traffic_drum / plastic_barrier | 49 / 5 | 59 / 6 |
+| bollard | 1 | 1 |
+
+한 이미지에 여러 클래스가 있으므로 클래스별 이미지 수의 합은133이 아니다.
+추가된 이미지 수는 독립 장면 수가 아니다. [전체 커버리지와 원본 보존 검사](../../../config/baselines/evidence/camera_local_teacher_v6/class-coverage.json)를 함께 확인한다.
+최종 YOLO 파일 재읽기·이미지 SHA·클래스 순서 검증은22,631장·127,645객체를 통과했고
+확인된 exact-pixel split 누출은0이다. 근접 장면의 계보 독립성이 모두 증명됐다는 뜻은 아니다.
+
+v6-r1은 Roboflow100장을 더한 중간 부모다. r2의 일부 AIM 하위 유형 메타데이터를 바로잡았고,
+r3의 원점 재생성 대신 **r1을 누적 부모로 한 r4**를 채택했다. 이로써 새로운 미채택 평가
+후보 때문에 기존 승인2장이 사라지지 않게 했다. r2/r3는 원본·증거로 보존하며 단일 버전
+목록에서 `superseded_intermediate`로 표시한다. 현재 경로는 항상 `current_adopted`로 확인한다.
+
+AIM80장과 bag27장은 개별 RGB 검수했다. 그중 **AIM58장·bag16장**은 보호된 평가 입력과
+pHash 거리≤6인 후보라 학습 채택을 보류했다. 이는 확정 중복 판정이 아니다. 원본과 수정한
+라벨·대응 후보를 보존했으며, 영상/계보를 확인하기 전 분할 제한을 면제하지 않는다.
+별도로 bag 검토39장 중12장은 회색 컨테이너 또는 먼 물체의 종류·전체 주석 확인이 남아 있다.
+
+**사용자 확인:** 20260912 터널 입구의 주황 프레임·검정/노랑 사선무늬 대상은 객체 목록에
+없는 고정 구조물이다. 해당 대상의 barrel/box/barrier 예측을 학습 양성으로 사용하지 않는다.
+실제 WoodBox의 `concrete barrier` 예측은 독립 RGB 검수로 그 박스만 `box`로 수정했다.
+컨테이너·다른 구조물을 같은 종류라고 자동 확정하거나 다른 실제 방벽까지 제외하지 않는다.
+
+### Teacher 비교 결과와 사용 가능한 범위
+
+세 모델은 **같은 독립 Capture GT1,653장·14개 run 그룹**에서 비교했다. 범위 안의 전체
+객체 종류가 확인된 영상은1,254장이다. 나머지는 부분 GT로 처리해 미대응 검출을 FP로
+세지 않았다. 원래 모델의 최종 heldout과 teacher 확인 목적의 역할을 구분한다.
+
+아래는 confidence0.40에서 **box 원본 이름들을 학습 box로 매핑한** 결과다.
+이름을 무시한 기하 대응은 별도이며 아래 TP로 섞지 않았다.
+
+| Teacher | box TP / 예측 / GT | precision | recall |
+|---|---:|---:|---:|
+| YOLOE-26x | 28 / 33 / 305 | 84.85% | 9.18% |
+| Grounding DINO-B | 15 / 16 / 305 | 93.75% | 4.92% |
+| MM Grounding DINO-L | 56 / 56 / 305 | 100% | 18.36% |
+
+L은 상자 검출에서 이득이 있었지만 recall이 낮다. PE 방벽은 평가 가능한GT102개 중
+YOLOE-X의 정상 이름 대응이1개, B/L은0개였다. **대형 teacher 하나로 모든 미지원 장애물을
+자동 정답화할 수 있다는 근거는 없다.** 잘못된 이름의 박스는 사람이/RGB가 종류를 확인한
+경우에만 재활용하며, 전역 alias로 바꾸지 않는다.
+
+selection에서 고른 threshold를 고정한 heldout까지 **표본·precision 조건을 통과한 후보**는
+X person0.60, B person0.30, L person0.35·bicycle0.45다. precision≥95%와 양쪽 GT/예측20개를
+확인했지만, **3개 이상의 독립 장면 근거는 아직 확정하지 못했다.** 반복 녹화 run 수를
+독립 장면 수로 간주하지 않도록 r5 보고기에서 자동 승인 gate를 보강했다. 따라서 세 teacher
+모두 현재 `approved=false`이며, 후보 threshold는 개별 검수 보조용이다. 새 소스 cohort
+검수와 독립 장면 확인을 통과하기 전 자동 라벨을 확정하지 않는다.
+**이 범위는 배포 confidence나 모델 지원 수락을 뜻하지 않는다.**
+
+원래 정확한 박스에 연결해 **이름만 제안하는 조건부 통계 후보**는 더 넓다. X는 person/bicycle/
+car/truck/traffic_drum/traffic_cone, B/L은 person/bicycle/bus/traffic_cone가 표본·precision 조건을
+통과했다. 이 후보도 독립 장면 확인 전 자동 승인은 보류한다.
+조건부 이름 precision을 전체 영상 precision으로 사용하면 안 된다. 상자·steel·plastic 등
+이번 보강은 자동 묶음 승인 없이 **개별 RGB 검수**로 채택했다. 모든 변경의 근거·원래 박스·
+teacher phrase와 actor prior를 남겼다.
+
+AIM의 actor 목록에 dog가 있는데 실제 RGB에는 자전거 탑승자가 보이는 사례도 있었다.
+actor metadata는 후보 선정용이며 종류 GT로 무조건 전파하지 않는다. 원본 생산자의
+`training_visible=false`·3D/atomicity 미검증 표시를 그대로 두고, 별도로 확인한 2D bbox만
+사용한다. 이 보강으로 원본3D GT가 검증된 것이 아니다.
+
+### 실제 처리 범위와 재현
+
+AIM 세 폴더의 snapshot은 **163,269장·187세션**이다. 로컬 파일 수가 일치한 세션에서
+대표 **5,328장·148세션**을 X로 선별했다. 별도로 명시한 장애물 bag의 **500장**을 처리했다.
+객체 없는 주행 전체를 전수 추론하지 않았고, 모든 원본을 재라벨링했다고 표시하지 않는다.
+선별된231장의 같은 RGB는 B/L/X로 추가 대조했다. 모델·실행 SHA와 실패·재사용 기록은
+[실행 증거](../../../config/baselines/evidence/camera_local_teacher_v6/runs.json)에 있다.
+L은 기본800/1333·FP16·batch1에서 완료했으며 OOM 축소 대조는 필요하지 않았다.
+초기 L-GT 실행에는 실행기 소스 snapshot이 없어 모델/설정 binding까지만 주장한다.
+후속 focused 실행에는 코드와 패키지 pin을 기록했다. 이전 예측 재사용 시간을 새 처리율로
+설명하지 않는다. 이 시간은 offline teacher 처리이며 ROS source-to-output 지연이 아니다.
+
+상위 workspace에서 저장된 검수 결정을 재생성하는 예시는 다음과 같다. 기존 산출물 경로를
+덮어쓰지 않고 별도의 `reproduced` 폴더를 사용한다. image_facts/export에는 numpy·OpenCV·
+Pillow가 필요하므로 기존 전용 환경에서 실행한다.
+
+```bash
+python3 asmc-camera-data-audit/tools/perception/camera_teacher_expansion.py export \
+  --curated data/roboflow/curated-v6-teacher-r1/curated.jsonl \
+  --reviews data/roboflow/teacher-v6-admission-r4/reviews.json \
+  --additional data/roboflow/teacher-v6-admission-r4/frames.jsonl \
+  --output data/roboflow/curated-v6-reproduced \
+  --dataset data/dataset_versions/camera_objects_bbox_v6-reproduced
+```
+
+검수 결정·manifest는 로컬 데이터에 있고 Git에는 SHA·요약·도구만 있다. 다른 PC에서 이
+명령을 실행하려면 원본 이미지와 입력 검수 파일도 함께 옮겨야 한다. 단일 버전 목록의
+부모 SHA·[입력 pin](../../../config/baselines/evidence/camera_local_teacher_v6/input-pins.json)을 확인한다.
+
+[브라우저 실험 목차](http://localhost:8768/)에서 날짜/E번호가 붙은 teacher 같은 RGB 비교,
+AIM/bag 세 모델 비교, **v6 bbox labels before / after**를 연다. localhost는 현재 개발 PC의
+로컬 서버이며 팀 공유 호스팅이 아니다. 페이지는 상위 `artifacts/camera-teacher-v6`에 있다.
+원본 예측과 개별 검수 contact sheet도 보존했다.
+
+다음 우선순위는 보류74장의 실제 계보/근접 영상 검토, 부족한 plastic_barrier·box·이륜차의
+유효 독립 장면 확보, 기존 person/vehicle 회귀 방지 샘플링이다. stroller는 여전히 미지원이다.
+이번 v6은 구조적으로 검증된 부분집합이며 학습·운영 모델 교체나 전체 클래스 지원 수락이 아니다.
+
+### PE Firewall 후속 진단 — 2026-10-11
+
+사용자의 "프롬프트 문제인가 / 보강량이 너무 적다"는 피드백으로 **기존 자료만** 추가 대조했다.
+운영 모델·기존21종 설정·v6-r4 라벨은 변경하지 않았다. 결과와 입력/실행 스크립트 SHA는
+[PE 진단 증거](../../../config/baselines/evidence/camera_local_teacher_v6/pe-prompt-diagnosis.json)에 있다.
+
+selection의 PE12장과 PE가 없는 대조12장을 고정했다. 평가 범위 안 PE GT는35개이며
+반복 관측을 포함한다. 같은 Capture run이므로 독립 장면 검증이나 새 heldout이 아니다.
+
+| 방법 | confidence | PE 일대일 TP / GT | PE 없는 대조 중 검출된 이미지 |
+|---|---:|---:|---:|
+| DINO-L 기존21종, 정상 plastic_barrier 이름 | 0.40 | 0 / 35 | 0 / 12 |
+| DINO-L 단일 `plastic barrier` | 0.40 | 8 / 35 | 2 / 12 |
+| YOLOE-X visual prompt | 0.40 | 6 / 35 | 0 / 12 |
+| DINO-L 단일 `plastic barrier` | 0.10 | 27 / 35 | 12 / 12 |
+
+기존21종 DINO-L도0.10에서 **이름 무시 기하 대응26/35**, 정상 plastic 이름15/35였다.
+즉 위치 제안을 전혀 못 만드는 상태는 아니다. 다른 이름·낮은 confidence·다중 프롬프트
+문맥이 함께 작용한다. `plastic road barrier`, `orange road barrier`, `water filled barrier`,
+`water-filled traffic barrier`, `plastic jersey barrier`, `traffic barricade`, `road barrier`도
+각각 단독 실제 추론했다. 이름을 구체화하면 항상 개선되는 것은 아니었다. threshold만
+낮추면 대조 배경 오검출이 크게 증가한다. 위 대조 수는 FP 박스 수나 precision이 아니다.
+
+[공식 YOLOE visual prompt](https://docs.ultralytics.com/models/yoloe/#predict-usage)는
+단어 대신 참조 RGB의 bbox를 사용한다. 이번에는 대상24장 밖의 같은 run에 있는 orange PE
+박스1개를 예시로 주고 X에서 실제 실행했다. 출력 `object0`의 의미는 그 참조 PE이며,
+학습 클래스 `plastic_barrier`와 연결할 수 있다. 아직 다른 run/날씨 일반화나 자동 보강
+승인으로 확대하지 않는다. SAM·추가 학습·새 다운로드·TensorRT 생성은 필요하지 않았다.
+
+보강133장은 대량 라벨링 완료로 볼 수 없다. 기존 자료에는 이미 plastic_barrier591객체가
+있고, Enzo의 직접 대응 PE142장은 **이름이 모호해서가 아니라** 주석 완전성/RGB 검수가
+미완료여서 보류됐다. 이번 고정 표본12장에서 PE·drum의 직접 대응과 원본 박스 활용
+가능성을 확인했지만, 아직 최대50장 cohort 검수 완료나142장 채택을 뜻하지 않는다.
+
+자료 활용 우선순위는 다음과 같이 유지/구체화한다.
+
+1. Enzo 등 명확한 PE/box/drum 라벨은 기존 박스를 보존하고 source×class 묶음 표본 검수로
+   채택한다. 이 경로에 open-vocabulary teacher의 자동 승인 기준을 요구하지 않는다.
+2. 혼합 클래스는 독립적으로 실제 종류를 확인한 actor/연속 등장 구간·시각적으로 같은
+   묶음부터 검수한다. 잘못된 teacher 이름은 위치 제안과 분리해 개별/묶음 근거로 수정한다.
+3. pHash 보류74장은 실제 RGB·계보로 확인한다. 비슷한 터널 배경만으로 확정 중복 판정하지
+   않고, 실제 평가 누출을 확인한 후보만 제외한다. 기존 frozen split은 유지한다.
+4. 신규 bbox는 단일 종류별 DINO와 YOLOE visual prompt를 라벨 초안 후보로 활용한다.
+   누락된 다른 대상 객체·잘못된 박스·미검출을 검토하며, 예측을 무조건 정답으로 쓰지 않는다.
+
+브라우저에서 `artifacts/camera-teacher-v6/pe-prompt-diagnosis-r1/index.html`의 같은 RGB,
+원본21종/단일 text/visual prompt 결과와 Enzo12장 표본을 비교할 수 있다.
+
+## 기존 자료 채택 확대 — 2026-10-11 v7
+
+**현재 채택본은 `camera_objects_bbox_v7-adoption-r2`, 23,264장·129,630객체다.**
+부모 v6-r4의22,631장·127,645객체와 모든 split/group을 그대로 보존했다.
+[집계·보존 증거](../../../config/baselines/evidence/camera_data_expansion_v7/summary.json),
+[실제 YOLO 파일 재검증](../../../config/baselines/evidence/camera_data_expansion_v7/verification.json),
+[채택기](../../../tools/perception/camera_data_expansion_v7.py),
+[새 채택 예외 정책](../../../config/datasets/camera_object_adoption_v7.json)을 참조한다.
+운영 추론·ROS 인터페이스·bridge·스폰·주행·녹화·학습은 이번에 변경/실행하지 않았다.
+
+| 구분 | v6-r4 | v7-r2 | 증가 |
+|---|---:|---:|---:|
+| 전체 이미지 | 22,631 | 23,264 | 633 |
+| 전체 대상 객체 | 127,645 | 129,630 | 1,985 |
+| train 이미지 | 21,851 | 22,023 | 172 |
+| selection 이미지 | 113 | 113 | 0 |
+| heldout 이미지 | 667 | 1,128 | 461 |
+
+### 직접 대응 → 혼합 재분류 → 기존 teacher 검수 재사용
+
+Enzo의 의미가 직접 대응하는 pending463장에 대해 **소스×원본 클래스별 seed20261009,
+최대50장, 고유268장**의 실제 RGB를 검수했다. 포함된 PE 방벽·상자·드럼·콘크리트 방벽의
+원본 박스를 활용했다. 기존 중복/대표본 제한2장은 유지하고 **461장·1,325객체**를 추가했다.
+이 소스 전체는 이전부터 heldout이다. 따라서 PE142장의 증가도 **평가 보강**이며 train 증가로
+설명하지 않는다. 이번에 본 heldout은 새로 숨겨진 최종 시험이 아니다. 묶음 표본 통과와
+모든 개별 영상의 완전 GT 확인도 구분해 `review_basis=source_class_sample`을 남긴다.
+
+혼합 라벨은 실제 RGB와 annotation ID가 표시된 확대 영상을 확인해 **mino76장,
+tooth92장, jjj2장**을 train에 추가했다. Mino의 `obstacle`은 cargo/wood box·drum·
+콘크리트 방벽으로 나누고, tooth의 `Obstacle_Yellow`는 WoodBox와 노란 drum으로 나눴다.
+**tooth의 같은 `PE` 라벨에 원통 드럼과 사각 PE_Firewall이 공존**하므로 새 묶음 일괄
+승인을 차단하고 주석별로 traffic_drum/plastic_barrier를 부여한다. v2 원본 규칙과 과거
+채택본은 덮어쓰지 않는다. jjj9의 미확정 흰색 방벽4주석은 PE_Firewall로 확인했다.
+모든 원본 박스와 작은 정확한 양성 GT를 유지했고, v7에서 새 annotation ID는 만들지 않았다.
+
+기존 AIM/bag 유사 장면 보류 중 부족 종류13장을 대상으로 **모든 대응35쌍**의 RGB를
+다시 확인했다. 배경은 같지만 배치 물체가 다른 AIM 상자1장·철제 방벽1장은 복원했다.
+같은 배치 또는 독립성 미확인인 나머지11장은 유지했다. 다른 근접 후보도 미검수 상태를
+유지하며 전체74장 중72장은 여전히 보류다. 21개 부족 후보 전체700쌍의 검수가 끝났다는
+뜻이 아니다. pHash만으로 실제 누출을 확정하거나 한 쌍의 통과로 나머지를 면제하지 않는다.
+기존 teacher 원본·개별 검수 결과를 재사용했고 새 추론·미승인 teacher 자동 채택은 없다.
+
+| 대상 클래스 | 추가 train 등장 이미지 | 추가 heldout 등장 이미지 | 전체 객체 증가 |
+|---|---:|---:|---:|
+| box | 58 | 319 | 459 |
+| plastic_barrier | 18 | 142 | 303 |
+| concrete_barrier | 105 | 222 | 535 |
+| steel_barricade | 2 | 0 | 2 |
+| traffic_drum | 126 | 236 | 679 |
+| bollard | 2 | 0 | 7 |
+
+한 이미지에 여러 종류가 있어 클래스별 이미지 수를 더하면633이 되지 않는다.
+수량 증가를 독립 장면 증가로 해석하지 않는다. 소스/run 그룹 수와 검증된 독립 장면 수를
+분리하며 현재 독립 장면 수는 미확인이다. 확인하지 않은 날씨·터널·뷰는 unknown으로 남긴다.
+
+천으로 덮인 물체·여러 물체를 합친 박스·tiny PE 종류 불명29개 검토 사례는 보류 기록에
+남겼다. jjj의 탑승자 복합·dog/deer 혼합과 기존 숫자9 미완료19장도 이름만 바꿔 채택하지
+않았다. 이는 원본 라벨이 불량하다는 뜻이 아니라 목표16종으로 분리하는 확인이 남았다는
+뜻이다. 동일 픽셀·같은 split group 충돌은 검수로 면제할 수 없고, 새 후보의 모든 반대
+split pHash≤6 대응을 확인한다. 이번 채택본의 exact-pixel split 누출은0이며, 모든 장면의
+계보 독립성이 입증됐다는 뜻은 아니다.
+
+### 저장·재현·갤러리
+
+```text
+data/roboflow/
+  expansion-v7-reviews-r1/            # 고정 표본·개별 RGB 수정·보류 근거
+  expansion-v7-reviews-r2/            # 유사 장면 35쌍 재검토, 2장 복원
+  curated-v7-adoption-r1/             # 631장 추가한 중간 부모, 보존
+  curated-v7-adoption-r2/             # 최종 통합 기록·summary·coverage
+data/dataset_versions/
+  camera_objects_bbox_v7-adoption-r2/ # data.yaml·manifest·검증·image symlink·YOLO labels
+  camera_objects_versions.json       # current_adopted와 부모 SHA/검증 상태
+artifacts/camera-data-expansion-v7/   # 원본 검수 시트·확대·전후·유사 장면 비교
+```
+
+상위 workspace의 data/artifacts이며 실행 worktree 내부의 별도 원본이 아니다.
+이미지는 원본을 가리키는 symlink다. 원본·이전 revision을 삭제하지 않는다.
+Git에는 도구·정책·요약·문서만 포함한다. 클래스 규칙 v2와 데이터 v7은 별도 버전이다.
+
+재생성은 저장된 검수 패키지를 사용해 **새 경로**로 실행한다. 예:
+
+```bash
+python3 tools/perception/camera_data_expansion_v7.py \
+  --parent ../data/roboflow/curated-v6-teacher-r4/curated.jsonl \
+  --reviews ../data/roboflow/expansion-v7-reviews-r1/reviews.json \
+  --output /tmp/asmc-v7-r1-reproduce \
+  --dataset /tmp/asmc-v7-r1-dataset
+```
+
+r2는 r1의 curated를 부모로 사용하고 `expansion-v7-reviews-r2/reviews.json` 및
+`--near-reviews ../data/roboflow/expansion-v7-reviews-r2/near-reviews.json`을 지정한다.
+부모·이미지 SHA, 고정 표본 구성, source/class 검수, 기존 채택 불변,16종 ID, 원본 박스,
+정확한 작은 GT, 실제 파일·정규 좌표·이미지 SHA와 split 누출을 검사한다.
+
+[갤러리 전체 목차](http://localhost:8768/index.html),
+[v7 요약·검수 진입점](http://localhost:8768/camera-data-expansion-v7/index.html),
+[633장 원본/변환 비교](http://localhost:8768/camera-data-expansion-v7/final-adopted/index.html)를
+제공한다. E 번호와 등록 시각은 기존 목차에 붙이며 실험 시작 시각으로 해석하지 않는다.
+
+CPU 검사는 기존 데이터 전용 `../data/roboflow/.venv/bin/python`으로 실행한다.
+호스트 기본 Python의 SciPy 미설치 오류는 코드 실패와 구분한다. 관련 데이터/teacher/갤러리
+회귀, perception 계약과 문서 검사를 실행하고 로컬 결과를 증거에 남긴다. Hosted CI의
+결제 차단/네트워크 미확인은 통과로 표시하지 않는다. PR #81은 Draft를 유지한다.
+
+### 다음 구현으로 넘길 부족 조건
+
+train 등장 이미지는 PE 방벽172장·철제 방벽178장·사슴61장·이륜차69장·자전거230장,
+상자1,109장이다. stroller는0장이다. 평가 selection의 클래스 커버리지가 여전히 부족하며
+이번 증가가 학습 준비·회귀 해결을 뜻하지 않는다. 기존 Capture12/3/3과 평가 분할을
+train으로 옮기지 않는다.
+
+[MPC 수집 파일럿](camera-mpc-object-collection-pilot.md)에 최신 등장 이미지 기반
+**장애물10+희소 객체2 배분**, bridge GT/추가 LiDAR 수신, Object 파싱 한계, 시각·actor
+연결, 지면 높이·기준점 검증, raw→Capture 전환과 SUNNY/FOGGY13시 파일럿을 명시했다.
+파일럿 통과 후 전체 경로의11/13/15시6회 주행으로 확장한다. 수집 후 샘플링·비교 재학습으로
+이어가며 이번에는 자동 수집을 시작하지 않는다.

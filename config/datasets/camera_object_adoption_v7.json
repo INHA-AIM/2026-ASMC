@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "parent": "curated-v6-teacher-r4",
+  "individual_only_source_labels": {
+    "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh": ["PE", "Obstacle_Yellow"],
+    "roboflow:jjj-nx9di/katri_new_data-xkbev": ["9"],
+    "roboflow:mino-qjf5p/vi2re": ["obstacle"],
+    "roboflow:parkminseo/final-ftuy2": ["box"]
+  },
+  "reason": "Original-label meanings may contain multiple target types. Preserve the v2 historical mapping and accepted parent; new admissions require independent per-image RGB decisions.",
+  "direct_review": "fixed seed 20261009; at most 50 images per source/original-label; whole-image target completeness; preserve original boxes",
+  "similarity_review": "all opposing split pHash distances <=6; exact pixel duplicates cannot be waived; visually similar background alone is not proven leakage",
+  "teacher_approval_required_for_direct_source_labels": false,
+  "new_teacher_inference": false
+}
