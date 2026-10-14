@@ -23,9 +23,9 @@
     <param name="managed" value="$(arg managed)"/>
     <param name="initial_mode" value="$(arg initial_mode)"/>
     <param name="target_hz" value="$(arg target_hz)"/>
-    <!-- Reset the backend selector before loading the explicit profile.
+    <!-- Use rosparam for the fallback so the explicit YAML profile can override it.
          The config may select RF/YOLOE; otherwise the node defaults to YOLO. -->
-    <param name="model_kind" value="yolo"/>
+    <rosparam param="model_kind">yolo</rosparam>
     <rosparam command="load" file="$(arg config)" subst_value="true"/>
     <rosparam command="load" file="$(arg class_groups_config)"/>
     <param name="hood_mask" type="bool" value="$(arg objects_hood_mask)"/>

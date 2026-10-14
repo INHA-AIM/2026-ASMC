@@ -65,7 +65,7 @@ class RFDetrTest(unittest.TestCase):
         children=list(node)
         reset=next(c for c in children if c.tag=='rosparam' and c.get('param')=='model_kind')
         config=next(c for c in children if c.tag=='rosparam' and c.get('file')=='$(arg config)')
-        self.assertEqual(reset.get('command'),'delete')
+        self.assertEqual(reset.text.strip(),'yolo')
         self.assertLess(children.index(reset),children.index(config))
 
     def test_quality_threshold_and_small_sample_cannot_pass(self):

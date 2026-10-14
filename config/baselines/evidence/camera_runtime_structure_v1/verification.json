@@ -7,9 +7,9 @@
       "passed": true
     },
     "runtime_cpu": {
-      "path": "data/runtime/camera-structure-v1/runtime-tests-final.log",
-      "sha256": "7ef500533ee78b9e2d5be0d9ca64af8970ac0901967853b9efad35e12b136f2a",
-      "count": 48,
+      "path": "artifacts/camera-runtime-structure-20261014-r1/runtime-override-final.log",
+      "sha256": "6b90c40d763ea3c7f645826b04d104531a2e982bef8858be097947771b58e1b7",
+      "count": 49,
       "passed": true
     },
     "contracts_cpu": {
@@ -41,6 +41,18 @@
       "sha256": "721a51a02121f03b7202a1b1fec5b75b834e3626207b139c58496f158e25fc38",
       "count": 5,
       "passed": true
+    },
+    "rfdetr_compatibility": {
+      "path": "artifacts/camera-runtime-structure-20261014-r1/runtime-override-final.log",
+      "sha256": "6b90c40d763ea3c7f645826b04d104531a2e982bef8858be097947771b58e1b7",
+      "count": 16,
+      "passed": true
+    },
+    "full_camera_cpu_ci": {
+      "path": "artifacts/camera-runtime-structure-20261014-r1/full-camera-cpu-ci-final.log",
+      "sha256": "10c692b713a120bbfe26b265389b6bd4cb073ec8382c527a10f02da5edba274a",
+      "count": null,
+      "passed": true
     }
   },
   "legacy_message_files_changed": false,
@@ -67,6 +79,16 @@
     "initial_failed_run": 38606921687,
     "initial_failure": "New CameraObjectObservation was missing from the shared message registry.",
     "registry_fixed_and_local_contracts_passed": true,
-    "latest_result": "Check current PR status; hosted and local results are independent."
+    "latest_result": "Check current PR status; hosted and local results are independent.",
+    "second_failed_run": 38607875311,
+    "second_failure": "RF compatibility test expected an old XML delete; actual parser check exposed a private param overriding explicit backend YAML.",
+    "backend_fallback_fixed_and_local_full_cpu_step_passed": true
+  },
+  "source_changes_since_live_measurement": {
+    "paths": [
+      "src/asmc_camera/launch/camera_objects.launch",
+      "src/asmc_camera/test/runtime/test_camera_entrypoints.py"
+    ],
+    "reason": "Backend fallback XML corrected for explicit experiment override; E8 effective parameters unchanged. New parser regression checks included."
   }
 }

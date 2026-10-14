@@ -109,7 +109,7 @@ alias의 동일 상태를 검사했다. 입력 프레임에 수신 세대를 붙
 stamp 역행 시 이전 pending frame이 새 세대로 다시 채택되는 경계를 막았다. 신호등도 입력 callback에서
 세대를 관측해 오래된 staged frame을 차단한다.
 
-- 카메라 CPU 회귀313개, 별도 runtime48개, metric4개, 계약35개 및 generated ROS 경계 시험.
+- 카메라 CPU 회귀313개, 별도 runtime49개, metric4개, 계약35개 및 generated ROS 경계 시험.
 - 최종 입력 세대 경계 코드로 독립 ROS master에서 모드·alias·관측 metadata·입력 중단11항목을 재확인했다.
 - 실제 catkin build, launch 해석, 읽기 전용 cache·mask 격리·2슬롯 상한·고정 class ID.
 - PREPARE/ACTIVE/STANDBY, 정상 빈 결과·decode 오류·입력 중단·frozen clock·오래된 세대·fatal CUDA 모의 시험.
@@ -118,6 +118,9 @@ stamp 역행 시 이전 pending frame이 새 세대로 다시 채택되는 경�
 PR #85의 첫 hosted CI는 새 메시지를 공용 등록표에 빠뜨린 오류로 계약 검사에서 실패했다.
 등록표와 고정 메시지 수·MD5 회귀 시험을 보완했고 로컬35개 계약 시험을 통과했다.
 수정 후 hosted CI 결과는 PR의 최신 checks와 로컬 `hosted-camera-ci*.log`에서 확인한다.
+두 번째 CI의 RF 호환 시험을 계기로 실제 launch의 backend 선택도 확인했다. 기본값을
+`param`으로 지정하면 명시적 RF YAML을 덮는 문제가 있어 `rosparam` 기본값으로 수정했다.
+기본 YOLO와 명시적 RF 선택을 실제 launch 해석으로 확인했다. E8 기본 구성의 처리 설정은 같다.
 
 원본 로그·raw-frame 표·이미지 갤러리는 workspace `artifacts/camera-runtime-structure-20261014-r1/`와
 `data/runtime/camera-structure-v1/results/`에 있다. E347을 기존 ASMC 실험 목록에서 찾을 수 있다.
