@@ -3,16 +3,23 @@
 > 기준일: 2026-10-09. 사용자 지정 Roboflow 22개 프로젝트와 기존 Capture GT를 대상으로 한다.
 > 운영 모델·ROS 인터페이스·confidence·fusion·컨테이너 마운트는 변경하지 않는다.
 
-최신 채택본과 실행 방법은 [v7 기존 자료 채택 확대](#기존-자료-채택-확대--2026-10-11-v7)를 먼저 확인한다.
-다음 구현은 [MPC 자동 수집 파일럿](camera-mpc-object-collection-pilot.md)이며 아직 실행하지 않았다.
+**2026-10-14 통합 준비:** 이 문서는 PR #81의 v6/v7 자료 정리와 이전 파일럿 기록이다.
+[v7 기존 자료 채택 확대](#기존-자료-채택-확대--2026-10-11-v7)는 보존된 데이터 버전이며 최신 본학습 자료 전체를 뜻하지 않는다.
+Capture 자동 수집은 PR #82에서 이미 구현·실행했고, [수집 인계](camera-mpc-object-collection-pilot.md)에 기록한다.
+현재 main의 개발 기본은 PR #84의 [v11 E8 배포 계약](camera-mission16-deployment.md)이다.
+이번 #81/#82 준비는 모델·데이터를 다시 생성하거나 교체하지 않는다. 범위와 최신 분류는
+[통합 준비·데이터 구분](camera-data-integration-prep.md)을 먼저 읽는다.
 이전 저장 위치·로컬 teacher 비교는 [v6 작업](#로컬-teacher와-저장-버전--2026-10-11-v6)에 보존한다.
 
-## 현재 기준 — 2026-10-10 v2 16종
+## 보존된 v2 데이터 정책 — 2026-10-10, 16종
 
+학습 클래스16종과 원본 의미 대응은 유지한다. 아래 소비 그룹 열과 manifest의 `consumer_group`은
+당시 데이터 분석용4그룹이며 현재 runtime의3그룹과 구분한다. 현재 소비 매핑은
+[배포 계약](camera-mission16-deployment.md)과 `object_classes_mission16_v1.yaml`을 따른다.
 이 절과 [v2 라벨 정책](../../../config/datasets/camera_object_labels_v2.json),
-[v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)가 현재 합의다.
+[v2 소스별 대응표](../../../config/datasets/camera_object_source_labels_v2.json)는 당시 데이터 변환 기준이다.
 아래 v1/2026-10-09 결과·검수·export는 당시의 증거로 보존하며 현재 분류 계약과 구분한다.
-**PR #78의 데이터·샘플링은 main에 병합됐다. 현재 #80의 bbox 파일럿은 Draft이며 운영 실행은 수정하지 않는다.**
+**PR #78/#80은 main에 병합됐다. 아래 bbox 파일럿·회귀 진단은 과거 실험이며, 현재 E8 배포 상태와 구분한다.**
 최신 결과는 [사람·이륜차 회귀 진단](#2026-10-11-사람이륜차-회귀-진단--재학습-없음)과 [16epoch 비교 결과](#16epoch-비교-결과--본학습-후보-선정-보류), 샘플링은 [bbox 파일럿](#bbox-파일럿-샘플링--2026-10-11), 전체 자료 수치·적용 정책은 [Capture actor 보강 결과](#capture-actor-연결-보강--2026-10-11-v5-capture-r1)를 먼저 읽는다.
 아래 v4의 엄격한 채택 기준은 별도 보존 자료의 기준이며 v5 전체의 검수 완료를 뜻하지 않는다.
 2026-10-11 추가 검토는 [teacher 대안과 RF-DETR](#2026-10-11-teacher-대안과-rf-detr-검토), 병합 범위는 [#78 main 통합](#2026-10-11-pr-78-병합-범위와-main-통합)을 따른다.
