@@ -1,0 +1,46 @@
+{
+  "recorded_utc": "2026-10-14T09:53:15.452489+00:00",
+  "base_main": "3922386e",
+  "default_profile": "finetuned_e8",
+  "alternative": "pretrained_coco7",
+  "user_live_review": "usable for development; sunny/foggy/time/tunnel/bumper-near misses remain",
+  "rollout_authorization": "development default and main merge authorized on 2026-10-14",
+  "model_selection": "startup; restart camera node",
+  "public_wire_definitions_changed": false,
+  "models_uploaded_as": "GitHub Release assets, not Git blobs",
+  "local_validation": {
+    "outer_workspace_build": "passed",
+    "nested_main_build": "passed",
+    "camera_detection": 79,
+    "camera_runtime": 33,
+    "camera_facade": 17,
+    "model_release_install": 3,
+    "legacy_b0_measurements": 14,
+    "front_adapter": 6,
+    "fusion_class_policy": 8,
+    "fusion_time_matcher": 9,
+    "planning_relevance": 27,
+    "planning_group_conversion": 2,
+    "documentation_migration": "passed",
+    "p1b_contract": "passed",
+    "perception_contract": "passed",
+    "topic_policy": "passed",
+    "runtime_acceptance_contract": "passed"
+  },
+  "fixed_existing_failure": "Facade expected traffic_light=false but current planner owns it by default; test now checks canonical conditional single producer, production planner unchanged",
+  "limitations": [
+    "Full ACTIVE + MORAI rendering acceptance and 30min run pending",
+    "Tunnel and bumper-near recall insufficient",
+    "Pretrained model supports 7 classes; not a new-obstacle fallback",
+    "Existing numeric planning enum cannot express all three groups; tracked companion preserves strings",
+    "Historical FP16 parity differences and PyTorch bag gaps retained"
+  ],
+  "source_sha256": {
+    "src/asmc_camera/launch/perception.launch": "c99dd8213f51a5711c2912059b0505863b6fa88add2a976dba770ecf8e8c3816",
+    "src/asmc_camera/src/asmc_camera/detection/yolo_batch_backend.py": "777e11816626f38000dc52375413201d72ecfdfc0a8435b6c4c98565de5da5a8",
+    "src/asmc_camera/src/asmc_camera/nodes/object_detection_node.py": "6208993b5b0732e2a2fc623636a5657fc2a599e63b400d192500e30b2f1167b3",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionClassPolicy.hpp": "3ccf2be51840c682a7e7dc3ec6af3d53c0c5abeec135d38d38e16ea1dd8b5e7a",
+    "src/planning_inputs/src/converter.cpp": "0d95ace62f7c945288c659fec5450526ecdbc5705ef51d13f5688582459085d4"
+  },
+  "hosted_ci": "queried after PR creation; this file is local-validation evidence, not hosted success"
+}

@@ -527,9 +527,9 @@ struct LiDARObjectInfo
     float tracking_height_input = 0;
     asmc::lidar::Rot tracking_yaw_from_input = asmc::lidar::Rot::Identity();
     asmc::lidar::Vec tracking_origin_in_yaw = asmc::lidar::Vec::Zero();
-	string str_ObjectClass = "unknown";      //car,person,truck
+	string str_ObjectClass = "unknown";      // selected camera consumer group or unknown
 
-    // str_ObjectClass를 확정시킨 YOLO 원본 라벨(car/truck/bus/person).
+    // str_ObjectClass를 확정시킨 YOLO 원본 라벨(16종/7종; 소비 그룹과 구분).
     // 클래스가 unknown으로 돌아가면 같이 unknown이 된다.
     std::string str_YoloClass = "unknown";
 

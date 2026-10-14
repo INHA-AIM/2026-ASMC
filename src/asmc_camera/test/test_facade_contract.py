@@ -418,16 +418,21 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             }
             self.assertEqual(expected, arguments["traffic_light_checkpoint"], name)
             self.assertEqual(
-                "false",
+                "true",
                 arguments["traffic_light"],
-                name + " must not start a duplicate perception producer",
+                name + " owns traffic light unless an external producer is selected",
             )
             traffic_arg = next(
                 item
                 for item in launch.findall("arg")
                 if item.get("name") == "traffic_light"
             )
-            self.assertIn("planning-owner review", traffic_arg.get("doc", ""), name)
+            self.assertIn("external traffic-light producer", traffic_arg.get("doc", ""), name)
+            owned = launch.find("group[@if='$(arg traffic_light)']")
+            self.assertIsNotNone(owned)
+            producers = owned.findall("node[@name='traffic_light_infer']")
+            self.assertEqual(1, len(producers))
+            self.assertEqual("asmc_camera", producers[0].get("pkg"))
 
         package = ET.parse(behavior_root / "package.xml").getroot()
         dependencies = {

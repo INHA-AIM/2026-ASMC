@@ -15,13 +15,14 @@
   <arg name="objects_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)"/>
   <arg name="traffic_light_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)"/>
   <arg name="lane_target_hz" default="10.0"/>
-  <arg name="objects_target_hz" default="20.0"/>
+  <arg name="objects_target_hz" default="15.0"/>
   <arg name="start_camera_lane" default="$(eval arg('profile') in ['planning', 'debug', 'legacy'])"/>
   <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="start_camera_objects" default="$(eval arg('profile') in ['planning', 'debug'])"/>
-  <arg name="camera_objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <arg name="objects_model_profile" default="finetuned_e8" doc="finetuned_e8 | pretrained_coco7; selected at startup, restart detector to change"/>
+  <arg name="camera_objects_config" default="$(eval find('asmc_camera') + '/config/camera/' + {'finetuned_e8': 'yolo26l_mission16_e8_three_view.yaml', 'pretrained_coco7': 'yolo26l_pretrained_mission_three_view.yaml'}[arg('objects_model_profile')])"/>
   <arg name="objects_conf_thres" default="" doc="Optional startup cutoff override; consumers can use box.confidence for stricter live filtering."/>
-  <arg name="objects_class_groups_config" default="$(find asmc_camera)/config/camera/object_classes.yaml"/>
+  <arg name="objects_class_groups_config" default="$(find asmc_camera)/config/camera/object_classes_mission16_v1.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
   <arg name="objects_side_ego_mask" default="true"/>
   <arg name="objects_left_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml"/>

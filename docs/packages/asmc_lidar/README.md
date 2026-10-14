@@ -1,5 +1,11 @@
 # LiDAR 기능 이전과 손재호 인계
 
+**2026-10-14 카메라 소비 변경:** Main 기본은 `camera_class_profile:=mission16_v1`입니다.
+원본16종과 `vehicle / dynamic_obstacle / static_obstacle`을 보존합니다. 전방 bbox fusion만 연결하며,
+3뷰 출력이 3뷰 fusion을 의미하지 않습니다. [현재 카메라 계약](../../handoffs/perception/camera-mission16-deployment.md)을
+먼저 확인하세요. 현재 검출·추적 실행 호스트는 여전히 nested Main이며 `asmc_lidar` 기능 이전은 후속입니다.
+
+
 현재 `asmc_lidar`는 **좌표·시간 기반과 공용 계약만 제공하는 빌드 가능한 골격**이다.
 검출·군집·OBB·추적·fusion·ROS 어댑터의 실행 구현은 손재호가 원본
 [`lidar+sensorfusion`](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)에서 이전한다.

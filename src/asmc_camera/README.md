@@ -1,6 +1,19 @@
 # `asmc_camera` runtime
 
-YOLOE 장애물 후보 비교 결과와 운영 수락 보류 사유는 [m/l·640/960/1280 실험 인계](../../docs/handoffs/perception/camera-yoloe-obstacle-selection.md)를 참고한다. 현재 COCO7 기본 모델은 유지한다.
+**2026-10-14 개발 기본:** YOLO26l v11 E8·원본16종·세 소비 그룹·3뷰15Hz·전방1280·TensorRT FP16입니다.
+공식 사전학습 모델은 `objects_model_profile:=pretrained_coco7`로 선택합니다. 기본은 `finetuned_e8`입니다.
+현재 실행·모델 다운로드·판제/LiDAR 규칙은 [배포 계약](../../docs/handoffs/perception/camera-mission16-deployment.md),
+남은 작업은 [후속 계획](../../docs/handoffs/perception/camera-deployment-roadmap-20261014.md)을 따릅니다.
+아래 COCO7·YOLO11m 설명은 이전 실험/복구 경로이며 현재 기본값과 구분합니다.
+
+```bash
+roslaunch asmc_camera perception.launch profile:=debug start_camera_lane:=false start_traffic_light:=false
+# 사전학습 모델은 종료 후 재실행하며 objects_model_profile:=pretrained_coco7 추가
+rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
+```
+
+
+YOLOE 장애물 후보 비교 결과와 운영 수락 보류 사유는 [m/l·640/960/1280 실험 인계](../../docs/handoffs/perception/camera-yoloe-obstacle-selection.md)를 참고한다. COCO7 기본값은 당시 상태이며 현재 E8 기본 배포와 구분한다.
 
 > **상태:** P4-C6 — camera/BEV/lane/traffic runtime·offline·training 패키지 통합 완료
 
@@ -22,7 +35,7 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 
 ## 실행
 
-### 선정한 3뷰 개발 모델
+### 이전 COCO7 3뷰 모델 선정 기록
 
 [실험 갤러리 통합 목차](http://localhost:8768/)에서 카메라·LiDAR 비교를 함께 확인한다.
 8개 M/L·detect/seg·960/1280 비교와 최종 선정 근거는

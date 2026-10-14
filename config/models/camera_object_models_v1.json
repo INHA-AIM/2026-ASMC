@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "release_tag": "camera-yolo26l-v11-e8-v1",
+  "github_repository": "INHAautonav/2026-ASMC",
+  "default_profile": "finetuned_e8",
+  "selection": "startup; restart camera detector to change; no in-flight weight replacement",
+  "runtime": {
+    "container": "asmc-ros-noetic",
+    "gpu": "RTX 4060 Ti 8GB",
+    "tensorrt": "10.13.0.35",
+    "ultralytics": "8.4.150",
+    "front_tensor": [
+      736,
+      1280
+    ],
+    "side_tensor": [
+      480,
+      640
+    ],
+    "batch": "2plus1",
+    "target_hz": 15,
+    "confidence": 0.4,
+    "nms_iou": 0.7,
+    "ego_mask": true
+  },
+  "checkpoint_provenance": {
+    "finetuned_e8": "v11 complete 8epoch, epoch7.pt; unchanged training checkpoint including resume state",
+    "pretrained_coco7": "official YOLO26l detection, COCO80 checkpoint; runtime filters original COCO7"
+  },
+  "weights_license": "AGPL-3.0; upstream Ultralytics weights",
+  "files": [
+    {
+      "profile": "finetuned_e8",
+      "asset": "yolo26l-finetuned_e8.pt",
+      "relative_path": "camera_mission16_v11_e8/yolo26l.pt",
+      "sha256": "6d5f4f0645b855bf66f0b0fa9d86b690d7659027e419d3b894d40c046ff89f70",
+      "bytes": 316458898
+    },
+    {
+      "profile": "finetuned_e8",
+      "asset": "yolo26l-finetuned_e8.engine",
+      "relative_path": "camera_mission16_v11_e8/yolo26l.engine",
+      "sha256": "c9dc3ca826c9fffa4705da4e31b7ff65c913a50b9658f4d74a7079d08df21f97",
+      "bytes": 56610526
+    },
+    {
+      "profile": "pretrained_coco7",
+      "asset": "yolo26l-pretrained_coco7.pt",
+      "relative_path": "camera_coco7_v1/yolo26l.pt",
+      "sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "bytes": 53211173
+    },
+    {
+      "profile": "pretrained_coco7",
+      "asset": "yolo26l-pretrained_coco7.engine",
+      "relative_path": "camera_coco7_v1/yolo26l.engine",
+      "sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+      "bytes": 57496998
+    }
+  ]
+}

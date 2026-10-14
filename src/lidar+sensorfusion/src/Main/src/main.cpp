@@ -1,3 +1,4 @@
+#include "SensorFusion/FusionClassPolicy.hpp"
 #include <Global/Global.hpp>
 #include <Parser/Parser.hpp>
 #include <Camera/Camera.hpp>
@@ -604,6 +605,12 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "Main");
     ros::NodeHandle st_NodeHandle;
     ros::NodeHandle st_PrivateNodeHandle("~");
+    std::string camera_class_profile;
+    st_PrivateNodeHandle.param("camera_class_profile", camera_class_profile, std::string("mission16_v1"));
+    if (camera_class_profile != "legacy" && camera_class_profile != "mission16_v1") {
+        ROS_FATAL("Unsupported camera_class_profile"); return 1;
+    }
+    fusion_class::MissionProfile() = camera_class_profile == "mission16_v1";
     std::string fusion_trace_path;
     st_PrivateNodeHandle.param("fusion_trace_path", fusion_trace_path, std::string());
     try {
