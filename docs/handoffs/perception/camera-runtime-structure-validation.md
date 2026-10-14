@@ -72,6 +72,12 @@ GPU 수치는 MORAI와 배경 프로그램을 포함한 전체 VRAM이다. CPU·
 Windows 프로그램의 CPU/RAM을 모두 계측한 것으로 설명하지 않는다. 합산 RSS에는 공유 페이지가 포함될 수 있다.
 문서·브라우저 등 사용자 작업은 종료하지 않았다.
 
+시각화 비용 대조는 TwinLite15Hz에서 별도로 수행했다. GUI OFF 여섯 회차의 카메라 CPU는
+293.37–296.18%, 합산 RSS peak는3115–3134MiB였다. 실제 rqt와 현재 overlay·합성 경로를
+활성화한 한 회차는 CPU433.56%·RSS3892.55MiB였다. 배경 부하가 다른 단일 대조이므로
+정밀한 인과 효과로 해석하지 않지만 시각화 비용이 작다고 가정하지 않는다.
+일반 camera.launch는 시각화 노드를 시작하지 않으며 raw debug 영상 발행도 끈다.
+
 ## 후처리
 
 모든 조합은 E8 one2one 출력·같은 GT/ignore/mask를 사용했다. confidence13개×동일 클래스 IoU4개×
@@ -103,11 +109,15 @@ alias의 동일 상태를 검사했다. 입력 프레임에 수신 세대를 붙
 stamp 역행 시 이전 pending frame이 새 세대로 다시 채택되는 경계를 막았다. 신호등도 입력 callback에서
 세대를 관측해 오래된 staged frame을 차단한다.
 
-- 카메라 CPU 회귀313개, 별도 runtime48개, metric4개, 계약27개 및 generated ROS 경계 시험.
+- 카메라 CPU 회귀313개, 별도 runtime48개, metric4개, 계약35개 및 generated ROS 경계 시험.
 - 최종 입력 세대 경계 코드로 독립 ROS master에서 모드·alias·관측 metadata·입력 중단11항목을 재확인했다.
 - 실제 catkin build, launch 해석, 읽기 전용 cache·mask 격리·2슬롯 상한·고정 class ID.
 - PREPARE/ACTIVE/STANDBY, 정상 빈 결과·decode 오류·입력 중단·frozen clock·오래된 세대·fatal CUDA 모의 시험.
 - Hosted CI는 PR의 실제 결과를 별도로 기록한다. 로컬 통과로 대체하지 않는다.
+
+PR #85의 첫 hosted CI는 새 메시지를 공용 등록표에 빠뜨린 오류로 계약 검사에서 실패했다.
+등록표와 고정 메시지 수·MD5 회귀 시험을 보완했고 로컬35개 계약 시험을 통과했다.
+수정 후 hosted CI 결과는 PR의 최신 checks와 로컬 `hosted-camera-ci*.log`에서 확인한다.
 
 원본 로그·raw-frame 표·이미지 갤러리는 workspace `artifacts/camera-runtime-structure-20261014-r1/`와
 `data/runtime/camera-structure-v1/results/`에 있다. E347을 기존 ASMC 실험 목록에서 찾을 수 있다.

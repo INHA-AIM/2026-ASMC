@@ -13,9 +13,9 @@
       "passed": true
     },
     "contracts_cpu": {
-      "path": "artifacts/camera-runtime-structure-20261014-r1/contract-tests-final.log",
-      "sha256": "417387797a51a8cc42dcdcdc24d6c2b6937d5bfaf3079a0d46110a2bffb7c5ce",
-      "count": 27,
+      "path": "artifacts/camera-runtime-structure-20261014-r1/contracts-registry-final.log",
+      "sha256": "78b88bb64852f0aebea5289e888928c15e8ce79dd68715f79e7e0ab8b6960c3f",
+      "count": 35,
       "passed": true
     },
     "documentation": {
@@ -62,5 +62,11 @@
       "predictions_sha256": "f37070e287c63899fe9c9d2b82bdc09e9729a1c99cac7ba78a89e59aa03617b4"
     }
   },
-  "hosted_ci": "pending submission; local checks are independent"
+  "hosted_ci": {
+    "pr": "https://github.com/INHAautonav/2026-ASMC/pull/85",
+    "initial_failed_run": 38606921687,
+    "initial_failure": "New CameraObjectObservation was missing from the shared message registry.",
+    "registry_fixed_and_local_contracts_passed": true,
+    "latest_result": "Check current PR status; hosted and local results are independent."
+  }
 }

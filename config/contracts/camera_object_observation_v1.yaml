@@ -4,6 +4,10 @@ status: additive_camera_producer
 existing_md5:
   CameraObjectBox: 34412c90553e06734f1acade77c8e1e3
   CameraObjectBoxArray: 310c671afb3693e7909db6453d115b79
+messages:
+  asmc_msgs/CameraObjectObservation:
+    md5: fbddb8fe0071685b60811037c0302106
+    required_fields: [detections, producer_session_id, generation, calibration_id, model_id, config_id]
 observation:
   type: asmc_msgs/CameraObjectObservation
   md5: fbddb8fe0071685b60811037c0302106
