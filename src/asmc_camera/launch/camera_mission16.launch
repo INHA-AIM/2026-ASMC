@@ -1,5 +1,5 @@
 <launch>
-  <!-- Compatibility entrypoint for the E8 live review; canonical entrypoint is perception.launch. -->
+  <!-- Compatibility entrypoint for the E8 live review; canonical entrypoint is camera.launch. -->
   <arg name="profile" default="debug"/>
   <arg name="objects_model_profile" default="finetuned_e8"/>
   <arg name="objects_conf_thres" default="0.40"/>

@@ -71,9 +71,10 @@ def sensor_only_trial(output, seconds):
     for view,topic in topics.items():
         subs.append(rospy.Subscriber(topic,CompressedImage,lambda m,v=view:inputs[v].append(
             dict(arrival=time.monotonic(),stamp_ns=m.header.stamp.to_nsec())),queue_size=100,buff_size=2**24))
-    subs.append(rospy.Subscriber('/diagnostics',DiagnosticArray,lambda m:diagnostics.append(dict(
-        arrival=time.monotonic(),values=[dict(name=s.name,**{v.key:v.value for v in s.values})
-            for s in m.status if s.name.startswith(('morai_sensor_bridge/','morai_udp_bridge/'))])),queue_size=20))
+    for diagnostic_topic in ('/diagnostics','/morai_sensor_bridge/diagnostics','/morai_udp_bridge/diagnostics'):
+        subs.append(rospy.Subscriber(diagnostic_topic,DiagnosticArray,lambda m:diagnostics.append(dict(
+            arrival=time.monotonic(),values=[dict(name=s.name,**{v.key:v.value for v in s.values})
+                for s in m.status if s.name.startswith(('morai_sensor_bridge/','morai_udp_bridge/'))])),queue_size=20))
     sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],['/morai_sensor_bridge','/morai_udp_bridge'],system_metrics=True)
     sampler.start();begin=time.monotonic();end=begin+seconds
     try:

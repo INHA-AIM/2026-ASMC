@@ -1,188 +1,109 @@
 <launch>
-  <!-- P4-C6 canonical entrypoint. Camera/BEV/lane and traffic-light runtime,
-       offline/training support, models and config are owned by asmc_camera.
-       Topics/nodes are unchanged; LiDAR/fusion and data collection remain independent. -->
-  <!-- External planner controls models independently; no route policy starts here. -->
-  <!-- Lane fitting is implemented only for the shadow-road ODD. Even ACTIVE
-       debug output must not be consumed for driving outside that ODD.
-       The planner owns the domain gate; operating_domain is not a location check. -->
-  <!-- idle: no models; planning: warm resident models in STANDBY;
-       debug: all models ACTIVE with debug publishers; legacy: old lane loop.
-       start_* selects which nodes exist; set_inference_mode controls loaded models. -->
-  <arg name="profile" default="idle" doc="idle | planning | debug | legacy"/>
-  <arg name="managed" default="$(eval {'idle': True, 'planning': True, 'debug': True, 'legacy': False}[arg('profile')])"/>
-  <arg name="lane_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)"/>
-  <arg name="objects_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)"/>
-  <arg name="traffic_light_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)"/>
-  <arg name="lane_target_hz" default="10.0"/>
-  <arg name="objects_target_hz" default="15.0"/>
-  <arg name="start_camera_lane" default="$(eval arg('profile') in ['planning', 'debug', 'legacy'])"/>
-  <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning', 'debug'])"/>
-  <arg name="start_camera_objects" default="$(eval arg('profile') in ['planning', 'debug'])"/>
-  <arg name="objects_model_profile" default="finetuned_e8" doc="finetuned_e8 | pretrained_coco7; selected at startup, restart detector to change"/>
-  <arg name="camera_objects_config" default="$(eval find('asmc_camera') + '/config/camera/' + {'finetuned_e8': 'yolo26l_mission16_e8_three_view.yaml', 'pretrained_coco7': 'yolo26l_pretrained_mission_three_view.yaml'}[arg('objects_model_profile')])"/>
-  <arg name="objects_conf_thres" default="" doc="Optional startup cutoff override; consumers can use box.confidence for stricter live filtering."/>
-  <arg name="objects_class_groups_config" default="$(find asmc_camera)/config/camera/object_classes_mission16_v1.yaml"/>
-  <arg name="objects_hood_mask" default="true"/>
-  <arg name="objects_side_ego_mask" default="true"/>
-  <arg name="objects_left_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml"/>
-  <arg name="objects_right_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_right_v1.yaml"/>
-  <arg name="objects_ego_hood_filter" default="false"/>
-  <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml"/>
-  <arg name="objects_debug_raw" default="$(eval arg('profile') == 'debug')"/>
-  <arg name="objects_debug_masks" default="false"/>
-  <arg name="objects_views" default=""/>
-  <arg name="objects_hood_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
-  <arg name="start_visualization" default="$(eval arg('profile') == 'debug')"/>
-  <arg name="visualization_legacy_rqt" default="false"/>
-  <arg name="visualization_calibration_grid" default="false"/>
-  <arg name="publish_bev_debug_metadata"
-       default="$(arg visualization_legacy_rqt)"/>
-
-  <arg name="camera_checkpoint"
-       default="$(find asmc_camera)/../../artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt"/>
-  <arg name="camera_device" default="cuda"/>
-  <arg name="camera_warmup_iterations" default="1"/>
-  <arg name="camera_batch_wait_ms" default="20.0"/>
-  <arg name="camera_model_grid_max_hz" default="15.0"/>
-  <arg name="camera_sensor_set_path"
-       default="$(find asmc_camera)/../../config/morai/sensors/ASMC_sensor_set_v3.json"/>
-  <arg name="camera_calibration_config"
-       default="$(find asmc_camera)/config/cameras_v3.yaml"/>
-  <arg name="bev_grid_config"
-       default="$(find asmc_camera)/config/bev/bev_grid.yaml"/>
-  <arg name="lane_operating_domain" default="shadow_two_way_v1"/>
-  <arg name="lane_algorithm_id" default="twinlite_v6_shadow_boundary_contract_v1"/>
-  <!-- The camera lane result is consumed only as the reinforced shared family
-       in the shadow-road ODD. Keep the canonical family available when lane nodes are enabled. Review
-       markers are enabled by debug/legacy profiles; planning stays headless. -->
-  <arg name="lane_enable_shared_family_debug" default="$(eval arg('profile') in ['debug', 'legacy'])"/>
-  <arg name="lane_enable_boundary_family_candidate" default="true"/>
-  <arg name="lane_enable_independent_boundary_pipeline" default="false"/>
-  <arg name="lane_publish_pipeline_audit" default="false"/>
-
-  <arg name="traffic_light_checkpoint"
-       default="$(find asmc_camera)/models/traffic_light/best.pt"/>
-  <arg name="traffic_light_device" default="auto"/>
-  <arg name="traffic_light_image_topic" default="/cam_extra/image_jpeg/compressed"/>
-  <arg name="traffic_light_state_topic" default="/traffic_light/state"/>
-  <arg name="traffic_light_detail_topic" default="/traffic_light/detail"/>
-  <arg name="traffic_light_typed_topic"
-       default="/perception/traffic_light/detection"/>
-  <arg name="traffic_light_hz" default="10.0"/>
-  <arg name="traffic_light_min_detect" default="0.40"/>
-  <arg name="traffic_light_stale_sec" default="1.0"/>
-  <!-- Managed profiles wait for input without a startup timeout. -->
-  <arg name="traffic_light_wait_first" default="$(eval 10.0 if arg('profile') == 'legacy' else 0.0)"/>
-
-  <group if="$(arg start_camera_objects)">
-    <include file="$(find asmc_camera)/launch/camera_objects.launch">
-      <arg name="config" value="$(arg camera_objects_config)"/>
-      <arg name="conf_thres" value="$(arg objects_conf_thres)"/>
-      <arg name="class_groups_config" value="$(arg objects_class_groups_config)"/>
-      <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
-      <arg name="objects_side_ego_mask" value="$(arg objects_side_ego_mask)"/>
-      <arg name="objects_left_ego_mask_config" value="$(arg objects_left_ego_mask_config)"/>
-      <arg name="objects_right_ego_mask_config" value="$(arg objects_right_ego_mask_config)"/>
-      <arg name="objects_ego_hood_filter" value="$(arg objects_ego_hood_filter)"/>
-      <arg name="objects_ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>
-      <arg name="objects_debug_raw" value="$(arg objects_debug_raw)"/>
-      <arg name="objects_debug_masks" value="$(arg objects_debug_masks)"/>
-      <arg name="views" value="$(arg objects_views)"/>
-      <arg name="objects_hood_mask_config" value="$(arg objects_hood_mask_config)"/>
-      <arg name="managed" value="$(arg managed)"/>
-      <arg name="initial_mode" value="$(arg objects_initial_mode)"/>
-      <arg name="target_hz" value="$(arg objects_target_hz)"/>
-    </include>
-  </group>
-
-  <group if="$(arg start_camera_lane)">
-    <include file="$(find asmc_camera)/launch/camera_lane.launch">
-      <arg name="managed" value="$(arg managed)"/>
-      <arg name="initial_mode" value="$(arg lane_initial_mode)"/>
-      <arg name="target_hz" value="$(arg lane_target_hz)"/>
-      <arg name="checkpoint" value="$(arg camera_checkpoint)"/>
-      <arg name="device" value="$(arg camera_device)"/>
-      <arg name="warmup_iterations" value="$(arg camera_warmup_iterations)"/>
-      <arg name="batch_wait_ms" value="$(arg camera_batch_wait_ms)"/>
-      <arg name="publish_model_grid_road_marking" value="true"/>
-      <arg name="model_grid_max_hz" value="$(arg camera_model_grid_max_hz)"/>
-    </include>
-
-    <node pkg="asmc_camera" type="camera_bev_node.py"
-          name="camera_bev" output="screen" required="$(eval not arg('managed'))">
-      <param name="managed" value="$(arg managed)"/>
-      <rosparam command="load" file="$(arg bev_grid_config)"/>
-      <rosparam command="load" file="$(arg camera_calibration_config)"/>
-      <rosparam param="enabled_views">[front, left, right]</rosparam>
-      <param name="verify_sensor_set" value="true"/>
-      <param name="sensor_set_path" value="$(arg camera_sensor_set_path)"/>
-      <param name="publish_coverage" value="$(arg publish_bev_debug_metadata)"/>
-    </node>
-
-    <node pkg="asmc_camera" type="camera_bev_fusion_node.py"
-          name="camera_bev_fusion" output="screen" required="$(eval not arg('managed'))">
-      <param name="managed" value="$(arg managed)"/>
-      <rosparam command="load" file="$(arg bev_grid_config)"/>
-      <rosparam command="load" file="$(arg camera_calibration_config)"/>
-      <rosparam command="load" file="$(find asmc_camera)/config/bev/fusion.yaml"/>
-      <rosparam param="views">[front, left, right]</rosparam>
-      <param name="publish_debug_metadata"
-             value="$(arg publish_bev_debug_metadata)"/>
-    </node>
-
-    <node pkg="asmc_camera" type="lane_vectorizer_node.py"
-          name="camera_lane_vectorizer" output="screen" required="$(eval not arg('managed'))">
-      <param name="managed" value="$(arg managed)"/>
-      <rosparam command="load" file="$(arg camera_calibration_config)"/>
-      <rosparam command="load" file="$(find asmc_camera)/config/bev/lane_fitting.yaml"/>
-      <rosparam param="views">[front, left, right]</rosparam>
-      <param name="operating_domain" value="$(arg lane_operating_domain)"/>
-      <param name="algorithm_id" value="$(arg lane_algorithm_id)"/>
-      <param name="shared_lane_family/runtime_debug_enabled"
-             value="$(arg lane_enable_shared_family_debug)"/>
-      <param name="enable_boundary_family_candidate"
-             value="$(arg lane_enable_boundary_family_candidate)"/>
-      <param name="enable_independent_boundary_pipeline"
-             value="$(arg lane_enable_independent_boundary_pipeline)"/>
-      <param name="publish_pipeline_audit"
-             value="$(arg lane_publish_pipeline_audit)"/>
-    </node>
-  </group>
-
-  <group if="$(arg start_traffic_light)">
-    <!-- P4-C1 preserves both legacy String topics while publishing the exact
-         source-image header on the typed result. -->
-    <node pkg="asmc_camera" type="traffic_light_node.py" name="traffic_light_infer"
-          output="screen" required="$(eval not arg('managed'))"
-          args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg traffic_light_image_topic) --state-topic $(arg traffic_light_state_topic) --detail-topic $(arg traffic_light_detail_topic) --typed-topic $(arg traffic_light_typed_topic) --device $(arg traffic_light_device) --hz $(arg traffic_light_hz) --min-detect $(arg traffic_light_min_detect) --stale-sec $(arg traffic_light_stale_sec) --wait-first $(arg traffic_light_wait_first)">
-      <param name="managed" value="$(arg managed)"/>
-      <param name="initial_mode" value="$(arg traffic_light_initial_mode)"/>
-      <param name="target_hz" value="$(arg traffic_light_hz)"/>
-    </node>
-  </group>
-
-  <group if="$(arg start_visualization)">
-    <include file="$(find asmc_camera)/launch/visualization.launch">
-      <arg name="camera_calibration_config" value="$(arg camera_calibration_config)"/>
-      <arg name="bev_grid_config" value="$(arg bev_grid_config)"/>
-      <arg name="legacy_rqt" value="$(arg visualization_legacy_rqt)"/>
-      <arg name="calibration_grid" value="$(arg visualization_calibration_grid)"/>
-      <arg name="traffic_light" value="$(arg start_traffic_light)"/>
-      <arg name="camera_lane" value="$(arg start_camera_lane)"/>
-      <arg name="camera_objects" value="$(arg start_camera_objects)"/>
-      <arg name="objects_config" value="$(arg camera_objects_config)"/>
-      <arg name="objects_side_ego_mask" value="$(arg objects_side_ego_mask)"/>
-      <arg name="objects_left_ego_mask_config" value="$(arg objects_left_ego_mask_config)"/>
-      <arg name="objects_right_ego_mask_config" value="$(arg objects_right_ego_mask_config)"/>
-      <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
-      <arg name="objects_ego_hood_filter" value="$(arg objects_ego_hood_filter)"/>
-      <arg name="objects_ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>
-      <arg name="objects_debug_raw" value="$(arg objects_debug_raw)"/>
-      <arg name="objects_hood_mask_config" value="$(arg objects_hood_mask_config)"/>
-      <arg name="traffic_light_image_topic" value="$(arg traffic_light_image_topic)"/>
-      <arg name="traffic_light_detection_topic" value="$(arg traffic_light_typed_topic)"/>
-    </include>
-  </group>
-
+  <!--Compatibility facade; new users use camera.launch and view.launch.-->
+  <arg name="profile" default="idle" doc="idle | planning | debug | legacy" />
+  <arg name="managed" default="$(eval {'idle': True, 'planning': True, 'debug': True, 'legacy': False}[arg('profile')])" />
+  <arg name="lane_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)" />
+  <arg name="objects_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)" />
+  <arg name="traffic_light_initial_mode" default="$(eval 2 if arg('profile') == 'debug' else 0)" />
+  <arg name="lane_target_hz" default="10.0" />
+  <arg name="objects_target_hz" default="15.0" />
+  <arg name="start_camera_lane" default="$(eval arg('profile') in ['planning', 'debug', 'legacy'])" />
+  <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning', 'debug'])" />
+  <arg name="start_camera_objects" default="$(eval arg('profile') in ['planning', 'debug'])" />
+  <arg name="objects_model_profile" default="finetuned_e8" doc="finetuned_e8 | pretrained_coco7; selected at startup, restart detector to change" />
+  <arg name="camera_objects_config" default="$(eval find('asmc_camera') + '/config/camera/' + {'finetuned_e8': 'yolo26l_mission16_e8_three_view.yaml', 'pretrained_coco7': 'yolo26l_pretrained_mission_three_view.yaml'}[arg('objects_model_profile')])" />
+  <arg name="objects_conf_thres" default="" doc="Optional startup cutoff override; consumers can use box.confidence for stricter live filtering." />
+  <arg name="objects_class_groups_config" default="$(find asmc_camera)/config/camera/object_classes_mission16_v1.yaml" />
+  <arg name="objects_hood_mask" default="true" />
+  <arg name="objects_side_ego_mask" default="true" />
+  <arg name="objects_left_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml" />
+  <arg name="objects_right_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_right_v1.yaml" />
+  <arg name="objects_ego_hood_filter" default="false" />
+  <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml" />
+  <arg name="objects_debug_raw" default="$(eval arg('profile') == 'debug')" />
+  <arg name="objects_debug_masks" default="false" />
+  <arg name="objects_views" default="" />
+  <arg name="objects_hood_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml" />
+  <arg name="start_visualization" default="$(eval arg('profile') == 'debug')" />
+  <arg name="visualization_legacy_rqt" default="false" />
+  <arg name="visualization_calibration_grid" default="false" />
+  <arg name="publish_bev_debug_metadata" default="$(arg visualization_legacy_rqt)" />
+  <arg name="camera_checkpoint" default="$(find asmc_camera)/../../artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt" />
+  <arg name="camera_device" default="cuda" />
+  <arg name="camera_warmup_iterations" default="1" />
+  <arg name="camera_batch_wait_ms" default="20.0" />
+  <arg name="camera_model_grid_max_hz" default="15.0" />
+  <arg name="camera_sensor_set_path" default="$(find asmc_camera)/../../config/morai/sensors/ASMC_sensor_set_v3.json" />
+  <arg name="camera_calibration_config" default="$(find asmc_camera)/config/cameras_v3.yaml" />
+  <arg name="bev_grid_config" default="$(find asmc_camera)/config/bev/bev_grid.yaml" />
+  <arg name="lane_operating_domain" default="shadow_two_way_v1" />
+  <arg name="lane_algorithm_id" default="twinlite_v6_shadow_boundary_contract_v1" />
+  <arg name="lane_enable_shared_family_debug" default="$(eval arg('profile') in ['debug', 'legacy'])" />
+  <arg name="lane_enable_boundary_family_candidate" default="true" />
+  <arg name="lane_enable_independent_boundary_pipeline" default="false" />
+  <arg name="lane_publish_pipeline_audit" default="false" />
+  <arg name="traffic_light_checkpoint" default="$(find asmc_camera)/models/traffic_light/best.pt" />
+  <arg name="traffic_light_device" default="auto" />
+  <arg name="traffic_light_image_topic" default="/cam_extra/image_jpeg/compressed" />
+  <arg name="traffic_light_state_topic" default="/traffic_light/state" />
+  <arg name="traffic_light_detail_topic" default="/traffic_light/detail" />
+  <arg name="traffic_light_typed_topic" default="/perception/traffic_light/detection" />
+  <arg name="traffic_light_hz" default="10.0" />
+  <arg name="traffic_light_min_detect" default="0.40" />
+  <arg name="traffic_light_stale_sec" default="1.0" />
+  <arg name="traffic_light_wait_first" default="$(eval 10.0 if arg('profile') == 'legacy' else 0.0)" />
+  <include file="$(find asmc_camera)/launch/_components.launch">
+    <arg name="profile" value="$(arg profile)" />
+    <arg name="managed" value="$(arg managed)" />
+    <arg name="lane_initial_mode" value="$(arg lane_initial_mode)" />
+    <arg name="objects_initial_mode" value="$(arg objects_initial_mode)" />
+    <arg name="traffic_light_initial_mode" value="$(arg traffic_light_initial_mode)" />
+    <arg name="lane_target_hz" value="$(arg lane_target_hz)" />
+    <arg name="objects_target_hz" value="$(arg objects_target_hz)" />
+    <arg name="start_camera_lane" value="$(arg start_camera_lane)" />
+    <arg name="start_traffic_light" value="$(arg start_traffic_light)" />
+    <arg name="start_camera_objects" value="$(arg start_camera_objects)" />
+    <arg name="objects_model_profile" value="$(arg objects_model_profile)" />
+    <arg name="camera_objects_config" value="$(arg camera_objects_config)" />
+    <arg name="objects_conf_thres" value="$(arg objects_conf_thres)" />
+    <arg name="objects_class_groups_config" value="$(arg objects_class_groups_config)" />
+    <arg name="objects_hood_mask" value="$(arg objects_hood_mask)" />
+    <arg name="objects_side_ego_mask" value="$(arg objects_side_ego_mask)" />
+    <arg name="objects_left_ego_mask_config" value="$(arg objects_left_ego_mask_config)" />
+    <arg name="objects_right_ego_mask_config" value="$(arg objects_right_ego_mask_config)" />
+    <arg name="objects_ego_hood_filter" value="$(arg objects_ego_hood_filter)" />
+    <arg name="objects_ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)" />
+    <arg name="objects_debug_raw" value="$(arg objects_debug_raw)" />
+    <arg name="objects_debug_masks" value="$(arg objects_debug_masks)" />
+    <arg name="objects_views" value="$(arg objects_views)" />
+    <arg name="objects_hood_mask_config" value="$(arg objects_hood_mask_config)" />
+    <arg name="start_visualization" value="$(arg start_visualization)" />
+    <arg name="visualization_legacy_rqt" value="$(arg visualization_legacy_rqt)" />
+    <arg name="visualization_calibration_grid" value="$(arg visualization_calibration_grid)" />
+    <arg name="publish_bev_debug_metadata" value="$(arg publish_bev_debug_metadata)" />
+    <arg name="camera_checkpoint" value="$(arg camera_checkpoint)" />
+    <arg name="camera_device" value="$(arg camera_device)" />
+    <arg name="camera_warmup_iterations" value="$(arg camera_warmup_iterations)" />
+    <arg name="camera_batch_wait_ms" value="$(arg camera_batch_wait_ms)" />
+    <arg name="camera_model_grid_max_hz" value="$(arg camera_model_grid_max_hz)" />
+    <arg name="camera_sensor_set_path" value="$(arg camera_sensor_set_path)" />
+    <arg name="camera_calibration_config" value="$(arg camera_calibration_config)" />
+    <arg name="bev_grid_config" value="$(arg bev_grid_config)" />
+    <arg name="lane_operating_domain" value="$(arg lane_operating_domain)" />
+    <arg name="lane_algorithm_id" value="$(arg lane_algorithm_id)" />
+    <arg name="lane_enable_shared_family_debug" value="$(arg lane_enable_shared_family_debug)" />
+    <arg name="lane_enable_boundary_family_candidate" value="$(arg lane_enable_boundary_family_candidate)" />
+    <arg name="lane_enable_independent_boundary_pipeline" value="$(arg lane_enable_independent_boundary_pipeline)" />
+    <arg name="lane_publish_pipeline_audit" value="$(arg lane_publish_pipeline_audit)" />
+    <arg name="traffic_light_checkpoint" value="$(arg traffic_light_checkpoint)" />
+    <arg name="traffic_light_device" value="$(arg traffic_light_device)" />
+    <arg name="traffic_light_image_topic" value="$(arg traffic_light_image_topic)" />
+    <arg name="traffic_light_state_topic" value="$(arg traffic_light_state_topic)" />
+    <arg name="traffic_light_detail_topic" value="$(arg traffic_light_detail_topic)" />
+    <arg name="traffic_light_typed_topic" value="$(arg traffic_light_typed_topic)" />
+    <arg name="traffic_light_hz" value="$(arg traffic_light_hz)" />
+    <arg name="traffic_light_min_detect" value="$(arg traffic_light_min_detect)" />
+    <arg name="traffic_light_stale_sec" value="$(arg traffic_light_stale_sec)" />
+    <arg name="traffic_light_wait_first" value="$(arg traffic_light_wait_first)" />
+  </include>
 </launch>

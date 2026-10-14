@@ -11,7 +11,7 @@ import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from sensor_msgs.msg import CompressedImage
 
-from asmc_msgs.msg import CameraObjectBox, CameraObjectBoxArray
+from asmc_msgs.msg import CameraObjectBox, CameraObjectBoxArray, CameraObjectObservation
 from asmc_camera.camera.frame_buffer import EncodedFrame, LatestFrameBuffer
 from asmc_camera.detection.classes import load_class_groups
 from asmc_camera.detection.processor import ObjectFrameProcessor
@@ -42,33 +42,36 @@ from asmc_camera.runtime.state import ACTIVE
 
 
 class ObjectDetectionNode:
-    def __init__(self, backend=None):
+    def __init__(self, backend=None, parameters=None, input_source=None, fault_handler=None):
+        from asmc_camera.runtime.parameters import Parameters
+        self.parameters = parameters or Parameters()
+        self.input_source, self.fault_handler = input_source, fault_handler
         check_message_build()
-        confidence = validate_confidence(rospy.get_param("~conf_thres", 0.7))
-        self.views = list(rospy.get_param("~views", ["front"]))
+        confidence = validate_confidence(self.parameters.get("~conf_thres", 0.7))
+        self.views = list(self.parameters.get("~views", ["front"]))
         if not self.views or len(set(self.views)) != len(self.views) or set(self.views)-{'front','left','right'}:
             raise ValueError("views must contain unique front/left/right names")
-        production_batch = bool(rospy.get_param("~batched_runtime", False))
-        experimental = bool(rospy.get_param('~seg_experiment', False))
+        production_batch = bool(self.parameters.get("~batched_runtime", False))
+        experimental = bool(self.parameters.get('~seg_experiment', False))
         if self.views != ['front'] and not (experimental or production_batch):
             raise ValueError('multiple object views require seg_experiment=true')
-        self.debug_masks = bool(rospy.get_param('~debug_masks', False))
-        groups = load_class_groups(rospy.get_param("~class_groups"))
-        hood_mask = HoodMask.load(bool(rospy.get_param("~hood_mask", False)),
-                                  rospy.get_param("~hood_mask_config", ""))
+        self.debug_masks = bool(self.parameters.get('~debug_masks', False))
+        groups = load_class_groups(self.parameters.get("~class_groups"))
+        hood_mask = HoodMask.load(bool(self.parameters.get("~hood_mask", False)),
+                                  self.parameters.get("~hood_mask_config", ""))
         view_masks = load_view_masks(self.views, hood_mask,
-                                    bool(rospy.get_param('~side_ego_mask', False)),
-                                    rospy.get_param('~side_ego_mask_configs', {}))
-        ego_hood_filter = EgoHoodFilter.load(bool(rospy.get_param("~ego_hood_filter", False)),
-                                            rospy.get_param("~ego_hood_filter_config", ""))
+                                    bool(self.parameters.get('~side_ego_mask', False)),
+                                    self.parameters.get('~side_ego_mask_configs', {}))
+        ego_hood_filter = EgoHoodFilter.load(bool(self.parameters.get("~ego_hood_filter", False)),
+                                            self.parameters.get("~ego_hood_filter_config", ""))
         if hood_mask.enabled and ego_hood_filter.enabled:
             raise ValueError("hood input mask and ego hood post-filter are mutually exclusive")
         if backend is None:
-            batched = production_batch or bool(rospy.get_param('~batched_experiment', False))
+            batched = production_batch or bool(self.parameters.get('~batched_experiment', False))
             if batched and not (experimental or production_batch):
                 raise ValueError('batched runtime requires seg_experiment=true')
             if batched:
-                if rospy.get_param('~model_kind', 'yolo') == 'rfdetr':
+                if self.parameters.get('~model_kind', 'yolo') == 'rfdetr':
                     from asmc_camera.detection.rfdetr_backend import RFDetrBackend
                     factory = RFDetrBackend
                 elif production_batch:
@@ -82,30 +85,30 @@ class ObjectDetectionNode:
                 factory = SegmentationDetector
             else:
                 factory = UltralyticsDetector
-            extra = dict(task=rospy.get_param('~task', 'detect'),
-                         front_width=int(rospy.get_param('~front_width', 1280)),
-                         batch_mode=rospy.get_param('~batch_mode', '2plus1'),
-                         runtime_backend=rospy.get_param('~runtime_backend', 'tensorrt'),
-                         source_checkpoint_sha256=rospy.get_param('~source_checkpoint_sha256',''),
-                         expected_prompt_sha256=rospy.get_param('~expected_prompt_sha256','')) if batched else {}
+            extra = dict(task=self.parameters.get('~task', 'detect'),
+                         front_width=int(self.parameters.get('~front_width', 1280)),
+                         batch_mode=self.parameters.get('~batch_mode', '2plus1'),
+                         runtime_backend=self.parameters.get('~runtime_backend', 'tensorrt'),
+                         source_checkpoint_sha256=self.parameters.get('~source_checkpoint_sha256',''),
+                         expected_prompt_sha256=self.parameters.get('~expected_prompt_sha256','')) if batched else {}
             if production_batch:
-                extra.update(head_profile=rospy.get_param('~head_profile', 'legacy_coco7'),
-                             nms_iou=rospy.get_param('~nms_iou', .7))
-            if rospy.get_param('~model_kind', 'yolo') == 'rfdetr':
+                extra.update(head_profile=self.parameters.get('~head_profile', 'legacy_coco7'),
+                             nms_iou=self.parameters.get('~nms_iou', .7))
+            if self.parameters.get('~model_kind', 'yolo') == 'rfdetr':
                 if not batched:
                     raise ValueError('RF-DETR requires opt-in batch runtime')
-                extra['rfdetr_input_shapes'] = rospy.get_param('~rfdetr_input_shapes', None)
+                extra['rfdetr_input_shapes'] = self.parameters.get('~rfdetr_input_shapes', None)
             backend = factory(
-                weights=rospy.get_param("~weights"),
-                device=rospy.get_param("~device", "cuda:0"),
-                require_cuda=bool(rospy.get_param("~require_cuda", True)),
+                weights=self.parameters.get("~weights"),
+                device=self.parameters.get("~device", "cuda:0"),
+                require_cuda=bool(self.parameters.get("~require_cuda", True)),
                 conf_thres=confidence,
-                allowed_names=rospy.get_param("~allowed_names", ["bus", "truck", "person", "car"]),
-                expected_sha256=rospy.get_param("~expected_sha256", ""),
-                predict_overrides=rospy.get_param("~predict_overrides", {}),
+                allowed_names=self.parameters.get("~allowed_names", ["bus", "truck", "person", "car"]),
+                expected_sha256=self.parameters.get("~expected_sha256", ""),
+                predict_overrides=self.parameters.get("~predict_overrides", {}),
                 log=rospy.loginfo,
-                model_kind=rospy.get_param('~model_kind', 'yolo'),
-                prompt_embeddings=rospy.get_param('~prompt_embeddings', ''),
+                model_kind=self.parameters.get('~model_kind', 'yolo'),
+                prompt_embeddings=self.parameters.get('~prompt_embeddings', ''),
                 **extra
             )
         self.batch_backend = backend if getattr(backend, 'batched', False) is True else None
@@ -113,11 +116,12 @@ class ObjectDetectionNode:
             hood_mask=view_masks[v],
             ego_hood_filter=ego_hood_filter if v == 'front' else EgoHoodFilter(),
             include_masks=self.debug_masks,
-            label_mode=rospy.get_param("~label_mode", "group")) for v in self.views}
+            label_mode=self.parameters.get("~label_mode", "group")) for v in self.views}
         self.processor = self.processors.get('front', self.processors[self.views[0]])
         self.backend_info = dict(backend.info)
-        self.backend_info["deployment_profile"] = rospy.get_param("~deployment_profile", "custom")
-        batch_wait = float(rospy.get_param('~batch_wait_ms', 10 if self.batch_backend else 0))
+        self.backend_info['runtime_layout'] = 'shared' if input_source is not None else 'separate'
+        self.backend_info["deployment_profile"] = self.parameters.get("~deployment_profile", "custom")
+        batch_wait = float(self.parameters.get('~batch_wait_ms', 10 if self.batch_backend else 0))
         if not 0 <= batch_wait <= 10:
             raise ValueError('object batch wait must be in [0,10] ms')
         self.buffer = LatestFrameBuffer(self.views, batch_wait_ms=batch_wait)
@@ -134,7 +138,7 @@ class ObjectDetectionNode:
         self.duplicates = []
         self.publisher = rospy.Publisher("/perception/camera/objects", CameraObjectBoxArray, queue_size=5)
         self.raw_publisher = (rospy.Publisher("/perception/camera/objects/debug/raw", CameraObjectBoxArray, queue_size=5)
-                              if bool(rospy.get_param("~debug_raw", False)) else None)
+                              if bool(self.parameters.get("~debug_raw", False)) else None)
         self.filter_counts = dict(raw=0, kept=0, excluded=0)
         self.excluded_boxes = 0
         self.diagnostics = rospy.Publisher("/perception/camera/objects/diagnostics", DiagnosticArray, queue_size=5)
@@ -143,14 +147,18 @@ class ObjectDetectionNode:
         self.mask_publishers = {v: rospy.Publisher(
             '/perception/camera/objects/debug/'+('instances' if v == 'front' else v+'/instances')+'/compressed',
             CompressedImage, queue_size=1) for v in self.views} if self.debug_masks else {}
-        self.control = RosInferenceControl("yolo", self.views, 20., on_transition=self._invalidate)
+        self.control = RosInferenceControl("yolo", self.views, 20., on_transition=self._invalidate, parameters=self.parameters)
+        from asmc_camera.runtime.observation import ObservationIdentity
+        self.identity = ObservationIdentity.from_parameters(self.parameters, self.backend_info, self.control.session_id)
+        self.observations = rospy.Publisher('/perception/camera/objects/observations', CameraObjectObservation, queue_size=5)
         self.control.state.record('startup', model_load_ms=self.backend_info.get('model_load_ms'),
                                   dummy_warmup_ms=self.backend_info.get('warmup_ms'))
-        topics = dict(front=rospy.get_param('~image_topic','/image_jpeg/compressed'),
+        topics = dict(front=self.parameters.get('~image_topic','/image_jpeg/compressed'),
                       left='/cam_left/image_jpeg/compressed', right='/cam_right/image_jpeg/compressed')
-        topics.update(rospy.get_param('~image_topics', {}))
-        self.subscribers = [rospy.Subscriber(topics[v], CompressedImage, partial(self._callback, view=v),
-                            queue_size=1, buff_size=2**24) for v in self.views]
+        topics.update(self.parameters.get('~image_topics', {}))
+        self.subscribers = [self.input_source.subscribe(topics[v], partial(self._callback, view=v))
+                            if self.input_source else rospy.Subscriber(topics[v], CompressedImage,
+                            partial(self._callback, view=v), queue_size=1, buff_size=2**24) for v in self.views]
         self.subscriber = self.subscribers[0]
         rospy.on_shutdown(self.shutdown)
         self.worker = threading.Thread(target=self._worker, daemon=True)
@@ -164,7 +172,9 @@ class ObjectDetectionNode:
         if mode != ACTIVE:
             for header in self.last_headers.values():
                 message = CameraObjectBoxArray(header=copy.deepcopy(header), valid=False)
+                observation = self.identity.wrap(message, self.control.state.generation, CameraObjectObservation)
                 self.publisher.publish(message)
+                self.observations.publish(observation)
                 if self.raw_publisher is not None:
                     self.raw_publisher.publish(message)
 
@@ -176,11 +186,13 @@ class ObjectDetectionNode:
                 self.header_errors += 1
                 rospy.logwarn_throttle(5, "camera objects requires nonzero source stamp and matching camera view frame_id")
                 return
-        self.control.state.observe(view, message.header.stamp.to_nsec())
+        generation = self.control.observe(view, message.header.stamp.to_nsec())
         self.buffer.push(ObjectFrame(view=view, stamp=message.header.stamp,
                                      frame_id=message.header.frame_id, data=bytes(message.data),
-                                     received_monotonic=time.monotonic(),
-                                     received_ros_ns=rospy.Time.now().to_nsec(), header=copy.deepcopy(message.header)))
+                                     received_monotonic=getattr(message, 'received_monotonic', time.monotonic()),
+                                     received_ros_ns=getattr(message, 'received_ros_ns', rospy.Time.now().to_nsec()),
+                                     decode_key=getattr(message, 'decode_key', None),
+                                     decode_source=getattr(message, 'decode_source', None), generation=generation, header=copy.deepcopy(message.header)))
 
     def _worker(self):
         while not self.stop.is_set() and not rospy.is_shutdown():
@@ -192,7 +204,7 @@ class ObjectDetectionNode:
                 from asmc_camera.detection.batch_processor import process_batch
                 admitted, tokens = [], {}
                 for frame in frames:
-                    token = self.control.state.begin({frame.view:frame.stamp.to_nsec()}, per_view=True)
+                    token = self.control.state.begin({frame.view:frame.stamp.to_nsec()}, per_view=True, expected_generation=frame.generation)
                     if token is not None:
                         admitted.append(frame)
                         tokens[frame.view] = token
@@ -205,7 +217,7 @@ class ObjectDetectionNode:
             for frame in frames:
                 processor = self.processors[frame.view]
                 stamps = {frame.view: frame.stamp.to_nsec()}
-                token = self.control.state.begin(stamps, per_view=len(self.views)>1)
+                token = self.control.state.begin(stamps, per_view=len(self.views)>1, expected_generation=frame.generation)
                 if token is None:
                     continue
                 if self.raw_publisher is not None:
@@ -218,6 +230,8 @@ class ObjectDetectionNode:
                 self._consume(frame, token, message, raw, timings, error)
 
     def _consume(self, frame, token, message, raw, timings, error):
+        if error and self.fault_handler:
+            self.fault_handler(error[1])
         processor = self.processors[frame.view]
         stamps = {frame.view:frame.stamp.to_nsec()}
         with self.control.state.output_guard(token) as allowed:
@@ -225,7 +239,9 @@ class ObjectDetectionNode:
                 return
             self.control.state.complete(token, stamps, message.valid, error[0] if error else '')
             if self.control.state.mode == ACTIVE:
+                observation = self.identity.wrap(message, self.control.state.generation, CameraObjectObservation)
                 self.publisher.publish(message)
+                self.observations.publish(observation)
                 if self.raw_publisher is not None:
                     self.raw_publisher.publish(raw if raw is not None else message)
                 self.last_header = copy.deepcopy(frame.header)
@@ -327,6 +343,8 @@ class ObjectDetectionNode:
             publisher.publish(CompressedImage(header=copy.deepcopy(frame.header),format='jpeg',data=data.tobytes()))
 
     def shutdown(self):
+        if self.stop.is_set():
+            return
         self.stop.set()
         for subscriber in self.subscribers:
             subscriber.unregister()

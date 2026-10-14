@@ -1,4 +1,5 @@
 """Decode once and retain per-frame failures while batching valid observations."""
+from contextlib import ExitStack
 import time
 import cv2
 import numpy as np
@@ -6,6 +7,11 @@ from .messages import build_box_array
 
 
 def process_batch(frames, processors, backend, include_raw=False):
+    with ExitStack() as leases:
+        return _process_batch(frames, processors, backend, include_raw, leases)
+
+
+def _process_batch(frames, processors, backend, include_raw, leases):
     images, rows = {}, {}
     for frame in frames:
         p = processors[frame.view]
@@ -14,7 +20,8 @@ def process_batch(frames, processors, backend, include_raw=False):
         timings = {}
         start = time.monotonic()
         try:
-            image = p.decode(np.frombuffer(frame.data, np.uint8), cv2.IMREAD_COLOR)
+            image = (leases.enter_context(frame.decode_source.lease(frame)) if getattr(frame, 'decode_source', None)
+                     else p.decode(np.frombuffer(frame.data, np.uint8), cv2.IMREAD_COLOR))
             if image is None:
                 raise ValueError('JPEG decoder returned no image')
             p.last_image = image

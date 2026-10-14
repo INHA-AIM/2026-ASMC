@@ -1,0 +1,10 @@
+# Preserve the accepted TwinLite runtime; 15Hz remains an experiment.
+checkpoint: $(find asmc_camera)/../../artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+device: cuda
+input_hw: [384, 640]
+views: [front, left, right]
+amp: true
+warmup_iterations: 1
+batch_wait_ms: 20.0
+publish_model_grid_road_marking: true
+model_grid_max_hz: 15.0

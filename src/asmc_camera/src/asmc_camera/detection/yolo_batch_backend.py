@@ -126,6 +126,16 @@ class BatchedYoloDetector:
                 if self.task == 'segment' and getattr(result, 'masks', None) is not None:
                     bitmap = (scale_masks(result.masks.data[None], tensor_hw)[0] > .5).cpu().numpy()
                 detections, masks = select_result(result, result.names, self.allowed, self.conf, bitmap)
+                if self.mission and getattr(self, 'capture_pre_nms_evaluation', False):
+                    if not hasattr(self, 'pre_nms_evaluation'):
+                        self.pre_nms_evaluation = {}
+                    self.pre_nms_evaluation[view] = []
+                    for detection in detections:
+                        clipped = transform.box(detection)
+                        self.pre_nms_evaluation[view].append(dict(class_name=detection.source_class_name,
+                            confidence=detection.confidence,
+                            xyxy=[clipped.xmin,clipped.ymin,clipped.xmax,clipped.ymax],
+                            nms_xyxy=[detection.xmin,detection.ymin,detection.xmax,detection.ymax]))
                 if self.mission:
                     from .output_nms import suppress
                     indexed = [dict(class_name=d.source_class_name, confidence=d.confidence,

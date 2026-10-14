@@ -1,5 +1,21 @@
 schema_version: 1
 profile: camera_runtime_profiles_v1
+# Legacy perception.launch profiles remain valid below.
+entrypoints:
+  camera:
+    launch: camera.launch
+    default_mode: standby
+    default_models: all
+    default_detector: e8
+    confidence: 0.40
+    nms_iou: 0.70
+    implementation: separate
+  view:
+    launch: view.launch
+    starts_inference: false
+observation_contract: config/contracts/camera_object_observation_v1.yaml
+postprocessing_candidate: {confidence: 0.40, nms_iou: 0.50, exclusive_names: false}
+# The candidate is an explicit startup override; the agreed 0.70 default stays.
 launch_profiles:
   default: idle
   idle: {load_models: false, inference: false, visualization: false}
@@ -12,9 +28,12 @@ activation_owner: planning
 
 components:
   camera_objects:
-    enabled_by_default: false
+    enabled_by_default: true  # camera.launch loads the model in STANDBY
     launch_argument: start_camera_objects
     canonical_topic: /perception/camera/objects
+    observation_topic: /perception/camera/objects/observations
+    mode_service: /perception/camera/objects/set_mode
+    status_topic: /perception/camera/objects/status
     diagnostics_topic: /perception/camera/objects/diagnostics
     source_stamp_policy: source_image_header
     views: [front, left, right]
@@ -25,7 +44,7 @@ components:
     implementation: asmc_camera/object_detection_node.py
     consumer: Main/camera_objects_yolo_bbox_adapter.py
   camera_lane:
-    enabled_by_default: false
+    enabled_by_default: true  # camera.launch loads the model in STANDBY
     sensor_set: ASMC_sensor_set_v3
     output_frame: base_link
     source_stamp_policy: newest_synchronized_camera_source
@@ -61,7 +80,7 @@ components:
       compatibility_topic_enabled_by_default: false
       compatibility_launch_argument: lane_enable_independent_boundary_pipeline
   traffic_light:
-    enabled_by_default: false
+    enabled_by_default: true  # camera.launch loads the model in STANDBY
     activation_owner: planning
     legacy_topics: [/traffic_light/state, /traffic_light/detail]
     canonical_topic: /perception/traffic_light/detection

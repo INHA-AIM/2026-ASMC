@@ -1,5 +1,8 @@
 # 카메라 객체 배포·소비 계약 — 2026-10-14
 
+> 현재 실행·새 제어 경로는 [카메라 실행·3뷰 관측 계약](../../contracts/perception/camera-runtime-v1.md)이 정본입니다.
+> 아래 기존 profile/서비스 설명과 과거 검증 결과는 호환·재현 기록으로 보존합니다.
+
 현재 개발 기본은 **YOLO26l v11 E8, 16종, 전방1280·좌우640, TensorRT FP16,
 3뷰15Hz·2+1 batch, Ego mask ON, confidence0.40·동일 클래스 NMS0.70**이다.
 사용자가 실시간 육안 시험 후 개발 기본 적용을 승인했다. SUNNY/FOGGY·11/13/15시 전체 조건,

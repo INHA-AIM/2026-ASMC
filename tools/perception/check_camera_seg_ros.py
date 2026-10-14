@@ -62,7 +62,7 @@ def main():
         subs.append(rospy.Subscriber(topic,CompressedImage,overlays.append,queue_size=100))
     topics=dict(front='/image_jpeg/compressed',left='/cam_left/image_jpeg/compressed',right='/cam_right/image_jpeg/compressed')
     pubs={v:rospy.Publisher(topics[v],CompressedImage,queue_size=5) for v in views}
-    service=rospy.ServiceProxy('~set_inference_mode',SetInferenceMode)
+    service=rospy.ServiceProxy('/perception/camera/objects/set_mode',SetInferenceMode)
     jpeg=cv2.imencode('.jpg',np.full((24,32,3),180,np.uint8))[1].tobytes()
     checks={}
     def wait(test,description):

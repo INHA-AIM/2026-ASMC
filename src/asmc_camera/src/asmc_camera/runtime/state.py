@@ -87,9 +87,11 @@ class InferenceState:
             self.record('request_accepted', target_hz=target, source_cutoff_ns=self.cutoff)
             return True, self.generation, 'accepted_not_ready'
 
-    def begin(self, stamps, per_view=False):
+    def begin(self, stamps, per_view=False, expected_generation=None):
         with self.lock:
             now = self.clock()
+            if expected_generation is not None and expected_generation != self.generation:
+                return None
             if not stamps or any(v not in self.views or n <= 0 for v, n in stamps.items()):
                 return None
             deadline = max((self.next_by_view.get(v, 0.) for v in stamps), default=0.) if per_view else self.next_at

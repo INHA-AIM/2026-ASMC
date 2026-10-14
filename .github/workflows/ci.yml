@@ -124,6 +124,7 @@ jobs:
           python3 -m unittest tools/perception/test_tunnel_summary.py
           python3 -m unittest tools/perception/test_camera_lidar_evidence.py
           python3 -m unittest discover -s src/asmc_camera/test/runtime -p 'test_*.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_runtime_measurements.py'
 
       - name: Check inference control faults with generated ROS messages
         run: |

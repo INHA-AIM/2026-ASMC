@@ -1,27 +1,36 @@
 """ROS adapter for the per-model execution API, without route policy."""
 import threading
+import uuid
 import rospy
 from asmc_camera.msg import InferenceStatus
 from asmc_camera.srv import SetInferenceMode, SetInferenceModeResponse
 from .state import InferenceState, STANDBY, ACTIVE
 from .trace import LifecycleTrace
+from .parameters import Parameters, control_paths
 
 
 class RosInferenceControl:
-    def __init__(self, model, views, default_hz, warmed_up=True, on_transition=None):
+    def __init__(self, model, views, default_hz, warmed_up=True, on_transition=None, parameters=None):
         self.model = model
-        self.trace = LifecycleTrace(rospy.get_param('~lifecycle_trace_path', ''))
+        self.parameters = parameters or Parameters()
+        get = self.parameters.get
+        self.session_id = str(uuid.uuid4())
+        self.fatal_reason = ''
+        self.trace = LifecycleTrace(get('~lifecycle_trace_path', ''))
         self.state = InferenceState(
-            views, managed=bool(rospy.get_param('~managed', False)),
-            initial_mode=int(rospy.get_param('~initial_mode', STANDBY)),
-            target_hz=float(rospy.get_param('~target_hz', default_hz)), warmed_up=warmed_up,
+            views, managed=bool(get('~managed', False)),
+            initial_mode=int(get('~initial_mode', STANDBY)),
+            target_hz=float(get('~target_hz', default_hz)), warmed_up=warmed_up,
             trace=self.trace if self.trace.path is not None else None,
-            target_hz_by_view=rospy.get_param('~target_hz_by_view', {}))
+            target_hz_by_view=get('~target_hz_by_view', {}))
         self.state.record('control_ready', loaded=True, warmed_up=bool(warmed_up))
         self.on_transition = on_transition
         self.pipeline = None
-        self.publisher = rospy.Publisher('~inference_status', InferenceStatus, queue_size=1, latch=True)
-        self.service = rospy.Service('~set_inference_mode', SetInferenceMode, self._request)
+        service, status, legacy = control_paths(model)
+        self.publisher = rospy.Publisher(status, InferenceStatus, queue_size=1, latch=True)
+        self.legacy_publisher = rospy.Publisher(legacy + '/inference_status', InferenceStatus, queue_size=1, latch=True)
+        self.service = rospy.Service(service, SetInferenceMode, self._request)
+        self.legacy_service = rospy.Service(legacy + '/set_inference_mode', SetInferenceMode, self._request)
         self.stopped = threading.Event()
         self.publish()
         self.thread = threading.Thread(target=self._status_loop, daemon=True)
@@ -38,6 +47,8 @@ class RosInferenceControl:
 
     def _request(self, request):
         with self.state.lock:
+            if self.fatal_reason:
+                return SetInferenceModeResponse(False, self.state.generation, self.fatal_reason)
             previous = self.state.generation
             accepted, generation, reason = self.state.request(request.mode, request.target_hz)
             if accepted and generation != previous:
@@ -46,6 +57,27 @@ class RosInferenceControl:
                     self.on_transition(request.mode)
             self.publish()
         return SetInferenceModeResponse(accepted, generation, reason)
+
+    def observe(self, view, stamp):
+        with self.state.lock:
+            previous = self.state.generation
+            self.state.observe(view, stamp)
+            if self.state.generation != previous:
+                self.pipeline = None
+                if self.on_transition:
+                    self.on_transition(STANDBY)  # invalidate, keep requested mode
+                self.publish()
+            return self.state.generation
+
+    def fault(self, reason):
+        with self.state.lock:
+            self.fatal_reason = 'runtime_restart_required: ' + str(reason)
+            self.state.request(STANDBY)
+            self.state.warmed_up = False
+            self.state.errors += 1
+            if self.on_transition:
+                self.on_transition(STANDBY)
+            self.publish()
 
     def pipeline_observation(self, message):
         with self.state.lock:
@@ -68,6 +100,8 @@ class RosInferenceControl:
                 if key in ('source_cutoff', 'last_source_stamp'):
                     value = rospy.Time(value // 1000000000, value % 1000000000)
                 setattr(msg, key, value)
+            if self.fatal_reason:
+                msg.reason = self.fatal_reason
             if self.model == 'twinlite':
                 p = self.pipeline
                 msg.pipeline_ready = bool(values['prepared'] and p and p[1] and
@@ -78,13 +112,17 @@ class RosInferenceControl:
             else:
                 msg.pipeline_ready = values['prepared']
             self.publisher.publish(msg)
+            self.legacy_publisher.publish(msg)
             self.state.record('status', prepared=msg.prepared, pipeline_ready=msg.pipeline_ready,
                               successful_batches=msg.successful_batches, reason=msg.reason)
 
     def close(self):
+        if self.stopped.is_set():
+            return
         self.stopped.set()
         self.thread.join(timeout=1.)
         self.service.shutdown()
+        self.legacy_service.shutdown()
         self.trace.close()
 
 

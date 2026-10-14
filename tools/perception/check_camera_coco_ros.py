@@ -57,10 +57,10 @@ def main():
     backend = Backend()
     node = ObjectDetectionNode(backend)
     statuses, outputs = [], []
-    subscriptions = [rospy.Subscriber('~inference_status', InferenceStatus, statuses.append, queue_size=100),
+    subscriptions = [rospy.Subscriber('/perception/camera/objects/status', InferenceStatus, statuses.append, queue_size=100),
                      rospy.Subscriber('/perception/camera/objects', CameraObjectBoxArray, outputs.append, queue_size=100)]
     publisher = rospy.Publisher('/image_jpeg/compressed', CompressedImage, queue_size=5)
-    service = rospy.ServiceProxy('~set_inference_mode', SetInferenceMode)
+    service = rospy.ServiceProxy('/perception/camera/objects/set_mode', SetInferenceMode)
     jpeg = cv2.imencode('.jpg', np.full((24, 32, 3), 180, np.uint8))[1].tobytes()
     checks = {}
     def wait(predicate, description):

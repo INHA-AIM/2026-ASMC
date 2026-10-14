@@ -27,8 +27,11 @@ SUPPORTED_VIEWS = ("front", "left", "right")
 
 
 class SemanticInferenceNode:
-    def __init__(self) -> None:
-        self.views = tuple(str(value) for value in rospy.get_param("~views", ["front"]))
+    def __init__(self, parameters=None, input_source=None, fault_handler=None) -> None:
+        from asmc_camera.runtime.parameters import Parameters
+        self.parameters = parameters or Parameters()
+        self.input_source, self.fault_handler = input_source, fault_handler
+        self.views = tuple(str(value) for value in self.parameters.get("~views", ["front"]))
         unknown = set(self.views) - set(SUPPORTED_VIEWS)
         if not self.views or unknown or len(set(self.views)) != len(self.views):
             raise ValueError(
@@ -36,34 +39,34 @@ class SemanticInferenceNode:
                     SUPPORTED_VIEWS, self.views
                 )
             )
-        camera_topics = dict(rospy.get_param("~camera_topics"))
+        camera_topics = dict(self.parameters.get("~camera_topics"))
         missing_topics = [view for view in self.views if view not in camera_topics]
         if missing_topics:
             raise ValueError("camera_topics missing views: {}".format(missing_topics))
 
-        backend_name = str(rospy.get_param("~backend", "twinlite"))
+        backend_name = str(self.parameters.get("~backend", "twinlite"))
         load_started = time.perf_counter()
         backend = create_backend(
             backend_name,
-            checkpoint=str(rospy.get_param("~checkpoint")),
-            model_config=str(rospy.get_param("~model_config", "medium")),
-            twinlite_root=rospy.get_param("~twinlite_root", None),
-            device=str(rospy.get_param("~device", "cuda")),
-            weights=str(rospy.get_param("~weights", "auto")),
-            amp=bool(rospy.get_param("~amp", True)),
-            channels_last=bool(rospy.get_param("~channels_last", False)),
+            checkpoint=str(self.parameters.get("~checkpoint")),
+            model_config=str(self.parameters.get("~model_config", "medium")),
+            twinlite_root=self.parameters.get("~twinlite_root", None),
+            device=str(self.parameters.get("~device", "cuda")),
+            weights=str(self.parameters.get("~weights", "auto")),
+            amp=bool(self.parameters.get("~amp", True)),
+            channels_last=bool(self.parameters.get("~channels_last", False)),
             input_hw=tuple(
                 int(value)
-                for value in rospy.get_param("~input_hw", [384, 640])
+                for value in self.parameters.get("~input_hw", [384, 640])
             ),
         )
         self.engine = InferenceEngine(
             backend,
-            restore_original=bool(rospy.get_param("~restore_original", True)),
+            restore_original=bool(self.parameters.get("~restore_original", True)),
         )
         model_load_ms = (time.perf_counter() - load_started) * 1000.
         dummy_warmup_ms = 0.
-        warmup_iterations = int(rospy.get_param("~warmup_iterations", 1))
+        warmup_iterations = int(self.parameters.get("~warmup_iterations", 1))
         if warmup_iterations < 0:
             raise ValueError("warmup_iterations must be non-negative")
         if warmup_iterations:
@@ -84,9 +87,9 @@ class SemanticInferenceNode:
             )
         self.buffer = LatestFrameBuffer(
             self.views,
-            batch_wait_ms=float(rospy.get_param("~batch_wait_ms", 4.0)),
+            batch_wait_ms=float(self.parameters.get("~batch_wait_ms", 4.0)),
         )
-        self.log_interval = float(rospy.get_param("~log_interval_sec", 2.0))
+        self.log_interval = float(self.parameters.get("~log_interval_sec", 2.0))
         if self.log_interval <= 0:
             raise ValueError("log_interval_sec must be positive")
         self.categorical_heads = frozenset(backend.info.categorical_classes)
@@ -124,9 +127,9 @@ class SemanticInferenceNode:
             for view in self.views
         }
         self.publish_model_grid_road_marking = bool(
-            rospy.get_param("~publish_model_grid_road_marking", False)
+            self.parameters.get("~publish_model_grid_road_marking", False)
         )
-        self.model_grid_max_hz = float(rospy.get_param("~model_grid_max_hz", 10.0))
+        self.model_grid_max_hz = float(self.parameters.get("~model_grid_max_hz", 10.0))
         if self.model_grid_max_hz <= 0.0:
             raise ValueError("model_grid_max_hz must be positive")
         self.model_grid_period_ns = int(round(1e9 / self.model_grid_max_hz))
@@ -181,21 +184,17 @@ class SemanticInferenceNode:
         self._timestamp_fallbacks_by_view = {view: None for view in self.views}
         self._timestamp_regressions_by_view = {view: None for view in self.views}
 
-        self.control = RosInferenceControl("twinlite", self.views, 10., warmed_up=bool(warmup_iterations))
+        self.control = RosInferenceControl("twinlite", self.views, 10., warmed_up=bool(warmup_iterations), parameters=self.parameters)
         self.control.state.record('startup', model_load_ms=model_load_ms,
                                   dummy_warmup_ms=dummy_warmup_ms)
         self.family_status_subscriber = rospy.Subscriber(
             "/perception/lane/boundary_family", LaneBoundaryFamily, self.control.pipeline_observation, queue_size=1)
         self.subscribers = []
         for view in self.views:
-            subscriber = rospy.Subscriber(
-                str(camera_topics[view]),
-                CompressedImage,
-                self._callback,
-                callback_args=view,
-                queue_size=1,
-                buff_size=int(rospy.get_param("~subscriber_buffer_bytes", 16 << 20)),
-            )
+            subscriber = (self.input_source.subscribe(str(camera_topics[view]), self._callback, callback_args=view)
+                          if self.input_source else rospy.Subscriber(str(camera_topics[view]), CompressedImage,
+                          self._callback, callback_args=view, queue_size=1,
+                          buff_size=int(self.parameters.get("~subscriber_buffer_bytes", 16 << 20))))
             self.subscribers.append(subscriber)
         self.subscribers.append(
             rospy.Subscriber(
@@ -232,15 +231,17 @@ class SemanticInferenceNode:
         return "/perception/camera/{}/{}/{}".format(view, head, suffix)
 
     def _callback(self, message: CompressedImage, view: str) -> None:
-        self.control.state.observe(view, message.header.stamp.to_nsec())
+        generation = self.control.observe(view, message.header.stamp.to_nsec())
         self.buffer.push(
             EncodedFrame(
                 view=view,
                 stamp=message.header.stamp,
                 frame_id=message.header.frame_id,
                 data=bytes(message.data),
-                received_monotonic=time.monotonic(),
-                received_ros_ns=int(rospy.Time.now().to_nsec()),
+                received_monotonic=getattr(message, 'received_monotonic', time.monotonic()),
+                received_ros_ns=getattr(message, 'received_ros_ns', int(rospy.Time.now().to_nsec())),
+                decode_key=getattr(message, 'decode_key', None),
+                decode_source=getattr(message, 'decode_source', None), generation=generation,
             )
         )
 
@@ -304,30 +305,38 @@ class SemanticInferenceNode:
 
     def _worker(self) -> None:
         pending = CoherentFrames(self.views, int(float(
-            rospy.get_param("~managed_max_skew_ms", 35.)) * 1e6))
+            self.parameters.get("~managed_max_skew_ms", 35.)) * 1e6))
         while not self._stop.is_set() and not rospy.is_shutdown():
             frames = self.buffer.pop_batch(timeout=0.2)
+            if not frames:
+                continue
+            generation = self.control.state.generation
+            frames = [f for f in frames if f.generation is None or f.generation == generation]
             if not frames:
                 continue
             if self.control.state.managed:
                 if self.control.state.mode == 0:
                     pending.clear()
                     continue
-                frames = pending.offer(frames, self.control.state.generation)
+                frames = pending.offer(frames, generation)
                 if frames is None:
                     continue
             stamps = {frame.view: frame.stamp.to_nsec() for frame in frames}
-            token = self.control.state.begin(stamps)
+            token = self.control.state.begin(stamps, expected_generation=generation)
             if token is None:
                 continue
             pending.clear()
+            from contextlib import ExitStack
+            leases = ExitStack()
             decoded = {}
             usable_frames = {}
             started = time.perf_counter()
             for frame in frames:
-                image = cv2.imdecode(
-                    np.frombuffer(frame.data, dtype=np.uint8), cv2.IMREAD_COLOR
-                )
+                try:
+                    image = (leases.enter_context(frame.decode_source.lease(frame)) if frame.decode_source
+                             else cv2.imdecode(np.frombuffer(frame.data, dtype=np.uint8), cv2.IMREAD_COLOR))
+                except Exception:
+                    image = None
                 if image is None:
                     self.decode_errors += 1
                     rospy.logwarn_throttle(2.0, "failed to decode camera JPEG")
@@ -337,6 +346,7 @@ class SemanticInferenceNode:
             decode_ms = (time.perf_counter() - started) * 1000.0
             if not decoded or (self.control.state.managed and len(decoded) != len(frames)):
                 self.control.state.complete(token, stamps, False, "decode_error")
+                leases.close()
                 continue
             try:
                 # Snapshot the lazy-publish decision for the complete batch.
@@ -351,11 +361,15 @@ class SemanticInferenceNode:
                 if self._stop.is_set():
                     return
             except Exception as exc:
+                if self.fault_handler:
+                    self.fault_handler(exc)
                 with self._stats_lock:
                     self.inference_errors += 1
                 self.control.state.complete(token, stamps, False, "inference_error")
                 rospy.logerr_throttle(2.0, "semantic inference failed: %s", exc)
                 continue
+            finally:
+                leases.close()
 
             with self.control.state.output_guard(token) as allowed:
                 if not allowed:
@@ -583,6 +597,8 @@ class SemanticInferenceNode:
         self.diagnostics_publisher.publish(message)
 
     def _shutdown(self) -> None:
+        if self._stop.is_set():
+            return
         self._stop.set()
         self.buffer.close()
         if self.worker is not threading.current_thread():

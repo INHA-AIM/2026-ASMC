@@ -342,8 +342,22 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
         if name not in arguments:
             raise ContractError(f"facade launch is missing {name}")
 
+    # The public legacy facade now forwards its options to one internal
+    # component launch. Validate the forwarding edge as well as its body.
+    component = repo_root / "src/asmc_camera/launch/_components.launch"
+    if component.is_file():
+        expected = "$(find asmc_camera)/launch/_components.launch"
+        includes = [x for x in root.findall("include") if x.get("file") == expected]
+        if len(includes) != 1:
+            raise ContractError("legacy facade must include its component launch exactly once")
+        forwarded = {x.get("name"): x.get("value") for x in includes[0].findall("arg")}
+        if any(forwarded.get(name) != "$(arg " + name + ")" for name in arguments):
+            raise ContractError("legacy facade lost an option forwarding edge")
+        runtime_root = ET.parse(component).getroot()
+    else:
+        runtime_root = root
     runtime_nodes = {
-        (item.get("pkg"), item.get("type")) for item in root.iter("node")
+        (item.get("pkg"), item.get("type")) for item in runtime_root.iter("node")
     }
     for executable in (
         "camera_bev_node.py",

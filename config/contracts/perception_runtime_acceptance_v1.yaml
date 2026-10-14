@@ -253,7 +253,7 @@ static_bindings:
       - TWINLITE_ROOT=/opt/baselines/TwinLiteNetPlus
       - /opt/baselines/TwinLiteNetPlus:ro
   - id: canonical_perception_launch
-    file: src/asmc_camera/launch/perception.launch
+    file: src/asmc_camera/launch/_components.launch
     anchors:
       - pkg="asmc_camera" type="camera_bev_node.py"
       - pkg="asmc_camera" type="camera_bev_fusion_node.py"

@@ -1,0 +1,54 @@
+<launch>
+  <!-- Internal comparison entrypoint. Public callers use camera.launch. -->
+  <arg name="mode" default="standby"/><arg name="models" default="all"/>
+  <arg name="detector" default="e8"/><arg name="confidence" default="0.40"/>
+  <arg name="nms_iou" default="0.70"/>
+  <arg name="implementation" default="separate" doc="separate | shared; experimental until accepted"/>
+  <arg name="lane_hz" default="10.0"/>
+  <arg name="profile" default="$(eval {'off':'idle','standby':'planning','active':'debug'}[arg('mode')])"/>
+  <arg name="selection" default="$(eval ['objects','lane','traffic_light'] if arg('models') == 'all' else arg('models').split(','))"/>
+  <arg name="valid_models" default="$(eval {True: True}[arg('models') == 'all' or (arg('models') != '' and arg('models').replace('objects','').replace('traffic_light','').replace('lane','').replace(',','') == '' and len(arg('models').split(',')) == arg('models').split(',').count('objects') + arg('models').split(',').count('lane') + arg('models').split(',').count('traffic_light') and arg('models').split(',').count('objects') &lt;= 1 and arg('models').split(',').count('lane') &lt;= 1 and arg('models').split(',').count('traffic_light') &lt;= 1)])"/>
+  <arg name="objects" default="$(eval arg('mode') != 'off' and 'objects' in arg('selection') and arg('valid_models'))"/>
+  <arg name="lane" default="$(eval arg('mode') != 'off' and 'lane' in arg('selection') and arg('valid_models'))"/>
+  <arg name="traffic" default="$(eval arg('mode') != 'off' and 'traffic_light' in arg('selection') and arg('valid_models'))"/>
+  <arg name="model_profile" default="$(eval {'e8':'finetuned_e8','pretrained':'pretrained_coco7'}[arg('detector')])"/>
+  <arg name="object_config" default="$(eval find('asmc_camera') + '/config/camera/' + {'e8':'yolo26l_mission16_e8_three_view.yaml','pretrained':'yolo26l_pretrained_mission_three_view.yaml'}[arg('detector')])"/>
+  <arg name="separate" default="$(eval {'separate':True,'shared':False}[arg('implementation')])"/>
+  <include file="$(find asmc_camera)/launch/_components.launch">
+    <arg name="profile" value="$(arg profile)"/>
+    <arg name="start_camera_objects" value="$(eval arg('objects') and arg('separate'))"/>
+    <arg name="start_camera_lane" value="$(arg lane)"/>
+    <arg name="start_lane_inference" value="$(arg separate)"/>
+    <arg name="start_traffic_light" value="$(eval arg('traffic') and arg('separate'))"/>
+    <arg name="start_visualization" value="false"/>
+    <arg name="objects_debug_raw" value="false"/>
+    <arg name="traffic_light_device" value="cuda"/>
+    <arg name="lane_enable_shared_family_debug" value="false"/>
+    <arg name="objects_model_profile" value="$(arg model_profile)"/>
+    <arg name="objects_conf_thres" value="$(arg confidence)"/>
+    <arg name="objects_nms_iou" value="$(arg nms_iou)"/>
+    <arg name="lane_target_hz" value="$(arg lane_hz)"/>
+    <arg name="objects_component_config" value="$(find asmc_camera)/config/camera/objects_runtime.yaml"/>
+    <arg name="lane_component_config" value="$(find asmc_camera)/config/camera/lane_runtime.yaml"/>
+    <arg name="traffic_component_config" value="$(find asmc_camera)/config/camera/traffic_light_runtime.yaml"/>
+    <arg name="objects_node_name" value="camera_objects"/>
+    <arg name="lane_node_name" value="camera_lane"/>
+    <arg name="traffic_node_name" value="camera_traffic_light"/>
+  </include>
+  <group if="$(eval arg('mode') != 'off' and not arg('separate'))">
+    <node pkg="asmc_camera" type="camera_runtime_node.py" name="camera_runtime" output="screen">
+      <rosparam param="models" subst_value="true">$(arg selection)</rosparam>
+      <param name="initial_mode" value="$(eval 2 if arg('mode') == 'active' else 0)"/>
+      <rosparam command="load" file="$(arg object_config)" ns="components/objects" subst_value="true"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/camera/object_classes_mission16_v1.yaml" ns="components/objects"/>
+      <param name="components/objects/conf_thres" value="$(arg confidence)" type="double"/>
+      <param name="components/objects/nms_iou" value="$(arg nms_iou)" type="double"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/camera/objects_runtime.yaml" ns="components/objects" subst_value="true"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/camera/cameras.yaml" ns="components/lane"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/camera/twinlite_medium.yaml" ns="components/lane"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/camera/lane_runtime.yaml" ns="components/lane" subst_value="true"/>
+      <param name="components/lane/target_hz" value="$(arg lane_hz)"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/camera/traffic_light_runtime.yaml" ns="components/traffic_light" subst_value="true"/>
+    </node>
+  </group>
+</launch>

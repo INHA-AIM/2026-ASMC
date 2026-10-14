@@ -38,7 +38,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.launch_path = PACKAGE_ROOT / "launch" / "perception.launch"
-        cls.launch_root = ET.parse(cls.launch_path).getroot()
+        cls.launch_root = ET.parse(PACKAGE_ROOT / "launch/_components.launch").getroot()
         cls.runtime = yaml.safe_load(
             (PACKAGE_ROOT / "config" / "runtime.yaml").read_text(encoding="utf-8")
         )

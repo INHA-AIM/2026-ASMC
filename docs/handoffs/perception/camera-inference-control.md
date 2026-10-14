@@ -1,5 +1,8 @@
 # 모델별 카메라 추론 실행 상태
 
+> 현재 실행·새 제어 경로는 [카메라 실행·3뷰 관측 계약](../../contracts/perception/camera-runtime-v1.md)이 정본입니다.
+> 아래 기존 profile/서비스 설명과 과거 검증 결과는 호환·재현 기록으로 보존합니다.
+
 **2026-10-14 실행 기본 갱신:** YOLO26l v11 E8·3뷰15Hz가 기본이며 사전학습 YOLO26l은
 `objects_model_profile:=pretrained_coco7`로 선택합니다. 모델 교체는 종료·재시작 방식입니다.
 기존 모드 서비스와 MD5는 유지합니다. [모델 파일·소비 계약](camera-mission16-deployment.md)을 먼저 확인하세요.

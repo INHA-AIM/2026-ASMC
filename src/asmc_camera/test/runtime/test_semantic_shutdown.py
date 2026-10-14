@@ -24,6 +24,8 @@ class SemanticShutdownTest(unittest.TestCase):
 
     def test_shutdown_terminates_waiting_worker_before_trace_close(self):
         node = SemanticInferenceNode.__new__(SemanticInferenceNode)
+        from asmc_camera.runtime.parameters import Parameters
+        node.parameters = Parameters(getter=lambda name, default: default)
         node.views = ['front']
         node.buffer = LatestFrameBuffer(node.views, batch_wait_ms=0)
         node._stop = threading.Event()

@@ -1,4 +1,7 @@
 <launch>
+  <arg name="component_config" default=""/>
+  <arg name="nms_iou" default="0.70"/>
+  <arg name="node_name" default="camera_object_detector"/>
   <arg name="managed" default="true"/>
   <arg name="initial_mode" default="0"/>
   <arg name="target_hz" default="15.0"/>
@@ -15,16 +18,15 @@
   <arg name="objects_debug_masks" default="false"/>
   <arg name="views" default=""/>
   <arg name="objects_hood_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
-  <node pkg="asmc_camera" type="object_detection_node.py" name="camera_object_detector"
+  <node pkg="asmc_camera" type="object_detection_node.py" name="$(arg node_name)"
         output="screen" required="false" launch-prefix="$(optenv ASMC_YOLO_PYTHON)">
     <param name="managed" value="$(arg managed)"/>
     <param name="initial_mode" value="$(arg initial_mode)"/>
     <param name="target_hz" value="$(arg target_hz)"/>
-    <!-- Clear only a stale backend selector; preserve externally set traces.
+    <!-- Reset the backend selector before loading the explicit profile.
          The config may select RF/YOLOE; otherwise the node defaults to YOLO. -->
-    <rosparam command="delete" param="model_kind"/>
+    <param name="model_kind" value="yolo"/>
     <rosparam command="load" file="$(arg config)" subst_value="true"/>
-    <param name="conf_thres" value="$(arg conf_thres)" type="double" if="$(eval arg('conf_thres') != '')"/>
     <rosparam command="load" file="$(arg class_groups_config)"/>
     <param name="hood_mask" type="bool" value="$(arg objects_hood_mask)"/>
     <param name="side_ego_mask" type="bool" value="$(arg objects_side_ego_mask)"/>
@@ -38,5 +40,8 @@
     <param name="debug_masks" type="bool" value="$(arg objects_debug_masks)"/>
     <rosparam param="views" subst_value="true" if="$(eval arg('views') != '')">$(arg views)</rosparam>
     <param name="hood_mask_config" value="$(arg objects_hood_mask_config)"/>
+    <rosparam command="load" file="$(arg component_config)" subst_value="true" if="$(eval arg('component_config') != '')"/>
+    <param name="nms_iou" value="$(arg nms_iou)" type="double"/>
+    <param name="conf_thres" value="$(arg conf_thres)" type="double" if="$(eval arg('conf_thres') != '')"/>
   </node>
 </launch>
