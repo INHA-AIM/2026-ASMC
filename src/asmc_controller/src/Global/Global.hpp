@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "Util/StopBrakeResponse.hpp"
+
 struct MPCControl {
     double delta = 0.0;    // 조향각 [rad]
     double accel = 0.0;    // 가속도 [m/s^2]
@@ -35,6 +37,7 @@ struct MPCParams {
     std::vector<double> accel_response_lut;
     std::vector<double> brake_pedal_lut;
     std::vector<double> brake_response_lut;
+    StopBrakeResponseConfig stop_brake_response;
     double vel_min          = 0.0;     // [m/s]
     double vel_max          = 30.0;    // [m/s]
 
@@ -206,3 +209,4 @@ struct MPCContext {
 };
 
 extern MPCContext g_mpc;
+

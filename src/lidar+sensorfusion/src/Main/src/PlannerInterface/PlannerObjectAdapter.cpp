@@ -29,7 +29,7 @@ bool IsNoise(const std::string& object_class) {
 
 std::int16_t MapObjectType(const std::string& object_class) {
     if (object_class == "person" || object_class == "pedestrian") return 1;
-    if (object_class == "car" || object_class == "truck" ||
+    if (object_class == "vehicle" || object_class == "car" || object_class == "truck" ||
         object_class == "bus" || object_class == "bicycle" ||
         object_class == "motorcycle") return 2;
     return 3;
@@ -148,7 +148,9 @@ std::vector<PlannerObject> MakePlannerObjects(
 
         PlannerObject planner_object;
         planner_object.id = object.s32_Id;
-        planner_object.type = MapObjectType(object.str_ObjectClass);
+        planner_object.type = MapObjectType(
+            object.str_ObjectClass == "dynamic_obstacle" && object.str_YoloClass == "person"
+                ? "person" : object.str_ObjectClass);
         planner_object.classification = object.str_ObjectClass;
         planner_object.yolo_class =
             object.str_YoloClass.empty() ? "unknown" : object.str_YoloClass;

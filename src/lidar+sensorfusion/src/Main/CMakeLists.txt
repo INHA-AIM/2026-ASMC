@@ -96,6 +96,9 @@ target_link_libraries(main myHeader
 )
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(warmup_motion_evidence_test test/test_warmup_motion_evidence.cpp)
+  target_include_directories(warmup_motion_evidence_test PRIVATE src)
+  add_test(NAME warmup_motion_evidence_test COMMAND warmup_motion_evidence_test)
   find_package(rostest REQUIRED)
   find_package(rosbag REQUIRED)
   add_executable(lidar_continuous_replay test/lidar_continuous_replay.cpp)
@@ -248,3 +251,4 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 install(PROGRAMS scripts/yolo_detection_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+

@@ -43,6 +43,7 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Evaluation/Cost.cpp
   src/Frenet/Evaluation/KinematicFilter.cpp
   src/Frenet/Generator/BoundaryConditionPolicy.cpp
+  src/Frenet/Generator/SpatialStop.cpp
   src/Frenet/Generator/CandidateCombiner.cpp
   src/Frenet/Generator/LateralGenerator.cpp
   src/Frenet/Generator/LongitudinalGenerator.cpp
@@ -51,6 +52,8 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Maneuver/Avoid/Avoid.cpp
   src/Frenet/Maneuver/Avoid/AvoidLifecycle.cpp
   src/Frenet/Maneuver/Avoid/AvoidTargetResolver.cpp
+  src/Frenet/Maneuver/Avoid/AvoidCompletion.cpp
+  src/Frenet/Maneuver/Avoid/MapAvoidReconnection.cpp
   src/Frenet/Maneuver/Avoid/MapAvoid.cpp
   src/Frenet/Maneuver/Follow.cpp
   src/Frenet/Maneuver/Keep.cpp
@@ -511,6 +514,11 @@ if(CATKIN_ENABLE_TESTING)
   add_executable(roundabout_merge_shadow tools/frenet/roundabout_merge_shadow.cpp)
   target_link_libraries(roundabout_merge_shadow asmc_planner_frenet_core yaml-cpp)
 
+  add_executable(observed_motion_test tests/frenet/observed_motion_test.cpp)
+  target_include_directories(observed_motion_test PRIVATE src)
+  target_link_libraries(observed_motion_test asmc_planner_frenet_core)
+  add_test(NAME observed_motion_test COMMAND observed_motion_test)
+
   foreach(merge_test roundabout_candidate_test roundabout_execution_test roundabout_prediction_test)
     add_executable(${merge_test} tests/frenet/${merge_test}.cpp)
     target_link_libraries(${merge_test} asmc_planner_frenet_core yaml-cpp)
@@ -721,5 +729,17 @@ if(CATKIN_ENABLE_TESTING)
       planner_maneuver_equivalence planner_fsm_equivalence)
     add_dependencies(${gate} ${catkin_EXPORTED_TARGETS})
     target_link_libraries(${gate} asmc_planner_ros_adapters)
+  endforeach()
+endif()
+
+
+if(CATKIN_ENABLE_TESTING)
+  foreach(regression avoid_completion_test avoid_reconnection_test avoid_return_distance_test avoid_return_progress_test avoid_side_search_test spatial_stop_speed_test stop_road_braking_test vehicle_curvature_test)
+    add_executable(${regression} tests/frenet/${regression}.cpp)
+    target_link_libraries(${regression} asmc_planner_frenet_core yaml-cpp)
+    target_compile_definitions(${regression} PRIVATE
+      FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+      FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt")
+    add_test(NAME ${regression} COMMAND ${regression})
   endforeach()
 endif()

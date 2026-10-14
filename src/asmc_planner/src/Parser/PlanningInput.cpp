@@ -1,4 +1,5 @@
 #include "Parser/PlanningInput.hpp"
+#include "Parser/vehicle_curvature.hpp"
 
 #include <cmath>
 #include <unordered_set>
@@ -53,7 +54,7 @@ ConversionStatus ConvertVehicleState(const asmc_msgs::VehicleState& message,
     converted.x = message.x;
     converted.y = message.y;
     converted.yaw = message.yaw;
-    converted.kappa = 0.0;
+    converted.kappa = VehicleCurvature(message.speed, message.yaw_rate);
     converted.v = message.speed;
     converted.a = message.acceleration;
     state = converted;
@@ -257,3 +258,4 @@ asmc_msgs::Trajectory MakeStopTrajectory(
 }
 
 }  // namespace frenet_planner_ros
+

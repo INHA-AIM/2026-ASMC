@@ -27,6 +27,7 @@ enum class RejectionReason {
     NONE = 0,
     CURVATURE,
     COLLISION,
+    ROAD_BOUNDARY,
 };
 
 // =========================================================
@@ -80,3 +81,4 @@ struct FrenetPath {
 };
 
 #endif  // PLANNER_COMMON_FRENET_TYPES_HPP
+

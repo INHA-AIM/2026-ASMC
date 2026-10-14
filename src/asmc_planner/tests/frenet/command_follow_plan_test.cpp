@@ -477,7 +477,7 @@ int main() {
     }
 
     // --- dropout grace: 1~10 cycle 유지, 11번째 LOST -----------------------
-    // dropout_grace_cycles=10 (config/params.yaml: 20Hz 기준 0.5초, Behavior
+    // dropout_grace_cycles=10 (config/frenet/params.yaml: 20Hz 기준 0.5초, Behavior
     // FOLLOW 해제 유예 0.4s보다 길게 유지하도록 의도적으로 설정된 값이다.
     // PlannerConfig.hpp의 구조체 기본값 5는 이 값을 로드하지 못했을 때의
     // fallback일 뿐이며, 여기서는 MakeLocalConfig()로 실제 params.yaml을
@@ -735,6 +735,30 @@ int main() {
                "stale: a fresh FOLLOW after low-speed KEEP has no grace");
     }
 
+    // Handoff race: only the explicitly requested, recently observed ID may
+    // be recovered. A never observed ID still fails, even with an active lead.
+    {
+        FrenetPlanner planner;
+        if (!planner.Init(config)) return 1;
+        CartesianPath path;
+        const std::vector<TrackedObject> objects{
+            MakeVehicle(waypoints,15,kEgoS+30,5),
+            MakeVehicle(waypoints,17,kEgoS+45,5)};
+        planner.SetObjectObservationTime(100);
+        planner.Plan(ego,objects,MakeFollowCommand(15),path);
+        planner.SetObjectObservationTime(100.1);
+        planner.Plan(ego,objects,MakeFollowCommand(15),path);
+        planner.SetObjectObservationTime(100.2);
+        planner.Plan(ego,{objects[0]},MakeFollowCommand(17),path);
+        Expect(planner.active_leader_id()==17 &&
+               planner.last_failure_reason()!=Reason::TARGET_OBJECT_LOST,
+               "handoff: recently observed requested ID survives one-frame absence");
+        planner.SetObjectObservationTime(100.3);
+        const bool ok=planner.Plan(ego,{},MakeFollowCommand(19),path);
+        Expect(!ok&&planner.last_failure_reason()==Reason::TARGET_OBJECT_LOST,
+               "handoff: never observed requested ID cannot borrow another leader");
+    }
+
     std::remove(config.c_str());
     if (g_failures != 0) {
         std::cerr << g_failures << " follow plan check(s) failed\n";
@@ -743,4 +767,5 @@ int main() {
     std::cout << "all follow plan checks passed\n";
     return 0;
 }
+
 

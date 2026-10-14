@@ -42,7 +42,7 @@ void ResetMPCForPlannerStop(double published_steering) {
 }
 
 MPCOutput MPCProcess(
-    const MPCState& ego_state, const ReferencePath& reference) {
+    const MPCState& ego_state, const ReferencePath& reference, double acceleration_limit) {
     MPCOutput output;
 
     // UDP MPC와 같은 정지 데드락 복구. 정상 STOP은 호출자가 이미 걸러낸
@@ -79,10 +79,13 @@ MPCOutput MPCProcess(
         output.stuck_event_path_progress = path_progress;
     }
 
+    auto solve_params = g_mpc.params;
+    if (std::isfinite(acceleration_limit) && acceleration_limit > 0)
+        solve_params.accel_max = std::min(solve_params.accel_max,acceleration_limit);
     const MPCControl optimization_previous_control = g_mpc.last_control;
     const MPCResult result = solveMPC(
         ego_state, reference, optimization_previous_control, g_mpc.warm_start,
-        g_mpc.params);
+        solve_params);
     if (!result.success ||
         result.controls.size() != static_cast<std::size_t>(g_mpc.params.horizon) ||
         !std::isfinite(result.control.delta) ||
@@ -96,7 +99,7 @@ MPCOutput MPCProcess(
     g_mpc.last_control = result.control;
     output.cost = computeCostBreakdown(
         result.predicted_states, result.controls, reference,
-        optimization_previous_control, g_mpc.params);
+        optimization_previous_control, solve_params);
     output.first_reference_curvature = reference.k_ref.empty()
         ? 0.0 : reference.k_ref.front();
     output.first_feedforward_steering = SteeringFeedforward(
@@ -108,14 +111,15 @@ MPCOutput MPCProcess(
         ? 0.0 : reference.a_ref.front();
     output.first_used_reference_acceleration = clip(
         output.first_reference_acceleration,
-        g_mpc.params.accel_min, g_mpc.params.accel_max);
+        solve_params.accel_min, solve_params.accel_max);
     output.current_speed = ego_state.vx;
     output.first_speed_error =
         output.current_speed - output.first_reference_speed;
     MPCControl output_control = result.control;
     if (g_mpc.recovery_cycles_left > 0 && forward_intent && ego_stopped) {
         output_control.accel =
-            std::max(output_control.accel, g_mpc.params.stuck_launch_accel);
+            std::min(solve_params.accel_max,
+                     std::max(output_control.accel, g_mpc.params.stuck_launch_accel));
         // 다음 cycle의 rate cost가 실제 출력한 가속과 이어지도록 동기화한다.
         g_mpc.last_control.accel = output_control.accel;
         --g_mpc.recovery_cycles_left;
@@ -133,3 +137,4 @@ MPCOutput MPCProcess(
 
 
 const MPCParams& GetMPCParams() { return g_mpc.params; }
+

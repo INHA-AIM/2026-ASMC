@@ -57,7 +57,15 @@ def main():
     except RuntimeError as exc:
         rospy.logfatal(str(exc))
         raise SystemExit(1)
-    allowed = rospy.get_param("~allowed_names", list(ALLOWED_NAMES))
+    profile = rospy.get_param("~class_profile", "mission16_v1")
+    if profile not in ('legacy', 'mission16_v1'):
+        raise ValueError('unsupported camera class profile')
+    if profile == 'mission16_v1':
+        from asmc_camera.detection.mission import CLASSES
+        defaults = list(CLASSES)
+    else:
+        defaults = list(ALLOWED_NAMES)
+    allowed = rospy.get_param("~allowed_names", defaults)
     threshold = validate_threshold(rospy.get_param("~conf_thres", 0.0))
     # Cache subscription avoids a master RPC on every camera callback. This is
     # an additional consumer cutoff; it cannot recover boxes cut by the producer.

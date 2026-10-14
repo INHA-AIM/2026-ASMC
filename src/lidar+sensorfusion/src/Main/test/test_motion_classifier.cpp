@@ -398,9 +398,47 @@ TEST(MotionClassifier, StationaryBoundsRemainStaticDespiteFastTrackerVelocity) {
     EXPECT_TRUE(object.b_IsDynamic);
 }
 
+
+TEST(MotionClassifierTest, PreviouslyDynamicReacquisitionRequiresRigidEvidence) {
+    MotionClassifier classifier;
+    LiDARObjectInfo object{};
+    for (int frame = 1; frame <= 3; ++frame) {
+        UpdateObjectWithObb(classifier, object, frame, 36.0F, 0.0F,
+                            frame - 2.0F, frame + 2.0F, -1.0F, 1.0F);
+    }
+    EXPECT_EQ(MotionState::Unknown, StateOf(object));
+    EXPECT_FLOAT_EQ(0.0F, object.f32_PlannerVxKPH);
+    for (int frame = 4; frame <= 11; ++frame) {
+        UpdateObjectWithObb(classifier, object, frame, 36.0F, 0.0F,
+                            frame - 2.0F, frame + 2.0F, -1.0F, 1.0F);
+    }
+    EXPECT_EQ(MotionState::Dynamic, StateOf(object));
+    for (int miss = 1; miss <= 4; ++miss) {
+        UpdateObject(classifier, object, 11 + miss, 36.0F, 0.0F,
+                     11.0F, 0.0F, miss);
+    }
+    for (int frame = 16; frame <= 18; ++frame) {
+        UpdateObjectWithObb(classifier, object, frame, 36.0F, 0.0F,
+                            frame - 2.0F, frame + 2.0F, -1.0F, 1.0F);
+        if (frame < 18) EXPECT_EQ(MotionState::Unknown, StateOf(object));
+    }
+    EXPECT_EQ(MotionState::DynamicPending, StateOf(object));
+    EXPECT_NEAR(36.0F, object.f32_PlannerVxKPH, 0.01F);
+    EXPECT_TRUE(object.motion_valid);
+    std::vector<LiDARObjectInfo> objects{object};
+    classifier.InvalidateMapHistory(objects);
+    for (int frame = 19; frame <= 21; ++frame) {
+        UpdateObjectWithObb(classifier, object, frame, 36.0F, 0.0F,
+                            frame - 2.0F, frame + 2.0F, -1.0F, 1.0F);
+    }
+    EXPECT_EQ(MotionState::Unknown, StateOf(object));
+    EXPECT_FLOAT_EQ(0.0F, object.f32_PlannerVxKPH);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+

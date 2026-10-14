@@ -1,5 +1,11 @@
 # 모델별 카메라 추론 실행 상태
 
+**2026-10-14 실행 기본 갱신:** YOLO26l v11 E8·3뷰15Hz가 기본이며 사전학습 YOLO26l은
+`objects_model_profile:=pretrained_coco7`로 선택합니다. 모델 교체는 종료·재시작 방식입니다.
+기존 모드 서비스와 MD5는 유지합니다. [모델 파일·소비 계약](camera-mission16-deployment.md)을 먼저 확인하세요.
+TwinLite와 ResNet의 기존10Hz는 이번에 유지하며, TwinLite15Hz는 후속 최적화 대조입니다.
+
+
 PR #68의 전방 YOLO opt-in 이전은 main `7aed612`에 병합됐다. 후속 작업은
 `feat/camera-region-activation`에서 모델 실행 인터페이스와 교체 가능한 예시를 제공한다.
 구간·결과 소비·주행 모드·제어권은 판제가 결정한다. 카메라 생산자는 GPS나 HD 구간을 읽지 않는다.
@@ -46,7 +52,7 @@ roslaunch asmc_bridge bridge.launch transport_profile:=local stream_profile:=com
 |---|---|---|
 | `roslaunch asmc_camera perception.launch` | idle: 모델·차선 downstream을 실행하지 않음, 서비스 없음 | 없음 |
 | `roslaunch asmc_camera perception.launch profile:=planning` | 세 모델 로드·dummy 예열 후 STANDBY, 외부 요청 대기 | 꺼짐 |
-| `roslaunch asmc_camera perception.launch profile:=debug` | 세 모델 ACTIVE, TwinLite 3뷰·YOLO 전방·ResNet camera4 | debug publisher 켜짐, rqt 별도 |
+| `roslaunch asmc_camera perception.launch profile:=debug` | 세 모델 ACTIVE, TwinLite 3뷰·YOLO 3뷰·ResNet camera4 | debug publisher 켜짐, rqt 별도 |
 | `roslaunch asmc_camera perception.launch profile:=legacy` | 기존 차선 반복 추론, 모델 목표 Hz 제한 없음 | 꺼짐 |
 
 인자 없는 idle launch는 노드가 없어 종료한다. 판제가 서비스를 호출하려면 planning으로
@@ -71,7 +77,7 @@ roslaunch asmc_camera perception.launch profile:=debug \
 ```
 
 planning/debug의 `managed`는 true다. 목표는 TwinLite 10Hz **배치율**(각 뷰 10Hz),
-YOLO 20Hz, 신호등 10Hz이며 새 입력만 처리한다. 이전 관측을 복제해 Hz를 채우지 않는다.
+YOLO 15Hz, 신호등 10Hz이며 새 입력만 처리한다. 이전 관측을 복제해 Hz를 채우지 않는다.
 입력이나 연산 성능이 부족하면 목표보다 낮아질 수 있다. legacy는 입력·연산 성능이
 허용하는 만큼 반복 처리하며 같은 목표 제한을 적용하지 않는다.
 
@@ -156,11 +162,11 @@ ID 분절을 확정하지 않으며, 그 판단은 독립 actor identity 또는 
 
 ```xml
 <arg name="lane_target_hz" default="10.0"/>
-<arg name="objects_target_hz" default="20.0"/>
+<arg name="objects_target_hz" default="15.0"/>
 <arg name="traffic_light_hz" default="10.0"/>
 ```
 
-각각 TwinLite 배치, 전방 YOLO, camera4 ResNet의 목표다. 수정 후 카메라 launch를
+각각 TwinLite 배치, 3뷰 YOLO, camera4 ResNet의 목표다. 수정 후 카메라 launch를
 다시 시작하면 반영되며 catkin 재빌드는 필요 없다. launch 명령의 같은 이름 인자가
 파일 기본값을 덮어쓰고, 실행 중 판제 서비스의 양수 `target_hz` 요청이 다시 덮어쓴다.
 `target_hz: 0`은 현재 값을 유지한다. rosparam만 바꿔서는 실행 중 주기 관리자가 갱신되지 않는다.
@@ -174,7 +180,7 @@ YOLO 클래스·confidence YAML과 `config/runtime.yaml`의 설명 값을 바꿔
 | 모델 | 서비스 | 상태 토픽 |
 |---|---|---|
 | TwinLite | `/camera_semantic_inference/set_inference_mode` | `/camera_semantic_inference/inference_status` |
-| 전방 YOLO | `/camera_object_detector/set_inference_mode` | `/camera_object_detector/inference_status` |
+| 3뷰 YOLO | `/camera_object_detector/set_inference_mode` | `/camera_object_detector/inference_status` |
 | camera4 ResNet18 | `/traffic_light_infer/set_inference_mode` | `/traffic_light_infer/inference_status` |
 
 타입은 `asmc_camera/SetInferenceMode`, `asmc_camera/InferenceStatus`다.
@@ -191,8 +197,8 @@ rostopic echo /camera_semantic_inference/inference_status
 rosservice call /camera_semantic_inference/set_inference_mode "{mode: 2, target_hz: 10.0}"
 
 # YOLO·신호등도 독립적으로 준비 → 활성화
-rosservice call /camera_object_detector/set_inference_mode "{mode: 1, target_hz: 20.0}"
-rosservice call /camera_object_detector/set_inference_mode "{mode: 2, target_hz: 20.0}"
+rosservice call /camera_object_detector/set_inference_mode "{mode: 1, target_hz: 15.0}"
+rosservice call /camera_object_detector/set_inference_mode "{mode: 2, target_hz: 15.0}"
 rosservice call /traffic_light_infer/set_inference_mode "{mode: 1, target_hz: 10.0}"
 rosservice call /traffic_light_infer/set_inference_mode "{mode: 2, target_hz: 10.0}"
 
@@ -267,7 +273,7 @@ roslaunch asmc_camera camera_region_example.launch allow_example_control:=true
 
 설정은 `src/asmc_camera/config/runtime/camera_region_example.yaml`이다. 모델별 초기
 모드·zone ID·Hz·GPS 손실 요청과 준비·복귀 조건을 바꾸거나 노드를 제거해 판제가 대신
-같은 서비스를 호출할 수 있다. 기본 예시는 TwinLite와 ResNet 10Hz, YOLO 20Hz 요청이다.
+같은 서비스를 호출할 수 있다. 과거 예시는 TwinLite와 ResNet 10Hz, YOLO 20Hz 요청이다. 현재 YOLO 기본은15Hz이며 예시를 사용할 때15Hz로 지정한다.
 실제 입력보다 높은 목표 Hz를 요청해도 이전 관측을 재발행하지 않는다.
 
 준비 lead는 `max(3초, 측정된 준비 p99+1초)`, 거리는 `max(20m, 속력×lead+5m)`이다.

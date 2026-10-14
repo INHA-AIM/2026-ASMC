@@ -58,7 +58,7 @@ class CocoProfilesTest(unittest.TestCase):
         self.assertIsNone(groups.group_of('traffic light'))
         self.assertIsNone(groups.group_of('stop sign'))
 
-    def test_experiment_is_yolo_only_and_defaults_remain_baseline(self):
+    def test_legacy_experiment_is_explicit_and_default_is_e8(self):
         root = ET.parse(PACKAGE/'launch/camera_objects_coco_experiment.launch').getroot()
         args = {a.get('name'): a.get('default') for a in root.findall('arg')}
         self.assertEqual('all', args['classes'])
@@ -67,10 +67,11 @@ class CocoProfilesTest(unittest.TestCase):
         self.assertEqual('false', passed['start_camera_lane'])
         self.assertEqual('false', passed['start_traffic_light'])
         self.assertEqual('true', passed['start_camera_objects'])
+        self.assertIn('object_classes.yaml', passed['objects_class_groups_config'])
         original = ET.parse(PACKAGE/'launch/camera_objects.launch').getroot()
         defaults = {a.get('name'): a.get('default') for a in original.findall('arg')}
-        self.assertTrue(defaults['config'].endswith('/yolo11m_coco.yaml'))
-        self.assertTrue(defaults['class_groups_config'].endswith('/object_classes.yaml'))
+        self.assertTrue(defaults['config'].endswith('/yolo26l_mission16_e8_three_view.yaml'))
+        self.assertTrue(defaults['class_groups_config'].endswith('/object_classes_mission16_v1.yaml'))
 
 
 if __name__ == '__main__':

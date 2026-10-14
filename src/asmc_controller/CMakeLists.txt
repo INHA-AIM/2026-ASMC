@@ -42,6 +42,16 @@ install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(stop_acceleration_limit_test test/stop_acceleration_limit_test.cpp)
+  if(TARGET stop_acceleration_limit_test)
+    target_link_libraries(stop_acceleration_limit_test mpc_core gtest_main)
+  endif()
+
+  catkin_add_gtest(stop_brake_response_test test/stop_brake_response_test.cpp)
+  if(TARGET stop_brake_response_test)
+    target_link_libraries(stop_brake_response_test gtest_main)
+  endif()
+
   catkin_add_gtest(parameter_loader_test test/parameter_loader_test.cpp)
   if(TARGET parameter_loader_test)
     target_compile_definitions(parameter_loader_test PRIVATE
@@ -130,3 +140,4 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(planner_stop_continuity_test mpc_core gtest_main)
   endif()
 endif()
+

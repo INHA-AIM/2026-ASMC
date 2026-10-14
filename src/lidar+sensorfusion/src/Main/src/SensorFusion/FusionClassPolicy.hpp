@@ -7,12 +7,27 @@
 #include <string>
 
 namespace fusion_class {
+// Startup-only opt-in. Motion classification remains independent.
+inline bool& MissionProfile() { static bool enabled = false; return enabled; }
+inline std::string MissionGroup(const std::string& label) {
+    if (label == "vehicle" || label == "dynamic_obstacle" || label == "static_obstacle") return label;
+    if (label == "car" || label == "truck" || label == "bus") return "vehicle";
+    if (label == "person" || label == "dog" || label == "deer" ||
+        label == "bicycle" || label == "stroller") return "dynamic_obstacle";
+    if (label == "motorcycle" || label == "bollard" || label == "box" ||
+        label == "concrete_barrier" || label == "steel_barricade" ||
+        label == "traffic_drum" || label == "plastic_barrier" || label == "traffic_cone")
+        return "static_obstacle";
+    return "unknown";
+}
+
 
 inline std::string Normalize(std::string label) {
     std::transform(label.begin(), label.end(), label.begin(),
                    [](unsigned char value) {
                        return static_cast<char>(std::tolower(value));
                    });
+    if (MissionProfile()) return MissionGroup(label);
     if (label == "person" || label == "dog" || label == "bicycle" ||
         label == "motorcycle") return label;
     if (label == "car" || label == "truck" || label == "bus") return "car";
@@ -20,6 +35,7 @@ inline std::string Normalize(std::string label) {
 }
 
 inline bool IsConfirmed(const std::string& label) {
+    if (MissionProfile()) return label == "vehicle" || label == "dynamic_obstacle" || label == "static_obstacle";
     return label == "car" || label == "person" || label == "dog" ||
            label == "bicycle" || label == "motorcycle";
 }

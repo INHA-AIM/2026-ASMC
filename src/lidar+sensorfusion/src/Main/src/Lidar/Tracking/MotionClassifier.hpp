@@ -1,4 +1,5 @@
 #pragma once
+#include "WarmupMotionEvidence.hpp"
 
 #include <Global/Global.hpp>
 
@@ -84,6 +85,8 @@ private:
     };
 
     struct TrackState {
+        bool previously_dynamic = false;
+        std::deque<motion_evidence::Sample> warmup;
         std::deque<VelocitySample> accepted;
         std::deque<VelocitySample> observations;
         std::deque<ChangeCandidate> candidates;
@@ -129,3 +132,4 @@ private:
     MotionClassifierConfig config_;
     std::unordered_map<std::int32_t, TrackState> tracks_;
 };
+

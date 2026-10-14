@@ -125,3 +125,31 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
     }
     return result.clear;
 }
+
+bool CartesianAvoidTrajectoryClear(const CartesianPath& path,
+                              const std::vector<TrackedObject>& obstacles,
+                              const VehicleShape& ego_shape,
+                              const CollisionCheckConfig& collision_cfg,
+                              double dt, int* blocking_id,
+                              int margin_recovery_object_id,
+                              bool* margin_recovery_used) {
+    bool moving_recovery = false;
+    if (!CartesianTrajectoryClear(path, obstacles, ego_shape, collision_cfg,
+            dt, blocking_id, margin_recovery_object_id, &moving_recovery)) {
+        if (margin_recovery_used) *margin_recovery_used = moving_recovery;
+        return false;
+    }
+    std::vector<TrackedObject> stationary;
+    for (const auto& object : obstacles) {
+        if (object.motion_state != ObjectMotionState::UNKNOWN &&
+            object.motion_state != ObjectMotionState::DYNAMIC_PENDING) continue;
+        stationary.push_back(object);
+        stationary.back().vx = stationary.back().vy = stationary.back().speed = 0.0;
+        stationary.back().yaw_rate = 0.0;
+    }
+    bool stationary_recovery = false;
+    const bool clear = CartesianTrajectoryClear(path, stationary, ego_shape,
+        collision_cfg, dt, blocking_id, margin_recovery_object_id, &stationary_recovery);
+    if (margin_recovery_used) *margin_recovery_used = moving_recovery || stationary_recovery;
+    return clear;
+}

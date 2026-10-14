@@ -56,6 +56,9 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
         result.ego_speed_mps, v2_avoidance_.start_d);
     v2_avoidance_.map_entry_s = result.map_entry_s;
     v2_avoidance_.map_transition_distance = result.map_transition_distance;
+    v2_avoidance_.map_return_schedule_valid = result.map_return_schedule_valid;
+    v2_avoidance_.map_return_start_s = result.map_return_start_s;
+    v2_avoidance_.map_return_end_s = result.map_return_end_s;
     const double entry_gap = ForwardArcDistance(last_s_, result.map_entry_s, track_length);
     v2_avoidance_.shift_entry_distance = avoid_road_map_.enabled()
         ? initial_gap - std::max(0.0, entry_gap) : shift_distance;
@@ -129,7 +132,7 @@ double FrenetPlanner::EffectiveAvoidShiftStartDistance(
 
 void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     double ego_s, double ego_d, double ego_speed,
-    AvoidPrepareResult& result) {
+    AvoidPrepareResult& result, bool keep_handoff_safe) {
     if (!execution_->avoid.active || !execution_->avoid.committed) return;
 
     constexpr double kProgressEpsilon = 1e-6;
@@ -163,6 +166,14 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
         std::isfinite(gap) && std::isfinite(clear_distance) &&
         clear_distance > kProgressEpsilon && gap < -clear_distance;
 
+    // Follow the accepted spatial maneuver, not a newly observed obstacle rear
+    // edge. A return is committed only after complete road/body validation.
+    if (avoid_road_map_.enabled() && v2_avoidance_.map_return_schedule_valid &&
+        (execution_->avoid.phase == AvoidPhase::SHIFT || execution_->avoid.phase == AvoidPhase::PASS) &&
+        ForwardArcDistance(ego_s,v2_avoidance_.map_return_start_s,track_length)<=0.0) {
+        execution_.observeEarlyReturnCandidate(true);
+    }
+
     // LiDAR OBB는 접근하며 보이는 면이 늘어 target_d가 바깥쪽으로 확장될
     // 수 있다. 예전에는 그 목표 d를 끝까지 찍어야 PASS가 되어, 장애물을
     // 이미 완전히 지난 뒤에도 SHIFT가 남아 복귀가 늦거나 margin 안에서
@@ -178,8 +189,10 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     // 장애물을 완전히 지난 뒤에도 바로 COMPLETED하지 않는다. RETURN에서
     // d=0 복귀가 끝나야 Behavior가 KEEP으로 transaction을 넘길 수 있다.
     execution_.observeAvoidPass(longitudinally_cleared, entered_pass_this_cycle);
-    execution_.observeAvoidReturn({std::isfinite(ego_d) &&
-        std::fabs(ego_d) <= avoid_cfg_.lateral_tolerance});
+    // Geometry and KEEP feasibility are facts; Execution owns completion.
+    execution_.observeAvoidReturn({longitudinally_cleared &&
+        std::isfinite(ego_d) && std::fabs(ego_d) <= avoid_cfg_.lateral_tolerance &&
+        keep_handoff_safe});
 
     // 복구 latch는 장애물 옆으로 이동하는 SHIFT에만 유효하다. 목표 d에
     // PASS 이후에는 속도 경계 진동 방지용 거리 기반 generator latch만
@@ -259,3 +272,4 @@ void FrenetPlanner::ResetExternalAvoidance() {
         execution_.resetAvoid();
     v2_avoid_targets_ = AvoidTargetPlan{};
 }
+

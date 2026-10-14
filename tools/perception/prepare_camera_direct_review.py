@@ -37,7 +37,7 @@ def annotation_crops(rows, labels, output):
                 crop = source.convert('RGB').crop(bounds)
             scale = min(232/crop.width, 190/crop.height)
             crop = crop.resize((max(1, int(crop.width*scale)), max(1, int(crop.height*scale))),
-                               Image.Resampling.NEAREST)
+                               getattr(Image, 'Resampling', Image).NEAREST)
             ImageDraw.Draw(crop).rectangle([(x1-bounds[0])*scale, (y1-bounds[1])*scale,
                                            (x2-bounds[0])*scale, (y2-bounds[1])*scale], outline='#ff00ff')
             x, y = (k % 8)*240, (k//8)*240

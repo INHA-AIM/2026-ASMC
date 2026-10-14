@@ -1,5 +1,11 @@
 # 장애물 미션의 MORAI 객체 범위와 학습·소비 분류
 
+**현재 합의 — 2026-10-14:** 학습 클래스16종과 소비 그룹3종의 정본은
+[카메라 배포 계약](../perception/camera-mission16-deployment.md)입니다. SportBike/Scooter는static,
+자전거/유모차는dynamic으로 둡니다. 유모차 안 아기는 별도person 정답에서 제외합니다.
+아래 10/06 네 그룹·킥보드 등의 후보는 당시 기록이며 현재 실행 규칙을 덮어쓰지 않습니다.
+
+
 > 현재 학습 명칭은 [데이터 인계 시작점의 v2 16종](../perception/camera-training-data-audit.md#현재-기준--2026-10-10-v2-16종)을 따른다.
 > 아래 초기 분류·과거 실험은 이력이다. 입식 전동 킥보드는 현재 후보에서 제외하며,
 > CargoBox/WoodBox는 box, drum류는 traffic_drum으로 통합하되 원본 종류를 보존한다.

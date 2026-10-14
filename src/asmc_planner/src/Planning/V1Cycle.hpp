@@ -129,6 +129,7 @@ void Planner::RunV1(RuntimePort& port) {
         command.stop_position = stop_s;
     }
 
+    port.planner_.SetObjectObservationTime(snapshot.objects.header.stamp.toSec());
     const ConversionStatus objects_status =
         ConvertDetectedObjects(snapshot.objects, objects);
     if (objects_status != ConversionStatus::OK) {
@@ -241,3 +242,4 @@ void Planner::RunV1(RuntimePort& port) {
         vehicle_age, objects_age, behavior_age);
 }
 }
+

@@ -20,6 +20,8 @@ struct ObjectTrackingConfig {
     double yaw_rate_smoothing_alpha;
     // [cycles] 이 사이클 수 넘게 관측되지 않은 객체 트랙을 제거한다.
     int missing_cycles_eviction;
+    // [rad] Minimum velocity-direction change supported by a fresh history.
+    double min_motion_direction_change_rad = .05;
 };
 
 // =========================================================
@@ -64,6 +66,8 @@ struct FollowingConfig {
 // FSM이 지정한 대상이 이 범위/조건을 만족하는지만 검증한다.
 // =========================================================
 struct AvoidConfig {
+    // Cooperative search slice; unfinished candidates resume from fresh inputs.
+    double map_search_budget_s = 0.08;
     // Map-aware bypass cruise speed; independent of KEEP's low-speed fallback.
     double bypass_speed_cap = 2.0; // [m/s]
     double detection_distance; // [m] FSM이 지정한 대상까지 이 거리 안이어야 유효(실제값은 충돌 lookahead와 자동 조정)
@@ -191,6 +195,9 @@ struct MergeConfig {
 struct StopConfig {
     // [m/s^2] APPROACH 감속 프로파일과 BRAKING 진입거리 계산에 쓰는 감속도.
     double comfortable_decel;
+    // Ordinary STOP restart limits; do not change the braking limit.
+    double reapproach_speed = 1.0;
+    double reapproach_accel = 0.5;
     // [m/s^2] 일반 STOP에서 허용하는 최대 감속도. 남은 거리로 계산한 요구
     // 감속도가 comfortable_decel보다 크면 이 값까지 연속적으로 강화한다.
     // MPC constraints.acceleration.max_reverse와 같은 크기로 유지해야 한다.
@@ -290,3 +297,4 @@ struct HighwayMergeConfig {
 };
 
 #endif  // PLANNER_CONFIG_FRENET_CONFIG_HPP
+
