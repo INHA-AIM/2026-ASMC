@@ -7,6 +7,7 @@
 #include <cmath>
 
 #include "Util/BrakingSteering.hpp"
+#include "Util/StopResponseScope.hpp"
 #include "Util/MessageConverter.hpp"
 #include "MPC/Reference/path_resampler.hpp"
 #include "MPC/Reference/reference_validator.hpp"
@@ -16,6 +17,12 @@ ControlContext g_control;
 
 namespace mpc_controller_ros {
 namespace {
+
+bool stop_response_active = false;
+StopResponseScope stop_response_scope = StopResponseScope::NONE;
+ros::SteadyTime behavior_received_at;
+StopBrakeResponse stop_brake_response;
+StopAccelerationResponse stop_acceleration_response;
 
 double SampleDiagnosticCartesianAcceleration(
     const PlannedPath& path, double start_time_offset) {
@@ -40,6 +47,14 @@ double SampleDiagnosticCartesianAcceleration(
 void BehaviorCommandCallback(
     const asmc_msgs::BehaviorCommand::ConstPtr& message) {
     if (!message) return;
+    const auto scope = ResolveStopResponseScope(*message);
+    if (scope != stop_response_scope) {
+        stop_brake_response.Reset();
+        stop_acceleration_response.Reset();
+    }
+    stop_response_scope = scope;
+    stop_response_active = scope != StopResponseScope::NONE;
+    behavior_received_at = ros::SteadyTime::now();
     const bool emergency =
         message->maneuver_type == asmc_msgs::BehaviorCommand::EMERGENCY_STOP;
     if (emergency != g_control.emergency_stop_active) {
@@ -66,6 +81,8 @@ void VehicleStateCallback(
 }
 
 void PublishStop(const char* reason) {
+    stop_brake_response.Reset();
+    stop_acceleration_response.Reset();
     g_control.has_successful_control = false;
     ResetMPCOnFailSafe();
     g_control.control_pub.publish(MakeRosStopCommand());
@@ -74,6 +91,8 @@ void PublishStop(const char* reason) {
 
 void ControlProcess(const ros::SteadyTimerEvent&) {
     if (g_control.emergency_stop_active) {
+        stop_brake_response.Reset();
+        stop_acceleration_response.Reset();
         g_control.has_successful_control = false;
         ResetMPCOnFailSafe();
         g_control.control_pub.publish(MakeRosEmergencyStopCommand());
@@ -104,6 +123,8 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
     PlannedPath path;
     const TrajectoryStatus status = ConvertTrajectory(g_control.latest_trajectory, path);
     if (status == TrajectoryStatus::STOP_TRAJECTORY) {
+        stop_brake_response.Reset();
+        stop_acceleration_response.Reset();
         MPCState stop_state;
         if (ConvertVehicleState(g_control.latest_vehicle_state, stop_state) != VehicleStateStatus::OK) {
             PublishStop("invalid vehicle state during planner STOP");
@@ -171,8 +192,13 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
         return;
     }
 
-    const MPCOutput output =
-        MPCProcess(current_state, reference);
+    const auto& response_config = GetMPCParams().stop_brake_response;
+    const bool compensate = stop_response_active && response_config.enabled &&
+        IsMessageFresh(behavior_received_at, ros::SteadyTime::now(),
+                       g_control.trajectory_timeout);
+    const MPCOutput output = MPCProcess(current_state, reference,
+        compensate ? response_config.acceleration_limit
+                   : std::numeric_limits<double>::quiet_NaN());
     if (output.stuck_event ==
         StuckEvent::RECOVERY_STARTED) {
         ROS_WARN("MPC stuck recovery start: ego_v=%.2f max_ref_v=%.2f "
@@ -227,9 +253,30 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
     g_control.last_successful_steering=output.control.delta;
     g_control.last_successful_control_at=ros::SteadyTime::now();
     g_control.has_successful_control=true;
-    g_control.control_pub.publish(ToRosControlCommand(output.control,
+    MPCControl mapped_control = output.control;
+    if (compensate) {
+        stop_brake_response.Observe(g_control.latest_vehicle_state.acceleration,
+            current_state.vx,g_control.latest_vehicle_state.header.stamp.toSec(),
+            response_config);
+        stop_acceleration_response.Observe(g_control.latest_vehicle_state.acceleration,
+            current_state.vx,g_control.latest_vehicle_state.header.stamp.toSec(),response_config);
+        mapped_control.accel = output.control.accel > 0
+            ? stop_acceleration_response.Compensate(output.control.accel,GetMPCParams().accel_max)
+            : stop_brake_response.Compensate(
+            output.control.accel,GetMPCParams().accel_min);
+        stop_brake_response.Issued(mapped_control.accel,ros::Time::now().toSec(),
+                                   response_config);
+        stop_acceleration_response.Issued(mapped_control.accel,ros::Time::now().toSec(),response_config);
+        ROS_INFO_THROTTLE(.25,"[STOP-RESPONSE] gain=%.3f throttle_gain=%.3f desired_a=%+.2f "
+            "mapped_a=%+.2f measured_a=%+.2f",stop_brake_response.gain(),stop_acceleration_response.gain(),
+            output.control.accel,mapped_control.accel,
+            g_control.latest_vehicle_state.acceleration);
+    } else {
+        stop_brake_response.Reset();
+        stop_acceleration_response.Reset();
+    }
+    g_control.control_pub.publish(ToRosControlCommand(mapped_control,
                                              GetMPCParams()));
 }
 
 }  // namespace mpc_controller_ros
-

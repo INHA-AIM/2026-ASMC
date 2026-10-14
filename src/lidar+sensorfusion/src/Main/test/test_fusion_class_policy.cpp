@@ -95,3 +95,21 @@ TEST(FusionClassPolicy, EpochInvalidationRemovesOldClassWithoutResettingGeometry
     fusion_class::InvalidateObservation(object, 3);
     EXPECT_EQ("noise", object.str_ObjectClass);
 }
+
+TEST(FusionClassPolicy, MissionGroupsPreserveRawAndDoNotSetMotion) {
+    fusion_class::MissionProfile() = true;
+    EXPECT_EQ("vehicle", fusion_class::Normalize("truck"));
+    EXPECT_EQ("static_obstacle", fusion_class::Normalize("motorcycle"));
+    EXPECT_EQ("dynamic_obstacle", fusion_class::Normalize("bicycle"));
+    EXPECT_EQ("dynamic_obstacle", fusion_class::Normalize("stroller"));
+    EXPECT_EQ("unknown", fusion_class::Normalize("building"));
+    EXPECT_EQ("vehicle", fusion_class::Normalize("vehicle"));
+    LiDARObjectInfo object;
+    const bool motion = object.b_IsDynamic;
+    fusion_class::Observe(object, "vehicle", "truck", 1, 1);
+    EXPECT_EQ("vehicle", object.str_ObjectClass);
+    EXPECT_EQ("truck", object.str_YoloClass);
+    EXPECT_EQ(motion, object.b_IsDynamic);
+    fusion_class::MissionProfile() = false;
+    EXPECT_EQ("car", fusion_class::Normalize("truck"));
+}

@@ -48,6 +48,19 @@ constraints:
 # (3.08 s, 43.73 m) gives approximately 8.9 m/s^2 full-brake deceleration.
 # This is deliberately separate from the MPC acceleration constraint above.
 control_mapping:
+  # Ordinary STOP only. Identify throttle and brake responses separately.
+  # Limit positive MPC acceleration; retain steering warm-start and braking bounds.
+  # MERGE and fixed safety brakes keep their existing behavior.
+  stop_brake_response:
+    enabled: true
+    acceleration_limit: 0.5       # [m/s^2] ordinary STOP only; solver bound
+    acceleration_minimum_request: 0.15
+    learning_time_constant: 0.3
+    response_time_constant: 0.1
+    minimum_gain: 0.5
+    maximum_gain: 2.5
+    minimum_request: 0.5
+    minimum_speed: 0.5
   brake_full_decel: 8.9
   # 2026-09-10 MORAI IONIQ 5 repeated calibration. The controller computes
   # desired acceleration in m/s^2 and inversely interpolates these monotonic
@@ -72,3 +85,4 @@ stuck_recovery:
   timeout: 1.0                 # [s] 정지가 이 시간 지속되면 복구 시작
   duration: 0.75               # [s] 한 번의 제한된 launch assist 시간
   launch_accel: 0.5            # [m/s^2] 복구 중 최소 요구 가속도
+

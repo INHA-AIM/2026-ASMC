@@ -33,6 +33,7 @@ const char* ReasonName(RejectionReason reason) {
     switch (reason) {
         case RejectionReason::CURVATURE: return "curvature";
         case RejectionReason::COLLISION: return "collision";
+        case RejectionReason::ROAD_BOUNDARY: return "road_boundary";
         case RejectionReason::NONE: return "valid";
     }
     return "unknown";
@@ -200,3 +201,4 @@ void PlannerDebugWriter::Publish(const RefLine& ref,
         std::remove(temp_path.c_str());
     }
 }
+

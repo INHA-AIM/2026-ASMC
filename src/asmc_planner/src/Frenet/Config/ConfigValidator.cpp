@@ -105,6 +105,13 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         return false;
     }
 
+    if (!CheckPositiveFinite(object_tracking_cfg.min_motion_direction_change_rad,
+                              "planner/object_tracking/min_motion_direction_change_rad", error_message) ||
+        object_tracking_cfg.min_motion_direction_change_rad > 3.141592653589793) {
+        error_message="planner/object_tracking/min_motion_direction_change_rad must be in (0, pi]";
+        return false;
+    }
+
     // --- path_generator ---
     if (!CheckRange(path_cfg.lateral_d1, "planner/path_generator/lateral_d1", error_message))
         return false;
@@ -268,6 +275,11 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
     }
 
     // --- avoid ---
+    if (!IsFinite(avoid_cfg.map_search_budget_s) || avoid_cfg.map_search_budget_s <= 0.0 ||
+        avoid_cfg.map_search_budget_s > 0.15) {
+        error_message = "planner/avoid/map_search_budget_s must be finite and in (0, 0.15]";
+        return false;
+    }
     if (!CheckPositiveFinite(avoid_cfg.detection_distance, "planner/avoid/detection_distance", error_message))
         return false;
     if (!IsFinite(avoid_cfg.bypass_speed_cap) ||
@@ -387,6 +399,9 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
 
     // --- stop ---
     if (!CheckPositiveFinite(stop_cfg.comfortable_decel, "planner/stop/comfortable_decel", error_message))
+        return false;
+    if (!CheckPositiveFinite(stop_cfg.reapproach_speed, "planner/stop/reapproach_speed", error_message) ||
+        !CheckPositiveFinite(stop_cfg.reapproach_accel, "planner/stop/reapproach_accel", error_message))
         return false;
     if (!IsFinite(stop_cfg.max_service_decel) ||
         stop_cfg.max_service_decel < stop_cfg.comfortable_decel) {
@@ -633,3 +648,4 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
 
     return true;
 }
+

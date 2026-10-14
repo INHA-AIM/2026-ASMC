@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include "Global/Global.hpp"
+#include <limits>
 
 #include "Frenet/Geometry/GeometryTypes.hpp"
 
@@ -34,6 +35,21 @@ struct TrackedObject {
     double height = 0.0;
     double yaw_rate = 0.0;  // [rad/s] planner가 연속 heading 관측으로 추정
 
+    // Internal prediction policy, not a ROS field. Infinity preserves the
+    // existing constant-turn model. A provisional turn ends along its tangent.
+    double turn_prediction_duration = std::numeric_limits<double>::infinity();
+
+    // Optional continuation for an additional short sensor-velocity hypothesis.
+    // NaN retains the tangent continuation used by ordinary predictions.
+    double continuation_vx = std::numeric_limits<double>::quiet_NaN();
+    double continuation_vy = std::numeric_limits<double>::quiet_NaN();
+
+    // Optional departure-only speed interval. NaNs preserve ordinary point
+    // prediction. Its swept footprint covers intermediate speeds continuously;
+    // these internal fields do not change the ROS message/wire contract.
+    double prediction_min_speed = std::numeric_limits<double>::quiet_NaN();
+    double prediction_max_speed = std::numeric_limits<double>::quiet_NaN();
+
     // ---- 아래는 충돌검사용 authoritative geometry (구 TrackedObstacle) ----
     geometry::Corners8 corners{};
     bool geometry_valid = false;
@@ -41,3 +57,4 @@ struct TrackedObject {
 };
 
 #endif  // PLANNER_COMMON_OBJECT_TYPES_HPP
+

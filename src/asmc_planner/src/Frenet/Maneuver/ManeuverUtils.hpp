@@ -47,4 +47,15 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
                               int margin_recovery_object_id = -1,
                               bool* margin_recovery_used = nullptr);
 
+// AVOID must not depend on unconfirmed motion vacating current occupancy.
+// Confirmed DYNAMIC objects retain their normal moving prediction.
+bool CartesianAvoidTrajectoryClear(const CartesianPath& path,
+                              const std::vector<TrackedObject>& obstacles,
+                              const VehicleShape& ego_shape,
+                              const CollisionCheckConfig& collision_cfg,
+                              double dt, int* blocking_id = nullptr,
+                              int margin_recovery_object_id = -1,
+                              bool* margin_recovery_used = nullptr);
+
 #endif  // FRENET_MANEUVER_MANEUVER_UTILS_HPP
+

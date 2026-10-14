@@ -16,10 +16,13 @@ class ClassGroups:
     excluded: FrozenSet[str]
     default_group: str = "obstacle"
     animal: FrozenSet[str] = frozenset()
+    explicit: Optional[Mapping[str, FrozenSet[str]]] = None
 
     def group_of(self, source_class_name: str) -> Optional[str]:
         """Return the group for a raw label, or None when it is excluded."""
         key = str(source_class_name).strip().lower()
+        if self.explicit is not None:
+            return next((g for g, names in self.explicit.items() if key in names), None)
         if key in self.excluded:
             return None
         if key in self.person:
@@ -43,6 +46,13 @@ def _names(values: object, label: str) -> FrozenSet[str]:
 def load_class_groups(config: Mapping[str, object]) -> ClassGroups:
     """Build groups from the ``object_classes.yaml`` mapping."""
     groups = config.get("groups")
+    if config.get("profile") == "mission16_v1":
+        from .mission import GROUPS as mission_groups
+        expected = {g: frozenset(names) for g, names in mission_groups.items()}
+        actual = {g: _names(v, g) for g, v in groups.items()} if isinstance(groups, Mapping) else {}
+        if actual != expected or config.get('default_group') != 'unknown':
+            raise ValueError('mission16_v1 requires the fixed approved mapping and unknown default')
+        return ClassGroups(frozenset(), frozenset(), frozenset(), 'unknown', explicit=actual)
     if not isinstance(groups, Mapping) or set(groups) not in (
         {"person", "vehicle"}, {"person", "animal", "vehicle"}
     ):

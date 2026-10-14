@@ -65,6 +65,8 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
     for (size_t sample_index = 0; sample_index < samples.size();
          ++sample_index) {
         const CollisionSample& sample = samples[sample_index];
+        const geometry::Polygon2D physical_ego =
+            MakeEgoFootprint(sample.ego, ego_shape, 0.0);
         for (const TrackedObject& object : obstacles) {
             if (sample.reactive_coast &&
                 object.id == reactive_coast_exempt_object_id) {
@@ -73,21 +75,23 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
 
             const double margin =
                 EffectiveSafetyMargin(cfg, object, sample.time);
-            const geometry::Polygon2D expanded_ego =
-                MakeEgoFootprint(sample.ego, ego_shape, margin);
-            const bool expanded_overlap = CheckObstacleOverlap(
-                expanded_ego, {}, object, sample.time);
+            // Euclidean clearance keeps the same margin around edges and
+            // corners. Expanding a rectangle by margin on both axes otherwise
+            // reserves sqrt(2) * margin at its corners.
+            const double physical_clearance = geometry::ConvexPolygonDistance(
+                physical_ego, PredictObstacleFootprint(object, sample.time));
+            // Distance is conservatively zero for invalid geometry. Boundary
+            // contact also remains blocked, including a zero configured margin.
+            const bool inside_margin = physical_clearance <= margin + 1e-9;
 
             if (object.id != margin_recovery_object_id) {
-                // 회피 대상이 아닌 모든 객체는 항상 확장 margin을 강제한다.
-                if (expanded_overlap) return reject(object.id, sample_index);
+                // 회피 대상이 아닌 모든 객체에는 최단거리 margin을 강제한다.
+                if (inside_margin) return reject(object.id, sample_index);
                 continue;
             }
 
             // 회피 대상도 실제 차체 OBB 충돌은 어떤 phase/속도에서도 금지다.
-            const geometry::Polygon2D physical_ego =
-                MakeEgoFootprint(sample.ego, ego_shape, 0.0);
-            if (CheckObstacleOverlap(physical_ego, {}, object, sample.time)) {
+            if (physical_clearance <= 1e-9) {
                 return reject(object.id, sample_index);
             }
 
@@ -100,9 +104,7 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
                 recovery.use_physical_clearance = longitudinal <= 0.0;
             }
             const double clearance = recovery.use_physical_clearance
-                ? geometry::ConvexPolygonDistance(
-                      physical_ego,
-                      PredictObstacleFootprint(object, sample.time))
+                ? physical_clearance
                 : std::fabs((predicted.x - sample.ego.x) * recovery_nx +
                             (predicted.y - sample.ego.y) * recovery_ny);
             if (!std::isfinite(clearance)) {
@@ -111,22 +113,22 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
 
             if (!recovery.initialized) {
                 recovery.initialized = true;
-                recovery.started_inside_margin = expanded_overlap;
+                recovery.started_inside_margin = inside_margin;
                 recovery.initial_clearance = clearance;
                 recovery.max_clearance = clearance;
-                result.margin_recovery_used = expanded_overlap;
+                result.margin_recovery_used = inside_margin;
                 continue;
             }
 
             if (!recovery.started_inside_margin) {
                 // margin 밖에서 시작했다면 이후 진입은 recovery가 아니다.
-                if (expanded_overlap) return reject(object.id, sample_index);
+                if (inside_margin) return reject(object.id, sample_index);
                 continue;
             }
 
             if (recovery.exited_margin) {
                 // 한 번 빠져나간 뒤 다시 margin으로 들어오는 경로는 금지한다.
-                if (expanded_overlap) return reject(object.id, sample_index);
+                if (inside_margin) return reject(object.id, sample_index);
                 continue;
             }
 
@@ -139,7 +141,7 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
             }
             recovery.max_clearance = std::max(recovery.max_clearance, clearance);
 
-            if (!expanded_overlap) {
+            if (!inside_margin) {
                 if (!recovery.clearance_progressed) {
                     return reject(object.id, sample_index);
                 }
@@ -189,7 +191,8 @@ PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t)
     // perception이 준 map-frame 절대속도 vx/vy로 시작한다. yaw_rate가
     // 있으면 그 속도 벡터를 회전시켜 constant-turn-rate로 적분한다.
     if (std::fabs(obj.yaw_rate) > 1e-3) {
-        const double angle = obj.yaw_rate * t;
+        const double turn_time = std::min(t, std::max(0.0, obj.turn_prediction_duration));
+        const double angle = obj.yaw_rate * turn_time;
         const double sine = std::sin(angle);
         const double cosine = std::cos(angle);
         pose.x = obj.x +
@@ -199,10 +202,24 @@ PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t)
             (velocity.first * (1.0 - cosine) + velocity.second * sine) /
                 obj.yaw_rate;
     } else {
-        pose.x = obj.x + velocity.first * t;
-        pose.y = obj.y + velocity.second * t;
+        const double first_time = std::min(t, std::max(0.0, obj.turn_prediction_duration));
+        const bool continuation = obj.motion_state != ObjectMotionState::LOW_THREAT && std::isfinite(obj.continuation_vx) && std::isfinite(obj.continuation_vy);
+        pose.x = obj.x + velocity.first * first_time +
+            (continuation ? obj.continuation_vx : velocity.first) * (t-first_time);
+        pose.y = obj.y + velocity.second * first_time +
+            (continuation ? obj.continuation_vy : velocity.second) * (t-first_time);
     }
-    pose.heading = obj.heading + obj.yaw_rate * t;
+    const double turn_time = std::min(t, std::max(0.0, obj.turn_prediction_duration));
+    const double angle = obj.yaw_rate * turn_time;
+    if (std::fabs(obj.yaw_rate) > 1e-3) {
+        const double tangent_time = t - turn_time;
+        const bool continuation = obj.motion_state != ObjectMotionState::LOW_THREAT && std::isfinite(obj.continuation_vx) && std::isfinite(obj.continuation_vy);
+        pose.x += (continuation ? obj.continuation_vx :
+            velocity.first * std::cos(angle) - velocity.second * std::sin(angle)) * tangent_time;
+        pose.y += (continuation ? obj.continuation_vy :
+            velocity.first * std::sin(angle) + velocity.second * std::cos(angle)) * tangent_time;
+    }
+    pose.heading = obj.heading + angle;
     return pose;
 }
 
@@ -242,6 +259,26 @@ geometry::Polygon2D PredictObstacleFootprint(
     const TrackedObject& obstacle, double prediction_time) {
     if (!obstacle.geometry_valid || !std::isfinite(obstacle.vx) ||
         !std::isfinite(obstacle.vy) || !std::isfinite(prediction_time)) return {};
+    const double speed=std::hypot(obstacle.vx,obstacle.vy);
+    if(obstacle.motion_state!=ObjectMotionState::LOW_THREAT&&speed>1e-6&&
+       (std::isfinite(obstacle.prediction_min_speed)||std::isfinite(obstacle.prediction_max_speed))) {
+        const double low=obstacle.prediction_min_speed,high=obstacle.prediction_max_speed;
+        if(!std::isfinite(low)||!std::isfinite(high)||low<0||low>speed||high<speed)return {};
+        geometry::Polygon2D points;
+        for(double bounded_speed:{low,high}) {
+            auto bounded=obstacle;
+            bounded.vx*=bounded_speed/speed;bounded.vy*=bounded_speed/speed;
+            const auto pose=PredictTrackedObjectPose(bounded,prediction_time);
+            const auto corners=geometry::TranslateCorners(obstacle.corners,
+                pose.x-obstacle.x,pose.y-obstacle.y,1.0);
+            const auto xy=geometry::ProjectCornersToXY(corners);
+            points.insert(points.end(),xy.begin(),xy.end());
+        }
+        // Constant-turn translation (including fixed continuation velocity)
+        // is affine in initial speed. The endpoint hull covers every speed
+        // between them, avoiding sparse-speed sampling holes.
+        return geometry::ComputeConvexHull(points);
+    }
     const PredictedObjectPose pose =
         PredictTrackedObjectPose(obstacle, prediction_time);
     const geometry::Corners8 predicted = geometry::TranslateCorners(
@@ -263,8 +300,11 @@ bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
     geometry::ZRange obstacle_z;
     if (obstacle.z_valid) obstacle_z = geometry::ComputeZRange(predicted);
     if (!geometry::CheckZOverlap(ego_z, obstacle_z)) return false;
-    const geometry::Polygon2D footprint = geometry::ComputeConvexHull(
-        geometry::ProjectCornersToXY(predicted));
+    const bool speed_interval=obstacle.motion_state!=ObjectMotionState::LOW_THREAT&&
+        (std::isfinite(obstacle.prediction_min_speed)||std::isfinite(obstacle.prediction_max_speed));
+    const geometry::Polygon2D footprint = speed_interval
+        ? PredictObstacleFootprint(obstacle,prediction_time)
+        : geometry::ComputeConvexHull(geometry::ProjectCornersToXY(predicted));
     return geometry::CheckConvexPolygonOverlapSAT(ego_footprint, footprint);
 }
 
@@ -362,3 +402,4 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
         }
     }
 }
+

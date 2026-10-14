@@ -71,11 +71,16 @@ struct FollowingRequest {
     double gap_gain = 0.0;
 };
 
-// STOPPING 전용 종방향 생성 입력. stop_s는 이미 phase(APPROACH/BRAKING)
-// 판단이 끝난 뒤의 목표 s다 - lifecycle 자체는 이 struct에 없다(Stop.cpp가
-// 계속 소유).
+// STOPPING longitudinal input. Lifecycle remains in Stop.cpp; a spatial
+// profile may cover either approach or braking without changing its endpoint.
 struct StopRequest {
     double stop_s = 0.0;
+    // Ordinary external STOP uses a distance-native, jerk-limited profile.
+    // Roundabout waiting keeps its frontier-specific timing contract.
+    bool spatial_profile = false;
+    double comfortable_decel = 0.0;
+    double cruise_speed = 0.0;
+    double acceleration_limit = 0.0; // zero keeps the generator default
     // STOP 계열은 정지 목표를 지나치지 않도록 delta_s 범위를 제한한다.
     // R5부터 GenerateRequestedCandidates(CandidateCombiner.cpp)가 이 값을
     // 직접 읽어 종방향 후보를 만든다 - 호출자(Keep.cpp)가
@@ -113,3 +118,4 @@ struct TrajectoryRequest {
 };
 
 #endif  // FRENET_PIPELINE_TRAJECTORY_REQUEST_HPP
+

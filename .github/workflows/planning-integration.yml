@@ -54,10 +54,21 @@ jobs:
           catkin_make planning_filter_test
           ./devel/lib/planning_inputs/planning_filter_test
 
+      - name: Build legacy camera message dependency for runtime launch
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          # The full launch includes the legacy camera BBOX bridge importing Msg.
+          # Jobs have isolated workspaces; the LiDAR job's Msg build is unavailable here.
+          cd src/lidar+sensorfusion
+          catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=OFF -DCATKIN_WHITELIST_PACKAGES='Msg'
+
       - name: Check real ROS planning input boundary
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
+          source src/lidar+sensorfusion/devel/setup.bash
+          python3 -c "from Msg.msg import Yolo_bbox_arr; print('Legacy camera Msg import OK')"
           python3 src/planning_inputs/test/ros_boundary_smoke_test.py
 
   validated-lidar-build:
@@ -118,3 +129,4 @@ jobs:
           for fixture_case in camera_bbox_lane camera_bbox_clipped camera_bbox_lane_change camera_bbox_ego_mask; do
             rostest lane_boundary_adapter "$fixture_case.test" --text
           done
+

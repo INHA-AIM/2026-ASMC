@@ -335,7 +335,87 @@ int main(){
   hard_block.corners[i]={ego.x+x,ego.y+y,double(i/4)};}
  out={};expect(!slow_planner.PlanRoundaboutMerge(ego,{hard_block},cmd,801,801,out,r),
   "a physical blocker still rejects all slower progress candidates");
+ // A physical blockage at the frontier requires stopping upstream. Direct
+ // stopping candidates must include a checked stationary tail, not coast into
+ // the obstacle after publishing only a short safe prefix.
+ ego=pose_at(zone.stop_s-15);ego.v=5;ego.a=0;
+ auto frontier_block=crossing_car;auto bp=pose_at(zone.stop_s);
+ frontier_block.motion_state=ObjectMotionState::LOW_THREAT;
+ frontier_block.x=bp.x;frontier_block.y=bp.y;frontier_block.vx=frontier_block.vy=0;
+ for(int i=0;i<8;++i){const double x=(i%4==0||i%4==3)?-2:2,y=i%4<2?-.9:.9;
+  frontier_block.corners[i]={bp.x+x*std::cos(bp.yaw)-y*std::sin(bp.yaw),
+   bp.y+x*std::sin(bp.yaw)+y*std::cos(bp.yaw),double(i/4)};}
+ FrenetPlanner upstream_stop;bool upstream_ok=upstream_stop.Init(file.string());out={};
+ upstream_ok=upstream_ok&&upstream_stop.PlanRoundaboutMerge(ego,{frontier_block},cmd,802,802,out,r);
+ double end_station=zone.stop_s;
+ if(!out.x.empty())upstream_stop.ProjectPointToS(out.x.back(),out.y.back(),zone.stop_s-15,end_station);
+ expect(upstream_ok&&out.x.size()>2&&out.v.back()==0&&end_station<zone.stop_s-3,
+  "a blocked frontier keeps a steerable complete stop upstream");
+ expect(upstream_ok&&EvaluateCartesianTrajectorySafety(out,{frontier_block},shape,waiting_collision,planner.sample_dt()).clear&&!r.ready,
+  "upstream braking preserves physical collision checks and cannot authorize entry");
+ ego=pose_at(zone.stop_s-1);ego.v=.08;ego.a=-3;
+ FrenetPlanner near_zero_stop;bool near_zero_ok=near_zero_stop.Init(file.string());out={};
+ near_zero_ok=near_zero_ok&&near_zero_stop.PlanRoundaboutMerge(ego,{},cmd,803,803,out,r);
+ bool nonreverse=near_zero_ok&&!out.v.empty();for(double speed:out.v)nonreverse&=speed>=-1e-9;
+ expect(nonreverse&&out.v.back()==0,
+  "a strong measured brake near standstill does not force all waiting candidates into reverse");
  cmd.merge_type=MergeType::HIGHWAY;expect(!tick(200,200)&&planner.last_failure_reason()==FrenetPlanner::PlanFailureReason::INVALID_COMMAND,"roundabout implementation cannot silently execute highway merge");
+ // A braking state with little spare distance must use the shared spatial
+ // stop rather than lose steering when time-quintic candidates have no solution.
+ cmd.merge_type=MergeType::ROUNDABOUT;
+ ego=pose_at(zone.stop_s-8);ego.v=7.8;ego.a=-2;
+ FrenetPlanner spatial_wait;bool spatial_ok=spatial_wait.Init(file.string());out={};
+ spatial_ok=spatial_ok&&spatial_wait.PlanRoundaboutMerge(ego,{},cmd,900,900,out,r);
+ double spatial_end=0;
+ if(!out.x.empty())spatial_wait.ProjectPointToS(out.x.back(),out.y.back(),zone.stop_s-8,spatial_end);
+ expect(spatial_ok&&out.x.size()>2&&out.v.back()<.05&&std::fabs(spatial_end-zone.stop_s)<.02,
+   "distance-native waiting reaches the rear-axle frontier under achieved braking");
+ bool spatial_bounded=spatial_ok;double spatial_hint=zone.stop_s-8;
+ for(size_t i=0;i<out.x.size();++i){
+   double station=0;
+   spatial_bounded&=spatial_wait.ProjectPointToS(out.x[i],out.y[i],spatial_hint,station)&&station<=zone.stop_s+.02;
+   spatial_hint=station;
+   spatial_bounded&=std::fabs(out.kappa[i])<=cfg["planner"]["kinematic_limits"]["max_curvature"].as<double>()+1e-6;
+ }
+ expect(spatial_bounded,"shared stopping calculation retains MERGE frontier and steering constraints");
+ if(spatial_ok){
+   const auto tangent=Interpolate(ref,spatial_end).theta;
+   expect(std::fabs(std::remainder(out.yaw.back()-tangent,2*M_PI))<2.1*M_PI/180,
+     "spatial waiting keeps the map-aligned terminal heading");
+ }
+ // A small in-lane offset on the final entry bend must not create an
+ // unnecessary centre-return S turn during braking. Keep the observed turn
+ // boundary and certify the complete stop before the same map frontier.
+ ego=pose_at(zone.stop_s-2.55);
+ ego.x+=.15*std::sin(ego.yaw);ego.y-=.15*std::cos(ego.yaw);
+ ego.yaw+=1*M_PI/180;ego.kappa=-.008;ego.v=3;ego.a=-1.2;
+ FrenetPlanner offset_wait;bool offset_ok=offset_wait.Init(file.string());out={};
+ offset_ok=offset_ok&&offset_wait.PlanRoundaboutMerge(ego,{},cmd,901,901,out,r);
+ double offset_end=0,peak_curvature=0;
+ if(!out.x.empty())offset_wait.ProjectPointToS(out.x.back(),out.y.back(),zone.stop_s-2.55,offset_end);
+ for(double k:out.kappa)peak_curvature=std::max(peak_curvature,std::fabs(k));
+ expect(offset_ok&&out.x.size()>2&&out.v.back()==0&&offset_end<=zone.stop_s+.02,
+   "offset waiting retains a complete frontier-bounded stop");
+ expect(offset_ok&&std::fabs(out.kappa.front()-ego.kappa)<1e-5&&peak_curvature<.15,
+   "waiting preserves observed curvature without a sharp centering S turn");
+ expect(offset_ok&&road.EvaluatePath(out,shape,planner.sample_dt()).drivable,
+   "retained lateral offset still passes full-body road containment");
+ if(offset_ok){
+   const auto terminal=Interpolate(ref,offset_end);
+   const double terminal_d=(out.y.back()-terminal.y)*std::cos(terminal.theta)-
+       (out.x.back()-terminal.x)*std::sin(terminal.theta);
+   expect(std::fabs(terminal_d)>.05&&std::fabs(terminal_d)<.25&&
+       std::fabs(std::remainder(out.yaw.back()-terminal.theta,2*M_PI))<2.1*M_PI/180,
+     "safe stop may retain a small offset while aligning with the road");
+ }
+ ego=pose_at(zone.stop_s-2);ego.x+=.2*std::sin(ego.yaw);ego.y-=.2*std::cos(ego.yaw);
+ ego.yaw+=.5*M_PI/180;ego.kappa=Interpolate(ref,zone.stop_s-2).kappa;ego.v=.8;ego.a=-.2;
+ FrenetPlanner slow_offset_wait;bool slow_offset_ok=slow_offset_wait.Init(file.string());out={};
+ slow_offset_ok=slow_offset_ok&&slow_offset_wait.PlanRoundaboutMerge(ego,{},cmd,902,902,out,r);
+ expect(slow_offset_ok&&out.x.size()>2&&out.v.back()==0&&
+     std::fabs(out.kappa.front()-ego.kappa)<1e-5,
+   "low-speed offset policy keeps a steering-capable stop and its initial curvature");
  std::filesystem::remove_all(dir);return failures?1:0;
 }
+
 

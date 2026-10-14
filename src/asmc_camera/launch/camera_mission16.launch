@@ -1,0 +1,15 @@
+<launch>
+  <!-- Compatibility entrypoint for the E8 live review; canonical entrypoint is perception.launch. -->
+  <arg name="profile" default="debug"/>
+  <arg name="objects_model_profile" default="finetuned_e8"/>
+  <arg name="objects_conf_thres" default="0.40"/>
+  <arg name="start_camera_lane" default="false"/>
+  <arg name="start_traffic_light" default="false"/>
+  <include file="$(find asmc_camera)/launch/perception.launch">
+    <arg name="profile" value="$(arg profile)"/>
+    <arg name="objects_model_profile" value="$(arg objects_model_profile)"/>
+    <arg name="objects_conf_thres" value="$(arg objects_conf_thres)"/>
+    <arg name="start_camera_lane" value="$(arg start_camera_lane)"/>
+    <arg name="start_traffic_light" value="$(arg start_traffic_light)"/>
+  </include>
+</launch>

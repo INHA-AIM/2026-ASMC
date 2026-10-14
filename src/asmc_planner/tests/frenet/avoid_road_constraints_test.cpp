@@ -18,6 +18,24 @@ std::vector<TrackedObject> Objects(const YAML::Node& nodes){
  return objects;
 }
 
+// A bounded search can report pending before its later candidate slice is
+// evaluated. These geometry assertions wait on the same input snapshot; the
+// separate side-search test checks braking output and per-call latency.
+bool AwaitPrepare(FrenetPlanner& planner,const CartesianState& ego,
+                  const std::vector<TrackedObject>& objects,const PlannerCommand& command,
+                  CartesianPath& path,FrenetPlanner::AvoidPrepareResult& result){
+    bool ok=false;
+    for(int i=0;i<100;++i){path={};result={};ok=planner.PrepareAvoid(ego,objects,command,path,result);if(result.candidate_valid)break;}
+    return ok;
+}
+bool AwaitCommitted(FrenetPlanner& planner,const CartesianState& ego,
+                    const std::vector<TrackedObject>& objects,const PlannerCommand& command,
+                    CartesianPath& path,FrenetPlanner::AvoidPrepareResult& result){
+    bool ok=false;
+    for(int i=0;i<100;++i){path={};result={};ok=planner.PlanCommittedAvoid(ego,objects,command,path,result);if(result.candidate_valid)break;}
+    return ok;
+}
+
 // Synthetic geometry only: a road widens after x=45, then several independently
 // tracked boxes occupy the same bypass corridor. No recorded bag is needed.
 void SyntheticReplanning(const YAML::Node& original) {
@@ -63,7 +81,7 @@ void SyntheticReplanning(const YAML::Node& original) {
  }
  Expect(moved,"synthetic vehicle starts the lateral bypass");
  objects.push_back(box(2,81,-.4,.4));p={};r={};
- const bool widened=multi.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ const bool widened=AwaitCommitted(multi,ego,objects,cmd,p,r);
  double s=0;multi.ProjectEgoToS(ego,s);
  Expect(widened&&r.candidate_valid&&r.selected_target_d<nominal-.25,"second independent box widens the same-side bypass");
  Expect(widened&&r.map_entry_s<=s+1e-6,"actual lateral motion prevents entry postponement");
@@ -75,7 +93,7 @@ void SyntheticReplanning(const YAML::Node& original) {
  Expect(!r.candidate_valid,"widening cannot bypass a full-road physical barrier");
  objects.pop_back();bool completed=false;int stalls=0;
  for(int i=0;i<800;++i){
-  p={};r={};if(!multi.PlanCommittedAvoid(ego,objects,cmd,p,r)||p.x.size()<2){++stalls;break;}
+  p={};r={};if(!AwaitCommitted(multi,ego,objects,cmd,p,r)||p.x.size()<2){++stalls;break;}
   if(multi.avoid_completed()){completed=true;break;}
   ego={p.x[1],p.y[1],p.yaw[1],p.kappa[1],p.v[1],p.a[1]};
  }
@@ -192,7 +210,7 @@ int main(){
  auto junction_objects=Objects(fixture["junction"]["objects"]);
  command.target_object_id=99;command.requested_direction=LateralDirection::RIGHT;
  path={};result={};
- const bool junction_ok=junction.PrepareAvoid(junction_ego,junction_objects,command,path,result);
+ const bool junction_ok=AwaitPrepare(junction,junction_ego,junction_objects,command,path,result);
  Expect(junction_ok&&result.candidate_valid&&result.selected_target_d<0,"recorded junction state has a right bypass");
  Expect(result.candidate_valid&&map.PathClear(result.candidate_path,shape),"right bypass includes a road-constrained return");
  // A paint-scored fallback must never override a physical OBB collision.
@@ -208,3 +226,4 @@ int main(){
  SyntheticReplanning(config);
  return failures?1:0;
 }
+

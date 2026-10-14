@@ -530,9 +530,44 @@ int main() {
                "previous KEEP trajectory existed and must not be reused by the node");
     }
 
+    // A stopped vehicle before the same target uses bounded reapproach,
+    // independently of the normal cruise speed and service brake strength.
+    {
+        if (!fresh(planner)) return 1;
+        auto ego = PoseAtArcLength(wp, kEgoS, 0.0);
+        double station=0;planner->ProjectEgoToS(ego,station);
+        PlannerCommand stop{};stop.mode=STOP;stop.has_target_speed=true;
+        stop.target_speed=13.8889;stop.stop_position=station+2.56;
+        const bool ok=planner->Plan(ego,no_objects,stop,path);
+        Expect(ok&&path.v.size()>1,"early STOP restart produces a moving stop-capable trajectory");
+        double peak_v=0,peak_a=0;
+        for(double v:path.v)peak_v=std::max(peak_v,v);
+        for(double a:path.a)peak_a=std::max(peak_a,a);
+        Expect(ok&&peak_v<=1.05,"STOP restart does not inherit the normal cruise speed");
+        Expect(ok&&peak_a<=.51,"STOP restart limits positive acceleration independently of braking");
+        double end=0;
+        const bool projected=ok&&planner->ProjectPointToS(path.x.back(),path.y.back(),station,end);
+        Expect(projected&&end<=stop.stop_position+.02&&path.v.back()<1e-6,
+               "restart keeps a zero-speed endpoint before the unchanged target");
+    }
+    // A late braking fallback must not request another throttle pulse merely
+    // because the measured starting acceleration was positive.
+    {
+        if (!fresh(planner)) return 1;
+        auto ego=PoseAtArcLength(wp,kEgoS,2.35);ego.a=3.17;
+        double station=0;planner->ProjectEgoToS(ego,station);
+        PlannerCommand stop{};stop.mode=STOP;stop.has_target_speed=true;
+        stop.target_speed=13.8889;stop.stop_position=station+1.4;
+        const bool ok=planner->Plan(ego,no_objects,stop,path);
+        Expect(ok&&path.v.size()>1,"late accelerating STOP retains checked steerable braking");
+        double peak_v=0;for(double v:path.v)peak_v=std::max(peak_v,v);
+        Expect(ok&&peak_v<=ego.v+.01,"braking fallback does not repeat measured throttle acceleration");
+    }
+
     if (g_failures == 0) {
         std::cout << "All command STOP plan tests passed\n";
         return 0;
     }
     return 1;
 }
+

@@ -6,10 +6,6 @@ import math
 from pathlib import Path
 import time
 import uuid
-from capture_coco7_actors import (grpc, SimulatorStub, ActorStub, CategoryObstacles, ObjectInfo,
-    OBJECT_TYPE_VEHICLE, OBJECT_TYPE_PEDESTRIAN, OBJECT_TYPE_OBSTACLE, Transform, Vector3,
-    ActorSpawnInfo, VehicleSpawnParam, PedestrianSpawnParam, ObstacleSpawnParam,
-    EnableActor, SetTransformParam, MessageToDict)
 
 FIXTURE = [('vehicle','2014_Kia_K7',20.,0.),
     ('vehicle','2013_Hyundai_Xcient(P520)',35.,3.),
@@ -17,7 +13,6 @@ FIXTURE = [('vehicle','2014_Kia_K7',20.,0.),
     ('pedestrian','Man1',12.,2.),('pedestrian','Dog1',10.,-2.),
     ('obstacle','Bicycle_city',3.,8.),('obstacle','SportBike',3.,-8.),
     ('vehicle','2023_Kia_EV6',0.,10.),('vehicle','2016_Hyundai_Ioniq',0.,-10.)]
-TYPES = dict(vehicle=OBJECT_TYPE_VEHICLE,pedestrian=OBJECT_TYPE_PEDESTRIAN,obstacle=OBJECT_TYPE_OBSTACLE)
 
 
 def load_fixture(path):
@@ -38,7 +33,14 @@ def main():
     p.add_argument('--registry',type=Path,required=True)
     p.add_argument('--grpc-host',default='host.docker.internal')
     p.add_argument('--fixture',type=Path,help='Explicit offsets for the same nine models; ground gate unchanged')
-    a=p.parse_args();channel=grpc.insecure_channel(a.grpc_host+':7789')
+    a=p.parse_args()
+    # Fixture validation and --help do not require the live simulator SDK.
+    from capture_coco7_actors import (grpc, SimulatorStub, ActorStub, CategoryObstacles, ObjectInfo,
+        OBJECT_TYPE_VEHICLE, OBJECT_TYPE_PEDESTRIAN, OBJECT_TYPE_OBSTACLE, Transform, Vector3,
+        ActorSpawnInfo, VehicleSpawnParam, PedestrianSpawnParam, ObstacleSpawnParam,
+        EnableActor, SetTransformParam, MessageToDict)
+    TYPES = dict(vehicle=OBJECT_TYPE_VEHICLE,pedestrian=OBJECT_TYPE_PEDESTRIAN,obstacle=OBJECT_TYPE_OBSTACLE)
+    channel=grpc.insecure_channel(a.grpc_host+':7789')
     actors=ActorStub(channel)
     if a.operation=='cleanup':
         report=json.loads(a.registry.read_text());report['cleanup']=[]

@@ -1,5 +1,10 @@
 # 카메라 객체 검출 인수 가이드 — 손재호
 
+**현재 계약 — 2026-10-14:** 기본 YOLO26l v11 E8·16종·3카메라15Hz와 세 소비 그룹은
+[현재 배포 계약](camera-mission16-deployment.md)을 따릅니다. 아래 YOLO11m/P2a/구 그룹/0.7 cutoff는
+당시 인계 기록입니다. 이번 배포의 confidence는0.40, Main 추가 cutoff는 기본0.0이며 원본 라벨은 유지합니다.
+
+
 > **2026-10-09 통합 작업:** [3뷰 COCO7 실행·모델 선정](camera-three-view-coco-runtime.md)을 현재 시작점으로 사용합니다. 아래 기존 실험과 실패 증거는 보존합니다.
 
 > **문서 상태:** Active Guide / Handoff

@@ -85,6 +85,10 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/object_tracking/yaw_rate_clamp_rad_s",     object_tracking_cfg.yaw_rate_clamp_rad_s);
     REQUIRE("planner/object_tracking/yaw_rate_smoothing_alpha", object_tracking_cfg.yaw_rate_smoothing_alpha);
     REQUIRE("planner/object_tracking/missing_cycles_eviction",  object_tracking_cfg.missing_cycles_eviction);
+    // Preserve existing user YAMLs; the committed YAML explicitly sets this.
+    object_tracking_cfg.min_motion_direction_change_rad = .05;
+    if(root["planner"]["object_tracking"]["min_motion_direction_change_rad"])
+        REQUIRE("planner/object_tracking/min_motion_direction_change_rad", object_tracking_cfg.min_motion_direction_change_rad);
 
     REQUIRE("planner/path_generator/lateral_d1/min",   path_cfg.lateral_d1.min);
     REQUIRE("planner/path_generator/lateral_d1/max",   path_cfg.lateral_d1.max);
@@ -152,6 +156,9 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/following/exit_search_margin",   following_cfg.exit_search_margin);
     REQUIRE("planner/following/dropout_grace_cycles", following_cfg.dropout_grace_cycles);
 
+    if (root["planner"]["avoid"]["map_search_budget_s"]) {
+        REQUIRE("planner/avoid/map_search_budget_s", avoid_cfg.map_search_budget_s);
+    }
     REQUIRE("planner/avoid/detection_distance",         avoid_cfg.detection_distance);
     if (root["planner"]["avoid"]["bypass_speed_cap"]) {
         REQUIRE("planner/avoid/bypass_speed_cap", avoid_cfg.bypass_speed_cap);
@@ -190,6 +197,10 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/lane_change/heading_tolerance",           lane_change_cfg.heading_tolerance);
 
     REQUIRE("planner/stop/comfortable_decel",       stop_cfg.comfortable_decel);
+    if (root["planner"]["stop"]["reapproach_speed"])
+        REQUIRE("planner/stop/reapproach_speed", stop_cfg.reapproach_speed);
+    if (root["planner"]["stop"]["reapproach_accel"])
+        REQUIRE("planner/stop/reapproach_accel", stop_cfg.reapproach_accel);
     REQUIRE("planner/stop/max_service_decel",       stop_cfg.max_service_decel);
     REQUIRE("planner/stop/braking_margin",          stop_cfg.braking_margin);
     REQUIRE("planner/stop/stop_buffer",             stop_cfg.stop_buffer);
@@ -335,3 +346,4 @@ bool LoadParams(const std::string& yaml_path,
 
     return true;
 }
+

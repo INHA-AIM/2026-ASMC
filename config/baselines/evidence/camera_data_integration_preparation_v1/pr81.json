@@ -1,0 +1,20 @@
+{
+  "recorded_utc": "2026-10-14T11:57:37.321727+00:00",
+  "base_main": "c70e5d7aa2193839d40b47961b03b3b71ba30655",
+  "scope": "PR81 data/teacher tools and current-state documentation; no main merge",
+  "local_cpu_tests": {
+    "teacher_expansion": 22,
+    "v7_adoption": 12
+  },
+  "contracts": "perception passed",
+  "documentation_migration": "passed",
+  "runtime_changes_against_main": false,
+  "dataset_mutated": false,
+  "new_collection_started": false,
+  "training_started": false,
+  "uncommitted_training_work_imported": false,
+  "hosted_ci": "pending updated PR checks; local tests do not imply hosted pass",
+  "historical_teacher_and_data_evidence": "preserved; not re-evaluated",
+  "new_ci_coverage": "v7 adoption tests explicitly registered",
+  "review_status": "Draft; main merge not authorized in this task"
+}

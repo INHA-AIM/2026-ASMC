@@ -1,5 +1,10 @@
 # 3뷰 COCO7 통합 실행·모델 선정
 
+**2026-10-14 이후:** 이 문서는 COCO7 선정 당시의 실험 기록입니다. 현재 기본은 v11 E8입니다.
+[16종 배포·모델 선택·소비 규칙](camera-mission16-deployment.md)을 실행 정본으로 사용합니다.
+공식 사전학습 YOLO26l은 같은 소비 계약의 대조 모델로 계속 제공합니다.
+
+
 이 문서는 #73·#74·#75의 누적 작업을 흡수한 통합 작업의 시작점이다.
 작업 worktree는 `asmc-camera-objects`, 브랜치는 `feat/camera-three-view-coco-runtime`이다.
 `2026-ASMC`는 main checkout, `asmc-camera-verify`는 rename 재현용이다.
