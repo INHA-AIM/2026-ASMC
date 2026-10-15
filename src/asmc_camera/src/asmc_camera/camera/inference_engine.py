@@ -48,31 +48,37 @@ class InferenceEngine:
             raise ValueError("at least one view is required")
 
         keys = list(images_bgr)
-        tensors = []
+        groups = {}
         geometries: Dict[str, LetterboxGeometry] = {}
         started = time.perf_counter()
         for key in keys:
+            shape = tuple(self.backend.info.input_hw_by_view.get(key, self.backend.info.input_hw))
             tensor, geometry = letterbox_bgr(
-                images_bgr[key], target_hw=self.backend.info.input_hw
+                images_bgr[key], target_hw=shape
             )
-            tensors.append(tensor)
+            groups.setdefault(shape, []).append((key, tensor))
             geometries[key] = geometry
-        batch = np.stack(tensors, axis=0)
+        batches = [([key for key, _ in entries], np.stack([tensor for _, tensor in entries]))
+                   for entries in groups.values()]
         preprocess_ms = (time.perf_counter() - started) * 1000.0
 
-        started = time.perf_counter()
-        outputs = dict(self.backend.infer(batch))
-        inference_ms = (time.perf_counter() - started) * 1000.0
-        validate_backend_output(
-            outputs,
-            self.backend.info.heads,
-            batch.shape,
-            self.backend.info.categorical_classes,
-        )
+        # One loaded model, one serial worker: batch only equal tensor shapes.
+        # Incomplete view sets continue without waiting for a missing camera.
+        inference_ms = 0.0
+        results = {}
+        for group_keys, batch in batches:
+            started = time.perf_counter()
+            outputs = dict(self.backend.infer(batch))
+            inference_ms += (time.perf_counter() - started) * 1000.0
+            validate_backend_output(outputs, self.backend.info.heads, batch.shape,
+                                    self.backend.info.categorical_classes)
+            for index, key in enumerate(group_keys):
+                results[key] = (index, outputs)
 
         started = time.perf_counter()
         predictions: Dict[str, ViewPrediction] = {}
-        for index, key in enumerate(keys):
+        for key in keys:
+            index, outputs = results[key]
             geometry = geometries[key]
             per_head = {}
             categorical_confidences = {}

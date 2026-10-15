@@ -271,6 +271,14 @@ def main():
     except Exception as exc:
         report['failures'].append(str(exc))
     finally:
+        # GUI/preview have independent process groups. Reap them before ROS
+        # launch shutdown, which can block while model workers join.
+        from run_b0_matrix import stop
+        if qt_process: stop(qt_process,timeout=5)
+        if main_process: stop(main_process,timeout=10)
+        report['qt_inventory_after']=qt_viewers()
+        if any(v['owned_trial'] for v in report['qt_inventory_after']):
+            report['failures'].append('trial Qt remains after cleanup')
         if sampler:
             resources = sampler.close()
             (a.output/'resources.json').write_text(json.dumps(resources))
@@ -279,13 +287,7 @@ def main():
                 report['failures'].append('insufficient resource sampling coverage; no resource acceptance')
         if a.gui and 'view_launch' in locals():
             view_launch.shutdown()
-        from run_b0_matrix import stop
-        if qt_process: stop(qt_process,timeout=5)
-        if main_process: stop(main_process,timeout=10)
         parent.shutdown()
-        report['qt_inventory_after']=qt_viewers()
-        if any(v['owned_trial'] for v in report['qt_inventory_after']):
-            report['failures'].append('trial Qt remains after cleanup')
         replay_stop.set()
         if replay:
             replay.join(2)

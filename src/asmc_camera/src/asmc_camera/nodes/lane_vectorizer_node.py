@@ -150,7 +150,12 @@ class LaneVectorizerNode:
         missing = sorted(set(self.views) - set(cameras))
         if missing:
             raise ValueError("lane vector calibration missing views: {}".format(missing))
-        model_hw = tuple(int(value) for value in rospy.get_param("~model_input_hw"))
+        model_hw = tuple(int(value) for value in rospy.get_param("~input_hw", rospy.get_param("~model_input_hw")))
+        model_hw_by_view = dict(rospy.get_param("~input_hw_by_view", {}))
+        if set(model_hw_by_view) - set(cameras):
+            raise ValueError("model_input_hw_by_view contains an unknown camera")
+        model_hw_by_view = {view: tuple(int(v) for v in model_hw_by_view.get(view, model_hw))
+                            for view in self.views}
         source_masks = {
             str(name): int(value)
             for name, value in dict(rospy.get_param("~source_masks")).items()
@@ -158,7 +163,6 @@ class LaneVectorizerNode:
         if set(self.views) - set(source_masks):
             raise ValueError("source_masks must cover every enabled view")
         projector_kwargs = {
-            "model_hw": model_hw,
             "x_bounds_m": (
                 float(rospy.get_param("~evidence_x_min_m")),
                 float(rospy.get_param("~evidence_x_max_m")),
@@ -176,7 +180,8 @@ class LaneVectorizerNode:
         }
         self.projectors = {
             view: ModelGridGroundProjector(
-                cameras[view], source_mask=source_masks[view], **projector_kwargs
+                cameras[view], model_hw=model_hw_by_view[view],
+                source_mask=source_masks[view], **projector_kwargs
             )
             for view in self.views
         }
@@ -329,6 +334,7 @@ class LaneVectorizerNode:
             "operating_domain": self.operating_domain,
             "expected_boundary_count": self.expected_boundary_count,
             "model_input_hw": list(model_hw),
+            "model_input_hw_by_view": model_hw_by_view,
             "source_masks": source_masks,
             "confidence_by_class": self.confidence_by_class,
             "node": self.node_parameters,
@@ -357,6 +363,7 @@ class LaneVectorizerNode:
             "expected_boundary_count": self.expected_boundary_count,
             "representation": self.shared_family_representation,
             "model_input_hw": list(model_hw),
+            "model_input_hw_by_view": model_hw_by_view,
             "source_masks": source_masks,
             "confidence_by_class": self.confidence_by_class,
             "node": self.node_parameters,

@@ -1,0 +1,31 @@
+{
+  "trial": "data/runtime/camera-front960-v1/results/opencv-one-r1/front960-sunny-gui-r1",
+  "generation2_spans": [
+    {
+      "start_active_sec": 47.3045606839587,
+      "duration_ms": 2340.8493540482596,
+      "caller": {
+        "event": "gc",
+        "phase": "start",
+        "generation": 2,
+        "at": 268951.111732171,
+        "thread": "Thread-15",
+        "caller_file": "/usr/local/lib/python3.8/dist-packages/ultralytics/models/yolo/detect/predict.py",
+        "caller_function": "construct_result",
+        "caller_line": 121,
+        "collected": 0,
+        "uncollectable": 0
+      }
+    }
+  ],
+  "input_max_gaps": {
+    "camera_traffic_light:camera_extra": 0.1803392400033772,
+    "camera_objects:camera_right": 2.384752258018125,
+    "camera_objects:camera_left": 2.3837513859616593,
+    "camera_lane:camera_right": 0.11159620905527845,
+    "camera_lane:camera_left": 0.11131644702982157,
+    "camera_lane:camera_front": 0.13130064000142738,
+    "camera_objects:camera_front": 2.385738264012616
+  },
+  "interpretation": "YOLO generation2 pause coincides with its callback gap; other process receives same cameras. This event is not a global camera input outage. No GC policy changed."
+}

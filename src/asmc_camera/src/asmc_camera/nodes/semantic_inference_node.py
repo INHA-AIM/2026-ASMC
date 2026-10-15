@@ -59,11 +59,14 @@ class SemanticInferenceNode:
                 int(value)
                 for value in self.parameters.get("~input_hw", [384, 640])
             ),
+            input_hw_by_view=self.parameters.get("~input_hw_by_view", {}),
         )
         self.engine = InferenceEngine(
             backend,
             restore_original=bool(self.parameters.get("~restore_original", True)),
         )
+        if set(backend.info.input_hw_by_view) - set(SUPPORTED_VIEWS):
+            raise ValueError("input_hw_by_view contains an unknown camera")
         model_load_ms = (time.perf_counter() - load_started) * 1000.
         dummy_warmup_ms = 0.
         warmup_iterations = int(self.parameters.get("~warmup_iterations", 1))
@@ -569,6 +572,8 @@ class SemanticInferenceNode:
             "weights": self.backend_info.get("weights"),
             "views": self.views,
             "input_hw": self.backend_info.get("input_hw"),
+            "input_hw_by_view": self.backend_info.get("input_hw_by_view"),
+            "channels_last": self.backend_info.get("channels_last"),
             "received_by_view": self.buffer.received,
             "replaced_by_view": self.buffer.replaced,
             "output_frames": self.output_frames,

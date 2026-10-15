@@ -20,6 +20,11 @@ roslaunch asmc_camera camera.launch mode:=active
 공개 옵션은 `mode:=off/standby/active`, `models:=all` 또는 쉼표로 연결한
 `objects,lane,traffic_light`, `detector:=e8/pretrained`, `confidence`, `nms_iou`다.
 현재 정본은 YOLO15Hz·TwinLite15Hz·ResNet10Hz, confidence0.40·동일 클래스 NMS0.50이다.
+2026-10-15 사용자 요청에 따라 전방 tensor는 YOLO/TwinLite 모두544×960으로 변경했다.
+YOLO 좌우480×640, TwinLite 좌우384×640은 유지한다. 센서 RGB·원본 좌표·header·보정은 그대로다.
+TwinLite는 한 checkpoint의 같은 크기 입력끼리 나눠 추론하며, 전방 확대와 YOLO 축소의
+통합 효과는 [960 검증 기록](../../handoffs/perception/camera-front960-validation.md)에서 별도로 판정한다.
+이전1280/640 결과를 새 입력의 성능 수락으로 사용하지 않는다.
 YOLO/TwinLite의 완전한5초 창 최소10Hz와 목표15Hz의95% 달성은 별도로 보고한다.
 입력이 끊기면 목표를15Hz로 높여도 결과 공급을 보장할 수 없다.
 같은 목표 Hz는 같은 입력 프레임·발행 위상을 의미하지 않으며 소비자는 원본 stamp로 연결한다.
@@ -27,9 +32,11 @@ YOLO/TwinLite의 완전한5초 창 최소10Hz와 목표15Hz의95% 달성은 별�
 종료하는 명령은 아니다. `standby`는 모델 로드·dummy 예열 이후 입력 추론 없이 대기한다.
 PREPARE는 서비스로 요청한다. ACTIVE는 새로운 영상만 처리하며 결과 재발행으로 Hz를 높이지 않는다.
 
-`objects_runtime.yaml`, `lane_runtime.yaml`, `traffic_light_runtime.yaml`과 모델 프로필 YAML이
+`objects_runtime.yaml`, `lane_runtime.yaml`, `lane_input.yaml`, `traffic_light_runtime.yaml`과 모델 프로필 YAML이
 mask·보정·입력·모델 경로·상세 설정을 소유한다. 공개 옵션으로 매번 지정할 필요가 없다.
 ResNet은 camera4의 기존 PIL RGB·GPU resize·bfloat16 경로를 유지한다.
+`lane_input.yaml`은 TwinLite와 model-grid 투영이 함께 읽는 단일 입력 크기 설정이다.
+구형 `perception.launch`의 TwinLite384×640 호환 경로는 보존한다.
 TwinLite·BEV·차선 피팅의 책임은 분리하며 차선 주행 소비는 음영 ODD에 한정한다.
 구간 판정과 결과 소비는 판제 소유다.
 
@@ -121,6 +128,9 @@ fallback 진단을 함께 기록해야 한다. 지연 실측은 이 시각과 �
 ROS 발행까지 monotonic wall 시간을 사용한다.
 
 ## 비교용 공유 프로세스
+
+전방960 이후의 공유 입력 경계와 B1/B2 설계는 [공유 입력 설계안](../../handoffs/perception/camera-shared-input-design.md)에 있다.
+GPU 입력·전송 공유는 아직 구현하지 않았으며 추가 실험보다 설계를 먼저 확정한다.
 
 기본은 R1의 독립 프로세스다. 내부 `_runtime.launch implementation:=shared`는 R2 실험 경로다.
 명시적인 모델별 Parameters namespace·독립 worker·모드·주기를 사용한다. 공유 입력은 토픽당

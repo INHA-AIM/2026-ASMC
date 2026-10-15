@@ -27,7 +27,13 @@ def install(output):
         # Diagnose rare whole-process pauses without changing GC policy. Only
         # generation2 is recorded; no lock, payload copy, or IO in this hook.
         if info['generation']==2:
-            rows.append(dict(event='gc',phase=phase,generation=2,at=time.monotonic()))
+            caller=sys._getframe(1)
+            event=dict(event='gc',phase=phase,generation=2,at=time.monotonic(),
+                thread=threading.current_thread().name,caller_file=caller.f_code.co_filename,
+                caller_function=caller.f_code.co_name,caller_line=caller.f_lineno,
+                collected=info.get('collected'),uncollectable=info.get('uncollectable'))
+            del caller  # Never retain producer frames/tensors in the journal.
+            rows.append(event)
     gc.callbacks.append(gc_event)
 
     def subscribe(name, data_class, callback=None, callback_args=None, **kwargs):

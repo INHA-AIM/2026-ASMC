@@ -19,12 +19,12 @@ class ModelGridProjectionTest(unittest.TestCase):
             PACKAGE_ROOT / "config" / "bev" / "cameras_v2.yaml"
         )
 
-    def _single_point(self, view, ground_xy, source_mask):
+    def _single_point(self, view, ground_xy, source_mask, model_hw=(384,640)):
         camera = self.cameras[view]
         # Include the x=20 m boundary explicitly for the quantization audit;
         # runtime ROI membership otherwise uses the usual half-open interval.
         projector = ModelGridGroundProjector(
-            camera, source_mask=source_mask, x_bounds_m=(-5.0, 20.5)
+            camera, model_hw=model_hw, source_mask=source_mask, x_bounds_m=(-5.0, 20.5)
         )
         pixel, depth = camera.project_ground([ground_xy])
         self.assertGreater(depth[0], 0.0)
@@ -43,6 +43,14 @@ class ModelGridProjectionTest(unittest.TestCase):
         self.assertEqual((1, 2), result.xy.shape)
         np.testing.assert_allclose(result.xy[0], [10.0, 1.5], atol=0.15)
         self.assertEqual(1, int(result.source_mask[0]))
+
+    def test_front_960_grid_and_side_640_keep_metric_coordinate_contract(self):
+        for view, point, source, shape in [('front',(10.0,1.5),1,(544,960)),
+                                            ('left',(2.0,5.0),2,(384,640)),
+                                            ('right',(2.0,-5.0),4,(384,640))]:
+            result=self._single_point(view,point,source,shape)
+            np.testing.assert_allclose(result.xy[0],point,atol=.15)
+            self.assertEqual(int(result.source_mask[0]),source)
 
     def test_front_model_grid_quantization_for_variable_lane_widths(self):
         for width in (2.5, 3.0, 3.5, 4.0):

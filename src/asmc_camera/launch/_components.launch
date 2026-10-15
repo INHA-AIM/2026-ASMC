@@ -12,6 +12,7 @@
   <arg name="profile" default="idle" doc="idle | planning | debug | legacy"/>
   <arg name="objects_component_config" default=""/>
   <arg name="lane_component_config" default=""/>
+  <arg name="lane_input_config" default="$(eval find('asmc_camera') + '/config/camera/lane_input.yaml' if arg('lane_component_config') != '' else '')"/>
   <arg name="traffic_component_config" default=""/>
   <arg name="start_lane_inference" default="true"/>
   <arg name="objects_node_name" default="camera_object_detector"/>
@@ -112,6 +113,7 @@
     <include file="$(find asmc_camera)/launch/camera_lane.launch" if="$(arg start_lane_inference)">
       <arg name="node_name" value="$(arg lane_node_name)"/>
       <arg name="component_config" value="$(arg lane_component_config)"/>
+      <arg name="input_config" value="$(arg lane_input_config)"/>
       <arg name="managed" value="$(arg managed)"/>
       <arg name="initial_mode" value="$(arg lane_initial_mode)"/>
       <arg name="target_hz" value="$(arg lane_target_hz)"/>
@@ -151,6 +153,9 @@
       <param name="managed" value="$(arg managed)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
       <rosparam command="load" file="$(find asmc_camera)/config/bev/lane_fitting.yaml"/>
+      <!-- The semantic worker and model-grid projector share one shape policy.
+           Legacy callers without a component config retain 384x640. -->
+      <rosparam command="load" file="$(arg lane_input_config)" if="$(eval arg('lane_input_config') != '')"/>
       <rosparam param="views">[front, left, right]</rosparam>
       <param name="operating_domain" value="$(arg lane_operating_domain)"/>
       <param name="algorithm_id" value="$(arg lane_algorithm_id)"/>

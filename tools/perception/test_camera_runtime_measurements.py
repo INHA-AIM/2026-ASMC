@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'tools/perception'))
 sys.path.insert(0, str(ROOT/'tools/audit'))
 from compare_camera_runtime import measurements, resource_summary
-from summarize_camera_visualization import readiness_events
+from summarize_camera_visualization import readiness_events, viewer_condition_verified
 from b0_resources import ResourceSampler, _TimeoutTransport, qt_viewers
 import tempfile
 import subprocess
@@ -16,6 +16,14 @@ from evaluate_camera_bbox_pilot import frame_counts, summarize
 
 
 class RuntimeMeasurementsTest(unittest.TestCase):
+    def test_viewer_acceptance_requires_actual_inventory_and_no_leftover_or_user_viewer(self):
+        trial=dict(gui=True,qt_inventory_before=[],qt_inventory_during=[dict(owned_trial=True)],qt_inventory_after=[])
+        self.assertTrue(viewer_condition_verified(trial))
+        self.assertFalse(viewer_condition_verified(dict(gui=True)))
+        self.assertFalse(viewer_condition_verified(dict(trial,qt_inventory_after=[dict(owned_trial=True)])))
+        self.assertFalse(viewer_condition_verified(dict(trial,qt_inventory_during=[dict(owned_trial=False)])))
+        self.assertTrue(viewer_condition_verified(dict(trial,gui=False,qt_inventory_during=[])))
+
     def test_qt_inventory_distinguishes_owned_user_and_zombie_processes(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)

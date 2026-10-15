@@ -4,6 +4,8 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 실행은 `camera.launch`, 시각화는 `view.launch`를 사용합니다.
 기본 객체 모델은 YOLO26l v11 E8, 사전학습 YOLO26l도 실행 시 선택할 수 있습니다.
 현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
+전방 tensor는 두 모델 모두544×960입니다. YOLO 좌우는480×640, TwinLite 좌우는384×640을 유지합니다.
+TwinLite는 이전 전방384×640에서 확대되므로 추가 연산 비용도 검증합니다.
 YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합니다. 같은 목표 Hz가 같은 영상 시각을 보장하지는 않습니다.
 
 ```bash
@@ -27,10 +29,12 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 [실측·후처리 선정](../../docs/handoffs/perception/camera-runtime-structure-validation.md)을 함께 확인하세요.
 [15Hz·confidence 후속 검증](../../docs/handoffs/perception/camera-rate-confidence-followup.md)에 최신 결정과 이전 실패를 정리했습니다.
 [시각화·readiness 검증](../../docs/handoffs/perception/camera-visualization-validation.md)은 단일 렌더링 경로와 GUI 동시 부하 결과를 관리합니다.
-단일 렌더러는 PR #85의 후보 경로입니다. 짧은 반복은 통과했지만30분 시험의 차선·신호등 공백으로 main 승격과 PR Ready를 보류했습니다.
+단일 렌더러는 PR #85의 후보 경로입니다. 이전 입력의30분 시험에서 차선·신호등 공백이 있어 main 승격과 PR Ready를 보류했습니다.
+[전방960 검증](../../docs/handoffs/perception/camera-front960-validation.md)은 별도 결과이며 이전 입력의 통과를 재사용하지 않습니다.
 판제는 구간·활성화·소비를 결정하며 차선의 주행 소비는 음영 ODD에 한정합니다.
 
 세부 모델·입력·mask 설정은 `config/camera/*_runtime.yaml`과 선택한 모델 프로필 YAML에서 관리합니다.
+현재/실험/호환 설정의 구분은 [config 안내](config/README.md), 실제 가중치와 로컬 연결은 [models 안내](models/README.md)를 참고하세요.
 일반 실행에서 실험용 batch·모델 경로·디버그 옵션을 반복 지정할 필요가 없습니다.
 기존 `perception.launch`·`camera_mission16.launch` 및 실험 launch는 호환·재현 목적으로 유지합니다.
 새 실행과 동시에 켜서 생산자를 중복으로 만들지 않습니다.

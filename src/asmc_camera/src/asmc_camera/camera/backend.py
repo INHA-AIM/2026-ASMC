@@ -30,6 +30,8 @@ class BackendInfo:
     weights: str
     upstream_commit: str
     categorical_classes: Mapping[str, Tuple[str, ...]] = field(default_factory=dict)
+    input_hw_by_view: Mapping[str, Tuple[int, int]] = field(default_factory=dict)
+    channels_last: bool = False
 
 
 class SemanticBackend(ABC):

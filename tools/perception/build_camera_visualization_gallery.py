@@ -42,7 +42,7 @@ def main():
     overview=[]
     for group in ('baseline','candidate'):
         for weather in ('sunny','foggy'):
-            subset=[r for r in primary if '-'+group+'-' in r['trial'] and '-'+weather+'-' in r['trial']]
+            subset=[r for r in primary if ('baseline' if '-baseline-' in r['trial'] else 'candidate')==group and '-'+weather+'-' in r['trial']]
             if not subset:continue
             resource=[r['resources'] for r in subset]
             overview.append([group,weather,len(subset),
@@ -93,14 +93,14 @@ def main():
             pooled.append([group,stream.replace('/perception/',''),s['count'],*[number(s['p'+str(q)+'_ms']) for q in (50,95,99)]])
     for group,s in report['pooled_family_latency'].items():
         pooled.append([group,'lane family (separate)',s['count'],*[number(s['p'+str(q)+'_ms']) for q in (50,95,99)]])
-    title='[%s · 2026-10-15] 객체 시각화·차선 공급 최적화'%identifier
+    title='[%s · 2026-10-15] %s'%(identifier,report.get('gallery_title','객체 시각화·차선 공급 최적화'))
     status='수락 통과' if report.get('acceptance_complete') else '검증 결과 확인 필요 / 기본 승격 보류'
     content='<h1>'+esc(title)+'</h1><p><a href="../index.html">ASMC 실험 목록</a> · <a href="summary.json">전체 수치 JSON</a> · <a href="trials.csv">실행별 CSV</a></p>'
     content+='<p class="status">'+esc(status)+'</p><p>'+esc(report['introduction'])+'</p>'
     if report.get('condition_correction'):
         content+='<p class="status">측정 조건 정정: '+esc(report['condition_correction']['reason'])+' 초기 수치는 보존하며 viewer를 정리한 별도 대조를 수행한다.</p>'
     content+='<p>모델 입력 callback→발행 지연과 차선 family 지연은 별도다. 백분위는 원시 프레임을 합쳐 계산했다. CPU는 camera/debug/Main preview 프로세스 합산(100%=1코어), rqt는 WSL 전체 CPU에 포함된다. GPU는 MORAI·Windows 전체다.</p>'
-    content+='<h2>기존 / 신규 전체 GUI · 날씨별 3회</h2>'+table(['구성','날씨','회차','CPU % 평균','RSS peak MiB','VRAM peak %','유효 family Hz 평균','최저 5초 Hz','readiness false 상태 수'],overview)
+    content+='<h2>'+esc(report.get('comparison_heading','기존 / 신규 전체 GUI · 날씨별 3회'))+'</h2>'+table(['구성','날씨','회차','CPU % 평균','RSS peak MiB','VRAM peak %','유효 family Hz 평균','최저 5초 Hz','readiness false 상태 수'],overview)
     content+='<h2>실제 화면</h2><p>각 회차에서 수신한 디버그 JPEG이며 추론 품질 GT가 아니다. 좌/전방/우 순서와 뷰별 시각·mask SHA를 유지한다.</p><div class="photos">'+''.join(photos)+'</div>'
     content+='<h2>실패 화면 보존</h2><p>readiness가 꺼졌을 때 가장 최근에 수신한 디버그 화면이다. 정확히 동기화한 source GT가 아니며, 화면만으로 센서 또는 추론 원인을 단정하지 않는다.</p><div class="photos">'+''.join(failure_photos)+'</div>'
     content+='<h2>원시 프레임 통합 지연</h2>'+table(['구성·날씨','stream','n','p50 ms','p95 ms','p99 ms'],pooled)

@@ -51,6 +51,7 @@
       <rosparam command="load" file="$(find asmc_camera)/config/camera/cameras.yaml" ns="components/lane"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/twinlite_medium.yaml" ns="components/lane"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/lane_runtime.yaml" ns="components/lane" subst_value="true"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/camera/lane_input.yaml" ns="components/lane"/>
       <param name="components/lane/target_hz" value="$(arg lane_hz)"/>
       <param name="components/lane/batch_wait_ms" value="$(arg lane_batch_wait_ms)"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/traffic_light_runtime.yaml" ns="components/traffic_light" subst_value="true"/>

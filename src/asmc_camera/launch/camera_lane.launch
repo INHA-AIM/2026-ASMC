@@ -1,5 +1,6 @@
 <launch>
   <arg name="component_config" default=""/>
+  <arg name="input_config" default=""/>
   <arg name="node_name" default="camera_semantic_inference"/>
   <arg name="managed" default="true"/>
   <arg name="initial_mode" default="0"/>
@@ -35,6 +36,7 @@
            value="$(arg publish_model_grid_road_marking)"/>
     <param name="model_grid_max_hz" value="$(arg model_grid_max_hz)"/>
     <rosparam command="load" file="$(arg component_config)" subst_value="true" if="$(eval arg('component_config') != '')"/>
+    <rosparam command="load" file="$(arg input_config)" if="$(eval arg('input_config') != '')"/>
     <param name="target_hz" value="$(arg target_hz)"/>
   </node>
 </launch>

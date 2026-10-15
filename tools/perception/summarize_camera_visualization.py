@@ -18,6 +18,13 @@ def distribution(values):
     return dict(count=len(values),**{f'p{q}_ms':percentile(values,q) for q in (50,95,99)})
 
 
+def viewer_condition_verified(trial):
+    expected=int(trial['gui'])
+    keys=('qt_inventory_before','qt_inventory_during','qt_inventory_after')
+    return (all(k in trial for k in keys) and not trial[keys[0]] and not trial[keys[2]] and
+            len(trial[keys[1]])==expected and sum(v['owned_trial'] for v in trial[keys[1]])==expected)
+
+
 def readiness_events(diagnostics,families,start,end):
     """Compare producer readiness with independently received family messages.
 
@@ -116,6 +123,16 @@ def main():
             if any(v for k,v in values.items() if k.endswith('errors') and isinstance(v,int)):
                 trial['minimum_acceptance_failures'].append('diagnostic errors: '+name)
         trial['object_backends']=sorted({v['backend'] for _,v in model_snapshots.get('camera_objects/inference',[])})
+        trial['gc_pauses']=[]
+        for path in root.glob('camera_*.jsonl'):
+            began=None
+            for event in rows(path):
+                if event['event']!='gc':continue
+                if event['phase']=='start':began=event['at']
+                elif began is not None:
+                    if start<=began<end:
+                        trial['gc_pauses'].append(dict(probe=path.stem,start_active_sec=began-start,duration_ms=(event['at']-began)*1000))
+                    began=None
         codecs={}
         for path in root.glob('visual-*.jsonl'):
             events=[r for r in rows(path) if start<=r['at']<end]
@@ -175,6 +192,7 @@ def main():
     controls=[r for r in effective if '-control-' in r['trial']]
     soaks=[r for r in summary['trials'] if r['matrix']==a.soak_matrix]
     summary['runtime_completion_checks']=dict(
+        viewer_conditions_verified=all(viewer_condition_verified(r) for r in candidate+baseline+controls+soaks),
         fixed_candidate_source=len({r['source_sha256'] for r in candidate+soaks})==1,
         baseline_three_per_weather=all(sum('-'+w+'-' in r['trial'] for r in baseline)==3 for w in ('sunny','foggy')),
         candidate_three_per_weather=all(sum('-'+w+'-' in r['trial'] for r in candidate)==3 for w in ('sunny','foggy')),

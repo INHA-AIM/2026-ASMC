@@ -8,7 +8,7 @@ views:
 - front
 - left
 - right
-front_width: 1280
+front_width: 960
 batch_mode: 2plus1
 batch_wait_ms: 10.0
 target_hz: 15.0

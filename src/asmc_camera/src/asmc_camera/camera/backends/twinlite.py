@@ -30,7 +30,13 @@ class TwinLiteBackend(SemanticBackend):
         amp: bool = True,
         channels_last: bool = False,
         input_hw: Tuple[int, int] = (384, 640),
+        input_hw_by_view: Optional[Mapping[str, Tuple[int, int]]] = None,
     ) -> None:
+        shapes = {str(view): tuple(int(v) for v in shape)
+                  for view, shape in (input_hw_by_view or {}).items()}
+        for shape in [tuple(input_hw)] + list(shapes.values()):
+            if len(shape) != 2 or any(v <= 0 or v % 32 for v in shape):
+                raise ValueError("TwinLite input dimensions must be positive multiples of32")
         import torch
 
         from asmc_camera.training.twinlite import (
@@ -107,6 +113,8 @@ class TwinLiteBackend(SemanticBackend):
             weights="ema" if use_ema else "model",
             upstream_commit=str(upstream_commit),
             categorical_classes=categorical_classes,
+            input_hw_by_view=shapes,
+            channels_last=self._channels_last,
         )
 
     @property
@@ -117,11 +125,8 @@ class TwinLiteBackend(SemanticBackend):
         self, batch: np.ndarray
     ) -> Mapping[str, Union[np.ndarray, CategoricalOutput]]:
         torch = self._torch
-        if batch.ndim != 4 or batch.shape[1:] != (
-            3,
-            self.info.input_hw[0],
-            self.info.input_hw[1],
-        ):
+        allowed = {tuple(self.info.input_hw)} | set(self.info.input_hw_by_view.values())
+        if batch.ndim != 4 or batch.shape[0] < 1 or batch.shape[1] != 3 or tuple(batch.shape[2:]) not in allowed:
             raise ValueError("invalid TwinLite input shape: {}".format(batch.shape))
         tensor = torch.from_numpy(np.ascontiguousarray(batch)).to(
             self._device, non_blocking=True

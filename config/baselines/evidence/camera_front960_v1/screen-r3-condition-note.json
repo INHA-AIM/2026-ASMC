@@ -1,0 +1,5 @@
+{
+  "status": "development_diagnostic",
+  "reason": "Own CPU regression suite briefly overlapped SUNNY. Pair retained; screen-r4 repeats with no concurrent own CPU suite.",
+  "source_unchanged": true
+}
