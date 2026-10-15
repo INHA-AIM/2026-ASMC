@@ -2,7 +2,9 @@
 """Retain every GUI trial; separate codec savings from supply/readiness gates."""
 import argparse
 import ast
+from bisect import bisect_right
 from collections import Counter,defaultdict
+import csv
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,6 +16,30 @@ from compare_camera_runtime import resource_summary
 
 def distribution(values):
     return dict(count=len(values),**{f'p{q}_ms':percentile(values,q) for q in (50,95,99)})
+
+
+def readiness_events(diagnostics,families,start,end):
+    """Compare producer readiness with independently received family messages.
+
+    A newer message seen by this subscriber indicates control-path lag, not its
+    cause. Never use a future family to excuse an earlier readiness failure.
+    """
+    families=sorted(families,key=lambda r:r['at']);times=[r['at'] for r in families]
+    result=[]
+    for event in diagnostics:
+        if not start<=event['at']<end:continue
+        for status in event['statuses']:
+            v=status['values']
+            if status['name']!='camera_semantic_perception/readiness' or v['pipeline_ready']!='False':continue
+            row=dict(at=event['at'],values=v)
+            i=bisect_right(times,event['at'])-1
+            if i>=0:
+                latest=families[i];stamp=int(v['family_source_ns']) if v['family_source_ns']!='None' else None
+                row.update(latest_probe_family_stamp_ns=latest['stamp'],latest_probe_family_valid=latest['valid'],
+                    latest_probe_family_receipt_age_ms=(event['at']-latest['at'])*1000,
+                    newer_family_already_seen=stamp is not None and latest['stamp']>stamp)
+            result.append(row)
+    return result
 
 
 def main():
@@ -57,7 +83,9 @@ def main():
         if not valid['five_second_hz'] or min(valid['five_second_hz'])<10 or valid['max_gap_sec']>.25:
             trial['minimum_acceptance_failures'].append('valid lane family supply/gap')
         reasons=Counter();source_ages=[];view=[];model_snapshots=defaultdict(list)
-        for event in json.loads((root/'diagnostics.json').read_text()):
+        diagnostic_events=json.loads((root/'diagnostics.json').read_text())
+        trial['readiness_failure_events']=readiness_events(diagnostic_events,family,start,end)
+        for event in diagnostic_events:
             if not start<=event['at']<end:continue
             for status in event['statuses']:
                 v=status['values']
@@ -157,6 +185,17 @@ def main():
     summary['runtime_acceptance_pass']=all(summary['runtime_completion_checks'].values())
     summary['acceptance_complete']=False  # Final review also requires completed soak, parity and CI.
     (a.output/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+    csv_rows=[]
+    for trial in summary['trials']:
+        for key,s in trial['streams'].items():
+            csv_rows.append(dict(matrix=trial['matrix'],trial=trial['trial'],effective_final=trial.get('effective_final_trial',False),
+                stream=key,hz=s['hz'],min_5s_hz=min(s['five_second_hz'],default=0),
+                **{f'p{q}_ms':s['wall_ms'][f'p{q}'] for q in (50,95,99)},max_gap_ms=s['max_gap_sec']*1000,
+                minimum_pass=s['minimum_supply_pass'],target_pass=s['target_95pct_pass'],
+                failures='; '.join(trial['minimum_acceptance_failures'])))
+    if csv_rows:
+        with (a.output/'trials.csv').open('w') as stream:
+            writer=csv.DictWriter(stream,fieldnames=list(csv_rows[0]));writer.writeheader();writer.writerows(csv_rows)
     print(json.dumps(dict(trials=len(summary['trials']),candidate_failures=summary['final_candidate_failures'])))
 
 

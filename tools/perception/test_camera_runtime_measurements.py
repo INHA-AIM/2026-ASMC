@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'tools/perception'))
 sys.path.insert(0, str(ROOT/'tools/audit'))
 from compare_camera_runtime import measurements, resource_summary
+from summarize_camera_visualization import readiness_events
 from b0_resources import ResourceSampler, _TimeoutTransport
 from unittest.mock import patch
 from validate_p1b_contract import load_message_specs, all_message_md5
@@ -13,6 +14,19 @@ from evaluate_camera_bbox_pilot import frame_counts, summarize
 
 
 class RuntimeMeasurementsTest(unittest.TestCase):
+    def test_readiness_links_only_prior_independent_family_observations(self):
+        values=dict(pipeline_ready='False',family_source_ns='10')
+        diagnostics=[dict(at=5,statuses=[dict(name='camera_semantic_perception/readiness',values=values)])]
+        families=[dict(at=3,stamp=10,valid=True),dict(at=6,stamp=30,valid=True)]
+        result=readiness_events(diagnostics,families,0,10)[0]
+        self.assertFalse(result['newer_family_already_seen'])
+        families.append(dict(at=4.9,stamp=20,valid=True))
+        result=readiness_events(diagnostics,families,0,10)[0]
+        self.assertTrue(result['newer_family_already_seen'])
+        self.assertEqual(result['latest_probe_family_stamp_ns'],20)
+        self.assertAlmostEqual(result['latest_probe_family_receipt_age_ms'],100)
+        self.assertFalse(readiness_events(diagnostics,families,6,10))
+
     def test_resource_coverage_missing_cpu_is_unknown_not_zero(self):
         row = dict(arrival=.1, gpu=dict(memory_used_mib=100, memory_total_mib=1000),
                    nodes={'node':dict(cpu_percent=None,rss_mib=1)})

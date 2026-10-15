@@ -74,11 +74,18 @@ def main():
             if not source.exists():continue
             dest=r['trial']+'-'+source.name;shutil.copyfile(source,a.output/dest)
             photos.append('<figure><figcaption>'+esc(r['trial']+' · '+role)+'</figcaption><a href="'+esc(dest)+'"><img loading="lazy" src="'+esc(dest)+'"></a></figure>')
-    failures=[]
+    failures=[];failure_photos=[]
     for r in report['trials']:
         if not r['minimum_acceptance_failures']:continue
         failures.append([r['matrix']+'/'+r['trial'],'; '.join(r['minimum_acceptance_failures']),
             str(r.get('readiness_failure_reasons',{})),r.get('resource_recovery_trial','')])
+        if not (r['matrix']=='soak' or (r.get('effective_final_trial') and '-baseline-' in r['trial'] and '-r1' in r['trial'])):continue
+        root=a.results/r['matrix']/r['trial']
+        for role in ('objects','lane'):
+            source=root/('failure-'+role+'.jpg')
+            if not source.exists():continue
+            dest=r['trial']+'-'+source.name;shutil.copyfile(source,a.output/dest)
+            failure_photos.append('<figure><figcaption>'+esc(r['trial']+' · '+role+' · readiness 저하 때의 최근 화면')+'</figcaption><a href="'+esc(dest)+'"><img loading="lazy" src="'+esc(dest)+'"></a></figure>')
     pooled=[]
     for group,streams in report['pooled_frame_latency'].items():
         for stream,s in sorted(streams.items()):
@@ -92,7 +99,19 @@ def main():
     content+='<p>모델 입력 callback→발행 지연과 차선 family 지연은 별도다. 백분위는 원시 프레임을 합쳐 계산했다. CPU는 camera/debug/Main preview 프로세스 합산(100%=1코어), rqt는 WSL 전체 CPU에 포함된다. GPU는 MORAI·Windows 전체다.</p>'
     content+='<h2>기존 / 신규 전체 GUI · 날씨별 3회</h2>'+table(['구성','날씨','회차','CPU % 평균','RSS peak MiB','VRAM peak %','유효 family Hz 평균','최저 5초 Hz','readiness false 상태 수'],overview)
     content+='<h2>실제 화면</h2><p>각 회차에서 수신한 디버그 JPEG이며 추론 품질 GT가 아니다. 좌/전방/우 순서와 뷰별 시각·mask SHA를 유지한다.</p><div class="photos">'+''.join(photos)+'</div>'
+    content+='<h2>실패 화면 보존</h2><p>readiness가 꺼졌을 때 가장 최근에 수신한 디버그 화면이다. 정확히 동기화한 source GT가 아니며, 화면만으로 센서 또는 추론 원인을 단정하지 않는다.</p><div class="photos">'+''.join(failure_photos)+'</div>'
     content+='<h2>원시 프레임 통합 지연</h2>'+table(['구성·날씨','stream','n','p50 ms','p95 ms','p99 ms'],pooled)
+    soak_rows=[]
+    for r in main_trials:
+        if r['matrix']!='soak':continue
+        family=r['lane_family'];streams=list(r['streams'].values())
+        soak_rows.append([r['trial'],number(r['end']-r['start']),number(family['valid_supply']['hz'],2),
+            number(min(family['valid_supply']['five_second_hz'],default=0),2),
+            *[number(family['input_to_subscriber_ms']['p'+str(q)]) for q in (50,95,99)],
+            number(max(v['wall_ms']['p95'] for v in streams)),number(max(v['wall_ms']['p99'] for v in streams)),
+            number(max(v['max_gap_sec'] for v in streams)*1000),number(family['valid_supply']['max_gap_sec']*1000),
+            r['active_status_failures']['lane'],number(100*r['resources']['vram_peak_fraction'])])
+    content+='<h2>30분 연속 시험</h2>'+table(['실행','초','유효 family Hz','최저5초 Hz','family p50','family p95','family p99','모델 최대p95','모델 최대p99','모델 최대공백 ms','family 최대공백 ms','readiness false','VRAM %'],soak_rows)
     content+='<details><summary>뷰·회차·30분 연속 시험 상세</summary>'+table(['회차','stream','Hz','최저 5초 Hz','p50 ms','p95 ms','p99 ms','최대 공백 ms','중복','역행','최소/지연'],details)+'</details>'
     content+='<details><summary>노드·JPEG 호출 수</summary><p>계측 창 경계의 비동기 호출 수는 출력 수와 최대 한 프레임 차이가 날 수 있다. 신규 내부 counter와 CPU/ROS 시험으로 중간 인코딩0·합성당1회·같은 소스 중복 디코딩0을 검사했다.</p>'+table(['회차','객체 시각화 노드','decode','encode','mosaic 수신','개별 encode','counter 계약'],codecs)+'</details>'
     content+='<details><summary>이전 실패·미완료·계측 무효 기록 보존</summary>'+table(['실행','실패','readiness 원인','자원 재측정'],failures)+'</details>'

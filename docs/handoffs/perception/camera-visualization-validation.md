@@ -4,6 +4,9 @@
 PR #85에서 E8/사전학습 선택, 16종→세 그룹, confidence0.40·NMS0.50, 3뷰 mask와 원본 header를 유지한다.
 YOLO/TwinLite 목표15Hz·ResNet10Hz, 시각화 목표10Hz다. 학습·수집·LiDAR 연결·판제 정책·PR 병합은 수행하지 않는다.
 
+**판정: 짧은 교차 반복은 통과했지만30분 시험은 미통과다. 기본 전환과 PR 준비 완료를 보류하고 Draft를 유지한다.**
+단일 객체 렌더러의 codec·캐시·출력 동등성은 통과했다. TwinLite·ResNet의 장시간 공백과 차선 readiness는 해결되지 않았다.
+
 ## 실행 경로
 
 객체 시각화의 기본 경로는 네 노드의 JPEG 중계에서 `camera_object_view` 한 노드의 직접 합성으로 바뀐다.
@@ -47,7 +50,7 @@ JPEG 중계를 제거한 뒤에도 실패가 남아 다음의 불필요한 처�
 
 ## 측정과 수락
 
-최종 교차 반복·GUI 대조·동일 영상 비교를 완료했다. 30분 연속 시험의 최종 수락은 완료 결과로 갱신한다.
+최종 교차 반복·GUI 대조·동일 영상 비교와30분 연속 시험을 완료했다. 마지막 시험의 실패는 아래에 보존한다.
 
 기존 기준은 계측만 추가한827a53dd 경로이고 신규는 같은 모델·입력·후처리의 최적화 경로다.
 MORAI와 세 모델 및 기존 Main preview를 켠다. Main 제어는 `/b0/discarded_ctrl_cmd*`로 격리한다.
@@ -119,15 +122,54 @@ CPU/ROS 시험은 같은 뷰·stamp 중복 decode0과 중간 encode0을 확인�
 
 ### 출력 동등성과 로컬 검사
 
-같은 저장 RGB에서 객체180/180·차선 class-ID180/180·신호등60/60 대응이 일치했다.
+같은 저장 RGB의 공통 `(뷰, 원본 이미지 ID)`별로 객체 결과180/180·차선 class-ID180/180·
+신호등60/60 대응이 일치했다. 이 수는 검출 박스 개수가 아니다. 객체 결과에는 비어 있지 않은 결과도 포함됐다.
 신호등 confidence 차이도0이었다. 렌더러는 기존 overlay/mosaic 함수를 사용하고 원본 영상은 변경하지 않는다.
-CPU 회귀728개와 계약 회귀35개, 문서·정본 설정 SHA·토픽 정책 검사를 통과했다.
-생성된 ROS 메시지 fixture와 최신 hosted CI 상태는 최종 검증 기록에서 로컬 검사와 구분한다.
+CPU 회귀729개(전체728개+추가 시간 대응 검사1개), 계약 회귀35개와 문서·정본 설정 SHA·토픽 정책 검사를 통과했다.
+생성된 ROS 메시지 fixture7개·64개 확인 항목과 launch 해석도 통과했다. 오류 주입 fixture의 WARN은 의도한 실패 입력이다.
+최신 hosted CI는 [PR #85 Checks](https://github.com/INHAautonav/2026-ASMC/pull/85/checks)에서 로컬 검사와 구분한다.
+
+### 30분 연속 시험: 미통과
+
+같은 신규 source SHA `80feb71d0d56fbb734917ff2b7c9dcbd6c6c63db25b812851b56431fb5b51eae`로
+SUNNY·세 모델 ACTIVE·전체 debug sink·객체 rqt·Main preview를1800초 실행했다. 재시작하지 않았다.
+
+| 출력 | 평균 Hz | 최저5초 Hz | p50 / p95 / p99 ms | 최대 공백 ms |
+|---|---:|---:|---|---:|
+| YOLO 전방 | 14.94 | 14.6 | 48.2 / 79.8 / 91.2 | 197.7 |
+| YOLO 좌 | 14.89 | 14.2 | 48.1 / 79.4 / 91.5 | 203.9 |
+| YOLO 우 | 14.85 | 14.2 | 47.4 / 78.5 / 90.8 | 235.3 |
+| TwinLite 전방 | 14.76 | 5.6 | 64.9 / 106.5 / 125.2 | 3,466.6 |
+| TwinLite 좌 | 14.76 | 5.6 | 66.3 / 109.6 / 127.7 | 3,466.7 |
+| TwinLite 우 | 14.76 | 5.6 | 66.9 / 110.3 / 128.3 | 3,466.6 |
+| ResNet camera4 | 9.93 | 4.0 | 56.3 / 91.2 / 102.2 | 3,217.9 |
+| 유효 lane family | 14.39 | 5.6 | 142.2 / 207.6 / 244.6 | 3,428.5 |
+
+모델 p95/p99는 통과했지만 최저5초 공급과 최대 공백에서 실패했다. 백분위가 이 긴 공백을 면제하지 않는다.
+Readiness false26개 snapshot은 source_stale25개·model_not_prepared1개였다.
+오류·중복/역행 출력 stamp는0이었고 전체 VRAM peak5061MiB/61.81%, CPU 평균440.1%, RSS peak3893.1MiB였다.
+자원 샘플3599개를 확보해 coverage 기준도 통과했다.
+
+객체 렌더러는1799.3초의 내부 snapshot 대조에서 decode51220·합성 encode/publish17820/17820·
+개별 encode0·오류0을 기록했다. 모든 뷰가 신선했고 JPEG 캐시는8개, pending 상한은1이었다.
+단일 렌더러의 성공과 전체 카메라 실행의 미통과를 분리한다.
+
+입력 probe에서도 TwinLite 전방 callback 공백3432.8ms, ResNet callback 공백3169.6ms가 확인됐다.
+이때 같은 전방 입력을 받는 YOLO callback의 전체 실행 최대 공백은130.2ms였다.
+TwinLite 긴 공백은 ACTIVE1786.97–1790.40초, ResNet은1016.98–1020.15초로 서로 다른 구간이다.
+이는 MORAI의 모든 센서가 동시에 중단됐다는 근거가 아니다. 프로세스 처리·callback·계측 probe의 영향을 구분해야 한다.
+가중치·모드 세대 변경이나 OOM은 관찰되지 않았다. GC·CUDA/CPU 대기·잠금 또는 계측 비용 중 무엇이 원인인지는 확인하지 못했다.
+기존4노드의30분 대조는 실행하지 않아 긴 공백이 신규 렌더러 때문에 발생했다고 판단하지 않는다.
+독립 family 수신 기록과 control의 source stamp도 함께 남겼으며 미래 family를 과거 실패의 면제 근거로 쓰지 않는다.
+
+후속 확인은 probe를 제거한 같은 조건 대조와 GC/잠금/발행 시간 계측이다. 원인이 확인된 불필요한 처리만 수정한 뒤
+전체 수락을 다시 수행한다. 350ms freshness와 기존 timeout은 유지하며 기본 전환·PR Ready·LiDAR 연결 완료로 표시하지 않는다.
 
 ## 결과·재현·후속
 
 - 원본: `data/runtime/camera-visualization-v1/results/`, 기존 진단은 `camera-structure-v1/results/visualization-baseline-diagnostic/`.
 - 갤러리: `artifacts/camera-visualization-20261015-r1/`, ASMC 실험 목록의 날짜·E번호로 연결한다.
+- Git 요약: `config/baselines/evidence/camera_visualization_v1/`, 원본 입력/출력 기록과 실패 화면은 로컬 데이터 영역에 보존한다.
 - 집계: `summarize_camera_visualization.py --matrix final-matrix-r2`를 사용한다. 실패와 최종 후보를 구분한다.
 - 같은 저장 RGB에서 기존/신규 bbox·차선 class-ID·신호등 출력을 대응한다. 파라미터나 confidence를 다시 선정하지 않는다.
 
@@ -152,6 +194,7 @@ source /data/runtime/camera-visualization-v1/devel/setup.bash
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
+위 명령은 PR #85의 실험 workspace용이다. main에 병합하거나 기본 승격한 명령으로 설명하지 않는다.
 기본 STANDBY, PREPARE/ACTIVE·기존 alias, 사전학습 선택은 실행 계약을 따른다.
 수락 실패가 남으면 기본 전환과 PR 준비 완료를 보류한다. 병합은 이번 범위가 아니다.
-다음 작업은 `asmc_lidar`의 카메라별 관측 수신·버퍼·보정·투영 경계 인계다.
+카메라 장시간 수락을 해결한 뒤 `asmc_lidar`의 카메라별 관측 수신·버퍼·보정·투영 경계를 인계한다.
