@@ -195,7 +195,7 @@ def main():
                 failures='; '.join(trial['minimum_acceptance_failures'])))
     if csv_rows:
         with (a.output/'trials.csv').open('w') as stream:
-            writer=csv.DictWriter(stream,fieldnames=list(csv_rows[0]));writer.writeheader();writer.writerows(csv_rows)
+            writer=csv.DictWriter(stream,fieldnames=list(csv_rows[0]),lineterminator='\n');writer.writeheader();writer.writerows(csv_rows)
     print(json.dumps(dict(trials=len(summary['trials']),candidate_failures=summary['final_candidate_failures'])))
 
 
