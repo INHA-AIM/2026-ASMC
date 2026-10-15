@@ -24,8 +24,13 @@ public:
         private_nh_.param("speed/maximum_mps", config.maximum_speed_mps, 60.0);
         private_nh_.param("position/gps_correction_gain",
                           config.position_gps_correction_gain, 1.0);
+        private_nh_.param("orientation/imu_yaw_is_true_enu",
+                          config.imu_yaw_is_true_enu, false);
         private_nh_.param("speed/gps_correction_gain",
                           config.gps_correction_gain, 0.35);
+        private_nh_.param("speed/gps_gain_reference_speed_mps",
+                          config.gps_gain_reference_speed_mps, 0.0);
+        private_nh_.param("speed/gps_gain_minimum", config.gps_gain_minimum, 0.08);
         private_nh_.param("speed/gps_innovation_limit_mps",
                           config.gps_innovation_limit_mps, 3.0);
         private_nh_.param("speed/imu_acceleration_filter_alpha",
@@ -49,6 +54,10 @@ public:
         estimator_ = std::make_unique<frenet_planner_ros::GpsImuStateEstimator>(
             config);
 
+        if (config.gps_gain_reference_speed_mps > 0.0)
+            ROS_INFO("GPS speed gain scheduling: reference=%.2f m/s minimum=%.3f",
+                     config.gps_gain_reference_speed_mps, config.gps_gain_minimum);
+
         std::string gps_topic, imu_topic, output_topic;
         private_nh_.param<std::string>("topics/gps", gps_topic, "/gps");
         private_nh_.param<std::string>("topics/imu", imu_topic, "/imu");
@@ -67,9 +76,11 @@ public:
         ROS_INFO(
             "GPS/IMU state source enabled; rear-axle lever arm correction "
             "x=%.3f y=%.3f m; position GPS gain=%.2f; "
+            "IMU true-ENU to UTM grid correction=%s; "
             "EgoStatus fallback is disabled",
             config.gps_sensor_offset_x_m, config.gps_sensor_offset_y_m,
-            config.position_gps_correction_gain);
+            config.position_gps_correction_gain,
+            config.imu_yaw_is_true_enu ? "enabled" : "disabled");
     }
 
 private:

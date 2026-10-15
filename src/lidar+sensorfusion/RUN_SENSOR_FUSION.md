@@ -338,3 +338,9 @@ After recording, generate the synchronized samples, summary and plots:
 To lock the comparison to known IDs, add `--gt-id 101 --track-id 7`.
 
 Outputs are written below `lidar_velocity_test_velocity_analysis/`.
+
+### MORAI 지도 방향 기준
+
+`main.launch`의 `imu_yaw_is_true_enu` 기본값은 `true`입니다. MORAI의 IMU yaw는 실제 동·북 방향 기준이고, GPS 위치는 UTM52N 지도 눈금 기준이므로 지도 위치를 만들 때 위도·경도로 방향 차이를 계산합니다. `planning_inputs/config/vehicle_state.yaml`과 같은 설정을 사용해야 차량과 장애물의 방향 기준이 맞습니다. 이미 UTM yaw를 제공하는 다른 입력이면 두 곳을 함께 `false`로 설정하십시오.
+
+`SensorPoseHistory`는 원본 IMU 이력을 보존하고 지도 출력용 복사본만 보정합니다. 기존 모드에서는 위치 외삽과 장애물 지도 변환에 보정된 yaw를 사용합니다. 공통 geometry 모드에서는 GPS 시점 자세와 LiDAR 시점 지도 자세에만 보정을 적용하므로 GPS 없이 동작하는 로컬 인지 경로는 바뀌지 않습니다. 재밍·GPS 유효성·최대 나이 제한은 유지됩니다.

@@ -93,6 +93,8 @@
   <!-- With common geometry, stale GPS suppresses map outputs while local
        processing continues. Legacy mode retains its original pose gate. -->
   <arg name="lidar_pose_gps_max_age_s" default="0.30"/>
+  <!-- Match planning_inputs' MORAI true-ENU to UTM heading conversion. -->
+  <arg name="imu_yaw_is_true_enu" default="true"/>
   <arg name="lidar_pose_imu_max_age_s" default="0.12"/>
   <arg name="lidar_pose_can_max_age_s" default="0.12"/>
   <!-- Only absorbs callback-order jitter; source stamps and stale limits stay authoritative. -->
@@ -114,6 +116,7 @@
 
   <!-- 인지 메인 노드: 카메라 UDP 수신, GPS/IMU/CAN 파싱, 라이다 전처리, 센서퓨전 -->
   <node name="Main" pkg="Main" type="main" output="screen">
+    <param name="imu_yaw_is_true_enu" value="$(arg imu_yaw_is_true_enu)"/>
     <param name="enable_common_geometry" value="$(arg enable_common_geometry)"/>
     <param name="lidar_level_roll" value="$(arg lidar_level_roll)"/>
     <param name="lidar_mount_config" value="$(arg lidar_mount_config)"/>

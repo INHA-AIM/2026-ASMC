@@ -85,6 +85,15 @@ void GpsToUtm52N(double lat_deg, double lon_deg,
     if (lat_deg < 0.0) out_northing += 10000000.0;
 }
 
+double Utm52NYawOffset(double lat_deg, double lon_deg) {
+    constexpr double step_deg = 1e-5;
+    double east_before, north_before, east_after, north_after;
+    GpsToUtm52N(lat_deg - step_deg, lon_deg, east_before, north_before);
+    GpsToUtm52N(lat_deg + step_deg, lon_deg, east_after, north_after);
+    return std::atan2(north_after - north_before, east_after - east_before)
+        - kPi / 2.0;
+}
+
 double QuaternionToYaw(double w, double x, double y, double z) {
     return std::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z));
 }
