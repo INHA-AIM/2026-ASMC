@@ -24,7 +24,7 @@ publisher나 변환 로직은 포함하지 않는다.
 - 기존 planning/perception 타입: 13개, ROS1 MD5 동결
 - HD Map/competition 타입: 12개
 - perception runtime additive 타입: 3개
-- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은35개 메시지·1개 서비스이며 UrbanFeatureDebug, LiDAR/camera handoff와 공용 추론 제어를 포함
+- 위 P1/P4 등록은 당시 28개 subset. 현재 CMake 등록은 37개 메시지·1개 서비스이며 UrbanFeatureDebug, LiDAR/camera handoff, LiDAR object contract v2와 공용 추론 제어를 포함
 - 외부 MORAI wire type: pinned `src/MORAI-ROS_morai_msgs`, 이 패키지로 복사하지 않음
 - 중복 `Msg` package: consumer 이관과 clean build 전까지 삭제하지 않음
 
@@ -37,6 +37,7 @@ publisher나 변환 로직은 포함하지 않는다.
 | competition | `CompetitionCheckpoint*`, `MissionZone*` |
 | perception runtime v1 | `TrafficLightDetection`, `TrackedObject*` |
 | 카메라/이전용 LiDAR | `CameraObjectBox*`, `CameraObjectObservation`, `LidarObject*` |
+| LiDAR object contract v2 | `LidarObjectV2`, `LidarObjectArrayV2` |
 | 추론 제어 v2 | `InferenceStatus`, `SetInferenceMode.srv` — 생산자 UUID·모드·준비 상태 |
 | 판제 debug | `UrbanFeatureDebug` |
 
@@ -76,9 +77,13 @@ ROS1 MD5는 `.msg` 파일 SHA가 아니다. 주석과 공백을 제외한 상수
 | `config/contracts/asmc_msgs_contract_registry_v1.yaml` | 현재 모든 공용 message와 소유 계약의 대응 |
 | `config/contracts/hd_map_topic_contract_v1.yaml` | 기존·HD Map 25개 message MD5, 필수 필드와 11개 HD Map topic |
 | `config/contracts/perception_runtime_topic_contract_v1.yaml` | perception additive 3개 message와 canonical/compatibility topic |
+| `config/contracts/lidar_candidate_topic_contract_v1.yaml` | LiDAR/camera handoff v1 message MD5와 planned topic |
+| `config/contracts/lidar_candidate_topic_contract_v2.yaml` | LiDAR object v2의 append-only motion 계약과 MD5 |
+| `config/contracts/planning_debug_topic_contract_v1.yaml` | planning debug message와 topic |
 | `config/baselines/runtime_baseline_v1.yaml` | P1-A 당시 package/topic/message 회귀 snapshot |
 | `config/baselines/hd_map_runtime_pins_v1.yaml` | HD Map publisher가 읽는 현재 map·metadata SHA와 개수 pin |
 | `src/asmc_msgs/test/test_message_serialization.py` | generated ROS type MD5와 serialization 왕복 |
+| `src/asmc_msgs/test/test_lidar_object_v2.py` | v2 generated MD5, motion 상수와 v1 필드 접두부 검증 |
 | `tools/audit/validate_p1b_contract.py` | ROS 설치 없이 source contract 검증 |
 
 P1-A baseline은 당시 시점의 frozen snapshot이고 이후 추가된 `LaneAssociation`까지 포함한 현재

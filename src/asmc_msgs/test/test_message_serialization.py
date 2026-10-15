@@ -29,6 +29,8 @@ EXPECTED_MD5 = {
     "LidarObjectArray": "5f774d07dffd4c7dfa93a8d4b62c60b4",
     "CameraObjectBox": "34412c90553e06734f1acade77c8e1e3",
     "CameraObjectBoxArray": "310c671afb3693e7909db6453d115b79",
+    "LidarObjectV2": "c22c9b52da848aeab0e2b4e73343d9f0",
+    "LidarObjectArrayV2": "d728e7fd984c24641abe10dddfda6dd5",
 }
 
 

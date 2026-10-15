@@ -1,0 +1,28 @@
+schema_version: 1
+contract_id: asmc_lidar_handoff_v2
+status: additive_v2_types_acceptance_pending
+owner: asmc_lidar
+# New contract version (src/asmc_msgs/README.md: new information keeps the
+# existing types and adds a new contract version and new message types).
+# lidar_candidate_topic_contract_v1.yaml keeps owning the frozen v1 types and the
+# v1 topics. This version owns only the additive v2 types below; every
+# base_contract rule (stamps, frames, GPS denial and recovery, validity) applies
+# to them unchanged.
+base_contract: config/contracts/lidar_candidate_topic_contract_v1.yaml
+compatibility_policy: additive_only
+implementation:
+  message_types: available
+  ros_publishers: pending
+messages:
+  asmc_msgs/LidarObjectV2: c22c9b52da848aeab0e2b4e73343d9f0
+  asmc_msgs/LidarObjectArrayV2: d728e7fd984c24641abe10dddfda6dd5
+# Frozen v1 types that the v2 types repeat field for field. Owned by
+# base_contract and repeated here only as the pinned extension base.
+base_messages:
+  asmc_msgs/LidarObject: b94cf82e0f325e9ce0364bb143df9f06
+  asmc_msgs/LidarObjectArray: 5f774d07dffd4c7dfa93a8d4b62c60b4
+rules:
+  - LidarObjectV2 repeats every LidarObject constant and field with the same type, name and order and appends only MOTION_UNKNOWN=0, MOTION_LOW_THREAT=1, MOTION_DYNAMIC_PENDING=2, MOTION_DYNAMIC=3, bool motion_valid and uint8 motion_state; LidarObjectArrayV2 keeps the LidarObjectArray constants, header, status, reason and stamp_provenance and carries LidarObjectV2[] objects.
+  - LidarObjectV2.motion_state is the authoritative temporal motion state; motion_valid is true exactly when motion_state != MOTION_UNKNOWN, so warm-up, GPS-denied and recovering tracks are never a valid LOW_THREAT.
+  - LidarObjectV2.dynamic_valid and is_dynamic are derived copies (motion_valid; motion_state == MOTION_DYNAMIC); is_dynamic=false is not evidence of a static object.
+  - While v1 LidarObject* topics remain, their dynamic_valid and is_dynamic keep the v1 meaning and are not derived from motion_state.

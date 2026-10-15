@@ -318,6 +318,44 @@ def _constant_map(spec: MessageSpec) -> Dict[str, str]:
     return {constant.name: constant.value for constant in spec.constants}
 
 
+LIDAR_MOTION_CONSTANTS = (
+    Constant("uint8", "MOTION_UNKNOWN", "0"),
+    Constant("uint8", "MOTION_LOW_THREAT", "1"),
+    Constant("uint8", "MOTION_DYNAMIC_PENDING", "2"),
+    Constant("uint8", "MOTION_DYNAMIC", "3"),
+)
+LIDAR_V2_APPENDED_FIELDS = (Field("bool", "motion_valid"), Field("uint8", "motion_state"))
+
+
+def validate_lidar_object_v2(specs: Mapping[str, MessageSpec]) -> None:
+    """Require LidarObject*V2 to be a lossless, append-only superset of frozen v1."""
+
+    required = ("LidarObject", "LidarObjectArray", "LidarObjectV2", "LidarObjectArrayV2")
+    missing = sorted(name for name in required if name not in specs)
+    if missing:
+        raise ContractError(f"LiDAR object contract sources are missing: {missing}")
+    v1, v2 = specs["LidarObject"], specs["LidarObjectV2"]
+    if v2.constants != v1.constants + LIDAR_MOTION_CONSTANTS:
+        raise ContractError(
+            "LidarObjectV2 constants must be the LidarObject constants followed by "
+            "uint8 MOTION_UNKNOWN=0, MOTION_LOW_THREAT=1, MOTION_DYNAMIC_PENDING=2, MOTION_DYNAMIC=3"
+        )
+    if v2.fields != v1.fields + LIDAR_V2_APPENDED_FIELDS:
+        raise ContractError(
+            "LidarObjectV2 must repeat every LidarObject field in order and append only "
+            "bool motion_valid, uint8 motion_state"
+        )
+    array_v1, array_v2 = specs["LidarObjectArray"], specs["LidarObjectArrayV2"]
+    if array_v1.fields[-1:] != (Field("asmc_msgs/LidarObject[]", "objects"),):
+        raise ContractError("frozen LidarObjectArray element field changed")
+    expected_array_fields = array_v1.fields[:-1] + (Field("asmc_msgs/LidarObjectV2[]", "objects"),)
+    if array_v2.constants != array_v1.constants or array_v2.fields != expected_array_fields:
+        raise ContractError(
+            "LidarObjectArrayV2 must keep the LidarObjectArray constants, header, status, "
+            "reason and stamp_provenance and carry asmc_msgs/LidarObjectV2[] objects"
+        )
+
+
 def _validate_semantics(specs: Mapping[str, MessageSpec]) -> None:
     mission = _constant_map(specs["MissionZone"])
     required_statuses = {
@@ -345,6 +383,8 @@ def _validate_semantics(specs: Mapping[str, MessageSpec]) -> None:
         or association.get("REFERENCE_BASE_LINK_REAR_AXLE") != "1"
     ):
         raise ContractError("LaneAssociation state/reference constants changed")
+
+    validate_lidar_object_v2(specs)
 
 
 def _validate_topics(contract: Mapping[str, object], message_md5: Mapping[str, str]) -> None:

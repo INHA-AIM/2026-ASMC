@@ -220,6 +220,11 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET test_sensor_pose_history)
     target_link_libraries(test_sensor_pose_history myHeader ${catkin_LIBRARIES})
   endif()
+  catkin_add_gtest(test_lidar_object_v2_contract test/test_lidar_object_v2_contract.cpp)
+  if(TARGET test_lidar_object_v2_contract)
+    add_dependencies(test_lidar_object_v2_contract ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(test_lidar_object_v2_contract ${catkin_LIBRARIES})
+  endif()
 endif()
 
 catkin_install_python(PROGRAMS

@@ -55,6 +55,12 @@ add_message_files(
   CameraObjectBox.msg
   CameraObjectBoxArray.msg
   CameraObjectObservation.msg
+  # LiDAR object contract v2 (B0): lossless 4-state temporal motion.
+  # LidarObject/LidarObjectArray above stay frozen; v2 is a new type, not an
+  # in-place extension (README new-message rule). Owner contract:
+  # config/contracts/lidar_candidate_topic_contract_v2.yaml.
+  LidarObjectV2.msg
+  LidarObjectArrayV2.msg
 )
 
 add_service_files(FILES SetInferenceMode.srv)
@@ -74,4 +80,5 @@ catkin_package(
 
 if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_message_serialization.py)
+  catkin_add_nosetests(test/test_lidar_object_v2.py)
 endif()

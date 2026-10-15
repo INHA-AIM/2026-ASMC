@@ -11,6 +11,8 @@ contracts:
     message_sections: [messages]
   - path: config/contracts/lidar_candidate_topic_contract_v1.yaml
     message_sections: [messages]
+  - path: config/contracts/lidar_candidate_topic_contract_v2.yaml
+    message_sections: [messages]
   - path: config/contracts/planning_debug_topic_contract_v1.yaml
     message_sections: [messages]
   - path: config/contracts/camera_object_observation_v1.yaml
