@@ -1,0 +1,16 @@
+<launch>
+  <!-- B0 runtime gate: the real Main node through main_integration.launch with planner UDP disabled,
+       fed by test_main_integration_gating_ros.py. Run only in an isolated network namespace with a
+       private master (rostest with reuse-master against that namespace's own roscore). -->
+  <group>
+    <remap from="/ctrl_cmd_0" to="/main_integration_gating/discarded_ctrl_cmd_0"/>
+    <include file="$(find Main)/main_integration.launch">
+      <arg name="planner_udp_enabled" value="false"/>
+      <arg name="enable_sensor_fusion" value="false"/>
+      <arg name="drivable_filter_enabled" value="false"/>
+      <arg name="known_static_filter_enabled" value="false"/>
+      <arg name="static_structure_exclusion_enabled" value="false"/>
+    </include>
+  </group>
+  <test pkg="Main" type="test_main_integration_gating_ros.py" test-name="main_integration_gating" time-limit="240"/>
+</launch>

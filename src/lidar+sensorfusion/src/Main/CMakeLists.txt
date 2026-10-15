@@ -123,6 +123,10 @@ if(CATKIN_ENABLE_TESTING)
   catkin_install_python(PROGRAMS test/test_camera_objects_adapter_ros.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   add_rostest(test/camera_objects_adapter.test)
+  # B0 runtime gate: real Main via main_integration.launch, planner UDP off; isolated netns only.
+  catkin_install_python(PROGRAMS test/test_main_integration_gating_ros.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  add_rostest(test/main_integration_gating.test)
   catkin_add_gtest(test_ground_evidence test/test_ground_evidence.cpp)
   catkin_add_gtest(test_adaptive_clustering
     test/test_adaptive_clustering.cpp
@@ -261,6 +265,16 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(test_planner_udp_enable test/test_planner_udp_enable.cpp test/test_runtime_globals.cpp)
   if(TARGET test_planner_udp_enable)
     target_link_libraries(test_planner_udp_enable myHeader ${catkin_LIBRARIES} yaml-cpp)
+  endif()
+  # GPS/IMU/CAN validity, GPS denial and 3-sample recovery through the common path: no ROS master.
+  catkin_add_gtest(test_gps_denial_recovery_b0 test/test_gps_denial_recovery_b0.cpp test/test_runtime_globals.cpp)
+  if(TARGET test_gps_denial_recovery_b0)
+    target_link_libraries(test_gps_denial_recovery_b0 myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  endif()
+  # Legacy outputs and UDP in common geometry: frame-wide warm-up gate, wire identity. No ROS master.
+  catkin_add_gtest(test_legacy_compat_b0 test/test_legacy_compat_b0.cpp test/test_runtime_globals.cpp)
+  if(TARGET test_legacy_compat_b0)
+    target_link_libraries(test_legacy_compat_b0 myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
   endif()
 endif()
 
