@@ -57,10 +57,12 @@ jobs:
           python3 tools/audit/validate_perception_contract.py
           python3 tools/audit/validate_perception_topic_policy.py
           python3 tools/audit/validate_perception_runtime_acceptance.py
+          python3 tools/audit/check_legacy_lidar_publishers.py
           python3 -m unittest tools/audit/test_p1b_contract.py
           python3 -m unittest tools/audit/test_perception_contract.py
           python3 -m unittest tools/audit/test_perception_topic_policy.py
           python3 -m unittest tools/audit/test_perception_runtime_acceptance.py
+          python3 -m unittest tools/audit/test_legacy_lidar_publishers.py
           python3 -m unittest tools/perception/test_camera_object_parity.py
           python3 -m unittest tools/perception/test_legacy_yolo_reference.py
           python3 -m unittest tools/perception/test_camera_handoff_replay.py

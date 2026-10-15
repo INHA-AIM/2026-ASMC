@@ -8,6 +8,7 @@
 | 인지→판제 구간 소비 | [상시 발행·소비 범위](perception-to-planning.md) | 판제: 상시 입력에서 미션별 사용·예외 결정, A153 끝·A126 진입 전 준비 |
 | 카메라→Main/LiDAR | [전방 연결·3뷰 관측](camera-to-lidar.md) | 손재호: 카메라별 버퍼/보정/3뷰 fusion·전체 asmc_lidar 이전 |
 | LiDAR 전체 이전 | [이전 계획](lidar-migration.md) | 기존 Main 동작 보존·구조물/추적/유효성·판제 소비 검증 |
+| LiDAR v2 최종 출력→판제 | [rollout·legacy 상태](lidar-v2-output-rollout.md) | opt-in `main_integration.launch`; production 기본값과 판제 `/last_lidar` 입력은 아직 유지 |
 | 카메라 family→판제 | [음영 인계](camera-to-planning.md) | 판제: ODD·모드·차로/corridor·fallback·실제 제어 수락 |
 | HD Map→판제 | [지도 인계](hd-map-to-planning.md) | map copy/parity·좌표·route·GPS 무효/복구 소비 |
 | 미션 지도→시나리오 | [미션 시나리오](hd-map-mission-scenario.md) | 구간/배치·공식 checkpoint와 시나리오 완주 정의 구분 |

@@ -4,7 +4,7 @@
 // invalid sample (stamped after the scan) that was processed while WaitForLocalLookupNs waited
 // (lidar_pose_wait_timeout_s = 0.05) moved the barrier past the scan, and the final lookup selected the
 // 105 ms old valid IMU again (SensorPoseHistory.hpp: future samples are not used, so online and bag replay
-// do not depend on callback timing; docs/contracts/perception/lidar-object-v2.md section 4).
+// do not depend on callback timing; docs/contracts/lidar-object-v2.md section 4).
 // ROS-free: no master, no NodeHandle, no socket. Seams: frame_boundary::ConfigureForTest, ros::Time::init().
 // Arrival order is controlled by call order, so every case is deterministic. No case depends on another case, on
 // --gtest_repeat iterations or on --gtest_shuffle order: every case uses its own local SensorPoseHistory, except the

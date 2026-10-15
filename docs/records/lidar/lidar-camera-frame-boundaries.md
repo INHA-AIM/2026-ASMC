@@ -21,14 +21,19 @@ Hungarian·fusion은 nested `Main`에서 한 번 실행하며, 새 `Geometry/` �
 |---|---|
 | 원본/ROI 점 | LiDAR 장착 위치의 센서 좌표 `velodyne` |
 | 지면·군집·내부 추적 | 실제 scan 행렬로 수평화한 센서 좌표 |
-| `/perception/lidar/objects_local` | 후륜축 중심 `base_link`, 현재 실측 OBB |
-| `/perception/lidar/objects_map` | 동일 관측·ID를 가용 pose로 변환한 `map` OBB |
-| `/perception/lidar/diagnostics` | 입력 침묵·무효, map 보류, 관측 세대·출처·출력 비용 |
+| `/perception/lidar/objects_local` | 후륜축 중심 `base_link`, 현재 실측 OBB. v1 호환용이며 최종 출력이 아님 |
+| `/perception/lidar/objects_map` | 동일 관측·ID를 가용 pose로 변환한 `map` OBB. v1 호환용이며 최종 출력이 아님 |
+| `/lidar/local_object` | 최종 출력. GPS 음영·복구 중인 scan의 `base_link` 객체와 motion 상태 |
+| `/lidar/map_object` | 최종 출력. map pose가 유효한 scan의 `map` 객체와 motion 상태 |
+| `/perception/lidar/diagnostics` | 입력 침묵·무효, map 보류, 관측 세대·출처·출력 비용, v2 출력과 사유 |
 
-typed 출력은 구독자가 있을 때 객체 변환·직렬화·발행한다. 구독자가 없어도 local
+v1 typed 출력은 구독자가 있을 때 객체 변환·직렬화·발행한다. 구독자가 없어도 local
 처리와 추적은 지속한다. map 출력 때문에 검출·추적을 다시 실행하지 않는다.
 local만 구독하면 typed map geometry도 계산하지 않는다. legacy 출력·map 기반
 motion 분류 비용은 별도이며, 전체 비용은 아직 부하 측정 전이다.
+v2 두 topic은 구독자 수와 무관하게 scan마다 많아야 하나만 발행한다. 입력이 무효인 scan에는 둘 다 발행하지 않는다.
+의미·진리표는 [LiDAR object v2 계약](../../contracts/lidar-object-v2.md)에,
+적용 단계와 남은 차단은 [rollout 인계](../../handoffs/lidar-v2-output-rollout.md)에 있다.
 
 일반 경로의 후보 수평화는 `Ry(pitch) × Rx(roll)`이며, 비영 장착 회전에서는
 `R_mountᵀ × R_vehicle_level × R_mount`로 합성한다. pitch-only 후보는 별도로
@@ -125,6 +130,13 @@ roslaunch Main main.launch start_yolo:=false rviz:=false \
 
 roll·pitch 후보는 `lidar_level_roll:=true`로 바꾼다. 기존 경로 복원은
 `enable_common_geometry:=false`이며, 객체 생산자는 한 개만 실행한다.
+v2 최종 출력과 legacy gate까지 확인할 때는 공통 경로와 roll·pitch를 고정한 통합 launch를 쓴다.
+오프라인 실행에서는 planner UDP를 끈다.
+
+```bash
+roslaunch Main main_integration.launch rviz:=false planner_udp_enabled:=false
+```
+
 시각화는 별도 터미널에서 직접 연다.
 
 ```bash

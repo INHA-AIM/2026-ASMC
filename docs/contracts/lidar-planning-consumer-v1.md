@@ -22,8 +22,10 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 | `asmc_msgs/LidarObject` | 지속 ID/검출 번호·관측/예측·중심/8코너·속도/동정적 유효성 |
 | `asmc_msgs/CameraObjectBoxArray` | source header·영상 크기·입력 유효성·원본 픽셀 box 배열 |
 | `asmc_msgs/CameraObjectBox` | box·그룹 class_name·원래 라벨 source_class_name·confidence/유효성. 원본 numeric class ID는 현 타입에 없음 |
-| `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. 생산자 구현 예정 |
-| `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. 어댑터 구현 예정 |
+| `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. Main opt-in v1 호환 후보이며 최종 출력이 아니다 |
+| `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. Main opt-in v1 호환 후보이며 최종 출력이 아니다 |
+| `asmc_msgs/LidarObjectArrayV2`, `LidarObjectV2` | v1 필드 전체에 무손실 motion 상태를 더한 v2 타입. [v2 계약](./lidar-object-v2.md) |
+| `/lidar/local_object`, `/lidar/map_object` | scan마다 최대 1개인 최종 LiDAR 출력. GPS 음영·복구 중에는 local, map pose가 유효하면 map. opt-in |
 | `/perception/camera/objects` | 3뷰 원본 픽셀 검출. 현재 Main 어댑터는 전방만 소비 |
 | `/perception/camera/objects/observations` | session/generation·보정/모델/설정 ID 포함. asmc_lidar 수신·버퍼·투영 지원 제공; 3뷰 객체 매칭/fusion은 손재호의 후속 구현 |
 
@@ -105,3 +107,9 @@ HD맵·카메라 문맥의 frame/시간·유효 범위가 맞지 않으면 관�
 확인한다. 생산 호스트는 아직 nested Main이며 골격의 전체 기능 이전은 완료되지 않았다.
 관측 상태·속도/dynamic validity를 소비자가 확인해야 하며 자동 remap·판제 cutover는 없다.
 strict 100ms bracketing API와 opt-in 300ms 제한 GPS 보정 API를 구분한다.
+
+v1 `objects_local`·`objects_map`은 호환용(deprecated)으로 남긴 토픽이다. 구독자가 있으면 같은 scan에
+둘 다 나갈 수 있으므로 local/map 배타 출력으로 소비하지 않는다. scan마다 local 또는 map 하나만 내는 최종
+출력은 [LiDAR object v2](./lidar-object-v2.md)의 `/lidar/local_object`·`/lidar/map_object`이며
+`roslaunch Main main_integration.launch`에서만 켜진다. 판제 입력을 v2로 바꾸는 작업은 별도 후속 단계다
+([rollout](../handoffs/lidar-v2-output-rollout.md)). v1 토픽의 제거나 배타화는 소비자 수락 이후에 정한다.

@@ -84,6 +84,36 @@ Jaeho owns the remaining migration and3-view fusion implementation.
 Historical standalone YOLO and comparison runners can be inspected in commit
 `ae8dcbc0`; use a matching isolated checkout rather than reinstalling them here.
 
+## LiDAR output profiles
+
+`main.launch` is the production profile and its defaults are unchanged:
+`enable_common_geometry:=false`, `lidar_level_roll:=false` and `planner_udp_enabled:=true`
+(the planner UDP sender follows `setting.yaml` `PlannerInterface`, 127.0.0.1:7510). Legacy
+`/last_lidar`, `/lidar/tracked_objects_map`, `/lidar/motion_debug` and UDP are published for every
+processed scan; neither `/lidar/local_object` nor `/lidar/map_object` is advertised (nor are the v1 candidates
+`/perception/lidar/objects_local` and `/perception/lidar/objects_map`). Known gap of this profile:
+warm-up tracks still reach `/last_lidar` and UDP as speed-0 objects.
+
+`main_integration.launch` is the opt-in LiDAR v2 integration profile. It includes `main.launch` and
+pins `enable_common_geometry=true` and `lidar_level_roll=true`, so IMU roll and pitch are each removed
+exactly once. Each scan publishes at most one `asmc_msgs/LidarObjectArrayV2`:
+`/lidar/map_object` (`map`) when the map pose is valid,
+`/lidar/local_object` (`base_link`) while GPS is missing, invalid, stale or recovering,
+and nothing when the LiDAR, time, IMU, CAN or transform input is invalid (the reason is reported on
+`/perception/lidar/diagnostics`). The legacy outputs and UDP follow only `/lidar/map_object` scans whose
+objects all have a valid motion state. Offline replays, bags and tests pass
+`planner_udp_enabled:=false`: the planner UDP sender socket is not created and nothing is sent (roscpp's
+own UDPROS server socket may still exist; it sends nothing):
+
+```bash
+roslaunch Main main_integration.launch rviz:=false planner_udp_enabled:=false
+```
+
+Contract and truth table: [LiDAR object v2](../../docs/contracts/lidar-object-v2.md).
+Rollout, legacy status and open blockers:
+[LiDAR v2 rollout](../../docs/handoffs/lidar-v2-output-rollout.md). The planner still
+consumes `/last_lidar`; moving it to the v2 topics is a separate later step.
+
 ## LiDAR-only motion decision
 
 `MotionClassifier` keeps its decision history separately from the tracker's
@@ -140,7 +170,7 @@ The one topic required for OBB + ID + speed visualization is
 `/lidar_tracking_markers`.
 
 Its OBB markers are rebuilt from only the objects observed in the current
-LiDAR frame (`miss_count == 0`).  Every MarkerArray starts with `DELETEALL`,
+LiDAR frame (`miss_count == 0`). Every MarkerArray starts with `DELETEALL`,
 so an OBB from a disappeared or predict-only track cannot remain in RViz.
 Predict-only tracks may still keep their ID/velocity annotations, but they do
 not publish either an OBB or the old fallback AABB.
@@ -161,9 +191,23 @@ rosrun rqt_image_view rqt_image_view /camera/image/compressed
 `/lidar_tracking_markers` is a visualization message, not a stable downstream
 tracked-object API. Consumers can inspect it with `rostopic echo`.
 
-The typed downstream and validation API is now `/lidar/tracked_objects_map`.
-Its velocity components use m/s; `speed_kph` is display-only. To record one
-validation scenario after rebuilding:
+`/lidar/tracked_objects_map` is a legacy map-frame topic kept for recording and
+validation tools (`analyze_velocity_bag.py`, `src/Main/scripts/build_known_static_object_catalog.py`,
+`tools/perception/*`). No runtime planner subscribes to it by default: `planning_inputs`
+consumes `/last_lidar` and `/lidar/motion_debug`, and only its opt-in
+`lidar_source_policy:=main_raw` path reads this topic. It is a removal candidate once these
+consumers migrate; new consumers use the v2 topics. In `main_integration.launch` it
+follows the same gate as `/last_lidar`. Its velocity components use m/s; `speed_kph` is
+display-only.
+
+Main is the only `/last_lidar` publisher.
+`src/asmc_hd_map/development/won_tae_link_node/drivable_filter_node.py` republishes
+`/lidar/tracked_objects_map` as `last_lidar` for manual cross-checks of the C++ drivable
+filter. No launch file starts it; running it next to Main would create a second
+`/last_lidar` publisher. `tools/audit/check_legacy_lidar_publishers.py` (CI) fails if a
+launch file or shell launcher starts it.
+
+To record one validation scenario after rebuilding:
 
 ```bash
 rosbag record --lz4 -O lidar_velocity_test.bag \

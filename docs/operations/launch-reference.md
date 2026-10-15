@@ -184,6 +184,7 @@
 | `camera_class_profile` | `mission16_v1` | — |
 | `enable_common_geometry` | `false` | — |
 | `lidar_level_roll` | `false` | — |
+| `planner_udp_enabled` | `true` | — |
 | `lidar_mount_config` | `$(find asmc_lidar)/config/autonav_v3.yaml` | — |
 | `fusion_camera_config` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
 | `map_altitude_origin_m` | `0.0` | — |

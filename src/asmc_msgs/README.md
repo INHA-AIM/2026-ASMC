@@ -9,6 +9,7 @@ perception runtime 메시지 3개를 additive하게 추가했다.
 - 공용 계약 허브: [contracts/README.md](../../docs/contracts/README.md)
 - 사람이 읽는 규약: [HD Map topic contract v1](../../docs/contracts/hd-map-topic-v1.md)
 - perception 규약: [Perception runtime topic contract v1](../../docs/contracts/perception-runtime-v1.md)
+- LiDAR object v2 규약: [LiDAR object v2](../../docs/contracts/lidar-object-v2.md)
 - 기계 판독 규약: [hd_map_topic_contract_v1.yaml](../../config/contracts/hd_map_topic_contract_v1.yaml)
 - message registry: [asmc_msgs_contract_registry_v1.yaml](../../config/contracts/asmc_msgs_contract_registry_v1.yaml)
 - 검증: `python3 tools/audit/validate_p1b_contract.py`

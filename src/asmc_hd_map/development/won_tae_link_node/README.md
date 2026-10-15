@@ -1001,6 +1001,8 @@ roslaunch Main main.launch
 
 `drivable_filter_node.py`는 C++ 결과와 대조하는 독립 구현으로 남겨 둔다. 실시간
 운용 중 함께 실행하면 `/last_lidar` publisher가 둘이 되므로 동시에 실행하지 않는다.
+어떤 launch도 이 노드를 띄우지 않으며, launch 파일이나 shell launcher가 이 노드를 띄우면
+CI의 `tools/audit/check_legacy_lidar_publishers.py`가 실패한다.
 
 ### 좌표 변환이 없다
 

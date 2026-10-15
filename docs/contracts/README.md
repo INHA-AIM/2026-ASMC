@@ -8,6 +8,7 @@
 | 카메라 실행·모드·3뷰 관측 | [camera runtime v1](camera-runtime-v1.md) | `camera_object_observation_v1.yaml`, camera launch/runtime YAML |
 | 카메라 데이터·라벨·split | [dataset 계약](dataset-labeling-split.md) | 고정16종·소스 대응, versioned policy/manifest/검수 |
 | 카메라→LiDAR/판제 | [LiDAR 소비 v1](lidar-planning-consumer-v1.md), [현재 인계](../handoffs/camera-to-lidar.md) | 현재 Main 전방 어댑터·후속3뷰 관측 설정 |
+| LiDAR 최종 local/map 출력 | [LiDAR object v2](lidar-object-v2.md) | `lidar_candidate_topic_contract_v2.yaml`, opt-in·판제 cutover 전 |
 | typed 신호등·tracked 객체 | [perception runtime v1](perception-runtime-v1.md) | `perception_runtime_topic_contract_v1.yaml` |
 | Behavior/Frenet transaction | [FSM/Frenet v2](planning-fsm-frenet-v2.md) | 공용 msg·asmc_planner 내부 직접 호출/관찰 출력 |
 | HD Map message/topic | [HD Map topic v1](hd-map-topic-v1.md) | `hd_map_topic_contract_v1.yaml`, asmc_msgs registry |

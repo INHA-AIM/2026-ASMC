@@ -81,7 +81,7 @@ YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다.
 | IMU 선택 함수 | 도착 완료 표본만 전달, 유한값/유효 quaternion 검사 후 valid 지정 |
 | v3 장착 설정 | 출처 SHA와 단위 확인. 장착 z를 노면 기준 센서 높이로 사용하지 않음 |
 | 회귀시험 | 좌표·8코너·속도·관측시각·pose/IMU 선택 의미 검사. 실제 검출 성능 시험은 후속 |
-| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar는 수신 확인용 probe 제공, LiDAR 처리 노드는 미이전 |
+| 공용 `asmc_msgs` 타입 | LidarObject/Array(v1 동결), LidarObjectV2/ArrayV2(v2 additive), CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar는 수신 확인용 probe 제공, LiDAR 처리 노드는 미이전 |
 
 빌드·시험 명령과 API 위치는 [패키지 README](../../src/asmc_lidar/README.md)에 있다.
 소스에는 지면·tracker 후보나 실행 launch를 남기지 않았다. 이전 `unified.launch`,
@@ -124,6 +124,11 @@ YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다.
 [소비 계약](../contracts/lidar-planning-consumer-v1.md)과
 [기계 판독 계약](../../config/contracts/lidar_candidate_topic_contract_v1.yaml)은
 후속 구현의 목표다. 현재 publisher 목록이 아니다.
+scan마다 local 또는 map 하나만 내는 최종 출력과 무손실 motion 상태는
+[LiDAR object v2 계약](../contracts/lidar-object-v2.md)과
+[v2 기계 판독 계약](../../config/contracts/lidar_candidate_topic_contract_v2.yaml)이 정한다.
+현재 생산자는 nested Main의 opt-in `main_integration.launch`이며, 앞으로 이전할
+`asmc_lidar` 노드도 같은 계약을 따라야 한다.
 
 - 현재 Main의 local 입력은 관측 시점 유효 IMU와 차량 속도(CAN)다. 각각 age 120ms, 최대 대기 50ms이며 GPS는 기다리지 않는다. CAN 없이 처리하는 LiDAR+IMU 전용 정책은 후속 설계다.
 - scan stamp는 bridge 수신 시각이며 광선 측정 시각으로 바꾸어 설명하지 않는다.
