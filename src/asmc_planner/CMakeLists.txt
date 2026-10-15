@@ -641,6 +641,10 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME keep_candidate_target_test COMMAND keep_candidate_target_test)
 
+  add_executable(keep_cruise_scope_test tests/frenet/keep_cruise_scope_test.cpp)
+  target_link_libraries(keep_cruise_scope_test asmc_planner_frenet_core)
+  add_test(NAME keep_cruise_scope_test COMMAND keep_cruise_scope_test)
+
   # Recorded AVOID approach failure and low-speed SHIFT continuity regression.
   add_executable(avoid_tracking_handoff_test tests/frenet/avoid_tracking_handoff_test.cpp)
   target_compile_definitions(avoid_tracking_handoff_test PRIVATE

@@ -5,23 +5,32 @@
 control_frequency: 20.0
 
 mpc:
-  horizon: 36           # 28(1.4s)->36(1.8s): 코너 진입을 더 일찍 내다보도록 확장. dt는 그대로.
+  # Normal KEEP trajectories are usually 1.5 s long. At dt=0.05, 29 steps
+  # end at 1.40 s, leaving room for the observed source-time offset instead
+  # of repeating the moving endpoint over the former 1.8 s horizon.
+  horizon: 29
   dt: 0.05             # control_frequency(20Hz=50ms)와 정합.
   max_iterations: 25
   wheelbase: 3.0
   # 2026-09-11 MORAI IONIQ 5 실측(10/20/30/40deg) 평균:
   # kappa ~= 0.844 * tan(delta) / wheelbase.
   steering_curvature_gain: 0.844
+  # MORAI command-to-observed-yaw delay (dynamics + transport), measured on bags.
+  # 0 restores the instantaneous model; acceleration is not delayed.
+  steering_response_delay_s: 0.15
 
 cost:
-  # Structural A/B baseline: keep the former lateral tracking strength while
-  # reducing only longitudinal spatial lag. These are not final MORAI tuning.
+  # Keep the straight-road noise response; strengthen tracking progressively
+  # on curved reference samples. Steering delay/rate limits remain unchanged.
   contour_error: 6.0
+  curve_contour_boost: 6.0
+  contour_boost_start_curvature: 0.004  # [1/m], radius 250 m
+  contour_boost_full_curvature: 0.012   # [1/m], radius about 83 m
   lag_error: 0.5
   heading_error: 3.0      # 6.0→3.0: 과도한 heading 보정이 오버슈트 유발
-  speed_error: 2.0        # 3.0→2.0: 급정거 방지
+  speed_error: 8.0        # Validated with smoothed speed estimates and steering delay.
   control: 1.25            # 2.0→1.0: steer effort 페널티 완화
-  control_rate: 100.0     # 90~110 사이의 값으로 조절해야함.
+  control_rate: 110.0     # Matched with the shorter horizon; GPS-step regression retained.
   control_rate_accel: 2.5
   terminal: 8.0
 
@@ -36,7 +45,12 @@ constraints:
     # 물리 조향 한계는 공식/실측 입력값 40deg다. 실측 최대 곡률은 위 gain을
     # 적용하면 약 0.236 1/m이며 Frenet 제한 0.23보다 작은 여유를 갖는다.
     max_angle: 0.6981317008
-    max_rate: 1.0         # 0.4→1.0: 너무 작으면 solver 출력이 매 사이클 잘려서 흔들림
+    max_rate: 1.0         # Low-speed ceiling; the speed-dependent envelope follows.
+    # Above 18 km/h, reduce slew as (5 / speed_mps)^2, down to min_rate.
+    # Applied inside the solver to both warm start and all projected controls.
+    # Set the reference speed to 0 to restore the legacy fixed rate limit.
+    rate_reference_speed_mps: 5.0
+    min_rate: 0.1
   acceleration:
     max_forward: 2.0
     max_reverse: -5.0
@@ -66,8 +80,8 @@ control_mapping:
   # desired acceleration in m/s^2 and inversely interpolates these monotonic
   # pedal->response curves. STOP/E-STOP fixed overrides are intentionally
   # outside this mapping.
-  # The measured response is strongly speed-dependent. Keep this first-stage
-  # 1-D LUT disabled until a speed-indexed mapping is implemented.
+  # Existing 1-D LUT remains enabled. Its response is speed-dependent;
+  # these steering changes do not constitute a new pedal calibration.
   use_calibrated_lut: true
   accel:
     pedal:         [0.0, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50, 0.60]

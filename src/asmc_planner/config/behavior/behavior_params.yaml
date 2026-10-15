@@ -1,4 +1,19 @@
 behavior: {update_rate: 10.0}
+# MORAI-only cruise profile: on ordinary KEEP links with map cap >= 40 km/h,
+# replace that cap with 58. Explicit link caps below apply only through the
+# same ordinary-driving gate. The original map is unchanged.
+# Signal approach, obstacle handling, FOLLOW, STOP and roundabout merge take
+# precedence. Unlisted lower-speed links and downstream curvature limits remain.
+# Nominal target/cap 58; verify actual speed stays below 60 in simulator Bags.
+# This is a requested cruise speed, not a guaranteed measured segment average.
+normal_cruise:
+  enabled: true
+  target_speed_kph: 58.0
+  max_speed_kph: 58.0
+  minimum_map_speed_kph: 40.0
+  # Ordinary exit road after roundabout merge; merge links retain their limits.
+  link_speed_caps_kph:
+    A2256W000054: 50.0
 interface_version: "v1"
 v2: {command_validity_seconds: 0.5, feedback_stale_seconds: 1.0}
 # Match Frenet's configured FOLLOW acquisition gate. A previously acquired
@@ -41,13 +56,17 @@ traffic_light:
   # semantic light_state와 raw label은 현재 frame 값을 그대로 사용한다.
   detection_grace_seconds: 1.0
   # 카메라 검출 여부와 무관하게 route-associated map stop line에 대해,
-  # 현재 실제 속도에서 comfort 감속하여 물리 정지선 약 1.5 m 전에
-  # 25 km/h에 도달하도록 시작 거리를 계산하고, 통과 뒤 30 m까지 유지한다.
+  # 현재 실제 속도에서 감속하여 물리 정지선 25 m 전에 25 km/h에
+  # 도달하는 것을 목표로 한다. 신호 접근 감속 가정은 1.5 m/s^2로 유지한다.
+  # 일반 곡선 감속 설정과 독립적이며 jerk/제어 지연은 Bag으로 확인한다.
+  # 정지선 통과 뒤 5 m까지 유지하고 이후 지도·곡률이 허용하는 속도로 복귀한다.
   # 한 번 시작한 감속은 같은 정지선에 latch된다. RED/YELLOW STOP과는 별도다.
+  # MORAI 시험: 동적 장애물 구간의 신호 접근 25 km/h, 일반 구간 상한 58 km/h.
+  # 전체 평균 50 km/h 달성 여부는 저속 구간·신호 대기를 포함해 별도 측정한다.
   approach_speed_limit_kph: 25.0
-  approach_comfortable_decel: 2.0
-  approach_margin_m: 7
-  post_stopline_distance_m: 30.0
+  approach_comfortable_decel: 1.5
+  approach_margin_m: 25.0
+  post_stopline_distance_m: 5.0
   mock_path: "$(find asmc_planner)/config/behavior/traffic_light_mock.yaml"
 vehicle: {length: 4.635, width: 1.892, wheelbase: 3.0}
 lane: {default_width: 3.5}

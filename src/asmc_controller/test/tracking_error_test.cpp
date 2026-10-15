@@ -162,6 +162,40 @@ TEST(TrackingErrorWeightTest, TerminalPreservesStageContourLagRatio) {
     EXPECT_GT(contour.terminal, lag.terminal);
 }
 
+TEST(ContourSchedule, PreservesStraightsAndStrengthensBothTurnDirections) {
+    MPCParams p;
+    p.weight_contour_error = 6.0;
+    p.curve_contour_boost = 6.0;
+    p.contour_boost_start_curvature = .004;
+    p.contour_boost_full_curvature = .012;
+    EXPECT_DOUBLE_EQ(ContourTrackingWeight(0, p), 6.0);
+    EXPECT_DOUBLE_EQ(ContourTrackingWeight(.004, p), 6.0);
+    EXPECT_NEAR(ContourTrackingWeight(.008, p), 9.0, 1e-12);
+    EXPECT_DOUBLE_EQ(ContourTrackingWeight(.02, p), 12.0);
+    EXPECT_DOUBLE_EQ(ContourTrackingWeight(-.02, p), 12.0);
+    p.curve_contour_boost = 0.0;
+    EXPECT_DOUBLE_EQ(ContourTrackingWeight(.02, p), 6.0);
+    p.curve_contour_boost = 6.0;
+    p.contour_boost_full_curvature = p.contour_boost_start_curvature;
+    EXPECT_DOUBLE_EQ(ContourTrackingWeight(.02, p), 6.0);
+}
+
+TEST(ContourSchedule, TotalStageCostUsesReferenceCurvature) {
+    MPCParams p;
+    p.weight_contour_error = 6.0;
+    p.curve_contour_boost = 6.0;
+    p.dt = .05;
+    ReferencePath ref;
+    ref.x_ref = {0,0}; ref.y_ref = {0,0}; ref.yaw_ref = {0,0};
+    ref.v_ref = {0,0}; ref.a_ref = {0,0}; ref.k_ref = {.02,.02};
+    MPCState state; state.y = 1;
+    const auto curve = computeCostBreakdown({state,state}, {MPCControl{}}, ref, MPCControl{}, p);
+    ref.k_ref = {0,0};
+    const auto straight = computeCostBreakdown({state,state}, {MPCControl{}}, ref, MPCControl{}, p);
+    EXPECT_NEAR(curve.contour, 2 * straight.contour, 1e-12);
+    EXPECT_DOUBLE_EQ(curve.lag, straight.lag);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {

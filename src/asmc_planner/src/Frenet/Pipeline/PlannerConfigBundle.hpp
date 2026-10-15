@@ -17,6 +17,7 @@ struct PlannerConfigBundle {
     const PathGeneratorConfig& path;
     const KinematicLimits& limits;
     const CostWeights& cost_weights;
+    const KeepCruiseConfig& keep_cruise;
     const VehicleShape& vehicle_shape;
     const CollisionCheckConfig& collision;
     const StopConfig& stop;

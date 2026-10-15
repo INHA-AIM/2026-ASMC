@@ -63,15 +63,15 @@ TEST(BrakingWarmStart, SeedComparisonRetainsShiftedSteeringAndPreviousActuatorAn
     EXPECT_LT(result.control.accel, 0);
 }
 
-TEST(BrakingWarmStart, AccelerationReferenceKeepsExistingWarmStart) {
+TEST(BrakingWarmStart, AccelerationReferenceRefreshesStaleWarmStart) {
     auto p = Params(); p.max_iterations = 0;
     const MPCState ego{0, 0, 0, 8};
     std::vector<MPCControl> desired(p.horizon, {.02, 1.0});
-    std::vector<MPCControl> warm(p.horizon, {.04, .3});
-    const auto result = solveMPC(ego, Reference(ego, desired, p), {.04, .3}, warm, p);
+    std::vector<MPCControl> warm(p.horizon, {.02, .3});
+    const auto result = solveMPC(ego, Reference(ego, desired, p), {.02, .3}, warm, p);
     ASSERT_TRUE(result.success);
     for (const auto& u : result.controls) {
-        EXPECT_DOUBLE_EQ(u.delta, .04); EXPECT_DOUBLE_EQ(u.accel, .3);
+        EXPECT_DOUBLE_EQ(u.delta, .02); EXPECT_DOUBLE_EQ(u.accel, 1.0);
     }
 }
 

@@ -9,6 +9,7 @@
 
 #include "Control.hpp"
 #include "MPC/MPC.hpp"
+#include "MPC/Constraints/constraints.hpp"
 #include "Util/MessageConverter.hpp"
 
 namespace {
@@ -338,11 +339,7 @@ void RunPlannerStopCycle(ControllerOutputCapture& capture) {
               mpc_controller_ros::ConvertVehicleState(g_control.latest_vehicle_state, ego));
     g_mpc.stuck_cycles = 3;
     g_mpc.recovery_cycles_left = 2;
-    const double min_age = (ros::SteadyTime::now() -
-        g_control.last_successful_control_at).toSec();
     mpc_controller_ros::ControlProcess(ros::SteadyTimerEvent{});
-    const double max_age = (ros::SteadyTime::now() -
-        g_control.last_successful_control_at).toSec();
     ASSERT_TRUE(capture.WaitForCommand());
     ASSERT_EQ(1u, capture.Commands().size());
     const auto actual = capture.Commands().front();
@@ -351,10 +348,11 @@ void RunPlannerStopCycle(ControllerOutputCapture& capture) {
     EXPECT_DOUBLE_EQ(expected.accel, actual.accel);
     EXPECT_DOUBLE_EQ(expected.brake, actual.brake);
     EXPECT_TRUE(std::isfinite(actual.steering));
-    const double rate = GetMPCParams().steering_rate_max;
-    // BrakingSteering decays toward zero at rate * successful_control_age.
-    EXPECT_GE(actual.steering, std::max(0.0, previous - rate * max_age) - 1e-8);
-    EXPECT_LE(actual.steering, std::max(0.0, previous - rate * min_age) + 1e-8);
+    const double rate = SteeringRateLimit(ego.vx, GetMPCParams());
+    // A valid STOP tracks cached geometry at the same fixed MPC time step.
+    // Braking must not erase the path or let launch recovery override the pedal.
+    EXPECT_LE(std::abs(actual.steering-previous), rate*GetMPCParams().dt+1e-8);
+    EXPECT_FALSE(g_mpc.braking_geometry.empty());
     EXPECT_LE(std::abs(actual.steering), GetMPCParams().steering_max);
     ExpectRuntimeReset();
     EXPECT_DOUBLE_EQ(actual.steering, g_mpc.last_control.delta);
@@ -367,6 +365,40 @@ TEST(ControllerFailSafeVerification, CTRL008PlannerStop) {
     ControllerOutputCapture capture;
     ASSERT_TRUE(capture.Initialize());
     RunPlannerStopCycle(capture);
+}
+
+TEST(ControllerFailSafeVerification, HighSpeedPlannerStopUsesScheduledRateAndKeepsDelay) {
+    ControllerOutputCapture capture;
+    ASSERT_TRUE(capture.Initialize());
+    MPCParams params;
+    params.dt = 0.05;
+    params.steering_response_delay_s = 0.15;
+    params.steering_rate_reference_speed_mps = 5.0;
+    params.steering_rate_min = 0.1;
+    InitMPC(params);
+    g_mpc.steering_history = {0.04, 0.04, 0.04, 0.04};
+    g_control.last_successful_steering = 0.04;
+    g_control.last_successful_control_at = ros::SteadyTime::now() - ros::WallDuration(0.05);
+    const auto previous_at = g_control.last_successful_control_at;
+    g_control.latest_vehicle_state.speed = 58.0/3.6;
+    g_control.vehicle_state_received_at = ros::SteadyTime::now();
+    auto stop = MakeValidTrajectory();
+    stop.points.resize(1);
+    stop.points.front().velocity = 0.0;
+    mpc_controller_ros::TrajectoryCallback(
+        asmc_msgs::Trajectory::ConstPtr(new asmc_msgs::Trajectory(stop)));
+    mpc_controller_ros::ControlProcess(ros::SteadyTimerEvent{});
+    ASSERT_TRUE(capture.WaitForCommand());
+    ASSERT_EQ(capture.Commands().size(), 1u);
+    const auto actual = capture.Commands().front();
+    const double elapsed = (g_control.last_successful_control_at-previous_at).toSec();
+    EXPECT_NEAR(actual.steering, std::max(0.0, 0.04-0.1*elapsed), 1e-8);
+    EXPECT_DOUBLE_EQ(actual.accel, 0.0);
+    EXPECT_DOUBLE_EQ(actual.brake, mpc_controller_ros::MakeRosStopCommand().brake);
+    EXPECT_DOUBLE_EQ(g_control.last_successful_steering, actual.steering);
+    ASSERT_FALSE(g_mpc.steering_history.empty());
+    EXPECT_DOUBLE_EQ(g_mpc.steering_history.back(), actual.steering);
+    EXPECT_DOUBLE_EQ(g_mpc.steering_history.front(), 0.04);
 }
 
 

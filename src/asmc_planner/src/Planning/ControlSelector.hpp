@@ -16,12 +16,19 @@ class ControlSelector final {
   void normalCallback(const morai_msgs::CtrlCmd::ConstPtr& message);
   void jammingCallback(const morai_msgs::CtrlCmd::ConstPtr& message);
   void diagnosticsCallback(const ros::SteadyTimerEvent&);
+  void watchdogCallback(const ros::SteadyTimerEvent&);
+  void publishStop();
+  bool commandFresh() const;
   void publishDiagnostics();
 
   ros::NodeHandle nh_;
   ros::Subscriber mode_sub_, normal_sub_, jamming_sub_;
   ros::Publisher control_pub_, diagnostics_pub_;
   ros::SteadyTimer diagnostics_timer_;
+  ros::SteadyTimer watchdog_timer_;
+  ros::SteadyTime selected_received_at_;
+  double command_timeout_s_ = 0.25;
+  bool awaiting_selected_command_ = true;
   PlanningMode mode_ = PlanningMode::NORMAL;
   bool has_mode_ = false;
   bool normal_received_ = false;

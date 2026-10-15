@@ -7,11 +7,23 @@
 #include "MPC/Math/utils.hpp"
 #include "MPC/Model/vehicle_model.hpp"
 #include "MPC/Solver/mpc_solver.hpp"
+#include "MPC/Reference/braking_reference.hpp"
+#include "MPC/Reference/reference_validator.hpp"
 
 namespace {
 
 int CyclesFromSeconds(double seconds, double frequency_hz) {
     return std::max(1, static_cast<int>(std::ceil(seconds * frequency_hz)));
+}
+
+void RecordPublishedSteering(double steering) {
+    g_mpc.steering_history.push_back(steering);
+    const std::size_t history_size = static_cast<std::size_t>(std::ceil(
+        g_mpc.params.steering_response_delay_s / g_mpc.params.dt)) + 1;
+    if (g_mpc.steering_history.size() > history_size) {
+        g_mpc.steering_history.erase(g_mpc.steering_history.begin(),
+            g_mpc.steering_history.end() - history_size);
+    }
 }
 
 }  // namespace
@@ -28,17 +40,29 @@ void InitMPC(const MPCParams& params) {
 }
 
 void ResetMPCOnFailSafe() {
+    g_mpc.braking_geometry.clear();
     g_mpc.warm_start.clear();
+    g_mpc.steering_history.clear();
     g_mpc.last_control = MPCControl{};
     g_mpc.stuck_cycles = 0;
     g_mpc.recovery_cycles_left = 0;
 }
 
 void ResetMPCForPlannerStop(double published_steering) {
-    ResetMPCOnFailSafe();
-    if (std::isfinite(published_steering))
-        g_mpc.last_control.delta = std::clamp(published_steering,
-            -g_mpc.params.steering_max, g_mpc.params.steering_max);
+    if (!std::isfinite(published_steering)) {
+        ResetMPCOnFailSafe();
+        return;
+    }
+    // A valid planner STOP invalidates the optimization seed, not commands
+    // still travelling through the steering actuator. Record this published
+    // command so a brief STOP -> KEEP transition predicts the real delay.
+    g_mpc.warm_start.clear();
+    g_mpc.last_control = MPCControl{};
+    g_mpc.last_control.delta = std::clamp(published_steering,
+        -g_mpc.params.steering_max, g_mpc.params.steering_max);
+    g_mpc.stuck_cycles = 0;
+    g_mpc.recovery_cycles_left = 0;
+    RecordPublishedSteering(g_mpc.last_control.delta);
 }
 
 MPCOutput MPCProcess(
@@ -85,7 +109,7 @@ MPCOutput MPCProcess(
     const MPCControl optimization_previous_control = g_mpc.last_control;
     const MPCResult result = solveMPC(
         ego_state, reference, optimization_previous_control, g_mpc.warm_start,
-        solve_params);
+        solve_params, g_mpc.steering_history);
     if (!result.success ||
         result.controls.size() != static_cast<std::size_t>(g_mpc.params.horizon) ||
         !std::isfinite(result.control.delta) ||
@@ -128,8 +152,11 @@ MPCOutput MPCProcess(
         }
     }
 
+    if (ValidateReference(reference, g_mpc.params).ok())
+        g_mpc.braking_geometry = reference;
     output.success = true;
     output.control = output_control;
+    RecordPublishedSteering(output_control.delta);
     output.first_acceleration_residual = output.control.accel -
         output.first_used_reference_acceleration;
     return output;
@@ -138,3 +165,24 @@ MPCOutput MPCProcess(
 
 const MPCParams& GetMPCParams() { return g_mpc.params; }
 
+bool MPCPlannerStopSteering(const MPCState& ego, double brake_pedal,
+                            double& steering) {
+    if (ego.vx < g_mpc.params.stuck_ego_speed) {
+        g_mpc.braking_geometry.clear();
+        return false;
+    }
+    const double decel = BrakePedalDeceleration(brake_pedal, g_mpc.params);
+    const auto reference = MakeBrakingReference(g_mpc.braking_geometry,
+        ego, decel, g_mpc.params);
+    if (reference.empty()) return false;
+    MPCParams braking_params = g_mpc.params;
+    // The runtime publishes the existing fixed brake pedal, so optimization
+    // must predict that same deceleration and may never ask for acceleration.
+    braking_params.accel_min = -decel;
+    braking_params.accel_max = -decel;
+    const auto result = solveMPC(ego, reference, g_mpc.last_control, {},
+        braking_params, g_mpc.steering_history);
+    if (!result.success || !std::isfinite(result.control.delta)) return false;
+    steering = result.control.delta;
+    return true;
+}
