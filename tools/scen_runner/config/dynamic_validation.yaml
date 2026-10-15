@@ -1,0 +1,16 @@
+client_key: scen_runner_ped_validation
+link_map: src/asmc_planner/config/behavior/link_set.json
+ego_links: [A2256W000728, A2256W000599, A2256W000207, A2256W000205]
+# 모든 모델에 동일한 위치·방향·속도·거리 적용. 랜덤 추출 없음.
+cross_station_m: 33.0
+start_lateral_m: 8.0
+end_lateral_m: -8.0
+activation_distance_m: 15.0
+walk_speed_kmh: 10.0
+spawn_height_offset_m: 0.4
+# GUI의 도착 관찰 허용 오차. 실제 정지는 MORAI 웨이포인트가 처리한다.
+end_tolerance_m: 0.25
+groups:
+  Adult: [Man1, Man2, Man3, Man4, Man5, Man6, Man7, Man8, Woman1, Woman2, Woman3, Woman4, Woman5, Woman6, Woman7, Woman8, NCAP_EPTa, police1, police_f_1, police_m_2, worker_f_1, worker_m_1]
+  Child: [Boy1, Girl1, Boy2, Girl2, NCAP_EPTc]
+  Animal: [Deer1, Dog1, Dog2, Ped_Pet1]

@@ -1,0 +1,11 @@
+# 처음 한 번 local.yaml로 복사한 뒤 이 PC의 값을 입력하세요.
+# local.yaml은 Git 제외 대상입니다. 맵·객체·주행 설정은 기존 YAML에 둡니다.
+morai:
+  host: null  # 컨테이너에서 접속할 MORAI Windows 호스트의 IPv4 또는 호스트명
+  port: 7789  # MORAI gRPC 서버 포트
+
+dll:
+  # DLL 도구를 WSL에서 사용할 때만 필요합니다.
+  # 자신의 Simulator_Data/Managed 전체 WSL 경로를 입력하세요.
+  # 예: /mnt/c/MORAI/Simulator/Simulator_Data/Managed
+  managed_path: null

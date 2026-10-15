@@ -6,6 +6,7 @@ catkin이 아닌 **Python·gRPC·시나리오** 도구.
 |------|------|--------|
 | `aim_scenario_runner/` | 장원태 | `run.sh`, `scenario_launcher.py` |
 | `grpc_inha_univ/` | 장원태 | `run_mode.sh`, `src/api/morai_sim_client.py` |
+| `scen_runner/` | 장원태 | `run_validation.sh` (전체 씬·단일 구간 검증·저장 기록 재현) |
 | `audit/` | 통합 회귀·계약 기준 | `build_runtime_baseline.py`, `build_perception_runtime_baseline.py`, `validate_p1b_contract.py`, `validate_perception_contract.py`, `validate_perception_runtime_acceptance.py`, `validate_bridge_profiles.py` |
 | `bridge/` | MORAI release template에서 transport별 import 생성 | `render_morai_network_profiles.py --write\|--check` |
 | `research/lbc_teacher_bev/` | privileged MORAI state 기반 GT/teacher BEV 연구 도구 | `scripts/visualize_lbc_bev.sh`, `scripts/collect_lbc_bev.sh` |
