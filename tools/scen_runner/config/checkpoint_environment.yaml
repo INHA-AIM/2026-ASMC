@@ -1,0 +1,9 @@
+# Six weather/hour pairs. Exclude only the immediately previous PAIR.
+weathers: [Sunny, Foggy]
+hours: [11, 13, 15]
+instantly: true
+# Use official checkpoint radii/positions from competition_metadata.yaml.
+# CP11 in the user-provided coordinate table differs from current metadata.
+# Override only environment detection; do not alter the HD map or driving route.
+checkpoint_pose_overrides:
+  '11': {x: 73.55110931396484, y: -238.7718963623047, z: 28.71942138671875}

@@ -1,0 +1,6 @@
+# 주행 허용 후 ego XY 위치가 이 범위에 머무르면 정체 사례를 저장하고 재시작.
+enabled: true
+duration_s: 150.0
+position_radius_m: 1.0
+# 이보다 긴 관측 공백은 정체 증거로 사용하지 않고 새 관측 구간을 시작.
+max_sample_gap_s: 5.0

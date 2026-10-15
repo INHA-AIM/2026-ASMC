@@ -1,0 +1,21 @@
+link_map: src/asmc_planner/config/behavior/link_set.json
+ego_links: [A2256W000448, A2256W000126, A2256W000128]
+target_link: A2256W000126
+scene_types: [static, dynamic, both]
+# Distances measured forward from A126's entrance, not ego's moving position.
+cross_station_m: [35.0, 75.0]
+static_station_m: [0.0, null]  # null end resolves to the actual A126 link length
+static_yaw_deg: [-10.0, 10.0]
+static_lateral_jitter_m: 0.3  # identical centre-range width on ego left and right
+static_max_tries: 120  # search batch; exhaustion retries rather than aborting
+static_tick_candidates: 12  # yield to scene polling/reset/close between batches
+static_dynamic_gap_m: 1.0
+allow_lane_marking_crossing: true  # tunnel-only: yellow/white lines may be crossed
+# Pedestrian starts on each side; editable after checking the actual tunnel walls.
+start_lateral_m: {left: 4.5, right: 3.0}
+end_lateral_m: 3.0
+# Across the road, or diagonally WITH ego travel; never towards stopped ego.
+cross_patterns: [0, 1]
+diagonal_angle_deg: [10.0, 25.0]
+ego_speed_kmh: 25
+speeds_kmh: [15, 16, 17, 18]

@@ -10,6 +10,9 @@ Testing/
 .catkin_workspace
 .catkin_tools/
 
+# Local alias into the nested LiDAR workspace; build it in its own workspace.
+/src/Msg
+
 # Docker local overrides
 .env
 

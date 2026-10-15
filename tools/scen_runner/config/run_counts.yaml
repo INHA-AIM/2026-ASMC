@@ -1,0 +1,10 @@
+# 최초 시작을 포함한 총 주행 횟수.
+# 1 = 한 번 주행 후 정지. 10 = 최초 주행 + 재시작 9번.
+# 1 이상의 정수만 사용. run_validation.sh를 다시 실행할 때 읽는다.
+scene_runs: 1
+section_runs:
+  static: 10
+  dynamic: 10
+  roundabout: 10
+  high_speed: 10
+  tunnel: 10

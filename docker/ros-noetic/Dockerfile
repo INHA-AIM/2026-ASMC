@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-rosbridge-suite \
     ros-noetic-tf2-sensor-msgs \
     ros-noetic-cv-bridge \
-    dmz-cursor-theme xcursor-themes \
+    dmz-cursor-theme xcursor-themes fonts-nanum \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-lbc.txt requirements-mgeo.txt requirements-grpc.txt requirements-linknode.txt /tmp/

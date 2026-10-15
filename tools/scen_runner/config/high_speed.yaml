@@ -1,0 +1,35 @@
+# Native sample spawn points 6 / 8 / 10; ENU map coordinates.
+speeds_kmh: [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80]
+periods_s: [8, 9]
+maximum_spawn_vehicle: 50  # per source
+safety_distance_m: 5.0
+ttc_s: 1.0
+# High-speed-only additions to the shared roundabout's eight-model catalogue.
+extra_models:
+  2016_Hyundai_Santafe: {id: 30200001, length: 4.7, width: 2.203}
+  2016_Hyundai_Universe: {id: 30300001, length: 12.031, width: 2.873}
+  2013_Hyundai_Xcient(P520): {id: 30400003, length: 6.965, width: 2.6}
+  2013_Hyundai_Xcient(P540): {id: 30400004, length: 8.829, width: 3.146}
+  2017_Kia_Niro(HEV): {id: 30200003, length: 4.347, width: 2.065}
+  2020_Kia_K5: {id: 30100014, length: 4.905, width: 2.053}
+  2014_Kia_K7: {id: 30100005, length: 4.97, width: 2.072}
+  2019_Hyundai_Kona(EV): {id: 30700003, length: 4.257, width: 2.0}
+points:
+  - id: 6
+    start_link: A2256W000406
+    start_point_index: 78
+    end_link: A2256W001105
+    end_point_index: 83
+    spawn_pose: {x: 65.769, y: 309.277, z: 28.288, yaw_deg: -83.065}
+  - id: 8
+    start_link: A2256W000175
+    start_point_index: 78
+    end_link: A2256W000422
+    end_point_index: 59
+    spawn_pose: {x: 69.323, y: 309.680, z: 28.321, yaw_deg: -82.905}
+  - id: 10
+    start_link: A2256W000029
+    start_point_index: 167
+    end_link: A2256W000432
+    end_point_index: 246
+    spawn_pose: {x: 73.008, y: 265.605, z: 28.346, yaw_deg: -82.461}

@@ -1,0 +1,47 @@
+# 반드시 두 조건을 동시에 만족해야 한다:
+# 1. 각 객체가 직진 차량의 0.5 m 안전간격을 침범해 회피가 필요하다.
+# 2. 정지 후 출발 / 15 km/h 모두 실선·연석 침범 없이 회피하고 복귀 가능하다.
+# 접근도로 1개, 교차로는 1개/2개 랜덤. 후보 탐색은 성공 또는 취소까지 반복한다.
+client_key: scen_runner_one_scene
+max_tries_per_region: 500
+min_object_gap_m: 1.0
+excluded_models:
+  - Road_Sign_Mark
+  - Speed_Bump
+  - Tree01
+  - Tree02
+  - Tree03
+  - Tree04
+  - Tree05
+  - Tree06
+  - Tree07
+  - Tree08
+  - Tree09
+  - fr-streetlight-2
+  - hole-cover
+  - EFFECT_Fire01
+  - OBJ_Hyundai_Universe_High
+  - OBJ_Hyundai_Xcient_Mixer
+  - OBJ_Hyundai_Xcient_P520
+  - OBJ_Hyundai_Xcient_P540
+intersection:
+  count_choices: [1, 2]
+  range_rule: footprint_overlap
+  models: all_available  # 전체 모델에서 위 제외 목록만 적용
+  # 넓은 후보 범위에서 뽑되 직진 방해 + 두 속도 회피·복귀 가능 검증은 필수.
+  s_from_stopline_m: [8.393221494, 20.393238379]  # 현재 맵 ENU Y: 아래 -147 m ~ 위 -135 m
+  d_range_m: [-2.5, 5.0]  # 경로 기준 오른쪽 2.5 m, 왼쪽 5.0 m (왼쪽 +)
+  yaw_range_deg: [-10.0, 10.0]
+approach:
+  models: all_available  # 크기·위치·회피 검사로 채택 여부를 결정
+  s_from_section_start_m: [12.0, 25.0]
+  # 객체 중심은 흰 실선 위 또는 바깥. 일부 차체/안전간격은 차로에 걸친다.
+  center_outside_white_m: [0.0, 0.15]
+  yaw_range_deg: [-180.0, 180.0]
+  # HD맵에 연석 데이터가 없는 잉여도로의 시험 배치 띠.
+  # 실제 연석 폭을 확인해 조정할 값이며 측정된 도로 경계로 취급하지 않는다.
+  placement_band_outer_m: 0.4
+  placement_band_inner_m: 0.2
+phases:
+  # A213은 교차로 5 m 전에 복귀 완료, A222의 15 km/h 검사도 그 지점에서 시작.
+  handoff_before_stopline_m: 5.0

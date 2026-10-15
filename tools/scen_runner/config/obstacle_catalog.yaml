@@ -1,0 +1,875 @@
+exclude:
+- Road_Sign_Mark
+- Speed_Bump
+- hole-cover
+models:
+  barricade_measured:
+    morai_model: null
+    length: 1.082
+    width: 3.014
+    height: 1.026
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+  vehicle_measured:
+    morai_model: null
+    length: 4.702
+    width: 2.204
+    height: 1.692
+    center_offset:
+    - 1.29
+    - 0.0
+    measured: true
+  custom_box:
+    morai_model: null
+    length: 1.0
+    width: 1.0
+    height: 1.0
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: false
+  CargoBox:
+    morai_model: CargoBox
+    length: 0.749
+    width: 0.749
+    height: 0.434
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:01.808143+00:00'
+    valid_box: true
+  WoodBox:
+    morai_model: WoodBox
+    length: 1.2
+    width: 1.2
+    height: 1.2
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:02.180044+00:00'
+    valid_box: true
+  RedBarrel:
+    morai_model: RedBarrel
+    length: 0.63
+    width: 0.66
+    height: 1.04
+    center_offset:
+    - 0.0
+    - 0.012
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:02.569464+00:00'
+    valid_box: true
+  YellowBarrel:
+    morai_model: YellowBarrel
+    length: 0.573
+    width: 0.572
+    height: 0.919
+    center_offset:
+    - 0.002
+    - -0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:02.951070+00:00'
+    valid_box: true
+  TrafficBarrel:
+    morai_model: TrafficBarrel
+    length: 0.811
+    width: 0.811
+    height: 0.954
+    center_offset:
+    - 0.0
+    - 0.012
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:03.339022+00:00'
+    valid_box: true
+  OBJ_Hyundai_Grandeur:
+    morai_model: OBJ_Hyundai_Grandeur
+    length: 5.021
+    width: 2.088
+    height: 1.503
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:03.705896+00:00'
+    valid_box: true
+  OBJ_Hyundai_HD65:
+    morai_model: OBJ_Hyundai_HD65
+    length: 6.56
+    width: 2.517
+    height: 2.481
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:04.078003+00:00'
+    valid_box: true
+  OBJ_Hyundai_HR:
+    morai_model: OBJ_Hyundai_HR
+    length: 5.027
+    width: 1.919
+    height: 1.97
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:04.473412+00:00'
+    valid_box: true
+  OBJ_Hyundai_Ioniq:
+    morai_model: OBJ_Hyundai_Ioniq
+    length: 4.65
+    width: 2.115
+    height: 1.509
+    center_offset:
+    - 1.369
+    - -0.032
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:04.890064+00:00'
+    valid_box: true
+  OBJ_Hyundai_SantaFe:
+    morai_model: OBJ_Hyundai_SantaFe
+    length: 4.702
+    width: 2.203
+    height: 1.692
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:05.261695+00:00'
+    valid_box: true
+  OBJ_Hyundai_Sonata:
+    morai_model: OBJ_Hyundai_Sonata
+    length: 4.86
+    width: 2.123
+    height: 1.476
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:05.626716+00:00'
+    valid_box: true
+  OBJ_Hyundai_Universe_High:
+    morai_model: OBJ_Hyundai_Universe_High
+    length: 12.031
+    width: 2.873
+    height: 3.534
+    center_offset:
+    - 2.771
+    - -0.065
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:06.223803+00:00'
+    valid_box: true
+  OBJ_Hyundai_Xcient_Mixer:
+    morai_model: OBJ_Hyundai_Xcient_Mixer
+    length: 10.157
+    width: 3.163
+    height: 3.788
+    center_offset:
+    - 2.979
+    - -0.068
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:06.652879+00:00'
+    valid_box: true
+  OBJ_Hyundai_Xcient_P520:
+    morai_model: OBJ_Hyundai_Xcient_P520
+    length: 6.947
+    width: 3.146
+    height: 3.963
+    center_offset:
+    - 2.683
+    - -0.063
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:07.080328+00:00'
+    valid_box: true
+  OBJ_Hyundai_Xcient_P540:
+    morai_model: OBJ_Hyundai_Xcient_P540
+    length: 8.83
+    width: 3.146
+    height: 3.475
+    center_offset:
+    - 3.269
+    - -0.077
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:07.494396+00:00'
+    valid_box: true
+  OBJ_Kia_K5:
+    morai_model: OBJ_Kia_K5
+    length: 4.846
+    width: 2.173
+    height: 1.456
+    center_offset:
+    - 1.338
+    - 0.01
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:07.933926+00:00'
+    valid_box: true
+  OBJ_Kia_K7:
+    morai_model: OBJ_Kia_K7
+    length: 4.97
+    width: 2.072
+    height: 1.484
+    center_offset:
+    - 1.33
+    - -0.029
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:08.347306+00:00'
+    valid_box: true
+  OBJ_Kia_Niro:
+    morai_model: OBJ_Kia_Niro
+    length: 4.347
+    width: 2.065
+    height: 1.556
+    center_offset:
+    - 1.401
+    - -0.033
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:08.766062+00:00'
+    valid_box: true
+  OBJ_Kia_Sorento:
+    morai_model: OBJ_Kia_Sorento
+    length: 4.801
+    width: 2.099
+    height: 1.675
+    center_offset:
+    - 1.324
+    - -0.032
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:12.082190+00:00'
+    valid_box: true
+  OBJ_Kona_EV_2019:
+    morai_model: OBJ_Kona_EV_2019
+    length: 4.257
+    width: 2.0
+    height: 1.53
+    center_offset:
+    - 1.356
+    - -0.032
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:12.540411+00:00'
+    valid_box: true
+  OBJ_Niro_EV_2020:
+    morai_model: OBJ_Niro_EV_2020
+    length: 4.375
+    width: 2.059
+    height: 1.544
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:12.913341+00:00'
+    valid_box: true
+  Lane_Separation_Bar:
+    morai_model: Lane_Separation_Bar
+    length: 0.21
+    width: 0.21
+    height: 0.75
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:13.290255+00:00'
+    valid_box: true
+  PE_Drum:
+    morai_model: PE_Drum
+    length: 0.497
+    width: 0.497
+    height: 0.803
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:13.660074+00:00'
+    valid_box: true
+  PE_Firewall_Orange:
+    morai_model: PE_Firewall_Orange
+    length: 0.6
+    width: 1.358
+    height: 0.9
+    center_offset:
+    - 0.0
+    - 0.012
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:14.058450+00:00'
+    valid_box: true
+  PE_Firewall_White:
+    morai_model: PE_Firewall_White
+    length: 0.6
+    width: 1.358
+    height: 0.9
+    center_offset:
+    - 0.0
+    - 0.012
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:14.439073+00:00'
+    valid_box: true
+  Road_Sign_Mark:
+    morai_model: Road_Sign_Mark
+    length: 0.13
+    width: 0.11
+    height: 0.03
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:14.825667+00:00'
+    valid_box: true
+  Speed_Bump:
+    morai_model: Speed_Bump
+    length: 3.6
+    width: 20.0
+    height: 0.1
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:15.194395+00:00'
+    valid_box: true
+  Steel_Barricade:
+    morai_model: Steel_Barricade
+    length: 1.081
+    width: 3.013
+    height: 1.025
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:15.561037+00:00'
+    valid_box: true
+  OBJ_G80_Open_Door:
+    morai_model: OBJ_G80_Open_Door
+    length: 4.995
+    width: 2.78
+    height: 1.58
+    center_offset:
+    - 1.365
+    - 0.289
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:16.733005+00:00'
+    valid_box: true
+  Concrete_Barricade01:
+    morai_model: Concrete_Barricade01
+    length: 0.39
+    width: 1.918
+    height: 0.812
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:17.094843+00:00'
+    valid_box: true
+  Concrete_Barricade02:
+    morai_model: Concrete_Barricade02
+    length: 0.77
+    width: 1.79
+    height: 1.297
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:17.459327+00:00'
+    valid_box: true
+  Bollard01:
+    morai_model: Bollard01
+    length: 0.366
+    width: 0.366
+    height: 0.859
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:17.834051+00:00'
+    valid_box: true
+  Bicycle_city:
+    morai_model: Bicycle_city
+    length: 0.991
+    width: 0.514
+    height: 1.051
+    center_offset:
+    - 0.454
+    - -0.011
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:18.197120+00:00'
+    valid_box: true
+  Bicycle_mountain:
+    morai_model: Bicycle_mountain
+    length: 1.058
+    width: 0.391
+    height: 0.951
+    center_offset:
+    - 0.525
+    - -0.012
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:18.649070+00:00'
+    valid_box: true
+  Scooter_01:
+    morai_model: Scooter_01
+    length: 2.268
+    width: 0.812
+    height: 1.504
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:19.019112+00:00'
+    valid_box: true
+  Scooter_02:
+    morai_model: Scooter_02
+    length: 1.697
+    width: 0.882
+    height: 1.189
+    center_offset:
+    - 0.545
+    - -0.011
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:19.430475+00:00'
+    valid_box: true
+  Bollard04:
+    morai_model: Bollard04
+    length: 0.366
+    width: 0.366
+    height: 0.859
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:19.813983+00:00'
+    valid_box: true
+  Tree01:
+    morai_model: Tree01
+    length: 5.852
+    width: 5.255
+    height: 9.902
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:20.188313+00:00'
+    valid_box: true
+  Tree02:
+    morai_model: Tree02
+    length: 7.674
+    width: 7.561
+    height: 13.405
+    center_offset:
+    - 0.004
+    - -0.22
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:20.567109+00:00'
+    valid_box: true
+  Tree03:
+    morai_model: Tree03
+    length: 9.28
+    width: 9.915
+    height: 15.951
+    center_offset:
+    - -0.09
+    - 0.006
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:20.951002+00:00'
+    valid_box: true
+  Tree04:
+    morai_model: Tree04
+    length: 11.403
+    width: 12.033
+    height: 20.421
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:21.316167+00:00'
+    valid_box: true
+  Tree05:
+    morai_model: Tree05
+    length: 17.845
+    width: 15.446
+    height: 21.644
+    center_offset:
+    - 0.064
+    - -0.279
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:21.693747+00:00'
+    valid_box: true
+  Tree06:
+    morai_model: Tree06
+    length: 11.251
+    width: 10.664
+    height: 24.079
+    center_offset:
+    - 1.312
+    - 0.518
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:22.079848+00:00'
+    valid_box: true
+  Tree07:
+    morai_model: Tree07
+    length: 10.987
+    width: 12.185
+    height: 23.255
+    center_offset:
+    - -0.34
+    - -0.595
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:22.463472+00:00'
+    valid_box: true
+  Tree08:
+    morai_model: Tree08
+    length: 10.017
+    width: 8.368
+    height: 21.357
+    center_offset:
+    - -0.448
+    - 1.242
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:22.856252+00:00'
+    valid_box: true
+  Tree09:
+    morai_model: Tree09
+    length: 13.846
+    width: 15.75
+    height: 22.598
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:23.217918+00:00'
+    valid_box: true
+  BabyStroller1:
+    morai_model: BabyStroller1
+    length: 1.222
+    width: 0.602
+    height: 1.722
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:23.593241+00:00'
+    valid_box: true
+  BabyStroller2:
+    morai_model: BabyStroller2
+    length: 1.215
+    width: 0.647
+    height: 1.719
+    center_offset:
+    - 0.452
+    - -0.008
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:24.015989+00:00'
+    valid_box: true
+  BabyStroller3:
+    morai_model: BabyStroller3
+    length: 1.842
+    width: 0.538
+    height: 1.146
+    center_offset:
+    - 0.602
+    - -0.014
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:24.435780+00:00'
+    valid_box: true
+  Bike1:
+    morai_model: Bike1
+    length: 1.655
+    width: 0.664
+    height: 1.841
+    center_offset:
+    - 0.018
+    - -0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:24.850371+00:00'
+    valid_box: true
+  Bike2:
+    morai_model: Bike2
+    length: 1.7
+    width: 0.657
+    height: 1.881
+    center_offset:
+    - 0.035
+    - -0.001
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:25.313232+00:00'
+    valid_box: true
+  Bike3:
+    morai_model: Bike3
+    length: 1.649
+    width: 0.515
+    height: 1.629
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:25.697242+00:00'
+    valid_box: true
+  SportBike:
+    morai_model: SportBike
+    length: 2.021
+    width: 0.754
+    height: 1.697
+    center_offset:
+    - 0.005
+    - -0.003
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:26.099409+00:00'
+    valid_box: true
+  ElectricScooter1:
+    morai_model: ElectricScooter1
+    length: 1.219
+    width: 0.565
+    height: 1.998
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:26.468045+00:00'
+    valid_box: true
+  ElectricScooter2:
+    morai_model: ElectricScooter2
+    length: 1.219
+    width: 0.565
+    height: 1.998
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:26.839150+00:00'
+    valid_box: true
+  Scooter1:
+    morai_model: Scooter1
+    length: 2.268
+    width: 0.812
+    height: 1.871
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:27.226533+00:00'
+    valid_box: true
+  Scooter2:
+    morai_model: Scooter2
+    length: 1.697
+    width: 0.882
+    height: 1.632
+    center_offset:
+    - -0.062
+    - 0.001
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:27.643219+00:00'
+    valid_box: true
+  KR_Sign_SL_30:
+    morai_model: KR_Sign_SL_30
+    length: 0.316
+    width: 0.6
+    height: 3.011
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:28.016938+00:00'
+    valid_box: true
+  KR_Sign_SL_40:
+    morai_model: KR_Sign_SL_40
+    length: 0.316
+    width: 0.6
+    height: 3.011
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:28.419064+00:00'
+    valid_box: true
+  KR_Sign_SL_50:
+    morai_model: KR_Sign_SL_50
+    length: 0.316
+    width: 0.6
+    height: 3.011
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:28.811669+00:00'
+    valid_box: true
+  KR_Sign_SL_60:
+    morai_model: KR_Sign_SL_60
+    length: 0.316
+    width: 0.6
+    height: 3.011
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:29.227022+00:00'
+    valid_box: true
+  KR_Sign_SL_70:
+    morai_model: KR_Sign_SL_70
+    length: 0.316
+    width: 0.6
+    height: 3.011
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:29.630497+00:00'
+    valid_box: true
+  KR_Sign_SL_80:
+    morai_model: KR_Sign_SL_80
+    length: 0.316
+    width: 0.6
+    height: 3.011
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:30.039966+00:00'
+    valid_box: true
+  KR_Sign_SL_90:
+    morai_model: KR_Sign_SL_90
+    length: 0.316
+    width: 0.6
+    height: 3.011
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:30.396687+00:00'
+    valid_box: true
+  KR_Sign_SL_100:
+    morai_model: KR_Sign_SL_100
+    length: 0.316
+    width: 0.6
+    height: 3.011
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:30.783242+00:00'
+    valid_box: true
+  KR_Sign_SL_110:
+    morai_model: KR_Sign_SL_110
+    length: 0.316
+    width: 0.6
+    height: 3.011
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:31.174693+00:00'
+    valid_box: true
+  concrete-barrier:
+    morai_model: concrete-barrier
+    length: 0.617
+    width: 3.205
+    height: 0.791
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:31.536218+00:00'
+    valid_box: true
+  fr-streetlight-2:
+    morai_model: fr-streetlight-2
+    length: 1.884
+    width: 0.15
+    height: 6.442
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:31.918679+00:00'
+    valid_box: true
+  hole-cover:
+    morai_model: hole-cover
+    length: 3.087
+    width: 2.484
+    height: 0.048
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:32.308648+00:00'
+    valid_box: true
+  EFFECT_Fire01:
+    morai_model: EFFECT_Fire01
+    length: 0.749
+    width: 0.749
+    height: 0.434
+    center_offset:
+    - 0.0
+    - 0.0
+    measured: true
+    measured_at_utc: '2026-10-06T07:17:32.672813+00:00'
+    valid_box: true
+available_models:
+- CargoBox
+- WoodBox
+- RedBarrel
+- YellowBarrel
+- TrafficBarrel
+- OBJ_Hyundai_Grandeur
+- OBJ_Hyundai_HD65
+- OBJ_Hyundai_HR
+- OBJ_Hyundai_Ioniq
+- OBJ_Hyundai_SantaFe
+- OBJ_Hyundai_Sonata
+- OBJ_Hyundai_Universe_High
+- OBJ_Hyundai_Xcient_Mixer
+- OBJ_Hyundai_Xcient_P520
+- OBJ_Hyundai_Xcient_P540
+- OBJ_Kia_K5
+- OBJ_Kia_K7
+- OBJ_Kia_Niro
+- OBJ_Kia_Sorento
+- OBJ_Kona_EV_2019
+- OBJ_Niro_EV_2020
+- Lane_Separation_Bar
+- PE_Drum
+- PE_Firewall_Orange
+- PE_Firewall_White
+- Road_Sign_Mark
+- Speed_Bump
+- Steel_Barricade
+- OBJ_G80_Open_Door
+- Concrete_Barricade01
+- Concrete_Barricade02
+- Bollard01
+- Bicycle_city
+- Bicycle_mountain
+- Scooter_01
+- Scooter_02
+- Bollard04
+- Tree01
+- Tree02
+- Tree03
+- Tree04
+- Tree05
+- Tree06
+- Tree07
+- Tree08
+- Tree09
+- BabyStroller1
+- BabyStroller2
+- BabyStroller3
+- Bike1
+- Bike2
+- Bike3
+- SportBike
+- ElectricScooter1
+- ElectricScooter2
+- Scooter1
+- Scooter2
+- KR_Sign_SL_30
+- KR_Sign_SL_40
+- KR_Sign_SL_50
+- KR_Sign_SL_60
+- KR_Sign_SL_70
+- KR_Sign_SL_80
+- KR_Sign_SL_90
+- KR_Sign_SL_100
+- KR_Sign_SL_110
+- concrete-barrier
+- fr-streetlight-2
+- hole-cover
+- EFFECT_Fire01
+measurement_errors: {}
+measurement_complete: true

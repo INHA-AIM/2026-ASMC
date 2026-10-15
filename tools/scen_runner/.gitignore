@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+layouts/
+.logs/
+.runtime/
+save_collision_log/
+.archive/
+config/local.yaml
