@@ -33,6 +33,7 @@ class CameraEntrypointsTest(unittest.TestCase):
                                  'lane_runtime_config:=' + str(profile))
             params = {k[len(prefix):]: v.value for k, v in config.params.items() if k.startswith(prefix)}
             self.assertEqual(params['backend'], 'twinlite_tensorrt')
+            self.assertEqual(params['checkpoint'],str(LAUNCH.parent/'models/lane_segmentation/twinlite-medium-v6.pt'))
             self.assertTrue(params['gpu_preprocess'] and params['lazy_outputs'])
             self.assertEqual(params['input_hw'], [480, 640])
             self.assertEqual(params['input_hw_by_view/front'], [544, 960])
@@ -94,6 +95,13 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertFalse(names & {'camera_runtime_node.py', 'object_detection_node.py',
                                  'semantic_inference_node.py', 'traffic_light_node.py'})
         self.assertTrue(config.nodes)
+
+    def test_normal_lane_view_renders_the_published_family(self):
+        config=self.config('view.launch','models:=lane')
+        types={n.type for n in config.nodes}
+        self.assertIn('family_view_node.py',types)
+        self.assertNotIn('lane_vectorizer_node.py',types)
+        self.assertNotIn('lane_vector_visualizer_node.py',types)
 
     def test_object_view_uses_one_renderer_and_keeps_legacy_diagnostics_explicit(self):
         config = self.config('view.launch','models:=objects')

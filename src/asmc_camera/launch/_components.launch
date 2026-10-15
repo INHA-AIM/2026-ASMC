@@ -50,7 +50,7 @@
        default="$(arg visualization_legacy_rqt)"/>
 
   <arg name="camera_checkpoint"
-       default="$(find asmc_camera)/../../artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt"/>
+       default="$(find asmc_camera)/models/lane_segmentation/twinlite-medium-v6.pt"/>
   <arg name="camera_device" default="cuda"/>
   <arg name="camera_warmup_iterations" default="1"/>
   <arg name="camera_batch_wait_ms" default="20.0"/>

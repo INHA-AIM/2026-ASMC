@@ -16,6 +16,7 @@ consumer가 어떤 freshness·quality·fallback을 검사해야 하는지, 어�
 | Camera lane/BEV→Planning | [음영 camera v3](./perception/shadow-camera.md) | Active, read-only adapter 인수 완료; deployment 미승인 |
 | Camera runtime 실행 정본 | [카메라 실행 계약](../contracts/perception/camera-runtime-v1.md) | 3뷰·YOLO/TwinLite 목표15Hz·최소10Hz·모드와 관측 계약 |
 | TwinLite TensorRT 검증 | [변환·부하·보류 근거](./perception/camera-twinlite-tensorrt.md) | PR #85 후보; 품질 통과와 후단 readiness 수락을 구분 |
+| 음영 lane 실행 최적화 | [family 전용·BEV 수요·GC 진단](./perception/camera-shadow-family-optimization.md) | PR #85 후속; GPU/음영 반복·장기 수락 대기 |
 | Camera runtime 이전 단계별 계획 | [카메라 런타임 계획](./perception/camera-runtime-plan.md) | 이전10Hz 단계 계획; 최신 실행은 위 계약을 따름 |
 | 판제→Camera 모델 실행 | [독립 추론 모드와 직접 실행](./perception/camera-inference-control.md) | PR #69 병합; 독립 준비·주기 수락 및 분류 차이 2건 승인. 연속 주행은 판제 통합 검증 |
 | Camera objects P2a | [직접 launch와 검증](./perception/camera-objects-p2a.md) | Opt-in YOLO11m 생산자와 기존 LiDAR 호환 어댑터 |

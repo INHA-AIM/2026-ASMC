@@ -25,17 +25,25 @@ def main():
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--limit', type=int, default=0, help='0=all validation frames; positive=first N triplets')
     p.add_argument('--gpu-preprocess', action='store_true')
+    p.add_argument('--family-fixture', type=Path, help='Pinned RGB/pose manifest; compare the production family pipeline on an isolated ROS master')
+    p.add_argument('--data-root', type=Path, default=Path('/data'))
     a=p.parse_args(); a.output.mkdir(parents=True,exist_ok=False)
     kwargs=dict(checkpoint=str(a.checkpoint),input_hw=(480,640),input_hw_by_view={'front':(544,960)})
     baseline=TwinLiteBackend(**kwargs,channels_last=True)
     candidate=TwinLiteTensorRTBackend(**kwargs,engine_manifest=str(a.engine_manifest))
     engines=[InferenceEngine(baseline),InferenceEngine(candidate)]
+    gpu=RawGpuCache() if a.gpu_preprocess else None
+    if a.family_fixture:
+        from shadow_family_parity import run
+        try:
+            return run(a, engines, gpu)
+        finally:
+            if gpu: gpu.close()
     groups=defaultdict(dict)
     for row in map(json.loads,a.validation.read_text().splitlines()):
         groups[(row['run_id'],row['frame_id'])][row['view']]=row
     cases=sorted(groups.items())
     if a.limit: cases=cases[:a.limit]
-    gpu=RawGpuCache() if a.gpu_preprocess else None
     counts=defaultdict(lambda:np.zeros((5,3),np.int64))
     samples=[]; timing=[]; render=[]; batch1=[]
     for index,((run,frame),rows) in enumerate(cases):

@@ -76,12 +76,15 @@ def main():
             if job.get('gui'):
                 command += ['--gui']
                 command += ['--view-models',job.get('view_models','all')]
+                command += ['--visual-outputs',job.get('visual_outputs','all')]
             if job.get('qt'):
                 command += ['--qt']
             if job.get('legacy_lidar_root'):
                 command += ['--legacy-lidar-root', job['legacy_lidar_root']]
             if job.get('profile_lane_fit'):
                 command += ['--profile-lane-fit']
+            if job.get('allocation_profile'):
+                command += ['--allocation-profile']
             if job.get('shared_gpu_input'):
                 command += ['--shared-gpu-input']
             script = 'source '+shlex.quote(str(overlay/'devel/setup.bash'))+'\nexec '+shlex.join(command)

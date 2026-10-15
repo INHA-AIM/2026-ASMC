@@ -68,6 +68,7 @@ from asmc_camera.bev.spline_fitting import fit_lane_tracks_with_audit
 
 from asmc_camera.runtime.ros_control import LaneEpochGate
 from asmc_camera.runtime.latest_work import LatestWork
+from asmc_camera.runtime.demand_inputs import DemandInputs, DemandSynchronizer
 
 
 @dataclass(frozen=True)
@@ -505,18 +506,14 @@ class LaneVectorizerNode:
         self.synchronizers = []
         for view in self.views:
             base = "/perception/camera/{}/road_marking/model_grid".format(view)
-            class_id = message_filters.Subscriber(
-                base + "/class_id", Image, queue_size=2
-            )
-            confidence = message_filters.Subscriber(
-                base + "/confidence", Image, queue_size=2
-            )
-            synchronizer = message_filters.TimeSynchronizer(
-                [class_id, confidence], queue_size=4
-            )
-            synchronizer.registerCallback(partial(self._view_callback, view))
-            self.subscribers.extend([class_id, confidence])
-            self.synchronizers.append(synchronizer)
+            group = DemandSynchronizer(
+                [base + "/class_id", base + "/confidence"], Image,
+                lambda: not self.epoch_gate.enabled or self.epoch_gate.mode != 0,
+                partial(self._view_callback, view),
+                context=self.epoch_gate.context,
+                on_reset=self._reset_grid_inputs)
+            self.subscribers.append(group)
+        self.demand_inputs = DemandInputs(self.subscribers)
         interval = max(
             0.2, float(rospy.get_param("~diagnostics_interval_sec", 2.0))
         )
@@ -536,6 +533,12 @@ class LaneVectorizerNode:
             self.publish_pipeline_audit,
         )
 
+    def _reset_grid_inputs(self):
+        self.fit_work.clear()
+        with self.buffer_lock:
+            for queue in self.buffers.values():
+                queue.clear()
+
     def _runtime_invalidate(self):
         if hasattr(self, 'fit_work'):
             self.fit_work.clear()
@@ -553,7 +556,12 @@ class LaneVectorizerNode:
     def _view_callback(self, view, class_message, confidence_message):
         # Do not wait for the fit's epoch lock in a transport callback. Tag
         # receipt now; the worker checks generation and cutoff under that lock.
-        generation = self.epoch_gate.generation
+        generation = self.epoch_gate.context()
+        # The fit owns the gate lock for its whole calculation. Transport must
+        # remain latest-only and never wait for that lock; _process rechecks.
+        if self.epoch_gate.enabled and (self.epoch_gate.mode == 0 or
+                class_message.header.stamp.to_nsec() <= self.epoch_gate.cutoff):
+            return
         self.inputs[view] += 1
         stamps = (
             int(class_message.header.stamp.to_nsec()),
@@ -583,7 +591,7 @@ class LaneVectorizerNode:
         )
         ready = None
         with self.buffer_lock:
-            if generation != self.epoch_gate.generation:
+            if generation != self.epoch_gate.context():
                 return
             if generation != self.buffer_generation:
                 for old_queue in self.buffers.values():
@@ -636,13 +644,13 @@ class LaneVectorizerNode:
         with self.processing_lock, self.epoch_gate.lock:
             if self.fit_stop.is_set():
                 return
-            if self.epoch_gate.enabled and any(f.generation != self.epoch_gate.generation for f in frames.values()):
+            if self.epoch_gate.enabled and any(f.generation != self.epoch_gate.context() for f in frames.values()):
                 return
             if not all(self.epoch_gate.allows(f.header.stamp) for f in frames.values()):
                 return
-            if self.epoch_gate.enabled and self.runtime_generation != self.epoch_gate.generation:
+            if self.epoch_gate.enabled and self.runtime_generation != self.epoch_gate.context():
                 self.boundary_tracker.reset()
-                self.runtime_generation = self.epoch_gate.generation
+                self.runtime_generation = self.epoch_gate.context()
             self.last_runtime_header = max(frames.values(), key=lambda f: f.stamp_ns).header
             started = time.perf_counter()
             family_candidate_published = False
@@ -803,12 +811,8 @@ class LaneVectorizerNode:
                     self.boundary_family_outputs += 1
                     if not family_output.valid:
                         self.boundary_family_invalid_outputs += 1
-                independent_pipeline_needed = bool(
-                    self.independent_boundary_pipeline_enabled
-                    or self.publish_pipeline_audit
-                    or self.marker_publisher.get_num_connections() > 0
-                    or self.legacy_boundary_publisher.get_num_connections() > 0
-                )
+                # Debug/audit subscribers must never activate another fitter.
+                independent_pipeline_needed = self.independent_boundary_pipeline_enabled
                 lanes = ()
                 frame_audit["spline"] = {
                     "enabled": False,

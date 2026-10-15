@@ -1,0 +1,62 @@
+{
+  "schema": "camera_shadow_family_v1",
+  "base_commit": "cafe43f0d1f8903ae76428c2759b24790cbf41a3",
+  "cpu_checks": {
+    "runtime": 77,
+    "bev": 180,
+    "camera": 26,
+    "detection": 89,
+    "facade": 17,
+    "measurements": 11,
+    "shadow-tools": 5
+  },
+  "cpu_count": 405,
+  "actual_ros_mode_contract": {
+    "pass_": true,
+    "master": "127.0.0.1:11391",
+    "actual_ros_transport": true,
+    "gpu": false,
+    "checks": [
+      "canonical/alias share state",
+      "PREPARE needs completed inputs and family",
+      "STANDBY invalidates",
+      "old family rejected after reprepare",
+      "ACTIVE requires its new generation"
+    ],
+    "note": "Contract check with synthetic completed inputs; no camera/model/performance or vehicle-control claim."
+  },
+  "noetic_runtime_checks": 77,
+  "model_quality_parent": "camera_twinlite_tensorrt_v1",
+  "family_parity": {
+    "schema": "shadow_family_parity_v1",
+    "triplets": 2356,
+    "fixture_sha256": "4b5cf3062216972a027682325ecc856150b77e184541d2f74fb142a364ced164",
+    "checkpoint_sha256": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b",
+    "engine_manifest_sha256": "74ce9e2149a94d41f78342dbf495171b34093616d295b2119ecac7a7b9bbccdb",
+    "validity_changes": 0,
+    "role_changes": 0,
+    "support_changes": 364,
+    "live_readiness_verified": false,
+    "automatic_promotion_allowed": false,
+    "note": "Production vectorizer, same RGB/pose and quantization; geometry changes require review. Offline parity is not live readiness or GT accuracy."
+  },
+  "geometry_review": {
+    "schema": "shadow_family_parity_v2",
+    "triplets": 6,
+    "fixture_sha256": "cc3e6c8fc8708a94fbfa24ffe9602507ef175b2871f941ef0367933277e05e0a",
+    "checkpoint_sha256": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b",
+    "engine_manifest_sha256": "74ce9e2149a94d41f78342dbf495171b34093616d295b2119ecac7a7b9bbccdb",
+    "validity_changes": 0,
+    "role_changes": 0,
+    "support_changes": 6,
+    "live_readiness_verified": false,
+    "automatic_promotion_allowed": false,
+    "geometry_definition": "Absolute lateral delta at common forward x within both accepted extents; sample-index distance retained separately. Support-state changes are reported independently.",
+    "note": "Production vectorizer, same RGB/pose and quantization; geometry changes require review. Offline parity is not live readiness or GT accuracy."
+  },
+  "acceptance_complete": false,
+  "default_backend": "twinlite",
+  "live_repeats": "running",
+  "soak": "pending",
+  "merged": false
+}

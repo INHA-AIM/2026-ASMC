@@ -7,6 +7,8 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 전방 tensor는 두 모델 모두544×960입니다. 좌우 tensor는 두 모델 모두480×640인 PR #85 후보입니다.
 TwinLite는 독립 PyTorch 경로를 유지하며, TensorRT 후보의 품질·공급 검증은
 [TensorRT 검증 기록](../../docs/handoffs/perception/camera-twinlite-tensorrt.md)에서 관리합니다.
+[음영 family 최적화](../../docs/handoffs/perception/camera-shadow-family-optimization.md)는
+family 전용 경로·수요 기반 BEV·GC 진단과 후속 수락 상태를 관리합니다.
 YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합니다. 같은 목표 Hz가 같은 영상 시각을 보장하지는 않습니다.
 
 ```bash

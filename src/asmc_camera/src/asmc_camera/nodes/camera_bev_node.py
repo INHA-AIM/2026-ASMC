@@ -38,6 +38,7 @@ def _enabled_views(value):
 
 from asmc_camera.runtime.ros_control import LaneEpochGate
 from asmc_camera.runtime.cadence import downstream_gate
+from asmc_camera.runtime.demand_inputs import DemandInputs, DemandSynchronizer
 
 class CameraBevNode:
     def __init__(self) -> None:
@@ -128,24 +129,14 @@ class CameraBevNode:
                 )
             self.publishers[view] = publishers
             camera = self.cameras[view]
-            drivable_subscriber = message_filters.Subscriber(
-                camera.drivable_topic, Image, queue_size=2
-            )
-            marking_subscriber = message_filters.Subscriber(
-                camera.road_marking_topic, Image, queue_size=2
-            )
-            confidence_subscriber = message_filters.Subscriber(
-                camera.road_marking_confidence_topic, Image, queue_size=2
-            )
-            synchronizer = message_filters.TimeSynchronizer(
-                [drivable_subscriber, marking_subscriber, confidence_subscriber],
-                queue_size=4,
-            )
-            synchronizer.registerCallback(partial(self._callback, view))
-            self.subscribers.extend(
-                [drivable_subscriber, marking_subscriber, confidence_subscriber]
-            )
-            self.synchronizers.append(synchronizer)
+            group = DemandSynchronizer(
+                [camera.drivable_topic, camera.road_marking_topic,
+                 camera.road_marking_confidence_topic], Image,
+                lambda view=view: self._requested(view), partial(self._callback, view),
+                context=self.epoch_gate.context,
+                on_reset=partial(self._reset_view, view))
+            self.subscribers.append(group)
+        self.demand_inputs = DemandInputs(self.subscribers)
 
         self.diagnostics_publisher = rospy.Publisher(
             "/perception/bev/debug/diagnostics", DiagnosticArray, queue_size=1
@@ -169,6 +160,13 @@ class CameraBevNode:
             self.publish_coverage,
         )
 
+    def _requested(self, view):
+        return (not self.epoch_gate.enabled or self.epoch_gate.mode != 0) and any(
+            publisher.get_num_connections() > 0 for publisher in self.publishers[view].values())
+
+    def _reset_view(self, view):
+        self.last_input_stamp_ns[view] = self.next_output_stamp_ns[view] = 0
+
     def _callback(
         self,
         view: str,
@@ -177,7 +175,7 @@ class CameraBevNode:
         confidence_message: Image,
     ) -> None:
         with self.epoch_gate.lock:
-            if not self.epoch_gate.allows(drivable_message.header.stamp):
+            if not self._requested(view) or not self.epoch_gate.allows(drivable_message.header.stamp):
                 return
             stamp_ns = int(drivable_message.header.stamp.to_nsec())
             self.monitor.count_input(view, stamp_ns)
@@ -222,20 +220,13 @@ class CameraBevNode:
 
                 started = time.perf_counter()
                 header = drivable_message.header
-                self.publishers[view]["drivable"].publish(
-                    self._image_message(projected.drivable_probability, header)
-                )
-                self.publishers[view]["road_marking"].publish(
-                    self._image_message(projected.road_marking_class_id, header)
-                )
-                self.publishers[view]["road_marking_confidence"].publish(
-                    self._image_message(projected.road_marking_confidence, header)
-                )
-                coverage_publisher = self.publishers[view].get("coverage")
-                if coverage_publisher is not None:
-                    coverage_publisher.publish(
-                        self._image_message(projected.coverage, header)
-                    )
+                outputs = dict(drivable=projected.drivable_probability,
+                    road_marking=projected.road_marking_class_id,
+                    road_marking_confidence=projected.road_marking_confidence,
+                    coverage=projected.coverage)
+                for name, publisher in self.publishers[view].items():
+                    if publisher.get_num_connections() > 0:
+                        publisher.publish(self._image_message(outputs[name], header))
                 publish_ms = (time.perf_counter() - started) * 1000.0
             except Exception as exc:
                 # message_filters callbacks can finish after rospy has closed the
@@ -322,6 +313,8 @@ class CameraBevNode:
                 "result_age_ms": result_age_ms,
                 "coverage_ratio": self.coverage_ratio[view],
                 "timestamp_resets": self.timestamp_resets[view],
+                "output_requested": self._requested(view),
+                "input_subscribed": self.subscribers[self.views.index(view)].active,
                 "calibration_sha256": self.source_sha256,
                 "ground_plane_frame": self.cameras[view].ground_plane.frame_id,
                 "ground_plane_coefficients": self.cameras[view].ground_plane.coefficients,

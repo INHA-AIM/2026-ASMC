@@ -1,6 +1,7 @@
 """ROS adapter for the per-model execution API, without route policy."""
 import threading
 import uuid
+import time
 import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from asmc_camera.msg import InferenceStatus
@@ -83,11 +84,22 @@ class RosInferenceControl:
             self.publish()
 
     def pipeline_observation(self, message):
+        generation = self.state.generation
+        stamp = message.header.stamp.to_nsec()
+        waiting = time.monotonic()
         with self.state.lock:
-            self.pipeline = (message.header.stamp.to_nsec(), bool(message.valid),
-                             self.state.clock(), self.state.generation)
+            lock_wait_ms = (time.monotonic()-waiting)*1000
+            # Family has no generation field. Only accept stamps completed by
+            # this producer generation; a delayed/restarted producer cannot
+            # establish readiness using an unrecognized source image.
+            if (generation != self.state.generation or self.state.mode == STANDBY or
+                    stamp <= self.state.cutoff or stamp not in self.state.completed_sources):
+                return
+            self.pipeline = (stamp, bool(message.valid),
+                             self.state.clock(), self.state.generation,
+                             str(getattr(message,'status_reason','')))
             self.state.record('pipeline_output', source_stamp_ns=message.header.stamp.to_nsec(),
-                              valid=bool(message.valid))
+                              valid=bool(message.valid),lock_wait_ms=lock_wait_ms)
 
     def publish(self, event=None):
         with self.state.lock:
@@ -149,6 +161,7 @@ def pipeline_readiness(values, pipeline, now_ns, wall_now, freshness):
                 input_prepared=bool(values['prepared']), generation=values['generation'],
                 source_cutoff_ns=values['source_cutoff'], family_valid=bool(p and p[1]),
                 family_source_ns=p[0] if p else None, family_generation=p[3] if p else None,
+                family_status_reason=p[4] if p and len(p)>4 else None,
                 family_source_age_ms=source_age*1000 if p else None,
                 family_receipt_age_ms=receipt_age*1000 if p else None,
                 input_source_age_ms=(now_ns-values['last_source_stamp'])/1e6,
@@ -166,21 +179,35 @@ class LaneEpochGate:
         self.target_hz = 0
         self.on_standby = on_standby
         self.generation = None
+        self.epoch = 0
+        self.successful_batches = None
+        self._epoch_context = (self.enabled, self.generation, self.cutoff, self.epoch)
         self.subscriber = rospy.Subscriber(
             '/camera_semantic_inference/inference_status', InferenceStatus,
             self._status, queue_size=1)
 
     def _status(self, status):
         with self.lock:
-            changed = self.generation != status.generation or self.mode != status.mode
+            restarted = (self.successful_batches is not None and
+                         status.successful_batches < self.successful_batches)
+            changed = (self.generation != status.generation or self.mode != status.mode or
+                       self.cutoff != status.source_cutoff.to_nsec() or restarted)
+            self.epoch += int(changed)
+            self.successful_batches = status.successful_batches
             self.generation = status.generation
             self.enabled = status.managed
             self.mode = status.mode
             self.cutoff = status.source_cutoff.to_nsec()
             self.target_hz = status.target_hz if status.managed else 0
+            self._epoch_context = (self.enabled, self.generation, self.cutoff, self.epoch)
             if changed and self.enabled and self.mode == STANDBY and self.on_standby:
                 self.on_standby()
 
     def allows(self, stamp):
         with self.lock:
             return not self.enabled or (self.mode != STANDBY and stamp.to_nsec() > self.cutoff)
+
+    def context(self):
+        # Atomic immutable snapshot; subscription workers must not acquire the
+        # gate lock while holding a transport/group lock.
+        return self._epoch_context

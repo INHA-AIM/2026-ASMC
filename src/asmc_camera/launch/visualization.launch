@@ -81,6 +81,12 @@
   </group>
   <group if="$(arg camera_lane)">
 
+    <node if="$(eval not arg('legacy_rqt'))" pkg="asmc_camera" type="family_view_node.py"
+          name="camera_lane_view" output="screen">
+      <rosparam command="load" file="$(arg bev_grid_config)"/>
+      <param name="managed" value="true"/>
+    </node>
+
     <node pkg="asmc_camera" type="semantic_visualizer_node.py"
           name="camera_semantic_visualizer" output="screen" required="false">
       <rosparam command="load"

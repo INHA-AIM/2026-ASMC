@@ -110,7 +110,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         canonical_root = PACKAGE_ROOT / "src" / "asmc_camera"
         expected_support = {
             "camera": 9,
-            "bev": 19,
+            "bev": 20,
         }
         for namespace, expected_count in expected_support.items():
             files = list((canonical_root / namespace).rglob("*.py"))

@@ -20,6 +20,18 @@ from lifecycle_measurements import percentile, rate_report
 from b0_resources import ResourceSampler, qt_viewers
 
 
+def acceptance_eligible(report):
+    return (report.get('acceptance_eligible',True) and
+            not report.get('allocation_profile',False) and not report.get('profile_lane_fit',False))
+
+
+def transition_ready(status, expected, mode):
+    return all(role in status and status[role].generation==generation and
+               status[role].mode==mode and status[role].prepared and
+               (role!='lane' or status[role].pipeline_ready)
+               for role,generation in expected.items())
+
+
 def measurements(rows, start, end, target):
     reports = {}
     streams = defaultdict(list)
@@ -79,6 +91,8 @@ def main():
     p.add_argument('--saved-input', type=Path, help='JSON {front,left,right,extra: [JPEG path,...]}')
     p.add_argument('--gui', action='store_true', help='Visualization publishers with connected sinks')
     p.add_argument('--view-models', default='all', help='view.launch models selection; recorded separately from inference ACTIVE roles')
+    p.add_argument('--visual-outputs', choices=('all','family','bev'), default='all',
+        help='Internal demand comparison: full views, published family only, or fused BEV only')
     p.add_argument('--qt', action='store_true', help='Also open the actual rqt viewer for this trial')
     p.add_argument('--nms-iou', type=float, default=.7)
     p.add_argument('--confidence', type=float, default=.4)
@@ -86,9 +100,16 @@ def main():
     p.add_argument('--fusion-hz', type=float)
     p.add_argument('--legacy-lidar-root', type=Path)
     p.add_argument('--profile-lane-fit', action='store_true')
+    p.add_argument('--allocation-profile', action='store_true',help='Diagnostic TwinLite allocation/deserialize run; excluded from acceptance')
     p.add_argument('--shared-gpu-input', action='store_true')
     p.add_argument('--lane-runtime-config', type=Path)
     a = p.parse_args()
+    if a.allocation_profile and (a.variant=='R2' or a.profile_lane_fit):
+        p.error('allocation diagnosis uses an independent lane worker without fit profiling')
+    if a.qt and not a.gui:
+        p.error('--qt requires --gui')
+    if a.visual_outputs!='all' and not a.gui:
+        p.error('explicit visual output demand requires --gui')
     # roslaunch starts node processes in ROS_HOME; probes need an absolute path.
     a.output = a.output.resolve()
     a.output.mkdir(parents=True, exist_ok=False)
@@ -152,7 +173,8 @@ def main():
             super()._load_config()
             for node in self.config.nodes:
                 if node.type in ('object_detection_node.py','semantic_inference_node.py','traffic_light_node.py','camera_runtime_node.py'):
-                    node.launch_prefix = 'python3 '+shlex.quote(str(probe))+' --output '+shlex.quote(str(a.output/(node.name+'.jsonl')))+' --'
+                    diagnostic = ' --allocation-profile' if a.allocation_profile and node.type=='semantic_inference_node.py' else ''
+                    node.launch_prefix = 'python3 '+shlex.quote(str(probe))+diagnostic+' --output '+shlex.quote(str(a.output/(node.name+'.jsonl')))+' --'
                 elif node.type=='lane_vectorizer_node.py' and a.profile_lane_fit:
                     node.launch_prefix = 'python3 '+shlex.quote(str(probe))+' --lane-fit-profile --output '+shlex.quote(str(a.output/'lane-fit.profile'))+' --'
     class MeasuredViewLaunch(roslaunch.parent.ROSLaunchParent):
@@ -188,6 +210,9 @@ def main():
     sampler, report, start, end = None, dict(variant=a.variant, active=active, lane_hz=a.lane_hz,
         saved_input=str(a.saved_input) if a.saved_input else None, gui=a.qt, visualization_sinks=a.gui, nms_iou=a.nms_iou, failures=[],
         confidence=a.confidence, view_models=a.view_models if a.gui else None, profile_lane_fit=a.profile_lane_fit,
+        visual_outputs=a.visual_outputs,allocation_profile=a.allocation_profile,
+        acceptance_eligible=not(a.allocation_profile or a.profile_lane_fit),
+        mode_transitions=[],
         timestamp_mode=rospy.get_param('/morai_sensor_bridge/timestamp_mode','unset (bridge default receive)'),
         use_sim_time=rospy.get_param('/use_sim_time',False),
         latency_definition='Actual model/broker compressed input callback entry -> ROS publish return; monotonic wall.',
@@ -214,18 +239,24 @@ def main():
             if time.monotonic() > deadline:
                 raise RuntimeError('model load timeout')
             parent.spin_once(); time.sleep(.05)
-        for role in active:
-            rospy.wait_for_service(legacy[role]+'/set_inference_mode', 5)
-            response = rospy.ServiceProxy(legacy[role]+'/set_inference_mode', SetInferenceMode)(1, 0.)
-            if not response.accepted:
-                raise RuntimeError(response.reason)
-        deadline = time.monotonic()+30
-        while not all(status[r].prepared for r in active):
-            if time.monotonic() > deadline:
-                raise RuntimeError('PREPARE timeout: '+repr({r:status[r].reason for r in active}))
-            parent.spin_once(); time.sleep(.05)
-        for role in active:
-            rospy.ServiceProxy(legacy[role]+'/set_inference_mode', SetInferenceMode)(2, 0.)
+        def transition(mode):
+            record=dict(mode=mode,started=time.monotonic(),expected={},ready=False)
+            report['mode_transitions'].append(record)
+            for role in active:
+                rospy.wait_for_service(legacy[role]+'/set_inference_mode',5)
+                response=rospy.ServiceProxy(legacy[role]+'/set_inference_mode',SetInferenceMode)(mode,0.)
+                if not response.accepted: raise RuntimeError(response.reason)
+                record['expected'][role]=response.generation
+            deadline=time.monotonic()+30
+            while not transition_ready(status,record['expected'],mode):
+                if time.monotonic()>deadline:
+                    record['elapsed_sec']=time.monotonic()-record['started']
+                    raise RuntimeError('mode {} prepare/family timeout: {}'.format(mode,
+                        {r:status[r].reason for r in active}))
+                parent.spin_once(); time.sleep(.05)
+            record.update(ready=True,elapsed_sec=time.monotonic()-record['started'])
+        transition(1)
+        transition(2)
         if a.gui:
             # Start only visualization and connect compressed debug sinks. The
             # sink cost is recorded separately from a real rqt window's cost.
@@ -234,8 +265,15 @@ def main():
             view_launch.start()
             debug_topics = dict(objects='/perception/camera/objects/debug/mosaic/compressed',
                 lane='/perception/camera/debug/mosaic/compressed', traffic_light='/perception/traffic_light/debug/image/compressed')
+            lane_views=dict(lane_family='/perception/lane/debug/shared_family_bev/compressed',
+                            bev='/perception/bev/debug/fused/compressed')
+            if a.visual_outputs=='all':
+                debug_topics.update(lane_views)
+            else:
+                debug_topics={a.visual_outputs:lane_views['lane_family' if a.visual_outputs=='family' else 'bev']}
             for role, topic in debug_topics.items():
-                if a.view_models != 'all' and role not in a.view_models.split(','):
+                selected_role='lane' if role in ('lane_family','family','bev') else role
+                if a.view_models != 'all' and selected_role not in a.view_models.split(','):
                     continue
                 subscribers.append(rospy.Subscriber(topic, CompressedImage,
                     lambda m,r=role:receive_debug(m,r),queue_size=1))
@@ -252,8 +290,10 @@ def main():
             if main_process.poll() is not None:
                 raise RuntimeError('legacy lidar launch exited')
         if a.qt:
+            qt_topic = (lane_views['lane_family'] if a.visual_outputs=='family' else lane_views['bev']
+                        if a.visual_outputs=='bev' else '/perception/camera/objects/debug/mosaic/compressed')
             qt_process = subprocess.Popen(['rosrun','rqt_image_view','rqt_image_view','--clear-config',
-                '/perception/camera/objects/debug/mosaic/compressed','__name:=camera_runtime_viewer'],
+                qt_topic,'__name:=camera_runtime_viewer'],
                 stdout=(a.output/'qt.log').open('w'),stderr=subprocess.STDOUT,start_new_session=True)
             time.sleep(3)
             if qt_process.poll() is not None:

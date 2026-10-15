@@ -1,6 +1,7 @@
 # 카메라 실행·3뷰 관측 계약 v1
 
 현재 실행 정본은 `asmc_camera/camera.launch`, 시각화 정본은 `view.launch`다.
+음영 lane의 실행·수요와 검증 상태는 [family 최적화 인계](../../handoffs/perception/camera-shadow-family-optimization.md)를 따른다.
 E8와 사전학습 YOLO26l을 실행 시 선택하며 가중치 교체에는 노드 재시작이 필요하다.
 기계 정본은 `config/contracts/camera_object_observation_v1.yaml`이다.
 

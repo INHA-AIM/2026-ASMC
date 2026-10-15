@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 from lifecycle_measurements import rate_report,percentile
 from summarize_camera_structure import rate_followup,rows,parity
-from compare_camera_runtime import resource_summary
+from compare_camera_runtime import resource_summary, acceptance_eligible
 
 
 def distribution(values):
@@ -74,6 +74,12 @@ def main():
     pooled=defaultdict(lambda:defaultdict(list));family_pooled=defaultdict(list)
     for trial in summary['trials']:
         root=a.results/trial['matrix']/trial['trial']
+        report_path=root/'report.json'
+        raw_report=json.loads(report_path.read_text()) if report_path.is_file() else {}
+        if not acceptance_eligible(raw_report):
+            trial['effective_final_trial']=False
+            trial['minimum_acceptance_failures'].append('diagnostic instrumentation; excluded from timing acceptance')
+            continue
         if not trial.get('complete'):trial['minimum_acceptance_failures'].append('incomplete measurement')
         start,end=trial.get('start'),trial.get('end')
         if start is None:continue
