@@ -9,6 +9,7 @@ TwinLite는 독립 PyTorch 경로를 유지하며, TensorRT 후보의 품질·�
 [TensorRT 검증 기록](../../docs/handoffs/perception/camera-twinlite-tensorrt.md)에서 관리합니다.
 [음영 family 최적화](../../docs/handoffs/perception/camera-shadow-family-optimization.md)는
 family 전용 경로·수요 기반 BEV·GC 진단과 후속 수락 상태를 관리합니다.
+최신 음영 반복12회와10분 연속 시험에서 순간 family freshness/공백 실패가 남아 TensorRT 기본 전환과 PR Ready는 보류했습니다.
 YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합니다. 같은 목표 Hz가 같은 영상 시각을 보장하지는 않습니다.
 
 ```bash

@@ -1,0 +1,37 @@
+{
+  "previous": {
+    "at": 12359.695396005,
+    "stamp": 1792068612039095401,
+    "valid": true,
+    "reason": "accepted"
+  },
+  "next": {
+    "at": 12360.061289118,
+    "stamp": 1792068612098185777,
+    "valid": true,
+    "reason": "accepted"
+  },
+  "gap_ms": 365.8931130012206,
+  "elapsed_sec": 187.65837986800034,
+  "source_interval_ms": 59.090376,
+  "nearby": {
+    "camera_lane-input": {
+      "count": 9,
+      "max_gap_ms": 66.59500599926105
+    },
+    "camera_lane-output": {
+      "count": 7,
+      "max_gap_ms": 107.28696700061846
+    },
+    "family-gc-input": {
+      "count": 0,
+      "max_gap_ms": 0
+    },
+    "family-gc-output": {
+      "count": 0,
+      "max_gap_ms": 0
+    }
+  },
+  "gc_nearby": [],
+  "note": "Gap is subscriber reception, not an instrumented producer publish gap. Front input/model-grid continued. Family worker, ROS delivery and benchmark subscriber costs are not fully separated; no causal waiver."
+}

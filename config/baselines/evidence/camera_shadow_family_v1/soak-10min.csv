@@ -1,0 +1,11 @@
+trial,group,stream,hz,min_5s_hz,p50_ms,p95_ms,p99_ms,max_gap_ms,target_95pct_pass
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/traffic_light/detection:camera_extra,9.965,9.8,59.33838800046942,91.81521380105552,101.83755986043255,163.42784900007246,True
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/camera/front/road_marking/model_grid/class_id:camera_front,14.785,13.4,46.425837999777286,76.15215149962751,90.63425690055722,250.031380001019,False
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/camera/left/road_marking/model_grid/class_id:camera_left,14.785,13.4,48.80835699987074,79.78554649980651,94.47933399915198,250.80640799933462,False
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/camera/right/road_marking/model_grid/class_id:camera_right,14.785,13.4,49.82151200056251,80.6194909991973,96.47149879929182,251.5409229999932,False
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/camera/front/road_marking/class_id:camera_front,14.785,13.4,49.97794100017927,79.95404899975256,95.7609161996515,252.18544800009113,False
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/camera/left/road_marking/class_id:camera_left,14.785,13.4,51.457125999149866,82.61674400000629,98.06649979873322,252.2914379987924,False
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/camera/right/road_marking/class_id:camera_right,14.785,13.4,51.830603000780684,82.80058099899179,98.99739370066526,252.3594949998369,False
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/camera/objects:camera_left,14.893333333333333,14.2,30.791895499532984,46.07577275010044,52.57472214998414,200.1131630004238,False
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/camera/objects:camera_right,14.905,14.4,31.391075001010904,46.75735939981677,53.93323882013646,191.30697999935364,True
+soak-t2-sunny-all-10min-r1,T2-sunny-all-soak,/perception/camera/objects:camera_front,14.935,14.6,30.212531000870513,45.048752999719,51.99793880019569,194.91284099967743,True

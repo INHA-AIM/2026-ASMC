@@ -1,0 +1,393 @@
+{
+  "acceptance_eligible": false,
+  "notes": "Tracemalloc diagnostic only; heap growth includes model/library imports and benchmark receipts. No leak or GC causation established.",
+  "stages": {
+    "deserialize": {
+      "count": 884,
+      "wall_ms": {
+        "p50": 1.694127999144257,
+        "p95": 2.145364250009152,
+        "p99": 4.586876400444446
+      },
+      "thread_cpu_p95_ms": 2.1184600500000097
+    },
+    "pipeline_observation": {
+      "count": 884,
+      "wall_ms": {
+        "p50": 0.041212500946130604,
+        "p95": 8.313583400286008,
+        "p99": 11.194466749529953
+      },
+      "thread_cpu_p95_ms": 0.13258789999999748
+    }
+  },
+  "first_sample": {
+    "event": "allocation_sample",
+    "at": 11666.533806345,
+    "current_bytes": 153330529,
+    "peak_bytes": 181533497,
+    "gc_counts": [
+      278,
+      9,
+      5
+    ],
+    "gc_stats": [
+      {
+        "collections": 427,
+        "collected": 1243,
+        "uncollectable": 0
+      },
+      {
+        "collections": 38,
+        "collected": 144,
+        "uncollectable": 0
+      },
+      {
+        "collections": 3,
+        "collected": 13,
+        "uncollectable": 0
+      }
+    ],
+    "generation_timing": [
+      {
+        "count": 322,
+        "total_ms": 24.597231989901047,
+        "maximum_ms": 0.26527399859332945
+      },
+      {
+        "count": 29,
+        "total_ms": 19.325716002640547,
+        "maximum_ms": 1.2232529988978058
+      },
+      {
+        "count": 3,
+        "total_ms": 86.77900300062902,
+        "maximum_ms": 57.17652699968312
+      }
+    ]
+  },
+  "last_sample": {
+    "event": "allocation_sample",
+    "at": 11721.538285175,
+    "current_bytes": 163772561,
+    "peak_bytes": 182674830,
+    "gc_counts": [
+      53,
+      4,
+      7
+    ],
+    "gc_stats": [
+      {
+        "collections": 444,
+        "collected": 1243,
+        "uncollectable": 0
+      },
+      {
+        "collections": 40,
+        "collected": 342,
+        "uncollectable": 0
+      },
+      {
+        "collections": 3,
+        "collected": 13,
+        "uncollectable": 0
+      }
+    ],
+    "generation_timing": [
+      {
+        "count": 339,
+        "total_ms": 27.389233988287742,
+        "maximum_ms": 0.3313790002721362
+      },
+      {
+        "count": 31,
+        "total_ms": 20.74903300308506,
+        "maximum_ms": 1.2232529988978058
+      },
+      {
+        "count": 3,
+        "total_ms": 86.77900300062902,
+        "maximum_ms": 57.17652699968312
+      }
+    ]
+  },
+  "end": {
+    "event": "allocation_end",
+    "at": 11727.936891393,
+    "tracked_types": [
+      [
+        "builtins.function",
+        39175
+      ],
+      [
+        "builtins.dict",
+        24235
+      ],
+      [
+        "builtins.tuple",
+        20832
+      ],
+      [
+        "builtins.builtin_function_or_method",
+        14405
+      ],
+      [
+        "builtins.cell",
+        10387
+      ],
+      [
+        "builtins.list",
+        8367
+      ],
+      [
+        "builtins.weakref",
+        7990
+      ],
+      [
+        "builtins.getset_descriptor",
+        7729
+      ],
+      [
+        "builtins.method_descriptor",
+        6507
+      ],
+      [
+        "builtins.wrapper_descriptor",
+        3456
+      ],
+      [
+        "builtins.type",
+        3402
+      ],
+      [
+        "builtins.instancemethod",
+        2844
+      ],
+      [
+        "builtins.property",
+        2474
+      ],
+      [
+        "builtins.staticmethod",
+        1931
+      ],
+      [
+        "builtins.module",
+        1775
+      ],
+      [
+        "builtins.member_descriptor",
+        1769
+      ],
+      [
+        "_frozen_importlib.ModuleSpec",
+        1716
+      ],
+      [
+        "torch._ops.OpOverload",
+        1690
+      ],
+      [
+        "_frozen_importlib_external.SourceFileLoader",
+        1612
+      ],
+      [
+        "builtins.set",
+        1353
+      ],
+      [
+        "inspect.Parameter",
+        1228
+      ],
+      [
+        "typing._GenericAlias",
+        1168
+      ],
+      [
+        "builtins.classmethod",
+        1055
+      ],
+      [
+        "torch._ops.OpOverloadPacket",
+        857
+      ],
+      [
+        "_ctypes.CField",
+        696
+      ],
+      [
+        "builtins.method",
+        570
+      ],
+      [
+        "pybind11_builtins.pybind11_type",
+        487
+      ],
+      [
+        "sympy.core.assumptions.StdFactKB",
+        479
+      ],
+      [
+        "collections.OrderedDict",
+        476
+      ],
+      [
+        "builtins.mappingproxy",
+        468
+      ]
+    ],
+    "retained_locations": [
+      {
+        "location": "<frozen importlib._bootstrap_external>:640",
+        "bytes": 33293261,
+        "count": 278445
+      },
+      {
+        "location": "<frozen importlib._bootstrap>:219",
+        "bytes": 3644179,
+        "count": 36279
+      },
+      {
+        "location": "/opt/ros/noetic/lib/python3/dist-packages/rospy/topics.py:1070",
+        "bytes": 3072544,
+        "count": 6
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/__init__.py:1332",
+        "bytes": 2631592,
+        "count": 12958
+      },
+      {
+        "location": "/usr/lib/python3.8/linecache.py:137",
+        "bytes": 2127085,
+        "count": 20717
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/_ops.py:416",
+        "bytes": 915344,
+        "count": 2217
+      },
+      {
+        "location": "/data/runtime/camera-shadow-family-v1/tools/perception/camera_runtime_probe.py:57",
+        "bytes": 591072,
+        "count": 8594
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/_ops.py:670",
+        "bytes": 550176,
+        "count": 9917
+      },
+      {
+        "location": "/usr/lib/python3.8/typing.py:764",
+        "bytes": 419096,
+        "count": 2344
+      },
+      {
+        "location": "/usr/lib/python3.8/dataclasses.py:398",
+        "bytes": 367630,
+        "count": 4013
+      },
+      {
+        "location": "/usr/lib/python3.8/abc.py:85",
+        "bytes": 335015,
+        "count": 1130
+      },
+      {
+        "location": "<frozen importlib._bootstrap_external>:123",
+        "bytes": 322244,
+        "count": 2541
+      },
+      {
+        "location": "/opt/ros/noetic/lib/python3/dist-packages/sensor_msgs/msg/_CompressedImage.py:161",
+        "bytes": 260624,
+        "count": 4296
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/_ops.py:757",
+        "bytes": 256833,
+        "count": 4755
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/_ops.py:772",
+        "bytes": 253593,
+        "count": 1529
+      },
+      {
+        "location": "/data/runtime/camera-shadow-family-v1/tools/perception/camera_runtime_probe.py:56",
+        "bytes": 240520,
+        "count": 4295
+      },
+      {
+        "location": "/usr/lib/python3.8/functools.py:57",
+        "bytes": 191128,
+        "count": 2692
+      },
+      {
+        "location": "/usr/lib/python3.8/posixpath.py:368",
+        "bytes": 185632,
+        "count": 1627
+      },
+      {
+        "location": "/opt/ros/noetic/lib/python3/dist-packages/genpy/rostime.py:125",
+        "bytes": 182600,
+        "count": 4565
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/jit/_builtins.py:160",
+        "bytes": 180550,
+        "count": 2721
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/_ops.py:124",
+        "bytes": 174048,
+        "count": 1036
+      },
+      {
+        "location": "<frozen importlib._bootstrap>:344",
+        "bytes": 171072,
+        "count": 2376
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/distributed/__init__.py:19",
+        "bytes": 163937,
+        "count": 1732
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/_prims_common/wrappers.py:222",
+        "bytes": 161848,
+        "count": 1341
+      },
+      {
+        "location": "<frozen importlib._bootstrap>:36",
+        "bytes": 160272,
+        "count": 2357
+      },
+      {
+        "location": "<frozen importlib._bootstrap_external>:1561",
+        "bytes": 145584,
+        "count": 282
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/_prims/__init__.py:318",
+        "bytes": 137888,
+        "count": 124
+      },
+      {
+        "location": "/usr/local/lib/python3.8/dist-packages/torch/library.py:143",
+        "bytes": 131072,
+        "count": 1
+      },
+      {
+        "location": "/usr/lib/python3.8/functools.py:60",
+        "bytes": 127992,
+        "count": 610
+      },
+      {
+        "location": "/usr/lib/python3.8/inspect.py:2821",
+        "bytes": 125088,
+        "count": 1090
+      }
+    ],
+    "acceptance_timing": false
+  }
+}

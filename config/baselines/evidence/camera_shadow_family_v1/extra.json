@@ -1,0 +1,2244 @@
+{
+  "schema": "shadow_family_runtime_v1",
+  "trials": [
+    {
+      "name": "bev-t0-sunny-r1",
+      "group": "T0-sunny-bev-repeat",
+      "report": "bev-t0-sunny-r1/report.json",
+      "acceptance_eligible": true,
+      "failures": [],
+      "active_status_failures": {
+        "objects": 0,
+        "lane": 0,
+        "traffic_light": 0
+      },
+      "resources": {
+        "camera_cpu_mean": 337.2065152080124,
+        "camera_rss_peak_mib": 3787.31640625,
+        "vram_peak_mib": 5158.0,
+        "vram_peak_fraction": 0.6299462628236444,
+        "wsl_system_cpu_mean": 22.261899529669204,
+        "sample_count": 120,
+        "cpu_sample_count": 119,
+        "gpu_sample_count": 120,
+        "resource_coverage_pass": true,
+        "scope": "Summed camera/debug/preview ROS processes; rqt included in WSL system CPU, not this process sum. Whole GPU includes MORAI/Windows."
+      },
+      "lane_family": {
+        "messages": 894,
+        "hz": 14.9,
+        "valid_messages": 894,
+        "excluded_old_epoch_messages": 0,
+        "first_second": 15,
+        "five_second_hz": [
+          15.0,
+          14.8,
+          14.8,
+          15.0,
+          14.8,
+          15.0,
+          15.0,
+          14.8,
+          15.0,
+          14.8,
+          15.0,
+          14.8
+        ],
+        "max_gap_sec": 0.17799793499943917,
+        "first_output_sec": 0.023175309999714955,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "valid_supply": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17799793499943917,
+          "first_output_sec": 0.023175309999714955,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "fit_valid_count": 894,
+        "input_to_subscriber_ms": {
+          "p50": 118.45916500078602,
+          "p95": 167.90678940151344,
+          "p99": 199.573020160151
+        },
+        "latency_sample_count": 894
+      },
+      "streams": {
+        "/perception/traffic_light/detection:camera_extra": {
+          "messages": 598,
+          "hz": 9.966666666666667,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 10,
+          "five_second_hz": [
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            9.8,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            9.8
+          ],
+          "max_gap_sec": 0.13897797699974035,
+          "first_output_sec": 0.05066044900013367,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 59.765594500277075,
+            "p95": 94.2034601002888,
+            "p99": 103.43186081068778
+          },
+          "target_hz": 10.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": false,
+          "timing_pass": true
+        },
+        "/perception/camera/front/road_marking/model_grid/class_id:camera_front": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            14.8,
+            15.2,
+            14.8,
+            15.0,
+            14.8,
+            14.8,
+            15.0,
+            14.6
+          ],
+          "max_gap_sec": 0.16945102600038808,
+          "first_output_sec": 0.021699992999856477,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 56.93446199893515,
+            "p95": 91.61576625028829,
+            "p99": 105.61551234010042
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/left/road_marking/model_grid/class_id:camera_left": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            14.8,
+            15.2,
+            14.8,
+            15.0,
+            14.8,
+            14.8,
+            15.0,
+            14.6
+          ],
+          "max_gap_sec": 0.16947108800013666,
+          "first_output_sec": 0.022781150000810158,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 60.09585250012606,
+            "p95": 94.80568249973658,
+            "p99": 108.21098660901045
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/right/road_marking/model_grid/class_id:camera_right": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            15.0,
+            14.6
+          ],
+          "max_gap_sec": 0.16941914999915753,
+          "first_output_sec": 0.023893947000033222,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 60.26669200127799,
+            "p95": 96.15737455014823,
+            "p99": 111.26783484996852
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_right": {
+          "messages": 895,
+          "hz": 14.916666666666666,
+          "valid_messages": 895,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.17760248500053422,
+          "first_output_sec": 0.06350641600147355,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 32.181922000745544,
+            "p95": 46.52955800029304,
+            "p99": 52.17594305933744
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_front": {
+          "messages": 896,
+          "hz": 14.933333333333334,
+          "valid_messages": 896,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 16,
+          "five_second_hz": [
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.18287752300057036,
+          "first_output_sec": 0.06367104200035101,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 31.00066800016066,
+            "p95": 45.55553200043505,
+            "p99": 52.1750182490905
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_left": {
+          "messages": 895,
+          "hz": 14.916666666666666,
+          "valid_messages": 895,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.17754207200050587,
+          "first_output_sec": 0.06316716200126393,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 32.559712999500334,
+            "p95": 46.90937299928919,
+            "p99": 54.238710160534524
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        }
+      },
+      "mode_transitions": [
+        {
+          "mode": 1,
+          "started": 11738.733582848,
+          "expected": {
+            "objects": 1,
+            "lane": 1,
+            "traffic_light": 1
+          },
+          "ready": true,
+          "elapsed_sec": 0.5597168899985263
+        },
+        {
+          "mode": 2,
+          "started": 11739.293312331,
+          "expected": {
+            "objects": 2,
+            "lane": 2,
+            "traffic_light": 2
+          },
+          "ready": true,
+          "elapsed_sec": 0.41454174400132615
+        }
+      ],
+      "gc_generation2": [
+        {
+          "probe": "family-gc",
+          "at": 11757.131099973,
+          "duration_ms": 18.518320999646676,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 11794.165701273,
+          "duration_ms": 13.280948998726672,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 11775.616813289,
+          "duration_ms": 9.490786998867407,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        }
+      ],
+      "qt_before": [],
+      "qt_during": [
+        {
+          "pid": 25442,
+          "command": [
+            "python3",
+            "/opt/ros/noetic/lib/rqt_image_view/rqt_image_view",
+            "--clear-config",
+            "/perception/bev/debug/fused/compressed",
+            "__name:=camera_runtime_viewer"
+          ],
+          "owned_trial": true
+        }
+      ],
+      "qt_after": []
+    },
+    {
+      "name": "bev-t2-sunny-r1",
+      "group": "T2-sunny-bev-repeat",
+      "report": "bev-t2-sunny-r1/report.json",
+      "acceptance_eligible": true,
+      "failures": [],
+      "active_status_failures": {
+        "objects": 0,
+        "lane": 0,
+        "traffic_light": 0
+      },
+      "resources": {
+        "camera_cpu_mean": 324.74406762283047,
+        "camera_rss_peak_mib": 3564.0546875,
+        "vram_peak_mib": 5029.0,
+        "vram_peak_fraction": 0.6141914997557401,
+        "wsl_system_cpu_mean": 22.362237942195446,
+        "sample_count": 120,
+        "cpu_sample_count": 119,
+        "gpu_sample_count": 120,
+        "resource_coverage_pass": true,
+        "scope": "Summed camera/debug/preview ROS processes; rqt included in WSL system CPU, not this process sum. Whole GPU includes MORAI/Windows."
+      },
+      "lane_family": {
+        "messages": 876,
+        "hz": 14.6,
+        "valid_messages": 876,
+        "excluded_old_epoch_messages": 0,
+        "first_second": 14,
+        "five_second_hz": [
+          15.0,
+          14.6,
+          14.6,
+          14.8,
+          14.8,
+          14.6,
+          14.4,
+          14.8,
+          14.8,
+          14.6,
+          14.2,
+          14.0
+        ],
+        "max_gap_sec": 0.2017570110001543,
+        "first_output_sec": 0.05807556699983252,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "valid_supply": {
+          "messages": 876,
+          "hz": 14.6,
+          "valid_messages": 876,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            15.0,
+            14.6,
+            14.6,
+            14.8,
+            14.8,
+            14.6,
+            14.4,
+            14.8,
+            14.8,
+            14.6,
+            14.2,
+            14.0
+          ],
+          "max_gap_sec": 0.2017570110001543,
+          "first_output_sec": 0.05807556699983252,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "fit_valid_count": 876,
+        "input_to_subscriber_ms": {
+          "p50": 105.70857799939404,
+          "p95": 154.77599199994074,
+          "p99": 185.05522900113647
+        },
+        "latency_sample_count": 876
+      },
+      "streams": {
+        "/perception/traffic_light/detection:camera_extra": {
+          "messages": 597,
+          "hz": 9.95,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 9,
+          "five_second_hz": [
+            9.8,
+            10.0,
+            10.0,
+            10.0,
+            9.8,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            9.8,
+            10.0
+          ],
+          "max_gap_sec": 0.14700250199894072,
+          "first_output_sec": 0.11117013100010809,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 62.9070769991813,
+            "p95": 93.2554071991035,
+            "p99": 99.72535600078112
+          },
+          "target_hz": 10.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": false,
+          "timing_pass": true
+        },
+        "/perception/camera/front/road_marking/model_grid/class_id:camera_front": {
+          "messages": 892,
+          "hz": 14.866666666666667,
+          "valid_messages": 892,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.1855672340007004,
+          "first_output_sec": 0.0423901840003964,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 41.41279349914839,
+            "p95": 64.45011749974586,
+            "p99": 80.13843069042196
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/left/road_marking/model_grid/class_id:camera_left": {
+          "messages": 892,
+          "hz": 14.866666666666667,
+          "valid_messages": 892,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            14.8,
+            14.8,
+            15.2,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.18499338800029363,
+          "first_output_sec": 0.044431979998989846,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 44.6214109997527,
+            "p95": 65.6827946998419,
+            "p99": 82.41913580959591
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/right/road_marking/model_grid/class_id:camera_right": {
+          "messages": 892,
+          "hz": 14.866666666666667,
+          "valid_messages": 892,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            14.8,
+            14.8,
+            15.2,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.18407553599899984,
+          "first_output_sec": 0.04569110699958401,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 45.363801999883435,
+            "p95": 66.4623324504646,
+            "p99": 83.77978376021933
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_right": {
+          "messages": 893,
+          "hz": 14.883333333333333,
+          "valid_messages": 893,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            14.8,
+            15.2,
+            15.0,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.1987282750014856,
+          "first_output_sec": 0.0394636189994344,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 33.62463000121352,
+            "p95": 48.321592200227315,
+            "p99": 57.2510334802792
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_front": {
+          "messages": 895,
+          "hz": 14.916666666666666,
+          "valid_messages": 895,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            14.8,
+            15.2,
+            15.0,
+            14.6,
+            15.2
+          ],
+          "max_gap_sec": 0.17445817200132296,
+          "first_output_sec": 0.03807241699905717,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 32.33440700023493,
+            "p95": 47.116107100191584,
+            "p99": 53.96582494020546
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_left": {
+          "messages": 893,
+          "hz": 14.883333333333333,
+          "valid_messages": 893,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            14.8,
+            15.2,
+            15.0,
+            14.6,
+            15.0
+          ],
+          "max_gap_sec": 0.19046862800132658,
+          "first_output_sec": 0.03853778200027591,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 34.339054000156466,
+            "p95": 48.70152399998915,
+            "p99": 58.69836619960553
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        }
+      },
+      "mode_transitions": [
+        {
+          "mode": 1,
+          "started": 11820.621659345,
+          "expected": {
+            "objects": 1,
+            "lane": 1,
+            "traffic_light": 1
+          },
+          "ready": true,
+          "elapsed_sec": 0.36281697799859103
+        },
+        {
+          "mode": 2,
+          "started": 11820.984487492,
+          "expected": {
+            "objects": 2,
+            "lane": 2,
+            "traffic_light": 2
+          },
+          "ready": true,
+          "elapsed_sec": 0.4173306619995856
+        }
+      ],
+      "gc_generation2": [
+        {
+          "probe": "family-gc",
+          "at": 11839.782991817,
+          "duration_ms": 13.124285998856067,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 11858.56501331,
+          "duration_ms": 10.35704200148757,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 11877.408397575,
+          "duration_ms": 9.354940999401151,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        }
+      ],
+      "qt_before": [],
+      "qt_during": [
+        {
+          "pid": 26299,
+          "command": [
+            "python3",
+            "/opt/ros/noetic/lib/rqt_image_view/rqt_image_view",
+            "--clear-config",
+            "/perception/bev/debug/fused/compressed",
+            "__name:=camera_runtime_viewer"
+          ],
+          "owned_trial": true
+        }
+      ],
+      "qt_after": []
+    },
+    {
+      "name": "diagnostic-t2-sunny-all-r1",
+      "group": "T2-sunny-all-repeat",
+      "report": "diagnostic-t2-sunny-all-r1/report.json",
+      "acceptance_eligible": false,
+      "failures": [
+        "diagnostic run: excluded from acceptance"
+      ],
+      "active_status_failures": {
+        "objects": 0,
+        "lane": 0,
+        "traffic_light": 0
+      },
+      "resources": {
+        "camera_cpu_mean": 412.7581178664591,
+        "camera_rss_peak_mib": 3929.83203125,
+        "vram_peak_mib": 4908.0,
+        "vram_peak_fraction": 0.5994137762579385,
+        "wsl_system_cpu_mean": 27.57335783420635,
+        "sample_count": 120,
+        "cpu_sample_count": 119,
+        "gpu_sample_count": 120,
+        "resource_coverage_pass": true,
+        "scope": "Summed camera/debug/preview ROS processes; rqt included in WSL system CPU, not this process sum. Whole GPU includes MORAI/Windows."
+      },
+      "lane_family": {
+        "messages": 884,
+        "hz": 14.733333333333333,
+        "valid_messages": 884,
+        "excluded_old_epoch_messages": 0,
+        "first_second": 16,
+        "five_second_hz": [
+          14.6,
+          14.8,
+          14.2,
+          15.0,
+          14.6,
+          15.0,
+          14.8,
+          14.6,
+          14.8,
+          14.8,
+          14.8,
+          14.8
+        ],
+        "max_gap_sec": 0.19088061299953551,
+        "first_output_sec": 0.00507643899982213,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "valid_supply": {
+          "messages": 884,
+          "hz": 14.733333333333333,
+          "valid_messages": 884,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 16,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            14.2,
+            15.0,
+            14.6,
+            15.0,
+            14.8,
+            14.6,
+            14.8,
+            14.8,
+            14.8,
+            14.8
+          ],
+          "max_gap_sec": 0.19088061299953551,
+          "first_output_sec": 0.00507643899982213,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "fit_valid_count": 884,
+        "input_to_subscriber_ms": {
+          "p50": 116.10871850007243,
+          "p95": 176.19890425112317,
+          "p99": 198.43473833119774
+        },
+        "latency_sample_count": 884
+      },
+      "streams": {
+        "/perception/traffic_light/detection:camera_extra": {
+          "messages": 598,
+          "hz": 9.966666666666667,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 10,
+          "five_second_hz": [
+            10.0,
+            10.0,
+            9.8,
+            10.0,
+            10.0,
+            9.8,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            10.0
+          ],
+          "max_gap_sec": 0.166610206999394,
+          "first_output_sec": 0.03563337000014144,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 58.883501001218974,
+            "p95": 88.08052569975189,
+            "p99": 98.24636447967347
+          },
+          "target_hz": 10.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": false,
+          "timing_pass": true
+        },
+        "/perception/camera/front/road_marking/model_grid/class_id:camera_front": {
+          "messages": 893,
+          "hz": 14.883333333333333,
+          "valid_messages": 893,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 16,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.1779436339984386,
+          "first_output_sec": 0.008189967998987413,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 47.3178629999893,
+            "p95": 86.72312060007243,
+            "p99": 103.27207020069184
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/left/road_marking/model_grid/class_id:camera_left": {
+          "messages": 893,
+          "hz": 14.883333333333333,
+          "valid_messages": 893,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 16,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.17811035600061587,
+          "first_output_sec": 0.00953407899942249,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 50.006008001219016,
+            "p95": 89.53223060052551,
+            "p99": 103.94716724011235
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/right/road_marking/model_grid/class_id:camera_right": {
+          "messages": 893,
+          "hz": 14.883333333333333,
+          "valid_messages": 893,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 16,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.1783253869998589,
+          "first_output_sec": 0.010452648999489611,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 50.613907998922514,
+            "p95": 88.63696560001698,
+            "p99": 105.1214293207886
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/front/road_marking/class_id:camera_front": {
+          "messages": 893,
+          "hz": 14.883333333333333,
+          "valid_messages": 893,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 16,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.17855825100014044,
+          "first_output_sec": 0.013300765000167303,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 51.10710400003882,
+            "p95": 90.48059139895486,
+            "p99": 107.49486024040384
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/left/road_marking/class_id:camera_left": {
+          "messages": 893,
+          "hz": 14.883333333333333,
+          "valid_messages": 893,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 16,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.17857302999982494,
+          "first_output_sec": 0.013906250000218279,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 52.74011100118514,
+            "p95": 92.3186672007432,
+            "p99": 108.4391744801542
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/right/road_marking/class_id:camera_right": {
+          "messages": 893,
+          "hz": 14.883333333333333,
+          "valid_messages": 893,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 16,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.6,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.1785532649992092,
+          "first_output_sec": 0.014343298000312643,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 52.957773999878555,
+            "p95": 91.22447759909845,
+            "p99": 108.09537088061919
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_left": {
+          "messages": 896,
+          "hz": 14.933333333333334,
+          "valid_messages": 896,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.18096312399939052,
+          "first_output_sec": 0.07289644400043471,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 28.033335999680276,
+            "p95": 42.74769000039669,
+            "p99": 48.483887850306864
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_right": {
+          "messages": 895,
+          "hz": 14.916666666666666,
+          "valid_messages": 895,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.21063420700011193,
+          "first_output_sec": 0.07223646499915048,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 27.346437998858164,
+            "p95": 42.89190179970319,
+            "p99": 48.23149058091072
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_front": {
+          "messages": 896,
+          "hz": 14.933333333333334,
+          "valid_messages": 896,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.8,
+            15.2,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.18097074500110466,
+          "first_output_sec": 0.07273394399999233,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 26.479283000298892,
+            "p95": 41.16012150052484,
+            "p99": 46.01077289862585
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        }
+      },
+      "mode_transitions": [
+        {
+          "mode": 1,
+          "started": 11655.044104759,
+          "expected": {
+            "objects": 1,
+            "lane": 1,
+            "traffic_light": 1
+          },
+          "ready": true,
+          "elapsed_sec": 0.5633618720003142
+        },
+        {
+          "mode": 2,
+          "started": 11655.607481915,
+          "expected": {
+            "objects": 2,
+            "lane": 2,
+            "traffic_light": 2
+          },
+          "ready": true,
+          "elapsed_sec": 0.41309866799929296
+        }
+      ],
+      "gc_generation2": [
+        {
+          "probe": "family-gc",
+          "at": 11673.934297781,
+          "duration_ms": 28.44896799979324,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 11692.827509269,
+          "duration_ms": 11.386350999600836,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 11711.528692911,
+          "duration_ms": 10.654424000676954,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        }
+      ],
+      "qt_before": [],
+      "qt_during": [
+        {
+          "pid": 24584,
+          "command": [
+            "python3",
+            "/opt/ros/noetic/lib/rqt_image_view/rqt_image_view",
+            "--clear-config",
+            "/perception/camera/objects/debug/mosaic/compressed",
+            "__name:=camera_runtime_viewer"
+          ],
+          "owned_trial": true
+        }
+      ],
+      "qt_after": []
+    },
+    {
+      "name": "off-t2-foggy-r1",
+      "group": "T2-foggy-off-repeat",
+      "report": "off-t2-foggy-r1/report.json",
+      "acceptance_eligible": true,
+      "failures": [],
+      "active_status_failures": {
+        "objects": 0,
+        "lane": 0,
+        "traffic_light": 0
+      },
+      "resources": {
+        "camera_cpu_mean": 311.7102158948253,
+        "camera_rss_peak_mib": 3177.22265625,
+        "vram_peak_mib": 4998.0,
+        "vram_peak_fraction": 0.6104054714215926,
+        "wsl_system_cpu_mean": 21.507443304862168,
+        "sample_count": 120,
+        "cpu_sample_count": 119,
+        "gpu_sample_count": 120,
+        "resource_coverage_pass": true,
+        "scope": "Summed camera/debug/preview ROS processes; rqt included in WSL system CPU, not this process sum. Whole GPU includes MORAI/Windows."
+      },
+      "lane_family": {
+        "messages": 887,
+        "hz": 14.783333333333333,
+        "valid_messages": 887,
+        "excluded_old_epoch_messages": 0,
+        "first_second": 14,
+        "five_second_hz": [
+          14.6,
+          14.8,
+          14.4,
+          15.0,
+          14.8,
+          15.0,
+          15.0,
+          14.8,
+          15.0,
+          14.8,
+          14.6,
+          14.6
+        ],
+        "max_gap_sec": 0.19999542699952144,
+        "first_output_sec": 0.01070767000055639,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "valid_supply": {
+          "messages": 887,
+          "hz": 14.783333333333333,
+          "valid_messages": 887,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 14,
+          "five_second_hz": [
+            14.6,
+            14.8,
+            14.4,
+            15.0,
+            14.8,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            14.6,
+            14.6
+          ],
+          "max_gap_sec": 0.19999542699952144,
+          "first_output_sec": 0.01070767000055639,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "fit_valid_count": 887,
+        "input_to_subscriber_ms": {
+          "p50": 95.39073799896869,
+          "p95": 132.84261290136786,
+          "p99": 149.21354314061315
+        },
+        "latency_sample_count": 887
+      },
+      "streams": {
+        "/perception/traffic_light/detection:camera_extra": {
+          "messages": 598,
+          "hz": 9.966666666666667,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 10,
+          "five_second_hz": [
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            9.8,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            9.8,
+            10.0
+          ],
+          "max_gap_sec": 0.15872208299879276,
+          "first_output_sec": 0.0434378320005635,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 53.096408999408595,
+            "p95": 84.01550554926871,
+            "p99": 90.76340711933878
+          },
+          "target_hz": 10.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": false,
+          "timing_pass": true
+        },
+        "/perception/camera/front/road_marking/model_grid/class_id:camera_front": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.6,
+            14.6,
+            15.0,
+            15.2,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17000893399927008,
+          "first_output_sec": 0.020288532999984454,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 38.72460200000205,
+            "p95": 54.32285570022941,
+            "p99": 69.33464056977755
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/left/road_marking/model_grid/class_id:camera_left": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.6,
+            14.6,
+            15.0,
+            15.2,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17057800799921097,
+          "first_output_sec": 0.022054643999581458,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 42.332032000558684,
+            "p95": 58.300765550939104,
+            "p99": 72.6682762198835
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/right/road_marking/model_grid/class_id:camera_right": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.6,
+            14.6,
+            15.0,
+            15.2,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8
+          ],
+          "max_gap_sec": 0.17082411800038244,
+          "first_output_sec": 0.023082198000338394,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 42.83326600034343,
+            "p95": 58.05300604952208,
+            "p99": 66.54169141087561
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_right": {
+          "messages": 895,
+          "hz": 14.916666666666666,
+          "valid_messages": 895,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            14.8,
+            15.2,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.17754411900023115,
+          "first_output_sec": 0.03172007400098664,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 32.287559000906185,
+            "p95": 44.6566944998267,
+            "p99": 49.110848420277755
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_front": {
+          "messages": 897,
+          "hz": 14.95,
+          "valid_messages": 897,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            14.8,
+            15.0,
+            15.2,
+            15.0,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.1774059050003416,
+          "first_output_sec": 0.0323598850009148,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 30.731606999324868,
+            "p95": 42.98523159995966,
+            "p99": 47.723299880453844
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_left": {
+          "messages": 897,
+          "hz": 14.95,
+          "valid_messages": 897,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 16,
+          "five_second_hz": [
+            15.0,
+            14.8,
+            14.6,
+            15.0,
+            15.2,
+            15.0,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.18175147400143032,
+          "first_output_sec": 0.03339165000033972,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 32.65964099955454,
+            "p95": 45.04344980050519,
+            "p99": 49.01972759995258
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        }
+      },
+      "mode_transitions": [
+        {
+          "mode": 1,
+          "started": 11978.940563603,
+          "expected": {
+            "objects": 1,
+            "lane": 1,
+            "traffic_light": 1
+          },
+          "ready": true,
+          "elapsed_sec": 0.40887684599874774
+        },
+        {
+          "mode": 2,
+          "started": 11979.349456676,
+          "expected": {
+            "objects": 2,
+            "lane": 2,
+            "traffic_light": 2
+          },
+          "ready": true,
+          "elapsed_sec": 0.41498713299915835
+        }
+      ],
+      "gc_generation2": [
+        {
+          "probe": "family-gc",
+          "at": 12034.474261319,
+          "duration_ms": 12.000161999822012,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 12015.888481255,
+          "duration_ms": 11.895190000359435,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 11997.351122671,
+          "duration_ms": 7.0330700000340585,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        }
+      ],
+      "qt_before": [],
+      "qt_during": [],
+      "qt_after": []
+    },
+    {
+      "name": "off-t2-sunny-r1",
+      "group": "T2-sunny-off-repeat",
+      "report": "off-t2-sunny-r1/report.json",
+      "acceptance_eligible": true,
+      "failures": [],
+      "active_status_failures": {
+        "objects": 0,
+        "lane": 0,
+        "traffic_light": 0
+      },
+      "resources": {
+        "camera_cpu_mean": 314.5607070400209,
+        "camera_rss_peak_mib": 3206.4921875,
+        "vram_peak_mib": 5113.0,
+        "vram_peak_fraction": 0.6244504152418173,
+        "wsl_system_cpu_mean": 21.33458210826881,
+        "sample_count": 120,
+        "cpu_sample_count": 119,
+        "gpu_sample_count": 120,
+        "resource_coverage_pass": true,
+        "scope": "Summed camera/debug/preview ROS processes; rqt included in WSL system CPU, not this process sum. Whole GPU includes MORAI/Windows."
+      },
+      "lane_family": {
+        "messages": 890,
+        "hz": 14.833333333333334,
+        "valid_messages": 890,
+        "excluded_old_epoch_messages": 0,
+        "first_second": 15,
+        "five_second_hz": [
+          15.0,
+          14.6,
+          15.0,
+          14.8,
+          15.0,
+          14.8,
+          15.0,
+          14.8,
+          14.8,
+          15.2,
+          14.4,
+          14.6
+        ],
+        "max_gap_sec": 0.21970256399981736,
+        "first_output_sec": 0.025652283999079373,
+        "duplicate_stamps": 0,
+        "reversed_stamps": 0,
+        "valid_supply": {
+          "messages": 890,
+          "hz": 14.833333333333334,
+          "valid_messages": 890,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            14.6,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            14.8,
+            15.2,
+            14.4,
+            14.6
+          ],
+          "max_gap_sec": 0.21970256399981736,
+          "first_output_sec": 0.025652283999079373,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "fit_valid_count": 890,
+        "input_to_subscriber_ms": {
+          "p50": 99.39923000001727,
+          "p95": 137.67901680066643,
+          "p99": 152.3852449292281
+        },
+        "latency_sample_count": 890
+      },
+      "streams": {
+        "/perception/traffic_light/detection:camera_extra": {
+          "messages": 598,
+          "hz": 9.966666666666667,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 10,
+          "five_second_hz": [
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            9.8,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            9.8,
+            10.0
+          ],
+          "max_gap_sec": 0.1375098259995866,
+          "first_output_sec": 0.04232886799945845,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 53.563960500468966,
+            "p95": 84.99365675079389,
+            "p99": 89.3710400196869
+          },
+          "target_hz": 10.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": false,
+          "timing_pass": true
+        },
+        "/perception/camera/front/road_marking/model_grid/class_id:camera_front": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.8,
+            15.2,
+            14.6,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.21422349000022223,
+          "first_output_sec": 0.0803798300003109,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 40.2789939998911,
+            "p95": 59.379323449775264,
+            "p99": 75.53289232058889
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/left/road_marking/model_grid/class_id:camera_left": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.8,
+            15.2,
+            14.6,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.2137768969987519,
+          "first_output_sec": 0.08247830300024361,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 43.94681049961946,
+            "p95": 65.89390239923888,
+            "p99": 78.84547223080524
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/right/road_marking/model_grid/class_id:camera_right": {
+          "messages": 894,
+          "hz": 14.9,
+          "valid_messages": 894,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            14.8,
+            14.8,
+            15.0,
+            14.8,
+            15.2,
+            14.6,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            14.6,
+            15.2
+          ],
+          "max_gap_sec": 0.21380469600080687,
+          "first_output_sec": 0.0835250839991204,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 44.43061350048083,
+            "p95": 61.23442849911953,
+            "p99": 73.93556155999251
+          },
+          "target_hz": 15.0,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_right": {
+          "messages": 897,
+          "hz": 14.95,
+          "valid_messages": 897,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            15.0,
+            15.0,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.18593742600023688,
+          "first_output_sec": 0.00937260899991088,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 32.6212520012632,
+            "p95": 45.46512879969669,
+            "p99": 49.97263251949332
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_front": {
+          "messages": 898,
+          "hz": 14.966666666666667,
+          "valid_messages": 898,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.2,
+            14.8,
+            14.8,
+            15.0,
+            15.0,
+            15.0,
+            15.0
+          ],
+          "max_gap_sec": 0.17626783999912732,
+          "first_output_sec": 0.00948495800003002,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 31.193480000183627,
+            "p95": 43.84316750047219,
+            "p99": 52.10695884930827
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        },
+        "/perception/camera/objects:camera_left": {
+          "messages": 897,
+          "hz": 14.95,
+          "valid_messages": 897,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 15,
+          "five_second_hz": [
+            15.0,
+            15.0,
+            15.0,
+            14.8,
+            15.0,
+            15.2,
+            14.8,
+            14.8,
+            15.2,
+            14.8,
+            14.8,
+            15.0
+          ],
+          "max_gap_sec": 0.1858052770003269,
+          "first_output_sec": 0.009229839999534306,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0,
+          "wall_ms": {
+            "p50": 32.75683400170237,
+            "p95": 45.99503060126154,
+            "p99": 50.97465900071254
+          },
+          "target_hz": 15,
+          "target_95pct_pass": true,
+          "minimum_9_5_pass": true,
+          "minimum_10_pass": true,
+          "timing_pass": true
+        }
+      },
+      "mode_transitions": [
+        {
+          "mode": 1,
+          "started": 11902.07609346,
+          "expected": {
+            "objects": 1,
+            "lane": 1,
+            "traffic_light": 1
+          },
+          "ready": true,
+          "elapsed_sec": 0.513181172998884
+        },
+        {
+          "mode": 2,
+          "started": 11902.589293414,
+          "expected": {
+            "objects": 2,
+            "lane": 2,
+            "traffic_light": 2
+          },
+          "ready": true,
+          "elapsed_sec": 0.46418737200110627
+        }
+      ],
+      "gc_generation2": [
+        {
+          "probe": "family-gc",
+          "at": 11920.360849047,
+          "duration_ms": 10.648403998857248,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 11957.45834777,
+          "duration_ms": 10.593814000458224,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        },
+        {
+          "probe": "family-gc",
+          "at": 11938.893223854,
+          "duration_ms": 8.589020999352215,
+          "caller": "/opt/ros/noetic/lib/python3/dist-packages/genpy/message.py",
+          "function": "__init__"
+        }
+      ],
+      "qt_before": [],
+      "qt_during": [],
+      "qt_after": []
+    }
+  ],
+  "pooled_latency": {
+    "T0-sunny-bev-repeat": {
+      "/perception/traffic_light/detection:camera_extra": {
+        "count": 598,
+        "p50_ms": 59.765594500277075,
+        "p95_ms": 94.2034601002888,
+        "p99_ms": 103.43186081068778
+      },
+      "/perception/camera/front/road_marking/model_grid/class_id:camera_front": {
+        "count": 894,
+        "p50_ms": 56.93446199893515,
+        "p95_ms": 91.61576625028829,
+        "p99_ms": 105.61551234010042
+      },
+      "/perception/camera/left/road_marking/model_grid/class_id:camera_left": {
+        "count": 894,
+        "p50_ms": 60.09585250012606,
+        "p95_ms": 94.80568249973658,
+        "p99_ms": 108.21098660901045
+      },
+      "/perception/camera/right/road_marking/model_grid/class_id:camera_right": {
+        "count": 894,
+        "p50_ms": 60.26669200127799,
+        "p95_ms": 96.15737455014823,
+        "p99_ms": 111.26783484996852
+      },
+      "/perception/camera/objects:camera_left": {
+        "count": 895,
+        "p50_ms": 32.559712999500334,
+        "p95_ms": 46.90937299928919,
+        "p99_ms": 54.238710160534524
+      },
+      "/perception/camera/objects:camera_right": {
+        "count": 895,
+        "p50_ms": 32.181922000745544,
+        "p95_ms": 46.52955800029304,
+        "p99_ms": 52.17594305933744
+      },
+      "/perception/camera/objects:camera_front": {
+        "count": 896,
+        "p50_ms": 31.00066800016066,
+        "p95_ms": 45.55553200043505,
+        "p99_ms": 52.1750182490905
+      },
+      "family_input_to_subscriber": {
+        "count": 894,
+        "p50_ms": 118.45916500078602,
+        "p95_ms": 167.90678940151344,
+        "p99_ms": 199.573020160151
+      }
+    },
+    "T2-sunny-bev-repeat": {
+      "/perception/traffic_light/detection:camera_extra": {
+        "count": 597,
+        "p50_ms": 62.9070769991813,
+        "p95_ms": 93.2554071991035,
+        "p99_ms": 99.72535600078112
+      },
+      "/perception/camera/front/road_marking/model_grid/class_id:camera_front": {
+        "count": 892,
+        "p50_ms": 41.41279349914839,
+        "p95_ms": 64.45011749974586,
+        "p99_ms": 80.13843069042196
+      },
+      "/perception/camera/left/road_marking/model_grid/class_id:camera_left": {
+        "count": 892,
+        "p50_ms": 44.6214109997527,
+        "p95_ms": 65.6827946998419,
+        "p99_ms": 82.41913580959591
+      },
+      "/perception/camera/right/road_marking/model_grid/class_id:camera_right": {
+        "count": 892,
+        "p50_ms": 45.363801999883435,
+        "p95_ms": 66.4623324504646,
+        "p99_ms": 83.77978376021933
+      },
+      "/perception/camera/objects:camera_front": {
+        "count": 895,
+        "p50_ms": 32.33440700023493,
+        "p95_ms": 47.116107100191584,
+        "p99_ms": 53.96582494020546
+      },
+      "/perception/camera/objects:camera_left": {
+        "count": 893,
+        "p50_ms": 34.339054000156466,
+        "p95_ms": 48.70152399998915,
+        "p99_ms": 58.69836619960553
+      },
+      "/perception/camera/objects:camera_right": {
+        "count": 893,
+        "p50_ms": 33.62463000121352,
+        "p95_ms": 48.321592200227315,
+        "p99_ms": 57.2510334802792
+      },
+      "family_input_to_subscriber": {
+        "count": 876,
+        "p50_ms": 105.70857799939404,
+        "p95_ms": 154.77599199994074,
+        "p99_ms": 185.05522900113647
+      }
+    },
+    "T2-foggy-off-repeat": {
+      "/perception/traffic_light/detection:camera_extra": {
+        "count": 598,
+        "p50_ms": 53.096408999408595,
+        "p95_ms": 84.01550554926871,
+        "p99_ms": 90.76340711933878
+      },
+      "/perception/camera/front/road_marking/model_grid/class_id:camera_front": {
+        "count": 894,
+        "p50_ms": 38.72460200000205,
+        "p95_ms": 54.32285570022941,
+        "p99_ms": 69.33464056977755
+      },
+      "/perception/camera/left/road_marking/model_grid/class_id:camera_left": {
+        "count": 894,
+        "p50_ms": 42.332032000558684,
+        "p95_ms": 58.300765550939104,
+        "p99_ms": 72.6682762198835
+      },
+      "/perception/camera/right/road_marking/model_grid/class_id:camera_right": {
+        "count": 894,
+        "p50_ms": 42.83326600034343,
+        "p95_ms": 58.05300604952208,
+        "p99_ms": 66.54169141087561
+      },
+      "/perception/camera/objects:camera_right": {
+        "count": 895,
+        "p50_ms": 32.287559000906185,
+        "p95_ms": 44.6566944998267,
+        "p99_ms": 49.110848420277755
+      },
+      "/perception/camera/objects:camera_front": {
+        "count": 897,
+        "p50_ms": 30.731606999324868,
+        "p95_ms": 42.98523159995966,
+        "p99_ms": 47.723299880453844
+      },
+      "/perception/camera/objects:camera_left": {
+        "count": 897,
+        "p50_ms": 32.65964099955454,
+        "p95_ms": 45.04344980050519,
+        "p99_ms": 49.01972759995258
+      },
+      "family_input_to_subscriber": {
+        "count": 887,
+        "p50_ms": 95.39073799896869,
+        "p95_ms": 132.84261290136786,
+        "p99_ms": 149.21354314061315
+      }
+    },
+    "T2-sunny-off-repeat": {
+      "/perception/traffic_light/detection:camera_extra": {
+        "count": 598,
+        "p50_ms": 53.563960500468966,
+        "p95_ms": 84.99365675079389,
+        "p99_ms": 89.3710400196869
+      },
+      "/perception/camera/front/road_marking/model_grid/class_id:camera_front": {
+        "count": 894,
+        "p50_ms": 40.2789939998911,
+        "p95_ms": 59.379323449775264,
+        "p99_ms": 75.53289232058889
+      },
+      "/perception/camera/left/road_marking/model_grid/class_id:camera_left": {
+        "count": 894,
+        "p50_ms": 43.94681049961946,
+        "p95_ms": 65.89390239923888,
+        "p99_ms": 78.84547223080524
+      },
+      "/perception/camera/right/road_marking/model_grid/class_id:camera_right": {
+        "count": 894,
+        "p50_ms": 44.43061350048083,
+        "p95_ms": 61.23442849911953,
+        "p99_ms": 73.93556155999251
+      },
+      "/perception/camera/objects:camera_left": {
+        "count": 897,
+        "p50_ms": 32.75683400170237,
+        "p95_ms": 45.99503060126154,
+        "p99_ms": 50.97465900071254
+      },
+      "/perception/camera/objects:camera_right": {
+        "count": 897,
+        "p50_ms": 32.6212520012632,
+        "p95_ms": 45.46512879969669,
+        "p99_ms": 49.97263251949332
+      },
+      "/perception/camera/objects:camera_front": {
+        "count": 898,
+        "p50_ms": 31.193480000183627,
+        "p95_ms": 43.84316750047219,
+        "p99_ms": 52.10695884930827
+      },
+      "family_input_to_subscriber": {
+        "count": 890,
+        "p50_ms": 99.39923000001727,
+        "p95_ms": 137.67901680066643,
+        "p99_ms": 152.3852449292281
+      }
+    }
+  },
+  "pooling": "Raw frame samples within complete runs, including failed runs; diagnostics excluded. Never mean run medians. Soak and repeat pools separate.",
+  "latency_definition": "Model input callback to publish; valid family input callback to subscriber. Source age and model forward are separate quantities.",
+  "full_stack_driving_acceptance": false,
+  "automatic_promotion_allowed": false
+}

@@ -8,9 +8,9 @@
     "detection": 89,
     "facade": 17,
     "measurements": 11,
-    "shadow-tools": 5
+    "shadow-tools": 7
   },
-  "cpu_count": 405,
+  "cpu_count": 407,
   "actual_ros_mode_contract": {
     "pass_": true,
     "master": "127.0.0.1:11391",
@@ -56,7 +56,22 @@
   },
   "acceptance_complete": false,
   "default_backend": "twinlite",
-  "live_repeats": "running",
-  "soak": "pending",
-  "merged": false
+  "live_repeats": "12 complete; PyTorch SUNNY r3 family gap, TensorRT FOGGY r2 source_stale readiness failure",
+  "soak": {
+    "requested_seconds": 600,
+    "completed_seconds": 600,
+    "changed_from_seconds": 1800,
+    "change_reason": "User explicitly shortened continuous test to10 minutes.",
+    "passed": false,
+    "readiness_drops": 0,
+    "family_gap_ms": 365.8931130012206
+  },
+  "merged": false,
+  "noetic_shadow_tool_checks": 7,
+  "execution_code_commit": "6d96e46e",
+  "measurements_complete": true,
+  "catkin_build": true,
+  "catkin_install": true,
+  "installed_model_paths_verified": true,
+  "ros_rqt_remaining": 0
 }
