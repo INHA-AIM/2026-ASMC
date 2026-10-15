@@ -211,3 +211,7 @@ GUI 시험은 rqt0→1→0, GUI OFF는0 유지를 확인했고 마지막 ROS/rqt
 결과는 [E356 갤러리](http://127.0.0.1:8765/camera-shadow-family-20261015-r1/index.html),
 작은 JSON/CSV 증거는 `config/baselines/evidence/camera_shadow_family_v1/`, 원시는
 `data/runtime/camera-shadow-family-v1/`에 있다. 후속 LiDAR 연결과 운영 승격을 완료로 표시하지 않는다.
+
+최신 결과 커밋 `ae6dd452`의 hosted 카메라/planning/LiDAR CI는 결제 또는 지출 한도 문제로
+job 시작 전에 차단됐다(steps0). 코드 시험 실패나 통과로 해석하지 않는다.
+`hosted-ci-block.json`에 대상 commit·check ID·확인 시각을 기록했다. 로컬 검사로 이 차단을 대체하지 않는다.
