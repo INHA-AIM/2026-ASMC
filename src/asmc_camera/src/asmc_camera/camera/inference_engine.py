@@ -40,9 +40,23 @@ class InferenceEngine:
         self.restore_original = bool(restore_original)
 
     def infer(
+        self, images_bgr, preserve_model_grid=True, gpu_inputs=None,
+    ) -> BatchPrediction:
+        stream = getattr(self.backend, 'cuda_stream', None)
+        if stream is not None:
+            with self.backend._torch.cuda.stream(stream):
+                try:
+                    return self._infer(images_bgr, preserve_model_grid, gpu_inputs)
+                finally:
+                    for raw in (gpu_inputs or {}).values():
+                        raw.release()
+        return self._infer(images_bgr, preserve_model_grid, gpu_inputs)
+
+    def _infer(
         self,
         images_bgr: Mapping[str, np.ndarray],
         preserve_model_grid: bool = True,
+        gpu_inputs=None,
     ) -> BatchPrediction:
         if not images_bgr:
             raise ValueError("at least one view is required")
@@ -53,12 +67,19 @@ class InferenceEngine:
         started = time.perf_counter()
         for key in keys:
             shape = tuple(self.backend.info.input_hw_by_view.get(key, self.backend.info.input_hw))
-            tensor, geometry = letterbox_bgr(
-                images_bgr[key], target_hw=shape
-            )
+            if gpu_inputs is not None:
+                from asmc_camera.runtime.gpu_input import PreprocessSpec, prepare
+                tensor, geometry, _ = prepare(gpu_inputs[key], PreprocessSpec(shape, 'area'))
+            else:
+                tensor, geometry = letterbox_bgr(images_bgr[key], target_hw=shape)
             groups.setdefault(shape, []).append((key, tensor))
             geometries[key] = geometry
-        batches = [([key for key, _ in entries], np.stack([tensor for _, tensor in entries]))
+        if gpu_inputs is not None:
+            import torch
+            stack = torch.stack
+        else:
+            stack = np.stack
+        batches = [([key for key, _ in entries], stack([tensor for _, tensor in entries]))
                    for entries in groups.values()]
         preprocess_ms = (time.perf_counter() - started) * 1000.0
 

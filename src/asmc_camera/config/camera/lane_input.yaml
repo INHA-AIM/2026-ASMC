@@ -1,5 +1,5 @@
 # One shape policy for inference and calibrated model-grid projection.
-# Native RGB/header/calibration are unchanged. Only front tensor is enlarged.
-input_hw: [384, 640]
+# Native RGB/header/calibration are unchanged. B1/B2 matches YOLO geometry.
+input_hw: [480, 640]
 input_hw_by_view:
   front: [544, 960]

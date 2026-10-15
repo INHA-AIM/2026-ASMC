@@ -9,3 +9,5 @@ calibration_config: $(find asmc_camera)/config/cameras_v3.yaml
 ego_hood_filter: false
 debug_raw: false
 debug_masks: false
+# Validated direct AutoBackend + unchanged NMS, avoiding per-frame Results graphs.
+direct_detect: true

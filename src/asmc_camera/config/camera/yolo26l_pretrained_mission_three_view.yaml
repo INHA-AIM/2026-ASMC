@@ -1,4 +1,4 @@
-weights: $(optenv ASMC_MODELS_ROOT /data/models)/camera_coco7_v1/yolo26l.engine
+weights: $(find asmc_camera)/models/object_detection/yolo26l-pretrained_coco7.engine
 expected_sha256: 95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f
 runtime_backend: tensorrt
 task: detect

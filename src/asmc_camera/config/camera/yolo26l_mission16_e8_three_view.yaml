@@ -35,7 +35,7 @@ allowed_names:
 - stroller
 device: cuda:0
 require_cuda: true
-weights: $(optenv ASMC_MODELS_ROOT /data/models)/camera_mission16_v11_e8/yolo26l.engine
+weights: $(find asmc_camera)/models/object_detection/yolo26l-finetuned_e8.engine
 runtime_backend: tensorrt
 expected_sha256: c9dc3ca826c9fffa4705da4e31b7ff65c913a50b9658f4d74a7079d08df21f97
 deployment_profile: finetuned_e8

@@ -52,6 +52,12 @@ class ModelGridProjectionTest(unittest.TestCase):
             np.testing.assert_allclose(result.xy[0],point,atol=.15)
             self.assertEqual(int(result.source_mask[0]),source)
 
+    def test_side480_native_grid_keeps_both_camera_metric_coordinates(self):
+        for view, point, source in [('left',(2.0,5.0),2),('right',(2.0,-5.0),4)]:
+            result=self._single_point(view,point,source,(480,640))
+            np.testing.assert_allclose(result.xy[0],point,atol=.15)
+            self.assertEqual(int(result.source_mask[0]),source)
+
     def test_front_model_grid_quantization_for_variable_lane_widths(self):
         for width in (2.5, 3.0, 3.5, 4.0):
             for distance in (5.0, 10.0, 15.0, 20.0):

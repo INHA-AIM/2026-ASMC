@@ -39,9 +39,22 @@ class CameraEntrypointsTest(unittest.TestCase):
         names = {n.name for n in config.nodes}
         self.assertIn('camera_runtime', names)
         self.assertIn('camera_lane_vectorizer', names)
-        self.assertFalse({'camera_objects', 'camera_lane', 'camera_traffic_light'} & names)
-        self.assertEqual(config.params['/camera_runtime/models'].value, ['objects', 'lane', 'traffic_light'])
+        self.assertFalse({'camera_objects', 'camera_lane'} & names)
+        self.assertIn('camera_traffic_light', names)
+        self.assertEqual(config.params['/camera_runtime/models'].value, ['objects', 'lane'])
         self.assertEqual(config.params['/camera_runtime/components/lane/target_hz'].value, 15.)
+
+    def test_shared_traffic_only_does_not_start_an_empty_gpu_runtime(self):
+        config = self.config('_runtime.launch', 'implementation:=shared', 'models:=traffic_light')
+        self.assertEqual({n.name for n in config.nodes}, {'camera_traffic_light'})
+
+    def test_package_weights_resolve_without_external_model_mount(self):
+        for detector, filename in [('e8','yolo26l-finetuned_e8.engine'),('pretrained','yolo26l-pretrained_coco7.engine')]:
+            config = self.config('camera.launch','models:=objects','detector:='+detector)
+            path = Path(config.params['/camera_objects/weights'].value)
+            self.assertEqual(path, LAUNCH.parent/'models/object_detection'/filename)
+            self.assertTrue(path.is_file())
+            self.assertFalse(path.is_symlink())
 
     def test_models_order_and_pretrained_selection(self):
         config = self.config('camera.launch', 'models:=traffic_light,objects', 'detector:=pretrained')

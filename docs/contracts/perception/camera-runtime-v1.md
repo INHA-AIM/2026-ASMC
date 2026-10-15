@@ -21,7 +21,8 @@ roslaunch asmc_camera camera.launch mode:=active
 `objects,lane,traffic_light`, `detector:=e8/pretrained`, `confidence`, `nms_iou`다.
 현재 정본은 YOLO15Hz·TwinLite15Hz·ResNet10Hz, confidence0.40·동일 클래스 NMS0.50이다.
 2026-10-15 사용자 요청에 따라 전방 tensor는 YOLO/TwinLite 모두544×960으로 변경했다.
-YOLO 좌우480×640, TwinLite 좌우384×640은 유지한다. 센서 RGB·원본 좌표·header·보정은 그대로다.
+현재 PR의 TwinLite 좌우480×640 후보로 YOLO와 B1/B2 shape를 통일한다.
+기존 좌우384×640은 `lane_input_side384.yaml`에 보존한다. 센서 RGB·원본 좌표·header·보정은 그대로다.
 TwinLite는 한 checkpoint의 같은 크기 입력끼리 나눠 추론하며, 전방 확대와 YOLO 축소의
 통합 효과는 [960 검증 기록](../../handoffs/perception/camera-front960-validation.md)에서 별도로 판정한다.
 이전1280/640 결과를 새 입력의 성능 수락으로 사용하지 않는다.
@@ -36,6 +37,10 @@ PREPARE는 서비스로 요청한다. ACTIVE는 새로운 영상만 처리하며
 mask·보정·입력·모델 경로·상세 설정을 소유한다. 공개 옵션으로 매번 지정할 필요가 없다.
 ResNet은 camera4의 기존 PIL RGB·GPU resize·bfloat16 경로를 유지한다.
 `lane_input.yaml`은 TwinLite와 model-grid 투영이 함께 읽는 단일 입력 크기 설정이다.
+YOLO 배포 checkpoint2개·engine2개는 패키지 models의 실제 Git 파일이다.
+[모델 배포 안내](../../../src/asmc_camera/models/README.md)의 지원 GPU/runtime과 SHA를 따른다.
+공유 GPU 입력은 내부 `_runtime.launch implementation:=shared shared_gpu_input:=true` 후보이며
+기본은 모델별 프로세스다. 공유 후보에서도 camera4 ResNet은 별도 프로세스를 사용한다.
 구형 `perception.launch`의 TwinLite384×640 호환 경로는 보존한다.
 TwinLite·BEV·차선 피팅의 책임은 분리하며 차선 주행 소비는 음영 ODD에 한정한다.
 구간 판정과 결과 소비는 판제 소유다.

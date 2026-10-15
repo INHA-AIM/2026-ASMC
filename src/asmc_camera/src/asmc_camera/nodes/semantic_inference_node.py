@@ -332,6 +332,7 @@ class SemanticInferenceNode:
             from contextlib import ExitStack
             leases = ExitStack()
             decoded = {}
+            gpu_inputs = {} if self.input_source and self.input_source.gpu_enabled else None
             usable_frames = {}
             started = time.perf_counter()
             for frame in frames:
@@ -346,6 +347,16 @@ class SemanticInferenceNode:
                     continue
                 decoded[frame.view] = image
                 usable_frames[frame.view] = frame
+                if gpu_inputs is not None:
+                    try:
+                        gpu_inputs[frame.view] = leases.enter_context(self.input_source.gpu_lease(frame, image))
+                    except Exception as exc:
+                        if self.fault_handler:
+                            self.fault_handler(exc)
+                        self.control.state.complete(token, stamps, False, 'gpu_input_error')
+                        rospy.logerr_throttle(2., 'shared GPU input failed: %s', exc)
+                        decoded.clear()
+                        break
             decode_ms = (time.perf_counter() - started) * 1000.0
             if not decoded or (self.control.state.managed and len(decoded) != len(frames)):
                 self.control.state.complete(token, stamps, False, "decode_error")
@@ -360,6 +371,7 @@ class SemanticInferenceNode:
                 prediction = self.engine.infer(
                     decoded,
                     preserve_model_grid=preserve_model_grid,
+                    gpu_inputs=gpu_inputs,
                 )
                 if self._stop.is_set():
                     return

@@ -8,7 +8,7 @@ from .shared_input import SharedInput
 
 class SharedRuntime:
     def __init__(self):
-        self.input = SharedInput(rospy, CompressedImage)
+        self.input = SharedInput(rospy, CompressedImage, rospy.get_param('~shared_gpu_input', False))
         self.components, self.controls, self.threads = [], [], []
         self.fatal = ''
         self.closed = False
@@ -18,6 +18,8 @@ class SharedRuntime:
         for role in self.models:
             rospy.set_param('/camera_runtime/components/' + role + '/initial_mode', 0)
             rospy.set_param('/camera_runtime/components/' + role + '/managed', True)
+        if self.input.gpu_enabled and 'objects' in self.models:
+            rospy.set_param('/camera_runtime/components/objects/direct_detect', True)
         from asmc_camera.nodes.object_detection_node import ObjectDetectionNode
         from asmc_camera.nodes.semantic_inference_node import SemanticInferenceNode
         for role, factory in [('objects', ObjectDetectionNode), ('lane', SemanticInferenceNode)]:
@@ -82,6 +84,11 @@ class SharedRuntime:
             values = dict(decodes=cache.decodes, hits=cache.hits, busy=cache.busy, errors=cache.errors,
                           slots={camera: len(rows) for camera, rows in cache.rows.items()})
         rospy.loginfo("shared input summary: %s", json.dumps(values, sort_keys=True))
+        if self.input.gpu_cache is not None:
+            gpu = self.input.gpu_cache
+            rospy.loginfo('shared GPU summary: %s', json.dumps(dict(
+                uploads=gpu.uploads, hits=gpu.hits, bytes=gpu.bytes, busy=gpu.busy,
+                prepares=gpu.prepares, prepared_hits=gpu.prepared_hits, resizes=gpu.resizes)))
 
 
 def main():

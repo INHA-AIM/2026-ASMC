@@ -1,0 +1,4 @@
+# Reproduction/control profile: front960, original side384 letterbox.
+input_hw: [384, 640]
+input_hw_by_view:
+  front: [544, 960]

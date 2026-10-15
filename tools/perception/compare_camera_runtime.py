@@ -86,6 +86,7 @@ def main():
     p.add_argument('--fusion-hz', type=float)
     p.add_argument('--legacy-lidar-root', type=Path)
     p.add_argument('--profile-lane-fit', action='store_true')
+    p.add_argument('--shared-gpu-input', action='store_true')
     a = p.parse_args()
     # roslaunch starts node processes in ROS_HOME; probes need an absolute path.
     a.output = a.output.resolve()
@@ -133,6 +134,10 @@ def main():
             'lane_target_hz:='+str(a.lane_hz), 'traffic_light_device:=cuda'] if a.variant == 'R0' else [
             'mode:=standby', 'implementation:='+('shared' if a.variant == 'R2' else 'separate'), 'lane_hz:='+str(a.lane_hz), 'nms_iou:='+str(a.nms_iou)]
     if a.variant != 'R0':
+        if a.shared_gpu_input:
+            if a.variant != 'R2':
+                raise ValueError('shared GPU input requires R2')
+            args += ['shared_gpu_input:=true']
         args += ['confidence:='+str(a.confidence)]
         if a.lane_batch_wait_ms is not None:
             args += ['lane_batch_wait_ms:='+str(a.lane_batch_wait_ms)]

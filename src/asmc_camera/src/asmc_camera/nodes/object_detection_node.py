@@ -93,6 +93,7 @@ class ObjectDetectionNode:
                          expected_prompt_sha256=self.parameters.get('~expected_prompt_sha256','')) if batched else {}
             if production_batch:
                 extra.update(head_profile=self.parameters.get('~head_profile', 'legacy_coco7'),
+                             direct_detect=self.parameters.get('~direct_detect', False),
                              nms_iou=self.parameters.get('~nms_iou', .5))
             if self.parameters.get('~model_kind', 'yolo') == 'rfdetr':
                 if not batched:

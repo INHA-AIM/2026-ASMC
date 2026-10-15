@@ -1,0 +1,74 @@
+{
+  "schema_version": 2,
+  "deployment": "package-local ordinary Git files",
+  "weights_license": "AGPL-3.0; upstream Ultralytics weights",
+  "source_release": "camera-yolo26l-v11-e8-v1",
+  "files": [
+    {
+      "profile": "finetuned_e8",
+      "path": "object_detection/yolo26l-finetuned_e8.pt",
+      "sha256": "ec93d103bdc085e33d24ecd7d43afaefa6acf156549343b0d829123a0d89f2b9",
+      "bytes": 53073858,
+      "source_sha256": "6d5f4f0645b855bf66f0b0fa9d86b690d7659027e419d3b894d40c046ff89f70",
+      "source_relative_path": "camera_mission16_v11_e8/yolo26l.pt",
+      "transformation": "EMA tensors unchanged; training state removed by allowlist"
+    },
+    {
+      "profile": "finetuned_e8",
+      "path": "object_detection/yolo26l-finetuned_e8.engine",
+      "sha256": "c9dc3ca826c9fffa4705da4e31b7ff65c913a50b9658f4d74a7079d08df21f97",
+      "bytes": 56610526,
+      "source_sha256": "c9dc3ca826c9fffa4705da4e31b7ff65c913a50b9658f4d74a7079d08df21f97",
+      "source_relative_path": "camera_mission16_v11_e8/yolo26l.engine",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "profile": "pretrained_coco7",
+      "path": "object_detection/yolo26l-pretrained_coco7.pt",
+      "sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "bytes": 53211173,
+      "source_sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "source_relative_path": "camera_coco7_v1/yolo26l.pt",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "profile": "pretrained_coco7",
+      "path": "object_detection/yolo26l-pretrained_coco7.engine",
+      "sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+      "bytes": 57496998,
+      "source_sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+      "source_relative_path": "camera_coco7_v1/yolo26l.engine",
+      "transformation": "byte-for-byte copy"
+    }
+  ],
+  "runtime": {
+    "container": "asmc-ros-noetic",
+    "gpu": "RTX 4060 Ti 8GB",
+    "tensorrt": "10.13.0.35",
+    "ultralytics": "8.4.150",
+    "front_tensor": [
+      544,
+      960
+    ],
+    "side_tensor": [
+      480,
+      640
+    ],
+    "batch": "2plus1",
+    "target_hz": 15,
+    "confidence": 0.4,
+    "nms_iou": 0.5,
+    "ego_mask": true,
+    "profile_revision": "front960-20261015"
+  },
+  "checkpoint_provenance": {
+    "finetuned_e8": "v11 complete 8epoch epoch7.pt; deployment contains unchanged EMA and no resume state",
+    "pretrained_coco7": "official YOLO26l detection, COCO80 checkpoint; runtime filters original COCO7"
+  },
+  "engine_environment": {
+    "gpu": "RTX 4060 Ti 8GB",
+    "tensorrt": "10.13.0.35",
+    "platform": "Linux x86_64",
+    "container": "asmc-ros-noetic"
+  }
+}

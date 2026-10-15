@@ -56,7 +56,9 @@ def main():
     p.add_argument('--matrix',default='final-matrix',help='Completed fixed-code comparison directory')
     p.add_argument('--recovery',default='resource-recovery',help='Coverage-only repeat; never replace a failed performance result')
     p.add_argument('--soak-matrix',default='soak',help='Explicit final continuous trial; earlier failures stay historical')
+    p.add_argument('--structure-matrices',help='Comma-separated matrices for separate/shared input comparison; default retains visualization reporting')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
+    final_matrices=set(a.structure_matrices.split(',')) if a.structure_matrices else {a.matrix}
     rate_followup(SimpleNamespace(results=a.results,output=a.output))
     summary=json.loads((a.output/'summary.json').read_text())
     originals={t['trial']:t for t in summary['trials'] if t['matrix']==a.matrix}
@@ -77,7 +79,12 @@ def main():
         trial['resources']=resource_summary(json.loads((root/'resources.json').read_text()),start,end)
         resource_ok=trial['resources']['resource_coverage_pass']
         if not resource_ok:trial['minimum_acceptance_failures'].append('resource coverage invalid')
-        trial['effective_final_trial']=trial['matrix']==a.matrix and resource_ok
+        trial['effective_final_trial']=trial['matrix'] in final_matrices and resource_ok
+        if a.structure_matrices:
+            jobs=json.loads((a.results/trial['matrix']/'jobs.json').read_text())
+            job=next(j for j in jobs if j['name']==trial['trial'])
+            trial['comparison_group']=('separate' if job['variant']=='R1' else
+                                       'shared_gpu' if job.get('shared_gpu_input') else 'shared_decode')
         if trial['matrix']==a.recovery:
             original=originals[trial['rerun_of']]
             original_root=a.results/a.matrix/original['trial']
@@ -154,19 +161,19 @@ def main():
             trial['pending_capacity_values']=sorted({int(v['pending_capacity']) for _,v in view})
             if max(trial['max_image_cache_per_view'].values())>8 or trial['pending_capacity_values']!=[1]:
                 trial['minimum_acceptance_failures'].append('debug cache/pending bound')
-            if trial['matrix'] in (a.matrix,a.recovery,a.soak_matrix) and trial['missing_fresh_view_snapshots']:
+            if trial['matrix'] in final_matrices | {a.recovery,a.soak_matrix} and trial['missing_fresh_view_snapshots']:
                 trial['minimum_acceptance_failures'].append('debug view missing/stale')
             if not trial['codec_contract_pass']:trial['minimum_acceptance_failures'].append('debug codec contract/errors')
         if trial['gui'] and 'objects' in trial['active']:
             debug=trial.get('debug_outputs',{}).get('objects',{})
-            if trial['matrix'] in (a.matrix,a.recovery,a.soak_matrix) and debug.get('messages',0)==0:
+            if trial['matrix'] in final_matrices | {a.recovery,a.soak_matrix} and debug.get('messages',0)==0:
                 trial['minimum_acceptance_failures'].append('missing actual object debug output')
         if trial['effective_final_trial'] and trial.get('complete') and '-control-' not in trial['trial']:
-            group=('baseline' if '-baseline-' in trial['trial'] else 'candidate')+'-'+('foggy' if '-foggy-' in trial['trial'] else 'sunny')
+            group=trial.get('comparison_group', 'baseline' if '-baseline-' in trial['trial'] else 'candidate')+'-'+('foggy' if '-foggy-' in trial['trial'] else 'sunny')
             inputs={}
             for path in root.glob('*.jsonl'):
                 for r in rows(path):
-                    if r['event']=='input' and path.stem=='camera_lane':inputs[r['stamp']]=min(r['at'],inputs.get(r['stamp'],r['at']))
+                    if r['event']=='input' and path.stem in ('camera_lane','camera_runtime'):inputs[r['stamp']]=min(r['at'],inputs.get(r['stamp'],r['at']))
                     if r['event']=='output' and r.get('received') is not None and not r.get('stale') and start<=r['at']<end:
                         if r['topic']=='/perception/camera/objects' and not r['valid']:continue
                         pooled[group][r['topic']+':'+r['frame']].append(r['wall_ms'])
@@ -179,9 +186,9 @@ def main():
         final_candidate_failures={r['trial']:r['minimum_acceptance_failures'] for r in summary['trials']
             if (r.get('effective_final_trial') or r['matrix']==a.soak_matrix) and '-baseline-' not in r['trial'] and r['minimum_acceptance_failures']},
         invalid_resource_trials={r['matrix']+'/'+r['trial']:r.get('resource_recovery_trial') for r in summary['trials']
-            if r['matrix'] in (a.matrix,a.recovery,a.soak_matrix) and not r.get('resources',{}).get('resource_coverage_pass',False)},
+            if r['matrix'] in final_matrices | {a.recovery,a.soak_matrix} and not r.get('resources',{}).get('resource_coverage_pass',False)},
         historical_failures={r['matrix']+'/'+r['trial']:r['minimum_acceptance_failures'] for r in summary['trials']
-            if r['matrix'] not in (a.matrix,a.soak_matrix) and r['minimum_acceptance_failures']},
+            if r['matrix'] not in final_matrices | {a.soak_matrix} and r['minimum_acceptance_failures']},
         soak_matrix=a.soak_matrix)
     parity_root=a.results/'saved-parity'
     if all((parity_root/('complete-'+v)/'report.json').exists() for v in ('baseline','candidate')):

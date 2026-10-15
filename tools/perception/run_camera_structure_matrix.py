@@ -80,6 +80,8 @@ def main():
                 command += ['--legacy-lidar-root', job['legacy_lidar_root']]
             if job.get('profile_lane_fit'):
                 command += ['--profile-lane-fit']
+            if job.get('shared_gpu_input'):
+                command += ['--shared-gpu-input']
             script = 'source '+shlex.quote(str(overlay/'devel/setup.bash'))+'\nexec '+shlex.join(command)
             print('START '+label, flush=True)
             with (a.output/(label+'.log')).open('w') as stream:

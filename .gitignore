@@ -30,8 +30,6 @@ venv/
 /data/
 /checkpoints/
 # Verified local links installed from the camera model release; binaries remain external.
-/src/asmc_camera/models/object_detection/yolo26l-*.pt
-/src/asmc_camera/models/object_detection/yolo26l-*.engine
 *.bag
 *.bagidx
 

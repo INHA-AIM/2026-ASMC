@@ -72,13 +72,18 @@ class Delivery:
 
 
 class SharedInput:
-    def __init__(self, rospy, compressed_type):
+    def __init__(self, rospy, compressed_type, gpu_enabled=False):
         self.ros, self.message_type = rospy, compressed_type
         self.lock = threading.RLock()
         self.callbacks, self.subscribers = {}, {}
         self.last_stamp, self.epochs, self.last_payload = {}, {}, {}
         self.received = {}
         self.cache = DecodedCache()
+        self.gpu_enabled = bool(gpu_enabled)
+        self.gpu_cache = None
+        if self.gpu_enabled:
+            from .gpu_input import RawGpuCache
+            self.gpu_cache = RawGpuCache()
 
     def subscribe(self, topic, callback, callback_args=None, **kwargs):
         callback = (lambda message, fn=callback, arg=callback_args: fn(message, arg)) if callback_args is not None else callback
@@ -110,7 +115,8 @@ class SharedInput:
             self.last_payload[topic] = payload
             self.received[topic] = self.received.get(topic, 0) + 1
             callbacks = tuple(self.callbacks[topic])
-            key = (message.header.frame_id, self.epochs.get(topic, 0), stamp)
+            key = (message.header.frame_id, self.epochs.get(topic, 0), stamp,
+                   int(getattr(message.header, 'seq', 0)))
         delivery = Delivery(copy.deepcopy(message.header), payload, received,
                             received_ros, (topic, key), self)
         for callback in callbacks:
@@ -129,3 +135,11 @@ class SharedInput:
     def close(self):
         for subscriber in self.subscribers.values():
             subscriber.unregister()
+        if self.gpu_cache is not None:
+            self.gpu_cache.close()
+
+    def gpu_lease(self, frame, image):
+        if self.gpu_cache is None:
+            raise RuntimeError('shared GPU input is not enabled')
+        topic, key = frame.decode_key
+        return self.gpu_cache.lease(topic, key, image)

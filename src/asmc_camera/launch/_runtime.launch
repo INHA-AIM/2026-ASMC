@@ -5,6 +5,7 @@
   <arg name="nms_iou" default="0.50"/>
   <arg name="implementation" default="separate" doc="separate | shared; experimental until accepted"/>
   <arg name="lane_hz" default="15.0"/>
+  <arg name="shared_gpu_input" default="false" doc="internal validated GPU preprocessing candidate"/>
   <arg name="lane_batch_wait_ms" default="20.0"/>
   <arg name="lane_fusion_hz" default="$(arg lane_hz)"/>
   <arg name="profile" default="$(eval {'off':'idle','standby':'planning','active':'debug'}[arg('mode')])"/>
@@ -21,7 +22,7 @@
     <arg name="start_camera_objects" value="$(eval arg('objects') and arg('separate'))"/>
     <arg name="start_camera_lane" value="$(arg lane)"/>
     <arg name="start_lane_inference" value="$(arg separate)"/>
-    <arg name="start_traffic_light" value="$(eval arg('traffic') and arg('separate'))"/>
+    <arg name="start_traffic_light" value="$(arg traffic)"/>
     <arg name="start_visualization" value="false"/>
     <arg name="objects_debug_raw" value="false"/>
     <arg name="traffic_light_device" value="cuda"/>
@@ -39,9 +40,10 @@
     <arg name="lane_node_name" value="camera_lane"/>
     <arg name="traffic_node_name" value="camera_traffic_light"/>
   </include>
-  <group if="$(eval arg('mode') != 'off' and not arg('separate'))">
+  <group if="$(eval arg('mode') != 'off' and not arg('separate') and (arg('objects') or arg('lane')))">
     <node pkg="asmc_camera" type="camera_runtime_node.py" name="camera_runtime" output="screen">
-      <rosparam param="models" subst_value="true">$(arg selection)</rosparam>
+      <param name="shared_gpu_input" value="$(arg shared_gpu_input)"/>
+      <rosparam param="models" subst_value="true">$(eval ['objects','lane'] if arg('objects') and arg('lane') else ['objects'] if arg('objects') else ['lane'])</rosparam>
       <param name="initial_mode" value="$(eval 2 if arg('mode') == 'active' else 0)"/>
       <rosparam command="load" file="$(arg object_config)" ns="components/objects" subst_value="true"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/object_classes_mission16_v1.yaml" ns="components/objects"/>

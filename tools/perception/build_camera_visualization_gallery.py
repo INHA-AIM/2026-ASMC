@@ -40,9 +40,9 @@ def main():
     main_trials=[r for r in report['trials'] if r.get('effective_final_trial') or r['matrix']==soak_matrix]
     primary=[r for r in main_trials if '-control-' not in r['trial'] and r['matrix']!=soak_matrix]
     overview=[]
-    for group in ('baseline','candidate'):
+    for group in report.get('comparison_groups',('baseline','candidate')):
         for weather in ('sunny','foggy'):
-            subset=[r for r in primary if ('baseline' if '-baseline-' in r['trial'] else 'candidate')==group and '-'+weather+'-' in r['trial']]
+            subset=[r for r in primary if r.get('comparison_group','baseline' if '-baseline-' in r['trial'] else 'candidate')==group and '-'+weather+'-' in r['trial']]
             if not subset:continue
             resource=[r['resources'] for r in subset]
             overview.append([group,weather,len(subset),
@@ -100,6 +100,11 @@ def main():
     if report.get('condition_correction'):
         content+='<p class="status">측정 조건 정정: '+esc(report['condition_correction']['reason'])+' 초기 수치는 보존하며 viewer를 정리한 별도 대조를 수행한다.</p>'
     content+='<p>모델 입력 callback→발행 지연과 차선 family 지연은 별도다. 백분위는 원시 프레임을 합쳐 계산했다. CPU는 camera/debug/Main preview 프로세스 합산(100%=1코어), rqt는 WSL 전체 CPU에 포함된다. GPU는 MORAI·Windows 전체다.</p>'
+    for extra in report.get('additional_tables',[]):
+        content+='<h2>'+esc(extra['title'])+'</h2>'+table(extra['headers'],extra['rows'])
+    if report.get('quality_gallery'):
+        content+='<h2>같은 RGB · Native GT / 기존384 / 후보480</h2><p>6개 조건 run의 고정54장 중18장 표시. 연속 관측이며 독립 장면54개로 해석하지 않는다.</p><div class="photos">'+''.join(
+            '<figure><figcaption>'+esc(r['label'])+'</figcaption><a href="'+esc(r['file'])+'"><img loading="lazy" src="'+esc(r['file'])+'"></a></figure>' for r in report['quality_gallery'])+'</div>'
     content+='<h2>'+esc(report.get('comparison_heading','기존 / 신규 전체 GUI · 날씨별 3회'))+'</h2>'+table(['구성','날씨','회차','CPU % 평균','RSS peak MiB','VRAM peak %','유효 family Hz 평균','최저 5초 Hz','readiness false 상태 수'],overview)
     content+='<h2>실제 화면</h2><p>각 회차에서 수신한 디버그 JPEG이며 추론 품질 GT가 아니다. 좌/전방/우 순서와 뷰별 시각·mask SHA를 유지한다.</p><div class="photos">'+''.join(photos)+'</div>'
     content+='<h2>실패 화면 보존</h2><p>readiness가 꺼졌을 때 가장 최근에 수신한 디버그 화면이다. 정확히 동기화한 source GT가 아니며, 화면만으로 센서 또는 추론 원인을 단정하지 않는다.</p><div class="photos">'+''.join(failure_photos)+'</div>'
