@@ -27,6 +27,24 @@ class ShadowValidationTest(unittest.TestCase):
         self.assertFalse(acceptance_eligible(dict(profile_lane_fit=True)))
         self.assertFalse(acceptance_eligible(dict(acceptance_eligible=False)))
 
+    def test_runtime_acceptance_keeps_short_family_gaps_and_transient_readiness_failures(self):
+        from summarize_camera_structure import shadow_acceptance_failures
+        stream=dict(five_second_hz=[14.8],timing_pass=True,duplicate_stamps=0,reversed_stamps=0)
+        keys=['/perception/camera/objects:'+v for v in ('front','left','right')]
+        keys+=['/perception/camera/'+v+'/road_marking/model_grid/class_id:'+v for v in ('front','left','right')]
+        keys+=['/perception/traffic_light/detection:extra']
+        report=dict(complete=True,start=0,end=60,active=['objects','lane','traffic_light'],
+            streams={k:stream for k in keys},lane_family=dict(valid_supply=dict(stream,max_gap_sec=.2)),
+            resources=dict(resource_coverage_pass=True,vram_peak_fraction=.7))
+        statuses=[dict(role=r,at=1,prepared=True,pipeline_ready=True,errors=[]) for r in report['active']]
+        self.assertEqual(shadow_acceptance_failures(report,statuses),[])
+        report['lane_family']['valid_supply']['max_gap_sec']=.251
+        self.assertIn('valid family gap over250ms',shadow_acceptance_failures(report,statuses))
+        statuses[1]['pipeline_ready']=False
+        self.assertIn('ACTIVE readiness/errors: lane',shadow_acceptance_failures(report,statuses))
+        report['allocation_profile']=True
+        self.assertEqual(shadow_acceptance_failures(report,statuses),['diagnostic run: excluded from acceptance'])
+
     def test_camera_pairing_does_not_accept_out_of_window_or_missing_inputs(self):
         self.assertIsNone(nearest_index([],10,3))
         self.assertIsNone(nearest_index([1,20],10,3))

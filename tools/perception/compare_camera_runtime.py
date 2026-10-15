@@ -177,6 +177,10 @@ def main():
                     node.launch_prefix = 'python3 '+shlex.quote(str(probe))+diagnostic+' --output '+shlex.quote(str(a.output/(node.name+'.jsonl')))+' --'
                 elif node.type=='lane_vectorizer_node.py' and a.profile_lane_fit:
                     node.launch_prefix = 'python3 '+shlex.quote(str(probe))+' --lane-fit-profile --output '+shlex.quote(str(a.output/'lane-fit.profile'))+' --'
+                elif node.type=='lane_vectorizer_node.py':
+                    # Record family-process GC separately from model GC. The
+                    # normal probe does not trace allocations or alter policy.
+                    node.launch_prefix = 'python3 '+shlex.quote(str(probe))+' --output '+shlex.quote(str(a.output/'family-gc.jsonl'))+' --'
     class MeasuredViewLaunch(roslaunch.parent.ROSLaunchParent):
         def _load_config(self):
             super()._load_config()

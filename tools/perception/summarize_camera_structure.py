@@ -64,8 +64,11 @@ def main():
     p.add_argument('--results', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--rate-followup', action='store_true', help='15Hz/10Hz minimum follow-up; preserve original report decisions')
+    p.add_argument('--shadow-family', action='store_true', help='Shadow ODD repeats/soak; include valid-family gap and exclude diagnostic timing')
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=True)
+    if a.shadow_family:
+        return shadow_family_followup(a)
     if a.rate_followup:
         return rate_followup(a)
     summaries, pooled = [], defaultdict(lambda:defaultdict(list))
@@ -124,6 +127,114 @@ def main():
     hashes = {str(f.relative_to(source)):hashlib.sha256(f.read_bytes()).hexdigest() for f in files if '__pycache__' not in f.parts}
     (a.output/'final-source-hashes.json').write_text(json.dumps(hashes,indent=2)+'\n')
     print(json.dumps(dict(trials=len(summaries),rows=len(csv_rows),parity=out['parity'])))
+
+
+def shadow_acceptance_failures(report, statuses):
+    """Evaluate continuity as well as mean throughput, without waiving sources."""
+    from compare_camera_runtime import acceptance_eligible
+    if not acceptance_eligible(report):
+        return ['diagnostic run: excluded from acceptance']
+    failures=list(report.get('failures', []))
+    if not report.get('complete'):
+        failures.append('incomplete measurement')
+    if report.get('start') is None or report.get('end') is None:
+        return failures+['no ACTIVE measurement window']
+    streams=report.get('streams', {})
+    for prefix, count in (('/perception/camera/objects:',3),
+                          ('/road_marking/model_grid/class_id:',3),
+                          ('/perception/traffic_light/detection:',1)):
+        if sum(prefix in key for key in streams)!=count:
+            failures.append('missing required streams: '+prefix)
+    for key, stream in streams.items():
+        minimum=9.5 if key.startswith('/perception/traffic_light') else 10.
+        if min(stream.get('five_second_hz',[]),default=0)<minimum:
+            failures.append('supply: '+key)
+        if not stream.get('timing_pass'):
+            failures.append('timing: '+key)
+        if stream.get('duplicate_stamps') or stream.get('reversed_stamps'):
+            failures.append('stamp order: '+key)
+    family=report.get('lane_family',{}).get('valid_supply',{})
+    if min(family.get('five_second_hz',[]),default=0)<10.:
+        failures.append('valid family below10Hz')
+    if family.get('max_gap_sec',1.)>.25:
+        failures.append('valid family gap over250ms')
+    if family.get('duplicate_stamps') or family.get('reversed_stamps'):
+        failures.append('valid family stamp order')
+    for role in report.get('active',[]):
+        active=[s for s in statuses if s['role']==role and report['start']<=s['at']<report['end']]
+        if not active or any(not s['prepared'] or s['errors'] or
+                             (role=='lane' and not s['pipeline_ready']) for s in active):
+            failures.append('ACTIVE readiness/errors: '+role)
+    resources=report.get('resources',{})
+    if not resources.get('resource_coverage_pass') or resources.get('vram_peak_fraction',1.)>.9:
+        failures.append('resources/VRAM')
+    return failures
+
+
+def shadow_family_followup(a):
+    from compare_camera_runtime import acceptance_eligible
+    trials=[]; pooled=defaultdict(lambda:defaultdict(list)); csv_rows=[]
+    for path in sorted(a.results.rglob('report.json')):
+        report=json.loads(path.read_text())
+        if 'variant' not in report:
+            continue
+        if report.get('start') is None:
+            trials.append(dict(name=path.parent.name,report=str(path.relative_to(a.results)),
+                acceptance_eligible=acceptance_eligible(report),failures=shadow_acceptance_failures(report,[])))
+            continue
+        jobs_path=path.parent.parent/'jobs.json'
+        jobs=json.loads(jobs_path.read_text()) if jobs_path.exists() else []
+        job=next((j for j in jobs if j['name']==path.parent.name),{})
+        statuses=json.loads((path.parent/'statuses.json').read_text())
+        backend='T2' if 't2' in path.parent.name else 'T0'
+        group='-'.join((backend,job.get('weather','unknown'),report.get('visual_outputs','all') if report.get('visualization_sinks') else 'off',
+                        'soak' if report['end']-report['start']>=600 else 'repeat'))
+        failures=shadow_acceptance_failures(report,statuses)
+        inputs={}; gc_started={}; gc_times=[]
+        for raw in path.parent.glob('*.jsonl'):
+            if 'allocations' in raw.stem:
+                continue
+            with raw.open() as stream:
+                for line in stream:
+                    row=json.loads(line)
+                    if row['event']=='input' and raw.stem=='camera_lane':
+                        inputs[row['stamp']]=min(row['at'],inputs.get(row['stamp'],row['at']))
+                    if row['event']=='gc':
+                        if row['phase']=='start':
+                            gc_started[raw.stem]=row['at']
+                        elif raw.stem in gc_started and report['start']<=row['at']<report['end']:
+                            gc_times.append(dict(probe=raw.stem,at=row['at'],duration_ms=1000*(row['at']-gc_started.pop(raw.stem)),
+                                                 caller=row.get('caller_file'),function=row.get('caller_function')))
+                    if (acceptance_eligible(report) and report['complete'] and row['event']=='output' and
+                            row.get('received') is not None and not row.get('stale') and report['start']<=row['at']<report['end']):
+                        if row['topic']=='/perception/camera/objects' and not row['valid']:
+                            continue
+                        pooled[group][row['topic']+':'+row['frame']].append(row['wall_ms'])
+        family_rows=json.loads((path.parent/'lane-families.json').read_text())
+        if acceptance_eligible(report) and report['complete']:
+            pooled[group]['family_input_to_subscriber'].extend(1000*(r['at']-inputs[r['stamp']]) for r in family_rows
+                if r['valid'] and report['start']<=r['at']<report['end'] and r['stamp'] in inputs)
+        active_status_failures={role:sum(not s['prepared'] or bool(s['errors']) or (role=='lane' and not s['pipeline_ready'])
+            for s in statuses if s['role']==role and report['start']<=s['at']<report['end']) for role in report['active']}
+        trials.append(dict(name=path.parent.name,group=group,report=str(path.relative_to(a.results)),
+            acceptance_eligible=acceptance_eligible(report),failures=failures,active_status_failures=active_status_failures,
+            resources=report.get('resources'),lane_family=report['lane_family'],streams=report['streams'],
+            mode_transitions=report.get('mode_transitions'),gc_generation2=sorted(gc_times,key=lambda r:r['duration_ms'],reverse=True)[:10],
+            qt_before=report.get('qt_inventory_before'),qt_during=report.get('qt_inventory_during'),qt_after=report.get('qt_inventory_after')))
+        for key,s in report['streams'].items():
+            csv_rows.append(dict(trial=path.parent.name,group=group,stream=key,hz=s['hz'],
+                min_5s_hz=min(s['five_second_hz'],default=0),**{f'p{q}_ms':s['wall_ms'][f'p{q}'] for q in (50,95,99)},
+                max_gap_ms=1000*s['max_gap_sec'],target_95pct_pass=s['target_95pct_pass']))
+    result=dict(schema='shadow_family_runtime_v1',trials=trials,
+        pooled_latency={group:{key:dict(count=len(v),**{f'p{q}_ms':percentile(v,q) for q in (50,95,99)}) for key,v in streams.items()} for group,streams in pooled.items()},
+        pooling='Raw frame samples within complete runs, including failed runs; diagnostics excluded. Never mean run medians. Soak and repeat pools separate.',
+        latency_definition='Model input callback to publish; valid family input callback to subscriber. Source age and model forward are separate quantities.',
+        full_stack_driving_acceptance=False,automatic_promotion_allowed=False)
+    (a.output/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
+    if csv_rows:
+        with (a.output/'trials.csv').open('w') as stream:
+            writer=csv.DictWriter(stream,fieldnames=list(csv_rows[0]));writer.writeheader();writer.writerows(csv_rows)
+    print(json.dumps(dict(trials=len(trials),failures={t['name']:t['failures'] for t in trials if t['failures']})))
 
 
 def rate_followup(a):
