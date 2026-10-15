@@ -104,8 +104,12 @@ roslaunch asmc_camera view.launch models:=objects
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
-기존 좌/전방/우 overlay와 합성 경로를 유지한다. subscriber가 없는 큰 영상의 변환·인코딩은
-기존 lazy 정책을 유지한다. 세 영상을 한 곳에서 그리고 한 번만 인코딩하는 구조는 후속이다.
+객체 시각화는 좌/전방/우를 한 노드에서 직접 합성하고 JPEG를 한 번 인코딩하는 경로를 검증한다.
+기존 개별/합성 토픽과 표시 순서를 유지하며 개별 뷰는 구독할 때만 추가 인코딩한다.
+뷰별 최대8 JPEG·500ms 캐시와 기존 관측의 session·generation·카메라·stamp·설정 식별자로
+정확한 영상 대응과 무효화를 관리한다. 합성 header는 디버그 발행 시각이며 동기 3뷰 관측이 아니다.
+시각화 목표는10Hz이고 추론 목표15Hz와 별도다. 구독자가 없는 큰 영상의 구독·변환·인코딩을 중단한다.
+최종 기본 전환과 GUI 수락 상태는 [시각화 검증 기록](../../handoffs/perception/camera-visualization-validation.md)을 따른다.
 
 ## Timestamp의 출처
 

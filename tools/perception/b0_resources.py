@@ -4,7 +4,14 @@ from pathlib import Path
 import subprocess
 import threading
 import time
-from xmlrpc.client import ServerProxy
+from xmlrpc.client import ServerProxy, Transport
+
+
+class _TimeoutTransport(Transport):
+    def make_connection(self, host):
+        connection = super().make_connection(host)
+        connection.timeout = .25
+        return connection
 
 
 def gpu_sample():
@@ -36,6 +43,7 @@ class ResourceSampler:
         self.ticks = os.sysconf('SC_CLK_TCK')
         self.system_metrics = system_metrics
         self.previous_system = None
+        self.discovery_after = {}
 
     def _system_sample(self):
         values = [int(v) for v in Path('/proc/stat').read_text().splitlines()[0].split()[1:]]
@@ -55,19 +63,21 @@ class ResourceSampler:
 
     def _discover(self):
         for name in self.names:
-            if name in self.pids:
+            if self.stop.is_set():
+                return
+            if name in self.pids or time.monotonic() < self.discovery_after.get(name,0):
                 continue
             try:
-                with ServerProxy(self.master_uri) as master:
+                with ServerProxy(self.master_uri,transport=_TimeoutTransport()) as master:
                     code, _, uri = master.lookupNode('/b0_resources', name)
                 if code != 1:
                     continue
-                with ServerProxy(uri) as node:
+                with ServerProxy(uri,transport=_TimeoutTransport()) as node:
                     code, _, pid = node.getPid('/b0_resources')
                 if code == 1:
                     self.pids[name] = pid
             except Exception:
-                pass  # A node not launched yet is distinct from a zero-RSS process.
+                self.discovery_after[name] = time.monotonic()+5.
 
     def _loop(self):
         next_discovery = 0
@@ -76,7 +86,7 @@ class ResourceSampler:
             if started >= next_discovery:
                 self._discover()
                 next_discovery = started+1.
-            row = dict(arrival=started, gpu=None, nodes={})
+            row = dict(arrival=time.monotonic(), gpu=None, nodes={})
             if self.system_metrics:
                 try:
                     row['system'] = self._system_sample()

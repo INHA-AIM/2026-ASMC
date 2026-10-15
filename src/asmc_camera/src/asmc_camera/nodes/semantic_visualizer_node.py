@@ -13,6 +13,7 @@ import rospy
 from sensor_msgs.msg import CompressedImage, Image
 
 from asmc_camera.camera.visualization import render_mosaic, render_panel
+from asmc_camera.runtime.demand_inputs import DemandSubscriber, DemandInputs
 
 
 SUPPORTED_VIEWS = ("front", "left", "right")
@@ -20,6 +21,12 @@ SUPPORTED_VIEWS = ("front", "left", "right")
 
 class SemanticVisualizerNode:
     def __init__(self) -> None:
+        # This renderer owns its process. Small LUT/resize tasks otherwise wake
+        # all 20 CPU threads, reducing wall time but spending ~4x CPU time.
+        opencv_threads = int(rospy.get_param('~opencv_threads', 1))
+        if opencv_threads < 1:
+            raise ValueError('opencv_threads must be positive')
+        cv2.setNumThreads(opencv_threads)
         self.views = tuple(str(value) for value in rospy.get_param("~views", ["front"]))
         unknown = set(self.views) - set(SUPPORTED_VIEWS)
         if not self.views or unknown or len(set(self.views)) != len(self.views):
@@ -88,21 +95,26 @@ class SemanticVisualizerNode:
         self.synchronizers = []
         buffer_bytes = int(rospy.get_param("~subscriber_buffer_bytes", 16 << 20))
         for view in self.views:
-            rgb = message_filters.Subscriber(
+            demand = lambda v=view: (self.mosaic_publisher.get_num_connections() > 0 or
+                (v in self.panel_publishers and self.panel_publishers[v].get_num_connections() > 0))
+            rgb = DemandSubscriber(
                 str(camera_topics[view]),
                 CompressedImage,
+                demand,
                 queue_size=1,
                 buff_size=buffer_bytes,
             )
-            drivable = message_filters.Subscriber(
+            drivable = DemandSubscriber(
                 "/perception/camera/{}/drivable/probability".format(view),
                 Image,
+                demand,
                 queue_size=1,
                 buff_size=buffer_bytes,
             )
-            secondary = message_filters.Subscriber(
+            secondary = DemandSubscriber(
                 "/perception/camera/{}/{}".format(view, secondary_topic_suffix),
                 Image,
+                demand,
                 queue_size=1,
                 buff_size=buffer_bytes,
             )
@@ -112,6 +124,8 @@ class SemanticVisualizerNode:
             synchronizer.registerCallback(self._callback, view)
             self.subscribers.extend((rgb, drivable, secondary))
             self.synchronizers.append(synchronizer)
+
+        self.demand_inputs = DemandInputs(self.subscribers)
 
         rospy.loginfo(
             "camera semantic visualizer views=%s secondary_mode=%s "

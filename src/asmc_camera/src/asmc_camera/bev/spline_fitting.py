@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
 import numpy as np
 
@@ -41,6 +42,25 @@ def _open_uniform_knots(control_count: int, degree: int) -> np.ndarray:
 
 
 def bspline_basis(parameters, knots, degree, control_count):
+    values = np.asarray(parameters, dtype=np.float64).reshape(-1)
+    # Robust iterations and dense sampling reuse identical basis matrices.
+    # Retain at most 64 * 256KiB; callers still receive owned writable arrays.
+    if (isinstance(knots, np.ndarray) and knots.dtype == np.float64 and knots.ndim == 1 and
+            values.size <= 2048 and knots.size <= 256 and
+            values.size * max(0,len(knots)-1) <= 32768):
+        return _cached_basis(values.tobytes(),knots.tobytes(),degree,control_count).copy()
+    return _bspline_basis_uncached(values,knots,degree,control_count)
+
+
+@lru_cache(maxsize=64)
+def _cached_basis(parameters, knots, degree, control_count):
+    result = _bspline_basis_uncached(np.frombuffer(parameters,np.float64),
+                                    np.frombuffer(knots,np.float64),degree,control_count)
+    result.setflags(write=False)
+    return result
+
+
+def _bspline_basis_uncached(parameters, knots, degree, control_count):
     values = np.asarray(parameters, dtype=np.float64).reshape(-1)
     interval_count = len(knots) - 1
     basis = np.zeros((len(values), interval_count), dtype=np.float64)

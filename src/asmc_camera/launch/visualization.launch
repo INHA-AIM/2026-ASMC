@@ -26,7 +26,21 @@
   <arg name="traffic_light_image_topic" default="/cam_extra/image_jpeg/compressed"/>
   <arg name="traffic_light_detection_topic" default="/perception/traffic_light/detection"/>
 
-  <group if="$(arg camera_objects)">
+  <group if="$(eval arg('camera_objects') and not arg('objects_debug_raw') and not arg('objects_ego_hood_filter') and not arg('legacy_rqt'))">
+    <node pkg="asmc_camera" type="object_view_node.py" name="camera_object_view" output="screen">
+      <param name="publish_hz" value="10.0"/>
+      <param name="jpeg_quality" value="80"/>
+      <param name="stale_sec" value="0.5"/>
+      <param name="ego_mask_enabled/front" value="$(arg objects_hood_mask)"/>
+      <param name="ego_mask_enabled/left" value="$(arg objects_side_ego_mask)"/>
+      <param name="ego_mask_enabled/right" value="$(arg objects_side_ego_mask)"/>
+      <param name="ego_mask_configs/front" value="$(arg objects_hood_mask_config)"/>
+      <param name="ego_mask_configs/left" value="$(arg objects_left_ego_mask_config)"/>
+      <param name="ego_mask_configs/right" value="$(arg objects_right_ego_mask_config)"/>
+    </node>
+  </group>
+  <!-- Explicit legacy/raw-filter diagnostics retain their old renderer. -->
+  <group if="$(eval arg('camera_objects') and (arg('objects_debug_raw') or arg('objects_ego_hood_filter') or arg('legacy_rqt')))">
     <node pkg="asmc_camera" type="object_visualizer_node.py"
           name="camera_object_visualizer" output="screen" required="false">
       <rosparam command="load" file="$(arg objects_config)" subst_value="true"/>

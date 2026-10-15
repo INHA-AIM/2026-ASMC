@@ -43,6 +43,24 @@ def measurements(rows, start, end, target):
     return reports
 
 
+def resource_summary(resources, start, end, interval=.5):
+    resources=[r for r in resources if start<=r['arrival']<end]
+    gpu=[r['gpu'] for r in resources if r['gpu']]
+    cpu=[sum(n['cpu_percent'] or 0 for n in r['nodes'].values()) for r in resources
+         if any(n['cpu_percent'] is not None for n in r['nodes'].values())]
+    system_cpu=[r['system']['cpu_percent'] for r in resources if r.get('system',{}).get('cpu_percent') is not None]
+    times=[start]+[r['arrival'] for r in resources]+[end]
+    coverage=(len(resources)>=(end-start)/interval*.8 and len(cpu)>=len(resources)*.9 and
+              len(gpu)>=len(resources)*.9 and max((b-a for a,b in zip(times,times[1:])),default=end-start)<=3.)
+    return dict(camera_cpu_mean=sum(cpu)/len(cpu) if cpu else None,
+        camera_rss_peak_mib=max((sum(n['rss_mib'] for n in r['nodes'].values()) for r in resources),default=None),
+        vram_peak_mib=max((r['memory_used_mib'] for r in gpu),default=None),
+        vram_peak_fraction=max((r['memory_used_mib']/r['memory_total_mib'] for r in gpu),default=None),
+        wsl_system_cpu_mean=sum(system_cpu)/len(system_cpu) if system_cpu else None,
+        sample_count=len(resources),cpu_sample_count=len(cpu),gpu_sample_count=len(gpu),resource_coverage_pass=coverage,
+        scope='Summed camera/debug/preview ROS processes; rqt included in WSL system CPU, not this process sum. Whole GPU includes MORAI/Windows.')
+
+
 def main():
     import rospy
     import roslaunch
@@ -67,6 +85,7 @@ def main():
     p.add_argument('--lane-batch-wait-ms', type=float)
     p.add_argument('--fusion-hz', type=float)
     p.add_argument('--legacy-lidar-root', type=Path)
+    p.add_argument('--profile-lane-fit', action='store_true')
     a = p.parse_args()
     # roslaunch starts node processes in ROS_HOME; probes need an absolute path.
     a.output = a.output.resolve()
@@ -76,11 +95,23 @@ def main():
     root = Path(__file__).resolve().parents[2]
     legacy = dict(objects='/camera_object_detector', lane='/camera_semantic_inference', traffic_light='/traffic_light_infer')
     active = a.active.split(',')
-    status, status_rows, diagnostics, subscribers, outputs, families = {}, [], [], [], [], []
+    status, status_rows, diagnostics, subscribers, outputs, families, debug_outputs = {}, [], [], [], [], [], []
+    debug_samples, latest_debug, failure_samples = {}, {}, {}
+    start = end = None
+    def receive_debug(message, role):
+        at = time.monotonic()
+        debug_outputs.append(dict(role=role,at=at,stamp=message.header.stamp.to_nsec(),bytes=len(message.data)))
+        latest_debug[role] = message
+        if start is not None and start <= at < end and role not in debug_samples:
+            debug_samples[role] = message
     def receive_status(role, message):
         status[role] = message
-        status_rows.append(dict(role=role,at=time.monotonic(),generation=message.generation,mode=message.mode,
-            prepared=message.prepared,pipeline_ready=message.pipeline_ready,errors=message.errors,reason=message.reason))
+        row=dict(role=role,at=time.monotonic(),generation=message.generation,mode=message.mode,
+            prepared=message.prepared,pipeline_ready=message.pipeline_ready,errors=message.errors,reason=message.reason)
+        status_rows.append(row)
+        if role=='lane' and not message.pipeline_ready and start is not None and start<=row['at']<end:
+            for name,sample in list(latest_debug.items()):
+                failure_samples.setdefault(name,(sample,row))
     for role, node in legacy.items():
         subscribers.append(rospy.Subscriber(node+'/inference_status', InferenceStatus,
             lambda m, r=role: receive_status(r, m), queue_size=20))
@@ -114,6 +145,14 @@ def main():
             for node in self.config.nodes:
                 if node.type in ('object_detection_node.py','semantic_inference_node.py','traffic_light_node.py','camera_runtime_node.py'):
                     node.launch_prefix = 'python3 '+shlex.quote(str(probe))+' --output '+shlex.quote(str(a.output/(node.name+'.jsonl')))+' --'
+                elif node.type=='lane_vectorizer_node.py' and a.profile_lane_fit:
+                    node.launch_prefix = 'python3 '+shlex.quote(str(probe))+' --lane-fit-profile --output '+shlex.quote(str(a.output/'lane-fit.profile'))+' --'
+    class MeasuredViewLaunch(roslaunch.parent.ROSLaunchParent):
+        def _load_config(self):
+            super()._load_config()
+            for node in self.config.nodes:
+                if node.type in ('object_view_node.py','object_visualizer_node.py'):
+                    node.launch_prefix = 'python3 '+shlex.quote(str(probe))+' --visual-codecs --output '+shlex.quote(str(a.output/('visual-'+node.name+'.jsonl')))+' --'
     parent = MeasuredLaunch(roslaunch.rlutil.get_or_generate_uuid(None, False), [(str(launch), args)])
     roslaunch.configure_logging(parent.run_id)
     replay_stop, replay = threading.Event(), None
@@ -140,7 +179,7 @@ def main():
     main_process = qt_process = None
     sampler, report, start, end = None, dict(variant=a.variant, active=active, lane_hz=a.lane_hz,
         saved_input=str(a.saved_input) if a.saved_input else None, gui=a.qt, visualization_sinks=a.gui, nms_iou=a.nms_iou, failures=[],
-        confidence=a.confidence, view_models=a.view_models if a.gui else None,
+        confidence=a.confidence, view_models=a.view_models if a.gui else None, profile_lane_fit=a.profile_lane_fit,
         timestamp_mode=rospy.get_param('/morai_sensor_bridge/timestamp_mode','unset (bridge default receive)'),
         use_sim_time=rospy.get_param('/use_sim_time',False),
         latency_definition='Actual model/broker compressed input callback entry -> ROS publish return; monotonic wall.',
@@ -149,6 +188,8 @@ def main():
         hashes = {str(f.relative_to(package)):hashlib.sha256(f.read_bytes()).hexdigest()
                   for pattern in ('src/**/*.py','launch/*.launch','config/**/*.yaml') for f in package.glob(pattern)}
         report['source_sha256'] = hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()
+        report['measurement_sha256']={f:hashlib.sha256((root/'tools/perception'/f).read_bytes()).hexdigest()
+            for f in ('compare_camera_runtime.py','camera_runtime_probe.py','b0_resources.py')}
         (a.output/'source-hashes.json').write_text(json.dumps(hashes,indent=2))
         parent.start()
         report['effective_lane_batch_wait_ms'] = rospy.get_param('/camera_lane/batch_wait_ms',None)
@@ -173,7 +214,7 @@ def main():
         if a.gui:
             # Start only visualization and connect compressed debug sinks. The
             # sink cost is recorded separately from a real rqt window's cost.
-            view_launch = roslaunch.parent.ROSLaunchParent(parent.run_id,
+            view_launch = MeasuredViewLaunch(parent.run_id,
                 [(str(package/'launch/view.launch'), ['models:='+a.view_models])])
             view_launch.start()
             debug_topics = dict(objects='/perception/camera/objects/debug/mosaic/compressed',
@@ -181,7 +222,8 @@ def main():
             for role, topic in debug_topics.items():
                 if a.view_models != 'all' and role not in a.view_models.split(','):
                     continue
-                subscribers.append(rospy.Subscriber(topic, CompressedImage, lambda m: None, queue_size=1))
+                subscribers.append(rospy.Subscriber(topic, CompressedImage,
+                    lambda m,r=role:receive_debug(m,r),queue_size=1))
         if a.legacy_lidar_root:
             env = dict(os.environ)
             nested = a.legacy_lidar_root
@@ -206,10 +248,7 @@ def main():
             ['/camera_runtime'] if a.variant == 'R2' else list(legacy.values()) if a.variant == 'R0'
             else ['/camera_objects','/camera_lane','/camera_traffic_light'])
         if a.gui:
-            names += ['/camera_object_visualizer','/camera_object_visualizer_left','/camera_object_visualizer_right',
-                      '/camera_object_mosaic','/camera_semantic_visualizer','/camera_bev_visualizer',
-                      '/camera_traffic_light_visualizer','/lane_vector_visualizer']
-        if a.qt: names.append('/camera_runtime_viewer')
+            names += ['/'+n.name for n in view_launch.config.nodes]
         if a.legacy_lidar_root: names += ['/Main','/camera_objects_yolo_bbox_adapter']
         sampler = ResourceSampler(os.environ.get('ROS_MASTER_URI','http://127.0.0.1:11311'), names, interval=.5, system_metrics=True)
         sampler.start()
@@ -219,18 +258,17 @@ def main():
             parent.spin_once(); time.sleep(.05)
         report.update(start=start, end=end, complete=time.monotonic()>=end,
                       final_status={r:dict(generation=m.generation, prepared=m.prepared, pipeline_ready=m.pipeline_ready, errors=m.errors, reason=m.reason) for r,m in status.items()})
+        if qt_process and qt_process.poll() is not None:
+            report['failures'].append('Qt viewer terminated during measurement')
     except Exception as exc:
         report['failures'].append(str(exc))
     finally:
         if sampler:
             resources = sampler.close()
             (a.output/'resources.json').write_text(json.dumps(resources))
-            gpu = [r['gpu'] for r in resources if r['gpu']]
-            cpu = [sum(n['cpu_percent'] or 0 for n in r['nodes'].values()) for r in resources]
-            report['resources'] = dict(camera_cpu_mean=sum(cpu)/len(cpu) if cpu else None,
-                camera_rss_peak_mib=max((sum(n['rss_mib'] for n in r['nodes'].values()) for r in resources),default=None),
-                vram_peak_mib=max((r['memory_used_mib'] for r in gpu),default=None),
-                vram_peak_fraction=max((r['memory_used_mib']/r['memory_total_mib'] for r in gpu),default=None))
+            report['resources'] = resource_summary(resources,start,end)
+            if not report['resources']['resource_coverage_pass']:
+                report['failures'].append('insufficient resource sampling coverage; no resource acceptance')
         if a.gui and 'view_launch' in locals():
             view_launch.shutdown()
         from run_b0_matrix import stop
@@ -267,8 +305,22 @@ def main():
         (a.output/'statuses.json').write_text(json.dumps(status_rows))
         (a.output/'diagnostics.json').write_text(json.dumps(diagnostics))
         (a.output/'lane-families.json').write_text(json.dumps(families))
+        (a.output/'debug-outputs.json').write_text(json.dumps(debug_outputs))
+        for role, message in debug_samples.items():
+            (a.output/('sample-'+role+'.jpg')).write_bytes(bytes(message.data))
+        failure_metadata={}
+        for role,(message,context) in failure_samples.items():
+            (a.output/('failure-'+role+'.jpg')).write_bytes(bytes(message.data))
+            failure_metadata[role]=dict(context,debug_header_stamp_ns=message.header.stamp.to_nsec(),
+                note='Most recent debug image when lane status became not ready; not a synchronized source GT image.')
+        (a.output/'failure-samples.json').write_text(json.dumps(failure_metadata,indent=2))
+        if start is not None:
+            report['debug_outputs'] = {role:rate_report([(r['at'],r['stamp'],True) for r in debug_outputs if r['role']==role],start,end)
+                for role in {r['role'] for r in debug_outputs}}
         if start is not None:
             report['lane_family'] = rate_report([(r['at'],r['stamp'],True) for r in families],start,end)
+            report['lane_family']['valid_supply'] = rate_report(
+                [(r['at'],r['stamp'],True) for r in families if r['valid']],start,end)
             active_families = [r for r in families if start <= r['at'] < end]
             report['lane_family']['fit_valid_count'] = sum(r['valid'] for r in active_families)
             inputs = {}

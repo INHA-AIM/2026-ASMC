@@ -5,12 +5,40 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'tools/perception'))
 sys.path.insert(0, str(ROOT/'tools/audit'))
-from compare_camera_runtime import measurements
+from compare_camera_runtime import measurements, resource_summary
+from b0_resources import ResourceSampler, _TimeoutTransport
+from unittest.mock import patch
 from validate_p1b_contract import load_message_specs, all_message_md5
 from evaluate_camera_bbox_pilot import frame_counts, summarize
 
 
 class RuntimeMeasurementsTest(unittest.TestCase):
+    def test_resource_coverage_missing_cpu_is_unknown_not_zero(self):
+        row = dict(arrival=.1, gpu=dict(memory_used_mib=100, memory_total_mib=1000),
+                   nodes={'node':dict(cpu_percent=None,rss_mib=1)})
+        result = resource_summary([row],0,60)
+        self.assertIsNone(result['camera_cpu_mean'])
+        self.assertFalse(result['resource_coverage_pass'])
+        complete = [dict(row,arrival=i*.5,nodes={'node':dict(cpu_percent=25,rss_mib=1)})
+                    for i in range(120)]
+        result = resource_summary(complete,0,60)
+        self.assertTrue(result['resource_coverage_pass'])
+        self.assertEqual(result['camera_cpu_mean'],25)
+        self.assertFalse(resource_summary(complete[:50]+complete[60:],0,60)['resource_coverage_pass'])
+
+    def test_xmlrpc_discovery_uses_bounded_transport_and_failure_backoff(self):
+        connection = _TimeoutTransport().make_connection('127.0.0.1:11311')
+        self.assertEqual(connection.timeout,.25)
+        sampler=ResourceSampler('http://127.0.0.1:11311',['/missing'])
+        with patch('b0_resources.ServerProxy',side_effect=TimeoutError) as proxy:
+            sampler._discover(); sampler._discover()
+            self.assertEqual(proxy.call_count,1)
+            self.assertIsInstance(proxy.call_args.kwargs['transport'],_TimeoutTransport)
+        sampler.stop.set()
+        with patch('b0_resources.ServerProxy') as proxy:
+            sampler._discover()
+            proxy.assert_not_called()
+
     def test_raw_percentiles_full_windows_gaps_and_duplicate_count(self):
         rows = [dict(event='output', at=.1+i*.1, stamp=i+1, received=.05+i*.1,
                      wall_ms=i, valid=True, stale=False,

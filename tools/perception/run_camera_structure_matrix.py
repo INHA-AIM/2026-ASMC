@@ -58,7 +58,7 @@ def main():
                 if not transition['success']:
                     raise RuntimeError('weather change not confirmed: '+repr(transition))
                 time.sleep(3)
-            overlay = a.baseline_root if job['variant'] == 'R0' else a.candidate_root
+            overlay = a.baseline_root if job['variant'] == 'R0' or job.get('baseline') else a.candidate_root
             command = ['python3', str(root/'tools/perception/compare_camera_runtime.py'),
                 '--variant',job['variant'],'--seconds',str(job.get('seconds',60)),
                 '--active',job.get('active','objects,lane,traffic_light'),
@@ -78,6 +78,8 @@ def main():
                 command += ['--qt']
             if job.get('legacy_lidar_root'):
                 command += ['--legacy-lidar-root', job['legacy_lidar_root']]
+            if job.get('profile_lane_fit'):
+                command += ['--profile-lane-fit']
             script = 'source '+shlex.quote(str(overlay/'devel/setup.bash'))+'\nexec '+shlex.join(command)
             print('START '+label, flush=True)
             with (a.output/(label+'.log')).open('w') as stream:

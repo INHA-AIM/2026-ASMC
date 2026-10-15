@@ -65,6 +65,13 @@ class CameraEntrypointsTest(unittest.TestCase):
                                  'semantic_inference_node.py', 'traffic_light_node.py'})
         self.assertTrue(config.nodes)
 
+    def test_object_view_uses_one_renderer_and_keeps_legacy_diagnostics_explicit(self):
+        config = self.config('view.launch','models:=objects')
+        self.assertEqual([n.type for n in config.nodes],['object_view_node.py'])
+        legacy = self.config('visualization.launch','camera_objects:=true','objects_debug_raw:=true')
+        self.assertEqual(len(legacy.nodes),4)
+        self.assertNotIn('object_view_node.py',{n.type for n in legacy.nodes})
+
 
 if __name__ == '__main__':
     unittest.main()

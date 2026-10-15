@@ -32,7 +32,9 @@ canonical_configs:
   - path: src/asmc_camera/config/camera/twinlite_medium.yaml
     sha256: 4f8ab7228971b84a31324f8448b5aa90c22e6e9d106afedf638015ba4d1536dd
   - path: src/asmc_camera/config/camera/visualization.yaml
-    sha256: da013db2e5c5333a0c969c883b57735a4f6704cdc7db879743076d8fa2fa32d3
+    sha256: a5cacc655463667cbee60e5211dc0cb4ad86e2f59e7615d1f377943aa38122a1
+    previous_sha256: da013db2e5c5333a0c969c883b57735a4f6704cdc7db879743076d8fa2fa32d3
+    revision_reason: camera_visualization_20261015_debug_opencv_threads_1
   - path: src/asmc_camera/config/bev/bev_grid.yaml
     sha256: 8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3
   - path: src/asmc_camera/config/bev/bev_grid_dev.yaml

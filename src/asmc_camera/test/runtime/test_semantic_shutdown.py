@@ -9,6 +9,26 @@ from asmc_camera.nodes.semantic_inference_node import SemanticInferenceNode
 
 
 class SemanticShutdownTest(unittest.TestCase):
+    def test_lane_grid_for_all_views_precedes_large_debug_images(self):
+        node = SemanticInferenceNode.__new__(SemanticInferenceNode)
+        node.categorical_heads = {'road_marking'}
+        node.publishers = {v:dict(drivable=v+'-probability',road_marking=v+'-native-class') for v in ('front','left','right')}
+        node.confidence_publishers = {v:dict(road_marking=v+'-native-confidence') for v in node.publishers}
+        node.model_grid_publishers = {v:v+'-grid-class' for v in node.publishers}
+        node.model_grid_confidence_publishers = {v:v+'-grid-confidence' for v in node.publishers}
+        frames = {v:object() for v in node.publishers}
+        predictions = SimpleNamespace(views={v:SimpleNamespace(probabilities=dict(drivable=object(),road_marking=object()),
+            categorical_confidences=dict(road_marking=object()),model_grid_probabilities=dict(road_marking=object()),
+            model_grid_categorical_confidences=dict(road_marking=object())) for v in frames})
+        received=[]
+        node._publish_connected_image=lambda *args: received.append(args) or True
+        self.assertTrue(node._publish_predictions(predictions,frames,True))
+        self.assertTrue(all('-grid-' in r[0] for r in received[:6]))
+        self.assertFalse(any('-grid-' in r[0] for r in received[6:]))
+        for publisher,value,frame,categorical in received:
+            self.assertIs(frame,frames[publisher.split('-')[0]])
+        self.assertIs(received[0][1],predictions.views['front'].model_grid_probabilities['road_marking'])
+
     def test_managed_fifteen_hz_model_grid_keeps_each_fresh_batch(self):
         node = SemanticInferenceNode.__new__(SemanticInferenceNode)
         node.views = ('front', 'left', 'right')

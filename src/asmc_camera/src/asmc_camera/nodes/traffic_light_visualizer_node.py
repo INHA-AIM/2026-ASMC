@@ -15,6 +15,7 @@ import numpy as np
 import rospy
 from asmc_msgs.msg import TrafficLightDetection
 from sensor_msgs.msg import CompressedImage
+from asmc_camera.runtime.demand_inputs import DemandSubscriber, DemandInputs
 
 from asmc_camera.traffic_light_visualization import (
     StampedCache,
@@ -45,19 +46,22 @@ class TrafficLightVisualizerNode:
             CompressedImage,
             queue_size=1,
         )
-        self.image_subscriber = rospy.Subscriber(
+        self.image_subscriber = DemandSubscriber(
             image_topic,
             CompressedImage,
+            lambda:self.publisher.get_num_connections() > 0,
             self._image_callback,
             queue_size=5,
             buff_size=int(rospy.get_param("~subscriber_buffer_bytes", 16 << 20)),
         )
-        self.detection_subscriber = rospy.Subscriber(
+        self.detection_subscriber = DemandSubscriber(
             detection_topic,
             TrafficLightDetection,
+            lambda:self.publisher.get_num_connections() > 0,
             self._detection_callback,
             queue_size=5,
         )
+        self.demand_inputs = DemandInputs([self.image_subscriber,self.detection_subscriber])
         rospy.loginfo(
             "traffic-light visualizer image=%s detection=%s",
             image_topic,

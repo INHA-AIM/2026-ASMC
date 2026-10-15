@@ -27,15 +27,16 @@ def _predict_y(nodes, x):
     if len(nodes) < 3:
         return float(nodes[-1].xy[1]), 0.0
     recent = np.asarray([node.xy for node in nodes[-6:]], dtype=np.float64)
-    centered_x = recent[:, 0] - float(np.mean(recent[:, 0]))
+    mean_x, mean_y = np.mean(recent[:, 0]), np.mean(recent[:, 1])
+    centered_x = recent[:, 0] - float(mean_x)
     denominator = float(np.dot(centered_x, centered_x))
     slope = (
         0.0
         if denominator <= 1e-9
-        else float(np.dot(centered_x, recent[:, 1] - np.mean(recent[:, 1])))
+        else float(np.dot(centered_x, recent[:, 1] - mean_y))
         / denominator
     )
-    intercept = float(np.mean(recent[:, 1]) - slope * np.mean(recent[:, 0]))
+    intercept = float(mean_y - slope * mean_x)
     return slope * float(x) + intercept, slope
 
 

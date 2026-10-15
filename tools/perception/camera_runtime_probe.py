@@ -77,6 +77,8 @@ def install(output):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--visual-codecs', action='store_true', help='Count debug JPEG calls without instrumenting model outputs')
+    parser.add_argument('--lane-fit-profile', action='store_true', help='Diagnostic cProfile of the fitting worker; not a timing acceptance run')
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     command = args.command
@@ -84,9 +86,41 @@ def main():
         command = command[1:]
     if not command:
         parser.error('node executable required')
-    install(args.output)
+    if args.lane_fit_profile:
+        import cProfile
+        from asmc_camera.nodes.lane_vectorizer_node import LaneVectorizerNode
+        original = LaneVectorizerNode._process
+        profile = cProfile.Profile()
+        LaneVectorizerNode._process = lambda self,frames:profile.runcall(original,self,frames)
+        atexit.register(lambda:profile.dump_stats(str(args.output)))
+    elif args.visual_codecs:
+        install_codecs(args.output)
+    else:
+        install(args.output)
     sys.argv = command
     runpy.run_path(command[0], run_name='__main__')
+
+
+def install_codecs(output):
+    import cv2
+    rows, lock = [], threading.Lock()
+    for name, event in (('imdecode','decode'),('imencode','encode')):
+        original = getattr(cv2,name)
+        def measured(*args, _original=original, _event=event, **kwargs):
+            start = time.monotonic()
+            try:
+                return _original(*args,**kwargs)
+            finally:
+                end = time.monotonic()
+                with lock:
+                    rows.append(dict(event=_event,at=end,duration_ms=(end-start)*1000))
+        setattr(cv2,name,measured)
+    def save():
+        output.parent.mkdir(parents=True,exist_ok=True)
+        with lock,output.open('w') as stream:
+            for row in rows:
+                stream.write(json.dumps(row,separators=(',',':'))+'\n')
+    atexit.register(save)
 
 
 if __name__ == '__main__':

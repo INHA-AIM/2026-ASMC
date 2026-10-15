@@ -26,6 +26,7 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 [모델 설치와 소비 규칙](../../docs/handoffs/perception/camera-mission16-deployment.md),
 [실측·후처리 선정](../../docs/handoffs/perception/camera-runtime-structure-validation.md)을 함께 확인하세요.
 [15Hz·confidence 후속 검증](../../docs/handoffs/perception/camera-rate-confidence-followup.md)에 최신 결정과 이전 실패를 정리했습니다.
+[시각화·readiness 검증](../../docs/handoffs/perception/camera-visualization-validation.md)은 단일 렌더링 경로와 GUI 동시 부하 결과를 관리합니다.
 판제는 구간·활성화·소비를 결정하며 차선의 주행 소비는 음영 ODD에 한정합니다.
 
 세부 모델·입력·mask 설정은 `config/camera/*_runtime.yaml`과 선택한 모델 프로필 YAML에서 관리합니다.

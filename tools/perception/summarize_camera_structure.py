@@ -13,9 +13,9 @@ def rows(path):
     return [json.loads(s) for s in path.read_text().splitlines() if s]
 
 
-def parity(root):
+def parity(root, variant_names=('R0','R1','R2')):
     variants = {}
-    for variant in ('R0','R1','R2'):
+    for variant in variant_names:
         folder = root/('complete-'+variant)
         sources = json.loads((folder/'replay-sources.json').read_text())
         boxes, lanes, traffic = defaultdict(list), defaultdict(list), defaultdict(list)
@@ -25,6 +25,8 @@ def parity(root):
                 boxes[(r['frame'], sources[key])].append(r['boxes'])
         for path in folder.glob('*.jsonl'):
             for r in rows(path):
+                if r['event'] != 'output':
+                    continue
                 key = str(r['stamp'])+':'+r['frame']
                 if r['event'] != 'output' or key not in sources or r.get('stale'):
                     continue
@@ -35,10 +37,10 @@ def parity(root):
                     traffic[identity].append(r['classification'])
         variants[variant] = dict(boxes=boxes, lanes=lanes, traffic=traffic)
     result = {}
-    for variant in ('R1','R2'):
+    for variant in variant_names[1:]:
         checks = {}
         for kind in ('boxes','lanes','traffic'):
-            ref, candidate = variants['R0'][kind], variants[variant][kind]
+            ref, candidate = variants[variant_names[0]][kind], variants[variant][kind]
             common = set(ref)&set(candidate)
             mismatched, max_delta = [], 0.
             for key in common:
