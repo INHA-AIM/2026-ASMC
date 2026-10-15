@@ -5,14 +5,14 @@ owner: asmc_lidar
 # New contract version (src/asmc_msgs/README.md: new information keeps the
 # existing types and adds a new contract version and new message types).
 # lidar_candidate_topic_contract_v1.yaml keeps owning the frozen v1 types and the
-# v1 topics. This version owns only the additive v2 types below; every
-# base_contract rule (stamps, frames, GPS denial and recovery, validity) applies
-# to them unchanged.
+# v1 topics. This version owns only the additive v2 types and the v2 topics below;
+# every base_contract rule (stamps, frames, GPS denial and recovery, validity)
+# applies to them unless a rule below narrows it for the v2 topics.
 base_contract: config/contracts/lidar_candidate_topic_contract_v1.yaml
 compatibility_policy: additive_only
 implementation:
   message_types: available
-  ros_publishers: pending
+  ros_publishers: available_opt_in
 messages:
   asmc_msgs/LidarObjectV2: c22c9b52da848aeab0e2b4e73343d9f0
   asmc_msgs/LidarObjectArrayV2: d728e7fd984c24641abe10dddfda6dd5
@@ -21,8 +21,35 @@ messages:
 base_messages:
   asmc_msgs/LidarObject: b94cf82e0f325e9ce0364bb143df9f06
   asmc_msgs/LidarObjectArray: 5f774d07dffd4c7dfa93a8d4b62c60b4
+# The v2 topic names below are user-mandated final names (2026-10-15).
+planned_topics:
+  /lidar/local_object:
+    type: asmc_msgs/LidarObjectArrayV2
+    frame: base_link
+    producer_owner: asmc_lidar
+    implementation: available_opt_in
+    runtime_host: src/lidar+sensorfusion/src/Main
+    launch: roslaunch Main main_integration.launch
+    selected_when: gps_missing_invalid_stale_or_recovering
+    exclusive_with: /lidar/map_object
+    subscriber_demand: false
+  /lidar/map_object:
+    type: asmc_msgs/LidarObjectArrayV2
+    frame: map
+    producer_owner: asmc_lidar
+    implementation: available_opt_in
+    runtime_host: src/lidar+sensorfusion/src/Main
+    launch: roslaunch Main main_integration.launch
+    selected_when: map_pose_valid_for_scan
+    exclusive_with: /lidar/local_object
+    subscriber_demand: false
 rules:
   - LidarObjectV2 repeats every LidarObject constant and field with the same type, name and order and appends only MOTION_UNKNOWN=0, MOTION_LOW_THREAT=1, MOTION_DYNAMIC_PENDING=2, MOTION_DYNAMIC=3, bool motion_valid and uint8 motion_state; LidarObjectArrayV2 keeps the LidarObjectArray constants, header, status, reason and stamp_provenance and carries LidarObjectV2[] objects.
   - LidarObjectV2.motion_state is the authoritative temporal motion state; motion_valid is true exactly when motion_state != MOTION_UNKNOWN, so warm-up, GPS-denied and recovering tracks are never a valid LOW_THREAT.
   - LidarObjectV2.dynamic_valid and is_dynamic are derived copies (motion_valid; motion_state == MOTION_DYNAMIC); is_dynamic=false is not evidence of a static object.
   - While v1 LidarObject* topics remain, their dynamic_valid and is_dynamic keep the v1 meaning and are not derived from motion_state.
+  - Each scan is published on at most one of /lidar/local_object or /lidar/map_object, selected by pose validity and never by subscriber count; /lidar/map_object only when the map pose is valid for that scan, /lidar/local_object only while GPS is missing, invalid, stale or recovering (fewer than three consecutive normal samples), and the first scan after recovery is /lidar/map_object.
+  - A scan whose LiDAR input, scan time, IMU or CAN input, leveling or map transform, or any object geometry is invalid, or whose map pose is invalid for a non-GPS reason, publishes nothing on either v2 topic; the reason is reported on /perception/lidar/diagnostics (v2_output, v2_reason), which is how v2 consumers distinguish input-invalid from sensor silence.
+  - OBSERVED_EMPTY on a v2 topic means valid inputs and zero objects on the active topic; an empty array is never a mode signal and no zero-coordinate placeholder object is published.
+  - With common geometry, legacy /last_lidar, /lidar/tracked_objects_map, /lidar/motion_debug and planner UDP are published only in /lidar/map_object scans whose every publishable object has a valid motion state; otherwise the legacy map markers are cleared (DELETEALL).
+  - main_integration.launch pins enable_common_geometry=true and lidar_level_roll=true so IMU roll and pitch are each removed exactly once; production main.launch keeps its defaults and planner_udp_enabled defaults to the production value.

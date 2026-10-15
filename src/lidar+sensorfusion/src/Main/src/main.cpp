@@ -12,6 +12,7 @@
 #include <PlannerInterface/PlannerObjectRosPublisher.hpp>
 #include <ros/package.h>
 #include <Geometry/FrameBoundaryPublisher.hpp>
+#include <Geometry/OutputGate.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -197,19 +198,17 @@ void InitVehicleSpec()
     CANHZ = config["Vehicle"]["CAN"]["Hz"].as<int32>();
 }
 
-void InitPlannerInterface()
+void InitPlannerInterface(bool planner_udp_enabled)
 {
-    YAML::Node config = YAML::LoadFile(YamlURL);
-    const YAML::Node planner = config["PlannerInterface"];
-    if (!planner || !planner["Enabled"].as<bool>(false)) {
-        ROS_INFO("Planner object interface disabled");
+    // ~planner_udp_enabled=false: the planner UDP sender (and its socket) is never created, so the UDP Send below never runs.
+    if (!planner_udp_enabled) {
+        ROS_INFO("Planner object interface disabled (planner_udp_enabled=false)");
         return;
     }
-
-    st_PlannerObjectSender = std::make_unique<PlannerObjectSender>(
-        planner["IP"].as<string>(),
-        planner["Port"].as<int>(),
-        planner["MaxObjects"].as<std::size_t>(20));
+    YAML::Node config = YAML::LoadFile(YamlURL);
+    st_PlannerObjectSender =
+        MakePlannerObjectSender(planner_udp_enabled, config["PlannerInterface"]);
+    if (!st_PlannerObjectSender) ROS_INFO("Planner object interface disabled");
 }
 
 void InitGlobal(ros::NodeHandle &st_NodeHandle, pthread_t *pth_GPS)
@@ -538,16 +537,23 @@ void *TemporalThread(void *p_Arg)
             if(lidar_processed) st_FrameBoundaryPublisher->Publish(st_LiDAR);
             else st_FrameBoundaryPublisher->Invalid(scan_stamp,pose_ready?"empty_or_invalid_lidar_input":pose_reason);
         }
-        const bool map_ready=!frame_boundary::Enabled() ||
-            (frame_boundary::Current().map_pose.valid && asmc::lidar::validate_time(frame_boundary::Current().time).empty());
-        const bool legacy_ready=map_ready && (!frame_boundary::Enabled() ||
-            (lidar_processed && frame_boundary::LegacyMotionReady(st_LiDAR)));
-        if(frame_boundary::Enabled() && st_FrameBoundaryPublisher)
-            st_FrameBoundaryPublisher->SetLegacyReason(!pose_ready?"input_invalid":!map_ready?"pose_unavailable":
-                !legacy_ready?"motion_state_unrepresentable":"available");
-        if(st_PlannerObjectRosPublisher && frame_boundary::Enabled() && (!pose_ready || !legacy_ready))
+        // B0 output gate (Geometry/OutputGate.hpp). Common geometry OFF keeps the previous rule:
+        // legacy publish iff lidar_processed, no V2, no SuppressMap, no SetLegacyReason.
+        // Common geometry ON: at most one of /lidar/local_object and /lidar/map_object per scan, legacy only
+        // with map_v2 and the frame-wide LegacyMotionReady gate, DELETEALL whenever withheld.
+        const output_gate::Inputs gate=frame_boundary::GateInputs(
+            pose_ready,pose_reason,lidar_processed,st_LiDAR,processed_lidar_generation);
+        output_gate::Decision decision=output_gate::Decide(gate);
+        if(gate.common_geometry && st_FrameBoundaryPublisher)
+            decision=st_FrameBoundaryPublisher->PublishV2(st_LiDAR,scan_stamp,decision);
+        const bool legacy_motion_ready=!gate.common_geometry ||
+            (lidar_processed && frame_boundary::LegacyMotionReady(st_LiDAR));
+        const output_gate::LegacyPlan legacy=output_gate::PlanLegacy(decision,gate,legacy_motion_ready);
+        if(legacy.report_reason && st_FrameBoundaryPublisher)
+            st_FrameBoundaryPublisher->SetLegacyReason(legacy.reason);
+        if(legacy.suppress_markers && st_PlannerObjectRosPublisher)
             st_PlannerObjectRosPublisher->SuppressMap(scan_stamp);
-        if (lidar_processed && legacy_ready && st_PlannerObjectRosPublisher) {
+        if (legacy.publish && st_PlannerObjectRosPublisher) {
             st_PlannerObjectRosPublisher->Publish(
                 st_LiDAR, lidar_pose, st_VehicleSpec, ts_CurrTime);
         }
@@ -561,7 +567,8 @@ void *TemporalThread(void *p_Arg)
                 elapsed_ms, st_CurrentData.st_RawLiDAR.s32_Num,
                 st_LiDAR.vec_Objects.size());
         }
-        if (lidar_processed && legacy_ready && st_PlannerObjectSender) {
+        // UDP and the ROS legacy topics share the same boolean.
+        if (legacy.publish && st_PlannerObjectSender) {
             st_PlannerObjectSender->Send(
                 st_LiDAR, lidar_pose, st_VehicleSpec);
         }
@@ -573,6 +580,11 @@ void *TemporalThread(void *p_Arg)
                     << ",\"duration_ms\":" << std::chrono::duration<double, std::milli>(
                         std::chrono::steady_clock::now() - lidar_pipeline_start).count()
                     << ",\"objects\":" << st_LiDAR.vec_Objects.size();
+                if (gate.common_geometry) {
+                    out << ",\"v2_mode\":\"" << output_gate::ModeName(decision.v2) << "\""
+                        << ",\"v2_reason\":" << fusion_trace::Quote(decision.reason)
+                        << ",\"legacy_publish\":" << (legacy.publish ? "true" : "false");
+                }
             });
 
         // 인지 전용: PlanningProcess/ControlProcess 호출 제거 (소스 부재)
@@ -629,6 +641,9 @@ int main(int argc, char **argv)
         "benchmark_sample_frames", s32_BenchmarkSampleFrames, 200);
     s32_BenchmarkWarmupFrames = std::max(0, s32_BenchmarkWarmupFrames);
     s32_BenchmarkSampleFrames = std::max(10, s32_BenchmarkSampleFrames);
+    bool planner_udp_enabled = kPlannerUdpEnabledDefault;
+    st_PrivateNodeHandle.param(
+        "planner_udp_enabled", planner_udp_enabled, kPlannerUdpEnabledDefault);
 
     InitMutex();
     InitVehicleSpec();
@@ -644,7 +659,7 @@ int main(int argc, char **argv)
         std::make_unique<MotionClassifier>(st_PrivateNodeHandle);
     st_PlannerObjectRosPublisher =
         std::make_unique<PlannerObjectRosPublisher>(st_NodeHandle);
-    InitPlannerInterface();
+    InitPlannerInterface(planner_udp_enabled);
     InitGlobal(st_NodeHandle, &th_GPS);
     InitIMU(st_NodeHandle, &th_IMU);
     InitializeCamera(st_NodeHandle, &th_Camera);
@@ -683,6 +698,10 @@ int main(int argc, char **argv)
     ReportFusionTotals();
     if(st_FrameBoundaryPublisher) st_FrameBoundaryPublisher->ReportTotals();
     fusion_trace::Sink().Flush();
+    // B-15: frame_boundary::Publisher owns a ros::WallTimer. Left to static destruction it is destroyed after
+    // roscpp's function-local TimerManager<WallTime>::global() (created later, destroyed earlier) and
+    // ~WallTimer -> TimerManager::remove() locks a destroyed mutex -> boost::lock_error -> std::terminate.
+    st_FrameBoundaryPublisher.reset();
 
     return 0;
 }

@@ -18,6 +18,8 @@ static ros::Publisher pub_ObjectPcl;     // 모든 클러스터 포인트
 
 void InitFusionLidarViz(ros::NodeHandle& nh)
 {
+    // 시각화 전용(velodyne frame, wall-clock stamp)이며 최종 LiDAR 출력이 아니다.
+    // 최종 출력은 /lidar/local_object | /lidar/map_object (FrameBoundaryPublisher.cpp).
     pub_ObjectBoxes = nh.advertise<visualization_msgs::MarkerArray>("/lidar/object_boxes", 1, false);
     pub_ObjectPcl   = nh.advertise<sensor_msgs::PointCloud2>        ("/lidar/object",       1, false);
 

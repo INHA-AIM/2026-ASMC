@@ -15,6 +15,8 @@ extern Planning st_Planning;
 
 void InitLidarViz(ros::NodeHandle& nh)
 {
+    // /lidar_tracking_markers와 아래 /lidar/debug_* 토픽은 시각화/디버그용이며 최종 LiDAR 출력이 아니다.
+    // 최종 출력은 /lidar/local_object | /lidar/map_object (FrameBoundaryPublisher.cpp).
     marker_pub = nh.advertise<visualization_msgs::MarkerArray>(
         "/lidar_tracking_markers", 1);
 }

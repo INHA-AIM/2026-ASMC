@@ -109,3 +109,14 @@ void PlannerObjectSender::Send(const LiDAR& lidar, const GPS_IMU& gps_imu,
         }
     }
 }
+
+std::unique_ptr<PlannerObjectSender> MakePlannerObjectSender(
+    bool planner_udp_enabled, const YAML::Node& planner) {
+    // Decided before the constructor's socket(): disabled means no sender socket and no send.
+    if (!planner_udp_enabled) return nullptr;
+    if (!planner || !planner["Enabled"].as<bool>(false)) return nullptr;
+    return std::make_unique<PlannerObjectSender>(
+        planner["IP"].as<std::string>(),
+        planner["Port"].as<int>(),
+        planner["MaxObjects"].as<std::size_t>(20));
+}

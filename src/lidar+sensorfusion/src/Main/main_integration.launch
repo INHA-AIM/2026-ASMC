@@ -1,0 +1,32 @@
+<launch>
+  <!-- LiDAR V2 integration profile: production main.launch with common geometry ON.
+       Pinned here (not overridable): enable_common_geometry=true and lidar_level_roll=true, so the
+       IMU roll AND pitch are each removed exactly once (CorrectingPoints -> StoreLeveling).
+       Final LiDAR output per scan: at most one LidarObjectArrayV2 message,
+         /lidar/map_object   (frame map)       when the map pose is valid for the scan,
+         /lidar/local_object (frame base_link) while GPS is denied or recovering,
+         nothing on either topic when LiDAR/time/IMU/CAN/transform input is invalid
+         (reason in /perception/lidar/diagnostics).
+       Legacy /last_lidar, /lidar/tracked_objects_map, /lidar/motion_debug and planner UDP follow
+       map_v2 scans AND the frame-wide LegacyMotionReady gate.
+       planner_udp_enabled defaults to the production value (true); tests and offline replays
+       must pass planner_udp_enabled:=false. main.launch defaults are unchanged. -->
+  <arg name="planner_udp_enabled" default="true"/>
+  <arg name="enable_sensor_fusion" default="true"/>
+  <arg name="rviz" default="false"/>
+  <arg name="fusion_trace_path" default=""/>
+  <arg name="drivable_filter_enabled" default="true"/>
+  <arg name="known_static_filter_enabled" default="true"/>
+  <arg name="static_structure_exclusion_enabled" default="true"/>
+  <include file="$(find Main)/main.launch">
+    <arg name="enable_common_geometry" value="true"/>
+    <arg name="lidar_level_roll" value="true"/>
+    <arg name="planner_udp_enabled" value="$(arg planner_udp_enabled)"/>
+    <arg name="enable_sensor_fusion" value="$(arg enable_sensor_fusion)"/>
+    <arg name="rviz" value="$(arg rviz)"/>
+    <arg name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
+    <arg name="drivable_filter_enabled" value="$(arg drivable_filter_enabled)"/>
+    <arg name="known_static_filter_enabled" value="$(arg known_static_filter_enabled)"/>
+    <arg name="static_structure_exclusion_enabled" value="$(arg static_structure_exclusion_enabled)"/>
+  </include>
+</launch>

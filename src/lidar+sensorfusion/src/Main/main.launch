@@ -3,6 +3,9 @@
   <!-- Opt-in common geometry; roll promotion is a separate acceptance gate. -->
   <arg name="enable_common_geometry" default="false"/>
   <arg name="lidar_level_roll" default="false"/>
+  <!-- Planner UDP sender (setting.yaml PlannerInterface). Default true = production behaviour.
+       Tests and offline replays pass planner_udp_enabled:=false: no planner UDP sender socket, nothing sent (roscpp's own UDPROS server socket may still exist; it sends nothing). -->
+  <arg name="planner_udp_enabled" default="true"/>
   <arg name="lidar_mount_config" default="$(find asmc_lidar)/config/autonav_v3.yaml"/>
   <arg name="fusion_camera_config" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <arg name="map_altitude_origin_m" default="0.0"/>
@@ -114,6 +117,7 @@
     <param name="imu_yaw_is_true_enu" value="$(arg imu_yaw_is_true_enu)"/>
     <param name="enable_common_geometry" value="$(arg enable_common_geometry)"/>
     <param name="lidar_level_roll" value="$(arg lidar_level_roll)"/>
+    <param name="planner_udp_enabled" value="$(arg planner_udp_enabled)"/>
     <param name="lidar_mount_config" value="$(arg lidar_mount_config)"/>
     <param name="camera_class_profile" value="$(arg camera_class_profile)"/>
     <param name="fusion_camera_config" value="$(arg fusion_camera_config)"/>

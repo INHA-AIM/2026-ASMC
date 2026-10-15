@@ -46,6 +46,7 @@ include_directories(
 add_library(myHeader
   src/Geometry/FrameBoundary.cpp
   src/Geometry/FrameBoundaryPublisher.cpp
+  src/Geometry/OutputGate.cpp
   src/Global/Global.cpp
   src/Parser/Parser.cpp
   src/Parser/GpsSanityFilter.cpp
@@ -109,9 +110,16 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET test_frame_boundary_ros)
     target_link_libraries(test_frame_boundary_ros myHeader ${catkin_LIBRARIES})
   endif()
+  # B0 V2 output topics (/lidar/local_object, /lidar/map_object) over ROS; V1 test above is unchanged.
+  add_rostest_gtest(test_frame_boundary_v2_ros test/frame_boundary_v2.test
+    test/test_frame_boundary_v2_ros.cpp test/test_runtime_globals.cpp)
+  if(TARGET test_frame_boundary_v2_ros)
+    target_link_libraries(test_frame_boundary_v2_ros myHeader ${catkin_LIBRARIES})
+  endif()
   catkin_add_nosetests(test/test_camera_objects_adapter.py)
   catkin_add_nosetests(test/test_camera_inference_ownership.py)
   catkin_add_nosetests(test/test_fusion_continuous_replay.py)
+  catkin_add_nosetests(test/test_main_launch_contract.py)
   catkin_install_python(PROGRAMS test/test_camera_objects_adapter_ros.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   add_rostest(test/camera_objects_adapter.test)
@@ -229,10 +237,30 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET test_sensor_pose_history)
     target_link_libraries(test_sensor_pose_history myHeader ${catkin_LIBRARIES})
   endif()
+  # F1/S11: IMU/CAN invalid barriers do not depend on when later samples arrive. No ROS master.
+  catkin_add_gtest(test_invalid_barrier_order_b0 test/test_invalid_barrier_order_b0.cpp test/test_runtime_globals.cpp)
+  if(TARGET test_invalid_barrier_order_b0)
+    target_link_libraries(test_invalid_barrier_order_b0 myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  endif()
   catkin_add_gtest(test_lidar_object_v2_contract test/test_lidar_object_v2_contract.cpp)
   if(TARGET test_lidar_object_v2_contract)
     add_dependencies(test_lidar_object_v2_contract ${catkin_EXPORTED_TARGETS})
     target_link_libraries(test_lidar_object_v2_contract ${catkin_LIBRARIES})
+  endif()
+  # B0 output gate truth table: pure, no ROS master.
+  catkin_add_gtest(test_output_gate_b0 test/test_output_gate_b0.cpp src/Geometry/OutputGate.cpp)
+  if(TARGET test_output_gate_b0)
+    target_link_libraries(test_output_gate_b0 ${catkin_LIBRARIES})
+  endif()
+  # V2 builder, motion mapping and gate inputs: ConfigureForTest seam only, no ROS master.
+  catkin_add_gtest(test_lidar_object_v2_builder test/test_lidar_object_v2_builder.cpp test/test_runtime_globals.cpp)
+  if(TARGET test_lidar_object_v2_builder)
+    target_link_libraries(test_lidar_object_v2_builder myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  endif()
+  # ~planner_udp_enabled seam: no AF_INET socket is opened by this test.
+  catkin_add_gtest(test_planner_udp_enable test/test_planner_udp_enable.cpp test/test_runtime_globals.cpp)
+  if(TARGET test_planner_udp_enable)
+    target_link_libraries(test_planner_udp_enable myHeader ${catkin_LIBRARIES} yaml-cpp)
   endif()
 endif()
 

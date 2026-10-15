@@ -59,6 +59,44 @@ void SetReason(std::string* reason, const char* value) {
     if (reason != nullptr) *reason = value;
 }
 
+// Invalid IMU / vehicle-speed evidence (common geometry only). Every invalid
+// source stamp is kept in ascending order. A lookup is invalid when ANY invalid
+// stamp lies in [selected valid sample, query]; samples stamped after the query
+// never change the answer, whenever they arrive (header contract: online and
+// bag replay independent of callback timing).
+constexpr std::size_t kMaxInvalidStamps = 1024;
+
+void RecordInvalid(std::deque<std::uint64_t>* stamps, std::uint64_t ns) {
+    const auto it = std::lower_bound(stamps->begin(), stamps->end(), ns);
+    if (it == stamps->end() || *it != ns) stamps->insert(it, ns);
+    while (stamps->size() > kMaxInvalidStamps) stamps->pop_front();
+}
+
+bool InvalidWithin(const std::deque<std::uint64_t>& stamps,
+                   std::uint64_t from_ns, std::uint64_t to_ns) {
+    const auto it = std::lower_bound(stamps.begin(), stamps.end(), from_ns);
+    return it != stamps.end() && *it <= to_ns;
+}
+
+// Same horizon as PruneImuLocked/PruneCanLocked (history_duration_s behind the
+// newest accepted valid sample).
+void PruneInvalid(std::deque<std::uint64_t>* stamps, std::uint64_t newest_valid_ns,
+                  double history_duration_s) {
+    const auto keep_ns = static_cast<std::uint64_t>(
+        std::max(1.0, history_duration_s) * 1e9);
+    while (!stamps->empty() && newest_valid_ns > keep_ns &&
+           stamps->front() < newest_valid_ns - keep_ns) {
+        stamps->pop_front();
+    }
+}
+
+template <typename Sample>
+std::uint64_t NewestNs(const std::deque<Sample>& samples) {
+    if (samples.empty()) return 0;
+    const auto& s = samples.back();
+    return s.source_ns ? s.source_ns : s.stamp_ms * 1000000ULL;
+}
+
 }  // namespace
 
 SensorPoseHistory::SensorPoseHistory(
@@ -76,7 +114,8 @@ void SensorPoseHistory::Configure(const SensorPoseHistoryConfig& config) {
         imu_.clear();
         can_.clear();
         invalid_imu_stamp_ms_=invalid_can_stamp_ms_=0;
-        invalid_imu_stamp_ns_=invalid_can_stamp_ns_=0;
+        invalid_imu_ns_.clear();
+        invalid_can_ns_.clear();
         has_accepted_imu_ = false;
         has_accepted_can_ = false;
         last_seen_imu_stamp_ms_ = 0;
@@ -119,7 +158,7 @@ void SensorPoseHistory::AddGps(
         }
         const auto attitude_ns=attitude==imu_.end()?0:(attitude->source_ns?attitude->source_ns:attitude->stamp_ms*1000000ULL);
         if(!attitude_ns || double(sample.stamp_ns-attitude_ns)*1e-9>config_.imu_max_age_s ||
-            (invalid_imu_stamp_ns_<=static_cast<std::uint64_t>(sample.stamp_ns) && invalid_imu_stamp_ns_>=attitude_ns)) {
+            InvalidWithin(invalid_imu_ns_,attitude_ns,static_cast<std::uint64_t>(sample.stamp_ns))) {
             sample.valid=false;
         } else {
             GPS_IMU at_gps{};
@@ -142,7 +181,12 @@ bool SensorPoseHistory::AddImu(
         if(frame_boundary::Enabled()) {
             std::lock_guard<std::mutex> lock(mutex_);
             invalid_imu_stamp_ms_=std::max(invalid_imu_stamp_ms_,stamp_ms);
-            invalid_imu_stamp_ns_=std::max<std::uint64_t>(invalid_imu_stamp_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
+            RecordInvalid(&invalid_imu_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
+            // Zero header: no source time (stamp_ms is the callback's receipt time). The
+            // sample still arrived after every valid sample already held, so the newest
+            // one must not be reused (receipt time vs scan source stamp alone raced).
+            if(!source_ns && !imu_.empty()) RecordInvalid(&invalid_imu_ns_,NewestNs(imu_));
+            PruneInvalid(&invalid_imu_ns_,NewestNs(imu_),config_.history_duration_s);
         }
         SetReason(reason, "invalid IMU sample");
         return false;
@@ -169,8 +213,11 @@ bool SensorPoseHistory::AddImu(
         const double jump = std::abs(std::remainder(
             yaw - accepted_imu_yaw_rad_, 2.0 * kPi));
         if (jump > allowed) {
-            if(frame_boundary::Enabled()) invalid_imu_stamp_ms_=std::max(invalid_imu_stamp_ms_,stamp_ms);
-            invalid_imu_stamp_ns_=std::max<std::uint64_t>(invalid_imu_stamp_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
+            if(frame_boundary::Enabled()) {
+                invalid_imu_stamp_ms_=std::max(invalid_imu_stamp_ms_,stamp_ms);
+                RecordInvalid(&invalid_imu_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
+                PruneInvalid(&invalid_imu_ns_,NewestNs(imu_),config_.history_duration_s);
+            }
             SetReason(reason, "implausible IMU yaw jump");
             return false;
         }
@@ -180,6 +227,7 @@ bool SensorPoseHistory::AddImu(
     accepted_imu_yaw_rad_ = yaw;
     accepted_imu_stamp_ms_ = stamp_ms;
     PruneImuLocked();
+    PruneInvalid(&invalid_imu_ns_,NewestNs(imu_),config_.history_duration_s);
     SetReason(reason, "accepted");
     sample_cv_.notify_all();
     return true;
@@ -193,7 +241,10 @@ bool SensorPoseHistory::AddCan(
         if(frame_boundary::Enabled()) {
             std::lock_guard<std::mutex> lock(mutex_);
             invalid_can_stamp_ms_=std::max(invalid_can_stamp_ms_,stamp_ms);
-            invalid_can_stamp_ns_=std::max<std::uint64_t>(invalid_can_stamp_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
+            RecordInvalid(&invalid_can_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
+            // Zero header (CANParser_Callback: NaN speed, receipt time): see AddImu.
+            if(!source_ns && !can_.empty()) RecordInvalid(&invalid_can_ns_,NewestNs(can_));
+            PruneInvalid(&invalid_can_ns_,NewestNs(can_),config_.history_duration_s);
         }
         SetReason(reason, "invalid vehicle-speed sample");
         return false;
@@ -216,8 +267,11 @@ bool SensorPoseHistory::AddCan(
         const double allowed = config_.can_base_speed_allowance_mps +
             config_.can_maximum_acceleration_mps2 * elapsed_s;
         if (std::abs(speed_mps - accepted_can_speed_mps_) > allowed) {
-            if(frame_boundary::Enabled()) invalid_can_stamp_ms_=std::max(invalid_can_stamp_ms_,stamp_ms);
-            invalid_can_stamp_ns_=std::max<std::uint64_t>(invalid_can_stamp_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
+            if(frame_boundary::Enabled()) {
+                invalid_can_stamp_ms_=std::max(invalid_can_stamp_ms_,stamp_ms);
+                RecordInvalid(&invalid_can_ns_,source_ns?source_ns:stamp_ms*1000000ULL);
+                PruneInvalid(&invalid_can_ns_,NewestNs(can_),config_.history_duration_s);
+            }
             SetReason(reason, "implausible vehicle-speed jump");
             return false;
         }
@@ -227,6 +281,7 @@ bool SensorPoseHistory::AddCan(
     accepted_can_speed_mps_ = speed_mps;
     accepted_can_stamp_ms_ = stamp_ms;
     PruneCanLocked();
+    PruneInvalid(&invalid_can_ns_,NewestNs(can_),config_.history_duration_s);
     SetReason(reason, "accepted");
     sample_cv_.notify_all();
     return true;
@@ -372,10 +427,10 @@ bool SensorPoseHistory::LookupLocalLocked(std::uint64_t lidar_stamp_ms,
     const auto query_ns=source_ns?source_ns:lidar_stamp_ms*1000000ULL;
     const auto imu_ns=imu_latest->source_ns?imu_latest->source_ns:imu_latest->stamp_ms*1000000ULL;
     const auto can_ns=can_latest->source_ns?can_latest->source_ns:can_latest->stamp_ms*1000000ULL;
-    if(frame_boundary::Enabled() && invalid_imu_stamp_ns_<=query_ns &&
-        invalid_imu_stamp_ns_>=imu_ns) {SetReason(reason,"imu_input_invalid");return false;}
-    if(frame_boundary::Enabled() && invalid_can_stamp_ns_<=query_ns &&
-        invalid_can_stamp_ns_>=can_ns) {SetReason(reason,"speed_input_invalid");return false;}
+    if(frame_boundary::Enabled() && InvalidWithin(invalid_imu_ns_,imu_ns,query_ns))
+        {SetReason(reason,"imu_input_invalid");return false;}
+    if(frame_boundary::Enabled() && InvalidWithin(invalid_can_ns_,can_ns,query_ns))
+        {SetReason(reason,"speed_input_invalid");return false;}
     if(selection) *selection={imu_ns,imu_latest->receipt_steady_ns,can_ns,can_latest->receipt_steady_ns};
     pose->st_IMU=imu_latest->data;
     pose->st_CAN=can_latest->data;
@@ -456,7 +511,8 @@ void SensorPoseHistory::Reset() {
         imu_.clear();
         can_.clear();
         invalid_imu_stamp_ms_=invalid_can_stamp_ms_=0;
-        invalid_imu_stamp_ns_=invalid_can_stamp_ns_=0;
+        invalid_imu_ns_.clear();
+        invalid_can_ns_.clear();
         has_accepted_imu_ = false;
         has_accepted_can_ = false;
         last_seen_imu_stamp_ms_ = 0;

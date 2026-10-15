@@ -104,7 +104,11 @@ private:
     std::deque<TimedImu> imu_;
     std::deque<TimedCan> can_;
     std::uint64_t invalid_imu_stamp_ms_ = 0, invalid_can_stamp_ms_ = 0;
-    std::uint64_t invalid_imu_stamp_ns_ = 0, invalid_can_stamp_ns_ = 0;
+    // Common geometry only: source ns of EVERY invalid IMU / vehicle-speed sample,
+    // ascending. A single max-stamp barrier let a later invalid sample (stamped
+    // after a scan, arriving during that scan's pose wait) hide the invalid samples
+    // inside the scan's window, so the previous valid sample was used again.
+    std::deque<std::uint64_t> invalid_imu_ns_, invalid_can_ns_;
     bool has_accepted_imu_ = false;
     double accepted_imu_yaw_rad_ = 0.0;
     std::uint64_t accepted_imu_stamp_ms_ = 0;

@@ -112,6 +112,28 @@ class P1BContractTest(unittest.TestCase):
         self.assertEqual(rows.get(v2_path), ["messages"])
         self.assertEqual(rows.get(v1_path), ["messages"])
 
+    def test_lidar_object_v2_topics_are_an_exclusive_pair_owned_by_v2_contract(self):
+        v1 = yaml.safe_load((REPO_ROOT / "config/contracts/lidar_candidate_topic_contract_v1.yaml").read_text())
+        v2 = yaml.safe_load((REPO_ROOT / "config/contracts/lidar_candidate_topic_contract_v2.yaml").read_text())
+        local, mapped = "/lidar/local_object", "/lidar/map_object"
+        topics = v2["planned_topics"]
+        self.assertEqual(set(topics), {local, mapped})
+        self.assertFalse(set(topics) & set(v1["planned_topics"]))
+        for name, frame, other in ((local, "base_link", mapped), (mapped, "map", local)):
+            with self.subTest(topic=name):
+                topic = topics[name]
+                self.assertEqual(topic["type"], "asmc_msgs/LidarObjectArrayV2")
+                self.assertIn(topic["type"], v2["messages"])
+                self.assertEqual(topic["frame"], frame)
+                self.assertEqual(topic["exclusive_with"], other)
+                self.assertIs(topic["subscriber_demand"], False)
+                self.assertEqual(topic["launch"], "roslaunch Main main_integration.launch")
+        main = REPO_ROOT / "src" / "lidar+sensorfusion" / "src" / "Main"
+        producer = (main / "src" / "Geometry" / "FrameBoundaryPublisher.cpp").read_text(encoding="utf-8")
+        for name in topics:
+            self.assertIn('"%s"' % name, producer)
+        self.assertTrue((main / "main_integration.launch").is_file())
+
     def test_lidar_object_v2_is_lossless_append_only_superset(self):
         validate_lidar_object_v2(self.specs)
         v1 = self.specs["LidarObject"]
