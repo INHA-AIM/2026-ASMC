@@ -15,6 +15,7 @@ std::string calibration_id;
 asmc::lidar::Context current;
 asmc::lidar::Rot scan_attitude=asmc::lidar::Rot::Identity();
 double scan_yaw=0.;
+unsigned leveling_stores=0;
 std::string Sha256(const std::string& path) {
   std::ifstream stream(path,std::ios::binary);
   if (!stream) throw std::runtime_error("Cannot read calibration source: "+path);
@@ -156,7 +157,9 @@ void PrepareScan(const asmc::lidar::Observation& time,const GPS_IMU& local,
   current.frame=asmc::lidar::Frame::LeveledSensor;
   current.base_from_sensor=SensorMount(vehicle);
   current.calibration_source=calibration_id;
-  current.leveling_source="Main::CorrectingPoints";
+  // leveling_source is written only by StoreLeveling. A scan whose points were never leveled
+  // (e.g. LidarProcess early return) stays unproven and base_from_input fails closed.
+  current.leveling_source.clear(); leveling_stores=0;
   current.map_pose=map_pose;
   // KF derivatives are not promoted to an absolute 3D velocity by this adapter.
   current.ego_linear_base=asmc::lidar::Vec(local.st_CAN.f32_CurrentVel_MPS,0,0);
@@ -184,7 +187,7 @@ void RecordTrackingFrame(LiDARObjectInfo& object) {
   object.tracking_yaw_from_input=YawFromInput();
   object.tracking_origin_in_yaw=OriginInYaw();
 }
-void AlignTrackingFrame(LiDARObjectInfo& object,double yaw_now_rad) {
+void AlignTrackingFrame(LiDARObjectInfo& object,double yaw_now_rad,bool rotate_obb_yaw) {
   if(!Enabled() || !object.tracking_frame_valid) return;
   const auto inverse=YawFromInput().transpose().eval();
   const auto yaw_change=asmc::lidar::rpy(0,0,object.f32_PrevYaw-yaw_now_rad);
@@ -200,10 +203,30 @@ void AlignTrackingFrame(LiDARObjectInfo& object,double yaw_now_rad) {
   object.Eigen_KfState_CA=jacobian*object.Eigen_KfState_CA;
   object.Eigen_KfState_CA(0)=next.x();object.Eigen_KfState_CA(1)=next.y();
   object.Eigen_KfP_CA=jacobian*object.Eigen_KfP_CA*jacobian.transpose();
-  const auto axis=(rotation*asmc::lidar::Vec(std::cos(object.f32_OBB_YawRad),std::sin(object.f32_OBB_YawRad),0)).eval();
-  object.f32_OBB_YawRad=std::atan2(axis.y(),axis.x());
+  if(rotate_obb_yaw) {
+    // Only a previous-scan OBB (aligned copy, missed track) is re-expressed; a current
+    // detection's OBB yaw is already measured in this scan's frame.
+    const auto axis=(rotation*asmc::lidar::Vec(std::cos(object.f32_OBB_YawRad),std::sin(object.f32_OBB_YawRad),0)).eval();
+    object.f32_OBB_YawRad=std::atan2(axis.y(),axis.x());
+  }
   object.f32_PrevYaw=yaw_now_rad;
   RecordTrackingFrame(object); object.tracking_height_input=next.z();
 }
-void StoreLeveling(const asmc::lidar::Rot& rotation){current.applied_leveling=rotation;}
+bool StoreLeveling(const asmc::lidar::Rot& rotation) {
+  // Exactly one valid store per PrepareScan. A second store or an invalid rotation leaves the
+  // scan unproven (empty leveling_source) instead of silently replacing the applied rotation.
+  if(++leveling_stores!=1 || !asmc::lidar::rotation_valid(rotation)) {
+    current.leveling_source.clear();
+    return false;
+  }
+  current.applied_leveling=rotation;
+  current.leveling_source="Main::CorrectingPoints";
+  return true;
+}
+unsigned LevelingStoreCount(){return leveling_stores;}
+void ConfigureForTest(bool enable,bool roll,const std::string& calibration) {
+  enabled=enable; use_roll=roll; calibration_id=calibration;
+  current=asmc::lidar::Context{}; scan_attitude=asmc::lidar::Rot::Identity(); scan_yaw=0.;
+  leveling_stores=0;
+}
 }  // namespace frame_boundary

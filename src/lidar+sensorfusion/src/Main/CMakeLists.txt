@@ -132,6 +132,15 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(test_tracking_association
       myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
   endif()
+  # ROS master 없이 실행: frame_boundary::ConfigureForTest seam만 사용한다.
+  catkin_add_gtest(test_leveling_contract
+    test/test_leveling_contract.cpp
+    test/test_runtime_globals.cpp
+  )
+  if(TARGET test_leveling_contract)
+    target_link_libraries(test_leveling_contract
+      myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  endif()
   catkin_add_gtest(test_motion_classifier
     test/test_motion_classifier.cpp
     test/test_runtime_globals.cpp

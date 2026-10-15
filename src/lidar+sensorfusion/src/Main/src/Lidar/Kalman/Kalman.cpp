@@ -46,13 +46,15 @@ inline Eigen::Matrix2f rot2(float dpsi){
 }
 
 // ★ 자차 요 변화량만큼 상태/공분산을 현재 바디 프레임으로 회전 정렬
-inline void compensate_ego_yaw(LiDARObjectInfo &o, float ego_yaw_now_deg)
+// rotate_obb_yaw: 공통 기하에서 o의 OBB yaw가 이전 scan 값(miss predict)이면 true,
+// 현재 검출(update)이면 false. legacy 분기는 원래 OBB yaw를 돌리지 않으므로 무관하다.
+inline void compensate_ego_yaw(LiDARObjectInfo &o, float ego_yaw_now_deg, bool rotate_obb_yaw)
 {
     // 1) 현재 yaw [deg] → rad 변환
     float yaw_now = ego_yaw_now_deg * M_PI / 180.0f;
 
     if(frame_boundary::Enabled() && o.tracking_frame_valid) {
-        frame_boundary::AlignTrackingFrame(o,yaw_now); return;
+        frame_boundary::AlignTrackingFrame(o,yaw_now,rotate_obb_yaw); return;
     }
     // 2) Δyaw = 현재 - 과거 ([-π, π]로 정규화)
     float dpsi = wrapToPi(yaw_now - o.f32_PrevYaw);
@@ -115,7 +117,8 @@ void kalman_filter_predict(LiDARObjectInfo &o, float64 dt, float ego_yaw_now)
 
     // 1) "현재 프레임 바디 좌표"로 회전 정렬 (수동 회전 내부에서 처리)
     //    이 호출 안에서 PrevYaw가 ego_yaw_now로 갱신됨
-    compensate_ego_yaw(o, ego_yaw_now);
+    //    miss track은 이전 scan의 OBB를 그대로 들고 있으므로 OBB yaw도 1회 재표현한다.
+    compensate_ego_yaw(o, ego_yaw_now, true);
 
     // 2) 표준 CA 예측
     Eigen::Matrix<float, 6, 6> A = Eigen::Matrix<float, 6, 6>::Identity();
@@ -155,7 +158,9 @@ void kalman_filter_update(LiDARObjectInfo &obj,
     // --- 프레임 정렬(수동 회전) : 지난 프레임 기준 상태/공분산을 "현재 바디 프레임"으로 재표현 ---
     // 내부에서 PrevYaw가 ego_yaw_now로 갱신됨
     // ROS_INFO("[BEFORE] &obj=%p prev=%.6f", (void*)&obj, obj.f32_PrevYaw);
-    compensate_ego_yaw(obj, ego_yaw_now);
+    // obj는 현재 검출이다. OBB yaw는 Objectinfo_for_km/stabilizeMatchedOBB가 이미 현재
+    // 프레임으로 기록했으므로 KF 상태만 정렬한다(OBB yaw 이중 회전 금지).
+    compensate_ego_yaw(obj, ego_yaw_now, false);
 
     // --- 두 번째 프레임: 속도 초기화 (pred_x/pred_y는 반드시 '현재 프레임 기준'이어야 함) ---
     if (obj.s32_KfInitCount == 1) {

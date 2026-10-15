@@ -22,6 +22,16 @@ asmc::lidar::Observation ScanTime(const RAW_LIDAR_DATA& raw);
 ros::Time SourceStamp(const RAW_LIDAR_DATA& raw);
 bool LegacyMotionReady(const LiDAR& lidar);
 void RecordTrackingFrame(LiDARObjectInfo& object);
-void AlignTrackingFrame(LiDARObjectInfo& object, double yaw_now_rad);
-void StoreLeveling(const asmc::lidar::Rot& rotation);
+// Re-expresses the previous scan's KF state in the current scan frame exactly once.
+// rotate_obb_yaw=true: object's f32_OBB_YawRad is a previous-scan value (aligned copy, missed track).
+// rotate_obb_yaw=false: current detection (kalman_filter_update); its OBB yaw is already current.
+void AlignTrackingFrame(LiDARObjectInfo& object, double yaw_now_rad, bool rotate_obb_yaw = true);
+// Single-leveling contract: stored exactly once per PrepareScan. A second store or an invalid
+// rotation clears leveling_source (base_from_input fails closed) and returns false.
+bool StoreLeveling(const asmc::lidar::Rot& rotation);
+// StoreLeveling calls since the last PrepareScan (diagnostics/tests).
+unsigned LevelingStoreCount();
+// Unit-test seam only: selects common geometry on/off without ROS params or package files
+// and resets the per-scan state. The runtime path (main.cpp) never calls it.
+void ConfigureForTest(bool enabled, bool use_roll, const std::string& calibration_id);
 }  // namespace frame_boundary
