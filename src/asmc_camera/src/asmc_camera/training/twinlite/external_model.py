@@ -13,7 +13,7 @@ import torch
 
 
 DEFAULT_TWINLITE_ROOT = "/opt/baselines/TwinLiteNetPlus"
-PINNED_TWINLITE_COMMIT = "90f1b8695ae311d5123b05f8534b2e11e42499d2"
+from ...camera.backends import PINNED_TWINLITE_COMMIT
 SUPPORTED_CONFIGS = ("nano", "small", "medium", "large")
 
 

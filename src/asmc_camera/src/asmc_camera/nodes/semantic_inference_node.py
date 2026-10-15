@@ -31,6 +31,11 @@ class SemanticInferenceNode:
         from asmc_camera.runtime.parameters import Parameters
         self.parameters = parameters or Parameters()
         self.input_source, self.fault_handler = input_source, fault_handler
+        self.lazy_outputs = bool(self.parameters.get('~lazy_outputs', False))
+        self.local_gpu_cache = None
+        if bool(self.parameters.get('~gpu_preprocess', False)) and input_source is None:
+            from asmc_camera.runtime.gpu_input import RawGpuCache
+            self.local_gpu_cache = RawGpuCache(device=str(self.parameters.get('~device', 'cuda')))
         self.views = tuple(str(value) for value in self.parameters.get("~views", ["front"]))
         unknown = set(self.views) - set(SUPPORTED_VIEWS)
         if not self.views or unknown or len(set(self.views)) != len(self.views):
@@ -48,6 +53,8 @@ class SemanticInferenceNode:
         load_started = time.perf_counter()
         backend = create_backend(
             backend_name,
+            **({'engine_manifest': str(self.parameters.get('~engine_manifest'))}
+               if backend_name == 'twinlite_tensorrt' else {}),
             checkpoint=str(self.parameters.get("~checkpoint")),
             model_config=str(self.parameters.get("~model_config", "medium")),
             twinlite_root=self.parameters.get("~twinlite_root", None),
@@ -97,6 +104,7 @@ class SemanticInferenceNode:
             raise ValueError("log_interval_sec must be positive")
         self.categorical_heads = frozenset(backend.info.categorical_classes)
         self.backend_info = dict(backend.info.__dict__)
+        self.latest_backend_stages = {}
         self.output_topics = {
             view: {
                 head: self._output_topic(view, head, head in self.categorical_heads)
@@ -332,7 +340,8 @@ class SemanticInferenceNode:
             from contextlib import ExitStack
             leases = ExitStack()
             decoded = {}
-            gpu_inputs = {} if self.input_source and self.input_source.gpu_enabled else None
+            local_gpu_cache = getattr(self, 'local_gpu_cache', None)
+            gpu_inputs = {} if local_gpu_cache or (self.input_source and self.input_source.gpu_enabled) else None
             usable_frames = {}
             started = time.perf_counter()
             for frame in frames:
@@ -349,7 +358,11 @@ class SemanticInferenceNode:
                 usable_frames[frame.view] = frame
                 if gpu_inputs is not None:
                     try:
-                        gpu_inputs[frame.view] = leases.enter_context(self.input_source.gpu_lease(frame, image))
+                        if local_gpu_cache:
+                            gpu_inputs[frame.view] = leases.enter_context(local_gpu_cache.lease(
+                                frame.view, (generation, frame.stamp.to_nsec()), image))
+                        else:
+                            gpu_inputs[frame.view] = leases.enter_context(self.input_source.gpu_lease(frame, image))
                     except Exception as exc:
                         if self.fault_handler:
                             self.fault_handler(exc)
@@ -368,11 +381,14 @@ class SemanticInferenceNode:
                 # progress; re-checking afterward could request arrays that
                 # were intentionally not copied into this prediction.
                 preserve_model_grid = self._model_grid_has_subscribers()
+                native_outputs = self._native_output_requests() if self.lazy_outputs else None
                 prediction = self.engine.infer(
                     decoded,
                     preserve_model_grid=preserve_model_grid,
                     gpu_inputs=gpu_inputs,
+                    native_outputs=native_outputs,
                 )
+                self.latest_backend_stages = prediction.backend_stages
                 if self._stop.is_set():
                     return
             except Exception as exc:
@@ -436,10 +452,10 @@ class SemanticInferenceNode:
             for head, output in value.probabilities.items():
                 if head in self.categorical_heads:
                     categorical_outputs.append((self.publishers[view][head], output, frame, True))
-                    other_outputs.append((self.confidence_publishers[view][head],
-                                          value.categorical_confidences[head], frame, False))
                 else:
                     other_outputs.append((self.publishers[view][head], output, frame, False))
+            for head, confidence in value.categorical_confidences.items():
+                other_outputs.append((self.confidence_publishers[view][head], confidence, frame, False))
             if publish_model_grid and view in self.model_grid_publishers:
                 model_grid_outputs.extend([
                     (self.model_grid_publishers[view],
@@ -452,6 +468,16 @@ class SemanticInferenceNode:
             if not self._publish_connected_image(publisher, value, frame, categorical):
                 return False
         return True
+
+    def _native_output_requests(self):
+        requests = {}
+        for view in self.views:
+            requests[view] = {head for head, publisher in self.publishers[view].items()
+                              if publisher.get_num_connections() > 0}
+            requests[view].update(head + '_confidence'
+                for head, publisher in self.confidence_publishers[view].items()
+                if publisher.get_num_connections() > 0)
+        return requests
 
     def _should_publish_model_grid(self, predictions, usable_frames):
         if not self.model_grid_publishers:
@@ -599,6 +625,7 @@ class SemanticInferenceNode:
             "inference_errors": self.inference_errors,
             "processing_fps": round(fps, 3),
             "average_stage_ms": averages,
+            "latest_backend_stage_ms": self.latest_backend_stages,
             "queue_age_p50_ms": self._percentile(self._queue_age_samples, 50),
             "queue_age_p95_ms": self._percentile(self._queue_age_samples, 95),
             "end_to_end_p50_ms": self._percentile(self._end_to_end_samples, 50),
@@ -624,6 +651,9 @@ class SemanticInferenceNode:
         self.buffer.close()
         if self.worker is not threading.current_thread():
             self.worker.join(timeout=2.)
+        cache = getattr(self, 'local_gpu_cache', None)
+        if cache is not None and not self.worker.is_alive():
+            cache.close()
         self.control.close()
 
 

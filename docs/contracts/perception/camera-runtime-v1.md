@@ -39,6 +39,9 @@ ResNet은 camera4의 기존 PIL RGB·GPU resize·bfloat16 경로를 유지한다
 `lane_input.yaml`은 TwinLite와 model-grid 투영이 함께 읽는 단일 입력 크기 설정이다.
 YOLO 배포 checkpoint2개·engine2개는 패키지 models의 실제 Git 파일이다.
 [모델 배포 안내](../../../src/asmc_camera/models/README.md)의 지원 GPU/runtime과 SHA를 따른다.
+TwinLite v6 checkpoint도 패키지에 포함한다. 기본 backend는 PyTorch이며, TensorRT
+FP16 후보는 `lane_runtime_tensorrt.yaml`에서 선택한다. 변환 품질·부하·남은 후단 실패는
+[TensorRT 검증 기록](../../handoffs/perception/camera-twinlite-tensorrt.md)을 따른다.
 공유 GPU 입력은 내부 `_runtime.launch implementation:=shared shared_gpu_input:=true` 후보이며
 기본은 모델별 프로세스다. 공유 후보에서도 camera4 ResNet은 별도 프로세스를 사용한다.
 구형 `perception.launch`의 TwinLite384×640 호환 경로는 보존한다.
@@ -135,7 +138,9 @@ ROS 발행까지 monotonic wall 시간을 사용한다.
 ## 비교용 공유 프로세스
 
 전방960 이후의 공유 입력 경계와 B1/B2 설계는 [공유 입력 설계안](../../handoffs/perception/camera-shared-input-design.md)에 있다.
-GPU 입력·전송 공유는 아직 구현하지 않았으며 추가 실험보다 설계를 먼저 확정한다.
+GPU 입력·전송 공유 후보는 구현했으며, TensorRT 전환 후 T3 대조에서도 기본으로
+채택하지 않았다. CPU 절감과 다른 모델의 지연 악화를 함께 판정하며 위 검증 기록에
+실측과 보류 근거를 남긴다.
 
 기본은 R1의 독립 프로세스다. 내부 `_runtime.launch implementation:=shared`는 R2 실험 경로다.
 명시적인 모델별 Parameters namespace·독립 worker·모드·주기를 사용한다. 공유 입력은 토픽당

@@ -1,5 +1,5 @@
 # Canonical camera.launch requests15Hz; legacy perception.launch keeps10Hz.
-checkpoint: $(find asmc_camera)/../../artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+checkpoint: $(find asmc_camera)/models/lane_segmentation/twinlite-medium-v6.pt
 device: cuda
 # Tensor sizes are shared with the model-grid projector via lane_input.yaml.
 views: [front, left, right]

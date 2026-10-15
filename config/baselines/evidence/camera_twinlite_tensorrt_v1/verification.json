@@ -1,0 +1,18 @@
+{
+  "cpu_ros_checks": 418,
+  "cpu_ros_pass": true,
+  "catkin_build_install_pass": true,
+  "package_path_without_external_models_pass": true,
+  "documentation_and_contracts_pass": true,
+  "config_sha256": {
+    "t0.yaml": "3ba9f67a0499fac9389305851ae7a4c085d203b73c34433275c774e34b60b905",
+    "t1.yaml": "c70a077f9a4ea2002078941975b03abcbcb8701353ab4b99cfa6b4ac0384cd35",
+    "t2.yaml": "54d32acca4cd78d7b7eeb4fd004a46f804d1af1509b1c766e871e6a97561b5d2",
+    "live-final-jobs.json": "86204f517336bbe226492b954fcff0385cb78494446018143009c3c7db78ce2e",
+    "soak-jobs.json": "028b4a02bd9c7b600abf395a54dc0ef7fc675890fcee27d0ecdf638abc046b21"
+  },
+  "ci": "pending final push",
+  "default_backend": "pytorch",
+  "shared_runtime_promoted": false,
+  "pr_merged": false
+}

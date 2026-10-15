@@ -57,6 +57,7 @@ def main():
     p.add_argument('--recovery',default='resource-recovery',help='Coverage-only repeat; never replace a failed performance result')
     p.add_argument('--soak-matrix',default='soak',help='Explicit final continuous trial; earlier failures stay historical')
     p.add_argument('--structure-matrices',help='Comma-separated matrices for separate/shared input comparison; default retains visualization reporting')
+    p.add_argument('--group-prefixes',type=json.loads,default={},help='JSON trial-prefix to comparison-group mapping; longest matching prefix wins')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
     final_matrices=set(a.structure_matrices.split(',')) if a.structure_matrices else {a.matrix}
     rate_followup(SimpleNamespace(results=a.results,output=a.output))
@@ -85,6 +86,10 @@ def main():
             job=next(j for j in jobs if j['name']==trial['trial'])
             trial['comparison_group']=('separate' if job['variant']=='R1' else
                                        'shared_gpu' if job.get('shared_gpu_input') else 'shared_decode')
+        for prefix in sorted(a.group_prefixes,key=len,reverse=True):
+            if trial['trial'].startswith(prefix):
+                trial['comparison_group']=a.group_prefixes[prefix]
+                break
         if trial['matrix']==a.recovery:
             original=originals[trial['rerun_of']]
             original_root=a.results/a.matrix/original['trial']

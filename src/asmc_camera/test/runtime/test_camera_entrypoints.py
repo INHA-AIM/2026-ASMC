@@ -24,6 +24,23 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertEqual(config.params['/camera_bev_fusion/max_fused_hz'].value, 15.)
         self.assertEqual(config.params['/camera_objects/model_kind'].value, 'yolo')
 
+    def test_twinlite_candidate_resolves_local_engines_in_both_process_layouts(self):
+        from asmc_camera.camera.backends.twinlite_tensorrt import load_manifest
+        profile = LAUNCH.parent / 'config/camera/lane_runtime_tensorrt.yaml'
+        for layout, prefix in [('separate', '/camera_lane/'),
+                               ('shared', '/camera_runtime/components/lane/')]:
+            config = self.config('_runtime.launch', 'implementation:=' + layout,
+                                 'lane_runtime_config:=' + str(profile))
+            params = {k[len(prefix):]: v.value for k, v in config.params.items() if k.startswith(prefix)}
+            self.assertEqual(params['backend'], 'twinlite_tensorrt')
+            self.assertTrue(params['gpu_preprocess'] and params['lazy_outputs'])
+            self.assertEqual(params['input_hw'], [480, 640])
+            self.assertEqual(params['input_hw_by_view/front'], [544, 960])
+            manifest, directory = load_manifest(params['engine_manifest'], params['checkpoint'],
+                (480, 640), {'front': (544, 960)}, 'medium')
+            self.assertEqual(directory, LAUNCH.parent / 'models/lane_segmentation')
+            self.assertEqual([r['max_batch'] for r in manifest['engines']], [1, 2])
+
     def test_off_has_no_producers(self):
         self.assertFalse(self.config('camera.launch', 'mode:=off').nodes)
 

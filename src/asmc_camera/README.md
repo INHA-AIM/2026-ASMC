@@ -4,8 +4,9 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 실행은 `camera.launch`, 시각화는 `view.launch`를 사용합니다.
 기본 객체 모델은 YOLO26l v11 E8, 사전학습 YOLO26l도 실행 시 선택할 수 있습니다.
 현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
-전방 tensor는 두 모델 모두544×960입니다. YOLO 좌우는480×640, TwinLite 좌우는384×640을 유지합니다.
-TwinLite는 이전 전방384×640에서 확대되므로 추가 연산 비용도 검증합니다.
+전방 tensor는 두 모델 모두544×960입니다. 좌우 tensor는 두 모델 모두480×640인 PR #85 후보입니다.
+TwinLite는 독립 PyTorch 경로를 유지하며, TensorRT 후보의 품질·공급 검증은
+[TensorRT 검증 기록](../../docs/handoffs/perception/camera-twinlite-tensorrt.md)에서 관리합니다.
 YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합니다. 같은 목표 Hz가 같은 영상 시각을 보장하지는 않습니다.
 
 ```bash

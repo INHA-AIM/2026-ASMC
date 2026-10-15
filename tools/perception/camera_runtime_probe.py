@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark-only launch prefix: in-memory callback-to-publish timing, no trace IO.
+"""Benchmark-only timing with a bounded asynchronous diagnostic journal.
 
 The same prefix instruments the frozen R0 and both candidates. Input receipt is
 the entry to the actual model (or shared broker) callback, not a separate ROS
@@ -21,11 +21,12 @@ import time
 def install(output):
     import rospy
     subscriber, publisher = rospy.Subscriber, rospy.Publisher
-    receipts, rows, lock = OrderedDict(), [], threading.RLock()
+    from asmc_camera.runtime.jsonl_journal import JsonlJournal
+    receipts, rows, lock = OrderedDict(), JsonlJournal(output), threading.RLock()
 
     def gc_event(phase, info):
         # Diagnose rare whole-process pauses without changing GC policy. Only
-        # generation2 is recorded; no lock, payload copy, or IO in this hook.
+        # generation2 is recorded; no payload copy or file IO in this hook.
         if info['generation']==2:
             caller=sys._getframe(1)
             event=dict(event='gc',phase=phase,generation=2,at=time.monotonic(),
@@ -76,15 +77,14 @@ def install(output):
     def advertise(name, data_class, **kwargs):
         original = publisher(name, data_class, **kwargs)
         measured = name == '/perception/camera/objects' or name == '/perception/traffic_light/detection' or (
-            name.startswith('/perception/camera/') and name.endswith('/road_marking/class_id'))
+            name.startswith('/perception/camera/') and (
+                name.endswith('/road_marking/class_id') or
+                name.endswith('/road_marking/model_grid/class_id')))
         return MeasuredPublisher(original, name) if measured else original
 
     def save():
         gc.callbacks.remove(gc_event)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with lock, output.open('w') as stream:
-            for row in rows:
-                stream.write(json.dumps(row, separators=(',', ':')) + '\n')
+        rows.close()
     rospy.Subscriber, rospy.Publisher = subscribe, advertise
     atexit.register(save)
 
@@ -118,7 +118,8 @@ def main():
 
 def install_codecs(output):
     import cv2
-    rows, lock = [], threading.Lock()
+    from asmc_camera.runtime.jsonl_journal import JsonlJournal
+    rows, lock = JsonlJournal(output), threading.Lock()
     for name, event in (('imdecode','decode'),('imencode','encode')):
         original = getattr(cv2,name)
         def measured(*args, _original=original, _event=event, **kwargs):
@@ -131,10 +132,7 @@ def install_codecs(output):
                     rows.append(dict(event=_event,at=end,duration_ms=(end-start)*1000))
         setattr(cv2,name,measured)
     def save():
-        output.parent.mkdir(parents=True,exist_ok=True)
-        with lock,output.open('w') as stream:
-            for row in rows:
-                stream.write(json.dumps(row,separators=(',',':'))+'\n')
+        rows.close()
     atexit.register(save)
 
 

@@ -4,6 +4,8 @@
 수락 전 공유 구조의 기본 승격·PR 병합은 하지 않는다.
 실행 시작점은 [카메라 실행 계약](../../contracts/perception/camera-runtime-v1.md)이다.
 구현·배포 모델·실패를 포함한 최종 판정은 [B1/B2 검증 기록](camera-shared960-validation.md)을 따른다.
+후속 TensorRT 변환과 T0–T3 재대조는 [TensorRT 검증 기록](camera-twinlite-tensorrt.md)에 있다.
+공유 입력은 CPU 절감에도 YOLO p95 악화 제한을 넘어 기본 채택하지 않았다.
 
 ## 현재 코드에서 같아진 것과 다른 것
 
@@ -16,7 +18,7 @@
 | 축소 보간 |OpenCV linear|OpenCV area|
 | Ego mask |ON, 원본 크기에서 적용|기존 원본 입력 유지|
 | 독립 CPU→GPU 입력 |BGR uint8, GPU에서 RGB·binding dtype·/255|CPU RGB float32·/255, GPU AMP|
-| 현재 실행 |TensorRT FP16|PyTorch AMP, TensorRT 아님|
+| 현재 기본 / 후보 |TensorRT FP16|기본 PyTorch AMP / 후보 TensorRT FP16|
 
 전방 너비와 tensor shape가 같아도 입력 픽셀·dtype·layout이 다르면 최종 tensor를
 그대로 공유할 수 없다. mask를 resize 뒤로 옮기는 것도 경계 픽셀을 바꾸므로 동등한

@@ -5,6 +5,7 @@
   <arg name="nms_iou" default="0.50"/>
   <arg name="implementation" default="separate" doc="separate | shared; experimental until accepted"/>
   <arg name="lane_hz" default="15.0"/>
+  <arg name="lane_runtime_config" default="$(find asmc_camera)/config/camera/lane_runtime.yaml"/>
   <arg name="shared_gpu_input" default="false" doc="internal validated GPU preprocessing candidate"/>
   <arg name="lane_batch_wait_ms" default="20.0"/>
   <arg name="lane_fusion_hz" default="$(arg lane_hz)"/>
@@ -34,7 +35,7 @@
     <arg name="camera_batch_wait_ms" value="$(arg lane_batch_wait_ms)"/>
     <arg name="lane_fusion_max_hz" value="$(arg lane_fusion_hz)"/>
     <arg name="objects_component_config" value="$(find asmc_camera)/config/camera/objects_runtime.yaml"/>
-    <arg name="lane_component_config" value="$(find asmc_camera)/config/camera/lane_runtime.yaml"/>
+    <arg name="lane_component_config" value="$(arg lane_runtime_config)"/>
     <arg name="traffic_component_config" value="$(find asmc_camera)/config/camera/traffic_light_runtime.yaml"/>
     <arg name="objects_node_name" value="camera_objects"/>
     <arg name="lane_node_name" value="camera_lane"/>
@@ -52,7 +53,7 @@
       <rosparam command="load" file="$(find asmc_camera)/config/camera/objects_runtime.yaml" ns="components/objects" subst_value="true"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/cameras.yaml" ns="components/lane"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/twinlite_medium.yaml" ns="components/lane"/>
-      <rosparam command="load" file="$(find asmc_camera)/config/camera/lane_runtime.yaml" ns="components/lane" subst_value="true"/>
+      <rosparam command="load" file="$(arg lane_runtime_config)" ns="components/lane" subst_value="true"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/lane_input.yaml" ns="components/lane"/>
       <param name="components/lane/target_hz" value="$(arg lane_hz)"/>
       <param name="components/lane/batch_wait_ms" value="$(arg lane_batch_wait_ms)"/>

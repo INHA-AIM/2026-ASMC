@@ -1,0 +1,6 @@
+package /data/runtime/camera-twinlite-trt-v1/install/share/asmc_camera
+yolo26l_pretrained_mission_three_view.yaml
+weights yolo26l-pretrained_coco7.engine 57496998 95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f
+yolo26l_mission16_e8_three_view.yaml
+weights yolo26l-finetuned_e8.engine 56610526 c9dc3ca826c9fffa4705da4e31b7ff65c913a50b9658f4d74a7079d08df21f97
+TwinLite manifest/checkpoint/engine SHA validation PASS

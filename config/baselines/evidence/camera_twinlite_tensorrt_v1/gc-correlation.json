@@ -1,0 +1,26 @@
+{
+  "window_monotonic": [
+    288128,
+    288132
+  ],
+  "gc_start": 288129.980588673,
+  "gc_stop": 288130.513565584,
+  "gc_caller": "LaneBoundaryFamily.deserialize",
+  "collected": 0,
+  "input_max_gap_ms": {
+    "camera_lane": {
+      "camera_left": 549.6673999587074,
+      "camera_front": 543.4705140069127,
+      "camera_right": 547.6215140079148
+    },
+    "camera_objects": {
+      "camera_left": 106.20863403892145,
+      "camera_front": 105.18368700286373,
+      "camera_right": 105.19722802564502
+    },
+    "camera_traffic_light": {
+      "camera_extra": 167.659986007493
+    }
+  },
+  "interpretation": "Lane-local callback gap overlaps GC; other model callbacks continue. Does not prove MORAI rendering failure."
+}

@@ -1,0 +1,105 @@
+{
+  "schema": "asmc_twinlite_tensorrt_v1",
+  "checkpoint": "twinlite-medium-v6.pt",
+  "checkpoint_sha256": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b",
+  "checkpoint_epoch": 11,
+  "weights": "ema",
+  "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2",
+  "model_config": "medium",
+  "torch": "2.1.2+cu118",
+  "opset": 17,
+  "class_names": {
+    "drivable": [
+      "background",
+      "drivable"
+    ],
+    "road_marking": [
+      "background",
+      "white_lane",
+      "yellow_lane",
+      "stopline"
+    ]
+  },
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.29",
+  "engines": [
+    {
+      "hw": [
+        544,
+        960
+      ],
+      "max_batch": 1,
+      "onnx": "twinlite_medium_v6_front.onnx",
+      "onnx_sha256": "3cdbd9289aeb0326f365d26ababf20f88913eaef6e31b41a6f740cdf2a22240f",
+      "output_mode": "reduced",
+      "precision": "fp16",
+      "fp32_sensitive": false,
+      "onnx_parity": [
+        {
+          "batch": 1,
+          "max_abs": [
+            3.337860107421875e-06,
+            0.0,
+            1.9669532775878906e-06
+          ]
+        }
+      ],
+      "build_seconds": 162.9735942769912,
+      "fp32_layers": [],
+      "file": "twinlite_medium_v6_front.engine",
+      "sha256": "b0a544448e3e431b6974c749c0b894740198c67faacfdab8939d32678cfd6cd6",
+      "bytes": 5237276
+    },
+    {
+      "hw": [
+        480,
+        640
+      ],
+      "max_batch": 2,
+      "onnx": "twinlite_medium_v6_sides.onnx",
+      "onnx_sha256": "9e7108c101b3842c58013db9494fe785cb3ad49f7c5da5ba1d855712860078ca",
+      "output_mode": "reduced",
+      "precision": "fp16",
+      "fp32_sensitive": false,
+      "onnx_parity": [
+        {
+          "batch": 1,
+          "max_abs": [
+            3.4123659133911133e-06,
+            0.0,
+            9.5367431640625e-07
+          ]
+        },
+        {
+          "batch": 2,
+          "max_abs": [
+            3.993511199951172e-06,
+            0.0,
+            1.1324882507324219e-06
+          ]
+        }
+      ],
+      "build_seconds": 105.00220957701094,
+      "fp32_layers": [],
+      "file": "twinlite_medium_v6_sides.engine",
+      "sha256": "1df1b5fb4f2c37bbed0c6c078e5938034632a112770244e10879254c5e866cd4",
+      "bytes": 5518268
+    }
+  ],
+  "completed": true,
+  "onnx": "1.17.0",
+  "tensorrt": "10.13.0.35",
+  "gpu_name": "NVIDIA GeForce RTX 4060 Ti",
+  "compute_capability": [
+    8,
+    9
+  ],
+  "source_checkpoint": "/data/runtime/camera-twinlite-trt-v1/source.pt",
+  "acceptance": "offline_quality_passed_live_acceptance_failed",
+  "quality_validation": {
+    "images": 1404,
+    "data": "twinlite_morai_v6_road_marking_actor_negative/val.jsonl",
+    "report": "camera-twinlite-trt-20261015-r1/quality-reduced-gpu-full-r1/report.json"
+  },
+  "source_checkpoint_original": "artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt",
+  "runtime_evidence": "config/baselines/evidence/camera_twinlite_tensorrt_v1/summary.json"
+}

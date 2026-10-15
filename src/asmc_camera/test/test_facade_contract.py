@@ -109,7 +109,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
     def test_runtime_support_and_config_are_canonically_owned(self):
         canonical_root = PACKAGE_ROOT / "src" / "asmc_camera"
         expected_support = {
-            "camera": 8,
+            "camera": 9,
             "bev": 19,
         }
         for namespace, expected_count in expected_support.items():

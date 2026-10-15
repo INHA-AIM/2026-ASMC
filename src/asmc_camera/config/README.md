@@ -10,7 +10,8 @@
 | `camera/yolo26l_mission16_e8_three_view.yaml` | 기본 E8, 전방960·좌우640 |
 | `camera/yolo26l_pretrained_mission_three_view.yaml` | 실행 시 선택하는 사전학습 COCO7, 전방960·좌우640 |
 | `camera/object_classes_mission16_v1.yaml` | 원본 이름→세 소비 그룹 |
-| `camera/lane_runtime.yaml` | TwinLite checkpoint·AMP·주기·발행 설정 |
+| `camera/lane_runtime.yaml` | 현재 독립 PyTorch 경로·checkpoint·AMP·발행 설정 |
+| `camera/lane_runtime_tensorrt.yaml` | TensorRT FP16·GPU 전처리·구독별 복원 후보. 실시간 수락 전 기본 전환 없음 |
 | `camera/lane_input.yaml` | TwinLite 전방544×960·좌우480×640 후보. 추론과 model-grid 투영이 함께 읽음 |
 | `camera/lane_input_side384.yaml` | 전방960·기존 좌우384 비교/복구용 |
 | `camera/twinlite_medium.yaml` | TwinLite backend와 구형 launch의 공통 기본값 |

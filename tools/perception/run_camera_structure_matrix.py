@@ -67,6 +67,8 @@ def main():
                 command += ['--saved-input',str(a.saved_input)]
             command += ['--nms-iou',str(job.get('nms_iou',.7))]
             command += ['--confidence',str(job.get('confidence',.4))]
+            if job.get('lane_runtime_config'):
+                command += ['--lane-runtime-config', job['lane_runtime_config']]
             if 'lane_batch_wait_ms' in job:
                 command += ['--lane-batch-wait-ms',str(job['lane_batch_wait_ms'])]
             if 'fusion_hz' in job:

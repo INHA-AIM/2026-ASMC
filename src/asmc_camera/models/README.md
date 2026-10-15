@@ -28,6 +28,19 @@ dynamic profile이 전방544×960·좌우480×640과 batch1/2/3을 지원합니�
 재현합니다. 기존 release 설치 도구로 이 파일을 심볼릭 링크로 바꾸지 않습니다.
 
 `object_detection/yolo11m.pt`는 기존 호환용 파일입니다. `traffic_light/best.pt`는
-ResNet 신호등 모델이며 YOLO 선택과 관계없습니다. TwinLite checkpoint와 고정 upstream 소스는
-기존 설치 의존성입니다. checkpoint는
-`config/camera/lane_runtime.yaml`에 지정된 기존 학습 산출물 경로에 있습니다.
+ResNet 신호등 모델이며 YOLO 선택과 관계없습니다. TwinLite의 고정 upstream 소스는
+PyTorch 복구 경로 및 export의 설치 의존성입니다. canonical `lane_runtime.yaml`은
+동일한 SHA의 패키지 내부 checkpoint를 사용하며 원본 학습 산출물은 보존합니다.
+
+
+## TwinLite TensorRT 후보
+
+`lane_segmentation/`에는 Medium v6 원본 checkpoint, 전방544×960 B1 및 좌우480×640
+B1–2 ONNX/FP16 engine, `manifest.json`을 둡니다. EMA·두 head·클래스 순서는 유지하며
+attention을 근사하거나 제거하지 않습니다. Manifest의 checkpoint/engine SHA와 GPU,
+TensorRT 버전을 시작 시 검사합니다. 불일치는 명시적으로 실패하며 fallback하지 않습니다.
+
+이 파일은 실시간 수락을 위한 후보입니다. `lane_runtime.yaml`의 PyTorch 복구 경로와
+고정 upstream 소스 의존성은 보존합니다. 변환에는 upstream 소스와 ONNX 도구가 필요하며,
+TensorRT 실행 자체는 해당 upstream Python 모델을 로드하지 않습니다.
+[변환·품질·실시간 검증](../../../docs/handoffs/perception/camera-twinlite-tensorrt.md)을 확인하세요.

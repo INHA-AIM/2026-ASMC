@@ -87,6 +87,7 @@ def main():
     p.add_argument('--legacy-lidar-root', type=Path)
     p.add_argument('--profile-lane-fit', action='store_true')
     p.add_argument('--shared-gpu-input', action='store_true')
+    p.add_argument('--lane-runtime-config', type=Path)
     a = p.parse_args()
     # roslaunch starts node processes in ROS_HOME; probes need an absolute path.
     a.output = a.output.resolve()
@@ -134,6 +135,8 @@ def main():
             'lane_target_hz:='+str(a.lane_hz), 'traffic_light_device:=cuda'] if a.variant == 'R0' else [
             'mode:=standby', 'implementation:='+('shared' if a.variant == 'R2' else 'separate'), 'lane_hz:='+str(a.lane_hz), 'nms_iou:='+str(a.nms_iou)]
     if a.variant != 'R0':
+        if a.lane_runtime_config:
+            args += ['lane_runtime_config:='+str(a.lane_runtime_config.resolve())]
         if a.shared_gpu_input:
             if a.variant != 'R2':
                 raise ValueError('shared GPU input requires R2')
@@ -189,6 +192,9 @@ def main():
         use_sim_time=rospy.get_param('/use_sim_time',False),
         latency_definition='Actual model/broker compressed input callback entry -> ROS publish return; monotonic wall.',
         aggregate_definition='Per-run raw frames, linear interpolated percentiles; no mean of run medians.'), None, None
+    if a.lane_runtime_config:
+        report['lane_runtime_config'] = str(a.lane_runtime_config)
+        report['lane_runtime_config_sha256'] = hashlib.sha256(Path(a.lane_runtime_config).read_bytes()).hexdigest()
     try:
         report['qt_inventory_before']=qt_viewers()
         if any(v['owned_trial'] for v in report['qt_inventory_before']):
@@ -300,13 +306,19 @@ def main():
             sub.unregister()
         rows = []
         for path in a.output.glob('*.jsonl'):
-            rows.extend(dict(json.loads(s), probe=path.stem) for s in path.read_text().splitlines() if s)
+            loaded = [dict(json.loads(s), probe=path.stem) for s in path.read_text().splitlines() if s]
+            rows.extend(loaded)
+            ends = [r for r in loaded if r.get('event') == 'journal_end']
+            if not ends:
+                report['failures'].append('measurement journal did not finish: '+path.name)
+            if ends and any(r['dropped'] for r in ends):
+                report['failures'].append('measurement journal dropped events: '+path.name)
         if start is not None and not rows:
             report['failures'].append('missing model measurement traces; no latency/supply claim')
         if start is not None:
             report['streams'] = measurements(rows, start, end, 15)
             required = dict(objects='/perception/camera/objects:',
-                lane='/perception/camera/front/road_marking/class_id:',
+                lane='/perception/camera/front/road_marking/model_grid/class_id:',
                 traffic_light='/perception/traffic_light/detection:')
             for role in active:
                 if not any(key.startswith(required[role]) for key in report['streams']):

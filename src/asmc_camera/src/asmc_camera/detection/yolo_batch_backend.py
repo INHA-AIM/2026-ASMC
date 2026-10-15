@@ -30,7 +30,6 @@ class BatchedYoloDetector:
             raise DetectorStartupError('direct detection requires TensorRT detect')
         self.supports_gpu_input = self.direct_detect
         self.cuda_stream = torch.cuda.Stream(device=device) if self.direct_detect else None
-        self.output_buffers = {}
         self.input_uploads = self.input_upload_bytes = 0
         self.mode, self.shapes = batch_mode, shapes_for_front(front_width)
         batch_groups(['front', 'left', 'right'], batch_mode)
@@ -64,6 +63,9 @@ class BatchedYoloDetector:
             from ultralytics.nn.autobackend import AutoBackend
             try:
                 self.runtime = AutoBackend(str(path), device=torch.device(device), fp16=True, verbose=False)
+                from asmc_camera.runtime.tensorrt import TensorRTRunner
+                self.trt_runner = TensorRTRunner(self.runtime.backend.model,
+                    self.runtime.backend.context, torch.device(device), self.cuda_stream)
             except Exception as exc:
                 raise DetectorStartupError('TensorRT engine cannot load in this GPU/runtime environment; '
                     'use the supported asmc-ros-noetic environment or rebuild from package .pt: ' + str(exc)) from exc
@@ -130,31 +132,8 @@ class BatchedYoloDetector:
         return self._infer_images(images, order, gpu_frames, gpu_masks)
 
     def _execute_direct(self, tensor):
-        # AutoBackend's execute_v2 runs on stream0. Use the very same engine
-        # and context on this worker's stream, with the actual binding dtype.
-        backend = self.runtime.backend
-        if tensor.dtype != backend.bindings['images'].data.dtype:
-            raise ValueError('direct tensor dtype differs from engine I/O')
-        context = backend.context
-        if not context.set_input_shape('images', tuple(tensor.shape)):
-            raise ValueError('YOLO input shape is outside the engine profile')
-        context.set_tensor_address('images', tensor.data_ptr())
-        outputs = []
-        for name in sorted(backend.output_names):
-            shape = tuple(context.get_tensor_shape(name))
-            if any(v <= 0 for v in shape):
-                raise ValueError('unresolved YOLO output shape')
-            key = (name, shape)
-            if key not in self.output_buffers:
-                if len(self.output_buffers) >= 8:
-                    raise ValueError('unexpected growth of YOLO output shape cache')
-                self.output_buffers[key] = self.torch.empty(shape, device=self.device,
-                    dtype=backend.bindings[name].data.dtype)
-            value = self.output_buffers[key]
-            context.set_tensor_address(name, value.data_ptr())
-            outputs.append(value)
-        if not context.execute_async_v3(self.cuda_stream.cuda_stream):
-            raise RuntimeError('YOLO TensorRT execution failed')
+        values = self.trt_runner.execute(tensor)
+        outputs = [values[name] for name in self.trt_runner.output_names]
         return outputs[0] if len(outputs) == 1 else outputs
 
     def _infer_images(self, images, order, gpu_frames=None, gpu_masks=None):

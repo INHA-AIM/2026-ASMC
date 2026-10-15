@@ -51,12 +51,14 @@ class LifecycleMeasurementsTest(unittest.TestCase):
     def test_trace_disabled_no_io_and_overflow_does_not_pass(self):
         disabled=LifecycleTrace()
         disabled('input');disabled.close()
-        self.assertEqual([],disabled.rows)
+        self.assertIsNone(disabled.journal)
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'trace.jsonl'
             trace=LifecycleTrace(str(path),capacity=1)
-            trace('input');trace('begin')
-            self.assertFalse(path.exists())
+            # Keep the asynchronous consumer from draining between the two
+            # appends so overflow is deterministic, independent of scheduling.
+            with trace.journal.lock:
+                trace('input');trace('begin')
             trace.close()
             import json
             rows=[json.loads(line) for line in path.read_text().splitlines()]
@@ -64,6 +66,18 @@ class LifecycleMeasurementsTest(unittest.TestCase):
             rows[-1]['dropped']=0
             self.assertTrue(trace_integrity(rows))
             self.assertFalse(trace_integrity(rows[:-1]))
+
+    def test_async_trace_preserves_legacy_end_marker_and_clock(self):
+        import json
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'trace.jsonl'
+            trace=LifecycleTrace(str(path),clock=lambda:12.5)
+            trace('input',generation=1)
+            trace.close();trace.close()
+            rows=[json.loads(line) for line in path.read_text().splitlines()]
+            self.assertTrue(trace_integrity(rows))
+            self.assertTrue(all(row['monotonic']==12.5 for row in rows))
+            self.assertEqual(['input','trace_end'],[row['event'] for row in rows])
 
     def test_state_emits_accepted_processing_and_input_timestamps(self):
         events=[]
