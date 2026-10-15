@@ -94,7 +94,9 @@ def main():
             time.sleep(2)
     finally:
         if child:
-            stop(child)
+            # The child owns roslaunch and its own Qt session. Allow its bounded
+            # nested cleanup to finish before killing the benchmark process.
+            stop(child,timeout=60)
         if api and original is not None:
             restored = change_weather(original.type)
             (a.output/'weather-restored.json').write_text(json.dumps(restored))

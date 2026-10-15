@@ -17,7 +17,7 @@ import threading
 import time
 
 from lifecycle_measurements import percentile, rate_report
-from b0_resources import ResourceSampler
+from b0_resources import ResourceSampler, qt_viewers
 
 
 def measurements(rows, start, end, target):
@@ -185,11 +185,15 @@ def main():
         latency_definition='Actual model/broker compressed input callback entry -> ROS publish return; monotonic wall.',
         aggregate_definition='Per-run raw frames, linear interpolated percentiles; no mean of run medians.'), None, None
     try:
+        report['qt_inventory_before']=qt_viewers()
+        if any(v['owned_trial'] for v in report['qt_inventory_before']):
+            raise RuntimeError('unclosed Qt from an earlier trial; do not start a new comparison')
         hashes = {str(f.relative_to(package)):hashlib.sha256(f.read_bytes()).hexdigest()
                   for pattern in ('src/**/*.py','launch/*.launch','config/**/*.yaml') for f in package.glob(pattern)}
         report['source_sha256'] = hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()
         report['measurement_sha256']={f:hashlib.sha256((root/'tools/perception'/f).read_bytes()).hexdigest()
-            for f in ('compare_camera_runtime.py','camera_runtime_probe.py','b0_resources.py')}
+            for f in ('compare_camera_runtime.py','camera_runtime_probe.py','b0_resources.py',
+                      'run_camera_structure_matrix.py','run_b0_matrix.py')}
         (a.output/'source-hashes.json').write_text(json.dumps(hashes,indent=2))
         parent.start()
         report['effective_lane_batch_wait_ms'] = rospy.get_param('/camera_lane/batch_wait_ms',None)
@@ -244,6 +248,10 @@ def main():
             if qt_process.poll() is not None:
                 report['failures'].append('Qt viewer exited; do not claim GUI-ON acceptance')
         time.sleep(2)
+        report['qt_inventory_during']=qt_viewers()
+        report['expected_owned_qt']=int(a.qt)
+        if sum(v['owned_trial'] for v in report['qt_inventory_during'])!=int(a.qt):
+            report['failures'].append('actual trial Qt count differs from requested GUI condition')
         names = ['/camera_bev','/camera_bev_fusion','/camera_lane_vectorizer'] + (
             ['/camera_runtime'] if a.variant == 'R2' else list(legacy.values()) if a.variant == 'R0'
             else ['/camera_objects','/camera_lane','/camera_traffic_light'])
@@ -272,9 +280,12 @@ def main():
         if a.gui and 'view_launch' in locals():
             view_launch.shutdown()
         from run_b0_matrix import stop
-        if qt_process: stop(qt_process)
-        if main_process: stop(main_process)
+        if qt_process: stop(qt_process,timeout=5)
+        if main_process: stop(main_process,timeout=10)
         parent.shutdown()
+        report['qt_inventory_after']=qt_viewers()
+        if any(v['owned_trial'] for v in report['qt_inventory_after']):
+            report['failures'].append('trial Qt remains after cleanup')
         replay_stop.set()
         if replay:
             replay.join(2)

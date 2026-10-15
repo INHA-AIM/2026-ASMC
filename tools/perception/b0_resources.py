@@ -14,6 +14,23 @@ class _TimeoutTransport(Transport):
         return connection
 
 
+def qt_viewers(proc=Path('/proc')):
+    """Read actual image-viewer processes; ignore unreaped zombie registrations."""
+    found=[]
+    for p in proc.iterdir():
+        if not p.name.isdigit():continue
+        try:
+            stat=(p/'stat').read_text().rsplit(')',1)[1].split()
+            args=(p/'cmdline').read_bytes().decode().strip('\0').split('\0')
+            if stat[0]=='Z' or not args:continue
+            is_viewer=Path(args[0]).name=='rqt_image_view' or (
+                Path(args[0]).name.startswith('python') and len(args)>1 and Path(args[1]).name=='rqt_image_view')
+            if is_viewer:found.append(dict(pid=int(p.name),command=args,
+                owned_trial='__name:=camera_runtime_viewer' in args))
+        except (OSError,ValueError,IndexError):continue
+    return sorted(found,key=lambda r:r['pid'])
+
+
 def gpu_sample():
     result = subprocess.run(['nvidia-smi', '--query-gpu=utilization.gpu,memory.used,memory.total',
                              '--format=csv,noheader,nounits'], capture_output=True, text=True, timeout=2)

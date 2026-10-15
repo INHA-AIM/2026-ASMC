@@ -7,13 +7,39 @@ sys.path.insert(0, str(ROOT/'tools/perception'))
 sys.path.insert(0, str(ROOT/'tools/audit'))
 from compare_camera_runtime import measurements, resource_summary
 from summarize_camera_visualization import readiness_events
-from b0_resources import ResourceSampler, _TimeoutTransport
+from b0_resources import ResourceSampler, _TimeoutTransport, qt_viewers
+import tempfile
+import subprocess
 from unittest.mock import patch
 from validate_p1b_contract import load_message_specs, all_message_md5
 from evaluate_camera_bbox_pilot import frame_counts, summarize
 
 
 class RuntimeMeasurementsTest(unittest.TestCase):
+    def test_qt_inventory_distinguishes_owned_user_and_zombie_processes(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            for pid,state,args in [(1,'S',['python3','/opt/rqt_image_view','__name:=camera_runtime_viewer']),
+                                   (2,'S',['python3','/opt/rqt_image_view']),
+                                   (3,'Z',['python3','/opt/rqt_image_view','__name:=camera_runtime_viewer']),
+                                   (4,'S',['bash','-c','rqt_image_view __name:=camera_runtime_viewer'])]:
+                p=root/str(pid);p.mkdir();(p/'stat').write_text(str(pid)+' (test) '+state+' 0 0')
+                (p/'cmdline').write_bytes(('\0'.join(args)+'\0').encode())
+            result=qt_viewers(root)
+            self.assertEqual([r['pid'] for r in result],[1,2])
+            self.assertEqual([r['owned_trial'] for r in result],[True,False])
+
+    def test_child_stop_uses_selected_grace_then_kills_ignored_interrupt(self):
+        from run_b0_matrix import stop
+        from unittest.mock import Mock
+        process=Mock(pid=123);process.poll.return_value=None
+        process.wait.side_effect=[subprocess.TimeoutExpired('qt',5),0]
+        with patch('run_b0_matrix.os.killpg') as kill:
+            stop(process,timeout=5)
+        self.assertEqual(process.wait.call_args_list[0].kwargs,dict(timeout=5))
+        self.assertEqual([c.args[0] for c in kill.call_args_list],[123,123])
+        self.assertEqual(kill.call_count,2)
+
     def test_readiness_links_only_prior_independent_family_observations(self):
         values=dict(pipeline_ready='False',family_source_ns='10')
         diagnostics=[dict(at=5,statuses=[dict(name='camera_semantic_perception/readiness',values=values)])]

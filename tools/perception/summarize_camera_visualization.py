@@ -48,6 +48,7 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--matrix',default='final-matrix',help='Completed fixed-code comparison directory')
     p.add_argument('--recovery',default='resource-recovery',help='Coverage-only repeat; never replace a failed performance result')
+    p.add_argument('--soak-matrix',default='soak',help='Explicit final continuous trial; earlier failures stay historical')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
     rate_followup(SimpleNamespace(results=a.results,output=a.output))
     summary=json.loads((a.output/'summary.json').read_text())
@@ -136,12 +137,12 @@ def main():
             trial['pending_capacity_values']=sorted({int(v['pending_capacity']) for _,v in view})
             if max(trial['max_image_cache_per_view'].values())>8 or trial['pending_capacity_values']!=[1]:
                 trial['minimum_acceptance_failures'].append('debug cache/pending bound')
-            if trial['matrix'] in (a.matrix,a.recovery,'soak') and trial['missing_fresh_view_snapshots']:
+            if trial['matrix'] in (a.matrix,a.recovery,a.soak_matrix) and trial['missing_fresh_view_snapshots']:
                 trial['minimum_acceptance_failures'].append('debug view missing/stale')
             if not trial['codec_contract_pass']:trial['minimum_acceptance_failures'].append('debug codec contract/errors')
         if trial['gui'] and 'objects' in trial['active']:
             debug=trial.get('debug_outputs',{}).get('objects',{})
-            if trial['matrix'] in (a.matrix,a.recovery,'soak') and debug.get('messages',0)==0:
+            if trial['matrix'] in (a.matrix,a.recovery,a.soak_matrix) and debug.get('messages',0)==0:
                 trial['minimum_acceptance_failures'].append('missing actual object debug output')
         if trial['effective_final_trial'] and trial.get('complete') and '-control-' not in trial['trial']:
             group=('baseline' if '-baseline-' in trial['trial'] else 'candidate')+'-'+('foggy' if '-foggy-' in trial['trial'] else 'sunny')
@@ -159,11 +160,12 @@ def main():
         pooled_frame_latency={g:{k:distribution(v) for k,v in streams.items()} for g,streams in pooled.items()},
         pooled_family_latency={g:distribution(v) for g,v in family_pooled.items()},
         final_candidate_failures={r['trial']:r['minimum_acceptance_failures'] for r in summary['trials']
-            if (r.get('effective_final_trial') or r['matrix']=='soak') and '-baseline-' not in r['trial'] and r['minimum_acceptance_failures']},
+            if (r.get('effective_final_trial') or r['matrix']==a.soak_matrix) and '-baseline-' not in r['trial'] and r['minimum_acceptance_failures']},
         invalid_resource_trials={r['matrix']+'/'+r['trial']:r.get('resource_recovery_trial') for r in summary['trials']
-            if r['matrix'] in (a.matrix,a.recovery,'soak') and not r.get('resources',{}).get('resource_coverage_pass',False)},
+            if r['matrix'] in (a.matrix,a.recovery,a.soak_matrix) and not r.get('resources',{}).get('resource_coverage_pass',False)},
         historical_failures={r['matrix']+'/'+r['trial']:r['minimum_acceptance_failures'] for r in summary['trials']
-            if r['matrix'] not in (a.matrix,'soak') and r['minimum_acceptance_failures']})
+            if r['matrix'] not in (a.matrix,a.soak_matrix) and r['minimum_acceptance_failures']},
+        soak_matrix=a.soak_matrix)
     parity_root=a.results/'saved-parity'
     if all((parity_root/('complete-'+v)/'report.json').exists() for v in ('baseline','candidate')):
         summary['output_parity']=parity(parity_root,('baseline','candidate'))
@@ -171,7 +173,7 @@ def main():
     candidate=[r for r in effective if '-candidate-' in r['trial']]
     baseline=[r for r in effective if '-baseline-' in r['trial']]
     controls=[r for r in effective if '-control-' in r['trial']]
-    soaks=[r for r in summary['trials'] if r['matrix']=='soak']
+    soaks=[r for r in summary['trials'] if r['matrix']==a.soak_matrix]
     summary['runtime_completion_checks']=dict(
         fixed_candidate_source=len({r['source_sha256'] for r in candidate+soaks})==1,
         baseline_three_per_weather=all(sum('-'+w+'-' in r['trial'] for r in baseline)==3 for w in ('sunny','foggy')),

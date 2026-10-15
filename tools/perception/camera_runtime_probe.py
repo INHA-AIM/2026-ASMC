@@ -7,6 +7,7 @@ subscriber and not the sensor header's clock. Production launch never uses it.
 """
 import argparse
 import atexit
+import gc
 from collections import OrderedDict
 import json
 import hashlib
@@ -21,6 +22,13 @@ def install(output):
     import rospy
     subscriber, publisher = rospy.Subscriber, rospy.Publisher
     receipts, rows, lock = OrderedDict(), [], threading.RLock()
+
+    def gc_event(phase, info):
+        # Diagnose rare whole-process pauses without changing GC policy. Only
+        # generation2 is recorded; no lock, payload copy, or IO in this hook.
+        if info['generation']==2:
+            rows.append(dict(event='gc',phase=phase,generation=2,at=time.monotonic()))
+    gc.callbacks.append(gc_event)
 
     def subscribe(name, data_class, callback=None, callback_args=None, **kwargs):
         if data_class.__name__ != 'CompressedImage' or callback is None:
@@ -66,6 +74,7 @@ def install(output):
         return MeasuredPublisher(original, name) if measured else original
 
     def save():
+        gc.callbacks.remove(gc_event)
         output.parent.mkdir(parents=True, exist_ok=True)
         with lock, output.open('w') as stream:
             for row in rows:
