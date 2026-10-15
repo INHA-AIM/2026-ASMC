@@ -61,9 +61,9 @@ tensor를 engine 입력 버퍼에 복사하는 구간이며, 원본 uint8 H2D·r
 두 구성 모두 통과했다. GT 없는 종류는 IoU 수락 근거에서 제외했다.
 ONNX는 PyTorch FP32와 frontB1/sideB1/B2를 독립 CPU runtime으로 비교했다.
 FP16 engine 생성과 품질 검증 중 MORAI·실시간 추론은 종료했다.
-최종 CPU/ROS 회귀418개, catkin build/install, 문서·P1-B·perception 계약 검사 통과.
+최종 CPU/ROS 회귀419개, catkin build/install, 문서·P1-B·perception 계약 검사 통과.
 `ASMC_MODELS_ROOT=/nonexistent`에서도 install/share 아래 YOLO 두 프로필과 TwinLite
-checkpoint/engine SHA를 검증했다. Hosted CI 결과는 증거의 verification.json에 별도 기록한다.
+checkpoint/engine SHA를 검증했다. 검증 커밋별 CI는 증거의 verification.json에, 최신 상태는 PR #85 checks에 기록한다.
 
 YOLO 공통 runner는 고정 val205의 E8/사전학습 두 모델, 총 410개 입력으로 이전
 실행 경로와 대조했다. 박스 IoU≥0.98·confidence 차이≤0.02를 통과했다.
@@ -151,7 +151,7 @@ freshness 완화 또는 실패 구간 제거로 통과시키지 않는다.
 
 전체 원본은 `data/runtime/camera-twinlite-trt-v1/`, 측정 당시 source는 그 아래
 `measured-source/`에 보존한다. 측정 후 변경은 선택적 lifecycle trace의 기존 종료
-표식 호환과 보고·검증 코드다. 추론 수학·입력·모델 설정은 바꾸지 않았다.
+표식 호환, 구형 기준선의 새 모듈 부재에 독립적인 측정기 import와 보고·검증 코드다. 추론 수학·입력·모델 설정은 바꾸지 않았다.
 추적 종료는 예전 `trace_end/monotonic` 계약을 유지하며 분석기 회귀를 추가했다.
 실험 계측 journal의 종료는 기존 `journal_end/at`로 유지한다.
 

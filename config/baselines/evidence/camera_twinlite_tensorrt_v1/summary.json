@@ -11704,6 +11704,6 @@
   ],
   "code_preservation": {
     "measured_source": "data/runtime/camera-twinlite-trt-v1/measured-source",
-    "post_measurement_change": "Optional lifecycle trace footer compatibility and reporting/verification only; inference math/config unchanged."
+    "post_measurement_change": "Optional lifecycle trace footer compatibility, frozen-overlay probe import, and reporting/verification only; inference math/config unchanged."
   }
 }

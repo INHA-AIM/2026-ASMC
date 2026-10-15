@@ -1,5 +1,5 @@
 {
-  "cpu_ros_checks": 418,
+  "cpu_ros_checks": 419,
   "cpu_ros_pass": true,
   "catkin_build_install_pass": true,
   "package_path_without_external_models_pass": true,
@@ -11,8 +11,38 @@
     "live-final-jobs.json": "86204f517336bbe226492b954fcff0385cb78494446018143009c3c7db78ce2e",
     "soak-jobs.json": "028b4a02bd9c7b600abf395a54dc0ef7fc675890fcee27d0ecdf638abc046b21"
   },
-  "ci": "pending final push",
+  "ci": {
+    "tested_commit": "0b999198936cb4c554d1de564f18ed9065987812",
+    "checks": [
+      {
+        "completedAt": "2026-10-15T08:49:43Z",
+        "link": "https://github.com/INHAautonav/2026-ASMC/actions/runs/38706785627/job/116328050456",
+        "name": "catkin-build",
+        "state": "SUCCESS"
+      },
+      {
+        "completedAt": "2026-10-15T08:43:00Z",
+        "link": "https://github.com/INHAautonav/2026-ASMC/actions/runs/38706785628/job/116328049977",
+        "name": "planning-catkin-build",
+        "state": "SUCCESS"
+      },
+      {
+        "completedAt": "2026-10-15T08:54:46Z",
+        "link": "https://github.com/INHAautonav/2026-ASMC/actions/runs/38706785628/job/116328050281",
+        "name": "validated-lidar-build",
+        "state": "SUCCESS"
+      }
+    ],
+    "latest_status_source": "https://github.com/INHAautonav/2026-ASMC/pull/85/checks",
+    "note": "Follow-up changes are measurement compatibility, its CPU regression, and verification records; their latest CI is reported by PR checks."
+  },
   "default_backend": "pytorch",
   "shared_runtime_promoted": false,
-  "pr_merged": false
+  "pr_merged": false,
+  "cpu_followup": {
+    "checks": 11,
+    "new_unique_check": 1,
+    "pass": true,
+    "scope": "Measurement journal runs against frozen R0 without importing its missing new runtime module."
+  }
 }

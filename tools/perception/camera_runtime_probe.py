@@ -18,11 +18,21 @@ import threading
 import time
 
 
+def measurement_journal(output):
+    # The measured overlay may be frozen R0 and lack this new runtime helper.
+    # Load the journal from the measurement checkout, not the target package.
+    import importlib.util
+    path = Path(__file__).resolve().parents[2] / 'src/asmc_camera/src/asmc_camera/runtime/jsonl_journal.py'
+    spec = importlib.util.spec_from_file_location('_camera_measurement_journal', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.JsonlJournal(output)
+
+
 def install(output):
     import rospy
     subscriber, publisher = rospy.Subscriber, rospy.Publisher
-    from asmc_camera.runtime.jsonl_journal import JsonlJournal
-    receipts, rows, lock = OrderedDict(), JsonlJournal(output), threading.RLock()
+    receipts, rows, lock = OrderedDict(), measurement_journal(output), threading.RLock()
 
     def gc_event(phase, info):
         # Diagnose rare whole-process pauses without changing GC policy. Only
@@ -118,8 +128,7 @@ def main():
 
 def install_codecs(output):
     import cv2
-    from asmc_camera.runtime.jsonl_journal import JsonlJournal
-    rows, lock = JsonlJournal(output), threading.Lock()
+    rows, lock = measurement_journal(output), threading.Lock()
     for name, event in (('imdecode','decode'),('imencode','encode')):
         original = getattr(cv2,name)
         def measured(*args, _original=original, _event=event, **kwargs):

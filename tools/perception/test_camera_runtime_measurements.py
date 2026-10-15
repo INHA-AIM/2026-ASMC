@@ -16,6 +16,18 @@ from evaluate_camera_bbox_pilot import frame_counts, summarize
 
 
 class RuntimeMeasurementsTest(unittest.TestCase):
+    def test_probe_journal_supports_frozen_overlay_without_new_runtime_module(self):
+        import json
+        from camera_runtime_probe import measurement_journal
+        with tempfile.TemporaryDirectory() as directory, patch.dict(sys.modules, {'asmc_camera.runtime.jsonl_journal':None}):
+            path=Path(directory)/'measure.jsonl'
+            journal=measurement_journal(path)
+            journal.append(dict(event='input',at=1.))
+            journal.close()
+            rows=[json.loads(line) for line in path.read_text().splitlines()]
+            self.assertEqual(['input','journal_end'],[row['event'] for row in rows])
+            self.assertEqual(rows[-1]['dropped'],0)
+
     def test_viewer_acceptance_requires_actual_inventory_and_no_leftover_or_user_viewer(self):
         trial=dict(gui=True,qt_inventory_before=[],qt_inventory_during=[dict(owned_trial=True)],qt_inventory_after=[])
         self.assertTrue(viewer_condition_verified(trial))
