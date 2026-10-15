@@ -4,14 +4,16 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 실행은 `camera.launch`, 시각화는 `view.launch`를 사용합니다.
 기본 객체 모델은 YOLO26l v11 E8, 사전학습 YOLO26l도 실행 시 선택할 수 있습니다.
 현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
-전방 tensor는 두 모델 모두544×960입니다. 좌우 tensor는 두 모델 모두480×640인 PR #85 후보입니다.
+PR #85의 현재 기본 tensor는 두 모델 모두 전방544×960·좌우480×640입니다. 모델별 독립 프로세스를 사용하며 입력 tensor를 공유하지 않습니다.
 TwinLite의 기본 backend는 TensorRT FP16이며, 명시적인 PyTorch 복구 설정을 보존합니다. 변환 품질 검증은
 [TensorRT 검증 기록](../../docs/handoffs/perception/camera-twinlite-tensorrt.md)에서 관리합니다.
 [음영 family 최적화](../../docs/handoffs/perception/camera-shadow-family-optimization.md)는
 family 전용 경로·수요 기반 BEV·GC 진단과 후속 수락 상태를 관리합니다.
 이전 음영 반복12회와10분 연속 시험의 순간 family freshness/공백 실패는 과거 증거로 보존합니다.
 현재 기본 전환과 전체 공급 수락은 별도 결정이며, 최신 결과·직접 시험 명령은
-[family 공급 최적화](../../docs/handoffs/perception/camera-family-supply-optimization.md)를 따릅니다. 사용자 주행 확인 전 PR은 Draft입니다.
+[family 공급 최적화](../../docs/handoffs/perception/camera-family-supply-optimization.md)를 따릅니다.
+2026-10-16 사용자 직접 주행·시각화 확인은 완료됐습니다. 자동 시험의 순간 공백/freshness 차단이 남아 PR은 Draft/미병합입니다.
+같은 문서에 bus/truck의 간헐적 누락, 차로 앞 bicycle/dog, dog 하위 종류별 약세와 판제 요청 후 추가학습 결정을 기록했습니다.
 YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합니다. 같은 목표 Hz가 같은 영상 시각을 보장하지는 않습니다.
 
 ```bash
@@ -35,7 +37,7 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 [실측·후처리 선정](../../docs/handoffs/perception/camera-runtime-structure-validation.md)을 함께 확인하세요.
 [15Hz·confidence 후속 검증](../../docs/handoffs/perception/camera-rate-confidence-followup.md)에 최신 결정과 이전 실패를 정리했습니다.
 [시각화·readiness 검증](../../docs/handoffs/perception/camera-visualization-validation.md)은 단일 렌더링 경로와 GUI 동시 부하 결과를 관리합니다.
-단일 렌더러는 PR #85의 후보 경로입니다. 이전 입력의30분 시험에서 차선·신호등 공백이 있어 main 승격과 PR Ready를 보류했습니다.
+단일 렌더러는 PR #85의 현재 실행 경로입니다. 이전 입력의30분 시험과 현재 입력의10분 시험은 조건별 증거로 보존하며 최신 차단 상태는 위 family 공급 최적화 문서를 따릅니다.
 [전방960 검증](../../docs/handoffs/perception/camera-front960-validation.md)은 별도 결과이며 이전 입력의 통과를 재사용하지 않습니다.
 판제는 구간·활성화·소비를 결정하며 차선의 주행 소비는 음영 ODD에 한정합니다.
 
