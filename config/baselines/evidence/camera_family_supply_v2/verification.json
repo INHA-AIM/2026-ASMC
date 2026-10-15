@@ -1,0 +1,83 @@
+{
+  "checks": [
+    {
+      "name": "runtime",
+      "returncode": 0
+    },
+    {
+      "name": "bev",
+      "returncode": 0
+    },
+    {
+      "name": "camera",
+      "returncode": 0
+    },
+    {
+      "name": "detection",
+      "returncode": 0
+    },
+    {
+      "name": "facade",
+      "returncode": 1
+    },
+    {
+      "name": "measurement",
+      "returncode": 0
+    },
+    {
+      "name": "contract",
+      "returncode": 1
+    },
+    {
+      "name": "object-mode",
+      "returncode": 0
+    },
+    {
+      "name": "family-mode",
+      "returncode": 0
+    },
+    {
+      "name": "facade-r2",
+      "returncode": 0,
+      "repairs": [
+        "overlay docker file restored",
+        "intentional lane config SHA inventory updated"
+      ]
+    },
+    {
+      "name": "contract-r2",
+      "returncode": 0
+    },
+    {
+      "name": "measurement-guard",
+      "returncode": 0
+    },
+    {
+      "name": "ROS family uint8 bytes render roundtrip",
+      "returncode": 0,
+      "log": "family-view-wire.log",
+      "transport": "family-view-transport.json"
+    },
+    {
+      "name": "early shutdown time before blocking pmon cleanup",
+      "returncode": 0,
+      "log": "active-window-final.log"
+    },
+    {
+      "name": "overlay catkin install",
+      "returncode": 0,
+      "log": "install-overlay-final.log"
+    },
+    {
+      "name": "installed model and recovery paths",
+      "returncode": 0,
+      "log": "install-paths-final.json"
+    }
+  ],
+  "original_failures_preserved": true,
+  "unit_tests_passed": 437,
+  "actual_ros_checks_passed": 22,
+  "training": false,
+  "public_vehicle_control_published": false,
+  "install_status": "passed explicit -C /data/runtime/camera-family-supply-v2; installed E8/pretrained/TRT/PyTorch recovery paths verified"
+}

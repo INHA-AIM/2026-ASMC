@@ -7,9 +7,11 @@ import hashlib
 import json
 import threading
 import time
+import uuid
 from collections import deque
 from dataclasses import dataclass
 from functools import partial
+from itertools import product
 
 import message_filters
 import numpy as np
@@ -62,6 +64,7 @@ from asmc_camera.bev.shared_lane_family import (
     YELLOW_ROLE,
     contiguous_sample_state_segments,
     fit_shared_lane_family_with_audit,
+    family_compute_cache_info,
 )
 from asmc_camera.bev.spline_fitting import fit_lane_tracks_with_audit
 
@@ -69,6 +72,7 @@ from asmc_camera.bev.spline_fitting import fit_lane_tracks_with_audit
 from asmc_camera.runtime.ros_control import LaneEpochGate
 from asmc_camera.runtime.latest_work import LatestWork
 from asmc_camera.runtime.demand_inputs import DemandInputs, DemandSynchronizer
+from asmc_camera.runtime.trace import LifecycleTrace
 
 
 @dataclass(frozen=True)
@@ -80,6 +84,7 @@ class _ViewFrame:
     confidence: np.ndarray
     decode_copy_ms: float
     generation: object = None
+    received_at: float = 0.
 
 
 RUNTIME_PROFILE_SCHEMA = "asmc-lane-runtime-profile-1.2.0"
@@ -414,7 +419,7 @@ class LaneVectorizerNode:
         self.max_skew_ns = int(
             round(float(rospy.get_param("~max_timestamp_skew_ms", 35.0)) * 1e6)
         )
-        self.queue_size = int(rospy.get_param("~sync_queue_size", 12))
+        self.queue_size = int(rospy.get_param("~sync_queue_size", 4))
         if self.max_skew_ns < 0 or self.queue_size <= 0:
             raise ValueError("lane vector synchronization settings are invalid")
 
@@ -424,6 +429,10 @@ class LaneVectorizerNode:
         self.processing_lock = threading.Lock()
         self.fit_work = LatestWork()
         self.fit_stop = threading.Event()
+        self.supply_session_id = str(uuid.uuid4())
+        self.supply_trace = LifecycleTrace(rospy.get_param('~lifecycle_trace_path', ''))
+        self.family_compute_ms = deque(maxlen=512)
+        self.last_family_diagnostic_at = 0.
         self.inputs = {view: 0 for view in self.views}
         self.pair_errors = {view: 0 for view in self.views}
         self.queue_drops = {view: 0 for view in self.views}
@@ -511,7 +520,7 @@ class LaneVectorizerNode:
                 lambda: not self.epoch_gate.enabled or self.epoch_gate.mode != 0,
                 partial(self._view_callback, view),
                 context=self.epoch_gate.context,
-                on_reset=self._reset_grid_inputs)
+                on_reset=self._reset_grid_inputs,subscriber_queue_size=1,subscriber_buffer_bytes=2 << 20)
             self.subscribers.append(group)
         self.demand_inputs = DemandInputs(self.subscribers)
         interval = max(
@@ -554,6 +563,7 @@ class LaneVectorizerNode:
             self.boundary_family_publisher.publish(message)
 
     def _view_callback(self, view, class_message, confidence_message):
+        received_at = time.monotonic()
         # Do not wait for the fit's epoch lock in a transport callback. Tag
         # receipt now; the worker checks generation and cutoff under that lock.
         generation = self.epoch_gate.context()
@@ -588,7 +598,10 @@ class LaneVectorizerNode:
             confidence,
             decode_copy_ms,
             generation,
+            received_at,
         )
+        self._trace_supply('family_input', source_stamp_ns=stamps[0], view=view, context=generation,
+                           received_at=received_at, decode_copy_ms=decode_copy_ms)
         ready = None
         with self.buffer_lock:
             if generation != self.epoch_gate.context():
@@ -624,23 +637,234 @@ class LaneVectorizerNode:
         self.fit_work.close()
         if self.fit_worker is not threading.current_thread():
             self.fit_worker.join(timeout=2.)
+        if hasattr(self, 'supply_trace'):
+            self.supply_trace.close()
 
     def _take_synchronized_locked(self):
         while all(self.buffers[view] for view in self.views):
-            frames = [self.buffers[view][0] for view in self.views]
-            stamps = [frame.stamp_ns for frame in frames]
-            span = max(stamps) - min(stamps)
-            if span <= self.max_skew_ns:
-                self.last_skew_ms = span / 1e6
-                return {
-                    view: self.buffers[view].popleft() for view in self.views
-                }
+            candidates = [frames for frames in product(*(self.buffers[v] for v in self.views))
+                          if max(f.stamp_ns for f in frames)-min(f.stamp_ns for f in frames)<=self.max_skew_ns]
+            if candidates:
+                frames = max(candidates,key=lambda fs:(min(f.stamp_ns for f in fs),tuple(f.stamp_ns for f in fs)))
+                stamps = [f.stamp_ns for f in frames]
+                self.last_skew_ms = (max(stamps)-min(stamps))/1e6
+                for view, selected in zip(self.views,frames):
+                    while self.buffers[view] and self.buffers[view][0].stamp_ns<=selected.stamp_ns:
+                        discarded=self.buffers[view].popleft()
+                        if discarded is not selected:
+                            self.queue_drops[view]+=1
+                return dict(zip(self.views,frames))
+            stamps = [self.buffers[v][0].stamp_ns for v in self.views]
             oldest = self.views[int(np.argmin(stamps))]
             self.buffers[oldest].popleft()
             self.sync_rejected += 1
         return None
 
+    def _trace_supply(self, event, **values):
+        trace = getattr(self, 'supply_trace', None)
+        if trace:
+            trace(event, session_id=self.supply_session_id, **values)
+
+    def _context_allows(self, frames, context):
+        return (not self.fit_stop.is_set() and self.epoch_gate.context()==context and
+                (not self.epoch_gate.enabled or all(f.generation==context and self.epoch_gate.allows(f.header.stamp)
+                                                   for f in frames.values())))
+
     def _process(self, frames):
+        if (getattr(self, 'independent_boundary_pipeline_enabled', False) or
+                getattr(self, 'publish_pipeline_audit', False) or
+                not getattr(self, 'boundary_family_candidate_enabled', True)):
+            return self._process_legacy(frames)
+        with self.processing_lock:
+            with self.epoch_gate.lock:
+                context = self.epoch_gate.context()
+                if not self._context_allows(frames, context):
+                    return
+            header = Header(stamp=max(frames.values(),key=lambda f:f.stamp_ns).header.stamp,frame_id=self.frame_id)
+            source_ns = header.stamp.to_nsec()
+            started, cpu_started = time.monotonic(), time.thread_time()
+            self._trace_supply('family_compute_start', source_stamp_ns=source_ns, context=context,
+                               sources={v:f.stamp_ns for v,f in frames.items()},
+                               wait_ms=1000*(started-min((f.received_at for f in frames.values() if f.received_at),default=started)))
+            timings = {'input_decode_copy':sum(f.decode_copy_ms for f in frames.values())}
+            audit = {'projection':{},'association':{},'prefit':{},'shared_family':{}}
+            try:
+                evidence, nodes, tracks, fitted, family, shared_audit = self._compute_family_frame(frames,timings,audit)
+            except Exception as error:
+                self.errors += 1
+                family = None
+                evidence = nodes = tracks = fitted = ()
+                shared_audit = {'accepted':False,'reason':'pipeline_error: '+type(error).__name__}
+                rospy.logerr_throttle(2.,'lane family failed: %s',error)
+            computed = time.monotonic()
+            self._trace_supply('family_compute_end',source_stamp_ns=source_ns,context=context,
+                               wall_ms=1000*(computed-started),cpu_ms=1000*(time.thread_time()-cpu_started),stages=dict(timings))
+            output = build_boundary_family_output(family,status_reason=shared_audit.get('reason','unknown'),
+                                                   expected_boundary_count=self.expected_boundary_count)
+            message = self._boundary_family_message(output,header)
+            waiting = time.monotonic()
+            with self.epoch_gate.lock:
+                if not self._context_allows(frames,context):
+                    self._trace_supply('family_discarded_epoch',source_stamp_ns=source_ns,context=context)
+                    return
+                self.last_runtime_header = header
+                self.runtime_generation = context
+                self.last_shared_family_audit = shared_audit
+                publish_started = time.monotonic()
+                self._trace_supply('family_publish_start',source_stamp_ns=source_ns,context=context,
+                                   lock_wait_ms=1000*(publish_started-waiting),build_ms=1000*(waiting-computed))
+                self.boundary_family_publisher.publish(message)
+                self._trace_supply('family_publish_end',source_stamp_ns=source_ns,context=context,
+                                   wall_ms=1000*(time.monotonic()-publish_started),valid=bool(message.valid))
+                self.boundary_family_outputs += 1
+                self.boundary_family_invalid_outputs += int(not output.valid)
+            self.family_compute_ms.append(1000*(computed-started))
+            self.shared_family_fit_ms.append(timings.get('shared_family_fit',0.))
+            self.processing_ms.append(1000*(time.monotonic()-started))
+            self.output_times.append(time.monotonic()); self.outputs += 1
+            self.last_counts = dict(evidence=len(evidence.xy) if hasattr(evidence,'xy') else 0,
+                nodes=len(nodes),tracks=len(tracks),prefit_tracks=len(fitted),lanes=0,lane_candidates=0,
+                white_lanes=0,yellow_lanes=0,shadow_boundaries=0,shadow_yellow_boundaries=0,shadow_white_boundaries=0,
+                shadow_corridor_complete=False,boundary_completeness=COMPLETENESS_EMPTY,
+                shared_family_available=family is not None,shared_family_acceptance_mode=shared_audit.get('acceptance_mode','rejected'),
+                shared_family_distributed=shared_audit.get('acceptance_mode')=='distributed_multi_role',
+                shared_family_observed_roles=len(shared_audit.get('observed_roles',[])),boundary_family_candidate_published=True)
+            # Expensive diagnostic construction is outside the calculation and
+            # generation locks and follows the established two-second cadence.
+            if time.monotonic()-self.last_family_diagnostic_at>=2.:
+                self.last_family_diagnostic_at=time.monotonic()
+                publications=[]
+                if self.shared_family_diagnostics_publisher.get_num_connections():
+                    publications.append((self.shared_family_diagnostics_publisher,
+                        self._shared_family_diagnostics_message(family,shared_audit,header)))
+                if self.evidence_publisher.get_num_connections() and hasattr(evidence,'xy'):
+                    publications.append((self.evidence_publisher,self._point_cloud(evidence,header)))
+                if self.marker_publisher.get_num_connections():
+                    publications.append((self.marker_publisher,self._markers((),header)))
+                if self.shared_family_debug_enabled and self.shared_family_marker_publisher.get_num_connections():
+                    publications.append((self.shared_family_marker_publisher,self._shared_family_markers(family,header)))
+                with self.epoch_gate.lock:
+                    if self._context_allows(frames,context):
+                        for publisher, diagnostic in publications:
+                            publisher.publish(diagnostic)
+            timings['profiled_body']=1000*(computed-started)
+            timings['callback_total']=1000*(time.monotonic()-started)
+            self._record_runtime_timings(timings)
+            age_ms=(rospy.Time.now().to_nsec()-source_ns)/1e6
+            if 0<=age_ms<=60000:
+                self.end_to_end_ms.append(age_ms)
+
+    def _compute_family_frame(self, frames, timings, frame_audit):
+        shared_audit = {"accepted": False, "reason": "disabled"}
+        view_evidence = []
+        for view in self.views:
+            projector = self.projectors[view]
+            if self.publish_pipeline_audit:
+                frame_audit["projection"][view] = _measure(
+                    timings,
+                    "projection_audit",
+                    lambda projector=projector, view=view: projector.selection_audit(
+                        frames[view].class_id,
+                        frames[view].confidence,
+                        self.confidence_by_class,
+                    ),
+                )
+            view_evidence.append(
+                _measure(
+                    timings,
+                    "projection_extract",
+                    lambda projector=projector, view=view: projector.extract(
+                        frames[view].class_id,
+                        frames[view].confidence,
+                        self.confidence_by_class,
+                    ),
+                )
+            )
+        evidence = _measure(
+            timings,
+            "evidence_concat",
+            lambda: MetricEvidence.concatenate(view_evidence),
+        )
+        nodes = _measure(
+            timings,
+            "node_reduction",
+            lambda: reduce_evidence_to_nodes(
+                evidence, **self.node_parameters
+            ),
+        )
+        tracks, frame_audit["association"] = _measure(
+            timings,
+            "association",
+            lambda: associate_lane_nodes_with_audit(
+                nodes, **self.track_parameters
+            ),
+        )
+        if self.shadow_boundary_enabled:
+            fitted_tracks, frame_audit["prefit"] = _measure(
+                timings,
+                "shadow_prefit",
+                lambda: select_shadow_lane_tracks_with_audit(
+                    tracks, self.shadow_boundary_parameters
+                ),
+            )
+        else:
+            fitted_tracks = tracks
+            frame_audit["prefit"] = {
+                "input_tracks": int(len(tracks)),
+                "eligible_tracks": int(len(tracks)),
+                "selected_tracks": int(len(tracks)),
+                "rejected": {},
+            }
+        shared_family = None
+        if self.shared_family_runtime_enabled:
+            try:
+                shared_family, shared_audit = _measure(
+                    timings,
+                    "shared_family_fit",
+                    lambda: fit_shared_lane_family_with_audit(
+                        fitted_tracks, self.shared_family_parameters
+                    ),
+                )
+            except Exception as exc:
+                self.shared_family_errors += 1
+                shared_audit = {
+                    "accepted": False,
+                    "reason": "runtime_error",
+                    "error": "{}: {}".format(type(exc).__name__, exc),
+                }
+                rospy.logwarn_throttle(
+                    2.0, "shared lane-family fit failed: %s", exc
+                )
+            shared_elapsed_ms = float(
+                timings.get("shared_family_fit", 0.0)
+            )
+            shared_audit = dict(shared_audit)
+            shared_audit["fit_ms"] = shared_elapsed_ms
+            shared_audit["deployment_allowed"] = False
+            shared_audit["runtime_debug_enabled"] = bool(
+                self.shared_family_debug_enabled
+            )
+            shared_audit["candidate_output_enabled"] = bool(
+                self.boundary_family_candidate_enabled
+            )
+            planning_usability = measure_planning_usability(
+                shared_family,
+                zones=self.planning_zones,
+                anchor_tolerance_m=(
+                    self.invalid_support_config.gap_tolerance_m
+                ),
+            )
+            shared_audit["invalid_support_classification"] = _measure(
+                timings,
+                "invalid_support_classification",
+                lambda: classify_invalid_support(
+                    planning_usability, self.invalid_support_config
+                ),
+            )
+            frame_audit["shared_family"] = shared_audit
+        return evidence, nodes, tracks, fitted_tracks, shared_family, shared_audit
+
+    def _process_legacy(self, frames):
         with self.processing_lock, self.epoch_gate.lock:
             if self.fit_stop.is_set():
                 return
@@ -675,114 +899,10 @@ class LaneVectorizerNode:
                 },
             }
             try:
-                view_evidence = []
-                for view in self.views:
-                    projector = self.projectors[view]
-                    if self.publish_pipeline_audit:
-                        frame_audit["projection"][view] = _measure(
-                            timings,
-                            "projection_audit",
-                            lambda projector=projector, view=view: projector.selection_audit(
-                                frames[view].class_id,
-                                frames[view].confidence,
-                                self.confidence_by_class,
-                            ),
-                        )
-                    view_evidence.append(
-                        _measure(
-                            timings,
-                            "projection_extract",
-                            lambda projector=projector, view=view: projector.extract(
-                                frames[view].class_id,
-                                frames[view].confidence,
-                                self.confidence_by_class,
-                            ),
-                        )
-                    )
-                evidence = _measure(
-                    timings,
-                    "evidence_concat",
-                    lambda: MetricEvidence.concatenate(view_evidence),
-                )
-                nodes = _measure(
-                    timings,
-                    "node_reduction",
-                    lambda: reduce_evidence_to_nodes(
-                        evidence, **self.node_parameters
-                    ),
-                )
-                tracks, frame_audit["association"] = _measure(
-                    timings,
-                    "association",
-                    lambda: associate_lane_nodes_with_audit(
-                        nodes, **self.track_parameters
-                    ),
-                )
-                if self.shadow_boundary_enabled:
-                    fitted_tracks, frame_audit["prefit"] = _measure(
-                        timings,
-                        "shadow_prefit",
-                        lambda: select_shadow_lane_tracks_with_audit(
-                            tracks, self.shadow_boundary_parameters
-                        ),
-                    )
-                else:
-                    fitted_tracks = tracks
-                    frame_audit["prefit"] = {
-                        "input_tracks": int(len(tracks)),
-                        "eligible_tracks": int(len(tracks)),
-                        "selected_tracks": int(len(tracks)),
-                        "rejected": {},
-                    }
-                shared_family = None
+                evidence, nodes, tracks, fitted_tracks, shared_family, shared_audit = self._compute_family_frame(frames, timings, frame_audit)
                 if self.shared_family_runtime_enabled:
-                    try:
-                        shared_family, shared_audit = _measure(
-                            timings,
-                            "shared_family_fit",
-                            lambda: fit_shared_lane_family_with_audit(
-                                fitted_tracks, self.shared_family_parameters
-                            ),
-                        )
-                    except Exception as exc:
-                        self.shared_family_errors += 1
-                        shared_audit = {
-                            "accepted": False,
-                            "reason": "runtime_error",
-                            "error": "{}: {}".format(type(exc).__name__, exc),
-                        }
-                        rospy.logwarn_throttle(
-                            2.0, "shared lane-family fit failed: %s", exc
-                        )
-                    shared_elapsed_ms = float(
-                        timings.get("shared_family_fit", 0.0)
-                    )
-                    self.shared_family_fit_ms.append(shared_elapsed_ms)
-                    shared_audit = dict(shared_audit)
-                    shared_audit["fit_ms"] = shared_elapsed_ms
-                    shared_audit["deployment_allowed"] = False
-                    shared_audit["runtime_debug_enabled"] = bool(
-                        self.shared_family_debug_enabled
-                    )
-                    shared_audit["candidate_output_enabled"] = bool(
-                        self.boundary_family_candidate_enabled
-                    )
-                    planning_usability = measure_planning_usability(
-                        shared_family,
-                        zones=self.planning_zones,
-                        anchor_tolerance_m=(
-                            self.invalid_support_config.gap_tolerance_m
-                        ),
-                    )
-                    shared_audit["invalid_support_classification"] = _measure(
-                        timings,
-                        "invalid_support_classification",
-                        lambda: classify_invalid_support(
-                            planning_usability, self.invalid_support_config
-                        ),
-                    )
-                    frame_audit["shared_family"] = shared_audit
                     self.last_shared_family_audit = shared_audit
+                    self.shared_family_fit_ms.append(shared_audit["fit_ms"])
                 newest_header = max(
                     frames.values(), key=lambda value: value.stamp_ns
                 ).header
@@ -1704,6 +1824,8 @@ class LaneVectorizerNode:
             "processing_fps": round(fps, 3),
             "processing_p50_ms": float(np.percentile(processing, 50)) if len(processing) else None,
             "processing_p95_ms": float(np.percentile(processing, 95)) if len(processing) else None,
+            "family_compute_p95_ms": float(np.percentile(self.family_compute_ms,95)) if self.family_compute_ms else None,
+            "family_compute_cache": family_compute_cache_info(),
             "boundary_publish_p50_ms": float(np.percentile(boundary_publish, 50)) if len(boundary_publish) else None,
             "boundary_publish_p95_ms": float(np.percentile(boundary_publish, 95)) if len(boundary_publish) else None,
             "end_to_end_p50_ms": float(np.percentile(latency, 50)) if len(latency) else None,

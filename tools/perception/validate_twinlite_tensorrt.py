@@ -26,12 +26,15 @@ def main():
     p.add_argument('--limit', type=int, default=0, help='0=all validation frames; positive=first N triplets')
     p.add_argument('--gpu-preprocess', action='store_true')
     p.add_argument('--family-fixture', type=Path, help='Pinned RGB/pose manifest; compare the production family pipeline on an isolated ROS master')
+    p.add_argument('--family-reference-runtime', type=Path, help='Frozen runtime: compare its family implementation with current on the exact same TensorRT grids')
     p.add_argument('--data-root', type=Path, default=Path('/data'))
     a=p.parse_args(); a.output.mkdir(parents=True,exist_ok=False)
     kwargs=dict(checkpoint=str(a.checkpoint),input_hw=(480,640),input_hw_by_view={'front':(544,960)})
-    baseline=TwinLiteBackend(**kwargs,channels_last=True)
     candidate=TwinLiteTensorRTBackend(**kwargs,engine_manifest=str(a.engine_manifest))
-    engines=[InferenceEngine(baseline),InferenceEngine(candidate)]
+    if a.family_reference_runtime and not a.family_fixture:
+        p.error('--family-reference-runtime requires --family-fixture')
+    engines=([InferenceEngine(candidate)] if a.family_reference_runtime else
+             [InferenceEngine(TwinLiteBackend(**kwargs,channels_last=True)),InferenceEngine(candidate)])
     gpu=RawGpuCache() if a.gpu_preprocess else None
     if a.family_fixture:
         from shadow_family_parity import run

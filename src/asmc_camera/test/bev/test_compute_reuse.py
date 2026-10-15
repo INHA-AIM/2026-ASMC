@@ -8,6 +8,31 @@ from asmc_camera.bev.boundary_candidates import _track_separation,_track_y_at_x
 
 
 class ComputeReuseTest(unittest.TestCase):
+    def test_family_nearest_assignment_matches_original_distances_including_ties(self):
+        from asmc_camera.bev.shared_lane_family import _nearest_curve_indices, _FitWorkspace
+        rng=np.random.RandomState(19);workspace=_FitWorkspace(8,3)
+        for count in (1,17,512,513,1100):
+            points=rng.normal(size=(count,2));curve=rng.normal(size=(240,2))
+            expected=np.argmin(np.sum((points[:,None,:]-curve[None,:,:])**2,axis=2),axis=1)
+            np.testing.assert_array_equal(_nearest_curve_indices(points,curve,workspace),expected)
+            previous=workspace.distance_buffers
+            np.testing.assert_array_equal(_nearest_curve_indices(points,curve,workspace),expected)
+            self.assertIs(workspace.distance_buffers,previous)
+        np.testing.assert_array_equal(_nearest_curve_indices([[0,0]],[[-1,0],[1,0]]),[0])
+
+    def test_family_fixed_matrices_are_readonly_exact_and_bounded(self):
+        from asmc_camera.bev.shared_lane_family import _FitWorkspace,_fixed_fit_matrices,_basis_derivative
+        _fixed_fit_matrices.cache_clear()
+        for count in range(4,17):
+            for degree in (1,2,3):
+                workspace=_FitWorkspace(count,degree)
+                expected=bspline_basis(workspace.dense,workspace.knots,degree,count)
+                np.testing.assert_array_equal(workspace.basis(workspace.dense),expected)
+                np.testing.assert_array_equal(workspace.derivative(workspace.dense),
+                                              _basis_derivative(workspace.dense,workspace.knots,degree,count))
+                with self.assertRaises(ValueError): workspace.dense_basis[0,0]=1
+        self.assertLessEqual(_fixed_fit_matrices.cache_info().currsize,16)
+
     def test_spline_basis_is_exact_owned_and_cache_is_bounded(self):
         _cached_basis.cache_clear();rng=np.random.RandomState(7)
         for controls in (4,6,12,24):

@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import signal
 import subprocess
 import threading
 import time
@@ -23,6 +24,20 @@ from b0_resources import ResourceSampler, qt_viewers
 def acceptance_eligible(report):
     return (report.get('acceptance_eligible',True) and
             not report.get('allocation_profile',False) and not report.get('profile_lane_fit',False))
+
+
+def active_window(start, planned_end, finished, shutdown_at=None):
+    end=min(planned_end,shutdown_at) if shutdown_at is not None else planned_end
+    return dict(start=start,end=max(start,end),planned_end=planned_end,
+                complete=finished>=planned_end and (shutdown_at is None or shutdown_at>=planned_end))
+
+
+def shutdown_observer(previous, record):
+    def handle(signum, frame):
+        record()  # roslaunch pmon may block before invoking rospy shutdown hooks.
+        if callable(previous):return previous(signum,frame)
+        if previous==signal.SIG_DFL:raise KeyboardInterrupt()
+    return handle
 
 
 def transition_ready(status, expected, mode):
@@ -118,7 +133,12 @@ def main():
     root = Path(__file__).resolve().parents[2]
     legacy = dict(objects='/camera_object_detector', lane='/camera_semantic_inference', traffic_light='/traffic_light_infer')
     active = a.active.split(',')
-    status, status_rows, diagnostics, subscribers, outputs, families, debug_outputs = {}, [], [], [], [], [], []
+    from camera_measurement_records import RecordedRows, instrument_consumer
+    records=[RecordedRows(a.output/('consumer-'+name+'.jsonl')) for name in
+             ('statuses','diagnostics','boxes','families','debug')]
+    status_rows,diagnostics,outputs,families,debug_outputs=records
+    status, subscribers = {}, []
+    close_consumer_probe=instrument_consumer(a.output/'consumer-gc.jsonl',LaneBoundaryFamily)
     debug_samples, latest_debug, failure_samples = {}, {}, {}
     start = end = None
     def receive_debug(message, role):
@@ -144,7 +164,7 @@ def main():
                                     xyxy=[b.xmin,b.ymin,b.xmax,b.ymax]) for b in m.boxes])), queue_size=30))
     subscribers.append(rospy.Subscriber('/perception/lane/boundary_family', LaneBoundaryFamily,
         lambda m: families.append(dict(at=time.monotonic(),stamp=m.header.stamp.to_nsec(),
-            valid=m.valid,reason=m.status_reason)),queue_size=30))
+            valid=m.valid,reason=m.status_reason)),queue_size=1))
     # Keep the same normal lane consumers as the real stack. No GUI consumers
     # are added unless explicitly requested, so lazy output stays comparable.
     for topic in ('/perception/camera/objects/diagnostics', '/perception/camera/diagnostics', '/morai_sensor_bridge/diagnostics',
@@ -172,6 +192,9 @@ def main():
         def _load_config(self):
             super()._load_config()
             for node in self.config.nodes:
+                if node.type in ('lane_vectorizer_node.py','semantic_inference_node.py'):
+                    key='/'+node.name+'/lifecycle_trace_path'
+                    self.config.params[key]=roslaunch.core.Param(key,str(a.output/(node.name+'-supply.trace')))
                 if node.type in ('object_detection_node.py','semantic_inference_node.py','traffic_light_node.py','camera_runtime_node.py'):
                     diagnostic = ' --allocation-profile' if a.allocation_profile and node.type=='semantic_inference_node.py' else ''
                     node.launch_prefix = 'python3 '+shlex.quote(str(probe))+diagnostic+' --output '+shlex.quote(str(a.output/(node.name+'.jsonl')))+' --'
@@ -187,6 +210,12 @@ def main():
             for node in self.config.nodes:
                 if node.type in ('object_view_node.py','object_visualizer_node.py'):
                     node.launch_prefix = 'python3 '+shlex.quote(str(probe))+' --visual-codecs --output '+shlex.quote(str(a.output/('visual-'+node.name+'.jsonl')))+' --'
+                elif node.type=='family_view_node.py':
+                    # The original ROS uint8[] wire decoder rejected bytes.
+                    # Use the same repaired renderer for both fitters; leave
+                    # the frozen baseline inference/fitting sources untouched.
+                    node.launch_prefix='python3 '+shlex.quote(str(probe))+' --visual-codecs --entrypoint '+shlex.quote(str(root/'src/asmc_camera/scripts/family_view_node.py'))+' --output '+shlex.quote(str(a.output/'family-view.jsonl'))+' --'
+                    node.env_args.append(('PYTHONPATH',str(root/'devel/lib/python3/dist-packages')+':'+os.environ.get('PYTHONPATH','')))
     parent = MeasuredLaunch(roslaunch.rlutil.get_or_generate_uuid(None, False), [(str(launch), args)])
     roslaunch.configure_logging(parent.run_id)
     replay_stop, replay = threading.Event(), None
@@ -221,6 +250,12 @@ def main():
         use_sim_time=rospy.get_param('/use_sim_time',False),
         latency_definition='Actual model/broker compressed input callback entry -> ROS publish return; monotonic wall.',
         aggregate_definition='Per-run raw frames, linear interpolated percentiles; no mean of run medians.'), None, None
+    report['consumer_recording']='bounded async JSONL; report materialization after ACTIVE'
+    report['family_subscription_queue']=1
+    shutdown_at=[None]; signal_handlers={}
+    def record_shutdown():
+        if shutdown_at[0] is None:shutdown_at[0]=time.monotonic()
+    rospy.on_shutdown(record_shutdown)
     if a.lane_runtime_config:
         report['lane_runtime_config'] = str(a.lane_runtime_config)
         report['lane_runtime_config_sha256'] = hashlib.sha256(Path(a.lane_runtime_config).read_bytes()).hexdigest()
@@ -233,7 +268,11 @@ def main():
         report['source_sha256'] = hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()
         report['measurement_sha256']={f:hashlib.sha256((root/'tools/perception'/f).read_bytes()).hexdigest()
             for f in ('compare_camera_runtime.py','camera_runtime_probe.py','b0_resources.py',
-                      'run_camera_structure_matrix.py','run_b0_matrix.py')}
+                      'run_camera_structure_matrix.py','run_b0_matrix.py','camera_measurement_records.py')}
+        report['family_view_source_sha256']={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in (root/'src/asmc_camera/src/asmc_camera/bev/family_view.py',
+                      root/'src/asmc_camera/src/asmc_camera/nodes/family_view_node.py',
+                      root/'src/asmc_camera/scripts/family_view_node.py')}
         (a.output/'source-hashes.json').write_text(json.dumps(hashes,indent=2))
         parent.start()
         report['effective_lane_batch_wait_ms'] = rospy.get_param('/camera_lane/batch_wait_ms',None)
@@ -313,14 +352,18 @@ def main():
         if a.gui:
             names += ['/'+n.name for n in view_launch.config.nodes]
         if a.legacy_lidar_root: names += ['/Main','/camera_objects_yolo_bbox_adapter']
+        for sig in (signal.SIGINT,signal.SIGTERM):
+            signal_handlers[sig]=signal.getsignal(sig)
+            signal.signal(sig,shutdown_observer(signal_handlers[sig],record_shutdown))
         sampler = ResourceSampler(os.environ.get('ROS_MASTER_URI','http://127.0.0.1:11311'), names, interval=.5, system_metrics=True)
         sampler.start()
         start = time.monotonic(); end = start+a.seconds
         print('MEASURE '+str(a.output), flush=True)
         while time.monotonic() < end and not rospy.is_shutdown():
             parent.spin_once(); time.sleep(.05)
-        report.update(start=start, end=end, complete=time.monotonic()>=end,
-                      final_status={r:dict(generation=m.generation, prepared=m.prepared, pipeline_ready=m.pipeline_ready, errors=m.errors, reason=m.reason) for r,m in status.items()})
+        window=active_window(start,end,time.monotonic(),shutdown_at[0]);end=window['end']
+        report.update(window,final_status={r:dict(generation=m.generation, prepared=m.prepared, pipeline_ready=m.pipeline_ready, errors=m.errors, reason=m.reason) for r,m in status.items()})
+        if not window['complete']:report['failures'].append('interrupted ACTIVE measurement; cleanup excluded')
         if qt_process and qt_process.poll() is not None:
             report['failures'].append('Qt viewer terminated during measurement')
     except Exception as exc:
@@ -343,11 +386,24 @@ def main():
         if a.gui and 'view_launch' in locals():
             view_launch.shutdown()
         parent.shutdown()
+        for sig,handler in signal_handlers.items():signal.signal(sig,handler)
         replay_stop.set()
         if replay:
             replay.join(2)
         for sub in subscribers:
             sub.unregister()
+        try:
+            close_consumer_probe()
+        except Exception as error:
+            report['failures'].append('consumer timing journal failed: '+str(error))
+        retained=[]
+        for record in records:
+            try:
+                retained.append(record.finish())
+            except Exception as error:
+                report['failures'].append('consumer journal failed: '+record.path.name+': '+str(error))
+                retained.append([])
+        status_rows,diagnostics,outputs,families,debug_outputs=retained
         rows = []
         for path in a.output.glob('*.jsonl'):
             loaded = [dict(json.loads(s), probe=path.stem) for s in path.read_text().splitlines() if s]
@@ -360,6 +416,12 @@ def main():
         if start is not None and not rows:
             report['failures'].append('missing model measurement traces; no latency/supply claim')
         if start is not None:
+            unmatched=[r for r in rows if r['event']=='output' and start<=r['at']<end and
+                       r.get('received') is None and r.get('valid',True) and not r.get('stale') and
+                       (r['topic'] in ('/perception/camera/objects','/perception/traffic_light/detection') or '/road_marking/' in r['topic'])]
+            report['unmatched_model_output_stamps']=len(unmatched)
+            if unmatched:
+                report['failures'].append('model input/output stamp mismatch')
             report['streams'] = measurements(rows, start, end, 15)
             required = dict(objects='/perception/camera/objects:',
                 lane='/perception/camera/front/road_marking/model_grid/class_id:',
@@ -378,6 +440,12 @@ def main():
         (a.output/'boxes.json').write_text(json.dumps(outputs))
         (a.output/'statuses.json').write_text(json.dumps(status_rows))
         (a.output/'diagnostics.json').write_text(json.dumps(diagnostics))
+        family_diagnostics=[s['values'] for row in diagnostics for s in row['statuses']
+            if s['name']=='drivable_bev/lane_vectorizer']
+        report['family_error_counters']={key:max((int(v.get(key,'0')) for v in family_diagnostics),default=0)
+            for key in ('errors','shared_family_errors')}
+        if any(report['family_error_counters'].values()):
+            report['failures'].append('family calculation errors')
         (a.output/'lane-families.json').write_text(json.dumps(families))
         (a.output/'debug-outputs.json').write_text(json.dumps(debug_outputs))
         for role, message in debug_samples.items():
@@ -391,6 +459,9 @@ def main():
         if start is not None:
             report['debug_outputs'] = {role:rate_report([(r['at'],r['stamp'],True) for r in debug_outputs if r['role']==role],start,end)
                 for role in {r['role'] for r in debug_outputs}}
+            report['family_view_stamped_messages']=sum(r['role']=='lane_family' and r['stamp']>0 and start<=r['at']<end for r in debug_outputs)
+            if a.gui and a.visual_outputs in ('all','family') and not report['family_view_stamped_messages']:
+                report['failures'].append('family visualization never received a renderable source stamp')
         if start is not None:
             report['lane_family'] = rate_report([(r['at'],r['stamp'],True) for r in families],start,end)
             report['lane_family']['valid_supply'] = rate_report(
@@ -404,6 +475,34 @@ def main():
             times = [(r['at']-inputs[r['stamp']])*1000 for r in active_families if r['stamp'] in inputs]
             report['lane_family']['input_to_subscriber_ms'] = {f'p{q}':percentile(times,q) for q in (50,95,99)}
             report['lane_family']['latency_sample_count'] = len(times)
+            produced=[r for r in rows if r['event']=='output' and r['topic']=='/perception/lane/boundary_family' and r['valid']]
+            report['lane_family']['producer_supply']=rate_report([(r['at'],r['stamp'],True) for r in produced],start,end)
+            by_stamp=defaultdict(list)
+            for row in produced:
+                by_stamp[row['stamp']].append(row)
+            transport=[]; unmatched=0
+            for row in active_families:
+                if not row['valid']: continue
+                matches=[p for p in by_stamp[row['stamp']] if p.get('publish_begin',p['at'])<=row['at']]
+                if not matches:
+                    unmatched+=1
+                    continue
+                published=max(matches,key=lambda p:p['at'])
+                transport.append(1000*(row['at']-published.get('publish_begin',published['at'])))
+            report['lane_family']['publish_begin_to_subscriber_ms']={f'p{q}':percentile(transport,q) for q in (50,95,99)}
+            report['lane_family']['unmatched_publisher_stamps']=unmatched
+            if unmatched: report['failures'].append('family consumer/publisher stamp mismatch')
+            supply_path=a.output/'camera_lane_vectorizer-supply.trace'
+            if supply_path.exists():
+                trace=[json.loads(line) for line in supply_path.read_text().splitlines()]
+                endings=[r for r in trace if r['event']=='trace_end']
+                if not endings or any(r['dropped'] for r in endings):
+                    report['failures'].append('family supply trace incomplete/dropped')
+                compute=[r for r in trace if r['event']=='family_compute_end' and start<=r['monotonic']<end]
+                gates=[r for r in trace if r['event']=='family_publish_start' and start<=r['monotonic']<end]
+                report['lane_family']['compute_wall_ms']={f'p{q}':percentile([r['wall_ms'] for r in compute],q) for q in (50,95,99)}
+                report['lane_family']['compute_cpu_ms']={f'p{q}':percentile([r['cpu_ms'] for r in compute],q) for q in (50,95,99)}
+                report['lane_family']['publish_lock_wait_ms']={f'p{q}':percentile([r['lock_wait_ms'] for r in gates],q) for q in (50,95,99)}
         (a.output/'report.json').write_text(json.dumps(report, indent=2)+'\n')
         print('RESULT '+json.dumps(report.get('resources', report['failures'])), flush=True)
     return int(bool(report['failures']))

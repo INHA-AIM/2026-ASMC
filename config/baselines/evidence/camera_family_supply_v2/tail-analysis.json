@@ -1,0 +1,40 @@
+{
+  "sunny_repeat": {
+    "trial": "full-gui-matrix-r5/trt-after-sunny-fixed-r2",
+    "readiness_false_samples": 1,
+    "reason": "source_stale",
+    "family_source_age_ms": 392.650365,
+    "family_receipt_age_ms": 84.296,
+    "latest_input_source_age_ms": [
+      43.129,
+      44.979,
+      46.852
+    ],
+    "compute_wall_ms": 122.53,
+    "compute_cpu_ms": 115.531,
+    "queue_wait_ms": 63.617,
+    "gen2_gc_near_event": false,
+    "certainty": "confirmed CPU calculation burst and pending wait; exact workload cause remains unconfirmed"
+  },
+  "soak": {
+    "trial": "soak-matrix-final/soak-trt-after-foggy-fixed-10min",
+    "family_publish_gap_ms": 261.717337,
+    "family_subscriber_gap_ms": 261.473259,
+    "source_interval_ms": 205.389261,
+    "begin_active_sec": 308.668664,
+    "end_active_sec": 308.930382,
+    "model_grid_max_gap_ms": 234.04,
+    "camera_input_max_gap_ms": 115.57,
+    "compute_before_ms": 38.24,
+    "compute_after_ms": 63.55,
+    "gen2_gc_near_event": false,
+    "certainty": "gap originates before family consumer transport; model-grid supply timing and compute contribution remain. Not assigned to MORAI rendering or GC."
+  },
+  "gc_max_ms": {
+    "twinlite_gen2": 0.0,
+    "family_gen2": 18.011068,
+    "consumer_gen2": 0.0
+  },
+  "automatic_acceptance_passed": false,
+  "thresholds_unchanged": true
+}

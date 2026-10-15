@@ -23,6 +23,14 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertEqual(config.params['/camera_lane/target_hz'].value, 15.)
         self.assertEqual(config.params['/camera_bev_fusion/max_fused_hz'].value, 15.)
         self.assertEqual(config.params['/camera_objects/model_kind'].value, 'yolo')
+        self.assertEqual(config.params['/camera_lane/backend'].value,'twinlite_tensorrt')
+
+    def test_pytorch_recovery_is_explicit_and_uses_the_same_input_sizes(self):
+        profile=LAUNCH.parent/'config/camera/lane_runtime_pytorch.yaml'
+        config=self.config('_runtime.launch','lane_runtime_config:='+str(profile))
+        self.assertEqual(config.params['/camera_lane/backend'].value,'twinlite')
+        self.assertEqual(config.params['/camera_lane/input_hw'].value,[480,640])
+        self.assertEqual(config.params['/camera_lane/input_hw_by_view/front'].value,[544,960])
 
     def test_twinlite_candidate_resolves_local_engines_in_both_process_layouts(self):
         from asmc_camera.camera.backends.twinlite_tensorrt import load_manifest

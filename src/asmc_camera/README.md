@@ -5,11 +5,13 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 기본 객체 모델은 YOLO26l v11 E8, 사전학습 YOLO26l도 실행 시 선택할 수 있습니다.
 현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
 전방 tensor는 두 모델 모두544×960입니다. 좌우 tensor는 두 모델 모두480×640인 PR #85 후보입니다.
-TwinLite는 독립 PyTorch 경로를 유지하며, TensorRT 후보의 품질·공급 검증은
+TwinLite의 기본 backend는 TensorRT FP16이며, 명시적인 PyTorch 복구 설정을 보존합니다. 변환 품질 검증은
 [TensorRT 검증 기록](../../docs/handoffs/perception/camera-twinlite-tensorrt.md)에서 관리합니다.
 [음영 family 최적화](../../docs/handoffs/perception/camera-shadow-family-optimization.md)는
 family 전용 경로·수요 기반 BEV·GC 진단과 후속 수락 상태를 관리합니다.
-최신 음영 반복12회와10분 연속 시험에서 순간 family freshness/공백 실패가 남아 TensorRT 기본 전환과 PR Ready는 보류했습니다.
+이전 음영 반복12회와10분 연속 시험의 순간 family freshness/공백 실패는 과거 증거로 보존합니다.
+현재 기본 전환과 전체 공급 수락은 별도 결정이며, 최신 결과·직접 시험 명령은
+[family 공급 최적화](../../docs/handoffs/perception/camera-family-supply-optimization.md)를 따릅니다. 사용자 주행 확인 전 PR은 Draft입니다.
 YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합니다. 같은 목표 Hz가 같은 영상 시각을 보장하지는 않습니다.
 
 ```bash

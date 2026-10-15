@@ -2,6 +2,7 @@
 """Execute explicit R0/R1/R2 jobs serially; preserve failures and restore weather."""
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import shlex
@@ -13,6 +14,12 @@ from xmlrpc.client import ServerProxy
 from run_b0_matrix import stop
 
 
+def stationary_condition(location, velocity, origin, max_distance=.25, max_speed=.2):
+    distance=math.sqrt(sum((location[k]-origin[k])**2 for k in ('x','y','z')))
+    speed=math.sqrt(sum(velocity[k]**2 for k in ('x','y','z')))
+    return dict(distance_m=distance,speed_api_units=speed,valid=distance<=max_distance and speed<=max_speed)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--jobs', type=Path, required=True)
@@ -21,6 +28,7 @@ def main():
     p.add_argument('--candidate-root', type=Path, required=True)
     p.add_argument('--saved-input', type=Path)
     p.add_argument('--grpc-host', default='host.docker.internal')
+    p.add_argument('--stationary-fixture',type=Path,help='Prepared pose JSON; read-only guard aborts on external movement, never repositions Ego')
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=False)
     jobs = json.loads(a.jobs.read_text())
@@ -48,9 +56,34 @@ def main():
             observed = api.GetWeather(Empty(), timeout=5)
         return dict(requested=requested, observed=observed.type,
                     status=response.status, success=response.status==1 and observed.type==requested)
+    condition_log=None
+    if a.stationary_fixture:
+        sys.path.insert(0,str(root/'tools/grpc_inha_univ/src/proto'))
+        import grpc
+        from morai.actor.actor_pb2_grpc import ActorStub
+        from morai.common.object_info_pb2 import ObjectInfo
+        from morai.common.enum_pb2 import OBJECT_TYPE_VEHICLE
+        from camera_runtime_probe import measurement_journal
+        actor=ActorStub(grpc.insecure_channel(a.grpc_host+':7789'))
+        ego=ObjectInfo(object_type=OBJECT_TYPE_VEHICLE);ego.id.value='Ego'
+        origin=json.loads(a.stationary_fixture.read_text())['requested']['location']
+        condition_log=measurement_journal(a.output/'fixture-state.jsonl')
+        def check_condition(label):
+            state=actor.GetActorState(ego,timeout=2)
+            mode=actor.GetVehicleControlMode(ego,timeout=2)
+            location={k:getattr(state.transform.location,k) for k in ('x','y','z')}
+            velocity={k:getattr(state.velocity,k) for k in ('x','y','z')}
+            condition=stationary_condition(location,velocity,origin)
+            row=dict(event='fixture_condition',at=time.monotonic(),trial=label,location=location,velocity=velocity,
+                     control_mode=mode.mode,**condition)
+            condition_log.append(row)
+            if not condition['valid']:
+                (a.output/'fixture-condition-failure.json').write_text(json.dumps(row,indent=2))
+                raise RuntimeError('stationary fixture changed; preserve trial and stop without overriding external control')
     try:
         for job in jobs:
             label = job['name']
+            if a.stationary_fixture:check_condition(label)
             if api:
                 requested = {'sunny':0,'foggy':2}[job['weather']]
                 transition = change_weather(requested)
@@ -91,6 +124,10 @@ def main():
             print('START '+label, flush=True)
             with (a.output/(label+'.log')).open('w') as stream:
                 child = subprocess.Popen(['bash','-c',script], stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
+                if a.stationary_fixture:
+                    while child.poll() is None:
+                        check_condition(label)
+                        time.sleep(.5)
                 returncode = child.wait()
             path = a.output/label/'report.json'
             report = json.loads(path.read_text()) if path.exists() else {}
@@ -104,9 +141,12 @@ def main():
             # The child owns roslaunch and its own Qt session. Allow its bounded
             # nested cleanup to finish before killing the benchmark process.
             stop(child,timeout=60)
-        if api and original is not None:
-            restored = change_weather(original.type)
-            (a.output/'weather-restored.json').write_text(json.dumps(restored))
+        try:
+            if api and original is not None:
+                restored = change_weather(original.type)
+                (a.output/'weather-restored.json').write_text(json.dumps(restored))
+        finally:
+            if condition_log:condition_log.close()
     return int(any(r['returncode'] or r['failures'] for r in index))
 
 

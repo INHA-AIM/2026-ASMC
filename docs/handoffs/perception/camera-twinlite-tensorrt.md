@@ -2,7 +2,8 @@
 
 시작점은 [카메라 실행 계약](../../contracts/perception/camera-runtime-v1.md)이며
 이전 [B1/B2·공유 입력 증거](camera-shared960-validation.md)를 보존한다.
-PR #85에서 진행하고 병합하지 않는다. 현재 기본은 독립 PyTorch이며 TensorRT는 후보다.
+PR #85에서 진행하고 병합하지 않는다. 아래는 변환 당시 독립 PyTorch 기본값과 TensorRT 후보의 기록이다.
+최신 TensorRT 기본 설정·명시적 PyTorch 복구·공급 수락 상태는 [family 공급 최적화](camera-family-supply-optimization.md)를 따른다.
 모델·차선 알고리즘·보정·freshness350ms·ROS MD5를 변경하지 않는다.
 
 ## 고정 모델과 실행

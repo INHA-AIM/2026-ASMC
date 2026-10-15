@@ -11,6 +11,52 @@ from shadow_family_parity import compare_family
 
 
 class ShadowValidationTest(unittest.TestCase):
+    def test_cleanup_after_early_shutdown_is_not_a_complete_active_window(self):
+        from compare_camera_runtime import active_window
+        result=active_window(100.,160.,195.,128.)
+        self.assertEqual(result['end'],128.)
+        self.assertFalse(result['complete'])
+        self.assertTrue(active_window(100.,160.,165.)['complete'])
+        self.assertTrue(active_window(100.,160.,165.,164.)['complete'])
+        from compare_camera_runtime import shutdown_observer
+        calls=[]
+        handler=shutdown_observer(lambda *_:calls.append('blocking pmon cleanup'),lambda:calls.append('stop timestamp'))
+        handler(2,None)
+        self.assertEqual(calls,['stop timestamp','blocking pmon cleanup'])
+
+    def test_fixed_pose_guard_rejects_external_driving_without_changing_control(self):
+        from run_camera_structure_matrix import stationary_condition
+        origin=dict(x=1.,y=2.,z=3.);stopped=dict(x=0.,y=0.,z=0.)
+        self.assertTrue(stationary_condition(origin,stopped,origin)['valid'])
+        self.assertFalse(stationary_condition(dict(origin,x=1.3),stopped,origin)['valid'])
+        self.assertFalse(stationary_condition(origin,dict(stopped,x=.3),origin)['valid'])
+
+    def test_consumer_rows_are_journaled_and_materialized_only_after_close(self):
+        from camera_measurement_records import RecordedRows
+        with tempfile.TemporaryDirectory() as directory:
+            rows=RecordedRows(Path(directory)/'consumer.jsonl')
+            for value in range(300):rows.append(dict(at=value,stamp=value+1))
+            self.assertLessEqual(rows.journal.high_water,rows.journal.capacity)
+            self.assertEqual(rows.finish(),[dict(at=value,stamp=value+1) for value in range(300)])
+            self.assertEqual(rows.journal.dropped,0)
+
+    def test_consumer_deserialization_and_gc_instrumentation_restore_original_policy(self):
+        import gc
+        from asmc_msgs.msg import LaneBoundaryFamily
+        from camera_measurement_records import instrument_consumer
+        original=LaneBoundaryFamily.deserialize;policy=(gc.isenabled(),gc.get_threshold())
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'timing.jsonl';close=instrument_consumer(path,LaneBoundaryFamily)
+            try:
+                data=io.BytesIO();LaneBoundaryFamily().serialize(data)
+                LaneBoundaryFamily().deserialize(data.getvalue())
+            finally:close()
+            import json
+            events=[json.loads(line) for line in path.read_text().splitlines()]
+            self.assertTrue(any(row['event']=='family_deserialize' for row in events))
+        self.assertIs(LaneBoundaryFamily.deserialize,original)
+        self.assertEqual((gc.isenabled(),gc.get_threshold()),policy)
+
     def test_measurement_waits_for_the_requested_epoch_and_a_valid_lane_pipeline(self):
         from compare_camera_runtime import transition_ready
         status={'lane':NS(generation=1,mode=1,prepared=True,pipeline_ready=True)}

@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "checks": {
+    "initial_standby": true,
+    "alias_same_generation": true,
+    "prepare_requires_family": true,
+    "new_family_enables_prepare": true,
+    "standby_clears_ready": true,
+    "old_family_rejected": true,
+    "active_requires_new_generation": true,
+    "prior_prepare_family_rejected_in_active": true,
+    "active_new_inputs_and_family_ready": true,
+    "alias_status_same_state": true
+  },
+  "actual_ros_transport": true,
+  "gpu": false,
+  "master": "127.0.0.1:11391",
+  "scope": "Synthetic completed model inputs with real mode services/status/family transport; no performance or driving claim"
+}

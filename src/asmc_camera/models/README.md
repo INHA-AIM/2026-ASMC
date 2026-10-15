@@ -33,14 +33,15 @@ PyTorch 복구 경로 및 export의 설치 의존성입니다. canonical `lane_r
 동일한 SHA의 패키지 내부 checkpoint를 사용하며 원본 학습 산출물은 보존합니다.
 
 
-## TwinLite TensorRT 후보
+## TwinLite TensorRT 기본 backend
 
 `lane_segmentation/`에는 Medium v6 원본 checkpoint, 전방544×960 B1 및 좌우480×640
 B1–2 ONNX/FP16 engine, `manifest.json`을 둡니다. EMA·두 head·클래스 순서는 유지하며
 attention을 근사하거나 제거하지 않습니다. Manifest의 checkpoint/engine SHA와 GPU,
 TensorRT 버전을 시작 시 검사합니다. 불일치는 명시적으로 실패하며 fallback하지 않습니다.
 
-이 파일은 실시간 수락을 위한 후보입니다. `lane_runtime.yaml`의 PyTorch 복구 경로와
+`lane_runtime.yaml`은 이 engine을 기본으로 사용합니다. `lane_runtime_pytorch.yaml`의 명시적 복구 경로와
 고정 upstream 소스 의존성은 보존합니다. 변환에는 upstream 소스와 ONNX 도구가 필요하며,
 TensorRT 실행 자체는 해당 upstream Python 모델을 로드하지 않습니다.
 [변환·품질·실시간 검증](../../../docs/handoffs/perception/camera-twinlite-tensorrt.md)을 확인하세요.
+전체 공급 수락과 사용자 주행 확인은 [최신 family 기록](../../../docs/handoffs/perception/camera-family-supply-optimization.md)에서 별도로 관리합니다.

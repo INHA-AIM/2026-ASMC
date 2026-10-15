@@ -1,0 +1,21 @@
+{
+  "live-matrix-r1/trt-after-foggy-r2/report.json": "External GAME_WHEEL driving observed; stationary shadow ODD was not maintained. Original timing/validity failures retained. Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "live-matrix-r1/trt-after-foggy-r1/report.json": "External GAME_WHEEL driving observed; stationary shadow ODD was not maintained. Original timing/validity failures retained. Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "live-matrix-r1/trt-before-foggy-r1/report.json": "External GAME_WHEEL driving observed; stationary shadow ODD was not maintained. Original timing/validity failures retained. Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "live-matrix-r1/trt-after-sunny-r2/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "live-matrix-r1/trt-before-sunny-r3/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "live-matrix-r1/trt-after-sunny-r1/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "live-matrix-r1/trt-before-sunny-r2/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "live-matrix-r1/trt-after-sunny-r3/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "live-matrix-r1/trt-before-sunny-r1/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "foggy-fixed-matrix-r2/trt-after-foggy-fixed-r1/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "foggy-fixed-matrix-r2/trt-before-foggy-fixed-r1/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "foggy-fixed-matrix-r2/trt-after-foggy-fixed-r2/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "foggy-fixed-matrix-r2/trt-before-foggy-fixed-r2/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "smoke-matrix-r1/smoke-trt-after-sunny/report.json": " Family GUI rejected ROS uint8[] bytes; not full GUI acceptance. Model/family timing evidence retained.",
+  "full-gui-matrix-r3/trt-before-sunny-fixed-r1/report.json": "Measurement renderer executable could not be resolved by ROS; not full GUI acceptance.",
+  "full-gui-matrix-r4/trt-before-sunny-fixed-r1/report.json": "Measurement renderer raw source path shadowed generated ROS msg; not full GUI acceptance.",
+  "full-gui-matrix-r5/trt-after-sunny-fixed-r3/report.json": "Stationary guard detected external wheel input and stopped at28.51s. Measurement incorrectly included shutdown cleanup as ACTIVE;31.4s tail gap is measurement defect, not inference stall. Original report preserved.",
+  "full-gui-matrix-r3/trt-after-sunny-fixed-r1/report.json": "Measurement renderer executable could not be resolved by ROS; not full GUI acceptance.",
+  "full-gui-matrix-r4/trt-after-sunny-fixed-r1/report.json": "Measurement renderer raw source path shadowed generated ROS msg; not full GUI acceptance."
+}

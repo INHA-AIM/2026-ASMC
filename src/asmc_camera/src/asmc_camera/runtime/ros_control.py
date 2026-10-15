@@ -2,6 +2,7 @@
 import threading
 import uuid
 import time
+import json
 import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from asmc_camera.msg import InferenceStatus
@@ -28,6 +29,7 @@ class RosInferenceControl:
         self.state.record('control_ready', loaded=True, warmed_up=bool(warmed_up))
         self.on_transition = on_transition
         self.pipeline = None
+        self.latest_receipts = {view:None for view in views}
         self.readiness_publisher = (rospy.Publisher('/perception/camera/diagnostics', DiagnosticArray, queue_size=1)
                                     if model == 'twinlite' else None)
         service, status, legacy = control_paths(model)
@@ -64,6 +66,7 @@ class RosInferenceControl:
 
     def observe(self, view, stamp):
         with self.state.lock:
+            self.latest_receipts[view]=self.state.clock()
             previous = self.state.generation
             self.state.observe(view, stamp)
             if self.state.generation != previous:
@@ -121,6 +124,12 @@ class RosInferenceControl:
             if self.model == 'twinlite':
                 p = self.pipeline
                 detail = pipeline_readiness(values, p, now.to_nsec(), self.state.clock(), self.state.freshness)
+                detail['latest_input_source_age_ms_by_view'] = json.dumps({
+                    view:(now.to_nsec()-stamp)/1e6 if stamp else None
+                    for view,stamp in self.state.latest_input.items()},sort_keys=True)
+                detail['latest_input_receipt_age_ms_by_view'] = json.dumps({
+                    view:1000*(self.state.clock()-received) if received is not None else None
+                    for view,received in self.latest_receipts.items()},sort_keys=True)
                 msg.pipeline_ready = detail['pipeline_ready']
                 msg.last_output_valid = bool(p and p[1])
                 diagnostic = DiagnosticStatus(name='camera_semantic_perception/readiness',
@@ -165,6 +174,7 @@ def pipeline_readiness(values, pipeline, now_ns, wall_now, freshness):
                 family_source_age_ms=source_age*1000 if p else None,
                 family_receipt_age_ms=receipt_age*1000 if p else None,
                 input_source_age_ms=(now_ns-values['last_source_stamp'])/1e6,
+                model_result_source_age_ms=(now_ns-values['last_source_stamp'])/1e6,
                 freshness_ms=freshness*1000)
 
 

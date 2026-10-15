@@ -7,6 +7,17 @@ from asmc_camera.bev.visualization import draw_metric_grid, draw_stateful_lane_f
 
 
 class FamilyViewTest(unittest.TestCase):
+    def test_ros_uint8_support_survives_serialization_and_renders_as_bytes(self):
+        import io
+        from asmc_msgs.msg import LaneBoundaryFamily,LaneBoundaryFamilyMember
+        from geometry_msgs.msg import Point32
+        message=LaneBoundaryFamily(valid=True,boundaries=[LaneBoundaryFamilyMember(role=1,color=1,
+            polyline=[Point32(x=i,y=1) for i in range(6)],support_state=[1,1,0,0,2,2])])
+        encoded=io.BytesIO();message.serialize(encoded)
+        decoded=LaneBoundaryFamily().deserialize(encoded.getvalue())
+        self.assertIsInstance(decoded.boundaries[0].support_state,bytes)
+        self.assertEqual([s[1] for s in family_segments(decoded)],['observed','invalid','structure_inferred'])
+
     def family(self, states):
         return NS(valid=True,boundaries=[NS(role=1,color=1,support_state=states,
             polyline=[NS(x=i,y=1) for i in range(len(states))])])

@@ -160,6 +160,12 @@ def shadow_acceptance_failures(report, statuses):
         failures.append('valid family gap over250ms')
     if family.get('duplicate_stamps') or family.get('reversed_stamps'):
         failures.append('valid family stamp order')
+    if report.get('family_subscription_queue')==1:
+        produced=report.get('lane_family',{}).get('producer_supply',{})
+        if min(produced.get('five_second_hz',[]),default=0)<10 or produced.get('max_gap_sec',1.)>.25:
+            failures.append('valid family producer supply/gap')
+        if produced.get('duplicate_stamps') or produced.get('reversed_stamps'):
+            failures.append('family producer stamp order')
     for role in report.get('active',[]):
         active=[s for s in statuses if s['role']==role and report['start']<=s['at']<report['end']]
         if not active or any(not s['prepared'] or s['errors'] or
@@ -174,6 +180,8 @@ def shadow_acceptance_failures(report, statuses):
 def shadow_family_followup(a):
     from compare_camera_runtime import acceptance_eligible
     trials=[]; pooled=defaultdict(lambda:defaultdict(list)); csv_rows=[]
+    correction_path=a.results/'condition-corrections.json'
+    corrections=json.loads(correction_path.read_text()) if correction_path.exists() else {}
     for path in sorted(a.results.rglob('report.json')):
         report=json.loads(path.read_text())
         if 'variant' not in report:
@@ -186,10 +194,14 @@ def shadow_family_followup(a):
         jobs=json.loads(jobs_path.read_text()) if jobs_path.exists() else []
         job=next((j for j in jobs if j['name']==path.parent.name),{})
         statuses=json.loads((path.parent/'statuses.json').read_text())
-        backend='T2' if 't2' in path.parent.name else 'T0'
+        backend=job.get('comparison_stage') or ('T2' if 't2' in path.parent.name else 'T0')
         group='-'.join((backend,job.get('weather','unknown'),report.get('visual_outputs','all') if report.get('visualization_sinks') else 'off',
                         'soak' if report['end']-report['start']>=600 else 'repeat'))
         failures=shadow_acceptance_failures(report,statuses)
+        correction=corrections.get(str(path.relative_to(a.results)))
+        if correction:
+            failures.append('measurement condition changed: '+correction)
+            group+='-condition-invalid'
         inputs={}; gc_started={}; gc_times=[]
         for raw in path.parent.glob('*.jsonl'):
             if 'allocations' in raw.stem:
@@ -214,13 +226,34 @@ def shadow_family_followup(a):
         if acceptance_eligible(report) and report['complete']:
             pooled[group]['family_input_to_subscriber'].extend(1000*(r['at']-inputs[r['stamp']]) for r in family_rows
                 if r['valid'] and report['start']<=r['at']<report['end'] and r['stamp'] in inputs)
+            publication_path=path.parent/'family-gc.jsonl'
+            publications=[r for r in (rows(publication_path) if publication_path.exists() else []) if r['event']=='output' and
+                          r['topic']=='/perception/lane/boundary_family' and r.get('valid')]
+            publish_by_stamp={r['stamp']:r for r in publications}
+            pooled[group]['family_publish_begin_to_subscriber'].extend(
+                1000*(r['at']-publish_by_stamp[r['stamp']]['publish_begin']) for r in family_rows
+                if r['valid'] and report['start']<=r['at']<report['end'] and r['stamp'] in publish_by_stamp)
+            trace_path=path.parent/'camera_lane_vectorizer-supply.trace'
+            if trace_path.exists():
+                for event in rows(trace_path):
+                    if not report['start']<=event['monotonic']<report['end']:
+                        continue
+                    if event['event']=='family_compute_end':
+                        pooled[group]['family_compute_wall'].append(event['wall_ms'])
+                        pooled[group]['family_compute_cpu'].append(event['cpu_ms'])
+                    elif event['event']=='family_publish_start':
+                        pooled[group]['family_publish_lock_wait'].append(event['lock_wait_ms'])
         active_status_failures={role:sum(not s['prepared'] or bool(s['errors']) or (role=='lane' and not s['pipeline_ready'])
             for s in statuses if s['role']==role and report['start']<=s['at']<report['end']) for role in report['active']}
         trials.append(dict(name=path.parent.name,group=group,report=str(path.relative_to(a.results)),
             acceptance_eligible=acceptance_eligible(report),failures=failures,active_status_failures=active_status_failures,
+            source_sha256=report.get('source_sha256'),measurement_sha256=report.get('measurement_sha256'),
+            lane_runtime_config_sha256=report.get('lane_runtime_config_sha256'),
+            family_view_source_sha256=report.get('family_view_source_sha256'),
             resources=report.get('resources'),lane_family=report['lane_family'],streams=report['streams'],
             mode_transitions=report.get('mode_transitions'),gc_generation2=sorted(gc_times,key=lambda r:r['duration_ms'],reverse=True)[:10],
             qt_before=report.get('qt_inventory_before'),qt_during=report.get('qt_inventory_during'),qt_after=report.get('qt_inventory_after')))
+        if correction:trials[-1]['condition_correction']=correction
         for key,s in report['streams'].items():
             csv_rows.append(dict(trial=path.parent.name,group=group,stream=key,hz=s['hz'],
                 min_5s_hz=min(s['five_second_hz'],default=0),**{f'p{q}_ms':s['wall_ms'][f'p{q}'] for q in (50,95,99)},

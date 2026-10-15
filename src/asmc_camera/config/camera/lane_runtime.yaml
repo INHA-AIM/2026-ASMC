@@ -1,5 +1,8 @@
 # Canonical camera.launch requests15Hz; legacy perception.launch keeps10Hz.
+backend: twinlite_tensorrt
 checkpoint: $(find asmc_camera)/models/lane_segmentation/twinlite-medium-v6.pt
+engine_manifest: $(find asmc_camera)/models/lane_segmentation/manifest.json
+gpu_preprocess: true
 device: cuda
 # Tensor sizes are shared with the model-grid projector via lane_input.yaml.
 views: [front, left, right]

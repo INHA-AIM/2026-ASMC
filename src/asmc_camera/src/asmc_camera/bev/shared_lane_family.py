@@ -16,12 +16,13 @@ from the research repositories under ``external``.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import math
 from typing import Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
-from .spline_fitting import bspline_basis
+from .spline_fitting import bspline_basis, _bspline_basis_uncached
 
 
 LEFT_ROLE = "left_outer_boundary"
@@ -400,6 +401,54 @@ def _basis_derivative(parameters, knots, degree, control_count) -> np.ndarray:
     ) / denominator
 
 
+@lru_cache(maxsize=16)
+def _fixed_fit_matrices(control_count, degree):
+    """Small immutable matrices; frame-dependent parameter arrays stay local."""
+    knots = _open_uniform_knots(control_count, degree)
+    dense = np.linspace(0.0, 1.0, max(200, control_count * 32))
+    basis = _bspline_basis_uncached(dense, knots, degree, control_count)
+    lower, upper = np.clip(dense-1e-4, 0., 1.), np.clip(dense+1e-4, 0., 1.)
+    derivative = (_bspline_basis_uncached(upper, knots, degree, control_count)-
+                  _bspline_basis_uncached(lower, knots, degree, control_count)) / np.maximum(upper-lower, 1e-9)[:, None]
+    regularizer = np.diff(np.eye(control_count), n=2, axis=0)
+    for value in (knots, dense, basis, derivative, regularizer):
+        value.setflags(write=False)
+    return knots, dense, basis, derivative, regularizer
+
+
+class _FitWorkspace:
+    def __init__(self, controls, degree):
+        self.control_count, self.degree = controls, degree
+        self.knots, self.dense, self.dense_basis, self.dense_derivative, self.regularizer = _fixed_fit_matrices(controls, degree)
+        self.last_parameters = self.last_basis = None
+        self.distance_buffers = None
+        self.basis_reuses = 0
+
+    def basis(self, parameters):
+        if parameters is self.dense:
+            self.basis_reuses += 1
+            return self.dense_basis
+        if parameters is self.last_parameters:
+            self.basis_reuses += 1
+            return self.last_basis
+        self.last_parameters = parameters
+        self.last_basis = _bspline_basis_uncached(parameters, self.knots, self.degree, self.control_count)
+        return self.last_basis
+
+    def derivative(self, parameters):
+        if parameters is self.dense:
+            return self.dense_derivative
+        values = np.asarray(parameters, np.float64).reshape(-1)
+        lower, upper = np.clip(values-1e-4, 0., 1.), np.clip(values+1e-4, 0., 1.)
+        return (_bspline_basis_uncached(upper, self.knots, self.degree, self.control_count)-
+                _bspline_basis_uncached(lower, self.knots, self.degree, self.control_count)) / np.maximum(upper-lower, 1e-9)[:, None]
+
+
+def family_compute_cache_info():
+    value = _fixed_fit_matrices.cache_info()
+    return dict(hits=value.hits, misses=value.misses, entries=value.currsize, capacity=value.maxsize)
+
+
 def _fit_controls(
     targets: np.ndarray,
     parameters: np.ndarray,
@@ -407,24 +456,26 @@ def _fit_controls(
     control_count: int,
     degree: int,
     smoothing: float,
+    workspace=None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    knots = _open_uniform_knots(control_count, degree)
-    basis = bspline_basis(parameters, knots, degree, control_count)
+    knots = workspace.knots if workspace else _open_uniform_knots(control_count, degree)
+    basis = workspace.basis(parameters) if workspace else bspline_basis(parameters, knots, degree, control_count)
     root = np.sqrt(np.maximum(weights, 1e-9))[:, None]
     design = basis * root
     target = targets * root
     if control_count >= 3 and smoothing > 0.0:
-        regularizer = np.diff(np.eye(control_count), n=2, axis=0)
+        regularizer = workspace.regularizer if workspace else np.diff(np.eye(control_count), n=2, axis=0)
         design = np.vstack((design, math.sqrt(smoothing) * regularizer))
         target = np.vstack((target, np.zeros((len(regularizer), 2))))
     controls = np.linalg.lstsq(design, target, rcond=None)[0]
     return knots, controls
 
 
-def _curve_geometry(parameters, knots, degree, controls):
-    basis = bspline_basis(parameters, knots, degree, len(controls))
+def _curve_geometry(parameters, knots, degree, controls, workspace=None):
+    basis = workspace.basis(parameters) if workspace else bspline_basis(parameters, knots, degree, len(controls))
     points = basis @ controls
-    tangent = _basis_derivative(parameters, knots, degree, len(controls)) @ controls
+    derivative = workspace.derivative(parameters) if workspace else _basis_derivative(parameters, knots, degree, len(controls))
+    tangent = derivative @ controls
     norm = np.linalg.norm(tangent, axis=1)
     if np.any(norm <= 1e-9):
         raise ValueError("shared family centre spline has a degenerate tangent")
@@ -436,17 +487,24 @@ def _curve_geometry(parameters, knots, degree, controls):
     return points, tangent, normal
 
 
-def _nearest_curve_indices(points, curve):
+def _nearest_curve_indices(points, curve, workspace=None):
     values = np.asarray(points, dtype=np.float64).reshape(-1, 2)
     reference = np.asarray(curve, dtype=np.float64).reshape(-1, 2)
     result = np.empty(len(values), dtype=np.int64)
+    shape = (min(512, len(values)), len(reference))
+    if workspace is not None:
+        if workspace.distance_buffers is None or workspace.distance_buffers[0].shape != shape:
+            workspace.distance_buffers = (np.empty(shape), np.empty(shape))
+        dx, dy = workspace.distance_buffers
+    else:
+        dx, dy = np.empty(shape), np.empty(shape)
     for start in range(0, len(values), 512):
         stop = min(len(values), start + 512)
-        squared = np.sum(
-            (values[start:stop, None, :] - reference[None, :, :]) ** 2,
-            axis=2,
-        )
-        result[start:stop] = np.argmin(squared, axis=1)
+        x, y = dx[:stop-start], dy[:stop-start]
+        np.subtract(values[start:stop, None, 0], reference[None, :, 0], out=x)
+        np.subtract(values[start:stop, None, 1], reference[None, :, 1], out=y)
+        np.square(x, out=x); np.square(y, out=y); np.add(x, y, out=x)
+        result[start:stop] = np.argmin(x, axis=1)
     return result
 
 
@@ -737,6 +795,7 @@ def fit_shared_lane_family_with_audit(
         )
     )
     robust = np.ones(len(points), dtype=np.float64)
+    workspace = _FitWorkspace(control_count, degree)
     knots, controls = _fit_controls(
         targets,
         parameters,
@@ -744,19 +803,20 @@ def fit_shared_lane_family_with_audit(
         control_count,
         degree,
         float(values["spline_smoothing"]),
+        workspace,
     )
     left_width = float(values["nominal_left_width_m"])
     right_width = float(values["nominal_right_width_m"])
-    dense_parameters = np.linspace(0.0, 1.0, max(200, control_count * 32))
+    dense_parameters = workspace.dense
     residual = np.empty(len(points), dtype=np.float64)
     assigned_parameters = parameters.copy()
     assigned_normals = np.tile(neutral_normal, (len(points), 1))
 
     for _ in range(int(values["robust_iterations"])):
         dense_curve, _, dense_normals = _curve_geometry(
-            dense_parameters, knots, degree, controls
+            dense_parameters, knots, degree, controls, workspace
         )
-        nearest = _nearest_curve_indices(points, dense_curve)
+        nearest = _nearest_curve_indices(points, dense_curve, workspace)
         assigned_parameters = dense_parameters[nearest]
         assigned_centres = dense_curve[nearest]
         assigned_normals = dense_normals[nearest]
@@ -801,9 +861,10 @@ def fit_shared_lane_family_with_audit(
             control_count,
             degree,
             float(values["spline_smoothing"]),
+            workspace,
         )
         centres, _, normals = _curve_geometry(
-            assigned_parameters, knots, degree, controls
+            assigned_parameters, knots, degree, controls, workspace
         )
         signed = np.sum((points - centres) * normals, axis=1)
         residual = np.abs(signed - offsets)
@@ -815,12 +876,12 @@ def fit_shared_lane_family_with_audit(
         )
         robust = 1.0 / (1.0 + (residual / max(scale, 1e-9)) ** 2)
 
-    dense_curve, _, _ = _curve_geometry(dense_parameters, knots, degree, controls)
+    dense_curve, _, _ = _curve_geometry(dense_parameters, knots, degree, controls, workspace)
     centre_samples, sample_parameters, sample_station = _resample_curve(
         dense_curve, dense_parameters, float(values["sample_spacing_m"])
     )
     centre_samples, _, sample_normals = _curve_geometry(
-        sample_parameters, knots, degree, controls
+        sample_parameters, knots, degree, controls, workspace
     )
     if np.any(np.diff(centre_samples[:, 0]) < -0.10):
         audit.update({"accepted": False, "reason": "non_monotonic_forward_curve"})

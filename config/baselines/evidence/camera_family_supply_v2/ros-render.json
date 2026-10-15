@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "actual_ros_transport": true,
+  "stamped_render": true,
+  "jpeg_bytes": 5373,
+  "baseline_environment": true
+}

@@ -60,11 +60,12 @@ class DemandSynchronizer:
     refresh/unregister returns. ``context`` must be a cheap immutable snapshot.
     """
     def __init__(self, topics, message_type, demand, callback, context=lambda: None,
-                 on_reset=None, queue_size=4, subscriber_queue_size=2):
+                 on_reset=None, queue_size=4, subscriber_queue_size=2, subscriber_buffer_bytes=None):
         self.topics, self.message_type = tuple(topics), message_type
         self.demand, self.callback, self.context = demand, callback, context
         self.on_reset = on_reset
         self.queue_size, self.subscriber_queue_size = queue_size, subscriber_queue_size
+        self.subscriber_buffer_bytes = subscriber_buffer_bytes
         self.lock = threading.RLock()
         self.subscribers, self.synchronizer = [], None
         self.closed, self.active, self.epoch = False, False, 0
@@ -103,8 +104,10 @@ class DemandSynchronizer:
                     with self.lock:
                         if self.active and epoch == self.epoch and self.context() == context and self.demand():
                             source.signalMessage(message)
-                self.subscribers.append(rospy.Subscriber(
-                    topic, self.message_type, receive, queue_size=self.subscriber_queue_size))
+                kwargs = dict(queue_size=self.subscriber_queue_size)
+                if self.subscriber_buffer_bytes is not None:
+                    kwargs['buff_size'] = self.subscriber_buffer_bytes
+                self.subscribers.append(rospy.Subscriber(topic, self.message_type, receive, **kwargs))
 
     def unregister(self):
         with self.lock:

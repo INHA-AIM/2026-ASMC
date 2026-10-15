@@ -36,6 +36,8 @@ def main():
             timestamp=datetime.now(timezone.utc).isoformat(),time_basis='report_first_creation_utc')
         registry_path.write_text(json.dumps(registry,ensure_ascii=False,indent=2)+'\n')
     identifier='E%03d'%registry[key]['number']
+    if report.get('schema')=='shadow_family_runtime_v1':
+        return family_supply_gallery(a,report,identifier)
     soak_matrix=report.get('soak_matrix','soak')
     main_trials=[r for r in report['trials'] if r.get('effective_final_trial') or r['matrix']==soak_matrix]
     primary=[r for r in main_trials if '-control-' not in r['trial'] and r['matrix']!=soak_matrix]
@@ -128,6 +130,55 @@ def main():
     style='body{font:15px system-ui;background:#111923;color:#dae5f3;margin:24px}a{color:#75caff}h2{margin-top:32px}.status{padding:16px;background:#223c4d}.scroll{overflow:auto}table{border-collapse:collapse;white-space:nowrap;font-size:13px}th,td{padding:8px;border:1px solid #344556}th{background:#223141}.photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:12px}figure{margin:0}img{max-width:100%}summary{cursor:pointer;padding:12px}pre{white-space:pre-wrap}'
     (a.output/'index.html').write_text('<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>'+style+'</style>'+content+'</html>')
     print(json.dumps(dict(experiment_id=identifier,trials=len(main_trials),page=str(a.output/'index.html'))))
+
+
+def family_supply_gallery(args, report, identifier):
+    """Render the same retained producer/consumer measurements, without pooling medians."""
+    title=identifier+' · TensorRT 기본·family 공급 최적화 — 2026-10-15–16'
+    content='<h1>'+esc(title)+'</h1><p><a href="../index.html">ASMC 실험 목록</a> · <a href="summary.json">전체 JSON</a> · <a href="trials.csv">뷰·회차 CSV</a> · <a href="parity/index.html">동일 TensorRT 입력 전후 비교</a></p>'
+    content+='<p>TensorRT 기본 설정과 전체 공급 수락은 별도입니다. PR #85는 사용자 주행 확인 전 Draft입니다. 기존·신규 모두 같은 engine·입력·유효성 기준을 사용합니다. 반복 시험은 SUNNY/FOGGY13시 각3회60초이며 마지막 FOGGY 전체 GUI 연속 시험은10분입니다. 실제 rqt 한 개·Main preview·LiDAR 부하를 포함합니다.</p>'
+    content+='<p>모델 callback→발행, family 계산, callback→family 수신, family 발행→수신을 분리합니다. Source stamp는 촬영 시각 보장이 아닙니다. 분위수는 실제 raw 표본에서 계산하며 실행별 중앙값을 평균내지 않습니다. Family producer/consumer gap은 각각250ms 기준입니다.</p>'
+    primary=set(report.get('primary_trial_reports',[]))
+    if primary:
+        content+='<p><strong>'+('자동 수락 통과 · 사용자 주행 확인 대기' if report.get('automatic_acceptance_passed') else '자동 수락 미완료 · Draft 유지')+'</strong>. 본문 비교표는 정규 측정13회이며, 이전 결함/중단 실행은 실패 표와 JSON에 보존합니다.</p>'
+    overview=[];details=[];photos=[];failures=[]
+    for trial in report['trials']:
+        if trial['failures']:failures.append([str(Path(trial['report']).parent),'; '.join(trial['failures'])])
+        if primary and trial['report'] not in primary:continue
+        if 'lane_family' not in trial:
+            continue
+        family=trial['lane_family'];valid=family['valid_supply'];producer=family.get('producer_supply',{})
+        overview.append([trial['name'],number(valid['hz'],2),number(min(valid['five_second_hz'],default=0),2),
+            number(1000*producer.get('max_gap_sec',0)),number(1000*valid['max_gap_sec']),
+            *[number(family.get('input_to_subscriber_ms',{}).get('p'+str(q))) for q in (50,95,99)],
+            number(family.get('compute_wall_ms',{}).get('p95')),
+            trial['active_status_failures'].get('lane'),number(100*trial['resources']['vram_peak_fraction']),
+            'PASS' if not trial['failures'] else 'FAIL'])
+        for key,stream in trial['streams'].items():
+            details.append([trial['name'],key.replace('/perception/camera/',''),number(stream['hz'],2),
+                number(min(stream['five_second_hz'],default=0),2),
+                *[number(stream['wall_ms']['p'+str(q)]) for q in (50,95,99)],
+                number(1000*stream['max_gap_sec']),stream['target_95pct_pass']])
+        root=args.results/Path(trial['report']).parent
+        if '-r1' in trial['name'] or 'soak' in trial['name']:
+            for pattern in ('sample-*.jpg','failure-*.jpg'):
+                for source in sorted(root.glob(pattern)):
+                    dest=trial['name']+'-'+source.name;shutil.copyfile(source,args.output/dest)
+                    photos.append('<figure><figcaption>'+esc(dest)+'</figcaption><a href="'+esc(dest)+'"><img loading="lazy" src="'+esc(dest)+'"></a></figure>')
+    content+='<h2>회차별 공급·공백</h2>'+table(['회차','유효 family Hz','최저5초 Hz','발행 공백ms','수신 공백ms','전체 p50','p95','p99','계산 p95','readiness false','VRAM%','수락'],overview)
+    pooled=[]
+    for group,streams in report['pooled_latency'].items():
+        if primary and ('condition-invalid' in group or group.startswith('smoke-')):continue
+        for key,value in streams.items():
+            pooled.append([group,key,value['count'],*[number(value['p'+str(q)+'_ms']) for q in (50,95,99)]])
+    content+='<h2>원시 프레임 통합 분위수</h2>'+table(['구성·날씨','항목','n','p50 ms','p95 ms','p99 ms'],pooled)
+    content+='<h2>실제 화면·실패 보존</h2><p>수신한 debug JPEG입니다. 실패 화면은 readiness 저하 시 최근 화면이며 동기 GT라고 설명하지 않습니다.</p><div class="photos">'+''.join(photos)+'</div>'
+    content+='<details><summary>뷰별 모든 회차</summary>'+table(['회차','stream','Hz','최저5초 Hz','p50','p95','p99','공백ms','목표95%'],details)+'</details>'
+    content+='<h2>실패·계측 오류</h2>'+table(['회차','사유'],failures)
+    content+='<p>GT·모델 품질과 실행 구조를 구분합니다. 이전 PyTorch/TensorRT 곡선 차이·365.9ms 수신 공백은 <a href="../camera-shadow-family-20261015-r1/index.html">이전 E356</a>에 보존합니다. 이번 결과는 주행 수락·LiDAR 연결·PR 병합이 아닙니다.</p>'
+    style='body{font:15px system-ui;background:#111923;color:#dae5f3;margin:24px}a{color:#75caff}h2{margin-top:32px}.scroll{overflow:auto}table{border-collapse:collapse;white-space:nowrap;font-size:13px}td,th{padding:8px;border:1px solid #344556}.photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:12px}img{max-width:100%}summary{cursor:pointer;padding:12px}'
+    (args.output/'index.html').write_text('<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>'+style+'</style>'+content+'</html>')
+    print(json.dumps(dict(experiment_id=identifier,trials=len(report['trials']),page=str(args.output/'index.html'))))
 
 
 if __name__=='__main__':main()

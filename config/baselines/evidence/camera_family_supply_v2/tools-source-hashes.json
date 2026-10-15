@@ -1,0 +1,10 @@
+{
+  "tools/perception/camera_runtime_probe.py": "02910925a61d17638fd37525d26cd5547e852cd68a5e3dde4fedeeb8ab32f92a",
+  "tools/perception/shadow_family_parity.py": "b5b21e08d971bb032da69b4a0c80d9e24b4716464028bf19c93257be1972c825",
+  "tools/perception/validate_twinlite_tensorrt.py": "03f0a0fe8c73dd46372fda6a34354b603278d604dec063393338d256d00cd72d",
+  "tools/perception/camera_measurement_records.py": "cd806ae91fb4acc7a4b2ac2654e5046d2ad0ce96a8d06b759676e270c18d889a",
+  "tools/perception/summarize_camera_structure.py": "20290b2c783e49610673f765797e011a06371492d1bdb6449be589b3b35328ce",
+  "tools/perception/build_camera_visualization_gallery.py": "b4739127b41208133aa3f8c971b1ad598cf6729af2997ad4cff92ed3d50edf09",
+  "tools/perception/compare_camera_runtime.py": "0f9d504db7b71912c7374c7990b64c0daea8da8ebae3c2877d6b5d7fa5ccd978",
+  "tools/perception/run_camera_structure_matrix.py": "188033abb0a82ed0b5593f23f5dd92dff4284a8624dbbe4c9b9d41f08726f25c"
+}

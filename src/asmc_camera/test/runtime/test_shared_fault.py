@@ -14,6 +14,7 @@ class SharedFaultTest(unittest.TestCase):
         control.state.observe('front',100)
         control.state.observe('left',100)
         control.pipeline = ('old',)
+        control.latest_receipts = {'front':None,'left':None}
         control.publish, control.on_transition = Mock(), Mock()
         self.assertEqual(control.observe('front',1),1)
         self.assertIsNone(control.pipeline)

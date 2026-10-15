@@ -10,6 +10,9 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 import numpy as np
+import time
+import importlib.util
+import sys
 
 
 def compare_family(reference, candidate):
@@ -71,7 +74,21 @@ def run(args, engines, gpu_cache):
     rospy.set_param('~managed',False)
     rospy.set_param('~enable_boundary_family_candidate',True)
     rospy.set_param('~enable_independent_boundary_pipeline',False)
-    nodes=[LaneVectorizerNode(),LaneVectorizerNode()]
+    reference_runtime=getattr(args,'family_reference_runtime',None)
+    reference_hashes={}
+    if reference_runtime:
+        source=reference_runtime/'src/asmc_camera/src/asmc_camera'
+        def load_reference(name,path):
+            spec=importlib.util.spec_from_file_location(name,path)
+            module=importlib.util.module_from_spec(spec);sys.modules[name]=module;spec.loader.exec_module(module)
+            reference_hashes[str(path)]=sha256_file(path)
+            return module
+        fitter=load_reference('asmc_camera.bev._reference_shared_family',source/'bev/shared_lane_family.py')
+        reference_node=load_reference('asmc_camera.nodes._reference_lane_vectorizer',source/'nodes/lane_vectorizer_node.py')
+        reference_node.fit_shared_lane_family_with_audit=fitter.fit_shared_lane_family_with_audit
+        nodes=[reference_node.LaneVectorizerNode(),LaneVectorizerNode()]
+    else:
+        nodes=[LaneVectorizerNode(),LaneVectorizerNode()]
     class Capture:
         message=None
         def publish(self,message): self.message=message
@@ -108,13 +125,15 @@ def run(args, engines, gpu_cache):
                     if hashlib.sha256(blob).hexdigest()!=source['sha256']: raise ValueError('RGB SHA mismatch')
                     images[view]=cv2.imdecode(np.frombuffer(blob,np.uint8),cv2.IMREAD_COLOR)
                     if images[view] is None: raise ValueError('undecodable fixture JPEG')
-                predictions=[engines[0].infer(images,native_outputs={v:set() for v in images})]
+                predictions=[] if reference_runtime else [engines[0].infer(images,native_outputs={v:set() for v in images})]
                 with ExitStack() as stack:
                     inputs={v:stack.enter_context(gpu_cache.lease(v,(run_id,index),image))
                             for v,image in images.items()} if gpu_cache else None
-                    predictions.append(engines[1].infer(images,gpu_inputs=inputs,
+                    predictions.append(engines[-1].infer(images,gpu_inputs=inputs,
                                                        native_outputs={v:set() for v in images}))
-                messages=[]
+                if reference_runtime:
+                    predictions=[predictions[0],predictions[0]]
+                messages=[];compute_times=[];grid_hashes=[]
                 for node,prediction in zip(nodes,predictions):
                     inputs={}
                     for view,value in prediction.views.items():
@@ -126,15 +145,35 @@ def run(args, engines, gpu_cache):
                             np.rint(np.clip(value.model_grid_categorical_confidences['road_marking'],0,1)*255).astype(np.uint8),
                             0.,node.epoch_gate.context())
                     node.boundary_family_publisher.message=None
+                    hashes={v:hashlib.sha256(f.class_id.tobytes()+f.confidence.tobytes()).hexdigest() for v,f in inputs.items()}
+                    for value in inputs.values():
+                        value.class_id.setflags(write=False);value.confidence.setflags(write=False)
+                    begun=time.perf_counter()
                     node._process(inputs)
+                    if reference_runtime and (node.errors or node.shared_family_errors):
+                        raise RuntimeError('family pipeline error during refactor parity')
+                    compute_times.append(1000*(time.perf_counter()-begun))
+                    if hashes!={v:hashlib.sha256(f.class_id.tobytes()+f.confidence.tobytes()).hexdigest() for v,f in inputs.items()}:
+                        raise RuntimeError('family pipeline modified a model grid')
+                    grid_hashes.append(hashes)
                     message=node.boundary_family_publisher.message
                     if message is None: raise RuntimeError('production vectorizer did not publish a family')
                     messages.append(message)
                 compared=compare_family(*messages)
+                if reference_runtime:
+                    if grid_hashes[0]!=grid_hashes[1]:raise RuntimeError('paired model grids differ')
+                    delta=0.;shape_equal=True
+                    a={m.role:m for m in messages[0].boundaries};b={m.role:m for m in messages[1].boundaries}
+                    for role in set(a)&set(b):
+                        x=np.asarray([(p.x,p.y,p.z) for p in a[role].polyline]);y=np.asarray([(p.x,p.y,p.z) for p in b[role].polyline])
+                        shape_equal &= x.shape==y.shape
+                        if x.shape==y.shape and x.size:delta=max(delta,float(np.max(np.abs(x-y))))
+                    compared.update(grid_sha256=grid_hashes[0],point_shapes_equal=bool(shape_equal),point_max_abs_delta_m=delta,
+                                    compute_ms=dict(reference=compute_times[0],candidate=compute_times[1]))
                 results.append(dict(run_id=run_id,index=index,phase=frame['phase'],pose=frame['pose'],**compared))
                 if index%60==0 or not compared['validity_equal'] or not compared['roles_equal']:
                     panels=[]
-                    for title,message in zip(('PyTorch','TensorRT'),messages):
+                    for title,message in zip(('Previous family','Optimized family') if reference_runtime else ('PyTorch','TensorRT'),messages):
                         canvas=np.zeros((*grid.shape,3),np.uint8); draw_metric_grid(canvas,grid)
                         draw_stateful_lane_family(canvas,family_segments(message),grid,title+': '+message.status_reason)
                         panels.append(cv2.resize(canvas,(320,500)))
@@ -156,7 +195,17 @@ def run(args, engines, gpu_cache):
         live_readiness_verified=False,automatic_promotion_allowed=False,
         geometry_definition='Absolute lateral delta at common forward x within both accepted extents; sample-index distance retained separately. Support-state changes are reported independently.',
         note='Production vectorizer, same RGB/pose and quantization; geometry changes require review. Offline parity is not live readiness or GT accuracy.')
+    if reference_runtime:
+        summary.update(schema='shadow_family_refactor_parity_v1',reference_sources=reference_hashes,
+            grid_inputs_equal=True,point_max_abs_delta_m=max((r['point_max_abs_delta_m'] for r in results),default=0),
+            shape_changes=sum(not r['point_shapes_equal'] for r in results),
+            parity_pass=all(r['validity_equal'] and r['roles_equal'] and r['colors_equal'] and not r['support_changed_roles'] and
+                            r['point_shapes_equal'] and r['point_max_abs_delta_m']<=1e-6 for r in results),
+            compute_ms={name:{'p'+str(q):float(np.percentile([r['compute_ms'][name] for r in results],q)) for q in (50,95,99)}
+                        for name in ('reference','candidate')},
+            note='Same TensorRT grids; refactor parity, not PyTorch/TensorRT accuracy. Offline timing includes message construction and is not live acceptance.')
     (args.output/'report.json').write_text(json.dumps(summary,indent=2)+'\n')
-    (args.output/'index.html').write_text('<meta charset="utf-8"><h1>Shadow family PyTorch / TensorRT</h1>'+''.join(
+    title='TensorRT grids: previous / optimized family' if reference_runtime else 'Shadow family PyTorch / TensorRT'
+    (args.output/'index.html').write_text('<meta charset="utf-8"><h1>'+title+'</h1>'+''.join(
         '<p>{} {}</p><img loading="lazy" src="{}">'.format(run,phase,file) for file,run,phase in gallery))
-    return 0 if not summary['validity_changes'] and not summary['role_changes'] else 1
+    return 0 if (summary['parity_pass'] if reference_runtime else not summary['validity_changes'] and not summary['role_changes']) else 1

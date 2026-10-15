@@ -1,4 +1,4 @@
-# Experimental TensorRT candidate; canonical runtime stays PyTorch until live acceptance.
+# Historical T2 profile for reproduction; canonical camera.launch now uses TensorRT.
 # Canonical camera.launch requests15Hz; legacy perception.launch keeps10Hz.
 device: cuda
 # Tensor sizes are shared with the model-grid projector via lane_input.yaml.

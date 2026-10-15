@@ -1,7 +1,7 @@
 # 카메라 실행·3뷰 관측 계약 v1
 
 현재 실행 정본은 `asmc_camera/camera.launch`, 시각화 정본은 `view.launch`다.
-음영 lane의 실행·수요와 검증 상태는 [family 최적화 인계](../../handoffs/perception/camera-shadow-family-optimization.md)를 따른다.
+음영 lane의 실행·수요와 최신 검증 상태는 [family 공급 최적화 인계](../../handoffs/perception/camera-family-supply-optimization.md)를 따른다.
 E8와 사전학습 YOLO26l을 실행 시 선택하며 가중치 교체에는 노드 재시작이 필요하다.
 기계 정본은 `config/contracts/camera_object_observation_v1.yaml`이다.
 
@@ -40,8 +40,10 @@ ResNet은 camera4의 기존 PIL RGB·GPU resize·bfloat16 경로를 유지한다
 `lane_input.yaml`은 TwinLite와 model-grid 투영이 함께 읽는 단일 입력 크기 설정이다.
 YOLO 배포 checkpoint2개·engine2개는 패키지 models의 실제 Git 파일이다.
 [모델 배포 안내](../../../src/asmc_camera/models/README.md)의 지원 GPU/runtime과 SHA를 따른다.
-TwinLite v6 checkpoint도 패키지에 포함한다. 기본 backend는 PyTorch이며, TensorRT
-FP16 후보는 `lane_runtime_tensorrt.yaml`에서 선택한다. 변환 품질·부하·남은 후단 실패는
+TwinLite v6 checkpoint도 패키지에 포함한다. 기본 backend는 `lane_runtime.yaml`의 TensorRT
+FP16이다. 같은 입력의 PyTorch 복구는 내부 `_runtime.launch`의 `lane_runtime_config`로
+`lane_runtime_pytorch.yaml`을 명시적으로 선택한다. Engine 오류에 자동 fallback하지 않는다.
+기본 backend 선택은 전체 공급 수락을 뜻하지 않는다. 변환 품질·과거 후단 실패는
 [TensorRT 검증 기록](../../handoffs/perception/camera-twinlite-tensorrt.md)을 따른다.
 공유 GPU 입력은 내부 `_runtime.launch implementation:=shared shared_gpu_input:=true` 후보이며
 기본은 모델별 프로세스다. 공유 후보에서도 camera4 ResNet은 별도 프로세스를 사용한다.

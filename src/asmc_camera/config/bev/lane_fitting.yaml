@@ -19,7 +19,7 @@ min_camera_depth_m: 0.10
 edge_taper_fraction: 0.08
 forward_fade_start_m: 15.0
 max_timestamp_skew_ms: 35.0
-sync_queue_size: 12
+sync_queue_size: 4
 diagnostics_interval_sec: 2.0
 
 # RViz debug reference only. base_link is the rear-axle centre; these values

@@ -150,6 +150,9 @@
 
     <node pkg="asmc_camera" type="lane_vectorizer_node.py"
           name="camera_lane_vectorizer" output="screen" required="$(eval not arg('managed'))">
+      <env name="OPENBLAS_NUM_THREADS" value="1"/>
+      <env name="OMP_NUM_THREADS" value="1"/>
+      <env name="MKL_NUM_THREADS" value="1"/>
       <param name="managed" value="$(arg managed)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
       <rosparam command="load" file="$(find asmc_camera)/config/bev/lane_fitting.yaml"/>

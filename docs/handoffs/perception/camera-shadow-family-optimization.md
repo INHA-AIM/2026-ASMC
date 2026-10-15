@@ -2,7 +2,8 @@
 
 PR #85의 후속 구현이다. 시작점은 [실행 계약](../../contracts/perception/camera-runtime-v1.md),
 이전 증거는 [TensorRT 변환·부하 검증](camera-twinlite-tensorrt.md)이다.
-현재 기본은 독립 PyTorch이며 TensorRT 기본 전환과 PR 병합은 보류한다.
+아래는 당시 독립 PyTorch 기본값과 TensorRT 후보 시험의 기록이다. 최신 기본 backend와 후속 수락 상태는
+[TensorRT 기본·family 공급 최적화](camera-family-supply-optimization.md)를 따른다. 아래 과거 결과는 덮어쓰지 않는다.
 
 ## 실행 경로와 수요
 

@@ -55,7 +55,7 @@ def install(output):
             with lock:
                 key = (message.header.frame_id, message.header.stamp.to_nsec())
                 receipts[key] = (now, message.header.seq)
-                if len(receipts) > 20000:
+                if len(receipts) > 256:
                     receipts.popitem(last=False)
                 rows.append(dict(event='input', at=now, frame=key[0], stamp=key[1], topic=name))
             return callback(message, callback_args) if callback_args is not None else callback(message)
@@ -67,6 +67,7 @@ def install(output):
         def __getattr__(self, key):
             return getattr(self.original, key)
         def publish(self, message):
+            publish_begin = time.monotonic()
             result = self.original.publish(message)
             now = time.monotonic()
             if hasattr(message, 'header'):
@@ -80,13 +81,14 @@ def install(output):
                             candidate_labels=list(message.candidate_labels),candidate_confidences=list(message.candidate_confidences))
                             if self.name == '/perception/traffic_light/detection' else None),
                         received=received, source_sequence=receipt[1] if receipt else None,
+                        publish_begin=publish_begin, publish_ms=(now-publish_begin)*1000,
                         payload_sha256=hashlib.sha256(bytes(message.data)).hexdigest() if hasattr(message, 'encoding') else None,
                         wall_ms=(now-received)*1000 if received is not None else None))
             return result
 
     def advertise(name, data_class, **kwargs):
         original = publisher(name, data_class, **kwargs)
-        measured = name == '/perception/camera/objects' or name == '/perception/traffic_light/detection' or (
+        measured = name in ('/perception/camera/objects','/perception/traffic_light/detection','/perception/lane/boundary_family') or (
             name.startswith('/perception/camera/') and (
                 name.endswith('/road_marking/class_id') or
                 name.endswith('/road_marking/model_grid/class_id')))
@@ -165,6 +167,7 @@ def install_allocation_profile(output):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--entrypoint',type=Path,help='Benchmark-only executable override, used for the same repaired view in frozen/current overlays')
     parser.add_argument('--visual-codecs', action='store_true', help='Count debug JPEG calls without instrumenting model outputs')
     parser.add_argument('--lane-fit-profile', action='store_true', help='Diagnostic cProfile of the fitting worker; not a timing acceptance run')
     parser.add_argument('--allocation-profile', action='store_true',
@@ -176,6 +179,8 @@ def main():
         command = command[1:]
     if not command:
         parser.error('node executable required')
+    if args.entrypoint:
+        command[0]=str(args.entrypoint.resolve(strict=True))
     if args.lane_fit_profile:
         import cProfile
         from asmc_camera.nodes.lane_vectorizer_node import LaneVectorizerNode
