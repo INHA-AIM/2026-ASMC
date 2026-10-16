@@ -12,7 +12,7 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import CompressedImage, Image
 
-from asmc_camera.camera.visualization import render_mosaic, render_panel
+from asmc_camera.camera.visualization import render_mosaic, render_panel, binary_lane_palette
 from asmc_camera.runtime.demand_inputs import DemandSubscriber, DemandInputs
 
 
@@ -44,6 +44,7 @@ class SemanticVisualizerNode:
         ).strip()
         if self.secondary_mode not in ("lane", "road_marking"):
             raise ValueError("secondary_mode must be lane or road_marking")
+        self.lane_palette = binary_lane_palette(rospy.get_param('~lane_color_bgr', [0, 230, 255]))
         secondary_topic_suffix = (
             "lane/probability"
             if self.secondary_mode == "lane"
@@ -197,6 +198,7 @@ class SemanticVisualizerNode:
                 ),
                 secondary_mode=self.secondary_mode,
                 panel_width=self.panel_width,
+                lane_palette=self.lane_palette,
             )
         except (TypeError, ValueError) as exc:
             self.shape_errors += 1

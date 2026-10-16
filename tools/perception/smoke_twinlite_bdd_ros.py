@@ -15,6 +15,7 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--port',type=int,default=11497)
     p.add_argument('--seconds',type=float,default=12)
+    p.add_argument('--resolution',choices=('runtime','official'),default='runtime')
     a=p.parse_args()
     if not 11400<=a.port<=11999:raise ValueError('private test master port required')
     if not 0<a.seconds<=60:raise ValueError('smoke duration must be in (0, 60] seconds')
@@ -70,7 +71,8 @@ def main():
         subscribers.append(rospy.Subscriber('/experiments/twinlite_bdd/status',InferenceStatus,
             lambda m:statuses.append(dict(prepared=m.prepared,pipeline_ready=m.pipeline_ready,mode=m.mode,reason=m.reason,session=m.producer_session_id)),queue_size=1))
         for launch in ('bdd_lane.launch','bdd_lane_view.launch'):
-            parent=roslaunch.parent.ROSLaunchParent(uuid,[str(package/'launch'/launch)])
+            entries=[(str(package/'launch'/launch),['resolution:='+a.resolution])] if launch=='bdd_lane.launch' else [str(package/'launch'/launch)]
+            parent=roslaunch.parent.ROSLaunchParent(uuid,entries)
             parent.start();parents.append(parent)
         validation=Path('/data/dataset_versions/twinlite_morai_v6_road_marking_actor_negative/val.jsonl')
         first=json.loads(validation.open().readline());run=first['run_id'];frame=first['frame_id']
@@ -100,7 +102,7 @@ def main():
             decoded=cv2.imdecode(np.frombuffer(image.data,np.uint8),cv2.IMREAD_COLOR)
             if decoded is None:bad['invalid_mosaic']+=1
             else:cv2.imwrite(str(a.output/'mosaic.jpg'),decoded)
-        result=dict(master_uri=uri,input_hz=15,duration_seconds=a.seconds,source_samples={v:r['sample_id'] for v,r in rows.items()},
+        result=dict(master_uri=uri,resolution=a.resolution,input_hz=15,duration_seconds=a.seconds,source_samples={v:r['sample_id'] for v,r in rows.items()},
                     received=dict(counts),validation_errors=bad,public_publishers=public_publishers,public_services=public_services,
                     prepared_seen=any(s['prepared'] for s in statuses),pipeline_ready_seen=any(s['pipeline_ready'] for s in statuses),
                     status=list(statuses),scope='Fixed RGB replay through real ROS/GPU/renderer; not live MORAI performance acceptance')

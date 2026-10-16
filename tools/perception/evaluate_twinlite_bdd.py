@@ -66,10 +66,12 @@ def panel(image, text, width=640):
 
 def write_gallery(output, report, cards):
     rows=[]
+    labels={'bdd_official640':'BDD Large · 공식384×640','bdd_runtime':'BDD Large · 전방960/측방640',
+            'medium_v6':'현재 Medium v6 · 전방960/측방640'}
     for record in report['quality']:
         if record['group'] == 'all':
             rows.append('<tr><td>{}</td><td>{:.2f}%</td><td>{:.2f}%</td></tr>'.format(
-                html.escape(record['model']),100*record['drivable_iou'],100*record['lane_iou']))
+                html.escape(labels[record['model']]),100*record['drivable_iou'],100*record['lane_iou']))
     payload=json.dumps(cards,ensure_ascii=False).replace('<','\\u003c')
     template=Path(__file__).with_name('templates')/'twinlite_bdd.html'
     content=template.read_text().replace('__CARDS__',payload).replace('__ROWS__',''.join(rows))

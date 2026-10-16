@@ -5,6 +5,7 @@
     <rosparam command="load" file="$(find asmc_camera)/config/camera/visualization.yaml"/>
     <rosparam param="views">[left, front, right]</rosparam>
     <param name="secondary_mode" value="lane"/>
+    <rosparam param="lane_color_bgr">[255, 230, 0]</rosparam>
     <param name="condition_label" value="BDD100K Large · binary lane (not yellow class)"/>
     <remap from="/perception/camera/front/drivable/probability" to="/experiments/twinlite_bdd/front/drivable/probability"/>
     <remap from="/perception/camera/left/drivable/probability" to="/experiments/twinlite_bdd/left/drivable/probability"/>

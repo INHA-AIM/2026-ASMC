@@ -146,6 +146,7 @@
     "src/asmc_bridge/README.md",
     "src/data_collection/README.md",
     "src/asmc_hd_map/README.md",
-    "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md"
+    "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md",
+    "src/asmc_camera/docs/bdd-pretrained-experiment.md"
   ]
 }

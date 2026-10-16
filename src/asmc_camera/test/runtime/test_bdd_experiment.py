@@ -57,6 +57,7 @@ class BddExperimentTest(unittest.TestCase):
         cfg=self.config('bdd_lane_view.launch')
         self.assertEqual([n.type for n in cfg.nodes],['semantic_visualizer_node.py'])
         self.assertEqual(cfg.params['/camera_lane_bdd_view/secondary_mode'].value,'lane')
+        self.assertEqual(cfg.params['/camera_lane_bdd_view/lane_color_bgr'].value,[255,230,0])
         remaps=dict(cfg.nodes[0].remap_args)
         self.assertEqual(remaps['/perception/camera/debug/mosaic/compressed'],
                          '/experiments/twinlite_bdd/debug/mosaic/compressed')

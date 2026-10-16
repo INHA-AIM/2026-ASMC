@@ -59,6 +59,9 @@ source /root/ws/src/lidar+sensorfusion/devel/setup.bash
 판제 사용 범위이며 생산자를 끄는 설정이 아닙니다. Lane 주행 소비는 음영 ODD에 한정하고 A126 진입 전에
 유효 family를 확인합니다. A448은 접근 구간, 주변 차량 소비는 A153 끝/A451 진입까지입니다.
 
+공식 BDD100K Large의 추가학습 전 결과는 [별도 실험 실행 안내](../../src/asmc_camera/docs/bdd-pretrained-experiment.md)를
+따릅니다. 이진 차선 시각화 실험이며 위 C의 운영 family를 대체하지 않습니다.
+
 명시적으로 대기 실행이 필요하면 C 대신 `roslaunch asmc_camera camera.launch mode:=standby`를
 사용합니다. 다음은 그 경우에만 필요한 객체/신호등 복구 예입니다. 모드 요청자는 하나만 둡니다.
 

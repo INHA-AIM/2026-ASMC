@@ -47,7 +47,12 @@ Large는 흰/황/정지선의 개별 분류 성능을 제공하지 않는다.
 다른 출처의 `model` 모듈은 계속 거부한다. r2의 세 모델 로드·전체 GPU 추론이 완료됐다.
 
 공식 전처리 수치 일치, 실험 토픽·서비스 격리, 기본 실행 보존과 source metadata를 CPU/ROS 시험으로 확인한다.
-실제 ROS/GPU/renderer 연결과 로컬 빌드 결과는 같은 폴더의 `ros-smoke/report.json` 및 PR에 기록한다.
+카메라 CPU 26개, runtime 회귀 91개와 추가 namespace/provenance 검사를 통과했다.
+현재 컨테이너 `/root/ws`에서 `catkin_make --pkg asmc_camera -j2 -l2`가 통과했다.
+실제 ROS/GPU/renderer의 runtime 입력 연결은 독립 master에서 통과했다. 12초 시험에서
+뷰별111개 확률·합성56개를 수신했고 shape·stamp·wire 오류와 운영 토픽/서비스 발행은0이었다.
+첫 연결 시험은 기존 mono8 확률을32FC1로 해석한 시험기 오류로 실패했으며 이를 보존하고 수정 후 재검증했다.
+결과는 같은 폴더의 `ros-smoke/report.json` 및 PR에 기록한다.
 고정 RGB 재생 시험은 실제 MORAI 주행·전체 스택 공급 수락으로 표시하지 않는다.
 
 실험은 별도 브랜치로 제공하며 PR #94의 개인 PC 데이터 경로 변경과 분리한다. 이번 작업에는
