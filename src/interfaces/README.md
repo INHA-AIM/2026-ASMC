@@ -1,7 +1,7 @@
 # ASMC ROS Interface Specification
 
 > **문서 역할:** Canonical — 현재 구현된 팀 내부 ROS 계약
-> **인지 확장 작업안:** [인지 융합 로드맵 §6](../../docs/architecture/perception-roadmap.md#6-working-topicinterface-proposal)
+> **인지 확장 작업안:** [현재 인지 로드맵](../../docs/architecture/perception-roadmap.md)
 > **문서 허브:** [docs/README.md](../../docs/README.md)
 
 이 문서는 `2026-ASMC` 내부 ROS 모듈 사이의 사람이 읽는 인터페이스 정본이다.
@@ -23,7 +23,7 @@ Behavior/FSM → Frenet Planner → MPC Controller
 - 팀 PC 내부 모듈은 ROS topic으로 통신한다.
 - Behavior/FSM은 행동을 결정한다.
 - Frenet은 명령받은 행동에 맞는 안전한 trajectory를 생성한다.
-- MPC는 trajectory를 추종하여 `/ctrl_cmd`를 발행한다.
+- MPC는 trajectory를 추종하여 `/ctrl_cmd/normal`을 발행하고 선택기가 최종 `/ctrl_cmd`를 소유한다.
 - 알고리즘 내부 구조체와 ROS message는 node boundary의 converter로 분리한다.
 
 ## 2. Canonical topics
@@ -39,11 +39,13 @@ Behavior/FSM → Frenet Planner → MPC Controller
 | `/behavior/command_v2` | Behavior/FSM | Frenet, MPC | `asmc_msgs/BehaviorCommand` | 현재 maneuver transaction과 target |
 | `/planning/frenet_feedback_v2` | Frenet | Behavior/FSM | `asmc_msgs/FrenetFeedback` | 현재 transaction 실행 결과 |
 | `/planning/trajectory` | Frenet | MPC | `asmc_msgs/Trajectory` | 최종 추종 trajectory |
-| `/ctrl_cmd` | MPC | MORAI UDP Bridge | `morai_msgs/CtrlCmd` | 차량 제어 명령 |
+| `/ctrl_cmd` | Control selector | MORAI UDP Bridge | `morai_msgs/CtrlCmd` | 차량 제어 명령 |
 | `/behavior/context` | Behavior/FSM | Frenet | `asmc_msgs/BehaviorContext` | v1 compatibility command |
 | `/planning/feedback` | Frenet | FSM | `asmc_msgs/PlanFeedback` | v1 compatibility feedback |
 
-실시간 topic은 기본 `queue_size=1`로 사용하고 이름은 launch/remap으로 변경 가능하게 한다.
+위 /vehicle/state·/perception/objects는 기존 단독/호환 경계다. 현재 통합 launch는
+/planning/vehicle/state·/planning/objects로 연결하며 Behavior→Frenet은 내부 직접 호출이다.
+기존 topic/enum·wire 정의는 유지한다. 실제 queue는 각 producer/consumer의 최신 결과 정책을 따른다.
 
 ## 3. Frame and units
 

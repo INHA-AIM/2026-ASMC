@@ -12,6 +12,8 @@
 
 struct SensorPoseHistoryConfig {
     // MORAI reports true ENU yaw; map positions use UTM grid axes.
+    // The standalone struct defaults false; main.launch explicitly enables true.
+    // Match planning_inputs and do not rotate an already-grid-yaw producer twice.
     bool imu_yaw_is_true_enu = false;
     double gps_max_age_s = 0.30;
     double imu_max_age_s = 0.12;

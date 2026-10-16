@@ -1,4 +1,6 @@
 int32 id
+# Consumer-specific numeric category, not camera class ID or three-group ID.
+# Unknown still carries collision geometry; it does not mean no object.
 uint8 type
 
 geometry_msgs/Point center

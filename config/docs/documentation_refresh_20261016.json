@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-16",
+  "main_commit": "32ba7e8f482192f189e1a95a38c0ea1906b4b585",
+  "source_prs": [
+    85,
+    86,
+    87,
+    89
+  ],
+  "includes_structure_pr": 88,
+  "preserved_bodies": [
+    {
+      "source": "docs/operations/data-preparation.md",
+      "source_commit": "4eb061badd2a964cea83db11cb02cb4c87363179",
+      "source_sha256": "814a7e26bee951d312f9dcda3ada18bd69bbedb6114b7ba10d583525fa21f2fd",
+      "historical_copy": "docs/records/camera/data-preparation-through-v7.md",
+      "historical_copy_sha256": "f067f70e04e5ad1a0fcc320c9636e3db7139060ba4ebac9b8e0f98a132a43f9f",
+      "body_policy": "Original historical body retained; relative destinations rebased, status notice added. Section anchors may now point to preserved evidence."
+    },
+    {
+      "source": "docs/architecture/consolidation-roadmap.md",
+      "source_commit": "4eb061badd2a964cea83db11cb02cb4c87363179",
+      "source_sha256": "3ea36390878b03afccf48cb3190eb4b39276bcfb937ad6b56348e56686dc5a2c",
+      "historical_copy": "docs/records/repository/consolidation-roadmap-through-pr87.md",
+      "historical_copy_sha256": "d15734378bc9e8410eb724f4703854bbc349cf5c9cba521a1a9544c852612494",
+      "body_policy": "Original historical body retained; relative destinations rebased, status notice added. Section anchors may now point to preserved evidence."
+    },
+    {
+      "source": "docs/architecture/perception-roadmap.md",
+      "source_commit": "4eb061badd2a964cea83db11cb02cb4c87363179",
+      "source_sha256": "710c2b50e06de2e082f607eab9086924502b6ee396c592fbbc0080fd4c3325f6",
+      "historical_copy": "docs/records/camera/perception-roadmap-through-pr85.md",
+      "historical_copy_sha256": "146ee8d0d76f1542e06c901669ccd18dbdd2766ed3c017f27cecbf6f3ad053cb",
+      "body_policy": "Original historical body retained; relative destinations rebased, status notice added. Section anchors may now point to preserved evidence."
+    },
+    {
+      "source": "docs/contracts/dataset-labeling-split.md",
+      "source_commit": "4eb061badd2a964cea83db11cb02cb4c87363179",
+      "source_sha256": "fab4ab48049473009779198b8192983bdb6357f932c29ddb076a71005cf28ba4",
+      "historical_copy": "docs/records/camera/segmentation-dataset-policy-v6.md",
+      "historical_copy_sha256": "62894d7d05dfd16ebd6e18596ce35b9a171b49921cda59ca2731bfb2cec1317a",
+      "body_policy": "Original historical body retained; relative destinations rebased, status notice added. Section anchors may now point to preserved evidence."
+    },
+    {
+      "source": "docs/competition/obstacle-assets-and-labels.md",
+      "source_commit": "4eb061badd2a964cea83db11cb02cb4c87363179",
+      "source_sha256": "16f3685c87d30c5229602d518a697abbd2b79367db83e81b0d97b6441ec2cc21",
+      "historical_copy": "docs/records/camera/object-label-proposals-through-pr85.md",
+      "historical_copy_sha256": "d225ef90ad026e13b544fec83c44bdbc3aa733bf4f08ad8dd2ea00b77166a0af",
+      "body_policy": "Original historical body retained; relative destinations rebased, status notice added. Section anchors may now point to preserved evidence."
+    },
+    {
+      "source": "docs/handoffs/camera-to-planning.md",
+      "source_commit": "4eb061badd2a964cea83db11cb02cb4c87363179",
+      "source_sha256": "95e68fe7b201f4561088ff5a108702dc2701ec577f2f4a6ee22f277c9981d970",
+      "historical_copy": "docs/records/camera/shadow-handoff-v3.md",
+      "historical_copy_sha256": "63a9f0ae78efcea53f4df407307a00cbf70e8a1d20c41d860c573d3891ab571e",
+      "body_policy": "Original historical body retained; relative destinations rebased, status notice added. Section anchors may now point to preserved evidence."
+    },
+    {
+      "source": "src/asmc_camera/training/README.md",
+      "source_commit": "4eb061badd2a964cea83db11cb02cb4c87363179",
+      "source_sha256": "a9b27de634dd6cc51a3f27e17d6655de600bbf5bf1ed861750e00947fb069d35",
+      "historical_copy": "docs/records/camera/twinlite-training-through-v6.md",
+      "historical_copy_sha256": "bccbdaa1a78284e0851740a096c329e4ce3045ff8e4fe8a2c38bf7082aebdfb0",
+      "body_policy": "Original historical body retained; relative destinations rebased, status notice added. Section anchors may now point to preserved evidence."
+    },
+    {
+      "source": "src/data_collection/README.md",
+      "source_commit": "4eb061badd2a964cea83db11cb02cb4c87363179",
+      "source_sha256": "137e5b7b765080fdeb1c32f3553b1783e650e1feefcaa5feb8d669f2bfc1fd8a",
+      "historical_copy": "docs/records/bridge/collection-modes-through-pr82.md",
+      "historical_copy_sha256": "4004ceda820e16208d7aee72628d81aff369a3627c6b9680372c2715d6d01360",
+      "body_policy": "Original historical body retained; relative destinations rebased, status notice added. Section anchors may now point to preserved evidence."
+    }
+  ],
+  "current_check": "tools/audit/check_runtime_documentation.py",
+  "one_time_relocation_proof_reused_from_pr88": true
+}

@@ -1,104 +1,125 @@
-# ASMC 실행 명령어 모음
+# ASMC 실행 명령
 
-> **문서 역할:** Active Operator Reference — 현재 runtime 실행·시각화·녹화 명령과 공개 옵션
->
-> **범위:** 본선·local 공통 실행 진입점. 학습·offline 분석·HD Map 생성용 내부
-> launch는 각 package README를 따른다.
+`asmc-ros-noetic`의 `/root/ws`는 실행할 checkout입니다. 현재 worktree를 유지하고
+다른 checkout을 빌드한 setup과 섞지 않습니다. 인자는 `name:=value`이며
+[실제 launch 인자/기본값](launch-reference.md)은 소스에서 자동 생성합니다.
 
-명령은 host에서 현재 저장소 root를 ASMC로 잡고, container에서는 `/root/ws`인
-기준이다. ROS launch 인자는 `name:=value` 형태로 덮어쓴다.
+## 1. 개별 구성으로 전체 스택 실행
 
-## 1. 가장 빠른 local 실행
-
-### Host — container 준비
+### Host와 빌드
 
 ```bash
-# 먼저 host에서 이 저장소 안의 아무 디렉터리로 이동
 export ASMC=$(git rev-parse --show-toplevel)
 cd "$ASMC"
+# GUI를 쓸 때만
 xhost +local:docker
-
 ./scripts/docker_ros_up.sh up
+docker exec -it asmc-ros-noetic bash
 ```
 
-### Terminal A — UDP bridge는 단독 foreground로 유지
+컨테이너 안에서 두 workspace를 빌드합니다. 주행 중 container 재생성이나 빌드를 하지 않습니다.
 
 ```bash
-docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
+./scripts/build_ws.sh -j2
 source devel/setup.bash
-./scripts/udp_bridge.sh
+cd /root/ws/src/lidar+sensorfusion
+catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='Main;Msg;morai_msgs'
 ```
 
-bridge는 perception·planning 통합 명령에 포함하지 않는다. 항상 별도 terminal의 log와
-diagnostics를 보며 입력 Hz를 검사한다.
-
-### LiDAR 이전용 골격과 현재 실행 경로
-
-`asmc_lidar`는 좌표·시간 라이브러리와 계약 시험만 제공한다. 손재호가 기존
-`lidar+sensorfusion`의 검출·추적·fusion을 이전할 예정이며 현재 객체 publisher는 없다.
-기존 실행은 [원본 sensor-fusion guide](../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md),
-새 골격의 빌드·시험은 [asmc_lidar README](../../src/asmc_lidar/README.md),
-이전·삭제 조건은 [LiDAR 인계](../handoffs/lidar-migration.md)를 따른다.
-이전 개인 연구용 비교·후보 launch는 삭제됐다. 옛 devel에 실행파일이 남아 있어도
-현재 소스에서 지원하는 기능으로 사용하지 않는다.
-
-### 입력 Hz·브릿지 진단 (별도 터미널)
+이후 각 터미널에서 공통 환경을 적용합니다. Main/Msg를 찾을 때 바깥→nested 순서를 지킵니다.
 
 ```bash
-rostopic hz /Ego_topic
-rostopic hz /image_jpeg/compressed
-rostopic hz /velodyne_points
-rostopic hz /gps
-rostopic hz /imu
-rostopic hz /vehicle/state
-rostopic echo -n 1 /morai_udp_bridge/diagnostics
-rostopic echo -n 1 /morai_sensor_bridge/diagnostics
-```
-
-### Terminal B — 최종 HD Map
-
-```bash
-docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
-source devel/setup.bash
-roslaunch asmc_hd_map competition_map.launch
+source /root/ws/devel/setup.bash
+source /root/ws/src/lidar+sensorfusion/devel/setup.bash
 ```
 
-RViz까지 열려면:
+### 터미널별 실행
+
+각 행은 별도 터미널에서 foreground로 실행합니다. 이 구성과 아래 시나리오 통합 구성을 동시에 켜지 않습니다.
+
+| 순서 | 실행 | 포함·주의 |
+|---|---|---|
+| A | `./scripts/udp_bridge.sh` | 허용 센서·기본 `/vehicle/state`, UDP 포트당 수신자 하나 |
+| B | `roslaunch asmc_hd_map competition_map.launch` | 정적 지도·metadata; 현재 Planner local map copy를 자동 대체하지 않음 |
+| C | `roslaunch asmc_camera camera.launch` | 세 모델 STANDBY, E8 기본; 아래 PREPARE/ACTIVE 필요 |
+| D | `roslaunch Main main.launch rviz:=false` | LiDAR·전방 어댑터/fusion·추적; YOLO 모델 미실행 |
+| E | `roslaunch asmc_planner autonomy_no_bridges_v2.launch traffic_light:=false` | **차량 제어 포함**, 판제 입력/MPC/selector/재밍 어댑터 |
+
+카메라가 신호등도 소유하는 권장 구성이라 E의 `traffic_light:=false`를 명시합니다.
+판제 launch의 실제 기본은 true입니다. true는 별도 ResNet을 시작하므로 카메라 ResNet과 중복으로 켜지 않습니다.
+false는 판제의 신호 규칙을 끄는 인자가 아닙니다. bridge `/vehicle/state`와
+판제 `/planning/vehicle/state`는 다른 토픽·추정기이며 같은 토픽의 중복 producer는 금지합니다.
+
+객체/신호등은 PREPARE 후 같은 generation의 prepared=true를 확인하고 ACTIVE를 요청합니다.
+
+```bash
+rosservice call /perception/camera/objects/set_mode '{mode: 1, target_hz: 0.0}'
+rostopic echo /perception/camera/objects/status
+# prepared=true 확인 후 echo 종료, ACTIVE
+rosservice call /perception/camera/objects/set_mode '{mode: 2, target_hz: 0.0}'
+rosservice call /perception/camera/traffic_light/set_mode '{mode: 1, target_hz: 0.0}'
+rostopic echo /perception/camera/traffic_light/status
+# 같은 generation 준비 확인 후
+rosservice call /perception/camera/traffic_light/set_mode '{mode: 2, target_hz: 0.0}'
+```
+
+lane은 일반 구간 STANDBY, 음영 진입 전 PREPARE→prepared/pipeline_ready 확인→ACTIVE,
+이탈 후 STANDBY입니다. 구간 판단/연결은 판제 책임이며 카메라 launch가 자동으로 결정하지 않습니다.
+
+```bash
+rosservice call /perception/camera/lane/set_mode '{mode: 1, target_hz: 0.0}'
+rostopic echo /perception/camera/lane/status
+# 준비 확인 후
+rosservice call /perception/camera/lane/set_mode '{mode: 2, target_hz: 0.0}'
+# 음영 이탈 후
+rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
+```
+
+### 개별 디버그·시각화
+
+아래는 기존 해당 producer를 종료한 뒤 택합니다. `mode:=active`는 수동 모델 확인용입니다.
+
+```bash
+roslaunch asmc_camera camera.launch mode:=active models:=objects
+# 위 실행을 종료한 뒤 사전학습7종 대조
+roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=pretrained
+```
+
+E8은16종, pretrained는COCO80 checkpoint에서7종만 선택합니다. 입력은 YOLO/TwinLite 모두
+전방544×960 B1·좌우480×640 B2, 목표15/15Hz·ResNet10Hz, confidence0.40·NMS0.50입니다.
+Ego mask·보정·engine은 YAML/manifest가 소유합니다. 자동 PyTorch fallback은 없습니다.
+
+```bash
+# 시각화 worker와 rqt는 각각 한 세트만 실행
+roslaunch asmc_camera view.launch models:=objects,lane
+rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
+```
+
+같은 rqt에서 `/perception/lane/debug/shared_family_bev/compressed`로 바꿉니다.
+view.launch는 추론을 시작하지 않습니다. GUI 종료 후 사용한 process가 남지 않았는지
+`rosnode list`, `pgrep -af rqt_image_view`로 확인하고 해당 터미널의 Ctrl+C로 정리합니다.
+사용자/다른 작업의 프로세스를 일괄 종료하지 않습니다.
 
 ```bash
 roslaunch asmc_hd_map competition_map.launch rviz:=true
+roslaunch asmc_planner dashboard.launch state_topic:=/planning/vehicle/state
+rostopic info /YOLO/BBox
+rostopic info /ctrl_cmd
+rostopic hz /image_jpeg/compressed
+rostopic hz /velodyne_points
+rostopic hz /planning/objects
+rostopic hz /planning/vehicle/state
+rostopic echo -n 1 /morai_sensor_bridge/diagnostics
 ```
 
-### Terminal C — camera
-
-```bash
-docker exec -it asmc-ros-noetic bash
-cd /root/ws
-source /opt/ros/noetic/setup.bash
-source devel/setup.bash
-roslaunch asmc_camera camera.launch models:=objects,lane
-```
-
-기본은 STANDBY다. 객체 PREPARE/ACTIVE와 음영 lane 준비는 [카메라 계약](../contracts/camera-runtime-v1.md)을 따른다.
-신호등을 카메라에서 소유하려면 `models:=all`을 선택하고 판제의 신호등 생산자는 끈다.
-현재 LiDAR는 별도 nested Main이며 [카메라→LiDAR 인계](../handoffs/camera-to-lidar.md)의 빌드/source 순서를 따른다.
-
-### Terminal D — Planning/Control
-
-bridge를 이미 실행했으므로 `no_bridges` launch를 사용한다. 신호등 producer를
-perception에서 이미 켰다면 중복 실행을 막기 위해 `traffic_light:=false`로 둔다.
-
-```bash
-docker exec -it asmc-ros-noetic bash
-cd /root/ws
-source /opt/ros/noetic/setup.bash
-source devel/setup.bash
-roslaunch behavior_planner autonomy_no_bridges_v2.launch traffic_light:=false
-```
+HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한다고 같은 publisher를 하나 더 띄우지 않습니다.
+원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
+전방 어댑터와 nested source 순서는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
+판제 단독/통합 차이는 [판제 운영](planning-control.md)을 봅니다.
 
 ## 2. Container·build 명령
 
@@ -193,154 +214,60 @@ roslaunch asmc_bridge bridge.launch \
   cmd_ip:=192.168.0.1
 ```
 
-## 4. HD Map 옵션
+
+## 4. 팀 시나리오 통합 실행
+
+[scen_runner](../../tools/scen_runner/README.md)는 #86의 전체 씬·단일구간·충돌/정체 재현 경로입니다.
+개인 `local.yaml`을 작성한 뒤 같은 컨테이너의 네 터미널에서 실행합니다.
+앞 절의 수동 인지/판제 실행과 동시에 켜지 않습니다.
 
 ```bash
-roslaunch asmc_hd_map competition_map.launch [arg:=value ...]
+# 터미널1
+./tools/scen_runner/run_bridge.sh
+# 터미널2
+./tools/scen_runner/run_perception.sh
+# 터미널3: 요청 대기 후 판제/MPC 시작·재시작
+./tools/scen_runner/run_planning.sh
+# 터미널4: 객체/환경 배치·차량 주행을 포함한 개발 검증
+./tools/scen_runner/run_scenario.sh --mode scene --seed 42
 ```
 
-| arg | 기본값 | 설명 |
-|---|---:|---|
-| `rviz` | `false` | 최종 map RViz preset 동시 실행 |
-| `data_root` | `/data` | 외부 data root |
-| `debug_republish_hz` | `1.0` | latched/static debug marker 재발행 Hz |
-| `baseline_path` | empty | 검증 baseline override |
-| `publish_local` | `false` | 선택적 local lane/grid 크롭 발행. 필요할 때만 `true`; 기본 RViz는 전역 외곽선 marker 사용 |
-| `local_pose_source` | `gps_imu` | `gps_imu`, `ego_status`, `pose_stamped` |
-| `local_ego_topic` | `/Ego_topic` | `ego_status` 입력 |
-| `local_pose_topic` | `/localization/pose` | `pose_stamped` 입력 |
-| `local_gps_topic` | `/gps` | GPS 입력 |
-| `local_imu_topic` | `/imu` | IMU 입력 |
-| `local_extent_m` | `120.0` | local 정사각 crop 한 변(m); 현행 호환값 |
-| `local_publish_hz` | `5.0` | local topic 최대 발행 Hz |
-
-운영 topic은 `/hd_map/global/*`, `/hd_map/local/*`, `/hd_map/meta`다. debug marker를
-planning data로 사용하지 않는다.
-
-## 5. Camera 실행·LiDAR 연결
-
-일반 실행은 `camera.launch`, 이미 실행 중인 생산자의 시각화는 `view.launch`다.
-기존 `perception.launch`의 상세 옵션은 호환/과거 실험용이며 일반 실행에 반복 지정하지 않는다.
-현재 인수 계약은 [카메라 runtime](../contracts/camera-runtime-v1.md), Main 연결은 [LiDAR 인계](../handoffs/camera-to-lidar.md)가 소유한다.
-
-| 공개 옵션 | 기본값 | 의미 |
-|---|---|---|
-| mode | standby | off/standby/active |
-| models | all | objects,lane,traffic_light 중 쉼표로 조합 |
-| detector | e8 | e8/pretrained, 변경 시 노드 재시작 |
-| confidence | 0.40 | 객체 생산자 cutoff |
-| nms_iou | 0.50 | 원본 클래스별 NMS |
+구간만 시험할 때는 터미널4를 다음 중 하나로 대체합니다.
 
 ```bash
-roslaunch asmc_camera camera.launch
-# 객체만 즉시 확인할 때
-roslaunch asmc_camera camera.launch mode:=active models:=objects
-# 기존 실행 종료 후 사전학습 대조
-roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=pretrained
+./tools/scen_runner/run_scenario.sh --mode section --section tunnel
+./tools/scen_runner/run_scenario.sh --replay-browser
+# 키보드/외부 제어기 검증에는 run_scenario 대신 사용
+./tools/scen_runner/run_validation.sh --mode section --section dynamic
 ```
 
-E8/사전학습 YOLO와 TwinLite는 TensorRT다. 전방544×960 B1·좌우480×640 B2,
-목표 YOLO/TwinLite/ResNet=15/15/10Hz이며 실제 최소 공급과 목표 달성은 따로 검사한다.
-Mask·보정·모델 경로·세부 입력은 패키지 YAML로 관리한다. Engine 환경 불일치에 자동 fallback하지 않는다.
-모델별 독립 프로세스이며 같은 입력 크기/Hz가 같은 stamp나 tensor 공유를 뜻하지 않는다.
+`--section`은 static/dynamic/roundabout/high_speed/tunnel입니다.
+난수·날씨·주행 횟수·정체 시간은 공유 YAML, PC 주소/DLL 경로는 Git 제외 local.yaml이 소유합니다.
+시나리오 자체의 gRPC/DLL/신호 고정은 개발 검증용입니다. 본선 입력 경로가 아닙니다.
+현재 시나리오 perception 구성은 카메라 전체 ACTIVE입니다. 음영에서만 lane을 활성화하는
+판제 운영 정책과 구분하고 full-stack 부하/모드 gate는 별도 확인합니다.
 
-모드 요청은 별도 터미널에서 한다. 같은 generation의 prepared=true를 확인한 뒤 ACTIVE를 요청한다.
+## 5. 수집·bag·오프라인 진입점
+
+수집은 명시적으로 실행할 때만 시작합니다. 현재 문서 작업은 이 명령을 실행하지 않습니다.
+Capture는 학습 GT, raw bag은 실제 비동기 지연/재현 측정이며 서로를 대체하지 않습니다.
 
 ```bash
-rosservice call /perception/camera/objects/set_mode '{mode: 1, target_hz: 0.0}'
-rostopic echo /perception/camera/objects/status
-# prepared=true 확인 후 Ctrl-C
-rosservice call /perception/camera/objects/set_mode '{mode: 2, target_hz: 0.0}'
+# 수동 Capture 요청만: 차량 제어를 시작하지 않음
+roslaunch data_collection capture_mode_collector.launch capture_hz:=1.0 max_captures:=100
+# 자동 Capture 주행: 기존 주행 제어를 종료하고 승인된 장부/설정으로만 실행
+roslaunch data_collection capture_route_collection.launch controller:=mpc target_kph:=20
+# raw bag
+roslaunch data_collection bag_recorder.launch profile:=full_raw scenario:=manual_route controller:=wheel
+# live bridge를 종료한 별도 재현 환경; paused 상태로 시작
+roslaunch data_collection bag_replay.launch bag_path:=/data/rosbags/raw/<run_id> required_profile:=camera_raw
 ```
 
-Lane은 일반 구간 STANDBY → 음영 진입 전 PREPARE → prepared/pipeline_ready 확인 → ACTIVE → 이탈 후 STANDBY다.
-서비스 루트는 `/perception/camera/lane/set_mode`이며 구간 판단은 판제 책임이다. Family 정본 결과를 소비하고 영상 BEV는 수요가 있을 때만 만든다.
+[수집 README](../../src/data_collection/README.md)의 센서셋/파일 QA와 [bag 재현](rosbag-evaluation.md)의
+시계·consumer·result recorder 준비 순서를 따릅니다. raw gRPC 자동수집과 운영 판제를 동시에 실행하지 않습니다.
+개별 component·전체 인자는 [launch 목록](launch-reference.md)에서 찾습니다.
 
-```bash
-roslaunch asmc_camera view.launch models:=objects,lane
-rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
-```
-
-한 rqt에서 family 화면 `/perception/lane/debug/shared_family_bev/compressed`로 선택을 바꿀 수 있다.
-시각화는 추론 생산자를 시작하지 않으며 기존 rqt를 중복 생성하지 않는다.
-
-Main은 별도 실행하고 **독립 YOLO를 시작하지 않는다**. `/perception/camera/objects`의 전방만
-`/YOLO/BBox`로 변환한다. `start_yolo` 및 구형 장치/GPU 옵션은 제거됐다.
-현재 판제 입력과 전방 unique·±50ms·200ms 대기는 유지한다. 3뷰 fusion/전체 LiDAR 이전은 손재호의 후속 작업이다.
-빌드·source 순서, 원본 이름/그룹·confidence 손실 경계와 잔류 실행파일 정리는 위 LiDAR 인계를 따른다.
-
-[Family 최신 검증](../records/camera/camera-family-supply-optimization.md)의 순간 공백/freshness 제한은 유지한다.
-과거 P4/P5·YOLO11m 수락 도구와 기록은 당시 입력/프로필의 증거이며 현재 설정 전체 수락으로 재사용하지 않는다.
-
-## 6. Planning/Control 옵션
-
-```bash
-roslaunch behavior_planner autonomy_no_bridges_v2.launch [arg:=value ...]
-```
-
-| arg | 기본값 | 설명 |
-|---|---:|---|
-| `state_source` | `gps_imu` | `gps_imu`, local 개발용 `ego_dev` |
-| `dashboard` | `false` | behavior dashboard |
-| `traffic_light` | `false` | 독립 호환 시험에서만 판제 launch가 신호등 producer를 시작할지 |
-| `traffic_light_device` | `auto` | 신호등 inference device |
-| `camera_topic` | `/cam_extra/image_jpeg/compressed` | 신호등 input |
-| `traffic_light_checkpoint` | `asmc_camera/models/traffic_light/best.pt` | checkpoint |
-
-신호등 producer의 운영 소유자는 `asmc_camera`이고 planning launch 기본값은 `false`다.
-`traffic_light:=true`는 perception launch를 켜지 않은 독립 호환 시험에서만 사용한다. bridge와
-`/vehicle/state` producer도 중복으로 켜지 않는다.
-
-## 7. Bag 녹화·재생
-
-### 녹화
-
-```bash
-roslaunch data_collection bag_recorder.launch [arg:=value ...]
-```
-
-| arg | 기본값 | 설명 |
-|---|---:|---|
-| `profile` | `full_raw` | `config/bag_profiles/*.yaml`의 profile 이름 |
-| `scenario`, `controller`, `run_id` | empty | run metadata; `run_id` empty이면 자동 생성 |
-| `rosbag_root` | empty | empty이면 `$ASMC_DATA/rosbags` 정책 사용 |
-| `map_slug` | `kcity2025` | map ID |
-| `weather`, `sim_hour` | empty | 지정하면 simulator 환경 metadata override |
-| `grpc_address`, `grpc_port` | `127.0.0.1`, `7789` | 개발용 환경 metadata gRPC |
-| `grpc_timeout_sec` | `1.0` | 개별 RPC timeout |
-| `grpc_connect_timeout_sec` | `2.0` | gRPC 연결 timeout |
-| `environment_poll_sec` | `2.0` | 환경 metadata polling |
-| `topic_timeout_sec` | `10.0` | 필수 topic 대기 timeout |
-| `parent_raw_run_id` | empty | result bag의 부모 raw run |
-| `model_id`, `checkpoint` | empty | result profile에서 필수 |
-| `min_free_gb` | `20.0` | 최소 남은 disk |
-| `split_gb` | `4.0` | bag split 크기 |
-| `buffer_mb` | `1024` | rosbag buffer |
-
-예:
-
-```bash
-roslaunch data_collection bag_recorder.launch \
-  profile:=full_raw scenario:=manual_route controller:=wheel
-```
-
-### 재생
-
-```bash
-roslaunch data_collection bag_replay.launch \
-  bag_path:=/data/rosbags/<run>/<file>.bag [arg:=value ...]
-```
-
-| arg | 기본값 | 설명 |
-|---|---:|---|
-| `bag_path` | 필수 | replay bag |
-| `required_profile` | `camera_raw` | bag manifest에서 요구할 profile |
-| `rate` | `1.0` | replay 배속 |
-| `allow_privileged_gt` | `false` | oracle bag을 명시적으로 허용 |
-| `wait_for_start` | `true` | consumer 준비 전 paused wait |
-| `post_roll_sec` | `2.0` | 마지막 message 후 대기 |
-
-## 8. LAN2LAN 연습 사전 준비
+## 6. LAN2LAN 연습 사전 준비
 
 연습과 현장은 포트를 바꾸지 않고 IP만 local에서 LAN2LAN으로 바꾼다.
 
@@ -440,7 +367,7 @@ local로 돌아갈 때는 MORAI에 `*_local.json`을 다시 import하고 bridge�
 실행한다. LAN2LAN 옵션을 환경변수로 숨기거나 수신 sender IP로 자동 판별하지
 않는다.
 
-## 9. 종료
+## 7. 종료
 
 각 foreground `roslaunch`는 해당 terminal에서 `Ctrl+C`로 종료한다. container를 내릴 때:
 

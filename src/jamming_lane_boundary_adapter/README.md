@@ -26,7 +26,7 @@ MORAI sensors --UDP--> asmc_bridge sensor node --ROS--> camera perception
   └─/perception/lane/boundary_observations─> compatibility/diagnostic pilot only
 ```
 
-이 패키지는 `behavior_planner`, `frenet_planner`, `mpc_controller`, UDP 명령 송신 코드를
+이 패키지는 asmc_planner·asmc_controller의 core와 UDP 명령 송신 코드를
 수정하거나 호출하지 않는다. 기존 두 monitor는 `BehaviorCommand`, `Trajectory` 및 차량 제어 명령을 발행하지
 않는다. 따라서 판제 파트가 현재 작업 중인 실행 경로와 독립적으로 빌드·검토할 수 있다.
 
@@ -39,7 +39,7 @@ strip/centerline segment로 변환한다. independent pilot과
 기존 shared-family monitor와 별도로 core를 재사용하는 BBOX 차선변경 노드를 제공한다.
 `camera_bbox_lane_change.launch`는 기본값이 preview이고, `enable_control:=true`일 때만
 JAMMING 모드에서 `/ctrl_cmd/jamming`을 발행한다. 통합 selector만 MORAI용
-`/ctrl_cmd`를 발행한다. `camera_bbox_detector.launch`의 YOLO 출력과 외부 차선 인식의
+`/ctrl_cmd`를 발행한다. `camera_bbox_detector.launch`가 변환하는 외부 카메라 결과와 외부 차선 인식의
 `/perception/lane/boundary_family`를 소비한다. 실행·튜닝은
 [카메라 차선 변경 안내](docs/bbox-lane-change.md)를 따른다.
 음영구간 on/off, route 의미, camera drivable threshold, LiDAR occupancy 차감과 fallback은 이
@@ -57,7 +57,7 @@ JAMMING 모드에서 `/ctrl_cmd/jamming`을 발행한다. 통합 selector만 MOR
 - consumer horizon, 차로폭·순서·교차 검사 설정값과 C++ 회귀 테스트
 - Marker/diagnostics 중 판제 개발·운영에 필요한 read-only 관측 항목
 
-최종 소유 package를 `behavior_planner` 또는 `frenet_planner`로 미리 고정하지 않는다.
+현재 planner package는 asmc_planner 하나다. 흡수할 내부 lane/corridor 책임 경계는 판제와 정한다.
 route/mission 문맥·LiDAR occupancy·corridor 후보를 함께 소유할 판제 경계를
 팀이 합의한 뒤 그 모듈에 흡수한다. 다음 gate를 모두 통과하기 전에는
 `lane_boundary_adapter`를 삭제하거나 production planning source로 연결하지 않는다.

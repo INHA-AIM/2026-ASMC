@@ -33,7 +33,7 @@ Start Main/main.launch and the simulator bridge, then start the planning stack
 from the root workspace environment:
 
 ```bash
-roslaunch behavior_planner autonomy_no_bridges_v2.launch objects_source:=lidar
+roslaunch asmc_planner autonomy_no_bridges_v2.launch objects_source:=lidar traffic_light:=false
 ```
 
 Default lidar_source_policy:=validated_lidar consumes Main's fully filtered
@@ -71,8 +71,8 @@ the existing jamming-mode selector still owns camera-control handover.
 
 Latest driving/merge/avoidance parameter files and Frenet map snapshot are kept.
 asmc_bridge, traffic-light inference, asmc_hd_map runtime, and jamming code are
-unchanged by the LiDAR restoration. Standalone v2 starts traffic-light inference;
-pass traffic_light:=false if an external producer already runs it.
+unchanged by the LiDAR restoration. 통합 v2 launch의 traffic_light 기본은 true입니다. 카메라 models:=all을 별도 실행하면
+traffic_light:=false를 지정해 생산자를 하나만 둡니다.
 
 The dashboard consumes /planning/objects and now receives restored Main
 /lidar/motion_debug filter and motion diagnostics. Record both topics,
@@ -85,7 +85,7 @@ CI builds the root workspace and the nested Main workspace with the frozen
 message schema, runs original sensor/filter regressions, and checks actual
 ROS transport for exact-time motion/geometry preservation and empty frames.
 Old successful drives establish the reference policy; new MORAI driving must
-confirm closed-loop behavior after integration. Main has not been merged.
+confirm closed-loop behavior after integration. Main 연결은 main에 반영됐으며, asmc_lidar로의 기능 이전은 아직 완료되지 않았습니다.
 
 고속의 GPS 차분 속도 잡음은 `speed/gps_gain_reference_speed_mps: 5.0`과
 `speed/gps_gain_minimum: 0.08`로 완화합니다. GPS 속도와 예측 속도 중 작은 값이

@@ -1,4 +1,4 @@
-# 음영구간 카메라 인지 v3 판제 인수 가이드
+# 카메라 음영 family → 판제 인계
 
 > **문서 상태:** Active Handoff Guide
 > **Handoff 허브:** [README.md](README.md)
@@ -15,8 +15,8 @@
 이 문서는 음영 왕복 2차로에서 카메라가 제공하는 차선 family와 주행가능영역을 판제가
 어떻게 해석해야 하는지 설명한다. 인지 쪽에서는 ROS 출력까지만 제공한다. 어느 위치에서
 기능을 켜고 끌지, 어느 차로가 home/opposing인지, 장애물을 피해 어느 경로를 선택할지와
-closed-loop 합격 여부는 판제 파트가 소유한다. 현재 perception 코드는 Behavior, Frenet,
-MPC 또는 `/ctrl_cmd`에 연결하지 않는다.
+closed-loop 합격 여부는 판제 파트가 소유한다. 카메라 생산자는 Behavior/Frenet/MPC나 `/ctrl_cmd`를 발행하지 않는다.
+현재 판제 통합 launch는 별도의 재밍 어댑터를 enable_control=true로 포함하므로 전체 스택이 read-only라는 뜻은 아니다.
 
 ## 1. 데이터 흐름과 소유권
 
@@ -48,14 +48,14 @@ MORAI RGB ×3 --UDP--> bridge --ROS--> TwinLiteNet+ v6
 기본 disabled feature flag와 ODD gate를 별도로 두는 것이 권장되지만, 그 flag와 연결 코드는
 이 인수 작업의 범위가 아니다.
 
-`lane_boundary_adapter`는 이 계약을 검증하기 위한 임시 read-only reference package다.
+`lane_boundary_adapter`의 family monitor는 read-only reference다. 같은 패키지의 BBox 차로/재밍 제어 launch는 별도 경로다.
 최종 판제는 가능하면 그 node를 별도 프로세스로 영구 유지하지 않고,
 `BuildBoundaryFamilyStripContext()`·freshness/invalid gate·관련 테스트를
 planning-owned lane/corridor module에 흡수한다. 흡수 전에는 아래 8절 인수 체크리스트와
 adapter README의 bag/closed-loop parity를 통과해야 한다. standalone package 삭제는
 대체 consumer merge 후 별도 PR에서만 수행한다.
 
-## 2. 판제가 읽을 최소 토픽
+## 2. family 정본과 선택적 raster
 
 | 토픽 | 타입 | 의미 | 필수 해석 |
 |---|---|---|---|
@@ -63,7 +63,9 @@ adapter README의 bag/closed-loop parity를 통과해야 한다. standalone pack
 | `/perception/bev/camera/drivable_probability` | `sensor_msgs/Image` | 카메라 기반 주행가능 score `0~255` | coverage와 함께 사용 |
 | `/perception/bev/camera/coverage` | `sensor_msgs/Image` | 한 카메라 이상이 기하적으로 관측한 cell은 255 | 0은 non-drivable이 아니라 unknown |
 
-보조 토픽은 `/perception/bev/diagnostics`, `/perception/lane/diagnostics`다.
+기본 필수 경로는 boundary_family다. drivable raster는 소비자/recorder/시각화 수요가 있을 때만
+생성되며 무구독 상태에서 raster가 없다고 family 실패로 판정하지 않는다. raster를 사용하는 소비자는
+probability와 coverage 둘 다 구독해야 한다. 보조 토픽은 `/perception/bev/diagnostics`, `/perception/lane/diagnostics`다.
 `/perception/bev/camera/source_count`는 기본 off이며 overlap 검수에서
 `publish_bev_debug_metadata:=true`로 켠다. road-marking raster와 Marker는 분석·시각화용이며
 판제의 최소 입력 계약이 아니다.
@@ -74,7 +76,7 @@ adapter README의 bag/closed-loop parity를 통과해야 한다. standalone pack
 support를 보존한다. 판제가 더 긴 horizon을 선택할 때도 `INVALID`를 연결하거나 추정으로
 승격하지 말고, freshness·폭·support gate와 별도 far-range audit를 적용한다.
 
-모든 최소 출력은 `header.frame_id=base_link`이고 x-forward, y-left다. timestamp는 callback
+family와 해당 raster 출력은 `header.frame_id=base_link`이고 x-forward, y-left다. timestamp는 callback
 수신 시각이 아니라 세 카메라 입력 묶음의 최신 source stamp다. BEV fusion은 세 view의
 stamp 차이가 35ms 이내일 때 최대 10Hz로 발행한다. 한 view가 빠지면 오래된 raster를 다시
 발행하지 않으므로 consumer가 마지막 메시지를 무기한 유지해서는 안 된다. 초기 freshness
@@ -215,120 +217,52 @@ score 또는 hole로 보일 수 있다. 그러나 object detector나 occupancy s
 제동거리, route intent와 허용 중앙선 침범을 판제가 함께 알아야 하기 때문이다. 카메라
 drivable과 lane family는 근거를 제공하고 최종 corridor 생성은 판제·퓨전 파트가 소유한다.
 
-## 6. 실행과 기록
 
-인지 출력은 bridge·GUI와 같은 `asmc-ros-noetic` 컨테이너의 별도
-terminal에서 실행한다. bag replay ROS 추론도 같은 컨테이너를 사용한다.
-`asmc-perception-train`은 모델 학습과 학습 중 validation 전용이다.
+## 6. 현재 실행·모드·품질
+
+TwinLite Medium v6 TensorRT FP16, 전방544×960 B1·좌우480×640 B2, 추론 목표15Hz입니다.
+family는 model-grid→지면투영→최신3뷰→shared fitting 경로이고 영상 BEV 합성과 독립입니다.
+원본 RGB/보정·미터 grid·support 의미는 유지합니다. BEV raster의10Hz 상한과 family/모델15Hz 목표를 섞지 않습니다.
+일반 구간은 HD맵이며 lane STANDBY, 음영 진입 전에 아래 절차를 사용합니다.
 
 ```bash
-source /opt/ros/noetic/setup.bash
-source /root/ws/devel/setup.bash
-roslaunch asmc_camera perception.launch profile:=legacy \
-  camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
-  lane_publish_pipeline_audit:=true
+roslaunch asmc_camera camera.launch models:=objects,lane
+# 별도 터미널
+rosservice call /perception/camera/lane/set_mode '{mode: 1, target_hz: 0.0}'
+rostopic echo /perception/camera/lane/status
+# 같은 generation의 prepared/pipeline_ready 확인 후
+rosservice call /perception/camera/lane/set_mode '{mode: 2, target_hz: 0.0}'
+# 음영 이탈 후
+rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
 ```
 
-`boundary_family` 보강 fitting과 정본 발행은 운영 기본값이다. 성능 측정에서 marker
-생성 비용만 빼려면 `lane_enable_shared_family_debug:=false`를 추가하고
-`lane_enable_boundary_family_candidate` 기본값은 유지한다. 기존
-`boundary_observations`는 호환·진단용 비정본이며 운영 기본에서는 발행하지
-않는다. 기존 A/B 재현에서만
-`lane_enable_independent_boundary_pipeline:=true`로 개별 spline·tracker와 함께 켠다.
-
-UDP bridge와 read-only adapter는 `asmc-ros-noetic`에서 실행한다. adapter는 선택 사항이며
-차량 제어를 발행하지 않는다. 아래 기본 명령은 `base_link` RViz와 최종 strip/perception
-support marker를 자동으로 연다.
+이 예제의 objects도 STANDBY에서 시작하므로 필요하면 objects PREPARE/ACTIVE를 별도로 요청합니다.
+신호등 producer는 카메라/판제 중 하나만 실행합니다. 위 models 조합에는 신호등이 없습니다.
+일반 시각화는 view.launch, read-only strip 검수는 별도 monitor입니다.
 
 ```bash
-source /root/ws/devel/setup.bash
-roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
-```
-
-bag replay나 처리시간 측정에서는 RViz 부하를 제외한다.
-
-```bash
+roslaunch asmc_camera view.launch models:=lane
+rosrun rqt_image_view rqt_image_view --clear-config /perception/lane/debug/shared_family_bev/compressed
+# marker/strip 계약을 검토할 때만
 roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=false
 ```
 
-성능 측정에는 raster/Marker를 기록하지 않는 `shadow_runtime_profile_result`를 쓴다. 판제
-인수 replay에는 실제 최소 출력을 필수로 기록하는
-`shadow_camera_perception_handoff_result`를 쓴다.
+현재 `camera_bbox_lane_change.launch`는 기본 enable_control=false이고 판제 통합 launch가 true로 덮어씁니다.
+카메라 모드와 최종 NORMAL/JAMMING 선택은 동일 기능이 아닙니다. 구간 활성화·정지/재개·fallback은 판제에서 확인합니다.
 
-```bash
-rosrun asmc_camera run_shadow_lane_bag_batch.py \
-  --selection /root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml \
-  --checkpoint /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
-  --model-id <unique-v3-handoff-model-id> \
-  --enable-boundary-family-candidate \
-  --result-profile shadow_camera_perception_handoff_result \
-  --external-pipeline
-```
+## 7. 수락 상태와 인수 확인
 
-위 runner와 inference pipeline은 `asmc-ros-noetic`의 별도 terminal에서 같은 ROS
-master를 사용해 실행한다. `--external-pipeline`은 runner가 모델을 중복으로
-띄우지 않고 recorder/replay만 소유하게 한다.
+#85의 TensorRT semantic 품질·리팩토링은 검증했고 사용자 직접 주행에서 family가 잘 표시됨을 확인했습니다.
+자동 시험의 family 최대공백261.7ms(250ms 기준 초과)와 SUNNY freshness 사건은
+[최신 공급 기록](../records/camera/camera-family-supply-optimization.md)에 남아 있습니다.
+freshness350ms를 늘리거나 예전 결과 재발행으로 해결하지 않습니다.
+현재 기본 backend 선택·사용자 승인과 전체 자동 수락을 구분합니다.
 
-raw bag은 변경하지 않고 결과를
-`/data/rosbags/results/<raw_run_id>/<model_id>/`에 둔다. planning 알고리즘 A/B도 같은 raw
-또는 같은 handoff result를 재생해 입력을 고정해야 한다.
+판제는 ODD·algorithm/config·source/receive age·valid/support를 검사하고 INVALID interval을 연결하지 않습니다.
+PREPARE 새 세대와 정상 ACTIVE 창을 구분하며 재시작/입력 중단 시 과거 family를 사용하지 않습니다.
+회피 corridor·현재/반대 차로 의미·LiDAR veto·복귀·명령 단절 제동은 판제와 함께 검증합니다.
+일반 구간의 lane OFF/STANDBY도 다른 모델 공급을 방해하지 않아야 합니다.
 
-## 7. v3 동결 성능과 최적화 판단
-
-대표 straddle, lateral sweep, Sunny/Foggy static avoid-return 4개 raw bag을 GUI 없이 격리
-재생했다. 결과 bag 4개는 모두 `status=complete`이고 총 1,270 frame에서 다음을 확인했다.
-
-| 항목 | 결과 |
-|---|---:|
-| family accepted | 1,270 / 1,270 |
-| 최장 reject | 0 frame |
-| runtime error | 0 |
-| run별 family 출력 | 10.324 / 10.323 / 9.381 / 10.406 Hz |
-| 전체 lane body p50 / p95 | 76.37 / 96.96 ms |
-| shared fit p50 / p95 | 31.66 / 40.88 ms |
-| sample observed / inferred / invalid | 67.22 / 11.50 / 21.29% |
-| valid span p50 / p95 | 20.07 / 21.75 m |
-| inlier residual p95의 frame 분포 p95 | 0.293 m |
-
-네 bag에서는 v3의 distributed fallback이 0회였고 모두 strict path였다. 따라서 이 결과는
-기존 정상 동작 비회귀와 처리량을 증명하지만 fallback의 실제 발생률·정확도를 과장하지
-않는다. GUI, 두 visualizer, RViz와 map overlay를 함께 띄운 개발 snapshot에서는 lane
-처리율이 약 7.5Hz, p95가 약 105ms까지 내려갔다. 이는 시각화 포함 stress 참고치이며
-headless 판제 입력 기준선은 위 result-topic rate다.
-
-새 handoff profile도 straddle bag 한 개로 smoke 검증했다. `boundary_family` 401개
-(`10.29Hz`), drivable/coverage 각각 386개(`9.90Hz`)와 세 diagnostics가 기록됐고 모든 오류는
-0이었다. 10.9MB LZ4 result bag의 SHA-256은
-`a404a662b1d2da9b197f34f96e38f261c4b5391258aeae3b63192a9882bd99dd`다. 이는 recorder와
-스키마 검증이며 판제 closed-loop 검증은 아니다.
-
-결론은 **v3 geometry·threshold·상태 계약을 먼저 동결하고 판제에 넘긴다**이다. 9Hz gate는
-통과했지만 여유가 크지는 않으므로 full-stack에서 9Hz를 깨면 다음 순서로 최적화한다.
-
-1. 판제가 `boundary_family`를 실제 후보로 선택한 뒤에만 legacy independent spline,
-   temporal tracker와 legacy typed publish를 끄는 opt-in profile 검토
-2. 중복 projection audit/extract 순회 결합
-3. shared fit의 basis 구성, robust iteration, residual lookup과 solve를 세분 profile
-
-각 최적화는 같은 4개 bag에서 algorithm/config ID, support state, invalid hard split과 geometry
-분포가 유지되는지 확인해야 한다. threshold 완화나 ROI 축소로 처리율만 올리는 것은 허용하지
-않는다. 정본 수치·bag SHA-256은
-[`freeze.yaml`](../../artifacts/perception_eval/analysis/twinlite_v6_shadow_boundary_family_candidate_v3_profile_20260915/freeze.yaml)에
-있다.
-
-## 8. 판제 인수 체크리스트
-
-- [ ] 입력 feature flag 기본값이 off이고 음영 ODD 판단이 판제 소유다.
-- [ ] algorithm/representation/ODD와 source freshness를 검사한다.
-- [ ] `valid=false`, missing과 stale을 구분해 기록한다.
-- [ ] inferred를 observed보다 낮은 권한으로 쓰고 invalid interval은 잇지 않는다.
-- [ ] yellow/white 역할을 home/opposing/차로 번호로 직접 치환하지 않는다.
-- [ ] drivable score는 coverage와 함께 읽고 unknown을 non-drivable로 오인하지 않는다.
-- [ ] drivable/coverage의 stamp·shape·encoding을 함께 검사하고 동결 grid hash를 pin한다.
-- [ ] LiDAR occupancy/object가 camera score보다 충돌 veto 우선권을 가진다.
-- [ ] 장애물 회피 후 route 문맥으로 원래 진행 차로 복귀를 결정한다.
-- [ ] 같은 raw/result bag으로 feature off/on과 fallback을 비교한다.
-- [ ] 실제 planning 부하에서 출력률·stale·closed-loop trajectory를 검증한다.
-- [ ] 대회판 simulator에서 별도 회귀 검증 전 production 승격으로 표시하지 않는다.
-- [ ] adapter core·config·test 흡수 후 동일 bag에서 strip/degraded/gap·diagnostics parity를 확인한다.
-- [ ] standalone package 삭제 전 외부 launch·code·문서 참조 0, rollback 경로와 판제 owner 리뷰를 확인한다.
+과거 v3의4bag/1,270frame 수락과 당시 실행 명령은 [동결 인수 기록](../records/camera/shadow-handoff-v3.md)에 보존합니다.
+이를 현재960·전체 GUI·실제 판제 연결 수락으로 대체하지 않습니다.
+직접 실행과 현재 객체 인계는 [실행 명령](../operations/commands.md), [카메라→LiDAR](camera-to-lidar.md)를 따릅니다.

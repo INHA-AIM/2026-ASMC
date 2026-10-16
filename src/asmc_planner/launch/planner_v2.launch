@@ -1,6 +1,6 @@
 <launch>
-  <!-- Candidate single-package path: replaces both legacy planner nodes.
-       Input producers and controller are launched separately. -->
+  <!-- Current single-package planner. Standalone defaults below are development
+       MORAI inputs; autonomy_no_bridges_v2 selects canonical planning inputs. -->
   <arg name="state_topic" default="/vehicle/state"/>
   <arg name="behavior_objects_topic" default="/Object_topic"/>
   <arg name="objects_input_type" default="morai"/>

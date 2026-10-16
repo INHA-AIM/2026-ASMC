@@ -5,7 +5,6 @@
 /docs/                                 @ahnsh03
 /scripts/                              @ahnsh03
 /src/asmc_msgs/                        @ahnsh03 @yuntae12-sudo @kante2
-/src/integration_launch/               @ahnsh03 @yuntae12-sudo
 /src/interfaces/                       @ahnsh03
 /src/MORAI-ROS_morai_msgs/             @ahnsh03
 
@@ -15,7 +14,7 @@
 
 # Planning and control
 /src/asmc_controller/                   @yuntae12-sudo @yangseojun
-/src/lane_boundary_adapter/            @ahnsh03 @yuntae12-sudo @kante2
+/src/jamming_lane_boundary_adapter/    @ahnsh03 @yuntae12-sudo @kante2
 
 # Bridge and vehicle state
 /src/asmc_bridge/                      @kante2 @ahnsh03
@@ -23,11 +22,14 @@
 # Perception
 /src/asmc_camera/                      @sonshiny @ahnsh03
 /src/lidar+sensorfusion/               @sonshiny @ahnsh03
+/src/asmc_lidar/                       @sonshiny @ahnsh03
+/src/planning_inputs/                  @yuntae12-sudo @ahnsh03
 
 # Privileged simulator teacher/research tools (not production runtime)
 /tools/research/lbc_teacher_bev/       @ahnsh03
 
 # Scenario, gRPC and evaluation tools
+/tools/scen_runner/                    @wkddnjsxo
 /tools/aim_scenario_runner/            @wkddnjsxo
 /tools/grpc_inha_univ/                 @wkddnjsxo
 /tools/audit/                          @ahnsh03

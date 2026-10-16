@@ -1,6 +1,6 @@
 <launch>
   <!-- Canonical runtime entry point. The debug marker topic is read-only and
-       may be disabled by launching with rviz:=false (the default). -->
+       has on-demand consumers; rviz:=false only disables the GUI, not all publishers. -->
   <arg name="rviz" default="false"/>
   <arg name="data_root" default="/data"/>
   <arg name="debug_republish_hz" default="0.0"/>

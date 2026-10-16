@@ -33,8 +33,8 @@ MORAI UDP → bridge → 팀 PC 내부 ROS다.
 ```
 
 MORAI release는 UI에서 import하는 JSON으로 선택하며 bridge runtime은 하나다. 두 번째 명령은
-LAN IP를 선택하지만 아직 현장 검증 완료를 뜻하지 않는다. Object/Semantic/Instance가 빠진 본선
-launch는 Phase 3에 구현한다.
+LAN IP를 선택하지만 아직 현장 검증 완료를 뜻하지 않는다. 기본 competition profile은 Object/Semantic/Instance socket을 생성하지 않는다.
+local development profile만 개발 GT를 추가하며 본선 알고리즘 입력으로 사용하지 않는다.
 
 `asmc-ros-noetic` 컨테이너는 이 레거시 rosbridge와 같은 뜻이 아니다. UDP bridge가 MORAI
 packet을 내부 ROS topic으로 정규화하고 인지 노드를 실행하는 현재 필수 환경이다.

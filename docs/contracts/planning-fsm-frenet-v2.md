@@ -6,7 +6,8 @@
 >
 > **원래 범위:** 최초 D0 커밋은 계약만 고정했다. 이후 구현 이력은 Git에서 보존한다.
 >
-> **수정 대상 경계:** 이 프로젝트에서 수정하는 것은 **Frenet Planner와 MPC 코드뿐이다.**
+> **D3 당시 수정 범위:** 당시 작업은 **Frenet Planner와 MPC 코드**를 대상으로 했다.
+> 현재는 단일 asmc_planner 내부의 Behavior/Execution/Frenet이며 이 역사적 범위가 현재 ownership을 덮어쓰지 않는다.
 > `BehaviorCommand.msg` / `FrenetFeedback.msg`는 **FSM 개발자가 정의한 원본을 그대로
 > 사용하며 Frenet 측에서 수정하지 않는다.** FSM 패키지 코드도 수정하지 않는다.
 > 11절은 확정된 command lifecycle 정책이며, 11.9절에 남은 논의 항목이 있다.
@@ -52,21 +53,17 @@ v2의 핵심 전환은 두 가지다.
 | `FrenetFeedback` | `asmc_msgs` | `src/asmc_msgs/msg/FrenetFeedback.msg` |
 
 > **현재 상태:** 두 원본은 `src/asmc_msgs/msg/`에 있고 `CMakeLists.txt`에 등록되어 있다.
-> `src/behavior_planner/`와 `src/frenet_planner/`가 이 production message를 사용한다.
+> `src/asmc_planner/` 내부 Behavior/Execution/Frenet과 별도 controller가 production message를 사용한다.
+> 내부 handoff는 C++ 직접 호출이며 v2 topic은 관찰/controller 호환으로 유지한다.
 > 별도 reference copy는 유지하지 않으며 message 내용은 해당 production 파일이 정본이다.
 
 **두 메시지를 다른 패키지에 복사하지 않는다.** ROS에서 `asmc_msgs/BehaviorCommand`와
 `behavior_planner/BehaviorCommand`는 내용이 같아도 서로 다른 타입이며, 같은 토픽에
 연결되지 않는다.
 
-현재 저장소에 남아 있는 `src/behavior_planner/msg/BehaviorContext.msg`,
-`src/behavior_planner/msg/PlanFeedback.msg`는 **빌드되지 않는 죽은 파일**이다
-(`src/behavior_planner/CMakeLists.txt`는 `UrbanFeatureDebug.msg`만 등록하고,
-`behavior_node.cpp`는 `asmc_msgs::BehaviorContext`를 publish한다).
-
-> **이 파일들을 Frenet 측에서 삭제하지 않는다.** 아래 1.4절의 수정 범위 원칙에
-> 따라 `behavior_planner` 패키지는 건드리지 않는다. 혼동을 줄이는 정리는 FSM
-> 담당자에게 요청할 사항으로 남긴다.
+기존 behavior_planner/frenet_planner 패키지와 그 안의 중복 msg 파일은 단일 planner 이전에서 제거됐다.
+공용 BehaviorContext/PlanFeedback과 v2 원본은 asmc_msgs에 유지한다. 과거 D3의 삭제 금지 범위는
+당시 작업 경계이며 지금 없는 파일을 복구하라는 지시가 아니다.
 
 ### 1.2 토픽 (현재 production과 legacy 병행)
 
@@ -88,9 +85,11 @@ ROS1은 한 토픽에 두 메시지 타입을 실을 수 없다. cutover 전까�
 
 ---
 
-### 1.4 수정 범위 원칙 (D3-0에서 확정)
+### 1.4 D3-0 당시 수정 범위와 현재 경계
 
-이 작업에서 **수정하는 것과 하지 않는 것**을 명확히 구분한다. 문서 여러 곳이
+아래는 D3-0 당시 **수정하는 것과 하지 않는 것**이다. 현재는 asmc_planner 내부 책임과
+ownership/공용 계약 리뷰를 따르며 삭제된 패키지 경로를 실행 대상으로 사용하지 않는다.
+당시 범위를 명확히 구분한다. 문서 여러 곳이
 이 원칙을 전제하므로 여기에 한 번만 정의하고 나머지는 이 절을 참조한다.
 
 | 대상 | 수정 여부 |
@@ -153,7 +152,7 @@ FSM에 반영"하므로, echo가 틀리면 피드백 전체가 무시된다.
 | 긴급정지 | `EMERGENCY_STOP` = **6** | `EMERGENCY` = **10** |
 | (내부 전용) | — | `INTERSECTION_WAIT`=4, `TURN_LEFT`=5, `TURN_RIGHT`=6 |
 
-내부 enum 순서는 `src/frenet_planner/src/frenet_planner/Common/BehaviorTypes.hpp`의
+내부 enum 순서는 `src/asmc_planner/src/Frenet/Common/BehaviorTypes.hpp`의
 선언 순서에서 온다.
 
 > **`static_cast<BehaviorState>(msg.maneuver_type)`는 금지한다.**
@@ -2304,7 +2303,7 @@ D6-2a 이후 실측(같은 조건):
 
 저속 maintenance 정책(crawl + 충돌 검사)은 D6-2b에서 구현한다.
 
-### 12.8 파일 배치
+### 12.8 당시 파일 배치 (현재 실행 경로 아님)
 
 ```
 src/asmc_msgs/msg/

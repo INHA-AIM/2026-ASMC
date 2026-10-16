@@ -62,7 +62,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 > 변경하지 않았고 LiDAR 빌드 의존성과 기존 Ultralytics 8.4.150 고정만 반영했습니다.
 > RTX 50 팀원은 최초 1회
 > `./scripts/docker_ros_up.sh build-rtx50`, 실행할 때 `up-rtx50`을 사용합니다.
-> RTX 50 이미지에서는 센서퓨전 YOLO와 신호등 ResNet18이 모두 격리된
+> RTX 50 이미지에서는 카메라 YOLO와 신호등 ResNet18이 모두 격리된
 > `/opt/yolo-venv`(Python 3.9 + PyTorch cu128)를 사용합니다. 두 이미지 모두
 > NVIDIA 드라이버와 Container Toolkit은 **host**에 설치돼 있어야 하며,
 > 컨테이너 안에 드라이버를 설치하면 안 됩니다. 확인·문제해결 절차는
@@ -77,19 +77,21 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 ├── docs/                      # 팀 문서
 ├── docker/                    # ros-noetic · perception-train
 ├── src/
-│   ├── behavior_planner/      # planning ✅
-│   ├── frenet_planner/        # ROS trajectory planning + C++ core ✅
+│   ├── asmc_planner/          # Behavior·Execution·Frenet 단일 패키지
+│   ├── planning_inputs/       # 판제 상태·LiDAR 입력 어댑터
 │   ├── asmc_controller/        # ROS trajectory control + C++ core ✅
 │   ├── asmc_msgs/             # 팀 내부 ROS1 공용 message 계약
 │   ├── asmc_bridge/           # MORAI Network/Sensor UDP + VehicleState
 │   ├── asmc_hd_map/           # HD Map builder/runtime/검수
 │   ├── asmc_camera/       # camera·BEV·lane·traffic runtime + offline/training
-│   ├── lane_boundary_adapter/ # read-only perception→planning adapter
+│   ├── jamming_lane_boundary_adapter/ # family 검토·BBox 재밍 제어
+│   ├── asmc_lidar/            # 좌표/시간 코어·이전용 골격
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
 │   ├── lidar+sensorfusion/     # 독립 nested LiDAR/fusion workspace
 │   └── MORAI-ROS_morai_msgs/  # submodule beta_drive
 ├── tools/
-│   ├── aim_scenario_runner/   # scenario ✅
+│   ├── scen_runner/           # 현재 전체 씬/구간·충돌 재현
+│   ├── aim_scenario_runner/   # 기존 시나리오 도구
 │   ├── research/lbc_teacher_bev/ # privileged GT/teacher BEV 연구 도구
 │   └── grpc_inha_univ/        # gRPC ✅
 ├── scripts/
@@ -108,7 +110,8 @@ P4-C6부터 camera semantic, camera BEV/lane, traffic-light의 실행·offline·
 정본은 모두 `src/asmc_camera/`이다. 기존
 `camera_semantic_perception`, `drivable_bev`, `traffic_light`, `src/perception/` 경로는
 제거했으며 topic과 node 이름은 호환성을 위해 유지했다. 실시간 추론은
-`asmc-ros-noetic`에서 `roslaunch asmc_camera perception.launch`로 실행하며, 세부
+`asmc-ros-noetic`에서 `roslaunch asmc_camera camera.launch`로 실행하고
+시각화는 `view.launch`·별도 rqt를 사용하며, 세부
 경로와 인수 경계는
 [Perception package README](src/asmc_camera/README.md)를 따른다. `src/data_collection/`과
 `src/lidar+sensorfusion/`은 독립 경계로 남아 있다.

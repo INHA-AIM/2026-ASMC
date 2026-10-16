@@ -7,7 +7,7 @@
 대회 허용 범위는 [대회 환경](../competition/README.md), Planning/Control의 실행은
 [Planning/Control 규약](./planning-control.md), bag 기록·재생은
 [rosbag 가이드](./rosbag-evaluation.md)를 따른다. parser·timestamp·TF·`vehicle_state`를
-수정하거나 Phase 3 이관을 준비할 때는 [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)를
+수정할 때는 [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)를
 함께 본다.
 
 ## 1. 현재값과 남은 승인 항목
@@ -48,12 +48,13 @@ TrafficLight oracle/GetTrafficLight는 bridge 필수 토픽이 아니다.
 MORAI --UDP--> asmc_bridge의 sensor/network node --> 팀 내부 ROS topic
 MORAI <--UDP-- asmc_bridge network node <--ROS-- /ctrl_cmd
 
-/vehicle/state + perception --> Behavior/FSM --> Frenet --> MPC --> /ctrl_cmd
+/planning/vehicle/state + /planning/objects --> asmc_planner(Behavior→Frenet)
+  --> MPC /ctrl_cmd/normal + 음영 /ctrl_cmd/jamming --> selector --> /ctrl_cmd
 ```
 
 - MORAI와 팀 PC 사이에는 허용 UDP만 쓴다.
 - ROS는 팀 PC 내부의 정규화·인지·디버깅 경계다.
-- Behavior/Frenet/MPC도 현재 내부 ROS topic으로 연결되며 직접 UDP socket을 열지 않는다.
+- Behavior/Frenet은 asmc_planner 내부 직접 호출이며 MPC와는 ROS trajectory로 연결된다. 직접 UDP socket을 열지 않는다.
 - `rosbridge.sh` direct WebSocket 실험은 종료됐으며 현재 개발·본선 경로가 아니다.
 - gRPC scenario runner와 GT topic은 개발·데이터 수집 전용이다.
 - `asmc_bridge/bridge.launch`가 Network UDP, Sensor UDP, VehicleState node를 한 번에 기동한다.
@@ -120,7 +121,7 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 | 2 | left camera | `9292→9293` | `/cam_left/image_jpeg/compressed` | 20 |
 | 3 | right camera | `9294→9295` | `/cam_right/image_jpeg/compressed` | 20 |
 | 4 | extra camera | `9296→9297` | `/cam_extra/image_jpeg/compressed` | 10 |
-| 5 | VLP16 Intensity | `9298→9299` | `/velodyne_points` | 10 |
+| 5 | VLP16 Intensity | `9298→9299` | `/velodyne_points` | v3 15 (v2 10) |
 | 6 | GPS | `9300→9301` | `/gps` | 5 |
 | 7 | IMU | `9302→9303` | `/imu` | 50 |
 
@@ -274,7 +275,7 @@ asmc-ros-gui rviz -d /root/ws/<config>.rviz
 
 ## 8. 현장 전환 gate
 
-Phase 3에서 현재값을 바꿀 때 다음을 한 변경으로 검증한다.
+현재 구현된 profile을 실제 현장에 적용할 때 다음을 함께 검증한다.
 
 1. `local`과 `lan2lan`의 port·channel·Ctrl mode가 같고 IP만 다른지 확인한다.
 2. Ctrl `9093/9094`, Ego Vehicle Status `9088/9099`, MolitComp Competition Vehicle Status

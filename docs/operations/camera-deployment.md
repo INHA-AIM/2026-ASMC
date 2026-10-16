@@ -1,9 +1,9 @@
-# 카메라 객체 배포·소비 계약 — 2026-10-15
+# 카메라 객체 배포·소비
 
 > 현재 실행·새 제어 경로는 [카메라 실행·3뷰 관측 계약](../contracts/camera-runtime-v1.md)이 정본입니다.
 > 아래 기존 profile/서비스 설명과 과거 검증 결과는 호환·재현 기록으로 보존합니다.
 
-현재 PR의 개발 프로필은 **YOLO26l v11 E8, 16종, 전방960·좌우640, TensorRT FP16,
+현재 개발 기본 프로필은 **YOLO26l v11 E8, 16종, 전방960·좌우640, TensorRT FP16,
 3뷰15Hz·2+1 batch, Ego mask ON, confidence0.40·동일 클래스 NMS0.50**이다.
 이전 승인된1280·NMS0.70의 검증 기록과 새 입력의 수락은 구분한다.
 사용자가 실시간 육안 시험 후 개발 기본 적용을 승인했다. SUNNY/FOGGY·11/13/15시 전체 조건,
@@ -124,6 +124,9 @@ E8/E22 비교8회, E8 TensorRT4회. TensorRT는 약14.8–15Hz, 입력수신→�
 p50 33–36ms·p95 41–45ms, 최대공백173.3ms, 전체VRAM peak1966/8188MiB,
 중복·역행stamp0이다. 다른 두 모델은 로드된STANDBY였다.
 PyTorch 비교의 일부250ms 초과 공백과 FP16 parity 차이도 보존했다.
-독립 연속GT 없는 bag의 전체recall은 만들지 않았다. MORAI+전체ACTIVE·30분 시험은 남아 있다.
+독립 연속GT 없는 bag의 전체recall은 만들지 않았다. 이 표는 당시 전방1280/측방640·NMS0.70 조건의 결과이며
+현재960/NMS0.50 전체 수락으로 바꾸지 않는다. 후속 전체 GUI·10분 시험과 남은 family 순간 공백은
+[최신 family 공급 기록](../records/camera/camera-family-supply-optimization.md)을 따른다.
 
-다음 작업의 순서·수집 조건·라벨 정책은 [후속 개발 계획](../records/camera/camera-deployment-roadmap-20261014.md)을 따른다.
+현재 다음 작업은 [대회 완료 로드맵](../architecture/consolidation-roadmap.md)을 따른다.
+[10/14 수집·학습 제안](../records/camera/camera-deployment-roadmap-20261014.md)은 당시 후보 기록이다.
