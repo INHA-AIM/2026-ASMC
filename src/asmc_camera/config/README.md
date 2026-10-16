@@ -19,6 +19,7 @@
 | `camera/lane_input.yaml` | TwinLite 전방544×960·좌우480×640 후보. 추론과 model-grid 투영이 함께 읽음 |
 | `camera/lane_input_side384.yaml` | 전방960·기존 좌우384 비교/복구용 |
 | `camera/twinlite_medium.yaml` | TwinLite backend와 구형 launch의 공통 기본값 |
+| `camera/lane_bdd_large.yaml`, `camera/lane_input_bdd_official.yaml` | 공식 BDD Large의 이진 출력 실험. 운영 family와 분리한 `bdd_lane.launch` 전용 |
 | `camera/traffic_light_runtime.yaml` | camera4 ResNet 설정 |
 | `camera/visualization.yaml`, `bev/visualization*.yaml` | 시각화 설정 |
 | `cameras_v3.yaml`, `bev/*` | 보정·BEV·차선 처리. 입력 tensor 변경으로 센서 보정을 바꾸지 않음 |

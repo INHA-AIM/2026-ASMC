@@ -36,9 +36,13 @@ class BatchPrediction:
 
 
 class InferenceEngine:
-    def __init__(self, backend: SemanticBackend, restore_original: bool = True):
+    def __init__(self, backend: SemanticBackend, restore_original: bool = True,
+                 resize_interpolation: str = "auto"):
+        if resize_interpolation not in ("auto", "linear"):
+            raise ValueError("resize_interpolation must be auto or linear")
         self.backend = backend
         self.restore_original = bool(restore_original)
+        self.resize_interpolation = resize_interpolation
 
     def infer(
         self, images_bgr, preserve_model_grid=True, gpu_inputs=None,
@@ -72,9 +76,12 @@ class InferenceEngine:
             shape = tuple(self.backend.info.input_hw_by_view.get(key, self.backend.info.input_hw))
             if gpu_inputs is not None:
                 from asmc_camera.runtime.gpu_input import PreprocessSpec, prepare
+                if self.resize_interpolation != "auto":
+                    raise ValueError("explicit linear resize requires the CPU preprocessing path")
                 tensor, geometry, _ = prepare(gpu_inputs[key], PreprocessSpec(shape, 'area'))
             else:
-                tensor, geometry = letterbox_bgr(images_bgr[key], target_hw=shape)
+                tensor, geometry = letterbox_bgr(images_bgr[key], target_hw=shape,
+                                                interpolation=self.resize_interpolation)
             groups.setdefault(shape, []).append((key, tensor))
             geometries[key] = geometry
         if gpu_inputs is not None:

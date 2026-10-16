@@ -1,0 +1,27 @@
+<launch>
+  <!-- Quality inspection only. Absolute remaps isolate *all* experiment outputs
+       and controls from the deployed MORAI model and its family readiness. -->
+  <arg name="resolution" default="runtime" doc="runtime: front960/sides640 | official: all384x640"/>
+  <arg name="input_config" default="$(eval find('asmc_camera') + '/config/camera/' + {'runtime':'lane_input.yaml','official':'lane_input_bdd_official.yaml'}[arg('resolution')])"/>
+  <group>
+    <remap from="/perception/camera/front/drivable/probability" to="/experiments/twinlite_bdd/front/drivable/probability"/>
+    <remap from="/perception/camera/left/drivable/probability" to="/experiments/twinlite_bdd/left/drivable/probability"/>
+    <remap from="/perception/camera/right/drivable/probability" to="/experiments/twinlite_bdd/right/drivable/probability"/>
+    <remap from="/perception/camera/front/lane/probability" to="/experiments/twinlite_bdd/front/lane/probability"/>
+    <remap from="/perception/camera/left/lane/probability" to="/experiments/twinlite_bdd/left/lane/probability"/>
+    <remap from="/perception/camera/right/lane/probability" to="/experiments/twinlite_bdd/right/lane/probability"/>
+    <remap from="/perception/camera/diagnostics" to="/experiments/twinlite_bdd/diagnostics"/>
+    <remap from="/perception/camera/lane/status" to="/experiments/twinlite_bdd/status"/>
+    <remap from="/perception/camera/lane/set_mode" to="/experiments/twinlite_bdd/set_mode"/>
+    <remap from="/camera_semantic_inference/inference_status" to="/experiments/twinlite_bdd/legacy_status"/>
+    <remap from="/camera_semantic_inference/set_inference_mode" to="/experiments/twinlite_bdd/legacy_set_mode"/>
+    <remap from="/perception/lane/boundary_family" to="/experiments/twinlite_bdd/unused_family"/>
+    <include file="$(find asmc_camera)/launch/camera_lane.launch">
+      <arg name="node_name" value="camera_lane_bdd"/>
+      <arg name="component_config" value="$(find asmc_camera)/config/camera/lane_bdd_large.yaml"/>
+      <arg name="input_config" value="$(arg input_config)"/>
+      <arg name="initial_mode" value="2"/>
+      <arg name="target_hz" value="15.0"/>
+    </include>
+  </group>
+</launch>

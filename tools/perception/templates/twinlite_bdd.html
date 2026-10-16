@@ -1,0 +1,23 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TwinLiteNet+ BDD100K Large · MORAI 수집 영상 비교</title>
+<style>
+body{font:16px system-ui;background:#111827;color:#e5e7eb;margin:auto;padding:24px;max-width:1500px}a{color:#93c5fd}h1{font-size:27px}p{line-height:1.65}table{border-collapse:collapse}td,th{padding:10px 18px;border-bottom:1px solid #475569}select,button{font:inherit;padding:8px;margin:6px;background:#1e293b;color:white;border:1px solid #64748b;border-radius:6px}article{background:#1e293b;padding:14px;margin:18px 0;border-radius:10px}img{display:block;width:100%;height:auto}small{color:#94a3b8}#count{margin:12px}
+</style>
+<a href="../index.html">← ASMC 실험 목록</a><h1>TwinLiteNet+ BDD100K Large · MORAI 수집 영상 비교</h1>
+<p>추가학습 없이 공식 Large 가중치를 추론했습니다. <b>총 __IMAGES__장 평가, 조건·뷰별 균등 간격으로 고른 __CARDS_COUNT__장 시각화</b>입니다.
+위: 원본 / MORAI GT / 범례. 아래: 현재 Medium v6 / BDD Large 전방960·좌우640 / BDD Large 공식384×640.</p>
+<p>초록은 주행가능노면, BDD의 <b>하늘색은 모든 차선의 이진 출력</b>입니다. 흰색·황색·정지선을 구분한 결과가 아닙니다.
+현재 MORAI 모델은 흰색·노란색·빨간색으로 구분합니다. 두 모델은 학습 도메인과 라벨 정의가 다르므로 이 결과만으로 Large의 추가학습 성능을 판단하지 않습니다.</p>
+<table><thead><tr><th>모델·입력</th><th>주행가능노면 IoU</th><th>흰/황 차선 통합 IoU</th></tr></thead><tbody>__ROWS__</tbody></table>
+<p><small>MORAI native GT·유효 픽셀만 평가, threshold 0.5. 차선 비교에서는 GT 정지선 픽셀 제외. Drivable은 객체 점유를 negative로 처리하는 MORAI 규칙이며 BDD 정의와 다릅니다.
+연속 프레임·6개 run 기반 개발 평가입니다. 구간 종류는 확인하지 않은 영상에 임의로 터널 등의 태그를 붙이지 않았습니다. <a href="report.json">전체 지표·조건별 분포·SHA</a> / <a href="samples.jsonl">이미지별 근거</a></small></p>
+<label>날씨 <select id="weather"><option value="">전체</option><option>SUNNY</option><option>FOGGY</option></select></label>
+<label>시각 <select id="hour"><option value="">전체</option><option>11</option><option>13</option><option>15</option></select></label>
+<label>뷰 <select id="view"><option value="">전체</option><option>front</option><option>left</option><option>right</option></select></label>
+<button id="prev">이전</button><button id="next">다음</button><div id="count"></div><main id="cards"></main>
+<p><small>생성: __DATE__ · BDD 배포 SHA __SHA__</small></p>
+<script>
+const data=__CARDS__;let page=0;const size=12;const el=id=>document.getElementById(id);
+function render(){const rows=data.filter(r=>['weather','hour','view'].every(k=>!el(k).value||r[k]===el(k).value));page=Math.max(0,Math.min(page,Math.ceil(rows.length/size)-1));el('count').textContent=`${rows.length}장 · ${page+1}/${Math.max(1,Math.ceil(rows.length/size))} 페이지`;el('cards').replaceChildren();for(const r of rows.slice(page*size,(page+1)*size)){const card=document.createElement('article'),title=document.createElement('p'),a=document.createElement('a'),im=document.createElement('img');title.textContent=`${r.weather} ${r.hour}시 · ${r.view} · ${r.sample_id}`;im.src=r.file;im.loading='lazy';im.alt=title.textContent;a.href=r.file;a.target='_blank';a.append(im);card.append(title,a);el('cards').append(card)}}
+for(const k of ['weather','hour','view'])el(k).onchange=()=>{page=0;render()};el('prev').onclick=()=>{page--;render()};el('next').onclick=()=>{page++;render()};render();
+</script></html>

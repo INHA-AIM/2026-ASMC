@@ -35,6 +35,18 @@
       ]
     },
     {
+      "title": "BDD Large experimental inference",
+      "path": "src/asmc_camera/launch/bdd_lane.launch",
+      "internal_args": [
+        "input_config"
+      ]
+    },
+    {
+      "title": "BDD Large experimental visualization",
+      "path": "src/asmc_camera/launch/bdd_lane_view.launch",
+      "internal_args": []
+    },
+    {
       "title": "HD Map",
       "path": "src/asmc_hd_map/launch/competition_map.launch",
       "internal_args": []

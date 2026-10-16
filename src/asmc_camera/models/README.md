@@ -45,3 +45,8 @@ TensorRT 버전을 시작 시 검사합니다. 불일치는 명시적으로 실�
 TensorRT 실행 자체는 해당 upstream Python 모델을 로드하지 않습니다.
 [변환·품질·실시간 검증](../../../docs/records/camera/camera-twinlite-tensorrt.md)을 확인하세요.
 전체 공급 수락과 사용자 주행 확인은 [최신 family 기록](../../../docs/records/camera/camera-family-supply-optimization.md)에서 별도로 관리합니다.
+
+`lane_segmentation/twinlite-large-bdd100k.pt`는 공식 BDD100K Large의 **미추가학습 이진
+drivable/lane** 모델입니다. 원본 tensor를 그대로 보존한 약8MB checkpoint와 source JSON을
+Git에 포함합니다. [실험 실행 안내](../docs/bdd-pretrained-experiment.md)에 별도 토픽·입력 크기와
+추론 명령이 있습니다. Medium v6의 기본 TensorRT·4종 road_marking·family를 대체하지 않습니다.

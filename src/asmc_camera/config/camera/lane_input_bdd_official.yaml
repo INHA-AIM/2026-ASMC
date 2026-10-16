@@ -1,0 +1,3 @@
+# Official validation tensor size, with aspect-preserving padding for all views.
+input_hw: [384, 640]
+input_hw_by_view: {}

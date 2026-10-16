@@ -46,6 +46,7 @@ def letterbox_bgr(
     image_bgr: np.ndarray,
     target_hw: Tuple[int, int] = (384, 640),
     padding_value: int = 114,
+    interpolation: str = "auto",
 ) -> Tuple[np.ndarray, LetterboxGeometry]:
     if image_bgr.ndim != 3 or image_bgr.shape[2] not in (3, 4):
         raise ValueError("input must be a BGR/BGRA image")
@@ -54,9 +55,11 @@ def letterbox_bgr(
     )
     resized_h, resized_w = geometry.resized_hw
     shrinking = resized_h <= image_bgr.shape[0] and resized_w <= image_bgr.shape[1]
-    interpolation = cv2.INTER_AREA if shrinking else cv2.INTER_LINEAR
+    if interpolation not in ("auto", "linear"):
+        raise ValueError("interpolation must be auto or linear")
+    resize_mode = cv2.INTER_LINEAR if interpolation == "linear" or not shrinking else cv2.INTER_AREA
     resized_bgr = cv2.resize(
-        image_bgr[:, :, :3], (resized_w, resized_h), interpolation=interpolation
+        image_bgr[:, :, :3], (resized_w, resized_h), interpolation=resize_mode
     )
     resized_rgb = cv2.cvtColor(resized_bgr, cv2.COLOR_BGR2RGB)
     target_h, target_w = geometry.target_hw

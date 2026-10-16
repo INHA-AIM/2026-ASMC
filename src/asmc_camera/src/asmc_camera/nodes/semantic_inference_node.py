@@ -71,6 +71,7 @@ class SemanticInferenceNode:
         self.engine = InferenceEngine(
             backend,
             restore_original=bool(self.parameters.get("~restore_original", True)),
+            resize_interpolation=str(self.parameters.get("~resize_interpolation", "auto")),
         )
         if set(backend.info.input_hw_by_view) - set(SUPPORTED_VIEWS):
             raise ValueError("input_hw_by_view contains an unknown camera")

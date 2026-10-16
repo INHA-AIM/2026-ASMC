@@ -1,0 +1,17 @@
+# Official binary BDD100K weights. Experimental display only; never family GT.
+backend: twinlite
+model_config: large
+twinlite_root: /opt/baselines/TwinLiteNetPlus
+checkpoint: $(find asmc_camera)/models/lane_segmentation/twinlite-large-bdd100k.pt
+weights: model
+device: cuda
+amp: true
+channels_last: true
+restore_original: true
+resize_interpolation: linear  # Official BDD preprocessing; runtime auto/AREA is unchanged.
+gpu_preprocess: false
+lazy_outputs: true
+warmup_iterations: 1
+batch_wait_ms: 20.0
+publish_model_grid_road_marking: false
+log_interval_sec: 5.0
