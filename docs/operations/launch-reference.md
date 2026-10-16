@@ -99,7 +99,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `mode` | `standby` | off &#124; standby &#124; active |
+| `mode` | `active` | off &#124; standby &#124; active; default continuous inference |
 | `models` | `all` | all or comma-separated objects,lane,traffic_light |
 | `detector` | `e8` | e8 &#124; pretrained; restart to change weights |
 | `confidence` | `0.40` | — |

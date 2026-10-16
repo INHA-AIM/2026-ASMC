@@ -13,8 +13,10 @@
 > **Planning 경계:** [Planning/Control 개발 가이드](../architecture/planning-control.md)
 
 이 문서는 음영 왕복 2차로에서 카메라가 제공하는 차선 family와 주행가능영역을 판제가
-어떻게 해석해야 하는지 설명한다. 인지 쪽에서는 ROS 출력까지만 제공한다. 어느 위치에서
-기능을 켜고 끌지, 어느 차로가 home/opposing인지, 장애물을 피해 어느 경로를 선택할지와
+어떻게 해석해야 하는지 설명한다. 인지 쪽에서는 ROS 출력까지만 제공한다.
+현재 세 모델은 상시 ACTIVE이며 [구간별 소비 안내](perception-to-planning.md)를 따른다.
+공식 팀 음영은 A126이며 A448은 접근 구간이다. A126 진입 전에 새 유효 family를 확인한다.
+어느 위치에서 정보를 사용할지, 어느 차로가 home/opposing인지, 장애물을 피해 어느 경로를 선택할지와
 closed-loop 합격 여부는 판제 파트가 소유한다. 카메라 생산자는 Behavior/Frenet/MPC나 `/ctrl_cmd`를 발행하지 않는다.
 현재 판제 통합 launch는 별도의 재밍 어댑터를 enable_control=true로 포함하므로 전체 스택이 read-only라는 뜻은 아니다.
 

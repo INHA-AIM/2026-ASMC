@@ -69,8 +69,10 @@ roslaunch asmc_camera view.launch models:=objects
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
-판제 관리 실행은 `camera.launch models:=objects`의 STANDBY에서 시작한다.
-`/perception/camera/objects/set_mode`의 mode1 PREPARE → 같은 세대 prepared=true 확인 → mode2 ACTIVE를 사용한다.
+기본 `camera.launch`는 세 모델 상시 ACTIVE·발행이다. `models:=objects`도 객체 ACTIVE로 시작한다.
+명시적인 `mode:=standby` 복구에는 `/perception/camera/objects/set_mode`의 mode1 PREPARE →
+같은 세대 prepared=true 확인 → mode2 ACTIVE를 사용한다. [판제 소비 범위](../handoffs/perception-to-planning.md)는
+생산자 발행 제한과 구별하며, Frenet 객체 입력을 구간별로 끊지 않는다.
 TwinLite도 현재15Hz 목표·TensorRT·전방544×960/좌우480×640이다. 음영 lane 모드와 readiness는 [실행 계약](../contracts/camera-runtime-v1.md)을 따른다.
 신호등은 카메라 또는 판제 launch 중 한 곳만 실행한다. 판제가 이미 시작했다면 카메라는 `models:=objects,lane` 등 필요한 조합만 선택한다.
 

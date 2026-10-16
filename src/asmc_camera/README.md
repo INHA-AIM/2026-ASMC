@@ -19,7 +19,8 @@ YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합�
 
 ```bash
 # asmc-ros-noetic에서 빌드한 workspace 환경을 source한 뒤
-roslaunch asmc_camera camera.launch                        # 세 모델 STANDBY
+roslaunch asmc_camera camera.launch                        # 세 모델 상시 ACTIVE
+roslaunch asmc_camera camera.launch mode:=standby          # 명시적인 대기 실행; 둘 중 하나만 실행
 roslaunch asmc_camera camera.launch mode:=active models:=objects
 # 기존 실행을 종료한 뒤 사전학습 모델 대조
 roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=pretrained
@@ -40,7 +41,10 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 [시각화·readiness 검증](../../docs/records/camera/camera-visualization-validation.md)은 단일 렌더링 경로와 GUI 동시 부하 결과를 관리합니다.
 단일 렌더러는 PR #85의 현재 실행 경로입니다. 이전 입력의30분 시험과 현재 입력의10분 시험은 조건별 증거로 보존하며 최신 차단 상태는 위 family 공급 최적화 문서를 따릅니다.
 [전방960 검증](../../docs/records/camera/camera-front960-validation.md)은 별도 결과이며 이전 입력의 통과를 재사용하지 않습니다.
-판제는 구간·활성화·소비를 결정하며 차선의 주행 소비는 음영 ODD에 한정합니다.
+기본은 세 모델 상시 추론·발행입니다. 구간에 따라 생산자를 끄지 않으며 판제가 결과 소비를 결정합니다.
+[구간별 소비 안내](../../docs/handoffs/perception-to-planning.md)에 A153 끝까지의 차량 구간,
+A126 진입 전 family 준비와 신호등 범위를 정리했습니다. 차선의 주행 소비는 음영 ODD에 한정합니다.
+카메라와 판제를 함께 실행할 때 판제의 `traffic_light:=false`로 신호등 생산자를 하나만 둡니다.
 
 세부 모델·입력·mask 설정은 `config/camera/*_runtime.yaml`과 선택한 모델 프로필 YAML에서 관리합니다.
 현재/실험/호환 설정의 구분은 [config 안내](config/README.md), 실제 가중치와 로컬 연결은 [models 안내](models/README.md)를 참고하세요.

@@ -19,7 +19,7 @@ asmc_camera/camera.launch — 3뷰 YOLO, 독립 실행
 - **안승현/카메라:** 모델·전처리·bbox·세 그룹·confidence·3뷰 관측과 실행 성능, 공용 제어·LiDAR 카메라 입력 지원.
 - **PR #87에서 완료한 Main 정리:** 독립 YOLO 노드/래퍼/전용 가중치/설치 경로를 제거했다. Main은 카메라 모델을 시작하거나 로드하지 않는다.
 - **손재호:** 검출·지면/구조물·군집·OBB·추적·카메라 매칭/fusion·ROS 출력의 `asmc_lidar` 이전.
-- **판제:** 결과 소비·행동 정책·음영 lane 활성화. 이번 변경은 판제 입력 토픽·MD5·정책을 바꾸지 않는다.
+- **판제:** 결과 소비·행동 정책·음영 lane 사용. 기본은 세 모델 상시 ACTIVE이며 이번 변경은 판제 입력 토픽·MD5·정책을 바꾸지 않는다.
 
 음영 어댑터의 `camera_bbox_detector.launch`도 별도 추론 없이 전방 CPU 변환만 제공한다. 전용 출력 토픽과 소비 cutoff0.7은 그대로이며 Main 어댑터의 기본0.0과 구분한다.
 수집/시나리오 launch의 폐기 `start_yolo` 인자도 제거했다.
@@ -43,6 +43,8 @@ Main은 이미 외부 카메라가 기본이었다. PR #87에서 `start_yolo`와
 
 Tensor 크기로 카메라 intrinsics를 바꾸지 않는다. 검출은 이미 원본 픽셀 좌표로 복원돼 있다.
 목표 Hz가 같아도 두 모델의 source stamp나 실행 위상이 같다는 뜻은 아니다.
+카메라와 LiDAR 입력은 구간별로 중단하지 않는다. Frenet은 신선한 객체 입력이 필요하다.
+[판제 소비 안내](perception-to-planning.md)에 세 객체 단위·A153 종료·A126 진입 전 준비를 정리했다.
 
 | 소비 그룹 | 원본 학습 클래스 |
 |---|---|
@@ -92,7 +94,8 @@ source /path/to/2026-ASMC/devel/setup.bash
 roslaunch asmc_camera camera.launch models:=objects
 ```
 
-별도 터미널에서 준비를 요청한다. 서비스 accepted만으로 준비 완료를 판단하지 않는다.
+기본은 ACTIVE다. `mode:=standby`로 명시적인 대기 실행을 선택한 경우에만 별도 터미널에서
+다음 준비를 요청한다. 서비스 accepted만으로 준비 완료를 판단하지 않는다.
 
 ```bash
 rosservice call /perception/camera/objects/set_mode '{mode: 1, target_hz: 0.0}'

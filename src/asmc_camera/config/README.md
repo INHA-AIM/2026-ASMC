@@ -2,10 +2,13 @@
 
 `camera.launch`가 현재 실행의 시작점입니다. config 파일 전체를 순서대로 읽는 구조가
 아니며, launch에서 선택한 파일만 사용합니다.
+기본은 세 모델 상시 ACTIVE·목표15/15/10Hz입니다. 구간은 생산자 on/off 대신
+[판제 소비 안내](../../../docs/handoffs/perception-to-planning.md)로 관리합니다.
 
 | 설정 | 현재 역할 |
 |---|---|
 | `runtime.yaml` | 실행·소유권·공급 기준 안내 |
+| `runtime/camera_region_example.yaml` | 기본 미실행인 제어 예제. 현재 설정은 GPS/구간과 무관하게 세 모델 ACTIVE 요청 |
 | `camera/objects_runtime.yaml` | 두 객체 모델이 공유하는 mask·보정·발행 설정 |
 | `camera/yolo26l_mission16_e8_three_view.yaml` | 기본 E8, 전방960·좌우640 |
 | `camera/yolo26l_pretrained_mission_three_view.yaml` | 실행 시 선택하는 사전학습 COCO7, 전방960·좌우640 |

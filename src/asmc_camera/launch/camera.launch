@@ -1,5 +1,7 @@
 <launch>
-  <arg name="mode" default="standby" doc="off | standby | active"/>
+  <!-- Continuous inference/publication by default. Planning owns mission consumption;
+       see docs/handoffs/perception-to-planning.md. Do not gate object freshness here. -->
+  <arg name="mode" default="active" doc="off | standby | active; default continuous inference"/>
   <arg name="models" default="all" doc="all or comma-separated objects,lane,traffic_light"/>
   <arg name="detector" default="e8" doc="e8 | pretrained; restart to change weights"/>
   <arg name="confidence" default="0.40"/>

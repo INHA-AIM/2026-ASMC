@@ -58,8 +58,11 @@ source /path/to/2026-ASMC/src/lidar+sensorfusion/devel/setup.bash
 roslaunch Main main.launch rviz:=false
 ```
 
-For planner-managed operation start camera in default STANDBY and use PREPARE →
-prepared=true → ACTIVE. Camera defaults: E8 TensorRT, front544×960/sides480×640,
+Camera starts ACTIVE and publishes continuously by default. Only when explicitly
+starting with `mode:=standby`, use PREPARE → prepared=true → ACTIVE to resume.
+Mission bounds guide planning consumption, not publication gates; Frenet requires
+fresh object input even on map-only roads. See the [consumption guide](../../docs/handoffs/perception-to-planning.md).
+Camera defaults: E8 TensorRT, front544×960/sides480×640,
 15Hz target, confidence0.40/NMS0.50. Recovery is `detector:=pretrained` after restart.
 The supported packaged engine environment is RTX4060Ti/TensorRT10.13.0.35; Main itself
 no longer performs a GPU preflight. Do not reuse old Main GPU instructions.

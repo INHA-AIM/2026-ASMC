@@ -1,4 +1,6 @@
 import unittest
+from pathlib import Path
+import yaml
 from types import SimpleNamespace
 from asmc_camera.runtime.region_example import RegionExample
 
@@ -10,6 +12,18 @@ class Stamp:
 
 
 class RegionExampleTest(unittest.TestCase):
+    def test_packaged_policy_does_not_gate_models_by_region_or_gps(self):
+        path = Path(__file__).resolve().parents[2] / 'config/runtime/camera_region_example.yaml'
+        config = yaml.safe_load(path.read_text())
+        policy = RegionExample(config)
+        self.assertEqual({k: v['target_hz'] for k, v in config['models'].items()},
+                         dict(twinlite=15., yolo=15., resnet18=10.))
+        for context in (None, self.context(0.), self.context(150.),
+                        self.context(500.), self.context(150., valid=False)):
+            modes, _ = policy.decide(context, dict(gps_shadow_candidate=(100., 200.),
+                traffic_light_activation_A236_to_A308=(300., 400.)), 10., 1., 1.)
+            self.assertEqual(modes, dict(twinlite=2, yolo=2, resnet18=2))
+
     def setUp(self):
         self.policy = RegionExample(dict(context_freshness_sec=.5, prepare_lead_sec=3.,
             prepare_min_distance_m=20., prepare_margin_m=5., recovery_hold_sec=.5,

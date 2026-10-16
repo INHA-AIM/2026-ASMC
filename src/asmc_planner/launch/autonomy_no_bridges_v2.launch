@@ -8,6 +8,8 @@
   <arg name="lidar_input_topic" default="/last_lidar"/>
   <arg name="lidar_source_policy" default="validated_lidar"/>
   <arg name="avoid_path_margin_m" default="0.4"/>
+  <!-- With asmc_camera/camera.launch (all models ACTIVE), pass traffic_light:=false
+       to keep one ResNet producer. Planner signal decisions remain enabled. -->
   <arg name="traffic_light" default="true"
        doc="Set false only when an external traffic-light producer is running; false does not disable planner signal rules."/>
   <arg name="traffic_light_device" default="auto"/>

@@ -6,7 +6,7 @@
 
 | 분야 | 최근 결정·근거 | 보존 목록 |
 |---|---|---|
-| 카메라 | [family 공급·사용자 확인](camera/camera-family-supply-optimization.md), [TwinLite TRT](camera/camera-twinlite-tensorrt.md), [객체 배포 비교](../../config/baselines/evidence/camera_mission16_deployment_v1/comparison.json) | [camera](camera/) |
+| 카메라 | [상시 추론 기본값](camera/2026-10-16-continuous-inference.md), [family 공급·사용자 확인](camera/camera-family-supply-optimization.md), [TwinLite TRT](camera/camera-twinlite-tensorrt.md), [객체 배포 비교](../../config/baselines/evidence/camera_mission16_deployment_v1/comparison.json) | [camera](camera/) |
 | LiDAR | [좌표/시간 경계](lidar/lidar-camera-frame-boundaries.md), [연속 회귀](lidar/lidar-continuous-regression.md) | [lidar](lidar/) |
 | Bridge | [P3-G local closeout](bridge/bridge-p3g-local-closeout-v1.md) | [bridge](bridge/) |
 | HD Map | [compact 제품](hd-map/kcity2025-compact-drivable-v1.md), [입력 감사](hd-map/kcity2025-drivable-input-v1.md) | [hd-map](hd-map/) |

@@ -45,7 +45,7 @@ source /root/ws/src/lidar+sensorfusion/devel/setup.bash
 |---|---|---|
 | A | `./scripts/udp_bridge.sh` | 허용 센서·기본 `/vehicle/state`, UDP 포트당 수신자 하나 |
 | B | `roslaunch asmc_hd_map competition_map.launch` | 정적 지도·metadata; 현재 Planner local map copy를 자동 대체하지 않음 |
-| C | `roslaunch asmc_camera camera.launch` | 세 모델 STANDBY, E8 기본; 아래 PREPARE/ACTIVE 필요 |
+| C | `roslaunch asmc_camera camera.launch` | 세 모델 상시 ACTIVE·발행, E8 기본; GUI 별도 |
 | D | `roslaunch Main main.launch rviz:=false` | LiDAR·전방 어댑터/fusion·추적; YOLO 모델 미실행 |
 | E | `roslaunch asmc_planner autonomy_no_bridges_v2.launch traffic_light:=false` | **차량 제어 포함**, 판제 입력/MPC/selector/재밍 어댑터 |
 
@@ -54,7 +54,13 @@ source /root/ws/src/lidar+sensorfusion/devel/setup.bash
 false는 판제의 신호 규칙을 끄는 인자가 아닙니다. bridge `/vehicle/state`와
 판제 `/planning/vehicle/state`는 다른 토픽·추정기이며 같은 토픽의 중복 producer는 금지합니다.
 
-객체/신호등은 PREPARE 후 같은 generation의 prepared=true를 확인하고 ACTIVE를 요청합니다.
+기본 카메라는 세 모델 모두 추론·발행합니다. 준비가 끝나기 전에 판제가 결과를 사용하지 않도록
+상태와 새 결과의 validity/freshness를 확인합니다. [구간별 소비 안내](../handoffs/perception-to-planning.md)는
+판제 사용 범위이며 생산자를 끄는 설정이 아닙니다. Lane 주행 소비는 음영 ODD에 한정하고 A126 진입 전에
+유효 family를 확인합니다. A448은 접근 구간, 주변 차량 소비는 A153 끝/A451 진입까지입니다.
+
+명시적으로 대기 실행이 필요하면 C 대신 `roslaunch asmc_camera camera.launch mode:=standby`를
+사용합니다. 다음은 그 경우에만 필요한 객체/신호등 복구 예입니다. 모드 요청자는 하나만 둡니다.
 
 ```bash
 rosservice call /perception/camera/objects/set_mode '{mode: 1, target_hz: 0.0}'
@@ -67,21 +73,21 @@ rostopic echo /perception/camera/traffic_light/status
 rosservice call /perception/camera/traffic_light/set_mode '{mode: 2, target_hz: 0.0}'
 ```
 
-lane은 일반 구간 STANDBY, 음영 진입 전 PREPARE→prepared/pipeline_ready 확인→ACTIVE,
-이탈 후 STANDBY입니다. 구간 판단/연결은 판제 책임이며 카메라 launch가 자동으로 결정하지 않습니다.
+Lane도 기본 상시 ACTIVE입니다. 수동으로 대기시켰다면 다음 PREPARE → prepared/pipeline_ready
+확인 → ACTIVE 순서로 복구합니다. 현재 구간 진입/이탈로 자동 중단하지 않습니다.
 
 ```bash
 rosservice call /perception/camera/lane/set_mode '{mode: 1, target_hz: 0.0}'
 rostopic echo /perception/camera/lane/status
 # 준비 확인 후
 rosservice call /perception/camera/lane/set_mode '{mode: 2, target_hz: 0.0}'
-# 음영 이탈 후
+# 수동 중단이 필요한 경우에만 (기본 운용에서는 호출하지 않음)
 rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
 ```
 
 ### 개별 디버그·시각화
 
-아래는 기존 해당 producer를 종료한 뒤 택합니다. `mode:=active`는 수동 모델 확인용입니다.
+아래는 기존 해당 producer를 종료한 뒤 택합니다. `mode:=active`는 기본값을 명시한 모델 확인 예입니다.
 
 ```bash
 roslaunch asmc_camera camera.launch mode:=active models:=objects
