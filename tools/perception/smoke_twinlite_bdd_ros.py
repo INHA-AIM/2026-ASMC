@@ -17,6 +17,7 @@ def main():
     p.add_argument('--seconds',type=float,default=12)
     a=p.parse_args()
     if not 11400<=a.port<=11999:raise ValueError('private test master port required')
+    if not 0<a.seconds<=60:raise ValueError('smoke duration must be in (0, 60] seconds')
     a.output.mkdir(parents=True,exist_ok=False)
     uri='http://127.0.0.1:{}'.format(a.port)
     master=xmlrpc.client.ServerProxy(uri)
@@ -50,19 +51,21 @@ def main():
         package=Path(rospkg.RosPack().get_path('asmc_camera'))
         uuid=roslaunch.rlutil.get_or_generate_uuid(None,False)
         roslaunch.configure_logging(uuid)
-        counts=Counter();bad=[];statuses=deque(maxlen=256);latest_mosaic=[None];sent=set()
+        counts=Counter();bad=Counter();statuses=deque(maxlen=256);latest_mosaic=[None];sent=set()
         views=('front','left','right')
         expected_hw={'front':(720,1280),'left':(480,640),'right':(480,640)}
         def probability(msg,view):
             counts[view]+=1
-            if (msg.height,msg.width)!=expected_hw[view] or msg.encoding!='32FC1':bad.append('shape/encoding:'+view)
-            if msg.header.stamp.to_nsec() not in sent:bad.append('unknown_stamp:'+view)
-            array=np.frombuffer(msg.data,dtype=np.float32)
-            if not np.isfinite(array).all() or array.min()<0 or array.max()>1:bad.append('invalid_probability:'+view)
+            if (msg.height,msg.width)!=expected_hw[view] or msg.encoding!='mono8':
+                bad['shape/encoding:'+view]+=1
+                return
+            if msg.header.stamp.to_nsec() not in sent:bad['unknown_stamp:'+view]+=1
+            if msg.step!=msg.width or len(msg.data)!=msg.height*msg.step:
+                bad['invalid_payload:'+view]+=1
         subscribers=[rospy.Subscriber('/experiments/twinlite_bdd/'+v+'/lane/probability',Image,probability,callback_args=v,queue_size=1) for v in views]
         def mosaic(msg):
             counts['mosaic']+=1;latest_mosaic[0]=msg
-            if msg.header.stamp.to_nsec() not in sent:bad.append('unknown_mosaic_stamp')
+            if msg.header.stamp.to_nsec() not in sent:bad['unknown_mosaic_stamp']+=1
         subscribers.append(rospy.Subscriber('/experiments/twinlite_bdd/debug/mosaic/compressed',CompressedImage,mosaic,queue_size=1))
         subscribers.append(rospy.Subscriber('/experiments/twinlite_bdd/status',InferenceStatus,
             lambda m:statuses.append(dict(prepared=m.prepared,pipeline_ready=m.pipeline_ready,mode=m.mode,reason=m.reason,session=m.producer_session_id)),queue_size=1))
@@ -95,7 +98,7 @@ def main():
         image=latest_mosaic[0]
         if image is not None:
             decoded=cv2.imdecode(np.frombuffer(image.data,np.uint8),cv2.IMREAD_COLOR)
-            if decoded is None:bad.append('invalid_mosaic')
+            if decoded is None:bad['invalid_mosaic']+=1
             else:cv2.imwrite(str(a.output/'mosaic.jpg'),decoded)
         result=dict(master_uri=uri,input_hz=15,duration_seconds=a.seconds,source_samples={v:r['sample_id'] for v,r in rows.items()},
                     received=dict(counts),validation_errors=bad,public_publishers=public_publishers,public_services=public_services,

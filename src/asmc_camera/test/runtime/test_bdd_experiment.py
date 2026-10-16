@@ -30,6 +30,7 @@ class BddExperimentTest(unittest.TestCase):
         self.assertEqual(params['/camera_lane_bdd/input_hw_by_view/front'],[544,960])
         self.assertEqual(params['/camera_lane_bdd/input_hw'],[480,640])
         self.assertEqual(params['/camera_lane_bdd/resize_interpolation'],'linear')
+        self.assertEqual(params['/camera_lane_bdd/batch_wait_ms'],20.)
         remaps=dict(cfg.nodes[0].remap_args)
         expected=['/perception/camera/lane/status','/perception/camera/lane/set_mode',
                   '/camera_semantic_inference/inference_status','/camera_semantic_inference/set_inference_mode',

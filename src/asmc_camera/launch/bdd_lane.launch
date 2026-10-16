@@ -22,6 +22,7 @@
       <arg name="input_config" value="$(arg input_config)"/>
       <arg name="initial_mode" value="2"/>
       <arg name="target_hz" value="15.0"/>
+      <arg name="batch_wait_ms" value="20.0"/>
     </include>
   </group>
 </launch>
