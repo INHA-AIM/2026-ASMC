@@ -71,6 +71,10 @@ msg/CMake의 비주석 내용이 동일했습니다. 모델/학습 데이터·lo
 
 ## 실행 문서·과거 근거 통합
 
+후속 사용자 요청으로 `src/asmc_perception/README.md`만 남아 있던 이전 안내 폴더도 제거했습니다.
+실행 코드·package.xml·모델은 없었으며, 연결된 HD맵 보고서 링크와 현행 저장소 지도를 `asmc_camera` 기준으로 갱신했습니다.
+과거 기록의 이전 패키지명은 당시 이력으로 보존합니다.
+
 [명령 안내](../../operations/commands.md)는 수동 개별/통합 구성을 시나리오 통합 구성과 분리하고
 제어 생산자·camera/Main source순서·PREPARE/ACTIVE·별도rqt·Capture/Bag 권한을 표시합니다.
 [launch 인자 목록](../../operations/launch-reference.md)은 XML23개에서 자동 생성하며

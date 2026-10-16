@@ -28,7 +28,7 @@
 | asmc_lidar | `src/asmc_lidar` | 좌표/시간 코어와 인계 설정·시험; 실행 노드 미구현 |
 | Main, Msg | `src/lidar+sensorfusion/src/{Main,Msg}` | 현재 LiDAR·전방 fusion 실행과 구형 wire |
 
-`asmc_perception` 경로의 README는 rename 안내이며 ROS 패키지가 아닙니다.
+이름 변경이 완료된 `src/asmc_perception` 폴더와 이전 안내는 제거했습니다. 카메라 정본은 `src/asmc_camera`입니다.
 삭제된 `behavior_planner`·`frenet_planner` 패키지명은 내부 C++/파라미터 namespace와 구분합니다.
 `lane_boundary_adapter`의 실제 폴더명은 `jamming_lane_boundary_adapter`입니다.
 
