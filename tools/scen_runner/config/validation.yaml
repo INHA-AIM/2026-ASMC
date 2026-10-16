@@ -1,0 +1,39 @@
+sample_source: 'R_KR_PR_K-city_2025/2026_molit_comp_sample_scene.json'
+sample_sha256: c9ab17cef9b07dd3a7d4a2f56c6cc39f89f07cadccce8edce3d579e891237c85
+# Portable snapshot of egoVehicle.initPosition; original scenario is not loaded.
+scene_start:
+  x: -131.48599243164062
+  y: -427.96099853515625
+  z: 28.882999420166016
+  roll: -359.540
+  pitch: 0.121
+  yaw: 62.515
+section_height_offset_m: 0.35
+end_radius_m: 3.0
+# Live section finish line, perpendicular to the route at its end. Side offsets
+# and passing between ego samples are accepted; this does not change scene CPs.
+section_end_half_width_m: 10.0
+section_end_approach_m: 25.0
+# 구간별 검증에서만 적용. 해당 진입 방향이 초록인 교차로 단계를 주기적으로 갱신.
+# K-city 2025: 정적 IntTL7 첫 그룹, 동적 IntTL3 세 번째 그룹.
+# 개별 신호 고정은 교차로 단계 전환 때 풀리므로 그것만으로 유지하지 않는다.
+# 구간 전환/종료 시 갱신을 중단하고 진입 전 교차로 단계에서 자동 주기를 재개한다.
+section_traffic_lights:
+  enabled: true
+  color: 48  # MORAI TL_COLOR_G_WITH_GLEFT
+  refresh_interval_s: 1.0
+  controllers:
+    static: {IntTL7: 0}
+    dynamic: {IntTL3: 2}
+  ids:
+    static: [C1256W000091]
+    dynamic: [C1256W000016, C1256W000018]
+    roundabout: []
+    high_speed: []
+    tunnel: []
+sections:
+  static: {start_link: A2256W000213, lead_in_m: 15.0, end_link: A2256W000222}
+  dynamic: {start_link: A2256W000728, lead_in_m: 30.0, end_link: A2256W000205}
+  roundabout: {start_link: A2256W000148, lead_in_m: 15.0, end_link: A2256W000151}
+  high_speed: {start_link: A2256W000846, lead_in_m: 0.0, end_link: A2256W000446}
+  tunnel: {start_link: A2256W000448, lead_in_m: 0.0, end_link: A2256W000126}

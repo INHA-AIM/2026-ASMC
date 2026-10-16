@@ -1,0 +1,23 @@
+# Timing assumptions for verification, not measured controller performance.
+ego_speed_kmh: 25
+ego_reaction_s: 0.5
+ego_deceleration_mps2: 3.0
+npc_start_delay_s: 0.1
+# Station along A728 -> A599 -> A207 -> A205 (metres).
+cross_station_m: [23.0, 29.0]
+diagonal_angle_deg: [10.0, 25.0]
+# Spawn positions relative to the crossing centre (ego left/right).
+start_lateral_m: {left: 6.0, right: 8.0}
+end_lateral_m: 8.0
+clearance_m: 0.3
+minimum_stop_gap_m: 1.0
+speeds_kmh: [15, 16, 17, 18]
+# Conservative horizontal radius assumptions, not MORAI measured dimensions.
+models:
+  Man1: {group: Adult, radius_m: 0.5}
+  Woman1: {group: Adult, radius_m: 0.5}
+  Boy1: {group: Child, radius_m: 0.45}
+  Girl1: {group: Child, radius_m: 0.45}
+  Deer1: {group: Animal, radius_m: 1.0}
+  Dog1: {group: Animal, radius_m: 0.65}
+  Ped_Pet1: {group: Animal, radius_m: 0.8}

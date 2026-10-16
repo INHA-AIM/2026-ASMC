@@ -1,0 +1,91 @@
+# 정적 장애물 구간(A2256W000222) 배치·회피 판정 설정
+#
+# 거리 s 는 공식 전역경로 기준 누적거리(m), d 는 경로 중심에서 왼쪽(+)/오른쪽(-) 거리(m).
+# 경로 파일과 HD맵 파일은 저장소 루트 기준 상대경로다.
+
+map:
+  global_path: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
+  competition_metadata: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
+  drivable_map: src/asmc_hd_map/config/kcity2025_compact_drivable_map.json
+  lane_markings: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
+
+zone:
+  mission_zone_id: static_obstacle_candidate   # 구간 s 범위를 metadata 에서 읽는다
+  stopline_zone_id: traffic_light_C1256W000091  # 구간 입구 정지선
+  checkpoint_id: '4'                            # 구간 끝 체크포인트(반경 3 m)
+  view_s_range: [270.0, 372.0]                  # 계산·화면에 쓰는 경로 구간
+  grid_resolution_m: 0.05                       # 거리 지도 해상도
+  grid_padding_m: 16.0                          # 경로 좌우로 확보할 폭
+
+# 2023_Hyundai_ioniq5 (규정 2-6-1). 위치 기준점은 뒷바퀴 축 중심(MORAI ego 위치와 동일).
+vehicle:
+  length: 4.635
+  width: 1.892
+  wheelbase: 3.0
+  front_overhang: 0.845
+  rear_overhang: 0.79
+  max_wheel_angle_deg: 40.0
+  min_turning_radius: 5.87
+
+# 회피 경로가 지켜야 하는 차량 한계
+limits:
+  max_curvature: 0.23       # 1/m, MORAI 실측 0.235 기준 (frenet_planner params.yaml)
+  max_lateral_accel: 2.6    # m/s^2 (frenet_planner params.yaml)
+  max_steer_rate: 1.0       # rad/s, 바퀴 조향 속도 (mpc_controller mpc_params.yaml)
+  max_accel: 2.0            # m/s^2, 정지 후 출발 가속 (mpc_controller mpc_params.yaml)
+
+clearance:
+  obstacle_m: 0.5           # 장애물과 최소 간격
+  road_edge_m: 0.1          # 주행가능영역 경계(연석)와 최소 간격
+  solid_line_m: 0.0         # 실선 도색과 최소 간격 (0 = 닿지만 않으면 됨)
+  checkpoint_m: 2.5         # 체크포인트 반경 3 m 중 판정에 쓰는 값(뒷바퀴 축 기준)
+
+# 밟으면 안 되는 선. 교차로 안 흰 점선과 정지선은 넘어갈 수 있다.
+forbidden_lines:
+  - {color: yellow}
+  - {color: white, pattern: solid, feature_type: lane_marking}
+
+speed_cases:
+  - id: stop_start
+    label: 정지 후 출발
+    start: stopline          # 정지선 앞에 멈춘 상태에서 출발
+    stop_gap_m: 1.0          # 앞 범퍼와 정지선 사이 거리
+    initial_speed_kmh: 0.0
+    max_speed_kmh: 15.0
+  - id: cruise_15
+    label: 감지 후 15 km/h
+    start: before_stopline
+    start_distance_m: 40.0   # 정지선 몇 m 전부터 장애물을 알고 15 km/h 로 달린다고 가정
+    initial_speed_kmh: 15.0
+    max_speed_kmh: 15.0
+
+search:
+  station_step_m: 0.5       # 회피 시작/복귀 시작 위치 간격
+  pose_step_m: 0.25         # 충돌 검사 간격
+  goal_after_checkpoint_m: 6.0
+  lateral_offsets_m:        # 시험할 옆 이동량
+    fine: {max: 4.0, step: 0.25}
+    coarse: {max_left: 9.0, max_right: 12.0, step: 0.5}
+  transition_lengths_m: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 23, 26, 30]
+  transitions_per_offset: 4
+
+random:
+  s_from_stopline_m: [2.0, 28.0]
+  d_range_m: [-2.5, 2.5]
+  yaw_range_deg: [-10.0, 10.0]
+  count: 1
+  min_gap_m: 1.0
+  require_lane_block: true   # 내 차로를 실제로 막는 위치만
+  require_all_cases: true    # 모든 속도 조건에서 회피 가능해야 함
+  max_tries: 300
+  region_step_s_m: 1.0
+  region_step_d_m: 0.5
+
+morai:
+  host: null  # PC별 주소는 config/local.yaml의 morai.host에서 읽음
+  port: 7789  # 공통 기본 포트; config/local.yaml에서 변경 가능
+  client_key: scen_runner
+  grpc_src: tools/grpc_inha_univ/src
+  ego_id: Ego
+  poll_hz: 5.0
+  measure_spot: {x: -59.85, y: -140.0}   # 모델 크기 측정용 임시 스폰 위치

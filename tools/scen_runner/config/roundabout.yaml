@@ -1,0 +1,26 @@
+# Example scene spawn point 4, with model/speed/period randomization.
+client_key: scen_runner_roundabout
+link_map: src/asmc_planner/config/behavior/link_set.json
+ego_links: [A2256W000148, A2256W000146, A2256W000151]
+npc_links: [A2256W000144, A2256W000133, A2256W000134, A2256W000135, A2256W000102]
+start_point_index: 26
+end_point_index: 9
+spawn_pose: {x: -111.339, y: 358.261, z: 28.331, yaw_deg: -136.201}
+# Per-NPC dynamics speed ceiling (converted to m/s for the SDK).
+speeds_kmh: [15, 17, 19, 20, 21]
+# A successful 15 km/h spawn forces only the next vehicle to 21 km/h.
+periods_s: [4, 5]
+maximum_spawn_vehicle: 50
+safety_distance_m: 5.0
+ttc_s: 1.0
+decision_range_m: 1.0
+# NPC catalogue names, not OBJ_ static models. Dimensions from installed model data.
+models:
+  2015_Kia_K5: {id: 30100004, length: 4.845, width: 2.09}
+  2021_Hyundai_G80: {id: 30100010, length: 4.995, width: 2.138}
+  2021_Hyundai_Genesis_GV80: {id: 30200007, length: 4.922, width: 2.154}
+  2023_Hyundai_Ioniq5: {id: 30200014, length: 4.635, width: 2.161}
+  2017_hyundai_solati_h350: {id: 30300002, length: 6.193, width: 2.47}
+  2012_Hyundai_HD65: {id: 30400002, length: 6.557, width: 2.517}
+  2013_Hyundai_Porter2: {id: 30400001, length: 5.026, width: 1.919}
+  2016_Kia_Soul(EV): {id: 30700005, length: 4.089, width: 2.009}
