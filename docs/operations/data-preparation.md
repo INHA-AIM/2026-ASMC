@@ -20,8 +20,36 @@ $ASMC_DATA/
 └── models/                           # 원본/실험 모델; 패키지 배포본과 구분
 ```
 
-AIM 원본은 `/mnt/d/asmc_aim/dataset/{static_010101,dynamic_obstacle,tunnel_static_obstacle}` 범위입니다.
-다운로드가 완료되지 않은 원본은 사용하지 않습니다. E드라이브 이전은 아직 팀 공통 경로로 전환한 상태가 아닙니다.
+AIM 원본은 `/mnt/d/morai dataset/asmc_aim/{static_010101,dynamic_obstacle,tunnel_static_obstacle}` 범위입니다.
+이 PC의 이전 `/mnt/d/asmc_aim/dataset`은 새 원본을 가리키는 Windows junction으로 유지합니다.
+기존 manifest·SHA·split을 바꾸지 않고 과거 버전의 참조를 복원하기 위한 경로입니다.
+다운로드가 완료되지 않은 원본은 사용하지 않습니다.
+
+MORAI 기존 원본은 `E:\morai_dataset\SensorData`(`/mnt/e/morai_dataset/SensorData`)에 있습니다.
+사용자가 두 루트를 합칠 때 동명 파일을 덮어쓰지 않았음을 확인했습니다.
+새 Capture는 공식 기본 `C:\MoraiLauncher_Win\MoraiLauncher_Win_Data\SaveFile\SensorData`를
+명시적으로 전달합니다. 복사·검수 도구는 두 위치 중 해당 run이 있는 한 루트를 선택합니다.
+현재 위치 정본은 [data_locations.json](../../src/data_collection/config/data_locations.json)이며,
+역사적 원본 경로 문자열은 일괄 치환하지 않습니다.
+
+[2026-10-17 경로 검증](../../config/baselines/evidence/data_paths_20261017/summary.json)에서
+v11(train41,345/val205/test116)과 TwinLite v6(train26,001/val1,404)의 image/label/target 경로를
+호스트와 읽기 전용 임시 컨테이너에서 전수 확인해 누락0을 확인했습니다.
+원본·라벨·manifest·split은 수정하지 않았습니다. 실제 Capture RPC와 학습은 실행하지 않았으며
+새 저장 경로의 실제 파일 QA는 다음 정차 Capture에서 확인합니다.
+
+`scripts/docker_perception_up.sh`는 로컬 AIM·E 보관본이 모두 있으면 읽기 전용 원본
+mount override를 자동으로 포함합니다. AIM은 현 경로와 기존 manifest 경로 모두에서 읽힙니다.
+현재 실행 중인 ROS 컨테이너를 이 작업에서 재생성하지 않습니다.
+`ASMC_DATA`의 정리본·학습 cache/checkpoint까지 E로 이전한 것은 아닙니다.
+
+추가학습 전 경로 검사는 다음과 같습니다. 검사는 데이터를 변경하지 않습니다.
+
+```bash
+python3 scripts/verify_data_locations.py \
+  --dataset "$ASMC_DATA/dataset_versions/camera_objects_bbox_v11-preflight-r4" \
+  --dataset "$ASMC_DATA/dataset_versions/twinlite_morai_v6_road_marking_actor_negative"
+```
 이전할 때 복사·SHA·원본 링크·컨테이너 mount를 확인하고 기존 원본을 정리합니다.
 YOLO export 이미지는 원본 symlink일 수 있으므로 dataset 폴더만 복사하면 원본까지 이동하지 않습니다.
 

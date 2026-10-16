@@ -37,8 +37,8 @@ def parse_args():
     parser.add_argument("--run-id", action="append", required=True)
     parser.add_argument(
         "--sensor-root",
-        default="/mnt/c/MoraiLauncher_Win/SensorData",
-        help="MORAI Windows SensorData path as seen from WSL",
+        default=None,
+        help="Native root override; otherwise locate this run in default storage or the E-drive archive",
     )
     parser.add_argument("--data-root", default=str(default_data_root()))
     parser.add_argument("--jobs", type=int, default=4)
@@ -123,6 +123,7 @@ def main():
                     ],
                     "file_count": sum(len(entries) for _, entries in frames),
                     "source_bytes": total_bytes,
+                    "source_sensor_root": str(frames[0][1][0]['path'].parent.parent),
                 }
             else:
                 result = sync_run(

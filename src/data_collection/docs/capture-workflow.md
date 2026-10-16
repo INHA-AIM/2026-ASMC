@@ -105,13 +105,22 @@ sensor profile이 바뀌지 않는 연속 수집 단위로 잡는다. 하나라�
 `backend:=grpc` 또는 `backend:=ros_topic`을 지정한다. ROS 방식은 publish 이후의
 저장 완료 응답이 없으므로 100-frame SensorData 파일 QA가 특히 중요하다.
 
-MORAI 이미지·GT는 Windows의 `SensorData`에 저장되는데 **루트가 두 개로 갈린다.**
-`is_custom_file_name = true`인 캡처에서 카메라·GPS·IMU는
-`C:\MoraiLauncher_Win\SensorData`로, 3D LiDAR는
-`C:\MoraiLauncher_Win\MoraiLauncher_Win_Data\SaveFile\SensorData\LIDAR_5`로 간다.
-모라이 자체 동작이며 센서셋에 저장 경로 필드가 없어 설정으로 바꿀 수 없다. 아래
-`sync_capture_mode_data.py`의 `--sensor-root` 기본값은 앞의 루트만 가리키므로
-**LiDAR는 동기화 대상이 아니다.** LiDAR Capture 형식과 과거 실측 상세는 repository 밖의
+새 Capture는 고유 파일명을 유지하고 `file_dir`에 **공식 기본 폴더**
+`C:\MoraiLauncher_Win\MoraiLauncher_Win_Data\SaveFile\SensorData`를 명시한다.
+`morai_file_dir`가 비어 있어도 이 경로를 전달하며, 빈 경로 fallback에 맡기지 않는다.
+저장 위치 정본은 [data_locations.json](../config/data_locations.json)이다.
+기존73개 run은 사용자 지정 이름+빈 경로를 사용했고, 과거 실측에서 카메라·GPS·IMU와
+LiDAR가 두 루트에 갈렸다. 이는 모든 모드에 적용되는 공식 두 경로 규칙이 아니다.
+[공식 Capture 안내](https://help-morai-sim-en.scrollhelp.site/morai-sim-standard-en/capture-sensor-data)는
+기본 폴더와 사용자 지정 `file_dir`를 구분한다. 설치 경로가 다른 PC는 설정 또는
+기존 `morai_file_dir` 인자로 Windows 경로를 지정하고 정차 파일 QA를 수행한다.
+
+2026-10-17 이전 두 원본 루트는 사용자가 덮어쓰기 없이
+`E:\morai_dataset\SensorData`(`/mnt/e/morai_dataset/SensorData`)에 합쳤다.
+복사·검수 도구는 새 기본 폴더와 E 보관본에서 run의 고유 이름으로 **한 루트만** 선택한다.
+같은 이름이 양쪽에 있으면 혼합하지 않고 `--sensor-root` 명시를 요구한다.
+원본 root가 바뀌어도 기존 `source_files` 이력과 학습 버전은 일괄 치환하지 않는다.
+**LiDAR는 이 카메라 복사 도구의 동기화 대상이 아니다.** LiDAR Capture 형식과 과거 실측 상세는 repository 밖의
 개인 분석 기록으로 분리돼 있으며, 팀 공용 파이프라인이 이를 사용하게 될 때 별도 versioned
 contract와 importer를 이 저장소에 추가한다.
 
@@ -148,6 +157,11 @@ python3 scripts/sync_capture_mode_data.py \
 여러 run은 `--run-id`를 반복한다. 완료 데이터는
 `$ASMC_DATA/datasets/<run_id>/`에 저장되고 `_SUCCESS`, `dataset.json`,
 `manifest.jsonl`이 생성된다.
+
+E 보관본을 명시하려면 위 명령에 `--sensor-root /mnt/e/morai_dataset/SensorData`를 추가한다.
+WSL 실행이 기본이며 컨테이너에서 원본을 읽을 때는 해당 경로를 읽기 전용으로 마운트한다.
+`--data-root`/`ASMC_DATA`는 정리된 복사본과 장부의 위치로, 원본 `--sensor-root`와 다르다.
+폴더 이동만으로 새 Capture 저장 위치나 복사 출력 위치가 자동 변경되지는 않는다.
 
 성공으로 기록됐지만 실제 파일 일부가 누락된 capture는 원본 manifest를 고치거나 파일을
 삭제하지 않는다. 확인된 sequence를 명시적으로 제외하면 `dataset.json`에 원래 성공 수,

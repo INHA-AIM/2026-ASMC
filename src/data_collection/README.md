@@ -37,6 +37,10 @@ bbox3_partial은 BBox 누락을 명시하며 누락 뷰를 빈 정답으로 만�
 원본은 `$ASMC_DATA/datasets/<run_id>`, 실행 장부는 `capture_runs/<run_id>`, 학습 export는
 `dataset_versions/<version>`입니다. Windows 저장root·native-ID·완전성은 Capture 절차를 봅니다.
 
+저장 위치 정본은 [data_locations.json](config/data_locations.json)입니다. 새 Capture는 공식
+`SaveFile\SensorData`를 명시하고, 원본 복사·검수는 기본 폴더와 E 보관본에서 run을 찾습니다.
+동일 이름이 여러 루트에 있으면 `--sensor-root`를 지정해야 하며 서로 다른 루트를 섞지 않습니다.
+
 ## Raw/result bag
 
 ```bash

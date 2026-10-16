@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "capture_directory_windows": "C:\\MoraiLauncher_Win\\MoraiLauncher_Win_Data\\SaveFile\\SensorData",
+  "capture_directory_wsl": "/mnt/c/MoraiLauncher_Win/MoraiLauncher_Win_Data/SaveFile/SensorData",
+  "capture_archive_wsl": "/mnt/e/morai_dataset/SensorData",
+  "aim_directory_wsl": "/mnt/d/morai dataset/asmc_aim",
+  "aim_legacy_directory_wsl": "/mnt/d/asmc_aim/dataset"
+}

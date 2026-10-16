@@ -9,7 +9,8 @@
   <arg name="grpc_address" default="127.0.0.1"/>
   <arg name="grpc_port" default="7789"/>
   <arg name="save_topic" default="/SaveSensorData"/>
-  <!-- Windows path interpreted by MORAI. Empty means MORAI's SensorData default. -->
+  <!-- Empty selects the explicit official SaveFile/SensorData path from data_locations.json.
+       Custom filenames remain enabled for run/GT lineage; no empty-path fallback. -->
   <arg name="morai_file_dir" default=""/>
   <arg name="only_when_moving" default="false"/>
   <arg name="min_speed_mps" default="0.2"/>

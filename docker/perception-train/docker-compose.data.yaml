@@ -1,0 +1,16 @@
+# Local relocated originals. The start script includes this only when both exist.
+services:
+  asmc-perception-train:
+    volumes:
+      - type: bind
+        source: ${ASMC_AIM_ROOT:?set ASMC_AIM_ROOT}
+        target: /mnt/d/asmc_aim/dataset
+        read_only: true
+      - type: bind
+        source: ${ASMC_AIM_ROOT:?set ASMC_AIM_ROOT}
+        target: /mnt/d/morai dataset/asmc_aim
+        read_only: true
+      - type: bind
+        source: ${ASMC_MORAI_ARCHIVE:?set ASMC_MORAI_ARCHIVE}
+        target: /mnt/e/morai_dataset/SensorData
+        read_only: true

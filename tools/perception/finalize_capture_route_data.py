@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'src/data_collection/src'))
 from data_collection.capture_sync import (CaptureSyncError, load_successful_records,
                                          preflight_run, sync_run)
+from data_collection.data_locations import resolve_sensor_root
 
 
 def classify_records(sensor_root, records):
@@ -28,7 +29,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--run-id', required=True)
     p.add_argument('--data-root', type=Path, default=ROOT.parent/'data')
-    p.add_argument('--sensor-root', type=Path, default=Path('/mnt/c/MoraiLauncher_Win/SensorData'))
+    p.add_argument('--sensor-root', type=Path, help='Override automatic default/archive root lookup')
     p.add_argument('--ledger', type=Path, required=True, help='Independently reviewed placement ledger')
     p.add_argument('--layout-id', required=True)
     p.add_argument('--output', type=Path, required=True)
@@ -46,6 +47,7 @@ def main():
     if json.loads((run/'summary.json').read_text()).get('failed') != 0:
         raise ValueError('Capture RPC failure requires diagnosis before finalization')
     records = load_successful_records(run/'capture_manifest.jsonl')
+    a.sensor_root = resolve_sensor_root(a.sensor_root, records)
     accepted, excluded = classify_records(a.sensor_root, records)
     if not accepted:
         raise ValueError('no structurally complete RGB/GT records')
