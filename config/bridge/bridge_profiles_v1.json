@@ -120,7 +120,7 @@
       },
       "telemetry_module": {
         "path": "src/asmc_bridge/src/asmc_bridge/telemetry.py",
-        "sha256": "3d10e8a2191f8c8de94377e028821987993b59c5127cc4514185dd4b04d06453"
+        "sha256": "e148d13086ceaa63291c045039a43ec0e97ff8ac008102294fc50df80093c527"
       },
       "python_setup": {
         "path": "src/asmc_bridge/setup.py",
@@ -444,7 +444,9 @@
       "gps": 1.0,
       "imu": 0.3
     },
-    "normal_console_lines_per_period": 2,
+    "console_blocks_per_period": 2,
+    "console_format": "multiline_per_stream_hz",
+    "console_interval_display": false,
     "lidar_detail_destination": "/morai_sensor_bridge/diagnostics",
     "rate_is_drop_count": false
   }

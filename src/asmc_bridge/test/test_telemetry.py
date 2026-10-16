@@ -74,11 +74,14 @@ class TelemetryTest(unittest.TestCase):
         self.now += 1
         rows = self.metrics.snapshot('console')[2]
         text = console_summary(rows, 5.)
-        self.assertIn('RGB F/L/R/4=20.0/19.0/18.0/10.0 Hz', text)
+        self.assertTrue(text.startswith('[SENSORS]\n'))
+        self.assertIn('\n  cam1=20.0Hz  cam2=19.0Hz  cam3=18.0Hz  cam4=10.0Hz\n', text)
+        self.assertIn('\n  lidar=1.0Hz\n', text)
+        self.assertNotIn('5.0s', text)
         self.assertIn('lidar:STALE', text)
         self.assertIn('err +1', text)
         self.assertNotIn('competition:INVALID', text)
-        self.assertNotIn('GT SEM', text)
+        self.assertNotIn('sem_front=', text)
         self.assertIn('drop +?', text)
 
     def test_network_console_omits_optional_protocol_and_retains_custom_ids(self):
@@ -87,10 +90,35 @@ class TelemetryTest(unittest.TestCase):
         self.metrics.register('cmd', transmit=True)
         rows = self.metrics.snapshot('console')[2]
         text = console_summary(rows, 5., network=True, ego_link='A2256W000126')
+        self.assertTrue(text.startswith('[NETWORK]\n'))
         self.assertIn('TX cmd=idle', text)
+        self.assertNotIn('5.0s', text)
         self.assertIn('link=A126', text)
         self.assertNotIn('competition=', text)
         self.assertEqual(short_link('custom-link-id'), 'custom-link-id')
+
+    def test_console_shows_gt_and_custom_sensors_without_missing_view_placeholders(self):
+        for name in ('cam1', 'gps', 'imu', 'lidar_instance', 'sem_front', 'sem_left', 'sem_right', 'custom'):
+            self.metrics.register(name)
+            self.metrics.message(name)
+        self.now += 1
+        text = console_summary(self.metrics.snapshot('console')[2], 1.)
+        self.assertIn('\n  cam1=1.0Hz\n', text)
+        self.assertNotIn('cam2=', text)
+        self.assertIn('\n  gps=1.0Hz  imu=1.0Hz  lidar=0.0Hz  lidar_instance=1.0Hz\n', text)
+        self.assertIn('\n  sem_front=1.0Hz  sem_left=1.0Hz  sem_right=1.0Hz\n', text)
+        self.assertIn('\n  custom=1.0Hz\n', text)
+
+    def test_network_console_shows_each_receive_rate_and_required_competition_fault(self):
+        for name in ('ego', 'col', 'competition'):
+            self.metrics.register(name)
+            self.metrics.message(name)
+        self.metrics.increment('competition', 'header_errors')
+        self.now += .1
+        text = console_summary(self.metrics.snapshot('console')[2], .1, network=True)
+        self.assertIn('\n  RX ego=10.0Hz  col=10.0Hz  competition=10.0Hz\n', text)
+        self.assertIn('competition:DEGRADED', text)
+        self.assertIn('err +1', text)
 
     def test_recent_errors_warn_but_historical_errors_do_not_hide_recovery(self):
         self.metrics.message('lidar')

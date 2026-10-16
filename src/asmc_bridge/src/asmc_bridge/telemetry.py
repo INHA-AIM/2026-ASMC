@@ -195,45 +195,48 @@ def short_link(link):
 
 
 def console_summary(rows, interval, network=False, ego_link='', competition_link=''):
-    """Group fixed camera views and report recent faults instead of old totals."""
+    """Render one multiline block with a name and unit for each active stream.
+
+    Rates retain their measured interval; the console need not print that interval.
+    """
     shown = set()
 
     def rate(name):
         shown.add(name)
-        row = rows.get(name)
-        return '-' if row is None or row['health'] == 'IDLE' else '{:.1f}'.format(row['interval_hz'])
+        row = rows[name]
+        value = 'idle' if row['health'] == 'IDLE' else '{:.1f}Hz'.format(row['interval_hz'])
+        return '{}={}'.format(name, value)
 
-    def group(label, names):
-        if not any(name in rows for name in names):
-            return None
-        return '{}={} Hz'.format(label, '/'.join(rate(name) for name in names))
+    def group(names):
+        return '  '.join(rate(name) for name in names if name in rows)
 
     if network:
-        rx = ['{}={}'.format(name, rate(name)) for name in ('ego', 'col', 'obj') if name in rows]
+        parts = ['[NETWORK]']
+        rx = group(('ego', 'col', 'obj'))
         competition = rows.get('competition')
         if competition and competition['health'] not in ('IDLE', 'UNSUPPORTED'):
-            rx.append('competition=' + rate('competition'))
+            rx = '  '.join(value for value in (rx, rate('competition')) if value)
         shown.add('competition')
-        parts = ['[NET {:.1f}s] RX '.format(interval) + ' '.join(rx) + ' Hz']
-        if 'cmd' in rows:
-            shown.add('cmd')
-            parts.append('TX cmd=' + ('idle' if rows['cmd']['health'] == 'IDLE' else rate('cmd') + ' Hz'))
-        parts.append('link=' + short_link(ego_link))
+        if rx:
+            parts.append('  RX ' + rx)
+        links = ['link=' + short_link(ego_link)]
         if competition_link and competition and competition['health'] in ('OK', 'DEGRADED'):
-            parts.append('competition_link=' + short_link(competition_link))
+            links.append('competition_link=' + short_link(competition_link))
+        if 'cmd' in rows:
+            parts.append('  TX ' + rate('cmd') + '  | ' + '  '.join(links))
+        else:
+            parts.append('  ' + '  '.join(links))
     else:
-        parts = ['[SENSOR {:.1f}s]'.format(interval)]
-        for label, names in (
-                ('RGB F/L/R/4', ('cam1', 'cam2', 'cam3', 'cam4')),
-                ('GPS/IMU', ('gps', 'imu')),
-                ('LiDAR', ('lidar',)),
-                ('GT SEM F/L/R', ('sem_front', 'sem_left', 'sem_right')),
-                ('GT LiDAR', ('lidar_instance',))):
-            value = group(label, names)
+        parts = ['[SENSORS]']
+        for names in (('cam1', 'cam2', 'cam3', 'cam4'),
+                      ('gps', 'imu', 'lidar', 'lidar_instance'),
+                      ('sem_front', 'sem_left', 'sem_right')):
+            value = group(names)
             if value:
-                parts.append(value)
-    other = ['{}={} Hz'.format(name, rate(name)) for name in sorted(rows) if name not in shown]
-    parts.extend(other)
+                parts.append('  ' + value)
+    other = group([name for name in sorted(rows) if name not in shown])
+    if other:
+        parts.append('  ' + other)
     issues = []
     for name, row in sorted(rows.items()):
         if row['health'] not in ('OK', 'IDLE', 'UNSUPPORTED'):
@@ -241,14 +244,14 @@ def console_summary(rows, interval, network=False, ego_link='', competition_link
             if row['health'] == 'STALE':
                 description += '({:.1f}s)'.format(row['last_message_age_sec'])
             issues.append(description)
-    parts.append('state=' + (','.join(issues) if issues else 'OK'))
+    state = 'state=' + (','.join(issues) if issues else 'OK')
     errors = sum(row[key + '_delta'] for row in rows.values()
                  for key in ('parse_errors', 'header_errors', 'send_errors'))
     receivers = [row for row in rows.values() if not row['transmit']]
     drop_known = all(row['socket_drop_supported'] for row in receivers)
     drops = str(sum(row['socket_drops_delta'] for row in receivers)) if drop_known else '?'
-    parts.append('err +{} / drop +{}'.format(errors, drops))
-    return ' | '.join(parts)
+    parts.append('  {}  | err +{}  | drop +{}'.format(state, errors, drops))
+    return '\n'.join(parts)
 
 
 class PeriodicReporter:

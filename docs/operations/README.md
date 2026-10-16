@@ -209,7 +209,7 @@ SIM 송신 cadence, Windows ingress, UDP, bridge와 ROS scheduling을 단일 rat
 2. `docker_ros_up.sh status`가 `mode=host`, `published={}`인지 확인한다.
 3. MORAI LiDAR Connect와 `127.0.0.1:9299`를 확인한다.
 4. `ss -lunp`로 다른 9299 bind가 없는지 확인한다.
-5. bridge foreground의 `[SENSOR 5.0s] ... LiDAR=... Hz`와1초 주기 diagnostics를 확인한다.
+5. bridge foreground의 `[SENSORS]` 요약 블록에서 `lidar=...Hz`를 확인한다. 콘솔은5초, diagnostics는1초 주기다.
 6. `rotation_hz`와 PointCloud의 `interval_hz`를 비교한다. 두 값 모두 약12Hz이고
    `socket_drops=0`이면 ROS 변환 이전의 입력 cadence를 먼저 조사한다. `raw_packet_hz`는
    최근 구간, `packets_per_frame_median`은 최대4096프레임이므로 두 값을 같은 창으로 단정하지 않는다.
