@@ -51,3 +51,12 @@ LiDAR 최종 출력·공동 자율주행·장시간 수락을 새로 검증했�
 격리 검사 환경에 판제 package.xml이 없어 첫 실행이 실패한 증거는
 `camera-signal-owner-runtime-tests.attempt1.log`에, 환경 보완 후 통과 결과는
 `camera-signal-owner-runtime-tests.log`에 보존했다.
+
+## CI의 이전 구간 제어 기대값 수정
+
+`1e84c40b`의 catkin CI는 `check_region_example_ros.py`가 여전히 구간 밖 STANDBY를
+기대해 실패했다. 제품 설정을 되돌리지 않고 검증 도구를 현재 상시 ACTIVE·15/15/10Hz 정책에
+맞췄다. 구간 제어·PREPARE·GPS 무효/복구·외부 제어 전환은 명시적인 임시 시험 정책으로
+별도 검증해 기존 API 검사를 유지했다.
+격리 ROS master에서17개 확인 항목이 모두 통과했다. 증거는 앞의 로컬 실행 폴더의
+`pr92-region-example-ros.json`과 `pr92-region-master.log`다. 최신 hosted CI 판정은 PR #92에서 확인한다.
