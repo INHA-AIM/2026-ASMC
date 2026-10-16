@@ -2,12 +2,13 @@
 
 PR #85의 최신 시작점이다. [실행 계약](../../contracts/perception/camera-runtime-v1.md)과 함께 읽는다.
 TwinLite 기본 backend는 TensorRT FP16이다. 2026-10-16 사용자 직접 주행·시각화에서 YOLO와 family 차선의 정성 확인을 마쳤다.
-전체 자동 공급 수락은 별도이며, 아래 순간 공백/freshness 차단이 남아 PR은 Draft/미병합으로 유지한다.
+전체 자동 공급 수락은 별도다. 사용자는 2026-10-16 아래 순간 공백/freshness 제한을 기록한 상태로 현재 리팩토링을 main에 병합하도록 승인했다.
+병합 결정은 자동 시험 전체 통과를 뜻하지 않으며, 원본 실패와 후속 개선 항목을 보존한다.
 이전 [음영 family 시험](camera-shadow-family-optimization.md)과 [PyTorch/TensorRT 차이](camera-twinlite-tensorrt.md)는 당시 증거로 보존한다.
 
 ## 현재 기본 구성 — 사용자 검토용
 
-아래는 PR #85의 `camera.launch` 정본이다. 아직 main 병합 완료를 의미하지 않는다.
+아래는 PR #85로 반영하는 `camera.launch` 정본이다. 실제 병합 커밋과 시각은 [PR #85](https://github.com/INHAautonav/2026-ASMC/pull/85)의 병합 기록을 따른다.
 구형 `perception.launch`의 작은 입력/10Hz 호환 설정과 과거 실험 YAML은 현재 기본값과 구분한다.
 
 | 항목 | YOLO 객체 인지 | TwinLite 차선 semantic |
@@ -148,9 +149,9 @@ YOLO/TwinLite 최소10Hz·ResNet 최소9.5Hz, 모델 p95/p99·공백, stamp 순�
 직전 family 계산38.2ms·다음63.6ms이며 주변의 계측된 gen2 GC는 없다. 따라서 소비자 전달이나 MORAI 렌더링·GC만을 원인으로 단정하지 않는다.
 10분 gen2 GC 최대는 family18.0ms, TwinLite/시험 소비자는 관측0이다. 이전533ms/2.34초 정지를 완전히 해결했다는 근거로 확대하지 않는다.
 
-**결정: TensorRT 기본값을 유지하고 전체 자동 수락은 보류한다.** 남은 차단은 SUNNY source-age 저하와10분 family262ms 공백이다.
+**자동 시험 판정: TensorRT 기본값을 유지하고 전체 자동 수락은 보류한다.** 남은 항목은 SUNNY source-age 저하와10분 family262ms 공백이다.
 후속은 모델→model-grid 공급 순간 지연과 family CPU burst를 같은 입력·단계별 시간으로 확인하는 작업이다.
-아래 사용자 정성 주행 확인은 완료됐지만 위 자동 시험 실패를 면제하지 않으며 PR #85는 Draft/미병합이다.
+시험 종료 당시 PR은 Draft/미병합이었다. 아래 사용자 정성 주행 확인과 병합 승인은 위 실패를 통과로 바꾸지 않는다.
 
 CPU437개·실제 ROS 모드/관측/렌더링22개, Noetic 빌드·명시적 overlay 설치 및 설치본 E8/pretrained/TRT/PyTorch 복구 경로를 확인했다.
 첫 설치가 inherited PWD 때문에 `/root/ws`를 선택한 기록을 보존하고 `catkin_make -C /data/runtime/camera-family-supply-v2 install`로 실제 overlay를 재검증했다. 소스·마운트는 바꾸지 않았다.
@@ -179,6 +180,23 @@ Hosted CI는 최신 push의 check 상태를 별도 기록하며, billing 차단�
 **결정:** 현재 E8·confidence0.40·NMS0.50과 실행 설정을 유지한다. 추가 수집/학습은 지금 시작하지 않고 판제 측 개선 요청이 있을 때 진행한다.
 요청 시 먼저 기존 자료의 하위 유형·정면/후면·차로 내·근거리·음영 조건을 집계하고 실패가 확인된 조건만 보강한다.
 보강 후에는 bus/truck/bicycle/dog 개선뿐 아니라 기존16종의 회귀·중복/배경 FP와3뷰 공급도 함께 확인한다.
+
+## 병합 결정과 남은 개발 항목 — 2026-10-16
+
+사용자 직접 주행 확인 후 현재 리팩토링을 적용해 PR #85를 병합하라는 승인을 받았다.
+현재 설정을 팀 개발 기준으로 반영하며, SUNNY readiness 저하1표본과10분 family 최대 공백261.7ms는 알려진 제한으로 남긴다.
+Freshness350ms/공백250ms 기준이나 실패 증거는 변경하지 않는다. 전체 자동 수락·공동 자율주행 수락·3뷰 LiDAR fusion 완료를 의미하지 않는다.
+
+최신 main의 PR #86 시나리오 검증/replay 변경을 먼저 통합한다. 기존 카메라 공개/호환 진입점과 계약을 검사하고 사용자 실행 프로세스·컨테이너 마운트는 변경하지 않는다.
+병합 전 hosted CI3개는 모두 billing/spending 제한으로 steps0 상태였다. 로컬 검사와 hosted 미실행을 구분하고 CI 보호 규칙을 해제하지 않는다.
+main `5c53ac06` 통합 후 문서 migration·공용/인지/토픽/실행 계약 검사와 회귀60개를 통과했다.
+회귀는 카메라 facade17·planning launch/filter4·시나리오 도구 camera runtime4·공용 계약35개다.
+실행 코드/모델은 추가 변경하지 않았으므로 기존 CPU437개·실제 ROS22개·빌드/출력 동등성·실시간 실패 증거를 재사용한다.
+
+다음 작업의 첫 대상은 LiDAR 인계 문서다. 카메라별 관측 버퍼·보정·좌표·source stamp·session/generation·원본 이름/세 그룹·정상 빈 결과/무효 결과의 소비 규칙과 담당 범위를 명시한다.
+현재 실행 fusion은 기존 Main의 전방 bbox unique·±50ms·200ms 대기이며, `asmc_lidar`의3뷰 fusion 구현은 후속 별도 작업이다.
+그다음 디스크/데이터 경로를 확정하고 전체 docs를 현행화한다. 추가 수집/학습은 판제 측 개선 요청 이후에 진행한다.
+공급 순간 지연과 family CPU burst는 별도 코드 개선 항목으로 유지하며, 가중치 추가학습으로 해결됐다고 가정하지 않는다.
 
 ## 직접 실행·복구
 
@@ -245,7 +263,7 @@ roslaunch asmc_camera _runtime.launch lane_runtime_config:=$(rospack find asmc_c
 
 ## 다음 순서
 
-1. 사용자 정성 주행 확인은 완료됐다. 남은 자동 공급 차단을 해결/재검증하고 최신 main/회귀를 확인해 PR #85를 정리한다. 이번 기록 갱신에서 병합하지 않는다.
+1. 사용자 승인에 따라 현재 리팩토링을 PR #85로 main에 반영한다. 자동 공급의 알려진 제한은 별도 후속 개선/재검증 항목으로 유지한다.
 2. LiDAR 인계:3뷰 관측·보정·시각·세대·원본 이름/그룹 계약과 담당 작업을 갱신한다. 현재 실행 fusion은 기존 Main이며3뷰 fusion 완료로 표시하지 않는다.
 3. 큰 자료의 복사/해시/링크/컨테이너 경로 검증 후 E드라이브 중심 저장 경로를 확정하고 디스크를 정리한다.
 4. 그 경로를 기준으로 전체 docs를 현행화하고 중복을 정리한다.

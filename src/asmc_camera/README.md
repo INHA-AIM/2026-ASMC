@@ -4,7 +4,7 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 실행은 `camera.launch`, 시각화는 `view.launch`를 사용합니다.
 기본 객체 모델은 YOLO26l v11 E8, 사전학습 YOLO26l도 실행 시 선택할 수 있습니다.
 현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
-PR #85의 현재 기본 tensor는 두 모델 모두 전방544×960·좌우480×640입니다. 모델별 독립 프로세스를 사용하며 입력 tensor를 공유하지 않습니다.
+현재 기본 tensor는 두 모델 모두 전방544×960·좌우480×640입니다. 모델별 독립 프로세스를 사용하며 입력 tensor를 공유하지 않습니다.
 TwinLite의 기본 backend는 TensorRT FP16이며, 명시적인 PyTorch 복구 설정을 보존합니다. 변환 품질 검증은
 [TensorRT 검증 기록](../../docs/handoffs/perception/camera-twinlite-tensorrt.md)에서 관리합니다.
 [음영 family 최적화](../../docs/handoffs/perception/camera-shadow-family-optimization.md)는
@@ -12,7 +12,8 @@ family 전용 경로·수요 기반 BEV·GC 진단과 후속 수락 상태를 �
 이전 음영 반복12회와10분 연속 시험의 순간 family freshness/공백 실패는 과거 증거로 보존합니다.
 현재 기본 전환과 전체 공급 수락은 별도 결정이며, 최신 결과·직접 시험 명령은
 [family 공급 최적화](../../docs/handoffs/perception/camera-family-supply-optimization.md)를 따릅니다.
-2026-10-16 사용자 직접 주행·시각화 확인은 완료됐습니다. 자동 시험의 순간 공백/freshness 차단이 남아 PR은 Draft/미병합입니다.
+2026-10-16 사용자 직접 주행·시각화 확인 후 현재 리팩토링의 main 병합 승인을 받았습니다.
+자동 시험의 순간 공백/freshness는 알려진 제한으로 남기며, 병합을 전체 자동 수락으로 표시하지 않습니다.
 같은 문서에 bus/truck의 간헐적 누락, 차로 앞 bicycle/dog, dog 하위 종류별 약세와 판제 요청 후 추가학습 결정을 기록했습니다.
 YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합니다. 같은 목표 Hz가 같은 영상 시각을 보장하지는 않습니다.
 
