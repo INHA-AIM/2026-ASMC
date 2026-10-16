@@ -178,6 +178,24 @@ int main() {
                "invalid step: Init fails when delta_s.step <= 0");
     }
 
+    // Cruise profile is required and strictly validated even when disabled.
+    for (const std::string value : {".nan", ".inf", "-1.0", "0.0", "bad"}) {
+        const auto config = MakeMutatedConfig(
+            source, waypoint_file, "speed_error_weight: 4.0",
+            "speed_error_weight: " + value, "config_loader_bad_cruise.yaml");
+        Expect(!config.empty(), "cruise: mutation created");
+        FrenetPlanner planner;
+        Expect(!planner.Init(config), "cruise: invalid speed cost rejected");
+    }
+    {
+        const auto config = MakeMutatedConfig(
+            source, waypoint_file, "    speed_error_weight: 4.0\n", "",
+            "config_loader_missing_cruise.yaml");
+        Expect(!config.empty(), "cruise: missing-key mutation created");
+        FrenetPlanner planner;
+        Expect(!planner.Init(config), "cruise: missing cost rejected");
+    }
+
     if (g_failures > 0) {
         std::cerr << g_failures << " config validation check(s) failed\n";
         return 1;

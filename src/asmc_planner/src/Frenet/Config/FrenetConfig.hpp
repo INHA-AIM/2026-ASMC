@@ -6,6 +6,16 @@
 
 #include "Frenet/Generator/GeneratorConfig.hpp"
 
+// Simulator tuning for externally requested high-speed KEEP only. Maneuver
+// selects this profile; Speed/Evaluation continue to consume ordinary limits.
+struct KeepCruiseConfig {
+    bool enabled = false;
+    double min_requested_speed = 0.0; // [m/s], before curvature limiting
+    double max_lateral_accel = 0.0;   // [m/s^2]
+    double speed_error_weight = 0.0;
+    std::vector<std::string> source_links; // Explicitly validated ordinary roads.
+};
+
 // =========================================================
 // TrackedObject의 연속 heading으로 yaw-rate를 추정/보관하는 파라미터
 // (frenet_planner.cpp의 PreparePlanningContext). 회전교차로/합류에서 순환

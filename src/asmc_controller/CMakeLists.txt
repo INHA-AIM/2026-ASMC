@@ -14,9 +14,11 @@ set(MPC_CORE_SOURCES
   src/Global/Global.cpp
   src/Util/ParameterLoader.cpp
   src/MPC/Model/vehicle_model.cpp
+  src/MPC/Model/steering_delay.cpp
   src/MPC/Cost/cost_function.cpp
   src/MPC/Constraints/constraints.cpp
   src/MPC/Solver/mpc_solver.cpp
+  src/MPC/Reference/braking_reference.cpp
   src/MPC/Reference/path_resampler.cpp
   src/MPC/Reference/trajectory_timing.cpp
   src/MPC/Reference/reference_validator.cpp
@@ -52,6 +54,12 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(stop_brake_response_test gtest_main)
   endif()
 
+  catkin_add_gtest(straight_stability_test test/straight_stability_test.cpp)
+  if(TARGET straight_stability_test)
+    target_compile_definitions(straight_stability_test PRIVATE
+      CONTROLLER_YAML_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/controller.yaml")
+    target_link_libraries(straight_stability_test mpc_core gtest_main)
+  endif()
   catkin_add_gtest(parameter_loader_test test/parameter_loader_test.cpp)
   if(TARGET parameter_loader_test)
     target_compile_definitions(parameter_loader_test PRIVATE
@@ -97,7 +105,7 @@ if(CATKIN_ENABLE_TESTING)
 
   catkin_add_gtest(braking_steering_test test/braking_steering_test.cpp)
   if(TARGET braking_steering_test)
-    target_link_libraries(braking_steering_test gtest_main)
+    target_link_libraries(braking_steering_test mpc_core gtest_main)
   endif()
 
   catkin_add_gtest(mpc_controller_test test/mpc_controller_test.cpp)

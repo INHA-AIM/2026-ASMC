@@ -21,7 +21,13 @@ struct StateAdapterConfig {
     double minimum_speed_baseline_s = 0.12;
     double maximum_speed_mps = 60.0;
     double position_gps_correction_gain = 1.0;
+    // Enable only when IMU orientation is true ENU, not already UTM grid yaw.
+    bool imu_yaw_is_true_enu = false;
     double gps_correction_gain = 0.35;
+    // 0 keeps the fixed gain. GPS speed noise grows with speed when sensor
+    // timestamp jitter affects the finite-difference velocity measurement.
+    double gps_gain_reference_speed_mps = 0.0;
+    double gps_gain_minimum = 0.08;
     double gps_innovation_limit_mps = 3.0;
     double imu_acceleration_filter_alpha = 0.50;
     double imu_acceleration_deadband_mps2 = 0.10;
@@ -107,6 +113,7 @@ private:
     double predicted_acceleration_mps2_ = 0.0;
     double predicted_yaw_rate_ = 0.0;
     double last_gps_position_innovation_m_ = 0.0;
+    double imu_to_grid_yaw_ = 0.0;
 
     bool imuAt(const ros::Time& stamp, ImuSample& sample) const;
     bool poseAt(const ros::Time& stamp, PoseSample& pose) const;

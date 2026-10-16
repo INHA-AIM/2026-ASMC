@@ -109,15 +109,17 @@ planner:
   # 연속 곡률-속도 관계(Speed/CurveSpeed.cpp)만 쓰고, 이산 curve_vel_*/
   # curve_th_* 문턱값은 쓰지 않는다(사용처 없음 확인 후 제거, 2026 리팩토링).
   curve_speed:
-    target_vel: 14.5
+    target_vel: 16.1111111111  # [m/s] 58 km/h upper target; curve/map limits still apply.
     # [m] 속도 기반 필요 제동거리에 더해지는 추가 곡률 preview 거리.
     curve_lookahead_m: 27.0
-    # 횡가속도 한계의 80%만 사용(여유폭 확보). v_curve = sqrt(max_lateral_accel
+    # MORAI 완만한 곡선 시험: 횡가속도 한계(2.6)의 95% 사용.
+    # 반경 80 m에서 약 50.6 km/h; 더 급한 곡선은 계속 감속한다.
+    # 실제 추종 안정성은 새 Bag으로 확인. v_curve = sqrt(max_lateral_accel
     # * lateral_accel_safety_factor / |kappa|).
-    lateral_accel_safety_factor: 0.8
-    # 실제 평균 감속도는 max_longitudinal_accel의 절반 정도로 가정(lookahead
-    # 제동거리 계산용).
-    comfortable_decel_factor: 0.5
+    lateral_accel_safety_factor: 0.95
+    # 곡선 제동거리/속도 프로파일의 감속 가정: 3.0 * 0.65 = 1.95 m/s^2.
+    # 횡가속도·jerk 한계는 유지하며, 신호 접근/STOP의 1.5 설정과는 별개다.
+    comfortable_decel_factor: 0.65
     # [m/s^2] usable_decel의 최소 하한.
     min_usable_decel: 0.5
 
@@ -365,6 +367,17 @@ planner:
     accel_intent_deadband_mps: 0.3
 
   # --- CostWeights (cost.hpp) ---------------------------------
+  # Selected high-speed KEEP roads only; signal/obstacle/merge low-speed requests use
+  # the base limits and costs. Disable this profile to restore previous tuning.
+  keep_cruise:
+    enabled: true
+    # Ordinary roundabout exit and post-jamming roads. Highway exit keeps 2.6:
+    # raising its curve allowance failed the full-lap tracking guard.
+    source_links: [A2256W000054, A2256W000846, A2256W000128, A2256W000333, A2256W000154, A2256W000332, A2256W000751]
+    min_requested_speed: 11.1111111111  # [m/s] 40 km/h
+    max_lateral_accel: 3.8
+    speed_error_weight: 4.0
+
   cost_weights:
     kj: 0.1
     kt: 1.0

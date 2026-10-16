@@ -20,6 +20,9 @@ double NormalizeAngle(double angle) {
 }
 
 bool ValidGps(const morai_msgs::GPSMessage& gps) {
+    // (0,0) with status=1 is MORAI's jamming sentinel, outside this UTM 52N
+    // map. Never let it pollute the position/speed history or yaw rotation.
+    if (gps.latitude == 0.0 && gps.longitude == 0.0) return false;
     return gps.status > 0 && ValidStamp(gps.header.stamp) &&
            IsFinite(gps.latitude) && gps.latitude >= -90.0 &&
            gps.latitude <= 90.0 && IsFinite(gps.longitude) &&
@@ -41,6 +44,12 @@ GpsImuStateEstimator::GpsImuStateEstimator(const StateAdapterConfig& config)
     : config_(config) {
     config_.gps_correction_gain =
         std::clamp(config_.gps_correction_gain, 0.0, 1.0);
+    if (!IsFinite(config_.gps_gain_reference_speed_mps) ||
+        config_.gps_gain_reference_speed_mps < 0.0)
+        config_.gps_gain_reference_speed_mps = 0.0;
+    config_.gps_gain_minimum = IsFinite(config_.gps_gain_minimum)
+        ? std::clamp(config_.gps_gain_minimum, 0.0, config_.gps_correction_gain)
+        : config_.gps_correction_gain;
     config_.position_gps_correction_gain =
         std::clamp(config_.position_gps_correction_gain, 0.0, 1.0);
     config_.imu_acceleration_filter_alpha =
@@ -66,6 +75,17 @@ void GpsImuStateEstimator::updateGps(
     latest_gps_valid_ = true;
     gps_received_at_ = received_at;
     latest_gps_source_stamp_ = gps.header.stamp;
+
+    if (config_.imu_yaw_is_true_enu) {
+        const double rotation = Utm52NYawOffset(gps.latitude, gps.longitude);
+        const double change = NormalizeAngle(rotation - imu_to_grid_yaw_);
+        // GPS can arrive after IMU. Retained orientations must use one grid
+        // basis, including samples received before the first usable fix.
+        for (auto& imu : imu_history_) imu.yaw = NormalizeAngle(imu.yaw + change);
+        for (auto& pose : pose_history_) pose.yaw = NormalizeAngle(pose.yaw + change);
+        predicted_yaw_ = NormalizeAngle(predicted_yaw_ + change);
+        imu_to_grid_yaw_ = rotation;
+    }
 
     double easting = 0.0;
     double northing = 0.0;
@@ -95,8 +115,8 @@ void GpsImuStateEstimator::updateImu(
     const auto& q = imu.orientation;
     const double norm =
         std::sqrt(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z);
-    const double yaw = QuaternionToYaw(
-        q.w / norm, q.x / norm, q.y / norm, q.z / norm);
+    const double yaw = NormalizeAngle(QuaternionToYaw(
+        q.w / norm, q.x / norm, q.y / norm, q.z / norm) + imu_to_grid_yaw_);
 
     double acceleration = std::clamp(
         imu.linear_acceleration.x, config_.imu_acceleration_min_mps2,
@@ -365,7 +385,17 @@ void GpsImuStateEstimator::updateSpeedFromGps(
         const double limited_innovation = std::clamp(
             gps_speed - estimated_speed, -config_.gps_innovation_limit_mps,
             config_.gps_innovation_limit_mps);
-        correction = config_.gps_correction_gain * limited_innovation;
+        double gain = config_.gps_correction_gain;
+        // Use the smaller speed so braking/stopping restores the stronger
+        // correction promptly. IMU propagation remains responsive to real
+        // acceleration; only the noisy absolute GPS correction is reduced.
+        const double speed = std::min(gps_speed, estimated_speed);
+        if (config_.gps_gain_reference_speed_mps > 0.0 &&
+            speed > config_.gps_gain_reference_speed_mps) {
+            const double ratio = config_.gps_gain_reference_speed_mps / speed;
+            gain = std::max(config_.gps_gain_minimum, gain * ratio * ratio);
+        }
+        correction = gain * limited_innovation;
         speed_mps_ = std::clamp(speed_mps_ + correction, 0.0,
                                 config_.maximum_speed_mps);
     }

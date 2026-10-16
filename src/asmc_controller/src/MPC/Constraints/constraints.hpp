@@ -3,6 +3,8 @@
 
 #include "Global/Global.hpp"
 
+double SteeringRateLimit(double speed_mps, const MPCParams& params);
+
 // box constraint 클리핑
 void clipSteering(MPCControl& u, double max_steering);
 void clipAcceleration(MPCControl& u, double a_min, double a_max);

@@ -6,6 +6,7 @@
 
 #include "MPC/Math/utils.hpp"
 #include "MPC/Model/vehicle_model.hpp"
+#include "MPC/Model/steering_delay.hpp"
 #include "MPC/Cost/cost_function.hpp"
 #include "MPC/Constraints/constraints.hpp"
 
@@ -75,16 +76,19 @@ static double evalCost(
     const ReferencePath&                ref,
     const MPCControl&                   prev_control,
     const MPCParams&                    params,
+    const std::vector<double>&          steering_history,
     const std::vector<LinearizedModel>* models   = nullptr,
     std::vector<MPCState>*              out_traj = nullptr)
 {
+    const auto applied = ApplySteeringDelay(U, steering_history, prev_control.delta,
+        params.steering_response_delay_s, params.dt);
     std::vector<MPCState> traj;
     if (models && models->size() == U.size()) {
         // 선형 모델로 trajectory 예측
-        traj = predictTrajectoryLTV(x0, U, *models);
+        traj = predictTrajectoryLTV(x0, applied, *models);
     } else {
         // fallback: 비선형 forward sim
-        traj = predictTrajectory(x0, U, params.dt, params.wheelbase,
+        traj = predictTrajectory(x0, applied, params.dt, params.wheelbase,
                                  params.vel_min, params.vel_max,
                                  params.steering_curvature_gain);
     }
@@ -109,7 +113,8 @@ static std::vector<MPCControl> computeGradient(
     const std::vector<LinearizedModel>& models,
     const ReferencePath&                ref,
     const MPCControl&                   prev_control,
-    const MPCParams&                    params)
+    const MPCParams&                    params,
+    const std::vector<double>&          steering_history)
 {
     const int N   = static_cast<int>(U.size());
     const double eps = 1e-3;
@@ -120,16 +125,16 @@ static std::vector<MPCControl> computeGradient(
         std::vector<MPCControl> U_p = U, U_m = U;
         U_p[k].delta += eps;
         U_m[k].delta -= eps;
-        grad[k].delta = (evalCost(x0, U_p, ref, prev_control, params, &models)
-                       - evalCost(x0, U_m, ref, prev_control, params, &models))
+        grad[k].delta = (evalCost(x0, U_p, ref, prev_control, params, steering_history, &models)
+                       - evalCost(x0, U_m, ref, prev_control, params, steering_history, &models))
                        / (2.0 * eps);
 
         // d/d_accel
         U_p = U; U_m = U;
         U_p[k].accel += eps;
         U_m[k].accel -= eps;
-        grad[k].accel = (evalCost(x0, U_p, ref, prev_control, params, &models)
-                       - evalCost(x0, U_m, ref, prev_control, params, &models))
+        grad[k].accel = (evalCost(x0, U_p, ref, prev_control, params, steering_history, &models)
+                       - evalCost(x0, U_m, ref, prev_control, params, steering_history, &models))
                        / (2.0 * eps);
     }
     return grad;
@@ -146,10 +151,15 @@ MPCResult solveMPC(
     const ReferencePath&           ref,
     const MPCControl&              prev_control,
     const std::vector<MPCControl>& warm_start,
-    const MPCParams&               params)
+    const MPCParams&               configured_params,
+    const std::vector<double>&     steering_history)
 {
     MPCResult result;
     result.success = false;
+    // Apply the same envelope to warm start and every optimization projection.
+    // Clipping only the published command would invalidate the predicted path.
+    MPCParams params = configured_params;
+    params.steering_rate_max = SteeringRateLimit(x0.vx, configured_params);
 
     if (ref.empty()) {
         result.solver_msg = "Empty reference path";
@@ -203,37 +213,40 @@ MPCResult solveMPC(
     //    → 이후 gradient/line search에서 비선형 forward sim 대체
     // ====================================
     std::vector<LinearizedModel> models = buildLTVModels(
-        x0, U, params.dt, params.wheelbase, params.vel_min, params.vel_max,
+        x0, ApplySteeringDelay(U, steering_history, prev_control.delta,
+            params.steering_response_delay_s, params.dt), params.dt, params.wheelbase, params.vel_min, params.vel_max,
         params.steering_curvature_gain);
 
-    double cost_cur = evalCost(x0, U, ref, prev_control, params, &models);
+    double cost_cur = evalCost(x0, U, ref, prev_control, params, steering_history, &models);
     if (static_cast<int>(warm_start.size()) >= N) {
         // Keep shifted steering and the actual previous actuator command.
-        // Only challenge stale acceleration when the new reference brakes.
-        bool stale_braking_seed = false;
-        std::vector<MPCControl> braking_seed = U;
+        // Challenge stale acceleration when the new speed profile changes.
+        // A reused near-zero acceleration can otherwise stall speed tracking.
+        bool stale_acceleration_seed = false;
+        std::vector<MPCControl> acceleration_seed = U;
         for (int i = 0; i < N; ++i) {
             const size_t ref_idx = std::min(static_cast<size_t>(i), ref.size() - 1);
             if (ref.a_ref.size() <= ref_idx || !std::isfinite(ref.a_ref[ref_idx]))
                 continue;
             const double a_ref = clip(ref.a_ref[ref_idx], params.accel_min, params.accel_max);
-            stale_braking_seed |= a_ref < -0.1 && U[i].accel > a_ref + 0.1;
-            braking_seed[i].accel = a_ref;
+            stale_acceleration_seed |= std::abs(U[i].accel - a_ref) > 0.1;
+            acceleration_seed[i].accel = a_ref;
         }
-        if (stale_braking_seed) {
-            projectControls(braking_seed, prev_control, params);
-            auto braking_models = buildLTVModels(
-                x0, braking_seed, params.dt, params.wheelbase,
+        if (stale_acceleration_seed) {
+            projectControls(acceleration_seed, prev_control, params);
+            auto seed_models = buildLTVModels(
+                x0, ApplySteeringDelay(acceleration_seed, steering_history, prev_control.delta,
+                    params.steering_response_delay_s, params.dt), params.dt, params.wheelbase,
                 params.vel_min, params.vel_max, params.steering_curvature_gain);
-            const double braking_cost = evalCost(
-                x0, braking_seed, ref, prev_control, params, &braking_models);
+            const double seed_cost = evalCost(
+                x0, acceleration_seed, ref, prev_control, params, steering_history, &seed_models);
             // Near ties retain history. Compare initial costs once; run the
             // existing optimizer only once, with unchanged rate constraints.
             const double improvement = 0.01 * std::max(1.0, std::fabs(cost_cur));
-            if (std::isfinite(braking_cost) && braking_cost < cost_cur - improvement) {
-                U = std::move(braking_seed);
-                models = std::move(braking_models);
-                cost_cur = braking_cost;
+            if (std::isfinite(seed_cost) && seed_cost < cost_cur - improvement) {
+                U = std::move(acceleration_seed);
+                models = std::move(seed_models);
+                cost_cur = seed_cost;
             }
         }
     }
@@ -247,7 +260,7 @@ MPCResult solveMPC(
 
         // ---- gradient 계산 (선형 모델 기반) ----
         std::vector<MPCControl> grad = computeGradient(
-            x0, U, models, ref, prev_control, params);
+            x0, U, models, ref, prev_control, params, steering_history);
 
         // 수렴 체크
         double grad_norm2 = 0.0;
@@ -273,9 +286,10 @@ MPCResult solveMPC(
             // U_new 기준으로 선형화 모델 갱신 후 cost 평가
             // U_old 기준 models로 U_new cost 평가 시 선형화 오차 누적 방지
             std::vector<LinearizedModel> models_new = buildLTVModels(
-                x0, U_new, params.dt, params.wheelbase, params.vel_min,
+                x0, ApplySteeringDelay(U_new, steering_history, prev_control.delta,
+                    params.steering_response_delay_s, params.dt), params.dt, params.wheelbase, params.vel_min,
                 params.vel_max, params.steering_curvature_gain);
-            cost_new = evalCost(x0, U_new, ref, prev_control, params, &models_new);
+            cost_new = evalCost(x0, U_new, ref, prev_control, params, steering_history, &models_new);
 
             if (cost_new < cost_cur - 1e-4 * alpha * grad_norm2) {
                 accepted = true;
@@ -306,7 +320,7 @@ MPCResult solveMPC(
     //    최종 trajectory는 비선형 모델로 다시 계산 (근사 오차 제거)
     // ====================================
     std::vector<MPCState> traj;
-    evalCost(x0, U, ref, prev_control, params, nullptr, &traj);
+    evalCost(x0, U, ref, prev_control, params, steering_history, nullptr, &traj);
 
     result.controls         = U;
     result.predicted_states = traj;

@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
+#include "Frenet/Maneuver/KeepCruise.hpp"
 #include "Frenet/Math/Utils.hpp"
 #include "Frenet/Speed/CurveSpeed.hpp"
 #include "Frenet/Speed/SpeedProfiler.hpp"
@@ -64,7 +65,7 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
     std::string config_error;
     if (!LoadParams(yaml_path, ref_config_, object_tracking_cfg_, path_cfg_, limits_,
-                     cost_weights_,
+                     cost_weights_, keep_cruise_cfg_,
                      vehicle_shape_,
                      collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
                      lane_change_cfg_,
@@ -77,7 +78,7 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
         return false;
     }
     if (!ValidateConfig(ref_config_, object_tracking_cfg_, path_cfg_, limits_,
-                         cost_weights_, vehicle_shape_,
+                         cost_weights_, keep_cruise_cfg_, vehicle_shape_,
                          collision_cfg_, curve_speed_cfg_, following_cfg_,
                          avoid_cfg_, lane_change_cfg_, stop_cfg_,
                          emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
@@ -428,7 +429,7 @@ double FrenetPlanner::LowSpeedLateralTransitionDistance(
 
 PlannerConfigBundle FrenetPlanner::MakePipelineConfigBundle() const {
     return PlannerConfigBundle{
-        path_cfg_, limits_, cost_weights_, vehicle_shape_, collision_cfg_,
+        path_cfg_, limits_, cost_weights_, keep_cruise_cfg_, vehicle_shape_, collision_cfg_,
         stop_cfg_, merge_cfg_, avoid_cfg_, following_cfg_, curve_speed_cfg_,
         lane_width_};
 }
@@ -783,7 +784,8 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
     target_speed_input.has_external_max_speed = external_command.has_max_speed;
     target_speed_input.external_max_speed = external_command.max_speed;
     ctx.resolved_target_speed = ResolveTargetSpeed(
-        ref_, target_speed_input, curve_speed_cfg_, limits_);
+        ref_, target_speed_input, curve_speed_cfg_,
+        ResolveKeepCruiseLimits(external_command, keep_cruise_cfg_, limits_));
 
     last_d_ = ctx.d;
 
@@ -1039,7 +1041,8 @@ bool FrenetPlanner::PlanInternal(
     // clamp-이후 값을 기대하는 기존 계약을 그대로 보존한다), start 생성 후
     // 그 clamp된 필드로 재대입한다.
     const FrenetState start = ClampInitialBoundaryState(
-        s, s_dot, s_ddot, d, d_dot, d_ddot, limits_);
+        s, s_dot, s_ddot, d, d_dot, d_ddot,
+        ResolveKeepCruiseLimits(*external_command, keep_cruise_cfg_, limits_));
     s_ddot = start.s_dd;
     d_dot = start.d_d;
     d_ddot = start.d_dd;

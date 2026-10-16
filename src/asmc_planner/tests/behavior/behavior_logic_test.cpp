@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <cmath>
 
 #include "asmc_msgs/PlanFeedback.h"
 #include "Output/BehaviorMessages.hpp"
@@ -1222,6 +1223,218 @@ TEST(MsgConverterTest, CommandIdentityChangesWithExecutionMeaning) {
   context.selected_behavior = BehaviorType::FOLLOW;
   const asmc_msgs::BehaviorContext follow = MsgConverter::toMsg(context, 1);
   EXPECT_FALSE(SameCommandIdentity(keep, follow));
+}
+
+
+namespace {
+UrbanFeature CruiseFeature() {
+  UrbanFeature f;
+  f.timestamp = 1.0;
+  f.ego.valid = true;
+  f.ego.state_valid = true;
+  f.ego.speed = 55.0 / 3.6;
+  f.route.current_link_valid = true;
+  f.route.current_link_id = "ordinary";
+  f.route.speed_limit = 50.0 / 3.6;
+  return f;
+}
+NormalCruiseConfig CruiseConfig() { return {true, 55.0/3.6, 58.0/3.6, 50.0/3.6}; }
+bool HasCruise(const BehaviorContextData& c) {
+  return c.extra_flags.count("normal_cruise_active") != 0;
+}
+}
+
+TEST(NormalCruiseTest, ExplicitProfileRaisesOrdinaryMapCapAndSerializesIt) {
+  BehaviorDecision decision;
+  const auto f = CruiseFeature();
+  EXPECT_DOUBLE_EQ(decision.decide(f, PlannerFeedbackData{}, 0).target.desired_speed, 50.0/3.6);
+  ASSERT_TRUE(decision.setNormalCruiseConfig(CruiseConfig()));
+  const auto c = decision.decide(f, PlannerFeedbackData{}, 0);
+  ASSERT_EQ(c.selected_behavior, BehaviorType::KEEP);
+  EXPECT_TRUE(HasCruise(c));
+  EXPECT_DOUBLE_EQ(c.target.desired_speed, 55.0/3.6);
+  EXPECT_DOUBLE_EQ(c.hard.max_speed, 58.0/3.6);
+  const auto message = MsgConverter::toMsg(c, 1);
+  EXPECT_TRUE(message.has_max_speed);
+  EXPECT_DOUBLE_EQ(message.max_speed, 58.0/3.6);
+  V2CommandManager manager;
+  const auto command = manager.update(c, nullptr, ros::Time(1.0), 0.5);
+  EXPECT_EQ(command.maneuver_type, asmc_msgs::BehaviorCommand::KEEP);
+  EXPECT_DOUBLE_EQ(command.desired_speed_mps, 55.0/3.6);
+}
+
+TEST(NormalCruiseTest, LowSpeedAndInvalidMapLinksRetainOriginalLimits) {
+  for (double speed : {30.0, 40.0, 45.0}) {
+    BehaviorDecision decision;
+    ASSERT_TRUE(decision.setNormalCruiseConfig(CruiseConfig()));
+    auto f = CruiseFeature(); f.route.speed_limit = speed/3.6;
+    const auto c = decision.decide(f, PlannerFeedbackData{}, 0);
+    EXPECT_FALSE(HasCruise(c));
+    EXPECT_DOUBLE_EQ(c.hard.max_speed, speed/3.6);
+  }
+  BehaviorDecision decision;
+  ASSERT_TRUE(decision.setNormalCruiseConfig(CruiseConfig()));
+  auto f = CruiseFeature(); f.route.current_link_valid = false;
+  EXPECT_FALSE(HasCruise(decision.decide(f, PlannerFeedbackData{}, 0)));
+  f = CruiseFeature(); f.ego.valid = false;
+  EXPECT_FALSE(HasCruise(decision.decide(f, PlannerFeedbackData{}, 0)));
+}
+
+TEST(NormalCruiseTest, SignalCapOverridesCruiseAndReleasesAfterExit) {
+  BehaviorDecision decision;
+  ASSERT_TRUE(decision.setNormalCruiseConfig(CruiseConfig()));
+  TrafficStopConfig stop;
+  stop.approach_speed_limit = 25.0/3.6;
+  stop.approach_comfortable_decel = 1.5;
+  stop.approach_margin = 25;
+  stop.post_stopline_distance = 5;
+  decision.setTrafficStopConfig(stop);
+  auto f = CruiseFeature();
+  EXPECT_TRUE(HasCruise(decision.decide(f, PlannerFeedbackData{}, 0)));
+  f.timestamp += .1; f.signal.has_stop_line = true;
+  f.signal.stop_line_s = 100; f.signal.distance_to_stop_line = 60;
+  f.signal.light_state = TrafficLightState::GREEN;
+  auto c = decision.decide(f, PlannerFeedbackData{}, 0);
+  EXPECT_FALSE(HasCruise(c)); EXPECT_DOUBLE_EQ(c.hard.max_speed,25.0/3.6);
+  f.timestamp += .1; f.signal.has_stop_line = false;
+  f.signal.has_passed_stop_line = true; f.signal.distance_since_stop_line = 4;
+  c = decision.decide(f, PlannerFeedbackData{}, 0);
+  EXPECT_FALSE(HasCruise(c)); EXPECT_DOUBLE_EQ(c.hard.max_speed,25.0/3.6);
+  f.timestamp += .1; f.signal.distance_since_stop_line = 6;
+  EXPECT_TRUE(HasCruise(decision.decide(f, PlannerFeedbackData{}, 0)));
+}
+
+TEST(NormalCruiseTest, ObstacleAndMergeCasesNeverReceiveCruiseOverride) {
+  for (int scenario = 0; scenario < 7; ++scenario) {
+    BehaviorDecision decision;
+    ASSERT_TRUE(decision.setNormalCruiseConfig(CruiseConfig()));
+    auto f = CruiseFeature();
+    if (scenario == 0) { f.risk.static_obstacle_ahead = true; f.risk.avoidance_object_id = 10; }
+    if (scenario == 1) { f.surrounding.has_front_vehicle = true; f.surrounding.front_vehicle.id = 10; }
+    if (scenario == 2) f.risk.pedestrian_risk = true;
+    if (scenario == 3) f.risk.emergency_risk = true;
+    if (scenario == 4) { f.roundabout.enabled = true; f.roundabout.approach = true; }
+    if (scenario == 5) { f.roundabout.enabled = true; f.roundabout.target_link_id = "ordinary"; }
+    if (scenario == 6) f.risk.avoid_target_reclassified_moving = true;
+    const auto c = decision.decide(f, PlannerFeedbackData{}, 0);
+    EXPECT_FALSE(HasCruise(c)) << scenario;
+    EXPECT_LE(c.target.desired_speed,50.0/3.6) << scenario;
+    if (scenario == 2 || scenario == 3) EXPECT_TRUE(c.hard.force_stop);
+  }
+}
+
+TEST(NormalCruiseTest, InvalidConfigurationDisablesPreviouslyEnabledProfile) {
+  BehaviorDecision decision;
+  ASSERT_TRUE(decision.setNormalCruiseConfig(CruiseConfig()));
+  auto bad = CruiseConfig(); bad.max_speed = 10;
+  EXPECT_FALSE(decision.setNormalCruiseConfig(bad));
+  EXPECT_FALSE(HasCruise(decision.decide(CruiseFeature(), PlannerFeedbackData{}, 0)));
+  bad = CruiseConfig(); bad.target_speed = std::nan("");
+  EXPECT_FALSE(decision.setNormalCruiseConfig(bad));
+}
+
+// MORAI cruise eligibility expanded to 40 km/h map links. The special-zone
+// gate must continue to win, including on the newly eligible links.
+TEST(NormalCruiseTest, FortyKphProfileKeepsProtectedSituationsAndThirtyKphRoads) {
+  for (int scenario = 0; scenario < 9; ++scenario) {
+    BehaviorDecision decision;
+    ASSERT_TRUE(decision.setNormalCruiseConfig({true,57.8/3.6,58.0/3.6,40.0/3.6}));
+    auto f = CruiseFeature();
+    f.route.speed_limit = 40.0/3.6;
+    if (scenario == 1) f.route.speed_limit = 30.0/3.6;
+    if (scenario == 2) f.risk.static_obstacle_ahead = true;
+    if (scenario == 3) f.risk.pedestrian_risk = true;
+    if (scenario == 4) f.risk.emergency_risk = true;
+    if (scenario == 5) f.surrounding.has_front_vehicle = true;
+    if (scenario == 6) { f.roundabout.enabled = true; f.roundabout.approach = true; }
+    if (scenario == 7) { f.roundabout.enabled = true; f.roundabout.target_link_id = "ordinary"; }
+    if (scenario == 8) f.risk.avoid_target_reclassified_moving = true;
+    const auto c = decision.decide(f, PlannerFeedbackData{}, 0);
+    EXPECT_EQ(HasCruise(c), scenario == 0) << scenario;
+    if (scenario == 0) {
+      EXPECT_DOUBLE_EQ(c.target.desired_speed,57.8/3.6);
+      EXPECT_DOUBLE_EQ(c.hard.max_speed,58.0/3.6);
+    } else EXPECT_LE(c.target.desired_speed,f.route.speed_limit) << scenario;
+    if (scenario == 3 || scenario == 4) EXPECT_TRUE(c.hard.force_stop);
+  }
+}
+
+TEST(NormalCruiseTest, FortyKphProfileWaitsUntilWholeVehicleClearsSignalExit) {
+  BehaviorDecision decision;
+  ASSERT_TRUE(decision.setNormalCruiseConfig({true,57.8/3.6,58.0/3.6,40.0/3.6}));
+  TrafficStopConfig stop;
+  stop.approach_speed_limit=25.0/3.6;
+  stop.post_stopline_distance=5;
+  decision.setTrafficStopConfig(stop);
+  auto f=CruiseFeature();f.route.speed_limit=40.0/3.6;
+  f.signal.has_passed_stop_line=true;f.signal.distance_since_stop_line=4;
+  auto c=decision.decide(f,PlannerFeedbackData{},0);
+  EXPECT_FALSE(HasCruise(c));EXPECT_DOUBLE_EQ(c.hard.max_speed,25.0/3.6);
+  f.timestamp+=.1;f.signal.distance_since_stop_line=6;
+  c=decision.decide(f,PlannerFeedbackData{},0);
+  EXPECT_TRUE(HasCruise(c));EXPECT_DOUBLE_EQ(c.target.desired_speed,57.8/3.6);
+}
+
+TEST(NormalCruiseTest, ExplicitLinkCapIsBoundedAndDoesNotRaiseOtherThirtyKphLinks) {
+  BehaviorDecision decision;
+  auto config = CruiseConfig();
+  config.link_speed_caps["exit_link"] = 50.0/3.6;
+  ASSERT_TRUE(decision.setNormalCruiseConfig(config));
+  auto f = CruiseFeature();
+  f.route.speed_limit = 30.0/3.6;
+  EXPECT_FALSE(HasCruise(decision.decide(f, PlannerFeedbackData{}, 0)));
+  f.route.current_link_id = "exit_link";
+  const auto c = decision.decide(f, PlannerFeedbackData{}, 0);
+  ASSERT_TRUE(HasCruise(c));
+  EXPECT_DOUBLE_EQ(c.target.desired_speed, 50.0/3.6);
+  EXPECT_DOUBLE_EQ(c.hard.max_speed, 50.0/3.6);
+  EXPECT_DOUBLE_EQ(MsgConverter::toMsg(c, 1).max_speed, 50.0/3.6);
+}
+
+TEST(NormalCruiseTest, ExplicitLinkCannotBypassSignalObstacleOrMergeGuards) {
+  for (int scenario = 0; scenario < 11; ++scenario) {
+    BehaviorDecision decision;
+    auto config = CruiseConfig();
+    config.link_speed_caps["ordinary"] = 50.0/3.6;
+    ASSERT_TRUE(decision.setNormalCruiseConfig(config));
+    TrafficStopConfig stop;
+    stop.approach_speed_limit = 25.0/3.6;
+    stop.post_stopline_distance = 5;
+    decision.setTrafficStopConfig(stop);
+    auto f = CruiseFeature();
+    f.route.speed_limit = 30.0/3.6;
+    if (scenario == 0) f.risk.static_obstacle_ahead = true;
+    if (scenario == 1) f.risk.pedestrian_risk = true;
+    if (scenario == 2) f.risk.emergency_risk = true;
+    if (scenario == 3) f.surrounding.has_front_vehicle = true;
+    if (scenario == 4) { f.roundabout.enabled = true; f.roundabout.approach = true; }
+    if (scenario == 5) { f.roundabout.enabled = true; f.roundabout.target_link_id = "ordinary"; }
+    if (scenario == 6) f.risk.avoid_target_reclassified_moving = true;
+    if (scenario == 7) { f.signal.has_passed_stop_line = true; f.signal.distance_since_stop_line = 4; }
+    if (scenario == 8) f.ego.valid = false;
+    if (scenario == 9) f.route.current_link_valid = false;
+    if (scenario == 10) {
+      f.signal.has_stop_line = true; f.signal.stop_line_s = 100;
+      f.signal.distance_to_stop_line = 20;
+      f.signal.light_state = TrafficLightState::RED;
+    }
+    const auto c = decision.decide(f, PlannerFeedbackData{}, 0);
+    EXPECT_FALSE(HasCruise(c)) << scenario;
+    EXPECT_LE(c.target.desired_speed, 30.0/3.6) << scenario;
+    if (scenario == 1 || scenario == 2) EXPECT_TRUE(c.hard.force_stop);
+  }
+}
+
+TEST(NormalCruiseTest, InvalidExplicitLinkCapsDisableTheEntireProfile) {
+  BehaviorDecision decision;
+  for (double cap : {0.0, -1.0, 59.0/3.6, std::nan("")}) {
+    ASSERT_TRUE(decision.setNormalCruiseConfig(CruiseConfig()));
+    auto config = CruiseConfig(); config.link_speed_caps["ordinary"] = cap;
+    EXPECT_FALSE(decision.setNormalCruiseConfig(config));
+    EXPECT_FALSE(HasCruise(decision.decide(CruiseFeature(), PlannerFeedbackData{}, 0)));
+  }
+  auto config = CruiseConfig(); config.link_speed_caps[""] = 50.0/3.6;
+  EXPECT_FALSE(decision.setNormalCruiseConfig(config));
 }
 
 }  // namespace behavior_planner

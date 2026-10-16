@@ -11,6 +11,8 @@
 #include <string>
 
 struct SensorPoseHistoryConfig {
+    // MORAI reports true ENU yaw; map positions use UTM grid axes.
+    bool imu_yaw_is_true_enu = false;
     double gps_max_age_s = 0.30;
     double imu_max_age_s = 0.12;
     double can_max_age_s = 0.12;

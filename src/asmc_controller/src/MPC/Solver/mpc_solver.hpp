@@ -24,6 +24,7 @@ MPCResult solveMPC(
     const ReferencePath&           ref,
     const MPCControl&              prev_control,
     const std::vector<MPCControl>& warm_start,
-    const MPCParams&               params);
+    const MPCParams&               params,
+    const std::vector<double>&     steering_history = {});
 
 #endif // MPC_SOLVER_HPP

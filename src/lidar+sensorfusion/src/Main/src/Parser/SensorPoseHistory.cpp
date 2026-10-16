@@ -10,6 +10,25 @@ namespace {
 
 constexpr double kPi = 3.14159265358979323846;
 
+// Convert only map-facing copies. Local LiDAR/camera geometry and raw IMU
+// history retain their original basis, including during GPS jamming.
+IMU_DATA GridImu(const IMU_DATA& imu, const GPS_DATA& gps, bool true_enu) {
+    if (!true_enu) return imu;
+    constexpr double step = 1e-5;
+    double e0, n0, e1, n1;
+    int zone = 52;
+    bool north = true;
+    GeographicLib::UTMUPS::Forward(gps.f64_Latitude - step,
+        gps.f64_Longitude, zone, north, e0, n0, 52);
+    GeographicLib::UTMUPS::Forward(gps.f64_Latitude + step,
+        gps.f64_Longitude, zone, north, e1, n1, 52);
+    const double offset = std::atan2(n1 - n0, e1 - e0) - kPi / 2.;
+    IMU_DATA out = imu;
+    out.f32_Yaw_rad = std::remainder(double(imu.f32_Yaw_rad) + offset, 2. * kPi);
+    out.f32_Yaw_deg = out.f32_Yaw_rad * 180. / kPi;
+    return out;
+}
+
 template <typename Sample>
 void InsertOrdered(std::deque<Sample>* samples, const Sample& sample) {
     const auto it = std::lower_bound(
@@ -75,6 +94,12 @@ void SensorPoseHistory::AddGps(
     }
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        if (config_.imu_yaw_is_true_enu &&
+            (!std::isfinite(gps.f64_Latitude) || !std::isfinite(gps.f64_Longitude) ||
+             gps.f64_Latitude < 0. || gps.f64_Latitude > 84. ||
+             gps.f64_Longitude < 126. || gps.f64_Longitude > 132. || gps.b_isJamming)) {
+            return;  // This deployment's map contract is UTM zone 52N.
+        }
         InsertOrdered(&gps_, TimedGps{stamp_ms, gps, source_ns});
         if(frame_boundary::Enabled()) {
         asmc::lidar::PoseSample sample;
@@ -97,7 +122,8 @@ void SensorPoseHistory::AddGps(
             (invalid_imu_stamp_ns_<=static_cast<std::uint64_t>(sample.stamp_ns) && invalid_imu_stamp_ns_>=attitude_ns)) {
             sample.valid=false;
         } else {
-            GPS_IMU at_gps{};at_gps.st_IMU=attitude->data;
+            GPS_IMU at_gps{};
+            at_gps.st_IMU=GridImu(attitude->data,gps,config_.imu_yaw_is_true_enu);
             sample.map_from_reference.linear()=frame_boundary::MapRotation(at_gps);
         }
         bounded_gps_.append(sample);
@@ -291,12 +317,13 @@ bool SensorPoseHistory::LookupLocked(
     // sanity-checked vehicle speed and heading. This avoids 1--2 m map jumps
     // when a 5 Hz GPS callback arrives just before/after LiDAR processing.
     const double speed_mps = can_latest->data.f32_CurrentVel_MPS;
-    const double yaw_rad = imu_latest->data.f32_Yaw_rad;
+    const auto grid_imu = GridImu(imu_latest->data, resolved_gps, config_.imu_yaw_is_true_enu);
+    const double yaw_rad = grid_imu.f32_Yaw_rad;
     resolved_gps.f64_E += speed_mps * std::cos(yaw_rad) * gps_age_s;
     resolved_gps.f64_N += speed_mps * std::sin(yaw_rad) * gps_age_s;
 
     pose->st_GPS = resolved_gps;
-    pose->st_IMU = imu_latest->data;
+    pose->st_IMU = grid_imu;
     pose->st_CAN = can_latest->data;
     pose->b_Jamming = resolved_gps.b_isJamming;
     SetReason(reason, "ready");
@@ -406,7 +433,18 @@ asmc::lidar::PoseSelection SensorPoseHistory::MapAt(const asmc::lidar::Observati
         local.st_CAN.f32_CurrentVel_MPS>config_.maximum_extrapolation_speed_mps) {
         asmc::lidar::PoseSelection invalid;invalid.reason="map_speed_invalid";return invalid;
     }
-    return bounded_gps_.at(t,frame_boundary::MapRotation(local),
+    GPS_IMU map_local = local;
+    if (config_.imu_yaw_is_true_enu) {
+        auto gps = gps_.end();
+        for (auto it = gps_.begin(); it != gps_.end(); ++it)
+            if (static_cast<asmc::lidar::Ns>(it->source_ns ? it->source_ns : it->stamp_ms*1000000ULL) <= t.stamp_ns)
+                gps = it;
+        if (gps == gps_.end()) {
+            asmc::lidar::PoseSelection invalid; invalid.reason="gps_missing"; return invalid;
+        }
+        map_local.st_IMU = GridImu(local.st_IMU, gps->data, true);
+    }
+    return bounded_gps_.at(t,frame_boundary::MapRotation(map_local),
         asmc::lidar::Vec(local.st_CAN.f32_CurrentVel_MPS,0,0));
 }
 

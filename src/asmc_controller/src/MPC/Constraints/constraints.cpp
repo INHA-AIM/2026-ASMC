@@ -1,5 +1,16 @@
 #include "MPC/Constraints/constraints.hpp"
 #include "MPC/Math/utils.hpp"
+#include <algorithm>
+#include <cmath>
+
+double SteeringRateLimit(double speed_mps, const MPCParams& params) {
+    if (params.steering_rate_reference_speed_mps <= 0.0 ||
+        std::abs(speed_mps) <= params.steering_rate_reference_speed_mps)
+        return params.steering_rate_max;
+    const double ratio = params.steering_rate_reference_speed_mps / std::abs(speed_mps);
+    return std::clamp(params.steering_rate_max * ratio * ratio,
+                      params.steering_rate_min, params.steering_rate_max);
+}
 
 
 void clipSteering(MPCControl& u, double max_steering) {

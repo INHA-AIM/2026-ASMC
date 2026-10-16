@@ -25,6 +25,12 @@ struct MPCParams {
     // 제약 조건
     double steering_max     = 0.6981317008;  // 40deg [rad]
     double steering_rate_max= 1.0;     // [rad/s]
+    // Optional inverse-square speed envelope for steering slew. Zero reference
+    // speed preserves the legacy fixed limit. The floor keeps correction
+    // authority at high speed; this is not a lateral-acceleration guarantee.
+    double steering_rate_reference_speed_mps = 0.0;
+    double steering_rate_min = 0.1;    // [rad/s]
+    double steering_response_delay_s = 0.0;  // command-to-yaw response, optional
     double accel_min        = -5.0;    // [m/s^2]
     double accel_max        = 3.0;     // [m/s^2]
     // MORAI longlCmdType=1의 brake=1.0에 대응하는 차량 최대 감속도.
@@ -52,6 +58,10 @@ struct MPCParams {
 
     // 비용 가중치
     double weight_contour_error = 6.0;
+    // Optional curve tracking gain; zero preserves the legacy cost exactly.
+    double curve_contour_boost = 0.0;
+    double contour_boost_start_curvature = 0.004; // [1/m]
+    double contour_boost_full_curvature = 0.012;  // [1/m]
     double weight_lag_error     = 0.5;
     double weight_heading_error = 2.0;
     double weight_speed_error   = 0.3;
@@ -202,6 +212,8 @@ struct MPCContext {
     MPCParams params;
     MPCControl last_control;
     std::vector<MPCControl> warm_start;
+    ReferencePath braking_geometry;  // last successful validated moving path
+    std::vector<double> steering_history;  // oldest first, published commands
     int stuck_cycles = 0;
     int recovery_cycles_left = 0;
     int stuck_timeout_cycles = 1;

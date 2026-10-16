@@ -125,6 +125,32 @@ TEST(SensorPoseHistory, WaitTimeoutStillRejectsMissingPose) {
     EXPECT_EQ("no IMU at or before LiDAR scan", reason);
 }
 
+TEST(SensorPoseHistory, TrueEnuHeadingAndExtrapolationUseUtmGrid) {
+    SensorPoseHistoryConfig config;
+    config.imu_yaw_is_true_enu = true;
+    SensorPoseHistory history(config);
+    // True north at K-City points slightly east in UTM52N.
+    auto gps = Gps(10., 20.);
+    gps.f64_Latitude = 37.24;
+    gps.f64_Longitude = 126.77;
+    history.AddImu(1000, Imu(M_PI / 2.)); // IMU arrives before the first GPS.
+    history.AddCan(1000, Can(10.));
+    history.AddGps(1000, gps);
+    GPS_IMU pose{}, local{};
+    ASSERT_TRUE(history.Lookup(1100, &pose));
+    const double expected_yaw = M_PI / 2. - 0.02356;
+    EXPECT_NEAR(expected_yaw, pose.st_IMU.f32_Yaw_rad, 0.0001);
+    EXPECT_NEAR(10. + std::cos(expected_yaw), pose.st_GPS.f64_E, 0.0001);
+    EXPECT_NEAR(20. + std::sin(expected_yaw), pose.st_GPS.f64_N, 0.0001);
+    ASSERT_TRUE(history.WaitForLocalLookup(1100, 0., &local));
+    EXPECT_NEAR(M_PI / 2., local.st_IMU.f32_Yaw_rad, 1e-6);
+    auto invalid = gps; invalid.f64_Latitude = invalid.f64_Longitude = 0.;
+    invalid.f64_E = 1e6;
+    history.AddGps(1050, invalid);
+    ASSERT_TRUE(history.Lookup(1100, &pose));
+    EXPECT_LT(pose.st_GPS.f64_E, 11.);
+}
+
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
