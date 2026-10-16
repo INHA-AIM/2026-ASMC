@@ -65,4 +65,4 @@ motion semantics, full raw-pipeline reproducibility, independent object-preserva
 and normal map tracking review, actual GPU fusion, and direct user launch review.
 
 See [baseline](../../perception_lidar_camera_frame_boundaries_v1.yaml) and
-[runtime handoff](../../../../docs/handoffs/perception/lidar-camera-frame-boundaries.md).
+[runtime handoff](../../../../docs/records/lidar/lidar-camera-frame-boundaries.md).

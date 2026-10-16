@@ -48,7 +48,7 @@ python3 tools/bridge/render_morai_sensor_profiles.py --check
 
 현재 `competition_vehicle_status`는 정적 decoder·fixture·ROS publish 회귀 기준까지만
 적용됐다. local live 불일치는
-[P3-E 기록](../../docs/records/baselines/bridge-p3e-local-live-v1.md), 물리 통합은
-[P3-F 기록](../../docs/records/baselines/bridge-p3f-consolidated-v1.md), local/field 요구 분리는
-[P3-G 기록](../../docs/records/baselines/bridge-p3g-local-closeout-v1.md)에 남겼다. generated JSON과
+[P3-E 기록](../../docs/records/bridge/bridge-p3e-local-live-v1.md), 물리 통합은
+[P3-F 기록](../../docs/records/bridge/bridge-p3f-consolidated-v1.md), local/field 요구 분리는
+[P3-G 기록](../../docs/records/bridge/bridge-p3g-local-closeout-v1.md)에 남겼다. generated JSON과
 synthetic test의 성공을 현장 승인으로 해석하지 않는다.

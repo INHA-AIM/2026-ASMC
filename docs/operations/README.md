@@ -7,7 +7,7 @@
 대회 허용 범위는 [대회 환경](../competition/README.md), Planning/Control의 실행은
 [Planning/Control 규약](./planning-control.md), bag 기록·재생은
 [rosbag 가이드](./rosbag-evaluation.md)를 따른다. parser·timestamp·TF·`vehicle_state`를
-수정하거나 Phase 3 이관을 준비할 때는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
+수정하거나 Phase 3 이관을 준비할 때는 [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)를
 함께 본다.
 
 ## 1. 현재값과 남은 승인 항목
@@ -197,7 +197,7 @@ python3 scripts/verify_morai_topics.py \
 
 설정 Hz보다 낮은 관측값을 바로 packet loss로 단정하지 않는다. sequence가 없는 stream은
 SIM 송신 cadence, Windows ingress, UDP, bridge와 ROS scheduling을 단일 rate만으로 분리할 수
-없다. 날짜가 있는 기준선은 [transport 검증 기록](../records/simulator/runtime-transport-2026-09.md)에
+없다. 날짜가 있는 기준선은 [transport 검증 기록](../records/bridge/runtime-transport-2026-09.md)에
 보존한다.
 
 ## 6. 문제 해결

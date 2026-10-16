@@ -9,7 +9,7 @@
 > **문서 허브:** [README.md](../README.md)
 > **최종 수정:** 2026-09-21
 > 담당 경로·검증: [팀 ownership](../onboarding/ownership.md)
-> Git·PR 규칙: [협업 규칙](../governance/README.md)
+> Git·PR 규칙: [협업 규칙](../onboarding/collaboration.md)
 
 현재 표는 실제 경로를 나타낸다. HD맵은 `asmc_hd_map`으로 통합됐고, 나머지 팀 소유 공용
 코드는 `asmc_msgs`, `asmc_bridge`, `asmc_camera` 경계로 순차 수렴시킨다. 단계별 삭제
@@ -42,7 +42,7 @@ gate는 [저장소 통합 로드맵](./consolidation-roadmap.md)을 따른다. p
 
 **Git에 넣지 않음:** `build/`, `devel/`, `data/`, `checkpoints/`, `.bag`, `*.pth`
 
-P1-A 당시 snapshot은 [runtime-baseline-v1.md](../records/baselines/runtime-v1.md)에 보존한다.
+P1-A 당시 snapshot은 [runtime-baseline-v1.md](../records/repository/runtime-v1.md)에 보존한다.
 현재 HEAD는 승인된 후속 변경으로 v1과 다르므로 `build_runtime_baseline.py --check`를 일상
 회귀에 넣지 않는다. 다음 repository-wide freeze는 v1을 덮어쓰지 않고 새 version으로 만든다.
 현재 contract/product는 아래 명령으로 검증한다. bag과 현장 원본은 `$ASMC_DATA`에서 읽되
@@ -73,10 +73,10 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | Frenet planner (`frenet_planner_node`, ROS+core) | `src/asmc_planner/` | 이강태 | @kante2 |
 | MORAI bridge | `src/asmc_bridge/` | 이강태·안승현 | @kante2 · @ahnsh03 |
 
-현재 개발 경계는 [Planning/Control guide](../packages/planning-control/README.md), 실행 흐름은
+현재 개발 경계는 [Planning/Control guide](planning-control.md), 실행 흐름은
 [운영 규약](../operations/planning-control.md)을 따른다. v1 설계와 standalone UDP 기준선은
-각각 [legacy handoff](../handoffs/planning/behavior-legacy.md)와
-[archive](../archive/planning/standalone-udp-baseline.md)에 보존한다.
+각각 [legacy handoff](../records/archive/planning-behavior-legacy.md)와
+[archive](../records/archive/standalone-udp-baseline.md)에 보존한다.
 
 ### bridge · HD Map
 
@@ -85,7 +85,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `src/asmc_bridge/` | Network/Sensor UDP, VehicleState, 공동 launch | 이강태·안승현; planning consumer 공동 리뷰 |
 | `src/asmc_hd_map/` | reviewed HD Map과 runtime | 안승현 |
 
-현재 bridge 구조와 Phase 3 이관 결과는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
+현재 bridge 구조와 Phase 3 이관 결과는 [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)를
 따른다. P3-F에서 하위 node와 공동 launch를 `src/asmc_bridge/`로 물리 통합했다.
 
 ### LBC teacher BEV research
@@ -108,7 +108,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `tools/grpc_inha_univ/` | 장원태 | @wkddnjsxo |
 
 현재 package 경계, 본선 입력 규칙과 Phase 4 이관 gate는
-[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C6에서
+[Perception 개발·통합 가이드](../../src/asmc_camera/docs/integration.md)를 따른다. P4-C6에서
 camera/BEV/lane/traffic ROS node, runtime support/config/model과 가치 있는 학습·offline audit를
 `asmc_camera` 안의 명시적 경계로 통합했다. 실행·참조가 없는 camera 3D 연구와 기존 호환
 package는 Git history를 남기고 제거했다.
@@ -168,7 +168,7 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../../.github/CODEOWNERS)
 | morai_msgs (26.R1) | [MORAI-ROS_morai_msgs](https://github.com/MORAI-Autonomous/MORAI-ROS_morai_msgs) `26.R1` | beta diff 참고 |
 
 **금지:** 외부 베이스라인·레거시 코드를 **본 repo에 통째 복사** (이식 PR로만 반영).  
-매핑 상세: [integration-plan.md](../archive/integration/wave1-wave2-plan.md)
+매핑 상세: [integration-plan.md](../records/archive/wave1-wave2-plan.md)
 
 ## 5. 아키텍처 → 경로
 

@@ -25,8 +25,8 @@
 | Frenet | `src/asmc_planner/` | 이강태·정윤태 |
 | MPC | `src/asmc_controller/` | 정윤태·양서준 |
 | Planning adapter | `src/jamming_lane_boundary_adapter/` | 통합·판제 공동; 판제 consumer 흡수 후 삭제 gate |
-| UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../packages/asmc_bridge/README.md) | 이강태·안승현, planning consumer 공동 리뷰 |
-| Perception façade와 typed 계약 | `src/asmc_camera/`; [runtime 계약](../contracts/perception/runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |
+| UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../../src/asmc_bridge/docs/integration.md) | 이강태·안승현, planning consumer 공동 리뷰 |
+| Perception façade와 typed 계약 | `src/asmc_camera/`; [runtime 계약](../contracts/perception-runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |
 | Camera/BEV/traffic | `src/asmc_camera/` | 안승현, perception·planning consumer 공동 리뷰 |
 | LiDAR/3D·camera fusion | 원본 `src/lidar+sensorfusion/`, 이전용 골격 `src/asmc_lidar/` | 손재호가 기능 이전·수락 후 asmc_lidar 정본화, 안승현 계약·개선사항 인계 |
 | 데이터 수집 | `src/data_collection/` | 안승현, perception 공동 리뷰 |
@@ -76,4 +76,4 @@
 3. producer와 consumer를 같은 PR 또는 명시된 순서의 연속 PR로 검증한다.
 4. 기존 실행 경로는 parity와 rollback이 확인될 때까지 제거하지 않는다.
 
-브랜치·PR 명령은 [협업 규칙](../governance/README.md)을 따른다.
+브랜치·PR 명령은 [협업 규칙](collaboration.md)을 따른다.

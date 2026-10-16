@@ -2,19 +2,19 @@
 
 **2026-10-14 PR #81/#82 main 통합:** Capture 자동 수집·GT 변환 도구는 명시 실행용이다.
 일반 카메라/판제 launch나 패키지 빌드로 스폰·주행·녹화가 시작되지 않는다.
-[현재 범위·데이터 구분](../../docs/handoffs/perception/camera-data-integration-prep.md)을 먼저 확인한다.
+[현재 범위·데이터 구분](../../docs/records/camera/camera-data-integration-prep.md)을 먼저 확인한다.
 현재 E8 모델은 별도 배포이며, E드라이브 전환·전처리/본학습 도구는 다음 작업 단위다.
 
 > **역할:** Active Package Guide — 현재 수집·bag·dataset 재현 절차
 >
-> 인지 전체 경계는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md),
-> label·split 정본은 [dataset contract](../../docs/contracts/perception/dataset-labeling-split.md)를
+> 인지 전체 경계는 [Perception 개발·통합 가이드](../asmc_camera/docs/integration.md),
+> label·split 정본은 [dataset contract](../../docs/contracts/dataset-labeling-split.md)를
 > 따른다. 이 문서의 상세 명령과 모드 차이는 Phase 4 분리 전까지 그대로 보존한다.
 
 > **역할:** Active Module — Capture GT, raw/result rosbag, 동기화, mask/cache/dataset lineage
 > **담당:** 안승현
-> **데이터 정본:** [인지 데이터 라벨링·분할 계약](../../docs/contracts/perception/dataset-labeling-split.md)
-> **전체 로드맵:** [카메라·MGeo·LiDAR 융합 로드맵](../../docs/packages/asmc_perception/roadmap.md)
+> **데이터 정본:** [인지 데이터 라벨링·분할 계약](../../docs/contracts/dataset-labeling-split.md)
+> **전체 로드맵:** [카메라·MGeo·LiDAR 융합 로드맵](../../docs/architecture/perception-roadmap.md)
 > **rosbag 정본:** [rosbag 재현 평가 가이드](../../docs/operations/rosbag-evaluation.md)
 > **문서 허브:** [docs/README.md](../../docs/README.md)
 
@@ -40,7 +40,7 @@ Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론�
 
 ## 장애물 자동 수집 Capture 파일럿
 
-실행·게이트·저장 구조의 시작점은 [Capture 자동 수집 인계](../../docs/handoffs/perception/camera-mpc-object-collection-pilot.md)다.
+실행·게이트·저장 구조의 시작점은 [Capture 자동 수집 인계](../../docs/records/camera/camera-mpc-object-collection-pilot.md)다.
 `capture_route_collection.launch`는 기존 MPC/PP와 개발 Ego pose를 연결한 **수집 전용** 경로다.
 운영 추론이나 GT bridge 기본값을 변경하지 않는다. 기본 actuator는 gRPC이고,
 PP는 Pure Pursuit + P 속도 제어다. 실제 5/20/30km/h Capture 파일럿과 전체 경로 추종 결과, 실패·수정 근거를 인계에 기록한다.
@@ -440,7 +440,7 @@ TwinLiteNet+ 입력은 `intensity/{front,left,right}`, 라벨 원본은 대응�
 `instance`·`depth`는 향후 작업을 위해 원본으로 보존한다.
 
 라벨 팔레트, `384×640` paired letterbox, run-based split과 QA 계약은
-[`docs/contracts/perception/dataset-labeling-split.md`](../../docs/contracts/perception/dataset-labeling-split.md)를
+[`docs/contracts/perception/dataset-labeling-split.md`](../../docs/contracts/dataset-labeling-split.md)를
 따른다.
 
 객체 포함 run의 Semantic 전수 감사는 `scripts/audit_semantic_capture.py`로 수행한다.
@@ -647,7 +647,7 @@ Capture Mode 동기화본 → native target → TwinLite cache → run-based dat
 - `lane_capture` / `lane_stream_gt` profile은 아직 없음
 
 과거 YOLOPv3 WP와 Bronze/Silver/Gold 수집 설계는 현재 계획이 아니다. 현재 구현 순서와
-후속 gate는 [인지 통합 로드맵](../../docs/packages/asmc_perception/roadmap.md), native 원본·mask·split
-규칙은 [데이터셋 계약](../../docs/contracts/perception/dataset-labeling-split.md)을 따른다.
+후속 gate는 [인지 통합 로드맵](../../docs/architecture/perception-roadmap.md), native 원본·mask·split
+규칙은 [데이터셋 계약](../../docs/contracts/dataset-labeling-split.md)을 따른다.
 
 `--profile bbox3_partial`은 뷰별 BBox 누락을 명시하면서 원본 RGB/GT를 복사한다. 누락 뷰는 bbox export에서 보류하고 negative로 만들지 않는다.

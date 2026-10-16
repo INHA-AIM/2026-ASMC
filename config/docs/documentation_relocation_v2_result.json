@@ -1,0 +1,44 @@
+{
+  "base_commit": "d36f29b6e5dad468c2668ff2e3823e5de8de49b5",
+  "generated_at": "2026-10-16T05:56:09.263671+00:00",
+  "central_markdown_before": 122,
+  "central_markdown_after": 110,
+  "central_directories": [
+    "architecture",
+    "competition",
+    "contracts",
+    "handoffs",
+    "onboarding",
+    "operations",
+    "records"
+  ],
+  "actions": {
+    "update_references": 26,
+    "keep": 19,
+    "move": 104,
+    "remove_redirect": 12
+  },
+  "checks": {
+    "body_preservation": true,
+    "history": true,
+    "frozen_sha_parity": true,
+    "local_links_and_anchors": true,
+    "documentation_regressions": 7,
+    "python38_syntax": true,
+    "perception_contract": true,
+    "p1b_contract": true,
+    "diff_check": true,
+    "unexpected_runtime_or_model_changes": 0
+  },
+  "retained_preexisting_issues": {
+    "history_declaration_corrected": 2,
+    "parent_personal_research_references": 3
+  },
+  "parent_workspace": {
+    "changed_files": 34,
+    "changed_links": 79,
+    "body_preserved": true,
+    "local_checkout": "2026-ASMC-work"
+  },
+  "hosted_ci": "See PR checks; not substituted by local validation."
+}

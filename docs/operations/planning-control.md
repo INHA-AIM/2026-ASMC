@@ -4,7 +4,7 @@
 >
 > **상태:** Active — MORAI 외부는 UDP, 팀 PC 내부 Planning/Control은 ROS1/catkin
 >
-> **개발 경계:** [Planning/Control package-group guide](../packages/planning-control/README.md)
+> **개발 경계:** [Planning/Control package-group guide](../architecture/planning-control.md)
 
 ## 1. 범위
 
@@ -23,7 +23,7 @@ MORAI --UDP--> bridge/state/perception --ROS--> Behavior/FSM
 ```
 
 이전에 사용한 standalone UDP `Planner :9300 → MPC`와 직접 Ctrl UDP 경로는
-[역사 기준선](../archive/planning/standalone-udp-baseline.md)에 보존한다. 현재 소스에는
+[역사 기준선](../records/archive/standalone-udp-baseline.md)에 보존한다. 현재 소스에는
 적용하지 않는다.
 
 ## 2. 빌드
@@ -100,7 +100,7 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch objects_source:=lidar traff
 | `/behavior/context` | `asmc_msgs/BehaviorContext` | Behavior→Frenet | v1 compatibility |
 | `/planning/feedback` | `asmc_msgs/PlanFeedback` | Frenet→Behavior | v1 compatibility |
 
-필드·enum·transaction은 [FSM↔Frenet v2 contract](../contracts/planning/fsm-frenet-v2.md), frame과
+필드·enum·transaction은 [FSM↔Frenet v2 contract](../contracts/planning-fsm-frenet-v2.md), frame과
 timestamp는 [ROS interface](../../src/interfaces/README.md)가 정본이다.
 
 ## 6. 관측

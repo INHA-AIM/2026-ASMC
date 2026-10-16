@@ -3,7 +3,7 @@
 > **문서 역할:** Active Guide — Real Time UDP raw/result bag의 재현 가능한 운용
 >
 > 날짜가 있는 rate·latency와 종료된 GT 실험은
-> [transport 검증 기록](../records/simulator/runtime-transport-2026-09.md)에 보존한다.
+> [transport 검증 기록](../records/bridge/runtime-transport-2026-09.md)에 보존한다.
 
 ## 1. 사용 원칙
 

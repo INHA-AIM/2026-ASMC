@@ -1,6 +1,6 @@
 # scen_runner — 전체 씬·단일 구간 검증
 
-카메라 실행은 현재 `asmc_camera/camera.launch mode:=active`를 사용한다. Main은 외부 전방 검출의 CPU 어댑터만 실행하고 독립 YOLO 옵션은 제거됐다. 카메라 설정은 카메라 패키지가 소유하며 [LiDAR 인계](../../docs/packages/asmc_lidar/camera-handoff.md)를 따른다.
+카메라 실행은 현재 `asmc_camera/camera.launch mode:=active`를 사용한다. Main은 외부 전방 검출의 CPU 어댑터만 실행하고 독립 YOLO 옵션은 제거됐다. 카메라 설정은 카메라 패키지가 소유하며 [LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다.
 
 MORAI에 객체·환경을 배치하고 ego의 준비 정지, 충돌/도착/정체에 따른 다음 주행과 최종 시작점 복귀를 처리한다. `run_validation.sh`는 기존처럼 키보드 또는 외부 제어기를 사용한다. `run_scenario.sh`는 별도 판제 실행기와 연동하여 리스폰마다 판제·MPC를 재시작하고 준비를 확인한다. 시나리오 자체는 `/ctrl_cmd`를 발행하지 않는다.
 

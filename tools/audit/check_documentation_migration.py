@@ -20,8 +20,14 @@ from urllib.parse import unquote
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+from tools.audit.documentation_links import anchors, links, local_target, split_target, without_link_destinations
+
 DEFAULT_MANIFEST = REPO_ROOT / "config/docs/documentation_migration_v1.json"
-MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
+RELOCATION_MANIFEST = REPO_ROOT / "config/docs/documentation_relocation_v2.json"
+CENTRAL_DIRECTORIES = {"onboarding", "architecture", "operations", "contracts", "handoffs", "competition", "records"}
+RECORD_AREAS = {'camera', 'lidar', 'bridge', 'planning', 'hd-map', 'repository', 'archive'}
+NAVIGATION_PAGES = {'docs/README.md', 'docs/handoffs/README.md', 'docs/records/README.md'}
 
 
 def repo_path(raw: str) -> Path:
@@ -40,13 +46,8 @@ def sha256(path: Path) -> str:
 
 
 def markdown_link_targets(text: str) -> Iterable[str]:
-    for match in MARKDOWN_LINK_RE.finditer(text):
-        raw = match.group(1).strip()
-        if raw.startswith("<") and ">" in raw:
-            raw = raw[1 : raw.index(">")]
-        else:
-            raw = raw.split(maxsplit=1)[0]
-        yield unquote(raw)
+    for link in links(text):
+        yield link.target
 
 
 def tracked_markdown_files() -> Sequence[Path]:
@@ -153,6 +154,14 @@ def validate_current_tree(manifest: dict) -> List[str]:
             errors.append(f"frozen file SHA mismatch: {raw}: expected {expected}, got {actual}")
 
     redirects = manifest.get("redirects", [])
+    retired = manifest.get("retired_redirects", [])
+    if manifest.get("redirect_policy", {}).get("state") == "removed" and redirects:
+        errors.append("removed redirect policy cannot retain live compatibility pages")
+    for entry in retired:
+        if repo_path(entry["legacy"]).exists():
+            errors.append(f"retired compatibility page reintroduced: {entry['legacy']}")
+        if not repo_path(entry["target"]).is_file():
+            errors.append(f"retired compatibility replacement missing: {entry['target']}")
     legacy_paths: Set[Path] = set()
     legacy_names: Set[str] = set()
     for entry in redirects:
@@ -219,17 +228,16 @@ def validate_current_tree(manifest: dict) -> List[str]:
 
     # Current docs should link directly to canonical files.  Only the redirect
     # pages themselves may resolve through another compatibility page.
+    anchor_cache = {}
     for markdown in tracked_markdown_files():
         if not markdown.is_file() or markdown.resolve() in legacy_paths:
             continue
         text = markdown.read_text(encoding="utf-8", errors="replace")
         for raw_link in markdown_link_targets(text):
-            if raw_link.startswith(("#", "http://", "https://", "mailto:")):
+            if not local_target(raw_link):
                 continue
-            path_part = raw_link.split("#", 1)[0].split("?", 1)[0]
-            if not path_part:
-                continue
-            resolved = (markdown.parent / path_part).resolve()
+            path_part, _, fragment = split_target(raw_link)
+            resolved = (markdown.parent / path_part).resolve() if path_part else markdown.resolve()
             try:
                 resolved.relative_to(REPO_ROOT)
             except ValueError:
@@ -249,10 +257,32 @@ def validate_current_tree(manifest: dict) -> List[str]:
                     f"active Markdown links through compatibility stub: "
                     f"{markdown.relative_to(REPO_ROOT)} -> {raw_link}"
                 )
+            if fragment and resolved.is_file() and resolved.suffix == '.md':
+                if resolved not in anchor_cache:
+                    anchor_cache[resolved] = anchors(resolved.read_text(encoding='utf-8'))
+                if fragment not in anchor_cache[resolved]:
+                    errors.append(f"broken Markdown anchor: {markdown.relative_to(REPO_ROOT)} -> {raw_link}")
 
     empty_dirs = [path for path in (REPO_ROOT / "docs").rglob("*") if path.is_dir() and not any(path.iterdir())]
     for path in empty_dirs:
         errors.append(f"empty documentation directory: {path.relative_to(REPO_ROOT)}")
+
+    actual_directories = {p.name for p in (REPO_ROOT / 'docs').iterdir() if p.is_dir()}
+    if actual_directories != CENTRAL_DIRECTORIES:
+        errors.append(f"central documentation directories differ: {sorted(actual_directories)}")
+    for path in (REPO_ROOT / 'docs').rglob('*.md'):
+        relative = path.relative_to(REPO_ROOT / 'docs')
+        if len(relative.parts) > 3:
+            errors.append(f"documentation exceeds two directory levels: {relative}")
+        if len(relative.parts) == 3 and relative.parts[0] != 'records':
+            errors.append(f"non-record Markdown must be directly inside its category: {relative}")
+        if len(relative.parts) == 1 and path.name != 'README.md':
+            errors.append(f"unexpected root documentation page: {relative}")
+        if path.name != 'README.md' and not re.fullmatch(r'[a-z0-9][a-z0-9.-]*\.md', path.name):
+            errors.append(f"documentation filename violates lowercase/hyphen convention: {relative}")
+    for path in (REPO_ROOT/'docs/records').iterdir():
+        if path.is_dir() and path.name not in RECORD_AREAS:
+            errors.append(f"unrecognized record category: {path.name}")
 
     return errors
 
@@ -296,6 +326,17 @@ def validate_history(manifest: dict) -> List[str]:
             errors.append(f"baseline {key} mismatch: expected {baseline.get(key)}, got {actual}")
 
     for entry in retention:
+        if entry['disposition'] == 'corrected_snapshot_frozen_before_v2':
+            original = git_bytes(revision, entry['source'])
+            snapshot = entry['corrected_snapshot']
+            corrected = git_bytes(snapshot['commit'], snapshot['path'])
+            if hashlib.sha256(original).hexdigest() != entry['historical_source_sha256']:
+                errors.append(f"historical source SHA mismatch: {entry['source']}")
+            if hashlib.sha256(corrected).hexdigest() != snapshot['sha256'] or repo_path(entry['targets'][0]).read_bytes() != corrected:
+                errors.append(f"pre-existing corrected snapshot changed: {entry['source']}")
+            if not repo_path(entry['correction_evidence']).is_file():
+                errors.append(f"pre-existing correction evidence missing: {entry['source']}")
+            continue
         if not entry["disposition"].startswith("byte_identical"):
             continue
         source_bytes = git_bytes(revision, entry["source"])
@@ -320,6 +361,60 @@ def validate_history(manifest: dict) -> List[str]:
     return errors
 
 
+def relocation_body(text: str) -> str:
+    # Only explicitly added navigation blocks may differ during this move.
+    text = re.sub(r'<!-- documentation-structure-v2:start -->.*?<!-- documentation-structure-v2:end -->\n', '', text, flags=re.S)
+    return without_link_destinations(text)
+
+
+def validate_relocation(inventory: dict) -> List[str]:
+    """One-time before/after proof; deliberately excluded from default CI."""
+    errors = []
+    if inventory.get('schema_version') != 2:
+        return ['unsupported relocation inventory schema']
+    sources, targets = set(), set()
+    revision = inventory['base_commit']
+    for entry in inventory['entries']:
+        source, target = entry['source'], entry['target']
+        if source in sources:
+            errors.append(f'duplicate relocation source: {source}')
+        sources.add(source)
+        original = git_bytes(revision, source)
+        if hashlib.sha256(original).hexdigest() != entry['source_sha256']:
+            errors.append(f'relocation source SHA mismatch: {source}')
+        if entry['action'] == 'remove_redirect':
+            if repo_path(source).exists() or not repo_path(target).is_file():
+                errors.append(f'invalid redirect retirement: {source} -> {target}')
+            if '호환 안내'.encode('utf-8') not in original:
+                errors.append(f'non-redirect deletion refused: {source}')
+            continue
+        if target in targets:
+            errors.append(f'duplicate relocation destination: {target}')
+        targets.add(target)
+        path = repo_path(target)
+        if not path.is_file():
+            errors.append(f'relocation target missing: {target}')
+            continue
+        current = path.read_bytes()
+        if entry['frozen'] or path.suffix != '.md':
+            equal = current == original
+        else:
+            normalize = relocation_body if source in NAVIGATION_PAGES else without_link_destinations
+            equal = normalize(current.decode('utf-8')) == without_link_destinations(original.decode('utf-8'))
+        if not equal:
+            errors.append(f'non-navigation content changed during relocation: {source} -> {target}')
+        if source != target and repo_path(source).exists():
+            errors.append(f'old relocation source remains: {source}')
+    original_docs = set(git_tree_paths(revision))
+    declared_docs = {x for x in sources if x.startswith('docs/')}
+    if original_docs != declared_docs:
+        errors.append(f'relocation inventory incomplete: missing={sorted(original_docs-declared_docs)}, extra={sorted(declared_docs-original_docs)}')
+    for path in (REPO_ROOT/'docs').rglob('*'):
+        if path.is_file() and path.relative_to(REPO_ROOT).as_posix() not in targets | set(inventory.get('new_files', [])):
+            errors.append(f'undeclared new central document: {path.relative_to(REPO_ROOT)}')
+    return errors
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_MANIFEST)
@@ -328,12 +423,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         action="store_true",
         help="also verify the recorded pre-migration commit and byte-identical moves",
     )
+    parser.add_argument('--verify-relocation', action='store_true',
+                        help='one-time v2 source/target body-preservation check (requires base Git history)')
     args = parser.parse_args(argv)
 
     manifest = json.loads(args.config.read_text(encoding="utf-8"))
     errors = validate_current_tree(manifest)
     if args.with_history:
         errors.extend(validate_history(manifest))
+    if args.verify_relocation:
+        errors.extend(validate_relocation(json.loads(RELOCATION_MANIFEST.read_text())))
 
     if errors:
         for error in errors:
@@ -348,7 +447,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "documentation migration check passed: "
         f"markdown={markdown_count}, generated_text={text_count}, "
         f"redirects={len(manifest['redirects'])}, frozen={len(manifest['frozen_current_files'])}, "
-        f"history={history}"
+        f"history={history}, relocation={'verified' if args.verify_relocation else 'not requested'}"
     )
     return 0
 

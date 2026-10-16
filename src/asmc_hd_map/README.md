@@ -6,10 +6,10 @@ AutoNav K-City 2025 HD맵의 deterministic builder, 운영 publisher, local cach
 
 > **문서 역할:** Active Package Guide — deterministic builder, runtime publisher와 개발 검수
 
-- topic·message 의미: [HD Map contract](../../docs/contracts/hd-map/topic-v1.md)
-- 판제 소비와 RViz: [runtime contract](../../docs/contracts/hd-map/runtime-v1.md)
-- checkpoint·mission: [competition metadata](../../docs/contracts/competition/kcity2025-metadata-v1.md)
-- 최종 주행가능영역 기준: [P2-B baseline](../../docs/records/baselines/kcity2025-compact-drivable-v1.md)
+- topic·message 의미: [HD Map contract](../../docs/contracts/hd-map-topic-v1.md)
+- 판제 소비와 RViz: [runtime contract](../../docs/contracts/hd-map-runtime-v1.md)
+- checkpoint·mission: [competition metadata](../../docs/contracts/competition-kcity2025-metadata-v1.md)
+- 최종 주행가능영역 기준: [P2-B baseline](../../docs/records/hd-map/kcity2025-compact-drivable-v1.md)
 
 message/topic 의미는 HD Map contract, 실행 토픽과 필드 해석은 runtime contract, 공식
 checkpoint·mission 값은 competition metadata가 우선한다. 이 README는 패키지를 개발하고
@@ -50,11 +50,11 @@ roslaunch asmc_hd_map competition_map_debug.launch follow_ego:=false \
   debug_marker_detail:=full                                                # 전체 경로, 제작 검수
 ```
 
-박스·색·TF 의미는 [runtime contract §4.0](../../docs/contracts/hd-map/runtime-v1.md#40-ego-차량-박스와-base_link-추적)을 본다.
+박스·색·TF 의미는 [runtime contract §4.0](../../docs/contracts/hd-map-runtime-v1.md#40-ego-차량-박스와-base_link-추적)을 본다.
 
 미션 구간은 종류별 namespace(`mission_<type>`, 점선 `mission_surface_<type>`, full 전용 `mission_actors_<type>`)로
-나뉘어 RViz에서 따로 켜고 끌 수 있다. 범례는 [runtime contract §4](../../docs/contracts/hd-map/runtime-v1.md#4-rviz-표시)를 보고,
-구간별 회피 차로·actor 후보와 샘플링 API는 [미션 시나리오 spec](../../docs/handoffs/hd-map/mission-scenario-spec.md)을 본다.
+나뉘어 RViz에서 따로 켜고 끌 수 있다. 범례는 [runtime contract §4](../../docs/contracts/hd-map-runtime-v1.md#4-rviz-표시)를 보고,
+구간별 회피 차로·actor 후보와 샘플링 API는 [미션 시나리오 spec](../../docs/handoffs/hd-map-mission-scenario.md)을 본다.
 
 최종/legacy/원태 source와 최신/과거 주행가능영역 비교:
 
@@ -89,10 +89,10 @@ GPS 안테나가 아니라 후륜축 중심 `base_link`의 map 좌표를 기준�
 공식 경로·누적거리는 `/hd_map/global/route`, 현재 구간·속도·미션 시작/종료 좌표는
 `/hd_map/context`에서 받는다. GPS 무효 시 현재 정보를 무효화하고 마지막 음영구간 정보만
 역사값으로 제공하며, 복귀하면 새 GPS로 재획득한다. 판제 반영 항목은
-[판제 인수 문서](../../docs/handoffs/hd-map/planning-consumption-v1.md)를 따른다. `hd_map_consumer_example.py`의 `~layers`와
+[판제 인수 문서](../../docs/handoffs/hd-map-to-planning.md)를 따른다. `hd_map_consumer_example.py`의 `~layers`와
 `SemanticMapIndex`로 필요한 vector/미션 레이어만 받고 제한속도·구간·신호등/정지선을 조회한다.
 링크별 유효 최대속도 39개는 속도 zone payload로 전달한다. 상세 설정과 좌표 변환은
-[runtime 계약](../../docs/contracts/hd-map/runtime-v1.md#22-선택-구독과-규칙-조회)을 따른다.
+[runtime 계약](../../docs/contracts/hd-map-runtime-v1.md#22-선택-구독과-규칙-조회)을 따른다.
 
 RViz 기본 프리셋은 주행가능영역의 전역 외곽선을 표시한다. `Drivable area near ego`는 제거했고,
 전체 raster 면 display는 필요할 때만 수동으로 켠다.
@@ -268,8 +268,8 @@ ROS 환경에서는 `catkin_make --pkg asmc_msgs asmc_hd_map`과 실제 topic ve
 | hybrid completion | `reports/kcity2025_hybrid_completion_20260916/` |
 | operational candidate | `reports/kcity2025_operational_map_20260916/`과 config/source SHA |
 | route curation 1~14 | [route curation 기록](../../docs/records/hd-map/kcity2025-route-curation-20260917.md) |
-| P2-A input audit | [P2-A baseline](../../docs/records/baselines/kcity2025-drivable-input-v1.md) |
-| P2-B compact product | [P2-B baseline](../../docs/records/baselines/kcity2025-compact-drivable-v1.md) |
+| P2-A input audit | [P2-A baseline](../../docs/records/hd-map/kcity2025-drivable-input-v1.md) |
+| P2-B compact product | [P2-B baseline](../../docs/records/hd-map/kcity2025-compact-drivable-v1.md) |
 
 원태 `development/won_tae_link_node`는 현재 제품 재생성에 필요한 provenance를 외부 immutable
 artifact로 보존하고 parity를 확인하기 전까지 삭제하지 않는다.

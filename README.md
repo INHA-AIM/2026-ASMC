@@ -15,14 +15,14 @@
 |------|------|
 | [문서 허브](docs/README.md) | 정본·가이드·설계안·기록의 전체 색인 |
 | [개발 시작](docs/onboarding/README.md) | clone, Docker, 빌드와 환경 기준 |
-| [실행 명령어 모음](docs/runtime-commands.md) | bridge·HD Map·perception·planning·bag 명령, 모든 공개 옵션과 LAN2LAN 준비 |
+| [실행 명령어 모음](docs/operations/commands.md) | bridge·HD Map·perception·planning·bag 명령, 모든 공개 옵션과 LAN2LAN 준비 |
 | [팀 ownership](docs/onboarding/ownership.md) | 담당 경로와 검증 책임 |
-| [협업 규칙](docs/governance/README.md) | 브랜치, PR, 리뷰와 main 안정성 |
+| [협업 규칙](docs/onboarding/collaboration.md) | 브랜치, PR, 리뷰와 main 안정성 |
 | [시스템 개요](docs/architecture/system-overview.md) | 현재 아키텍처와 모듈 경계 |
 | [통합 로드맵](docs/architecture/consolidation-roadmap.md) | 패키지 통합부터 현장 배포까지의 순서 |
 | [운영 가이드](docs/operations/README.md) | Docker, MORAI UDP, 시뮬 검증과 현장 전환 기준 |
 | [검증·실험 기록](docs/records/README.md) | 날짜·commit·artifact별 baseline과 실험 결과 |
-| [역사·레거시 기록](docs/archive/README.md) | 현재 실행 금지인 과거 설계와 대체 문서 |
+| [역사·레거시 기록](docs/records/archive/README.md) | 현재 실행 금지인 과거 설계와 대체 문서 |
 | [기여 요약](CONTRIBUTING.md) | PR 전 최소 확인 사항 |
 
 ## 빠른 시작
@@ -66,7 +66,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 > `/opt/yolo-venv`(Python 3.9 + PyTorch cu128)를 사용합니다. 두 이미지 모두
 > NVIDIA 드라이버와 Container Toolkit은 **host**에 설치돼 있어야 하며,
 > 컨테이너 안에 드라이버를 설치하면 안 됩니다. 확인·문제해결 절차는
-> [src/lidar+sensorfusion/RUN_SENSOR_FUSION.md](src/lidar+sensorfusion/RUN_SENSOR_FUSION.md#camera-inference-gpu-cuda)를 보십시오.
+> [src/lidar+sensorfusion/RUN_SENSOR_FUSION.md](src/lidar+sensorfusion/RUN_SENSOR_FUSION.md#current-camera-connection--2026-10-16)를 보십시오.
 
 상세: [docs/onboarding/README.md](docs/onboarding/README.md)
 
@@ -120,5 +120,5 @@ P4-C6부터 camera semantic, camera BEV/lane, traffic-light의 실행·offline·
 - WIP 공유는 Draft PR을 사용한다.
 - 과거 Phase 0 개인 레포와 `main` 직푸시 정책은 현재 규칙이 아니다.
 
-상세 명령은 [협업 규칙](docs/governance/README.md), 과거 이식 기록은
-[Wave 1/2 archive](docs/archive/integration/wave1-wave2-plan.md)를 참고한다.
+상세 명령은 [협업 규칙](docs/onboarding/collaboration.md), 과거 이식 기록은
+[Wave 1/2 archive](docs/records/archive/wave1-wave2-plan.md)를 참고한다.

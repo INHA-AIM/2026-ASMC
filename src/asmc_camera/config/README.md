@@ -33,5 +33,5 @@ Git으로 보존하고, 재현에 필요한 실험 프로필·SHA·실패 증거
 과거 설정을 이동·삭제하려면 인계 문서와 시험의 참조부터 함께 정리해야 합니다.
 
 960 변경의 검증 상태와 기존 실패는
-[실행 계약](../../../docs/contracts/perception/camera-runtime-v1.md)과
-[960 검증 기록](../../../docs/handoffs/perception/camera-front960-validation.md)을 따릅니다.
+[실행 계약](../../../docs/contracts/camera-runtime-v1.md)과
+[960 검증 기록](../../../docs/records/camera/camera-front960-validation.md)을 따릅니다.

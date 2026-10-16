@@ -1,0 +1,1299 @@
+{
+  "schema_version": 2,
+  "base_commit": "d36f29b6e5dad468c2668ff2e3823e5de8de49b5",
+  "scope": "One-time path relocation inventory; source hashes do not freeze living documentation.",
+  "entries": [
+    {
+      "source": ".github/pull_request_template.md",
+      "target": ".github/pull_request_template.md",
+      "action": "update_references",
+      "source_sha256": "c2ff6dc34ecf01ec838f910d0d29496bc626e8d7b3ff8dc3712b2f969d45c7f8",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "CONTRIBUTING.md",
+      "target": "CONTRIBUTING.md",
+      "action": "update_references",
+      "source_sha256": "65f6554ebae6039fcd73fb28d471e6355e15ade182287c91d2230de1cb19136b",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "README.md",
+      "target": "README.md",
+      "action": "update_references",
+      "source_sha256": "c776a0b0e8938eb34d691310753d3c6a30602e59c982a337147c1369bfb911a6",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "config/README.md",
+      "target": "config/README.md",
+      "action": "update_references",
+      "source_sha256": "4387516aee4368865fcd77623dd75641f28aceda6080aae39302b476c1d226e3",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "config/baselines/evidence/camera_yoloe_l_first_v1/README.md",
+      "target": "config/baselines/evidence/camera_yoloe_l_first_v1/README.md",
+      "action": "update_references",
+      "source_sha256": "55e5d547c994823517e93a9cbcfe82c6781e88d31a980a035c4a006cb6ee8b37",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/README.md",
+      "target": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/README.md",
+      "action": "update_references",
+      "source_sha256": "e1a203a038650721d581fe730075fecbdc36ea2ab9e19a1127c802ed23e00c2d",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "config/baselines/evidence/lidar_continuous_regression_v1/README.md",
+      "target": "config/baselines/evidence/lidar_continuous_regression_v1/README.md",
+      "action": "update_references",
+      "source_sha256": "dca6e86ad8f11241b29d9cc00379762f39f58e0e7ea30feb8bb3dfa91367697b",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "config/bridge/README.md",
+      "target": "config/bridge/README.md",
+      "action": "update_references",
+      "source_sha256": "f1c3334f8f0930d38ef039cf97d9e5a8c9c9bbdee00f08b914a39c37d38e752b",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "config/morai/udp-sim-cheat-sheet.md",
+      "target": "config/morai/udp-sim-cheat-sheet.md",
+      "action": "update_references",
+      "source_sha256": "c583618daf13bdc96172a5abdd59d3e06a70c1eed42213ba5079ac1bdea395f5",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/README.md",
+      "target": "docs/README.md",
+      "action": "keep",
+      "source_sha256": "c0e3c31b7872691c20ee26a8aa198868715136204485a2616828474b02c8a901",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/architecture/consolidation-roadmap.md",
+      "target": "docs/architecture/consolidation-roadmap.md",
+      "action": "keep",
+      "source_sha256": "a811cc21030fa89ea974cc7872832dc824d6c00171d35e5d6a22be84536d6fc9",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/architecture/repository-layout.md",
+      "target": "docs/architecture/repository-layout.md",
+      "action": "keep",
+      "source_sha256": "4506b74e40cb619e0180a3b29276e9ae1b370799dbdd62e098fd27441ab1522a",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/architecture/system-overview.md",
+      "target": "docs/architecture/system-overview.md",
+      "action": "keep",
+      "source_sha256": "2ab4b4ae8281916732086394f65659db8cf987f720216b106188c8cd7ddef7a2",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/archive/README.md",
+      "target": "docs/records/archive/README.md",
+      "action": "move",
+      "source_sha256": "6526f3e08397f9ffd236dd52e3ee67e714e37cad031695c9d80651212ebcc6dd",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/archive/generated-msg/BehaviorCommand.msg.txt",
+      "target": "docs/records/archive/BehaviorCommand.msg.txt",
+      "action": "move",
+      "source_sha256": "8146606c640fd089e71b1348cb806d7aca1e9fb2f19dbd2af8d1b7290da17274",
+      "frozen": true,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/archive/generated-msg/FrenetFeedback.msg.txt",
+      "target": "docs/records/archive/FrenetFeedback.msg.txt",
+      "action": "move",
+      "source_sha256": "caac9cd7686e17b6b58ada9796994dbbf3ff00caf35d2862c16f36974810ae8b",
+      "frozen": true,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/archive/generated-msg/README.md",
+      "target": "docs/records/archive/generated-msg-index.md",
+      "action": "move",
+      "source_sha256": "4049ab6e107b84e6296f4c9eaa2030d6a5334d705a32a0afc077f690cca2883e",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/archive/integration/wave1-wave2-plan.md",
+      "target": "docs/records/archive/wave1-wave2-plan.md",
+      "action": "move",
+      "source_sha256": "065a2fc9ed850eea19186649fd22f22337ff1b07a9df641d3e1bcc8b84a9ab7a",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/archive/perception/agentic-loop.md",
+      "target": "docs/records/archive/agentic-loop.md",
+      "action": "move",
+      "source_sha256": "de101e44329424c05e227d771b1a7e47f96c0efa5dfd8af95b8fbd8c0d5e0ea3",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/archive/planning/d1-legacy-behavior-boundary.md",
+      "target": "docs/records/archive/d1-legacy-behavior-boundary.md",
+      "action": "move",
+      "source_sha256": "e49422a48c0922d776329203d61b534a847fed37bd80cf135df5d1a302657f5d",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/archive/planning/standalone-udp-baseline.md",
+      "target": "docs/records/archive/standalone-udp-baseline.md",
+      "action": "move",
+      "source_sha256": "bee69b59b868379a167a0aab4a5d6aab55e0cecf7f1dd06c11a010e963360a58",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/collaboration.md",
+      "target": "docs/onboarding/collaboration.md",
+      "action": "remove_redirect",
+      "source_sha256": "dfebc4eb98bf5c23f8b1e2890d220b17143e3142cca75deb82ab453e554512ea",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/competition/README.md",
+      "target": "docs/competition/README.md",
+      "action": "keep",
+      "source_sha256": "bf4dda3305fb07a585238f80abe5bcbc278fd5dc1718fefea724c82cc10f0e87",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/competition/images/image-20230408-141822.png",
+      "target": "docs/competition/images/image-20230408-141822.png",
+      "action": "keep",
+      "source_sha256": "03eb49dba84e9d6b76501a0b006c1afe0d144e390abadce8b1fa02a299cd796f",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/competition/images/스크린샷 2025-08-08 112023.png",
+      "target": "docs/competition/images/스크린샷 2025-08-08 112023.png",
+      "action": "keep",
+      "source_sha256": "ed2ac61c4008f94e9a931903269e3739eb6dd9e99cec2e9a28fa32ae679eb085",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/competition/images/스크린샷 2026-06-30 111239.png",
+      "target": "docs/competition/images/스크린샷 2026-06-30 111239.png",
+      "action": "keep",
+      "source_sha256": "7b82a47800532edf311a511c1ca4226365e1cabef76b62f58577892cb322e01d",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/competition/images/스크린샷 2026-07-10 124338.png",
+      "target": "docs/competition/images/스크린샷 2026-07-10 124338.png",
+      "action": "keep",
+      "source_sha256": "977cc9eab64d66fd8b675b670d53c206a16f1e8cc3f84de0c65a5c44468326b8",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/competition/images/스크린샷 2026-07-13 162644.png",
+      "target": "docs/competition/images/스크린샷 2026-07-13 162644.png",
+      "action": "keep",
+      "source_sha256": "6c14939bbbe78079d7d04ebc1a8c4a398f2679882cd5a6712f562c43e4896dce",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/contracts/README.md",
+      "target": "docs/contracts/README.md",
+      "action": "keep",
+      "source_sha256": "1fc81e526220b90a03803167bad4ef7f13f395286780e02b346a549c4941b8a0",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/contracts/competition/kcity2025-metadata-v1.md",
+      "target": "docs/contracts/competition-kcity2025-metadata-v1.md",
+      "action": "move",
+      "source_sha256": "67b8db48318269c50cb0d3303b763a7e908edcbd68550ba8a5ba2dfa6e06691d",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/contracts/hd-map-runtime-visualization-v1.md",
+      "target": "docs/contracts/hd-map-runtime-v1.md",
+      "action": "remove_redirect",
+      "source_sha256": "1873a3c8b4c59ecfaa7c243315f77bee02513de92514340be1706a9469c72cf8",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/contracts/hd-map-topic-contract-v1.md",
+      "target": "docs/contracts/hd-map-topic-v1.md",
+      "action": "remove_redirect",
+      "source_sha256": "f411c4dbbdba81f0f361f183bf3d71d34e89b5189ba133567a9ea801cd67ee9c",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/contracts/hd-map/runtime-v1.md",
+      "target": "docs/contracts/hd-map-runtime-v1.md",
+      "action": "move",
+      "source_sha256": "257e34fe67311ef54ff4767a8c510efa98009a24486f5ffb5f705e77c2569cea",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/contracts/hd-map/topic-v1.md",
+      "target": "docs/contracts/hd-map-topic-v1.md",
+      "action": "move",
+      "source_sha256": "9590276e9dc2e230758e67cf2bd338e9c3d62e4ea63e7b759eb3667f523e372b",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/contracts/kcity2025-competition-metadata-v1.md",
+      "target": "docs/contracts/competition-kcity2025-metadata-v1.md",
+      "action": "remove_redirect",
+      "source_sha256": "047ffd63fff2e51c19f7293084b337bb00c4975cc9a830284cbf044bdc7fe077",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/contracts/perception/camera-runtime-v1.md",
+      "target": "docs/contracts/camera-runtime-v1.md",
+      "action": "move",
+      "source_sha256": "b0e75cc03ed0c9aa0393c74b7558ee3e8165c3997584ab298f4d6545a0b88f5e",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/contracts/perception/dataset-labeling-split.md",
+      "target": "docs/contracts/dataset-labeling-split.md",
+      "action": "move",
+      "source_sha256": "2286a6f28f11299a1287e480920ee31e77c779e500e88548b5e6855cfb0d4f9b",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/contracts/perception/lidar-planning-consumer-v1.md",
+      "target": "docs/contracts/lidar-planning-consumer-v1.md",
+      "action": "move",
+      "source_sha256": "cd20b28a7f45feacb63db334d0f8747aec528f8e70b54931368adce10f61d655",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/contracts/perception/runtime-v1.md",
+      "target": "docs/contracts/perception-runtime-v1.md",
+      "action": "move",
+      "source_sha256": "18eb190d4a45f6497bf38ce699de6204f43256355abfa882ee10e46d5a4c5a00",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/contracts/planning/fsm-frenet-v2.md",
+      "target": "docs/contracts/planning-fsm-frenet-v2.md",
+      "action": "move",
+      "source_sha256": "cd9ebce778115d3e72a849dca6edd5f1dd85a3dccc8bb284c862d74c7803fa3f",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/contracts/simulator/morai-msgs-beta-policy.md",
+      "target": "docs/contracts/simulator-morai-msgs-beta-policy.md",
+      "action": "move",
+      "source_sha256": "b08dbbfcf35cf3fb71266c076b092fea5e8f38d39a0f9ed38af21063e7b8e9d1",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/getting-started.md",
+      "target": "docs/onboarding/README.md",
+      "action": "remove_redirect",
+      "source_sha256": "5b1b9137e0b8de01e630a03f2104871f8303b55603d773500cf06b299ecfa5a5",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/governance/README.md",
+      "target": "docs/onboarding/collaboration.md",
+      "action": "move",
+      "source_sha256": "89b9c5a3db6a4ffed94df22e34bf280e28f7d48ad4e08b8b0728b46f5c808a97",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/README.md",
+      "target": "docs/handoffs/README.md",
+      "action": "keep",
+      "source_sha256": "5deac67e07c9d413bac3f843c06545dfbeca9e9affc6d6a122c7f870e6e8f949",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/competition/obstacle-assets-and-labels.md",
+      "target": "docs/competition/obstacle-assets-and-labels.md",
+      "action": "move",
+      "source_sha256": "a0865c7ef2990e4a4f5ef5653e7fa2918d50691b9985267eb4c71a883b6f59c9",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/competition/rule-v1.2-impacts.md",
+      "target": "docs/competition/rule-v1.2-impacts.md",
+      "action": "move",
+      "source_sha256": "08daf13ae04463c66975eacd62a5f6fbccdb59b368b4ad42d5c8e8c4e998df42",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/hd-map/mission-scenario-spec.md",
+      "target": "docs/handoffs/hd-map-mission-scenario.md",
+      "action": "move",
+      "source_sha256": "e6a46695499408099bade4ba2e628ed8c7d411068807253c56ef3cfa6ae39c2b",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/hd-map/planning-consumption-v1.md",
+      "target": "docs/handoffs/hd-map-to-planning.md",
+      "action": "move",
+      "source_sha256": "f0f6ae271af77e49b09b1fcd28dbd438d4906a81a242851bd3ff08877575aa18",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-coco-class-expansion.md",
+      "target": "docs/records/camera/camera-coco-class-expansion.md",
+      "action": "move",
+      "source_sha256": "725367f874ce8b36a0908187b4d6426577d442af5397ffc578def86b9e069db0",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-data-integration-prep.md",
+      "target": "docs/records/camera/camera-data-integration-prep.md",
+      "action": "move",
+      "source_sha256": "6665e50326e5bdcba003a4f1c45f2bcb84b6318e099d5cc8ecfef0689d896dae",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-deployment-roadmap-20261014.md",
+      "target": "docs/records/camera/camera-deployment-roadmap-20261014.md",
+      "action": "move",
+      "source_sha256": "111e9b00971e521b7a6faa623a2dda07443b5b81e615f6b297a9f88c75411d39",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-family-supply-optimization.md",
+      "target": "docs/records/camera/camera-family-supply-optimization.md",
+      "action": "move",
+      "source_sha256": "0920299a6427601e86ef2d627c4b46a967ce4352f93f4058711363c561a64c6d",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-front960-validation.md",
+      "target": "docs/records/camera/camera-front960-validation.md",
+      "action": "move",
+      "source_sha256": "b88bc2ea98cbf6ebbb13f8cdf533ca1c18a5cbdd56eb192f74a99a4defe75b55",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-inference-control.md",
+      "target": "docs/records/camera/camera-inference-control.md",
+      "action": "move",
+      "source_sha256": "6bd72dec41ca1fab98454c2fcc212582d1489891946bf9faa147e5068864b98f",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-lidar-b0.md",
+      "target": "docs/records/camera/camera-lidar-b0.md",
+      "action": "move",
+      "source_sha256": "d33df28dc88356fc13bcaa05ba64bbc4caf8a5442dbd24a24e72b514fcadf3b3",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-lidar-b1a.md",
+      "target": "docs/records/camera/camera-lidar-b1a.md",
+      "action": "move",
+      "source_sha256": "996f7366ed620f343d6c9f392c8e1f1a5785e8c52092f7a6daa35903ec69f872",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-lidar-coordinate-reference-review.md",
+      "target": "docs/records/camera/camera-lidar-coordinate-reference-review.md",
+      "action": "move",
+      "source_sha256": "c2e229de5f17e42d2bf45fb9b34933dec418bc1068c2dfdc93dd2bfd45c7c697",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-lidar-fusion-study.md",
+      "target": "docs/records/camera/camera-lidar-fusion-study.md",
+      "action": "move",
+      "source_sha256": "e3f526fe6ae4633bdc0754ba80f043f8b6944369852b95fd901370b282eb3a17",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-mission16-deployment.md",
+      "target": "docs/operations/camera-deployment.md",
+      "action": "move",
+      "source_sha256": "46e873003a081455bdeac5f6ff27424ce7811580e41ed63463d1c8e2f8289f40",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-mpc-object-collection-pilot.md",
+      "target": "docs/records/camera/camera-mpc-object-collection-pilot.md",
+      "action": "move",
+      "source_sha256": "8f01f7647a4b3608ba751889a94bc14c2d709c817f90b8243867dc08f1a23398",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-object-detection.md",
+      "target": "docs/records/camera/camera-object-detection.md",
+      "action": "move",
+      "source_sha256": "f6ab303b6ea9ab3ccfd3a041aec7aa45426940cf39c8cf6a17c326363f7b0800",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-objects-p2a.md",
+      "target": "docs/records/camera/camera-objects-p2a.md",
+      "action": "move",
+      "source_sha256": "e64783648bc9db97d348a2cc97664fb867519cc68139da45d55bcd498a2a4bc2",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-rate-confidence-followup.md",
+      "target": "docs/records/camera/camera-rate-confidence-followup.md",
+      "action": "move",
+      "source_sha256": "0d258e4c6c41179ba4beda1c6a022ae27252d4d7071ad9ab11230781edbe2b30",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-runtime-plan.md",
+      "target": "docs/records/camera/camera-runtime-plan.md",
+      "action": "move",
+      "source_sha256": "a4e9c0fa20b68d4fe423c227ca738505d596400b7d67aeafd59ad1251a11cab5",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-runtime-structure-validation.md",
+      "target": "docs/records/camera/camera-runtime-structure-validation.md",
+      "action": "move",
+      "source_sha256": "757cea31b39487667e7aa25e6344c3a402ad3821341b288bdd3df150ea56795c",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-seg-model-selection.md",
+      "target": "docs/records/camera/camera-seg-model-selection.md",
+      "action": "move",
+      "source_sha256": "0b394a711c782bb0dadaecfdecd3834b165ee74c417afb38428a3a4479187db3",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-shadow-family-optimization.md",
+      "target": "docs/records/camera/camera-shadow-family-optimization.md",
+      "action": "move",
+      "source_sha256": "7090df3ce379c563044868874b4b801d4d0322af76cc4d295225a794ed169cd2",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-shared-input-design.md",
+      "target": "docs/records/camera/camera-shared-input-design.md",
+      "action": "move",
+      "source_sha256": "7af0fc911c67c3def4685b5dedb751dd6590c1dc934c815ae8a16b6c5b5c3e86",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-shared960-validation.md",
+      "target": "docs/records/camera/camera-shared960-validation.md",
+      "action": "move",
+      "source_sha256": "4506e6909e9585d2919b9e4bbbceb631eeb6cd78eba6069b51e6ef53ea178fa6",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-three-view-coco-runtime.md",
+      "target": "docs/records/camera/camera-three-view-coco-runtime.md",
+      "action": "move",
+      "source_sha256": "1cf617f79a9f0e5c444cb85aa17ec4e530c89baa767b94d058091b3a321ea393",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-training-data-audit.md",
+      "target": "docs/operations/data-preparation.md",
+      "action": "move",
+      "source_sha256": "74451822ed5b3837b3e058873f30b4c99984b122ec4cc2b130bd2514a9dfbf70",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-twinlite-tensorrt.md",
+      "target": "docs/records/camera/camera-twinlite-tensorrt.md",
+      "action": "move",
+      "source_sha256": "13a3bb0416c497d532dc9c80367a738198fd0f30028519f96191808bfb7c3c21",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-visualization-validation.md",
+      "target": "docs/records/camera/camera-visualization-validation.md",
+      "action": "move",
+      "source_sha256": "127612aa64a93a9f12d3d9084a3068a95ecc6367a969e36876af400fb7e403a4",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/perception/camera-yoloe-l-first-run.md",
+      "target": "docs/records/camera/camera-yoloe-l-first-run.md",
+      "action": "move",
+      "source_sha256": "cc67a8a955971c15e56378bcc44ad97444e9161c8805815c72e51086245801ff",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-yoloe-l-prompt-cleanup.md",
+      "target": "docs/records/camera/camera-yoloe-l-prompt-cleanup.md",
+      "action": "move",
+      "source_sha256": "20e5c4a02f8bcbf828ea0a0509d94b78c9a9145c7877d14045b27c0091064f63",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/camera-yoloe-obstacle-selection.md",
+      "target": "docs/records/camera/camera-yoloe-obstacle-selection.md",
+      "action": "move",
+      "source_sha256": "2ef54b694f86e23ab863b68b11973255cb057d44037b13adb0b6c807e5c831fe",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/lidar-camera-frame-boundaries.md",
+      "target": "docs/records/lidar/lidar-camera-frame-boundaries.md",
+      "action": "move",
+      "source_sha256": "8a13113ec8e8a1ccdf1ae3bbde0c6c15d05f745132dd38af606bf99b1c46c843",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/lidar-continuous-regression.md",
+      "target": "docs/records/lidar/lidar-continuous-regression.md",
+      "action": "move",
+      "source_sha256": "2f2db0f93248be0a585fa39d7dfd1d4c2a3c93c3b1ef227d32b110843658fde2",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/handoffs/perception/shadow-camera.md",
+      "target": "docs/handoffs/camera-to-planning.md",
+      "action": "move",
+      "source_sha256": "d6da27c41b2ddfe3d4d87437902bcf8a569628d4455b08ffc8ff1f29a474dc0f",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/handoffs/planning/behavior-legacy.md",
+      "target": "docs/records/archive/planning-behavior-legacy.md",
+      "action": "move",
+      "source_sha256": "ddfcca33fdbd08f77061cc1a3b7413a7342079817fdaa8f4fc6c3bd713820f4e",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/network-udp-ros.md",
+      "target": "docs/operations/README.md",
+      "action": "remove_redirect",
+      "source_sha256": "cc4a47dc8a9234e98870ee04e36ee2a8b96f37e0576214ca589cd8b50ec95462",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/onboarding/README.md",
+      "target": "docs/onboarding/README.md",
+      "action": "keep",
+      "source_sha256": "45bce42a884beb730b4417899a1f91ad32f5800c71ff42e1b58f7c7313bbb3fb",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/onboarding/ownership.md",
+      "target": "docs/onboarding/ownership.md",
+      "action": "keep",
+      "source_sha256": "058030d1a32948da2f3a434eb8755d486ea022450b9624c9a5d4ee0e0cce7534",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/operations/README.md",
+      "target": "docs/operations/README.md",
+      "action": "keep",
+      "source_sha256": "be715354a698a8f0d27dcb606487d282daffdb668fcdb3eb91714de578005df6",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/operations/planning-control.md",
+      "target": "docs/operations/planning-control.md",
+      "action": "keep",
+      "source_sha256": "0bdac522d821abf4d90e78f9955392d8cef66e25cb9d0f1276023b6903d4f76c",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/operations/rosbag-evaluation.md",
+      "target": "docs/operations/rosbag-evaluation.md",
+      "action": "keep",
+      "source_sha256": "7e2b1a1800f162f0c5aa88334a67a1e58012abe16dfa9f4ad2110ffbcb5d5ae8",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/asmc_bridge/README.md",
+      "target": "src/asmc_bridge/docs/integration.md",
+      "action": "move",
+      "source_sha256": "0754c4ab2e15313b62703a1829a586363c1ed5b45ddce72b8f0ae0934dc74f9b",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/asmc_lidar/README.md",
+      "target": "docs/handoffs/lidar-migration.md",
+      "action": "move",
+      "source_sha256": "4c11eef7ca692f7a40b652f0ce5126d067993924665a673dfd18eeba42d99ac6",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/asmc_lidar/b1a-improvement-tasks.md",
+      "target": "src/asmc_lidar/docs/migration-tasks.md",
+      "action": "move",
+      "source_sha256": "5c63382537d540f7b5f56ea860b09071c1aea363b2d773b2d78026c799401f5f",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/asmc_lidar/camera-handoff.md",
+      "target": "docs/handoffs/camera-to-lidar.md",
+      "action": "move",
+      "source_sha256": "b353c8f6aee1584db61f2955d8aab8cb33e2525c921ff306c912aa958b0bb514",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/asmc_perception/README.md",
+      "target": "src/asmc_camera/docs/integration.md",
+      "action": "move",
+      "source_sha256": "e8e6c4fde4a9465066b2ebe53133c28319efc3e589cd03ae8d63367a7cdbce90",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/asmc_perception/bev-lane-interface-plan.md",
+      "target": "src/asmc_camera/docs/bev-lane-design.md",
+      "action": "move",
+      "source_sha256": "622656da533453c313f0b0ad80ff8058b367a25d6a7a547881a89edc1122ece7",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/asmc_perception/roadmap.md",
+      "target": "docs/architecture/perception-roadmap.md",
+      "action": "move",
+      "source_sha256": "da585f8329d89bd1e65acb41a9638caff6b186a78ea3842d895018d06fe4dbd8",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/planning-control/README.md",
+      "target": "docs/architecture/planning-control.md",
+      "action": "move",
+      "source_sha256": "aa37cce2a6793e1a5b06f8a2ef0d765beb4e0c7eeb2f9a5cc6031ea9ee550ab7",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/planning-control/refactoring.md",
+      "target": "docs/architecture/planning-control-refactoring.md",
+      "action": "move",
+      "source_sha256": "bc3a5ae47942f01b243864721393e7068f6e1c215416f4c3b2700b208f9ce67f",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/packages/planning-control/roundabout-merge-implementation.md",
+      "target": "src/asmc_planner/docs/roundabout-merge.md",
+      "action": "move",
+      "source_sha256": "94c317c2afe1b67a0e2beb381e3eff33e849f810ab6a8651a6bfc8639e571ef9",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/perception-dataset-labeling-split.md",
+      "target": "docs/contracts/dataset-labeling-split.md",
+      "action": "remove_redirect",
+      "source_sha256": "94938dcfb3bb624da2e13b3f5f3a8004d6b0e38aa8ca3c2cc6ae2609237f8739",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/perception-map-fusion-roadmap.md",
+      "target": "docs/architecture/perception-roadmap.md",
+      "action": "remove_redirect",
+      "source_sha256": "88bcc2810d0ee77ab8a200c8b1a10ba2343a58da30708949158b9e932237ab71",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/planning-control-udp.md",
+      "target": "docs/operations/planning-control.md",
+      "action": "remove_redirect",
+      "source_sha256": "6f32b4eb087c956e8c7f86bc412d830d7c8f8192c5d4ae0b6a110f1815ecfdf4",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/README.md",
+      "target": "docs/records/README.md",
+      "action": "keep",
+      "source_sha256": "f7a7cbc6cba8baadb9051a7b7dcfb3a5e1eecbabb8654f56bd271953a21d3167",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/bridge-p3a-v1.md",
+      "target": "docs/records/bridge/bridge-p3a-v1.md",
+      "action": "move",
+      "source_sha256": "954671c1336d14c98e4d596e71d690d679471f72b8e4cf8f4b036c8412678e85",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/bridge-p3b-v1.md",
+      "target": "docs/records/bridge/bridge-p3b-v1.md",
+      "action": "move",
+      "source_sha256": "d516d271e2fc56e8fb1d28a0ddc94569bae0f2de3f5c1934e8a7b4f502cc9415",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/bridge-p3c-v1.md",
+      "target": "docs/records/bridge/bridge-p3c-v1.md",
+      "action": "move",
+      "source_sha256": "b6d3f9192f5b769ac08527e0628c805dcab6eed732012abc85c1b459c3091b93",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/bridge-p3d-v1.md",
+      "target": "docs/records/bridge/bridge-p3d-v1.md",
+      "action": "move",
+      "source_sha256": "fb5c0e65fe1b06b00a004c2e40437e50ff1e12b9c400a1942f0ba32d5bdef4f7",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/bridge-p3e-local-live-v1.md",
+      "target": "docs/records/bridge/bridge-p3e-local-live-v1.md",
+      "action": "move",
+      "source_sha256": "1d82fe3b52855d89e8ad157374251c14d01c29ab0d369af39b167efc3a9ed292",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/bridge-p3f-consolidated-v1.md",
+      "target": "docs/records/bridge/bridge-p3f-consolidated-v1.md",
+      "action": "move",
+      "source_sha256": "bb8cbdbcb6a39a429d03b5e0c4f6d66315dcbd2c8fa7e03b2ba6c0af9844e04d",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/bridge-p3g-local-closeout-v1.md",
+      "target": "docs/records/bridge/bridge-p3g-local-closeout-v1.md",
+      "action": "move",
+      "source_sha256": "bd1084dcefffb0f8c6512160d60583fd394e000461a043561db76ed3e74a332e",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/kcity2025-compact-drivable-v1.md",
+      "target": "docs/records/hd-map/kcity2025-compact-drivable-v1.md",
+      "action": "move",
+      "source_sha256": "2ffa747d15caede30767b555ae26816e48e62a8c24b9d7ad3f96d5ec96cc3cc6",
+      "frozen": true,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/kcity2025-drivable-input-v1.md",
+      "target": "docs/records/hd-map/kcity2025-drivable-input-v1.md",
+      "action": "move",
+      "source_sha256": "beac0b15b194f8a82496c90595da8df834a2137103cb5e880a51b6294576d72f",
+      "frozen": true,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/perception-p4a-runtime-v1.md",
+      "target": "docs/records/camera/perception-p4a-runtime-v1.md",
+      "action": "move",
+      "source_sha256": "a031cc3f93c7ea062e8c91375c9bc2c06dbb5b3ebeccb830eda160b1876f6a22",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/perception-p5a-topic-audit-v1.md",
+      "target": "docs/records/camera/perception-p5a-topic-audit-v1.md",
+      "action": "move",
+      "source_sha256": "033aa5449582198eb3bb733478eb15635f1a4f8486f52f2249f2a055d1da9dbe",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/perception-p5b-rqt-v1.md",
+      "target": "docs/records/camera/perception-p5b-rqt-v1.md",
+      "action": "move",
+      "source_sha256": "7086a9d548b037cfa206f5b0eb577087e0c9dbeb1f65c9de92b6a1fe5b169599",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/perception-p5c-runtime-acceptance-v1.md",
+      "target": "docs/records/camera/perception-p5c-runtime-acceptance-v1.md",
+      "action": "move",
+      "source_sha256": "2f14c7d50f1522bce1a6699e1a299db31fc9f1ca38ec81335c3ff7920026955c",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/perception-p5de-closeout-v1.md",
+      "target": "docs/records/camera/perception-p5de-closeout-v1.md",
+      "action": "move",
+      "source_sha256": "3e25ba1367132e4c27780534c0a21df8006f579f6b04ccad13fea355f096a340",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/baselines/runtime-v1.md",
+      "target": "docs/records/repository/runtime-v1.md",
+      "action": "move",
+      "source_sha256": "12749bc7c67dedce15223356e0cf5249b6f8e7b61a1f3c7bb93045dfc7f9009f",
+      "frozen": true,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/hd-map/kcity2025-route-curation-20260917.md",
+      "target": "docs/records/hd-map/kcity2025-route-curation-20260917.md",
+      "action": "keep",
+      "source_sha256": "2a3b341535b06b06e3c2be948f0c6d13dee19a798a4d7e0031762478eef02c0f",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/perception/twinlitenet-v4-evaluation.md",
+      "target": "docs/records/camera/twinlitenet-v4-evaluation.md",
+      "action": "move",
+      "source_sha256": "8b007e8445af3b26a3d7adf59602e1284d2b2770986949d359da4407c7463c92",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/simulator/morai-msgs-versions.md",
+      "target": "docs/records/bridge/morai-msgs-versions.md",
+      "action": "move",
+      "source_sha256": "7108617a4199e57a752ea8903af43f91249c55a773f08383c8ee63ac1f235e7b",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/records/simulator/runtime-transport-2026-09.md",
+      "target": "docs/records/bridge/runtime-transport-2026-09.md",
+      "action": "move",
+      "source_sha256": "164c0fbd6e80212637c3578b7cbaba7c0bcf095bdaf9315f505eb093445d0f96",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/repository-consolidation-roadmap.md",
+      "target": "docs/architecture/consolidation-roadmap.md",
+      "action": "remove_redirect",
+      "source_sha256": "696b42bc0ea7529ca9e3614ff1fb4379744102fac23432c3fefc20498d1c0b0c",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/runtime-commands.md",
+      "target": "docs/operations/commands.md",
+      "action": "move",
+      "source_sha256": "444005b02e7aa90d6c7927c559de72b0ef0be80ff517cae772cb9874aaa70242",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "docs/sim-verification-checklist.md",
+      "target": "docs/operations/README.md",
+      "action": "remove_redirect",
+      "source_sha256": "cc4a47dc8a9234e98870ee04e36ee2a8b96f37e0576214ca589cd8b50ec95462",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/README.md",
+      "target": "docs/records/repository/documentation-index.md",
+      "action": "move",
+      "source_sha256": "6cbba1c032b07dd47a2275fa5a908d7d2f1a1403e24a9c9f05cc25d149301aed",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/current-inventory.md",
+      "target": "docs/records/repository/documentation-current-inventory.md",
+      "action": "move",
+      "source_sha256": "da90d2c60d973d37c6d28369db02131ea02f58f72256eb28e0f293fe403aea00",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d1-path-migration-report.md",
+      "target": "docs/records/repository/documentation-d1-path-migration-report.md",
+      "action": "move",
+      "source_sha256": "ed19371442f12aee7f6f1e88618edf2272b9318dfdd4c2c450f9b59ec3a0573e",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d2-bridge-report.md",
+      "target": "docs/records/repository/documentation-d2-bridge-report.md",
+      "action": "move",
+      "source_sha256": "b66512cf3c66b6bcf3799e3df52bd1391035ceba785e4d8fab668c55b50d9fe9",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d2-competition-operations-report.md",
+      "target": "docs/records/repository/documentation-d2-competition-operations-report.md",
+      "action": "move",
+      "source_sha256": "3677806888a7f8c6128c8f2830c6d3ea2233f191868d131ee2990b7d0068360d",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d2-content-parity-audit.md",
+      "target": "docs/records/repository/documentation-d2-content-parity-audit.md",
+      "action": "move",
+      "source_sha256": "38dc9e9239279186402ac0975aa226beacf955210692351bb48dceb7fbc7088a",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d2-contracts-report.md",
+      "target": "docs/records/repository/documentation-d2-contracts-report.md",
+      "action": "move",
+      "source_sha256": "b8e34b137af15198905e144b9465c8deb07a71b6933eb57971d13389c91ad323",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d2-hd-map-msgs-report.md",
+      "target": "docs/records/repository/documentation-d2-hd-map-msgs-report.md",
+      "action": "move",
+      "source_sha256": "fbfd72cd4ffc31aa83fc55f2635203e7438b782957f09aada8e2d164697ab61d",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d2-onboarding-governance-report.md",
+      "target": "docs/records/repository/documentation-d2-onboarding-governance-report.md",
+      "action": "move",
+      "source_sha256": "2e23dfbc431f1bd1a96f6b86d46dbc18f11624db7f6e438b38ca748898961830",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d2-perception-report.md",
+      "target": "docs/records/repository/documentation-d2-perception-report.md",
+      "action": "move",
+      "source_sha256": "91b7ea25c686e9816b279e3ebf8f615cf847172042876b3422e769120f3245c1",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d2-planning-handoffs-report.md",
+      "target": "docs/records/repository/documentation-d2-planning-handoffs-report.md",
+      "action": "move",
+      "source_sha256": "6275cdbb0fe3d6f63a309fcdd7810b370b9b6d40b8fd80cc6e9c6fa61315ea50",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d2-records-archive-report.md",
+      "target": "docs/records/repository/documentation-d2-records-archive-report.md",
+      "action": "move",
+      "source_sha256": "c033611af6fb38e8afd0a735b4aa783971873fc6d0090d90e8501581dfee4cdc",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d3-retention-compatibility-report.md",
+      "target": "docs/records/repository/documentation-d3-retention-compatibility-report.md",
+      "action": "move",
+      "source_sha256": "f5f1abaa81f097080e86514a24eb2db0d2f72cd454312ce0640ef64bd2b885bd",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/d4-package-readme-report.md",
+      "target": "docs/records/repository/documentation-d4-package-readme-report.md",
+      "action": "move",
+      "source_sha256": "2ec4b65f8478014a61bfbf4f499c9d41776012fecb619f71e0713f716db9c8fc",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/structure/migration-gates.md",
+      "target": "docs/records/repository/documentation-migration-gates.md",
+      "action": "move",
+      "source_sha256": "958a01926d2f4af77904d788105d52631425253075af8d2bdab11514c27f5dbf",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "docs/team-dev-guide.md",
+      "target": "docs/onboarding/ownership.md",
+      "action": "remove_redirect",
+      "source_sha256": "1b0af71cea6b8f58328db86ee45676fdb3895bee56b86cfc3a8465f5b38c51a0",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_camera/README.md",
+      "target": "src/asmc_camera/README.md",
+      "action": "update_references",
+      "source_sha256": "6212b980b828fa2f3e90fa667bcda05a9e7d90939174907f9c64647f3a6312f2",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_camera/config/README.md",
+      "target": "src/asmc_camera/config/README.md",
+      "action": "update_references",
+      "source_sha256": "c07dc8dd475faaef24e47b214b028d4a62d1846efc8241bb409e3c726b68d714",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_camera/docs/bev-development-history.md",
+      "target": "docs/records/camera/bev-development-history.md",
+      "action": "move",
+      "source_sha256": "fec1f5812363a0b01f99d639b7562433bf7b7047f831773f95dbd0dd1d2cd321",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_camera/docs/camera-semantic-history.md",
+      "target": "docs/records/camera/camera-semantic-history.md",
+      "action": "move",
+      "source_sha256": "e27df2631a82fb6ce3db64df70eddd605f30f7647ce7eed271c9abaf8e220b19",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_camera/docs/traffic-light-history.md",
+      "target": "docs/records/camera/traffic-light-history.md",
+      "action": "move",
+      "source_sha256": "6bc10429e6f1633f67c1cb7f91b5ede131fc0823ed15d12c11c3e700954633d9",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_camera/models/README.md",
+      "target": "src/asmc_camera/models/README.md",
+      "action": "update_references",
+      "source_sha256": "eef47268f79c0f5c23e539316478efe0d113a8e7eac2164e37ff8006ef00ce9e",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_camera/training/README.md",
+      "target": "src/asmc_camera/training/README.md",
+      "action": "update_references",
+      "source_sha256": "c91f20d7256da5b0a8cdad5f95d1d2ef0d153bd968fb46f0c5a8683fac685c77",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_controller/README.md",
+      "target": "src/asmc_controller/README.md",
+      "action": "update_references",
+      "source_sha256": "9b5459fe2987db0b114f21c9093a03146f45d6027f707235145d8dc3c48b8500",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_hd_map/README.md",
+      "target": "src/asmc_hd_map/README.md",
+      "action": "update_references",
+      "source_sha256": "75c6c3cbde3deea33b594442dff8722597cda8c027b02e0e8e2ce1294df17710",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_hd_map/development/won_tae_link_node/README.md",
+      "target": "src/asmc_hd_map/development/won_tae_link_node/README.md",
+      "action": "update_references",
+      "source_sha256": "0bf59ea9092efc44c2f6cf7170641910e8ff6aa6d7b208a2c854a0fcd747d972",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_lidar/README.md",
+      "target": "src/asmc_lidar/README.md",
+      "action": "update_references",
+      "source_sha256": "49a1fcd8774316f6a0bbb33551dec1949fc0be13b3aaf983d590abf7692fc764",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_msgs/README.md",
+      "target": "src/asmc_msgs/README.md",
+      "action": "update_references",
+      "source_sha256": "25a8c083303aca2b1f473026d57c5ae228e8476d1ea56ffc2bbccc7be5ee7da5",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/data_collection/README.md",
+      "target": "src/data_collection/README.md",
+      "action": "update_references",
+      "source_sha256": "c865f3ba6007891fd5ee2179e179ee3e773ab47b2919da993b24406ff2e00a0b",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/integration/README.md",
+      "target": "src/integration/README.md",
+      "action": "update_references",
+      "source_sha256": "12872e93d439434f0b06e31d165248a355b6140ff1316a13a9de87cb282c2eec",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/interfaces/README.md",
+      "target": "src/interfaces/README.md",
+      "action": "update_references",
+      "source_sha256": "5ca951ec0d29481017c40c17e05ad86ff7356d2d06136f9d954a76057e6392a9",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/jamming_lane_boundary_adapter/CAMERA_BBOX_LANE.md",
+      "target": "src/jamming_lane_boundary_adapter/docs/bbox-lane.md",
+      "action": "move",
+      "source_sha256": "9a5e0763299bba87ef8e28692f61d74b676721f5201dc342810cde67f820c238",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/jamming_lane_boundary_adapter/CAMERA_BBOX_LANE_CHANGE.md",
+      "target": "src/jamming_lane_boundary_adapter/docs/bbox-lane-change.md",
+      "action": "move",
+      "source_sha256": "745e06674f5e0917efe201050d10e9bd545068b660a3633d26d1cddd00ccbbd6",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/jamming_lane_boundary_adapter/README.md",
+      "target": "src/jamming_lane_boundary_adapter/README.md",
+      "action": "update_references",
+      "source_sha256": "0d01f5065a61dba9fc905ddad1bdfcc22ba808e092dfa8b16a269e661a8d5040",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/jamming_lane_boundary_adapter/docs/camera-lane-cleanup-audit.md",
+      "target": "docs/records/repository/jamming-camera-lane-cleanup-audit.md",
+      "action": "move",
+      "source_sha256": "1ddd8671e97d2f62c22679b7495d8262ba836a16884e8e1ecb424eff87f12fc1",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/jamming_lane_boundary_adapter/docs/local-planning-control.md",
+      "target": "src/jamming_lane_boundary_adapter/docs/local-planning-control.md",
+      "action": "update_references",
+      "source_sha256": "a8e5951e9350c6c7245774e202b47cb4e0333506711f3e6a6f2ccf340db9d3eb",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md",
+      "target": "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md",
+      "action": "update_references",
+      "source_sha256": "4105561483bcabc66dc4851d6a41da801f568c0109f24296dbbc0d3152576934",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "tools/perception_eval/README.md",
+      "target": "tools/perception_eval/README.md",
+      "action": "update_references",
+      "source_sha256": "ba5ce2c9f4f1573e151e41e2a9ae37ac3042bf505de6c249178fcabebdb86d92",
+      "frozen": false,
+      "followup_content_review": true
+    },
+    {
+      "source": "tools/scen_runner/README.md",
+      "target": "tools/scen_runner/README.md",
+      "action": "update_references",
+      "source_sha256": "9ec428624339d170632101035f5d475ddd03394fdd55a421bb603195c6a91167",
+      "frozen": false,
+      "followup_content_review": true
+    }
+  ],
+  "original_markdown_count": 122,
+  "new_files": [
+    "docs/records/repository/documentation-restructure-v2.md"
+  ]
+}

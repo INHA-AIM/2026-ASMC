@@ -6,12 +6,12 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
 현재 기본 tensor는 두 모델 모두 전방544×960·좌우480×640입니다. 모델별 독립 프로세스를 사용하며 입력 tensor를 공유하지 않습니다.
 TwinLite의 기본 backend는 TensorRT FP16이며, 명시적인 PyTorch 복구 설정을 보존합니다. 변환 품질 검증은
-[TensorRT 검증 기록](../../docs/handoffs/perception/camera-twinlite-tensorrt.md)에서 관리합니다.
-[음영 family 최적화](../../docs/handoffs/perception/camera-shadow-family-optimization.md)는
+[TensorRT 검증 기록](../../docs/records/camera/camera-twinlite-tensorrt.md)에서 관리합니다.
+[음영 family 최적화](../../docs/records/camera/camera-shadow-family-optimization.md)는
 family 전용 경로·수요 기반 BEV·GC 진단과 후속 수락 상태를 관리합니다.
 이전 음영 반복12회와10분 연속 시험의 순간 family freshness/공백 실패는 과거 증거로 보존합니다.
 현재 기본 전환과 전체 공급 수락은 별도 결정이며, 최신 결과·직접 시험 명령은
-[family 공급 최적화](../../docs/handoffs/perception/camera-family-supply-optimization.md)를 따릅니다.
+[family 공급 최적화](../../docs/records/camera/camera-family-supply-optimization.md)를 따릅니다.
 2026-10-16 사용자 직접 주행·시각화 확인 후 현재 리팩토링의 main 병합 승인을 받았습니다.
 자동 시험의 순간 공백/freshness는 알려진 제한으로 남기며, 병합을 전체 자동 수락으로 표시하지 않습니다.
 같은 문서에 bus/truck의 간헐적 누락, 차로 앞 bicycle/dog, dog 하위 종류별 약세와 판제 요청 후 추가학습 결정을 기록했습니다.
@@ -32,14 +32,14 @@ roslaunch asmc_camera view.launch models:=objects
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
-[실행·모드·관측 계약](../../docs/contracts/perception/camera-runtime-v1.md)에 공개 옵션과
+[실행·모드·관측 계약](../../docs/contracts/camera-runtime-v1.md)에 공개 옵션과
 새 제어 경로·기존 alias·원본16종/세 그룹·관측 freshness를 정리했습니다.
-[모델 설치와 소비 규칙](../../docs/handoffs/perception/camera-mission16-deployment.md),
-[실측·후처리 선정](../../docs/handoffs/perception/camera-runtime-structure-validation.md)을 함께 확인하세요.
-[15Hz·confidence 후속 검증](../../docs/handoffs/perception/camera-rate-confidence-followup.md)에 최신 결정과 이전 실패를 정리했습니다.
-[시각화·readiness 검증](../../docs/handoffs/perception/camera-visualization-validation.md)은 단일 렌더링 경로와 GUI 동시 부하 결과를 관리합니다.
+[모델 설치와 소비 규칙](../../docs/operations/camera-deployment.md),
+[실측·후처리 선정](../../docs/records/camera/camera-runtime-structure-validation.md)을 함께 확인하세요.
+[15Hz·confidence 후속 검증](../../docs/records/camera/camera-rate-confidence-followup.md)에 최신 결정과 이전 실패를 정리했습니다.
+[시각화·readiness 검증](../../docs/records/camera/camera-visualization-validation.md)은 단일 렌더링 경로와 GUI 동시 부하 결과를 관리합니다.
 단일 렌더러는 PR #85의 현재 실행 경로입니다. 이전 입력의30분 시험과 현재 입력의10분 시험은 조건별 증거로 보존하며 최신 차단 상태는 위 family 공급 최적화 문서를 따릅니다.
-[전방960 검증](../../docs/handoffs/perception/camera-front960-validation.md)은 별도 결과이며 이전 입력의 통과를 재사용하지 않습니다.
+[전방960 검증](../../docs/records/camera/camera-front960-validation.md)은 별도 결과이며 이전 입력의 통과를 재사용하지 않습니다.
 판제는 구간·활성화·소비를 결정하며 차선의 주행 소비는 음영 ODD에 한정합니다.
 
 세부 모델·입력·mask 설정은 `config/camera/*_runtime.yaml`과 선택한 모델 프로필 YAML에서 관리합니다.
@@ -52,4 +52,4 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 LiDAR fusion 정책을 바꾸지 않습니다. 3뷰 관측 메시지는 후속 LiDAR 인계를 위한 생산자 계약이며
 현재 3뷰 LiDAR fusion이 연결됐다는 의미는 아닙니다.
 
-LiDAR 연결은 [현재 인계](../../docs/packages/asmc_lidar/camera-handoff.md)를 따른다. Main은 별도 실행하며 전방 어댑터만 소유한다.
+LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다. Main은 별도 실행하며 전방 어댑터만 소유한다.

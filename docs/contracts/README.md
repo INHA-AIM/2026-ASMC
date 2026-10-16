@@ -8,15 +8,15 @@
 
 | 소비자·변경 범위 | 정본 | 상태 | 기계·구현 정본 |
 |---|---|---|---|
-| ROS1 공용 message, HD Map topic | [HD Map topic v1](./hd-map/topic-v1.md) | Frozen Interface | `config/contracts/hd_map_topic_contract_v1.yaml`, `src/asmc_msgs/msg/` |
-| HD Map 실행·판제 소비·RViz | [HD Map runtime v1](./hd-map/runtime-v1.md) | Active Runtime | `src/asmc_hd_map/` |
-| 체크포인트·미션·속도 구간 | [K-City metadata v1](./competition/kcity2025-metadata-v1.md) | Frozen Metadata | `src/asmc_hd_map/config/kcity2025_competition_metadata*.yaml` |
-| Behavior/FSM ↔ Frenet | [FSM↔Frenet v2](./planning/fsm-frenet-v2.md) | Frozen Interface | `BehaviorCommand.msg`, `FrenetFeedback.msg`, `src/asmc_planner/` |
-| 인지 원본·라벨·split | [dataset 계약](./perception/dataset-labeling-split.md) | Canonical Data Contract | versioned manifest와 `$ASMC_DATA` artifact |
-| 인지 runtime typed topic | [Perception runtime v1](./perception/runtime-v1.md) | Frozen Additive Interface | `config/contracts/perception_runtime_topic_contract_v1.yaml`, `src/asmc_msgs/msg/` |
-| 인지 runtime/debug 발행 정책 | [P5-A topic 감사](../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit | `config/contracts/perception_topic_policy_v1.yaml` |
-| 인지 live producer·consumer·rate·frame | [P5-C runtime acceptance](../records/baselines/perception-p5c-runtime-acceptance-v1.md)·[P5-D/E closeout](../records/baselines/perception-p5de-closeout-v1.md) | Active Acceptance Gate | `config/contracts/perception_runtime_acceptance_v1.yaml` |
-| MORAI message 호환 | [`beta_drive` 정책](./simulator/morai-msgs-beta-policy.md) | Canonical until competition port | pinned submodule `45c6baf` |
+| ROS1 공용 message, HD Map topic | [HD Map topic v1](./hd-map-topic-v1.md) | Frozen Interface | `config/contracts/hd_map_topic_contract_v1.yaml`, `src/asmc_msgs/msg/` |
+| HD Map 실행·판제 소비·RViz | [HD Map runtime v1](./hd-map-runtime-v1.md) | Active Runtime | `src/asmc_hd_map/` |
+| 체크포인트·미션·속도 구간 | [K-City metadata v1](./competition-kcity2025-metadata-v1.md) | Frozen Metadata | `src/asmc_hd_map/config/kcity2025_competition_metadata*.yaml` |
+| Behavior/FSM ↔ Frenet | [FSM↔Frenet v2](./planning-fsm-frenet-v2.md) | Frozen Interface | `BehaviorCommand.msg`, `FrenetFeedback.msg`, `src/asmc_planner/` |
+| 인지 원본·라벨·split | [dataset 계약](./dataset-labeling-split.md) | Canonical Data Contract | versioned manifest와 `$ASMC_DATA` artifact |
+| 인지 runtime typed topic | [Perception runtime v1](./perception-runtime-v1.md) | Frozen Additive Interface | `config/contracts/perception_runtime_topic_contract_v1.yaml`, `src/asmc_msgs/msg/` |
+| 인지 runtime/debug 발행 정책 | [P5-A topic 감사](../records/camera/perception-p5a-topic-audit-v1.md) | Frozen Input Audit | `config/contracts/perception_topic_policy_v1.yaml` |
+| 인지 live producer·consumer·rate·frame | [P5-C runtime acceptance](../records/camera/perception-p5c-runtime-acceptance-v1.md)·[P5-D/E closeout](../records/camera/perception-p5de-closeout-v1.md) | Active Acceptance Gate | `config/contracts/perception_runtime_acceptance_v1.yaml` |
+| MORAI message 호환 | [`beta_drive` 정책](./simulator-morai-msgs-beta-policy.md) | Canonical until competition port | pinned submodule `45c6baf` |
 
 문서가 길다는 이유로 서로 다른 계약을 한 파일에 합치지 않는다. HD Map, planning transaction,
 인지 데이터와 simulator wire schema는 변경 주체와 검증 방법이 달라 독립 정본이어야 한다.

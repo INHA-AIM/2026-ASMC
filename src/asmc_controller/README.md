@@ -2,7 +2,7 @@
 
 > **역할:** ROS1 trajectory tracking runtime + transport-independent MPC core
 
-Planning 전체 경계는 [Planning/Control 개발 가이드](../../docs/packages/planning-control/README.md),
+Planning 전체 경계는 [Planning/Control 개발 가이드](../../docs/architecture/planning-control.md),
 시간·frame·fail-safe 계약은 [ROS interface](../interfaces/README.md)를 따른다.
 
 ## 현재 I/O

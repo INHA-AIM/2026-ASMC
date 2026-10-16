@@ -5,7 +5,7 @@
 > **기준:** Ubuntu 20.04 · ROS1 Noetic · Python 3.8 · 2026-09-22
 
 세부 Docker·MORAI IP·포트·시뮬 검증은 [운영 가이드](../operations/README.md), Git 작업은
-[협업 규칙](../governance/README.md)을 따른다.
+[협업 규칙](collaboration.md)을 따른다.
 
 ## 1. 준비
 
@@ -121,6 +121,6 @@ git status --short
 | 작업 | 다음 문서 |
 |---|---|
 | 담당 경로 확인 | [팀 ownership](./ownership.md) |
-| 브랜치·PR | [협업 규칙](../governance/README.md) |
+| 브랜치·PR | [협업 규칙](collaboration.md) |
 | Docker·UDP·GPU·시뮬 검증 | [운영 가이드](../operations/README.md) |
 | 저장소 통합 단계 | [통합 로드맵](../architecture/consolidation-roadmap.md) |

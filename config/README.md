@@ -70,4 +70,4 @@ rate, source stamp, frame과 기본-OFF topic 부재를 측정한다. 신호등�
 같은 파일의 `phase_status`, `consumer_handoff`, `operational_closeout`이 P5-D/E까지 고정한다.
 신호등 producer 소유권·typed fail-closed 정책, lane-family 정본, planning launch 기본값, 컨테이너
 경계와 rqt/RViz 진입점은 별도 임의 설정이 아니라 이 계약과
-[closeout 기록](../docs/records/baselines/perception-p5de-closeout-v1.md)을 함께 따른다.
+[closeout 기록](../docs/records/camera/perception-p5de-closeout-v1.md)을 함께 따른다.
