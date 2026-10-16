@@ -1,0 +1,285 @@
+{
+  "date": "2026-10-17",
+  "base_commit": "34795cdbf03a010a17edab59806257534b76b107",
+  "envelope_observed": {
+    "port": 9798,
+    "header": "#DetailEgoInfo$",
+    "declared_body_bytes": 105,
+    "actual_body_bytes": 105,
+    "datagram_bytes": 138,
+    "tail_hex": "0d0a",
+    "semantic_body_decoded": false
+  },
+  "runs": {
+    "gt": {
+      "duration_sec": 20.005689034995157,
+      "competition": {
+        "level": 0,
+        "message": "optional; unsupported #DetailEgoInfo$",
+        "values": {
+          "health": "UNSUPPORTED",
+          "messages": "0",
+          "header_errors": "0",
+          "parse_errors": "0",
+          "unsupported_packets": "777",
+          "unsupported_protocol": "#DetailEgoInfo$",
+          "data_available": "false"
+        }
+      },
+      "optional_info_notices": 1,
+      "report_errors": [],
+      "diagnostics": {
+        "/morai_udp_bridge/diagnostics": {
+          "sample_count": 20,
+          "hz": 0.9999708820580536,
+          "interval_median_sec": 0.9999621050083078,
+          "interval_min_sec": 0.99969821999548,
+          "interval_max_sec": 1.0007387719961116
+        },
+        "/morai_sensor_bridge/diagnostics": {
+          "sample_count": 20,
+          "hz": 0.9998664106910492,
+          "interval_median_sec": 1.0001008749968605,
+          "interval_min_sec": 0.9988152359874221,
+          "interval_max_sec": 1.001192344003357
+        }
+      },
+      "console": {
+        "sensors": {
+          "sample_count": 4,
+          "hz": 0.19998405195187094,
+          "interval_median_sec": 5.000484517993755,
+          "interval_min_sec": 4.999516943003982,
+          "interval_max_sec": 5.001194737997139,
+          "last_line": "[SENSOR 5.0s] | RGB F/L/R/4=19.6/19.6/19.6/10.0 Hz | GPS/IMU=5.0/33.6 Hz | LiDAR=12.2 Hz | GT SEM F/L/R=19.6/19.6/19.6 Hz | GT LiDAR=12.2 Hz | state=OK | err +0 / drop +0"
+        },
+        "network": {
+          "sample_count": 4,
+          "hz": 0.1999897814821397,
+          "interval_median_sec": 5.0005746350070694,
+          "interval_min_sec": 4.999563386998489,
+          "interval_max_sec": 5.000628405992757,
+          "last_line": "[NET 5.0s] RX ego=37.4 col=37.8 obj=37.2 Hz | TX cmd=idle | link=A126 | state=OK | err +0 / drop +0"
+        }
+      },
+      "clouds": {
+        "/velodyne_points_instance": {
+          "sample_count": 246,
+          "hz": 12.289160050607743,
+          "interval_median_sec": 0.07393386999319773,
+          "interval_min_sec": 0.06920107499172445,
+          "interval_max_sec": 0.11072303098626435,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        },
+        "/velodyne_points": {
+          "sample_count": 246,
+          "hz": 12.289320226324845,
+          "interval_median_sec": 0.07377700399956666,
+          "interval_min_sec": 0.06845225500001106,
+          "interval_max_sec": 0.1106429270002991,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        }
+      }
+    },
+    "normal": {
+      "duration_sec": 20.054171640003915,
+      "competition": {
+        "level": 0,
+        "message": "optional; unsupported #DetailEgoInfo$",
+        "values": {
+          "health": "UNSUPPORTED",
+          "messages": "0",
+          "header_errors": "0",
+          "parse_errors": "0",
+          "unsupported_packets": "786",
+          "unsupported_protocol": "#DetailEgoInfo$",
+          "data_available": "false"
+        }
+      },
+      "optional_info_notices": 1,
+      "report_errors": [],
+      "diagnostics": {
+        "/morai_udp_bridge/diagnostics": {
+          "sample_count": 20,
+          "hz": 0.9999517093842611,
+          "interval_median_sec": 1.000060096004745,
+          "interval_min_sec": 0.9987471279891906,
+          "interval_max_sec": 1.0009947430080501
+        },
+        "/morai_sensor_bridge/diagnostics": {
+          "sample_count": 20,
+          "hz": 0.9999178452763526,
+          "interval_median_sec": 1.0000279820087599,
+          "interval_min_sec": 0.9992472440062556,
+          "interval_max_sec": 1.0009450039942749
+        }
+      },
+      "console": {
+        "sensors": {
+          "sample_count": 4,
+          "hz": 0.19999700749793048,
+          "interval_median_sec": 5.000015911995433,
+          "interval_min_sec": 4.999992459008354,
+          "interval_max_sec": 5.000216070009628,
+          "last_line": "[SENSOR 5.0s] | RGB F/L/R/4=18.8/18.8/18.8/9.8 Hz | GPS/IMU=5.0/33.2 Hz | LiDAR=11.8 Hz | state=OK | err +0 / drop +0"
+        },
+        "network": {
+          "sample_count": 4,
+          "hz": 0.19999944809491466,
+          "interval_median_sec": 5.000077024000348,
+          "interval_min_sec": 4.9995207939937245,
+          "interval_max_sec": 5.000443575001555,
+          "last_line": "[NET 5.0s] RX ego=38.2 col=38.4 Hz | TX cmd=idle | link=A126 | state=OK | err +0 / drop +0"
+        }
+      },
+      "clouds": {
+        "/velodyne_points": {
+          "sample_count": 248,
+          "hz": 12.37249255985325,
+          "interval_median_sec": 0.073392751000938,
+          "interval_min_sec": 0.07003969300421886,
+          "interval_max_sec": 0.20738196499587502,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        }
+      }
+    },
+    "required": {
+      "duration_sec": 10.030703923999681,
+      "competition": {
+        "level": 1,
+        "message": "invalid input",
+        "values": {
+          "health": "INVALID",
+          "messages": "0",
+          "header_errors": "409",
+          "parse_errors": "0",
+          "unsupported_packets": "0",
+          "unsupported_protocol": "",
+          "data_available": "false"
+        }
+      },
+      "optional_info_notices": 0,
+      "report_errors": [],
+      "diagnostics": {
+        "/morai_udp_bridge/diagnostics": {
+          "sample_count": 10,
+          "hz": 1.000006790378825,
+          "interval_median_sec": 1.0004989839944756,
+          "interval_min_sec": 0.9979082829959225,
+          "interval_max_sec": 1.001901904004626
+        },
+        "/morai_sensor_bridge/diagnostics": {
+          "sample_count": 10,
+          "hz": 0.9998900860820694,
+          "interval_median_sec": 1.0000118059979286,
+          "interval_min_sec": 0.9979195530031575,
+          "interval_max_sec": 1.0017798570042942
+        }
+      },
+      "console": {
+        "sensors": {
+          "sample_count": 2,
+          "hz": 0.20002790453304237,
+          "interval_median_sec": 4.999302483993233,
+          "interval_min_sec": 4.999302483993233,
+          "interval_max_sec": 4.999302483993233,
+          "last_line": "[SENSOR 5.0s] | RGB F/L/R/4=19.8/19.8/19.8/10.0 Hz | GPS/IMU=5.0/33.0 Hz | LiDAR=12.0 Hz | state=OK | err +0 / drop +0"
+        },
+        "network": {
+          "sample_count": 2,
+          "hz": 0.20000199546001593,
+          "interval_median_sec": 4.999950113997329,
+          "interval_min_sec": 4.999950113997329,
+          "interval_max_sec": 4.999950113997329,
+          "last_line": "[NET 5.0s] RX ego=37.8 col=38.0 competition=0.0 Hz | TX cmd=idle | link=A126 | state=competition:INVALID | err +186 / drop +0"
+        }
+      },
+      "clouds": {
+        "/velodyne_points": {
+          "sample_count": 122,
+          "hz": 12.166450918725781,
+          "interval_median_sec": 0.07330000300134998,
+          "interval_min_sec": 0.0694100940017961,
+          "interval_max_sec": 0.11041249601112213,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        }
+      }
+    }
+  },
+  "checks": {
+    "python_tests": 32,
+    "paused_clock_ros_test": "passed",
+    "catkin_xml_results": {
+      "tests": 34,
+      "errors": 0,
+      "failures": 0
+    },
+    "docs_cli_profile_tests": 23
+  },
+  "artifacts": {
+    "bridge-required.log": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-required.log",
+      "sha256": "d27d16109e0f9c08f4bcc3e205488d5ad3d5a13500e93bd492541b6a4e04e9e6",
+      "bytes": 5777
+    },
+    "bridge-reporting-gt.json": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-reporting-gt.json",
+      "sha256": "9a3c825a9bf6536673b23da1673011956e14fe50dfdb1eaa88db266d9f36f08e",
+      "bytes": 779122
+    },
+    "bridge-reporting-required.json": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-reporting-required.json",
+      "sha256": "9792a0cc916304e560bef08e655efa8fff322fce42a899c1638563cdf3c50c63",
+      "bytes": 267219
+    },
+    "master-required.log": {
+      "path": "data/runtime/bridge-logs-20261017/master-required.log",
+      "sha256": "cfa94409e0d9c5230451eaa2fce777c704421a393ea989b1751f15f0f1070bf2",
+      "bytes": 871
+    },
+    "bridge-reporting-normal.json": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-reporting-normal.json",
+      "sha256": "930314a657d2024c01df652e81772bfd7b418b6cc5c9c319446cb5255940b35c",
+      "bytes": 533888
+    },
+    "master-gt.log": {
+      "path": "data/runtime/bridge-logs-20261017/master-gt.log",
+      "sha256": "9a20f106aac8de09ab97db0506145835c87146ee28ced6521b093d8035620db4",
+      "bytes": 871
+    },
+    "bridge-gt.log": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-gt.log",
+      "sha256": "ec06604adc75c7626a7e844a98ba7bbfd30feef0100023edc904c8da047892d2",
+      "bytes": 7220
+    },
+    "bridge-normal.log": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-normal.log",
+      "sha256": "dc06f4509ab48ed55db4423ef5a8f398270de64839276e9d7df57bdcd3e1bf68",
+      "bytes": 6201
+    },
+    "master-normal.log": {
+      "path": "data/runtime/bridge-logs-20261017/master-normal.log",
+      "sha256": "5f7bca69d37b560b9411cd71a195e84f3ef3b8b44ed3ca94c243a0954d9911d3",
+      "bytes": 871
+    },
+    "tests.log": {
+      "path": "data/runtime/bridge-logs-20261017/tests.log",
+      "sha256": "1c255b15f4107448b903205eef2f659f760f404818313bc60991bf452d0543db",
+      "bytes": 4743
+    },
+    "install.log": {
+      "path": "data/runtime/bridge-logs-20261017/install.log",
+      "sha256": "6ca7b9220abcb481dc3e00972a25559b963680f66990661572c703a778dc948b",
+      "bytes": 9762
+    }
+  },
+  "source_sha256": {
+    "src/asmc_bridge/src/asmc_bridge/telemetry.py": "3d10e8a2191f8c8de94377e028821987993b59c5127cc4514185dd4b04d06453",
+    "src/asmc_bridge/scripts/morai_udp_bridge.py": "a689089ccf9065a6be3b4cc69264d05783d1e8f7ac1a9e69994093eb968404ca",
+    "tools/bridge/measure_bridge_reporting.py": "ad391d03158d3759bd693bca042eb301afe7e110975ee7019737321a47813d3e"
+  }
+}

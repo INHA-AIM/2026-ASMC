@@ -64,6 +64,28 @@ class InputRequirementTest(unittest.TestCase):
     def test_field_gate_can_require_competition_status(self):
         self.assertTrue(MODULE.input_required("competition", True))
 
+    @staticmethod
+    def detail_packet():
+        return MODULE.OPTIONAL_DETAIL_EGO_HDR + struct.pack('<i', 105) + b'\0' * 12 + b'\0' * 105 + b'\r\n'
+
+    def test_detail_envelope_is_optional_only_in_local_competition_channel(self):
+        packet = self.detail_packet()
+        self.assertEqual(len(packet), 138)
+        self.assertTrue(MODULE.is_optional_competition_variant('competition', packet, 'local', False))
+        for kind, transport, required in [('ego', 'local', False), ('competition', 'lan2lan', False), ('competition', 'local', True)]:
+            with self.subTest(kind=kind, transport=transport, required=required):
+                self.assertFalse(MODULE.is_optional_competition_variant(kind, packet, transport, required))
+        with self.assertRaisesRegex(ValueError, 'header mismatch'):
+            MODULE.decode_vehicle_status_packet(packet)
+
+    def test_malformed_detail_and_unknown_headers_stay_errors(self):
+        packet = self.detail_packet()
+        header_size = len(MODULE.OPTIONAL_DETAIL_EGO_HDR)
+        declared_wrong = packet[:header_size] + struct.pack('<i', 104) + packet[header_size + 4:]
+        for malformed in (packet[:-1], packet + b'\0', packet[:-2] + b'XX', declared_wrong, b'?' + packet[1:]):
+            with self.subTest(packet=malformed[:20]):
+                self.assertFalse(MODULE.is_optional_competition_variant('competition', malformed, 'local', False))
+
 
 class ReportingStatusTest(unittest.TestCase):
     def test_send_failure_is_visible_then_idle_recovery_preserves_history(self):
@@ -87,6 +109,28 @@ class ReportingStatusTest(unittest.TestCase):
         status = owner.pub_diagnostics.publish.call_args[0][0].status[0]
         self.assertEqual(status.level, status.OK)
         self.assertEqual({value.key: value.value for value in status.values}['send_errors'], '1')
+
+    def test_optional_unsupported_is_visible_but_not_usable_or_warning(self):
+        telemetry = MODULE.BridgeTelemetry()
+        telemetry.register('competition', optional=True)
+        telemetry.unsupported('competition', '#DetailEgoInfo$')
+        owner = SimpleNamespace(telemetry=telemetry, _health={},
+            _next_console=float('inf'), reporter=SimpleNamespace(failures=0),
+            runtime_profile='morai_udp', transport_profile='local',
+            stream_profile='competition', timestamp_mode='receive',
+            last_competition_link_id='', pub_diagnostics=mock.Mock())
+        with mock.patch.object(MODULE.rospy.Time, 'now', return_value=MODULE.rospy.Time(1)), \
+                mock.patch.object(MODULE.rospy, 'logwarn') as warning:
+            MODULE.publish_report(owner, 'morai_udp_bridge')
+        warning.assert_not_called()
+        status = owner.pub_diagnostics.publish.call_args[0][0].status[0]
+        self.assertEqual(status.level, status.OK)
+        values = {value.key: value.value for value in status.values}
+        self.assertEqual(values['health'], 'UNSUPPORTED')
+        self.assertEqual(values['messages'], '0')
+        self.assertEqual(values['data_available'], 'false')
+        self.assertEqual(values['unsupported_packets'], '1')
+        self.assertEqual(values['header_errors'], '0')
 
 
 class SourceTimestampTest(unittest.TestCase):

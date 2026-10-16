@@ -54,6 +54,7 @@ def input_required(kind, competition_status_required=False):
 #   이후 버전별 분기 (패킷 전체 길이로 판별)
 # --------------------------------------------------------------------------
 EGO_HDR = b"#MoraiInfo$"
+OPTIONAL_DETAIL_EGO_HDR = b"#DetailEgoInfo$"
 EGO_PRE = len(EGO_HDR) + AUX          # 27
 EGO_HEAD_FMT = "<IIbb"
 EGO_COMMON_FMT = "<25f"               # offset 10~109
@@ -92,6 +93,21 @@ COL_N = 5
 CMD_HDR = b"#MoraiCtrlCmd$"
 CMD_FMT_27 = "<BBB" + "ffffff"        # 신버전(rear_steer 포함), 전체 59B
 CMD_FMT_23 = "<BBB" + "fffff"         # 구버전, 전체 55B
+
+
+def is_optional_competition_variant(kind, data, transport, required):
+    """Recognize only the observed local envelope; do not decode its body.
+
+    This 105-byte DetailEgoInfo body is distinct from the validated 152-byte
+    MoraiInfo body. Required/field inputs and malformed envelopes stay faults.
+    """
+    if kind != 'competition' or transport != 'local' or required:
+        return False
+    header_size = len(OPTIONAL_DETAIL_EGO_HDR)
+    if len(data) != header_size + AUX + 105 + TAIL:
+        return False
+    return (data.startswith(OPTIONAL_DETAIL_EGO_HDR) and data.endswith(b'\r\n')
+            and struct.unpack_from('<i', data, header_size)[0] == 105)
 
 
 def vec3(x, y, z):
@@ -250,6 +266,7 @@ class MoraiUdpBridge(object):
                     stale_after=float(stale_after.get(name, stale_after.get('default', .5))))
         self._last_source_ns = {}
         self.warned = set()
+        self.protocol_notices = set()
 
         listeners = (
             (self.ego_port, "ego", EGO_HDR, self.handle_ego),
@@ -300,6 +317,15 @@ class MoraiUdpBridge(object):
             if data is None:
                 continue
             if not data.startswith(hdr):
+                if is_optional_competition_variant(
+                        kind, data, self.transport_profile, self.competition_status_required):
+                    self.telemetry.unsupported(kind, OPTIONAL_DETAIL_EGO_HDR.decode('ascii'))
+                    if port not in self.protocol_notices:
+                        self.protocol_notices.add(port)
+                        rospy.loginfo(
+                            'Competition status: optional local #DetailEgoInfo$ (105B body); '
+                            'kept in diagnostics, not decoded or published')
+                    continue
                 self.telemetry.increment(kind, 'header_errors')
                 if port not in self.warned:
                     self.warned.add(port)

@@ -187,6 +187,11 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             f"{name} implementation artifact SHA changed",
         )
     reporting = contract['diagnostics_policy']
+    _require(contract['optional_local_competition_variant'] == {
+        'header_ascii': '#DetailEgoInfo$', 'payload_bytes': 105, 'datagram_bytes': 138,
+        'transport': 'local', 'requires_optional_input': True, 'decoded': False,
+        'diagnostic_health': 'UNSUPPORTED', 'counts_as_fault': False,
+    }, 'known optional envelope exemption changed; required/field decoding must remain separate')
     reporting_config = yaml.safe_load((REPO_ROOT / 'src/asmc_bridge/config/diagnostics.yaml').read_text())
     _require(reporting['clock'] == 'monotonic', 'bridge health must use monotonic receive time')
     _require(reporting_config['diagnostics_period'] == reporting['diagnostics_period_sec'], 'diagnostics cadence diverged')

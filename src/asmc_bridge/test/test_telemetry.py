@@ -9,7 +9,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-from asmc_bridge.telemetry import BridgeTelemetry, PeriodicReporter, latency_summary
+from asmc_bridge.telemetry import BridgeTelemetry, PeriodicReporter, console_summary, latency_summary, short_link
 
 
 class TelemetryTest(unittest.TestCase):
@@ -43,6 +43,54 @@ class TelemetryTest(unittest.TestCase):
         self.metrics.register('competition', optional=True)
         self.metrics.increment('competition', 'header_errors')
         self.assertEqual(self.metrics.snapshot()[2]['competition']['health'], 'INVALID')
+
+    def test_optional_protocol_is_separate_from_faults_and_valid_messages(self):
+        self.metrics.register('competition', optional=True)
+        self.metrics.unsupported('competition', '#DetailEgoInfo$')
+        row = self.metrics.snapshot()[2]['competition']
+        self.assertEqual(row['health'], 'UNSUPPORTED')
+        self.assertEqual(row['messages'], 0)
+        self.assertEqual(row['header_errors'], 0)
+        self.metrics.increment('competition', 'header_errors')
+        self.assertEqual(self.metrics.snapshot()[2]['competition']['health'], 'INVALID')
+        self.metrics.message('competition')
+        row = self.metrics.snapshot()[2]['competition']
+        self.assertEqual(row['health'], 'OK')
+        self.assertEqual(row['unsupported_packets'], 1)
+        self.assertEqual(row['unsupported_protocol'], '')
+        with self.assertRaises(ValueError):
+            self.metrics.unsupported('lidar', '#DetailEgoInfo$')
+
+    def test_console_keeps_real_faults_and_orders_camera_views(self):
+        for name in ('cam1', 'cam2', 'cam3', 'cam4'):
+            self.metrics.register(name)
+        for name, count in (('cam1', 20), ('cam2', 19), ('cam3', 18), ('cam4', 10)):
+            for _ in range(count):
+                self.metrics.message(name)
+        self.metrics.message('lidar')
+        self.metrics.register('competition', optional=True)
+        self.metrics.unsupported('competition', '#DetailEgoInfo$')
+        self.metrics.increment('lidar', 'parse_errors')
+        self.now += 1
+        rows = self.metrics.snapshot('console')[2]
+        text = console_summary(rows, 5.)
+        self.assertIn('RGB F/L/R/4=20.0/19.0/18.0/10.0 Hz', text)
+        self.assertIn('lidar:STALE', text)
+        self.assertIn('err +1', text)
+        self.assertNotIn('competition:INVALID', text)
+        self.assertNotIn('GT SEM', text)
+        self.assertIn('drop +?', text)
+
+    def test_network_console_omits_optional_protocol_and_retains_custom_ids(self):
+        self.metrics.register('competition', optional=True)
+        self.metrics.unsupported('competition', '#DetailEgoInfo$')
+        self.metrics.register('cmd', transmit=True)
+        rows = self.metrics.snapshot('console')[2]
+        text = console_summary(rows, 5., network=True, ego_link='A2256W000126')
+        self.assertIn('TX cmd=idle', text)
+        self.assertIn('link=A126', text)
+        self.assertNotIn('competition=', text)
+        self.assertEqual(short_link('custom-link-id'), 'custom-link-id')
 
     def test_recent_errors_warn_but_historical_errors_do_not_hide_recovery(self):
         self.metrics.message('lidar')

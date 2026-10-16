@@ -30,6 +30,9 @@ Network/Sensor component와 VehicleState를 직접 조합하도록 단순화했�
 - Competition Vehicle Status는 MolitComp03의 `787 / 9797→9798` 항목이다. 참가팀 local
   검증에서는 선택 사항이며 decoder와 topic은 그대로 연다. 주최 현장 수락에서만
   `--require-competition-status`로 필수화하며 live packet gate는 아직 남아 있다.
+  Local 선택 입력의 관측된 `#DetailEgoInfo$`·105B body는 정상 envelope일 때만1회 INFO와
+  `UNSUPPORTED` 진단으로 분리한다. 정상 decode/발행으로 세지 않으며, 미지·손상 형식과 필수
+  gate/LAN2LAN의 불일치는 계속 오류다.
 - `258 / 7603→7502`는 live `#TrafficLight$`인 simulator oracle이며 Competition Vehicle
   Status로 해석하거나 canonical bridge에서 소비하지 않는다.
 - type 258과 GetTrafficLight query는 별개다. 조사한 두 release와 주최 export에는

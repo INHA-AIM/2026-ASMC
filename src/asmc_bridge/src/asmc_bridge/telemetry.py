@@ -1,6 +1,7 @@
 """Thread-safe bridge health and cadence; no sensor/control policy changes."""
 from collections import deque
 import math
+import re
 import socket
 import struct
 import threading
@@ -24,7 +25,8 @@ class BridgeTelemetry:
     COUNTERS = ('messages', 'raw_packets', 'parse_errors', 'header_errors',
                 'timestamp_fallbacks', 'timestamp_regressions', 'socket_drops',
                 'rotation_boundaries', 'discarded_revolutions', 'assembly_timeouts',
-                'device_regressions', 'ignored_packets', 'send_errors')
+                'device_regressions', 'ignored_packets', 'send_errors',
+                'unsupported_packets')
     WINDOWS = ('processing', 'assembly', 'gap', 'packets_per_frame',
                'points_per_frame', 'wall_rotation', 'device_rotation')
 
@@ -44,6 +46,7 @@ class BridgeTelemetry:
             row.update(optional=optional, transmit=transmit, stale_after=stale_after,
                        last_received=None, receiver='transmit' if transmit else 'starting', receiver_error='',
                        socket_drop_supported=False, socket_rcvbuf=0,
+                       unsupported_protocol='', last_unsupported=None,
                        previous_wrap_wall=None, previous_wrap_device=None)
             self.streams[name] = row
 
@@ -63,6 +66,17 @@ class BridgeTelemetry:
                 row['gap'].append(max(0., now - row['last_received']) * 1000.)
             row['last_received'] = now
             row['messages'] += 1
+            row['unsupported_protocol'] = ''
+            row['last_unsupported'] = None
+
+    def unsupported(self, name, protocol):
+        with self.lock:
+            row = self.streams[name]
+            if not row['optional']:
+                raise ValueError('required inputs cannot be treated as optional unsupported')
+            row['unsupported_packets'] += 1
+            row['unsupported_protocol'] = protocol[:64]
+            row['last_unsupported'] = self.clock()
 
     def receiver(self, name, state, error=''):
         with self.lock:
@@ -145,6 +159,8 @@ class BridgeTelemetry:
             row['average_hz'] = row['messages'] / max(1e-6, now - self.started)
             row['last_message_age_sec'] = (-1. if row['last_received'] is None
                 else max(0., now - row['last_received']))
+            row['last_unsupported_age_sec'] = (-1. if row['last_unsupported'] is None
+                else max(0., now - row['last_unsupported']))
             row['health'] = stream_health(row)
         return now, interval, rows
 
@@ -156,6 +172,11 @@ def stream_health(row):
         if row.get('send_errors_delta', 0):
             return 'DEGRADED'
         return 'IDLE' if row['last_message_age_sec'] < 0 or row['last_message_age_sec'] > row['stale_after'] else 'OK'
+    if row['optional'] and row.get('unsupported_protocol'):
+        if any(row.get(key + '_delta', 0) for key in ('parse_errors', 'header_errors', 'socket_drops')):
+            return 'INVALID'
+        return ('UNSUPPORTED' if row['last_unsupported_age_sec'] <= row['stale_after']
+                else 'IDLE')
     if not row['messages']:
         if row['parse_errors'] or row['header_errors']:
             return 'INVALID'
@@ -165,6 +186,69 @@ def stream_health(row):
     if any(row.get(key + '_delta', 0) for key in ('parse_errors', 'header_errors', 'socket_drops')):
         return 'DEGRADED'
     return 'OK'
+
+
+def short_link(link):
+    """Shorten only the known K-City ID pattern; diagnostics keeps full IDs."""
+    match = re.fullmatch(r'A2256W(\d{6})', link)
+    return 'A{}'.format(int(match[1])) if match else link or '-'
+
+
+def console_summary(rows, interval, network=False, ego_link='', competition_link=''):
+    """Group fixed camera views and report recent faults instead of old totals."""
+    shown = set()
+
+    def rate(name):
+        shown.add(name)
+        row = rows.get(name)
+        return '-' if row is None or row['health'] == 'IDLE' else '{:.1f}'.format(row['interval_hz'])
+
+    def group(label, names):
+        if not any(name in rows for name in names):
+            return None
+        return '{}={} Hz'.format(label, '/'.join(rate(name) for name in names))
+
+    if network:
+        rx = ['{}={}'.format(name, rate(name)) for name in ('ego', 'col', 'obj') if name in rows]
+        competition = rows.get('competition')
+        if competition and competition['health'] not in ('IDLE', 'UNSUPPORTED'):
+            rx.append('competition=' + rate('competition'))
+        shown.add('competition')
+        parts = ['[NET {:.1f}s] RX '.format(interval) + ' '.join(rx) + ' Hz']
+        if 'cmd' in rows:
+            shown.add('cmd')
+            parts.append('TX cmd=' + ('idle' if rows['cmd']['health'] == 'IDLE' else rate('cmd') + ' Hz'))
+        parts.append('link=' + short_link(ego_link))
+        if competition_link and competition and competition['health'] in ('OK', 'DEGRADED'):
+            parts.append('competition_link=' + short_link(competition_link))
+    else:
+        parts = ['[SENSOR {:.1f}s]'.format(interval)]
+        for label, names in (
+                ('RGB F/L/R/4', ('cam1', 'cam2', 'cam3', 'cam4')),
+                ('GPS/IMU', ('gps', 'imu')),
+                ('LiDAR', ('lidar',)),
+                ('GT SEM F/L/R', ('sem_front', 'sem_left', 'sem_right')),
+                ('GT LiDAR', ('lidar_instance',))):
+            value = group(label, names)
+            if value:
+                parts.append(value)
+    other = ['{}={} Hz'.format(name, rate(name)) for name in sorted(rows) if name not in shown]
+    parts.extend(other)
+    issues = []
+    for name, row in sorted(rows.items()):
+        if row['health'] not in ('OK', 'IDLE', 'UNSUPPORTED'):
+            description = name + ':' + row['health']
+            if row['health'] == 'STALE':
+                description += '({:.1f}s)'.format(row['last_message_age_sec'])
+            issues.append(description)
+    parts.append('state=' + (','.join(issues) if issues else 'OK'))
+    errors = sum(row[key + '_delta'] for row in rows.values()
+                 for key in ('parse_errors', 'header_errors', 'send_errors'))
+    receivers = [row for row in rows.values() if not row['transmit']]
+    drop_known = all(row['socket_drop_supported'] for row in receivers)
+    drops = str(sum(row['socket_drops_delta'] for row in receivers)) if drop_known else '?'
+    parts.append('err +{} / drop +{}'.format(errors, drops))
+    return ' | '.join(parts)
 
 
 class PeriodicReporter:
@@ -233,10 +317,11 @@ def publish_report(owner, namespace):
         owner._health[name] = state
         status = DiagnosticStatus(name=namespace + '/' + name, hardware_id='morai_udp')
         status.level = (DiagnosticStatus.ERROR if state == 'ERROR' else
-                        DiagnosticStatus.OK if state in ('OK', 'IDLE') else DiagnosticStatus.WARN)
+                        DiagnosticStatus.OK if state in ('OK', 'IDLE', 'UNSUPPORTED') else DiagnosticStatus.WARN)
         status.message = dict(OK='receiving' if not row['transmit'] else 'active',
             IDLE='no control command' if row['transmit'] else 'optional; no data',
             WAITING='no data', STALE='stale', INVALID='invalid input',
+            UNSUPPORTED='optional; unsupported ' + row['unsupported_protocol'],
             DEGRADED='recent packet or send errors', ERROR='receiver failed')[state]
         values = dict(runtime_profile=owner.runtime_profile, transport_profile=owner.transport_profile,
             stream_profile=owner.stream_profile, timestamp_mode=owner.timestamp_mode,
@@ -249,10 +334,18 @@ def publish_report(owner, namespace):
             raw_packets=row['raw_packets'], raw_packet_hz=row['raw_packet_hz'],
             parse_errors=row['parse_errors'], header_errors=row['header_errors'],
             ignored_packets=row['ignored_packets'], send_errors=row['send_errors'],
+            unsupported_packets=row['unsupported_packets'], unsupported_protocol=row['unsupported_protocol'],
+            last_unsupported_age_sec=row['last_unsupported_age_sec'],
+            data_available=str(not row['transmit'] and row['messages'] > 0 and state in ('OK', 'DEGRADED')).lower(),
             timestamp_fallbacks=row['timestamp_fallbacks'], timestamp_regressions=row['timestamp_regressions'],
             socket_drops=row['socket_drops'], socket_drop_supported=str(row['socket_drop_supported']).lower(),
             socket_rcvbuf_bytes=row['socket_rcvbuf'], statistics_window='rolling_last_4096_samples',
             reporter_failures=owner.reporter.failures)
+        if namespace == 'morai_udp_bridge':
+            if name == 'ego':
+                values['last_link_id'] = owner.last_link_id
+            elif name == 'competition':
+                values['last_link_id'] = owner.last_competition_link_id
         for source, prefix in (('processing', 'processing'), ('assembly', 'assembly'), ('gap', 'output_gap')):
             summary = latency_summary(row[source])
             for key, value in summary.items():
@@ -275,17 +368,9 @@ def publish_report(owner, namespace):
     owner.pub_diagnostics.publish(message)
     if now >= owner._next_console:
         _, log_interval, log_rows = owner.telemetry.snapshot('console')
-        summary = ' '.join('{}={:.1f}Hz'.format(name, row['interval_hz']) for name, row in sorted(log_rows.items()))
-        issues = ','.join('{}:{}'.format(name, row['health']) for name, row in sorted(log_rows.items()) if row['health'] not in ('OK', 'IDLE')) or '-'
-        idle = ','.join(name for name, row in sorted(log_rows.items()) if row['health'] == 'IDLE') or '-'
-        errors = sum(row['parse_errors'] + row['header_errors'] + row['send_errors'] for row in log_rows.values())
-        error_delta = sum(row['parse_errors_delta'] + row['header_errors_delta'] + row['send_errors_delta'] for row in log_rows.values())
-        drops = sum(row['socket_drops'] for row in log_rows.values())
-        drop_delta = sum(row['socket_drops_delta'] for row in log_rows.values())
-        links = (' | links ego={} competition={}'.format(owner.last_link_id or '-', owner.last_competition_link_id or '-')
-                 if hasattr(owner, 'last_link_id') else '')
-        rospy.loginfo('%s[%.1fs] %s | issue=%s idle=%s errors=%d(+%d) udp_drop=%d(+%d)%s',
-            'network' if hasattr(owner, 'last_link_id') else 'sensors', log_interval, summary,
-            issues, idle, errors, error_delta, drops, drop_delta, links)
+        rospy.loginfo('%s', console_summary(log_rows, log_interval,
+            network=namespace == 'morai_udp_bridge',
+            ego_link=getattr(owner, 'last_link_id', ''),
+            competition_link=getattr(owner, 'last_competition_link_id', '')))
         owner._last_console = now
         owner._next_console += (math.floor((now - owner._next_console) / owner.log_period) + 1) * owner.log_period

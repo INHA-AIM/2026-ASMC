@@ -80,7 +80,7 @@
       },
       "network_node": {
         "path": "src/asmc_bridge/scripts/morai_udp_bridge.py",
-        "sha256": "4c14fbb6ea44afa9fed35ff0bcefda3f4b2b9b37d03762794ef4763d9e1f3b15"
+        "sha256": "a689089ccf9065a6be3b4cc69264d05783d1e8f7ac1a9e69994093eb968404ca"
       },
       "sensor_launch": {
         "path": "src/asmc_bridge/launch/morai_sensor_bridge.launch",
@@ -120,7 +120,7 @@
       },
       "telemetry_module": {
         "path": "src/asmc_bridge/src/asmc_bridge/telemetry.py",
-        "sha256": "32360a91fad5a96e41a9eff2e0759128039f885aec6ed6367dccb33863277df2"
+        "sha256": "3d10e8a2191f8c8de94377e028821987993b59c5127cc4514185dd4b04d06453"
       },
       "python_setup": {
         "path": "src/asmc_bridge/setup.py",
@@ -423,6 +423,16 @@
       "errors": 0,
       "failures": 0
     }
+  },
+  "optional_local_competition_variant": {
+    "header_ascii": "#DetailEgoInfo$",
+    "payload_bytes": 105,
+    "datagram_bytes": 138,
+    "transport": "local",
+    "requires_optional_input": true,
+    "decoded": false,
+    "diagnostic_health": "UNSUPPORTED",
+    "counts_as_fault": false
   },
   "diagnostics_policy": {
     "clock": "monotonic",

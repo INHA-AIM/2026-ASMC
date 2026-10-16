@@ -183,7 +183,12 @@ rostopic echo /vehicle/state -n1
 diagnostics의 `interval_hz`, `last_message_age_sec`, `health`, parse/header error,
 processing/assembly/output-gap p95와 timestamp fallback을 함께 본다. 수신 중단은 누적 수가
 남아 있어도 `STALE`이며 socket/thread 실패는 `ERROR`다. 선택 입력의 최초 미수신은 `IDLE`이지만
-계속 잘못된 헤더를 보내면 `INVALID`로 구분한다.
+알 수 없거나 손상된 헤더를 보내면 `INVALID`로 구분한다. 관측한 local 선택 입력
+`#DetailEgoInfo$`(105B body·138B datagram·정상CRLF)는 `UNSUPPORTED`로 별도 집계하고
+1회 INFO만 남긴다. `data_available=false`이며 decoder로 전달하지 않는다.
+필수 gate 또는 LAN2LAN에는 이 예외를 적용하지 않는다.
+콘솔은 RX/TX, RGB F/L/R/4, GPS/IMU, LiDAR, GT 순으로 묶고 최근5초의 오류·drop만 보여준다.
+K-City 링크의 전체 ID는 Network diagnostics의 `last_link_id`에 보존한다.
 LiDAR는 `raw_packet_hz`, `rotation_hz`(최근 구간의 방위각 경계),
 `wall_rotation_hz`/`device_rotation_hz`(최근 최대4096회전 평균),
 `packets_per_frame_median`, `socket_drops`, `discarded_revolutions`도 본다.

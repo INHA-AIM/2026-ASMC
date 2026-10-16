@@ -51,7 +51,8 @@ def main():
     def log(message):
         with lock:
             for prefix in console:
-                if message.msg.startswith(prefix + '['):
+                aliases = {'sensors': ('sensors[', '[SENSOR '), 'network': ('network[', '[NET ')}
+                if message.msg.startswith(aliases[prefix]):
                     console[prefix].append(dict(received_monotonic=time.monotonic(), text=message.msg))
             if 'diagnostics failed; retrying' in message.msg or 'deque mutated' in message.msg:
                 report_errors.append(message.msg)
