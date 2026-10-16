@@ -12,10 +12,10 @@
 
 ## 모델 선택·파일 배포
 
-| `objects_model_profile` | 가중치 | 지원 원본 이름 | 비고 |
+| 공개 `detector` 선택 | 가중치 | 지원 원본 이름 | 비고 |
 |---|---|---|---|
-| `finetuned_e8` — 기본 | v11의 완전한8epoch `epoch7.pt` | 합의한16종 | 신규 장애물 지원, 버스 회귀·터널/근거리 누락 남음 |
-| `pretrained_coco7` | 공식 YOLO26l detection | person, dog, bicycle, car, motorcycle, bus, truck | checkpoint는 COCO80, runtime은7종만 출력; 신규 장애물을 지원한다고 표시하지 않음 |
+| `e8` — 기본 (`finetuned_e8`) | v11의 완전한8epoch `epoch7.pt` | 합의한16종 | 신규 장애물 지원, 버스 회귀·터널/근거리 누락 남음 |
+| `pretrained` (`pretrained_coco7`) | 공식 YOLO26l detection | person, dog, bicycle, car, motorcycle, bus, truck | checkpoint는 COCO80, runtime은7종만 출력; 신규 장애물을 지원한다고 표시하지 않음 |
 
 선택은 실행 시 고정한다. 변경하려면 기존 detector를 종료한 뒤 재시작한다. 동시에 두 모델을
 같은 출력 토픽에 띄우지 않는다. PREPARE 완료와 새로운 ACTIVE 세대 결과를 기다린다.

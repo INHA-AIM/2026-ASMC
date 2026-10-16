@@ -74,7 +74,7 @@ msg/CMake의 비주석 내용이 동일했습니다. 모델/학습 데이터·lo
 [명령 안내](../../operations/commands.md)는 수동 개별/통합 구성을 시나리오 통합 구성과 분리하고
 제어 생산자·camera/Main source순서·PREPARE/ACTIVE·별도rqt·Capture/Bag 권한을 표시합니다.
 [launch 인자 목록](../../operations/launch-reference.md)은 XML23개에서 자동 생성하며
-기존 인자 default 변화·삭제된 target·명령 인자 오타를 검사합니다.
+기존 인자 default 변화·삭제된 target·명령 인자 오타·필수 인자 누락·고정16종 ID/3그룹 문서 대응을 검사합니다.
 
 아래 긴 문서는 실험값/명령을 기록으로 옮기고 안정된 원래 현행 경로에는 짧은 안내를 남겼습니다.
 이는 옛 경로 redirect stub을 다시 만드는 작업이 아닙니다. 원래 경로가 현재 내용의 정본입니다.
@@ -121,7 +121,7 @@ map copy/정본 정합, 판제/제어 회귀와 전체 조건 반복·현장 LAN
 - 현행 launch23개/실행 예제52개·고정16종 ID/3그룹 표 검사: 통과.
 - 문서/명령/라벨·P1-B/perception/runtime/topic CPU 회귀52개: 통과.
 - 카메라 facade 계약17개·LiDAR 관측 설정 계약4개: 통과.
-- Noetic Python3.8에서 문서/명령/P1-B/perception CPU 회귀25개: 통과(새 라벨 검사 추가 전 실행).
+- 최종 Noetic Python3.8에서도 동일 CPU 회귀52개·카메라17개·LiDAR4개(총73개): 통과.
 - Noetic roslaunch --dump-params23개: 모두 통과. required 경로는 미사용 placeholder만 제공했으며 node/제어/GUI를 시작하지 않음.
 - Python3.8 syntax·git diff --check: 통과. msg 비주석 정의·실행 AST/token/XML 내용: 동일.
 
