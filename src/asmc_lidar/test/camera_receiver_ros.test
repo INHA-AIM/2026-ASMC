@@ -1,0 +1,3 @@
+<launch>
+  <test test-name="camera_receiver_ros" pkg="asmc_lidar" type="camera_receiver_ros_test" time-limit="30"/>
+</launch>

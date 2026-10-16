@@ -3,6 +3,7 @@
 import ast
 from pathlib import Path
 import unittest
+import sys
 import xml.etree.ElementTree as ET
 
 import yaml
@@ -19,6 +20,8 @@ def read_yaml(path):
 class CameraObjectsContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if not (ROOT / 'config/contracts/camera_object_observation_v1.yaml').is_file():
+            raise unittest.SkipTest('cross-repository references unavailable in isolated package build')
         cls.config = read_yaml(ROOT / 'src/asmc_lidar/config/camera_objects.yaml')
         cls.contract = read_yaml(ROOT / cls.config['observation_contract'])
 
@@ -36,6 +39,20 @@ class CameraObjectsContractTest(unittest.TestCase):
         self.assertTrue(self.contract['observation']['one_message_per_view'])
         self.assertEqual(self.contract['identity']['producer_session_id'], 'uuid_per_object_producer_start')
         self.assertIn('calibration_id', self.contract['identity']['deduplication_key'])
+
+    def test_common_control_source_md5_and_legacy_definition_are_frozen(self):
+        sys.path.insert(0, str(ROOT / 'tools/audit'))
+        from validate_p1b_contract import load_message_specs, all_message_md5
+        control = read_yaml(ROOT / self.config['control_contract'])
+        md5 = all_message_md5(load_message_specs(ROOT / 'src/asmc_msgs/msg'))
+        self.assertEqual(control['messages']['asmc_msgs/InferenceStatus']['md5'], md5['InferenceStatus'])
+        self.assertEqual(self.contract['mode']['status_type'], 'asmc_msgs/InferenceStatus')
+        self.assertEqual(self.contract['mode']['service_type'], 'asmc_msgs/SetInferenceMode')
+        legacy = all_message_md5(load_message_specs(CAMERA / 'msg'))
+        self.assertEqual(control['compatibility']['status_md5'], legacy['InferenceStatus'])
+        self.assertIn('string producer_session_id', (ROOT / 'src/asmc_msgs/msg/InferenceStatus.msg').read_text())
+        self.assertEqual((ROOT / 'src/asmc_msgs/srv/SetInferenceMode.srv').read_text(),
+                         (CAMERA / 'srv/SetInferenceMode.srv').read_text())
 
     def test_camera_ids_and_native_geometry_resolve_to_calibration(self):
         calibration = self.camera_reference('calibration_config')
@@ -65,8 +82,8 @@ class CameraObjectsContractTest(unittest.TestCase):
         self.assertIn('motorcycle', groups['static_obstacle'])
         self.assertTrue({'bicycle', 'stroller'} <= set(groups['dynamic_obstacle']))
 
-    def test_skeleton_does_not_claim_or_depend_on_runtime_fusion(self):
-        self.assertEqual(self.config['implementation_status'], 'contract_only_receiver_not_implemented')
+    def test_receiver_does_not_claim_or_depend_on_runtime_fusion(self):
+        self.assertEqual(self.config['implementation_status'], 'receiver_buffer_projection_ready_fusion_not_implemented')
         compatibility = self.config['current_compatibility']
         self.assertEqual(compatibility['camera_scope'], 'front')
         self.assertEqual(compatibility['output_topic'], '/YOLO/BBox')

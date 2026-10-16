@@ -1,13 +1,15 @@
-# asmc_lidar — 손재호 기능 이전용 골격
+# asmc_lidar — 좌표·시간 기반과 카메라 입력 인계
 
 **2026-10-16 카메라 인계:** [현재 연결·실행·손재호 구현 경계](../../docs/handoffs/camera-to-lidar.md).
 `config/camera_objects.yaml`은 실제 카메라 관측 계약/보정/라벨 설정을 참조하고 교차 시험으로 검사한다.
-관측 수신·버퍼·3뷰 fusion은 아직 미구현이다. Main의 독립 YOLO는 제거하고 외부 카메라 전방 어댑터만 사용한다.
+관측 수신·뷰별 버퍼·보정/투영 인터페이스를 제공한다. 3뷰 객체 매칭·fusion은 손재호의 후속 구현이다. Main의 독립 YOLO는 제거하고 외부 카메라 전방 어댑터만 사용한다.
 
 
-현재는 **빌드 가능한 좌표·시간 라이브러리와 계약 시험**이다. 검출·군집·추적·fusion·
+현재는 **좌표·시간 라이브러리, 공용 카메라 수신 컴포넌트와 계약 시험**이다. 검출·군집·추적·fusion·
 ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며 구현한다.
-실제 주행에는 기존 패키지를 사용한다. 이 패키지에는 실행 launch가 없다.
+실제 주행에는 기존 패키지를 사용한다. 이 패키지는 수신 확인용 probe를 제공하며 LiDAR 처리 launch는 없다.
+
+[카메라 입력 API·공용 상태 전환·직접 시험](docs/camera-input.md)을 손재호의 연결 시작점으로 사용한다.
 
 2026-10-08 B1a의 GPS·map·수평화·카메라 투영·추적 경계와 담당별 후속 작업은
 [B1a 개선 과제](docs/migration-tasks.md)에 정리했다.
@@ -26,8 +28,10 @@ ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며
 | `include/asmc_lidar/projection.hpp`, `src/projection.cpp` | 장착 회전을 고려한 수평화와 관측별 합성 카메라 투영 |
 | `include/asmc_lidar/bounded_pose.hpp`, `src/bounded_pose.cpp` | 별도 300ms 제한 GPS 위치 보정·무효 barrier·3회 복구 API |
 | `include/asmc_lidar/imu_selection.hpp` | 이미 도착한 IMU 중 scan 시각 이전의 최신 유효 표본 선택, 누락/stale 진단 |
-| `config/camera_objects.yaml`, `test/camera_objects_contract_test.py` | 카메라 관측·보정·라벨 참조와 교차 검사; 실행 노드 없음 |
+| `config/camera_objects.yaml`, `test/camera_objects_contract_test.py` | 카메라 관측·보정·라벨 참조와 교차 검사; 실제 API/시험은 camera-input 문서 |
 | `config/autonav_v3.yaml` | 장착 변환의 출처/SHA와 값. 후속 ROS 어댑터에서 검증·로딩할 참고 설정 |
+| `camera_observations.hpp`, `camera_receiver.hpp`, `camera_calibration.hpp` | ROS 독립 버퍼·ROS 수신·보정 로더·투영 경계 |
+| `examples/camera_observation_probe.cpp` | 모드/제어/객체 출력 없이 diagnostics만 제공하는 연결 예제 |
 | `test/` | 중심/8코너·시간·pose·속도·IMU 선택의 회귀시험 |
 
 `asmc::lidar::transform()`은 local 결과와 map 가용성을 분리한다. 호출자는 실제 적용한
@@ -68,6 +72,8 @@ cd /root/ws
 catkin_make --build /tmp/asmc_lidar_handoff_build \
   -DCATKIN_DEVEL_PREFIX=/tmp/asmc_lidar_handoff_devel \
   --only-pkg-with-deps asmc_lidar -DCATKIN_ENABLE_TESTING=ON -j2
+catkin_make --build /tmp/asmc_lidar_handoff_build \
+  -DCATKIN_DEVEL_PREFIX=/tmp/asmc_lidar_handoff_devel camera_receiver_ros_test -j2 -l2
 (cd /tmp/asmc_lidar_handoff_build/asmc_lidar && ctest --output-on-failure)
 source /tmp/asmc_lidar_handoff_devel/setup.bash
 python3 src/asmc_msgs/test/test_message_serialization.py
@@ -75,7 +81,7 @@ python3 src/asmc_msgs/test/test_message_serialization.py
 
 새 골격은 PCL·외부 지면분할 라이브러리·`Main`·`Msg` nested workspace에 의존하지 않는다.
 손재호가 실제 처리 단계를 추가할 때 필요한 의존성만 명시한다. 공용 메시지는
-`asmc_msgs`에 정의돼 있지만 이 골격이 토픽을 발행하지는 않는다.
+`asmc_msgs`에 정의돼 있다. 수신 확인용 probe는 diagnostics만 발행하며 LiDAR 객체를 발행하지 않는다.
 
 이전 연구 소스·보고서는 정리 전 커밋 `020f6c2`에 남아 있다. 선택적 복구는 별도
 checkout에서 검토한다. 예전 `unified.launch`와 `ground_compare_live.launch`는 삭제됐다.

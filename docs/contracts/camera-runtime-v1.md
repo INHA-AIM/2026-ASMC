@@ -62,7 +62,11 @@ TwinLite·BEV·차선 피팅의 책임은 분리하며 차선 주행 소비는 �
 표의 `/status`는 각 역할의 새 루트 뒤에 붙인다. 기존 루트 뒤의
 `/set_inference_mode`, `/inference_status`는 같은 제어 객체·세대의 alias다.
 별도 중계 노드·상태 머신·추론 생산자는 생기지 않는다. Main의 YOLO 상태 구독과
-차선 `LaneEpochGate`의 구독은 계속 동작한다. 메시지·서비스 필드와 MD5는 바뀌지 않는다.
+차선 `LaneEpochGate`의 구독도 정본으로 전환한다. 정본은 `asmc_msgs/InferenceStatus`와
+`asmc_msgs/SetInferenceMode`이며 상태에 `producer_session_id`를 추가했다. 기존 `asmc_camera`
+타입의 필드·MD5는 구형 경로에 보존한다. 정본 상태는 별도 타입/MD5이므로 카메라·Main·소비자를
+같은 변경으로 재빌드/재시작한다. 구형 타입을 쓰는 소비자는 구형 경로를 사용하거나 공용 타입으로
+수정한다. [공용 제어 계약](../../config/contracts/camera_inference_control_v2.yaml)을 따른다.
 
 ```bash
 rosservice call /perception/camera/objects/set_mode '{mode: 1, target_hz: 0.0}'

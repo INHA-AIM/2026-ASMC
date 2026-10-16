@@ -5,10 +5,11 @@ YOLO는 `asmc_camera/camera.launch`만 소유하고 Main의 독립 YOLO 실행·
 현재 판제는 여전히 nested Main의 `/last_lidar`와 tracked/motion 출력을 소비한다.
 전방 bbox fusion만 연결돼 있으며3뷰 fusion과 LiDAR 전체 이전은 손재호의 후속 작업이다.
 
-현재 `asmc_lidar`는 **좌표·시간 기반과 공용 계약만 제공하는 빌드 가능한 골격**이다.
-검출·군집·OBB·추적·fusion·ROS 어댑터의 실행 구현은 손재호가 원본
+현재 `asmc_lidar`는 **좌표·시간 기반과 공용 카메라 수신·버퍼·투영 컴포넌트**를 제공한다.
+[카메라 입력 API](../../src/asmc_lidar/docs/camera-input.md)를 손재호의 연결 시작점으로 사용한다.
+검출·군집·OBB·추적·fusion·최종 ROS 출력의 실행 구현은 손재호가 원본
 [`lidar+sensorfusion`](../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)에서 이전한다.
-기존 원본 패키지가 현재 주행 경로다. `asmc_lidar` 자체는 ROS 노드를 갖지 않지만,
+기존 원본 패키지가 현재 주행 경로다. `asmc_lidar`는 수신 확인용 probe를 제공하며,
 `Main`의 opt-in 어댑터가 코어를 연결해 typed local/map 객체를 제공한다.
 [좌표·GPS 경계 구현과 수락 보류](../records/lidar/lidar-camera-frame-boundaries.md)를 참고한다.
 [external 6개 좌표 구현과 현재 보정 검토](../records/camera/camera-lidar-coordinate-reference-review.md)에는
@@ -80,7 +81,7 @@ YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다.
 | IMU 선택 함수 | 도착 완료 표본만 전달, 유한값/유효 quaternion 검사 후 valid 지정 |
 | v3 장착 설정 | 출처 SHA와 단위 확인. 장착 z를 노면 기준 센서 높이로 사용하지 않음 |
 | 회귀시험 | 좌표·8코너·속도·관측시각·pose/IMU 선택 의미 검사. 실제 검출 성능 시험은 후속 |
-| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar 자체 ROS 노드는 아직 없음 |
+| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar는 수신 확인용 probe 제공, LiDAR 처리 노드는 미이전 |
 
 빌드·시험 명령과 API 위치는 [패키지 README](../../src/asmc_lidar/README.md)에 있다.
 소스에는 지면·tracker 후보나 실행 launch를 남기지 않았다. 이전 `unified.launch`,

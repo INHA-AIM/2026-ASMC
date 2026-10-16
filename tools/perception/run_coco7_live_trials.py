@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Live MORAI matrix: fresh launches, independent generations and all failed trials retained."""
+from asmc_camera.runtime.parameters import canonical_control_path
 import argparse
 from collections import defaultdict
 import hashlib
@@ -121,8 +122,8 @@ def provenance(models, engine, revision):
 def main():
     import rosgraph
     import rospy
-    from asmc_camera.msg import InferenceStatus
-    from asmc_camera.srv import SetInferenceMode
+    from asmc_msgs.msg import InferenceStatus
+    from asmc_msgs.srv import SetInferenceMode
     from asmc_msgs.msg import CameraObjectBoxArray, TrafficLightDetection, LaneBoundaryFamily, Trajectory, VehicleState, BehaviorCommand
     from planning_inputs.msg import DetectedObjectArray
     from sensor_msgs.msg import Image, CompressedImage
@@ -188,7 +189,7 @@ def main():
                 if rospy.is_shutdown() or time.monotonic()>deadline:raise RuntimeError(reason)
                 time.sleep(.03)
         def request(model,mode):
-            proxy=rospy.ServiceProxy(NODES[model]+'/set_inference_mode',SetInferenceMode)
+            proxy=rospy.ServiceProxy(canonical_control_path(NODES[model], 'set_mode'),SetInferenceMode)
             started=time.monotonic();reply=proxy(mode,0.)
             row=dict(model=model,mode=mode,generation=reply.generation,accepted=reply.accepted,reason=reply.reason,
                      call_started=started,call_returned=time.monotonic());report['requests'].append(row)
@@ -236,7 +237,7 @@ def main():
                 subs.append(rospy.Subscriber('/perception/camera/'+view+'/road_marking/class_id',Image,lambda m,v=view:receive_output(v,m),queue_size=100,buff_size=2**24))
             subs.append(rospy.Subscriber('/perception/traffic_light/detection',TrafficLightDetection,lambda m:receive_output('resnet18',m),queue_size=100))
             subs.append(rospy.Subscriber('/perception/lane/boundary_family',LaneBoundaryFamily,lambda m:receive_output('family',m),queue_size=100))
-            for model,node in NODES.items():subs.append(rospy.Subscriber(node+'/inference_status',InferenceStatus,lambda m,n=model:receive_status(n,m),queue_size=100))
+            for model,node in NODES.items():subs.append(rospy.Subscriber(canonical_control_path(node, 'status'),InferenceStatus,lambda m,n=model:receive_status(n,m),queue_size=100))
             subs.append(rospy.Subscriber('/perception/camera/objects/diagnostics',DiagnosticArray,lambda m:diagnostics.append(dict(arrival=time.monotonic(),values=[{v.key:v.value for v in s.values} for s in m.status])),queue_size=100))
             subs.append(rospy.Subscriber('/diagnostics',DiagnosticArray,lambda m:diagnostics.append(dict(
                 arrival=time.monotonic(),kind='bridge',values=[dict(name=s.name,**{v.key:v.value for v in s.values})

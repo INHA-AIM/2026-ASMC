@@ -56,7 +56,8 @@ def manifest(root, config, revision):
     paths = list((root/'src/asmc_camera/src/asmc_camera').rglob('*.py'))
     for folder, suffixes in [('src/asmc_camera/launch', ['*.launch']), ('src/asmc_camera/config', ['*.yaml']),
                              ('src/lidar+sensorfusion/src/Main/src', ['*.cpp', '*.hpp']),
-                             ('src/asmc_msgs/msg', ['*.msg']), ('src/asmc_camera/msg', ['*.msg']),
+                             ('src/asmc_msgs/msg', ['*.msg']), ('src/asmc_msgs/srv', ['*.srv']),
+                             ('src/asmc_camera/msg', ['*.msg']),
                              ('src/asmc_camera/srv', ['*.srv']), ('tools/perception', ['*b0*.py'])]:
         for suffix in suffixes:
             paths.extend((root/folder).rglob(suffix))

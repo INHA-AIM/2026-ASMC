@@ -24,7 +24,7 @@ publisher나 변환 로직은 포함하지 않는다.
 - 기존 planning/perception 타입: 13개, ROS1 MD5 동결
 - HD Map/competition 타입: 12개
 - perception runtime additive 타입: 3개
-- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은34개이며 UrbanFeatureDebug와 LiDAR/camera handoff additive 타입을 포함
+- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은35개 메시지·1개 서비스이며 UrbanFeatureDebug, LiDAR/camera handoff와 공용 추론 제어를 포함
 - 외부 MORAI wire type: pinned `src/MORAI-ROS_morai_msgs`, 이 패키지로 복사하지 않음
 - 중복 `Msg` package: consumer 이관과 clean build 전까지 삭제하지 않음
 
@@ -37,9 +37,14 @@ publisher나 변환 로직은 포함하지 않는다.
 | competition | `CompetitionCheckpoint*`, `MissionZone*` |
 | perception runtime v1 | `TrafficLightDetection`, `TrackedObject*` |
 | 카메라/이전용 LiDAR | `CameraObjectBox*`, `CameraObjectObservation`, `LidarObject*` |
+| 추론 제어 v2 | `InferenceStatus`, `SetInferenceMode.srv` — 생산자 UUID·모드·준비 상태 |
 | 판제 debug | `UrbanFeatureDebug` |
 
-현재 전체 목록은 `msg/`, 등록 순서는 `CMakeLists.txt`가 구현 정본이다.
+공용 추론 제어는 [v2 계약](../../config/contracts/camera_inference_control_v2.yaml)을 따른다.
+생산자는 asmc_camera이며 구형 카메라 타입은 기존 제어 경로에서 호환용으로 유지한다.
+정본 상태 경로 소비자는 공용 타입으로 재빌드해야 한다.
+
+현재 전체 목록은 `msg/`·`srv/`, 등록 순서는 `CMakeLists.txt`가 구현 정본이다.
 
 이 패키지는 interface만 제공한다. HD맵 publisher/metadata/geometry는 asmc_hd_map,
 카메라 관측은 asmc_camera, 현재 LiDAR 실행은 nested Main, 판제는 asmc_planner가 소유한다. 판제는 `/hd_map/global/*` latched 토픽을 한 번 받아 위치 기반으로
@@ -68,7 +73,7 @@ ROS1 MD5는 `.msg` 파일 SHA가 아니다. 주석과 공백을 제외한 상수
 
 | 정본 | 역할 |
 |---|---|
-| `config/contracts/asmc_msgs_contract_registry_v1.yaml` | P1/P4 동결28개 message subset과 소유 계약의 대응 |
+| `config/contracts/asmc_msgs_contract_registry_v1.yaml` | 현재 모든 공용 message와 소유 계약의 대응 |
 | `config/contracts/hd_map_topic_contract_v1.yaml` | 기존·HD Map 25개 message MD5, 필수 필드와 11개 HD Map topic |
 | `config/contracts/perception_runtime_topic_contract_v1.yaml` | perception additive 3개 message와 canonical/compatibility topic |
 | `config/baselines/runtime_baseline_v1.yaml` | P1-A 당시 package/topic/message 회귀 snapshot |

@@ -82,7 +82,7 @@ class NodeWorkerTest(unittest.TestCase):
         self.assertGreaterEqual(float(values["input_silence_sec"]), 0.9)
 
     def request(self, mode, hz=20):
-        from asmc_camera.srv import SetInferenceModeRequest
+        from asmc_msgs.srv import SetInferenceModeRequest
         result = self.node.control._request(SetInferenceModeRequest(mode, hz))
         self.assertTrue(result.accepted)
 

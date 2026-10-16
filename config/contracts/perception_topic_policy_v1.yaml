@@ -69,9 +69,9 @@ topic_families:
 
   - id: camera_inference_status
     topics:
-      - {pattern: /perception/camera/objects/status, type: asmc_camera/InferenceStatus}
-      - {pattern: /perception/camera/lane/status, type: asmc_camera/InferenceStatus}
-      - {pattern: /perception/camera/traffic_light/status, type: asmc_camera/InferenceStatus}
+      - {pattern: /perception/camera/objects/status, type: asmc_msgs/InferenceStatus}
+      - {pattern: /perception/camera/lane/status, type: asmc_msgs/InferenceStatus}
+      - {pattern: /perception/camera/traffic_light/status, type: asmc_msgs/InferenceStatus}
       - {pattern: /camera_semantic_inference/inference_status, type: asmc_camera/InferenceStatus}
       - {pattern: /camera_object_detector/inference_status, type: asmc_camera/InferenceStatus}
       - {pattern: /traffic_light_infer/inference_status, type: asmc_camera/InferenceStatus}
@@ -80,7 +80,7 @@ topic_families:
       anchors: ["control_paths(model)", "legacy + '/inference_status'"]
     consumers:
       - file: src/asmc_camera/src/asmc_camera/runtime/ros_control.py
-        anchor: "'/camera_semantic_inference/inference_status'"
+        anchor: "'/perception/camera/lane/status'"
     bag_profiles: []
     classification: operational_diagnostics
     current_mode: default_on

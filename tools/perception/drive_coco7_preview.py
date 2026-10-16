@@ -5,6 +5,7 @@ This is an evaluation actuator policy, not an unchanged MPC validation. The
 preview steering is retained; trajectory speed is capped and sent as type 2.
 Only this gate publishes /ctrl_cmd. Existing actors/scenarios are preserved.
 """
+from asmc_camera.runtime.parameters import canonical_control_path
 import argparse
 import json
 import math
@@ -96,7 +97,7 @@ def main():
     from morai.actor.actor_control_pb2 import VehicleCtrlCmd
     import rosgraph
     import rospy
-    from asmc_camera.msg import InferenceStatus
+    from asmc_msgs.msg import InferenceStatus
     from asmc_msgs.msg import CameraObjectBoxArray, Trajectory, VehicleState
     from morai_msgs.msg import CtrlCmd, CollisionData
     p=argparse.ArgumentParser(description=__doc__)
@@ -146,7 +147,7 @@ def main():
     def receive_collision(msg):
         if msg.collision_object or msg.collision_objecta: collision[0]=True
     for name,node in [('yolo','camera_object_detector'),('twinlite','camera_semantic_inference'),('resnet18','traffic_light_infer')]:
-        subs.append(rospy.Subscriber('/'+node+'/inference_status',InferenceStatus,lambda m,n=name:receive_status(n,m),queue_size=5))
+        subs.append(rospy.Subscriber(canonical_control_path('/'+node, 'status'),InferenceStatus,lambda m,n=name:receive_status(n,m),queue_size=5))
     subs += [rospy.Subscriber('/evaluation/ctrl_cmd',CtrlCmd,lambda m:receive('preview',m),queue_size=1),
              rospy.Subscriber('/planning/trajectory',Trajectory,lambda m:receive('trajectory',m),queue_size=1),
              rospy.Subscriber('/planning/vehicle/state',VehicleState,lambda m:receive('state',m),queue_size=1),

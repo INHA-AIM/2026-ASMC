@@ -16,15 +16,15 @@ asmc_camera/camera.launch — 3뷰 YOLO, 독립 실행
   → planning_inputs → 판제
 ```
 
-- **안승현/카메라:** 모델·전처리·bbox·세 그룹·confidence·3뷰 관측과 실행 성능.
-- **이번 Main 정리:** 독립 YOLO 노드/래퍼/전용 가중치/설치 경로를 제거한다. Main은 카메라 모델을 시작하거나 로드하지 않는다.
+- **안승현/카메라:** 모델·전처리·bbox·세 그룹·confidence·3뷰 관측과 실행 성능, 공용 제어·LiDAR 카메라 입력 지원.
+- **PR #87에서 완료한 Main 정리:** 독립 YOLO 노드/래퍼/전용 가중치/설치 경로를 제거했다. Main은 카메라 모델을 시작하거나 로드하지 않는다.
 - **손재호:** 검출·지면/구조물·군집·OBB·추적·카메라 매칭/fusion·ROS 출력의 `asmc_lidar` 이전.
 - **판제:** 결과 소비·행동 정책·음영 lane 활성화. 이번 변경은 판제 입력 토픽·MD5·정책을 바꾸지 않는다.
 
 음영 어댑터의 `camera_bbox_detector.launch`도 별도 추론 없이 전방 CPU 변환만 제공한다. 전용 출력 토픽과 소비 cutoff0.7은 그대로이며 Main 어댑터의 기본0.0과 구분한다.
 수집/시나리오 launch의 폐기 `start_yolo` 인자도 제거했다.
 
-Main은 이미 외부 카메라가 기본이었다. 이번 정리는 `start_yolo`와 `yolo_device/yolo_require_cuda/yolo_perf_log_interval_sec` 복구 옵션을 없앤다.
+Main은 이미 외부 카메라가 기본이었다. PR #87에서 `start_yolo`와 `yolo_device/yolo_require_cuda/yolo_perf_log_interval_sec` 복구 옵션을 없앴다.
 이 인자를 넘기는 기존 호출에서는 제거해야 한다. 복구 모델은 카메라의 `detector:=pretrained`를 사용한다.
 `camera_class_profile`은 fusion의 분류 정책이며 독립 YOLO 실행 옵션과 다르므로 유지한다.
 
@@ -140,22 +140,32 @@ src/lidar+sensorfusion/install/lib/Main/yolo_detection_node
 과거 P2a 비교의 소스·가중치는 변경 전 커밋 `ae8dcbc0eb80f06f8c8db54742543aad369ef3cc`에 있다.
 재현이 필요하면 그 커밋의 별도 checkout·일치하는 빌드/source 환경·독립 ROS master를 사용한다. 현재 운영에 복구하지 않는다.
 
-## 손재호의 다음 구현 경계
+## 카메라 입력 지원과 손재호의 다음 구현
 
-`asmc_lidar/config/camera_objects.yaml`은 참조 설정과 계약 시험뿐이다. 구독·버퍼·투영·fusion 노드는 아직 없다.
-골격에는 카메라 모델·TensorRT·Main/Msg 의존성을 추가하지 않는다.
+`asmc_lidar`에 카메라 수신·뷰별 제한 버퍼·보정 로딩·투영 인터페이스를 제공한다.
+[입력 API·빌드·시험·probe](../../src/asmc_lidar/docs/camera-input.md)에 최소 연결 예제를 정리했다.
+현재 운영 Main의 전방 연결과 최종 판제 출력은 계속 유지한다.
 
-1. **관측 수신·버퍼:** `/perception/camera/objects/observations`의 `CameraObjectObservation`을 뷰별로 받는다.
-   `detections.header`·원본 크기와 session/generation·calibration/model/config ID를 보존한다.
-   세션/세대 변경·stamp 회귀·STANDBY·입력 중단에서 이전 관측을 제거하며 중복 관측을 새 확인 횟수로 세지 않는다.
-2. **보정·투영:** frame과 해당 카메라 보정·원본 영상 크기를 연결한다. source stamp는 bridge source/fallback 정책을 따른다.
-   수평화/장착/관측시점 pose 변환을 중복 적용하지 않는다. bbox만으로 거리나 map 위치를 생성하지 않는다.
-3. **매칭·통합:** 3뷰의 서로 다른 관측 시각·가림·중복 객체를 처리한다. 현재 전방50ms/200ms 정책을3뷰 구현 완료로 복사하지 않는다.
-   큐 크기·새 매칭 정책·중복 근거 통합은 구현 시 별도 비교로 확정한다.
-4. **출력·이전:** 원본 이름/그룹과 실측 운동 상태를 분리하고, 기존 판제 계약을 공동 확인한 뒤 `asmc_lidar`로 소비를 전환한다.
+- **카메라 담당 제공:** 공용 상태/서비스 전환, 관측 수신·검증·버퍼, session/generation·시간 게이트,
+  보정 ID 교차 검사·원본 좌표 투영 인터페이스·시험과 진단.
+- **손재호 구현:** 자신의 scan 처리 루프에 Receiver 연결 → scan/영상 시간 매칭 → 3D 객체/bbox 연결
+  → 여러 카메라 근거 통합·분류 유지 → 추적/ROS 출력 이전과 판제 공동 검증.
+- **판제 담당:** 모드 요청과 결과 소비·행동 정책. 수신부는 모드 서비스를 호출하지 않는다.
 
-정상 빈 결과는 `detections.valid=true`와 빈 boxes다. 무효 결과는 `valid=false`이며 미수신/stale과 구분한다.
-새 관측 계약은 이 차이를 전달하지만 현재 구형 wire의 손실을 자동 해결한 것으로 표시하지 않는다.
+기본 버퍼는 뷰별8관측·350ms이며 query 허용 시간차는 호출자가 지정한다. 한 뷰를 기다리며
+전체를 막지 않는다. 정상 빈 결과·무효·미수신·stale을 구분하고 카메라 미검출만으로
+LiDAR 객체를 삭제하지 않는다. 후보 조회는 소비나 독립 확인 횟수를 자동 증가시키지 않는다.
+
+정본 상태/서비스는 `asmc_msgs/InferenceStatus`, `asmc_msgs/SetInferenceMode`다.
+새 상태 UUID는 관측과 같으며, Main도 정본 상태를 구독한다. 기존 `asmc_camera` 타입과
+구형 노드 루트의 제어 경로는 호환용으로 남는다. 정본 경로의 구형 타입 소비자는
+재빌드/재시작해야 하며 구형 bag을 토픽 이름만 바꿔 새 타입처럼 사용하지 않는다.
+[공용 제어 정본](../../config/contracts/camera_inference_control_v2.yaml)을 따른다.
+
+전방1280×720·좌우640×480의 bbox를 사용하고 tensor 크기로 보정을 바꾸지 않는다.
+호출자가 scan의 실제 좌표·수평화·시간 변환을 제공한다. source stamp는 기존 bridge 정책을
+따르며 보정/시간 근거가 없는 결과를 정확한 동기 관측이라고 표시하지 않는다.
+3뷰 입력 지원은 3뷰 fusion 완료가 아니다.
 
 ## 검증 상태와 남은 개선
 
@@ -165,9 +175,10 @@ SUNNY source-age 저하와10분 family 최대261.7ms 공백은 [최신 family �
 
 사용자 관찰의 bus/truck 간헐적 누락, 차로 앞 bicycle/dog, `dog 2`·`dog 10` 약세도 같은 기록을 따른다.
 추가학습은 판제 측 개선 요청 이후에 진행한다. 시간 공급/좌표 문제가 학습으로 해결된다고 가정하지 않는다.
-이번 연결·빌드 검증 결과는 [작은 증거](../../config/baselines/evidence/camera_lidar_handoff_v2)에 보존하며 공동 주행 또는3뷰 fusion 수락으로 확대하지 않는다.
+이번 공용 계약·수신부의 [구현 검증 기록](../records/lidar/2026-10-16-camera-observation-handoff.md)을 확인한다.
+PR #87의 전방 연결 증거는 [기존 요약](../../config/baselines/evidence/camera_lidar_handoff_v2)에 보존하며 공동 주행 또는3뷰 fusion 수락으로 확대하지 않는다.
 
-### 이번 연결 검증 결과
+### PR #87 전방 연결 검증 결과
 
 | 검사 | 결과 |
 |---|---|

@@ -5,6 +5,7 @@ Never starts SimulationWorld (which deletes actors). Original GPS, scenarios,
 adapter code and defaults are not edited. Driving forwards the existing preview
 through a test gate, with a single /ctrl_cmd publisher and a 5 km/h ceiling.
 """
+from asmc_camera.runtime.parameters import canonical_control_path
 import argparse
 import copy
 import hashlib
@@ -32,8 +33,8 @@ from morai.actor.actor_set_pb2 import VehicleControlModeParam, VehicleGear, SetT
 from morai.actor.actor_control_pb2 import VehicleCtrlCmd
 from morai.actor.actor_enum_pb2 import VEHICLE_CONTROL_AUTO_MODE, GEAR_MODE_D
 from morai_msgs.msg import CtrlCmd, GPSMessage, CollisionData
-from asmc_camera.msg import InferenceStatus
-from asmc_camera.srv import SetInferenceMode
+from asmc_msgs.msg import InferenceStatus
+from asmc_msgs.srv import SetInferenceMode
 from asmc_hd_map.msg import HdMapContext
 from asmc_msgs.msg import LaneBoundaryFamily
 from lane_boundary_adapter.msg import CameraBBoxLaneResult
@@ -157,7 +158,7 @@ class Trial:
             self.log('collision', message=repr(message))
 
     def request(self, mode):
-        result = rospy.ServiceProxy('/camera_semantic_inference/set_inference_mode',SetInferenceMode)(mode,10.)
+        result = rospy.ServiceProxy('/perception/camera/lane/set_mode',SetInferenceMode)(mode,10.)
         if not result.accepted:
             raise RuntimeError('mode rejected: '+result.reason)
         self.log('mode_request', mode=mode, generation=result.generation)
@@ -276,7 +277,7 @@ class Trial:
         self.stop()
         self.call(self.sim._simulation_stub.Resume,Empty(),True)
         for name, topic, kind in (
-            ('status','/camera_semantic_inference/inference_status',InferenceStatus),
+            ('status','/perception/camera/lane/status',InferenceStatus),
             ('family','/perception/lane/boundary_family',LaneBoundaryFamily),
             ('bbox','/planning/camera_bbox_lane/result',CameraBBoxLaneResult),
             ('preview','/planning/camera_bbox_lane_change/control_preview',CtrlCmd),
@@ -296,7 +297,7 @@ class Trial:
             self.run_process('region_example',['roslaunch','asmc_camera','camera_region_example.launch',
                 'allow_example_control:=true'])
             for model,node_name in [('yolo','camera_object_detector'),('resnet18','traffic_light_infer')]:
-                self.subscribers.append(rospy.Subscriber('/'+node_name+'/inference_status',InferenceStatus,
+                self.subscribers.append(rospy.Subscriber(canonical_control_path('/'+node_name, 'status'),InferenceStatus,
                     lambda message,model=model:self.log('other_model_status',model=model,mode=message.mode,
                         generation=message.generation,prepared=message.prepared,pipeline_ready=message.pipeline_ready),
                     queue_size=10))
@@ -310,7 +311,7 @@ class Trial:
                 'ignore_bbox_during_lane_change:=true','lane_change_cooldown:=4.0',
                 'expected_config_sha256:='+FAMILY_SHA,
                 'calibration_file:=/root/ws/src/asmc_camera/config/cameras_v3.yaml','use_rviz:=false'])
-        rospy.wait_for_service('/camera_semantic_inference/set_inference_mode',timeout=60)
+        rospy.wait_for_service('/perception/camera/lane/set_mode',timeout=60)
         self.observer_thread=threading.Thread(target=self.observe_trial,daemon=True)
         self.observer_thread.start()
         self.gate_thread=threading.Thread(target=self.gate,daemon=True)

@@ -28,6 +28,10 @@ class ObjectViewCache:
         active = not status.managed or status.mode == 2
         if key != self.control_key and (not active or (self.control_key and key[0] != self.control_key[0])):
             self.clear()
+        session = getattr(status, "producer_session_id", "")
+        if getattr(self, "control_session", session) != session:
+            self.clear()
+        self.control_session = session
         self.control_key, self.active = key, active
 
     def expire(self, now):
@@ -80,6 +84,9 @@ class ObjectViewCache:
             self.identity = identity
             self.identity_conflict = False
         if self.identity_conflict:
+            return False
+        if getattr(self, "control_session", "") and identity[0] != self.control_session:
+            self.counts["status_session_mismatch"] += 1
             return False
         if self.control_key and identity[1] != self.control_key[0]:
             self.counts['status_generation_mismatch'] += 1

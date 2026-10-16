@@ -5,6 +5,7 @@ Run in the selected overlay (frozen main for R0, candidate for R1/R2). No vehicl
 control, actors, training or producer defaults are changed. A saved-image replay
 can run on a separate ROS master; live trials use the existing bridge.
 """
+from asmc_camera.runtime.parameters import canonical_control_path
 import argparse
 import hashlib
 from collections import defaultdict
@@ -92,8 +93,8 @@ def main():
     import rospy
     import roslaunch
     import rospkg
-    from asmc_camera.msg import InferenceStatus
-    from asmc_camera.srv import SetInferenceMode
+    from asmc_msgs.msg import InferenceStatus
+    from asmc_msgs.srv import SetInferenceMode
     from sensor_msgs.msg import Image, CompressedImage
     from asmc_msgs.msg import CameraObjectBoxArray, LaneBoundaryFamily
     from diagnostic_msgs.msg import DiagnosticArray
@@ -156,7 +157,7 @@ def main():
             for name,sample in list(latest_debug.items()):
                 failure_samples.setdefault(name,(sample,row))
     for role, node in legacy.items():
-        subscribers.append(rospy.Subscriber(node+'/inference_status', InferenceStatus,
+        subscribers.append(rospy.Subscriber(canonical_control_path(node, 'status'), InferenceStatus,
             lambda m, r=role: receive_status(r, m), queue_size=20))
     subscribers.append(rospy.Subscriber('/perception/camera/objects', CameraObjectBoxArray,
         lambda m: outputs.append(dict(frame=m.header.frame_id, stamp=m.header.stamp.to_nsec(), seq=m.header.seq,
@@ -286,8 +287,8 @@ def main():
             record=dict(mode=mode,started=time.monotonic(),expected={},ready=False)
             report['mode_transitions'].append(record)
             for role in active:
-                rospy.wait_for_service(legacy[role]+'/set_inference_mode',5)
-                response=rospy.ServiceProxy(legacy[role]+'/set_inference_mode',SetInferenceMode)(mode,0.)
+                rospy.wait_for_service(canonical_control_path(legacy[role], 'set_mode'),5)
+                response=rospy.ServiceProxy(canonical_control_path(legacy[role], 'set_mode'),SetInferenceMode)(mode,0.)
                 if not response.accepted: raise RuntimeError(response.reason)
                 record['expected'][role]=response.generation
             deadline=time.monotonic()+30

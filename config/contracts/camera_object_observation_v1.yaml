@@ -28,10 +28,11 @@ identity:
 normal_empty: detections.valid_true_and_empty_boxes
 invalid: detections.valid_false
 mode:
-  service_type: asmc_camera/SetInferenceMode
-  status_type: asmc_camera/InferenceStatus
+  service_type: asmc_msgs/SetInferenceMode
+  status_type: asmc_msgs/InferenceStatus
   roles:
     objects: {service: /perception/camera/objects/set_mode, status: /perception/camera/objects/status, legacy_root: /camera_object_detector, model_field: yolo}
     lane: {service: /perception/camera/lane/set_mode, status: /perception/camera/lane/status, legacy_root: /camera_semantic_inference, model_field: twinlite}
     traffic_light: {service: /perception/camera/traffic_light/set_mode, status: /perception/camera/traffic_light/status, legacy_root: /traffic_light_infer, model_field: resnet18}
-future_lidar_consumer: not_implemented_in_this_change
+lidar_consumer: receiver_buffer_projection_only
+control_contract: config/contracts/camera_inference_control_v2.yaml

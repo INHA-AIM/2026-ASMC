@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Exercise the optional example through real ROS services, without GPU/driving."""
+from asmc_camera.runtime.parameters import canonical_control_path
 import json
 import os
 from pathlib import Path
@@ -8,7 +9,7 @@ import subprocess
 import time
 
 import rospy
-from asmc_camera.srv import SetInferenceMode, SetInferenceModeResponse
+from asmc_msgs.srv import SetInferenceMode, SetInferenceModeResponse
 from asmc_camera.runtime.state import InferenceState
 from asmc_hd_map.msg import HdMapContext
 from asmc_msgs.msg import MissionZone, MissionZoneArray
@@ -24,7 +25,7 @@ def main():
     def request(name, req):
         return SetInferenceModeResponse(*states[name].request(req.mode,req.target_hz))
     for name,node in nodes.items():
-        services.append(rospy.Service(node+'/set_inference_mode',SetInferenceMode,
+        services.append(rospy.Service(canonical_control_path(node, 'set_mode'),SetInferenceMode,
             lambda req,name=name:request(name,req)))
     context_pub=rospy.Publisher('/hd_map/context',HdMapContext,queue_size=1)
     zone_pub=rospy.Publisher('/hd_map/global/mission_zones',MissionZoneArray,queue_size=1,latch=True)
@@ -64,7 +65,7 @@ def main():
         # Replacing the example needs no changes in any model provider.
         os.killpg(process.pid,signal.SIGINT);process.wait(timeout=10)
         for name in nodes:
-            rospy.ServiceProxy(nodes[name]+'/set_inference_mode',SetInferenceMode)(0,0)
+            rospy.ServiceProxy(canonical_control_path(nodes[name], 'set_mode'),SetInferenceMode)(0,0)
         checks['example_removed_external_controller_works']=all(v.mode==0 for v in states.values())
     finally:
         if process.poll() is None:

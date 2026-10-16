@@ -6,7 +6,8 @@ import rospy
 from asmc_hd_map.msg import HdMapContext
 from asmc_msgs.msg import MissionZoneArray, VehicleState
 from std_msgs.msg import String
-from asmc_camera.srv import SetInferenceMode
+from asmc_msgs.srv import SetInferenceMode
+from asmc_camera.runtime.parameters import control_paths
 from asmc_camera.runtime.region_example import RegionExample
 
 
@@ -45,7 +46,7 @@ class CameraRegionExampleNode:
                 self.speed, self.speed_at = value.speed, time.monotonic()
 
     def _request(self, model, mode, hz):
-        service = self.config['models'][model]['node'] + '/set_inference_mode'
+        service = control_paths(model)[0]
         try:
             rospy.wait_for_service(service, timeout=1.)
             response = rospy.ServiceProxy(service, SetInferenceMode)(mode, hz)

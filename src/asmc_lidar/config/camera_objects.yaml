@@ -1,6 +1,6 @@
-# Handoff references only: no ROS subscriber, buffer, projector or fusion node.
+# Reusable camera receiver/buffer/projection; object matching and fusion remain migration work.
 schema_version: 1
-implementation_status: contract_only_receiver_not_implemented
+implementation_status: receiver_buffer_projection_ready_fusion_not_implemented
 observation_contract: config/contracts/camera_object_observation_v1.yaml
 observation_topic: /perception/camera/objects/observations
 status_topic: /perception/camera/objects/status
@@ -15,3 +15,11 @@ current_compatibility:
   input_topic: /perception/camera/objects
   camera_scope: front
   output_topic: /YOLO/BBox
+
+control_contract: config/contracts/camera_inference_control_v2.yaml
+buffer:
+  capacity_per_view: 8
+  retention_ms: 350
+  status_freshness_ms: 350
+  future_tolerance_ms: 50
+  query_policy: nonblocking_nearest_candidates_caller_supplies_tolerance

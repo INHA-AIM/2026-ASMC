@@ -9,7 +9,7 @@ import time
 import cv2
 import numpy as np
 import rospy
-from asmc_camera.msg import InferenceStatus
+from asmc_msgs.msg import InferenceStatus
 from asmc_msgs.msg import CameraObjectObservation
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from sensor_msgs.msg import CompressedImage

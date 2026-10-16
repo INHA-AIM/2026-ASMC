@@ -30,7 +30,7 @@
 
 카메라 TensorRT가 기본이어도 family 순간 공백250ms 기준과 freshness350ms의 남은 실패는 추적합니다.
 YOLO는 전 조건 모든 에셋 지원을 검증한 상태가 아닙니다. 추가학습은 현재 사용자 판단에 따라 보류합니다.
-`asmc_lidar`는 아직 실행 패키지가 아니며 3뷰 YOLO 출력이 3뷰 LiDAR fusion 완료를 뜻하지 않습니다.
+`asmc_lidar`는 카메라 수신 컴포넌트와 확인용 probe를 제공하지만 전체 LiDAR 실행은 아직 이전되지 않았으며 3뷰 YOLO 출력이 3뷰 LiDAR fusion 완료를 뜻하지 않습니다.
 
 판제의 최신 주행 개선과 전체 회귀 통과는 다릅니다. 이전 이관 기록의 AVOID/link 실패와
 #89가 보고한 `roundabout_execution_test` 실패는 시점별로 구분해 해결·재검증합니다.

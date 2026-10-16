@@ -72,10 +72,11 @@ jobs:
           source /opt/ros/noetic/setup.bash
           ./scripts/build_ws.sh
 
-      - name: Check LiDAR coordinate and time foundation
+      - name: Check LiDAR camera receiver, coordinates and time
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
+          catkin_make camera_receiver_ros_test -j2 -l2
           cd build/asmc_lidar
           ctest --output-on-failure
 

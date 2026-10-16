@@ -11,7 +11,7 @@ from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Header
 from asmc_camera.nodes.object_detection_node import ObjectDetectionNode
 from asmc_camera.detection.backend import Detection
-from asmc_camera.srv import SetInferenceMode
+from asmc_msgs.srv import SetInferenceMode
 from asmc_msgs.msg import CameraObjectBoxArray
 from check_object_visualization_ros import wait
 
@@ -36,7 +36,7 @@ def main():
     sub=rospy.Subscriber('/perception/camera/objects',CameraObjectBoxArray,outputs.append,queue_size=10)
     source=rospy.Publisher('/image_jpeg/compressed',CompressedImage,queue_size=5)
     jpeg=cv2.imencode('.jpg',np.full((100,120,3),200,np.uint8))[1].tobytes()
-    request=rospy.ServiceProxy('/camera_object_detector/set_inference_mode',SetInferenceMode)
+    request=rospy.ServiceProxy('/perception/camera/objects/set_mode',SetInferenceMode)
     def send():
         h=Header(stamp=rospy.Time.now(),frame_id='camera_front')
         source.publish(CompressedImage(header=h,format='jpeg',data=jpeg));return h
