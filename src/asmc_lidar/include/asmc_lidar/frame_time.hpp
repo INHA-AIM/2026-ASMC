@@ -1,6 +1,7 @@
 #pragma once
 // Coordinate/time foundation for the LiDAR migration. ROS adapters provide
 // validated observations, extrinsics and pose samples; this library has no I/O.
+// Current runtime is nested Main; this core does not implement a receiver/fuser.
 #include <Eigen/Geometry>
 #include <array>
 #include <cstdint>

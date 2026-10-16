@@ -119,7 +119,8 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
 
     // Trajectory -> PlannedPath만 변환한다. ego_at_plan의 provenance는
     // ConvertTrajectory가 내부적으로 검증하지만 MPCState로는 변환하지 않는다
-    // - x0는 아래에서 최신 /vehicle/state로부터 독립적으로 만든다.
+    // - x0는 아래에서 설정된 최신 vehicle-state 토픽으로부터 독립적으로 만든다.
+    // 통합 launch는 /planning/vehicle/state, 단독 기본은 /vehicle/state다.
     PlannedPath path;
     const TrajectoryStatus status = ConvertTrajectory(g_control.latest_trajectory, path);
     if (status == TrajectoryStatus::STOP_TRAJECTORY) {

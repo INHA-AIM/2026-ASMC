@@ -24,6 +24,7 @@
 | Behavior | `src/asmc_planner/` | 정윤태·양서준 |
 | Frenet | `src/asmc_planner/` | 이강태·정윤태 |
 | MPC | `src/asmc_controller/` | 정윤태·양서준 |
+| 판제 입력 | `src/planning_inputs/` | 정윤태·판제 공동, 상태/좌표 변경 시 LiDAR·통합 리뷰 |
 | Planning adapter | `src/jamming_lane_boundary_adapter/` | 통합·판제 공동; 판제 consumer 흡수 후 삭제 gate |
 | UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../../src/asmc_bridge/docs/integration.md) | 이강태·안승현, planning consumer 공동 리뷰 |
 | Perception façade와 typed 계약 | `src/asmc_camera/`; [runtime 계약](../contracts/perception-runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |
@@ -41,8 +42,8 @@
 |---|---|
 | `asmc_hd_map` | 2단계 완료. 운영 map과 global/local topic 사용 |
 | `asmc_bridge` | P3-G local closeout 완료. 실제 두 PC LAN2LAN은 6단계 현장 리허설에서 검증 |
-| `asmc_camera`(구 `asmc_perception`) | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 팀원 개발 중인 `src/lidar+sensorfusion`은 handoff 전 변경 금지 |
-| 목표 `asmc_camera` | 안승현: 현재 asmc_perception의 이름 변경부터 별도 검증. YOLO 생산자 이전·공용 검출 계약은 다음 변경. 기존 /perception 토픽 유지 |
+| `asmc_camera`(구 `asmc_perception`) | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 Main은 카메라 외부 결과 소비로 연결됨. 알고리즘 이전은 손재호 담당 |
+| `asmc_camera` 현재 | rename·3뷰 YOLO 단일화·TensorRT·family 최적화 병합. 원본16종/소비3그룹 계약 제공. 추가학습은 판제 요청 시 |
 | 목표 `asmc_lidar` | 손재호: 좌표·시간 골격 위에 원본 기능 보존·개선 적용·메시지/좌표 어댑터 이전 마무리. camera fusion 내부 유지, 개인 연구 runtime은 Git 이력에서만 조회 |
 | `learning*` 정리 | 완료. LBC teacher/debug 필요 기능만 `tools/research/lbc_teacher_bev` 이관 |
 | 실행·시각화 | P5-A~E 완료 기록 유지. bridge는 별도 실행, 웹 콘솔은 수요 발생 후 검토 |
@@ -77,3 +78,10 @@
 4. 기존 실행 경로는 parity와 rollback이 확인될 때까지 제거하지 않는다.
 
 브랜치·PR 명령은 [협업 규칙](collaboration.md)을 따른다.
+
+## 다음 작업의 정렬 기준
+
+담당별 다음 결과와 대회 완료 증거는 [통합 로드맵](../architecture/consolidation-roadmap.md)을 따릅니다.
+카메라 모델 추가학습·3뷰 fusion·패키지 이전을 모두 끝내야만 현재 주행을 시험할 수 있는 것은 아닙니다.
+먼저 현재 전체 미션의 실패를 기록·재현하고 해당 owner가 작은 변경으로 개선합니다.
+PR #89의 좌표·고속 추종 변경은 현재 코드에 반영됐으며 남은 회귀 실패와 현장 수락은 별도입니다.

@@ -12,6 +12,7 @@ namespace planning_inputs {
 
 // Canonical ASMC object categories. Msg/TrackedObject.type uses a different
 // numeric convention, so the source integer must never be copied directly.
+// Unknown retains geometry/motion; camera static/dynamic groups are not this enum.
 constexpr std::uint8_t kObjectUnknown = 0;
 constexpr std::uint8_t kObjectVehicle = 1;
 constexpr std::uint8_t kObjectPedestrian = 2;

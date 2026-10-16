@@ -15,7 +15,8 @@
 3. WIP 공유는 Draft PR로 하고, 실행 불가능한 상태를 Ready로 전환하지 않는다.
 4. 한 PR은 한 목적만 다루며 rename과 동작 변경을 분리한다.
 5. 공용 계약·UDP·Docker·CI·여러 파트 변경은 관련 owner의 리뷰를 받는다.
-6. bag, dataset, checkpoint, 비밀값과 호스트 절대경로를 커밋하지 않는다.
+6. 원본 bag/dataset·학습 재개 checkpoint·비밀값·호스트 절대경로를 커밋하지 않는다.
+   예외로 승인된 package-local 배포 모델은 manifest/SHA/지원 환경과 함께 관리한다.
 
 ## 2. Pull request workflow
 
@@ -106,6 +107,7 @@ docker exec -it asmc-ros-noetic bash -lc 'cd /root/ws && ./scripts/build_ws.sh'
 
 - 문서 이동: 로컬 Markdown 링크, `git diff --check`와
   `python3 tools/audit/check_documentation_migration.py`
+- 현행 실행 안내: `python3 tools/audit/check_runtime_documentation.py`; 인자 변경 시 `--write`로 목록 갱신
 - HD Map: deterministic builder/test와 topic/RViz smoke
 - perception: 동일 bag replay, 출력 rate·latency·message contract
 - bridge: packet fixture, topic type/rate, 기존 profile 회귀

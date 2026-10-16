@@ -24,7 +24,7 @@ publisher나 변환 로직은 포함하지 않는다.
 - 기존 planning/perception 타입: 13개, ROS1 MD5 동결
 - HD Map/competition 타입: 12개
 - perception runtime additive 타입: 3개
-- 합계: 28개
+- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은34개이며 UrbanFeatureDebug와 LiDAR/camera handoff additive 타입을 포함
 - 외부 MORAI wire type: pinned `src/MORAI-ROS_morai_msgs`, 이 패키지로 복사하지 않음
 - 중복 `Msg` package: consumer 이관과 clean build 전까지 삭제하지 않음
 
@@ -36,11 +36,13 @@ publisher나 변환 로직은 포함하지 않는다.
 | HD Map | `HdMapMeta`, `LaneMarking*`, `Lane*`, `LaneAssociation`, `DrivableArea*` |
 | competition | `CompetitionCheckpoint*`, `MissionZone*` |
 | perception runtime v1 | `TrafficLightDetection`, `TrackedObject*` |
+| 카메라/이전용 LiDAR | `CameraObjectBox*`, `CameraObjectObservation`, `LidarObject*` |
+| 판제 debug | `UrbanFeatureDebug` |
 
 현재 전체 목록은 `msg/`, 등록 순서는 `CMakeLists.txt`가 구현 정본이다.
 
-이 패키지는 interface만 제공하며 publisher, metadata 생성기와 최종 geometry는
-`asmc_hd_map`이 소유한다. 판제는 `/hd_map/global/*` latched 토픽을 한 번 받아 위치 기반으로
+이 패키지는 interface만 제공한다. HD맵 publisher/metadata/geometry는 asmc_hd_map,
+카메라 관측은 asmc_camera, 현재 LiDAR 실행은 nested Main, 판제는 asmc_planner가 소유한다. 판제는 `/hd_map/global/*` latched 토픽을 한 번 받아 위치 기반으로
 조회하는 방식을 기본으로 하고, `/hd_map/local/lanes`와 `/hd_map/local/drivable_grid`는
 선택적 파생 캐시로만 사용한다. `/hd_map/local/current_lane`은 후륜축 중심 `base_link`를
 기준으로 한 상태 포함(`INSIDE/BOUNDARY/NEARBY/STALE`) 차로 association이다. local crop에는
@@ -66,7 +68,7 @@ ROS1 MD5는 `.msg` 파일 SHA가 아니다. 주석과 공백을 제외한 상수
 
 | 정본 | 역할 |
 |---|---|
-| `config/contracts/asmc_msgs_contract_registry_v1.yaml` | 전체 28개 message와 소유 계약의 일대일 대응 |
+| `config/contracts/asmc_msgs_contract_registry_v1.yaml` | P1/P4 동결28개 message subset과 소유 계약의 대응 |
 | `config/contracts/hd_map_topic_contract_v1.yaml` | 기존·HD Map 25개 message MD5, 필수 필드와 11개 HD Map topic |
 | `config/contracts/perception_runtime_topic_contract_v1.yaml` | perception additive 3개 message와 canonical/compatibility topic |
 | `config/baselines/runtime_baseline_v1.yaml` | P1-A 당시 package/topic/message 회귀 snapshot |

@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-16",
+  "base_commit": "4eb061badd2a964cea83db11cb02cb4c87363179",
+  "latest_main_commit": "32ba7e8f",
+  "scope": "All tracked team-owned package source/config/launch comments scanned; interfaces, units, frames, entrypoints and changed boundaries manually compared. Not a proof of every algorithm comment or all driving behavior.",
+  "excluded": [
+    "pinned MORAI submodule",
+    "nested morai_msgs and Velodyne vendor",
+    "generated SDK/external dependencies"
+  ],
+  "packages": {
+    "lane_boundary_adapter": {
+      "path": "src/jamming_lane_boundary_adapter",
+      "source_files_scanned": 30,
+      "files_with_comments_or_docstrings": 27,
+      "comment_lines": 401
+    },
+    "Main": {
+      "path": "src/lidar+sensorfusion/src/Main",
+      "source_files_scanned": 106,
+      "files_with_comments_or_docstrings": 93,
+      "comment_lines": 2108
+    },
+    "Msg": {
+      "path": "src/lidar+sensorfusion/src/Msg",
+      "source_files_scanned": 5,
+      "files_with_comments_or_docstrings": 1,
+      "comment_lines": 10
+    },
+    "asmc_controller": {
+      "path": "src/asmc_controller",
+      "source_files_scanned": 55,
+      "files_with_comments_or_docstrings": 46,
+      "comment_lines": 728
+    },
+    "data_collection": {
+      "path": "src/data_collection",
+      "source_files_scanned": 52,
+      "files_with_comments_or_docstrings": 34,
+      "comment_lines": 177
+    },
+    "planning_inputs": {
+      "path": "src/planning_inputs",
+      "source_files_scanned": 47,
+      "files_with_comments_or_docstrings": 38,
+      "comment_lines": 219
+    },
+    "asmc_planner": {
+      "path": "src/asmc_planner",
+      "source_files_scanned": 279,
+      "files_with_comments_or_docstrings": 239,
+      "comment_lines": 8236
+    },
+    "asmc_camera": {
+      "path": "src/asmc_camera",
+      "source_files_scanned": 293,
+      "files_with_comments_or_docstrings": 230,
+      "comment_lines": 1012
+    },
+    "asmc_bridge": {
+      "path": "src/asmc_bridge",
+      "source_files_scanned": 20,
+      "files_with_comments_or_docstrings": 19,
+      "comment_lines": 201
+    },
+    "asmc_hd_map": {
+      "path": "src/asmc_hd_map",
+      "source_files_scanned": 144,
+      "files_with_comments_or_docstrings": 120,
+      "comment_lines": 1915
+    },
+    "asmc_lidar": {
+      "path": "src/asmc_lidar",
+      "source_files_scanned": 14,
+      "files_with_comments_or_docstrings": 13,
+      "comment_lines": 49
+    },
+    "asmc_msgs": {
+      "path": "src/asmc_msgs",
+      "source_files_scanned": 36,
+      "files_with_comments_or_docstrings": 24,
+      "comment_lines": 492
+    }
+  },
+  "comment_only_source_changes": [
+    {
+      "path": "src/asmc_camera/scripts/camera_runtime_node.py",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/asmc_controller/src/Control.cpp",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/asmc_hd_map/launch/competition_map.launch",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/frame_time.hpp",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/asmc_msgs/CMakeLists.txt",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/asmc_msgs/msg/CameraObjectBox.msg",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/asmc_msgs/msg/CameraObjectBoxArray.msg",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/asmc_msgs/msg/DetectedObject.msg",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/asmc_msgs/msg/VehicleState.msg",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/asmc_planner/launch/planner_v2.launch",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/data_collection/scripts/sync_collector_node.py",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.hpp",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Msg/msg/TrackedObject.msg",
+      "non_comment_content_equal": true
+    },
+    {
+      "path": "src/planning_inputs/include/planning_inputs/converter.hpp",
+      "non_comment_content_equal": true
+    }
+  ],
+  "message_field_definitions_unchanged": true,
+  "model_weights_configs_algorithms_unchanged": true
+}

@@ -1,0 +1,384 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-16",
+  "dataset_relative_path": "dataset_versions/camera_objects_bbox_v11-preflight-r4",
+  "scope": "Read-only local v11 preparation metadata snapshot; not a new full-image audit or retraining run.",
+  "source_sha256": {
+    "summary.json": "95ab60b250d3551782cd9fc8287a9758832c22671da2402ce3f7fcfc713f70d8",
+    "policy.json": "85c55868ef92c048cd16e9b027bba01ff3614c1a37b460eb9efdd944c813acc9",
+    "pretrain.json": "54d46da76f15d74e3938f96dd2c578ec3bd4a076df985a562b125082e8a7abc6",
+    "verification.json": "a9fb50599796d6a53514b1f74bc6bfd4b6eee02d54fb45fb3aa42f8ab9c2a9a6"
+  },
+  "splits": {
+    "train": {
+      "images": 41345,
+      "positive": 154537,
+      "ignore": 234208,
+      "classes": {
+        "person": {
+          "positive": 31027,
+          "images": 13037,
+          "ignore": 36951,
+          "excluded": 1,
+          "groups": 11
+        },
+        "dog": {
+          "positive": 4602,
+          "images": 4531,
+          "ignore": 17290,
+          "groups": 4
+        },
+        "deer": {
+          "positive": 4738,
+          "images": 4629,
+          "ignore": 15045,
+          "groups": 5
+        },
+        "bicycle": {
+          "positive": 6336,
+          "images": 6077,
+          "ignore": 16355,
+          "groups": 9
+        },
+        "car": {
+          "positive": 13130,
+          "images": 6581,
+          "ignore": 2495,
+          "excluded": 62,
+          "groups": 6
+        },
+        "motorcycle": {
+          "positive": 5178,
+          "images": 4862,
+          "ignore": 15271,
+          "groups": 9
+        },
+        "bus": {
+          "positive": 7048,
+          "images": 5062,
+          "ignore": 3736,
+          "groups": 5
+        },
+        "truck": {
+          "positive": 7502,
+          "images": 4152,
+          "ignore": 4658,
+          "groups": 3
+        },
+        "bollard": {
+          "positive": 30165,
+          "images": 4616,
+          "ignore": 33636,
+          "excluded": 1,
+          "groups": 4
+        },
+        "box": {
+          "positive": 5161,
+          "images": 4874,
+          "ignore": 12552,
+          "groups": 15
+        },
+        "concrete_barrier": {
+          "positive": 7570,
+          "images": 6185,
+          "ignore": 16420,
+          "groups": 7
+        },
+        "steel_barricade": {
+          "positive": 5590,
+          "images": 5417,
+          "ignore": 9106,
+          "groups": 10
+        },
+        "traffic_drum": {
+          "positive": 16221,
+          "images": 4599,
+          "ignore": 16164,
+          "excluded": 10,
+          "groups": 13
+        },
+        "plastic_barrier": {
+          "positive": 4100,
+          "images": 3803,
+          "ignore": 12056,
+          "groups": 8
+        },
+        "traffic_cone": {
+          "positive": 3277,
+          "images": 2864,
+          "ignore": 10957,
+          "groups": 4
+        },
+        "stroller": {
+          "positive": 2892,
+          "images": 2892,
+          "ignore": 11516,
+          "groups": 3
+        }
+      }
+    },
+    "selection": {
+      "images": 205,
+      "positive": 359,
+      "ignore": 800,
+      "classes": {
+        "person": {
+          "positive": 52,
+          "ignore": 248,
+          "images": 52,
+          "groups": 2
+        },
+        "dog": {
+          "positive": 10,
+          "images": 10,
+          "groups": 7
+        },
+        "deer": {
+          "ignore": 43,
+          "positive": 22,
+          "images": 22,
+          "groups": 1
+        },
+        "bicycle": {
+          "ignore": 5,
+          "positive": 20,
+          "images": 20,
+          "groups": 2
+        },
+        "car": {
+          "positive": 22,
+          "images": 6,
+          "ignore": 9,
+          "groups": 1
+        },
+        "motorcycle": {
+          "ignore": 39,
+          "positive": 21,
+          "images": 21,
+          "groups": 1
+        },
+        "bus": {
+          "positive": 16,
+          "images": 16,
+          "groups": 1
+        },
+        "truck": {
+          "positive": 14,
+          "images": 13,
+          "groups": 1
+        },
+        "bollard": {
+          "ignore": 23,
+          "positive": 21,
+          "images": 21,
+          "groups": 1
+        },
+        "box": {
+          "ignore": 24,
+          "positive": 21,
+          "images": 10,
+          "groups": 1
+        },
+        "concrete_barrier": {
+          "ignore": 47,
+          "positive": 20,
+          "images": 20,
+          "groups": 1
+        },
+        "steel_barricade": {
+          "positive": 20,
+          "images": 20,
+          "ignore": 67,
+          "groups": 1
+        },
+        "traffic_drum": {
+          "ignore": 13,
+          "positive": 20,
+          "images": 20,
+          "groups": 1
+        },
+        "plastic_barrier": {
+          "ignore": 99,
+          "positive": 35,
+          "images": 29,
+          "groups": 2
+        },
+        "traffic_cone": {
+          "positive": 20,
+          "images": 20,
+          "ignore": 35,
+          "groups": 1
+        },
+        "stroller": {
+          "positive": 25,
+          "ignore": 148,
+          "images": 25,
+          "groups": 1
+        }
+      }
+    },
+    "heldout": {
+      "images": 116,
+      "positive": 445,
+      "ignore": 721,
+      "classes": {
+        "person": {
+          "positive": 63,
+          "ignore": 165,
+          "images": 48,
+          "groups": 2
+        },
+        "dog": {
+          "positive": 21,
+          "images": 16,
+          "groups": 1
+        },
+        "deer": {
+          "positive": 24,
+          "images": 23,
+          "ignore": 61,
+          "groups": 2
+        },
+        "bicycle": {
+          "ignore": 11,
+          "positive": 22,
+          "images": 22,
+          "groups": 1
+        },
+        "car": {
+          "positive": 35,
+          "images": 21,
+          "groups": 1
+        },
+        "motorcycle": {
+          "positive": 43,
+          "ignore": 38,
+          "images": 19,
+          "groups": 2
+        },
+        "bus": {
+          "positive": 22,
+          "images": 21,
+          "groups": 1
+        },
+        "truck": {
+          "positive": 29,
+          "images": 24,
+          "groups": 1
+        },
+        "bollard": {
+          "positive": 20,
+          "ignore": 27,
+          "images": 20,
+          "groups": 1
+        },
+        "box": {
+          "ignore": 44,
+          "positive": 22,
+          "images": 21,
+          "groups": 2
+        },
+        "concrete_barrier": {
+          "ignore": 32,
+          "positive": 22,
+          "images": 22,
+          "groups": 1
+        },
+        "steel_barricade": {
+          "positive": 23,
+          "images": 23,
+          "ignore": 70,
+          "groups": 1
+        },
+        "traffic_drum": {
+          "positive": 23,
+          "images": 16,
+          "ignore": 12,
+          "groups": 2
+        },
+        "plastic_barrier": {
+          "positive": 27,
+          "images": 27,
+          "ignore": 102,
+          "groups": 1
+        },
+        "traffic_cone": {
+          "ignore": 38,
+          "positive": 21,
+          "images": 21,
+          "groups": 1
+        },
+        "stroller": {
+          "positive": 28,
+          "ignore": 121,
+          "images": 27,
+          "groups": 1
+        }
+      }
+    }
+  },
+  "policy": {
+    "schema_version": "camera-pretrain-1",
+    "seed": 20261011,
+    "imgsz": 960,
+    "rect": false,
+    "multi_scale": 0,
+    "tiny_short_px": 4,
+    "tiny_area_px2": 64,
+    "minimum_visible_pixels": 4,
+    "maximum_repeats": 2,
+    "background_limit": 3000,
+    "mask_files": {
+      "front": "src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml",
+      "left": "src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml",
+      "right": "src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml"
+    },
+    "augmentation": {
+      "mosaic": 0,
+      "mixup": 0,
+      "copy_paste": 0,
+      "degrees": 0,
+      "translate": 0,
+      "scale": 0,
+      "perspective": 0,
+      "fliplr": 0.5,
+      "flipud": 0,
+      "hsv_h": 0.015,
+      "hsv_s": 0.7,
+      "hsv_v": 0.4
+    },
+    "requires_ignore_aware_trainer": true,
+    "supported_ultralytics": "8.4.150",
+    "spatial_background_version": 2,
+    "safe_semantic_classes": [
+      "asphalt",
+      "white_lane",
+      "yellow_lane",
+      "blue_lane",
+      "crosswalk",
+      "stopline",
+      "sidewalk",
+      "sky",
+      "building",
+      "road_edge",
+      "road_sign",
+      "traffic_sign",
+      "traffic_light"
+    ],
+    "partial_negative_policy": "safe semantic full feature cells plus annotated-class full-cell bbox interiors; other unknown classes remain masked",
+    "expanded_safe_semantic_classes": [
+      "building",
+      "road_edge",
+      "road_sign",
+      "traffic_sign",
+      "traffic_light"
+    ],
+    "range_cutoff_applied": false,
+    "policy_sha256": "912036832834f2359ec735806e9a73ce925b57df68576c785c1ac6f515afc738"
+  },
+  "historical_evaluation_exposure": true,
+  "independent_scene_counts_claimed": false,
+  "all_train_images_per_epoch": true,
+  "max_repeats": 2,
+  "local_tooling_is_not_packaged_training_support": true
+}

@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "output": "docs/operations/launch-reference.md",
+  "launches": [
+    {
+      "title": "Bridge",
+      "path": "src/asmc_bridge/launch/bridge.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Network bridge component",
+      "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Sensor bridge component",
+      "path": "src/asmc_bridge/launch/morai_sensor_bridge.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Bridge state component",
+      "path": "src/asmc_bridge/launch/vehicle_state.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Camera",
+      "path": "src/asmc_camera/launch/camera.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Visualization",
+      "path": "src/asmc_camera/launch/view.launch",
+      "internal_args": [
+        "valid_models"
+      ]
+    },
+    {
+      "title": "HD Map",
+      "path": "src/asmc_hd_map/launch/competition_map.launch",
+      "internal_args": []
+    },
+    {
+      "title": "HD Map RViz",
+      "path": "src/asmc_hd_map/launch/competition_map_debug.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Main LiDAR/fusion",
+      "path": "src/lidar+sensorfusion/src/Main/main.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Integrated planning/control",
+      "path": "src/asmc_planner/launch/autonomy_no_bridges_v2.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Planner component",
+      "path": "src/asmc_planner/launch/planner_v2.launch",
+      "internal_args": []
+    },
+    {
+      "title": "MPC component",
+      "path": "src/asmc_controller/launch/controller.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Planning state component",
+      "path": "src/planning_inputs/launch/vehicle_state.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Planning object component",
+      "path": "src/planning_inputs/launch/objects.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Dashboard",
+      "path": "src/asmc_planner/launch/dashboard.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Read-only family monitor",
+      "path": "src/jamming_lane_boundary_adapter/launch/shadow_boundary_family_candidate.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Jamming control/preview",
+      "path": "src/jamming_lane_boundary_adapter/launch/camera_bbox_lane_change.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Capture trigger",
+      "path": "src/data_collection/launch/capture_mode_collector.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Capture route pilot",
+      "path": "src/data_collection/launch/capture_route_collection.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Bag recorder",
+      "path": "src/data_collection/launch/bag_recorder.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Bag replay",
+      "path": "src/data_collection/launch/bag_replay.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Scenario perception composition",
+      "path": "tools/scen_runner/launch/perception.launch",
+      "internal_args": []
+    },
+    {
+      "title": "Scenario planning composition",
+      "path": "tools/scen_runner/launch/planning.launch",
+      "internal_args": []
+    }
+  ],
+  "command_guides": [
+    "docs/operations/commands.md",
+    "docs/operations/planning-control.md",
+    "docs/handoffs/camera-to-lidar.md",
+    "docs/handoffs/camera-to-planning.md",
+    "docs/operations/camera-deployment.md",
+    "src/asmc_camera/README.md",
+    "src/asmc_planner/README.md",
+    "src/asmc_controller/README.md",
+    "src/planning_inputs/README.md",
+    "src/asmc_bridge/README.md",
+    "src/data_collection/README.md",
+    "src/asmc_hd_map/README.md",
+    "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md"
+  ]
+}

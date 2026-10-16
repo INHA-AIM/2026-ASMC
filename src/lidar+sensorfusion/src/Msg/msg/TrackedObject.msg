@@ -5,6 +5,8 @@ int16 type
 #             or "unknown" when no camera detection currently backs this track.
 string classification
 string yolo_class
+# Filtered motion decision (including pending safety state), independent of
+# classification mobility group. Do not infer velocity validity from this flag.
 bool is_dynamic
 int32 age
 int32 miss_count

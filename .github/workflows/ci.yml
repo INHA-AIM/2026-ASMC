@@ -40,6 +40,11 @@ jobs:
       - name: Test documentation link and retention checks
         run: python3 -m unittest tools/audit/test_documentation_migration.py
 
+      - name: Check current launch documentation
+        run: |
+          python3 tools/audit/check_runtime_documentation.py
+          python3 -m unittest tools/audit/test_runtime_documentation.py
+
       - name: Verify bridge profiles
         run: |
           python3 tools/bridge/render_morai_network_profiles.py --check

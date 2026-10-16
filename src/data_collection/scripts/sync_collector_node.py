@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Sync dataset collector (profile-based).
+Auxiliary ROS snapshot collector (profile-based), not synchronized Capture GT.
 
-Phase 0 default mode = latest_timer: latch newest messages and snapshot at collect_hz.
-Time Manager tick mode can be added later without changing on-disk layout.
+latest_timer latches newest messages and snapshots at collect_hz. This does not
+provide MORAI external ticks or guarantee camera/GT timestamp pairing. Use the
+Capture workflow for supervised RGB/GT and raw rosbag for deployment timing.
 
 Usage:
   export ASMC_DATA=...

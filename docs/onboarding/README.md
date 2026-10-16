@@ -41,7 +41,7 @@ export ASMC="<clone한-2026-ASMC-경로>"
 export ASMC_DATA="<맵·bag·dataset을 둘-저장소-밖-경로>"
 ```
 
-- Git에 넣지 않음: `data/`, `checkpoints/`, bag, dataset, model checkpoint
+- Git에 넣지 않음: 원본 data/bag/dataset·학습 재개 checkpoint. 예외로 검증된 카메라 배포 모델은 `asmc_camera/models`에 포함
 - ROS 컨테이너: `$ASMC_DATA`를 `/data`에 읽기/쓰기로 마운트
 - 학습 컨테이너: 원본 보호를 위해 `/data`를 읽기 전용으로 마운트
 - 코드와 설정에 `/home/<사용자>/...` 같은 호스트 절대경로를 넣지 않음
@@ -75,9 +75,9 @@ Behavior/Frenet/MPC도 현재 catkin package이므로 `build_ws.sh`에서 함께
 ./scripts/udp_bridge.sh
 ```
 
-현재 개발 설정의 Host/Destination IP는 `127.0.0.1`이다. 현장 IP·9093/9094 등의 승인된
-포트와 LiDAR 15 Hz 적용은 `asmc_bridge` 통합 단계에서 profile로 구현하며, 그 전에는
-개별 설정 파일을 임의로 바꾸지 않는다.
+현재 개발 설정의 Host/Destination IP는 `127.0.0.1`이다. 현장 IP·9093/9094와 v3 LiDAR15Hz 설정은 generated profile에 반영돼 있다.
+LAN2LAN의 실제 두 PC 수락은 별도이며 [실행 명령](../operations/commands.md)의 명시 인자를 사용한다.
+개별 generated JSON을 임의 편집하지 않는다.
 
 ## 4. 인지 학습 컨테이너
 

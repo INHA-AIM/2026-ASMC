@@ -4,8 +4,8 @@
 > **현재 package 경계:** [Planning/Control 개발 가이드](./planning-control.md)
 > **범위:** `src/asmc_planner/`, `src/asmc_controller/` 코드를 수정할 때 지켜야 하는
 > 아키텍처 규칙. 알고리즘 파라미터 튜닝 가이드가 아니다.
-> **기준 시점:** `Fix/yuntae-planner` 브랜치, Commit E(트래잭토리 provenance 수정 +
-> 이 문서 추가) 시점의 실제 코드 구조.
+> **현재 기준:** 단일 asmc_planner의 내부 Behavior/Execution/Frenet, 별도 MPC.
+> 초기 Commit E의 provenance 원칙을 유지하며 구 standalone/node 경계는 현재 실행에 적용하지 않는다.
 > **문서 허브:** [README.md](../README.md)
 
 이 문서는 "Frenet Planner나 MPC Controller를 고칠 때 어떤 아키텍처 규칙을 지켜야
@@ -41,7 +41,7 @@ domain helper
 ```text
 Behavior/FSM (BehaviorCommand, /behavior/command_v2)
         ↓
-Frenet ROS Runtime (frenet_planner_node, behavior_command_adapter,
+Planner runtime 내부 Execution/Frenet (asmc_planner_node, behavior_command_adapter,
                      command_execution_manager, message_converter,
                      feedback_builder)
         ↓
@@ -63,8 +63,8 @@ Model / Cost / Constraints / Solver (mpc_core, ROS 비의존)
 /ctrl_cmd (morai_msgs/CtrlCmd)
 ```
 
-Frenet과 MPC는 `/planning/trajectory` 하나로만 연결된다. Behavior/FSM은
-`/behavior/command_v2`로만 Frenet에 연결된다. 이 경계를 우회하는 직접 참조나
+Frenet과 MPC는 `/planning/trajectory` 하나로만 연결된다. Behavior/FSM→Execution→Frenet은 같은 package의 C++ 직접 호출이며
+`/behavior/command_v2`는 공개 관찰/MPC 호환 출력이다. 이 경계를 우회하는 직접 참조나
 패키지 간 UDP 재도입은 하지 않는다.
 
 ## 3. 책임 매트릭스
@@ -72,7 +72,7 @@ Frenet과 MPC는 `/planning/trajectory` 하나로만 연결된다. Behavior/FSM�
 | 구성요소 | 소유 | 소유하지 않음 |
 |---|---|---|
 | Behavior/FSM | maneuver 선택, command_id/transaction lifecycle | trajectory 생성, collision 검사 |
-| Frenet ROS Node (`frenet_planner_node`) | subscribe, freshness, ROS↔Core 변환 호출, 20Hz 타이머, publish, fail-safe 분기 | candidate 생성/평가 수식 |
+| Planner 내부 runtime (`asmc_planner_node`) | subscribe, freshness, ROS↔Core 변환 호출, 20Hz 타이머, publish, fail-safe 분기 | candidate 생성/평가 수식 |
 | Behavior Command Adapter (`behavior_command_adapter`) | `BehaviorCommand` 유효성 검증 | transaction 상태 |
 | Command Execution Manager (`command_execution_manager`) | v2 명령 transaction 상태(IDLE/READY/COMMITTED/EXECUTING/...) | planning 결과 자체 |
 | Feedback Builder (`feedback_builder.cpp`) | `FrenetFeedback` 메시지 조립 | planning 로직 |
@@ -96,9 +96,9 @@ Frenet과 MPC는 `/planning/trajectory` 하나로만 연결된다. Behavior/FSM�
 - `MPC`는 `warm_start_`, `last_control_`, stuck/recovery cycle 카운터를
   소유한다. `main.cpp / Control.cpp`는 이 상태를 직접 만지지 않고 `MPCProcess`/
   `ResetOnFailSafe`를 통해서만 접근한다.
-- **Ego(현재 차량 상태)의 authoritative source는 하나뿐이다**: `/vehicle/state`.
-  - Frenet은 `/vehicle/state`를 직접 구독해 planning의 현재 상태로 쓴다.
-  - MPC도 `/vehicle/state`를 직접 구독해 `ControlProcess`의 x0로 쓴다.
+- **Ego(현재 차량 상태)의 authoritative source는 실행 설정이 선택한 하나다**. 통합 실행은 `/planning/vehicle/state`, 단독 기본은 `/vehicle/state`다.
+  - Frenet은 설정된 같은 state 토픽을 구독해 planning의 현재 상태로 쓴다.
+  - MPC도 설정된 같은 state 토픽을 구독해 `ControlProcess`의 x0로 쓴다.
   - `Trajectory.ego_at_plan`은 **provenance 전용 스냅샷**이다 - "이 trajectory가
     어떤 Ego 상태에서 계획됐는가"를 기록할 뿐, 어느 쪽 control 입력으로도 다시
     쓰이지 않는다. `PlannedPath`에 relay용 `ego_*` 필드를 두지 않는다(Commit E에서

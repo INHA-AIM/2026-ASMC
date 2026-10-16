@@ -22,7 +22,7 @@ roslaunch asmc_camera camera.launch mode:=active
 `objects,lane,traffic_light`, `detector:=e8/pretrained`, `confidence`, `nms_iou`다.
 현재 정본은 YOLO15Hz·TwinLite15Hz·ResNet10Hz, confidence0.40·동일 클래스 NMS0.50이다.
 2026-10-15 사용자 요청에 따라 전방 tensor는 YOLO/TwinLite 모두544×960으로 변경했다.
-현재 PR의 TwinLite 좌우480×640 후보로 YOLO와 B1/B2 shape를 통일한다.
+현재 TwinLite 좌우480×640과 YOLO의 B1/B2 shape가 같다.
 기존 좌우384×640은 `lane_input_side384.yaml`에 보존한다. 센서 RGB·원본 좌표·header·보정은 그대로다.
 TwinLite는 한 checkpoint의 같은 크기 입력끼리 나눠 추론하며, 전방 확대와 YOLO 축소의
 통합 효과는 [960 검증 기록](../records/camera/camera-front960-validation.md)에서 별도로 판정한다.
@@ -122,7 +122,7 @@ roslaunch asmc_camera view.launch models:=objects
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
-객체 시각화는 좌/전방/우를 한 노드에서 직접 합성하고 JPEG를 한 번 인코딩하는 경로를 검증한다.
+객체 시각화는 좌/전방/우를 한 노드에서 직접 합성하고 JPEG를 한 번 인코딩한다.
 기존 개별/합성 토픽과 표시 순서를 유지하며 개별 뷰는 구독할 때만 추가 인코딩한다.
 뷰별 최대8 JPEG·500ms 캐시와 기존 관측의 session·generation·카메라·stamp·설정 식별자로
 정확한 영상 대응과 무효화를 관리한다. 합성 header는 디버그 발행 시각이며 동기 3뷰 관측이 아니다.

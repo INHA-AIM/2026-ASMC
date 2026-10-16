@@ -6,7 +6,7 @@ catkin이 아닌 **Python·gRPC·시나리오** 도구.
 |------|------|--------|
 | `aim_scenario_runner/` | 장원태 | `run.sh`, `scenario_launcher.py` |
 | `grpc_inha_univ/` | 장원태 | `run_mode.sh`, `src/api/morai_sim_client.py` |
-| `scen_runner/` | 장원태 | `run_validation.sh` (전체 씬·단일 구간 검증·저장 기록 재현) |
+| `scen_runner/` | 장원태 | `run_bridge.sh`·`run_perception.sh`·`run_planning.sh`·`run_scenario.sh`, 독립 `run_validation.sh` |
 | `audit/` | 통합 회귀·계약 기준 | `build_runtime_baseline.py`, `build_perception_runtime_baseline.py`, `validate_p1b_contract.py`, `validate_perception_contract.py`, `validate_perception_runtime_acceptance.py`, `validate_bridge_profiles.py` |
 | `bridge/` | MORAI release template에서 transport별 import 생성 | `render_morai_network_profiles.py --write\|--check` |
 | `research/lbc_teacher_bev/` | privileged MORAI state 기반 GT/teacher BEV 연구 도구 | `scripts/visualize_lbc_bev.sh`, `scripts/collect_lbc_bev.sh` |
@@ -53,7 +53,7 @@ python3 -m unittest src/asmc_msgs/test/test_message_serialization.py
 ```
 
 `validate_perception_runtime_acceptance.py`는 source·launch·판제 consumer 경로뿐 아니라 P5-D/E
-handoff 상태, planning의 중복 신호등 방지 기본값, representative lane-family 근거와 운영
+handoff 상태, 과거 호환 launch의 신호등 중복 방지 설정, representative lane-family 근거와 운영
 container·시각화 진입점이 계약에서 벗어나지 않았는지 ROS 없이 검사한다. 실행 중
 rate·stamp·frame·publisher/subscriber 검사는 perception을
 먼저 실행한 뒤 저장소 루트의 `./scripts/verify_perception.sh`로 수행한다. verifier 자체가 인지
@@ -63,3 +63,7 @@ rate·stamp·frame·publisher/subscriber 검사는 perception을
 `build_perception_runtime_baseline.py --check`는 그 commit을 별도 worktree에서 재현할 때만
 사용한다. 현재 HEAD에서는 정본 package closeout과 충돌하므로 frozen manifest의 schema·핵심
 값만 `test_perception_runtime_baseline.py`로 검사한다.
+
+현재 실행 인자/명령 문서는 `python3 tools/audit/check_runtime_documentation.py`로 검사합니다.
+launch 인자가 바뀌면 `--write`로 자동 목록을 갱신합니다. 현재 통합 판제의 traffic_light 기본true와
+외부 카메라 사용 시 false 명시를 과거 P5 호환 기본값과 구분합니다.

@@ -1,86 +1,47 @@
-# 팀 아키텍처 개요
+# 시스템 구조
 
-> 현재 planner production package는 `asmc_planner` 하나다. Behavior → Execution →
-> Frenet은 내부 C++ 구조와 직접 호출로 연결한다. 기존 planner ROS topic은
-> 외부 관측·controller 호환 계약으로 유지하며, 두 legacy 패키지는 제거되었다.
-
-
-> **문서 역할:** Working Overview — 현재 전체 구조를 짧게 연결하는 문서
-> **문서 허브:** [README.md](../README.md)
-> **상태:** Working Overview v0.4 — 상세: [운영 가이드](../operations/README.md) · [인지 융합 로드맵](perception-roadmap.md)
-
-## 1. 한 줄 요약
-
-카메라 패키지는 2026-10-06 `asmc_perception`에서 `asmc_camera`로 이름을 바꿨다. LiDAR 목표 패키지는 `asmc_lidar`다.
-YOLO 추론은 카메라 쪽, LiDAR 객체와 box의 매칭/분류 fusion은 LiDAR 쪽에 둔다.
-HD맵은 정적 문맥을 제공하며 별도 `asmc_fusion`은 만들지 않는다.
-이름 변경·원본 기능 이전은 아직 미완료이며 [통합 로드맵](./consolidation-roadmap.md)의
-담당자별 이전 계획과 gate를 따른다. 아래 과거 Phase B 연구안은 이전 완료 상태가 아니다.
-
-**Hybrid modular (rule-first):** 룰+MPC 뼈대에 camera lane/drivable, MGeo map prior와 LiDAR occupancy를 출처가 분리된 ego-BEV에서 결합한다. 시뮬 경계는 허용 **UDP**, 모듈 내부는 **ROS**다. 세부 인터페이스는 camera live와 map pilot 결과를 확인한 뒤 확정하며 Semi-E2E는 후속 연구로 둔다.
-
-## 2. 배포 파이프라인 (Phase B 목표)
+현재 구조는 ROS1 Noetic 기반의 모듈식 인지·Behavior/Frenet·MPC입니다. MORAI 경계는 UDP이며
+개발용 gRPC·Capture·GT는 학습·검증 도구에 한정합니다. 현재 팀 소유 패키지와 nested workspace는
+[저장소 지도](repository-layout.md), 담당은 [ownership](../onboarding/ownership.md)을 봅니다.
 
 ```text
-[Camera ×3] ── UDP bridge ─ camera segmentation ─ camera probability ─┐
-[MGeo bake] ─ localization/crop ─ map road/lane/route/stopline ───────┼─ ego-BEV
-[LiDAR VLP16] ─ UDP bridge ─ detection/tracking/occupancy ────────────┘
-[GPS/IMU/status] ─ localization + blackout dead reckoning ────────────┘
+MORAI 허용 센서 → asmc_bridge
+  RGB 3뷰 → asmc_camera YOLO → 전방 CPU 어댑터 → nested Main fusion/추적
+  LiDAR + GPS/IMU ────────────────────────────→ Main → /last_lidar
+  GPS/IMU → planning_inputs → /planning/vehicle/state
+  camera4 → asmc_camera ResNet → 신호등 typed 관측
+  RGB 3뷰 → TwinLite → model-grid 투영 → 음영 boundary_family
 
-ego-BEV → lane/topology + safe drivable + object/lane context
-        → Behavior + Frenet → trajectory → MPC → Ctrl UDP
+/last_lidar + motion_debug → planning_inputs → /planning/objects
+차량 상태·객체·신호·local map → asmc_planner(Behavior → Execution → Frenet)
+  → /planning/trajectory → asmc_controller → /ctrl_cmd/normal
+음영 제어 어댑터 → /ctrl_cmd/jamming
+  → asmc_planner 제어 선택기 → /ctrl_cmd → UDP bridge → MORAI
 ```
 
-## 3. 현재 개발 단계
+## 현재 실행과 목표를 구분한다
 
-| 순서 | 현재 방향 |
-|---:|---|
-| 1 | 음영구간 3-camera shared lane-family v3·판제 인수 완료 |
-| 2 | MGeo/node-link bake 자산 통합과 local crop·좌표계 검증 |
-| 3 | camera v3와 map crop 실증을 바탕으로 공통 BEV/interface 합의 |
-| 4 | lane topology, LiDAR occupancy와 GPS blackout 대응 연결 |
-| 5 | 10월 대회판 호환·안정화 이식과 필요 시 camera domain 보강 |
+| 경계 | 현재 구현 | 남은 작업 |
+|---|---|---|
+| 카메라 객체 | E8 기본·사전학습 선택, TensorRT, 원본16종/소비3그룹, 3뷰 관측 | 요청된 실패 조건만 추가학습; 3뷰 관측이 곧 3뷰 fusion은 아님 |
+| 차선 | TwinLite TensorRT·전방544×960/측방480×640, model-grid→shared family | 음영 ODD에서 판제 소비·fallback 공동 확인; 순간 공급 공백 제한 추적 |
+| LiDAR | nested `Main`이 지면·군집·OBB·추적·전방 fusion·판제 출력을 제공 | 손재호가 `asmc_lidar`로 기능 이전, 카메라별 버퍼·보정·3뷰 fusion |
+| 판제 | `asmc_planner` 단일 패키지, LiDAR 입력 통합 실행, MPC·재밍 선택기 | 전 구간·조건별 반복 수락, 카메라 그룹/음영 소비 정책은 판제 담당 |
+| HD Map | `asmc_hd_map` global/local·mission metadata 제공 | 판제 local map copy와 출처·route parity 확인; 자동 `/hd_map/*` 전환은 아님 |
+| 상태·좌표 | bridge `/vehicle/state`와 판제 전용 `/planning/vehicle/state` 분리 | 두 토픽을 같은 추정기로 오인하지 않음; Main·판제 UTM yaw 설정 일치 |
+| 현장 | local UDP profile·LAN2LAN 설정과 검사 도구 | 실제 주최 환경·두 PC 네트워크·재시작·장시간 주행 수락 |
 
-과거 Phase 0/Wave 1/2 이식 과정은 [integration-plan.md](../records/archive/wave1-wave2-plan.md)에 기록으로
-보존한다. 현재 세부 gate는 [인지 융합 로드맵](perception-roadmap.md) §10을 따른다.
+## 최신 팀 변경
 
-## 4. 모듈·담당
+[PR #89](https://github.com/INHAautonav/2026-ASMC/pull/89)는 차량·LiDAR의 true ENU→UTM 방향 정합,
+GPS 위치/속도 보정, MPC 조향 반응 지연·변화 제한, 제어 선택기 watchdog과 조건부 속도 정책을 반영했습니다.
+메시지·토픽 이름은 유지됩니다. 방향 보정은 두 소비 경로에 함께 적용하며 중복 회전하지 않습니다.
+일반 주행 요청58km/h는 실제 최고속도 보장이 아닙니다. 신호·장애물·합류가 우선하며,
+구간별 성과·남은 회귀 실패는 [판제 운영](../operations/planning-control.md)에 구분합니다.
 
-| 모듈 | 역할 | ASMC 경로 | 담당 |
-|------|------|-----------|------|
-| Expert / Behavior | rule + route, τ* 로깅 | `src/asmc_planner/` (+ LBC 학습 경로) | 정윤태·양서준 / 안승현 |
-| LBC teacher BEV | privileged simulator state → GT BEV | `tools/research/lbc_teacher_bev/` | 안승현 |
-| 차선·주행가능영역·eval | 카메라 학습·live 추론·음영 lane-family v3 | `src/asmc_camera/` runtime + offline/training | 안승현 |
-| MGeo map prior | current Node/Link vector 후보·offline bake, pose 기반 local crop | `src/asmc_hd_map/` 후보와 기존 `src/asmc_hd_map/development/won_tae_link_node/` | 안승현·장원태 협의 |
-| 공통 BEV·차로 문맥 | map/camera/LiDAR layer와 object association | `src/asmc_camera/` camera layer; LiDAR handoff 후 공통 계약 | 인지·맵·LiDAR 공동 |
-| LiDAR 장애물 | clustering·OBB·tracking·카메라 보조 분류 | `src/lidar+sensorfusion/` | 손재호, 정윤태 |
-| PA/SA_plan 구 학습 실험 | 현재 runtime 미사용 | Git history | 안승현 |
-| Behavior + Frenet + MPC | ROS command→trajectory→control; bridge가 Ctrl UDP 전송 | `src/asmc_planner/`, `src/asmc_planner/`, `src/asmc_controller/` | 정윤태·양서준·이강태 |
-| Scenario / gRPC | 시나리오·시뮬 API | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
-| Bridge | MORAI UDP 경계·내부 ROS 변환 | `src/asmc_bridge/` 단일 패키지 | 이강태, 안승현 |
+## 대회 마무리 우선순위
 
-## 5. Planning/Control
-
-- Bicycle 3.0 m, δ_max 40°. MPC는 `/ctrl_cmd`, bridge가 UDP **cmd type 1 + ctrl mode 2**를 소유한다.
-
-Planning/Control은 ROS1/catkin runtime과 transport-independent C++ core로 구성된다. 현재 v2
-Behavior→Frenet→MPC 경로와 알려진 본선 준비 gap은
-[Planning/Control 개발 가이드](planning-control.md), 실행은
-[운영 규약](../operations/planning-control.md)을 따른다.
-
-## 6. 인터페이스
-
-현재 확정 계약과 초안을 섞지 않는다. 작업 중 camera/BEV 이름은
-[인지 융합 로드맵](perception-roadmap.md) §6, 합의된 계약은
-`src/interfaces/README.md`에서 관리한다. 공용 interface 변경은 **Path B**다.
-
-## 7. 기술 선택
-
-| 항목 | 결정 |
-|------|------|
-| 골격 | Hybrid modular + MPC |
-| 네트워크 | **UDP 경계 + ROS 내부** (권장; mpc 이견 회의 후) |
-| camera/map/LiDAR | 출처별 layer를 보존하고 실증 후 fusion 규칙 확정 |
-| 인터페이스 | provisional topic만 문서화, camera live/map pilot 뒤 합의 |
-| 개발판→대회판 | 9월 26.R1.h3 기능 완성, 10월 한시적 호환·안정화 브랜치 후보 |
-| Semi-E2E | Phase C |
+먼저 단일 producer·정확한 좌표/시각·실패 시 정지·전 구간 반복주행을 고정합니다.
+패키지 이전과 모델 개선은 그 기준선을 보존한 작은 변경으로 진행합니다.
+새 BEV 융합·seg 객체 학습·연구 모델 비교는 필수 주행 경로를 지연시키지 않는 후속입니다.
+담당별 결과·수락 기준은 [통합 로드맵](consolidation-roadmap.md)에 있습니다.
