@@ -285,7 +285,7 @@ class SensorBridge(object):
             else:
                 n = int(p("~lidar_packets_per_frame", 0))
                 if n <= 0:
-                    rate = float(p("~lidar_rotation_rate", 10.0))
+                    rate = float(p("~lidar_rotation_rate", 15.0))
                     channel = len(VERTICAL_ANGLES[model])
                     per_pkt = 24 if channel == 16 else 12
                     n = max(1, int(round((36000.0 / (rate * 2.0)) / per_pkt)))

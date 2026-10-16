@@ -100,7 +100,7 @@ GetTrafficLight를 필수 채널로 가정하거나 본선 planning 입력으로
 local 개발 profile을 명시해야 수신한다.
 
 ```bash
-./scripts/udp_bridge.sh --streams development
+./scripts/udp_bridge.sh --gt
 ```
 
 | 센서 | Host / Dest | ROS 토픽 |
@@ -116,12 +116,15 @@ Camera-10은 예전 **9090**이 아님 (rosbridge와 충돌).
 ID 11은 local development profile에서만 독립 수신한다. 정합용 source stamp가 필요하면:
 
 ```bash
-./scripts/udp_bridge.sh --streams development timestamp_mode:=source
+./scripts/udp_bridge.sh --gt timestamp_mode:=source
 ```
 
 | 센서 | Host / Dest | ROS 토픽 | field |
 |---|---|---|---|
 | Instance LiDAR ID 11 | 9310 / **9311** | `/velodyne_points_instance` | `instance_id uint32` |
+
+GT JSON의 Intensity(ID5)·Instance(ID11)는 모두15Hz다. 변경한 JSON을 MORAI UI에서 다시 로드한다.
+`--gt`는 수신 채널만 추가하며 센서 송신 주기나 timestamp 정책을 자동 변경하지 않는다.
 
 확인: `./scripts/docker_ros_up.sh verify-gt 20`. Instance/Object/Semantic은 개발 oracle이며
 대회 launch와 일반 raw bag에 포함하지 않는다.

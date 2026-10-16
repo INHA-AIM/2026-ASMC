@@ -64,7 +64,7 @@
     "artifacts": {
       "facade_launch": {
         "path": "src/asmc_bridge/launch/bridge.launch",
-        "sha256": "49e4042230e6d37f31d1ea0d4c5c88fecf5a8182684bdac3de7db01151a41637"
+        "sha256": "ead524373a72d35400e56c7dce16dc1a1b4c3c798c7f118e9bce0aab2b8348df"
       },
       "facade_package": {
         "path": "src/asmc_bridge/package.xml",
@@ -72,7 +72,7 @@
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "826c86dfa07b322f9a016e502fec6adc7dc487656226018a8019783a40c7a0e9"
+        "sha256": "e4ea97ff32dd622613176a745e224c3c86cc484bca4c1ff4671954ff9107cc77"
       },
       "network_launch": {
         "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
@@ -84,11 +84,11 @@
       },
       "sensor_launch": {
         "path": "src/asmc_bridge/launch/morai_sensor_bridge.launch",
-        "sha256": "75cb79410bfd0b2621a71d55a703cdaa045249193a3301a6909d567336a9ee0f"
+        "sha256": "fb4f7add5f169c505c6142e07d7b99777c411aa9a983ac027218a27dc33443cf"
       },
       "sensor_node": {
         "path": "src/asmc_bridge/scripts/morai_sensor_bridge.py",
-        "sha256": "f1ac1522a04f9f07a1569844768de3e73f8f045ab260822986b290227a5ea321"
+        "sha256": "80eb811208b74104c4f7612860ca72af0f04804542b164e7988a26006d8cd9c7"
       },
       "docker_entrypoint": {
         "path": "scripts/docker_ros_up.sh",
@@ -347,9 +347,10 @@
     },
     "GT": {
       "path": "config/morai/sensors/ASMC_sensor_set_GT.json",
-      "sha256": "ef278764593c28db4e2cf29a5e657ac530822fbdad38ddf8c7d7015d2886d801",
+      "sha256": "80ffc6bc17b3bdafd8f2ce920593555c7217947a353ee732810b723fc1a48396",
+      "previous_10hz_sha256": "ef278764593c28db4e2cf29a5e657ac530822fbdad38ddf8c7d7015d2886d801",
       "role": "development_ground_truth_only",
-      "lidar_hz": 10,
+      "lidar_hz": 15,
       "live_acceptance": "development_only"
     }
   },

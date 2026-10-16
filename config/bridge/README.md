@@ -37,7 +37,10 @@ Network/Sensor component와 VehicleState를 직접 조합하도록 단순화했�
 - v3는 UI 저장값과 손재호 코드의 소비 loop가 15 Hz다. local raw UDP 완성 scan 약 12 Hz는
   요구상 허용하며, bridge가 중복 cloud를 만들어 15 Hz로 부풀리지 않는다.
 - 기본 `competition`은 Object/Semantic/Instance publisher를 생성하지 않는다. 이 입력은
-  local `development`에서만 활성화하며 LAN2LAN과의 결합은 거부한다.
+  `./scripts/udp_bridge.sh --gt`에서만 추가한다. 내부 이름은 `development`를 유지하며
+  LAN2LAN과의 결합은 거부한다. 이전 `--streams`/`ASMC_STREAMS`는 제거했다.
+- GT 센서셋은 Intensity·Instance LiDAR 모두15Hz다. 이전10Hz SHA는 계약에 보존하며
+  현재 파일의 주기·frequencyIndex 외 설정은 바꾸지 않았다. MORAI UI 재로드 후 적용된다.
 - `sensors/generated/` v2/v3 파생본은 UDP IP만 transport에 맞게 바꾸며 GT LAN2LAN은
   생성하지 않는다.
 

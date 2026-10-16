@@ -19,6 +19,19 @@ SPEC.loader.exec_module(MODULE)
 
 
 class SensorBridgeProtocolTest(unittest.TestCase):
+    def test_launch_default_and_gt_share_15hz_reference_without_forcing_output_rate(self):
+        import roslaunch
+        launch = os.path.join(os.path.dirname(SCRIPT), '..', 'launch', 'bridge.launch')
+        for profile, enabled in [('competition', False), ('development', True)]:
+            config = roslaunch.config.load_config_default([(launch, ['stream_profile:='+profile])], None, verbose=False)
+            self.assertEqual(config.params['/morai_sensor_bridge/lidar_rotation_rate'].value, 15.)
+            self.assertEqual(config.params['/morai_sensor_bridge/lidar_frame_mode'].value, 'azimuth')
+            self.assertEqual(config.params['/morai_sensor_bridge/enable_semantic_camera'].value, enabled)
+            self.assertEqual(config.params['/morai_sensor_bridge/enable_instance_lidar'].value, enabled)
+            self.assertEqual(config.params['/morai_udp_bridge/enable_object'].value, enabled)
+        recovery = roslaunch.config.load_config_default([(launch, ['lidar_rotation_rate:=10.0'])], None, verbose=False)
+        self.assertEqual(recovery.params['/morai_sensor_bridge/lidar_rotation_rate'].value, 10.)
+
     def test_camera_packet_uses_reported_payload_size(self):
         payload = b"jpeg"
         padded = payload + b"\x00" * 10

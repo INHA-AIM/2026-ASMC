@@ -29,7 +29,8 @@
   <arg name="enable_lidar" default="true"/>
   <arg name="enable_semantic_camera" default="$(eval arg('stream_profile') == 'development')"/>
   <arg name="lidar_model"  default="VLP-16"/>
-  <arg name="lidar_rotation_rate" default="10.0"/>
+  <!-- v3 and GT use 15Hz; azimuth wrap still determines actual revolutions. -->
+  <arg name="lidar_rotation_rate" default="15.0"/>
   <!-- azimuth detects physical revolutions and works with both v2 and v3. -->
   <arg name="lidar_frame_mode" default="azimuth"/>
   <arg name="publish_lidar_tf" default="true"/>

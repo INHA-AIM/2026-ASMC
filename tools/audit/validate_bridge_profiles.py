@@ -121,6 +121,8 @@ def _sensor_summary(path: Path) -> Dict[str, Any]:
         "camera4_pitch_deg": float(data["cameraList"][3]["rot"]["pitch"]),
         "lidar_period_s": float(lidar["sensorPeriod"]),
         "lidar_frequency_index": int(lidar["frequencyIndex"]),
+        "lidar_periods_s": [float(_sensor_config(row)["sensorPeriod"]) for row in data["Lidar3DList"]],
+        "lidar_frequency_indices": [int(_sensor_config(row)["frequencyIndex"]) for row in data["Lidar3DList"]],
         "lidar_ports": [
             int(lidar["udpConfig"]["hostPort"]),
             int(lidar["udpConfig"]["destinationPort"]),
@@ -477,9 +479,9 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     )
     entrypoint_text = (REPO_ROOT / "scripts/udp_bridge.sh").read_text(encoding="utf-8")
     _require(
-        "[--transport local|lan2lan] [--streams competition|development]"
+        "[--transport local|lan2lan] [--gt]"
         in entrypoint_text,
-        "bridge CLI must expose transport and streams without a simulator selector",
+        "bridge CLI must expose transport and --gt without a simulator selector",
     )
     _require(
         "--require-competition-status" in entrypoint_text,
@@ -490,13 +492,16 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "bridge CLI must not select a simulator release",
     )
     _require(
-        "development streams are local-only" in entrypoint_text,
+        "--gt is local-only" in entrypoint_text,
         "bridge CLI must reject LAN2LAN privileged streams",
     )
     _require(
         "exec roslaunch asmc_bridge bridge.launch" in entrypoint_text,
         "bridge CLI must use the canonical asmc_bridge facade",
     )
+    for launch_path in (facade, sensor_launch):
+        _require(_launch_arg(launch_path, "lidar_rotation_rate") == "15.0",
+                 f"{launch_path.relative_to(REPO_ROOT)} must match v3/GT 15Hz")
     _require(
         'CMD_IP="$TRANSPORT_CMD_IP"' in entrypoint_text,
         "bridge CLI must derive Ctrl destination from the selected transport",
@@ -600,6 +605,13 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(summaries["v2"]["lidar_ports"] == [9298, 9299], "v2 LiDAR ports changed")
     _require(summaries["v3"]["lidar_ports"] == [9298, 9299], "v3 LiDAR ports changed")
     _require((summaries["GT"]["cameras"], summaries["GT"]["lidars"]) == (7, 2), "GT sensor inventory changed")
+    _require(contract["sensor_sets"]["GT"]["lidar_hz"] == 15,
+             "GT LiDAR rate metadata must be 15Hz")
+    _require(all(math.isclose(period, 1.0 / 15.0, abs_tol=1e-6)
+                 for period in summaries["GT"]["lidar_periods_s"]),
+             "GT Intensity and Instance LiDAR must both be 15Hz")
+    _require(summaries["GT"]["lidar_frequency_indices"] == [2, 2],
+             "GT Intensity and Instance frequencyIndex must both be 2")
 
     live = contract["live_observations"]
     _require(live["date"] == "2026-09-23", "P3-E live observation date changed")

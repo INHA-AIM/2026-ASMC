@@ -873,7 +873,7 @@
       "lc": {
         "sensorName": "DefaultSensor",
         "sensorType": 2,
-        "sensorPeriod": 0.10000000149011612,
+        "sensorPeriod": 0.06666667014360428,
         "commType": 1,
         "udpConfig": {
           "hostIP": "127.0.0.1",
@@ -930,7 +930,7 @@
         "lidar3DType": 0,
         "intensityType": 0,
         "isVizPointCloud": false,
-        "frequencyIndex": 1,
+        "frequencyIndex": 2,
         "optEq": 0,
         "gamma": 1.5,
         "reflecity": 0.0
@@ -953,7 +953,7 @@
       "lc": {
         "sensorName": "DefaultSensor",
         "sensorType": 2,
-        "sensorPeriod": 0.10000000149011612,
+        "sensorPeriod": 0.06666667014360428,
         "commType": 1,
         "udpConfig": {
           "hostIP": "127.0.0.1",
@@ -1010,7 +1010,7 @@
         "lidar3DType": 0,
         "intensityType": 2,
         "isVizPointCloud": false,
-        "frequencyIndex": 1,
+        "frequencyIndex": 2,
         "optEq": 0,
         "gamma": 1.5,
         "reflecity": 0.0

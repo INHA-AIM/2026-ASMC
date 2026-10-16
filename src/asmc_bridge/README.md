@@ -28,8 +28,12 @@ release는 runtime 인자가 아니라 MORAI UI에 import한 network JSON schema
 `bridge.launch`가 Network/Sensor component와 기본 VehicleState를 직접 include하므로 전체 실행에
 추가 조합 계층이 필요하지 않다.
 
-Object/Semantic/Instance oracle은 `./scripts/udp_bridge.sh --streams development`로만 열 수 있고
+Object/Semantic/Instance oracle은 `./scripts/udp_bridge.sh --gt`로만 열 수 있고
 LAN2LAN과 함께 사용할 수 없다. `/vehicle/state` authoritative publisher는 하나만 실행한다.
+`--streams`와 `ASMC_STREAMS`는 제거했다. 인자 없는 실행은 일반 입력만 받고, `--gt`는
+내부 `development` 프로필을 선택한다. 내부 `competition/development` 이름은 MORAI 버전 구분이 아니다.
+GT 센서셋의 Intensity·Instance LiDAR 모두15Hz이며, 변경된 JSON을 MORAI UI에서 다시 로드해야 한다.
+Bridge의 기본 `lidar_rotation_rate=15`는 조립 참고값이고 실제 센서 송신 주기를 바꾸지 않는다.
 
 v3는 MORAI 저장 설정과 손재호 소비 loop가 15 Hz이며 완성 scan 약 12 Hz 입력은 허용한다.
 bridge는 azimuth wrap으로 실제 회전을 조립하고 중복 cloud를 만들지 않는다. MolitComp
