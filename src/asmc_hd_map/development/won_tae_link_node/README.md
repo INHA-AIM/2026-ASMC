@@ -8,7 +8,7 @@ MGeo `link_set.json` + `node_set.json`과 직접 수집한 GPS/LiDAR 차선 CSV�
 주행가능영역 / 차선 / 정지선을 이진(0/255) 래스터로 굽고 HDF5 로 저장하는
 오프라인 도구다. 베이크 자체는 ROS·UDP·시뮬레이터 없이 실행된다.
 
-팀 로드맵의 **MGeo map prior** 계층([인지 융합 로드맵](../../../../docs/packages/asmc_perception/roadmap.md)
+팀 로드맵의 **MGeo map prior** 계층([인지 융합 로드맵](../../../../docs/architecture/perception-roadmap.md)
 3.1)이 여기서 구현된다. catkin 패키지가 아니라 오프라인 CLI 라서 `src/perception/`
 아래가 아닌 `src/asmc_hd_map/development/won_tae_link_node/` 에 둔다. 로드맵이 함께 잡아둔 **런타임 local crop 은
 아직 이 저장소에 없다** — `live_check.py` 의 `ego_view()` 가 기능적으로 같은 일을

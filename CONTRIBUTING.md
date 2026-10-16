@@ -1,6 +1,6 @@
 # 기여 가이드
 
-현재 Git·PR 정본은 [협업 규칙](docs/governance/README.md), 담당 경계는
+현재 Git·PR 정본은 [협업 규칙](docs/onboarding/collaboration.md), 담당 경계는
 [팀 ownership](docs/onboarding/ownership.md)이다.
 
 ## 작업 순서
@@ -44,4 +44,4 @@ gh pr create --fill
 - [ ] submodule pointer 변경 의도와 대상 commit을 확인했다.
 
 통합 검증은 [시뮬 검증 체크리스트](./docs/operations/README.md), MORAI message
-변경은 [beta_drive 정책](docs/contracts/simulator/morai-msgs-beta-policy.md)을 따른다.
+변경은 [beta_drive 정책](docs/contracts/simulator-morai-msgs-beta-policy.md)을 따른다.

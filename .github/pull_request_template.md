@@ -35,6 +35,6 @@
 - [ ] `build/`, `devel/`, cache 등 생성물을 추가하지 않았다.
 - [ ] submodule pointer 변경 의도와 대상 commit을 확인했다.
 
-정책: [협업 규칙](../docs/governance/README.md) ·
+정책: [협업 규칙](../docs/onboarding/collaboration.md) ·
 [팀 ownership](../docs/onboarding/ownership.md) ·
 [시뮬 검증](../docs/operations/README.md)

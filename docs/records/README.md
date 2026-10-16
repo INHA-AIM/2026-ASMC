@@ -1,4 +1,19 @@
 # 검증·실험 기록
+<!-- documentation-structure-v2:start -->
+
+## 분야별 바로가기
+
+- [카메라 실험·학습·실행 기록](camera/)
+- [LiDAR 검증 기록](lidar/)
+- [Bridge·센서 통신 기록](bridge/)
+- [HD맵 기록](hd-map/)
+- [저장소·문서 정리 기록](repository/)
+- [종료된 설계·실행법](archive/)
+
+새 기록은 해당 분야에 실제 실험일과 주제로 추가한다. 현행 안내의 수정은 Git으로 추적하며,
+이번 이전의 본문 보존 검사는 상시 동결 규칙으로 사용하지 않는다.
+
+<!-- documentation-structure-v2:end -->
 
 > **문서 역할:** Active Records Index — 특정 commit·날짜·artifact에서 관측한 사실의 탐색
 >
@@ -25,18 +40,18 @@
 
 | 기록 | 시점·식별자 | 보존하는 사실 | 현재 권위 |
 |---|---|---|---|
-| [P1-A runtime v1](./baselines/runtime-v1.md) | content commit `73c0a8c` | 당시 24 packages, 33 runtime messages, sensor/bag/HD Map snapshot | 현재 구조는 package guide와 contracts |
-| [P3-A bridge v1](./baselines/bridge-p3a-v1.md) | 2026-09-23, `p3a_bridge_profiles_v1` | bridge source/topic SHA, 공통 runtime, transport/network/sensor profile | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
-| [P3-E local live v1](./baselines/bridge-p3e-local-live-v1.md) | 2026-09-23, `p3e_bridge_local_live_v1` | MolitComp03 v3 packet/rate, azimuth framing, Competition header 불일치 | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
-| [P3-F consolidated v1](./baselines/bridge-p3f-consolidated-v1.md) | 2026-09-23, `p3f_bridge_consolidated_v1` | bridge 4→1 package 이관, 663 tests와 post-move local smoke | [bridge package guide](../packages/asmc_bridge/README.md) |
-| [P3-G local closeout v1](./baselines/bridge-p3g-local-closeout-v1.md) | 2026-09-23, `p3g_bridge_local_closeout_v1` | 참가팀 local 선택 status와 주최 현장 explicit gate | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
-| [P4-A perception runtime v1](./baselines/perception-p4a-runtime-v1.md) | 2026-09-23, `p4a_perception_runtime_v1` | package/launch/topic/frame/stamp/model/oracle와 중복 제거 gate | [Perception guide](../packages/asmc_perception/README.md) |
-| [P5-A perception topic audit v1](./baselines/perception-p5a-topic-audit-v1.md) | 2026-09-25, `p5a_perception_topic_audit_v1` | 24 family·63 topic의 producer/consumer/bag 사용과 P5-B 정리 gate | [`perception_topic_policy_v1.yaml`](../../config/contracts/perception_topic_policy_v1.yaml) |
-| [P5-B perception rqt/runtime v1](./baselines/perception-p5b-rqt-v1.md) | 2026-09-25, P5-B closeout | 기본 rqt 2종, debug metadata·pipeline audit opt-in과 검증 결과 | [`perception.launch`](../../src/asmc_camera/launch/perception.launch) |
-| [P5-C perception runtime acceptance v1](./baselines/perception-p5c-runtime-acceptance-v1.md) | 2026-09-25, `asmc_perception_runtime_acceptance_v1` | 현재 producer/subscriber/type/rate/stamp/frame와 이동 경로를 실행·정적으로 검증 | [`perception_runtime_acceptance_v1.yaml`](../../config/contracts/perception_runtime_acceptance_v1.yaml) |
-| [P5-D/E perception closeout v1](./baselines/perception-p5de-closeout-v1.md) | 2026-09-26, P5-D/E closeout | typed consumer 인계, 대표 lane-family bag, 중복 producer 방지와 최종 운영 경계 | [`perception_runtime_acceptance_v1.yaml`](../../config/contracts/perception_runtime_acceptance_v1.yaml) |
-| [P2-A drivable input](./baselines/kcity2025-drivable-input-v1.md) | P2-A, stage14 SHA | link별 clip/guard 입력 판정 | P2-B 결과가 후속 product |
-| [P2-B compact drivable](./baselines/kcity2025-compact-drivable-v1.md) | `kcity2025_static_junction_widened_drivable_v6` | Lane/vector/grid 개수와 product SHA | [HD Map runtime contract](../contracts/hd-map/runtime-v1.md)와 현 product hash |
+| [P1-A runtime v1](./repository/runtime-v1.md) | content commit `73c0a8c` | 당시 24 packages, 33 runtime messages, sensor/bag/HD Map snapshot | 현재 구조는 package guide와 contracts |
+| [P3-A bridge v1](./bridge/bridge-p3a-v1.md) | 2026-09-23, `p3a_bridge_profiles_v1` | bridge source/topic SHA, 공통 runtime, transport/network/sensor profile | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
+| [P3-E local live v1](./bridge/bridge-p3e-local-live-v1.md) | 2026-09-23, `p3e_bridge_local_live_v1` | MolitComp03 v3 packet/rate, azimuth framing, Competition header 불일치 | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
+| [P3-F consolidated v1](./bridge/bridge-p3f-consolidated-v1.md) | 2026-09-23, `p3f_bridge_consolidated_v1` | bridge 4→1 package 이관, 663 tests와 post-move local smoke | [bridge package guide](../../src/asmc_bridge/docs/integration.md) |
+| [P3-G local closeout v1](./bridge/bridge-p3g-local-closeout-v1.md) | 2026-09-23, `p3g_bridge_local_closeout_v1` | 참가팀 local 선택 status와 주최 현장 explicit gate | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
+| [P4-A perception runtime v1](./camera/perception-p4a-runtime-v1.md) | 2026-09-23, `p4a_perception_runtime_v1` | package/launch/topic/frame/stamp/model/oracle와 중복 제거 gate | [Perception guide](../../src/asmc_camera/docs/integration.md) |
+| [P5-A perception topic audit v1](./camera/perception-p5a-topic-audit-v1.md) | 2026-09-25, `p5a_perception_topic_audit_v1` | 24 family·63 topic의 producer/consumer/bag 사용과 P5-B 정리 gate | [`perception_topic_policy_v1.yaml`](../../config/contracts/perception_topic_policy_v1.yaml) |
+| [P5-B perception rqt/runtime v1](./camera/perception-p5b-rqt-v1.md) | 2026-09-25, P5-B closeout | 기본 rqt 2종, debug metadata·pipeline audit opt-in과 검증 결과 | [`perception.launch`](../../src/asmc_camera/launch/perception.launch) |
+| [P5-C perception runtime acceptance v1](./camera/perception-p5c-runtime-acceptance-v1.md) | 2026-09-25, `asmc_perception_runtime_acceptance_v1` | 현재 producer/subscriber/type/rate/stamp/frame와 이동 경로를 실행·정적으로 검증 | [`perception_runtime_acceptance_v1.yaml`](../../config/contracts/perception_runtime_acceptance_v1.yaml) |
+| [P5-D/E perception closeout v1](./camera/perception-p5de-closeout-v1.md) | 2026-09-26, P5-D/E closeout | typed consumer 인계, 대표 lane-family bag, 중복 producer 방지와 최종 운영 경계 | [`perception_runtime_acceptance_v1.yaml`](../../config/contracts/perception_runtime_acceptance_v1.yaml) |
+| [P2-A drivable input](./hd-map/kcity2025-drivable-input-v1.md) | P2-A, stage14 SHA | link별 clip/guard 입력 판정 | P2-B 결과가 후속 product |
+| [P2-B compact drivable](./hd-map/kcity2025-compact-drivable-v1.md) | `kcity2025_static_junction_widened_drivable_v6` | Lane/vector/grid 개수와 product SHA | [HD Map runtime contract](../contracts/hd-map-runtime-v1.md)와 현 product hash |
 | [route curation 2026-09-17](./hd-map/kcity2025-route-curation-20260917.md) | stage01~14 audit | source별 선택, 사용자 검수와 링크별 보정 근거 | machine policy와 current package guide |
 
 `runtime-v1`은 최초 통합 전 상태를 동결한 snapshot이다. 이후 HD Map launch 이름,
@@ -52,9 +67,9 @@ P2-A는 P2-B 이전의 입력 감사이므로 문서 끝의 “다음 gate”를
 
 | 기록 | 조건 | 보존하는 사실 | 현재 권위 |
 |---|---|---|---|
-| [TwinLiteNet+ v4](./perception/twinlitenet-v4-evaluation.md) | 2026-09-04~05, v4 val 1,404 samples | epoch 10/18 학습·평가와 한계 | [Perception guide](../packages/asmc_perception/README.md) |
-| [MORAI message versions](./simulator/morai-msgs-versions.md) | 최종 조사 2026-09-15 | `beta_drive`·26.R1 field 차이와 direct ROS 실패 | [simulator contract](../contracts/simulator/morai-msgs-beta-policy.md) |
-| [runtime transport](./simulator/runtime-transport-2026-09.md) | 2026-09-05~23 | host network, rate/latency, bag, 종료된 GT와 P3-E live 실험 | [운영 가이드](../operations/README.md) |
+| [TwinLiteNet+ v4](./camera/twinlitenet-v4-evaluation.md) | 2026-09-04~05, v4 val 1,404 samples | epoch 10/18 학습·평가와 한계 | [Perception guide](../../src/asmc_camera/docs/integration.md) |
+| [MORAI message versions](./bridge/morai-msgs-versions.md) | 최종 조사 2026-09-15 | `beta_drive`·26.R1 field 차이와 direct ROS 실패 | [simulator contract](../contracts/simulator-morai-msgs-beta-policy.md) |
+| [runtime transport](./bridge/runtime-transport-2026-09.md) | 2026-09-05~23 | host network, rate/latency, bag, 종료된 GT와 P3-E live 실험 | [운영 가이드](../operations/README.md) |
 
 성능값은 dataset, checkpoint, simulator profile과 측정 창을 함께 인용한다. 예를 들어 당시
 LiDAR `8.x Hz` 관측은 현재 10 Hz baseline이나 승인된 15 Hz 목표를 대체하지 않는다.

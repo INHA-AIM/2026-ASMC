@@ -2,11 +2,11 @@
 
 현재 Behavior Planner, Frenet Planner와 MPC Controller는 ROS1/catkin package이며 내부
 `asmc_msgs` topic으로 연결된다. MORAI UDP는 bridge package만 소유한다. 자세한 현재 구조는
-[Planning/Control 개발 가이드](../../../docs/packages/planning-control/README.md), 실행은
+[Planning/Control 개발 가이드](../../../docs/architecture/planning-control.md), 실행은
 [운영 규약](../../../docs/operations/planning-control.md)을 따른다.
 
 아래 `lane_boundary_adapter`의 기존 monitor는 camera 관측 계약 검토용 read-only ROS pilot이다.
-별도 추가한 [카메라·BBOX 차선변경 노드](../CAMERA_BBOX_LANE_CHANGE.md)는
+별도 추가한 [카메라·BBOX 차선변경 노드](bbox-lane-change.md)는
 명시적으로 활성화하면 MORAI `/ctrl_cmd`를 발행한다. 기존 planner/controller와 동시 실행하지 않는다.
 외부 차선 경계와 YOLO 판정을 사용해 차로 중심을 추종하고 장애물에 따라 반복 변경한다.
 

@@ -2,17 +2,17 @@
 
 현재 YOLO 추론은 별도 `asmc_camera/camera.launch`가 소유한다. `camera_bbox_detector.launch`는 카메라 전방 결과를 전용 토픽으로 바꾸는 CPU 어댑터뿐이다.
 구형 cropped YOLO/가중치/실행 옵션은 제거했고 기존 차로 판정·제어 정책과 소비 cutoff0.7은 유지한다.
-[카메라→Main/LiDAR 인계](../../docs/packages/asmc_lidar/camera-handoff.md)를 참고한다.
+[카메라→Main/LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 참고한다.
 
 현재 카메라 차선 주행·BBOX 기반 반복 차선변경 실행은
-[카메라 차선 변경 안내](CAMERA_BBOX_LANE_CHANGE.md)를 참고한다.
-YOLO 설치와 차로 판정은 [BBOX 판정 안내](CAMERA_BBOX_LANE.md)를 따른다.
+[카메라 차선 변경 안내](docs/bbox-lane-change.md)를 참고한다.
+YOLO 설치와 차로 판정은 [BBOX 판정 안내](docs/bbox-lane.md)를 따른다.
 
 > Planning 전체 경계와 제어 승격 gate는
-> [Planning/Control 개발 가이드](../../docs/packages/planning-control/README.md)를 따른다.
+> [Planning/Control 개발 가이드](../../docs/architecture/planning-control.md)를 따른다.
 >
 > 음영구간 v3의 판제 소비 규칙, camera drivable 결합과 파트별 소유권은
-> [음영구간 카메라 인지 v3 판제 인수 가이드](../../docs/handoffs/perception/shadow-camera.md)를
+> [음영구간 카메라 인지 v3 판제 인수 가이드](../../docs/handoffs/camera-to-planning.md)를
 > 먼저 따른다.
 
 카메라 인지가 발행하는 typed metric 경계 관측을 판제 개발자가 확인할 수 있는 차로 띠
@@ -41,7 +41,7 @@ strip/centerline segment로 변환한다. independent pilot과
 JAMMING 모드에서 `/ctrl_cmd/jamming`을 발행한다. 통합 selector만 MORAI용
 `/ctrl_cmd`를 발행한다. `camera_bbox_detector.launch`의 YOLO 출력과 외부 차선 인식의
 `/perception/lane/boundary_family`를 소비한다. 실행·튜닝은
-[카메라 차선 변경 안내](CAMERA_BBOX_LANE_CHANGE.md)를 따른다.
+[카메라 차선 변경 안내](docs/bbox-lane-change.md)를 따른다.
 음영구간 on/off, route 의미, camera drivable threshold, LiDAR occupancy 차감과 fallback은 이
 패키지에 추가하지 않는다. 그 정책과 연결·closed-loop 검증은 판제 파트가 소유한다.
 
@@ -317,4 +317,4 @@ replay-clock 조건에서 candidate 398개를 모두 usable로 변환했고 cont
 ## BBOX 차로 판정
 
 거리 추정 없이 기존 YOLO BBOX를 내 차로/옆 차로/양쪽/판정 불가로 분류하는
-관측 전용 노드와 실행 명령은 [CAMERA_BBOX_LANE.md](CAMERA_BBOX_LANE.md)를 참고한다.
+관측 전용 노드와 실행 명령은 [CAMERA_BBOX_LANE.md](docs/bbox-lane.md)를 참고한다.

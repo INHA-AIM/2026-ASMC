@@ -1,6 +1,6 @@
 # YOLOE-26l native 3뷰 첫 실행 증거
 
-시작점은 [결과와 직접 실행 안내](../../../../docs/handoffs/perception/camera-yoloe-l-first-run.md)다.
+시작점은 [결과와 직접 실행 안내](../../../../docs/records/camera/camera-yoloe-l-first-run.md)다.
 이번 범위는 사전학습 l 모델의 42/27종 prompt·TensorRT·batch 실행 문제 확인이다.
 학습·운영 승격·대회 전체 스택 승인·3뷰 mask fusion은 포함하지 않는다.
 

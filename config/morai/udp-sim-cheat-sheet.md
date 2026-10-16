@@ -3,7 +3,7 @@
 > **공통 런타임:** `morai_udp` — 26.R1.H3와 25.S4.MolitComp03가 같은 bridge를 사용한다.
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh` 기준.
 > 상세: [개발·시뮬레이터 운영 가이드](../../docs/operations/README.md)
-> bridge 구현·통합 gate: [MORAI bridge guide](../../docs/packages/asmc_bridge/README.md)
+> bridge 구현·통합 gate: [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)
 > 본선 센서셋: [`ASMC_sensor_set_v3.json`](./sensors/ASMC_sensor_set_v3.json) — 설정·소비 15 Hz, 완성 scan 약 12 Hz 허용<br>
 > 회귀 센서셋: [`ASMC_sensor_set_v2.json`](./sensors/ASMC_sensor_set_v2.json) — 10 Hz 비교용<br>
 > GT용: [`ASMC_sensor_set_GT.json`](./sensors/ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)

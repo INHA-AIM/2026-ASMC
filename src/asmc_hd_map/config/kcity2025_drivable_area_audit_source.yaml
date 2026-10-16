@@ -64,4 +64,4 @@ classification:
 
 outputs:
   manifest: src/asmc_hd_map/config/kcity2025_drivable_area_input_audit.yaml
-  report: docs/records/baselines/kcity2025-drivable-input-v1.md
+  report: docs/records/hd-map/kcity2025-drivable-input-v1.md

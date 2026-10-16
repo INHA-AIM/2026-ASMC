@@ -85,6 +85,6 @@ Only when the asmc_bridge sensor node is NOT running and Main must own UDP 9299:
 
 Never run both UDP receivers on port 9299 at the same time.
 
-Current full handoff: docs/packages/asmc_lidar/camera-handoff.md
+Current full handoff: docs/handoffs/camera-to-lidar.md
 Removed Main options: start_yolo, yolo_device, yolo_require_cuda, yolo_perf_log_interval_sec.
 Recovery uses asmc_camera camera.launch detector:=pretrained after restart.

@@ -1,11 +1,11 @@
 # LiDAR + camera sensor fusion
 
-**2026-10-14 current camera contract:** [E8 deployment, model choice and three groups](../../docs/handoffs/perception/camera-mission16-deployment.md). Main consumes external camera results with `camera_class_profile:=mission16_v1`; camera E8 runs in the outer workspace. `start_yolo` is removed.
+**2026-10-14 current camera contract:** [E8 deployment, model choice and three groups](../../docs/operations/camera-deployment.md). Main consumes external camera results with `camera_class_profile:=mission16_v1`; camera E8 runs in the outer workspace. `start_yolo` is removed.
 
 > **역할:** Active Standalone Guide — 독립 nested catkin workspace의 build·runtime·검증
 >
 > Phase 4 통합 경계와 중복 package 제거 gate는
-> [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md)를 따른다. 이
+> [Perception 개발·통합 가이드](../asmc_camera/docs/integration.md)를 따른다. 이
 > workspace는 outer catkin package처럼 취급하거나 parity 확인 전에 이동하지 않는다.
 
 This directory is a self-contained ROS1 Noetic catkin workspace nested under
@@ -28,7 +28,7 @@ Main YOLO node, weights, `start_yolo` and GPU options have been removed. Main do
 not start a camera producer. Existing LiDAR processing and planner outputs remain.
 
 The complete current build/source, PREPARE/ACTIVE, model recovery and stale-build
-cleanup instructions are in [Camera → Main → LiDAR handoff](../../docs/packages/asmc_lidar/camera-handoff.md).
+cleanup instructions are in [Camera → Main → LiDAR handoff](../../docs/handoffs/camera-to-lidar.md).
 Build/source the outer workspace first, then the nested workspace:
 
 ```bash
@@ -40,7 +40,7 @@ cd src/lidar+sensorfusion
 catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='Main;Msg;morai_msgs'
 ```
 
-Start `asmc_bridge` once using the [current bridge guide](../../docs/packages/asmc_bridge/README.md).
+Start `asmc_bridge` once using the [current bridge guide](../asmc_bridge/docs/integration.md).
 Camera terminal (outer setup):
 
 ```bash

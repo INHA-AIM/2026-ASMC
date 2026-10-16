@@ -14,7 +14,7 @@
 팀이 직접 유지하는 공통 ROS 코드의 **목표**는 다음 다섯 패키지다.
 카메라 패키지는 2026-10-06 `asmc_perception`에서 `asmc_camera`로 이름을 바꿨다(호환 wrapper 없이 완전 이전, 옛 경로에는 이전 안내 README만 남김).
 YOLO26l E8/사전학습 카메라 생산자는 정본 실행이며 기존 Main에는 전방 호환 어댑터만 남긴다.
-현재 실행·이전 경계는 [카메라→LiDAR 인계](../packages/asmc_lidar/camera-handoff.md)를 따른다.
+현재 실행·이전 경계는 [카메라→LiDAR 인계](../handoffs/camera-to-lidar.md)를 따른다.
 `asmc_lidar`는 좌표·시간 코어만 남긴 이전용 골격이다. 아래 목표를 운영 이전 완료로 해석하지 않는다.
 
 | 정본 패키지 | 책임 |
@@ -75,7 +75,7 @@ topic/type/MD5, 실행 인자, 고정 bag과 실패 사례를 기록한다. 문�
 `6435af1`·`8dde9b6`을 최신 코드라고 간주하지 않는다. 담당자 브랜치는 대신 덮어쓰지 않는다.
 
 개인 연구 알고리즘·비교 도구·보고서·후보 tracker와 ROS 실행기는 삭제 커밋으로
-정리하고 Git 이력에만 보존했다. [현재 인계 문서](../packages/asmc_lidar/README.md)를
+정리하고 Git 이력에만 보존했다. [현재 인계 문서](../handoffs/lidar-migration.md)를
 따라 원본 tracker의 연관·ID 생애주기·OBB 안정화·분류 유지·동정적 정책을 우선
 보존한다. 좌표/시간 오류 때문에 달라져야 하는 결과는 의도적 차이로 별도 시험한다.
 정리 전 `020f6c2`에서 필요한 개선 근거만 선별 확인하고 연구 폴더를 일괄 복구하지 않는다.
@@ -104,7 +104,7 @@ topic/type/MD5, 실행 인자, 고정 bag과 실패 사례를 기록한다. 문�
    현재 후보 CameraBox 계약으로 표현이 부족하면 별도 계약 검토하며 기존 MD5를 묵시 변경하지 않는다.
    **3~4 구현(2026-10-06, P2a):** 전방 YOLO11m 생산자와 source_class_name 계약, 기존
    `/YOLO/BBox` 어댑터를 opt-in으로 추가했다. jamming 통합은 다음 단계다.
-   검증·증거와 직접 launch는 [P2a 안내](../handoffs/perception/camera-objects-p2a.md)를 따른다.
+   검증·증거와 직접 launch는 [P2a 안내](../records/camera/camera-objects-p2a.md)를 따른다.
 5. 문서 `docs/packages/asmc_perception/` 이동은 코드 rename 때 링크 점검과 함께 처리한다.
    날짜가 있는 실험·학습 기록은 과거 이름을 보존한다. 지금은 문서 경로를 옮기지 않는다.
 
@@ -142,7 +142,7 @@ topic/type/MD5, 실행 인자, 고정 bag과 실패 사례를 기록한다. 문�
 분리**다. 근거 추출은 실행하되 새 억제는 OFF로 검증하고, 구조물 경계의 판제 전달과
 객체 보존 회귀를 함께 통과한 뒤 승격한다. 빈 객체 목록을 자유공간으로 해석하지 않는다.
 상세 분석 항목·점 계보/진단 요구·단계별 gate는
-[구조물 분리 인계 계약](../packages/asmc_lidar/README.md#모드-없는-구조물-분리--손재호의-후속-구현-계약)에 모아 둔다.
+[구조물 분리 인계 계약](../handoffs/lidar-migration.md#모드-없는-구조물-분리--손재호의-후속-구현-계약)에 모아 둔다.
 현재 골격에 이 검출 기능이 구현됐다는 뜻은 아니다.
 
 #### D. 공용 메시지·local/map·판제 소비 계약
@@ -167,7 +167,7 @@ map 가용성에 반영하며 local 검출·추적 reset 조건으로 사용하�
 판제가 local을 사용할지 map을 사용할지는 명시적 어댑터로 정하고 한 토픽 frame을 전환하지 않는다.
 
 기계 정본은 [후보 topic 계약](../../config/contracts/lidar_candidate_topic_contract_v1.yaml),
-현재 골격과 후속 시험 범위는 [LiDAR 인계](../packages/asmc_lidar/README.md)에서 확인한다.
+현재 골격과 후속 시험 범위는 [LiDAR 인계](../handoffs/lidar-migration.md)에서 확인한다.
 서준 고정 브랜치와 main의 메시지 차이, main Behavior GT 경로, 강태 음영 소비 연결은
 아직 남은 통합 항목이다. Frenet 단독 변환 통과를 세 판제 모듈 전체 승인으로 확대하지 않는다.
 
@@ -289,7 +289,7 @@ catkin package 하나를 유지하면서도 실행 이미지가 학습 산출물
 
 ### 2026-10-05 이후 역할과 우선순위
 
-LiDAR 인계는 [현재 골격과 이전 계획](../packages/asmc_lidar/README.md)을 따른다.
+LiDAR 인계는 [현재 골격과 이전 계획](../handoffs/lidar-migration.md)을 따른다.
 개인 연구 실행기와 알고리즘은 삭제했고 좌표·시간 코어·IMU 선택·공용 메시지를 남겼다.
 손재호가 기존 기능을 이전하며 GPS·미션에 따른 검출 모드 전환을 제거하고 local/map
 어댑터를 연결한다. 이후 구조물·군집·추적 정확도를 단계별로 개선한다.
@@ -317,7 +317,7 @@ metadata, 검증 기준**을 먼저 고정한다. 이 단계가 끝나면 이후
 
 **완료.** 기계 판독 manifest는
 [`config/baselines/runtime_baseline_v1.yaml`](../../config/baselines/runtime_baseline_v1.yaml), 사람이
-읽는 결과는 [P1-A runtime baseline](../records/baselines/runtime-v1.md), 재생성 도구는
+읽는 결과는 [P1-A runtime baseline](../records/repository/runtime-v1.md), 재생성 도구는
 `tools/audit/build_runtime_baseline.py`다.
 
 - 현재 catkin package 24개, launch 51개와 node 선언 56개, package dependency, executable과
@@ -342,8 +342,8 @@ P4-B의 perception additive 3개를 포함한 현재 `asmc_msgs` 1.0.0은 총 28
 perception 정본은
 [`config/contracts/perception_runtime_topic_contract_v1.yaml`](../../config/contracts/perception_runtime_topic_contract_v1.yaml)이며,
 전체 소유 관계는 `asmc_msgs_contract_registry_v1.yaml`이 검사한다. 사람이 읽는 규약은
-[HD Map topic contract v1](../contracts/hd-map/topic-v1.md)과
-[Perception runtime topic contract v1](../contracts/perception/runtime-v1.md)이다.
+[HD Map topic contract v1](../contracts/hd-map-topic-v1.md)과
+[Perception runtime topic contract v1](../contracts/perception-runtime-v1.md)이다.
 
 | 메시지 계열 | 필수 정보 |
 |---|---|
@@ -392,7 +392,7 @@ P2-D `LaneAssociation`까지 완료됐으며 wire schema의 현재값은 contrac
 생성 bundle은
 [`kcity2025_competition_metadata.yaml`](../../src/asmc_hd_map/config/kcity2025_competition_metadata.yaml),
 사람이 읽는 정본은
-[K-City competition metadata v1](../contracts/competition/kcity2025-metadata-v1.md)이다. 공식
+[K-City competition metadata v1](../contracts/competition-kcity2025-metadata-v1.md)이다. 공식
 checkpoint/path, current link set, reviewed route decomposition과 stage14 map SHA를 모두 고정하며
 입력이 바뀌면 `--write`도 실패한다.
 
@@ -477,7 +477,7 @@ P2-A workspace 회귀, source 비교와 local crop 계약을 포함해 `asmc_hd_
 검증 횟수를 같은 baseline 수치로 덮어쓰지 않는다.
 
 규정집 v1.2(2026-09-30)에서 checkpoint는 15개로 줄었다(구 11 삭제, 12~15 재번호). 아래 16개 수치는
-P1-C·P1-D 당시 검증 기록이며 현재 기준은 [competition metadata](../contracts/competition/kcity2025-metadata-v1.md)를 따른다.
+P1-C·P1-D 당시 검증 기록이며 현재 기준은 [competition metadata](../contracts/competition-kcity2025-metadata-v1.md)를 따른다.
 
 P1-C 기준으로 checkpoint 16개의 route/link XY 투영 오차는 모두 `0.0 m`, route station은
 단조 증가하며 START/END station 0과 5% station `109.230586167 m` 단위 테스트가 통과했다.
@@ -543,7 +543,7 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 ### 6.2 `asmc_bridge`
 
 현재 구현·입출력·timestamp/TF와 이관 검증의 상세 인벤토리는
-[MORAI bridge 개발·통합 가이드](../packages/asmc_bridge/README.md)를 따른다. 이 절은 목표
+[MORAI bridge 개발·통합 가이드](../../src/asmc_bridge/docs/integration.md)를 따른다. 이 절은 목표
 아키텍처이며 현재 `asmc_bridge` package나 환경 profile이 이미 있다는 뜻이 아니다.
 
 - UDP network/sensor decode와 `vehicle_state` 정규화를 한 패키지에 둔다.
@@ -568,7 +568,7 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 ### 6.3 `asmc_perception`과 `learning*` 정리
 
 현재 package와 문서·runtime 경계의 상세 인벤토리는
-[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C6에서 camera
+[Perception 개발·통합 가이드](../../src/asmc_camera/docs/integration.md)를 따른다. P4-C6에서 camera
 semantic, metric BEV/lane family, traffic light의 runtime·offline·training을
 `asmc_perception`으로 물리 통합했고 구 package를 제거했다. topic과 node 이름은
 호환성을 위해 유지한다.
@@ -588,7 +588,7 @@ semantic, metric BEV/lane family, traffic light의 runtime·offline·training을
 
 ### 6.4 스크립트와 시각화
 
-실행 명령의 현재 정본은 [실행 명령어 모음](../runtime-commands.md)이다. Phase 5는
+실행 명령의 현재 정본은 [실행 명령어 모음](../operations/commands.md)이다. Phase 5는
 모든 process를 하나의 스크립트로 숨기지 않는다. UDP bridge는 별도 foreground
 terminal에서 log·Hz·diagnostics를 계속 볼 수 있게 `udp_bridge.sh`를 단독 진입점으로
 유지한다. 통합 편의 명령은 인지 runtime과 debug UI 정도로 한정한다.
@@ -609,7 +609,7 @@ Phase 5의 우선순위는 wrapper 수를 늘리는 것이 아니라 perception 
 줄이는 것이다.
 
 **P5-A 완료:** [`perception_topic_policy_v1.yaml`](../../config/contracts/perception_topic_policy_v1.yaml)과
-[감사 기록](../records/baselines/perception-p5a-topic-audit-v1.md)에 24 family, 펼친 63 topic의
+[감사 기록](../records/camera/perception-p5a-topic-audit-v1.md)에 24 family, 펼친 63 topic의
 publisher·runtime subscriber·bag profile을 동결했다. `model_grid`와 per-view BEV 3종은 각각
 lane vectorizer와 fusion의 필수 내부 transport라서 이름만 보고 끌 수 없다. runtime 동작은
 바꾸지 않았으며 P5-B는 per-view coverage, source-view, frame-level pipeline audit의 opt-in
@@ -621,7 +621,7 @@ mosaic와 원본 RGB/fused semantic BEV 좌우 비교 화면만 광고한다. �
 calibration grid는 `visualization_calibration_grid:=true`에서만 생성한다. 두 기본 영상도
 subscriber가 없으면 렌더링·JPEG 직렬화를 하지 않는다. live MORAI에서 BEV 비교 영상
 `1344x1050 @ 5.0 Hz`를 확인했으며 세부 근거는
-[P5-B rqt 기준 기록](../records/baselines/perception-p5b-rqt-v1.md)에 있다. 이 작업은
+[P5-B rqt 기준 기록](../records/camera/perception-p5b-rqt-v1.md)에 있다. 이 작업은
 RViz marker 구성과 planning 소유 adapter를 바꾸지 않았다. 이어서 per-view coverage와
 fused source count/view를 `publish_bev_debug_metadata` opt-in으로 전환했다. frame-level
 pipeline audit도 `lane_publish_pipeline_audit` opt-in으로 전환했고 result-bag batch가 이를
@@ -666,7 +666,7 @@ process로 유지한다. live·bag inference는 `asmc-ros-noetic`에서 직접 �
 `asmc-perception-train`에 격리한다. rqt 기본 화면은 camera mosaic와 BEV comparison 두 개,
 lane 검수는 `base_link` RViz를 자동으로 여는 adapter launch, graph 수락은
 `verify_perception.sh`로 고정했다. 상세 인수표와 증거는
-[P5-D/E closeout](../records/baselines/perception-p5de-closeout-v1.md)에 있다.
+[P5-D/E closeout](../records/camera/perception-p5de-closeout-v1.md)에 있다.
 
 **웹 콘솔 보류:** 현재 RViz/rqt와 구조화 diagnostics로 필요한 검수가 가능하므로 구현하지
 않는다. 실제 원격 다중 사용자 수요가 생길 때 별도 제안과 threat model을 거쳐 연다.
@@ -694,7 +694,7 @@ lane/area, checkpoint 3 m radius, active mission, topic rate/staleness를 한 la
 Phase 5는 P5-A~P5-E까지 완료됐다. 다음 우선순위는 LAN2LAN 현장 리허설에 바로 들어가기보다
 담당자와 함께 LiDAR/fusion
 기준선을 먼저 계측하고 개선 범위를 합의하는 것이다. 정본 Working Proposal은
-[LiDAR 인계 계획](../packages/asmc_lidar/README.md)이며, 지면 제거,
+[LiDAR 인계 계획](../handoffs/lidar-migration.md)이며, 지면 제거,
 터널 벽·천장 억제, 거리 적응형 clustering, 추적 안정화와 HD Map 기반 고주로 차로 귀속을
 우선 검토한다. 담당자가 개발 중인 nested workspace는 합의·baseline 없이 이동하거나
 `asmc_camera`에 흡수하지 않는다. LAN2LAN 리허설은 이 통합의 안정 지점 뒤에 수행한다.
@@ -795,7 +795,7 @@ rosbag, model checkpoint와 주최 배포 원본은 repo로 옮기지 않고 `$A
 `asmc_bridge`는 각각 단일 package/runtime 계약을 소유한다. P4-A는 camera, LiDAR,
 traffic-light, BEV, lane, fusion, recorder의 package/launch/topic/type/frame/timestamp/model SHA,
 bag profile과 배포 금지 oracle을
-[`p4a_perception_runtime_v1`](../records/baselines/perception-p4a-runtime-v1.md)로 동결했다.
+[`p4a_perception_runtime_v1`](../records/camera/perception-p4a-runtime-v1.md)로 동결했다.
 
 P4-B에서 canonical `asmc_perception` package와 단일 compatibility launch, v3 camera calibration,
 traffic-light/LiDAR additive message·topic 계약을 추가했다. 당시에는 기존 runtime source와

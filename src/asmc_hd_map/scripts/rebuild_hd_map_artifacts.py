@@ -23,8 +23,8 @@ METADATA = Path("src/asmc_hd_map/config/kcity2025_competition_metadata.yaml")
 AUDIT_SOURCE = Path("src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml")
 DOC_MANIFEST = Path("config/docs/documentation_migration_v1.json")
 BUILDER_RECORDS = (
-    "docs/records/baselines/kcity2025-drivable-input-v1.md",
-    "docs/records/baselines/kcity2025-compact-drivable-v1.md",
+    "docs/records/hd-map/kcity2025-drivable-input-v1.md",
+    "docs/records/hd-map/kcity2025-compact-drivable-v1.md",
 )
 AUDIT_PIN = re.compile(
     r"(\n  competition_metadata:\n    path: [^\n]+\n    sha256: )([0-9a-f]{64})"

@@ -1,6 +1,6 @@
 # asmc_lidar — 손재호 기능 이전용 골격
 
-**2026-10-16 카메라 인계:** [현재 연결·실행·손재호 구현 경계](../../docs/packages/asmc_lidar/camera-handoff.md).
+**2026-10-16 카메라 인계:** [현재 연결·실행·손재호 구현 경계](../../docs/handoffs/camera-to-lidar.md).
 `config/camera_objects.yaml`은 실제 카메라 관측 계약/보정/라벨 설정을 참조하고 교차 시험으로 검사한다.
 관측 수신·버퍼·3뷰 fusion은 아직 미구현이다. Main의 독립 YOLO는 제거하고 외부 카메라 전방 어댑터만 사용한다.
 
@@ -10,12 +10,12 @@ ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며
 실제 주행에는 기존 패키지를 사용한다. 이 패키지에는 실행 launch가 없다.
 
 2026-10-08 B1a의 GPS·map·수평화·카메라 투영·추적 경계와 담당별 후속 작업은
-[B1a 개선 과제](../../docs/packages/asmc_lidar/b1a-improvement-tasks.md)에 정리했다.
+[B1a 개선 과제](docs/migration-tasks.md)에 정리했다.
 공통 기반은 `Main`의 opt-in `Geometry/` 어댑터에 연결했다. 검증 상태와 직접 launch는
-[좌표·GPS 경계 인계](../../docs/handoffs/perception/lidar-camera-frame-boundaries.md)에 있다.
+[좌표·GPS 경계 인계](../../docs/records/lidar/lidar-camera-frame-boundaries.md)에 있다.
 재호의 전체 이전·터널 필터 운영 수락과 기본값 승격은 별도다.
 
-담당 작업과 완료 조건은 [LiDAR 인계 문서](../../docs/packages/asmc_lidar/README.md),
+담당 작업과 완료 조건은 [LiDAR 인계 문서](../../docs/handoffs/lidar-migration.md),
 카메라와의 역할 분담은 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)에 있다.
 
 ## 남긴 구성
@@ -44,8 +44,8 @@ ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며
 손재호가 지면 뒤·군집 앞에 구조물 근거 추출을 추가하고, 군집 뒤에 벽/객체 혼합 여부를
 검사한다. 동일 경로를 모든 구간에 사용하며 GPS나 미션으로 지면/군집을 전환하지 않는다.
 구체적인 단계·내부 결과 요구·실패 사례·검증 순서는
-[모드 없는 구조물 분리 계약](../../docs/packages/asmc_lidar/README.md#모드-없는-구조물-분리--손재호의-후속-구현-계약)을 따른다.
-같은 문서의 [참고 구현 검수](../../docs/packages/asmc_lidar/README.md#참고-구현-검수와-현실적인-첫-제안--2026-10-05)에
+[모드 없는 구조물 분리 계약](../../docs/handoffs/lidar-migration.md#모드-없는-구조물-분리--손재호의-후속-구현-계약)을 따른다.
+같은 문서의 [참고 구현 검수](../../docs/handoffs/lidar-migration.md#참고-구현-검수와-현실적인-첫-제안--2026-10-05)에
 PCL 기반 첫 실험, depth_clustering의 조건부 비교와 소스 주의점, 후순위 논문을 정리했다.
 읽기 검수만 완료했으며 새 backend가 빌드·실행됐다는 뜻은 아니다.
 
@@ -91,4 +91,4 @@ GPS stamp가 0인 무효 입력은 bounded API의 수신 시각 barrier로만 �
 local 준비 조건은 유효 IMU·차량 속도이며 GPS와 독립적이다.
 
 실제 지면·군집·추적 연속 재현기는 nested Main의 시험 도구이며 이 코어의 기능이 아니다.
-[연속 회귀와 재호 과제](../../docs/handoffs/perception/lidar-continuous-regression.md)를 참고한다.
+[연속 회귀와 재호 과제](../../docs/records/lidar/lidar-continuous-regression.md)를 참고한다.

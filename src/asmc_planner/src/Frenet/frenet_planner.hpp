@@ -1023,7 +1023,7 @@ private:
     //   resolver: "FSM이 15번을 지정했다. 유효한가?"   -> 이 함수
     //
     // 같은 차선의 가장 가까운 차량을 스스로 고르지 않는다 - 대상 선택
-    // 권한은 FSM에 있다(docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류).
+    // 권한은 FSM에 있다(docs/records/archive/d1-legacy-behavior-boundary.md 0.1절 B 분류).
     //
     // 더 가까운 차량이 나타나도 무시한다. 자동 handoff는 FSM이 지시한 대상을
     // 추종 중이라고 오인하게 만든다. 그 차량과 충돌 위험이 있으면 충돌
@@ -1101,7 +1101,7 @@ private:
     //
     // 모든 객체 탐색 -> 같은 차선 -> 저속/정지 -> 가장 가까운 것 -> 좌/우
     // 방향까지 자동 결정하는 acquisition을 스스로 하지 않는다 - 그 권한은
-    // 전부 FSM에 있다(docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
+    // 전부 FSM에 있다(docs/records/archive/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
     //
     // ===== 속도 조건을 쓰지 않는 이유 =====
     //

@@ -7,7 +7,7 @@
 
 > **문서 역할:** Working Overview — 현재 전체 구조를 짧게 연결하는 문서
 > **문서 허브:** [README.md](../README.md)
-> **상태:** Working Overview v0.4 — 상세: [운영 가이드](../operations/README.md) · [인지 융합 로드맵](../packages/asmc_perception/roadmap.md)
+> **상태:** Working Overview v0.4 — 상세: [운영 가이드](../operations/README.md) · [인지 융합 로드맵](perception-roadmap.md)
 
 ## 1. 한 줄 요약
 
@@ -41,8 +41,8 @@ ego-BEV → lane/topology + safe drivable + object/lane context
 | 4 | lane topology, LiDAR occupancy와 GPS blackout 대응 연결 |
 | 5 | 10월 대회판 호환·안정화 이식과 필요 시 camera domain 보강 |
 
-과거 Phase 0/Wave 1/2 이식 과정은 [integration-plan.md](../archive/integration/wave1-wave2-plan.md)에 기록으로
-보존한다. 현재 세부 gate는 [인지 융합 로드맵](../packages/asmc_perception/roadmap.md) §10을 따른다.
+과거 Phase 0/Wave 1/2 이식 과정은 [integration-plan.md](../records/archive/wave1-wave2-plan.md)에 기록으로
+보존한다. 현재 세부 gate는 [인지 융합 로드맵](perception-roadmap.md) §10을 따른다.
 
 ## 4. 모듈·담당
 
@@ -65,13 +65,13 @@ ego-BEV → lane/topology + safe drivable + object/lane context
 
 Planning/Control은 ROS1/catkin runtime과 transport-independent C++ core로 구성된다. 현재 v2
 Behavior→Frenet→MPC 경로와 알려진 본선 준비 gap은
-[Planning/Control 개발 가이드](../packages/planning-control/README.md), 실행은
+[Planning/Control 개발 가이드](planning-control.md), 실행은
 [운영 규약](../operations/planning-control.md)을 따른다.
 
 ## 6. 인터페이스
 
 현재 확정 계약과 초안을 섞지 않는다. 작업 중 camera/BEV 이름은
-[인지 융합 로드맵](../packages/asmc_perception/roadmap.md) §6, 합의된 계약은
+[인지 융합 로드맵](perception-roadmap.md) §6, 합의된 계약은
 `src/interfaces/README.md`에서 관리한다. 공용 interface 변경은 **Path B**다.
 
 ## 7. 기술 선택

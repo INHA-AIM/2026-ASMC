@@ -11,10 +11,10 @@ v1.2 변경: 일정 추가, 체크포인트 15개로 정리, 네트워크 스펙
 
 이 문서는 팀 저장소에 필요한 결론만 둔다. 규정 원문·Q&A·배포 링크는 저장소 상위의
 `docs/competition/`에 보존하고, 구현 설정은 [운영 가이드](../operations/README.md)와
-[HD Map 계약](../contracts/hd-map/topic-v1.md)을 따른다.
+[HD Map 계약](../contracts/hd-map-topic-v1.md)을 따른다.
 
 장애물 출제 에셋·시나리오 높이·Object Info 속도는
-[2026-10-06 전달 Q&A와 분류 설계](../handoffs/competition/obstacle-assets-and-labels.md)를 참고한다.
+[2026-10-06 전달 Q&A와 분류 설계](obstacle-assets-and-labels.md)를 참고한다.
 F2 전체 객체가 범위이며 `OBJ_G80_Open_Door`는 제외라는 답변과,
 미검수 102개 집계·후속 학습 제안을 구분한다.
 
@@ -86,7 +86,7 @@ staleness, latency와 자원 사용량을 측정한다.
 - 상태: Competition Vehicle Status와 CollisionData
 - **판정 전용:** Ego Detail Status, Ego Vehicle Status, Get TrafficLight Status는 판정 프로그램만
   쓰며 본선에서 참가팀은 사용할 수 없다. 팀 bridge는 26r1 호환을 위해 수신할 수 있지만 runtime
-  노드가 소비하면 안 된다 ([v1.2 영향](../handoffs/competition/rule-v1.2-impacts.md)).
+  노드가 소비하면 안 된다 ([v1.2 영향](rule-v1.2-impacts.md)).
 - Competition Vehicle Status 미제공: `pos_x/y/z`, `vel_y/z`, `accel_x/y/z`, 타이어 횡력·side slip·
   cornering stiffness
 - 사용하지 않는 센서 네트워크는 Disconnect할 수 있다.
@@ -205,7 +205,7 @@ PR #64 후속 구현은 HD맵 source·생성 metadata·발행용 payload에 새 
 공식 4개소의 대응은 `unverified`, 교차로 ID는 `null`, `intersection_failure_evaluation_available=false`다.
 **규칙 제공과 자동 채점 구현은 다르다.** 판제의 실제 위반 집계기는 이번 변경에 포함하지 않는다.
 신호 이외 규칙의 점검 결과와 파트별 확인 항목은
-[신호 채점 인계](../handoffs/competition/rule-v1.2-impacts.md#6-신호-채점-후속-공지--2026-10-06-반영)를 따른다.
+[신호 채점 인계](rule-v1.2-impacts.md#6-신호-채점-후속-공지--2026-10-06-반영)를 따른다.
 
 ## 6. 당일 절차와 배포 전 gate
 

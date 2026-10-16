@@ -5,12 +5,12 @@
 // planner가 같은 차선의 가장 가까운 차량을 스스로 고르고, 주행 중 더
 // 가까운 차량이 나타나면 자동으로 handoff하는 정책은 v2에서 금지된다 -
 // 그러면 FSM은 자기가 지시한 대상을 추종 중이라고 오인한다
-// (docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류).
+// (docs/records/archive/d1-legacy-behavior-boundary.md 0.1절 B 분류).
 //
 //   selector: "누구를 따라갈까?"                  -> 금지
 //   resolver: "FSM이 15번을 지정했다. 유효한가?"   -> 이것만 한다
 //
-// 계약: docs/contracts/planning/fsm-frenet-v2.md 12.5절(D5), 8.2절
+// 계약: docs/contracts/planning-fsm-frenet-v2.md 12.5절(D5), 8.2절
 
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Maneuver/ManeuverUtils.hpp"

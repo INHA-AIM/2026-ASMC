@@ -23,7 +23,7 @@ add_message_files(
   PlanFeedback.msg
   # v2 인터페이스 (FSM <-> Frenet). FSM 담당자가 정의한 원본을 그대로 등록한다.
   # 필드/상수를 Frenet 편의로 수정하지 않는다
-  # (docs/contracts/planning/fsm-frenet-v2.md 1.4절).
+  # (docs/contracts/planning-fsm-frenet-v2.md 1.4절).
   BehaviorCommand.msg
   FrenetFeedback.msg
   # HD Map / competition metadata contract v1. These are additive message
