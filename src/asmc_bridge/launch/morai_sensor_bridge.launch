@@ -44,6 +44,7 @@
 
   <node pkg="asmc_bridge" type="morai_sensor_bridge.py"
         name="morai_sensor_bridge" output="screen">
+    <rosparam command="load" file="$(find asmc_bridge)/config/diagnostics.yaml"/>
     <param name="runtime_profile" value="$(arg runtime_profile)"/>
     <param name="transport_profile" value="$(arg transport_profile)"/>
     <param name="stream_profile" value="$(arg stream_profile)"/>

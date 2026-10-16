@@ -20,16 +20,16 @@ import socket
 import struct
 import threading
 import time
-from collections import deque
 
 import numpy as np
 import rospy
-from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
+from diagnostic_msgs.msg import DiagnosticArray
 import tf2_ros
 from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import (CompressedImage, Image, Imu, NavSatFix,
                              NavSatStatus, PointCloud2, PointField)
 from morai_msgs.msg import GPSMessage
+from asmc_bridge.telemetry import BridgeTelemetry, publish_report, start_reporting
 
 VERTICAL_ANGLES = {
     "HDL-32E": [-30.67, -9.33, -29.33, -8.0, -28.0, -6.67, -26.67, -5.33,
@@ -67,30 +67,6 @@ DEFAULT_SEMANTIC_CAMERAS = [
 ]
 
 
-def latency_summary(samples):
-    values = sorted(float(value) for value in samples)
-    if not values:
-        return {"samples": 0, "mean_ms": 0.0, "p50_ms": 0.0,
-                "p95_ms": 0.0, "max_ms": 0.0}
-
-    def percentile(percent):
-        position = (len(values) - 1) * float(percent) / 100.0
-        low = int(np.floor(position))
-        high = int(np.ceil(position))
-        if low == high:
-            return values[low]
-        return (values[low] * (high - position)
-                + values[high] * (position - low))
-
-    return {
-        "samples": len(values),
-        "mean_ms": sum(values) / len(values),
-        "p50_ms": percentile(50),
-        "p95_ms": percentile(95),
-        "max_ms": values[-1],
-    }
-
-
 def parse_camera_packet(block):
     """Return ``(sec, nsec, index, payload, is_final)`` for one MORAI JPEG block."""
     if len(block) < 21 or block[:3] != b"MOR":
@@ -124,6 +100,8 @@ class VelodyneFrameAssembler(object):
         self.started_ns = None
         self.previous_azimuth = None
         self.synchronized = mode == "packet_count"
+        self.boundaries = 0
+        self.discarded_revolutions = 0
 
     def _take(self):
         completed = (self.chunks, self.device_times, self.started_ns)
@@ -140,9 +118,11 @@ class VelodyneFrameAssembler(object):
             and self.previous_azimuth - azimuth > 18000
         )
         if self.mode == "azimuth" and wrapped:
+            self.boundaries += 1
             if self.synchronized and len(self.chunks) >= self.minimum_packets:
                 completed = self._take()
             else:
+                self.discarded_revolutions += 1
                 self.chunks = []
                 self.device_times = []
                 self.started_ns = None
@@ -165,6 +145,8 @@ class VelodyneFrameAssembler(object):
         if self.synchronized and len(self.chunks) >= self.minimum_packets:
             completed = self._take()
         else:
+            if self.chunks:
+                self.discarded_revolutions += 1
             self.chunks = []
             self.device_times = []
             self.started_ns = None
@@ -235,28 +217,17 @@ class SensorBridge(object):
                 rospy.loginfo("forward %-5s raw UDP -> %s:%d",
                               name, self.planner_forward_ip, port)
 
-        self.stats = {}
-        self.errors = {}
-        self.timestamp_fallbacks = {}
-        self.timestamp_regressions = {}
-        self.processing_ms = {}
-        self.assembly_ms = {}
-        self.raw_packet_stats = {}
-        self.frame_packet_counts = {}
-        self.last_received_monotonic = {}
+        self.telemetry = BridgeTelemetry()
+        self.stale_after = dict(p("~stale_after", {}) or {})
         # Only the explicit local development profile starts GT-only streams;
         # verify-gt then promotes them to required inputs for that run.
         self.optional_streams = set()
         self._last_source_ns = {}
-        self._started_monotonic = time.monotonic()
-        self._last_report_monotonic = self._started_monotonic
-        self._last_report_stats = {}
-        self._last_report_raw_packet_stats = {}
         self.pub_diagnostics = rospy.Publisher(
             "/morai_sensor_bridge/diagnostics", DiagnosticArray, queue_size=1
         )
         self._start_all(p)
-        rospy.Timer(rospy.Duration(5.0), self._report)
+        start_reporting(self, 'morai_sensor_bridge')
 
     def _start_all(self, p):
         if p("~enable_camera", True):
@@ -406,17 +377,8 @@ class SensorBridge(object):
         return table.get(key)
 
     def _spawn(self, name, port, fn):
-        self.stats[name] = 0
-        self.errors[name] = 0
-        self.timestamp_fallbacks[name] = 0
-        self.timestamp_regressions[name] = 0
-        self.processing_ms[name] = deque(maxlen=4096)
-        self.assembly_ms[name] = deque(maxlen=4096)
-        self.raw_packet_stats[name] = 0
-        self.frame_packet_counts[name] = deque(maxlen=4096)
-        self.last_received_monotonic[name] = None
-        self._last_report_stats[name] = 0
-        self._last_report_raw_packet_stats[name] = 0
+        self.telemetry.register(name, optional=name in self.optional_streams,
+            stale_after=float(self.stale_after.get(name, self.stale_after.get('default', .5))))
         t = threading.Thread(target=self._guard, args=(name, port, fn))
         t.daemon = True
         t.start()
@@ -425,18 +387,24 @@ class SensorBridge(object):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8 << 20)
+        self.telemetry.configure_socket(name, sock)
         try:
             sock.bind(("0.0.0.0", port))
         except Exception as e:
+            self.telemetry.receiver(name, 'failed', str(e))
             rospy.logerr("bind %d (%s) failed: %s", port, name, e)
+            sock.close()
             return
         sock.settimeout(1.0)
         rospy.loginfo("listening %-8s on udp/%d", name, port)
+        self.telemetry.receiver(name, 'running')
         try:
             fn(sock, name)
         except Exception as e:
+            self.telemetry.receiver(name, 'failed', str(e))
             rospy.logerr("%s thread died: %s", name, e)
         finally:
+            self.telemetry.receiver_exited(name, rospy.is_shutdown())
             sock.close()
 
     def _camera_loop(self, sock, name, pub_c, pub_r, frame_id):
@@ -446,13 +414,15 @@ class SensorBridge(object):
         assembly_started_ns = None
         while not rospy.is_shutdown():
             try:
-                blk, _ = sock.recvfrom(65000)
+                blk, _ = self.telemetry.receive(name, sock, 65000)
             except socket.timeout:
+                continue
+            if blk is None:
                 continue
             try:
                 sec, nsec, index, payload, is_final = parse_camera_packet(blk)
             except (struct.error, ValueError):
-                self.errors[name] += 1
+                self.telemetry.increment(name, 'parse_errors')
                 continue
 
             stamp_key = (sec, nsec)
@@ -462,7 +432,7 @@ class SensorBridge(object):
                 expected_index = 0
                 assembly_started_ns = time.perf_counter_ns()
             if active_stamp != stamp_key or index != expected_index:
-                self.errors[name] += 1
+                self.telemetry.increment(name, 'parse_errors')
                 buf = bytearray()
                 active_stamp = None
                 expected_index = 0
@@ -506,7 +476,7 @@ class SensorBridge(object):
             completed_ns = time.perf_counter_ns()
             self._record_processing(name, processing_started_ns, completed_ns)
             if assembly_started_ns is not None:
-                self.assembly_ms[name].append(
+                self.telemetry.sample(name, 'assembly',
                     (completed_ns - assembly_started_ns) / 1000000.0
                 )
             assembly_started_ns = None
@@ -523,9 +493,12 @@ class SensorBridge(object):
 
         while not rospy.is_shutdown():
             try:
-                pkt, _ = sock.recvfrom(2048)
+                pkt, _ = self.telemetry.receive(name, sock, 2048)
             except socket.timeout:
+                self.telemetry.increment(name, 'assembly_timeouts')
+                previous_discarded = assembler.discarded_revolutions
                 completed = assembler.flush()
+                self.telemetry.increment(name, 'discarded_revolutions', assembler.discarded_revolutions - previous_discarded)
                 if completed is not None:
                     chunks, device_times, assembly_started_ns = completed
                     self._lidar_publish(
@@ -535,7 +508,8 @@ class SensorBridge(object):
                 continue
 
             raw_seen += 1
-            self.raw_packet_stats[name] += 1
+            if pkt is None:
+                continue
             if raw_seen == 1:
                 preview = "".join(chr(b) if 32 <= b < 127 else "."
                                   for b in pkt[:min(40, len(pkt))])
@@ -551,7 +525,7 @@ class SensorBridge(object):
                         "%s 패킷이 너무 짧음 (%dB). Velodyne raw(~1206B)가 아님.",
                         name, len(pkt))
             if len(pkt) < 100:
-                self.errors[name] += 1
+                self.telemetry.increment(name, 'parse_errors')
                 continue
             # 1200B 데이터부 (표준 1206 = 1200 + 6 timestamp)
             chunk = pkt[:1200] if len(pkt) >= 1200 else pkt.ljust(1200, b"\x00")[:1200]
@@ -559,9 +533,14 @@ class SensorBridge(object):
                 device_time = struct.unpack("<I", pkt[1200:1204])[0]
             else:
                 device_time = None
+            previous_boundaries = assembler.boundaries
+            previous_discarded = assembler.discarded_revolutions
             completed = assembler.push(
                 chunk, device_time, time.perf_counter_ns()
             )
+            if assembler.boundaries != previous_boundaries:
+                self.telemetry.rotation(name, device_time)
+            self.telemetry.increment(name, 'discarded_revolutions', assembler.discarded_revolutions - previous_discarded)
             if completed is not None:
                 chunks, device_times, assembly_started_ns = completed
                 self._lidar_publish(
@@ -576,6 +555,7 @@ class SensorBridge(object):
         try:
             b = np.frombuffer(b"".join(chunks), dtype=np.uint8).reshape([-1, 100])
         except ValueError as e:
+            self.telemetry.increment(name, 'parse_errors')
             rospy.logwarn_throttle(5.0, "%s reshape fail (%d pkts): %s",
                                    name, len(chunks), e)
             return False
@@ -615,9 +595,10 @@ class SensorBridge(object):
         )
         completed_ns = time.perf_counter_ns()
         self._record_processing(name, processing_started_ns, completed_ns)
-        self.frame_packet_counts[name].append(len(chunks))
+        self.telemetry.sample(name, 'packets_per_frame', len(chunks))
+        self.telemetry.sample(name, 'points_per_frame', int(np.count_nonzero(valid)))
         if assembly_started_ns is not None:
-            self.assembly_ms[name].append(
+            self.telemetry.sample(name, 'assembly',
                 (completed_ns - assembly_started_ns) / 1000000.0
             )
         self._mark_message(name)
@@ -657,10 +638,9 @@ class SensorBridge(object):
         return m
 
     def _fallback_stamp(self, name, regression=False):
-        self.timestamp_fallbacks[name] = self.timestamp_fallbacks.get(name, 0) + 1
+        self.telemetry.increment(name, 'timestamp_fallbacks')
         if regression:
-            self.timestamp_regressions[name] = \
-                self.timestamp_regressions.get(name, 0) + 1
+            self.telemetry.increment(name, 'timestamp_regressions')
         stamp = rospy.Time.now()
         value_ns = int(stamp.to_nsec())
         previous = self._last_source_ns.get(name)
@@ -709,8 +689,10 @@ class SensorBridge(object):
     def _gps(self, sock, name):
         while not rospy.is_shutdown():
             try:
-                raw, _ = sock.recvfrom(8196)
+                raw, _ = self.telemetry.receive(name, sock, 8196)
             except socket.timeout:
+                continue
+            if raw is None:
                 continue
             processing_started_ns = time.perf_counter_ns()
             self._forward_to_planner(name, raw)
@@ -719,7 +701,11 @@ class SensorBridge(object):
             except Exception:
                 continue
             f = line.split(",")
-            if len(f) < 10 or "GGA" not in f[0]:
+            if "GGA" not in f[0]:
+                self.telemetry.increment(name, 'ignored_packets')
+                continue
+            if len(f) < 10:
+                self.telemetry.increment(name, 'parse_errors')
                 continue
             try:
                 lat = self._nmea_deg(f[2], f[3])
@@ -727,6 +713,7 @@ class SensorBridge(object):
                 status = int(f[6]) if f[6] else 0
                 alt = float(f[9]) if f[9] else 0.0
             except (ValueError, IndexError):
+                self.telemetry.increment(name, 'parse_errors')
                 continue
 
             stamp = rospy.Time.now()
@@ -762,12 +749,15 @@ class SensorBridge(object):
     def _imu(self, sock, name):
         while not rospy.is_shutdown():
             try:
-                raw, _ = sock.recvfrom(65535)
+                raw, _ = self.telemetry.receive(name, sock, 65535)
             except socket.timeout:
+                continue
+            if raw is None:
                 continue
             processing_started_ns = time.perf_counter_ns()
             self._forward_to_planner(name, raw)
             if raw[0:9] != b"#IMUData$" or len(raw) < 113:
+                self.telemetry.increment(name, 'parse_errors')
                 continue
             sec, nsec = struct.unpack("<II", raw[25:33])
             d = struct.unpack("<10d", raw[33:113])
@@ -793,13 +783,12 @@ class SensorBridge(object):
     def _record_processing(self, name, started_ns, completed_ns=None):
         if completed_ns is None:
             completed_ns = time.perf_counter_ns()
-        self.processing_ms[name].append(
+        self.telemetry.sample(name, 'processing',
             (completed_ns - started_ns) / 1000000.0
         )
 
     def _mark_message(self, name):
-        self.stats[name] += 1
-        self.last_received_monotonic[name] = time.monotonic()
+        self.telemetry.message(name)
 
     def _broadcast_map_tf(self, stamp, lat, lon):
         """GPS 위치 + IMU 방위로 map -> base_link 를 발행한다.
@@ -856,111 +845,7 @@ class SensorBridge(object):
                 5.0, "%s planner UDP forward failed: %s", name, e)
 
     def _report(self, _):
-        now = time.monotonic()
-        report_elapsed = max(1e-6, now - self._last_report_monotonic)
-        interval_rates = {}
-        raw_interval_rates = {}
-        for name, count in self.stats.items():
-            previous = self._last_report_stats.get(name, 0)
-            interval_rates[name] = max(0, count - previous) / report_elapsed
-            previous_raw = self._last_report_raw_packet_stats.get(name, 0)
-            raw_interval_rates[name] = max(
-                0, self.raw_packet_stats.get(name, 0) - previous_raw
-            ) / report_elapsed
-        rospy.loginfo(
-            "rx " + "  ".join(
-                "%s=%d(%.1fHz)" % (name, count, interval_rates[name])
-                for name, count in sorted(self.stats.items())
-            )
-        )
-        self._last_report_stats = dict(self.stats)
-        self._last_report_raw_packet_stats = dict(self.raw_packet_stats)
-        self._last_report_monotonic = now
-        for name in sorted(self.frame_packet_counts):
-            counts = self.frame_packet_counts[name]
-            if counts:
-                rospy.loginfo(
-                    "%s raw=%.1f packets/s frame=%.1fHz packets/frame median=%.1f",
-                    name,
-                    raw_interval_rates[name],
-                    interval_rates[name],
-                    float(np.median(counts)),
-                )
-        for k, v in self.stats.items():
-            if v == 0 and k not in self.optional_streams:
-                rospy.logwarn_throttle(
-                    30.0, "%s 수신 0건 - MORAI Sensor Destination Port 확인.", k)
-        message = DiagnosticArray()
-        message.header.stamp = rospy.Time.now()
-        elapsed = max(1e-6, time.monotonic() - self._started_monotonic)
-        for name in sorted(self.stats):
-            processing = latency_summary(self.processing_ms[name])
-            assembly = latency_summary(self.assembly_ms[name])
-            last_received = self.last_received_monotonic[name]
-            last_age_sec = (
-                -1.0 if last_received is None else max(0.0, now - last_received)
-            )
-            status = DiagnosticStatus()
-            status.name = "morai_sensor_bridge/{}".format(name)
-            status.hardware_id = "morai_udp"
-            optional_idle = (
-                self.stats[name] == 0 and name in self.optional_streams
-            )
-            status.level = (
-                DiagnosticStatus.OK
-                if self.stats[name] > 0 or optional_idle
-                else DiagnosticStatus.WARN
-            )
-            if self.stats[name] > 0:
-                status.message = "receiving"
-            elif optional_idle:
-                status.message = "optional GT stream idle"
-            else:
-                status.message = "no data"
-            status.values = [
-                KeyValue("runtime_profile", self.runtime_profile),
-                KeyValue("transport_profile", self.transport_profile),
-                KeyValue("stream_profile", self.stream_profile),
-                KeyValue("timestamp_mode", self.timestamp_mode),
-                KeyValue("optional_stream", str(name in self.optional_streams).lower()),
-                KeyValue("messages", str(self.stats[name])),
-                KeyValue("average_hz", "{:.3f}".format(self.stats[name] / elapsed)),
-                KeyValue("interval_hz", "{:.3f}".format(interval_rates[name])),
-                KeyValue("last_message_age_sec", "{:.6f}".format(last_age_sec)),
-                KeyValue("processing_samples", str(processing["samples"])),
-                KeyValue("processing_mean_ms", "{:.6f}".format(processing["mean_ms"])),
-                KeyValue("processing_p50_ms", "{:.6f}".format(processing["p50_ms"])),
-                KeyValue("processing_p95_ms", "{:.6f}".format(processing["p95_ms"])),
-                KeyValue("processing_max_ms", "{:.6f}".format(processing["max_ms"])),
-                KeyValue("assembly_samples", str(assembly["samples"])),
-                KeyValue("assembly_p50_ms", "{:.6f}".format(assembly["p50_ms"])),
-                KeyValue("assembly_p95_ms", "{:.6f}".format(assembly["p95_ms"])),
-                KeyValue("parse_errors", str(self.errors.get(name, 0))),
-                KeyValue(
-                    "timestamp_fallbacks",
-                    str(self.timestamp_fallbacks.get(name, 0)),
-                ),
-                KeyValue(
-                    "timestamp_regressions",
-                    str(self.timestamp_regressions.get(name, 0)),
-                ),
-            ]
-            if name.startswith("lidar"):
-                status.values.extend([
-                    KeyValue(
-                        "raw_packet_hz",
-                        "{:.3f}".format(raw_interval_rates[name]),
-                    ),
-                    KeyValue(
-                        "packets_per_frame_median",
-                        "{:.3f}".format(
-                            float(np.median(self.frame_packet_counts[name]))
-                            if self.frame_packet_counts[name] else 0.0
-                        ),
-                    ),
-                ])
-            message.status.append(status)
-        self.pub_diagnostics.publish(message)
+        publish_report(self, 'morai_sensor_bridge')
 
 
 def main():

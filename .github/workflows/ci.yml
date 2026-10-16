@@ -80,6 +80,13 @@ jobs:
           cd build/asmc_lidar
           ctest --output-on-failure
 
+      - name: Check bridge protocols, concurrent reporting and stale recovery
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          catkin_make run_tests_asmc_bridge -j2 -l2
+          catkin_test_results --verbose build/test_results/asmc_bridge
+
       - name: Install CPU tensor runtime for preprocessing regression
         run: python3 -m pip install --disable-pip-version-check --index-url https://download.pytorch.org/whl/cpu 'torch==2.1.2+cpu'
 

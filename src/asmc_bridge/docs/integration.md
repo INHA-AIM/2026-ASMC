@@ -178,9 +178,18 @@ rostopic echo /morai_sensor_bridge/diagnostics -n1
 rostopic echo /vehicle/state -n1
 ```
 
-diagnostics의 `interval_hz`, `last_message_age_sec`, parse error, processing/assembly p95와 timestamp
-fallback을 함께 본다. LiDAR는 `raw_packet_hz`와 `packets_per_frame_median`도 본다. topic rate 하나만으로 Windows ingress, UDP loss, decoder와 ROS scheduling
-중 어디서 손실됐는지 단정하지 않는다.
+콘솔은 Network/Sensor 각각5초 한 줄, diagnostics는1초 주기다. monotonic clock으로
+주기를 관리하며 [`diagnostics.yaml`](../config/diagnostics.yaml)에서 조절한다.
+diagnostics의 `interval_hz`, `last_message_age_sec`, `health`, parse/header error,
+processing/assembly/output-gap p95와 timestamp fallback을 함께 본다. 수신 중단은 누적 수가
+남아 있어도 `STALE`이며 socket/thread 실패는 `ERROR`다. 선택 입력의 최초 미수신은 `IDLE`이지만
+계속 잘못된 헤더를 보내면 `INVALID`로 구분한다.
+LiDAR는 `raw_packet_hz`, `rotation_hz`(최근 구간의 방위각 경계),
+`wall_rotation_hz`/`device_rotation_hz`(최근 최대4096회전 평균),
+`packets_per_frame_median`, `socket_drops`, `discarded_revolutions`도 본다.
+표본은 잠금 안에서 복사하고 집계·ROS 발행은 잠금 밖에서 한다. 통계 예외는 다음 주기에
+재시도하며 `reporter_failures`로 남는다. Topic rate 하나만으로 Windows ingress, UDP loss,
+decoder와 ROS scheduling 중 어디서 손실됐는지 단정하지 않는다.
 
 ## 6. build와 회귀 검사
 

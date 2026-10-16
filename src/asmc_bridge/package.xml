@@ -18,6 +18,7 @@
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <exec_depend>tf2_ros</exec_depend>
+  <test_depend>rostest</test_depend>
 
   <export/>
 </package>

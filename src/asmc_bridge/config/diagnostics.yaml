@@ -1,0 +1,9 @@
+# Wall/monotonic reporting continues while ROS simulated time is paused.
+diagnostics_period: 1.0
+log_period: 5.0
+# Receive age, not source-stamp age. These are diagnostic thresholds; the
+# vehicle-state estimator and perception/fusion freshness rules are unchanged.
+stale_after:
+  default: 0.5
+  gps: 1.0
+  imu: 0.3

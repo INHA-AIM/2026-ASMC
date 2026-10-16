@@ -3,13 +3,16 @@
 import importlib.util
 import os
 import struct
+import sys
 import unittest
+from types import SimpleNamespace
 from unittest import mock
 
 
 SCRIPT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "scripts", "morai_udp_bridge.py")
 )
+sys.path.insert(0, os.path.join(os.path.dirname(SCRIPT), '..', 'src'))
 SPEC = importlib.util.spec_from_file_location("morai_udp_bridge_node", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
@@ -62,12 +65,37 @@ class InputRequirementTest(unittest.TestCase):
         self.assertTrue(MODULE.input_required("competition", True))
 
 
+class ReportingStatusTest(unittest.TestCase):
+    def test_send_failure_is_visible_then_idle_recovery_preserves_history(self):
+        telemetry = MODULE.BridgeTelemetry()
+        telemetry.register('cmd', transmit=True)
+        telemetry.increment('cmd', 'send_errors')
+        owner = SimpleNamespace(telemetry=telemetry, _health={},
+            _next_console=float('inf'), reporter=SimpleNamespace(failures=0),
+            runtime_profile='morai_udp', transport_profile='local',
+            stream_profile='competition', timestamp_mode='receive',
+            pub_diagnostics=mock.Mock())
+        with mock.patch.object(MODULE.rospy.Time, 'now', return_value=MODULE.rospy.Time(1)), \
+                mock.patch.object(MODULE.rospy, 'logwarn') as warning:
+            MODULE.publish_report(owner, 'morai_udp_bridge')
+        status = owner.pub_diagnostics.publish.call_args[0][0].status[0]
+        self.assertEqual(status.level, status.WARN)
+        self.assertEqual(status.message, 'recent packet or send errors')
+        self.assertEqual(warning.call_args[0][5], 1)
+        with mock.patch.object(MODULE.rospy.Time, 'now', return_value=MODULE.rospy.Time(2)):
+            MODULE.publish_report(owner, 'morai_udp_bridge')
+        status = owner.pub_diagnostics.publish.call_args[0][0].status[0]
+        self.assertEqual(status.level, status.OK)
+        self.assertEqual({value.key: value.value for value in status.values}['send_errors'], '1')
+
+
 class SourceTimestampTest(unittest.TestCase):
     def bridge(self):
         value = MODULE.MoraiUdpBridge.__new__(MODULE.MoraiUdpBridge)
         value.timestamp_mode = "source"
-        value.timestamp_fallbacks = {"ego": 0, "competition": 0}
-        value.timestamp_regressions = {"ego": 0, "competition": 0}
+        value.telemetry = MODULE.BridgeTelemetry()
+        value.telemetry.register('ego')
+        value.telemetry.register('competition')
         value._last_source_ns = {}
         return value
 
@@ -76,7 +104,7 @@ class SourceTimestampTest(unittest.TestCase):
         stamp = bridge.packet_stamp(123, 456, "ego")
         self.assertEqual(stamp.secs, 123)
         self.assertEqual(stamp.nsecs, 456)
-        self.assertEqual(bridge.timestamp_fallbacks["ego"], 0)
+        self.assertEqual(bridge.telemetry.snapshot()[2]['ego']['timestamp_fallbacks'], 0)
 
     def test_regression_falls_back_and_is_counted(self):
         bridge = self.bridge()
@@ -86,8 +114,9 @@ class SourceTimestampTest(unittest.TestCase):
         ):
             stamp = bridge.packet_stamp(122, 456, "ego")
         self.assertEqual(stamp, MODULE.rospy.Time(999, 1))
-        self.assertEqual(bridge.timestamp_fallbacks["ego"], 1)
-        self.assertEqual(bridge.timestamp_regressions["ego"], 1)
+        row = bridge.telemetry.snapshot()[2]['ego']
+        self.assertEqual(row['timestamp_fallbacks'], 1)
+        self.assertEqual(row['timestamp_regressions'], 1)
 
 
 if __name__ == "__main__":

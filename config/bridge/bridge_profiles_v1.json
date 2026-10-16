@@ -68,7 +68,7 @@
       },
       "facade_package": {
         "path": "src/asmc_bridge/package.xml",
-        "sha256": "f2a36e65654b9eb326f04d8502add3dc94d7f22367247d99880b86a0aec4eb13"
+        "sha256": "f892471e9d9da9bb3a28b45a66b62b3d8bff390b24bf0fc7c0eeae5de5a7f95f"
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
@@ -76,19 +76,19 @@
       },
       "network_launch": {
         "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
-        "sha256": "2fc9666f470234ba9528bbe97ec076f336aa9f594f6ec1aac96770222beb0d17"
+        "sha256": "7ecfec0772bd5517e973e53bc9f0efcfc98169869afa04b43b93368b94c2e23f"
       },
       "network_node": {
         "path": "src/asmc_bridge/scripts/morai_udp_bridge.py",
-        "sha256": "dad78a3c0d6e810d655d48ebe1aeeb78e9f454322455e283e8bcd20c74a06181"
+        "sha256": "4c14fbb6ea44afa9fed35ff0bcefda3f4b2b9b37d03762794ef4763d9e1f3b15"
       },
       "sensor_launch": {
         "path": "src/asmc_bridge/launch/morai_sensor_bridge.launch",
-        "sha256": "fb4f7add5f169c505c6142e07d7b99777c411aa9a983ac027218a27dc33443cf"
+        "sha256": "4835fe582900ec35b7309dc0a2a8f1544a9408b858adb157e9c07ee5ea2fa39c"
       },
       "sensor_node": {
         "path": "src/asmc_bridge/scripts/morai_sensor_bridge.py",
-        "sha256": "80eb811208b74104c4f7612860ca72af0f04804542b164e7988a26006d8cd9c7"
+        "sha256": "3beb773c08d969db64537b2ebfd9105fa0b71bfe87c0a95876f0ed28898920fd"
       },
       "docker_entrypoint": {
         "path": "scripts/docker_ros_up.sh",
@@ -113,6 +113,18 @@
       "vehicle_state_node": {
         "path": "src/asmc_bridge/src/vehicle_state/vehicle_state_node.cpp",
         "sha256": "1ee1e2e4693e0486b3f98f2299896942a266fe7a743f6b6d531bee1378f75f14"
+      },
+      "diagnostics_config": {
+        "path": "src/asmc_bridge/config/diagnostics.yaml",
+        "sha256": "80e4821c9a3a9da7c60e98ebc3f83bb3b9665fc4465e5ce8114283c7ca2eef16"
+      },
+      "telemetry_module": {
+        "path": "src/asmc_bridge/src/asmc_bridge/telemetry.py",
+        "sha256": "32360a91fad5a96e41a9eff2e0759128039f885aec6ed6367dccb33863277df2"
+      },
+      "python_setup": {
+        "path": "src/asmc_bridge/setup.py",
+        "sha256": "748f3d6857fb828c2c19cff0c1ff5e064e7af155304efa38b11567dafc63654e"
       }
     },
     "subscribed_topics": {
@@ -411,5 +423,19 @@
       "errors": 0,
       "failures": 0
     }
+  },
+  "diagnostics_policy": {
+    "clock": "monotonic",
+    "diagnostics_period_sec": 1.0,
+    "console_period_sec": 5.0,
+    "statistics_window": "rolling_last_4096_samples",
+    "stale_after_sec": {
+      "default": 0.5,
+      "gps": 1.0,
+      "imu": 0.3
+    },
+    "normal_console_lines_per_period": 2,
+    "lidar_detail_destination": "/morai_sensor_bridge/diagnostics",
+    "rate_is_drop_count": false
   }
 }

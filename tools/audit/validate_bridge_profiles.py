@@ -8,6 +8,7 @@ import hashlib
 import math
 import sys
 import xml.etree.ElementTree as ET
+import yaml
 from pathlib import Path
 from typing import Any, Dict, Iterable
 
@@ -185,6 +186,16 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             _sha256(REPO_ROOT / spec["path"]) == spec["sha256"],
             f"{name} implementation artifact SHA changed",
         )
+    reporting = contract['diagnostics_policy']
+    reporting_config = yaml.safe_load((REPO_ROOT / 'src/asmc_bridge/config/diagnostics.yaml').read_text())
+    _require(reporting['clock'] == 'monotonic', 'bridge health must use monotonic receive time')
+    _require(reporting_config['diagnostics_period'] == reporting['diagnostics_period_sec'], 'diagnostics cadence diverged')
+    _require(reporting_config['log_period'] == reporting['console_period_sec'], 'console cadence diverged')
+    _require(reporting_config['stale_after'] == reporting['stale_after_sec'], 'receive-health thresholds diverged')
+    for component in ('morai_udp_bridge', 'morai_sensor_bridge'):
+        node = ET.parse(REPO_ROOT / f'src/asmc_bridge/launch/{component}.launch').find('node')
+        _require(any(param.get('file') == '$(find asmc_bridge)/config/diagnostics.yaml'
+                     for param in node.findall('rosparam')), f'{component} does not load shared diagnostics settings')
     _require(
         implementation["published_topics"]["/vehicle/state"] == "asmc_msgs/VehicleState",
         "normalized vehicle state topic changed",

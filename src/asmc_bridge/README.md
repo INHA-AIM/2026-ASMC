@@ -49,3 +49,22 @@ TrafficLight oracle이라 production bridge에서 소비하지 않는다.
 ```
 
 기본 diagnostics는 미수신 Competition 입력을 `optional; no data`로 표시한다.
+
+콘솔은 Network와 Sensor가 각각 **5초마다 한 줄**로 최근 Hz·문제 상태·idle 입력·누적/신규
+오류·UDP socket drop을 출력한다. LiDAR 상세 줄과 큰 누적 메시지 수는 콘솔에서 제거했다.
+`/morai_udp_bridge/diagnostics`, `/morai_sensor_bridge/diagnostics`는 **1초마다** 발행하며,
+누적 메시지 수·마지막 수신 age·처리/조립/출력 공백·LiDAR 회전율을 보존한다.
+주기는 ROS clock 정지와 무관한 monotonic clock을 사용한다.
+
+정본 설정은 [`config/diagnostics.yaml`](config/diagnostics.yaml)이다. 수신 age가 기본0.5초,
+GPS1.0초, IMU0.3초를 넘으면 `STALE`; 최초 미수신은 `WAITING`, 선택 입력의 최초 미수신은
+`IDLE`, 잘못된 입력은 `INVALID`, 수신 스레드 실패는 `ERROR`다. 최근 파싱/송신 오류 또는
+socket drop은 `DEGRADED`로 표시한다. 이 진단 기준은 차량 상태·fusion의 유효성 기준을 바꾸지 않는다.
+통계는 잠금 안에서 제한된 표본을 복사한 뒤 잠금 밖에서 집계한다. 진단 callback 실패는
+오류 로그와 `reporter_failures`에 남기고 다음 주기에 재시도한다.
+
+LiDAR 저하를 구분할 때는 `rotation_hz`, `wall_rotation_hz`, `device_rotation_hz`와
+실제 PointCloud `interval_hz`, `socket_drops`, `discarded_revolutions`를 함께 확인한다.
+Hz는 각각 최근 보고 구간, 지연·패킷 중앙값·wall/device 회전 평균은 최근 최대4096표본이며
+집계 범위가 다르다. `socket_drops=0`도 Windows 송신과 Docker Desktop 이전 구간의 무손실을
+보장하지 않는다. [2026-10-17 확인 결과](../../docs/records/bridge/2026-10-17-lidar-cadence-diagnostics.md)를 참고한다.

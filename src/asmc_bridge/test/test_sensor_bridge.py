@@ -3,6 +3,7 @@
 import importlib.util
 import os
 import struct
+import sys
 import unittest
 
 import numpy as np
@@ -13,6 +14,7 @@ from sensor_msgs.msg import PointField
 SCRIPT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "scripts", "morai_sensor_bridge.py")
 )
+sys.path.insert(0, os.path.join(os.path.dirname(SCRIPT), '..', 'src'))
 SPEC = importlib.util.spec_from_file_location("morai_sensor_bridge_node", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
