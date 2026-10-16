@@ -19,6 +19,7 @@
 | `timestamp_mode` | `receive` | — |
 | `publish_map_tf` | `false` | — |
 | `lidar_frame_mode` | `azimuth` | — |
+| `lidar_rotation_rate` | `15.0` | v3/GT assembly reference Hz; sensor rate is set in MORAI |
 | `cmd_ip` | `$(optenv MORAI_CMD_IP 127.0.0.1)` | — |
 | `cmd_port` | `9093` | — |
 | `competition_port` | `9798` | — |
@@ -75,7 +76,7 @@
 | `enable_lidar` | `true` | — |
 | `enable_semantic_camera` | `$(eval arg('stream_profile') == 'development')` | — |
 | `lidar_model` | `VLP-16` | — |
-| `lidar_rotation_rate` | `10.0` | — |
+| `lidar_rotation_rate` | `15.0` | — |
 | `lidar_frame_mode` | `azimuth` | — |
 | `publish_lidar_tf` | `true` | — |
 | `lidar_x` | `0.80` | — |

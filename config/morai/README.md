@@ -14,17 +14,19 @@
 
 ```bash
 ./scripts/udp_bridge.sh
-./scripts/udp_bridge.sh --streams development
+./scripts/udp_bridge.sh --gt
 ./scripts/udp_bridge.sh --transport lan2lan
 ```
 
-인자가 없는 첫 명령은 `runtime=morai_udp`, `transport=local`, `streams=competition`,
+인자가 없는 첫 명령은 `runtime=morai_udp`, `transport=local`, GT OFF,
 Ctrl target `127.0.0.1:9093`으로 실행된다. Object/Semantic/Instance는 발행하지 않으며
-두 번째 명령에서만 local 개발 oracle로 연다. sensor set이나 MORAI release를 bridge가
+`--gt`에서만 local 개발 oracle로 연다. 이전 `--streams`/`ASMC_STREAMS`는 제거했다.
+내부 `stream_profile=competition/development`는 일반/GT 입력 구분이며 MORAI 버전이 아니다.
+sensor set이나 MORAI release를 bridge가
 선택하지는 않는다. sensor set과
 release network JSON은 MORAI UI에서 불러온 것이 기준이다.
 
-두 번째 명령은 Ctrl 대상 IP와 diagnostics를 `lan2lan`으로 맞추지만 실제 LAN gate를 대신하지
+LAN2LAN 명령은 Ctrl 대상 IP와 diagnostics를 `lan2lan`으로 맞추지만 실제 LAN gate를 대신하지
 않는다. `lan2lan` network JSON은 Ctrl, Ego Vehicle Status, Competition Vehicle Status,
 CollisionData만 LAN IP를 쓰고
 Object/legacy/미확인 채널은 MORAI PC loopback에 둔다. renderer는 UDP field만 바꾸며
@@ -63,10 +65,13 @@ MolitComp, 팀 MolitComp, 26.R1 export 모두 type 778 MoraiTLServiceProvider를
 판단은 카메라 인지 결과를 사용한다. 주최 network에 있는 항목 전체를 팀 runtime 필수 입력으로
 해석하지 않는다.
 
-팀 MolitComp 직접 저장본과 주최 저장본 모두 type 787 항목을 포함하지만 참가팀 local live에서는
-UDP 9798 packet이 관측되지 않았다. 그래서 일반 `verify`는 이를 요구하지 않고, 주최 현장판을
-검사할 때만 `verify-field` 또는 `--require-competition-status`를 사용한다. JSON 항목 존재와
-runtime 발행은 별도 증거다.
+팀 MolitComp 직접 저장본과 주최 저장본 모두 type 787 항목을 포함한다. 과거 참가팀 local
+검사에서는9798 packet이 없었고, 2026-10-17에는 `#DetailEgoInfo$`·본문105B가 관측됐다.
+이는 기존 검증 decoder의 `#MoraiInfo$`·본문152B와 달라 현재 `/Competition_topic`으로
+변환하지 않는다. Local의 선택 입력에서만 관측한 envelope를1회 안내하고 diagnostics의
+`UNSUPPORTED`로 보존한다. 일반 `verify`는 이를 요구하지 않고, 주최 현장판을 검사할 때만
+`verify-field` 또는 `--require-competition-status`로 필수화한다. 필수화 또는 LAN2LAN에서
+형식 불일치를 정상으로 면제하지 않는다. JSON 항목 존재와 runtime 발행·decode 수락은 별도다.
 
 정확한 원본 inventory는 다음과 같다. `Division_TYPE` 1/2/3/4는 각각 publisher,
 subscriber, controller, service다.
@@ -100,7 +105,7 @@ Vehicle Status, Ego Ctrl Cmd, Competition Vehicle Status로 고정했다. 릴리
 | `ASMC_sensor_set_v1.json` | 340° | 10 Hz | 최초 설정·과거 재현 |
 | `ASMC_sensor_set_v2.json` | 328° | 10 Hz | 현재 회귀 기준 |
 | `ASMC_sensor_set_v3.json` | 328° | 15 Hz | 본선 설정, 실제 완성 scan 약 12 Hz 허용 |
-| `ASMC_sensor_set_GT.json` | 328° | 10 Hz | v2 + Semantic Camera 3대 + Instance LiDAR, 개발 전용 |
+| `ASMC_sensor_set_GT.json` | 328° | Intensity·Instance 모두15 Hz | 일반 센서 + Semantic Camera 3대 + Instance LiDAR, 개발 전용 |
 
 v3는 MORAI UI가 저장한 `sensorPeriod≈0.06666667`, `frequencyIndex=2`를 가진다. v2와 센서 pose,
 Camera×4, GPS/IMU, UDP `9290~9303`은 같다. export release 차이로 v3에는 일부 ROS2Native 빈
@@ -112,7 +117,12 @@ MolitComp03 local 실측은 raw 약 600 packet/s, 50 packet/revolution, 완성 s
 이는 허용된다. bridge는 azimuth 기준으로 8 Hz 오조립을 제거하며, 시뮬레이터에 없는 scan을
 복제해 15 Hz로 만들지 않는다. packet/parse error, latency·CPU와 tracking 품질은 계속 관찰한다.
 
-원본 네 파일은 UI export·provenance 기준이다. `sensors/generated/`의 v2/v3
+GT는 2026-10-17에 두 LiDAR의 `sensorPeriod≈0.06666667`·`frequencyIndex=2`만 수정했다.
+pose·포트·나머지 센서는 보존했으며 이전10Hz SHA는 bridge 계약과 Git 이력에 남긴다.
+MORAI UI에서 GT JSON을 다시 로드해야 새 주기가 적용된다. Bridge의 조립 참고값도15Hz지만
+실제 송신 주기를 원격 변경하거나 완성 scan을 복제하지 않는다.
+
+v1/v2/v3 파일은 UI export·provenance 기준이다. `sensors/generated/`의 v2/v3
 `local`/`lan2lan` 파일은 포트·pose·주기를 고정하고 UDP IP만 transport 계약으로 바꾸어
 생성한 MORAI import용이다. GT는 local 개발 전용이며 LAN2LAN 파생본을 만들지 않는다.
 v3 LAN2LAN 파일의 존재는 실제 LAN2LAN 배포 승인을 의미하지 않는다.

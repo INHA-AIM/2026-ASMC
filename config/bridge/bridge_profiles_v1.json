@@ -64,31 +64,31 @@
     "artifacts": {
       "facade_launch": {
         "path": "src/asmc_bridge/launch/bridge.launch",
-        "sha256": "49e4042230e6d37f31d1ea0d4c5c88fecf5a8182684bdac3de7db01151a41637"
+        "sha256": "ead524373a72d35400e56c7dce16dc1a1b4c3c798c7f118e9bce0aab2b8348df"
       },
       "facade_package": {
         "path": "src/asmc_bridge/package.xml",
-        "sha256": "f2a36e65654b9eb326f04d8502add3dc94d7f22367247d99880b86a0aec4eb13"
+        "sha256": "f892471e9d9da9bb3a28b45a66b62b3d8bff390b24bf0fc7c0eeae5de5a7f95f"
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "826c86dfa07b322f9a016e502fec6adc7dc487656226018a8019783a40c7a0e9"
+        "sha256": "e4ea97ff32dd622613176a745e224c3c86cc484bca4c1ff4671954ff9107cc77"
       },
       "network_launch": {
         "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
-        "sha256": "2fc9666f470234ba9528bbe97ec076f336aa9f594f6ec1aac96770222beb0d17"
+        "sha256": "7ecfec0772bd5517e973e53bc9f0efcfc98169869afa04b43b93368b94c2e23f"
       },
       "network_node": {
         "path": "src/asmc_bridge/scripts/morai_udp_bridge.py",
-        "sha256": "dad78a3c0d6e810d655d48ebe1aeeb78e9f454322455e283e8bcd20c74a06181"
+        "sha256": "a689089ccf9065a6be3b4cc69264d05783d1e8f7ac1a9e69994093eb968404ca"
       },
       "sensor_launch": {
         "path": "src/asmc_bridge/launch/morai_sensor_bridge.launch",
-        "sha256": "75cb79410bfd0b2621a71d55a703cdaa045249193a3301a6909d567336a9ee0f"
+        "sha256": "4835fe582900ec35b7309dc0a2a8f1544a9408b858adb157e9c07ee5ea2fa39c"
       },
       "sensor_node": {
         "path": "src/asmc_bridge/scripts/morai_sensor_bridge.py",
-        "sha256": "f1ac1522a04f9f07a1569844768de3e73f8f045ab260822986b290227a5ea321"
+        "sha256": "3beb773c08d969db64537b2ebfd9105fa0b71bfe87c0a95876f0ed28898920fd"
       },
       "docker_entrypoint": {
         "path": "scripts/docker_ros_up.sh",
@@ -113,6 +113,18 @@
       "vehicle_state_node": {
         "path": "src/asmc_bridge/src/vehicle_state/vehicle_state_node.cpp",
         "sha256": "1ee1e2e4693e0486b3f98f2299896942a266fe7a743f6b6d531bee1378f75f14"
+      },
+      "diagnostics_config": {
+        "path": "src/asmc_bridge/config/diagnostics.yaml",
+        "sha256": "80e4821c9a3a9da7c60e98ebc3f83bb3b9665fc4465e5ce8114283c7ca2eef16"
+      },
+      "telemetry_module": {
+        "path": "src/asmc_bridge/src/asmc_bridge/telemetry.py",
+        "sha256": "e148d13086ceaa63291c045039a43ec0e97ff8ac008102294fc50df80093c527"
+      },
+      "python_setup": {
+        "path": "src/asmc_bridge/setup.py",
+        "sha256": "748f3d6857fb828c2c19cff0c1ff5e064e7af155304efa38b11567dafc63654e"
       }
     },
     "subscribed_topics": {
@@ -347,9 +359,10 @@
     },
     "GT": {
       "path": "config/morai/sensors/ASMC_sensor_set_GT.json",
-      "sha256": "ef278764593c28db4e2cf29a5e657ac530822fbdad38ddf8c7d7015d2886d801",
+      "sha256": "80ffc6bc17b3bdafd8f2ce920593555c7217947a353ee732810b723fc1a48396",
+      "previous_10hz_sha256": "ef278764593c28db4e2cf29a5e657ac530822fbdad38ddf8c7d7015d2886d801",
       "role": "development_ground_truth_only",
-      "lidar_hz": 10,
+      "lidar_hz": 15,
       "live_acceptance": "development_only"
     }
   },
@@ -410,5 +423,31 @@
       "errors": 0,
       "failures": 0
     }
+  },
+  "optional_local_competition_variant": {
+    "header_ascii": "#DetailEgoInfo$",
+    "payload_bytes": 105,
+    "datagram_bytes": 138,
+    "transport": "local",
+    "requires_optional_input": true,
+    "decoded": false,
+    "diagnostic_health": "UNSUPPORTED",
+    "counts_as_fault": false
+  },
+  "diagnostics_policy": {
+    "clock": "monotonic",
+    "diagnostics_period_sec": 1.0,
+    "console_period_sec": 5.0,
+    "statistics_window": "rolling_last_4096_samples",
+    "stale_after_sec": {
+      "default": 0.5,
+      "gps": 1.0,
+      "imu": 0.3
+    },
+    "console_blocks_per_period": 2,
+    "console_format": "multiline_per_stream_hz",
+    "console_interval_display": false,
+    "lidar_detail_destination": "/morai_sensor_bridge/diagnostics",
+    "rate_is_drop_count": false
   }
 }

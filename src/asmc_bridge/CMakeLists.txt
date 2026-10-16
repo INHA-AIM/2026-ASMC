@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
+catkin_python_setup()
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES asmc_vehicle_state_adapter
@@ -47,9 +49,14 @@ target_link_libraries(ego_vehicle_state_dev_node
   asmc_vehicle_state_adapter ${catkin_LIBRARIES})
 
 if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  catkin_install_python(PROGRAMS test/check_reporting_ros.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  add_rostest(test/reporting.test)
   catkin_add_nosetests(test/test_udp_bridge.py)
   catkin_add_nosetests(test/test_sensor_bridge.py)
   catkin_add_nosetests(test/test_topic_verifier.py)
+  catkin_add_nosetests(test/test_telemetry.py)
 
   add_executable(vehicle_state_adapter_test
     test/vehicle_state_adapter_test.cpp)

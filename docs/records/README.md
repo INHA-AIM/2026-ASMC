@@ -8,7 +8,7 @@
 |---|---|---|
 | 카메라 | [상시 추론 기본값](camera/2026-10-16-continuous-inference.md), [family 공급·사용자 확인](camera/camera-family-supply-optimization.md), [TwinLite TRT](camera/camera-twinlite-tensorrt.md), [객체 배포 비교](../../config/baselines/evidence/camera_mission16_deployment_v1/comparison.json) | [camera](camera/) |
 | LiDAR | [좌표/시간 경계](lidar/lidar-camera-frame-boundaries.md), [연속 회귀](lidar/lidar-continuous-regression.md) | [lidar](lidar/) |
-| Bridge | [P3-G local closeout](bridge/bridge-p3g-local-closeout-v1.md) | [bridge](bridge/) |
+| Bridge | [콘솔 줄바꿈·센서별 Hz](bridge/2026-10-17-bridge-console-layout.md), [로그·선택 형식 구분](bridge/2026-10-17-bridge-log-readability.md), [LiDAR 회전율·진단 정리](bridge/2026-10-17-lidar-cadence-diagnostics.md), [P3-G local closeout](bridge/bridge-p3g-local-closeout-v1.md) | [bridge](bridge/) |
 | HD Map | [compact 제품](hd-map/kcity2025-compact-drivable-v1.md), [입력 감사](hd-map/kcity2025-drivable-input-v1.md) | [hd-map](hd-map/) |
 | 저장소 | [구조 이전](repository/documentation-restructure-v2.md), [현행화·소스 검토](repository/2026-10-16-documentation-refresh.md) | [repository](repository/) |
 | 종료된 설계 | [과거 실행/연구 목록](archive/README.md) | [archive](archive/) |

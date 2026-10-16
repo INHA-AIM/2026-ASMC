@@ -161,7 +161,7 @@ source devel/setup.bash
 전에는 결정할 수 없고 WSL mirrored/NAT·다중 NIC에서 오판할 수 있어 제공하지 않는다.
 
 기본 명령은 `local + competition`이다. Object/Semantic/Instance가 필요한 개발 실험만
-`./scripts/udp_bridge.sh --streams development`로 실행한다. development와 lan2lan을 결합하면
+`./scripts/udp_bridge.sh --gt`로 실행한다. development와 lan2lan을 결합하면
 스크립트와 두 bridge node가 모두 기동을 거부한다.
 
 다른 터미널에서:
@@ -185,7 +185,7 @@ rostopic echo /Ego_topic -n1
 부재를 확인한다. 참가팀 MolitComp03 local은 JSON에 type 787 항목이 있어도 실제 packet을
 내보내지 않았으므로 `/Competition_topic`은 기본 필수가 아니다. `verify-field`만 type 787을
 추가로 요구한다. release 인자는 bridge 동작이나 필수 목록을 바꾸지 않는 provenance label이다.
-GT 실험 재현에서만 `--streams development`와 `verify-gt 20 molitcomp03`을 함께 사용한다.
+GT 실험 재현에서만 `--gt`와 `verify-gt 20 molitcomp03`을 함께 사용한다.
 
 LiDAR 실제 도착률만 별도로 검사할 때는 다음처럼 실행한다. 이 exact-arrival 진단은 v3의
 설정·소비 15 Hz 요구와 다르며, 현재 MolitComp03에서는 약 12 Hz를 넣어 사용한다.
@@ -209,9 +209,14 @@ SIM 송신 cadence, Windows ingress, UDP, bridge와 ROS scheduling을 단일 rat
 2. `docker_ros_up.sh status`가 `mode=host`, `published={}`인지 확인한다.
 3. MORAI LiDAR Connect와 `127.0.0.1:9299`를 확인한다.
 4. `ss -lunp`로 다른 9299 bind가 없는지 확인한다.
-5. bridge foreground의 `rx ... lidar=...`와 diagnostics를 확인한다.
-6. diagnostics에서 `raw_packet_hz≈packet/frame×frame Hz`인지 확인한다. v3 local P3-E 표본은
-   약 `600 packet/s`, `50 packet/frame`, `12 Hz`였고 현재 요구에서 허용된다.
+5. bridge foreground의 `[SENSORS]` 요약 블록에서 `lidar=...Hz`를 확인한다. 콘솔은5초, diagnostics는1초 주기다.
+6. `rotation_hz`와 PointCloud의 `interval_hz`를 비교한다. 두 값 모두 약12Hz이고
+   `socket_drops=0`이면 ROS 변환 이전의 입력 cadence를 먼저 조사한다. `raw_packet_hz`는
+   최근 구간, `packets_per_frame_median`은 최대4096프레임이므로 두 값을 같은 창으로 단정하지 않는다.
+   v3 local P3-E 표본은 약 `600 packet/s`, `50 packet/frame`, `12 Hz`였다.
+7. 최초 미수신 `WAITING`, 수신 중단 `STALE`, 잘못된 입력 `INVALID`, 수신기 실패 `ERROR`를
+   구분한다. Local 선택 Competition의 알려진 형식은1회 INFO와 `UNSUPPORTED` 진단으로
+   분리하며 정상 decode로 세지 않는다. 현재 설정과 로그 규칙은 [bridge README](../../src/asmc_bridge/README.md)를 따른다.
 
 ### ROS master 충돌
 

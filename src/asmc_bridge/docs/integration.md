@@ -178,9 +178,27 @@ rostopic echo /morai_sensor_bridge/diagnostics -n1
 rostopic echo /vehicle/state -n1
 ```
 
-diagnostics의 `interval_hz`, `last_message_age_sec`, parse error, processing/assembly p95와 timestamp
-fallback을 함께 본다. LiDAR는 `raw_packet_hz`와 `packets_per_frame_median`도 본다. topic rate 하나만으로 Windows ingress, UDP loss, decoder와 ROS scheduling
-중 어디서 손실됐는지 단정하지 않는다.
+콘솔은 Network/Sensor 각각5초마다 줄바꿈한 요약 블록, diagnostics는1초 주기다. monotonic clock으로
+주기를 관리하며 [`diagnostics.yaml`](../config/diagnostics.yaml)에서 조절한다.
+diagnostics의 `interval_hz`, `last_message_age_sec`, `health`, parse/header error,
+processing/assembly/output-gap p95와 timestamp fallback을 함께 본다. 수신 중단은 누적 수가
+남아 있어도 `STALE`이며 socket/thread 실패는 `ERROR`다. 선택 입력의 최초 미수신은 `IDLE`이지만
+알 수 없거나 손상된 헤더를 보내면 `INVALID`로 구분한다. 관측한 local 선택 입력
+`#DetailEgoInfo$`(105B body·138B datagram·정상CRLF)는 `UNSUPPORTED`로 별도 집계하고
+1회 INFO만 남긴다. `data_available=false`이며 decoder로 전달하지 않는다.
+필수 gate 또는 LAN2LAN에는 이 예외를 적용하지 않는다.
+콘솔 제목은 `[NETWORK]`, `[SENSORS]`이며 주기를 표시하지 않는다.
+`RX`는 MORAI에서 수신, `TX`는 MORAI로 송신이다. 센서는 `cam1=19.4Hz`처럼
+각 이름과 Hz를 표시하고, RGB / GPS·IMU·LiDAR / GT semantic을 줄별로 나눈다.
+`err +N`, `drop +N`은 최근5초 증가량이다. 1초 diagnostics 발행은 매초 오류 로그를
+출력한다는 뜻이 아니다. 상태 전환 경고와 반복 파싱·송신 오류의5초 throttle을 유지한다.
+K-City 링크의 전체 ID는 Network diagnostics의 `last_link_id`에 보존한다.
+LiDAR는 `raw_packet_hz`, `rotation_hz`(최근 구간의 방위각 경계),
+`wall_rotation_hz`/`device_rotation_hz`(최근 최대4096회전 평균),
+`packets_per_frame_median`, `socket_drops`, `discarded_revolutions`도 본다.
+표본은 잠금 안에서 복사하고 집계·ROS 발행은 잠금 밖에서 한다. 통계 예외는 다음 주기에
+재시도하며 `reporter_failures`로 남는다. Topic rate 하나만으로 Windows ingress, UDP loss,
+decoder와 ROS scheduling 중 어디서 손실됐는지 단정하지 않는다.
 
 ## 6. build와 회귀 검사
 

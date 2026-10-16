@@ -6,6 +6,7 @@
   <arg name="timestamp_mode" default="receive"/>
   <arg name="publish_map_tf" default="false"/>
   <arg name="lidar_frame_mode" default="azimuth"/>
+  <arg name="lidar_rotation_rate" default="15.0" doc="v3/GT assembly reference Hz; sensor rate is set in MORAI"/>
   <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP 127.0.0.1)"/>
   <arg name="cmd_port" default="9093"/>
   <arg name="competition_port" default="9798"/>
@@ -32,6 +33,7 @@
     <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
     <arg name="publish_map_tf" value="$(arg publish_map_tf)"/>
     <arg name="lidar_frame_mode" value="$(arg lidar_frame_mode)"/>
+    <arg name="lidar_rotation_rate" value="$(arg lidar_rotation_rate)"/>
   </include>
 
   <include if="$(arg enable_vehicle_state)"

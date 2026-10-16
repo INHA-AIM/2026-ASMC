@@ -1,0 +1,14 @@
+<launch>
+  <!-- A paused ROS clock must not stop receive-health reporting. -->
+  <param name="use_sim_time" value="true"/>
+  <node pkg="asmc_bridge" type="morai_sensor_bridge.py" name="morai_sensor_bridge" output="screen">
+    <rosparam command="load" file="$(find asmc_bridge)/config/diagnostics.yaml"/>
+    <param name="enable_lidar" value="false"/>
+    <param name="enable_gps" value="false"/>
+    <param name="enable_imu" value="false"/>
+    <rosparam param="cameras">
+      - {name: cam1, port: 39194, topic: /bridge_test/image/compressed, frame: camera_test}
+    </rosparam>
+  </node>
+  <test test-name="bridge_reporting_ros" pkg="asmc_bridge" type="check_reporting_ros.py" time-limit="25"/>
+</launch>

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
+import os
+import json
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -37,6 +40,54 @@ class BridgeProfileContractTest(unittest.TestCase):
         result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
         self.assertAlmostEqual(0.1, result["sensor_sets"]["v2"]["lidar_period_s"])
         self.assertAlmostEqual(1.0 / 15.0, result["sensor_sets"]["v3"]["lidar_period_s"])
+
+    def test_gt_updates_both_lidars_and_preserves_sensor_identity(self):
+        result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
+        self.assertEqual([2, 2], result['sensor_sets']['GT']['lidar_frequency_indices'])
+        for period in result['sensor_sets']['GT']['lidar_periods_s']:
+            self.assertAlmostEqual(1.0 / 15.0, period)
+        sensors = json.loads((REPO_ROOT / 'config/morai/sensors/ASMC_sensor_set_GT.json').read_text())
+        self.assertEqual([5, 11], [row['m_SensorUniqueID'] for row in sensors['Lidar3DList']])
+        self.assertEqual([9299, 9311], [row['lc']['udpConfig']['destinationPort'] for row in sensors['Lidar3DList']])
+
+
+class BridgeCommandLineTest(unittest.TestCase):
+    def parse(self, *args, extra_env=None):
+        path = REPO_ROOT / 'scripts/udp_bridge.sh'
+        # Exercise the actual parser before any ROS sourcing, port binding, or
+        # model execution. No parser implementation is duplicated in the test.
+        prefix = path.read_text().split('NETWORK_PRESET_26R1=', 1)[0]
+        report = '\nprintf "%s\\n" "$TRANSPORT_PROFILE" "$STREAM_PROFILE" "$REQUIRE_COMPETITION_STATUS" "${LAUNCH_ARGS[@]}"\n'
+        env = dict(os.environ, ASMC=str(REPO_ROOT))
+        for key in ('ASMC_TRANSPORT', 'ASMC_STREAMS'):
+            env.pop(key, None)
+        env.update(extra_env or {})
+        return subprocess.run(['bash', '-c', prefix + report, str(path), *args],
+                              env=env, capture_output=True, text=True, timeout=5)
+
+    def test_default_and_gt_keep_timestamp_and_overrides_explicit(self):
+        default = self.parse()
+        self.assertEqual(default.returncode, 0, default.stderr)
+        self.assertEqual(default.stdout.splitlines()[:3], ['local', 'competition', 'false'])
+        gt = self.parse('--gt', 'timestamp_mode:=source', 'cmd_port:=9093')
+        self.assertEqual(gt.returncode, 0, gt.stderr)
+        self.assertEqual(gt.stdout.splitlines(), ['local', 'development', 'false',
+                         'timestamp_mode:=source', 'cmd_port:=9093'])
+
+    def test_transport_and_field_gate_remain_independent_of_gt(self):
+        field = self.parse('--transport', 'lan2lan', '--require-competition-status')
+        self.assertEqual(field.returncode, 0, field.stderr)
+        self.assertEqual(field.stdout.splitlines()[:3], ['lan2lan', 'competition', 'true'])
+        for args in (('--gt', '--transport', 'lan2lan'), ('--gt', '--require-competition-status')):
+            result = self.parse(*args)
+            self.assertEqual(result.returncode, 2, args)
+
+    def test_obsolete_or_unknown_selectors_fail_before_ros_startup(self):
+        for args in (('--streams', 'development'), ('--streams=competition',),
+                     ('stream_profile:=development',), ('--gt=false',), ('--unknown',)):
+            result = self.parse(*args)
+            self.assertEqual(result.returncode, 2, args)
+        self.assertEqual(self.parse(extra_env={'ASMC_STREAMS': 'development'}).returncode, 2)
 
 
 if __name__ == "__main__":

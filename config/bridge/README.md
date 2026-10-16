@@ -30,6 +30,9 @@ Network/Sensor component와 VehicleState를 직접 조합하도록 단순화했�
 - Competition Vehicle Status는 MolitComp03의 `787 / 9797→9798` 항목이다. 참가팀 local
   검증에서는 선택 사항이며 decoder와 topic은 그대로 연다. 주최 현장 수락에서만
   `--require-competition-status`로 필수화하며 live packet gate는 아직 남아 있다.
+  Local 선택 입력의 관측된 `#DetailEgoInfo$`·105B body는 정상 envelope일 때만1회 INFO와
+  `UNSUPPORTED` 진단으로 분리한다. 정상 decode/발행으로 세지 않으며, 미지·손상 형식과 필수
+  gate/LAN2LAN의 불일치는 계속 오류다.
 - `258 / 7603→7502`는 live `#TrafficLight$`인 simulator oracle이며 Competition Vehicle
   Status로 해석하거나 canonical bridge에서 소비하지 않는다.
 - type 258과 GetTrafficLight query는 별개다. 조사한 두 release와 주최 export에는
@@ -37,7 +40,10 @@ Network/Sensor component와 VehicleState를 직접 조합하도록 단순화했�
 - v3는 UI 저장값과 손재호 코드의 소비 loop가 15 Hz다. local raw UDP 완성 scan 약 12 Hz는
   요구상 허용하며, bridge가 중복 cloud를 만들어 15 Hz로 부풀리지 않는다.
 - 기본 `competition`은 Object/Semantic/Instance publisher를 생성하지 않는다. 이 입력은
-  local `development`에서만 활성화하며 LAN2LAN과의 결합은 거부한다.
+  `./scripts/udp_bridge.sh --gt`에서만 추가한다. 내부 이름은 `development`를 유지하며
+  LAN2LAN과의 결합은 거부한다. 이전 `--streams`/`ASMC_STREAMS`는 제거했다.
+- GT 센서셋은 Intensity·Instance LiDAR 모두15Hz다. 이전10Hz SHA는 계약에 보존하며
+  현재 파일의 주기·frequencyIndex 외 설정은 바꾸지 않았다. MORAI UI 재로드 후 적용된다.
 - `sensors/generated/` v2/v3 파생본은 UDP IP만 transport에 맞게 바꾸며 GT LAN2LAN은
   생성하지 않는다.
 

@@ -6,7 +6,7 @@
 # ROS topics. Release selection belongs to the JSON imported in the MORAI UI,
 # not to this runtime command.
 # The default competition stream profile opens only the deployment allowlist.
-# Object/Semantic/Instance inputs require explicit local development mode.
+# Object/Semantic/Instance inputs require the explicit local --gt option.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
@@ -15,26 +15,26 @@ source "$SCRIPT_DIR/asmc_env.sh"
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan] [--streams competition|development] [--require-competition-status] [roslaunch overrides]
+Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan] [--gt] [--require-competition-status] [roslaunch overrides]
 
 Transport profiles:
   local   MORAI and Autonav bridge on one workstation via 127.0.0.1 (default)
   lan2lan MORAI PC 192.168.0.1 and Autonav PC 192.168.0.10
 
-Stream profiles:
-  competition  Ego/Competition/Collision + RGB/LiDAR/GPS/IMU (default)
-  development  adds Object/Semantic/Instance; local transport only
+Inputs:
+  default  Ego/Competition/Collision + RGB/LiDAR/GPS/IMU
+  --gt     adds Object/Semantic/Instance LiDAR; local transport only
 
 The script does not change MORAI UI settings. Import the generated sensor JSON
-matching the selected transport. v3 is the 15 Hz deployment setting; complete
-scans near 12 Hz are accepted.
+matching the selected transport. v3 configures Intensity LiDAR at 15 Hz; GT
+configures Intensity and Instance LiDAR at 15 Hz. Actual scan arrival can be lower.
 
 Competition Vehicle Status is optional in the participant simulator. Use
 --require-competition-status only for the organizer/field acceptance gate.
 
 Examples:
   ./scripts/udp_bridge.sh
-  ./scripts/udp_bridge.sh --streams development
+  ./scripts/udp_bridge.sh --gt
   ./scripts/udp_bridge.sh --transport lan2lan
   ./scripts/udp_bridge.sh --transport lan2lan --require-competition-status
   ./scripts/udp_bridge.sh timestamp_mode:=source
@@ -43,7 +43,7 @@ EOF
 
 RUNTIME_PROFILE="morai_udp"
 TRANSPORT="${ASMC_TRANSPORT:-local}"
-STREAMS="${ASMC_STREAMS:-competition}"
+GT=false
 REQUIRE_COMPETITION_STATUS=false
 LAUNCH_ARGS=()
 while [ "$#" -gt 0 ]; do
@@ -60,17 +60,13 @@ while [ "$#" -gt 0 ]; do
       TRANSPORT="${1#*=}"
       shift
       ;;
-    --streams)
-      if [ "$#" -lt 2 ]; then
-        echo "[udp_bridge] ERROR: --streams requires a value." >&2
-        exit 2
-      fi
-      STREAMS="$2"
-      shift 2
-      ;;
-    --streams=*)
-      STREAMS="${1#*=}"
+    --gt)
+      GT=true
       shift
+      ;;
+    --streams|--streams=*)
+      echo "[udp_bridge] ERROR: --streams was replaced by --gt; omit --gt for normal inputs." >&2
+      exit 2
       ;;
     --require-competition-status)
       REQUIRE_COMPETITION_STATUS=true
@@ -94,7 +90,11 @@ while [ "$#" -gt 0 ]; do
       exit 2
       ;;
     stream_profile:=*)
-      echo "[udp_bridge] ERROR: use --streams instead of stream_profile." >&2
+      echo "[udp_bridge] ERROR: use --gt instead of stream_profile; omit it for normal inputs." >&2
+      exit 2
+      ;;
+    --*)
+      echo "[udp_bridge] ERROR: unknown option '$1'; see --help." >&2
       exit 2
       ;;
     *)
@@ -103,6 +103,11 @@ while [ "$#" -gt 0 ]; do
       ;;
   esac
 done
+
+if [ -n "${ASMC_STREAMS:-}" ]; then
+  echo "[udp_bridge] ERROR: ASMC_STREAMS was removed; unset it and use --gt when needed." >&2
+  exit 2
+fi
 
 case "${TRANSPORT,,}" in
   local)
@@ -119,37 +124,31 @@ case "${TRANSPORT,,}" in
     exit 2
     ;;
 esac
-case "${STREAMS,,}" in
-  competition)
-    STREAM_PROFILE="competition"
-    ;;
-  development)
-    STREAM_PROFILE="development"
-    if [ "$TRANSPORT_PROFILE" != "local" ]; then
-      echo "[udp_bridge] ERROR: development streams are local-only." >&2
-      echo "  Use --transport local or switch to --streams competition." >&2
-      exit 2
-    fi
-    ;;
-  *)
-    echo "[udp_bridge] ERROR: unknown stream profile '$STREAMS'." >&2
-    usage >&2
+# Keep the node-level profiles stable; the public CLI only exposes GT on/off.
+STREAM_PROFILE="competition"
+if [ "$GT" = true ]; then
+  STREAM_PROFILE="development"
+  if [ "$TRANSPORT_PROFILE" != "local" ]; then
+    echo "[udp_bridge] ERROR: --gt is local-only; use --transport local or omit --gt." >&2
     exit 2
-    ;;
-esac
-if [ "$REQUIRE_COMPETITION_STATUS" = true ] && [ "$STREAM_PROFILE" != "competition" ]; then
-  echo "[udp_bridge] ERROR: Competition Vehicle Status gate requires competition streams." >&2
+  fi
+fi
+if [ "$REQUIRE_COMPETITION_STATUS" = true ] && [ "$GT" = true ]; then
+  echo "[udp_bridge] ERROR: the organizer/field status gate cannot be combined with --gt." >&2
   exit 2
 fi
 NETWORK_PRESET_26R1="config/morai/network/generated/ASMC_network_set_26r1_${TRANSPORT_PROFILE}.json"
 NETWORK_PRESET_COMP="config/morai/network/generated/ASMC_network_set_molitcomp03_${TRANSPORT_PROFILE}.json"
 SENSOR_PRESET_V2="config/morai/sensors/generated/ASMC_sensor_set_v2_${TRANSPORT_PROFILE}.json"
 SENSOR_PRESET_V3="config/morai/sensors/generated/ASMC_sensor_set_v3_${TRANSPORT_PROFILE}.json"
+SENSOR_PRESET_GT="config/morai/sensors/ASMC_sensor_set_GT.json"
 
 # Parse and shift our CLI arguments before sourcing catkin setup files. Catkin
 # setup forwards the caller's positional parameters to _setup_util.py.
 cd "$ASMC_WS_ROOT"
-for preset in "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP" "$SENSOR_PRESET_V2" "$SENSOR_PRESET_V3"; do
+PRESETS=( "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP" "$SENSOR_PRESET_V2" "$SENSOR_PRESET_V3" )
+if [ "$GT" = true ]; then PRESETS+=( "$SENSOR_PRESET_GT" ); fi
+for preset in "${PRESETS[@]}"; do
   if [ ! -f "$ASMC_WS_ROOT/$preset" ]; then
     echo "[udp_bridge] ERROR: generated MORAI preset is missing: $preset" >&2
     echo "  python3 tools/bridge/render_morai_network_profiles.py --write" >&2
@@ -195,13 +194,18 @@ echo "  ROS_MASTER_URI : $ROS_MASTER_URI"
 echo "  Launch         : asmc_bridge/bridge.launch"
 echo "  Runtime        : ${RUNTIME_PROFILE} (26r1 and competition shared)"
 echo "  Transport      : ${TRANSPORT_PROFILE}"
-echo "  Streams        : ${STREAM_PROFILE}"
+echo "  GT inputs      : ${GT} (internal stream profile: ${STREAM_PROFILE})"
 echo "  MORAI preset   : import ONE file matching the installed release"
 echo "                   26r1       -> ${NETWORK_PRESET_26R1}"
 echo "                   competition -> ${NETWORK_PRESET_COMP}"
-echo "  Sensor preset  : v3 deployment -> ${SENSOR_PRESET_V3}"
-echo "                        configured 15 Hz; complete scans near 12 Hz are accepted"
-echo "                   v2 regression -> ${SENSOR_PRESET_V2}"
+if [ "$GT" = true ]; then
+  echo "  Sensor preset  : GT development -> ${SENSOR_PRESET_GT}"
+  echo "                   Intensity + Instance LiDAR configured 15 Hz; reload in MORAI UI"
+else
+  echo "  Sensor preset  : v3 deployment -> ${SENSOR_PRESET_V3}"
+  echo "                   configured 15 Hz; actual complete scans may arrive slower"
+  echo "                   v2 regression -> ${SENSOR_PRESET_V2} (lidar_rotation_rate:=10.0)"
+fi
 # Receive sockets bind the same ports for both transports. Only the outgoing
 # Ctrl destination changes, so derive it from the explicit transport instead
 # of a container-wide environment value that could silently keep LAN2LAN on

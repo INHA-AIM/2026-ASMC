@@ -1,0 +1,176 @@
+{
+  "date": "2026-10-17",
+  "base_commit": "6e1209a1c966bd889dc4e8ab7fd762a42eaab47c",
+  "console": {
+    "period_sec": 5.0,
+    "interval_in_title": false,
+    "layout": "multiline_per_stream_hz",
+    "events_per_period": 2
+  },
+  "diagnostics_period_sec": 1.0,
+  "runs": {
+    "multiline-gt": {
+      "duration_sec": 20.05278170098609,
+      "report_errors": [],
+      "diagnostics": {
+        "/morai_udp_bridge/diagnostics": {
+          "sample_count": 20,
+          "hz": 1.0000063735144935,
+          "interval_median_sec": 0.9999997859995347,
+          "interval_min_sec": 0.9989421089994721,
+          "interval_max_sec": 1.000500160997035
+        },
+        "/morai_sensor_bridge/diagnostics": {
+          "sample_count": 20,
+          "hz": 0.9999132930978116,
+          "interval_median_sec": 0.9998232409998309,
+          "interval_min_sec": 0.9994028710061684,
+          "interval_max_sec": 1.0020849120046478
+        }
+      },
+      "console": {
+        "sensors": {
+          "sample_count": 4,
+          "hz": 0.19997487558321247,
+          "interval_median_sec": 5.000715809001122,
+          "interval_min_sec": 5.000067048007622,
+          "interval_max_sec": 5.00110171099368,
+          "last_block": "[SENSORS]\n  cam1=19.0Hz  cam2=19.0Hz  cam3=19.0Hz  cam4=10.0Hz\n  gps=5.0Hz  imu=33.8Hz  lidar=12.2Hz  lidar_instance=12.4Hz\n  sem_front=19.0Hz  sem_left=19.0Hz  sem_right=19.0Hz\n  state=OK  | err +0  | drop +0"
+        },
+        "network": {
+          "sample_count": 4,
+          "hz": 0.1999985667568275,
+          "interval_median_sec": 4.999419648011099,
+          "interval_min_sec": 4.999324783988413,
+          "interval_max_sec": 5.00136306200875,
+          "last_block": "[NETWORK]\n  RX ego=38.0Hz  col=38.0Hz  obj=37.6Hz\n  TX cmd=idle  | link=A126\n  state=OK  | err +0  | drop +0"
+        }
+      },
+      "clouds": {
+        "/velodyne_points_instance": {
+          "sample_count": 241,
+          "hz": 12.018024872262917,
+          "interval_median_sec": 0.07313652599987108,
+          "interval_min_sec": 0.06596117300796323,
+          "interval_max_sec": 0.10930219700094312,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        },
+        "/velodyne_points": {
+          "sample_count": 241,
+          "hz": 12.018851778741245,
+          "interval_median_sec": 0.07294676599849481,
+          "interval_min_sec": 0.0669392450072337,
+          "interval_max_sec": 0.10949880701082293,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        }
+      },
+      "optional_competition_info_count": 1,
+      "competition": {
+        "health": "UNSUPPORTED",
+        "messages": "0",
+        "header_errors": "0",
+        "parse_errors": "0",
+        "unsupported_packets": "811",
+        "data_available": "false"
+      }
+    },
+    "multiline-normal": {
+      "duration_sec": 20.05231362399354,
+      "report_errors": [],
+      "diagnostics": {
+        "/morai_udp_bridge/diagnostics": {
+          "sample_count": 20,
+          "hz": 0.9999754008681592,
+          "interval_median_sec": 0.9999815140035935,
+          "interval_min_sec": 0.9994931330002146,
+          "interval_max_sec": 1.0005715129955206
+        },
+        "/morai_sensor_bridge/diagnostics": {
+          "sample_count": 20,
+          "hz": 0.9999791866963524,
+          "interval_median_sec": 1.0001609079918126,
+          "interval_min_sec": 0.9987698199984152,
+          "interval_max_sec": 1.0007434980070684
+        }
+      },
+      "console": {
+        "sensors": {
+          "sample_count": 4,
+          "hz": 0.1999969921785218,
+          "interval_median_sec": 5.00023630700889,
+          "interval_min_sec": 4.999404135000077,
+          "interval_max_sec": 5.00058514799457,
+          "last_block": "[SENSORS]\n  cam1=18.0Hz  cam2=18.0Hz  cam3=18.0Hz  cam4=10.0Hz\n  gps=5.0Hz  imu=33.0Hz  lidar=12.0Hz\n  state=OK  | err +0  | drop +0"
+        },
+        "network": {
+          "sample_count": 4,
+          "hz": 0.1999991267371713,
+          "interval_median_sec": 5.000312465999741,
+          "interval_min_sec": 4.999128490992007,
+          "interval_max_sec": 5.000624538006377,
+          "last_block": "[NETWORK]\n  RX ego=39.6Hz  col=40.0Hz\n  TX cmd=idle  | link=A126\n  state=OK  | err +0  | drop +0"
+        }
+      },
+      "clouds": {
+        "/velodyne_points": {
+          "sample_count": 238,
+          "hz": 11.88579008759417,
+          "interval_median_sec": 0.07222586999705527,
+          "interval_min_sec": 0.06619324200437404,
+          "interval_max_sec": 0.13206337700830773,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        }
+      },
+      "optional_competition_info_count": 1,
+      "competition": {
+        "health": "UNSUPPORTED",
+        "messages": "0",
+        "header_errors": "0",
+        "parse_errors": "0",
+        "unsupported_packets": "828",
+        "data_available": "false"
+      }
+    }
+  },
+  "artifacts": {
+    "bridge-reporting-multiline-gt.json": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-reporting-multiline-gt.json",
+      "sha256": "85a7a90ab3c5f8a7377c6903512b916ec32ede9b4b2d447d64700e2a0c74e8cb",
+      "bytes": 779328
+    },
+    "bridge-multiline-gt.log": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-multiline-gt.log",
+      "sha256": "2885fe95bfd8fcdd0e41fbe33e2fa170a5b08789332a8042659b5c4758648865",
+      "bytes": 7413
+    },
+    "bridge-reporting-multiline-normal.json": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-reporting-multiline-normal.json",
+      "sha256": "f0b0e7d72d1e983d37a19626405b228a0d52f47eae8c0f1840c15ba641ccd1ce",
+      "bytes": 533995
+    },
+    "bridge-multiline-normal.log": {
+      "path": "data/runtime/bridge-logs-20261017/bridge-multiline-normal.log",
+      "sha256": "b6741be9776704d10cac8385bf05b7d6a6192272861e665b66740dbfa490f014",
+      "bytes": 6282
+    }
+  },
+  "source_sha256": {
+    "src/asmc_bridge/src/asmc_bridge/telemetry.py": "e148d13086ceaa63291c045039a43ec0e97ff8ac008102294fc50df80093c527",
+    "src/asmc_bridge/test/test_telemetry.py": "a50c260f76eef041ced7c135fc6e8ba0bc71ecda019c7511ec13708ca9246041",
+    "tools/bridge/measure_bridge_reporting.py": "cbd3aae58b8bba8bbd37e2bacf58a0dadc556def00d6c465b95554d5b588e249"
+  },
+  "checks": {
+    "python_tests": 34,
+    "docs_cli_profile_tests": 23,
+    "ros_clock_health_regression": "prior PR #93 check reused; no timing or health change"
+  },
+  "scope": {
+    "merged": false,
+    "control_remapped": true,
+    "planner_raw_forwarding_disabled": true,
+    "simulator_settings_changed": false
+  }
+}

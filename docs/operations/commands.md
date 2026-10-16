@@ -182,7 +182,7 @@ source devel/setup.bash
 | option | 기본 | 허용값·의미 |
 |---|---:|---|
 | `--transport` | `local` | `local`, `lan2lan`; Ctrl 목적지 IP를 결정 |
-| `--streams` | `competition` | `competition`, `development`; development는 local 전용 |
+| `--gt` | OFF | 일반 입력에 Object·Semantic·Instance LiDAR 추가; local 전용 |
 | `--require-competition-status` | false | 주최 현장판 type 787을 필수 gate로 전환 |
 | `-h`, `--help` | — | 도움말 |
 
@@ -192,10 +192,11 @@ source devel/setup.bash
 |---|---:|---|
 | `runtime_profile` | `morai_udp` | 두 MORAI release가 공유하는 고정 runtime; wrapper override 금지 |
 | `transport_profile` | `local` | 직접 launch용 `local`, `lan2lan`; wrapper에서는 `--transport` 사용 |
-| `stream_profile` | `competition` | 직접 launch용 `competition`, `development`; wrapper에서는 `--streams` 사용 |
+| `stream_profile` | `competition` | 내부 `competition`, `development`; wrapper에서는 `--gt`로 GT만 추가 |
 | `timestamp_mode` | `receive` | `receive` 또는 source timestamp 실험용 `source` |
 | `publish_map_tf` | `false` | raw GPS/IMU `map→base_link` TF; 권위 localization과 동시 금지 |
 | `lidar_frame_mode` | `azimuth` | VLP16 frame assembly 모드; 현행은 `azimuth` |
+| `lidar_rotation_rate` | `15.0` | v3/GT 조립 참고값. 실제 송신 주기는 MORAI 센서셋 설정; v2 비교는10.0 |
 | `cmd_ip` | transport에서 결정 | local `127.0.0.1`, LAN2LAN `192.168.0.1` |
 | `cmd_port` | `9093` | MORAI Ego Ctrl Cmd listen port |
 | `competition_port` | `9798` | Competition Vehicle Status 수신 port |
@@ -204,6 +205,9 @@ source devel/setup.bash
 
 `runtime_profile`, `transport_profile`, `stream_profile`은 wrapper가 관리한다.
 `transport_profile:=...`를 직접 넘기지 말고 `--transport`를 사용한다.
+`--streams`와 `ASMC_STREAMS`는 폐기했다. GT 개발은 `./scripts/udp_bridge.sh --gt`를 사용하고,
+MORAI UI에서 `config/morai/sensors/ASMC_sensor_set_GT.json`을 로드한다. Intensity·Instance
+LiDAR 모두15Hz로 설정되어 있다. 주기 변경은 JSON 재로드 후 적용되며 실제 수신률은 별도로 확인한다.
 
 직접 launch도 가능하지만 local 디버그 외에는 wrapper가 더 안전하다.
 

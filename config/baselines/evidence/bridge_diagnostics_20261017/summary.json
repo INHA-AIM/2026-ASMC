@@ -1,0 +1,992 @@
+{
+  "date": "2026-10-17",
+  "base_commit": "5a59c4a037861e20159882ee8c28a3ae41518659",
+  "simulator_lidar_setting_hz": 15,
+  "simulator_setting_source": "user-confirmed MORAI UI; not inferred from repository JSON",
+  "test_control_output": false,
+  "planner_raw_forwarding": false,
+  "production_master_modified": false,
+  "raw_before": {
+    "duration_sec": 30.000108470994746,
+    "streams": [
+      {
+        "port": 9299,
+        "packets": 18150,
+        "bytes": 21888900,
+        "wraps": 363,
+        "malformed": 0,
+        "socket_drops": 0,
+        "device_regressions": 0,
+        "effective_rcvbuf": 8388608,
+        "raw_packet_hz": 604.9978125095153,
+        "wall_rotation_hz": 12.096504517598662,
+        "device_rotation_hz": 12.096022099499203,
+        "packets_per_rotation_median": 50.0,
+        "device_time_per_wall_time": 0.9998977841260436
+      },
+      {
+        "port": 9311,
+        "packets": 18150,
+        "bytes": 21888900,
+        "wraps": 363,
+        "malformed": 0,
+        "socket_drops": 0,
+        "device_regressions": 0,
+        "effective_rcvbuf": 8388608,
+        "raw_packet_hz": 604.9978125095153,
+        "wall_rotation_hz": 12.095882993907207,
+        "device_rotation_hz": 12.096528156072743,
+        "packets_per_rotation_median": 50.0,
+        "device_time_per_wall_time": 0.9998685308659458
+      }
+    ],
+    "linux_udp_counter_delta": {
+      "InDatagrams": 36300,
+      "NoPorts": 0,
+      "InErrors": 0,
+      "OutDatagrams": 36300,
+      "RcvbufErrors": 0,
+      "SndbufErrors": 0,
+      "InCsumErrors": 0,
+      "IgnoredMulti": 0,
+      "MemErrors": 0
+    }
+  },
+  "raw_after": {
+    "duration_sec": 30.000156116992002,
+    "streams": [
+      {
+        "port": 9299,
+        "packets": 18750,
+        "bytes": 22612500,
+        "wraps": 375,
+        "malformed": 0,
+        "socket_drops": 0,
+        "device_regressions": 0,
+        "effective_rcvbuf": 8388608,
+        "raw_packet_hz": 624.9967475795919,
+        "wall_rotation_hz": 12.511821679295215,
+        "wall_rotation_period_median_ms": 75.39233549323399,
+        "wall_rotation_period_min_ms": 63.14042198937386,
+        "wall_rotation_period_max_ms": 112.41500001051463,
+        "device_rotation_hz": 12.51213367508631,
+        "device_rotation_period_median_ms": 75.31150000000001,
+        "device_rotation_period_min_ms": 70.365,
+        "device_rotation_period_max_ms": 109.86999999999999,
+        "packets_per_rotation_median": 50.0,
+        "azimuth_step_histogram_hundredths_degree": {
+          "720": 17999,
+          "719": 375,
+          "721": 375
+        },
+        "device_time_per_wall_time": 0.9998121636280766
+      },
+      {
+        "port": 9311,
+        "packets": 18750,
+        "bytes": 22612500,
+        "wraps": 375,
+        "malformed": 0,
+        "socket_drops": 0,
+        "device_regressions": 0,
+        "effective_rcvbuf": 8388608,
+        "raw_packet_hz": 624.9967475795919,
+        "wall_rotation_hz": 12.511783787822843,
+        "wall_rotation_period_median_ms": 75.25880949833663,
+        "wall_rotation_period_min_ms": 66.10059100785293,
+        "wall_rotation_period_max_ms": 112.14146501151845,
+        "device_rotation_hz": 12.512276416660681,
+        "device_rotation_period_median_ms": 75.3055,
+        "device_rotation_period_min_ms": 70.873,
+        "device_rotation_period_max_ms": 109.946,
+        "packets_per_rotation_median": 50.0,
+        "azimuth_step_histogram_hundredths_degree": {
+          "720": 17999,
+          "719": 375,
+          "721": 375
+        },
+        "device_time_per_wall_time": 0.9997627946135196
+      }
+    ],
+    "linux_udp_counter_delta": {
+      "InDatagrams": 37500,
+      "NoPorts": 0,
+      "InErrors": 0,
+      "OutDatagrams": 37500,
+      "RcvbufErrors": 0,
+      "SndbufErrors": 0,
+      "InCsumErrors": 0,
+      "IgnoredMulti": 0,
+      "MemErrors": 0
+    }
+  },
+  "reporting_runs": {
+    "live": {
+      "duration_sec": 60.015228044008836,
+      "report_errors": [],
+      "clouds": {
+        "/velodyne_points_instance": {
+          "sample_count": 749,
+          "hz": 12.488999374413021,
+          "interval_median_sec": 0.07605881850031437,
+          "interval_min_sec": 0.06393707200186327,
+          "interval_max_sec": 0.11583459099347237,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        },
+        "/velodyne_points": {
+          "sample_count": 749,
+          "hz": 12.489311640626289,
+          "interval_median_sec": 0.07605930950376205,
+          "interval_min_sec": 0.062188883995986544,
+          "interval_max_sec": 0.11611691600410268,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        }
+      },
+      "diagnostics": {
+        "/morai_udp_bridge/diagnostics": {
+          "sample_count": 60,
+          "hz": 0.9999724493523231,
+          "interval_median_sec": 0.9999782579980092,
+          "interval_min_sec": 0.998129240993876,
+          "interval_max_sec": 1.001780286009307,
+          "streams": {
+            "morai_udp_bridge/cmd": {
+              "health_last": "IDLE",
+              "messages_delta": 0,
+              "raw_packet_hz_mean": 0.0,
+              "processing_p95_ms_max": 0.0,
+              "last": {
+                "messages": "0",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_udp_bridge/col": {
+              "health_last": "OK",
+              "messages_delta": 2262,
+              "raw_packet_hz_mean": 38.36659581666667,
+              "processing_p95_ms_max": 0.111623,
+              "last": {
+                "messages": "2337",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_udp_bridge/competition": {
+              "health_last": "INVALID",
+              "messages_delta": 0,
+              "raw_packet_hz_mean": 36.93331741666667,
+              "processing_p95_ms_max": 0.0,
+              "last": {
+                "messages": "0",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "2250",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_udp_bridge/ego": {
+              "health_last": "OK",
+              "messages_delta": 2244,
+              "raw_packet_hz_mean": 38.04989988333333,
+              "processing_p95_ms_max": 0.137849,
+              "last": {
+                "messages": "2318",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_udp_bridge/obj": {
+              "health_last": "OK",
+              "messages_delta": 2179,
+              "raw_packet_hz_mean": 36.9499835,
+              "processing_p95_ms_max": 0.124095,
+              "last": {
+                "messages": "2250",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            }
+          }
+        },
+        "/morai_sensor_bridge/diagnostics": {
+          "sample_count": 60,
+          "hz": 0.9999052256270402,
+          "interval_median_sec": 1.0000175510067493,
+          "interval_min_sec": 0.9839727959915763,
+          "interval_max_sec": 1.0158180730068125,
+          "streams": {
+            "morai_sensor_bridge/cam1": {
+              "health_last": "OK",
+              "messages_delta": 1156,
+              "raw_packet_hz_mean": 39.18330705,
+              "processing_p95_ms_max": 0.091931,
+              "last": {
+                "messages": "1194",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/cam2": {
+              "health_last": "OK",
+              "messages_delta": 1156,
+              "raw_packet_hz_mean": 19.583323316666668,
+              "processing_p95_ms_max": 0.122652,
+              "last": {
+                "messages": "1194",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/cam3": {
+              "health_last": "OK",
+              "messages_delta": 1156,
+              "raw_packet_hz_mean": 19.583322333333335,
+              "processing_p95_ms_max": 0.092467,
+              "last": {
+                "messages": "1194",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/cam4": {
+              "health_last": "OK",
+              "messages_delta": 590,
+              "raw_packet_hz_mean": 9.983350183333334,
+              "processing_p95_ms_max": 0.107419,
+              "last": {
+                "messages": "609",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/gps": {
+              "health_last": "OK",
+              "messages_delta": 295,
+              "raw_packet_hz_mean": 9.999996533333332,
+              "processing_p95_ms_max": 0.098538,
+              "last": {
+                "messages": "304",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/imu": {
+              "health_last": "OK",
+              "messages_delta": 2040,
+              "raw_packet_hz_mean": 34.56652183333333,
+              "processing_p95_ms_max": 0.101162,
+              "last": {
+                "messages": "2104",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/lidar": {
+              "health_last": "OK",
+              "messages_delta": 738,
+              "raw_packet_hz_mean": 624.9979791333334,
+              "processing_p95_ms_max": 3.097559,
+              "last": {
+                "messages": "760",
+                "rotation_boundaries": "761",
+                "discarded_revolutions": "1",
+                "assembly_timeouts": "0",
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": "12.506165",
+                "wall_rotation_hz": "12.505633"
+              },
+              "rotation_delta": 738
+            },
+            "morai_sensor_bridge/lidar_instance": {
+              "health_last": "OK",
+              "messages_delta": 738,
+              "raw_packet_hz_mean": 624.9981342333333,
+              "processing_p95_ms_max": 2.62879,
+              "last": {
+                "messages": "760",
+                "rotation_boundaries": "761",
+                "discarded_revolutions": "1",
+                "assembly_timeouts": "0",
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": "12.506032",
+                "wall_rotation_hz": "12.505552"
+              },
+              "rotation_delta": 738
+            },
+            "morai_sensor_bridge/sem_front": {
+              "health_last": "OK",
+              "messages_delta": 1156,
+              "raw_packet_hz_mean": 19.5999848,
+              "processing_p95_ms_max": 0.079762,
+              "last": {
+                "messages": "1194",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/sem_left": {
+              "health_last": "OK",
+              "messages_delta": 1156,
+              "raw_packet_hz_mean": 19.583324083333334,
+              "processing_p95_ms_max": 0.108125,
+              "last": {
+                "messages": "1194",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/sem_right": {
+              "health_last": "OK",
+              "messages_delta": 1156,
+              "raw_packet_hz_mean": 19.583322333333335,
+              "processing_p95_ms_max": 0.092129,
+              "last": {
+                "messages": "1193",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            }
+          }
+        }
+      },
+      "console": {
+        "sensors": {
+          "sample_count": 12,
+          "hz": 0.1999690496885212,
+          "interval_median_sec": 5.000528093994944,
+          "interval_min_sec": 4.998337148004794,
+          "interval_max_sec": 5.005616452006507,
+          "example": "sensors[5.0s] cam1=19.4Hz cam2=19.4Hz cam3=19.4Hz cam4=9.8Hz gps=5.0Hz imu=35.2Hz lidar=12.8Hz lidar_instance=12.8Hz sem_front=19.4Hz sem_left=19.4Hz sem_right=19.4Hz | issue=- idle=- errors=0(+0) udp_drop=0(+0)"
+        },
+        "network": {
+          "sample_count": 12,
+          "hz": 0.1999940952179553,
+          "interval_median_sec": 5.00003432900121,
+          "interval_min_sec": 4.99910717199964,
+          "interval_max_sec": 5.001893407999887,
+          "example": "network[5.0s] cmd=0.0Hz col=38.4Hz competition=0.0Hz ego=38.0Hz obj=36.6Hz | issue=competition:INVALID idle=cmd errors=2213(+183) udp_drop=0(+0) | links ego=A2256W000126 competition=-"
+        }
+      },
+      "code_revision": "intermediate telemetry implementation; before final truncation guard and send-error log fix"
+    },
+    "final-r2": {
+      "duration_sec": 30.030544543013093,
+      "report_errors": [],
+      "clouds": {
+        "/velodyne_points": {
+          "sample_count": 365,
+          "hz": 12.146530678197122,
+          "interval_median_sec": 0.07520762149943039,
+          "interval_min_sec": 0.06886066199513152,
+          "interval_max_sec": 0.11169652300304733,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        },
+        "/velodyne_points_instance": {
+          "sample_count": 365,
+          "hz": 12.146549840761228,
+          "interval_median_sec": 0.07530570349626942,
+          "interval_min_sec": 0.06806741199397948,
+          "interval_max_sec": 0.10985974200593773,
+          "duplicate_stamps": 0,
+          "regressing_stamps": 0
+        }
+      },
+      "diagnostics": {
+        "/morai_udp_bridge/diagnostics": {
+          "sample_count": 30,
+          "hz": 0.999980625099405,
+          "interval_median_sec": 1.0000151870044647,
+          "interval_min_sec": 0.9984092259983299,
+          "interval_max_sec": 1.0023588590120198,
+          "streams": {
+            "morai_udp_bridge/cmd": {
+              "health_last": "IDLE",
+              "messages_delta": 0,
+              "raw_packet_hz_mean": 0.0,
+              "processing_p95_ms_max": 0.0,
+              "last": {
+                "messages": "0",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_udp_bridge/col": {
+              "health_last": "OK",
+              "messages_delta": 1119,
+              "raw_packet_hz_mean": 38.60014253333333,
+              "processing_p95_ms_max": 0.10999,
+              "last": {
+                "messages": "1194",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_udp_bridge/competition": {
+              "health_last": "INVALID",
+              "messages_delta": 0,
+              "raw_packet_hz_mean": 37.63342636666667,
+              "processing_p95_ms_max": 0.0,
+              "last": {
+                "messages": "0",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "1165",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_udp_bridge/ego": {
+              "health_last": "OK",
+              "messages_delta": 1112,
+              "raw_packet_hz_mean": 38.36680486666667,
+              "processing_p95_ms_max": 0.141809,
+              "last": {
+                "messages": "1190",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_udp_bridge/obj": {
+              "health_last": "OK",
+              "messages_delta": 1090,
+              "raw_packet_hz_mean": 37.63342636666667,
+              "processing_p95_ms_max": 0.111853,
+              "last": {
+                "messages": "1165",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            }
+          }
+        },
+        "/morai_sensor_bridge/diagnostics": {
+          "sample_count": 30,
+          "hz": 0.9999641325280937,
+          "interval_median_sec": 1.0001976429921342,
+          "interval_min_sec": 0.9971675230044639,
+          "interval_max_sec": 1.0019835580023937,
+          "streams": {
+            "morai_sensor_bridge/cam1": {
+              "health_last": "OK",
+              "messages_delta": 568,
+              "raw_packet_hz_mean": 39.13331996666667,
+              "processing_p95_ms_max": 0.086119,
+              "last": {
+                "messages": "607",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/cam2": {
+              "health_last": "OK",
+              "messages_delta": 568,
+              "raw_packet_hz_mean": 19.566662166666667,
+              "processing_p95_ms_max": 0.088582,
+              "last": {
+                "messages": "606",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/cam3": {
+              "health_last": "OK",
+              "messages_delta": 568,
+              "raw_packet_hz_mean": 19.566662166666667,
+              "processing_p95_ms_max": 0.084249,
+              "last": {
+                "messages": "606",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/cam4": {
+              "health_last": "OK",
+              "messages_delta": 290,
+              "raw_packet_hz_mean": 10.000110933333334,
+              "processing_p95_ms_max": 0.087603,
+              "last": {
+                "messages": "310",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/gps": {
+              "health_last": "OK",
+              "messages_delta": 145,
+              "raw_packet_hz_mean": 9.9999918,
+              "processing_p95_ms_max": 0.099965,
+              "last": {
+                "messages": "154",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/imu": {
+              "health_last": "OK",
+              "messages_delta": 1003,
+              "raw_packet_hz_mean": 34.6333513,
+              "processing_p95_ms_max": 0.1026,
+              "last": {
+                "messages": "1066",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/lidar": {
+              "health_last": "OK",
+              "messages_delta": 353,
+              "raw_packet_hz_mean": 608.3297321,
+              "processing_p95_ms_max": 3.295421,
+              "last": {
+                "messages": "375",
+                "rotation_boundaries": "376",
+                "discarded_revolutions": "1",
+                "assembly_timeouts": "0",
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": "12.145019",
+                "wall_rotation_hz": "12.144329"
+              },
+              "rotation_delta": 353
+            },
+            "morai_sensor_bridge/lidar_instance": {
+              "health_last": "OK",
+              "messages_delta": 353,
+              "raw_packet_hz_mean": 608.3295574333333,
+              "processing_p95_ms_max": 2.759927,
+              "last": {
+                "messages": "374",
+                "rotation_boundaries": "375",
+                "discarded_revolutions": "1",
+                "assembly_timeouts": "0",
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": "12.141276",
+                "wall_rotation_hz": "12.141190"
+              },
+              "rotation_delta": 353
+            },
+            "morai_sensor_bridge/sem_front": {
+              "health_last": "OK",
+              "messages_delta": 568,
+              "raw_packet_hz_mean": 19.566662166666667,
+              "processing_p95_ms_max": 0.074318,
+              "last": {
+                "messages": "606",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/sem_left": {
+              "health_last": "OK",
+              "messages_delta": 568,
+              "raw_packet_hz_mean": 19.566662166666667,
+              "processing_p95_ms_max": 0.130026,
+              "last": {
+                "messages": "606",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            },
+            "morai_sensor_bridge/sem_right": {
+              "health_last": "OK",
+              "messages_delta": 568,
+              "raw_packet_hz_mean": 19.566662166666667,
+              "processing_p95_ms_max": 0.089252,
+              "last": {
+                "messages": "606",
+                "rotation_boundaries": null,
+                "discarded_revolutions": null,
+                "assembly_timeouts": null,
+                "socket_drops": "0",
+                "parse_errors": "0",
+                "header_errors": "0",
+                "reporter_failures": "0",
+                "device_rotation_hz": null,
+                "wall_rotation_hz": null
+              }
+            }
+          }
+        }
+      },
+      "console": {
+        "sensors": {
+          "sample_count": 6,
+          "hz": 0.19997984623906692,
+          "interval_median_sec": 5.000295930993161,
+          "interval_min_sec": 4.999452830001246,
+          "interval_max_sec": 5.001850964006735,
+          "example": "sensors[5.0s] cam1=19.8Hz cam2=19.8Hz cam3=19.8Hz cam4=10.0Hz gps=5.0Hz imu=34.6Hz lidar=12.2Hz lidar_instance=12.2Hz sem_front=19.8Hz sem_left=19.8Hz sem_right=19.8Hz | issue=- idle=- errors=0(+0) udp_drop=0(+0)"
+        },
+        "network": {
+          "sample_count": 6,
+          "hz": 0.19998686645457944,
+          "interval_median_sec": 5.00024724600371,
+          "interval_min_sec": 5.000093631999334,
+          "interval_max_sec": 5.000838862993987,
+          "example": "network[5.0s] cmd=0.0Hz col=37.4Hz competition=0.0Hz ego=37.2Hz obj=36.8Hz | issue=competition:INVALID idle=cmd errors=1124(+184) udp_drop=0(+0) | links ego=A2256W000126 competition=-"
+        }
+      },
+      "runtime_module_sha256": {
+        "/tmp/bridge_diagnostics_build/install/lib/python3/dist-packages/asmc_bridge/telemetry.py": "84941be424a18bede6609fa52034cea9dfc29c4942dba59580c54b971d260575"
+      },
+      "code_revision": "installed final receive/truncation path; subsequent send-error log count fix covered by final Python tests"
+    }
+  },
+  "checks": {
+    "cpu_python_protocol_and_telemetry": "26 Python tests + 1 paused-clock ROS case; catkin XML counts wrappers separately",
+    "paused_ros_clock_stale_recovery": "passed WAITING -> OK -> STALE -> OK",
+    "vehicle_state_cpp": "passed",
+    "independent_build_install": "passed",
+    "hosted_ci": "pending after push"
+  },
+  "limits": [
+    "No Windows-side packet capture; Linux zero-drop counters do not prove lossless Windows ingress.",
+    "MORAI internal sensor scheduler/rendering cost not isolated.",
+    "Serial run rates vary; not a speedup claim.",
+    "Competition port 9798 header remains unsupported and is reported INVALID."
+  ],
+  "artifacts": {
+    "bridge-final-r2.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/bridge-final-r2.log",
+      "sha256": "5616988c204bad410ee9d8505a22d4a217e0f85cc109d016d8f170e06c1e1850",
+      "bytes": 8663
+    },
+    "bridge-final.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/bridge-final.log",
+      "sha256": "1eecadbe7e7c06f89747a01e3b2938ad3f121cddbe8b925fb06f3efc7cbebec5",
+      "bytes": 5863
+    },
+    "bridge-reporting-final-r2.json": {
+      "path": "data/runtime/bridge-diagnostics-20261017/bridge-reporting-final-r2.json",
+      "sha256": "8ada74320dcb5644f762cac18d3563ec368872a5f8a70fb10e5b2f25c3b076a6",
+      "bytes": 1075248
+    },
+    "bridge-reporting-live.json": {
+      "path": "data/runtime/bridge-diagnostics-20261017/bridge-reporting-live.json",
+      "sha256": "aa0b15ba7e32033fef164d177dcb877247aafba2d51f325be0b40c07bfce7cfe",
+      "bytes": 2149927
+    },
+    "bridge.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/bridge.log",
+      "sha256": "37a1d121df3eeaa9af25c7c90332141c7a3ef1e6043f7838ac2ee396d477ce8d",
+      "bytes": 11379
+    },
+    "build-final.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/build-final.log",
+      "sha256": "3965c503e114d779867be52b97f57f28776c2d5ba0521ceec459a9dc5cb5dbe1",
+      "bytes": 4660
+    },
+    "install-final.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/install-final.log",
+      "sha256": "52a6acbb04ad29b1c6612379f2df1cca51779364b4360ee127125f261ae3f4b0",
+      "bytes": 7884
+    },
+    "master-final-r2.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/master-final-r2.log",
+      "sha256": "8895a563f1229399634c0aa33ee61449b96f94a25138cec461ec3d5bd2b83da8",
+      "bytes": 871
+    },
+    "master-final.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/master-final.log",
+      "sha256": "fb7efc8bdc774a677dcd17365f24bf6af2126987e9fec715dc63bc9e173a0fe7",
+      "bytes": 871
+    },
+    "master.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/master.log",
+      "sha256": "36d93b3be7e50ec663fc6623626d13b3a66918760987ad9e3668c19e0a29cccc",
+      "bytes": 871
+    },
+    "measure_bridge_reporting.py": {
+      "path": "data/runtime/bridge-diagnostics-20261017/measure_bridge_reporting.py",
+      "sha256": "0e439ec8c4f97a6043ce62b6932783b5dbce778136ec3f500b279c04012e79d3",
+      "bytes": 4201
+    },
+    "nosetests-test.test_sensor_bridge.py.xml": {
+      "path": "data/runtime/bridge-diagnostics-20261017/nosetests-test.test_sensor_bridge.py.xml",
+      "sha256": "c631c3a69f227dd3fecaad514dcc088c3ae0d00eb0a6af82ec94a64c77279b89",
+      "bytes": 884
+    },
+    "nosetests-test.test_telemetry.py.xml": {
+      "path": "data/runtime/bridge-diagnostics-20261017/nosetests-test.test_telemetry.py.xml",
+      "sha256": "13e0ec1aa6e2ba046756ecac6c365fe9375649588d5c7388d9f7a9f8e1cecac3",
+      "bytes": 1509
+    },
+    "nosetests-test.test_topic_verifier.py.xml": {
+      "path": "data/runtime/bridge-diagnostics-20261017/nosetests-test.test_topic_verifier.py.xml",
+      "sha256": "01196749008c405f75f9567c44f1d52b01a3cd1f52f7f479fab5bf7bd7d5760e",
+      "bytes": 570
+    },
+    "nosetests-test.test_udp_bridge.py.xml": {
+      "path": "data/runtime/bridge-diagnostics-20261017/nosetests-test.test_udp_bridge.py.xml",
+      "sha256": "88765ee41d93011ce30162b709d31429c1aadd33e0419caced1fec44b59b8c65",
+      "bytes": 1044
+    },
+    "raw-after-tool.py": {
+      "path": "data/runtime/bridge-diagnostics-20261017/raw-after-tool.py",
+      "sha256": "a7f1a18a1fbc0f1bb7e8d78ff10aa604a90c16b32d6ae52f5a306d318d9da060",
+      "bytes": 6573
+    },
+    "raw-after.json": {
+      "path": "data/runtime/bridge-diagnostics-20261017/raw-after.json",
+      "sha256": "348d236784229deab1098b688c113cd204296790df60cc09784fb3b859aa28cf",
+      "bytes": 2093
+    },
+    "raw-before-tool.py": {
+      "path": "data/runtime/bridge-diagnostics-20261017/raw-before-tool.py",
+      "sha256": "c308b5e1c59bfdf0ecc1727cf6bab2b99b12d90116a8b6504d9b67164a8a6f4c",
+      "bytes": 5877
+    },
+    "raw-before.json": {
+      "path": "data/runtime/bridge-diagnostics-20261017/raw-before.json",
+      "sha256": "48ebd667797c376f28895f4f0a2412adbe3c613db5b990b44dcfb3d939d83e7b",
+      "bytes": 1193
+    },
+    "rostest-test_reporting.xml": {
+      "path": "data/runtime/bridge-diagnostics-20261017/rostest-test_reporting.xml",
+      "sha256": "a5320a488cbc18af7bd04033efb39f0c83be771490598cbf90db5a2893031ca9",
+      "bytes": 2481
+    },
+    "rosunit-bridge_reporting_ros.xml": {
+      "path": "data/runtime/bridge-diagnostics-20261017/rosunit-bridge_reporting_ros.xml",
+      "sha256": "62a307f3a523e830d2f492c4308c0ae4ce57b919c0d44718be5a02e5d6b1da29",
+      "bytes": 332
+    },
+    "run-live.py": {
+      "path": "data/runtime/bridge-diagnostics-20261017/run-live.py",
+      "sha256": "12eff93a3ac3683c395d100a7e6e0a51da245091dad6941b8eb5bc311d689477",
+      "bytes": 2722
+    },
+    "tests-final.txt": {
+      "path": "data/runtime/bridge-diagnostics-20261017/tests-final.txt",
+      "sha256": "aac65b6d3594110e1a23f7129568113ec6c804113cd27a3c14ae4d2cc3e20f1c",
+      "bytes": 51
+    },
+    "tests-initial.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/tests-initial.log",
+      "sha256": "a5f97d5934e2c1e49634c91598a48e7c5d95a9be2d59394039541b7915eb8fca",
+      "bytes": 7156
+    },
+    "tests-verifier-retest.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/tests-verifier-retest.log",
+      "sha256": "e178c0e422367ae9b2760f2bcd4e1f4985a57cfdbc8021c5b34335465369a02e",
+      "bytes": 1184
+    },
+    "final-runtime-module-sha.json": {
+      "path": "data/runtime/bridge-diagnostics-20261017/final-runtime-module-sha.json",
+      "sha256": "b53ee5e457be28039dc9e486b2220c789adf1ec413b72afa94c186b93169fa8c",
+      "bytes": 165
+    },
+    "python-tests-final.log": {
+      "path": "data/runtime/bridge-diagnostics-20261017/python-tests-final.log",
+      "sha256": "3b00acc732f66031321049f9b581cc4368d7da5dbf65c0d3df7821886b64dc44",
+      "bytes": 125
+    }
+  },
+  "code_files": {
+    "src/asmc_bridge/src/asmc_bridge/telemetry.py": "32360a91fad5a96e41a9eff2e0759128039f885aec6ed6367dccb33863277df2",
+    "src/asmc_bridge/scripts/morai_udp_bridge.py": "4c14fbb6ea44afa9fed35ff0bcefda3f4b2b9b37d03762794ef4763d9e1f3b15",
+    "src/asmc_bridge/scripts/morai_sensor_bridge.py": "3beb773c08d969db64537b2ebfd9105fa0b71bfe87c0a95876f0ed28898920fd",
+    "src/asmc_bridge/config/diagnostics.yaml": "80e4821c9a3a9da7c60e98ebc3f83bb3b9665fc4465e5ce8114283c7ca2eef16",
+    "tools/bridge/measure_lidar_ingress.py": "a7f1a18a1fbc0f1bb7e8d78ff10aa604a90c16b32d6ae52f5a306d318d9da060",
+    "tools/bridge/measure_bridge_reporting.py": "0e439ec8c4f97a6043ce62b6932783b5dbce778136ec3f500b279c04012e79d3"
+  }
+}
