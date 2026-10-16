@@ -10,8 +10,10 @@ import rospy
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Header
-from asmc_camera.msg import InferenceStatus
-from asmc_camera.srv import SetInferenceMode
+from asmc_msgs.msg import InferenceStatus
+from asmc_camera.msg import InferenceStatus as LegacyInferenceStatus
+from asmc_camera.srv import SetInferenceMode as LegacySetInferenceMode
+from asmc_msgs.srv import SetInferenceMode
 from asmc_msgs.msg import CameraObjectBoxArray, CameraObjectObservation
 from asmc_camera.nodes.object_detection_node import ObjectDetectionNode
 
@@ -56,8 +58,8 @@ def main():
     status_sub=rospy.Subscriber('/perception/camera/objects/status',InferenceStatus,received.append,queue_size=100)
     output_sub=rospy.Subscriber('/perception/camera/objects',CameraObjectBoxArray,outputs.append,queue_size=100)
     observation_sub=rospy.Subscriber('/perception/camera/objects/observations',CameraObjectObservation,observations.append,queue_size=100)
-    legacy_sub=rospy.Subscriber('/camera_object_detector/inference_status',InferenceStatus,legacy_status.append,queue_size=100)
-    alias=rospy.ServiceProxy('/camera_object_detector/set_inference_mode',SetInferenceMode)
+    legacy_sub=rospy.Subscriber('/camera_object_detector/inference_status',LegacyInferenceStatus,legacy_status.append,queue_size=100)
+    alias=rospy.ServiceProxy('/camera_object_detector/set_inference_mode',LegacySetInferenceMode)
     image_pub=rospy.Publisher('/image_jpeg/compressed',CompressedImage,queue_size=5)
     service=rospy.ServiceProxy('/perception/camera/objects/set_mode',SetInferenceMode)
     checks={}
@@ -89,6 +91,15 @@ def main():
         checks['active_empty_detection_valid']=outputs[-1].valid and not outputs[-1].boxes
         wait(lambda:observations and legacy_status)
         checks['observation_same_header_and_generation']=observations[-1].detections.header.stamp == outputs[-1].header.stamp and observations[-1].detections.header.frame_id == outputs[-1].header.frame_id and observations[-1].generation==received[-1].generation
+        checks['status_observation_session_matches']=received[-1].producer_session_id==observations[-1].producer_session_id
+        # Several state snapshots can share the same paused/quantized ROS stamp.
+        # Match the complete payload rather than crossing every equal-stamp pair.
+        def same_payload(a,b):
+            return all(getattr(a,field)==getattr(b,field) for field in LegacyInferenceStatus.__slots__)
+        wait(lambda:any(same_payload(a,b) for a in received for b in legacy_status))
+        checks['legacy_status_same_payload']=any(same_payload(a,b) for a in received for b in legacy_status)
+        checks['legacy_status_md5_preserved']=LegacyInferenceStatus._md5sum=='e106e808a882b2b0140346746e164145'
+        checks['legacy_service_md5_preserved']=LegacySetInferenceMode._md5sum=='94a789aab65be7cc8d09e8f777708430'
         checks['observation_has_stable_identity']=bool(observations[-1].producer_session_id and observations[-1].calibration_id and observations[-1].model_id and observations[-1].config_id)
         checks['alias_same_state']=alias(2,0).generation==service(2,0).generation
         backend.block=True

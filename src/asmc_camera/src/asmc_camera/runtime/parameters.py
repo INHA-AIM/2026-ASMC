@@ -29,3 +29,13 @@ def fatal_cuda_error(error):
     message = str(error).lower()
     return any(s in message for s in ('cuda error', 'out of memory', 'illegal memory access',
                                       'device-side assert', 'cublas_status_execution_failed'))
+
+
+def canonical_control_path(node, endpoint):
+    """Resolve existing node identifiers used by experiment process ownership."""
+    if endpoint not in ('status', 'set_mode'):
+        raise ValueError('unknown inference control endpoint')
+    role = next((role for role, legacy in LEGACY.items() if node.rstrip('/') == legacy), None)
+    if role is None:
+        raise ValueError('unknown camera producer: ' + node)
+    return '/perception/camera/' + role + '/' + endpoint

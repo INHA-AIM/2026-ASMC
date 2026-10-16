@@ -4,7 +4,7 @@ from unittest.mock import Mock
 from asmc_camera.runtime.shared_runtime import SharedRuntime
 from asmc_camera.runtime.ros_control import RosInferenceControl
 from asmc_camera.runtime.state import InferenceState, ACTIVE, STANDBY
-from asmc_camera.srv import SetInferenceModeRequest
+from asmc_msgs.srv import SetInferenceModeRequest
 
 
 class SharedFaultTest(unittest.TestCase):

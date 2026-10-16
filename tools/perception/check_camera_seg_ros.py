@@ -15,7 +15,7 @@ from asmc_msgs.msg import CameraObjectBoxArray
 from asmc_camera.detection.backend import Detection
 from asmc_camera.detection.segmentation import SegmentationFrame
 from asmc_camera.nodes.object_detection_node import ObjectDetectionNode
-from asmc_camera.srv import SetInferenceMode
+from asmc_msgs.srv import SetInferenceMode
 
 
 def main():

@@ -17,7 +17,6 @@
   <exec_depend>rospy</exec_depend>
   <depend>asmc_msgs</depend>
   <depend>asmc_lidar</depend>
-  <depend>asmc_camera</depend>
   <depend>libssl-dev</depend>
   <depend>diagnostic_msgs</depend>
   <test_depend>rostest</test_depend>

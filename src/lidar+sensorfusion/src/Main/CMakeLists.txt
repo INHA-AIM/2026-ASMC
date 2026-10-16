@@ -16,7 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
   Msg
   asmc_lidar
   asmc_msgs
-  asmc_camera
   diagnostic_msgs
   tf
   tf2
@@ -31,7 +30,7 @@ find_package(OpenSSL REQUIRED)
 find_package(PCL REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS asmc_lidar asmc_camera asmc_msgs diagnostic_msgs roscpp roslib std_msgs geometry_msgs tf tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg pcl_conversions
+  CATKIN_DEPENDS asmc_lidar asmc_msgs diagnostic_msgs roscpp roslib std_msgs geometry_msgs tf tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg pcl_conversions
 )
 
 include_directories(

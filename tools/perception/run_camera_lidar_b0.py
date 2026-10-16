@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """One isolated B0 trial. Keeps all models resident; never commands a vehicle."""
+from asmc_camera.runtime.parameters import canonical_control_path
 import argparse
 from collections import defaultdict
 import hashlib
@@ -22,8 +23,8 @@ from sensor_msgs.msg import CompressedImage, Image, Imu, NavSatFix, PointCloud2
 from morai_msgs.msg import GPSMessage, EgoVehicleStatus, CtrlCmd
 from Msg.msg import TrackedObjectArray, Yolo_bbox_arr
 from asmc_msgs.msg import CameraObjectBoxArray, TrafficLightDetection, LaneBoundaryFamily
-from asmc_camera.msg import InferenceStatus
-from asmc_camera.srv import SetInferenceMode
+from asmc_msgs.msg import InferenceStatus
+from asmc_msgs.srv import SetInferenceMode
 
 from b0_measurements import output_report, output_gate, resource_report, fusion_report, gps_phase_report, input_window_end
 from b0_resources import ResourceSampler
@@ -193,7 +194,7 @@ def main():
     for model in loaded_models:
         node = NODES[model]
         rospy.set_param(node+'/lifecycle_trace_path', str(args.output/(model+'.lifecycle.jsonl')) if traced else '')
-        subscribers.append(rospy.Subscriber(node+'/inference_status', InferenceStatus,
+        subscribers.append(rospy.Subscriber(canonical_control_path(node, 'status'), InferenceStatus,
                            lambda m, n=model: receive_status(n, m), queue_size=100))
     subscribers.append(rospy.Subscriber('/rosout', Log, receive_log, queue_size=1000))
     subscribers.append(rospy.Subscriber('/YOLO/BBox', Yolo_bbox_arr, receive_bbox, queue_size=100))
@@ -256,7 +257,7 @@ def main():
         raise RuntimeError('timeout: '+description)
     def request(model, mode):
         called = time.monotonic()
-        reply = rospy.ServiceProxy(NODES[model]+'/set_inference_mode', SetInferenceMode)(mode, config['conditions']['target_hz'][model])
+        reply = rospy.ServiceProxy(canonical_control_path(NODES[model], 'set_mode'), SetInferenceMode)(mode, config['conditions']['target_hz'][model])
         row = dict(model=model, mode=mode, generation=reply.generation, call_started=called,
                    call_returned=time.monotonic(), accepted=reply.accepted, reason=reply.reason)
         requests.append(row)
@@ -290,7 +291,7 @@ def main():
             command.append('objects_debug_masks:='+str(args.debug).lower())
         camera = launch('camera', command)
         for node in (NODES[m] for m in loaded_models):
-            rospy.wait_for_service(node+'/set_inference_mode', timeout=60)
+            rospy.wait_for_service(canonical_control_path(node, 'set_mode'), timeout=60)
         wait(loaded, 'all resident models loaded and dummy warmed', 60)
         report['load_dummy_warmup_sec'] = time.monotonic()-launch_start
         if args.objects_config:

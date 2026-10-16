@@ -1,7 +1,7 @@
 #include "SensorFusion.hpp" // (or your relevant main header)
 #include "FusionClassPolicy.hpp"
 #include "FusionTimeMatcher.hpp"
-#include <asmc_camera/InferenceStatus.h>
+#include <asmc_msgs/InferenceStatus.h>
 #include "FusionTrace.hpp"
 #include "FusionClassState.hpp"
 #include "FusionStateTrace.hpp"
@@ -63,17 +63,19 @@ bool g_CameraActive = true, g_HasControl = false;
 ros::WallTime g_LastControl, g_LastYolo;
 bool g_YoloSilent = false;
 uint64 g_ControlBatches = 0;
+std::string g_ControlSession;
 uint64 g_ProcessingCameraEpoch = 1;
 
-void CameraControl(const asmc_camera::InferenceStatus::ConstPtr& status) {
+void CameraControl(const asmc_msgs::InferenceStatus::ConstPtr& status) {
     std::lock_guard<std::mutex> lock(g_FusionInputMutex);
-    const bool active = status->mode == asmc_camera::InferenceStatus::ACTIVE &&
+    const bool active = status->mode == asmc_msgs::InferenceStatus::ACTIVE &&
         status->reason != "source_image_stale";
-    if (!g_HasControl || status->generation != g_ControlGeneration || active != g_CameraActive ||
+    if (!g_HasControl || status->producer_session_id != g_ControlSession || status->generation != g_ControlGeneration || active != g_CameraActive ||
         status->successful_batches < g_ControlBatches) {
         ++g_CameraEpoch;
         g_YoloInputQueue.clear();
     }
+    g_ControlSession = status->producer_session_id;
     g_HasControl = true;
     g_ControlGeneration = status->generation;
     g_ControlBatches = status->successful_batches;
@@ -690,7 +692,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
 
     static ros::NodeHandle control_nh;
     static ros::Subscriber control_sub = control_nh.subscribe(
-        "/camera_object_detector/inference_status", 1, CameraControl);
+        "/perception/camera/objects/status", 1, CameraControl);
     static uint64 admitted_epoch = 0;
     static std::deque<TimedLidarObjects> pending_lidar;
     static std::deque<TimedYoloFrame> yolo_history;

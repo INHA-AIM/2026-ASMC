@@ -15,3 +15,5 @@ contracts:
     message_sections: [messages]
   - path: config/contracts/camera_object_observation_v1.yaml
     message_sections: [messages]
+  - path: config/contracts/camera_inference_control_v2.yaml
+    message_sections: [messages]

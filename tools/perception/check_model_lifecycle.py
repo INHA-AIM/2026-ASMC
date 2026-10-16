@@ -5,6 +5,7 @@ Trace runs diagnose server-accepted transitions. --no-trace measures the same
 output gates without buffered instrumentation and uses the conservative RPC
 start as its timing anchor. Preparation requires the acknowledged generation.
 """
+from asmc_camera.runtime.parameters import canonical_control_path
 import argparse
 import hashlib
 import json
@@ -18,8 +19,8 @@ from pathlib import Path
 import rospy
 from sensor_msgs.msg import Image
 from asmc_msgs.msg import CameraObjectBoxArray, TrafficLightDetection, LaneBoundaryFamily
-from asmc_camera.msg import InferenceStatus
-from asmc_camera.srv import SetInferenceMode
+from asmc_msgs.msg import InferenceStatus
+from asmc_msgs.srv import SetInferenceMode
 from lifecycle_measurements import percentile, rate_report, trace_trial, trace_integrity, ten_hz_pass
 
 NODES = dict(twinlite='/camera_semantic_inference', yolo='/camera_object_detector',
@@ -71,7 +72,7 @@ def main():
             rows.setdefault(name, []).append((time.monotonic(), msg.header.stamp.to_nsec(),
                                                bool(getattr(msg,'valid',True))))
     for model, node in NODES.items():
-        subscribers.append(rospy.Subscriber(node+'/inference_status', InferenceStatus,
+        subscribers.append(rospy.Subscriber(canonical_control_path(node, 'status'), InferenceStatus,
             lambda msg, model=model: status(model,msg), queue_size=100))
         rospy.set_param(node+'/lifecycle_trace_path', '' if args.no_trace else
                         str((args.output/(model+'.lifecycle.jsonl')).resolve()))
@@ -100,7 +101,7 @@ def main():
             time.sleep(.005)
         raise RuntimeError('timed out: '+description)
     def request(model,mode,purpose='transition'):
-        proxy = rospy.ServiceProxy(NODES[model]+'/set_inference_mode', SetInferenceMode)
+        proxy = rospy.ServiceProxy(canonical_control_path(NODES[model], 'set_mode'), SetInferenceMode)
         started = time.monotonic()
         result = proxy(mode,HZ[model])
         returned = time.monotonic()
@@ -132,7 +133,7 @@ def main():
         camera=run('camera',['roslaunch','asmc_camera','perception.launch','profile:=planning',
             'traffic_light_wait_first:=0','lane_enable_shared_family_debug:=false'])
         for model in NODES:
-            rospy.wait_for_service(NODES[model]+'/set_inference_mode',timeout=60)
+            rospy.wait_for_service(canonical_control_path(NODES[model], 'set_mode'),timeout=60)
             wait(lambda:model in statuses and statuses[model].loaded and statuses[model].warmed_up,
                  model+' load/dummy warmup',60)
         report['launch_to_all_loaded_and_dummy_warmed_sec']=time.monotonic()-launch_started

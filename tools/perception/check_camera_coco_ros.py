@@ -15,8 +15,8 @@ from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Header
 from asmc_camera.detection.backend import Detection
 from asmc_camera.nodes.object_detection_node import ObjectDetectionNode
-from asmc_camera.msg import InferenceStatus
-from asmc_camera.srv import SetInferenceMode
+from asmc_msgs.msg import InferenceStatus
+from asmc_msgs.srv import SetInferenceMode
 from asmc_msgs.msg import CameraObjectBoxArray
 
 

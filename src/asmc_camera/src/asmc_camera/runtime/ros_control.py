@@ -5,8 +5,10 @@ import time
 import json
 import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
-from asmc_camera.msg import InferenceStatus
-from asmc_camera.srv import SetInferenceMode, SetInferenceModeResponse
+from asmc_msgs.msg import InferenceStatus
+from asmc_camera.msg import InferenceStatus as LegacyInferenceStatus
+from asmc_camera.srv import SetInferenceMode as LegacySetInferenceMode, SetInferenceModeResponse as LegacyModeResponse
+from asmc_msgs.srv import SetInferenceMode, SetInferenceModeResponse
 from .state import InferenceState, STANDBY, ACTIVE
 from .trace import LifecycleTrace
 from .parameters import Parameters, control_paths
@@ -34,9 +36,9 @@ class RosInferenceControl:
                                     if model == 'twinlite' else None)
         service, status, legacy = control_paths(model)
         self.publisher = rospy.Publisher(status, InferenceStatus, queue_size=1, latch=True)
-        self.legacy_publisher = rospy.Publisher(legacy + '/inference_status', InferenceStatus, queue_size=1, latch=True)
+        self.legacy_publisher = rospy.Publisher(legacy + '/inference_status', LegacyInferenceStatus, queue_size=1, latch=True)
         self.service = rospy.Service(service, SetInferenceMode, self._request)
-        self.legacy_service = rospy.Service(legacy + '/set_inference_mode', SetInferenceMode, self._request)
+        self.legacy_service = rospy.Service(legacy + '/set_inference_mode', LegacySetInferenceMode, self._legacy_request)
         self.stopped = threading.Event()
         self.publish()
         self.thread = threading.Thread(target=self._status_loop, daemon=True)
@@ -63,6 +65,10 @@ class RosInferenceControl:
                     self.on_transition(request.mode)
             self.publish()
         return SetInferenceModeResponse(accepted, generation, reason)
+
+    def _legacy_request(self, request):
+        response = self._request(request)
+        return LegacyModeResponse(response.accepted, response.generation, response.reason)
 
     def observe(self, view, stamp):
         with self.state.lock:
@@ -113,6 +119,7 @@ class RosInferenceControl:
                 values["prepared"] = False
                 values["reason"] = "source_image_stale"
             msg = InferenceStatus()
+            msg.producer_session_id = self.session_id
             msg.header.stamp = now
             msg.model = self.model
             for key, value in values.items():
@@ -140,7 +147,10 @@ class RosInferenceControl:
             else:
                 msg.pipeline_ready = values['prepared']
             self.publisher.publish(msg)
-            self.legacy_publisher.publish(msg)
+            legacy = LegacyInferenceStatus()
+            for field in legacy.__slots__:
+                setattr(legacy, field, getattr(msg, field))
+            self.legacy_publisher.publish(legacy)
             self.state.record('status', prepared=msg.prepared, pipeline_ready=msg.pipeline_ready,
                               successful_batches=msg.successful_batches, reason=msg.reason)
 
@@ -191,18 +201,21 @@ class LaneEpochGate:
         self.generation = None
         self.epoch = 0
         self.successful_batches = None
+        self.producer_session_id = None
         self._epoch_context = (self.enabled, self.generation, self.cutoff, self.epoch)
         self.subscriber = rospy.Subscriber(
-            '/camera_semantic_inference/inference_status', InferenceStatus,
+            '/perception/camera/lane/status', InferenceStatus,
             self._status, queue_size=1)
 
     def _status(self, status):
         with self.lock:
-            restarted = (self.successful_batches is not None and
+            session = status.producer_session_id
+            restarted = (self.producer_session_id is not None and session != self.producer_session_id) or (self.successful_batches is not None and
                          status.successful_batches < self.successful_batches)
             changed = (self.generation != status.generation or self.mode != status.mode or
                        self.cutoff != status.source_cutoff.to_nsec() or restarted)
             self.epoch += int(changed)
+            self.producer_session_id = session
             self.successful_batches = status.successful_batches
             self.generation = status.generation
             self.enabled = status.managed

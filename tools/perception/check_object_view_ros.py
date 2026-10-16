@@ -10,7 +10,7 @@ import rospy
 from std_msgs.msg import Header
 from sensor_msgs.msg import CompressedImage
 from diagnostic_msgs.msg import DiagnosticArray,DiagnosticStatus,KeyValue
-from asmc_camera.msg import InferenceStatus
+from asmc_msgs.msg import InferenceStatus
 from asmc_msgs.msg import CameraObjectBoxArray,CameraObjectObservation
 from asmc_camera.nodes.object_view_node import ObjectViewNode
 from asmc_camera.nodes.semantic_visualizer_node import SemanticVisualizerNode

@@ -11,10 +11,13 @@ class ReadinessTest(unittest.TestCase):
     def test_restart_with_reused_generation_invalidates_the_local_input_epoch(self):
         with patch('rospy.get_param',return_value=True),patch('rospy.Subscriber'):
             gate=LaneEpochGate()
-        status=NS(generation=0,mode=ACTIVE,managed=True,target_hz=15.,successful_batches=20,
+        status=NS(producer_session_id="session1",generation=0,mode=ACTIVE,managed=True,target_hz=15.,successful_batches=20,
                   source_cutoff=NS(to_nsec=lambda:0))
         gate._status(status); old=gate.context()
         gate._status(status); self.assertEqual(gate.context(),old)
+        status.producer_session_id="session2"
+        gate._status(status); self.assertNotEqual(gate.context(),old)
+        old=gate.context()
         status.successful_batches=0
         gate._status(status); self.assertNotEqual(gate.context(),old)
         status.source_cutoff=NS(to_nsec=lambda:100)

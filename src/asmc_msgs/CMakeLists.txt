@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
+  InferenceStatus.msg
   VehicleState.msg
   DetectedObject.msg
   DetectedObjectArray.msg
@@ -55,6 +56,8 @@ add_message_files(
   CameraObjectBoxArray.msg
   CameraObjectObservation.msg
 )
+
+add_service_files(FILES SetInferenceMode.srv)
 
 generate_messages(
   DEPENDENCIES

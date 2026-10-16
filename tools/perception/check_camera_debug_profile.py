@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+from asmc_camera.runtime.parameters import canonical_control_path
 import argparse,json,os,signal,subprocess,time
 from pathlib import Path
 import cv2,numpy as np,rospy,rosgraph
 from sensor_msgs.msg import CompressedImage
-from asmc_camera.msg import InferenceStatus
+from asmc_msgs.msg import InferenceStatus
 
 def main():
     parser=argparse.ArgumentParser(description='GPU bag smoke test for all debug image publishers; not rate acceptance.')
@@ -21,7 +22,7 @@ def main():
     for key,topic in topics.items():
      subscribers.append(rospy.Subscriber(topic,CompressedImage,lambda m,k=key:received[k].append(m),queue_size=20,buff_size=16<<20))
     for key,node in [('twinlite','camera_semantic_inference'),('yolo','camera_object_detector'),('resnet','traffic_light_infer')]:
-     subscribers.append(rospy.Subscriber('/'+node+'/inference_status',InferenceStatus,lambda m,k=key:statuses.update({k:m}),queue_size=5))
+     subscribers.append(rospy.Subscriber(canonical_control_path('/'+node, 'status'),InferenceStatus,lambda m,k=key:statuses.update({k:m}),queue_size=5))
     def run(name,command):
      h=(out/(name+'.log')).open('w');streams.append(h)
      p=subprocess.Popen(command,stdout=h,stderr=subprocess.STDOUT,start_new_session=True);processes.append(p);return p
@@ -29,7 +30,7 @@ def main():
     try:
      run('camera',['roslaunch','asmc_camera','perception.launch','profile:=debug'])
      for node in ('camera_semantic_inference','camera_object_detector','traffic_light_infer'):
-      rospy.wait_for_service('/'+node+'/set_inference_mode',timeout=90)
+      rospy.wait_for_service(canonical_control_path('/'+node, 'set_mode'),timeout=90)
      bag=run('bag',['rosbag','play','--clock','-s',str(args.start),'-u',str(args.duration),str(args.bag)])
      bag.wait(timeout=args.duration+30.);time.sleep(.25)
      report['images']={k:{'messages':len(v),'decodable':bool(v and cv2.imdecode(np.frombuffer(v[-1].data,np.uint8),1) is not None),'last_source_stamp_ns':v[-1].header.stamp.to_nsec() if v else None} for k,v in received.items()}

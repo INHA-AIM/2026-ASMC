@@ -5,6 +5,7 @@ Driving and stationary repeat measurements remain separate experiments. This
 runner never overrides a planner STOP, changes existing actors, or sets an Ego
 velocity to simulate a successful drive.
 """
+from asmc_camera.runtime.parameters import canonical_control_path
 import argparse
 from collections import defaultdict
 import json
@@ -39,8 +40,8 @@ def main():
     import rosgraph
     import rospy
     import yaml
-    from asmc_camera.msg import InferenceStatus
-    from asmc_camera.srv import SetInferenceMode
+    from asmc_msgs.msg import InferenceStatus
+    from asmc_msgs.srv import SetInferenceMode
     from asmc_msgs.msg import CameraObjectBoxArray, TrafficLightDetection, Trajectory
     from sensor_msgs.msg import CompressedImage, Image
 
@@ -89,7 +90,7 @@ def main():
 
     def request(model, mode):
         started = time.monotonic()
-        response = rospy.ServiceProxy(NODES[model]+'/set_inference_mode', SetInferenceMode)(mode, 0.)
+        response = rospy.ServiceProxy(canonical_control_path(NODES[model], 'set_mode'), SetInferenceMode)(mode, 0.)
         row = dict(model=model, mode=mode, generation=response.generation,
                    call_started=started, call_returned=time.monotonic(), accepted=response.accepted, reason=response.reason)
         report['requests'].append(row); save()
@@ -134,7 +135,7 @@ def main():
         if running & set(NODES.values()) or rospy.get_param('/use_sim_time', False):
             raise RuntimeError('existing inference or simulated clock; refusing mixed live trial')
         for model, node in NODES.items():
-            subs.append(rospy.Subscriber(node+'/inference_status', InferenceStatus, lambda m,k=model:status(k,m), queue_size=10))
+            subs.append(rospy.Subscriber(canonical_control_path(node, 'status'), InferenceStatus, lambda m,k=model:status(k,m), queue_size=10))
         topics = dict(front='/image_jpeg/compressed', left='/cam_left/image_jpeg/compressed',
                       right='/cam_right/image_jpeg/compressed', extra='/cam_extra/image_jpeg/compressed')
         for view, topic in topics.items():

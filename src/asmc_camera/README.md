@@ -53,3 +53,7 @@ LiDAR fusion 정책을 바꾸지 않습니다. 3뷰 관측 메시지는 후속 L
 현재 3뷰 LiDAR fusion이 연결됐다는 의미는 아닙니다.
 
 LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다. Main은 별도 실행하며 전방 어댑터만 소유한다.
+
+정본 상태/모드 타입은 `asmc_msgs/InferenceStatus`, `asmc_msgs/SetInferenceMode`다.
+상태의 session UUID는 객체 관측과 같으며 기존 `asmc_camera` 타입은 구형 노드 제어 경로에 보존한다.
+정본 경로 소비자는 공용 타입으로 재빌드하고 카메라·Main과 함께 재시작한다.

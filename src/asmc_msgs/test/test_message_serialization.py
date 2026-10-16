@@ -8,6 +8,8 @@ import asmc_msgs.msg as generated_messages
 
 
 EXPECTED_MD5 = {
+    "InferenceStatus": "8b2caf96bbf9a9eaea848fcb9551b79f",
+    "CameraObjectObservation": "fbddb8fe0071685b60811037c0302106",
     "HdMapMeta": "adb0d98c5dbd41055ebb929fcdf3af19",
     "LaneMarking": "65d4f9e4cbb4f60a65b5d7c3702e49fa",
     "LaneMarkingArray": "2eae16c9d4bf3385ac35eba4b3d1b823",
@@ -42,6 +44,21 @@ class GeneratedSerializationTest(unittest.TestCase):
                 restored = message_class()
                 restored.deserialize(buffer.getvalue())
                 self.assertEqual(str(original), str(restored))
+
+
+    def test_inference_session_and_service_roundtrip(self):
+        from asmc_msgs.msg import InferenceStatus
+        from asmc_msgs.srv import SetInferenceMode, SetInferenceModeRequest
+        self.assertEqual(SetInferenceMode._md5sum, "94a789aab65be7cc8d09e8f777708430")
+        status = InferenceStatus(producer_session_id="restart-uuid", generation=7, mode=2)
+        raw = io.BytesIO(); status.serialize(raw)
+        copy = InferenceStatus(); copy.deserialize(raw.getvalue())
+        self.assertEqual(copy.producer_session_id, "restart-uuid")
+        self.assertEqual(copy.generation, 7)
+        request = SetInferenceModeRequest(mode=1, target_hz=15.)
+        raw = io.BytesIO(); request.serialize(raw)
+        copy = SetInferenceModeRequest(); copy.deserialize(raw.getvalue())
+        self.assertEqual(copy, request)
 
 
 if __name__ == "__main__":

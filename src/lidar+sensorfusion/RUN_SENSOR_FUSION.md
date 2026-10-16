@@ -74,7 +74,9 @@ Classification confirmation/change/miss grace remains5/3/3; motion is independen
 
 The old broad bottom-image exclusion remains disabled. Current YOLO uses3-view Ego
 masks rather than the old standalone YOLO hood-filter runtime.
-`asmc_lidar` still contains coordinate/time foundations and handoff contracts only.
+`asmc_lidar` provides coordinate/time foundations and a reusable camera receiver, bounded buffer and projection API.
+Main reads `asmc_msgs/InferenceStatus` on `/perception/camera/objects/status`; rebuild/restart camera and Main together.
+The old camera-owned status/service types remain on legacy node control paths.
 Jaeho owns the remaining migration and3-view fusion implementation.
 Historical standalone YOLO and comparison runners can be inspected in commit
 `ae8dcbc0`; use a matching isolated checkout rather than reinstalling them here.

@@ -1,0 +1,71 @@
+schema_version: 1
+contract_id: camera_inference_control_v2
+owner: asmc_msgs
+producer: asmc_camera
+decision_owner: planning
+legacy_default: ACTIVE_unrestricted
+managed_default: STANDBY
+models:
+  twinlite: /camera_semantic_inference
+  yolo: /camera_object_detector
+  resnet18: /traffic_light_infer
+service:
+  private_name: set_inference_mode
+  type: asmc_msgs/SetInferenceMode
+  modes: {STANDBY: 0, PREPARE: 1, ACTIVE: 2}
+  target_hz_zero: keep_current
+  maximum_request_hz: 120
+  accepted_means: request_recorded_not_ready
+status:
+  private_name: inference_status
+  type: asmc_msgs/InferenceStatus
+  latched: true
+  wall_publish_period_sec: 0.2
+  freshness_sec: 0.35
+  prepare_normal_frames_per_view: 3
+  generation_changes: [mode, rate, source_epoch]
+  success_is_distinct_from_semantic_validity: true
+  twinlite_pipeline_ready: fresh_valid_LaneBoundaryFamily_after_cutoff
+results:
+  source_header_preserved: true
+  repeat_old_observations_to_meet_rate: false
+  PREPARE:
+    twinlite: internal_lane_pipeline_runs_consumer_must_check_mode
+    yolo: no_operational_detections
+    resnet18: no_operational_detections
+  STANDBY:
+    gpu_model_retained: true
+    repeating_inference: false
+    ready: false
+    previous_result: invalidation_once_if_source_header_known
+    traffic_light_legacy: not_detected
+example:
+  launch: src/asmc_camera/launch/camera_region_example.launch
+  default_enabled: false
+  sole_control_owner_required: true
+  policy: src/asmc_camera/config/runtime/camera_region_example.yaml
+  vehicle_control: false
+scope_exclusions: [region_ownership, driving_mode, automatic_control_authority, lidar_matching_and_fusion]
+
+canonical_roots:
+  yolo: /perception/camera/objects
+  twinlite: /perception/camera/lane
+  resnet18: /perception/camera/traffic_light
+canonical_endpoints: {service: set_mode, status: status}
+producer_session_id: same_uuid_as_camera_object_observation
+compatibility:
+  contract: config/contracts/camera_inference_control_v1.yaml
+  status_type: asmc_camera/InferenceStatus
+  status_md5: e106e808a882b2b0140346746e164145
+  service_type: asmc_camera/SetInferenceMode
+  service_md5: 94a789aab65be7cc8d09e8f777708430
+  policy: legacy_node_roots_share_state_with_canonical_api
+  canonical_topic_cutover_requires_consumer_rebuild: true
+messages:
+  asmc_msgs/InferenceStatus:
+    md5: 8b2caf96bbf9a9eaea848fcb9551b79f
+    producer: asmc_camera
+    consumers: [asmc_camera, asmc_lidar, Main, planning]
+services:
+  asmc_msgs/SetInferenceMode:
+    md5: 94a789aab65be7cc8d09e8f777708430
