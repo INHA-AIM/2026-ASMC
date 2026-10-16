@@ -21,6 +21,8 @@ def accepted_name(name):
 def scoped_complete(row,pixel_scope):
     # Accurate actor boxes do not prove exhaustive labels for fixed map props.
     # Tiny unresolved actors alone cannot promote a partial image to full GT.
+    if 'supervision' in row:
+        return row['supervision'] in ('complete','reviewed_negative')
     return row.get('evaluation_scope')=='complete'
 
 
@@ -48,13 +50,16 @@ def frame_counts(row,predictions,confidence,level='class',pixel_scope=False):
     predictions=[dict(p,group=name(p['class_name'])) for p in predictions if p['confidence']>=confidence]
     gt=[];ignored=[]
     for a in row['annotations']:
+        if a.get('supervision')=='excluded':continue
+        if a.get('supervision')=='ignore':
+            ignored.append(a);continue
         label=training_label(a)
         if not label:
             if a.get('disposition')!='excluded':ignored.append(a)
             continue
         box=a['xyxy'];w=box[2]-box[0];h=box[3]-box[1]
         long,short=(24,12) if label in ('car','truck','bus') else (16,8)
-        if pixel_scope and (max(w,h)<long or min(w,h)<short):
+        if pixel_scope and 'supervision' not in row and (max(w,h)<long or min(w,h)<short):
             ignored.append(a);continue
         gt.append(dict(a,group=name(label)))
     pairs=match_boxes(gt,predictions,.5)
@@ -95,12 +100,23 @@ def summarize(rows,predictions,confidence,level='class',pixel_scope=False):
             complete_fp=n-tp,complete_fn=gt-tp,independent_source_groups=len(groups[name]),
             sufficient_sample=gt>=20,source_generalization_limited=len(groups[name])<2)
     scores=[c['f1'] for c in result.values() if c['sufficient_sample'] and c['f1'] is not None]
+    # Keep the historical >=20-GT score unchanged. The reviewed fixed16 panel
+    # must also expose every class, without silently dropping rare classes.
+    package = str(Path(__file__).resolve().parents[2]/'src/asmc_camera/src')
+    if package not in sys.path: sys.path.insert(0, package)
+    from asmc_camera.detection.mission import CLASSES
+    fixed16=[result.get(c,{}).get('f1') for c in CLASSES]
     return dict(confidence=confidence,classes=result,macro_f1=sum(scores)/len(scores) if scores else None,
+        macro_f1_fixed16=(sum(fixed16)/len(CLASSES) if all(v is not None for v in fixed16) else None),
+        fixed16_small_sample_classes=[c for c in CLASSES if not result.get(c,{}).get('sufficient_sample',False)],
+        fixed16_macro_policy='All 16 complete-GT classes equally weighted; descriptive when low-sample/source-limited. Not a statistically calibrated regression gate.',
         complete_images=sum(scoped_complete(r,pixel_scope) for r in rows),
         partial_images=sum(not scoped_complete(r,pixel_scope) for r in rows),
         scoped_native_capture_images=sum(r.get('evaluation_scope')!='complete' and scoped_complete(r,pixel_scope) for r in rows),
         macro_policy='>=20 complete GT; source/run correlation separately flagged, not independent-scene claims',
-        pixel_scope='vehicle 24/12px, other 16/8px' if pixel_scope else 'all original GT')
+        pixel_scope=('manifest frozen positive/ignore policy; no legacy display threshold' if
+            any('supervision' in r for r in rows) else
+            'vehicle 24/12px, other 16/8px' if pixel_scope else 'all original GT'))
 
 
 def infer(args):

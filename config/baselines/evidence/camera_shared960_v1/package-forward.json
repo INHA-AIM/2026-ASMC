@@ -1,0 +1,7 @@
+{
+  "tensor_count": 11,
+  "all_outputs_equal": true,
+  "max_abs_difference": 0.0,
+  "names_equal": true,
+  "scope": "CPU forward, unchanged EMA vs reloaded deployment, 64x96 input; no optimizer update"
+}

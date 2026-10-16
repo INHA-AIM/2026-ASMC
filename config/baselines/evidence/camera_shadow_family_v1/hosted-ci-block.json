@@ -1,0 +1,18 @@
+{
+  "observed_at": "2026-10-15T22:05:59.876811+09:00",
+  "commit": "ae6dd452f1af191e276c8b84f60a1c2c09c0f867",
+  "status": "blocked_before_job_start",
+  "jobs": [
+    "catkin-build",
+    "planning-catkin-build",
+    "validated-lidar-build"
+  ],
+  "steps_executed": 0,
+  "reason": "GitHub reports recent account payments failed or spending limit needs increase.",
+  "check_run_ids": [
+    116436926127,
+    116436923375,
+    116436922499
+  ],
+  "local_tests_substitute_for_hosted": false
+}

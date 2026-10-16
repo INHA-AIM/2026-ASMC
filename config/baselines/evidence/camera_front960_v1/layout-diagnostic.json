@@ -1,0 +1,38 @@
+{
+  "contiguous_a": {
+    "inference_median_ms": 37.136849510716274,
+    "inference_p95_ms": 58.84828975831624,
+    "total_median_ms": 48.65142350899987,
+    "total_p95_ms": 74.88938800815959
+  },
+  "channels_last": {
+    "inference_median_ms": 32.70469294511713,
+    "inference_p95_ms": 42.78731298109051,
+    "total_median_ms": 44.379958999343216,
+    "total_p95_ms": 53.923238257993944
+  },
+  "contiguous_b": {
+    "inference_median_ms": 38.07924999273382,
+    "inference_p95_ms": 53.10337501578033,
+    "total_median_ms": 51.711618521949276,
+    "total_p95_ms": 66.30614602181595
+  },
+  "numeric": {
+    "front": {
+      "drivable_max_difference": 0.005828678607940674,
+      "road_marking_class_mismatch_fraction": 1.736111111111111e-05,
+      "confidence_max_difference": 0.01099550724029541
+    },
+    "left": {
+      "drivable_max_difference": 0.0037197470664978027,
+      "road_marking_class_mismatch_fraction": 1.3020833333333334e-05,
+      "confidence_max_difference": 0.004332900047302246
+    },
+    "right": {
+      "drivable_max_difference": 0.00457686185836792,
+      "road_marking_class_mismatch_fraction": 0.0,
+      "confidence_max_difference": 0.007406473159790039
+    }
+  },
+  "scope": "Single TwinLite process, same captured RGB, MORAI running; diagnostic only, not full-stack acceptance."
+}

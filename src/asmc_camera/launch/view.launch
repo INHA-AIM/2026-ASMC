@@ -1,0 +1,10 @@
+<launch>
+  <arg name="models" default="all"/>
+  <arg name="valid_models" default="$(eval {True: True}[arg('models') == 'all' or (arg('models') != '' and arg('models').replace('objects','').replace('traffic_light','').replace('lane','').replace(',','') == '' and len(arg('models').split(',')) == arg('models').split(',').count('objects') + arg('models').split(',').count('lane') + arg('models').split(',').count('traffic_light') and arg('models').split(',').count('objects') &lt;= 1 and arg('models').split(',').count('lane') &lt;= 1 and arg('models').split(',').count('traffic_light') &lt;= 1)])"/>
+  <include file="$(find asmc_camera)/launch/visualization.launch">
+    <arg name="camera_objects" value="$(eval arg('models') == 'all' or 'objects' in arg('models').split(','))"/>
+    <arg name="camera_lane" value="$(eval arg('models') == 'all' or 'lane' in arg('models').split(','))"/>
+    <arg name="traffic_light" value="$(eval arg('models') == 'all' or 'traffic_light' in arg('models').split(','))"/>
+    <arg name="objects_config" value="$(find asmc_camera)/config/camera/yolo26l_mission16_e8_three_view.yaml"/>
+  </include>
+</launch>

@@ -13,6 +13,7 @@ import message_filters
 import numpy as np
 import rospy
 from sensor_msgs.msg import CompressedImage, Image
+from asmc_camera.runtime.demand_inputs import DemandSubscriber, DemandInputs
 
 from asmc_camera.bev.calibration import calibrations_from_dict
 from asmc_camera.bev.fusion import build_quality_maps
@@ -158,14 +159,14 @@ class CameraBevVisualizerNode:
         for view in self.views:
             namespace = "/perception/bev/debug/{}".format(view)
             if self.publish_per_view_mosaic:
-                drivable = message_filters.Subscriber(
-                    namespace + "/drivable_probability", Image, queue_size=2
+                drivable = DemandSubscriber(
+                    namespace + "/drivable_probability", Image, self._mosaic_requested, queue_size=2
                 )
-                marking = message_filters.Subscriber(
-                    namespace + "/road_marking/class_id", Image, queue_size=2
+                marking = DemandSubscriber(
+                    namespace + "/road_marking/class_id", Image, self._mosaic_requested, queue_size=2
                 )
-                coverage = message_filters.Subscriber(
-                    namespace + "/coverage", Image, queue_size=2
+                coverage = DemandSubscriber(
+                    namespace + "/coverage", Image, self._mosaic_requested, queue_size=2
                 )
                 sync = message_filters.TimeSynchronizer(
                     [drivable, marking, coverage], queue_size=4
@@ -181,9 +182,11 @@ class CameraBevVisualizerNode:
                     queue_size=1,
                 )
             self.subscribers.append(
-                rospy.Subscriber(
+                DemandSubscriber(
                     self.cameras[view].image_topic,
                     CompressedImage,
+                    lambda v=view:self.comparison_publisher.get_num_connections() > 0 or
+                        (v in self.grid_publishers and self.grid_publishers[v].get_num_connections() > 0),
                     partial(self._camera_callback, view),
                     queue_size=1,
                     buff_size=16 * 1024 * 1024,
@@ -204,7 +207,7 @@ class CameraBevVisualizerNode:
                 ]
             )
         fused_subscribers = [
-            message_filters.Subscriber(topic, Image, queue_size=2)
+            DemandSubscriber(topic, Image, self._fused_requested, queue_size=2)
             for topic in fused_topics
         ]
         fused_sync = message_filters.TimeSynchronizer(
@@ -252,6 +255,7 @@ class CameraBevVisualizerNode:
             self.mosaic_timer = rospy.Timer(
                 rospy.Duration(1.0 / max(0.1, mosaic_hz)), self._publish_mosaic
             )
+        self.demand_inputs = DemandInputs(self.subscribers)
         rospy.loginfo(
             "camera BEV visualizer ready views=%s comparison=2x%sx%s "
             "legacy=%s calibration_grid=%s per_view_mosaic=%s raw_history=%d",
@@ -263,6 +267,13 @@ class CameraBevVisualizerNode:
             self.publish_per_view_mosaic,
             self.raw_history_size,
         )
+
+    def _mosaic_requested(self):
+        return self.mosaic_publisher is not None and self.mosaic_publisher.get_num_connections() > 0
+
+    def _fused_requested(self):
+        return any(p is not None and p.get_num_connections() > 0
+                   for p in (self.comparison_publisher,self.fused_publisher,self.quality_publisher))
 
     def _compact_fused_callback(
         self,

@@ -36,6 +36,7 @@ class InferenceState:
         self.cutoff, self.last_source, self.next_at = 0, 0, 0.
         self.next_by_view = {v: 0. for v in self.views}
         self.samples = deque(maxlen=200)
+        self.completed_sources = deque(maxlen=256)
         self.successful_batches = self.errors = 0
         self.last_output_valid = False
         self.reason = 'standby' if self.mode == STANDBY else 'awaiting_new_images'
@@ -62,6 +63,7 @@ class InferenceState:
         self.latest_output = {v: 0 for v in self.views}
         self.completed_at = {v: -float('inf') for v in self.views}
         self.samples.clear()
+        self.completed_sources.clear()
         self.next_at = 0.
         self.next_by_view = {v: 0. for v in self.views}
         self.last_output_valid = False
@@ -87,9 +89,11 @@ class InferenceState:
             self.record('request_accepted', target_hz=target, source_cutoff_ns=self.cutoff)
             return True, self.generation, 'accepted_not_ready'
 
-    def begin(self, stamps, per_view=False):
+    def begin(self, stamps, per_view=False, expected_generation=None):
         with self.lock:
             now = self.clock()
+            if expected_generation is not None and expected_generation != self.generation:
+                return None
             if not stamps or any(v not in self.views or n <= 0 for v, n in stamps.items()):
                 return None
             deadline = max((self.next_by_view.get(v, 0.) for v in stamps), default=0.) if per_view else self.next_at
@@ -132,6 +136,7 @@ class InferenceState:
                 return True
             for view, stamp in stamps.items():
                 if stamp > self.latest_output[view]:
+                    self.completed_sources.append(stamp)
                     self.hits[view] += 1
                     self.latest_output[view] = stamp
                     self.completed_at[view] = now

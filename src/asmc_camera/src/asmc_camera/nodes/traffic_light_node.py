@@ -40,31 +40,29 @@ def _sha256(path):
 class LatestCompressedImage:
     """Keep bytes and the exact header of only the newest camera message."""
 
-    def __init__(self, rospy, compressed_image_cls, topic):
+    def __init__(self, rospy, compressed_image_cls, topic, input_source=None):
         self._lock = threading.Lock()
         self._jpeg = None
         self._header = None
         self._seq = 0
         self.on_receive = None
-        self._sub = rospy.Subscriber(
-            topic,
-            compressed_image_cls,
-            self._callback,
-            queue_size=1,
-            buff_size=16 * 1024 * 1024,
-        )
+        self._generation = None
+        self._sub = (input_source.subscribe(topic, self._callback) if input_source
+                     else rospy.Subscriber(topic, compressed_image_cls, self._callback,
+                                           queue_size=1, buff_size=16 * 1024 * 1024))
 
     def _callback(self, message):
+        generation = self.on_receive(message.header) if self.on_receive is not None else None
         with self._lock:
             self._jpeg = bytes(message.data)
             self._header = copy.deepcopy(message.header)
             self._seq += 1
-        if self.on_receive is not None:
-            self.on_receive(message.header)
+            self._generation = generation
 
-    def latest(self):
+    def latest(self, include_generation=False):
         with self._lock:
-            return self._jpeg, self._seq, copy.deepcopy(self._header)
+            values = self._jpeg, self._seq, copy.deepcopy(self._header)
+            return values + (self._generation,) if include_generation else values
 
     def close(self):
         self._sub.unregister()
@@ -99,7 +97,7 @@ from asmc_camera.runtime.ros_control import RosInferenceControl
 from asmc_camera.runtime.state import ACTIVE
 
 
-def main(argv=None):
+def main(argv=None, parameters=None, input_source=None, init_node=True, on_ready=None, fault_handler=None):
     import rospy
     from asmc_msgs.msg import TrafficLightDetection
     from sensor_msgs.msg import CompressedImage
@@ -120,7 +118,14 @@ def main(argv=None):
     parser.add_argument("--print-topk", action="store_true")
     args = parser.parse_args(rospy.myargv(argv=argv)[1:])
 
-    rospy.init_node("traffic_light_infer", anonymous=False)
+    if init_node:
+        rospy.init_node("traffic_light_infer", anonymous=False)
+    from asmc_camera.runtime.parameters import Parameters
+    parameters = parameters or Parameters()
+    for key, attribute in [('checkpoint','ckpt'), ('image_topic','image_topic'), ('device','device'),
+                           ('target_hz','hz'), ('min_detect','min_detect'), ('stale_sec','stale_sec')]:
+        if parameters.namespace or parameters.get('~runtime_profile', '') == 'camera_runtime_v1':
+            setattr(args, attribute, parameters.get('~' + key, getattr(args, attribute)))
     try:
         device = select_device(args.device)
     except RuntimeError as exc:
@@ -161,7 +166,7 @@ def main(argv=None):
         torch.cuda.synchronize(device)
     dummy_warmup_ms = (time.perf_counter() - warmup_started) * 1000.
 
-    source = LatestCompressedImage(rospy, CompressedImage, args.image_topic)
+    source = LatestCompressedImage(rospy, CompressedImage, args.image_topic, input_source)
     state_publisher = rospy.Publisher(
         args.state_topic, String, queue_size=1, latch=True
     )
@@ -185,11 +190,14 @@ def main(argv=None):
                 confidence=0., stale=True, inference_latency_ms=0., model_id=model_id,
                 candidate_labels=[], candidate_confidences=[]))
 
-    control = RosInferenceControl("resnet18", ["camera4"], args.hz, on_transition=invalidate)
+    control = RosInferenceControl("resnet18", ["camera4"], args.hz, on_transition=invalidate, parameters=parameters)
     control.state.record('startup', model_load_ms=model_load_ms, dummy_warmup_ms=dummy_warmup_ms)
-    if control.state.trace is not None:
-        source.on_receive = lambda header: control.state.record(
-            'received', view='camera4', source_stamp_ns=header.stamp.to_nsec())
+    def observe_header(header):
+        generation = control.observe("camera4", header.stamp.to_nsec())
+        if control.state.trace is not None:
+            control.state.record('received', view='camera4', source_stamp_ns=header.stamp.to_nsec())
+        return generation
+    source.on_receive = observe_header
     rospy.loginfo(
         "traffic-light ready input=%s legacy=%s,%s typed=%s model=%s device=%s val_acc=%.4f",
         args.image_topic,
@@ -201,9 +209,11 @@ def main(argv=None):
         validation_accuracy,
     )
 
+    if on_ready:
+        on_ready(control)
     wait_started = time.monotonic()
     while not rospy.is_shutdown():
-        jpeg, _, header = source.latest()
+        jpeg, _, header, source_generation = source.latest(True)
         if jpeg is not None and header is not None:
             break
         if not control.state.managed and args.wait_first > 0 and time.monotonic() - wait_started > args.wait_first:
@@ -221,7 +231,7 @@ def main(argv=None):
     try:
         while not rospy.is_shutdown():
             loop_started = time.perf_counter()
-            jpeg, sequence, source_header = source.latest()
+            jpeg, sequence, source_header, source_generation = source.latest(True)
             if jpeg is None or sequence == last_seq:
                 if (
                     control.state.mode == ACTIVE
@@ -256,9 +266,11 @@ def main(argv=None):
                     stale_published = True
                 rospy.sleep(0.005)
                 continue
-            control.state.observe("camera4", source_header.stamp.to_nsec())
+            if source_generation is None:
+                rospy.sleep(.005)
+                continue
             stamps = {"camera4": source_header.stamp.to_nsec()}
-            token = control.state.begin(stamps)
+            token = control.state.begin(stamps, expected_generation=source_generation)
             if token is None:
                 rospy.sleep(.005)
                 continue
@@ -277,6 +289,8 @@ def main(argv=None):
                     ):
                         probabilities = F.softmax(model(tensor).float(), dim=1)[0].cpu()
             except Exception as exc:  # pragma: no cover - hardware/runtime path
+                if fault_handler:
+                    fault_handler(exc)
                 control.state.complete(token, stamps, False, "inference_error")
                 rospy.logwarn_throttle(2.0, "traffic-light inference failed: %s", exc)
                 continue

@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "checks": {
+    "e8": {
+      "/camera_objects/weights": "/data/runtime/camera-family-supply-v2/install/share/asmc_camera/models/object_detection/yolo26l-finetuned_e8.engine",
+      "/camera_lane/checkpoint": "/data/runtime/camera-family-supply-v2/install/share/asmc_camera/models/lane_segmentation/twinlite-medium-v6.pt",
+      "/camera_lane/engine_manifest": "/data/runtime/camera-family-supply-v2/install/share/asmc_camera/models/lane_segmentation/manifest.json"
+    },
+    "pretrained": {
+      "/camera_objects/weights": "/data/runtime/camera-family-supply-v2/install/share/asmc_camera/models/object_detection/yolo26l-pretrained_coco7.engine",
+      "/camera_lane/checkpoint": "/data/runtime/camera-family-supply-v2/install/share/asmc_camera/models/lane_segmentation/twinlite-medium-v6.pt",
+      "/camera_lane/engine_manifest": "/data/runtime/camera-family-supply-v2/install/share/asmc_camera/models/lane_segmentation/manifest.json"
+    }
+  },
+  "recovery_backend": "twinlite"
+}

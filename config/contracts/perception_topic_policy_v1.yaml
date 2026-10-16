@@ -25,7 +25,7 @@ scope:
       reason: team-owned implementation is not complete
 
 launch_defaults:
-  source: src/asmc_camera/launch/perception.launch
+  source: src/asmc_camera/launch/_components.launch
   anchors:
   - <arg name="profile" default="idle" doc="idle | planning | debug | legacy"/>
   - '<arg name="managed" default="$(eval {''idle'': True, ''planning'': True, ''debug'':
@@ -69,12 +69,15 @@ topic_families:
 
   - id: camera_inference_status
     topics:
+      - {pattern: /perception/camera/objects/status, type: asmc_camera/InferenceStatus}
+      - {pattern: /perception/camera/lane/status, type: asmc_camera/InferenceStatus}
+      - {pattern: /perception/camera/traffic_light/status, type: asmc_camera/InferenceStatus}
       - {pattern: /camera_semantic_inference/inference_status, type: asmc_camera/InferenceStatus}
       - {pattern: /camera_object_detector/inference_status, type: asmc_camera/InferenceStatus}
       - {pattern: /traffic_light_infer/inference_status, type: asmc_camera/InferenceStatus}
     producer:
       file: src/asmc_camera/src/asmc_camera/runtime/ros_control.py
-      anchors: ["'~inference_status'"]
+      anchors: ["control_paths(model)", "legacy + '/inference_status'"]
     consumers:
       - file: src/asmc_camera/src/asmc_camera/runtime/ros_control.py
         anchor: "'/camera_semantic_inference/inference_status'"
@@ -87,6 +90,7 @@ topic_families:
   - id: camera_objects
     topics:
       - {pattern: /perception/camera/objects, type: asmc_msgs/CameraObjectBoxArray}
+      - {pattern: /perception/camera/objects/observations, type: asmc_msgs/CameraObjectObservation}
     producer:
       file: src/asmc_camera/src/asmc_camera/nodes/object_detection_node.py
       anchors: ['"/perception/camera/objects"']

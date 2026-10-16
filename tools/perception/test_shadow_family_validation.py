@@ -1,0 +1,148 @@
+import io
+from pathlib import Path
+import sys
+import tempfile
+from types import SimpleNamespace as NS
+import unittest
+from unittest.mock import Mock, patch
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from prepare_shadow_family_fixture import nearest_index, phase
+from shadow_family_parity import compare_family
+
+
+class ShadowValidationTest(unittest.TestCase):
+    def test_cleanup_after_early_shutdown_is_not_a_complete_active_window(self):
+        from compare_camera_runtime import active_window
+        result=active_window(100.,160.,195.,128.)
+        self.assertEqual(result['end'],128.)
+        self.assertFalse(result['complete'])
+        self.assertTrue(active_window(100.,160.,165.)['complete'])
+        self.assertTrue(active_window(100.,160.,165.,164.)['complete'])
+        from compare_camera_runtime import shutdown_observer
+        calls=[]
+        handler=shutdown_observer(lambda *_:calls.append('blocking pmon cleanup'),lambda:calls.append('stop timestamp'))
+        handler(2,None)
+        self.assertEqual(calls,['stop timestamp','blocking pmon cleanup'])
+
+    def test_fixed_pose_guard_rejects_external_driving_without_changing_control(self):
+        from run_camera_structure_matrix import stationary_condition
+        origin=dict(x=1.,y=2.,z=3.);stopped=dict(x=0.,y=0.,z=0.)
+        self.assertTrue(stationary_condition(origin,stopped,origin)['valid'])
+        self.assertFalse(stationary_condition(dict(origin,x=1.3),stopped,origin)['valid'])
+        self.assertFalse(stationary_condition(origin,dict(stopped,x=.3),origin)['valid'])
+
+    def test_consumer_rows_are_journaled_and_materialized_only_after_close(self):
+        from camera_measurement_records import RecordedRows
+        with tempfile.TemporaryDirectory() as directory:
+            rows=RecordedRows(Path(directory)/'consumer.jsonl')
+            for value in range(300):rows.append(dict(at=value,stamp=value+1))
+            self.assertLessEqual(rows.journal.high_water,rows.journal.capacity)
+            self.assertEqual(rows.finish(),[dict(at=value,stamp=value+1) for value in range(300)])
+            self.assertEqual(rows.journal.dropped,0)
+
+    def test_consumer_deserialization_and_gc_instrumentation_restore_original_policy(self):
+        import gc
+        from asmc_msgs.msg import LaneBoundaryFamily
+        from camera_measurement_records import instrument_consumer
+        original=LaneBoundaryFamily.deserialize;policy=(gc.isenabled(),gc.get_threshold())
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'timing.jsonl';close=instrument_consumer(path,LaneBoundaryFamily)
+            try:
+                data=io.BytesIO();LaneBoundaryFamily().serialize(data)
+                LaneBoundaryFamily().deserialize(data.getvalue())
+            finally:close()
+            import json
+            events=[json.loads(line) for line in path.read_text().splitlines()]
+            self.assertTrue(any(row['event']=='family_deserialize' for row in events))
+        self.assertIs(LaneBoundaryFamily.deserialize,original)
+        self.assertEqual((gc.isenabled(),gc.get_threshold()),policy)
+
+    def test_measurement_waits_for_the_requested_epoch_and_a_valid_lane_pipeline(self):
+        from compare_camera_runtime import transition_ready
+        status={'lane':NS(generation=1,mode=1,prepared=True,pipeline_ready=True)}
+        self.assertTrue(transition_ready(status,{'lane':1},1))
+        self.assertFalse(transition_ready(status,{'lane':2},1))
+        self.assertFalse(transition_ready(status,{'lane':1},2))
+        status['lane'].pipeline_ready=False
+        self.assertFalse(transition_ready(status,{'lane':1},1))
+
+    def test_diagnostic_profiles_cannot_be_used_for_timing_acceptance(self):
+        from compare_camera_runtime import acceptance_eligible
+        self.assertTrue(acceptance_eligible({}))
+        self.assertFalse(acceptance_eligible(dict(allocation_profile=True)))
+        self.assertFalse(acceptance_eligible(dict(profile_lane_fit=True)))
+        self.assertFalse(acceptance_eligible(dict(acceptance_eligible=False)))
+
+    def test_runtime_acceptance_keeps_short_family_gaps_and_transient_readiness_failures(self):
+        from summarize_camera_structure import shadow_acceptance_failures
+        stream=dict(five_second_hz=[14.8],timing_pass=True,duplicate_stamps=0,reversed_stamps=0)
+        keys=['/perception/camera/objects:'+v for v in ('front','left','right')]
+        keys+=['/perception/camera/'+v+'/road_marking/model_grid/class_id:'+v for v in ('front','left','right')]
+        keys+=['/perception/traffic_light/detection:extra']
+        report=dict(complete=True,start=0,end=60,active=['objects','lane','traffic_light'],
+            streams={k:stream for k in keys},lane_family=dict(valid_supply=dict(stream,max_gap_sec=.2)),
+            resources=dict(resource_coverage_pass=True,vram_peak_fraction=.7))
+        statuses=[dict(role=r,at=1,prepared=True,pipeline_ready=True,errors=[]) for r in report['active']]
+        self.assertEqual(shadow_acceptance_failures(report,statuses),[])
+        report['lane_family']['valid_supply']['max_gap_sec']=.251
+        self.assertIn('valid family gap over250ms',shadow_acceptance_failures(report,statuses))
+        statuses[1]['pipeline_ready']=False
+        self.assertIn('ACTIVE readiness/errors: lane',shadow_acceptance_failures(report,statuses))
+        report['allocation_profile']=True
+        self.assertEqual(shadow_acceptance_failures(report,statuses),['diagnostic run: excluded from acceptance'])
+
+    def test_camera_pairing_does_not_accept_out_of_window_or_missing_inputs(self):
+        self.assertIsNone(nearest_index([],10,3))
+        self.assertIsNone(nearest_index([1,20],10,3))
+        self.assertEqual(nearest_index([1,10,20],13,3),1)
+        self.assertEqual(nearest_index([10,20],15,5),0)
+        self.assertEqual([phase(s,10,20) for s in (9,10,15,20,21)],
+                         ['entry','interior','interior','interior','exit'])
+
+    def family(self, valid=True, delta=0, role=1):
+        return NS(valid=valid,status_reason='test',boundaries=[NS(role=role,color=1,
+            polyline=[NS(x=i,y=delta) for i in range(4)],support_state=[1]*4)])
+
+    def test_parity_reports_new_invalidity_role_confusion_and_geometry_separately(self):
+        r=compare_family(self.family(),self.family(delta=.1))
+        self.assertTrue(r['validity_equal'] and r['roles_equal'])
+        self.assertAlmostEqual(r['geometry_delta_p95_m'],.1)
+        self.assertFalse(compare_family(self.family(),self.family(False))['validity_equal'])
+        self.assertFalse(compare_family(self.family(),self.family(role=2))['roles_equal'])
+        changed=self.family(); changed.boundaries[0].support_state=[1,0,0,1]
+        self.assertEqual(compare_family(self.family(),changed)['support_changed_roles'],1)
+
+    def test_shifted_arc_samples_are_compared_at_the_same_forward_distance(self):
+        reference=self.family(); candidate=self.family()
+        for message,shift in [(reference,0.),(candidate,.4)]:
+            for i,p in enumerate(message.boundaries[0].polyline):
+                p.x=i+shift; p.y=.1*p.x
+        compared=compare_family(reference,candidate)
+        self.assertLess(compared['geometry_delta_max_m'],1e-12)
+        self.assertGreater(compared['sample_index_distance_p95_m'],.4)
+
+    def test_allocation_probe_restores_methods_and_does_not_change_gc_policy(self):
+        import gc
+        from asmc_msgs.msg import LaneBoundaryFamily
+        from camera_runtime_probe import install_allocation_profile
+        original=LaneBoundaryFamily.deserialize
+        enabled,thresholds=gc.isenabled(),gc.get_threshold()
+        rows=Mock(); callbacks=[]
+        with tempfile.TemporaryDirectory() as directory, \
+                patch('camera_runtime_probe.measurement_journal',return_value=rows), \
+                patch('atexit.register',side_effect=callbacks.append):
+            install_allocation_profile(Path(directory)/'profile.jsonl')
+            try:
+                encoded=io.BytesIO(); LaneBoundaryFamily().serialize(encoded)
+                LaneBoundaryFamily().deserialize(encoded.getvalue())
+            finally:
+                callbacks[-1]()
+        self.assertIs(LaneBoundaryFamily.deserialize,original)
+        events=[call.args[0] for call in rows.append.call_args_list]
+        self.assertTrue(any(e.get('stage')=='deserialize' for e in events))
+        self.assertFalse(events[-1]['acceptance_timing'])
+        rows.close.assert_called_once()
+        self.assertEqual((gc.isenabled(),gc.get_threshold()),(enabled,thresholds))
+
+
+if __name__=='__main__': unittest.main()

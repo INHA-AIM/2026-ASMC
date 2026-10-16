@@ -1,0 +1,86 @@
+{
+  "schema": "shadow_family_fixture_v1",
+  "runs": [
+    {
+      "run_id": "20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel",
+      "bag": "rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag",
+      "bag_sha256": "9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34",
+      "triplets": 485,
+      "rejected_front_inputs": 9,
+      "phases": {
+        "entry": 125,
+        "interior": 282,
+        "exit": 78
+      }
+    },
+    {
+      "run_id": "20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel",
+      "bag": "rosbags/raw/20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel/bags/20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel_0.bag",
+      "bag_sha256": "82c6c196a458c661232df7325b45ec034509181e7b61ddfb79ed878c4ebdaa22",
+      "triplets": 427,
+      "rejected_front_inputs": 0,
+      "phases": {
+        "entry": 119,
+        "interior": 227,
+        "exit": 81
+      }
+    },
+    {
+      "run_id": "20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel",
+      "bag": "rosbags/raw/20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel/bags/20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel_0.bag",
+      "bag_sha256": "870b65df19cb1cd7df792cb34dfb56130d5f059a4f5851b0b0dda8118409a8d7",
+      "triplets": 370,
+      "rejected_front_inputs": 1,
+      "phases": {
+        "entry": 92,
+        "interior": 201,
+        "exit": 77
+      }
+    },
+    {
+      "run_id": "20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel",
+      "bag": "rosbags/raw/20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel/bags/20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel_0.bag",
+      "bag_sha256": "12498b76d03a0bfc8ae853b30722dda11145fe53c00fb2d53e7fb665abae8bc7",
+      "triplets": 346,
+      "rejected_front_inputs": 1,
+      "phases": {
+        "entry": 93,
+        "interior": 165,
+        "exit": 88
+      }
+    },
+    {
+      "run_id": "20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel",
+      "bag": "rosbags/raw/20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel/bags/20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel_0.bag",
+      "bag_sha256": "8fa558024e8d29a943c8177ffc1747580d4e4ce89417a139b0db9646c776e261",
+      "triplets": 358,
+      "rejected_front_inputs": 4,
+      "phases": {
+        "entry": 111,
+        "interior": 194,
+        "exit": 53
+      }
+    },
+    {
+      "run_id": "20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel",
+      "bag": "rosbags/raw/20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel/bags/20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel_0.bag",
+      "bag_sha256": "8a1d91cdcc5c15cf2dba493acd938209f073e9eb2ff268914e9f3e1d0cc3d5d4",
+      "triplets": 370,
+      "rejected_front_inputs": 5,
+      "phases": {
+        "entry": 108,
+        "interior": 205,
+        "exit": 57
+      }
+    }
+  ],
+  "triplets": 2356,
+  "manifest_sha256": "4b5cf3062216972a027682325ecc856150b77e184541d2f74fb142a364ced164",
+  "route_sha256": "50658991e607d9339d76e4cd6cb169dfc733ea53b93de2c3e222460bb497cc05",
+  "shadow_station_bounds": [
+    1877.744798966,
+    1996.730791531
+  ],
+  "boundary_source": "existing morai_camera_runtime_trial SHADOW_START/END; development ODD fixture",
+  "note": "Existing development bag RGB and interpolated pose. No new GT or capture-time guarantee; keep original header/fallback policy. Adjacent frames are not independent scenes."
+}

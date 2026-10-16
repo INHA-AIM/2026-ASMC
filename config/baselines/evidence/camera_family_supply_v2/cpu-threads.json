@@ -1,0 +1,14 @@
+{
+  "point_max_abs_delta_m": 0.0,
+  "previous": {
+    "p50": 10.63796599919442,
+    "p95": 17.54048245238664,
+    "p99": 19.60136400190095
+  },
+  "one": {
+    "p50": 10.031612502643839,
+    "p95": 15.335414202490938,
+    "p99": 16.695360330122643
+  },
+  "decision": "family-only BLAS environment threads=1; no OpenCV call in family fitting"
+}

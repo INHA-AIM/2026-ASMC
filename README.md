@@ -27,6 +27,11 @@
 
 ## 빠른 시작
 
+YOLO26l E8·사전학습 모델의 배포 checkpoint와 TensorRT engine은
+[카메라 models](src/asmc_camera/models/README.md)에 실제 Git 파일로 포함됩니다.
+지원 GPU·TensorRT 환경에서는 별도 YOLO 다운로드 없이 실행하며, TwinLite·ResNet과
+GPU 이미지 설치 의존성은 해당 실행 안내를 따릅니다.
+
 Windows 팀원은 최초 한 번 Docker Desktop **4.34 이상**에서 다음 설정을 적용해야 합니다.
 
 1. Docker Desktop을 Linux containers/WSL 2 모드로 실행합니다.

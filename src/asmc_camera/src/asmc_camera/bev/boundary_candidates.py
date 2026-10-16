@@ -200,15 +200,13 @@ def _track_separation(first: _TrackCandidate, second: _TrackCandidate) -> float:
     if upper - lower < 1.0:
         return second.reference_y_m - first.reference_y_m
     samples = np.linspace(lower, upper, max(3, int(math.ceil(upper - lower)) + 1))
-    return float(
-        np.median(
-            [
-                _track_y_at_x(second.track, value)
-                - _track_y_at_x(first.track, value)
-                for value in samples
-            ]
-        )
-    )
+    def interpolate(points):
+        order = np.argsort(points[:,0],kind='mergesort')
+        points = points[order]
+        unique_x,indices = np.unique(points[:,0],return_index=True)
+        return np.interp(np.clip(samples,unique_x[0],unique_x[-1]),unique_x,points[indices,1])
+    # Sorting and unique-x selection are invariant for this whole sample set.
+    return float(np.median(interpolate(second_points)-interpolate(first_points)))
 
 
 def select_shadow_lane_tracks_with_audit(

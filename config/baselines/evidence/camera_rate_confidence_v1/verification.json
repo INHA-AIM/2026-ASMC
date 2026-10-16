@@ -1,0 +1,35 @@
+{
+  "cpu_ci_tests": 517,
+  "contract_tests": 35,
+  "generated_ros_fixtures": 5,
+  "live_repetitions": 6,
+  "weather_repetitions": {
+    "sunny": 3,
+    "foggy": 3
+  },
+  "seconds_each": 60,
+  "local_camera_pass": true,
+  "all_three_models_active": true,
+  "gui_off_repetitions_pass": true,
+  "gui_sunny_readiness_failed_trials": [
+    "extra-legacy-main-gui",
+    "extra-sunny-objects-view"
+  ],
+  "heldout_retuned": false,
+  "public_messages_changed": false,
+  "training_started": false,
+  "merged": false,
+  "source_sha256": {
+    "src/asmc_camera/src/asmc_camera/runtime/cadence.py": "87cf432e830067b4ddc48df53baa25304ca9f96085bc88a925d81eb5d02156e8",
+    "src/asmc_camera/src/asmc_camera/runtime/latest_work.py": "0c4e4c87c98383565a9d284f832cee63a2f3845c415c1c6d608d5084fbfceda9",
+    "src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py": "89283ab04ad023e3a6966adbd2d71b4bb24db3d3df3dd2c69f3e1768ce6f2e01",
+    "src/asmc_camera/launch/_runtime.launch": "5d8311584d49bc9b4305553302aeb2fd570689076ad2ae2bdc0e4512a644413a",
+    "src/asmc_camera/launch/camera.launch": "95ad5e55acf40197df77a3f6b8c19088cf01cd9a1d83303908398b4c6541961a",
+    "src/asmc_camera/config/runtime.yaml": "e43a70a1e5c796fbc60ec2debe84a21a19e6d51b3913e42513e2aef3f35188f5"
+  },
+  "evidence_sha256": {
+    "summary.json": "06948fc6b279ec5db4ddc190311c9a0d52d874e4e5f10871c1ecebdabd28d1ec",
+    "trials.csv": "4ae6e05530ba26e86d11a65a4b69d67b798921b6a4efec965bdafe508ff364c2",
+    "confidence-comparison.json": "591935b788292cf2afc0ff6c102d7778e6597f2105f590f8d9e1d12f7a29ddd9"
+  }
+}

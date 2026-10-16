@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""Benchmark-only timing with a bounded asynchronous diagnostic journal.
+
+The same prefix instruments the frozen R0 and both candidates. Input receipt is
+the entry to the actual model (or shared broker) callback, not a separate ROS
+subscriber and not the sensor header's clock. Production launch never uses it.
+"""
+import argparse
+import atexit
+import gc
+from collections import OrderedDict
+import json
+import hashlib
+from pathlib import Path
+import runpy
+import sys
+import threading
+import time
+
+
+def measurement_journal(output):
+    # The measured overlay may be frozen R0 and lack this new runtime helper.
+    # Load the journal from the measurement checkout, not the target package.
+    import importlib.util
+    path = Path(__file__).resolve().parents[2] / 'src/asmc_camera/src/asmc_camera/runtime/jsonl_journal.py'
+    spec = importlib.util.spec_from_file_location('_camera_measurement_journal', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.JsonlJournal(output)
+
+
+def install(output):
+    import rospy
+    subscriber, publisher = rospy.Subscriber, rospy.Publisher
+    receipts, rows, lock = OrderedDict(), measurement_journal(output), threading.RLock()
+
+    def gc_event(phase, info):
+        # Diagnose rare whole-process pauses without changing GC policy. Only
+        # generation2 is recorded; no payload copy or file IO in this hook.
+        if info['generation']==2:
+            caller=sys._getframe(1)
+            event=dict(event='gc',phase=phase,generation=2,at=time.monotonic(),
+                thread=threading.current_thread().name,caller_file=caller.f_code.co_filename,
+                caller_function=caller.f_code.co_name,caller_line=caller.f_lineno,
+                collected=info.get('collected'),uncollectable=info.get('uncollectable'))
+            del caller  # Never retain producer frames/tensors in the journal.
+            rows.append(event)
+    gc.callbacks.append(gc_event)
+
+    def subscribe(name, data_class, callback=None, callback_args=None, **kwargs):
+        if data_class.__name__ != 'CompressedImage' or callback is None:
+            return subscriber(name, data_class, callback, callback_args, **kwargs)
+        def receive(message):
+            now = time.monotonic()
+            with lock:
+                key = (message.header.frame_id, message.header.stamp.to_nsec())
+                receipts[key] = (now, message.header.seq)
+                if len(receipts) > 256:
+                    receipts.popitem(last=False)
+                rows.append(dict(event='input', at=now, frame=key[0], stamp=key[1], topic=name))
+            return callback(message, callback_args) if callback_args is not None else callback(message)
+        return subscriber(name, data_class, receive, **kwargs)
+
+    class MeasuredPublisher:
+        def __init__(self, original, name):
+            self.original, self.name = original, name
+        def __getattr__(self, key):
+            return getattr(self.original, key)
+        def publish(self, message):
+            publish_begin = time.monotonic()
+            result = self.original.publish(message)
+            now = time.monotonic()
+            if hasattr(message, 'header'):
+                key = (message.header.frame_id, message.header.stamp.to_nsec())
+                with lock:
+                    receipt = receipts.get(key)
+                    received = receipt[0] if receipt else None
+                    rows.append(dict(event='output', at=now, frame=key[0], stamp=key[1], topic=self.name,
+                        valid=bool(getattr(message, 'valid', True)), stale=bool(getattr(message, 'stale', False)),
+                        classification=(dict(state=message.state,label=message.label,confidence=message.confidence,
+                            candidate_labels=list(message.candidate_labels),candidate_confidences=list(message.candidate_confidences))
+                            if self.name == '/perception/traffic_light/detection' else None),
+                        received=received, source_sequence=receipt[1] if receipt else None,
+                        publish_begin=publish_begin, publish_ms=(now-publish_begin)*1000,
+                        payload_sha256=hashlib.sha256(bytes(message.data)).hexdigest() if hasattr(message, 'encoding') else None,
+                        wall_ms=(now-received)*1000 if received is not None else None))
+            return result
+
+    def advertise(name, data_class, **kwargs):
+        original = publisher(name, data_class, **kwargs)
+        measured = name in ('/perception/camera/objects','/perception/traffic_light/detection','/perception/lane/boundary_family') or (
+            name.startswith('/perception/camera/') and (
+                name.endswith('/road_marking/class_id') or
+                name.endswith('/road_marking/model_grid/class_id')))
+        return MeasuredPublisher(original, name) if measured else original
+
+    def save():
+        gc.callbacks.remove(gc_event)
+        rows.close()
+    rospy.Subscriber, rospy.Publisher = subscribe, advertise
+    atexit.register(save)
+
+
+def install_allocation_profile(output):
+    """Opt-in diagnostic run; never use these timings as acceptance evidence."""
+    import tracemalloc
+    from collections import Counter
+    from asmc_msgs.msg import LaneBoundaryFamily
+    from asmc_camera.runtime.ros_control import RosInferenceControl
+    rows = measurement_journal(output)
+    stopped = threading.Event()
+    tracemalloc.start(8)
+    rows.append(dict(event='allocation_begin',at=time.monotonic(),acceptance_timing=False))
+    gc_started=[0.,0.,0.]
+    gc_totals=[[0,0.,0.] for _ in range(3)]
+    def profile_gc(phase, info):
+        generation=info['generation']
+        if phase=='start':
+            gc_started[generation]=time.monotonic()
+        else:
+            elapsed=(time.monotonic()-gc_started[generation])*1000
+            stats=gc_totals[generation]
+            stats[0]+=1; stats[1]+=elapsed; stats[2]=max(stats[2],elapsed)
+    gc.callbacks.append(profile_gc)
+    originals = []
+    for owner, name in ((LaneBoundaryFamily, 'deserialize'),
+                        (RosInferenceControl, 'pipeline_observation')):
+        original = getattr(owner, name)
+        originals.append((owner, name, original))
+        def measured(self, *args, _original=original, _name=name, **kwargs):
+            start, cpu = time.monotonic(), time.thread_time()
+            try:
+                return _original(self, *args, **kwargs)
+            finally:
+                end = time.monotonic()
+                rows.append(dict(event='allocation_stage',stage=_name,at=end,
+                    wall_ms=(end-start)*1000,cpu_ms=(time.thread_time()-cpu)*1000,
+                    thread=threading.current_thread().name))
+        setattr(owner, name, measured)
+    def sample():
+        while not stopped.wait(5.):
+            current, peak = tracemalloc.get_traced_memory()
+            rows.append(dict(event='allocation_sample',at=time.monotonic(),
+                current_bytes=current,peak_bytes=peak,gc_counts=gc.get_count(),gc_stats=gc.get_stats(),
+                generation_timing=[dict(count=s[0],total_ms=s[1],maximum_ms=s[2]) for s in gc_totals]))
+    worker = threading.Thread(target=sample, name='allocation-diagnostic',daemon=True)
+    worker.start()
+    def save():
+        stopped.set(); worker.join(timeout=1.)
+        gc.callbacks.remove(profile_gc)
+        for owner, name, original in originals:
+            setattr(owner,name,original)
+        # Heap walks are end-of-run diagnostic work, outside timing windows.
+        try:
+            counts=Counter(str(type(value).__module__)+'.'+str(type(value).__name__) for value in gc.get_objects())
+            snapshot=tracemalloc.take_snapshot()
+            rows.append(dict(event='allocation_end',at=time.monotonic(),
+                tracked_types=counts.most_common(30),
+                retained_locations=[dict(location=str(s.traceback),bytes=s.size,count=s.count)
+                                    for s in snapshot.statistics('lineno')[:30]],
+                acceptance_timing=False))
+        finally:
+            tracemalloc.stop(); rows.close()
+    atexit.register(save)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--entrypoint',type=Path,help='Benchmark-only executable override, used for the same repaired view in frozen/current overlays')
+    parser.add_argument('--visual-codecs', action='store_true', help='Count debug JPEG calls without instrumenting model outputs')
+    parser.add_argument('--lane-fit-profile', action='store_true', help='Diagnostic cProfile of the fitting worker; not a timing acceptance run')
+    parser.add_argument('--allocation-profile', action='store_true',
+        help='Diagnostic tracemalloc + family deserialize/callback timings; not an acceptance run')
+    parser.add_argument('command', nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    command = args.command
+    if command and command[0] == '--':
+        command = command[1:]
+    if not command:
+        parser.error('node executable required')
+    if args.entrypoint:
+        command[0]=str(args.entrypoint.resolve(strict=True))
+    if args.lane_fit_profile:
+        import cProfile
+        from asmc_camera.nodes.lane_vectorizer_node import LaneVectorizerNode
+        original = LaneVectorizerNode._process
+        profile = cProfile.Profile()
+        LaneVectorizerNode._process = lambda self,frames:profile.runcall(original,self,frames)
+        atexit.register(lambda:profile.dump_stats(str(args.output)))
+    elif args.visual_codecs:
+        install_codecs(args.output)
+    else:
+        install(args.output)
+    if args.allocation_profile:
+        if args.visual_codecs or args.lane_fit_profile:
+            parser.error('allocation profile requires the normal model probe')
+        install_allocation_profile(args.output.with_name(args.output.stem+'-allocations.jsonl'))
+    sys.argv = command
+    runpy.run_path(command[0], run_name='__main__')
+
+
+def install_codecs(output):
+    import cv2
+    rows, lock = measurement_journal(output), threading.Lock()
+    for name, event in (('imdecode','decode'),('imencode','encode')):
+        original = getattr(cv2,name)
+        def measured(*args, _original=original, _event=event, **kwargs):
+            start = time.monotonic()
+            try:
+                return _original(*args,**kwargs)
+            finally:
+                end = time.monotonic()
+                with lock:
+                    rows.append(dict(event=_event,at=end,duration_ms=(end-start)*1000))
+        setattr(cv2,name,measured)
+    def save():
+        rows.close()
+    atexit.register(save)
+
+
+if __name__ == '__main__':
+    main()

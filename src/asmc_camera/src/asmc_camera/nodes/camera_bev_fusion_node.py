@@ -28,6 +28,7 @@ from asmc_camera.bev.projector import CameraBevProjector, ProjectedSemantic
 
 from asmc_camera.runtime.ros_control import LaneEpochGate
 from asmc_camera.runtime.cadence import downstream_gate
+from asmc_camera.runtime.demand_inputs import DemandInputs, DemandSynchronizer
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,7 @@ class _ViewFrame:
     stamp_ns: int
     header: object
     semantic: ProjectedSemantic
+    generation: object = None
 
 
 def _names(value):
@@ -168,21 +170,14 @@ class CameraBevFusionNode:
         self.synchronizers = []
         for view in self.views:
             namespace = "/perception/bev/debug/{}".format(view)
-            drivable = message_filters.Subscriber(
-                namespace + "/drivable_probability", Image, queue_size=2
-            )
-            marking = message_filters.Subscriber(
-                namespace + "/road_marking/class_id", Image, queue_size=2
-            )
-            confidence = message_filters.Subscriber(
-                namespace + "/road_marking/confidence", Image, queue_size=2
-            )
-            synchronizer = message_filters.TimeSynchronizer(
-                [drivable, marking, confidence], queue_size=4
-            )
-            synchronizer.registerCallback(partial(self._view_callback, view))
-            self.subscribers.extend([drivable, marking, confidence])
-            self.synchronizers.append(synchronizer)
+            group = DemandSynchronizer(
+                [namespace + "/drivable_probability", namespace + "/road_marking/class_id",
+                 namespace + "/road_marking/confidence"], Image,
+                self._requested, partial(self._view_callback, view),
+                context=self.epoch_gate.context,
+                on_reset=self._reset_inputs)
+            self.subscribers.append(group)
+        self.demand_inputs = DemandInputs(self.subscribers)
 
         self.diagnostics_publisher = rospy.Publisher(
             "/perception/bev/diagnostics", DiagnosticArray, queue_size=1
@@ -206,11 +201,22 @@ class CameraBevFusionNode:
             self.publish_debug_metadata,
         )
 
+    def _requested(self):
+        return (not self.epoch_gate.enabled or self.epoch_gate.mode != 0) and any(
+            publisher.get_num_connections() > 0 for publisher in self.publishers.values())
+
+    def _reset_inputs(self):
+        with self.buffer_lock:
+            for queue in self.buffers.values():
+                queue.clear()
+            self.next_output_stamp_ns = self.last_input_source_stamp_ns = 0
+
     def _view_callback(
         self, view: str, drivable: Image, marking: Image, confidence: Image
     ) -> None:
-        if not self.epoch_gate.allows(drivable.header.stamp):
+        if not self._requested() or not self.epoch_gate.allows(drivable.header.stamp):
             return
+        generation = self.epoch_gate.context()
         stamps = [
             int(message.header.stamp.to_nsec())
             for message in (drivable, marking, confidence)
@@ -231,9 +237,11 @@ class CameraBevFusionNode:
             self.pair_errors[view] += 1
             rospy.logwarn_throttle(2.0, "%s fused BEV input invalid: %s", view, exc)
             return
-        frame = _ViewFrame(view, stamps[0], drivable.header, semantic)
+        frame = _ViewFrame(view, stamps[0], drivable.header, semantic, generation)
         ready = None
         with self.buffer_lock:
+            if generation != self.epoch_gate.context():
+                return
             queue = self.buffers[view]
             if len(queue) >= self.queue_size:
                 queue.popleft()
@@ -258,6 +266,8 @@ class CameraBevFusionNode:
 
     def _fuse_and_publish(self, frames) -> None:
         with self.processing_lock, self.epoch_gate.lock:
+            if not self._requested() or any(f.generation != self.epoch_gate.context() for f in frames.values()):
+                return
             if not all(self.epoch_gate.allows(f.header.stamp) for f in frames.values()):
                 return
             stamp_ns = max(frame.stamp_ns for frame in frames.values())
@@ -296,7 +306,8 @@ class CameraBevFusionNode:
                     messages["source_count"] = fused.source_count
                     messages["source_view"] = fused.source_view
                 for name, value in messages.items():
-                    self.publishers[name].publish(self._message(value, header))
+                    if self.publishers[name].get_num_connections() > 0:
+                        self.publishers[name].publish(self._message(value, header))
             except Exception as exc:
                 self.fusion_errors += 1
                 rospy.logerr_throttle(2.0, "camera BEV fusion failed: %s", exc)

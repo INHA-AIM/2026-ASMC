@@ -19,6 +19,17 @@ ROAD_MARKING_COLORS_BGR = {
     3: STOPLINE_COLOR_BGR,
 }
 
+# Debug-only palettes avoid repeated full-image boolean assignment/copies.
+_DRIVABLE_LUT = np.zeros((256, 1, 3), np.uint8)
+_DRIVABLE_LUT[1:] = DRIVABLE_COLOR_BGR
+_LANE_LUT = np.zeros((256, 1, 3), np.uint8)
+_LANE_LUT[1:] = LANE_COLOR_BGR
+_ROAD_MARKING_LUT = np.zeros((256, 1, 3), np.uint8)
+for _class_id, _color in ROAD_MARKING_COLORS_BGR.items():
+    _ROAD_MARKING_LUT[_class_id, 0] = _color
+for _palette in (_DRIVABLE_LUT, _LANE_LUT, _ROAD_MARKING_LUT):
+    _palette.setflags(write=False)
+
 
 def normalize_probability(probability: np.ndarray) -> np.ndarray:
     """Return a contiguous float32 probability image in the [0, 1] range."""
@@ -86,19 +97,16 @@ def render_panel(
 
     drivable = hard_mask(drivable_probability, drivable_threshold)
     _validate_spatial_shape(image_bgr, drivable, "drivable")
-    drivable_image = np.zeros_like(image_bgr)
-    drivable_image[drivable] = DRIVABLE_COLOR_BGR
-    secondary_image = np.zeros_like(image_bgr)
+    drivable_image = cv2.applyColorMap(drivable.view(np.uint8), _DRIVABLE_LUT)
     if secondary_mode == "lane":
         lane = hard_mask(secondary_output, lane_threshold)
         _validate_spatial_shape(image_bgr, lane, "lane")
-        secondary_image[lane] = LANE_COLOR_BGR
+        secondary_image = cv2.applyColorMap(lane.view(np.uint8), _LANE_LUT)
         secondary_label = "LANE >= {:.2f}".format(lane_threshold)
     else:
         road_marking = normalize_class_ids(secondary_output)
         _validate_spatial_shape(image_bgr, road_marking, "road_marking")
-        for class_id, color in ROAD_MARKING_COLORS_BGR.items():
-            secondary_image[road_marking == class_id] = color
+        secondary_image = cv2.applyColorMap(road_marking, _ROAD_MARKING_LUT)
         secondary_label = "ROAD MARKING | WHITE / YELLOW / STOP"
 
     tile_width = panel_width

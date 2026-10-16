@@ -53,6 +53,7 @@ add_message_files(
   LidarObjectArray.msg
   CameraObjectBox.msg
   CameraObjectBoxArray.msg
+  CameraObjectObservation.msg
 )
 
 generate_messages(

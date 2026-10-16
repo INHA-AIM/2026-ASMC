@@ -1,0 +1,40 @@
+{
+  "local_cpu_unique_tests": 729,
+  "local_cpu_definition": "728 complete CPU tests + one new readiness time-link test; the seven-test measurement module rerun passed.",
+  "contracts_tests": 35,
+  "generated_ros_fixtures": 7,
+  "generated_ros_checks": 64,
+  "generated_ros_pass": true,
+  "output_parity": {
+    "candidate": {
+      "boxes": {
+        "common": 180,
+        "mismatched": [],
+        "max_confidence_delta": 0.0
+      },
+      "lanes": {
+        "common": 180,
+        "mismatched": [],
+        "max_confidence_delta": 0.0
+      },
+      "traffic": {
+        "common": 60,
+        "mismatched": [],
+        "max_confidence_delta": 0.0
+      }
+    }
+  },
+  "producer_source_sha256": "80feb71d0d56fbb734917ff2b7c9dcbd6c6c63db25b812851b56431fb5b51eae",
+  "runtime_acceptance_pass": false,
+  "default_promoted": false,
+  "pr_ready": false,
+  "pr_merged": false,
+  "weather_restored": {
+    "requested": 0,
+    "observed": 0,
+    "status": 1,
+    "success": true
+  },
+  "scope": "Camera-only; frozen inference/weights; no training/collection/lidar implementation/planner policy/control publication.",
+  "latest_ci": "PR #85 Checks is the live source for the final report commit; local tests are separate."
+}

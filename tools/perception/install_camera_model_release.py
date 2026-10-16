@@ -56,6 +56,37 @@ def install(manifest, release_dir, models_root, verify_only=False):
                 models_root=str(models_root), release_tag=manifest['release_tag'])
 
 
+def link_package_models(manifest, models_root, package_models):
+    """Expose verified external artifacts without duplicating large weights.
+
+    Links are local conveniences, not runtime dependencies or Git artifacts.
+    Never replace an unrelated existing package file, including a broken link.
+    """
+    models_root, package_models = Path(models_root).resolve(), Path(package_models).resolve()
+    entries = []
+    destinations = set()
+    for item in manifest['files']:
+        asset, relative = Path(item['asset']), Path(item['relative_path'])
+        if asset.name != str(asset) or relative.is_absolute() or '..' in relative.parts:
+            raise ValueError('unsafe model link path')
+        source, link = (models_root/relative).resolve(), package_models/asset
+        if link in destinations:
+            raise ValueError('duplicate package model link')
+        destinations.add(link)
+        if models_root not in source.parents:
+            raise ValueError('model link source outside models root')
+        if source.stat().st_size != item['bytes'] or sha256(source) != item['sha256']:
+            raise ValueError('installed model mismatch: '+str(source))
+        if (link.exists() or link.is_symlink()) and (not link.is_symlink() or link.resolve() != source):
+            raise ValueError('refusing to replace package model: '+str(link))
+        entries.append((source, link))
+    package_models.mkdir(parents=True, exist_ok=True)
+    for source, link in entries:
+        if not link.is_symlink():
+            link.symlink_to(os.path.relpath(source,package_models))
+    return dict(links=[str(link) for _,link in entries], copied_bytes=0)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path,
@@ -63,9 +94,13 @@ def main():
     parser.add_argument('--release-dir', type=Path, required=True)
     parser.add_argument('--models-root', type=Path, required=True)
     parser.add_argument('--verify-only', action='store_true')
+    parser.add_argument('--package-models', type=Path, help='Optional local links to verified installed files')
     args = parser.parse_args()
-    print(json.dumps(install(json.loads(args.manifest.read_text()), args.release_dir,
-                             args.models_root, args.verify_only), indent=2))
+    manifest = json.loads(args.manifest.read_text())
+    result = install(manifest, args.release_dir, args.models_root, args.verify_only)
+    if args.package_models and not args.verify_only:
+        result['package_models'] = link_package_models(manifest,args.models_root,args.package_models)
+    print(json.dumps(result, indent=2))
 
 
 if __name__ == '__main__':

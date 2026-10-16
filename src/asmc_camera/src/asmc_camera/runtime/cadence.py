@@ -11,7 +11,10 @@ def downstream_gate(stamp, previous, deadline, period, upstream_hz=0):
     """
     publish, following, reset = source_time_gate_with_reset(
         stamp, previous, deadline, period)
-    if 0 < upstream_hz <= 1e9 / period:
+    # Compare periods using the same nanosecond rounding as the caller.
+    # 15Hz -> 66,666,667ns -> 14.999999925Hz: comparing reciprocal Hz
+    # falsely applies a second phase gate to an equal-rate producer.
+    if 0 < upstream_hz and int(round(1e9 / upstream_hz)) >= period:
         publish = reset or stamp > previous
     return publish, following, reset
 

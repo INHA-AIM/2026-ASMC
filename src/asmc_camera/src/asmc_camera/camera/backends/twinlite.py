@@ -30,7 +30,13 @@ class TwinLiteBackend(SemanticBackend):
         amp: bool = True,
         channels_last: bool = False,
         input_hw: Tuple[int, int] = (384, 640),
+        input_hw_by_view: Optional[Mapping[str, Tuple[int, int]]] = None,
     ) -> None:
+        shapes = {str(view): tuple(int(v) for v in shape)
+                  for view, shape in (input_hw_by_view or {}).items()}
+        for shape in [tuple(input_hw)] + list(shapes.values()):
+            if len(shape) != 2 or any(v <= 0 or v % 32 for v in shape):
+                raise ValueError("TwinLite input dimensions must be positive multiples of32")
         import torch
 
         from asmc_camera.training.twinlite import (
@@ -89,6 +95,8 @@ class TwinLiteBackend(SemanticBackend):
         if self._channels_last:
             self._model = self._model.to(memory_format=torch.channels_last)
         self._amp = bool(amp) and self._device.type == "cuda"
+        self.cuda_stream = torch.cuda.Stream(device=self._device) if self._device.type == 'cuda' else None
+        self.input_uploads = self.input_upload_bytes = 0
         self._secondary_head = task_spec.secondary_head
         categorical_classes = {}
         if self._secondary_head == "road_marking":
@@ -107,6 +115,8 @@ class TwinLiteBackend(SemanticBackend):
             weights="ema" if use_ema else "model",
             upstream_commit=str(upstream_commit),
             categorical_classes=categorical_classes,
+            input_hw_by_view=shapes,
+            channels_last=self._channels_last,
         )
 
     @property
@@ -117,15 +127,22 @@ class TwinLiteBackend(SemanticBackend):
         self, batch: np.ndarray
     ) -> Mapping[str, Union[np.ndarray, CategoricalOutput]]:
         torch = self._torch
-        if batch.ndim != 4 or batch.shape[1:] != (
-            3,
-            self.info.input_hw[0],
-            self.info.input_hw[1],
-        ):
+        allowed = {tuple(self.info.input_hw)} | set(self.info.input_hw_by_view.values())
+        if batch.ndim != 4 or batch.shape[0] < 1 or batch.shape[1] != 3 or tuple(batch.shape[2:]) not in allowed:
             raise ValueError("invalid TwinLite input shape: {}".format(batch.shape))
-        tensor = torch.from_numpy(np.ascontiguousarray(batch)).to(
-            self._device, non_blocking=True
-        )
+        if isinstance(batch, torch.Tensor):
+            if batch.device != self._device and str(batch.device) != str(self._device) + ':0':
+                raise ValueError('shared TwinLite tensor is on the wrong device')
+            if batch.dtype != torch.float32:
+                raise ValueError('TwinLite requires normalized float32 input')
+            tensor = batch
+        else:
+            if self._device.type == 'cuda':
+                self.input_uploads += 1
+                self.input_upload_bytes += batch.nbytes
+            tensor = torch.from_numpy(np.ascontiguousarray(batch)).to(
+                self._device, non_blocking=True
+            )
         if self._channels_last:
             tensor = tensor.contiguous(memory_format=torch.channels_last)
         with torch.no_grad():

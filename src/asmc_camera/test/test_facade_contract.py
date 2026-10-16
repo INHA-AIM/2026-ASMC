@@ -38,7 +38,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.launch_path = PACKAGE_ROOT / "launch" / "perception.launch"
-        cls.launch_root = ET.parse(cls.launch_path).getroot()
+        cls.launch_root = ET.parse(PACKAGE_ROOT / "launch/_components.launch").getroot()
         cls.runtime = yaml.safe_load(
             (PACKAGE_ROOT / "config" / "runtime.yaml").read_text(encoding="utf-8")
         )
@@ -109,8 +109,8 @@ class PerceptionFacadeContractTest(unittest.TestCase):
     def test_runtime_support_and_config_are_canonically_owned(self):
         canonical_root = PACKAGE_ROOT / "src" / "asmc_camera"
         expected_support = {
-            "camera": 8,
-            "bev": 19,
+            "camera": 9,
+            "bev": 20,
         }
         for namespace, expected_count in expected_support.items():
             files = list((canonical_root / namespace).rglob("*.py"))

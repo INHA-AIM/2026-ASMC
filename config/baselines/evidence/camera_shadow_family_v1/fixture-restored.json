@@ -1,0 +1,98 @@
+{
+  "actions": {
+    "brake_hold": true,
+    "transform": 1,
+    "gear": 1,
+    "weather": 1,
+    "time": 1,
+    "release_owned_command": true,
+    "control_mode": 1
+  },
+  "observed": {
+    "state": {
+      "actorInfo": {
+        "id": {
+          "value": "Ego"
+        },
+        "objectType": "OBJECT_TYPE_VEHICLE"
+      },
+      "boundingBox": {
+        "extent": {
+          "x": 1.0804173946380615,
+          "y": 2.3175039291381836,
+          "z": 0.8220231533050537
+        },
+        "location": {
+          "x": 16.355504989624023,
+          "y": -492.61419677734375,
+          "z": 29.060531616210938
+        },
+        "rotation": {
+          "x": -358.6827697753906,
+          "y": 0.1176094263792038,
+          "z": -154.58213806152344
+        }
+      },
+      "transform": {
+        "location": {
+          "x": 17.755260467529297,
+          "y": -492.00030517578125,
+          "z": 28.610261917114258
+        },
+        "rotation": {
+          "x": -358.6827697753906,
+          "y": 0.1176094263792038,
+          "z": -154.58213806152344
+        }
+      },
+      "velocity": {
+        "x": -0.0024980157613754272,
+        "y": -0.28282418847084045,
+        "z": -0.3814172148704529
+      },
+      "angularVelocity": {
+        "x": -0.06170893460512161,
+        "y": -0.00571828568354249,
+        "z": 0.08428040146827698
+      },
+      "acceleration": {
+        "x": -0.012262940406799316,
+        "y": 1.087767481803894,
+        "z": -0.33771294355392456
+      },
+      "vehicleState": {
+        "gearMode": "GEAR_MODE_D",
+        "currentLinkInfo": {
+          "id": {
+            "value": "A2256W000126"
+          },
+          "waypointIdx": 25
+        },
+        "remainingDistance": -1.0,
+        "isPassDesPos": true,
+        "tlId": {
+          "value": "Not Detected"
+        },
+        "tlColor": "TL_COLOR_NOT_DETECTED"
+      },
+      "globalVelocity": {
+        "x": -0.15004688501358032,
+        "y": 0.3434846103191376,
+        "z": -0.29151174426078796
+      }
+    },
+    "weather": {
+      "type": "WEATHER_TYPE_CLOUDY"
+    },
+    "time": {
+      "hour": 13
+    },
+    "mode": {
+      "mode": "VEHICLE_CONTROL_KEYBOARD"
+    }
+  },
+  "position_delta_m": 0.0057122926241128455,
+  "actors_spawned_or_deleted": 0,
+  "public_ros_control_published": false,
+  "note": "Restored pose, gear, weather, time and control mode; exact physics momentum is not replayed."
+}

@@ -30,11 +30,11 @@ def sha(path):
     return digest.hexdigest()
 
 
-def stop(process):
+def stop(process, timeout=25):
     if process.poll() is None:
         os.killpg(process.pid, signal.SIGINT)
         try:
-            process.wait(timeout=25)
+            process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             os.killpg(process.pid, signal.SIGKILL)
             process.wait()

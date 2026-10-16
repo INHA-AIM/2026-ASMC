@@ -1,0 +1,7 @@
+runtime_profile: camera_runtime_v1
+checkpoint: $(find asmc_camera)/models/traffic_light/best.pt
+image_topic: /cam_extra/image_jpeg/compressed
+device: cuda
+target_hz: 10.0
+min_detect: 0.40
+stale_sec: 1.0

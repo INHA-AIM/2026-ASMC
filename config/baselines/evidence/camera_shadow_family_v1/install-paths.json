@@ -1,0 +1,10 @@
+{
+  "e8": {
+    "/camera_lane/checkpoint": "/data/runtime/camera-shadow-family-v1/install/share/asmc_camera/models/lane_segmentation/twinlite-medium-v6.pt",
+    "/camera_objects/weights": "/data/runtime/camera-shadow-family-v1/install/share/asmc_camera/models/object_detection/yolo26l-finetuned_e8.engine"
+  },
+  "pretrained": {
+    "/camera_lane/checkpoint": "/data/runtime/camera-shadow-family-v1/install/share/asmc_camera/models/lane_segmentation/twinlite-medium-v6.pt",
+    "/camera_objects/weights": "/data/runtime/camera-shadow-family-v1/install/share/asmc_camera/models/object_detection/yolo26l-pretrained_coco7.engine"
+  }
+}

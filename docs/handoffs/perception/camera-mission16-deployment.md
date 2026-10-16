@@ -1,7 +1,11 @@
-# 카메라 객체 배포·소비 계약 — 2026-10-14
+# 카메라 객체 배포·소비 계약 — 2026-10-15
 
-현재 개발 기본은 **YOLO26l v11 E8, 16종, 전방1280·좌우640, TensorRT FP16,
-3뷰15Hz·2+1 batch, Ego mask ON, confidence0.40·동일 클래스 NMS0.70**이다.
+> 현재 실행·새 제어 경로는 [카메라 실행·3뷰 관측 계약](../../contracts/perception/camera-runtime-v1.md)이 정본입니다.
+> 아래 기존 profile/서비스 설명과 과거 검증 결과는 호환·재현 기록으로 보존합니다.
+
+현재 PR의 개발 프로필은 **YOLO26l v11 E8, 16종, 전방960·좌우640, TensorRT FP16,
+3뷰15Hz·2+1 batch, Ego mask ON, confidence0.40·동일 클래스 NMS0.50**이다.
+이전 승인된1280·NMS0.70의 검증 기록과 새 입력의 수락은 구분한다.
 사용자가 실시간 육안 시험 후 개발 기본 적용을 승인했다. SUNNY/FOGGY·11/13/15시 전체 조건,
 터널·범퍼 앞 근거리의 안정적 인지는 아직 충족하지 못했다. 이 배포를 전 구간 성능 수락으로
 해석하지 않는다. 학습은 종료했고 E22 대신 E8을 사용한다.
@@ -18,15 +22,20 @@
 STANDBY는 모델을 해제하는 동작이 아니다. 살아 있는 worker의 경로 파라미터만 바꾸어
 가중치가 변경됐다고 간주하지 않는다. 각 실행의 실제 profile·engine SHA는 diagnostics에 나온다.
 
-가중치는 Git에 넣지 않고 [모델 Release](https://github.com/INHAautonav/2026-ASMC/releases/tag/camera-yolo26l-v11-e8-v1)에
-checkpoint2개·engine2개로 배포한다. [파일·SHA 목록](../../../config/models/camera_object_models_v1.json)이 정본이다.
+사용자 요청으로 checkpoint2개·engine2개의 실제 배포 파일을 카메라 패키지에 포함한다.
+[배포 파일·SHA 목록 v2](../../../config/models/camera_object_models_v2.json)가 패키지 배포의 정본이다.
+E8은 원본 EMA를 그대로 유지한53.07MB 배포본이며 학습 재개 상태는 포함하지 않는다.
+두 canonical YAML은 `$(find asmc_camera)/models/object_detection/`의 engine을 읽는다.
+기존 [모델 Release](https://github.com/INHAautonav/2026-ASMC/releases/tag/camera-yolo26l-v11-e8-v1)와
+[원본 목록 v1](../../../config/models/camera_object_models_v1.json)은 과거 배포·학습 재개용으로 보존한다.
 TensorRT engine은 RTX4060Ti·TensorRT10.13.0.35에서 검증했다. 다른 GPU/런타임에 같은 engine을
 무조건 적용하지 않으며, 제공한 checkpoint와 `prepare_coco7_models.py --head-profile`로 다시 생성한다.
 E8은 one2one+외부 same-class NMS이고, 사전학습 복구 engine은 검증된 one2many 경로다.
 checkpoint·가중치 라이선스는 Ultralytics AGPL-3.0이며 저장소 코드 라이선스와 구분한다.
 
-GitHub 인증이 된 호스트에서 다운로드하고 실제 `/data/models`에 대응하는 폴더에 설치한다.
-공유 컨테이너의 pip 패키지를 변경하지 않는다.
+지원 GPU·컨테이너에서 패키지를 pull·빌드하면 YOLO를 별도 다운로드하지 않아도 된다.
+아래 명령은 **과거 release 재현·원본 checkpoint 확보용**이며 현재 실행의 필수 단계가 아니다.
+공유 컨테이너의 pip 패키지는 변경하지 않는다.
 
 ```bash
 gh release download camera-yolo26l-v11-e8-v1 --repo INHAautonav/2026-ASMC --dir /tmp/asmc-camera-models-v1
@@ -34,9 +43,9 @@ python3 tools/perception/install_camera_model_release.py \
   --release-dir /tmp/asmc-camera-models-v1 --models-root "${ASMC_DATA:?ASMC_DATA를 지정하세요}/models"
 ```
 
-`ASMC_DATA`는 호스트의 기존 데이터 루트다. 컨테이너에서는 기본 `/data/models`를 사용한다.
-다른 마운트는 `ASMC_MODELS_ROOT`로 지정한다. 설치기는 전체 파일의 SHA를 먼저 검사하며,
-다른 기존 모델을 덮어쓰지 않는다. E8 checkpoint에는 재개 상태도 보존돼 있다.
+`ASMC_DATA`는 원본 데이터를 보존할 호스트 루트다. 과거 프로필은 `ASMC_MODELS_ROOT`를
+사용할 수 있지만 현재 두 canonical 프로필은 package-local 경로를 사용한다. 설치기는
+기존 모델을 덮어쓰지 않는다. 원본 E8 checkpoint에만 재개 상태가 보존돼 있다.
 
 ## 직접 실행
 

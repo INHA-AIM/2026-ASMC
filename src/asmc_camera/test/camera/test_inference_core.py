@@ -3,6 +3,7 @@
 import threading
 import time
 import unittest
+from dataclasses import replace
 
 import numpy as np
 
@@ -138,6 +139,37 @@ class GeometryTest(unittest.TestCase):
 
 
 class InferenceEngineTest(unittest.TestCase):
+    def test_front_960_and_sides_640_use_one_backend_and_separate_shape_batches(self):
+        backend = CategoricalDummyBackend()
+        backend._info = replace(backend.info, input_hw_by_view={'front': (544, 960)})
+        calls = []
+        original = backend.infer
+        def measured(batch):
+            calls.append(batch.shape)
+            return original(batch)
+        backend.infer = measured
+        images = {'front': np.zeros((720,1280,3),np.uint8),
+                  'left': np.zeros((480,640,3),np.uint8),
+                  'right': np.zeros((480,640,3),np.uint8)}
+        result = InferenceEngine(backend).infer(images)
+        self.assertEqual(calls, [(1,3,544,960), (2,3,384,640)])
+        for view, prediction in result.views.items():
+            expected = (544,960) if view == 'front' else (384,640)
+            self.assertEqual(prediction.geometry.target_hw, expected)
+            self.assertEqual(prediction.model_grid_probabilities['road_marking'].shape, expected)
+            self.assertEqual(prediction.probabilities['road_marking'].shape, images[view].shape[:2])
+            self.assertEqual(prediction.categorical_confidences['road_marking'].shape, images[view].shape[:2])
+        calls.clear()
+        InferenceEngine(backend).infer({'right': images['right']})
+        self.assertEqual(calls, [(1,3,384,640)])  # missing cameras do not block
+        for image in images.values():
+            self.assertFalse(image.any())  # preprocessing does not mutate RGB
+
+    def test_960_front_letterbox_preserves_full_fov(self):
+        geometry = compute_letterbox_geometry((720,1280), (544,960))
+        self.assertEqual(geometry.resized_hw, (540,960))
+        self.assertEqual(geometry.pad_ltrb, (0,2,0,2))
+
     def test_backend_registry_rejects_unknown_model(self):
         with self.assertRaisesRegex(ValueError, "unsupported semantic backend"):
             create_backend("not-a-model")

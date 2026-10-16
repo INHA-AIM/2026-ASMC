@@ -32,6 +32,7 @@ venv/
 # Data & checkpoints (repo root only — mgeo_toolkit/data is tracked)
 /data/
 /checkpoints/
+# Verified local links installed from the camera model release; binaries remain external.
 *.bag
 *.bagidx
 

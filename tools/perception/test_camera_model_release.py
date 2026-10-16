@@ -2,10 +2,27 @@ import hashlib
 import tempfile
 import unittest
 from pathlib import Path
-from install_camera_model_release import install
+from install_camera_model_release import install, link_package_models
 
 
 class ReleaseInstallTest(unittest.TestCase):
+    def test_local_links_are_verified_repeatable_and_never_replace_existing_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            manifest, source, target = self.fixture(root)
+            install(manifest,source,target)
+            package=root/'package/models'
+            result=link_package_models(manifest,target,package)
+            self.assertEqual(result['copied_bytes'],0)
+            link_package_models(manifest,target,package)
+            self.assertTrue((package/'b.pt').is_symlink())
+            self.assertEqual((package/'b.pt').read_bytes(),b'pinned checkpoint')
+            (package/'a.engine').unlink()
+            (package/'a.engine').write_bytes(b'legacy model')
+            with self.assertRaises(ValueError):
+                link_package_models(manifest,target,package)
+            self.assertEqual((package/'a.engine').read_bytes(),b'legacy model')
+
     def fixture(self, root):
         source = root / 'download'
         source.mkdir()

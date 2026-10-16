@@ -1,20 +1,43 @@
 schema_version: 1
 profile: camera_runtime_profiles_v1
+# Legacy perception.launch profiles remain valid below.
+entrypoints:
+  camera:
+    launch: camera.launch
+    default_mode: standby
+    default_models: all
+    default_detector: e8
+    confidence: 0.40
+    nms_iou: 0.50
+    implementation: separate
+  view:
+    launch: view.launch
+    starts_inference: false
+observation_contract: config/contracts/camera_object_observation_v1.yaml
+postprocessing_default: {confidence: 0.40, nms_iou: 0.50, exclusive_names: false}
 launch_profiles:
   default: idle
   idle: {load_models: false, inference: false, visualization: false}
   planning: {load_models: true, managed: true, initial_mode: STANDBY, visualization: false}
   debug: {load_models: true, managed: true, initial_mode: ACTIVE, visualization: true}
   legacy: {camera_lane: true, camera_objects: false, traffic_light: false, managed: false}
-model_target_hz: {twinlite: 10.0, yolo: 15.0, resnet18: 10.0}
+input_policy:
+  objects_model_profiles: [camera/yolo26l_mission16_e8_three_view.yaml, camera/yolo26l_pretrained_mission_three_view.yaml]
+  lane_inference_and_projection: camera/lane_input.yaml
+model_target_hz: {twinlite: 15.0, yolo: 15.0, resnet18: 10.0}
+minimum_supply_hz: {twinlite: 10.0, yolo: 10.0, resnet18: 9.5}
+# Target15Hz and >=10Hz supply are separate; source interruptions are not waived.
 activation_owner: planning
 # Component flags select node creation. A loaded managed model's service controls inference.
 
 components:
   camera_objects:
-    enabled_by_default: false
+    enabled_by_default: true  # camera.launch loads the model in STANDBY
     launch_argument: start_camera_objects
     canonical_topic: /perception/camera/objects
+    observation_topic: /perception/camera/objects/observations
+    mode_service: /perception/camera/objects/set_mode
+    status_topic: /perception/camera/objects/status
     diagnostics_topic: /perception/camera/objects/diagnostics
     source_stamp_policy: source_image_header
     views: [front, left, right]
@@ -25,7 +48,7 @@ components:
     implementation: asmc_camera/object_detection_node.py
     consumer: Main/camera_objects_yolo_bbox_adapter.py
   camera_lane:
-    enabled_by_default: false
+    enabled_by_default: true  # camera.launch loads the model in STANDBY
     sensor_set: ASMC_sensor_set_v3
     output_frame: base_link
     source_stamp_policy: newest_synchronized_camera_source
@@ -61,7 +84,7 @@ components:
       compatibility_topic_enabled_by_default: false
       compatibility_launch_argument: lane_enable_independent_boundary_pipeline
   traffic_light:
-    enabled_by_default: false
+    enabled_by_default: true  # camera.launch loads the model in STANDBY
     activation_owner: planning
     legacy_topics: [/traffic_light/state, /traffic_light/detail]
     canonical_topic: /perception/traffic_light/detection

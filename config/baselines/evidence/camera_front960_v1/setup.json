@@ -1,0 +1,26 @@
+{
+  "runtime": "/data/runtime/camera-front960-v1",
+  "prior_runtime": "/data/runtime/camera-visualization-v1",
+  "prior_source_preserved": true,
+  "shape": {
+    "objects_front": [
+      544,
+      960
+    ],
+    "objects_side": [
+      480,
+      640
+    ],
+    "lane_front": [
+      544,
+      960
+    ],
+    "lane_side": [
+      384,
+      640
+    ]
+  },
+  "source_sha256": "d4169d62e9e0f64b5bae2e69b1ec9422ac95f55f30668302dd706b99deb2eb53",
+  "models_root": "/data/models",
+  "engine_rebuilt": false
+}

@@ -1,0 +1,19 @@
+{
+  "discovered_utc": "2026-10-15T02:00:35.808868+00:00",
+  "owned_qt_pids": [
+    69197,
+    77754
+  ],
+  "reason": "Two Qt viewers from interrupted diagnostic trials survived. GUI ON in final-matrix-r2/resource-recovery/soak had one new + two existing object viewers. GUI OFF retained two idle windows without visualization publishers.",
+  "original_results_preserved": true,
+  "affected_matrices": [
+    "final-matrix-r2",
+    "resource-recovery",
+    "soak"
+  ],
+  "cleanup": "Owned viewer marker verified; processes exited, zombie registrations ignored/cleaned. Shared ROS graph restored to four original nodes.",
+  "remedy": "5s Qt cleanup and 60s outer grace; pre/during/post actual Qt inventory and CPU + real interruption checks. Repeat fixed-code 16 trials and 30min once with clean GUI condition.",
+  "new_matrix": "clean-matrix-r1",
+  "new_soak": "clean-soak-r1",
+  "runtime_source_sha256": "80feb71d0d56fbb734917ff2b7c9dcbd6c6c63db25b812851b56431fb5b51eae"
+}

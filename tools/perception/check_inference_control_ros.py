@@ -12,7 +12,7 @@ from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Header
 from asmc_camera.msg import InferenceStatus
 from asmc_camera.srv import SetInferenceMode
-from asmc_msgs.msg import CameraObjectBoxArray
+from asmc_msgs.msg import CameraObjectBoxArray, CameraObjectObservation
 from asmc_camera.nodes.object_detection_node import ObjectDetectionNode
 
 
@@ -52,11 +52,14 @@ def main():
     while rospy.Time.now().to_nsec()==0:time.sleep(.01)
     backend=Backend()
     node=ObjectDetectionNode(backend)
-    received, outputs = [], []
-    status_sub=rospy.Subscriber('~inference_status',InferenceStatus,received.append,queue_size=100)
+    received, outputs, observations, legacy_status = [], [], [], []
+    status_sub=rospy.Subscriber('/perception/camera/objects/status',InferenceStatus,received.append,queue_size=100)
     output_sub=rospy.Subscriber('/perception/camera/objects',CameraObjectBoxArray,outputs.append,queue_size=100)
+    observation_sub=rospy.Subscriber('/perception/camera/objects/observations',CameraObjectObservation,observations.append,queue_size=100)
+    legacy_sub=rospy.Subscriber('/camera_object_detector/inference_status',InferenceStatus,legacy_status.append,queue_size=100)
+    alias=rospy.ServiceProxy('/camera_object_detector/set_inference_mode',SetInferenceMode)
     image_pub=rospy.Publisher('/image_jpeg/compressed',CompressedImage,queue_size=5)
-    service=rospy.ServiceProxy('~set_inference_mode',SetInferenceMode)
+    service=rospy.ServiceProxy('/perception/camera/objects/set_mode',SetInferenceMode)
     checks={}
     def wait(predicate,timeout=4):
         deadline=time.monotonic()+timeout
@@ -84,14 +87,19 @@ def main():
         send()
         wait(lambda:any(m.valid for m in outputs))
         checks['active_empty_detection_valid']=outputs[-1].valid and not outputs[-1].boxes
+        wait(lambda:observations and legacy_status)
+        checks['observation_same_header_and_generation']=observations[-1].detections.header.stamp == outputs[-1].header.stamp and observations[-1].detections.header.frame_id == outputs[-1].header.frame_id and observations[-1].generation==received[-1].generation
+        checks['observation_has_stable_identity']=bool(observations[-1].producer_session_id and observations[-1].calibration_id and observations[-1].model_id and observations[-1].config_id)
+        checks['alias_same_state']=alias(2,0).generation==service(2,0).generation
         backend.block=True
-        image_pub.publish(CompressedImage(header=Header(seq=100,stamp=rospy.Time.now(),
+        blocked_stamp=rospy.Time.now()
+        image_pub.publish(CompressedImage(header=Header(seq=100,stamp=blocked_stamp,
             frame_id='camera_front'),data=jpeg))
         wait(backend.entered.is_set)
         generation=service(0,0).generation
         backend.release.set()
         time.sleep(.3)
-        checks['old_inflight_result_withheld']=not any(m.header.seq==100 for m in outputs)
+        checks['old_inflight_result_withheld']=not any(m.header.stamp==blocked_stamp for m in outputs)
         checks['standby_invalidation']=not outputs[-1].valid
         service(1,10)
         for _ in range(3):send()
@@ -115,7 +123,7 @@ def main():
         ticking.set();clock_thread.join(timeout=1.)
         node.shutdown()
         rospy.set_param('/use_sim_time',False)
-        for sub in (status_sub,output_sub):sub.unregister()
+        for sub in (status_sub,output_sub,observation_sub,legacy_sub):sub.unregister()
         image_pub.unregister();clock_pub.unregister()
     passed=bool(checks) and all(checks.values())
     print(json.dumps(dict(passed=passed,checks=checks)))

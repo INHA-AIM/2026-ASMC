@@ -1,0 +1,177 @@
+{
+  "scope": "Stored independent RGB and native GT; MORAI background load may remain. No acceptance throughput claim.",
+  "input_manifest_sha256": "4add24d993fabacb4a99f9d36caaee7c7d4ffc7c391e33d4c5d087a4d64092d4",
+  "sample_count": 54,
+  "gt": {
+    "side384:front": {
+      "drivable_iou": 0.9618866592721708,
+      "marking_iou": [
+        0.9937476750822729,
+        0.652116044232263,
+        0.7517145480073442,
+        0.7931022107378697
+      ],
+      "target_pixels": [
+        4666330,
+        16291948,
+        203074,
+        68454,
+        25324
+      ]
+    },
+    "side480:front": {
+      "drivable_iou": 0.9618866592721708,
+      "marking_iou": [
+        0.9937476750822729,
+        0.652116044232263,
+        0.7517145480073442,
+        0.7931022107378697
+      ],
+      "target_pixels": [
+        4666330,
+        16291948,
+        203074,
+        68454,
+        25324
+      ]
+    },
+    "gpu480:front": {
+      "drivable_iou": 0.9618866592721708,
+      "marking_iou": [
+        0.9937476750822729,
+        0.652116044232263,
+        0.7517145480073442,
+        0.7931022107378697
+      ],
+      "target_pixels": [
+        4666330,
+        16291948,
+        203074,
+        68454,
+        25324
+      ]
+    },
+    "side384:left": {
+      "drivable_iou": 0.9779621593473355,
+      "marking_iou": [
+        0.9925825828495565,
+        0.4587740638883013,
+        0.854035445814515,
+        0.6669101533966398
+      ],
+      "target_pixels": [
+        1863403,
+        5374063,
+        30778,
+        123557,
+        1202
+      ]
+    },
+    "side480:left": {
+      "drivable_iou": 0.9796926507193587,
+      "marking_iou": [
+        0.9959339161238546,
+        0.6365562583741002,
+        0.9197895543598014,
+        0.72646404744255
+      ],
+      "target_pixels": [
+        1863403,
+        5374063,
+        30778,
+        123557,
+        1202
+      ]
+    },
+    "gpu480:left": {
+      "drivable_iou": 0.9796926507193587,
+      "marking_iou": [
+        0.9959339161238546,
+        0.6365562583741002,
+        0.9197895543598014,
+        0.72646404744255
+      ],
+      "target_pixels": [
+        1863403,
+        5374063,
+        30778,
+        123557,
+        1202
+      ]
+    },
+    "side384:right": {
+      "drivable_iou": 0.9811222137005128,
+      "marking_iou": [
+        0.9941277600216473,
+        0.8362201765921473,
+        0.0,
+        0.3172231985940246
+      ],
+      "target_pixels": [
+        1637097,
+        5353157,
+        175301,
+        322,
+        820
+      ]
+    },
+    "side480:right": {
+      "drivable_iou": 0.9800275486281939,
+      "marking_iou": [
+        0.995198339560601,
+        0.8575689909891622,
+        0.0,
+        0.3741935483870968
+      ],
+      "target_pixels": [
+        1637097,
+        5353157,
+        175301,
+        322,
+        820
+      ]
+    },
+    "gpu480:right": {
+      "drivable_iou": 0.9800275486281939,
+      "marking_iou": [
+        0.995198339560601,
+        0.8575689909891622,
+        0.0,
+        0.3741935483870968
+      ],
+      "target_pixels": [
+        1637097,
+        5353157,
+        175301,
+        322,
+        820
+      ]
+    }
+  },
+  "direct_pass": true,
+  "gpu_detection_pass": true,
+  "twin_gpu_pass": true,
+  "comparisons": {
+    "direct_parity": {
+      "count": 410,
+      "passed": 410,
+      "min_iou": 1.0,
+      "max_confidence_delta": 0.0,
+      "unmatched": 0,
+      "threshold_boundary": 0
+    },
+    "gpu_detection_parity": {
+      "count": 108,
+      "passed": 108,
+      "min_iou": 1.0,
+      "max_confidence_delta": 0.0,
+      "unmatched": 0,
+      "threshold_boundary": 0
+    }
+  },
+  "twin_parity": {
+    "count": 54,
+    "max_drivable_mean_abs": 0.0,
+    "max_marking_mismatch": 0.0
+  }
+}

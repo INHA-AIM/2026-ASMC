@@ -6,6 +6,19 @@ from asmc_camera.bev.performance_monitor import source_time_gate_with_reset
 
 
 class CadenceTest(unittest.TestCase):
+    def test_rounded_fifteen_hz_period_preserves_managed_fresh_observations(self):
+        period = int(round(1e9 / 15.))
+        last, deadline = 0, 0
+        for stamp in (1000000000, 1050000000, 1100000000, 1200000000):
+            admitted, deadline, reset = downstream_gate(stamp, last, deadline, period, 15.)
+            self.assertTrue(admitted)
+            self.assertFalse(reset)
+            last = stamp
+        self.assertFalse(downstream_gate(last, last, deadline, period, 15.)[0])
+        # A truly faster producer must still respect the downstream ceiling.
+        self.assertEqual(downstream_gate(last + 50000000, last, last + period, period, 20.),
+                         source_time_gate_with_reset(last + 50000000, last, last + period, period))
+
     def test_managed_phase_jitter_keeps_fresh_results_without_duplicates(self):
         stamps = [1000000000, 1099999999, 1200000001, 1299999999]
         last, deadline = 0, 0

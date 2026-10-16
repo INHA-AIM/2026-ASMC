@@ -17,7 +17,7 @@ class NodeWorkerTest(unittest.TestCase):
         self.outputs, self.diagnostics = [], []
         params = {"~class_groups": {"groups": {"person": ["person"], "vehicle": ["car"]}}}
         def publisher(topic, *args, **kwargs):
-            if topic.endswith("inference_status"):
+            if topic not in ("/perception/camera/objects", "/perception/camera/objects/diagnostics"):
                 return Mock()
             return Mock(publish=(self.diagnostics if topic.endswith("diagnostics") else self.outputs).append)
         self.patches = [patch.object(rospy, "get_param", side_effect=lambda name, default=None: params.get(name, default)),

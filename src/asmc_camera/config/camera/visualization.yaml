@@ -7,3 +7,4 @@ sync_queue_size: 30
 drivable_threshold: 0.5
 lane_threshold: 0.5
 condition_label: ""
+opencv_threads: 1  # Isolated debug renderer; inference thread settings are unchanged.

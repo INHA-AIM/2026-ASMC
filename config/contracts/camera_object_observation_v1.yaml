@@ -1,0 +1,37 @@
+schema_version: 1
+contract_id: camera_object_observation_v1
+status: additive_camera_producer
+existing_md5:
+  CameraObjectBox: 34412c90553e06734f1acade77c8e1e3
+  CameraObjectBoxArray: 310c671afb3693e7909db6453d115b79
+messages:
+  asmc_msgs/CameraObjectObservation:
+    md5: fbddb8fe0071685b60811037c0302106
+    required_fields: [detections, producer_session_id, generation, calibration_id, model_id, config_id]
+observation:
+  type: asmc_msgs/CameraObjectObservation
+  md5: fbddb8fe0071685b60811037c0302106
+  topic: /perception/camera/objects/observations
+  latch: false
+  one_message_per_view: true
+  source: detections.header
+  source_dimensions: [detections.image_width, detections.image_height]
+  source_labels: detections.boxes.source_class_name
+  consumer_groups: detections.boxes.class_name
+identity:
+  producer_session_id: uuid_per_object_producer_start
+  generation: same_atomic_output_guard_as_mode_control
+  calibration_id: sha256_of_camera_calibration_and_sensor_source_digest
+  model_id: engine_or_checkpoint_sha256
+  config_id: sha256_of_startup_configuration_and_mask_files
+  deduplication_key: [producer_session_id, generation, camera_frame_id, source_stamp_ns, calibration_id]
+normal_empty: detections.valid_true_and_empty_boxes
+invalid: detections.valid_false
+mode:
+  service_type: asmc_camera/SetInferenceMode
+  status_type: asmc_camera/InferenceStatus
+  roles:
+    objects: {service: /perception/camera/objects/set_mode, status: /perception/camera/objects/status, legacy_root: /camera_object_detector, model_field: yolo}
+    lane: {service: /perception/camera/lane/set_mode, status: /perception/camera/lane/status, legacy_root: /camera_semantic_inference, model_field: twinlite}
+    traffic_light: {service: /perception/camera/traffic_light/set_mode, status: /perception/camera/traffic_light/status, legacy_root: /traffic_light_infer, model_field: resnet18}
+future_lidar_consumer: not_implemented_in_this_change
