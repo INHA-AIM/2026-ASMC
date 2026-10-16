@@ -367,6 +367,15 @@ def relocation_body(text: str) -> str:
     return without_link_destinations(text)
 
 
+def relocated_document_paths(text: str, inventory: dict) -> str:
+    replacements = {entry['source']: entry['target'] for entry in inventory['entries']
+                    if entry['action'] in {'move', 'remove_redirect'}}
+    if not replacements:
+        return text
+    pattern = re.compile('|'.join(re.escape(x) for x in sorted(replacements, key=len, reverse=True)))
+    return pattern.sub(lambda match: replacements[match[0]], text)
+
+
 def validate_relocation(inventory: dict) -> List[str]:
     """One-time before/after proof; deliberately excluded from default CI."""
     errors = []
@@ -396,7 +405,9 @@ def validate_relocation(inventory: dict) -> List[str]:
             errors.append(f'relocation target missing: {target}')
             continue
         current = path.read_bytes()
-        if entry['frozen'] or path.suffix != '.md':
+        if entry['action'] == 'update_documentation_paths':
+            equal = current.decode('utf-8') == relocated_document_paths(original.decode('utf-8'), inventory)
+        elif entry['frozen'] or path.suffix != '.md':
             equal = current == original
         else:
             normalize = relocation_body if source in NAVIGATION_PAGES else without_link_destinations

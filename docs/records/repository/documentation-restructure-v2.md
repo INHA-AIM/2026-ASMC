@@ -44,7 +44,7 @@ python3 tools/audit/check_documentation_migration.py --with-history --verify-rel
 
 ## 이동 목록
 
-집계: `{"keep": 19, "move": 104, "remove_redirect": 12, "update_references": 26}`.
+집계: `{"update_references": 26, "keep": 19, "move": 104, "remove_redirect": 12, "update_documentation_paths": 24}`.
 `remove_redirect`는 본문을 가진 문서 삭제가 아니라 기존 4줄 호환 안내 제거다.
 `update_references`는 위치를 유지한 README 등의 링크 목적지만 수정한 경우다.
 
@@ -194,12 +194,31 @@ python3 tools/audit/check_documentation_migration.py --with-history --verify-rel
 | [src/asmc_camera/docs/camera-semantic-history.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_camera/docs/camera-semantic-history.md) | [docs/records/camera/camera-semantic-history.md](../camera/camera-semantic-history.md) | move |
 | [src/asmc_camera/docs/traffic-light-history.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_camera/docs/traffic-light-history.md) | [docs/records/camera/traffic-light-history.md](../camera/traffic-light-history.md) | move |
 | [src/asmc_camera/models/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_camera/models/README.md) | [src/asmc_camera/models/README.md](../../../src/asmc_camera/models/README.md) | update_references |
+| [src/asmc_camera/src/asmc_camera/bev/shared_lane_family.py](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_camera/src/asmc_camera/bev/shared_lane_family.py) | [src/asmc_camera/src/asmc_camera/bev/shared_lane_family.py](../../../src/asmc_camera/src/asmc_camera/bev/shared_lane_family.py) | update_documentation_paths |
 | [src/asmc_camera/training/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_camera/training/README.md) | [src/asmc_camera/training/README.md](../../../src/asmc_camera/training/README.md) | update_references |
 | [src/asmc_controller/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_controller/README.md) | [src/asmc_controller/README.md](../../../src/asmc_controller/README.md) | update_references |
 | [src/asmc_hd_map/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_hd_map/README.md) | [src/asmc_hd_map/README.md](../../../src/asmc_hd_map/README.md) | update_references |
+| [src/asmc_hd_map/config/kcity2025_compact_drivable_source.yaml](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_hd_map/config/kcity2025_compact_drivable_source.yaml) | [src/asmc_hd_map/config/kcity2025_compact_drivable_source.yaml](../../../src/asmc_hd_map/config/kcity2025_compact_drivable_source.yaml) | update_documentation_paths |
+| [src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml) | [src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml](../../../src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml) | update_documentation_paths |
+| [src/asmc_hd_map/config/kcity2025_mission_scenario_source.yaml](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_hd_map/config/kcity2025_mission_scenario_source.yaml) | [src/asmc_hd_map/config/kcity2025_mission_scenario_source.yaml](../../../src/asmc_hd_map/config/kcity2025_mission_scenario_source.yaml) | update_documentation_paths |
 | [src/asmc_hd_map/development/won_tae_link_node/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_hd_map/development/won_tae_link_node/README.md) | [src/asmc_hd_map/development/won_tae_link_node/README.md](../../../src/asmc_hd_map/development/won_tae_link_node/README.md) | update_references |
+| [src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py) | [src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py](../../../src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py) | update_documentation_paths |
+| [src/asmc_hd_map/test/test_drivable_area_audit_workspace.py](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_hd_map/test/test_drivable_area_audit_workspace.py) | [src/asmc_hd_map/test/test_drivable_area_audit_workspace.py](../../../src/asmc_hd_map/test/test_drivable_area_audit_workspace.py) | update_documentation_paths |
 | [src/asmc_lidar/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_lidar/README.md) | [src/asmc_lidar/README.md](../../../src/asmc_lidar/README.md) | update_references |
+| [src/asmc_msgs/CMakeLists.txt](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_msgs/CMakeLists.txt) | [src/asmc_msgs/CMakeLists.txt](../../../src/asmc_msgs/CMakeLists.txt) | update_documentation_paths |
 | [src/asmc_msgs/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_msgs/README.md) | [src/asmc_msgs/README.md](../../../src/asmc_msgs/README.md) | update_references |
+| [src/asmc_planner/src/Execution/Acceptance/CommandExecutionManager.hpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/src/Execution/Acceptance/CommandExecutionManager.hpp) | [src/asmc_planner/src/Execution/Acceptance/CommandExecutionManager.hpp](../../../src/asmc_planner/src/Execution/Acceptance/CommandExecutionManager.hpp) | update_documentation_paths |
+| [src/asmc_planner/src/Frenet/Common/PlannerCommand.hpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/src/Frenet/Common/PlannerCommand.hpp) | [src/asmc_planner/src/Frenet/Common/PlannerCommand.hpp](../../../src/asmc_planner/src/Frenet/Common/PlannerCommand.hpp) | update_documentation_paths |
+| [src/asmc_planner/src/Frenet/frenet_planner.hpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/src/Frenet/frenet_planner.hpp) | [src/asmc_planner/src/Frenet/frenet_planner.hpp](../../../src/asmc_planner/src/Frenet/frenet_planner.hpp) | update_documentation_paths |
+| [src/asmc_planner/src/Parser/BehaviorCommandAdapter.hpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/src/Parser/BehaviorCommandAdapter.hpp) | [src/asmc_planner/src/Parser/BehaviorCommandAdapter.hpp](../../../src/asmc_planner/src/Parser/BehaviorCommandAdapter.hpp) | update_documentation_paths |
+| [src/asmc_planner/src/Planning/Compatibility/avoid_commit_coordinator.hpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/src/Planning/Compatibility/avoid_commit_coordinator.hpp) | [src/asmc_planner/src/Planning/Compatibility/avoid_commit_coordinator.hpp](../../../src/asmc_planner/src/Planning/Compatibility/avoid_commit_coordinator.hpp) | update_documentation_paths |
+| [src/asmc_planner/tests/equivalence/phase5_legacy_manager.hpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/tests/equivalence/phase5_legacy_manager.hpp) | [src/asmc_planner/tests/equivalence/phase5_legacy_manager.hpp](../../../src/asmc_planner/tests/equivalence/phase5_legacy_manager.hpp) | update_documentation_paths |
+| [src/asmc_planner/tests/frenet/command_avoid_target_test.cpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/tests/frenet/command_avoid_target_test.cpp) | [src/asmc_planner/tests/frenet/command_avoid_target_test.cpp](../../../src/asmc_planner/tests/frenet/command_avoid_target_test.cpp) | update_documentation_paths |
+| [src/asmc_planner/tests/frenet/command_emergency_plan_test.cpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/tests/frenet/command_emergency_plan_test.cpp) | [src/asmc_planner/tests/frenet/command_emergency_plan_test.cpp](../../../src/asmc_planner/tests/frenet/command_emergency_plan_test.cpp) | update_documentation_paths |
+| [src/asmc_planner/tests/frenet/command_follow_plan_test.cpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/tests/frenet/command_follow_plan_test.cpp) | [src/asmc_planner/tests/frenet/command_follow_plan_test.cpp](../../../src/asmc_planner/tests/frenet/command_follow_plan_test.cpp) | update_documentation_paths |
+| [src/asmc_planner/tests/frenet/planner_command_defaults_test.cpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/tests/frenet/planner_command_defaults_test.cpp) | [src/asmc_planner/tests/frenet/planner_command_defaults_test.cpp](../../../src/asmc_planner/tests/frenet/planner_command_defaults_test.cpp) | update_documentation_paths |
+| [src/asmc_planner/tests/frenet/v2_enum_mapping_test.cpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/tests/frenet/v2_enum_mapping_test.cpp) | [src/asmc_planner/tests/frenet/v2_enum_mapping_test.cpp](../../../src/asmc_planner/tests/frenet/v2_enum_mapping_test.cpp) | update_documentation_paths |
+| [src/asmc_planner/tests/frenet/v2_ros_regression_test.cpp](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/asmc_planner/tests/frenet/v2_ros_regression_test.cpp) | [src/asmc_planner/tests/frenet/v2_ros_regression_test.cpp](../../../src/asmc_planner/tests/frenet/v2_ros_regression_test.cpp) | update_documentation_paths |
 | [src/data_collection/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/data_collection/README.md) | [src/data_collection/README.md](../../../src/data_collection/README.md) | update_references |
 | [src/integration/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/integration/README.md) | [src/integration/README.md](../../../src/integration/README.md) | update_references |
 | [src/interfaces/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/interfaces/README.md) | [src/interfaces/README.md](../../../src/interfaces/README.md) | update_references |
@@ -209,7 +228,12 @@ python3 tools/audit/check_documentation_migration.py --with-history --verify-rel
 | [src/jamming_lane_boundary_adapter/docs/camera-lane-cleanup-audit.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/jamming_lane_boundary_adapter/docs/camera-lane-cleanup-audit.md) | [docs/records/repository/jamming-camera-lane-cleanup-audit.md](jamming-camera-lane-cleanup-audit.md) | move |
 | [src/jamming_lane_boundary_adapter/docs/local-planning-control.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/jamming_lane_boundary_adapter/docs/local-planning-control.md) | [src/jamming_lane_boundary_adapter/docs/local-planning-control.md](../../../src/jamming_lane_boundary_adapter/docs/local-planning-control.md) | update_references |
 | [src/lidar+sensorfusion/RUN_SENSOR_FUSION.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/lidar+sensorfusion/RUN_SENSOR_FUSION.md) | [src/lidar+sensorfusion/RUN_SENSOR_FUSION.md](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md) | update_references |
+| [src/lidar+sensorfusion/tools_offline_bag_test.sh](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/src/lidar+sensorfusion/tools_offline_bag_test.sh) | [src/lidar+sensorfusion/tools_offline_bag_test.sh](../../../src/lidar+sensorfusion/tools_offline_bag_test.sh) | update_documentation_paths |
+| [tools/audit/build_perception_runtime_baseline.py](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/tools/audit/build_perception_runtime_baseline.py) | [tools/audit/build_perception_runtime_baseline.py](../../../tools/audit/build_perception_runtime_baseline.py) | update_documentation_paths |
+| [tools/audit/build_runtime_baseline.py](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/tools/audit/build_runtime_baseline.py) | [tools/audit/build_runtime_baseline.py](../../../tools/audit/build_runtime_baseline.py) | update_documentation_paths |
 | [tools/perception_eval/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/tools/perception_eval/README.md) | [tools/perception_eval/README.md](../../../tools/perception_eval/README.md) | update_references |
+| [tools/perception_eval/run_all.sh](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/tools/perception_eval/run_all.sh) | [tools/perception_eval/run_all.sh](../../../tools/perception_eval/run_all.sh) | update_documentation_paths |
+| [tools/perception_eval/run_bake.py](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/tools/perception_eval/run_bake.py) | [tools/perception_eval/run_bake.py](../../../tools/perception_eval/run_bake.py) | update_documentation_paths |
 | [tools/scen_runner/README.md](https://github.com/INHAautonav/2026-ASMC/blob/d36f29b6e5dad468c2668ff2e3823e5de8de49b5/tools/scen_runner/README.md) | [tools/scen_runner/README.md](../../../tools/scen_runner/README.md) | update_references |
 
 ## 다음 내용 검토
@@ -241,8 +265,32 @@ main/repro checkout과 컨테이너 마운트는 변경하지 않았다. PR 병�
 기존에 깨져 있던 anchor 4개는 존재하는 절 또는 문서 시작점으로만 수정했다.
 README·handoff·records 목차의 추가 탐색 블록만 일회성 본문 비교에서 허용한다.
 
-검사기 회귀 7개는 원본 내용 손실, 동결 파일 변경, 구 stub 재등장, 누락 anchor/image,
+검사기 회귀 8개는 원본 내용 손실, 동결 파일 변경, 구 stub 재등장, 누락 anchor/image,
 과거 명령 보존과 현행 문서의 후속 정상 수정을 확인한다.
 
 검사 요약은 [v2 결과](../../../config/docs/documentation_relocation_v2_result.json)에 있다.
 followup_content_review는 현행 안내의 검토·분리 대상이며 과거 실측 결과를 다시 쓰라는 지시가 아니다.
+
+## 소스 주석·문서 생성기 경로 보완
+
+소스·시험 주석과 문서 생성 도구 등 24개 파일에 남아 있던 문서 참조/보고서 경로를 갱신했다.
+update_documentation_paths는 전체 원문에서 등록된 문서 경로만 치환한 결과와 정확히 같아야 한다.
+C++ 실행 문장, 모델·피팅 계산, 지도 geometry와 배포 산출물은 바꾸지 않았다.
+HD맵 source YAML의 변경은 report 출력 위치와 설명 주석뿐이다.
+역사적 baseline YAML의 원본 경로와 v1 생성기의 당시 scan_scope는 보존했다.
+
+지원 Python3.8/Noetic에서도 문서 검사 회귀 8개를 통과했다.
+HD맵 P2-A 감사·compact 산출물·runtime pin의 check와 보고서 workspace 시험 3개가 통과했다.
+역사적 P4-A 생성기 회귀 6개도 통과했다.
+
+추가로 기존 main의 범위 밖 불일치 두 가지를 확인했으며 수정하지 않았다.
+
+- 전체 HD맵 재현 체인: metadata의 route_links 출처 표기가 src/behavior_planner에 남아 있어
+  현재 generator의 src/asmc_planner 표기와 다르다. 그 metadata와 generator/source는 이번 PR에서 바꾸지 않았다.
+  나머지 audit/compact/runtime pin/보고서 SHA 단계는 통과했다.
+- P1-A baseline 시험: 7개 중 1개는 현재 mission authority를 인정하지 않아 실패한다.
+  시작 main의 함수를 직접 읽어 같은 입력으로 확인해 동일한 BaselineError가 남는 것을 확인했다.
+  기존 checkpoint16/provisional 기대값과 현재15/team_final 정책의 차이를 이번 문서 구조 작업에서 수정하지 않았다.
+
+원본 로그와 비교 증거는 로컬 data/runtime/docs-restructure-v2에 보존한다.
+이 두 결과를 문서 이전 검사·새 보고서 경로 검증의 통과와 섞지 않는다.

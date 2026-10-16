@@ -37,7 +37,7 @@ void CheckDefaults(const PlannerCommand& cmd, const std::string& prefix) {
 
     // D2: FOLLOW의 선행차와 AVOID의 회피 장애물이 같은 필드를 쓴다.
     // BehaviorCommand가 둘 다 primary_object_id 하나로 주기 때문이다
-    // (docs/contracts/planning/fsm-frenet-v2.md 3.3절). 대상이 없는 maneuver는 -1.
+    // (docs/contracts/planning-fsm-frenet-v2.md 3.3절). 대상이 없는 maneuver는 -1.
     Expect(cmd.target_object_id == -1, prefix + ": target_object_id is invalid id");
     Expect(cmd.leader_s == 0.0, prefix + ": leader_s is zero");
     Expect(cmd.leader_speed == 0.0, prefix + ": leader_speed is zero");

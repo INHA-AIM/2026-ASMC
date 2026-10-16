@@ -1,7 +1,7 @@
 #pragma once
 
 // AVOID core와 command manager의 COMMIT을 한 planning tick에서 함께 적용한다.
-// 계약: docs/contracts/planning/fsm-frenet-v2.md 12.7.5절
+// 계약: docs/contracts/planning-fsm-frenet-v2.md 12.7.5절
 
 #include <cmath>
 

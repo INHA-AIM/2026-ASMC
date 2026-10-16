@@ -1156,6 +1156,14 @@
       "followup_content_review": true
     },
     {
+      "source": "src/asmc_camera/src/asmc_camera/bev/shared_lane_family.py",
+      "target": "src/asmc_camera/src/asmc_camera/bev/shared_lane_family.py",
+      "action": "update_documentation_paths",
+      "source_sha256": "fd20b2334f79245c9a4c16ed14bff2aedfdadd3dca5e0b17129931b89190f978",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
       "source": "src/asmc_camera/training/README.md",
       "target": "src/asmc_camera/training/README.md",
       "action": "update_references",
@@ -1180,12 +1188,52 @@
       "followup_content_review": true
     },
     {
+      "source": "src/asmc_hd_map/config/kcity2025_compact_drivable_source.yaml",
+      "target": "src/asmc_hd_map/config/kcity2025_compact_drivable_source.yaml",
+      "action": "update_documentation_paths",
+      "source_sha256": "97b279c0e1e4c72ffcd1ded7205e7b9a9380446f99b89573cbee0dfbee352cec",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml",
+      "target": "src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml",
+      "action": "update_documentation_paths",
+      "source_sha256": "95e8e79409468efa66c36fb933601833126687f9efa74802c04d9da4f6774046",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_hd_map/config/kcity2025_mission_scenario_source.yaml",
+      "target": "src/asmc_hd_map/config/kcity2025_mission_scenario_source.yaml",
+      "action": "update_documentation_paths",
+      "source_sha256": "f5f4948c6aff01b6396098d5512ee43dcdcb10d0924a8a32b23b853d802bc684",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
       "source": "src/asmc_hd_map/development/won_tae_link_node/README.md",
       "target": "src/asmc_hd_map/development/won_tae_link_node/README.md",
       "action": "update_references",
       "source_sha256": "0bf59ea9092efc44c2f6cf7170641910e8ff6aa6d7b208a2c854a0fcd747d972",
       "frozen": false,
       "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py",
+      "target": "src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py",
+      "action": "update_documentation_paths",
+      "source_sha256": "4ad8dae66f55685c74ff88ec614a8e695ca3c865b48aa41a8af5fbbd21a0802d",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_hd_map/test/test_drivable_area_audit_workspace.py",
+      "target": "src/asmc_hd_map/test/test_drivable_area_audit_workspace.py",
+      "action": "update_documentation_paths",
+      "source_sha256": "b875a13ec8b61ae24ff751d7d145ca162087040bc717de16621f2d6da16e53c1",
+      "frozen": false,
+      "followup_content_review": false
     },
     {
       "source": "src/asmc_lidar/README.md",
@@ -1196,12 +1244,116 @@
       "followup_content_review": true
     },
     {
+      "source": "src/asmc_msgs/CMakeLists.txt",
+      "target": "src/asmc_msgs/CMakeLists.txt",
+      "action": "update_documentation_paths",
+      "source_sha256": "3077d5a8e1b5141f8e3c6c915fc8631aefdf8da7a97bd1d065edb8d934b6f0e5",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
       "source": "src/asmc_msgs/README.md",
       "target": "src/asmc_msgs/README.md",
       "action": "update_references",
       "source_sha256": "25a8c083303aca2b1f473026d57c5ae228e8476d1ea56ffc2bbccc7be5ee7da5",
       "frozen": false,
       "followup_content_review": true
+    },
+    {
+      "source": "src/asmc_planner/src/Execution/Acceptance/CommandExecutionManager.hpp",
+      "target": "src/asmc_planner/src/Execution/Acceptance/CommandExecutionManager.hpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "2c1acb8b7ef7c3dc2d2502eb1727c81e222ed04adcbec8c711dd0b3fb7474db0",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/src/Frenet/Common/PlannerCommand.hpp",
+      "target": "src/asmc_planner/src/Frenet/Common/PlannerCommand.hpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "9d305c487eb6b5db29d2f3a28a4b55f7293f580db22e5b43c41968759f7a5a9b",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/src/Frenet/frenet_planner.hpp",
+      "target": "src/asmc_planner/src/Frenet/frenet_planner.hpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "86cd172da8651b80f6ca78f1266da5a725734a23626db40f725a41f4f8f36ccb",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/src/Parser/BehaviorCommandAdapter.hpp",
+      "target": "src/asmc_planner/src/Parser/BehaviorCommandAdapter.hpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "911548acda0df5ccccaea4cc40f45a47739468cfb0147787f42a542320dca687",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/src/Planning/Compatibility/avoid_commit_coordinator.hpp",
+      "target": "src/asmc_planner/src/Planning/Compatibility/avoid_commit_coordinator.hpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "f5d0eab58e15376c22b5b35d7a509af922561cfb021df0e05f68cc63e2cdd9f2",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/tests/equivalence/phase5_legacy_manager.hpp",
+      "target": "src/asmc_planner/tests/equivalence/phase5_legacy_manager.hpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "a17d9db9a2e2f1345c5e6c1f26366be4fec9d46ed817c2d5a67bb2e3648b19f2",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/tests/frenet/command_avoid_target_test.cpp",
+      "target": "src/asmc_planner/tests/frenet/command_avoid_target_test.cpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "bf4a6e2cd11088c5b07c363d26dacbe7a0dc01b7d23370e8d3f1d987855d343e",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/tests/frenet/command_emergency_plan_test.cpp",
+      "target": "src/asmc_planner/tests/frenet/command_emergency_plan_test.cpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "af4e92b8db8e2ba14cdfb384049a8724168302dcae9bc12ad4153584894f89ae",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/tests/frenet/command_follow_plan_test.cpp",
+      "target": "src/asmc_planner/tests/frenet/command_follow_plan_test.cpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "1f63acdbe7bafc9edbece89199ed3fe10f90f97da1af81e356bc02580b49865a",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/tests/frenet/planner_command_defaults_test.cpp",
+      "target": "src/asmc_planner/tests/frenet/planner_command_defaults_test.cpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "47d5e7ee817c23e067af4cd765b41f01a84f4d4e48b5101cfb76b7d6579a7708",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/tests/frenet/v2_enum_mapping_test.cpp",
+      "target": "src/asmc_planner/tests/frenet/v2_enum_mapping_test.cpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "6ab098fb39d8f0772eae3731dac138dcd4779a036e8266602181671273c37f96",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "src/asmc_planner/tests/frenet/v2_ros_regression_test.cpp",
+      "target": "src/asmc_planner/tests/frenet/v2_ros_regression_test.cpp",
+      "action": "update_documentation_paths",
+      "source_sha256": "affb5a9c22a282f37d7ba3aabbc7449b9b223dfc72dfaee658e24ea7e7cea3b6",
+      "frozen": false,
+      "followup_content_review": false
     },
     {
       "source": "src/data_collection/README.md",
@@ -1276,12 +1428,52 @@
       "followup_content_review": true
     },
     {
+      "source": "src/lidar+sensorfusion/tools_offline_bag_test.sh",
+      "target": "src/lidar+sensorfusion/tools_offline_bag_test.sh",
+      "action": "update_documentation_paths",
+      "source_sha256": "64e3fdd5ecef28b9d95abddd86ef94beb6d25533af5160e649a8a46c65e1bb94",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "tools/audit/build_perception_runtime_baseline.py",
+      "target": "tools/audit/build_perception_runtime_baseline.py",
+      "action": "update_documentation_paths",
+      "source_sha256": "3f1a107fe8ec8dd91f8c20e9322a7fa4f65e844bd45c21b60afc6f7642c9f425",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "tools/audit/build_runtime_baseline.py",
+      "target": "tools/audit/build_runtime_baseline.py",
+      "action": "update_documentation_paths",
+      "source_sha256": "eeb7dd99233e13c52cf56c2ab8ea2e4ba264d8b9c986325a8de63b48dd43ef7f",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
       "source": "tools/perception_eval/README.md",
       "target": "tools/perception_eval/README.md",
       "action": "update_references",
       "source_sha256": "ba5ce2c9f4f1573e151e41e2a9ae37ac3042bf505de6c249178fcabebdb86d92",
       "frozen": false,
       "followup_content_review": true
+    },
+    {
+      "source": "tools/perception_eval/run_all.sh",
+      "target": "tools/perception_eval/run_all.sh",
+      "action": "update_documentation_paths",
+      "source_sha256": "45ab0e4ddab9d4d98b6a2d7be7cfeb8fc4e76b8957abfae956ac486fa20635b9",
+      "frozen": false,
+      "followup_content_review": false
+    },
+    {
+      "source": "tools/perception_eval/run_bake.py",
+      "target": "tools/perception_eval/run_bake.py",
+      "action": "update_documentation_paths",
+      "source_sha256": "8f7ce2f0bd87c07736b8817f58a60f488a52d28dcfdefe4f14889f7fa7b8f86b",
+      "frozen": false,
+      "followup_content_review": false
     },
     {
       "source": "tools/scen_runner/README.md",

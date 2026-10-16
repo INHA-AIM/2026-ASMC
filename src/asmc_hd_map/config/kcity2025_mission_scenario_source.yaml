@@ -4,7 +4,7 @@ schema_version: asmc.hd_map.mission_scenario_source/v1
 # it (or the competition metadata) and the next spec build, publisher start or
 # sampler run uses the new values. Every entry is a starting point for the
 # scenario-generator owner to revise; see
-# docs/handoffs/hd-map/mission-scenario-spec.md.
+# docs/handoffs/hd-map-mission-scenario.md.
 
 inputs:
   competition_metadata: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml

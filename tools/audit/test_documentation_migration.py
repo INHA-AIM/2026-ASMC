@@ -9,6 +9,13 @@ from tools.audit.documentation_links import anchors, links, without_link_destina
 
 
 class MarkdownReferencesTest(unittest.TestCase):
+    def test_document_path_relocation_preserves_all_other_code_and_settings(self):
+        inventory = {'entries': [dict(source='docs/old.md', target='docs/contracts/new.md', action='move')]}
+        original = 'const int threshold = 42; // docs/old.md\nreport: docs/old.md\n'
+        expected = 'const int threshold = 42; // docs/contracts/new.md\nreport: docs/contracts/new.md\n'
+        self.assertEqual(audit.relocated_document_paths(original, inventory), expected)
+        self.assertNotEqual(audit.relocated_document_paths(original, inventory), expected.replace('42', '99'))
+
     def test_image_reference_html_and_parentheses_keep_target_boundaries(self):
         text = ('![image](<images/a b.png>)\n[weight](model(1).md "title")\n'
                 '[ref][guide]\n[guide]: target.md#part\n<a href="other.md#part">x</a>\n')

@@ -31,7 +31,7 @@ SCHEMA_VERSION = 1
 BASELINE_ID = "p4a_perception_runtime_v1"
 INPUT_COMMIT = "1bd8ec9"
 MANIFEST_REL = Path("config/baselines/perception_runtime_baseline_v1.yaml")
-REPORT_REL = Path("docs/records/baselines/perception-p4a-runtime-v1.md")
+REPORT_REL = Path("docs/records/camera/perception-p4a-runtime-v1.md")
 
 MODEL_ARTIFACTS = (
     {

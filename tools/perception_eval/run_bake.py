@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MGeo → bake artifact (STUB). See docs/archive/perception/agentic-loop.md"""
+"""MGeo → bake artifact (STUB). See docs/records/archive/agentic-loop.md"""
 import argparse
 import sys
 
