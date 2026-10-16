@@ -1,5 +1,7 @@
 # 카메라 차선 변경 코드 정리 결과
 
+> 아래 crop/legacy detector 명령은 과거 감사 기록이다. 현재 camera_bbox_detector.launch는 CPU 변환만 제공하며 legacy crop 추론 옵션은 제거됐다.
+
 현재 정상 동작하는 세 실행 조합을 기준으로 이 패키지의 구형 코드를 정리했다.
 
 - `asmc_perception/perception.launch camera_model_grid_max_hz:=5.0`

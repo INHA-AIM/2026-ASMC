@@ -9,7 +9,6 @@
     <remap from="/ctrl_cmd_0" to="/b0/discarded_ctrl_cmd_0"/>
     <remap from="/ctrl_cmd" to="/b0/discarded_ctrl_cmd"/>
     <include file="$(find Main)/main.launch">
-      <arg name="start_yolo" value="false"/>
       <arg name="camera_class_profile" value="$(arg camera_class_profile)"/>
       <arg name="rviz" value="false"/>
       <arg name="start_velodyne_driver" value="false"/>

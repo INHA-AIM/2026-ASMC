@@ -8,5 +8,6 @@
   <buildtool_depend>catkin</buildtool_depend>
   <depend>asmc_msgs</depend>
   <depend>eigen</depend>
+  <test_depend>python3-yaml</test_depend>
   <export/>
 </package>

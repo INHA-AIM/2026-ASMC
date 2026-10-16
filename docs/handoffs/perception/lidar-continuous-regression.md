@@ -119,7 +119,7 @@ source하는 것만으로 새 바이너리가 설치되는 것은 아니다.
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
 source src/lidar+sensorfusion/devel/setup.bash
-roslaunch Main main.launch start_yolo:=false rviz:=false \
+roslaunch Main main.launch rviz:=false \
   enable_common_geometry:=true lidar_level_roll:=true
 ```
 

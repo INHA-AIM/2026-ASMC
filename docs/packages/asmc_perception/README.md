@@ -1,5 +1,10 @@
 # Perception 개발·통합 가이드
 
+**현재 실행 정본 — 2026-10-16:** [카메라 실행 계약](../../contracts/perception/camera-runtime-v1.md)과 [LiDAR 인계](../asmc_lidar/camera-handoff.md)를 따른다.
+YOLO E8/TwinLite TensorRT·전방544×960/좌우480×640·목표15/15/10Hz이며 실행은 `camera.launch`, 시각화는 `view.launch`다.
+아래 P4/P5 단계별 검증·옵션은 당시 기록이다. Main은 독립 YOLO 없이 카메라 전방 결과만 소비하며 LiDAR 전체 이전은 손재호의 후속 작업이다.
+
+
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
 > **현재 상태:** P4-C6 package 통합과 P5-A~P5-E topic·시각화·consumer handoff·운영 closeout 완료

@@ -16,6 +16,8 @@ target_link_libraries(asmc_lidar_frame_time PUBLIC Eigen3::Eigen)
 target_compile_options(asmc_lidar_frame_time PRIVATE -Wall -Wextra)
 
 if(CATKIN_ENABLE_TESTING)
+  add_test(NAME asmc_lidar_camera_contract_test
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/camera_objects_contract_test.py)
   add_executable(asmc_lidar_geometry_boundary_test test/geometry_boundary_test.cpp)
   target_link_libraries(asmc_lidar_geometry_boundary_test PRIVATE asmc_lidar_frame_time)
   add_test(NAME asmc_lidar_geometry_boundary_test COMMAND asmc_lidar_geometry_boundary_test)

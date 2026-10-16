@@ -1,0 +1,22 @@
+[
+  {
+    "name": "adapter-unit",
+    "returncode": 0
+  },
+  {
+    "name": "adapter-wire",
+    "returncode": 0
+  },
+  {
+    "name": "mode-generation",
+    "returncode": 0
+  },
+  {
+    "name": "coco7-adapter",
+    "returncode": 0
+  },
+  {
+    "name": "launch",
+    "returncode": 0
+  }
+]

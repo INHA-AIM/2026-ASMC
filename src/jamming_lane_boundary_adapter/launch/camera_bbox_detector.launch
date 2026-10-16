@@ -1,38 +1,11 @@
 <launch>
-  <!-- Shared camera producer by default. Explicit legacy selects the old cropped detector. -->
-  <arg name="image_topic" default="/image_jpeg/compressed"/>
-  <arg name="detector_source" default="camera_objects" doc="camera_objects | legacy"/>
-  <arg name="validated_source" default="$(eval {'camera_objects':'camera_objects','legacy':'legacy'}[arg('detector_source')])"/>
-  <arg name="hood_crop_bottom_ratio" default="$(eval 0.21 if arg('detector_source') == 'legacy' else 0.0)"/>
-  <arg name="detector_image_topic" default="/planning/camera_bbox_lane/detector_input/compressed"/>
+  <!-- CPU conversion only. Start asmc_camera/camera.launch separately. -->
   <arg name="bbox_topic" default="/planning/camera_bbox_lane/yolo"/>
-  <arg name="weights" default="$(find Main)/YOLOWeight/yolo11m.pt"/>
-  <arg name="device" default="cuda:0"/>
+  <!-- Existing jamming consumer cutoff, intentionally independent of producer0.40. -->
   <arg name="conf_thres" default="0.7"/>
-  <!-- The standard RTX 40 ROS image provides CUDA PyTorch and Ultralytics
-       through system Python. RTX 50 may override this with its inference venv. -->
-  <arg name="python" default="/usr/bin/python3"/>
-  <arg name="dependencies" default=""/>
-  <node unless="$(eval arg('detector_source') == 'legacy')" pkg="Main"
+  <node pkg="Main"
         type="camera_objects_yolo_bbox_adapter.py" name="jamming_camera_objects_adapter" output="screen">
     <remap from="/YOLO/BBox" to="$(arg bbox_topic)"/>
     <param name="conf_thres" value="$(arg conf_thres)"/>
   </node>
-  <group if="$(eval arg('detector_source') == 'legacy')">
-  <node pkg="lane_boundary_adapter" type="camera_bbox_crop.py" name="camera_bbox_crop" output="screen" required="true">
-    <param name="input_topic" value="$(arg image_topic)"/>
-    <param name="output_topic" value="$(arg detector_image_topic)"/>
-    <param name="hood_crop_bottom_ratio" value="$(arg hood_crop_bottom_ratio)"/>
-  </node>
-  <node pkg="Main" type="yolo_detection_node" name="camera_bbox_detector" output="screen" required="true">
-    <env name="ASMC_YOLO_PYTHON" value="$(arg python)"/>
-    <env name="PYTHONPATH" value="$(arg dependencies):$(optenv PYTHONPATH)"/>
-    <param name="weights" value="$(arg weights)"/>
-    <param name="device" value="$(arg device)"/>
-    <param name="require_cuda" value="true"/>
-    <param name="conf_thres" value="$(arg conf_thres)"/>
-    <remap from="/camera/image/compressed" to="$(arg detector_image_topic)"/>
-    <remap from="/YOLO/BBox" to="$(arg bbox_topic)"/>
-  </node>
-  </group>
 </launch>

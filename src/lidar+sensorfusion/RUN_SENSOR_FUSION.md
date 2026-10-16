@@ -1,6 +1,6 @@
 # LiDAR + camera sensor fusion
 
-**2026-10-14 current camera contract:** [E8 deployment, model choice and three groups](../../docs/handoffs/perception/camera-mission16-deployment.md). Main defaults to `start_yolo:=false camera_class_profile:=mission16_v1`; camera E8 runs in the outer workspace.
+**2026-10-14 current camera contract:** [E8 deployment, model choice and three groups](../../docs/handoffs/perception/camera-mission16-deployment.md). Main consumes external camera results with `camera_class_profile:=mission16_v1`; camera E8 runs in the outer workspace. `start_yolo` is removed.
 
 > **역할:** Active Standalone Guide — 독립 nested catkin workspace의 build·runtime·검증
 >
@@ -21,225 +21,63 @@ The authoritative ASMC v1 poses are:
 The runtime copy is in `src/Main/setting.yaml`; the simulator source is the
 outer repository's `config/morai/sensors/ASMC_sensor_set_v1.json`.
 
-## Build
+## Current camera connection — 2026-10-16
+
+Main consumes camera-owned YOLO through its front-only CPU adapter. The independent
+Main YOLO node, weights, `start_yolo` and GPU options have been removed. Main does
+not start a camera producer. Existing LiDAR processing and planner outputs remain.
+
+The complete current build/source, PREPARE/ACTIVE, model recovery and stale-build
+cleanup instructions are in [Camera → Main → LiDAR handoff](../../docs/packages/asmc_lidar/camera-handoff.md).
+Build/source the outer workspace first, then the nested workspace:
 
 ```bash
 cd /path/to/2026-ASMC
-git pull --recurse-submodules
-git submodule update --init --recursive
+source /opt/ros/noetic/setup.bash
 ./scripts/build_ws.sh -j2
-
+source devel/setup.bash
 cd src/lidar+sensorfusion
+catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='Main;Msg;morai_msgs'
+```
+
+Start `asmc_bridge` once using the [current bridge guide](../../docs/packages/asmc_bridge/README.md).
+Camera terminal (outer setup):
+
+```bash
 source /opt/ros/noetic/setup.bash
-source ../../devel/setup.bash
-catkin_make --force-cmake -j2
+source /path/to/2026-ASMC/devel/setup.bash
+roslaunch asmc_camera camera.launch mode:=active models:=objects
 ```
 
-## Run
-
-Start the outer sensor bridge first:
+Main terminal (outer setup before nested setup):
 
 ```bash
-cd /path/to/2026-ASMC
 source /opt/ros/noetic/setup.bash
-source devel/setup.bash
-./scripts/udp_bridge.sh publish_map_tf:=true
+source /path/to/2026-ASMC/devel/setup.bash
+source /path/to/2026-ASMC/src/lidar+sensorfusion/devel/setup.bash
+roslaunch Main main.launch rviz:=false
 ```
 
-`publish_map_tf:=true` is an opt-in raw GPS + latest IMU transform used by
-this standalone map-frame fusion candidate. Do not enable it when localization
-already publishes the authoritative `map -> base_link` transform; two TF
-authorities for the same edge are invalid. The ordinary team UDP bridge keeps
-this option false by default.
+For planner-managed operation start camera in default STANDBY and use PREPARE →
+prepared=true → ACTIVE. Camera defaults: E8 TensorRT, front544×960/sides480×640,
+15Hz target, confidence0.40/NMS0.50. Recovery is `detector:=pretrained` after restart.
+The supported packaged engine environment is RTX4060Ti/TensorRT10.13.0.35; Main itself
+no longer performs a GPU preflight. Do not reuse old Main GPU instructions.
 
-In another terminal, start the perception node. Camera-LiDAR class fusion and
-the YOLO node are enabled by default:
+Only valid front results go to `/YOLO/BBox`; valid-empty is forwarded, invalid/side/zero
+stamp is withheld. The wire has no confidence/group fields: filtering occurs before
+conversion, original names are retained and Main reconstructs the three groups.
+The extra adapter cutoff defaults to0.0. Fusion remains unique, ±50ms and200ms wait.
+Classification confirmation/change/miss grace remains5/3/3; motion is independent.
+`/last_lidar` and tracked/motion planner contracts remain unchanged. LiDAR-only uses
+`enable_sensor_fusion:=false`. A missing camera is not evidence to delete LiDAR objects.
 
-```bash
-cd /path/to/2026-ASMC/src/lidar+sensorfusion
-source /opt/ros/noetic/setup.bash
-source ../../devel/setup.bash
-source devel/setup.bash
-./start_main.sh
-```
-
-### Camera-owned YOLO producer
-
-Build/source outer `asmc_msgs` before this nested workspace. Start the camera
-producer in a separate sourced outer terminal:
-
-```bash
-roslaunch asmc_camera perception.launch profile:=debug start_camera_lane:=false start_traffic_light:=false
-```
-
-In the nested terminal (outer setup first, nested setup second):
-
-```bash
-roslaunch Main main.launch start_yolo:=false rviz:=false
-```
-
-This selects `camera_objects_yolo_bbox_adapter.py` instead of legacy YOLO.
-The adapter checks the outer message MD5 at startup, accepts valid front-camera
-results, and retains the raw 16/7-class labels, configured confidence cutoff, box order, integer
-coordinates and source header on `/YOLO/BBox`. Valid empty results are forwarded;
-invalid/side/zero-stamp results are withheld. Only one bbox publisher may run.
-For full legacy rollback, stop the new producer and restart Main with `start_yolo:=true camera_class_profile:=legacy`.
-GUI/bridge are separate. See [P2a guide](../../docs/handoffs/perception/camera-objects-p2a.md)
-and [evidence](../../config/baselines/perception_camera_objects_parity_v1.yaml).
-
-To run LiDAR-only, launch with `enable_sensor_fusion:=false`.
-
-Fusion classification defaults to `vehicle`, `dynamic_obstacle`, `static_obstacle`, or `unknown`,
-while `yolo_class` preserves the original camera name. `camera_class_profile:=legacy` restores
-the old normalization. Motion is independent of this grouping. The YOLO result carries the source image timestamp. Each
-LiDAR object frame waits at most 200 ms for the nearest source-stamped YOLO
-result and consumes that result exactly once, only when the timestamp offset
-is at most 50 ms. The limit is not relaxed on timeout. Every 5 seconds,
-`Fusion sync 5s` reports matched/dropped counts, offset median/p95/max, and
-pending queue sizes. Initial classification needs 5 consistent matches, an
-established class changes after 3 consistent opposite matches, and 3 unmatched
-YOLO frames retain the class before the fourth resets it to `unknown`. Class
-state is never permanently locked. The broad bottom-image LiDAR exclusion is
-disabled by default; the targeted ego-hood YOLO false-positive filter remains.
-
-## Camera inference GPU (CUDA)
-
-GPU 세대별로 이미지만 분리하며 소스 코드는 동일하게 사용한다.
-
-| image | interpreter | PyTorch | GPU inference |
-|---|---|---|---|
-| `asmc/ros-noetic:dev` (RTX 40) | `/usr/bin/python3` (3.8) | 2.1.2+cu118 | sensor-fusion YOLO + traffic-light ResNet18 |
-| `asmc/ros-noetic:rtx50` | `/opt/yolo-venv/bin/python` (3.9) | 2.7.1+cu128 | sensor-fusion YOLO + traffic-light ResNet18 |
-
-ROS Noetic은 Python 3.8에 고정되어 있고 해당 버전용 PyTorch cu118은 RTX 50의
-`sm_120` 커널을 포함하지 않는다. 따라서 RTX 50 이미지만 기본 이미지를 상속하고
-두 카메라 추론 프로세스용 Python 3.9/cu128 환경을 추가한다. LiDAR, tracking 및
-나머지 ROS 노드는 두 이미지 모두 시스템 Python 3.8을 그대로 쓴다.
-
-`Main/scripts/yolo_detection_node`는 이미지가 지정한 인터프리터로
-`YOLODetection.py`를 실행한다. `traffic_light/run.sh`도 동일한 방식으로
-시스템 Python 또는 RTX 50 venv를 선택한다. 사용자가 컨테이너 안에서 실행하는
-`./start_main.sh`, bridge, ROS 명령은 GPU 세대와 무관하게 동일하다.
-
-ROS message support works across the split because `rospy`, `rosgraph`,
-`genpy`, `sensor_msgs` and the generated `Msg` package are pure Python and are
-reached over `PYTHONPATH`. The CPython 3.8 extension modules in the ROS tree
-(`cv_bridge`, `tf2_py`, `camera_calibration_parsers`) are never imported — this
-node decodes `CompressedImage` with `cv2.imdecode` directly.
-
-### First run after pulling
-
-RTX 40:
-
-```bash
-git pull
-./scripts/docker_ros_up.sh build
-./scripts/docker_ros_up.sh up
-```
-
-RTX 50 (기본 이미지를 먼저 한 번 만들고 파생 이미지를 만든다):
-
-```bash
-git pull
-./scripts/docker_ros_up.sh build
-./scripts/docker_ros_up.sh build-rtx50
-./scripts/docker_ros_up.sh up-rtx50
-
-docker exec -it asmc-ros-noetic bash
-cd /root/ws/src/lidar+sensorfusion
-catkin_make -j2          # picks up the new node wrapper
-./start_main.sh
-```
-
-The host must already have the NVIDIA driver and the NVIDIA Container Toolkit
-installed; the compose file only forwards the GPU (`gpus: all`,
-`NVIDIA_VISIBLE_DEVICES`, `NVIDIA_DRIVER_CAPABILITIES`). **Never install an
-NVIDIA host driver inside the container** — the toolkit injects the host driver
-libraries at runtime, and a second copy breaks the ABI match.
-
-### Checking that it works
-
-`start_main.sh` prints a read-only GPU line before roslaunch:
-
-```
-[GPU][OK] NVIDIA GeForce RTX 5070 (sm_120) torch=2.7.1+cu128 torch_cuda=12.8
-```
-
-The node itself then logs its preflight, which runs a real CUDA kernel and
-synchronizes rather than trusting `is_available()`:
-
-```
-YOLO CUDA preflight OK:
-  device=cuda:0
-  torch=2.7.1+cu128
-  torch_cuda=12.8
-  torch.cuda.is_available=True
-  torch_arch_list=sm_75,sm_80,sm_86,sm_90,sm_100,sm_120,compute_120
-  device_count=1
-  gpu_name=NVIDIA GeForce RTX 5070
-  gpu_capability=sm_120
-  CUDA kernel executed and synchronized
-YOLO model ready:
-  weights=/root/ws/src/lidar+sensorfusion/src/Main/YOLOWeight/yolo11m.pt
-  model_device=cuda:0
-  warmup_inference=... ms
-```
-
-Then, every 5 s:
-
-```
-YOLO performance (mean/median/p95 ms over 5.0s, N frames):
-  decode=... preprocess=... inference=... postprocess=...
-  callback=... e2e=... fps=... device=cuda:0
-```
-
-To query the environment by hand:
-
-```bash
-docker exec -it asmc-ros-noetic /opt/yolo-venv/bin/python -c \
-  "import torch; print(torch.__version__, torch.version.cuda); \
-   print(torch.cuda.is_available(), torch.cuda.get_device_name(0)); \
-   print(torch.cuda.get_device_capability(0), torch.cuda.get_arch_list())"
-```
-
-To confirm the GPU is really doing the work, look for the node as a CUDA
-compute process while it runs:
-
-```bash
-nvidia-smi                         # process list + utilization + memory
-nvidia-smi pmon -c 5               # per-process compute samples
-```
-
-A healthy run shows a `python` process from `/opt/yolo-venv` in the compute
-list. If YOLO is silently on the CPU instead, that process is absent and the
-node burns several hundred percent CPU in `top`.
-
-### If the GPU is not used
-
-`start_main.sh` and the node preflight separate the three causes; work through
-them in this order.
-
-1. **Driver / passthrough** — `nvidia-smi` fails inside the container, or
-   `torch.cuda.is_available()` is `False`. Check the host driver and the NVIDIA
-   Container Toolkit, then that the container was started from
-   `docker/ros-noetic/docker-compose.yaml` (it carries `gpus: all`). Do not
-   install a driver in the container.
-2. **PyTorch architecture** — `is_available()` is `True` but the kernel probe
-   fails with `no kernel image is available for execution on the device`, and
-   `torch_arch_list` has no entry for your GPU's capability. The image is stale:
-   RTX 40은 `rebuild`, RTX 50은 `rebuild-rtx50`을 실행한다.
-3. **Wrapper / environment** — the node exits with
-   `YOLO 전용 Python 환경이 없습니다: /opt/yolo-venv/bin/python`. The image
-   predates this change; rebuild. If the node still starts under
-   `/usr/bin/python3`, the workspace was not rebuilt after the pull; run
-   `catkin_make` so `devel/lib/Main/yolo_detection_node` exists.
-
-The node never falls back to the CPU on its own. To run on the CPU
-deliberately, pass both arguments explicitly:
-
-```bash
-./start_main.sh yolo_require_cuda:=false yolo_device:=cpu
-```
+The old broad bottom-image exclusion remains disabled. Current YOLO uses3-view Ego
+masks rather than the old standalone YOLO hood-filter runtime.
+`asmc_lidar` still contains coordinate/time foundations and handoff contracts only.
+Jaeho owns the remaining migration and3-view fusion implementation.
+Historical standalone YOLO and comparison runners can be inspected in commit
+`ae8dcbc0`; use a matching isolated checkout rather than reinstalling them here.
 
 ## LiDAR-only motion decision
 

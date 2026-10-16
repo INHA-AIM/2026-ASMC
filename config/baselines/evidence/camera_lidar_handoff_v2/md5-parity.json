@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "legacy": {
+    "Msg/Yolo_bbox": "605f5dd6f8f921f2dc15199c760840f9",
+    "Msg/Yolo_bbox_arr": "9604a9d8104d38c3bd9830382a3571d0",
+    "Msg/TrackedObject": "6c96135eb03a3ee93bba474fa835f57d",
+    "Msg/TrackedObjectArray": "e127b2aabd7494ad01a5a56b005bf07e"
+  }
+}

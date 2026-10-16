@@ -37,14 +37,19 @@ Terminal 1 - MORAI UDP sensor bridge:
   source devel/setup.bash
   ./scripts/udp_bridge.sh
 
-Terminal 2 - LiDAR tracking, YOLO, and camera/LiDAR fusion:
+Terminal 2 - camera-owned YOLO (outer workspace):
+  source /opt/ros/noetic/setup.bash
+  source /path/to/2026-ASMC/devel/setup.bash
+  roslaunch asmc_camera camera.launch mode:=active models:=objects
+
+Terminal 3 - LiDAR tracking and front camera/LiDAR fusion (no YOLO model):
   cd /path/to/2026-ASMC/src/lidar+sensorfusion
   source /opt/ros/noetic/setup.bash
   source ../../devel/setup.bash
   source devel/setup.bash
   ./start_main.sh
 
-Terminal 3 - RViz:
+Terminal 4 - RViz:
   source /opt/ros/noetic/setup.bash
   source /path/to/2026-ASMC/devel/setup.bash
   source /path/to/2026-ASMC/src/lidar+sensorfusion/devel/setup.bash
@@ -79,3 +84,7 @@ Only when the asmc_bridge sensor node is NOT running and Main must own UDP 9299:
   START_VELODYNE_DRIVER=true ./start_main.sh
 
 Never run both UDP receivers on port 9299 at the same time.
+
+Current full handoff: docs/packages/asmc_lidar/camera-handoff.md
+Removed Main options: start_yolo, yolo_device, yolo_require_cuda, yolo_perf_log_interval_sec.
+Recovery uses asmc_camera camera.launch detector:=pretrained after restart.

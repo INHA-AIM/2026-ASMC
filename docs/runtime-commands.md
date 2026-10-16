@@ -73,23 +73,19 @@ RViz까지 열려면:
 roslaunch asmc_hd_map competition_map.launch rviz:=true
 ```
 
-### Terminal C — camera·BEV·lane perception
+### Terminal C — camera
 
 ```bash
 docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-roslaunch asmc_camera perception.launch
+roslaunch asmc_camera camera.launch models:=objects,lane
 ```
 
-신호등과 debug image publisher까지 필요하면:
-
-```bash
-roslaunch asmc_camera perception.launch \
-  start_traffic_light:=true \
-  start_visualization:=true
-```
+기본은 STANDBY다. 객체 PREPARE/ACTIVE와 음영 lane 준비는 [카메라 계약](./contracts/perception/camera-runtime-v1.md)을 따른다.
+신호등을 카메라에서 소유하려면 `models:=all`을 선택하고 판제의 신호등 생산자는 끈다.
+현재 LiDAR는 별도 nested Main이며 [카메라→LiDAR 인계](./packages/asmc_lidar/camera-handoff.md)의 빌드/source 순서를 따른다.
 
 ### Terminal D — Planning/Control
 
@@ -221,236 +217,60 @@ roslaunch asmc_hd_map competition_map.launch [arg:=value ...]
 운영 topic은 `/hd_map/global/*`, `/hd_map/local/*`, `/hd_map/meta`다. debug marker를
 planning data로 사용하지 않는다.
 
-## 5. Perception 옵션
+## 5. Camera 실행·LiDAR 연결
 
-운영 추론은 bridge·GUI와 같은 `asmc-ros-noetic` 컨테이너의 별도 terminal에서 직접
-실행한다.
+일반 실행은 `camera.launch`, 이미 실행 중인 생산자의 시각화는 `view.launch`다.
+기존 `perception.launch`의 상세 옵션은 호환/과거 실험용이며 일반 실행에 반복 지정하지 않는다.
+현재 인수 계약은 [카메라 runtime](./contracts/perception/camera-runtime-v1.md), Main 연결은 [LiDAR 인계](./packages/asmc_lidar/camera-handoff.md)가 소유한다.
 
-```bash
-docker exec -it asmc-ros-noetic bash
-cd /root/ws
-source /opt/ros/noetic/setup.bash
-source devel/setup.bash
-roslaunch asmc_camera perception.launch [arg:=value ...]
-```
-
-| arg | 기본값 | 설명 |
-|---|---:|---|
-| `start_camera_lane` | `true` | semantic, per-view BEV, fused BEV, lane vectorizer 실행 |
-| `start_traffic_light` | `false` | extra camera 신호등 추론 |
-| `start_visualization` | `false` | debug image publisher 실행; GUI 창을 자동으로 열지 않음 |
-| `visualization_legacy_rqt` | `false` | 개별 camera·중간/fitting BEV 등 이전 rqt 영상 호환 발행 |
-| `visualization_calibration_grid` | `false` | camera별 지면 calibration grid overlay 발행 |
-| `publish_bev_debug_metadata` | legacy rqt값(기본 `false`) | per-view coverage, source count/view 발행; 평가·bag·구 시각화용 |
-| `camera_checkpoint` | v6 `best_mean.pt` | camera semantic checkpoint |
-| `camera_device` | `cuda` | inference device |
-| `camera_warmup_iterations` | `1` | model warm-up 횟수 |
-| `camera_batch_wait_ms` | `20.0` | multi-view batch 대기(ms) |
-| `camera_model_grid_max_hz` | `15.0` | model-grid road-marking 최대 Hz |
-| `camera_sensor_set_path` | `ASMC_sensor_set_v3.json` | calibration 검증 sensor snapshot |
-| `camera_calibration_config` | `config/cameras_v3.yaml` | BEV camera calibration |
-| `bev_grid_config` | `config/bev/bev_grid.yaml` | `base_link` BEV 범위·해상도 |
-| `lane_operating_domain` | `shadow_two_way_v1` | typed lane-family ODD ID |
-| `lane_algorithm_id` | `twinlite_v6_shadow_boundary_contract_v1` | algorithm/version ID |
-| `lane_enable_shared_family_debug` | `true` | 음영구간 shared-family 보강 fitting·근거 marker; 성능 측정에서만 `false` |
-| `lane_enable_boundary_family_candidate` | `true` | 판제 소비 정본 `/perception/lane/boundary_family` 발행 |
-| `lane_enable_independent_boundary_pipeline` | `false` | legacy 개별 spline·tracker·`boundary_observations`; 호환 평가에서만 `true` |
-| `lane_publish_pipeline_audit` | `false` | frame별 상세 lane audit; 평가·result bag에서만 명시적으로 활성화 |
-| `traffic_light_checkpoint` | package `models/traffic_light/best.pt` | 신호등 checkpoint |
-| `traffic_light_device` | `auto` | `auto`, CPU/GPU device override |
-| `traffic_light_image_topic` | `/cam_extra/image_jpeg/compressed` | 신호등 camera input |
-| `traffic_light_state_topic` | `/traffic_light/state` | legacy String state |
-| `traffic_light_detail_topic` | `/traffic_light/detail` | legacy detail |
-| `traffic_light_typed_topic` | `/perception/traffic_light/detection` | typed canonical output |
-| `traffic_light_hz` | `10.0` | 추론 최대 Hz |
-| `traffic_light_min_detect` | `0.40` | 최소 detection confidence |
-| `traffic_light_stale_sec` | `1.0` | 입력 stale timeout(s) |
-
-기능별 분리 실행:
+| 공개 옵션 | 기본값 | 의미 |
+|---|---|---|
+| mode | standby | off/standby/active |
+| models | all | objects,lane,traffic_light 중 쉼표로 조합 |
+| detector | e8 | e8/pretrained, 변경 시 노드 재시작 |
+| confidence | 0.40 | 객체 생산자 cutoff |
+| nms_iou | 0.50 | 원본 클래스별 NMS |
 
 ```bash
-# camera·BEV·lane만
-roslaunch asmc_camera perception.launch \
-  start_traffic_light:=false start_visualization:=false
-
-# 신호등만
-roslaunch asmc_camera perception.launch \
-  start_camera_lane:=false start_traffic_light:=true
-
-# 이미 실행 중인 producer의 시각화 publisher만
-roslaunch asmc_camera perception.launch \
-  start_camera_lane:=false start_visualization:=true
+roslaunch asmc_camera camera.launch
+# 객체만 즉시 확인할 때
+roslaunch asmc_camera camera.launch mode:=active models:=objects
+# 기존 실행 종료 후 사전학습 대조
+roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=pretrained
 ```
 
-`camera_lane.launch`는 전체 lane chain이 아니라 semantic inference node만 실행한다.
-일반 주행에서는 항상 최상위 `perception.launch`를 사용한다.
+E8/사전학습 YOLO와 TwinLite는 TensorRT다. 전방544×960 B1·좌우480×640 B2,
+목표 YOLO/TwinLite/ResNet=15/15/10Hz이며 실제 최소 공급과 목표 달성은 따로 검사한다.
+Mask·보정·모델 경로·세부 입력은 패키지 YAML로 관리한다. Engine 환경 불일치에 자동 fallback하지 않는다.
+모델별 독립 프로세스이며 같은 입력 크기/Hz가 같은 stamp나 tensor 공유를 뜻하지 않는다.
 
-### 음영구간 shared-family와 판제 adapter RViz
-
-일반 `perception.launch`를 옵션 없이 실행해도 음영구간 보강
-`/perception/lane/boundary_family`와 그 근거 marker가 기본 생성된다. 판제는 이 family를
-차선 인지 정본으로 사용한다. legacy 개별 spline·tracker와
-`/perception/lane/boundary_observations`는 기본 비활성화다. 기존 호환·진단 재현이
-필요할 때만 `lane_enable_independent_boundary_pipeline:=true`로 켠다.
+모드 요청은 별도 터미널에서 한다. 같은 generation의 prepared=true를 확인한 뒤 ACTIVE를 요청한다.
 
 ```bash
-# asmc-ros-noetic container
-roslaunch asmc_camera perception.launch
+rosservice call /perception/camera/objects/set_mode '{mode: 1, target_hz: 0.0}'
+rostopic echo /perception/camera/objects/status
+# prepared=true 확인 후 Ctrl-C
+rosservice call /perception/camera/objects/set_mode '{mode: 2, target_hz: 0.0}'
 ```
 
-bag 처리시간 비교처럼 family 근거 marker 비용을 제외하려면
-`lane_enable_shared_family_debug:=false`만 주고, family 출력은 그대로 유지한다.
-
-별도 `asmc-ros-noetic` terminal에서 adapter를 실행하면 Fixed Frame이 `base_link`인 전용
-RViz가 자동으로 열린다. 최종 accepted strip과 perception support/gap marker가 이미 등록돼
-있어 별도 RViz terminal이나 display 추가가 필요 없다.
+Lane은 일반 구간 STANDBY → 음영 진입 전 PREPARE → prepared/pipeline_ready 확인 → ACTIVE → 이탈 후 STANDBY다.
+서비스 루트는 `/perception/camera/lane/set_mode`이며 구간 판단은 판제 책임이다. Family 정본 결과를 소비하고 영상 BEV는 수요가 있을 때만 만든다.
 
 ```bash
-docker exec -it asmc-ros-noetic bash
-cd /root/ws
-source /opt/ros/noetic/setup.bash
-source devel/setup.bash
-roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
+roslaunch asmc_camera view.launch models:=objects,lane
+rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
-bag replay·처리시간 측정처럼 GUI가 필요 없을 때만 `rviz:=false`를 추가한다. adapter와 RViz는
-read-only이며 Behavior/Frenet/제어 명령을 발행하지 않는다.
+한 rqt에서 family 화면 `/perception/lane/debug/shared_family_bev/compressed`로 선택을 바꿀 수 있다.
+시각화는 추론 생산자를 시작하지 않으며 기존 rqt를 중복 생성하지 않는다.
 
-### rqt/RViz 표시
+Main은 별도 실행하고 **독립 YOLO를 시작하지 않는다**. `/perception/camera/objects`의 전방만
+`/YOLO/BBox`로 변환한다. `start_yolo` 및 구형 장치/GPU 옵션은 제거됐다.
+현재 판제 입력과 전방 unique·±50ms·200ms 대기는 유지한다. 3뷰 fusion/전체 LiDAR 이전은 손재호의 후속 작업이다.
+빌드·source 순서, 원본 이름/그룹·confidence 손실 경계와 잔류 실행파일 정리는 위 LiDAR 인계를 따른다.
 
-먼저 perception을 시각화 publisher와 함께 실행한다. 이 명령은 GUI 창을 직접 열지는
-않는다.
-
-```bash
-# asmc-ros-noetic container
-roslaunch asmc_camera perception.launch start_visualization:=true
-```
-
-팀 공통 rqt 확인 대상은 아래 두 영상이다.
-
-| rqt topic | 확인 내용 |
-|---|---|
-| `/perception/camera/debug/mosaic/compressed` | 좌·전방·우 camera의 원본·주행가능·road-marking 9칸 영상 |
-| `/perception/bev/debug/comparison/compressed` | 원본 RGB BEV와 fused semantic BEV의 좌우 비교 영상 |
-
-GUI는 `asmc-ros-noetic` container에서 연다. 두 rqt 창과 RViz는 각각 프로세스를 점유하므로
-필요한 창마다 별도 host terminal을 열고 다음 공통 준비를 수행한다.
-
-```bash
-docker exec -it asmc-ros-noetic bash
-cd /root/ws
-```
-
-각 terminal에서 원하는 명령 하나를 실행한다.
-
-```bash
-# rqt: camera 9-panel mosaic
-asmc-ros-gui rqt-image /perception/camera/debug/mosaic/compressed
-
-# rqt: RGB BEV | semantic BEV comparison
-asmc-ros-gui rqt-image /perception/bev/debug/comparison/compressed
-
-# RViz: 기존 marker 확인 방식은 변경 없음
-asmc-ros-gui rviz
-```
-
-- `camera/debug/mosaic/compressed`: 좌·전방·우 각각의 원본·주행가능·road-marking,
-  총 9칸이다.
-- `bev/debug/comparison/compressed`: 같은 metric crop의 원본 RGB BEV(왼쪽)와 fused semantic
-  결과(오른쪽)다. 오른쪽은 주행가능 확률을 0.5에서 이진화하고 차선 class를 고정
-  색으로 그리므로 확률·confidence 밝기를 표현하지 않는다. 별도 확률/품질·fitting·
-  grid 영상은 기본으로 광고하지 않는다.
-- image publisher는 subscriber-lazy이므로 rqt 창을 열기 전 `rostopic hz`에 아무 값이
-  없어도 정상이다.
-
-이전 개별·중간 영상을 잠시 비교해야 할 때만 호환 profile을 켠다.
-
-```bash
-roslaunch asmc_camera perception.launch \
-  start_visualization:=true \
-  visualization_legacy_rqt:=true
-```
-
-이 옵션은 camera별 panel, 기존 fused/fused-quality와 lane evidence/fitted/boundary/
-reprojection 영상을 다시 광고한다. camera calibration grid는 호환 profile과 분리되어
-있으며 다음처럼 명시적으로 켠다.
-
-```bash
-roslaunch asmc_camera perception.launch \
-  start_visualization:=true \
-  visualization_calibration_grid:=true
-```
-
-RViz marker 구성은 이번 rqt 정리에서 변경하지 않았다.
-
-기본 실행에서는 per-view projected `coverage`, fused `source_count`, `source_view`도
-광고하지 않는다. 평가 bag이나 overlap/calibration 분석에서 필요하면 다음처럼 독립적으로
-다시 켠다. `visualization_legacy_rqt:=true`를 사용하면 이 값도 기본 true가 된다.
-
-```bash
-roslaunch asmc_camera perception.launch publish_bev_debug_metadata:=true
-```
-
-`road_marking/model_grid/*`와 `/perception/bev/debug/{view}`의 semantic raster는 이름에
-`grid`·`debug`가 있어도 rqt 화면이 아니라 각각 lane vectorizer와 camera fusion의 내부
-입력이다. `rostopic list`에 계속 보이는 것이 정상이며 시각화 정리 목적으로 끄지 않는다.
-
-`/perception/lane/pipeline_audit`도 일반 주행에서는 광고하지 않는다. raw bag 평가나
-rejection 원인 분석에서만 다음처럼 켠다. 공식 batch 도구는 이 인자를 자동으로 전달한다.
-
-```bash
-roslaunch asmc_camera perception.launch lane_publish_pipeline_audit:=true
-```
-
-### Perception runtime 수락검사
-
-bridge와 검사할 perception/planning process를 먼저 각자의 foreground terminal에서 실행한다.
-아래 verifier는 인지 노드를 자동 시작하지 않으며, 현재 ROS graph를 15초간 측정한다.
-
-```bash
-# 기본 camera semantic → per-view BEV → fused BEV → lane graph
-./scripts/verify_perception.sh
-
-# 신호등 producer와 canonical rqt 두 화면도 함께 실행했을 때
-./scripts/verify_perception.sh --traffic-light --visualization
-
-# behavior_planner까지 실행한 상태에서 typed + legacy 신호등 구독 확인
-./scripts/verify_perception.sh --traffic-light --require-planning
-
-# 판제 팀원이 read-only adapter를 함께 검토할 때만
-./scripts/verify_perception.sh --require-lane-adapter
-
-# perception·신호등·rqt·planning·lane adapter를 모두 띄운 최종 P5 gate
-./scripts/verify_perception.sh \
-  --traffic-light --visualization --require-planning --require-lane-adapter
-```
-
-| verifier 옵션 | 의미 |
-|---|---|
-| `--duration SEC` | 측정 시간, 기본 15초 |
-| `--max-stale-sec SEC` | 일반 topic의 마지막 수신 허용 age, 기본 1초 |
-| `--master-timeout-sec SEC` | ROS master XML-RPC 호출 제한, 기본 3초; master가 없을 때 무한 대기 방지 |
-| `--traffic-light` | typed detection과 legacy state/detail producer 검사 |
-| `--visualization` | subscriber-lazy인 canonical mosaic/comparison 2종 검사 |
-| `--require-planning` | `/behavior_planner`의 typed/legacy 신호등 구독 검사; `--traffic-light` 필수 |
-| `--require-lane-adapter` | `/boundary_family_monitor`의 canonical `boundary_family` 구독 검사 |
-| `--allow-opt-in-debug` | 의도적으로 켠 기본-OFF debug publisher를 정보로만 보고 실패시키지 않음 |
-| `--yaml-out PATH` | machine-readable 결과 저장; ROS container 안의 경로 |
-
-기본 검사는 node, message type, 유일 publisher, 필수 내부 subscriber, rate, source stamp,
-`frame_id`, staleness와 diagnostics ERROR를 함께 본다. P5-B와 shared-family closeout에서
-기본-OFF로 정한 20개 topic이
-옵션 없이 다시 광고되어도 실패한다. 계약 정본과 판제/launch 경로의 정적 연결만 빠르게
-확인하려면 다음을 실행한다.
-
-```bash
-python3 tools/audit/validate_perception_runtime_acceptance.py
-python3 -m unittest tools/audit/test_perception_runtime_acceptance.py
-```
-
-세부 기준과 해석은
-[P5-C runtime acceptance](./records/baselines/perception-p5c-runtime-acceptance-v1.md)와
-[P5-D/E closeout](./records/baselines/perception-p5de-closeout-v1.md)을 따른다.
+[Family 최신 검증](./handoffs/perception/camera-family-supply-optimization.md)의 순간 공백/freshness 제한은 유지한다.
+과거 P4/P5·YOLO11m 수락 도구와 기록은 당시 입력/프로필의 증거이며 현재 설정 전체 수락으로 재사용하지 않는다.
 
 ## 6. Planning/Control 옵션
 

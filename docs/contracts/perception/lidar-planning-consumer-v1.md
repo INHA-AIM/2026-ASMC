@@ -1,12 +1,15 @@
 # LiDAR → 판단제어 공통 소비 계약
 
-**2026-10-14 카메라 분류:** Main의 `camera_class_profile` 기본은 `mission16_v1`입니다.
+**2026-10-16 카메라 연결:** 독립 Main YOLO는 제거하고 `asmc_camera/camera.launch`만 추론을 소유한다.
+[현재 실행·3뷰 인계](../../packages/asmc_lidar/camera-handoff.md)를 따른다.
+
+**카메라 분류:** Main의 `camera_class_profile` 기본은 `mission16_v1`입니다.
 tracked `classification`은3그룹, `yolo_class`는원본 이름입니다. 기존 numeric planning enum은 유지되며
 unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비 계약](../../handoffs/perception/camera-mission16-deployment.md)을
 함께 확인합니다. 좌표·시간·운동의 기존 기준은 그대로 적용합니다.
 
 
-> 상태: **LiDAR 이전 구현용 계약, 카메라 객체 생산자 opt-in 구현**. `asmc_lidar`는 좌표·시간 라이브러리
+> 상태: **LiDAR 이전 구현용 계약, 카메라 객체 생산자는 정본 실행**. `asmc_lidar`는 좌표·시간 라이브러리
 > 골격이며 검출/추적/ROS 어댑터는 손재호의 후속 구현이다. 기존 주행은 원본
 > `lidar+sensorfusion`을 사용한다. [인계 계획](../../packages/asmc_lidar/README.md)과
 > [타입·목표 토픽](../../../config/contracts/lidar_candidate_topic_contract_v1.yaml)을 함께 본다.
@@ -21,7 +24,8 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 | `asmc_msgs/CameraObjectBox` | box·그룹 class_name·원래 라벨 source_class_name·confidence/유효성. 원본 numeric class ID는 현 타입에 없음 |
 | `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. 생산자 구현 예정 |
 | `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. 어댑터 구현 예정 |
-| `/perception/camera/objects` | P2a는 camera_front만 출력. 카메라 생산자+LiDAR 호환 어댑터 opt-in 구현 |
+| `/perception/camera/objects` | 3뷰 원본 픽셀 검출. 현재 Main 어댑터는 전방만 소비 |
+| `/perception/camera/objects/observations` | session/generation·보정/모델/설정 ID 포함. asmc_lidar 수신·3뷰 fusion은 손재호의 후속 구현 |
 
 기존 `TrackedObject*`, `DetectedObject*`의 MD5는 유지한다. 기존 `/last_lidar`,
 `/lidar_nogps`, `/perception/objects`를 자동 remap하지 않는다. 구 타입으로 표현할 수

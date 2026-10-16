@@ -111,6 +111,7 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(test_frame_boundary_ros myHeader ${catkin_LIBRARIES})
   endif()
   catkin_add_nosetests(test/test_camera_objects_adapter.py)
+  catkin_add_nosetests(test/test_camera_inference_ownership.py)
   catkin_add_nosetests(test/test_fusion_continuous_replay.py)
   catkin_install_python(PROGRAMS test/test_camera_objects_adapter_ros.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -224,31 +225,6 @@ endif()
 
 catkin_install_python(PROGRAMS
   scripts/camera_objects_yolo_bbox_adapter.py
-  src/Camera/YOLO/YOLODetection.py
   scripts/build_known_static_object_catalog.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-
-# YOLO 노드는 CUDA 12.8 PyTorch가 설치된 Python 3.9 전용 환경에서 실행해야
-# 한다. catkin_install_python이 만드는 relay 스크립트는 빌드 시점의 시스템
-# Python으로 shebang이 고정되므로, 인터프리터를 명시하는 shell 래퍼를 같은
-# libexec 디렉터리에 함께 둔다.
-#   devel space  : 아래 file(COPY)가 devel/lib/Main 에 복사한다.
-#   install space: install(PROGRAMS)가 shebang을 고치지 않고 그대로 설치한다.
-# 두 경우 모두 래퍼와 YOLODetection.py가 같은 디렉터리에 놓이므로, 래퍼는
-# 자기 절대 경로를 기준으로 노드 스크립트를 찾을 수 있다.
-file(COPY scripts/yolo_detection_node
-  DESTINATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}
-  FILE_PERMISSIONS
-    OWNER_READ OWNER_WRITE OWNER_EXECUTE
-    GROUP_READ GROUP_EXECUTE
-    WORLD_READ WORLD_EXECUTE
-)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/yolo_detection_node
-)
-
-install(PROGRAMS scripts/yolo_detection_node
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-

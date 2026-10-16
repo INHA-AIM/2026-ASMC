@@ -87,7 +87,9 @@ def main():
                  "fresh invalid-frame input silence diagnostic")
         checks["input_stop_no_repeated_output"] = len(candidates) == count
         checks["decode_error_diagnostic"] = int(latest_values().get("decode_errors", 0)) >= 1
-        old = launch(["rosrun", "Main", "yolo_detection_node", "__name:=yolo_detection_node"], "legacy")
+        # Duplicate wire publisher injection needs no second GPU model.
+        old = launch(["rostopic", "pub", "-r", "1", "/YOLO/BBox", "Msg/Yolo_bbox_arr",
+                      "{objc: 0, yolo_bbox_arr: []}", "__name:=yolo_detection_node"], "duplicate-wire")
         wait_for(lambda: len(dict(rosgraph.Master("/p2_fault_graph").getSystemState()[0]).get("/YOLO/BBox", [])) == 2,
                  "two warmed bbox publishers")
         wait_for(lambda: "/yolo_detection_node" in latest_values().get("duplicate_nodes", ""), "duplicate inference diagnostic")

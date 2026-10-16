@@ -117,7 +117,7 @@ roslaunch asmc_camera camera_objects.launch initial_mode:=2
 STANDBY이므로 생략하면 입력을 받아도 반복 추론·운영 결과를 내지 않는다.
 
 ```bash
-roslaunch Main main.launch start_yolo:=false rviz:=false \
+roslaunch Main main.launch rviz:=false \
   enable_common_geometry:=true lidar_level_roll:=false
 ```
 

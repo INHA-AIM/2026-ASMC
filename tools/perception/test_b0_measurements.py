@@ -46,7 +46,7 @@ class B0MeasurementsTest(unittest.TestCase):
         remaps = {r.get('from'): r.get('to') for r in group.findall('remap')}
         self.assertEqual('/b0/discarded_ctrl_cmd_0', remaps['/ctrl_cmd_0'])
         self.assertEqual('/b0/discarded_ctrl_cmd', remaps['/ctrl_cmd'])
-        self.assertEqual('false', next(a.get('value') for a in group.find('include').findall('arg') if a.get('name') == 'start_yolo'))
+        self.assertNotIn('start_yolo', {a.get('name') for a in group.find('include').findall('arg')})
 
     def test_old_epoch_and_invalidity_are_distinct(self):
         row = output_report([output(10.05, 5), output(10.1, 11, False), output(10.2, 12)], 10, 11, 10)

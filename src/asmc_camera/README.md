@@ -51,3 +51,5 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 학습·데이터 감사·수집 도구는 오프라인 경로입니다. 이 실행 변경은 데이터·가중치·차량 제어·
 LiDAR fusion 정책을 바꾸지 않습니다. 3뷰 관측 메시지는 후속 LiDAR 인계를 위한 생산자 계약이며
 현재 3뷰 LiDAR fusion이 연결됐다는 의미는 아닙니다.
+
+LiDAR 연결은 [현재 인계](../../docs/packages/asmc_lidar/camera-handoff.md)를 따른다. Main은 별도 실행하며 전방 어댑터만 소유한다.

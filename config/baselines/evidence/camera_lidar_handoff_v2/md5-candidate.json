@@ -1,0 +1,11 @@
+{
+  "asmc_msgs/CameraObjectBox": "34412c90553e06734f1acade77c8e1e3",
+  "asmc_msgs/CameraObjectBoxArray": "310c671afb3693e7909db6453d115b79",
+  "asmc_msgs/CameraObjectObservation": "fbddb8fe0071685b60811037c0302106",
+  "asmc_camera/InferenceStatus": "e106e808a882b2b0140346746e164145",
+  "asmc_camera/SetInferenceMode": "94a789aab65be7cc8d09e8f777708430",
+  "Msg/Yolo_bbox": "605f5dd6f8f921f2dc15199c760840f9",
+  "Msg/Yolo_bbox_arr": "9604a9d8104d38c3bd9830382a3571d0",
+  "Msg/TrackedObject": "6c96135eb03a3ee93bba474fa835f57d",
+  "Msg/TrackedObjectArray": "e127b2aabd7494ad01a5a56b005bf07e"
+}

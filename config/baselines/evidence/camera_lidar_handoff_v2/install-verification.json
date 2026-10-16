@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "removed_files_absent": {
+    "../data/runtime/camera-lidar-handoff-v2/candidate/src/lidar+sensorfusion/devel/lib/Main/YOLODetection.py": true,
+    "../data/runtime/camera-lidar-handoff-v2/candidate/src/lidar+sensorfusion/install/lib/Main/YOLODetection.py": true,
+    "../data/runtime/camera-lidar-handoff-v2/candidate/src/lidar+sensorfusion/devel/lib/Main/yolo_detection_node": true,
+    "../data/runtime/camera-lidar-handoff-v2/candidate/src/lidar+sensorfusion/install/lib/Main/yolo_detection_node": true
+  },
+  "camera_engines_installed": true,
+  "skeleton_config_installed": true
+}

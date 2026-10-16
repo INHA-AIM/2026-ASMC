@@ -1,5 +1,8 @@
 # 카메라 객체 검출 인수 가이드 — 손재호
 
+**과거 설계 기록:** 아래 YOLO11m 기본값은 현재 설정이 아니다. 현재 E8/사전학습·3뷰 TensorRT 실행은 [카메라 계약](../../contracts/perception/camera-runtime-v1.md), Main 연결은 [LiDAR 인계](../../packages/asmc_lidar/camera-handoff.md)를 따른다.
+
+
 **현재 계약 — 2026-10-14:** 기본 YOLO26l v11 E8·16종·3카메라15Hz와 세 소비 그룹은
 [현재 배포 계약](camera-mission16-deployment.md)을 따릅니다. 아래 YOLO11m/P2a/구 그룹/0.7 cutoff는
 당시 인계 기록입니다. 이번 배포의 confidence는0.40, Main 추가 cutoff는 기본0.0이며 원본 라벨은 유지합니다.
@@ -81,7 +84,7 @@ class별 pedestrian recall·독립 test lineage가 저장소에 없다. 이름�
 
 ### 새 3-class weight는 아직 drop-in 교체가 아니다
 
-현재 [`YOLODetection.py`](../../../src/lidar+sensorfusion/src/Main/src/Camera/YOLO/YOLODetection.py)는
+현재 [`YOLODetection.py`](https://github.com/INHAautonav/2026-ASMC/blob/ae8dcbc0eb80f06f8c8db54742543aad369ef3cc/src/lidar%2Bsensorfusion/src/Main/src/Camera/YOLO/YOLODetection.py)는
 `bus/truck/person/car`만 통과시킨다. downstream adapter도 `person/pedestrian`은 보행자로,
 `car/truck/bus`는 차량으로 해석하지만 문자열 `vehicle`은 아직 일반 장애물로 처리한다.
 

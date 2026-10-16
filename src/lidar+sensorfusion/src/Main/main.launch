@@ -6,7 +6,6 @@
   <arg name="lidar_mount_config" default="$(find asmc_lidar)/config/autonav_v3.yaml"/>
   <arg name="fusion_camera_config" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <arg name="map_altitude_origin_m" default="0.0"/>
-  <arg name="start_yolo" default="false"/>
   <arg name="fusion_yolo_policy" default="unique" doc="unique | bounded_reuse"/>
   <arg name="camera_objects_conf_thres" default="0.0" doc="Optional stricter adapter cutoff. Camera already filters confidence; 0 passes its accepted candidates without a hidden 0.7 gate."/>
   <!-- MORAI sends VLP-16 packets (Velodyne product ID 0x22). -->
@@ -16,10 +15,6 @@
   <arg name="start_velodyne_driver" default="false"/>
   <arg name="rviz" default="false"/>
   <arg name="enable_sensor_fusion" default="true"/>
-  <!-- YOLO 추론 장치. 기본은 CUDA 강제이며, CPU 실행은 명시적 선택이어야 한다. -->
-  <arg name="yolo_require_cuda" default="true"/>
-  <arg name="yolo_device" default="cuda:0"/>
-  <arg name="yolo_perf_log_interval_sec" default="5.0"/>
   <!-- Association remains strict at 50 ms, but waits up to 200 ms for a
        delayed YOLO result before declaring that a LiDAR frame has no match. -->
   <arg name="fusion_max_time_offset_sec" default="0.05"/>
@@ -260,22 +255,10 @@
     <param name="fusion_exclude_hood_y_band" value="false"/>
   </node>
 
-  <!-- YOLO 검출: /camera/image/compressed 구독 -> /YOLO/BBox 발행.
-       type이 yolo_detection_node(shell 래퍼)인 이유는, catkin이 생성하는
-       YOLODetection.py relay가 시스템 Python 3.8로 shebang이 고정되기
-       때문이다. 래퍼가 /opt/yolo-venv/bin/python(CUDA 12.8 PyTorch)을
-       명시적으로 실행한다. -->
+  <!-- Inference belongs to a separately launched asmc_camera/camera.launch.
+       This CPU adapter consumes front results only; it never loads a model. -->
   <group if="$(arg enable_sensor_fusion)">
-  <node if="$(arg start_yolo)" name="yolo_detection_node" pkg="Main" type="yolo_detection_node" output="screen">
-    <param name="weights" value="$(find Main)/YOLOWeight/yolo11m.pt"/>
-    <!-- CUDA를 쓸 수 없으면 조용히 CPU로 내려가지 않고 노드를 종료한다.
-         의도적으로 CPU에서 돌리려면 require_cuda를 false로 바꿔야 한다. -->
-    <param name="require_cuda" value="$(arg yolo_require_cuda)"/>
-    <param name="device" value="$(arg yolo_device)"/>
-    <param name="perf_log_interval_sec" value="$(arg yolo_perf_log_interval_sec)"/>
-  </node>
-
-  <node unless="$(arg start_yolo)" name="camera_objects_yolo_bbox_adapter" pkg="Main"
+  <node name="camera_objects_yolo_bbox_adapter" pkg="Main"
         type="camera_objects_yolo_bbox_adapter.py" output="screen" required="false">
     <param name="conf_thres" value="$(arg camera_objects_conf_thres)"/>
     <param name="class_profile" value="$(arg camera_class_profile)"/>
