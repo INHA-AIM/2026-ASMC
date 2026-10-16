@@ -8,17 +8,15 @@
   <arg name="lidar_input_topic" default="/last_lidar"/>
   <arg name="lidar_source_policy" default="validated_lidar"/>
   <arg name="avoid_path_margin_m" default="0.4"/>
-  <!-- With asmc_camera/camera.launch (all models ACTIVE), pass traffic_light:=false
-       to keep one ResNet producer. Planner signal decisions remain enabled. -->
-  <arg name="traffic_light" default="true"
-       doc="Set false only when an external traffic-light producer is running; false does not disable planner signal rules."/>
-  <arg name="traffic_light_device" default="auto"/>
-  <arg name="camera_topic" default="/cam_extra/image_jpeg/compressed"/>
+  <!-- 신호등 추론·발행은 카메라 담당의 asmc_camera/camera.launch가 단독 소유한다.
+       판제는 /perception/traffic_light/detection을 소비하며 별도 ResNet을 시작하지 않는다.
+       실행 중 중단·재개/주기는 카메라의 /perception/camera/traffic_light/set_mode
+       (mode 0=STANDBY, 2=ACTIVE, target_hz 0=유지)로 제어한다. 단일 제어 소유자를 유지한다.
+       판제 신호 규칙은 계속 동작하며 stale/invalid는 unknown으로 처리한다.
+       See docs/handoffs/perception-to-planning.md. -->
   <arg name="expected_config_sha256"
        default="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/bev/cameras_v2.yaml"/>
-  <arg name="traffic_light_checkpoint"
-       default="$(find asmc_camera)/models/traffic_light/best.pt"/>
 
   <!-- Dictionary lookup rejects unsupported sources during launch loading. -->
   <include if="$(eval {'gps_imu': True, 'external': False}[arg('state_source')])"
@@ -32,11 +30,6 @@
     <arg name="output_topic" value="$(arg canonical_objects_topic)"/>
   </include>
 
-  <group if="$(arg traffic_light)">
-    <node pkg="asmc_camera" type="traffic_light_node.py"
-          name="traffic_light_infer" output="screen" required="true"
-          args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg camera_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --typed-topic /perception/traffic_light/detection --device $(arg traffic_light_device)"/>
-  </group>
   <include file="$(find asmc_planner)/launch/planner_v2.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>
     <arg name="objects_input_type" value="detected"/>

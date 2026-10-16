@@ -18,10 +18,11 @@ consumer_handoff:
     consumer_node: /asmc_planner
     selection_policy: typed_authoritative_after_first_message
     invalid_or_stale_policy: unknown_without_legacy_fallback
-    # Historical v1 opt-in policy; standalone v2 starts signal inference only.
+    # Camera owns inference for every planner entrypoint; no launch opt-out needed.
     planning_launch_starts_producer_by_default: false
     planning_launch_signal_defaults:
-      autonomy_no_bridges_v2.launch: true
+      autonomy_no_bridges_v2.launch: false
+      mode_control_integration.launch: false
     compatibility_retirement: deferred_until_all_consumers_are_typed
     evidence:
       - config/baselines/perception_traffic_light_parity_v1.yaml

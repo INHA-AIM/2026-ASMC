@@ -44,7 +44,8 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 기본은 세 모델 상시 추론·발행입니다. 구간에 따라 생산자를 끄지 않으며 판제가 결과 소비를 결정합니다.
 [구간별 소비 안내](../../docs/handoffs/perception-to-planning.md)에 A153 끝까지의 차량 구간,
 A126 진입 전 family 준비와 신호등 범위를 정리했습니다. 차선의 주행 소비는 음영 ODD에 한정합니다.
-카메라와 판제를 함께 실행할 때 판제의 `traffic_light:=false`로 신호등 생산자를 하나만 둡니다.
+신호등 추론·발행도 카메라 담당의 단일 생산자로 유지합니다. 판제 launch는 별도 모델을 시작하지 않아
+`traffic_light:=false`가 필요하지 않습니다. 실행 중 중단·재개는 카메라의 기존 `set_mode`를 사용합니다.
 
 세부 모델·입력·mask 설정은 `config/camera/*_runtime.yaml`과 선택한 모델 프로필 YAML에서 관리합니다.
 현재/실험/호환 설정의 구분은 [config 안내](config/README.md), 실제 가중치와 로컬 연결은 [models 안내](models/README.md)를 참고하세요.

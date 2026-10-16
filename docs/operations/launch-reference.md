@@ -260,12 +260,8 @@
 | `lidar_input_topic` | `/last_lidar` | — |
 | `lidar_source_policy` | `validated_lidar` | — |
 | `avoid_path_margin_m` | `0.4` | — |
-| `traffic_light` | `true` | Set false only when an external traffic-light producer is running; false does not disable planner signal rules. |
-| `traffic_light_device` | `auto` | — |
-| `camera_topic` | `/cam_extra/image_jpeg/compressed` | — |
 | `expected_config_sha256` | `691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070` | — |
 | `calibration_file` | `$(find asmc_camera)/config/bev/cameras_v2.yaml` | — |
-| `traffic_light_checkpoint` | `$(find asmc_camera)/models/traffic_light/best.pt` | — |
 
 ## Planner component
 

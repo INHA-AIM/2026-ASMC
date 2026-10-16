@@ -75,12 +75,27 @@ Frenet V2는 매 주기 새 객체 입력을 요구하고 stale이면 정지한�
 # 각 터미널에서 같은 workspace 환경을 source. bridge/Main은 별도 한 세트 유지.
 roslaunch asmc_camera camera.launch
 # 별도 판제 터미널: 카메라가 신호등도 소유하므로 별도 ResNet은 시작하지 않음
-roslaunch asmc_planner autonomy_no_bridges_v2.launch traffic_light:=false
+roslaunch asmc_planner autonomy_no_bridges_v2.launch
 ```
 
-판제 launch의 `traffic_light` 기본은 독립 실행 호환을 위해 true다. 카메라 세 모델 구성과
-함께 실행할 때는 반드시 false로 지정한다. 이는 판제 신호 규칙을 비활성화하지 않는다.
-현재 판제는 카메라 모드 서비스를 구간별로 자동 호출하지 않는다.
+**신호등 추론·발행의 단일 소유자는 카메라 담당의 `asmc_camera`다.** 판제 launch는
+별도 ResNet을 시작하지 않으며 `traffic_light:=false` 인자도 필요하지 않다.
+기존 `traffic_light`, `traffic_light_device`, `traffic_light_checkpoint`, `camera_topic` 인자는
+판제 launch에서 제거했으므로 예전 호출에서도 삭제한다. 판제의 신호 판단 규칙과 typed/legacy
+소비 정책은 유지한다. 현재 판제는 카메라 모드 서비스를 구간별로 자동 호출하지 않는다.
+
+실행 중 신호등 추론을 잠시 중단하거나 재개하려면 카메라의 기존 모드/주기 API를 사용한다.
+이는 ROS parameter를 바꾸는 것과 다르며, 시작 YAML은 실행 초기값을 제공한다.
+
+```bash
+# 필요한 경우만: 신호등 모델은 로드한 채 추론 중단
+rosservice call /perception/camera/traffic_light/set_mode '{mode: 0, target_hz: 0.0}'
+# 현재 주기를 유지하며 재개 (기본10Hz)
+rosservice call /perception/camera/traffic_light/set_mode '{mode: 2, target_hz: 0.0}'
+```
+
+중단 중 신호는 미검출/무효·stale에 따라 unknown으로 처리한다. 판제 신호 규칙 자체를
+끄는 기능은 아니다. 모드 제어 권한은 카메라 담당과 합의해 하나로 유지한다.
 
 `mode:=standby/off`, 모델 조합, 공용 `SetInferenceMode` 서비스는 명시적인 중단·복구·시험에
 유지한다. 낮은 수준의 managed component와 구형 `perception.launch profile:=planning`은

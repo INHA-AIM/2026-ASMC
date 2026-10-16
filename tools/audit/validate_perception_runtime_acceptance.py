@@ -113,59 +113,26 @@ def _load_repository_yaml(repo_root: Path, relative: str) -> Mapping[str, object
 
 
 def _validate_planning_signal_launch(
-    launch: ET.Element, launch_name: str, expected_default: str
+    launch: ET.Element, launch_name: str
 ) -> None:
-    arguments = {item.get("name"): item for item in launch.findall("arg")}
-    signal_arg = arguments.get("traffic_light")
-    if signal_arg is None or signal_arg.get("default") != expected_default:
+    obsolete_args = {"traffic_light", "traffic_light_checkpoint",
+                     "traffic_light_device", "camera_topic"}
+    if any(arg.get("name") in obsolete_args for arg in launch.iter("arg")):
         raise AcceptanceContractError(
-            f"{launch_name} traffic_light default must be {expected_default}"
-        )
-    if expected_default == "false":
-        if "planning-owner review" not in signal_arg.get("doc", ""):
-            raise AcceptanceContractError(
-                f"{launch_name} lost the cross-team planning ownership note"
-            )
-    elif "external traffic-light producer" not in signal_arg.get("doc", ""):
-        raise AcceptanceContractError(
-            f"{launch_name} must document disabling duplicate signal inference"
+            f"{launch_name} must not own or forward camera inference options"
         )
 
-    # Planning may own standalone signal inference; the complete camera/lane
-    # pipeline remains an independently launched perception graph.
+    # Camera inference is launched separately; planner launch only consumes it.
     for include in launch.iter("include"):
         if "$(find asmc_camera)" in include.get("file", ""):
             raise AcceptanceContractError(
                 f"{launch_name} must not include the full perception pipeline"
             )
-    perception_nodes = [
-        node for node in launch.iter("node")
-        if node.get("pkg") == "asmc_camera"
-    ]
-    if len(perception_nodes) != 1 or perception_nodes[0].get("type") != "traffic_light_node.py":
+    if any(node.get("pkg") in ("asmc_camera", "traffic_light")
+           for node in launch.iter("node")):
         raise AcceptanceContractError(
-            f"{launch_name} must contain only its explicit traffic-light producer"
+            f"{launch_name} must not start a camera perception producer"
         )
-    signal = perception_nodes[0]
-    gated_signal = any(
-        group.get("if") == "$(arg traffic_light)"
-        and signal in list(group.iter("node"))
-        for group in launch.iter("group")
-    )
-    if not gated_signal:
-        raise AcceptanceContractError(
-            f"{launch_name} must allow disabling signal inference via traffic_light"
-        )
-    if expected_default == "true":
-        if signal.get("required") != "true":
-            raise AcceptanceContractError(
-                f"{launch_name} must fail visibly when standalone signal inference dies"
-            )
-        camera = arguments.get("camera_topic")
-        if camera is None or camera.get("default") != "/cam_extra/image_jpeg/compressed":
-            raise AcceptanceContractError(
-                f"{launch_name} must use the bridge traffic-light camera topic"
-            )
 
 
 def _validate_p5_closeout(
@@ -225,17 +192,16 @@ def _validate_p5_closeout(
             )
 
     expected_defaults = {
-        "autonomy_no_bridges_v2.launch": "true",
+        "autonomy_no_bridges_v2.launch": False,
+        "mode_control_integration.launch": False,
     }
-    if traffic.get("planning_launch_signal_defaults") != {
-        name: default == "true" for name, default in expected_defaults.items()
-    }:
+    if traffic.get("planning_launch_signal_defaults") != expected_defaults:
         raise AcceptanceContractError("planning signal launch defaults changed")
-    for launch_name, default in expected_defaults.items():
+    for launch_name in expected_defaults:
         launch = ET.parse(
             repo_root / "src/asmc_planner/launch" / launch_name
         ).getroot()
-        _validate_planning_signal_launch(launch, launch_name, default)
+        _validate_planning_signal_launch(launch, launch_name)
 
     shadow_result = _load_repository_yaml(
         repo_root,

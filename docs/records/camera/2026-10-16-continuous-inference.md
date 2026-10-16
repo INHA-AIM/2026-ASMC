@@ -36,3 +36,18 @@ A153 끝/A451 진입까지 차량을 사용하며 공식 팀 음영 A126에 들�
 이는 단일20초 동작 확인이다. 최악 지연·최대 공백·GUI/날씨 반복·음영 유효 family 공급·
 LiDAR 최종 출력·공동 자율주행·장시간 수락을 새로 검증했다고 표시하지 않는다.
 과거 family 순간 공백과 품질 제한은 [기존 공급 기록](camera-family-supply-optimization.md)에 유지한다.
+
+## 후속 결정: 신호등 생산자도 카메라로 단일화
+
+사용자 요청으로 판제의 별도 ResNet 실행 경로와 전용 launch 인자를 제거했다.
+`traffic_light:=false` 없이 카메라와 판제의 기본 launch를 함께 사용할 수 있다.
+판제 launch·behavior 설정에 카메라 담당의 단일 생산자 소유권과 기존 카메라 `set_mode` 제어를
+주석으로 남겼다. 판제의 신호 규칙·typed/legacy 선택·stale/invalid 정책은 유지했다.
+
+기본 카메라 + 판제 두 진입점의 실제 ROS launch 해석에서 신호등 노드가
+`camera_traffic_light` 하나인 것을 확인했다. 카메라 runtime86개·facade17개·공용 계약/문서52개·
+판제 입력 계약4개가 통과했다. 관련 검사도 새 소유권을 요구하도록 변경했다.
+이 결과는 launch 검사이며 새 차량 주행 시험이 아니다. 실행 중 카메라는 재시작하지 않았다.
+격리 검사 환경에 판제 package.xml이 없어 첫 실행이 실패한 증거는
+`camera-signal-owner-runtime-tests.attempt1.log`에, 환경 보완 후 통과 결과는
+`camera-signal-owner-runtime-tests.log`에 보존했다.

@@ -42,8 +42,7 @@ def main():
     try:
         time.sleep(2)
         launch = subprocess.Popen(
-            ['roslaunch', 'asmc_planner', 'mode_control_integration.launch',
-             'traffic_light:=false'], env=env,
+            ['roslaunch', 'asmc_planner', 'mode_control_integration.launch'], env=env,
             stdout=open('/tmp/asmc_mode_stack_launch.log', 'w'),
             stderr=subprocess.STDOUT, start_new_session=True)
         rospy.init_node('asmc_mode_stack_offline_check', anonymous=True)

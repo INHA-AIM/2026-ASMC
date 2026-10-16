@@ -407,32 +407,18 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             hashlib.sha256(model.read_bytes()).hexdigest(),
         )
 
-    def test_planning_launches_use_the_canonical_traffic_light_model(self):
+    def test_planning_launches_leave_inference_ownership_to_camera(self):
         behavior_root = REPO_ROOT / "src" / "asmc_planner"
-        expected = "$(find asmc_camera)/models/traffic_light/best.pt"
-        for name in ("autonomy_no_bridges_v2.launch",):
+        for name in ("autonomy_no_bridges_v2.launch", "mode_control_integration.launch"):
             launch = ET.parse(behavior_root / "launch" / name).getroot()
             arguments = {
                 item.get("name"): item.get("default", "")
                 for item in launch.findall("arg")
             }
-            self.assertEqual(expected, arguments["traffic_light_checkpoint"], name)
-            self.assertEqual(
-                "true",
-                arguments["traffic_light"],
-                name + " owns traffic light unless an external producer is selected",
-            )
-            traffic_arg = next(
-                item
-                for item in launch.findall("arg")
-                if item.get("name") == "traffic_light"
-            )
-            self.assertIn("external traffic-light producer", traffic_arg.get("doc", ""), name)
-            owned = launch.find("group[@if='$(arg traffic_light)']")
-            self.assertIsNotNone(owned)
-            producers = owned.findall("node[@name='traffic_light_infer']")
-            self.assertEqual(1, len(producers))
-            self.assertEqual("asmc_camera", producers[0].get("pkg"))
+            self.assertNotIn("traffic_light_checkpoint", arguments, name)
+            self.assertNotIn("traffic_light", arguments, name)
+            self.assertFalse(any(node.get("pkg") in ("asmc_camera", "traffic_light")
+                                 for node in launch.iter("node")), name)
 
         package = ET.parse(behavior_root / "package.xml").getroot()
         dependencies = {

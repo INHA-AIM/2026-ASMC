@@ -33,7 +33,7 @@ Start Main/main.launch and the simulator bridge, then start the planning stack
 from the root workspace environment:
 
 ```bash
-roslaunch asmc_planner autonomy_no_bridges_v2.launch objects_source:=lidar traffic_light:=false
+roslaunch asmc_planner autonomy_no_bridges_v2.launch objects_source:=lidar
 ```
 
 Default lidar_source_policy:=validated_lidar consumes Main's fully filtered
@@ -71,8 +71,9 @@ the existing jamming-mode selector still owns camera-control handover.
 
 Latest driving/merge/avoidance parameter files and Frenet map snapshot are kept.
 asmc_bridge, traffic-light inference, asmc_hd_map runtime, and jamming code are
-unchanged by the LiDAR restoration. 통합 v2 launch의 traffic_light 기본은 true입니다. 카메라 models:=all을 별도 실행하면
-traffic_light:=false를 지정해 생산자를 하나만 둡니다.
+unchanged by the LiDAR restoration. 현재 신호등 생산자는 카메라 담당의 asmc_camera로 단일화했습니다.
+판제 launch는 추론을 시작하지 않으며 폐기된 traffic_light:=false 인자를 지정하지 않습니다.
+중단·재개·주기는 카메라 set_mode에서 제어하고 판제는 신호 규칙과 freshness 처리를 유지합니다.
 
 The dashboard consumes /planning/objects and now receives restored Main
 /lidar/motion_debug filter and motion diagnostics. Record both topics,

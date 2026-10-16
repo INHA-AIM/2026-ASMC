@@ -30,6 +30,15 @@ class CameraEntrypointsTest(unittest.TestCase):
         for node in ('camera_objects', 'camera_lane', 'camera_traffic_light'):
             self.assertEqual(config.params['/' + node + '/initial_mode'].value, 0)
 
+    def test_camera_and_planner_defaults_have_only_one_signal_producer(self):
+        planner = LAUNCH.parents[1] / 'asmc_planner/launch'
+        for name in ('autonomy_no_bridges_v2.launch', 'mode_control_integration.launch'):
+            config = roslaunch.config.load_config_default([
+                (str(LAUNCH / 'camera.launch'), []), (str(planner / name), [])], None, verbose=False)
+            signals = [n for n in config.nodes if n.type == 'traffic_light_node.py']
+            self.assertEqual([n.name for n in signals], ['camera_traffic_light'], name)
+            self.assertEqual(config.params['/camera_traffic_light/initial_mode'].value, 2)
+
     def test_pytorch_recovery_is_explicit_and_uses_the_same_input_sizes(self):
         profile=LAUNCH.parent/'config/camera/lane_runtime_pytorch.yaml'
         config=self.config('_runtime.launch','lane_runtime_config:='+str(profile))

@@ -318,7 +318,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
     if traffic_config.get("topic") != expected_binding["compatibility_topic"]:
         raise ContractError("behavior planner compatibility topic drifted")
 
-    for filename in ("autonomy_no_bridges_v2.launch",):
+    for filename in ("autonomy_no_bridges_v2.launch", "mode_control_integration.launch"):
         behavior_launch = ET.parse(
             repo_root / "src/asmc_planner/launch" / filename
         ).getroot()
@@ -326,10 +326,8 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
             (item.get("pkg"), item.get("type"))
             for item in behavior_launch.iter("node")
         }
-        if ("asmc_camera", "traffic_light_node.py") not in nodes:
-            raise ContractError(f"{filename} does not start canonical producer")
-        if ("traffic_light", "live_infer.py") in nodes:
-            raise ContractError(f"{filename} regressed to legacy producer")
+        if any(package in ("asmc_camera", "traffic_light") for package, _ in nodes):
+            raise ContractError(f"{filename} must consume the camera-owned producer")
 
     launch_path = repo_root / "src" / "asmc_camera" / "launch" / "perception.launch"
     root = ET.parse(launch_path).getroot()

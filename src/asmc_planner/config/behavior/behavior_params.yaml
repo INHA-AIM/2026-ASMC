@@ -52,6 +52,8 @@ route: {route_links_path: "$(find asmc_planner)/config/behavior/route_links_1.ya
 traffic_light:
   # Camera ResNet now runs continuously; A236 start..A308 end is the reviewed
   # consumption scope. It does not disable this input or change signal rules.
+  # asmc_camera owns the sole producer and its mode/rate controls. Planning
+  # consumes typed detections here; never start another classifier in its launch.
   use_mock: false
   # P4-C3 canonical input. Keep `topic` below until every deployment starts
   # asmc_camera; it is fallback-only after the first typed sample arrives.
