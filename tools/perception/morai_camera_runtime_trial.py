@@ -292,7 +292,7 @@ class Trial:
             'publish_local:=true','local_gps_topic:=/camera_trial/gps','rviz:=false'])
         if self.args.canonical_example:
             self.run_process('fusion',['roslaunch','Main','main.launch',
-                'start_yolo:=false','rviz:=false'])
+                'rviz:=false'])
             self.run_process('region_example',['roslaunch','asmc_camera','camera_region_example.launch',
                 'allow_example_control:=true'])
             for model,node_name in [('yolo','camera_object_detector'),('resnet18','traffic_light_infer')]:

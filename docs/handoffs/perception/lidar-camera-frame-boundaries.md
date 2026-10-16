@@ -1,5 +1,7 @@
 # LiDAR·카메라 좌표와 GPS 경계 — opt-in 구현
 
+> 2026-10-16 현재 실행은 [카메라→Main/LiDAR 인계](../../packages/asmc_lidar/camera-handoff.md)를 따른다. 아래 날짜별 실험 명령은 당시 checkout 재현용이며, 현재 Main에서는 start_yolo 옵션이 제거됐다. 원본 수치·설정·실패 증거는 보존한다.
+
 `feat/lidar-camera-frame-boundaries`는 B1a PR #71 병합 main `534ddc5`를 기준으로
 한다. 사용자의 승인으로 #71을 병합했고, 실패 원본과 고정 재호 브랜치 `8dde9b6`은
 유지한다. 새 경로와 roll 보정은 각각 수락 전이며 기본 OFF다.

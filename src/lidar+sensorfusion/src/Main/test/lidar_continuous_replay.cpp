@@ -57,6 +57,11 @@ int main(int argc,char** argv) {
     if(gps_mode!="normal"&&gps_mode!="invalid"&&gps_mode!="missing")return 2;
     const double begin=argc>6?std::stod(argv[6]):0,end=argc>7?std::stod(argv[7]):0;
     ros::NodeHandle nh,pnh("~");
+    // The replay bypasses production main(); select its same class policy explicitly.
+    std::string camera_profile;
+    pnh.param("camera_class_profile",camera_profile,std::string("mission16_v1"));
+    if(camera_profile!="legacy"&&camera_profile!="mission16_v1")return 2;
+    fusion_class::MissionProfile()=camera_profile=="mission16_v1";
     pnh.setParam("enable_common_geometry",profile!="legacy");
     pnh.setParam("lidar_level_roll",profile=="common_roll_pitch");
     InitMutex();InitVehicleSpec();InitProjectionMatrix(st_Camera,YAML::LoadFile(YamlURL));

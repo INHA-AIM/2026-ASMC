@@ -1,5 +1,8 @@
 # 모델별 카메라 추론 실행 상태
 
+**현재 안내:** 기능별 모드 서비스와 `camera.launch`·`view.launch`는 [실행 계약](../../contracts/perception/camera-runtime-v1.md)을 따른다. 아래 PR #69의 옵션·실험 수치는 과거 기록이며 Main 독립 YOLO 복구 옵션은 제거됐다.
+
+
 > 현재 실행·새 제어 경로는 [카메라 실행·3뷰 관측 계약](../../contracts/perception/camera-runtime-v1.md)이 정본입니다.
 > 아래 기존 profile/서비스 설명과 과거 검증 결과는 호환·재현 기록으로 보존합니다.
 

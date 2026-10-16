@@ -877,6 +877,9 @@ def main() -> int:
     mode.add_argument("--check", action="store_true")
     args = parser.parse_args()
     try:
+        legacy = args.repo_root / "src/lidar+sensorfusion/src/Main/src/Camera/YOLO/YOLODetection.py"
+        if not legacy.is_file():
+            raise BaselineError("P4-A is a frozen historical inventory. Use the source/generator revision recorded in its baseline report; current models and commands are documented in asmc_camera/README.md.")
         write_or_check(args.repo_root, args.write, args.check)
     except (BaselineError, OSError, ValueError, yaml.YAMLError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

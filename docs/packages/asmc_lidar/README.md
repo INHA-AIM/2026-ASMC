@@ -1,10 +1,9 @@
 # LiDAR 기능 이전과 손재호 인계
 
-**2026-10-14 카메라 소비 변경:** Main 기본은 `camera_class_profile:=mission16_v1`입니다.
-원본16종과 `vehicle / dynamic_obstacle / static_obstacle`을 보존합니다. 전방 bbox fusion만 연결하며,
-3뷰 출력이 3뷰 fusion을 의미하지 않습니다. [현재 카메라 계약](../../handoffs/perception/camera-mission16-deployment.md)을
-먼저 확인하세요. 현재 검출·추적 실행 호스트는 여전히 nested Main이며 `asmc_lidar` 기능 이전은 후속입니다.
-
+**2026-10-16 현재 카메라/판제 연결:** [카메라 → Main → 손재호 이전 인계](camera-handoff.md)를 먼저 읽는다.
+YOLO는 `asmc_camera/camera.launch`만 소유하고 Main의 독립 YOLO 실행·설치 경로는 제거했다.
+현재 판제는 여전히 nested Main의 `/last_lidar`와 tracked/motion 출력을 소비한다.
+전방 bbox fusion만 연결돼 있으며3뷰 fusion과 LiDAR 전체 이전은 손재호의 후속 작업이다.
 
 현재 `asmc_lidar`는 **좌표·시간 기반과 공용 계약만 제공하는 빌드 가능한 골격**이다.
 검출·군집·OBB·추적·fusion·ROS 어댑터의 실행 구현은 손재호가 원본
@@ -20,7 +19,7 @@
 
 ## 읽는 순서와 검증 상태
 
-1. 이 README에서 역할·현재 구현과 후속 과제를 확인한다.
+1. 이 README와 [현재 카메라 인계](camera-handoff.md)에서 실행/계약·현재 구현과 후속 과제를 확인한다.
 2. [B1a 과제 목록](b1a-improvement-tasks.md)에서 재호가 먼저 고칠 작업을 선택한다.
 3. [PR #72 연속 회귀](../../handoffs/perception/lidar-continuous-regression.md)에서 시간·지면·추적 검증과 미수락 항목을 확인한다.
 4. [좌표 경계](../../handoffs/perception/lidar-camera-frame-boundaries.md)와 [외부 참고 검토](../../handoffs/perception/camera-lidar-coordinate-reference-review.md)를 세부 근거로 읽는다.
@@ -71,7 +70,7 @@ python3 -m http.server 8767 --bind 127.0.0.1 \
 ## 역할과 남긴 파일
 
 카메라 패키지는 `asmc_camera`다(2026-10-06 `asmc_perception`에서 이름 변경). 안승현이
-YOLO 생산자를 `asmc_camera`에 opt-in 구현했다. 모델/통합 부하 검증도 카메라가 맡는다. 손재호는 `asmc_lidar`의 LiDAR 처리와
+YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다. 모델/통합 부하 검증도 카메라가 맡는다. 손재호는 `asmc_lidar`의 LiDAR 처리와
 카메라 box 매칭·클래스 유지 fusion을 맡는다. HD맵은 지도와 주행영역을 제공한다.
 자세한 역할 분담은 [통합 로드맵](../../architecture/consolidation-roadmap.md)을 따른다.
 
@@ -81,7 +80,7 @@ YOLO 생산자를 `asmc_camera`에 opt-in 구현했다. 모델/통합 부하 검
 | IMU 선택 함수 | 도착 완료 표본만 전달, 유한값/유효 quaternion 검사 후 valid 지정 |
 | v3 장착 설정 | 출처 SHA와 단위 확인. 장착 z를 노면 기준 센서 높이로 사용하지 않음 |
 | 회귀시험 | 좌표·8코너·속도·관측시각·pose/IMU 선택 의미 검사. 실제 검출 성능 시험은 후속 |
-| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자와 Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar 자체 ROS 노드는 아직 없음 |
+| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar 자체 ROS 노드는 아직 없음 |
 
 빌드·시험 명령과 API 위치는 [패키지 README](../../../src/asmc_lidar/README.md)에 있다.
 소스에는 지면·tracker 후보나 실행 launch를 남기지 않았다. 이전 `unified.launch`,

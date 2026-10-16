@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-10-16T04:26:27.203892+00:00",
+  "base_commit": "ae8dcbc0eb80f06f8c8db54742543aad369ef3cc",
+  "branch": "feat/camera-lidar-handoff-v2",
+  "scope": "camera producer ownership, front adapter, migration handoff contracts; no runtime 3-view fusion or planner policy change",
+  "checks": {
+    "outer_clean_build": true,
+    "nested_clean_build": true,
+    "reference_build": true,
+    "main_tests": {
+      "tests": 320,
+      "errors": 0,
+      "failures": 0
+    },
+    "skeleton_ctest_suites": 4,
+    "camera_runtime_tests": 80,
+    "camera_detection_tests": 89,
+    "measurement_tests": 36,
+    "facade_tests": 17,
+    "shared_contract_tests": 35,
+    "new_legacy_reference_tests": 2,
+    "new_replay_comparison_tests": 3,
+    "historical_manifest_tests": 6,
+    "planning_contract_tests": 4,
+    "scenario_engine_tests": 4,
+    "jamming_ros_fixtures": 4,
+    "actual_ros_adapter_mode_launch": true,
+    "md5_parity": true,
+    "install": true,
+    "documentation_migration": true
+  },
+  "prior_failures": {
+    "host_python_scipy_missing": "reran supported Python3.8 container without modifying installs",
+    "old_b0_start_yolo_assertion": "updated to assert retired arg absent; initial and corrected logs preserved",
+    "first_bag_comparison": "reference harness stale object; see condition-corrections.json"
+  },
+  "baseline_camera_quality": "PR85 unchanged E8/TwinLite outputs; not rerun or reaccepted by this change",
+  "retained_limits": [
+    "family261.7ms gap and SUNNY freshness event",
+    "bus/truck and frontal bicycle/dog subtype quality",
+    "3-view LiDAR receiver/buffer/fusion not implemented"
+  ],
+  "cleanup": {
+    "test_ros_and_rqt_remaining": 0,
+    "user_bridge_preserved": true,
+    "public_vehicle_control_published": false,
+    "simulator_weather_actors_unchanged": true,
+    "container_mounts_unchanged": true
+  },
+  "local_raw_artifacts": "data/runtime/camera-lidar-handoff-v2",
+  "hosted_ci": "check PR status separately; prior account billing block"
+}

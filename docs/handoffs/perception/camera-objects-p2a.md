@@ -1,5 +1,8 @@
 # 카메라 객체 생산자 P2a 사용·검증
 
+**과거 P2a 기록:** 아래 YOLO11m·구형 Main 실행법은 당시 검증 재현용이다. 현재 실행은 [LiDAR 카메라 인계](../../packages/asmc_lidar/camera-handoff.md)를 따른다. 독립 Main YOLO는 현재 checkout에서 제거됐으며 과거 소스/가중치는 커밋 ae8dcbc0에서 확인한다.
+
+
 > 기준: main `af253c3575c1e704e70511c2a2033ec15e33299a`, 전방 YOLO11m 동작 보존.
 > opt-in 구현이며 LiDAR 전체 이전이나 대회 full-stack 성능 승인을 뜻하지 않는다.
 > 최신 통합 기준은 컨트롤러 PR #67을 포함한 main `c5d0b78`이다. 검출·LiDAR·HD맵 실행 코드는

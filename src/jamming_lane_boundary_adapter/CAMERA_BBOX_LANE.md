@@ -71,7 +71,7 @@ RTX 5080 환경에서 기존 ROS 컨테이너의 cu118 대신 `asmc-perception-t
 컨테이너를 새로 만들었을 때만 다음을 실행한다.
 
 ```bash
-docker exec -it asmc-perception-train bash -lc 'python3 -m pip install --no-deps --target /opt/camera-bbox-deps -r /root/ws/src/jamming_lane_boundary_adapter/requirements-camera-bbox.txt'
+docker exec -it asmc-ros-noetic bash -lc 'python3 -m pip install --no-deps --target /opt/camera-bbox-deps -r /root/ws/src/jamming_lane_boundary_adapter/requirements-camera-bbox.txt'
 ```
 
 루트 패키지 빌드 (현재 완료):
@@ -82,12 +82,18 @@ docker exec -it asmc-ros-noetic bash -lc 'source /opt/ros/noetic/setup.bash && s
 
 브리지와 기존 카메라 차선 인식은 켜둔다. 자동 주행을 시험하지 않을 때는 기존
 camera follower/avoidance 노드도 종료한다. 아래 명령은 기존 주행 노드를 중지시키지 않는다.
-LiDAR Main은 필요 없다. 중첩 workspace를 source하는 이유는 기존 YOLO와 Msg를 읽기 위해서다.
-
-터미널 1: GPU YOLO만 실행. 기존 fusion의 `/YOLO/BBox`와 분리된 토픽을 사용한다.
+LiDAR Main 실행은 필요 없다. 중첩 workspace는 CPU 호환 어댑터와 Msg를 읽기 위해 source한다.
+추론은 별도 `asmc_camera` 한 곳만 소유한다. 이미 실행 중이면 추가로 시작하지 않는다.
 
 ```bash
-docker exec -it asmc-perception-train bash -lc '
+roslaunch asmc_camera camera.launch mode:=active models:=objects
+```
+
+터미널 1: 카메라 결과의 전방 CPU 변환만 실행한다. 기존 fusion의 `/YOLO/BBox`와 분리된 토픽을 사용한다.
+이 launch는 모델을 시작하지 않는다. 기존 소비 cutoff0.7은 유지하며 구형 detector_source/weights/device/crop 옵션은 제거됐다.
+
+```bash
+docker exec -it asmc-ros-noetic bash -lc '
 source /opt/ros/noetic/setup.bash &&
 source /root/ws/devel/setup.bash &&
 source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&

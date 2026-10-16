@@ -1,5 +1,8 @@
 # TensorRT 기본·family 공급 최적화 — 2026-10-15–16
 
+**LiDAR 후속:** 현재 Main의 카메라 연결과 손재호 이전 경계는 [현행 인계](../../packages/asmc_lidar/camera-handoff.md)를 따른다. 독립 Main YOLO는 제거하고 전방 어댑터만 유지한다.
+
+
 PR #85의 최신 시작점이다. [실행 계약](../../contracts/perception/camera-runtime-v1.md)과 함께 읽는다.
 TwinLite 기본 backend는 TensorRT FP16이다. 2026-10-16 사용자 직접 주행·시각화에서 YOLO와 family 차선의 정성 확인을 마쳤다.
 전체 자동 공급 수락은 별도다. 사용자는 2026-10-16 아래 순간 공백/freshness 제한을 기록한 상태로 현재 리팩토링을 main에 병합하도록 승인했다.

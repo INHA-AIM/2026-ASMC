@@ -9,7 +9,6 @@
     <arg name="publish_local" value="false"/>
   </include>
   <include file="$(find Main)/main.launch">
-    <arg name="start_yolo" value="false"/>
     <arg name="rviz" value="false"/>
     <arg name="start_velodyne_driver" value="false"/>
     <arg name="fusion_yolo_policy" value="$(arg fusion_yolo_policy)"/>

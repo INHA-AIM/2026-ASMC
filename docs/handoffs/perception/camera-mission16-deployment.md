@@ -49,44 +49,34 @@ python3 tools/perception/install_camera_model_release.py \
 
 ## 직접 실행
 
-팀원의 최신 main을 빌드하고 source한 `asmc-ros-noetic`에서 실행한다. 이 launch는 차량 제어를
-시작하지 않는다. 기존 카메라 producer를 종료하고 bridge·카메라 센서 입력을 유지한다.
+현재 정본은 `camera.launch`·`view.launch`다. 최신 checkout을 빌드/source한 `asmc-ros-noetic`에서 실행한다.
+Main의 독립 YOLO는 제거됐다. 바깥/nested 빌드 순서와 전방 연결은 [LiDAR 인계](../../packages/asmc_lidar/camera-handoff.md)를 따른다.
 
 ```bash
-source /root/ws/devel/setup.bash
-roslaunch asmc_camera perception.launch profile:=debug \
-  start_camera_lane:=false start_traffic_light:=false
+roslaunch asmc_camera camera.launch mode:=active models:=objects
 ```
 
-사전학습 모델 대조는 종료·재실행 후 아래 인자를 추가한다.
+사전학습 모델은 기존 detector를 종료한 뒤 선택한다.
 
 ```bash
-roslaunch asmc_camera perception.launch profile:=debug \
-  objects_model_profile:=pretrained_coco7 \
-  start_camera_lane:=false start_traffic_light:=false
+roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=pretrained
 ```
 
-별도 터미널:
+시각화와 GUI는 각각 별도 한 세트다.
 
 ```bash
+roslaunch asmc_camera view.launch models:=objects
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
-판제 관리 실행은 `profile:=planning`으로 STANDBY에서 시작한다. 기존
-`/camera_object_detector/set_inference_mode` (`asmc_camera/SetInferenceMode`)에
-mode1 PREPARE → `prepared=true` 확인 → mode2 ACTIVE를 요청한다. 구간 정책은 판제 소유다.
-`idle`은 미실행, `debug`는 ACTIVE다. [모드 인터페이스](camera-inference-control.md)를 따른다.
-TwinLite 목표는 이번에10Hz를 유지하고,15Hz 통합 최적화는 후속 검증 과제다.
+판제 관리 실행은 `camera.launch models:=objects`의 STANDBY에서 시작한다.
+`/perception/camera/objects/set_mode`의 mode1 PREPARE → 같은 세대 prepared=true 확인 → mode2 ACTIVE를 사용한다.
+TwinLite도 현재15Hz 목표·TensorRT·전방544×960/좌우480×640이다. 음영 lane 모드와 readiness는 [실행 계약](../../contracts/perception/camera-runtime-v1.md)을 따른다.
+신호등은 카메라 또는 판제 launch 중 한 곳만 실행한다. 판제가 이미 시작했다면 카메라는 `models:=objects,lane` 등 필요한 조합만 선택한다.
 
-신호등 생산자는 한 곳만 소유한다. 현재 `asmc_planner/autonomy_no_bridges_v2.launch`는
-신호등을 기본으로 켠다. 이 launch를 쓰면 카메라 launch는 `start_traffic_light:=false`로 두거나,
-카메라가 신호등을 맡는 경우 판제 launch에 `traffic_light:=false`를 명시한다. 판제 신호 규칙을
-끄는 인자가 아니다. 이전 facade 시험의 외부 생산자 기본 가정은 현재 코드에 맞춰 수정했다.
-
-생산자 cutoff는 `objects_conf_thres:=0.40`으로 지정한다. 더 낮추려면 재시작한다.
-소비자는 `box.confidence`로 더 엄격히 거를 수 있다. 전방 BBox 어댑터의
-`/camera_objects_yolo_bbox_adapter/conf_thres`는 추가 cutoff이며 기본0.0이다.
-그 값을 낮춰도 생산자가 이미 버린 박스를 되찾을 수 없다.
+생산자 cutoff는 공개 `confidence:=0.40`으로 지정한다. 변경하려면 재시작한다.
+소비자는 `box.confidence`로 추가 필터링할 수 있다. 전방 어댑터의 추가 cutoff 기본0.0은 생산자가 승인한 박스를 통과시킨다.
+그 값을 낮춰도 생산자가 버린 박스를 되찾을 수 없다.
 
 ## Camera → LiDAR → 판제 계약
 
@@ -106,7 +96,7 @@ CargoBox/WoodBox는 box, Scooter/SportBike는 motorcycle, PE_Firewall은 plastic
   view(`camera_front/left/right`), 원본 이름·그룹·confidence 보존. 메시지·서비스 MD5는 유지한다.
 - `valid=true`·빈 boxes는 정상 빈 관측이다. `valid=false`, 오래된 stamp, 중단 입력은 새 빈 관측과 구분한다.
   카메라 bbox만으로 map 위치·거리·속도를 만들지 않는다.
-- Main의 기본 `camera_class_profile:=mission16_v1`, `start_yolo:=false`다. 전방만 기존
+- Main의 기본은 `camera_class_profile:=mission16_v1`이며 독립 YOLO 옵션은 제거됐다. 전방만 기존
   `/YOLO/BBox`로 변환하며 producer는 하나다. 이 구형 wire에는 원본 이름·bbox·header만 있고
   confidence/그룹 필드는 없다. confidence는 변환 전 필터링하고 그룹은 같은 고정 표로 재구성한다.
 - fusion은 **전방 bbox·unique·±50ms·200ms 대기**다. 좌우 bbox는 독립 출력이며 아직3뷰 fusion이 아니다.
@@ -119,7 +109,7 @@ CargoBox/WoodBox는 box, Scooter/SportBike는 motorcycle, PE_Firewall은 plastic
   판제가3그룹별 정책을 구현할 때는 문자열을 보존한 tracked companion을 함께 사용한다.
 - 미등록 라벨은unknown/진단으로 남긴다. 클래스 이름만 보고 static으로 자동 배정하지 않는다.
 
-완전 legacy 복구는 `camera_coco7.launch`와 Main의 `camera_class_profile:=legacy`를 명시한다.
+과거 분류 정책의 재현은 `camera_coco7.launch`와 Main의 `camera_class_profile:=legacy`를 명시한다. Main 독립 YOLO를 다시 시작하는 경로는 없다.
 이는 위 `pretrained_coco7` 선택(동일3그룹 계약 유지)과 다르다.
 
 ## 검증 범위와 남은 과제

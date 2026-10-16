@@ -1,13 +1,11 @@
 <launch>
   <!-- Model parameters remain owned by asmc_camera. The launcher selects the
        GPU Python for semantic_inference/object_detection/traffic_light only. -->
-  <include file="$(find asmc_camera)/launch/perception.launch">
-    <arg name="profile" value="debug"/>
-    <arg name="start_visualization" value="false"/>
+  <include file="$(find asmc_camera)/launch/camera.launch">
+    <arg name="mode" value="active"/>
   </include>
   <include file="$(find Main)/main.launch">
     <arg name="start_velodyne_driver" value="false"/>
-    <arg name="start_yolo" value="false"/>
     <arg name="rviz" value="false"/>
   </include>
 </launch>

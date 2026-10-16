@@ -1,5 +1,8 @@
 # 파트 간 인수인계 문서
 
+카메라→기존 Main→판제의 현재 실행/소비 규칙과 손재호 이전 경계는 [LiDAR 카메라 인계](../packages/asmc_lidar/camera-handoff.md)가 정본이다.
+
+
 > **문서 역할:** Active Handoff Index — 생산자·소비자 사이의 현재 인수 조건과 legacy 구분
 
 Handoff 문서는 공용 message의 정본을 새로 정의하지 않는다. producer가 무엇을 내보내고

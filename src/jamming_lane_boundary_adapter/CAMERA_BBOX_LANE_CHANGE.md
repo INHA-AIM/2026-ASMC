@@ -69,7 +69,13 @@ BBOX 기반 속도 상한도 이 구간에서는 제외하며 변경 속도/곡�
 발행하는 다른 controller와 BBOX 관측 전용 launch는 종료한다. 이 launch가
 BBOX 판정 노드도 함께 실행한다. GPU detector는 중복 실행하지 않는다.
 
-GPU YOLO가 아직 안 켜져 있으면:
+카메라 YOLO가 아직 안 켜져 있으면 별도 터미널에서 실행한다. 이미 켜져 있으면 반복 실행하지 않는다.
+
+```bash
+roslaunch asmc_camera camera.launch mode:=active models:=objects
+```
+
+아래는 별도 GPU 모델이 아니라 카메라 결과의 전방 CPU 변환이다. 이미 변환 노드가 실행 중이면 추가로 시작하지 않는다:
 
 ```bash
 docker exec -it asmc-ros-noetic bash -lc '

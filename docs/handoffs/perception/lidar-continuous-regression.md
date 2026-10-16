@@ -1,5 +1,7 @@
 # PR #72 — 연속 지면·군집·추적 회귀와 재호 인계
 
+> 2026-10-16 현재 실행은 [카메라→Main/LiDAR 인계](../../packages/asmc_lidar/camera-handoff.md)를 따른다. 아래 날짜별 실험 명령은 당시 checkout 재현용이며, 현재 Main에서는 start_yolo 옵션이 제거됐다. 원본 수치·설정·실패 증거는 보존한다.
+
 시작점은 [LiDAR 인계 README](../../packages/asmc_lidar/README.md)다. 이 문서는
 공통 좌표·시간 변경과 roll 추가를 실제 처리 함수로 분리 검증하는 근거를 연결한다.
 공통 경계와 roll 기본값은 각각 OFF이며, 속도·동정적 validity는 false다.

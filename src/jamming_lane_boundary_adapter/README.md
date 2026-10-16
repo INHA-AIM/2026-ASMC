@@ -1,5 +1,9 @@
 # Lane Boundary Adapter
 
+현재 YOLO 추론은 별도 `asmc_camera/camera.launch`가 소유한다. `camera_bbox_detector.launch`는 카메라 전방 결과를 전용 토픽으로 바꾸는 CPU 어댑터뿐이다.
+구형 cropped YOLO/가중치/실행 옵션은 제거했고 기존 차로 판정·제어 정책과 소비 cutoff0.7은 유지한다.
+[카메라→Main/LiDAR 인계](../../docs/packages/asmc_lidar/camera-handoff.md)를 참고한다.
+
 현재 카메라 차선 주행·BBOX 기반 반복 차선변경 실행은
 [카메라 차선 변경 안내](CAMERA_BBOX_LANE_CHANGE.md)를 참고한다.
 YOLO 설치와 차로 판정은 [BBOX 판정 안내](CAMERA_BBOX_LANE.md)를 따른다.

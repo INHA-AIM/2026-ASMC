@@ -1,0 +1,17 @@
+# Handoff references only: no ROS subscriber, buffer, projector or fusion node.
+schema_version: 1
+implementation_status: contract_only_receiver_not_implemented
+observation_contract: config/contracts/camera_object_observation_v1.yaml
+observation_topic: /perception/camera/objects/observations
+status_topic: /perception/camera/objects/status
+cameras:
+  front: camera_front
+  left: camera_left
+  right: camera_right
+calibration_config: $(find asmc_camera)/config/cameras_v3.yaml
+class_groups_config: $(find asmc_camera)/config/camera/object_classes_mission16_v1.yaml
+current_compatibility:
+  runtime_host: Main
+  input_topic: /perception/camera/objects
+  camera_scope: front
+  output_topic: /YOLO/BBox

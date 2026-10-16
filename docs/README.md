@@ -1,5 +1,8 @@
 # 2026-ASMC 문서 허브
 
+현재 카메라 YOLO 단일화와 기존 Main/판제 연결은 [LiDAR 카메라 인계](./packages/asmc_lidar/camera-handoff.md)를 따른다. 실제3뷰 fusion/전체 이전은 손재호의 후속 작업이다.
+
+
 > **문서 상태:** Active Index
 > **최종 정리:** 2026-09-26
 > **대상:** 팀원 전원 · 관리: 통합 리드와 각 문서 담당자

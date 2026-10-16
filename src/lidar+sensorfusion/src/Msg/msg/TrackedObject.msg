@@ -1,7 +1,7 @@
 int32 id
 int16 type
-# classification: fusion policy result, one of car / person / unknown.
-# yolo_class: the raw YOLO label that confirmed it (car / truck / bus / person),
+# classification: current mission16 group (vehicle / dynamic_obstacle / static_obstacle / unknown).
+# yolo_class: the raw camera model name (16 mission classes or 7 pretrained classes),
 #             or "unknown" when no camera detection currently backs this track.
 string classification
 string yolo_class

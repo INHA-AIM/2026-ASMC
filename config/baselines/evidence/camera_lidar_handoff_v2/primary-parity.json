@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "frames": 649,
+  "ready": 648,
+  "objects": 21028,
+  "differences": [],
+  "tolerance": 1e-06,
+  "scope": "logical offline output parity, not real-time or GT quality acceptance"
+}

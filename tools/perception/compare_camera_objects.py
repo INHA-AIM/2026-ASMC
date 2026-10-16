@@ -70,6 +70,8 @@ def main():
     parser.add_argument("--expected-frames", type=int, default=3514)
     parser.add_argument("--device", default="cuda:0")
     args = parser.parse_args()
+    from legacy_yolo_reference import require_legacy_yolo_checkout
+    require_legacy_yolo_checkout(ROOT)
     rospy.rostime.set_rostime_initialized(True)
     legacy = load_module("legacy_yolo", MAIN / "src/Camera/YOLO/YOLODetection.py")
     adapter = load_module("object_adapter", MAIN / "scripts/camera_objects_yolo_bbox_adapter.py")

@@ -1,0 +1,7 @@
+{
+  "source_mtime_ns": 1792123190891071826,
+  "object_mtime_ns": 1792123192647148845,
+  "reference_executable_sha256": "f0f62c7e895403bf84ce60eb9d332d04f5fd596f6830df8f8202630b7c0440b0",
+  "source_sha256": "7d0c464578d9503577c8d51fb967ca85af7a24219f2a18d1aa44f5d48f09d972",
+  "observation": "first reference incremental build did not compile modified harness; copy2 retained an older source mtime"
+}

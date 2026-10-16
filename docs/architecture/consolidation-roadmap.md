@@ -13,7 +13,8 @@
 
 팀이 직접 유지하는 공통 ROS 코드의 **목표**는 다음 다섯 패키지다.
 카메라 패키지는 2026-10-06 `asmc_perception`에서 `asmc_camera`로 이름을 바꿨다(호환 wrapper 없이 완전 이전, 옛 경로에는 이전 안내 README만 남김).
-YOLO11m 카메라 생산자와 기존 LiDAR 호환 어댑터는 opt-in 구현됐으며,
+YOLO26l E8/사전학습 카메라 생산자는 정본 실행이며 기존 Main에는 전방 호환 어댑터만 남긴다.
+현재 실행·이전 경계는 [카메라→LiDAR 인계](../packages/asmc_lidar/camera-handoff.md)를 따른다.
 `asmc_lidar`는 좌표·시간 코어만 남긴 이전용 골격이다. 아래 목표를 운영 이전 완료로 해석하지 않는다.
 
 | 정본 패키지 | 책임 |
@@ -63,7 +64,7 @@ YOLO11m 카메라 생산자와 기존 LiDAR 호환 어댑터는 opt-in 구현됐
 
 | 항목 | 현재 | 완료 목표·담당 |
 |---|---|---|
-| 카메라 패키지 | `src/asmc_camera/`(2026-10-06 rename); YOLO11m opt-in 생산자 구현; 기본 LiDAR 실행기는 보존 | `src/asmc_camera/`; 안승현이 YOLO 실행/후속 성능을 검증 |
+| 카메라 패키지 | `src/asmc_camera/`(2026-10-06 rename); YOLO26l E8/사전학습·3뷰 TensorRT 정본; 기존 LiDAR 실행기는 보존 | `src/asmc_camera/`; 안승현이 YOLO 실행/후속 성능을 검증 |
 | 원본 LiDAR | `src/lidar+sensorfusion/`의 nested `Main`·`Msg` | 손재호가 기존 기능과 개선 패치를 `src/asmc_lidar/`로 이전 |
 | 새 LiDAR 골격 | 좌표·시간/IMU 코어·회귀시험, 공용 메시지 정의 | 손재호가 검출·추적·fusion·ROS 어댑터를 원본에서 이전 |
 | 구조물 억제 | 골격에는 구현 없음 | 구현 시 OFF에서 출발, 손재호의 객체 보존 회귀 이후에만 승격 |
@@ -80,6 +81,8 @@ topic/type/MD5, 실행 인자, 고정 bag과 실패 사례를 기록한다. 문�
 정리 전 `020f6c2`에서 필요한 개선 근거만 선별 확인하고 연구 폴더를 일괄 복구하지 않는다.
 
 #### B. 안승현 — 카메라 rename과 YOLO 생산자 정리
+
+2026-10-16 현재 rename/3뷰 배포/실행 리팩토링은 main에 반영됐고 Main의 독립 YOLO 경로를 제거한다. 아래 번호별 날짜는 과거 단계의 기록이다.
 
 1. **이름 변경만 먼저:** `package.xml`, CMake/catkin, Python 설치·import, launch의
    `pkg`/`find`, 스크립트·Docker/CI·RViz/rqt·테스트·학습 경로를 목록화한다.

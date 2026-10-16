@@ -127,8 +127,9 @@ def replay(args, path, repeat):
                                                   record_raw, queue_size=100))
         if args.fusion:
             subscriptions.append(rospy.Subscriber("/lidar/tracked_objects_map", TrackedObjectArray, record_track, queue_size=100))
-            command = ["roslaunch", "Main", "main.launch", "start_yolo:=" + ("true" if path == "old" else "false"),
-                       "rviz:=false", "start_velodyne_driver:=false"]
+            command = ["roslaunch", "Main", "main.launch", "rviz:=false", "start_velodyne_driver:=false"]
+            if path == "old":
+                command.append("start_yolo:=true")  # Historical checkout only; guarded before ROS startup.
             if args.fusion_trace:
                 command.append("fusion_trace_path:=" + str(prefix.with_suffix(".fusion.jsonl").resolve()))
             launch(command, "main")
@@ -270,6 +271,9 @@ def main():
         raise SystemExit("--fusion-trace requires --fusion")
     if args.fusion and args.repeats != 2:
         raise SystemExit("strict fusion comparison requires two old and two new runs")
+    if args.path != "new":
+        from legacy_yolo_reference import require_legacy_yolo_checkout
+        require_legacy_yolo_checkout(Path(__file__).resolve().parents[2])
     args.output.mkdir(parents=True, exist_ok=True)
     # rospy chooses its clock subscription at initialization; setting this
     # afterwards would leave the measurement process on wall time.

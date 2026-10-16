@@ -1,5 +1,10 @@
 # asmc_lidar — 손재호 기능 이전용 골격
 
+**2026-10-16 카메라 인계:** [현재 연결·실행·손재호 구현 경계](../../docs/packages/asmc_lidar/camera-handoff.md).
+`config/camera_objects.yaml`은 실제 카메라 관측 계약/보정/라벨 설정을 참조하고 교차 시험으로 검사한다.
+관측 수신·버퍼·3뷰 fusion은 아직 미구현이다. Main의 독립 YOLO는 제거하고 외부 카메라 전방 어댑터만 사용한다.
+
+
 현재는 **빌드 가능한 좌표·시간 라이브러리와 계약 시험**이다. 검출·군집·추적·fusion·
 ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며 구현한다.
 실제 주행에는 기존 패키지를 사용한다. 이 패키지에는 실행 launch가 없다.
@@ -21,6 +26,7 @@ ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며
 | `include/asmc_lidar/projection.hpp`, `src/projection.cpp` | 장착 회전을 고려한 수평화와 관측별 합성 카메라 투영 |
 | `include/asmc_lidar/bounded_pose.hpp`, `src/bounded_pose.cpp` | 별도 300ms 제한 GPS 위치 보정·무효 barrier·3회 복구 API |
 | `include/asmc_lidar/imu_selection.hpp` | 이미 도착한 IMU 중 scan 시각 이전의 최신 유효 표본 선택, 누락/stale 진단 |
+| `config/camera_objects.yaml`, `test/camera_objects_contract_test.py` | 카메라 관측·보정·라벨 참조와 교차 검사; 실행 노드 없음 |
 | `config/autonav_v3.yaml` | 장착 변환의 출처/SHA와 값. 후속 ROS 어댑터에서 검증·로딩할 참고 설정 |
 | `test/` | 중심/8코너·시간·pose·속도·IMU 선택의 회귀시험 |
 
