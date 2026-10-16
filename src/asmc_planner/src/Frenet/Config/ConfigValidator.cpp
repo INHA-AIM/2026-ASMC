@@ -1,6 +1,7 @@
 #include "Frenet/Config/ConfigValidator.hpp"
 
 #include <cmath>
+#include <algorithm>
 
 namespace {
 
@@ -48,6 +49,7 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
                      const PathGeneratorConfig& path_cfg,
                      const KinematicLimits& limits,
                      const CostWeights& cost_weights,
+                     const KeepCruiseConfig& keep_cruise_cfg,
                      const VehicleShape& vehicle_shape,
                      const CollisionCheckConfig& collision_cfg,
                      const CurveSpeedConfig& curve_speed_cfg,
@@ -125,6 +127,21 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         return false;
     if (!CheckPositiveFinite(path_cfg.lateral_target_tolerance,
                               "planner/path_generator/lateral_target_tolerance", error_message))
+        return false;
+
+    // Validate disabled profiles as well: enabling one must not expose bad data.
+    if (keep_cruise_cfg.source_links.empty() ||
+        std::any_of(keep_cruise_cfg.source_links.begin(), keep_cruise_cfg.source_links.end(),
+                    [](const std::string& link) { return link.empty(); })) {
+        error_message = "planner/keep_cruise/source_links must contain nonempty road IDs";
+        return false;
+    }
+    if (!CheckPositiveFinite(keep_cruise_cfg.min_requested_speed,
+                              "planner/keep_cruise/min_requested_speed", error_message) ||
+        !CheckPositiveFinite(keep_cruise_cfg.max_lateral_accel,
+                              "planner/keep_cruise/max_lateral_accel", error_message) ||
+        !CheckPositiveFinite(keep_cruise_cfg.speed_error_weight,
+                              "planner/keep_cruise/speed_error_weight", error_message))
         return false;
 
     // --- kinematic_limits ---

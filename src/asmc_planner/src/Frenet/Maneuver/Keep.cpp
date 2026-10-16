@@ -17,6 +17,7 @@
 
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/StoppingLateralGeometry.hpp"
+#include "Frenet/Maneuver/KeepCruise.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -92,7 +93,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     double resolved_target_speed, const PlannerCommand& command,
     CartesianPath& out_path) {
     // Pipeline/TrajectoryPipeline 분리(R3 1/4단계)를 위한 선행 작업 - 이
-    // pipeline이 참조하는 config 11종을 번들 하나로 묶어 그 필드를 통해서만
+    // pipeline이 참조하는 config를 번들 하나로 묶어 그 필드를 통해서만
     // 읽는다. 값/동작은 기존과 완전히 동일하다(순수 구조 이동).
     const PlannerConfigBundle cfg = MakePipelineConfigBundle();
     const PlannerCommand* external_command = &command;
@@ -227,7 +228,10 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // STOP/FOLLOW의 경계조건 semantics는 start.s_dd(raw/진단용, 이 함수
     // 앞부분의 Frenet boundary-state 구성 지점)를 그대로 유지해야 한다.
     const bool external_keep_candidates = external_command->mode == LANE_KEEPING;
-    KinematicLimits maneuver_limits = cfg.limits;
+    KinematicLimits maneuver_limits = ResolveKeepCruiseLimits(
+        *external_command, cfg.keep_cruise, cfg.limits);
+    const CostWeights maneuver_costs = ResolveKeepCruiseCosts(
+        *external_command, cfg.keep_cruise, cfg.cost_weights);
     if (external_stop_mode) {
         // 일반 주행의 가속도 한계는 그대로 두고 STOP 후보에만 서비스 제동
         // 한계를 허용한다. MPC의 accel_min보다 큰 감속 궤적을 보내지 않도록
@@ -417,7 +421,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             pass_start, request, maneuver_limits,
             planning_collision_obstacles,
             append_keep_continuity_candidates, &pass_stats, geometry_mode);
-        EvaluateCosts(candidates, cfg.cost_weights, lateral_cost_target);
+        EvaluateCosts(candidates, maneuver_costs, lateral_cost_target);
         stats = pass_stats;
 
         const FrenetPath* pass_best = external_stop_mode
@@ -431,7 +435,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             pass_cartesian, base_resolved_target_speed,
             final_applied_target_speed, cfg.curve_speed,
             cfg.limits.max_longitudinal_accel,
-            cfg.limits.max_lateral_accel);
+            maneuver_limits.max_lateral_accel);
         if (!selected_speed_envelope.valid) break;
 
         const double candidate_raw_speed_cap = std::min(
@@ -694,7 +698,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             selected_cartesian, base_resolved_target_speed,
             final_applied_target_speed, cfg.curve_speed,
             cfg.limits.max_longitudinal_accel,
-            cfg.limits.max_lateral_accel);
+            maneuver_limits.max_lateral_accel);
         // Exactly one mutation per successful KEEP cycle.  last_target_speed_
         // and feedback now mean the target that generated selected_cartesian,
         // never the raw Behavior/reference/candidate cap.

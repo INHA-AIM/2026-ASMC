@@ -13,8 +13,8 @@
 #include <algorithm>
 int main(int argc,char**argv){
  if(argc!=3){std::cerr<<"Usage: roundabout_merge_shadow frames.json resolved_params.yaml\n";return 1;}
- ReferenceConfig rc; ObjectTrackingConfig ot;PathGeneratorConfig pc;KinematicLimits lim;CostWeights cw;VehicleShape shape;CollisionCheckConfig cc;CurveSpeedConfig cs;FollowingConfig fc;AvoidConfig ac;LaneChangeConfig lc;StopConfig sc;EmergencyStopConfig ec;MergeConfig mc;HighwayMergeConfig hc;PlannerVisualizationConfig vc;double wb,lw,period,maxa;std::string wp,err;
- if(!LoadParams(argv[2],rc,ot,pc,lim,cw,shape,cc,cs,fc,ac,lc,sc,ec,mc,hc,vc,wb,lw,period,maxa,wp,err)){std::cerr<<err;return 2;}
+ ReferenceConfig rc; ObjectTrackingConfig ot;PathGeneratorConfig pc;KinematicLimits lim;CostWeights cw;KeepCruiseConfig kc;VehicleShape shape;CollisionCheckConfig cc;CurveSpeedConfig cs;FollowingConfig fc;AvoidConfig ac;LaneChangeConfig lc;StopConfig sc;EmergencyStopConfig ec;MergeConfig mc;HighwayMergeConfig hc;PlannerVisualizationConfig vc;double wb,lw,period,maxa;std::string wp,err;
+ if(!LoadParams(argv[2],rc,ot,pc,lim,cw,kc,shape,cc,cs,fc,ac,lc,sc,ec,mc,hc,vc,wb,lw,period,maxa,wp,err)){std::cerr<<err;return 2;}
  RefLine ref;if(!LoadReferenceLine(wp,ref,rc,lim.max_curvature))return 3;
  struct Track{double heading=0,rate=0;int missing=0;};std::unordered_map<int,Track> tracks;
  bool hashint=false;double hint=0;

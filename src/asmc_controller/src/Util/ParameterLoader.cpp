@@ -52,6 +52,10 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     // 제약
     loadInto(root, "constraints/steering/max_angle", p.steering_max);
     loadInto(root, "constraints/steering/max_rate",  p.steering_rate_max);
+    loadInto(root, "constraints/steering/rate_reference_speed_mps",
+             p.steering_rate_reference_speed_mps);
+    loadInto(root, "constraints/steering/min_rate", p.steering_rate_min);
+    loadInto(root, "mpc/steering_response_delay_s", p.steering_response_delay_s);
     loadInto(root, "constraints/acceleration/max_forward", p.accel_max);
     loadInto(root, "constraints/acceleration/max_reverse", p.accel_min);
     loadInto(root, "control_mapping/brake_full_decel", p.brake_full_decel);
@@ -96,6 +100,27 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
 
     // 비용 가중치
     loadInto(root, "cost/contour_error",  p.weight_contour_error);
+    // New optional schedule never inherits an old tuning when reloading YAML.
+    p.curve_contour_boost = 0.0;
+    try {
+        const auto cost = root["cost"];
+        if (cost && cost["curve_contour_boost"] &&
+            cost["contour_boost_start_curvature"] && cost["contour_boost_full_curvature"]) {
+            loadInto(root, "cost/curve_contour_boost", p.curve_contour_boost);
+            loadInto(root, "cost/contour_boost_start_curvature", p.contour_boost_start_curvature);
+            loadInto(root, "cost/contour_boost_full_curvature", p.contour_boost_full_curvature);
+        }
+    } catch (const YAML::Exception&) {
+        p.curve_contour_boost = 0.0;
+    }
+    if (!std::isfinite(p.curve_contour_boost) || p.curve_contour_boost < 0.0 ||
+        !std::isfinite(p.contour_boost_start_curvature) ||
+        !std::isfinite(p.contour_boost_full_curvature) ||
+        p.contour_boost_start_curvature < 0.0 ||
+        p.contour_boost_full_curvature <= p.contour_boost_start_curvature) {
+        std::printf("[MPC] Invalid curve contour schedule; using base tracking cost\n");
+        p.curve_contour_boost = 0.0;
+    }
     loadInto(root, "cost/lag_error",      p.weight_lag_error);
     loadInto(root, "cost/heading_error",  p.weight_heading_error);
     loadInto(root, "cost/speed_error",    p.weight_speed_error);
@@ -110,6 +135,19 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     loadInto(root, "solver/convergence_eps",  p.convergence_eps);
     loadInto(root, "solver/line_search_steps",p.line_search_steps);
 
+    if (!std::isfinite(p.steering_response_delay_s) ||
+        p.steering_response_delay_s < 0.0 || p.steering_response_delay_s > 0.5) {
+        std::printf("[MPC] Invalid steering response delay; disabling delay model\n");
+        p.steering_response_delay_s = 0.0;
+    }
+    if (!std::isfinite(p.steering_rate_reference_speed_mps) ||
+        p.steering_rate_reference_speed_mps < 0.0 ||
+        !std::isfinite(p.steering_rate_min) ||
+        p.steering_rate_min <= 0.0 || p.steering_rate_min > p.steering_rate_max) {
+        std::printf("[MPC] Invalid steering rate schedule; disabling schedule\n");
+        p.steering_rate_reference_speed_mps = 0.0;
+        p.steering_rate_min = p.steering_rate_max;
+    }
     if (p.brake_full_decel <= 0.0) {
         std::printf("[MPC] Invalid brake_full_decel %.3f; using 8.9 m/s^2\n",
                     p.brake_full_decel);

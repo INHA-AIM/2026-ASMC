@@ -21,6 +21,8 @@ double g_LidarPoseWaitTimeoutS = 0.05;
 void ConfigureSensorPoseHistory(ros::NodeHandle& private_node)
 {
     SensorPoseHistoryConfig config;
+    private_node.param("imu_yaw_is_true_enu", config.imu_yaw_is_true_enu,
+                       config.imu_yaw_is_true_enu);
     private_node.param("lidar_pose_gps_max_age_s", config.gps_max_age_s,
                        config.gps_max_age_s);
     private_node.param("lidar_pose_imu_max_age_s", config.imu_max_age_s,

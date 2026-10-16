@@ -35,6 +35,7 @@ bool LoadParams(const std::string& yaml_path,
                  PathGeneratorConfig& path_cfg,
                  KinematicLimits& limits,
                  CostWeights& cost_weights,
+                 KeepCruiseConfig& keep_cruise_cfg,
                  VehicleShape& vehicle_shape,
                  CollisionCheckConfig& collision_cfg,
                  CurveSpeedConfig& curve_speed_cfg,
@@ -125,6 +126,12 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/kinematic_limits/low_speed_min_creep_speed",  limits.low_speed_min_creep_speed);
     REQUIRE("planner/kinematic_limits/low_speed_crawl_speed_cap",  limits.low_speed_crawl_speed_cap);
     REQUIRE("planner/kinematic_limits/accel_intent_deadband_mps",  limits.accel_intent_deadband_mps);
+
+    REQUIRE("planner/keep_cruise/enabled", keep_cruise_cfg.enabled);
+    REQUIRE("planner/keep_cruise/source_links", keep_cruise_cfg.source_links);
+    REQUIRE("planner/keep_cruise/min_requested_speed", keep_cruise_cfg.min_requested_speed);
+    REQUIRE("planner/keep_cruise/max_lateral_accel", keep_cruise_cfg.max_lateral_accel);
+    REQUIRE("planner/keep_cruise/speed_error_weight", keep_cruise_cfg.speed_error_weight);
 
     REQUIRE("planner/cost_weights/kj",     cost_weights.kj);
     REQUIRE("planner/cost_weights/kt",     cost_weights.kt);

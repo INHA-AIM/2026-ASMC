@@ -1,9 +1,26 @@
 #include "MPC/Cost/cost_function.hpp"
 
 #include <cmath>
+#include <algorithm>
 
 #include "MPC/Math/utils.hpp"
 #include "MPC/Model/vehicle_model.hpp"
+
+double ContourTrackingWeight(double reference_curvature, const MPCParams& p) {
+    if (!std::isfinite(reference_curvature) ||
+        !std::isfinite(p.curve_contour_boost) || p.curve_contour_boost <= 0.0 ||
+        !std::isfinite(p.contour_boost_start_curvature) ||
+        !std::isfinite(p.contour_boost_full_curvature) ||
+        p.contour_boost_start_curvature < 0.0 ||
+        p.contour_boost_full_curvature <= p.contour_boost_start_curvature) {
+        return p.weight_contour_error;
+    }
+    const double blend = std::clamp(
+        (std::fabs(reference_curvature) - p.contour_boost_start_curvature) /
+        (p.contour_boost_full_curvature - p.contour_boost_start_curvature),
+        0.0, 1.0);
+    return p.weight_contour_error + p.curve_contour_boost * blend;
+}
 
 // ========================================
 // Reference-frame tracking geometry.
@@ -137,7 +154,8 @@ CostBreakdown computeCostBreakdown(
         const TrackingError tracking =
             computeTrackingError(st, ref, ref_idx);
         bd.contour += dt_scale * computeContourErrorCost(
-            tracking, params.weight_contour_error);
+            tracking, ContourTrackingWeight(
+                (R > 0) ? ref.k_ref[ref_idx] : 0.0, params));
         bd.lag += dt_scale * computeLagErrorCost(
             tracking, params.weight_lag_error);
         bd.heading += dt_scale * computeHeadingErrorCost(st, ref, ref_idx, params.weight_heading_error);

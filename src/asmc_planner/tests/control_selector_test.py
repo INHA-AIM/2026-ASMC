@@ -29,24 +29,35 @@ class ControlSelectorTest(unittest.TestCase):
         self.assertTrue(self.normal.get_num_connections())
         self.assertTrue(self.jamming.get_num_connections())
 
+    def tearDown(self):
+        for endpoint in [self.output, self.mode, self.normal, self.jamming]:
+            endpoint.unregister()
+
     def assert_forwarded(self, publisher, command):
         before = len(self.received)
+        expected = io.BytesIO()
+        command.serialize(expected)
         deadline = time.monotonic() + 3
-        while len(self.received) == before and time.monotonic() < deadline:
+        while time.monotonic() < deadline:
             publisher.publish(command)
             rospy.sleep(0.05)
-        self.assertGreater(len(self.received), before)
-        expected, actual = io.BytesIO(), io.BytesIO()
-        command.serialize(expected)
-        self.received[-1].serialize(actual)
-        self.assertEqual(expected.getvalue(), actual.getvalue())
+            for received in self.received[before:]:
+                actual = io.BytesIO()
+                received.serialize(actual)
+                if expected.getvalue() == actual.getvalue():
+                    return
+        self.fail('selected command was not forwarded')
 
     def assert_blocked(self, publisher, command):
         before = len(self.received)
         for _ in range(4):
             publisher.publish(command)
             rospy.sleep(0.05)
-        self.assertEqual(before, len(self.received))
+        for actual in self.received[before:]:
+            # The watchdog may publish STOP, but never the unselected command.
+            self.assertEqual(actual.longlCmdType, 1)
+            self.assertEqual(actual.accel, 0.0)
+            self.assertEqual(actual.brake, 1.0)
 
     def test_switch_and_ownership(self):
         normal = CtrlCmd(longlCmdType=1, accel=0.17, brake=0.0,
@@ -67,6 +78,35 @@ class ControlSelectorTest(unittest.TestCase):
         rospy.sleep(0.1)
         self.assert_blocked(self.jamming, jamming)
         self.assert_forwarded(self.normal, normal)
+
+    def test_selected_source_timeout_and_recovery(self):
+        self.mode.publish(UInt8(0))
+        rospy.sleep(0.1)
+        drive = CtrlCmd(longlCmdType=1, accel=0.2)
+        self.assert_forwarded(self.normal, drive)
+        before = len(self.received)
+        # Unselected commands cannot keep an old NORMAL throttle alive.
+        deadline = time.monotonic() + 0.5
+        while time.monotonic() < deadline:
+            self.jamming.publish(drive)
+            rospy.sleep(0.03)
+        self.assertGreater(len(self.received), before)
+        self.assertEqual(self.received[-1].brake, 1.0)
+        self.assertEqual(self.received[-1].accel, 0.0)
+        self.assert_forwarded(self.normal, drive)
+
+    def test_switch_requires_fresh_selected_command(self):
+        drive = CtrlCmd(longlCmdType=1, accel=0.2)
+        self.mode.publish(UInt8(1))
+        rospy.sleep(0.1)
+        self.assert_forwarded(self.jamming, drive)
+        self.mode.publish(UInt8(0))
+        rospy.sleep(0.1)
+        self.assertEqual(self.received[-1].brake, 1.0)
+        self.assert_forwarded(self.normal, drive)
+        self.mode.publish(UInt8(9))
+        rospy.sleep(0.1)
+        self.assertEqual(self.received[-1].brake, 1.0)
 
 
 if __name__ == '__main__':

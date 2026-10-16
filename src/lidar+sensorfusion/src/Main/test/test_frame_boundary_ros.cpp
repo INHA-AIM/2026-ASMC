@@ -88,6 +88,29 @@ TEST(FrameBoundary, MapInvalidBarrierRecoveryAndSilence) {
   Now(21.2);history.AddGpsInvalid(20800,21200);
   EXPECT_TRUE(history.MapAt(21200,motion).valid);
 }
+TEST(FrameBoundary, MapYawUsesGridWhileLocalYawStaysTrueEnu) {
+  Configure(); SensorPoseHistoryConfig config; config.imu_yaw_is_true_enu=true;
+  SensorPoseHistory history(config); auto motion=Local(M_PI/2.);
+  GPS_DATA gps{}; gps.f64_E=100; gps.f64_N=200; gps.f64_U=29.9;
+  gps.f64_Latitude=37.24; gps.f64_Longitude=126.77;
+  for(unsigned t:{20000,20200,20400}) {
+    Now(t*.001); history.AddImu(t,motion.st_IMU);
+    history.AddCan(t,motion.st_CAN); history.AddGps(t,gps);
+  }
+  Now(20.45); const auto map=history.MapAt(20450,motion);
+  ASSERT_TRUE(map.valid);
+  const auto forward=map.map_from_base.rotation()*asmc::lidar::Vec::UnitX();
+  EXPECT_NEAR(std::atan2(forward.y(),forward.x()),M_PI/2.-0.02356,0.0001);
+  GPS_IMU local{}; ASSERT_TRUE(history.WaitForLocalLookup(20450,0,&local));
+  EXPECT_NEAR(local.st_IMU.f32_Yaw_rad,M_PI/2.,1e-6);
+  // A future GPS cannot change the correction of an earlier scan.
+  auto future=gps; future.f64_Longitude=129.;
+  history.AddImu(20500,motion.st_IMU); history.AddGps(20500,future);
+  EXPECT_NEAR((history.MapAt(20450,motion).map_from_base.matrix()-map.map_from_base.matrix()).norm(),0.,1e-9);
+  Now(20.5); history.AddGpsInvalid(20500,20500);
+  EXPECT_FALSE(history.MapAt(20500,motion).valid);
+}
+
 TEST(FrameBoundary, LocalAssociationIgnoresMapCoordinatesIncludingNaN) {
   Configure(); TrackingConfig();
   auto previous=Detection(10,1);previous.s32_Id=42;previous.s32_Age=20;

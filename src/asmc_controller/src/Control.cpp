@@ -132,9 +132,13 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
         }
         auto stop = MakeRosStopCommand();
         if (g_control.has_successful_control) {
-            const double age=(ros::SteadyTime::now()-g_control.last_successful_control_at).toSec();
-            stop.steering=BrakingSteering(g_control.last_successful_steering,age,
-                stop_state.vx,GetMPCParams().steering_rate_max);
+            const auto now = ros::SteadyTime::now();
+            const double elapsed = (now - g_control.last_successful_control_at).toSec();
+            stop.steering = BrakingSteering(g_control.last_successful_steering,
+                elapsed, stop_state.vx, GetMPCParams());
+            MPCPlannerStopSteering(stop_state, stop.brake, stop.steering);
+            g_control.last_successful_steering = stop.steering;
+            g_control.last_successful_control_at = now;
         }
         ResetMPCForPlannerStop(stop.steering);
         g_control.control_pub.publish(stop);

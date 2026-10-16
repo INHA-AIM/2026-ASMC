@@ -3,6 +3,7 @@
 #include "Planning/BehaviorContext.hpp"
 #include <algorithm>
 #include <cmath>
+#include <XmlRpcValue.h>
 
 #include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/BehaviorCommand.h>
@@ -324,6 +325,48 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh, ros::NodeHandle pnh,
   builder_.setStopTargetOffset(stop_target_offset_m);
   traffic_stop.target_offset = stop_target_offset_m;
   decision_.setTrafficStopConfig(traffic_stop);
+  NormalCruiseConfig normal_cruise;
+  double cruise_target_kph = 0.0, cruise_max_kph = 0.0, cruise_map_min_kph = 0.0;
+  pnh_.param("normal_cruise/enabled", normal_cruise.enabled, false);
+  pnh_.param("normal_cruise/target_speed_kph", cruise_target_kph, 0.0);
+  pnh_.param("normal_cruise/max_speed_kph", cruise_max_kph, 0.0);
+  pnh_.param("normal_cruise/minimum_map_speed_kph", cruise_map_min_kph, 0.0);
+  normal_cruise.target_speed = cruise_target_kph / 3.6;
+  normal_cruise.max_speed = cruise_max_kph / 3.6;
+  normal_cruise.minimum_map_speed = cruise_map_min_kph / 3.6;
+  // ROS/YAML types and km/h conversion stay at the input boundary. The
+  // decision layer receives only validated link IDs and m/s values.
+  bool link_caps_valid = true;
+  XmlRpc::XmlRpcValue link_caps;
+  if (pnh_.hasParam("normal_cruise/link_speed_caps_kph")) {
+    link_caps_valid = pnh_.getParam("normal_cruise/link_speed_caps_kph", link_caps) &&
+        link_caps.getType() == XmlRpc::XmlRpcValue::TypeStruct;
+    if (link_caps_valid) {
+      for (auto it = link_caps.begin(); it != link_caps.end(); ++it) {
+        const auto type = it->second.getType();
+        if (type != XmlRpc::XmlRpcValue::TypeInt &&
+            type != XmlRpc::XmlRpcValue::TypeDouble) {
+          link_caps_valid = false;
+          break;
+        }
+        const double kph = type == XmlRpc::XmlRpcValue::TypeInt
+            ? static_cast<double>(static_cast<int>(it->second))
+            : static_cast<double>(it->second);
+        normal_cruise.link_speed_caps[it->first] = kph / 3.6;
+      }
+    }
+  }
+  if (!link_caps_valid) normal_cruise.enabled = false;
+  const bool cruise_valid = decision_.setNormalCruiseConfig(normal_cruise);
+  if (!link_caps_valid || !cruise_valid) {
+    ROS_ERROR("Invalid normal_cruise settings; profile disabled, map limits retained");
+  } else if (normal_cruise.enabled) {
+    ROS_WARN("MORAI ordinary KEEP cruise: target=%.1f cap=%.1f km/h; "
+             "eligible map links >= %.1f km/h or %zu explicit link caps",
+             cruise_target_kph, cruise_max_kph, cruise_map_min_kph,
+             normal_cruise.link_speed_caps.size());
+  }
+
   builder_.setSafetyConfig(safety);
   builder_.setFollowTargetConfig(follow_target);
   builder_.setAvoidTargetConfig(avoid_target);

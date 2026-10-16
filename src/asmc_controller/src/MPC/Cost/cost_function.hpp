@@ -14,6 +14,8 @@ TrackingError computeTrackingError(const MPCState& state,
                                    size_t ref_idx);
 
 double computeContourErrorCost(const TrackingError& error, double weight);
+// Reference-only schedule: straight GPS noise does not change its weight.
+double ContourTrackingWeight(double reference_curvature, const MPCParams& params);
 double computeLagErrorCost(const TrackingError& error, double weight);
 
 double computeHeadingErrorCost(const MPCState& state, const ReferencePath& ref,

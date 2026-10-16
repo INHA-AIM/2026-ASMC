@@ -19,5 +19,9 @@ void GpsToEnu(double lat_deg, double lon_deg, double alt_m,
 void GpsToUtm52N(double lat_deg, double lon_deg,
                  double& out_easting, double& out_northing);
 
+// Add this rotation to true-ENU yaw to express orientation in the same UTM
+// grid as GpsToUtm52N. Computed from the projection's local north direction.
+double Utm52NYawOffset(double lat_deg, double lon_deg);
+
 // IMU 쿼터니안(w,x,y,z) -> yaw [rad], 범위 (-pi, pi].
 double QuaternionToYaw(double w, double x, double y, double z);

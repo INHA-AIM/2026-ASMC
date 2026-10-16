@@ -6,6 +6,21 @@
 
 namespace behavior_planner {
 
+bool BehaviorDecision::setNormalCruiseConfig(const NormalCruiseConfig& config) {
+  normal_cruise_ = {};
+  if (!config.enabled) return true;
+  if (!std::isfinite(config.target_speed) || !std::isfinite(config.max_speed) ||
+      !std::isfinite(config.minimum_map_speed) || config.minimum_map_speed <= 0.0 ||
+      config.target_speed < config.minimum_map_speed ||
+      config.max_speed < config.target_speed) return false;
+  for (const auto& entry : config.link_speed_caps) {
+    if (entry.first.empty() || !std::isfinite(entry.second) ||
+        entry.second <= 0.0 || entry.second > config.max_speed) return false;
+  }
+  normal_cruise_ = config;
+  return true;
+}
+
 BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
                                              const asmc_msgs::PlanFeedback&) {
   // The v1 feedback contract has no PREPARE/READY/COMMITTED lifecycle.
@@ -214,6 +229,39 @@ BehaviorContextData BehaviorDecision::decide(
     default:
       context.target.target_link_id = feature.route.current_link_id;
       break;
+  }
+  // Apply after FSM arbitration so committed avoidance/follow/merge cannot
+  // inherit the ordinary cruise request. Every cycle starts from the original
+  // map constraints above; leaving KEEP immediately restores those constraints.
+  const bool roundabout_zone = feature.roundabout.enabled &&
+      (feature.roundabout.approach ||
+       feature.route.current_link_id == feature.roundabout.source_link_id ||
+       feature.route.current_link_id == feature.roundabout.target_link_id);
+  const auto link_cap = normal_cruise_.link_speed_caps.find(
+      feature.route.current_link_id);
+  const bool explicit_link = link_cap != normal_cruise_.link_speed_caps.end();
+  const bool ordinary_cruise = normal_cruise_.enabled &&
+      feature.ego.valid && feature.route.current_link_valid &&
+      context.selected_behavior == BehaviorType::KEEP &&
+      !context.hard.intersection_approach_active &&
+      !context.hard.planned_stop && !context.hard.force_stop &&
+      !context.hard.emergency_stop && !roundabout_zone &&
+      !feature.risk.static_obstacle_ahead &&
+      !feature.risk.avoid_target_reclassified_moving &&
+      !feature.risk.pedestrian_risk && !feature.risk.emergency_risk &&
+      !feature.surrounding.has_front_vehicle && !follow_release_grace &&
+      std::isfinite(feature.route.speed_limit) &&
+      feature.route.speed_limit > 0.0 &&
+      (explicit_link ||
+       feature.route.speed_limit >= normal_cruise_.minimum_map_speed) &&
+      std::abs(context.hard.max_speed - feature.route.speed_limit) < 1e-6;
+  if (ordinary_cruise) {
+    context.hard.max_speed = explicit_link ? link_cap->second
+                                          : normal_cruise_.max_speed;
+    context.target.desired_speed = std::min(normal_cruise_.target_speed,
+                                          context.hard.max_speed);
+    context.extra_flags["normal_cruise_active"] = true;
+    context.debug.hard_rule_reason += ";normal_cruise_simulation_profile";
   }
   if (follow_owns_avoid_target &&
       context.selected_behavior == BehaviorType::FOLLOW) {

@@ -19,7 +19,13 @@ timeouts:
 # against the predicted pose at the same sensor header.stamp, then translated
 # forward to the current predicted pose without rewinding its timestamp.
 position:
-  gps_correction_gain: 1.0
+  gps_correction_gain: 0.35
+
+# MORAI IMU yaw is true ENU; positions and the path use UTM zone 52N grid.
+# Rotate yaw using the local projection before propagation/lever-arm removal.
+# Set false only for a producer that already publishes UTM grid orientation.
+orientation:
+  imu_yaw_is_true_enu: true
 
 # GPS provides longitudinal speed correction; IMU acceleration predicts between
 # GPS callbacks. Propagation dt always uses sensor header.stamp. Steady receive
@@ -29,6 +35,11 @@ speed:
   minimum_baseline: 0.12
   maximum_mps: 60.0
   gps_correction_gain: 0.35
+  # Reduce finite-difference GPS speed noise at high speed. The smaller of
+  # GPS and predicted speeds restores the original gain while slowing down.
+  # 0 disables scheduling and preserves the fixed correction gain above.
+  gps_gain_reference_speed_mps: 5.0
+  gps_gain_minimum: 0.08
   gps_innovation_limit_mps: 3.0
   imu_acceleration_filter_alpha: 0.50
   imu_acceleration_deadband_mps2: 0.10

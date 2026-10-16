@@ -1241,6 +1241,7 @@ private:
     PathGeneratorConfig path_cfg_{};
     KinematicLimits limits_{};
     CostWeights cost_weights_{};
+    KeepCruiseConfig keep_cruise_cfg_{};
     VehicleShape vehicle_shape_{};
     CollisionCheckConfig collision_cfg_{};
     CurveSpeedConfig curve_speed_cfg_{};
