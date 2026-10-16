@@ -40,12 +40,20 @@ avoid:
   reconnect_max_lateral_delta_m: 0.8
   reconnect_max_size_delta_m: 1.5
   release_grace_cycles: 3
+# Object input must remain fresh on every Frenet cycle, including map-only roads.
+# Consumption guide: docs/handoffs/perception-to-planning.md (no new gate here).
+# Unit 2 includes all of A153 and ends at A451 entry; shadow is A126, with
+# camera family ready BEFORE A126. A448 is an approach, not a cold-start deadline.
 objects: {input_type: "morai", stale_seconds: 0.3}
 map:
   link_set_path: "$(find asmc_planner)/config/behavior/link_set.json"
   node_set_path: "$(find asmc_planner)/config/behavior/node_set.json"
 route: {route_links_path: "$(find asmc_planner)/config/behavior/route_links_1.yaml"}
 traffic_light:
+  # Camera ResNet now runs continuously; A236 start..A308 end is the reviewed
+  # consumption scope. It does not disable this input or change signal rules.
+  # asmc_camera owns the sole producer and its mode/rate controls. Planning
+  # consumes typed detections here; never start another classifier in its launch.
   use_mock: false
   # P4-C3 canonical input. Keep `topic` below until every deployment starts
   # asmc_camera; it is fallback-only after the first typed sample arrives.

@@ -7,8 +7,14 @@ Planning runs at 20 Hz. ROS topic and parameter contracts remain unchanged,
 except `UrbanFeatureDebug` is now `asmc_msgs/UrbanFeatureDebug`.
 
 ```bash
-roslaunch asmc_planner autonomy_no_bridges_v2.launch objects_source:=lidar traffic_light:=false
+roslaunch asmc_planner autonomy_no_bridges_v2.launch objects_source:=lidar
 ```
+
+신호등 추론·발행은 카메라 담당의 `asmc_camera/camera.launch`가 단독 소유합니다.
+판제는 `/perception/traffic_light/detection`을 소비하며 별도 ResNet을 시작하지 않습니다.
+기존 `traffic_light`·장치·checkpoint·camera_topic 인자는 제거했습니다. 실행 중 중단·재개·주기는
+카메라의 `/perception/camera/traffic_light/set_mode`에서 제어하고 판제 신호 규칙은 유지합니다.
+[인지 소비·제어 안내](../../docs/handoffs/perception-to-planning.md)를 따릅니다.
 
 `behavior_planner` and `frenet_planner` packages have been removed. Their C++
 namespaces and parameter namespaces remain for source/parameter compatibility.

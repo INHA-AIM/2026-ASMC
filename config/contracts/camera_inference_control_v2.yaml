@@ -5,6 +5,11 @@ producer: asmc_camera
 decision_owner: planning
 legacy_default: ACTIVE_unrestricted
 managed_default: STANDBY
+# Low-level managed components retain STANDBY; the public launch explicitly
+# requests ACTIVE for all models. Mode services remain available to one owner.
+camera_launch_default: ACTIVE
+mission_publication_gating: false
+consumption_guide: docs/handoffs/perception-to-planning.md
 models:
   twinlite: /camera_semantic_inference
   yolo: /camera_object_detector

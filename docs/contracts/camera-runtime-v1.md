@@ -8,8 +8,10 @@ E8와 사전학습 YOLO26l을 실행 시 선택하며 가중치 교체에는 노
 ## 실행과 소유권
 
 ```bash
-# 기본: 세 모델을 로드·예열하고 STANDBY에서 대기
+# 기본: 세 모델을 로드·예열하고 상시 ACTIVE, 추론·발행
 roslaunch asmc_camera camera.launch
+# 명시적인 대기 실행: 위 실행을 종료한 뒤 선택
+roslaunch asmc_camera camera.launch mode:=standby
 # 객체 인지 ACTIVE; 주행 제어는 시작하지 않는다
 roslaunch asmc_camera camera.launch mode:=active models:=objects
 # 사전학습 대조: 기존 실행을 종료한 뒤 시작
@@ -49,7 +51,11 @@ FP16이다. 같은 입력의 PyTorch 복구는 내부 `_runtime.launch`의 `lane
 기본은 모델별 프로세스다. 공유 후보에서도 camera4 ResNet은 별도 프로세스를 사용한다.
 구형 `perception.launch`의 TwinLite384×640 호환 경로는 보존한다.
 TwinLite·BEV·차선 피팅의 책임은 분리하며 차선 주행 소비는 음영 ODD에 한정한다.
-구간 판정과 결과 소비는 판제 소유다.
+구간 판정과 결과 소비는 판제 소유다. 현재는 세 모델을 상시 ACTIVE로 유지하며
+구간·GPS 유효 여부로 발행을 중단하지 않는다. Frenet 객체 freshness를 유지하고,
+[구간별 소비 안내](../handoffs/perception-to-planning.md)에 따라 판제가 사용 범위를 결정한다.
+A153 끝/A451 진입까지 차량 소비, A126 진입 전 family 준비를 구분한다.
+구형 `perception.launch profile:=planning`과 낮은 수준의 managed STANDBY 기본은 유지한다.
 
 ## 제어와 호환
 
@@ -67,6 +73,8 @@ TwinLite·BEV·차선 피팅의 책임은 분리하며 차선 주행 소비는 �
 타입의 필드·MD5는 구형 경로에 보존한다. 정본 상태는 별도 타입/MD5이므로 카메라·Main·소비자를
 같은 변경으로 재빌드/재시작한다. 구형 타입을 쓰는 소비자는 구형 경로를 사용하거나 공용 타입으로
 수정한다. [공용 제어 계약](../../config/contracts/camera_inference_control_v2.yaml)을 따른다.
+
+다음은 명시적으로 STANDBY를 선택한 경우의 복구 절차다. 기본 실행에는 필요하지 않다.
 
 ```bash
 rosservice call /perception/camera/objects/set_mode '{mode: 1, target_hz: 0.0}'

@@ -3,6 +3,9 @@
 [빠른 실행](../README.md)과 [공개 계약](../../../docs/contracts/camera-runtime-v1.md)을 먼저 확인합니다.
 이 문서는 package 내부 책임과 변경 지점을 다룹니다. 현재 모델별 독립 프로세스이며
 YOLO/TwinLite 전방544×960 B1·좌우480×640 B2, TensorRT, 목표15/15/10Hz입니다.
+공개 `camera.launch`는 세 모델을 상시 ACTIVE로 시작합니다. 구간별 발행 제한을 두지 않으며
+[인지→판제 소비 범위](../../../docs/handoffs/perception-to-planning.md)는 판제 사용 안내입니다.
+낮은 수준의 managed STANDBY 기본과 구형 profile은 명시적인 제어/복구용으로 유지합니다.
 
 ## 책임 경계
 

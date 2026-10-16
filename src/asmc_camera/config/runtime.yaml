@@ -4,7 +4,7 @@ profile: camera_runtime_profiles_v1
 entrypoints:
   camera:
     launch: camera.launch
-    default_mode: standby
+    default_mode: active
     default_models: all
     default_detector: e8
     confidence: 0.40
@@ -28,11 +28,14 @@ model_target_hz: {twinlite: 15.0, yolo: 15.0, resnet18: 10.0}
 minimum_supply_hz: {twinlite: 10.0, yolo: 10.0, resnet18: 9.5}
 # Target15Hz and >=10Hz supply are separate; source interruptions are not waived.
 activation_owner: planning
+consumption_guide: docs/handoffs/perception-to-planning.md
+# All three public camera.launch workers infer/publish continuously. Mission
+# bounds guide planning consumption, not producer on/off or empty detections.
 # Component flags select node creation. A loaded managed model's service controls inference.
 
 components:
   camera_objects:
-    enabled_by_default: true  # camera.launch loads the model in STANDBY
+    enabled_by_default: true  # camera.launch starts ACTIVE
     launch_argument: start_camera_objects
     canonical_topic: /perception/camera/objects
     observation_topic: /perception/camera/objects/observations
@@ -48,7 +51,7 @@ components:
     implementation: asmc_camera/object_detection_node.py
     consumer: Main/camera_objects_yolo_bbox_adapter.py
   camera_lane:
-    enabled_by_default: true  # camera.launch loads the model in STANDBY
+    enabled_by_default: true  # camera.launch starts ACTIVE; driving use is shadow-only
     sensor_set: ASMC_sensor_set_v3
     output_frame: base_link
     source_stamp_policy: newest_synchronized_camera_source
@@ -84,7 +87,7 @@ components:
       compatibility_topic_enabled_by_default: false
       compatibility_launch_argument: lane_enable_independent_boundary_pipeline
   traffic_light:
-    enabled_by_default: true  # camera.launch loads the model in STANDBY
+    enabled_by_default: true  # camera.launch starts ACTIVE
     activation_owner: planning
     legacy_topics: [/traffic_light/state, /traffic_light/detail]
     canonical_topic: /perception/traffic_light/detection
@@ -94,7 +97,7 @@ components:
     planning_consumer_cutover_status: typed_preferred_legacy_fallback_p4c3
     decision_closed_loop_acceptance: p4c4_traffic_light_behavior_closed_loop_v1
     vehicle_closed_loop_acceptance: p4c4_traffic_light_vehicle_closed_loop_v1
-    mission_activation_status: pending_hd_map_zone_integration
+    mission_activation_status: continuous_inference_consumption_owned_by_planning
   visualization:
     enabled_by_default: false
     object_overlay:

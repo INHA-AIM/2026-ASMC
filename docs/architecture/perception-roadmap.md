@@ -2,14 +2,15 @@
 
 현재 카메라 모델·실행 구조는 고정하고 판제·LiDAR 소비와 반복 주행 검증을 우선합니다.
 학습·데이터 확대·새 모델 비교는 실제 실패와 요청에 연결합니다.
+세 모델은 상시 ACTIVE·발행을 기본으로 하며 [구간별 소비](../handoffs/perception-to-planning.md)는 판제 책임입니다.
 
 | 단계 | 현재 상태 | 다음 확인 |
 |---|---|---|
 | YOLO 3뷰 | E8/사전학습 선택·TensorRT·16종→3그룹·전방960, 카메라 단일 생산자 | 차량 자체 누락·중복·그룹 전환·입력 중단 대응 |
-| TwinLite/family | 전방544×960/측방480×640·TensorRT·음영 model-grid→family | 판제 PREPARE/ACTIVE·구간 이탈 STANDBY·freshness/fallback; 알려진 순간 공백 추적 |
+| TwinLite/family | 전방544×960/측방480×640·TensorRT·상시 model-grid→family | A126 진입 전 유효 family·음영 한정 소비·freshness/fallback; 알려진 순간 공백 추적 |
 | 신호등 | camera4 ResNet10Hz·typed 관측 | 신호등 생산자 하나, stale 시 legacy 우회 없음 |
 | Main 연결 | 전방 CPU 어댑터·unique ±50ms/200ms·기존 판제 출력 | 최신 판제와 실제 주행, 원본 이름/그룹/운동 분리 |
-| LiDAR 이전 | `asmc_lidar` 좌표/시간 코어·카메라 관측 계약 | 손재호의 수신/버퍼/투영/다중관측 통합·검출/추적 이전 |
+| LiDAR 이전 | `asmc_lidar` 좌표/시간 코어·3뷰 수신/버퍼/투영 라이브러리 | 손재호의 실행 연결·다중관측 통합·검출/추적 이전 |
 | HD Map | 정적 global/local·mission products | 판제 local map copy와 정합; 지도와 카메라 관측의 권위 분리 |
 | 자료·학습 | 원본 보존·v11 기반 E8 배포 | 추가학습 요청 시 실패 클래스/조건만 보강·고정 split 재검증 |
 

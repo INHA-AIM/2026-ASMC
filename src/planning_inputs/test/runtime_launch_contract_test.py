@@ -7,17 +7,18 @@ import xml.etree.ElementTree as ET
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 class LaunchContracts(unittest.TestCase):
-    def test_standalone_signal_producer(self):
-        tree = ET.parse(ROOT / 'src/asmc_planner/launch/autonomy_no_bridges_v2.launch')
-        args = {arg.get('name'): arg.get('default') for arg in tree.findall('arg')}
-        self.assertEqual(args['traffic_light'], 'true')
-        group = tree.find("group[@if='$(arg traffic_light)']")
-        node = group.find("node[@name='traffic_light_infer']")
-        self.assertEqual(node.get('pkg'), 'asmc_camera')
-        self.assertEqual(node.get('required'), 'true')
-        self.assertIn('--image-topic $(arg camera_topic)', node.get('args'))
-        self.assertIn('--typed-topic /perception/traffic_light/detection', node.get('args'))
-        self.assertTrue((ROOT / 'src/asmc_camera/scripts' / node.get('type')).is_file())
+    def test_planning_never_starts_a_camera_signal_producer(self):
+        for name in ('autonomy_no_bridges_v2.launch', 'mode_control_integration.launch'):
+            tree = ET.parse(ROOT / 'src/asmc_planner/launch' / name)
+            args = {arg.get('name') for arg in tree.iter('arg')}
+            self.assertTrue({'traffic_light', 'traffic_light_checkpoint',
+                             'traffic_light_device', 'camera_topic'}.isdisjoint(args), name)
+            self.assertFalse(any(node.get('pkg') in ('asmc_camera', 'traffic_light')
+                                 for node in tree.iter('node')), name)
+        import yaml
+        behavior = yaml.safe_load((ROOT / 'src/asmc_planner/config/behavior/behavior_params.yaml').read_text())
+        self.assertEqual(behavior['traffic_light']['typed_topic'], '/perception/traffic_light/detection')
+        self.assertEqual(behavior['traffic_light']['topic'], '/traffic_light/state')
 
     def test_nested_lidar_mask_artifacts(self):
         package = ROOT / 'src/lidar+sensorfusion/src/Main'

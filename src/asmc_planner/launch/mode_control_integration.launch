@@ -1,15 +1,14 @@
 <launch>
-  <!-- Camera boundary producer and GPU detector are managed separately. -->
+  <!-- 모든 카메라 추론·신호등 발행은 asmc_camera가 별도 소유한다.
+       중단/재개는 카메라 set_mode를 사용하며 여기서 별도 생산자를 만들지 않는다. -->
   <arg name="state_source" default="gps_imu"/>
   <arg name="state_topic" default="/planning/vehicle/state"/>
-  <arg name="traffic_light" default="true"/>
   <arg name="expected_config_sha256"
        default="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/bev/cameras_v2.yaml"/>
   <include file="$(find asmc_planner)/launch/autonomy_no_bridges_v2.launch">
     <arg name="state_source" value="$(arg state_source)"/>
     <arg name="state_topic" value="$(arg state_topic)"/>
-    <arg name="traffic_light" value="$(arg traffic_light)"/>
     <arg name="expected_config_sha256" value="$(arg expected_config_sha256)"/>
     <arg name="calibration_file" value="$(arg calibration_file)"/>
   </include>

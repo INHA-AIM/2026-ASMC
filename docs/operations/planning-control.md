@@ -14,12 +14,13 @@ source /opt/ros/noetic/setup.bash
 ./scripts/build_ws.sh -j2
 source devel/setup.bash
 # bridge·카메라·Main을 별도 준비한 뒤
-roslaunch asmc_planner autonomy_no_bridges_v2.launch traffic_light:=false
+roslaunch asmc_planner autonomy_no_bridges_v2.launch
 ```
 
-이 명령은 차량 제어를 시작합니다. 카메라의 `models:=all`이 ResNet도 실행하므로 신호등을 중복으로
-시작하지 않도록 `traffic_light:=false`를 명시합니다. 실제 통합 launch의 기본은 `true`이며,
-외부 신호등 producer가 없을 때만 그 기본 경로를 사용합니다. false는 신호 판단 규칙을 끄는 값이 아닙니다.
+이 명령은 차량 제어를 시작합니다. 신호등 추론·발행은 카메라 담당의 `asmc_camera`만 소유하며,
+판제 launch는 별도 ResNet을 시작하지 않습니다. `traffic_light:=false` 등 폐기 인자는 삭제합니다.
+실행 중 중단/재개·주기는 카메라의 `set_mode`에서 제어합니다. 판제 신호 규칙·stale/invalid 처리와
+구간별 소비 책임은 유지합니다. [소비·제어 안내](../handoffs/perception-to-planning.md)를 따릅니다.
 
 `state_source:=gps_imu`는 `/planning/vehicle/state` producer를 포함하고 `external`은 외부 producer를 요구합니다.
 통합 객체 source는 `lidar`만 지원하며 `/last_lidar`와 exact source stamp의 `/lidar/motion_debug`를 소비합니다.

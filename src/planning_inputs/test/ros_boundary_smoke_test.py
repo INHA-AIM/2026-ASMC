@@ -38,7 +38,7 @@ def main():
     launch = subprocess.Popen([
         'roslaunch', 'asmc_planner', 'autonomy_no_bridges_v2.launch',
         'objects_source:=lidar', 'lidar_source_policy:=main_raw',
-        'lidar_input_topic:=/lidar/tracked_objects_map', 'traffic_light:=false'], start_new_session=True)
+        'lidar_input_topic:=/lidar/tracked_objects_map'], start_new_session=True)
     extra_processes = []
     try:
         master = rosgraph.Master('/planning_boundary_test')

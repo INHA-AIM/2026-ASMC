@@ -125,6 +125,7 @@
     "docs/operations/planning-control.md",
     "docs/handoffs/camera-to-lidar.md",
     "docs/handoffs/camera-to-planning.md",
+    "docs/handoffs/perception-to-planning.md",
     "docs/operations/camera-deployment.md",
     "src/asmc_camera/README.md",
     "src/asmc_planner/README.md",
