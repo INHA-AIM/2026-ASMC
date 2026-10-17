@@ -8,6 +8,17 @@
 - [데이터 준비·split·원본 경로](training-data.md)
 - [이번 실행 기록](../../../docs/records/camera/2026-10-17-twinlite-large-training.md)
 - [Medium 운영본과 동일 val 비교](../../../docs/records/camera/2026-10-17-twinlite-medium-large-validation.md)
+- [8epoch 종료·Large 운영 전환 계획](large-deployment-plan.md)
+
+2026-10-17 후속 결정으로 **8epoch 전체 val 평가·저장 후 종료**를 예약한다.
+LR 계산의40epoch 일정과24시간 절대 상한은 유지한다. 별도 종료 감시기가
+`epoch008.pt`의 원자적 저장을 확인해 기존 STOP 절차를 요청하며, 실행 중인 코드는 변경하지 않는다.
+`stop-policy.json`과 종료 결과에서 완료 epoch 및 목표 이후 추가 update 여부를 확인한다.
+아래24시간 안내는 안전 상한이며 현재 실행의 목표는8epoch다.
+감시 컨테이너는 `asmc-twinlite-epoch8-stop`이며 GPU를 사용하지 않는다. 감시 코드도
+학습 snapshot 옆 `epoch8-stop-guard.py`로 고정했다. E366에서 `armed`는 예약 활성,
+`stop_requested`는 정상 종료 요청, `stopped_at_target`은 목표 경계 종료 확인을 뜻한다.
+`guard_error`/`needs_review`는 확인 필요 상태다. 원래 학습 컨테이너의 자동 재시작은 설정하지 않는다.
 
 ## 설정과 평가
 
