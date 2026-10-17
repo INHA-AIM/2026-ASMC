@@ -9,6 +9,7 @@
 - [이번 실행 기록](../../../docs/records/camera/2026-10-17-twinlite-large-training.md)
 - [Medium 운영본과 동일 val 비교](../../../docs/records/camera/2026-10-17-twinlite-medium-large-validation.md)
 - [8epoch 종료·Large 운영 전환 계획](large-deployment-plan.md)
+- [2026-10-18 원본 복구·날씨/시간별 분포](../../../docs/records/camera/2026-10-18-twinlite-large-recovery.md)
 
 2026-10-17 후속 결정으로 **8epoch 전체 val 평가·저장 후 종료**를 예약한다.
 LR 계산의40epoch 일정과24시간 절대 상한은 유지한다. 별도 종료 감시기가
