@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Union
 
 import cv2
 import numpy as np
@@ -18,10 +18,12 @@ from .tasks import ROAD_MARKING_CLASS_VALUES, task_from_training_heads
 SUPPORTED_DATASET_SCHEMAS = {
     "morai-perception-dataset-1.0.0",
     "morai-perception-dataset-1.1.0",
+    "morai-perception-dataset-1.2.0",
 }
 SUPPORTED_SAMPLE_SCHEMAS = {
     "morai-perception-sample-1.0.0",
     "morai-perception-sample-1.1.0",
+    "morai-perception-sample-1.2.0",
 }
 DEFAULT_DATASET_VERSION = "twinlite_morai_v1"
 
@@ -157,6 +159,7 @@ class MoraiTwinLiteDataset(Dataset):
         joint_transform: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
         verify_files: bool = True,
         max_samples: Optional[int] = None,
+        source_roots: Optional[Mapping[str, Union[str, Path]]] = None,
     ) -> None:
         configured_root = data_root or os.environ.get("ASMC_DATA")
         if not configured_root:
@@ -169,6 +172,11 @@ class MoraiTwinLiteDataset(Dataset):
         ).resolve()
         self.split = str(split)
         self.joint_transform = joint_transform
+        configured_sources = source_roots
+        if configured_sources is None:
+            configured_sources = json.loads(os.environ.get('ASMC_TWINLITE_SOURCE_ROOTS', '{}'))
+        self.source_roots = {str(name): Path(path).expanduser().resolve()
+                             for name, path in configured_sources.items()}
 
         if self.split not in ("train", "val", "test"):
             raise MoraiDatasetError(f"unsupported split: {self.split}")
@@ -184,6 +192,11 @@ class MoraiTwinLiteDataset(Dataset):
                 f"{self.dataset_meta.get('schema_version')}"
             )
         self.target_hw = [int(value) for value in self.dataset_meta["target_hw"]]
+        self.target_hw_by_view = {str(view): list(map(int, shape)) for view, shape in
+                                  self.dataset_meta.get('target_hw_by_view', {}).items()}
+        missing_sources = set(self.dataset_meta.get('source_roots_required', [])) - set(self.source_roots)
+        if missing_sources:
+            raise MoraiDatasetError('explicit source roots required: ' + ', '.join(sorted(missing_sources)))
         self.training_heads = tuple(self.dataset_meta["training_heads"])
         try:
             self.task_spec = task_from_training_heads(self.training_heads)
@@ -215,7 +228,8 @@ class MoraiTwinLiteDataset(Dataset):
             if sample_id in seen:
                 raise MoraiDatasetError(f"duplicate sample id: {sample_id}")
             seen.add(sample_id)
-            if [int(value) for value in row["geometry"]["target_hw"]] != self.target_hw:
+            expected_hw = self.target_hw_by_view.get(row['view'], self.target_hw)
+            if [int(value) for value in row["geometry"]["target_hw"]] != expected_hw:
                 raise MoraiDatasetError(
                     f"sample target shape differs from dataset: {sample_id}"
                 )
@@ -231,14 +245,16 @@ class MoraiTwinLiteDataset(Dataset):
                         f"sample {sample_id} has an invalid road-marking encoding"
                     )
             if verify_files:
-                relative_paths = [row["image"], row["valid_mask"]]
+                relative_paths = [row["valid_mask"]]
+                if not self.rgb_path(row).is_file():
+                    raise MoraiDatasetError('missing source RGB: ' + str(self.rgb_path(row)))
                 relative_paths.extend(row["targets"][head] for head in self.heads)
                 relative_paths.extend((row.get("valid_masks") or {}).values())
-                missing = [
-                    str(_resolve_under_root(self.data_root, relative))
-                    for relative in relative_paths
-                    if not _resolve_under_root(self.data_root, relative).is_file()
-                ]
+                missing = []
+                for relative in set(relative_paths):
+                    path = _resolve_under_root(self.data_root, relative)
+                    if not path.is_file():
+                        missing.append(str(path))
                 if missing:
                     raise MoraiDatasetError(
                         f"sample {sample_id} references missing files: {missing}"
@@ -247,18 +263,50 @@ class MoraiTwinLiteDataset(Dataset):
     def __len__(self) -> int:
         return len(self.rows)
 
+    def rgb_path(self, row) -> Path:
+        reference = row.get('source_ref')
+        if not reference:
+            return _resolve_under_root(self.data_root, row['image'])
+        root = self.source_roots.get(reference.get('root'))
+        if root is None:
+            raise MoraiDatasetError('source root not explicitly configured: ' + str(reference.get('root')))
+        path = (root / reference['path']).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError as exc:
+            raise MoraiDatasetError('RGB reference escapes declared source root') from exc
+        return path
+
     def __getitem__(self, index: int) -> Dict[str, Any]:
         row = self.rows[index]
         geometry = row["geometry"]
-        rgb_path = _resolve_under_root(self.data_root, row["image"])
+        rgb_path = self.rgb_path(row)
         rgb = _letterbox_rgb(_read_rgb(rgb_path), geometry)
+        expected_hw = list(map(int, geometry['target_hw']))
+
+        if row.get('packed_targets'):
+            if self.task_spec.secondary_head != 'road_marking':
+                raise MoraiDatasetError('packed targets require the road-marking task')
+            path = _resolve_under_root(self.data_root, row['packed_targets'])
+            packed = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+            encoding = (row.get('target_encodings') or {}).get('packed_targets')
+            if (encoding != dict(type='uint8_bitfield', drivable_bit=0, road_marking_bits=[1,2], valid_bit=3)
+                    or packed is None or packed.dtype != np.uint8 or list(packed.shape) != expected_hw
+                    or np.any(packed & 240)):
+                raise MoraiDatasetError('invalid packed target or encoding: ' + str(path))
+            arrays = dict(image=rgb, targets=dict(drivable=packed & 1, road_marking=(packed >> 1) & 3),
+                          valid_mask=(packed >> 3) & 1,
+                          valid_masks={head:(packed >> 3) & 1 for head in self.heads})
+            if self.joint_transform is not None:
+                arrays = self.joint_transform(arrays)
+            return self._as_tensors(arrays, row)
 
         drivable_path = _resolve_under_root(
             self.data_root, row["targets"]["drivable"]
         )
         valid_path = _resolve_under_root(self.data_root, row["valid_mask"])
         drivable = _read_binary_mask(
-            drivable_path, self.target_hw, "drivable"
+            drivable_path, expected_hw, "drivable"
         )
         secondary_head = self.task_spec.secondary_head
         secondary_path = _resolve_under_root(
@@ -267,21 +315,21 @@ class MoraiTwinLiteDataset(Dataset):
         if secondary_head == "road_marking":
             secondary = _read_categorical_mask(
                 secondary_path,
-                self.target_hw,
+                expected_hw,
                 secondary_head,
                 self.task_spec.class_counts[secondary_head],
             )
         else:
             secondary = _read_binary_mask(
-                secondary_path, self.target_hw, secondary_head
+                secondary_path, expected_hw, secondary_head
             )
-        valid = _read_binary_mask(valid_path, self.target_hw, "valid")
+        valid = _read_binary_mask(valid_path, expected_hw, "valid")
         valid_masks = {}
         for head in self.heads:
             relative = (row.get("valid_masks") or {}).get(head, row["valid_mask"])
             valid_masks[head] = _read_binary_mask(
                 _resolve_under_root(self.data_root, relative),
-                self.target_hw,
+                expected_hw,
                 head + " valid",
             )
 
@@ -293,6 +341,12 @@ class MoraiTwinLiteDataset(Dataset):
         }
         if self.joint_transform is not None:
             arrays = self.joint_transform(arrays)
+
+        return self._as_tensors(arrays, row)
+
+    def _as_tensors(self, arrays, row):
+        secondary_head = self.task_spec.secondary_head
+        geometry = row['geometry']
 
         image = np.ascontiguousarray(arrays["image"].transpose(2, 0, 1))
         drivable = np.ascontiguousarray(arrays["targets"]["drivable"])
@@ -319,6 +373,8 @@ class MoraiTwinLiteDataset(Dataset):
                 "run_id": row["run_id"],
                 "frame_id": int(row["frame_id"]),
                 "view": row["view"],
+                "weather": str(row.get("weather", "unknown")),
+                "hour": str(row.get("hour", "unknown")),
                 "geometry": geometry,
             },
         }

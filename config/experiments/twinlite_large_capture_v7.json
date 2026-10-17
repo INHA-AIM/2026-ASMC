@@ -1,0 +1,41 @@
+{
+  "schema_version": "twinlite-preparation-recipe-1.0.0",
+  "state": "preparation_only_training_not_started",
+  "dataset_version": "twinlite_morai_v7_large_capture_r2",
+  "data_root_example": "/mnt/e/asmc_data/twinlite",
+  "source_roots_example": {
+    "capture_raw": "/mnt/e/morai_dataset/SensorData",
+    "silver": "<workspace>/data"
+  },
+  "initial_checkpoint": "src/asmc_camera/models/lane_segmentation/twinlite-large-bdd100k.pt",
+  "initial_checkpoint_sha256": "e503cbbb05177ef6e59fe19285b60314715109f95bf2a494185e3145dd53a4a6",
+  "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2",
+  "scale": "large",
+  "input_hw_by_view": {
+    "front": [544, 960],
+    "left": [480, 640],
+    "right": [480, 640]
+  },
+  "rgb": {"channel_order": "RGB", "normalization": "/255", "shrink_interpolation": "INTER_AREA", "padding": 114},
+  "target_policy": "config/perception_target_policy_v3_actor_negative.json",
+  "targets": {
+    "drivable": ["background", "drivable"],
+    "road_marking": ["background", "white_lane", "yellow_lane", "stopline"]
+  },
+  "sampling": {
+    "all_training_images_per_epoch": true,
+    "homogeneous_shape_batches": true,
+    "balance_weather_and_hour": true,
+    "maximum_image_exposures_per_epoch": 2,
+    "seed": 20261017
+  },
+  "evaluation": {
+    "whole_session_and_layout_splits": true,
+    "repeat_validation_or_test": false,
+    "checkpoint_selection_metric": "six_condition_macro_mean_head_iou",
+    "historically_blind_test": false
+  },
+  "gpu_capacity_checked": {"batch_size": 4, "amp": true, "optimizer_updates": 0},
+  "runtime_model_changed": false,
+  "training_launch_authorized": false
+}

@@ -38,6 +38,7 @@ from asmc_camera.training.twinlite import (  # noqa: E402
     task_from_checkpoint,
     twinlite_training_step,
 )
+from asmc_camera.training.twinlite.batching import ShapeBatchSampler
 
 
 def _default_run_name() -> str:
@@ -96,7 +97,7 @@ def parse_args():
     parser.add_argument(
         "--preflight-only",
         action="store_true",
-        help="Load data/model/checkpoint and run one no-grad batch per split, then exit",
+        help="Load data/model/checkpoint and check each input shape without gradients or updates",
     )
     return parser.parse_args()
 
@@ -175,13 +176,23 @@ def _update_confusion(confusion, outputs, batch, task_spec: TwinLiteTaskSpec):
         target = batch["targets"][head].long()
         for index, view in enumerate(views):
             view = str(view)
+            groups = ["all", view]
+            weather = batch['meta'].get('weather', ['unknown']*len(views))[index]
+            hour = batch['meta'].get('hour', ['unknown']*len(views))[index]
+            if weather in ('SUNNY','FOGGY') and str(hour) in ('11','13','15'):
+                condition = str(weather)+':'+str(hour)
+                if condition not in confusion[head]:
+                    confusion[head][condition] = dict(
+                        intersection=[0]*task_spec.class_counts[head],
+                        union=[0]*task_spec.class_counts[head],foreground=[0,0])
+                groups.append(condition)
             selected_valid = valid[index]
             for class_index in range(task_spec.class_counts[head]):
                 predicted_class = (prediction[index] == class_index) & selected_valid
                 target_class = (target[index] == class_index) & selected_valid
                 intersection = int((predicted_class & target_class).sum().item())
                 union = int((predicted_class | target_class).sum().item())
-                for group in ("all", view):
+                for group in groups:
                     confusion[head][group]["intersection"][class_index] += intersection
                     confusion[head][group]["union"][class_index] += union
 
@@ -193,7 +204,7 @@ def _update_confusion(confusion, outputs, batch, task_spec: TwinLiteTaskSpec):
             foreground_union = int(
                 (predicted_foreground | target_foreground).sum().item()
             )
-            for group in ("all", view):
+            for group in groups:
                 confusion[head][group]["foreground"][0] += foreground_intersection
                 confusion[head][group]["foreground"][1] += foreground_union
 
@@ -203,7 +214,7 @@ def _confusion_to_metrics(confusion, task_spec: TwinLiteTaskSpec):
     for head in task_spec.heads:
         result[head] = {}
         class_names = task_spec.class_names[head]
-        for view in ("all", "front", "left", "right"):
+        for view in confusion[head]:
             entry = confusion[head][view]
             intersections = entry["intersection"]
             unions = entry["union"]
@@ -307,12 +318,24 @@ def validate(
         head: _head_score(metrics, task_spec, head) for head in task_spec.heads
     }
     mean_iou = sum(head_scores.values()) / len(head_scores)
+    conditions = [w+':'+h for w in ('SUNNY','FOGGY') for h in ('11','13','15')]
+    condition_scores = {head: {
+        condition: (metrics[head][condition]['iou'] if task_spec.class_counts[head] == 2
+                    else metrics[head][condition]['mean_foreground_iou'])
+        for condition in conditions if condition in metrics[head]}
+        for head in task_spec.heads}
+    condition_macro = {head:sum(scores.values())/len(scores)
+                       for head,scores in condition_scores.items() if len(scores)==6}
     return {
         "sample_count": sample_count,
         "losses": averaged_losses,
         "metrics": metrics,
         "head_scores": head_scores,
         "mean_head_iou": mean_iou,
+        "condition_head_scores": condition_scores,
+        "six_condition_macro_head_scores": condition_macro,
+        "six_condition_macro_mean_head_iou": (sum(condition_macro.values())/len(condition_macro)
+                                                if len(condition_macro)==len(task_spec.heads) else None),
     }
 
 
@@ -418,6 +441,23 @@ def _preflight_split(model, loader, criterion, device, amp_enabled, channels_las
     }
 
 
+def _preflight_shapes(model, dataset, criterion, device, amp_enabled, channels_last,
+                      batch_size):
+    """Check both native deployment geometries; never call optimizer.step()."""
+    groups = defaultdict(list)
+    for index, row in enumerate(dataset.rows):
+        shape = tuple(row['geometry']['target_hw'])
+        if len(groups[shape]) < batch_size:
+            groups[shape].append(index)
+    reports = []
+    for shape, indices in sorted(groups.items()):
+        subset = torch.utils.data.Subset(dataset, indices)
+        loader = DataLoader(subset, batch_size=len(indices), num_workers=0)
+        reports.append(_preflight_split(model, loader, criterion, device,
+                                        amp_enabled, channels_last))
+    return reports
+
+
 def main():
     args = parse_args()
     if (
@@ -486,15 +526,24 @@ def main():
         )
     generator = torch.Generator().manual_seed(args.seed)
     loader_options = {
-        "batch_size": args.batch_size,
         "num_workers": args.num_workers,
         "pin_memory": device.type == "cuda",
         "persistent_workers": args.num_workers > 0,
     }
-    train_loader = DataLoader(
-        train_dataset, shuffle=True, generator=generator, **loader_options
-    )
-    val_loader = DataLoader(val_dataset, shuffle=False, **loader_options)
+    mixed_shapes = bool(train_dataset.target_hw_by_view)
+    train_sampler = None
+    if mixed_shapes:
+        train_sampler = ShapeBatchSampler(
+            train_dataset.rows, args.batch_size, args.seed,
+            balance_conditions=train_dataset.dataset_meta.get('balance_conditions', False))
+        train_loader = DataLoader(train_dataset, batch_sampler=train_sampler, **loader_options)
+        val_loader = DataLoader(val_dataset, batch_sampler=ShapeBatchSampler(
+            val_dataset.rows, args.batch_size, args.seed, shuffle=False), **loader_options)
+    else:
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
+                                  shuffle=True, generator=generator, **loader_options)
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
+                                shuffle=False, **loader_options)
 
     model, upstream_commit = load_external_twinlite(
         config=args.config, root=args.twinlite_root
@@ -622,21 +671,23 @@ def main():
             "initialization": initialization,
             "task_spec": task_spec.as_dict(),
             "dataset_provenance": dataset_provenance,
-            "train": _preflight_split(
+            "train": _preflight_shapes(
                 model,
-                train_loader,
+                train_dataset,
                 criterion,
                 device,
                 amp_enabled,
                 args.channels_last,
+                args.batch_size,
             ),
-            "val": _preflight_split(
+            "val": _preflight_shapes(
                 model,
-                val_loader,
+                val_dataset,
                 criterion,
                 device,
                 amp_enabled,
                 args.channels_last,
+                args.batch_size,
             ),
         }
         with (output_dir / "preflight.json").open("w", encoding="utf-8") as stream:
@@ -648,6 +699,8 @@ def main():
         torch.cuda.reset_peak_memory_stats(device)
     started = time.perf_counter()
     for epoch in range(start_epoch, args.epochs + 1):
+        if train_sampler is not None:
+            train_sampler.set_epoch(epoch-1)
         epoch_started = time.perf_counter()
         epoch_lr = optimizer.param_groups[0]["lr"]
         train_losses = train_epoch(
@@ -677,9 +730,13 @@ def main():
         )
         scheduler.step()
         head_scores = validation["head_scores"]
+        if val_dataset.dataset_meta.get('selection_metric') == 'six_condition_macro_mean_head_iou':
+            if validation['six_condition_macro_mean_head_iou'] is None:
+                raise RuntimeError('all six conditions required for checkpoint selection')
+            head_scores = validation['six_condition_macro_head_scores']
         da_iou = head_scores["drivable"]
         secondary_iou = head_scores[task_spec.secondary_head]
-        mean_iou = validation["mean_head_iou"]
+        mean_iou = sum(head_scores.values())/len(head_scores)
         row = {
             "epoch": epoch,
             "lr": epoch_lr,

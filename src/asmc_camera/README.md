@@ -66,3 +66,7 @@ LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)를 따�
 공식 BDD100K Large의 추가학습 전 결과는 [별도 추론 실험](docs/bdd-pretrained-experiment.md)으로
 확인한다. `bdd_lane.launch`·`bdd_lane_view.launch`는 이진 drivable/lane 시각화만 제공하며
 운영 family 입력과 상태 토픽에 결과를 섞지 않는다. 운영 기본 모델은 변경하지 않는다.
+
+이후 Capture 전체를 사용하는 Large 추가학습은 [데이터 준비 안내](docs/training-data.md)를 따른다.
+전방960×544·좌우640×480, 배치 계보별 train/val/test와 조건 균형을 준비하며
+현재 단계에서는 학습과 운영 가중치 교체를 시작하지 않는다.
