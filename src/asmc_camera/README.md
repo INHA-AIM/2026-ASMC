@@ -5,7 +5,10 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 기본 객체 모델은 YOLO26l v11 E8, 사전학습 YOLO26l도 실행 시 선택할 수 있습니다.
 현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
 현재 기본 tensor는 두 모델 모두 전방544×960·좌우480×640입니다. 모델별 독립 프로세스를 사용하며 입력 tensor를 공유하지 않습니다.
-TwinLite의 기본 backend는 TensorRT FP16이며, 명시적인 PyTorch 복구 설정을 보존합니다. 변환 품질 검증은
+TwinLite 기본 모델은 **Medium v6·TensorRT FP16**입니다.
+Large v7 E8은 패키징·품질 검증을 완료한 명시적 시험 후보입니다. SUNNY freshness 실패로 기본 전환은 보류합니다.
+기존 Medium의 TensorRT·PyTorch 복구 설정을 보존합니다.
+[선정·동일 평가·실시간 검증](../../docs/records/camera/2026-10-18-twinlite-large-deployment.md)에 배포 SHA와 한계를 기록합니다. 변환 품질 검증은
 [TensorRT 검증 기록](../../docs/records/camera/camera-twinlite-tensorrt.md)에서 관리합니다.
 [음영 family 최적화](../../docs/records/camera/camera-shadow-family-optimization.md)는
 family 전용 경로·수요 기반 BEV·GC 진단과 후속 수락 상태를 관리합니다.
@@ -53,7 +56,7 @@ A126 진입 전 family 준비와 신호등 범위를 정리했습니다. 차선�
 기존 `perception.launch`·`camera_mission16.launch` 및 실험 launch는 호환·재현 목적으로 유지합니다.
 새 실행과 동시에 켜서 생산자를 중복으로 만들지 않습니다.
 
-학습·데이터 감사·수집 도구는 오프라인 경로입니다. 이 실행 변경은 데이터·가중치·차량 제어·
+학습·데이터 감사·수집 도구는 오프라인 경로입니다. 실행 구조는 데이터·차량 제어·
 LiDAR fusion 정책을 바꾸지 않습니다. 3뷰 관측 메시지는 후속 LiDAR 인계를 위한 생산자 계약이며
 현재 3뷰 LiDAR fusion이 연결됐다는 의미는 아닙니다.
 
@@ -70,4 +73,6 @@ LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)를 따�
 이후 Capture 전체를 사용하는 Large 추가학습은 [데이터 준비 안내](docs/training-data.md)를 따른다.
 전방960×544·좌우640×480, 배치 계보별 train/val/test와 조건 균형을 준비하며
 2026-10-17 승인 후 [Large 학습과 모니터링](docs/training-run.md)을 시작했다.
-운영 가중치 교체는 품질·TensorRT·family 검증 후 별도로 판단한다.
+2026-10-18 완료된8epoch 중E8을 선정하고 품질·TensorRT·정차 통합 시험을 완료했다.
+FOGGY 전체 GUI10분은 통과했으나 교차12회 중 Large SUNNY1회에서 readiness 저하3건이 남았다.
+`lane_runtime_large.yaml`로 명시적 시험이 가능하며, 기본 승격과 PR 병합은 하지 않았다.

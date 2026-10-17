@@ -23,7 +23,7 @@ closed-loop 합격 여부는 판제 파트가 소유한다. 카메라 생산자�
 ## 1. 데이터 흐름과 소유권
 
 ```text
-MORAI RGB ×3 --UDP--> bridge --ROS--> TwinLiteNet+ v6
+MORAI RGB ×3 --UDP--> bridge --ROS--> TwinLiteNet+ Medium v6 (Large v7 E8 candidate)
                                         ├─ metric shared boundary family
                                         └─ camera drivable BEV + coverage
                                                      │
@@ -80,13 +80,14 @@ support를 보존한다. 판제가 더 긴 horizon을 선택할 때도 `INVALID`
 
 family와 해당 raster 출력은 `header.frame_id=base_link`이고 x-forward, y-left다. timestamp는 callback
 수신 시각이 아니라 세 카메라 입력 묶음의 최신 source stamp다. BEV fusion은 세 view의
-stamp 차이가 35ms 이내일 때 최대 10Hz로 발행한다. 한 view가 빠지면 오래된 raster를 다시
+stamp 차이가 35ms 이내일 때 현재 `camera.launch`에서 최대15Hz로 발행한다. 한 view가 빠지면 오래된 raster를 다시
 발행하지 않으므로 consumer가 마지막 메시지를 무기한 유지해서는 안 된다. 초기 freshness
 상한은 lane과 raster 모두 0.35초를 제안하며, 최종 수치는 판제 full-stack 실측으로 정한다.
 
 ## 3. 차선 family 계약
 
-동결된 producer 식별자는 다음과 같다.
+동결한 algorithm/representation 식별자는 유지한다. 아래 config SHA는 초기 인계 기록 예시이며,
+현재 실행의 config SHA는 실제 메시지·diagnostics와 해당 실행 증거에서 확인한다.
 
 ```text
 operating_domain = shadow_two_way_v1
@@ -96,6 +97,9 @@ expected count   = 3
 config SHA-256   = 691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070
 deployment_allowed = false
 ```
+
+`algorithm_id`의 `v6`는 동결한 family 계산/계약 식별자이며 현재 신경망 checkpoint 버전을 뜻하지 않습니다.
+모델 배포 SHA와 실행 설정은 별도 배포 목록·diagnostics에서 확인합니다.
 
 `deployment_allowed=false`는 메시지를 버리라는 뜻이 아니라, 현재 결과가 판제 연결과
 closed-loop 승인을 대신하지 않는다는 뜻이다. read-only 검토에서는 이 값을 요구한다.
@@ -222,13 +226,14 @@ drivable과 lane family는 근거를 제공하고 최종 corridor 생성은 판�
 
 ## 6. 현재 실행·모드·품질
 
-TwinLite Medium v6 TensorRT FP16, 전방544×960 B1·좌우480×640 B2, 추론 목표15Hz입니다.
+TwinLite 기본은 Medium v6 TensorRT FP16, 전방544×960 B1·좌우480×640 B2, 추론 목표15Hz입니다.
 family는 model-grid→지면투영→최신3뷰→shared fitting 경로이고 영상 BEV 합성과 독립입니다.
-원본 RGB/보정·미터 grid·support 의미는 유지합니다. BEV raster의10Hz 상한과 family/모델15Hz 목표를 섞지 않습니다.
-일반 구간은 HD맵이며 lane STANDBY, 음영 진입 전에 아래 절차를 사용합니다.
+원본 RGB/보정·미터 grid·support 의미는 유지합니다. 현재 family·BEV fusion의15Hz 목표와 시각화10Hz 상한을 구분합니다.
+기본 `camera.launch`는 세 모델 상시 ACTIVE이며, 일반 구간의 주행 소비는 HD맵입니다.
+아래 절차는 명시적으로 STANDBY를 선택한 경우에만 사용합니다.
 
 ```bash
-roslaunch asmc_camera camera.launch models:=objects,lane
+roslaunch asmc_camera camera.launch mode:=standby models:=objects,lane
 # 별도 터미널
 rosservice call /perception/camera/lane/set_mode '{mode: 1, target_hz: 0.0}'
 rostopic echo /perception/camera/lane/status
@@ -239,7 +244,7 @@ rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
 ```
 
 이 예제의 objects도 STANDBY에서 시작하므로 필요하면 objects PREPARE/ACTIVE를 별도로 요청합니다.
-신호등 producer는 카메라/판제 중 하나만 실행합니다. 위 models 조합에는 신호등이 없습니다.
+신호등 producer는 카메라가 단독 소유하며 판제는 별도 모델을 실행하지 않습니다. 위 명시적 models 조합에는 신호등이 없습니다.
 일반 시각화는 view.launch, read-only strip 검수는 별도 monitor입니다.
 
 ```bash
@@ -253,6 +258,11 @@ roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=fa
 카메라 모드와 최종 NORMAL/JAMMING 선택은 동일 기능이 아닙니다. 구간 활성화·정지/재개·fallback은 판제에서 확인합니다.
 
 ## 7. 수락 상태와 인수 확인
+
+2026-10-18 Large E8은 동일 val/test·TensorRT semantic/family 검증과 FOGGY10분을 통과했다.
+교차12회 중 Large SUNNY1회에 source freshness 저하3건이 있어 Medium 기본을 유지한다.
+[배포 기록](../records/camera/2026-10-18-twinlite-large-deployment.md)에 수치와 전방 황색차선 회귀를 남겼다.
+이 결과가 과거 순간 공백의 모든 원인 해결이나 공동 자율주행 수락을 의미하지는 않는다.
 
 #85의 TensorRT semantic 품질·리팩토링은 검증했고 사용자 직접 주행에서 family가 잘 표시됨을 확인했습니다.
 자동 시험의 family 최대공백261.7ms(250ms 기준 초과)와 SUNNY freshness 사건은

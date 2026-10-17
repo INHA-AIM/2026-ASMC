@@ -42,9 +42,12 @@ ResNet은 camera4의 기존 PIL RGB·GPU resize·bfloat16 경로를 유지한다
 `lane_input.yaml`은 TwinLite와 model-grid 투영이 함께 읽는 단일 입력 크기 설정이다.
 YOLO 배포 checkpoint2개·engine2개는 패키지 models의 실제 Git 파일이다.
 [모델 배포 안내](../../src/asmc_camera/models/README.md)의 지원 GPU/runtime과 SHA를 따른다.
-TwinLite v6 checkpoint도 패키지에 포함한다. 기본 backend는 `lane_runtime.yaml`의 TensorRT
+TwinLite Large v7 E8 checkpoint·전용 engine과 기존 Medium v6 복구본을 패키지에 포함한다. 기본 모델은 Medium v6이며 `lane_runtime_large.yaml`의 Large E8 후보는 SUNNY freshness 실패로 승격을 보류한다.
+기본 backend는 `lane_runtime.yaml`의 TensorRT
 FP16이다. 같은 입력의 PyTorch 복구는 내부 `_runtime.launch`의 `lane_runtime_config`로
-`lane_runtime_pytorch.yaml`을 명시적으로 선택한다. Engine 오류에 자동 fallback하지 않는다.
+`lane_runtime_pytorch.yaml`을 명시적으로 선택한다. Medium 복구는 `lane_runtime_medium.yaml`이다.
+[Large E8 배포 검증](../records/camera/2026-10-18-twinlite-large-deployment.md)에 선정·SHA·정차 시험과 한계를 기록한다.
+Engine 오류에 자동 fallback하지 않는다.
 기본 backend 선택은 전체 공급 수락을 뜻하지 않는다. 변환 품질·과거 후단 실패는
 [TensorRT 검증 기록](../records/camera/camera-twinlite-tensorrt.md)을 따른다.
 공유 GPU 입력은 내부 `_runtime.launch implementation:=shared shared_gpu_input:=true` 후보이며

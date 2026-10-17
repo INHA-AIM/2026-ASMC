@@ -122,6 +122,12 @@ class CaptureDatasetTests(unittest.TestCase):
         self.assertAlmostEqual(metrics['drivable']['all']['iou'],20/25)
         scores = [metrics['drivable'][w+':'+h]['iou'] for w in ('SUNNY','FOGGY') for h in ('11','13','15')]
         self.assertAlmostEqual(sum(scores)/len(scores),1/6)
+        batch['meta']['hour'] = ['17']
+        trainer._update_confusion(confusion, outputs, batch, ROAD_MARKING_TASK)
+        diagnostic = trainer._confusion_to_metrics(confusion, ROAD_MARKING_TASK)
+        self.assertIn('FOGGY:17', diagnostic['drivable'])
+        self.assertEqual(scores, [diagnostic['drivable'][w+':'+h]['iou']
+                                 for w in ('SUNNY','FOGGY') for h in ('11','13','15')])
 
     def test_frozen_four_class_evaluator_accepts_mixed_geometry(self):
         class Tiny(torch.nn.Module):

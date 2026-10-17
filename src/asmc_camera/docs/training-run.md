@@ -1,7 +1,8 @@
 # TwinLite Large 장기학습·현황 확인
 
 2026-10-17 사용자 승인으로 v7 전체 train의 Large 추가학습을 시작했다.
-현재 실행 ID는 `twinlite_large_v7_20261017_r1`이며, 운영 Medium v6 TensorRT를 자동 교체하지 않는다.
+실행 ID는 `twinlite_large_v7_20261017_r1`이다. 완전한8epoch에서 종료했고 이후 optimizer update는0이다.
+선정된E8의 배포 상태는 [배포 검증 기록](../../../docs/records/camera/2026-10-18-twinlite-large-deployment.md)을 따른다.
 
 - [E366 학습 현황](http://127.0.0.1:8000/camera-seg-large-train-20261017-r1/index.html)
 - [실제 학습 recipe](../../../config/experiments/twinlite_large_training_v7.json)
@@ -11,7 +12,8 @@
 - [8epoch 종료·Large 운영 전환 계획](large-deployment-plan.md)
 - [2026-10-18 원본 복구·날씨/시간별 분포](../../../docs/records/camera/2026-10-18-twinlite-large-recovery.md)
 
-2026-10-17 후속 결정으로 **8epoch 전체 val 평가·저장 후 종료**를 예약한다.
+2026-10-17 후속 결정인 **8epoch 전체 val 평가·저장 후 종료**를 완료했다.
+아래는 당시 실행·복구 절차이며 종료된 학습을 자동 재시작하지 않는다.
 LR 계산의40epoch 일정과24시간 절대 상한은 유지한다. 별도 종료 감시기가
 `epoch008.pt`의 원자적 저장을 확인해 기존 STOP 절차를 요청하며, 실행 중인 코드는 변경하지 않는다.
 `stop-policy.json`과 종료 결과에서 완료 epoch 및 목표 이후 추가 update 여부를 확인한다.

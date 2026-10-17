@@ -179,8 +179,10 @@ def _update_confusion(confusion, outputs, batch, task_spec: TwinLiteTaskSpec):
             groups = ["all", view]
             weather = batch['meta'].get('weather', ['unknown']*len(views))[index]
             hour = batch['meta'].get('hour', ['unknown']*len(views))[index]
-            if weather in ('SUNNY','FOGGY') and str(hour) in ('11','13','15'):
-                condition = str(weather)+':'+str(hour)
+            # Record diagnostic hours too; best selection below remains the
+            # original six SUNNY/FOGGY x 11/13/15 conditions.
+            if weather in ('SUNNY','FOGGY') and str(hour).isdigit() and 0 <= int(hour) < 24:
+                condition = str(weather)+':'+str(int(hour))
                 if condition not in confusion[head]:
                     confusion[head][condition] = dict(
                         intersection=[0]*task_spec.class_counts[head],

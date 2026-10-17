@@ -21,6 +21,8 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--checkpoint', type=Path, required=True)
     p.add_argument('--engine-manifest', type=Path, required=True)
+    p.add_argument('--model-config', choices=['nano', 'small', 'medium', 'large'], default='medium')
+    p.add_argument('--reference-fp32', action='store_true', help='Compare against FP32 PyTorch instead of AMP')
     p.add_argument('--validation', type=Path, default=Path('/data/dataset_versions/twinlite_morai_v6_road_marking_actor_negative/val.jsonl'))
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--limit', type=int, default=0, help='0=all validation frames; positive=first N triplets')
@@ -29,12 +31,13 @@ def main():
     p.add_argument('--family-reference-runtime', type=Path, help='Frozen runtime: compare its family implementation with current on the exact same TensorRT grids')
     p.add_argument('--data-root', type=Path, default=Path('/data'))
     a=p.parse_args(); a.output.mkdir(parents=True,exist_ok=False)
-    kwargs=dict(checkpoint=str(a.checkpoint),input_hw=(480,640),input_hw_by_view={'front':(544,960)})
+    kwargs=dict(checkpoint=str(a.checkpoint),model_config=a.model_config,
+                input_hw=(480,640),input_hw_by_view={'front':(544,960)})
     candidate=TwinLiteTensorRTBackend(**kwargs,engine_manifest=str(a.engine_manifest))
     if a.family_reference_runtime and not a.family_fixture:
         p.error('--family-reference-runtime requires --family-fixture')
     engines=([InferenceEngine(candidate)] if a.family_reference_runtime else
-             [InferenceEngine(TwinLiteBackend(**kwargs,channels_last=True)),InferenceEngine(candidate)])
+             [InferenceEngine(TwinLiteBackend(**kwargs,channels_last=True,amp=not a.reference_fp32)),InferenceEngine(candidate)])
     gpu=RawGpuCache() if a.gpu_preprocess else None
     if a.family_fixture:
         from shadow_family_parity import run
@@ -119,6 +122,7 @@ def main():
     result=dict(schema='twinlite_trt_validation_v1',images=len(samples),triplets=len(cases),
         checkpoint_sha256=sha256_file(a.checkpoint),engine_manifest_sha256=sha256_file(a.engine_manifest),
         validation_sha256=sha256_file(a.validation),gpu_preprocess=a.gpu_preprocess,
+        model_config=a.model_config,reference_amp=not a.reference_fp32,
         samples=samples,quality=quality,timing=timing,
         side_batch1=batch1,batch1_pass=all(r['pass_'] for r in batch1),
         numerical_pass=all(r['pass_'] for r in samples),quality_pass=all(r['pass_'] for r in quality),
