@@ -1,6 +1,7 @@
 <launch>
-  <!-- Headless debug publishers. Open their compressed topics with
-       rqt_image_view from the GUI-capable ROS container. -->
+  <!-- Shared internal renderer composition for view.launch and legacy callers.
+       Normal users run view.launch. This file starts no inference or rqt;
+       standalone defaults keep all renderer flags false. -->
   <arg name="camera_calibration_config"
        default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <arg name="bev_grid_config"

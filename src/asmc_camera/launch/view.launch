@@ -1,4 +1,6 @@
 <launch>
+  <!-- Public visualization entrypoint. Select renderers only; inference modes
+       are controlled by camera.launch. rqt is opened separately by the user. -->
   <arg name="models" default="all"/>
   <arg name="valid_models" default="$(eval {True: True}[arg('models') == 'all' or (arg('models') != '' and arg('models').replace('objects','').replace('traffic_light','').replace('lane','').replace(',','') == '' and len(arg('models').split(',')) == arg('models').split(',').count('objects') + arg('models').split(',').count('lane') + arg('models').split(',').count('traffic_light') and arg('models').split(',').count('objects') &lt;= 1 and arg('models').split(',').count('lane') &lt;= 1 and arg('models').split(',').count('traffic_light') &lt;= 1)])"/>
   <include file="$(find asmc_camera)/launch/visualization.launch">

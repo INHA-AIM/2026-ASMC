@@ -172,3 +172,36 @@ Large E8 PyTorch 복구로 변경했다. Medium v6 TensorRT는 `lane_runtime_med
 재현 checkout·기존 컨테이너 마운트를 유지하고 로컬 운영 overlay에 새 기본 설정을 반영한다.
 현재 실행 중인 사용자 노드를 강제로 바꾸지 않으며 새 셸/노드 재시작부터 적용한다.
 이번 변경에서 재학습·새로운 MORAI 부하 시험·PR 병합은 수행하지 않는다.
+
+
+## Medium→Large 시각화 지연 재집계
+
+두 모델의 SUNNY/FOGGY13시·같은 터널 위치·전체 GUI/Main/LiDAR 조건에서 각6회60초의
+원시 monotonic 기록을 합산했다. 실행별 percentile을 평균하지 않았고, Large600초 시험은
+비교에서 제외했다. 아래 단위는ms이며 입력 시작점은 카메라 모델의 압축 영상 callback이다.
+
+| 경로 | Medium p50 | Large p50 | 증가 | Medium p95 | Large p95 | 증가 |
+|---|---:|---:|---:|---:|---:|---:|
+| 전방 모델 결과 | 48.5 | 73.8 | 25.3 | 93.0 | 124.4 | 31.5 |
+| semantic 합성 JPEG 수신 | 77.7 | 101.7 | 24.0 | 122.5 | 155.4 | 32.8 |
+| family 정보 수신 | 107.7 | 135.8 | 28.0 | 162.8 | 187.7 | 24.9 |
+| family JPEG 수신 | 148.6 | 174.5 | 25.8 | 212.9 | 239.4 | 26.5 |
+
+Semantic JPEG2,742/2,718장과 family JPEG각3,600장은 원본 입력stamp에 모두 대응했다.
+JPEG 수신은 시험 소비자까지이며 rqt의 화면 표시·모니터 지연은 측정하지 않았다.
+Semantic 합성 header는 가장 새 패널의 stamp이므로 다른 패널은 더 오래됐을 수 있다.
+Family JPEG는 같은 결과의10Hz 표시와 STALE 화면을 포함하므로 신규 검출 공급률로 쓰지 않는다.
+Simulator 렌더링·bridge 이전 지연도 이 수치에 포함되지 않는다.
+
+Semantic 시각화는 목표10Hz지만 실측은 Medium7.43–7.73Hz, Large7.15–7.70Hz다.
+Family 시각화는 양쪽10Hz다. Semantic의 현재 callback은 직전 렌더링 후100ms 미만을
+건너뛰므로15Hz(약66.7ms 간격) 입력을 두 장 중 한 장 처리하면 약7.5Hz가 된다.
+정수 연산 오류가 아니라 이벤트 기반 throttle의 주기 선택 결과이며 두 모델에 같은 코드가 적용된다.
+Timer 기반 최신 입력 선택 등으로 별도 대조할 개선 후보이며 이번에 계산 방식을 변경하지 않았다.
+큰 변화는 모델 결과가 준비되는 시간이며,
+같은 stamp의 원본 크기 class 출력 이후 semantic JPEG 수신까지 p50은23.37→23.74ms,
+p95는30.58→31.50ms다. 이 값만으로 병목의 인과를 확정하지 않으며 정확한3뷰 대응·렌더링·
+JPEG·ROS 전달과 rqt 화면 지연을 분리한다. 새 실시간/GPU 시험이나 설정 변경은 수행하지 않았다.
+
+재현 자료: `artifacts/camera-seg-large-deploy-20261018-r1/view-latency-audit.py`,
+`view-latency-audit.json`. 현재 기본 Large 및 기존 수락 실패 기록은 유지한다.
