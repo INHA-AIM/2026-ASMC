@@ -1,6 +1,7 @@
 # TwinLite Large Capture 학습 데이터
 
-현재 단계는 **데이터와 GPU 입력 준비**다. Large 추가학습과 운영 모델 교체는 시작하지 않았다.
+v7 데이터와 GPU 입력 준비를 완료했고,2026-10-17 승인 후 [Large 학습](training-run.md)을 시작했다.
+운영 모델 교체는 후속 검증 단계다.
 준비 설정은 [v7 recipe](../../../config/experiments/twinlite_large_capture_v7.json),
 집계와 검사 기록은 [2026-10-17 준비 결과](../../../docs/records/camera/2026-10-17-twinlite-large-data.md)를 따른다.
 
@@ -101,7 +102,8 @@ python3 scripts/train_twinlite.py \
 마지막 명령은 양쪽 해상도의 no-grad forward와 loss만 검사하고 종료한다.
 `--skip-file-check`는 원본 전수검사·최종 target 재읽기·SHA 검증 후 중복된 존재 확인을
 생략하는 옵션이다. 처음 시도한 기본 존재 확인은 NTFS에서 오래 걸려 중단 기록을 남겼다.
-실제 추가학습은 별도 승인 후 일정·LR·평가 주기와 최종 test 사용 시점을 확정한다.
+위 명령은 준비 검사 재현용이다. 승인 후 시작한 실제 학습의 일정·LR·평가·복구는
+[학습 실행 안내](training-run.md)를 따른다. 준비 recipe는 당시 설정의 기록으로 보존한다.
 
 추가학습한 4-class checkpoint의 별도 val/test 평가는 `scripts/evaluate_twinlite.py`를
 사용한다. 이 도구도 같은 shape sampler와 조건 macro 집계를 사용하며 val/test를 반복하지 않는다.

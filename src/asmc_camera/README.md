@@ -69,4 +69,5 @@ LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)를 따�
 
 이후 Capture 전체를 사용하는 Large 추가학습은 [데이터 준비 안내](docs/training-data.md)를 따른다.
 전방960×544·좌우640×480, 배치 계보별 train/val/test와 조건 균형을 준비하며
-현재 단계에서는 학습과 운영 가중치 교체를 시작하지 않는다.
+2026-10-17 승인 후 [Large 학습과 모니터링](docs/training-run.md)을 시작했다.
+운영 가중치 교체는 품질·TensorRT·family 검증 후 별도로 판단한다.

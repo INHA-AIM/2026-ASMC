@@ -104,3 +104,6 @@ E드라이브의 `preflight/large-capture-v7-r2/preflight.json`이 입력 검사
 
 다음 작업은 사용자 승인 후 Large 추가학습 설정·중간 val 평가·최종 test 평가를 확정하는 것이다.
 현재 운영 Medium v6 TensorRT와 family 실행 설정은 유지한다.
+
+준비 완료 후 같은 날17:55 KST에 별도 승인으로 시작한 학습은
+[E366 학습 시작 기록](2026-10-17-twinlite-large-training.md)으로 이어진다.
