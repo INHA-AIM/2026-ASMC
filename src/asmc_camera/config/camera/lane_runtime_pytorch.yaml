@@ -1,5 +1,6 @@
 # Explicit recovery profile for the canonical 960/640 inputs. Restart to select.
-checkpoint: $(find asmc_camera)/models/lane_segmentation/twinlite-medium-v6.pt
+model_config: large
+checkpoint: $(find asmc_camera)/models/lane_segmentation/twinlite-large-v7-e8.pt
 backend: twinlite
 device: cuda
 views: [front, left, right]

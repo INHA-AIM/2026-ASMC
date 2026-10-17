@@ -1,6 +1,6 @@
 {
   "schema": "asmc_lane_deployment_v1",
-  "state": "validated_model_candidate_default_promotion_held",
+  "state": "default_promoted_by_user_with_known_limits",
   "model_config": "large",
   "epoch": 8,
   "weights": "ema",
@@ -158,7 +158,7 @@
       "all_pass": false,
       "scope": "Parked shadow ODD; not closed-loop driving acceptance"
     },
-    "current_default": "medium_v6_tensorrt",
+    "current_default": "large_v7_e8_tensorrt",
     "candidate_profile": "src/asmc_camera/config/camera/lane_runtime_large.yaml",
     "foggy_gui_600sec_pass": true,
     "sunny_source_age_peak_ms": 399.113178,
@@ -239,5 +239,18 @@
     "documentation_migration": "passed",
     "runtime_documentation": "passed",
     "hosted_ci": "not_run_local_changes_not_pushed"
+  },
+  "deployment_decision": {
+    "date": "2026-10-18",
+    "authority": "explicit user instruction",
+    "default_profile": "src/asmc_camera/config/camera/lane_runtime.yaml",
+    "current_default": "large_v7_e8_tensorrt",
+    "acceptance_override": true,
+    "automatic_acceptance_pass": false,
+    "known_failures_preserved": true,
+    "freshness_ms": 350,
+    "fallback_profile": "src/asmc_camera/config/camera/lane_runtime_medium.yaml",
+    "runtime_gates_changed": false,
+    "scope": "default model selection only; automatic acceptance failure retained"
   }
 }

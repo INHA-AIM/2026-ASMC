@@ -1,8 +1,8 @@
 # TwinLite Large v7 E8 선정·배포 검증
 
 2026-10-18 사용자 요청으로 완료된1–8epoch에서 배포 후보를 선정하고 검증을 완료했다.
-현재 상태는 **E8 배포 파일·품질 검증 완료, SUNNY freshness 실패로 기본 승격 보류**이다.
-현재 운영 기본은 Medium v6이며, 파일 생성이나 val 개선을 운영 수락으로 표시하지 않는다.
+현재 상태는 **사용자 승인으로 Large v7 E8 TensorRT 기본 전환 완료**다.
+앞선 보류 판정과 SUNNY freshness·공급 지연 실패는 보존하며 전체 자동 수락으로 표시하지 않는다.
 
 ## 선정과 학습 종료
 
@@ -78,7 +78,8 @@ CPU ONNX는 opset17이며 전방B1·측방B1/B2 모두 대응을 통과했다.
 - 실제 ROS 새 overlay에서 저장 영상30초 재생: 세 모델15/15/10Hz,
   family449/449유효·최소5초창14.8Hz·최대공백126.8ms,
   family 입력→수신p95 86.7ms, VRAM3,871MiB다. 이 시험은 MORAI 수락과 구분한다.
-- MORAI 시험 완료 후에도 SUNNY source freshness 실패로 Medium 기본값을 유지한다.
+- 초기 MORAI 시험 직후에는 SUNNY source freshness 실패로 Medium 기본값을 유지했다.
+  후속 사용자 승인에 따른 현재 기본 전환은 아래 결정 기록을 따른다.
   기존 순간family 공백/freshness 제한도 자동 해결된 것으로 표시하지 않는다.
 - 재현 checkout과 기존컨테이너 마운트는 유지한다. 오프라인 family의 시험ROS master는11358, 저장 영상/실시간은11359이며
   시험기가 생성한 master만 종료한다. 실시간에는 rqt 한 세트를 사용하고 공개 ROS 차량 제어는 격리한다.
@@ -129,7 +130,7 @@ Freshness를 늘리거나 오래된 결과를 재발행하지 않는다.
 첫 실행은 CPU 회귀와 겹쳤고 두 번째도 낮은 공급이 지속됐다. 별도 조건의 성능 실패로
 보존하며 터널 FOGGY600초 통과로 숨기지 않는다. 원인을 특정 모델/동시 CPU 검사로 확정하지 않는다.
 
-**기본은 Medium v6, Large E8은 `lane_runtime_large.yaml`의 명시적 시험 후보다.**
+**초기 검증 판정에서는 Medium을 유지했다. 아래 후속 사용자 결정으로 현재 기본은 Large E8이다.**
 원래 pose(위치 차이4.85mm)·gear·CLOUDY13시·키보드 제어 모드를 복원했고 시험 ROS·rqt를 정리했다.
 신규 학습·수집·YOLO 변경·PR 병합은 하지 않았다. Hosted CI는 이번 로컬 변경을 게시하지 않아 미실행이다.
 
@@ -141,10 +142,10 @@ Freshness를 늘리거나 오래된 결과를 재발행하지 않는다.
 ```bash
 source /opt/ros/noetic/setup.bash
 source /data/runtime/camera-twinlite-large-v7-e8-r1/devel/setup.bash --extend
-# 유지한 Medium 기본: 세 모델 ACTIVE
+# Large v7 E8 기본: 세 모델 ACTIVE
 roslaunch asmc_camera camera.launch
-# 위 실행을 종료한 뒤 Large E8을 명시적으로 시험할 때만
-roslaunch asmc_camera _runtime.launch mode:=active lane_runtime_config:=$(rospack find asmc_camera)/config/camera/lane_runtime_large.yaml
+# 위 실행을 종료한 뒤 기존 Medium으로 복구할 때만
+roslaunch asmc_camera _runtime.launch mode:=active lane_runtime_config:=$(rospack find asmc_camera)/config/camera/lane_runtime_medium.yaml
 ```
 
 별도 터미널에서 같은 환경을 source한 뒤:
@@ -155,5 +156,19 @@ roslaunch asmc_camera view.launch models:=lane
 rosrun rqt_image_view rqt_image_view --clear-config /perception/lane/debug/shared_family_bev/compressed
 ```
 
-다음 작업은 SUNNY source age와 복원 환경의 공급 저하를 분리 재현·개선한 후 Large 기본
-승격을 판단하는 것이다. Medium/Large의 역할·전처리·피팅·350ms·15/15/10Hz 조건은 유지한다.
+다음 단계는 새 Large 출력을 기준으로 family의 투영 grid 범위·support·보간/피팅 품질을 검토하는 것이다.
+SUNNY source age·복원 환경 공급 저하는 알려진 후속 성능 과제로 유지한다.
+역할·전처리·피팅·freshness350ms·15/15/10Hz 조건은 이번 기본 전환에서 바꾸지 않는다.
+
+
+## 2026-10-18 후속 사용자 결정 — 기본 전환
+
+사용자가 “이정도면 일단 그냥 기본으로 전환해줘. 그리고 다음단계로 넘어가자”라고 지시했다.
+이에 따라 `lane_runtime.yaml`은 Large v7 E8 TensorRT, `lane_runtime_pytorch.yaml`은 같은
+Large E8 PyTorch 복구로 변경했다. Medium v6 TensorRT는 `lane_runtime_medium.yaml`에 보존한다.
+전방544×960 B1·좌우480×640 B2, 15/15/10Hz·YOLO E8/confidence0.40/NMS0.50은 유지한다.
+자동 수락의 `all_pass=false`, SUNNY3건, 별도 재생 최소9.2Hz와 전방 황색차선 회귀는 수정하지 않는다.
+이 결정은 기본 모델 선택 승인이다. 판제의 ODD·valid/stale 처리와 공동 자율주행 검증을 대신하지 않는다.
+재현 checkout·기존 컨테이너 마운트를 유지하고 로컬 운영 overlay에 새 기본 설정을 반영한다.
+현재 실행 중인 사용자 노드를 강제로 바꾸지 않으며 새 셸/노드 재시작부터 적용한다.
+이번 변경에서 재학습·새로운 MORAI 부하 시험·PR 병합은 수행하지 않는다.

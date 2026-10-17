@@ -40,8 +40,8 @@ B1–2 ONNX/FP16 engine, `manifest.json`을 둡니다. EMA·두 head·클래스 
 attention을 근사하거나 제거하지 않습니다. Manifest의 checkpoint/engine SHA와 GPU,
 TensorRT 버전을 시작 시 검사합니다. 불일치는 명시적으로 실패하며 fallback하지 않습니다.
 
-`lane_runtime.yaml`은 기존 Medium engine과 `manifest.json`을 계속 기본으로 사용합니다.
-`lane_runtime_large.yaml`은 아래 Large v7 E8의 전용 manifest를 사용하는 시험 후보입니다.
+`lane_runtime.yaml`은 Large v7 E8과 `manifest-large-v7-e8.json`을 기본으로 사용합니다.
+`lane_runtime_large.yaml`은 같은 배포본의 명시적 선택입니다.
 `lane_runtime_medium.yaml`은 명시적인 Medium 복구 설정입니다. `lane_runtime_pytorch.yaml`의 명시적 복구 경로와
 고정 upstream 소스 의존성은 보존합니다. 변환에는 upstream 소스와 ONNX 도구가 필요하며,
 TensorRT 실행 자체는 해당 upstream Python 모델을 로드하지 않습니다.
@@ -51,7 +51,7 @@ TensorRT 실행 자체는 해당 upstream Python 모델을 로드하지 않습�
 `lane_segmentation/twinlite-large-bdd100k.pt`는 공식 BDD100K Large의 **미추가학습 이진
 drivable/lane** 모델입니다. 원본 tensor를 그대로 보존한 약8MB checkpoint와 source JSON을
 Git에 포함합니다. [실험 실행 안내](../docs/bdd-pretrained-experiment.md)에 별도 토픽·입력 크기와
-추론 명령이 있습니다. MORAI 추가학습 Large E8 후보 및 현재 Medium 기본 TensorRT·4종 road_marking·family와 분리합니다.
+추론 명령이 있습니다. 현재 기본인 MORAI 추가학습 Large E8 TensorRT·4종 road_marking·family와 분리합니다.
 
 
 ## Large v7 E8 배포 파일

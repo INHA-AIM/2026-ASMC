@@ -13,9 +13,9 @@
 | `camera/yolo26l_mission16_e8_three_view.yaml` | 기본 E8, 전방960·좌우640 |
 | `camera/yolo26l_pretrained_mission_three_view.yaml` | 실행 시 선택하는 사전학습 COCO7, 전방960·좌우640 |
 | `camera/object_classes_mission16_v1.yaml` | 원본 이름→세 소비 그룹 |
-| `camera/lane_runtime.yaml` | Medium v6 기본 TensorRT FP16·GPU 전처리·수요 기반 출력·고정 engine manifest |
-| `camera/lane_runtime_pytorch.yaml` | 같은 Medium·입력 크기의 명시적 PyTorch 복구 설정. 내부 `_runtime.launch lane_runtime_config:=...`로 선택 |
-| `camera/lane_runtime_large.yaml` | Large v7 E8 TensorRT 명시적 시험 후보. SUNNY source freshness 실패로 기본 승격 보류 |
+| `camera/lane_runtime.yaml` | Large v7 E8 기본 TensorRT FP16·GPU 전처리·수요 기반 출력·고정 engine manifest |
+| `camera/lane_runtime_pytorch.yaml` | 같은 Large E8·입력 크기의 명시적 PyTorch 복구 설정. 내부 `_runtime.launch lane_runtime_config:=...`로 선택 |
+| `camera/lane_runtime_large.yaml` | Large v7 E8 TensorRT 명시적 선택. 현재 기본과 같은 설정이며 이전 후보 실행 명령도 보존 |
 | `camera/lane_runtime_medium.yaml` | 기존 Medium v6 TensorRT의 명시적 복구 설정. 노드 종료 후 내부 `_runtime.launch lane_runtime_config:=...`로 선택 |
 | `camera/lane_runtime_tensorrt.yaml` | 기존 T2 실험 재현 설정. 현재 실행 정본은 `lane_runtime.yaml` |
 | `camera/lane_input.yaml` | TwinLite 전방544×960·좌우480×640 후보. 추론과 model-grid 투영이 함께 읽음 |

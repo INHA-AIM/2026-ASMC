@@ -24,8 +24,8 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertEqual(config.params['/camera_bev_fusion/max_fused_hz'].value, 15.)
         self.assertEqual(config.params['/camera_objects/model_kind'].value, 'yolo')
         self.assertEqual(config.params['/camera_lane/backend'].value,'twinlite_tensorrt')
-        self.assertEqual(config.params['/camera_lane/model_config'].value,'medium')
-        self.assertTrue(config.params['/camera_lane/checkpoint'].value.endswith('/twinlite-medium-v6.pt'))
+        self.assertEqual(config.params['/camera_lane/model_config'].value,'large')
+        self.assertTrue(config.params['/camera_lane/checkpoint'].value.endswith('/twinlite-large-v7-e8.pt'))
 
     def test_explicit_standby_keeps_three_workers_loaded_without_inference(self):
         config = self.config('camera.launch', 'mode:=standby')
@@ -45,14 +45,15 @@ class CameraEntrypointsTest(unittest.TestCase):
         profile=LAUNCH.parent/'config/camera/lane_runtime_pytorch.yaml'
         config=self.config('_runtime.launch','lane_runtime_config:='+str(profile))
         self.assertEqual(config.params['/camera_lane/backend'].value,'twinlite')
-        self.assertEqual(config.params['/camera_lane/model_config'].value,'medium')
-        self.assertTrue(config.params['/camera_lane/checkpoint'].value.endswith('/twinlite-medium-v6.pt'))
+        self.assertEqual(config.params['/camera_lane/model_config'].value,'large')
+        self.assertTrue(config.params['/camera_lane/checkpoint'].value.endswith('/twinlite-large-v7-e8.pt'))
         self.assertEqual(config.params['/camera_lane/input_hw'].value,[480,640])
         self.assertEqual(config.params['/camera_lane/input_hw_by_view/front'].value,[544,960])
 
-    def test_large_candidate_and_medium_recovery_resolve_separate_engine_manifests(self):
+    def test_large_default_and_medium_recovery_resolve_separate_engine_manifests(self):
         from asmc_camera.camera.backends.twinlite_tensorrt import load_manifest
-        for profile, scale in [('lane_runtime_large.yaml', 'large'), ('lane_runtime_medium.yaml', 'medium')]:
+        for profile, scale in [('lane_runtime.yaml', 'large'), ('lane_runtime_large.yaml', 'large'),
+                               ('lane_runtime_medium.yaml', 'medium')]:
             config = self.config('_runtime.launch', 'lane_runtime_config:=' +
                                  str(LAUNCH.parent/'config/camera'/profile))
             values = {k[len('/camera_lane/'):]: v.value for k, v in config.params.items()

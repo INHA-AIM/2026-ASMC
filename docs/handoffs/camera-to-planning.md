@@ -23,7 +23,7 @@ closed-loop 합격 여부는 판제 파트가 소유한다. 카메라 생산자�
 ## 1. 데이터 흐름과 소유권
 
 ```text
-MORAI RGB ×3 --UDP--> bridge --ROS--> TwinLiteNet+ Medium v6 (Large v7 E8 candidate)
+MORAI RGB ×3 --UDP--> bridge --ROS--> TwinLiteNet+ Large v7 E8
                                         ├─ metric shared boundary family
                                         └─ camera drivable BEV + coverage
                                                      │
@@ -226,7 +226,7 @@ drivable과 lane family는 근거를 제공하고 최종 corridor 생성은 판�
 
 ## 6. 현재 실행·모드·품질
 
-TwinLite 기본은 Medium v6 TensorRT FP16, 전방544×960 B1·좌우480×640 B2, 추론 목표15Hz입니다.
+TwinLite 기본은 Large v7 E8 TensorRT FP16, 전방544×960 B1·좌우480×640 B2, 추론 목표15Hz입니다.
 family는 model-grid→지면투영→최신3뷰→shared fitting 경로이고 영상 BEV 합성과 독립입니다.
 원본 RGB/보정·미터 grid·support 의미는 유지합니다. 현재 family·BEV fusion의15Hz 목표와 시각화10Hz 상한을 구분합니다.
 기본 `camera.launch`는 세 모델 상시 ACTIVE이며, 일반 구간의 주행 소비는 HD맵입니다.
@@ -260,7 +260,8 @@ roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=fa
 ## 7. 수락 상태와 인수 확인
 
 2026-10-18 Large E8은 동일 val/test·TensorRT semantic/family 검증과 FOGGY10분을 통과했다.
-교차12회 중 Large SUNNY1회에 source freshness 저하3건이 있어 Medium 기본을 유지한다.
+교차12회 중 Large SUNNY1회에 source freshness 저하3건을 기록했다.
+후속 사용자 승인으로 Large E8을 기본으로 전환했으며 freshness350ms와 소비자 유효성 검사는 유지한다.
 [배포 기록](../records/camera/2026-10-18-twinlite-large-deployment.md)에 수치와 전방 황색차선 회귀를 남겼다.
 이 결과가 과거 순간 공백의 모든 원인 해결이나 공동 자율주행 수락을 의미하지는 않는다.
 

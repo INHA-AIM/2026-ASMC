@@ -5,9 +5,9 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 기본 객체 모델은 YOLO26l v11 E8, 사전학습 YOLO26l도 실행 시 선택할 수 있습니다.
 현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
 현재 기본 tensor는 두 모델 모두 전방544×960·좌우480×640입니다. 모델별 독립 프로세스를 사용하며 입력 tensor를 공유하지 않습니다.
-TwinLite 기본 모델은 **Medium v6·TensorRT FP16**입니다.
-Large v7 E8은 패키징·품질 검증을 완료한 명시적 시험 후보입니다. SUNNY freshness 실패로 기본 전환은 보류합니다.
-기존 Medium의 TensorRT·PyTorch 복구 설정을 보존합니다.
+TwinLite 기본 모델은 **Large v7 E8·TensorRT FP16**입니다.
+2026-10-18 사용자가 알려진 SUNNY freshness·공급 지연 제한을 확인한 뒤 기본 전환을 승인했습니다.
+같은 Large의 PyTorch 복구와 기존 Medium v6 TensorRT 복구 설정을 보존합니다. 자동 수락 실패 기록과350ms 기준은 유지합니다.
 [선정·동일 평가·실시간 검증](../../docs/records/camera/2026-10-18-twinlite-large-deployment.md)에 배포 SHA와 한계를 기록합니다. 변환 품질 검증은
 [TensorRT 검증 기록](../../docs/records/camera/camera-twinlite-tensorrt.md)에서 관리합니다.
 [음영 family 최적화](../../docs/records/camera/camera-shadow-family-optimization.md)는
@@ -75,4 +75,5 @@ LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)를 따�
 2026-10-17 승인 후 [Large 학습과 모니터링](docs/training-run.md)을 시작했다.
 2026-10-18 완료된8epoch 중E8을 선정하고 품질·TensorRT·정차 통합 시험을 완료했다.
 FOGGY 전체 GUI10분은 통과했으나 교차12회 중 Large SUNNY1회에서 readiness 저하3건이 남았다.
-`lane_runtime_large.yaml`로 명시적 시험이 가능하며, 기본 승격과 PR 병합은 하지 않았다.
+후속 사용자 결정으로 `lane_runtime.yaml`을 Large E8 기본으로 전환했다.
+`lane_runtime_large.yaml`은 같은 모델의 명시적 선택이며 `lane_runtime_medium.yaml`은 복구 설정이다. PR 병합은 하지 않았다.
