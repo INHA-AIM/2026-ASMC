@@ -67,3 +67,7 @@ optimizer update1·EMA update1·AdamW state300개와 고정 deadline을 확인�
 
 학습을 끝까지 수행한 결과나 배포 수락을 이 시작 기록으로 대체하지 않는다.
 최종 best checkpoint와 heldout·TensorRT·family 검증은 학습 종료 후 정리한다.
+
+같은 날 중간 수렴 추이와 기존 Medium 운영본의 동일 val 대조는
+[별도 비교 기록](2026-10-17-twinlite-medium-large-validation.md)에 남긴다.
+원래 학습 중 AMP 평가를 보존하며 CPU FP32 대조와 구분한다.

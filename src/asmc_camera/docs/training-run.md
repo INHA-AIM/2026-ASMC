@@ -7,6 +7,7 @@
 - [실제 학습 recipe](../../../config/experiments/twinlite_large_training_v7.json)
 - [데이터 준비·split·원본 경로](training-data.md)
 - [이번 실행 기록](../../../docs/records/camera/2026-10-17-twinlite-large-training.md)
+- [Medium 운영본과 동일 val 비교](../../../docs/records/camera/2026-10-17-twinlite-medium-large-validation.md)
 
 ## 설정과 평가
 
