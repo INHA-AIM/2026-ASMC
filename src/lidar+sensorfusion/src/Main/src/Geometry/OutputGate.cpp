@@ -8,6 +8,7 @@ const char* ModeName(Mode mode) {
   switch (mode) {
     case Mode::kLocal: return "local";
     case Mode::kMap: return "map";
+    case Mode::kBoth: return "local_and_map";
     case Mode::kNone: default: return "none";
   }
 }
@@ -66,11 +67,11 @@ Decision Decide(const Inputs& in) {
     case GpsState::kHealthy: {
       if (!in.map_pose_matches_scan) return None(gps, "map_pose_time_mismatch");
       Decision d;
-      d.v2 = Mode::kMap;
+      d.v2 = Mode::kBoth;
       d.legacy_permitted = true;
       d.suppress_legacy_markers = false;
       d.gps = gps;
-      d.reason = "map:" + OrUnknown(in.map_reason);
+      d.reason = "local_and_map:" + OrUnknown(in.map_reason);
       return d;
     }
     case GpsState::kDenied:
@@ -104,13 +105,16 @@ LegacyPlan PlanLegacy(const Decision& effective, const Inputs& in, bool legacy_m
     plan.reason.clear();
     return plan;
   }
-  plan.publish = effective.v2 == Mode::kMap && effective.legacy_permitted && legacy_motion_ready;
+  plan.publish = (effective.v2 == Mode::kMap || effective.v2 == Mode::kBoth) &&
+      effective.legacy_permitted && legacy_motion_ready;
   plan.suppress_markers = !plan.publish;     // DELETEALL whenever the legacy frame is withheld
   plan.report_reason = true;
   // Pre-B0 legacy_output strings are kept; "frame_invalid" is new for B0-only rejections.
   if (!in.pose_ready) plan.reason = "input_invalid";
   else if (!in.map_pose_valid || !in.time_error.empty()) plan.reason = "pose_unavailable";
-  else if (!effective.legacy_permitted || effective.v2 != Mode::kMap) plan.reason = "frame_invalid";
+  else if (!effective.legacy_permitted ||
+           (effective.v2 != Mode::kMap && effective.v2 != Mode::kBoth))
+    plan.reason = "frame_invalid";
   else if (!legacy_motion_ready) plan.reason = "motion_state_unrepresentable";
   else plan.reason = "available";
   return plan;

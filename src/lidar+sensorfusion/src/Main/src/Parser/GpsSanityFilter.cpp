@@ -7,11 +7,18 @@ GpsSanityFilter::GpsSanityFilter(const GpsSanityConfig& config)
     : config_(config) {}
 
 GpsSanityDecision GpsSanityFilter::Evaluate(
-    double map_x, double map_y, double source_stamp_s) {
+    double map_x, double map_y, double source_stamp_s,
+    double receipt_stamp_s) {
     GpsSanityDecision decision;
     if (!std::isfinite(map_x) || !std::isfinite(map_y) ||
         !std::isfinite(source_stamp_s) || source_stamp_s <= 0.0) {
         decision.reason = "non-finite coordinate or stamp";
+        return decision;
+    }
+    if (std::isfinite(receipt_stamp_s) &&
+        source_stamp_s > receipt_stamp_s + config_.maximum_future_lead_s) {
+        decision.future_stamp = true;
+        decision.reason = "source timestamp is ahead of receipt time";
         return decision;
     }
     if (map_x < config_.min_x || map_x > config_.max_x ||

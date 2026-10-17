@@ -15,7 +15,7 @@
 |---|---|
 | `feat(asmc_msgs): add lossless lidar object v2 motion contract` | `LidarObjectV2`·`LidarObjectArrayV2`, 새 계약 파일 `lidar_candidate_topic_contract_v2.yaml`과 registry 1행, validator와 시험 |
 | `fix(lidar): unify leveling and remove duplicate yaw transform` | scan당 `StoreLeveling` 1회 계약, Kalman update의 OBB yaw 이중 회전 제거. 둘 다 공통 경로에만 적용된다 |
-| `feat(lidar): enforce exclusive local/map output gating` | `OutputGate`, v2 publisher, legacy gate, `planner_udp_enabled`, `main_integration.launch`, topic policy |
+| `feat(lidar): enforce local/map output gating` | `OutputGate`, v2 publisher, legacy gate, `planner_udp_enabled`, `main_integration.launch`, topic policy |
 | `test(lidar): cover gps denial recovery and legacy compatibility` | GPS·IMU·CAN 음영·복구 gtest, legacy 호환 gtest, 실제 Main을 띄우는 rostest |
 | `docs(lidar): document b0 rollout and remaining blockers` | 계약·인계 문서, `drivable_filter_node.py` 정적 검사 |
 
@@ -29,7 +29,7 @@ LP seeding, ML 코드는 건드리지 않았다.
 | 단계 | launch | 최종 LiDAR 출력 | legacy와 UDP | 상태 |
 |---|---|---|---|---|
 | 0 production | `roslaunch Main main.launch` | v2 없음 | 처리한 scan마다 발행, UDP는 `setting.yaml`대로 127.0.0.1:7510 | 현행 운영 경로. 변경 없음. 5절 KNOWN_GAP |
-| 1 통합 프로필 | `roslaunch Main main_integration.launch` | scan마다 `/lidar/local_object` 또는 `/lidar/map_object` 중 최대 1개 | `/lidar/map_object` scan 가운데 객체가 모두 `motion_valid`인 scan에서만 | B0 구현, opt-in |
+| 1 통합 프로필 | `roslaunch Main main_integration.launch` | 유효한 local scan마다 `/lidar/local_object`; map pose가 유효하면 같은 stamp의 `/lidar/map_object` 추가 | `/lidar/map_object` scan 가운데 객체가 모두 `motion_valid`인 scan에서만 | B0 구현, opt-in |
 | 2 소비자 수락(B1 진입) | 1과 같음 | 1과 같음 | 1과 같음 | 미착수. 9절 조건 |
 | 3 판제 v2 이전 | 별도 결정 | v2 | 병행 유지 | 미착수, B0 범위 밖. 8절 |
 | 4 정리 | 별도 결정 | v2 | `/lidar/tracked_objects_map`, v1 typed, legacy 기하 경로 제거 검토 | 모든 소비자 이전 후 |
@@ -53,7 +53,7 @@ roslaunch Main main_integration.launch planner_udp_enabled:=false
   `known_static_filter_enabled`, `static_structure_exclusion_enabled`)의 기본값은 `main.launch`와 같다.
 - 확인할 것: `rostopic echo /perception/lidar/diagnostics`에서 `v2_output`, `v2_reason`, `gps_state`,
   `leveling_store_count`(1), `leveling_source`(`Main::CorrectingPoints`)를 본다. `/lidar/local_object`와
-  `/lidar/map_object`를 함께 구독해 같은 stamp가 두 topic에 나오지 않는지 확인한다.
+  `/lidar/map_object`를 함께 구독해 map의 모든 stamp에 같은 stamp의 local 출력이 있는지 확인한다.
 - rollback: `main_integration.launch`를 끝내고 `main.launch`를 다시 실행한다. 객체 생산자는 한 번에 하나만 띄운다.
 
 ROS master가 필요한 시험은 공유 master(11311)가 아니라 격리된 network namespace의 전용 master에서만 실행한다.
@@ -66,9 +66,10 @@ ROS master가 필요한 시험은 공유 master(11311)가 아니라 격리된 ne
 - **NONE(아무것도 없음):** LiDAR·scan 시각·IMU·CAN·좌표 변환·객체 기하 중 하나라도 무효이거나 GPS가 아닌 이유로
   map pose가 무효인 scan이다. v2 두 topic에 아무것도 나가지 않는다. 빈 배열이나 `INPUT_INVALID` 배열도 내지 않는다.
   사유는 진단(`v2_output`, `v2_reason`, `v2_none_frames`)과 trace `lidar_process_end`에만 남는다.
-- **LOCAL:** GPS가 없거나 무효이거나 stale이거나 복구 중이다(연속 정상 3표본 전). `/lidar/local_object`(`base_link`)만 나가고
+- **LOCAL:** local 입력이 유효한 모든 scan에 `/lidar/local_object`(`base_link`)가 나온다. GPS가 없거나 무효이거나
+  stale·미래 시각이거나 복구 중이면 local만 나오고
   legacy는 보류된다. 지도 marker에는 DELETEALL만 나간다.
-- **MAP:** 그 scan의 map pose가 유효하다. `/lidar/map_object`(`map`)만 나간다.
+- **MAP:** 그 scan의 map pose가 유효하면 같은 stamp의 `/lidar/map_object`(`map`)가 local에 추가로 나온다.
 - `OBSERVED_EMPTY` 빈 배열은 입력이 유효하고 활성 topic의 장면에 객체가 실제로 0개일 때만 나간다.
   모드 신호로 빈 배열을 반복하지 않으며 좌표 0의 더미 객체를 만들지 않는다.
 - v1 `/perception/lidar/objects_local`·`objects_map`은 지금도 scan마다 두 topic 모두 나간다(구독자가 있을 때).
@@ -197,6 +198,15 @@ runtime 하네스는 WSL 전용(user·network namespace, private binfmt_misc)이
 
 > **정본:** commit 전 최종 검증(G8, 2026-10-16 KST)의 기계용 결과는 감사 디렉터리의 `results/TEST_RESULTS.json`이다.
 > 아래 숫자와 다르면 그 JSON을 따른다.
+
+### 2026-10-17 local 상시 출력 계약 보정
+
+아래 G7/G8 수치는 당시의 상호 배타적 local/map 계약으로 측정한 **과거 증거**다. 현재 계약은 사용자의
+최종 요구대로 유효한 local scan마다 `/lidar/local_object`를 발행하고, map pose가 유효한 같은 scan에는
+`/lidar/map_object`를 추가 발행한다. 따라서 아래의 “동시 발행 0”과 local/map 개별 개수는 현재 합격 기준이나
+예상 개수가 아니다. S08 미래 GPS(+10초)는 수신 시각보다 100ms 넘게 앞선 비정상 stamp로 거부하며 sanity
+anchor를 오염시키지 않는다. 2026-10-17 재검증에서는 S08 50 scan 전부 local, map 41 scan, 미래·복구 구간
+map 위반 0, 정상 GPS 복귀 후 세 번째 표본부터 local+map 복구를 확인했다. 전체 격리 행렬 27/27도 통과했다.
 
 아래 값은 bag smoke 항목을 빼면 **G7 재검증** 기록이다.
 - G7은 F1·F1b·B-15 수정(10절) 뒤의 소스를 처음부터 다시 빌드해 2026-10-15 19:20–21:20 KST에 측정했다.

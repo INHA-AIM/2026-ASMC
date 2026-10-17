@@ -136,8 +136,8 @@ TEST(FrameBoundaryV2, CommonGeometryOffAdvertisesNoV2AndPassesDecisionThrough) {
   EXPECT_EQ(local.size(),0U); EXPECT_EQ(map.size(),0U);
 }
 
-// Every scan: exactly one V2 message when inputs are valid, nothing otherwise; V1 as before.
-TEST(FrameBoundaryV2, ExactlyOneV2MessagePerScanAndV1Unchanged) {
+// Every locally valid scan has local V2; map V2 is additional when the map pose is valid.
+TEST(FrameBoundaryV2, LocalAlwaysAndMapOnlyWithValidPoseAndV1Unchanged) {
   Configure(); ros::Time::setNow(ros::Time(40.));
   ros::NodeHandle node; frame_boundary::Publisher publisher(node);
   Inbox<ArrayV1> v1_local,v1_map; Inbox<ArrayV2> v2_local,v2_map;
@@ -154,16 +154,17 @@ TEST(FrameBoundaryV2, ExactlyOneV2MessagePerScanAndV1Unchanged) {
   const auto s4=Step(publisher,40.3,MapPose(40.3,false,"map_speed_invalid"),{object},4);    // CAN > limit
   const auto s5=Step(publisher,40.4,MapPose(40.4,false,"gps_recovering"),{object},5);       // recovering
   const auto s6=Step(publisher,40.5,MapPose(40.5,true,"gps_bounded_prediction"),{object},6); // recovered
-  EXPECT_EQ(s1.decision.v2,Mode::kMap); EXPECT_EQ(s2.decision.v2,Mode::kLocal);
+  EXPECT_EQ(s1.decision.v2,Mode::kBoth); EXPECT_EQ(s2.decision.v2,Mode::kLocal);
   EXPECT_EQ(s3.decision.v2,Mode::kNone); EXPECT_EQ(s3.decision.reason,"local_input_invalid:imu_input_invalid");
   EXPECT_EQ(s4.decision.v2,Mode::kNone); EXPECT_EQ(s4.decision.reason,"map_pose_invalid:map_speed_invalid");
-  EXPECT_EQ(s5.decision.v2,Mode::kLocal); EXPECT_EQ(s6.decision.v2,Mode::kMap);
-  ASSERT_TRUE(Wait([&]{return v1_local.size()==6 && v1_map.size()==6 && v2_local.size()==2 && v2_map.size()==2;}));
+  EXPECT_EQ(s5.decision.v2,Mode::kLocal); EXPECT_EQ(s6.decision.v2,Mode::kBoth);
+  ASSERT_TRUE(Wait([&]{return v1_local.size()==6 && v1_map.size()==6 && v2_local.size()==4 && v2_map.size()==2;}));
   ros::WallDuration(.5).sleep();                                         // nothing late may arrive
-  ASSERT_EQ(v2_local.size(),2U); ASSERT_EQ(v2_map.size(),2U);
-  // Stamps: map_v2 {40.0,40.5}, local_v2 {40.1,40.4}; no stamp on both; invalid scans silent.
+  ASSERT_EQ(v2_local.size(),4U); ASSERT_EQ(v2_map.size(),2U);
+  // Map-valid scans appear on both; GPS-denied scans appear only on local; invalid scans are silent.
   EXPECT_EQ(v2_map.at(0).header.stamp,ros::Time(40.0)); EXPECT_EQ(v2_map.at(1).header.stamp,ros::Time(40.5));
-  EXPECT_EQ(v2_local.at(0).header.stamp,ros::Time(40.1)); EXPECT_EQ(v2_local.at(1).header.stamp,ros::Time(40.4));
+  EXPECT_EQ(v2_local.at(0).header.stamp,ros::Time(40.0)); EXPECT_EQ(v2_local.at(1).header.stamp,ros::Time(40.1));
+  EXPECT_EQ(v2_local.at(2).header.stamp,ros::Time(40.4)); EXPECT_EQ(v2_local.at(3).header.stamp,ros::Time(40.5));
   for(std::size_t i=0;i<2;++i) {
     EXPECT_EQ(v2_map.at(i).header.frame_id,"map"); EXPECT_EQ(v2_local.at(i).header.frame_id,"base_link");
     EXPECT_EQ(int(v2_map.at(i).status),int(ArrayV2::OBSERVED)); EXPECT_EQ(int(v2_local.at(i).status),int(ArrayV2::OBSERVED));
@@ -175,7 +176,7 @@ TEST(FrameBoundaryV2, ExactlyOneV2MessagePerScanAndV1Unchanged) {
   EXPECT_EQ(int(v1_map.at(3).status),int(ArrayV1::POSE_UNAVAILABLE));
   // V2 objects are lossless copies of the V1 objects of the same scan and frame.
   ExpectSameV1Fields(v2_map.at(0).objects.at(0),v1_map.at(0).objects.at(0));
-  ExpectSameV1Fields(v2_local.at(0).objects.at(0),v1_local.at(1).objects.at(0));
+  ExpectSameV1Fields(v2_local.at(1).objects.at(0),v1_local.at(1).objects.at(0));
   const auto first_map=v2_map.at(0);                // Inbox::at returns a copy
   const auto& o=first_map.objects.at(0);
   EXPECT_EQ(o.track_id,7); EXPECT_TRUE(o.motion_valid); EXPECT_EQ(int(o.motion_state),int(o.MOTION_DYNAMIC));
@@ -201,10 +202,10 @@ TEST(FrameBoundaryV2, InvalidGeometryPublishesNothingOnV2) {
   EXPECT_TRUE(output_gate::PlanLegacy(s1.decision,gate,true).suppress_markers);
   // A valid scan afterwards is published normally (the rejection did not consume the V2 stamp).
   const auto s3=Step(publisher,41.2,MapPose(41.2,true,"gps_observed"),{Detection(1,10,0)},3);
-  EXPECT_EQ(s3.decision.v2,Mode::kMap);
-  ASSERT_TRUE(Wait([&]{return map.size()==1;}));
+  EXPECT_EQ(s3.decision.v2,Mode::kBoth);
+  ASSERT_TRUE(Wait([&]{return map.size()==1 && local.size()==1;}));
   ros::WallDuration(.4).sleep();
-  EXPECT_EQ(map.size(),1U); EXPECT_EQ(local.size(),0U);
+  EXPECT_EQ(map.size(),1U); EXPECT_EQ(local.size(),1U);
   EXPECT_EQ(map.at(0).header.stamp,ros::Time(41.2));
 }
 
@@ -219,7 +220,7 @@ TEST(FrameBoundaryV2, WarmupObjectIsCarriedOnMapV2AsUnknown) {
   auto warm=Detection(2,14,0); warm.motion_valid=false; warm.s32_MotionState=0;
   auto stale=Detection(3,18,0); stale.motion_valid=false; stale.s32_MotionState=static_cast<int>(MotionState::Dynamic);
   const auto s=Step(publisher,42.0,MapPose(42.0,true,"gps_observed"),{ready,warm,stale},1);
-  EXPECT_EQ(s.decision.v2,Mode::kMap);
+  EXPECT_EQ(s.decision.v2,Mode::kBoth);
   const auto gate=frame_boundary::GateInputs(true,"local_ready",true,s.lidar,1);
   const auto plan=output_gate::PlanLegacy(s.decision,gate,frame_boundary::LegacyMotionReady(s.lidar));
   EXPECT_FALSE(plan.publish); EXPECT_TRUE(plan.suppress_markers); EXPECT_EQ(plan.reason,"motion_state_unrepresentable");
@@ -246,7 +247,7 @@ TEST(FrameBoundaryV2, V2StampGuardIsIndependentOfV1) {
   ASSERT_TRUE(Wait([&]{return a.getNumPublishers()&&b.getNumPublishers();}));
   ros::WallDuration(.2).sleep();
   const auto s=Step(publisher,43.0,MapPose(43.0,true,"gps_observed"),{Detection(1,10,0)},1);   // V1 consumed 43.0
-  EXPECT_EQ(s.decision.v2,Mode::kMap);
+  EXPECT_EQ(s.decision.v2,Mode::kBoth);
   const auto again=publisher.PublishV2(s.lidar,s.stamp,output_gate::Decide(
       frame_boundary::GateInputs(true,"local_ready",true,s.lidar,1)));
   EXPECT_EQ(again.v2,Mode::kNone); EXPECT_EQ(again.reason,"v2_stamp_rejected");
@@ -258,7 +259,7 @@ TEST(FrameBoundaryV2, V2StampGuardIsIndependentOfV1) {
   EXPECT_EQ(mismatch.v2,Mode::kNone); EXPECT_EQ(mismatch.reason,"context_stamp_mismatch");
   ASSERT_TRUE(Wait([&]{return map.size()==1;}));
   ros::WallDuration(.4).sleep();
-  EXPECT_EQ(map.size(),1U); EXPECT_EQ(local.size(),0U);
+  EXPECT_EQ(map.size(),1U); EXPECT_EQ(local.size(),1U);
 }
 
 // local_v2/map_v2 selection follows pose validity only, never subscriber demand.
@@ -269,7 +270,7 @@ TEST(FrameBoundaryV2, SelectionIgnoresSubscriberDemand) {
   ASSERT_TRUE(Wait([&]{return b.getNumPublishers();}));
   ros::WallDuration(.2).sleep();
   const auto s1=Step(publisher,44.0,MapPose(44.0,true,"gps_observed"),{Detection(1,10,0)},1);
-  EXPECT_EQ(s1.decision.v2,Mode::kMap);
+  EXPECT_EQ(s1.decision.v2,Mode::kBoth);
   ASSERT_TRUE(Wait([&]{return map.size()==1;}));
   ASSERT_EQ(map.at(0).objects.size(),1U);                    // map geometry without any V1 subscriber
   EXPECT_NEAR(map.at(0).objects[0].center.x,
@@ -283,9 +284,9 @@ TEST(FrameBoundaryV2, SelectionIgnoresSubscriberDemand) {
   ASSERT_TRUE(Wait([&]{return a.getNumPublishers();}));
   ros::WallDuration(.2).sleep();
   const auto s3=Step(publisher,44.2,MapPose(44.2,true,"gps_observed"),{Detection(1,10,0)},3);
-  EXPECT_EQ(s3.decision.v2,Mode::kMap);                       // healthy stays map without map subscribers
+  EXPECT_EQ(s3.decision.v2,Mode::kBoth);                      // local publishes even without map subscribers
   ros::WallDuration(.4).sleep();
-  EXPECT_EQ(map.size(),1U); EXPECT_EQ(local.size(),0U);       // no local_v2 message in a map scan
+  EXPECT_EQ(map.size(),1U); EXPECT_EQ(local.size(),1U);
 }
 
 // Valid inputs and zero objects: one OBSERVED_EMPTY on the active topic only, never a dummy.
@@ -300,11 +301,12 @@ TEST(FrameBoundaryV2, EmptySceneIsObservedEmptyOnActiveTopicOnly) {
   auto unassigned=Detection(-1,10,0);
   Step(publisher,45.0,MapPose(45.0,true,"gps_observed"),{},1);
   Step(publisher,45.1,MapPose(45.1,false,"gps_stale"),{unassigned},2);
-  ASSERT_TRUE(Wait([&]{return map.size()==1 && local.size()==1;}));
+  ASSERT_TRUE(Wait([&]{return map.size()==1 && local.size()==2;}));
   ros::WallDuration(.4).sleep();
-  ASSERT_EQ(map.size(),1U); ASSERT_EQ(local.size(),1U);
+  ASSERT_EQ(map.size(),1U); ASSERT_EQ(local.size(),2U);
   EXPECT_EQ(int(map.at(0).status),int(ArrayV2::OBSERVED_EMPTY)); EXPECT_TRUE(map.at(0).objects.empty());
   EXPECT_EQ(int(local.at(0).status),int(ArrayV2::OBSERVED_EMPTY)); EXPECT_TRUE(local.at(0).objects.empty());
+  EXPECT_EQ(int(local.at(1).status),int(ArrayV2::OBSERVED_EMPTY)); EXPECT_TRUE(local.at(1).objects.empty());
   EXPECT_EQ(map.at(0).reason,"observed_empty"); EXPECT_EQ(local.at(0).reason,"observed_empty");
 }
 
@@ -328,7 +330,7 @@ TEST(FrameBoundaryV2, DiagnosticsReportReasonCountersAndLevelingCount) {
   },3.5));
   EXPECT_EQ(values.at("v2_output"),"none"); EXPECT_EQ(values.at("v2_reason"),"v2_stamp_rejected");
   EXPECT_EQ(values.at("gps_state"),"denied");
-  EXPECT_EQ(values.at("v2_map_frames"),"1"); EXPECT_EQ(values.at("v2_local_frames"),"1");
+  EXPECT_EQ(values.at("v2_map_frames"),"1"); EXPECT_EQ(values.at("v2_local_frames"),"2");
   EXPECT_EQ(values.at("v2_none_frames"),"2"); EXPECT_EQ(values.at("v2_stamp_errors"),"1");
   EXPECT_EQ(values.at("leveling_store_count"),"1");
   EXPECT_EQ(values.at("leveling_source"),"Main::CorrectingPoints");
@@ -339,7 +341,7 @@ TEST(FrameBoundaryV2, DiagnosticsReportReasonCountersAndLevelingCount) {
   const std::string totals=testing::internal::GetCapturedStdout();
   EXPECT_NE(totals.find("[LIDAR_FRAME_TOTAL] processed=2 invalid=1 stamp_errors=0 source_stamp_ns="),std::string::npos)
       << totals;
-  EXPECT_NE(totals.find("[LIDAR_V2_TOTAL] local=1 map=1 none=2 stamp_errors=1"),std::string::npos) << totals;
+  EXPECT_NE(totals.find("[LIDAR_V2_TOTAL] local=2 map=1 none=2 stamp_errors=1"),std::string::npos) << totals;
 }
 }  // namespace
 int main(int argc,char** argv) {

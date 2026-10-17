@@ -59,11 +59,11 @@ append-only 상위집합 규칙은 `tools/audit/validate_p1b_contract.py`의 `va
 | Topic | Type | frame | 이 topic이 선택되는 scan |
 |---|---|---|---|
 | `/lidar/map_object` | `asmc_msgs/LidarObjectArrayV2` | `map` | 그 scan의 map pose가 유효하다(`gps_observed`, `gps_bounded_prediction`). query stamp와 clock이 scan과 같다 |
-| `/lidar/local_object` | `asmc_msgs/LidarObjectArrayV2` | `base_link`(후륜축) | GPS가 `gps_missing`, `gps_invalid`, `gps_stale`, `gps_recovering`(연속 정상 3표본 전)이다 |
+| `/lidar/local_object` | `asmc_msgs/LidarObjectArrayV2` | `base_link`(후륜축) | local 입력과 객체 기하가 유효한 모든 scan(GPS 상태와 무관) |
 | `/perception/lidar/diagnostics` | `diagnostic_msgs/DiagnosticArray` | — | 1초마다 v2 출력·사유·카운터를 보고한다 |
 
-- scan 하나에 v2 메시지는 **최대 1개**다. 같은 stamp가 두 v2 topic에 함께 나오지 않는다.
-  선택은 pose 유효성으로만 하며 구독자 수와 무관하다. 소비자는 두 topic을 모두 구독한다.
+- local 입력이 유효한 scan에는 `/lidar/local_object`가 항상 나온다. 같은 scan의 map pose도 유효하면
+  같은 stamp로 `/lidar/map_object`가 추가로 나온다. 선택은 구독자 수와 무관하다.
 - `header.stamp`는 scan의 bridge 수신 source stamp다(`stamp_provenance`). v2는 v1과 별도의 stamp guard를 둔다.
   0, 역행, 중복 stamp에는 아무것도 발행하지 않고 `v2_stamp_errors`를 1 올린다.
 - `status`는 `OBSERVED`(1)와 `OBSERVED_EMPTY`(2)만 쓴다. `reason`은 local 객체가 있으면 `observed`,
@@ -78,7 +78,7 @@ append-only 상위집합 규칙은 `tools/audit/validate_p1b_contract.py`의 `va
   `fusion_trace_path`를 켰으면 trace `lidar_process_end`의 `v2_mode`/`v2_reason`에도 남는다.
   소비자는 이 침묵을 진단과 자신의 timeout으로 판단한다. 빈 배열로 해석하지 않는다.
 
-진단의 v2 키는 `v2_output`(`none`/`local`/`map`), `v2_reason`, `gps_state`, `v2_local_frames`,
+진단의 v2 키는 `v2_output`(`none`/`local`/`local_and_map`), `v2_reason`, `gps_state`, `v2_local_frames`,
 `v2_map_frames`, `v2_none_frames`, `v2_stamp_errors`, `v2_local_subscribers`, `v2_map_subscribers`,
 `leveling_store_count`다. 기존 키는 그대로이며 `legacy_output`에는 새 값 `frame_invalid`가 생겼다.
 종료할 때 stdout에 `[LIDAR_V2_TOTAL] local=… map=… none=… stamp_errors=…`를 출력한다.
@@ -109,8 +109,8 @@ N1–N7은 `output_gate::Decide`, N8–N9는 `PublishV2`와 `BuildV2`, M1·M2의
 | N9 | 객체 하나라도 기하가 무효다(치수 NaN·음수, 비유한 corner, map 변환 실패). 프레임 전체를 거부한다 | 없음 | `invalid_object_dimensions`, 변환 사유, `map_transform_invalid:<사유>` | 보류 | N2와 같음 | 평가값 |
 | L1 | GPS 음영: `gps_missing`, `gps_invalid`, `gps_stale` | `/lidar/local_object` | `local_only:<GPS 사유>` | 보류 | `pose_unavailable` | `denied` |
 | L2 | GPS 복구 중: `gps_recovering` | `/lidar/local_object` | `local_only:gps_recovering` | 보류 | `pose_unavailable` | `recovering` |
-| M1 | map pose가 정상이고 발행 대상 객체 가운데 `motion_valid=false`(warm-up)가 하나라도 있다 | `/lidar/map_object`. 해당 객체는 `MOTION_UNKNOWN`이다 | `map:<map 사유>` | 프레임 전체 보류 | `motion_state_unrepresentable` | `healthy` |
-| M2 | map pose가 정상이고 발행 대상 객체가 모두 `motion_valid`다(빈 장면 포함) | `/lidar/map_object` | `map:gps_observed` 또는 `map:gps_bounded_prediction` | 발행 | `available` | `healthy` |
+| M1 | map pose가 정상이고 발행 대상 객체 가운데 `motion_valid=false`(warm-up)가 하나라도 있다 | `/lidar/local_object` + `/lidar/map_object`. 해당 객체는 `MOTION_UNKNOWN`이다 | `local_and_map:<map 사유>` | 프레임 전체 보류 | `motion_state_unrepresentable` | `healthy` |
+| M2 | map pose가 정상이고 발행 대상 객체가 모두 `motion_valid`다(빈 장면 포함) | `/lidar/local_object` + `/lidar/map_object` | `local_and_map:gps_observed` 또는 `local_and_map:gps_bounded_prediction` | 발행 | `available` | `healthy` |
 
 모든 행에서 v1 `/perception/lidar/objects_local`·`objects_map`은 변경 전 동작을 그대로 따른다.
 구독자가 있으면 같은 scan에 local과 map이 함께 나갈 수 있으며 `INPUT_INVALID`·`POSE_UNAVAILABLE` 배열도 그대로다.
@@ -125,8 +125,8 @@ LiDAR 처리에 성공한 scan마다 발행한다. DELETEALL, `legacy_output` �
 
 | 불변식 | 구조적 근거 |
 |---|---|
-| scan stamp마다 v2 메시지는 0개 또는 1개이고 두 v2 topic에 동시에 나가지 않는다 | `PublishV2`의 발행 분기가 하나다 |
-| `/lidar/map_object`는 M1·M2에서만, `/lidar/local_object`는 L1·L2에서만 나간다 | `Decide`와 `Downgrade` |
+| 유효한 local scan마다 `/lidar/local_object`가 1개 나오고, `/lidar/map_object`는 유효한 같은-stamp local 출력과 함께만 나온다 | `PublishV2`의 `kLocal`/`kBoth` 분기 |
+| `/lidar/map_object`는 M1·M2에서만, `/lidar/local_object`는 L1·L2와 M1·M2에서 나온다 | `Decide`와 `PublishV2` |
 | legacy 발행은 같은 scan의 `/lidar/map_object` 발행과 발행 대상 전체의 `motion_valid`를 요구한다. UDP도 같은 불리언을 쓴다 | `PlanLegacy`, `main.cpp`의 `legacy.publish` |
 | local/map 선택은 구독자 수와 무관하다 | `BuildV2`는 구독 수를 보지 않는다 |
 | GPS 3표본 복구 상태는 `BoundedPoseHistory`에만 있고 gate는 상태가 없다. 복구된 첫 scan은 `/lidar/map_object`다 | `OutputGate.cpp` |
@@ -158,7 +158,7 @@ map pose(GPS)는 `asmc_lidar::BoundedPoseHistory`가 정한다.
 - 표본이 없으면 `gps_missing`이다. 무효 status, 0 좌표, 비유한 값, 잘못된 map offset은 `gps_invalid`다.
   마지막 표본의 age가 300ms(`lidar_pose_gps_max_age_s`)를 넘으면 `gps_stale`이다.
   연속 정상 3표본 전에는 `gps_recovering`이다. 무효 표본이나 300ms를 넘는 정상 표본 간격은 연속 횟수를 0으로 되돌린다.
-- 정상 표본이 3개 연속으로 모이면 map pose가 유효해지고 그 scan부터 `/lidar/map_object`가 나간다.
+- 정상 표본이 3개 연속으로 모이면 map pose가 유효해지고 그 scan부터 local과 `/lidar/map_object`가 함께 나간다.
   음영 중에는 map 위치를 추정하지 않으며 단절 전후 GPS 차분으로 속도를 만들지 않는다.
 - map attitude는 같은 scan의 IMU 표본(roll·pitch·yaw 각 1회)이고, 짧은 위치 보정에는 CAN 속도를 쓴다.
   CAN 속도가 비유한이거나 35m/s(`lidar_pose_maximum_speed_mps`)를 넘으면 `map_speed_invalid`이고 N6이다.
@@ -166,8 +166,9 @@ map pose(GPS)는 `asmc_lidar::BoundedPoseHistory`가 정한다.
 - GPS 음영은 local tracker·ID·검출 설정을 바꾸지 않는다. map 기반 motion 이력만 지운다. 그래서 L1·L2의
   local 객체는 모두 `MOTION_UNKNOWN`이다. 복구 후에는 track마다 warm-up(`motion_warmup_observations=3`)을
   다시 거친다. 그동안 `/lidar/map_object`는 나가지만 해당 객체가 `MOTION_UNKNOWN`이므로 legacy는 M1로 보류된다.
-- 미래 stamp GPS가 들어오면 GPS sanity filter가 미래 시각에 고정된다. GPS 시계가 정상으로 돌아와도 단위
-  시나리오에서 25 scan 동안 map을 쓰지 못했다(B-11). stale이나 미래 map은 나가지 않는다.
+- callback 수신 시각보다 `gps_sanity_maximum_future_lead_s`(기본 100ms) 넘게 미래인 GPS source stamp는
+  즉시 `gps_invalid` barrier로 거부하며 sanity anchor를 미래로 옮기지 않는다. 이 구간에는 local만 나오고,
+  정상 시각 GPS가 돌아오면 기존 3표본 복구 latch를 거쳐 local+map 출력으로 복귀한다.
 
 ## 5. 수평화와 yaw 계약
 

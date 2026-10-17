@@ -238,6 +238,7 @@
 | `gps_sanity_maximum_speed_mps` | `80.0` | — |
 | `gps_sanity_base_jump_allowance_m` | `3.0` | — |
 | `gps_sanity_reanchor_after_s` | `2.0` | — |
+| `gps_sanity_maximum_future_lead_s` | `0.10` | — |
 | `lidar_pose_gps_max_age_s` | `0.30` | — |
 | `imu_yaw_is_true_enu` | `true` | — |
 | `lidar_pose_imu_max_age_s` | `0.12` | — |

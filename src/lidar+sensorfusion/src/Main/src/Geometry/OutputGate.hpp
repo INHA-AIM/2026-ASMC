@@ -2,9 +2,10 @@
 // B0 final-output selection for one LiDAR scan. Pure: no ROS, no globals, no I/O,
 // standard headers only, so every row is unit-testable without a ROS master.
 //
-// enable_common_geometry=true (main_integration.launch). Per scan exactly one row applies:
+// enable_common_geometry=true (main_integration.launch). Local is the primary
+// scan output and map is an additional output only while the map pose is valid:
 //   map pose valid for this scan (gps_observed / gps_bounded_prediction)
-//       -> /lidar/map_object only. Legacy (/last_lidar, /lidar/tracked_objects_map,
+//       -> /lidar/local_object AND /lidar/map_object. Legacy (/last_lidar, /lidar/tracked_objects_map,
 //          /lidar/motion_debug, planner UDP) only when LegacyMotionReady holds for the whole frame.
 //   gps_missing / gps_invalid / gps_stale / gps_recovering (fewer than 3 consecutive good samples)
 //       -> /lidar/local_object only. No map_v2, no legacy, map markers DELETEALL.
@@ -26,7 +27,7 @@
 
 namespace output_gate {
 
-enum class Mode : std::uint8_t { kNone = 0, kLocal = 1, kMap = 2 };
+enum class Mode : std::uint8_t { kNone = 0, kLocal = 1, kMap = 2, kBoth = 3 };
 enum class GpsState : std::uint8_t {
   kNotEvaluated = 0,   // legacy mode or pose not ready (no map pose computed for this scan)
   kHealthy = 1,        // map pose valid

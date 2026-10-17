@@ -238,7 +238,7 @@ output_gate::Decision Publisher::PublishV2(const LiDAR& lidar,const ros::Time& s
   if(!Enabled()) return decision;
   last_leveling_store_count_=LevelingStoreCount();
   auto effective=decision;
-  V2Frame frame;
+  V2Frame local_frame, map_frame;
   if(effective.v2!=output_gate::Mode::kNone) {
     // Own stamp guard: V1 Accept() has already consumed this stamp.
     const auto context_ns=lidar.frame_context.time.stamp_ns;
@@ -247,14 +247,40 @@ output_gate::Decision Publisher::PublishV2(const LiDAR& lidar,const ros::Time& s
     } else if(context_ns<=0 || static_cast<std::uint64_t>(context_ns)!=scan_stamp.toNSec()) {
       effective=output_gate::Downgrade(decision,"context_stamp_mismatch");
     } else {
-      frame=BuildV2(lidar,effective.v2);
-      if(!frame.valid) effective=output_gate::Downgrade(decision,frame.reason);
+      const bool wants_local=effective.v2==output_gate::Mode::kLocal ||
+          effective.v2==output_gate::Mode::kBoth;
+      const bool wants_map=effective.v2==output_gate::Mode::kMap ||
+          effective.v2==output_gate::Mode::kBoth;
+      if(wants_local) {
+        local_frame=BuildV2(lidar,output_gate::Mode::kLocal);
+        if(!local_frame.valid)
+          effective=output_gate::Downgrade(decision,local_frame.reason);
+      }
+      if(effective.v2!=output_gate::Mode::kNone && wants_map) {
+        map_frame=BuildV2(lidar,output_gate::Mode::kMap);
+        if(!map_frame.valid) {
+          if(local_frame.valid) {
+            effective.v2=output_gate::Mode::kLocal;
+            effective.legacy_permitted=false;
+            effective.suppress_legacy_markers=true;
+            effective.reason="local_only:"+map_frame.reason;
+          } else {
+            effective=output_gate::Downgrade(decision,map_frame.reason);
+          }
+        }
+      }
     }
   }
-  // One branch publishes one message; kNone publishes nothing (no empty or dummy array).
-  if(effective.v2==output_gate::Mode::kMap) {map_v2_.publish(frame.array); last_v2_stamp_=scan_stamp; ++v2_map_;}
-  else if(effective.v2==output_gate::Mode::kLocal) {local_v2_.publish(frame.array); last_v2_stamp_=scan_stamp; ++v2_local_;}
-  else ++v2_none_;
+  // Local is emitted for every valid scan. Map is additionally emitted only
+  // when the pose for this exact scan is valid. kNone emits neither.
+  if(effective.v2==output_gate::Mode::kBoth) {
+    local_v2_.publish(local_frame.array); map_v2_.publish(map_frame.array);
+    last_v2_stamp_=scan_stamp; ++v2_local_; ++v2_map_;
+  } else if(effective.v2==output_gate::Mode::kMap) {
+    map_v2_.publish(map_frame.array); last_v2_stamp_=scan_stamp; ++v2_map_;
+  } else if(effective.v2==output_gate::Mode::kLocal) {
+    local_v2_.publish(local_frame.array); last_v2_stamp_=scan_stamp; ++v2_local_;
+  } else ++v2_none_;
   v2_mode_=output_gate::ModeName(effective.v2); v2_reason_=effective.reason;
   gps_state_=output_gate::GpsStateName(effective.gps);
   return effective;

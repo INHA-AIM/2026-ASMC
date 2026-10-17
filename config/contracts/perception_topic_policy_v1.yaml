@@ -55,7 +55,7 @@ topic_families:
     classification: candidate_contract
     current_mode: explicit_argument
     p5b_action: keep
-    rationale: Opt-in Main adapter of the asmc_lidar core. v1 objects_local/objects_map are compatibility candidates whose serialization is subscriber-demand; v2 /lidar/local_object and /lidar/map_object (config/contracts/lidar_candidate_topic_contract_v2.yaml) carry at most one message per scan selected by pose validity, independent of subscribers. The v2 names /lidar/local_object and /lidar/map_object are user-mandated final topic names (2026-10-15) outside the /perception/lidar namespace of the v1 candidates. No planner cutover or package-port acceptance.
+    rationale: Opt-in Main adapter of the asmc_lidar core. v1 objects_local/objects_map are compatibility candidates whose serialization is subscriber-demand; v2 /lidar/local_object is emitted for every valid local scan and /lidar/map_object is additionally emitted only for a valid same-scan map pose, independent of subscribers. The v2 names /lidar/local_object and /lidar/map_object are user-mandated final topic names (2026-10-15) outside the /perception/lidar namespace of the v1 candidates. No planner cutover or package-port acceptance.
 
   - id: lidar_frame_diagnostics
     topics:

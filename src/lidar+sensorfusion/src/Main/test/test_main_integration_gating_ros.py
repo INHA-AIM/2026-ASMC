@@ -6,9 +6,10 @@ Each sample is published 2 ms after its source stamp, like the vehicle bridge: I
 S-30 ms, CAN at S-5 ms, LiDAR at S+12 ms (S on a 100 ms grid). Phases: healthy, GPS status 0 (denied),
 healthy (3-sample recovery), IMU silent (stale local input), healthy.
 
-Checked per LiDAR stamp: /lidar/local_object and /lidar/map_object are never both published; no map_v2 and no
-legacy output (/last_lidar, /lidar/tracked_objects_map) during the GPS denial; no V2 output at all while
-the IMU is stale; the first two scans after the denial are not map; legacy frames only on map_v2 scans
+Checked per LiDAR stamp: /lidar/local_object is the continuous valid-local output and /lidar/map_object is
+additionally published only with a valid map pose; no map_v2 and no legacy output
+(/last_lidar, /lidar/tracked_objects_map) during the GPS denial; no V2 output at all while
+the IMU is stale; the first two scans after the denial are local-only; legacy frames only on map_v2 scans
 whose objects are all motion_valid; frames base_link/map; no zero-center objects. Scans the node skipped
 under load are tolerated by counting, never by relaxing the per-stamp rules.
 Must run inside an isolated network namespace with a private master (see the B0 harness)."""
@@ -114,7 +115,7 @@ class MainIntegrationGatingTest(unittest.TestCase):
             time.sleep(0.05)
         return False
 
-    def test_exclusive_v2_gps_denial_recovery_and_legacy_gate(self):
+    def test_continuous_local_and_valid_map_gps_denial_recovery_and_legacy_gate(self):
         self.assertTrue(self.wait_for_graph(), 'Main did not connect to the synthetic inputs and outputs')
         n_points, cloud = static_cloud()
         fields = [PointField('x', 0, PointField.FLOAT32, 1), PointField('y', 4, PointField.FLOAT32, 1),
@@ -180,8 +181,8 @@ class MainIntegrationGatingTest(unittest.TestCase):
         in_phase = {name: [ms for ms, p in sorted(phase_of.items()) if p == name] for name, _, _ in PHASES}
         summary = {key: len(v) for key, v in self.received.items()}
         rospy.loginfo('received %s', summary)
-        # Exactly one final topic per scan stamp.
-        self.assertFalse(set(local) & set(mapped), 'a scan was published on both /lidar/local_object and /lidar/map_object')
+        # Every map frame has the same-scan local frame; local is the primary valid-scan output.
+        self.assertTrue(set(mapped) <= set(local), 'map output existed without same-stamp local output')
         self.assertEqual(len(local), len(set(local)))
         self.assertEqual(len(mapped), len(set(mapped)))
         for ms in local + mapped:
@@ -195,6 +196,7 @@ class MainIntegrationGatingTest(unittest.TestCase):
         recovery = in_phase['recovery']
         self.assertFalse(set(recovery[:2]) & set(mapped))
         self.assertFalse(set(recovery[:2]) & legacy)
+        self.assertGreaterEqual(len(set(recovery[:2]) & set(local)), 1, summary)
         self.assertGreaterEqual(len(set(recovery[2:]) & set(mapped)), 9, summary)
         # IMU silent: from the second scan on the last IMU sample is older than 0.12 s, so the local input is
         # invalid: nothing on V2 at all (no empty or dummy array), no legacy.
@@ -204,6 +206,7 @@ class MainIntegrationGatingTest(unittest.TestCase):
         # Map output and legacy available in the healthy phases.
         self.assertGreaterEqual(len(set(in_phase['healthy']) & set(mapped)), 20, summary)
         self.assertGreaterEqual(len(set(in_phase['healthy_end'][2:]) & set(mapped)), 9, summary)
+        self.assertGreaterEqual(len(set(in_phase['healthy']) & set(local)), 20, summary)
         self.assertGreater(len(legacy), 0, summary)
         # Legacy only with map_v2 and the frame-wide motion gate (no warm-up object on the legacy wire).
         by_map = {m.header.stamp.to_nsec() // MS: m for m in self.received['map_v2']}

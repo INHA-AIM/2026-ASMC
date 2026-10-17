@@ -30,6 +30,17 @@ TEST(GpsSanityFilter, ReanchorsAfterSustainedGapForRespawn) {
     EXPECT_TRUE(filter.Evaluate(100.0, 300.0, 12.1).accepted);
 }
 
+TEST(GpsSanityFilter, FutureStampIsRejectedWithoutPoisoningRecovery) {
+    GpsSanityFilter filter;
+    EXPECT_TRUE(filter.Evaluate(-100.0, -400.0, 10.0, 10.01).accepted);
+    const auto future = filter.Evaluate(-99.0, -400.0, 20.1, 10.1);
+    EXPECT_FALSE(future.accepted);
+    EXPECT_TRUE(future.future_stamp);
+    EXPECT_EQ("source timestamp is ahead of receipt time", future.reason);
+    // The rejected +10 s sample must not advance the continuity anchor.
+    EXPECT_TRUE(filter.Evaluate(-99.0, -400.0, 10.2, 10.21).accepted);
+}
+
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

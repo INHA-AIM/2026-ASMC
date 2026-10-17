@@ -25,7 +25,7 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 | `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. Main opt-in v1 호환 후보이며 최종 출력이 아니다 |
 | `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. Main opt-in v1 호환 후보이며 최종 출력이 아니다 |
 | `asmc_msgs/LidarObjectArrayV2`, `LidarObjectV2` | v1 필드 전체에 무손실 motion 상태를 더한 v2 타입. [v2 계약](./lidar-object-v2.md) |
-| `/lidar/local_object`, `/lidar/map_object` | scan마다 최대 1개인 최종 LiDAR 출력. GPS 음영·복구 중에는 local, map pose가 유효하면 map. opt-in |
+| `/lidar/local_object`, `/lidar/map_object` | 유효한 local scan마다 local을 내고, 같은 scan의 map pose가 유효할 때 map을 추가로 내는 최종 LiDAR 출력. opt-in |
 | `/perception/camera/objects` | 3뷰 원본 픽셀 검출. 현재 Main 어댑터는 전방만 소비 |
 | `/perception/camera/objects/observations` | session/generation·보정/모델/설정 ID 포함. asmc_lidar 수신·버퍼·투영 지원 제공; 3뷰 객체 매칭/fusion은 손재호의 후속 구현 |
 

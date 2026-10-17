@@ -376,15 +376,19 @@ void *ParseGPS(void *pst_NodeHandle)
     private_node.param("gps_sanity_reanchor_after_s",
                        sanity_config.reanchor_after_s,
                        sanity_config.reanchor_after_s);
+    private_node.param("gps_sanity_maximum_future_lead_s",
+                       sanity_config.maximum_future_lead_s,
+                       sanity_config.maximum_future_lead_s);
     {
         std::lock_guard<std::mutex> lock(g_GpsSanityMutex);
         g_GpsSanityFilter.reset(new GpsSanityFilter(sanity_config));
     }
     ROS_INFO(
-        "GPS sanity gate: bounds=[%.1f,%.1f]x[%.1f,%.1f] max_speed=%.1fm/s reanchor=%.1fs",
+        "GPS sanity gate: bounds=[%.1f,%.1f]x[%.1f,%.1f] max_speed=%.1fm/s reanchor=%.1fs future_lead=%.3fs",
         sanity_config.min_x, sanity_config.max_x,
         sanity_config.min_y, sanity_config.max_y,
-        sanity_config.maximum_speed_mps, sanity_config.reanchor_after_s);
+        sanity_config.maximum_speed_mps, sanity_config.reanchor_after_s,
+        sanity_config.maximum_future_lead_s);
     ros::Subscriber st_SubscribeGPS = st_NodeHandle->subscribe<morai_msgs::GPSMessage>("/gps", 1, GPSParser_Callback);
     ros::Rate rate(GPSHZ);
     while (ros::ok())
@@ -408,9 +412,10 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
     st_GPSData.b_isJamming = (st_Msg->status == 0);
     const ros::Time received=ros::Time::now();
     const ros::Time original_stamp=st_Msg->header.stamp;
-    auto invalidate=[&] {
+    auto invalidate=[&](bool unknown_source_time=false) {
         const auto stamp=original_stamp.isZero()?received:original_stamp;
-        if(frame_boundary::Enabled()) g_SensorPoseHistory.AddGpsInvalidAt(original_stamp.toNSec(),receipt_steady);
+        if(frame_boundary::Enabled()) g_SensorPoseHistory.AddGpsInvalidAt(
+            unknown_source_time ? 0 : original_stamp.toNSec(), receipt_steady);
         else g_SensorPoseHistory.AddGpsInvalid(stamp.toNSec()/1000000ULL,received.toNSec()/1000000ULL);
     };
     if (st_Msg->status == 0 || (frame_boundary::Enabled() &&
@@ -449,10 +454,14 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
             g_GpsSanityFilter.reset(new GpsSanityFilter());
         }
         sanity = g_GpsSanityFilter->Evaluate(
-            st_GPSData.f64_E, st_GPSData.f64_N, source_stamp.toSec());
+            st_GPSData.f64_E, st_GPSData.f64_N,
+            source_stamp.toSec(), received.toSec());
     }
     if (!sanity.accepted) {
-        invalidate();
+        // A future source stamp is not a future barrier. Treat it as an
+        // invalid sample received now; otherwise it would become active much
+        // later and a +10 s clock glitch would also poison normal recovery.
+        invalidate(sanity.future_stamp);
         ROS_WARN_THROTTLE(
             1.0,
             "Rejected GPS sample: status=%d map=(%.1f,%.1f) reason=%s jump=%.1fm allowed=%.1fm",

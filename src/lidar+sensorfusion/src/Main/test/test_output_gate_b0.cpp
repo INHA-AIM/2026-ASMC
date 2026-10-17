@@ -117,8 +117,8 @@ TEST(OutputGateB0, EveryGpsFaultClassMapsToItsOutput) {
   for (const auto& r : kGpsHealthy) {
     EXPECT_EQ(output_gate::ClassifyGps(true, r), GpsState::kHealthy);
     const Decision d = Decide(Healthy(r));
-    EXPECT_EQ(d.v2, Mode::kMap) << r;
-    EXPECT_EQ(d.reason, "map:" + r);
+    EXPECT_EQ(d.v2, Mode::kBoth) << r;
+    EXPECT_EQ(d.reason, "local_and_map:" + r);
   }
   // A valid map pose is healthy whatever its reason text says.
   EXPECT_EQ(output_gate::ClassifyGps(true, "gps_stale"), GpsState::kHealthy);
@@ -178,11 +178,11 @@ TEST(OutputGateB0, GpsDeniedOrRecoveringSelectsLocalOnly) {
   }
 }
 
-TEST(OutputGateB0, HealthySelectsMapOnlyAndKeepsFrameWideLegacyMotionGate) {
+TEST(OutputGateB0, HealthySelectsLocalAndMapAndKeepsFrameWideLegacyMotionGate) {
   for (const auto& reason : kGpsHealthy) {
     const Inputs in = Healthy(reason);
     const Decision d = Decide(in);
-    EXPECT_EQ(d.v2, Mode::kMap);
+    EXPECT_EQ(d.v2, Mode::kBoth);
     EXPECT_TRUE(d.legacy_permitted);
     EXPECT_FALSE(d.suppress_legacy_markers);
     EXPECT_EQ(d.gps, GpsState::kHealthy);
@@ -217,12 +217,12 @@ TEST(OutputGateB0, DowngradeAfterBuilderOrStampRejectionPublishesNothing) {
 TEST(OutputGateB0, DeleteAllOnEveryScanWhileMapOutputIsDeactivated) {
   struct Scan { Inputs in; bool motion; Mode v2; bool publish; bool suppress; };
   const std::vector<Scan> scans{
-      {Healthy("gps_observed"), true, Mode::kMap, true, false},
+      {Healthy("gps_observed"), true, Mode::kBoth, true, false},
       {WithMapReason("gps_invalid"), true, Mode::kLocal, false, true},          // deactivation
       {WithMapReason("gps_stale"), true, Mode::kLocal, false, true},
       {WithMapReason("gps_recovering"), true, Mode::kLocal, false, true},
-      {Healthy("gps_bounded_prediction"), false, Mode::kMap, false, true},     // tracks still warming up
-      {Healthy("gps_bounded_prediction"), true, Mode::kMap, true, false},      // legacy back
+      {Healthy("gps_bounded_prediction"), false, Mode::kBoth, false, true},    // tracks still warming up
+      {Healthy("gps_bounded_prediction"), true, Mode::kBoth, true, false},     // legacy back
       {WithMapReason("map_speed_invalid"), true, Mode::kNone, false, true},    // CAN invalid: nothing
   };
   for (std::size_t i = 0; i < scans.size(); ++i) {
@@ -258,14 +258,14 @@ TEST(OutputGateB0, ExhaustiveInvariants) {
         const bool inputs_valid = in.pose_ready && in.lidar_processed && in.context_current &&
             in.time_error.empty() && in.leveling_valid;
         const GpsState gps = output_gate::ClassifyGps(in.map_pose_valid, in.map_reason);
-        if (plan.publish) { ASSERT_EQ(d.v2, Mode::kMap); }                  // legacy only with map_v2
+        if (plan.publish) { ASSERT_EQ(d.v2, Mode::kBoth); }                 // legacy only with map_v2
         if (plan.publish) { ASSERT_TRUE(motion); }                          // LegacyMotionReady kept
         if (plan.publish) { ASSERT_TRUE(PreB0LegacyPublish(in, motion)); }  // B0 only tightens
-        if (d.v2 != Mode::kMap) { ASSERT_FALSE(plan.publish); }             // never local + legacy
+        if (d.v2 != Mode::kBoth) { ASSERT_FALSE(plan.publish); }
         ASSERT_EQ(plan.suppress_markers, !plan.publish);                    // DELETEALL iff withheld
         ASSERT_TRUE(plan.report_reason);
         if (!inputs_valid) { ASSERT_EQ(d.v2, Mode::kNone); }                // row 3: nothing on V2
-        if (d.v2 == Mode::kMap) {
+        if (d.v2 == Mode::kBoth) {
           ASSERT_TRUE(inputs_valid && in.map_pose_valid && in.map_pose_matches_scan);
         }
         if (d.v2 == Mode::kLocal) {
@@ -276,7 +276,7 @@ TEST(OutputGateB0, ExhaustiveInvariants) {
           ASSERT_EQ(d.v2, Mode::kLocal);
         }
         if (inputs_valid && gps == GpsState::kHealthy && in.map_pose_matches_scan) {
-          ASSERT_EQ(d.v2, Mode::kMap);
+          ASSERT_EQ(d.v2, Mode::kBoth);
           ASSERT_EQ(plan.publish, motion);
         }
         if (gps == GpsState::kNonGpsInvalid) { ASSERT_EQ(d.v2, Mode::kNone); }
@@ -288,7 +288,7 @@ TEST(OutputGateB0, ExhaustiveInvariants) {
 }
 
 // Recovery latch lives in BoundedPoseHistory (3 consecutive good samples). Feed its reasons
-// through the gate: denial -> local only; the first scan with 3 good samples -> map only.
+// through the gate: denial -> local only; the first scan with 3 good samples -> local and map.
 TEST(OutputGateB0, BoundedPoseRecoveryDrivesLocalThenMap) {
   using asmc::lidar::Ns;
   asmc::lidar::BoundedPoseHistory history(300000000LL, 3);
@@ -313,14 +313,14 @@ TEST(OutputGateB0, BoundedPoseRecoveryDrivesLocalThenMap) {
   add(400000000, true);
   EXPECT_EQ(mode_at(450000000).reason, "local_only:gps_recovering");        // 2 good: still latched
   add(600000000, true);
-  EXPECT_EQ(mode_at(650000000).v2, Mode::kMap);                             // 3rd good: first map scan
+  EXPECT_EQ(mode_at(650000000).v2, Mode::kBoth);                            // 3rd good: first map scan
   EXPECT_EQ(mode_at(901000000).reason, "local_only:gps_stale");             // silence > 0.30 s
   add(800000000, false, 905000000);                                         // invalid sample
   EXPECT_EQ(mode_at(910000000).reason, "local_only:gps_invalid");
   add(1000000000, true); add(1200000000, true);
   EXPECT_EQ(mode_at(1250000000).reason, "local_only:gps_recovering");
   add(1400000000, true);
-  EXPECT_EQ(mode_at(1400000000).v2, Mode::kMap);                            // recovers exactly at 3rd good
+  EXPECT_EQ(mode_at(1400000000).v2, Mode::kBoth);                           // recovers exactly at 3rd good
   // A gap above 0.30 s between good samples restarts the count.
   add(1800000000, true);
   EXPECT_EQ(mode_at(1800000000).reason, "local_only:gps_recovering");

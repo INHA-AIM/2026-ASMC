@@ -80,7 +80,7 @@ struct ScanOut {
   asmc::lidar::PoseSelection map;
   output_gate::Inputs in;
   output_gate::Decision d;
-  char mode() const { return d.v2 == Mode::kMap ? 'M' : d.v2 == Mode::kLocal ? 'L' : 'N'; }
+  char mode() const { return d.v2 == Mode::kBoth || d.v2 == Mode::kMap ? 'M' : d.v2 == Mode::kLocal ? 'L' : 'N'; }
   Ns gps_age() const { return map.sample_stamps.empty() ? -1 : stamp - map.sample_stamps.back(); }
 };
 
@@ -176,9 +176,13 @@ class Rig {
     g.f64_E = 100.0 + 2.0 * t * std::cos(kYaw) + (f.gps == Gps::kJump ? 60.0 : 0.0);
     g.f64_N = 200.0 + 2.0 * t * std::sin(kYaw);
     g.f64_U = 30.0; g.b_isJamming = false;
-    const auto sanity = sanity_.Evaluate(g.f64_E, g.f64_N, double(stamp) * 1e-9);
+    const auto sanity = sanity_.Evaluate(
+        g.f64_E, g.f64_N, double(stamp) * 1e-9,
+        double(arrival) * 1e-9);
     if (!sanity.accepted) {
-      history_.AddGpsInvalidAt(std::uint64_t(stamp), std::uint64_t(arrival));
+      history_.AddGpsInvalidAt(
+          sanity.future_stamp ? 0 : std::uint64_t(stamp),
+          std::uint64_t(arrival));
       return;
     }
     history_.AddGps(std::uint64_t(stamp / kMs), g, std::uint64_t(stamp), std::uint64_t(arrival));
@@ -242,7 +246,7 @@ TEST(GpsDenialRecovery, StartupNeedsThreeConsecutiveGoodSamples) {
   Expect(start, "LLM" + Repeat('M', 17), "startup");
   EXPECT_EQ(start[0].d.reason, "local_only:gps_recovering");
   EXPECT_EQ(start[1].d.reason, "local_only:gps_recovering");
-  EXPECT_EQ(start[2].d.reason, "map:gps_bounded_prediction");
+  EXPECT_EQ(start[2].d.reason, "local_and_map:gps_bounded_prediction");
   EXPECT_EQ(start[2].gps_age(), 30 * kMs);
 }
 
@@ -499,8 +503,8 @@ TEST(GpsDenialRecovery, CanSpeedAboveLimitIsNoneNotLocal) {
 
 // Clock mismatch: a LiDAR clock in another epoch or ahead of the inputs, and IMU stamps 1 s behind,
 // give no V2 output; a scan whose receipt time is invalid is none too. A GPS clock running 10 s
-// ahead never yields a map pose from a sample stamped after the scan (safety); the resulting outage
-// after the GPS clock returns (sanity filter anchored in the future, B-11) is recorded, not asserted.
+// ahead never yields a map pose from a sample stamped after the scan. Rejected future samples must
+// not move the sanity anchor, so normal-time GPS can recover through the ordinary three-sample latch.
 TEST(GpsDenialRecovery, ClockMismatchNeverProducesMapOrLocalFromInconsistentTime) {
   const Ns offsets[] = {Ns(100) * kSec - Ns(1800000000) * kSec, Ns(10) * kSec};
   for (const Ns offset : offsets) {
@@ -535,14 +539,33 @@ TEST(GpsDenialRecovery, ClockMismatchNeverProducesMapOrLocalFromInconsistentTime
     rig.Run(20, Tick{});
     Tick future; future.gps_lag = -10 * kSec;
     const auto ahead = rig.Run(5, future);
-    Expect(ahead, "MMLLL", "GPS clock 10 s ahead");
+    Expect(ahead, "LLLLL", "GPS clock 10 s ahead");
     const auto back = rig.Run(25, Tick{});
-    CheckInvariants(back, "GPS clock back");
+    Expect(back, "LL" + Repeat('M', 23), "GPS clock back");
     for (const auto& s : back) {
       if (s.mode() == 'M') { EXPECT_LE(s.map.sample_stamps.back(), s.stamp); }
     }
     ::testing::Test::RecordProperty("future_gps_outage_local_scans", CountMode(back, 'L'));
   }
+}
+
+TEST(GpsDenialRecovery, FutureGpsIsLocalOnlyAndCurrentTimeGpsRecovers) {
+  Rig rig;
+  Expect(rig.Run(4, Tick{}), "LLMM", "future/startup");
+
+  Tick future;
+  future.gps_lag = -10 * kSec;
+  const auto denied = rig.Run(5, future);
+  Expect(denied, "LLLLL", "future/denied");
+  for (const auto& scan : denied) {
+    EXPECT_FALSE(scan.map.valid);
+    EXPECT_TRUE(scan.map.reason == "gps_invalid" ||
+                scan.map.reason == "gps_recovering");
+  }
+
+  // Normal source time is accepted immediately by the sanity filter, while
+  // the map output still waits for the existing three-good-sample latch.
+  Expect(rig.Run(5, Tick{}), "LLMMM", "future/recovery");
 }
 
 // "GPS is never reused indefinitely": after the GPS invalid onset no map frame at all, and after
@@ -589,7 +612,9 @@ TEST(GpsDenialRecovery, GpsIsNeverReusedBeyondMaxAgeAfterOnset) {
 // is covered by the rig above and by the netns integration matrix (real map origin).
 TEST(GpsDenialRecovery, ParserCallbacksTurnEveryMalformedInputIntoABarrier) {
   UseCommonGeometry();
-  const Ns base = 1900000000LL * kSec;
+  // Keep source stamps behind callback receipt time. Future timestamps are covered by the
+  // dedicated tests above; this case isolates malformed payload and barrier semantics.
+  const Ns base = Ns(ros::Time::now().toNSec()) - 10 * kSec;
   const double lat = 37.2400, lon = 126.7700;
   auto quat = [](double r, double p, double y) {
     geometry_msgs::Quaternion q;

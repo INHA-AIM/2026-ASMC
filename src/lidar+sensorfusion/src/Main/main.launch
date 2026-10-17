@@ -88,6 +88,7 @@
   <arg name="gps_sanity_maximum_speed_mps" default="80.0"/>
   <arg name="gps_sanity_base_jump_allowance_m" default="3.0"/>
   <arg name="gps_sanity_reanchor_after_s" default="2.0"/>
+  <arg name="gps_sanity_maximum_future_lead_s" default="0.10"/>
   <!-- With common geometry, stale GPS suppresses map outputs while local
        processing continues. Legacy mode retains its original pose gate. -->
   <arg name="lidar_pose_gps_max_age_s" default="0.30"/>
@@ -218,6 +219,8 @@
            value="$(arg gps_sanity_base_jump_allowance_m)"/>
     <param name="gps_sanity_reanchor_after_s"
            value="$(arg gps_sanity_reanchor_after_s)"/>
+    <param name="gps_sanity_maximum_future_lead_s"
+           value="$(arg gps_sanity_maximum_future_lead_s)"/>
     <param name="lidar_pose_gps_max_age_s"
            value="$(arg lidar_pose_gps_max_age_s)"/>
     <param name="lidar_pose_imu_max_age_s"

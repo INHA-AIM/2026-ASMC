@@ -294,7 +294,7 @@ TEST(LidarObjectV2Builder, GateInputsUseOneContextOfThisScan) {
   EXPECT_TRUE(processed.map_pose_matches_scan);
   EXPECT_TRUE(processed.context_current); EXPECT_TRUE(processed.leveling_valid);
   EXPECT_TRUE(processed.time_error.empty());
-  EXPECT_EQ(output_gate::Decide(processed).v2, Mode::kMap);
+  EXPECT_EQ(output_gate::Decide(processed).v2, Mode::kBoth);
   // Same frame_context but a newer generation: the copy is stale -> nothing.
   const auto stale = frame_boundary::GateInputs(true, "local_ready", true, a, 42);
   EXPECT_FALSE(stale.context_current);
@@ -321,8 +321,8 @@ TEST(LidarObjectV2Builder, GateInputsUseOneContextOfThisScan) {
 TEST(LidarObjectV2Builder, GateInputsFromRealContextsFollowTheTruthTable) {
   UseCommonGeometry();
   struct Row { const char* reason; bool valid; bool store; Mode mode; };
-  const Row rows[] = {{"gps_observed", true, true, Mode::kMap},
-                      {"gps_bounded_prediction", true, true, Mode::kMap},
+  const Row rows[] = {{"gps_observed", true, true, Mode::kBoth},
+                      {"gps_bounded_prediction", true, true, Mode::kBoth},
                       {"gps_missing", false, true, Mode::kLocal},
                       {"gps_invalid", false, true, Mode::kLocal},
                       {"gps_stale", false, true, Mode::kLocal},
@@ -338,8 +338,11 @@ TEST(LidarObjectV2Builder, GateInputsFromRealContextsFollowTheTruthTable) {
     const auto gate = frame_boundary::GateInputs(true, "local_ready", true, lidar, generation);
     const auto decision = output_gate::Decide(gate);
     EXPECT_EQ(decision.v2, row.mode) << row.reason << " store=" << row.store;
-    if (decision.v2 != Mode::kNone) {
-      EXPECT_TRUE(frame_boundary::BuildV2(lidar, decision.v2).valid) << row.reason;
+    if (decision.v2 == Mode::kLocal || decision.v2 == Mode::kBoth) {
+      EXPECT_TRUE(frame_boundary::BuildV2(lidar, Mode::kLocal).valid) << row.reason;
+    }
+    if (decision.v2 == Mode::kMap || decision.v2 == Mode::kBoth) {
+      EXPECT_TRUE(frame_boundary::BuildV2(lidar, Mode::kMap).valid) << row.reason;
     }
   }
 }

@@ -105,8 +105,12 @@ LegacyFrame Gate(const LiDAR& lidar, std::uint64_t generation) {
   LegacyFrame out;
   const auto in = frame_boundary::GateInputs(true, "local_ready", true, lidar, generation);
   out.decision = output_gate::Decide(in);
-  if (out.decision.v2 != Mode::kNone) {
-    const auto frame = frame_boundary::BuildV2(lidar, out.decision.v2);
+  if (out.decision.v2 == Mode::kLocal || out.decision.v2 == Mode::kBoth) {
+    const auto frame = frame_boundary::BuildV2(lidar, Mode::kLocal);
+    if (!frame.valid) out.decision = output_gate::Downgrade(out.decision, frame.reason);
+  }
+  if (out.decision.v2 == Mode::kMap || out.decision.v2 == Mode::kBoth) {
+    const auto frame = frame_boundary::BuildV2(lidar, Mode::kMap);
     if (!frame.valid) out.decision = output_gate::Downgrade(out.decision, frame.reason);
   }
   out.plan = output_gate::PlanLegacy(out.decision, in, frame_boundary::LegacyMotionReady(lidar));
@@ -178,7 +182,7 @@ TEST(LegacyCompat, WarmupTrackWouldLeaveAsStationaryOnTheLegacyWire) {
     EXPECT_FALSE(v2.motion_valid);
     EXPECT_EQ(int(v2.motion_state), int(asmc_msgs::LidarObjectV2::MOTION_UNKNOWN));
     const auto frame = Gate(lidar, std::uint64_t(scan + 1));
-    EXPECT_EQ(frame.decision.v2, Mode::kMap);                // V2 carries it, marked unknown
+    EXPECT_EQ(frame.decision.v2, Mode::kBoth);               // both V2 frames carry it, marked unknown
     EXPECT_FALSE(frame.plan.publish);                         // no /last_lidar, no tracked_objects_map, no UDP
     EXPECT_TRUE(frame.plan.suppress_markers);
     EXPECT_EQ(frame.plan.reason, "motion_state_unrepresentable");
@@ -212,7 +216,7 @@ TEST(LegacyCompat, CommonModeWithholdsTheWholeLegacyFrameWhileAnyObjectWarmsUp) 
     lidar.vec_Objects = objects;
     const auto frame = Gate(lidar, std::uint64_t(scan + 1));
     const bool expect_publish = map_valid && !frame.any_warmup;
-    EXPECT_EQ(frame.decision.v2, map_valid ? Mode::kMap : Mode::kLocal);
+    EXPECT_EQ(frame.decision.v2, map_valid ? Mode::kBoth : Mode::kLocal);
     EXPECT_EQ(frame.plan.publish, expect_publish);
     EXPECT_EQ(frame.plan.suppress_markers, !frame.plan.publish);    // DELETEALL whenever withheld
     if (frame.plan.publish) {
