@@ -6,6 +6,126 @@
 > 연결: [현재 객체 생산자](camera-objects-p2a.md), [객체 검출 인계](camera-object-detection.md),
 > [LiDAR 인계](../../handoffs/lidar-migration.md), [인지 융합 로드맵](../../architecture/perception-roadmap.md).
 
+## 2026-10-18 현재 파이프라인 유지와 음영 bag 후속 비교
+
+이 절이 대회 전 우선순위를 갱신한다. 아래의 2026-10-07 YOLO11m/B0/B1a 서술과 고정
+소스 결과는 당시 기록으로 보존한다. 현재 카메라 기준선은 YOLO26l E8·3뷰·TensorRT다.
+센서 융합 인코더·VLA·E2E는 사용자 결정으로 대회 이후로 미룬다.
+
+| 순위 | 이번 비교 후보 | 확인할 질문 |
+|---|---|---|
+| 1 | 기존 YOLO26 E8 box + 점군 깊이/연결성 | 모델을 추가하지 않고 객체와 배경의 점 혼합을 줄일 수 있는가? |
+| 2 | 공개 YOLO26s-seg | 같은 결과의 box와 mask가 선택하는 LiDAR 지지점과 추가 비용은 어떻게 다른가? |
+| 3 | 공개 YOLOE26s-seg + 고정 prompt embedding | 미지원 장애물의 관측 근거가 늘어나는가? prompt가 실제 검출을 보장하지는 않음 |
+| 4 | 공개 PIDNet-S Cityscapes | 벽/건물/도로 경계의 보조 의미가 있는가? Cityscapes에는 터널 천장 전용 클래스가 없음 |
+| 별도 기하 비교 | PCL 평면 지지+연결성, Conditional Euclidean Clustering, depth_clustering | 구조물 표면 근거와 군집 연결을 개선할 수 있는가? 학습 가중치가 없는 구현 후보 |
+| 추적 비교 | 현재 tracker의 관측/연관/초기화/재관측 진단 | 점군 변화와 무관하게 남는 ID·속도 실패는 무엇인가? 새 neural model은 필수 아님 |
+
+목표 장비는 **RTX 4060 Ti 8GB**, 시뮬레이터 별도 PC다. 기존 지면 제거·객체 소비 계약을
+기준선으로 두고 공개 모델은 하나씩 로드한다. 앞선 세대/크기/학습 데이터가 다른 모델의
+비교를 mask 하나의 효과로 해석하지 않는다. 각 seg 모델 안에서 boxes-only와 mask 사용을
+짝지어 비교한다. 신규 모델은 운영 설치 버전이나 기본 launch를 변경하지 않고 실행한다.
+
+터널은 전역 최대 평면/고정 높이를 통째로 삭제하기보다 중력 대비 법선, 실제 관측된 유한한
+표면 지지 범위, 돌출부와 깊이 단절을 먼저 기록한다. 천장에는 지면 대비 높이와 통과 공간이
+필요하고, 트럭 측면·벽 근처 장애물·낮은 보를 보존한다. 구조물 근거와 억제 마스크는 분리한다.
+객체 추적에서 제외해도 충돌 경계에서 지우지 않으며 현재 객체 메시지를 구조물 메시지로
+재해석하지 않는다. [기하 후보 검수](../../handoffs/lidar-migration.md#참고-구현-검수와-현실적인-첫-제안--2026-10-05)를 따른다.
+
+② LiDAR semantic/instance와 ③ 학습 객체 검출은 예비 경로다. 다른 클래스 혼합에는 semantic,
+같은 클래스 합침에는 instance/검출, 분리 후 형상 불안정에는 형상 추정/검출을 비교한다.
+시간·자차 보상·연관·초기화 원인의 속도 급변은 ④에서 먼저 해결한다. GT로 점을 정확히
+나눈 입력을 기존 후단에 넣어 분리 자체의 효과를 확인하면 ②/③ 투자 판단에 도움이 된다.
+
+실행은 기존 B1a 음영 원본 `20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel`
+bag을 첫 비교 입력으로 고정한다. 24.8초, LiDAR 208 scan, 전방 영상 494개이며 이미 여러
+개발에 사용한 자료다. 이 bag에는 독립 semantic/instance/3D box/객체 속도 GT 토픽이 없다.
+지지점 수 감소는 객체 보존율이나 벽 제거 정확도가 아니고, 사후 최근접 timestamp 연결은
+실시간 도착/소비 정책 검증이 아니다. 연속 ID·속도는 시간열로 진단하되 GT 오차로 표시하지 않는다.
+
+실행 산출물은 개인 workspace `artifacts/lidar-fusion-shadow-20261018-r1/`에 모으고 입력·가중치·
+도구 SHA, 실행 명령, 관측 JSONL, 처리 비용, 대표 원본/투영 그림을 남긴다. 이 절에는
+실제로 끝난 후보와 막힌 후보를 구분해 결과를 추가한다. 운영 기본값 승격과 closed-loop
+실시간 주행 수락은 이번 오프라인 비교에 포함하지 않는다.
+
+### 같은 날 실행 결과 — 공개 가중치 3개와 기존 E8, PCL 관측 근거
+
+[비교 그림과 조건](../../../config/baselines/evidence/lidar_fusion_shadow_v1/index.html),
+[전체 수치·가중치/소스 SHA](../../../config/baselines/evidence/lidar_fusion_shadow_v1/summary.json)를
+저장했다. 같은 bag의 LiDAR **208 scan**, 전/좌/우 각 **208 대응 영상**, 모델당 **624개**를
+E8 → YOLO26s-seg → YOLOE26s-seg → PIDNet-S 순서로 별도 프로세스에서 끝까지 실행했다.
+현재 v3 camera4는 전상방 카메라이며 후방이 아니므로 이번 3뷰 비교에 포함하지 않았다.
+추론 중 운영 launch·모델·ROS 메시지 기본값은 바꾸지 않았다.
+
+| 후보 | 측정한 단일 뷰 호출 p95 | 이 bag에서 확인한 결과 | 다음 개발 판단 |
+|---|---:|---|---|
+| 기존 YOLO26l E8 TensorRT FP16 | 31.8ms | 전방 box 출력 228개 관측: `box` 200, 나머지 barrier/drum/dog 등. 대표 상자 검출 유지 | **1순위: 유지하고 기하 분리/유효성 보완**. 출력 수는 정답 검출 수가 아님 |
+| 공개 YOLO26s-seg, FP32·imgsz640 | 64.4ms | 전방 208 영상에서 출력 1개(`train`). 동일 상자 장면의 검출 부재를 그림에서 확인 | COCO 가중치 그대로 E8를 교체하는 안은 후순위 |
+| 공개 YOLOE26s-seg, FP32·imgsz640 | 66.9ms | 전방 `wooden crate` 67개 관측. 전체 뷰에는 airplane/train/bench 등 배경 혼동 출력도 존재 | **학습 모델 중 조건부 후속 후보**. MORAI 적응과 배경 혼동·점 처리량 제한을 먼저 검증 |
+| PIDNet-S Cityscapes, FP32 | 33.6ms* | 전체 inference checkpoint를 빠짐없이 로드. 터널 바닥/구조물 분류가 대표 그림에서 불안정 | 터널 semantic 라벨로 적응하기 전 자동 억제 근거로 채택하지 않음 |
+
+모든 detector는 `conf=0.4`로 실행하고 저장된 출력에서 `0.7`도 별도 집계했다. E8의 학습
+클래스·입력 크기·FP16 TensorRT와 공개 seg의 COCO/prompt·640·FP32가 다르므로 같은
+조건의 네트워크 속도 순위가 아니다. E8는 운영 backend를 사용했지만 이번 호출은 뷰별
+순차 처리이며 운영 `2plus1`의 전체 공급 Hz가 아니다. *PIDNet 수치는 forward·출력 resize·
+argmax·CPU 전송이며 입력 resize/정규화/H2D는 제외했다. GPU 모델별 1회 전체 bag 실행으로,
+다른 CPU 진단/호스트 부하와 반복 편차를 통제한 성능 수락 시험이 아니다.
+
+공개 가중치 출처:
+[YOLO26s-seg](https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26s-seg.pt),
+[YOLOE26s-seg](https://github.com/ultralytics/assets/releases/download/v8.4.0/yoloe-26s-seg.pt).
+PIDNet 원저자의 대체 Drive 하위 폴더는 로그인으로 연결됐다. 대신 모델 제공자인
+[Qualcomm 공개 로더](https://github.com/qualcomm/ai-hub-models/blob/v0.64.0/src/qai_hub_models/models/pidnet/model.py)가
+명시한 [원본 PyTorch checkpoint](https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/pidnet/v2/PIDNet_S_Cityscapes_val.pt)를
+확보했다. SHA는 `b51aa935bdb64a0779d776f38267fd49f7cce59413910abbbf0a74934b3d7c01`,
+공식 PIDNet 코드 `4c158cf`의 inference state 전체 shape/key 대응을 검사했다.
+새 모델 설치나 운영 Python 패키지 업그레이드는 하지 않았다.
+
+**점 선택·분리의 실제 한계:** 고정 반경0.55m·깊이차0.75m 연결과 box 중앙을 지지하는
+가까운 성분 선택을 관측 전용으로 비교했다. 이는 Frustum PointNets/PCL CEC/depth_clustering
+논문의 재현이 아닌 실험용 기하 어댑터다. E8의 추가 연결 계산은 전체 프레임 p95 **3.9ms**,
+box가 있는 프레임만 보면 p95 **7.2ms**였다. 하지만 raw 점 지지가 있는 242개 검출 중
+42개는 조건을 만족하는 성분을 선택하지 못했다. 미선택 점은 모두 미확정으로 보존했다.
+전방 scan112의 E8 상자(conf0.93)는 box 안 raw LiDAR 점이 0개다. 점 분리만으로 복구할
+수 없는 관측 부족이며 검출/거리의 유효성을 구분해야 한다.
+
+YOLOE의 큰 배경 box에는 이 어댑터의 계산량이 커졌다. box 존재 프레임 p95 **45.1ms**,
+최대 **886.5ms**였다. production 지면/voxel을 먼저 거친 입력이 아닌 raw 점 실험이므로
+운영 추가 지연으로 그대로 환산하지 않는다. 다만 CPU 이웃 그래프도 무제한으로 만들 수
+없다는 근거다. 후보 점 수/ROI/voxel과 처리 예산을 제한하고 초과는 unknown으로 보존하는
+정책이 필요하다. box→mask 지지점 감소 역시 객체 보존이나 벽 제거 정답률이 아니다.
+
+**PCL 표면 근거:** 같은 208 scan에 raw 센서 ROI x[-5,35]·y[-15,15]·z[-4,10]m,
+0.15m voxel의 첫 원본점을 사용했다. K12 법선과 RANSAC 최대4평면(잔차0.12m·150회)을
+추출하고 원본점 인덱스·관측 min/max·평면 잔차를 저장했다.
+법선 p95 **12.6ms**, 평면 p95 **28.4ms**, 둘의 합 p95 **38.5ms**였다(입력 준비 제외).
+이는 **구조물 근거의 관측 시험**이며 기존 지면/군집을 교체하지 않았다. 아직 중력 정렬,
+벽/트럭 의미 판정, 곡면 연결, RegionGrowing/CEC, 구조물 억제는 적용하지 않았다.
+[평면 지지점 그림](../../../config/baselines/evidence/lidar_fusion_shadow_v1/structure-evidence.png)을
+보고 IMU·지면·객체 보호를 연결할 가치와 비용을 판단한다. 추가 GPU가 없어도 CPU 비용은 있다.
+
+**④ 추적 진단:** 2026-10-14 배포 snapshot의 `lidar_continuous_replay`를 별도 master11339에서
+`common_pitch`로 실행해 208 scan 모두 local-ready·plane-valid인 출력을 보존했다.
+새 2026-10-18 Main 빌드나 tracker 교체가 아니며 camera box는 재생하지 않았다. 출력 ID는
+329개로, 독립 객체 수나 ID switch 정답이 아니다. 내부 상대 KF 속도 크기 최대 **58.3m/s**는
+ID76·scan118·LiDAR miss24 상태였다. 관측과 예측의 분리, miss 중 CA 외삽·유효성/유지 기간을
+먼저 조사할 근거이며, 실제 차량 속도나 GT 속도 오차로 해석하지 않는다.
+[관측/예측 상태 그림](../../../config/baselines/evidence/lidar_fusion_shadow_v1/tracking-diagnostic.png)을
+남겼다. 점 분리 개선만으로 이 예측 상태의 문제까지 해결됐다고 판단하지 않는다.
+
+실행 후 우선순위는 **E8 유지+처리량을 제한한 기하 분리/④ 진단 → PCL 관측 근거 검증 →
+필요 시 YOLOE MORAI 적응 → PIDNet 터널 적응**이다. COCO YOLO26s-seg 즉시 교체는 보류한다.
+HARP-NeXt/FRNet·CenterPoint-Pillar와 official depth_clustering·PCL CEC는 이번에 실행하지
+않았다. 전자는 ②·③ 예비 경로, 후자는 구조물 근거/계보 검증 뒤의 별도 비교다.
+모델 단독 로드·추론은 모두 8GB에서 끝났지만 전체 GPU peak는 측정하지 않았다.
+JSON의 Torch peak는 TensorRT 외부 할당을 포함하지 않는다. 차선·신호등·판제 동시 실행,
+추론 결과 도착 지연, 다른 날/날씨 bag과 실시간 주행 수락은 남아 있다.
+
+도구는 `tools/perception/benchmark_shadow_point_support.py`, `benchmark_shadow_structure.cpp`,
+`summarize_shadow_point_support.py`, `plot_shadow_support_evidence.py`다. 실제 실행 카메라 코드는
+`2026-ASMC-repro`의 `8de5f65` snapshot 및 결과 JSON의 파일별 SHA로 고정했다. timestamp
+경계·원본점 계보·미확정 보존 회귀 3개와 모델당624/PCL208/tracker208 출력 완결성을 확인했다.
+
 일반 정적·동적 장애물 구간은 기존 LiDAR와 YOLO 융합을 유지한다. 음영구간에서는
 터널 벽·천장과 장애물이 섞이는 문제를 카메라로 보완할 수 있는지 먼저 확인한다.
 우선 후보는 **기존 카메라 검출과 LiDAR 점의 기하 연결**, 그다음은 **YOLO26-seg로
