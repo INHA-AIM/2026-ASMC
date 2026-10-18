@@ -1,0 +1,62 @@
+{
+  "schema": "twinlite_bdd_pretrained_v1",
+  "created_at": "2026-10-16T19:56:41.211569+00:00",
+  "source_url": "https://drive.google.com/file/d/1H8P-GrOUBOaVs5LEqXBfz0dC9gguUUio/view",
+  "source_sha256": "5605d1a8ce762c1b6f7d23f4c2e7ec9384bfd6e6887b040b43e1f8902a817e22",
+  "official_readme": "https://github.com/chequanghuy/TwinLiteNetPlus",
+  "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2",
+  "model_config": "large",
+  "task_spec": {
+    "name": "drivable_lane_binary",
+    "heads": [
+      "drivable",
+      "lane"
+    ],
+    "class_names": {
+      "drivable": [
+        "background",
+        "drivable"
+      ],
+      "lane": [
+        "background",
+        "lane"
+      ]
+    },
+    "class_counts": {
+      "drivable": 2,
+      "lane": 2
+    }
+  },
+  "checkpoint": "twinlite-large-bdd100k.pt",
+  "checkpoint_sha256": "e503cbbb05177ef6e59fe19285b60314715109f95bf2a494185e3145dd53a4a6",
+  "bytes": 7953318,
+  "tensor_count": 408,
+  "parameter_count": 1943911,
+  "all_source_tensors_identical": true,
+  "training_performed": false,
+  "official_preprocessing": {
+    "input_hw": [
+      384,
+      640
+    ],
+    "color": "RGB",
+    "normalization": "uint8 / 255",
+    "resize": "OpenCV INTER_LINEAR",
+    "padding": 114
+  },
+  "live_input_hw_by_view": {
+    "front": [
+      544,
+      960
+    ],
+    "left": [
+      480,
+      640
+    ],
+    "right": [
+      480,
+      640
+    ]
+  },
+  "deployment_status": "experimental binary semantic visualization; no family/planning output"
+}

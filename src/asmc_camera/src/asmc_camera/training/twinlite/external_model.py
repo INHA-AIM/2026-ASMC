@@ -81,13 +81,19 @@ def load_external_twinlite(
 
     existing = sys.modules.get("model")
     if existing is not None:
-        existing_file = Path(getattr(existing, "__file__", "") or "/").resolve()
-        try:
-            existing_file.relative_to(source_root)
-        except ValueError as exc:
-            raise ExternalTwinLiteError(
-                f"Python module name 'model' is already owned by {existing_file}"
-            ) from exc
+        # Upstream model/ is a namespace package (no __init__.py). Its __file__
+        # is None after the first load; validate search paths instead of '/'.
+        filename = getattr(existing, "__file__", None)
+        locations = [filename] if filename else list(getattr(existing, "__path__", ()))
+        if not locations:
+            raise ExternalTwinLiteError("Python module name 'model' has no verified source")
+        for location in locations:
+            try:
+                Path(location).resolve().relative_to(source_root)
+            except ValueError as exc:
+                raise ExternalTwinLiteError(
+                    f"Python module name 'model' is already owned by {location}"
+                ) from exc
     if str(source_root) not in sys.path:
         sys.path.insert(0, str(source_root))
     module = importlib.import_module("model.model")

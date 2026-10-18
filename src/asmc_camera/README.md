@@ -62,3 +62,7 @@ LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)를 따�
 정본 상태/모드 타입은 `asmc_msgs/InferenceStatus`, `asmc_msgs/SetInferenceMode`다.
 상태의 session UUID는 객체 관측과 같으며 기존 `asmc_camera` 타입은 구형 노드 제어 경로에 보존한다.
 정본 경로 소비자는 공용 타입으로 재빌드하고 카메라·Main과 함께 재시작한다.
+
+공식 BDD100K Large의 추가학습 전 결과는 [별도 추론 실험](docs/bdd-pretrained-experiment.md)으로
+확인한다. `bdd_lane.launch`·`bdd_lane_view.launch`는 이진 drivable/lane 시각화만 제공하며
+운영 family 입력과 상태 토픽에 결과를 섞지 않는다. 운영 기본 모델은 변경하지 않는다.

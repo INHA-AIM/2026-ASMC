@@ -35,6 +35,18 @@
       ]
     },
     {
+      "title": "BDD Large experimental inference",
+      "path": "src/asmc_camera/launch/bdd_lane.launch",
+      "internal_args": [
+        "input_config"
+      ]
+    },
+    {
+      "title": "BDD Large experimental visualization",
+      "path": "src/asmc_camera/launch/bdd_lane_view.launch",
+      "internal_args": []
+    },
+    {
       "title": "HD Map",
       "path": "src/asmc_hd_map/launch/competition_map.launch",
       "internal_args": []
@@ -134,6 +146,7 @@
     "src/asmc_bridge/README.md",
     "src/data_collection/README.md",
     "src/asmc_hd_map/README.md",
-    "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md"
+    "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md",
+    "src/asmc_camera/docs/bdd-pretrained-experiment.md"
   ]
 }

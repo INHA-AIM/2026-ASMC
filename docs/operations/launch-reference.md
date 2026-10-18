@@ -116,6 +116,24 @@
 
 유효성 검사 전용 내부 인자는 일반 사용자 옵션에서 제외합니다.
 
+## BDD Large experimental inference
+
+[소스](../../src/asmc_camera/launch/bdd_lane.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `resolution` | `runtime` | runtime: front960/sides640 &#124; official: all384x640 |
+
+유효성 검사 전용 내부 인자는 일반 사용자 옵션에서 제외합니다.
+
+## BDD Large experimental visualization
+
+[소스](../../src/asmc_camera/launch/bdd_lane_view.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |
+
 ## HD Map
 
 [소스](../../src/asmc_hd_map/launch/competition_map.launch)
