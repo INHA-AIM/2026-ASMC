@@ -104,6 +104,14 @@ deployment_allowed = false
 `algorithm_id`의 `v6`는 동결한 family 계산/계약 식별자이며 현재 신경망 checkpoint 버전을 뜻하지 않습니다.
 모델 배포 SHA와 실행 설정은 별도 배포 목록·diagnostics에서 확인합니다.
 
+`camera_bbox_lane`·`camera_bbox_lane_change`와 planner의 관련 launch는 구 설정 SHA를
+`expected_hash`/`expected_config_sha256` 기본값으로 고정합니다. 새 보정·폭 정책을 켜면 이 경로는
+`wrong_geometry_config_hash`로 거부할 수 있습니다. 인지 기본값 전환을 판제의 자동 수락으로
+해석하지 않습니다. 판제 담당이 새 family의 xyz·유효 범위·소비 조건을 확인해 설정을 인수합니다.
+특히 객체 bbox와 차선을 영상에서 비교하는 어댑터는 고정 평면 homography를 따로 사용하므로,
+SHA만 바꿔 M1 family를 허용하기 전에 자세 보정된 xyz의 투영 정합을 검증해야 합니다.
+Read-only family monitor의 수신과 실제 제어 경로의 승격은 구분합니다.
+
 `deployment_allowed=false`는 메시지를 버리라는 뜻이 아니라, 현재 결과가 판제 연결과
 closed-loop 승인을 대신하지 않는다는 뜻이다. read-only 검토에서는 이 값을 요구한다.
 실제 제어 승격 시 판제 파트가 별도 opt-in과 검증 기록을 남겨야 하며, 인지 쪽 flag를 조용히
