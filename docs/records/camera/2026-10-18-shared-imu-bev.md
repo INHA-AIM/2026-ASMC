@@ -111,3 +111,9 @@ semantic의 전체 종료 경로와 두 렌더 worker·수요 worker의 join을 
 격리 복사본의 중복 검색·HD맵 생성 타입·실행 권한을 맞춘 재시험13개 및 구간 예제1개가 통과했다.
 구간 예제는 연속 추론·명시적 구간 정책·GPS 무효·외부 제어18항목을 모두 통과했다.
 이 수정은 시험기·검증 기록에 한정하며 운영 시각화·모델·판제 승인 설정을 변경하지 않는다.
+
+다음 hosted 실행에서 수정한 view 검사는12항목 모두 통과했다. 마지막 legacy raw-overlay
+시험은 raw Publisher 연결을 기다리지 않아 첫 non-latched 결과가 유실될 수 있었다.
+이미지·objects·출력 외에 raw TCPROS 연결도 첫 발행 전에 확인하도록 fixture를 보완했다.
+기존10초 제한·exact-stamp 대응·거부 조건은 유지했다. 독립 master에서 ego-filter, mask+raw,
+ego-filter 순으로 세 번 확인해 모두 통과했다. 운영 렌더러는 변경하지 않았다.
