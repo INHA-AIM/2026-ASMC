@@ -49,7 +49,7 @@ def transition_ready(status, expected, mode):
                for role,generation in expected.items())
 
 
-def measurements(rows, start, end, target):
+def measurements(rows, start, end, target, lane_target=10.):
     reports = {}
     streams = defaultdict(list)
     for row in rows:
@@ -62,7 +62,7 @@ def measurements(rows, start, end, target):
         report = rate_report([(r['at'], r['stamp'], r['valid']) for r in values], start, end)
         times = [r['wall_ms'] for r in values if start <= r['at'] < end]
         report['wall_ms'] = {f'p{q}': percentile(times, q) for q in (50, 95, 99)}
-        hz = target if key.startswith('/perception/camera/objects:') else 10.
+        hz = target if key.startswith('/perception/camera/objects:') else lane_target if '/road_marking/' in key else 10.
         report['target_hz'] = hz
         report['target_95pct_pass'] = bool(report['five_second_hz']) and min(report['five_second_hz']) >= hz*.95
         report['minimum_9_5_pass'] = bool(report['five_second_hz']) and min(report['five_second_hz']) >= 9.5
@@ -291,6 +291,7 @@ def main():
         parent.start()
         report['effective_lane_batch_wait_ms'] = rospy.get_param('/camera_lane/batch_wait_ms',None)
         report['effective_fusion_hz'] = rospy.get_param('/camera_bev_fusion/max_fused_hz',None)
+        report['effective_imu_config'] = rospy.get_param('/camera_lane_vectorizer/imu_motion', {})
         deadline = time.monotonic()+120
         while not all(r in status and status[r].loaded and status[r].warmed_up for r in legacy):
             if time.monotonic() > deadline:
@@ -436,7 +437,7 @@ def main():
             report['unmatched_model_output_stamps']=len(unmatched)
             if unmatched:
                 report['failures'].append('model input/output stamp mismatch')
-            report['streams'] = measurements(rows, start, end, 15)
+            report['streams'] = measurements(rows, start, end, 15, a.lane_hz)
             required = dict(objects='/perception/camera/objects:',
                 lane='/perception/camera/front/road_marking/model_grid/class_id:',
                 traffic_light='/perception/traffic_light/detection:')

@@ -2,6 +2,18 @@
 from collections import Counter, defaultdict
 
 
+def normalize_supply_targets(streams, lane_hz):
+    """Correct old fixed10Hz lane target tags without changing raw reports."""
+    result = {}
+    for key, stream in streams.items():
+        target = 15. if key.startswith('/perception/camera/objects:') else lane_hz if '/road_marking/' in key else 10.
+        minimum = min(stream.get('five_second_hz', []), default=0.)
+        result[key] = dict(stream, reported_target_hz=stream.get('target_hz'),
+                           reported_target_95pct_pass=stream.get('target_95pct_pass'),
+                           target_hz=target, target_95pct_pass=minimum >= .95 * target)
+    return result
+
+
 def family_probes(message, stations=(5., 10., 15.)):
     """Small audit samples; never interpolate across INVALID support."""
     result = []

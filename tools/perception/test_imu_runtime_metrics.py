@@ -1,6 +1,6 @@
 import unittest
 from types import SimpleNamespace as S
-from imu_runtime_metrics import imu_application, family_probes
+from imu_runtime_metrics import imu_application, family_probes, normalize_supply_targets
 
 
 class ImuRuntimeMetricsTest(unittest.TestCase):
@@ -30,6 +30,15 @@ class ImuRuntimeMetricsTest(unittest.TestCase):
                      support_state=[1, 1, 0, 1])
         result = family_probes(S(boundaries=[boundary]))
         self.assertEqual(result, [[2, 5., .5, -.36]])
+
+    def test_lane15_target_tag_correction_preserves_original(self):
+        key = '/perception/camera/front/road_marking/model_grid/class_id:camera_front'
+        stream = dict(five_second_hz=[14.2, 15.], target_hz=10., target_95pct_pass=True)
+        result = normalize_supply_targets({key: stream}, 15.)[key]
+        self.assertEqual(result['reported_target_hz'], 10.)
+        self.assertEqual(result['target_hz'], 15.)
+        self.assertFalse(result['target_95pct_pass'])
+        self.assertTrue(stream['target_95pct_pass'])
 
 
 if __name__ == '__main__': unittest.main()

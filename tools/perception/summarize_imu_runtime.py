@@ -38,14 +38,18 @@ def main(args):
                 failures.append('joint policy/IMU count mismatch')
         start, end = report.get('start'), report.get('end')
         seconds = end - start if start is not None and end is not None else 0.
+        from imu_runtime_metrics import normalize_supply_targets
         trials.append(dict(trial=path.parent.name, path=str(path), passed=not failures, failures=failures,
-            imu=imu, family=report.get('lane_family'), resources=report.get('resources'), streams=report.get('streams'),
+            imu=imu, family=report.get('lane_family'), resources=report.get('resources'),
+            streams=normalize_supply_targets(report.get('streams', {}), report.get('lane_hz', 10.)),
             complete=report.get('complete'), seconds=seconds,
-            mode=report.get('imu_mode'), fallback_transitions=transitions))
-    candidates = [r for r in trials if r['mode'] == 'source']
+            mode=report.get('imu_mode'), effective_imu_config=report.get('effective_imu_config'),
+            fallback_transitions=transitions))
+    candidates = [r for r in trials if r['mode'] == 'source' and args.candidate_contains in r['trial']]
     summary = dict(schema='imu_joint_runtime_acceptance_v1', trials=trials,
         all_candidate_passed=bool(candidates) and all(r['passed'] for r in candidates),
-        candidate_runs=len(candidates), ten_minute_pass=any(r['passed'] and r['seconds'] >= 599.99 for r in candidates))
+        candidate_runs=len(candidates), candidate_name_filter=args.candidate_contains,
+        ten_minute_pass=any(r['passed'] and r['seconds'] >= 599.99 for r in candidates))
     args.output.write_text(json.dumps(summary, indent=2) + '\n')
     print(json.dumps(dict(trials=len(trials), candidate_runs=len(candidates),
         all_candidate_passed=summary['all_candidate_passed'], ten_minute_pass=summary['ten_minute_pass'],
@@ -56,4 +60,5 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--results', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--candidate-contains', default='', help='Select final revision by recorded run name; all earlier trials remain in evidence')
     main(p.parse_args())
