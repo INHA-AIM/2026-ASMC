@@ -1,0 +1,2734 @@
+{
+  "schema": "tunnel_receive_time_imu_fit_review_v1",
+  "frames": 216,
+  "tool_sha256": "ce251d4f6ed30adca4bf016eab75c34481958c0279eca112159f4e4889294bf6",
+  "timing_basis": "legacy receive headers; no raw source timing; offset variants are sensitivity only",
+  "input_pins": {
+    "schema": "lane_motion_inputs_v1",
+    "runs": [
+      {
+        "run_id": "20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel",
+        "bag": "rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag",
+        "bag_sha256": "9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34",
+        "topics": {
+          "/Ego_topic": {
+            "type": "morai_msgs/EgoVehicleStatus",
+            "count": 1238
+          },
+          "/cam_extra/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 247
+          },
+          "/cam_left/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 494
+          },
+          "/cam_right/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 494
+          },
+          "/gps": {
+            "type": "morai_msgs/GPSMessage",
+            "count": 124
+          },
+          "/gps/fix": {
+            "type": "sensor_msgs/NavSatFix",
+            "count": 124
+          },
+          "/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 494
+          },
+          "/imu": {
+            "type": "sensor_msgs/Imu",
+            "count": 1223
+          },
+          "/morai_sensor_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 5
+          },
+          "/morai_udp_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 5
+          },
+          "/tf_static": {
+            "type": "tf2_msgs/TFMessage",
+            "count": 1
+          },
+          "/velodyne_points": {
+            "type": "sensor_msgs/PointCloud2",
+            "count": 208
+          }
+        },
+        "signals": 2709,
+        "continuous_frames": 36
+      },
+      {
+        "run_id": "20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel",
+        "bag": "rosbags/raw/20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel/bags/20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel_0.bag",
+        "bag_sha256": "82c6c196a458c661232df7325b45ec034509181e7b61ddfb79ed878c4ebdaa22",
+        "topics": {
+          "/Ego_topic": {
+            "type": "morai_msgs/EgoVehicleStatus",
+            "count": 1067
+          },
+          "/cam_extra/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 213
+          },
+          "/cam_left/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 427
+          },
+          "/cam_right/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 427
+          },
+          "/gps": {
+            "type": "morai_msgs/GPSMessage",
+            "count": 107
+          },
+          "/gps/fix": {
+            "type": "sensor_msgs/NavSatFix",
+            "count": 107
+          },
+          "/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 427
+          },
+          "/imu": {
+            "type": "sensor_msgs/Imu",
+            "count": 1038
+          },
+          "/morai_sensor_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 4
+          },
+          "/morai_udp_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 4
+          },
+          "/tf_static": {
+            "type": "tf2_msgs/TFMessage",
+            "count": 1
+          },
+          "/velodyne_points": {
+            "type": "sensor_msgs/PointCloud2",
+            "count": 176
+          }
+        },
+        "signals": 2319,
+        "continuous_frames": 36
+      },
+      {
+        "run_id": "20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel",
+        "bag": "rosbags/raw/20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel/bags/20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel_0.bag",
+        "bag_sha256": "870b65df19cb1cd7df792cb34dfb56130d5f059a4f5851b0b0dda8118409a8d7",
+        "topics": {
+          "/Ego_topic": {
+            "type": "morai_msgs/EgoVehicleStatus",
+            "count": 928
+          },
+          "/cam_extra/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 185
+          },
+          "/cam_left/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 371
+          },
+          "/cam_right/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 370
+          },
+          "/gps": {
+            "type": "morai_msgs/GPSMessage",
+            "count": 93
+          },
+          "/gps/fix": {
+            "type": "sensor_msgs/NavSatFix",
+            "count": 92
+          },
+          "/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 371
+          },
+          "/imu": {
+            "type": "sensor_msgs/Imu",
+            "count": 914
+          },
+          "/morai_sensor_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 4
+          },
+          "/morai_udp_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 4
+          },
+          "/tf_static": {
+            "type": "tf2_msgs/TFMessage",
+            "count": 1
+          },
+          "/velodyne_points": {
+            "type": "sensor_msgs/PointCloud2",
+            "count": 156
+          }
+        },
+        "signals": 2027,
+        "continuous_frames": 36
+      },
+      {
+        "run_id": "20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel",
+        "bag": "rosbags/raw/20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel/bags/20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel_0.bag",
+        "bag_sha256": "12498b76d03a0bfc8ae853b30722dda11145fe53c00fb2d53e7fb665abae8bc7",
+        "topics": {
+          "/Ego_topic": {
+            "type": "morai_msgs/EgoVehicleStatus",
+            "count": 868
+          },
+          "/cam_extra/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 174
+          },
+          "/cam_left/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 347
+          },
+          "/cam_right/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 347
+          },
+          "/gps": {
+            "type": "morai_msgs/GPSMessage",
+            "count": 87
+          },
+          "/gps/fix": {
+            "type": "sensor_msgs/NavSatFix",
+            "count": 86
+          },
+          "/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 347
+          },
+          "/imu": {
+            "type": "sensor_msgs/Imu",
+            "count": 846
+          },
+          "/morai_sensor_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 3
+          },
+          "/morai_udp_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 3
+          },
+          "/tf_static": {
+            "type": "tf2_msgs/TFMessage",
+            "count": 1
+          },
+          "/velodyne_points": {
+            "type": "sensor_msgs/PointCloud2",
+            "count": 144
+          }
+        },
+        "signals": 1887,
+        "continuous_frames": 36
+      },
+      {
+        "run_id": "20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel",
+        "bag": "rosbags/raw/20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel/bags/20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel_0.bag",
+        "bag_sha256": "8fa558024e8d29a943c8177ffc1747580d4e4ce89417a139b0db9646c776e261",
+        "topics": {
+          "/Ego_topic": {
+            "type": "morai_msgs/EgoVehicleStatus",
+            "count": 906
+          },
+          "/cam_extra/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 181
+          },
+          "/cam_left/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 362
+          },
+          "/cam_right/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 362
+          },
+          "/gps": {
+            "type": "morai_msgs/GPSMessage",
+            "count": 91
+          },
+          "/gps/fix": {
+            "type": "sensor_msgs/NavSatFix",
+            "count": 91
+          },
+          "/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 362
+          },
+          "/imu": {
+            "type": "sensor_msgs/Imu",
+            "count": 886
+          },
+          "/morai_sensor_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 3
+          },
+          "/morai_udp_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 4
+          },
+          "/tf_static": {
+            "type": "tf2_msgs/TFMessage",
+            "count": 1
+          },
+          "/velodyne_points": {
+            "type": "sensor_msgs/PointCloud2",
+            "count": 152
+          }
+        },
+        "signals": 1974,
+        "continuous_frames": 36
+      },
+      {
+        "run_id": "20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel",
+        "bag": "rosbags/raw/20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel/bags/20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel_0.bag",
+        "bag_sha256": "8a1d91cdcc5c15cf2dba493acd938209f073e9eb2ff268914e9f3e1d0cc3d5d4",
+        "topics": {
+          "/Ego_topic": {
+            "type": "morai_msgs/EgoVehicleStatus",
+            "count": 939
+          },
+          "/cam_extra/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 188
+          },
+          "/cam_left/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 375
+          },
+          "/cam_right/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 375
+          },
+          "/gps": {
+            "type": "morai_msgs/GPSMessage",
+            "count": 94
+          },
+          "/gps/fix": {
+            "type": "sensor_msgs/NavSatFix",
+            "count": 94
+          },
+          "/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 375
+          },
+          "/imu": {
+            "type": "sensor_msgs/Imu",
+            "count": 919
+          },
+          "/morai_sensor_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 4
+          },
+          "/morai_udp_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 4
+          },
+          "/tf_static": {
+            "type": "tf2_msgs/TFMessage",
+            "count": 1
+          },
+          "/velodyne_points": {
+            "type": "sensor_msgs/PointCloud2",
+            "count": 155
+          }
+        },
+        "signals": 2046,
+        "continuous_frames": 36
+      }
+    ],
+    "fixture_sha256": "4b5cf3062216972a027682325ecc856150b77e184541d2f74fb142a364ced164",
+    "representatives_sha256": "a83df03048b4b3765f5f6a09d28b30125a0a7c188e6f063926b2c4f510a646c6",
+    "signals_sha256": "d12b9ffde6c0b2f1c8182b7c468d34bd09f92fc45b547de389ad41a3c95bd873",
+    "continuous_sha256": "0aa48e0ce65333cfb6457b2aa5d08d25e0c608e1a61cb6acf50476e21e325560",
+    "note": "Header/source clocks preserved; Ego pose is development-only. No sensor timing ground truth."
+  },
+  "clock_policy_sha256": "021333ff74dffe7cffa572295e27f54f22ad0359b97cb62d5a0a2fb69cae8486",
+  "grid_manifest_sha256": "c74386af84d639f79085dca8c01dee57c8a0295c27ad684443a4c48bd587d851",
+  "configs": {
+    "cameras_v3.yaml": "54637d8bbbe5af9b0255824644e4118c86de4b3c683661ddc827913ed1817538",
+    "bev/lane_fitting.yaml": "9f0a137c78515a9eb75a8ac3f72eb7d2c9694557d49810d382290304d2facad6"
+  },
+  "roll_pitch_deg": {
+    "roll": {
+      "count": 216,
+      "min": -0.9175730399406433,
+      "max": 2.3793184318915057,
+      "p50": -0.19577989240127647,
+      "p95": 2.356943773271344,
+      "p99": 2.3697274551346625
+    },
+    "pitch": {
+      "count": 216,
+      "min": -0.4913723955942612,
+      "max": 0.7874088355654041,
+      "p50": 0.1981502149593025,
+      "p95": 0.47805837105634974,
+      "p99": 0.6237028121981683
+    }
+  },
+  "validity": {
+    "M0": {
+      "available": 216,
+      "valid": 216
+    },
+    "M1_receive": {
+      "available": 216,
+      "valid": 216
+    },
+    "M1_minus40ms": {
+      "available": 216,
+      "valid": 216
+    },
+    "M1_plus40ms": {
+      "available": 216,
+      "valid": 216
+    },
+    "F_width0": {
+      "available": 216,
+      "valid": 216
+    },
+    "F_smooth0": {
+      "available": 216,
+      "valid": 216
+    }
+  },
+  "same_input_fit_ms": {
+    "M0": {
+      "count": 216,
+      "min": 32.04060299322009,
+      "max": 97.72173900273629,
+      "p50": 55.817232496337965,
+      "p95": 77.38782749220263,
+      "p99": 90.48584553893306
+    },
+    "M1_receive": {
+      "count": 216,
+      "min": 26.97539600194432,
+      "max": 93.5406159987906,
+      "p50": 54.76438350160606,
+      "p95": 75.59663948995876,
+      "p99": 86.70013950977591
+    },
+    "M1_minus40ms": {
+      "count": 216,
+      "min": 33.32785099337343,
+      "max": 115.74028700124472,
+      "p50": 54.89397800556617,
+      "p95": 82.96221225100453,
+      "p99": 91.9480284988822
+    },
+    "M1_plus40ms": {
+      "count": 216,
+      "min": 31.53482699417509,
+      "max": 134.79399199422915,
+      "p50": 54.39597050281009,
+      "p95": 80.68640874625999,
+      "p99": 98.79789724509462
+    },
+    "F_width0": {
+      "count": 216,
+      "min": 34.21101899584755,
+      "max": 115.31279700284358,
+      "p50": 56.393108003248926,
+      "p95": 76.99907350615831,
+      "p99": 92.91730314871528
+    },
+    "F_smooth0": {
+      "count": 216,
+      "min": 34.31048399943393,
+      "max": 156.45628300262615,
+      "p50": 56.02303049818147,
+      "p95": 95.52523925594869,
+      "p99": 134.19215215108122
+    }
+  },
+  "stage_pixel_distances": {
+    "M0": {
+      "raw/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "raw/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "raw/left/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "raw/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/left/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "raw/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      }
+    },
+    "M1_receive": {
+      "raw/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "raw/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "raw/left/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "raw/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/left/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "raw/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "nodes/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      }
+    }
+  },
+  "family_pixel_distances": {
+    "M0": {
+      "observed/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 5.793799877166748,
+        "p50": 1.0,
+        "p95": 4.0,
+        "p99": 5.1660472393035874
+      },
+      "observed/left/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 2.0,
+        "p50": 1.0,
+        "p95": 1.399999976158142,
+        "p99": 2.0
+      },
+      "observed/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 7.796899795532227,
+        "p50": 1.399999976158142,
+        "p95": 4.996899604797363,
+        "p99": 6.306434726715085
+      },
+      "observed/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 3.59689998626709,
+        "p50": 0.0,
+        "p95": 1.699999988079071,
+        "p99": 2.0
+      },
+      "observed/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 7.096899747848511,
+        "p50": 0.0,
+        "p95": 5.546899795532227,
+        "p99": 6.7355821132659885
+      },
+      "inferred/left/1": {
+        "count": 149,
+        "min": 0.0,
+        "max": 13.393799781799316,
+        "p50": 4.995349884033203,
+        "p95": 7.6347296714782695,
+        "p99": 9.949023895263673
+      },
+      "inferred/front/2": {
+        "count": 168,
+        "min": 3.995349884033203,
+        "max": 136.59695434570312,
+        "p50": 61.987613677978516,
+        "p95": 117.12294502258301,
+        "p99": 132.65391540527347
+      },
+      "inferred/left/2": {
+        "count": 166,
+        "min": 3.59689998626709,
+        "max": 20.378296852111816,
+        "p50": 14.990697860717773,
+        "p95": 18.95407271385193,
+        "p99": 20.05232706069946
+      },
+      "inferred/front/1": {
+        "count": 177,
+        "min": 10.090699195861816,
+        "max": 50.95969009399414,
+        "p50": 23.0,
+        "p95": 36.07131881713867,
+        "p99": 49.413769531250004
+      },
+      "inferred/right/1": {
+        "count": 189,
+        "min": 0.0,
+        "max": 91.79695129394531,
+        "p50": 15.0,
+        "p95": 65.61458129882811,
+        "p99": 81.38457870483404
+      }
+    },
+    "M1_receive": {
+      "observed/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 11.58759880065918,
+        "p50": 1.0,
+        "p95": 9.82422423362732,
+        "p99": 11.10953388214111
+      },
+      "observed/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 1.5,
+        "p50": 0.0,
+        "p95": 1.0499999970197678,
+        "p99": 1.399999976158142
+      },
+      "observed/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 4.996899604797363,
+        "p50": 0.0,
+        "p95": 2.196899890899658,
+        "p99": 3.59689998626709
+      },
+      "observed/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 3.396899938583374,
+        "p50": 0.0,
+        "p95": 2.799999952316284,
+        "p99": 3.0836824536323544
+      },
+      "inferred/front/1": {
+        "count": 181,
+        "min": 1.0,
+        "max": 51.162790298461914,
+        "p50": 21.889147758483887,
+        "p95": 38.0,
+        "p99": 50.466202926635745
+      },
+      "inferred/left/1": {
+        "count": 115,
+        "min": 2.196899890899658,
+        "max": 13.295349597930908,
+        "p50": 3.098449945449829,
+        "p95": 9.543799781799315,
+        "p99": 10.654465465545654
+      },
+      "inferred/front/2": {
+        "count": 160,
+        "min": 13.999998092651367,
+        "max": 95.93179321289062,
+        "p50": 44.196903228759766,
+        "p95": 82.20526952743529,
+        "p99": 91.87328132629393
+      },
+      "inferred/left/2": {
+        "count": 160,
+        "min": 12.287598609924316,
+        "max": 25.968996047973633,
+        "p50": 18.181398391723633,
+        "p95": 23.491901588439937,
+        "p99": 24.53848264694214
+      },
+      "inferred/right/1": {
+        "count": 199,
+        "min": 0.0,
+        "max": 85.59384155273438,
+        "p50": 16.196897506713867,
+        "p95": 66.71992950439451,
+        "p99": 84.04399353027345
+      },
+      "observed/left/1": {
+        "count": 144,
+        "min": 1.0,
+        "max": 1.0,
+        "p50": 1.0,
+        "p95": 1.0,
+        "p99": 1.0
+      }
+    },
+    "M1_minus40ms": {
+      "observed/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 11.19999885559082,
+        "p50": 1.0,
+        "p95": 9.896899223327637,
+        "p99": 10.761629009246825
+      },
+      "observed/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 2.0,
+        "p50": 0.0,
+        "p95": 1.199999988079071,
+        "p99": 1.6699999898672093
+      },
+      "observed/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 4.996899604797363,
+        "p50": 0.0,
+        "p95": 2.196899890899658,
+        "p99": 3.59689998626709
+      },
+      "observed/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 4.0,
+        "p50": 0.0,
+        "p95": 2.799999952316284,
+        "p99": 3.59689998626709
+      },
+      "inferred/front/1": {
+        "count": 182,
+        "min": 1.0,
+        "max": 50.36589431762695,
+        "p50": 23.484498023986816,
+        "p95": 39.56589126586914,
+        "p99": 49.87537414550781
+      },
+      "inferred/left/1": {
+        "count": 113,
+        "min": 2.196899890899658,
+        "max": 13.795349597930908,
+        "p50": 3.098449945449829,
+        "p95": 9.278759956359858,
+        "p99": 11.173271484374999
+      },
+      "inferred/front/2": {
+        "count": 160,
+        "min": 13.999998092651367,
+        "max": 93.73489379882812,
+        "p50": 47.492252349853516,
+        "p95": 77.8556174278259,
+        "p99": 91.36431884765624
+      },
+      "inferred/left/2": {
+        "count": 160,
+        "min": 13.181398391723633,
+        "max": 25.565895080566406,
+        "p50": 18.32829761505127,
+        "p95": 23.789459562301634,
+        "p99": 24.620482959747314
+      },
+      "inferred/right/1": {
+        "count": 201,
+        "min": 0.0,
+        "max": 87.96281433105469,
+        "p50": 15.78759765625,
+        "p95": 71.9596939086914,
+        "p99": 84.07522201538086
+      },
+      "observed/left/1": {
+        "count": 145,
+        "min": 0.5,
+        "max": 3.0,
+        "p50": 1.0,
+        "p95": 1.0,
+        "p99": 1.2239999866485605
+      }
+    },
+    "M1_plus40ms": {
+      "observed/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 11.996898651123047,
+        "p50": 1.0,
+        "p95": 9.595349311828613,
+        "p99": 11.10953388214111
+      },
+      "observed/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 1.699999988079071,
+        "p50": 0.0,
+        "p95": 1.0,
+        "p99": 1.199999988079071
+      },
+      "observed/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 5.696899890899658,
+        "p50": 0.0,
+        "p95": 2.22228741645813,
+        "p99": 3.582132256031036
+      },
+      "observed/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 4.196899890899658,
+        "p50": 0.0,
+        "p95": 2.498449921607971,
+        "p99": 3.59689998626709
+      },
+      "inferred/front/1": {
+        "count": 184,
+        "min": 0.0,
+        "max": 54.55658721923828,
+        "p50": 18.0,
+        "p95": 38.983104324340815,
+        "p99": 50.46634305953979
+      },
+      "inferred/left/1": {
+        "count": 113,
+        "min": 1.399999976158142,
+        "max": 13.295349597930908,
+        "p50": 3.0,
+        "p95": 9.399999999999991,
+        "p99": 10.696899833679199
+      },
+      "inferred/front/2": {
+        "count": 160,
+        "min": 13.999998092651367,
+        "max": 94.76902770996094,
+        "p50": 45.392250061035156,
+        "p95": 80.66414127349852,
+        "p99": 89.78473731994627
+      },
+      "inferred/left/2": {
+        "count": 160,
+        "min": 13.181398391723633,
+        "max": 25.76744556427002,
+        "p50": 18.189148902893066,
+        "p95": 23.968996047973633,
+        "p99": 24.615910158157348
+      },
+      "inferred/right/1": {
+        "count": 200,
+        "min": 0.0,
+        "max": 85.76591491699219,
+        "p50": 16.143022537231445,
+        "p95": 66.61630325317383,
+        "p99": 85.18862525939942
+      },
+      "observed/left/1": {
+        "count": 144,
+        "min": 1.0,
+        "max": 1.399999976158142,
+        "p50": 1.0,
+        "p95": 1.0,
+        "p99": 1.0
+      }
+    },
+    "F_width0": {
+      "observed/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 4.296899795532227,
+        "p50": 0.0,
+        "p95": 1.6988374590873718,
+        "p99": 2.7095349431037867
+      },
+      "observed/left/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 1.699999988079071,
+        "p50": 0.0,
+        "p95": 1.0,
+        "p99": 1.3399999797344184
+      },
+      "observed/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 5.599999904632568,
+        "p50": 0.0,
+        "p95": 3.746899962425232,
+        "p99": 5.334264755249021
+      },
+      "observed/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 2.399999976158142,
+        "p50": 0.0,
+        "p95": 1.699999988079071,
+        "p99": 2.1673649072647083
+      },
+      "observed/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 5.196899890899658,
+        "p50": 0.0,
+        "p95": 3.4226749539375305,
+        "p99": 4.282364797592162
+      },
+      "inferred/left/1": {
+        "count": 103,
+        "min": 2.196899890899658,
+        "max": 13.6968994140625,
+        "p50": 5.393799781799316,
+        "p95": 9.715814638137811,
+        "p99": 10.686899414062502
+      },
+      "inferred/front/2": {
+        "count": 143,
+        "min": 3.59689998626709,
+        "max": 136.59695434570312,
+        "p50": 69.97830963134766,
+        "p95": 121.19698333740234,
+        "p99": 133.46227264404297
+      },
+      "inferred/left/2": {
+        "count": 141,
+        "min": 4.196899890899658,
+        "max": 20.772096633911133,
+        "p50": 16.379847526550293,
+        "p95": 19.9844970703125,
+        "p99": 20.645118331909178
+      },
+      "inferred/front/1": {
+        "count": 165,
+        "min": 0.0,
+        "max": 52.165889739990234,
+        "p50": 27.68759822845459,
+        "p95": 41.27255554199216,
+        "p99": 48.052775497436514
+      },
+      "inferred/right/1": {
+        "count": 183,
+        "min": 6.590699672698975,
+        "max": 102.0728759765625,
+        "p50": 14.393798828125,
+        "p95": 89.02016372680666,
+        "p99": 101.28400756835939
+      }
+    },
+    "F_smooth0": {
+      "observed/front/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 14.990697860717773,
+        "p50": 1.0,
+        "p95": 4.248449802398682,
+        "p99": 8.407714343070973
+      },
+      "observed/left/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 2.0,
+        "p50": 1.0,
+        "p95": 2.0,
+        "p99": 2.0
+      },
+      "observed/front/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 7.590699672698975,
+        "p50": 1.399999976158142,
+        "p95": 5.046512126922607,
+        "p99": 6.396899700164795
+      },
+      "observed/left/2": {
+        "count": 216,
+        "min": 0.0,
+        "max": 2.098449945449829,
+        "p50": 0.0,
+        "p95": 1.7246124744415283,
+        "p99": 2.0
+      },
+      "observed/right/1": {
+        "count": 216,
+        "min": 0.0,
+        "max": 7.0,
+        "p50": 0.0,
+        "p95": 5.072287142276764,
+        "p99": 5.95453494787216
+      },
+      "inferred/left/1": {
+        "count": 160,
+        "min": 0.0,
+        "max": 13.295350074768066,
+        "p50": 3.8976749181747437,
+        "p95": 7.196899890899658,
+        "p99": 9.803799781799313
+      },
+      "inferred/front/2": {
+        "count": 174,
+        "min": 4.295349836349487,
+        "max": 134.9814453125,
+        "p50": 56.091485023498535,
+        "p95": 112.86145286560057,
+        "p99": 128.68662849426278
+      },
+      "inferred/left/2": {
+        "count": 171,
+        "min": 3.995349884033203,
+        "max": 22.3782958984375,
+        "p50": 14.78604793548584,
+        "p95": 19.378297328948975,
+        "p99": 20.818296432495128
+      },
+      "inferred/front/1": {
+        "count": 183,
+        "min": 3.196899890899658,
+        "max": 56.05193901062012,
+        "p50": 21.0,
+        "p95": 36.95937919616699,
+        "p99": 47.8169018554688
+      },
+      "inferred/right/1": {
+        "count": 193,
+        "min": 0.0,
+        "max": 84.79694366455078,
+        "p50": 15.184497833251953,
+        "p95": 66.54947738647458,
+        "p99": 82.57832336425781
+      }
+    }
+  },
+  "by_phase": {
+    "entry": {
+      "family_pixel_distances": {
+        "M0": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 1.0,
+            "max": 1.0,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.699999988079071,
+            "p50": 0.0,
+            "p95": 1.399999976158142,
+            "p99": 1.4869999796152134
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "inferred/left/1": {
+            "count": 64,
+            "min": 4.0,
+            "max": 7.393799781799316,
+            "p50": 5.647674918174744,
+            "p95": 6.583682453632354,
+            "p99": 7.145705919265746
+          },
+          "inferred/front/2": {
+            "count": 49,
+            "min": 91.19384765625,
+            "max": 136.59695434570312,
+            "p50": 111.59076690673828,
+            "p95": 129.79511718749998,
+            "p99": 135.54244995117188
+          },
+          "inferred/left/2": {
+            "count": 50,
+            "min": 8.787599563598633,
+            "max": 16.88604736328125,
+            "p50": 14.796123504638672,
+            "p95": 16.703022384643553,
+            "p99": 16.88604736328125
+          },
+          "inferred/front/1": {
+            "count": 51,
+            "min": 18.0,
+            "max": 36.0,
+            "p50": 26.0,
+            "p95": 34.29534721374512,
+            "p99": 35.99534606933594
+          },
+          "inferred/right/1": {
+            "count": 51,
+            "min": 11.996898651123047,
+            "max": 18.17829704284668,
+            "p50": 15.184497833251953,
+            "p95": 17.381397247314453,
+            "p99": 18.17829704284668
+          }
+        },
+        "M1_receive": {
+          "observed/front/2": {
+            "count": 72,
+            "min": 2.196899890899658,
+            "max": 11.58759880065918,
+            "p50": 8.146899700164795,
+            "p95": 10.596899032592773,
+            "p99": 11.312402839660647
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.5,
+            "p50": 0.5,
+            "p95": 1.399999976158142,
+            "p99": 1.4289999830722815
+          },
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 4.996899604797363,
+            "p50": 1.0,
+            "p95": 3.433604967594148,
+            "p99": 4.215899841785438
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.199999988079071,
+            "p50": 0.0,
+            "p95": 1.0,
+            "p99": 1.0579999965429319
+          },
+          "inferred/front/1": {
+            "count": 72,
+            "min": 8.1968994140625,
+            "max": 19.287596702575684,
+            "p50": 13.999998092651367,
+            "p95": 17.065115451812744,
+            "p99": 18.087200002670297
+          },
+          "inferred/left/1": {
+            "count": 72,
+            "min": 2.196899890899658,
+            "max": 4.196899890899658,
+            "p50": 3.0,
+            "p95": 3.8891474962234502,
+            "p99": 4.196899890899658
+          },
+          "inferred/front/2": {
+            "count": 72,
+            "min": 13.999998092651367,
+            "max": 19.578296661376953,
+            "p50": 16.546897411346436,
+            "p95": 18.975196838378906,
+            "p99": 19.165502719879154
+          },
+          "inferred/left/2": {
+            "count": 72,
+            "min": 17.378297805786133,
+            "max": 25.968996047973633,
+            "p50": 18.975196838378906,
+            "p95": 24.11601037979126,
+            "p99": 25.116995506286628
+          },
+          "inferred/right/1": {
+            "count": 72,
+            "min": 19.673646926879883,
+            "max": 30.864343643188477,
+            "p50": 23.390695571899414,
+            "p95": 28.63960914611817,
+            "p99": 30.512645225524906
+          }
+        },
+        "M1_minus40ms": {
+          "observed/front/2": {
+            "count": 72,
+            "min": 2.0,
+            "max": 11.19999885559082,
+            "p50": 7.893799781799316,
+            "p95": 10.596899032592773,
+            "p99": 10.909395961761478
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 0.5,
+            "p95": 1.5,
+            "p99": 2.0
+          },
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 4.996899604797363,
+            "p50": 1.0,
+            "p95": 3.596899855136871,
+            "p99": 4.928100868463517
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.399999976158142,
+            "p50": 0.0,
+            "p95": 1.0,
+            "p99": 1.1159999930858637
+          },
+          "inferred/front/1": {
+            "count": 72,
+            "min": 8.393799781799316,
+            "max": 19.190696716308594,
+            "p50": 13.999998092651367,
+            "p95": 16.808564853668216,
+            "p99": 18.27319944381715
+          },
+          "inferred/left/1": {
+            "count": 72,
+            "min": 2.196899890899658,
+            "max": 4.498449802398682,
+            "p50": 3.0,
+            "p95": 3.688449966907502,
+            "p99": 4.144550442695621
+          },
+          "inferred/front/2": {
+            "count": 72,
+            "min": 13.999998092651367,
+            "max": 19.287596702575684,
+            "p50": 16.584497451782227,
+            "p95": 18.587596893310547,
+            "p99": 19.065792798995975
+          },
+          "inferred/left/2": {
+            "count": 72,
+            "min": 17.378297805786133,
+            "max": 25.565895080566406,
+            "p50": 18.976747512817383,
+            "p95": 24.165895462036133,
+            "p99": 25.142096767425542
+          },
+          "inferred/right/1": {
+            "count": 72,
+            "min": 19.37364673614502,
+            "max": 30.864343643188477,
+            "p50": 23.175195693969727,
+            "p95": 28.76069664955139,
+            "p99": 30.787841186523437
+          },
+          "observed/left/1": {
+            "count": 1,
+            "min": 3.0,
+            "max": 3.0,
+            "p50": 3.0,
+            "p95": 3.0,
+            "p99": 3.0
+          }
+        },
+        "M1_plus40ms": {
+          "observed/front/2": {
+            "count": 72,
+            "min": 2.196899890899658,
+            "max": 11.996898651123047,
+            "p50": 7.398449778556824,
+            "p95": 10.377751588821413,
+            "p99": 11.431099796295172
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.699999988079071,
+            "p50": 0.5999999940395355,
+            "p95": 1.199999988079071,
+            "p99": 1.5579999965429319
+          },
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 5.696899890899658,
+            "p50": 0.8499999940395355,
+            "p95": 3.3325973510742197,
+            "p99": 4.205899958610548
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.399999976158142,
+            "p50": 0.0,
+            "p95": 1.0,
+            "p99": 1.1159999930858637
+          },
+          "inferred/front/1": {
+            "count": 72,
+            "min": 8.590700149536133,
+            "max": 17.9844970703125,
+            "p50": 13.999998092651367,
+            "p95": 17.59689712524414,
+            "p99": 17.915698080062867
+          },
+          "inferred/left/1": {
+            "count": 72,
+            "min": 2.899999976158142,
+            "max": 4.098449945449829,
+            "p50": 3.0,
+            "p95": 3.5443024754524233,
+            "p99": 3.8854499793052693
+          },
+          "inferred/front/2": {
+            "count": 72,
+            "min": 13.999998092651367,
+            "max": 19.578296661376953,
+            "p50": 16.799997329711914,
+            "p95": 18.679689359664916,
+            "p99": 19.150095787048343
+          },
+          "inferred/left/2": {
+            "count": 72,
+            "min": 17.575197219848633,
+            "max": 25.76744556427002,
+            "p50": 19.027522087097168,
+            "p95": 24.25729055404663,
+            "p99": 25.20054640769959
+          },
+          "inferred/right/1": {
+            "count": 72,
+            "min": 19.578296661376953,
+            "max": 30.864343643188477,
+            "p50": 23.387595653533936,
+            "p95": 28.683214139938357,
+            "p99": 30.795544652938844
+          }
+        },
+        "F_width0": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.0,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "inferred/left/1": {
+            "count": 60,
+            "min": 3.196899890899658,
+            "max": 6.5,
+            "p50": 5.0,
+            "p95": 6.393799781799316,
+            "p99": 6.5
+          },
+          "inferred/front/2": {
+            "count": 49,
+            "min": 83.39694213867188,
+            "max": 136.59695434570312,
+            "p50": 110.9985237121582,
+            "p95": 131.1563568115234,
+            "p99": 135.25296020507812
+          },
+          "inferred/left/2": {
+            "count": 49,
+            "min": 10.0,
+            "max": 17.48139762878418,
+            "p50": 14.387598037719727,
+            "p95": 16.42945747375488,
+            "p99": 17.14614158630371
+          },
+          "inferred/front/1": {
+            "count": 52,
+            "min": 12.5,
+            "max": 33.98759460449219,
+            "p50": 26.0,
+            "p95": 31.89999999999999,
+            "p99": 33.48392135620117
+          },
+          "inferred/right/1": {
+            "count": 52,
+            "min": 12.190698623657227,
+            "max": 18.17829704284668,
+            "p50": 14.78527307510376,
+            "p95": 17.381397247314453,
+            "p99": 18.17829704284668
+          }
+        },
+        "F_smooth0": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 1.0,
+            "max": 1.0,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.399999976158142,
+            "p50": 1.0,
+            "p95": 1.399999976158142,
+            "p99": 1.399999976158142
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "inferred/left/1": {
+            "count": 65,
+            "min": 4.0,
+            "max": 7.5,
+            "p50": 5.896899938583374,
+            "p95": 7.0,
+            "p99": 7.306015930175781
+          },
+          "inferred/front/2": {
+            "count": 45,
+            "min": 83.18142700195312,
+            "max": 134.9814453125,
+            "p50": 106.67990112304688,
+            "p95": 126.18085327148437,
+            "p99": 134.71607971191406
+          },
+          "inferred/left/2": {
+            "count": 47,
+            "min": 8.787599563598633,
+            "max": 17.79069709777832,
+            "p50": 14.59224796295166,
+            "p95": 17.44503717422485,
+            "p99": 17.701549110412596
+          },
+          "inferred/front/1": {
+            "count": 53,
+            "min": 17.9844970703125,
+            "max": 36.59379196166992,
+            "p50": 27.19534683227539,
+            "p95": 34.638135528564455,
+            "p99": 35.86579315185546
+          },
+          "inferred/right/1": {
+            "count": 53,
+            "min": 10.984498977661133,
+            "max": 18.575197219848633,
+            "p50": 14.5906982421875,
+            "p95": 17.73891716003418,
+            "p99": 18.26803314208984
+          }
+        }
+      }
+    },
+    "interior": {
+      "family_pixel_distances": {
+        "M0": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 4.393799781799316,
+            "p50": 1.0,
+            "p95": 3.59689998626709,
+            "p99": 4.114201936721805
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 1.0,
+            "p95": 2.0,
+            "p99": 2.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 4.996899604797363,
+            "p50": 2.799999952316284,
+            "p95": 4.198294854164123,
+            "p99": 4.568698730468753
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 3.59689998626709,
+            "p50": 0.8499999940395355,
+            "p95": 2.0,
+            "p99": 2.463100996017466
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 7.096899747848511,
+            "p50": 1.699999988079071,
+            "p95": 6.185349810123444,
+            "p99": 6.882799141407014
+          },
+          "inferred/front/2": {
+            "count": 56,
+            "min": 4.098449945449829,
+            "max": 73.9845199584961,
+            "p50": 53.436829566955566,
+            "p95": 68.21494436264038,
+            "p99": 71.23622465133668
+          },
+          "inferred/left/2": {
+            "count": 56,
+            "min": 3.59689998626709,
+            "max": 19.575197219848633,
+            "p50": 15.47984790802002,
+            "p95": 18.628297567367554,
+            "p99": 19.19616532325745
+          },
+          "inferred/front/1": {
+            "count": 70,
+            "min": 10.689149856567383,
+            "max": 37.0,
+            "p50": 14.181398391723633,
+            "p95": 30.362794876098633,
+            "p99": 36.55604991912842
+          },
+          "inferred/right/1": {
+            "count": 70,
+            "min": 2.399999976158142,
+            "max": 34.9844970703125,
+            "p50": 16.04147434234619,
+            "p95": 31.091242504119872,
+            "p99": 33.876218261718755
+          },
+          "inferred/left/1": {
+            "count": 50,
+            "min": 0.0,
+            "max": 13.393799781799316,
+            "p50": 4.046124875545502,
+            "p95": 8.943799781799314,
+            "p99": 11.67879978179931
+          }
+        },
+        "M1_receive": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 1.0,
+            "p95": 1.5,
+            "p99": 1.8568994528055203
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 1.0,
+            "max": 1.0,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.0,
+            "p50": 0.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 3.0,
+            "p50": 1.399999976158142,
+            "p95": 2.799999952316284,
+            "p99": 2.9289999830722815
+          },
+          "inferred/front/2": {
+            "count": 45,
+            "min": 31.187602043151855,
+            "max": 82.4814281463623,
+            "p50": 61.793819427490234,
+            "p95": 77.41987113952636,
+            "p99": 81.78015800476075
+          },
+          "inferred/left/2": {
+            "count": 45,
+            "min": 12.287598609924316,
+            "max": 21.968996047973633,
+            "p50": 16.78759765625,
+            "p95": 18.45860767364502,
+            "p99": 20.92254501342774
+          },
+          "inferred/front/1": {
+            "count": 56,
+            "min": 1.0,
+            "max": 42.27209663391113,
+            "p50": 26.83682346343994,
+            "p95": 36.49302291870117,
+            "p99": 40.472443485260015
+          },
+          "inferred/right/1": {
+            "count": 59,
+            "min": 0.0,
+            "max": 71.47521018981934,
+            "p50": 14.193798065185547,
+            "p95": 16.690077400207503,
+            "p99": 67.58380565643311
+          },
+          "inferred/left/1": {
+            "count": 39,
+            "min": 2.196899890899658,
+            "max": 13.295349597930908,
+            "p50": 6.0,
+            "p95": 10.424109745025635,
+            "p99": 12.307938528060907
+          }
+        },
+        "M1_minus40ms": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.196899890899658,
+            "p50": 1.0,
+            "p95": 1.6884499400854116,
+            "p99": 2.0571009683609023
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 1.0,
+            "max": 1.399999976158142,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.1159999930858637
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.0,
+            "p50": 0.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 4.0,
+            "p50": 1.399999976158142,
+            "p95": 3.432752490043641,
+            "p99": 3.7137989902496362
+          },
+          "inferred/front/2": {
+            "count": 45,
+            "min": 39.88915252685547,
+            "max": 82.19073486328125,
+            "p50": 63.48451042175293,
+            "p95": 78.73583831787109,
+            "p99": 82.01063957214356
+          },
+          "inferred/left/2": {
+            "count": 45,
+            "min": 13.181398391723633,
+            "max": 21.772096633911133,
+            "p50": 16.681397438049316,
+            "p95": 19.508837890624996,
+            "p99": 21.508096466064455
+          },
+          "inferred/front/1": {
+            "count": 58,
+            "min": 1.0,
+            "max": 41.67364692687988,
+            "p50": 27.43759775161743,
+            "p95": 36.53488368988037,
+            "p99": 40.70552820205688
+          },
+          "inferred/right/1": {
+            "count": 61,
+            "min": 0.0,
+            "max": 69.67675971984863,
+            "p50": 14.193798065185547,
+            "p95": 18.781396865844727,
+            "p99": 65.89024047851562
+          },
+          "inferred/left/1": {
+            "count": 37,
+            "min": 2.799999952316284,
+            "max": 13.795349597930908,
+            "p50": 6.0,
+            "p95": 11.039379882812499,
+            "p99": 12.859907531738283
+          }
+        },
+        "M1_plus40ms": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.399999976158142,
+            "p50": 0.25,
+            "p95": 1.399999976158142,
+            "p99": 1.399999976158142
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 1.0,
+            "max": 1.399999976158142,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.1159999930858637
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.0,
+            "p50": 0.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.799999952316284,
+            "p50": 1.2999999821186066,
+            "p95": 2.634147435426713,
+            "p99": 2.799999952316284
+          },
+          "inferred/front/2": {
+            "count": 45,
+            "min": 39.393795013427734,
+            "max": 80.58608055114746,
+            "p50": 60.18916130065918,
+            "p95": 74.07290000915528,
+            "p99": 77.86149002075197
+          },
+          "inferred/left/2": {
+            "count": 45,
+            "min": 13.181398391723633,
+            "max": 19.5906982421875,
+            "p50": 16.681397438049316,
+            "p95": 18.364498138427734,
+            "p99": 19.5906982421875
+          },
+          "inferred/front/1": {
+            "count": 58,
+            "min": 0.0,
+            "max": 41.8736457824707,
+            "p50": 26.834497451782227,
+            "p95": 39.159848022460935,
+            "p99": 41.135294609069824
+          },
+          "inferred/right/1": {
+            "count": 60,
+            "min": 0.0,
+            "max": 73.57521057128906,
+            "p50": 14.440698146820068,
+            "p95": 18.379072761535646,
+            "p99": 68.7335437774658
+          },
+          "inferred/left/1": {
+            "count": 37,
+            "min": 1.399999976158142,
+            "max": 13.295349597930908,
+            "p50": 6.196899890899658,
+            "p95": 10.454419708251951,
+            "p99": 12.359907531738283
+          }
+        },
+        "F_width0": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.799999952316284,
+            "p50": 0.5999999940395355,
+            "p95": 2.196899890899658,
+            "p99": 2.3717989087104834
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.699999988079071,
+            "p50": 0.0,
+            "p95": 1.0,
+            "p99": 1.4869999796152134
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 3.59689998626709,
+            "p50": 1.0,
+            "p95": 3.286899912357331,
+            "p99": 3.59689998626709
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 0.0,
+            "p95": 1.534999981522561,
+            "p99": 2.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 4.498449802398682,
+            "p50": 2.098449945449829,
+            "p95": 4.0886049509048465,
+            "p99": 4.3553492975234995
+          },
+          "inferred/front/2": {
+            "count": 49,
+            "min": 4.393799781799316,
+            "max": 78.76590728759766,
+            "p50": 59.48916053771973,
+            "p95": 74.06421165466308,
+            "p99": 77.32888549804686
+          },
+          "inferred/left/2": {
+            "count": 49,
+            "min": 4.196899890899658,
+            "max": 20.772096633911133,
+            "p50": 17.181398391723633,
+            "p95": 20.378297805786133,
+            "p99": 20.58307319641113
+          },
+          "inferred/front/1": {
+            "count": 60,
+            "min": 0.0,
+            "max": 43.3782958984375,
+            "p50": 25.643799304962158,
+            "p95": 36.30465259552001,
+            "p99": 42.84912479400634
+          },
+          "inferred/right/1": {
+            "count": 63,
+            "min": 9.592249631881714,
+            "max": 101.1790771484375,
+            "p50": 14.796897888183594,
+            "p95": 19.999534797668456,
+            "p99": 100.25868896484376
+          },
+          "inferred/left/1": {
+            "count": 40,
+            "min": 2.196899890899658,
+            "max": 13.6968994140625,
+            "p50": 6.196899890899658,
+            "p95": 10.221899414062499,
+            "p99": 12.526899414062498
+          }
+        },
+        "F_smooth0": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 8.893799781799316,
+            "p50": 1.399999976158142,
+            "p95": 4.0886049509048465,
+            "p99": 6.056000893116022
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 1.0,
+            "p95": 2.0,
+            "p99": 2.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 5.393799781799316,
+            "p50": 2.0492249727249146,
+            "p95": 4.285504841804505,
+            "p99": 5.1120006561279325
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 0.0,
+            "p95": 2.0,
+            "p99": 2.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 7.0,
+            "p50": 1.2999999821186066,
+            "p95": 5.643604791164399,
+            "p99": 6.290000000000006
+          },
+          "inferred/front/2": {
+            "count": 64,
+            "min": 4.393799781799316,
+            "max": 74.5876235961914,
+            "p50": 42.88838291168213,
+            "p95": 70.9002571105957,
+            "p99": 72.82362167358397
+          },
+          "inferred/left/2": {
+            "count": 64,
+            "min": 3.995349884033203,
+            "max": 18.386048316955566,
+            "p50": 15.184497833251953,
+            "p95": 17.686047554016113,
+            "p99": 18.06616549491882
+          },
+          "inferred/front/1": {
+            "count": 72,
+            "min": 5.793799877166748,
+            "max": 32.156593322753906,
+            "p50": 13.884498596191406,
+            "p95": 26.727093505859376,
+            "p99": 28.629707107543975
+          },
+          "inferred/right/1": {
+            "count": 72,
+            "min": 4.69534969329834,
+            "max": 33.08294677734375,
+            "p50": 17.842249393463135,
+            "p95": 27.848646497726445,
+            "p99": 32.72244323730469
+          },
+          "inferred/left/1": {
+            "count": 50,
+            "min": 0.0,
+            "max": 13.295350074768066,
+            "p50": 3.098449945449829,
+            "p95": 8.277209901809687,
+            "p99": 11.873590431213373
+          }
+        }
+      }
+    },
+    "exit": {
+      "family_pixel_distances": {
+        "M0": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 5.793799877166748,
+            "p50": 1.0999999940395355,
+            "p95": 4.998294913768769,
+            "p99": 5.509799809455874
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 1.0,
+            "p95": 1.399999976158142,
+            "p99": 2.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 7.796899795532227,
+            "p50": 3.59689998626709,
+            "p95": 5.793799877166748,
+            "p99": 6.871698718070992
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 0.0,
+            "p95": 1.4249999880790725,
+            "p99": 2.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 7.0,
+            "p50": 0.5,
+            "p95": 5.223604929447175,
+            "p99": 6.569597845077518
+          },
+          "inferred/front/2": {
+            "count": 63,
+            "min": 3.995349884033203,
+            "max": 80.6829776763916,
+            "p50": 10.39224910736084,
+            "p95": 72.65234813690185,
+            "p99": 78.94697578430177
+          },
+          "inferred/left/2": {
+            "count": 60,
+            "min": 5.0,
+            "max": 20.378296852111816,
+            "p50": 15.333723068237305,
+            "p95": 19.60007982254028,
+            "p99": 20.260296964645384
+          },
+          "inferred/front/1": {
+            "count": 56,
+            "min": 10.090699195861816,
+            "max": 50.95969009399414,
+            "p50": 25.33139657974243,
+            "p95": 46.069766998291016,
+            "p99": 50.198217964172365
+          },
+          "inferred/right/1": {
+            "count": 68,
+            "min": 0.0,
+            "max": 91.79695129394531,
+            "p50": 14.0906982421875,
+            "p95": 79.36638050079345,
+            "p99": 91.76056880950928
+          },
+          "inferred/left/1": {
+            "count": 35,
+            "min": 0.0,
+            "max": 10.0,
+            "p50": 2.0,
+            "p95": 6.88317968845367,
+            "p99": 9.2504188632965
+          }
+        },
+        "M1_receive": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.196899890899658,
+            "p50": 0.0,
+            "p95": 0.45000000000000284,
+            "p99": 1.8441009598970444
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 1.0,
+            "max": 1.0,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 1.0,
+            "p95": 1.399999976158142,
+            "p99": 2.0
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.29000000000000625
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 3.396899938583374,
+            "p50": 0.0,
+            "p95": 2.9449999868869785,
+            "p99": 3.254899904727937
+          },
+          "inferred/front/2": {
+            "count": 43,
+            "min": 37.196895599365234,
+            "max": 95.93179321289062,
+            "p50": 70.0643482208252,
+            "p95": 91.2476417541504,
+            "p99": 94.5207339477539
+          },
+          "inferred/left/2": {
+            "count": 43,
+            "min": 14.181398391723633,
+            "max": 22.772096633911133,
+            "p50": 17.378297805786133,
+            "p95": 21.50550718307495,
+            "p99": 22.27591011047363
+          },
+          "inferred/front/1": {
+            "count": 53,
+            "min": 14.5,
+            "max": 51.162790298461914,
+            "p50": 29.378293991088867,
+            "p95": 49.875193405151364,
+            "p99": 50.80120994567871
+          },
+          "inferred/right/1": {
+            "count": 68,
+            "min": 0.0,
+            "max": 85.59384155273438,
+            "p50": 13.946123123168945,
+            "p95": 81.44220085144042,
+            "p99": 85.31232776641846
+          },
+          "inferred/left/1": {
+            "count": 4,
+            "min": 5.393799781799316,
+            "max": 9.893799781799316,
+            "p50": 8.397674918174744,
+            "p95": 9.699497306346894,
+            "p99": 9.85493928670883
+          }
+        },
+        "M1_minus40ms": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.399999976158142,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 1.1159999930858637
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 0.5,
+            "max": 1.0,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.196899890899658,
+            "p50": 1.0,
+            "p95": 1.66999998688698,
+            "p99": 2.0571009683609023
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 1.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.899999976158142,
+            "p50": 0.0,
+            "p95": 2.196899890899658,
+            "p99": 2.8289999592304236
+          },
+          "inferred/front/2": {
+            "count": 43,
+            "min": 47.98759841918945,
+            "max": 93.73489379882812,
+            "p50": 66.37055015563965,
+            "p95": 90.03709030151367,
+            "p99": 93.33704864501954
+          },
+          "inferred/left/2": {
+            "count": 43,
+            "min": 13.78449821472168,
+            "max": 22.772096633911133,
+            "p50": 17.878297805786133,
+            "p95": 20.858606910705568,
+            "p99": 22.269398880004882
+          },
+          "inferred/front/1": {
+            "count": 52,
+            "min": 1.0,
+            "max": 50.36589431762695,
+            "p50": 31.0,
+            "p95": 49.72523260116577,
+            "p99": 50.313312435150145
+          },
+          "inferred/right/1": {
+            "count": 68,
+            "min": 0.0,
+            "max": 87.96281433105469,
+            "p50": 14.18759822845459,
+            "p95": 83.11581344604492,
+            "p99": 86.37560256958007
+          },
+          "inferred/left/1": {
+            "count": 4,
+            "min": 5.393799781799316,
+            "max": 9.0,
+            "p50": 8.397674918174744,
+            "p95": 8.939767491817474,
+            "p99": 8.987953498363495
+          }
+        },
+        "M1_plus40ms": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.998449921607971,
+            "p50": 0.0,
+            "p95": 0.5399999946355853,
+            "p99": 2.8575504434108745
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 1.0,
+            "max": 1.0,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 1.5739999830722846
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 4.196899890899658,
+            "p50": 0.0,
+            "p95": 3.59689998626709,
+            "p99": 4.196899890899658
+          },
+          "inferred/front/2": {
+            "count": 43,
+            "min": 32.19999313354492,
+            "max": 94.76902770996094,
+            "p50": 71.16279792785645,
+            "p95": 87.10760879516602,
+            "p99": 94.27154342651367
+          },
+          "inferred/left/2": {
+            "count": 43,
+            "min": 14.581398010253906,
+            "max": 22.772096633911133,
+            "p50": 17.575197219848633,
+            "p95": 20.651087474822997,
+            "p99": 22.22804960250854
+          },
+          "inferred/front/1": {
+            "count": 54,
+            "min": 5.0,
+            "max": 54.55658721923828,
+            "p50": 28.48992347717285,
+            "p95": 50.04236621856689,
+            "p99": 52.65269630432128
+          },
+          "inferred/right/1": {
+            "count": 68,
+            "min": 0.0,
+            "max": 85.76591491699219,
+            "p50": 13.891473293304443,
+            "p95": 74.21281356811524,
+            "p99": 85.65062576293946
+          },
+          "inferred/left/1": {
+            "count": 4,
+            "min": 4.393799781799316,
+            "max": 10.696899890899658,
+            "p50": 8.397674798965454,
+            "p95": 10.382132363319396,
+            "p99": 10.633946385383606
+          }
+        },
+        "F_width0": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 4.296899795532227,
+            "p50": 0.0,
+            "p95": 1.5443024754524233,
+            "p99": 3.9430004358291657
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 1.0,
+            "p50": 0.0,
+            "p95": 1.0,
+            "p99": 1.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 5.599999904632568,
+            "p50": 2.196899890899658,
+            "p95": 4.6651947021484395,
+            "p99": 5.526798861026765
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.399999976158142,
+            "p50": 0.0,
+            "p95": 2.0,
+            "p99": 2.399999976158142
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 5.196899890899658,
+            "p50": 0.0,
+            "p95": 1.66999998688698,
+            "p99": 4.4868998908996645
+          },
+          "inferred/front/2": {
+            "count": 45,
+            "min": 3.59689998626709,
+            "max": 77.19383430480957,
+            "p50": 65.99382209777832,
+            "p95": 77.00404510498046,
+            "p99": 77.18427711486817
+          },
+          "inferred/left/2": {
+            "count": 43,
+            "min": 13.08914852142334,
+            "max": 20.681398391723633,
+            "p50": 17.876747131347656,
+            "p95": 20.407057571411134,
+            "p99": 20.643304328918457
+          },
+          "inferred/front/1": {
+            "count": 53,
+            "min": 13.386048316955566,
+            "max": 52.165889739990234,
+            "p50": 29.196897506713867,
+            "p95": 47.693333053588866,
+            "p99": 50.19553459167479
+          },
+          "inferred/right/1": {
+            "count": 68,
+            "min": 6.590699672698975,
+            "max": 102.0728759765625,
+            "p50": 14.193798065185547,
+            "p95": 89.96051025390625,
+            "p99": 101.86460510253906
+          },
+          "inferred/left/1": {
+            "count": 3,
+            "min": 8.295349597930908,
+            "max": 10.1968994140625,
+            "p50": 8.696899652481079,
+            "p95": 10.046899437904358,
+            "p99": 10.166899418830871
+          }
+        },
+        "F_smooth0": {
+          "observed/front/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 14.990697860717773,
+            "p50": 1.199999988079071,
+            "p95": 6.438799738883972,
+            "p99": 10.518799381256143
+          },
+          "observed/left/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.0,
+            "p50": 1.0,
+            "p95": 2.0,
+            "p99": 2.0
+          },
+          "observed/front/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 7.590699672698975,
+            "p50": 2.949999988079071,
+            "p95": 6.395194745063781,
+            "p99": 6.880699672698981
+          },
+          "observed/left/2": {
+            "count": 72,
+            "min": 0.0,
+            "max": 2.098449945449829,
+            "p50": 0.0,
+            "p95": 1.6441474646329883,
+            "p99": 2.028550484180451
+          },
+          "observed/right/1": {
+            "count": 72,
+            "min": 0.0,
+            "max": 7.0,
+            "p50": 0.0,
+            "p95": 4.1984498500823975,
+            "p99": 5.5777987194061405
+          },
+          "inferred/front/2": {
+            "count": 65,
+            "min": 4.295349836349487,
+            "max": 72.48762321472168,
+            "p50": 9.39069938659668,
+            "p95": 70.18948211669921,
+            "p99": 72.03962272644043
+          },
+          "inferred/left/2": {
+            "count": 60,
+            "min": 4.196899890899658,
+            "max": 22.3782958984375,
+            "p50": 14.739148139953613,
+            "p95": 20.57535219192505,
+            "p99": 21.788295898437497
+          },
+          "inferred/front/1": {
+            "count": 58,
+            "min": 3.196899890899658,
+            "max": 56.05193901062012,
+            "p50": 26.33682107925415,
+            "p95": 44.52496337890625,
+            "p99": 54.6225217628479
+          },
+          "inferred/right/1": {
+            "count": 68,
+            "min": 0.0,
+            "max": 84.79694366455078,
+            "p50": 14.387598037719727,
+            "p95": 81.14098033905029,
+            "p99": 83.31046806335449
+          },
+          "inferred/left/1": {
+            "count": 45,
+            "min": 1.0,
+            "max": 9.393799781799316,
+            "p50": 2.0,
+            "p95": 4.156899833679197,
+            "p99": 8.86716361999512
+          }
+        }
+      }
+    }
+  },
+  "matched_temporal_pairs": 198,
+  "matched_temporal_lateral_change_m": {
+    "all": {
+      "M0": {
+        "count": 198,
+        "min": 0.0019012097255295731,
+        "max": 0.2601378447648984,
+        "p50": 0.03315810215473544,
+        "p95": 0.18345241185048816,
+        "p99": 0.24647619710158822
+      },
+      "M1_receive": {
+        "count": 198,
+        "min": 0.008536410275100215,
+        "max": 0.13746771044978714,
+        "p50": 0.040755512413402153,
+        "p95": 0.10106117219279205,
+        "p99": 0.10989827251130646
+      },
+      "M1_minus40ms": {
+        "count": 198,
+        "min": 0.007688352592982062,
+        "max": 0.12743248306578306,
+        "p50": 0.04210974935316204,
+        "p95": 0.10275271054071723,
+        "p99": 0.11408884224307043
+      },
+      "M1_plus40ms": {
+        "count": 198,
+        "min": 0.009207367848734993,
+        "max": 0.12358459867011759,
+        "p50": 0.038885460301780875,
+        "p95": 0.10286325632452077,
+        "p99": 0.11556775368590662
+      }
+    },
+    "entry": {
+      "M0": {
+        "count": 66,
+        "min": 0.0019012097255295731,
+        "max": 0.027128799097996925,
+        "p50": 0.008344071885000637,
+        "p95": 0.022315352809474734,
+        "p99": 0.026496300784997852
+      },
+      "M1_receive": {
+        "count": 66,
+        "min": 0.011132617322762384,
+        "max": 0.13746771044978714,
+        "p50": 0.05203204976520407,
+        "p95": 0.10696997316868917,
+        "p99": 0.12713082948021528
+      },
+      "M1_minus40ms": {
+        "count": 66,
+        "min": 0.011427376733482085,
+        "max": 0.12743248306578306,
+        "p50": 0.054399448907822515,
+        "p95": 0.10985818143212155,
+        "p99": 0.11904554466867712
+      },
+      "M1_plus40ms": {
+        "count": 66,
+        "min": 0.009207367848734993,
+        "max": 0.12358459867011759,
+        "p50": 0.051920647494252875,
+        "p95": 0.11128407851097996,
+        "p99": 0.12080507948395755
+      }
+    },
+    "interior": {
+      "M0": {
+        "count": 66,
+        "min": 0.011609567784076324,
+        "max": 0.2601378447648984,
+        "p50": 0.06449821308578763,
+        "p95": 0.21741264360416512,
+        "p99": 0.2510447224265029
+      },
+      "M1_receive": {
+        "count": 66,
+        "min": 0.008536410275100215,
+        "max": 0.10759852658630101,
+        "p50": 0.034424354544390384,
+        "p95": 0.07071376712214897,
+        "p99": 0.1023437608827302
+      },
+      "M1_minus40ms": {
+        "count": 66,
+        "min": 0.007688352592982062,
+        "max": 0.10507564110678826,
+        "p50": 0.03469551113013531,
+        "p95": 0.08187420359173345,
+        "p99": 0.10355817206551746
+      },
+      "M1_plus40ms": {
+        "count": 66,
+        "min": 0.009398535252321417,
+        "max": 0.10257717722361544,
+        "p50": 0.033405810812149106,
+        "p95": 0.0743078940171896,
+        "p99": 0.09954559244702911
+      }
+    },
+    "exit": {
+      "M0": {
+        "count": 66,
+        "min": 0.01743282825495589,
+        "max": 0.25707413641063787,
+        "p50": 0.06550849293311023,
+        "p95": 0.20840421349919389,
+        "p99": 0.2491435149291142
+      },
+      "M1_receive": {
+        "count": 66,
+        "min": 0.0123255623860985,
+        "max": 0.09010770955323753,
+        "p50": 0.040349546239548666,
+        "p95": 0.07734334323352443,
+        "p99": 0.08663335622866382
+      },
+      "M1_minus40ms": {
+        "count": 66,
+        "min": 0.01335657032092552,
+        "max": 0.08904701603667345,
+        "p50": 0.038277394010098345,
+        "p95": 0.07888512691983682,
+        "p99": 0.08552536861991925
+      },
+      "M1_plus40ms": {
+        "count": 66,
+        "min": 0.014252320609581481,
+        "max": 0.11545206312031214,
+        "p50": 0.03778586317983859,
+        "p95": 0.09495047116219263,
+        "p99": 0.10836508917944722
+      }
+    }
+  },
+  "independent_gt": false,
+  "default_changed": false,
+  "note": "Each aggregate pixel statistic is a distribution of per-frame medians. Observed and inferred samples are separate. Temporal comparisons use identical x/roles valid for both frames and all four motion variants, aligned by development Ego poses."
+}

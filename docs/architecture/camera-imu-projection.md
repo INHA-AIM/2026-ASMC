@@ -65,3 +65,10 @@ Lifecycle trace를 켜면 프레임별 `imu_projection`의 원본 시각/자세/
 family 계산을 멈추지 않고, 준비된 두 샘플이 없으면 명시적으로 고정 평면을 사용한다.
 회귀와 실시간 대조는 [검증 기록](../records/camera/2026-10-18-source-time-imu-projection.md)에 고정한다.
 기본값 승격은 이 구현 자체의 완료와 구분한다.
+
+## 터널 운동 후속 판단
+
+[기존 bag·새 원본 시각 주행 대조](../records/camera/2026-10-18-tunnel-imu-motion-and-fit.md)에서
+IMU가 큰 가감속 기하 변화를 줄였고, nominal 폭 prior가 영상 차선 밀착도를 떨어뜨리는 기여를 확인했다.
+후속 실시간 후보는 M1+폭 prior 완화 하나다. 정속/미세 조향의 노이즈·절대 지면 가정·공급 검증은 남아 있으며
+현재 정본 enabled=false와 기존 M0 fallback은 유지한다.
