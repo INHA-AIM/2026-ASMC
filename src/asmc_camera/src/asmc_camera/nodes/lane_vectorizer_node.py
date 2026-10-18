@@ -28,7 +28,8 @@ from sensor_msgs import point_cloud2
 from sensor_msgs.msg import Image, Imu, PointCloud2, PointField
 from asmc_msgs.msg import CameraGroundProjection, CameraModelGridTiming, SensorFrameTiming
 from asmc_camera.runtime.sensor_timing import ImuTimeline, sensor_key
-from asmc_camera.bev.imu_projection import attitude_camera, correct_evidence
+from asmc_camera.bev.imu_projection import correct_evidence
+from asmc_camera.runtime.ground_projection import select_ground_projection
 from asmc_camera.bev.family_fit_policy import FamilyFitPolicy
 from std_msgs.msg import Header
 from visualization_msgs.msg import Marker, MarkerArray
@@ -849,40 +850,24 @@ class LaneVectorizerNode:
         return message
 
     def _attitude_cameras(self, frames):
-        """All views corrected or all nominal; no mixed-plane partial fallback."""
-        cameras, details = {}, {}
-        reason = 'corrected'
-        wait_deadline = time.monotonic() + float(self.imu_config.get('max_wait_ms',0.)) / 1000.
+        """Adapt model timing to the shared, model/solver-independent geometry policy."""
+        headers, raw_timings = {}, {}
         for view, frame in frames.items():
             timing = frame.timing
             if timing is None or not timing.source_timing_valid:
-                reason = 'missing_source_timing'; break
-            raw = timing.sensor_timing
-            expected = (self.projectors[view].camera.image_topic, frame.header.frame_id,
-                        frame.stamp_ns, timing.image_header.seq)
-            actual = (raw.sensor_topic, raw.sensor_frame_id, raw.published_stamp.to_nsec(), raw.sensor_wire_sequence)
-            if (not raw.sensor_wire_sequence_valid or expected != actual or
-                    timing.image_header.stamp.to_nsec() != frame.stamp_ns):
-                reason = 'source_identity_mismatch'; break
-            pose, why = self.imu_timeline.wait_attitude(raw, self.imu_config.get('imu_frame_id','imu'),
-                                                      min(10., max(0., 1000 * (wait_deadline - time.monotonic()))))
-            if pose is None:
-                reason = why; break
-            try:
-                cameras[view] = attitude_camera(self.projectors[view].camera, pose.quaternion,
-                    self.imu_config.get('imu_mount_rotation_deg',[0.,0.,0.]),
-                    float(self.imu_config.get('max_tilt_deg',8.)))
-            except ValueError:
-                reason = 'attitude_out_of_range'; break
-            details[view] = dict(source_ns=pose.source_ns, bracket_ms=pose.bracket_ms,
-                quaternion=list(pose.quaternion), plane=cameras[view].ground_plane.coefficients,
-                bridge_session_id=pose.bridge_session_id)
-        skew_ms = ((max(row['source_ns'] for row in details.values()) -
-                    min(row['source_ns'] for row in details.values())) / 1e6 if details else None)
-        if reason == 'corrected' and skew_ms > float(self.imu_config.get('max_source_skew_ms',35.)):
-            reason = 'camera_source_skew'
-        if reason != 'corrected':
-            cameras = {}
+                continue
+            # Preserve the model-grid/raw source check before handing original
+            # headers to the shared selector. Publisher seq values are unrelated.
+            header = Header(seq=timing.image_header.seq, stamp=frame.header.stamp,
+                            frame_id=frame.header.frame_id)
+            if timing.image_header.stamp.to_nsec() != frame.stamp_ns:
+                header.stamp = rospy.Time(0)
+            headers[view], raw_timings[view] = header, timing.sensor_timing
+        decision = select_ground_projection(
+            {v:self.projectors[v].camera for v in frames}, headers, raw_timings,
+            self.imu_timeline, self.imu_config)
+        cameras, details, reason, skew_ms = (dict(decision.cameras), dict(decision.details),
+                                            decision.reason, decision.source_skew_ms)
         failure_timeline = self.imu_timeline.snapshot() if reason == 'imu_not_bracketed' else None
         with self.imu_lock:
             self.imu_counts[reason] = self.imu_counts.get(reason,0) + 1

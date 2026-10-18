@@ -1,0 +1,7 @@
+# Generated identity pins for the unchanged nominal camera calibration.
+# Runtime C++ verifies the YAML file SHA before accepting these per-view IDs.
+calibration_sha256: 54637d8bbbe5af9b0255824644e4118c86de4b3c683661ddc827913ed1817538
+calibration_ids:
+  front: 909d2fc2f40bd98f99995415b8a7d4cd9c5bf6ae5240334c1f3613c4e8b549f2
+  left: 7b97a51305e92289e5bacb65be1935e8bc1ada0dedece68f6e3a964909a98bbd
+  right: b9e003fff48e5c1656b29b3b5abdcd8ab8e260eb89320fe315067ebdf2e003fe

@@ -1,34 +1,7 @@
 """Sparse attitude-only ground correction; network and static pixel gates stay fixed."""
-from dataclasses import replace
 import numpy as np
-from .calibration import GroundPlane, _rotation_x, _rotation_y, _rotation_z
 from .model_grid_projection import MetricEvidence
-from asmc_camera.runtime.sensor_timing import quaternion_rotation
-
-
-def attitude_camera(camera, quaternion, imu_mount_rotation_deg=(0., 0., 0.), max_tilt_deg=8.):
-    """Flat world normal in body, with fixed normal distance and no heave estimate.
-
-    R_WB = R_WI R_BI.T. Camera extrinsics stay fixed: mount pitch is applied once.
-    Yaw alone does not change a flat-world ground normal. No Euler subtraction.
-    """
-    if not 0 < max_tilt_deg <= 8.:
-        raise ValueError('validated tilt limit must be in (0,8] degrees')
-    mount = np.asarray(imu_mount_rotation_deg, dtype=float)
-    if mount.shape != (3,) or not np.isfinite(mount).all():
-        raise ValueError('invalid IMU mount rotation')
-    roll, pitch, yaw = np.radians(mount)
-    body_from_imu = _rotation_z(yaw) @ _rotation_y(pitch) @ _rotation_x(roll)
-    world_from_body = quaternion_rotation(quaternion) @ body_from_imu.T
-    normal = world_from_body.T @ np.array([0., 0., 1.])
-    if normal[2] < np.cos(np.deg2rad(max_tilt_deg)):
-        raise ValueError('attitude outside validated tilt range')
-    height = -float(camera.ground_plane.z_at_origin_m)
-    if height <= 0 or abs(camera.ground_plane.dz_dx) + abs(camera.ground_plane.dz_dy) > 1e-12:
-        raise ValueError('attitude candidate requires the nominal flat-plane profile')
-    plane = GroundPlane('base_link', -height/normal[2], -normal[0]/normal[2],
-                        -normal[1]/normal[2], 'imu_source_time_flat_world')
-    return replace(camera, ground_plane=plane)
+from asmc_camera.runtime.ground_projection import attitude_camera  # compatibility import
 
 
 def correct_evidence(projector, evidence, corrected_camera):
