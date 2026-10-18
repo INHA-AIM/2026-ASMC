@@ -123,6 +123,7 @@ class ImuTimeline:
         self.capacity, self.retention = capacity, retention_sec
         self.lock = threading.RLock()
         self.pending = OrderedDict()
+        self.changed = threading.Condition(self.lock)
         self.poses = OrderedDict()
         self.blocked = deque(maxlen=capacity)
         self.session = None
@@ -194,6 +195,32 @@ class ImuTimeline:
         self.poses.move_to_end(ns)
         self.counters['joined'] += 1
         self._prune()
+        self.changed.notify_all()
+
+    def wait_attitude(self, camera_timing, imu_frame_id='imu', max_wait_ms=0.):
+        """Bounded wait for a future bracket; never waits on invalid/old inputs.
+
+        Condition.wait releases the timeline lock so both wire callbacks can
+        join the arriving sample. Existing source/freshness checks run again.
+        The deadline uses real monotonic wall time even in clock-fixture tests.
+        """
+        if not 0 <= float(max_wait_ms) <= 10.:
+            raise ValueError('IMU wait must be within0–10ms')
+        deadline = time.monotonic() + float(max_wait_ms) / 1000.
+        waited = False
+        with self.changed:
+            while True:
+                pose, reason = self.attitude(camera_timing, imu_frame_id)
+                failure = self.last_bracket_failure or {}
+                target, latest = failure.get('target_ns'), failure.get('last_ns')
+                remaining = deadline - time.monotonic()
+                if (pose is not None or reason != 'imu_not_bracketed' or remaining <= 0 or
+                        latest is None or target <= latest):
+                    if waited: self.counters['wait_recovered' if pose is not None else 'wait_unresolved'] += 1
+                    return pose, reason
+                if not waited: self.counters['wait_requested'] += 1
+                waited = True
+                self.changed.wait(remaining)
 
     def attitude(self, camera_timing, imu_frame_id='imu'):
         with self.lock:

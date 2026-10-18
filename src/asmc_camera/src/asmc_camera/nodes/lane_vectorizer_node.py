@@ -172,6 +172,8 @@ class LaneVectorizerNode:
                 raise ValueError('IMU receipt freshness must not exceed350ms')
             if not 0 < float(self.imu_config.get('max_source_skew_ms',35.)) <= 35.:
                 raise ValueError('camera source skew must not exceed35ms')
+            if not 0 <= float(self.imu_config.get('max_wait_ms',0.)) <= 10.:
+                raise ValueError('IMU wait must not exceed10ms')
             self.imu_timeline = ImuTimeline(**{key:self.imu_config[key] for key in
                 ('capacity','max_bracket_ms','retention_sec') if key in self.imu_config},
                 max_age_sec=float(self.imu_config.get('max_receipt_age_sec',.35)))
@@ -820,6 +822,7 @@ class LaneVectorizerNode:
         """All views corrected or all nominal; no mixed-plane partial fallback."""
         cameras, details = {}, {}
         reason = 'corrected'
+        wait_deadline = time.monotonic() + float(self.imu_config.get('max_wait_ms',0.)) / 1000.
         for view, frame in frames.items():
             timing = frame.timing
             if timing is None or not timing.source_timing_valid:
@@ -831,7 +834,8 @@ class LaneVectorizerNode:
             if (not raw.sensor_wire_sequence_valid or expected != actual or
                     timing.image_header.stamp.to_nsec() != frame.stamp_ns):
                 reason = 'source_identity_mismatch'; break
-            pose, why = self.imu_timeline.attitude(raw, self.imu_config.get('imu_frame_id','imu'))
+            pose, why = self.imu_timeline.wait_attitude(raw, self.imu_config.get('imu_frame_id','imu'),
+                                                      min(10., max(0., 1000 * (wait_deadline - time.monotonic()))))
             if pose is None:
                 reason = why; break
             try:

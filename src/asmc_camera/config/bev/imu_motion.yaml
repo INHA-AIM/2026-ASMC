@@ -11,6 +11,9 @@ imu_frame_id: imu
 imu_mount_rotation_deg: [0.0, 0.0, 0.0]
 max_tilt_deg: 8.0
 max_bracket_ms: 100.0
+# Only await the next real IMU sample when camera source is ahead of the tail.
+# This is not extrapolation or a freshness extension; budget covers all3 views.
+max_wait_ms: 10.0
 max_receipt_age_sec: 0.35
 retention_sec: 2.0
 capacity: 256
