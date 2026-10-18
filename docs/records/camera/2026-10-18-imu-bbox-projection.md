@@ -88,5 +88,39 @@ ROS 시험은 각각 독립 master이며 제어 시험은 기존 시험 토픽�
   [판제 체크리스트](../../handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)에 남긴다.
   이번 구현·시험은 실제 차량 제어 승인과 별개다.
 
-이 작업은 실행 중인 배포본의 노드를 재시작하지 않았다. 새 checkout을 빌드·source한 뒤 classifier를
-재시작해야 소비 변경이 적용된다. 카메라 공용화는 계산 결과를 바꾸지 않으며 다음 계획된 배포 때 반영할 수 있다.
+구현 검증 시점에는 실행 중인 배포본을 유지했다. 이후 사용자 요청에 따른 재빌드·재시작은 아래에 기록한다.
+
+## 후속 배포·재시작 확인
+
+사용자 승인으로 두 코드 커밋 `71e3d3ce`, `856337dd`를 GitHub의
+`feat/camera-imu-adapter`에 push했다. 현재 운영 workspace인
+`/data/runtime/camera-twinlite-large-v7-e8-r1`에 카메라·메시지·BBox 어댑터 변경56개 파일을
+반영하고 Release로 재빌드했다. 각 파일 SHA와 정본 보정의 manifest 일치를 확인했다.
+기존 worktree·컨테이너 마운트·모델·브릿지는 유지했다.
+
+카메라 roslaunch 한 개를 정상 종료한 뒤 같은 기본 설정으로 재시작했다. YOLO·TwinLite·ResNet은
+모두 새 producer session이며 ACTIVE·loaded·pipeline_ready, 오류0을 확인했다.
+공용 함수의 실제 import는 `asmc_camera.runtime.ground_projection`이고 metadata MD5도 유지된다.
+
+재시작 후12.01초의 읽기 전용 확인 결과는 다음과 같다.
+
+| 결과 | 수신 수 | 평균 공급 | 최대 수신 공백 |
+|---|---:|---:|---:|
+| 전방 YOLO | 180 | 14.98Hz | 138.7ms |
+| 좌측 YOLO | 180 | 14.98Hz | 141.4ms |
+| 우측 YOLO | 180 | 14.98Hz | 141.4ms |
+| 유효 family | 179 | 14.90Hz | 168.0ms |
+| 공유 투영 context | 180 | 14.98Hz | 141.5ms |
+
+Context180개 모두 M1이었다. 이는 재시작 직후의 짧은 동작 확인이며 장기/폐루프 수락을
+다시 수행한 결과가 아니다. 실제 배포 workspace의 공용 선택4건·기존 IMU 연결4건 및
+독립 master의 BBox 투영 ROS3건도 통과했다.
+
+기존에 켜져 있던 카메라·family만 재시작했다. 시각화·BBox 제어·판제 노드는 새로 시작하지 않았다.
+시각화는 기존 `view.launch`와 별도 rqt 명령으로 열 수 있다. BBox 소비는 새로 빌드된 패키지를
+source하고 실행할 때 반영된다. Planner launch 변경은 Git 브랜치에 있으며 판제 실행 전
+해당 checkout 반영·빌드는 별도다. 결과/상태별 단일 생산자와 시험 노드 종료를 확인했다.
+
+변경 전 소스·상태·환경, 배포 파일 SHA, 빌드·ROS 시험 로그와 재시작 확인은
+`/data/runtime/camera-imu-adapter-20261018-r1/`의 `before.json`, `source-before.tar`,
+`provenance.json`, `build.log`, `running.json`, `after.json`, `graph-final.json`에 보존했다.
