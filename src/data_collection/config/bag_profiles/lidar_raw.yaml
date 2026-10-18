@@ -14,12 +14,15 @@ required_topics:
   - /imu
   - /Ego_topic
 optional_topics:
+  # Keep raw source/receive clocks alongside unchanged sensor headers.
+  - /morai_sensor_bridge/frame_timing
   - /ctrl_cmd
   - /tf
   - /tf_static
   - /morai_sensor_bridge/diagnostics
   - /morai_udp_bridge/diagnostics
 expected_types:
+  /morai_sensor_bridge/frame_timing: asmc_msgs/SensorFrameTiming
   /velodyne_points: sensor_msgs/PointCloud2
   /gps: morai_msgs/GPSMessage
   /imu: sensor_msgs/Imu

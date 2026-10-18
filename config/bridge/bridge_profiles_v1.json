@@ -88,7 +88,9 @@
       },
       "sensor_node": {
         "path": "src/asmc_bridge/scripts/morai_sensor_bridge.py",
-        "sha256": "3beb773c08d969db64537b2ebfd9105fa0b71bfe87c0a95876f0ed28898920fd"
+        "sha256": "7ddfc8726692ac13041ff400a492f2753fa1a00a828202168ab1dacbe136ddd3",
+        "previous_sha256": "3beb773c08d969db64537b2ebfd9105fa0b71bfe87c0a95876f0ed28898920fd",
+        "revision_reason": "20261018_additive_sensor_frame_timing_kernel_receipt_and_bounded_imu_burst_queue"
       },
       "docker_entrypoint": {
         "path": "scripts/docker_ros_up.sh",
@@ -120,11 +122,17 @@
       },
       "telemetry_module": {
         "path": "src/asmc_bridge/src/asmc_bridge/telemetry.py",
-        "sha256": "e148d13086ceaa63291c045039a43ec0e97ff8ac008102294fc50df80093c527"
+        "sha256": "822653f81f989d6d4c0a533738aa2eca471494cc2a06b5abd0649c58f147643d",
+        "previous_sha256": "e148d13086ceaa63291c045039a43ec0e97ff8ac008102294fc50df80093c527",
+        "revision_reason": "20261018_additive_sensor_frame_timing_kernel_receipt_and_bounded_imu_burst_queue"
       },
       "python_setup": {
         "path": "src/asmc_bridge/setup.py",
         "sha256": "748f3d6857fb828c2c19cff0c1ff5e064e7af155304efa38b11567dafc63654e"
+      },
+      "frame_timing_module": {
+        "path": "src/asmc_bridge/src/asmc_bridge/frame_timing.py",
+        "sha256": "9d18ffc9c25c26d9c12f957402d80e844d4629116b227198a1d04852febc5937"
       }
     },
     "subscribed_topics": {
@@ -146,7 +154,8 @@
       "/imu": "sensor_msgs/Imu",
       "/vehicle/state": "asmc_msgs/VehicleState",
       "/morai_udp_bridge/diagnostics": "diagnostic_msgs/DiagnosticArray",
-      "/morai_sensor_bridge/diagnostics": "diagnostic_msgs/DiagnosticArray"
+      "/morai_sensor_bridge/diagnostics": "diagnostic_msgs/DiagnosticArray",
+      "/morai_sensor_bridge/frame_timing": "asmc_msgs/SensorFrameTiming"
     },
     "optional_development_topics": {
       "/Object_topic": "morai_msgs/ObjectStatusList",

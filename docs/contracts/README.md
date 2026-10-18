@@ -14,6 +14,7 @@
 | HD Map 실행/조회/RViz | [HD Map runtime v1](hd-map-runtime-v1.md) | competition_map launch·runtime pins |
 | checkpoint·mission metadata | [K-City metadata v1](competition-kcity2025-metadata-v1.md) | 현재 metadata YAML·출처/authority |
 | MORAI wire 호환 | [beta_drive 정책](simulator-morai-msgs-beta-policy.md) | 고정 submodule·bridge decoder |
+| 센서 원본/수신/발행 시각 | [timing 기록·활용](../architecture/bridge-sensor-timing.md) | `sensor_frame_timing_v1.yaml`, `asmc_msgs/SensorFrameTiming` |
 
 기계 계약은 저장소 `config/contracts/`에 있습니다. source 설정과 wire 의미가 충돌하면
 producer/consumer owner와 영향·호환·검증을 확인합니다. 기존 필드/상수는 동결하며 확장은 additive/versioned로 합니다.

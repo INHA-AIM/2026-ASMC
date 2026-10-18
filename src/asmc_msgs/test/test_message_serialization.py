@@ -8,6 +8,7 @@ import asmc_msgs.msg as generated_messages
 
 
 EXPECTED_MD5 = {
+    "SensorFrameTiming": "07dce68802e02b5b3f4cd89724a7cad7",
     "InferenceStatus": "8b2caf96bbf9a9eaea848fcb9551b79f",
     "CameraObjectObservation": "fbddb8fe0071685b60811037c0302106",
     "HdMapMeta": "adb0d98c5dbd41055ebb929fcdf3af19",
@@ -33,6 +34,22 @@ EXPECTED_MD5 = {
 
 
 class GeneratedSerializationTest(unittest.TestCase):
+    def test_sensor_frame_timing_keeps_raw_and_selected_clocks_separate(self):
+        from asmc_msgs.msg import SensorFrameTiming
+        import genpy
+        original = SensorFrameTiming(bridge_session_id='session', stream_id='cam1', frame_sequence=3,
+            published_stamp=genpy.Time(100, 20), sensor_wire_sequence=17, sensor_wire_sequence_valid=True,
+            source_sec=99, source_nsec=123, source_valid=True, source_duplicate=True,
+            rx_first_unix_ns=100000000001, rx_last_unix_ns=100000000010,
+            rx_first_monotonic_ns=50, rx_last_monotonic_ns=60, packet_count=2,
+            header_timestamp_policy='receive')
+        buffer = io.BytesIO(); original.serialize(buffer)
+        restored = SensorFrameTiming(); restored.deserialize(buffer.getvalue())
+        self.assertEqual(original, restored)
+        self.assertEqual(restored.source_sec, 99)
+        self.assertEqual(restored.published_stamp.secs, 100)
+        self.assertEqual(restored.sensor_wire_sequence, 17)
+
     def test_default_instances_round_trip_and_match_frozen_md5(self):
         for name, expected_md5 in EXPECTED_MD5.items():
             with self.subTest(message=name):

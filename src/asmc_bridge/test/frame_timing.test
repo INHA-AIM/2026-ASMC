@@ -1,0 +1,12 @@
+<launch>
+  <!-- Isolated rostest master and non-operational UDP ports. No control output. -->
+  <node pkg="asmc_bridge" type="morai_sensor_bridge.py" name="morai_sensor_bridge" output="screen">
+    <param name="enable_gps" value="false"/>
+    <param name="enable_lidar" value="false"/>
+    <param name="enable_imu" value="true"/>
+    <param name="imu_port" value="19303"/>
+    <param name="timestamp_mode" value="receive"/>
+    <rosparam param="cameras">[{name: cam1, port: 19291, topic: /timing_fixture/image, frame: camera_fixture}]</rosparam>
+  </node>
+  <test test-name="frame_timing_wire" pkg="asmc_bridge" type="check_frame_timing_ros.py" time-limit="25"/>
+</launch>

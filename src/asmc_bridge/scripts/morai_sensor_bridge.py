@@ -20,6 +20,7 @@ import socket
 import struct
 import threading
 import time
+import uuid
 
 import numpy as np
 import rospy
@@ -29,6 +30,8 @@ from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import (CompressedImage, Image, Imu, NavSatFix,
                              NavSatStatus, PointCloud2, PointField)
 from morai_msgs.msg import GPSMessage
+from asmc_msgs.msg import SensorFrameTiming
+from asmc_bridge.frame_timing import SourceClockTracker, publish_sensor, receipt_fields
 from asmc_bridge.telemetry import BridgeTelemetry, publish_report, start_reporting
 
 VERTICAL_ANGLES = {
@@ -97,6 +100,8 @@ class VelodyneFrameAssembler(object):
         self.minimum_packets = max(12, self.packets_per_frame // 4)
         self.chunks = []
         self.device_times = []
+        self.receipts = []
+        self.completed_receipts = ()
         self.started_ns = None
         self.previous_azimuth = None
         self.synchronized = mode == "packet_count"
@@ -105,12 +110,14 @@ class VelodyneFrameAssembler(object):
 
     def _take(self):
         completed = (self.chunks, self.device_times, self.started_ns)
+        self.completed_receipts = tuple(self.receipts)
         self.chunks = []
         self.device_times = []
+        self.receipts = []
         self.started_ns = None
         return completed
 
-    def push(self, packet, device_time, arrival_ns):
+    def push(self, packet, device_time, arrival_ns, receipt=None):
         azimuth = velodyne_packet_azimuth(packet)
         completed = None
         wrapped = (
@@ -125,6 +132,7 @@ class VelodyneFrameAssembler(object):
                 self.discarded_revolutions += 1
                 self.chunks = []
                 self.device_times = []
+                self.receipts = []
                 self.started_ns = None
             # The packet after this boundary starts a complete revolution.
             self.synchronized = True
@@ -133,7 +141,15 @@ class VelodyneFrameAssembler(object):
             self.started_ns = arrival_ns
         self.chunks.append(packet)
         self.device_times.append(device_time)
+        self.receipts.append(receipt)
         self.previous_azimuth = azimuth
+        if len(self.chunks) > max(4096, self.packets_per_frame * 4):
+            # No-wrap/malformed streams must not grow payload or timing memory.
+            self._take()
+            self.completed_receipts = ()
+            self.synchronized = self.mode == 'packet_count'
+            self.discarded_revolutions += 1
+            return None
 
         if (self.mode == "packet_count"
                 and len(self.chunks) >= self.packets_per_frame):
@@ -149,6 +165,7 @@ class VelodyneFrameAssembler(object):
                 self.discarded_revolutions += 1
             self.chunks = []
             self.device_times = []
+            self.receipts = []
             self.started_ns = None
         if self.mode == "azimuth":
             # A timeout loses the physical revolution boundary. Resynchronize
@@ -223,6 +240,13 @@ class SensorBridge(object):
         # verify-gt then promotes them to required inputs for that run.
         self.optional_streams = set()
         self._last_source_ns = {}
+        self._header_fallback_reason = {}
+        self._timing_trackers = {}
+        self._timing_sequences = {}
+        self.bridge_session_id = str(uuid.uuid4())
+        self.use_sim_time = bool(p('/use_sim_time', False))
+        self.pub_timing = rospy.Publisher(
+            '/morai_sensor_bridge/frame_timing', SensorFrameTiming, queue_size=128)
         self.pub_diagnostics = rospy.Publisher(
             "/morai_sensor_bridge/diagnostics", DiagnosticArray, queue_size=1
         )
@@ -315,7 +339,11 @@ class SensorBridge(object):
             self._spawn("gps", int(p("~gps_port", 9301)), self._gps)
 
         if p("~enable_imu", True):
-            self.pub_imu = rospy.Publisher("/imu", Imu, queue_size=1)
+            # Pose samples arrive in short bursts, including repeated raw stamps.
+            # A video-style queue of one dropped distinct source poses in live
+            # timing joins. Keep a small bounded burst buffer; consumers still
+            # choose their own latest/bracketed policy. No header-clock change.
+            self.pub_imu = rospy.Publisher("/imu", Imu, queue_size=16)
             self._spawn("imu", int(p("~imu_port", 9303)), self._imu)
 
     def _start_camera(self, cam):
@@ -412,10 +440,16 @@ class SensorBridge(object):
         active_stamp = None
         expected_index = 0
         assembly_started_ns = None
+        receipts = []
         while not rospy.is_shutdown():
             try:
-                blk, _ = self.telemetry.receive(name, sock, 65000)
+                blk, _, receipt = self.telemetry.receive_timed(name, sock, 65000)
             except socket.timeout:
+                if active_stamp is not None:
+                    self.telemetry.increment(name, 'assembly_timeouts')
+                    self.telemetry.increment(name, 'incomplete_frames')
+                    buf, receipts, active_stamp = bytearray(), [], None
+                    expected_index, assembly_started_ns = 0, None
                 continue
             if blk is None:
                 continue
@@ -427,19 +461,31 @@ class SensorBridge(object):
 
             stamp_key = (sec, nsec)
             if index == 0:
+                if active_stamp is not None:
+                    self.telemetry.increment(name, 'incomplete_frames')
                 buf = bytearray()
                 active_stamp = stamp_key
                 expected_index = 0
                 assembly_started_ns = time.perf_counter_ns()
+                receipts = []
             if active_stamp != stamp_key or index != expected_index:
                 self.telemetry.increment(name, 'parse_errors')
+                if active_stamp is not None:
+                    self.telemetry.increment(name, 'incomplete_frames')
                 buf = bytearray()
                 active_stamp = None
                 expected_index = 0
                 assembly_started_ns = None
+                receipts = []
                 continue
             buf.extend(payload)
+            receipts.append(receipt)
             expected_index += 1
+            if len(buf) > 16 * 1024 * 1024 or expected_index > 4096:
+                self.telemetry.increment(name, 'parse_errors')
+                buf, receipts, active_stamp = bytearray(), [], None
+                expected_index, assembly_started_ns = 0, None
+                continue
             if not is_final:
                 continue
 
@@ -450,7 +496,9 @@ class SensorBridge(object):
             m.header.frame_id = frame_id
             m.format = "jpeg"
             m.data = bytes(buf)
-            pub_c.publish(m)
+            wire_sequence = publish_sensor(pub_c, m)
+            self._publish_timing(name, pub_c, m, receipts, wire_sequence,
+                                 sec=sec, nsec=nsec, reference='camera_frame')
 
             if pub_r is not None:
                 try:
@@ -473,6 +521,7 @@ class SensorBridge(object):
             buf = bytearray()
             active_stamp = None
             expected_index = 0
+            receipts = []
             completed_ns = time.perf_counter_ns()
             self._record_processing(name, processing_started_ns, completed_ns)
             if assembly_started_ns is not None:
@@ -493,7 +542,7 @@ class SensorBridge(object):
 
         while not rospy.is_shutdown():
             try:
-                pkt, _ = self.telemetry.receive(name, sock, 2048)
+                pkt, _, receipt = self.telemetry.receive_timed(name, sock, 2048)
             except socket.timeout:
                 self.telemetry.increment(name, 'assembly_timeouts')
                 previous_discarded = assembler.discarded_revolutions
@@ -503,7 +552,8 @@ class SensorBridge(object):
                     chunks, device_times, assembly_started_ns = completed
                     self._lidar_publish(
                         chunks, device_times, name, publisher,
-                        ch, cos_v, sin_v, value_field, assembly_started_ns
+                        ch, cos_v, sin_v, value_field, assembly_started_ns,
+                        assembler.completed_receipts, assembly_timeout=True
                     )
                 continue
 
@@ -536,7 +586,7 @@ class SensorBridge(object):
             previous_boundaries = assembler.boundaries
             previous_discarded = assembler.discarded_revolutions
             completed = assembler.push(
-                chunk, device_time, time.perf_counter_ns()
+                chunk, device_time, time.perf_counter_ns(), receipt
             )
             if assembler.boundaries != previous_boundaries:
                 self.telemetry.rotation(name, device_time)
@@ -545,12 +595,13 @@ class SensorBridge(object):
                 chunks, device_times, assembly_started_ns = completed
                 self._lidar_publish(
                     chunks, device_times, name, publisher,
-                    ch, cos_v, sin_v, value_field, assembly_started_ns
+                    ch, cos_v, sin_v, value_field, assembly_started_ns,
+                    assembler.completed_receipts
                 )
 
     def _lidar_publish(self, chunks, device_times, name, publisher,
                        ch, cos_v, sin_v, value_field,
-                       assembly_started_ns=None):
+                       assembly_started_ns=None, receipts=(), assembly_timeout=False):
         processing_started_ns = time.perf_counter_ns()
         try:
             b = np.frombuffer(b"".join(chunks), dtype=np.uint8).reshape([-1, 100])
@@ -587,12 +638,14 @@ class SensorBridge(object):
         device_us = next((value for value in reversed(device_times)
                           if value is not None), None)
         stamp = self._stamp_from_velodyne(device_us, name)
-        publisher.publish(
-            self._make_cloud(
+        cloud = self._make_cloud(
                 x[valid], y[valid], z[valid], raw_value[valid],
                 stamp, value_field
             )
-        )
+        wire_sequence = publish_sensor(publisher, cloud)
+        self._publish_timing(name, publisher, cloud, receipts, wire_sequence,
+                             device_times=device_times, reference='lidar_sweep',
+                             assembly_timeout=assembly_timeout)
         completed_ns = time.perf_counter_ns()
         self._record_processing(name, processing_started_ns, completed_ns)
         self.telemetry.sample(name, 'packets_per_frame', len(chunks))
@@ -638,6 +691,8 @@ class SensorBridge(object):
         return m
 
     def _fallback_stamp(self, name, regression=False):
+        if hasattr(self, '_header_fallback_reason'):
+            self._header_fallback_reason[name] = 'source_regression' if regression else 'invalid_source'
         self.telemetry.increment(name, 'timestamp_fallbacks')
         if regression:
             self.telemetry.increment(name, 'timestamp_regressions')
@@ -659,6 +714,8 @@ class SensorBridge(object):
         return stamp
 
     def _stamp_from_sec_nsec(self, sec, nsec, name):
+        if hasattr(self, '_header_fallback_reason'):
+            self._header_fallback_reason[name] = ''
         if self.timestamp_mode == "receive":
             return rospy.Time.now()
         if int(sec) <= 0 or not 0 <= int(nsec) < 1000000000:
@@ -672,6 +729,8 @@ class SensorBridge(object):
 
     def _stamp_from_velodyne(self, device_us, name):
         """Resolve Velodyne microseconds-since-hour to the nearest ROS hour."""
+        if hasattr(self, '_header_fallback_reason'):
+            self._header_fallback_reason[name] = ''
         if self.timestamp_mode == "receive":
             return rospy.Time.now()
         if device_us is None or not 0 <= int(device_us) < 3600 * 1000000:
@@ -749,7 +808,7 @@ class SensorBridge(object):
     def _imu(self, sock, name):
         while not rospy.is_shutdown():
             try:
-                raw, _ = self.telemetry.receive(name, sock, 65535)
+                raw, _, receipt = self.telemetry.receive_timed(name, sock, 65535)
             except socket.timeout:
                 continue
             if raw is None:
@@ -771,7 +830,9 @@ class SensorBridge(object):
                 = d[4], d[5], d[6]
             m.linear_acceleration.x, m.linear_acceleration.y, \
                 m.linear_acceleration.z = d[7], d[8], d[9]
-            self.pub_imu.publish(m)
+            wire_sequence = publish_sensor(self.pub_imu, m)
+            self._publish_timing(name, self.pub_imu, m, [receipt], wire_sequence,
+                                 sec=sec, nsec=nsec, signature=d, reference='imu_sample')
             # map TF uses the latest IMU orientation. GPS and IMU arrive on
             # independent UDP streams, so no timestamp interpolation is
             # implied here.
@@ -779,6 +840,55 @@ class SensorBridge(object):
                                 m.orientation.z, m.orientation.w)
             self._record_processing(name, processing_started_ns)
             self._mark_message(name)
+
+    def _publish_timing(self, name, publisher, sensor, receipts, wire_sequence,
+                        sec=0, nsec=0, signature=None, device_times=None,
+                        reference='', assembly_timeout=False):
+        """One bounded sidecar per completed sensor frame; no payload copying.
+
+        Metadata failures cannot kill a receiver. Missing sidecars leave sequence
+        gaps, while diagnostic timing_errors distinguishes local failure.
+        """
+        self._timing_sequences[name] = self._timing_sequences.get(name, 0) + 1
+        try:
+            tracker = self._timing_trackers.get(name)
+            if tracker is None:
+                tracker = self._timing_trackers[name] = SourceClockTracker()
+            flags = (tracker.device(device_times) if device_times is not None
+                     else tracker.sec_nsec(sec, nsec, signature))
+            for flag, counter in (('source_duplicate', 'source_duplicates'),
+                                  ('source_conflict', 'source_conflicts'),
+                                  ('source_regression', 'source_regressions'),
+                                  ('device_hour_rollover', 'device_hour_rollovers')):
+                if flags[flag]:
+                    self.telemetry.increment(name, counter)
+            if not flags['source_valid']:
+                self.telemetry.increment(name, 'source_invalid')
+            msg = SensorFrameTiming(**receipt_fields(receipts), **flags)
+            msg.bridge_session_id = self.bridge_session_id
+            msg.stream_id = name
+            msg.frame_sequence = self._timing_sequences[name]
+            msg.sensor_topic = publisher.resolved_name
+            msg.sensor_frame_id = sensor.header.frame_id
+            msg.published_stamp = sensor.header.stamp
+            msg.sensor_wire_sequence, msg.sensor_wire_sequence_valid = wire_sequence
+            msg.source_clock_domain = 'velodyne_device_hour' if device_times is not None else 'morai_sensor'
+            msg.source_reference = reference
+            msg.source_sec, msg.source_nsec = sec, nsec
+            if device_times:
+                msg.source_device_first_us = device_times[0] if device_times[0] is not None else 0
+                msg.source_device_last_us = device_times[-1] if device_times[-1] is not None else 0
+            msg.assembly_timeout = assembly_timeout
+            msg.publish_ros_time = rospy.Time.now()
+            msg.publish_monotonic_ns = time.monotonic_ns()
+            msg.use_sim_time = self.use_sim_time
+            msg.header_timestamp_policy = self.timestamp_mode
+            msg.header_fallback_reason = self._header_fallback_reason.get(name, '')
+            self.pub_timing.publish(msg)
+            self.telemetry.increment(name, 'timing_messages')
+        except Exception as error:
+            self.telemetry.increment(name, 'timing_errors')
+            rospy.logwarn_throttle(5., '%s timing metadata failed: %s', name, error)
 
     def _record_processing(self, name, started_ns, completed_ns=None):
         if completed_ns is None:

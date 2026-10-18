@@ -7,6 +7,8 @@ import struct
 import threading
 import time
 
+from .frame_timing import PacketReceipt
+
 
 def latency_summary(samples):
     """Summarize an immutable snapshot, never a live receiver-owned deque."""
@@ -26,7 +28,10 @@ class BridgeTelemetry:
                 'timestamp_fallbacks', 'timestamp_regressions', 'socket_drops',
                 'rotation_boundaries', 'discarded_revolutions', 'assembly_timeouts',
                 'device_regressions', 'ignored_packets', 'send_errors',
-                'unsupported_packets')
+                'unsupported_packets', 'ancillary_truncations',
+                'rx_timestamp_fallbacks', 'source_invalid', 'source_duplicates',
+                'source_conflicts', 'source_regressions', 'device_hour_rollovers',
+                'timing_errors', 'timing_messages', 'incomplete_frames')
     WINDOWS = ('processing', 'assembly', 'gap', 'packets_per_frame',
                'points_per_frame', 'wall_rotation', 'device_rotation')
 
@@ -46,6 +51,7 @@ class BridgeTelemetry:
             row.update(optional=optional, transmit=transmit, stale_after=stale_after,
                        last_received=None, receiver='transmit' if transmit else 'starting', receiver_error='',
                        socket_drop_supported=False, socket_rcvbuf=0,
+                       socket_timestamp_option=0,
                        unsupported_protocol='', last_unsupported=None,
                        previous_wrap_wall=None, previous_wrap_device=None)
             self.streams[name] = row
@@ -96,29 +102,62 @@ class BridgeTelemetry:
             supported = hasattr(sock, 'recvmsg')
         except OSError:
             pass
+        timestamp_option = 0
+        if hasattr(sock, 'recvmsg'):
+            # Linux NEW uses two signed 64-bit fields, including on 32-bit.
+            # OLD is a native long timespec. Python 3.8 need not expose constants.
+            for option in (64, 35):
+                try:
+                    sock.setsockopt(socket.SOL_SOCKET, option, 1)
+                    timestamp_option = option
+                    break
+                except OSError:
+                    continue
         with self.lock:
             self.streams[name].update(socket_drop_supported=supported,
+                socket_timestamp_option=timestamp_option,
                 socket_rcvbuf=sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF))
 
     def receive(self, name, sock, size):
+        data, address, _ = self.receive_timed(name, sock, size)
+        return data, address
+
+    def receive_timed(self, name, sock, size):
+        """Receive once; preserve kernel and monotonic receipt without a new socket."""
+        kernel_ns, drops, flags = None, None, 0
         if hasattr(sock, 'recvmsg'):
-            data, control, flags, address = sock.recvmsg(size, socket.CMSG_SPACE(4))
-            drops = None
+            data, control, flags, address = sock.recvmsg(
+                size, socket.CMSG_SPACE(16) + socket.CMSG_SPACE(4))
+            monotonic_ns, unix_ns = time.monotonic_ns(), time.time_ns()
             for level, kind, value in control:
                 if level == socket.SOL_SOCKET and kind == 40 and len(value) >= 4:
                     drops = struct.unpack('=I', value[:4])[0]
-            with self.lock:
-                row = self.streams[name]
-                row['raw_packets'] += 1
-                if drops is not None:
-                    row['socket_drops'] = drops
-                if flags & socket.MSG_TRUNC:
-                    row['parse_errors'] += 1
-                    return None, address
-            return data, address
-        data, address = sock.recvfrom(size)
-        self.increment(name, 'raw_packets')
-        return data, address
+                if level == socket.SOL_SOCKET and kind in (35, 64):
+                    fmt = '=qq' if kind == 64 else '@ll'
+                    length = struct.calcsize(fmt)
+                    if len(value) >= length:
+                        sec, nsec = struct.unpack(fmt, value[:length])
+                        if sec > 0 and 0 <= nsec < 1000000000:
+                            kernel_ns = sec * 1000000000 + nsec
+        else:
+            data, address = sock.recvfrom(size)
+            monotonic_ns, unix_ns = time.monotonic_ns(), time.time_ns()
+        truncated = bool(flags & socket.MSG_CTRUNC)
+        if truncated:
+            kernel_ns = None
+        receipt = PacketReceipt(kernel_ns if kernel_ns is not None else unix_ns,
+                                monotonic_ns, kernel_ns is not None, truncated)
+        with self.lock:
+            row = self.streams[name]
+            row['raw_packets'] += 1
+            row['ancillary_truncations'] += int(truncated)
+            row['rx_timestamp_fallbacks'] += int(kernel_ns is None)
+            if drops is not None:
+                row['socket_drops'] = drops
+            if flags & socket.MSG_TRUNC:
+                row['parse_errors'] += 1
+                return None, address, receipt
+        return data, address, receipt
 
     def rotation(self, name, device_us):
         now = self.clock()
@@ -183,7 +222,9 @@ def stream_health(row):
         return 'IDLE' if row['optional'] else 'WAITING'
     if row['last_message_age_sec'] > row['stale_after']:
         return 'STALE'
-    if any(row.get(key + '_delta', 0) for key in ('parse_errors', 'header_errors', 'socket_drops')):
+    if any(row.get(key + '_delta', 0) for key in (
+            'parse_errors', 'header_errors', 'socket_drops', 'ancillary_truncations',
+            'source_conflicts', 'timing_errors')):
         return 'DEGRADED'
     return 'OK'
 
@@ -246,7 +287,8 @@ def console_summary(rows, interval, network=False, ego_link='', competition_link
             issues.append(description)
     state = 'state=' + (','.join(issues) if issues else 'OK')
     errors = sum(row[key + '_delta'] for row in rows.values()
-                 for key in ('parse_errors', 'header_errors', 'send_errors'))
+                 for key in ('parse_errors', 'header_errors', 'send_errors',
+                             'ancillary_truncations', 'source_conflicts', 'timing_errors'))
     receivers = [row for row in rows.values() if not row['transmit']]
     drop_known = all(row['socket_drop_supported'] for row in receivers)
     drops = str(sum(row['socket_drops_delta'] for row in receivers)) if drop_known else '?'
@@ -314,7 +356,9 @@ def publish_report(owner, namespace):
             if state in ('STALE', 'INVALID', 'ERROR', 'DEGRADED'):
                 rospy.logwarn('%s %s: %s age=%.3fs errors=%d %s', namespace, name,
                     state, row['last_message_age_sec'],
-                    row['parse_errors'] + row['header_errors'] + row['send_errors'], row['receiver_error'])
+                    sum(row[key] for key in ('parse_errors', 'header_errors', 'send_errors',
+                                            'ancillary_truncations', 'source_conflicts', 'timing_errors')),
+                    row['receiver_error'])
             elif old_state in ('STALE', 'INVALID', 'ERROR', 'DEGRADED') and state == 'OK':
                 rospy.loginfo('%s %s: recovered', namespace, name)
         owner._health[name] = state
@@ -326,6 +370,9 @@ def publish_report(owner, namespace):
             WAITING='no data', STALE='stale', INVALID='invalid input',
             UNSUPPORTED='optional; unsupported ' + row['unsupported_protocol'],
             DEGRADED='recent packet or send errors', ERROR='receiver failed')[state]
+        if state == 'DEGRADED' and any(row[key + '_delta'] for key in (
+                'ancillary_truncations', 'source_conflicts', 'timing_errors')):
+            status.message = 'recent sensor timing errors'
         values = dict(runtime_profile=owner.runtime_profile, transport_profile=owner.transport_profile,
             stream_profile=owner.stream_profile, timestamp_mode=owner.timestamp_mode,
             required=str(not row['optional'] and not row['transmit']).lower(),
@@ -338,6 +385,7 @@ def publish_report(owner, namespace):
             parse_errors=row['parse_errors'], header_errors=row['header_errors'],
             ignored_packets=row['ignored_packets'], send_errors=row['send_errors'],
             unsupported_packets=row['unsupported_packets'], unsupported_protocol=row['unsupported_protocol'],
+            assembly_timeouts=row['assembly_timeouts'],
             last_unsupported_age_sec=row['last_unsupported_age_sec'],
             data_available=str(not row['transmit'] and row['messages'] > 0 and state in ('OK', 'DEGRADED')).lower(),
             timestamp_fallbacks=row['timestamp_fallbacks'], timestamp_regressions=row['timestamp_regressions'],
@@ -349,6 +397,12 @@ def publish_report(owner, namespace):
                 values['last_link_id'] = owner.last_link_id
             elif name == 'competition':
                 values['last_link_id'] = owner.last_competition_link_id
+        for key in ('socket_timestamp_option', 'ancillary_truncations', 'rx_timestamp_fallbacks',
+                    'source_invalid', 'source_duplicates', 'source_conflicts', 'source_regressions',
+                    'device_hour_rollovers', 'timing_errors', 'timing_messages', 'incomplete_frames'):
+            values[key] = row[key]
+            if key + '_delta' in row:
+                values[key + '_delta'] = row[key + '_delta']
         for source, prefix in (('processing', 'processing'), ('assembly', 'assembly'), ('gap', 'output_gap')):
             summary = latency_summary(row[source])
             for key, value in summary.items():

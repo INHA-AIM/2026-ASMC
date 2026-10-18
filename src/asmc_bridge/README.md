@@ -84,3 +84,12 @@ LiDAR 저하를 구분할 때는 `rotation_hz`, `wall_rotation_hz`, `device_rota
 Hz는 각각 최근 보고 구간, 지연·패킷 중앙값·wall/device 회전 평균은 최근 최대4096표본이며
 집계 범위가 다르다. `socket_drops=0`도 Windows 송신과 Docker Desktop 이전 구간의 무손실을
 보장하지 않는다. [2026-10-17 확인 결과](../../docs/records/bridge/2026-10-17-lidar-cadence-diagnostics.md)를 참고한다.
+
+
+Camera·IMU·LiDAR 원본 시각과 수신/발행 시각은 추가 메시지
+`/morai_sensor_bridge/frame_timing`으로 보존한다. 기존 센서 header와 receive 기본 정책은 유지한다.
+같은 source 시각의 IMU 재전송과 충돌·역행, kernel 수신 fallback을 diagnostics에서 확인할 수 있다.
+Wire sequence가 유효한 기록만 원 센서와 조인한다. IMU 발행 큐는 burst 보존용16개이며 영상은 queue1을 유지한다.
+[계약·기록 명령](../../docs/architecture/bridge-sensor-timing.md)과
+[실측·검증 결과](../../docs/records/bridge/2026-10-18-sensor-frame-timing.md)를 따른다.
+이 경로 추가로 운영 IMU 운동 보정이나 Main의 시간 매칭을 바꾸지는 않는다.

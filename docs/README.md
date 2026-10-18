@@ -11,7 +11,7 @@
 | 인지 상시 발행·미션별 소비 | [인지→판제 소비 범위](handoffs/perception-to-planning.md) |
 | 카메라와 LiDAR 연결 | [카메라→LiDAR](handoffs/camera-to-lidar.md), [LiDAR 이전](handoffs/lidar-migration.md) |
 | 음영구간 차선·판제 연결 | [카메라→판제](handoffs/camera-to-planning.md), [판제 운영](operations/planning-control.md) |
-| 공용 메시지·좌표·시간 확인 | [계약 목록](contracts/README.md), [센서 원본/수신 시각 설계](architecture/bridge-sensor-timing.md)(구현 전) |
+| 공용 메시지·좌표·시간 확인 | [계약 목록](contracts/README.md), [센서 원본/수신 시각](architecture/bridge-sensor-timing.md) |
 | 대회 입력·객체 범위 확인 | [대회 환경](competition/README.md), [에셋과 라벨](competition/obstacle-assets-and-labels.md) |
 | 데이터 수집·라벨·재현 | [데이터 준비](operations/data-preparation.md), [데이터 계약](contracts/dataset-labeling-split.md), [bag 평가](operations/rosbag-evaluation.md) |
 | 실험 결과·실패 근거 확인 | [기록 목록](records/README.md) |

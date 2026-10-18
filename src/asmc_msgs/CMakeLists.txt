@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   InferenceStatus.msg
+  SensorFrameTiming.msg
   VehicleState.msg
   DetectedObject.msg
   DetectedObjectArray.msg

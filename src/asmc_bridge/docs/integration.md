@@ -107,9 +107,11 @@ GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된
 센서 융합 run은 모든 입력의 timestamp mode를 manifest에 기록한다. receive/source bag을 설명
 없이 섞지 않는다.
 
-원본과 수신 시각을 함께 보존하는 후속 설계는
-[센서 timing 설계](../../../docs/architecture/bridge-sensor-timing.md)를 따른다.
-새 metadata·커널 timestamp 수신은 아직 구현 전이며 현재 header 정책은 유지한다.
+원본과 수신 시각은 `/morai_sensor_bridge/frame_timing`의
+`asmc_msgs/SensorFrameTiming`으로 함께 보존한다. camera/IMU의 raw 시각과 LiDAR sweep의
+device tick·첫/마지막 수신을 기록하며, 실제 센서 wire sequence로 연결한다.
+커널 timestamp가 없으면 user-space fallback을 명시한다. 현재 header·Main matching 정책은 유지한다.
+[timing 계약과 보간 전제](../../../docs/architecture/bridge-sensor-timing.md)를 따른다.
 
 ### Coordinate frame
 

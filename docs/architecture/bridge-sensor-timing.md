@@ -1,35 +1,36 @@
-# 센서 원본 시각·수신 시각 보존 설계
+# 센서 원본 시각·수신 시각 보존
 
 ## 상태와 목표
 
-**이 문서는 구현 전 분석이다.** 현재 bridge의 `timestamp_mode=receive`, 기존 센서 메시지와
+**Camera·IMU·LiDAR timing 기록 경로를 구현했다.** 현재 bridge의 `timestamp_mode=receive`, 기존 센서 메시지와
 header·MD5·포트·LiDAR 프레임 구성·GPS/IMU state·Main의 ±50ms/200ms 정책은 바꾸지 않는다.
 카메라/IMU의 원본 시각과 실제 bridge 수신/처리 시각을 따로 보존한 뒤 운동 보정·지연 분석에 사용한다.
 첫 범위는 `morai_sensor_bridge`의 camera·IMU·LiDAR다. 네트워크 Ego/Object/Collision의 전역
 source 전환까지 한 번에 확대하지 않는다.
 
-## 현재 코드에서 알 수 있는 것
+## 변경 전 경로와 보존 이유
 
 - `_camera_loop`는 모든 JPEG 조각의 원본 `(sec,nsec)`와 index 연속성을 확인한다.
   완성 후 `_stamp_from_sec_nsec`가 receive 또는 source 중 하나를 header에 넣는다.
-  원본 시각은 receive 정책의 결과 메시지에서 복구할 수 없다.
+  원본 시각은 기존 receive 정책의 결과 메시지 하나만으로 복구할 수 없었다.
 - `_imu`도 원본 sec/nsec와 quaternion을 읽지만 결과에는 선택한 header stamp 하나만 남는다.
 - `BridgeTelemetry.receive`는 `recvmsg()`로 `SO_RXQ_OVFL`을 읽고 `(bytes,address)`만 반환한다.
-  커널 packet timestamp는 활성화하지 않으며, 현재의 처리 시작/조립 소요시간은 네트워크 수신 시각과 다르다.
+  기존에는 커널 packet timestamp를 활성화하지 않았고, 처리 시작/조립 소요시간은 네트워크 수신 시각과 달랐다. 현재는 `receive_timed`가 별도 receipt를 반환한다.
 - `_lidar_publish`는 회전 안의 device time 중 마지막 유효 값을 source stamp 후보로 사용한다.
   Velodyne의 시간은 hour 내 microseconds다. Unix sec/nsec로 직접 해석하지 않는다.
 - receive는 완성 message를 만들 때의 ROS 시간이다. camera 노출 시각·첫 UDP 도착 시각이 아니다.
-  source 값이 무효/역행하면 receive fallback을 적용한다. 그 결과 stamp를 원본으로 간주하면 안 된다.
+  `timestamp_mode=source`에서 source 값이 무효/역행하면 receive fallback을 적용한다. 그 결과 stamp를 원본으로 간주하면 안 된다.
 - GPS NMEA에는 camera/IMU와 동일한 원본 sec/nsec 필드가 없다. 없는 값을 source라고 만들지 않는다.
 
 MORAI는 camera와 IMU 프로토콜에 timestamp를 제공한다. 프로토콜의 timestamp가 실제 노출의
 어느 단계에 찍히는지는 별도 검증 대상으로 남긴다.
 [공식 센서 프로토콜](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/-35)
 
-## 제안 계약: 센서 메시지와 작은 timing 기록을 함께 발행
+## 구현 계약: 센서 메시지와 timing 기록을 함께 발행
 
-공용 **`asmc_msgs/SensorFrameTiming`**을 제안한다. 아래 필드는 설계안이며 아직 생성 메시지나
-운영 토픽을 추가하지 않았다. 제안 토픽은 `/morai_sensor_bridge/frame_timing`이다.
+공용 **`asmc_msgs/SensorFrameTiming`**을 `/morai_sensor_bridge/frame_timing`에 기본 발행한다.
+[기계 계약](../../config/contracts/sensor_frame_timing_v1.yaml)과
+[메시지 정의](../../src/asmc_msgs/msg/SensorFrameTiming.msg)가 필드의 정본이다.
 기존 이미지/IMU/cloud를 감싸서 다시 발행하거나 JPEG를 복제하지 않는다.
 
 | 정보 | 보존 목적 |
@@ -45,7 +46,9 @@ MORAI는 camera와 IMU 프로토콜에 timestamp를 제공한다. 프로토콜�
 
 현재 Noetic의 `rospy.msg.serialize_message`가 최상위 `header.seq`를 publisher sequence로
 덮어쓰는 것을 코드로 확인했다. 원 센서 발행의 실제 wire sequence를 metadata의 별도 필드에
-복사하는 시점과 무구독/직렬화 실패를 실제 연결 시험으로 확정해야 한다.
+복사한다. 같은 publisher lock에서 serialize 전후 sequence를 확인하며, 무구독으로
+직렬화를 생략한 경우 `sensor_wire_sequence_valid=false`다. 독립 ROS master의 실제 UDP/serialization
+시험에서 무구독·연결·raw 중복/충돌/역행을 검증했다.
 메타데이터 자체의 header sequence와 센서의 wire sequence를 같은 것으로 가정하지 않는다.
 같은 header stamp가 반복될 수 있으므로 **stamp 하나만으로 1:1 조인하지 않는다.** Session·stream·
 sequence를 보조 키로 쓰고, 필요시 원본 payload의 짧은 digest를 추가한다. 해소되지 않는 조인은
@@ -55,7 +58,7 @@ ambiguous로 배제하며 다른 IMU나 이미지에 임의로 붙이지 않는�
 보존하되 보간의 독립 자세 수를 늘리지 않는다. 같은 원본 시각에 값이 충돌하면 별도 오류다.
 원본에 임의1ns를 더하거나 receive fallback을 원본 필드에 덮어쓰지 않는다.
 
-## 수신부 개선 지점
+## 수신부 구현
 
 1. `BridgeTelemetry`에 별도 timed receive 경로를 두고 기존2값 반환 인터페이스를 보존한다.
    실제 수신은 현재 소켓 하나에서 수행한다. 두 번째 소켓으로 같은 UDP 포트를 경쟁 수신하지 않는다.
@@ -67,8 +70,9 @@ ambiguous로 배제하며 다른 IMU나 이미지에 임의로 붙이지 않는�
 4. IMU는 packet 하나의 source/receive 쌍을 보존한다. LiDAR는 기존 회전 assembler의 첫/마지막
    device time·수신 범위를 함께 보존한다. PointCloud를 단일 순간 측정으로 설명하지 않는다.
 5. frame당 작은 metadata 하나를 만든다. 고주파 LiDAR packet마다 ROS metadata를 발행하지 않는다.
-   로그 쓰기는 bounded journal에서 처리하고 queue overflow·sequence gap을 별도로 기록한다.
-   receive callback에서 JSON 파일 쓰기·이미지 decode·전체 payload 복사는 추가하지 않는다.
+   Bridge 수신 경로에는 파일 쓰기를 추가하지 않는다. 별도 확인기가 전체 metadata/header를
+   파일로 기록하고 대응표는 bounded 상태로 관리한다. queue 누락·sequence gap은 별도 집계한다.
+   receive callback에서 JSON 파일 쓰기·이미지 decode·전체 payload 복사는 추가하지 않았다.
 
 커널 timestamp도 시스템 시간이며 단조 증가가 보장되는 시간이 아니다. 지속시간에는 같은 프로세스의
 monotonic clock을 쓴다. ns 단위 필드는 ns 정확도 보장이 아니며, 현재 원본 timestamp의 약1ms
@@ -112,7 +116,7 @@ LiDAR sweep은 시간 구간이므로 마지막 device time만 맞춘 것을 poi
 Source header가 필요한 소비자는 충분한 대조 후 별도 명시적 프로필/계약으로 전환한다.
 전역 `timestamp_mode=source` 하나로 Ego·LiDAR·camera·IMU를 동시에 바꾸는 방식은 이번 권고가 아니다.
 
-## 구현 전 확정/시험 목록
+## 검증 범위와 남은 작업
 
 - 공용 timing 계약과 실제 wire key, 정상 frame당 metadata 수, ROS bag 재생 시 조인.
 - 커널/사용자 수신 timestamp·ancillary truncation·overflow·미지원 fallback과 기존 socket drop 계측 공존.
@@ -123,4 +127,45 @@ Source header가 필요한 소비자는 충분한 대조 후 별도 명시적 �
 합성 영상도 단일 header가 세 뷰의 모든 입력 시각을 나타내지는 않는다. 뷰별 원본 header/관측 ID를
 별도로 유지해야 하며 합성 header의 반복을 곧 동일 영상 재표시로 단정하지 않는다.
 
-공용 메시지 추가와 bridge 구현은 다음 작업이다. 이번에는 분석과 문서만 반영했다.
+구현과 실제 MORAI 측정은 [작업 기록](../records/bridge/2026-10-18-sensor-frame-timing.md)을 따른다.
+Camera/IMU 원본 시각과 kernel/user receive 보존·wire 연결·중복/충돌/역행 진단은 구현했다.
+운영 camera/IMU SLERP·동적 운동 보정·LiDAR point deskew는 **아직 적용하지 않았다**.
+기존 bag에서 버린 source 시각을 복원하거나 receive를 source로 바꾸어 표시하지 않는다.
+
+## 구체적인 구현 제한
+
+- `SO_TIMESTAMPNS_NEW=64`를 먼저 사용하고, 미지원 시 native OLD timespec 또는 user-space로
+  fallback한다. `rx_userspace_fallback_packets`와 `ancillary_truncated_packets`로 구분한다.
+  monotonic receipt는 syscall 반환 직후여서 kernel 수신 이후 사용자 스케줄링을 포함한다.
+- `publish_ros_time`·`publish_monotonic_ns`는 센서 publish 직후 timing을 조립하는 시점이다.
+  커널 송신 완료·센서 노출·소비자 수신 시각으로 해석하지 않는다.
+- LiDAR의 `source_duplicate`는 sweep 마지막 tick이 이전 sweep 끝과 같은 경우다.
+  `device_tick_duplicates`는 sweep 내부에서 반복된 packet tick 수다. 이를 cloud 중복으로 세지 않는다.
+- JPEG 조각 최대4096개/16MiB, LiDAR 조립 최대 `max(4096, packets_per_frame*4)`개,
+  raw source history는 stream당128키, metadata 출력 큐는128개로 제한한다.
+- IMU 발행 큐는 기존1개에서16개로 늘렸다. 몰려온 서로 다른 source pose가 ROS 비동기 큐에서
+  사라지는 것을 줄이기 위한 버퍼이며 영상의 queue1 최신 우선·센서 stamp 정책은 유지한다.
+- Diagnostics에 source 무효·중복·충돌·역행, timing 실패·발행 수, ancillary truncation과
+  kernel timestamp option을 추가했다. 콘솔5초·진단1초 주기는 유지한다.
+- Metadata는 센서와 별도 ROS 전송이므로 함께 도착한다는 보장은 없다. sequence gap·missing·ambiguous를
+  기록하고 보간에서 배제한다. 무구독 센서에는 wire sequence가 없으며 stamp만으로 대신 조인하지 않는다.
+
+## 직접 기록·확인
+
+기존 raw bag 프로필(camera/lidar/full/development GT)은 timing 토픽을 선택 항목으로 포함한다.
+기록 시작 때 발행 중이면 함께 저장한다. 구형 bridge에서 토픽이 없더라도 raw 수집을 막지 않는다.
+원본 시각 분석을 할 run은 실제 metadata 포함 여부를 확인한다. Capture GT 파일 수집 경로는 변경하지 않는다.
+
+기존 source 순서로 workspace를 source한 뒤 별도 터미널에서 실행한다.
+
+```bash
+# 영상 payload를 복제하지 않는 짧은 측정. 출력 경로는 새 run마다 다르게 지정한다.
+python3 tools/bridge/verify_frame_timing.py --duration 30 --output /tmp/sensor-timing-review
+rostopic echo -n 1 /morai_sensor_bridge/frame_timing
+# 후속 운동 분석용 bag에는 원 센서와 metadata를 함께 기록한다.
+rosbag record -O /tmp/camera-imu-timing.bag /image_jpeg/compressed /cam_left/image_jpeg/compressed /cam_right/image_jpeg/compressed /imu /morai_sensor_bridge/frame_timing
+```
+
+확인기는 `timing.jsonl`·`sensor-headers.jsonl` 전체 timing/header와 정확히 대응한 `matched.jsonl`,
+누락·보류·중복·원본 역행·kernel fallback·진단을 담은 `report.json`을 생성한다.
+대형 payload는 보관하지 않고 대응표는 stream당256개·2초로 제한한다.

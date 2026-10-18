@@ -1,0 +1,28 @@
+schema_version: 1
+contract_id: sensor_frame_timing_v1
+status: additive_bridge_producer
+messages:
+  asmc_msgs/SensorFrameTiming:
+    md5: 07dce68802e02b5b3f4cd89724a7cad7
+    required_fields: [bridge_session_id, stream_id, frame_sequence, sensor_topic,
+      sensor_frame_id, published_stamp, sensor_wire_sequence, sensor_wire_sequence_valid,
+      source_clock_domain, source_reference, source_sec, source_nsec, source_valid,
+      rx_first_unix_ns, rx_last_unix_ns, rx_first_monotonic_ns, rx_last_monotonic_ns,
+      publish_ros_time, publish_monotonic_ns, header_timestamp_policy]
+topic: /morai_sensor_bridge/frame_timing
+producer: asmc_bridge/morai_sensor_bridge.py
+latch: false
+queue_size: 128
+scope: [camera_compressed, imu, lidar_sweep]
+identity: [bridge_session_id, stream_id, frame_sequence]
+sensor_join: [sensor_topic, sensor_frame_id, published_stamp, sensor_wire_sequence]
+sensor_join_requires: sensor_wire_sequence_valid_and_unique_key_and_single_sensor_publisher
+source_domains:
+  morai_sensor: raw_camera_or_imu_sec_nsec_not_verified_exposure_time
+  velodyne_device_hour: raw_packet_microseconds_since_hour_not_unix
+duration_clock: monotonic_same_bridge_session
+duplicate_policy: retain_receipts_but_do_not_count_repeated_imu_source_as_independent_pose
+missing_or_ambiguous_join: reject_for_motion_compensation
+existing_sensor_header_policy: unchanged_receive_default
+operational_motion_compensation: not_implemented
+legacy_fusion_time_matching: unchanged
