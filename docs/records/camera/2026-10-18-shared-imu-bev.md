@@ -96,3 +96,10 @@ classifier·follower의 동일 설정 승인, read-only/preview 이후 폐루프
 승인 SHA·보정값·제어 설정은 변경하지 않았다. 시각화용 평면 metadata를 판제 정본으로 승격하지 않는다.
 54개 계약·문서 시험과 문서 검사, planning launch/input 계약이 통과했고,
 주석 변경 전후 세 launch XML tree와 두 C++ 파일의 비주석 token이 같음을 확인했다.
+
+Main 대상 hosted CI의 첫 실행은 catkin 빌드·계약 검사를 통과한 뒤 facade 소유권 검사에서
+BEV 모듈 수의 이전 기대값20과 실제23이 달라 실패했다. 추가한 IMU 투영·프레임별 피팅 정책·공유
+comparison 기하 모듈을 포함하도록 기대 목록을 갱신했다. 소유권·금지 의존성 검사는 유지한다.
+격리된 Noetic 복사본에서 CI CPU 회귀58개 명령을 확인했다. 최초 복사본의 생성 ROS 타입·rospack
+경로 문제로 실패한 네 suite는 경로를 맞춰 재확인했으며 검출89개·영상37개·BEV210개·runtime119개가
+통과했다. 나머지54개 명령도 통과했다. 운영 노드·GPU·학습 가중치는 변경하지 않았다.
