@@ -232,7 +232,8 @@ class CameraBevVisualizerNode:
                     [camera.drivable_topic, camera.road_marking_topic, camera.road_marking_confidence_topic],
                     Image, self._comparison_requested, partial(self._semantic_callback, view),
                     context=self.gate.context, on_reset=self._clear_shared,
-                    queue_size=4, subscriber_queue_size=1, subscriber_buffer_bytes=4*1024*1024))
+                    queue_size=4, subscriber_queue_size=1, subscriber_buffer_bytes=4*1024*1024,
+                    callback_with_context=True))
         self.fused_publisher = None
         self.quality_publisher = None
         if self.publish_legacy_outputs:
@@ -314,8 +315,10 @@ class CameraBevVisualizerNode:
                 return
         self.render_worker.offer()
 
-    def _semantic_callback(self, view, *messages):
+    def _semantic_callback(self, view, callback_epoch, *messages):
         with self.gate.lock, self.lock:
+            if callback_epoch != self.gate.context():
+                return
             self._current_cache()
             if not self.gate.allows(messages[0].header.stamp):
                 return

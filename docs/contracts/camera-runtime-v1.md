@@ -148,6 +148,13 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 시각화 목표는10Hz이고 추론 목표15Hz와 별도다. 구독자가 없는 큰 영상의 구독·변환·인코딩을 중단한다.
 최종 기본 전환과 GUI 수락 상태는 [시각화 검증 기록](../records/camera/camera-visualization-validation.md)을 따른다.
 
+Family 선은 발행된 family를 그대로 그린다. RGB/semantic comparison은
+[`CameraGroundProjection`](../../config/contracts/camera_ground_projection_v1.yaml)의 뷰별 지면을
+공유한다. 원본 시각 IMU 조회는 family worker에서 한 번이며, 작은 metadata는 피팅 전에 전달해
+영상 렌더링이 피팅 완료를 기다리지 않도록 한다. Comparison만 구독하면 별도의 고정 BEV 합성
+경로를 구동하지 않는다. 원 JPEG와 같은 시각의 semantic이 없는 경우에는 대체하지 않고 건너뛴다.
+기존 BEV 데이터 토픽·판제 좌표 계약은 변경하지 않는다.
+
 ## Timestamp의 출처
 
 카메라는 bridge의 header stamp를 다시 만들지 않는다. 센서 촬영 시각이라는 보장은 없다.

@@ -182,6 +182,15 @@ class SharedComparisonTest(unittest.TestCase):
         node.shared_projection=False
         self.assertTrue(node._fused_requested())
 
+    def test_native_callback_inflight_across_epoch_change_cannot_repopulate_cache(self):
+        node=CameraBevVisualizerNode.__new__(CameraBevVisualizerNode)
+        node.lock=threading.Lock(); node.cache_epoch='new'
+        node.gate=NS(lock=threading.RLock(),context=lambda:'new')
+        node.comparison_frames=Mock(); node.render_worker=Mock()
+        node._semantic_callback('front','old',Image(),Image(),Image())
+        node.comparison_frames.add_semantic.assert_not_called()
+        node.render_worker.offer.assert_not_called()
+
     def test_epoch_change_during_encoding_discards_completed_render(self):
         node=CameraBevVisualizerNode.__new__(CameraBevVisualizerNode)
         node.shared_projection=True; node.lock=threading.Lock()
