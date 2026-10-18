@@ -169,6 +169,21 @@ topic_families:
     p5b_action: keep
     rationale: Camera semantic output and input to metric projection.
 
+  - id: camera_semantic_model_grid_timing
+    topics:
+      - {pattern: '/perception/camera/{view}/road_marking/model_grid/timing', type: asmc_msgs/CameraModelGridTiming}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/runtime/grid_timing.py
+      anchors: ["'/perception/camera/{}/road_marking/model_grid/timing'"]
+    consumers:
+      - file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+        anchor: "topics.append(base + '/timing')"
+    bag_profiles: [camera_semantic_result.yaml]
+    classification: canonical_quality_metadata
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Exact source and derived wire lineage; required by the opt-in IMU projection, without changing legacy image headers or the model.
+
   - id: camera_semantic_model_grid
     topics:
       - {pattern: '/perception/camera/{view}/road_marking/model_grid/class_id', type: sensor_msgs/Image}

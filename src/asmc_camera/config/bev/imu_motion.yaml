@@ -1,0 +1,13 @@
+# Internal M1 comparison. TensorRT weights/preprocessing and legacy headers stay fixed.
+# Current v3 IMU (id7) mount rotation is [0,0,0]; orientation is world_from_imu.
+# Flat K-City world +Z, nominal rear-axle normal distance0.36m, no height estimator.
+enabled: false
+imu_topic: /imu
+imu_frame_id: imu
+imu_mount_rotation_deg: [0.0, 0.0, 0.0]
+max_tilt_deg: 8.0
+max_bracket_ms: 100.0
+max_receipt_age_sec: 0.35
+retention_sec: 2.0
+capacity: 256
+max_source_skew_ms: 35.0

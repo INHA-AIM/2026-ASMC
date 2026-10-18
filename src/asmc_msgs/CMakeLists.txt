@@ -11,6 +11,7 @@ add_message_files(
   FILES
   InferenceStatus.msg
   SensorFrameTiming.msg
+  CameraModelGridTiming.msg
   VehicleState.msg
   DetectedObject.msg
   DetectedObjectArray.msg

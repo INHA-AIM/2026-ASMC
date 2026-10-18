@@ -12,7 +12,12 @@ def attitude_camera(camera, quaternion, imu_mount_rotation_deg=(0., 0., 0.), max
     R_WB = R_WI R_BI.T. Camera extrinsics stay fixed: mount pitch is applied once.
     Yaw alone does not change a flat-world ground normal. No Euler subtraction.
     """
-    roll, pitch, yaw = np.radians(np.asarray(imu_mount_rotation_deg, dtype=float))
+    if not 0 < max_tilt_deg <= 8.:
+        raise ValueError('validated tilt limit must be in (0,8] degrees')
+    mount = np.asarray(imu_mount_rotation_deg, dtype=float)
+    if mount.shape != (3,) or not np.isfinite(mount).all():
+        raise ValueError('invalid IMU mount rotation')
+    roll, pitch, yaw = np.radians(mount)
     body_from_imu = _rotation_z(yaw) @ _rotation_y(pitch) @ _rotation_x(roll)
     world_from_body = quaternion_rotation(quaternion) @ body_from_imu.T
     normal = world_from_body.T @ np.array([0., 0., 1.])

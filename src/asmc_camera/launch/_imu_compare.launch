@@ -1,0 +1,8 @@
+<launch>
+  <!-- Internal stationary/dynamic comparison; never run beside camera.launch. -->
+  <arg name="enabled" default="true"/>
+  <arg name="trace_path" default=""/>
+  <include file="$(find asmc_camera)/launch/camera.launch"/>
+  <param name="/camera_lane_vectorizer/imu_motion/enabled" value="$(arg enabled)"/>
+  <param name="/camera_lane_vectorizer/lifecycle_trace_path" value="$(arg trace_path)"/>
+</launch>

@@ -30,8 +30,8 @@ class PerceptionTopicPolicyTest(unittest.TestCase):
 
     def test_repository_policy_is_valid(self):
         result = validate_policy(REPO_ROOT, self.policy)
-        self.assertEqual(32, result["family_count"])
-        self.assertEqual(81, result["expanded_topic_count"])
+        self.assertEqual(33, result["family_count"])
+        self.assertEqual(84, result["expanded_topic_count"])
         self.assertEqual(2, result["required_internal_family_count"])
         self.assertEqual(2, result["default_off_candidate_count"])
 

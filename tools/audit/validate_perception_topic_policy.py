@@ -25,6 +25,7 @@ REQUIRED_FAMILY_IDS = {
     "camera_objects_visualization",
     "camera_semantic_full_resolution",
     "camera_semantic_model_grid",
+    "camera_semantic_model_grid_timing",
     "camera_diagnostics",
     "per_view_projected_semantics",
     "per_view_projected_coverage",

@@ -73,6 +73,7 @@ class SensorTimingIndex:
                 self.session = session
                 for key in self.entries:
                     self.retired_keys[key] = self.clock()
+                    self.retired_keys.move_to_end(key)
                 self.entries.clear()
             if not message.sensor_wire_sequence_valid:
                 self.counters['no_wire_sequence'] += 1
@@ -217,3 +218,9 @@ class ImuTimeline:
                 return None, 'imu_bracket_too_wide'
             q = slerp(a[1][1], b[1][1], (target-a[0])/span)
             return Attitude(tuple(q), target, span/1e6, self.session), 'interpolated'
+
+    def snapshot(self):
+        with self.lock:
+            self._prune()
+            return dict(session=self.session, poses=len(self.poses), pending=len(self.pending),
+                        counters=dict(self.counters))
