@@ -1,6 +1,6 @@
 schema_version: 1
 contract_id: camera_ground_projection_v1
-status: additive_internal_visualization
+status: additive_shared_projection
 messages:
   asmc_msgs/CameraGroundProjection:
     md5: 050ff5c07c51419cd222e14e8032a9b3
@@ -8,7 +8,9 @@ messages:
       config_id, imu_corrected, reason, views, image_headers, calibration_ids, plane_coefficients]
 topic: /perception/lane/ground_projection
 producer: asmc_camera/lane_vectorizer_node.py
-consumer: asmc_camera/camera_bev_visualizer_node.py
+consumers:
+  - asmc_camera/camera_bev_visualizer_node.py
+  - lane_boundary_adapter/camera_bbox_lane_node
 delivery: non_latched_queue_1_only_when_subscribed
 meaning: exact_per_view_ground_planes_already_selected_by_family_no_second_imu_lookup
 plane_order: [dz_dx, dz_dy, z_at_origin_m]
@@ -20,4 +22,9 @@ ambiguous_semantic_stamp: reject
 calibration_identity: sha256_sorted_compact_json_of_nominal_CameraCalibration_dataclass
 missing_context_or_frame: skip_without_nearest_frame_or_latest_pose_substitution
 fallback: all_views_use_same_family_M0_fallback_and_display_reason
-scope: comparison_visualization_only_no_change_to_legacy_BEV_data_or_planning
+family_join: exact_header_stamp_frame_and_config_id_no_header_seq_comparison
+family_xyz: validate_on_latest_bundle_view_plane_then_lift_xy_on_selected_image_plane
+consumer_gate: active_loaded_fresh_lane_status_same_producer_session_and_generation
+consumer_bounds: {context_capacity: 8, context_age_ms: 350, pending_images: 8, pending_wait_ms: 250}
+scope: comparison_and_read_only_bbox_projection_no_closed_loop_approval_or_legacy_BEV_change
+lifecycle: family_bundle_producer_only_not_an_independent_always_on_geometry_service

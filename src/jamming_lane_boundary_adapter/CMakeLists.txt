@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(OpenCV REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 add_message_files(FILES CameraBBox.msg CameraBBoxFrame.msg CameraBBoxLaneResult.msg)
 generate_messages(DEPENDENCIES std_msgs sensor_msgs)
@@ -45,9 +46,10 @@ include_directories(
 add_library(lane_boundary_adapter
   src/boundary_family_adapter.cpp
   src/lane_boundary_adapter.cpp
+  src/ground_projection.cpp
 )
 add_dependencies(lane_boundary_adapter ${catkin_EXPORTED_TARGETS})
-target_link_libraries(lane_boundary_adapter ${catkin_LIBRARIES})
+target_link_libraries(lane_boundary_adapter ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(lane_boundary_monitor_node
   src/lane_boundary_monitor_node.cpp
@@ -69,7 +71,7 @@ target_link_libraries(boundary_family_monitor_node
 
 add_executable(camera_bbox_lane_node src/camera_bbox_lane_node.cpp)
 add_dependencies(camera_bbox_lane_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(camera_bbox_lane_node lane_boundary_adapter ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp)
+target_link_libraries(camera_bbox_lane_node lane_boundary_adapter ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp OpenSSL::Crypto)
 add_executable(camera_bbox_lane_change_node src/camera_bbox_lane_change_node.cpp)
 add_dependencies(camera_bbox_lane_change_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(camera_bbox_lane_change_node lane_boundary_adapter ${catkin_LIBRARIES})
@@ -83,6 +85,13 @@ if(CATKIN_ENABLE_TESTING)
   add_rostest(test/camera_bbox_clipped.test DEPENDENCIES camera_bbox_lane_node)
   add_rostest(test/camera_bbox_ego_mask.test DEPENDENCIES camera_bbox_lane_node)
   add_rostest(test/camera_bbox_lane.test DEPENDENCIES camera_bbox_lane_node)
+  add_rostest(test/camera_bbox_imu_projection.test DEPENDENCIES camera_bbox_lane_node)
+
+  catkin_add_gtest(ground_projection_test test/ground_projection_test.cpp)
+  if(TARGET ground_projection_test)
+    add_dependencies(ground_projection_test ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(ground_projection_test lane_boundary_adapter ${catkin_LIBRARIES})
+  endif()
 
   catkin_add_gtest(lane_boundary_adapter_test
     test/lane_boundary_adapter_test.cpp

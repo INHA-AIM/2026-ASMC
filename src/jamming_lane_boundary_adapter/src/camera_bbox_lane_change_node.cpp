@@ -85,7 +85,7 @@ struct Parameters {
     // 카메라 계약과 ROS 토픽
     // 인수한 v3 설정 해시.
     std::string expected_config_sha256 =
-        "691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070";
+        "2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a";
     // 차선 경계 입력(base_link).
     std::string input_topic = "/perception/lane/boundary_family";
     // MORAI UDP bridge 주행 명령.
@@ -591,8 +591,8 @@ void laneBoundaryCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& msg) {
     follower_state.lane_markers_valid = false;
 
     // 2. 인수한 카메라 설정과 기하 계약 검사.
-    // IMU family adoption belongs to planning: validate the classifier's fixed-
-    // plane reprojection first, then pin the same approved config in both consumers.
+    // IMU family adoption belongs to planning: the classifier consumes the exact image-time
+    // projection context, and both consumers pin the same approved config.
     // Do not bypass this gate to restore control after a camera default update.
     // See docs/handoffs/camera-to-planning.md, section 7.1.
     if (msg->config_sha256 != params.expected_config_sha256) {

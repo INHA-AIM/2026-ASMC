@@ -1,10 +1,11 @@
 # BBOX 검출에 따른 반복 차선변경
 
-**현재 IMU family의 제어 인수는 판제 담당 확인 대기다.** 초기 SHA·고정 평면 BBox classifier와
-follower의 설정을 함께 검증해야 한다. SHA만 갱신해 제어를 허용하지 않는다.
+**IMU 투영은 연결됐고 폐루프 제어 인수는 별도다.** Classifier는 정확한 영상의 보정 context를
+사용하고 follower와 동일한 현재 config SHA를 기대한다. 원래 미터 단위 xy 소비에는 자세를
+다시 적용하지 않는다. metadata 누락·세대 전환은 UNKNOWN이며 기존 제어 정책이 처리한다.
 [판제 인수 체크리스트](../../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)에 따라
-read-only/preview 검증 후 제어를 승인한다. 아래 standalone 기본값과 달리 planner 통합 launch는
-`enable_control=true`를 전달한다.
+read-only/preview 이후 제어를 확인한다. standalone `enable_control=false`는 유지하며,
+planner 통합 launch가 전달하던 `enable_control=true`도 변경하지 않았다.
 
 `src/camera_bbox_lane_change_node.cpp`가 차선 중심 주행과 BBOX 기반 차선변경을 수행한다.
 파일 상단에 모든 인자와 설명을 두고 같은 파일에 main을 둔다.

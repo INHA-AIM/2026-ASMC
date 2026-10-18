@@ -40,10 +40,10 @@
   <arg name="lane_width_max" default="4.6"/>
   <arg name="max_width_variation" default="0.8"/>
   <arg name="inferred_confidence_scale" default="0.60"/>
-  <!-- Keep the old approval until planning validates the IMU family and BBox
-       projection together. Both consumers must pin the approved config; a hash-only
-       update is insufficient. See docs/handoffs/camera-to-planning.md 7.1. -->
-  <arg name="expected_config_sha256" default="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
+  <!-- Classifier and follower pin the same current M1 config. The classifier also
+       validates exact image-time plane metadata; this is not closed-loop approval.
+       Standalone control remains opt-in. See camera-to-planning.md 7.1. -->
+  <arg name="expected_config_sha256" default="2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a"/>
   <arg name="input_topic" default="/perception/lane/boundary_family"/>
   <arg name="control_topic" default="/ctrl_cmd/jamming"/>
   <arg name="preview_topic" default="/planning/camera_bbox_lane_change/control_preview"/>
@@ -81,7 +81,9 @@
   <arg name="use_rviz" default="true"/>
   <arg name="bbox_consumer_x_max" default="20.0"/>
   <arg name="start_classifier" default="true"/>
-  <arg name="calibration_file" default="$(find asmc_camera)/config/bev/cameras_v2.yaml"/>
+  <arg name="projection_context_required" default="true"/>
+  <arg name="projection_manifest" default="$(find asmc_camera)/config/bev/projection_context_v1.yaml"/>
+  <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <include if="$(arg start_classifier)" file="$(find lane_boundary_adapter)/launch/camera_bbox_lane.launch">
     <arg name="use_rviz" value="false"/>
     <arg name="contact_band_height_px" value="$(arg contact_band_height_px)"/>
@@ -94,6 +96,8 @@
     <arg name="hood_crop_bottom_ratio" value="$(arg hood_crop_bottom_ratio)"/>
     <!-- Both consumers must validate the same explicitly selected producer config. -->
     <arg name="expected_hash" value="$(arg expected_config_sha256)"/>
+    <arg name="projection_context_required" value="$(arg projection_context_required)"/>
+    <arg name="projection_manifest" value="$(arg projection_manifest)"/>
     <arg name="calibration_file" value="$(arg calibration_file)"/>
     <arg name="consumer_x_max" value="$(arg bbox_consumer_x_max)"/>
     <arg name="source_timeout" value="$(arg source_timeout)"/>

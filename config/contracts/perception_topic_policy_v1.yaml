@@ -193,11 +193,13 @@ topic_families:
     consumers:
       - file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py
         anchor: "'/perception/lane/ground_projection'"
+      - file: src/jamming_lane_boundary_adapter/src/camera_bbox_lane_node.cpp
+        anchor: '"/perception/lane/ground_projection"'
     bag_profiles: [camera_semantic_result.yaml]
-    classification: debug_opt_in
+    classification: canonical_quality_metadata
     current_mode: subscriber_lazy
     p5b_action: keep
-    rationale: Shares the family worker's one source-time IMU decision with both comparison panels; no additional fitting or inference.
+    rationale: Shares one image-time plane selection with comparison panels and the BBox lane adapter; required for exact-frame reprojection, without additional IMU lookup or fitting.
 
   - id: camera_semantic_model_grid
     topics:

@@ -14,13 +14,12 @@
        (mode 0=STANDBY, 2=ACTIVE, target_hz 0=유지)로 제어한다. 단일 제어 소유자를 유지한다.
        판제 신호 규칙은 계속 동작하며 stale/invalid는 unknown으로 처리한다.
        See docs/handoffs/perception-to-planning.md. -->
-  <!-- Planning adoption pending: the current camera IMU family has a new SHA and
-       dynamic ground geometry. Preserve this old approval until BBox reprojection,
-       timing and closed-loop behavior are validated (camera-to-planning.md 7.1).
+  <!-- Current M1 hash/calibration are shared by follower and exact-image BBox
+       projection. Closed-loop acceptance remains planning-owned (camera-to-planning.md 7.1).
        This launch enables jamming control below; it is not a read-only monitor. -->
   <arg name="expected_config_sha256"
-       default="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
-  <arg name="calibration_file" default="$(find asmc_camera)/config/bev/cameras_v2.yaml"/>
+       default="2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a"/>
+  <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
 
   <!-- Dictionary lookup rejects unsupported sources during launch loading. -->
   <include if="$(eval {'gps_imu': True, 'external': False}[arg('state_source')])"
