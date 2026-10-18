@@ -30,9 +30,9 @@ class P1BContractTest(unittest.TestCase):
 
     def test_repository_contract_is_valid(self):
         result = validate_contract(REPO_ROOT, self.contract, self.baseline)
-        self.assertEqual(result["message_count"], 37)
+        self.assertEqual(result["message_count"], 38)
         self.assertEqual(result["contract_message_count"], 25)
-        self.assertEqual(result["registered_message_count"], 37)
+        self.assertEqual(result["registered_message_count"], 38)
         self.assertEqual(result["legacy_message_count"], 13)
         self.assertEqual(result["new_message_count"], 12)
         self.assertEqual(result["topic_count"], 11)
@@ -51,6 +51,14 @@ class P1BContractTest(unittest.TestCase):
         self.assertTrue(set(definition['required_fields']).issubset(fields))
         self.assertIn('sensor_wire_sequence', contract['sensor_join'])
         self.assertEqual(contract['operational_motion_compensation'], 'not_implemented')
+
+    def test_shared_projection_metadata_matches_registered_additive_contract(self):
+        contract = yaml.safe_load((REPO_ROOT / 'config/contracts/camera_ground_projection_v1.yaml').read_text())
+        definition = contract['messages']['asmc_msgs/CameraGroundProjection']
+        self.assertEqual(ros1_md5('CameraGroundProjection', self.specs), definition['md5'])
+        fields = {field.name for field in self.specs['CameraGroundProjection'].fields}
+        self.assertTrue(set(definition['required_fields']).issubset(fields))
+        self.assertEqual(contract['plane_order'], ['dz_dx', 'dz_dy', 'z_at_origin_m'])
 
     def test_lidar_handoff_md5_matches_message_sources(self):
         contract = yaml.safe_load((REPO_ROOT / "config/contracts/lidar_candidate_topic_contract_v1.yaml").read_text())

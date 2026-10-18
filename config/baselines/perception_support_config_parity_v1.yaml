@@ -53,9 +53,13 @@ canonical_configs:
     previous_sha256: 00b0909db8813e8bda08e9c9efa079bc6556b98d56511c9b532da79aec060a9d
     revision_reason: family_supply_20261015_sync_queue_12_to_4_no_fitting_threshold_changes
   - path: src/asmc_camera/config/bev/visualization.yaml
-    sha256: ab145bda84b1ba3de1c296a26a5a836a99cc3b6bbb9aa7021fdee4d326a7db04
-    previous_sha256: 497286b20abb22e16464596d8f1354d6a19958129300f04c2a0b12c8f4bda5e8
-    revision_reason: camera_display_20261018_rgb_bev_cap_5_to_10hz
+    sha256: d14e4fef3848506342181d69fd01b76513a65d2572fe4602c9a215964e903573
+    previous_sha256: ab145bda84b1ba3de1c296a26a5a836a99cc3b6bbb9aa7021fdee4d326a7db04
+    revision_reason: camera_shared_imu_bev_20261018_bounded_cache_and_opencv_threads_1
+    revision_evidence: docs/records/camera/2026-10-18-shared-imu-bev.md
+    prior_revisions:
+      - sha256: 497286b20abb22e16464596d8f1354d6a19958129300f04c2a0b12c8f4bda5e8
+        reason: before_camera_display_20261018_rgb_bev_cap_5_to_10hz
   - path: src/asmc_camera/config/bev/visualization_dev.yaml
     sha256: dd5f1ca51182ba792b4a97e3ce75595729ea163a0dd2e967bbfa2701a7b04bc7
   - path: src/asmc_camera/config/offline/bev/shadow_map_rgb_bev.yaml
