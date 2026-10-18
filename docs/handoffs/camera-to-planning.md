@@ -53,7 +53,7 @@ MORAI RGB ×3 --UDP--> bridge --ROS--> TwinLiteNet+ Large v7 E8
 `lane_boundary_adapter`의 family monitor는 read-only reference다. 같은 패키지의 BBox 차로/재밍 제어 launch는 별도 경로다.
 최종 판제는 가능하면 그 node를 별도 프로세스로 영구 유지하지 않고,
 `BuildBoundaryFamilyStripContext()`·freshness/invalid gate·관련 테스트를
-planning-owned lane/corridor module에 흡수한다. 흡수 전에는 아래 8절 인수 체크리스트와
+planning-owned lane/corridor module에 흡수한다. 흡수 전에는 아래 7절 인수 체크리스트와
 adapter README의 bag/closed-loop parity를 통과해야 한다. standalone package 삭제는
 대체 consumer merge 후 별도 PR에서만 수행한다.
 
@@ -115,6 +115,24 @@ deployment_allowed = false
 특히 객체 bbox와 차선을 영상에서 비교하는 어댑터는 고정 평면 homography를 따로 사용하므로,
 SHA만 바꿔 M1 family를 허용하기 전에 자세 보정된 xyz의 투영 정합을 검증해야 합니다.
 Read-only family monitor의 수신과 실제 제어 경로의 승격은 구분합니다.
+
+| 항목 | 현재 카메라 기본값 | 기존 BBox 판제 소비 경로 |
+|---|---|---|
+| 설정 SHA | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | 위 초기 `691b9982…`를 기대하며 불일치 시 거부 |
+| 지면 | `cameras_v3.yaml`, 명목 거리0.36m + 영상 원본 시각 IMU | `cameras_v2.yaml`, 고정 지면 z=-0.35m |
+| 영상 재투영 | 보정된 family xyz 및 해당 영상의 보정·시각 확인 필요 | `FamilyPoint2d`의 xy에 YAML 평면 z를 다시 붙여 고정 homography 적용 |
+| 인수 상태 | 사용자 표시·주행 확인, 카메라 실행 검증 완료 | 새 IMU 기하의 BBox 판정·폐루프 제어 인수는 판제 담당 확인 대기 |
+
+이 차이는 설정만의 문제가 아닙니다. `camera_bbox_lane_node.cpp::projectPoint()`는 원본
+family z를 보존하지 않으므로 `expected_hash`와 YAML 파일명만 바꾸는 것으로 IMU 투영이
+연결되지 않습니다. 판제 담당이 3D 경계 또는 영상별 평면·보정 정보를 보존하는 재투영 경로를
+구현·검증해야 합니다. Family의 대표 header는 묶음의 최신 영상 시각이고 뷰별 시각은 다를 수
+있으며, 병진/yaw의 공통 시각 정렬(M2)은 보류 중입니다. 최신 평면을 임의의 전방 영상에 적용하지 않습니다.
+`/perception/lane/ground_projection`은 현재 **시각화 전용 계약**이며 검증된 판제 입력으로
+승격하지 않았습니다. 필요하면 카메라 담당과 별도 소비 계약을 먼저 합의합니다.
+
+M1을 끈 M0 복구도 현재 Large·0.36m 등 다른 설정을 유지하므로 초기 `691b9982…` SHA와
+자동으로 호환되는 것은 아닙니다. 실제 메시지의 SHA와 보정 파일을 확인합니다.
 
 `deployment_allowed=false`는 메시지를 버리라는 뜻이 아니라, 현재 결과가 판제 연결과
 closed-loop 승인을 대신하지 않는다는 뜻이다. read-only 검토에서는 이 값을 요구한다.
@@ -273,6 +291,28 @@ roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=fa
 카메라 모드와 최종 NORMAL/JAMMING 선택은 동일 기능이 아닙니다. 구간 활성화·정지/재개·fallback은 판제에서 확인합니다.
 
 ## 7. 수락 상태와 인수 확인
+
+### 7.1 판제 담당의 별도 인수 작업
+
+카메라 PR 병합은 아래 작업의 완료를 뜻하지 않습니다. 카메라 담당은 보정·원본 시각·진단과
+검증 자료를 제공하고, 판제 담당은 소비 변경과 제어 승격을 소유합니다. 현재 아래 항목은 **인수 대기**입니다.
+
+- [ ] Read-only로 현행 family의 xyz, `base_link`, 역할, `valid`·support·범위를 확인한다.
+- [ ] BBox 차로 어댑터에서 z를 잃는 고정 평면 투영을 검토하고, 같은 영상 시각·보정으로
+  정차/가속/제동/조향과 M1→M0 복귀 시 RGB 위 경계·객체 차로 판정의 정합을 확인한다.
+- [ ] 승인한 SHA·보정 경로를 BBox classifier의 `expected_hash`, follower의
+  `expected_config_sha256`, planner 통합 launch에 일관되게 전달한다. SHA 검사를 제거하지 않는다.
+- [ ] 잘못된 SHA, invalid/stale, 입력 중단·재시작·세대 전환에서 unknown/정지/fallback을 확인한다.
+  freshness350ms와 source/receive 시각 검사를 완화하지 않는다.
+- [ ] Read-only bag·preview 이후 A126 음영 ODD와 selector의 제어 소유권, 차로변경·복귀·LiDAR veto를
+  폐루프로 검증하고 승인 기록을 남긴다. `autonomy_no_bridges_v2.launch`는
+  `enable_control=true`를 전달하므로 단순 관측 시험용으로 실행하지 않는다.
+
+검토 시작점은 [BBox 판정 안내](../../src/jamming_lane_boundary_adapter/docs/bbox-lane.md)와
+[차선변경 안내](../../src/jamming_lane_boundary_adapter/docs/bbox-lane-change.md)다.
+설정 불일치 거부는 새 family를 인수하지 않았다는 의미이며, 신경망 추론 장애로 단정하지 않는다.
+
+### 7.2 검증 이력과 남은 한계
 
 2026-10-18 Large E8은 동일 val/test·TensorRT semantic/family 검증과 FOGGY10분을 통과했다.
 교차12회 중 Large SUNNY1회에 source freshness 저하3건을 기록했다.

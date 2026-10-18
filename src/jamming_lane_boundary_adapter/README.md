@@ -1,5 +1,11 @@
 # Lane Boundary Adapter
 
+**IMU family 판제 인수 대기:** 현재 카메라는 명목 지면 거리0.36m·원본 시각 IMU 보정을 사용한다.
+이 패키지의 BBox 소비 경로는 초기 설정 SHA·`cameras_v2.yaml` 고정 평면 투영을 유지하므로
+`wrong_geometry_config_hash`로 거부할 수 있다. SHA만 바꾸지 말고
+[판제 인수 체크리스트](../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)에 따라
+xyz 재투영·시각 정합·제어 승격을 판제 담당이 검증한다. Read-only monitor와 제어 경로는 구분한다.
+
 현재 YOLO 추론은 별도 `asmc_camera/camera.launch`가 소유한다. `camera_bbox_detector.launch`는 카메라 전방 결과를 전용 토픽으로 바꾸는 CPU 어댑터뿐이다.
 구형 cropped YOLO/가중치/실행 옵션은 제거했고 기존 차로 판정·제어 정책과 소비 cutoff0.7은 유지한다.
 [카메라→Main/LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 참고한다.

@@ -227,6 +227,10 @@ void laneCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& message) {
     }
     if (frame.stamp == last_lane_stamp) return;  // 중복 frame은 확인 횟수를 올리지 않음.
     last_lane_stamp = frame.stamp;
+    // Planning handoff: keep this fail-closed gate until both the classifier and
+    // follower accept the same validated geometry. Updating the hash alone does
+    // not make the static projection below compatible with IMU family xyz.
+    // See docs/handoffs/camera-to-planning.md, section 7.1.
     if (message->config_sha256 != params.expected_hash) {
         frame.error = "wrong_geometry_config_hash";
     } else {
@@ -253,6 +257,11 @@ void laneCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& message) {
 // 4. 지면 차선 경계만 원본 영상에 투영. BBOX의 거리/3D 크기는 만들지 않는다.
 // ============================================================================
 bool projectPoint(const Point& point, cv::Point2d& pixel) {
+    // Compatibility projection: FamilyPoint2d has discarded the producer's z.
+    // This reconstructs z from the fixed YAML plane, not the image-time IMU plane.
+    // Planning must validate a z-preserving, image/calibration/time-matched path
+    // before accepting the new family SHA; latest per-view metadata is not an
+    // interchangeable plane for another image (no common-time ego-motion alignment).
     const cv::Vec3d body(point.x, point.y, camera.ground_z + camera.slope_x*point.x + camera.slope_y*point.y);
     const cv::Vec3d optical = camera.rotation * body + camera.translation;
     if (optical[2] <= 0.01) return false;

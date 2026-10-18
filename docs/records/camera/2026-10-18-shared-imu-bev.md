@@ -86,3 +86,13 @@ SHA가 남아 있었다. 메시지38개/family34개·85토픽으로 등록 수�
 
 사용자 직접 주행 확인에 따라 M2 이동/yaw 정렬·과거 근거 누적은 보류한다.
 [현행 보정 설계](../../architecture/camera-imu-projection.md)에 재개 조건을 남겼으며 PR 통합의 필수 조건으로 두지 않는다.
+
+## 판제 별도 인수 경계
+
+사용자 요청에 따라 [판제 인계](../../handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)에
+현행 IMU family와 초기 SHA·고정 평면 BBox 소비 경로의 차이, xyz/영상 시각 재투영,
+classifier·follower의 동일 설정 승인, read-only/preview 이후 폐루프 검증 항목을 명시했다.
+해당 C++ hash gate·고정 평면 투영과 세 launch에도 주석을 남겼다. 카메라 기본값과 기존 판제
+승인 SHA·보정값·제어 설정은 변경하지 않았다. 시각화용 평면 metadata를 판제 정본으로 승격하지 않는다.
+54개 계약·문서 시험과 문서 검사, planning launch/input 계약이 통과했고,
+주석 변경 전후 세 launch XML tree와 두 C++ 파일의 비주석 token이 같음을 확인했다.

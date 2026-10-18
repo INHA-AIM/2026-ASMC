@@ -1,5 +1,10 @@
 # BBOX가 내 차로 / 옆 차로에 있는지 판정
 
+**현재 IMU family는 별도 인수가 필요하다.** 아래 실행법은 초기 SHA·고정 평면의 호환 경로다.
+현재 카메라 기본값에 연결하려면 판제 담당이 xy에서 z를 복원하는 투영 경로와 영상 시각 정합을
+검증해야 한다. SHA 검사만 해제하거나 새 값으로 바꾸지 않는다.
+[현재값·인수 체크리스트](../../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)를 따른다.
+
 거리 추정 없이 기존 전방 YOLO BBOX와 camera boundary family를 사용한다.
 `src/camera_bbox_lane_node.cpp`에 인자 기본값·주석·main·판정 함수를 둔다.
 이 노드는 관측/표시 전용이다. 자동 차선변경과 `/ctrl_cmd` 발행은 하지 않는다.
