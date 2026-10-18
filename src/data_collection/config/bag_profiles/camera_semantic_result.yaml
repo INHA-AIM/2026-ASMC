@@ -58,6 +58,7 @@ optional_topics:
   - /perception/lane/debug/markers
   - /perception/lane/boundary_observations
   - /perception/lane/boundary_family
+  - /perception/lane/ground_projection
   - /perception/lane/boundaries
   - /perception/lane/diagnostics
   - /perception/lane/pipeline_audit
@@ -70,6 +71,7 @@ expected_types:
   /perception/camera/diagnostics: diagnostic_msgs/DiagnosticArray
   /perception/lane/boundary_observations: asmc_msgs/LaneBoundaryObservationArray
   /perception/lane/boundary_family: asmc_msgs/LaneBoundaryFamily
+  /perception/lane/ground_projection: asmc_msgs/CameraGroundProjection
   /perception/lane/pipeline_audit: diagnostic_msgs/DiagnosticArray
   /perception/lane/debug/shared_family/diagnostics: diagnostic_msgs/DiagnosticArray
   /perception/lane/debug/shared_family/markers: visualization_msgs/MarkerArray

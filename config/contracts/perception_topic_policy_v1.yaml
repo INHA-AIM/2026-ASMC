@@ -193,7 +193,7 @@ topic_families:
     consumers:
       - file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py
         anchor: "'/perception/lane/ground_projection'"
-    bag_profiles: []
+    bag_profiles: [camera_semantic_result.yaml]
     classification: debug_opt_in
     current_mode: subscriber_lazy
     p5b_action: keep

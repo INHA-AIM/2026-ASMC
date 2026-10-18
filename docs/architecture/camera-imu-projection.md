@@ -135,3 +135,8 @@ legacy 소비자는 종전 데이터 토픽을 계속 사용할 수 있다. Comp
 세대/생산자 변경 시 캐시를 비우며 렌더 도중 변경된 결과도 발행하지 않는다.
 화면의 `IMU shared` 또는 `M0: 사유`가 실제 family의 선택을 표시한다.
 수신/발행 source stamp는 보존한다. 차량 이동·yaw에 따라 Ego 기준 도로가 움직이는 것은 정상이다.
+
+결과 녹화 프로필에는 이 metadata를 optional topic으로 포함한다. 원본 RGB run과 함께 재생해야
+정확한 비교 영상이 만들어진다. metadata가 없는 구형 결과-only bag에서는 기본 comparison이
+기다린다. 과거 고정 평면 검토가 필요하면 내부 `bev/visualization.yaml`의
+`shared_family_projection: false`를 명시하고 view 노드를 재시작한다. 최신 자세를 대입하는 자동 복구는 하지 않는다.

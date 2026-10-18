@@ -1,0 +1,65 @@
+{
+  "source_commit": "a7c2bba1",
+  "files": [
+    {
+      "path": "src/asmc_camera/README.md",
+      "before_sha256": "c7709b3f0c0279218bc1b981c64967c032bab0d0ba6c20e60c42fb9f08feb5a7",
+      "after_sha256": "a43c8569f811d6ff3840c0aeab96cb830815f8d3352b0b2cfd897cbef1145ed1"
+    },
+    {
+      "path": "src/asmc_camera/config/bev/visualization.yaml",
+      "before_sha256": "ab145bda84b1ba3de1c296a26a5a836a99cc3b6bbb9aa7021fdee4d326a7db04",
+      "after_sha256": "403e93759fe58d666bc71e557c7b62d6a3ef85ec33bea6d33ec726d12280bc38"
+    },
+    {
+      "path": "src/asmc_camera/launch/visualization.launch",
+      "before_sha256": "31c37a9003476ca4a0e0c8123757e24ad47fd3a2cc079a925dc484abf0d2c6e2",
+      "after_sha256": "e1a500209ef6b0d6a4ce548506c17af18c530f70fbcc7cc28725e0b0f2281e09"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/bev/calibration.py",
+      "before_sha256": "1bf6efb0c96e1056e12ed9afbff1474b247529ea09b03fbb0b7bc9acccf1fedc",
+      "after_sha256": "da1bdbb67480a35ae4c4307ee7d95380348316418af32c773f2fbe8b7ed9f248"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/bev/comparison_projection.py",
+      "before_sha256": null,
+      "after_sha256": "1086fefe5b943f0c6a5576ab25afb60dc7002b5ebf20cb85d8f26044c934948a"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py",
+      "before_sha256": "58c45def5fd914441fea50ef0ce57c8d937beb1f308c609439c5fa8384c7087b",
+      "after_sha256": "bc12d4b1583345c738a9ab5e9e22370b2e871986c6db8d3743e657a090fe0c24"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py",
+      "before_sha256": "055520c55f0e854ff59926ef2c86d3df48bddc79422e56df9ff8492a800d2da3",
+      "after_sha256": "4eadcfa37c60e919fdcd63f2eb8aeef4832f12e806a78aba60068e871c15768b"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/runtime/comparison_frames.py",
+      "before_sha256": null,
+      "after_sha256": "13b5a7deeca382c0504fa7864be061a9db91305b4a2044bfd2b63ebfb98c3ad5"
+    },
+    {
+      "path": "src/asmc_camera/test/bev/test_shared_comparison.py",
+      "before_sha256": null,
+      "after_sha256": "4961f7f5c626bf6bdcd892e134345815213424a9afae0b5a0c26a6d93b5f00f8"
+    },
+    {
+      "path": "src/asmc_msgs/CMakeLists.txt",
+      "before_sha256": "911c585c815b32b006e4032d63c18f87b36da922b293d4ea5be9d567db541383",
+      "after_sha256": "8d6faea884f8d7553003382dd47f3c7495a3039f1b3ea6b27a11fd5e5ce5f6b3"
+    },
+    {
+      "path": "src/asmc_msgs/README.md",
+      "before_sha256": "17ce145043b500965420927f96edee3c7992d1025f179ca8015d6469e88f5a9e",
+      "after_sha256": "498b834f1ede7b26ab59246714a1e89b4d12d4f6e928e5beb642d318be019adb"
+    },
+    {
+      "path": "src/asmc_msgs/msg/CameraGroundProjection.msg",
+      "before_sha256": null,
+      "after_sha256": "966dc065754602b8e0f053e3b71ea74074608578b6a66dd97066b2f9866aa2a5"
+    }
+  ]
+}

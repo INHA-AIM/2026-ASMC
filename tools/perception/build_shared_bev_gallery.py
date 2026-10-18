@@ -14,7 +14,8 @@ def main():
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
     rows=[]
     for name,label in [('baseline','기존 고정 BEV'),('candidate','보정 공유 첫 구현'),
-                       ('early-projection','피팅 전 보정 공유')]:
+                       ('early-projection','피팅 전 보정 공유 · 60초'),
+                       ('epoch-guard','최종 세대 guard · 20초')]:
         src=a.run_root/'live'/name;dst=a.output/name;dst.mkdir()
         report=json.loads((src/'report.json').read_text())
         for path in src.iterdir():
@@ -32,13 +33,14 @@ def main():
 <h1>2026-10-18 · 두 시각화의 IMU 보정 재사용</h1><a href="../index.html">ASMC 실험 목록</a>
 <p>IMU 조회·M1/M0 선택은 family worker에서 한 번. 작은 metadata를 피팅 전에 발행하고,
 comparison은 같은 원 RGB·semantic을 뷰별 한 geometry로 투영합니다. 추론·피팅을 다시 실행하지 않습니다.</p>
-<p>차량·날씨·제어를 변경하지 않은 각60초 읽기 전용 참고 측정입니다. 경로·자세를 통제한 품질 대조나
-음영 ODD 주행 수락이 아닙니다. 기존 실행부터 family 무효가 많았으며 최종843개 중780개도 무효입니다.
-이 결과를 readiness 통과로 사용하지 않습니다. rqt 창 대신 실제 영상 토픽 구독으로 렌더링 부하를 만들었습니다.</p>
+<p>차량·날씨·제어를 변경하지 않은 세 구성 각60초와 최종20초 읽기 전용 참고 측정입니다. 경로·자세를 통제한 품질 대조나
+음영 ODD 주행 수락이 아닙니다. 기존 실행부터 family 무효가 많았으며 보정 공유60초의843개 중780개도 무효입니다.
+마지막20초에는300/300 유효와 readiness 저하0을 확인했지만 장기 주행 수락으로 확대하지 않습니다.
+rqt 창 대신 실제 영상 토픽 구독으로 렌더링 부하를 만들었습니다.</p>
 <table><tr><th>구성</th><th>평균 Hz</th><th>최소5초 Hz</th><th>bridge header→표시 p95 ms</th><th>최대 공백 ms</th><th>BEV 체인 CPU, core100% 기준</th></tr>'''
-    page+=''.join(rows)+'</table><p>첫 공유 구현의 대기를 줄인 뒤 최종 comparison p95 약238ms입니다. 기존 약217ms와 비교해 보정 raster 비용이 남습니다. 카메라 촬영→광자 표시 지연으로 해석하지 않습니다. CPU 수치는 서로 다른 참고 구간이며 엄밀한 동일 pose의 인과 효과가 아닙니다.</p>'
+    page+=''.join(rows)+'</table><p>첫 공유 구현의 대기를 줄인 뒤 comparison p95는60초 약238ms, 마지막20초 약218ms입니다. 기존 약217ms와 비교해 보정 raster 비용과 구간 차이가 남습니다. 카메라 촬영→광자 표시 지연으로 해석하지 않습니다. CPU 수치는 서로 다른 참고 구간이며 엄밀한 동일 pose의 인과 효과가 아닙니다.</p>'
     page+='<div class="pair">'
-    for name,label in [('baseline','기존 고정 지면'),('early-projection','같은 프레임의 IMU 공유')]:
+    for name,label in [('baseline','기존 고정 지면'),('epoch-guard','같은 프레임의 IMU 공유')]:
         page+='<section><h2>'+label+'</h2><a href="'+name+'/comparison.jpg"><img src="'+name+'/comparison.jpg"></a><a href="'+name+'/report.json">원본 측정</a></section>'
     page+='</div><p>그림은 각 실행의 실제 수신 예시로 같은 장면 비교가 아닙니다. M0 복귀는 화면에 사유를 표시합니다. 차량 이동/yaw에 따른 Ego 기준 도로 이동과 roll/pitch 흔들림을 구분합니다.</p></html>'
     (a.output/'index.html').write_text(page,encoding='utf-8')
