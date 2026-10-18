@@ -1,0 +1,211 @@
+{
+  "version": "obb_quality_temporal_eval_v2",
+  "frozen_before": "the baseline run of experiment 02; must not change after any baseline or candidate metric is seen (SHA256 in BASELINE_LOCK.json)",
+  "review_of_experiment01_contract": {
+    "kept": "inputs/filters, dt from t_lidar, GT-empty frames kept, +-90 deg / 35 m mask, class-first 2-stage Hungarian, center gate (vehicle 2.5 m, pedestrian 1.0 m) OR BEV IoU >= 0.1, ignore-box handling, GT segmentation, map-aligned temporal differencing, scene bootstrap",
+    "corrected": "box canonicalisation: experiment 01 compared prediction length/width and yaw with GT l/w/yaw literally. GT vehicles have l>=w (100%) but GT pedestrians have l<w (100%) and the V2 output can publish length<width with yaw along the short side (stabilizeMatchedOBB re-fit without long-axis normalisation, CALLGRAPH_AND_RISK_KO.md section 9). All size/yaw metrics of this contract therefore use canonical long=max(l,w), short=min(l,w) and the axis yaw of the long side for BOTH prediction and GT. BEV IoU used for matching is invariant to this relabelling, so matching is unchanged. Experiment-01 style literal metrics are still reported with the prefix legacy_ for continuity, never gated."
+  },
+  "inputs": {
+    "dataset": "/home/autonav/Lidar_Data/{primary,highspeed_eval} via tools/replay_lidar_scene.load_scene (read-only import, bytecode disabled)",
+    "frame_filter": "frame-level lidar_primary==1 and has_lidar_npy; GT-empty frames are kept in the input stream",
+    "gt_filter": "labels_3d_lidar_v1 rows with correction_valid==1 and vel_source=='raw' (kind=gt)",
+    "ignore_boxes": "rows with correction_valid==1 and vel_source!='raw' (kind=ignore): never GT; a prediction matched to one is neither TP nor FP; their points are excluded from split/over-merge attribution",
+    "dt": "t_lidar difference of consecutive primary frames; never a fixed 66.7 ms",
+    "pose_inputs": "synthetic IMU (yaw = ego.yaw at t_lidar, roll=pitch=0), CAN speed (central difference of t_lidar ego positions), GPS antenna = T_ego2global * GPS lever arm; all stamped t_lidar and fed through the production SensorPoseHistory (identical to experiment 01)",
+    "lidar_ring": "the npy point clouds carry only x,y,z,intensity (no ring/time field): ring-based quantities are replaced by elevation-angle bins of 2 deg and azimuth bins of 0.5 deg",
+    "frozen_input_manifest": "work/inputs/INPUT_MANIFEST.json (SHA256 of every frames.csv / gt.csv; byte-identical to experiment 01 inputs for 114/114 scenes)",
+    "static_bag": "nas_bag_feasibility gt_instance smoke bag (291 scans), replayed in scene form with the /Ego_topic pose because its /imu quaternions are all zero (experiment 01)"
+  },
+  "system_under_test": {
+    "path": "SensorPoseHistory -> frame_boundary::PrepareScan -> LidarProcess -> FusionProcessAt (no camera input) -> GateInputs/Decide -> BuildV2(kLocal)",
+    "launch_profile": "Main/main_integration.launch params via roslaunch --dump-params, planner_udp_enabled:=false, harness override imu_yaw_is_true_enu=false (map yaw only, dataset has no lat/lon)",
+    "prediction": "V2 /lidar/local_object objects (base_link) of every scan whose effective V2 mode includes local; scans without local output contribute no predictions and are counted as dropped",
+    "cluster_points": "harness --points-out: cluster points of every observed track (tracking input frame) + base_from_input per scan; used ONLY by the evaluator (observability features, split/over-merge attribution with GT, clustering counterfactuals); never by any runtime algorithm",
+    "determinism": "std::srand(0) per scene process, one process per scene, single-threaded LidarProcess, identical binary flags for every arm"
+  },
+  "frames": {
+    "gt": "ego/body frame at t_lidar = base_link (verified in experiment 01); GT z is the box center (box bottom ~ -0.35 m in base_link)",
+    "prediction": "base_link at the scan stamp",
+    "sensor_bev_position_base_link": [0.8, 0.0],
+    "temporal_differencing": "per-frame residual vectors (pred - gt) are rotated by that frame's ego yaw into map-aligned axes before frame-to-frame differencing; scalar residuals (size, axis-yaw error) are frame invariant"
+  },
+  "canonicalization": {
+    "long": "max(l, w)", "short": "min(l, w)",
+    "axis_yaw": "yaw if l >= w else yaw + pi/2, taken modulo pi",
+    "applies_to": "prediction (V2 length/width/yaw) and GT (l/w/yaw)",
+    "axis_error": "e = 0.5*atan2(sin 2(a-b), cos 2(a-b)) in (-pi/2, pi/2]; |e| in [0, 90 deg]"
+  },
+  "masks": {
+    "azimuth_deg": [-90.0, 90.0],
+    "max_range_m": 35.0,
+    "applied_on": "BEV center of the box in base_link",
+    "tracker_roi_base_link": {"x": [-29.2, 50.8], "y": [-20.0, 20.0], "z": [-0.55, 4.45],
+      "why": "production ROI -30/50/-20/20, z -2/3 in the LiDAR frame (mount 0.8,0,1.45, rpy 0); only the y=+-20 m edges intersect the evaluation mask (x in [0, 28.7] m)"},
+    "rule": "matching uses all GT/ignore boxes and all predictions; afterwards TP/FN are counted only for GT inside the mask, FP only for unmatched predictions inside the mask"
+  },
+  "matching": {
+    "per": "frame",
+    "class_map_prediction": {"vehicle": "vehicle", "dynamic_obstacle": "pedestrian", "*": "unknown"},
+    "class_map_gt": {"0": "vehicle", "1": "pedestrian"},
+    "stages": [
+      "stage 1: Hungarian (scipy linear_sum_assignment) over pairs with identical class",
+      "stage 2: Hungarian over remaining pairs whose prediction class is unknown",
+      "vehicle<->pedestrian pairs are never matched",
+      "stage 3: remaining predictions are greedily (ascending cost) matched to ignore boxes with the same gate"
+    ],
+    "gate": "pair admissible iff BEV center distance <= center_gate_m[gt class] OR (distance < 10 m AND BEV IoU >= 0.1)",
+    "center_gate_m": {"vehicle": 2.5, "pedestrian": 1.0},
+    "bev_iou": "exact rotated-rectangle intersection (convex clipping)",
+    "cost": "BEV center distance (m); inadmissible = 1e6",
+    "tie_break": "GT sorted by track_id, predictions sorted by track id before assignment"
+  },
+  "gt_track_segmentation": {
+    "why": "labels_3d track_id is not persistent",
+    "break_on_dims_change_m": 0.005, "break_on_class_change": true, "break_on_position_jump_m": 1.0,
+    "position_jump_definition": "|(gx,gy)_k+1 - (gx,gy)_k - R(ego_yaw_k) v_ego_k * dt|", "break_on_gap_s": 0.3
+  },
+  "metrics": {
+    "recall_precision": "recall = TP/(TP+FN) over in-mask GT (overall, vehicle, pedestrian); recall_roi* = GT inside tracker_roi_base_link; precision = TP/(TP+FP) over in-mask predictions",
+    "center_error": "BEV distance pred center - GT center for TP: MAE, p95 (all, vehicle, pedestrian)",
+    "size_error": "canonical |pred long - gt long|, |pred short - gt short|, |pred h - gt h| for TP: MAE, p95 (vehicle = primary, all reported)",
+    "yaw_error": "canonical axis yaw error |e| (deg) for TP: MAE, p95 (vehicle = primary; pedestrian footprint axis is ill-defined, reported only)",
+    "corner_error": "nearest-to-sensor corner: the GT corner and the prediction corner closest (BEV) to the sensor position (0.8, 0) in base_link; error = BEV distance between them (m), MAE/p95",
+    "temporal_pairs": "pairs (k,k+1) of consecutive input frames (dt <= 0.3 s) where the same GT segment is TP in both",
+    "size_temporal_residual": "|(pl-gl)_k+1 - (pl-gl)_k| and |(ps-gs)_k+1 - (ps-gs)_k| (= output size jitter because GT size is constant within a segment): p50/p95; primary = vehicle",
+    "yaw_temporal_residual": "|axis_error(e_k+1 - e_k)| with e = canonical axis yaw error (deg): p50/p95; primary = vehicle",
+    "center_temporal_residual": "|r_k+1 - r_k| of map-aligned center residual vectors: p50/p95",
+    "corner_temporal_residual": "|c_k+1 - c_k| of map-aligned nearest-corner residual vectors: p95",
+    "axis_flip": "temporal pair with yaw temporal residual > 60 deg (a 90 deg long/short axis swap appears as ~90 deg)",
+    "extreme_size_jump": "temporal pair where long OR short changes by >= 25% of its previous-frame prediction OR by >= 0.75 m: with dpl = pl_k+1 - pl_k and dps = ps_k+1 - ps_k, jump = (|dpl| >= 0.25*pl_k) or (|dpl| >= 0.75) or (|dps| >= 0.25*ps_k) or (|dps| >= 0.75)",
+    "extreme_yaw_jump": "vehicle temporal pair with yaw temporal residual > 15 deg",
+    "extreme_size_yaw_jump_rate": "fraction of vehicle temporal pairs with extreme_size_jump OR extreme_yaw_jump",
+    "legacy_extreme_jump_rate": "experiment-01 definition (center delta > 1 m or vehicle literal yaw delta > 15 deg), reported only",
+    "velocity": "experiment-01 definitions (legacy KF absolute velocity of the same track id), reported only: A/B/C/D do not change the KF",
+    "stationary_false_moving": "TP with GT speed < 0.2 m/s and kf_init_count >= 2: fraction with predicted speed > 0.5 m/s",
+    "id_switch": "per GT segment, consecutive TP observations with different predicted track id; rate = IDSW / TP",
+    "fragmentation": "per GT segment, number of TP -> not-TP -> TP interruptions; rate = fragmentations / segments with >=1 TP",
+    "unique_track_ids": "distinct predicted ids in local output per scene, summed",
+    "scan_accounting": "input scans, scans with local output, dropped scans",
+    "runtime": "per-scan lidar_process_ms and frame_ms p50/p95/max, peak RSS per process (dedicated performance run, both arms simultaneously on dedicated cores)"
+  },
+  "observability": {
+    "computed_from": "cluster points of the predicted track (tracking input frame, sensor at origin) and its raw tracker OBB (harness tracks[].obb); identical for baseline and output-only candidates",
+    "features": {
+      "npts": "number of cluster points (voxel centroids)",
+      "az_span_deg": "max-min azimuth of the points seen from the sensor",
+      "z_span_m": "max-min z",
+      "az_bins": "occupied 0.5 deg azimuth bins",
+      "el_bins": "occupied 2 deg elevation bins (ring substitute)",
+      "edge_support": "for each of the 4 OBB edges: points within 0.15 m of the edge line and within the edge extent + 0.15 m; supported if >= max(3, 15% of points) and the supporting points cover >= 30% of the edge length",
+      "visible_faces": "number of supported edges among the sensor-facing edges (outer side faces the sensor): 0, 1 (one face) or 2 (two dominant edges / L)",
+      "fit_residual_m": "mean distance of points to the nearest OBB edge",
+      "inlier_ratio": "fraction of points within 0.15 m of the nearest edge",
+      "aspect": "raw OBB long/short",
+      "pca_ratio": "sqrt(lambda1/lambda2) of the XY point covariance",
+      "obs_count": "number of scans in which the predicted id has been observed in local output up to and including this scan",
+      "prev_miss": "the id was observed before but not in the previous scan",
+      "ambiguity": "another observed track's measured point-mean centroid lies within 1.5 m of this track's predicted association position (tracks[].pred) in this scan"
+    },
+    "buckets": {
+      "range_m": [[0, 15], [15, 25], [25, 35]],
+      "track_age_obs": {"first_1_2": [1, 2], "obs_3_5": [3, 5], "obs_6_plus": [6, 1000000]},
+      "npts_quantiles": [0, 10, 25, 50, 75, 90, 100]
+    }
+  },
+  "split_overmerge": {
+    "gt_use": "evaluator only; never used by any runtime algorithm",
+    "point_assignment": "each cluster point (base_link) is assigned exclusively to the GT (kind=gt) box that contains it after expanding by 0.3 m in long/short and 0.3 m in z; if several expanded boxes contain it, the one with the smallest normalised depth max(|u|/(L/2), |v|/(S/2)) wins; points inside an expanded ignore box are discarded",
+    "eligible_gt_observation": "in-mask GT with >= 5 assigned points from any prediction",
+    "split": "eligible GT with >= 2 predictions each having >= 5 assigned points to it AND >= 50% of their own points assigned to it",
+    "vertical_split": "split whose two largest fragments have XY extent overlap (in the GT frame, sides floored at 0.1 m) >= 50% of the smaller and z-interval overlap <= 20% of the smaller height; otherwise horizontal_split",
+    "over_merge": "a prediction with >= 5 points and >= 10% of its points assigned to each of >= 2 GT boxes whose un-expanded BEV IoU < 0.1; every such GT observation is flagged",
+    "rates": "split_rate = split eligible GT observations / eligible GT observations; over_merge_rate = over-merge-flagged eligible GT observations / eligible GT observations (overall, vehicle, by range and by obs_count of the largest/merged prediction)",
+    "events": "maximal runs of consecutive scans of one GT segment with the condition; report event count, frame count and repeated events (run length >= 2)",
+    "review": "at least 50 stratified events are rendered (BEV + side view of the points, GT and predicted boxes) and reviewed; the observed false-positive share of the automatic detector is reported"
+  },
+  "clustering_counterfactual": {
+    "duplicate_merge_fragments": "each observed track's points are re-clustered offline with the production adaptive rule (3D distance <= min(tol(p),tol(q)), tol from horizontal range in the tracking input frame, 0.55/0.85 m over 8..50 m); components >= 2 = a ConsolidateCurrentDetections merge of that many clusters (validated per scan against prof.clusters - prof.det)",
+    "fixed_eps_0p5": "same points re-clustered with a fixed 0.5 m tolerance and MinPoints 5: >= 2 components = an object the adaptive tolerance kept together",
+    "interpretation": "with the GT point assignment: prevented_split (one GT), avoided_or_caused_over_merge (several GTs)"
+  },
+  "roi_boundary": {
+    "event": "eligible in-mask GT observation whose GT footprint extends beyond the production tracker ROI (base_link |y| > 20 m for any corner, or top above z 4.45 m)",
+    "effect": "TP size/center errors of boundary observations vs non-boundary observations in the same range bucket"
+  },
+  "breakdowns": {
+    "scene": true, "class": ["vehicle", "pedestrian"],
+    "range_m": [[0, 15], [15, 25], [25, 35]],
+    "track_age_obs": {"first_1_2": [1, 2], "obs_3_5": [3, 5], "obs_6_plus": [6, 1000000]},
+    "gt_speed_mps": {"static": [0, 0.2], "slow": [0.2, 2.0], "moving": [2.0, 8.0], "fast": [8.0, 1000.0]}
+  },
+  "sets": {
+    "primary": "84 Lidar_Data/primary scenes = main evaluation",
+    "development": "primary minus holdout (79 scenes) = the only set allowed for configuration selection",
+    "holdout": ["scen93", "scen98", "scen103", "scen108", "scen113"],
+    "highspeed": "30 Lidar_Data/highspeed_eval scenes = crash/drop/large-regression stress only (deskew impossible)",
+    "all": "114 scenes",
+    "static_bag": "static GT smoke bag; reported and gated for jitter/false-moving non-worsening"
+  },
+  "bootstrap": {"unit": "scene", "resamples": 10000, "seed": 20261018,
+    "statistic": "paired relative change (candidate - baseline)/baseline of each key metric recomputed on the pooled resampled primary scenes", "ci": [2.5, 97.5]},
+  "c_d_justification": {
+    "C_split_overmerge_recovery": "implement ONLY if, on the 79 development scenes of the baseline, (split events + over-merge events of vehicles) >= 100 AND [(split + over-merge flagged eligible vehicle observations) >= 0.5% of eligible vehicle observations OR >= 10% of baseline vehicle extreme size/yaw jump pairs touch a split/over-merge flagged observation]",
+    "D_roi_padding": "evaluate ONLY if, on the development scenes, ROI-boundary events of vehicles >= 100 AND [boundary observations >= 0.5% of eligible vehicle observations OR >= 10% of vehicle extreme size/yaw jump pairs touch a boundary observation]",
+    "otherwise": "record NOT_JUSTIFIED_BY_CURRENT_DATA and do not implement",
+    "insufficient_vs_not_needed": "if the evaluable event count is < 100 the data is insufficient to judge (counts toward PARTIAL_PASS_FOLLOWUP_REQUIRED); if >= 100 events exist but the rate/contamination test fails, the feature is judged not needed (does not block a full PASS)"
+  },
+  "tuning": {
+    "max_configs_per_ablation": 5,
+    "set": "development (79 scenes) only; holdout, highspeed and the static bag are never used for selection",
+    "eligibility": "all metric regression gates below evaluated on the development set (excluding holdout-only and external gates)",
+    "score": "primary improvement score = mean of the relative reductions of [vehicle long temporal p95, vehicle short temporal p95, vehicle yaw temporal p95, vehicle extreme size+yaw jump rate]",
+    "selection": "per ablation: eligible config with the most improvement criteria met, tie -> highest score; across ablations: the per-ablation winner with the most criteria met then highest score, where B must additionally not worsen dev vehicle center MAE vs A's winner by more than 2% and not worsen dev idsw/fragmentation by more than 2%; only that single selected configuration is run once on the holdout",
+    "after_holdout": "no code, threshold, contract or evaluator change"
+  },
+  "decision": {
+    "regression_gates": {
+      "existing_tests_new_failures": 0,
+      "sanitizer_new_signatures": 0,
+      "default_false_identical_to_baseline": "byte-identical harness jsonl (timing object excluded) and identical points dump on all 114 scenes and the static bag",
+      "contract_changes": "topic/message/frame/leveling/GPS-denial truth table: 0",
+      "recall_overall_drop_pp_max": 0.5,
+      "recall_class_drop_pp_max": 1.0,
+      "recall_roi_gates": "the same limits also apply to recall_roi, recall_roi_vehicle, recall_roi_pedestrian",
+      "precision_worsen_rel_max": 0.02,
+      "vehicle_accuracy_worsen_rel_max": 0.02,
+      "vehicle_accuracy_metrics": ["center_mae_vehicle", "long_mae_vehicle", "short_mae_vehicle", "yaw_mae_vehicle_deg"],
+      "extra_accuracy_metrics_same_limit": ["center_mae"],
+      "holdout_scene_core_metric_worsen_rel_max": 0.05,
+      "holdout_core_metrics": ["recall", "precision", "center_mae_vehicle", "long_mae_vehicle", "short_mae_vehicle", "yaw_mae_vehicle_deg"],
+      "idsw_fragmentation_rate_worsen_rel_max": 0.02,
+      "split_overmerge_rate_worsen_rel_max": 0.05,
+      "new_scan_drops": 0,
+      "runtime_p95_increase_rel_max": 0.10,
+      "peak_rss_increase_rel_max": 0.10,
+      "udp_packets_sent": 0,
+      "evaluated_on": ["primary", "all"],
+      "highspeed": "stress only: new scan drops = 0 and no metric regression gate failing by more than 10% relative / 2 pp"
+    },
+    "improvement_criteria_on_primary": {
+      "size": "vehicle long temporal p95 AND vehicle short temporal p95 both reduced by >= 15%",
+      "yaw": "vehicle yaw temporal p95 reduced by >= 15%",
+      "jump": "vehicle extreme size+yaw jump rate reduced by >= 25%",
+      "required_count": 2,
+      "bootstrap": "for every counted criterion (both metrics for size) the paired scene-bootstrap 95% CI of the relative change must lie entirely below 0",
+      "holdout_direction_consistency_min": 4,
+      "holdout_direction_rule": "a counted criterion needs >= 4 of 5 holdout scenes improving in the same direction (size: both long and short p95 improve in that scene); a scene without vehicle temporal pairs counts as not improved",
+      "bucket_no_large_regression": "in buckets obs_count 1-5 (first_1_2 and obs_3_5 pooled) and range 15-35 m (15-25 and 25-35 pooled) on primary: none of [center_mae_vehicle, long_mae_vehicle, short_mae_vehicle, yaw_mae_vehicle_deg, vehicle long/short/yaw temporal p95, vehicle extreme size+yaw jump rate] worsens by more than 10% relative and vehicle recall does not drop by more than 2 pp",
+      "static_bag": "on the static bag (all GT classes pooled): long temporal p95, short temporal p95, yaw temporal p95 and the stationary false-moving rate of the candidate must each be <= the baseline value",
+      "c_or_d_selected": "targeted split/over-merge (C) or ROI-boundary (D) event count must drop by >= 20%"
+    },
+    "verdict_rules": [
+      "any regression gate failed -> REJECTED_EXPERIMENT",
+      "a large regression in the obs 1-5 or range 15-35 m bucket, a static-bag worsening, or (C/D selected) targeted events reduced by < 20% -> REJECTED_EXPERIMENT",
+      "fewer than 2 criteria reach their primary reduction threshold -> REJECTED_EXPERIMENT",
+      ">= 2 criteria reach the threshold but fewer than 2 of them also have a bootstrap CI entirely below 0 AND holdout consistency (>= 4/5) -> INCONCLUSIVE",
+      ">= 2 criteria fully satisfied and every other condition holds, C/D judged not needed (>= 100 evaluable events) or implemented and passing -> EXPERIMENT_PASS_CANDIDATE_ONLY",
+      "as above but C or D could not be judged because its evaluable development events < 100 -> PARTIAL_PASS_FOLLOWUP_REQUIRED"
+    ],
+    "allowed_verdicts": ["EXPERIMENT_PASS_CANDIDATE_ONLY", "PARTIAL_PASS_FOLLOWUP_REQUIRED", "INCONCLUSIVE", "REJECTED_EXPERIMENT", "BLOCKED_*"]
+  }
+}

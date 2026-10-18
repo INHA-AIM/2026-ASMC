@@ -1,0 +1,39 @@
+<!-- B0 TEST-ONLY wrapper (harness work dir, NOT in the worktree). G4 version of
+     analysis/tests/skeletons/b0_test_wrapper.launch.in:
+       * includes the product integration launch Main/main_integration.launch, which pins
+         enable_common_geometry=true and lidar_level_roll=true (orchestrator decision 3); that launch has no
+         lidar_level_roll arg, so passing one fails with 'unused args' (logs/g3/s61_include_arg_probe.log).
+       * /ctrl_cmd_0 (Parser.cpp ParseCAN, zero CtrlCmd at CAN rate) is remapped to a discard topic, as
+         tools/perception/b1a_protocol.py does for trials.
+       * planner_udp_enabled defaults to FALSE here (every B0 measurement run). Only the labelled positive
+         control passes use_product_udp_default:=true, which includes the product launch WITHOUT the arg
+         (product default true) inside its own separate namespace (orchestrator decision 7).
+       * map-mask dependent filters default off so synthetic objects are not removed from /last_lidar by the
+         road mask (main.launch drivable/known_static/static_structure); the bag smoke passes them on. -->
+<launch>
+  <arg name="planner_udp_enabled" default="false"/>
+  <arg name="use_product_udp_default" default="false"/>
+  <arg name="enable_sensor_fusion" default="false"/>
+  <arg name="fusion_trace_path" default=""/>
+  <arg name="drivable_filter_enabled" default="false"/>
+  <arg name="known_static_filter_enabled" default="false"/>
+  <arg name="static_structure_exclusion_enabled" default="false"/>
+  <group>
+    <remap from="/ctrl_cmd_0" to="/b0_test/discarded_ctrl_cmd_0"/>
+    <include unless="$(arg use_product_udp_default)" file="$(find Main)/main_integration.launch">
+      <arg name="planner_udp_enabled" value="$(arg planner_udp_enabled)"/>
+      <arg name="enable_sensor_fusion" value="$(arg enable_sensor_fusion)"/>
+      <arg name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
+      <arg name="drivable_filter_enabled" value="$(arg drivable_filter_enabled)"/>
+      <arg name="known_static_filter_enabled" value="$(arg known_static_filter_enabled)"/>
+      <arg name="static_structure_exclusion_enabled" value="$(arg static_structure_exclusion_enabled)"/>
+    </include>
+    <include if="$(arg use_product_udp_default)" file="$(find Main)/main_integration.launch">
+      <arg name="enable_sensor_fusion" value="$(arg enable_sensor_fusion)"/>
+      <arg name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
+      <arg name="drivable_filter_enabled" value="$(arg drivable_filter_enabled)"/>
+      <arg name="known_static_filter_enabled" value="$(arg known_static_filter_enabled)"/>
+      <arg name="static_structure_exclusion_enabled" value="$(arg static_structure_exclusion_enabled)"/>
+    </include>
+  </group>
+</launch>

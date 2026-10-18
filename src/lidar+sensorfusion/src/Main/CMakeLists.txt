@@ -105,6 +105,11 @@ if(CATKIN_ENABLE_TESTING)
   target_include_directories(lidar_continuous_replay PRIVATE ${rosbag_INCLUDE_DIRS})
   add_dependencies(lidar_continuous_replay ${catkin_EXPORTED_TARGETS})
   target_link_libraries(lidar_continuous_replay myHeader ${rosbag_LIBRARIES})
+  # Experiment harness: Lidar_Data scene / MORAI bag replay through the production V2 path (isolated master only).
+  add_executable(lidar_dataset_replay test/lidar_dataset_replay.cpp)
+  target_include_directories(lidar_dataset_replay PRIVATE ${rosbag_INCLUDE_DIRS})
+  add_dependencies(lidar_dataset_replay ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(lidar_dataset_replay myHeader ${rosbag_LIBRARIES})
   add_rostest_gtest(test_frame_boundary_ros test/frame_boundary.test
     test/test_frame_boundary_ros.cpp test/test_runtime_globals.cpp)
   if(TARGET test_frame_boundary_ros)

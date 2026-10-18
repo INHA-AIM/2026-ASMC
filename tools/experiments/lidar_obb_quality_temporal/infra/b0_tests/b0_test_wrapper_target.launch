@@ -1,0 +1,22 @@
+<!-- TARGET-contrast wrapper (G4): the reconstructed TARGET fcfe8c58 package (target_build/ws, outside the worktree)
+     has no main_integration.launch and no planner_udp_enabled arg. It includes the TARGET main.launch with
+     enable_common_geometry=true and lidar_level_roll=true (same geometry profile as main_integration.launch) and
+     sets /Main/planner_udp_enabled=false exactly like the existing tools (TARGET ignores it; the TARGET copy's
+     setting.yaml has PlannerInterface.Enabled=false instead, B0 plan D13 UDP-off overlay). -->
+<launch>
+  <arg name="fusion_trace_path" default=""/>
+  <param name="/Main/planner_udp_enabled" value="false"/>
+  <group>
+    <remap from="/ctrl_cmd_0" to="/b0_test/discarded_ctrl_cmd_0"/>
+    <include file="$(find Main)/main.launch">
+      <arg name="enable_common_geometry" value="true"/>
+      <arg name="lidar_level_roll" value="true"/>
+      <arg name="enable_sensor_fusion" value="false"/>
+      <arg name="start_yolo" value="false"/>
+      <arg name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
+      <arg name="drivable_filter_enabled" value="false"/>
+      <arg name="known_static_filter_enabled" value="false"/>
+      <arg name="static_structure_exclusion_enabled" value="false"/>
+    </include>
+  </group>
+</launch>

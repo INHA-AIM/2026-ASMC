@@ -1,0 +1,1392 @@
+{
+ "schema": "b0_fault_catalogue/1+g4",
+ "status": "G4 EXECUTED COPY of analysis/tests/fault_catalogue.json. TODO_CONTRACT resolved by the orchestrator decisions (1: NONE publishes nothing on V2; 3: main_integration.launch pins lidar_level_roll=true; 4: V1 typed topics unchanged and non-final; 6: non-GPS map invalidity -> NONE; 7: UDP positive control only in a labelled namespace). Consumed by tools/b0_tests/{b0_feeder,b0_truth_table}.py.",
+ "mode_definitions": {
+  "MAP": "oracle map-available state: local output plus map output (local inputs valid AND GPS/map pose valid for the scan)",
+  "LOCAL": "local inputs valid AND map pose invalid (gps_missing|gps_invalid|gps_stale|gps_recovering|map_speed_invalid)",
+  "NONE": "LiDAR scan accepted by the parser but local inputs invalid (IMU/CAN missing, stale, invalid barrier)",
+  "REJECTED": "LiDAR scan rejected by the parser (zero / duplicate / regressing source stamp, Parser.cpp:272-275,311-316): no processing, no output, no DELETEALL"
+ },
+ "contract_parameters": {
+  "_note": "Values marked TODO_CONTRACT must be set from the B0 contract (other sub-agent) before running. The truth table records everything; only the verdict uses these.",
+  "v2_local_topic": "/lidar/local_object",
+  "v2_map_topic": "/lidar/map_object",
+  "v2_local_frame": "base_link",
+  "v2_map_frame": "map",
+  "invalid_signal_policy": "none",
+  "local_state_map_v2_policy": "local is continuous for valid local scans; map is an additional same-stamp output only when map pose is valid",
+  "v1_typed_topics_policy": "unchanged_dual_publish",
+  "motion_valid_false_allowed_states": [
+   0
+  ],
+  "motion_valid_false_allowed_states_note": "B0 plan D2: motion_valid=false is always MOTION_UNKNOWN (0)",
+  "derived_fields": {
+   "dynamic_valid_equals_motion_valid": true,
+   "is_dynamic_equals_state_dynamic": true
+  },
+  "legacy_topics_map_only": [
+   "/last_lidar",
+   "/lidar/tracked_objects_map",
+   "/lidar/motion_debug"
+  ],
+  "legacy_marker_topics_suppressed_with_deleteall": [
+   "/last_lidar_markers",
+   "/lidar/tracking_markers_map"
+  ],
+  "legacy_frame_wide_motion_gate": "KEEP (FrameBoundary.cpp:174-180 LegacyMotionReady; main.cpp:543-553). NOTE: the failed earlier candidate tested the opposite (tests/candidate/README.txt 'PerObjectWarmup NoFrameWideSuppression'); do not reuse that expectation.",
+  "planner_udp_default": "true (reproduces setting.yaml:198-202 PlannerInterface.Enabled=true -> main.cpp:200-213 sender created). Tests pass planner_udp_enabled:=false.",
+  "recovery_samples": 3,
+  "gps_max_age_s": 0.3,
+  "gps_maximum_future_lead_s": 0.1,
+  "imu_max_age_s": 0.12,
+  "can_max_age_s": 0.12,
+  "max_speed_mps": 35.0,
+  "invalid_signal_policy_note": "orchestrator decision 1 (B0 plan D1 rejected): a NONE scan publishes NOTHING on /lidar/local_object and /lidar/map_object; the reason is reported only in /perception/lidar/diagnostics (v2_output=none, v2_reason, v2_none_frames) and in the fusion trace lidar_process_end v2_mode/v2_reason",
+  "v1_typed_topics_policy_note": "orchestrator decision 4: /perception/lidar/objects_local|objects_map keep TARGET behaviour (compatibility/deprecated); recorded but excluded from the final-output verdict",
+  "non_gps_map_invalid_policy": "none (B0 plan D7 / orchestrator decision 6)"
+ },
+ "defaults": {
+  "period_s": 0.1,
+  "stamp_grid_ms": 100,
+  "_stamp_note": "every published stamp is an exact multiple of 1 ms so ms-truncated legacy stamps (verify_runtime.txt C7/D2) associate exactly",
+  "ego_start_map_xy": [
+   -100.0,
+   150.0
+  ],
+  "ego_yaw_rad": 0.3,
+  "ego_speed_mps": 0.0,
+  "gps_status_good": 1,
+  "imu_offsets_ms": [
+   -40,
+   -5
+  ],
+  "can_offset_ms": -5,
+  "gps_offset_ms": -30,
+  "lidar_after_inputs_ms": 10,
+  "objects": {
+   "A": {
+    "kind": "box",
+    "ego_frame_xy": [
+     22.0,
+     3.4
+    ],
+    "size_lwh": [
+     4.0,
+     1.8,
+     1.5
+    ],
+    "yaw_rel": 0.0,
+    "speed_mps": 0.0
+   },
+   "B": {
+    "kind": "box",
+    "ego_frame_xy": [
+     10.0,
+     0.0
+    ],
+    "size_lwh": [
+     4.2,
+     1.8,
+     1.5
+    ],
+    "yaw_rel": 0.0,
+    "speed_mps": 4.0
+   },
+   "C": {
+    "kind": "box",
+    "ego_frame_xy": [
+     18.0,
+     -3.4
+    ],
+    "size_lwh": [
+     4.0,
+     1.8,
+     1.5
+    ],
+    "yaw_rel": 0.2,
+    "speed_mps": 0.0
+   },
+   "P": {
+    "kind": "box",
+    "ego_frame_xy": [
+     14.0,
+     -6.0
+    ],
+    "size_lwh": [
+     0.6,
+     0.6,
+     1.7
+    ],
+    "yaw_rel": 0.0,
+    "speed_mps": 0.0
+   }
+  },
+  "launch_args": {
+   "enable_sensor_fusion": "false",
+   "planner_udp_enabled": "false",
+   "drivable_filter_enabled": "false",
+   "known_static_filter_enabled": "false",
+   "static_structure_exclusion_enabled": "false",
+   "_filters_note": "map-mask filters off so synthetic objects are not removed from /last_lidar by road geometry (main.launch:38,52,71); 50_bag_smoke runs production filter defaults",
+   "_roll_note": "main_integration.launch pins enable_common_geometry=true and lidar_level_roll=true (orchestrator decision 3); not a test argument"
+  }
+ },
+ "phase_fields": {
+  "scans": "int, number of LiDAR ticks",
+  "gps": "good|status0|latlon0|stamp0|nan|offset_bad|silent|stale_stamp|future_stamp|jump  (+ gps_lag_s, gps_jump_m)",
+  "gps_first_n": "optional: only the first N scans of the phase use 'gps', the rest use 'gps_then'",
+  "imu": "good|quat_invalid|stamp0|stale|silent|behind_clock|yaw_jump  (+ imu_lag_s)",
+  "can": "good|stale|silent|stamp0|speed_jump  (+ can_lag_s)",
+  "lidar": "good|stamp0|duplicate|regress|silent|sim_epoch",
+  "objects": "list of object ids present in the cloud",
+  "ego": "optional {speed_mps, yaw_rate_rps, roll_deg, pitch_deg}",
+  "can_speed_mps": "optional reported CAN speed target; ramps by <= 2.4 m/s per tick"
+ },
+ "scenarios": [
+  {
+   "id": "S00_healthy_startup",
+   "purpose": "startup needs 3 good GPS samples (bounded_pose.cpp:41,62); then MAP",
+   "phases": [
+    {
+     "scans": 40,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 0,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 0,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 0,
+     "scan": 2,
+     "mode": "MAP"
+    },
+    {
+     "phase": 0,
+     "scan": 39,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S01_gps_status0",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 10,
+     "gps": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 1,
+     "scan": 9,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S02_gps_latlon0",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 10,
+     "gps": "latlon0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S03_gps_stamp0",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 10,
+     "gps": "stamp0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S04_gps_nan_and_offset",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 5,
+     "gps": "nan",
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 5,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 5,
+     "gps": "offset_bad",
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 10,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "MAP"
+    },
+    {
+     "phase": 3,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 4,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 4,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S05_gps_silence",
+   "purpose": "stale after 0.30 s; gap > 0.30 s resets the consecutive counter (bounded_pose.cpp:51)",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 10,
+     "gps": "silent",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 0,
+     "mode": "MAP"
+    },
+    {
+     "phase": 1,
+     "scan": 1,
+     "mode": "MAP"
+    },
+    {
+     "phase": 1,
+     "scan": 2,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S06_gps_stale_stamp",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 12,
+     "gps": "stale_stamp",
+     "gps_lag_s": 0.5,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 6,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 1,
+     "scan": 11,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S07_gps_sanity_jump",
+   "purpose": "GpsSanityFilter rejects >3 m + 80 m/s*dt (GpsSanityFilter.cpp:47-52) -> invalid barrier -> 3-sample recovery",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 1,
+     "gps": "jump",
+     "gps_jump_m": 60.0,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S08_clock_gps_future",
+   "purpose": "GPS stamped +10 s (sensor clock ahead) is rejected without advancing the sanity anchor: future phase is local-only; normal-time GPS then restores local+map after the three-good-sample latch.",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 5,
+     "gps": "future_stamp",
+     "gps_lag_s": -10.0,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 25,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 4,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "MAP"
+    },
+    {
+     "phase": 2,
+     "scan": 24,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S09_clock_lidar_sim_epoch",
+   "purpose": "LiDAR stamped in a different epoch (100 s) than IMU/CAN/GPS (wall): 'no IMU at or before LiDAR scan' -> NONE every scan",
+   "phases": [
+    {
+     "scans": 20,
+     "lidar": "sim_epoch",
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 0,
+     "scan": 0,
+     "mode": "NONE"
+    },
+    {
+     "phase": 0,
+     "scan": 19,
+     "mode": "NONE"
+    }
+   ]
+  },
+  {
+   "id": "S10_clock_imu_behind",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 10,
+     "imu": "behind_clock",
+     "imu_lag_s": 1.0,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 2,
+     "mode": "NONE"
+    },
+    {
+     "phase": 1,
+     "scan": 9,
+     "mode": "NONE"
+    }
+   ]
+  },
+  {
+   "id": "S11_imu_quat_invalid",
+   "purpose": "b_ImuReady=false (Parser.cpp:592-596) -> invalid barrier (SensorPoseHistory.cpp:113-121) -> NONE; GPS during the invalid window fails the IMU gate (:96-99) -> 3-sample map recovery afterwards",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 5,
+     "imu": "quat_invalid",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 0,
+     "mode": "NONE"
+    },
+    {
+     "phase": 1,
+     "scan": 4,
+     "mode": "NONE"
+    }
+   ]
+  },
+  {
+   "id": "S12_imu_stale",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 10,
+     "imu": "stale",
+     "imu_lag_s": 0.2,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 3,
+     "mode": "NONE"
+    },
+    {
+     "phase": 1,
+     "scan": 9,
+     "mode": "NONE"
+    }
+   ]
+  },
+  {
+   "id": "S13_imu_silence",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 10,
+     "imu": "silent",
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 1,
+     "mode": "NONE"
+    },
+    {
+     "phase": 1,
+     "scan": 9,
+     "mode": "NONE"
+    }
+   ]
+  },
+  {
+   "id": "S14_can_stale",
+   "purpose": "CAN does not gate GPS samples: map returns without a 3-sample recovery once CAN is fresh",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 10,
+     "can": "stale",
+     "can_lag_s": 0.2,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 3,
+     "mode": "NONE"
+    },
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S15_can_silence",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 10,
+     "can": "silent",
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 1,
+     "mode": "NONE"
+    },
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S16_can_stamp0",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 10,
+     "can": "stamp0",
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 3,
+     "mode": "NONE"
+    },
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S17_recovery_1",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 5,
+     "gps": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 6,
+     "gps": "good",
+     "gps_first_n": 1,
+     "gps_then": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 3,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S18_recovery_2",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 5,
+     "gps": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 6,
+     "gps": "good",
+     "gps_first_n": 2,
+     "gps_then": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 3,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S19_recovery_3",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 5,
+     "gps": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 6,
+     "gps": "good",
+     "gps_first_n": 3,
+     "gps_then": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 2,
+     "scan": 2,
+     "mode": "MAP"
+    },
+    {
+     "phase": 2,
+     "scan": 3,
+     "mode": "LOCAL"
+    }
+   ]
+  },
+  {
+   "id": "S20_invalid_during_recovery",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 5,
+     "gps": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 2,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 1,
+     "gps": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 2,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 3,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 4,
+     "scan": 0,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 4,
+     "scan": 1,
+     "mode": "LOCAL"
+    },
+    {
+     "phase": 4,
+     "scan": 2,
+     "mode": "MAP"
+    }
+   ]
+  },
+  {
+   "id": "S21_lidar_faults",
+   "phases": [
+    {
+     "scans": 15,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 1,
+     "lidar": "stamp0",
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 1,
+     "lidar": "duplicate",
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 1,
+     "lidar": "regress",
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 15,
+     "lidar": "silent",
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 10,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 0,
+     "mode": "REJECTED"
+    },
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "REJECTED"
+    },
+    {
+     "phase": 3,
+     "scan": 0,
+     "mode": "REJECTED"
+    },
+    {
+     "phase": 5,
+     "scan": 0,
+     "mode": "MAP"
+    }
+   ],
+   "extra_checks": [
+    "diagnostics message 'input_silence' observed during phase 4 (FrameBoundaryPublisher.cpp:133-135)"
+   ]
+  },
+  {
+   "id": "S22_warmup_spawn",
+   "purpose": "warm-up objects never reach legacy topics/UDP; LegacyMotionReady frame-wide suppression kept; map_v2 keeps publishing with motion_valid=false/UNKNOWN",
+   "phases": [
+    {
+     "scans": 25,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B",
+      "C"
+     ]
+    }
+   ],
+   "extra_checks": [
+    "first >=3 scans of C in map_v2: motion_valid=false and motion_state=0",
+    "legacy /last_lidar absent (frame-wide) while C not motion_valid, with DELETEALL",
+    "C never appears in /last_lidar with speed_kph==0 before motion_valid"
+   ]
+  },
+  {
+   "id": "S23_attitude_yaw_geometry",
+   "purpose": "D: roll/pitch once, OBB yaw not double-rotated; main_integration.launch (lidar_level_roll=true pinned, decision 3)",
+   "phases": [
+    {
+     "scans": 40,
+     "objects": [
+      "A",
+      "C",
+      "P"
+     ],
+     "ego": {
+      "speed_mps": 0.0,
+      "yaw_rate_rps": 0.8,
+      "roll_deg": 3.0,
+      "pitch_deg": -2.0
+     }
+    }
+   ],
+   "_yaw_note": "0.8 rad/s = 4.6 deg per scan, so a per-frame double yaw rotation (Kalman.cpp:158 -> FrameBoundary.cpp:203-204) exceeds the 3 deg tolerance; IMU yaw-jump gate allows 5 deg + 120 deg/s*dt (SensorPoseHistory.hpp:18-19)",
+   "geometry_checks": {
+    "center_tol_m": 0.35,
+    "yaw_tol_deg": 3.0,
+    "yaw_modulo_deg": 90.0,
+    "frames": [
+     "local_v2",
+     "map_v2"
+    ]
+   }
+  },
+  {
+   "id": "S24_ego_moving",
+   "phases": [
+    {
+     "scans": 40,
+     "objects": [
+      "A",
+      "C"
+     ],
+     "ego": {
+      "speed_mps": 3.0
+     }
+    }
+   ],
+   "geometry_checks": {
+    "center_tol_m": 0.35,
+    "yaw_tol_deg": 5.0,
+    "frames": [
+     "local_v2",
+     "map_v2"
+    ]
+   }
+  },
+  {
+   "id": "S25_fusion_on_status0",
+   "optional": true,
+   "purpose": "same as S01 with enable_sensor_fusion=true and empty /YOLO/BBox stubs; records /lidar/object and /lidar/object_boxes (wall-stamped, window association; verify_runtime.txt D3)",
+   "launch_args": {
+    "enable_sensor_fusion": "true"
+   },
+   "yolo_stub": true,
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 10,
+     "gps": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 15,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "S26_planner_udp_default_control",
+   "purpose": "LABELLED POSITIVE CONTROL (orchestrator decision 7): planner_udp_enabled NOT passed (product default true) inside a separate unprivileged user+net namespace (namespace-private loopback, 0 routes). A UDP sink inside that namespace decodes every datagram. Proves the detectors (Udp.OutDatagrams, strace sendto, main UDP sockets=2) see a real send, and that sends happen only on legacy-published (map_v2 + LegacyMotionReady) scans.",
+   "launch_args": {
+    "planner_udp_enabled": null
+   },
+   "phases": [
+    {
+     "scans": 40,
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 8,
+     "gps": "status0",
+     "objects": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "scans": 20,
+     "objects": [
+      "A",
+      "B",
+      "C"
+     ]
+    }
+   ],
+   "optional": true,
+   "positive_control": true
+  },
+  {
+   "id": "S27_planner_udp_false",
+   "purpose": "planner_udp_enabled:=false -> main UDP sockets=1 (roscpp UDPROS only), 0 sends (e06 selftest: TARGET 2 sockets/47 sends vs disabled 1/0)",
+   "launch_args": {
+    "planner_udp_enabled": "false"
+   },
+   "phases": [
+    {
+     "scans": 30,
+     "objects": [
+      "A",
+      "B"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "S28_can_speed_over_limit",
+   "purpose": "D7: CAN speed above lidar_pose_maximum_speed_mps=35 (ramped inside the CAN jump gate) -> map_speed_invalid -> NONE (nothing on V2, not local_v2); back below the limit -> map at once",
+   "phases": [
+    {
+     "scans": 20,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 30,
+     "can_speed_mps": 36.0,
+     "objects": [
+      "A"
+     ]
+    },
+    {
+     "scans": 25,
+     "can_speed_mps": 0.0,
+     "objects": [
+      "A"
+     ]
+    }
+   ],
+   "hand_expect": [
+    {
+     "phase": 1,
+     "scan": 13,
+     "mode": "MAP"
+    },
+    {
+     "phase": 1,
+     "scan": 14,
+     "mode": "NONE"
+    },
+    {
+     "phase": 1,
+     "scan": 29,
+     "mode": "NONE"
+    },
+    {
+     "phase": 2,
+     "scan": 0,
+     "mode": "MAP"
+    }
+   ]
+  }
+ ]
+}

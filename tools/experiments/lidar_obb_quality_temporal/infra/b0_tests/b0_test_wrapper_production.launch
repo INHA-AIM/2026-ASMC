@@ -1,0 +1,19 @@
+<!-- B0 TEST-ONLY wrapper for the PRODUCTION profile (Main/main.launch defaults: enable_common_geometry=false,
+     lidar_level_roll=false). Used only for the labelled KNOWN_GAP/B1 characterization run (orchestrator
+     decision 5: production warm-up exposure is unchanged by B0 and must not be asserted as correct).
+     planner_udp_enabled:=false (no planner UDP sender socket, nothing sent); /ctrl_cmd_0 remapped; map-mask filters off as in the
+     integration matrix. -->
+<launch>
+  <arg name="fusion_trace_path" default=""/>
+  <group>
+    <remap from="/ctrl_cmd_0" to="/b0_test/discarded_ctrl_cmd_0"/>
+    <include file="$(find Main)/main.launch">
+      <arg name="planner_udp_enabled" value="false"/>
+      <arg name="enable_sensor_fusion" value="false"/>
+      <arg name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
+      <arg name="drivable_filter_enabled" value="false"/>
+      <arg name="known_static_filter_enabled" value="false"/>
+      <arg name="static_structure_exclusion_enabled" value="false"/>
+    </include>
+  </group>
+</launch>
