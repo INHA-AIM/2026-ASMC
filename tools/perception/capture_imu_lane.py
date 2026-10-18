@@ -33,8 +33,10 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--duration',type=float,default=20.)
+    parser.add_argument('--sample-hz',type=float,default=2.)
     args=parser.parse_args()
     if not 0 < args.duration <= 600:parser.error('duration must be in (0,600]')
+    if not .1 <= args.sample_hz <= 15:parser.error('sample-hz must be in [.1,15]')
     args.output.mkdir(parents=True,exist_ok=False)
     rospy.init_node('imu_lane_capture',anonymous=True,disable_signals=True)
     timeline=ImuTimeline();lock=threading.Lock();latest={};journal=deque(maxlen=2048)
@@ -79,7 +81,7 @@ def main():
                 with lock:
                     pending=list(journal);journal.clear();sample=dict(latest)
                 for row in pending:events.write(json.dumps(row)+'\n')
-                if set(sample)==set(views) and time.monotonic()-last_saved>.45:
+                if set(sample)==set(views) and time.monotonic()-last_saved>=1./args.sample_hz:
                     stamps=[row[0].header.stamp.to_nsec() for row in sample.values()]
                     key=tuple((sample[v][2].producer_session_id,sample[v][2].generation,
                                sample[v][2].image_header.seq, sample[v][2].image_header.stamp.to_nsec()) for v in views)
@@ -105,6 +107,7 @@ def main():
             with lock:
                 for row in journal:events.write(json.dumps(row)+'\n')
     report=dict(duration_sec=time.monotonic()-start,frames=index,counts=counts,journal_drops=dropped[0],
+        sample_hz=args.sample_hz,
         timeline=timeline.snapshot(),imu_enabled=rospy.get_param('/camera_lane_vectorizer/imu_motion/enabled',None))
     (args.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2),flush=True)
