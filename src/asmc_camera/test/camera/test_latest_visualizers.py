@@ -11,6 +11,7 @@ from std_msgs.msg import Header
 from asmc_camera.nodes.semantic_visualizer_node import SemanticVisualizerNode
 from asmc_camera.nodes.family_view_node import FamilyViewNode
 from asmc_camera.bev.grid import BevGridSpec
+from asmc_camera.runtime.latest_work import LatestWork
 
 
 class Gate:
@@ -103,11 +104,9 @@ class LatestVisualizersTest(unittest.TestCase):
     def test_repeated_source_is_not_counted_as_a_new_display_frame(self):
         n = self.semantic(); self.feed(n, self.clock)
         n._publish(None)
-        n.latest_event.wait = Mock()
         self.clock += .1
         n._publish(None)
         self.assertEqual(n.mosaic_publisher.publish.call_count, 1)
-        n.latest_event.wait.assert_called_once_with(.04)
 
     def test_individual_panel_clears_stale_result_with_zero_stamp(self):
         n = self.semantic(); n.panel_publishers = {'front': publisher()}
@@ -138,10 +137,36 @@ class LatestVisualizersTest(unittest.TestCase):
         np.testing.assert_array_equal(before, after)
         self.assertFalse(actual.flags.writeable)
 
+    def family(self):
+        n = FamilyViewNode.__new__(FamilyViewNode)
+        n.lock = threading.RLock(); n.gate = Gate(); n.publisher = publisher()
+        n.arrival_driven = True; n.work = LatestWork(); n.last_display_key = None
+        n.grid = BevGridSpec(-2, 10, -4, 4, .1)
+        n.background = np.zeros((*n.grid.shape, 3), np.uint8); n.sample = None
+        return n
+
+    def test_family_without_subscribers_does_not_wake_itself_in_a_busy_loop(self):
+        n = self.family(); n.publisher.get_num_connections = lambda: 0
+        n._publish(None); n._heartbeat(None)
+        self.assertIsNone(n.work.pending)
+
+    def test_family_arrivals_are_not_throttled_to_ten_hz_and_stale_clears_once(self):
+        from asmc_msgs.msg import LaneBoundaryFamily
+        n = self.family()
+        for i in range(15):
+            self.clock = 20.+i/15
+            n._receive(LaneBoundaryFamily(header=Header(stamp=rospy.Time.from_sec(self.clock)),
+                                         valid=True, status_reason='accepted'))
+            self.assertTrue(n.work.pop()); n._publish(None)
+        self.assertEqual(n.publisher.publish.call_count, 15)
+        self.clock += .4; n._heartbeat(None)
+        self.assertTrue(n.work.pop()); n._publish(None); n._publish(None)
+        self.assertEqual(n.publisher.publish.call_count, 16)
+
     def test_family_jpeg_is_outside_receive_lock_and_epoch_checked(self):
         n = FamilyViewNode.__new__(FamilyViewNode)
         n.lock = threading.RLock(); n.gate = Gate(); n.publisher = publisher()
-        n.latest_event = threading.Event(); n.last_display_stamp = None
+        n.arrival_driven = True; n.work = LatestWork(); n.last_display_key = None
         n.grid = BevGridSpec(-2, 10, -4, 4, .1)
         n.background = np.zeros((*n.grid.shape, 3), np.uint8)
         header = Header(stamp=rospy.Time.from_sec(self.clock))

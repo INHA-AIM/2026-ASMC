@@ -14,6 +14,7 @@ from sensor_msgs.msg import CompressedImage, Image
 from asmc_camera.camera.visualization import render_mosaic, render_panel, binary_lane_palette
 from asmc_camera.runtime.demand_inputs import DemandSynchronizer, DemandInputs
 from asmc_camera.runtime.ros_control import LaneEpochGate
+from asmc_camera.runtime.render_worker import RenderWorker
 
 
 SUPPORTED_VIEWS = ("front", "left", "right")
@@ -60,7 +61,6 @@ class SemanticVisualizerNode:
             raise ValueError("publish_hz must be positive")
         if not 1 <= self.jpeg_quality <= 100:
             raise ValueError("jpeg_quality must be between 1 and 100")
-        self.minimum_period = 1.0 / self.publish_hz
         self.publish_per_view_panels = bool(
             rospy.get_param("~publish_per_view_panels", False)
         )
@@ -81,7 +81,6 @@ class SemanticVisualizerNode:
             queue_size=1,
         )
         self._lock = threading.RLock()
-        self.latest_event = threading.Event()
         self.last_display_stamp = None
         self.last_display_key = None
         self.samples = {}  # One exact-stamp triple per view; newer inputs replace it.
@@ -113,9 +112,10 @@ class SemanticVisualizerNode:
                 *messages, v, context=g.current_context)
             self.synchronizers.append(group)
         self.demand_inputs = DemandInputs(self.synchronizers)
-        # A 15Hz callback with a 100ms throttle only renders every second input
-        # (7.5Hz). An independent latest-frame timer preserves a 10Hz cadence.
-        self.timer = rospy.Timer(rospy.Duration(self.minimum_period), self._publish)
+        self.render_worker = RenderWorker(lambda: self._publish(None), self.publish_hz,
+            lambda error: rospy.logerr_throttle(2., 'semantic view worker failed: %s', error))
+        self.timer = rospy.Timer(rospy.Duration(.1), self._heartbeat)
+        rospy.on_shutdown(self.close)
 
         rospy.loginfo(
             "camera semantic visualizer views=%s secondary_mode=%s "
@@ -149,7 +149,9 @@ class SemanticVisualizerNode:
         with self._lock:
             self.callback_counts[view] += 1
             self.samples[view] = (rgb, drivable, secondary, context, time.monotonic())
-            self.latest_event.set()
+        worker = getattr(self, 'render_worker', None)
+        if worker is not None:
+            worker.offer()
 
     def _current(self, sample, context):
         return bool(sample and sample[3] == context and
@@ -188,13 +190,7 @@ class SemanticVisualizerNode:
             self.latest_headers.clear()
             self.panel_keys.clear()
             self.last_display_stamp = self.last_display_key = None
-            return
-        with self._lock:
-            repeat = bool(self.samples and max(s[0].header.stamp.to_nsec()
-                          for s in self.samples.values()) == self.last_display_stamp)
-            self.latest_event.clear()
-        if repeat:
-            self.latest_event.wait(.04)
+            return False
         with self._lock:
             samples = dict(self.samples)
         context = self.gate.context()
@@ -225,7 +221,7 @@ class SemanticVisualizerNode:
         display_key = (context, tuple((view, headers[view].stamp.to_nsec() if view in headers else None)
                                       for view in self.views))
         if display_key == self.last_display_key:
-            return
+            return False
         encoded_panels = {}
         for view, publisher in self.panel_publishers.items():
             if publisher.get_num_connections() and view in panels:
@@ -241,9 +237,9 @@ class SemanticVisualizerNode:
                                               header, 'camera_debug_mosaic')
         with self.gate.lock:
             if context != self.gate.context():
-                return
+                return False
             if any(not self._current(sample, context) for sample in fresh.values()):
-                return
+                return False
             for view, message in encoded_panels.items():
                 if message is not None and self._requested(view):
                     self.panel_publishers[view].publish(message)
@@ -253,6 +249,27 @@ class SemanticVisualizerNode:
             self.last_display_stamp = max((h.stamp.to_nsec() for h in headers.values()), default=None)
             self.last_display_key = display_key
         self._maybe_log(time.monotonic())
+        return bool(encoded_panels or mosaic is not None)
+
+    def _heartbeat(self, _event):
+        # Only demand/expiry/context transitions need polling. A current source
+        # is offered by its exact-stamp callback, without waiting for this timer.
+        with self._lock:
+            samples = dict(self.samples)
+        context = self.gate.context()
+        if not any(self._requested(v) for v in self.views):
+            if samples or self.latest_panels:
+                self.render_worker.offer()
+            return
+        key = (context, tuple((v, samples[v][0].header.stamp.to_nsec()
+               if self._current(samples.get(v), context) else None) for v in self.views))
+        if key != self.last_display_key:
+            self.render_worker.offer()
+
+    def close(self):
+        self.timer.shutdown()
+        self.demand_inputs.close()
+        self.render_worker.close()
 
     @staticmethod
     def _probability_array(message: Image) -> np.ndarray:

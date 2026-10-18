@@ -70,6 +70,10 @@ def run(args):
     cv2.imencode=instrument('jpeg_ms',original_encode)
 
     class Measured(mod.FamilyViewNode):
+        def __init__(self):
+            # Preserve this tool's timer/prototype comparison after the normal
+            # renderer moved to arrival-driven scheduling.
+            super().__init__(arrival_driven=False)
         def _receive(self,message):
             begin=time.monotonic();stamp=message.header.stamp.to_nsec()
             with lock:received[stamp]=begin
@@ -133,7 +137,7 @@ def run(args):
         sub.unregister();time.sleep(.6)
         demand_unsubscribed=node.input.sub is None
     finally:
-        active[0]=False;node.timer.shutdown();node.inputs.close();node.gate.subscriber.unregister()
+        active[0]=False;node.close();node.gate.subscriber.unregister()
         pub.unregister();sub.unregister();node.publisher.unregister()
         mod.draw_metric_grid=original_grid;mod.draw_stateful_lane_family=original_family;cv2.imencode=original_encode
         rospy.signal_shutdown('offline renderer probe complete')

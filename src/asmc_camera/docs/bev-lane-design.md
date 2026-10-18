@@ -182,6 +182,11 @@ sample-b는 model selection용 val이다. 최종 성능 판단에는 재학습 �
    지도와 측위만 사용하고 GT/oracle sensor output을 배포 입력으로 누설하지 않는다.
 7. vector 기준선까지 완성한 뒤에만 센서 해상도·10/15/20 Hz를 낮추는 부하 최적화를 수행한다.
 
+**현재 정본(2026-10-18):** 사용자가 MORAI VehicleSpec의 wheelRadius=0.36m를 채택해
+`cameras_v3.yaml`의 정적 노면을 z=-0.36m로 변경했다. 아래0.35m는 과거 보정 이력이다.
+카메라 장착 pose·head·피팅은 유지하며 이 선택을 실측 heave 보정이나 M1 승격으로 설명하지 않는다.
+[현재 변경 근거](../../../docs/records/camera/2026-10-18-nominal-ground-and-arrival-view.md)
+
 **2026-09-11 보정:** MORAI `base_link` 후륜축 중심과 노면을 같은 `z=0`으로 취급했던
 오류를 수정했다. 두 구간 LiDAR fit을 바탕으로 정적 노면 `z=-0.35 m`를 calibration의
 필수 계약으로 두고 homography, model-grid evidence, 시각화와 offline 평가를 모두 같은

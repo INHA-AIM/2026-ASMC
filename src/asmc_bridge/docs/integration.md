@@ -107,6 +107,10 @@ GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된
 센서 융합 run은 모든 입력의 timestamp mode를 manifest에 기록한다. receive/source bag을 설명
 없이 섞지 않는다.
 
+원본과 수신 시각을 함께 보존하는 후속 설계는
+[센서 timing 설계](../../../docs/architecture/bridge-sensor-timing.md)를 따른다.
+새 metadata·커널 timestamp 수신은 아직 구현 전이며 현재 header 정책은 유지한다.
+
 ### Coordinate frame
 
 - GPS offset은 UTM52N에서 `(302595, 4124145) m`를 뺀 K-City `map` 좌표다.

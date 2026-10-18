@@ -46,7 +46,8 @@ SUNNY freshness3건·별도 재생 공급 저하·황색차선 회귀를 해결�
 3. [운동·시각화 분석](../records/camera/2026-10-18-lane-motion-review.md)에서 정본 좌우 반전은
    재현되지 않았다. IMU 상대 자세 후보는 터널 내부 변화량을 줄였지만 진입부·지원 범위 회귀가
    남아 있다. 후속 [정차·표시 대조](../records/camera/2026-10-18-lane-display-and-rest-calibration.md)에서
-   M1-rest 보정 승격은 보류했다. 운영 M0를 유지하며 family 즉시 표시와 큰 영상10Hz 분리를 권고한다.
+   M1-rest 보정 승격은 보류했다. 운영은 정적 평면 투영을 유지하고 [후속 구현](../records/camera/2026-10-18-nominal-ground-and-arrival-view.md)에서
+   명목 노면0.36m·family 즉시 표시·큰 영상10Hz를 적용했다. IMU 운동 보정은 미적용이다.
 4. 피팅·보정·격자·freshness 기본값은 유지한다. Ego 시간 누적은 미검증 터널 속도 입력과
    계산 증가 때문에 보류한다. 시각화는 축 표시·최신 프레임10Hz 스케줄링을 먼저 대조하며,
    후보가 기하/지원 범위를 보존할 때만 전체 자료와 최대10분 실시간 시험으로 확대한다.

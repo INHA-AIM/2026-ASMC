@@ -36,10 +36,13 @@ roslaunch asmc_camera view.launch models:=objects
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
-최신 semantic 화면은 정확히 대응한 최신 프레임을10Hz timer로 표시합니다. Family 화면은
-격자를 재사용하고 렌더링을 수신 잠금 밖에서 처리하며, source stamp·세대·350ms freshness를 유지합니다.
-[표시 주기·정차 보정 대조](../../docs/records/camera/2026-10-18-lane-display-and-rest-calibration.md)에서
-family 도착 즉시 표시를 별도로 검증했습니다. 이 후보는 아직 기본10Hz 표시를 대체하지 않습니다.
+Family 선 화면은 실제 family가 도착하면 즉시 갱신합니다. 신호등도 결과 도착 즉시 표시합니다.
+큰 객체/RGB-semantic 합성과 RGB BEV 비교는 최대10Hz로 제한하고 최신 대기 결과 하나만 유지합니다.
+구독자가 없으면 해당 영상 처리를 중단하며, 시각화가 추론/판제 발행을 기다리게 하지 않습니다.
+현재 정본 `cameras_v3.yaml`의 지면은 MORAI VehicleSpec wheelRadius에 맞춘 **z=-0.36m**입니다.
+카메라 장착 위치는 바꾸지 않았으며 IMU 운동 보정은 아직 적용하지 않습니다.
+[0.36m·표시 경로 검증](../../docs/records/camera/2026-10-18-nominal-ground-and-arrival-view.md)에
+정차 지면 채택 근거와 표시 부하의 남은 제한을 기록합니다.
 
 [실행·모드·관측 계약](../../docs/contracts/camera-runtime-v1.md)에 공개 옵션과
 새 제어 경로·기존 alias·원본16종/세 그룹·관측 freshness를 정리했습니다.

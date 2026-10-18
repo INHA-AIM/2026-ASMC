@@ -24,7 +24,7 @@
 | `camera/lane_bdd_large.yaml`, `camera/lane_input_bdd_official.yaml` | 공식 BDD Large의 이진 출력 실험. 운영 family와 분리한 `bdd_lane.launch` 전용 |
 | `camera/traffic_light_runtime.yaml` | camera4 ResNet 설정 |
 | `camera/visualization.yaml`, `bev/visualization*.yaml` | 시각화 설정 |
-| `cameras_v3.yaml`, `bev/*` | 보정·BEV·차선 처리. 입력 tensor 변경으로 센서 보정을 바꾸지 않음 |
+| `cameras_v3.yaml`, `bev/*` | 정본 노면 z=-0.36m(MORAI wheelRadius), 보정·BEV·차선 처리. 센서 장착 위치는 유지 |
 
 `camera/yoloe_l/`, `camera/yoloe_selection/`, M/L·detect/seg 비교 프로필,
 `*_experiment.yaml`과 마스크의 v1/neutral_v2는 과거 비교·복구 경로입니다.
@@ -41,3 +41,6 @@ Git으로 보존하고, 재현에 필요한 실험 프로필·SHA·실패 증거
 960 변경의 검증 상태와 기존 실패는
 [실행 계약](../../../docs/contracts/camera-runtime-v1.md)과
 [960 검증 기록](../../../docs/records/camera/camera-front960-validation.md)을 따릅니다.
+
+Family 표시는 결과 도착 즉시 갱신하고 큰 합성 화면은 최대10Hz로 제한합니다.
+`bev/cameras_v2.yaml`의0.35m는 과거 재현용이며 현재 정본과 구분합니다.

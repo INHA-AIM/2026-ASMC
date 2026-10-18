@@ -4,13 +4,16 @@ source_sha256: 4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f
 # v3 changes the VLP-16 period from v2 but preserves all four camera poses,
 # intrinsics, resolutions and UDP topics.  test_facade_contract.py freezes that
 # parity before this snapshot can be used by the canonical facade.
+# Nominal rear-axle-to-road offset approved on 2026-10-18: live MORAI
+# VehicleSpec.wheelRadius=0.36 m. Not a measured suspension/heave correction.
+# Camera/IMU mounts stay unchanged; v2 retains its historical 0.35 m baseline.
 ground_plane:
   frame_id: base_link
   model: plane
-  z_at_origin_m: -0.35
+  z_at_origin_m: -0.36
   dz_dx: 0.0
   dz_dy: 0.0
-  source: lidar_ground_fit_20260911
+  source: morai_vehicle_spec_wheel_radius_0p36_20261018
 
 cameras:
   front:
