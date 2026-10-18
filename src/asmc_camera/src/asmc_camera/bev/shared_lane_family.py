@@ -278,13 +278,18 @@ def _track_score(track) -> float:
     return confidence * min(1.0, span / 12.0)
 
 
-def _track_y_at_x(track, x_m: float) -> float:
-    points = np.asarray(track.xy, dtype=np.float64).reshape(-1, 2)
+def _interpolate_track_y(points, x_m):
+    """Sort/deduplicate once for every query in a role-pair comparison."""
     order = np.argsort(points[:, 0], kind="mergesort")
     points = points[order]
     unique_x, indices = np.unique(points[:, 0], return_index=True)
-    target = float(np.clip(float(x_m), unique_x[0], unique_x[-1]))
-    return float(np.interp(target, unique_x, points[indices, 1]))
+    target = np.clip(x_m, unique_x[0], unique_x[-1])
+    return np.interp(target, unique_x, points[indices, 1])
+
+
+def _track_y_at_x(track, x_m: float) -> float:
+    points = np.asarray(track.xy, dtype=np.float64).reshape(-1, 2)
+    return float(_interpolate_track_y(points, float(x_m)))
 
 
 def _track_separation(first, second, reference_x_m: float) -> float:
@@ -297,14 +302,8 @@ def _track_separation(first, second, reference_x_m: float) -> float:
             first, reference_x_m
         )
     samples = np.linspace(lower, upper, max(3, int(math.ceil(upper - lower)) + 1))
-    return float(
-        np.median(
-            [
-                _track_y_at_x(second, value) - _track_y_at_x(first, value)
-                for value in samples
-            ]
-        )
-    )
+    return float(np.median(_interpolate_track_y(second_xy, samples) -
+                           _interpolate_track_y(first_xy, samples)))
 
 
 def _assign_observed_roles(tracks: Sequence, values: Mapping) -> tuple[dict, dict]:
@@ -424,13 +423,29 @@ class _FitWorkspace:
         self.control_count, self.degree = controls, degree
         self.knots, self.dense, self.dense_basis, self.dense_derivative, self.regularizer = _fixed_fit_matrices(controls, degree)
         self.last_parameters = self.last_basis = None
+        self.selected_parameters = self.selected_basis = self.selected_derivative = None
         self.distance_buffers = None
         self.basis_reuses = 0
+
+    def select_dense(self, indices):
+        """Reuse exact dense-grid rows for this iteration, including repeats.
+
+        Nearest-curve assignments select existing parameter values. Re-running
+        the knot recurrence (and its two finite differences) gives the same
+        rows, so keep only this frame's current selection, never past frames.
+        """
+        self.selected_parameters = self.dense[indices]
+        self.selected_basis = self.dense_basis[indices]
+        self.selected_derivative = self.dense_derivative[indices]
+        return self.selected_parameters
 
     def basis(self, parameters):
         if parameters is self.dense:
             self.basis_reuses += 1
             return self.dense_basis
+        if parameters is self.selected_parameters:
+            self.basis_reuses += 1
+            return self.selected_basis
         if parameters is self.last_parameters:
             self.basis_reuses += 1
             return self.last_basis
@@ -441,6 +456,8 @@ class _FitWorkspace:
     def derivative(self, parameters):
         if parameters is self.dense:
             return self.dense_derivative
+        if parameters is self.selected_parameters:
+            return self.selected_derivative
         values = np.asarray(parameters, np.float64).reshape(-1)
         lower, upper = np.clip(values-1e-4, 0., 1.), np.clip(values+1e-4, 0., 1.)
         return (_bspline_basis_uncached(upper, self.knots, self.degree, self.control_count)-
@@ -889,7 +906,7 @@ def fit_shared_lane_family_with_audit(
             dense_parameters, knots, degree, controls, workspace
         )
         nearest = _nearest_curve_indices(points, dense_curve, workspace)
-        assigned_parameters = dense_parameters[nearest]
+        assigned_parameters = workspace.select_dense(nearest)
         assigned_centres = dense_curve[nearest]
         assigned_normals = dense_normals[nearest]
         signed = np.sum((points - assigned_centres) * assigned_normals, axis=1)
