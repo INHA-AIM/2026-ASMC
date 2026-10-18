@@ -1,0 +1,256 @@
+{
+  "schema": "asmc_lane_deployment_v1",
+  "state": "default_promoted_by_user_with_known_limits",
+  "model_config": "large",
+  "epoch": 8,
+  "weights": "ema",
+  "checkpoint": "src/asmc_camera/models/lane_segmentation/twinlite-large-v7-e8.pt",
+  "checkpoint_sha256": "3a37e3e4708374e8b26dcea889b3f132f76bffa8586213f2c171b75504484ce6",
+  "source_checkpoint_sha256": "4029a2892966d5f1b3e0e2991211214395935015e5062ec9e497b4ff70c142c0",
+  "checkpoint_bytes": 7955842,
+  "engine_manifest": "src/asmc_camera/models/lane_segmentation/manifest-large-v7-e8.json",
+  "engine_manifest_sha256": "10f880579ca23d88898f1233d8cdb5868c7f188dd2c811235a84cbdbdb90a404",
+  "input_hw_by_view": {
+    "front": [
+      544,
+      960
+    ],
+    "left": [
+      480,
+      640
+    ],
+    "right": [
+      480,
+      640
+    ]
+  },
+  "class_names": {
+    "drivable": [
+      "background",
+      "drivable"
+    ],
+    "road_marking": [
+      "background",
+      "white_lane",
+      "yellow_lane",
+      "stopline"
+    ]
+  },
+  "environment": {
+    "torch": "2.1.2+cu118",
+    "tensorrt": "10.13.0.35",
+    "gpu_name": "NVIDIA GeForce RTX 4060 Ti",
+    "compute_capability": [
+      8,
+      9
+    ],
+    "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2"
+  },
+  "dataset": "twinlite_morai_v7_large_capture_r2",
+  "historical_evaluation_usage": "same K-City images have past Medium development use; current Large training did not use val/test",
+  "selection": "highest completed-epoch six-condition validation macro mean head IoU, selected before test",
+  "quality": {
+    "images": 1404,
+    "numerical_pass": true,
+    "quality_pass": true,
+    "batch1_pass": true,
+    "max_probability_p99": 0.005306871011853226,
+    "min_class_match": 0.9998958333333333,
+    "max_iou_drop_pp": 0.09760712879560984
+  },
+  "family": {
+    "triplets": 2356,
+    "validity_changes": 0,
+    "role_changes": 0,
+    "support_changes": 441,
+    "live_readiness_verified": false
+  },
+  "evidence_gallery": "http://127.0.0.1:8000/camera-seg-large-deploy-20261018-r1/index.html",
+  "public_contract_changed": false,
+  "training_after_epoch8": false,
+  "medium_recovery_profile": "src/asmc_camera/config/camera/lane_runtime_medium.yaml",
+  "live_validation": {
+    "state": "completed_with_failure",
+    "acceptance": {
+      "schema": "twinlite_deployment_acceptance_v1",
+      "trials": [
+        {
+          "name": "medium-sunny-r1",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "large-sunny-r1",
+          "pass_": false,
+          "failures": [
+            "normal ACTIVE readiness/errors"
+          ],
+          "normal_lane_readiness_drops": 3
+        },
+        {
+          "name": "large-foggy-r1",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "medium-foggy-r1",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "large-sunny-r2",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "medium-sunny-r2",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "medium-foggy-r2",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "large-foggy-r2",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "medium-sunny-r3",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "large-sunny-r3",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "large-foggy-r3",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "medium-foggy-r3",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        },
+        {
+          "name": "large-foggy-gui-10min",
+          "pass_": true,
+          "failures": [],
+          "normal_lane_readiness_drops": 0
+        }
+      ],
+      "all_pass": false,
+      "scope": "Parked shadow ODD; not closed-loop driving acceptance"
+    },
+    "current_default": "large_v7_e8_tensorrt",
+    "candidate_profile": "src/asmc_camera/config/camera/lane_runtime_large.yaml",
+    "foggy_gui_600sec_pass": true,
+    "sunny_source_age_peak_ms": 399.113178,
+    "default_smoke_min_hz": 9.2,
+    "additional_smoke_conditions": "saved-input replay while MORAI restored CLOUDY outside shadow trial; not a matched performance comparison"
+  },
+  "medium_metrics": {
+    "val": {
+      "sample_count": 1404,
+      "head_scores": {
+        "drivable": 0.9749802351547637,
+        "road_marking": 0.7925821189846048
+      },
+      "six_condition_macro_head_scores": {
+        "drivable": 0.9749862615639482,
+        "road_marking": 0.7539113809367746
+      },
+      "six_condition_macro_mean_head_iou": 0.8644488212503614
+    },
+    "test": {
+      "sample_count": 14556,
+      "head_scores": {
+        "drivable": 0.9665046832071469,
+        "road_marking": 0.7576861885932219
+      },
+      "six_condition_macro_head_scores": {
+        "drivable": 0.9716902024624572,
+        "road_marking": 0.7818852556678563
+      },
+      "six_condition_macro_mean_head_iou": 0.8767877290651567
+    }
+  },
+  "large_metrics": {
+    "val": {
+      "sample_count": 1404,
+      "head_scores": {
+        "drivable": 0.9830699350994672,
+        "road_marking": 0.8867130326816631
+      },
+      "six_condition_macro_head_scores": {
+        "drivable": 0.9826574637156754,
+        "road_marking": 0.839360167993679
+      },
+      "six_condition_macro_mean_head_iou": 0.9110088158546772
+    },
+    "test": {
+      "sample_count": 14556,
+      "head_scores": {
+        "drivable": 0.9779252623263965,
+        "road_marking": 0.8493192447418801
+      },
+      "six_condition_macro_head_scores": {
+        "drivable": 0.981833889910701,
+        "road_marking": 0.8732860358681989
+      },
+      "six_condition_macro_mean_head_iou": 0.92755996288945
+    }
+  },
+  "source_training_run": "twinlite_large_v7_20261017_r1",
+  "source_complete_checkpoint": "epoch008.pt",
+  "front_yellow_lane_iou": {
+    "precision": "same CUDA FP32",
+    "val": {
+      "medium": 0.8500385664966195,
+      "large": 0.8380185951369803
+    },
+    "test": {
+      "medium": 0.8621636257143971,
+      "large": 0.8428011086599041
+    },
+    "note": "known per-view regression retained alongside aggregate improvements; test was not used to reselect epoch"
+  },
+  "local_checks": {
+    "runtime_tests": 94,
+    "packaging_tests": 3,
+    "acceptance_tests": 4,
+    "documentation_tests": 17,
+    "documentation_migration": "passed",
+    "runtime_documentation": "passed",
+    "hosted_ci": "not_run_local_changes_not_pushed"
+  },
+  "deployment_decision": {
+    "date": "2026-10-18",
+    "authority": "explicit user instruction",
+    "default_profile": "src/asmc_camera/config/camera/lane_runtime.yaml",
+    "current_default": "large_v7_e8_tensorrt",
+    "acceptance_override": true,
+    "automatic_acceptance_pass": false,
+    "known_failures_preserved": true,
+    "freshness_ms": 350,
+    "fallback_profile": "src/asmc_camera/config/camera/lane_runtime_medium.yaml",
+    "runtime_gates_changed": false,
+    "scope": "default model selection only; automatic acceptance failure retained"
+  }
+}

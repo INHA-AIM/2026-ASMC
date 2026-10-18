@@ -13,8 +13,10 @@
 | `camera/yolo26l_mission16_e8_three_view.yaml` | 기본 E8, 전방960·좌우640 |
 | `camera/yolo26l_pretrained_mission_three_view.yaml` | 실행 시 선택하는 사전학습 COCO7, 전방960·좌우640 |
 | `camera/object_classes_mission16_v1.yaml` | 원본 이름→세 소비 그룹 |
-| `camera/lane_runtime.yaml` | 기본 TensorRT FP16·GPU 전처리·수요 기반 출력·고정 engine manifest |
-| `camera/lane_runtime_pytorch.yaml` | 같은 입력 크기의 명시적 PyTorch 복구 설정. 내부 `_runtime.launch lane_runtime_config:=...`로 선택 |
+| `camera/lane_runtime.yaml` | Large v7 E8 기본 TensorRT FP16·GPU 전처리·수요 기반 출력·고정 engine manifest |
+| `camera/lane_runtime_pytorch.yaml` | 같은 Large E8·입력 크기의 명시적 PyTorch 복구 설정. 내부 `_runtime.launch lane_runtime_config:=...`로 선택 |
+| `camera/lane_runtime_large.yaml` | Large v7 E8 TensorRT 명시적 선택. 현재 기본과 같은 설정이며 이전 후보 실행 명령도 보존 |
+| `camera/lane_runtime_medium.yaml` | 기존 Medium v6 TensorRT의 명시적 복구 설정. 노드 종료 후 내부 `_runtime.launch lane_runtime_config:=...`로 선택 |
 | `camera/lane_runtime_tensorrt.yaml` | 기존 T2 실험 재현 설정. 현재 실행 정본은 `lane_runtime.yaml` |
 | `camera/lane_input.yaml` | TwinLite 전방544×960·좌우480×640 후보. 추론과 model-grid 투영이 함께 읽음 |
 | `camera/lane_input_side384.yaml` | 전방960·기존 좌우384 비교/복구용 |
@@ -22,7 +24,8 @@
 | `camera/lane_bdd_large.yaml`, `camera/lane_input_bdd_official.yaml` | 공식 BDD Large의 이진 출력 실험. 운영 family와 분리한 `bdd_lane.launch` 전용 |
 | `camera/traffic_light_runtime.yaml` | camera4 ResNet 설정 |
 | `camera/visualization.yaml`, `bev/visualization*.yaml` | 시각화 설정 |
-| `cameras_v3.yaml`, `bev/*` | 보정·BEV·차선 처리. 입력 tensor 변경으로 센서 보정을 바꾸지 않음 |
+| `cameras_v3.yaml`, `bev/*` | 정본 노면 z=-0.36m(MORAI wheelRadius), 보정·BEV·차선 처리. 센서 장착 위치는 유지 |
+| `bev/imu_motion.yaml` | 원본 시각 IMU 기본 enabled=true·공동 폭 피팅. 근거 부족 시 묶음 전체 M0/prior0.35, 내부 `_imu_compare.launch enabled:=false`로 명시적 복구 |
 
 `camera/yoloe_l/`, `camera/yoloe_selection/`, M/L·detect/seg 비교 프로필,
 `*_experiment.yaml`과 마스크의 v1/neutral_v2는 과거 비교·복구 경로입니다.
@@ -39,3 +42,6 @@ Git으로 보존하고, 재현에 필요한 실험 프로필·SHA·실패 증거
 960 변경의 검증 상태와 기존 실패는
 [실행 계약](../../../docs/contracts/camera-runtime-v1.md)과
 [960 검증 기록](../../../docs/records/camera/camera-front960-validation.md)을 따릅니다.
+
+Family 표시는 결과 도착 즉시 갱신하고 큰 합성 화면은 최대10Hz로 제한합니다.
+`bev/cameras_v2.yaml`의0.35m는 과거 재현용이며 현재 정본과 구분합니다.

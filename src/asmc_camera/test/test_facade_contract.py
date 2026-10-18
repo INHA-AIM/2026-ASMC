@@ -110,7 +110,9 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         canonical_root = PACKAGE_ROOT / "src" / "asmc_camera"
         expected_support = {
             "camera": 9,
-            "bev": 20,
+            # IMU projection, per-frame fit policy and shared comparison geometry
+            # are owned by this package alongside the original BEV support code.
+            "bev": 23,
         }
         for namespace, expected_count in expected_support.items():
             files = list((canonical_root / namespace).rglob("*.py"))

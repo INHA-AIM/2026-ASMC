@@ -28,7 +28,12 @@ from asmc_camera.training.twinlite import (  # noqa: E402
     adapt_twinlite_outputs,
     load_external_twinlite,
     move_batch_to_device,
+    configure_twinlite_task,
+    task_from_checkpoint,
+    task_from_training_heads,
+    ROAD_MARKING_TASK,
 )
+from asmc_camera.training.twinlite.batching import ShapeBatchSampler
 
 
 HEADS = ("drivable", "lane")
@@ -136,11 +141,15 @@ def main():
     )
     if checkpoint.get("upstream_commit") != upstream_commit:
         raise RuntimeError("checkpoint and loaded TwinLite source commits differ")
+    task = task_from_training_heads(dataset_metadata['training_heads'])
+    if task_from_checkpoint(checkpoint) != task:
+        raise RuntimeError('checkpoint and evaluation target classes differ; binary BDD output is not a 4-class prediction')
+    configure_twinlite_task(model,task)
     model.load_state_dict(checkpoint[state_key])
     model = model.to(device).eval()
     if args.channels_last:
         model = model.to(memory_format=torch.channels_last)
-    criterion = MaskedTwinLiteLoss().to(device)
+    criterion = MaskedTwinLiteLoss(task_spec=task).to(device)
 
     output_dir = Path(args.output_dir).expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -148,6 +157,36 @@ def main():
     run_started = time.perf_counter()
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
+
+    if task == ROAD_MARKING_TASK:
+        # Share the exact multiclass/validity/condition aggregation used during
+        # training; the old binary baseline report remains unchanged below.
+        sys.path.insert(0,str(Path(__file__).resolve().parent))
+        from train_twinlite import validate
+        for split in args.split:
+            dataset = MoraiTwinLiteDataset(data_root=args.data_root,
+                dataset_version=args.dataset_version,split=split,max_samples=args.max_samples)
+            if not len(dataset):
+                all_results[split] = dict(sample_count=0,reason='empty split')
+                continue
+            loader = DataLoader(dataset,batch_sampler=ShapeBatchSampler(
+                dataset.rows,args.batch_size,shuffle=False),num_workers=args.num_workers,
+                pin_memory=device.type=='cuda',persistent_workers=args.num_workers>0)
+            all_results[split] = validate(model,loader,criterion,task,device,
+                amp_enabled,channels_last=args.channels_last,log_interval=args.log_interval)
+        report = dict(schema_version='twinlite-frozen-marking-eval-1.0.0',
+            completed_at_utc=datetime.now(timezone.utc).isoformat(),
+            dataset_version=args.dataset_version,dataset_metadata_sha256=_sha256(dataset_metadata_path),
+            dataset_split_manifest_sha256=split_manifest_sha256,
+            checkpoint=str(checkpoint_path),checkpoint_sha256=_sha256(checkpoint_path),
+            checkpoint_epoch=checkpoint.get('epoch'),weights=state_key,
+            upstream_commit=upstream_commit,task_spec=task.as_dict(),
+            device=str(device),amp=amp_enabled,batch_size=args.batch_size,
+            training_performed=False,results=all_results,
+            elapsed_seconds=time.perf_counter()-run_started)
+        _write_json(output_dir/'metrics.json',report)
+        print(json.dumps(report,ensure_ascii=False,sort_keys=True),flush=True)
+        return
 
     for split in args.split:
         dataset = MoraiTwinLiteDataset(

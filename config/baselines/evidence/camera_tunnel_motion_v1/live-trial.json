@@ -1,0 +1,247 @@
+{
+  "ego_before": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -130.7770233154297,
+        "y": -426.60693359375,
+        "z": 29.333524703979492
+      },
+      "rotation": {
+        "x": 0.45263671875,
+        "y": 0.10843486338853836,
+        "z": 63.829925537109375
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -131.486328125,
+        "y": -427.9607238769531,
+        "z": 28.882909774780273
+      },
+      "rotation": {
+        "x": 0.45263671875,
+        "y": 0.10843486338853836,
+        "z": 63.829925537109375
+      }
+    },
+    "velocity": {
+      "x": -8.325770295414259e-07,
+      "y": -9.24740106711397e-07,
+      "z": 3.0217435778467916e-05
+    },
+    "angularVelocity": {
+      "x": 1.3682551980309654e-07,
+      "y": -1.3337934205992497e-06,
+      "z": -5.946997703176748e-07
+    },
+    "acceleration": {
+      "x": 2.860093900380889e-06,
+      "y": -1.2390739357215352e-05,
+      "z": 4.510585858952254e-05
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_P",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000748"
+        },
+        "waypointIdx": 1
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED",
+      "collisionObjects": [
+        "Ego"
+      ]
+    },
+    "globalVelocity": {
+      "x": 6.735681381542236e-07,
+      "y": -1.2252048691152595e-06,
+      "z": 3.0210709155653603e-05
+    }
+  },
+  "original_mode": 1,
+  "start_transform": {
+    "location": {
+      "x": 12.389554182283847,
+      "y": -497.8321010528456,
+      "z": 28.692453997421687
+    },
+    "rotation": {
+      "z": -151.68727521488606
+    }
+  },
+  "link": "A2256W000126",
+  "speed_limit_mps": 6.5,
+  "lateral_limit_m": 0.6,
+  "command_seconds": 25.0,
+  "actor_count_before": 1,
+  "rpc_failures": 0,
+  "settled_before_drive": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": 11.143959999084473,
+        "y": -498.47991943359375,
+        "z": 29.148712158203125
+      },
+      "rotation": {
+        "x": 1.444427490234375,
+        "y": 0.0007101796218194067,
+        "z": -150.427001953125
+      }
+    },
+    "transform": {
+      "location": {
+        "x": 12.495246887207031,
+        "y": -497.767578125,
+        "z": 28.695354461669922
+      },
+      "rotation": {
+        "x": 1.444427490234375,
+        "y": 0.0007101796218194067,
+        "z": -150.427001953125
+      }
+    },
+    "velocity": {
+      "x": -0.29361119866371155,
+      "y": -5.40614128112793e-05,
+      "z": -0.0009282664395868778
+    },
+    "angularVelocity": {
+      "x": 9.992065315600485e-06,
+      "y": -3.007349368999712e-05,
+      "z": -0.0005691171390935779
+    },
+    "acceleration": {
+      "x": -0.02671380713582039,
+      "y": 5.688518285751343e-06,
+      "z": -0.0016808346845209599
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000126"
+        },
+        "waypointIdx": 40
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED",
+      "collisionObjects": [
+        "Ego"
+      ]
+    },
+    "globalVelocity": {
+      "x": 0.2586832344532013,
+      "y": 0.1388903707265854,
+      "z": -0.0009256951743736863
+    }
+  },
+  "maximum_lateral_error_m": 0.13053515445402605,
+  "maximum_speed_mps": 5.535206743943276,
+  "ego_after": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -130.8128204345703,
+        "y": -426.6040954589844,
+        "z": 29.33367347717285
+      },
+      "rotation": {
+        "x": 0.44610595703125,
+        "y": 0.10042744874954224,
+        "z": 65.14659118652344
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -131.49075317382812,
+        "y": -427.9738464355469,
+        "z": 28.882843017578125
+      },
+      "rotation": {
+        "x": 0.44610595703125,
+        "y": 0.10042744874954224,
+        "z": 65.14659118652344
+      }
+    },
+    "velocity": {
+      "x": -0.04845167323946953,
+      "y": 0.00011391192674636841,
+      "z": 0.003933068830519915
+    },
+    "angularVelocity": {
+      "x": -4.45358018623665e-05,
+      "y": -0.0001412678975611925,
+      "z": -0.00031306847813539207
+    },
+    "acceleration": {
+      "x": -0.006831863895058632,
+      "y": -4.66667115688324e-05,
+      "z": 0.005505339242517948
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000748"
+        },
+        "waypointIdx": 1
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED",
+      "collisionObjects": [
+        "Ego"
+      ]
+    },
+    "globalVelocity": {
+      "x": -0.021463686600327492,
+      "y": -0.04343046620488167,
+      "z": 0.004018756095319986
+    }
+  },
+  "restored": false
+}

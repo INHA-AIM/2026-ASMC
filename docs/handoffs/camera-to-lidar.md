@@ -39,7 +39,7 @@ Main은 이미 외부 카메라가 기본이었다. PR #87에서 `start_yolo`와
 | 주기·후처리 | YOLO15Hz·TwinLite15Hz·ResNet10Hz 목표, confidence0.40·동일 클래스 NMS0.50 |
 | 차체 mask | YOLO 전방/좌/우 ON; 원본 영상 bbox·header·보정 유지 |
 | 모델/프로세스 | 패키지 내부 배포 파일, 독립 프로세스; 환경/SHA 불일치에 자동 fallback 없음 |
-| TwinLite/family | Medium v6 TensorRT, 같은 B1/B2 크기, 음영구간에서만 주행 소비 |
+| TwinLite/family | Large v7 E8 TensorRT, 같은 B1/B2 크기; Medium v6는 명시적 복구 설정, 음영구간에서만 주행 소비 |
 
 Tensor 크기로 카메라 intrinsics를 바꾸지 않는다. 검출은 이미 원본 픽셀 좌표로 복원돼 있다.
 목표 Hz가 같아도 두 모델의 source stamp나 실행 위상이 같다는 뜻은 아니다.

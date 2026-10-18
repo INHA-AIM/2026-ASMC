@@ -156,6 +156,7 @@
       <param name="managed" value="$(arg managed)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
       <rosparam command="load" file="$(find asmc_camera)/config/bev/lane_fitting.yaml"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/bev/imu_motion.yaml" ns="imu_motion"/>
       <!-- The semantic worker and model-grid projector share one shape policy.
            Legacy callers without a component config retain 384x640. -->
       <rosparam command="load" file="$(arg lane_input_config)" if="$(eval arg('lane_input_config') != '')"/>

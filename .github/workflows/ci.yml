@@ -98,6 +98,8 @@ jobs:
           python3 -m unittest discover -s src/asmc_camera/test -p 'test_facade_contract.py'
           python3 -m unittest discover -s src/asmc_camera/test/detection -p 'test_*.py'
           python3 -m unittest discover -s src/asmc_camera/test/camera -p 'test_*.py'
+          python3 -m unittest tools/perception/test_package_twinlite_checkpoint.py
+          python3 -m unittest tools/perception/test_assess_twinlite_deployment.py
           python3 -m unittest discover -s src/asmc_camera/test/bev -p 'test_*.py'
           python3 -m unittest tools/perception/test_hood_evaluation.py
           python3 -m unittest tools/perception/test_lifecycle_measurements.py
@@ -147,6 +149,8 @@ jobs:
           python3 -m unittest tools/perception/test_camera_lidar_evidence.py
           python3 -m unittest discover -s src/asmc_camera/test/runtime -p 'test_*.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_runtime_measurements.py'
+          python3 -m unittest discover -s tools/perception -p 'test_imu_runtime_metrics.py'
+          python3 -m unittest discover -s tools/perception -p 'test_imu_width_acceptance.py'
           python3 -m unittest discover -s tools/perception -p 'test_shadow_family_validation.py'
 
       - name: Check inference control faults with generated ROS messages

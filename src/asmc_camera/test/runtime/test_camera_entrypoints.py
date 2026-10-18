@@ -24,6 +24,18 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertEqual(config.params['/camera_bev_fusion/max_fused_hz'].value, 15.)
         self.assertEqual(config.params['/camera_objects/model_kind'].value, 'yolo')
         self.assertEqual(config.params['/camera_lane/backend'].value,'twinlite_tensorrt')
+        self.assertEqual(config.params['/camera_lane/model_config'].value,'large')
+        self.assertTrue(config.params['/camera_lane/checkpoint'].value.endswith('/twinlite-large-v7-e8.pt'))
+        self.assertTrue(config.params['/camera_lane_vectorizer/imu_motion/enabled'].value)
+        self.assertTrue(config.params['/camera_lane_vectorizer/imu_motion/corrected_joint_width_fit'].value)
+        self.assertEqual(config.params['/camera_lane_vectorizer/imu_motion/corrected_width_prior_strength'].value, 0.)
+
+    def test_fixed_plane_recovery_overrides_only_the_attitude_policy(self):
+        config = self.config('_imu_compare.launch', 'enabled:=false')
+        self.assertFalse(config.params['/camera_lane_vectorizer/imu_motion/enabled'].value)
+        self.assertEqual(config.params['/camera_lane/backend'].value, 'twinlite_tensorrt')
+        self.assertEqual(config.params['/camera_lane/model_config'].value, 'large')
+        self.assertEqual(config.params['/camera_lane_vectorizer/ground_plane/z_at_origin_m'].value, -.36)
 
     def test_explicit_standby_keeps_three_workers_loaded_without_inference(self):
         config = self.config('camera.launch', 'mode:=standby')
@@ -43,8 +55,24 @@ class CameraEntrypointsTest(unittest.TestCase):
         profile=LAUNCH.parent/'config/camera/lane_runtime_pytorch.yaml'
         config=self.config('_runtime.launch','lane_runtime_config:='+str(profile))
         self.assertEqual(config.params['/camera_lane/backend'].value,'twinlite')
+        self.assertEqual(config.params['/camera_lane/model_config'].value,'large')
+        self.assertTrue(config.params['/camera_lane/checkpoint'].value.endswith('/twinlite-large-v7-e8.pt'))
         self.assertEqual(config.params['/camera_lane/input_hw'].value,[480,640])
         self.assertEqual(config.params['/camera_lane/input_hw_by_view/front'].value,[544,960])
+
+    def test_large_default_and_medium_recovery_resolve_separate_engine_manifests(self):
+        from asmc_camera.camera.backends.twinlite_tensorrt import load_manifest
+        for profile, scale in [('lane_runtime.yaml', 'large'), ('lane_runtime_large.yaml', 'large'),
+                               ('lane_runtime_medium.yaml', 'medium')]:
+            config = self.config('_runtime.launch', 'lane_runtime_config:=' +
+                                 str(LAUNCH.parent/'config/camera'/profile))
+            values = {k[len('/camera_lane/'):]: v.value for k, v in config.params.items()
+                      if k.startswith('/camera_lane/')}
+            self.assertEqual(values['model_config'], scale)
+            manifest, directory = load_manifest(values['engine_manifest'], values['checkpoint'],
+                tuple(values['input_hw']), {'front': tuple(values['input_hw_by_view/front'])}, scale)
+            self.assertEqual(directory, LAUNCH.parent/'models/lane_segmentation')
+            self.assertEqual([row['max_batch'] for row in manifest['engines']], [1, 2])
 
     def test_twinlite_candidate_resolves_local_engines_in_both_process_layouts(self):
         from asmc_camera.camera.backends.twinlite_tensorrt import load_manifest

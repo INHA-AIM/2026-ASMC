@@ -69,6 +69,13 @@ v8–v11의 ignore/partial/spatial-background 전용 본학습 코드는 이번 
 
 ## 다음 준비
 
+TwinLite Large의 전체 Capture segmentation 준비는
+[패키지 데이터 안내](../../src/asmc_camera/docs/training-data.md)를 따른다.
+새 target/manifest는 `E:\asmc_data\twinlite`에 두고 기존 bbox 버전과 구분한다.
+이후 YOLO 수집본도 같은 RGB/Semantic 검사를 통과하면 활용하며 bbox 최소 크기·ignore
+규칙을 semantic 라벨에 적용하지 않는다. 데이터 준비와 학습 실행은 별도 단계이며,
+2026-10-17 시작한 [Large 학습 실행](../../src/asmc_camera/docs/training-run.md)의 현황은 E366을 따른다.
+
 현재는 추가수집·재학습을 시작하지 않습니다. 판제 요청이 오면 bus/truck·정면 bicycle/dog·Dog2/Dog10·터널/근거리
 실패를 저장하고 클래스×하위종류×소스×조건·독립 계보를 다시 집계합니다.
 확인된 부족 조건만 수집하고 라벨/배경 규칙을 train·selection·heldout에 동일 적용합니다.

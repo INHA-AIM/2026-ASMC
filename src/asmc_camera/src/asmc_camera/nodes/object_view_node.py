@@ -17,6 +17,7 @@ from sensor_msgs.msg import CompressedImage
 from asmc_camera.detection.hood_mask import HoodMask
 from asmc_camera.detection.visualization import render_object_overlay, render_object_mosaic
 from asmc_camera.detection.view_cache import ObjectViewCache, VIEWS
+from asmc_camera.runtime.render_worker import RenderWorker
 
 
 class ObjectViewNode:
@@ -51,21 +52,26 @@ class ObjectViewNode:
         self.observations = rospy.Subscriber('/perception/camera/objects/observations', CameraObjectObservation, self._observation, queue_size=5)
         self.status = rospy.Subscriber('/perception/camera/objects/status', InferenceStatus, self._status, queue_size=1)
         self.producer_diagnostics = rospy.Subscriber('/perception/camera/objects/diagnostics', DiagnosticArray, self._profiles, queue_size=1)
-        self.worker = threading.Thread(target=self._worker, name='object-view', daemon=True)
+        self.diagnostic_at = 0.
+        self.render_worker = RenderWorker(self._render_and_diagnose, self.hz,
+                                         self._render_error)
+        self.timer = rospy.Timer(rospy.Duration(.1), lambda _event: self._wake())
         rospy.on_shutdown(self.close)
-        self.worker.start()
 
     def _observation(self, message):
         with self.lock:
             self.cache.observe(message, time.monotonic())
+        self._wake()
 
     def _status(self, message):
         with self.lock:
             self.cache.control(message)
+        self._wake()
 
     def _image(self, message, view):
         with self.lock:
             self.cache.image(view, message, time.monotonic())
+        self._wake()
 
     def _profiles(self, message):
         for status in message.status:
@@ -202,35 +208,40 @@ class ObjectViewNode:
             message.header = header
         return message
 
-    def _worker(self):
-        diagnostic_at = 0.
-        while not self.stop.is_set() and not rospy.is_shutdown():
-            start = time.monotonic()
-            try:
-                self._tick()
-            except Exception as exc:
-                self.counts['worker_error'] += 1
-                rospy.logerr_throttle(2.,'object view worker failed: %s',exc)
-            if start-diagnostic_at >= 1.:
-                with self.lock:
-                    values = dict(self.counts, cache=dict(self.cache.counts),
-                        render_by_view=dict(self.render_by_view), fresh_views=self.last_fresh_views,
-                        image_cache_sizes={v:len(q) for v,q in self.cache.images.items()},
-                        source_subscriptions=sorted(self.images), pending_capacity=1, image_capacity_per_view=8)
-                error = self.counts['worker_error'] or self.counts['encode_error']
-                warning = self.counts['decode_or_shape_error'] or self.counts['render_error']
-                status = DiagnosticStatus(name='camera_objects/view', level=2 if error else 1 if warning else 0,
-                    message='worker_error' if error else 'render_error' if warning else 'running',
-                    values=[KeyValue(key=k,value=json.dumps(v)) for k,v in values.items()])
-                self.diagnostics.publish(DiagnosticArray(status=[status]))
-                diagnostic_at = start
-            self.stop.wait(max(0,1./self.hz-(time.monotonic()-start)))
-        self._subscriptions(set())
+    def _wake(self):
+        worker = getattr(self, 'render_worker', None)
+        if worker is not None:
+            worker.offer()
+
+    def _render_error(self, error):
+        self.counts['worker_error'] += 1
+        rospy.logerr_throttle(2., 'object view worker failed: %s', error)
+
+    def _render_and_diagnose(self):
+        before = self.counts['mosaic_publish'] + self.counts['individual_publish']
+        self._tick()
+        now = time.monotonic()
+        if now-self.diagnostic_at >= 1.:
+            with self.lock:
+                values = dict(self.counts, cache=dict(self.cache.counts),
+                    render_by_view=dict(self.render_by_view), fresh_views=self.last_fresh_views,
+                    image_cache_sizes={v:len(q) for v,q in self.cache.images.items()},
+                    source_subscriptions=sorted(self.images), pending_capacity=1, image_capacity_per_view=8,
+                    max_display_hz=self.hz, scheduling='arrival_latest_rate_cap')
+            error = self.counts['worker_error'] or self.counts['encode_error']
+            warning = self.counts['decode_or_shape_error'] or self.counts['render_error']
+            status = DiagnosticStatus(name='camera_objects/view', level=2 if error else 1 if warning else 0,
+                message='worker_error' if error else 'render_error' if warning else 'running',
+                values=[KeyValue(key=k,value=json.dumps(v)) for k,v in values.items()])
+            self.diagnostics.publish(DiagnosticArray(status=[status]))
+            self.diagnostic_at = now
+        return self.counts['mosaic_publish'] + self.counts['individual_publish'] > before
 
     def close(self):
         self.stop.set()
-        if threading.current_thread() is not self.worker:
-            self.worker.join(timeout=2.)
+        self.timer.shutdown()
+        self.render_worker.close()
+        self._subscriptions(set())
 
 
 def main():

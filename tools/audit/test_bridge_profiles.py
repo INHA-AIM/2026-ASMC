@@ -33,7 +33,7 @@ class BridgeProfileContractTest(unittest.TestCase):
         self.assertEqual(4, result["sensor_transport_profiles"])
         self.assertEqual("competition", result["default_stream_profile"])
         self.assertEqual("asmc_bridge/bridge.launch", result["canonical_launch"])
-        self.assertEqual(14, result["published_topic_count"])
+        self.assertEqual(15, result["published_topic_count"])
         self.assertEqual(["asmc_bridge"], result["packages"])
 
     def test_10hz_regression_and_15hz_deployment_are_distinct(self):

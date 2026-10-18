@@ -1,0 +1,96 @@
+{
+  "schema": "asmc_twinlite_tensorrt_v1",
+  "checkpoint": "twinlite-large-v7-e8.pt",
+  "checkpoint_sha256": "3a37e3e4708374e8b26dcea889b3f132f76bffa8586213f2c171b75504484ce6",
+  "checkpoint_epoch": 8,
+  "weights": "ema",
+  "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2",
+  "model_config": "large",
+  "torch": "2.1.2+cu118",
+  "opset": 17,
+  "class_names": {
+    "drivable": [
+      "background",
+      "drivable"
+    ],
+    "road_marking": [
+      "background",
+      "white_lane",
+      "yellow_lane",
+      "stopline"
+    ]
+  },
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.29",
+  "engines": [
+    {
+      "hw": [
+        544,
+        960
+      ],
+      "max_batch": 1,
+      "onnx": "twinlite_large_v7_e8_front.onnx",
+      "onnx_sha256": "8703f78025b46a40e72e65027d7e015965cfff45ef51a305f1c370d18d5a168a",
+      "output_mode": "reduced",
+      "precision": "fp16",
+      "fp32_sensitive": false,
+      "onnx_parity": [
+        {
+          "batch": 1,
+          "max_abs": [
+            1.9073486328125e-06,
+            0.0,
+            2.7418136596679688e-06
+          ]
+        }
+      ],
+      "build_seconds": 172.77480768100213,
+      "fp32_layers": [],
+      "file": "twinlite_large_v7_e8_front.engine",
+      "sha256": "2e1bda00533c065c5a3a1513b1eb2fdd397590e629fa9348dec9d51000d83f2f",
+      "bytes": 8937212
+    },
+    {
+      "hw": [
+        480,
+        640
+      ],
+      "max_batch": 2,
+      "onnx": "twinlite_large_v7_e8_sides.onnx",
+      "onnx_sha256": "752b6048ab90828c237aee2afa47970fa25fc73e334d1ba74751e6999cd3e6e1",
+      "output_mode": "reduced",
+      "precision": "fp16",
+      "fp32_sensitive": false,
+      "onnx_parity": [
+        {
+          "batch": 1,
+          "max_abs": [
+            2.86102294921875e-06,
+            0.0,
+            6.377696990966797e-06
+          ]
+        },
+        {
+          "batch": 2,
+          "max_abs": [
+            4.023313522338867e-06,
+            0.0,
+            1.1324882507324219e-06
+          ]
+        }
+      ],
+      "build_seconds": 105.2083620140038,
+      "fp32_layers": [],
+      "file": "twinlite_large_v7_e8_sides.engine",
+      "sha256": "ec8043fad0415363ff973ed8a5675a30e6de8169a6ee25dfda9551e015a2519c",
+      "bytes": 8391276
+    }
+  ],
+  "completed": true,
+  "onnx": "1.17.0",
+  "tensorrt": "10.13.0.35",
+  "gpu_name": "NVIDIA GeForce RTX 4060 Ti",
+  "compute_capability": [
+    8,
+    9
+  ]
+}

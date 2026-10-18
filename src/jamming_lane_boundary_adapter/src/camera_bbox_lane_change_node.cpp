@@ -591,6 +591,10 @@ void laneBoundaryCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& msg) {
     follower_state.lane_markers_valid = false;
 
     // 2. 인수한 카메라 설정과 기하 계약 검사.
+    // IMU family adoption belongs to planning: validate the classifier's fixed-
+    // plane reprojection first, then pin the same approved config in both consumers.
+    // Do not bypass this gate to restore control after a camera default update.
+    // See docs/handoffs/camera-to-planning.md, section 7.1.
     if (msg->config_sha256 != params.expected_config_sha256) {
         rejectLaneInput("wrong_geometry_config_hash");
         return;

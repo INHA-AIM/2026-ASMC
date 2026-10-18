@@ -1,6 +1,7 @@
 <launch>
-  <!-- Headless debug publishers. Open their compressed topics with
-       rqt_image_view from the GUI-capable ROS container. -->
+  <!-- Shared internal renderer composition for view.launch and legacy callers.
+       Normal users run view.launch. This file starts no inference or rqt;
+       standalone defaults keep all renderer flags false. -->
   <arg name="camera_calibration_config"
        default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <arg name="bev_grid_config"
@@ -96,10 +97,14 @@
       <rosparam param="views">[left, front, right]</rosparam>
       <param name="secondary_mode" value="$(arg secondary_mode)"/>
       <param name="publish_per_view_panels" value="$(arg legacy_rqt)"/>
+      <param name="managed" value="true"/>
     </node>
 
     <node pkg="asmc_camera" type="camera_bev_visualizer_node.py"
           name="camera_bev_visualizer" output="screen" required="false">
+      <env name="OPENBLAS_NUM_THREADS" value="1"/>
+      <env name="OMP_NUM_THREADS" value="1"/>
+      <param name="managed" value="true"/>
       <rosparam command="load" file="$(arg bev_grid_config)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
       <rosparam command="load" file="$(find asmc_camera)/config/bev/fusion.yaml"/>

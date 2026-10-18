@@ -39,6 +39,17 @@ class CameraCalibrationTest(unittest.TestCase):
         self.assertEqual("lidar_ground_fit_20260911", plane.source)
         np.testing.assert_allclose(plane.coefficients, [0.0, 0.0, -0.35])
 
+    def test_canonical_v3_uses_nominal_morai_36cm_without_moving_mounts(self):
+        _, cameras = load_calibration_snapshot(PACKAGE_ROOT / 'config' / 'cameras_v3.yaml')
+        for name, camera in cameras.items():
+            np.testing.assert_allclose(camera.ground_plane.coefficients, [0, 0, -.36])
+            self.assertEqual(camera.ground_plane.source,
+                             'morai_vehicle_spec_wheel_radius_0p36_20261018')
+            self.assertEqual(camera.translation_m, self.cameras[name].translation_m)
+            self.assertEqual(camera.rotation_deg, self.cameras[name].rotation_deg)
+        self.assertAlmostEqual(cameras['front'].translation_m[2] -
+                               cameras['front'].ground_plane.z_at_origin_m, 1.56)
+
     def test_missing_or_invalid_ground_plane_is_rejected(self):
         missing = dict(self.snapshot)
         missing.pop("ground_plane")

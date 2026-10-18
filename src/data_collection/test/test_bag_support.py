@@ -54,6 +54,10 @@ class BagProfileTest(unittest.TestCase):
         for name in names:
             profile = load_bag_profile(root, name)
             listed = set(profile["required_topics"] + profile["optional_topics"])
+            if profile.get('kind') == 'raw':
+                self.assertIn('/morai_sensor_bridge/frame_timing', profile['optional_topics'])
+                self.assertEqual(profile['expected_types']['/morai_sensor_bridge/frame_timing'],
+                                 'asmc_msgs/SensorFrameTiming')
             if not profile["privileged_gt"]:
                 self.assertNotIn("/velodyne_points_instance", listed)
                 self.assertNotIn("/Object_topic", listed)

@@ -1,0 +1,38 @@
+{
+  "source_checkpoint": "/prepared/training_runs/twinlite_large_v7_20261017_r1/epoch008.pt",
+  "source_sha256": "4029a2892966d5f1b3e0e2991211214395935015e5062ec9e497b4ff70c142c0",
+  "checkpoint": "twinlite-large-v7-e8.pt",
+  "checkpoint_sha256": "3a37e3e4708374e8b26dcea889b3f132f76bffa8586213f2c171b75504484ce6",
+  "bytes": 7955842,
+  "source_bytes": 31775612,
+  "epoch": 8,
+  "model_config": "large",
+  "weights": "ema",
+  "tensor_count": 408,
+  "all_tensors_equal": true,
+  "task_spec": {
+    "name": "drivable_road_marking_4class",
+    "heads": [
+      "drivable",
+      "road_marking"
+    ],
+    "class_names": {
+      "drivable": [
+        "background",
+        "drivable"
+      ],
+      "road_marking": [
+        "background",
+        "white_lane",
+        "yellow_lane",
+        "stopline"
+      ]
+    },
+    "class_counts": {
+      "drivable": 2,
+      "road_marking": 4
+    }
+  },
+  "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2",
+  "optimizer_state_included": false
+}

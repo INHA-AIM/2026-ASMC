@@ -40,6 +40,9 @@
   <arg name="lane_width_max" default="4.6"/>
   <arg name="max_width_variation" default="0.8"/>
   <arg name="inferred_confidence_scale" default="0.60"/>
+  <!-- Keep the old approval until planning validates the IMU family and BBox
+       projection together. Both consumers must pin the approved config; a hash-only
+       update is insufficient. See docs/handoffs/camera-to-planning.md 7.1. -->
   <arg name="expected_config_sha256" default="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
   <arg name="input_topic" default="/perception/lane/boundary_family"/>
   <arg name="control_topic" default="/ctrl_cmd/jamming"/>

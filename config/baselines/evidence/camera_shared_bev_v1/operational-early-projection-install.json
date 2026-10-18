@@ -1,0 +1,27 @@
+[
+  {
+    "path": "src/asmc_camera/config/bev/visualization.yaml",
+    "before_sha256": "403e93759fe58d666bc71e557c7b62d6a3ef85ec33bea6d33ec726d12280bc38",
+    "after_sha256": "d14e4fef3848506342181d69fd01b76513a65d2572fe4602c9a215964e903573"
+  },
+  {
+    "path": "src/asmc_camera/launch/visualization.launch",
+    "before_sha256": "e1a500209ef6b0d6a4ce548506c17af18c530f70fbcc7cc28725e0b0f2281e09",
+    "after_sha256": "196a1a2a60aae3da3aa3536431702743416379d753aaf42b152a0eab009f39a0"
+  },
+  {
+    "path": "src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py",
+    "before_sha256": "bc12d4b1583345c738a9ab5e9e22370b2e871986c6db8d3743e657a090fe0c24",
+    "after_sha256": "3915ae212e4a300b8bc40ac270a671177b32b1ae758517eb478d0f3933ddabf9"
+  },
+  {
+    "path": "src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py",
+    "before_sha256": "4eadcfa37c60e919fdcd63f2eb8aeef4832f12e806a78aba60068e871c15768b",
+    "after_sha256": "ccce0ce2a6c07f141e9a032bcff06cf936d143e0aaf7188195265c76e2035105"
+  },
+  {
+    "path": "src/asmc_camera/test/bev/test_shared_comparison.py",
+    "before_sha256": "4961f7f5c626bf6bdcd892e134345815213424a9afae0b5a0c26a6d93b5f00f8",
+    "after_sha256": "1a078b7f4c33c7e335e9f65170186ca4d611dccf32d05168a0a15064d6487306"
+  }
+]

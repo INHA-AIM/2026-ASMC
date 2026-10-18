@@ -33,14 +33,16 @@ PyTorch 복구 경로 및 export의 설치 의존성입니다. canonical `lane_r
 동일한 SHA의 패키지 내부 checkpoint를 사용하며 원본 학습 산출물은 보존합니다.
 
 
-## TwinLite TensorRT 기본 backend
+## TwinLite TensorRT와 복구 파일
 
 `lane_segmentation/`에는 Medium v6 원본 checkpoint, 전방544×960 B1 및 좌우480×640
 B1–2 ONNX/FP16 engine, `manifest.json`을 둡니다. EMA·두 head·클래스 순서는 유지하며
 attention을 근사하거나 제거하지 않습니다. Manifest의 checkpoint/engine SHA와 GPU,
 TensorRT 버전을 시작 시 검사합니다. 불일치는 명시적으로 실패하며 fallback하지 않습니다.
 
-`lane_runtime.yaml`은 이 engine을 기본으로 사용합니다. `lane_runtime_pytorch.yaml`의 명시적 복구 경로와
+`lane_runtime.yaml`은 Large v7 E8과 `manifest-large-v7-e8.json`을 기본으로 사용합니다.
+`lane_runtime_large.yaml`은 같은 배포본의 명시적 선택입니다.
+`lane_runtime_medium.yaml`은 명시적인 Medium 복구 설정입니다. `lane_runtime_pytorch.yaml`의 명시적 복구 경로와
 고정 upstream 소스 의존성은 보존합니다. 변환에는 upstream 소스와 ONNX 도구가 필요하며,
 TensorRT 실행 자체는 해당 upstream Python 모델을 로드하지 않습니다.
 [변환·품질·실시간 검증](../../../docs/records/camera/camera-twinlite-tensorrt.md)을 확인하세요.
@@ -49,4 +51,19 @@ TensorRT 실행 자체는 해당 upstream Python 모델을 로드하지 않습�
 `lane_segmentation/twinlite-large-bdd100k.pt`는 공식 BDD100K Large의 **미추가학습 이진
 drivable/lane** 모델입니다. 원본 tensor를 그대로 보존한 약8MB checkpoint와 source JSON을
 Git에 포함합니다. [실험 실행 안내](../docs/bdd-pretrained-experiment.md)에 별도 토픽·입력 크기와
-추론 명령이 있습니다. Medium v6의 기본 TensorRT·4종 road_marking·family를 대체하지 않습니다.
+추론 명령이 있습니다. 현재 기본인 MORAI 추가학습 Large E8 TensorRT·4종 road_marking·family와 분리합니다.
+
+
+## Large v7 E8 배포 파일
+
+`lane_segmentation/twinlite-large-v7-e8.pt`는 완료된8epoch의 EMA를 보존한
+7,955,842B 추론본이다. 원본 학습 checkpoint의408개 tensor/buffer와 dtype까지 같으며
+학습 재개 상태는 포함하지 않는다. 원본은 E드라이브 training run에 보존한다.
+전방/측방의 `twinlite_large_v7_e8_*.onnx`, `.engine`과 `manifest-large-v7-e8.json`을
+같은 폴더에 포함한다. `model_config: large`가 필요하며 Medium engine과 섞어 쓰지 않는다.
+
+[배포 목록](../../../config/models/camera_lane_large_v7_e8_v1.json)에 출처·SHA·환경을,
+[E8 배포 검증](../../../docs/records/camera/2026-10-18-twinlite-large-deployment.md)에
+동일 val/test·17시·TensorRT·family·실시간 결과와 현재 전환 상태를 기록한다.
+`lane_runtime_medium.yaml`은 기존 Medium v6 TensorRT의 명시적 복구 설정이다.
+공식 BDD 이진 Large와 MORAI 4종으로 추가학습한 이 배포본은 서로 다른 모델이다.

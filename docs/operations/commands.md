@@ -59,6 +59,8 @@ source /root/ws/src/lidar+sensorfusion/devel/setup.bash
 판제 사용 범위이며 생산자를 끄는 설정이 아닙니다. Lane 주행 소비는 음영 ODD에 한정하고 A126 진입 전에
 유효 family를 확인합니다. A448은 접근 구간, 주변 차량 소비는 A153 끝/A451 진입까지입니다.
 
+현재 차선 기본 모델은 Large v7 E8 TensorRT다. 사용자가 알려진 공급·freshness 제한을 확인한 뒤 전환을 승인했다.
+[선정·실측·Medium 복구](../records/camera/2026-10-18-twinlite-large-deployment.md)를 확인한다.
 공식 BDD100K Large의 추가학습 전 결과는 [별도 실험 실행 안내](../../src/asmc_camera/docs/bdd-pretrained-experiment.md)를
 따릅니다. 이진 차선 시각화 실험이며 위 C의 운영 family를 대체하지 않습니다.
 
@@ -90,26 +92,59 @@ rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
 
 ### 개별 디버그·시각화
 
-아래는 기존 해당 producer를 종료한 뒤 택합니다. `mode:=active`는 기본값을 명시한 모델 확인 예입니다.
+일반 사용은 위 C의 `camera.launch`와 아래 `view.launch`를 각각 한 번 실행합니다.
+두 launch 모두 `models:=all`이 기본이며, `camera.launch`는 `mode:=active`도 기본이므로
+이 인자를 반복 지정할 필요가 없습니다. 추론과 시각화 선택은 서로 독립적입니다.
 
 ```bash
-roslaunch asmc_camera camera.launch mode:=active models:=objects
-# 위 실행을 종료한 뒤 사전학습7종 대조
-roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=pretrained
+# C에서 이미 camera.launch를 실행했다면 추론을 또 시작하지 않음
+roslaunch asmc_camera view.launch
+# 별도 터미널: rqt는 한 개만 실행
+rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
 E8은16종, pretrained는COCO80 checkpoint에서7종만 선택합니다. 입력은 YOLO/TwinLite 모두
 전방544×960 B1·좌우480×640 B2, 목표15/15Hz·ResNet10Hz, confidence0.40·NMS0.50입니다.
 Ego mask·보정·engine은 YAML/manifest가 소유합니다. 자동 PyTorch fallback은 없습니다.
 
+같은 rqt에서 `/perception/camera/debug/mosaic/compressed`는 주행가능영역·차선 semantic,
+`/perception/lane/debug/shared_family_bev/compressed`는 피팅된 family를 표시합니다.
+`/perception/bev/debug/comparison/compressed`의 RGB·semantic은 같은 family 프레임의 IMU 지면을
+재사용합니다. 별도 추론·피팅을 하지 않으며 `IMU shared`/`M0: 사유`로 적용 상태를 표시합니다.
+Family 화면은 새 family 도착 즉시 갱신합니다. 신호등도 결과 도착 즉시 표시합니다.
+큰 객체·semantic 합성과 RGB BEV 비교 화면은 최대10Hz이며, 추론/판제 발행 주기와 독립적입니다.
+최신 결과 하나만 대기시키며 같은 source 결과 재표시를 신규 인지 공급으로 세지 않습니다.
+정본 지면은 `cameras_v3.yaml`의 z=-0.36m이며 변경 후 카메라/투영 노드를 다시 시작해야 합니다.
+Family는 원본 시각 IMU 자세·공동 폭 피팅을 기본 사용합니다. IMU/timing 근거가 부족하면
+세 뷰 모두 고정 평면·폭 prior0.35로 처리하며 명목 거리는0.36m 그대로입니다.
+[기본 전환과10분 검증](../records/camera/2026-10-18-joint-family-stabilization.md)을 확인합니다.
+고정 평면 복구가 필요하면 기존 `camera.launch`를 종료한 뒤
+`roslaunch asmc_camera _imu_compare.launch enabled:=false`로 대체합니다. `view.launch`는 그대로 사용합니다.
+[0.36m·표시 검증](../records/camera/2026-10-18-nominal-ground-and-arrival-view.md)을 함께 확인합니다.
+`view.launch`는 시각화 worker만 시작하며, 추론 모델이나 rqt 창을 시작하지 않습니다.
+
+일부 모델만 점검할 때는 기존 `camera.launch`를 종료한 뒤 다음 중 하나로 대체합니다.
+아래 두 줄은 서로 다른 추론 실행 예시입니다.
+
 ```bash
-# 시각화 worker와 rqt는 각각 한 세트만 실행
-roslaunch asmc_camera view.launch models:=objects,lane
-rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
+# YOLO만 추론: lane·신호등 모델은 시작하지 않음
+roslaunch asmc_camera camera.launch models:=objects
+# 위 추론 실행을 종료한 뒤 사전학습7종만 대조
+roslaunch asmc_camera camera.launch models:=objects detector:=pretrained
 ```
 
-같은 rqt에서 `/perception/lane/debug/shared_family_bev/compressed`로 바꿉니다.
-view.launch는 추론을 시작하지 않습니다. GUI 종료 후 사용한 process가 남지 않았는지
+추론은 기본 전체 실행을 유지하고 화면만 객체+차선으로 제한하려면, 기존 `view.launch`만
+종료한 뒤 다음으로 대체합니다. 신호등 추론·발행은 계속 동작합니다.
+
+```bash
+roslaunch asmc_camera view.launch models:=objects,lane
+```
+
+`visualization.launch`는 `view.launch`와 구형 실행 경로가 공유하는 내부 시각화 구성입니다.
+단독 기본 실행은 세 표시 플래그가 모두 false라 시각화 노드를 만들지 않습니다. 일반 사용자는
+`view.launch`를 사용하며 둘을 동시에 실행하지 않습니다. 상세 legacy/raw 옵션은 재현·진단용입니다.
+
+GUI 종료 후 사용한 process가 남지 않았는지
 `rosnode list`, `pgrep -af rqt_image_view`로 확인하고 해당 터미널의 Ctrl+C로 정리합니다.
 사용자/다른 작업의 프로세스를 일괄 종료하지 않습니다.
 

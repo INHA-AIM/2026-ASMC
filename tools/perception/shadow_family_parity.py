@@ -75,6 +75,8 @@ def run(args, engines, gpu_cache):
     rospy.set_param('~enable_boundary_family_candidate',True)
     rospy.set_param('~enable_independent_boundary_pipeline',False)
     reference_runtime=getattr(args,'family_reference_runtime',None)
+    reference_label=getattr(args,'reference_label','PyTorch')
+    candidate_label=getattr(args,'candidate_label','TensorRT')
     reference_hashes={}
     if reference_runtime:
         source=reference_runtime/'src/asmc_camera/src/asmc_camera'
@@ -173,7 +175,7 @@ def run(args, engines, gpu_cache):
                 results.append(dict(run_id=run_id,index=index,phase=frame['phase'],pose=frame['pose'],**compared))
                 if index%60==0 or not compared['validity_equal'] or not compared['roles_equal']:
                     panels=[]
-                    for title,message in zip(('Previous family','Optimized family') if reference_runtime else ('PyTorch','TensorRT'),messages):
+                    for title,message in zip(('Previous family','Optimized family') if reference_runtime else (reference_label,candidate_label),messages):
                         canvas=np.zeros((*grid.shape,3),np.uint8); draw_metric_grid(canvas,grid)
                         draw_stateful_lane_family(canvas,family_segments(message),grid,title+': '+message.status_reason)
                         panels.append(cv2.resize(canvas,(320,500)))
@@ -188,7 +190,10 @@ def run(args, engines, gpu_cache):
     (args.output/'families.jsonl').write_text(''.join(json.dumps(row)+'\n' for row in results))
     summary=dict(schema='shadow_family_parity_v2',triplets=len(results),
         fixture_sha256=sha256_file(args.family_fixture),checkpoint_sha256=sha256_file(args.checkpoint),
-        engine_manifest_sha256=sha256_file(args.engine_manifest),
+        engine_manifest_sha256=sha256_file(args.engine_manifest) if args.engine_manifest else None,
+        reference_checkpoint_sha256=engines[0].backend.info.checkpoint_sha256,
+        reference_model_config=engines[0].backend.info.model_config,
+        candidate_model_config=engines[-1].backend.info.model_config,
         validity_changes=sum(not r['validity_equal'] for r in results),
         role_changes=sum(not r['roles_equal'] for r in results),
         support_changes=sum(r['support_changed_roles']>0 for r in results),
@@ -205,7 +210,7 @@ def run(args, engines, gpu_cache):
                         for name in ('reference','candidate')},
             note='Same TensorRT grids; refactor parity, not PyTorch/TensorRT accuracy. Offline timing includes message construction and is not live acceptance.')
     (args.output/'report.json').write_text(json.dumps(summary,indent=2)+'\n')
-    title='TensorRT grids: previous / optimized family' if reference_runtime else 'Shadow family PyTorch / TensorRT'
+    title='TensorRT grids: previous / optimized family' if reference_runtime else 'Shadow family {} / {}'.format(reference_label,candidate_label)
     (args.output/'index.html').write_text('<meta charset="utf-8"><h1>'+title+'</h1>'+''.join(
         '<p>{} {}</p><img loading="lazy" src="{}">'.format(run,phase,file) for file,run,phase in gallery))
     return 0 if (summary['parity_pass'] if reference_runtime else not summary['validity_changes'] and not summary['role_changes']) else 1

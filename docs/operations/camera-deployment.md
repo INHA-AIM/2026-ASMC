@@ -73,7 +73,9 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 명시적인 `mode:=standby` 복구에는 `/perception/camera/objects/set_mode`의 mode1 PREPARE →
 같은 세대 prepared=true 확인 → mode2 ACTIVE를 사용한다. [판제 소비 범위](../handoffs/perception-to-planning.md)는
 생산자 발행 제한과 구별하며, Frenet 객체 입력을 구간별로 끊지 않는다.
-TwinLite도 현재15Hz 목표·TensorRT·전방544×960/좌우480×640이다. 음영 lane 모드와 readiness는 [실행 계약](../contracts/camera-runtime-v1.md)을 따른다.
+TwinLite 기본은 Large v7 E8·15Hz 목표·TensorRT·전방544×960/좌우480×640이다.
+[Large 배포 검증](../records/camera/2026-10-18-twinlite-large-deployment.md)의 동일 평가·정차 부하 결과와
+전방 황색차선 회귀와 SUNNY freshness 실패를 확인한다. 사용자가 이 제한을 확인한 뒤 Large E8 기본 전환을 승인했다. Medium은 명시적 복구 설정으로 보존한다. 음영 lane 모드와 readiness는 [실행 계약](../contracts/camera-runtime-v1.md)을 따른다.
 신호등 생산자는 카메라 담당의 `asmc_camera` 하나다. 판제 launch는 별도 ResNet을 시작하지 않는다.
 중단·재개·주기는 카메라의 기존 `/perception/camera/traffic_light/set_mode`로 제어한다.
 

@@ -1,5 +1,11 @@
 # BBOX 검출에 따른 반복 차선변경
 
+**현재 IMU family의 제어 인수는 판제 담당 확인 대기다.** 초기 SHA·고정 평면 BBox classifier와
+follower의 설정을 함께 검증해야 한다. SHA만 갱신해 제어를 허용하지 않는다.
+[판제 인수 체크리스트](../../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)에 따라
+read-only/preview 검증 후 제어를 승인한다. 아래 standalone 기본값과 달리 planner 통합 launch는
+`enable_control=true`를 전달한다.
+
 `src/camera_bbox_lane_change_node.cpp`가 차선 중심 주행과 BBOX 기반 차선변경을 수행한다.
 파일 상단에 모든 인자와 설명을 두고 같은 파일에 main을 둔다.
 외부 LiDAR 모듈은 수정하지 않는다. 이 패키지의 구형 카메라 추종·LiDAR 회피 구현은 정리했다.

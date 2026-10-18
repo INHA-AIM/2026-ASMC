@@ -122,6 +122,15 @@ class RuntimeMeasurementsTest(unittest.TestCase):
                    topic='/perception/camera/objects',frame='camera_front',valid=False,stale=False)
         self.assertFalse(measurements([row,dict(row,valid=True,stale=True)],0,5,15))
 
+    def test_lane_goal_uses_configured15_instead_of_legacy10(self):
+        rows = [dict(event='output', at=.01+i*.1, stamp=i+1, received=i*.1,
+                     wall_ms=10, valid=True, stale=False,
+                     topic='/perception/camera/front/road_marking/model_grid/class_id', frame='camera_front') for i in range(59)]
+        result = next(iter(measurements(rows,0,5.9,15,15).values()))
+        self.assertEqual(result['target_hz'], 15.)
+        self.assertFalse(result['target_95pct_pass'])
+        self.assertTrue(result['minimum_10_pass'])
+
     def test_frozen_old_md5_and_additive_observation_fields(self):
         specs = load_message_specs(ROOT/'src/asmc_msgs/msg')
         md5 = all_message_md5(specs)

@@ -1,0 +1,22 @@
+schema_version: 1
+contract_id: camera_model_grid_timing_v1
+status: additive_camera_producer
+messages:
+  asmc_msgs/CameraModelGridTiming:
+    md5: 3d9d2bf10966b2aac416bb6a1f66ea99
+    required_fields: [header, producer_session_id, generation, view, image_header,
+      class_header, confidence_header, grid_wire_sequences_valid, source_timing_valid,
+      reason, sensor_timing]
+topic: /perception/camera/{view}/road_marking/model_grid/timing
+views: [front, left, right]
+producer: asmc_camera/semantic_inference_node.py
+source_identity: [image_header.frame_id, image_header.stamp, image_header.seq]
+output_identity: [class_header, confidence_header]
+producer_identity: [producer_session_id, generation]
+sensor_timing: config/contracts/sensor_frame_timing_v1.yaml
+existing_images: unchanged_header_policy_pixel_data_and_md5
+enabled_imu_consumer: exact_three_way_class_confidence_timing_join
+missing_source: explicit_whole_family_fixed_plane_fallback
+missing_grid_timing: no_synthetic_or_republished_family
+pose_policy: bracketed_source_time_slerp_without_extrapolation
+motion_scope: roll_pitch_ground_projection_no_translation_no_heave

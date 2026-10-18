@@ -60,10 +60,16 @@ class DemandSynchronizer:
     refresh/unregister returns. ``context`` must be a cheap immutable snapshot.
     """
     def __init__(self, topics, message_type, demand, callback, context=lambda: None,
-                 on_reset=None, queue_size=4, subscriber_queue_size=2, subscriber_buffer_bytes=None):
+                 on_reset=None, queue_size=4, subscriber_queue_size=2, subscriber_buffer_bytes=None, message_types=None,
+                 callback_with_context=False):
         self.topics, self.message_type = tuple(topics), message_type
+        self.message_types = (tuple(message_types) if message_types is not None
+                              else (message_type,) * len(self.topics))
+        if len(self.message_types) != len(self.topics):
+            raise ValueError('one message type per synchronized topic is required')
         self.demand, self.callback, self.context = demand, callback, context
         self.on_reset = on_reset
+        self.callback_with_context = callback_with_context
         self.queue_size, self.subscriber_queue_size = queue_size, subscriber_queue_size
         self.subscriber_buffer_bytes = subscriber_buffer_bytes
         self.lock = threading.RLock()
@@ -96,10 +102,15 @@ class DemandSynchronizer:
             def deliver(*messages):
                 # Called synchronously inside receive's epoch lock.
                 if self.active and epoch == self.epoch and self.context() == context and self.demand():
-                    self.callback(*messages)
+                    # Consumers taking their own generation lock can recheck
+                    # this captured context after a concurrent status update.
+                    if self.callback_with_context:
+                        self.callback(context, *messages)
+                    else:
+                        self.callback(*messages)
             sync.registerCallback(deliver)
             self.synchronizer, self.active = sync, True
-            for topic, source in zip(self.topics, filters):
+            for topic, kind, source in zip(self.topics, self.message_types, filters):
                 def receive(message, source=source):
                     with self.lock:
                         if self.active and epoch == self.epoch and self.context() == context and self.demand():
@@ -107,7 +118,7 @@ class DemandSynchronizer:
                 kwargs = dict(queue_size=self.subscriber_queue_size)
                 if self.subscriber_buffer_bytes is not None:
                     kwargs['buff_size'] = self.subscriber_buffer_bytes
-                self.subscribers.append(rospy.Subscriber(topic, self.message_type, receive, **kwargs))
+                self.subscribers.append(rospy.Subscriber(topic, kind, receive, **kwargs))
 
     def unregister(self):
         with self.lock:

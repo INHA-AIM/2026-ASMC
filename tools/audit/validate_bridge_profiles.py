@@ -206,6 +206,11 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "normalized vehicle state topic changed",
     )
     _require(
+        implementation['published_topics'].get('/morai_sensor_bridge/frame_timing')
+        == 'asmc_msgs/SensorFrameTiming',
+        'additive source/receive timing topic is missing',
+    )
+    _require(
         implementation["published_topics"]["/Competition_topic"]
         == "morai_msgs/EgoVehicleStatus",
         "Competition Vehicle Status topic contract changed",

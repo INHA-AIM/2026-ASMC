@@ -11,7 +11,7 @@ class DemandSynchronizerTest(unittest.TestCase):
         clock.start(); self.addCleanup(clock.stop)
         self.connections = []
         def subscribe(topic, kind, callback, **kwargs):
-            item = NS(topic=topic, callback=callback, unregister=Mock())
+            item = NS(topic=topic, kind=kind, callback=callback, unregister=Mock())
             self.connections.append(item)
             return item
         self.patch = patch('rospy.Subscriber', side_effect=subscribe)
@@ -64,12 +64,31 @@ class DemandSynchronizerTest(unittest.TestCase):
         self.connections[-1].callback(self.image(20))
         self.delivered.assert_called_once()
 
+    def test_mixed_types_are_bound_to_the_corresponding_topics(self):
+        self.wanted = True
+        group = DemandSynchronizer(['/jpeg', '/mask'], object, lambda: True,
+                                   self.delivered, message_types=[str, bytes])
+        self.addCleanup(group.unregister)
+        group.refresh()
+        self.assertEqual([c.kind for c in self.connections], [str, bytes])
+        with self.assertRaises(ValueError):
+            DemandSynchronizer(['/jpeg', '/mask'], object, lambda: True,
+                               self.delivered, message_types=[str])
+
     def test_closed_group_does_not_reconnect_or_deliver(self):
         self.wanted = True; self.group.refresh()
         self.group.unregister(); self.group.refresh()
         self.assertEqual(len(self.connections),2)
         for c in self.connections: c.callback(self.image(10))
         self.delivered.assert_not_called()
+
+    def test_context_aware_callback_receives_the_captured_subscription_epoch(self):
+        self.group.callback_with_context = True
+        self.wanted = True; self.group.refresh()
+        first, second = self.image(10), self.image(10)
+        self.connections[0].callback(first)
+        self.connections[1].callback(second)
+        self.delivered.assert_called_once_with(1, first, second)
 
 
 if __name__ == '__main__':

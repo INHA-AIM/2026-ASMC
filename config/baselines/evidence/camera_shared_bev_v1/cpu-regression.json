@@ -1,0 +1,26 @@
+{
+  "suites": {
+    "bev-complete-final.log": {
+      "tests": 210,
+      "seconds": 5.661,
+      "passed": true
+    },
+    "runtime-complete-final.log": {
+      "tests": 119,
+      "seconds": 65.556,
+      "passed": true
+    },
+    "comparison-epoch-test.log": {
+      "tests": 12,
+      "seconds": 0.249,
+      "passed": true
+    },
+    "demand-epoch-test.log": {
+      "tests": 6,
+      "seconds": 0.018,
+      "passed": true
+    }
+  },
+  "counts_overlap": true,
+  "gpu_used": false
+}

@@ -14,6 +14,8 @@ required_topics:
   - /cam_right/image_jpeg/compressed
   - /Ego_topic
 optional_topics:
+  # Keep raw source/receive clocks alongside unchanged sensor headers.
+  - /morai_sensor_bridge/frame_timing
   - /gps
   - /imu
   - /ctrl_cmd
@@ -22,6 +24,7 @@ optional_topics:
   - /morai_sensor_bridge/diagnostics
   - /morai_udp_bridge/diagnostics
 expected_types:
+  /morai_sensor_bridge/frame_timing: asmc_msgs/SensorFrameTiming
   /image_jpeg/compressed: sensor_msgs/CompressedImage
   /cam_left/image_jpeg/compressed: sensor_msgs/CompressedImage
   /cam_right/image_jpeg/compressed: sensor_msgs/CompressedImage

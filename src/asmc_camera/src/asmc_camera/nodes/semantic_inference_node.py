@@ -150,6 +150,7 @@ class SemanticInferenceNode:
         self.model_grid_timestamp_resets = 0
         self.model_grid_publishers = {}
         self.model_grid_confidence_publishers = {}
+        self.grid_timing = None
         if (
             self.publish_model_grid_road_marking
             and "road_marking" in self.categorical_heads
@@ -197,6 +198,10 @@ class SemanticInferenceNode:
         self._timestamp_regressions_by_view = {view: None for view in self.views}
 
         self.control = RosInferenceControl("twinlite", self.views, 10., warmed_up=bool(warmup_iterations), parameters=self.parameters)
+        if self.model_grid_publishers:
+            from asmc_camera.runtime.grid_timing import GridTimingPublisher
+            self.grid_timing = GridTimingPublisher(self.views, camera_topics, self.control)
+            rospy.on_shutdown(self.grid_timing.close)
         self.control.state.record('startup', model_load_ms=model_load_ms,
                                   dummy_warmup_ms=dummy_warmup_ms)
         self.family_status_subscriber = rospy.Subscriber(
@@ -254,6 +259,7 @@ class SemanticInferenceNode:
                 received_ros_ns=getattr(message, 'received_ros_ns', int(rospy.Time.now().to_nsec())),
                 decode_key=getattr(message, 'decode_key', None),
                 decode_source=getattr(message, 'decode_source', None), generation=generation,
+                source_sequence=int(getattr(message.header, 'seq', 0)),
             )
         )
 
@@ -465,6 +471,28 @@ class SemanticInferenceNode:
                      value.model_grid_categorical_confidences['road_marking'], frame, False)])
         # Lane fitting consumes this compact three-view grid. Deliver the whole
         # set before optional full-resolution debug probabilities serialize.
+        grid_timing = getattr(self, 'grid_timing', None)
+        if grid_timing is not None:
+            # A tiny sidecar joins actual serialized output sequences back to
+            # the original compressed input. Compact transport stays ahead of
+            # expensive native visualization outputs.
+            from std_msgs.msg import Header
+            for view in prediction.views:
+                frame = usable_frames[view]
+                if not publish_model_grid or view not in self.model_grid_publishers:
+                    continue
+                value = prediction.views[view]
+                headers = []
+                for publisher, pixels, categorical in (
+                    (self.model_grid_publishers[view], value.model_grid_probabilities['road_marking'], True),
+                    (self.model_grid_confidence_publishers[view], value.model_grid_categorical_confidences['road_marking'], False)):
+                    if publisher.get_num_connections() > 0:
+                        message = self._image_message(pixels, frame, categorical)
+                        headers.append(grid_timing.publish_image(publisher, message))
+                    else:
+                        headers.append((Header(stamp=frame.stamp, frame_id=frame.frame_id), False))
+                grid_timing.publish(view, frame, headers)
+            model_grid_outputs = []
         for publisher, value, frame, categorical in model_grid_outputs + categorical_outputs + other_outputs:
             if not self._publish_connected_image(publisher, value, frame, categorical):
                 return False

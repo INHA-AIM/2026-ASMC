@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import platform
+import re
 import time
 
 import numpy as np
@@ -65,15 +66,20 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--checkpoint', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--model-config', choices=['nano', 'small', 'medium', 'large'], default='medium')
+    p.add_argument('--model-prefix', help='Artifact basename; defaults to twinlite_<scale>')
     p.add_argument('--output-mode', choices=['logits', 'reduced'], default='logits')
     p.add_argument('--precision', choices=['fp32', 'fp16'], default='fp16')
     p.add_argument('--fp32-sensitive', action='store_true')
     p.add_argument('--export-only', action='store_true')
     a = p.parse_args()
+    prefix = a.model_prefix or 'twinlite_' + a.model_config
+    if not re.fullmatch(r'[a-zA-Z0-9_-]+', prefix):
+        p.error('--model-prefix must be a filename basename')
     a.output.mkdir(parents=True, exist_ok=False)
     torch.set_num_threads(2)
     torch.manual_seed(20261015)
-    backend = TwinLiteBackend(str(a.checkpoint), device='cpu', amp=False,
+    backend = TwinLiteBackend(str(a.checkpoint), model_config=a.model_config, device='cpu', amp=False,
                              input_hw=(480,640), input_hw_by_view={'front': (544,960)})
     if backend.info.heads != ('drivable', 'road_marking'):
         raise ValueError('deployment requires the MORAI road-marking checkpoint')
@@ -92,7 +98,7 @@ def main():
         result['onnx'] = onnx.__version__
         for name, hw, batch in [('front', (544,960), 1), ('sides', (480,640), 2)]:
             dummy = torch.rand((batch,3)+hw)
-            onnx_path = a.output / ('twinlite_medium_v6_' + name + '.onnx')
+            onnx_path = a.output / (prefix + '_' + name + '.onnx')
             with torch.inference_mode():
                 torch.onnx.export(model, dummy, str(onnx_path), opset_version=17,
                     input_names=['images'], output_names=names,

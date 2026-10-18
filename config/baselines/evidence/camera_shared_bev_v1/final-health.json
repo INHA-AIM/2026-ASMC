@@ -1,0 +1,61 @@
+{
+  "at": "2026-10-18T12:10:10.100377+00:00",
+  "family_config_id": "2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a",
+  "statuses": {
+    "objects": {
+      "mode": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "pipeline_ready": true,
+      "errors": 0
+    },
+    "lane": {
+      "mode": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "pipeline_ready": true,
+      "errors": 0
+    },
+    "traffic_light": {
+      "mode": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "pipeline_ready": true,
+      "errors": 0
+    }
+  },
+  "publishers": {
+    "/perception/lane/boundary_family": [
+      "/camera_lane_vectorizer"
+    ],
+    "/perception/lane/ground_projection": [
+      "/camera_lane_vectorizer"
+    ],
+    "/perception/camera/objects/observations": [
+      "/camera_objects"
+    ],
+    "/perception/traffic_light/detection": [
+      "/camera_traffic_light"
+    ]
+  },
+  "alive": [
+    "/base_to_velodyne",
+    "/camera_bev",
+    "/camera_bev_fusion",
+    "/camera_lane",
+    "/camera_lane_vectorizer",
+    "/camera_objects",
+    "/camera_traffic_light",
+    "/gps_imu_vehicle_state_adapter",
+    "/morai_sensor_bridge",
+    "/morai_udp_bridge",
+    "/rosout"
+  ],
+  "dead": [],
+  "demand": {
+    "/perception/lane/ground_projection": [],
+    "/perception/bev/camera/drivable_probability": [],
+    "/perception/camera/front/drivable/probability": []
+  },
+  "rqt": []
+}

@@ -30,9 +30,9 @@ class P1BContractTest(unittest.TestCase):
 
     def test_repository_contract_is_valid(self):
         result = validate_contract(REPO_ROOT, self.contract, self.baseline)
-        self.assertEqual(result["message_count"], 35)
+        self.assertEqual(result["message_count"], 38)
         self.assertEqual(result["contract_message_count"], 25)
-        self.assertEqual(result["registered_message_count"], 35)
+        self.assertEqual(result["registered_message_count"], 38)
         self.assertEqual(result["legacy_message_count"], 13)
         self.assertEqual(result["new_message_count"], 12)
         self.assertEqual(result["topic_count"], 11)
@@ -42,6 +42,23 @@ class P1BContractTest(unittest.TestCase):
         self.assertEqual(md5s["BehaviorCommand"], "fad196232c8f54cbbe2a1bced9d3972a")
         self.assertEqual(md5s["DetectedObjectArray"], "14fbd9679c2d87ae7498e4269d9678da")
         self.assertEqual(md5s["LaneBoundaryFamily"], "70ac79f98ca1244c782ea4067becd6af")
+
+    def test_sensor_timing_contract_matches_source_and_requires_exact_join(self):
+        contract = yaml.safe_load((REPO_ROOT / 'config/contracts/sensor_frame_timing_v1.yaml').read_text())
+        definition = contract['messages']['asmc_msgs/SensorFrameTiming']
+        self.assertEqual(ros1_md5('SensorFrameTiming', self.specs), definition['md5'])
+        fields = {field.name for field in self.specs['SensorFrameTiming'].fields}
+        self.assertTrue(set(definition['required_fields']).issubset(fields))
+        self.assertIn('sensor_wire_sequence', contract['sensor_join'])
+        self.assertEqual(contract['operational_motion_compensation'], 'not_implemented')
+
+    def test_shared_projection_metadata_matches_registered_additive_contract(self):
+        contract = yaml.safe_load((REPO_ROOT / 'config/contracts/camera_ground_projection_v1.yaml').read_text())
+        definition = contract['messages']['asmc_msgs/CameraGroundProjection']
+        self.assertEqual(ros1_md5('CameraGroundProjection', self.specs), definition['md5'])
+        fields = {field.name for field in self.specs['CameraGroundProjection'].fields}
+        self.assertTrue(set(definition['required_fields']).issubset(fields))
+        self.assertEqual(contract['plane_order'], ['dz_dx', 'dz_dy', 'z_at_origin_m'])
 
     def test_lidar_handoff_md5_matches_message_sources(self):
         contract = yaml.safe_load((REPO_ROOT / "config/contracts/lidar_candidate_topic_contract_v1.yaml").read_text())

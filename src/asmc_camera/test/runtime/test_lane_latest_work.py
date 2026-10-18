@@ -41,7 +41,11 @@ class LatestLaneWorkTest(unittest.TestCase):
             return (),(),(),(),None,{'reason':'test'}
         node._compute_family_frame=calculate
         frame=_ViewFrame('front',10,Header(stamp=rospy.Time(0,10)),None,None,0.,current[0])
-        worker=threading.Thread(target=lambda:node._process({'front':frame}),daemon=True)
+        failures=[]
+        def calculate_frame():
+            try:node._process({'front':frame})
+            except Exception as error:failures.append(error)
+        worker=threading.Thread(target=calculate_frame,daemon=True)
         worker.start()
         try:
             self.assertTrue(entered.wait(1.))
@@ -52,6 +56,8 @@ class LatestLaneWorkTest(unittest.TestCase):
         finally:
             release.set();worker.join(2.)
         self.assertFalse(worker.is_alive())
+        self.assertEqual(failures,[])
+        node._boundary_family_message.assert_called_once()
         node.boundary_family_publisher.publish.assert_not_called()
 
     def test_grid_receipt_does_not_wait_for_the_fitting_epoch_lock(self):

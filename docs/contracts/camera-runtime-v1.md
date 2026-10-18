@@ -42,15 +42,22 @@ ResNet은 camera4의 기존 PIL RGB·GPU resize·bfloat16 경로를 유지한다
 `lane_input.yaml`은 TwinLite와 model-grid 투영이 함께 읽는 단일 입력 크기 설정이다.
 YOLO 배포 checkpoint2개·engine2개는 패키지 models의 실제 Git 파일이다.
 [모델 배포 안내](../../src/asmc_camera/models/README.md)의 지원 GPU/runtime과 SHA를 따른다.
-TwinLite v6 checkpoint도 패키지에 포함한다. 기본 backend는 `lane_runtime.yaml`의 TensorRT
+TwinLite Large v7 E8 checkpoint·전용 engine과 기존 Medium v6 복구본을 패키지에 포함한다. 2026-10-18 사용자 결정으로 기본 모델을 Large v7 E8로 전환했다. SUNNY freshness·공급 지연 제한과 자동 수락 실패는 보존한다.
+기본 backend는 `lane_runtime.yaml`의 TensorRT
 FP16이다. 같은 입력의 PyTorch 복구는 내부 `_runtime.launch`의 `lane_runtime_config`로
-`lane_runtime_pytorch.yaml`을 명시적으로 선택한다. Engine 오류에 자동 fallback하지 않는다.
+`lane_runtime_pytorch.yaml`을 명시적으로 선택한다. Medium 복구는 `lane_runtime_medium.yaml`이다.
+[Large E8 배포 검증](../records/camera/2026-10-18-twinlite-large-deployment.md)에 선정·SHA·정차 시험과 한계를 기록한다.
+Engine 오류에 자동 fallback하지 않는다.
 기본 backend 선택은 전체 공급 수락을 뜻하지 않는다. 변환 품질·과거 후단 실패는
 [TensorRT 검증 기록](../records/camera/camera-twinlite-tensorrt.md)을 따른다.
 공유 GPU 입력은 내부 `_runtime.launch implementation:=shared shared_gpu_input:=true` 후보이며
 기본은 모델별 프로세스다. 공유 후보에서도 camera4 ResNet은 별도 프로세스를 사용한다.
 구형 `perception.launch`의 TwinLite384×640 호환 경로는 보존한다.
 TwinLite·BEV·차선 피팅의 책임은 분리하며 차선 주행 소비는 음영 ODD에 한정한다.
+원본 시각 IMU·공동 폭 피팅이 기본이며 근거 부족 시 전 뷰가 기존 M0로 복귀한다.
+[보정 계약](../architecture/camera-imu-projection.md)과 [최종 검증](../records/camera/2026-10-18-joint-family-stabilization.md)을 따른다.
+Header·표현·MD5는 유지하지만 설정 SHA는 바뀐다. 구 SHA를 고정한 판제 어댑터의 인수는
+[인계 문서](../handoffs/camera-to-planning.md)에 따라 별도로 확인한다.
 구간 판정과 결과 소비는 판제 소유다. 현재는 세 모델을 상시 ACTIVE로 유지하며
 구간·GPS 유효 여부로 발행을 중단하지 않는다. Frenet 객체 freshness를 유지하고,
 [구간별 소비 안내](../handoffs/perception-to-planning.md)에 따라 판제가 사용 범위를 결정한다.
@@ -140,6 +147,13 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 정확한 영상 대응과 무효화를 관리한다. 합성 header는 디버그 발행 시각이며 동기 3뷰 관측이 아니다.
 시각화 목표는10Hz이고 추론 목표15Hz와 별도다. 구독자가 없는 큰 영상의 구독·변환·인코딩을 중단한다.
 최종 기본 전환과 GUI 수락 상태는 [시각화 검증 기록](../records/camera/camera-visualization-validation.md)을 따른다.
+
+Family 선은 발행된 family를 그대로 그린다. RGB/semantic comparison은
+[`CameraGroundProjection`](../../config/contracts/camera_ground_projection_v1.yaml)의 뷰별 지면을
+공유한다. 원본 시각 IMU 조회는 family worker에서 한 번이며, 작은 metadata는 피팅 전에 전달해
+영상 렌더링이 피팅 완료를 기다리지 않도록 한다. Comparison만 구독하면 별도의 고정 BEV 합성
+경로를 구동하지 않는다. 원 JPEG와 같은 시각의 semantic이 없는 경우에는 대체하지 않고 건너뛴다.
+기존 BEV 데이터 토픽·판제 좌표 계약은 변경하지 않는다.
 
 ## Timestamp의 출처
 

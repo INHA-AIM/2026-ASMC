@@ -7,7 +7,7 @@
 | 단계 | 현재 상태 | 다음 확인 |
 |---|---|---|
 | YOLO 3뷰 | E8/사전학습 선택·TensorRT·16종→3그룹·전방960, 카메라 단일 생산자 | 차량 자체 누락·중복·그룹 전환·입력 중단 대응 |
-| TwinLite/family | 전방544×960/측방480×640·TensorRT·상시 model-grid→family | A126 진입 전 유효 family·음영 한정 소비·freshness/fallback; 알려진 순간 공백 추적 |
+| TwinLite/family | Large v7 E8 기본·전방544×960/측방480×640·TensorRT·상시 model-grid→family | 새 모델의 투영 범위·피팅 품질, A126 진입 전 유효 family·음영 한정 소비·freshness/fallback |
 | 신호등 | camera4 ResNet10Hz·typed 관측 | 신호등 생산자 하나, stale 시 legacy 우회 없음 |
 | Main 연결 | 전방 CPU 어댑터·unique ±50ms/200ms·기존 판제 출력 | 최신 판제와 실제 주행, 원본 이름/그룹/운동 분리 |
 | LiDAR 이전 | `asmc_lidar` 좌표/시간 코어·3뷰 수신/버퍼/투영 라이브러리 | 손재호의 실행 연결·다중관측 통합·검출/추적 이전 |
@@ -30,6 +30,27 @@ Semantic 자체가 잘못되면 TwinLite, 객체 박스 누락·혼동은 YOLO�
 기존 객체 회귀·배경 FP·중복 FP·3그룹/16종 품질과 지연을 함께 확인합니다.
 RF-DETR는 지연 비교 후 현재 후보에서 제외했으며 다시 전 조합을 탐색하지 않습니다.
 Teacher는 위치 초안과 이름 확정 근거를 분리하고 미검출을 negative로 만들지 않습니다.
+
+## 다음 단계 — source 정합과 실제 가림
+
+TwinLite Large E8·전방544×960/측방480×640은 유지한다. 원본 시각 IMU·공동 폭 계산을
+[잔차·10분 수락](../records/camera/2026-10-18-joint-family-stabilization.md) 후 기본 전환했다.
+이전 Large 배포·M1-rest·폭 완화 후보의 실패는 당시 기록을 보존한다.
+새 정차 시험의 통과를 전체 주행·판제 제어 수락으로 확대하지 않는다.
+
+1. **3뷰 중첩·시각 정합:** 동일 차선의 카메라별 위치 차이·중복 가중과 raw source skew를
+   분리한다. 드문 M0 복귀의 순간 곡선 변화도 관측하며 freshness를 늘려 감추지 않는다.
+2. **실제 가림·출구 소실:** 기존 역할 제거5건은 스트레스 시험이다. 실제 RGB 가림과 내부 공백/
+   관측 밖 외삽을 나눠 support·observed/inferred 판정이 유지되는지 확인한다.
+3. **범위:** 계산 x[-5,20]·y[-8,8]m, raster0.10m와 판제 검토 x[0,15]m를 구분한다.
+   직접 model-grid 투영이므로 raster를 조밀하게 만들어 정확도가 좋아졌다고 설명하지 않는다.
+4. **조건부 이동 정렬:** 터널에서 유효한 상대 속도·yaw 입력을 확보하고 잔차의 원인이 시각 차이일
+   때만 뷰 사이 ego motion 정렬을 진행한다. 개발용 Ego pose·과거 GPS를 운영 입력으로 사용하지 않는다.
+   과거 근거 누적은 그 이후이며 모델·대체 곡선 탐색을 동시에 확대하지 않는다.
+
+차선 주행 소비는 음영 ODD에 한정하고 판제/LiDAR의 구현 책임을 유지한다.
+인지 기본 전환만으로 판제의 config SHA 고정·bbox 고정 평면 재투영이 갱신되지는 않는다.
+[카메라→판제 인수](../handoffs/camera-to-planning.md) 후 별도 공동 주행을 확인한다.
 
 ## 연결 문서
 

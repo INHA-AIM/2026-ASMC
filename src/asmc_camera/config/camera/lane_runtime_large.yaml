@@ -1,0 +1,17 @@
+# Explicit Large v7 E8 selection; same model/settings as the canonical default.
+model_config: large
+# Canonical camera.launch requests15Hz; legacy perception.launch keeps10Hz.
+backend: twinlite_tensorrt
+checkpoint: $(find asmc_camera)/models/lane_segmentation/twinlite-large-v7-e8.pt
+engine_manifest: $(find asmc_camera)/models/lane_segmentation/manifest-large-v7-e8.json
+gpu_preprocess: true
+device: cuda
+# Tensor sizes are shared with the model-grid projector via lane_input.yaml.
+views: [front, left, right]
+amp: true
+channels_last: true
+lazy_outputs: true
+warmup_iterations: 1
+batch_wait_ms: 20.0
+publish_model_grid_road_marking: true
+model_grid_max_hz: 15.0

@@ -32,9 +32,14 @@ canonical_configs:
   - path: src/asmc_camera/config/camera/twinlite_medium.yaml
     sha256: 4f8ab7228971b84a31324f8448b5aa90c22e6e9d106afedf638015ba4d1536dd
   - path: src/asmc_camera/config/camera/visualization.yaml
-    sha256: a5cacc655463667cbee60e5211dc0cb4ad86e2f59e7615d1f377943aa38122a1
-    previous_sha256: da013db2e5c5333a0c969c883b57735a4f6704cdc7db879743076d8fa2fa32d3
-    revision_reason: camera_visualization_20261015_debug_opencv_threads_1
+    sha256: 1ef1adceaaf0047c829d678e41ec14b6ca15fb65ee82fc8e2390f6af4e8c12ca
+    previous_sha256: a5cacc655463667cbee60e5211dc0cb4ad86e2f59e7615d1f377943aa38122a1
+    revision_reason: camera_display_20261018_arrival_workers_and_10hz_caps
+    prior_revisions:
+      - sha256: da013db2e5c5333a0c969c883b57735a4f6704cdc7db879743076d8fa2fa32d3
+        reason: before_opencv_thread_limit
+      - sha256: a5cacc655463667cbee60e5211dc0cb4ad86e2f59e7615d1f377943aa38122a1
+        reason: camera_visualization_20261015_debug_opencv_threads_1
   - path: src/asmc_camera/config/bev/bev_grid.yaml
     sha256: 8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3
   - path: src/asmc_camera/config/bev/bev_grid_dev.yaml
@@ -48,7 +53,13 @@ canonical_configs:
     previous_sha256: 00b0909db8813e8bda08e9c9efa079bc6556b98d56511c9b532da79aec060a9d
     revision_reason: family_supply_20261015_sync_queue_12_to_4_no_fitting_threshold_changes
   - path: src/asmc_camera/config/bev/visualization.yaml
-    sha256: 497286b20abb22e16464596d8f1354d6a19958129300f04c2a0b12c8f4bda5e8
+    sha256: d14e4fef3848506342181d69fd01b76513a65d2572fe4602c9a215964e903573
+    previous_sha256: ab145bda84b1ba3de1c296a26a5a836a99cc3b6bbb9aa7021fdee4d326a7db04
+    revision_reason: camera_shared_imu_bev_20261018_bounded_cache_and_opencv_threads_1
+    revision_evidence: docs/records/camera/2026-10-18-shared-imu-bev.md
+    prior_revisions:
+      - sha256: 497286b20abb22e16464596d8f1354d6a19958129300f04c2a0b12c8f4bda5e8
+        reason: before_camera_display_20261018_rgb_bev_cap_5_to_10hz
   - path: src/asmc_camera/config/bev/visualization_dev.yaml
     sha256: dd5f1ca51182ba792b4a97e3ce75595729ea163a0dd2e967bbfa2701a7b04bc7
   - path: src/asmc_camera/config/offline/bev/shadow_map_rgb_bev.yaml
