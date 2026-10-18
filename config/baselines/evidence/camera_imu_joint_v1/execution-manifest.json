@@ -1,36 +1,50 @@
 {
   "schema": "imu_joint_execution_manifest_v1",
-  "code_parent": "1243b84e8a1ae3cb1586b41815da70290add3540",
+  "code_parent": "9cbffc36",
   "code_config_sha256": {
-    "src/asmc_camera/src/asmc_camera/bev/shared_lane_family.py": "f60963ac17aec01eb26764e635f7ec5095348b0b21c2554095c3862b57d60083",
+    "src/asmc_camera/src/asmc_camera/bev/shared_lane_family.py": "b5a699ab28401233dc984c8be86abca93e2812c8b2ad7f00632ec6872a417eb0",
     "src/asmc_camera/src/asmc_camera/bev/family_fit_policy.py": "ecd3dcdc6afd2f6253082716de87755212811d6d301f8d520c76d33cf050ae37",
     "src/asmc_camera/src/asmc_camera/runtime/sensor_timing.py": "015b5b5051f4c926222855c9e38f35e15c32c2b104f8648416bb82f9cdf1b5a9",
     "src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py": "055520c55f0e854ff59926ef2c86d3df48bddc79422e56df9ff8492a800d2da3",
-    "src/asmc_camera/config/bev/imu_motion.yaml": "e2b541c441f808bb161d1498b6e1e6a0b98825308538ae03d0993d967165f18e",
+    "src/asmc_camera/config/bev/imu_motion.yaml": "e2b0e8d817abd6b679e1669c721452bf9bef5aebfc775de8ca59cdf7f71eb09e",
     "src/asmc_camera/config/cameras_v3.yaml": "54637d8bbbe5af9b0255824644e4118c86de4b3c683661ddc827913ed1817538",
     "tools/perception/check_imu_family_cpu.py": "992d85f27c0e13e09de17a0250376304843e77d0b8dcbe7f54120d1d86cf98cc",
     "tools/perception/compare_camera_runtime.py": "5df72bfe95457ae4d35d9dc59250a4e95292fc4f1cd0688f38acdfdff2125572",
     "tools/perception/summarize_imu_runtime.py": "70b056d65a55c61fdaa8dff4967b9581896bba33e12474cedc0f231289c382fc"
   },
   "reports": {
-    "cpu-regression.json": "428f04b322cdaeeb7c723abfd5cd685706ceafb2b94a4f1aa68cf1d7d56e2e79",
+    "cpu-regression.json": "284a3f306b74c90bfda08468882561a1549eea18f34b0a32e6de40275378ba39",
     "source-review.json": "00a2f0c141e5402cd47ee05bab8f495f617aec1969cdfb09833c6ca7dfeba727",
     "source-inlier-residuals.json": "c46b7182f64888c429d1b703c0baa95c60554f5c91c6935d64e3a4a4f18426f6",
+    "final-inventory.json": "0d6ccdf7af44bd788113575f105b1ec9ced7af363074899c3afc5edda9e43f66",
+    "post-restore-verified.json": "0844c471501bd69322ebda63bc7c5c19ad3596f8c77a19d4fda190a05fb20329",
     "external-movement.json": "ffd3653787813228c87f223f5c621222e28abafdb5f6e098eecb630e81e973ae",
+    "compute-optimization.json": "5fd017fe7753a1bb52dcef35c0a5b64112d8873b7bd0bf45039b5c2ac634459d",
     "legacy-review.json": "96c60082ed8075abd3562ece9ae011aacbb2f3ba6269a7b13b1f70676cba6835",
     "baseline-restored-status.json": "333674a1cc8468887f8fd3fed76f14cffa4bcf322566b5662fa4eb4b01358a71",
     "quality.json": "6f4637ada0865f75d66c1c9c396325613b5d0282759836c4deb285fe92daff2d",
     "runtime-parity.json": "6a716b043a57e4d1c30f1d0dfa3ad8380fddd5f8cbd85e6e7c0ccf6036918e1c",
-    "runtime.json": "6902a13b43406a1929a6ab6c792d26a0b2977db35f65fc44404be2e31f5b226d"
+    "operational-install.json": "521a31348ac791ee7f0fba1d79ac814898c41c441c70dbca67fc2f5098591519",
+    "fixture-restored.json": "99a2eed4629a7d7623860df38870727e013cb6ae3f7713f425ebb8aedacd83f4",
+    "runtime.json": "411a55caae9695e638bba0146d0977c1141117c578c4a3f621293531bd173577",
+    "default-verified.json": "ccd0ec585e917b30a9dd4340427c804a2219de3d63aada04d8703cfb799c2a36",
+    "final-regressions.json": "7a3d71f73dddfef075e08599993cb60687d6bdc55663f483f7d82a3ae42faaa6"
   },
-  "operational_defaults_changed": false,
-  "live_acceptance": "pending_transport_revision_external_vehicle_movement",
+  "operational_defaults_changed": true,
+  "live_acceptance": "passed_compute_revision_sunny_foggy60s_and_foggy600s",
   "source_quality_passed": true,
-  "cpu_tests": 56,
+  "cpu_tests": 59,
   "noetic_runtime": "asmc-ros-noetic",
   "weights_changed": false,
-  "push_pr": false,
-  "restoration": "Original camera runtime active and verified; vehicle/weather/time restoration pending external driving clarification",
+  "restoration": "New resumed-run ledger restored position within2.5mm, mode/gear/weather/time; yaw difference1.356deg recorded",
   "first_endurance_failure": "source_stale readiness1; source_age370.775ms; family producer continues",
-  "pending_revision": "Private non-latched family message buffers; CPU wire equality passed; live preparation guard stopped before inference"
+  "family_config_sha256": "2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a",
+  "gallery": "E397 camera-imu-joint-20261018-r1/index.html",
+  "limitations": [
+    "No independent geometric GT; temporal and segmentation consistency only",
+    "M0 fallback27/8983; adjacent curve change at15m up to0.318m",
+    "No common-time translation/yaw alignment or temporal accumulation",
+    "Planner geometry SHA guard and fixed-plane bbox projection require explicit downstream validation"
+  ],
+  "evidence_freeze": "Before final PR publication; no merge included"
 }

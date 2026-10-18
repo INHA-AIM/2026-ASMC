@@ -1,0 +1,157 @@
+{
+  "statuses": {
+    "objects": {
+      "mode": 2,
+      "generation": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "prepared": true,
+      "pipeline_ready": true,
+      "errors": 0,
+      "target_hz": 15.0,
+      "session": "668be92a-1a27-426f-91e1-9e5ef912a1f4"
+    },
+    "lane": {
+      "mode": 2,
+      "generation": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "prepared": true,
+      "pipeline_ready": true,
+      "errors": 0,
+      "target_hz": 15.0,
+      "session": "a15c1170-8a02-4702-b290-d662d0c280d5"
+    },
+    "traffic_light": {
+      "mode": 2,
+      "generation": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "prepared": true,
+      "pipeline_ready": true,
+      "errors": 0,
+      "target_hz": 10.0,
+      "session": "3c27a2b8-a348-494a-a2c9-c521e5cd84fe"
+    }
+  },
+  "family": {
+    "count": 150,
+    "valid": 150,
+    "sha": [
+      "2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a"
+    ],
+    "deployment_allowed": false
+  },
+  "diagnostic": {
+    "imu": {
+      "counts": {
+        "camera_source_skew": 1,
+        "corrected": 1513,
+        "imu_not_bracketed": 9
+      },
+      "enabled": true,
+      "last": {
+        "failure_timeline": null,
+        "fit_policy": {
+          "joint_width_fit": true,
+          "mode": "M1_source",
+          "reason": "corrected",
+          "width_prior_strength": 0.0
+        },
+        "fitted_widths_m": {
+          "left": 3.524426616846889,
+          "right": 3.533227500481246
+        },
+        "reason": "corrected",
+        "source_skew_ms": 2.0,
+        "used": true,
+        "views": {
+          "front": {
+            "bracket_ms": 33.0,
+            "bridge_session_id": "13fe366f-268a-464a-81e0-18863179f30b",
+            "plane": [
+              0.0027540699019052116,
+              0.00429768474561123,
+              -0.3600046898685871
+            ],
+            "quaternion": [
+              0.0005938116122727941,
+              0.00248213804701376,
+              -0.9443813406145777,
+              0.32884246969863556
+            ],
+            "source_ns": 1792322441774000000
+          },
+          "left": {
+            "bracket_ms": 33.0,
+            "bridge_session_id": "13fe366f-268a-464a-81e0-18863179f30b",
+            "plane": [
+              0.0027540495148665268,
+              0.004297789707160819,
+              -0.36000469001076724
+            ],
+            "quaternion": [
+              0.0005937848894426311,
+              0.002482184217110772,
+              -0.9443813619365907,
+              0.32884240816507776
+            ],
+            "source_ns": 1792322441772000000
+          },
+          "right": {
+            "bracket_ms": 33.0,
+            "bridge_session_id": "13fe366f-268a-464a-81e0-18863179f30b",
+            "plane": [
+              0.0027540495148665268,
+              0.004297789707160819,
+              -0.36000469001076724
+            ],
+            "quaternion": [
+              0.0005937848894426311,
+              0.002482184217110772,
+              -0.9443813619365907,
+              0.32884240816507776
+            ],
+            "source_ns": 1792322441772000000
+          }
+        }
+      },
+      "pose_timeline": {
+        "counters": {
+          "duplicate_or_invalid_source": 1256,
+          "joined": 3489,
+          "wait_recovered": 40,
+          "wait_requested": 49,
+          "wait_unresolved": 9
+        },
+        "last_bracket_failure": {
+          "first_ns": 1792322440433000000,
+          "fresh_samples": 9,
+          "last_ns": 1792322440700000000,
+          "latest_receipt_age_ms": 52.00368398800492,
+          "target_ns": 1792322440702000000
+        },
+        "pending": 0,
+        "poses": 61,
+        "session": "13fe366f-268a-464a-81e0-18863179f30b"
+      }
+    },
+    "config_sha256": "2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a"
+  },
+  "publishers": {
+    "/perception/camera/objects": [
+      "/camera_objects"
+    ],
+    "/perception/lane/boundary_family": [
+      "/camera_lane_vectorizer"
+    ],
+    "/perception/traffic_light/detection": [
+      "/camera_traffic_light"
+    ]
+  },
+  "enabled": true,
+  "model": "large",
+  "backend": "twinlite_tensorrt",
+  "head": "normal camera.launch; no experimental override",
+  "passed": true
+}

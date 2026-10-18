@@ -1,12 +1,12 @@
 {
-  "tests": 56,
+  "tests": 59,
   "failures": 0,
   "errors": 0,
   "skipped": 0,
   "passed": true,
   "required_patterns": {
     "test_shared_lane_family.py": 21,
-    "test_joint_family_fit.py": 4,
+    "test_joint_family_fit.py": 7,
     "test_family_fit_policy.py": 4,
     "test_imu_lane_adapter.py": 6,
     "test_lane_latest_work.py": 6,

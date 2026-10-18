@@ -1,0 +1,55 @@
+{
+  "schema": "imu_final_runtime_inventory_v1",
+  "nodes": [
+    {
+      "node": "/base_to_velodyne",
+      "alive": true
+    },
+    {
+      "node": "/camera_bev",
+      "alive": true
+    },
+    {
+      "node": "/camera_bev_fusion",
+      "alive": true
+    },
+    {
+      "node": "/camera_lane",
+      "alive": true
+    },
+    {
+      "node": "/camera_lane_vectorizer",
+      "alive": true
+    },
+    {
+      "node": "/camera_objects",
+      "alive": true
+    },
+    {
+      "node": "/camera_traffic_light",
+      "alive": true
+    },
+    {
+      "node": "/gps_imu_vehicle_state_adapter",
+      "alive": true
+    },
+    {
+      "node": "/morai_sensor_bridge",
+      "alive": true
+    },
+    {
+      "node": "/morai_udp_bridge",
+      "alive": true
+    },
+    {
+      "node": "/rosout",
+      "alive": true
+    }
+  ],
+  "no_owned_test_or_qt_processes": true,
+  "camera_launch": [
+    "  35840 Ssl  /usr/bin/python3 /opt/ros/noetic/bin/roslaunch asmc_camera camera.launch"
+  ],
+  "bridge_preserved": true,
+  "post_restore_passed": true
+}

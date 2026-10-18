@@ -168,5 +168,25 @@ M0 복구는 기존 실행을 종료한 뒤 `_imu_compare.launch enabled:=false`
 통과로 해결했다고 표시하지 않는다. 고정 RGB BEV 배경은 M1 평면으로 warp하지 않았으므로
 보정 family의 절대 밀착도 판정에는 원본 RGB와 후보별 재투영을 사용한다.
 
-정본 enabled=true의 운영 runtime 설치·재빌드·일반 launch 확인과 사용자 상태 복원을 이어간다.
-완료 결과는 별도 설치/기본 실행 검증 파일로 남긴다. 다른 과제 worktree와 미커밋 변경·모델은 유지한다.
+정본 enabled=true를 기존 운영 runtime에 설치하고 `asmc_msgs;asmc_camera`를 재빌드했다.
+일반 `camera.launch`의 새 실행에서152/152 유효 family·IMU 적용·위 SHA·세 모델 ACTIVE·단일 발행자를
+확인했다. [설치 전후 SHA](../../../config/baselines/evidence/camera_imu_joint_v1/operational-install.json)와
+[기본 실행](../../../config/baselines/evidence/camera_imu_joint_v1/default-verified.json)을 보존한다.
+
+사용자 위치·모드·R 기어·SUNNY13시를 새 장부로 복원했다. 위치 차이는2.5mm, yaw 차이는1.356°로
+기록했으며 yaw까지 동일하다고 설명하지 않는다. 복원 뒤 새 generation2에서도150/150 유효 결과와
+세 모델 준비를 확인했다. [복원 후 확인](../../../config/baselines/evidence/camera_imu_joint_v1/post-restore-verified.json),
+[상태 복원](../../../config/baselines/evidence/camera_imu_joint_v1/fixture-restored.json),
+[최종 실행 목록](../../../config/baselines/evidence/camera_imu_joint_v1/final-inventory.json)에 따라
+운영 bridge·camera만 유지하고 시험/rqt는 종료했다. 등록11개 모두 응답하며 죽은 ROS 등록은0이다.
+
+전체 BEV198개·IMU/family 집중59개·기본/복구 launch2개·품질 판정4개는 모두 통과했다.
+이 suite들은 일부 중복되므로 합산한 고유 시험 수로 설명하지 않는다.
+[최종 검사](../../../config/baselines/evidence/camera_imu_joint_v1/final-regressions.json)와
+[계산 프로파일](../../../config/baselines/evidence/camera_imu_joint_v1/compute-optimization.json)을 보존했다.
+실험 목록 **E397**, `camera-imu-joint-20261018-r1/index.html`과 원본 RGB 비교 E396은
+로컬 서버에서 HTTP200·새 페이지14개 링크 누락0을 확인했다.
+
+판제의 구 SHA 고정과 bbox의 고정 평면 투영은 [인수 규칙](../../handoffs/camera-to-planning.md)에 따라
+별도 검증한다. `deployment_allowed=false`·음영 ODD·정책 소유권은 유지한다.
+다른 과제 worktree와 미커밋 변경·모델은 유지했으며 이번 작업에 병합을 포함하지 않는다.
