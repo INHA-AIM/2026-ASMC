@@ -413,7 +413,8 @@ class LaneVectorizerNode:
             ),
         }
         self.family_fit_policy = FamilyFitPolicy(self.shared_family_parameters,
-            self.imu_config.get('corrected_width_prior_strength', 0.0))
+            self.imu_config.get('corrected_width_prior_strength', 0.0),
+            self.imu_config.get('corrected_joint_width_fit', False))
         if self.imu_enabled:
             boundary_family_contract_config['imu_motion'] = self.imu_config
             boundary_family_contract_config['frame_fit_policy'] = self.family_fit_policy.contract()

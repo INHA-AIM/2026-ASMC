@@ -19,12 +19,13 @@ class FrameFitConfig:
 
     def audit(self):
         return dict(mode=self.mode, reason=self.reason,
-                    width_prior_strength=float(self.parameters['width_prior_strength']))
+                    width_prior_strength=float(self.parameters['width_prior_strength']),
+                    joint_width_fit=bool(self.parameters['joint_width_fit_enabled']))
 
 
 class FamilyFitPolicy:
     """Construct once; selections cannot mutate this or another frame's config."""
-    def __init__(self, parameters, corrected_width_prior_strength=0.0):
+    def __init__(self, parameters, corrected_width_prior_strength=0.0, corrected_joint_width_fit=False):
         baseline = dict(DEFAULT_SHARED_FAMILY_CONFIG)
         baseline.update(parameters)
         # The shared-family fitter currently accepts scalar settings only.
@@ -38,7 +39,8 @@ class FamilyFitPolicy:
         if not math.isfinite(corrected) or not 0 <= corrected <= original:
             raise ValueError('corrected width prior must be finite and within [0, nominal]')
         self.nominal = MappingProxyType(baseline)
-        self.corrected = MappingProxyType(dict(baseline, width_prior_strength=corrected))
+        self.corrected = MappingProxyType(dict(baseline, width_prior_strength=corrected,
+                                              joint_width_fit_enabled=bool(corrected_joint_width_fit)))
 
     def select(self, imu_applied, reason='disabled'):
         return FrameFitConfig(self.corrected if imu_applied else self.nominal,
@@ -48,4 +50,5 @@ class FamilyFitPolicy:
         return dict(policy='all_views_source_imu_width_prior_v1',
                     nominal_width_prior_strength=float(self.nominal['width_prior_strength']),
                     corrected_width_prior_strength=float(self.corrected['width_prior_strength']),
+                    corrected_joint_width_fit=bool(self.corrected['joint_width_fit_enabled']),
                     fallback='original_fixed_plane_parameters')

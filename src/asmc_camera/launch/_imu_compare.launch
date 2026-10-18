@@ -3,8 +3,10 @@
   <arg name="enabled" default="true"/>
   <arg name="trace_path" default=""/>
   <arg name="corrected_width_prior" default="0.0"/>
+  <arg name="joint_width_fit" default="true"/>
   <include file="$(find asmc_camera)/launch/camera.launch"/>
   <param name="/camera_lane_vectorizer/imu_motion/enabled" value="$(arg enabled)"/>
   <param name="/camera_lane_vectorizer/imu_motion/corrected_width_prior_strength" value="$(arg corrected_width_prior)"/>
+  <param name="/camera_lane_vectorizer/imu_motion/corrected_joint_width_fit" value="$(arg joint_width_fit)"/>
   <param name="/camera_lane_vectorizer/lifecycle_trace_path" value="$(arg trace_path)"/>
 </launch>
