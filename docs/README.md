@@ -7,7 +7,7 @@
 | 처음 환경을 준비하고 빌드 | [온보딩](onboarding/README.md) |
 | 개별·통합 실행과 옵션 확인 | [실행 명령](operations/commands.md), [launch 인자 목록](operations/launch-reference.md) |
 | 전체 구조·담당·우선순위 확인 | [시스템 구조](architecture/system-overview.md), [대회 완료 로드맵](architecture/consolidation-roadmap.md), [ownership](onboarding/ownership.md) |
-| 카메라 실행·시각화 | [카메라 README](../src/asmc_camera/README.md), [배포 모델](operations/camera-deployment.md), [0.36m·표시 검증](records/camera/2026-10-18-nominal-ground-and-arrival-view.md) |
+| 카메라 실행·시각화 | [카메라 README](../src/asmc_camera/README.md), [배포 모델](operations/camera-deployment.md), [IMU·피팅 기본 전환](records/camera/2026-10-18-joint-family-stabilization.md) |
 | 인지 상시 발행·미션별 소비 | [인지→판제 소비 범위](handoffs/perception-to-planning.md) |
 | 카메라와 LiDAR 연결 | [카메라→LiDAR](handoffs/camera-to-lidar.md), [LiDAR 이전](handoffs/lidar-migration.md) |
 | 음영구간 차선·판제 연결 | [카메라→판제](handoffs/camera-to-planning.md), [판제 운영](operations/planning-control.md) |

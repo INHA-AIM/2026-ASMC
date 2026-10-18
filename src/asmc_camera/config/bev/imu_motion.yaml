@@ -1,7 +1,8 @@
-# Internal M1 comparison. TensorRT weights/preprocessing and legacy headers stay fixed.
+# Default source-time attitude correction; missing evidence uses all-view M0.
+# TensorRT weights/preprocessing and legacy headers stay fixed.
 # Current v3 IMU (id7) mount rotation is [0,0,0]; orientation is world_from_imu.
 # Flat K-City world +Z, nominal rear-axle normal distance0.36m, no height estimator.
-enabled: false
+enabled: true
 # Used only when all three views have valid source-time IMU. Fallback uses
 # lane_fitting.yaml's original0.35, never the relaxed value.
 corrected_width_prior_strength: 0.0

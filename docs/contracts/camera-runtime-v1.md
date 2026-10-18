@@ -54,6 +54,10 @@ Engine 오류에 자동 fallback하지 않는다.
 기본은 모델별 프로세스다. 공유 후보에서도 camera4 ResNet은 별도 프로세스를 사용한다.
 구형 `perception.launch`의 TwinLite384×640 호환 경로는 보존한다.
 TwinLite·BEV·차선 피팅의 책임은 분리하며 차선 주행 소비는 음영 ODD에 한정한다.
+원본 시각 IMU·공동 폭 피팅이 기본이며 근거 부족 시 전 뷰가 기존 M0로 복귀한다.
+[보정 계약](../architecture/camera-imu-projection.md)과 [최종 검증](../records/camera/2026-10-18-joint-family-stabilization.md)을 따른다.
+Header·표현·MD5는 유지하지만 설정 SHA는 바뀐다. 구 SHA를 고정한 판제 어댑터의 인수는
+[인계 문서](../handoffs/camera-to-planning.md)에 따라 별도로 확인한다.
 구간 판정과 결과 소비는 판제 소유다. 현재는 세 모델을 상시 ACTIVE로 유지하며
 구간·GPS 유효 여부로 발행을 중단하지 않는다. Frenet 객체 freshness를 유지하고,
 [구간별 소비 안내](../handoffs/perception-to-planning.md)에 따라 판제가 사용 범위를 결정한다.

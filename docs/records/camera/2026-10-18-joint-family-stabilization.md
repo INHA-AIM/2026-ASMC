@@ -91,20 +91,63 @@ GC가 기여한 정황이며 전체 지연의 유일한 원인으로 확정하�
 기존 fresh-message 소유권을 유지한다. 같은 wire bytes·유효/무효 전환·길이 축소/복귀·자세별xyz·
 이전 직렬화 데이터 보존을 검사했다. 원래 계산이나 message MD5를 변경하지 않았다.
 
-**후속 할당 개선의 실시간 시험과 기본 전환은 대기 중이다.** 재시험 시작 전 Ego가 시험 위치에서
-22.53m 이동하고 키보드/R 기어로 움직이는 것을 guard가 확인해, 모델 시험을 시작하지 않고 중단했다.
-외부 주행을 덮어쓰지 않도록 차량 이동·모드·기어 변경과 원위치 복원을 보류했다.
-기존 운영 runtime의 M0 `camera.launch`를 다시 실행했다. 세 모델 ACTIVE·loaded·prepared·오류0과
-결과 토픽별 단일 발행자를 확인했다. 새 설정의 enabled 기본값은 여전히false다.
-[기존 실행 복원 확인](../../../config/baselines/evidence/camera_imu_joint_v1/baseline-restored-status.json)을 보존했다.
+사용자 주행을 guard가 확인한 미착수 시험은 보존했다. Ego가22.53m 이동해 키보드/R 기어로
+움직였으므로 외부 주행을 덮어쓰지 않고 중단했으며, 기존 M0 `camera.launch`를 복원했다.
+[당시 실행 복원](../../../config/baselines/evidence/camera_imu_joint_v1/baseline-restored-status.json)을 유지한다.
 
-실험 경로는 `data/runtime/camera-imu-stabilize-20261018-r1/`이다. `live/original-state.json`에 처음
-위치·모드·기어·날씨·시간을 보존했다. 이후 외부 주행으로 복원 기준을 다시 확인해야 한다.
-미착수 guard 실패는 `live/pool-matrix/fixture-condition-failure.json`에 보존했다.
-완료한19회와 미착수 조건을 [집계](../../../config/baselines/evidence/camera_imu_joint_v1/runtime.json)에
-구분했다. 초기10분 실패를 후속 통과나 기본 탑재 완료로 표시하지 않는다.
+주행 종료 확인 후 현재 사용자 위치·모드·기어·날씨·시간을 새
+`live/resume-r1/original-state.json`에 기록하고 정차 시험을 재개했다. 최초 위치 장부와 혼동하지 않는다.
+메시지 재사용만 적용한 SUNNY60초에서 readiness 저하1건이 남았고, FOGGY60초는 통과했다.
+SUNNY family 계산 p95는87.09ms였고 실패 직전 한 계산은134.96ms였다. 메시지 조립은약1.34ms,
+발행은약0.40ms여서 메시지 할당만으로 원인을 설명할 수 없었다. 이 실패도 면제하지 않는다.
 
-Noetic CPU56개는 모두 통과했고 누락·skip은 없다. 실제 계산부226묶음×보정/복귀452대조의
+### 같은 결과의 수치 계산 재사용
+
+`27a738c6`은 측정한 두 중복 계산을 제거했다.
+
+- 차선 쌍의 거리 판정에서 같은 track의 정렬·중복 x 제거를 각 샘플마다 반복하지 않고,
+  같은 query를 한 번에 보간한다. stable sort·중복 x의 첫 값 선택·범위 clipping은 같다.
+- 반복 피팅의 최근접 parameter는 기존 dense grid의 원소다. 이미 계산한 basis와 유한차분
+  derivative의 해당 행을 선택하고, 매 반복의 같은 knot recurrence를 다시 만들지 않는다.
+  현재 프레임의 선택만 보존하며 과거 관측을 누적하지 않는다.
+
+동일 저장 입력226묶음×보정/복귀452대조에서 역할·support·좌표 차이는0m였다. CPU59개도 통과했다.
+동일 cProfile 조건의 전체 계산 누적 시간은20.59→15.77초(약23%), shared family 피팅은
+9.53→4.53초(약52%)로 감소했다. 프로파일 오버헤드가 있는 CPU 자료이며 live 지연 수치와 구분한다.
+
+후속 `sunny-compute-r1`·`foggy-compute-r1`은 전체 GUI/Main/LiDAR60초를 각각 통과했다.
+Family 계산 p95는52.43/53.46ms, 유효 family 최소5초 공급은14.4/14.8Hz였다.
+최종 `foggy-compute-soak-r1`의10분도 통과했다. 이 결과로 정본 enabled=true를 채택했다.
+기존 실패와 최종 후보 판정은 실행 이름으로 구분하며 이전 실패를 삭제하지 않는다.
+
+| 최종 FOGGY13시·전체 GUI/Main/LiDAR10분 | 결과 |
+|---|---:|
+| 유효 family | 8,983/8,983 · 평균14.97Hz |
+| 유효 family 최소5초 공급 | 14.6Hz |
+| Family 계산 p50/p95/p99 | 38.93/53.26/67.58ms |
+| Family 입력→소비자 p50/p95/p99 | 115.42/167.80/183.70ms |
+| Family 발행/수신 최대 공백 | 216.85/218.81ms |
+| YOLO·TwinLite 최소5초 공급 | 각각≥14.6Hz |
+| ResNet 최소5초 공급 | 9.8Hz |
+| 모델 callback→발행 p95/p99 최댓값 | 127.30/138.88ms |
+| Readiness 저하·모델 오류·중복/역행stamp | 0 |
+| 전체 VRAM peak | 62.37% |
+| 카메라/시각화/Main preview CPU 평균 합 | 340.20%, core100% 기준 |
+| 원본 시각 IMU 적용 | 8,956/8,983 · 99.70% |
+
+YOLO/차선은 이번 최종 실행의 모든 완전한5초 창에서15Hz 목표의95%도 만족했다.
+Family 전체 지연과 모델 지연을 혼합하지 않는다. 큐·journal·계측 대응 오류도 없었다.
+원본 시각 fallback27개는 source skew17·미보간7·너무 넓은 bracket3개였다.
+전환 때 고정 x=15m의 인접 곡선 차이는 최대0.318m였다. 독립 GT 오차는 아니지만
+M0 복귀의 순간 변화가 남았음을 표시한다. 오래된 결과 재발행·시간 평활화로 감추지 않았다.
+다음 우선 과제는 source-aware3뷰 선택과 중첩 근거 정합이다.
+
+실험 경로는 `data/runtime/camera-imu-stabilize-20261018-r1/`이다. 미착수 guard 실패는
+`live/pool-matrix/fixture-condition-failure.json`, 실제 실패는 `live/wait10-endurance`와
+`live/pool-matrix-r2`에 보존한다. 최종 revision은 `compute` 이름의 실행으로 선택한다.
+원래 report·trace·실패와 source stamp를 유지한다.
+
+Noetic CPU59개는 모두 통과했고 누락·skip은 없다. 실제 계산부226묶음×보정/복귀452대조의
 좌표 차이는0m였다. [품질](../../../config/baselines/evidence/camera_imu_joint_v1/quality.json),
 [계산부](../../../config/baselines/evidence/camera_imu_joint_v1/runtime-parity.json),
 [CPU 회귀](../../../config/baselines/evidence/camera_imu_joint_v1/cpu-regression.json)를 따른다.
@@ -114,8 +157,9 @@ Noetic CPU56개는 모두 통과했고 누락·skip은 없다. 실제 계산부2
 
 ## 실행과 남은 과제
 
-기본 전환 판정 전에는 실험 workspace의 `_imu_compare.launch`에서만 새 후보를 실행한다.
-M0 대조는 `enabled:=false`, 기존 폭 계산과 IMU만 대조하려면
+일반 `camera.launch`는 원본 시각 IMU·공동 폭 계산을 기본 사용한다.
+M0 복구는 기존 실행을 종료한 뒤 `_imu_compare.launch enabled:=false`로 실행한다.
+기존 폭 계산과 IMU만 대조하려면
 `enabled:=true corrected_width_prior:=0.35 joint_width_fit:=false`를 사용한다.
 일반 `camera.launch`와 동시에 켜지 않는다. 시각화 명령은 기존 `view.launch`를 유지한다.
 
@@ -124,6 +168,5 @@ M0 대조는 `enabled:=false`, 기존 폭 계산과 IMU만 대조하려면
 통과로 해결했다고 표시하지 않는다. 고정 RGB BEV 배경은 M1 평면으로 warp하지 않았으므로
 보정 family의 절대 밀착도 판정에는 원본 RGB와 후보별 재투영을 사용한다.
 
-재개 후 순서는 외부 주행 종료 확인→새 정차 기준/복원 장부 고정→SUNNY/FOGGY 할당 수정 대조→
-FOGGY10분 전체 GUI 확인→통과 시 정본 enabled=true·운영 runtime 설치/재빌드·일반 launch 확인이다.
-이번 미완료 단위는 로컬 커밋만 보존하며 push·PR을 게시하지 않는다. 이전 과제 worktree와 모델은 유지한다.
+정본 enabled=true의 운영 runtime 설치·재빌드·일반 launch 확인과 사용자 상태 복원을 이어간다.
+완료 결과는 별도 설치/기본 실행 검증 파일로 남긴다. 다른 과제 worktree와 미커밋 변경·모델은 유지한다.

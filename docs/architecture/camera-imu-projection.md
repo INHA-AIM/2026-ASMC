@@ -3,8 +3,9 @@
 ## 적용 경계
 
 현재 구현은 TwinLite Large TensorRT 이후의 **model-grid→지면 근거→family** 경로에
-roll/pitch 보정을 연결하는 M1 시험 경로다. 모델·정규화·해상도·mask·피팅 알고리즘·기존 header/MD5는 유지한다.
-정본 `imu_motion.yaml`의 enabled 기본값은 false이며, 내부 대조 launch에서만 켤 수 있다.
+roll/pitch 보정과 관측 폭·공통 B-spline 공동 계산을 사용하는 기본 경로다.
+정본 `imu_motion.yaml`은 enabled=true다. 모델·정규화·해상도·mask·family 표현·기존 header/MD5는 유지한다.
+[동일 입력·실시간 수락](../records/camera/2026-10-18-joint-family-stabilization.md) 후 기본 전환했다.
 일반 BEV/RGB 영상 warp와 차량 병진 이동·yaw 정렬·높이 추정·시간 누적은 이번 M1의 범위가 아니다.
 따라서 고정 평면 RGB BEV 배경에 M1 선을 겹쳐 위치 정확도를 판단하지 않는다.
 
@@ -50,8 +51,8 @@ Bridge 재시작·source clock 역행·충돌·중복 wire key는 기록하고 �
 ```bash
 # 같은 세 모델·설정으로 M0 대조
 roslaunch asmc_camera _imu_compare.launch enabled:=false
-# M1+폭 prior0 시험. 앞 실행을 종료한 뒤 실행
-roslaunch asmc_camera _imu_compare.launch enabled:=true
+# 기본 M1+공동 폭 계산. 앞 실행을 종료한 뒤 실행
+roslaunch asmc_camera camera.launch
 # IMU만 대조하는 내부 설정. 앞 실행을 종료한 뒤 실행
 roslaunch asmc_camera _imu_compare.launch enabled:=true corrected_width_prior:=0.35 joint_width_fit:=false
 # 별도 터미널의 시각화는 그대로 사용
@@ -64,21 +65,23 @@ roslaunch asmc_camera view.launch
 Lifecycle trace를 켜면 프레임별 `imu_projection`의 원본 시각/자세/사용 여부를 기록한다.
 
 소비 버퍼는 bounded이며 디코딩/NN 추론과 별도 mutex로 관리한다. IMU metadata를 기다리느라
-family 계산을 멈추지 않고, 준비된 두 샘플이 없으면 명시적으로 고정 평면을 사용한다.
+세 뷰 전체에 최대10ms의 조건부 대기 예산만 사용하며, 유효한 두 샘플을 얻지 못하면
+명시적으로 고정 평면을 사용한다. 대기 중 timeline lock을 해제한다.
 회귀와 실시간 대조는 [검증 기록](../records/camera/2026-10-18-source-time-imu-projection.md)에 고정한다.
-기본값 승격은 이 구현 자체의 완료와 구분한다.
+구현·이전 실패·최종 수락은 각 실행 기록으로 구분한다.
 
 ## 터널 운동 후속 판단
 
 [기존 bag·새 원본 시각 주행 대조](../records/camera/2026-10-18-tunnel-imu-motion-and-fit.md)에서
 IMU가 큰 가감속 기하 변화를 줄였고, nominal 폭 prior가 영상 차선 밀착도를 떨어뜨리는 기여를 확인했다.
-후속 후보는 M1+폭 prior 완화 하나다. [폭 정책 구현·품질 판정](../records/camera/2026-10-18-imu-width-policy.md)에서
-실제 계산부 연결과 M0 복귀의 좌표 동등성을 확인했다. 오른쪽 흰선 밀착도와 지원 범위 기준은 미통과여서
-정본 enabled=false와 기존 M0를 유지한다. 정속/미세 조향의 노이즈·절대 지면 가정·공급 검증은 남아 있다.
+이전 [폭 완화 후보](../records/camera/2026-10-18-imu-width-policy.md)는 오른쪽 흰선 잔차와
+약3.1cm 지원 손실로 미통과했다. [공동 계산 후속](../records/camera/2026-10-18-joint-family-stabilization.md)은
+같은 지원 기준에서 이 회귀를 없애고 공급 최적화·10분 수락을 마쳤다.
+정속/미세 조향의 노이즈와 절대 지면 가정은 내부 일관성·독립 GT 정확도를 구분해 해석한다.
 
 ## 프레임별 폭 사전값 정책
 
-`imu_motion.corrected_width_prior_strength`의 내부 시험 기본값은0이다. 세 뷰 모두 원본 시각의 IMU로
+`imu_motion.corrected_width_prior_strength`의 기본값은0이다. 세 뷰 모두 원본 시각의 IMU로
 보정된 프레임에만 적용한다. 하나라도 시각/자세 근거가 부족하면 전 뷰가 고정 평면으로 돌아가며,
 `lane_fitting.yaml`의 원래 prior0.35를 사용한다. 폭 범위2.4–4.6m와 shared B-spline·support 검사는 유지한다.
 
@@ -101,5 +104,12 @@ Camera source가 마지막 유효 IMU source보다 조금 앞서 도착하면, �
 `wait_requested`, `wait_recovered`, `wait_unresolved`와 `last_bracket_failure`를 확인한다.
 기다려도 근거가 없거나3뷰 source skew가35ms를 넘으면 기존 M0 복귀가 유지된다.
 
-운영 `camera.launch`의 M0 기본값과 실행 중인 runtime 사본은 이번 시험으로 전환하지 않았다.
-위 명령은 해당 변경을 빌드한 실험 checkout에서만 사용한다. 공개 실행과 중복해서 켜지 않는다.
+일반 `camera.launch`가 M1·공동 폭 계산을 사용한다. M0 복구는 기존 실행을 종료한 뒤
+`_imu_compare.launch enabled:=false`로 명시한다. 두 launch를 동시에 켜지 않는다.
+원본 timing이 없는 구형 bag과 IMU 오류는 기본 전환 후에도 M0로 처리한다.
+
+M0 복귀는 드물지만 사라지지 않았다. 최종10분의27/8,983프레임과 전환 때15m 지점의
+최대약0.318m 인접 곡선 차이를 기록했다. 이는 독립 GT 오차가 아니며 평활화로 감추지 않는다.
+다음 우선 과제는 source 시각에 맞춘3뷰 묶음 선택·중첩 근거 정합이다.
+병진/yaw 정렬과 과거 근거 누적은 유효한 터널 이동 입력과 별도 검증이 필요하다.
+판제의 구 SHA guard와 고정 평면 bbox 재투영은 [인수 규칙](../handoffs/camera-to-planning.md)을 따른다.
