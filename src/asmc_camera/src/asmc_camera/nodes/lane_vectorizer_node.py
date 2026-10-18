@@ -522,6 +522,7 @@ class LaneVectorizerNode:
             "/perception/lane/boundary_family",
             LaneBoundaryFamily,
             queue_size=1,
+            latch=False,
         )
         self.diagnostics_publisher = rospy.Publisher(
             "/perception/lane/diagnostics", DiagnosticArray, queue_size=1
@@ -757,7 +758,7 @@ class LaneVectorizerNode:
             output = build_boundary_family_output(family,status_reason=shared_audit.get('reason','unknown'),
                                                    expected_boundary_count=self.expected_boundary_count)
             plane = GroundPlane(**shared_audit['projection_ground_plane']) if 'projection_ground_plane' in shared_audit else None
-            message = self._boundary_family_message(output,header,plane)
+            message = self._boundary_family_message(output,header,plane,reuse=True)
             waiting = time.monotonic()
             with self.epoch_gate.lock:
                 if not self._context_allows(frames,context):
@@ -1765,8 +1766,19 @@ class LaneVectorizerNode:
         message.status = [status]
         return message
 
-    def _boundary_family_message(self, output, source_header, ground_plane=None):
-        message = LaneBoundaryFamily()
+    def _boundary_family_message(self, output, source_header, ground_plane=None, reuse=False):
+        # Private to the serial fit worker and its non-latched publisher. Noetic
+        # serializes into immutable wire bytes before publish returns, including
+        # queue_size=1 transports. Never retain this borrowed message elsewhere.
+        # Other callers keep the original fresh-message ownership by default.
+        if reuse:
+            if not hasattr(self, '_family_message_buffers'):
+                self._family_message_buffers = (LaneBoundaryFamily(), {})
+            message, member_buffers = self._family_message_buffers
+            message.boundaries.clear()
+        else:
+            message, member_buffers = LaneBoundaryFamily(), {}
+        message.header.seq = 0
         message.header.stamp = source_header.stamp
         message.header.frame_id = self.frame_id
         message.valid = bool(output.valid)
@@ -1788,7 +1800,13 @@ class LaneVectorizerNode:
         message.outlier_rate = float(output.outlier_rate)
         message.weighted_rms_m = float(output.weighted_rms_m)
         for value in output.boundaries:
-            boundary = LaneBoundaryFamilyMember()
+            role = int(value.role)
+            if reuse:
+                if role not in member_buffers:
+                    member_buffers[role] = (LaneBoundaryFamilyMember(), [])
+                boundary, points = member_buffers[role]
+            else:
+                boundary, points = LaneBoundaryFamilyMember(), []
             boundary.role = int(value.role)
             boundary.color = int(value.color)
             boundary.source_mask = int(value.source_mask)
@@ -1803,9 +1821,15 @@ class LaneVectorizerNode:
             boundary.max_inferred_gap_m = float(value.max_inferred_gap_m)
             boundary.bridged_length_ratio = float(value.bridged_length_ratio)
             xyz = (ground_plane or self.ground_plane).xyz(value.polyline_xy)
-            boundary.polyline = [
-                Point32(x=float(x), y=float(y), z=float(z)) for x, y, z in xyz
-            ]
+            if reuse:
+                # Three producer-owned roles, bounded by the fixed configured
+                # sampling range. Keep point objects, not historical frames.
+                while len(points) < len(xyz): points.append(Point32())
+                for point, (x, y, z) in zip(points, xyz):
+                    point.x, point.y, point.z = float(x), float(y), float(z)
+                boundary.polyline = points if len(points) == len(xyz) else points[:len(xyz)]
+            else:
+                boundary.polyline = [Point32(x=float(x), y=float(y), z=float(z)) for x, y, z in xyz]
             boundary.support_state = [
                 int(state) for state in value.support_state
             ]

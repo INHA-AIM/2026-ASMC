@@ -1,5 +1,6 @@
 from pathlib import Path
 from dataclasses import replace
+import io
 import threading
 from types import SimpleNamespace as NS
 import unittest
@@ -99,6 +100,44 @@ class ImuLaneAdapterTest(unittest.TestCase):
         np.testing.assert_allclose([p.z for p in message.boundaries[0].polyline],
                                    plane.xyz(fields['polyline_xy'])[:,2],atol=1e-7)
         self.assertEqual(node.ground_plane,camera.ground_plane)
+
+    def test_borrowed_message_wire_matches_fresh_and_resets_invalid_and_shorter_frames(self):
+        node = self.node
+        for name in ('frame_id','operating_domain','boundary_family_algorithm_id',
+                     'shared_family_representation','boundary_family_config_sha256'):
+            setattr(node, name, 'fixture')
+        node.ground_plane = node.projectors['front'].camera.ground_plane
+        def wire(message):
+            data = io.BytesIO(); message.serialize(data); return data.getvalue()
+        first_wire = first_points = None
+        for i, size in enumerate((12, 12, 0, 5, 12)):
+            members = []
+            for role in (1, 2, 3):
+                fields = {k: 0 for k in BoundaryFamilyMemberOutput.__dataclass_fields__}
+                fields.update(role=role, color=2 if role==2 else 1, confidence=.9,
+                    polyline_xy=np.column_stack((np.arange(size), np.full(size, role+i*.1))),
+                    support_state=np.full(size, 1 if i%2 else 2))
+                members.append(BoundaryFamilyMemberOutput(**fields))
+            output = replace(build_boundary_family_output(None, status_reason='fixture'),
+                valid=bool(size), boundaries=tuple(members) if size else ())
+            header = Header(seq=42, stamp=rospy.Time(10+i))
+            plane = attitude_camera(node.projectors['front'].camera,
+                                    (0, np.sin(i*.001), 0, np.cos(i*.001))).ground_plane
+            expected = node._boundary_family_message(output, header, plane)
+            actual = node._boundary_family_message(output, header, plane, reuse=True)
+            self.assertEqual(wire(actual), wire(expected))
+            self.assertEqual(header.seq, 42)
+            if i==0:
+                first_wire = wire(actual)
+                first_points = [id(p) for p in actual.boundaries[0].polyline]
+            if i==4:
+                self.assertEqual(first_points, [id(p) for p in actual.boundaries[0].polyline])
+        from asmc_msgs.msg import LaneBoundaryFamily
+        previous = LaneBoundaryFamily().deserialize(first_wire)
+        self.assertEqual(previous.header.stamp.to_sec(), 10.)
+        self.assertAlmostEqual(previous.boundaries[0].polyline[0].y, 1.)
+        self.assertEqual(len(node._family_message_buffers[1]), 3)
+        self.assertTrue(all(len(v[1])==12 for v in node._family_message_buffers[1].values()))
 
 
 if __name__=='__main__':unittest.main()
