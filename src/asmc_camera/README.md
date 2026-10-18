@@ -44,6 +44,9 @@ Family 선 화면은 실제 family가 도착하면 즉시 갱신합니다. 신�
 [원본 시각 IMU 보정](../../docs/architecture/camera-imu-projection.md)과 관측 폭·공통 곡선의 공동 피팅이 기본입니다.
 IMU roll/pitch는 model-grid의 지면 근거와 family xyz에 적용합니다. Comparison RGB·semantic BEV도
 family의 같은 프레임별 보정값을 재사용하며 IMU 조회·추론·피팅을 다시 실행하지 않습니다.
+평면 수학과 프레임별 선택은 공용 `runtime/ground_projection.py`에 있습니다.
+BBox lane 어댑터도 같은 영상의 평면 metadata를 재사용합니다.
+[공용화 범위와 소비 검증](../../docs/records/camera/2026-10-18-imu-bbox-projection.md)을 참고합니다.
 기존 BEV 데이터 토픽은 고정 평면 계약을 유지합니다.
 자세가 없거나 시각 대응이 불확실하면 묶음 전체를 기존 고정 평면으로 처리합니다.
 [잔차·공급 검증](../../docs/records/camera/2026-10-18-joint-family-stabilization.md)에

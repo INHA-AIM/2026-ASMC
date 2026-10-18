@@ -97,7 +97,7 @@ operating_domain = shadow_two_way_v1
 algorithm_id     = twinlite_v6_shadow_boundary_family_candidate_v3
 representation   = shared_parametric_bspline_normal_offsets_v2
 expected count   = 3
-config SHA-256   = 691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070
+config SHA-256   = 2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a
 deployment_allowed = false
 ```
 
@@ -108,28 +108,27 @@ deployment_allowed = false
 `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a`입니다.
 [10분 검증·복귀 한계](../records/camera/2026-10-18-joint-family-stabilization.md)를 함께 인수합니다.
 
-`camera_bbox_lane`·`camera_bbox_lane_change`와 planner의 관련 launch는 구 설정 SHA를
-`expected_hash`/`expected_config_sha256` 기본값으로 고정합니다. 새 보정·폭 정책을 켜면 이 경로는
-`wrong_geometry_config_hash`로 거부할 수 있습니다. 인지 기본값 전환을 판제의 자동 수락으로
-해석하지 않습니다. 판제 담당이 새 family의 xyz·유효 범위·소비 조건을 확인해 설정을 인수합니다.
-특히 객체 bbox와 차선을 영상에서 비교하는 어댑터는 고정 평면 homography를 따로 사용하므로,
-SHA만 바꿔 M1 family를 허용하기 전에 자세 보정된 xyz의 투영 정합을 검증해야 합니다.
-Read-only family monitor의 수신과 실제 제어 경로의 승격은 구분합니다.
+`camera_bbox_lane`·`camera_bbox_lane_change`와 planner의 관련 launch는 이제 현재 SHA와
+`asmc_camera/config/cameras_v3.yaml`을 기본으로 전달합니다. SHA 검사는 유지합니다.
+BBox classifier는 `/perception/lane/ground_projection`과 공용 lane status로 같은 추론 세대와
+영상의 평면을 확인합니다. Family xyz를 최신 묶음 뷰 평면과 검사한 뒤 전방 원본 영상의
+평면 위로 차로 띠 xy를 올려 투영합니다. 원본 시각 IMU를 두 번 조회하거나 고정 z를 다시 붙이지 않습니다.
 
-| 항목 | 현재 카메라 기본값 | 기존 BBox 판제 소비 경로 |
-|---|---|---|
-| 설정 SHA | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | 위 초기 `691b9982…`를 기대하며 불일치 시 거부 |
-| 지면 | `cameras_v3.yaml`, 명목 거리0.36m + 영상 원본 시각 IMU | `cameras_v2.yaml`, 고정 지면 z=-0.35m |
-| 영상 재투영 | 보정된 family xyz 및 해당 영상의 보정·시각 확인 필요 | `FamilyPoint2d`의 xy에 YAML 평면 z를 다시 붙여 고정 homography 적용 |
-| 인수 상태 | 사용자 표시·주행 확인, 카메라 실행 검증 완료 | 새 IMU 기하의 BBox 판정·폐루프 제어 인수는 판제 담당 확인 대기 |
+| 항목 | 현재 카메라와 BBox 소비자 |
+|---|---|
+| 설정 SHA | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` |
+| 정본 보정 | `src/asmc_camera/config/cameras_v3.yaml`, 명목 거리0.36m |
+| 영상 대응 | 원본 JPEG의 frame/stamp/wire sequence와 뷰별 context를 정확히 대응 |
+| 검사 | ACTIVE/loaded·session/generation·cutoff·350ms freshness·보정 ID·family xyz |
+| 누락·불일치 | UNKNOWN; 가까운 영상·최신 quaternion·YAML 고정 평면으로 대체하지 않음 |
+| 인수 상태 | CPU·읽기 전용 ROS 계약 검증; 실제 정차/운동·폐루프 인수는 판제 확인 필요 |
 
-이 차이는 설정만의 문제가 아닙니다. `camera_bbox_lane_node.cpp::projectPoint()`는 원본
-family z를 보존하지 않으므로 `expected_hash`와 YAML 파일명만 바꾸는 것으로 IMU 투영이
-연결되지 않습니다. 판제 담당이 3D 경계 또는 영상별 평면·보정 정보를 보존하는 재투영 경로를
-구현·검증해야 합니다. Family의 대표 header는 묶음의 최신 영상 시각이고 뷰별 시각은 다를 수
-있으며, 병진/yaw의 공통 시각 정렬(M2)은 보류 중입니다. 최신 평면을 임의의 전방 영상에 적용하지 않습니다.
-`/perception/lane/ground_projection`은 현재 **시각화 전용 계약**이며 검증된 판제 입력으로
-승격하지 않았습니다. 필요하면 카메라 담당과 별도 소비 계약을 먼저 합의합니다.
+[공유 투영 계약](../../config/contracts/camera_ground_projection_v1.yaml)은 기존 필드와 MD5를 유지하며
+comparison과 BBox 재투영을 포함합니다. Metadata 생산자는 여전히 family 묶음 worker 하나입니다.
+따라서 독립적인 상시 YOLO 지면 서비스가 구현된 것은 아닙니다. 일반 IMU 선택·투영 함수는
+[공용 라이브러리](../../src/asmc_camera/src/asmc_camera/runtime/ground_projection.py)로 분리했습니다.
+Family 대표 header는 최신 영상 시각이며 뷰별 시각은 다릅니다. 병진/yaw의 공통 시각 정렬(M2)은
+보류 중입니다. 자세 보정의 소비 연결을 폐루프 주행 승인으로 해석하지 않습니다.
 
 M1을 끈 M0 복구도 현재 Large·0.36m 등 다른 설정을 유지하므로 초기 `691b9982…` SHA와
 자동으로 호환되는 것은 아닙니다. 실제 메시지의 SHA와 보정 파일을 확인합니다.
@@ -298,10 +297,11 @@ roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=fa
 검증 자료를 제공하고, 판제 담당은 소비 변경과 제어 승격을 소유합니다. 현재 아래 항목은 **인수 대기**입니다.
 
 - [ ] Read-only로 현행 family의 xyz, `base_link`, 역할, `valid`·support·범위를 확인한다.
-- [ ] BBox 차로 어댑터에서 z를 잃는 고정 평면 투영을 검토하고, 같은 영상 시각·보정으로
-  정차/가속/제동/조향과 M1→M0 복귀 시 RGB 위 경계·객체 차로 판정의 정합을 확인한다.
-- [ ] 승인한 SHA·보정 경로를 BBox classifier의 `expected_hash`, follower의
-  `expected_config_sha256`, planner 통합 launch에 일관되게 전달한다. SHA 검사를 제거하지 않는다.
+- [x] BBox classifier의 같은 영상 context 투영과 현재 SHA·정본 보정 연결을 구현하고
+  nominal/roll/pitch·입력 순서·누락·세대 전환의 CPU/ROS 회귀를 추가했다.
+- [ ] 실제 정차/가속/제동/조향과 M1→M0 복귀 시 RGB 위 경계·객체 차로 판정의 정합을 확인한다.
+- [ ] 현재 전달하는 SHA·보정 경로를 판제 실행 환경에서 확인한다. classifier의 `expected_hash`,
+  follower의 `expected_config_sha256`를 함께 유지하며 SHA 검사를 제거하지 않는다.
 - [ ] 잘못된 SHA, invalid/stale, 입력 중단·재시작·세대 전환에서 unknown/정지/fallback을 확인한다.
   freshness350ms와 source/receive 시각 검사를 완화하지 않는다.
 - [ ] Read-only bag·preview 이후 A126 음영 ODD와 selector의 제어 소유권, 차로변경·복귀·LiDAR veto를
@@ -310,7 +310,7 @@ roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=fa
 
 검토 시작점은 [BBox 판정 안내](../../src/jamming_lane_boundary_adapter/docs/bbox-lane.md)와
 [차선변경 안내](../../src/jamming_lane_boundary_adapter/docs/bbox-lane-change.md)다.
-설정 불일치 거부는 새 family를 인수하지 않았다는 의미이며, 신경망 추론 장애로 단정하지 않는다.
+설정·context 불일치 거부는 소비 기하의 계약 오류이며, 신경망 추론 장애로 단정하지 않는다.
 
 ### 7.2 검증 이력과 남은 한계
 

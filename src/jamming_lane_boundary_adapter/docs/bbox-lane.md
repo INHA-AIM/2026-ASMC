@@ -1,9 +1,8 @@
 # BBOX가 내 차로 / 옆 차로에 있는지 판정
 
-**현재 IMU family는 별도 인수가 필요하다.** 아래 실행법은 초기 SHA·고정 평면의 호환 경로다.
-현재 카메라 기본값에 연결하려면 판제 담당이 xy에서 z를 복원하는 투영 경로와 영상 시각 정합을
-검증해야 한다. SHA 검사만 해제하거나 새 값으로 바꾸지 않는다.
-[현재값·인수 체크리스트](../../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)를 따른다.
+**기본값은 현재 IMU family와 원본 시각 투영이다.** 카메라의 보정 선택을 재사용하며
+새 IMU 조회나 픽셀 왜곡을 추가하지 않는다. SHA·보정 ID·영상 원본 header가 모두 맞아야 한다.
+[판제 인수 체크리스트](../../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)의 폐루프 시험은 별도다.
 
 거리 추정 없이 기존 전방 YOLO BBOX와 camera boundary family를 사용한다.
 `src/camera_bbox_lane_node.cpp`에 인자 기본값·주석·main·판정 함수를 둔다.
@@ -16,8 +15,12 @@
 2. `camera_bbox_frame_bridge.py`가 **같은 stamp의 원본 영상**과 BBOX를 묶는다.
    영상 없음, frame_id 불일치, 객체 수 불일치는 invalid다.
 3. C++ 노드는 기존 `BuildBoundaryFamilyStripContext`로 차선을 검증한다.
-   BBOX와 가장 가까운 차선 stamp를 사용하되 source age/시각 차이/계약 hash를 검사한다.
-4. `cameras_v2.yaml`의 지면 보정으로 유효 차선 띠만 원본 영상에 투영한다.
+   family의 stamp·frame·config와 projection context를 연결하고, 그 안의 **전방 원본 JPEG
+   seq·frame·stamp**를 BBox 프레임의 내장 image.header와 정확히 대응한다. 최상위 publisher
+   Header.seq는 각자 독립이므로 대응 키로 쓰지 않는다.
+4. family xyz가 묶음의 최신 뷰 평면 위에 있는지 검사한다. 차로 띠 계산에 쓰는 xy를
+   해당 전방 영상의 실제 M1/M0 평면 위에 놓고 `K(R·xyz+t)`로 한 번 투영한다. 먼 객체의
+   소실선 판정도 같은 평면을 사용한다. 카메라 장착 변환은 `config/cameras_v3.yaml` 정본이다.
    차선 단절 구간이나 관측 끝을 이어 붙이거나 연장하지 않는다.
 5. BBOX 하단 위 8px~아래 8px의 접촉 검사 영역을 실제 차로 폴리곤과 비교한다.
    두 차로가 동시에 관측되는 row를 최소 3개 확보하고, 각 row의 겹침 폭을 합산한다.
@@ -37,11 +40,28 @@
 다른 물체에 가려진 하단, 부정확한 BBOX, 차체 pitch 변화는 BBOX만으로 항상 감지할 수 없다.
 따라서 판정 결과를 확정된 물리 점유나 충돌 회피 가능 여부로 해석하지 않는다.
 
+## 보정 context와 입력 순서
+
+`/perception/camera/lane/status`가 ACTIVE·loaded이고 source/수신 freshness가350ms 이내여야 한다.
+추론 session/generation·family 생산 세션·설정·보정 ID와 뷰별 원본 header를 검증한다.
+BBox 프레임이 먼저 도착해도 JPEG 최대8개·대기250ms, context 최대8개·350ms 안에서
+콜백 도착 즉시 최신 완성 쌍을 처리한다. 임의 가까운 영상이나 최신 IMU로 대체하지 않는다.
+상태·세대 전환은 대기를 비우고, 최신 family가 무효라면 이전 정상 family로 실패를 가리지 않는다.
+진단의 `projection_policy`, `projection_pending*`, `projection_context_error`를 확인한다.
+
+M0도 생산자가 명시한 0.36m 평면 context가 필요하다. 초기0.35m fixture 재현에만
+`projection_context_required:=false`, `calibration_file:=.../config/bev/cameras_v2.yaml`,
+초기 `expected_hash:=691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070`을
+함께 지정한다. 이 경로는 기울어진 family z를 거부하므로 IMU 오류의 자동 복구로 사용하지 않는다.
+M2 병진/yaw 정렬은 없으며, 뷰 간35ms 한계와 움직이는 물체의 접점 불확실성은 남아 있다.
+
 ## 토픽과 값
 
 | 토픽 | 역할 |
 |---|---|
 | `/planning/camera_bbox_lane/yolo` | 기존 `Msg/Yolo_bbox_arr`, 별도 detector 출력 |
+| `/perception/lane/ground_projection` | 같은 영상의 선택 평면·보정·세대 metadata |
+| `/perception/camera/lane/status` | ACTIVE·세션·generation·cutoff 검증 |
 | `/planning/camera_bbox_lane/frame` | 정확한 원본 영상+BBOX 내부 연결 |
 | `/planning/camera_bbox_lane/result` | `lane_boundary_adapter/CameraBBoxLaneResult` |
 | `/planning/camera_bbox_lane/image` | RViz용 원본 영상+차선+BBOX+라벨 |

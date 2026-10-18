@@ -279,8 +279,8 @@
 | `lidar_input_topic` | `/last_lidar` | — |
 | `lidar_source_policy` | `validated_lidar` | — |
 | `avoid_path_margin_m` | `0.4` | — |
-| `expected_config_sha256` | `691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070` | — |
-| `calibration_file` | `$(find asmc_camera)/config/bev/cameras_v2.yaml` | — |
+| `expected_config_sha256` | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | — |
+| `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
 
 ## Planner component
 
@@ -390,7 +390,7 @@
 | `lane_width_max` | `4.6` | — |
 | `max_width_variation` | `0.8` | — |
 | `inferred_confidence_scale` | `0.60` | — |
-| `expected_config_sha256` | `691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070` | — |
+| `expected_config_sha256` | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | — |
 | `input_topic` | `/perception/lane/boundary_family` | — |
 | `control_topic` | `/ctrl_cmd/jamming` | — |
 | `preview_topic` | `/planning/camera_bbox_lane_change/control_preview` | — |
@@ -428,7 +428,9 @@
 | `use_rviz` | `true` | — |
 | `bbox_consumer_x_max` | `20.0` | — |
 | `start_classifier` | `true` | — |
-| `calibration_file` | `$(find asmc_camera)/config/bev/cameras_v2.yaml` | — |
+| `projection_context_required` | `true` | — |
+| `projection_manifest` | `$(find asmc_camera)/config/bev/projection_context_v1.yaml` | — |
+| `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
 
 ## Capture trigger
 

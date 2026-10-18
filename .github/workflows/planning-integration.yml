@@ -123,10 +123,12 @@ jobs:
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
           catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='asmc_msgs;asmc_lidar;asmc_camera;morai_msgs;lane_boundary_adapter'
+          catkin_make -j2 -l2 ground_projection_test
+          devel/lib/lane_boundary_adapter/ground_projection_test
           source devel/setup.bash
           source src/lidar+sensorfusion/devel/setup.bash
           # Direct rostest preserves the nested Msg Python environment.
-          for fixture_case in camera_bbox_lane camera_bbox_clipped camera_bbox_lane_change camera_bbox_ego_mask; do
-            rostest lane_boundary_adapter "$fixture_case.test" --text
+          for fixture_case in camera_bbox_lane camera_bbox_clipped camera_bbox_lane_change camera_bbox_ego_mask camera_bbox_imu_projection; do
+            rostest lane_boundary_adapter "$fixture_case.test"
           done
 

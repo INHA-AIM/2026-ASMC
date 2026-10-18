@@ -1,4 +1,5 @@
-# Internal, non-latched visualization sidecar. Computed once by the family
+# Internal, non-latched projection context for visualization and BBox adapters.
+# Computed once by the family
 # worker; consumers MUST NOT query IMU again or apply this plane twice.
 # Header stamp is the latest image stamp in this exact three-view bundle.
 std_msgs/Header header

@@ -115,7 +115,7 @@ Source 시각에 맞춘3뷰 묶음 선택·중첩 근거 정합은 후속 후보
 **2026-10-18 사용자 직접 주행 확인에 따라 M2 병진/yaw 정렬과 과거 근거 누적은 보류한다.**
 현재 M1·공동 폭 피팅의 PR 통합에 M2 구현을 요구하지 않는다. 실제 주행에서 관련 불일치가
 문제로 확인되고 유효한 터널 상대 이동 입력을 확보했을 때 별도 작업으로 재개한다.
-판제의 구 SHA guard와 고정 평면 bbox 재투영은 [인수 규칙](../handoffs/camera-to-planning.md)을 따른다.
+판제의 SHA guard와 같은 영상 context 기반 bbox 재투영은 [인수 규칙](../handoffs/camera-to-planning.md)을 따른다.
 
 ## 두 시각화의 보정 재사용
 
@@ -142,3 +142,26 @@ legacy 소비자는 종전 데이터 토픽을 계속 사용할 수 있다. Comp
 정확한 비교 영상이 만들어진다. metadata가 없는 구형 결과-only bag에서는 기본 comparison이
 기다린다. 과거 고정 평면 검토가 필요하면 내부 `bev/visualization.yaml`의
 `shared_family_projection: false`를 명시하고 view 노드를 재시작한다. 최신 자세를 대입하는 자동 복구는 하지 않는다.
+
+## 공용 보정과 소비자 책임
+
+`runtime/sensor_timing.py`의 source-time IMU timeline을 재사용하고, 평면 수학과 프레임별
+all-or-M0 선택을 `runtime/ground_projection.py`의 `attitude_camera`와
+`select_ground_projection`으로 모았다. `bev/imu_projection.py`는 semantic 근거 재투영과
+기존 import 호환만 담당한다. 이 함수에는 family 피팅·폭 prior·model-grid·ROS 노드 의존성이 없다. 카메라 한 개나
+여러 개의 원본 header/timing을 공급하면 같은 정책을 사용할 수 있다. Lane 노드는 model-grid
+출처를 확인하는 얇은 연결부만 가진다. 폭 prior·joint fit는 계속 family 전용 책임이다.
+
+YOLO bbox·TwinLite segmentation의 신경망 입력/출력 픽셀은 IMU로 변형하지 않는다. IMU는
+그 결과를 지면으로 올리거나 원본 영상에 다시 투영할 때 적용한다. 현재 YOLO의 3D 지면 위치나
+3뷰 LiDAR fusion까지 구현됐다는 뜻이 아니다. 기존 LiDAR 수신·투영 인터페이스도 별도다.
+
+Comparison과 BBox 어댑터는 이미 선택한 CameraGroundProjection을 재사용한다. BBox는 family
+대표 xyz가 실제 reference plane과 맞는지 검사하고, 차로 띠 xy를 **정확히 같은 전방 JPEG**의
+평면 위에 놓아 한 번 투영한다. 최상위 ROS publisher seq를 원 JPEG seq로 혼동하지 않는다.
+보정 YAML과 per-view ID manifest가 어긋나면 시작 또는 관측 수락을 거부한다.
+
+작은 metadata의 생산 주기는 여전히 family worker의 처리 묶음에 연결돼 있다. 차선 family가
+필요한 현재 BBox 소비에는 자연스러운 의존이지만, lane이 꺼져도 필요한 미래 YOLO 지면 투영은
+공용 선택 함수를 호출하는 별도 소비 연결이 필요하다. 이를 독립 공용 서비스가 완성됐다고
+표시하지 않는다. [검증·남은 한계](../records/camera/2026-10-18-imu-bbox-projection.md)를 참고한다.
