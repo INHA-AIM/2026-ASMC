@@ -102,6 +102,10 @@ def main():
             command += ['--confidence',str(job.get('confidence',.4))]
             if job.get('lane_runtime_config'):
                 command += ['--lane-runtime-config', job['lane_runtime_config']]
+            if 'imu_mode' in job:
+                command += ['--imu-mode',job['imu_mode']]
+            if 'joint_width_fit' in job:
+                command += ['--joint-width-fit',job['joint_width_fit']]
             if 'lane_batch_wait_ms' in job:
                 command += ['--lane-batch-wait-ms',str(job['lane_batch_wait_ms'])]
             if 'fusion_hz' in job:

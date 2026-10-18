@@ -119,6 +119,9 @@ def main():
     p.add_argument('--allocation-profile', action='store_true',help='Diagnostic TwinLite allocation/deserialize run; excluded from acceptance')
     p.add_argument('--shared-gpu-input', action='store_true')
     p.add_argument('--lane-runtime-config', type=Path)
+    p.add_argument('--imu-mode', choices=('config', 'fixed', 'source'), default='config',
+        help='Internal paired comparison; fixed plane or source-time attitude')
+    p.add_argument('--joint-width-fit', choices=('config', 'off', 'on'), default='config')
     a = p.parse_args()
     if a.allocation_profile and (a.variant=='R2' or a.profile_lane_fit):
         p.error('allocation diagnosis uses an independent lane worker without fit profiling')
@@ -192,6 +195,12 @@ def main():
     class MeasuredLaunch(roslaunch.parent.ROSLaunchParent):
         def _load_config(self):
             super()._load_config()
+            if a.imu_mode != 'config':
+                key='/camera_lane_vectorizer/imu_motion/enabled'
+                self.config.params[key]=roslaunch.core.Param(key,a.imu_mode=='source')
+            if a.joint_width_fit != 'config':
+                key='/camera_lane_vectorizer/imu_motion/corrected_joint_width_fit'
+                self.config.params[key]=roslaunch.core.Param(key,a.joint_width_fit=='on')
             for node in self.config.nodes:
                 if node.type in ('lane_vectorizer_node.py','semantic_inference_node.py'):
                     key='/'+node.name+'/lifecycle_trace_path'
@@ -245,6 +254,7 @@ def main():
         saved_input=str(a.saved_input) if a.saved_input else None, gui=a.qt, visualization_sinks=a.gui, nms_iou=a.nms_iou, failures=[],
         confidence=a.confidence, view_models=a.view_models if a.gui else None, profile_lane_fit=a.profile_lane_fit,
         visual_outputs=a.visual_outputs,allocation_profile=a.allocation_profile,
+        imu_mode=a.imu_mode,joint_width_fit=a.joint_width_fit,
         acceptance_eligible=not(a.allocation_profile or a.profile_lane_fit),
         mode_transitions=[],
         timestamp_mode=rospy.get_param('/morai_sensor_bridge/timestamp_mode','unset (bridge default receive)'),
@@ -501,6 +511,13 @@ def main():
                     report['failures'].append('family supply trace incomplete/dropped')
                 compute=[r for r in trace if r['event']=='family_compute_end' and start<=r['monotonic']<end]
                 gates=[r for r in trace if r['event']=='family_publish_start' and start<=r['monotonic']<end]
+                attitude=[r for r in trace if r['event']=='imu_projection' and start<=r['monotonic']<end]
+                policies=[r for r in trace if r['event']=='family_fit_policy' and start<=r['monotonic']<end]
+                from collections import Counter
+                report['imu_application']=dict(frames=len(attitude),corrected=sum(bool(r.get('used')) for r in attitude),
+                    reasons=dict(Counter(r.get('reason','unknown') for r in attitude)),
+                    policy_modes=dict(Counter(r.get('mode','unknown') for r in policies)),
+                    joint_frames=sum(bool(r.get('joint_width_fit')) for r in policies))
                 report['lane_family']['compute_wall_ms']={f'p{q}':percentile([r['wall_ms'] for r in compute],q) for q in (50,95,99)}
                 report['lane_family']['compute_cpu_ms']={f'p{q}':percentile([r['cpu_ms'] for r in compute],q) for q in (50,95,99)}
                 report['lane_family']['publish_lock_wait_ms']={f'p{q}':percentile([r['lock_wait_ms'] for r in gates],q) for q in (50,95,99)}

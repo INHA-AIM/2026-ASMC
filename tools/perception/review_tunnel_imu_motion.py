@@ -156,6 +156,10 @@ def main(args):
     frames=read(directory/'continuous-grids/manifest.jsonl')
     index={(r['run_id'],r['front_ns'],r['view']):r for r in read(directory/'inputs/rgb-index.jsonl')}
     configs={'M0':cfg,'M1_receive':cfg,'M1_minus40ms':cfg,'M1_plus40ms':cfg}
+    if args.joint_fit:
+        for name in MOTION[1:]:
+            configs[name]=deepcopy(cfg)
+            configs[name]['shared_lane_family'].update(width_prior_strength=0.,joint_width_fit_enabled=True)
     for name,key in [('F_width0','width_prior_strength'),('F_smooth0','spline_smoothing')]:
         configs[name]=deepcopy(cfg);configs[name]['shared_lane_family'][key]=0.
     records=[];gallery=[];costs=defaultdict(list)
@@ -203,6 +207,7 @@ def main(args):
                     if s['count']:accumulated[name][k].append(s['p50'])
         return {n:{k:stats(v) for k,v in values.items()} for n,values in accumulated.items()}
     summary=dict(schema='tunnel_receive_time_imu_fit_review_v1',frames=len(records),tool_sha256=sha(__file__),
+        joint_fit=args.joint_fit,
         timing_basis='legacy receive headers; no raw source timing; offset variants are sensitivity only',
         input_pins=pins,clock_policy_sha256=sha(directory/'bag-stamp-policy.json'),
         grid_manifest_sha256=sha(directory/'continuous-grids/manifest.jsonl'),
@@ -237,4 +242,5 @@ if __name__=='__main__':
     parser.add_argument('--inputs',type=Path,required=True)
     parser.add_argument('--config',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--joint-fit',action='store_true')
     main(parser.parse_args())
