@@ -121,6 +121,21 @@ class SharedComparisonTest(unittest.TestCase):
         return ComparisonProjection(self.cameras, BevGridSpec(-5.,20.,-8.,8.,.1),
                                     projector_options=dict(max_ground_range_m=22.))
 
+    def test_projection_sidecar_does_no_work_without_demand_and_gates_publication(self):
+        node=LaneVectorizerNode.__new__(LaneVectorizerNode)
+        node.projection_publisher=NS(get_num_connections=lambda:0,publish=Mock())
+        node._publish_frame_projection({}, {})  # no frame/header allocation
+        node.projection_publisher.get_num_connections=lambda:1
+        node.frame_id='base_link'; node._projection_message=Mock(return_value=self.context())
+        node.epoch_gate=NS(lock=threading.RLock(),context=lambda:'new')
+        frames={'front':NS(stamp_ns=10**10,header=self.header('front'))}
+        node._context_allows=Mock(return_value=False)
+        node._publish_frame_projection(frames,{})
+        node.projection_publisher.publish.assert_not_called()
+        node._context_allows.return_value=True
+        node._publish_frame_projection(frames,{})
+        node.projection_publisher.publish.assert_called_once()
+
     def images(self):
         rgb, sem = {}, {}
         for v, c in self.cameras.items():

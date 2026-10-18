@@ -11,6 +11,7 @@ fused_height: 1050
 # those exact planes. Legacy static BEV data outputs retain their old contract.
 shared_family_projection: true
 raw_comparison_history_size: 8
+opencv_threads: 1
 
 camera_grid_max_hz: 5.0
 camera_grid_longitudinal_step_m: 5.0

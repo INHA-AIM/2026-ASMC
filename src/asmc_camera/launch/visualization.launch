@@ -102,6 +102,8 @@
 
     <node pkg="asmc_camera" type="camera_bev_visualizer_node.py"
           name="camera_bev_visualizer" output="screen" required="false">
+      <env name="OPENBLAS_NUM_THREADS" value="1"/>
+      <env name="OMP_NUM_THREADS" value="1"/>
       <param name="managed" value="true"/>
       <rosparam command="load" file="$(arg bev_grid_config)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>

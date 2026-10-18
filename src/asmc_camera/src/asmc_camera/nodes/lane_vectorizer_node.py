@@ -766,7 +766,6 @@ class LaneVectorizerNode:
                                                    expected_boundary_count=self.expected_boundary_count)
             plane = GroundPlane(**shared_audit['projection_ground_plane']) if 'projection_ground_plane' in shared_audit else None
             message = self._boundary_family_message(output,header,plane,reuse=True)
-            projection = self._projection_message(frames, shared_audit, header)
             waiting = time.monotonic()
             with self.epoch_gate.lock:
                 if not self._context_allows(frames,context):
@@ -779,8 +778,6 @@ class LaneVectorizerNode:
                 self._trace_supply('family_publish_start',source_stamp_ns=source_ns,context=context,
                                    lock_wait_ms=1000*(publish_started-waiting),build_ms=1000*(waiting-computed))
                 self.boundary_family_publisher.publish(message)
-                if projection is not None:
-                    self.projection_publisher.publish(projection)
                 self._trace_supply('family_publish_end',source_stamp_ns=source_ns,context=context,
                                    wall_ms=1000*(time.monotonic()-publish_started),valid=bool(message.valid))
                 self.boundary_family_outputs += 1
@@ -905,6 +902,10 @@ class LaneVectorizerNode:
         with self.imu_lock:
             projection_reason = self.imu_last.get('reason', 'disabled') if self.imu_enabled else 'disabled'
         fit_config = self.family_fit_policy.select(bool(attitude_cameras), projection_reason)
+        projection_audit = dict(projection_planes={
+            v: (attitude_cameras[v] if attitude_cameras else self.projectors[v].camera).ground_plane.coefficients
+            for v in self.views}, projection_corrected=bool(attitude_cameras), projection_reason=projection_reason)
+        self._publish_frame_projection(frames, projection_audit)
         for view in self.views:
             projector = self.projectors[view]
             if self.publish_pipeline_audit:
@@ -1028,12 +1029,23 @@ class LaneVectorizerNode:
             reference_view = max(frames, key=lambda v: frames[v].stamp_ns)
             shared_audit['projection_ground_plane'] = attitude_cameras[reference_view].ground_plane.to_mapping()
             shared_audit['projection_reference_view'] = reference_view
-        shared_audit['projection_planes'] = {
-            v: (attitude_cameras[v] if attitude_cameras else self.projectors[v].camera).ground_plane.coefficients
-            for v in self.views}
-        shared_audit['projection_corrected'] = bool(attitude_cameras)
-        shared_audit['projection_reason'] = projection_reason
+        shared_audit.update(projection_audit)
         return evidence, nodes, tracks, fitted_tracks, shared_family, shared_audit
+
+    def _publish_frame_projection(self, frames, audit):
+        # The plane is final before fitting starts. Let visualization project
+        # concurrently; waiting for a spline adds avoidable display latency.
+        publisher = getattr(self, 'projection_publisher', None)
+        if publisher is None or not publisher.get_num_connections():
+            return
+        header = Header(stamp=max(frames.values(), key=lambda f:f.stamp_ns).header.stamp,
+                        frame_id=self.frame_id)
+        message = self._projection_message(frames, audit, header)
+        if message is not None:
+            with self.epoch_gate.lock:
+                context = self.epoch_gate.context()
+                if self._context_allows(frames, context):
+                    self.projection_publisher.publish(message)
 
     def _process_legacy(self, frames):
         with self.processing_lock, self.epoch_gate.lock:
@@ -1101,9 +1113,6 @@ class LaneVectorizerNode:
                         ),
                     )
                     family_candidate_published = True
-                    projection = self._projection_message(frames, shared_audit, header)
-                    if projection is not None:
-                        self.projection_publisher.publish(projection)
                     self.boundary_family_outputs += 1
                     if not family_output.valid:
                         self.boundary_family_invalid_outputs += 1

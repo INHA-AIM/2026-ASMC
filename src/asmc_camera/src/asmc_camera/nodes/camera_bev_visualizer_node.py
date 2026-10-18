@@ -43,6 +43,7 @@ def _enabled_views(value):
 
 class CameraBevVisualizerNode:
     def __init__(self) -> None:
+        cv2.setNumThreads(int(rospy.get_param('~opencv_threads', 1)))
         self.grid = BevGridSpec.from_mapping(
             {
                 name: rospy.get_param("~" + name)
@@ -246,9 +247,10 @@ class CameraBevVisualizerNode:
                 queue_size=1,
             )
         fused_hz = float(rospy.get_param("~fused_max_hz", 5.0))
-        self.fused_timer = rospy.Timer(
-            rospy.Duration(1.0 / max(0.1, fused_hz)), self._publish_outputs
-        )
+        self.fused_timer = None
+        if not self.shared_projection or self.publish_legacy_outputs:
+            self.fused_timer = rospy.Timer(
+                rospy.Duration(1.0 / max(0.1, fused_hz)), self._publish_outputs)
 
         self.mosaic_publisher = None
         self.mosaic_timer = None
