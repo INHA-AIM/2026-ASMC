@@ -5,6 +5,16 @@ YOLO는 `asmc_camera/camera.launch`만 소유하고 Main의 독립 YOLO 실행·
 현재 판제는 여전히 nested Main의 `/last_lidar`와 tracked/motion 출력을 소비한다.
 전방 bbox fusion만 연결돼 있으며3뷰 fusion과 LiDAR 전체 이전은 손재호의 후속 작업이다.
 
+**2026-10-18 연구 후속:** 별도 `research/lidar-perception-20261018` worktree에서
+HARP-NeXt(nuScenes/SemanticKITTI)·CenterPoint-Pillar의 공개 가중치를 각각208 scan에
+실행했다. strict weight load와8GB 실행은 확인했지만 GT 정확도·실시간 운영 수락은 아니다.
+[후속 결과와 객체 seg 학습 자산](../records/camera/camera-lidar-fusion-study.md#2026-10-18-추가학습-자산과-harpcenterpoint-후속-실행)을
+따른다. 기존 YOLO 학습 데이터에16종 native mask 근거가 있어 객체 seg 추가학습이 우선이며,
+TwinLite drivable은 actor-ignore 정적 노면이므로 장애물 부재/벽 삭제 mask로 쓰지 않는다.
+기본 HARP의 manmade/fence에는 보호할 물체가 섞일 수 있고 CenterPoint 기본10종에는
+box class가 없다. ②·③의 즉시 교체보다 MORAI 클래스·라벨·입력 도메인 적응이 선행한다.
+데이터 이관·IMU 채팅의 공유 source/컨테이너/운영 기본값은 변경하지 않았다.
+
 현재 `asmc_lidar`는 **좌표·시간 기반과 공용 카메라 수신·버퍼·투영 컴포넌트**를 제공한다.
 [카메라 입력 API](../../src/asmc_lidar/docs/camera-input.md)를 손재호의 연결 시작점으로 사용한다.
 검출·군집·OBB·추적·fusion·최종 ROS 출력의 실행 구현은 손재호가 원본

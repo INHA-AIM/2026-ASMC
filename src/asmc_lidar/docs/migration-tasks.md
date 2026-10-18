@@ -7,6 +7,15 @@
 현재 카메라 수신·버퍼·투영 지원은 [camera-input](camera-input.md)을 따른다.
 아래 B1a 기록과 후속 LiDAR 알고리즘 과제는 그대로 보존한다.
 
+**2026-10-18 추가학습/②·③ probe:** [후속 연구 결과](../../../docs/records/camera/camera-lidar-fusion-study.md#2026-10-18-추가학습-자산과-harpcenterpoint-후속-실행)에서
+HARP 두 기본 weight와 CenterPoint-Pillar의208 scan 출력,16class native mask48개 실물
+대응을 확인한다. 현재 추천은 TwinLite 정적 노면 문맥＋E8 계열 객체 seg 학습이다.
+부분 라벨/미검출/semantic 구조물 class를 LiDAR 추가 삭제로 바꾸지 않는다. HARP는
+360도 점 class를 보조할 수 있지만 instance/속도는 제공하지 않으며, CenterPoint의 단일
+VLP16 입력으로 나온 velocity는 무효다. ②에는 점 semantic GT,③에는3D box·클래스
+학습/검증 입력을 준비한다. 조사한 카메라 Capture manifest만으로 이 GT가 이미 있다고
+가정하지 않는다. 연구 실행은 별도 브랜치이며 기존 군집·추적·판제 입력은 변경하지 않았다.
+
 ## 2026-10-18 대회 전 개선 우선순위
 
 사용자 결정으로 센서 융합 인코더·VLA·E2E는 뒤로 미루고 ① 기존 YOLO 기반 점군 분리와

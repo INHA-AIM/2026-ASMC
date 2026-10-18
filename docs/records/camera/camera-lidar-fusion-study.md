@@ -6,6 +6,132 @@
 > 연결: [현재 객체 생산자](camera-objects-p2a.md), [객체 검출 인계](camera-object-detection.md),
 > [LiDAR 인계](../../handoffs/lidar-migration.md), [인지 융합 로드맵](../../architecture/perception-roadmap.md).
 
+## 2026-10-18 추가학습 자산과 HARP·CenterPoint 후속 실행
+
+**작업 격리:** `research/lidar-perception-20261018` / `2026-ASMC-lidar-research`에서 진행한다.
+이전 음영 비교 도구·문서·portable 증거는 `4da2a5b0`에 커밋해 옮겼다. 공유 worktree에서는
+그 커밋과 바이트가 같은 우리 신규 파일과 우리 문서 patch만 제거했다. 다른 채팅의 데이터
+이관·IMU·운영 source, 기존 컨테이너와 데이터 경로 설정은 수정하지 않았다.
+아래 결과는 [후속 비교 갤러리](../../../config/baselines/evidence/lidar_learned_candidates_v1/index.html),
+[기계 판독 결과](../../../config/baselines/evidence/lidar_learned_candidates_v1/summary.json),
+[mask 재사용 감사](../../../config/baselines/evidence/lidar_learned_candidates_v1/segmentation-reuse-summary.json)에 있다.
+
+### TwinLite의 노면 출력과 객체 seg를 같이 사용할 수 있는가
+
+가능하다. **기존 TwinLite의 노면/노면표식과 E8 검출을 유지하면서 객체 instance mask를
+학습하는 경로를 먼저 비교**한다. 이전 절의 공개 COCO seg 저순위는 무학습 즉시 교체에
+대한 판정이다. MORAI native mask로 추가학습할 수 있는 현재 조건에서는 YOLO26-seg도
+다시 우선 후보이며, zero-shot 결과만으로 YOLOE가 학습 후에도 우수하다고 결론내리지 않는다.
+
+TwinLite drivable은 정적 노면 의미이며 객체 픽셀을 loss에서 ignore하는 정책이다.
+따라서 높은 drivable 확률은 장애물 부재가 아니고 낮은 확률은 벽/천장이라는 뜻도 아니다.
+기존 지면과 실제 지지 높이를 함께 확인하는 노면 문맥으로 사용한다. 카메라 영상의 mask와
+3D 표면은 다르므로 같은 시각·보정·가시성·깊이·점 연결을 확인하고 LiDAR FOV/카메라 FOV
+밖과 미검출/미확정 점은 보존한다. 객체 mask는 box 안 벽/바닥 픽셀을 덜 포함할 수 있으나
+실제 지지점이 없는 scan112 같은 경우의 3D 위치를 새로 만들어주지는 않는다.
+
+공유 backbone으로 클래스 확장도 가능하다. 다만 노면과 그 위의 차선은 중첩되므로 기존
+drivable/road-marking head와 새 object/structure head를 분리하는 구성이 자연스럽다.
+semantic의 car class만 늘려도 차량별 instance/ID·3D 크기·속도가 생기지는 않는다.
+기존 LiDAR 군집·연관·④ 추적 경로는 계속 필요하다.
+
+| 학습 후보 | 지금 데이터로 가능한 일 | 추가 작업과 판단 |
+|---|---|---|
+| **YOLO26-seg** | native instance mask와 확정된16class를 이용한 box+mask 학습 | **우선 학습 기준선**. E8와 같은 크기의 seg에 backbone/neck 및 호환 head 가중치를 옮기는 안과 s/m-seg 추가학습을 구분. E8 detection-only checkpoint 자체에는 mask head가 없음 |
+| **E8 검출 고정+mask branch 학습** | 부분 라벨 중 mask가 확인된 positive만 mask loss에 사용 | 검출 보존을 겨냥한 실험안. 대응되는 가중치/클래스 순서 확인, bbox/cls branch와 BN 통계 고정, 전후 검출 parity가 필요. 이번에 구현/학습하지 않음 |
+| **YOLOE26s-seg** |16종의 고정 클래스/prompt와 native mask로 domain 적응 | 비교 후보. 무학습89 prompt의 성능을16class fine-tune 성능으로 간주하지 않음. prompt/클래스 export와 partial-label loss 검증 필요 |
+| **TwinLite 보조 semantic head** | 노면/표식 head를 유지하고 object/structure/unknown의 보조 분류 학습 | backbone 공유의 계산 이점은 가설. 현재 lane/drivable 회귀, 희소 작은 물체와 head 용량, decoder 비용을 확인. 우선 coarse 보조 head가 전체16class instance 통합보다 범위가 작음 |
+| **PIDNet-S** | Capture semantic과 actor mask를 이용한 도로/객체/구조물 semantic 학습 | domain 적응 기준선으로 가능. 기존 TwinLite와 병렬이면 추가 backbone 비용, 교체하면 노면표식·소비 계약 재검증. 자체 출력은 instance 분리가 아님 |
+
+### 실제 E8 학습 데이터의 mask 재사용 감사
+
+`camera_objects_bbox_v11-preflight-r4/manifest.jsonl`의 **41,666 image row**를 읽었다.
+train **41,345**, selection205, heldout116이다. 원본 manifest SHA는
+`9b42a32cb11e23324a5e1f13c114cc01d734cc5539ab0980293b6a9e2fb9d3ed`다.
+
+- train positive annotation 중 **64,966개는 native RGBA**, **5,162개는 저장된 packed mask**
+  연결 근거를 가진다. 합70,128개는 반복 관측을 포함한 주석 수이며 독립 객체 수가 아니다.
+- train **80,485개 주석은 box-only**, 3,924개는 검수가 필요한 polygon 필드다. box/teacher
+  사각형을 그대로 instance mask 정답으로 만들지 않는다.
+-16개 클래스마다 최대3개씩 **train48개 mask**를 실제 열어 RGB 크기, 가시 mask bbox와
+  기존 box의 최대2pixel 대응을 확인했고48개 모두 통과했다(RGBA45, packed3).
+  모든 주석의 파일 존재·정확도를 전수 수락한 결과는 아니다.
+- train image의 supervision은 complete1,473 / partial39,731 / reviewed_negative141이다.
+  positive 전부에 mask 연결 근거가 있고 complete인 프레임은 **train186**이다.
+  해당 작은 seed의 클래스는13종이며 deer/motorcycle/bollard를 포함한16종 전체 학습/평가를
+  충족하지 않는다. selection151·heldout74는 가용성만 조사했으며 학습에 넣지 않았다.
+- 즉 표준 seg 학습에 모든41,345장을 즉시 넣는 안과, 약7만 positive의 mask 근거를 활용할
+  수 있다는 판단은 다르다. 기존 bbox trainer의 partial/ignore 처리를 seg loss에도 보존하거나
+  native manifest+spawn ledger로 완전 GT subset을 다시 내보내야 한다.
+
+새 대규모 수집을 먼저 전제할 필요는 없다. 우선 기존 native mask·actor ID·spawn ledger의
+클래스 연결을 재사용하고, 누락된 완전 라벨/희소 클래스 및 터널 벽 근처·부분 가림·높은 차량·
+낮은 보 사례를 보충한다. run/layout 단위 split을 유지하며 기존 개발 bag을 독립 holdout으로
+부르지 않는다. 1Hz Capture도 프레임별 mask 학습에는 사용할 수 있다.
+
+**벽/천장 라벨의 한계:** 현재 palette의 `standing_object=(113,178,37)`와 building은
+벽·천장 전용 클래스가 아니다. 기존 drum 주석도 standing_object의 고립 component와
+검수 근거를 이용했다. 따라서 standing_object를 일괄 구조물 삭제 정답으로 만들면 안 된다.
+벽/천장을 따로 학습하려면 클래스 정의와 추가 GT가 필요하다. Depth·자세·노면·법선으로
+만든 벽/상부 표면 후보는 actor mask를 보호하고 검수한 pseudo-label로 구분한다.
+저신뢰도/겹침은 ignore로 두며, 통과 공간 안의 보/돌출물은 삭제 대상에 넣지 않는다.
+현재 조사한 Capture 학습 manifest에는 카메라 intensity/semantic/instance/depth/bbox가
+연결돼 있지만 LiDAR point semantic 또는3D box 학습 manifest는 연결돼 있지 않았다.
+이는 MORAI가 해당 GT를 제공할 수 없다는 뜻이 아니다.
+
+### HARP-NeXt와 CenterPoint-Pillar 기본 가중치 실행
+
+원본 음영 bag SHA `9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34`의
+**208 scan**을 각 후보로 실행했다. 원본 XYZI를 다시 읽어 이전 비교의 XYZ와208개 전부
+일치함을 확인했다. 지면 제거·군집·누적을 적용하지 않았고, 기본 가중치는 모든 state key를
+strict하게 로드했다. 별도 컨테이너에만 라이브러리를 설치했다.
+
+| 후보 | 실제 실행 구성 | 관측된 p95 비용 | Torch peak reserved | 판정 |
+|---|---|---:|---:|---|
+| **HARP-NeXt nuScenes** | 공식 CPU 전처리,32×480, FP16 autocast | 전처리/H2D57.2ms＋forward/output99.7ms; **합148.5ms** |814MiB | 실행 성공. 도로/구조물 근거 후보지만 VLP16/MORAI 재학습 필요 |
+| **HARP-NeXt SemanticKITTI** | 공식 GPU 전처리,64×512, FP16 autocast | 전처리/H2D96.3ms＋forward/output109.3ms; **합189.5ms** |572MiB | 실행 성공. 이번 입력에서 nuScenes보다 우선할 근거 없음 |
+| **CenterPoint-Pillar** | MMDetection3D1.4,0.2m pillar, FP32, circle NMS | 입력 pipeline/forward/NMS 호출 **168.1ms** |242MiB |3D box 출력 성공. 즉시 기존 검출 대체/속도 채택은 보류 |
+
+**속도 표는 GPU를 다른 채팅의 workload와 공유한 관측값**이다. 실행 중 GPU 사용률
+약78%·점유 약5GB를 관측했고 단독 GPU를 확보하기 위해 다른 작업을 멈추지 않았다.
+CPU/H2D와 forward를 따로 재서 합한 p95는 각 p95의 합과 다르다. Torch allocator 수치는
+driver·다른 프로세스까지 포함한 전체 VRAM peak가 아니다. 모두8GB에서 추론은 끝났지만
+위 표로 단독 FPS 상한이나 MORAI 실시간 주행 수락/불가를 확정하지 않는다. 초기 smoke의
+git 없는 metadata 오류, nuScenes GPU 전처리 변형의208개 출력 후 summary 저장 오류는
+raw log를 보존했다. 후자는 정식 비교 표에서 제외했고 GPU metadata 분기는 이후 수정했다.
+
+HARP는 공식 코드 `69c52ddc54e1fefaa7e64ac8e3fffea33e814eda`와 저자
+[Hugging Face](https://huggingface.co/samir-abh/HARP-NeXt)의 고정 revision
+`c2cd3ce5940be23bfbc2d1cf22131fd2fd3dc149`를 사용했다.
+nuScenes weight SHA는 `6f7fc5a1c03e9123541458358b1c703babf37ffc0b8b4ea6beac6c9f8478a147`,
+SemanticKITTI는 `5b5db652540a179b56e044d09c792d9f8332c6e4af78801293af604ce1d309e3`다.
+
+- nuScenes intensity는 원본 그대로, SemanticKITTI는 학습 입력 범위 차이를 반영해 **/255**를
+  명시했다. 후자는 보정된 reflectance 변환이 아닌 byte→unit의 입력 적응 가정이다.
+- VLP16의 관측 각도 중 모델 기본 FoV 밖으로 clamp되는 점은 nuScenes **14.4%**,
+  SemanticKITTI **30.5%**다. 그림에서는 회색으로 표시하며 이 점들을 삭제하지 않았다.
+- scan64의 E8 상자 box 안38개 점은 nuScenes에서 모두 `manmade`, SemanticKITTI에서는
+  fence33/motorcyclist3/vegetation2로 나왔다. 이38개는 배경도 섞인 box 지지점으로 객체점
+  GT가 아니다. 다만 `manmade/fence`를 제거하면 객체 보호를 보장할 수 없다는 구체 근거다.
+  기본 클래스에는 box나 터널 천장 전용 클래스가 없으므로 목적에 맞는 재학습이 필요하다.
+- semantic은 같은 클래스의 여러 차량/장애물을 instance로 나누거나 ID·속도를 직접 내지 않는다.
+  현재 기하 군집과④를 유지한 점별 보조 분류부터 검토한다.
+
+CenterPoint는 [OpenMMLab 공식 pillar checkpoint](https://download.openmmlab.com/mmdetection3d/v1.0.0_models/centerpoint/centerpoint_02pillar_second_secfpn_circlenms_4x8_cyclic_20e_nus/centerpoint_02pillar_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220811_031844-191a3822.pth),
+SHA `191a38226d2ce990f26cc3f78c454310cc562d81d29e86d8ca8fa39c0a44215d`를 사용했다.
+nuScenes10-sweep 학습 모델에 VLP16 **단일 scan**,5번째 time-offset0을 넣었다.
+현재 scan을 여러 번 복제해 누적으로 가장하지 않았다. 기본10종에는 box/임의 장애물 class가
+없고, 대표 scan64/112의 전방 상자는 score0.4 이상의 대응 box로 나타나지 않았다.
+이는 class·점밀도·단일/다중 sweep 도메인이 다른 시험이며 정답 없는 mAP 평가가 아니다.
+학습된 velocity 숫자가 출력돼도 이번 단일 scan에서 유효한 속도로 수락하지 않는다.
+일반 차량과 box 형상 검출에 투자할 때3D box GT·클래스 추가학습·좌표/추적 연결이 필요하다.
+
+**현재 권장:** TwinLite 노면/표식 유지＋E8 기반 객체 seg 학습을 첫 학습 비교로 두고,
+필요하면 TwinLite 보조 semantic head 또는 PIDNet을 같은 coarse label로 비교한다.
+카메라 FOV 밖까지 점 분류가 필요하면 HARP nuScenes를②의 domain 적응 기준선으로,
+분리 후에도 형상/검출 자체가 부족하고3D GT가 준비되면 CenterPoint-Pillar를③의 기준선으로
+유지한다. 모든 모델을 동시에 추가하는 계획은 아니며, 이번에는 재학습·운영 전환을 하지 않았다.
+
 ## 2026-10-18 현재 파이프라인 유지와 음영 bag 후속 비교
 
 이 절이 대회 전 우선순위를 갱신한다. 아래의 2026-10-07 YOLO11m/B0/B1a 서술과 고정
