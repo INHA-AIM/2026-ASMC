@@ -1,0 +1,13 @@
+{
+  "schema": "imu_width_runtime_compute_parity_v1",
+  "frames": 226,
+  "comparisons": 452,
+  "maximum_delta_m": 0.0,
+  "passed": true,
+  "public_master_used": false,
+  "gpu_used": false,
+  "live_acceptance": false,
+  "lookup": "source interpolator injection; exact wire adapter tested separately",
+  "reference_sha256": "b5ec48c634e308c6c6b14a42beeabba0e739e0558ea078e8dd2da24eae972901",
+  "tool_sha256": "9e848ec97d2f8c34c60826b7eb3b30c2ec72800fa0ff6713742130d69aecaae2"
+}

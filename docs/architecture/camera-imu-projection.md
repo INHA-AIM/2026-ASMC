@@ -50,8 +50,10 @@ Bridge 재시작·source clock 역행·충돌·중복 wire key는 기록하고 �
 ```bash
 # 같은 세 모델·설정으로 M0 대조
 roslaunch asmc_camera _imu_compare.launch enabled:=false
-# M1 시험. 앞 실행을 종료한 뒤 실행
+# M1+폭 prior0 시험. 앞 실행을 종료한 뒤 실행
 roslaunch asmc_camera _imu_compare.launch enabled:=true
+# IMU만 대조하는 내부 설정. 앞 실행을 종료한 뒤 실행
+roslaunch asmc_camera _imu_compare.launch enabled:=true corrected_width_prior:=0.35
 # 별도 터미널의 시각화는 그대로 사용
 roslaunch asmc_camera view.launch
 ```
@@ -70,5 +72,20 @@ family 계산을 멈추지 않고, 준비된 두 샘플이 없으면 명시적�
 
 [기존 bag·새 원본 시각 주행 대조](../records/camera/2026-10-18-tunnel-imu-motion-and-fit.md)에서
 IMU가 큰 가감속 기하 변화를 줄였고, nominal 폭 prior가 영상 차선 밀착도를 떨어뜨리는 기여를 확인했다.
-후속 실시간 후보는 M1+폭 prior 완화 하나다. 정속/미세 조향의 노이즈·절대 지면 가정·공급 검증은 남아 있으며
-현재 정본 enabled=false와 기존 M0 fallback은 유지한다.
+후속 후보는 M1+폭 prior 완화 하나다. [폭 정책 구현·품질 판정](../records/camera/2026-10-18-imu-width-policy.md)에서
+실제 계산부 연결과 M0 복귀의 좌표 동등성을 확인했다. 오른쪽 흰선 밀착도와 지원 범위 기준은 미통과여서
+정본 enabled=false와 기존 M0를 유지한다. 정속/미세 조향의 노이즈·절대 지면 가정·공급 검증은 남아 있다.
+
+## 프레임별 폭 사전값 정책
+
+`imu_motion.corrected_width_prior_strength`의 내부 시험 기본값은0이다. 세 뷰 모두 원본 시각의 IMU로
+보정된 프레임에만 적용한다. 하나라도 시각/자세 근거가 부족하면 전 뷰가 고정 평면으로 돌아가며,
+`lane_fitting.yaml`의 원래 prior0.35를 사용한다. 폭 범위2.4–4.6m와 shared B-spline·support 검사는 유지한다.
+
+프레임별 설정은 읽기 전용이며 계산 중 공유 설정을 수정하지 않는다. 보정 시/복귀 시의 두 값을
+family config SHA에 포함한다. 기존 diagnostics의 `imu_motion.last`와 shared family audit에
+`fit_policy`의 mode/reason/width_prior_strength와 `fitted_widths_m`을 남긴다. Lifecycle trace는
+`family_fit_policy`로 source stamp와 선택한 정책을 기록한다. 공개 메시지·서비스·MD5는 바꾸지 않는다.
+
+운영 `camera.launch`의 M0 기본값과 실행 중인 runtime 사본은 이번 시험으로 전환하지 않았다.
+위 명령은 해당 변경을 빌드한 실험 checkout에서만 사용한다. 공개 실행과 중복해서 켜지 않는다.
