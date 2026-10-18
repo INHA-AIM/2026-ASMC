@@ -40,7 +40,10 @@ Family 선 화면은 실제 family가 도착하면 즉시 갱신합니다. 신�
 큰 객체/RGB-semantic 합성과 RGB BEV 비교는 최대10Hz로 제한하고 최신 대기 결과 하나만 유지합니다.
 구독자가 없으면 해당 영상 처리를 중단하며, 시각화가 추론/판제 발행을 기다리게 하지 않습니다.
 현재 정본 `cameras_v3.yaml`의 지면은 MORAI VehicleSpec wheelRadius에 맞춘 **z=-0.36m**입니다.
-카메라 장착 위치는 바꾸지 않았으며 IMU 운동 보정은 아직 적용하지 않습니다.
+카메라 장착 위치는 바꾸지 않았습니다. 정본은 고정 평면이며,
+[원본 시각 IMU 보정](../../docs/architecture/camera-imu-projection.md)은 내부 M1 대조 경로로 연결했습니다.
+IMU roll/pitch는 model-grid의 지면 근거와 family xyz에 적용하며, 모델 추론과 일반 RGB BEV warp는 유지합니다.
+자세가 없거나 시각 대응이 불확실하면 묶음 전체를 기존 고정 평면으로 처리합니다.
 [0.36m·표시 경로 검증](../../docs/records/camera/2026-10-18-nominal-ground-and-arrival-view.md)에
 정차 지면 채택 근거와 표시 부하의 남은 제한을 기록합니다.
 

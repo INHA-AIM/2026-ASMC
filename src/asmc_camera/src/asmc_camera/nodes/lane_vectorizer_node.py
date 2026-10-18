@@ -749,7 +749,7 @@ class LaneVectorizerNode:
                                wall_ms=1000*(computed-started),cpu_ms=1000*(time.thread_time()-cpu_started),stages=dict(timings))
             output = build_boundary_family_output(family,status_reason=shared_audit.get('reason','unknown'),
                                                    expected_boundary_count=self.expected_boundary_count)
-            plane = GroundPlane(**shared_audit['projection_ground_plane']) if 'projection_ground_plane' in shared_audit else self.ground_plane
+            plane = GroundPlane(**shared_audit['projection_ground_plane']) if 'projection_ground_plane' in shared_audit else None
             message = self._boundary_family_message(output,header,plane)
             waiting = time.monotonic()
             with self.epoch_gate.lock:
@@ -1034,7 +1034,7 @@ class LaneVectorizerNode:
                         lambda: self.boundary_family_publisher.publish(
                             self._boundary_family_message(family_output, header,
                                 GroundPlane(**shared_audit['projection_ground_plane'])
-                                if 'projection_ground_plane' in shared_audit else self.ground_plane)
+                                if 'projection_ground_plane' in shared_audit else None)
                         ),
                     )
                     family_candidate_published = True

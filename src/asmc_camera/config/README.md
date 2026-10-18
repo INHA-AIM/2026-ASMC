@@ -25,6 +25,7 @@
 | `camera/traffic_light_runtime.yaml` | camera4 ResNet 설정 |
 | `camera/visualization.yaml`, `bev/visualization*.yaml` | 시각화 설정 |
 | `cameras_v3.yaml`, `bev/*` | 정본 노면 z=-0.36m(MORAI wheelRadius), 보정·BEV·차선 처리. 센서 장착 위치는 유지 |
+| `bev/imu_motion.yaml` | 원본 시각 IMU M1 시험의 자세·보간·freshness 제한. 정본 enabled=false, 내부 `_imu_compare.launch`에서만 대조 |
 
 `camera/yoloe_l/`, `camera/yoloe_selection/`, M/L·detect/seg 비교 프로필,
 `*_experiment.yaml`과 마스크의 v1/neutral_v2는 과거 비교·복구 경로입니다.
