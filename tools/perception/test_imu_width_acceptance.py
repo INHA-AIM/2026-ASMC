@@ -46,5 +46,14 @@ class ImuWidthAcceptanceTest(unittest.TestCase):
         rows[0]['variants'][VARIANTS[-1]]['semantic_model_px'] = {}
         self.assertFalse(summarize_quality(rows, pairs)['checks']['observed_pixel_distance'])
 
+    def test_invalid_family_is_reported_instead_of_losing_the_failure(self):
+        rows, pairs = self.records()
+        rows[1]['phase'] = rows[0]['phase']
+        rows[1]['stamp_ns'] = rows[0]['stamp_ns'] + 100000000
+        rows[1]['variants'][VARIANTS[-1]] = dict(valid=False, boundaries=[])
+        report = summarize_quality(rows, pairs)
+        self.assertFalse(report['passed'])
+        self.assertEqual(report['new_invalid'], [1])
+
 
 if __name__ == '__main__': unittest.main()

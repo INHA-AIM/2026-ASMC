@@ -91,7 +91,7 @@ def summarize_quality(records, pairs):
                 role_errors.append(dict(index=row['index'], reason='lateral_role_order'))
         if any(not 2.4 <= w <= 4.6 for w in candidate.get('widths_m', [])):
             bounds.append(row['index'])
-        a, b = base['semantic_model_px'], candidate['semantic_model_px']
+        a, b = base.get('semantic_model_px', {}), candidate.get('semantic_model_px', {})
         for key in set(a) | set(b):
             if not key.startswith('observed/'):
                 continue
@@ -112,7 +112,9 @@ def summarize_quality(records, pairs):
         values = []
         for a, b in zip(records, records[1:]):
             if a['phase'] == b['phase'] and 0 < b['stamp_ns'] - a['stamp_ns'] <= 200e6:
-                values.append(np.abs(np.asarray(b['variants'][name]['widths_m']) - a['variants'][name]['widths_m']))
+                before, after = (r['variants'][name].get('widths_m', []) for r in (a, b))
+                if len(before) == len(after) == 2:
+                    values.append(np.abs(np.asarray(after) - before))
         width_delta[name] = {side: stats([v[i] for v in values]) for i, side in enumerate(('left', 'right'))}
     checks = dict(motion=all(v['passed'] for v in motion.values()),
         observed_pixel_distance=bool(pixel_summary) and all(v['passed'] for v in pixel_summary.values()),

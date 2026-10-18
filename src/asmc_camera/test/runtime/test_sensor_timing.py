@@ -89,5 +89,15 @@ class SensorTimingTest(unittest.TestCase):
     def test_slerp_sign_does_not_change_rotation(self):
         np.testing.assert_allclose(slerp([0,0,0,1],[0,0,0,-1],.5),[0,0,0,1])
 
+    def test_source_regression_flushes_old_poses_and_requires_new_bracket(self):
+        self.add(2 * 10**9, 1)
+        self.add(10**9, 2, source_regression=True)
+        self.assertEqual(len(self.timeline.poses), 0)
+        self.assertIsNone(self.timeline.attitude(metadata(2 * 10**9))[0])
+        self.add(1010000000, 3)
+        self.assertIsNone(self.timeline.attitude(metadata(1050000000))[0])
+        self.add(1090000000, 4)
+        self.assertEqual(self.timeline.attitude(metadata(1050000000))[1], 'interpolated')
+
 
 if __name__=='__main__': unittest.main()
