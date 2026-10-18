@@ -29,6 +29,7 @@ from sensor_msgs.msg import Image, Imu, PointCloud2, PointField
 from asmc_msgs.msg import CameraModelGridTiming, SensorFrameTiming
 from asmc_camera.runtime.sensor_timing import ImuTimeline, sensor_key
 from asmc_camera.bev.imu_projection import attitude_camera, correct_evidence
+from asmc_camera.bev.family_fit_policy import FamilyFitPolicy
 from std_msgs.msg import Header
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -411,8 +412,11 @@ class LaneVectorizerNode:
                 "bounded_distributed_same_frame_multi_role_completion_v3"
             ),
         }
+        self.family_fit_policy = FamilyFitPolicy(self.shared_family_parameters,
+            self.imu_config.get('corrected_width_prior_strength', 0.0))
         if self.imu_enabled:
             boundary_family_contract_config['imu_motion'] = self.imu_config
+            boundary_family_contract_config['frame_fit_policy'] = self.family_fit_policy.contract()
         self.boundary_family_config_sha256 = hashlib.sha256(
             json.dumps(
                 boundary_family_contract_config,
@@ -856,6 +860,11 @@ class LaneVectorizerNode:
         view_evidence = []
         attitude_cameras = (_measure(timings,'imu_attitude_lookup',lambda:self._attitude_cameras(frames))
                             if getattr(self,'imu_enabled',False) else {})
+        # Capture one immutable selection for this calculation. Do not modify
+        # shared_family_parameters, including while a later mode is requested.
+        with self.imu_lock:
+            projection_reason = self.imu_last.get('reason', 'disabled') if self.imu_enabled else 'disabled'
+        fit_config = self.family_fit_policy.select(bool(attitude_cameras), projection_reason)
         for view in self.views:
             projector = self.projectors[view]
             if self.publish_pipeline_audit:
@@ -924,7 +933,7 @@ class LaneVectorizerNode:
                     timings,
                     "shared_family_fit",
                     lambda: fit_shared_lane_family_with_audit(
-                        fitted_tracks, self.shared_family_parameters
+                        fitted_tracks, fit_config.parameters
                     ),
                 )
             except Exception as exc:
@@ -941,6 +950,15 @@ class LaneVectorizerNode:
                 timings.get("shared_family_fit", 0.0)
             )
             shared_audit = dict(shared_audit)
+            shared_audit['fit_policy'] = fit_config.audit()
+            shared_audit['fitted_widths_m'] = (dict(left=shared_family.left_width_m,
+                right=shared_family.right_width_m) if shared_family is not None else None)
+            with self.imu_lock:
+                self.imu_last = dict(self.imu_last, fit_policy=shared_audit['fit_policy'],
+                                    fitted_widths_m=shared_audit['fitted_widths_m'])
+            self._trace_supply('family_fit_policy',
+                source_stamp_ns=max(frame.stamp_ns for frame in frames.values()),
+                **shared_audit['fit_policy'], fitted_widths_m=shared_audit['fitted_widths_m'])
             shared_audit["fit_ms"] = shared_elapsed_ms
             shared_audit["deployment_allowed"] = False
             shared_audit["runtime_debug_enabled"] = bool(

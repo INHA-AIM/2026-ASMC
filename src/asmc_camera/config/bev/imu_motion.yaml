@@ -2,6 +2,9 @@
 # Current v3 IMU (id7) mount rotation is [0,0,0]; orientation is world_from_imu.
 # Flat K-City world +Z, nominal rear-axle normal distance0.36m, no height estimator.
 enabled: false
+# Used only when all three views have valid source-time IMU. Fallback uses
+# lane_fitting.yaml's original0.35, never the relaxed value.
+corrected_width_prior_strength: 0.0
 imu_topic: /imu
 imu_frame_id: imu
 imu_mount_rotation_deg: [0.0, 0.0, 0.0]
