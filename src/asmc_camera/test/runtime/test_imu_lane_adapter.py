@@ -14,6 +14,7 @@ from asmc_msgs.msg import CameraModelGridTiming, SensorFrameTiming
 from asmc_camera.bev.calibration import calibrations_from_dict
 from asmc_camera.bev.boundary_family_output import BoundaryFamilyMemberOutput, build_boundary_family_output
 from asmc_camera.bev.imu_projection import attitude_camera
+from asmc_camera.bev.family_fit_policy import FamilyFitPolicy
 from asmc_camera.nodes.lane_vectorizer_node import LaneVectorizerNode
 from asmc_camera.runtime.sensor_timing import ImuTimeline
 
@@ -60,6 +61,16 @@ class ImuLaneAdapterTest(unittest.TestCase):
         self.frames['right'].timing.sensor_timing.sensor_wire_sequence=123
         self.frames['right'].timing.sensor_timing.sensor_wire_sequence_valid=False
         self.assertEqual(self.node._attitude_cameras(self.frames),{})
+
+    def test_width_policy_tracks_complete_correction_missing_view_and_recovery(self):
+        policy = FamilyFitPolicy({'width_prior_strength': .35})
+        expected = [(True, 0.), (False, .35), (True, 0.)]
+        for available, prior in expected:
+            self.frames['right'].timing.source_timing_valid = available
+            cameras = self.node._attitude_cameras(self.frames)
+            selected = policy.select(bool(cameras), self.node.imu_last['reason'])
+            self.assertEqual(selected.parameters['width_prior_strength'], prior)
+            self.assertEqual(len(cameras), 3 if available else 0)
 
     def test_wrong_grid_sequence_or_model_session_is_rejected_before_decoding(self):
         node=self.node;node.inputs={'front':0};node.pair_errors={'front':0};node.fit_work=Mock()
