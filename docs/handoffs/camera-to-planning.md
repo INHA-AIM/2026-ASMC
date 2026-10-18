@@ -78,8 +78,11 @@ probability와 coverage 둘 다 구독해야 한다. 보조 토픽은 `/percepti
 support를 보존한다. 판제가 더 긴 horizon을 선택할 때도 `INVALID`를 연결하거나 추정으로
 승격하지 말고, freshness·폭·support gate와 별도 far-range audit를 적용한다.
 
-family와 해당 raster 출력은 `header.frame_id=base_link`이고 x-forward, y-left다. timestamp는 callback
-수신 시각이 아니라 세 카메라 입력 묶음의 최신 source stamp다. BEV fusion은 세 view의
+family와 해당 raster 출력은 `header.frame_id=base_link`이고 x-forward, y-left다. Family timestamp는
+세 카메라 입력 묶음의 최신 **영상 header.stamp**를 보존한다. 모델 callback 시각이나 IMU 원본 시각으로
+다시 쓰지 않는다. Bridge의 `timestamp_mode=receive`에서는 센서 수신 기준이며 촬영 시각으로 단정하지 않는다.
+원본 MORAI 시각은 별도 `SensorFrameTiming`/`CameraModelGridTiming`으로 연결해 M1 보정에 사용한다.
+자세 보정과 서로 다른 영상 시각의 병진/yaw 정렬은 구분한다. BEV fusion은 세 view의
 stamp 차이가 35ms 이내일 때 현재 `camera.launch`에서 최대15Hz로 발행한다. 한 view가 빠지면 오래된 raster를 다시
 발행하지 않으므로 consumer가 마지막 메시지를 무기한 유지해서는 안 된다. 초기 freshness
 상한은 lane과 raster 모두 0.35초를 제안하며, 최종 수치는 판제 full-stack 실측으로 정한다.

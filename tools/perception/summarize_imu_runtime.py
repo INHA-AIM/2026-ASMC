@@ -49,6 +49,8 @@ def main(args):
     summary = dict(schema='imu_joint_runtime_acceptance_v1', trials=trials,
         all_candidate_passed=bool(candidates) and all(r['passed'] for r in candidates),
         candidate_runs=len(candidates), candidate_name_filter=args.candidate_contains,
+        interrupted_conditions=[dict(path=str(p), **json.loads(p.read_text()))
+                                for p in sorted(args.results.rglob('fixture-condition-failure.json'))],
         ten_minute_pass=any(r['passed'] and r['seconds'] >= 599.99 for r in candidates))
     args.output.write_text(json.dumps(summary, indent=2) + '\n')
     print(json.dumps(dict(trials=len(trials), candidate_runs=len(candidates),

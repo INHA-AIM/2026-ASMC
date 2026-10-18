@@ -53,7 +53,7 @@ roslaunch asmc_camera _imu_compare.launch enabled:=false
 # M1+폭 prior0 시험. 앞 실행을 종료한 뒤 실행
 roslaunch asmc_camera _imu_compare.launch enabled:=true
 # IMU만 대조하는 내부 설정. 앞 실행을 종료한 뒤 실행
-roslaunch asmc_camera _imu_compare.launch enabled:=true corrected_width_prior:=0.35
+roslaunch asmc_camera _imu_compare.launch enabled:=true corrected_width_prior:=0.35 joint_width_fit:=false
 # 별도 터미널의 시각화는 그대로 사용
 roslaunch asmc_camera view.launch
 ```
@@ -86,6 +86,20 @@ IMU가 큰 가감속 기하 변화를 줄였고, nominal 폭 prior가 영상 차
 family config SHA에 포함한다. 기존 diagnostics의 `imu_motion.last`와 shared family audit에
 `fit_policy`의 mode/reason/width_prior_strength와 `fitted_widths_m`을 남긴다. Lifecycle trace는
 `family_fit_policy`로 source stamp와 선택한 정책을 기록한다. 공개 메시지·서비스·MD5는 바꾸지 않는다.
+
+## 공동 폭 계산과 IMU 도착 순서
+
+[후속 잔차·공급 검증](../records/camera/2026-10-18-joint-family-stabilization.md)은 황색 기준 역할이
+관측된 프레임에서 공통 B-spline 제어점과 관측한 폭을 함께 계산한다. 폭 경계·support·robust 반복은
+유지하며, 황색 역할이 없으면 기존 계산을 사용한다. `joint_width_fit` 진단은 이 정책의 선택을 뜻하며
+모든 프레임에 황색 역할이 있었다는 뜻은 아니다.
+
+Camera source가 마지막 유효 IMU source보다 조금 앞서 도착하면, 세 뷰 합계 최대10ms 예산으로
+다음 실제 IMU 샘플을 기다린다. Condition 대기 중 timeline lock을 풀고, 도착 후 같은 source/session·
+100ms bracket·350ms freshness를 다시 검사한다. 오래된 source나 잘못된 세션에는 기다리지 않는다.
+외삽·최신 quaternion 대입·시간 상한 연장은 하지 않는다. `pose_timeline.counters`의
+`wait_requested`, `wait_recovered`, `wait_unresolved`와 `last_bracket_failure`를 확인한다.
+기다려도 근거가 없거나3뷰 source skew가35ms를 넘으면 기존 M0 복귀가 유지된다.
 
 운영 `camera.launch`의 M0 기본값과 실행 중인 runtime 사본은 이번 시험으로 전환하지 않았다.
 위 명령은 해당 변경을 빌드한 실험 checkout에서만 사용한다. 공개 실행과 중복해서 켜지 않는다.
