@@ -52,7 +52,8 @@ def main(args):
         rospy.set_param('~managed', False)
         rospy.set_param('~enable_boundary_family_candidate', True)
         rospy.set_param('~enable_independent_boundary_pipeline', False)
-        rospy.set_param('~imu_motion', dict(enabled=True, corrected_width_prior_strength=0.0))
+        rospy.set_param('~imu_motion', dict(enabled=True, corrected_width_prior_strength=0.0,
+                                           corrected_joint_width_fit=args.joint_fit))
         node = LaneVectorizerNode()
         node.demand_inputs.close()
         node.diagnostics_timer.shutdown()
@@ -73,7 +74,8 @@ def main(args):
                     header = Header(stamp=rospy.Time(stamp // 10**9, stamp % 10**9), frame_id='camera_' + view)
                     frames[view] = _ViewFrame(view, stamp, header, arrays[view + '_class'],
                         arrays[view + '_confidence'], 0., node.epoch_gate.context())
-                for corrected_mode, reason, name in ((True, 'corrected', 'M1_source_width0'),
+                corrected_name = 'M1_source_joint' if args.joint_fit else 'M1_source_width0'
+                for corrected_mode, reason, name in ((True, 'corrected', corrected_name),
                                                       (False, 'missing_source_timing', 'M0')):
                     def supplied_attitude(self, frames, used=corrected_mode, why=reason):
                         self.imu_last = dict(reason=why, used=used)
@@ -86,6 +88,8 @@ def main(args):
                     policy = audit['fit_policy']
                     if policy['width_prior_strength'] != (0. if corrected_mode else .35):
                         raise ValueError('incorrect effective width prior')
+                    if policy['joint_width_fit'] != (args.joint_fit and corrected_mode):
+                        raise ValueError('incorrect effective joint-fit policy')
                     results.append(dict(index=index, variant=name, delta_m=delta, policy=policy,
                                         valid=actual['valid'], grid_sha256=sha(capture / sample['grid'])))
                 if (index + 1) % 40 == 0:
@@ -93,7 +97,7 @@ def main(args):
         finally:
             node._shutdown()
             rospy.signal_shutdown('isolated parity complete')
-    report = dict(schema='imu_width_runtime_compute_parity_v1', frames=len(expected),
+    report = dict(schema='imu_width_runtime_compute_parity_v1', frames=len(expected), joint_fit=args.joint_fit,
         comparisons=len(results), maximum_delta_m=max(r['delta_m'] for r in results),
         passed=True, public_master_used=False, gpu_used=False, live_acceptance=False,
         lookup='source interpolator injection; exact wire adapter tested separately',
@@ -108,4 +112,5 @@ if __name__ == '__main__':
     for name in ('trial', 'reference', 'config', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--port', type=int, default=11366)
+    parser.add_argument('--joint-fit', action='store_true', help='Compare corrected production solver with M1_source_joint; fallback remains M0')
     main(parser.parse_args())

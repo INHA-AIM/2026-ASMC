@@ -12,19 +12,36 @@ def main(args):
     for path in sorted(args.results.rglob('report.json')):
         report = json.loads(path.read_text())
         if 'variant' not in report: continue
-        statuses = json.loads(path.with_name('statuses.json').read_text())
+        status_path = path.with_name('statuses.json')
+        statuses = json.loads(status_path.read_text()) if status_path.exists() else []
         failures = shadow_acceptance_failures(report, statuses)
+        if not status_path.exists(): failures.append('missing status journal')
         if report.get('gui') and not viewer_condition_verified(report): failures.append('Qt inventory')
         imu = report.get('imu_application', {})
+        transitions = None
+        trace_path = path.with_name('camera_lane_vectorizer-supply.trace')
+        if trace_path.exists() and report.get('start') is not None and report.get('end') is not None:
+            from imu_runtime_metrics import imu_application
+            trace = [json.loads(line) for line in trace_path.read_text().splitlines()]
+            imu = imu_application(trace, report['start'], report['end'], report.get('imu_mode') == 'source')
+            if imu['unmatched']: failures.append('IMU/fit publication trace mismatch')
+            family_path = path.with_name('consumer-families.jsonl')
+            if family_path.exists():
+                from imu_runtime_metrics import fallback_transitions
+                families = [r['record'] for r in map(json.loads, family_path.read_text().splitlines())
+                            if r['event'] == 'consumer_record']
+                transitions = fallback_transitions(trace, families, report['start'], report['end'])
         if report.get('imu_mode') == 'source':
             if not imu.get('frames') or imu.get('corrected', 0) / imu['frames'] < .99:
                 failures.append('source IMU application below99%')
             if imu.get('joint_frames') != imu.get('corrected'):
                 failures.append('joint policy/IMU count mismatch')
+        start, end = report.get('start'), report.get('end')
+        seconds = end - start if start is not None and end is not None else 0.
         trials.append(dict(trial=path.parent.name, path=str(path), passed=not failures, failures=failures,
             imu=imu, family=report.get('lane_family'), resources=report.get('resources'), streams=report.get('streams'),
-            complete=report.get('complete'), seconds=report.get('end', 0) - report.get('start', 0),
-            mode=report.get('imu_mode')))
+            complete=report.get('complete'), seconds=seconds,
+            mode=report.get('imu_mode'), fallback_transitions=transitions))
     candidates = [r for r in trials if r['mode'] == 'source']
     summary = dict(schema='imu_joint_runtime_acceptance_v1', trials=trials,
         all_candidate_passed=bool(candidates) and all(r['passed'] for r in candidates),

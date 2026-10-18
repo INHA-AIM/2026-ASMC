@@ -127,6 +127,7 @@ class ImuTimeline:
         self.blocked = deque(maxlen=capacity)
         self.session = None
         self.counters = Counter()
+        self.last_bracket_failure = None
 
     def add_timing(self, message):
         if message.stream_id != 'imu':
@@ -210,6 +211,9 @@ class ImuTimeline:
             if at < len(samples) and samples[at][0] == target:
                 return Attitude(samples[at][1][1], target, 0., self.session), 'exact'
             if at == 0 or at == len(samples):
+                self.last_bracket_failure = dict(target_ns=target, fresh_samples=len(samples),
+                    first_ns=stamps[0] if stamps else None, last_ns=stamps[-1] if stamps else None,
+                    latest_receipt_age_ms=1000 * (self.clock() - samples[-1][1][0]) if samples else None)
                 return None, 'imu_not_bracketed'
             a, b = samples[at-1:at+1]; span = b[0] - a[0]
             if any(a[0] < ns < b[0] for ns in self.blocked):
@@ -223,4 +227,4 @@ class ImuTimeline:
         with self.lock:
             self._prune()
             return dict(session=self.session, poses=len(self.poses), pending=len(self.pending),
-                        counters=dict(self.counters))
+                        counters=dict(self.counters), last_bracket_failure=self.last_bracket_failure)

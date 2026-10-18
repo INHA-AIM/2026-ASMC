@@ -849,9 +849,11 @@ class LaneVectorizerNode:
             reason = 'camera_source_skew'
         if reason != 'corrected':
             cameras = {}
+        failure_timeline = self.imu_timeline.snapshot() if reason == 'imu_not_bracketed' else None
         with self.imu_lock:
             self.imu_counts[reason] = self.imu_counts.get(reason,0) + 1
-            self.imu_last = dict(reason=reason, used=bool(cameras), views=details, source_skew_ms=skew_ms)
+            self.imu_last = dict(reason=reason, used=bool(cameras), views=details, source_skew_ms=skew_ms,
+                                 failure_timeline=failure_timeline)
         self._trace_supply('imu_projection', source_stamp_ns=max(frame.stamp_ns for frame in frames.values()),
                            context=self.epoch_gate.context(), **self.imu_last)
         return cameras

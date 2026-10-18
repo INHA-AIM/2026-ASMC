@@ -20,6 +20,7 @@ import time
 
 from lifecycle_measurements import percentile, rate_report
 from b0_resources import ResourceSampler, qt_viewers
+from imu_runtime_metrics import family_probes
 
 
 def acceptance_eligible(report):
@@ -168,7 +169,8 @@ def main():
                                     xyxy=[b.xmin,b.ymin,b.xmax,b.ymax]) for b in m.boxes])), queue_size=30))
     subscribers.append(rospy.Subscriber('/perception/lane/boundary_family', LaneBoundaryFamily,
         lambda m: families.append(dict(at=time.monotonic(),stamp=m.header.stamp.to_nsec(),
-            valid=m.valid,reason=m.status_reason)),queue_size=1))
+            valid=m.valid,reason=m.status_reason,config_sha256=m.config_sha256,
+            probes=family_probes(m) if m.valid else [])),queue_size=1))
     # Keep the same normal lane consumers as the real stack. No GUI consumers
     # are added unless explicitly requested, so lazy output stays comparable.
     for topic in ('/perception/camera/objects/diagnostics', '/perception/camera/diagnostics', '/morai_sensor_bridge/diagnostics',
@@ -279,7 +281,8 @@ def main():
         report['source_sha256'] = hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()
         report['measurement_sha256']={f:hashlib.sha256((root/'tools/perception'/f).read_bytes()).hexdigest()
             for f in ('compare_camera_runtime.py','camera_runtime_probe.py','b0_resources.py',
-                      'run_camera_structure_matrix.py','run_b0_matrix.py','camera_measurement_records.py')}
+                      'run_camera_structure_matrix.py','run_b0_matrix.py','camera_measurement_records.py',
+                      'imu_runtime_metrics.py')}
         report['family_view_source_sha256']={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest()
             for p in (root/'src/asmc_camera/src/asmc_camera/bev/family_view.py',
                       root/'src/asmc_camera/src/asmc_camera/nodes/family_view_node.py',
@@ -511,13 +514,11 @@ def main():
                     report['failures'].append('family supply trace incomplete/dropped')
                 compute=[r for r in trace if r['event']=='family_compute_end' and start<=r['monotonic']<end]
                 gates=[r for r in trace if r['event']=='family_publish_start' and start<=r['monotonic']<end]
-                attitude=[r for r in trace if r['event']=='imu_projection' and start<=r['monotonic']<end]
-                policies=[r for r in trace if r['event']=='family_fit_policy' and start<=r['monotonic']<end]
-                from collections import Counter
-                report['imu_application']=dict(frames=len(attitude),corrected=sum(bool(r.get('used')) for r in attitude),
-                    reasons=dict(Counter(r.get('reason','unknown') for r in attitude)),
-                    policy_modes=dict(Counter(r.get('mode','unknown') for r in policies)),
-                    joint_frames=sum(bool(r.get('joint_width_fit')) for r in policies))
+                from imu_runtime_metrics import imu_application
+                source_enabled=any(r['event']=='imu_projection' for r in trace)
+                report['imu_application']=imu_application(trace,start,end,source_enabled)
+                if report['imu_application']['unmatched']:
+                    report['failures'].append('IMU/fit publication trace mismatch')
                 report['lane_family']['compute_wall_ms']={f'p{q}':percentile([r['wall_ms'] for r in compute],q) for q in (50,95,99)}
                 report['lane_family']['compute_cpu_ms']={f'p{q}':percentile([r['cpu_ms'] for r in compute],q) for q in (50,95,99)}
                 report['lane_family']['publish_lock_wait_ms']={f'p{q}':percentile([r['lock_wait_ms'] for r in gates],q) for q in (50,95,99)}
