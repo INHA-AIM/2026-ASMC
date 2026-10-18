@@ -88,6 +88,8 @@ class ModelGridGroundProjector:
             raise ValueError("ground range and camera depth must be positive")
         self.camera = camera
         self.source_mask = int(source_mask)
+        self.max_ground_range_m = float(max_ground_range_m)
+        self.min_camera_depth_m = float(min_camera_depth_m)
         self.x_bounds_m = tuple(float(value) for value in x_bounds_m)
         self.y_bounds_m = tuple(float(value) for value in y_bounds_m)
         if self.x_bounds_m[1] <= self.x_bounds_m[0]:
