@@ -7,6 +7,10 @@ publish_per_view_mosaic: false
 fused_max_hz: 10.0
 fused_width: 672
 fused_height: 1050
+# Family computes source-time IMU planes once; RGB and semantic panels share
+# those exact planes. Legacy static BEV data outputs retain their old contract.
+shared_family_projection: true
+raw_comparison_history_size: 8
 
 camera_grid_max_hz: 5.0
 camera_grid_longitudinal_step_m: 5.0

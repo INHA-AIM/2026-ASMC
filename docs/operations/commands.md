@@ -109,6 +109,8 @@ Ego mask·보정·engine은 YAML/manifest가 소유합니다. 자동 PyTorch fal
 
 같은 rqt에서 `/perception/camera/debug/mosaic/compressed`는 주행가능영역·차선 semantic,
 `/perception/lane/debug/shared_family_bev/compressed`는 피팅된 family를 표시합니다.
+`/perception/bev/debug/comparison/compressed`의 RGB·semantic은 같은 family 프레임의 IMU 지면을
+재사용합니다. 별도 추론·피팅을 하지 않으며 `IMU shared`/`M0: 사유`로 적용 상태를 표시합니다.
 Family 화면은 새 family 도착 즉시 갱신합니다. 신호등도 결과 도착 즉시 표시합니다.
 큰 객체·semantic 합성과 RGB BEV 비교 화면은 최대10Hz이며, 추론/판제 발행 주기와 독립적입니다.
 최신 결과 하나만 대기시키며 같은 source 결과 재표시를 신규 인지 공급으로 세지 않습니다.

@@ -102,6 +102,7 @@
 
     <node pkg="asmc_camera" type="camera_bev_visualizer_node.py"
           name="camera_bev_visualizer" output="screen" required="false">
+      <param name="managed" value="true"/>
       <rosparam command="load" file="$(arg bev_grid_config)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
       <rosparam command="load" file="$(find asmc_camera)/config/bev/fusion.yaml"/>

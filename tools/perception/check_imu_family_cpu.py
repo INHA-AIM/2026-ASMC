@@ -14,6 +14,7 @@ def main(args):
         ('src/asmc_camera/test/bev', 'test_shared_lane_family.py'),
         ('src/asmc_camera/test/bev', 'test_joint_family_fit.py'),
         ('src/asmc_camera/test/bev', 'test_family_fit_policy.py'),
+        ('src/asmc_camera/test/bev', 'test_shared_comparison.py'),
         ('src/asmc_camera/test/runtime', 'test_imu_lane_adapter.py'),
         ('src/asmc_camera/test/runtime', 'test_lane_latest_work.py'),
         ('src/asmc_camera/test/runtime', 'test_sensor_timing.py'),

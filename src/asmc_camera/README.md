@@ -42,7 +42,9 @@ Family 선 화면은 실제 family가 도착하면 즉시 갱신합니다. 신�
 현재 정본 `cameras_v3.yaml`의 지면은 MORAI VehicleSpec wheelRadius에 맞춘 **z=-0.36m**입니다.
 카메라 장착 위치는 바꾸지 않았습니다.
 [원본 시각 IMU 보정](../../docs/architecture/camera-imu-projection.md)과 관측 폭·공통 곡선의 공동 피팅이 기본입니다.
-IMU roll/pitch는 model-grid의 지면 근거와 family xyz에 적용하며, 모델 추론과 일반 RGB BEV warp는 유지합니다.
+IMU roll/pitch는 model-grid의 지면 근거와 family xyz에 적용합니다. Comparison RGB·semantic BEV도
+family의 같은 프레임별 보정값을 재사용하며 IMU 조회·추론·피팅을 다시 실행하지 않습니다.
+기존 BEV 데이터 토픽은 고정 평면 계약을 유지합니다.
 자세가 없거나 시각 대응이 불확실하면 묶음 전체를 기존 고정 평면으로 처리합니다.
 [잔차·공급 검증](../../docs/records/camera/2026-10-18-joint-family-stabilization.md)에
 동일 입력 비교·10분 수락과 남은 M0 전환 한계를 기록했습니다. 복구는 기존 실행을 종료한 뒤

@@ -5,12 +5,18 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, Mapping, Tuple
 
 import numpy as np
 import yaml
+
+
+def calibration_id(camera):
+    """Identity of native pixel calibration, including the nominal ground."""
+    return hashlib.sha256(json.dumps(asdict(camera), sort_keys=True,
+                                    separators=(',', ':')).encode()).hexdigest()
 
 
 def _rotation_x(angle_rad: float) -> np.ndarray:

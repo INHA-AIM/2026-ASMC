@@ -13,12 +13,15 @@ import message_filters
 import numpy as np
 import rospy
 from sensor_msgs.msg import CompressedImage, Image
-from asmc_camera.runtime.demand_inputs import DemandSubscriber, DemandInputs
+from asmc_msgs.msg import CameraGroundProjection
+from asmc_camera.runtime.demand_inputs import DemandSubscriber, DemandInputs, DemandSynchronizer
+from asmc_camera.runtime.ros_control import LaneEpochGate
+from asmc_camera.runtime.render_worker import RenderWorker
+from asmc_camera.runtime.comparison_frames import ComparisonFrames
+from asmc_camera.bev.comparison_projection import ComparisonProjection
 
 from asmc_camera.bev.calibration import calibrations_from_dict
-from asmc_camera.bev.fusion import build_quality_maps
 from asmc_camera.bev.grid import BevGridSpec
-from asmc_camera.bev.projector import CameraBevProjector
 from asmc_camera.bev.visualization import (
     build_bev_mosaic,
     crop_bev_layers,
@@ -76,28 +79,14 @@ class CameraBevVisualizerNode:
 
         max_ground_range = float(rospy.get_param("~max_ground_range_m", 22.0))
         min_camera_depth = float(rospy.get_param("~min_camera_depth_m", 0.1))
-        self.projectors = {
-            view: CameraBevProjector(
-                self.cameras[view],
-                self.grid,
-                max_ground_range_m=max_ground_range,
-                min_camera_depth_m=min_camera_depth,
-            )
-            for view in self.views
-        }
-        self.rgb_quality = build_quality_maps(
-            self.projectors,
-            self.grid,
-            edge_taper_fraction=float(rospy.get_param("~edge_taper_fraction", 0.12)),
-            forward_fade_start_m=float(
-                rospy.get_param("~forward_fade_start_m", 15.0)
-            ),
-            lateral_fade_start_m=float(
-                rospy.get_param("~lateral_fade_start_m", 6.0)
-            ),
-            rear_fade_start_m=float(rospy.get_param("~rear_fade_start_m", -4.0)),
-            boundary_weight=float(rospy.get_param("~boundary_weight", 0.20)),
-        )
+        self.projection_renderer = ComparisonProjection(self.cameras, self.grid,
+            projector_options=dict(max_ground_range_m=max_ground_range,
+                                   min_camera_depth_m=min_camera_depth),
+            quality_options={name: float(rospy.get_param('~'+name, default))
+                for name, default in [('edge_taper_fraction', .12), ('forward_fade_start_m', 15.),
+                    ('lateral_fade_start_m', 6.), ('rear_fade_start_m', -4.), ('boundary_weight', .20)]})
+        self.projectors, self.rgb_quality = self.projection_renderer.nominal
+        self.shared_projection = bool(rospy.get_param('~shared_family_projection', True))
 
         self.jpeg_quality = int(rospy.get_param("~jpeg_quality", 85))
         self.publish_legacy_outputs = bool(
@@ -126,7 +115,7 @@ class CameraBevVisualizerNode:
         )
         if self.raw_comparison_max_skew_ns < 0:
             raise ValueError("raw_comparison_max_skew_ms cannot be negative")
-        self.raw_history_size = int(rospy.get_param("~raw_comparison_history_size", 40))
+        self.raw_history_size = int(rospy.get_param("~raw_comparison_history_size", 8))
         if self.raw_history_size <= 0:
             raise ValueError("raw_comparison_history_size must be positive")
         self.tile_size = (
@@ -153,6 +142,11 @@ class CameraBevVisualizerNode:
             view: deque(maxlen=self.raw_history_size) for view in self.views
         }
         self.lock = threading.Lock()
+        self.gate = LaneEpochGate()
+        self.cache_epoch = self.gate.context()
+        self.comparison_frames = ComparisonFrames(self.views,
+            self.projection_renderer.calibration_ids, capacity=self.raw_history_size, max_age_sec=.5)
+        self.comparison_metrics = dict(outputs=0, imu=0, m0=0, rejected=0, render_ms=0.)
         self.subscribers = []
         self.synchronizers = []
         self.grid_publishers = {}
@@ -225,6 +219,19 @@ class CameraBevVisualizerNode:
             CompressedImage,
             queue_size=1,
         )
+        self.render_worker = RenderWorker(self._publish_shared_comparison,
+            max_hz=float(rospy.get_param('~fused_max_hz', 10.)),
+            on_error=lambda exc: rospy.logwarn_throttle(2., 'shared BEV comparison: %s', exc))
+        rospy.on_shutdown(self.render_worker.close)
+        if self.shared_projection:
+            self.subscribers.append(DemandSubscriber('/perception/lane/ground_projection',
+                CameraGroundProjection, self._comparison_requested, self._projection_callback, queue_size=1))
+            for view, camera in self.cameras.items():
+                self.subscribers.append(DemandSynchronizer(
+                    [camera.drivable_topic, camera.road_marking_topic, camera.road_marking_confidence_topic],
+                    Image, self._comparison_requested, partial(self._semantic_callback, view),
+                    context=self.gate.context, on_reset=self._clear_shared,
+                    queue_size=4, subscriber_queue_size=1, subscriber_buffer_bytes=4*1024*1024))
         self.fused_publisher = None
         self.quality_publisher = None
         if self.publish_legacy_outputs:
@@ -273,7 +280,95 @@ class CameraBevVisualizerNode:
 
     def _fused_requested(self):
         return any(p is not None and p.get_num_connections() > 0
-                   for p in (self.comparison_publisher,self.fused_publisher,self.quality_publisher))
+                   for p in ((None if self.shared_projection else self.comparison_publisher),
+                             self.fused_publisher,self.quality_publisher))
+
+    def _comparison_requested(self):
+        return self.comparison_publisher.get_num_connections() > 0
+
+    def _clear_shared(self):
+        with self.lock:
+            self.comparison_frames.reset()
+
+    def _current_cache(self):
+        # Called under gate -> cache locks. Never retain input across epochs.
+        epoch = self.gate.context()
+        if epoch != self.cache_epoch:
+            self.comparison_frames.reset()
+            self.cache_epoch = epoch
+
+    def _projection_callback(self, message):
+        with self.gate.lock, self.lock:
+            self._current_cache()
+            if (not self.gate.allows(message.header.stamp) or
+                    (self.gate.enabled and (message.producer_session_id != self.gate.producer_session_id or
+                                           message.generation != self.gate.generation))):
+                return
+            try:
+                self.comparison_frames.add_context(message)
+            except ValueError as exc:
+                self.comparison_metrics['rejected'] += 1
+                rospy.logwarn_throttle(2., 'BEV projection context rejected: %s', exc)
+                return
+        self.render_worker.offer()
+
+    def _semantic_callback(self, view, *messages):
+        with self.gate.lock, self.lock:
+            self._current_cache()
+            if not self.gate.allows(messages[0].header.stamp):
+                return
+            try:
+                self.comparison_frames.add_semantic(view, messages)
+            except ValueError as exc:
+                self.comparison_metrics['rejected'] += 1
+                rospy.logwarn_throttle(2., 'BEV native semantic rejected: %s', exc)
+                return
+        self.render_worker.offer()
+
+    def _publish_shared_comparison(self):
+        if not self.shared_projection or not self._comparison_requested():
+            return False
+        with self.gate.lock, self.lock:
+            self._current_cache()
+            epoch = self.gate.context()
+            selected = self.comparison_frames.latest()
+        if selected is None:
+            return False
+        context, raw, semantic = selected
+        if not self.gate.allows(context.header.stamp):
+            return False
+        age = (rospy.Time.now()-context.header.stamp).to_sec()
+        if age < 0 or age > .5:
+            return False
+        started = time.monotonic()
+        rgb = {v: cv2.imdecode(np.frombuffer(raw[v].data, dtype=np.uint8), cv2.IMREAD_COLOR)
+               for v in self.views}
+        if any(image is None for image in rgb.values()):
+            raise ValueError('comparison JPEG decode failed')
+        planes = {v: context.plane_coefficients[3*i:3*i+3] for i, v in enumerate(context.views)}
+        semantics = {v: tuple(self._mono8_array(m, (self.cameras[v].height, self.cameras[v].width))
+                              for m in semantic[v]) for v in self.views}
+        rgb_bev, layers = self.projection_renderer.render(planes, rgb, semantics)
+        layers = crop_bev_layers(layers, self.grid, self.display_grid)
+        rgb_bev = crop_bev_layers({'rgb': rgb_bev}, self.grid, self.display_grid)['rgb']
+        comparison = render_bev_comparison(rgb_bev, layers['drivable'], layers['road_marking'],
+            layers['coverage'], self.display_grid, panel_size=self.fused_size,
+            drivable_threshold=self.comparison_drivable_threshold)
+        label = 'IMU shared' if context.imu_corrected else 'M0: '+context.reason
+        cv2.putText(comparison, label, (12, 54), cv2.FONT_HERSHEY_SIMPLEX, .6, (0,255,255), 1)
+        message = self._compressed(comparison, context.header.stamp, self.grid.frame_id)
+        with self.gate.lock:
+            if self.gate.context() != epoch or not self.gate.allows(context.header.stamp):
+                return False
+            if (rospy.Time.now()-context.header.stamp).to_sec() > .5 or not self._comparison_requested():
+                return False
+            self.comparison_publisher.publish(message)
+        self.comparison_metrics['outputs'] += 1
+        self.comparison_metrics['imu' if context.imu_corrected else 'm0'] += 1
+        self.comparison_metrics['render_ms'] = 1000*(time.monotonic()-started)
+        rospy.loginfo_throttle(5., 'shared BEV comparison outputs=%d IMU=%d M0=%d rejected=%d render=%.1fms',
+            *[self.comparison_metrics[k] for k in ('outputs','imu','m0','rejected','render_ms')])
+        return True
 
     def _compact_fused_callback(
         self,
@@ -356,14 +451,15 @@ class CameraBevVisualizerNode:
         if not comparison_requested and not grid_requested:
             return
         if comparison_requested:
-            with self.lock:
-                self.raw_frames[view].append(
-                    (
-                        bytes(message.data),
-                        message.header.stamp,
-                        message.header.frame_id,
-                    )
-                )
+            if self.shared_projection:
+                with self.gate.lock, self.lock:
+                    self._current_cache()
+                    if self.gate.allows(message.header.stamp):
+                        self.comparison_frames.add_raw(view, message)
+                self.render_worker.offer()
+            else:
+                with self.lock:
+                    self.raw_frames[view].append((bytes(message.data), message.header.stamp, message.header.frame_id))
         if not grid_requested:
             return
         now = time.monotonic()
@@ -418,7 +514,7 @@ class CameraBevVisualizerNode:
         )
 
     def _publish_outputs(self, _event) -> None:
-        publish_comparison = self.comparison_publisher.get_num_connections() > 0
+        publish_comparison = not self.shared_projection and self.comparison_publisher.get_num_connections() > 0
         publish_fused = (
             self.fused_publisher is not None
             and self.fused_publisher.get_num_connections() > 0

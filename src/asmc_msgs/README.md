@@ -24,7 +24,7 @@ publisher나 변환 로직은 포함하지 않는다.
 - 기존 planning/perception 타입: 13개, ROS1 MD5 동결
 - HD Map/competition 타입: 12개
 - perception runtime additive 타입: 3개
-- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은37개 메시지·1개 서비스이며 UrbanFeatureDebug, LiDAR/camera handoff·공용 추론 제어·센서/grid timing을 포함
+- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은38개 메시지·1개 서비스이며 UrbanFeatureDebug, LiDAR/camera handoff·공용 추론 제어·센서/grid timing·시각화 지면 metadata를 포함
 - 외부 MORAI wire type: pinned `src/MORAI-ROS_morai_msgs`, 이 패키지로 복사하지 않음
 - 중복 `Msg` package: consumer 이관과 clean build 전까지 삭제하지 않음
 
@@ -41,6 +41,7 @@ publisher나 변환 로직은 포함하지 않는다.
 | 판제 debug | `UrbanFeatureDebug` |
 | 센서 timing v1 | `SensorFrameTiming` — 원본/수신/발행 clock과 기존 sensor wire의 연결 키 |
 | Model-grid timing v1 | `CameraModelGridTiming` — 원본 JPEG와 class/confidence의 실제 wire header·추론 세대 연결 |
+| 내부 BEV 시각화 | `CameraGroundProjection` — family가 선택한 프레임별 지면을 RGB·semantic 비교 화면에 재사용 |
 
 공용 추론 제어는 [v2 계약](../../config/contracts/camera_inference_control_v2.yaml)을 따른다.
 생산자는 asmc_camera이며 구형 카메라 타입은 기존 제어 경로에서 호환용으로 유지한다.

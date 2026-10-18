@@ -6,8 +6,9 @@
 roll/pitch 보정과 관측 폭·공통 B-spline 공동 계산을 사용하는 기본 경로다.
 정본 `imu_motion.yaml`은 enabled=true다. 모델·정규화·해상도·mask·family 표현·기존 header/MD5는 유지한다.
 [동일 입력·실시간 수락](../records/camera/2026-10-18-joint-family-stabilization.md) 후 기본 전환했다.
-일반 BEV/RGB 영상 warp와 차량 병진 이동·yaw 정렬·높이 추정·시간 누적은 이번 M1의 범위가 아니다.
-따라서 고정 평면 RGB BEV 배경에 M1 선을 겹쳐 위치 정확도를 판단하지 않는다.
+Comparison RGB/semantic BEV는 family가 선택한 같은 프레임별 지면을 재사용한다.
+차량 병진 이동·yaw 정렬·높이 추정·시간 누적은 이번 M1의 범위가 아니다.
+구형 고정 평면 BEV 데이터 토픽은 유지하므로 그 배경으로 M1의 절대 정확도를 판단하지 않는다.
 
 평지의 세계 법선 `[0,0,1]`을 영상 원본 시각의 IMU quaternion으로 차량 좌표에 변환한다.
 `R_WB=R_WI·R_BIᵀ`, `n_B=R_WBᵀ·[0,0,1]`이며 카메라 장착 변환은 고정한다.
@@ -113,3 +114,24 @@ M0 복귀는 드물지만 사라지지 않았다. 최종10분의27/8,983프레�
 다음 우선 과제는 source 시각에 맞춘3뷰 묶음 선택·중첩 근거 정합이다.
 병진/yaw 정렬과 과거 근거 누적은 유효한 터널 이동 입력과 별도 검증이 필요하다.
 판제의 구 SHA guard와 고정 평면 bbox 재투영은 [인수 규칙](../handoffs/camera-to-planning.md)을 따른다.
+
+## 두 시각화의 보정 재사용
+
+Family worker가 원본 시각 IMU를 조회하고 M1/M0를 선택하는 계산은 기존대로 한 번이다.
+`/perception/lane/ground_projection`의 작은 비래치 metadata에 뷰별 실제 지면과 원 JPEG header,
+추론 session/generation·family 생산 세션·설정·보정 ID를 담는다.
+[내부 계약](../../config/contracts/camera_ground_projection_v1.yaml)은 기존 메시지 MD5를 바꾸지 않는다.
+메시지는 구독자가 있을 때만 조립·발행하며 family 선 시각화는 실제 family 결과를 그대로 그린다.
+
+Comparison은 원 JPEG를 frame/stamp/wire sequence로, 원본 크기 semantic 3개 head를
+같은 추론 epoch 안의 유일한 frame/stamp로 대응한다. Head별 ROS sequence가 JPEG와 같다고
+가정하지 않는다. 중복 stamp가 모호하거나 일부 입력이 없으면 다른 시각의 영상으로 대체하지 않는다.
+세 뷰가 모이면 뷰별 raster 투영/coverage/quality를 한 번 만들고 RGB와 semantic에 함께 사용한다.
+이미 보정된 raster를 다시 보정하지 않으며 모델 추론·IMU 조회·family 피팅을 추가 실행하지 않는다.
+
+기본 comparison만 구독하면 기존 고정 BEV 생성·합성 체인은 구독하지 않는다. 별도 recorder나
+legacy 소비자는 종전 데이터 토픽을 계속 사용할 수 있다. Comparison은 최신 완성 묶음만 최대10Hz로
+처리하고 JPEG를 마지막에 한 번 인코딩한다. 캐시는 뷰별8개/500ms, 렌더 대기는 한 개다.
+세대/생산자 변경 시 캐시를 비우며 렌더 도중 변경된 결과도 발행하지 않는다.
+화면의 `IMU shared` 또는 `M0: 사유`가 실제 family의 선택을 표시한다.
+수신/발행 source stamp는 보존한다. 차량 이동·yaw에 따라 Ego 기준 도로가 움직이는 것은 정상이다.

@@ -184,6 +184,21 @@ topic_families:
     p5b_action: keep
     rationale: Exact source and derived wire lineage; required by the opt-in IMU projection, without changing legacy image headers or the model.
 
+  - id: camera_shared_ground_projection
+    topics:
+      - {pattern: /perception/lane/ground_projection, type: asmc_msgs/CameraGroundProjection}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      anchors: ["'/perception/lane/ground_projection'"]
+    consumers:
+      - file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py
+        anchor: "'/perception/lane/ground_projection'"
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: subscriber_lazy
+    p5b_action: keep
+    rationale: Shares the family worker's one source-time IMU decision with both comparison panels; no additional fitting or inference.
+
   - id: camera_semantic_model_grid
     topics:
       - {pattern: '/perception/camera/{view}/road_marking/model_grid/class_id', type: sensor_msgs/Image}
