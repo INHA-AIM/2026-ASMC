@@ -11,7 +11,7 @@ class DemandSynchronizerTest(unittest.TestCase):
         clock.start(); self.addCleanup(clock.stop)
         self.connections = []
         def subscribe(topic, kind, callback, **kwargs):
-            item = NS(topic=topic, callback=callback, unregister=Mock())
+            item = NS(topic=topic, kind=kind, callback=callback, unregister=Mock())
             self.connections.append(item)
             return item
         self.patch = patch('rospy.Subscriber', side_effect=subscribe)
@@ -63,6 +63,17 @@ class DemandSynchronizerTest(unittest.TestCase):
         self.connections[-2].callback(self.image(20))
         self.connections[-1].callback(self.image(20))
         self.delivered.assert_called_once()
+
+    def test_mixed_types_are_bound_to_the_corresponding_topics(self):
+        self.wanted = True
+        group = DemandSynchronizer(['/jpeg', '/mask'], object, lambda: True,
+                                   self.delivered, message_types=[str, bytes])
+        self.addCleanup(group.unregister)
+        group.refresh()
+        self.assertEqual([c.kind for c in self.connections], [str, bytes])
+        with self.assertRaises(ValueError):
+            DemandSynchronizer(['/jpeg', '/mask'], object, lambda: True,
+                               self.delivered, message_types=[str])
 
     def test_closed_group_does_not_reconnect_or_deliver(self):
         self.wanted = True; self.group.refresh()

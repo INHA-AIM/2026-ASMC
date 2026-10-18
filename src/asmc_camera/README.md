@@ -36,6 +36,11 @@ roslaunch asmc_camera view.launch models:=objects
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
+최신 semantic 화면은 정확히 대응한 최신 프레임을10Hz timer로 표시합니다. Family 화면은
+격자를 재사용하고 렌더링을 수신 잠금 밖에서 처리하며, source stamp·세대·350ms freshness를 유지합니다.
+[표시 주기·정차 보정 대조](../../docs/records/camera/2026-10-18-lane-display-and-rest-calibration.md)에서
+family 도착 즉시 표시를 별도로 검증했습니다. 이 후보는 아직 기본10Hz 표시를 대체하지 않습니다.
+
 [실행·모드·관측 계약](../../docs/contracts/camera-runtime-v1.md)에 공개 옵션과
 새 제어 경로·기존 alias·원본16종/세 그룹·관측 freshness를 정리했습니다.
 [모델 설치와 소비 규칙](../../docs/operations/camera-deployment.md),

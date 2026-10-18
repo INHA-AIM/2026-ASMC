@@ -109,6 +109,10 @@ Ego mask·보정·engine은 YAML/manifest가 소유합니다. 자동 PyTorch fal
 
 같은 rqt에서 `/perception/camera/debug/mosaic/compressed`는 주행가능영역·차선 semantic,
 `/perception/lane/debug/shared_family_bev/compressed`는 피팅된 family를 표시합니다.
+Semantic 합성은 최신 정확 대응 영상을 최대10Hz로 표시합니다. Family 화면의 기본도10Hz이며,
+판제에 발행하는 family15Hz와 독립적입니다. 즉시 갱신15Hz 표시 후보는
+[별도 실측](../records/camera/2026-10-18-lane-display-and-rest-calibration.md)에서 비교했으며
+아직 기본 실행 인자로 추가하지 않았습니다. 같은 stamp 재표시를 신규 공급으로 세지 않습니다.
 `view.launch`는 시각화 worker만 시작하며, 추론 모델이나 rqt 창을 시작하지 않습니다.
 
 일부 모델만 점검할 때는 기존 `camera.launch`를 종료한 뒤 다음 중 하나로 대체합니다.

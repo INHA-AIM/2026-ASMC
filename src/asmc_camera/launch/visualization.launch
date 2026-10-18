@@ -97,6 +97,7 @@
       <rosparam param="views">[left, front, right]</rosparam>
       <param name="secondary_mode" value="$(arg secondary_mode)"/>
       <param name="publish_per_view_panels" value="$(arg legacy_rqt)"/>
+      <param name="managed" value="true"/>
     </node>
 
     <node pkg="asmc_camera" type="camera_bev_visualizer_node.py"

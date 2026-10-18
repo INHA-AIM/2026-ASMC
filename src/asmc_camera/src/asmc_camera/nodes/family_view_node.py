@@ -18,9 +18,16 @@ class FamilyViewNode:
     def __init__(self):
         self.lock = threading.RLock()
         self.sample = None
+        self.latest_event = threading.Event()
+        self.last_display_stamp = None
         self.gate = LaneEpochGate(on_standby=self._clear)
         self.grid = BevGridSpec.from_mapping({k: rospy.get_param('~'+k) for k in
             ('frame_id','x_min_m','x_max_m','y_min_m','y_max_m','resolution_m')})
+        self.background = np.zeros((*self.grid.shape, 3), np.uint8)
+        draw_metric_grid(self.background, self.grid)
+        cv2.putText(self.background, 'LEFT  ^ FORWARD  RIGHT', (2, 12),
+                    cv2.FONT_HERSHEY_SIMPLEX, .27, (180, 180, 180), 1)
+        self.background.setflags(write=False)
         self.publisher = rospy.Publisher('/perception/lane/debug/shared_family_bev/compressed',
                                          CompressedImage, queue_size=1)
         self.input = DemandSubscriber('/perception/lane/boundary_family', LaneBoundaryFamily,
@@ -48,27 +55,51 @@ class FamilyViewNode:
             with self.lock:
                 self.sample = (message.header, segments, message.status_reason,
                                self.gate.context(), time.monotonic())
+                self.latest_event.set()
 
     def _publish(self, _event):
         if not self._requested():
             self._clear()
             return
-        # The gate precedes the sample lock, as in the receive callback.
+        # A batched 15Hz producer can deliver two frames together then pause.
+        # If this tick would repeat the last source, wait briefly for the next
+        # real source instead. ROS Timer retains its original 10Hz deadlines.
+        with self.lock:
+            repeat = bool(self.sample and self.sample[0].stamp.to_nsec() == self.last_display_stamp)
+            self.latest_event.clear()
+        if repeat:
+            self.latest_event.wait(.04)
+        # Snapshot only. Rendering/encoding must not block a newer family or
+        # status callback. Recheck the epoch before publishing the finished JPEG.
         with self.gate.lock, self.lock:
             sample = self.sample
-            canvas = np.zeros((*self.grid.shape,3), np.uint8)
-            draw_metric_grid(canvas, self.grid)
-            current = bool(sample and sample[3] == self.gate.context() and
-                           self.gate.allows(sample[0].stamp) and time.monotonic()-sample[4] <= .35 and
-                           -.05 <= (rospy.Time.now()-sample[0].stamp).to_sec() <= .35)
-            reason = sample[2] if current else 'WAITING / STALE'
-            draw_stateful_lane_family(canvas, sample[1] if current else [], self.grid, reason)
-            success, jpeg = cv2.imencode('.jpg', canvas, [cv2.IMWRITE_JPEG_QUALITY,80])
-            if success:
-                output = CompressedImage(format='jpeg',data=jpeg.tobytes())
-                if sample:
-                    output.header = sample[0]
-                self.publisher.publish(output)
+            context = self.gate.context()
+            current = self._current(sample, context)
+        if current and sample[0].stamp.to_nsec() == self.last_display_stamp:
+            return
+        canvas = self.background.copy()
+        draw_stateful_lane_family(canvas, sample[1] if current else [], self.grid,
+                                  sample[2] if current else 'WAITING / STALE')
+        success, jpeg = cv2.imencode('.jpg', canvas, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        if not success:
+            return
+        output = CompressedImage(format='jpeg', data=jpeg.tobytes())
+        if sample:
+            output.header = sample[0]
+        with self.gate.lock:
+            if context != self.gate.context() or not self._requested():
+                return
+            if current and not self._current(sample, context):
+                return
+            self.publisher.publish(output)
+            self.last_display_stamp = sample[0].stamp.to_nsec() if current else None
+
+    def _current(self, sample, context):
+        return bool(sample and sample[3] == context and
+                    self.gate.allows(sample[0].stamp) and
+                    time.monotonic()-sample[4] <= .35 and
+                    -.05 <= (rospy.Time.now()-sample[0].stamp).to_sec() <= .35)
+
 
 
 def main():
