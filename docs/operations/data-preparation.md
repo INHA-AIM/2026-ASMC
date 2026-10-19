@@ -76,6 +76,50 @@ AIM 원본은 제공받은 자료 중 `{static_010101,dynamic_obstacle,tunnel_st
 이전 시 SHA·원본 링크·컨테이너 mount를 검증하고 사용 권한도 별도로 확인합니다.
 YOLO export 이미지는 원본 symlink일 수 있으므로 dataset 폴더만 복사하면 원본까지 이동하지 않습니다.
 
+### Capture 원본 위치와 학습 전 경로 검사
+
+`ASMC_DATA`는 **수집 장부·정리본·학습 버전의 루트**입니다. Windows 시뮬레이터가 쓰는
+native `SensorData`와는 다르며 한쪽을 바꿔도 다른 쪽을 자동 이동하거나 연결하지 않습니다.
+[data_locations.json](../../src/data_collection/config/data_locations.json)은 설치 예시 기본값만
+제공합니다. 개인 archive·AIM 경로는 빈 값이며 D/E 드라이브나 원본 추가 마운트를 요구하지 않습니다.
+
+새 Capture는 unique custom name을 유지하고 Windows 시뮬레이터의 conventional
+`C:\MoraiLauncher_Win\MoraiLauncher_Win_Data\SaveFile\SensorData`를 명시합니다.
+설치 위치가 다르면 기존 `morai_file_dir:=...` 인자, `ASMC_CAPTURE_DIR_WINDOWS`, 또는
+`ASMC_DATA_LOCATIONS`로 가리킨 **Git 밖 PC별 JSON**의 `capture_directory_windows`를 지정합니다.
+이 경로는 ROS 호스트의 데이터 경로나 Linux 마운트가 아닙니다. 실제 파일 QA를 먼저 수행합니다.
+
+원본 조회는 CLI `--sensor-root`가 우선이며 `ASMC_SENSOR_ROOT`도 명시 root로 취급합니다.
+둘 다 없으면 설정의 `capture_directory_wsl`과 선택적인 `capture_archive_wsl` 중 해당 run이
+실제로 있는 **한 루트만** 선택합니다. archive는 `ASMC_CAPTURE_ARCHIVE`로도 지정할 수 있습니다.
+다른 루트에 같은 run의 일부라도 있으면 `--sensor-root`를 요구하며 파일을 섞지 않습니다.
+같은 실체를 가리키는 symlink 별칭은 중복 root로 세지 않습니다. 없는 명시 root를 만들지 않습니다.
+원본 `source_files`·과거 SHA·split은 현재 경로에 맞춰 일괄 치환하지 않습니다.
+
+```bash
+# 저장소 루트, 실제 PC의 Linux/WSL 원본 root를 명시; dry-run은 복사하지 않음
+python3 scripts/sync_capture_mode_data.py --run-id <run-id> \
+  --sensor-root /absolute/path/to/SensorData --dry-run
+# 학습용 이미지/라벨/target 참조를 읽기 전용 검사
+python3 scripts/verify_data_locations.py \
+  --dataset "$ASMC_DATA/dataset_versions/<version>"
+```
+
+`ASMC_DATA_LOCATIONS` JSON은 `schema_version: 1`과 필요한 native 경로를 담습니다.
+`*_wsl`의 상대경로는 JSON 위치를 기준으로 해석하며 CLI 상대경로는 호출 위치를 기준으로 합니다.
+출력 보호가 필요한 PC만 같은 JSON에 `storage_contract`를 추가합니다. archive/AIM이 없어도
+일반 수집·ROS·학습 시작은 동작합니다. `ASMC_AIM_ROOT`는 입력 위치 표시일 뿐 자동 마운트 스위치가 아닙니다.
+컨테이너에서 native 자료를 읽으려면 **명시한 로컬 Compose overlay**로 읽기 전용 mount와
+해당 컨테이너 경로 설정을 함께 전달합니다. 호스트 경로 문자열만으로 컨테이너에 자료가 생기지 않습니다.
+기존 manifest의 절대경로 별칭도 필요할 때만 로컬 overlay에 두며 팀 공통 Compose에 넣지 않습니다.
+
+[2026-10-17 경로 검사 snapshot](../../config/baselines/evidence/data_paths_20261017/summary.json)은
+PR #94에서 수행한 당시 호스트·읽기 전용 컨테이너의 검증 근거로 보존합니다.
+그 안의 D/E·사용자 절대경로와 source SHA는 **과거 실행 기록**이며 현재 기본값이나 새 전수 검증이 아닙니다.
+당시 native Capture RPC·학습은 실행하지 않았습니다. Large/BDD100K 조사도
+[당시 학습 준비 기록](../records/camera/2026-10-17-twinlite-large-training-preparation.md)에 보존하고,
+현재 실행 상태는 패키지의 학습 안내를 따릅니다.
+
 설정 v2는 라벨 의미 버전, 데이터 v11은 통합 버전, r4는 해당 단계의 revision입니다.
 원본·부모 curated·reviews·policy·export SHA를 연결하고 이전 버전을 덮어쓰지 않습니다.
 같은 배치·증강·연속 장면은 lineage로 묶으며 촬영 이미지 수를 독립 장면 수로 설명하지 않습니다.

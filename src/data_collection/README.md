@@ -37,6 +37,12 @@ bbox3_partial은 BBox 누락을 명시하며 누락 뷰를 빈 정답으로 만�
 원본은 `$ASMC_DATA/datasets/<run_id>`, 실행 장부는 `capture_runs/<run_id>`, 학습 export는
 `dataset_versions/<version>`입니다. Windows 저장root·native-ID·완전성은 Capture 절차를 봅니다.
 
+[data_locations.json](config/data_locations.json)은 conventional MORAI 설치 기본값만 담습니다.
+native 원본은 `--sensor-root`/`ASMC_SENSOR_ROOT` 또는 PC별 `ASMC_DATA_LOCATIONS`로 지정하며,
+archive·AIM은 선택 입력입니다. 같은 run이 여러 실체 root에 있으면 자동 혼합하지 않습니다.
+Windows `morai_file_dir`는 시뮬레이터 저장 경로이고 `ASMC_DATA`는 ROS 장부·정리본 경로입니다.
+개인 외장 드라이브·기존 manifest 별칭·추가 마운트는 공용 기본값이 아닙니다.
+
 ## Raw/result bag
 
 ```bash
