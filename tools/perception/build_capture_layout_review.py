@@ -8,13 +8,16 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 import numpy as np
 from prepare_camera_seg_gt import parse_bbox
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src/data_collection/src'))
+from data_collection.data_locations import resolve_sensor_root
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--run',type=Path,required=True)
     p.add_argument('--ledger',type=Path,required=True)
-    p.add_argument('--sensor-root',type=Path,default=Path('/mnt/c/MoraiLauncher_Win/SensorData'))
+    p.add_argument('--sensor-root',type=Path,help='Override configured native SensorData roots')
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--ground-calibration',type=Path,default=Path(__file__).resolve().parents[2]/'config/morai/capture_asset_ground_v2.json')
     a=p.parse_args()
@@ -24,6 +27,7 @@ def main():
     parents={str(n):r for r in rows for n in r.get('native_ids',[]) if r.get('created') and not r.get('removed')}
     manifest=(a.run/'capture_manifest.jsonl').read_bytes()
     records=[json.loads(l) for l in manifest.splitlines() if l.strip()]
+    a.sensor_root=resolve_sensor_root(a.sensor_root, [r for r in records if r.get('success')])
     best={}
     for record in records:
         if not record.get('success'):continue

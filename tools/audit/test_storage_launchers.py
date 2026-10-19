@@ -57,6 +57,19 @@ elif 'python3' in sys.argv and 'default_artifact_root' in sys.argv[sys.argv.inde
         self.assertIn(str(custom)+' -> /data',result.stdout)
         self.assertFalse(custom.exists())
 
+    def test_present_native_and_aim_archives_do_not_activate_mounts(self):
+        aim=self.base/'other team AIM';archive=self.base/'native archive'
+        aim.mkdir();archive.mkdir()
+        for name in ('docker_ros_up.sh','docker_perception_up.sh'):
+            result=self.run_script(name,'config',env={
+                'ASMC_AIM_ROOT':str(aim), 'ASMC_MORAI_ARCHIVE':str(archive),
+                'ASMC_CAPTURE_ARCHIVE':str(archive)})
+            self.assertEqual(result.returncode,0,result.stderr)
+            call=self.calls()[-1]
+            self.assertEqual(call.count('-f'),1)
+            self.assertNotIn(str(aim),call);self.assertNotIn(str(archive),call)
+        self.assertFalse((self.base/'data').exists())
+
     def test_relative_override_is_made_absolute_for_compose(self):
         result=self.run_script('docker_perception_up.sh','config',env={'ASMC_DATA':'../separate data'})
         self.assertEqual(result.returncode,0,result.stderr)

@@ -20,6 +20,7 @@ catkin_package()
 
 if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_storage_paths.py)
+  catkin_add_nosetests(test/test_data_locations.py)
   catkin_add_nosetests(test/test_capture_mode.py)
   catkin_add_nosetests(test/test_capture_sync.py)
   catkin_add_nosetests(test/test_capture_collection.py)

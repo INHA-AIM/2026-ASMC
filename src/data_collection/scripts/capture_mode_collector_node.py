@@ -16,6 +16,7 @@ import time
 import rospy
 import rospkg
 from morai_msgs.msg import CtrlCmd, EgoVehicleStatus, SaveSensorData
+from data_collection.data_locations import capture_directory_windows
 
 from data_collection.capture_grpc import (
     CaptureGrpcError,
@@ -58,10 +59,11 @@ class RosTopicCaptureClient(object):
         msg = SaveSensorData()
         msg.is_custom_file_name = True
         msg.custom_file_name = custom_name
-        msg.file_dir = file_dir or ""
+        msg.file_dir = capture_directory_windows(file_dir)
         started = time.monotonic()
         self._publisher.publish(msg)
         return {
+            "morai_file_dir": msg.file_dir,
             "success": True,
             "capture_backend": "ros_topic",
             "grpc_status": None,
@@ -91,7 +93,7 @@ class CaptureModeCollector(object):
         self.control_source_timeout = float(
             rospy.get_param("~control_source_timeout_sec", 1.0)
         )
-        self.file_dir = str(rospy.get_param("~morai_file_dir", ""))
+        self.file_dir = capture_directory_windows(rospy.get_param("~morai_file_dir", ""))
         self._lock = threading.Lock()
         self._latest_ego = None
         self._latest_ego_wall = None
