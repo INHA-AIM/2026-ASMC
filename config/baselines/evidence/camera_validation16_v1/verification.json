@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "exact_train_overlap": 0,
+  "pixel_train_overlap": 0,
+  "source_run_group_overlap": 0,
+  "all_rows_complete": true,
+  "serialized_labels_verified": true,
+  "manifest_sha256": "d7e3440f18f8d1b0fe137aed89d3dd4214a67a7b2f4447b250769fb6cd64c4b6"
+}

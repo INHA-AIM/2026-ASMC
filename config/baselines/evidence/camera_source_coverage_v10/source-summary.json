@@ -1,0 +1,270 @@
+{
+  "dataset": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_v10-resplit-r2",
+  "manifest_sha256": "7eb1d28d1dd08182afe86b55335a4c9a47d0d7ebc54015c5207bc94cdf6d0cae",
+  "classes": {
+    "bicycle": {
+      "train_boxes": 6108,
+      "source_kind_boxes": {
+        "aim": 15,
+        "capture": 6093
+      },
+      "known_subtypes": {
+        "unknown": 15,
+        "Bike1": 1343,
+        "Bike2": 1087,
+        "Bike3": 964,
+        "Bicycle_city": 1369,
+        "Bicycle_mountain": 1330
+      },
+      "largest_source_share": 0.2133267845448592,
+      "distinct_source_names": 14,
+      "model_coverage_complete": false
+    },
+    "bollard": {
+      "train_boxes": 30166,
+      "source_kind_boxes": {
+        "capture": 2175,
+        "roboflow": 27991
+      },
+      "known_subtypes": {
+        "Bollard01": 1237,
+        "Bollard04": 938,
+        "unknown": 27991
+      },
+      "largest_source_share": 0.877047006563681,
+      "distinct_source_names": 9,
+      "model_coverage_complete": false
+    },
+    "box": {
+      "train_boxes": 4950,
+      "source_kind_boxes": {
+        "aim": 5,
+        "bag": 2,
+        "capture": 3815,
+        "roboflow": 1128
+      },
+      "known_subtypes": {
+        "unknown": 1138,
+        "CargoBox": 1357,
+        "WoodBox": 2455
+      },
+      "largest_source_share": 0.1402020202020202,
+      "distinct_source_names": 21,
+      "model_coverage_complete": false
+    },
+    "bus": {
+      "train_boxes": 7185,
+      "source_kind_boxes": {
+        "capture": 3995,
+        "roboflow": 3190
+      },
+      "known_subtypes": {
+        "unknown": 3201,
+        "2016_Hyundai_Universe": 3984
+      },
+      "largest_source_share": 0.22268615170494085,
+      "distinct_source_names": 8,
+      "model_coverage_complete": false
+    },
+    "car": {
+      "train_boxes": 11449,
+      "source_kind_boxes": {
+        "capture": 49,
+        "roboflow": 11400
+      },
+      "known_subtypes": {
+        "unknown": 11449
+      },
+      "largest_source_share": 0.318193728709931,
+      "distinct_source_names": 10,
+      "model_coverage_complete": false
+    },
+    "concrete_barrier": {
+      "train_boxes": 7536,
+      "source_kind_boxes": {
+        "capture": 4843,
+        "roboflow": 2693
+      },
+      "known_subtypes": {
+        "Concrete_Barricade01": 1225,
+        "concrete-barrier": 1976,
+        "Concrete_Barricade02": 1642,
+        "unknown": 2693
+      },
+      "largest_source_share": 0.17250530785562632,
+      "distinct_source_names": 11,
+      "model_coverage_complete": false
+    },
+    "deer": {
+      "train_boxes": 4738,
+      "source_kind_boxes": {
+        "aim": 12,
+        "capture": 4696,
+        "roboflow": 30
+      },
+      "known_subtypes": {
+        "unknown": 42,
+        "Deer1": 4696
+      },
+      "largest_source_share": 0.20578303081468974,
+      "distinct_source_names": 10,
+      "model_coverage_complete": false
+    },
+    "dog": {
+      "train_boxes": 4536,
+      "source_kind_boxes": {
+        "aim": 13,
+        "capture": 4523
+      },
+      "known_subtypes": {
+        "unknown": 13,
+        "Dog2": 2385,
+        "Dog1": 2138
+      },
+      "largest_source_share": 0.2239858906525573,
+      "distinct_source_names": 15,
+      "model_coverage_complete": false
+    },
+    "motorcycle": {
+      "train_boxes": 5178,
+      "source_kind_boxes": {
+        "aim": 9,
+        "capture": 4769,
+        "roboflow": 400
+      },
+      "known_subtypes": {
+        "unknown": 409,
+        "SportBike": 1116,
+        "Sportbike_01": 1582,
+        "Scooter1": 1350,
+        "Scooter2": 721
+      },
+      "largest_source_share": 0.1821166473541908,
+      "distinct_source_names": 14,
+      "model_coverage_complete": false
+    },
+    "person": {
+      "train_boxes": 30213,
+      "source_kind_boxes": {
+        "aim": 4,
+        "capture": 8859,
+        "roboflow": 21350
+      },
+      "known_subtypes": {
+        "BabyStroller3": 899,
+        "unknown": 21381,
+        "BabyStroller1": 1056,
+        "BabyStroller2": 845,
+        "Bike1": 1330,
+        "SportBike": 955,
+        "Bike2": 1192,
+        "Bike3": 1042,
+        "Scooter1": 941,
+        "Scooter2": 572
+      },
+      "largest_source_share": 0.38658855459570385,
+      "distinct_source_names": 17,
+      "model_coverage_complete": false
+    },
+    "plastic_barrier": {
+      "train_boxes": 4262,
+      "source_kind_boxes": {
+        "aim": 4,
+        "capture": 3517,
+        "roboflow": 741
+      },
+      "known_subtypes": {
+        "unknown": 745,
+        "PE_Firewall_White": 1581,
+        "PE_Firewall_Orange": 1936
+      },
+      "largest_source_share": 0.15978413890192397,
+      "distinct_source_names": 14,
+      "model_coverage_complete": false
+    },
+    "steel_barricade": {
+      "train_boxes": 5590,
+      "source_kind_boxes": {
+        "aim": 4,
+        "capture": 5051,
+        "roboflow": 535
+      },
+      "known_subtypes": {
+        "unknown": 539,
+        "Steel_Barricade": 5051
+      },
+      "largest_source_share": 0.17513416815742397,
+      "distinct_source_names": 15,
+      "model_coverage_complete": false
+    },
+    "stroller": {
+      "train_boxes": 2892,
+      "source_kind_boxes": {
+        "aim": 4,
+        "capture": 2888
+      },
+      "known_subtypes": {
+        "BabyStroller3": 939,
+        "BabyStroller1": 1071,
+        "BabyStroller2": 882
+      },
+      "largest_source_share": 0.18706777316735823,
+      "distinct_source_names": 8,
+      "model_coverage_complete": false
+    },
+    "traffic_cone": {
+      "train_boxes": 3006,
+      "source_kind_boxes": {
+        "capture": 2395,
+        "roboflow": 611
+      },
+      "known_subtypes": {
+        "Color_Cone": 1241,
+        "Rubber_Cone": 1154,
+        "unknown": 611
+      },
+      "largest_source_share": 0.20326014637391882,
+      "distinct_source_names": 8,
+      "model_coverage_complete": false
+    },
+    "traffic_drum": {
+      "train_boxes": 13755,
+      "source_kind_boxes": {
+        "aim": 4,
+        "capture": 2019,
+        "roboflow": 11732
+      },
+      "known_subtypes": {
+        "unknown": 11736,
+        "PE_Drum": 1170,
+        "TrafficBarrel": 849
+      },
+      "largest_source_share": 0.6062522719011268,
+      "distinct_source_names": 16,
+      "model_coverage_complete": false
+    },
+    "truck": {
+      "train_boxes": 7214,
+      "source_kind_boxes": {
+        "capture": 5374,
+        "roboflow": 1840
+      },
+      "known_subtypes": {
+        "unknown": 1841,
+        "2012_Hyundai_HD65": 1432,
+        "2013_Hyundai_Porter2": 1069,
+        "2013_Hyundai_Xcient(P520)": 916,
+        "2014_Hyundai_Xcient(Mixer)": 1337,
+        "2013_Hyundai_Xcient(P540)": 619
+      },
+      "largest_source_share": 0.2630995286942057,
+      "distinct_source_names": 6,
+      "model_coverage_complete": false
+    }
+  },
+  "notes": [
+    "Unknown subtypes are not inferred from class names.",
+    "Related runs and augmentations are not independent vehicle models.",
+    "Existing evaluation reservations are retained."
+  ]
+}

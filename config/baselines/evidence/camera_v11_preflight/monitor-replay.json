@@ -1,0 +1,123 @@
+{
+  "source": "stored v10 E4, no inference",
+  "recall_regressions": [
+    "car",
+    "bus"
+  ],
+  "quality_regressions": [
+    {
+      "class_name": "person",
+      "metric": "precision",
+      "baseline": 0.8389830508474576,
+      "current": 0.1742957746478873,
+      "delta": -0.6646872761995704,
+      "limit": 0.05
+    },
+    {
+      "class_name": "person",
+      "metric": "f1",
+      "baseline": 0.8461538461538461,
+      "current": 0.2894736842105263,
+      "delta": -0.5566801619433198,
+      "limit": 0.02
+    },
+    {
+      "class_name": "dog",
+      "metric": "precision",
+      "baseline": 0.7,
+      "current": 0.29545454545454547,
+      "delta": -0.4045454545454545,
+      "limit": 0.05
+    },
+    {
+      "class_name": "dog",
+      "metric": "f1",
+      "baseline": 0.4375,
+      "current": 0.3939393939393939,
+      "delta": -0.04356060606060608,
+      "limit": 0.02
+    },
+    {
+      "class_name": "bicycle",
+      "metric": "precision",
+      "baseline": 0.8333333333333334,
+      "current": 0.04866180048661801,
+      "delta": -0.7846715328467153,
+      "limit": 0.05
+    },
+    {
+      "class_name": "bicycle",
+      "metric": "f1",
+      "baseline": 0.75,
+      "current": 0.09237875288683603,
+      "delta": -0.6576212471131639,
+      "limit": 0.02
+    },
+    {
+      "class_name": "car",
+      "metric": "precision",
+      "baseline": 0.9130434782608695,
+      "current": 0.0,
+      "delta": -0.9130434782608695,
+      "limit": 0.05
+    },
+    {
+      "class_name": "car",
+      "metric": "f1",
+      "baseline": 0.6774193548387096,
+      "current": 0.0,
+      "delta": -0.6774193548387096,
+      "limit": 0.02
+    },
+    {
+      "class_name": "motorcycle",
+      "metric": "precision",
+      "baseline": 0.7142857142857143,
+      "current": 0.2247191011235955,
+      "delta": -0.4895666131621188,
+      "limit": 0.05
+    },
+    {
+      "class_name": "motorcycle",
+      "metric": "f1",
+      "baseline": 0.5714285714285714,
+      "current": 0.36363636363636365,
+      "delta": -0.20779220779220775,
+      "limit": 0.02
+    },
+    {
+      "class_name": "bus",
+      "metric": "precision",
+      "baseline": 1.0,
+      "current": 0.06666666666666667,
+      "delta": -0.9333333333333333,
+      "limit": 0.05
+    },
+    {
+      "class_name": "bus",
+      "metric": "f1",
+      "baseline": 0.7058823529411765,
+      "current": 0.08955223880597014,
+      "delta": -0.6163301141352063,
+      "limit": 0.02
+    },
+    {
+      "class_name": "truck",
+      "metric": "precision",
+      "baseline": 0.6363636363636364,
+      "current": 0.05405405405405406,
+      "delta": -0.5823095823095823,
+      "limit": 0.05
+    },
+    {
+      "class_name": "truck",
+      "metric": "f1",
+      "baseline": 0.45161290322580644,
+      "current": 0.0975609756097561,
+      "delta": -0.3540519276160503,
+      "limit": 0.02
+    }
+  ],
+  "checkpoint_score": null,
+  "automatic_training_pause_changed": false
+}

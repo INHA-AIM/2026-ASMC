@@ -1,0 +1,60 @@
+{
+  "schema_version": "camera-pretrain-1",
+  "seed": 20261011,
+  "models": {
+    "yolo26l": "models/camera_coco7_v1/yolo26l.pt"
+  },
+  "text_names": [
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "bus",
+    "truck",
+    "bollard",
+    "box",
+    "concrete barrier",
+    "steel barricade",
+    "traffic drum",
+    "plastic barrier",
+    "traffic cone",
+    "stroller"
+  ],
+  "training": {
+    "imgsz": 960,
+    "batch_candidates": [
+      4,
+      2,
+      1
+    ],
+    "nbs": 16,
+    "amp": true,
+    "optimizer": "AdamW",
+    "lr0": 0.001,
+    "weight_decay": 0.0005,
+    "freeze": null,
+    "epoch_margin": 1.2
+  },
+  "evaluation": {
+    "conf_control": 0.4,
+    "minimum_gt": 20,
+    "old_recall_drop_limit": 0.02,
+    "minimum_new_gt": 20,
+    "sample_warning": "Whole-layout resplit, reviewed complete full16 panel; repeated observations are not independent layouts",
+    "historical_diagnostics": "v9 E8 preserved separately; old 618 may overlap new train and is not a selection criterion"
+  },
+  "main": {
+    "epochs": 40,
+    "budget_seconds": 86400,
+    "reserve_seconds": 600
+  },
+  "source_dataset": "camera_objects_bbox_v10-resplit-r2",
+  "max_train_images": null,
+  "requires_ignore_aware_trainer": true,
+  "runtime_changes": false,
+  "requires_spatial_background_trainer": 2,
+  "initialization_policy": "Original official pretrained only. New split: never resume v8/v9 weights, EMA or optimizer.",
+  "background_policy": "camera_pretrain_policy_v3"
+}

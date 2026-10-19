@@ -1,0 +1,58 @@
+{
+  "schema_version": "camera-pretrain-1",
+  "seed": 20261011,
+  "imgsz": 960,
+  "rect": false,
+  "multi_scale": 0,
+  "tiny_short_px": 4,
+  "tiny_area_px2": 64,
+  "minimum_visible_pixels": 4,
+  "maximum_repeats": 2,
+  "background_limit": 3000,
+  "mask_files": {
+    "front": "src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml",
+    "left": "src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml",
+    "right": "src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml"
+  },
+  "augmentation": {
+    "mosaic": 0,
+    "mixup": 0,
+    "copy_paste": 0,
+    "degrees": 0,
+    "translate": 0,
+    "scale": 0,
+    "perspective": 0,
+    "fliplr": 0.5,
+    "flipud": 0,
+    "hsv_h": 0.015,
+    "hsv_s": 0.7,
+    "hsv_v": 0.4
+  },
+  "requires_ignore_aware_trainer": true,
+  "supported_ultralytics": "8.4.150",
+  "spatial_background_version": 2,
+  "safe_semantic_classes": [
+    "asphalt",
+    "white_lane",
+    "yellow_lane",
+    "blue_lane",
+    "crosswalk",
+    "stopline",
+    "sidewalk",
+    "sky",
+    "building",
+    "road_edge",
+    "road_sign",
+    "traffic_sign",
+    "traffic_light"
+  ],
+  "partial_negative_policy": "safe semantic full feature cells plus annotated-class full-cell bbox interiors; other unknown classes remain masked",
+  "expanded_safe_semantic_classes": [
+    "building",
+    "road_edge",
+    "road_sign",
+    "traffic_sign",
+    "traffic_light"
+  ],
+  "range_cutoff_applied": false
+}

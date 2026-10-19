@@ -1,0 +1,43 @@
+{
+  "status": "verified_label_patch_not_standalone_training_dataset",
+  "images": 861,
+  "added_boxes": 3888,
+  "split_images": {
+    "selection": 120,
+    "heldout": 297,
+    "train": 444
+  },
+  "split_added_boxes": {
+    "selection": 715,
+    "heldout": 1282,
+    "train": 1891
+  },
+  "corrected_negative_ids": [
+    "background_kcity_drive_001_front_000378"
+  ],
+  "active_train_images": 444,
+  "deferred_boxes": 1291,
+  "parent_manifest_sha256": "7eb1d28d1dd08182afe86b55335a4c9a47d0d7ebc54015c5207bc94cdf6d0cae",
+  "review_sha256": "1ce6b7f697d8ec6304966e055fff5dffb8ab03f00f992513c4be2215b055f0a6",
+  "active_training_changed": false,
+  "classes": [
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "bus",
+    "truck",
+    "bollard",
+    "box",
+    "concrete_barrier",
+    "steel_barricade",
+    "traffic_drum",
+    "plastic_barrier",
+    "traffic_cone",
+    "stroller"
+  ],
+  "confirmed_incorrect_negative_images": 6,
+  "negative_images_quarantined": 5
+}

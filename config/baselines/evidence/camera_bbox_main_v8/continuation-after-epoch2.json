@@ -1,0 +1,31 @@
+{
+  "recorded_utc": "2026-10-12T14:16:25.668687+00:00",
+  "action": "resume_existing_supervisor_after_review",
+  "reason": "User requested allowing initial metric recovery when configuration is sound; person and car recovered at epoch 2, no runtime failure observed. Motorcycle regression and high false positives remain unresolved.",
+  "job": "run-20261012-r1",
+  "container": "asmc-camera-main-v8-r1",
+  "previous_status": "paused_regression",
+  "resume_completed_epoch": 2,
+  "next_evaluation_epoch": 4,
+  "checkpoint_sha256": "905774ba4c96218207abb6d636ab7f44c134405f858e29e06089876ef4967c1a",
+  "batch": 4,
+  "gradient_accumulation": 4,
+  "effective_batch": 16,
+  "imgsz": 960,
+  "optimizer": "AdamW",
+  "lr0": 0.001,
+  "warmup_epochs": 1,
+  "configuration_changed": false,
+  "frozen_code_changed": false,
+  "existing_regression_guard_preserved": true,
+  "deadline_unix_unchanged": 1791888187.6838496,
+  "runtime_model_changed": false,
+  "quality_accepted": false,
+  "gpu_check": {
+    "memory_used_mib": 635,
+    "memory_total_mib": 8188,
+    "utilization_percent": 7
+  },
+  "morai_process_check": "no matching Windows MORAI/Simulator process",
+  "next_review": "Evaluate recovery and false positives at epoch 4; this continuation does not establish final convergence."
+}

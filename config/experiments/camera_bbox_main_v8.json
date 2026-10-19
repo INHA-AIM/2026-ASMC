@@ -1,0 +1,17 @@
+{
+  "schema_version": "camera-pretrain-1",
+  "seed": 20261011,
+  "models": {"yolo26l": "models/camera_coco7_v1/yolo26l.pt"},
+  "text_names": ["person", "dog", "deer", "bicycle", "car", "motorcycle", "bus", "truck", "bollard", "box", "concrete barrier", "steel barricade", "traffic drum", "plastic barrier", "traffic cone", "stroller"],
+  "training": {
+    "imgsz": 960, "batch_candidates": [4, 2, 1], "nbs": 16,
+    "amp": true, "optimizer": "AdamW", "lr0": 0.001,
+    "weight_decay": 0.0005, "freeze": null, "epoch_margin": 1.2
+  },
+  "evaluation": {"conf_control": 0.4, "minimum_gt": 20, "old_recall_drop_limit": 0.02},
+  "main": {"epochs": 40, "budget_seconds": 86400, "reserve_seconds": 600},
+  "source_dataset": "camera_objects_bbox_v8-pretrain-r1",
+  "max_train_images": null,
+  "requires_ignore_aware_trainer": true,
+  "runtime_changes": false
+}
