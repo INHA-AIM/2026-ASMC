@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "scope": "structure/split/source-restoration/loader/loss transmission; not full class evaluation sufficiency",
+  "dataset": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_v11-capture-restored-r2",
+  "dataset_metadata_sha256": "72413c1459fa2d3fe8eeff85104170856490d19ee8b9a5ecd5aaf708aab3ae5b",
+  "required_files": {
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-capture-restoration-v11-20261013-r1/restoration-verification.json": "817009cfa9d516ef3eb605e9f0241045a96814cf61de8e7b901e3dd582c41237",
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-capture-restoration-v11-20261013-r1/final-verification.json": "de911f8fa006fb68c6d456a51da59996a81656a773f460d44fe582265d9f600a",
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-capture-restoration-v11-20261013-r1/loader-verification.json": "dc65e10aae5612be993bd5d4c25232185870aabc31dd98f8244256863d68c617",
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-capture-restoration-v11-20261013-r1/cpu-loss-verification.json": "3ea2141cfde93262a7be3c491130bdd7244b9ffd86e96c5cc8612ff2a83b583a"
+  },
+  "activation_pending": true,
+  "training_started": false,
+  "selection_limits": [
+    "dog10/bus16/truck14 total GT",
+    "additional complete-only metric small samples",
+    "47 selection images seen by current v10 training",
+    "limited independent scenes"
+  ]
+}

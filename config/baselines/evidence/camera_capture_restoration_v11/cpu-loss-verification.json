@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "test_module": "test_camera_spatial_background",
+  "tests": 7,
+  "code": "existing frozen v10 trainer",
+  "cuda_visible_devices": "",
+  "optimizer_updates": 0,
+  "checks": [
+    "both detection head safe-cell gradients",
+    "unknown map semantics excluded",
+    "partial empty sample loader",
+    "ignore positive priority"
+  ]
+}

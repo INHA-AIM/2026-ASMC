@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "images": 150,
+  "fixed16_macro_on_GT_predictions": 1.0,
+  "ignore_predictions_not_counted_as_FP": true,
+  "all16_serialized_GT_counts_match": true
+}

@@ -1,0 +1,15 @@
+{
+  "time_utc": "2026-10-13T07:29:47.076389+00:00",
+  "choice": "retain_original_pretrained_restart_on_v10",
+  "reason": [
+    "E8 improving overall, but motorcycle recall 7/23 vs pretrained20/23 and E4 14/23",
+    "Existing E8 saw 207/212 new validation and all116 new test images",
+    "4/64 rescore improves fixed16 F1 only0.83pp and does not change motorcycle recall"
+  ],
+  "warmstart_technically_possible": true,
+  "warmstart_rejected_as_unproven_advantage_not_as_impossible": true,
+  "old_checkpoint_preserved": true,
+  "new_run_initial_weights_unchanged": true,
+  "prior_fresh_training_authorization_remains": true,
+  "regression_automatic_pause": false
+}

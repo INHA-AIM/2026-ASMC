@@ -1,0 +1,68 @@
+{
+  "schema_version": "camera-pretrain-1",
+  "classes": [
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "bus",
+    "truck",
+    "bollard",
+    "box",
+    "concrete_barrier",
+    "steel_barricade",
+    "traffic_drum",
+    "plastic_barrier",
+    "traffic_cone",
+    "stroller"
+  ],
+  "requires_ignore_aware_trainer": true,
+  "original_data_root": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data",
+  "policy_sha256": "7bd757e29d46a7e032fc3b0ed0ea50cae1c424b7a42850296133cb760bad982e",
+  "parents": {
+    "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_v8-pretrain-r1": "3708a4854908a6fcfff1d1647210a50ff7dc0661b88405eac75804fffb9e6c37"
+  },
+  "artifact_shas": {
+    "manifest.jsonl": "e3c6283d94100ed6ee59c2aec9f3e969cf2133458f0f810320c301b98611620b",
+    "policy.json": "cf83809045a3b450d3179f6b3a9b27cd6afff12715ba5be981d5e4f990d4b7e0",
+    "data.yaml": "fcfb1d7ff022ec9e02d323ca375d459dc9e3f0a2dced6fdba2147112c54685a2",
+    "verification.json": "f9f2a013caae8d9f58d77831b50a10f349832285105e8e3048648c484c24e22c",
+    "epoch-000-order.jsonl": "a75f9f9fb4b85ddedd34d01c85c3efb5f6edf6fa42aac6bde22844f0d79fbf19"
+  },
+  "recommended_training": {
+    "imgsz": 960,
+    "rect": false,
+    "multi_scale": 0,
+    "mosaic": 0,
+    "mixup": 0,
+    "copy_paste": 0,
+    "degrees": 0,
+    "translate": 0,
+    "scale": 0,
+    "perspective": 0,
+    "fliplr": 0.5,
+    "flipud": 0,
+    "hsv_h": 0.015,
+    "hsv_s": 0.7,
+    "hsv_v": 0.4
+  },
+  "checkpoint_selection": {
+    "selection_only": true,
+    "heldout_final_only": true,
+    "metrics": [
+      "class recall",
+      "complete-GT F1",
+      "person/motorcycle regression"
+    ],
+    "unsupported_class_is_not_pass": true
+  },
+  "final_version": true,
+  "source_stage": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_v8-pretrain-r1",
+  "requires_spatial_background_trainer": 2,
+  "audit_export_parent": {
+    "dataset": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_v9-background-r2",
+    "pretrain_sha256": "452251d8c0ab87c92b40a3b5725591ef88d7f25524b474d27de5b65f4aa71f34"
+  }
+}

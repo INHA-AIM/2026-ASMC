@@ -1,0 +1,657 @@
+{
+  "version": "camera_objects_bbox_v8-pretrain-r1",
+  "created_utc": "2026-10-12T06:49:21.181960+00:00",
+  "classes": [
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "bus",
+    "truck",
+    "bollard",
+    "box",
+    "concrete_barrier",
+    "steel_barricade",
+    "traffic_drum",
+    "plastic_barrier",
+    "traffic_cone",
+    "stroller"
+  ],
+  "images_by_split": {
+    "train": 53588,
+    "selection": 113,
+    "heldout": 1128
+  },
+  "objects": {
+    "train/positive": 262902,
+    "train/ignore": 261415,
+    "train/excluded": 2358,
+    "selection/positive": 119,
+    "heldout/positive": 3316,
+    "heldout/excluded": 527
+  },
+  "supervision_images": {
+    "train/partial": 50585,
+    "train/complete": 1003,
+    "selection/complete": 51,
+    "selection/partial": 62,
+    "heldout/partial": 719,
+    "heldout/complete": 409,
+    "train/reviewed_negative": 2000
+  },
+  "class_objects": {
+    "person": {
+      "train/positive": 48504,
+      "train/ignore": 51682,
+      "selection/positive": 112
+    },
+    "dog": {
+      "train/positive": 7737,
+      "train/ignore": 14378
+    },
+    "deer": {
+      "train/positive": 11243,
+      "train/ignore": 17383
+    },
+    "bicycle": {
+      "train/positive": 10758,
+      "train/ignore": 14637
+    },
+    "car": {
+      "train/positive": 15516,
+      "train/ignore": 2212,
+      "heldout/positive": 2
+    },
+    "motorcycle": {
+      "train/positive": 10338,
+      "heldout/positive": 400,
+      "train/ignore": 17885
+    },
+    "bus": {
+      "train/positive": 9547,
+      "train/ignore": 2049
+    },
+    "truck": {
+      "train/positive": 9779,
+      "train/ignore": 2998,
+      "selection/positive": 1
+    },
+    "bollard": {
+      "train/positive": 47881,
+      "train/ignore": 19902,
+      "heldout/positive": 399
+    },
+    "box": {
+      "train/positive": 10547,
+      "heldout/positive": 522,
+      "train/ignore": 16466,
+      "selection/positive": 6
+    },
+    "concrete_barrier": {
+      "train/positive": 13247,
+      "heldout/positive": 600,
+      "train/ignore": 17693
+    },
+    "steel_barricade": {
+      "train/positive": 14463,
+      "heldout/positive": 201,
+      "train/ignore": 14490
+    },
+    "traffic_drum": {
+      "train/positive": 21697,
+      "train/ignore": 10395,
+      "heldout/positive": 795
+    },
+    "plastic_barrier": {
+      "train/positive": 12194,
+      "train/ignore": 22772,
+      "heldout/positive": 397
+    },
+    "traffic_cone": {
+      "train/positive": 7019,
+      "train/ignore": 12792
+    },
+    "stroller": {
+      "train/positive": 12432,
+      "train/ignore": 23681
+    }
+  },
+  "train_class_images": {
+    "person": 23019,
+    "car": 7517,
+    "traffic_cone": 6345,
+    "dog": 7281,
+    "deer": 10310,
+    "steel_barricade": 13010,
+    "box": 9754,
+    "traffic_drum": 6036,
+    "bollard": 6743,
+    "concrete_barrier": 11200,
+    "bus": 6244,
+    "plastic_barrier": 11197,
+    "truck": 4882,
+    "motorcycle": 9337,
+    "bicycle": 9530,
+    "stroller": 11260
+  },
+  "class_eval_images": {
+    "selection": {
+      "person": 112,
+      "truck": 1,
+      "box": 1
+    },
+    "heldout": {
+      "concrete_barrier": 400,
+      "box": 522,
+      "traffic_drum": 598,
+      "plastic_barrier": 200,
+      "motorcycle": 200,
+      "steel_barricade": 200,
+      "bollard": 200,
+      "car": 1
+    }
+  },
+  "view_objects": {
+    "unknown": {
+      "positive": 107729,
+      "ignore": 8548
+    },
+    "front": {
+      "ignore": 126270,
+      "positive": 93568
+    },
+    "left": {
+      "positive": 30288,
+      "ignore": 30039
+    },
+    "right": {
+      "positive": 34752,
+      "ignore": 96558
+    }
+  },
+  "source_objects": {
+    "roboflow:aiv5challenge/yeonsoo-sarang": {
+      "positive": 4121,
+      "ignore": 3
+    },
+    "roboflow:battery-detection/cone-traffic-tirxp": {
+      "positive": 756,
+      "ignore": 32
+    },
+    "roboflow:dh-mzmhr/animal-tohen": {
+      "positive": 74
+    },
+    "roboflow:hl-fma/hlfma_2": {
+      "positive": 6366
+    },
+    "roboflow:jjj-nx9di/katri_new_data-xkbev": {
+      "positive": 11298,
+      "ignore": 7
+    },
+    "roboflow:mino-qjf5p/vi2re": {
+      "positive": 3113,
+      "ignore": 2
+    },
+    "roboflow:parkminseo/final-ftuy2": {
+      "positive": 1798,
+      "ignore": 93
+    },
+    "roboflow:s-workspace-p9mvp/morai_obstacle": {
+      "positive": 112
+    },
+    "roboflow:selfcar/morai_test-t3i2r": {
+      "positive": 55483,
+      "ignore": 8410
+    },
+    "roboflow:tooth-decay-rnacu/morai_ai_mission-fhqkh": {
+      "positive": 1422
+    },
+    "roboflow:yolo-m5lvd/detection-bzetd": {
+      "positive": 1001
+    },
+    "roboflow:yuna-z15io/obstcle-mi0kq": {
+      "positive": 8
+    },
+    "roboflow:enzo-mdikr/my-first-project-eeree": {
+      "positive": 3314
+    },
+    "roboflow:hl-fma/hlfma_3": {
+      "positive": 18863,
+      "ignore": 1
+    },
+    "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel": {
+      "ignore": 928,
+      "positive": 1620
+    },
+    "capture:20260903_213829_kcity_comp_sample_sunny_sim11am_wheel": {
+      "ignore": 406,
+      "positive": 1097
+    },
+    "capture:20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel": {
+      "ignore": 821,
+      "positive": 1512
+    },
+    "capture:20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel": {
+      "ignore": 962,
+      "positive": 1912
+    },
+    "capture:20260903_225540_kcity_comp_sample_foggy_sim11am_wheel": {
+      "positive": 295,
+      "ignore": 119
+    },
+    "capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel": {
+      "positive": 7
+    },
+    "capture:20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel": {
+      "ignore": 296,
+      "positive": 1420
+    },
+    "capture:20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel": {
+      "positive": 14,
+      "ignore": 8
+    },
+    "capture:20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel": {
+      "positive": 42
+    },
+    "capture:20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel": {
+      "positive": 2
+    },
+    "capture:20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel": {
+      "positive": 49
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_001": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_003": {
+      "positive": 2
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_005": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_007": {
+      "positive": 2
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_010": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_011": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_015": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_017": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_027": {
+      "positive": 2
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_029": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_033": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_039": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_044": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_045": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_047": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_048": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_008": {
+      "positive": 1
+    },
+    "aim:/mnt/d/asmc_aim/dataset/tunnel_static_obstacle/tunnel_static_obstacle_lap3_20261008_230129:tunnel_static_obstacle_lap3_20261008_230129_lap_003": {
+      "positive": 2
+    },
+    "aim:/mnt/d/asmc_aim/dataset/tunnel_static_obstacle/tunnel_static_obstacle_lap5_20261008_231424:tunnel_static_obstacle_lap5_20261008_231424_lap_003": {
+      "positive": 2
+    },
+    "bag:20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel": {
+      "positive": 1
+    },
+    "bag:20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel": {
+      "positive": 1
+    },
+    "capture:route_pp_30_20261011T161630_349": {
+      "positive": 3134,
+      "ignore": 5963
+    },
+    "capture:route_pp_30_20261011T173228_873": {
+      "positive": 9451,
+      "ignore": 17734
+    },
+    "capture:route_pp_30_20261012T000801_713": {
+      "positive": 8631,
+      "ignore": 17110
+    },
+    "capture:route_pp_30_20261012T002633_929": {
+      "positive": 7948,
+      "ignore": 15009
+    },
+    "capture:route_pp_30_20261012T004938_383": {
+      "positive": 7838,
+      "ignore": 15159
+    },
+    "capture:route_pp_30_20261012T010508_040": {
+      "positive": 8702,
+      "ignore": 16787
+    },
+    "capture:route_pp_30_20261012T012837_666": {
+      "positive": 14732,
+      "ignore": 29060
+    },
+    "capture:route_pp_30_20261012T015240_422": {
+      "positive": 15897,
+      "ignore": 28922
+    },
+    "capture:route_pp_30_20261012T021730_277": {
+      "positive": 11945,
+      "ignore": 20852
+    },
+    "capture:route_pp_30_20261012T032742_843": {
+      "positive": 20699,
+      "ignore": 30546
+    },
+    "capture:route_pp_30_20261012T041158_084": {
+      "positive": 20056,
+      "ignore": 24640
+    },
+    "capture:route_pp_30_20261012T044315_300": {
+      "positive": 21579,
+      "ignore": 27545
+    }
+  },
+  "subtype_objects": {
+    "person": {
+      "positive": 23773,
+      "ignore": 574
+    },
+    "car": {
+      "positive": 15518,
+      "ignore": 2212
+    },
+    "traffic_cone": {
+      "positive": 1161,
+      "ignore": 147
+    },
+    "dog": {
+      "positive": 140,
+      "ignore": 1
+    },
+    "deer": {
+      "positive": 68
+    },
+    "steel_barricade": {
+      "positive": 538
+    },
+    "wooden_box": {
+      "positive": 1007,
+      "ignore": 88
+    },
+    "traffic_drum": {
+      "positive": 547,
+      "ignore": 76
+    },
+    "box": {
+      "positive": 73,
+      "ignore": 9
+    },
+    "pe_drum": {
+      "positive": 17497,
+      "ignore": 1109
+    },
+    "bollard": {
+      "positive": 43699,
+      "ignore": 7310
+    },
+    "concrete_barricade": {
+      "positive": 2623
+    },
+    "bus": {
+      "positive": 3881,
+      "ignore": 234
+    },
+    "concrete_barrier": {
+      "positive": 113
+    },
+    "pe_firewall": {
+      "positive": 803,
+      "ignore": 47
+    },
+    "cargo_box": {
+      "positive": 578
+    },
+    "plastic_barrier": {
+      "positive": 44
+    },
+    "traffic_barrel": {
+      "positive": 3
+    },
+    "truck": {
+      "positive": 2799,
+      "ignore": 279
+    },
+    "yellowbarrel": {
+      "positive": 26
+    },
+    "motorcycle": {
+      "positive": 597
+    },
+    "bicycle": {
+      "positive": 237,
+      "ignore": 2
+    },
+    "BabyStroller1": {
+      "positive": 8626,
+      "ignore": 16688
+    },
+    "PE_Firewall_Orange": {
+      "positive": 6065,
+      "ignore": 12516
+    },
+    "Color_Cone": {
+      "ignore": 6118,
+      "positive": 3041
+    },
+    "Steel_Barricade": {
+      "positive": 14126,
+      "ignore": 14490
+    },
+    "BabyStroller2": {
+      "ignore": 17939,
+      "positive": 8010
+    },
+    "Deer1": {
+      "ignore": 17383,
+      "positive": 11175
+    },
+    "CargoBox": {
+      "ignore": 6163,
+      "positive": 3571
+    },
+    "PE_Drum": {
+      "ignore": 4814,
+      "positive": 2298
+    },
+    "Scooter1": {
+      "ignore": 9592,
+      "positive": 5255
+    },
+    "BabyStroller3": {
+      "ignore": 15911,
+      "positive": 8602
+    },
+    "PE_Firewall_White": {
+      "ignore": 10209,
+      "positive": 5679
+    },
+    "Bicycle_mountain": {
+      "positive": 2303,
+      "ignore": 3727
+    },
+    "Bollard01": {
+      "ignore": 6572,
+      "positive": 2549
+    },
+    "Rubber_Cone": {
+      "ignore": 6527,
+      "positive": 2817
+    },
+    "SportBike": {
+      "ignore": 8626,
+      "positive": 3974
+    },
+    "Scooter2": {
+      "ignore": 7877,
+      "positive": 3357
+    },
+    "Concrete_Barricade02": {
+      "ignore": 6555,
+      "positive": 4128
+    },
+    "Bollard04": {
+      "ignore": 6020,
+      "positive": 2032
+    },
+    "concrete-barrier": {
+      "ignore": 5678,
+      "positive": 3759
+    },
+    "Concrete_Barricade01": {
+      "ignore": 5460,
+      "positive": 3224
+    },
+    "TrafficBarrel": {
+      "ignore": 4396,
+      "positive": 2121
+    },
+    "WoodBox": {
+      "ignore": 10206,
+      "positive": 5846
+    },
+    "Bicycle_city": {
+      "ignore": 2607,
+      "positive": 2404
+    },
+    "Bike3": {
+      "ignore": 4645,
+      "positive": 3317
+    },
+    "Sportbike_01": {
+      "positive": 3148,
+      "ignore": 4328
+    },
+    "Bike1": {
+      "ignore": 9148,
+      "positive": 4815
+    },
+    "Bike2": {
+      "ignore": 6221,
+      "positive": 4126
+    },
+    "Dog2": {
+      "ignore": 6493,
+      "positive": 3791
+    },
+    "Dog1": {
+      "ignore": 7884,
+      "positive": 3806
+    },
+    "2016_Hyundai_Universe": {
+      "positive": 5666,
+      "ignore": 1815
+    },
+    "2012_Hyundai_HD65": {
+      "positive": 1797,
+      "ignore": 899
+    },
+    "2013_Hyundai_Porter2": {
+      "positive": 1438,
+      "ignore": 556
+    },
+    "2013_Hyundai_Xcient(P520)": {
+      "positive": 1196,
+      "ignore": 508
+    },
+    "2014_Hyundai_Xcient(Mixer)": {
+      "positive": 1747,
+      "ignore": 542
+    },
+    "2013_Hyundai_Xcient(P540)": {
+      "ignore": 214,
+      "positive": 803
+    }
+  },
+  "balance": {
+    "images": 53588,
+    "exposures": 60816,
+    "class_image_frequency": {
+      "person": 23019,
+      "car": 7517,
+      "traffic_cone": 6345,
+      "dog": 7281,
+      "deer": 10310,
+      "steel_barricade": 13010,
+      "box": 9754,
+      "traffic_drum": 6036,
+      "bollard": 6743,
+      "concrete_barrier": 11200,
+      "bus": 6244,
+      "plastic_barrier": 11197,
+      "truck": 4882,
+      "motorcycle": 9337,
+      "bicycle": 9530,
+      "stroller": 11260
+    },
+    "class_exposures": {
+      "truck": 6773,
+      "bus": 8067,
+      "car": 8704,
+      "person": 25691,
+      "bollard": 8164,
+      "box": 11238,
+      "traffic_drum": 7617,
+      "motorcycle": 10868,
+      "steel_barricade": 14798,
+      "plastic_barrier": 12809,
+      "concrete_barrier": 13014,
+      "bicycle": 11214,
+      "deer": 11988,
+      "dog": 8868,
+      "stroller": 12560,
+      "traffic_cone": 7842
+    },
+    "maximum_repeats": 2,
+    "all_images_included": true,
+    "batch_group_collisions": 7,
+    "optimizer_alignment": 16,
+    "alignment_extra_images": 13,
+    "correlation_groups": 12599,
+    "independent_scene_count_claimed": false,
+    "order_sha256": "4bb0137e96dfd59fdb8ca6c862d6d6fdd1d156d3aa27232e53bb91829cf0f643"
+  },
+  "background_images": 2000,
+  "background_rejections": {},
+  "source_positive_stage_manifest_sha256": "6b93b0761c219672480caf1e3746e04ba85bc6609a8e5103e121e2d3ae30a725",
+  "original_source_train_images": 53411,
+  "training_performed": false,
+  "exclusion_reasons": {
+    "no_usable_positive_not_negative": 1823
+  },
+  "evaluation_splits_moved": false,
+  "original_files_changed": false,
+  "independent_scene_counts_claimed": false,
+  "whole_stack_acceptance": false
+}

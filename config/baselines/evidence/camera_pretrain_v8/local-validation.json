@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-12",
+  "scope": "preprocessing and CPU loss integration only",
+  "cpu_tests": {
+    "passed": 60,
+    "optimizer_updates": 0,
+    "gpu_inference": false,
+    "modules": [
+      "test_camera_pretrain",
+      "test_camera_pretrain_torch",
+      "test_camera_bbox_training",
+      "test_camera_bbox_regression",
+      "test_camera_bbox_pilot",
+      "test_capture_route_export",
+      "test_capture_gt_sizes"
+    ]
+  },
+  "actual_input_fixture": {
+    "shape": [
+      5,
+      3,
+      960,
+      960
+    ],
+    "positive_boxes": 4,
+    "ignore_boxes": 1,
+    "complete_flags": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ],
+    "whole_dataset_container_access": false
+  },
+  "checks": {
+    "perception_contract": "passed",
+    "perception_topic_policy": "passed",
+    "documentation_migration": "passed",
+    "git_diff_check": "passed",
+    "full_rgb_sha_and_export_reread": "passed",
+    "stock_yolo_cli_blocked": "passed",
+    "gallery_http_200": "passed",
+    "catalogue_http_200": "passed"
+  },
+  "hosted_ci": {
+    "status": "not_run_for_local_changes",
+    "last_reported_limitation": "GitHub billing/usage limit",
+    "not_substituted_by_local_tests": true
+  },
+  "container_full_loader_preflight": {
+    "status": "expected_failure_missing_AIM_mount",
+    "required_read_only_mount": "/mnt/d/asmc_aim/dataset",
+    "shared_container_mounts_changed": false
+  },
+  "training_performed": false,
+  "collection_performed": false,
+  "runtime_changed": false,
+  "prs_merged": false,
+  "notes": [
+    "Initial pixel-hash schema failure retained locally.",
+    "Initial Capture test staging lacked data_collection; rerun with dependency passed.",
+    "Synthetic box gradient fixture adjusted from exact GT prediction to nonzero box error."
+  ],
+  "implementation_shas": {
+    "tools/perception/camera_pretrain_policy.py": "4b854d28076a82559be56eb49f2de1d1ff2f560330cf375ee5e28a6b8fc9ce01",
+    "tools/perception/camera_pretrain_torch.py": "a579aaa7f5000e92d4875dfe232faef2275037bb2bd383cc208d6039018e730b",
+    "tools/perception/train_camera_bbox_pilot.py": "4f6a6e4c035e56b3dbd6773730d9099c6ba13949774e3d9cef7b9175dc362fec"
+  },
+  "pull_requests": {
+    "81": "OPEN/DRAFT/unmerged",
+    "82": "OPEN/DRAFT/unmerged"
+  }
+}

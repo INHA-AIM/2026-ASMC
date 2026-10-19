@@ -13,6 +13,7 @@ from pathlib import Path
 import platform
 import subprocess
 import time
+import statistics
 from copy import deepcopy
 
 
@@ -37,7 +38,8 @@ def common_epochs(seconds_per_epoch, budget=10800, margin=1.2, maximum=20):
 
 def validate_resume(record, current):
     if record.get('stage')=='smoke':raise ValueError('smoke checkpoint is not a full epoch')
-    for key in ('model_key','config_sha256','manifest_sha256','initial_weights_sha256','batch','epochs'):
+    for key in ('model_key','config_sha256','manifest_sha256','initial_weights_sha256','batch','epochs',
+                'pretrain_metadata_sha256','pretrain_implementation_sha256'):
         if record.get(key)!=current.get(key):raise ValueError('resume identity mismatch: '+key)
 
 
@@ -50,7 +52,21 @@ def accumulation_threshold(nbs,batch,start_epoch,batches_per_epoch,resume_index=
     return accumulate
 
 
+def next_epoch_fits(remaining, epoch_seconds, margin=1.2, reserve=600):
+    valid=[s for s in epoch_seconds if math.isfinite(s) and s>0]
+    return bool(valid) and remaining >= statistics.median(valid[-3:])*margin+reserve
+
+
 def run(args):
+    # Check before importing GPU packages or opening a training run. Legacy runs
+    # remain unchanged; v8 must never silently discard its supervision sidecars.
+    is_pretrain = (args.dataset/'pretrain.json').is_file()
+    if is_pretrain:
+        from camera_pretrain_policy import validate_dataset_contract, validate_source_paths
+        meta=validate_dataset_contract(args.dataset, ignore_aware=getattr(args, 'pretrain', False))
+        validate_source_paths(args.dataset,meta)
+    elif getattr(args, 'pretrain', False):
+        raise ValueError('--pretrain requires a verified pretrain dataset')
     import torch
     import ultralytics
     import yaml
@@ -65,6 +81,8 @@ def run(args):
         raise ValueError('pre-stage official AMP-check checkpoint; no in-run downloads')
 
     cfg=json.loads(args.config.read_text()); settings=cfg['training']
+    if is_pretrain and settings['nbs'] != 16:
+        raise ValueError('v8 epoch order is aligned to effective batch 16')
     if args.batch not in settings['batch_candidates'] or settings['nbs']%args.batch:
         raise ValueError('batch must preserve the common effective batch exactly')
     data=yaml.safe_load((args.dataset/'data.yaml').read_text());names=data['names']
@@ -73,6 +91,10 @@ def run(args):
     identity=dict(model_key=args.model,config_sha256=sha(args.config),
         manifest_sha256=sha(args.dataset/'manifest.jsonl'),initial_weights_sha256=sha(weights),
         batch=args.batch,epochs=args.epochs)
+    if is_pretrain:
+        identity['pretrain_metadata_sha256']=sha(args.dataset/'pretrain.json')
+        identity['pretrain_implementation_sha256']=hashlib.sha256(''.join(sha(Path(__file__).parent/f)
+            for f in ('camera_pretrain_policy.py','camera_pretrain_torch.py','train_camera_bbox_pilot.py')).encode()).hexdigest()
     args.output.mkdir(parents=True,exist_ok=True)
     state=args.output/'run.json'
     if state.exists() and not args.resume:raise ValueError('existing run requires explicit --resume')
@@ -125,6 +147,23 @@ def run(args):
             parameters=sum(p.numel() for p in t.model.parameters()),amp_enabled=t.amp,
             actual_task=t.args.task,actual_head=type(t.model.model[-1]).__name__,
             actual_args=vars(t.args),dataset_cache_sha256=None)
+        if is_pretrain:
+            from camera_pretrain_torch import wrap_criterion
+            original_criterion=getattr(t.model,'criterion',None) or t.model.init_criterion()
+            t.model.criterion = wrap_criterion(original_criterion)
+            record['ignore_aware_criterion'] = True
+            if hasattr(t.model.criterion,'updates'):
+                record['e2e_loss_schedule_at_start']={k:getattr(t.model.criterion,k)
+                    for k in ('updates','o2m','o2o')}
+                if t.model.criterion.updates != t.start_epoch:
+                    raise ValueError('E2E loss schedule differs from restored epoch')
+            record['spatial_background_version']=json.loads((args.dataset/'policy.json').read_text()).get('spatial_background_version',1)
+            record['pretrain_metadata_sha256'] = sha(args.dataset/'pretrain.json')
+            if args.resume:
+                saved=torch.load(args.resume,map_location='cpu')
+                if 'scheduler_state' not in saved:raise ValueError('missing resume scheduler state')
+                t.scheduler.load_state_dict(saved['scheduler_state'])
+                record['restored_scheduler_state']=t.scheduler.state_dict()
         steps=[float(s['step']) for s in t.optimizer.state.values() if 'step' in s]
         moment=next((s['exp_avg'] for s in t.optimizer.state.values() if 'exp_avg' in s),None)
         record['optimizer_at_start']=dict(state_slots=len(t.optimizer.state),
@@ -132,6 +171,12 @@ def run(args):
             first_moment_sha256=hashlib.sha256(moment.detach().cpu().float().numpy().tobytes()).hexdigest() if moment is not None else None,
             ema_updates=t.ema.updates,scaler_scale=t.scaler.get_scale(),
             head_fused=getattr(t.model.model[-1],'is_fused',None))
+        if args.resume and is_pretrain:
+            saved_steps=[float(s['step']) for s in saved['optimizer']['state'].values() if 'step' in s]
+            if steps!=saved_steps or t.ema.updates!=saved['updates']:
+                raise ValueError('optimizer step or EMA update state was not restored')
+            record['optimizer_ema_resume_verified']=True
+            del saved
         if len(t.train_loader)%(settings['nbs']//args.batch):
             raise ValueError('epoch must end on an optimizer boundary for complete-epoch resume')
         if not t.amp:raise RuntimeError('AMP silently disabled')
@@ -141,7 +186,10 @@ def run(args):
         save(state,record)
         if not args.smoke_batches and not args.resume:
             initial=args.output/'initial.pt'
-            torch.save(dict(model=deepcopy(t.model).cpu().half(),ema=None,
+            snapshot=deepcopy(t.model).cpu().half()
+            # Training-only criterion must not be required to load deployment weights.
+            if hasattr(snapshot,'criterion'):snapshot.criterion=None
+            torch.save(dict(model=snapshot,ema=None,
                 train_args=vars(t.args),epoch=-1,version=ultralytics.__version__),initial)
             record['before_training_checkpoint']=dict(path=str(initial),sha256=sha(initial))
             save(state,record)
@@ -156,7 +204,7 @@ def run(args):
         batches.append(duration)
         order.update(('\n'.join(map(str,t.batch.get('im_file',[]))) if hasattr(t,'batch') else '').encode())
         if args.smoke_batches and len(batches)>=args.smoke_batches:t.stop=True
-        if time.monotonic()-started>args.max_seconds:
+        if time.monotonic()-started>args.max_seconds and not getattr(args,'epoch_budget',False):
             record['budget_exceeded']=True;t.stop=True
         if len(batches)%25==0 or t.stop:
             record.update(completed_batches=len(batches),last_loss=losses,
@@ -173,16 +221,70 @@ def run(args):
         save(state,record)
         if args.stop_after_epoch and t.epoch+1>=args.stop_after_epoch:
             record['epoch_boundary_pause']=True;t.stop=True;save(state,record)
+        if getattr(args,'epoch_budget',False) and not next_epoch_fits(
+                args.max_seconds-(time.monotonic()-started),epoch_times,
+                settings.get('epoch_margin',1.2),getattr(args,'reserve_seconds',600)):
+            record['epoch_boundary_pause']=True
+            record['budget_epoch_pause']=True
+            t.stop=True;save(state,record)
+    def epoch_start(t):
+        if is_pretrain:
+            t.train_loader.sampler.set_epoch(t.epoch)
+            record['epoch_order_report'] = t.train_loader.sampler.report
+            save(state,record)
     model=YOLO(str(args.resume or weights)) if args.model=='yolo26l' else (
         YOLOE(str(args.resume)) if args.resume else YOLOE('yoloe-26l.yaml').load(str(weights)))
     for event,cb in [('on_train_start',train_start),('on_train_batch_start',batch_start),
-                     ('on_train_batch_end',batch_end),('on_fit_epoch_end',epoch_end)]:
+                     ('on_train_batch_end',batch_end),('on_fit_epoch_end',epoch_end),
+                     ('on_train_epoch_start',epoch_start)]:
         model.add_callback(event,cb)
     try:
         # nbs controls accumulation/weight decay. Warmup accumulation is fixed by
         # preprocess_batch, after Ultralytics' LR warmup interpolation.
         Base=TextBBoxTrainer if args.model=='yoloe26l' else DetectionTrainer
         class PilotTrainer(Base):
+            def get_model(self,*a,**kw):
+                if args.resume and is_pretrain:
+                    saved=torch.load(args.resume,map_location='cpu')
+                    if saved.get('training_model') is None:
+                        raise ValueError('main resume requires live training model, not EMA-only weights')
+                    return saved['training_model'].float()
+                return super().get_model(*a,**kw)
+            def optimizer_step(self):
+                # Check scaled gradients before the pinned implementation clips,
+                # updates the scaler/EMA and clears gradients.
+                grads=[p.grad for p in self.model.parameters() if p.grad is not None]
+                finite=bool(torch.stack([torch.isfinite(g).all() for g in grads]).all()) if grads else False
+                record['gradient_checks']=record.get('gradient_checks',0)+1
+                if not finite:
+                    record['amp_nonfinite_gradient_steps']=record.get('amp_nonfinite_gradient_steps',0)+1
+                scale=self.scaler.get_scale()
+                super().optimizer_step()
+                if self.scaler.get_scale()<scale:
+                    record['amp_skipped_steps']=record.get('amp_skipped_steps',0)+1
+                if finite and grads:
+                    record['finite_gradient_steps']=record.get('finite_gradient_steps',0)+1
+            def save_model(self):
+                result=super().save_model()
+                if is_pretrain:
+                    saved=torch.load(self.last,map_location='cpu')
+                    live=deepcopy(self.model).cpu().float()
+                    if hasattr(live,'criterion'):live.criterion=None
+                    saved['training_model']=live
+                    saved['scheduler_state']=self.scheduler.state_dict()
+                    for destination in [self.last,self.wdir/f'epoch{self.epoch}.pt']:
+                        torch.save(saved,destination)
+                return result
+            def get_dataset(self):
+                if not is_pretrain:return super().get_dataset()
+                from camera_pretrain_policy import pretrain_data_dict
+                return pretrain_data_dict(args.dataset)
+            def get_dataloader(self,dataset_path,batch_size=16,rank=0,mode='train'):
+                if not is_pretrain:
+                    return super().get_dataloader(dataset_path,batch_size,rank,mode)
+                if rank not in (-1,0):raise ValueError('v8 loader is validated for single GPU only')
+                from camera_pretrain_torch import build_pretrain_loader
+                return build_pretrain_loader(args.dataset,mode,batch_size,self.args.workers)
             def validate(self):
                 # Partial labels must not create false FP rankings. External
                 # evaluator separates complete GT from recall-only annotations.
@@ -205,6 +307,10 @@ def run(args):
             close_mosaic=0,mosaic=0.5,mixup=0,copy_paste=0,degrees=0,translate=.1,scale=.5,
             fliplr=.5,flipud=0,hsv_h=.015,hsv_s=.7,hsv_v=.4,
             warmup_epochs=1.0,warmup_bias_lr=0.01,verbose=False)
+        if is_pretrain:
+            policy=json.loads((args.dataset/'policy.json').read_text())
+            if settings['imgsz']!=policy['imgsz']:raise ValueError('training resolution differs from supervision policy')
+            kwargs.update(policy['augmentation'],rect=False,multi_scale=0)
         if args.resume:kwargs['resume']=str(args.resume)
         model.train(trainer=PilotTrainer,**kwargs)
         settled=batches[20:] or batches
@@ -236,4 +342,7 @@ if __name__=='__main__':
     p.add_argument('--smoke-batches',type=int,default=0);p.add_argument('--max-seconds',type=float,default=10800)
     p.add_argument('--resume',type=Path)
     p.add_argument('--stop-after-epoch',type=int,help='explicit epoch-boundary pause for recovery testing')
+    p.add_argument('--pretrain',action='store_true',help='require the v8 ignore-aware loader and criterion')
+    p.add_argument('--epoch-budget',action='store_true',help='pause at a complete epoch; never truncate an epoch for time budget')
+    p.add_argument('--reserve-seconds',type=float,default=600,help='time reserved for evaluation/checkpoint saving')
     print(json.dumps(run(p.parse_args()),ensure_ascii=False,indent=2))

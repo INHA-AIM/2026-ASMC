@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "images": 41666,
+  "failures": [],
+  "checks": [
+    "all source RGB SHA and decoded pixel hashes during preparation",
+    "actual YOLO labels and supervision sidecars",
+    "fixed16 IDs and coordinates",
+    "source links",
+    "frozen split and lineage separation",
+    "immutable parents"
+  ],
+  "near_duplicate_scene_independence_claimed": false,
+  "rgb_sha_rechecked": false,
+  "training_performed": false
+}

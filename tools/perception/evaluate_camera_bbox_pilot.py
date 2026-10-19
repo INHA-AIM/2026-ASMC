@@ -119,6 +119,20 @@ def summarize(rows,predictions,confidence,level='class',pixel_scope=False):
             'vehicle 24/12px, other 16/8px' if pixel_scope else 'all original GT'))
 
 
+def evaluation_inputs(dataset, selection_only=False, skip_temporal=False):
+    """Keep intermediate checkpoint selection separate from final heldout use."""
+    rows=[r for r in read_jsonl(dataset/'manifest.jsonl')
+          if r['split'] in (('selection',) if selection_only else ('selection','heldout'))]
+    if (dataset/'pretrain.json').exists():
+        from camera_pretrain_policy import validate_dataset_contract,resolve_data_path
+        meta=validate_dataset_contract(dataset,ignore_aware=True)
+        rows=[dict(r,image=str(resolve_data_path(r['image'],dataset,meta['original_data_root']))) for r in rows]
+    temporal_path=dataset/'temporal-probe.jsonl'
+    temporal=list(read_jsonl(temporal_path)) if temporal_path.exists() and not (
+        skip_temporal or selection_only) else []
+    return rows,temporal
+
+
 def infer(args):
     started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
     import cv2
@@ -130,13 +144,16 @@ def infer(args):
     repo=Path(__file__).resolve().parents[2]
     cfg=json.loads(args.config.read_text())
     names=list(json.loads((args.dataset/'summary.json').read_text())['classes'])
-    rows=[r for r in read_jsonl(args.dataset/'manifest.jsonl') if r['split'] in ('selection','heldout')]
+    rows,temporal=evaluation_inputs(args.dataset,getattr(args,'selection_only',False),
+                                   getattr(args,'skip_temporal',False))
     temporal_path=args.dataset/'temporal-probe.jsonl'
-    temporal=list(read_jsonl(temporal_path)) if temporal_path.exists() and not getattr(args,'skip_temporal',False) else []
     inference_rows=list({r['id']:r for r in rows+temporal}.values())
     args.output.mkdir(parents=True,exist_ok=False)
     masks={view:HoodMask.load(True,repo/'src/asmc_camera/config/camera'/file) for view,file in
         [('front','yolo_hood_mask_v1.yaml'),('left','yolo_ego_mask_left_v1.yaml'),('right','yolo_ego_mask_right_v1.yaml')]}
+    for row in rows:
+        if row.get('ego_mask_applied') and row['mask_config_sha256']!=masks[row['view']].config_sha256:
+            raise ValueError('evaluation Ego mask differs from frozen dataset')
     actual_weights,baseline_kind=evaluation_weights(args.weights,cfg,args.baseline_policy)
     model=YOLO(str(actual_weights),task='detect')
     if 'Segment' in type(model.model.model[-1]).__name__:raise ValueError('not detection-only checkpoint')
@@ -213,6 +230,7 @@ def infer(args):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--selection-only',action='store_true',help='intermediate checkpoint evaluation; do not inspect heldout')
     p.add_argument('--config',required=True,type=Path);p.add_argument('--dataset',required=True,type=Path)
     p.add_argument('--weights',required=True,type=Path);p.add_argument('--output',required=True,type=Path)
     p.add_argument('--front-width',required=True,type=int,choices=[960,1280])
