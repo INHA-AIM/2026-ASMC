@@ -14,12 +14,9 @@ from data_collection import SCHEMA_VERSION
 
 
 def default_asmc_data_root():
-    if os.environ.get("ASMC_DATA"):
-        return os.path.expanduser(os.environ["ASMC_DATA"])
-    aim = os.environ.get("AIM_PROJECT")
-    if aim:
-        return os.path.join(os.path.expanduser(aim), "data")
-    return os.path.expanduser("~/projects/2026-ai-sw-mobility-competition/data")
+    from .storage_paths import default_data_root
+    return default_data_root()
+
 
 
 def _git_sha(cwd=None):
@@ -45,6 +42,10 @@ class DatasetWriter(object):
         self._manifest = None
         self._ego_fp = None
         self.asmc_cwd = asmc_cwd
+        from .storage_paths import validate_output
+        validate_output(self.data_root, "datasets", self.run_id)
+        if os.path.exists(self.root):
+            raise RuntimeError("Collection run already exists; choose a new run ID")
         self._prepare_dirs()
         self._write_meta()
         self._manifest = open(
@@ -56,7 +57,7 @@ class DatasetWriter(object):
             )
 
     def _prepare_dirs(self):
-        os.makedirs(self.root, exist_ok=True)
+        os.makedirs(self.root, exist_ok=False)
         for sub in (
             "sensors/cam_front",
             "sensors/cam_left",

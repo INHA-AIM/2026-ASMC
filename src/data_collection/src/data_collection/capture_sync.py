@@ -274,6 +274,8 @@ def sync_run(
     )
     frames, total_bytes = preflight_run(sensor_root, records, validate_png=validate_png, profile=profile)
     run_root = Path(dataset_root) / run_id
+    from .storage_paths import validate_bulk_output
+    validate_bulk_output(run_root)
     run_root.mkdir(parents=True, exist_ok=True)
 
     tasks = []

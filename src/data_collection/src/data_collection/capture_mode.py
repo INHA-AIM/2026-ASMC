@@ -41,14 +41,9 @@ def utc_now_iso():
 
 
 def default_capture_data_root():
-    if os.environ.get("ASMC_DATA"):
-        return os.path.expanduser(os.environ["ASMC_DATA"])
-    project = os.environ.get("AIM_PROJECT")
-    if project:
-        return os.path.join(os.path.expanduser(project), "data")
-    return os.path.expanduser(
-        "~/projects/2026-ai-sw-mobility-competition/data"
-    )
+    from .storage_paths import default_data_root
+    return default_data_root()
+
 
 
 class CaptureSchedule(object):
@@ -91,6 +86,8 @@ class CaptureRunWriter(object):
         self._successful_completed_ns = []
         self._rpc_latencies_ms = []
 
+        from .storage_paths import validate_output
+        validate_output(self.data_root, "capture_runs", self.run_id)
         os.makedirs(self.root, exist_ok=False)
         meta = dict(metadata or {})
         meta.update(
