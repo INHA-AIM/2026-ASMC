@@ -192,7 +192,7 @@ HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한�
 ### Perception training container
 
 ```bash
-./scripts/docker_perception_up.sh <build|up|down|rebuild>
+./scripts/docker_perception_up.sh <config|build|up|down|rebuild>
 ```
 
 `rebuild`는 no-cache build다. 이 컨테이너는 모델 학습과 학습 중 validation만 담당한다.

@@ -52,3 +52,19 @@ GT·gRPC는 개발용이고 competition profile의 Object/Semantic/Instance sock
 
 [인자 전체](../../docs/operations/launch-reference.md) · [데이터 준비](../../docs/operations/data-preparation.md) ·
 [데이터 계약](../../docs/contracts/dataset-labeling-split.md)
+
+## 저장 위치와 선택적 보호
+
+팀 기본값은 **호스트의 저장소와 나란한 `data/`**, 컨테이너의 `/data`입니다.
+다른 곳에 두면 호스트에서 `ASMC_DATA`를 지정합니다. 특정 드라이브·외부 데이터·개인 관리
+도구는 필수가 아닙니다. 기존 수집 launch의 명시적 출력 인자도 유지합니다.
+
+저장소 상위 `.storage/policy.json` 또는 `ASMC_DATA_LOCATIONS`의 `storage_contract`가
+있는 PC만 관리형 저장소 검사를 적용합니다. 해당 볼륨 미연결·다른 위치로의 출력·읽기 전용·
+설정한 최소 여유 공간 미달이면 새 쓰기를 거부하며 기존 노드를 종료하지 않습니다.
+정책 없는 PC에는 이 볼륨/여유 공간 제한을 강제하지 않습니다. 선택적
+`ASMC_STORAGE_DATA`는 물리 출력 루트이고 `ASMC_DATA`는 지도와 데이터의 병합 뷰일 수 있습니다.
+
+새 수집은 고유 run ID를 사용합니다. `DatasetWriter`도 기존 run의 meta/manifest를 덮어쓰지 않고
+ID 재사용을 거부합니다. `ASMC_STORAGE_UNMANAGED_OUTPUT=1`은 임시 단위시험 전용입니다.
+[공통 경로·로컬 정책·이관 주의](../../docs/operations/data-preparation.md#데이터-위치와-로컬-저장-정책)를 확인합니다.

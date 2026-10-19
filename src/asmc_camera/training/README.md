@@ -1,8 +1,12 @@
 # 카메라 학습 도구
 
 ROS live/bag 추론은 `asmc-ros-noetic`, 학습·validation은 격리 학습 환경에서 실행합니다.
-runtime package를 import했다고 학습이 시작되지는 않습니다. 현재 배포는 YOLO v11 E8와
-TwinLite Medium v6이며 이 문서의 과거 v1/v4 결과를 현재 모델로 적용하지 않습니다.
+runtime package를 import했다고 학습이 시작되지는 않습니다. 현재 모델은
+[배포 정본](../../../docs/operations/camera-deployment.md)을 따르며 이 문서의 과거 v1/v4 결과를 현재 모델로 적용하지 않습니다.
+
+`train_twinlite.py`/`train_twinlite_tiny.py`는 명시적 `--data-root`/출력 인자를 유지합니다.
+일반 팀 PC는 기존 `repo/artifacts` 출력이며, 선택적 관리형 저장 정책이 있는 PC만
+검증한 출력 볼륨을 사용합니다. [저장 위치 규칙](../../../docs/operations/data-preparation.md#데이터-위치와-로컬-저장-정책)을 확인합니다.
 
 | 경로 | 현재 역할 |
 |---|---|

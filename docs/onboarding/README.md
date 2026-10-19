@@ -35,6 +35,8 @@ git submodule update --init --recursive
 기준은 `beta_drive`의 pinned commit `45c6baf`이며, 핀 변경은 별도 PR과 호환 검증이 필요하다.
 
 환경변수는 선택 사항이다. 설정하지 않으면 스크립트가 저장소와 나란한 `data/`를 사용한다.
+특정 드라이브나 개인 `.storage` 설정은 필요 없다. 외장 저장소·추가 mount를 쓰는 PC만
+[데이터 위치와 로컬 정책](../operations/data-preparation.md#데이터-위치와-로컬-저장-정책)을 적용한다.
 
 ```bash
 export ASMC="<clone한-2026-ASMC-경로>"
