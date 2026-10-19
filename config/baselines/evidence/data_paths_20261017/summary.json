@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-17",
+  "base_commit": "c4edefcb4739f4b017784ba4af5ac620bf58042b",
+  "locations": {
+    "schema_version": 1,
+    "capture_directory_windows": "C:\\MoraiLauncher_Win\\MoraiLauncher_Win_Data\\SaveFile\\SensorData",
+    "capture_directory_wsl": "/mnt/c/MoraiLauncher_Win/MoraiLauncher_Win_Data/SaveFile/SensorData",
+    "capture_archive_wsl": "/mnt/e/morai_dataset/SensorData",
+    "aim_directory_wsl": "/mnt/d/morai dataset/asmc_aim",
+    "aim_legacy_directory_wsl": "/mnt/d/asmc_aim/dataset"
+  },
+  "user_confirmed_no_overwrite_during_merge": true,
+  "aim_before": {
+    "broken_train": 59,
+    "broken_val": 11,
+    "relocated_original_sha_matches": 70
+  },
+  "aim_repair": "Windows directory junction D:\\asmc_aim\\dataset -> D:\\morai dataset\\asmc_aim",
+  "host": [
+    {
+      "dataset": "../data/dataset_versions/camera_objects_bbox_v11-preflight-r4",
+      "samples": {
+        "train": 41345,
+        "val": 205,
+        "test": 116
+      },
+      "missing_count": 0,
+      "missing_examples": [],
+      "manifest_sha256": {
+        "manifest.jsonl": "9b42a32cb11e23324a5e1f13c114cc01d734cc5539ab0980293b6a9e2fb9d3ed"
+      }
+    },
+    {
+      "dataset": "../data/dataset_versions/twinlite_morai_v6_road_marking_actor_negative",
+      "samples": {
+        "train": 26001,
+        "val": 1404,
+        "test": 0
+      },
+      "missing_count": 0,
+      "missing_examples": [],
+      "manifest_sha256": {
+        "val.jsonl": "4add24d993fabacb4a99f9d36caaee7c7d4ffc7c391e33d4c5d087a4d64092d4",
+        "train.jsonl": "277f9161f39a0df0c99aaf9f23b07043b8d62af368bda1d425a5ea52c7ac8d85",
+        "test.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ],
+  "read_only_container": [
+    {
+      "dataset": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_v11-preflight-r4",
+      "samples": {
+        "train": 41345,
+        "val": 205,
+        "test": 116
+      },
+      "missing_count": 0,
+      "missing_examples": [],
+      "manifest_sha256": {
+        "manifest.jsonl": "9b42a32cb11e23324a5e1f13c114cc01d734cc5539ab0980293b6a9e2fb9d3ed"
+      }
+    },
+    {
+      "dataset": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/twinlite_morai_v6_road_marking_actor_negative",
+      "samples": {
+        "train": 26001,
+        "val": 1404,
+        "test": 0
+      },
+      "missing_count": 0,
+      "missing_examples": [],
+      "manifest_sha256": {
+        "val.jsonl": "4add24d993fabacb4a99f9d36caaee7c7d4ffc7c391e33d4c5d087a4d64092d4",
+        "train.jsonl": "277f9161f39a0df0c99aaf9f23b07043b8d62af368bda1d425a5ea52c7ac8d85",
+        "test.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ],
+  "checks": {
+    "data_collection_python_tests": 48,
+    "documentation_cli_profile_tests": 23,
+    "archived_native_capture_preflight_runs": 2,
+    "training_compose_parsed": true
+  },
+  "simulator_capture_executed": false,
+  "training_started": false,
+  "source_data_or_manifest_rewritten": false,
+  "source_sha256": {
+    "src/data_collection/config/data_locations.json": "72d6d1bfcfa082a60481150caf385737b8b993414b21c7435e01c654ba44ecfa",
+    "src/data_collection/src/data_collection/data_locations.py": "945862cd843a4d4be75805816de4e7501911955460ef9e6e0cddc6e3ef79e9a5",
+    "src/data_collection/src/data_collection/capture_grpc.py": "e256342c775f327843f4e71348b1d6edb410b47b07d31d24a81012099def89ba",
+    "src/data_collection/scripts/capture_mode_collector_node.py": "2c9bd791649c0393fa68d336f5b844989a9181bb1222092ad6c195df0f35b655",
+    "scripts/docker_perception_up.sh": "c795f2183efced9fb8894beeec1a8643fc5c37dd34f6e1d05803ab346310fdd7"
+  }
+}

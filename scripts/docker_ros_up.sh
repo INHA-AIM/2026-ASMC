@@ -8,13 +8,21 @@ COMPOSE_FILE="$REPO_ROOT/docker/ros-noetic/docker-compose.yaml"
 RTX50_COMPOSE_FILE="$REPO_ROOT/docker/ros-noetic/docker-compose.rtx50.yaml"
 CONTAINER="asmc-ros-noetic"
 
-export ASMC="${ASMC:-$REPO_ROOT}"
-export ASMC_DATA="${ASMC_DATA:-$(dirname "$REPO_ROOT")/data}"
-export TWINLITE_SOURCE="${TWINLITE_SOURCE:-$(dirname "$REPO_ROOT")/external/baselines/TwinLiteNetPlus}"
-mkdir -p "$ASMC_DATA"
+# Optional machine-local policy; ordinary clones still use ../data.
+source "$SCRIPT_DIR/lib/storage.sh"
+asmc_storage_load "$REPO_ROOT"
+asmc_storage_require_overlay "${ASMC_ROS_STORAGE_COMPOSE:-}"
+case "${1:-up}" in
+  up|rebuild|up-rtx50|rebuild-rtx50) asmc_storage_prepare_data "$REPO_ROOT" ;;
+esac
 
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
-COMPOSE_RTX50=(docker compose -f "$COMPOSE_FILE" -f "$RTX50_COMPOSE_FILE")
+COMPOSE_RTX50=(docker compose -f "$COMPOSE_FILE")
+if [[ -n "${ASMC_ROS_STORAGE_COMPOSE:-}" ]]; then
+  COMPOSE+=(-f "$ASMC_ROS_STORAGE_COMPOSE")
+  COMPOSE_RTX50+=(-f "$ASMC_ROS_STORAGE_COMPOSE")
+fi
+COMPOSE_RTX50+=(-f "$RTX50_COMPOSE_FILE")
 
 die() {
   echo "[FAIL] $*" >&2

@@ -15,6 +15,7 @@ Testing/
 
 # Docker local overrides
 .env
+/.storage/
 
 # Python
 __pycache__/

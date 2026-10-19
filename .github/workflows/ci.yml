@@ -35,6 +35,13 @@ jobs:
           test -d src/MORAI-ROS_morai_msgs/.git || test -f src/MORAI-ROS_morai_msgs/package.xml
           echo "morai_msgs present"
 
+      - name: Check portable data paths and optional storage profiles
+        run: |
+          PYTHONPATH=src/data_collection/src python3 -m unittest discover -s src/data_collection/test -p 'test_storage_paths.py'
+          PYTHONPATH=src/data_collection/src python3 -m unittest discover -s src/data_collection/test -p 'test_data_locations.py'
+          python3 -m unittest tools/audit/test_storage_launchers.py
+          python3 -m unittest tools/audit/test_data_location_preflight.py
+
       - name: Verify documentation migration
         run: python3 tools/audit/check_documentation_migration.py
       - name: Test documentation link and retention checks

@@ -25,6 +25,8 @@ from torch.utils.data import DataLoader
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PERCEPTION_SRC = REPO_ROOT / "src" / "asmc_camera" / "src"
 sys.path.insert(0, str(PERCEPTION_SRC))
+sys.path.insert(0, str(REPO_ROOT / "src" / "data_collection" / "src"))
+from data_collection.storage_paths import default_artifact_root, default_data_root, validate_bulk_output
 
 from asmc_camera.training.twinlite import (  # noqa: E402
     MaskedTwinLiteLoss,
@@ -48,7 +50,7 @@ def _default_run_name() -> str:
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-root", default=os.environ.get("ASMC_DATA", "/data"))
+    parser.add_argument("--data-root", default=default_data_root())
     parser.add_argument("--dataset-version", default="twinlite_morai_v1")
     parser.add_argument("--twinlite-root", default=os.environ.get("TWINLITE_ROOT"))
     parser.add_argument("--config", default="medium", choices=("nano", "small", "medium", "large"))
@@ -62,7 +64,7 @@ def parse_args():
     parser.add_argument("--run-name", default=_default_run_name())
     parser.add_argument(
         "--output-root",
-        default=str(REPO_ROOT / "artifacts/perception_eval/runs"),
+        default=str(default_artifact_root(REPO_ROOT) / "perception_eval/runs"),
     )
     parser.add_argument("--resume", help="Path to latest.pt from the same run")
     parser.add_argument(
@@ -479,7 +481,10 @@ def main():
     if device.type == "cuda":
         torch.backends.cudnn.benchmark = True
 
+    if not args.run_name or Path(args.run_name).name != args.run_name or args.run_name in (".", ".."):
+        raise ValueError("--run-name must be a single directory name")
     output_dir = Path(args.output_root).expanduser().resolve() / args.run_name
+    validate_bulk_output(output_dir)
     if output_dir.exists() and not args.resume:
         raise FileExistsError(
             f"output run already exists; choose a new --run-name: {output_dir}"

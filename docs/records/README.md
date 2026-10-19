@@ -15,6 +15,7 @@
 
 ## 긴 현행 문서에서 분리한 과거 근거
 
+- [2026-10-17 Large 학습 준비 조사](camera/2026-10-17-twinlite-large-training-preparation.md)
 - [Roboflow 확보·Teacher·v7 채택](camera/data-preparation-through-v7.md)
 - [인지 융합/BEV 후보와 단계별 실험](camera/perception-roadmap-through-pr85.md)
 - [통합·필드 배포의 이전 단계별 계획](repository/consolidation-roadmap-through-pr87.md)

@@ -16,6 +16,7 @@ import struct
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from data_collection.data_locations import resolve_sensor_root
 
 
 SYNC_SCHEMA_VERSION = "capture-sync-1.0.0"
@@ -147,6 +148,8 @@ def frame_sources(sensor_root, record, profile="legacy18"):
 
 def preflight_run(sensor_root, records, validate_png=True, profile="legacy18"):
     """Validate completeness, file sizes, and native camera dimensions."""
+    records = list(records)
+    sensor_root = resolve_sensor_root(sensor_root, records)
     frames = []
     total_bytes = 0
     errors = []
@@ -272,8 +275,11 @@ def sync_run(
     records, excluded_records = select_records(
         source_records, excluded_sequences=excluded_sequences
     )
+    sensor_root = resolve_sensor_root(sensor_root, records)
     frames, total_bytes = preflight_run(sensor_root, records, validate_png=validate_png, profile=profile)
     run_root = Path(dataset_root) / run_id
+    from .storage_paths import validate_bulk_output
+    validate_bulk_output(run_root)
     run_root.mkdir(parents=True, exist_ok=True)
 
     tasks = []

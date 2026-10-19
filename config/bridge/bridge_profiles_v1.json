@@ -94,7 +94,9 @@
       },
       "docker_entrypoint": {
         "path": "scripts/docker_ros_up.sh",
-        "sha256": "96b47f6260e7673167923c38adba35c32192356f93510a820088dd1a61317c78"
+        "sha256": "addb8b9f195d2612451f862868690b6528cb1d4a09951462d71df71fdd6b1392",
+        "previous_sha256": "96b47f6260e7673167923c38adba35c32192356f93510a820088dd1a61317c78",
+        "revision_reason": "20261019_opt_in_storage_policy_and_overlay_without_bridge_transport_or_topic_changes"
       },
       "topic_verifier": {
         "path": "scripts/verify_morai_topics.py",
