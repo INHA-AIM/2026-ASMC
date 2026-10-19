@@ -23,6 +23,8 @@ from torch.utils.data import DataLoader
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PERCEPTION_SRC = REPO_ROOT / "src" / "asmc_camera" / "src"
 sys.path.insert(0, str(PERCEPTION_SRC))
+sys.path.insert(0, str(REPO_ROOT / "src" / "data_collection" / "src"))
+from data_collection.storage_paths import default_artifact_root, default_data_root, validate_bulk_output
 
 from asmc_camera.training.twinlite import (  # noqa: E402
     MaskedTwinLiteLoss,
@@ -39,7 +41,7 @@ from asmc_camera.training.twinlite import (  # noqa: E402
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-root", default=os.environ.get("ASMC_DATA", "/data"))
+    parser.add_argument("--data-root", default=default_data_root())
     parser.add_argument("--dataset-version", default="twinlite_morai_v1")
     parser.add_argument("--split", default="train", choices=("train", "val"))
     parser.add_argument(
@@ -72,7 +74,7 @@ def parse_args():
     )
     parser.add_argument(
         "--output-dir",
-        default=str(REPO_ROOT / "artifacts/perception_eval/runs/twinlite_tiny_smoke"),
+        default=str(default_artifact_root(REPO_ROOT) / "perception_eval/runs/twinlite_tiny_smoke"),
     )
     parser.add_argument(
         "--device", default="cuda" if torch.cuda.is_available() else "cpu"
@@ -291,6 +293,7 @@ def _format_metrics(prefix, metrics, task_spec):
 
 def main():
     args = parse_args()
+    validate_bulk_output(args.output_dir)
     if args.max_samples <= 0 or args.epochs <= 0 or args.batch_size <= 0:
         raise ValueError("max-samples, epochs and batch-size must be positive")
     if args.num_workers < 0:
