@@ -1,0 +1,67 @@
+{
+  "complete_positive": {
+    "one2many": {
+      "foreground_anchors": 1,
+      "background_anchors": 15,
+      "background_gradient_l1": 48.000003814697266,
+      "foreground_gradient_l1": 3.200000286102295,
+      "first_anchor_gradient_l1": 3.200000286102295
+    },
+    "one2one": {
+      "foreground_anchors": 1,
+      "background_anchors": 15,
+      "background_gradient_l1": 12.000000953674316,
+      "foreground_gradient_l1": 0.8000000715255737,
+      "first_anchor_gradient_l1": 0.8000000715255737
+    }
+  },
+  "partial_positive": {
+    "one2many": {
+      "foreground_anchors": 1,
+      "background_anchors": 15,
+      "background_gradient_l1": 0.0,
+      "foreground_gradient_l1": 3.200000286102295,
+      "first_anchor_gradient_l1": 0.0
+    },
+    "one2one": {
+      "foreground_anchors": 1,
+      "background_anchors": 15,
+      "background_gradient_l1": 0.0,
+      "foreground_gradient_l1": 0.8000000715255737,
+      "first_anchor_gradient_l1": 0.0
+    }
+  },
+  "reviewed_negative": {
+    "one2many": {
+      "foreground_anchors": 0,
+      "background_anchors": 16,
+      "background_gradient_l1": 51.200008392333984,
+      "foreground_gradient_l1": 0.0,
+      "first_anchor_gradient_l1": 3.200000286102295
+    },
+    "one2one": {
+      "foreground_anchors": 0,
+      "background_anchors": 16,
+      "background_gradient_l1": 12.800002098083496,
+      "foreground_gradient_l1": 0.0,
+      "first_anchor_gradient_l1": 0.8000000715255737
+    }
+  },
+  "ignored_cell": {
+    "one2many": {
+      "foreground_anchors": 0,
+      "background_anchors": 16,
+      "background_gradient_l1": 48.000003814697266,
+      "foreground_gradient_l1": 0.0,
+      "first_anchor_gradient_l1": 0.0
+    },
+    "one2one": {
+      "foreground_anchors": 0,
+      "background_anchors": 16,
+      "background_gradient_l1": 12.000000953674316,
+      "foreground_gradient_l1": 0.0,
+      "first_anchor_gradient_l1": 0.0
+    }
+  },
+  "optimizer_updates": 0
+}

@@ -1,0 +1,72 @@
+{
+  "manifest_sha256": "3708a4854908a6fcfff1d1647210a50ff7dc0661b88405eac75804fffb9e6c37",
+  "counts": [
+    {
+      "source": "aim",
+      "supervision": "partial",
+      "images": 24
+    },
+    {
+      "source": "bag",
+      "supervision": "partial",
+      "images": 2
+    },
+    {
+      "source": "capture",
+      "supervision": "complete",
+      "images": 3
+    },
+    {
+      "source": "capture",
+      "supervision": "partial",
+      "images": 34441
+    },
+    {
+      "source": "capture",
+      "supervision": "reviewed_negative",
+      "images": 2000
+    },
+    {
+      "source": "roboflow",
+      "supervision": "complete",
+      "images": 1000
+    },
+    {
+      "source": "roboflow",
+      "supervision": "partial",
+      "images": 16118
+    }
+  ],
+  "partial_parent_annotation_complete": [
+    {
+      "source": "aim",
+      "annotation_complete": "True",
+      "images": 24
+    },
+    {
+      "source": "bag",
+      "annotation_complete": "True",
+      "images": 2
+    },
+    {
+      "source": "capture",
+      "annotation_complete": "False",
+      "images": 3767
+    },
+    {
+      "source": "capture",
+      "annotation_complete": "None",
+      "images": 30674
+    },
+    {
+      "source": "roboflow",
+      "annotation_complete": "False",
+      "images": 15848
+    },
+    {
+      "source": "roboflow",
+      "annotation_complete": "True",
+      "images": 270
+    }
+  ]
+}

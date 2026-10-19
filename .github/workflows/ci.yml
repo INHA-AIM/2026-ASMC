@@ -95,7 +95,9 @@ jobs:
           catkin_test_results --verbose build/test_results/asmc_bridge
 
       - name: Install CPU tensor runtime for preprocessing regression
-        run: python3 -m pip install --disable-pip-version-check --index-url https://download.pytorch.org/whl/cpu 'torch==2.1.2+cpu'
+        run: |
+          python3 -m pip install --disable-pip-version-check --index-url https://download.pytorch.org/whl/cpu 'torch==2.1.2+cpu' 'torchvision==0.16.2+cpu'
+          python3 -m pip install --disable-pip-version-check 'numpy<2' 'ultralytics==8.4.150'
 
       - name: Check camera object processing without a GPU
         run: |
@@ -135,6 +137,22 @@ jobs:
           python3 -m unittest discover -s tools/perception -p 'test_prepare_capture_training_data.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_bbox_pilot.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_bbox_training.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_pretrain.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_bbox_main.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_evaluation_inputs.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_capture_restoration.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_lr_branch.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_map_background.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_prediction_nms.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_preflight_revision.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_pretrain_torch.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_pretrain_v10.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_small_supervision.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_spatial_background.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_supervision_policy_review.py'
+          python3 -m unittest discover -s tools/perception -p 'test_camera_validation16.py'
+          python3 -m unittest discover -s tools/perception -p 'test_fixed_map_drums.py'
+          python3 -m unittest discover -s tools/perception -p 'test_mission16_evaluation.py'
           python3 -m unittest discover -s tools/perception -p 'test_rfdetr_candidate.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_label_changes.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_teacher_audit.py'

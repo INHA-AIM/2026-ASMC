@@ -1,0 +1,65 @@
+{
+  "schema_version": "camera-pretrain-1",
+  "seed": 20261011,
+  "models": {
+    "yolo26l": "models/camera_coco7_v1/yolo26l.pt"
+  },
+  "text_names": [
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "bus",
+    "truck",
+    "bollard",
+    "box",
+    "concrete barrier",
+    "steel barricade",
+    "traffic drum",
+    "plastic barrier",
+    "traffic cone",
+    "stroller"
+  ],
+  "training": {
+    "imgsz": 960,
+    "batch_candidates": [
+      4,
+      2,
+      1
+    ],
+    "nbs": 16,
+    "amp": true,
+    "optimizer": "AdamW",
+    "lr0": 0.001,
+    "weight_decay": 0.0005,
+    "freeze": null,
+    "epoch_margin": 1.2
+  },
+  "evaluation": {
+    "conf_control": 0.4,
+    "minimum_gt": 20,
+    "old_recall_drop_limit": 0.02
+  },
+  "main": {
+    "epochs": 40,
+    "budget_seconds": 86400,
+    "reserve_seconds": 600
+  },
+  "source_dataset": "camera_objects_bbox_v8-pretrain-r1",
+  "max_train_images": null,
+  "requires_ignore_aware_trainer": true,
+  "runtime_changes": false,
+  "validation16": {
+    "dataset": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_validation16_v1-r2",
+    "manifest_sha256": "d7e3440f18f8d1b0fe137aed89d3dd4214a67a7b2f4447b250769fb6cd64c4b6",
+    "role": "development_selection",
+    "preserved_regression_dataset": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-bbox-main-v8/run-20261012-r1/evaluation",
+    "headline_metric": "macro_f1_fixed16",
+    "small_sample_metrics_are_descriptive": true,
+    "confidence": 0.4,
+    "evaluate_before_resume": true,
+    "automatic_training_supervisor_switched": false
+  }
+}

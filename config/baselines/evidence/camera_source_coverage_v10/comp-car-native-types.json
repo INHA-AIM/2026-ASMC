@@ -1,0 +1,12 @@
+{
+  "counts": {
+    "Sedan": 1362,
+    "SUV": 384,
+    "Vehicle": 224,
+    "MPV": 73,
+    "Wagon": 93,
+    "unknown": 19
+  },
+  "unit": "positive annotations, not unique car models",
+  "exact_API_model_names_unavailable": true
+}

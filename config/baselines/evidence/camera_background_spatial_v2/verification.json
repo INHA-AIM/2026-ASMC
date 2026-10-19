@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "images": 54829,
+  "failures": [],
+  "checks": [
+    "all source RGB SHA and decoded pixel hashes during preparation",
+    "actual YOLO labels and supervision sidecars",
+    "fixed16 IDs and coordinates",
+    "source links",
+    "frozen split and lineage separation",
+    "immutable parents"
+  ],
+  "near_duplicate_scene_independence_claimed": false,
+  "full_audit_images": 54829,
+  "quarantined": 0,
+  "visual_every_image_claimed": false,
+  "all_available_synchronized_GT_rechecked": true,
+  "positive_boxes_changed": false,
+  "split_membership_changed": false
+}

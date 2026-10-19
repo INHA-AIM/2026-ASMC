@@ -1,0 +1,72 @@
+{
+  "schema_version": "camera-pretrain-1",
+  "seed": 20261011,
+  "models": {
+    "yolo26l": "models/camera_coco7_v1/yolo26l.pt"
+  },
+  "text_names": [
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "bus",
+    "truck",
+    "bollard",
+    "box",
+    "concrete barrier",
+    "steel barricade",
+    "traffic drum",
+    "plastic barrier",
+    "traffic cone",
+    "stroller"
+  ],
+  "training": {
+    "imgsz": 960,
+    "batch_candidates": [
+      4,
+      2,
+      1
+    ],
+    "nbs": 16,
+    "amp": true,
+    "optimizer": "AdamW",
+    "lr0": 0.001,
+    "weight_decay": 0.0005,
+    "freeze": null,
+    "epoch_margin": 1.2
+  },
+  "evaluation": {
+    "conf_control": 0.4,
+    "minimum_gt": 20,
+    "old_recall_drop_limit": 0.02,
+    "minimum_new_gt": 20,
+    "sample_warning": "Fixed v11 selection205: complete194/partial11; dog10,bus14,truck12 complete GT are small samples. Do not use heldout for checkpoint selection.",
+    "historical_diagnostics": "v9/v10 panels preserved separately; v10 saw47 new selection images. Restart from official pretrained.",
+    "interval_after_four": 2,
+    "existing_class_quality": {
+      "precision_drop_limit": 0.05,
+      "f1_drop_limit": 0.02
+    }
+  },
+  "main": {
+    "epochs": 40,
+    "budget_seconds": 86400,
+    "reserve_seconds": 600
+  },
+  "source_dataset": "camera_objects_bbox_v11-preflight-r4",
+  "max_train_images": null,
+  "requires_ignore_aware_trainer": true,
+  "runtime_changes": false,
+  "requires_spatial_background_trainer": 2,
+  "initialization_policy": "Original official pretrained only; do not resume v9/v10 checkpoints/optimizer. Dataset revision and classifier remap must be verified before training.",
+  "background_policy": "camera_pretrain_policy_v3",
+  "prepared_dataset_metadata_sha256": "54d46da76f15d74e3938f96dd2c578ec3bd4a076df985a562b125082e8a7abc6",
+  "preflight_notes": [
+    "Preparation only: no training started",
+    "All train41345 images per epoch; max2 repeats; no new source caps",
+    "Quality drop limits are development candidate-review limits, not automatic training-stop triggers",
+    "16-class IDs, RGB/GT geometry, mask, tiny4/64 and existing loss formula preserved"
+  ]
+}

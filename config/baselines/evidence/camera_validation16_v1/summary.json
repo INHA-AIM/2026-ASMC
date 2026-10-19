@@ -1,0 +1,322 @@
+{
+  "version": "camera_objects_bbox_validation16_v1-r2",
+  "images": 150,
+  "classes": {
+    "person": {
+      "images": 22,
+      "boxes": 22,
+      "sources": {
+        "roboflow:s-workspace-p9mvp/morai_obstacle": 9,
+        "capture:route_pp_30_20261011T151930_795": 9,
+        "aim:/mnt/d/asmc_aim/dataset/tunnel_static_obstacle/tunnel_static_obstacle_lap30_20261009_050119:tunnel_static_obstacle_lap30_20261009_050119_lap_022": 4
+      },
+      "scenes": 3,
+      "weather": {
+        "visual_clear": 9,
+        "SUNNY": 9,
+        "FOGGY": 4
+      },
+      "views": {
+        "unknown": 9,
+        "front": 7,
+        "left": 6
+      }
+    },
+    "dog": {
+      "images": 12,
+      "boxes": 12,
+      "sources": {
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_041": 1,
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_053": 2,
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_023": 2,
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_057": 1,
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_093": 2,
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_050": 1,
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_018": 2,
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_021": 1
+      },
+      "scenes": 8,
+      "weather": {
+        "SUNNY": 9,
+        "FOGGY": 3
+      },
+      "views": {
+        "front": 12
+      }
+    },
+    "deer": {
+      "images": 12,
+      "boxes": 12,
+      "sources": {
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_005": 4,
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_044": 6,
+        "aim:/mnt/d/asmc_aim/dataset/dynamic_obstacle/dynamic_obstacle_lap100_20260922_231513:dynamic_obstacle_lap100_20260922_231513_lap_060": 2
+      },
+      "scenes": 3,
+      "weather": {
+        "SUNNY": 4,
+        "FOGGY": 8
+      },
+      "views": {
+        "front": 10,
+        "right": 1,
+        "left": 1
+      }
+    },
+    "bicycle": {
+      "images": 12,
+      "boxes": 12,
+      "sources": {
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_019": 3,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_030": 2,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_013": 3,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_004": 2,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_002": 1,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_025": 1
+      },
+      "scenes": 6,
+      "weather": {
+        "SUNNY": 7,
+        "FOGGY": 5
+      },
+      "views": {
+        "front": 8,
+        "left": 4
+      }
+    },
+    "car": {
+      "images": 24,
+      "boxes": 44,
+      "sources": {
+        "capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel": 15,
+        "capture:20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel": 5,
+        "capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel": 4
+      },
+      "scenes": 3,
+      "weather": {
+        "FOGGY": 19,
+        "SUNNY": 5
+      },
+      "views": {
+        "front": 22,
+        "right": 2
+      }
+    },
+    "motorcycle": {
+      "images": 13,
+      "boxes": 23,
+      "sources": {
+        "roboflow:enzo-mdikr/my-first-project-eeree": 10,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_021": 1,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_008": 1,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_036": 1
+      },
+      "scenes": 4,
+      "weather": {
+        "visual_fog": 7,
+        "visual_clear": 3,
+        "SUNNY": 1,
+        "FOGGY": 2
+      },
+      "views": {
+        "unknown": 10,
+        "front": 3
+      }
+    },
+    "bus": {
+      "images": 11,
+      "boxes": 15,
+      "sources": {
+        "capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel": 11
+      },
+      "scenes": 1,
+      "weather": {
+        "FOGGY": 11
+      },
+      "views": {
+        "front": 8,
+        "right": 3
+      }
+    },
+    "truck": {
+      "images": 12,
+      "boxes": 14,
+      "sources": {
+        "capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel": 6,
+        "capture:20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel": 6
+      },
+      "scenes": 2,
+      "weather": {
+        "FOGGY": 12
+      },
+      "views": {
+        "front": 9,
+        "left": 3
+      }
+    },
+    "bollard": {
+      "images": 8,
+      "boxes": 16,
+      "sources": {
+        "roboflow:enzo-mdikr/my-first-project-eeree": 8
+      },
+      "scenes": 1,
+      "weather": {
+        "visual_fog": 4,
+        "visual_clear": 4
+      },
+      "views": {
+        "unknown": 8
+      }
+    },
+    "box": {
+      "images": 18,
+      "boxes": 50,
+      "sources": {
+        "roboflow:enzo-mdikr/my-first-project-eeree": 10,
+        "capture:20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel": 6,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_023": 1,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_042": 1
+      },
+      "scenes": 4,
+      "weather": {
+        "visual_fog": 7,
+        "visual_clear": 3,
+        "FOGGY": 7,
+        "SUNNY": 1
+      },
+      "views": {
+        "unknown": 10,
+        "front": 4,
+        "left": 4
+      }
+    },
+    "concrete_barrier": {
+      "images": 11,
+      "boxes": 14,
+      "sources": {
+        "roboflow:enzo-mdikr/my-first-project-eeree": 10,
+        "capture:route_pp_30_20261011T151930_795": 1
+      },
+      "scenes": 2,
+      "weather": {
+        "visual_fog": 7,
+        "visual_clear": 3,
+        "SUNNY": 1
+      },
+      "views": {
+        "unknown": 10,
+        "front": 1
+      }
+    },
+    "steel_barricade": {
+      "images": 13,
+      "boxes": 13,
+      "sources": {
+        "roboflow:enzo-mdikr/my-first-project-eeree": 10,
+        "aim:/mnt/d/asmc_aim/dataset/static_010101:test_static_v5_lap_035": 1,
+        "capture:route_pp_30_20261011T151930_795": 2
+      },
+      "scenes": 3,
+      "weather": {
+        "visual_fog": 7,
+        "visual_clear": 3,
+        "SUNNY": 3
+      },
+      "views": {
+        "unknown": 10,
+        "front": 3
+      }
+    },
+    "traffic_drum": {
+      "images": 25,
+      "boxes": 33,
+      "sources": {
+        "roboflow:enzo-mdikr/my-first-project-eeree": 25
+      },
+      "scenes": 1,
+      "weather": {
+        "visual_clear": 10,
+        "visual_fog": 15
+      },
+      "views": {
+        "unknown": 25
+      }
+    },
+    "plastic_barrier": {
+      "images": 9,
+      "boxes": 17,
+      "sources": {
+        "roboflow:enzo-mdikr/my-first-project-eeree": 8,
+        "capture:route_pp_30_20261011T151930_795": 1
+      },
+      "scenes": 2,
+      "weather": {
+        "visual_clear": 4,
+        "visual_fog": 4,
+        "SUNNY": 1
+      },
+      "views": {
+        "unknown": 8,
+        "front": 1
+      }
+    },
+    "traffic_cone": {
+      "images": 12,
+      "boxes": 12,
+      "sources": {
+        "capture:route_pp_30_20261011T151930_795": 12
+      },
+      "scenes": 1,
+      "weather": {
+        "SUNNY": 12
+      },
+      "views": {
+        "front": 8,
+        "right": 4
+      }
+    },
+    "stroller": {
+      "images": 13,
+      "boxes": 13,
+      "sources": {
+        "capture:route_pp_30_20261011T151930_795": 9,
+        "aim:/mnt/d/asmc_aim/dataset/tunnel_static_obstacle/tunnel_static_obstacle_lap30_20261009_050119:tunnel_static_obstacle_lap30_20261009_050119_lap_022": 4
+      },
+      "scenes": 2,
+      "weather": {
+        "SUNNY": 9,
+        "FOGGY": 4
+      },
+      "views": {
+        "front": 7,
+        "left": 6
+      }
+    }
+  },
+  "positives": 322,
+  "ignores": 33,
+  "weather": {
+    "visual_clear": 23,
+    "visual_fog": 22,
+    "SUNNY": 53,
+    "FOGGY": 52
+  },
+  "sources": {
+    "roboflow": 45,
+    "aim": 46,
+    "capture": 59
+  },
+  "train_images_denied": 53588,
+  "train_manifest_sha256": "3708a4854908a6fcfff1d1647210a50ff7dc0661b88405eac75804fffb9e6c37",
+  "review_manifest_sha256": "4e13182c9251b6a85b7af63d41eca6e93759db5afdbee8e4fefdf03c7bd46220",
+  "manifest_sha256": "d7e3440f18f8d1b0fe137aed89d3dd4214a67a7b2f4447b250769fb6cd64c4b6",
+  "all16_present": true,
+  "full_coverage_sufficient": false,
+  "limitations": [
+    "Development validation, not an unseen heldout test.",
+    "Image count does not imply independent scene count; per-class source/weather shortages remain.",
+    "AIM dog/deer/bicycle discovery used old teacher proposals; not an unbiased recall benchmark.",
+    "Exact/pixel/source/run/group checks do not prove absence of every unknown cross-project scene copy."
+  ]
+}

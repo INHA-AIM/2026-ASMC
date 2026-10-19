@@ -1,0 +1,696 @@
+{
+  "artifact_directory": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-supervision-policy-review-20261013-r2",
+  "active_training_changed": false,
+  "checks": {
+    "active_dataset_manifest_unchanged": true,
+    "active_validation_manifest_unchanged": true,
+    "new_split_id_file_pixel_group_cross_field_overlap": 0,
+    "serialized_yolo_label_files": 2178,
+    "serialized_positive_boxes": 6063,
+    "fixed16_class_order": [
+      "person",
+      "dog",
+      "deer",
+      "bicycle",
+      "car",
+      "motorcycle",
+      "bus",
+      "truck",
+      "bollard",
+      "box",
+      "concrete_barrier",
+      "steel_barricade",
+      "traffic_drum",
+      "plastic_barrier",
+      "traffic_cone",
+      "stroller"
+    ],
+    "cpu_tests_passed": 11,
+    "optimizer_updates_performed": 0,
+    "gpu_inference_performed": false
+  },
+  "source_shas": {
+    "tools/perception/review_camera_supervision_policy.py": "34cbe68d2413a7639657cd5a706c21e2142a21264279078f6b1eab5d88c251e7",
+    "tools/perception/test_camera_supervision_policy_review.py": "0e437817a1178efd99286c2baa04a87f749973e27a4ebe2c3d6b5b624c1aa10c",
+    "tools/perception/analyze_camera_small_supervision.py": "3b0e4d8c30f6fed7b5ee31d88a978ff1d063b3f5b629272a27edead92852beae",
+    "tools/perception/camera_pretrain_policy.py": "4b854d28076a82559be56eb49f2de1d1ff2f560330cf375ee5e28a6b8fc9ce01",
+    "tools/perception/prepare_camera_spatial_background.py": "038c66a94e9b0510f32237d078d95fd1feb1d1eeee10d152c846ad115a3dbd71",
+    "tools/perception/prepare_camera_pretrain.py": "e56e896bd14f5b9f59d62f4d3aade12ded4b5d76a7f6bdcf81fbef95642e6b3c",
+    "tools/perception/evaluate_camera_bbox_pilot.py": "049da5ac6f92ea2f305c37e352c17a936e6cbbcac2947e72211dc1abe8bf712f",
+    "tools/perception/capture_size_scope.py": "552ba8e37e3b2cff5c6ac8c435ad285080eadd8172d34899a75db9ccdc0e1c20"
+  },
+  "size_impact": [
+    {
+      "scope": "all",
+      "band": "0-20m",
+      "positive": 31005,
+      "removed": 255
+    },
+    {
+      "scope": "all",
+      "band": "20-40m",
+      "positive": 32962,
+      "removed": 3938
+    },
+    {
+      "scope": "all",
+      "band": "40-60m",
+      "positive": 25525,
+      "removed": 9260
+    },
+    {
+      "scope": "all",
+      "band": "60m+",
+      "positive": 57986,
+      "removed": 42555
+    },
+    {
+      "scope": "all",
+      "band": "unknown",
+      "positive": 115424,
+      "removed": 27001
+    },
+    {
+      "scope": "class:bicycle",
+      "band": "0-20m",
+      "positive": 2279,
+      "removed": 5
+    },
+    {
+      "scope": "class:bicycle",
+      "band": "20-40m",
+      "positive": 2503,
+      "removed": 211
+    },
+    {
+      "scope": "class:bicycle",
+      "band": "40-60m",
+      "positive": 2024,
+      "removed": 666
+    },
+    {
+      "scope": "class:bicycle",
+      "band": "60m+",
+      "positive": 3680,
+      "removed": 2857
+    },
+    {
+      "scope": "class:bicycle",
+      "band": "unknown",
+      "positive": 272,
+      "removed": 21
+    },
+    {
+      "scope": "class:bollard",
+      "band": "0-20m",
+      "positive": 1614,
+      "removed": 27
+    },
+    {
+      "scope": "class:bollard",
+      "band": "20-40m",
+      "positive": 1566,
+      "removed": 418
+    },
+    {
+      "scope": "class:bollard",
+      "band": "40-60m",
+      "positive": 1021,
+      "removed": 984
+    },
+    {
+      "scope": "class:bollard",
+      "band": "60m+",
+      "positive": 327,
+      "removed": 327
+    },
+    {
+      "scope": "class:bollard",
+      "band": "unknown",
+      "positive": 43353,
+      "removed": 15728
+    },
+    {
+      "scope": "class:box",
+      "band": "0-20m",
+      "positive": 1910,
+      "removed": 11
+    },
+    {
+      "scope": "class:box",
+      "band": "20-40m",
+      "positive": 2044,
+      "removed": 320
+    },
+    {
+      "scope": "class:box",
+      "band": "40-60m",
+      "positive": 1745,
+      "removed": 675
+    },
+    {
+      "scope": "class:box",
+      "band": "60m+",
+      "positive": 3663,
+      "removed": 2897
+    },
+    {
+      "scope": "class:box",
+      "band": "unknown",
+      "positive": 1185,
+      "removed": 262
+    },
+    {
+      "scope": "class:bus",
+      "band": "0-20m",
+      "positive": 290,
+      "removed": 0
+    },
+    {
+      "scope": "class:bus",
+      "band": "20-40m",
+      "positive": 532,
+      "removed": 4
+    },
+    {
+      "scope": "class:bus",
+      "band": "40-60m",
+      "positive": 486,
+      "removed": 0
+    },
+    {
+      "scope": "class:bus",
+      "band": "60m+",
+      "positive": 4358,
+      "removed": 1678
+    },
+    {
+      "scope": "class:bus",
+      "band": "unknown",
+      "positive": 3881,
+      "removed": 237
+    },
+    {
+      "scope": "class:car",
+      "band": "unknown",
+      "positive": 15516,
+      "removed": 1688
+    },
+    {
+      "scope": "class:concrete_barrier",
+      "band": "0-20m",
+      "positive": 2009,
+      "removed": 8
+    },
+    {
+      "scope": "class:concrete_barrier",
+      "band": "20-40m",
+      "positive": 1860,
+      "removed": 91
+    },
+    {
+      "scope": "class:concrete_barrier",
+      "band": "40-60m",
+      "positive": 1728,
+      "removed": 264
+    },
+    {
+      "scope": "class:concrete_barrier",
+      "band": "60m+",
+      "positive": 5300,
+      "removed": 4265
+    },
+    {
+      "scope": "class:concrete_barrier",
+      "band": "unknown",
+      "positive": 2350,
+      "removed": 88
+    },
+    {
+      "scope": "class:deer",
+      "band": "0-20m",
+      "positive": 1993,
+      "removed": 5
+    },
+    {
+      "scope": "class:deer",
+      "band": "20-40m",
+      "positive": 2278,
+      "removed": 117
+    },
+    {
+      "scope": "class:deer",
+      "band": "40-60m",
+      "positive": 1701,
+      "removed": 277
+    },
+    {
+      "scope": "class:deer",
+      "band": "60m+",
+      "positive": 5014,
+      "removed": 3872
+    },
+    {
+      "scope": "class:deer",
+      "band": "unknown",
+      "positive": 257,
+      "removed": 87
+    },
+    {
+      "scope": "class:dog",
+      "band": "0-20m",
+      "positive": 2728,
+      "removed": 63
+    },
+    {
+      "scope": "class:dog",
+      "band": "20-40m",
+      "positive": 2585,
+      "removed": 845
+    },
+    {
+      "scope": "class:dog",
+      "band": "40-60m",
+      "positive": 1569,
+      "removed": 1451
+    },
+    {
+      "scope": "class:dog",
+      "band": "60m+",
+      "positive": 715,
+      "removed": 715
+    },
+    {
+      "scope": "class:dog",
+      "band": "unknown",
+      "positive": 140,
+      "removed": 27
+    },
+    {
+      "scope": "class:motorcycle",
+      "band": "0-20m",
+      "positive": 1706,
+      "removed": 2
+    },
+    {
+      "scope": "class:motorcycle",
+      "band": "20-40m",
+      "positive": 1796,
+      "removed": 8
+    },
+    {
+      "scope": "class:motorcycle",
+      "band": "40-60m",
+      "positive": 1579,
+      "removed": 189
+    },
+    {
+      "scope": "class:motorcycle",
+      "band": "60m+",
+      "positive": 4908,
+      "removed": 3471
+    },
+    {
+      "scope": "class:motorcycle",
+      "band": "unknown",
+      "positive": 349,
+      "removed": 55
+    },
+    {
+      "scope": "class:person",
+      "band": "0-20m",
+      "positive": 5342,
+      "removed": 31
+    },
+    {
+      "scope": "class:person",
+      "band": "20-40m",
+      "positive": 5570,
+      "removed": 439
+    },
+    {
+      "scope": "class:person",
+      "band": "40-60m",
+      "positive": 4393,
+      "removed": 1358
+    },
+    {
+      "scope": "class:person",
+      "band": "60m+",
+      "positive": 8702,
+      "removed": 7957
+    },
+    {
+      "scope": "class:person",
+      "band": "unknown",
+      "positive": 24497,
+      "removed": 1277
+    },
+    {
+      "scope": "class:plastic_barrier",
+      "band": "0-20m",
+      "positive": 2240,
+      "removed": 3
+    },
+    {
+      "scope": "class:plastic_barrier",
+      "band": "20-40m",
+      "positive": 2558,
+      "removed": 135
+    },
+    {
+      "scope": "class:plastic_barrier",
+      "band": "40-60m",
+      "positive": 1887,
+      "removed": 467
+    },
+    {
+      "scope": "class:plastic_barrier",
+      "band": "60m+",
+      "positive": 4690,
+      "removed": 3971
+    },
+    {
+      "scope": "class:plastic_barrier",
+      "band": "unknown",
+      "positive": 819,
+      "removed": 236
+    },
+    {
+      "scope": "class:steel_barricade",
+      "band": "0-20m",
+      "positive": 2419,
+      "removed": 6
+    },
+    {
+      "scope": "class:steel_barricade",
+      "band": "20-40m",
+      "positive": 2716,
+      "removed": 102
+    },
+    {
+      "scope": "class:steel_barricade",
+      "band": "40-60m",
+      "positive": 2233,
+      "removed": 305
+    },
+    {
+      "scope": "class:steel_barricade",
+      "band": "60m+",
+      "positive": 6324,
+      "removed": 3960
+    },
+    {
+      "scope": "class:steel_barricade",
+      "band": "unknown",
+      "positive": 771,
+      "removed": 149
+    },
+    {
+      "scope": "class:stroller",
+      "band": "0-20m",
+      "positive": 2852,
+      "removed": 26
+    },
+    {
+      "scope": "class:stroller",
+      "band": "20-40m",
+      "positive": 2798,
+      "removed": 291
+    },
+    {
+      "scope": "class:stroller",
+      "band": "40-60m",
+      "positive": 2304,
+      "removed": 759
+    },
+    {
+      "scope": "class:stroller",
+      "band": "60m+",
+      "positive": 3895,
+      "removed": 3610
+    },
+    {
+      "scope": "class:stroller",
+      "band": "unknown",
+      "positive": 583,
+      "removed": 241
+    },
+    {
+      "scope": "class:traffic_cone",
+      "band": "0-20m",
+      "positive": 2086,
+      "removed": 58
+    },
+    {
+      "scope": "class:traffic_cone",
+      "band": "20-40m",
+      "positive": 1946,
+      "removed": 749
+    },
+    {
+      "scope": "class:traffic_cone",
+      "band": "40-60m",
+      "positive": 1368,
+      "removed": 1338
+    },
+    {
+      "scope": "class:traffic_cone",
+      "band": "60m+",
+      "positive": 311,
+      "removed": 311
+    },
+    {
+      "scope": "class:traffic_cone",
+      "band": "unknown",
+      "positive": 1308,
+      "removed": 340
+    },
+    {
+      "scope": "class:traffic_drum",
+      "band": "0-20m",
+      "positive": 1078,
+      "removed": 8
+    },
+    {
+      "scope": "class:traffic_drum",
+      "band": "20-40m",
+      "positive": 1371,
+      "removed": 208
+    },
+    {
+      "scope": "class:traffic_drum",
+      "band": "40-60m",
+      "positive": 828,
+      "removed": 519
+    },
+    {
+      "scope": "class:traffic_drum",
+      "band": "60m+",
+      "positive": 1075,
+      "removed": 1066
+    },
+    {
+      "scope": "class:traffic_drum",
+      "band": "unknown",
+      "positive": 17345,
+      "removed": 6163
+    },
+    {
+      "scope": "class:truck",
+      "band": "0-20m",
+      "positive": 459,
+      "removed": 2
+    },
+    {
+      "scope": "class:truck",
+      "band": "20-40m",
+      "positive": 839,
+      "removed": 0
+    },
+    {
+      "scope": "class:truck",
+      "band": "40-60m",
+      "positive": 659,
+      "removed": 8
+    },
+    {
+      "scope": "class:truck",
+      "band": "60m+",
+      "positive": 5024,
+      "removed": 1598
+    },
+    {
+      "scope": "class:truck",
+      "band": "unknown",
+      "positive": 2798,
+      "removed": 402
+    },
+    {
+      "scope": "view:front",
+      "band": "0-20m",
+      "positive": 10512,
+      "removed": 50
+    },
+    {
+      "scope": "view:front",
+      "band": "20-40m",
+      "positive": 17030,
+      "removed": 863
+    },
+    {
+      "scope": "view:front",
+      "band": "40-60m",
+      "positive": 15324,
+      "removed": 4386
+    },
+    {
+      "scope": "view:front",
+      "band": "60m+",
+      "positive": 44136,
+      "removed": 32224
+    },
+    {
+      "scope": "view:front",
+      "band": "unknown",
+      "positive": 6566,
+      "removed": 2348
+    },
+    {
+      "scope": "view:left",
+      "band": "0-20m",
+      "positive": 10866,
+      "removed": 110
+    },
+    {
+      "scope": "view:left",
+      "band": "20-40m",
+      "positive": 7410,
+      "removed": 1121
+    },
+    {
+      "scope": "view:left",
+      "band": "40-60m",
+      "positive": 4555,
+      "removed": 1980
+    },
+    {
+      "scope": "view:left",
+      "band": "60m+",
+      "positive": 5510,
+      "removed": 3813
+    },
+    {
+      "scope": "view:left",
+      "band": "unknown",
+      "positive": 1938,
+      "removed": 457
+    },
+    {
+      "scope": "view:right",
+      "band": "0-20m",
+      "positive": 9627,
+      "removed": 95
+    },
+    {
+      "scope": "view:right",
+      "band": "20-40m",
+      "positive": 8522,
+      "removed": 1954
+    },
+    {
+      "scope": "view:right",
+      "band": "40-60m",
+      "positive": 5646,
+      "removed": 2894
+    },
+    {
+      "scope": "view:right",
+      "band": "60m+",
+      "positive": 8340,
+      "removed": 6518
+    },
+    {
+      "scope": "view:right",
+      "band": "unknown",
+      "positive": 2617,
+      "removed": 1211
+    },
+    {
+      "scope": "view:unknown",
+      "band": "unknown",
+      "positive": 104303,
+      "removed": 22985
+    },
+    {
+      "scope": "weather:FOGGY",
+      "band": "unknown",
+      "positive": 1778,
+      "removed": 591
+    },
+    {
+      "scope": "weather:SUNNY",
+      "band": "unknown",
+      "positive": 6185,
+      "removed": 2195
+    },
+    {
+      "scope": "weather:unknown",
+      "band": "0-20m",
+      "positive": 31005,
+      "removed": 255
+    },
+    {
+      "scope": "weather:unknown",
+      "band": "20-40m",
+      "positive": 32962,
+      "removed": 3938
+    },
+    {
+      "scope": "weather:unknown",
+      "band": "40-60m",
+      "positive": 25525,
+      "removed": 9260
+    },
+    {
+      "scope": "weather:unknown",
+      "band": "60m+",
+      "positive": 57986,
+      "removed": 42555
+    },
+    {
+      "scope": "weather:unknown",
+      "band": "unknown",
+      "positive": 107461,
+      "removed": 24215
+    }
+  ],
+  "background": {
+    "counts": {
+      "images": 36444,
+      "valid_cells": 306943233,
+      "current_background_cells": 251920094,
+      "proposed_background_cells": 254652174,
+      "remaining_unknown_cells": 48537012
+    },
+    "current_background_fraction": 0.820738387153171,
+    "proposed_background_fraction": 0.829639316400893,
+    "unknown_fraction": 0.1581302559616944,
+    "denominator": "conservative stride8 cells inside image excluding padding and Ego; positive box footprints excluded from background numerator",
+    "new_background_candidates_by_proposed_split": {
+      "selection": 5145,
+      "train": 12679
+    },
+    "unique_background_pixels_by_proposed_split": {
+      "selection": 5145,
+      "train": 12679
+    },
+    "pending_rgb_review": true
+  },
+  "full_split": {
+    "train": 38846,
+    "selection": 5144,
+    "heldout": 10943
+  },
+  "final_training_ready": false
+}

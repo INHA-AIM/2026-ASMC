@@ -1,0 +1,193 @@
+{
+  "dataset": "camera_objects_bbox_v8-pretrain-r1",
+  "manifest_sha256": "3708a4854908a6fcfff1d1647210a50ff7dc0661b88405eac75804fffb9e6c37",
+  "class_coverage": {
+    "person": {
+      "original_image_count": 30055,
+      "valid_positive_images": 23019,
+      "split_groups": 18,
+      "correlation_groups": 4787,
+      "sources": 27,
+      "exposure_images": 25691,
+      "independent_scene_count_claimed": false
+    },
+    "dog": {
+      "original_image_count": 12324,
+      "valid_positive_images": 7281,
+      "split_groups": 5,
+      "correlation_groups": 266,
+      "sources": 10,
+      "exposure_images": 8868,
+      "independent_scene_count_claimed": false
+    },
+    "deer": {
+      "original_image_count": 17105,
+      "valid_positive_images": 10310,
+      "split_groups": 5,
+      "correlation_groups": 435,
+      "sources": 14,
+      "exposure_images": 11988,
+      "independent_scene_count_claimed": false
+    },
+    "bicycle": {
+      "original_image_count": 14665,
+      "valid_positive_images": 9530,
+      "split_groups": 9,
+      "correlation_groups": 320,
+      "sources": 18,
+      "exposure_images": 11214,
+      "independent_scene_count_claimed": false
+    },
+    "car": {
+      "original_image_count": 8280,
+      "valid_positive_images": 7517,
+      "split_groups": 16,
+      "correlation_groups": 3538,
+      "sources": 16,
+      "exposure_images": 8704,
+      "independent_scene_count_claimed": false
+    },
+    "motorcycle": {
+      "original_image_count": 16874,
+      "valid_positive_images": 9337,
+      "split_groups": 8,
+      "correlation_groups": 398,
+      "sources": 17,
+      "exposure_images": 10868,
+      "independent_scene_count_claimed": false
+    },
+    "bus": {
+      "original_image_count": 6809,
+      "valid_positive_images": 6244,
+      "split_groups": 11,
+      "correlation_groups": 3151,
+      "sources": 13,
+      "exposure_images": 8067,
+      "independent_scene_count_claimed": false
+    },
+    "truck": {
+      "original_image_count": 5479,
+      "valid_positive_images": 4882,
+      "split_groups": 12,
+      "correlation_groups": 1889,
+      "sources": 14,
+      "exposure_images": 6773,
+      "independent_scene_count_claimed": false
+    },
+    "bollard": {
+      "original_image_count": 14877,
+      "valid_positive_images": 6743,
+      "split_groups": 5,
+      "correlation_groups": 1343,
+      "sources": 14,
+      "exposure_images": 8164,
+      "independent_scene_count_claimed": false
+    },
+    "box": {
+      "original_image_count": 18554,
+      "valid_positive_images": 9754,
+      "split_groups": 21,
+      "correlation_groups": 634,
+      "sources": 30,
+      "exposure_images": 11238,
+      "independent_scene_count_claimed": false
+    },
+    "concrete_barrier": {
+      "original_image_count": 18653,
+      "valid_positive_images": 11200,
+      "split_groups": 9,
+      "correlation_groups": 889,
+      "sources": 18,
+      "exposure_images": 13014,
+      "independent_scene_count_claimed": false
+    },
+    "steel_barricade": {
+      "original_image_count": 18321,
+      "valid_positive_images": 13010,
+      "split_groups": 9,
+      "correlation_groups": 564,
+      "sources": 18,
+      "exposure_images": 14798,
+      "independent_scene_count_claimed": false
+    },
+    "traffic_drum": {
+      "original_image_count": 12557,
+      "valid_positive_images": 6036,
+      "split_groups": 16,
+      "correlation_groups": 1227,
+      "sources": 25,
+      "exposure_images": 7617,
+      "independent_scene_count_claimed": false
+    },
+    "plastic_barrier": {
+      "original_image_count": 19093,
+      "valid_positive_images": 11197,
+      "split_groups": 9,
+      "correlation_groups": 545,
+      "sources": 18,
+      "exposure_images": 12809,
+      "independent_scene_count_claimed": false
+    },
+    "traffic_cone": {
+      "original_image_count": 14566,
+      "valid_positive_images": 6345,
+      "split_groups": 6,
+      "correlation_groups": 629,
+      "sources": 15,
+      "exposure_images": 7842,
+      "independent_scene_count_claimed": false
+    },
+    "stroller": {
+      "original_image_count": 19494,
+      "valid_positive_images": 11260,
+      "split_groups": 3,
+      "correlation_groups": 390,
+      "sources": 12,
+      "exposure_images": 12560,
+      "independent_scene_count_claimed": false
+    }
+  },
+  "ignore_reasons": {
+    "native_near_point": 240196,
+    "tensor_near_point": 242023,
+    "insufficient_visible_instance_pixels": 164803
+  },
+  "view_supervision_images": {
+    "unknown/partial": 16899,
+    "unknown/complete": 1458,
+    "front/partial": 12794,
+    "left/partial": 11107,
+    "right/partial": 10566,
+    "right/complete": 2,
+    "left/complete": 3,
+    "front/reviewed_negative": 475,
+    "left/reviewed_negative": 1050,
+    "right/reviewed_negative": 475
+  },
+  "positive_native_short_side": {
+    "train/32px+": 36913,
+    "train/8-15px": 76799,
+    "train/16-31px": 46527,
+    "train/2-7px": 102663,
+    "selection/32px+": 14,
+    "selection/2-7px": 62,
+    "selection/8-15px": 24,
+    "selection/16-31px": 19,
+    "heldout/32px+": 1330,
+    "heldout/16-31px": 1433,
+    "heldout/8-15px": 545,
+    "heldout/2-7px": 8
+  },
+  "weather_images": {
+    "unknown": 54827,
+    "sunny": 2
+  },
+  "tunnel_images": {
+    "unknown": 54803,
+    "False": 20,
+    "True": 6
+  },
+  "unknown_conditions_not_inferred": true,
+  "occlusion_fraction": "not reliably available for all sources; pixel occupancy is not an occlusion exclusion rule",
+  "training_performed": false
+}

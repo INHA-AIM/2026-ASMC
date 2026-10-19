@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "scope": "individual reviews, structural export, frozen loader and CPU loss; not model performance or exhaustive visual correctness",
+  "dataset": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_v11-preflight-r4",
+  "metadata_sha256": "54d46da76f15d74e3938f96dd2c578ec3bd4a076df985a562b125082e8a7abc6",
+  "evidence_sha256": {
+    "reviews.json": "c71cb54822813affde9455047dfa46e4cacf10f944f25969fcdf4ef9f359f3b1",
+    "reviews-r4.json": "e0b58403b7c38264b15d0f5653dda9dfc8e70654509161ea3eed7db49a6a15cb",
+    "verification-r4.json": "de911f8fa006fb68c6d456a51da59996a81656a773f460d44fe582265d9f600a",
+    "loader-verification-r4.json": "9d1efc84fc14d154993c228658ca8a7fb4c9d8a3848f0690406abd21bcc7a390",
+    "cpu-tests-r4.log": "d604d5b4a307d14f9b407f9dc4ec3c155113ee4ba72b98ed71fc618e7f6974db",
+    "cpu-loss-tests.log": "523af87af7be36e8a99780f4773beddb4b4f00fbc7bb4beb67f2051a8ca61aa7",
+    "summary.json": "e963194d9fb94682f8c241e28550c5532568254c637171225c8ab47d9529496b",
+    "cross-class-overlaps-r4.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "future_config_sha256": "f028a407546d6f818a3be64487004de50333464253fcec3be598129046d8be58",
+  "activation_pending": true,
+  "training_started": false,
+  "limitations": [
+    "car/bus/truck unreviewed fine-label noise still possible; no source-wide decision propagated",
+    "partial39731/41345; global backgrounds not inferred",
+    "complete selection dog10/bus14/truck12 and independent scene limits unchanged",
+    "47 new selection images were seen by current v10; start from original pretrained for clean split"
+  ],
+  "checks": {
+    "cpu_revision_and_monitor_tests": 18,
+    "frozen_loss_tests": 7,
+    "actual_loader_cases": 4,
+    "optimizer_updates": 0
+  }
+}

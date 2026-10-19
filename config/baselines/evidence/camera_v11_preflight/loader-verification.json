@@ -1,0 +1,54 @@
+{
+  "passed": true,
+  "cuda_used": false,
+  "optimizer_updates": 0,
+  "train_images": 41345,
+  "batch_shape": [
+    4,
+    3,
+    960,
+    960
+  ],
+  "metadata_sha256": "6e4ee2a23d3aa63dde10131cc328373b41549a2c4f2046db899e32757a307bba",
+  "evidence_origin": "Observed successful docker exec python3 check_loader_cpu.py output; recorded without rerunning the check",
+  "cases": [
+    {
+      "case": "relabeled_bus",
+      "class_ids": [
+        6
+      ],
+      "complete": false
+    },
+    {
+      "case": "relabeled_plastic_barrier",
+      "class_ids": [
+        12,
+        12,
+        13,
+        12
+      ],
+      "complete": false
+    },
+    {
+      "case": "reviewed_negative",
+      "complete": true,
+      "positive_boxes": 0,
+      "supervised_cells": 18900,
+      "parent_partial_cells": 11148,
+      "additional_cells": 7752
+    },
+    {
+      "case": "reviewed_complete_vehicle",
+      "class_ids": [
+        4,
+        4,
+        4
+      ],
+      "complete": true,
+      "supervised_cells": 18882,
+      "parent_partial_cells": 7395,
+      "additional_cells": 11487
+    }
+  ],
+  "note": "Cell counts exclude assignment and class-local known-box masks; relabel cases assert label IDs, not absence of training gradients"
+}

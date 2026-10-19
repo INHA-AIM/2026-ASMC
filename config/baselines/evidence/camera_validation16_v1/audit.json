@@ -1,0 +1,25 @@
+{
+  "review_records": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-validation16-v1/review/reviewed-records-r2.jsonl",
+  "review_sha256": "4e13182c9251b6a85b7af63d41eca6e93759db5afdbee8e4fefdf03c7bd46220",
+  "near_duplicate_candidates": 34,
+  "near_duplicate_train_cache": 22914,
+  "all_candidates_visually_reviewed": true,
+  "confirmed_duplicates": 0,
+  "train_known_layouts_excluded": [
+    "route60_20261012",
+    "route120_20261012",
+    "route180_layout2_20261012"
+  ],
+  "initial_route_shared_actor_excluded": [
+    "BabyStroller3:9",
+    "90001",
+    "90002"
+  ],
+  "sources_not_proven_independent_scenes": true,
+  "cpu_tests": {
+    "passed": 4,
+    "environment": "asmc-ros-noetic python3 CPU; no package install/no GPU"
+  },
+  "training_observed_status": "paused_regression after epoch4; not restarted during validation construction",
+  "inference_or_optimizer_updates_this_task": 0
+}

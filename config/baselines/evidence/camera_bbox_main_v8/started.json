@@ -1,0 +1,54 @@
+{
+  "status": "training_in_progress",
+  "recorded_utc": "2026-10-12T12:11:53.217114+00:00",
+  "run": "artifacts/camera-bbox-main-v8/run-20261012-r1",
+  "model": "YOLO26l detection",
+  "dataset": "camera_objects_bbox_v8-pretrain-r1",
+  "train_images": 53588,
+  "positive_annotations": 262902,
+  "ignored_annotations": 261415,
+  "epochs_planned": 40,
+  "first_window_seconds": 86400,
+  "deadline_unix": 1791888187.6838496,
+  "batch": 4,
+  "effective_batch": 16,
+  "imgsz": 960,
+  "seed": 20261011,
+  "manifest_sha256": "3708a4854908a6fcfff1d1647210a50ff7dc0661b88405eac75804fffb9e6c37",
+  "diagnostic_manifest_sha256": "77a2b5dce256aa36f1525d4fae627b4eb90473263f618bb367e70cf6e263229f",
+  "weights_sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+  "config_sha256": "813eaf6de004c925ebd88928ffa95b3255cb0ad54136eaa2e5a60fd82a6617e9",
+  "code_snapshot_sha256": "be0d5b12a127d056052b3bbe44ce09e65642b59c98fbc6777f52a5e49ff55d7d",
+  "smoke": {
+    "batches": 200,
+    "passed": true,
+    "finite_gradient_steps": 44,
+    "initial_amp_skipped_steps": 6,
+    "oom": false,
+    "weights_discarded": true
+  },
+  "cpu_tests": {
+    "passed": 38,
+    "environment": "torch2.1.2+cu118 / Ultralytics8.4.150",
+    "modules": [
+      "test_camera_bbox_main",
+      "test_camera_bbox_training",
+      "test_camera_pretrain",
+      "test_camera_pretrain_torch"
+    ]
+  },
+  "evaluation_images": 618,
+  "diagnostic_original_splits": {
+    "selection": 318,
+    "heldout": 300
+  },
+  "previously_seen_development": true,
+  "train_eval_leaks": 0,
+  "production_approved": false,
+  "runtime_changes": false,
+  "hosted_ci_pass_claimed": false,
+  "pr81_82_merged": false,
+  "completed_epochs_at_record": 0,
+  "full_24_hour_results_available": false,
+  "actual_resume_verified": false
+}
