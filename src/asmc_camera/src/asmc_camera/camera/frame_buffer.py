@@ -19,6 +19,7 @@ class EncodedFrame:
     decode_key: object = None
     decode_source: object = None
     generation: Optional[int] = None
+    source_sequence: int = 0
 
 
 class LatestFrameBuffer:

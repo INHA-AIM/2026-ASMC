@@ -169,3 +169,11 @@ rosbag record -O /tmp/camera-imu-timing.bag /image_jpeg/compressed /cam_left/ima
 확인기는 `timing.jsonl`·`sensor-headers.jsonl` 전체 timing/header와 정확히 대응한 `matched.jsonl`,
 누락·보류·중복·원본 역행·kernel fallback·진단을 담은 `report.json`을 생성한다.
 대형 payload는 보관하지 않고 대응표는 stream당256개·2초로 제한한다.
+
+## TwinLite 자세 보정 연결
+
+이 timing을 소비하는 [IMU M1 시험 경로](camera-imu-projection.md)를 추가했다.
+카메라 생산자는 `CameraModelGridTiming`으로 원 JPEG와 class/confidence의 실제 wire header를 연결한다.
+Family는 같은 원본 clock의 IMU quaternion을 보간해 roll/pitch를 지면 투영에 반영한다.
+센서 header를 source로 바꾸거나 수신 시각을 원본으로 대체하지 않는다.
+정본 기본값은 고정 평면이며, 자세 보정 후보의 시각 대응과 품질·공급 수락은 별도로 판단한다.

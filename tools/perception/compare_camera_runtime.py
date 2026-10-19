@@ -20,6 +20,7 @@ import time
 
 from lifecycle_measurements import percentile, rate_report
 from b0_resources import ResourceSampler, qt_viewers
+from imu_runtime_metrics import family_probes
 
 
 def acceptance_eligible(report):
@@ -48,7 +49,7 @@ def transition_ready(status, expected, mode):
                for role,generation in expected.items())
 
 
-def measurements(rows, start, end, target):
+def measurements(rows, start, end, target, lane_target=10.):
     reports = {}
     streams = defaultdict(list)
     for row in rows:
@@ -61,7 +62,7 @@ def measurements(rows, start, end, target):
         report = rate_report([(r['at'], r['stamp'], r['valid']) for r in values], start, end)
         times = [r['wall_ms'] for r in values if start <= r['at'] < end]
         report['wall_ms'] = {f'p{q}': percentile(times, q) for q in (50, 95, 99)}
-        hz = target if key.startswith('/perception/camera/objects:') else 10.
+        hz = target if key.startswith('/perception/camera/objects:') else lane_target if '/road_marking/' in key else 10.
         report['target_hz'] = hz
         report['target_95pct_pass'] = bool(report['five_second_hz']) and min(report['five_second_hz']) >= hz*.95
         report['minimum_9_5_pass'] = bool(report['five_second_hz']) and min(report['five_second_hz']) >= 9.5
@@ -119,6 +120,9 @@ def main():
     p.add_argument('--allocation-profile', action='store_true',help='Diagnostic TwinLite allocation/deserialize run; excluded from acceptance')
     p.add_argument('--shared-gpu-input', action='store_true')
     p.add_argument('--lane-runtime-config', type=Path)
+    p.add_argument('--imu-mode', choices=('config', 'fixed', 'source'), default='config',
+        help='Internal paired comparison; fixed plane or source-time attitude')
+    p.add_argument('--joint-width-fit', choices=('config', 'off', 'on'), default='config')
     a = p.parse_args()
     if a.allocation_profile and (a.variant=='R2' or a.profile_lane_fit):
         p.error('allocation diagnosis uses an independent lane worker without fit profiling')
@@ -165,7 +169,8 @@ def main():
                                     xyxy=[b.xmin,b.ymin,b.xmax,b.ymax]) for b in m.boxes])), queue_size=30))
     subscribers.append(rospy.Subscriber('/perception/lane/boundary_family', LaneBoundaryFamily,
         lambda m: families.append(dict(at=time.monotonic(),stamp=m.header.stamp.to_nsec(),
-            valid=m.valid,reason=m.status_reason)),queue_size=1))
+            valid=m.valid,reason=m.status_reason,config_sha256=m.config_sha256,
+            probes=family_probes(m) if m.valid else [])),queue_size=1))
     # Keep the same normal lane consumers as the real stack. No GUI consumers
     # are added unless explicitly requested, so lazy output stays comparable.
     for topic in ('/perception/camera/objects/diagnostics', '/perception/camera/diagnostics', '/morai_sensor_bridge/diagnostics',
@@ -192,6 +197,12 @@ def main():
     class MeasuredLaunch(roslaunch.parent.ROSLaunchParent):
         def _load_config(self):
             super()._load_config()
+            if a.imu_mode != 'config':
+                key='/camera_lane_vectorizer/imu_motion/enabled'
+                self.config.params[key]=roslaunch.core.Param(key,a.imu_mode=='source')
+            if a.joint_width_fit != 'config':
+                key='/camera_lane_vectorizer/imu_motion/corrected_joint_width_fit'
+                self.config.params[key]=roslaunch.core.Param(key,a.joint_width_fit=='on')
             for node in self.config.nodes:
                 if node.type in ('lane_vectorizer_node.py','semantic_inference_node.py'):
                     key='/'+node.name+'/lifecycle_trace_path'
@@ -245,6 +256,7 @@ def main():
         saved_input=str(a.saved_input) if a.saved_input else None, gui=a.qt, visualization_sinks=a.gui, nms_iou=a.nms_iou, failures=[],
         confidence=a.confidence, view_models=a.view_models if a.gui else None, profile_lane_fit=a.profile_lane_fit,
         visual_outputs=a.visual_outputs,allocation_profile=a.allocation_profile,
+        imu_mode=a.imu_mode,joint_width_fit=a.joint_width_fit,
         acceptance_eligible=not(a.allocation_profile or a.profile_lane_fit),
         mode_transitions=[],
         timestamp_mode=rospy.get_param('/morai_sensor_bridge/timestamp_mode','unset (bridge default receive)'),
@@ -269,7 +281,8 @@ def main():
         report['source_sha256'] = hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()
         report['measurement_sha256']={f:hashlib.sha256((root/'tools/perception'/f).read_bytes()).hexdigest()
             for f in ('compare_camera_runtime.py','camera_runtime_probe.py','b0_resources.py',
-                      'run_camera_structure_matrix.py','run_b0_matrix.py','camera_measurement_records.py')}
+                      'run_camera_structure_matrix.py','run_b0_matrix.py','camera_measurement_records.py',
+                      'imu_runtime_metrics.py')}
         report['family_view_source_sha256']={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest()
             for p in (root/'src/asmc_camera/src/asmc_camera/bev/family_view.py',
                       root/'src/asmc_camera/src/asmc_camera/nodes/family_view_node.py',
@@ -278,6 +291,7 @@ def main():
         parent.start()
         report['effective_lane_batch_wait_ms'] = rospy.get_param('/camera_lane/batch_wait_ms',None)
         report['effective_fusion_hz'] = rospy.get_param('/camera_bev_fusion/max_fused_hz',None)
+        report['effective_imu_config'] = rospy.get_param('/camera_lane_vectorizer/imu_motion', {})
         deadline = time.monotonic()+120
         while not all(r in status and status[r].loaded and status[r].warmed_up for r in legacy):
             if time.monotonic() > deadline:
@@ -423,7 +437,7 @@ def main():
             report['unmatched_model_output_stamps']=len(unmatched)
             if unmatched:
                 report['failures'].append('model input/output stamp mismatch')
-            report['streams'] = measurements(rows, start, end, 15)
+            report['streams'] = measurements(rows, start, end, 15, a.lane_hz)
             required = dict(objects='/perception/camera/objects:',
                 lane='/perception/camera/front/road_marking/model_grid/class_id:',
                 traffic_light='/perception/traffic_light/detection:')
@@ -501,6 +515,11 @@ def main():
                     report['failures'].append('family supply trace incomplete/dropped')
                 compute=[r for r in trace if r['event']=='family_compute_end' and start<=r['monotonic']<end]
                 gates=[r for r in trace if r['event']=='family_publish_start' and start<=r['monotonic']<end]
+                from imu_runtime_metrics import imu_application
+                source_enabled=any(r['event']=='imu_projection' for r in trace)
+                report['imu_application']=imu_application(trace,start,end,source_enabled)
+                if report['imu_application']['unmatched']:
+                    report['failures'].append('IMU/fit publication trace mismatch')
                 report['lane_family']['compute_wall_ms']={f'p{q}':percentile([r['wall_ms'] for r in compute],q) for q in (50,95,99)}
                 report['lane_family']['compute_cpu_ms']={f'p{q}':percentile([r['cpu_ms'] for r in compute],q) for q in (50,95,99)}
                 report['lane_family']['publish_lock_wait_ms']={f'p{q}':percentile([r['lock_wait_ms'] for r in gates],q) for q in (50,95,99)}

@@ -1,6 +1,7 @@
 // 직선 구간 BBOX 차로 판정. 거리/주행 명령은 출력하지 않는다.
 // 기존 YOLO와 차선 모듈을 그대로 사용하고, 영상 하단 접점의 차로만 분류한다.
 #include "lane_boundary_adapter/boundary_family_adapter.hpp"
+#include "lane_boundary_adapter/ground_projection.hpp"
 #include <lane_boundary_adapter/CameraBBoxFrame.h>
 #include <lane_boundary_adapter/CameraBBoxLaneResult.h>
 #include <sensor_msgs/Image.h>
@@ -14,6 +15,11 @@
 #include <deque>
 #include <limits>
 #include <stdexcept>
+#include <fstream>
+#include <iomanip>
+#include <memory>
+#include <sstream>
+#include <openssl/sha.h>
 
 namespace {
 using Result = lane_boundary_adapter::CameraBBoxLaneResult;
@@ -27,9 +33,13 @@ using Context = lane_boundary_adapter::BoundaryFamilyStripContext;
 struct Parameters {
     std::string reference_lane_topic;      // 선택 사항: 주행 노드의 기준 차로. 비어 있으면 관측 전용 자동 선택.
     double reference_timeout = 0.5;        // [s] 기준 차로 미수신 시 자동 선택으로 복귀.
-    std::string calibration_file;          // cameras_v2.yaml. launch에서 실제 파일 경로 지정.
+    std::string calibration_file;          // Canonical cameras_v3; explicit v2 is legacy replay only.
     std::string camera_view = "front";    // 보정 파일 내 카메라 이름.
-    std::string expected_hash = "691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070";
+    std::string expected_hash = "2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a";
+    bool projection_context_required = true;
+    std::string projection_manifest;
+    std::string projection_topic = "/perception/lane/ground_projection";
+    std::string lane_status_topic = "/perception/camera/lane/status";
     std::string lane_topic = "/perception/lane/boundary_family"; // 검증된 차선 계약.
     std::string frame_topic = "/planning/camera_bbox_lane/frame"; // 원본 영상+BBOX.
     std::string result_topic = "/planning/camera_bbox_lane/result"; // 차로 판정 결과.
@@ -71,11 +81,13 @@ struct Parameters {
 
 struct Camera {
     int width = 0, height = 0;
+    cv::Matx33d intrinsic;
     cv::Matx33d homography;                // base_link 지면 xy -> 원본 영상 uv.
     cv::Matx33d rotation;
     cv::Vec3d translation;
     double ground_z = 0.0;
     double slope_x = 0.0, slope_y = 0.0;
+    cv::Vec3d selected_plane;
 } camera;
 std::vector<cv::Point2d> ego_polygon;
 cv::Mat ego_bitmap;
@@ -85,6 +97,7 @@ struct LaneFrame {
     Context context;
     int own_lane = -1;
     std::string error;
+    asmc_msgs::LaneBoundaryFamily::ConstPtr message;
 };
 struct LaneQuad {
     int lane;
@@ -102,6 +115,12 @@ std::vector<BoxTrack> box_tracks;
 
 lane_boundary_adapter::BoundaryFamilyAdapterConfig adapter;
 std::deque<LaneFrame> history;
+std::unique_ptr<lane_boundary_adapter::GroundProjectionBuffer> projection_buffer;
+struct PendingFrame { lane_boundary_adapter::CameraBBoxFrame::ConstPtr message; ros::SteadyTime receipt; };
+std::deque<PendingFrame> pending_frames;
+std::uint64_t pending_overflow=0, pending_expired=0, pending_superseded=0, projected_frames=0;
+bool last_projection_corrected=false;
+std::string last_projection_reason="not_selected";
 ros::Time last_lane_stamp, last_bbox_stamp;
 ros::SteadyTime last_bbox_receive;
 int pending_lane = -1, confirm_frames = 0;
@@ -117,6 +136,10 @@ void loadCalibration();
 void laneCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& message);
 void frameCallback(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& message);
 void statusCallback(const ros::TimerEvent&);
+void drainPending();
+void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr&,
+                  const LaneFrame* exact=nullptr,
+                  const lane_boundary_adapter::ProjectionMatch* projection=nullptr);
 void referenceCallback(const std_msgs::Int8::ConstPtr& message);
 std::string stampError(const ros::Time& stamp);
 int selectOwnLane(const Context& context);
@@ -163,6 +186,27 @@ int main(int argc, char** argv) {
         diagnostic_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(params.diagnostics_topic, 1);
         const auto lane_sub = nh.subscribe(params.lane_topic, 1, laneCallback);
         const auto frame_sub = nh.subscribe(params.frame_topic, 1, frameCallback);
+        ros::Subscriber projection_sub, lane_status_sub;
+        if(params.projection_context_required) {
+            projection_sub=nh.subscribe<asmc_msgs::CameraGroundProjection>(params.projection_topic,8,
+                [](const asmc_msgs::CameraGroundProjection::ConstPtr& m) {
+                    const auto revision=projection_buffer->revision();
+                    projection_buffer->add(m,ros::Time::now(),ros::SteadyTime::now());
+                    if(revision!=projection_buffer->revision()) {
+                        history.clear();pending_frames.clear();pending_lane=-1;confirm_frames=0;
+                    }
+                    drainPending();
+                },ros::VoidConstPtr());
+            lane_status_sub=nh.subscribe<asmc_msgs::InferenceStatus>(params.lane_status_topic,1,
+                [](const asmc_msgs::InferenceStatus::ConstPtr& m) {
+                    if(projection_buffer->status(*m,ros::Time::now(),ros::SteadyTime::now())) {
+                        history.clear();pending_frames.clear();pending_lane=-1;confirm_frames=0;
+                        box_tracks.clear();last_lane_stamp=ros::Time();
+                        publishInvalid(last_bbox_stamp,"lane_projection_epoch_changed");
+                    }
+                    drainPending();
+                },ros::VoidConstPtr());
+        }
         ros::Subscriber reference_sub;
         if (!params.reference_lane_topic.empty()) reference_sub = nh.subscribe(params.reference_lane_topic, 1, referenceCallback);
         const auto timer = nh.createTimer(ros::Duration(1.0 / params.status_rate), statusCallback);
@@ -217,6 +261,7 @@ int selectOwnLane(const Context& context) {
 
 void laneCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& message) {
     LaneFrame frame;
+    frame.message=message;
     frame.stamp = message->header.stamp;
     frame.error = stampError(frame.stamp);
     if (!frame.error.empty() || (!last_lane_stamp.isZero() && frame.stamp < last_lane_stamp)) {
@@ -227,11 +272,18 @@ void laneCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& message) {
     }
     if (frame.stamp == last_lane_stamp) return;  // 중복 frame은 확인 횟수를 올리지 않음.
     last_lane_stamp = frame.stamp;
+    // The pin remains fail-closed. Current geometry also requires its exact
+    // per-image projection context; legacy replay must explicitly opt out.
     if (message->config_sha256 != params.expected_hash) {
         frame.error = "wrong_geometry_config_hash";
     } else {
         frame.context = lane_boundary_adapter::BuildBoundaryFamilyStripContext(*message, adapter);
         if (!frame.context.usable()) frame.error = frame.context.reason;
+        if(!params.projection_context_required) {
+            for(const auto& b:message->boundaries) for(const auto& p:b.polyline)
+                if(!std::isfinite(p.z) || std::abs(p.z-lane_boundary_adapter::onPlane(camera.selected_plane,p.x,p.y)[2])>5e-5)
+                    frame.error="legacy_family_not_on_configured_plane";
+        }
     }
     int candidate = frame.error.empty() ? selectOwnLane(frame.context) : -1;
     if (candidate < 0) {
@@ -247,18 +299,15 @@ void laneCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& message) {
     }
     history.push_back(frame);
     while (history.size() > static_cast<std::size_t>(params.history_size)) history.pop_front();
+    if(params.projection_context_required) drainPending();
 }
 
 // ============================================================================
 // 4. 지면 차선 경계만 원본 영상에 투영. BBOX의 거리/3D 크기는 만들지 않는다.
 // ============================================================================
 bool projectPoint(const Point& point, cv::Point2d& pixel) {
-    const cv::Vec3d body(point.x, point.y, camera.ground_z + camera.slope_x*point.x + camera.slope_y*point.y);
-    const cv::Vec3d optical = camera.rotation * body + camera.translation;
-    if (optical[2] <= 0.01) return false;
-    const cv::Vec3d projected = camera.homography * cv::Vec3d(point.x, point.y, 1.0);
-    pixel = cv::Point2d(projected[0]/projected[2], projected[1]/projected[2]);
-    return std::isfinite(pixel.x) && std::isfinite(pixel.y);
+    return lane_boundary_adapter::projectGroundPoint(camera.intrinsic,camera.rotation,
+        camera.translation,camera.selected_plane,point.x,point.y,pixel);
 }
 
 std::vector<LaneQuad> projectLanes(const Context& context) {
@@ -485,14 +534,69 @@ void frameCallback(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messa
     const auto stamp = message->header.stamp;
     std::string error = stampError(stamp);
     if (error.empty() && !last_bbox_stamp.isZero() && stamp < last_bbox_stamp) error = "bbox_timestamp_regression";
-    if (!error.empty()) { publishInvalid(stamp, error); return; }
+    if (!error.empty()) { pending_frames.clear();publishInvalid(stamp, error); return; }
     if (stamp == last_bbox_stamp) return;
     last_bbox_stamp = stamp;
     last_bbox_receive = ros::SteadyTime::now();
-    if (!message->valid) { publishInvalid(stamp, message->reason); return; }
+    if (!message->valid) { pending_frames.clear();publishInvalid(stamp, message->reason); return; }
     if (message->image.header.stamp != stamp || message->image.header.frame_id != message->header.frame_id) {
-        publishInvalid(stamp, "image_bbox_header_mismatch"); return;
+        pending_frames.clear();publishInvalid(stamp, "image_bbox_header_mismatch"); return;
     }
+    if(params.projection_context_required) {
+        pending_frames.push_back({message,last_bbox_receive});
+        if(pending_frames.size()>8) {
+            ++pending_overflow;
+            publishInvalid(pending_frames.front().message->header.stamp,"projection_pending_capacity");
+            pending_frames.pop_front();
+        }
+        drainPending();
+    } else processFrame(message);
+}
+
+void drainPending() {
+    if(!params.projection_context_required || pending_frames.empty()) return;
+    const auto now=ros::Time::now(); const auto steady=ros::SteadyTime::now();
+    const auto gate=projection_buffer->gate(now,steady);
+    if(!gate.empty()) {
+        const auto stamp=pending_frames.back().message->header.stamp;
+        pending_frames.clear();publishInvalid(stamp,gate);return;
+    }
+    // A newer invalid family must not be hidden by an older accepted fit.
+    if(!history.empty() && (!history.back().error.empty() || !stampError(history.back().stamp).empty())) {
+        const auto stamp=pending_frames.back().message->header.stamp;pending_frames.clear();
+        publishInvalid(stamp,history.back().error.empty()?"lane_timestamp_expired":history.back().error);return;
+    }
+    std::string reason="waiting_for_projection_context";
+    // Keep up to eight original JPEGs while the slower semantic/family path
+    // finishes. A single latest slot would starve exact matching at 15Hz.
+    for(auto input=pending_frames.rbegin();input!=pending_frames.rend();++input) {
+        for(auto lane=history.rbegin();lane!=history.rend();++lane) {
+            if(!lane->error.empty())continue;
+            const auto match=projection_buffer->match(*lane->message,input->message->image.header,
+                params.camera_view,now,steady);
+            reason=match.reason;
+            if(!match.valid)continue;
+            const auto ready=input->message;
+            const LaneFrame* exact=&*lane;
+            while(!pending_frames.empty() && pending_frames.front().message->header.stamp<=ready->header.stamp) {
+                if(pending_frames.front().message->header.stamp<ready->header.stamp)++pending_superseded;
+                pending_frames.pop_front();
+            }
+            processFrame(ready,exact,&match);
+            return;
+        }
+    }
+    // Callback-driven matching adds no fixed timer wait. A bounded timeout
+    // emits UNKNOWN; it never substitutes a nearby image or the YAML plane.
+    while(!pending_frames.empty() && (steady-pending_frames.front().receipt).toSec()>.25) {
+        const auto stamp=pending_frames.front().message->header.stamp;
+        pending_frames.pop_front();++pending_expired;publishInvalid(stamp,reason);
+    }
+}
+
+void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& message,
+                  const LaneFrame* exact,const lane_boundary_adapter::ProjectionMatch* projection) {
+    const auto stamp=message->header.stamp;
     cv::Mat image;
     try { image = cv::imdecode(message->image.data, cv::IMREAD_COLOR); }
     catch (const cv::Exception&) { publishInvalid(stamp, "image_decode_failed"); return; }
@@ -509,14 +613,23 @@ void frameCallback(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messa
     if (!history.back().error.empty() || !stampError(history.back().stamp).empty()) {
         publishInvalid(stamp, history.back().error.empty() ? "lane_timestamp_expired" : history.back().error); return;
     }
-    const auto nearest = std::min_element(history.begin(), history.end(), [stamp](const auto& a, const auto& b) {
+    const auto nearest_it = std::min_element(history.begin(), history.end(), [stamp](const auto& a, const auto& b) {
         return std::abs((a.stamp-stamp).toSec()) < std::abs((b.stamp-stamp).toSec());
     });
+    const LaneFrame* nearest=exact?exact:&*nearest_it;
     if (!nearest->error.empty() || !stampError(nearest->stamp).empty()) {
         publishInvalid(stamp, "matched_lane_unavailable"); return;
     }
     if (std::abs((nearest->stamp-stamp).toSec()) > params.max_sensor_skew) {
         publishInvalid(stamp, "camera_bbox_lane_timestamp_skew"); return;
+    }
+    if(projection) {
+        ++projected_frames;
+        last_projection_corrected=projection->imu_corrected;
+        last_projection_reason=projection->reason;
+        camera.selected_plane=projection->plane;
+        camera.homography=lane_boundary_adapter::groundHomography(camera.intrinsic,camera.rotation,
+            camera.translation,camera.selected_plane);
     }
     Result result;
     result.header = message->header;
@@ -592,6 +705,18 @@ void publishResult(Result result) {
     add("adjacent_state", std::to_string(result.adjacent_state));
     add("publishes_control", "false");
     add("estimates_obstacle_distance", "false");
+    add("projection_policy",params.projection_context_required?"exact_image_context":"legacy_static_replay");
+    add("projection_pending",std::to_string(pending_frames.size()));
+    add("projection_pending_overflow",std::to_string(pending_overflow));
+    add("projection_pending_expired",std::to_string(pending_expired));
+    add("projection_pending_superseded",std::to_string(pending_superseded));
+    add("projection_matched_frames",std::to_string(projected_frames));
+    add("projection_imu_corrected",last_projection_corrected?"true":"false");
+    add("projection_selection_reason",last_projection_reason);
+    if(projection_buffer) {
+        add("projection_contexts",std::to_string(projection_buffer->size()));
+        add("projection_context_error",projection_buffer->last_error());
+    }
     diagnostic.status.push_back(status);
     diagnostic_pub.publish(diagnostic);
 }
@@ -608,6 +733,12 @@ void publishInvalid(const ros::Time& stamp, const std::string& reason) {
 }
 
 void statusCallback(const ros::TimerEvent&) {
+    if(params.projection_context_required) {
+        drainPending();
+        const auto gate=projection_buffer->gate(ros::Time::now(),ros::SteadyTime::now());
+        if(!gate.empty()){publishInvalid(last_bbox_stamp,gate);return;}
+        if(!pending_frames.empty())return;
+    }
     if (last_bbox_stamp.isZero()) publishInvalid(last_bbox_stamp, "waiting_for_bbox");
     else if ((ros::SteadyTime::now()-last_bbox_receive).toSec() > params.receive_timeout || !stampError(last_bbox_stamp).empty()) {
         publishInvalid(last_bbox_stamp, "bbox_timeout");
@@ -697,6 +828,7 @@ void publishImage(cv::Mat image, const std_msgs::Header& header, const Result& r
 void loadParameters(ros::NodeHandle& nh) {
 #define PARAM(name) nh.param(#name, params.name, params.name)
     PARAM(reference_lane_topic); PARAM(reference_timeout);
+    PARAM(projection_context_required); PARAM(projection_manifest); PARAM(projection_topic); PARAM(lane_status_topic);
     PARAM(hood_crop_bottom_ratio); PARAM(ego_mask_enabled); PARAM(ego_mask_config);
     if (params.ego_mask_enabled) {
         if (params.hood_crop_bottom_ratio != 0) throw std::runtime_error("ego mask and legacy crop are mutually exclusive");
@@ -762,6 +894,7 @@ void loadCalibration() {
     if (camera.width <= 0 || camera.height <= 0 || !std::isfinite(fov) || fov <= 0 || fov >= 180) throw std::runtime_error("invalid camera intrinsics");
     const double pi=std::acos(-1.0), focal=0.5*camera.width/std::tan(fov*pi/360.0);
     const cv::Matx33d K(focal,0,camera.width*.5, 0,focal,camera.height*.5, 0,0,1);
+    camera.intrinsic=K;
     const auto r=view["rotation_deg"].as<std::vector<double>>();
     const auto t=view["translation_m"].as<std::vector<double>>();
     if (r.size()!=3 || t.size()!=3) throw std::runtime_error("invalid camera extrinsics");
@@ -778,12 +911,22 @@ void loadCalibration() {
     camera.ground_z=ground["z_at_origin_m"].as<double>();
     camera.slope_x=ground["dz_dx"].as<double>(); camera.slope_y=ground["dz_dy"].as<double>();
     for (double v : {camera.ground_z,camera.slope_x,camera.slope_y}) if (!std::isfinite(v)) throw std::runtime_error("nonfinite ground plane");
-    cv::Matx33d ground_rotation;
-    for (int i=0;i<3;++i) {
-        ground_rotation(i,0)=camera.rotation(i,0)+camera.slope_x*camera.rotation(i,2);
-        ground_rotation(i,1)=camera.rotation(i,1)+camera.slope_y*camera.rotation(i,2);
-        ground_rotation(i,2)=camera.translation[i]+camera.ground_z*camera.rotation(i,2);
+    camera.selected_plane={camera.slope_x,camera.slope_y,camera.ground_z};
+    camera.homography=lane_boundary_adapter::groundHomography(K,camera.rotation,camera.translation,camera.selected_plane);
+    if(params.projection_context_required) {
+        const auto manifest=YAML::LoadFile(params.projection_manifest);
+        std::ifstream input(params.calibration_file,std::ios::binary);
+        const std::string bytes((std::istreambuf_iterator<char>(input)),std::istreambuf_iterator<char>());
+        unsigned char digest[SHA256_DIGEST_LENGTH];
+        SHA256(reinterpret_cast<const unsigned char*>(bytes.data()),bytes.size(),digest);
+        std::ostringstream hash;hash<<std::hex<<std::setfill('0');
+        for(auto v:digest)hash<<std::setw(2)<<static_cast<unsigned>(v);
+        if(hash.str()!=manifest["calibration_sha256"].as<std::string>())
+            throw std::runtime_error("projection calibration manifest SHA mismatch");
+        std::map<std::string,std::string> ids;
+        for(const auto& v:{"front","left","right"})ids[v]=manifest["calibration_ids"][v].as<std::string>();
+        projection_buffer=std::make_unique<lane_boundary_adapter::GroundProjectionBuffer>(
+            params.expected_hash,ids,camera.selected_plane);
     }
-    camera.homography=K*ground_rotation;
 }
 }  // namespace

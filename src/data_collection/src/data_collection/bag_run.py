@@ -75,5 +75,8 @@ def sha256_file(path, chunk_size=4 << 20):
 
 
 def default_rosbag_root():
-    data_root = os.environ.get("ASMC_DATA", "/data")
-    return os.path.join(os.path.abspath(os.path.expanduser(data_root)), "rosbags")
+    from .storage_paths import default_data_root
+    from .storage_paths import validate_output
+    root = default_data_root()
+    validate_output(root, "rosbags")
+    return os.path.join(root, "rosbags")

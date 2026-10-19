@@ -25,7 +25,12 @@ from asmc_msgs.msg import (
 )
 from geometry_msgs.msg import Point, Point32
 from sensor_msgs import point_cloud2
-from sensor_msgs.msg import Image, PointCloud2, PointField
+from sensor_msgs.msg import Image, Imu, PointCloud2, PointField
+from asmc_msgs.msg import CameraGroundProjection, CameraModelGridTiming, SensorFrameTiming
+from asmc_camera.runtime.sensor_timing import ImuTimeline, sensor_key
+from asmc_camera.bev.imu_projection import correct_evidence
+from asmc_camera.runtime.ground_projection import select_ground_projection
+from asmc_camera.bev.family_fit_policy import FamilyFitPolicy
 from std_msgs.msg import Header
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -41,7 +46,7 @@ from asmc_camera.bev.boundary_output import (
     build_shadow_boundary_output,
 )
 from asmc_camera.bev.boundary_family_output import build_boundary_family_output
-from asmc_camera.bev.calibration import calibrations_from_dict
+from asmc_camera.bev.calibration import GroundPlane, calibration_id, calibrations_from_dict
 from asmc_camera.bev.invalid_support import (
     classify_invalid_support,
     invalid_support_config_from_dict,
@@ -85,11 +90,14 @@ class _ViewFrame:
     decode_copy_ms: float
     generation: object = None
     received_at: float = 0.
+    timing: object = None
 
 
 RUNTIME_PROFILE_SCHEMA = "asmc-lane-runtime-profile-1.2.0"
 RUNTIME_PROFILE_STAGES = (
     "input_decode_copy",
+    "imu_attitude_lookup",
+    "imu_sparse_projection",
     "projection_audit",
     "projection_extract",
     "evidence_concat",
@@ -152,6 +160,27 @@ class LaneVectorizerNode:
             }
         )
         self.ground_plane = next(iter(cameras.values())).ground_plane
+        self.imu_config = dict(rospy.get_param('~imu_motion', {}))
+        self.imu_enabled = bool(self.imu_config.get('enabled', False))
+        self.imu_lock = threading.Lock()
+        self.imu_counts = {}
+        self.imu_last = {'reason': 'disabled'}
+        self.imu_timeline = None
+        if self.imu_enabled:
+            if not 0 < float(self.imu_config.get('max_bracket_ms',100)) <= 100:
+                raise ValueError('IMU bracket must not exceed100ms')
+            if not 0 < float(self.imu_config.get('max_receipt_age_sec',.35)) <= .35:
+                raise ValueError('IMU receipt freshness must not exceed350ms')
+            if not 0 < float(self.imu_config.get('max_source_skew_ms',35.)) <= 35.:
+                raise ValueError('camera source skew must not exceed35ms')
+            if not 0 <= float(self.imu_config.get('max_wait_ms',0.)) <= 10.:
+                raise ValueError('IMU wait must not exceed10ms')
+            self.imu_timeline = ImuTimeline(**{key:self.imu_config[key] for key in
+                ('capacity','max_bracket_ms','retention_sec') if key in self.imu_config},
+                max_age_sec=float(self.imu_config.get('max_receipt_age_sec',.35)))
+            self.imu_subscribers = [rospy.Subscriber(self.imu_config.get('imu_topic','/imu'), Imu,
+                self._imu_callback, queue_size=64), rospy.Subscriber('/morai_sensor_bridge/frame_timing',
+                SensorFrameTiming, self.imu_timeline.add_timing, queue_size=256)]
         self.calibration_sha256 = str(rospy.get_param("~source_sha256", ""))
         missing = sorted(set(self.views) - set(cameras))
         if missing:
@@ -386,6 +415,12 @@ class LaneVectorizerNode:
                 "bounded_distributed_same_frame_multi_role_completion_v3"
             ),
         }
+        self.family_fit_policy = FamilyFitPolicy(self.shared_family_parameters,
+            self.imu_config.get('corrected_width_prior_strength', 0.0),
+            self.imu_config.get('corrected_joint_width_fit', False))
+        if self.imu_enabled:
+            boundary_family_contract_config['imu_motion'] = self.imu_config
+            boundary_family_contract_config['frame_fit_policy'] = self.family_fit_policy.contract()
         self.boundary_family_config_sha256 = hashlib.sha256(
             json.dumps(
                 boundary_family_contract_config,
@@ -488,7 +523,15 @@ class LaneVectorizerNode:
             "/perception/lane/boundary_family",
             LaneBoundaryFamily,
             queue_size=1,
+            latch=False,
         )
+        # A small sidecar shares this worker's one IMU decision. Renderers do
+        # not subscribe to IMU or run the family fitter a second time.
+        self.projection_publisher = rospy.Publisher(
+            '/perception/lane/ground_projection', CameraGroundProjection,
+            queue_size=1, latch=False)
+        self.projection_calibration_ids = {
+            v: calibration_id(p.camera) for v, p in self.projectors.items()}
         self.diagnostics_publisher = rospy.Publisher(
             "/perception/lane/diagnostics", DiagnosticArray, queue_size=1
         )
@@ -515,12 +558,18 @@ class LaneVectorizerNode:
         self.synchronizers = []
         for view in self.views:
             base = "/perception/camera/{}/road_marking/model_grid".format(view)
+            topics = [base + '/class_id', base + '/confidence']
+            message_types = [Image, Image]
+            if self.imu_enabled:
+                topics.append(base + '/timing')
+                message_types.append(CameraModelGridTiming)
             group = DemandSynchronizer(
-                [base + "/class_id", base + "/confidence"], Image,
+                topics, Image,
                 lambda: not self.epoch_gate.enabled or self.epoch_gate.mode != 0,
                 partial(self._view_callback, view),
                 context=self.epoch_gate.context,
-                on_reset=self._reset_grid_inputs,subscriber_queue_size=1,subscriber_buffer_bytes=2 << 20)
+                on_reset=self._reset_grid_inputs,subscriber_queue_size=1,subscriber_buffer_bytes=2 << 20,
+                message_types=message_types)
             self.subscribers.append(group)
         self.demand_inputs = DemandInputs(self.subscribers)
         interval = max(
@@ -562,7 +611,7 @@ class LaneVectorizerNode:
             message.status_reason = "inference_standby"
             self.boundary_family_publisher.publish(message)
 
-    def _view_callback(self, view, class_message, confidence_message):
+    def _view_callback(self, view, class_message, confidence_message, timing_message=None):
         received_at = time.monotonic()
         # Do not wait for the fit's epoch lock in a transport callback. Tag
         # receipt now; the worker checks generation and cutoff under that lock.
@@ -580,6 +629,20 @@ class LaneVectorizerNode:
         if stamps[0] <= 0 or stamps[0] != stamps[1]:
             self.pair_errors[view] += 1
             return
+        if timing_message is not None:
+            if (timing_message.view != view or not timing_message.grid_wire_sequences_valid or
+                    timing_message.class_header != class_message.header or
+                    timing_message.confidence_header != confidence_message.header or
+                    timing_message.header.stamp != class_message.header.stamp or
+                    timing_message.header.frame_id != class_message.header.frame_id or
+                    timing_message.image_header.frame_id != class_message.header.frame_id or
+                    confidence_message.header.frame_id != class_message.header.frame_id or
+                    (self.epoch_gate.producer_session_id is not None and
+                     timing_message.producer_session_id != self.epoch_gate.producer_session_id) or
+                    (self.epoch_gate.generation is not None and
+                     timing_message.generation != self.epoch_gate.generation)):
+                self.pair_errors[view] += 1
+                return
         try:
             decode_started = time.perf_counter()
             projector = self.projectors[view]
@@ -599,6 +662,7 @@ class LaneVectorizerNode:
             decode_copy_ms,
             generation,
             received_at,
+            timing_message,
         )
         self._trace_supply('family_input', source_stamp_ns=stamps[0], view=view, context=generation,
                            received_at=received_at, decode_copy_ms=decode_copy_ms)
@@ -701,7 +765,8 @@ class LaneVectorizerNode:
                                wall_ms=1000*(computed-started),cpu_ms=1000*(time.thread_time()-cpu_started),stages=dict(timings))
             output = build_boundary_family_output(family,status_reason=shared_audit.get('reason','unknown'),
                                                    expected_boundary_count=self.expected_boundary_count)
-            message = self._boundary_family_message(output,header)
+            plane = GroundPlane(**shared_audit['projection_ground_plane']) if 'projection_ground_plane' in shared_audit else None
+            message = self._boundary_family_message(output,header,plane,reuse=True)
             waiting = time.monotonic()
             with self.epoch_gate.lock:
                 if not self._context_allows(frames,context):
@@ -754,9 +819,78 @@ class LaneVectorizerNode:
             if 0<=age_ms<=60000:
                 self.end_to_end_ms.append(age_ms)
 
+    def _imu_callback(self, message):
+        if message.orientation_covariance[0] < 0:
+            return
+        topic = self.imu_config.get('imu_topic', '/imu')
+        self.imu_timeline.add_imu(sensor_key(topic, message.header),
+            (message.orientation.x, message.orientation.y, message.orientation.z, message.orientation.w),
+            message.header.frame_id)
+
+    def _projection_message(self, frames, audit, header):
+        publisher = getattr(self, 'projection_publisher', None)
+        if publisher is None or not publisher.get_num_connections() or 'projection_planes' not in audit:
+            return None
+        timings = [frames[v].timing for v in self.views]
+        # Missing lineage cannot be replaced by a nearby JPEG, even in M0.
+        if any(t is None or not t.grid_wire_sequences_valid for t in timings):
+            return None
+        identities = {(t.producer_session_id, t.generation) for t in timings}
+        if len(identities) != 1:
+            return None
+        session, generation = next(iter(identities))
+        message = CameraGroundProjection(header=header,
+            producer_session_id=session, generation=generation,
+            projection_session_id=self.supply_session_id,
+            config_id=self.boundary_family_config_sha256,
+            imu_corrected=audit['projection_corrected'], reason=audit['projection_reason'],
+            views=list(self.views), image_headers=[t.image_header for t in timings],
+            calibration_ids=[self.projection_calibration_ids[v] for v in self.views],
+            plane_coefficients=[x for v in self.views for x in audit['projection_planes'][v]])
+        return message
+
+    def _attitude_cameras(self, frames):
+        """Adapt model timing to the shared, model/solver-independent geometry policy."""
+        headers, raw_timings = {}, {}
+        for view, frame in frames.items():
+            timing = frame.timing
+            if timing is None or not timing.source_timing_valid:
+                continue
+            # Preserve the model-grid/raw source check before handing original
+            # headers to the shared selector. Publisher seq values are unrelated.
+            header = Header(seq=timing.image_header.seq, stamp=frame.header.stamp,
+                            frame_id=frame.header.frame_id)
+            if timing.image_header.stamp.to_nsec() != frame.stamp_ns:
+                header.stamp = rospy.Time(0)
+            headers[view], raw_timings[view] = header, timing.sensor_timing
+        decision = select_ground_projection(
+            {v:self.projectors[v].camera for v in frames}, headers, raw_timings,
+            self.imu_timeline, self.imu_config)
+        cameras, details, reason, skew_ms = (dict(decision.cameras), dict(decision.details),
+                                            decision.reason, decision.source_skew_ms)
+        failure_timeline = self.imu_timeline.snapshot() if reason == 'imu_not_bracketed' else None
+        with self.imu_lock:
+            self.imu_counts[reason] = self.imu_counts.get(reason,0) + 1
+            self.imu_last = dict(reason=reason, used=bool(cameras), views=details, source_skew_ms=skew_ms,
+                                 failure_timeline=failure_timeline)
+        self._trace_supply('imu_projection', source_stamp_ns=max(frame.stamp_ns for frame in frames.values()),
+                           context=self.epoch_gate.context(), **self.imu_last)
+        return cameras
+
     def _compute_family_frame(self, frames, timings, frame_audit):
         shared_audit = {"accepted": False, "reason": "disabled"}
         view_evidence = []
+        attitude_cameras = (_measure(timings,'imu_attitude_lookup',lambda:self._attitude_cameras(frames))
+                            if getattr(self,'imu_enabled',False) else {})
+        # Capture one immutable selection for this calculation. Do not modify
+        # shared_family_parameters, including while a later mode is requested.
+        with self.imu_lock:
+            projection_reason = self.imu_last.get('reason', 'disabled') if self.imu_enabled else 'disabled'
+        fit_config = self.family_fit_policy.select(bool(attitude_cameras), projection_reason)
+        projection_audit = dict(projection_planes={
+            v: (attitude_cameras[v] if attitude_cameras else self.projectors[v].camera).ground_plane.coefficients
+            for v in self.views}, projection_corrected=bool(attitude_cameras), projection_reason=projection_reason)
+        self._publish_frame_projection(frames, projection_audit)
         for view in self.views:
             projector = self.projectors[view]
             if self.publish_pipeline_audit:
@@ -780,6 +914,9 @@ class LaneVectorizerNode:
                     ),
                 )
             )
+            if view in attitude_cameras:
+                view_evidence[-1] = _measure(timings,'imu_sparse_projection',lambda:
+                    correct_evidence(projector, view_evidence[-1], attitude_cameras[view]))
         evidence = _measure(
             timings,
             "evidence_concat",
@@ -822,7 +959,7 @@ class LaneVectorizerNode:
                     timings,
                     "shared_family_fit",
                     lambda: fit_shared_lane_family_with_audit(
-                        fitted_tracks, self.shared_family_parameters
+                        fitted_tracks, fit_config.parameters
                     ),
                 )
             except Exception as exc:
@@ -839,6 +976,15 @@ class LaneVectorizerNode:
                 timings.get("shared_family_fit", 0.0)
             )
             shared_audit = dict(shared_audit)
+            shared_audit['fit_policy'] = fit_config.audit()
+            shared_audit['fitted_widths_m'] = (dict(left=shared_family.left_width_m,
+                right=shared_family.right_width_m) if shared_family is not None else None)
+            with self.imu_lock:
+                self.imu_last = dict(self.imu_last, fit_policy=shared_audit['fit_policy'],
+                                    fitted_widths_m=shared_audit['fitted_widths_m'])
+            self._trace_supply('family_fit_policy',
+                source_stamp_ns=max(frame.stamp_ns for frame in frames.values()),
+                **shared_audit['fit_policy'], fitted_widths_m=shared_audit['fitted_widths_m'])
             shared_audit["fit_ms"] = shared_elapsed_ms
             shared_audit["deployment_allowed"] = False
             shared_audit["runtime_debug_enabled"] = bool(
@@ -862,7 +1008,29 @@ class LaneVectorizerNode:
                 ),
             )
             frame_audit["shared_family"] = shared_audit
+        if attitude_cameras:
+            # The planar fitter owns x/y. Lift its output onto the attitude
+            # plane at the same reference view used for the family header.
+            reference_view = max(frames, key=lambda v: frames[v].stamp_ns)
+            shared_audit['projection_ground_plane'] = attitude_cameras[reference_view].ground_plane.to_mapping()
+            shared_audit['projection_reference_view'] = reference_view
+        shared_audit.update(projection_audit)
         return evidence, nodes, tracks, fitted_tracks, shared_family, shared_audit
+
+    def _publish_frame_projection(self, frames, audit):
+        # The plane is final before fitting starts. Let visualization project
+        # concurrently; waiting for a spline adds avoidable display latency.
+        publisher = getattr(self, 'projection_publisher', None)
+        if publisher is None or not publisher.get_num_connections():
+            return
+        header = Header(stamp=max(frames.values(), key=lambda f:f.stamp_ns).header.stamp,
+                        frame_id=self.frame_id)
+        message = self._projection_message(frames, audit, header)
+        if message is not None:
+            with self.epoch_gate.lock:
+                context = self.epoch_gate.context()
+                if self._context_allows(frames, context):
+                    self.projection_publisher.publish(message)
 
     def _process_legacy(self, frames):
         with self.processing_lock, self.epoch_gate.lock:
@@ -924,7 +1092,9 @@ class LaneVectorizerNode:
                         timings,
                         "boundary_family_message_publish",
                         lambda: self.boundary_family_publisher.publish(
-                            self._boundary_family_message(family_output, header)
+                            self._boundary_family_message(family_output, header,
+                                GroundPlane(**shared_audit['projection_ground_plane'])
+                                if 'projection_ground_plane' in shared_audit else None)
                         ),
                     )
                     family_candidate_published = True
@@ -1630,8 +1800,19 @@ class LaneVectorizerNode:
         message.status = [status]
         return message
 
-    def _boundary_family_message(self, output, source_header):
-        message = LaneBoundaryFamily()
+    def _boundary_family_message(self, output, source_header, ground_plane=None, reuse=False):
+        # Private to the serial fit worker and its non-latched publisher. Noetic
+        # serializes into immutable wire bytes before publish returns, including
+        # queue_size=1 transports. Never retain this borrowed message elsewhere.
+        # Other callers keep the original fresh-message ownership by default.
+        if reuse:
+            if not hasattr(self, '_family_message_buffers'):
+                self._family_message_buffers = (LaneBoundaryFamily(), {})
+            message, member_buffers = self._family_message_buffers
+            message.boundaries.clear()
+        else:
+            message, member_buffers = LaneBoundaryFamily(), {}
+        message.header.seq = 0
         message.header.stamp = source_header.stamp
         message.header.frame_id = self.frame_id
         message.valid = bool(output.valid)
@@ -1653,7 +1834,13 @@ class LaneVectorizerNode:
         message.outlier_rate = float(output.outlier_rate)
         message.weighted_rms_m = float(output.weighted_rms_m)
         for value in output.boundaries:
-            boundary = LaneBoundaryFamilyMember()
+            role = int(value.role)
+            if reuse:
+                if role not in member_buffers:
+                    member_buffers[role] = (LaneBoundaryFamilyMember(), [])
+                boundary, points = member_buffers[role]
+            else:
+                boundary, points = LaneBoundaryFamilyMember(), []
             boundary.role = int(value.role)
             boundary.color = int(value.color)
             boundary.source_mask = int(value.source_mask)
@@ -1667,10 +1854,16 @@ class LaneVectorizerNode:
             boundary.invalid_length_m = float(value.invalid_length_m)
             boundary.max_inferred_gap_m = float(value.max_inferred_gap_m)
             boundary.bridged_length_ratio = float(value.bridged_length_ratio)
-            xyz = self.ground_plane.xyz(value.polyline_xy)
-            boundary.polyline = [
-                Point32(x=float(x), y=float(y), z=float(z)) for x, y, z in xyz
-            ]
+            xyz = (ground_plane or self.ground_plane).xyz(value.polyline_xy)
+            if reuse:
+                # Three producer-owned roles, bounded by the fixed configured
+                # sampling range. Keep point objects, not historical frames.
+                while len(points) < len(xyz): points.append(Point32())
+                for point, (x, y, z) in zip(points, xyz):
+                    point.x, point.y, point.z = float(x), float(y), float(z)
+                boundary.polyline = points if len(points) == len(xyz) else points[:len(xyz)]
+            else:
+                boundary.polyline = [Point32(x=float(x), y=float(y), z=float(z)) for x, y, z in xyz]
             boundary.support_state = [
                 int(state) for state in value.support_state
             ]
@@ -1786,6 +1979,10 @@ class LaneVectorizerNode:
         return message
 
     def _publish_diagnostics(self, _event):
+        with self.imu_lock:
+            imu_diagnostics = dict(enabled=self.imu_enabled, counts=dict(self.imu_counts), last=self.imu_last)
+        if self.imu_timeline is not None:
+            imu_diagnostics['pose_timeline'] = self.imu_timeline.snapshot()
         processing = np.asarray(self.processing_ms, dtype=np.float64)
         shared_processing = np.asarray(
             self.shared_family_fit_ms, dtype=np.float64
@@ -1813,6 +2010,7 @@ class LaneVectorizerNode:
         status.level = DiagnosticStatus.ERROR if self.errors else DiagnosticStatus.OK
         status.message = "errors" if self.errors else "running"
         values = {
+            "imu_motion": imu_diagnostics,
             "views": self.views,
             "inputs_by_view": self.inputs,
             "pair_errors_by_view": self.pair_errors,

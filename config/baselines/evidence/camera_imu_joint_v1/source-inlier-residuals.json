@@ -1,0 +1,31 @@
+{
+  "schema": "joint_inlier_residual_audit_v1",
+  "input_sha256": "461335d8e4507378ce8a2c076616954980d0d4a99114154e17b2cb267592622d",
+  "independent_gt": false,
+  "variants": {
+    "M0": {
+      "frames": 226,
+      "frame_residual_p95_distribution_m": {
+        "50": 0.08498341327715939,
+        "95": 0.17696693491687426,
+        "99": 0.3008616029038901
+      }
+    },
+    "M1_source_width0": {
+      "frames": 226,
+      "frame_residual_p95_distribution_m": {
+        "50": 0.12443364284226678,
+        "95": 0.17692706002880074,
+        "99": 0.19762220789058788
+      }
+    },
+    "M1_source_joint": {
+      "frames": 226,
+      "frame_residual_p95_distribution_m": {
+        "50": 0.08250421493013058,
+        "95": 0.15037950732990352,
+        "99": 0.1579971043082382
+      }
+    }
+  }
+}

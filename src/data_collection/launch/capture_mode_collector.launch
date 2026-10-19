@@ -9,7 +9,9 @@
   <arg name="grpc_address" default="127.0.0.1"/>
   <arg name="grpc_port" default="7789"/>
   <arg name="save_topic" default="/SaveSensorData"/>
-  <!-- Windows path interpreted by MORAI. Empty means MORAI's SensorData default. -->
+  <!-- Windows path on the simulator PC, not ASMC_DATA or a host mount.
+       Empty uses the conventional SaveFile/SensorData path in data_locations.json;
+       override morai_file_dir or ASMC_DATA_LOCATIONS for another installation. -->
   <arg name="morai_file_dir" default=""/>
   <arg name="only_when_moving" default="false"/>
   <arg name="min_speed_mps" default="0.2"/>

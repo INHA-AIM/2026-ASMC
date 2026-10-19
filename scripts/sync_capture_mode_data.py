@@ -5,7 +5,6 @@ from __future__ import print_function
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -21,13 +20,11 @@ from data_collection.capture_sync import (  # noqa: E402
     select_records,
     sync_run,
 )
+from data_collection.storage_paths import default_data_root as storage_data_root
 
 
 def default_data_root():
-    configured = os.environ.get("ASMC_DATA")
-    if configured:
-        return Path(configured).expanduser()
-    return REPO_ROOT.parent / "data"
+    return Path(storage_data_root())
 
 
 def parse_args():
@@ -37,8 +34,8 @@ def parse_args():
     parser.add_argument("--run-id", action="append", required=True)
     parser.add_argument(
         "--sensor-root",
-        default="/mnt/c/MoraiLauncher_Win/SensorData",
-        help="MORAI Windows SensorData path as seen from WSL",
+        default=None,
+        help="Native SensorData root override; otherwise locate the run in configured roots",
     )
     parser.add_argument("--data-root", default=str(default_data_root()))
     parser.add_argument("--jobs", type=int, default=4)
@@ -123,6 +120,7 @@ def main():
                     ],
                     "file_count": sum(len(entries) for _, entries in frames),
                     "source_bytes": total_bytes,
+                    "source_sensor_root": str(frames[0][1][0]["path"].parent.parent),
                 }
             else:
                 result = sync_run(

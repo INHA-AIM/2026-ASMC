@@ -76,7 +76,12 @@ def main():
                 raw.boxes.append(CameraObjectBox(xmin=20,ymin=135,xmax=230,ymax=159,class_name='vehicle',source_class_name='car',confidence=.9,confidence_valid=True))
             raw_publisher.publish(raw)
         objects.publish(result)
-    wait(lambda:images.get_num_connections() and objects.get_num_connections() and visualizer.publisher.get_num_connections(),'overlay connected')
+    # The synchronizer needs every transport, including debug/raw. Otherwise
+    # the first non-latched raw result can be lost during TCPROS setup on CI,
+    # leaving the exact-stamp triple incomplete even though image/objects connect.
+    wait(lambda:images.get_num_connections() and objects.get_num_connections() and
+         (raw_publisher is None or raw_publisher.get_num_connections()) and
+         visualizer.publisher.get_num_connections(),'overlay connected')
     jpeg=cv2.imencode('.jpg',np.zeros((160,240,3),np.uint8))[1].tobytes()
     checks={}
     def pair(seq):

@@ -2,31 +2,42 @@
 # Perception ML 학습 컨테이너 제어
 set -euo pipefail
 COMPOSE_DIR="$(dirname "$(readlink -f "$0")")/../docker/perception-train"
-export ASMC="${ASMC:-$(dirname "$(readlink -f "$0")")/..}"
-export ASMC_DATA="${ASMC_DATA:-$(dirname "$(readlink -f "$ASMC")")/data}"
-export TWINLITE_SOURCE="${TWINLITE_SOURCE:-$(dirname "$(readlink -f "$ASMC")")/external/baselines/TwinLiteNetPlus}"
-mkdir -p "$ASMC_DATA"
+REPO_ROOT="$(cd "$COMPOSE_DIR/../.." && pwd)"
+source "$REPO_ROOT/scripts/lib/storage.sh"
+asmc_storage_load "$REPO_ROOT"
+asmc_storage_require_overlay "${ASMC_TRAIN_STORAGE_COMPOSE:-}"
+case "${1:-up}" in
+  up|rebuild) asmc_storage_prepare_data "$REPO_ROOT" ;;
+esac
+COMPOSE_ARGS=(-f "$COMPOSE_DIR/docker-compose.yaml")
+
+if [[ -n "${ASMC_TRAIN_STORAGE_COMPOSE:-}" ]]; then
+  COMPOSE_ARGS+=(-f "$ASMC_TRAIN_STORAGE_COMPOSE")
+fi
 
 cmd="${1:-up}"
 echo "[DATA] $ASMC_DATA -> /data (ro)"
 echo "[TWINLITE] $TWINLITE_SOURCE -> /opt/baselines/TwinLiteNetPlus (ro)"
 case "$cmd" in
+  config)
+    docker compose "${COMPOSE_ARGS[@]}" config
+    ;;
   build)
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" build
+    docker compose "${COMPOSE_ARGS[@]}" build
     ;;
   up)
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" up -d --force-recreate
+    docker compose "${COMPOSE_ARGS[@]}" up -d --force-recreate
     docker ps --filter name=asmc-perception-train
     ;;
   down)
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" down
+    docker compose "${COMPOSE_ARGS[@]}" down
     ;;
   rebuild)
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" build --no-cache
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" up -d --force-recreate
+    docker compose "${COMPOSE_ARGS[@]}" build --no-cache
+    docker compose "${COMPOSE_ARGS[@]}" up -d --force-recreate
     ;;
   *)
-    echo "Usage: $0 {build|up|down|rebuild}"
+    echo "Usage: $0 {config|build|up|down|rebuild}"
     exit 1
     ;;
 esac

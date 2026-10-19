@@ -15,6 +15,8 @@
 | checkpoint·mission metadata | [K-City metadata v1](competition-kcity2025-metadata-v1.md) | 현재 metadata YAML·출처/authority |
 | MORAI wire 호환 | [beta_drive 정책](simulator-morai-msgs-beta-policy.md) | 고정 submodule·bridge decoder |
 | 센서 원본/수신/발행 시각 | [timing 기록·활용](../architecture/bridge-sensor-timing.md) | `sensor_frame_timing_v1.yaml`, `asmc_msgs/SensorFrameTiming` |
+| 원본 영상→model-grid→IMU 투영 | [자세 보정](../architecture/camera-imu-projection.md) | `camera_model_grid_timing_v1.yaml`, `asmc_msgs/CameraModelGridTiming` |
+| Family·RGB/semantic BEV 보정 재사용 | [같은 자세 보정의 두 시각화](../architecture/camera-imu-projection.md#두-시각화의-보정-재사용) | `camera_ground_projection_v1.yaml`, `asmc_msgs/CameraGroundProjection` |
 
 기계 계약은 저장소 `config/contracts/`에 있습니다. source 설정과 wire 의미가 충돌하면
 producer/consumer owner와 영향·호환·검증을 확인합니다. 기존 필드/상수는 동결하며 확장은 additive/versioned로 합니다.

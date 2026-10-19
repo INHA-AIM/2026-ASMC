@@ -54,6 +54,10 @@ Engine 오류에 자동 fallback하지 않는다.
 기본은 모델별 프로세스다. 공유 후보에서도 camera4 ResNet은 별도 프로세스를 사용한다.
 구형 `perception.launch`의 TwinLite384×640 호환 경로는 보존한다.
 TwinLite·BEV·차선 피팅의 책임은 분리하며 차선 주행 소비는 음영 ODD에 한정한다.
+원본 시각 IMU·공동 폭 피팅이 기본이며 근거 부족 시 전 뷰가 기존 M0로 복귀한다.
+[보정 계약](../architecture/camera-imu-projection.md)과 [최종 검증](../records/camera/2026-10-18-joint-family-stabilization.md)을 따른다.
+Header·표현·MD5는 유지하지만 설정 SHA는 바뀐다. 구 SHA를 고정한 판제 어댑터의 인수는
+[인계 문서](../handoffs/camera-to-planning.md)에 따라 별도로 확인한다.
 구간 판정과 결과 소비는 판제 소유다. 현재는 세 모델을 상시 ACTIVE로 유지하며
 구간·GPS 유효 여부로 발행을 중단하지 않는다. Frenet 객체 freshness를 유지하고,
 [구간별 소비 안내](../handoffs/perception-to-planning.md)에 따라 판제가 사용 범위를 결정한다.
@@ -143,6 +147,13 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 정확한 영상 대응과 무효화를 관리한다. 합성 header는 디버그 발행 시각이며 동기 3뷰 관측이 아니다.
 시각화 목표는10Hz이고 추론 목표15Hz와 별도다. 구독자가 없는 큰 영상의 구독·변환·인코딩을 중단한다.
 최종 기본 전환과 GUI 수락 상태는 [시각화 검증 기록](../records/camera/camera-visualization-validation.md)을 따른다.
+
+Family 선은 발행된 family를 그대로 그린다. RGB/semantic comparison은
+[`CameraGroundProjection`](../../config/contracts/camera_ground_projection_v1.yaml)의 뷰별 지면을
+공유한다. 원본 시각 IMU 조회는 family worker에서 한 번이며, 작은 metadata는 피팅 전에 전달해
+영상 렌더링이 피팅 완료를 기다리지 않도록 한다. Comparison만 구독하면 별도의 고정 BEV 합성
+경로를 구동하지 않는다. 원 JPEG와 같은 시각의 semantic이 없는 경우에는 대체하지 않고 건너뛴다.
+기존 BEV 데이터 토픽·판제 좌표 계약은 변경하지 않는다.
 
 ## Timestamp의 출처
 

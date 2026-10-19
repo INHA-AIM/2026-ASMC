@@ -36,7 +36,9 @@ def main():
     time.sleep(.4)
     checks=dict(idle_no_image_subscriptions=not node.images,
                 idle_no_decode=node.counts['decode']==0,
-                idle_semantic_no_large_inputs=all(s.sub is None for s in semantic.subscribers))
+                idle_semantic_no_large_inputs=all(
+                    not group.active and not group.subscribers
+                    for group in semantic.synchronizers))
     frames=[]
     sink=rospy.Subscriber('/perception/camera/objects/debug/mosaic/compressed',CompressedImage,
         lambda m:frames.append(m),queue_size=1)
@@ -77,8 +79,10 @@ def main():
     time.sleep(.15)
     before=node.counts['decode'];send(session='restarted',generation=4);time.sleep(.2)
     checks['disconnect_stops_image_work']=not node.images and node.counts['decode']==before
-    node.close();semantic.demand_inputs.close()
-    checks['shutdown_joins_worker']=not node.worker.is_alive()
+    node.close();semantic.close()
+    checks['shutdown_joins_worker']=(not node.render_worker.thread.is_alive() and
+        not semantic.render_worker.thread.is_alive() and
+        not semantic.demand_inputs.worker.is_alive())
     checks={k:bool(v) for k,v in checks.items()}
     result=dict(passed=all(checks.values()),checks=checks,counters=dict(node.counts))
     print(json.dumps(result,indent=2));return 0 if result['passed'] else 1

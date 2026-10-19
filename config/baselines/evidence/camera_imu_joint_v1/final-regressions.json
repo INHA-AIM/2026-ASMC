@@ -1,0 +1,42 @@
+{
+  "schema": "imu_joint_final_regressions_v1",
+  "suites": [
+    {
+      "name": "focused_imu_family_cpu",
+      "tests": 59,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log": "final-cpu-r3.log"
+    },
+    {
+      "name": "all_bev_cpu",
+      "tests": 198,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log": "full-bev-tests.log"
+    },
+    {
+      "name": "canonical_default_and_m0_launch",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log": "default-launch-tests.log"
+    },
+    {
+      "name": "quality_acceptance_faults",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log": "acceptance-gate-tests.log"
+    }
+  ],
+  "counts_overlap": true,
+  "gpu_used": false,
+  "public_control_published": false,
+  "build": "operational catkin_make asmc_msgs;asmc_camera -j2 passed",
+  "hosted_ci": "not run at local evidence freeze"
+}

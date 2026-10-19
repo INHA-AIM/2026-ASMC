@@ -53,7 +53,7 @@ MORAI RGB ×3 --UDP--> bridge --ROS--> TwinLiteNet+ Large v7 E8
 `lane_boundary_adapter`의 family monitor는 read-only reference다. 같은 패키지의 BBox 차로/재밍 제어 launch는 별도 경로다.
 최종 판제는 가능하면 그 node를 별도 프로세스로 영구 유지하지 않고,
 `BuildBoundaryFamilyStripContext()`·freshness/invalid gate·관련 테스트를
-planning-owned lane/corridor module에 흡수한다. 흡수 전에는 아래 8절 인수 체크리스트와
+planning-owned lane/corridor module에 흡수한다. 흡수 전에는 아래 7절 인수 체크리스트와
 adapter README의 bag/closed-loop parity를 통과해야 한다. standalone package 삭제는
 대체 consumer merge 후 별도 PR에서만 수행한다.
 
@@ -78,8 +78,11 @@ probability와 coverage 둘 다 구독해야 한다. 보조 토픽은 `/percepti
 support를 보존한다. 판제가 더 긴 horizon을 선택할 때도 `INVALID`를 연결하거나 추정으로
 승격하지 말고, freshness·폭·support gate와 별도 far-range audit를 적용한다.
 
-family와 해당 raster 출력은 `header.frame_id=base_link`이고 x-forward, y-left다. timestamp는 callback
-수신 시각이 아니라 세 카메라 입력 묶음의 최신 source stamp다. BEV fusion은 세 view의
+family와 해당 raster 출력은 `header.frame_id=base_link`이고 x-forward, y-left다. Family timestamp는
+세 카메라 입력 묶음의 최신 **영상 header.stamp**를 보존한다. 모델 callback 시각이나 IMU 원본 시각으로
+다시 쓰지 않는다. Bridge의 `timestamp_mode=receive`에서는 센서 수신 기준이며 촬영 시각으로 단정하지 않는다.
+원본 MORAI 시각은 별도 `SensorFrameTiming`/`CameraModelGridTiming`으로 연결해 M1 보정에 사용한다.
+자세 보정과 서로 다른 영상 시각의 병진/yaw 정렬은 구분한다. BEV fusion은 세 view의
 stamp 차이가 35ms 이내일 때 현재 `camera.launch`에서 최대15Hz로 발행한다. 한 view가 빠지면 오래된 raster를 다시
 발행하지 않으므로 consumer가 마지막 메시지를 무기한 유지해서는 안 된다. 초기 freshness
 상한은 lane과 raster 모두 0.35초를 제안하며, 최종 수치는 판제 full-stack 실측으로 정한다.
@@ -94,12 +97,41 @@ operating_domain = shadow_two_way_v1
 algorithm_id     = twinlite_v6_shadow_boundary_family_candidate_v3
 representation   = shared_parametric_bspline_normal_offsets_v2
 expected count   = 3
-config SHA-256   = 691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070
+config SHA-256   = 2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a
 deployment_allowed = false
 ```
 
 `algorithm_id`의 `v6`는 동결한 family 계산/계약 식별자이며 현재 신경망 checkpoint 버전을 뜻하지 않습니다.
 모델 배포 SHA와 실행 설정은 별도 배포 목록·diagnostics에서 확인합니다.
+
+원본 시각 IMU·공동 폭 기본 설정의 검증 SHA는
+`2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a`입니다.
+[10분 검증·복귀 한계](../records/camera/2026-10-18-joint-family-stabilization.md)를 함께 인수합니다.
+
+`camera_bbox_lane`·`camera_bbox_lane_change`와 planner의 관련 launch는 이제 현재 SHA와
+`asmc_camera/config/cameras_v3.yaml`을 기본으로 전달합니다. SHA 검사는 유지합니다.
+BBox classifier는 `/perception/lane/ground_projection`과 공용 lane status로 같은 추론 세대와
+영상의 평면을 확인합니다. Family xyz를 최신 묶음 뷰 평면과 검사한 뒤 전방 원본 영상의
+평면 위로 차로 띠 xy를 올려 투영합니다. 원본 시각 IMU를 두 번 조회하거나 고정 z를 다시 붙이지 않습니다.
+
+| 항목 | 현재 카메라와 BBox 소비자 |
+|---|---|
+| 설정 SHA | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` |
+| 정본 보정 | `src/asmc_camera/config/cameras_v3.yaml`, 명목 거리0.36m |
+| 영상 대응 | 원본 JPEG의 frame/stamp/wire sequence와 뷰별 context를 정확히 대응 |
+| 검사 | ACTIVE/loaded·session/generation·cutoff·350ms freshness·보정 ID·family xyz |
+| 누락·불일치 | UNKNOWN; 가까운 영상·최신 quaternion·YAML 고정 평면으로 대체하지 않음 |
+| 인수 상태 | CPU·읽기 전용 ROS 계약 검증; 실제 정차/운동·폐루프 인수는 판제 확인 필요 |
+
+[공유 투영 계약](../../config/contracts/camera_ground_projection_v1.yaml)은 기존 필드와 MD5를 유지하며
+comparison과 BBox 재투영을 포함합니다. Metadata 생산자는 여전히 family 묶음 worker 하나입니다.
+따라서 독립적인 상시 YOLO 지면 서비스가 구현된 것은 아닙니다. 일반 IMU 선택·투영 함수는
+[공용 라이브러리](../../src/asmc_camera/src/asmc_camera/runtime/ground_projection.py)로 분리했습니다.
+Family 대표 header는 최신 영상 시각이며 뷰별 시각은 다릅니다. 병진/yaw의 공통 시각 정렬(M2)은
+보류 중입니다. 자세 보정의 소비 연결을 폐루프 주행 승인으로 해석하지 않습니다.
+
+M1을 끈 M0 복구도 현재 Large·0.36m 등 다른 설정을 유지하므로 초기 `691b9982…` SHA와
+자동으로 호환되는 것은 아닙니다. 실제 메시지의 SHA와 보정 파일을 확인합니다.
 
 `deployment_allowed=false`는 메시지를 버리라는 뜻이 아니라, 현재 결과가 판제 연결과
 closed-loop 승인을 대신하지 않는다는 뜻이다. read-only 검토에서는 이 값을 요구한다.
@@ -258,6 +290,29 @@ roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=fa
 카메라 모드와 최종 NORMAL/JAMMING 선택은 동일 기능이 아닙니다. 구간 활성화·정지/재개·fallback은 판제에서 확인합니다.
 
 ## 7. 수락 상태와 인수 확인
+
+### 7.1 판제 담당의 별도 인수 작업
+
+카메라 PR 병합은 아래 작업의 완료를 뜻하지 않습니다. 카메라 담당은 보정·원본 시각·진단과
+검증 자료를 제공하고, 판제 담당은 소비 변경과 제어 승격을 소유합니다. 현재 아래 항목은 **인수 대기**입니다.
+
+- [ ] Read-only로 현행 family의 xyz, `base_link`, 역할, `valid`·support·범위를 확인한다.
+- [x] BBox classifier의 같은 영상 context 투영과 현재 SHA·정본 보정 연결을 구현하고
+  nominal/roll/pitch·입력 순서·누락·세대 전환의 CPU/ROS 회귀를 추가했다.
+- [ ] 실제 정차/가속/제동/조향과 M1→M0 복귀 시 RGB 위 경계·객체 차로 판정의 정합을 확인한다.
+- [ ] 현재 전달하는 SHA·보정 경로를 판제 실행 환경에서 확인한다. classifier의 `expected_hash`,
+  follower의 `expected_config_sha256`를 함께 유지하며 SHA 검사를 제거하지 않는다.
+- [ ] 잘못된 SHA, invalid/stale, 입력 중단·재시작·세대 전환에서 unknown/정지/fallback을 확인한다.
+  freshness350ms와 source/receive 시각 검사를 완화하지 않는다.
+- [ ] Read-only bag·preview 이후 A126 음영 ODD와 selector의 제어 소유권, 차로변경·복귀·LiDAR veto를
+  폐루프로 검증하고 승인 기록을 남긴다. `autonomy_no_bridges_v2.launch`는
+  `enable_control=true`를 전달하므로 단순 관측 시험용으로 실행하지 않는다.
+
+검토 시작점은 [BBox 판정 안내](../../src/jamming_lane_boundary_adapter/docs/bbox-lane.md)와
+[차선변경 안내](../../src/jamming_lane_boundary_adapter/docs/bbox-lane-change.md)다.
+설정·context 불일치 거부는 소비 기하의 계약 오류이며, 신경망 추론 장애로 단정하지 않는다.
+
+### 7.2 검증 이력과 남은 한계
 
 2026-10-18 Large E8은 동일 val/test·TensorRT semantic/family 검증과 FOGGY10분을 통과했다.
 교차12회 중 Large SUNNY1회에 source freshness 저하3건을 기록했다.

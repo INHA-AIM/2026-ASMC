@@ -1,0 +1,9 @@
+{
+  "/perception/lane/ground_projection": [],
+  "/perception/bev/camera/drivable_probability": [],
+  "/perception/camera/front/drivable/probability": [],
+  "/image_jpeg/compressed": [
+    "/camera_lane",
+    "/camera_objects"
+  ]
+}

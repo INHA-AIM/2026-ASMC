@@ -420,7 +420,9 @@ def build_dataset_version(
     if len(training_heads) != len(set(training_heads)):
         raise PerceptionDatasetError("training heads must not contain duplicates")
 
+    from .storage_paths import validate_bulk_output
     version_root = data_root / "dataset_versions" / dataset_name
+    validate_bulk_output(version_root)
     temporary_root = version_root.with_name(".{}.{}.tmp".format(dataset_name, os.getpid()))
     if version_root.exists() and not overwrite:
         raise PerceptionDatasetError(

@@ -132,6 +132,9 @@ DEFAULT_SHARED_FAMILY_CONFIG = {
     "lane_width_min_m": 2.40,
     "lane_width_max_m": 4.60,
     "width_prior_strength": 0.35,
+    # Numerically solve centre controls and observed widths together. Enabled
+    # only by the source-IMU profile after same-input verification.
+    "joint_width_fit_enabled": False,
     "spline_smoothing": 0.08,
     "control_spacing_m": 2.5,
     "sample_spacing_m": 0.25,
@@ -275,13 +278,18 @@ def _track_score(track) -> float:
     return confidence * min(1.0, span / 12.0)
 
 
-def _track_y_at_x(track, x_m: float) -> float:
-    points = np.asarray(track.xy, dtype=np.float64).reshape(-1, 2)
+def _interpolate_track_y(points, x_m):
+    """Sort/deduplicate once for every query in a role-pair comparison."""
     order = np.argsort(points[:, 0], kind="mergesort")
     points = points[order]
     unique_x, indices = np.unique(points[:, 0], return_index=True)
-    target = float(np.clip(float(x_m), unique_x[0], unique_x[-1]))
-    return float(np.interp(target, unique_x, points[indices, 1]))
+    target = np.clip(x_m, unique_x[0], unique_x[-1])
+    return np.interp(target, unique_x, points[indices, 1])
+
+
+def _track_y_at_x(track, x_m: float) -> float:
+    points = np.asarray(track.xy, dtype=np.float64).reshape(-1, 2)
+    return float(_interpolate_track_y(points, float(x_m)))
 
 
 def _track_separation(first, second, reference_x_m: float) -> float:
@@ -294,14 +302,8 @@ def _track_separation(first, second, reference_x_m: float) -> float:
             first, reference_x_m
         )
     samples = np.linspace(lower, upper, max(3, int(math.ceil(upper - lower)) + 1))
-    return float(
-        np.median(
-            [
-                _track_y_at_x(second, value) - _track_y_at_x(first, value)
-                for value in samples
-            ]
-        )
-    )
+    return float(np.median(_interpolate_track_y(second_xy, samples) -
+                           _interpolate_track_y(first_xy, samples)))
 
 
 def _assign_observed_roles(tracks: Sequence, values: Mapping) -> tuple[dict, dict]:
@@ -421,13 +423,29 @@ class _FitWorkspace:
         self.control_count, self.degree = controls, degree
         self.knots, self.dense, self.dense_basis, self.dense_derivative, self.regularizer = _fixed_fit_matrices(controls, degree)
         self.last_parameters = self.last_basis = None
+        self.selected_parameters = self.selected_basis = self.selected_derivative = None
         self.distance_buffers = None
         self.basis_reuses = 0
+
+    def select_dense(self, indices):
+        """Reuse exact dense-grid rows for this iteration, including repeats.
+
+        Nearest-curve assignments select existing parameter values. Re-running
+        the knot recurrence (and its two finite differences) gives the same
+        rows, so keep only this frame's current selection, never past frames.
+        """
+        self.selected_parameters = self.dense[indices]
+        self.selected_basis = self.dense_basis[indices]
+        self.selected_derivative = self.dense_derivative[indices]
+        return self.selected_parameters
 
     def basis(self, parameters):
         if parameters is self.dense:
             self.basis_reuses += 1
             return self.dense_basis
+        if parameters is self.selected_parameters:
+            self.basis_reuses += 1
+            return self.selected_basis
         if parameters is self.last_parameters:
             self.basis_reuses += 1
             return self.last_basis
@@ -438,6 +456,8 @@ class _FitWorkspace:
     def derivative(self, parameters):
         if parameters is self.dense:
             return self.dense_derivative
+        if parameters is self.selected_parameters:
+            return self.selected_derivative
         values = np.asarray(parameters, np.float64).reshape(-1)
         lower, upper = np.clip(values-1e-4, 0., 1.), np.clip(values+1e-4, 0., 1.)
         return (_bspline_basis_uncached(upper, self.knots, self.degree, self.control_count)-
@@ -485,6 +505,75 @@ def _curve_geometry(parameters, knots, degree, controls, workspace=None):
     flip = normal[:, 1] < 0.0
     normal[flip] *= -1.0
     return points, tangent, normal
+
+
+def _fit_joint_width_controls(points, parameters, normals, point_roles, weights, values, workspace):
+    """Same constant-normal-offset family, one bounded weighted linear solve.
+
+    With a measured yellow reference, jointly estimating the centre and two
+    widths removes the slow coordinate-descent drift of alternating updates.
+    Inferred roles retain their nominal width. Without yellow the original
+    solver remains authoritative; two white lines do not identify its gauge.
+    """
+    basis = workspace.basis(parameters)
+    count, controls = len(points), workspace.control_count
+    roles = [role for role in (LEFT_ROLE, RIGHT_ROLE) if np.any(point_roles == role)]
+    design = np.zeros((2 * count, 2 * controls + len(roles)))
+    design[0::2, :controls] = basis
+    design[1::2, controls:2 * controls] = basis
+    priors = []
+    for i, role in enumerate(roles):
+        mask = point_roles == role
+        sign = 1. if role == LEFT_ROLE else -1.
+        design[:, 2 * controls + i] = (normals * (mask * sign)[:, None]).ravel()
+        priors.append(float(values['nominal_left_width_m' if role == LEFT_ROLE else 'nominal_right_width_m']))
+    root = np.repeat(np.sqrt(np.maximum(weights, 1e-9)), 2)
+    design *= root[:, None]
+    target = points.ravel() * root
+    penalty = []
+    smoothing = float(values['spline_smoothing'])
+    if smoothing > 0:
+        regularizer = workspace.regularizer * math.sqrt(smoothing)
+        rows = np.zeros((2 * len(regularizer), design.shape[1]))
+        rows[:len(regularizer), :controls] = regularizer
+        rows[len(regularizer):, controls:2 * controls] = regularizer
+        penalty.append((rows, np.zeros(len(rows))))
+    prior = float(values['width_prior_strength'])
+    if prior > 0:
+        rows = np.zeros((len(roles), design.shape[1]))
+        for i, role in enumerate(roles):
+            # Match the original normalized width prior's observation scale.
+            rows[i, 2 * controls + i] = math.sqrt(prior * float(np.sum(weights[point_roles == role])))
+        penalty.append((rows, np.asarray(priors) * np.diag(rows[:, 2 * controls:])))
+    if penalty:
+        design = np.vstack([design] + [p[0] for p in penalty])
+        target = np.concatenate([target] + [p[1] for p in penalty])
+    solution = np.linalg.lstsq(design, target, rcond=None)[0]
+    widths = solution[2 * controls:].copy()
+    lower, upper = float(values['lane_width_min_m']), float(values['lane_width_max_m'])
+    fixed = {}
+    # Active-set bounds for at most two widths; remaining controls/widths are
+    # re-solved, so clipping a width never leaves incompatible centre controls.
+    for _ in roles:
+        violations = [i for i, w in enumerate(widths) if i not in fixed and not lower <= w <= upper]
+        if not violations:
+            break
+        for i in violations:
+            fixed[i] = float(np.clip(widths[i], lower, upper))
+        keep = np.ones(design.shape[1], dtype=bool)
+        adjusted = target.copy()
+        for i, width in fixed.items():
+            column = 2 * controls + i
+            keep[column] = False
+            adjusted -= design[:, column] * width
+        solution[keep] = np.linalg.lstsq(design[:, keep], adjusted, rcond=None)[0]
+        for i, width in fixed.items():
+            solution[2 * controls + i] = width
+        widths = solution[2 * controls:].copy()
+    fitted = np.column_stack((solution[:controls], solution[controls:2 * controls]))
+    result = {LEFT_ROLE: float(values['nominal_left_width_m']), RIGHT_ROLE: float(values['nominal_right_width_m'])}
+    result.update({role: float(widths[i]) for i, role in enumerate(roles)})
+    return workspace.knots, fitted, result
 
 
 def _nearest_curve_indices(points, curve, workspace=None):
@@ -817,7 +906,7 @@ def fit_shared_lane_family_with_audit(
             dense_parameters, knots, degree, controls, workspace
         )
         nearest = _nearest_curve_indices(points, dense_curve, workspace)
-        assigned_parameters = dense_parameters[nearest]
+        assigned_parameters = workspace.select_dense(nearest)
         assigned_centres = dense_curve[nearest]
         assigned_normals = dense_normals[nearest]
         signed = np.sum((points - assigned_centres) * assigned_normals, axis=1)
@@ -854,15 +943,17 @@ def fit_shared_lane_family_with_audit(
             dtype=np.float64,
         )
         targets = points - offsets[:, None] * assigned_normals
-        knots, controls = _fit_controls(
-            targets,
-            assigned_parameters,
-            base_weights * robust,
-            control_count,
-            degree,
-            float(values["spline_smoothing"]),
-            workspace,
-        )
+        if bool(values['joint_width_fit_enabled']) and YELLOW_ROLE in roles:
+            knots, controls, joint_widths = _fit_joint_width_controls(
+                points, assigned_parameters, assigned_normals, point_roles,
+                base_weights * robust, values, workspace)
+            left_width, right_width = joint_widths[LEFT_ROLE], joint_widths[RIGHT_ROLE]
+            offsets = np.asarray([left_width if r == LEFT_ROLE else -right_width if r == RIGHT_ROLE else 0.
+                                  for r in point_roles])
+        else:
+            knots, controls = _fit_controls(
+                targets, assigned_parameters, base_weights * robust, control_count,
+                degree, float(values["spline_smoothing"]), workspace)
         centres, _, normals = _curve_geometry(
             assigned_parameters, knots, degree, controls, workspace
         )

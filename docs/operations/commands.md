@@ -109,10 +109,17 @@ Ego mask·보정·engine은 YAML/manifest가 소유합니다. 자동 PyTorch fal
 
 같은 rqt에서 `/perception/camera/debug/mosaic/compressed`는 주행가능영역·차선 semantic,
 `/perception/lane/debug/shared_family_bev/compressed`는 피팅된 family를 표시합니다.
+`/perception/bev/debug/comparison/compressed`의 RGB·semantic은 같은 family 프레임의 IMU 지면을
+재사용합니다. 별도 추론·피팅을 하지 않으며 `IMU shared`/`M0: 사유`로 적용 상태를 표시합니다.
 Family 화면은 새 family 도착 즉시 갱신합니다. 신호등도 결과 도착 즉시 표시합니다.
 큰 객체·semantic 합성과 RGB BEV 비교 화면은 최대10Hz이며, 추론/판제 발행 주기와 독립적입니다.
 최신 결과 하나만 대기시키며 같은 source 결과 재표시를 신규 인지 공급으로 세지 않습니다.
 정본 지면은 `cameras_v3.yaml`의 z=-0.36m이며 변경 후 카메라/투영 노드를 다시 시작해야 합니다.
+Family는 원본 시각 IMU 자세·공동 폭 피팅을 기본 사용합니다. IMU/timing 근거가 부족하면
+세 뷰 모두 고정 평면·폭 prior0.35로 처리하며 명목 거리는0.36m 그대로입니다.
+[기본 전환과10분 검증](../records/camera/2026-10-18-joint-family-stabilization.md)을 확인합니다.
+고정 평면 복구가 필요하면 기존 `camera.launch`를 종료한 뒤
+`roslaunch asmc_camera _imu_compare.launch enabled:=false`로 대체합니다. `view.launch`는 그대로 사용합니다.
 [0.36m·표시 검증](../records/camera/2026-10-18-nominal-ground-and-arrival-view.md)을 함께 확인합니다.
 `view.launch`는 시각화 worker만 시작하며, 추론 모델이나 rqt 창을 시작하지 않습니다.
 
@@ -185,7 +192,7 @@ HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한�
 ### Perception training container
 
 ```bash
-./scripts/docker_perception_up.sh <build|up|down|rebuild>
+./scripts/docker_perception_up.sh <config|build|up|down|rebuild>
 ```
 
 `rebuild`는 no-cache build다. 이 컨테이너는 모델 학습과 학습 중 validation만 담당한다.

@@ -1,0 +1,95 @@
+{
+  "schema": "family_exact_compute_reuse_v1",
+  "frames": 226,
+  "comparisons": 452,
+  "profiled": true,
+  "live_latency": false,
+  "implementation_before_sha256": "f60963ac17aec01eb26764e635f7ec5095348b0b21c2554095c3862b57d60083",
+  "implementation_after_sha256": "b5a699ab28401233dc984c8be86abca93e2812c8b2ad7f00632ec6872a417eb0",
+  "profiles": {
+    "before": {
+      "profile": "fit-profile-r1.pstats",
+      "total_seconds": 32.75728858099999,
+      "functions": {
+        "_compute_family_frame": {
+          "calls": 452,
+          "cumulative_seconds": 20.594790315
+        },
+        "fit_shared_lane_family_with_audit": {
+          "calls": 452,
+          "cumulative_seconds": 9.525748515
+        },
+        "_track_separation": {
+          "calls": 3616,
+          "cumulative_seconds": 3.803608709
+        },
+        "_bspline_basis_uncached": {
+          "calls": 8594,
+          "cumulative_seconds": 1.9901513270000002
+        },
+        "associate_lane_nodes_with_audit": {
+          "calls": 452,
+          "cumulative_seconds": 5.05856322
+        }
+      }
+    },
+    "after": {
+      "profile": "fit-profile-r2.pstats",
+      "total_seconds": 28.159821356999995,
+      "functions": {
+        "_compute_family_frame": {
+          "calls": 452,
+          "cumulative_seconds": 15.766886512000001
+        },
+        "fit_shared_lane_family_with_audit": {
+          "calls": 452,
+          "cumulative_seconds": 4.526684975
+        },
+        "_track_separation": {
+          "calls": 3616,
+          "cumulative_seconds": 0.590841562
+        },
+        "_bspline_basis_uncached": {
+          "calls": 1814,
+          "cumulative_seconds": 0.399125724
+        },
+        "associate_lane_nodes_with_audit": {
+          "calls": 452,
+          "cumulative_seconds": 5.2059192990000005
+        }
+      }
+    }
+  },
+  "geometry": {
+    "schema": "imu_width_runtime_compute_parity_v1",
+    "frames": 226,
+    "joint_fit": true,
+    "comparisons": 452,
+    "maximum_delta_m": 0.0,
+    "passed": true,
+    "public_master_used": false,
+    "gpu_used": false,
+    "live_acceptance": false,
+    "lookup": "source interpolator injection; exact wire adapter tested separately",
+    "reference_sha256": "461335d8e4507378ce8a2c076616954980d0d4a99114154e17b2cb267592622d",
+    "tool_sha256": "805d5de0fa0927f1f087ac4b06c70153276e543201efef0f1a52083d6a836144"
+  },
+  "cpu": {
+    "tests": 59,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true,
+    "required_patterns": {
+      "test_shared_lane_family.py": 21,
+      "test_joint_family_fit.py": 7,
+      "test_family_fit_policy.py": 4,
+      "test_imu_lane_adapter.py": 6,
+      "test_lane_latest_work.py": 6,
+      "test_sensor_timing.py": 10,
+      "test_imu_runtime_metrics.py": 4
+    },
+    "gpu_used": false,
+    "live_master_used": false
+  }
+}

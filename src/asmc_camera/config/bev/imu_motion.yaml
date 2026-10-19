@@ -1,0 +1,21 @@
+# Default source-time attitude correction; missing evidence uses all-view M0.
+# TensorRT weights/preprocessing and legacy headers stay fixed.
+# Current v3 IMU (id7) mount rotation is [0,0,0]; orientation is world_from_imu.
+# Flat K-City world +Z, nominal rear-axle normal distance0.36m, no height estimator.
+enabled: true
+# Used only when all three views have valid source-time IMU. Fallback uses
+# lane_fitting.yaml's original0.35, never the relaxed value.
+corrected_width_prior_strength: 0.0
+corrected_joint_width_fit: true
+imu_topic: /imu
+imu_frame_id: imu
+imu_mount_rotation_deg: [0.0, 0.0, 0.0]
+max_tilt_deg: 8.0
+max_bracket_ms: 100.0
+# Only await the next real IMU sample when camera source is ahead of the tail.
+# This is not extrapolation or a freshness extension; budget covers all3 views.
+max_wait_ms: 10.0
+max_receipt_age_sec: 0.35
+retention_sec: 2.0
+capacity: 256
+max_source_skew_ms: 35.0

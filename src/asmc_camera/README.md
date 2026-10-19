@@ -40,7 +40,18 @@ Family 선 화면은 실제 family가 도착하면 즉시 갱신합니다. 신�
 큰 객체/RGB-semantic 합성과 RGB BEV 비교는 최대10Hz로 제한하고 최신 대기 결과 하나만 유지합니다.
 구독자가 없으면 해당 영상 처리를 중단하며, 시각화가 추론/판제 발행을 기다리게 하지 않습니다.
 현재 정본 `cameras_v3.yaml`의 지면은 MORAI VehicleSpec wheelRadius에 맞춘 **z=-0.36m**입니다.
-카메라 장착 위치는 바꾸지 않았으며 IMU 운동 보정은 아직 적용하지 않습니다.
+카메라 장착 위치는 바꾸지 않았습니다.
+[원본 시각 IMU 보정](../../docs/architecture/camera-imu-projection.md)과 관측 폭·공통 곡선의 공동 피팅이 기본입니다.
+IMU roll/pitch는 model-grid의 지면 근거와 family xyz에 적용합니다. Comparison RGB·semantic BEV도
+family의 같은 프레임별 보정값을 재사용하며 IMU 조회·추론·피팅을 다시 실행하지 않습니다.
+평면 수학과 프레임별 선택은 공용 `runtime/ground_projection.py`에 있습니다.
+BBox lane 어댑터도 같은 영상의 평면 metadata를 재사용합니다.
+[공용화 범위와 소비 검증](../../docs/records/camera/2026-10-18-imu-bbox-projection.md)을 참고합니다.
+기존 BEV 데이터 토픽은 고정 평면 계약을 유지합니다.
+자세가 없거나 시각 대응이 불확실하면 묶음 전체를 기존 고정 평면으로 처리합니다.
+[잔차·공급 검증](../../docs/records/camera/2026-10-18-joint-family-stabilization.md)에
+동일 입력 비교·10분 수락과 남은 M0 전환 한계를 기록했습니다. 복구는 기존 실행을 종료한 뒤
+`roslaunch asmc_camera _imu_compare.launch enabled:=false`이며 명목 거리는 그대로0.36m입니다.
 [0.36m·표시 경로 검증](../../docs/records/camera/2026-10-18-nominal-ground-and-arrival-view.md)에
 정차 지면 채택 근거와 표시 부하의 남은 제한을 기록합니다.
 

@@ -19,3 +19,7 @@ contracts:
     message_sections: [messages]
   - path: config/contracts/sensor_frame_timing_v1.yaml
     message_sections: [messages]
+  - path: config/contracts/camera_model_grid_timing_v1.yaml
+    message_sections: [messages]
+  - path: config/contracts/camera_ground_projection_v1.yaml
+    message_sections: [messages]

@@ -6,6 +6,7 @@ from __future__ import print_function
 import os
 import sys
 import time
+from data_collection.data_locations import capture_directory_windows
 
 
 class CaptureGrpcError(RuntimeError):
@@ -91,13 +92,14 @@ class MoraiCaptureClient(object):
         request = self._request_type()
         request.is_custom_file_name = True
         request.custom_file_name = custom_name
-        request.file_dir = file_dir or ""
+        request.file_dir = capture_directory_windows(file_dir)
         sim_time_raw = self._sim_time_raw()
         started = time.monotonic()
         response = self._sensor.SaveSensorData(request, timeout=self._timeout)
         latency_ms = (time.monotonic() - started) * 1000.0
         status = int(response.status)
         return {
+            "morai_file_dir": request.file_dir,
             "success": status == 1,
             "grpc_status": status,
             "grpc_description": str(getattr(response, "description", "")),

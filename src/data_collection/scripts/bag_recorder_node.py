@@ -256,6 +256,8 @@ class BagRecorderNode(object):
             )
 
         self.run_root = self._resolve_run_root()
+        from data_collection.storage_paths import validate_output
+        validate_output(os.path.dirname(self.run_root), os.path.basename(self.run_root))
         self.bags_dir = os.path.join(self.run_root, "bags")
         self.metadata_path = os.path.join(self.run_root, "metadata.yaml")
         self.timeline_path = os.path.join(

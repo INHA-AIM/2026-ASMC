@@ -1,0 +1,41 @@
+{
+  "objects": {
+    "mode": 2,
+    "loaded": true,
+    "warmed_up": true,
+    "prepared": true,
+    "pipeline_ready": true,
+    "errors": 0,
+    "generation": 0
+  },
+  "lane": {
+    "mode": 2,
+    "loaded": true,
+    "warmed_up": true,
+    "prepared": true,
+    "pipeline_ready": true,
+    "errors": 0,
+    "generation": 0
+  },
+  "traffic_light": {
+    "mode": 2,
+    "loaded": true,
+    "warmed_up": true,
+    "prepared": true,
+    "pipeline_ready": true,
+    "errors": 0,
+    "generation": 0
+  },
+  "imu_enabled": false,
+  "publishers": {
+    "/perception/lane/boundary_family": [
+      "/camera_lane_vectorizer"
+    ],
+    "/perception/camera/objects": [
+      "/camera_objects"
+    ],
+    "/perception/traffic_light/detection": [
+      "/camera_traffic_light"
+    ]
+  }
+}

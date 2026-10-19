@@ -1,0 +1,12 @@
+[
+  {
+    "path": "src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py",
+    "before_sha256": "3915ae212e4a300b8bc40ac270a671177b32b1ae758517eb478d0f3933ddabf9",
+    "after_sha256": "3f9a5442ab2a47752944476407eef465b2c1cd4d4d0b5e34dd4caa129d9166f1"
+  },
+  {
+    "path": "src/asmc_camera/src/asmc_camera/runtime/demand_inputs.py",
+    "before_sha256": "40f8901237a168164f33456aa63a42503eebef9efa51b688863a54df7ef7f8ed",
+    "after_sha256": "657ca0ffce76a281cf6d38cf055a18f8178da4a713e61e57fe75fd0aaba82365"
+  }
+]

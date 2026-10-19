@@ -1,0 +1,71 @@
+{
+  "schema": "imu_family_operational_install_v1",
+  "source_head": "9cbffc36",
+  "runtime": "/data/runtime/camera-twinlite-large-v7-e8-r1/src/asmc_camera",
+  "gate_sha256": "411a55caae9695e638bba0146d0977c1141117c578c4a3f621293531bd173577",
+  "effective_imu_config": {
+    "enabled": true,
+    "imu_topic": "/imu",
+    "imu_frame_id": "imu",
+    "imu_mount_rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "max_tilt_deg": 8.0,
+    "max_bracket_ms": 100.0,
+    "max_receipt_age_sec": 0.35,
+    "retention_sec": 2.0,
+    "capacity": 256,
+    "max_source_skew_ms": 35.0,
+    "corrected_width_prior_strength": 0.0,
+    "corrected_joint_width_fit": true,
+    "max_wait_ms": 10.0
+  },
+  "family_config_sha256": "2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a",
+  "files": {
+    "src/asmc_camera/bev/family_fit_policy.py": {
+      "before": null,
+      "after": "ecd3dcdc6afd2f6253082716de87755212811d6d301f8d520c76d33cf050ae37",
+      "source": "ecd3dcdc6afd2f6253082716de87755212811d6d301f8d520c76d33cf050ae37"
+    },
+    "src/asmc_camera/bev/shared_lane_family.py": {
+      "before": "bf936e97ec967f23f2e929fff32319f106cfe6efe2d3759911463cff7f73a31f",
+      "after": "b5a699ab28401233dc984c8be86abca93e2812c8b2ad7f00632ec6872a417eb0",
+      "source": "b5a699ab28401233dc984c8be86abca93e2812c8b2ad7f00632ec6872a417eb0"
+    },
+    "src/asmc_camera/nodes/lane_vectorizer_node.py": {
+      "before": "e291356a12daab117c3f5f4dac919c4afc6c958a9235dcfc53941549d2af5571",
+      "after": "055520c55f0e854ff59926ef2c86d3df48bddc79422e56df9ff8492a800d2da3",
+      "source": "055520c55f0e854ff59926ef2c86d3df48bddc79422e56df9ff8492a800d2da3"
+    },
+    "src/asmc_camera/runtime/sensor_timing.py": {
+      "before": "89bf1b9b40c390a645febb0ff6d6c285d97e81a453f31db3c079bf574d6581fe",
+      "after": "015b5b5051f4c926222855c9e38f35e15c32c2b104f8648416bb82f9cdf1b5a9",
+      "source": "015b5b5051f4c926222855c9e38f35e15c32c2b104f8648416bb82f9cdf1b5a9"
+    },
+    "config/bev/imu_motion.yaml": {
+      "before": "fdfc2d2f75822c5338dbb2f3ac18b6e1a8e720a8023cf372fc404c9c1b33eb36",
+      "after": "e2b0e8d817abd6b679e1669c721452bf9bef5aebfc775de8ca59cdf7f71eb09e",
+      "source": "e2b0e8d817abd6b679e1669c721452bf9bef5aebfc775de8ca59cdf7f71eb09e"
+    },
+    "config/README.md": {
+      "before": "b06893fb486b14e6daf37b7bb5928b1810b175ae1620ff7397406cf876746759",
+      "after": "1a8616c5613291dfa0c107aea91da898749b74735b28c4f3ac498e7a62655673",
+      "source": "1a8616c5613291dfa0c107aea91da898749b74735b28c4f3ac498e7a62655673"
+    },
+    "launch/_imu_compare.launch": {
+      "before": "3a74996e9d4a54eaa9b1bdb05524722dbc5bae53248fdf60a304b00d4448486c",
+      "after": "72d4329a75d0bc2c5db1f7d71732c71822c7f059b505b5d06142a55fb54d397d",
+      "source": "72d4329a75d0bc2c5db1f7d71732c71822c7f059b505b5d06142a55fb54d397d"
+    },
+    "README.md": {
+      "before": "d8999bf907d6866fb98889a39edca55a39632dc983f64111f47998e192e0de7b",
+      "after": "c7709b3f0c0279218bc1b981c64967c032bab0d0ba6c20e60c42fb9f08feb5a7",
+      "source": "c7709b3f0c0279218bc1b981c64967c032bab0d0ba6c20e60c42fb9f08feb5a7"
+    }
+  },
+  "build_verified": true,
+  "default_verified": true,
+  "restored": true
+}

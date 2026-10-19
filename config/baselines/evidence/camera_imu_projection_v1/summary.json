@@ -1,0 +1,740 @@
+{
+  "schema": "camera_imu_projection_review_v1",
+  "tool_sha256": "58d1a33caa151b4292956117769b519f20f2236ca0b43641b617113ba4f52232",
+  "dependency_sha256": {
+    "asmc_camera.bev.imu_projection": "793c1d139f6cfb94ea5980353c6f5f7d4f2e159065bc1d877fbbf566e0749dc8",
+    "review_family_motion": "291cb4c9c4c7b87a318bb867951fb94a4b605954143f8bee7bb1291fd31d0aa6"
+  },
+  "versions": {
+    "numpy": "1.24.4",
+    "opencv": "5.0.0"
+  },
+  "configs": {
+    "cameras_v3.yaml": "54637d8bbbe5af9b0255824644e4118c86de4b3c683661ddc827913ed1817538",
+    "bev/imu_motion.yaml": "fdfc2d2f75822c5338dbb2f3ac18b6e1a8e720a8023cf372fc404c9c1b33eb36",
+    "bev/lane_fitting.yaml": "9f0a137c78515a9eb75a8ac3f72eb7d2c9694557d49810d382290304d2facad6"
+  },
+  "inputs": [
+    {
+      "path": "/data/runtime/imu-lane-20261018-m1-r2",
+      "frames_sha256": "c6dd8d441395e0c8e7f3dfb5ef7bee7e05f28272e412fde87e4ae1fc947c0bf7",
+      "events_sha256": "1201a93f73de24e211532a1d07bca236a1b5e337957c2499d213555e3cd11597"
+    },
+    {
+      "path": "/data/runtime/imu-lane-20261018-m0-r3",
+      "frames_sha256": "fd6ddb728762801f00db5d8081e84faf530908ba73b113ec88dbbfddb8453f86",
+      "events_sha256": "ccc4021bf03acef6b2e43837d084e08c19706d67a0d20f43bf4a25810d331f82"
+    }
+  ],
+  "paired_frames": 120,
+  "validity": {
+    "M0": 120,
+    "M1": 120
+  },
+  "semantic_reprojection_model_px": {
+    "M0": {
+      "count": 120,
+      "min": 2.799999952316284,
+      "max": 3.0,
+      "p50": 2.799999952316284,
+      "p95": 3.0,
+      "p99": 3.0
+    },
+    "M1": {
+      "count": 120,
+      "min": 2.799999952316284,
+      "max": 2.799999952316284,
+      "p50": 2.799999952316284,
+      "p95": 2.799999952316284,
+      "p99": 2.799999952316284
+    }
+  },
+  "paired_curve_displacement_m": {
+    "count": 98,
+    "min": 0.048018191835903834,
+    "max": 0.058531789890832436,
+    "p50": 0.05649072070033853,
+    "p95": 0.058018070543233054,
+    "p99": 0.0582070559661598
+  },
+  "roll_pitch_deg": {
+    "roll": {
+      "count": 120,
+      "min": 0.4526402612591785,
+      "max": 0.4526409314917172,
+      "p50": 0.4526402765941848,
+      "p95": 0.4526402896832709,
+      "p99": 0.45264029337496103
+    },
+    "pitch": {
+      "count": 120,
+      "min": 0.10843391216786621,
+      "max": 0.10843955760651798,
+      "p50": 0.10843599315198249,
+      "p95": 0.10843850980780402,
+      "p99": 0.10843919360759152
+    }
+  },
+  "stages_ms": {
+    "M0_node_reduction": {
+      "count": 120,
+      "min": 3.325022989884019,
+      "max": 20.150851996731944,
+      "p50": 6.293494996498339,
+      "p95": 14.806016992224613,
+      "p99": 17.660103824309772
+    },
+    "M0_association": {
+      "count": 120,
+      "min": 14.794479997362942,
+      "max": 91.96508000604808,
+      "p50": 34.38041150366189,
+      "p95": 52.82381475990405,
+      "p99": 84.19879280903847
+    },
+    "M0_prefit": {
+      "count": 120,
+      "min": 1.8652940052561462,
+      "max": 14.794162998441607,
+      "p50": 4.342117499618325,
+      "p95": 10.108114209288031,
+      "p99": 14.323637775378305
+    },
+    "M0_shared_fit": {
+      "count": 120,
+      "min": 13.217445986811072,
+      "max": 54.977886989945546,
+      "p50": 24.492340002325363,
+      "p95": 38.773219998256536,
+      "p99": 52.8851720361854
+    },
+    "M0_remap_ms": {
+      "count": 120,
+      "min": 0.002196989953517914,
+      "max": 0.08416600758209825,
+      "p50": 0.01679100387264043,
+      "p95": 0.02937570097856223,
+      "p99": 0.06749855660018514
+    },
+    "M0_total_ms": {
+      "count": 120,
+      "min": 42.60561999399215,
+      "max": 167.69215000385884,
+      "p50": 71.8361180042848,
+      "p95": 104.69871779496313,
+      "p99": 138.98294318583797
+    },
+    "M1_node_reduction": {
+      "count": 120,
+      "min": 3.449342999374494,
+      "max": 18.768357011140324,
+      "p50": 6.104168998717796,
+      "p95": 13.693606796732638,
+      "p99": 16.040039196959697
+    },
+    "M1_association": {
+      "count": 120,
+      "min": 16.91392599605024,
+      "max": 90.25431200279854,
+      "p50": 31.1475194976083,
+      "p95": 56.268753700715024,
+      "p99": 66.87909114116339
+    },
+    "M1_prefit": {
+      "count": 120,
+      "min": 1.5287679998436943,
+      "max": 20.490448994678445,
+      "p50": 3.4874920020229183,
+      "p95": 9.058985957381081,
+      "p99": 13.688548389764037
+    },
+    "M1_shared_fit": {
+      "count": 120,
+      "min": 12.066897004842758,
+      "max": 56.53630799497478,
+      "p50": 24.739557498833165,
+      "p95": 44.86997720305226,
+      "p99": 50.073841158300645
+    },
+    "M1_remap_ms": {
+      "count": 120,
+      "min": 3.0287240078905597,
+      "max": 15.807721996679902,
+      "p50": 5.952527506451588,
+      "p95": 12.957155048934508,
+      "p99": 15.371490381512558
+    },
+    "M1_total_ms": {
+      "count": 120,
+      "min": 46.81633999280166,
+      "max": 179.99685600807425,
+      "p50": 74.58377999864751,
+      "p95": 117.29464610034483,
+      "p99": 131.25804456809422
+    }
+  },
+  "online": {
+    "imu-lane-20261018-m1-r2": {
+      "capture": {
+        "duration_sec": 30.033796554009314,
+        "frames": 62,
+        "counts": {
+          "imu": 1237,
+          "imu_timing": 1237,
+          "family": 288,
+          "diagnostics": 15
+        },
+        "journal_drops": 0,
+        "timeline": {
+          "session": "f0621291-ae36-4d0d-8e6a-327d547e2979",
+          "poses": 59,
+          "pending": 0,
+          "counters": {
+            "joined": 899,
+            "duplicate_or_invalid_source": 338
+          }
+        },
+        "imu_enabled": true
+      },
+      "messages": 288,
+      "valid": 288,
+      "valid_complete_5s_hz": {
+        "count": 5,
+        "min": 8.2,
+        "max": 10.2,
+        "p50": 10.0,
+        "p95": 10.16,
+        "p99": 10.192
+      },
+      "receive_gap_ms": {
+        "count": 287,
+        "min": 51.29417199350428,
+        "max": 221.3449500122806,
+        "p50": 100.28790700016543,
+        "p95": 149.67651390179526,
+        "p99": 199.25816500472135
+      },
+      "valid_receive_gap_ms": {
+        "count": 287,
+        "min": 51.29417199350428,
+        "max": 221.3449500122806,
+        "p50": 100.28790700016543,
+        "p95": 149.67651390179526,
+        "p99": 199.25816500472135
+      },
+      "duplicate_or_reverse_stamp": 0,
+      "imu_counts_between_diagnostics": {
+        "camera_source_skew": 9,
+        "corrected": 257,
+        "imu_not_bracketed": 0
+      },
+      "latest_stage_ms": {
+        "association": {
+          "count": 512,
+          "max": 114.22460999165196,
+          "p50": 36.014012002851814,
+          "p95": 65.09877415446681,
+          "p99": 95.50487340733525
+        },
+        "boundary_family_message_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "boundary_output_build": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "boundary_selection": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "callback_total": {
+          "count": 512,
+          "max": 221.77529499458615,
+          "p50": 100.72684899932938,
+          "p95": 143.61160114931408,
+          "p99": 184.5556821113859
+        },
+        "candidate_marker_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "evidence_concat": {
+          "count": 512,
+          "max": 4.084075000719167,
+          "p50": 0.09619450429454446,
+          "p95": 0.36645494838012377,
+          "p99": 1.4061266291537298
+        },
+        "evidence_message_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "imu_attitude_lookup": {
+          "count": 512,
+          "max": 9.42141299310606,
+          "p50": 1.1712315026670694,
+          "p95": 4.152629501186311,
+          "p99": 6.398300632572499
+        },
+        "imu_sparse_projection": {
+          "count": 512,
+          "max": 22.718009000527672,
+          "p50": 6.883162488520611,
+          "p95": 14.136617306940025,
+          "p99": 17.068677696515802
+        },
+        "independent_spline_fit": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "input_decode_copy": {
+          "count": 512,
+          "max": 0.47138701484072953,
+          "p50": 0.0736780057195574,
+          "p95": 0.11568580084713173,
+          "p99": 0.1859014503133949
+        },
+        "invalid_support_classification": {
+          "count": 512,
+          "max": 0.9102309995796531,
+          "p50": 0.06018100248184055,
+          "p95": 0.15549395175185055,
+          "p99": 0.3304138533712828
+        },
+        "legacy_boundary_marker_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "node_reduction": {
+          "count": 512,
+          "max": 25.644929002737626,
+          "p50": 6.221295501745772,
+          "p95": 14.236476851510815,
+          "p99": 16.792697520431826
+        },
+        "pipeline_audit_message_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "pipeline_audit_update": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "profiled_body": {
+          "count": 512,
+          "max": 220.2265519881621,
+          "p50": 98.73795050225453,
+          "p95": 142.92611615601345,
+          "p99": 187.81153586358406
+        },
+        "projection_audit": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "projection_extract": {
+          "count": 512,
+          "max": 26.366167978267185,
+          "p50": 8.77471400599461,
+          "p95": 16.39035720800166,
+          "p99": 20.70731710104155
+        },
+        "shadow_prefit": {
+          "count": 512,
+          "max": 36.6116789955413,
+          "p50": 4.010281496448442,
+          "p95": 13.80605170270428,
+          "p99": 18.98794749868102
+        },
+        "shared_diagnostics_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "shared_family_fit": {
+          "count": 512,
+          "max": 85.29922900197562,
+          "p50": 27.67085249797674,
+          "p95": 47.124894102307735,
+          "p99": 54.12756095931399
+        },
+        "shared_marker_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "temporal_tracking": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "typed_boundary_message_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        }
+      },
+      "latest_imu": {
+        "counts": {
+          "camera_source_skew": 20,
+          "corrected": 716,
+          "imu_not_bracketed": 1
+        },
+        "enabled": true,
+        "last": {
+          "reason": "corrected",
+          "source_skew_ms": 3.0,
+          "used": true,
+          "views": {
+            "front": {
+              "bracket_ms": 39.0,
+              "bridge_session_id": "f0621291-ae36-4d0d-8e6a-327d547e2979",
+              "plane": [
+                0.0018926169963013652,
+                -0.00790022772370616,
+                -0.3600118790115052
+              ],
+              "quaternion": [
+                -0.0028526528317056403,
+                -0.0028914450575644075,
+                -0.5286529320209258,
+                -0.8488283568442913
+              ],
+              "source_ns": 1792301795080000000
+            },
+            "left": {
+              "bracket_ms": 39.0,
+              "bridge_session_id": "f0621291-ae36-4d0d-8e6a-327d547e2979",
+              "plane": [
+                0.00189261564456258,
+                -0.007900227725833694,
+                -0.3600118790105903
+              ],
+              "quaternion": [
+                -0.0028526531899084598,
+                -0.0028914444844446324,
+                -0.5286529320212616,
+                -0.8488283568448305
+              ],
+              "source_ns": 1792301795077000000
+            },
+            "right": {
+              "bracket_ms": 39.0,
+              "bridge_session_id": "f0621291-ae36-4d0d-8e6a-327d547e2979",
+              "plane": [
+                0.00189261654572177,
+                -0.007900227724415336,
+                -0.36001187901120024
+              ],
+              "quaternion": [
+                -0.00285265295110658,
+                -0.0028914448665244823,
+                -0.5286529320210377,
+                -0.8488283568444709
+              ],
+              "source_ns": 1792301795079000000
+            }
+          }
+        },
+        "pose_timeline": {
+          "counters": {
+            "duplicate_or_invalid_source": 892,
+            "joined": 2407
+          },
+          "pending": 0,
+          "poses": 59,
+          "session": "f0621291-ae36-4d0d-8e6a-327d547e2979"
+        }
+      },
+      "note": "Read-only observer; GUI off, A748 stationary, not shadow ODD acceptance."
+    },
+    "imu-lane-20261018-m0-r3": {
+      "capture": {
+        "duration_sec": 30.033578059010324,
+        "frames": 63,
+        "counts": {
+          "imu": 1226,
+          "imu_timing": 1223,
+          "diagnostics": 15,
+          "family": 339
+        },
+        "journal_drops": 0,
+        "timeline": {
+          "session": "f0621291-ae36-4d0d-8e6a-327d547e2979",
+          "poses": 59,
+          "pending": 0,
+          "counters": {
+            "joined": 905,
+            "duplicate_or_invalid_source": 318
+          }
+        },
+        "imu_enabled": false
+      },
+      "messages": 339,
+      "valid": 339,
+      "valid_complete_5s_hz": {
+        "count": 5,
+        "min": 9.8,
+        "max": 12.6,
+        "p50": 11.8,
+        "p95": 12.44,
+        "p99": 12.568
+      },
+      "receive_gap_ms": {
+        "count": 338,
+        "min": 53.11553600768093,
+        "max": 232.9904169891961,
+        "p50": 83.14195000275504,
+        "p95": 128.9879582946014,
+        "p99": 156.9525713054463
+      },
+      "valid_receive_gap_ms": {
+        "count": 338,
+        "min": 53.11553600768093,
+        "max": 232.9904169891961,
+        "p50": 83.14195000275504,
+        "p95": 128.9879582946014,
+        "p99": 156.9525713054463
+      },
+      "duplicate_or_reverse_stamp": 0,
+      "imu_counts_between_diagnostics": {},
+      "latest_stage_ms": {
+        "association": {
+          "count": 512,
+          "max": 92.56479500618298,
+          "p50": 29.857286499463953,
+          "p95": 51.31953859672648,
+          "p99": 66.59239272747067
+        },
+        "boundary_family_message_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "boundary_output_build": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "boundary_selection": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "callback_total": {
+          "count": 512,
+          "max": 180.4104369948618,
+          "p50": 76.1641824938124,
+          "p95": 113.94858680432662,
+          "p99": 139.12085817224576
+        },
+        "candidate_marker_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "evidence_concat": {
+          "count": 512,
+          "max": 1.8528920045355335,
+          "p50": 0.10289200145052746,
+          "p95": 0.29429900314426044,
+          "p99": 0.7961560212424955
+        },
+        "evidence_message_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "imu_attitude_lookup": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "imu_sparse_projection": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "independent_spline_fit": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "input_decode_copy": {
+          "count": 512,
+          "max": 0.5032229964854196,
+          "p50": 0.07321750308619812,
+          "p95": 0.1104972579923924,
+          "p99": 0.14072138554183763
+        },
+        "invalid_support_classification": {
+          "count": 512,
+          "max": 1.3732689985772595,
+          "p50": 0.05736500315833837,
+          "p95": 0.09529760209261438,
+          "p99": 0.19640873098978703
+        },
+        "legacy_boundary_marker_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "node_reduction": {
+          "count": 512,
+          "max": 33.62733899848536,
+          "p50": 5.588900501606986,
+          "p95": 11.137971799325896,
+          "p99": 15.333851983741614
+        },
+        "pipeline_audit_message_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "pipeline_audit_update": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "profiled_body": {
+          "count": 512,
+          "max": 178.91782699734904,
+          "p50": 74.79585199325811,
+          "p95": 112.60891730344156,
+          "p99": 137.69535614905178
+        },
+        "projection_audit": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "projection_extract": {
+          "count": 512,
+          "max": 27.475304988911375,
+          "p50": 7.568309003545437,
+          "p95": 14.645870048116194,
+          "p99": 19.443083756777924
+        },
+        "shadow_prefit": {
+          "count": 512,
+          "max": 33.66550999635365,
+          "p50": 3.8244274983298965,
+          "p95": 10.81112150059198,
+          "p99": 16.97869215640821
+        },
+        "shared_diagnostics_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "shared_family_fit": {
+          "count": 512,
+          "max": 63.01740299386438,
+          "p50": 22.84072600014042,
+          "p95": 39.83529594770516,
+          "p99": 55.69971400749632
+        },
+        "shared_marker_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "temporal_tracking": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "typed_boundary_message_publish": {
+          "count": 512,
+          "max": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        }
+      },
+      "latest_imu": {
+        "counts": {},
+        "enabled": false,
+        "last": {
+          "reason": "disabled"
+        }
+      },
+      "note": "Read-only observer; GUI off, A748 stationary, not shadow ODD acceptance."
+    }
+  },
+  "decision": "M1 source-time trial implemented; keep canonical M0 until shadow driving contrast.",
+  "limits": [
+    "Stationary A748 is outside shadow family ODD.",
+    "Internal semantic consistency and paired displacement are not independent metric GT.",
+    "No heave, translation/yaw alignment or temporal support; fixed normal distance0.36m.",
+    "Existing native RGB/BEV debug warp remains fixed-plane; use these variant-specific native overlays."
+  ]
+}

@@ -8,6 +8,7 @@ import asmc_msgs.msg as generated_messages
 
 
 EXPECTED_MD5 = {
+    "CameraModelGridTiming": "3d9d2bf10966b2aac416bb6a1f66ea99",
     "SensorFrameTiming": "07dce68802e02b5b3f4cd89724a7cad7",
     "InferenceStatus": "8b2caf96bbf9a9eaea848fcb9551b79f",
     "CameraObjectObservation": "fbddb8fe0071685b60811037c0302106",

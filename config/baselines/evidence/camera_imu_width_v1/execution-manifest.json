@@ -1,0 +1,34 @@
+{
+  "schema": "imu_width_execution_manifest_v1",
+  "branch": "experiment/camera-imu-motion",
+  "parent_commit": "440a6d32d8b2c19d57936e4f4f64bd257d5892a0",
+  "code_config_sha256": {
+    "src/asmc_camera/src/asmc_camera/bev/family_fit_policy.py": "4912784580d6e69c1d6fd99f0b2c8b436a567ac9022f6a0197a15e69512b0ec8",
+    "src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py": "09586c5e1da018bceec5038621aa1914a98f3585ca3adb77fccd74babab8c65f",
+    "src/asmc_camera/config/bev/imu_motion.yaml": "247a746c34cd9771f0fdb5fab451cf6c6b4c806d338be6e6544112bdb2fc6fb4",
+    "src/asmc_camera/config/bev/lane_fitting.yaml": "9f0a137c78515a9eb75a8ac3f72eb7d2c9694557d49810d382290304d2facad6",
+    "src/asmc_camera/config/cameras_v3.yaml": "54637d8bbbe5af9b0255824644e4118c86de4b3c683661ddc827913ed1817538",
+    "tools/perception/check_imu_width_runtime.py": "9e848ec97d2f8c34c60826b7eb3b30c2ec72800fa0ff6713742130d69aecaae2",
+    "tools/perception/evaluate_imu_width_candidate.py": "a19b737b44d4d9d6c021f9b995059cad2aa97edef5f4e42a8d93b92eee7ed0d0",
+    "tools/perception/review_imu_width_failures.py": "30376078d59776e10f24e5c2c43a69c5899b7e34e586f44f6ea84f0673a1d800"
+  },
+  "reports": {
+    "quality": "574d0391025af16169e7492102a425aa4de623cbd8f8fd33189e0b4acdc86712",
+    "runtime_parity": "a393aa61a6e050e31228f54db2fb347642d8217c750922eaa9f4948bf380af5b",
+    "failures": "5685c7d79b3bbe746f1dec74de7ea432bd4d2f6baecf61fd33955a18ee908e77"
+  },
+  "tests": {
+    "host": 44,
+    "noetic_runtime": 24,
+    "noetic_policy": 4,
+    "noetic_acceptance": 4
+  },
+  "operational_defaults_changed": false,
+  "quality_passed": false,
+  "live_acceptance": "skipped_quality_gate_failed",
+  "limitations": [
+    "Temporal and semantic consistency are not independent GT errors.",
+    "Legacy dropout uses receive timestamps.",
+    "Production parity injects separately checked source attitude; wire joins have separate adapter tests."
+  ]
+}

@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 from types import SimpleNamespace as NS
 import numpy as np
 from asmc_camera.runtime.sensor_timing import SensorTimingIndex, ImuTimeline, slerp
@@ -88,6 +89,38 @@ class SensorTimingTest(unittest.TestCase):
 
     def test_slerp_sign_does_not_change_rotation(self):
         np.testing.assert_allclose(slerp([0,0,0,1],[0,0,0,-1],.5),[0,0,0,1])
+
+    def test_source_regression_flushes_old_poses_and_requires_new_bracket(self):
+        self.add(2 * 10**9, 1)
+        self.add(10**9, 2, source_regression=True)
+        self.assertEqual(len(self.timeline.poses), 0)
+        self.assertIsNone(self.timeline.attitude(metadata(2 * 10**9))[0])
+        self.add(1010000000, 3)
+        self.assertIsNone(self.timeline.attitude(metadata(1050000000))[0])
+        self.add(1090000000, 4)
+        self.assertEqual(self.timeline.attitude(metadata(1050000000))[1], 'interpolated')
+
+    def test_bounded_wait_rechecks_actual_arriving_bracket(self):
+        self.add(10**9, 1)
+        # Deterministically simulate the second wire callback while the
+        # condition releases its lock; no wall timing assumption in this test.
+        with patch.object(self.timeline.changed, 'wait', side_effect=lambda _: self.add(1080000000, 2)) as waiting:
+            pose, reason = self.timeline.wait_attitude(metadata(1040000000), max_wait_ms=10)
+        self.assertEqual(reason, 'interpolated')
+        self.assertIsNotNone(pose)
+        self.assertEqual(waiting.call_count, 1)
+        self.assertEqual(self.timeline.counters['wait_recovered'], 1)
+
+    def test_wait_does_not_extend_freshness_or_extrapolate(self):
+        self.add(10**9, 1)
+        pose, reason = self.timeline.wait_attitude(metadata(1040000000), max_wait_ms=1)
+        self.assertIsNone(pose)
+        self.assertEqual(reason, 'imu_not_bracketed')
+        self.now += .351
+        with patch.object(self.timeline.changed, 'wait') as waiting:
+            self.assertIsNone(self.timeline.wait_attitude(metadata(10**9), max_wait_ms=10)[0])
+            waiting.assert_not_called()
+        with self.assertRaises(ValueError): self.timeline.wait_attitude(metadata(10**9), max_wait_ms=11)
 
 
 if __name__=='__main__': unittest.main()

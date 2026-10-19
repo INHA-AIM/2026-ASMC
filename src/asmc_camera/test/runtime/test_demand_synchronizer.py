@@ -82,6 +82,14 @@ class DemandSynchronizerTest(unittest.TestCase):
         for c in self.connections: c.callback(self.image(10))
         self.delivered.assert_not_called()
 
+    def test_context_aware_callback_receives_the_captured_subscription_epoch(self):
+        self.group.callback_with_context = True
+        self.wanted = True; self.group.refresh()
+        first, second = self.image(10), self.image(10)
+        self.connections[0].callback(first)
+        self.connections[1].callback(second)
+        self.delivered.assert_called_once_with(1, first, second)
+
 
 if __name__ == '__main__':
     unittest.main()

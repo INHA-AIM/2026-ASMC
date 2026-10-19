@@ -26,6 +26,16 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertEqual(config.params['/camera_lane/backend'].value,'twinlite_tensorrt')
         self.assertEqual(config.params['/camera_lane/model_config'].value,'large')
         self.assertTrue(config.params['/camera_lane/checkpoint'].value.endswith('/twinlite-large-v7-e8.pt'))
+        self.assertTrue(config.params['/camera_lane_vectorizer/imu_motion/enabled'].value)
+        self.assertTrue(config.params['/camera_lane_vectorizer/imu_motion/corrected_joint_width_fit'].value)
+        self.assertEqual(config.params['/camera_lane_vectorizer/imu_motion/corrected_width_prior_strength'].value, 0.)
+
+    def test_fixed_plane_recovery_overrides_only_the_attitude_policy(self):
+        config = self.config('_imu_compare.launch', 'enabled:=false')
+        self.assertFalse(config.params['/camera_lane_vectorizer/imu_motion/enabled'].value)
+        self.assertEqual(config.params['/camera_lane/backend'].value, 'twinlite_tensorrt')
+        self.assertEqual(config.params['/camera_lane/model_config'].value, 'large')
+        self.assertEqual(config.params['/camera_lane_vectorizer/ground_plane/z_at_origin_m'].value, -.36)
 
     def test_explicit_standby_keeps_three_workers_loaded_without_inference(self):
         config = self.config('camera.launch', 'mode:=standby')
