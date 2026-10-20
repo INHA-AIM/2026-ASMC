@@ -64,3 +64,6 @@ synthetic test의 성공을 현장 승인으로 해석하지 않는다.
 보장하지 않는다. [실제 대조](../../docs/records/bridge/2026-10-20-lan-channel-review.md)와
 [두 PC 준비](../../docs/operations/lan2lan-rehearsal.md)를 확인하며, 주최 PC의 전체 network
 설정을 팀 생성본으로 덮어쓰지 않는다. 알고리즘 oracle 차단과 별도 judge 소비는 구분한다.
+2026-10-20 사용자 확인상 채점·녹화는 추론 PC에서 실행한다. 그 프로그램에 필요한 packet을
+MORAI loopback으로 돌리면 도착하지 않으므로 현장 endpoint 인수 전 generated 파일의
+채점 호환성을 보장하지 않는다. 알고리즘에 oracle 구독을 추가하는 방식으로 해결하지 않는다.

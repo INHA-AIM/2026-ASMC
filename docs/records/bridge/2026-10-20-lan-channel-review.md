@@ -19,9 +19,10 @@ GPU 추론·채점 프로그램 실행은 하지 않았다. IP·방화벽·장�
 
 ## 목적지가 달라지는 채널
 
-아래 이름은 보유 계약/네트워크 항목의 식별이다. **각 채널을 채점 프로그램이 실제 소비하는지와
-채점 프로그램의 실행 PC는 아직 확인되지 않았다.** 판정 전용/개발용 데이터를 팀 알고리즘
-입력으로 추가하라는 의미가 아니다.
+아래 이름은 보유 계약/네트워크 항목의 식별이다. 최초 검토 때 실행 위치는 미확인이었으며,
+같은 날 후속 사용자 확인으로 **채점·녹화는 추론 PC에서 실행**한 사실을 반영했다.
+각 채널의 실제 소비와 Windows/WSL/컨테이너 실행 형태·bind는 아직 미확인이다.
+판정 전용/개발용 데이터를 팀 알고리즘 입력으로 추가하라는 의미가 아니다.
 
 | PUBSUB type | 식별 | 주최 원본 Host → Destination | 팀 generated Host → Destination |
 |---|---|---|---|
@@ -53,8 +54,8 @@ Ctrl(type771), Collision(type261), Ego(type295), Competition(type787)의 위 LAN
 - 기본 `C:\Program Files\Wireshark\Wireshark.exe`는 없었고 `npcap` 서비스도 관측되지 않았다.
   다른 설치 경로까지 전수 검색한 결과는 아니다. 현장 연구원이 무엇을 바꿨는지의 증거도 아니다.
 
-시뮬 PC에 보내는 packet과 WSL/컨테이너 socket은 다른 계층이다. 시뮬/채점이 Windows에서
-직접 실행되면 팀 Docker가 모든 채점 packet을 중계하는 구조가 아니다.
+시뮬 PC에 보내는 packet과 WSL/컨테이너 socket은 다른 계층이다. 채점 프로그램이 추론 PC의
+Windows에서 직접 실행되면 팀 Docker가 모든 채점 packet을 중계하는 구조가 아니다.
 반대로 같은 PC에서 judge와 bridge가 같은 포트를 bind하면 충돌 가능성을 따로 확인해야 한다.
 
 ## 미완료와 담당
@@ -63,13 +64,17 @@ Ctrl(type771), Collision(type261), Ego(type295), Competition(type787)의 위 LAN
 |---|---|
 | 본인 PC의 MORAI LAN IP·sensor/network import | 준비 절차 제공, 실제 적용 전 — 안승현 |
 | 추론 PC Windows/WSL2/Hyper-V/Docker | 원격 PC 미검사 — 정윤태 |
-| 채점 프로그램 이름·실행 PC·포트 | 확인 대기. 주최 담당자/팀 공동 확인 |
+| 채점·녹화 실행 PC | **추론 PC — 후속 사용자 확인** |
+| 채점 프로그램 이름·실행 형태·listen 포트 | Windows/WSL/컨테이너 및 실제 bind 확인 대기. 주최 담당자/팀 공동 확인 |
 | type787 실제 packet·decode·Main 소비 | fixture/코드 준비, 현장 live 대기 |
 | 센서·Ctrl 양방향·채점/녹화 동시 부하 | 두 PC/실제 프로그램 수락 미실행 |
 
 팀 generated JSON을 주최 PC에 통째로 덮어쓰거나 oracle을 알고리즘에 연결해 이 차이를
 해결하지 않는다. 주최 원본과 실제 judge 설정을 기준으로 별도 소비 경로를 확정한다.
 사용자 기억의 “shark”는 Wireshark일 가능성이 있다는 추정으로만 남긴다.
+추론 PC의 프로그램에 필요한 채널이라면 위 loopback 목적지는 실제 누락 원인이다.
+필요한 judge channel을 LAN으로 전달하는 것과 알고리즘의 oracle 사용 금지는 별도 계층에서
+유지한다. 이 후속 확인으로 실제 network JSON이나 방화벽을 변경하지는 않았다.
 
 ## 이번 변경의 로컬 검증
 

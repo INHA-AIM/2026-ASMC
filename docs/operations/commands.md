@@ -320,6 +320,8 @@ roslaunch data_collection bag_replay.launch bag_path:=/data/rosbags/raw/<run_id>
 역할별 Windows·장치관리자·WSL2·Wireshark 확인과 주최 채점 채널의 차이는
 [LAN2LAN 상세](lan2lan-rehearsal.md)를 먼저 확인한다. 아래 팀 포트 목록을 채점 프로그램
 전체의 방화벽 목록으로 사용하지 않으며 현장 주최 network JSON을 팀 생성본으로 덮지 않는다.
+사용자 확인상 채점·녹화도 추론 PC에서 실행한다. 필요한 채점 channel은 그 PC까지 전달하고,
+Windows 프로그램 수신과 WSL/Docker 알고리즘 입력을 구분한다.
 
 연습과 현장은 포트를 바꾸지 않고 IP만 local에서 LAN2LAN으로 바꾼다.
 

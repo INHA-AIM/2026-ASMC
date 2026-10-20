@@ -1,6 +1,8 @@
 # 두 Windows PC의 MORAI LAN2LAN 준비·채점 채널 확인
 
 안승현 PC는 MORAI 송신/제어 수신, 정윤태 PC는 Windows·WSL2·Docker 추론을 담당한다.
+현장점검의 채점·녹화 프로그램도 **추론 PC에서 실행**했다는 사용자 확인을 2026-10-20 반영했다.
+프로그램이 Windows native인지 WSL/컨테이너인지와 실제 listen endpoint는 별도 확인한다.
 이 문서는 설정·확인 절차이며 시스템 변경이나 실제 두 PC/채점 수락을 수행한 기록이 아니다.
 기존 [직접 명령](commands.md#6-lan2lan-연습-사전-준비)과
 [bridge 계약](../../config/bridge/README.md)을 함께 사용한다.
@@ -121,13 +123,17 @@ MORAI loopback으로 돌린다. 포트는 유지하지만 목적지 IP가 달라
 채점 연결로 수락할 수 없다.** [원본/생성본 대조 기록](../records/bridge/2026-10-20-lan-channel-review.md)을 따른다.
 
 현재 정적 팀 설정과 Docker host mode가 type787/Collision/센서를 의도적으로 차단하는
-증거는 없지만 실제 두 PC·채점 동시 시험은 남아 있다. 채점 프로그램이 어느 PC에서 어떤
-포트를 bind하는지 확인하기 전에는 채점 통신 정상이나 현재 generated JSON의 현장 적용을 보장하지 않는다.
+증거는 없지만 실제 두 PC·채점 동시 시험은 남아 있다. 채점·녹화의 실행 위치는 사용자 확인으로
+**추론 PC**다. 따라서 필요한 채점 packet을 MORAI loopback으로 보내면 추론 PC에 도착하지
+않는다. 프로그램의 실행 환경과 실제 bind를 확인하기 전에는 채점 통신 정상이나 현재
+generated JSON의 현장 적용을 보장하지 않는다.
 
-1. 주최 원본 network JSON과 채점 프로그램 설정을 보존하고, 프로그램 실행 PC·listen IP·
-   포트·프로토콜·필요 채널을 주최 담당자와 확인한다. 현재 위치는 **확인 대기**다.
+1. 주최 원본 network JSON과 채점 프로그램 설정을 보존한다. 추론 PC의 채점·녹화 프로그램이
+   Windows/WSL/컨테이너 중 어디에서 실행되는지와 listen IP·포트·프로토콜·필요 채널을
+   확인한다. packet 목적지는 연습 기준 `192.168.0.10`이며 현장 제공 주소가 우선이다.
 2. 팀 알고리즘 입력과 채점 전용 소비를 나누어 endpoint 표를 확정한다. 채점 전용 packet이
-   PC에 도착하는 것과 인지/판제가 이를 사용하도록 허용하는 것은 별개다.
+   PC에 도착하는 것과 인지/판제가 이를 사용하도록 허용하는 것은 별개다. 필요한 judge
+   channel은 LAN을 통과시키고 알고리즘의 구독/입력 제한은 별도로 유지한다.
 3. 주최판에서는 팀 generated 파일로 전체 설정을 덮지 않는다. 합의한 sensor/팀 UDP endpoint와
    채점 endpoint를 함께 유지하며 수정 범위와 실제 packet을 대조한다.
 4. 채점/녹화가 Windows에서 실행되면 Docker가 중계한다고 가정하지 않는다. 컨테이너에서
