@@ -10,6 +10,10 @@
 수정할 때는 [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)를
 함께 본다.
 
+두 Windows PC 연습은 [LAN2LAN·채점 채널 확인](lan2lan-rehearsal.md)을 따른다.
+팀 sensor/bridge allowlist와 주최 채점 프로그램의 endpoint를 구분하며,
+현재 generated JSON의 채점 경로 차이는 [2026-10-20 대조](../records/bridge/2026-10-20-lan-channel-review.md)에 남긴다.
+
 ## 1. 현재값과 남은 승인 항목
 
 P3-A에서 공통 runtime과 profile 계약, Ctrl 포트를 적용했고 P3-B에서
@@ -33,7 +37,8 @@ live acceptance가 끝난 것을 구분한다.
 정본은 [`bridge_profiles_v1.json`](../../config/bridge/bridge_profiles_v1.json)이다. generated
 network/sensor JSON·decoder·synthetic UDP publish·allowlist 계약은 검증하지만,
 실측된 `7502` packet은 Competition이 아닌 `#TrafficLight$`였다. 실제 Competition type 787의
-`9798`은 아직 0건이므로 차단 상태다. 실제 LAN 검증도 남았다. v3는 설정과 소비 loop가
+`9798`은 해당 local 실측에서0건이므로 **현장 live 수락 대기**다. Docker/방화벽 차단을 확정한
+결과가 아니다. 실제 LAN·채점 동시 검증도 남았다. v3는 설정과 소비 loop가
 15 Hz이고 완성 scan 약 12 Hz 입력은 허용한다.
 
 type 258 TrafficLight status와 `GetTrafficLightStatus` 조회 서비스는 서로 다르다. 조사한 주최

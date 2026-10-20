@@ -1,5 +1,8 @@
 # Docker Desktop + WSL host networking.
-# MORAI Host/Destination IP와 Ctrl 목적지는 모두 127.0.0.1을 사용한다.
+# Local MORAI uses 127.0.0.1. LAN2LAN uses the generated MORAI sensor/network
+# sets and bridge --transport lan2lan; Compose does not rewrite their IPs.
+# Host mode has no per-port Docker allowlist. Windows/Hyper-V firewall and
+# MORAI channel destinations still need the separate two-PC/judge review.
 # 지원 SIM: 26.R1.H3 / 25.S4.MolitComp03. 치트시트: config/morai/udp-sim-cheat-sheet.md
 services:
   asmc-ros-noetic:

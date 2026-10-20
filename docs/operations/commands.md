@@ -317,6 +317,10 @@ roslaunch data_collection bag_replay.launch bag_path:=/data/rosbags/raw/<run_id>
 
 ## 6. LAN2LAN 연습 사전 준비
 
+역할별 Windows·장치관리자·WSL2·Wireshark 확인과 주최 채점 채널의 차이는
+[LAN2LAN 상세](lan2lan-rehearsal.md)를 먼저 확인한다. 아래 팀 포트 목록을 채점 프로그램
+전체의 방화벽 목록으로 사용하지 않으며 현장 주최 network JSON을 팀 생성본으로 덮지 않는다.
+
 연습과 현장은 포트를 바꾸지 않고 IP만 local에서 LAN2LAN으로 바꾼다.
 
 | 장치 | 전용 Ethernet NIC IPv4 | prefix/netmask |
@@ -370,8 +374,9 @@ firewall=true
 9291, 9293, 9295, 9297, 9299, 9301, 9303
 ```
 
-TrafficLight oracle `7502`, Object oracle `7505`, GT `9305/9307/9309/9311`은 본선
-allowlist에 추가하지 않는다.
+TrafficLight oracle `7502`, Object oracle `7505`, GT `9305/9307/9309/9311`은 팀 bridge/알고리즘
+입력에 추가하지 않는다. 별도 주최 채점 프로그램의 필요한 수신 경로까지 차단하라는 뜻이
+아니며 [채점 endpoint 확인](lan2lan-rehearsal.md#채점-전용-채널-아직-닫지-않은-경계)을 따른다.
 
 6. WSL과 container에서 실제 NIC·route·bind를 확인한다.
 

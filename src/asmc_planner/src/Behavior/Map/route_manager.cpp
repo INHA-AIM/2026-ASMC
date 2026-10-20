@@ -192,6 +192,9 @@ bool RouteManager::getCurrentLinkInfo(const std::string& id,
 }
 
 double RouteManager::getSpeedLimit(const std::string& id) const {
+  // Raw MGeo link limit in m/s; this accessor does not apply the HD-map
+  // competition cap/high-speed exception. Planning owns their combination.
+  // Its route station also differs from the HD official route station.
   LinkInfo link;
   return getCurrentLinkInfo(id, &link) ? link.max_speed : 0.0;
 }

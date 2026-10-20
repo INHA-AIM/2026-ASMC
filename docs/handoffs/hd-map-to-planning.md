@@ -6,6 +6,27 @@
 > **정본:** [기존 topic 계약](../contracts/hd-map-topic-v1.md),
 > [확장 상태 계약](../../src/asmc_hd_map/config/hd_map_context_contract_v1.yaml)
 
+## 판제 적용 전 확인 — 2026-10-20 코드 대조
+
+이 문서의 최초 producer 검증은 2026-10-06 기록이다. 아래는 main `2c94bf11`과의
+후속 대조이며 판제 기능을 대신 수정하거나 공동 주행을 수락한 결과가 아니다.
+안승현은 지도·계약·검증 근거를 제공하고, 판제는 사용할 지도 번들·상태 입력·경계 변환과
+주행 정책을 결정한다. 손재호의 로컬 3뷰 fusion 개발 상태는 이 문서로 변경하지 않는다.
+
+| 판제가 확인할 경계 | 현재 구현·주의점 | 인수 증거 |
+|---|---|---|
+| 지도 번들 | HD producer v6, Frenet 사본 v5. 전역 토픽 발행만으로 Frenet 파일은 갱신되지 않음 | 아래 2절의 세 파일·manifest를 함께 비교하고 A226/A111 후보 경로 회귀 확인 |
+| 차량 기준점 | 통합 launch의 `/planning/vehicle/state`는 이미 0.35m GPS lever와 UTM grid yaw 보정 적용. bridge `/vehicle/state`와 별개 | 동일 GPS/IMU 시각에서 HD pose·판제 pose의 기준점/방향 비교; lever를 다시 빼지 않음 |
+| 방향·시간 | HD 기본 GPS/IMU 경로는 가까운 IMU yaw를 사용. 판제 상태는 UTM 방향 보정·시간 전파가 있음 | 같은 시각·기준점으로 비교하고 어느 pose를 권위 입력으로 쓸지 결정. 같은 이름 `map`만으로 동등 판정하지 않음 |
+| 누적거리 | HD 공식 station과 Behavior/Frenet reference station은 다름 | 경계 map 좌표를 자기 경로에 재투영하고 분기·루프·진행 방향 확인 |
+| 속도·단위 | HD context 속도는 m/s, mission payload는 km/h. raw MGeo 제한과 대회 effective cap은 별개 | 정상 제한·고주로 예외·구간 끝에서 소비한 상한을 기록 |
+| GPS 무효·복귀 | context heartbeat와 위치 관측 시각은 다름 | `pose_stamp`·각 valid·수신 watchdog 검사; 역사 station을 현재 위치로 재사용하지 않음 |
+| 신호·모델 소비 | 모델은 상시 ACTIVE. metadata의 과거 활성화 힌트는 자동 on/off 명령이 아님 | 정지선·유효 인식·미션을 결합. 지도 경계5개를 공식 채점 교차로4개와 동일시하지 않음 |
+
+판제 연결 검토는 [인지 소비 확인표](perception-to-planning.md#판제-적용-확인표)와 함께 한다.
+의도적으로 이전 지도 사본을 유지한다면 이유·번들 ID·회귀 결과를 인수 기록에 남긴다.
+이 표의 확인 항목은 구현 누락을 확정한 목록이 아니라, 담당자의 적용 여부를 확인할 목록이다.
+
 ## 1. HD 패키지가 제공하는 결과
 
 운영 `roslaunch asmc_hd_map competition_map.launch rviz:=false`와 debug launch 모두 크롭을 기본으로 끈다.
@@ -49,8 +70,9 @@ source의 `traffic_light_activation_A236_to_A308`은 **A236 시작 → A308 종�
 전체 ID는 `A2256W000236` → `A2256W000308`, 공식 station은
 `[160.009167271, 609.876838441)` m다. 이 구간에서만 인지를 활성화한다는
 `enable_within_zone_only` / `disable_outside_zone=true` 정책을 metadata에 정의했다.
+현재 모델은 상시 ACTIVE이며 위 힌트가 구간 밖 발행 중단을 요구하지 않는다.
 HD가 camera 노드를 직접 켜고 끄지는 않는다. 판제가 유효한 context의
-`active_mission_ids`에 이 ID가 포함되는지 또는 전역 zone의 station 범위를 조회해 연결한다.
+`active_mission_ids` 또는 전역 zone의 station 범위를 결과 소비 정책에 연결한다.
 
 이 활성 zone과 실제 신호 정지선 경계 5개를 구분한다. `mission_type=traffic_light`만
 검사하면 둘 다 포함되므로 payload의 `perception_monitoring=activation_zone`과
@@ -131,12 +153,14 @@ HD geometry와 체크포인트를 이동시키지 않는다. GPS/IMU pair 간격
 GPS offset과 map origin 오차는 최대 1 m다. `pose_stamped` 입력은 이미 map 후륜축 좌표여야
 하며 HD에서 lever arm을 다시 빼지 않는다.
 
-main `asmc_bridge/src/vehicle_state/vehicle_state_adapter.cpp`의 `/vehicle/state` 위치는
-UTM에서 origin만 빼고 이 lever arm 보정은 적용하지 않는다.
-**판제/공용 localization 쪽에서 `/vehicle/state`도 동일한 후륜축 기준으로 맞춘다.**
-공용 어댑터에서 한 번 고치는 것이 여러 판제 consumer에서 따로 보정하는 것보다 명확하다.
-어댑터를 고칠 때 이미 보정한 pose에 0.35 m를 두 번 빼지 않는지 확인한다.
-HD context의 pose와 `/vehicle/state`로 만든 후보 경로가 다른 기준점이면 몸체/cell 검사에 오차가 생긴다.
+현재 `asmc_bridge/src/vehicle_state/vehicle_state_adapter.cpp`의 `/vehicle/state` 위치는
+UTM에서 origin만 빼며 이 lever arm 보정을 적용하지 않는다. 반면 통합 판제 launch의
+`planning_inputs` 추정기는 `/planning/vehicle/state`에 후륜축 lever와 UTM 방향 보정을
+이미 적용한다. 예전의 “판제 보정 미구현” 설명을 모든 상태 입력에 적용하지 않는다.
+단독 controller 등의 기본 토픽과 통합 launch의 토픽이 다르므로 실제 연결을 확인한다.
+판제가 권위 pose를 선택하고 소비자마다 0.35m를 중복 차감하지 않도록 한다.
+HD의 가까운 IMU yaw와 판제의 UTM 보정·전파 pose는 자동 동등하지 않으므로 같은 시각의
+위치·방향을 대조한다. 이번 인계 보강은 pose 생산 알고리즘을 변경하지 않는다.
 
 ## 4. GPS 음영과 복귀
 

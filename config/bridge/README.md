@@ -58,3 +58,9 @@ python3 tools/bridge/render_morai_sensor_profiles.py --check
 [P3-F 기록](../../docs/records/bridge/bridge-p3f-consolidated-v1.md), local/field 요구 분리는
 [P3-G 기록](../../docs/records/bridge/bridge-p3g-local-closeout-v1.md)에 남겼다. generated JSON과
 synthetic test의 성공을 현장 승인으로 해석하지 않는다.
+
+**채점 채널 확인:** 팀 generated LAN JSON은 비알고리즘 채널을 loopback으로 옮기는
+정책이다. 주최 원본의 type258/770/772/259 목적지와 달라 채점 프로그램까지 연결됐다고
+보장하지 않는다. [실제 대조](../../docs/records/bridge/2026-10-20-lan-channel-review.md)와
+[두 PC 준비](../../docs/operations/lan2lan-rehearsal.md)를 확인하며, 주최 PC의 전체 network
+설정을 팀 생성본으로 덮어쓰지 않는다. 알고리즘 oracle 차단과 별도 judge 소비는 구분한다.

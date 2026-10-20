@@ -17,6 +17,39 @@ Frenet V2는 매 주기 새 객체 입력을 요구하고 stale이면 정지한�
 객체 없음은 실제 새 관측의 정상 빈 결과로만 표현한다. 미수신을 빈 배열로 위장하지 않는다.
 추후 전력/부하 때문에 중단한다면 정책상 비사용과 센서 장애를 구별하는 판제 계약부터 합의한다.
 
+## 판제 적용 확인표
+
+2026-10-20 main `2c94bf11` 코드 대조다. 아래 항목은 판제의 적용·인수를 확인하는 안내이며,
+카메라가 판제 정책이나 손재호의 로컬 fusion 구현을 대신 변경한 목록이 아니다.
+카메라는 원본 이름·그룹·시각·좌표·상태를 제공하고, 판제는 소비·위험 판단·제어를 소유한다.
+
+| 소비 그룹 | 원본 모델 이름 | 정책에서 구분할 사항 |
+|---|---|---|
+| `vehicle` | car, bus, truck | vehicle은 차종 묶음. 실제 이동·정지·추종 가능 여부는 위치·추적 근거와 별도 |
+| `dynamic_obstacle` | person, dog, deer, bicycle, stroller | 이동 가능한 대회 에셋. 매 관측이 이동 중이라는 뜻은 아님 |
+| `static_obstacle` | motorcycle, bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier, traffic_cone | SportBike 정적 에셋이라는 사용자 확인 반영. 분류 오류를 실제 운동 정답으로 승격하지 않음 |
+
+`source_class_name`은 원본16종, `class_name`은 위 그룹이다. MORAI actor/API 에셋명은
+검출만으로 확인되지 않는다. 자세한 학습 ID·하위 종류는 [에셋/라벨](../competition/obstacle-assets-and-labels.md)을 따른다.
+
+| 연결 경계 | 현재 전달·제한 | 판제가 확인할 것 |
+|---|---|---|
+| 카메라 관측 | 원본 영상 픽셀 bbox·header와 camera ID, confidence·그룹·원본 이름 | tensor 좌표로 다시 확대하거나 원본 보정을 축소하지 않음. LiDAR의 미터 좌표와 직접 비교하지 않음 |
+| Main 전방 호환 | `/YOLO/BBox`는 전방만, 구형 wire에 confidence·그룹·session 없음 | 추가 cutoff는 변환 전 적용. Main은 원본 이름으로 그룹 재구성. 좌우3뷰 fusion은 손재호 작업 |
+| 판제 숫자 enum | `vehicle/pedestrian/unknown`. 원본 person은 pedestrian, 다른 dynamic/static은 unknown 가능 | **unknown 형상을 삭제하지 않음**. 세 그룹/원본 종류 정책은 문자열을 보존한 tracked 정보에서 연결 |
+| 운동 상태 | semantic 그룹과 `motion_state`·속도 validity는 별개. Main의 opt-in typed 출력은 아직 velocity/dynamic valid=false | unknown·미계산을 정지 속도0으로 해석하지 않음. 실제 운영 출력과 source policy를 확인 |
+| 입력 유지 | 새 관측의 빈 결과와 stale/무효/미수신을 구분 | 미션 밖 입력 토픽을 끊거나 빈 배열을 타이머로 만들어 장애를 숨기지 않음 |
+| 음영 family | `base_link` xyz·support·freshness, 같은 영상의 IMU 지면 context | 좌/우 역할을 home/opposing으로 고정하지 않음. stale·SHA·세대 불일치와 GPS 복귀 정책 인수 |
+| HD 정보 | map pose·station·속도·GPS 유효성은 별도 계약 | [HD 적용 확인표](hd-map-to-planning.md#판제-적용-전-확인--2026-10-20-코드-대조)의 번들·기준점·단위 대조 |
+| 신호등 | camera4 ResNet 단일 producer의 typed 결과와 legacy String | legacy latch를 현재 관측으로 믿지 않고 stamp·stale·confidence·정지선/미션을 함께 판단 |
+
+관련 코드의 실제 경계는 [분류 converter](../../src/planning_inputs/src/converter.cpp),
+[Frenet 파일 지도 reader](../../src/asmc_planner/src/Frenet/frenet_planner.cpp),
+[MGeo 속도 조회](../../src/asmc_planner/src/Behavior/Map/route_manager.cpp)다.
+원본 이름·confidence가 빠진 구형 메시지를 소비한 뒤 임의로 복원했다고 표시하지 않는다.
+단일 producer·정상 빈 결과·센서 중단·재시작·실제 장애물 회피를 함께 인수한다.
+카메라/LiDAR 수신 구현이 빌드됐다는 사실과 판제 폐루프 인수는 구분한다.
+
 ## 검토한 소비 범위
 
 표의 `Axxx`는 `A2256W000xxx`의 약칭이다. 정본 경계는

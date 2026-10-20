@@ -56,6 +56,10 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
                 root=config_dir+"hd_map/";
             }
             std::string error;
+            // This file bundle is independent of the /hd_map/global topics.
+            // Update drivable.json, lines.json and drivable_grid.rle together;
+            // publishing a newer HD map does not replace this planner cache.
+            // See docs/handoffs/hd-map-to-planning.md for bundle acceptance.
             if(!avoid_road_map_.Load(root+"drivable.json",root+"lines.json",error)) {
                 std::fprintf(stderr,"[FrenetPlanner] HD map init failed: %s\n",error.c_str());
                 return false;
