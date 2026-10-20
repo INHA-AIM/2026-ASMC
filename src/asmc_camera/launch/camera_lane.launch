@@ -17,8 +17,11 @@
   <arg name="publish_model_grid_road_marking" default="false"/>
   <arg name="model_grid_max_hz" default="10.0"/>
 
+  <!-- RTX 50: ASMC_LANE_PYTHON=/opt/yolo-venv/bin/python selects the cu128 runtime.
+       Unset keeps the default interpreter. -->
   <node pkg="asmc_camera" type="semantic_inference_node.py"
-        name="$(arg node_name)" output="screen" required="$(eval not arg('managed'))">
+        name="$(arg node_name)" output="screen" required="$(eval not arg('managed'))"
+        launch-prefix="$(optenv ASMC_LANE_PYTHON)">
     <param name="managed" value="$(arg managed)"/>
     <param name="initial_mode" value="$(arg initial_mode)"/>
     <param name="target_hz" value="$(arg target_hz)"/>
