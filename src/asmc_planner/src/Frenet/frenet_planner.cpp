@@ -1,4 +1,5 @@
 #include "Frenet/frenet_planner.hpp"
+#include "Frenet/Maneuver/KeepDepartureGeometry.hpp"
 
 #include <yaml-cpp/yaml.h>
 #include <fstream>
@@ -349,10 +350,25 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
            (required_distance <= 0.0 || s_i - s >= required_distance - 1e-6);
 }
 
+bool FrenetPlanner::KeepDepartureRoadClear(const CartesianPath& path) const {
+    auto exterior=vehicle_shape_;
+    exterior.width=std::max(exterior.width,exterior.road_outer_width);
+    return avoid_road_map_.EvaluatePath(path,exterior,path_cfg_.dt).drivable;
+}
+
 bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
     const CartesianState& ego, double s, double d,
     double resolved_target_speed, CartesianPath& out_path,
-    double duration_s) const {
+    double duration_s, bool* road_blocked,bool* actuation_blocked) const {
+    if (road_blocked) *road_blocked=false;
+    if (actuation_blocked) *actuation_blocked=false;
+    CartesianPath initial_pose;
+    initial_pose.x={ego.x};initial_pose.y={ego.y};initial_pose.yaw={ego.yaw};
+    if (!KeepDepartureRoadClear(initial_pose)) {
+        if (road_blocked) *road_blocked=true;
+        out_path=CartesianPath{};
+        return false;
+    }
     const double initial_distance = LowSpeedLateralTransitionDistance(d, 0.0);
     auto generate = [&](double target_d, double transition_distance,
                         CartesianPath& candidate) {
@@ -361,8 +377,32 @@ bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
                                   transition_distance)) {
             return false;
         }
-        return PathObeysCurvatureLimit(candidate, limits_.max_curvature);
+        if (!PathObeysCurvatureLimit(candidate, limits_.max_curvature)) return false;
+        if (!PathObeysSteeringRate(candidate,path_cfg_.dt,wheelbase_,limits_.steering)) {
+            if (actuation_blocked) *actuation_blocked=true;
+            return false;
+        }
+        if (!KeepDepartureRoadClear(candidate)) {
+            if (road_blocked) *road_blocked=true;
+            return false;
+        }
+        return true;
     };
+
+    constexpr double kExpansionFactor = 1.5;
+    constexpr int kMaximumExpansionAttempts = 8;
+    constexpr int kRefinementIterations = 6;
+    if (KeepDepartureOffsetHoldAllowed(ego,ref_,s,vehicle_shape_,lane_width_,
+                                      limits_.near_low_speed_fallback_v)) {
+        double distance=LowSpeedLateralTransitionDistance(d,d);
+        for(int attempt=0;attempt<kMaximumExpansionAttempts;++attempt,distance*=kExpansionFactor) {
+            CartesianPath held;
+            if(generate(d,distance,held)) {
+                out_path=std::move(held);
+                return true;
+            }
+        }
+    }
 
     CartesianPath initial;
     if (generate(0.0, initial_distance, initial)) {
@@ -370,9 +410,6 @@ bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
         return true;
     }
 
-    constexpr double kExpansionFactor = 1.5;
-    constexpr int kMaximumExpansionAttempts = 8;
-    constexpr int kRefinementIterations = 6;
     double infeasible_distance = initial_distance;
     double feasible_distance = std::numeric_limits<double>::quiet_NaN();
     CartesianPath feasible_path;
@@ -777,6 +814,15 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
             object.yaw_rate=roundabout_prediction_.Rate(object.id);
     }
 
+    // Motion history uses original sensor frames above. Collision predictions
+    // start at the ego observation time, rather than mixing a current ego with
+    // a delayed object pose. Advance only this derived vector, exactly once.
+    if (std::isfinite(object_evaluation_time_) && object_evaluation_time_ > observation_time) {
+        const double age = object_evaluation_time_ - observation_time;
+        for (auto& object : ctx.predicted_obstacles)
+            object = AdvanceObjectObservation(object, age);
+    }
+
     // TargetSpeedResolver는 공간/상위계층 제한을 합친 raw base cap만
     // 계산한다. KEEP의 cycle-to-cycle 연속성은 candidate cap까지 확인한 뒤
     // SpeedProfiler가 단독으로 적용한다.
@@ -988,13 +1034,14 @@ bool FrenetPlanner::PlanInternal(
     const bool external_follow = external_command->mode == FOLLOWING;
     // AVOID PREPARE도 이 fallback을 타지 않는다 (D6-2b).
     //
-    // 이 경로는 충돌 필터를 거치지 않은 crawl을 그대로 반환하므로, PREPARE의
-    // 유지 궤적으로 쓰면 장애물 쪽으로 기어간다. 저속 PREPARE의 유지 궤적은
+    // PlanLowSpeedFallback 생성기 자체는 충돌 필터를 거치지 않는다. KEEP는
+    // 전용 wrapper가 최종 객체를 검사한다. 저속 PREPARE의 유지 궤적은
     // BuildAvoidMaintenancePath가 **충돌 검사를 통과시킨 뒤** 만든다.
     //
     // 여기서 제외하지 않으면 PREPARE 블록에 도달하지도 못한다 - 이 분기가
     // 먼저 return하기 때문이다(실측으로 확인: v=0.3에서 low_speed_context이
     // 0으로 나오고 maintenance가 미검사 crawl이었다).
+    bool blocked_low_speed_crawl = false;
     if (std::fabs(ego.v) < limits_.low_speed_fallback_v &&
         !external_stop && !external_follow && !avoid_prepare &&
         !avoid_committed && !lane_change_prepare && !lane_change_committed) {
@@ -1012,9 +1059,8 @@ bool FrenetPlanner::PlanInternal(
         last_profiled_acceleration_ = 0.0;
         const bool keep_fallback = external_command->mode == LANE_KEEPING;
         const bool fallback_ok = keep_fallback
-            ? PlanCurvatureFeasibleKeepLowSpeedFallback(
-                  ego, s, d, resolved_target_speed, out_path,
-                  limits_.low_speed_crawl_duration_s)
+            ? PlanExternalKeepLowSpeedFallback(
+                  ego, s, d, resolved_target_speed, predicted_obstacles,out_path)
             : PlanLowSpeedFallback(
                   ego, s, d, 0.0, out_path,
                   limits_.low_speed_crawl_duration_s,
@@ -1024,10 +1070,16 @@ bool FrenetPlanner::PlanInternal(
                 ? 0.0 : out_path.v.back();
             last_candidate_paths_.push_back(out_path);
             last_candidate_validity_.push_back(true);
-        } else if (keep_fallback) {
-            last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
         }
-        return fallback_ok;
+        if (fallback_ok || !keep_fallback ||
+            last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
+            return fallback_ok;
+        }
+        // A rejected slow crawl does not establish that every physically
+        // reachable departure is blocked. Continue through the same prepared
+        // observation/state into KEEP's fully checked candidate pipeline.
+        // No second PlanInternal/tracking update and no rejected-path reuse.
+        blocked_low_speed_crawl = true;
     }
 
     double d_dot, d_ddot;
@@ -1098,11 +1150,17 @@ bool FrenetPlanner::PlanInternal(
                 ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
                 predicted_obstacles, resolved_target_speed,
                 *external_command, out_path);
-        default:
-            return KeepProcess(
+        default: {
+            const bool planned = KeepProcess(
                 ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
                 predicted_obstacles, resolved_target_speed,
-                *external_command, out_path);
+                *external_command, out_path, blocked_low_speed_crawl);
+            if (!planned && blocked_low_speed_crawl) {
+                out_path = CartesianPath{};
+                last_failure_reason_ = PlanFailureReason::COLLISION_BLOCKED;
+            }
+            return planned;
+        }
     }
 }
 

@@ -42,6 +42,14 @@ double SampleDiagnosticCartesianAcceleration(
     return path.a[first] + fraction * (path.a[second] - path.a[first]);
 }
 
+void PublishEmergencyStop() {
+    stop_brake_response.Reset();
+    stop_acceleration_response.Reset();
+    g_control.has_successful_control = false;
+    ResetMPCOnFailSafe();
+    g_control.control_pub.publish(MakeRosEmergencyStopCommand());
+}
+
 }  // namespace
 
 void BehaviorCommandCallback(
@@ -62,6 +70,10 @@ void BehaviorCommandCallback(
                  emergency ? "ACTIVE" : "RELEASED", message->command_id);
     }
     g_control.emergency_stop_active = emergency;
+    // The runtime uses a single ROS callback queue (ros::spin). Do not leave
+    // an accepted emergency waiting for the next 20 Hz control timer; reuse
+    // exactly the same reset/output path as subsequent emergency ticks.
+    if (emergency) PublishEmergencyStop();
 }
 
 void TrajectoryCallback(
@@ -91,11 +103,7 @@ void PublishStop(const char* reason) {
 
 void ControlProcess(const ros::SteadyTimerEvent&) {
     if (g_control.emergency_stop_active) {
-        stop_brake_response.Reset();
-        stop_acceleration_response.Reset();
-        g_control.has_successful_control = false;
-        ResetMPCOnFailSafe();
-        g_control.control_pub.publish(MakeRosEmergencyStopCommand());
+        PublishEmergencyStop();
         return;
     }
     if (!g_control.has_trajectory) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Planning/Planner.hpp"
+#include "Behavior/Feature/DynamicObjectPolicy.hpp"
 #include <mutex>
 #include <functional>
 #include "Execution/RequestedIntent.hpp"
@@ -30,6 +31,11 @@ class PlanningPort {
     PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh);
     PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh, FeedbackSink);
     void receiveIntent(const asmc_planner::RequestedIntent&);
+    behavior_planner::DynamicEnvironment dynamicEnvironment() const {
+      return {planner_initialized_?&planner_.road_map():nullptr,
+              planner_.vehicle_shape(),planner_.collision_config(),planner_.lane_width()};
+    }
+
 
 
  private:
@@ -257,6 +263,7 @@ class PlanningPort {
     // 마지막으로 수신한 v2 명령. timer가 소비한다. 명령 callback은 저장만
     // 하고 planning하지 않는다(runV2PlanningCycle 주석 참고).
     asmc_msgs::BehaviorCommand latest_v2_command_;
+    bool latest_v2_avoid_in_lane_only_ = false;
     bool has_v2_command_ = false;
 
     // v2 전용 궤적 캐시. command_id에 묶어 소유한다 - 다른 명령의 궤적을

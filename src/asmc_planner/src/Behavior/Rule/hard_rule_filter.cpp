@@ -139,6 +139,14 @@ HardConstraint HardRuleFilter::apply(const UrbanFeature& feature,
     result += "emergency_ttc;";
   }
 
+  if(feature.dynamic.action==DynamicAction::STOP) {
+    hard.stop_before_s=hard.planned_stop?std::min(hard.stop_before_s,feature.dynamic.stop_s):feature.dynamic.stop_s;
+    hard.planned_stop=true;
+    result+="dynamic_yield;";
+  }
+  if(feature.dynamic.action==DynamicAction::EMERGENCY) {
+    hard.emergency_stop=true;hard.force_stop=true;result+="dynamic_imminent;";
+  }
   if (result.empty()) result = "no_hard_constraint";
   if (reason) *reason = result;
   return hard;

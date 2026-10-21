@@ -1,4 +1,5 @@
 #include "AvoidRoadMap.hpp"
+#include "Frenet/Geometry/PolygonUtils.hpp"
 #include <yaml-cpp/yaml.h>
 #include <algorithm>
 #include <cmath>
@@ -7,6 +8,35 @@
 
 namespace {
 std::uint64_t BinKey(int x,int y) { return (std::uint64_t(std::uint32_t(x))<<32)|std::uint32_t(y); }
+}
+
+bool AvoidRoadMap::IntersectsDrivable(const geometry::Polygon2D& footprint) const {
+  if(!enabled_ || footprint.size()<3 || footprint.size()>64) return false;
+  double xmin=INFINITY,ymin=INFINITY,xmax=-INFINITY,ymax=-INFINITY;
+  for(const auto& p:footprint) {
+    if(!std::isfinite(p.x)||!std::isfinite(p.y)) return false;
+    xmin=std::min(xmin,p.x);xmax=std::max(xmax,p.x);
+    ymin=std::min(ymin,p.y);ymax=std::max(ymax,p.y);
+  }
+  const auto hull=geometry::ComputeConvexHull(footprint);
+  if(geometry::PolygonArea(hull)<1e-6 || xmin<grid_x_ || ymin<grid_y_ ||
+      xmax>=grid_x_+grid_width_*grid_resolution_ || ymax>=grid_y_+grid_height_*grid_resolution_) return false;
+  const int x0=std::max(0,int(std::floor((xmin-grid_x_)/grid_resolution_))-1);
+  const int x1=std::min(grid_width_-1,int(std::floor((xmax-grid_x_)/grid_resolution_)));
+  const int y0=std::max(0,int(std::floor((ymin-grid_y_)/grid_resolution_))-1);
+  const int y1=std::min(grid_height_-1,int(std::floor((ymax-grid_y_)/grid_resolution_)));
+  // A raster run is exactly the union of its adjacent free cells. Intersect
+  // each clipped run rectangle once, rather than imposing a cell-count cutoff
+  // that could mislabel a long/rotated bus as outside the road.
+  for(int y=y0;y<=y1;++y) for(const auto& run:grid_rows_[y]) {
+    const int begin=std::max(x0,run.first),end=std::min(x1+1,run.second);
+    if(begin>=end)continue;
+    const double a=grid_x_+begin*grid_resolution_,z=grid_x_+end*grid_resolution_;
+    const double b=grid_y_+y*grid_resolution_;
+    if(geometry::CheckConvexPolygonOverlapSAT(hull,{{a,b},{z,b},
+        {z,b+grid_resolution_},{a,b+grid_resolution_}})) return true;
+  }
+  return false;
 }
 
 bool AvoidRoadMap::Load(const std::string& areas, const std::string& lines,

@@ -59,6 +59,13 @@ runtime:
 
 planner:
   wheelbase: 3.0    # [m] asmc_controller/config/controller.yaml과 동일 값 유지
+  # Mirror of the existing Controller actuator capability, checked by the
+  # departure contract regression. No Controller constraint is relaxed.
+  steering_profile:
+    curvature_gain: 0.844
+    max_rate: 1.0       # [rad/s]
+    reference_speed: 5.0 # [m/s], inverse-square slew envelope knee
+    min_rate: 0.1      # [rad/s]
   lane_width: 3.5   # [m] LANE_CHANGE 오프셋, "내 차선" 판정(|d|<=lane_width/2)에 사용
 
   # [s] frenet_planner_node의 planning/frequency 기본값(20Hz)과 동일하게
@@ -67,8 +74,9 @@ planner:
   # 샘플 간격, 아래)와는 다른 값이다 - 절대 섞어 쓰지 않는다.
   replanning_period_s: 0.05
   # [m/s^2] normal KEEP SpeedProfiler의 양의 가속도 한계.
-  # 최종 MORAI tuning 값이 아니다.
-  max_target_speed_accel: 2.0
+  # 최고속도는 유지하고 일반 KEEP의 재가속 지연만 줄이는 MORAI 시험값.
+  # 기존 3.0m/s² 물리 제약과 6.0m/s³ jerk 제약은 그대로 적용한다.
+  max_target_speed_accel: 2.5
 
   # --- Reference line 구축/조회 (Reference/Reference.cpp) ---------
   # max_curvature는 kinematic_limits.max_curvature를 그대로 공유한다
@@ -373,7 +381,7 @@ planner:
     enabled: true
     # Ordinary roundabout exit and post-jamming roads. Highway exit keeps 2.6:
     # raising its curve allowance failed the full-lap tracking guard.
-    source_links: [A2256W000054, A2256W000846, A2256W000128, A2256W000333, A2256W000154, A2256W000332, A2256W000751]
+    source_links: [A2256W000748, A2256W000182, A2256W000329, A2256W000054, A2256W000846, A2256W000333, A2256W000154, A2256W000332, A2256W000751]
     min_requested_speed: 11.1111111111  # [m/s] 40 km/h
     max_lateral_accel: 3.8
     speed_error_weight: 4.0
@@ -392,6 +400,9 @@ planner:
   vehicle_shape:
     width: 1.9
     length: 4.635
+    # MORAI SDK measured exterior width 2.160835m. Road-only calibration;
+    # preserve the existing 1.9m object collision model and its 0.45m margin.
+    road_outer_width: 2.161
     # /vehicle/state x/y는 IONIQ 5 후륜축 기준이다.
     rear_overhang: 0.79
 

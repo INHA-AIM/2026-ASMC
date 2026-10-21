@@ -19,6 +19,8 @@
 
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
 #include "Frenet/Geometry/PolygonUtils.hpp"
+#include "Frenet/Generator/BoundaryConditionPolicy.hpp"
+#include "Frenet/Generator/LongitudinalGenerator.hpp"
 
 // 저속 fallback은 시간 대신 이동거리 기준 cosine smoothstep으로 d를 복귀시킨다.
 // 양 끝의 d'가 0이므로 정지 근처에서도 급격한 횡이동과 곡률 spike가 생기지 않는다.
@@ -210,8 +212,23 @@ bool FrenetPlanner::FollowProcess(
     SynchronizeFollowLeaderFragments(cmd.target_object_id,
                                      follow_collision_obstacles);
 
+    FrenetState follow_start=start;
+    if(status==FollowTargetStatus::VALID && cmd.leader_speed>0. &&
+       cmd.leader_speed>=start.s_d && start.s_dd<0.) {
+        // A freshly visible lead is pulling away. Re-injecting the measured
+        // brake lag into each new quintic otherwise collapses speed even after
+        // the gap law asks for acceleration; at rest it makes every candidate
+        // briefly reverse. Release only residual braking against the SAME gap
+        // target used by generation. Slower/stopped/missing leaders retain the
+        // raw boundary. Position/speed and raw diagnostics remain measured.
+        const double approach=FollowingApproachSpeed(start.s,cmd.leader_s,
+            cmd.leader_speed,cmd.time_gap,cmd.min_gap,resolved_target_speed,cmd.gap_gain);
+        follow_start.s_dd=ResolveVelocityKeepingBoundaryAcceleration(start.s_dd,
+            start.s_d,approach,limits_.accel_intent_deadband_mps);
+    }
+
     return ExecuteManeuverPipeline(
-        ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+        ego, follow_start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
         follow_collision_obstacles, resolved_target_speed, cmd, out_path);
 }
 

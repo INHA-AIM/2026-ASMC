@@ -109,6 +109,10 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/kinematic_limits/max_lateral_accel",      limits.max_lateral_accel);
     REQUIRE("planner/kinematic_limits/max_longitudinal_accel", limits.max_longitudinal_accel);
     REQUIRE("planner/kinematic_limits/max_curvature",          limits.max_curvature);
+    REQUIRE("planner/steering_profile/curvature_gain", limits.steering.curvature_gain);
+    REQUIRE("planner/steering_profile/max_rate", limits.steering.max_rate);
+    REQUIRE("planner/steering_profile/reference_speed", limits.steering.reference_speed);
+    REQUIRE("planner/steering_profile/min_rate", limits.steering.min_rate);
     REQUIRE("planner/kinematic_limits/max_longitudinal_jerk",  limits.max_longitudinal_jerk);
     REQUIRE("planner/kinematic_limits/low_speed_fallback_v",       limits.low_speed_fallback_v);
     REQUIRE("planner/kinematic_limits/low_speed_crawl_duration_s", limits.low_speed_crawl_duration_s);
@@ -145,6 +149,7 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/vehicle_shape/width",  vehicle_shape.width);
     REQUIRE("planner/vehicle_shape/length", vehicle_shape.length);
     REQUIRE("planner/vehicle_shape/rear_overhang", vehicle_shape.rear_overhang);
+    REQUIRE("planner/vehicle_shape/road_outer_width", vehicle_shape.road_outer_width);
 
     REQUIRE("planner/collision_check/safety_margin",      collision_cfg.safety_margin);
     REQUIRE("planner/collision_check/margin_growth_rate", collision_cfg.margin_growth_rate);

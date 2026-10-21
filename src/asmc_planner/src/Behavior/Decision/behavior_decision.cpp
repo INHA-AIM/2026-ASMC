@@ -6,6 +6,11 @@
 
 namespace behavior_planner {
 
+bool BehaviorDecision::setAbsoluteSpeedLimit(double mps) {
+  if(!std::isfinite(mps)||mps<=0)return false;
+  absolute_speed_limit_=mps;return true;
+}
+
 bool BehaviorDecision::setNormalCruiseConfig(const NormalCruiseConfig& config) {
   normal_cruise_ = {};
   if (!config.enabled) return true;
@@ -59,8 +64,12 @@ BehaviorContextData BehaviorDecision::decide(
                                feature.surrounding.left_lane_safe;
   context.enable.right_change = !context.hard.forbid_right_change &&
                                 feature.surrounding.right_lane_safe;
-  context.enable.avoid = feature.risk.static_obstacle_ahead &&
-                         feature.risk.avoidance_object_id >= 0;
+  const bool dynamic_avoid=feature.dynamic.action==DynamicAction::AVOID &&
+      !feature.risk.static_obstacle_ahead;
+  context.enable.avoid = (feature.risk.static_obstacle_ahead &&
+                         feature.risk.avoidance_object_id >= 0) || dynamic_avoid;
+  if(dynamic_avoid) context.score.avoid=90.0;
+  context.extra_flags["dynamic_in_lane_avoid"]=dynamic_avoid;
   context.enable.stop = context.hard.planned_stop || context.hard.force_stop;
   context.enable.emergency_stop = context.hard.emergency_stop;
 
@@ -79,7 +88,11 @@ BehaviorContextData BehaviorDecision::decide(
         context.hard.intersection_approach_activation_distance;
   }
   context.target.stop_before_s = context.hard.stop_before_s;
-  if (context.hard.planned_stop && feature.signal.stop_line_valid) {
+  const bool signal_stop_aspect=feature.signal.light_state==TrafficLightState::RED ||
+      feature.signal.light_state==TrafficLightState::YELLOW;
+  const bool signal_exempt=feature.signal.has_required_movement &&
+      feature.signal.required_movement==SignalMovement::RIGHT_UNPROTECTED;
+  if (context.hard.planned_stop && feature.signal.stop_line_valid && signal_stop_aspect && !signal_exempt) {
     context.target.has_stop_target = true;
     context.target.stop_x = feature.signal.stop_line_x;
     context.target.stop_y = feature.signal.stop_line_y;
@@ -99,10 +112,16 @@ BehaviorContextData BehaviorDecision::decide(
     context.target.lead_vehicle_id = follow_target_id;
     context.extra_flags["follow_release_grace"] = true;
   }
+  if(feature.dynamic.action==DynamicAction::STOP &&
+      (!context.target.has_stop_target || feature.dynamic.stop_s<feature.signal.stop_target_s)) {
+    context.target.has_stop_target=context.target.has_target_pose=true;
+    context.target.stop_x=context.target.target_x=feature.dynamic.stop_x;
+    context.target.stop_y=context.target.target_y=feature.dynamic.stop_y;
+    context.target.target_yaw=feature.dynamic.stop_yaw;
+  }
   if (context.enable.avoid) {
-    context.target.avoidance_object_id = feature.risk.avoidance_object_id;
-    context.extra_values["avoidance_object_id"] =
-        feature.risk.avoidance_object_id;
+    context.target.avoidance_object_id = dynamic_avoid?feature.dynamic.object_id:feature.risk.avoidance_object_id;
+    context.extra_values["avoidance_object_id"] = context.target.avoidance_object_id;
   }
 
   const bool follow_owns_avoid_target =
@@ -263,6 +282,18 @@ BehaviorContextData BehaviorDecision::decide(
     context.extra_flags["normal_cruise_active"] = true;
     context.debug.hard_rule_reason += ";normal_cruise_simulation_profile";
   }
+  // Keep the approach cap throughout the configured dynamic section instead
+  // of reaccelerating immediately after the stop-line exit buffer. Lower
+  // signal/object limits and execution safety still take precedence.
+  if(feature.dynamic.in_scope) {
+    context.hard.max_speed=std::min(context.hard.max_speed,feature.dynamic.section_speed_limit);
+    context.target.desired_speed=std::min(context.target.desired_speed,context.hard.max_speed);
+    context.debug.hard_rule_reason+=";dynamic_section_speed_limit";
+  }
+  // Final arbitration cap covers KEEP/FOLLOW/AVOID/MERGE and lane changes.
+  // Initial-state continuity and all lower signal/obstacle limits remain.
+  context.hard.max_speed=std::min(context.hard.max_speed,absolute_speed_limit_);
+  context.target.desired_speed=std::min(context.target.desired_speed,context.hard.max_speed);
   if (follow_owns_avoid_target &&
       context.selected_behavior == BehaviorType::FOLLOW) {
     context.debug.selected_reason = "fsm_follow_owns_same_target";

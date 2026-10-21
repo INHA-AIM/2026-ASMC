@@ -9,6 +9,12 @@ void Planner::ReceiveIntent(RuntimePort& port, const RequestedIntent& request) {
   // 20 Hz timer, preserving independent requested and accepted command IDs.
   std::lock_guard<std::mutex> lock(port.input_mutex_);
   port.latest_v2_command_ = request.command;
+  const auto bounded=request.decision.extra_flags.find("dynamic_in_lane_avoid");
+  port.latest_v2_avoid_in_lane_only_=
+      request.command.maneuver_type==asmc_msgs::BehaviorCommand::AVOID &&
+      request.decision.selected_behavior==behavior_planner::BehaviorType::AVOID &&
+      request.command.primary_object_id==request.decision.target.avoidance_object_id &&
+      bounded!=request.decision.extra_flags.end() && bounded->second;
   port.has_v2_command_ = true;
 }
 }

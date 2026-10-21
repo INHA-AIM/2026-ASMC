@@ -57,6 +57,13 @@ FrenetPath SampleLongitudinalQuartic(const QuarticPolynomial& poly, const std::v
 // [Sec.V-A] Following
 // =========================================================
 
+double FollowingApproachSpeed(double ego_s,double leader_s,double leader_speed,
+                             double time_gap,double min_gap,double cruise_speed,
+                             double gap_gain) {
+    const double gap_error=(leader_s-ego_s)-(min_gap+time_gap*leader_speed);
+    return std::max(0.0,std::min(cruise_speed,leader_speed+gap_gain*gap_error));
+}
+
 std::vector<FrenetPath> GenerateFollowingCandidates(const FrenetState& start,
                                                      double leader_s,
                                                      double leader_speed,
@@ -74,12 +81,8 @@ std::vector<FrenetPath> GenerateFollowingCandidates(const FrenetState& start,
     // Constant-time-gap 오차를 접근 속도로 피드백한다. 목표 간격보다 멀면
     // leader보다 빠르게 접근하고, 목표 간격에서는 leader 속도와 같아진다.
     // 상한은 도로 곡률 등을 반영해 상위 planner가 정한 순항 목표속도이다.
-    const double current_gap = leader_s - start.s;
-    const double desired_gap_now = min_gap + time_gap * leader_speed;
-    const double gap_error = current_gap - desired_gap_now;
-    const double raw_approach_speed = leader_speed + gap_gain * gap_error;
-    const double approach_speed = std::max(0.0, std::min(cruise_target_speed,
-                                                         raw_approach_speed));
+    const double approach_speed=FollowingApproachSpeed(start.s,leader_s,leader_speed,
+        time_gap,min_gap,cruise_target_speed,gap_gain);
 
     for (double T : T_list) {
         if (T <= 1e-6) continue;

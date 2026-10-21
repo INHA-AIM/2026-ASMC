@@ -16,6 +16,12 @@
 #include "Frenet/Geometry/FrenetTypes.hpp"
 #include "Frenet/Generator/GeneratorConfig.hpp"
 
+// One constant-time-gap target calculation shared by the following generator
+// and its boundary-condition policy. This does not select a leader.
+double FollowingApproachSpeed(double ego_s,double leader_s,double leader_speed,
+                             double time_gap,double min_gap,double cruise_speed,
+                             double gap_gain);
+
 struct KinematicLimits;
 
 // =========================================================

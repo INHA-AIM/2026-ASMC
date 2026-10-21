@@ -145,6 +145,14 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         return false;
 
     // --- kinematic_limits ---
+    if (!CheckPositiveFinite(limits.steering.curvature_gain,"planner/steering_profile/curvature_gain",error_message) ||
+        !CheckPositiveFinite(limits.steering.max_rate,"planner/steering_profile/max_rate",error_message) ||
+        !CheckPositiveFinite(limits.steering.min_rate,"planner/steering_profile/min_rate",error_message))return false;
+    if(!IsFinite(limits.steering.reference_speed) || limits.steering.reference_speed<0 ||
+       limits.steering.min_rate>limits.steering.max_rate) {
+        error_message="planner/steering_profile requires reference_speed >= 0 and min_rate <= max_rate";
+        return false;
+    }
     if (!CheckPositiveFinite(limits.max_lateral_accel, "planner/kinematic_limits/max_lateral_accel", error_message))
         return false;
     if (!CheckPositiveFinite(limits.max_longitudinal_accel, "planner/kinematic_limits/max_longitudinal_accel", error_message))
@@ -227,6 +235,12 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         return false;
     if (!CheckPositiveFinite(vehicle_shape.length, "planner/vehicle_shape/length", error_message))
         return false;
+    if (!CheckPositiveFinite(vehicle_shape.road_outer_width,
+            "planner/vehicle_shape/road_outer_width", error_message)) return false;
+    if (vehicle_shape.road_outer_width < vehicle_shape.width) {
+        error_message = "planner/vehicle_shape/road_outer_width must be >= width";
+        return false;
+    }
     if (!IsFinite(vehicle_shape.rear_overhang) ||
         (vehicle_shape.rear_overhang >= 0.0 && vehicle_shape.rear_overhang > vehicle_shape.length)) {
         error_message =

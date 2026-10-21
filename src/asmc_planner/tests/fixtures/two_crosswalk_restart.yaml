@@ -1,0 +1,64 @@
+provenance:
+  run: src/asmc_planner/docs/validation/dynamic_operational_completion_20261021/two_crosswalk_user_standard/two_crosswalk_pedestrians
+  canonical_receive_elapsed_s: 8.050272226333618
+  canonical_source_time: 1792575314.15
+  minimum_episode_envelope_clearance_m: 0.0
+  native_contact_events: []
+  reason: Original restart was based on a forecast claiming the currently occupied
+    lane would clear; native walking person remained close.
+object:
+  id: 30479
+  type: 2
+  motion_state: 3
+  center:
+    x: -58.93112619696663
+    y: -31.578232577245103
+    z: -0.6170201198096101
+  yaw: 1.4733381204809917
+  vx: -0.7433879390901751
+  vy: 1.4026003877130604
+  yaw_rate: 0.0
+  width: 0.5416863560676575
+  length: 0.4249255657196045
+  height: 1.3058276176452637
+  obb_corners:
+  - x: -58.68195452064356
+    y: -31.816039400410336
+    z: -1.269824933790567
+  - x: -58.64060763990524
+    y: -31.39313056189342
+    z: -1.2698058170044901
+  - x: -59.17972347224849
+    y: -31.34042191914076
+    z: -1.2700427971362782
+  - x: -59.2210704125907
+    y: -31.763330757956666
+    z: -1.2700619139485687
+  - x: -58.68252880727392
+    y: -31.816042281089217
+    z: 0.036002587371804895
+  - x: -58.6411819265356
+    y: -31.3931334425723
+    z: 0.03602170415788159
+  - x: -59.18029775887885
+    y: -31.340424799819644
+    z: 0.035784724026093485
+  - x: -59.22164469922106
+    y: -31.763333638635547
+    z: 0.035765607213803084
+ego:
+  header:
+    seq: 781
+    stamp:
+      secs: 1792575314
+      nsecs: 203287601
+    frame_id: map
+  source: 1
+  valid: true
+  x: -60.08389459028253
+  y: -41.37119070287311
+  yaw: 1.5758121468706694
+  speed: 1.538275831586928e-07
+  acceleration: 4.3993184690529586e-06
+  yaw_rate: 1.0930338021353236e-06
+observation_age_s: 0.07633423805236816

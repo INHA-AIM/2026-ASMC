@@ -4,8 +4,20 @@ behavior: {update_rate: 10.0}
 # same ordinary-driving gate. The original map is unchanged.
 # Signal approach, obstacle handling, FOLLOW, STOP and roundabout merge take
 # precedence. Unlisted lower-speed links and downstream curvature limits remain.
-# Nominal target/cap 58; verify actual speed stays below 60 in simulator Bags.
+# Nominal cruise 58 is bounded by maximum_speed_kph after maneuver selection.
 # This is a requested cruise speed, not a guaranteed measured segment average.
+# Requested cap has 1.5 km/h tracking margin to the user's measured 59 km/h
+# ceiling. Actual acceptance is checked from simulator truth, not this setting.
+maximum_speed_kph: 57.5
+
+dynamic_behavior:
+  # Original route spans of the dynamic obstacle section only. Projection on
+  # the ordered route includes intersection connectors with different map IDs.
+  route_links: [A2256W000728, A2256W000599, A2256W000207, A2256W000205]
+  # Preserve the existing 25 km/h intersection approach cap through the section;
+  # provisional simulation setting, not a certified safe speed for every entry.
+  section_speed_limit_kph: 25.0
+
 normal_cruise:
   enabled: true
   target_speed_kph: 58.0
@@ -14,6 +26,10 @@ normal_cruise:
   # Ordinary exit road after roundabout merge; merge links retain their limits.
   link_speed_caps_kph:
     A2256W000054: 50.0
+    # Initial two bends: request headroom; native curvature/kinematic limits
+    # still determine the actual lower corner speed. Provisional MORAI tune.
+    A2256W000182: 40.0
+    A2256W000329: 40.0
 interface_version: "v1"
 v2: {command_validity_seconds: 0.5, feedback_stale_seconds: 1.0}
 # Match Frenet's configured FOLLOW acquisition gate. A previously acquired

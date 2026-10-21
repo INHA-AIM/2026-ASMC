@@ -12,7 +12,8 @@ ProductionRuntime::ProductionRuntime()
       [this](const asmc_msgs::FrenetFeedback& feedback) { behavior_->receiveFeedback(feedback); }));
   behavior_.reset(new behavior_planner::BehaviorInput(
       handle("", behavior_queue_), handle("/behavior_planner", behavior_queue_),
-      [this](const RequestedIntent& request) { planning_->receiveIntent(request); }));
+      [this](const RequestedIntent& request) { planning_->receiveIntent(request); },
+      planning_->dynamicEnvironment()));
   mode_source_.reset(new GpsModeSource(handle("", planning_queue_)));
 }
 ProductionRuntime::~ProductionRuntime() {

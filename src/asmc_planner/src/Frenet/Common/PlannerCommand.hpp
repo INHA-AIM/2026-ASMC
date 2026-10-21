@@ -109,6 +109,10 @@ struct PlannerCommand {
     // 그래서 별도 유효성 플래그를 둔다(계약 1.3절과 같은 이유 - d는 음수가
     // 유효하므로 -1.0 sentinel도 쓸 수 없다).
     bool has_avoid_target_d = false;
+    // Native Behavior -> Planner intent constraint, default-off for the
+    // unchanged public message. Tightens AVOID to the current lane; it never
+    // bypasses geometry, collision checks, or command acceptance.
+    bool avoid_in_lane_only = false;
     double avoid_target_d = 0.0;            // [m]
 
     // 위 투영의 종방향 좌표 [m]. has_avoid_target_d가 true일 때만 유효하다.

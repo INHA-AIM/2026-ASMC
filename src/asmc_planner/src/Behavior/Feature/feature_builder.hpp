@@ -1,5 +1,6 @@
 #pragma once
 #include <unordered_map>
+#include <functional>
 
 #include "Behavior/Feature/object_projector.hpp"
 #include "Parser/Traffic/traffic_light_provider.hpp"
@@ -63,7 +64,9 @@ class FeatureBuilder {
     avoid_target_ = config;
   }
   UrbanFeature build(const EgoState&, const PerceptionObjects&,
-                     const RouteManager&, const TrafficLightProvider&);
+                     const RouteManager&, const TrafficLightProvider&,
+                     const std::function<bool(const ObjectFeature&)>& static_avoid_eligible = {},
+                     const std::function<PerceptionObjects(UrbanFeature&,const PerceptionObjects&)>& object_policy = {});
 
  private:
   struct AvoidOverlapState {

@@ -177,7 +177,12 @@ std::pair<double, double> PredictTrackedObjectVelocity(
     if (!std::isfinite(t) || !std::isfinite(object.yaw_rate)) {
         return velocity;
     }
-    const double angle = object.yaw_rate * t;
+    const double turn_time = std::min(t, std::max(0.0, object.turn_prediction_duration));
+    if (t > turn_time && object.motion_state != ObjectMotionState::LOW_THREAT &&
+        std::isfinite(object.continuation_vx) && std::isfinite(object.continuation_vy)) {
+        return {object.continuation_vx, object.continuation_vy};
+    }
+    const double angle = object.yaw_rate * turn_time;
     const double cosine = std::cos(angle);
     const double sine = std::sin(angle);
     return {cosine * velocity.first - sine * velocity.second,
@@ -221,6 +226,22 @@ PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t)
     }
     pose.heading = obj.heading + angle;
     return pose;
+}
+
+TrackedObject AdvanceObjectObservation(const TrackedObject& object, double elapsed) {
+    auto advanced = object;
+    const auto pose = PredictTrackedObjectPose(object, elapsed);
+    const auto velocity = PredictTrackedObjectVelocity(object, elapsed);
+    advanced.corners = geometry::TranslateCorners(object.corners,
+        pose.x - object.x, pose.y - object.y, 1.0);
+    advanced.x = pose.x;
+    advanced.y = pose.y;
+    advanced.heading = pose.heading;
+    advanced.vx = velocity.first;
+    advanced.vy = velocity.second;
+    advanced.speed = std::hypot(advanced.vx, advanced.vy);
+    advanced.turn_prediction_duration = std::max(0.0, object.turn_prediction_duration - elapsed);
+    return advanced;
 }
 
 geometry::Polygon2D MakeEgoFootprint(const CartesianState& cs,

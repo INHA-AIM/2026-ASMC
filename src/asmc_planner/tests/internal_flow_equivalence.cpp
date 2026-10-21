@@ -12,6 +12,7 @@ using Feedback = asmc_msgs::FrenetFeedback;
 struct InputPort {
   std::mutex input_mutex_;
   Command latest_v2_command_;
+  bool latest_v2_avoid_in_lane_only_ = false;
   bool has_v2_command_ = false;
 };
 template<class T> std::vector<uint8_t> bytes(const T& value) {
@@ -45,6 +46,20 @@ int main() {
   std::mt19937 random(20261010);
   asmc_planner::Planner coordinator;
   behavior_planner::BehaviorContextData decision;
+  {
+    InputPort constrained;Command command;command.command_id=7;
+    command.maneuver_type=Command::AVOID;command.primary_object_id=98;
+    decision.selected_behavior=behavior_planner::BehaviorType::AVOID;
+    decision.target.avoidance_object_id=98;decision.extra_flags["dynamic_in_lane_avoid"]=true;
+    coordinator.ReceiveIntent(constrained,{decision,command});
+    require(constrained.latest_v2_avoid_in_lane_only_);
+    command.primary_object_id=99;coordinator.ReceiveIntent(constrained,{decision,command});
+    require(!constrained.latest_v2_avoid_in_lane_only_);
+    command.primary_object_id=98;command.maneuver_type=Command::KEEP;
+    coordinator.ReceiveIntent(constrained,{decision,command});
+    require(!constrained.latest_v2_avoid_in_lane_only_);
+    decision=behavior_planner::BehaviorContextData{};
+  }
   size_t cycles=0;
   for (int scenario=0;scenario<1000;++scenario) {
     InputPort legacy, direct;
