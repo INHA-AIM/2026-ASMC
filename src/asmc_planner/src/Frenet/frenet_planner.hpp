@@ -37,8 +37,14 @@
 // 책임이고, 이 클래스는 그 행동을 어떻게 trajectory로 만들지만 담당한다.
 class FrenetPlanner {
 public:
+    const AvoidRoadMap& road_map() const { return avoid_road_map_; }
+    VehicleShape vehicle_shape() const { return vehicle_shape_; }
+    CollisionCheckConfig collision_config() const { return collision_cfg_; }
     // Actual perception timestamp; empty frames carry time too.
-    void SetObjectObservationTime(double time) { object_observation_time_=time; }
+    void SetObjectObservationTime(double time, double evaluation_time = -1) {
+        object_observation_time_=time;
+        object_evaluation_time_=evaluation_time < 0 ? time : evaluation_time;
+    }
     void BindExecutionState(asmc_planner::execution::ManeuverState& state) { execution_.bind(state); }
     // Plan() 실패 원인. 호출자(ROS node)가 "이전 궤적 재사용"과 "즉시 정지"를
     // 구분하려면 일시적 생성 실패와 명령 자체의 결함이 분리되어야 한다.
@@ -59,6 +65,9 @@ public:
         // 사라졌겠지"라고 추측하면 계약 9.2절의 원칙을 깬다 - core가 정확한
         // 사유를 준다.
         TARGET_OBJECT_LOST,
+        // A geometric road rejection is never eligible for old-path reuse.
+        ROAD_BOUNDARY_BLOCKED,
+        ACTUATION_BLOCKED,
     };
 
     // yaml_path: config/params.yaml
@@ -221,6 +230,8 @@ public:
     // 의미가 없다.
     double avoid_target_s() const { return v2_avoidance_.obstacle_s; }
     double avoid_target_d() const { return v2_avoidance_.obstacle_d; }
+    bool avoid_in_lane_only() const { return v2_avoidance_.dynamic_target; }
+    double lane_width() const { return lane_width_; }
 
     // v2 AVOID에 대해 FSM이 요청한 방향. mode=AVOID 하나로는 구분할 수 없어
     // 별도 필드로 보존한다(계약 3.3절).
@@ -629,7 +640,7 @@ private:
         const std::vector<TrackedObject>& obstacles,
         const std::vector<TrackedObject>& predicted_obstacles,
         double resolved_target_speed, const PlannerCommand& external_command,
-        CartesianPath& out_path);
+        CartesianPath& out_path, bool blocked_low_speed_crawl = false);
 
     // 외부 LANE_KEEPING 전용 진입점. 모드별 준비 작업이 없으므로 공용
     // pipeline을 그대로 위임한다 - PlanInternal의 switch(mode)가 KEEP일 때
@@ -642,7 +653,7 @@ private:
         const std::vector<TrackedObject>& obstacles,
         const std::vector<TrackedObject>& predicted_obstacles,
         double resolved_target_speed, const PlannerCommand& external_command,
-        CartesianPath& out_path);
+        CartesianPath& out_path, bool blocked_low_speed_crawl = false);
 
     // 외부 FOLLOWING 전용 진입점. FSM이 지정한 대상(target_object_id)만
     // 확보한다 - nearest-object 자동 선택/handoff는 하지 않는다(계약 D1
@@ -871,6 +882,7 @@ private:
     using AvoidPhase = asmc_planner::execution::AvoidPhase;
 
     struct AvoidanceContext {
+        bool dynamic_target = false;
         // BehaviorCommand에 고정된 논리 ID와 현재 perception 관측 ID를
         // 분리한다. tracker ID가 바뀌어도 wire transaction은 유지한다.
         double obstacle_s = 0.0;
@@ -1004,7 +1016,9 @@ private:
     bool PlanCurvatureFeasibleKeepLowSpeedFallback(
         const CartesianState& ego, double s, double d,
         double resolved_target_speed, CartesianPath& out_path,
-        double duration_s = 2.0) const;
+        double duration_s = 2.0, bool* road_blocked = nullptr,
+        bool* actuation_blocked = nullptr) const;
+    bool KeepDepartureRoadClear(const CartesianPath& path) const;
 
     // FSM이 지정한 FOLLOW 대상의 확보 결과.
     enum class FollowTargetStatus {
@@ -1042,9 +1056,10 @@ private:
     // 여부 판단(external_keep/속도 문턱/COLLISION_BLOCKED 제외)은 PlanInternal이
     // 그대로 유지한다 - STOP fail-safe 등 같은 분기의 다른 공용 실패 처리와
     // 뒤섞이지 않게 하기 위함이며, 이 함수는 "이미 호출하기로 결정된 뒤" 실제
-    // crawl 경로 생성과 last_failure_reason_ 갱신만 담당한다.
+    // crawl 생성·공용 충돌 검사·last_failure_reason_ 갱신을 담당한다.
     bool PlanExternalKeepLowSpeedFallback(const CartesianState& ego, double s,
                                           double d, double resolved_target_speed,
+                                          const std::vector<TrackedObject>& predicted_obstacles,
                                           CartesianPath& out_path);
 
     // 외부 EMERGENCY_STOP 실행부. 후보 파이프라인을 건너뛰고 직접 감속한다.
@@ -1306,6 +1321,7 @@ private:
     // 외부 command(v2) 전용 LANE_CHANGE 상태.
     LaneChangeContext v2_lane_change_{};
     double object_observation_time_ = -1, object_motion_time_ = -1;
+    double object_evaluation_time_ = -1;
     std::unordered_map<int, ObjectTrack> object_tracks_{};
     RoundaboutPrediction roundabout_prediction_{};
     bool roundabout_exit_prediction_active_=false;

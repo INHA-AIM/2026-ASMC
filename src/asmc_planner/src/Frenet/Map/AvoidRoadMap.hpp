@@ -14,6 +14,8 @@ class AvoidRoadMap {
  public:
   bool Load(const std::string& areas, const std::string& lines, std::string& error);
   bool enabled() const { return enabled_; }
+  // Full canonical XY footprint against the original raster; unknown is false.
+  bool IntersectsDrivable(const geometry::Polygon2D& footprint) const;
   bool PoseClear(double x, double y, double yaw, const VehicleShape& shape) const;
   struct PathEvaluation {
     bool drivable = false;

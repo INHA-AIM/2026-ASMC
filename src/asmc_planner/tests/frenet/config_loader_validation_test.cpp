@@ -196,6 +196,33 @@ int main() {
         Expect(!planner.Init(config), "cruise: missing cost rejected");
     }
 
+    for (const std::string value : {".nan", ".inf", "1.8", "0.0", "bad"}) {
+        const auto config=MakeMutatedConfig(source,waypoint_file,
+            "road_outer_width: 2.161", "road_outer_width: "+value,
+            "config_loader_bad_road_exterior.yaml");
+        Expect(!config.empty(),"road exterior: mutation created");
+        FrenetPlanner planner;
+        Expect(!planner.Init(config),"road exterior: invalid or undersized width rejected");
+    }
+    {
+        const auto config=MakeMutatedConfig(source,waypoint_file,
+            "    road_outer_width: 2.161\n", "", "config_loader_missing_road_exterior.yaml");
+        Expect(!config.empty(),"road exterior: missing-key mutation created");
+        FrenetPlanner planner;
+        Expect(!planner.Init(config),"road exterior: missing calibration rejected");
+    }
+    for (const auto& mutation : {
+            std::pair<std::string,std::string>{"curvature_gain: 0.844","curvature_gain: .nan"},
+            {"max_rate: 1.0","max_rate: 0.0"},
+            {"reference_speed: 5.0","reference_speed: -1.0"},
+            {"min_rate: 0.1","min_rate: 2.0"},
+            {"    curvature_gain: 0.844\n",""}}) {
+        const auto config=MakeMutatedConfig(source,waypoint_file,mutation.first,mutation.second,
+            "config_loader_bad_steering_profile.yaml");
+        Expect(!config.empty(),"steering contract: mutation created");
+        FrenetPlanner planner;
+        Expect(!planner.Init(config),"steering contract: invalid or missing actuator input rejected");
+    }
     if (g_failures > 0) {
         std::cerr << g_failures << " config validation check(s) failed\n";
         return 1;

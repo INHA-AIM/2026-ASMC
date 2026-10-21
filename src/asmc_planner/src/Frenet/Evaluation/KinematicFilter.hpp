@@ -18,6 +18,13 @@
 #include "Frenet/Math/FrenetConverter.hpp"
 #include "Frenet/Reference/Reference.hpp"
 
+struct SteeringProfileLimits {
+    double curvature_gain=1.0;
+    double max_rate=1.0;
+    double reference_speed=0.0;
+    double min_rate=1.0;
+};
+
 struct KinematicLimits {
     double max_lateral_accel;      // |d̈| 허용치 [m/s^2]
     double max_longitudinal_accel; // |s̈| 허용치 [m/s^2]
@@ -64,7 +71,14 @@ struct KinematicLimits {
     // 가속/감속"인지 "유지"인지 가르는 불감대. 이 폭 안의 속도차는 s_ddot
     // 경계조건에 반영하지 않는다(ResolveVelocityKeepingBoundaryAcceleration).
     double accel_intent_deadband_mps;
+    SteeringProfileLimits steering;
 };
+
+// Same actuator capability contract as the configured Controller. This is a
+// path feasibility calculation, not a control command or a second MPC state.
+double SteeringProfileRateLimit(double speed, const SteeringProfileLimits& limits);
+bool PathObeysSteeringRate(const CartesianPath& path,double dt,double wheelbase,
+                          const SteeringProfileLimits& limits);
 
 // [Sec.VI 1단] 결합 전 가속도 필터링.
 // 각 집합 안에서 |d̈|(또는 |s̈|)가 limits를 넘는 후보를 valid=false 처리.

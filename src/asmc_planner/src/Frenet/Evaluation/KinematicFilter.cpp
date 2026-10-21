@@ -1,8 +1,42 @@
 #include "Frenet/Evaluation/KinematicFilter.hpp"
 
 #include <cmath>
+#include <algorithm>
 
 #include "Frenet/Math/FrenetConverter.hpp"
+
+double SteeringProfileRateLimit(double speed,const SteeringProfileLimits& limits) {
+    if (limits.reference_speed<=0 || std::fabs(speed)<=limits.reference_speed)
+        return limits.max_rate;
+    const double ratio=limits.reference_speed/std::fabs(speed);
+    return std::clamp(limits.max_rate*ratio*ratio,limits.min_rate,limits.max_rate);
+}
+
+bool PathObeysSteeringRate(const CartesianPath& path,double dt,double wheelbase,
+                          const SteeringProfileLimits& limits) {
+    if (path.kappa.size()<2 || path.v.size()!=path.kappa.size() ||
+        !std::isfinite(dt) || dt<=0 || !std::isfinite(wheelbase) || wheelbase<=0 ||
+        !std::isfinite(limits.curvature_gain) || limits.curvature_gain<=0 ||
+        !std::isfinite(limits.max_rate) || limits.max_rate<=0 ||
+        !std::isfinite(limits.min_rate) || limits.min_rate<=0 || limits.min_rate>limits.max_rate ||
+        !std::isfinite(limits.reference_speed) || limits.reference_speed<0) return false;
+    for(std::size_t i=0;i<path.kappa.size();++i) {
+        if(!std::isfinite(path.kappa[i]) || !std::isfinite(path.v[i]))return false;
+        if(!i)continue;
+        // Controller interpolates curvature linearly. Bound the derivative
+        // of atan(L*k/gain) throughout that interval, including a zero crossing
+        // where the peak can exceed the endpoint angle difference / dt.
+        const double before=path.kappa[i-1],after=path.kappa[i];
+        const bool crosses_zero=(before<=0&&after>=0)||(before>=0&&after<=0);
+        const double nearest=crosses_zero?0:std::min(std::fabs(before),std::fabs(after));
+        const double scale=wheelbase/limits.curvature_gain;
+        const double peak_rate=scale*std::fabs(after-before)/
+            (dt*(1+scale*scale*nearest*nearest));
+        const double speed=std::max(std::fabs(path.v[i-1]),std::fabs(path.v[i]));
+        if(!std::isfinite(peak_rate)||peak_rate>SteeringProfileRateLimit(speed,limits)+1e-9)return false;
+    }
+    return true;
+}
 
 void FilterLateralByAcceleration(std::vector<FrenetPath>& candidates,
                                   const KinematicLimits& limits) {

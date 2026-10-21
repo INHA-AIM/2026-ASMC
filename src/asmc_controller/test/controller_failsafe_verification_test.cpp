@@ -270,6 +270,17 @@ TEST(ControllerFailSafeVerification, CTRL007EmergencyStop) {
     mpc_controller_ros::BehaviorCommandCallback(
         asmc_msgs::BehaviorCommand::ConstPtr(new asmc_msgs::BehaviorCommand(behavior)));
     ASSERT_TRUE(g_control.emergency_stop_active);
+    // No control timer runs in this fixture. Receiving EMERGENCY_STOP must
+    // itself publish full brake and reset the previous MPC/recovery state.
+    ASSERT_TRUE(capture.WaitForCommand());
+    ASSERT_EQ(1u, capture.Commands().size());
+    EXPECT_DOUBLE_EQ(1.0, capture.Commands().front().brake);
+    EXPECT_DOUBLE_EQ(0.0, capture.Commands().front().accel);
+    EXPECT_FALSE(g_control.has_successful_control);
+    ExpectRuntimeReset();
+    capture.ClearCommands();
+
+    // Subsequent timer ticks must keep the same emergency priority/output.
     g_mpc.stuck_cycles = 3;
     g_mpc.recovery_cycles_left = 2;
     mpc_controller_ros::ControlProcess(ros::SteadyTimerEvent{});

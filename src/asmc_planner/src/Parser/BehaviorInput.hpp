@@ -15,6 +15,7 @@
 #include <ros/ros.h>
 
 #include "Behavior/Decision/behavior_decision.hpp"
+#include "Behavior/Feature/DynamicObjectPolicy.hpp"
 #include "Execution/IntentEncoder.hpp"
 #include "Behavior/Feature/feature_builder.hpp"
 #include "Output/Behavior/data_logger.hpp"
@@ -30,6 +31,7 @@ class BehaviorInput {
   using IntentSink = std::function<void(const asmc_planner::RequestedIntent&)>;
   BehaviorInput(ros::NodeHandle, ros::NodeHandle);
   BehaviorInput(ros::NodeHandle, ros::NodeHandle, IntentSink);
+  BehaviorInput(ros::NodeHandle, ros::NodeHandle, IntentSink, DynamicEnvironment);
   void receiveFeedback(const asmc_msgs::FrenetFeedback&);
   void spin();
 
@@ -59,6 +61,11 @@ class BehaviorInput {
   MGeoLoader map_;
   RouteManager route_;
   FeatureBuilder builder_;
+  DynamicObjectPolicy dynamic_policy_;
+  std::vector<::TrackedObject> canonical_objects_;
+  double objects_source_time_ = 0;
+  bool dynamic_enabled_ = true;
+  ros::Publisher dynamic_diagnostics_pub_;
   BehaviorDecision decision_;
   std::shared_ptr<TrafficLightProvider> lights_;
   BehaviorVisualization visualization_;

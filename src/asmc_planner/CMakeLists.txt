@@ -110,6 +110,7 @@ add_library(asmc_planner_behavior_module
   src/Behavior/Decision/behavior_decision.cpp
   src/Behavior/Decision/behavior_scorer.cpp
   src/Behavior/Decision/transition_condition.cpp
+  src/Behavior/Feature/DynamicObjectPolicy.cpp
   src/Behavior/Feature/feature_builder.cpp
   src/Behavior/Feature/object_projector.cpp
   src/Behavior/Map/mgeo_loader.cpp
@@ -123,7 +124,7 @@ target_include_directories(asmc_planner_behavior_module PUBLIC src ${catkin_INCL
 add_dependencies(asmc_planner_behavior_module ${catkin_EXPORTED_TARGETS})
 target_compile_options(asmc_planner_behavior_module PRIVATE -Wall -Wextra)
 target_link_libraries(asmc_planner_behavior_module
-  asmc_planner_behavior_core asmc_planner_execution_core yaml-cpp ${catkin_LIBRARIES})
+  asmc_planner_behavior_core asmc_planner_execution_core asmc_planner_frenet_core yaml-cpp ${catkin_LIBRARIES})
 
 add_library(asmc_planner_ros_adapters
   src/Output/BehaviorMessages.cpp
@@ -147,6 +148,7 @@ add_library(asmc_planner_ros_adapters
 target_include_directories(asmc_planner_ros_adapters PUBLIC src ${catkin_INCLUDE_DIRS})
 add_dependencies(asmc_planner_ros_adapters ${catkin_EXPORTED_TARGETS})
 target_link_libraries(asmc_planner_ros_adapters
+  planning_state_core
   asmc_planner_frenet_core asmc_planner_behavior_module
   asmc_planner_execution_core yaml-cpp ${catkin_LIBRARIES})
 set_source_files_properties(
@@ -168,6 +170,12 @@ add_executable(asmc_control_selector_node
 target_include_directories(asmc_control_selector_node PRIVATE src ${catkin_INCLUDE_DIRS})
 add_dependencies(asmc_control_selector_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(asmc_control_selector_node ${catkin_LIBRARIES})
+
+add_executable(asmc_competition_speed_state_node src/competition_speed_state_node.cpp)
+target_include_directories(asmc_competition_speed_state_node PRIVATE src ${catkin_INCLUDE_DIRS})
+add_dependencies(asmc_competition_speed_state_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(asmc_competition_speed_state_node ${catkin_LIBRARIES})
+install(TARGETS asmc_competition_speed_state_node RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(TARGETS asmc_planner_behavior_module asmc_planner_ros_adapters asmc_planner_node
     asmc_control_selector_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -191,8 +199,11 @@ if(CATKIN_ENABLE_TESTING)
     tests/gps_mode_source_main.cpp src/Planning/GpsModeSource.cpp)
   target_include_directories(gps_mode_source_test_node PRIVATE src ${catkin_INCLUDE_DIRS})
   add_dependencies(gps_mode_source_test_node ${catkin_EXPORTED_TARGETS})
-  target_link_libraries(gps_mode_source_test_node ${catkin_LIBRARIES})
+  target_link_libraries(gps_mode_source_test_node planning_state_core ${catkin_LIBRARIES})
   add_rostest(tests/gps_mode_source.test DEPENDENCIES gps_mode_source_test_node)
+  add_rostest(tests/gps_recovery_source.test DEPENDENCIES gps_mode_source_test_node)
+  catkin_install_python(PROGRAMS tests/gps_recovery_source_test.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   # Explicit offline gate; preserve the existing registered regression set.
   add_executable(asmc_internal_flow_equivalence tests/internal_flow_equivalence.cpp)
   add_dependencies(asmc_internal_flow_equivalence ${catkin_EXPORTED_TARGETS})
@@ -245,7 +256,7 @@ if(CATKIN_ENABLE_TESTING)
     tests/behavior/fsm_command_binding_test.cpp
     )
   if(TARGET fsm_command_binding_test)
-    target_link_libraries(fsm_command_binding_test asmc_planner_behavior_core)
+    target_link_libraries(fsm_command_binding_test asmc_planner_behavior_core gtest_main)
     target_include_directories(fsm_command_binding_test PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/src)
   endif()
@@ -519,6 +530,30 @@ if(CATKIN_ENABLE_TESTING)
   target_link_libraries(observed_motion_test asmc_planner_frenet_core)
   add_test(NAME observed_motion_test COMMAND observed_motion_test)
 
+  add_executable(object_observation_alignment_test tests/frenet/object_observation_alignment_test.cpp)
+  target_link_libraries(object_observation_alignment_test asmc_planner_frenet_core yaml-cpp)
+  target_compile_definitions(object_observation_alignment_test PRIVATE
+    ASMC_ALIGNMENT_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
+  add_test(NAME object_observation_alignment_test COMMAND object_observation_alignment_test)
+
+  add_executable(low_speed_keep_collision_test tests/frenet/low_speed_keep_collision_test.cpp)
+  target_link_libraries(low_speed_keep_collision_test asmc_planner_frenet_core yaml-cpp)
+  target_compile_definitions(low_speed_keep_collision_test PRIVATE
+    ASMC_LOW_KEEP_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
+  add_test(NAME low_speed_keep_collision_test COMMAND low_speed_keep_collision_test)
+
+  add_executable(keep_future_acceleration_test tests/frenet/keep_future_acceleration_test.cpp)
+  target_link_libraries(keep_future_acceleration_test asmc_planner_frenet_core yaml-cpp)
+  target_compile_definitions(keep_future_acceleration_test PRIVATE
+    ASMC_FUTURE_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
+  add_test(NAME keep_future_acceleration_test COMMAND keep_future_acceleration_test)
+
+  add_executable(keep_departure_road_test tests/frenet/keep_departure_road_test.cpp)
+  target_link_libraries(keep_departure_road_test asmc_planner_frenet_core yaml-cpp)
+  target_compile_definitions(keep_departure_road_test PRIVATE
+    ASMC_DEPARTURE_ROAD_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
+  add_test(NAME keep_departure_road_test COMMAND keep_departure_road_test)
+
   foreach(merge_test roundabout_candidate_test roundabout_execution_test roundabout_prediction_test)
     add_executable(${merge_test} tests/frenet/${merge_test}.cpp)
     target_link_libraries(${merge_test} asmc_planner_frenet_core yaml-cpp)
@@ -746,4 +781,25 @@ if(CATKIN_ENABLE_TESTING)
       FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt")
     add_test(NAME ${regression} COMMAND ${regression})
   endforeach()
+endif()
+
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(dynamic_object_policy_test tests/behavior/dynamic_object_policy_test.cpp)
+  if(TARGET dynamic_object_policy_test)
+    target_compile_definitions(dynamic_object_policy_test PRIVATE ASMC_POLICY_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(dynamic_object_policy_test asmc_planner_ros_adapters ${catkin_LIBRARIES} gtest_main)
+  endif()
+endif()
+
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(competition_speed_alignment_test tests/behavior/competition_speed_alignment_test.cpp)
+  if(TARGET competition_speed_alignment_test)
+    target_include_directories(competition_speed_alignment_test PRIVATE src)
+    target_link_libraries(competition_speed_alignment_test gtest_main)
+  endif()
+  catkin_add_gtest(gps_recovery_gate_test tests/behavior/gps_recovery_gate_test.cpp)
+  if(TARGET gps_recovery_gate_test)
+    target_include_directories(gps_recovery_gate_test PRIVATE src)
+    target_link_libraries(gps_recovery_gate_test gtest_main)
+  endif()
 endif()

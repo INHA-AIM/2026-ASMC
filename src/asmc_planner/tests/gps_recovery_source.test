@@ -1,0 +1,11 @@
+<launch>
+  <rosparam ns="asmc_planner/gps_recovery" command="load"
+            file="$(find asmc_planner)/config/gps_recovery.yaml"/>
+  <param name="/planning_gps_imu_state_adapter/gps_sensor_offset/x" value="0.35"/>
+  <param name="/planning_gps_imu_state_adapter/gps_sensor_offset/y" value="0.0"/>
+  <param name="/behavior_planner/topics/ego" value="/test/recovery/state"/>
+  <node pkg="asmc_planner" type="gps_mode_source_test_node" name="recovery_source_test_node" required="true">
+    <remap from="/gps" to="/test/recovery/gps"/>
+  </node>
+  <test pkg="asmc_planner" type="gps_recovery_source_test.py" test-name="gps_recovery_source_test" time-limit="25"/>
+</launch>

@@ -25,6 +25,9 @@ struct VehicleShape {
     // 의미는 코드 계약이지 튜닝 가능한 parameter가 아니므로 params.yaml로
     // 옮기지 않는다 - 호출자가 항상 명시적으로 값을 지정해야 한다.
     double rear_overhang; // [m]
+    // Calibrated exterior for road containment only. Zero in manually built
+    // test shapes retains width; collision geometry continues to use width.
+    double road_outer_width = 0.0; // [m]
 };
 
 struct CollisionCheckConfig {
@@ -54,6 +57,11 @@ std::pair<double, double> PredictTrackedObjectVelocity(
     const TrackedObject& obj, double t);
 
 PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t);
+
+// Advance a derived planning copy from its observation time. Preserve every
+// authoritative corner and the original observation held by the caller.
+// Precondition: elapsed is finite and nonnegative (input adapter validates it).
+TrackedObject AdvanceObjectObservation(const TrackedObject& object, double elapsed);
 
 geometry::Polygon2D MakeEgoFootprint(const CartesianState& cs,
                                      const VehicleShape& shape,

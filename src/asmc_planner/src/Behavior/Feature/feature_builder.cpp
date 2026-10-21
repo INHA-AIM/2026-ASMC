@@ -9,7 +9,7 @@
 namespace behavior_planner {
 namespace {
 
-bool IsStaticAvoidCandidate(const ObjectFeature& object) {
+bool HasStaticAvoidSemantics(const ObjectFeature& object) {
   const bool static_semantics =
       object.type == ObjectType::STATIC_OBSTACLE ||
       object.type == ObjectType::UNKNOWN;
@@ -96,7 +96,7 @@ bool IsSpatiallySameTrack(const ObjectFeature& observation,
 bool IsSmallOverlappingLeadFragment(const ObjectFeature& fragment,
                                     const ObjectFeature& lead) {
   if (!fragment.valid || !lead.valid || fragment.id == lead.id ||
-      !IsStaticAvoidCandidate(fragment)) {
+      !HasStaticAvoidSemantics(fragment)) {
     return false;
   }
   if (!std::isfinite(fragment.length) || !std::isfinite(fragment.width) ||
@@ -141,7 +141,15 @@ bool IsSmallOverlappingLeadFragment(const ObjectFeature& fragment,
 UrbanFeature FeatureBuilder::build(
     const EgoState& ego, const PerceptionObjects& objects,
     const RouteManager& route_manager,
-    const TrafficLightProvider& traffic_light_provider) {
+    const TrafficLightProvider& traffic_light_provider,
+    const std::function<bool(const ObjectFeature&)>& static_avoid_eligible,
+    const std::function<PerceptionObjects(UrbanFeature&,const PerceptionObjects&)>& object_policy) {
+  // The same eligibility applies to acquisition and re-identification, before
+  // any static overlap latch is created. Physical observations are untouched.
+  const auto IsStaticAvoidCandidate = [&](const ObjectFeature& object) {
+    return HasStaticAvoidSemantics(object) &&
+        (!static_avoid_eligible || static_avoid_eligible(object));
+  };
   UrbanFeature feature;
   feature.signal.raw_label = traffic_light_provider.getRawLabel();
   feature.timestamp = ego.stamp;
@@ -264,18 +272,24 @@ UrbanFeature FeatureBuilder::build(
     feature.signal.distance_since_stop_line = distance_since_stop_line;
   }
 
+  // Resolve current-frame ownership once, after the authoritative ego/route
+  // projection and before target/history acquisition. Original observations
+  // and the separate complete Frenet collision input stay untouched.
+  PerceptionObjects policy_objects;
+  const PerceptionObjects* effective=&objects;
+  if(object_policy){policy_objects=object_policy(feature,objects);effective=&policy_objects;}
   std::vector<ObjectFeature> projected_objects;
-  projected_objects.reserve(objects.vehicles.size() + objects.pedestrians.size() +
-                            objects.obstacles.size());
-  for (const auto& object : objects.vehicles) {
+  projected_objects.reserve(effective->vehicles.size() + effective->pedestrians.size() +
+                            effective->obstacles.size());
+  for (const auto& object : effective->vehicles) {
     projected_objects.push_back(
         projector_.project(object, feature.ego, route_manager));
   }
-  for (const auto& object : objects.pedestrians) {
+  for (const auto& object : effective->pedestrians) {
     projected_objects.push_back(
         projector_.project(object, feature.ego, route_manager));
   }
-  for (const auto& object : objects.obstacles) {
+  for (const auto& object : effective->obstacles) {
     projected_objects.push_back(
         projector_.project(object, feature.ego, route_manager));
   }

@@ -4,6 +4,10 @@
 #include <algorithm>
 #include <cmath>
 #include <XmlRpcValue.h>
+#include <std_msgs/String.h>
+#include <sstream>
+#include <iomanip>
+#include "Parser/PlanningInput.hpp"
 
 #include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/BehaviorCommand.h>
@@ -16,6 +20,17 @@
 
 namespace behavior_planner {
 namespace {
+
+DynamicPolicyConfig LoadDynamicPolicyConfig(ros::NodeHandle& node) {
+  DynamicPolicyConfig config;
+  node.getParam("dynamic_behavior/route_links",config.route_links);
+  double speed_kph=25.0;
+  node.param("dynamic_behavior/section_speed_limit_kph",speed_kph,speed_kph);
+  if(!std::isfinite(speed_kph) || speed_kph<=0)
+    throw std::runtime_error("Invalid dynamic section speed limit");
+  config.section_speed_limit=speed_kph/3.6;
+  return config;
+}
 
 PlannerFeedbackData NormalizeFeedback(
     const asmc_msgs::FrenetFeedback* feedback) {
@@ -60,8 +75,14 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh, ros::NodeHandle pnh)
 
 BehaviorInput::BehaviorInput(ros::NodeHandle nh, ros::NodeHandle pnh,
                              IntentSink intent_sink)
-    : nh_(std::move(nh)), pnh_(std::move(pnh)),
-      intent_sink_(std::move(intent_sink)) {
+    : BehaviorInput(std::move(nh),std::move(pnh),std::move(intent_sink),DynamicEnvironment{}) {}
+
+BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
+                             IntentSink intent_sink,DynamicEnvironment environment)
+    : nh_(std::move(nh)),pnh_(std::move(pnh)),intent_sink_(std::move(intent_sink)),
+      dynamic_policy_(environment,LoadDynamicPolicyConfig(pnh_)) {
+  pnh_.param("dynamic_behavior/enabled",dynamic_enabled_,true);
+  dynamic_diagnostics_pub_=nh_.advertise<std_msgs::String>("/planning/dynamic_behavior",10);
   std::string ego_topic = "/vehicle/state";
   std::string objects_topic = "/Object_topic";
   std::string objects_input_type = "morai";
@@ -325,6 +346,10 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh, ros::NodeHandle pnh,
   builder_.setStopTargetOffset(stop_target_offset_m);
   traffic_stop.target_offset = stop_target_offset_m;
   decision_.setTrafficStopConfig(traffic_stop);
+  double maximum_speed_kph=57.5;
+  pnh_.param("maximum_speed_kph",maximum_speed_kph,maximum_speed_kph);
+  if(!decision_.setAbsoluteSpeedLimit(maximum_speed_kph/3.6))
+    throw std::runtime_error("Invalid maximum_speed_kph: finite positive limit required");
   NormalCruiseConfig normal_cruise;
   double cruise_target_kph = 0.0, cruise_max_kph = 0.0, cruise_map_min_kph = 0.0;
   pnh_.param("normal_cruise/enabled", normal_cruise.enabled, false);
@@ -524,10 +549,91 @@ void BehaviorInput::runOnce() {
   if (objects_received_ && !objects_fresh) {
     ROS_WARN_THROTTLE(1.0, "Behavior object input is stale; clearing targets");
   }
+  double scope_s=0,scope_d=0;std::string scope_link;
+  const bool projected=route_.projectEgo(ego_.x,ego_.y,&scope_s,&scope_d,&scope_link);
+  const bool scoped_dynamic=dynamic_enabled_ && projected && dynamic_policy_.inScope(scope_link);
+  // Cache the complete semantic observation. Decide ownership every ego cycle,
+  // including a section crossing with no new object callback. Canonical Frenet
+  // input remains unchanged; outside the section all legacy targets return.
+  BehaviorType active=BehaviorType::KEEP;
+  if(feedback_snapshot.active_maneuver==asmc_msgs::BehaviorCommand::AVOID)active=BehaviorType::AVOID;
+  else if(feedback_snapshot.active_maneuver==asmc_msgs::BehaviorCommand::MERGE)active=BehaviorType::MERGE;
+  else if(feedback_snapshot.active_maneuver==asmc_msgs::BehaviorCommand::LANE_CHANGE)active=BehaviorType::LEFT_CHANGE;
+  const bool complex=feedback_received && DynamicObjectPolicy::usesNativePathSafety(
+      active,NormalizeFeedback(&feedback_snapshot).execution_state);
+  const double feedback_age=(steady_now-feedback_received_at).toSec();
+  const bool previous_validated_stop=feedback_received &&
+      feedback_snapshot.command_id==v2_command_manager_.activeCommandId() &&
+      feedback_snapshot.command_accepted && feedback_snapshot.plan_valid &&
+      feedback_age>=0 && feedback_age<=feedback_v2_stale_seconds_ &&
+      (feedback_snapshot.active_maneuver==asmc_msgs::BehaviorCommand::STOP ||
+       feedback_snapshot.active_maneuver==asmc_msgs::BehaviorCommand::EMERGENCY_STOP);
+  const bool validated_native_avoid=feedback_received && active==BehaviorType::AVOID &&
+      feedback_snapshot.command_id==v2_command_manager_.activeCommandId() &&
+      feedback_snapshot.command_accepted && feedback_snapshot.plan_valid &&
+      feedback_age>=0 && feedback_age<=feedback_v2_stale_seconds_ &&
+      NormalizeFeedback(&feedback_snapshot).execution_state!=PlannerExecutionState::IDLE &&
+      feedback_snapshot.execution_state!=asmc_msgs::FrenetFeedback::COMPLETED &&
+      feedback_snapshot.execution_state!=asmc_msgs::FrenetFeedback::FAILED;
+  // A freshly validated native AVOID already checks every final object.
+  // Do not preempt it solely because a person slowed to LOW_THREAT. Unknown
+  // pedestrian rules remain for unevaluated inputs; failed/stale planning
+  // restores the legacy rule. Fresh provisional people use the same-frame
+  // occupancy brake decision. The canonical collision input is never filtered.
   const asmc_planner::BehaviorContext input{
-      ego_, objects_fresh ? objects_ : empty_objects, route_, *lights_};
-  const UrbanFeature feature = builder_.build(
-      input.ego, input.perception, input.route, input.traffic);
+      ego_, objects_fresh?objects_:empty_objects, route_, *lights_};
+  bool reserved_static_avoid = false;
+  UrbanFeature feature = builder_.build(
+      input.ego, input.perception, input.route, input.traffic,
+      [&](const ObjectFeature& object) {
+        if (!dynamic_enabled_ || !dynamic_policy_.enabled() || complex) return true;
+        const bool allowed=dynamic_policy_.allowsStaticAvoid(object,route_);
+        reserved_static_avoid |= !allowed;
+        return allowed;
+      },
+      [&](UrbanFeature& current,const PerceptionObjects& source) {
+        if(dynamic_enabled_ && dynamic_policy_.enabled())
+          current.dynamic=dynamic_policy_.evaluate(current,route_,
+              objects_fresh?canonical_objects_:std::vector<::TrackedObject>{},
+              ros::Time::now().toSec()-objects_source_time_,!complex,previous_validated_stop);
+        return DynamicObjectPolicy::legacyObjects(source,scoped_dynamic,
+            validated_native_avoid,current.dynamic.evaluated_provisional_ids,
+            current.dynamic.action==DynamicAction::AVOID?current.dynamic.object_id:-1);
+      });
+  if(dynamic_enabled_ && dynamic_policy_.enabled()) {
+    if(feature.dynamic.action==DynamicAction::FOLLOW &&
+       (!feature.surrounding.has_front_vehicle ||
+        feature.dynamic.lead.gap<feature.surrounding.front_vehicle.gap)) {
+      feature.surrounding.has_front_vehicle=true;
+      feature.surrounding.front_vehicle=feature.dynamic.lead;
+    }
+    feature.risk.min_ttc=std::min(feature.risk.min_ttc,feature.dynamic.ttc);
+    std::ostringstream stream;
+    stream<<"{\"action\":\""<<DynamicActionName(feature.dynamic.action)
+        <<"\",\"object_id\":"<<feature.dynamic.object_id
+        <<",\"eligible\":"<<feature.dynamic.eligible<<",\"outside\":"<<feature.dynamic.outside
+        <<",\"in_scope\":"<<(feature.dynamic.in_scope?"true":"false")
+        <<",\"scope_link_id\":\""<<feature.route.route_required_link_id<<"\""
+        <<",\"ordinary\":"<<(!complex?"true":"false")
+        <<",\"legacy_static_avoid_reserved\":"<<(reserved_static_avoid?"true":"false")
+        <<",\"provisional_owned\":"<<feature.dynamic.evaluated_provisional_ids.size()
+        <<",\"reason\":\""<<feature.dynamic.reason<<"\""
+        <<",\"ego_speed_mps\":"<<(std::isfinite(feature.ego.speed)?feature.ego.speed:0.)
+        <<",\"object_source_time\":"<<std::fixed<<std::setprecision(9)<<objects_source_time_
+        <<",\"assessments\":[";
+    bool first_assessment=true;
+    for(const auto& a:feature.dynamic.assessments) {
+      if(!first_assessment)stream<<",";
+      first_assessment=false;
+      stream<<"{\"id\":"<<a.id<<",\"type\":"<<a.type<<",\"motion\":"<<a.motion
+          <<",\"gate\":\""<<a.gate<<"\",\"ttc_s\":"<<a.ttc<<",\"stop_time_s\":"<<a.stop_time
+          <<",\"object_speed_mps\":"<<a.object_speed<<",\"lateral_m\":"<<a.lateral
+          <<",\"half_width_m\":"<<a.half_width<<",\"known_mobile\":"<<(a.known_mobile?"true":"false")
+          <<",\"bypass_room\":"<<(a.bypass_room?"true":"false")<<"}";
+    }
+    stream<<"]}";
+    std_msgs::String message;message.data=stream.str();dynamic_diagnostics_pub_.publish(message);
+  }
   const asmc_msgs::FrenetFeedback* feedback = nullptr;
   if (use_v2_interface_) {
     const bool feedback_fresh =
@@ -598,6 +704,9 @@ void BehaviorInput::detectedObjectsCallback(
         1.0, "Behavior rejected DetectedObjectArray with invalid header");
     return;
   }
+  canonical_objects_.clear();
+  frenet_planner_ros::ConvertDetectedObjects(*message,canonical_objects_);
+  objects_source_time_=message->header.stamp.toSec();
   objects_ = DetectedMsgConverter::toPerceptionObjects(*message);
   objects_received_at_ = ros::SteadyTime::now();
   objects_received_ = true;

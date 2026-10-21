@@ -23,7 +23,9 @@ cost:
   # Keep the straight-road noise response; strengthen tracking progressively
   # on curved reference samples. Steering delay/rate limits remain unchanged.
   contour_error: 6.0
-  curve_contour_boost: 6.0
+  # Provisional MORAI tuning: first-corner exterior road overlap measured
+  # 0.107m with 6.0; validate the full measured body before accepting 8.0.
+  curve_contour_boost: 8.0
   contour_boost_start_curvature: 0.004  # [1/m], radius 250 m
   contour_boost_full_curvature: 0.012   # [1/m], radius about 83 m
   lag_error: 0.5

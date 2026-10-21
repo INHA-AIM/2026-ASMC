@@ -20,10 +20,14 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     // 방금 수신한 명령. 아래 2단계에서 transaction 소유권에 따라 실제 계획
     // 대상으로 다시 묶는다(PlanningTarget).
     asmc_msgs::BehaviorCommand command;
+    bool requested_in_lane_avoid=false;
+    uint32_t constraints_command_id=0;
     {
         std::lock_guard<std::mutex> lock(port.input_mutex_);
         if (!port.has_v2_command_) return false;
         command = port.latest_v2_command_;
+        requested_in_lane_avoid=port.latest_v2_avoid_in_lane_only_;
+        constraints_command_id=command.command_id;
     }
     // 피드백의 command_id는 **방금 들어온 명령**의 것이다. 계약 1.5절에 따라
     // FSM은 자기가 보낸 ID와 일치하는 피드백만 반영하므로, 거부 회신도 그
@@ -283,8 +287,14 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     // isFresh()를 쓰면 같은 사이클 안에서 v1/v2가 서로 다른 clock 기준으로
     // stale을 판정하게 된다.
     const ros::SteadyTime steady_now = ros::SteadyTime::now();
+    const double source_skew = (context.ego.header.stamp - context.perception.header.stamp).toSec();
+    // Arrival freshness alone cannot authorize extrapolation of an arbitrarily
+    // old sensor frame. Reuse the configured input timeouts for source skew.
+    const bool source_times_ready = std::isfinite(source_skew) &&
+        source_skew <= port.runtime_.objects_timeout_s &&
+        source_skew >= -port.runtime_.vehicle_state_timeout_s;
     const bool inputs_ready =
-        snapshot.has_vehicle && snapshot.has_objects &&
+        snapshot.has_vehicle && snapshot.has_objects && source_times_ready &&
         IsSteadyFresh(snapshot.vehicle_received_at, steady_now,
                      port.runtime_.vehicle_state_timeout_s, &vehicle_age) &&
         IsSteadyFresh(snapshot.objects_received_at, steady_now,
@@ -338,7 +348,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     port.has_stop_reference_vehicle_ = true;
 
     std::vector<TrackedObject> objects;
-    port.planner_.SetObjectObservationTime(context.perception.header.stamp.toSec());
+    port.planner_.SetObjectObservationTime(context.perception.header.stamp.toSec(),
+                                         context.ego.header.stamp.toSec());
     if (ConvertDetectedObjects(context.perception, objects) !=
         ConversionStatus::OK) {
         CommandAcceptance failed = acceptance;
@@ -376,6 +387,10 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                           /*plan_valid=*/false);
         return true;
     }
+    // Acceptance can rebind this cycle to an older locked command. A new
+    // request's constraint must never be applied to that different identity.
+    planner_command.avoid_in_lane_only=requested_in_lane_avoid &&
+        command.command_id==constraints_command_id && planner_command.mode==AVOID;
 
     if (planner_command.mode == MERGE) {
         using Feedback = asmc_msgs::FrenetFeedback;
@@ -1664,6 +1679,15 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         CommandAcceptance failed = acceptance;
         failed.execution_state = port.command_manager_.execution_state();
         switch (reason) {
+            case FrenetPlanner::PlanFailureReason::ACTUATION_BLOCKED:
+                failed.result_code = asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+                failed.detail = "low-speed KEEP exceeds steering-rate capability";
+                break;
+            case FrenetPlanner::PlanFailureReason::ROAD_BOUNDARY_BLOCKED:
+                // Existing wire code; the core reason above forbids reuse.
+                failed.result_code = asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+                failed.detail = "low-speed KEEP blocked by drivable-road boundary";
+                break;
             case FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED:
                 failed.result_code =
                     asmc_msgs::FrenetFeedback::COLLISION_BLOCKED;

@@ -18,6 +18,8 @@
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/StoppingLateralGeometry.hpp"
 #include "Frenet/Maneuver/KeepCruise.hpp"
+#include "Frenet/Maneuver/KeepDepartureGeometry.hpp"
+#include "Frenet/Math/Utils.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -67,16 +69,29 @@ double PathSpeedAtTime(const CartesianPath& path, double sample_dt,
 bool FrenetPlanner::PlanExternalKeepLowSpeedFallback(const CartesianState& ego,
                                                       double s, double d,
                                                       double resolved_target_speed,
+                                                      const std::vector<TrackedObject>& predicted_obstacles,
                                                       CartesianPath& out_path) {
-    const bool fallback_ok = PlanCurvatureFeasibleKeepLowSpeedFallback(
+    bool road_blocked=false;
+    bool actuation_blocked=false;
+    const bool generated = PlanCurvatureFeasibleKeepLowSpeedFallback(
         ego, s, d, resolved_target_speed, out_path,
-        limits_.low_speed_crawl_duration_s);
-    std::printf("[FrenetPlanner-KEEP] near-low-speed fail-safe: no "
-                "candidate (v=%.2f), curvature-feasible crawl=%d\n",
-                ego.v, fallback_ok ? 1 : 0);
+        limits_.low_speed_crawl_duration_s,&road_blocked,&actuation_blocked);
+    int blocking_id=-1;
+    const bool fallback_ok=generated&&CartesianTrajectoryClear(out_path,
+        predicted_obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt,&blocking_id);
+    if(!fallback_ok) {
+        std::printf("[FrenetPlanner-KEEP] low-speed fallback rejected: "
+                    "v=%.2f generated=%d blocking_id=%d\n",ego.v,generated,blocking_id);
+        out_path=CartesianPath{};
+    }
+    // A collision is not transient generation failure: the runtime must not
+    // republish its older moving path after rejecting this fresh crawl.
     last_failure_reason_ = fallback_ok
         ? PlanFailureReason::NONE
-        : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+        : (blocking_id>=0 ? PlanFailureReason::COLLISION_BLOCKED
+           : road_blocked ? PlanFailureReason::ROAD_BOUNDARY_BLOCKED
+           : actuation_blocked ? PlanFailureReason::ACTUATION_BLOCKED
+                          : PlanFailureReason::TRANSIENT_GENERATION_FAILURE);
     if (fallback_ok) {
         last_target_speed_ = out_path.v.empty() ? 0.0 : out_path.v.back();
         last_raw_speed_cap_ = resolved_target_speed;
@@ -91,7 +106,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     const std::vector<TrackedObject>& obstacles,
     const std::vector<TrackedObject>& predicted_obstacles,
     double resolved_target_speed, const PlannerCommand& command,
-    CartesianPath& out_path) {
+    CartesianPath& out_path, bool blocked_low_speed_crawl) {
     // Pipeline/TrajectoryPipeline 분리(R3 1/4단계)를 위한 선행 작업 - 이
     // pipeline이 참조하는 config를 번들 하나로 묶어 그 필드를 통해서만
     // 읽는다. 값/동작은 기존과 완전히 동일하다(순수 구조 이동).
@@ -319,8 +334,11 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             ? std::min(resolved_target_speed, cfg.stop.reapproach_speed) : resolved_target_speed;
         request.stop.acceleration_limit = cfg.stop.reapproach_accel;
     }
-    const double lateral_cost_target = cmd.has_stop_lateral_hold
-        ? cmd.stop_lateral_hold_d : 0.0;
+    const bool keep_departure_hold=external_keep_candidates &&
+        KeepDepartureOffsetHoldAllowed(ego,ref_,s,cfg.vehicle_shape,cfg.lane_width,
+                                       cfg.limits.near_low_speed_fallback_v);
+    const double lateral_cost_target = keep_departure_hold ? d :
+        (cmd.has_stop_lateral_hold ? cmd.stop_lateral_hold_d : 0.0);
     const double base_resolved_target_speed = cmd.target_speed;
     const double previous_profiled_target = speed_profiler_.initialized()
         ? speed_profiler_.speed() : std::max(0.0, ego.v);
@@ -372,6 +390,14 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     }
 
     std::vector<FrenetPath> candidates;
+    bool keep_road_rejected=false;
+    bool keep_actuation_rejected=false;
+    const bool guard_keep_departure_road=is_true_external_keep &&
+        std::fabs(ego.v)<cfg.limits.near_low_speed_fallback_v;
+    const bool guard_keep_departure_actuation=is_true_external_keep &&
+        std::fabs(ego.v)<std::max(cfg.limits.near_low_speed_fallback_v,
+                                cfg.limits.steering.reference_speed);
+    bool reachable_speed_alternative = is_true_external_keep && blocked_low_speed_crawl;
     for (int generation_pass = 0;
          generation_pass < generation_pass_limit; ++generation_pass) {
         FrenetState pass_start = start;
@@ -389,44 +415,81 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                     cfg.limits.boundary_condition_accel_fraction);
         }
         request.target_speed = final_applied_target_speed;
-        if (is_true_external_keep) {
-            CurveSpeedConfig envelope_curve_config = cfg.curve_speed;
-            const double headroom = maneuver_limits.boundary_condition_accel_fraction;
-            envelope_curve_config.comfortable_decel_factor = std::min(
-                envelope_curve_config.comfortable_decel_factor, headroom);
-            envelope_curve_config.min_usable_decel = std::min(
-                envelope_curve_config.min_usable_decel,
-                maneuver_limits.max_longitudinal_accel * headroom);
-            request.speed_envelope = BuildKeepSpeedEnvelope(
-                ref_, s, s_dot, start.s_dd, cfg.path.time_horizon.max,
-                cfg.path.dt, final_applied_target_speed, envelope_curve_config,
-                maneuver_limits.max_longitudinal_accel,
-                maneuver_limits.max_lateral_accel,
-                maneuver_limits.max_longitudinal_jerk * headroom);
-            // An invalid spatial contract must not silently fall back to the
-            // terminal-velocity generator that caused delayed braking.
-            if (request.speed_envelope.empty()) {
-                candidates.clear();
-                break;
-            }
-        }
-        if (is_true_external_keep) {
-            pass_start.s_dd = ResolveEnvelopeBoundaryAcceleration(
-                start.s_dd, s_dot, final_raw_speed_cap, request.speed_envelope,
-                cfg.limits.accel_intent_deadband_mps);
-        }
-        selected_planning_s_dd = pass_start.s_dd;
         PlannerDebugStats pass_stats;
-        candidates = trajectory_pipeline.GenerateCandidates(
-            pass_start, request, maneuver_limits,
-            planning_collision_obstacles,
-            append_keep_continuity_candidates, &pass_stats, geometry_mode);
-        EvaluateCosts(candidates, maneuver_costs, lateral_cost_target);
-        stats = pass_stats;
+        const auto generate_pass = [&]() {
+            if (is_true_external_keep) {
+                CurveSpeedConfig envelope_curve_config = cfg.curve_speed;
+                const double headroom = maneuver_limits.boundary_condition_accel_fraction;
+                envelope_curve_config.comfortable_decel_factor = std::min(
+                    envelope_curve_config.comfortable_decel_factor, headroom);
+                envelope_curve_config.min_usable_decel = std::min(
+                    envelope_curve_config.min_usable_decel,
+                    maneuver_limits.max_longitudinal_accel * headroom);
+                request.speed_envelope = BuildKeepSpeedEnvelope(
+                    ref_, s, s_dot, start.s_dd, cfg.path.time_horizon.max,
+                    cfg.path.dt, reachable_speed_alternative
+                        ? final_raw_speed_cap : final_applied_target_speed,
+                    envelope_curve_config,
+                    maneuver_limits.max_longitudinal_accel,
+                    maneuver_limits.max_lateral_accel,
+                    maneuver_limits.max_longitudinal_jerk * headroom);
+                // An invalid spatial contract must not silently fall back to
+                // the terminal-velocity generator that caused delayed braking.
+                if (request.speed_envelope.empty()) {
+                    candidates.clear();
+                    return false;
+                }
+            }
+            if (is_true_external_keep) {
+                pass_start.s_dd = ResolveEnvelopeBoundaryAcceleration(
+                    start.s_dd, s_dot, final_raw_speed_cap, request.speed_envelope,
+                    cfg.limits.accel_intent_deadband_mps);
+            }
+            selected_planning_s_dd = pass_start.s_dd;
+            pass_stats = {};
+            candidates = trajectory_pipeline.GenerateCandidates(
+                pass_start, request, maneuver_limits,
+                planning_collision_obstacles,
+                append_keep_continuity_candidates, &pass_stats, geometry_mode);
+            if (guard_keep_departure_road || guard_keep_departure_actuation) {
+                for (auto& candidate:candidates) {
+                    if (!candidate.valid) continue;
+                    const auto cart=ConvertToCartesianPath(candidate,ref_,geometry_mode);
+                    if (guard_keep_departure_actuation &&
+                        !PathObeysSteeringRate(cart,cfg.path.dt,wheelbase_,cfg.limits.steering)) {
+                        candidate.valid=false;
+                        candidate.rejection_reason=RejectionReason::CURVATURE;
+                        keep_actuation_rejected=true;
+                    } else if (guard_keep_departure_road && !KeepDepartureRoadClear(cart)) {
+                        candidate.valid=false;
+                        candidate.rejection_reason=RejectionReason::ROAD_BOUNDARY;
+                        keep_road_rejected=true;
+                    }
+                }
+            }
+            EvaluateCosts(candidates, maneuver_costs, lateral_cost_target);
+            stats = pass_stats;
+            return true;
+        };
+        if (!generate_pass()) break;
 
         const FrenetPath* pass_best = external_stop_mode
             ? SelectBestStoppingPath(candidates)
             : SelectBestPath(candidates);
+        // Preserve the accepted nominal path. If every kinematically valid
+        // nominal path is blocked, also consider physically reachable forward
+        // acceleration instead of assuming that the next-cycle setpoint is
+        // the ego speed ceiling for the complete collision horizon. This is
+        // another fully filtered KEEP candidate, never an obstacle exemption.
+        if (is_true_external_keep && pass_best == nullptr &&
+            !reachable_speed_alternative &&
+            pass_stats.combined_valid_after_curvature > 0 &&
+            pass_stats.combined_valid_after_collision == 0 &&
+            final_raw_speed_cap > final_applied_target_speed + kRegenerationEpsilon) {
+            reachable_speed_alternative = true;
+            if (!generate_pass()) break;
+            pass_best = SelectBestPath(candidates);
+        }
         if (!is_true_external_keep || pass_best == nullptr) break;
 
         const CartesianPath pass_cartesian =
@@ -443,22 +506,25 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         speed_profile_input.raw_speed_cap = candidate_raw_speed_cap;
         const SpeedProfileOutput candidate_profile = speed_profiler_.Preview(
             speed_profile_input, speed_profile_limits);
-        // Rebuild when the applied ceiling or its environmental acceleration
-        // intent changes; all future sample speeds come from the spatial cap.
+        // The alternative uses the environmental ceiling for future samples.
+        // Its ceiling changes must rebuild even if the immediate target does
+        // not change. The nominal profile retains its original contract.
         const bool target_changed = std::fabs(
             candidate_profile.target_speed - final_applied_target_speed) >
+            kRegenerationEpsilon;
+        const bool ceiling_changed = reachable_speed_alternative && std::fabs(
+            candidate_raw_speed_cap - final_raw_speed_cap) >
             kRegenerationEpsilon;
         const double candidate_boundary_accel = ResolveEnvelopeBoundaryAcceleration(
             start.s_dd, s_dot, candidate_raw_speed_cap, request.speed_envelope,
             cfg.limits.accel_intent_deadband_mps);
-        const bool needs_regeneration = target_changed || std::fabs(
+        const bool needs_regeneration = target_changed || ceiling_changed || std::fabs(
             candidate_boundary_accel - pass_start.s_dd) > kRegenerationEpsilon;
         const bool can_regenerate =
             generation_pass + 1 < generation_pass_limit;
         if (!needs_regeneration) {
-            // The cap can change while an upward-limited target stays the
-            // same. Reuse is safe only because both the generator target and
-            // intent-corrected initial acceleration are unchanged.
+            // The future ceiling, immediate target and intent-corrected
+            // initial acceleration all agree with the generated candidates.
             final_raw_speed_cap = candidate_raw_speed_cap;
             final_speed_profile = candidate_profile;
             break;
@@ -557,6 +623,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             stats.combined_valid_after_curvature > 0 &&
             stats.combined_valid_after_collision == 0
                 ? PlanFailureReason::COLLISION_BLOCKED
+                : keep_road_rejected ? PlanFailureReason::ROAD_BOUNDARY_BLOCKED
+                : keep_actuation_rejected ? PlanFailureReason::ACTUATION_BLOCKED
                 : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
         std::printf("[FrenetPlanner] No valid candidate this cycle "
                     "(mode=%s, %zu generated)\n",
@@ -661,7 +729,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             speed_profiler_.Reset();
             last_profiled_acceleration_ = 0.0;
             return PlanExternalKeepLowSpeedFallback(ego, s, d,
-                                                     resolved_target_speed, out_path);
+                                                     resolved_target_speed,
+                                                     predicted_obstacles,out_path);
         }
         // A collision in the coast extension does not imply that braking is
         // unsafe. Try a fresh, fully checked stopping trajectory so lateral
@@ -688,6 +757,24 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
 
     CartesianPath selected_cartesian =
         ConvertToCartesianPath(*best, ref_, geometry_mode);
+
+    // At standstill, time-based lateral derivatives can lose the observed
+    // heading. Do not turn a rejected spatial crawl into a nominally clear
+    // departure by silently rotating the vehicle to the reference tangent.
+    // This is numerical pose equivalence, not a driving-tolerance setting.
+    constexpr double kHeadingNumericTolerance = 1e-6;
+    if (blocked_low_speed_crawl &&
+        (selected_cartesian.yaw.empty() ||
+         !std::isfinite(selected_cartesian.yaw.front()) ||
+         std::fabs(normalizeAngle(selected_cartesian.yaw.front() - ego.yaw)) >
+             kHeadingNumericTolerance)) {
+        out_path = CartesianPath{};
+        last_failure_reason_ = PlanFailureReason::COLLISION_BLOCKED;
+        speed_profiler_.Reset();
+        last_profiled_acceleration_ = 0.0;
+        std::printf("[FrenetPlanner-KEEP] blocked departure cannot preserve observed heading; hold\n");
+        return false;
+    }
 
     if (is_true_external_keep) {
         // 마지막 pass의 선택 후보로 진단을 다시 계산한다. 이 값은 hard reject가
@@ -739,7 +826,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                         "v0=%.2f v05=%.2f v10=%.2f base_cap=%.2f "
                         "candidate_cap=%.2f profiler_accel=%+.2f "
                         "max_kappa=%.4f max_lat_accel=%.2f regenerations=%d "
-                        "speed_plan=SPATIAL envelope_v0=%.2f\n",
+                        "speed_plan=SPATIAL envelope_v0=%.2f reachable_alternative=%d\n",
                         ego.v,
                         final_raw_speed_cap,
                         previous_profiled_target,
@@ -766,7 +853,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                         candidate_aware_regenerations,
                         request.speed_envelope.empty()
                             ? std::numeric_limits<double>::quiet_NaN()
-                            : std::sqrt(request.speed_envelope.front().speed_squared));
+                            : std::sqrt(request.speed_envelope.front().speed_squared),
+                        reachable_speed_alternative ? 1 : 0);
         }
         if (cmd.mode == FOLLOWING) {
             const double gap = leader_s - s;
@@ -805,11 +893,11 @@ bool FrenetPlanner::KeepProcess(
     const std::vector<TrackedObject>& obstacles,
     const std::vector<TrackedObject>& predicted_obstacles,
     double resolved_target_speed, const PlannerCommand& external_command,
-    CartesianPath& out_path) {
+    CartesianPath& out_path, bool blocked_low_speed_crawl) {
     // KEEP은 모드별 준비 작업이 없다 - 공용 pipeline을 그대로 위임한다.
     return ExecuteManeuverPipeline(
         ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
         predicted_obstacles, resolved_target_speed, external_command,
-        out_path);
+        out_path, blocked_low_speed_crawl);
 }
 

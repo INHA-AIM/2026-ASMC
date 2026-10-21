@@ -120,7 +120,12 @@ void FrenetPlanner::RefreshAvoidObservation(
     context.obstacle_lateral_half_extent = lateral_half_extent;
     context.obstacle_longitudinal_half_extent = longitudinal_half_extent;
 
+    // Dynamic map AVOID owns a fully checked in-lane offset. The scalar
+    // static-clearance heuristic may disagree with authoritative corners and
+    // push that offset beyond the permitted lane immediately after COMMIT.
+    // Refresh geometry here; MapAvoid must freshly validate/select any change.
     if (refresh_committed_target && execution_->avoid.committed &&
+        !context.dynamic_target &&
         !context.has_requested_target_d) {
         const double clearance =
             0.5 * vehicle_shape_.width + lateral_half_extent +
@@ -184,6 +189,15 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
             nearest_lateral_distance <= lane_width_ * 0.5;
 
         if (in_front && in_range && same_corridor && geometry_ok) {
+            // Lane permission belongs to the bound maneuver, not the next
+            // motion classification. Braking to LOW_THREAT must not turn a
+            // dynamic in-lane bypass into an adjacent-lane static bypass.
+            const bool same_bound_target=execution_->avoid.active &&
+                execution_->avoid.command_obstacle_id==target_object_id;
+            context.dynamic_target=(same_bound_target&&context.dynamic_target) ||
+                it->motion_state==ObjectMotionState::DYNAMIC ||
+                it->type==static_cast<int>(asmc_planner::ObjectType::PEDESTRIAN) ||
+                it->type==static_cast<int>(asmc_planner::ObjectType::VEHICLE);
             RefreshAvoidObservation(
                 ego_s, *it, context, /*refresh_committed_target=*/false);
             execution_.bindAvoidCommandTarget(target_object_id);
@@ -340,6 +354,7 @@ bool FrenetPlanner::PrepareExternalAvoidTargets(
     }
 
     // 확보 성공. 평가할 목표 d를 정한다.
+    v2_avoidance_.dynamic_target |= command.avoid_in_lane_only;
     //
     // ===== COMMIT 이후에는 잠긴 목표만 쓴다 (D6-3a) =====
     //

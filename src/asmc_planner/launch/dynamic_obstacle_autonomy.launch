@@ -1,0 +1,19 @@
+<launch>
+  <arg name="dynamic_behavior_enabled" default="true"/>
+  <param name="/behavior_planner/dynamic_behavior/enabled" value="$(arg dynamic_behavior_enabled)"/>
+  <rosparam ns="asmc_planner/gps_recovery" command="load"
+            file="$(find asmc_planner)/config/gps_recovery.yaml"/>
+  <!-- Preserve the merged production launch. One assembled state feeds both
+       planner and MPC; only the permitted Competition longitudinal speed is
+       added to the unchanged GPS/IMU pose estimator. No Ego-status fallback. -->
+  <include file="$(find planning_inputs)/launch/vehicle_state.launch">
+    <arg name="state_topic" value="/planning/vehicle/gps_imu_state"/>
+  </include>
+  <node pkg="asmc_planner" type="asmc_competition_speed_state_node"
+        name="planning_competition_speed_state" output="screen" required="true">
+    <rosparam command="load" file="$(find asmc_planner)/config/competition_speed_state.yaml"/>
+  </node>
+  <include file="$(find asmc_planner)/launch/autonomy_no_bridges_v2.launch">
+    <arg name="state_source" value="external"/>
+  </include>
+</launch>

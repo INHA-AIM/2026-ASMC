@@ -28,6 +28,9 @@ Planning 전체 경계는 [Planning/Control 개발 가이드](../../docs/archite
 - MPC solver 실패
 
 `BehaviorCommand::EMERGENCY_STOP`은 일반 solve보다 우선하는 emergency brake override다.
+수신 callback에서 즉시 최대 제동을 발행하고, 이후 20Hz 제어 주기에서도 같은
+초기화·제동 출력을 반복한다. 다음 timer까지의 대기를 없앤 것이며, ROS 전송과
+실제 제동 장치의 지연이 없어졌다는 뜻은 아니다. 일반 명령의 MPC 계산은 유지한다.
 wheelbase와 steering limit는 Frenet, MPC와 MORAI bridge 설정에서 일치해야 한다.
 
 ## 속도에 따른 조향 변화 제한
@@ -99,9 +102,9 @@ feed-forward와 controller state다. unit test 통과와 MORAI closed-loop 주�
 
 ## 곡선 중앙 추종 비용
 
-`cost.contour_error`는 직선에서 6.0을 유지한다. `curve_contour_boost` 6.0은
+`cost.contour_error`는 직선에서 6.0을 유지한다. `curve_contour_boost` 8.0은
 참조 경로 각 표본의 절대 곡률이 0.004~0.012 /m 사이일 때 선형으로 더해져,
-급한 쪽 곡선에서는 총 12.0이 된다. 좌우 곡선에 같은 규칙을 사용한다.
+급한 쪽 곡선에서는 총 14.0이 된다. 좌우 곡선에 같은 규칙을 사용한다.
 현재 측정 위치 오차를 이 가중치 선택에 쓰지 않으며, 조향 속도/각도 제한,
 지연 모델, terminal 비용과 정지 명령 우선순위는 그대로다.
 

@@ -1,0 +1,8 @@
+# Source-aligned consistency gate for the existing camera -> map handover.
+# Preliminary MORAI settings, not a certified positioning-error guarantee.
+enabled: true
+maximum_position_residual_m: 0.30
+required_gps_samples: 3
+maximum_past_s: 0.30
+maximum_future_s: 0.10
+maximum_receive_age_s: 0.30
