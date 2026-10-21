@@ -148,7 +148,6 @@ add_library(asmc_planner_ros_adapters
 target_include_directories(asmc_planner_ros_adapters PUBLIC src ${catkin_INCLUDE_DIRS})
 add_dependencies(asmc_planner_ros_adapters ${catkin_EXPORTED_TARGETS})
 target_link_libraries(asmc_planner_ros_adapters
-  planning_state_core
   asmc_planner_frenet_core asmc_planner_behavior_module
   asmc_planner_execution_core yaml-cpp ${catkin_LIBRARIES})
 set_source_files_properties(
@@ -199,11 +198,8 @@ if(CATKIN_ENABLE_TESTING)
     tests/gps_mode_source_main.cpp src/Planning/GpsModeSource.cpp)
   target_include_directories(gps_mode_source_test_node PRIVATE src ${catkin_INCLUDE_DIRS})
   add_dependencies(gps_mode_source_test_node ${catkin_EXPORTED_TARGETS})
-  target_link_libraries(gps_mode_source_test_node planning_state_core ${catkin_LIBRARIES})
+  target_link_libraries(gps_mode_source_test_node ${catkin_LIBRARIES})
   add_rostest(tests/gps_mode_source.test DEPENDENCIES gps_mode_source_test_node)
-  add_rostest(tests/gps_recovery_source.test DEPENDENCIES gps_mode_source_test_node)
-  catkin_install_python(PROGRAMS tests/gps_recovery_source_test.py
-    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   # Explicit offline gate; preserve the existing registered regression set.
   add_executable(asmc_internal_flow_equivalence tests/internal_flow_equivalence.cpp)
   add_dependencies(asmc_internal_flow_equivalence ${catkin_EXPORTED_TARGETS})
@@ -796,10 +792,5 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET competition_speed_alignment_test)
     target_include_directories(competition_speed_alignment_test PRIVATE src)
     target_link_libraries(competition_speed_alignment_test gtest_main)
-  endif()
-  catkin_add_gtest(gps_recovery_gate_test tests/behavior/gps_recovery_gate_test.cpp)
-  if(TARGET gps_recovery_gate_test)
-    target_include_directories(gps_recovery_gate_test PRIVATE src)
-    target_link_libraries(gps_recovery_gate_test gtest_main)
   endif()
 endif()

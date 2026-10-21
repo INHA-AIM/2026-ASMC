@@ -1,8 +1,6 @@
 <launch>
   <arg name="dynamic_behavior_enabled" default="true"/>
   <param name="/behavior_planner/dynamic_behavior/enabled" value="$(arg dynamic_behavior_enabled)"/>
-  <rosparam ns="asmc_planner/gps_recovery" command="load"
-            file="$(find asmc_planner)/config/gps_recovery.yaml"/>
   <!-- Preserve the merged production launch. One assembled state feeds both
        planner and MPC; only the permitted Competition longitudinal speed is
        added to the unchanged GPS/IMU pose estimator. No Ego-status fallback. -->

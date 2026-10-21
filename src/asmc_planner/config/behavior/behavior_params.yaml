@@ -25,7 +25,7 @@ normal_cruise:
   minimum_map_speed_kph: 40.0
   # Ordinary exit road after roundabout merge; merge links retain their limits.
   link_speed_caps_kph:
-    A2256W000054: 55.0
+    A2256W000054: 50.0
     # Initial two bends: request headroom; native curvature/kinematic limits
     # still determine the actual lower corner speed. Provisional MORAI tune.
     A2256W000182: 40.0
