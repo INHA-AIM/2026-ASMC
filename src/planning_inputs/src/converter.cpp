@@ -142,6 +142,10 @@ std::uint8_t ConvertClassification(const std::string& source,
   // The frozen numeric enum has only vehicle/pedestrian/unknown. Keep all
   // geometry and motion for the two obstacle groups; raw strings remain on
   // tracked_objects_map and the validated tracked companion topic.
+  // Planning must keep UNKNOWN geometry as a collision candidate. The enum
+  // cannot recover a source class or decide whether an object actually moves;
+  // use the tracked companion and motion validity for those policies.
+  // See docs/handoffs/perception-to-planning.md (consumer acceptance).
   if (label == "dynamic_obstacle" || label == "static_obstacle") {
     if (supported) *supported = true;
     return kObjectUnknown;

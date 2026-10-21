@@ -7,6 +7,10 @@ YOLO/TwinLite 전방544×960 B1·좌우480×640 B2, TensorRT, 목표15/15/10Hz�
 [인지→판제 소비 범위](../../../docs/handoffs/perception-to-planning.md)는 판제 사용 안내입니다.
 낮은 수준의 managed STANDBY 기본과 구형 profile은 명시적인 제어/복구용으로 유지합니다.
 
+ResNet은 현재 PyTorch CUDA BF16이며 YOLO/TwinLite TensorRT와 구분합니다.
+[신호등 실행·최적화 검토](traffic-light-runtime.md)에384×512 B1, 기존 전후처리와
+TensorRT 후보의 검증 범위를 정리했습니다. 이번 검토로 backend를 변경하지 않습니다.
+
 ## 책임 경계
 
 | 영역 | 위치 | 책임 |

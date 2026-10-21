@@ -13,6 +13,11 @@
 | 미션 지도→시나리오 | [미션 시나리오](hd-map-mission-scenario.md) | 구간/배치·공식 checkpoint와 시나리오 완주 정의 구분 |
 | 대회 규정→전체 | [v1.2 영향](../competition/rule-v1.2-impacts.md), [에셋/라벨](../competition/obstacle-assets-and-labels.md) | 최신 주최 공지·실제 F2 범위 확인 |
 
+판제 담당자는 [HD 적용 확인표](hd-map-to-planning.md#판제-적용-전-확인--2026-10-20-코드-대조)와
+[원본 클래스·그룹·유효성 확인표](perception-to-planning.md#판제-적용-확인표)를 함께 검토한다.
+두 PC/채점 프로그램 연결은 [LAN2LAN 안내](../operations/lan2lan-rehearsal.md)를 따른다.
+3뷰 fusion은 손재호, YOLO 학습은 장원태가 진행하며 카메라 담당은 기존 계약·자료·재현 지원을 제공한다.
+
 인계에는 producer/consumer·topic/type·원본/그룹·frame/단위·source 시각·freshness·무효/빈 상태,
 모델/설정/보정 ID·실제 검증·실패·rollback과 담당별 완료 조건을 남깁니다.
 Marker/GUI를 정본 planning 데이터로 사용하지 않습니다.
