@@ -86,3 +86,30 @@ Windows에서 직접 실행되면 팀 Docker가 모든 채점 packet을 중계�
 - `git diff --check` 통과. 운영 모델·메시지·네트워크 생성물·추론/판제 로직은 변경하지 않았다.
 
 전체 빌드·노드 재시작·새 성능 측정·hosted CI는 이번 문서/주석 점검에 포함하지 않는다.
+
+## 인계 문서 작업 마무리 — 2026-10-21
+
+`docs/planning-handoff-lan-review`의 범위는 아래 네 가지다. 연구 브랜치의 LiDAR/segmentation
+실험이나 데이터 이관·학습을 포함하지 않는다. 실제 기본값 변경과 폐루프 수락은 별도다.
+
+| 정리한 내용 | 팀원이 읽을 정본 | 적용·후속 담당 |
+|---|---|---|
+| 지도 번들·후륜축/UTM 방향·station·속도 단위·GPS 유효성 | [HD맵 확인표](../../handoffs/hd-map-to-planning.md#판제-적용-전-확인--2026-10-20-코드-대조) | 판제: 소비 입력·변환·지도 번들 선택과 검증. 카메라/지도 담당: 계약·근거 제공 |
+| 원본16종·3그룹·숫자 enum의 손실·unknown/운동 상태 | [인지 확인표](../../handoffs/perception-to-planning.md#판제-적용-확인표) | 판제: 정책·충돌 후보 보존. 손재호: 로컬3뷰 fusion 개발 |
+| ResNet18 BF16·384×512·10Hz 경로와 TensorRT 후보 | [신호등 실행 검토](../../../src/asmc_camera/docs/traffic-light-runtime.md) | 기존 backend 유지. 별도 최적화 시 동일 입력·품질·동시 부하 검증 |
+| Windows NIC/방화벽·WSL2/Docker·Wireshark·채점 endpoint | [두 PC 준비](../../operations/lan2lan-rehearsal.md) | 안승현: MORAI PC. 정윤태: 추론 PC. 채점 실제 bind는 주최 담당자와 확인 |
+
+Frenet 지도 reader·MGeo 속도 조회·객체 converter와 Compose에는 해당 경계의 주석을
+보강했다. C++의 실제 코드 변경이 없고 Compose YAML 해석 결과도 같음을 검사한다.
+모델·ROS 메시지/서비스·generated network/sensor JSON·방화벽·운영 노드는 변경하지 않는다.
+
+작업 단위에서 남겨야 할 미완료는 다음과 같다.
+
+- 판제의 지도/좌표/클래스 소비 인수와 실제 주행 확인.
+- 채점·녹화 프로그램의 실행 환경·필요 채널·listen endpoint 확인 후 두 PC 동시 시험.
+- ResNet TensorRT 변환/실측은 별도 후보 작업. 이번 검토를 성능 개선 완료로 표시하지 않음.
+
+2026-10-21 push 전 재검증에서 문서 링크/구조·동결5개, launch25개·명령63개,
+문서/bridge CPU 회귀23개와 network/sensor generated 결정성·bridge 계약 검사가 통과했다.
+C++ 주석만 변경됐고 Compose 값·배포 모델·메시지·generated 설정은 동일함을 확인했다.
+실제 커밋·원격 반영 여부는 Git 참조를 정본으로 확인하며 main 병합은 이번 작업에 포함하지 않는다.
