@@ -1,4 +1,5 @@
 #include <Geometry/FrameBoundary.hpp>
+#include <Lidar/Tracking/TrackTrace.hpp>
 #include <SensorFusion/FusionTrace.hpp>
 #include <ros/package.h>
 #include <openssl/sha.h>
@@ -186,13 +187,32 @@ void RecordTrackingFrame(LiDARObjectInfo& object) {
   object.tracking_frame_valid=true; object.tracking_height_input=object.f32_CoreZ;
   object.tracking_yaw_from_input=YawFromInput();
   object.tracking_origin_in_yaw=OriginInYaw();
+  object.tracking_stamp_ns=current.time.stamp_ns;
+  object.tracking_ego_speed_mps=static_cast<float>(current.ego_linear_base.x());
+}
+// base_link displacement from the recorded scan to the current scan, expressed in the recorded
+// (leveled, heading-aligned) yaw frame: constant-curvature arc with the mean of the two CAN
+// (vel_x) samples and the IMU yaw change. Zero when the record is missing or implausible.
+asmc::lidar::Vec EgoShiftSinceRecord(const LiDARObjectInfo& object,double yaw_now_rad) {
+  if(object.tracking_stamp_ns<=0 || current.time.stamp_ns<=object.tracking_stamp_ns) return asmc::lidar::Vec::Zero();
+  const double dt=1e-9*static_cast<double>(current.time.stamp_ns-object.tracking_stamp_ns);
+  const double v=0.5*(static_cast<double>(object.tracking_ego_speed_mps)+current.ego_linear_base.x());
+  if(dt>1.0 || !std::isfinite(v)) return asmc::lidar::Vec::Zero();
+  const double dpsi=std::remainder(yaw_now_rad-object.f32_PrevYaw,2.0*M_PI), s=v*dt;
+  if(std::abs(dpsi)<1e-6) return asmc::lidar::Vec(s,0.5*s*dpsi,0);
+  const double rho=s/dpsi;
+  return asmc::lidar::Vec(rho*std::sin(dpsi),rho*(1.0-std::cos(dpsi)),0);
 }
 void AlignTrackingFrame(LiDARObjectInfo& object,double yaw_now_rad,bool rotate_obb_yaw) {
   if(!Enabled() || !object.tracking_frame_valid) return;
   const auto inverse=YawFromInput().transpose().eval();
   const auto yaw_change=asmc::lidar::rpy(0,0,object.f32_PrevYaw-yaw_now_rad);
   const auto rotation=(inverse*yaw_change*object.tracking_yaw_from_input).eval();
-  const auto translation=(inverse*(yaw_change*object.tracking_origin_in_yaw-OriginInYaw())).eval();
+  // P0: relative CA, the ego translation stays in the state. Option ego_translation_comp:
+  // remove the base_link arc so the state (and its velocity) is ground-referenced.
+  const asmc::lidar::Vec ego_shift=tracking_options::Get().ego_translation_comp
+      ? EgoShiftSinceRecord(object,yaw_now_rad) : asmc::lidar::Vec::Zero();
+  const auto translation=(inverse*(yaw_change*(object.tracking_origin_in_yaw-ego_shift)-OriginInYaw())).eval();
   // Re-express the previous state before the unchanged relative CA prediction.
   // Do not subtract CAN displacement: relative CA already models ego motion.
   const asmc::lidar::Vec position(object.Eigen_KfState_CA(0),object.Eigen_KfState_CA(1),object.tracking_height_input);

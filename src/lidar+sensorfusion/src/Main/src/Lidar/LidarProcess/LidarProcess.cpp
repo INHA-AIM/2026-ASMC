@@ -3,6 +3,7 @@
 #include <Lidar/Tracking/MotionClassifier.hpp>
 #include <PlannerInterface/PlannerObjectAdapter.hpp>
 #include <Geometry/FrameBoundary.hpp>
+#include <Lidar/Tracking/TrackTrace.hpp>
 #include "PipelineTrace.hpp"
 
 
@@ -180,6 +181,22 @@ bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
 
     g_LidarStageProfile.Reset();
     g_LidarStageProfile.raw_points = st_RawLiDAR.s32_Num;
+    if (track_trace::Sink().Enabled()) {
+        // Inputs actually used by this scan (after SensorPoseHistory selection) and the KF dt.
+        track_trace::Event("scan", [&](std::ostream& out) {
+            const auto& imu = st_GPSIMU.st_IMU; const auto& gps = st_GPSIMU.st_GPS;
+            out << ",\"dt_s\":" << track_trace::N{ts_PrevTime.isZero() ? NAN : (ts_CurrTime - ts_PrevTime).toSec()}
+                << ",\"raw_points\":" << st_RawLiDAR.s32_Num
+                << ",\"imu_yaw_deg\":" << imu.f32_Yaw_deg << ",\"imu_roll_deg\":" << imu.f32_Roll_deg
+                << ",\"imu_pitch_deg\":" << imu.f32_Pitch_deg << ",\"can_kph\":" << st_GPSIMU.st_CAN.f32_CurrentVel_KPH
+                << ",\"gps_e\":" << track_trace::N{gps.f64_E} << ",\"gps_n\":" << track_trace::N{gps.f64_N}
+                << ",\"gps_jamming\":" << (gps.b_isJamming ? 1 : 0)
+                << ",\"common_geometry\":" << (frame_boundary::Enabled() ? 1 : 0)
+                << ",\"map_pose_valid\":" << (frame_boundary::Enabled() && frame_boundary::Current().map_pose.valid ? 1 : 0)
+                << ",\"opt_reacquire_elapsed_init\":" << (tracking_options::Get().reacquire_elapsed_init ? 1 : 0)
+                << ",\"opt_ego_translation_comp\":" << (tracking_options::Get().ego_translation_comp ? 1 : 0);
+        });
+    }
 
     deque<vector<LiDARObjectInfo>> prev_objects_queue = st_LiDAR.Prev_Objects_Queue;
     pcl::PointCloud<pcl::PointXYZI>::Ptr roi_cloud(new pcl::PointCloud<pcl::PointXYZI>);
@@ -345,5 +362,19 @@ bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
 
     LIDAR_STAGE(marker_ms, marker_pub.publish(marker_array));
     g_LidarStageProfile.valid = true;
+    if (track_trace::Sink().Enabled()) {
+        const auto& p = g_LidarStageProfile;
+        track_trace::Event("scan_end", [&](std::ostream& out) {
+            int observed = 0, missed = 0;
+            for (const auto& o : object) (o.s32_MissCount == 0 ? observed : missed)++;
+            out << ",\"process_ms\":" << std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count()
+                << ",\"stage_ms\":{\"make_cloud\":" << p.make_cloud_ms << ",\"roi\":" << p.roi_ms << ",\"voxel\":" << p.voxel_ms
+                << ",\"imu_correct\":" << p.imu_correct_ms << ",\"ransac\":" << p.ransac_ms << ",\"cluster\":" << p.cluster_ms
+                << ",\"objectinfo\":" << p.objectinfo_ms << ",\"framefilter\":" << p.framefilter_ms << ",\"motion\":" << p.motion_ms
+                << ",\"marker\":" << p.marker_ms << "},\"points\":{\"roi\":" << p.roi_points << ",\"voxel\":" << p.voxel_points
+                << ",\"ransac\":" << p.ransac_points << ",\"clusters\":" << p.clusters << "},\"tracks_observed\":" << observed
+                << ",\"tracks_missed\":" << missed;
+        });
+    }
     return true;
 }   

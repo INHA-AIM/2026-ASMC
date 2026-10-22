@@ -13,6 +13,7 @@
 #include <ros/package.h>
 #include <Geometry/FrameBoundaryPublisher.hpp>
 #include <Geometry/OutputGate.hpp>
+#include <Lidar/Tracking/TrackTrace.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -518,6 +519,7 @@ void *TemporalThread(void *p_Arg)
                 1.0, "Skipping LiDAR frame without synchronized pose: %s",
                 pose_reason.c_str());
         }
+        track_trace::Sink().SetScan(static_cast<std::int64_t>(processed_lidar_generation), scan_stamp.toNSec());
         const bool lidar_processed = pose_ready && LidarProcess(
             st_CurrentData.st_RawLiDAR, lidar_pose, st_LiDAR,
             *st_MotionClassifier);
@@ -599,6 +601,25 @@ void *TemporalThread(void *p_Arg)
     return nullptr;
 }
 
+// Experiment switches and the opt-in tracking trace (all default off = unchanged behaviour).
+// Shared by main() and the offline replay harness.
+void ConfigureTrackingExperiment(ros::NodeHandle& private_node)
+{
+    auto& options = tracking_options::Get();
+    private_node.param("lidar_kf_reacquire_elapsed_init", options.reacquire_elapsed_init, false);
+    private_node.param("lidar_kf_ego_translation_comp", options.ego_translation_comp, false);
+    std::string path, ids, run_id;
+    double max_mb = 512.0;
+    private_node.param("lidar_track_trace_path", path, std::string());
+    private_node.param("lidar_track_trace_ids", ids, std::string());
+    private_node.param("lidar_track_trace_run_id", run_id, std::string("runtime"));
+    private_node.param("lidar_track_trace_max_mb", max_mb, 512.0);
+    track_trace::Sink().Configure(path, run_id, ids, max_mb);
+    ROS_INFO("tracking experiment: reacquire_elapsed_init=%d ego_translation_comp=%d track_trace=%s",
+             options.reacquire_elapsed_init ? 1 : 0, options.ego_translation_comp ? 1 : 0,
+             path.empty() ? "off" : path.c_str());
+}
+
 void InitTemporal(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Temporal)
 {
     pthread_create(pth_Temporal, NULL, TemporalThread, NULL);
@@ -655,6 +676,12 @@ int main(int argc, char **argv)
     }
     st_FrameBoundaryPublisher=std::make_unique<frame_boundary::Publisher>(st_NodeHandle);
     ConfigureSensorPoseHistory(st_PrivateNodeHandle);
+    try {
+        ConfigureTrackingExperiment(st_PrivateNodeHandle);
+    } catch (const std::exception& error) {
+        ROS_FATAL("%s", error.what());
+        return 1;
+    }
     st_MotionClassifier =
         std::make_unique<MotionClassifier>(st_PrivateNodeHandle);
     st_PlannerObjectRosPublisher =
@@ -698,6 +725,7 @@ int main(int argc, char **argv)
     ReportFusionTotals();
     if(st_FrameBoundaryPublisher) st_FrameBoundaryPublisher->ReportTotals();
     fusion_trace::Sink().Flush();
+    track_trace::Sink().Flush();
     // B-15: frame_boundary::Publisher owns a ros::WallTimer. Left to static destruction it is destroyed after
     // roscpp's function-local TimerManager<WallTime>::global() (created later, destroyed earlier) and
     // ~WallTimer -> TimerManager::remove() locks a destroyed mutex -> boost::lock_error -> std::terminate.

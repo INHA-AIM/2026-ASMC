@@ -10,6 +10,7 @@
 #include "../src/main.cpp"
 #undef main
 #include <Lidar/ImuRansac/ImuRansac.hpp>
+#include <PlannerInterface/PlannerObjectAdapter.hpp>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <sensor_msgs/Imu.h>
@@ -55,6 +56,56 @@ std::vector<FrameRow> ReadFrames(const std::string& path) {
         rows.push_back(r);
     }
     return rows;
+}
+
+// Competition-restricted input stream (frames_comp.csv). Only the ALLOWED inference columns are looked up
+// by name; any other column (evaluation pose, vel_y/z, accel, ...) is never read, so it cannot reach the
+// tracker. vel_x = Competition Vehicle Status vel_x (m/s, signed), imu_* = IMU orientation (rad, ENU).
+// imu_roll_rad / imu_pitch_rad are optional and may be NaN (= not available, NOT measured zero).
+struct CompRow {
+    long idx = 0;
+    std::string stem, npy;
+    std::uint64_t stamp_ns = 0;
+    double vel_x = NAN, imu_yaw = NAN, imu_roll = NAN, imu_pitch = NAN;
+};
+
+std::vector<CompRow> ReadCompetitionFrames(const std::string& path) {
+    std::ifstream in(path); if (!in) throw std::runtime_error("frames open failed: " + path);
+    std::string line; std::getline(in, line);
+    const auto header = SplitCsv(line);
+    auto find = [&](const std::string& name) -> long {
+        for (std::size_t i = 0; i < header.size(); ++i) if (header[i] == name) return static_cast<long>(i);
+        return -1;
+    };
+    auto need = [&](const std::string& name) {
+        const long i = find(name); if (i < 0) throw std::runtime_error("missing allowed column " + name); return i;
+    };
+    const long c_idx = need("idx"), c_stem = need("stem"), c_ns = need("stamp_ns"), c_npy = need("npy"),
+        c_vx = need("vel_x_mps"), c_yaw = need("imu_yaw_rad"), c_roll = find("imu_roll_rad"), c_pitch = find("imu_pitch_rad");
+    std::vector<CompRow> rows;
+    while (std::getline(in, line)) {
+        if (line.empty()) continue;
+        const auto c = SplitCsv(line);
+        CompRow r; r.idx = std::stol(c[c_idx]); r.stem = c[c_stem]; r.stamp_ns = std::stoull(c[c_ns]); r.npy = c[c_npy];
+        r.vel_x = std::stod(c[c_vx]); r.imu_yaw = std::stod(c[c_yaw]);
+        if (c_roll >= 0) r.imu_roll = std::stod(c[c_roll]);
+        if (c_pitch >= 0) r.imu_pitch = std::stod(c[c_pitch]);
+        if (!rows.empty() && r.stamp_ns <= rows.back().stamp_ns) throw std::runtime_error("non-increasing stamp");
+        rows.push_back(r);
+    }
+    return rows;
+}
+
+// ZYX (roll, pitch, yaw) -> quaternion, same convention as Convert() below.
+sensor_msgs::Imu ImuFromRpy(std::uint64_t stamp_ns, double roll, double pitch, double yaw) {
+    sensor_msgs::Imu imu; imu.header.stamp.fromNSec(stamp_ns);
+    const double cr = std::cos(0.5 * roll), sr = std::sin(0.5 * roll), cp = std::cos(0.5 * pitch), sp = std::sin(0.5 * pitch),
+        cy = std::cos(0.5 * yaw), sy = std::sin(0.5 * yaw);
+    imu.orientation.w = cr * cp * cy + sr * sp * sy;
+    imu.orientation.x = sr * cp * cy - cr * sp * sy;
+    imu.orientation.y = cr * sp * cy + sr * cp * sy;
+    imu.orientation.z = cr * cp * sy - sr * sp * cy;
+    return imu;
 }
 
 // Minimal .npy (v1/v2, little-endian float32, C order, shape (N, K>=4)) reader.
@@ -163,12 +214,17 @@ public:
               std::uint64_t logical) {
         ++generation_; ++stats_.scans;
         ros::Time stamp; stamp.fromNSec(source_ns); ros::Time::setNow(stamp);
+        track_trace::Sink().SetScan(idx, source_ns);
         const auto w0 = std::chrono::steady_clock::now();
         GPS_IMU local{}; LocalInputSelection selected; std::string reason;
         const bool ready = history.WaitForLocalLookupNs(source_ns, 0, &local, &selected, &reason);
         out_ << "{\"scene\":" << fusion_trace::Quote(scene) << ",\"idx\":" << idx << ",\"stem\":"
              << fusion_trace::Quote(stem) << ",\"stamp_ns\":" << source_ns << ",\"raw_points\":" << n
-             << ",\"ready\":" << (ready ? "true" : "false") << ",\"reason\":" << fusion_trace::Quote(reason);
+             << ",\"ready\":" << (ready ? "true" : "false") << ",\"reason\":" << fusion_trace::Quote(reason)
+             << scan_extra_;
+        if (!ready && track_trace::Sink().Enabled()) {
+            track_trace::Event("scan_skipped", [&](std::ostream& o) { o << ",\"reason\":" << fusion_trace::Quote(reason); });
+        }
         bool processed = false; double lidar_ms = 0.;
         output_gate::Decision effective;
         frame_boundary::V2Frame local_frame;
@@ -222,6 +278,7 @@ public:
             }
         }
         const double frame_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - w0).count();
+        if (track_trace::Sink().Enabled() && processed) TracePublish(effective, local_frame, local);
         if (effective.v2 == output_gate::Mode::kBoth) { ++stats_.local; ++stats_.map; last_v2_stamp_ = stamp; }
         else if (effective.v2 == output_gate::Mode::kMap) { ++stats_.map; last_v2_stamp_ = stamp; }
         else if (effective.v2 == output_gate::Mode::kLocal) { ++stats_.local; last_v2_stamp_ = stamp; }
@@ -295,7 +352,55 @@ public:
         out_ << "]}\n";
     }
     const Stats& stats() const { return stats_; }
+    void SetScanExtra(const std::string& extra) { scan_extra_ = extra; }
 private:
+    // Final values of this scan as a consumer would read them: the V2 local objects (base_link) and,
+    // when the map pose is valid, MakePlannerObjects (the values behind /last_lidar and the UDP sender,
+    // before the planner-side filters). Tracks that are not published get an explicit reason.
+    void TracePublish(const output_gate::Decision& effective, const frame_boundary::V2Frame& local_frame,
+                      const GPS_IMU& local) {
+        track_trace::Event("publish", [&](std::ostream& o) {
+            o << ",\"v2_mode\":\"" << output_gate::ModeName(effective.v2) << "\",\"v2_reason\":" << fusion_trace::Quote(effective.reason)
+              << ",\"local\":[";
+            bool sep = false;
+            if (effective.v2 == output_gate::Mode::kLocal || effective.v2 == output_gate::Mode::kBoth) {
+                for (const auto& ob : local_frame.array.objects) {
+                    if (sep) o << ','; sep = true;
+                    o << "{\"id\":" << ob.track_id << ",\"c\":[" << ob.center.x << ',' << ob.center.y << ',' << ob.center.z
+                      << "],\"yaw\":" << ob.yaw << ",\"l\":" << ob.length << ",\"w\":" << ob.width << ",\"h\":" << ob.height
+                      << ",\"vel_valid\":" << (ob.absolute_velocity_valid ? 1 : 0) << ",\"mv\":" << (ob.motion_valid ? 1 : 0)
+                      << ",\"ms\":" << static_cast<int>(ob.motion_state) << '}';
+                }
+            }
+            o << "],\"unpublished\":[";
+            sep = false;
+            for (const auto& t : st_LiDAR.vec_Objects) {
+                const char* why = t.s32_Id < 0 ? "no_id" : t.s32_MissCount > 0 ? "missed_scan" :
+                    t.pcl_ClusterPoints.empty() ? "no_points" :
+                    (t.str_ObjectClass == "noise" || t.str_ObjectClass == "지면노이즈") ? "noise_class" : nullptr;
+                if (!why) continue;
+                if (sep) o << ','; sep = true;
+                o << "{\"id\":" << t.s32_Id << ",\"miss\":" << t.s32_MissCount << ",\"reason\":\"" << why << "\"}";
+            }
+            o << "],\"planner\":";
+            if (frame_boundary::Current().map_pose.valid) {
+                o << '[';
+                sep = false;
+                for (const auto& p : MakePlannerObjects(st_LiDAR, local, st_VehicleSpec, 200)) {
+                    if (sep) o << ','; sep = true;
+                    o << "{\"id\":" << p.id << ",\"obb_c_map\":[" << p.obb_center_map.x << ',' << p.obb_center_map.y
+                      << "],\"yaw_map\":" << p.obb_yaw_map_rad << ",\"l\":" << p.length << ",\"w\":" << p.width
+                      << ",\"v_map\":[" << p.velocity_map_mps.x << ',' << p.velocity_map_mps.y << "],\"raw_v_map\":["
+                      << p.raw_velocity_map_mps.x << ',' << p.raw_velocity_map_mps.y << "],\"ms\":" << p.motion_state
+                      << ",\"dyn\":" << (p.is_dynamic ? 1 : 0) << '}';
+                }
+                o << ']';
+            } else {
+                o << "null,\"planner_reason\":\"map_pose_invalid_no_planner_output\"";
+            }
+        });
+    }
+    std::string scan_extra_;
     std::ostream& out_;
     bool log_cov_;
     std::ostream* points_;
@@ -323,10 +428,17 @@ int main(int argc, char** argv) {
     std::string frames_path, bag_path, out_path, params_path, trace_path, points_path, scene = "scene";
     std::vector<std::pair<std::string, std::string>> overrides;
     bool log_cov = false; long max_frames = -1;
+    std::string input_mode = "historical", track_trace_path, track_trace_ids, run_id = "replay";
+    double track_trace_max_mb = 512.0;
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
         auto next = [&]() { if (i + 1 >= argc) throw std::runtime_error("missing value for " + a); return std::string(argv[++i]); };
         if (a == "--frames") frames_path = next();
+        else if (a == "--input-mode") input_mode = next();
+        else if (a == "--track-trace") track_trace_path = next();
+        else if (a == "--track-trace-ids") track_trace_ids = next();
+        else if (a == "--track-trace-max-mb") track_trace_max_mb = std::stod(next());
+        else if (a == "--run-id") run_id = next();
         else if (a == "--bag") bag_path = next();
         else if (a == "--out") out_path = next();
         else if (a == "--params") params_path = next();
@@ -339,15 +451,24 @@ int main(int argc, char** argv) {
             if (eq == std::string::npos) throw std::runtime_error("--set needs key=value"); overrides.push_back({kv.substr(0, eq), kv.substr(eq + 1)}); }
         else { std::cerr << "unknown argument " << a << "\n"; return 2; }
     }
-    if ((frames_path.empty() == bag_path.empty()) || out_path.empty() || params_path.empty()) {
+    if ((frames_path.empty() == bag_path.empty()) || out_path.empty() || params_path.empty() ||
+        (input_mode != "historical" && input_mode != "competition") || (input_mode == "competition" && frames_path.empty())) {
         std::cerr << "usage: lidar_dataset_replay (--frames FRAMES.csv | --bag BAG) --out OUT.jsonl --params DUMP.yaml"
                      " [--scene NAME] [--set key=value]... [--trace TRACE.jsonl] [--log-cov] [--max-frames N]"
-                     " [--points-out PTS.bin]\n";
+                     " [--points-out PTS.bin] [--input-mode historical|competition] [--track-trace PATH"
+                     " [--track-trace-ids 1,2] [--track-trace-max-mb N] [--run-id ID]]\n";
         return 2;
     }
     ros::NodeHandle nh, pnh("~");
     const std::size_t n_params = LoadMainParams(pnh, params_path);
     for (const auto& kv : overrides) SetParam(pnh, kv.first, YAML::Node(kv.second));
+    if (!track_trace_path.empty()) {
+        pnh.setParam("lidar_track_trace_path", track_trace_path);
+        pnh.setParam("lidar_track_trace_ids", track_trace_ids);
+        pnh.setParam("lidar_track_trace_run_id", run_id);
+        pnh.setParam("lidar_track_trace_max_mb", track_trace_max_mb);
+    }
+    ConfigureTrackingExperiment(pnh);
     std::string camera_profile;
     pnh.param("camera_class_profile", camera_profile, std::string("mission16_v1"));
     if (camera_profile != "legacy" && camera_profile != "mission16_v1") return 2;
@@ -371,7 +492,31 @@ int main(int argc, char** argv) {
     Replay replay(output, log_cov, points.get());
     std::uint64_t first_ns = 0, frames_done = 0;
     const auto wall0 = std::chrono::steady_clock::now();
-    if (!frames_path.empty()) {
+    if (input_mode == "competition") {
+        // Allowed channels only: IMU attitude (yaw; roll/pitch when provided) and vel_x as CAN speed,
+        // both stamped at t_lidar. No GPS sample is fed (not available in this input) -> map pose invalid.
+        const auto rows = ReadCompetitionFrames(frames_path);
+        first_ns = rows.empty() ? 0 : rows.front().stamp_ns;
+        for (const auto& r : rows) {
+            if (max_frames >= 0 && static_cast<long>(frames_done) >= max_frames) break;
+            const std::uint64_t logical = r.stamp_ns - first_ns + 1000000000ULL;
+            const bool rp = std::isfinite(r.imu_roll) && std::isfinite(r.imu_pitch);
+            const auto imu = ImuFromRpy(r.stamp_ns, rp ? r.imu_roll : 0.0, rp ? r.imu_pitch : 0.0, r.imu_yaw);
+            if (std::isfinite(r.imu_yaw)) history.AddImu(r.stamp_ns / 1000000, Convert(imu), nullptr, r.stamp_ns, logical);
+            if (std::isfinite(r.vel_x)) {
+                CAN_DATA can{}; can.f32_CurrentVel_MPS = static_cast<float32>(r.vel_x);
+                can.f32_CurrentVel_KPH = static_cast<float32>(3.6 * r.vel_x);
+                history.AddCan(r.stamp_ns / 1000000, can, nullptr, r.stamp_ns, logical);
+            }
+            std::ostringstream extra; extra << std::setprecision(9);
+            extra << ",\"ego_in\":{\"vel_x\":" << J{r.vel_x} << ",\"imu_yaw\":" << J{r.imu_yaw}
+                  << ",\"rp_available\":" << (rp ? 1 : 0) << ",\"gps\":0}";
+            replay.SetScanExtra(extra.str());
+            std::size_t n = 0; const auto xyzi = LoadNpyXyzi(r.npy, &n);
+            replay.Scan(scene, r.idx, r.stem, r.stamp_ns, xyzi.data(), n, history, classifier, logical);
+            ++frames_done;
+        }
+    } else if (!frames_path.empty()) {
         const auto rows = ReadFrames(frames_path);
         first_ns = rows.empty() ? 0 : rows.front().stamp_ns;
         const auto& g = st_VehicleSpec.st_GPSPos;
@@ -440,9 +585,11 @@ int main(int argc, char** argv) {
     std::cerr << "[DATASET_REPLAY_TOTAL] scene=" << scene << " scans=" << s.scans << " ready=" << s.ready
               << " processed=" << s.processed << " local=" << s.local << " map=" << s.map << " none=" << s.none
               << " params=" << n_params << " overrides=" << overrides.size() << " fusion=" << (b_EnableSensorFusion ? 1 : 0)
+              << " input_mode=" << input_mode << " trace_records=" << track_trace::Sink().Records()
+              << " trace_dropped=" << track_trace::Sink().Dropped()
               << " wall_s=" << std::chrono::duration<double>(std::chrono::steady_clock::now() - wall0).count()
               << " peak_rss_kb=" << usage.ru_maxrss << std::endl;
-    ReportFusionTotals(); fusion_trace::Sink().Flush(); output.flush();
+    ReportFusionTotals(); fusion_trace::Sink().Flush(); track_trace::Sink().Flush(); output.flush();
     if (points) { points->flush(); if (!*points) return 1; }
     return output ? 0 : 1;
 }

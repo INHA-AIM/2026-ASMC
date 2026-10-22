@@ -149,6 +149,15 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(test_tracking_association
       myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
   endif()
+  # Stage-1 tracking options (reacquire elapsed init, ego translation): ConfigureForTest seam, no ROS master.
+  catkin_add_gtest(test_tracking_frame_options
+    test/test_tracking_frame_options.cpp
+    test/test_runtime_globals.cpp
+  )
+  if(TARGET test_tracking_frame_options)
+    target_link_libraries(test_tracking_frame_options
+      myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  endif()
   # ROS master 없이 실행: frame_boundary::ConfigureForTest seam만 사용한다.
   catkin_add_gtest(test_leveling_contract
     test/test_leveling_contract.cpp

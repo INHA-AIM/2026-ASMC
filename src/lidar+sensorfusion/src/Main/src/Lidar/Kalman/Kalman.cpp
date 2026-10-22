@@ -1,5 +1,6 @@
 #include "kalman_utils.hpp"
 #include <Geometry/FrameBoundary.hpp>
+#include <Lidar/Tracking/TrackTrace.hpp>
 
 
 
@@ -83,6 +84,7 @@ std::pair<float, float> predictKalmanPosition(
         aligned.tracking_frame_valid=true;aligned.tracking_height_input=obj.tracking_height_input;
         aligned.tracking_yaw_from_input=obj.tracking_yaw_from_input;
         aligned.tracking_origin_in_yaw=obj.tracking_origin_in_yaw;
+        aligned.tracking_stamp_ns=obj.tracking_stamp_ns;aligned.tracking_ego_speed_mps=obj.tracking_ego_speed_mps;
         aligned.f32_PrevYaw=obj.f32_PrevYaw;aligned.f32_OBB_YawRad=obj.f32_OBB_YawRad;
         frame_boundary::AlignTrackingFrame(aligned,to_ccw_rad(ego_yaw_now));
         const auto& x=aligned.Eigen_KfState_CA;
@@ -135,6 +137,16 @@ void kalman_filter_predict(LiDARObjectInfo &o, float64 dt, float ego_yaw_now)
     // 필요하다면 편의용 캐시(f32_CoreX/Y) 업데이트
     o.f32_CoreX = o.Eigen_KfState_CA(0);
     o.f32_CoreY = o.Eigen_KfState_CA(1);
+    o.kf_elapsed_since_meas_s += dt;   // bookkeeping only (used by reacquire_elapsed_init)
+    if (track_trace::Sink().WantsTrack(o.s32_Id)) {
+        track_trace::Event("kf_predict_miss", [&](std::ostream& out) {
+            out << ",\"id\":" << o.s32_Id << ",\"miss\":" << o.s32_MissCount << ",\"kfc\":" << o.s32_KfInitCount
+                << ",\"dt\":" << dt << ",\"elapsed\":" << o.kf_elapsed_since_meas_s << ",\"x\":";
+            track_trace::Arr(out, o.Eigen_KfState_CA, 6);
+            out << ",\"Pdiag\":";
+            track_trace::Arr(out, o.Eigen_KfP_CA.diagonal(), 6);
+        });
+    }
 }
 
 // 매칭된 트랙용 Update (회전 보정 → 예측 → 업데이트)
@@ -152,8 +164,17 @@ void kalman_filter_update(LiDARObjectInfo &obj,
         obj.s32_KfInitCount = 1;
         obj.f32_CoreX = zx; obj.f32_CoreY = zy;
         obj.f32_PrevYaw = to_ccw_rad(ego_yaw_now);
+        obj.kf_elapsed_since_meas_s = 0.;
+        if (track_trace::Sink().WantsTrack(obj.s32_Id)) {
+            track_trace::Event("kf_init", [&](std::ostream& out) {
+                out << ",\"id\":" << obj.s32_Id << ",\"z\":[" << zx << ',' << zy << "],\"yaw_rad\":" << obj.f32_PrevYaw;
+            });
+        }
         return;
     }
+    const bool trace = track_trace::Sink().WantsTrack(obj.s32_Id);
+    const Eigen::Matrix<float, 6, 1> x_in = obj.Eigen_KfState_CA;
+    const int kfc_in = obj.s32_KfInitCount;
 
     // --- 프레임 정렬(수동 회전) : 지난 프레임 기준 상태/공분산을 "현재 바디 프레임"으로 재표현 ---
     // 내부에서 PrevYaw가 ego_yaw_now로 갱신됨
@@ -161,13 +182,24 @@ void kalman_filter_update(LiDARObjectInfo &obj,
     // obj는 현재 검출이다. OBB yaw는 Objectinfo_for_km/stabilizeMatchedOBB가 이미 현재
     // 프레임으로 기록했으므로 KF 상태만 정렬한다(OBB yaw 이중 회전 금지).
     compensate_ego_yaw(obj, ego_yaw_now, false);
+    const Eigen::Matrix<float, 6, 1> x_aligned = obj.Eigen_KfState_CA;
 
     // --- 두 번째 프레임: 속도 초기화 (pred_x/pred_y는 반드시 '현재 프레임 기준'이어야 함) ---
+    // P0: z - pred spans every scan since the first observation (missed scans included) but is divided
+    // by the last scan dt only. Option reacquire_elapsed_init divides by the real elapsed time.
+    double init_elapsed = dt;
     if (obj.s32_KfInitCount == 1) {
-        float32 vx_init = (zx - pred_x) / dt ;
-        float32 vy_init = (zy - pred_y) / dt ;
+        // Only a track that missed scans since its first observation takes the new path; without misses
+        // the elapsed time is dt and the P0 expression is used unchanged.
+        const bool elapsed_init = tracking_options::Get().reacquire_elapsed_init && obj.kf_elapsed_since_meas_s > 0.;
+        if (elapsed_init) init_elapsed = obj.kf_elapsed_since_meas_s + dt;
+        float32 vx_init = (zx - pred_x) / init_elapsed ;
+        float32 vy_init = (zy - pred_y) / init_elapsed ;
 
-        obj.Eigen_KfState_CA << pred_x, pred_y, vx_init, vy_init, 0.f, 0.f;
+        // P0 expression kept bit-exact when the option is off. With the option the position is set one
+        // scan before z along v_init, so the CA step below lands on z (zero innovation) as in P0.
+        if (elapsed_init) obj.Eigen_KfState_CA << zx - vx_init * dt, zy - vy_init * dt, vx_init, vy_init, 0.f, 0.f;
+        else obj.Eigen_KfState_CA << pred_x, pred_y, vx_init, vy_init, 0.f, 0.f;
         obj.s32_KfInitCount = 2;
         // 필요하면 여기서 바로 return해도 되지만, 일반적으로 아래 예측+업데이트 계속 진행
     }
@@ -203,6 +235,23 @@ void kalman_filter_update(LiDARObjectInfo &obj,
     // --- 캐시 ---
     obj.f32_CoreX = obj.Eigen_KfState_CA(0);
     obj.f32_CoreY = obj.Eigen_KfState_CA(1);
+    if (trace) {
+        track_trace::Event("kf_update", [&](std::ostream& out) {
+            out << ",\"id\":" << obj.s32_Id << ",\"kfc_in\":" << kfc_in << ",\"dt\":" << dt
+                << ",\"elapsed_before\":" << obj.kf_elapsed_since_meas_s << ",\"init_elapsed\":" << init_elapsed
+                << ",\"z\":[" << zx << ',' << zy << "],\"pred\":[" << pred_x << ',' << pred_y << "],\"x_in\":";
+            track_trace::Arr(out, x_in, 6);
+            out << ",\"x_aligned\":"; track_trace::Arr(out, x_aligned, 6);
+            out << ",\"x_prior\":"; track_trace::Arr(out, x_pred, 6);
+            out << ",\"P_prior_diag\":"; track_trace::Arr(out, P_pred.diagonal(), 6);
+            out << ",\"innov\":"; track_trace::Arr(out, y, 2);
+            out << ",\"S\":"; track_trace::Mat2(out, S, 2, 2);
+            out << ",\"K\":"; track_trace::Mat2(out, K, 6, 2);
+            out << ",\"x_post\":"; track_trace::Arr(out, obj.Eigen_KfState_CA, 6);
+            out << ",\"P_post_diag\":"; track_trace::Arr(out, obj.Eigen_KfP_CA.diagonal(), 6);
+        });
+    }
+    obj.kf_elapsed_since_meas_s = 0.;
 }
 
 //이거는 imm

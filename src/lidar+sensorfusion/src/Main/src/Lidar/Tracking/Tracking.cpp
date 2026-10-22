@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <SensorFusion/FusionClassState.hpp>
 #include <SensorFusion/FusionStateTrace.hpp>
+#include <Lidar/Tracking/TrackTrace.hpp>
 const double DISP_SPIKE = 0.60;  // 프레임 간 위치 점프(m) 스파이크 기준
 const double V_SPIKE    = 6.00;  // 속도 스파이크(m/s) 기준(≈ 21.6 km/h)
 #include <cmath>
@@ -427,6 +428,15 @@ void ConsolidateCurrentDetections(vector<LiDARObjectInfo>& now_object) {
                 }
                 LiDARObjectInfo& owner = now_object[owner_index];
                 const LiDARObjectInfo& fragment = now_object[fragment_index];
+                if (track_trace::Sink().Enabled()) {
+                    track_trace::Event("merge", [&](std::ostream& out) {
+                        out << ",\"owner_det\":" << owner.u16_Idx << ",\"fragment_det\":" << fragment.u16_Idx
+                            << ",\"owner_pts\":" << owner.pcl_ClusterPoints.size() << ",\"fragment_pts\":" << fragment.pcl_ClusterPoints.size()
+                            << ",\"obb_center_dist\":" << center_distance << ",\"aabb_iou\":" << tracking_association::AabbIou(left, right)
+                            << ",\"owner_mean\":[" << owner.f32_CoreX << ',' << owner.f32_CoreY << "],\"fragment_mean\":["
+                            << fragment.f32_CoreX << ',' << fragment.f32_CoreY << ']';
+                    });
+                }
                 owner.pcl_ClusterPoints.points.insert(
                     owner.pcl_ClusterPoints.points.end(),
                     fragment.pcl_ClusterPoints.points.begin(),
@@ -566,6 +576,21 @@ void Objectinfo_for_km(vector<LiDARObjectInfo> &vec_NowObject,
 
         vec_NowObject.push_back(st_CurrentObj);
     }
+    if (track_trace::Sink().Enabled()) {
+        // Raw detections (before duplicate consolidation): point mean (= KF measurement) and raw L-shape OBB.
+        track_trace::Event("detections", [&](std::ostream& out) {
+            out << ",\"n\":" << vec_NowObject.size() << ",\"det\":[";
+            for (std::size_t k = 0; k < vec_NowObject.size(); ++k) {
+                const auto& d = vec_NowObject[k];
+                if (k) out << ',';
+                out << "{\"det\":" << d.u16_Idx << ",\"npts\":" << d.pcl_ClusterPoints.size()
+                    << ",\"mean\":[" << d.f32_CoreX << ',' << d.f32_CoreY << ',' << d.f32_CoreZ
+                    << "],\"obb\":[" << d.f32_OBB_CenterX << ',' << d.f32_OBB_CenterY << ',' << d.f32_OBB_Width << ','
+                    << d.f32_OBB_Height << ',' << d.f32_OBB_YawRad << ',' << d.f32_OBB_ZMin << ',' << d.f32_OBB_ZMax << "]}";
+            }
+            out << ']';
+        });
+    }
 }
 
 
@@ -603,6 +628,9 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
     // OBB의 body-frame AABB IoU 역시 회전/자차 이동에 민감하므로 연관 비용에는
     // 물체의 두 평면 치수가 얼마나 비슷한지만 사용한다.
     vector<vector<double>> vec_CostMatrix(N, vector<double>(M, st_Tracking.f32_COST_INF));
+    const bool trace_on = track_trace::Sink().Enabled();
+    vector<vector<std::array<float, 3>>> cand_info;   // (distance, 1-shape, cost before gate), trace only
+    if (trace_on) cand_info.assign(N, vector<std::array<float, 3>>(M));
     for (int32 i = 0; i < N; ++i) {
         // 예측 위치
         float32 f32_Pred_x = vec_PredictedPositions[i].first;
@@ -665,7 +693,8 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             f32_Cost = std::max(
                 0.0F,
                 f32_Cost - st_Tracking.f32_ContinuityBonus * age_ratio);
-            
+            if (trace_on) cand_info[i][j] = {f32_Cost_dist, f32_Cost_shape, f32_Cost};
+
             if (f32_Cost < st_Tracking.f32_COST_THRESHOLD) {
                 vec_CostMatrix[i][j] = f32_Cost;
             } else {
@@ -691,6 +720,32 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
         }
         out << ']';
     });
+    if (trace_on) {
+        for (int32 i = 0; i < N; ++i) {
+            if (!track_trace::Sink().WantsTrack(vec_Compare[i].s32_Id)) continue;
+            const int aj = i < static_cast<int>(assignment.size()) ? assignment[i] : -1;
+            track_trace::Event("assoc", [&](std::ostream& out) {
+                const auto& p = vec_Compare[i];
+                out << ",\"id\":" << p.s32_Id << ",\"age\":" << p.s32_Age << ",\"miss\":" << p.s32_MissCount
+                    << ",\"kfc\":" << p.s32_KfInitCount << ",\"dt\":" << f64_Time << ",\"x_prev\":";
+                track_trace::Arr(out, p.Eigen_KfState_CA, 6);
+                out << ",\"pred\":[" << vec_PredictedPositions[i].first << ',' << vec_PredictedPositions[i].second
+                    << "],\"gate\":" << st_Tracking.f32_COST_THRESHOLD << ",\"assigned_j\":" << aj
+                    << ",\"assigned_det\":" << (aj >= 0 && aj < M ? static_cast<int>(vec_NowObject[aj].u16_Idx) : -1)
+                    << ",\"cands\":[";
+                bool first = true;
+                for (int32 j = 0; j < M; ++j) {
+                    const auto& c = cand_info[i][j];
+                    if (c[0] > 6.0F && c[2] >= st_Tracking.f32_COST_THRESHOLD) continue;
+                    if (!first) out << ','; first = false;
+                    out << "{\"j\":" << j << ",\"det\":" << vec_NowObject[j].u16_Idx << ",\"d\":" << c[0]
+                        << ",\"shape\":" << c[1] << ",\"cost\":" << c[2]
+                        << ",\"gated\":" << (c[2] < st_Tracking.f32_COST_THRESHOLD ? 0 : 1) << '}';
+                }
+                out << ']';
+            });
+        }
+    }
 
     vector<bool> matched_now(M, false);
     vector<bool> matched_prev(N, false);
@@ -737,6 +792,14 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             vec_NowObject[j].tracking_height_input=vec_Compare[i].tracking_height_input;
             vec_NowObject[j].tracking_yaw_from_input=vec_Compare[i].tracking_yaw_from_input;
             vec_NowObject[j].tracking_origin_in_yaw=vec_Compare[i].tracking_origin_in_yaw;
+            vec_NowObject[j].tracking_stamp_ns=vec_Compare[i].tracking_stamp_ns;
+            vec_NowObject[j].tracking_ego_speed_mps=vec_Compare[i].tracking_ego_speed_mps;
+            vec_NowObject[j].kf_elapsed_since_meas_s=vec_Compare[i].kf_elapsed_since_meas_s;
+            const bool trace_track = track_trace::Sink().WantsTrack(vec_NowObject[j].s32_Id);
+            std::array<float, 5> obb_raw{};
+            if (trace_track) obb_raw = {vec_NowObject[j].f32_OBB_CenterX, vec_NowObject[j].f32_OBB_CenterY,
+                                        vec_NowObject[j].f32_OBB_Width, vec_NowObject[j].f32_OBB_Height,
+                                        vec_NowObject[j].f32_OBB_YawRad};
 
             if (tracking_association::ShouldCarryPreviousClass(
                     vec_Compare[i], vec_NowObject[j])) {
@@ -755,6 +818,8 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
                 aligned.tracking_height_input=vec_Compare[i].tracking_height_input;
                 aligned.tracking_yaw_from_input=vec_Compare[i].tracking_yaw_from_input;
                 aligned.tracking_origin_in_yaw=vec_Compare[i].tracking_origin_in_yaw;
+                aligned.tracking_stamp_ns=vec_Compare[i].tracking_stamp_ns;
+                aligned.tracking_ego_speed_mps=vec_Compare[i].tracking_ego_speed_mps;
                 aligned.f32_PrevYaw=vec_Compare[i].f32_PrevYaw;
                 aligned.f32_OBB_YawRad=vec_Compare[i].f32_OBB_YawRad;
                 frame_boundary::AlignTrackingFrame(aligned,st_GPSIMU.st_IMU.f32_Yaw_rad);
@@ -785,7 +850,10 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
 
             const float32 f32_Rel_vx = vec_NowObject[j].Eigen_KfState_CA(2);
             const float32 f32_Rel_vy = vec_NowObject[j].Eigen_KfState_CA(3);
-            const float32 v_mps =
+            // P0: relative KF velocity + CAN speed on the tracking x axis. With ego_translation_comp the
+            // common-geometry state velocity is already ground-referenced: nothing is added.
+            const bool ground_state = tracking_options::Get().ego_translation_comp && frame_boundary::Enabled();
+            const float32 v_mps = ground_state ? 0.0f :
                 st_GPSIMU.st_CAN.f32_CurrentVel_KPH / 3.6f;
             const float32 f32_Abs_vx = f32_Rel_vx + v_mps;
             const float32 f32_Abs_vy = f32_Rel_vy;
@@ -802,6 +870,24 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             } else {
                 vec_NowObject[j].f32_DirX = 0.0f;
                 vec_NowObject[j].f32_DirY = 0.0f;
+            }
+            if (trace_track) {
+                const auto& n = vec_NowObject[j];
+                track_trace::Event("match", [&](std::ostream& out) {
+                    out << ",\"id\":" << n.s32_Id << ",\"j\":" << j << ",\"det\":" << n.u16_Idx << ",\"age\":" << n.s32_Age
+                        << ",\"prev_miss\":" << vec_Compare[i].s32_MissCount << ",\"cost\":" << vec_CostMatrix[i][j]
+                        << ",\"npts\":" << n.pcl_ClusterPoints.size()
+                        << ",\"z_mean\":[" << f32_Det_x << ',' << f32_Det_y << "],\"pred\":[" << f32_Pred_x << ',' << f32_Pred_y
+                        << "],\"obb_raw\":[" << obb_raw[0] << ',' << obb_raw[1] << ',' << obb_raw[2] << ',' << obb_raw[3] << ',' << obb_raw[4]
+                        << "],\"obb_stab\":[" << n.f32_OBB_CenterX << ',' << n.f32_OBB_CenterY << ',' << n.f32_OBB_Width << ','
+                        << n.f32_OBB_Height << ',' << n.f32_OBB_YawRad << "],\"stab_rule\":\""
+                        << (vec_Compare[i].s32_MissCount > 0 ? "raw_after_miss" :
+                            (obb_raw[3] > 1e-6f && obb_raw[2] / obb_raw[3] >= 1.2f ? "ema_0.25" : "predicted_yaw_only"))
+                        << "\",\"kf_post\":";
+                    track_trace::Arr(out, n.Eigen_KfState_CA, 6);
+                    out << ",\"can_mps\":" << st_GPSIMU.st_CAN.f32_CurrentVel_KPH / 3.6f << ",\"can_added\":" << v_mps
+                        << ",\"abs_v\":[" << n.f32_AbsVx << ',' << n.f32_AbsVy << ']';
+                });
             }
 
             // 동정적 판정은 트래킹의 실시간 속도를 변경하지 않는 별도
@@ -873,6 +959,13 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
                 retire_shape_agreement) {
                 continue;
             }
+            if (track_trace::Sink().WantsTrack(vec_Compare[i].s32_Id)) {
+                track_trace::Event("retire", [&](std::ostream& out) {
+                    out << ",\"id\":" << vec_Compare[i].s32_Id << ",\"by_id\":" << vec_NowObject[j].s32_Id
+                        << ",\"det\":" << vec_NowObject[j].u16_Idx << ",\"dist\":" << retire_dist
+                        << ",\"reason\":\"duplicate_of_matched_track\"";
+                });
+            }
             matched_prev[i] = true;
             break;
         }
@@ -890,6 +983,15 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             vec_NowObject[j].f32_PrevE = std::numeric_limits<float>::quiet_NaN();
             vec_NowObject[j].f32_PrevN = std::numeric_limits<float>::quiet_NaN();
             kalman_filter_update(vec_NowObject[j],vec_NowObject[j].f32_CoreX,vec_NowObject[j].f32_CoreY,0,0,f64_Time,st_GPSIMU.st_IMU.f32_Yaw_deg);
+            if (track_trace::Sink().WantsTrack(vec_NowObject[j].s32_Id)) {
+                const auto& n = vec_NowObject[j];
+                track_trace::Event("birth", [&](std::ostream& out) {
+                    out << ",\"id\":" << n.s32_Id << ",\"j\":" << j << ",\"det\":" << n.u16_Idx << ",\"npts\":" << n.pcl_ClusterPoints.size()
+                        << ",\"z_mean\":[" << n.f32_CoreX << ',' << n.f32_CoreY << "],\"obb\":[" << n.f32_OBB_CenterX << ','
+                        << n.f32_OBB_CenterY << ',' << n.f32_OBB_Width << ',' << n.f32_OBB_Height << ',' << n.f32_OBB_YawRad
+                        << "],\"reason\":\"unmatched_detection\"";
+                });
+            }
             // if (!vec_NowObject[j].b_IMMInit) {
             //     // 초기 IMM 설정
             //     float vx_init = (f32_Det_x - f32_Pred_x) / f64_Time;
@@ -959,6 +1061,11 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
                 // std::cout << "[MISS] prev_id=" << vec_Compare[i].s32_Id
                 //     << " miss=" << (vec_Compare[i].s32_MissCount + 1) << "\n";
                 vec_NowObject.push_back(missed);
+            } else if (track_trace::Sink().WantsTrack(missed.s32_Id)) {
+                track_trace::Event("drop", [&](std::ostream& out) {
+                    out << ",\"id\":" << missed.s32_Id << ",\"miss\":" << missed.s32_MissCount
+                        << ",\"reason\":\"miss_count_limit_25\"";
+                });
             }
         }
     }

@@ -1,0 +1,211 @@
+// Cause tests for the stage-1 tracking options (Lidar/Tracking/TrackTrace.hpp tracking_options).
+// ROS-free: no ros::init, no master. Seam: frame_boundary::ConfigureForTest (common geometry ON).
+// Every scan runs the production chain PrepareScan -> StoreLeveling -> CompareCentroids
+// (predictKalmanPosition, stabilizeMatchedOBB, kalman_filter_update/predict, absolute velocity)
+// -> RecordTrackingFrame with IDEAL measurements: the point mean of the detection equals the exact
+// object reference point in the tracking input frame (DIAGNOSTIC_ONLY, no clustering, no noise).
+//
+// "Fix" tests assert the corrected behaviour with the option ON. Setting the environment variable
+// TRACKING_OPTIONS_FORCE_OFF=1 runs the same assertions with the option OFF (= P0 code path, proven
+// output-identical to P0 by the replay identity runs) and they must FAIL: that is the before/after
+// evidence. "Guard" tests pin behaviour that must hold in both modes.
+#include <gtest/gtest.h>
+
+#include <Geometry/FrameBoundary.hpp>
+#include <Lidar/FrameFilter/FrameFilter.hpp>
+#include <Lidar/Kalman/kalman_utils.hpp>
+#include <Lidar/Tracking/TrackTrace.hpp>
+#include <Lidar/Tracking/tracking_utils.hpp>
+#include <asmc_lidar/projection.hpp>
+
+#include <cmath>
+#include <cstdlib>
+#include <deque>
+#include <functional>
+#include <vector>
+
+extern VehicleSpec st_VehicleSpec;
+
+namespace {
+using asmc::lidar::Vec;
+constexpr double kDt = 0.1;
+constexpr std::int64_t kSec = 1000000000LL;
+
+bool ForceOff() { const char* v = std::getenv("TRACKING_OPTIONS_FORCE_OFF"); return v && std::string(v) == "1"; }
+
+void ConfigureCase(bool reacquire, bool ego_translation) {
+  frame_boundary::ConfigureForTest(true, false, "unit_test_calibration");
+  st_VehicleSpec = VehicleSpec{};
+  st_VehicleSpec.st_LiDARPos = {0.80f, 0.0f, 1.45f};
+  st_VehicleSpec.st_LiDARRotationDeg = {0.f, 0.f, 0.f};
+  st_VehicleSpec.st_GPSPos = {0.35f, 0.0f, 1.25f};
+  st_Tracking.s32_NewTrackId = 100;
+  st_Tracking.b_UseMapAssociation = true;
+  st_Tracking.f32_COST_W_DIST = 1.0F; st_Tracking.f32_COST_W_IOU = 1.0F;
+  st_Tracking.f32_COST_THRESHOLD = 3.0F; st_Tracking.f32_COST_INF = 9999.0F;
+  st_Tracking.f32_ContinuityBonus = 0.20F;
+  st_Tracking.f32_MergedTrackRetireDistance = 0.45F; st_Tracking.f32_DuplicateIouThreshold = 0.35F;
+  st_Tracking.f32_DuplicateCenterDistance = 0.60F;
+  tracking_options::Get().reacquire_elapsed_init = reacquire && !ForceOff();
+  tracking_options::Get().ego_translation_comp = ego_translation && !ForceOff();
+}
+
+struct Ego { double x = 0, y = 0, yaw = 0, v = 0; };
+struct World { double x = 0, y = 0, vx = 0, vy = 0; };
+
+// Ideal detection: point mean (KF measurement) = object reference point in the leveled sensor frame
+// (= sensor frame here: zero roll/pitch, zero mount rotation); a 4.6 x 1.9 m perimeter for the OBB.
+LiDARObjectInfo Detection(const Ego& e, const World& o) {
+  const double c = std::cos(e.yaw), s = std::sin(e.yaw);
+  const double dx = o.x - e.x, dy = o.y - e.y;
+  const double bx = c * dx + s * dy, by = -s * dx + c * dy;   // base_link
+  const float x = float(bx - st_VehicleSpec.st_LiDARPos.f32_X), y = float(by - st_VehicleSpec.st_LiDARPos.f32_Y);
+  LiDARObjectInfo d{};
+  d.f32_CoreX = x; d.f32_CoreY = y; d.f32_CoreZ = 0.f;
+  d.f32_CoreE = NAN; d.f32_CoreN = NAN;
+  d.f32_MinX = x - 2.3f; d.f32_MaxX = x + 2.3f; d.f32_MinY = y - 0.95f; d.f32_MaxY = y + 0.95f;
+  d.f32_OBB_CenterX = x; d.f32_OBB_CenterY = y; d.f32_OBB_Width = 4.6f; d.f32_OBB_Height = 1.9f;
+  for (int i = 0; i <= 10; ++i) for (int side = -1; side <= 1; side += 2) {
+    pcl::PointXYZI p; p.x = x - 2.3f + 0.46f * i; p.y = y + 0.95f * side; p.z = 0.f; p.intensity = 1.f;
+    d.pcl_ClusterPoints.push_back(p);
+  }
+  d.s32_Id = -1; d.b_KfInitialized = false; d.s32_KfInitCount = 0;
+  return d;
+}
+
+GPS_IMU Local(const Ego& e) {
+  GPS_IMU out{};
+  out.st_IMU.b_ImuReady = true;
+  out.st_IMU.f32_Yaw_rad = float(e.yaw); out.st_IMU.f32_Yaw_deg = float(e.yaw * 180. / M_PI);
+  out.st_CAN.f32_CurrentVel_MPS = float(e.v); out.st_CAN.f32_CurrentVel_KPH = float(e.v * 3.6);
+  return out;
+}
+
+struct Result { std::vector<int> ids; std::vector<double> abs_err; LiDARObjectInfo last; };
+
+// Runs n scans. visible(k) = whether the object is detected in scan k. ego(k)/object(k) give the truth.
+Result Simulate(int n, const std::function<Ego(int)>& ego, const std::function<World(int)>& object,
+           const std::function<bool(int)>& visible) {
+  Result r;
+  // Production FrameFilter (consolidation, first-scan births, CompareCentroids) with the global scan clock
+  // exactly as LidarProcess drives it. A far stationary 'anchor' car is always visible, as in real scans,
+  // so no scan has zero detections; the target detection carries u16_Idx 0.
+  std::deque<std::vector<LiDARObjectInfo>> history;
+  ts_PrevTime = ros::Time();
+  World anchor; anchor.x = -20; anchor.y = -25;
+  for (int k = 0; k < n; ++k) {
+    const Ego e = ego(k); const World o = object(k);
+    const GPS_IMU local = Local(e);
+    const std::int64_t ns = 50 * kSec + std::int64_t(k * kDt * 1e9 + 0.5);
+    ts_CurrTime.fromNSec(ns);
+    asmc::lidar::PoseSelection no_map; no_map.reason = "gps_missing";
+    frame_boundary::PrepareScan(asmc::lidar::Observation{ns, ns, ns, "ros", "bridge_receive_ns", ""}, local, st_VehicleSpec, no_map, k + 1);
+    frame_boundary::StoreLeveling(asmc::lidar::leveling_rotation(0., 0., asmc::lidar::Rot::Identity()));
+    std::vector<LiDARObjectInfo> now;
+    if (visible(k)) { now.push_back(Detection(e, o)); now.back().u16_Idx = 0; }
+    now.push_back(Detection(e, anchor)); now.back().u16_Idx = 1;
+    FrameFilter(history, now, local, st_VehicleSpec);
+    ts_PrevTime = ts_CurrTime;
+    for (auto& t : now) if (t.s32_MissCount == 0) frame_boundary::RecordTrackingFrame(t);
+    int id = -1;
+    for (const auto& t : now) if (t.s32_MissCount == 0 && t.u16_Idx == 0) { id = t.s32_Id; r.last = t; }
+    r.ids.push_back(id);
+    if (id >= 0 && r.last.s32_KfInitCount >= 2) {
+      // truth: object ground velocity in ego axes (tracking input axes = base axes here)
+      const double c = std::cos(e.yaw), s = std::sin(e.yaw);
+      const double tvx = c * o.vx + s * o.vy, tvy = -s * o.vx + c * o.vy;
+      r.abs_err.push_back(std::hypot(r.last.f32_AbsVx - tvx, r.last.f32_AbsVy - tvy));
+    } else r.abs_err.push_back(NAN);
+    history.push_back(now);
+    if (history.size() > 3) history.pop_front();
+  }
+  return r;
+}
+
+double MaxLast(const std::vector<double>& v, int count) {
+  double m = 0; int seen = 0;
+  for (auto it = v.rbegin(); it != v.rend() && seen < count; ++it) if (std::isfinite(*it)) { m = std::max(m, *it); ++seen; }
+  return m;
+}
+
+Ego Straight(int k, double v0, double a = 0.0) {
+  const double t = k * kDt; Ego e; e.v = v0 + a * t; e.x = v0 * t + 0.5 * a * t * t; return e;
+}
+Ego Arc(int k, double v, double w) {
+  const double t = k * kDt; Ego e; e.v = v; e.yaw = w * t;
+  e.x = v / w * std::sin(w * t); e.y = v / w * (1 - std::cos(w * t)); return e;
+}
+
+// ---------------------------------------------------------------------------------- reacquire (A)
+// New track (one observation) missed for 2 scans, re-acquired in scan 3 while the ego drives 5 m/s
+// past a parked car. P0 divides the 3-scan displacement by one scan dt: 3x the relative speed.
+double ReacquireAbsError(bool option) {
+  ConfigureCase(option, false);
+  auto r = Simulate(4, [](int k) { return Straight(k, 5.0); }, [](int) { World w; w.x = 25; w.y = 4; return w; },
+               [](int k) { return k == 0 || k == 3; });
+  EXPECT_EQ(r.ids[0], r.ids[3]) << "re-acquisition must keep the id";
+  return r.abs_err[3];
+}
+TEST(TrackingFrameOptions, FixReacquiredNewTrackVelocityUsesElapsedTime) {
+  EXPECT_LT(ReacquireAbsError(true), 0.05);
+}
+TEST(TrackingFrameOptions, GuardP0ReacquireDefectIsReproduced) {
+  if (ForceOff()) GTEST_SKIP();
+  EXPECT_GT(ReacquireAbsError(false), 5.0);   // documents the P0 defect: |abs v| = 10 m/s on a parked car
+}
+TEST(TrackingFrameOptions, GuardReacquireOptionIsNeutralWithoutMisses) {
+  ConfigureCase(false, false);
+  auto a = Simulate(20, [](int k) { return Straight(k, 7.0); }, [](int) { World w; w.x = 30; w.y = -3; return w; }, [](int) { return true; });
+  ConfigureCase(true, false);
+  auto b = Simulate(20, [](int k) { return Straight(k, 7.0); }, [](int) { World w; w.x = 30; w.y = -3; return w; }, [](int) { return true; });
+  for (int j = 0; j < 6; ++j) EXPECT_FLOAT_EQ(a.last.Eigen_KfState_CA(j), b.last.Eigen_KfState_CA(j));
+}
+
+// ---------------------------------------------------------------------------- ego translation (B)
+TEST(TrackingFrameOptions, FixParkedCarHasNoFakeSpeedWhileEgoTurns) {
+  ConfigureCase(true, true);
+  auto r = Simulate(40, [](int k) { return Arc(k, 8.0, 0.3); }, [](int) { World w; w.x = 10; w.y = 20; return w; }, [](int) { return true; });
+  for (std::size_t k = 1; k < r.ids.size(); ++k) EXPECT_EQ(r.ids[k], r.ids[0]);
+  EXPECT_LT(MaxLast(r.abs_err, 20), 0.05);
+}
+TEST(TrackingFrameOptions, FixParkedCarHasNoFakeSpeedWhileEgoAccelerates) {
+  ConfigureCase(true, true);
+  auto r = Simulate(40, [](int k) { return Straight(k, 2.0, 2.0); }, [](int) { World w; w.x = 40; w.y = 5; return w; }, [](int) { return true; });
+  EXPECT_LT(MaxLast(r.abs_err, 30), 0.05);
+}
+TEST(TrackingFrameOptions, FixMovingCarGroundVelocityWhileEgoTurns) {
+  ConfigureCase(true, true);
+  auto r = Simulate(40, [](int k) { return Arc(k, 8.0, 0.3); },
+               [](int k) { World w; w.vx = 0.0; w.vy = 6.0; w.x = 12; w.y = -5 + 6.0 * k * kDt; return w; },
+               [](int) { return true; });
+  EXPECT_LT(MaxLast(r.abs_err, 20), 0.05);
+}
+TEST(TrackingFrameOptions, GuardStraightConstantSpeedParkedCarIsStillInBothModes) {
+  for (bool on : {false, true}) {
+    ConfigureCase(true, on);
+    auto r = Simulate(40, [](int k) { return Straight(k, 10.0); }, [](int) { World w; w.x = 50; w.y = 6; return w; }, [](int) { return true; });
+    EXPECT_LT(MaxLast(r.abs_err, 20), 0.05) << "ego_translation_comp=" << on;
+  }
+}
+TEST(TrackingFrameOptions, GuardRotationInPlaceLeverArmHandledInBothModes) {
+  for (bool on : {false, true}) {
+    ConfigureCase(true, on);
+    auto r = Simulate(30, [](int k) { Ego e; e.yaw = 0.4 * k * kDt; return e; }, [](int) { World w; w.x = 12; w.y = 2; return w; }, [](int) { return true; });
+    EXPECT_LT(MaxLast(r.abs_err, 15), 0.05) << "ego_translation_comp=" << on;
+  }
+}
+// The new-track prior of the ground-referenced state is 'not moving in the world': a parked car seen
+// while the ego drives is predicted where it really is, so a 2-scan miss at 12 m/s keeps the id.
+TEST(TrackingFrameOptions, FixFastEgoMissedParkedCarKeepsId) {
+  ConfigureCase(true, true);
+  auto r = Simulate(8, [](int k) { return Straight(k, 12.0); }, [](int) { World w; w.x = 45; w.y = 4; return w; },
+               [](int k) { return k == 0 || k >= 3; });
+  EXPECT_EQ(r.ids[3], r.ids[0]);
+  EXPECT_EQ(r.ids[7], r.ids[0]);
+}
+}  // namespace
+
+int main(int argc, char** argv) {
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

@@ -527,6 +527,12 @@ struct LiDARObjectInfo
     float tracking_height_input = 0;
     asmc::lidar::Rot tracking_yaw_from_input = asmc::lidar::Rot::Identity();
     asmc::lidar::Vec tracking_origin_in_yaw = asmc::lidar::Vec::Zero();
+    // Experiment bookkeeping (behaviour changes only with tracking_options, default off):
+    // source stamp and CAN speed of the scan described by tracking_*, and the time elapsed since
+    // this track's last real measurement (missed scans accumulate their dt).
+    std::int64_t tracking_stamp_ns = 0;
+    float tracking_ego_speed_mps = 0;
+    double kf_elapsed_since_meas_s = 0;
 	string str_ObjectClass = "unknown";      // selected camera consumer group or unknown
 
     // str_ObjectClass를 확정시킨 YOLO 원본 라벨(16종/7종; 소비 그룹과 구분).
