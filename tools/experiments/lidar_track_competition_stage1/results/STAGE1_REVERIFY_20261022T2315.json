@@ -1,0 +1,80 @@
+{
+ "created": "2026-10-22T23:30:42+09:00",
+ "session": "continuation 2026-10-22 23:15 KST",
+ "binaries": {
+  "p0:lib/Main/lidar_dataset_replay": {
+   "manifest": "cbeea5b60171c4afd8352372c3dd91a8bae59f6c6e2c7fede8a208edbdb51af1",
+   "now": "cbeea5b60171c4afd8352372c3dd91a8bae59f6c6e2c7fede8a208edbdb51af1",
+   "same": true
+  },
+  "p0:lib/libmyHeader.so": {
+   "manifest": "fd7cc0f2a482163103ff2e6404ce58a8308b0963bc044ce5c17502b349d7049a",
+   "now": "fd7cc0f2a482163103ff2e6404ce58a8308b0963bc044ce5c17502b349d7049a",
+   "same": true
+  },
+  "p0:lib/Main/main": {
+   "manifest": "03e14f2d7204df235f4708c7d9a3e393078691e156faf0afe2df0d564dd69a45",
+   "now": "03e14f2d7204df235f4708c7d9a3e393078691e156faf0afe2df0d564dd69a45",
+   "same": true
+  },
+  "p0:lib/Main/test_tracking_frame_options": {
+   "manifest": null,
+   "now": null,
+   "same": null,
+   "note": "not built for this variant"
+  },
+  "cand:lib/Main/lidar_dataset_replay": {
+   "manifest": "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756",
+   "now": "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756",
+   "same": true
+  },
+  "cand:lib/libmyHeader.so": {
+   "manifest": "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7",
+   "now": "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7",
+   "same": true
+  },
+  "cand:lib/Main/main": {
+   "manifest": "cf1f0cbaf17826f41a81323e453d3e5dca227b4300f6401b887ebaa7df6f8cd7",
+   "now": "cf1f0cbaf17826f41a81323e453d3e5dca227b4300f6401b887ebaa7df6f8cd7",
+   "same": true
+  },
+  "cand:lib/Main/test_tracking_frame_options": {
+   "manifest": "0ad4cf9f5b009503663ee3677aa1842b3090a08b157ab80f38e68acede875db8",
+   "now": "0ad4cf9f5b009503663ee3677aa1842b3090a08b157ab80f38e68acede875db8",
+   "same": true
+  },
+  "cand_o2:lib/Main/lidar_dataset_replay": {
+   "manifest": "7706b617d6cc191257de79af0ae2a181bf2ed14272351188d1a1cce00ebaf392",
+   "now": "7706b617d6cc191257de79af0ae2a181bf2ed14272351188d1a1cce00ebaf392",
+   "same": true
+  },
+  "cand_o2:lib/libmyHeader.so": {
+   "manifest": "06dd4352866b7c999f918d8fa748e8422f1b3b192e7bb0d3f698a9fc44cac72a",
+   "now": "06dd4352866b7c999f918d8fa748e8422f1b3b192e7bb0d3f698a9fc44cac72a",
+   "same": true
+  },
+  "cand_o2:lib/Main/main": {
+   "manifest": "7b1e8cc74ca81759f4a5a6204945cbdad5e05313228eaa96aaa4dfa49217474e",
+   "now": "7b1e8cc74ca81759f4a5a6204945cbdad5e05313228eaa96aaa4dfa49217474e",
+   "same": true
+  },
+  "cand_o2:lib/Main/test_tracking_frame_options": {
+   "manifest": "fdbaff23b0ba8a2d5c3630a1bf59f9b40434d8effa129738f397a84722605f1c",
+   "now": "fdbaff23b0ba8a2d5c3630a1bf59f9b40434d8effa129738f397a84722605f1c",
+   "same": true
+  }
+ },
+ "git": {
+  "branch": "exp/lidar-track-competition-stage1-20261022_134204",
+  "head": "5c12c34686ca7c17d4cdc8f90866f201fab7557a",
+  "status_short_lines": 0,
+  "log": [
+   "5c12c346 docs(lidar): record stage-1 competition baseline, diagnosis and tools",
+   "669859c1 feat(lidar): add opt-in track trace, competition replay inputs and tracking frame options",
+   "39cffc57 test(lidar): add experiment-02 replay harness, evaluator and frozen eval contract",
+   "916e4d9e fix-lidar-local-output-across-gps-faults"
+  ]
+ },
+ "live_instance": "none (no roscore/rosbag/Main process running at session start; ps checked)",
+ "protected_snapshot": "results/PROTECTED_SNAPSHOT_AFTER.json unchanged; no product repo touched in this session"
+}

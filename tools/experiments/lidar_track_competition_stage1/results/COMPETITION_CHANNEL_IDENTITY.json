@@ -1,0 +1,35 @@
+{
+  "schema": "competition_channel_identity_v1",
+  "created": "2026-10-22T23:30:00+09:00",
+  "corrects": ["INPUT_CONTRACT.md section 2 and 7", "INPUT_ALLOWLIST.json sources_of_rules / vel_x.source_competition / vel_x.status_in_product_P0", "FIRST_STAGE_REPORT_KO.md 1.3 (P1) and 2 (105 B decode item)"],
+  "channels": {
+    "295": {"name": "Competition Vehicle Status", "header": "#MoraiInfo$", "body_bytes": 152, "datagram_bytes": 181, "extension_fields": 0,
+            "template_molitcomp03_dest": "127.0.0.1:9099", "bridge": "ego_port 9099 kind=ego", "ros_topic": "/Ego_topic", "msg": "morai_msgs/EgoVehicleStatus",
+            "contract_status": "ALLOWED (velocity.x only)", "velocity_x_unit_on_wire": "km/h (bridge ego_velocity_in_ms=true -> m/s)",
+            "constant_zero_fields_per_prior_audit": ["position", "velocity.y", "velocity.z", "acceleration"]},
+    "770": {"name": "Ego Vehicle Status", "header": "#MoraiInfo$", "datagram_bytes": 229, "extension_fields": 12,
+            "extension_names": ["tire_lateral_force_fl/fr/rl/rr", "side_slip_angle_fl/fr/rl/rr", "tire_cornering_stiffness_fl/fr/rl/rr"],
+            "template_molitcomp03_dest": "127.0.0.1:911", "bridge": "none under template", "contract_status": "JUDGING ONLY"},
+    "787": {"name": "Ego Detail Status", "header": "#DetailEgoInfo$", "body_bytes": 105, "template_molitcomp03_dest": "192.168.0.10:9798 (host 9797)",
+            "bridge": "competition_port 9798 kind=competition (optional envelope recognised, body NOT decoded)", "ros_topic": "/Competition_topic (0 messages)",
+            "contract_status": "JUDGING ONLY"}
+  },
+  "main_consumer": {"launch": "main.launch:126-128 remap /Competition_topic -> /Ego_topic", "verdict": "CORRECT under the molitcomp03 template (reads 295)", "P1_remap_violation_claim": "WITHDRAWN",
+                    "P2_velocity_norm_violation": "KEPT (Parser.cpp:532-533 sqrt(vx^2+vy^2+vz^2); sign lost; reads forbidden fields)"},
+  "hazards": {
+    "H3_local_morai_save": {"file": "C:/2026_MORAI/MoraiLauncher_Win/MoraiLauncher_Win_Data/SaveFile/Network/25.S4.MolitComp03/NetworkInfo_2023_Hyundai_Ioniq5.json",
+                            "observed_2026_10_22": {"770": "dest 9099", "295": "dest 909"},
+                            "effect": "bridge decodes 229 B (770, judging-only, with tyre/slip extension) on ego_port and Main consumes it silently",
+                            "mitigation": ["load the template network set (295 -> 9099) before any live/MORAI run and check bridge payload length == 181",
+                                           "next stage: bridge ego_port competition guard (accept 181 B only; 229/245 B -> fault)"]}
+  },
+  "evidence": [
+    {"level": "config_verified_this_session", "path": "2026-ASMC-nogps/config/morai/network/templates/ASMC_network_template_molitcomp03.json", "detail": "listEgoNetworkInfo[3] PUBSUB 295 -> 9099; [4] 770 -> 911; [7] 787 -> 9798 host 9797"},
+    {"level": "code_verified_this_session", "path": "2026-ASMC-nogps/src/asmc_bridge/scripts/morai_udp_bridge.py", "detail": "lines 56-75 EGO_VARIANTS {181,229,245}, EXT_NAMES only in 229/245; 95-125 optional 105 B DetailEgoInfo not decoded, docstring: competition simulator static inspection = 152 B payload; 197-198, 272-273 port->kind"},
+    {"level": "code_verified_this_session", "path": "2026-ASMC-nogps/src/asmc_bridge/launch/morai_udp_bridge.launch:12-13", "detail": "ego_port 9099 (Ego Vehicle Status Dest), competition_port 9798"},
+    {"level": "consistency", "detail": "stage-1 INPUT_CONTRACT recorded a 105 B #DetailEgoInfo$ packet observed on 9798 (2026-10-17): matches 787 (105 B), contradicts Competition Vehicle Status (152 B)"},
+    {"level": "prior_session_verified_not_reverified", "date": "2026-10-22T05:13+09:00", "detail": "installed MolitComp03 simulator network default item assets + Assembly-CSharp IL: 295=Competition Vehicle Status, 770=Ego Vehicle Status, 787=Ego Detail Status; re-decode failed this session (UnityPy needs Python>=3.9, WSL has 3.8; simulator body directory absent, only the launcher is installed)"}
+  ],
+  "contradicting_repo_docs_to_fix_later": ["config/morai/README.md:57,91,95", "docs/competition/rule-v1.2-impacts.md section 1 and 8", "validate_bridge_profiles.py:239-247", "bridge_profiles_v1.json"],
+  "impact_on_stage1_numbers": "none (harness fed vel_x only; realtime feeder filled /Ego_topic velocity.x only, labelled as the Competition vel_x channel)"
+}
