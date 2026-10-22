@@ -24,7 +24,7 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 정식 후보 local/map 경로는 아래 표를 유지하되, 새 실행의 동시 비교 출력만
 `/migration/lidar/objects_local`, `/migration/lidar/objects_map`으로 namespace/remap한다.
 센서·카메라 입력은 정본 경로를 구독한다. 새 상태·진단 타입, session/ID·소비자 캐시 초기화,
-pose 선택과 시간 한계는 L1에서 확정한다. 현재 없는 타입을 구현된 계약으로 등록하지 않는다.
+pose 선택과 시간 한계는 [L1 설계](../../src/asmc_lidar/docs/migration-design.md)로 고정한다. 현재 없는 타입을 구현된 계약으로 등록하지 않는다.
 L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험 생산자를 연결하지 않는다.
 
 ## 공용 타입과 목표 연결
@@ -52,8 +52,9 @@ L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험
 
 ## 좌표·시간·속도
 
-아래 strict 보간은 기존 목표 계약이다. Main opt-in의 bounded 정책과 구분하며 새 실행의
-정책·시간 한계는 L1에서 확정해 이 절에 반영하고 L3에서 검증한다. 목표는 GPS/미션과
+아래 strict 보간은 기존 코어 API의 계약이다. 새 실행 정책은 L1에서 **bounded300ms·복구3회**로
+선택했으며 유효 IMU·속도가 전제다. IMU/속도 age120ms·대기50ms, source/receipt 분리는
+[L1 설계](../../src/asmc_lidar/docs/migration-design.md)를 따르고 L3에서 구현·검증한다. 목표는 GPS/미션과
 무관한 local 처리·발행과 scan 시각의 유효 pose에서만 생성하는 map 객체다. map 무효는
 정상 빈 객체로 위장하지 않고 상태로 구분한다. 지금 실행 기본값을 바꾼 것은 아니다.
 
@@ -63,7 +64,7 @@ L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험
 - stamp는 관측의 bridge 수신 기준을 보존한다. 실제 광선 발사 시각이나 처리 완료시각으로
   바꾸지 않는다. 관측·수신·처리 timestamp는 같은 clock임을 검증하고 CPU duration은
   steady/monotonic clock으로 따로 잰다.
-- map pose는 처리 시점까지 도착한 유효 양쪽 표본에서 최대 100ms 간격으로 보간한다.
+- strict `PoseHistory` API는 처리 시점까지 도착한 유효 양쪽 표본에서 최대 100ms 간격으로 보간한다.
   외삽하지 않는다. GPS 안테나와 후륜축 offset, map 원점·고도 기준을 검증한다.
   2D VehicleState만으로 완전한 3D pose를 만들지 않는다.
 - 이미 절대속도인 벡터는 축만 회전한다. base 좌표 위치의 미분은

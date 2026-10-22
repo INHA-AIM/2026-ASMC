@@ -2,7 +2,7 @@
 
 **2026-10-22: 안승현이 L0–L8 단위로 직접 이관을 진행한다.** 손재호의 별도 개발은
 병행하며 해당 브랜치 제공을 착수 조건으로 두지 않는다. 기존 팀 ownership·리뷰 경계는
-유지한다. 이번 L0는 문서·계약 상태 정리이며 코드 이관·운영 전환이 아니다.
+유지한다. L0–L1은 문서·설계·기준선 정리이며 코드 이관·운영 전환이 아니다.
 
 현재 `asmc_lidar`는 **좌표·시간 기반과 공용 카메라 수신·버퍼·투영 컴포넌트**, 그리고 Main common-geometry
 LiDAR 처리(ROI·Voxel·roll·pitch 수평화·RANSAC·군집·OBB·추적·전방 fusion·typed local/map)를 동작 보존 이식한
@@ -22,6 +22,8 @@ shadow의 비교 기준선은 Tracker yaw 수정이 반영된 Main `8f93c22e`(`f
 행렬 수치 대조와 센서 시각·지면·pose 제공자 차이를 기록했다.
 
 작업 상태·선행 조건·완료 근거의 정본은 [단계별 작업표](../../src/asmc_lidar/docs/migration-tasks.md)다.
+L1 구조·입출력·시각·pose 정책은 [이관 설계](../../src/asmc_lidar/docs/migration-design.md),
+고정 소스/설정·입력 SHA는 [L1 manifest](../../config/baselines/lidar_migration_l1_v1.yaml)를 따른다.
 현재 판제는 nested `lidar+sensorfusion`의 Main과 `/last_lidar`·tracked/motion 경로를 계속 쓴다.
 새 경로의 검증과 판제 인수 전에는 이 실행 경로·기본 설정·출력을 변경하지 않는다.
 
@@ -77,7 +79,7 @@ L7에서 기존 발행자·호환 어댑터를 정지하고 새 경로를 정식
 - roll/pitch 보정은 구간별 다른 정책 대신 같은 좌표·시각 규칙으로 검증한다. 지면 근거나
   IMU 무효를 숨기지 않는다. 자세 보정은 추적기의 ego motion 보상이나 deskew를 대신하지 않는다.
 - map 객체는 scan 시각의 유효 pose에서만 만든다. GPS 0·무효·stale에서 이전 위치를
-  무기한 재사용하지 않는다. strict 보간과 bounded pose의 선택·시간 한계는 L1에서 확정한다.
+  무기한 재사용하지 않는다. 새 실행은 L1에서 고정한 bounded300ms·복구3회를 사용한다. strict100ms 보간 코어는 별도 시험 API로 유지한다.
 - 정상 빈 결과·센서 무효·pose 무효·미수신을 구분한다. 미확정 속도·운동 상태를 유효한
   0/static으로 치환하지 않는다. 현재 `LidarObjectArray`의 상태와 속도 validity를 재사용 검토한다.
 - 측정 품질·속도 이상·일반 중복·지도 관련성은 인지 책임이다. TTC·추종·정지·재출발·회피와
@@ -90,7 +92,7 @@ L7에서 기존 발행자·호환 어댑터를 정지하고 새 경로를 정식
 ## 읽는 순서와 검증 상태
 
 1. 이 README와 [현재 카메라 인계](camera-to-lidar.md)에서 실행/계약·현재 구현과 후속 과제를 확인한다.
-2. [작업표](../../src/asmc_lidar/docs/migration-tasks.md)에서 L1부터 한 단위씩 계획한다. B1a 과제 대응표와 과거 증거를 함께 확인한다.
+2. [작업표](../../src/asmc_lidar/docs/migration-tasks.md)에서 L1 결과를 확인하고 L2부터 한 단위씩 계획한다. B1a 과제 대응표와 과거 증거를 함께 확인한다.
 3. [PR #72 연속 회귀](../records/lidar/lidar-continuous-regression.md)에서 시간·지면·추적 검증과 미수락 항목을 확인한다.
 4. [좌표 경계](../records/lidar/lidar-camera-frame-boundaries.md)와 [외부 참고 검토](../records/camera/camera-lidar-coordinate-reference-review.md)를 세부 근거로 읽는다.
 5. [소스 README](../../src/asmc_lidar/README.md)에서 코어 API·빌드·시험을 확인한다.
@@ -124,7 +126,7 @@ python3 -m http.server 8767 --bind 127.0.0.1 \
 검토 순서는 **연속 구간 1·2·3의 벽 조각/바닥 노이즈 → 분류 10번의 OBB와 우측 영상 →
 11관측의 분류 카운터 → 속도 급변 분포**다. 24점은 사진 없는 합성 정책 시험이다.
 같은 source stamp의 point→cluster→OBB→track/분류 이력을 이어서 확인한다.
-[작업표](../../src/asmc_lidar/docs/migration-tasks.md)의 과거 구조물·속도 증거로 연결한다. 다음 구현 계획은 L1이며 연구 확대는 L8이다.
+[작업표](../../src/asmc_lidar/docs/migration-tasks.md)의 과거 구조물·속도 증거로 연결한다. 다음 구현 계획은 L2이며 연구 확대는 L8이다.
 현재 세션의 localhost 8766 서버나 `/tmp` 경로는 향후 재현에 필요하지 않다.
 
 L8 위치·속도 개선의 과거 참고 순서는 [과제 목록의 관측 조사·비교 순서](../../src/asmc_lidar/docs/migration-tasks.md#위치속도-관측-조사와-재호의-비교-순서--2026-10-08)를 따른다.
@@ -163,7 +165,7 @@ YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다.
 [L0–L8 작업표](../../src/asmc_lidar/docs/migration-tasks.md)가 유일한 실행 순서 정본이다.
 L0 문서 → L1 구조·계약·기준선 → L2 검출 → L3 좌표·시간·추적 → L4 전방 fusion →
 L5 인지 필터 → L6 발행·실행·시각화 → L7 대조·판제 전환 → L8 개선 우선순위로 진행한다.
-각 단위는 별도 계획·구현·검증·커밋으로 닫고, 다음 착수는 **L1만** 구체화한다.
+각 단위는 별도 계획·구현·검증·커밋으로 닫는다. L1 결과를 확인한 뒤 다음은 **L2만** 구체화한다.
 
 아래 모드 없는 구조물 분리·참고 구현 제안은 과거 인계의 후속 연구다. 이관 필수조건으로
 모두 확장하지 않는다. 기존 객체 보존 회귀는 재사용하고 새 구조물 표현·억제는 L8에서
@@ -317,7 +319,7 @@ GUI 의존성을 따로 검토한다. 논문의 FPS를 우리 전체 처리시�
   revision도 미동결이다. 이번에는 clone/학습/추론하지 않고 후순위로 둔다.
 
 **당시 재호에게 제안한 첫 연구 실험은 1번의 관측 전용 구조물 근거 추출이다.**
-현재 다음 작업은 L1이며 아래 연구 제안의 재개 여부는 L8에서 결정한다. 기존 지면·
+현재 다음 구현 계획은 L2이며 아래 연구 제안의 재개 여부는 L8에서 결정한다. 기존 지면·
 군집·OBB를 고정하고 동일 scan에서 유한한 평면 지지 범위와 돌출부/미확정만 겹쳐 표시한다.
 억제 OFF의 점/객체 결과 동일성, 벽과 트럭 측면을 혼동한 사례, 지지 범위의 누락과 계산
 비용을 먼저 기록한다. 가드레일/곡면의 근거가 부족하면 미확정으로 남긴다. 그 결과를 보고

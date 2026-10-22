@@ -26,6 +26,10 @@ shadow 노드는 `/asmc_lidar/shadow/*`에만 발행하며 어떤 기존 launch�
 
 ## 목표 구조와 현재 경계
 
+[L1 설계](docs/migration-design.md)에 입력·pose·속도·출력·L2 추출 경계를 확정했고
+[L1 manifest](../../config/baselines/lidar_migration_l1_v1.yaml)에 source/설정/입력 SHA와 검증 범위를 기록했다.
+설계 결정이며 새 LiDAR 실행이 구현된 상태는 아니다.
+
 목표 책임은 `geometry / preprocessing / detection / tracking / fusion / filtering / ros`다.
 아래 기존 코어를 재사용하며 실제 폴더는 구현할 때 만든다. 빈 골격·새 LiDAR launch는 이번에 추가하지 않는다.
 새 실행의 출력은 `/migration/lidar/...`로 격리하고 기존 운영 입력은 유지한다.

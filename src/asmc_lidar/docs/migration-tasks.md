@@ -6,14 +6,14 @@
 
 ## 상태와 작업 규칙
 
-상태는 `미착수 / 진행 / 검증 대기 / 완료 / 보류`로 사용한다. L1–L8은 모두 미착수다.
+상태는 `미착수 / 진행 / 검증 대기 / 완료 / 보류`로 사용한다. L1 설계·기준선은 아래에 연결하며 L2–L8은 미착수다.
 이미 구현된 좌표·시간·카메라 입력 코어는 재사용 입력이며 전체 이관 완료로 세지 않는다.
-각 단위는 별도 계획 → 구현 → 검증 → 문서·로컬 커밋으로 진행한다. 다음 플랜은 L1만 다룬다.
+각 단위는 별도 계획 → 구현 → 검증 → 문서·로컬 커밋으로 진행한다. L1 설계·기준선 검증까지 완료했으며 다음 플랜은 L2만 다룬다.
 
 | 단위 | 상태 | 선행 | 결과 |
 |---|---|---|---|
 | L0 문서 통합 | 완료 | 사용자 승인 계획 | 기존 과제 연결·구현 상태·단계별 완료 기준 |
-| L1 구조·계약·기준선 | 미착수 | L0 | 책임·입출력·설정 소유권·고정 비교 자료 |
+| L1 구조·계약·기준선 | 완료 | L0 | [설계](migration-design.md)·[기준선 manifest](../../../config/baselines/lidar_migration_l1_v1.yaml) |
 | L2 검출 경로 | 미착수 | L1 | 입력·ROI·voxel·지면·군집·OBB 라이브러리/시험 경로 |
 | L3 좌표·시간·추적 | 미착수 | L2 | GPS 독립 local, 유효 pose map, 일관된 자세·속도 의미 |
 | L4 카메라 fusion | 미착수 | L3 | 기존 전방 매칭·분류 유지 이관 |
@@ -40,9 +40,10 @@
 ### L1 구조·계약·기준선
 
 - **입력·재사용:** 기존 Main 처리 단계·설정, 공용 좌표/카메라 코어, 최신 판제 소비 코드와 기존 bag·fixture.
-- **범위:** geometry/preprocessing/detection/tracking/fusion/filtering/ros 책임, source/receive 시각, pose 정책·시간 한계, IMU·차량 속도 무효 동작, local/map·속도·상태·재시작 계약을 확정한다. 입력·출력·설정 소유권과 기준선 SHA를 고정한다.
+- **범위:** [L1 설계](migration-design.md)에 책임·입출력·설정 소유권·scan context·좌표·속도·상태 의미를 확정했다. 선택한 map 정책은 GPS 최대300ms 예측·복구3회이며 IMU/속도 source age120ms·대기50ms다. 실제 Competition 입력은 검증 대기이고 Ego fallback은 금지한다.
 - **제외:** 새 알고리즘·메시지 구현·운영 전환. 새 상태 타입은 기존 타입으로 표현 불가능한 요구가 확인된 경우만 설계한다.
-- **검사·근거:** 현재 발행자·소비자·필터와 후보 메시지 필드를 대응시키고 기준선 launch·설정/입력 SHA·실제 측정 가능 항목·검증 한계를 남긴다.
+- **검사·근거:** [L1 manifest](../../../config/baselines/lidar_migration_l1_v1.yaml)에 main `19bc7697`·source subtree·설정/지도/보정32개·raw bag2개 전체 SHA·메시지 MD5·컨테이너를 고정했다. frame_time35개·geometry/bounded pose·IMU 코어 실행파일3개를 /tmp에 새로 컴파일해 통과했다. 문서/공용 계약 unittest32개, migration/history·runtime 문서·MD5·manifest 검사가 통과했다. SHA 검사는 source subtree7개·설정/근거32개·raw bag2개 전체 bytes·규정 사본·공용/구형 MD5를 대조했다. 기존 B1a 본문은 보존했고 실행 변경은 없다.
+- **한계:** 공식 URL은 동적 본문 미추출, 보존 v1.2 사본으로 대조했다. 두 bag은 Ego 개발 입력이며 실제 Competition/독립 GT가 없다. GPS invalid/missing variant의 옛 alias는 미확인이므로 L3 전 재발견/재생성한다. bag 재생·ROS 노드 실행은 하지 않았다.
 - **복구:** 기준선 Main 유지. 설계 선택을 수정해도 실행 변경 없음.
 
 ### L2 검출 경로

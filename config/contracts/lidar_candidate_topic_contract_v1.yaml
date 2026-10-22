@@ -6,6 +6,13 @@ implementation:
   coordinate_time_core: available
   imu_selection_core: available
   detection_tracking_fusion: shadow_port_explicit_launch_not_operational
+  migration_work_units: src/asmc_lidar/docs/migration-tasks.md
+  migration_design: src/asmc_lidar/docs/migration-design.md
+  migration_design_baseline: config/baselines/lidar_migration_l1_v1.yaml
+  target_pose_policy: bounded_300ms_recovery3_shadow_implemented_acceptance_pending
+  migration_lead: ahnsh03
+  parallel_development: sonshiny
+  camera_observation_receiver: available_library_and_probe
   ros_publishers_and_adapters: Main_opt_in_frame_boundary
   operational_default_promotion: pending
   skeleton_publishes_topics: false  # the shadow node publishes only /asmc_lidar/shadow/*, none of planned_topics
