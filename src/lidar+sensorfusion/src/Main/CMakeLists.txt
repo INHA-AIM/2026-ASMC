@@ -94,6 +94,14 @@ target_link_libraries(main myHeader
   Geographic
 )
 
+# GPS 음영구역 구조물 필터 코어(PCL 전용, ROS 비의존).
+# 실행 경로와 격리: myHeader·main에 넣거나 링크하지 않고 단위 테스트만 링크한다.
+# 기본 빌드(all)에서 제외하며, 테스트 대상의 의존성 또는 직접 지정할 때만 빌드한다.
+add_library(tunnel_filter_core EXCLUDE_FROM_ALL
+  src/Lidar/TunnelFilter/TunnelFilterCore.cpp
+)
+target_link_libraries(tunnel_filter_core ${PCL_LIBRARIES})
+
 if(CATKIN_ENABLE_TESTING)
   add_executable(warmup_motion_evidence_test test/test_warmup_motion_evidence.cpp)
   target_include_directories(warmup_motion_evidence_test PRIVATE src)
@@ -219,6 +227,13 @@ if(CATKIN_ENABLE_TESTING)
   )
   if(TARGET test_sensor_pose_history)
     target_link_libraries(test_sensor_pose_history myHeader ${catkin_LIBRARIES})
+  endif()
+  catkin_add_gtest(test_tunnel_filter_core
+    test/test_tunnel_filter_core.cpp
+  )
+  if(TARGET test_tunnel_filter_core)
+    target_link_libraries(test_tunnel_filter_core
+      tunnel_filter_core ${PCL_LIBRARIES})
   endif()
 endif()
 
