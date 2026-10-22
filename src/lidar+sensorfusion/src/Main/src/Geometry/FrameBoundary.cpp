@@ -184,26 +184,61 @@ void RecordTrackingFrame(LiDARObjectInfo& object) {
   object.tracking_yaw_from_input=YawFromInput();
   object.tracking_origin_in_yaw=OriginInYaw();
 }
-void AlignTrackingFrame(LiDARObjectInfo& object,double yaw_now_rad) {
-  if(!Enabled() || !object.tracking_frame_valid) return;
+namespace {
+struct TrackingFrameChange {asmc::lidar::Rot rotation; asmc::lidar::Vec translation;};
+// Previous tracking frame -> current one, for any point attached to the track.
+TrackingFrameChange ChangeSincePrevious(const LiDARObjectInfo& object,double yaw_now_rad) {
   const auto inverse=YawFromInput().transpose().eval();
   const auto yaw_change=asmc::lidar::rpy(0,0,object.f32_PrevYaw-yaw_now_rad);
-  const auto rotation=(inverse*yaw_change*object.tracking_yaw_from_input).eval();
-  const auto translation=(inverse*(yaw_change*object.tracking_origin_in_yaw-OriginInYaw())).eval();
+  return {(inverse*yaw_change*object.tracking_yaw_from_input).eval(),
+          (inverse*(yaw_change*object.tracking_origin_in_yaw-OriginInYaw())).eval()};
+}
+void AlignState(LiDARObjectInfo& object,const TrackingFrameChange& change,double yaw_now_rad) {
   // Re-express the previous state before the unchanged relative CA prediction.
   // Do not subtract CAN displacement: relative CA already models ego motion.
   const asmc::lidar::Vec position(object.Eigen_KfState_CA(0),object.Eigen_KfState_CA(1),object.tracking_height_input);
-  const auto next=(rotation*position+translation).eval();
+  const auto next=(change.rotation*position+change.translation).eval();
   Eigen::Matrix<float,6,6> jacobian=Eigen::Matrix<float,6,6>::Zero();
   for(unsigned block=0;block<3;++block)
-    jacobian.block<2,2>(2*block,2*block)=rotation.topLeftCorner<2,2>().cast<float>();
+    jacobian.block<2,2>(2*block,2*block)=change.rotation.topLeftCorner<2,2>().cast<float>();
   object.Eigen_KfState_CA=jacobian*object.Eigen_KfState_CA;
   object.Eigen_KfState_CA(0)=next.x();object.Eigen_KfState_CA(1)=next.y();
   object.Eigen_KfP_CA=jacobian*object.Eigen_KfP_CA*jacobian.transpose();
-  const auto axis=(rotation*asmc::lidar::Vec(std::cos(object.f32_OBB_YawRad),std::sin(object.f32_OBB_YawRad),0)).eval();
-  object.f32_OBB_YawRad=std::atan2(axis.y(),axis.x());
   object.f32_PrevYaw=yaw_now_rad;
   RecordTrackingFrame(object); object.tracking_height_input=next.z();
+}
+}
+void AlignTrackingState(LiDARObjectInfo& object,double yaw_now_rad) {
+  if(!Enabled() || !object.tracking_frame_valid) return;
+  AlignState(object,ChangeSincePrevious(object,yaw_now_rad),yaw_now_rad);
+}
+void AlignTrackingFrame(LiDARObjectInfo& object,double yaw_now_rad) {
+  if(!Enabled() || !object.tracking_frame_valid) return;
+  const auto change=ChangeSincePrevious(object,yaw_now_rad);
+  // The OBB was measured in the previous scan: center, corners and long axis
+  // take the same frame change as the filter state, exactly once. The box is
+  // only re-expressed; the relative CA prediction moves the KF state alone.
+  const auto move=[&](float& x,float& y,float& z) {
+    const auto p=(change.rotation*asmc::lidar::Vec(x,y,z)+change.translation).eval();
+    x=p.x();y=p.y();z=p.z();
+  };
+  const float previous_center_z=object.f32_OBB_CenterZ;
+  move(object.f32_OBB_CenterX,object.f32_OBB_CenterY,object.f32_OBB_CenterZ);
+  object.f32_OBB_ZMin+=object.f32_OBB_CenterZ-previous_center_z;
+  object.f32_OBB_ZMax+=object.f32_OBB_CenterZ-previous_center_z;
+  for(auto& corner:object.OBB_Corners_Body) move(corner.x,corner.y,corner.z);
+  const auto axis=(change.rotation*asmc::lidar::Vec(std::cos(object.f32_OBB_YawRad),std::sin(object.f32_OBB_YawRad),0)).eval();
+  double yaw=std::atan2(axis.y(),axis.x());
+  // Corner 0->1 is the yaw edge (computeOBBAtYaw order). A tilted frame change
+  // gives that edge a z component the 2D yaw cannot carry, so follow the edge.
+  // That correction is tiny; a large one means another corner order, so skip it.
+  const auto& first=object.OBB_Corners_Body[0];const auto& second=object.OBB_Corners_Body[1];
+  if(std::hypot(second.x-first.x,second.y-first.y)>1e-6) {
+    const double correction=std::remainder(std::atan2(second.y-first.y,second.x-first.x)-yaw,M_PI);
+    if(std::abs(correction)<.1) yaw+=correction;
+  }
+  object.f32_OBB_YawRad=std::atan2(std::sin(yaw),std::cos(yaw));
+  AlignState(object,change,yaw_now_rad);
 }
 void StoreLeveling(const asmc::lidar::Rot& rotation){current.applied_leveling=rotation;}
 }  // namespace frame_boundary

@@ -46,13 +46,18 @@ inline Eigen::Matrix2f rot2(float dpsi){
 }
 
 // ★ 자차 요 변화량만큼 상태/공분산을 현재 바디 프레임으로 회전 정렬
-inline void compensate_ego_yaw(LiDARObjectInfo &o, float ego_yaw_now_deg)
+// previous_obb: OBB가 아직 이전 scan 관측이면 true(예측 전용 트랙).
+inline void compensate_ego_yaw(LiDARObjectInfo &o, float ego_yaw_now_deg, bool previous_obb)
 {
     // 1) 현재 yaw [deg] → rad 변환
     float yaw_now = ego_yaw_now_deg * M_PI / 180.0f;
 
     if(frame_boundary::Enabled() && o.tracking_frame_valid) {
-        frame_boundary::AlignTrackingFrame(o,yaw_now); return;
+        // 예측 전용 트랙은 이전 scan OBB까지 함께 옮긴다. 매칭 트랙의 OBB는
+        // 이미 현재 scan 검출이므로 이전 scan에서 복사한 필터 상태만 옮긴다.
+        if (previous_obb) frame_boundary::AlignTrackingFrame(o,yaw_now);
+        else frame_boundary::AlignTrackingState(o,yaw_now);
+        return;
     }
     // 2) Δyaw = 현재 - 과거 ([-π, π]로 정규화)
     float dpsi = wrapToPi(yaw_now - o.f32_PrevYaw);
@@ -81,8 +86,8 @@ std::pair<float, float> predictKalmanPosition(
         aligned.tracking_frame_valid=true;aligned.tracking_height_input=obj.tracking_height_input;
         aligned.tracking_yaw_from_input=obj.tracking_yaw_from_input;
         aligned.tracking_origin_in_yaw=obj.tracking_origin_in_yaw;
-        aligned.f32_PrevYaw=obj.f32_PrevYaw;aligned.f32_OBB_YawRad=obj.f32_OBB_YawRad;
-        frame_boundary::AlignTrackingFrame(aligned,to_ccw_rad(ego_yaw_now));
+        aligned.f32_PrevYaw=obj.f32_PrevYaw;
+        frame_boundary::AlignTrackingState(aligned,to_ccw_rad(ego_yaw_now));
         const auto& x=aligned.Eigen_KfState_CA;
         return {x(0)+dt*x(2)+.5*dt*dt*x(4),x(1)+dt*x(3)+.5*dt*dt*x(5)};
     }
@@ -115,7 +120,7 @@ void kalman_filter_predict(LiDARObjectInfo &o, float64 dt, float ego_yaw_now)
 
     // 1) "현재 프레임 바디 좌표"로 회전 정렬 (수동 회전 내부에서 처리)
     //    이 호출 안에서 PrevYaw가 ego_yaw_now로 갱신됨
-    compensate_ego_yaw(o, ego_yaw_now);
+    compensate_ego_yaw(o, ego_yaw_now, true);
 
     // 2) 표준 CA 예측
     Eigen::Matrix<float, 6, 6> A = Eigen::Matrix<float, 6, 6>::Identity();
@@ -155,7 +160,7 @@ void kalman_filter_update(LiDARObjectInfo &obj,
     // --- 프레임 정렬(수동 회전) : 지난 프레임 기준 상태/공분산을 "현재 바디 프레임"으로 재표현 ---
     // 내부에서 PrevYaw가 ego_yaw_now로 갱신됨
     // ROS_INFO("[BEFORE] &obj=%p prev=%.6f", (void*)&obj, obj.f32_PrevYaw);
-    compensate_ego_yaw(obj, ego_yaw_now);
+    compensate_ego_yaw(obj, ego_yaw_now, false);
 
     // --- 두 번째 프레임: 속도 초기화 (pred_x/pred_y는 반드시 '현재 프레임 기준'이어야 함) ---
     if (obj.s32_KfInitCount == 1) {

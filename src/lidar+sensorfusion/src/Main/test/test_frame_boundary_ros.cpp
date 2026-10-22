@@ -4,16 +4,18 @@
 #include <Parser/Parser.hpp>
 #include <Camera/Camera.hpp>
 #include <Lidar/Tracking/tracking_utils.hpp>
+#include <Lidar/Kalman/kalman_utils.hpp>
 #include <Lidar/ImuRansac/ImuRansac.hpp>
 #include <ros/package.h>
 #include <mutex>
 #include <functional>
 #include <limits>
+#include <algorithm>
 
 extern VehicleSpec st_VehicleSpec;
 namespace {
-void Configure() {
-  ros::NodeHandle node("~"); node.setParam("enable_common_geometry",true); node.setParam("lidar_level_roll",true);
+void Configure(bool level_roll=true) {
+  ros::NodeHandle node("~"); node.setParam("enable_common_geometry",true); node.setParam("lidar_level_roll",level_roll);
   st_VehicleSpec.st_LiDARPos={.8f,0,1.45f}; st_VehicleSpec.st_LiDARRotationDeg={0,0,0};
   st_VehicleSpec.st_GPSPos={.35f,0,1.25f};
   CAMERA camera{};
@@ -174,6 +176,271 @@ TEST(FrameBoundary, TrackingReexpressesRollPitchAndNonzeroMountWithoutEgoDoubleC
   CompareCentroids(past,detections,.1,local);
   ASSERT_FALSE(detections.empty());EXPECT_EQ(detections.front().s32_Id,42);
   EXPECT_NEAR(detections.front().f32_CoreX,new_point.x(),1e-5);
+}
+
+// Tracker OBB geometry ownership. A world-fixed box is expressed in each scan
+// with the scan model above, p=L*mount^-1*(R^T*w); ego translation is zero, so
+// a previous-scan point reaches the current scan only through the frame change.
+struct TrackScan {
+  GPS_IMU local; asmc::lidar::Pose mount; asmc::lidar::Rot level;
+  asmc::lidar::Vec Point(const asmc::lidar::Vec& world) const {
+    return level*(mount.inverse()*(frame_boundary::MapRotation(local).transpose()*world));
+  }
+  asmc::lidar::Vec Direction(const asmc::lidar::Vec& world) const {
+    return level*(mount.rotation().transpose()*(frame_boundary::MapRotation(local).transpose()*world));
+  }
+  asmc::lidar::Vec World(const asmc::lidar::Vec& point) const {
+    return frame_boundary::MapRotation(local)*(mount*(level.transpose()*point));
+  }
+};
+TrackScan BeginTrackScan(double time,double yaw,double roll,double pitch,const VehicleSpec& vehicle) {
+  TrackScan scan; scan.local=Local(yaw);
+  scan.local.st_IMU.f32_Roll_rad=roll; scan.local.st_IMU.f32_Pitch_rad=pitch;
+  scan.mount=frame_boundary::SensorMount(vehicle);
+  scan.level=asmc::lidar::leveling_rotation(scan.local.st_IMU.f32_Roll_rad,
+      scan.local.st_IMU.f32_Pitch_rad,scan.mount.rotation(),frame_boundary::UseRoll());
+  asmc::lidar::PoseSelection unavailable; unavailable.reason="gps_missing";
+  Now(time); frame_boundary::PrepareScan(ros::Time(time),scan.local,vehicle,unavailable);
+  frame_boundary::StoreLeveling(scan.level);
+  return scan;
+}
+struct WorldBox {asmc::lidar::Vec center; double heading,length,width,height;};
+asmc::lidar::Vec Heading(const WorldBox& box) {return {std::cos(box.heading),std::sin(box.heading),0};}
+// computeOBBAtYaw order: 0->1 is the yaw (length) edge, 4..7 repeat 0..3 on the top face.
+std::array<asmc::lidar::Vec,8> WorldCorners(const WorldBox& box) {
+  const auto u=Heading(box); const asmc::lidar::Vec v(-u.y(),u.x(),0),up(0,0,.5*box.height);
+  const double su[]={-1,1,1,-1},sv[]={-1,-1,1,1};
+  std::array<asmc::lidar::Vec,8> out;
+  for(unsigned i=0;i<4;++i) {
+    const auto xy=(box.center+.5*su[i]*box.length*u+.5*sv[i]*box.width*v).eval();
+    out[i]=xy-up; out[i+4]=xy+up;
+  }
+  return out;
+}
+LiDARObjectInfo BoxDetection(const TrackScan& scan,const WorldBox& box) {
+  LiDARObjectInfo out{}; out.s32_Id=-1; out.str_ObjectClass="car"; out.str_YoloClass="car";
+  const auto world=WorldCorners(box);
+  double low=1e9,high=-1e9; out.f32_MinX=out.f32_MinY=1e9; out.f32_MaxX=out.f32_MaxY=-1e9;
+  for(unsigned i=0;i<8;++i) {
+    const auto p=scan.Point(world[i]);
+    out.OBB_Corners_Body[i]={float(p.x()),float(p.y()),float(p.z())};
+    low=std::min(low,p.z()); high=std::max(high,p.z());
+    out.f32_MinX=std::min<float>(out.f32_MinX,p.x()); out.f32_MaxX=std::max<float>(out.f32_MaxX,p.x());
+    out.f32_MinY=std::min<float>(out.f32_MinY,p.y()); out.f32_MaxY=std::max<float>(out.f32_MaxY,p.y());
+  }
+  // Cluster points: corners plus edge midpoints, all in this scan's leveled frame.
+  static const int edges[12][2]={{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
+  for(unsigned i=0;i<8;++i) {
+    pcl::PointXYZI p; const auto q=scan.Point(world[i]); p.x=q.x(); p.y=q.y(); p.z=q.z(); p.intensity=1;
+    out.pcl_ClusterPoints.push_back(p);
+  }
+  for(const auto& e:edges) {
+    pcl::PointXYZI p; const auto q=scan.Point(.5*(world[e[0]]+world[e[1]])); p.x=q.x(); p.y=q.y(); p.z=q.z();
+    p.intensity=1; out.pcl_ClusterPoints.push_back(p);
+  }
+  const auto center=scan.Point(box.center), axis=scan.Direction(Heading(box));
+  out.f32_CoreX=out.f32_OBB_CenterX=center.x(); out.f32_CoreY=out.f32_OBB_CenterY=center.y();
+  out.f32_CoreZ=out.f32_OBB_CenterZ=center.z();
+  out.f32_OBB_Width=box.length; out.f32_OBB_Height=box.width; out.f32_OBB_ZMin=low; out.f32_OBB_ZMax=high;
+  out.f32_OBB_YawRad=std::atan2(axis.y(),axis.x());
+  out.f32_CoreE=out.f32_CoreN=NAN;
+  return out;
+}
+// An OBB axis has no direction: compare with 180 degree equivalence.
+double AxisError(double a,double b) {return std::abs(std::remainder(a-b,M_PI));}
+double CornerYaw(const LiDARObjectInfo& o) {
+  const auto& a=o.OBB_Corners_Body[0]; const auto& b=o.OBB_Corners_Body[1];
+  return std::atan2(b.y-a.y,b.x-a.x);
+}
+double ScanYaw(const TrackScan& scan,const asmc::lidar::Vec& world_a,const asmc::lidar::Vec& world_b) {
+  const auto d=(scan.Point(world_b)-scan.Point(world_a)).eval();
+  return std::atan2(d.y(),d.x());
+}
+void ExpectObbSelfConsistent(const LiDARObjectInfo& o,const char* role) {
+  EXPECT_LT(AxisError(o.f32_OBB_YawRad,CornerYaw(o)),1e-5)<<role<<" yaw axis vs corner 0->1 edge";
+  asmc::lidar::Vec mean=asmc::lidar::Vec::Zero();
+  for(const auto& c:o.OBB_Corners_Body) mean+=asmc::lidar::Vec(c.x,c.y,c.z)/8.;
+  EXPECT_NEAR(mean.x(),o.f32_OBB_CenterX,1e-5)<<role; EXPECT_NEAR(mean.y(),o.f32_OBB_CenterY,1e-5)<<role;
+  EXPECT_NEAR(mean.z(),o.f32_OBB_CenterZ,1e-5)<<role;
+}
+void ExpectCarriedBox(const LiDARObjectInfo& o,const TrackScan& scan,const WorldBox& box,double z_extent,
+                      bool kf_at_center=true) {
+  // Previous-scan geometry must reach this scan exactly once: center, corners,
+  // yaw (and, for a zero relative velocity, the KF position) equal the box
+  // expressed in this scan.
+  EXPECT_NEAR(.5*(o.f32_OBB_ZMin+o.f32_OBB_ZMax),o.f32_OBB_CenterZ,1e-5);
+  EXPECT_NEAR(o.f32_OBB_ZMax-o.f32_OBB_ZMin,z_extent,1e-5);
+  const auto world=WorldCorners(box);
+  for(unsigned i=0;i<8;++i) {
+    const auto p=scan.Point(world[i]);
+    EXPECT_NEAR(o.OBB_Corners_Body[i].x,p.x(),1e-5)<<"corner "<<i;
+    EXPECT_NEAR(o.OBB_Corners_Body[i].y,p.y(),1e-5)<<"corner "<<i;
+    EXPECT_NEAR(o.OBB_Corners_Body[i].z,p.z(),1e-5)<<"corner "<<i;
+  }
+  const auto center=scan.Point(box.center);
+  EXPECT_NEAR(o.f32_OBB_CenterX,center.x(),1e-5); EXPECT_NEAR(o.f32_OBB_CenterY,center.y(),1e-5);
+  EXPECT_NEAR(o.f32_OBB_CenterZ,center.z(),1e-5);
+  if(kf_at_center) {EXPECT_NEAR(o.Eigen_KfState_CA(0),center.x(),1e-5); EXPECT_NEAR(o.Eigen_KfState_CA(1),center.y(),1e-5);}
+  EXPECT_LT(AxisError(o.f32_OBB_YawRad,ScanYaw(scan,world[0],world[1])),1e-5)<<"carried yaw";
+}
+void ExpectCarriedFrom(const LiDARObjectInfo& o,const TrackScan& scan,const TrackScan& seen_scan,
+                       const LiDARObjectInfo& seen) {
+  // A track matched until seen_scan and then missed carries its last observed
+  // (stabilized) OBB, re-expressed into this scan once per scan.
+  std::array<asmc::lidar::Vec,8> expected;
+  for(unsigned i=0;i<8;++i) {
+    const auto& c=seen.OBB_Corners_Body[i];
+    expected[i]=scan.Point(seen_scan.World(asmc::lidar::Vec(c.x,c.y,c.z)));
+    EXPECT_NEAR(o.OBB_Corners_Body[i].x,expected[i].x(),1e-5)<<"handover corner "<<i;
+    EXPECT_NEAR(o.OBB_Corners_Body[i].y,expected[i].y(),1e-5)<<"handover corner "<<i;
+    EXPECT_NEAR(o.OBB_Corners_Body[i].z,expected[i].z(),1e-5)<<"handover corner "<<i;
+  }
+  const auto center=scan.Point(seen_scan.World(
+      asmc::lidar::Vec(seen.f32_OBB_CenterX,seen.f32_OBB_CenterY,seen.f32_OBB_CenterZ)));
+  EXPECT_NEAR(o.f32_OBB_CenterX,center.x(),1e-5); EXPECT_NEAR(o.f32_OBB_CenterY,center.y(),1e-5);
+  EXPECT_NEAR(o.f32_OBB_CenterZ,center.z(),1e-5);
+  const auto edge=(expected[1]-expected[0]).eval();
+  EXPECT_LT(AxisError(o.f32_OBB_YawRad,std::atan2(edge.y(),edge.x())),1e-5)<<"handover yaw";
+  EXPECT_NEAR(o.f32_OBB_ZMax-o.f32_OBB_ZMin,seen.f32_OBB_ZMax-seen.f32_OBB_ZMin,1e-5);
+}
+struct TrackCase {
+  const char* name; bool level_roll; double yaw0,yaw_step; VehicleSpec vehicle;
+  WorldBox matched,predicted,handover; unsigned scans;
+  bool world_yaw;  // gravity-aligned leveled frame: matched yaw must equal the box heading
+  double roll_scale=1.;  // 0: no roll, so pitch-only leveling is gravity-aligned too
+};
+constexpr unsigned kHandoverScans=3;  // the handover box is detected only in scans 0..2
+void RunTrackCase(const TrackCase& c) {
+  SCOPED_TRACE(c.name);
+  Configure(c.level_roll); TrackingConfig();
+  std::deque<std::vector<LiDARObjectInfo>> history;
+  TrackScan handover_scan; LiDARObjectInfo handover_seen{}; double predicted_extent=0;
+  for(unsigned s=0;s<c.scans;++s) {
+    SCOPED_TRACE("scan "+std::to_string(s));
+    const double yaw=std::remainder(c.yaw0+c.yaw_step*s,2*M_PI);
+    const auto scan=BeginTrackScan(80.+.1*s,yaw,c.roll_scale*.06*std::sin(.7*s+.3),-.04*std::cos(.5*s),c.vehicle);
+    std::vector<LiDARObjectInfo> objects{BoxDetection(scan,c.matched)};
+    if(s<kHandoverScans) objects.push_back(BoxDetection(scan,c.handover));
+    if(s==0) {
+      objects.push_back(BoxDetection(scan,c.predicted));
+      const int ids[]={42,44,43};  // matched, handover, predicted
+      for(unsigned i=0;i<objects.size();++i) {
+        auto& o=objects[i]; o.s32_Id=ids[i]; o.s32_Age=5; o.b_KfInitialized=true; o.s32_KfInitCount=2;
+        o.Eigen_KfState_CA<<o.f32_CoreX,o.f32_CoreY,0,0,0,0; o.f32_PrevYaw=scan.local.st_IMU.f32_Yaw_rad;
+      }
+      predicted_extent=objects[2].f32_OBB_ZMax-objects[2].f32_OBB_ZMin;
+    } else CompareCentroids(history,objects,.1,scan.local);
+    // LidarProcess records the current frame for observed tracks after tracking.
+    for(auto& o:objects) if(o.s32_MissCount==0) frame_boundary::RecordTrackingFrame(o);
+    const LiDARObjectInfo *matched=nullptr,*predicted=nullptr,*handover=nullptr;
+    for(const auto& o:objects) {
+      if(o.s32_Id==42) matched=&o; if(o.s32_Id==43) predicted=&o; if(o.s32_Id==44) handover=&o;
+    }
+    ASSERT_NE(matched,nullptr); ASSERT_NE(predicted,nullptr); ASSERT_NE(handover,nullptr);
+    EXPECT_EQ(matched->s32_MissCount,0); EXPECT_EQ(predicted->s32_MissCount,int(s));
+    EXPECT_EQ(handover->s32_MissCount,s<kHandoverScans?0:int(s-kHandoverScans+1));
+    ExpectObbSelfConsistent(*matched,"matched"); ExpectObbSelfConsistent(*predicted,"predicted");
+    ExpectObbSelfConsistent(*handover,"handover");
+    if(c.world_yaw) {
+      const auto axis=scan.Direction(Heading(c.matched));
+      EXPECT_LT(AxisError(matched->f32_OBB_YawRad,std::atan2(axis.y(),axis.x())),1e-5)<<"matched yaw vs box heading";
+    }
+    ExpectCarriedBox(*predicted,scan,c.predicted,predicted_extent);
+    if(s+1==kHandoverScans) {handover_scan=scan; handover_seen=*handover;}
+    if(s>=kHandoverScans) ExpectCarriedFrom(*handover,scan,handover_scan,handover_seen);
+    history.clear(); history.push_back(objects);
+  }
+}
+VehicleSpec MountedVehicle() {auto v=st_VehicleSpec; v.st_LiDARRotationDeg={4.f,-3.f,8.f}; return v;}
+const WorldBox kMatchedBox{{12,2,.25},.4,4.5,1.8,1.5}, kPredictedBox{{7,-6,.1},-.9,3.,1.2,1.},
+    kHandoverBox{{16,-1,.2},1.2,2.,1.1,1.3};
+TEST(FrameBoundary, KalmanUpdateKeepsCurrentObbWhilePredictCarriesPreviousObb) {
+  for(bool roll:{false,true}) {
+    SCOPED_TRACE(roll?"roll_pitch":"pitch_only");
+    Configure(roll);
+    const auto before=BeginTrackScan(90.,.3,.05,-.03,st_VehicleSpec);
+    auto track=BoxDetection(before,kMatchedBox); track.s32_Id=42; track.b_KfInitialized=true;
+    track.s32_KfInitCount=2; track.Eigen_KfState_CA<<track.f32_CoreX,track.f32_CoreY,0,0,0,0;
+    track.f32_PrevYaw=before.local.st_IMU.f32_Yaw_rad; frame_boundary::RecordTrackingFrame(track);
+    const auto now=BeginTrackScan(90.1,.36,-.02,.04,st_VehicleSpec);
+    // Matched: the OBB is this scan's detection; only the copied filter state is old.
+    auto matched=BoxDetection(now,kMatchedBox);
+    matched.Eigen_KfState_CA=track.Eigen_KfState_CA; matched.Eigen_KfP_CA=track.Eigen_KfP_CA;
+    matched.b_KfInitialized=true; matched.s32_KfInitCount=2; matched.f32_PrevYaw=track.f32_PrevYaw;
+    matched.tracking_frame_valid=true; matched.tracking_height_input=track.tracking_height_input;
+    matched.tracking_yaw_from_input=track.tracking_yaw_from_input;
+    matched.tracking_origin_in_yaw=track.tracking_origin_in_yaw;
+    const auto detected=matched;
+    kalman_filter_update(matched,matched.f32_CoreX,matched.f32_CoreY,matched.f32_CoreX,matched.f32_CoreY,
+        .1,now.local.st_IMU.f32_Yaw_deg);
+    EXPECT_FLOAT_EQ(matched.f32_OBB_YawRad,detected.f32_OBB_YawRad)<<"ego yaw applied again to a current OBB";
+    EXPECT_FLOAT_EQ(matched.f32_OBB_CenterX,detected.f32_OBB_CenterX);
+    EXPECT_FLOAT_EQ(matched.f32_OBB_CenterY,detected.f32_OBB_CenterY);
+    EXPECT_FLOAT_EQ(matched.f32_OBB_CenterZ,detected.f32_OBB_CenterZ);
+    EXPECT_FLOAT_EQ(matched.f32_OBB_ZMin,detected.f32_OBB_ZMin);
+    EXPECT_FLOAT_EQ(matched.f32_OBB_ZMax,detected.f32_OBB_ZMax);
+    for(unsigned i=0;i<8;++i) {
+      EXPECT_FLOAT_EQ(matched.OBB_Corners_Body[i].x,detected.OBB_Corners_Body[i].x);
+      EXPECT_FLOAT_EQ(matched.OBB_Corners_Body[i].y,detected.OBB_Corners_Body[i].y);
+      EXPECT_FLOAT_EQ(matched.OBB_Corners_Body[i].z,detected.OBB_Corners_Body[i].z);
+    }
+    ExpectObbSelfConsistent(matched,"matched");
+    // The copied filter state is re-expressed once: its prior equals this
+    // scan's measurement of the static box, so the update keeps it.
+    EXPECT_NEAR(matched.Eigen_KfState_CA(0),detected.f32_CoreX,1e-5);
+    EXPECT_NEAR(matched.Eigen_KfState_CA(1),detected.f32_CoreY,1e-5);
+    // Predicted-only: the whole previous-scan OBB is carried by one frame change.
+    auto predicted=track; kalman_filter_predict(predicted,.1,now.local.st_IMU.f32_Yaw_deg);
+    ExpectObbSelfConsistent(predicted,"predicted");
+    ExpectCarriedBox(predicted,now,kMatchedBox,track.f32_OBB_ZMax-track.f32_OBB_ZMin);
+    // With a relative velocity only the KF state is motion-predicted; the OBB is
+    // re-expressed, not moved, so the CA displacement is not applied to it.
+    auto moving=track; moving.Eigen_KfState_CA(2)=1.5; moving.Eigen_KfState_CA(3)=-.5;
+    kalman_filter_predict(moving,.1,now.local.st_IMU.f32_Yaw_deg);
+    ExpectCarriedBox(moving,now,kMatchedBox,track.f32_OBB_ZMax-track.f32_OBB_ZMin,false);
+    const auto center=now.Point(kMatchedBox.center);
+    const double dx=moving.Eigen_KfState_CA(0)-center.x(),dy=moving.Eigen_KfState_CA(1)-center.y();
+    EXPECT_NEAR(std::hypot(dx,dy),.1*std::hypot(1.5,.5),1e-4)<<"KF moves by v*dt once";
+    // A corner order other than computeOBBAtYaw's must not snap the yaw by 90 deg.
+    auto foreign=track;
+    std::rotate(foreign.OBB_Corners_Body.begin(),foreign.OBB_Corners_Body.begin()+1,foreign.OBB_Corners_Body.begin()+4);
+    std::rotate(foreign.OBB_Corners_Body.begin()+4,foreign.OBB_Corners_Body.begin()+5,foreign.OBB_Corners_Body.end());
+    kalman_filter_predict(foreign,.1,now.local.st_IMU.f32_Yaw_deg);
+    const auto heading=now.Direction(Heading(kMatchedBox));
+    EXPECT_LT(AxisError(foreign.f32_OBB_YawRad,std::atan2(heading.y(),heading.x())),roll?1e-5:5e-3)
+        <<"yaw follows the rotated axis, not the foreign 0->1 edge";
+  }
+}
+TEST(FrameBoundary, TrackerObbSingleScanMatchedAndPredicted) {
+  Configure();
+  RunTrackCase({"pitch_only",false,.2,.04,st_VehicleSpec,kMatchedBox,kPredictedBox,kHandoverBox,2,false});
+  RunTrackCase({"roll_pitch",true,.2,.04,st_VehicleSpec,kMatchedBox,kPredictedBox,kHandoverBox,2,true});
+}
+TEST(FrameBoundary, TrackerObbYawDoesNotAccumulateOverScans) {
+  Configure();
+  RunTrackCase({"pitch_only",false,.2,.04,st_VehicleSpec,kMatchedBox,kPredictedBox,kHandoverBox,8,false});
+  RunTrackCase({"pitch_only_zero_roll",false,.2,.04,st_VehicleSpec,kMatchedBox,kPredictedBox,kHandoverBox,8,true,0.});
+  RunTrackCase({"roll_pitch",true,.2,.04,st_VehicleSpec,kMatchedBox,kPredictedBox,kHandoverBox,8,true});
+  RunTrackCase({"roll_pitch_nonzero_mount",true,.2,.04,MountedVehicle(),kMatchedBox,kPredictedBox,kHandoverBox,8,false});
+  RunTrackCase({"pitch_only_nonzero_mount",false,.2,-.05,MountedVehicle(),kMatchedBox,kPredictedBox,kHandoverBox,8,false});
+}
+TEST(FrameBoundary, TrackerObbNearSquareMatchedYawDoesNotDrift) {
+  // Aspect < 1.2 skips the yaw EMA, so a twice-rotated prior would drift every scan.
+  Configure();
+  const WorldBox square{{11,3,.2},.5,1.,.9,1.2};
+  RunTrackCase({"near_square_roll_pitch",true,.2,.04,st_VehicleSpec,square,kPredictedBox,kHandoverBox,8,true});
+  RunTrackCase({"near_square_pitch_only_zero_roll",false,.2,.04,st_VehicleSpec,square,kPredictedBox,kHandoverBox,8,true,0.});
+}
+TEST(FrameBoundary, TrackerObbYawWrapAround) {
+  // Ego yaw crosses +pi/-pi. The matched axis crosses the +-pi/2 branch of the
+  // normalized OBB yaw; the handover and predicted raw yaws cross +-pi and -pi/2.
+  Configure();
+  const double yaw0=M_PI-.06;
+  const WorldBox matched{{12,2,.25},yaw0+M_PI/2.+.06,4.5,1.8,1.5}, predicted{{7,-6,.1},M_PI/2.+.03,3.,1.2,1.},
+      handover{{16,-1,.2},.03,2.,1.1,1.3};
+  RunTrackCase({"wrap_pitch_only",false,yaw0,.04,st_VehicleSpec,matched,predicted,handover,6,false});
+  RunTrackCase({"wrap_pitch_only_zero_roll",false,yaw0,.04,st_VehicleSpec,matched,predicted,handover,6,true,0.});
+  RunTrackCase({"wrap_roll_pitch",true,yaw0,.04,st_VehicleSpec,matched,predicted,handover,6,true});
 }
 TEST(FrameBoundary, CalibrationRejectsRuntimeAndSnapshotMismatch) {
   Configure();EXPECT_TRUE(frame_boundary::MapOffsetsValid(302595.,4124145.));
