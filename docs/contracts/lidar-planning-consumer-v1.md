@@ -9,8 +9,9 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 함께 확인합니다. 좌표·시간·운동의 기존 기준은 그대로 적용합니다.
 
 
-> 상태: **LiDAR 이전 구현용 계약, 카메라 객체 생산자는 정본 실행**. `asmc_lidar`는 좌표·시간 라이브러리
-> 골격이며 검출/추적/ROS 어댑터는 손재호의 후속 구현이다. 기존 주행은 원본
+> 상태: **LiDAR 이전 구현용 계약, 카메라 객체 생산자는 정본 실행**. `asmc_lidar`는 좌표·시간 라이브러리와
+> Main 검출/추적·전방 fusion을 옮긴 shadow 노드(`/asmc_lidar/shadow/*` 전용, 아래 토픽 미발행)를 제공하며,
+> 이 계약 토픽의 생산자 전환은 손재호의 후속 구현이다. 기존 주행은 원본
 > `lidar+sensorfusion`을 사용한다. [인계 계획](../handoffs/lidar-migration.md)과
 > [타입·목표 토픽](../../config/contracts/lidar_candidate_topic_contract_v1.yaml)을 함께 본다.
 
@@ -25,7 +26,7 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 | `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. 생산자 구현 예정 |
 | `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. 어댑터 구현 예정 |
 | `/perception/camera/objects` | 3뷰 원본 픽셀 검출. 현재 Main 어댑터는 전방만 소비 |
-| `/perception/camera/objects/observations` | session/generation·보정/모델/설정 ID 포함. asmc_lidar 수신·버퍼·투영 지원 제공; 3뷰 객체 매칭/fusion은 손재호의 후속 구현 |
+| `/perception/camera/objects/observations` | session/generation·보정/모델/설정 ID 포함. asmc_lidar 수신·버퍼·투영 지원 제공, shadow 노드는 `camera_front`만 매칭·fusion; 3뷰 객체 매칭/fusion은 손재호의 후속 구현 |
 
 기존 `TrackedObject*`, `DetectedObject*`의 MD5는 유지한다. 기존 `/last_lidar`,
 `/lidar_nogps`, `/perception/objects`를 자동 remap하지 않는다. 구 타입으로 표현할 수

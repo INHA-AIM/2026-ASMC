@@ -1,6 +1,8 @@
-# Reusable camera receiver/buffer/projection; object matching and fusion remain migration work.
+# Reusable camera receiver/buffer/projection; 3-view object matching and fusion remain migration work.
 schema_version: 1
 implementation_status: receiver_buffer_projection_ready_fusion_not_implemented
+# Status of this receiver contract. The opt-in shadow node (docs/shadow-pipeline.md)
+# fuses camera_front only; 3-view fusion is not implemented.
 observation_contract: config/contracts/camera_object_observation_v1.yaml
 observation_topic: /perception/camera/objects/observations
 status_topic: /perception/camera/objects/status

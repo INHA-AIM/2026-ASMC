@@ -5,12 +5,19 @@ YOLO는 `asmc_camera/camera.launch`만 소유하고 Main의 독립 YOLO 실행·
 현재 판제는 여전히 nested Main의 `/last_lidar`와 tracked/motion 출력을 소비한다.
 전방 bbox fusion만 연결돼 있으며3뷰 fusion과 LiDAR 전체 이전은 손재호의 후속 작업이다.
 
-현재 `asmc_lidar`는 **좌표·시간 기반과 공용 카메라 수신·버퍼·투영 컴포넌트**를 제공한다.
+현재 `asmc_lidar`는 **좌표·시간 기반과 공용 카메라 수신·버퍼·투영 컴포넌트**, 그리고 Main common-geometry
+LiDAR 처리(ROI·Voxel·roll·pitch 수평화·RANSAC·군집·OBB·추적·전방 fusion·typed local/map)를 동작 보존 이식한
+**shadow 노드와 bag replay**를 제공한다([Shadow 파이프라인](../../src/asmc_lidar/docs/shadow-pipeline.md)).
 [카메라 입력 API](../../src/asmc_lidar/docs/camera-input.md)를 손재호의 연결 시작점으로 사용한다.
-검출·군집·OBB·추적·fusion·최종 ROS 출력의 실행 구현은 손재호가 원본
-[`lidar+sensorfusion`](../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)에서 이전한다.
-기존 원본 패키지가 현재 주행 경로다. `asmc_lidar`는 수신 확인용 probe를 제공하며,
+shadow 노드는 기존 launch에 포함되지 않고 명시 실행할 때만 `/asmc_lidar/shadow/*`에 발행한다.
+MotionClassifier·판제 후처리·구조물 분리·3뷰 fusion과 운영 ROS 출력 전환은 손재호가 원본
+[`lidar+sensorfusion`](../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)에서 이어서 이전한다.
+기존 원본 패키지가 현재 주행 경로다. `asmc_lidar`의 probe와 shadow 노드는 운영 출력을 내지 않으며,
 `Main`의 opt-in 어댑터가 코어를 연결해 typed local/map 객체를 제공한다.
+
+shadow의 비교 기준선은 Tracker yaw 수정이 반영된 Main `8f93c22e`(`fix/lidar-tracking-frame-yaw`, main 미병합)이고,
+그 수정은 shadow에 이미 들어 있다. 기존 Main은 동결하며 shadow 이식은 Main Tracker 수정의 선행 병합을 요구하지 않는다.
+저장소 Main과의 OBB yaw·corner 차이는 의도된 것이다([의도적 차이](../../src/asmc_lidar/docs/shadow-pipeline.md#기준선과-저장소-main과의-의도적-차이)).
 [좌표·GPS 경계 구현과 수락 보류](../records/lidar/lidar-camera-frame-boundaries.md)를 참고한다.
 [external 6개 좌표 구현과 현재 보정 검토](../records/camera/camera-lidar-coordinate-reference-review.md)에는
 행렬 수치 대조와 센서 시각·지면·pose 제공자 차이를 기록했다.
@@ -27,7 +34,8 @@ YOLO는 `asmc_camera/camera.launch`만 소유하고 Main의 독립 YOLO 실행·
 5. [소스 README](../../src/asmc_lidar/README.md)에서 코어 API·빌드·시험을 확인한다.
 
 `Main` 연결 구현은 opt-in이며 공통 경계와 roll 기본값은 모두 OFF다.
-현재 골격에 지면 제거·구조물 분류·OBB·tracker ROS 노드가 이전된 것은 아니다.
+지면 제거·군집·OBB·tracker·전방 fusion은 shadow 노드로 이식했고 roll·pitch 수평화와 local/map 출력을 검증했지만,
+운영 경로에는 연결하지 않았다. 구조물 분류는 아직 이전하지 않았다.
 24점 삭제/보존과 신규 분류 차이는 [원본 이미지·점군 비교 갤러리](../../config/baselines/evidence/lidar_continuous_regression_v1/user-review/index.html)에서 확인한다.
 24점은 장애물 정답이 없는 합성 지면 높이 입력이며, 실제 장애물 소실 사례로 해석하지 않는다.
 
@@ -81,11 +89,12 @@ YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다.
 | IMU 선택 함수 | 도착 완료 표본만 전달, 유한값/유효 quaternion 검사 후 valid 지정 |
 | v3 장착 설정 | 출처 SHA와 단위 확인. 장착 z를 노면 기준 센서 높이로 사용하지 않음 |
 | 회귀시험 | 좌표·8코너·속도·관측시각·pose/IMU 선택 의미 검사. 실제 검출 성능 시험은 후속 |
-| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar는 수신 확인용 probe 제공, LiDAR 처리 노드는 미이전 |
+| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar는 수신 확인용 probe와 shadow 노드 제공(운영 typed 토픽 미발행) |
+| shadow 노드·replay | `asmc_lidar_shadow_node`·`asmc_lidar_shadow_replay`와 shadow 전용 launch 2개. 명시 실행, `/asmc_lidar/shadow/*`만 발행. 공개 속도·동정적 validity false, TunnelFilter 기본 OFF. 실제 카메라 bag·실시간·TunnelFilter ON 성능은 미수락 |
 
 빌드·시험 명령과 API 위치는 [패키지 README](../../src/asmc_lidar/README.md)에 있다.
-소스에는 지면·tracker 후보나 실행 launch를 남기지 않았다. 이전 `unified.launch`,
-`ground_compare_live.launch`를 안내하는 명령은 현재 버전에서 사용할 수 없다.
+과거 연구용 지면·tracker 후보와 이전 `unified.launch`, `ground_compare_live.launch`는 남기지 않았으며
+이를 안내하는 명령은 현재 버전에서 사용할 수 없다. 현재 launch는 shadow 전용 2개뿐이다.
 
 ## 손재호의 이전 순서
 
@@ -123,7 +132,7 @@ YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다.
 
 [소비 계약](../contracts/lidar-planning-consumer-v1.md)과
 [기계 판독 계약](../../config/contracts/lidar_candidate_topic_contract_v1.yaml)은
-후속 구현의 목표다. 현재 publisher 목록이 아니다.
+후속 구현의 목표다. 현재 publisher 목록이 아니다. shadow 노드의 `/asmc_lidar/shadow/*`는 이 계약의 토픽이 아니다.
 
 - 현재 Main의 local 입력은 관측 시점 유효 IMU와 차량 속도(CAN)다. 각각 age 120ms, 최대 대기 50ms이며 GPS는 기다리지 않는다. CAN 없이 처리하는 LiDAR+IMU 전용 정책은 후속 설계다.
 - scan stamp는 bridge 수신 시각이며 광선 측정 시각으로 바꾸어 설명하지 않는다.
