@@ -25,7 +25,7 @@ MORAI 허용 센서 → asmc_bridge
 |---|---|---|
 | 카메라 객체 | E8 기본·사전학습 선택, TensorRT, 원본16종/소비3그룹, 3뷰 관측 | 요청된 실패 조건만 추가학습; 3뷰 관측이 곧 3뷰 fusion은 아님 |
 | 차선 | TwinLite TensorRT·전방544×960/측방480×640, model-grid→shared family | 음영 ODD에서 판제 소비·fallback 공동 확인; 순간 공급 공백 제한 추적 |
-| LiDAR | nested `Main`이 지면·군집·OBB·추적·전방 fusion·판제 출력을 제공 | 손재호가 `asmc_lidar`로 기능 이전, 카메라별 버퍼·보정·3뷰 fusion |
+| LiDAR | nested `Main`이 지면·군집·OBB·추적·전방 fusion·판제 출력을 제공. `asmc_lidar` shadow 노드는 지면~전방 fusion(MotionClassifier·판제 후처리 제외)을 `/asmc_lidar/shadow/*`로만 발행(명시 실행, 운영 미연결) | 손재호가 운영 전환까지 기능 이전(MotionClassifier·판제 후처리 포함), 카메라별 버퍼·보정·3뷰 fusion |
 | 판제 | `asmc_planner` 단일 패키지, LiDAR 입력 통합 실행, MPC·재밍 선택기 | 전 구간·조건별 반복 수락, 카메라 그룹/음영 소비 정책은 판제 담당 |
 | HD Map | `asmc_hd_map` global/local·mission metadata 제공 | 판제 local map copy와 출처·route parity 확인; 자동 `/hd_map/*` 전환은 아님 |
 | 상태·좌표 | bridge `/vehicle/state`와 판제 전용 `/planning/vehicle/state` 분리 | 두 토픽을 같은 추정기로 오인하지 않음; Main·판제 UTM yaw 설정 일치 |

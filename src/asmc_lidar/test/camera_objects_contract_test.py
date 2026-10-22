@@ -90,7 +90,29 @@ class CameraObjectsContractTest(unittest.TestCase):
         package = ET.parse(ROOT / 'src/asmc_lidar/package.xml').getroot()
         dependencies = {node.text for node in package if node.tag.endswith('depend')}
         self.assertFalse({'Main', 'Msg', 'asmc_camera', 'tensorrt', 'torch'} & dependencies)
-        self.assertFalse((ROOT / 'src/asmc_lidar/launch').exists())
+        self.assert_lidar_launch_is_shadow_only()
+
+    def assert_lidar_launch_is_shadow_only(self):
+        # src/asmc_lidar/launch may exist for the opt-in shadow node, but it must not
+        # start bridge/driver/camera/inference nodes, must not publish operational
+        # topics, and must not be included by Main/planner/camera/bridge launches.
+        operational = {'/last_lidar', '/lidar_nogps', '/YOLO/BBox', '/perception/lidar/objects_local',
+                       '/perception/lidar/objects_map', '/perception/lidar/diagnostics'}
+        for path in sorted((ROOT / 'src/asmc_lidar/launch').glob('*.launch')):
+            root = ET.parse(path).getroot()
+            self.assertEqual(root.findall('.//include'), [], path)
+            for node in root.findall('.//node'):
+                self.assertEqual((node.get('pkg'), node.get('type')), ('asmc_lidar', 'asmc_lidar_shadow_node'), path)
+            for element in root.iter():
+                for key in ('default', 'value', 'to'):
+                    value = element.get(key) or ''
+                    self.assertFalse(value in operational or value.startswith('/planning/'), (path, value))
+        for base in (ROOT / 'src/lidar+sensorfusion/src/Main', ROOT / 'src/asmc_planner', CAMERA,
+                     ROOT / 'src/asmc_bridge'):
+            for path in sorted(base.rglob('*.launch')):
+                text = path.read_text(errors='replace')
+                self.assertNotIn('asmc_lidar_shadow_node', text, path)
+                self.assertNotRegex(text, r'asmc_lidar\)/launch/', path)
 
 
 if __name__ == '__main__':

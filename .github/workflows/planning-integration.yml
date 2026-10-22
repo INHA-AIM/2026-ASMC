@@ -92,10 +92,17 @@ jobs:
       - name: Build restored LiDAR workspace with frozen messages
         run: |
           source /opt/ros/noetic/setup.bash
-          catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='asmc_msgs;asmc_lidar;asmc_camera'
+          # morai_msgs lets asmc_lidar build its required shadow targets, so nested Main is
+          # built and tested against the same asmc_lidar underlay as a full workspace build.
+          catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='asmc_msgs;asmc_lidar;asmc_camera;morai_msgs' -DASMC_LIDAR_SHADOW_REQUIRED=ON
           source devel/setup.bash
           cd src/lidar+sensorfusion
           catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=ON -DCATKIN_WHITELIST_PACKAGES='Main;Msg;morai_msgs'
+      - name: Check Main does not link asmc_lidar shadow libraries
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          python3 src/asmc_lidar/test/shadow_ci_check.py --devel devel --dependent-build src/lidar+sensorfusion/build
       - name: Run validated LiDAR regressions
         run: |
           source /opt/ros/noetic/setup.bash

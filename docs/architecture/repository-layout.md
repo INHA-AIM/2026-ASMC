@@ -25,7 +25,7 @@
 | planning_inputs | `src/planning_inputs` | 판제 전용 GPS/IMU 상태와 LiDAR wire 변환 |
 | lane_boundary_adapter | `src/jamming_lane_boundary_adapter` | 음영 family 검토·BBox 차로/재밍 제어; launch별 권한 다름 |
 | data_collection | `src/data_collection` | Capture·bag 기록/재생·dataset lineage |
-| asmc_lidar | `src/asmc_lidar` | 좌표/시간 코어와 인계 설정·시험; 실행 노드 미구현 |
+| asmc_lidar | `src/asmc_lidar` | 좌표/시간 코어·카메라 수신과 인계 설정·시험; Main LiDAR 처리·전방 fusion의 shadow 노드·bag replay(명시 실행, `/asmc_lidar/shadow/*`만 발행, 운영·판제 미연결) |
 | Main, Msg | `src/lidar+sensorfusion/src/{Main,Msg}` | 현재 LiDAR·전방 fusion 실행과 구형 wire |
 
 이름 변경이 완료된 `src/asmc_perception` 폴더와 이전 안내는 제거했습니다. 카메라 정본은 `src/asmc_camera`입니다.

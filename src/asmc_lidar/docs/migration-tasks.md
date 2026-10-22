@@ -6,6 +6,7 @@
 
 현재 카메라 수신·버퍼·투영 지원은 [camera-input](camera-input.md)을 따른다.
 아래 B1a 기록과 후속 LiDAR 알고리즘 과제는 그대로 보존한다.
+2026-10-22에 Main common-geometry LiDAR 경로를 [shadow 노드](shadow-pipeline.md)로 동작 보존 이식했다(운영 미연결).
 
 ## 확인된 경계와 먼저 고칠 사항
 
@@ -89,8 +90,8 @@ strict 100ms 보간과 Main bounded 300ms 보정을 구분하고 ROS/steady 시�
 3. **OBB·추적·속도:** `PipelineTrace.hpp`의 voxel 대응·OBB·miss·KF 초기화와 source dt로
    군집 중심 이동, 오연결, 초기화 급변과 자세 변화를 분리한다. 속도 필터를 먼저 추가하지
    않는다. 현재 공개 velocity/dynamic validity는 false다.
-4. **패키지 이전:** 기능을 작은 동작 보존 단위로 `asmc_lidar`에 옮긴다. 좌표 코어는
-   준비됐지만 지면·군집·tracker 노드가 이미 이전된 것은 아니다.
+4. **패키지 이전:** 기능을 작은 동작 보존 단위로 `asmc_lidar`에 옮긴다. 지면·군집·OBB·tracker·전방
+   fusion은 [shadow 노드](shadow-pipeline.md)로 옮겼고, 운영 연결·구조물 분리·3뷰 fusion은 남아 있다.
 
 ## PR #72에서 새로 고정한 회귀 입력
 

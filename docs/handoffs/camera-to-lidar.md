@@ -3,6 +3,7 @@
 시작점은 [LiDAR 인계](lidar-migration.md)다. 카메라 실행은 [카메라 계약](../contracts/camera-runtime-v1.md),
 관측 metadata는 [기계 정본](../../config/contracts/camera_object_observation_v1.yaml)을 따른다.
 현재 판제는 nested `lidar+sensorfusion`의 Main 출력을 소비한다. `asmc_lidar` 전체 이전은 완료되지 않았다.
+Main LiDAR 처리와 전방 fusion은 `asmc_lidar` shadow 노드로 이식했으나 명시 실행·`/asmc_lidar/shadow/*` 전용이며 운영에 연결하지 않았다.
 
 ## 현재 연결과 소유권
 
@@ -151,8 +152,9 @@ src/lidar+sensorfusion/install/lib/Main/yolo_detection_node
 
 - **카메라 담당 제공:** 공용 상태/서비스 전환, 관측 수신·검증·버퍼, session/generation·시간 게이트,
   보정 ID 교차 검사·원본 좌표 투영 인터페이스·시험과 진단.
-- **손재호 구현:** 자신의 scan 처리 루프에 Receiver 연결 → scan/영상 시간 매칭 → 3D 객체/bbox 연결
-  → 여러 카메라 근거 통합·분류 유지 → 추적/ROS 출력 이전과 판제 공동 검증.
+- **손재호 구현:** scan 처리 루프의 Receiver 연결 → scan/영상 시간 매칭 → 3D 객체/bbox 연결 → 분류 유지 →
+  추적/typed 출력은 `asmc_lidar` shadow 노드에 `camera_front` 하나로 이식했다(합성 fixture로 인터페이스·동기화만 검증).
+  남은 일은 여러 카메라 근거 통합(3뷰), 실제 카메라 bag 성능 확인, 운영 ROS 출력 전환과 판제 공동 검증이다.
 - **판제 담당:** 모드 요청과 결과 소비·행동 정책. 수신부는 모드 서비스를 호출하지 않는다.
 
 기본 버퍼는 뷰별8관측·350ms이며 query 허용 시간차는 호출자가 지정한다. 한 뷰를 기다리며

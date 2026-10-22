@@ -1,0 +1,55 @@
+<launch>
+  <!-- asmc_lidar shadow pipeline: port of Main's common-geometry LiDAR path.
+       Starts ONLY asmc_lidar_shadow_node. No LiDAR driver, MORAI bridge, camera,
+       inference or planner node, and no operational output: outputs default to
+       /asmc_lidar/shadow/* and the node refuses operational names
+       (/last_lidar, /lidar_nogps, /YOLO/BBox, /perception/lidar/*, /planning/*,
+       /tf, /tf_static, its own input topics; TF child lidar_leveled/base_link/map/velodyne).
+       Not included by any other launch file.
+       LiDAR-only without the asmc_camera package: shadow_pipeline_lidar_only.launch -->
+  <arg name="pipeline_config" default="$(find asmc_lidar)/config/shadow_pipeline.yaml"/>
+  <!-- Empty = keep config/shadow_pipeline.yaml (lidar.level_roll: true, experimental
+       tunnel_filter.enabled: false); a value overrides the file. -->
+  <arg name="lidar_level_roll" default=""/>
+  <!-- Empty = fusion.enable_sensor_fusion of the YAML (true). -->
+  <arg name="enable_camera_fusion" default=""/>
+  <arg name="camera_calibration_config" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
+  <arg name="experimental_tunnel_filter" default=""/>
+  <arg name="publish_tf" default="false"/>
+  <arg name="tf_child_frame" default="asmc_lidar_shadow/lidar_leveled"/>
+
+  <arg name="points_topic" default="/velodyne_points"/>
+  <arg name="imu_topic" default="/imu"/>
+  <arg name="can_topic" default="/Ego_topic"/>
+  <arg name="gps_topic" default="/gps"/>
+  <arg name="camera_observations_topic" default="/perception/camera/objects/observations"/>
+  <arg name="camera_status_topic" default="/perception/camera/objects/status"/>
+
+  <arg name="objects_local_topic" default="/asmc_lidar/shadow/objects_local"/>
+  <arg name="objects_map_topic" default="/asmc_lidar/shadow/objects_map"/>
+  <arg name="diagnostics_topic" default="/asmc_lidar/shadow/diagnostics"/>
+  <arg name="trace_topic" default="/asmc_lidar/shadow/trace"/>
+
+  <node pkg="asmc_lidar" type="asmc_lidar_shadow_node" name="asmc_lidar_shadow" output="screen">
+    <param name="pipeline_config" value="$(arg pipeline_config)"/>
+    <param name="package_dir" value="$(find asmc_lidar)"/>
+    <param if="$(eval arg('lidar_level_roll') != '')" name="lidar_level_roll" value="$(arg lidar_level_roll)"/>
+    <param if="$(eval arg('enable_camera_fusion') != '')" name="enable_camera_fusion"
+           value="$(arg enable_camera_fusion)"/>
+    <param name="camera_calibration_config" value="$(arg camera_calibration_config)"/>
+    <param if="$(eval arg('experimental_tunnel_filter') != '')" name="experimental_tunnel_filter"
+           value="$(arg experimental_tunnel_filter)"/>
+    <param name="publish_tf" value="$(arg publish_tf)"/>
+    <param name="tf_child_frame" value="$(arg tf_child_frame)"/>
+    <param name="points_topic" value="$(arg points_topic)"/>
+    <param name="imu_topic" value="$(arg imu_topic)"/>
+    <param name="can_topic" value="$(arg can_topic)"/>
+    <param name="gps_topic" value="$(arg gps_topic)"/>
+    <param name="camera_observations_topic" value="$(arg camera_observations_topic)"/>
+    <param name="camera_status_topic" value="$(arg camera_status_topic)"/>
+    <param name="objects_local_topic" value="$(arg objects_local_topic)"/>
+    <param name="objects_map_topic" value="$(arg objects_map_topic)"/>
+    <param name="diagnostics_topic" value="$(arg diagnostics_topic)"/>
+    <param name="trace_topic" value="$(arg trace_topic)"/>
+  </node>
+</launch>

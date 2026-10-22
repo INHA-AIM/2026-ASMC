@@ -2,12 +2,15 @@
 
 **2026-10-16 카메라 인계:** [현재 연결·실행·손재호 구현 경계](../../docs/handoffs/camera-to-lidar.md).
 `config/camera_objects.yaml`은 실제 카메라 관측 계약/보정/라벨 설정을 참조하고 교차 시험으로 검사한다.
-관측 수신·뷰별 버퍼·보정/투영 인터페이스를 제공한다. 3뷰 객체 매칭·fusion은 손재호의 후속 구현이다. Main의 독립 YOLO는 제거하고 외부 카메라 전방 어댑터만 사용한다.
+관측 수신·뷰별 버퍼·보정/투영 인터페이스를 제공한다. 전방(`camera_front`) fusion은 shadow 노드에 이식했으며 3뷰 객체 매칭·fusion은 손재호의 후속 구현이다. Main의 독립 YOLO는 제거하고 외부 카메라 전방 어댑터만 사용한다.
 
 
-현재는 **좌표·시간 라이브러리, 공용 카메라 수신 컴포넌트와 계약 시험**이다. 검출·군집·추적·fusion·
-ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며 구현한다.
-실제 주행에는 기존 패키지를 사용한다. 이 패키지는 수신 확인용 probe를 제공하며 LiDAR 처리 launch는 없다.
+현재는 **좌표·시간 라이브러리, 공용 카메라 수신 컴포넌트와 계약 시험**, 그리고 Main LiDAR
+처리(ROI→Voxel→roll·pitch→RANSAC→군집→OBB→추적→전방 fusion→typed local/map)를 옮긴
+**검증용 shadow 노드와 bag replay**다. [Shadow 파이프라인](docs/shadow-pipeline.md)에 이식 경계·원본 대응·
+토픽·실행 방법을 정리했다. 실제 주행에는 기존 `lidar+sensorfusion` Main을 계속 사용한다.
+shadow 노드는 `/asmc_lidar/shadow/*`에만 발행하며 어떤 기존 launch에도 포함되지 않는다.
+구현·검증 상태, 미수락 항목과 저장소 Main과의 의도적 차이는 [현재 상태와 제한](docs/shadow-pipeline.md#현재-상태와-제한)에 있다.
 
 [카메라 입력 API·공용 상태 전환·직접 시험](docs/camera-input.md)을 손재호의 연결 시작점으로 사용한다.
 
@@ -33,6 +36,9 @@ ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며
 | `camera_observations.hpp`, `camera_receiver.hpp`, `camera_calibration.hpp` | ROS 독립 버퍼·ROS 수신·보정 로더·투영 경계 |
 | `examples/camera_observation_probe.cpp` | 모드/제어/객체 출력 없이 diagnostics만 제공하는 연결 예제 |
 | `test/` | 중심/8코너·시간·pose·속도·IMU 선택의 회귀시험 |
+| `include/asmc_lidar/pipeline/`, `src/{preprocessing,ground,clustering,obb,tracking,pose,pipeline,fusion,experimental}/` | Main common-geometry 경로의 동작 보존 이식(정적 라이브러리, 외부 export 없음) |
+| `include/asmc_lidar/shadow/`, `src/ros/`, `tools/shadow_replay.cpp`, `launch/`, `config/shadow_pipeline.yaml` | shadow 노드·replay·설정. 노드와 replay는 같은 runtime을 호출 |
+| `src/experimental/tunnel_filter/`, `test/experimental/` | PR #102 TunnelFilterCore byte 동일 복사본과 27개 시험. 연결 stage는 기본 OFF |
 
 `asmc::lidar::transform()`은 local 결과와 map 가용성을 분리한다. 호출자는 실제 적용한
 수평화 행렬과 장착 변환을 넣어야 한다. `PoseHistory`는 동일 clock의 도착 완료 pose만
@@ -79,9 +85,13 @@ source /tmp/asmc_lidar_handoff_devel/setup.bash
 python3 src/asmc_msgs/test/test_message_serialization.py
 ```
 
-새 골격은 PCL·외부 지면분할 라이브러리·`Main`·`Msg` nested workspace에 의존하지 않는다.
-손재호가 실제 처리 단계를 추가할 때 필요한 의존성만 명시한다. 공용 메시지는
-`asmc_msgs`에 정의돼 있다. 수신 확인용 probe는 diagnostics만 발행하며 LiDAR 객체를 발행하지 않는다.
+기존 라이브러리(`asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros`)와
+`catkin_package` export는 바뀌지 않았다. shadow target은 PCL·pcl_conversions·GeographicLib·
+`morai_msgs`(submodule)를 쓰는 패키지 전용 정적 라이브러리이며 의존 패키지(Main 등)에 링크되지 않는다.
+이 의존성이 없으면 shadow target만 경고와 함께 건너뛴다. CI는 `-DASMC_LIDAR_SHADOW_REQUIRED=ON`으로 이 생략을
+configure 실패로 바꾸고, `test/shadow_ci_check.py`로 shadow 실행파일과 필수 시험의 실제 생성·통과를 확인한다
+([시험](docs/shadow-pipeline.md#시험)). `Main`·`Msg` nested workspace에는 의존하지 않는다.
+수신 확인용 probe는 diagnostics만 발행하며 LiDAR 객체를 발행하지 않는다.
 
 이전 연구 소스·보고서는 정리 전 커밋 `020f6c2`에 남아 있다. 선택적 복구는 별도
 checkout에서 검토한다. 예전 `unified.launch`와 `ground_compare_live.launch`는 삭제됐다.
@@ -96,5 +106,6 @@ checkout에서 검토한다. 예전 `unified.launch`와 `ground_compare_live.lau
 GPS stamp가 0인 무효 입력은 bounded API의 수신 시각 barrier로만 처리한다.
 local 준비 조건은 유효 IMU·차량 속도이며 GPS와 독립적이다.
 
-실제 지면·군집·추적 연속 재현기는 nested Main의 시험 도구이며 이 코어의 기능이 아니다.
+shadow 경로의 bag 재현기는 `asmc_lidar_shadow_replay`다(노드와 같은 runtime 호출, 지정 토픽만 읽음).
+nested Main의 연속 재현기와 그 기록은
 [연속 회귀와 재호 과제](../../docs/records/lidar/lidar-continuous-regression.md)를 참고한다.
