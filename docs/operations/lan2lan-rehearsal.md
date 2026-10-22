@@ -33,9 +33,9 @@ MORAI PC는 추론 PC에서 들어오는 **Ctrl UDP9093**을 해당 Ethernet 프
 | 방향 | 팀 실행의 포트·역할 |
 |---|---|
 | MORAI → 추론 | RGB `9291/9293/9295/9297`, LiDAR `9299`, GPS `9301`, IMU `9303` |
-| MORAI → 추론 | Collision `9092`, Competition Vehicle Status `9798` |
+| MORAI → 추론 | Collision `9092`, 현재 CompetitionInfoPublisher `9099` → `/Ego_topic` |
 | 추론 → MORAI | Ctrl destination `9093`, cmd type1·ctrl mode2 |
-| 개발 호환 | Ego `9099`는 기존 bridge 호환 수신. 본선 알고리즘의 허용 입력으로 승격하지 않음 |
+| 별도 상태 경로 | `9798`은 현재 Detail 형식으로 decoder 거부. 채점용 endpoint와 역할을 별도 확인 |
 
 **이 표는 채점 프로그램 전체의 방화벽 목록이 아니다.** 아래 채점 채널 검토 없이 표의
 포트만 전체 PC allowlist로 적용하면 채점 연결을 누락할 수 있다. 방화벽 전체 OFF 대신 실제
@@ -84,11 +84,11 @@ ss -lunp
 ./scripts/udp_bridge.sh --transport lan2lan
 ```
 
-현장판 type787이 실제 송신되는 조건에서만 별도 실행 때
-`./scripts/udp_bridge.sh --transport lan2lan --require-competition-status`와
-`./scripts/docker_ros_up.sh verify-field 30 molitcomp03`로 필수 gate를 확인한다.
-기존 bridge와 추가 실행을 겹치지 않는다. 참가팀 local의 `#DetailEgoInfo$` 변형은 정상
-Competition decode가 아니며 현장 필수 gate 실패를 면제하지 않는다.
+현재 UI의 CompetitionInfoPublisher는9099이며 `/Ego_topic`으로 전달된다.
+[2026-10-23 loopback 점검](../records/bridge/2026-10-23-competition-channel-audit.md)은
+실제 packet 해석까지 확인했으며 두 PC LAN 시험을 대신하지 않는다.
+기존 `--require-competition-status`/`verify-field`의 competition gate는 별도9798을 검사하므로
+이 환경의 필수 수락 명령으로 쓰지 않는다. 현장 UI·목적지·허용 필드와 실제 소비를 대조한다.
 
 ## Wireshark와 단계별 관측
 
@@ -122,7 +122,7 @@ Display filter는 `ip.addr == 192.168.0.1 && ip.addr == 192.168.0.10`을 사용�
 MORAI loopback으로 돌린다. 포트는 유지하지만 목적지 IP가 달라 **주최 원본과 동등한
 채점 연결로 수락할 수 없다.** [원본/생성본 대조 기록](../records/bridge/2026-10-20-lan-channel-review.md)을 따른다.
 
-현재 정적 팀 설정과 Docker host mode가 type787/Collision/센서를 의도적으로 차단하는
+현재 정적 팀 설정과 Docker host mode가 설정된 상태/Collision/센서를 의도적으로 차단하는
 증거는 없지만 실제 두 PC·채점 동시 시험은 남아 있다. 채점·녹화의 실행 위치는 사용자 확인으로
 **추론 PC**다. 따라서 필요한 채점 packet을 MORAI loopback으로 보내면 추론 PC에 도착하지
 않는다. 프로그램의 실행 환경과 실제 bind를 확인하기 전에는 채점 통신 정상이나 현재

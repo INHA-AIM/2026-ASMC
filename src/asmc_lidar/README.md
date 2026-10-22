@@ -1,6 +1,6 @@
 # asmc_lidar — 좌표·시간 기반과 카메라 입력 인계
 
-**2026-10-22 이관:** 안승현이 [L0–L8 작업표](docs/migration-tasks.md)를 직접 진행하며 손재호 개발은 병행한다.
+**2026-10-23 이관:** 안승현이 [L0–L8 작업표](docs/migration-tasks.md)를 직접 진행하며 손재호 개발은 병행한다.
 카메라 인계는 [현재 연결·실행·구현 경계](../../docs/handoffs/camera-to-lidar.md).
 `config/camera_objects.yaml`은 실제 카메라 관측 계약/보정/라벨 설정을 참조하고 교차 시험으로 검사한다.
 관측 수신·뷰별 버퍼·보정/투영 인터페이스를 제공한다. 전방(`camera_front`) fusion은 shadow 노드에 이식했으며 3뷰 객체 매칭·fusion은 손재호의 후속 구현이다. Main의 독립 YOLO는 제거하고 외부 카메라 전방 어댑터만 사용한다.
@@ -26,7 +26,7 @@ shadow 노드는 `/asmc_lidar/shadow/*`에만 발행하며 어떤 기존 launch�
 
 ## 목표 구조와 현재 경계
 
-[L1 설계](docs/migration-design.md)에 입력·pose·속도·출력·L2 추출 경계를 확정했고
+[L1 설계](docs/migration-design.md)에 입력·pose·속도·출력과 PR #103 이후 L2 인수 경계를 정리했고
 [L1 manifest](../../config/baselines/lidar_migration_l1_v1.yaml)에 source/설정/입력 SHA와 검증 범위를 기록했다.
 설계 결정이며 새 LiDAR 실행이 구현된 상태는 아니다.
 

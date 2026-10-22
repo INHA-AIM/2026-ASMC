@@ -1,12 +1,38 @@
 # LiDAR 이관 설계 — L1
 
 2026-10-22 결정. [L0–L8 작업표](migration-tasks.md)의 L1 결과이며, 진행 담당은 안승현이다.
-손재호의 별도 개발은 병행한다. **아래 새 실행 구조·정책은 설계이며 아직 구현되지 않았다.**
-현재 판제는 기존 nested Main을 사용한다. L2부터 한 단위씩 구현하고 L7에서 소비를 전환한다.
+손재호의 별도 개발은 병행한다. **PR #103의 shadow 구현을 재사용하며, 아래 목표 정책과 차이가 남은 부분을 구분한다.**
+현재 판제는 기존 nested Main을 사용한다. L2 인수 확인 뒤 미충족 정책을 한 단위씩 보완하고 L7에서 소비를 전환한다.
 
 기계 판독 기준선은 [L1 manifest](../../../config/baselines/lidar_migration_l1_v1.yaml), 현재/목표의
 전체 경계는 [통합 인계](../../../docs/handoffs/lidar-migration.md), 출력 의미는
 [소비 계약](../../../docs/contracts/lidar-planning-consumer-v1.md)을 따른다.
+
+## 2026-10-23 PR #103 반영과 입력 정정
+
+현재 구현은 main `281349da`의 [shadow 파이프라인](shadow-pipeline.md)이다.
+L1 manifest는2026-10-22 원본 기준선이며 당시 SHA와 해석을 덮어쓰지 않는다.
+[채널 실측 기록](../../../docs/records/bridge/2026-10-23-competition-channel-audit.md)과
+[추가 manifest](../../../config/baselines/competition_channel_audit_20261023.yaml)가 입력 해석을 정정한다.
+
+| 영역 | 이미 구현되어 재사용할 것 | L1 목표까지 남은 것 |
+|---|---|---|
+| L2 검출 | ROI/voxel/roll-pitch/지면/군집/OBB·모듈·replay | 원본점 계보, 빈 결과/가짜점, 상한62500·설정 소유·잠금/할당 검토 |
+| L3 좌표·추적 | local 추적, inverse leveling, 실제 base_link/map, bounded300ms·복구3회 | 속도 없어도 local 형상 유지, signed longitudinal 속도, restart/시각역행·dt 검증, 운동 validity |
+| L4 fusion | Receiver 기반 전방 unique ±50ms/200ms·class 유지 | 실제 영상 bag 검증; 3뷰 확대는 L8 |
+| L5 필터 | 기존 Main 운영 유지 | MotionClassifier/도로/known-static/structure/relevance 이관 |
+| L6 실행 | shadow launch·typed 배열·diagnostics·출력 guard | atomic 식별/4상태 계약·최종 실행/시각화 |
+| L7 수락 | PR 단위시험·기준선 bag 결과 보존 | 실시간·판제 소비·명시 전환 |
+
+현재 shadow namespace `/asmc_lidar/shadow/*`를 시험 정본으로 재사용한다. 이름만 바꾸는
+재이식이나 디렉토리 전체 재배치는 하지 않는다. `ground/clustering/obb/pose` 구조를 유지하고
+추가 변경은 확인된 책임 경계에만 적용한다. 다음 단위는 **L2 인수 확인**이며 아래 원본 추출
+목록은 코드 출처 확인표로 재사용한다. L3–L6의 구현분을 미착수로 다시 세지 않는다.
+
+기준선은 두 개를 보존한다: L1의 운영 Main `19bc7697`과 재호의 yaw 수정 Main `8f93c22e`.
+PR #103의 bit 동등성은 후자 기준이다. matched/predicted OBB 수정의 의도적 차이를 분리하고
+기존 운영 Main과 완전히 동일하다고 표시하지 않는다. PR #103 CI·Planning integration은
+성공했으나 이번 문서 작업에서 full replay/빌드를 다시 실행하지 않았다.
 
 ## 1. 근거와 현재 상태
 
@@ -24,25 +50,25 @@
 - Competition 제공 범위는 자세·x방향 속도·각속도·제어 입력 등이다. 위치, y/z 속도,
   가속도 등 미제공 필드를 0이라도 실제 측정으로 사용하지 않는다.
 
-| 실제 연결 | 현재 코드·관측 | 이관 결정 |
+| 실제 연결 | 현재 확인 | 이관 결정 |
 |---|---|---|
-| type787 / 9797→9798 → `/Competition_topic` | 허용 채널을 의도한 bridge 경로. 실제 현장 packet·필드 수락 미완료 | 실제 원천·형식·종방향 속도/부호/단위를 확인한 뒤 사용 |
-| Ego / UDP9099 → `/Ego_topic` | 개발 호환 출력 | 새 본선 LiDAR는 구독·자동 fallback하지 않음 |
-| Main의 `/Competition_topic`→`/Ego_topic` remap | 실제 속도 입력은 개발 Ego | 기준선 재현 전용으로 기록, 새 실행에는 가져오지 않음 |
-| local UDP9798의 `#DetailEgoInfo$` 105B | 현재 decoder는 발행하지 않고 UNSUPPORTED로 진단 | 이름·포트만으로 Competition 수신 성공 처리하지 않음 |
+| UI CompetitionInfoPublisher / 9088→9099 → `/Ego_topic` | 181B `#MoraiInfo$`, 323개 정상 해석. position/velocityYZ/accelerationXYZ=0 | 현재 허용 Competition 입력의 호환 이름으로 유지 |
+| 별도9797→9798 → `/Competition_topic` | 실제138B `#DetailEgoInfo$`, decoder 거부 | 운영 속도로 쓰거나 대체 연결하지 않음 |
+| Main remap / shadow 직접 `/Ego_topic` 구독 | 기존 허용 입력 연결을 계승 | 이름만으로 금지 판정하지 않고 실제 송신 종류를 확인 |
 
-`EgoVehicleStatus`라는 ROS 타입을 함께 쓰거나 bridge의 shared decoder 시험이 통과한 사실은
-현장 Competition 입력의 승인이 아니다. 현재 decoder는 signed speed와 velocity XYZ를 모두
-해석하고 publisher는 XYZ를 채운다. Main은 XYZ norm으로 속도를 얻어 부호를 잃는다.
-새 속도 어댑터는 **허용된 x방향 속도만 SI·부호 포함으로 정규화**하고, 원본 필드·단위·축·
-유효성을 기록한다. 어느 packet 필드가 해당 값인지 live 검증 없이 선택하지 않는다.
-미제공 y/z=0은 측정이 아니라 종방향 운동 근사의 가정이며 진단에 표시한다.
+저장 JSON은9099를type295,9798을type787로 두지만 이 번호를 모든 버전에 일반화하지 않는다.
+허용 여부는 UI publisher·endpoint·실제 packet·제공 필드로 판단한다. `EgoVehicleStatus` ROS
+타입이나 `/Ego_topic` 이름 자체는 판정 전용 데이터의 증거가 아니다.
+현재 bridge는 velocity.x를 km/h→m/s로 변환한다. 정차 표본에서 signed 필드와 x가 일치했지만
+전진/후진 독립 검증은 남았다. shadow는 XYZ norm과 음수 거부를 유지하므로 L3에서 signed x와
+유효성을 명시한다. 미제공 y/z=0을 측정으로 쓰지 않는다. 실제 판정 전용 Ego/Detail 송신으로
+바뀐 경우에는 동일 ROS 이름이어도 사용하지 않는다. 위치는 GPS/IMU로만 구성한다.
 
 ### 코드 기준선
 
 원본 동작 기준은 main `19bc76978a499bddacf13f5aaf0bb6d713785657`, L0 문서는 `4a16bfda`다.
 2026-10-22 원격 main은 같은 SHA였고 이 구간의 runtime diff는 없다. source tree·설정·메시지·
-지도·보정 SHA는 manifest로 고정한다. 이번 L1은 새 runtime 성능 측정이나 full-stack 빌드가 아니다.
+지도·보정 SHA는 manifest로 고정한다. 이 단락은2026-10-22 기준선 기록이다. 현재 main은281349da이고 새 runtime 재수락은 아직 하지 않았다.
 
 현재 실행 순서는 다음과 같다.
 
@@ -64,7 +90,7 @@ local 준비에도 IMU·CAN을 모두 요구하며 typed velocity/dynamic validi
 ## 2. 목표 구조와 설정 소유권
 
 하나의 LiDAR 실행부가 계산 라이브러리를 호출한다. GPU 카메라 프로세스는 독립이다.
-단계별 ROS 노드·점군 직렬화를 추가하지 않는다. 다음 폴더는 해당 구현 시 생성한다.
+단계별 ROS 노드·점군 직렬화를 추가하지 않는다. 아래는 책임 분류다. PR #103의 실제 디렉토리를 재사용하며 이름만을 위한 이동은 하지 않는다.
 
 | 책임 | 소유 기능 | 재사용·경계 |
 |---|---|---|
@@ -115,7 +141,7 @@ local 준비에도 IMU·CAN을 모두 요구하며 typed velocity/dynamic validi
 | LiDAR | `/velodyne_points`, PointCloud2 | 실제 완성 scan, source header 보존. empty/malformed와 정상 zero-object를 구분 |
 | IMU | `/imu` | scan 이전의 유효 quaternion·각속도. 최대 source age120ms·선택 대기50ms |
 | GPS | `/gps` | finite·lat/lon 영점·원점·map 범위·점프 검사. 무효 barrier 보존 |
-| 차량 속도 | 검증된 `/Competition_topic` | x속도 m/s·부호 포함. 최대 age120ms·선택 대기50ms. 미검증/누락은 invalid |
+| 차량 속도 | 현재 CompetitionInfoPublisher → `/Ego_topic` | x속도 m/s·부호 포함. 최대 age120ms·선택 대기50ms. 미검증/누락은 invalid |
 | 카메라 | `/perception/camera/objects/observations`와 객체 상태 | 기존 8관측/350ms API·session/generation·보정 ID. LiDAR가 모드를 요청하지 않음 |
 
 IMU/속도는 선택 마감까지 도착한 표본만 사용하며 source>scan인 표본은 사용하지 않는다.
@@ -198,7 +224,7 @@ L6 추가 관측 계약은 geometry·관측 ID·객체별 운동 상태를 **한
 
 정식 후보는 `/perception/lidar/objects_local`, `/perception/lidar/objects_map`, 진단은 기존
 `/perception/lidar/diagnostics`를 기준으로 한다. 객체 관측용 additive wire의 실제 topic/type
-연결은 L6에서 명시한다. 시험 출력만 `/migration/lidar/...`로 remap하고 입력은 정본을 구독한다.
+연결은 L6에서 명시한다. 시험 출력은 PR #103의 `/asmc_lidar/shadow/...`를 재사용하고 입력은 정본을 구독한다.
 Main opt-in과 동시 실행 시 같은 정식 토픽/TF를 중복 생산하지 않는다. map→base TF authority를
 새로 차지하지 않는다. 같은 이름의 wire type을 묵시적으로 바꾸지 않는다.
 
@@ -239,11 +265,12 @@ DynamicObjectPolicy·차량 도로 포함/충돌 판단은 이관하지 않는�
 
 두 raw bag은 D 정본에서 전체 bytes를 다시 hash하고 인덱스·첫 header만 읽었다. bag 재생·
 ROS publish·시뮬 실행은 하지 않았다. 둘 다 `/Ego_topic`은 있지만 `/Competition_topic`은 없다.
-따라서 개발 parity에는 쓰되 현장 허용 속도 입력의 통과 증거로 쓸 수 없다.
+토픽 이름만으로 당시 publisher 종류를 확정하지 않는다. 개발 parity에는 쓰되 당시 송신
+설정 근거 없이 현재 허용 채널 실측과 동일한 입력이었다고 소급하지 않는다.
 
 | 자료 | 새로 확인한 범위 | 한계 |
 |---|---|---|
-| primary 48.9265s·649 scan | SHA/bytes, GPS245·IMU2384·전방979, 첫 stamp ns·PointXYZI | 독립 객체 GT 없음, 당시 Ego 입력 |
+| primary 48.9265s·649 scan | SHA/bytes, GPS245·IMU2384·전방979, 첫 stamp ns·PointXYZI | 독립 객체 GT 없음, 당시 `/Ego_topic` 입력(송신 종류 별도 확인) |
 | shadow 24.7519s·208 scan | SHA/bytes, GPS124·IMU1223·전방494, 첫 stamp ns·PointXYZI | 평균 scan 공급 자체가10Hz 미만, live 공급 수락에 사용 불가 |
 | B1a·PR #72 Git evidence | fixed raw cases·합성 archive/manifest hash | 과거 실행의 품질·failure 의미 유지 |
 | GPS invalid/missing variant | 이전 manifest의 hash·재생성 recipe | `/evidence/fixtures`는 과거 임시 경로, 현재 파일 존재 확인 안 됨 |
@@ -256,6 +283,10 @@ L3 준비 때 원본 SHA·동일 window·recipe로 새 run에 생성하고 과�
 
 ### 동작 보존과 의도적 수정
 
+아래는 L1 목표이며 PR #103의 완료 선언이 아니다. 특히 지면 fallback은 기존 legacy 경로의
+정책이고 PR #103 common 경로는 이전 평면을 재사용하지 않는다. L2 인수에서 두 정책을
+구분하며 동등성 비교를 위해 fallback을 새로 추가하지 않는다.
+
 - 보존: ROI 범위·ego crop, voxel0.1m, ground/cluster·OBB 수치, 평균/OBB 중심 구분,
   CA/KF·연관·ID·분류 확인/변경/유예, 기존 filter 결정과 raw/계획 속도 구분.
 - 의도적 수정: source ns 보존, GPS0/stale map 차단, GPS와 local 분리, 같은 roll/pitch,
@@ -266,7 +297,12 @@ L3 준비 때 원본 SHA·동일 window·recipe로 새 run에 생성하고 과�
   원본값을 보존하고 차량 치수 정정은 별도 비교한다. legacy IMU 경로는 intensity 대입이 없어
   XYZ parity와 intensity 보존 요구를 분리한다. undefined payload의 byte parity는 요구하지 않는다.
 
-## 6. L2에 넘길 구현 목록과 검사
+## 6. L2 인수에 재사용할 원본 대응과 검사
+
+PR #103으로 추출 자체는 대부분 구현됐다. 아래 목록은 원본 출처·요구 충족 여부를
+확인하는 체크리스트이며 같은 기능을 다시 작성하라는 지시가 아니다. legacy pitch-only와
+common roll/pitch 차이를 그대로 분리한다. 재호의 일반649/터널402 scan 근거와 L1
+primary649/shadow208 scan은 서로 다른 자료 범위이므로 수치를 혼합하지 않는다.
 
 | 기존 구현 | L2에서 추출할 것 | 제거할 의존성 / L3로 남길 것 |
 |---|---|---|
@@ -290,4 +326,4 @@ warning은 남아 있으며 실패가 아니다. 소스 수정 없이 manifest�
 
 완료 시 문서/계약·MD5·manifest SHA·현재/기준선 source tree를 대조하고 L1만 닫는다.
 기존 시험은 검출 GT·현장 Competition·주행 부하·planner cutover를 승인하지 않는다.
-다음은 **L2만** 구체화한다. L3–L8 구현·push·PR·병합·추가 수집은 이번 단위에 포함하지 않는다.
+다음은 **L2 인수 확인만** 구체화한다. L3–L8 구현·push·PR·병합·추가 수집은 이번 단위에 포함하지 않는다.

@@ -22,7 +22,7 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 새 정본 전달의 JSON 진단 의존 해소는 L6이며 아직 구현하지 않았다.
 
 정식 후보 local/map 경로는 아래 표를 유지하되, 새 실행의 동시 비교 출력만
-`/migration/lidar/objects_local`, `/migration/lidar/objects_map`으로 namespace/remap한다.
+PR #103의 `/asmc_lidar/shadow/objects_local`, `/asmc_lidar/shadow/objects_map`을 사용한다.
 센서·카메라 입력은 정본 경로를 구독한다. 새 상태·진단 타입, session/ID·소비자 캐시 초기화,
 pose 선택과 시간 한계는 [L1 설계](../../src/asmc_lidar/docs/migration-design.md)로 고정한다. 현재 없는 타입을 구현된 계약으로 등록하지 않는다.
 L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험 생산자를 연결하지 않는다.
@@ -54,7 +54,7 @@ L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험
 
 아래 strict 보간은 기존 코어 API의 계약이다. 새 실행 정책은 L1에서 **bounded300ms·복구3회**로
 선택했으며 유효 IMU·속도가 전제다. IMU/속도 age120ms·대기50ms, source/receipt 분리는
-[L1 설계](../../src/asmc_lidar/docs/migration-design.md)를 따르고 L3에서 구현·검증한다. 목표는 GPS/미션과
+[L1 설계](../../src/asmc_lidar/docs/migration-design.md)를 따른다. PR #103의 pose/추적 구현을 재사용하고 L3에서 미충족을 보완한다. 목표는 GPS/미션과
 무관한 local 처리·발행과 scan 시각의 유효 pose에서만 생성하는 map 객체다. map 무효는
 정상 빈 객체로 위장하지 않고 상태로 구분한다. 지금 실행 기본값을 바꾼 것은 아니다.
 

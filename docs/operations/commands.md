@@ -221,7 +221,7 @@ source devel/setup.bash
 |---|---:|---|
 | `--transport` | `local` | `local`, `lan2lan`; Ctrl 목적지 IP를 결정 |
 | `--gt` | OFF | 일반 입력에 Object·Semantic·Instance LiDAR 추가; local 전용 |
-| `--require-competition-status` | false | 주최 현장판 type 787을 필수 gate로 전환 |
+| `--require-competition-status` | false | 별도9798 경로를 필수화. 현재9099 Competition 설정에는 사용하지 않음 |
 | `-h`, `--help` | — | 도움말 |
 
 추가로 덮어쓸 수 있는 `bridge.launch` 인자:
@@ -237,8 +237,8 @@ source devel/setup.bash
 | `lidar_rotation_rate` | `15.0` | v3/GT 조립 참고값. 실제 송신 주기는 MORAI 센서셋 설정; v2 비교는10.0 |
 | `cmd_ip` | transport에서 결정 | local `127.0.0.1`, LAN2LAN `192.168.0.1` |
 | `cmd_port` | `9093` | MORAI Ego Ctrl Cmd listen port |
-| `competition_port` | `9798` | Competition Vehicle Status 수신 port |
-| `competition_status_required` | `false` | true면 type 787 미수신을 field gate 실패로 처리 |
+| `competition_port` | `9798` | 별도 상태 수신 port; 현재 UI Competition은 ego_port9099 경로 |
+| `competition_status_required` | `false` | true면 별도 competition 경로 미수신/미지원 형식을 실패로 처리 |
 | `enable_vehicle_state` | `true` | GPS/IMU 기반 `/vehicle/state` producer |
 
 `runtime_profile`, `transport_profile`, `stream_profile`은 wrapper가 관리한다.
@@ -395,7 +395,9 @@ ss -lunp
 ./scripts/udp_bridge.sh --transport lan2lan
 ```
 
-주최 현장판에서 type 787을 수락할 때만:
+별도9798에 허용 상태가 송신되는 것을 확인한 환경에서만 아래 검사를 쓴다.
+현재 CompetitionInfoPublisher9099→`/Ego_topic` 설정에는 적용하지 않는다
+([2026-10-23 확인](../records/bridge/2026-10-23-competition-channel-audit.md)).
 
 ```bash
 ./scripts/udp_bridge.sh --transport lan2lan --require-competition-status

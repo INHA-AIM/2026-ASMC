@@ -10,7 +10,7 @@
 | TwinLite/family | Large v7 E8 기본·전방544×960/측방480×640·TensorRT·상시 model-grid→family | 새 모델의 투영 범위·피팅 품질, A126 진입 전 유효 family·음영 한정 소비·freshness/fallback |
 | 신호등 | camera4 ResNet10Hz·typed 관측 | 신호등 생산자 하나, stale 시 legacy 우회 없음 |
 | Main 연결 | 전방 CPU 어댑터·unique ±50ms/200ms·기존 판제 출력 | 최신 판제와 실제 주행, 원본 이름/그룹/운동 분리 |
-| LiDAR 이전 | `asmc_lidar` 좌표/시간 코어·3뷰 수신/버퍼/투영 라이브러리, Main 검출/추적·전방 fusion의 shadow 노드(운영 미연결) | 손재호의 운영 실행 연결·다중관측(3뷰) 통합·MotionClassifier·판제 후처리 이전 |
+| LiDAR 이전 | `asmc_lidar` 좌표/시간 코어·3뷰 수신/버퍼/투영 라이브러리, Main 검출/추적·전방 fusion의 shadow 노드(운영 미연결) | 안승현 L2 인수·L3–L7 보완, 손재호 병행 개발·3뷰 통합; MotionClassifier·판제 후처리 미이관 |
 | HD Map | 정적 global/local·mission products | 판제 local map copy와 정합; 지도와 카메라 관측의 권위 분리 |
 | 자료·학습 | 원본 보존·v11 기반 E8 배포 | 추가학습 요청 시 실패 클래스/조건만 보강·고정 split 재검증 |
 

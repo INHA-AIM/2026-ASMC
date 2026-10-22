@@ -221,7 +221,7 @@ PR #64 후속 구현은 HD맵 source·생성 metadata·발행용 payload에 새 
 - [ ] Competition Vehicle Status·CollisionData 수신
 - [ ] 카메라·LiDAR·GPS·IMU 포트와 rate 확인
 - [ ] 체크포인트 15개, 3 m 반경과 순서 검증
-- [ ] runtime 노드가 Ego Vehicle Status 파생 토픽(`/Ego_topic`)을 소비하지 않음
+- [ ] runtime이 판정 전용 Ego/Detail 정보를 소비하지 않음. `/Ego_topic`은 현재 허용 Competition의 호환 이름이므로 이름만으로 금지하지 않는다([실측](../records/bridge/2026-10-23-competition-channel-audit.md)).
 - [ ] 모든 `/ctrl_cmd` 송신 노드가 `longlCmdType=1`만 사용
 - [ ] planning이 `route_speed_limits`의 effective 상한(60 구간 최대 60 km/h)을 지킴
 - [ ] 속도 예외 링크 경계와 15분 timeout 검증

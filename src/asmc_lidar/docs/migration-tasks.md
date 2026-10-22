@@ -1,24 +1,24 @@
 # LiDAR 이관 작업표 — L0–L8
 
-2026-10-22 기준. 진행 담당은 **안승현**이며 손재호의 별도 개발은 병행한다.
+2026-10-23 기준(PR #103 반영). 진행 담당은 **안승현**이며 손재호의 별도 개발은 병행한다.
 [통합 인계](../../../docs/handoffs/lidar-migration.md)가 전체 흐름·책임·전환 규칙의 정본이다.
 이번에는 문서만 정리한다. 기존 Main이 판제 입력을 계속 제공하며 코드·운영 전환은 없다.
 
 ## 상태와 작업 규칙
 
-상태는 `미착수 / 진행 / 검증 대기 / 완료 / 보류`로 사용한다. L1 설계·기준선은 아래에 연결하며 L2–L8은 미착수다.
+상태는 `미착수 / 진행 / 검증 대기 / 완료 / 보류`로 사용한다. L1 설계·기준선은 보존하고 PR #103의 구현을 재사용한다. 검증 대기는 해당 L단위 목표 전체의 수락이 남았다는 뜻이다.
 이미 구현된 좌표·시간·카메라 입력 코어는 재사용 입력이며 전체 이관 완료로 세지 않는다.
-각 단위는 별도 계획 → 구현 → 검증 → 문서·로컬 커밋으로 진행한다. L1 설계·기준선 검증까지 완료했으며 다음 플랜은 L2만 다룬다.
+각 단위는 별도 계획 → 구현 → 검증 → 문서·로컬 커밋으로 진행한다. 다음 플랜은 새 검출 이식 대신 L2 인수 확인만 다룬다.
 
 | 단위 | 상태 | 선행 | 결과 |
 |---|---|---|---|
 | L0 문서 통합 | 완료 | 사용자 승인 계획 | 기존 과제 연결·구현 상태·단계별 완료 기준 |
 | L1 구조·계약·기준선 | 완료 | L0 | [설계](migration-design.md)·[기준선 manifest](../../../config/baselines/lidar_migration_l1_v1.yaml) |
-| L2 검출 경로 | 미착수 | L1 | 입력·ROI·voxel·지면·군집·OBB 라이브러리/시험 경로 |
-| L3 좌표·시간·추적 | 미착수 | L2 | GPS 독립 local, 유효 pose map, 일관된 자세·속도 의미 |
-| L4 카메라 fusion | 미착수 | L3 | 기존 전방 매칭·분류 유지 이관 |
+| L2 검출 경로 | 검증 대기 | L1 | PR #103 검출·시험 경로 구현됨. L1 요구와 차이 인수 확인 |
+| L3 좌표·시간·추적 | 검증 대기 | L2 | 추적·roll/pitch·base/map 구현. 속도 gate·부호·운동 validity·재시작 보완 |
+| L4 카메라 fusion | 검증 대기 | L3 | 전방 fusion 구현. 실제 영상 bag 수락 남음 |
 | L5 인지 필터 | 미착수 | L4 | 중복 필터의 단일 인지 구현 |
-| L6 발행·실행·시각화 | 미착수 | L5 | 독립 빌드·공용 출력·namespace·실행 진입점 |
+| L6 발행·실행·시각화 | 검증 대기 | L5 | shadow 실행·typed 출력 구현. atomic 상태 계약·정식 실행/시각화 남음 |
 | L7 대조·판제 전환 | 미착수 | L6 | 소비 검증·명시적 cutover·복구 |
 | L8 개선 우선순위 | 미착수 | L7 | 다음 한 가지 개선과 근거 |
 
@@ -40,13 +40,18 @@
 ### L1 구조·계약·기준선
 
 - **입력·재사용:** 기존 Main 처리 단계·설정, 공용 좌표/카메라 코어, 최신 판제 소비 코드와 기존 bag·fixture.
-- **범위:** [L1 설계](migration-design.md)에 책임·입출력·설정 소유권·scan context·좌표·속도·상태 의미를 확정했다. 선택한 map 정책은 GPS 최대300ms 예측·복구3회이며 IMU/속도 source age120ms·대기50ms다. 실제 Competition 입력은 검증 대기이고 Ego fallback은 금지한다.
+- **범위:** [L1 설계](migration-design.md)에 책임·입출력·설정 소유권·scan context·좌표·속도·상태 의미를 확정했다. 선택한 map 정책은 GPS 최대300ms 예측·복구3회이며 IMU/속도 source age120ms·대기50ms다. 2026-10-23 UI/UDP 확인으로 현재 `/Ego_topic`이 허용 Competition 입력임을 정정했다. signed 주행 검증은 남고 판정 전용 정보 fallback은 금지한다.
 - **제외:** 새 알고리즘·메시지 구현·운영 전환. 새 상태 타입은 기존 타입으로 표현 불가능한 요구가 확인된 경우만 설계한다.
 - **검사·근거:** [L1 manifest](../../../config/baselines/lidar_migration_l1_v1.yaml)에 main `19bc7697`·source subtree·설정/지도/보정32개·raw bag2개 전체 SHA·메시지 MD5·컨테이너를 고정했다. frame_time35개·geometry/bounded pose·IMU 코어 실행파일3개를 /tmp에 새로 컴파일해 통과했다. 문서/공용 계약 unittest32개, migration/history·runtime 문서·MD5·manifest 검사가 통과했다. SHA 검사는 source subtree7개·설정/근거32개·raw bag2개 전체 bytes·규정 사본·공용/구형 MD5를 대조했다. 기존 B1a 본문은 보존했고 실행 변경은 없다.
-- **한계:** 공식 URL은 동적 본문 미추출, 보존 v1.2 사본으로 대조했다. 두 bag은 Ego 개발 입력이며 실제 Competition/독립 GT가 없다. GPS invalid/missing variant의 옛 alias는 미확인이므로 L3 전 재발견/재생성한다. bag 재생·ROS 노드 실행은 하지 않았다.
+- **한계:** 공식 URL은 동적 본문 미추출, 보존 v1.2 사본으로 대조했다. 두 bag의 `/Ego_topic` 이름만으로 당시 송신 종류를 확정할 수 없으며 독립 GT도 없다. GPS invalid/missing variant의 옛 alias는 미확인이므로 L3 전 재발견/재생성한다. bag 재생·ROS 노드 실행은 하지 않았다.
 - **복구:** 기준선 Main 유지. 설계 선택을 수정해도 실행 변경 없음.
 
 ### L2 검출 경로
+
+**다음 작업:** PR #103 검출 라이브러리·replay를 그대로 재사용해 인수 확인한다. 다시 이식하지 않는다.
+L1 raw점 계보와62500점 상한, 빈 입력/가짜점, pitch-only/common 지면 fallback 차이,
+동작 보존 범위·stage 비용을 먼저 검사한다. seed/자료/기준선 SHA가 맞는 기존 증거를 재사용하고
+불일치·미검증 항목만 재실행한다. 전체 수정과 추적 정책 변경을 한 번에 하지 않는다.
 
 - **입력·재사용:** Main의 ROS snapshot·ROI/voxel·지면·군집·OBB 계산, L1 기준선.
 - **범위:** 계산 코어와 ROS 경계를 분리하고 시험 실행기로 같은 입력을 재생한다. 실행 중 원본 입력·원본점 계보를 보존한다.
@@ -56,6 +61,10 @@
 
 ### L3 좌표·시간·추적
 
+PR #103의 추적/roll-pitch/base/map/bounded300ms·복구3회는 재사용한다. 현재 속도 미수신 시
+local도 invalid인 gate를 L1 목표와 분리하고, `/Ego_topic`의 허용 x속도·부호·시간·단위를 검증한다.
+XYZ norm의 부호 손실·음수 거부, dt 초기화/시각 역행·reset, 공개 속도·dynamic validity는 미완료다.
+
 - **입력·재사용:** L2 검출, 기존 tracker/KF/연관, frame_time·projection·IMU 선택·strict/bounded pose 코어.
 - **범위:** 추적 동작 보존 이식과 좌표 수정은 별도 커밋으로 분리한다. 관측시각의 roll/pitch 정책, 실제 base_link 출력과 유효 pose map 변환을 연결하고 GPS와 local ID 생애주기를 분리한다.
 - **제외:** 관측 평균→OBB 중심 교체, 새 운동 모델, 과거 GPS 무기한 재사용, 검증 없는 속도 validity 승격.
@@ -63,6 +72,8 @@
 - **복구:** 새 경로의 직전 검증 커밋으로 복구한다. 기존 Main 운영은 변경하지 않는다.
 
 ### L4 카메라 fusion
+
+PR #103 전방 Receiver·unique 매칭과 class 정책을 재사용한다. 합성 상태 시험은 실제 카메라 bag 품질 수락을 대신하지 않는다.
 
 - **입력·재사용:** 카메라 Receiver·뷰별 버퍼·보정·projection, 기존 Main 전방 unique 매칭·분류 확인/변경/유예 정책.
 - **범위:** L3 관측 좌표로 전방 bbox 매칭과 원본 이름/그룹을 보존한다. 공용 관측의 session/generation·calibration ID를 검사한다.

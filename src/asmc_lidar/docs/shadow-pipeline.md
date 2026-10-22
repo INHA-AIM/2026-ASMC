@@ -6,6 +6,17 @@ nested `Main`의 common-geometry LiDAR 처리를 `asmc_lidar` 안에 동작 보�
 이 노드는 어떤 기존 launch에도 포함되지 않으며 `/asmc_lidar/shadow/*`에만 발행한다.
 운영 전환·기본값 승격·실시간 성능 수락은 이 문서의 범위가 아니다.
 
+## 2026-10-23 입력 확인과 L1 연결
+
+현재 `/Ego_topic`은 사용자 UI의 허용 CompetitionInfoPublisher(9088→9099)를 받는 호환 이름이다.
+[실측 기록](../../../docs/records/bridge/2026-10-23-competition-channel-audit.md)에서181B packet과
+현재 bridge의 m/s 변환을 확인했다. 별도9798은 Detail 형식으로 거부되므로 이름만 보고
+`/Competition_topic`으로 바꾸지 않는다. 주행·후진 부호는 이번 정차 시험으로 검증하지 않았다.
+
+이 문서의 구현/기존 검증은 유지한다. [L1 목표](migration-design.md)와 차이가 남은 사항은
+속도 없이 local 형상 유지, XYZ norm의 signed x 전환, atomic 관측 ID/운동 상태,
+필터·실시간·소비 전환이다. 단위별 상태는 [작업표](migration-tasks.md)를 따른다.
+
 ## 현재 상태와 제한
 
 - 구현 완료: 독립 LiDAR pipeline(아래 처리 흐름)과 전방(`camera_front`) class fusion.

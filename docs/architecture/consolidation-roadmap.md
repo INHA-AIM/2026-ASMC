@@ -29,7 +29,7 @@
 ## 지금 닫지 않은 항목
 
 2026-10-22 L0 문서 통합에 이어 [L1 설계·기준선](../../src/asmc_lidar/docs/migration-design.md)을 정리했다.
-다음 구현 계획은 L2만 구체화한다. 구현 상태와 과거 검증
+PR #103 검출·추적·전방 fusion shadow를 재사용해 다음은 L2 인수 확인만 구체화한다. 구현 상태와 과거 검증
 근거는 [통합 인계](../handoffs/lidar-migration.md)에 모은다. 재호 브랜치 대기 없이 진행하되
 판제 소비는 L7까지 기존 Main을 유지한다. 최신 PR #101의 동적 장애물 판단·안전 재출발은
 판제 정책으로 남기고, 측정·지도 관련성 필터의 소유권 통합과 구분한다.
@@ -45,7 +45,7 @@ YOLO는 전 조건 모든 에셋 지원을 검증한 상태가 아닙니다. 추
 
 현재 지도 products와 판제 local map은 자동 일치하지 않습니다. 전체 지도 재생성 검사에 남은
 route source 경로 provenance 차이는 [현행화 검토 기록](../records/repository/2026-10-16-documentation-refresh.md)에 남깁니다.
-본선 type787·LAN2LAN은 local 통과 기록을 현장 수락으로 바꾸지 않습니다.
+현재 CompetitionInfoPublisher는9099→`/Ego_topic`으로 실측 확인했습니다([정정](../records/bridge/2026-10-23-competition-channel-audit.md)). 주행 부호·본선 LAN2LAN 수락은 남았습니다.
 
 ## 단계별 변경 규칙
 

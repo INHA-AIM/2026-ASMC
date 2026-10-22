@@ -1,6 +1,6 @@
 # LiDAR 통합 이관 계획과 소비 인계
 
-**2026-10-22: 안승현이 L0–L8 단위로 직접 이관을 진행한다.** 손재호의 별도 개발은
+**2026-10-23: 안승현이 L0–L8 단위로 직접 이관을 진행한다.** 손재호의 별도 개발은
 병행하며 해당 브랜치 제공을 착수 조건으로 두지 않는다. 기존 팀 ownership·리뷰 경계는
 유지한다. L0–L1은 문서·설계·기준선 정리이며 코드 이관·운영 전환이 아니다.
 
@@ -9,7 +9,7 @@ LiDAR 처리(ROI·Voxel·roll·pitch 수평화·RANSAC·군집·OBB·추적·전
 **shadow 노드와 bag replay**를 제공한다([Shadow 파이프라인](../../src/asmc_lidar/docs/shadow-pipeline.md)).
 [카메라 입력 API](../../src/asmc_lidar/docs/camera-input.md)를 손재호의 연결 시작점으로 사용한다.
 shadow 노드는 기존 launch에 포함되지 않고 명시 실행할 때만 `/asmc_lidar/shadow/*`에 발행한다.
-MotionClassifier·판제 후처리·구조물 분리·3뷰 fusion과 운영 ROS 출력 전환은 손재호가 원본
+MotionClassifier·판제 후처리·구조물 분리·3뷰 fusion과 운영 ROS 출력 전환은 안승현의 단위별 진행과 손재호 병행 개발로 원본
 [`lidar+sensorfusion`](../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)에서 이어서 이전한다.
 기존 원본 패키지가 현재 주행 경로다. `asmc_lidar`의 probe와 shadow 노드는 운영 출력을 내지 않으며,
 `Main`의 opt-in 어댑터가 코어를 연결해 typed local/map 객체를 제공한다.
@@ -29,9 +29,9 @@ L1 구조·입출력·시각·pose 정책은 [이관 설계](../../src/asmc_lida
 
 | 구분 | 현재 구현 | 이번 이관에서 할 일 |
 |---|---|---|
-| 센서 처리·검출·추적·전방 fusion | 기존 Main이 운영 생산자 | 동작 보존 이식 후 좌표·시간 수정은 별도 비교 |
-| `asmc_lidar` | 좌표·시간 코어, 카메라 수신·버퍼·보정·투영, 진단 probe | LiDAR 전체 실행·발행 노드는 아직 미이전 |
-| 공용 local/map 출력 | Main의 opt-in 어댑터가 생산, 운영 수락 보류 | 새 패키지 생산자와 소비 전환은 L6–L7 |
+| 센서 처리·검출·추적·전방 fusion | Main 운영 + PR #103 shadow 구현 | shadow를 재사용하고 L1 요구 차이·미수락만 보완 |
+| `asmc_lidar` | 독립 검출·추적·전방 fusion·shadow 실행/재생 | L2 인수 → L3 속도/유효성 → L4 실제 bag → L5 필터 |
+| 공용 local/map 출력 | Main opt-in + 새 shadow 배열 | atomic 계약·정식 생산자/소비 전환은 L6–L7 |
 | 카메라 추론 | `asmc_camera` 단일 소유, Main 구형 YOLO 제거 완료 | 모델을 재이식하지 않고 관측·퓨전만 연결 |
 | 남은 구형 기능 | Main의 HSV 영상 처리·UDP 객체 송신·제어 발행 등 | 새 경로에 가져오지 않음. 기존 삭제는 소비 전환 이후 |
 
@@ -40,6 +40,10 @@ L1 구조·입출력·시각·pose 정책은 [이관 설계](../../src/asmc_lida
 [소비 계약](../contracts/lidar-planning-consumer-v1.md)을 따른다.
 [좌표·GPS 경계](../records/lidar/lidar-camera-frame-boundaries.md)와
 [external 좌표 검토](../records/camera/camera-lidar-coordinate-reference-review.md)는 기존 근거로 보존한다.
+
+현재 CompetitionInfoPublisher는9088→9099→`/Ego_topic`으로 확인됐다.
+[실측·정정](../records/bridge/2026-10-23-competition-channel-audit.md)에 따라 이름만으로 금지 입력을
+판정하지 않는다. 속도 없어도 local 형상을 유지하는 L1 목표, signed 속도와 후진 검증은 남았다.
 
 ## 현재 경로와 이관 목표
 
@@ -52,18 +56,18 @@ L1 구조·입출력·시각·pose 정책은 [이관 설계](../../src/asmc_lida
 
 목표 내부 책임은 `geometry / preprocessing / detection / tracking / fusion / filtering / ros`다.
 계산 라이브러리와 ROS 입출력을 분리하고 단계마다 ROS 노드를 추가하지 않는다.
-실제 디렉토리는 해당 구현 때 만든다. 구형 UDP `127.0.0.1:7510`, `/ctrl_cmd_0` 발행,
+PR #103의 ground/clustering/obb/pose 등 구현 디렉토리를 재사용한다. 구형 UDP `127.0.0.1:7510`, `/ctrl_cmd_0` 발행,
 HSV 차선·정지선·신호등 처리는 새 LiDAR 경로에 이식하지 않는다. 카메라 보정·투영은 유지한다.
 
 ## 시험 namespace와 전환
 
 | 대상 | 정식 후보 | 이관 동시 비교 |
 |---|---|---|
-| local 객체 | `/perception/lidar/objects_local` | `/migration/lidar/objects_local` |
-| map 객체 | `/perception/lidar/objects_map` | `/migration/lidar/objects_map` |
+| local 객체 | `/perception/lidar/objects_local` | `/asmc_lidar/shadow/objects_local` |
+| map 객체 | `/perception/lidar/objects_map` | `/asmc_lidar/shadow/objects_map` |
 | 상태·진단 | L1에서 기존 공용 타입·경로 검토 후 확정 | 확정된 새 출력만 시험 namespace 적용 |
 
-위 시험 경로는 **설계이며 아직 launch에 구현하지 않았다.** L2–L5의 시험 실행기는 기존
+위 시험 경로는 **PR #103 shadow launch에 구현됐다.** 기존 L1의 `/migration/lidar/*` 제안은 이 구현 이름으로 정렬한다. L2–L5의 시험 실행기는 기존
 판제에 연결하지 않는다. 출력 namespace/remap만 전환하며 센서·카메라 입력은 정본 경로를
 계속 구독한다. Main opt-in도 같은 정식 출력 이름을 쓰므로 동시 비교 시 충돌을 검사한다.
 
@@ -92,7 +96,7 @@ L7에서 기존 발행자·호환 어댑터를 정지하고 새 경로를 정식
 ## 읽는 순서와 검증 상태
 
 1. 이 README와 [현재 카메라 인계](camera-to-lidar.md)에서 실행/계약·현재 구현과 후속 과제를 확인한다.
-2. [작업표](../../src/asmc_lidar/docs/migration-tasks.md)에서 L1 결과를 확인하고 L2부터 한 단위씩 계획한다. B1a 과제 대응표와 과거 증거를 함께 확인한다.
+2. [작업표](../../src/asmc_lidar/docs/migration-tasks.md)에서 L1 결과와 PR #103 차이를 확인하고 L2 인수부터 한 단위씩 계획한다. B1a 과제 대응표와 과거 증거를 함께 확인한다.
 3. [PR #72 연속 회귀](../records/lidar/lidar-continuous-regression.md)에서 시간·지면·추적 검증과 미수락 항목을 확인한다.
 4. [좌표 경계](../records/lidar/lidar-camera-frame-boundaries.md)와 [외부 참고 검토](../records/camera/camera-lidar-coordinate-reference-review.md)를 세부 근거로 읽는다.
 5. [소스 README](../../src/asmc_lidar/README.md)에서 코어 API·빌드·시험을 확인한다.

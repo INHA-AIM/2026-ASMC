@@ -9,19 +9,24 @@
 6~7절은 2026-10-06 전달된 규정과 신호 채점 후속 공지를 main `c971d6b`와 대조하고,
 PR #64에서 HD맵 규칙·생성물·회귀를 갱신한 인계다. 기존 판제 실행·채점 코드는 변경하지 않는다.
 
-## 1. 판정 전용 채널 — Ego Vehicle Status
+## 1. 판정 전용 채널과 허용 Competition 입력
 
-v1.2 2-4: Ego Detail Status, Ego Vehicle Status, Get TrafficLight Status는 판정 전용이며 본선에서
-참가팀이 사용할 수 없다. 허용 네트워크 외 사용은 실격이다.
+**2026-10-23 정정:** ROS 토픽 이름으로 금지 여부를 판단했던 기존 표를 대체한다.
+[UI·실제 UDP 점검](../records/bridge/2026-10-23-competition-channel-audit.md)에서
+CompetitionInfoPublisher가9088→9099로 송신하며 bridge는 이를 `/Ego_topic`으로 제공함을 확인했다.
+v1.2 2-4의 판정 전용 Ego Detail/Ego Vehicle/Get TrafficLight 금지와 2-8의
+Competition Vehicle Status 허용을 함께 적용한다.
 
-| 항목 | 현재 상태 | 요청 |
+| 항목 | 현재 확인 | 후속 |
 |---|---|---|
-| bridge 수신 | `morai_udp_bridge.py`가 9099의 Ego Vehicle Status를 `/Ego_topic`으로 발행한다. competition stream profile도 `ego_vehicle_status`를 입력으로 둔다. | 26r1과 공용이므로 수신은 유지한다. runtime 노드의 소비 0개를 본선 gate로 확인한다 (bridge @kante2) |
-| LiDAR `Main` | `src/lidar+sensorfusion/src/Main/main.launch:37-39`가 `/Competition_topic`을 `/Ego_topic`으로 remap한다. Ego 속도·조향각이 tracking 절대속도와 `is_dynamic` 판정에 들어간다. | **v1.2 위반 소비다.** 9798 Competition Vehicle Status live acceptance 뒤 remap을 제거하고 `/Competition_topic`을 직접 읽는다 (LiDAR @sonshiny) |
-| opt-in 경로 | `state_source:=ego_dev`, `asmc_hd_map` `local_pose_source:=ego_status`, calibration·수집 도구 | 개발 전용으로만 사용한다. 본선 launch 인자에 넣지 않는다 |
+| bridge 수신 | 9099의181B Competition packet을 기존 decoder가 정상 해석. `/Ego_topic`은 호환 이름 | UI publisher·endpoint·packet 출처를 유지하고 새 환경에서 재확인 |
+| 기존 Main / 새 shadow | remap 또는 직접 `/Ego_topic` 구독. 토픽명에 따른 규정 위반 단정은 철회 | longitudinal 속도·부호·단위를 L3에서 검증. 9798로 임의 교체하지 않음 |
+| 별도9798 | 이번 송신은138B `#DetailEgoInfo$`, 기존 decoder는 거부 | 속도 fallback 금지. 기존 require 옵션은 이 별도 경로 검사임을 구분 |
+| opt-in 위치 경로 | `state_source:=ego_dev`, HD맵 `local_pose_source:=ego_status` 등 | Competition에는 위치가 없으므로 운영 위치 소스로 사용하지 않음 |
 
-Competition Vehicle Status에는 `pos_x/y/z`, `vel_y/z`, `accel_x/y/z`, 타이어 횡력·side slip·
-cornering stiffness가 없다. 위치는 GPS/IMU에서만 얻는다.
+Competition에는 `pos_x/y/z`, `vel_y/z`, `accel_x/y/z`, 타이어 횡력·side slip·cornering stiffness가
+제공되지 않는다. packet의0을 측정값으로 해석하지 않고 위치는 GPS/IMU에서 얻는다.
+이번 정차 표본만으로 전진·후진 속도 정확도와 본선 LAN 수락을 완료하지 않는다.
 
 ## 2. 제어 명령 — cmd type 1, ctrl mode 2
 
