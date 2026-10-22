@@ -1,6 +1,7 @@
-# 카메라 YOLO → 기존 Main → 손재호 LiDAR 이전 — 2026-10-16
+# 카메라 YOLO → 기존 Main → asmc_lidar 연결
 
-시작점은 [LiDAR 인계](lidar-migration.md)다. 카메라 실행은 [카메라 계약](../contracts/camera-runtime-v1.md),
+2026-10-22 현재 이관 진행은 안승현이 맡고 손재호의 별도 개발은 병행한다.
+순서·완료 기준은 [L0–L8 작업표](../../src/asmc_lidar/docs/migration-tasks.md), 시작점은 [LiDAR 인계](lidar-migration.md)다. 카메라 실행은 [카메라 계약](../contracts/camera-runtime-v1.md),
 관측 metadata는 [기계 정본](../../config/contracts/camera_object_observation_v1.yaml)을 따른다.
 현재 판제는 nested `lidar+sensorfusion`의 Main 출력을 소비한다. `asmc_lidar` 전체 이전은 완료되지 않았다.
 Main LiDAR 처리와 전방 fusion은 `asmc_lidar` shadow 노드로 이식했으나 명시 실행·`/asmc_lidar/shadow/*` 전용이며 운영에 연결하지 않았다.
@@ -19,7 +20,7 @@ asmc_camera/camera.launch — 3뷰 YOLO, 독립 실행
 
 - **안승현/카메라:** 모델·전처리·bbox·세 그룹·confidence·3뷰 관측과 실행 성능, 공용 제어·LiDAR 카메라 입력 지원.
 - **PR #87에서 완료한 Main 정리:** 독립 YOLO 노드/래퍼/전용 가중치/설치 경로를 제거했다. Main은 카메라 모델을 시작하거나 로드하지 않는다.
-- **손재호:** 검출·지면/구조물·군집·OBB·추적·카메라 매칭/fusion·ROS 출력의 `asmc_lidar` 이전.
+- **안승현/이관:** L1부터 단계별로 기존 LiDAR 실행을 이관한다. **손재호/LiDAR:** 별도 개발을 병행하고 결과·소비 경계 검토에 참여한다. 전방 fusion은 L4, 3뷰 확대는 L8 후속이다.
 - **판제:** 결과 소비·행동 정책·음영 lane 사용. 기본은 세 모델 상시 ACTIVE이며 이번 변경은 판제 입력 토픽·MD5·정책을 바꾸지 않는다.
 
 음영 어댑터의 `camera_bbox_detector.launch`도 별도 추론 없이 전방 CPU 변환만 제공한다. 전용 출력 토픽과 소비 cutoff0.7은 그대로이며 Main 어댑터의 기본0.0과 구분한다.
@@ -144,11 +145,11 @@ src/lidar+sensorfusion/install/lib/Main/yolo_detection_node
 과거 P2a 비교의 소스·가중치는 변경 전 커밋 `ae8dcbc0eb80f06f8c8db54742543aad369ef3cc`에 있다.
 재현이 필요하면 그 커밋의 별도 checkout·일치하는 빌드/source 환경·독립 ROS master를 사용한다. 현재 운영에 복구하지 않는다.
 
-## 카메라 입력 지원과 손재호의 다음 구현
+## 카메라 입력 지원과 이관 연결
 
 `asmc_lidar`에 카메라 수신·뷰별 제한 버퍼·보정 로딩·투영 인터페이스를 제공한다.
 [입력 API·빌드·시험·probe](../../src/asmc_lidar/docs/camera-input.md)에 최소 연결 예제를 정리했다.
-현재 운영 Main의 전방 연결과 최종 판제 출력은 계속 유지한다.
+현재 운영 Main의 전방 연결과 최종 판제 출력은 계속 유지한다. 새 출력 격리와 소비 전환은 통합 인계를 따른다.
 
 - **카메라 담당 제공:** 공용 상태/서비스 전환, 관측 수신·검증·버퍼, session/generation·시간 게이트,
   보정 ID 교차 검사·원본 좌표 투영 인터페이스·시험과 진단.

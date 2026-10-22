@@ -29,7 +29,7 @@
 | UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../../src/asmc_bridge/docs/integration.md) | 이강태·안승현, planning consumer 공동 리뷰 |
 | Perception façade와 typed 계약 | `src/asmc_camera/`; [runtime 계약](../contracts/perception-runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |
 | Camera/BEV/traffic | `src/asmc_camera/` | 안승현, perception·planning consumer 공동 리뷰 |
-| LiDAR/3D·camera fusion | 원본 `src/lidar+sensorfusion/`, 이전용 골격 `src/asmc_lidar/` | 손재호가 기능 이전·수락 후 asmc_lidar 정본화, 안승현 계약·개선사항 인계 |
+| LiDAR/3D·camera fusion | 원본 `src/lidar+sensorfusion/`, 이전용 골격 `src/asmc_lidar/` | 안승현이 L0–L8 이관 진행, 손재호 별도 개발 병행; LiDAR·판제 공동 소비 리뷰 후 정본 전환 |
 | 데이터 수집 | `src/data_collection/` | 안승현, perception 공동 리뷰 |
 | Scenario/gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | 공용 infra | `docker/`, `.github/`, `docs/`, `scripts/` 공용 진입점 | 통합 리뷰 필수 |
@@ -42,17 +42,16 @@
 |---|---|
 | `asmc_hd_map` | 2단계 완료. 운영 map과 global/local topic 사용 |
 | `asmc_bridge` | P3-G local closeout 완료. 실제 두 PC LAN2LAN은 6단계 현장 리허설에서 검증 |
-| `asmc_camera`(구 `asmc_perception`) | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 Main은 카메라 외부 결과 소비로 연결됨. 알고리즘 이전은 손재호 담당 |
+| `asmc_camera`(구 `asmc_perception`) | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 Main은 카메라 외부 결과 소비로 연결됨. LiDAR 이관은 아래 L0–L8 담당을 따름 |
 | `asmc_camera` 현재 | rename·3뷰 YOLO 단일화·TensorRT·family 최적화 병합. 원본16종/소비3그룹 계약 제공. 추가학습은 판제 요청 시 |
-| 목표 `asmc_lidar` | 손재호: 좌표·시간 골격 위에 원본 기능 보존·개선 적용·메시지/좌표 어댑터 이전 마무리. camera fusion 내부 유지, 개인 연구 runtime은 Git 이력에서만 조회 |
+| 목표 `asmc_lidar` | 안승현: 좌표·시간·카메라 수신 코어 위에 L0–L8 단계별 이관. 손재호 개발은 병행하며 브랜치 제공을 착수 조건으로 두지 않음. 운영은 기존 Main 유지 |
 | `learning*` 정리 | 완료. LBC teacher/debug 필요 기능만 `tools/research/lbc_teacher_bev` 이관 |
 | 실행·시각화 | P5-A~E 완료 기록 유지. bridge는 별도 실행, 웹 콘솔은 수요 발생 후 검토 |
 | LAN2LAN 현장 리허설 | 6단계 예정 |
 
 현재 경로와 목표 경로를 혼용하지 않는다. 이식 전까지 실행 명령은 각 package README와
 [저장소 레이아웃](../architecture/repository-layout.md)을 따른다.
-상세 순서·책임·삭제 조건은 [통합 로드맵](../architecture/consolidation-roadmap.md)의
-카메라/LiDAR 이전 계획이 정본이다. 이 문서의 역할 계획만으로 CODEOWNERS를 변경하거나
+전체 개발 방향은 [통합 로드맵](../architecture/consolidation-roadmap.md)을 따르며, LiDAR의 상세 순서·완료 상태는 [통합 인계](../handoffs/lidar-migration.md)와 [작업표](../../src/asmc_lidar/docs/migration-tasks.md)가 정본이다. 이 문서의 역할 계획만으로 CODEOWNERS를 변경하거나
 판제 소유 코드·손재호 브랜치를 대신 수정하지 않는다. 이전 PR에서 실제 담당자 리뷰 규칙을 확인한다.
 
 ## 변경과 검증 책임

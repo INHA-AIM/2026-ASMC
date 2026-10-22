@@ -1,6 +1,7 @@
 # asmc_lidar — 좌표·시간 기반과 카메라 입력 인계
 
-**2026-10-16 카메라 인계:** [현재 연결·실행·손재호 구현 경계](../../docs/handoffs/camera-to-lidar.md).
+**2026-10-22 이관:** 안승현이 [L0–L8 작업표](docs/migration-tasks.md)를 직접 진행하며 손재호 개발은 병행한다.
+카메라 인계는 [현재 연결·실행·구현 경계](../../docs/handoffs/camera-to-lidar.md).
 `config/camera_objects.yaml`은 실제 카메라 관측 계약/보정/라벨 설정을 참조하고 교차 시험으로 검사한다.
 관측 수신·뷰별 버퍼·보정/투영 인터페이스를 제공한다. 전방(`camera_front`) fusion은 shadow 노드에 이식했으며 3뷰 객체 매칭·fusion은 손재호의 후속 구현이다. Main의 독립 YOLO는 제거하고 외부 카메라 전방 어댑터만 사용한다.
 
@@ -12,16 +13,23 @@
 shadow 노드는 `/asmc_lidar/shadow/*`에만 발행하며 어떤 기존 launch에도 포함되지 않는다.
 구현·검증 상태, 미수락 항목과 저장소 Main과의 의도적 차이는 [현재 상태와 제한](docs/shadow-pipeline.md#현재-상태와-제한)에 있다.
 
-[카메라 입력 API·공용 상태 전환·직접 시험](docs/camera-input.md)을 손재호의 연결 시작점으로 사용한다.
+[카메라 입력 API·공용 상태 전환·직접 시험](docs/camera-input.md)을 카메라 연결 시작점으로 사용한다.
 
 2026-10-08 B1a의 GPS·map·수평화·카메라 투영·추적 경계와 담당별 후속 작업은
 [B1a 개선 과제](docs/migration-tasks.md)에 정리했다.
 공통 기반은 `Main`의 opt-in `Geometry/` 어댑터에 연결했다. 검증 상태와 직접 launch는
 [좌표·GPS 경계 인계](../../docs/records/lidar/lidar-camera-frame-boundaries.md)에 있다.
-재호의 전체 이전·터널 필터 운영 수락과 기본값 승격은 별도다.
+전체 이전·터널 필터 운영 수락과 기본값 승격은 별도다.
 
 담당 작업과 완료 조건은 [LiDAR 인계 문서](../../docs/handoffs/lidar-migration.md),
 카메라와의 역할 분담은 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)에 있다.
+
+## 목표 구조와 현재 경계
+
+목표 책임은 `geometry / preprocessing / detection / tracking / fusion / filtering / ros`다.
+아래 기존 코어를 재사용하며 실제 폴더는 구현할 때 만든다. 빈 골격·새 LiDAR launch는 이번에 추가하지 않는다.
+새 실행의 출력은 `/migration/lidar/...`로 격리하고 기존 운영 입력은 유지한다.
+정식 이름·전환·복구는 [통합 인계](../../docs/handoffs/lidar-migration.md#시험-namespace와-전환)를 따른다.
 
 ## 남긴 구성
 
@@ -51,7 +59,7 @@ shadow 노드는 `/asmc_lidar/shadow/*`에만 발행하며 어떤 기존 launch�
 
 ## 구조물 처리 확장 지점 — 아직 미구현
 
-손재호가 지면 뒤·군집 앞에 구조물 근거 추출을 추가하고, 군집 뒤에 벽/객체 혼합 여부를
+L8 후속 후보는 지면 뒤·군집 앞에 구조물 근거 추출을 추가하고, 군집 뒤에 벽/객체 혼합 여부를
 검사한다. 동일 경로를 모든 구간에 사용하며 GPS나 미션으로 지면/군집을 전환하지 않는다.
 구체적인 단계·내부 결과 요구·실패 사례·검증 순서는
 [모드 없는 구조물 분리 계약](../../docs/handoffs/lidar-migration.md#모드-없는-구조물-분리--손재호의-후속-구현-계약)을 따른다.

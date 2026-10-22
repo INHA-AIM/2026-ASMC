@@ -142,4 +142,4 @@ rostopic echo /lidar_camera_probe/diagnostics
 ```
 
 Probe는 자신의 diagnostics만 발행한다. `/YOLO/BBox`, `/last_lidar`, 차량 제어를 발행하지 않는다.
-실제 이전 순서는 [카메라→LiDAR 인계](../../../docs/handoffs/camera-to-lidar.md)를 따른다.
+실제 이전 순서는 [L0–L8 작업표](migration-tasks.md)를 따르며, 전방 fusion 연결은 L4, 3뷰 매칭 확대는 L8 후속이다. [카메라→LiDAR 인계](../../../docs/handoffs/camera-to-lidar.md)에서 현재 전방 경로를 확인한다.
