@@ -1,0 +1,67 @@
+scene=scen16 gt_tid=22 run=/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_AB
+[561] GT c=(23.31,15.75) l/w=5.02/2.08 yaw=-148.7 v=(0.00,0.00)
+    det 6: npts=19 mean=(22.79,15.03) rawOBB c=(22.89,15.14) 1.86x0.55 yaw=-64.0
+    assoc id=415 age=51 miss=0 kfc=2 pred=(22.56,15.11) gate=3 cands=det6:d=0.25/c=0.38, det14:d=5.85/c=6.16* -> j=5
+    KF kfc_in=2 dt=0.111 innov=(0.234,-0.080) K_vel=(0.70,0.70) x_post v=(-0.43,-0.26) a=(-0.76,0.03)
+    OBB ema_0.25: stab c=(22.87,15.12) 1.87x0.49 yaw=-59.7; absV=(-0.43,-0.26) can_added=0.00
+    V2 local c=(22.87,15.12) 1.87x0.49 yaw=-59.7 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[562] GT c=(22.52,16.43) l/w=5.02/2.08 yaw=-147.0 v=(0.00,0.00)
+    det 6: npts=19 mean=(21.94,15.84) rawOBB c=(22.12,15.95) 1.87x0.68 yaw=-63.0
+    assoc id=415 age=52 miss=0 kfc=2 pred=(21.87,15.70) gate=3 cands=det6:d=0.16/c=0.24, det11:d=5.93/c=6.63* -> j=6
+    KF kfc_in=2 dt=0.095 innov=(0.070,0.139) K_vel=(0.67,0.67) x_post v=(-0.45,-0.18) a=(-0.74,0.05)
+    OBB ema_0.25: stab c=(22.10,15.93) 1.87x0.63 yaw=-59.3; absV=(-0.45,-0.18) can_added=0.00
+    V2 local c=(22.10,15.93) 1.87x0.63 yaw=-59.3 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[563] GT c=(21.55,17.22) l/w=5.02/2.08 yaw=-145.0 v=(0.00,0.00)
+    det 6: npts=18 mean=(21.08,16.57) rawOBB c=(21.25,16.67) 1.83x0.73 yaw=-66.0
+    assoc id=415 age=53 miss=0 kfc=2 pred=(20.91,16.52) gate=3 cands=det6:d=0.18/c=0.13, det11:d=5.92/c=6.63* -> j=6
+    KF kfc_in=2 dt=0.110 innov=(0.172,0.050) K_vel=(0.70,0.70) x_post v=(-0.40,-0.16) a=(-0.68,0.04)
+    OBB ema_0.25: stab c=(21.22,16.65) 1.85x0.62 yaw=-59.4; absV=(-0.40,-0.16) can_added=0.00
+    V2 local c=(21.22,16.65) 1.85x0.62 yaw=-59.4 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[564] GT c=(19.56,18.70) l/w=5.02/2.08 yaw=-140.9 v=(0.00,0.00)
+    det 7: npts=16 mean=(19.02,18.03) rawOBB c=(19.04,18.03) 1.40x0.18 yaw=-51.0
+    assoc id=415 age=54 miss=0 kfc=2 pred=(18.95,17.93) gate=3 cands=det7:d=0.12/c=0.70 -> j=6
+    KF kfc_in=2 dt=0.214 innov=(0.072,0.094) K_vel=(0.95,0.95) x_post v=(-0.46,-0.10) a=(-0.64,0.04)
+    OBB ema_0.25: stab c=(19.05,18.05) 1.40x0.22 yaw=-54.2; absV=(-0.46,-0.10) can_added=0.00
+    V2 local c=(19.05,18.05) 1.40x0.22 yaw=-54.2 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[565] GT c=(18.44,19.44) l/w=5.02/2.08 yaw=-138.6 v=(0.00,0.00)
+    det 7: npts=17 mean=(18.05,18.70) rawOBB c=(18.09,18.72) 1.52x0.31 yaw=-40.0
+    assoc id=415 age=55 miss=0 kfc=2 pred=(17.85,18.69) gate=3 cands=det7:d=0.20/c=0.36 -> j=6
+    KF kfc_in=2 dt=0.110 innov=(0.196,0.004) K_vel=(0.78,0.78) x_post v=(-0.38,-0.11) a=(-0.56,0.02)
+    OBB ema_0.25: stab c=(18.12,18.78) 1.50x0.42 yaw=-49.0; absV=(-0.38,-0.11) can_added=0.00
+    V2 local c=(18.12,18.78) 1.50x0.42 yaw=-49.0 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[566] GT c=(17.26,20.16) l/w=5.02/2.08 yaw=-136.3 v=(0.00,0.00)
+    det 8: npts=17 mean=(16.93,19.36) rawOBB c=(17.02,19.51) 1.42x0.52 yaw=-49.0
+    assoc id=415 age=56 miss=0 kfc=2 pred=(16.77,19.38) gate=3 cands=det8:d=0.16/c=0.19 -> j=7
+    KF kfc_in=2 dt=0.112 innov=(0.163,-0.019) K_vel=(0.71,0.71) x_post v=(-0.32,-0.14) a=(-0.50,-0.01)
+    OBB ema_0.25: stab c=(17.01,19.50) 1.43x0.50 yaw=-47.3; absV=(-0.32,-0.14) can_added=0.00
+    V2 local c=(17.01,19.50) 1.43x0.50 yaw=-47.3 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[567] GT c=(16.10,20.82) l/w=5.02/2.08 yaw=-134.1 v=(0.00,0.00)
+    det 4: npts=8 mean=(16.03,19.78) rawOBB c=(16.06,19.80) 0.69x0.29 yaw=0.0
+    assoc id=415 age=57 miss=0 kfc=2 pred=(15.68,19.98) gate=3 cands=det4:d=0.40/c=0.92 -> j=3
+    KF kfc_in=2 dt=0.112 innov=(0.353,-0.195) K_vel=(0.69,0.69) x_post v=(-0.13,-0.29) a=(-0.38,-0.10)
+    OBB ema_0.25: stab c=(16.06,19.81) 0.72x0.16 yaw=-33.8; absV=(-0.13,-0.29) can_added=0.00
+    V2 local c=(16.06,19.81) 0.72x0.16 yaw=-33.8 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[568] GT c=(14.82,21.47) l/w=5.02/2.08 yaw=-131.7 v=(0.00,0.00)
+    det 4: npts=20 mean=(13.75,19.45) rawOBB c=(13.84,19.63) 1.58x0.72 yaw=-41.0
+    assoc id=415 age=58 miss=0 kfc=2 pred=(14.60,20.48) gate=3 cands=det4:d=1.34/c=2.04 -> j=4
+    KF kfc_in=2 dt=0.113 innov=(-0.857,-1.032) K_vel=(0.69,0.69) x_post v=(-0.75,-1.03) a=(-0.68,-0.49)
+    OBB ema_0.25: stab c=(13.82,19.59) 1.64x0.61 yaw=-33.8; absV=(-0.75,-1.03) can_added=0.00
+    V2 local c=(13.82,19.59) 1.64x0.61 yaw=-33.8 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[569] GT c=(13.52,22.07) l/w=5.02/2.08 yaw=-129.3 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 6 at 10.89 m
+[570] GT c=(12.27,22.58) l/w=5.02/2.08 yaw=-127.1 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 9 at 10.85 m
+[571] GT c=(10.93,23.06) l/w=5.02/2.08 yaw=-124.7 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 9 at 10.88 m
+[572] GT c=(9.56,23.49) l/w=5.02/2.08 yaw=-122.3 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 5 at 10.96 m
+[573] GT c=(6.99,24.14) l/w=5.02/2.08 yaw=-117.9 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 4 at 7.67 m
+[574] GT c=(5.60,24.40) l/w=5.02/2.08 yaw=-115.6 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 3 at 10.95 m
+[575] GT c=(4.54,24.55) l/w=5.02/2.08 yaw=-113.9 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 3 at 10.89 m
+[576] GT c=(3.18,24.71) l/w=5.02/2.08 yaw=-111.7 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 4 at 7.70 m
+[577] GT c=(2.10,24.79) l/w=5.02/2.08 yaw=-109.9 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 3 at 10.85 m
+[578] GT c=(0.78,24.85) l/w=5.02/2.08 yaw=-107.8 v=(0.00,0.00)  -> FN (no matched output); nearest raw det 3 at 10.86 m

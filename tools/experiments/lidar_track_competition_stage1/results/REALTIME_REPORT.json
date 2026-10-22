@@ -1,0 +1,1010 @@
+{
+ "schema": "realtime_report_v1",
+ "date": "2026-10-22",
+ "verdict_summary": {
+  "production_build_O0_15hz": "input 15.00 Hz sustained; 0.4% scans dropped (2/508, max 1 consecutive) on the urban scene scen21, 0 on scen75; end-to-end p95 66-90 ms, p99 69-126 ms, max 73-146 ms; LidarProcess p95 56-67 ms ~= the 66.7 ms period, i.e. NO margin: 15 Hz is met only marginally and only without camera decode, YOLO fusion, GPS/map, MotionClassifier and legacy planner publishing (not exercised here)",
+  "optimised_build_O2_15hz": "0 drops in 4 runs; end-to-end p50 12-14 ms, p95 20-24 ms, max 24-33 ms; LidarProcess p95 13 ms (5x margin)",
+  "options_A_B": "no measurable throughput cost at -O0 (2 drops, e2e p95 80 ms vs 90 ms off)",
+  "trace_on_off": "-O0: e2e p95 122 ms (trace on) vs 90/90 ms (off, 2 repeats), drops 3 vs 2; -O2: 23.4 vs 24.0/21.8 ms. Trace volume ~12.7 MB per 34 s (all tracks).",
+  "bottleneck": "-O0 Eigen per-point transforms: ROI p50 13-14 ms (p95 21 ms) and imu_correct ~4 ms; tracking FrameFilter p50 5-8 ms, p95 15-22 ms; L-shape objectinfo p95 ~9 ms. All collapse with -O2 (ROI 0.06 ms, FrameFilter 1.6 ms p50). PCL clustering (~6 ms p95) is unchanged (library already optimised). The production nested build has CMAKE_BUILD_TYPE unset (-O0).",
+  "historical_claim_p95_145ms": "came from the offline harness at maximum speed with 2-3 processes on SMT siblings (exp05/06 PERFORMANCE_RESULTS): it is a contention-affected offline processing time, not a 15 Hz latency; not used here"
+ },
+ "method": {
+  "node": "real Main node (lib/Main/main) via `roslaunch Main main_integration.launch planner_udp_enabled:=false` inside ns_batch.sh (unshare user/net/pid/mount, lo only, private roscore); one fresh namespace per run",
+  "inputs": "scripts/rt_feeder.py: /velodyne_points PointCloud2 at 15 Hz paced by absolute CLOCK_MONOTONIC deadlines (lateness recorded), /imu and /Ego_topic (velocity.x only = Competition vel_x channel; main.launch remaps /Competition_topic to /Ego_topic) at 50 Hz, no GPS. Scans = Lidar_Data competition-input scenes (recorded ~9-10 Hz) replayed at 15 Hz; ~10k points/scan (VLP-16 pattern)",
+  "consumer": "scripts/rt_observer.py subscribes /lidar/local_object and /lidar/map_object with tcp_nodelay and logs CLOCK_MONOTONIC receive time",
+  "clocks": "end-to-end latency = observer receive CLOCK_MONOTONIC - feeder publish CLOCK_MONOTONIC (same host, same clock); header.stamp (ROS wall) is only the join key and is never subtracted from a monotonic time; LidarProcess/stage times = steady_clock inside the node (track trace scan_end)",
+  "drop_accounting": "published scans vs V2 outputs joined by stamp; with trace on: scan id = callback generation, so latest-frame-wins skips = generation gaps and callbacks lost before processing = published - max generation",
+  "resources": "proc_samples.csv every 0.5 s: utime+stime, VmRSS, threads, /proc/loadavg, /proc/pressure/cpu, sum of task schedstat run_delay",
+  "builds": {
+   "O0": "exp_cand, CMAKE_BUILD_TYPE unset = production convention (-std=gnu++17, no -O)",
+   "O2": "exp_cand_o2, Release with -O2 only (no NDEBUG), same source commit 669859c1"
+  },
+  "order": "ABAB-like: O0 off, O2 off, O0 trace, O2 trace, O0 A+B, O0 off, O2 off (scen21) then O0 off, O2 off, O0 trace (scen75)",
+  "duration_per_run_s": "~34 s of input (508 / 500 scans)"
+ },
+ "contamination": "another session (asmc_lidar_migration) was active earlier in the day; during these runs load1 0.4-2.2 and CPU PSI some avg10 0.05-0.34 (recorded per run); Main run_delay <= 0.3 ms/s",
+ "not_covered": [
+  "camera JPEG decode and YOLO fusion inside TemporalThread (no camera input)",
+  "GPS/map pose, MotionClassifier, legacy /last_lidar publishing and planner filters (no GPS in the competition-restricted data)",
+  "real MORAI bridge timing and UDP receive path",
+  "real 15 Hz LiDAR (scans are 10 Hz recordings replayed faster)",
+  "long-duration (> 35 s) drift/memory growth"
+ ],
+ "runs": {
+  "O0_off_scen21_r1": {
+   "published_scans": 508,
+   "input_rate_hz": 15.00013907700525,
+   "input_duration_s": 33.799686616053805,
+   "input_period_ms": {
+    "n": 507,
+    "p50": 66.66666897945106,
+    "p95": 66.74254284007475,
+    "p99": 66.80821963120252,
+    "max": 66.91309798043221,
+    "mean": 66.66604855237436
+   },
+   "feeder_lateness_ms": {
+    "n": 508,
+    "p50": 0.144074,
+    "p95": 0.21598309999999996,
+    "p99": 0.30625502,
+    "max": 0.487553,
+    "mean": 0.1523302125984252
+   },
+   "outputs_local": 506,
+   "outputs_matched_to_input": 506,
+   "outputs_map": 0,
+   "dropped_scans_total": 2,
+   "drop_rate": 0.003937007874015748,
+   "drop_runs_max_consecutive": 1,
+   "output_rate_hz": 14.943622510917548,
+   "output_interval_ms": {
+    "n": 505,
+    "p50": 67.50659004319459,
+    "p95": 75.34916861914097,
+    "p99": 78.09990996494889,
+    "max": 114.71154994796962,
+    "mean": 66.91817859219995
+   },
+   "e2e_latency_ms": {
+    "n": 506,
+    "p50": 32.725419,
+    "p95": 90.47582675,
+    "p99": 125.32440489999998,
+    "max": 139.63464,
+    "mean": 40.205421701581024
+   },
+   "main_cpu_cores_mean": 0.3870571407861939,
+   "main_rss_kb_max": 201908,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 85,
+    "p50": 2.16,
+    "p95": 3.01,
+    "p99": 3.053199999999999,
+    "max": 3.28,
+    "mean": 2.350470588235293
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 85,
+    "p50": 0.34,
+    "p95": 2.55,
+    "p99": 3.12,
+    "max": 3.12,
+    "mean": 0.7414117647058821
+   },
+   "main_run_delay_ms_per_s": 0.053702061565345724,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792651742.943400426]: tracking experiment: reacquire_elapsed_init=0 ego_translation_comp=0 track_trace=off\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=506 invalid=0 stamp_errors=0 source_stamp_ns=1792651783825948238",
+    "[LIDAR_V2_TOTAL] local=506 map=0 none=0 stamp_errors=0"
+   ]
+  },
+  "O2_off_scen21_r1": {
+   "published_scans": 508,
+   "input_rate_hz": 15.000203104085763,
+   "input_duration_s": 33.799542344990186,
+   "input_period_ms": {
+    "n": 507,
+    "p50": 66.66749506257474,
+    "p95": 66.80922779487446,
+    "p99": 66.88534109853208,
+    "max": 66.99952995404601,
+    "mean": 66.66576399406348
+   },
+   "feeder_lateness_ms": {
+    "n": 508,
+    "p50": 0.176155,
+    "p95": 0.29962275,
+    "p99": 0.4270653400000001,
+    "max": 0.593903,
+    "mean": 0.18875205118110236
+   },
+   "outputs_local": 508,
+   "outputs_matched_to_input": 508,
+   "outputs_map": 0,
+   "dropped_scans_total": 0,
+   "drop_rate": 0.0,
+   "drop_runs_max_consecutive": 0,
+   "output_rate_hz": 15.004797202814263,
+   "output_interval_ms": {
+    "n": 507,
+    "p50": 68.52417706977576,
+    "p95": 73.41594812460244,
+    "p99": 74.44434219738469,
+    "max": 75.1653229817748,
+    "mean": 66.64535258180247
+   },
+   "e2e_latency_ms": {
+    "n": 508,
+    "p50": 14.126977499999999,
+    "p95": 24.010096149999995,
+    "p99": 28.11943919,
+    "max": 33.11717,
+    "mean": 14.53941512992126
+   },
+   "main_cpu_cores_mean": 0.08289687116800826,
+   "main_rss_kb_max": 194740,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 84,
+    "p50": 1.255,
+    "p95": 1.68,
+    "p99": 1.74,
+    "max": 1.74,
+    "mean": 1.2745238095238094
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 84,
+    "p50": 0.08,
+    "p95": 0.5934999999999994,
+    "p99": 0.6321000000000002,
+    "max": 0.74,
+    "mean": 0.15904761904761905
+   },
+   "main_run_delay_ms_per_s": 0.0717591379310957,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792651791.950958605]: tracking experiment: reacquire_elapsed_init=0 ego_translation_comp=0 track_trace=off\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=508 invalid=0 stamp_errors=0 source_stamp_ns=1792651832866029262",
+    "[LIDAR_V2_TOTAL] local=508 map=0 none=0 stamp_errors=0"
+   ]
+  },
+  "O0_trace_scen21": {
+   "published_scans": 508,
+   "input_rate_hz": 15.000215507830049,
+   "input_duration_s": 33.79951439599972,
+   "input_period_ms": {
+    "n": 507,
+    "p50": 66.66716700419784,
+    "p95": 66.74919368233532,
+    "p99": 66.83832897106186,
+    "max": 66.92781008314341,
+    "mean": 66.66570886784955
+   },
+   "feeder_lateness_ms": {
+    "n": 508,
+    "p50": 0.144593,
+    "p95": 0.22905684999999998,
+    "p99": 0.3148690900000001,
+    "max": 0.629961,
+    "mean": 0.15191390944881888
+   },
+   "outputs_local": 505,
+   "outputs_matched_to_input": 505,
+   "outputs_map": 0,
+   "dropped_scans_total": 3,
+   "drop_rate": 0.005905511811023622,
+   "drop_runs_max_consecutive": 1,
+   "output_rate_hz": 14.912075794618412,
+   "output_interval_ms": {
+    "n": 504,
+    "p50": 68.04179097525775,
+    "p95": 79.50641337665729,
+    "p99": 82.38875559065491,
+    "max": 85.26520000305027,
+    "mean": 67.05974498606612
+   },
+   "e2e_latency_ms": {
+    "n": 505,
+    "p50": 34.472235,
+    "p95": 121.75985059999988,
+    "p99": 132.43983256,
+    "max": 140.893707,
+    "mean": 44.393274237623764
+   },
+   "trace_scans_processed": 505,
+   "latest_frame_wins_skipped": 3,
+   "callbacks_not_reaching_processing_estimate": 0,
+   "lidar_process_ms": {
+    "n": 505,
+    "p50": 24.573078,
+    "p95": 67.109392,
+    "p99": 72.35739704,
+    "max": 75.179853,
+    "mean": 30.631597271287127
+   },
+   "stage_ms": {
+    "make_cloud": {
+     "n": 505,
+     "p50": 0.120957,
+     "p95": 0.20457559999999997,
+     "p99": 0.28711111999999966,
+     "max": 0.321117,
+     "mean": 0.12816807524752477
+    },
+    "roi": {
+     "n": 505,
+     "p50": 13.264342,
+     "p95": 21.425441599999996,
+     "p99": 24.775884879999996,
+     "max": 26.654741,
+     "mean": 14.082630534653463
+    },
+    "voxel": {
+     "n": 505,
+     "p50": 0.361026,
+     "p95": 0.6619387999999999,
+     "p99": 0.7459687199999997,
+     "max": 1.006891,
+     "mean": 0.40520079801980197
+    },
+    "imu_correct": {
+     "n": 505,
+     "p50": 3.582386,
+     "p95": 5.856167999999999,
+     "p99": 6.2405211199999995,
+     "max": 7.104882,
+     "mean": 3.8529656653465345
+    },
+    "ransac": {
+     "n": 505,
+     "p50": 0.422144,
+     "p95": 0.6965749999999997,
+     "p99": 0.8111043599999992,
+     "max": 3.047195,
+     "mean": 0.4594440455445545
+    },
+    "cluster": {
+     "n": 505,
+     "p50": 0.341564,
+     "p95": 6.1978545999999985,
+     "p99": 10.484155359999997,
+     "max": 11.4675,
+     "mean": 1.3363708178217821
+    },
+    "objectinfo": {
+     "n": 505,
+     "p50": 0.629158,
+     "p95": 8.608069799999999,
+     "p99": 10.389513639999993,
+     "max": 10.976909,
+     "mean": 1.8706878079207923
+    },
+    "framefilter": {
+     "n": 505,
+     "p50": 5.397858,
+     "p95": 21.576694199999995,
+     "p99": 25.005885279999994,
+     "max": 27.854231,
+     "mean": 7.650581744554455
+    },
+    "motion": {
+     "n": 505,
+     "p50": 0.0,
+     "p95": 0.0,
+     "p99": 0.0,
+     "max": 0.0,
+     "mean": 0.0
+    },
+    "marker": {
+     "n": 505,
+     "p50": 0.003983,
+     "p95": 0.007715399999999996,
+     "p99": 0.009719719999999996,
+     "max": 0.025899,
+     "mean": 0.004542194059405941
+    }
+   },
+   "trace_bytes": 12685642,
+   "main_cpu_cores_mean": 0.3943059677109803,
+   "main_rss_kb_max": 201632,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 85,
+    "p50": 0.67,
+    "p95": 0.7779999999999998,
+    "p99": 0.79,
+    "max": 0.79,
+    "mean": 0.6828235294117648
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 85,
+    "p50": 0.08,
+    "p95": 0.54,
+    "p99": 0.62,
+    "max": 0.62,
+    "mean": 0.17152941176470587
+   },
+   "main_run_delay_ms_per_s": -0.003020439510680408,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792651841.076516154]: tracking experiment: reacquire_elapsed_init=0 ego_translation_comp=0 track_trace=/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/realtime/O0_trace_scen21/track_trace.jsonl\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=505 invalid=0 stamp_errors=0 source_stamp_ns=1792651881932151079",
+    "[LIDAR_V2_TOTAL] local=505 map=0 none=0 stamp_errors=0"
+   ]
+  },
+  "O2_trace_scen21": {
+   "published_scans": 508,
+   "input_rate_hz": 15.000018726044413,
+   "input_duration_s": 33.7999578040326,
+   "input_period_ms": {
+    "n": 507,
+    "p50": 66.66489003691822,
+    "p95": 66.81092930957675,
+    "p99": 66.90229405649006,
+    "max": 67.09652591962367,
+    "mean": 66.66658343990652
+   },
+   "feeder_lateness_ms": {
+    "n": 508,
+    "p50": 0.16588350000000002,
+    "p95": 0.30066269999999995,
+    "p99": 0.40425901000000003,
+    "max": 0.617981,
+    "mean": 0.1812321062992126
+   },
+   "outputs_local": 508,
+   "outputs_matched_to_input": 508,
+   "outputs_map": 0,
+   "dropped_scans_total": 0,
+   "drop_rate": 0.0,
+   "drop_runs_max_consecutive": 0,
+   "output_rate_hz": 15.001075680497785,
+   "output_interval_ms": {
+    "n": 507,
+    "p50": 68.1062979856506,
+    "p95": 73.83694382151589,
+    "p99": 75.77501428779215,
+    "max": 77.14698009658605,
+    "mean": 66.66188620727075
+   },
+   "e2e_latency_ms": {
+    "n": 508,
+    "p50": 12.888817,
+    "p95": 23.38849045,
+    "p99": 26.76792445,
+    "max": 28.848355,
+    "mean": 13.370149600393702
+   },
+   "trace_scans_processed": 508,
+   "latest_frame_wins_skipped": 0,
+   "callbacks_not_reaching_processing_estimate": 0,
+   "lidar_process_ms": {
+    "n": 508,
+    "p50": 3.658265,
+    "p95": 13.427642699999996,
+    "p99": 16.59055287,
+    "max": 17.93834,
+    "mean": 5.121261297244095
+   },
+   "stage_ms": {
+    "make_cloud": {
+     "n": 508,
+     "p50": 0.0521745,
+     "p95": 0.09457169999999997,
+     "p99": 0.17086486000000004,
+     "max": 0.383645,
+     "mean": 0.057797511811023626
+    },
+    "roi": {
+     "n": 508,
+     "p50": 0.055747,
+     "p95": 0.14617874999999997,
+     "p99": 0.23044679,
+     "max": 1.117994,
+     "mean": 0.06837763976377953
+    },
+    "voxel": {
+     "n": 508,
+     "p50": 0.6735949999999999,
+     "p95": 1.2781568499999998,
+     "p99": 1.5418148400000002,
+     "max": 1.837768,
+     "mean": 0.6968782145669291
+    },
+    "imu_correct": {
+     "n": 508,
+     "p50": 0.14744800000000002,
+     "p95": 0.26686895,
+     "p99": 0.35577506000000014,
+     "max": 0.567564,
+     "mean": 0.15284731102362203
+    },
+    "ransac": {
+     "n": 508,
+     "p50": 0.387125,
+     "p95": 0.7496894499999998,
+     "p99": 0.91437251,
+     "max": 2.724005,
+     "mean": 0.41503896850393696
+    },
+    "cluster": {
+     "n": 508,
+     "p50": 0.324235,
+     "p95": 5.518629999999999,
+     "p99": 9.130954060000002,
+     "max": 9.797625,
+     "mean": 1.294734966535433
+    },
+    "objectinfo": {
+     "n": 508,
+     "p50": 0.1204225,
+     "p95": 0.9812002499999998,
+     "p99": 1.07608476,
+     "max": 1.258559,
+     "mean": 0.2670309330708661
+    },
+    "framefilter": {
+     "n": 508,
+     "p50": 1.578965,
+     "p95": 4.44315865,
+     "p99": 5.066971420000001,
+     "max": 6.665491,
+     "mean": 1.940586187007874
+    },
+    "motion": {
+     "n": 508,
+     "p50": 0.0,
+     "p95": 0.0,
+     "p99": 0.0,
+     "max": 0.0,
+     "mean": 0.0
+    },
+    "marker": {
+     "n": 508,
+     "p50": 0.0026490000000000003,
+     "p95": 0.0044902,
+     "p99": 0.008351070000000006,
+     "max": 0.222995,
+     "mean": 0.00326271062992126
+    }
+   },
+   "trace_bytes": 12740282,
+   "main_cpu_cores_mean": 0.08382581698619186,
+   "main_rss_kb_max": 195360,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 84,
+    "p50": 0.4,
+    "p95": 0.56,
+    "p99": 0.56,
+    "max": 0.56,
+    "mean": 0.40761904761904755
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 84,
+    "p50": 0.07,
+    "p95": 0.5734999999999993,
+    "p99": 0.6121000000000002,
+    "max": 0.72,
+    "mean": 0.15309523809523812
+   },
+   "main_run_delay_ms_per_s": 0.08827755488368376,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792651890.123114541]: tracking experiment: reacquire_elapsed_init=0 ego_translation_comp=0 track_trace=/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/realtime/O2_trace_scen21/track_trace.jsonl\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=508 invalid=0 stamp_errors=0 source_stamp_ns=1792651931031570196",
+    "[LIDAR_V2_TOTAL] local=508 map=0 none=0 stamp_errors=0"
+   ]
+  },
+  "O0_AB_scen21": {
+   "published_scans": 508,
+   "input_rate_hz": 15.000109751585326,
+   "input_duration_s": 33.79975269490387,
+   "input_period_ms": {
+    "n": 507,
+    "p50": 66.66667899116874,
+    "p95": 66.74099038355052,
+    "p99": 66.80440426804125,
+    "max": 66.91788008902222,
+    "mean": 66.66617888541198
+   },
+   "feeder_lateness_ms": {
+    "n": 508,
+    "p50": 0.139279,
+    "p95": 0.21340014999999998,
+    "p99": 0.27542097,
+    "max": 0.447654,
+    "mean": 0.1461386122047244
+   },
+   "outputs_local": 506,
+   "outputs_matched_to_input": 506,
+   "outputs_map": 0,
+   "dropped_scans_total": 2,
+   "drop_rate": 0.003937007874015748,
+   "drop_runs_max_consecutive": 1,
+   "output_rate_hz": 14.943764689896298,
+   "output_interval_ms": {
+    "n": 505,
+    "p50": 67.09269899874926,
+    "p95": 72.76831220369786,
+    "p99": 75.04599742591381,
+    "max": 85.42627503629774,
+    "mean": 66.91754191473015
+   },
+   "e2e_latency_ms": {
+    "n": 506,
+    "p50": 31.393821,
+    "p95": 80.531606,
+    "p99": 128.49926604999996,
+    "max": 143.279159,
+    "mean": 39.420437341897234
+   },
+   "main_cpu_cores_mean": 0.3829320999420144,
+   "main_rss_kb_max": 201196,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 85,
+    "p50": 0.45,
+    "p95": 0.53,
+    "p99": 0.53,
+    "max": 0.53,
+    "mean": 0.4201176470588238
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 85,
+    "p50": 0.05,
+    "p95": 0.44,
+    "p99": 0.54,
+    "max": 0.54,
+    "mean": 0.12435294117647061
+   },
+   "main_run_delay_ms_per_s": 0.030430849048203167,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792651939.268668473]: tracking experiment: reacquire_elapsed_init=1 ego_translation_comp=1 track_trace=off\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=506 invalid=0 stamp_errors=0 source_stamp_ns=1792651980136278629",
+    "[LIDAR_V2_TOTAL] local=506 map=0 none=0 stamp_errors=0"
+   ]
+  },
+  "O0_off_scen21_r2": {
+   "published_scans": 508,
+   "input_rate_hz": 15.000116647179013,
+   "input_duration_s": 33.799737157067284,
+   "input_period_ms": {
+    "n": 507,
+    "p50": 66.66702195070684,
+    "p95": 66.77756088320166,
+    "p99": 66.87256768811494,
+    "max": 67.05654400866479,
+    "mean": 66.6661482387915
+   },
+   "feeder_lateness_ms": {
+    "n": 508,
+    "p50": 0.1508335,
+    "p95": 0.25404715,
+    "p99": 0.3649632500000001,
+    "max": 0.53652,
+    "mean": 0.16590395275590553
+   },
+   "outputs_local": 506,
+   "outputs_matched_to_input": 506,
+   "outputs_map": 0,
+   "dropped_scans_total": 2,
+   "drop_rate": 0.003937007874015748,
+   "drop_runs_max_consecutive": 1,
+   "output_rate_hz": 14.944718636393622,
+   "output_interval_ms": {
+    "n": 505,
+    "p50": 66.95798202417791,
+    "p95": 71.57359055709092,
+    "p99": 74.3294724309817,
+    "max": 81.81642496492714,
+    "mean": 66.91327045560989
+   },
+   "e2e_latency_ms": {
+    "n": 506,
+    "p50": 29.658549999999998,
+    "p95": 89.90457725,
+    "p99": 125.54735864999996,
+    "max": 146.397663,
+    "mean": 38.209548938735175
+   },
+   "main_cpu_cores_mean": 0.39065520065978654,
+   "main_rss_kb_max": 201420,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 85,
+    "p50": 0.65,
+    "p95": 0.73,
+    "p99": 0.73,
+    "max": 0.73,
+    "mean": 0.6331764705882351
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 85,
+    "p50": 0.05,
+    "p95": 0.42399999999999977,
+    "p99": 0.54,
+    "max": 0.54,
+    "mean": 0.11494117647058825
+   },
+   "main_run_delay_ms_per_s": 0.020093745551793937,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792651988.103951560]: tracking experiment: reacquire_elapsed_init=0 ego_translation_comp=0 track_trace=off\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=506 invalid=0 stamp_errors=0 source_stamp_ns=1792652028980104207",
+    "[LIDAR_V2_TOTAL] local=506 map=0 none=0 stamp_errors=0"
+   ]
+  },
+  "O2_off_scen21_r2": {
+   "published_scans": 508,
+   "input_rate_hz": 15.00015066361895,
+   "input_duration_s": 33.79966050805524,
+   "input_period_ms": {
+    "n": 507,
+    "p50": 66.6638039983809,
+    "p95": 66.86308913631365,
+    "p99": 67.080078558065,
+    "max": 67.14480509981513,
+    "mean": 66.66599705730816
+   },
+   "feeder_lateness_ms": {
+    "n": 508,
+    "p50": 0.201061,
+    "p95": 0.3810941,
+    "p99": 0.5487444699999999,
+    "max": 0.684062,
+    "mean": 0.21883414960629918
+   },
+   "outputs_local": 508,
+   "outputs_matched_to_input": 508,
+   "outputs_map": 0,
+   "dropped_scans_total": 0,
+   "drop_rate": 0.0,
+   "drop_runs_max_consecutive": 0,
+   "output_rate_hz": 15.003923211605228,
+   "output_interval_ms": {
+    "n": 507,
+    "p50": 68.3781779371202,
+    "p95": 74.26614060532302,
+    "p99": 75.8835238753818,
+    "max": 76.9300910178572,
+    "mean": 66.64923472992187
+   },
+   "e2e_latency_ms": {
+    "n": 508,
+    "p50": 12.429012499999999,
+    "p95": 21.8281429,
+    "p99": 26.314771170000007,
+    "max": 28.054121,
+    "mean": 12.769542998031495
+   },
+   "main_cpu_cores_mean": 0.08260196764549882,
+   "main_rss_kb_max": 194672,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 84,
+    "p50": 0.515,
+    "p95": 0.56,
+    "p99": 0.57,
+    "max": 0.57,
+    "mean": 0.5183333333333333
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 84,
+    "p50": 0.06,
+    "p95": 0.39,
+    "p99": 0.48,
+    "max": 0.48,
+    "mean": 0.1144047619047619
+   },
+   "main_run_delay_ms_per_s": 0.04778873478666515,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792652037.104965655]: tracking experiment: reacquire_elapsed_init=0 ego_translation_comp=0 track_trace=off\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=508 invalid=0 stamp_errors=0 source_stamp_ns=1792652077958953380",
+    "[LIDAR_V2_TOTAL] local=508 map=0 none=0 stamp_errors=0"
+   ]
+  },
+  "O0_off_scen75": {
+   "published_scans": 500,
+   "input_rate_hz": 15.000378297960482,
+   "input_duration_s": 33.26582770701498,
+   "input_period_ms": {
+    "n": 499,
+    "p50": 66.66529597714543,
+    "p95": 66.74774175044149,
+    "p99": 66.80807987460867,
+    "max": 67.09404999855906,
+    "mean": 66.66498538479955
+   },
+   "feeder_lateness_ms": {
+    "n": 500,
+    "p50": 0.1387915,
+    "p95": 0.21762469999999975,
+    "p99": 0.29150771999999986,
+    "max": 0.964352,
+    "mean": 0.14903333600000002
+   },
+   "outputs_local": 500,
+   "outputs_matched_to_input": 500,
+   "outputs_map": 0,
+   "dropped_scans_total": 0,
+   "drop_rate": 0.0,
+   "drop_runs_max_consecutive": 0,
+   "output_rate_hz": 14.997576235680777,
+   "output_interval_ms": {
+    "n": 499,
+    "p50": 69.08382091205567,
+    "p95": 73.15588926430792,
+    "p99": 75.01379965804517,
+    "max": 77.83837197348475,
+    "mean": 66.67744069344333
+   },
+   "e2e_latency_ms": {
+    "n": 500,
+    "p50": 42.875195500000004,
+    "p95": 66.32637944999999,
+    "p99": 68.94031993,
+    "max": 72.473366,
+    "mean": 45.544532868000005
+   },
+   "main_cpu_cores_mean": 0.47329710397540387,
+   "main_rss_kb_max": 200400,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 84,
+    "p50": 0.43,
+    "p95": 0.47,
+    "p99": 0.4734,
+    "max": 0.49,
+    "mean": 0.42178571428571426
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 84,
+    "p50": 0.05,
+    "p95": 0.44,
+    "p99": 0.54,
+    "max": 0.54,
+    "mean": 0.11988095238095238
+   },
+   "main_run_delay_ms_per_s": 0.007605342877133921,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792652086.070722547]: tracking experiment: reacquire_elapsed_init=0 ego_translation_comp=0 track_trace=off\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=500 invalid=0 stamp_errors=0 source_stamp_ns=1792652126424823760",
+    "[LIDAR_V2_TOTAL] local=500 map=0 none=0 stamp_errors=0"
+   ]
+  },
+  "O2_off_scen75": {
+   "published_scans": 500,
+   "input_rate_hz": 15.000172797304083,
+   "input_duration_s": 33.26628344506025,
+   "input_period_ms": {
+    "n": 499,
+    "p50": 66.66760297957808,
+    "p95": 66.81577353738248,
+    "p99": 66.88929684692994,
+    "max": 67.19965802039951,
+    "mean": 66.6658986874955
+   },
+   "feeder_lateness_ms": {
+    "n": 500,
+    "p50": 0.17840299999999998,
+    "p95": 0.3331187999999998,
+    "p99": 0.4730869799999998,
+    "max": 0.74998,
+    "mean": 0.19274425000000003
+   },
+   "outputs_local": 500,
+   "outputs_matched_to_input": 500,
+   "outputs_map": 0,
+   "dropped_scans_total": 0,
+   "drop_rate": 0.0,
+   "drop_runs_max_consecutive": 0,
+   "output_rate_hz": 15.002810116071396,
+   "output_interval_ms": {
+    "n": 499,
+    "p50": 66.72658200841397,
+    "p95": 72.26767863612622,
+    "p99": 73.85610332712531,
+    "max": 75.34141989890486,
+    "mean": 66.65417960124512
+   },
+   "e2e_latency_ms": {
+    "n": 500,
+    "p50": 13.4745725,
+    "p95": 20.00099785,
+    "p99": 21.45012496,
+    "max": 24.047661,
+    "mean": 13.592288582000002
+   },
+   "main_cpu_cores_mean": 0.1052018772992923,
+   "main_rss_kb_max": 194812,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 83,
+    "p50": 0.41,
+    "p95": 0.51,
+    "p99": 0.51,
+    "max": 0.51,
+    "mean": 0.4161445783132529
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 83,
+    "p50": 0.05,
+    "p95": 0.43199999999999933,
+    "p99": 0.4579999999999993,
+    "max": 0.54,
+    "mean": 0.11554216867469881
+   },
+   "main_run_delay_ms_per_s": 0.2735545179855797,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792652134.541511097]: tracking experiment: reacquire_elapsed_init=0 ego_translation_comp=0 track_trace=off\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=500 invalid=0 stamp_errors=0 source_stamp_ns=1792652174868224859",
+    "[LIDAR_V2_TOTAL] local=500 map=0 none=0 stamp_errors=0"
+   ]
+  },
+  "O0_trace_scen75": {
+   "published_scans": 500,
+   "input_rate_hz": 15.000085542278503,
+   "input_duration_s": 33.26647695398424,
+   "input_period_ms": {
+    "n": 499,
+    "p50": 66.66575896088034,
+    "p95": 66.73796380637214,
+    "p99": 66.82192105799913,
+    "max": 66.962517099455,
+    "mean": 66.66628648093034
+   },
+   "feeder_lateness_ms": {
+    "n": 500,
+    "p50": 0.1307395,
+    "p95": 0.1975710499999999,
+    "p99": 0.2920368199999997,
+    "max": 0.421473,
+    "mean": 0.138190222
+   },
+   "outputs_local": 500,
+   "outputs_matched_to_input": 500,
+   "outputs_map": 0,
+   "dropped_scans_total": 0,
+   "drop_rate": 0.0,
+   "drop_runs_max_consecutive": 0,
+   "output_rate_hz": 14.995492950992416,
+   "output_interval_ms": {
+    "n": 499,
+    "p50": 67.21084297169,
+    "p95": 71.12252317601815,
+    "p99": 72.57046164013445,
+    "max": 75.11467998847365,
+    "mean": 66.68670401621036
+   },
+   "e2e_latency_ms": {
+    "n": 500,
+    "p50": 40.767081000000005,
+    "p95": 63.9411575,
+    "p99": 66.50014157999999,
+    "max": 67.985004,
+    "mean": 44.232919196000005
+   },
+   "trace_scans_processed": 500,
+   "latest_frame_wins_skipped": 0,
+   "callbacks_not_reaching_processing_estimate": 0,
+   "lidar_process_ms": {
+    "n": 500,
+    "p50": 33.385701,
+    "p95": 56.08984349999999,
+    "p99": 58.21033952,
+    "max": 59.781896,
+    "mean": 37.157152022
+   },
+   "stage_ms": {
+    "make_cloud": {
+     "n": 500,
+     "p50": 0.1106245,
+     "p95": 0.16812755,
+     "p99": 0.20278557999999955,
+     "max": 0.487422,
+     "mean": 0.11509498400000001
+    },
+    "roi": {
+     "n": 500,
+     "p50": 14.396666,
+     "p95": 20.978413749999998,
+     "p99": 21.43902125,
+     "max": 23.498011,
+     "mean": 15.394745636
+    },
+    "voxel": {
+     "n": 500,
+     "p50": 0.4081155,
+     "p95": 0.6546397500000001,
+     "p99": 0.7021475799999999,
+     "max": 0.797875,
+     "mean": 0.456031152
+    },
+    "imu_correct": {
+     "n": 500,
+     "p50": 4.0981875,
+     "p95": 5.9171553,
+     "p99": 6.26664836,
+     "max": 6.579763,
+     "mean": 4.353794654
+    },
+    "ransac": {
+     "n": 500,
+     "p50": 0.6037835,
+     "p95": 0.8142817499999999,
+     "p99": 0.9297292799999999,
+     "max": 3.016369,
+     "mean": 0.601023424
+    },
+    "cluster": {
+     "n": 500,
+     "p50": 1.953146,
+     "p95": 6.28867415,
+     "p99": 6.63810985,
+     "max": 7.079503,
+     "mean": 2.7704499260000004
+    },
+    "objectinfo": {
+     "n": 500,
+     "p50": 2.9965155,
+     "p95": 8.804258599999999,
+     "p99": 9.21602306,
+     "max": 9.470098,
+     "mean": 4.1116519600000005
+    },
+    "framefilter": {
+     "n": 500,
+     "p50": 7.8810565,
+     "p95": 15.35538875,
+     "p99": 17.97141434,
+     "max": 18.467514,
+     "mean": 8.136047331999999
+    },
+    "motion": {
+     "n": 500,
+     "p50": 0.0,
+     "p95": 0.0,
+     "p99": 0.0,
+     "max": 0.0,
+     "mean": 0.0
+    },
+    "marker": {
+     "n": 500,
+     "p50": 0.004540000000000001,
+     "p95": 0.008188199999999998,
+     "p99": 0.01566744999999999,
+     "max": 0.042713,
+     "mean": 0.005034954000000001
+    }
+   },
+   "trace_bytes": 13208807,
+   "main_cpu_cores_mean": 0.473788777501287,
+   "main_rss_kb_max": 201500,
+   "main_threads_max": 13,
+   "load1": {
+    "n": 84,
+    "p50": 0.42,
+    "p95": 0.51,
+    "p99": 0.51,
+    "max": 0.51,
+    "mean": 0.38821428571428573
+   },
+   "cpu_pressure_some_avg10": {
+    "n": 84,
+    "p50": 0.07,
+    "p95": 0.48,
+    "p99": 0.59,
+    "max": 0.59,
+    "mean": 0.14595238095238097
+   },
+   "main_run_delay_ms_per_s": 0.14771994670580907,
+   "node_totals": [
+    "\u001b[0m[INFO] [1792652183.036877802]: tracking experiment: reacquire_elapsed_init=0 ego_translation_comp=0 track_trace=/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/realtime/O0_trace_scen75/track_trace.jsonl\u001b[0m",
+    "[LIDAR_FRAME_TOTAL] processed=500 invalid=0 stamp_errors=0 source_stamp_ns=1792652223405200719",
+    "[LIDAR_V2_TOTAL] local=500 map=0 none=0 stamp_errors=0"
+   ]
+  }
+ },
+ "raw": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/realtime (per run: feeder.csv, observer.csv, proc_samples.csv, roslaunch.log, node_totals.txt, track_trace.jsonl for trace runs)",
+ "rt_summary_sha256": "c285e03c25027a5e7206a5bc51e1d5c3e1b1176b470b064469c4ae396254c4f7"
+}

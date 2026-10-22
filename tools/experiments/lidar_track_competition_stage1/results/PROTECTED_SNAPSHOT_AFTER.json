@@ -1,0 +1,23 @@
+{
+"taken_at": "2026-10-22T15:59:23+09:00",
+"experiments": {
+"obb_innovation_gate_20261018_113148": {"results_tree_sha256": "04de09f87864d8c0f2f1277cd5ee5fa3f8fb191eb0ae15237e01d4c890507968", "results_files": 37, "repo_head": "91bcd60d65e9b0ac700e4831d97dffbf35f7be2c", "repo_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "repo_status_lines": 0}
+,
+"obb_quality_temporal_20261018_170239": {"results_tree_sha256": "7690b720beb89bd7d5e48c462c92e29845e3569f52742e434cdfd4593f29335b", "results_files": 42, "repo_head": "60602a5f98eb848ca5c9fe9d9166e01ef3b266de", "repo_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "repo_status_lines": 0}
+,
+"obb_init_turn_follow_20261019_032258": {"results_tree_sha256": "819947d054b6ccea0330f9b282755dd7980995aeabf8cf9b32a7fbbc3fa6eb22", "results_files": 45, "repo_head": "30eb0c0b82f40c32d8b904474f0eb0a9810f5a8d", "repo_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "repo_status_lines": 0}
+,
+"obb_provisional_turn_v2_20261019_202308": {"results_tree_sha256": "69681ae643ebe4f6db562dfddfd99ac8c58efe9db2b9aaa061b95933a77958cd", "results_files": 45, "repo_head": "cea41cf8313b486dae1e72ae1436f91788cd2ee8", "repo_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "repo_status_lines": 0}
+,
+"obb_geometry_decoupled_20261020_200235": {"results_tree_sha256": "1f0c75e7f93e71b267495f3e3ab9b53f4132caffdede804f1878cf2f39416b4d", "results_files": 49, "repo_head": "0b4eddd5304dfeffd7ebbf124f8c96242c922ec0", "repo_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "repo_status_lines": 0}
+,
+"obb_measurement_identity_20261021_045723": {"results_tree_sha256": "df9064924f242394cc314e82460b6828483b121421747a45579a80d731fb1593", "results_files": 49, "repo_head": "d209d6e7e7fac00f8cfc85217d946f0a252fa6d4", "repo_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "repo_status_lines": 0}
+},
+"repos": {
+"/home/autonav/2026AIM/2026-ASMC": {"head": "8dde9b691bebd4f9d5172d0c43bd6b16d2052c2b", "branch": "feature/lidar-structural-surface-filter", "index_sha256": "57b85f1001a1f260f4065e48c6eab7529da0bd41bb085c67ca94ad3f5cc227fb", "status_sha256": "1ccd79f7fa9404377320951c1fca0f4c9fcd99e0c23d6a604f75952bb2b4cd13"}
+,
+"/home/autonav/2026AIM/2026-ASMC-nogps": {"head": "916e4d9efb38f9066aa4b079df05d16ef011c063", "branch": "feature/lidar-nogps-main-integration", "index_sha256": "8e60f6ac3015faa92477140c80a6eb0088d5f9b3fbd19afdaf3647aad55e7c17", "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
+,
+"/home/autonav/2026AIM/Yangtest": {"head": "66552a57cc3698eebee2faed83ea33ee9460d3c1", "branch": "feature/lidar-consolidation", "index_sha256": "c7610a9b284f90527af1026ee74f33f342332d22c90de0bdf7186316e2d57d1c", "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
+}
+}

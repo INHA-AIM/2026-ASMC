@@ -1,0 +1,56 @@
+scene=scen39 gt_tid=12 run=/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_AB
+[535] GT c=(25.70,0.06) l/w=5.20/2.26 yaw=-0.1 v=(2.87,0.06)  -> FN (no matched output); nearest raw det 4 at 5.88 m
+[536] GT c=(25.58,0.08) l/w=5.20/2.26 yaw=-0.1 v=(2.85,0.06)  -> FN (no matched output); nearest raw det 5 at 6.00 m
+[537] GT c=(25.54,0.08) l/w=5.20/2.26 yaw=-0.1 v=(2.85,0.05)  -> FN (no matched output); nearest raw det 11 at 8.40 m
+[538] GT c=(25.53,0.09) l/w=5.20/2.26 yaw=-0.1 v=(2.85,0.05)  -> FN (no matched output); nearest raw det 6 at 6.71 m
+[539] GT c=(25.50,0.09) l/w=5.20/2.26 yaw=-0.2 v=(2.86,0.03)  -> FN (no matched output); nearest raw det 5 at 8.15 m
+[540] GT c=(25.45,0.10) l/w=5.20/2.26 yaw=-0.3 v=(2.87,0.02)
+    det 22: npts=15 mean=(23.30,0.07) rawOBB c=(23.32,0.10) 1.30x0.13 yaw=-89.0
+    assoc id=495 age=27 miss=6 kfc=2 pred=(23.27,0.19) gate=3 cands=det22:d=0.13/c=0.18 -> j=21
+    KF kfc_in=2 dt=0.092 innov=(0.032,-0.125) K_vel=(1.16,1.16) x_post v=(2.78,-0.05) a=(-0.11,-0.03)
+    OBB raw_after_miss: stab c=(23.32,0.10) 1.30x0.13 yaw=-89.0; absV=(2.78,-0.05) can_added=0.00
+    V2 local c=(23.32,0.10) 1.30x0.13 yaw=-89.0 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[541] GT c=(25.37,0.10) l/w=5.20/2.26 yaw=-0.4 v=(2.89,0.01)
+    det 12: npts=15 mean=(23.23,0.14) rawOBB c=(23.25,0.12) 1.34x0.16 yaw=89.0
+    assoc id=495 age=28 miss=0 kfc=2 pred=(23.21,0.07) gate=3 cands=det12:d=0.07/c=0.07 -> j=11
+    KF kfc_in=2 dt=0.110 innov=(0.015,0.068) K_vel=(0.81,0.81) x_post v=(2.78,-0.00) a=(-0.11,-0.00)
+    OBB ema_0.25: stab c=(23.26,0.12) 1.33x0.17 yaw=-89.5; absV=(2.78,-0.00) can_added=0.00
+    V2 local c=(23.26,0.12) 1.33x0.17 yaw=-89.5 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[542] GT c=(25.31,0.10) l/w=5.20/2.26 yaw=-0.5 v=(2.92,0.00)  -> FN (no matched output); nearest raw det 10 at 8.15 m
+[543] GT c=(25.27,0.09) l/w=5.20/2.26 yaw=-0.6 v=(2.95,-0.01)  -> FN (no matched output); nearest raw det 12 at 5.35 m
+[544] GT c=(25.24,0.09) l/w=5.20/2.26 yaw=-0.8 v=(2.99,-0.02)  -> FN (no matched output); nearest raw det 15 at 5.62 m
+[545] GT c=(25.23,0.08) l/w=5.20/2.26 yaw=-0.9 v=(3.02,-0.02)  -> FN (no matched output); nearest raw det 12 at 5.97 m
+[546] GT c=(25.25,0.07) l/w=5.20/2.26 yaw=-1.1 v=(3.05,-0.04)  -> FN (no matched output); nearest raw det 17 at 5.66 m
+[547] GT c=(25.28,0.04) l/w=5.20/2.26 yaw=-1.4 v=(3.04,-0.05)  -> FN (no matched output); nearest raw det 11 at 4.59 m
+[548] GT c=(25.33,0.03) l/w=5.20/2.26 yaw=-1.6 v=(3.03,-0.06)  -> FN (no matched output); nearest raw det 23 at 4.29 m
+[549] GT c=(25.39,0.01) l/w=5.20/2.26 yaw=-1.8 v=(3.02,-0.07)  -> FN (no matched output); nearest raw det 15 at 8.35 m
+[550] GT c=(25.42,-0.00) l/w=5.20/2.26 yaw=-1.9 v=(3.01,-0.07)  -> FN (no matched output); nearest raw det 22 at 3.66 m
+[551] GT c=(25.43,-0.01) l/w=5.20/2.26 yaw=-2.0 v=(3.01,-0.08)
+    det 30: npts=15 mean=(23.28,0.04) rawOBB c=(23.29,0.04) 1.34x0.14 yaw=87.0
+    assoc id=495 age=38 miss=9 kfc=2 pred=(22.96,0.10) gate=3 cands=det30:d=0.32/c=0.34 -> j=29
+    KF kfc_in=2 dt=0.101 innov=(0.312,-0.058) K_vel=(0.92,0.92) x_post v=(2.95,-0.06) a=(0.01,-0.02)
+    OBB raw_after_miss: stab c=(23.29,0.04) 1.34x0.14 yaw=87.0; absV=(2.95,-0.06) can_added=0.00
+    V2 local c=(23.29,0.04) 1.34x0.14 yaw=87.0 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[552] GT c=(25.42,-0.04) l/w=5.20/2.26 yaw=-2.2 v=(2.98,-0.09)  -> FN (no matched output); nearest raw det 23 at 3.02 m
+[553] GT c=(25.43,-0.06) l/w=5.20/2.26 yaw=-2.3 v=(2.97,-0.09)  -> FN (no matched output); nearest raw det 19 at 2.66 m
+[554] GT c=(25.44,-0.08) l/w=5.20/2.26 yaw=-2.4 v=(2.96,-0.10)  -> FN (no matched output); nearest raw det 13 at 8.91 m
+[555] GT c=(25.47,-0.11) l/w=5.20/2.26 yaw=-2.7 v=(2.94,-0.13)  -> FN (no matched output); nearest raw det 11 at 9.02 m
+[556] GT c=(25.51,-0.13) l/w=5.20/2.26 yaw=-2.9 v=(2.92,-0.17)  -> FN (no matched output); nearest raw det 10 at 8.16 m
+[557] GT c=(25.55,-0.16) l/w=5.20/2.26 yaw=-3.2 v=(2.91,-0.19)  -> FN (no matched output); nearest raw det 10 at 9.10 m
+[558] GT c=(25.60,-0.21) l/w=5.20/2.26 yaw=-4.0 v=(2.89,-0.27)  -> FN (no matched output); nearest raw det 8 at 6.14 m
+[559] GT c=(25.63,-0.24) l/w=5.20/2.26 yaw=-4.6 v=(2.88,-0.33)  -> FN (no matched output); nearest raw det 5 at 5.97 m
+[560] GT c=(25.61,-0.34) l/w=5.20/2.26 yaw=-5.8 v=(2.87,-0.45)
+    det 17: npts=14 mean=(23.54,-0.18) rawOBB c=(23.79,-0.16) 1.42x0.69 yaw=87.0
+    assoc id=495 age=47 miss=8 kfc=2 pred=(23.47,-0.09) gate=3 cands=det17:d=0.11/c=0.72, det22:d=3.39/c=4.07* -> j=17
+    KF kfc_in=2 dt=0.212 innov=(0.061,-0.090) K_vel=(0.90,0.90) x_post v=(3.01,-0.17) a=(0.03,-0.06)
+    OBB raw_after_miss: stab c=(23.79,-0.16) 1.42x0.69 yaw=87.0; absV=(3.01,-0.17) can_added=0.00
+    V2 local c=(23.79,-0.16) 1.42x0.69 yaw=87.0 vel_valid=0
+    planner: map_pose_invalid_no_planner_output
+[561] GT c=(25.56,-0.40) l/w=5.20/2.26 yaw=-6.8 v=(2.87,-0.56)  -> FN (no matched output); nearest raw det 22 at 10.22 m
+[562] GT c=(25.53,-0.47) l/w=5.20/2.26 yaw=-7.7 v=(2.90,-0.63)  -> FN (no matched output); nearest raw det 5 at 10.55 m
+[563] GT c=(25.53,-0.54) l/w=5.20/2.26 yaw=-9.1 v=(2.96,-0.78)  -> FN (no matched output); nearest raw det 3 at 8.31 m
+[564] GT c=(25.54,-0.63) l/w=5.20/2.26 yaw=-9.9 v=(3.00,-0.84)  -> FN (no matched output); nearest raw det 3 at 10.69 m
+[565] GT c=(25.57,-0.73) l/w=5.20/2.26 yaw=-11.1 v=(3.05,-0.96)  -> FN (no matched output); nearest raw det 8 at 11.41 m

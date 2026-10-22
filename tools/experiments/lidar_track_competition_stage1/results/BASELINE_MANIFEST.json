@@ -1,0 +1,505 @@
+{
+ "experiment_id": "track_competition_stage1_20261022_134204",
+ "run_env": {
+  "RUN_ROOT": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204",
+  "TS": "20261022_134204",
+  "START_ISO": "2026-10-22T13:42:04+09:00",
+  "START_EPOCH": "1792644124",
+  "STAGE1_DEADLINE_EPOCH": "1792687324",
+  "TOTAL_DEADLINE_EPOCH": "1792989724",
+  "HOST": "AUTONAV",
+  "NPROC": "8",
+  "BRANCH": "exp/lidar-track-competition-stage1-20261022_134204",
+  "WORKTREE": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo",
+  "START_COMMIT": "39cffc57355a76eb35332e0fe70452f36cc70b42",
+  "PROD_BASE": "916e4d9efb38f9066aa4b079df05d16ef011c063",
+  "E3_RR": "/home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258",
+  "E6_RR": "/home/autonav/2026AIM/Lidar_experimments/obb_measurement_identity_20261021_045723"
+ },
+ "repository": {
+  "shared_git": "/home/autonav/2026AIM/2026-ASMC (.git, worktree)",
+  "worktree": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo",
+  "branch": "exp/lidar-track-competition-stage1-20261022_134204",
+  "head": "669859c1a8fa2a27ba2abf70b74373b5d64da913",
+  "log": [
+   "669859c1a8fa2a27ba2abf70b74373b5d64da913 feat(lidar): add opt-in track trace, competition replay inputs and tracking frame options",
+   "39cffc57355a76eb35332e0fe70452f36cc70b42 test(lidar): add experiment-02 replay harness, evaluator and frozen eval contract"
+  ],
+  "status_porcelain": [],
+  "start_commit_P0": "39cffc57355a76eb35332e0fe70452f36cc70b42",
+  "product_base": "916e4d9efb38f9066aa4b079df05d16ef011c063",
+  "submodule_MORAI-ROS_morai_msgs": "45c6baf148f2327f4c9fefd48262f25bdfe4b567 (git archive from 2026-ASMC-nogps, logs/submodule_populate.log)",
+  "pushed": false
+ },
+ "builds": {
+  "p0": {
+   "description": "P0 rebuild at 39cffc57 (HISTORICAL_REPRODUCTION)",
+   "build_rc": "nested_p0 rc=0 secs=402 head=39cffc57355a76eb35332e0fe70452f36cc70b42",
+   "CMAKE_BUILD_TYPE": "",
+   "CATKIN_ENABLE_TESTING": "ON",
+   "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+   "flags_make_lidar_dataset_replay": [
+    "CXX_FLAGS =     -std=gnu++17"
+   ],
+   "binaries": {
+    "lib/Main/lidar_dataset_replay": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_p0/devel/lib/Main/lidar_dataset_replay",
+     "sha256": "cbeea5b60171c4afd8352372c3dd91a8bae59f6c6e2c7fede8a208edbdb51af1"
+    },
+    "lib/libmyHeader.so": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_p0/devel/lib/libmyHeader.so",
+     "sha256": "fd7cc0f2a482163103ff2e6404ce58a8308b0963bc044ce5c17502b349d7049a"
+    },
+    "lib/Main/main": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_p0/devel/lib/Main/main",
+     "sha256": "03e14f2d7204df235f4708c7d9a3e393078691e156faf0afe2df0d564dd69a45"
+    },
+    "lib/Main/test_tracking_frame_options": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_p0/devel/lib/Main/test_tracking_frame_options",
+     "sha256": null
+    }
+   },
+   "outer_devel": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/devel",
+   "libasmc_lidar_frame_time.so": "4578e29c5db0d5a21aa9721a002476dda0dbc533962fe11ccce6f640e2e8511d"
+  },
+  "cand": {
+   "description": "stage-1 code 669859c1 (COMPETITION_BASELINE with options off, CANDIDATE with options on)",
+   "build_rc": "nested_cand rc=0 secs=32 head=39cffc57355a76eb35332e0fe70452f36cc70b42",
+   "CMAKE_BUILD_TYPE": "",
+   "CATKIN_ENABLE_TESTING": "ON",
+   "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+   "flags_make_lidar_dataset_replay": [
+    "CXX_FLAGS =     -std=gnu++17"
+   ],
+   "binaries": {
+    "lib/Main/lidar_dataset_replay": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+     "sha256": "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756"
+    },
+    "lib/libmyHeader.so": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+     "sha256": "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7"
+    },
+    "lib/Main/main": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/main",
+     "sha256": "cf1f0cbaf17826f41a81323e453d3e5dca227b4300f6401b887ebaa7df6f8cd7"
+    },
+    "lib/Main/test_tracking_frame_options": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/test_tracking_frame_options",
+     "sha256": "0ad4cf9f5b009503663ee3677aa1842b3090a08b157ab80f38e68acede875db8"
+    }
+   },
+   "outer_devel": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/devel",
+   "libasmc_lidar_frame_time.so": "4578e29c5db0d5a21aa9721a002476dda0dbc533962fe11ccce6f640e2e8511d"
+  },
+  "cand_o2": {
+   "description": "same source as cand, Release -O2 (realtime comparison only)",
+   "build_rc": "nested_cand_o2 rc=0 secs=500 head=669859c1a8fa2a27ba2abf70b74373b5d64da913",
+   "CMAKE_BUILD_TYPE": "Release",
+   "CATKIN_ENABLE_TESTING": "ON",
+   "CMAKE_CXX_FLAGS_RELEASE": "-O2",
+   "flags_make_lidar_dataset_replay": [
+    "CXX_FLAGS =   -O2   -std=gnu++17"
+   ],
+   "binaries": {
+    "lib/Main/lidar_dataset_replay": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand_o2/devel/lib/Main/lidar_dataset_replay",
+     "sha256": "7706b617d6cc191257de79af0ae2a181bf2ed14272351188d1a1cce00ebaf392"
+    },
+    "lib/libmyHeader.so": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand_o2/devel/lib/libmyHeader.so",
+     "sha256": "06dd4352866b7c999f918d8fa748e8422f1b3b192e7bb0d3f698a9fc44cac72a"
+    },
+    "lib/Main/main": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand_o2/devel/lib/Main/main",
+     "sha256": "7b1e8cc74ca81759f4a5a6204945cbdad5e05313228eaa96aaa4dfa49217474e"
+    },
+    "lib/Main/test_tracking_frame_options": {
+     "path": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand_o2/devel/lib/Main/test_tracking_frame_options",
+     "sha256": "fdbaff23b0ba8a2d5c3630a1bf59f9b40434d8effa129738f397a84722605f1c"
+    }
+   },
+   "outer_devel": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/devel",
+   "libasmc_lidar_frame_time.so": "4578e29c5db0d5a21aa9721a002476dda0dbc533962fe11ccce6f640e2e8511d"
+  }
+ },
+ "build_command": "scripts/build_nested.sh (copied from exp03 tools, RR re-pointed): env -i ... catkin_make --build build/exp_<v>/build -DCATKIN_DEVEL_PREFIX=build/exp_<v>/devel --only-pkg-with-deps Main --force-cmake -j6 -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY=ON -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON -DCATKIN_ENABLE_TESTING=ON (+ -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O2 for cand_o2); outer: scripts/build_outer.sh (scripts/build_ws.sh, CMAKE_BUILD_TYPE unset)",
+ "toolchain": "== date\n2026-10-22T13:44:56+09:00\n== uname\nLinux AUTONAV 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux\n== lsb\nDistributor ID:\tUbuntu\nDescription:\tUbuntu 20.04.6 LTS\nRelease:\t20.04\nCodename:\tfocal\n== cpu\nCPU(s):                                  8\nThread(s) per core:                      2\nCore(s) per socket:                      4\nSocket(s):                               1\nModel name:                              Intel(R) Core(TM) i5-14600KF\nCPU MHz:                                 3494.398\n== mem\n              total        used        free      shared  buff/cache   available\nMem:          15993        1552         931           1       13510       14196\nSwap:          8192         127        8064\n== gpu\nGPU 0: NVIDIA GeForce RTX 4070 SUPER (UUID: GPU-c6d6f64a-4cb6-88a0-cdcd-3f9a8c85b1a8)\n== gcc\ngcc (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0\n== cmake\ncmake version 3.16.3\n== ros\nnoetic\nnoetic\nROS_DISTRO=noetic\n== pcl\nlibeigen3-dev 3.3.7-2\nlibopencv-dev 4.2.0+dfsg-5\nlibpcl-dev 1.10.0+dfsg-5ubuntu1\nlibtbb-dev:amd64 2020.1-2\n== python\nPython 3.8.10\nnumpy 1.24.4\nscipy 1.10.1\n== disk\nFilesystem      Size  Used Avail Use% Mounted on\n/dev/sdd       1007G  453G  504G  48% /\n== load\n 13:44:56 up 7 days, 14:58,  2 users,  load average: 3.78, 2.84, 2.59\n== top cpu procs\nUSER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\nautonav   476507  100  0.8 652468 131640 ?       Rl   13:43   1:34 /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/baseline_harness/build/main_equiv_replay --bag /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/fixtures/primary-normal.bag --output /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/baseline_runs/primary-pitch-normal-r1.jsonl --profile pitch --topics /velodyne_points,/imu,/Ego_topic,/gps\nautonav   476373  100  0.8 655996 132364 ?       Rl   13:43   1:35 /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/baseline_harness/build/main_equiv_replay --bag /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/fixtures/primary-normal.bag --output /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/baseline_harness/validation/harness_stockeq-primary-roll_pitch-normal.jsonl --profile roll_pitch --stock-equivalent\nautonav   479236 91.5  2.4 415476 393116 pts/4   R+   13:44   0:01 /usr/lib/gcc/x86_64-linux-gnu/9/cc1plus -quiet -I /home/autonav/2026AIM/Yangtest_asmc_lidar_migration/src/asmc_lidar/include -I /home/autonav/2026AIM/Yangtest_asmc_lidar_migration/src/asmc_lidar/src -I /home/autonav/2026AIM/Yangtest_asmc_lidar_migration/src/asmc_lidar/src/experimental/tunnel_filter -I /usr/include/eigen3 -I /usr/include/pcl-1.10 -I /opt/ros/noetic/include -I /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/snapshots/base_d7aae120/devel/include -I /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/snapshots/base_d7aae120/src/lidar+sensorfusion/devel/include -imultiarch x86_64-linux-gnu -D_GNU_SOURCE -D DISABLE_LIBUSB_1_0 -D DISABLE_OPENNI -D DISABLE_OPENNI2 -D DISABLE_PCAP -D DISABLE_PNG -D ROS_PACKAGE_NAME=\"asmc_lidar\" /home/autonav/2026AIM/Yangtest_asmc_lidar_migration/src/asmc_lidar/src/clustering/clustering.cpp -quiet -dumpbase clustering.cpp -mtune=generic -march=x86-64 -auxbase-strip /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/modbuild/runtime/obj/src_asmc_lidar_src_clustering_clustering.cpp.o -Wall -Wextra -Wno-unused-parameter -std=gnu++17 -fPIC -fasynchronous-unwind-tables -fstack-protector-strong -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/cc3scmVI.s\nautonav   479261 85.0  1.5 281556 257092 pts/8   R+   13:44   0:00 /usr/lib/gcc/x86_64-linux-gnu/9/cc1plus -quiet -I /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/modbuild/preproc/diff/stub -I /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/snapshots/main_8f93c22e/src/lidar+sensorfusion/src/Main/src -I /home/autonav/2026AIM/Yangtest_asmc_lidar_migration/src/asmc_lidar/include -I /usr/include/eigen3 -I /usr/include/pcl-1.10 -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /home/autonav/2026AIM/Yangtest_asmc_lidar_migration/src/asmc_lidar/src/preprocessing/leveling.cpp -quiet -dumpbase leveling.cpp -mtune=generic -march=x86-64 -auxbase-strip /home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/modbuild/preproc/diff/O2/660aa09bfede.o -O2 -w -std=gnu++17 -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/ccuzMpbA.s\nroot      477864  1.0  0.0  23804  3316 ?        S    13:44   0:00 /lib/systemd/systemd-udevd\nroot           6  0.9  0.0   4864   932 ?        Sl   Oct14 101:34 plan9 --control-socket 7 --log-level 4 --server-fd 8 --pipe-fd 10 --log-truncate\nautonav   476340  0.7  0.2 815572 41904 ?        Ssl  13:43   0:00 /usr/bin/python3 /opt/ros/noetic/bin/rosmaster --core -p 11331 -w 3 __log:=/home/autonav/2026AIM/audit_work/asmc_lidar_migration_20261022_123841/baseline_harness/ros_home/log/1b74f5ea-cdd3-11f1-a962-d787606a8571/master.log\n",
+ "evaluator": {
+  "eval_lib.py": "8053c756652e2b1628ff0fb566100d833c0ede41f27dd1c58695833fbfc9eb1e",
+  "EVAL_CONTRACT.json": "71b4ef6fc060234d2d2426f192fcadf5930c69592d44d80797a180726cbecfb2",
+  "identity_check.py": "465de2f149c553326178e59b866b446ff8957275f0515d06c7fa3c755c7fb5d5",
+  "contract_version": "obb_quality_temporal_eval_v2",
+  "supplementary": {
+   "stage1_metrics.py": "112fd749a252f67df808b3f6fdeaa06091268f47c7a73519ff6bdd9602faf93a",
+   "diag_reference_point.py": "3f19c691f8f0aa2f38229503c472c38255d75d38c747f58275a9a0e96ec1af3b",
+   "trace_link.py": "0612a91a2de387a24e2fc5b76195fc1ade1082c8dd0160dc332752801c9592b9",
+   "rt_analyze.py": "1dfaab94ff3aa2b78dd240579714683c3880a433c91f5d20a56cf83f429d5e36",
+   "syn_report.py": "802551b1bd474af4c93d34e7a15e03fe11e9fa1ab478a07a49d83faf74c53c5b"
+  }
+ },
+ "data": {
+  "lidar_data_manifest": "8754a44acb750275a83e358600858027f78e218d100cb6fc667d6bc13f111a13",
+  "historical_inputs": "/home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258/work/inputs (frozen exp01..06 inputs, INPUT_MANIFEST sha be5d1ac6758f989ba55e27fc95ce0a0af4f75451f60f3823c1dda3a34aa2c4d3)",
+  "static_bag_inputs": "/home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258/work/static_bag/static_bag",
+  "competition_inputs": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/inputs_comp (COMP_INPUT_MANIFEST sha 782f496cabdc962d10922d2347dd32db81d8dfe8e3386fe593de9affd831eda0)",
+  "synthetic_inputs": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/synthetic (DIAGNOSTIC_ONLY, SYNTHETIC_MANIFEST sha 2079074cddb1e0cab3f0f049c6ebaee6c48547f25ef9fac693db6941e4557746)",
+  "gt": "labels_3d_lidar_v1 via frozen gt.csv (evaluation only)"
+ },
+ "reference_P0_run": {
+  "path": "/home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258/work/runs/p0",
+  "ARM.json": "8bd475e93e189c0e114b39505e392dc855d0a0c677c1bee0ea31e6c86e086e15",
+  "METRICS.json": "144afcd3cd9377d338523e3b725ed60d8d67fe9d81a01ddb575f6d9e587eafb4",
+  "binary_sha256_txt": "cdc2c00e0c9af3fb3c5358834667fa1c4d60ed7104823cb9120364b13a06e085  /home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258/work/src_p0/src/lidar+sensorfusion/build/exp_p0/devel/lib/Main/lidar_dataset_replay\ndc6cc664d7f9752e087416396b0e093b2ae156382316adb3623464ca0df5f6ea  /home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258/work/src_p0/src/lidar+sensorfusion/build/exp_p0/devel/lib/libmyHeader.so\n35204d35ac0eaada411aa2f558a71fe6c46722dc7435d2a5bbbb78c51ba12cf0  /home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258/work/runs/p0/params.yaml\n"
+ },
+ "runs": {
+  "CAND_A": {
+   "run_meta": [
+    "name=CAND_A variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[--set lidar_kf_reacquire_elapsed_init=true] par=6 scenes=[scen38 scen16 scen03 scen13 scen55 scen12 scen14 scen62 scen52 scen10 scen22 scen35 scen59 scen20 scen39 scen47 scen86 scen26 scen25 scen57 scen54 scen53 scen34 scen71 scen46 scen04 scen33 scen08 scen50 scen60 scen79 scen89 scen90 scen27 scen42 scen76 scen21 scen68 scen31 scen40 scen74 scen75 scen63 scen70 scen15 scen77 scen87 scen103 scen94 scen108 scen113 scen100 scen109 scen66 scen32 scen96 scen105 scen110 scen72 scen98 scen93 scen104 scen111 scen95 scen102 scen92 scen97 scen106 scen112 scen114 scen91 scen99 scen67 scen101 scen107 scen18 scen65 scen17 scen81 scen06 scen82 scen07 scen78 scen69 scen09 scen88 scen85 scen48 scen83 scen64 scen61 scen73 scen84 scen80 scen11 scen01 scen49 scen19 scen44 scen56 scen37 scen02 scen05 scen36 scen43 scen29 scen28 scen23 scen41 scen51 scen30 scen24 scen45 scen58 static_bag] points=1 trace=[] start=2026-10-22T15:20:06+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 CAND_A rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagram",
+    "nonzero_rc_files=0 total_rc=115",
+    "eval pkls=115 expected=115",
+    "end=2026-10-22T15:28:18+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_A/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/inputs_comp/scen38/frames_comp.csv --scene scen38 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_A/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition --set lidar_kf_reacquire_elapsed_init=true  --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_A/out/scen38.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_A/out/scen38.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_A/out/scen38.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_A/out/scen38.rc",
+   "n_jobs": 115,
+   "udp": 0
+  },
+  "CAND_AB": {
+   "run_meta": [
+    "name=CAND_AB variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[--set lidar_kf_reacquire_elapsed_init=true --set lidar_kf_ego_translation_comp=true] par=6 scenes=[scen38 scen16 scen03 scen13 scen55 scen12 scen14 scen62 scen52 scen10 scen22 scen35 scen59 scen20 scen39 scen47 scen86 scen26 scen25 scen57 scen54 scen53 scen34 scen71 scen46 scen04 scen33 scen08 scen50 scen60 scen79 scen89 scen90 scen27 scen42 scen76 scen21 scen68 scen31 scen40 scen74 scen75 scen63 scen70 scen15 scen77 scen87 scen103 scen94 scen108 scen113 scen100 scen109 scen66 scen32 scen96 scen105 scen110 scen72 scen98 scen93 scen104 scen111 scen95 scen102 scen92 scen97 scen106 scen112 scen114 scen91 scen99 scen67 scen101 scen107 scen18 scen65 scen17 scen81 scen06 scen82 scen07 scen78 scen69 scen09 scen88 scen85 scen48 scen83 scen64 scen61 scen73 scen84 scen80 scen11 scen01 scen49 scen19 scen44 scen56 scen37 scen02 scen05 scen36 scen43 scen29 scen28 scen23 scen41 scen51 scen30 scen24 scen45 scen58 static_bag] points=1 trace=[] start=2026-10-22T15:36:34+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 CAND_AB rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagra",
+    "nonzero_rc_files=0 total_rc=115",
+    "eval pkls=115 expected=115",
+    "end=2026-10-22T15:44:49+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_AB/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/inputs_comp/scen38/frames_comp.csv --scene scen38 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_AB/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition --set lidar_kf_reacquire_elapsed_init=true --set lidar_kf_ego_translation_comp=true  --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_AB/out/scen38.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_AB/out/scen38.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_AB/out/scen38.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_AB/out/scen38.rc",
+   "n_jobs": 115,
+   "udp": 0
+  },
+  "CAND_B": {
+   "run_meta": [
+    "name=CAND_B variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[--set lidar_kf_ego_translation_comp=true] par=6 scenes=[scen38 scen16 scen03 scen13 scen55 scen12 scen14 scen62 scen52 scen10 scen22 scen35 scen59 scen20 scen39 scen47 scen86 scen26 scen25 scen57 scen54 scen53 scen34 scen71 scen46 scen04 scen33 scen08 scen50 scen60 scen79 scen89 scen90 scen27 scen42 scen76 scen21 scen68 scen31 scen40 scen74 scen75 scen63 scen70 scen15 scen77 scen87 scen103 scen94 scen108 scen113 scen100 scen109 scen66 scen32 scen96 scen105 scen110 scen72 scen98 scen93 scen104 scen111 scen95 scen102 scen92 scen97 scen106 scen112 scen114 scen91 scen99 scen67 scen101 scen107 scen18 scen65 scen17 scen81 scen06 scen82 scen07 scen78 scen69 scen09 scen88 scen85 scen48 scen83 scen64 scen61 scen73 scen84 scen80 scen11 scen01 scen49 scen19 scen44 scen56 scen37 scen02 scen05 scen36 scen43 scen29 scen28 scen23 scen41 scen51 scen30 scen24 scen45 scen58 static_bag] points=1 trace=[] start=2026-10-22T15:28:18+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 CAND_B rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagram",
+    "nonzero_rc_files=0 total_rc=115",
+    "eval pkls=115 expected=115",
+    "end=2026-10-22T15:36:34+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_B/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/inputs_comp/scen38/frames_comp.csv --scene scen38 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_B/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition --set lidar_kf_ego_translation_comp=true  --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_B/out/scen38.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_B/out/scen38.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_B/out/scen38.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CAND_B/out/scen38.rc",
+   "n_jobs": 115,
+   "udp": 0
+  },
+  "CB": {
+   "run_meta": [
+    "name=CB variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[] par=6 scenes=[scen38 scen16 scen03 scen13 scen55 scen12 scen14 scen62 scen52 scen10 scen22 scen35 scen59 scen20 scen39 scen47 scen86 scen26 scen25 scen57 scen54 scen53 scen34 scen71 scen46 scen04 scen33 scen08 scen50 scen60 scen79 scen89 scen90 scen27 scen42 scen76 scen21 scen68 scen31 scen40 scen74 scen75 scen63 scen70 scen15 scen77 scen87 scen103 scen94 scen108 scen113 scen100 scen109 scen66 scen32 scen96 scen105 scen110 scen72 scen98 scen93 scen104 scen111 scen95 scen102 scen92 scen97 scen106 scen112 scen114 scen91 scen99 scen67 scen101 scen107 scen18 scen65 scen17 scen81 scen06 scen82 scen07 scen78 scen69 scen09 scen88 scen85 scen48 scen83 scen64 scen61 scen73 scen84 scen80 scen11 scen01 scen49 scen19 scen44 scen56 scen37 scen02 scen05 scen36 scen43 scen29 scen28 scen23 scen41 scen51 scen30 scen24 scen45 scen58 static_bag] points=1 trace=[] start=2026-10-22T15:10:30+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 CB rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": ",
+    "nonzero_rc_files=0 total_rc=115",
+    "eval pkls=115 expected=115",
+    "end=2026-10-22T15:18:51+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CB/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/inputs_comp/scen38/frames_comp.csv --scene scen38 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CB/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition   --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CB/out/scen38.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CB/out/scen38.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CB/out/scen38.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/CB/out/scen38.rc",
+   "n_jobs": 115,
+   "udp": 0
+  },
+  "HR_p0_rebuild": {
+   "run_meta": [
+    "name=HR_p0_rebuild variant=p0 mode=historical head=39cffc57355a76eb35332e0fe70452f36cc70b42 worktree_dirty_lines=1 extra=[] par=4 scenes=[scen93 scen21 scen58 static_bag] points=1 trace=[] start=2026-10-22T14:40:03+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 HR_p0_rebuild rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InD",
+    "nonzero_rc_files=0 total_rc=4",
+    "eval pkls=4 expected=4",
+    "end=2026-10-22T14:40:32+09:00"
+   ],
+   "binary_sha256": [
+    "cbeea5b60171c4afd8352372c3dd91a8bae59f6c6e2c7fede8a208edbdb51af1  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_p0/devel/lib/Main/lidar_dataset_replay",
+    "fd7cc0f2a482163103ff2e6404ce58a8308b0963bc044ce5c17502b349d7049a  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_p0/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/HR_p0_rebuild/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_p0/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258/work/inputs/scen93/frames.csv --scene scen93 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/HR_p0_rebuild/params.yaml --set imu_yaw_is_true_enu=false    --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/HR_p0_rebuild/out/scen93.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/HR_p0_rebuild/out/scen93.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/HR_p0_rebuild/out/scen93.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/HR_p0_rebuild/out/scen93.rc",
+   "n_jobs": 4,
+   "udp": 0
+  },
+  "ID_OFF_hist": {
+   "run_meta": [
+    "name=ID_OFF_hist variant=cand mode=historical head=39cffc57355a76eb35332e0fe70452f36cc70b42 worktree_dirty_lines=10 extra=[] par=6 scenes=[scen38 scen16 scen03 scen13 scen55 scen12 scen14 scen62 scen52 scen10 scen22 scen35 scen59 scen20 scen39 scen47 scen86 scen26 scen25 scen57 scen54 scen53 scen34 scen71 scen46 scen04 scen33 scen08 scen50 scen60 scen79 scen89 scen90 scen27 scen42 scen76 scen21 scen68 scen31 scen40 scen74 scen75 scen63 scen70 scen15 scen77 scen87 scen103 scen94 scen108 scen113 scen100 scen109 scen66 scen32 scen96 scen105 scen110 scen72 scen98 scen93 scen104 scen111 scen95 scen102 scen92 scen97 scen106 scen112 scen114 scen91 scen99 scen67 scen101 scen107 scen18 scen65 scen17 scen81 scen06 scen82 scen07 scen78 scen69 scen09 scen88 scen85 scen48 scen83 scen64 scen61 scen73 scen84 scen80 scen11 scen01 scen49 scen19 scen44 scen56 scen37 scen02 scen05 scen36 scen43 scen29 scen28 scen23 scen41 scen51 scen30 scen24 scen45 scen58 static_bag] points=1 trace=[] start=2026-10-22T14:58:34+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 ID_OFF_hist rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDat",
+    "nonzero_rc_files=0 total_rc=115",
+    "eval pkls=115 expected=115",
+    "end=2026-10-22T15:10:29+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ID_OFF_hist/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258/work/inputs/scen38/frames.csv --scene scen38 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ID_OFF_hist/params.yaml --set imu_yaw_is_true_enu=false    --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ID_OFF_hist/out/scen38.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ID_OFF_hist/out/scen38.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ID_OFF_hist/out/scen38.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ID_OFF_hist/out/scen38.rc",
+   "n_jobs": 115,
+   "udp": 0
+  },
+  "ISO_allowed_perturb": {
+   "run_meta": [
+    "name=ISO_allowed_perturb variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[] par=6 scenes=[scen58 scen93] points=0 trace=[] start=2026-10-22T15:19:47+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 ISO_allowed_perturb rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"U",
+    "nonzero_rc_files=0 total_rc=2",
+    "eval pkls=2 expected=2",
+    "end=2026-10-22T15:20:06+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_allowed_perturb/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/isolation/allowed_perturb/scen58/frames_comp.csv --scene scen58 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_allowed_perturb/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition   --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_allowed_perturb/out/scen58.jsonl  > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_allowed_perturb/out/scen58.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_allowed_perturb/out/scen58.rc",
+   "n_jobs": 2,
+   "udp": 0
+  },
+  "ISO_forbid_perturb": {
+   "run_meta": [
+    "name=ISO_forbid_perturb variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[] par=6 scenes=[scen58 scen93] points=0 trace=[] start=2026-10-22T15:19:09+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 ISO_forbid_perturb rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Ud",
+    "nonzero_rc_files=0 total_rc=2",
+    "eval pkls=2 expected=2",
+    "end=2026-10-22T15:19:28+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_perturb/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/isolation/forbid_perturb/scen58/frames_comp.csv --scene scen58 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_perturb/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition   --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_perturb/out/scen58.jsonl  > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_perturb/out/scen58.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_perturb/out/scen58.rc",
+   "n_jobs": 2,
+   "udp": 0
+  },
+  "ISO_forbid_removed": {
+   "run_meta": [
+    "name=ISO_forbid_removed variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[] par=6 scenes=[scen58 scen93] points=0 trace=[] start=2026-10-22T15:19:28+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 ISO_forbid_removed rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Ud",
+    "nonzero_rc_files=0 total_rc=2",
+    "eval pkls=2 expected=2",
+    "end=2026-10-22T15:19:47+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_removed/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/isolation/forbid_removed/scen58/frames_comp.csv --scene scen58 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_removed/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition   --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_removed/out/scen58.jsonl  > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_removed/out/scen58.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_forbid_removed/out/scen58.rc",
+   "n_jobs": 2,
+   "udp": 0
+  },
+  "ISO_orig": {
+   "run_meta": [
+    "name=ISO_orig variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[] par=6 scenes=[scen58 scen93] points=0 trace=[] start=2026-10-22T15:18:51+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 ISO_orig rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagr",
+    "nonzero_rc_files=0 total_rc=2",
+    "eval pkls=2 expected=2",
+    "end=2026-10-22T15:19:09+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_orig/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/isolation/orig/scen58/frames_comp.csv --scene scen58 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_orig/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition   --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_orig/out/scen58.jsonl  > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_orig/out/scen58.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/ISO_orig/out/scen58.rc",
+   "n_jobs": 2,
+   "udp": 0
+  },
+  "SYN_A": {
+   "run_meta": [
+    "name=SYN_A variant=cand mode=synthetic head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[--set lidar_kf_reacquire_elapsed_init=true] par=6 scenes=[syn01_ego_stop_static syn02_ego_straight_static syn03_ego_turn_static syn04_ego_rotate_inplace syn05_ego_straight_moving syn06_target_turn_accel syn07_irregular_dt syn08_occlusion_reacquire syn09_ego_brake syn10_ego_accel_turn_moving ] points=1 trace=[syn01_ego_stop_static syn02_ego_straight_static syn03_ego_turn_static syn04_ego_rotate_inplace syn05_ego_straight_moving syn06_target_turn_accel syn07_irregular_dt syn08_occlusion_reacquire syn09_ego_brake syn10_ego_accel_turn_moving ] start=2026-10-22T15:45:02+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 SYN_A rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams",
+    "nonzero_rc_files=0 total_rc=10",
+    "eval pkls=10 expected=10",
+    "end=2026-10-22T15:45:14+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_A/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/synthetic/syn01_ego_stop_static/frames_comp.csv --scene syn01_ego_stop_static --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_A/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition --set lidar_kf_reacquire_elapsed_init=true --track-trace /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_A/trace/syn01_ego_stop_static.trace.jsonl --run-id SYN_A:syn01_ego_stop_static --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_A/out/syn01_ego_stop_static.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_A/out/syn01_ego_stop_static.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_A/out/syn01_ego_stop_static.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_A/out/syn01_ego_stop_static.rc",
+   "n_jobs": 10,
+   "udp": 0
+  },
+  "SYN_AB": {
+   "run_meta": [
+    "name=SYN_AB variant=cand mode=synthetic head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[--set lidar_kf_reacquire_elapsed_init=true --set lidar_kf_ego_translation_comp=true] par=6 scenes=[syn01_ego_stop_static syn02_ego_straight_static syn03_ego_turn_static syn04_ego_rotate_inplace syn05_ego_straight_moving syn06_target_turn_accel syn07_irregular_dt syn08_occlusion_reacquire syn09_ego_brake syn10_ego_accel_turn_moving ] points=1 trace=[syn01_ego_stop_static syn02_ego_straight_static syn03_ego_turn_static syn04_ego_rotate_inplace syn05_ego_straight_moving syn06_target_turn_accel syn07_irregular_dt syn08_occlusion_reacquire syn09_ego_brake syn10_ego_accel_turn_moving ] start=2026-10-22T15:45:26+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 SYN_AB rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagram",
+    "nonzero_rc_files=0 total_rc=10",
+    "eval pkls=10 expected=10",
+    "end=2026-10-22T15:45:38+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_AB/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/synthetic/syn01_ego_stop_static/frames_comp.csv --scene syn01_ego_stop_static --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_AB/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition --set lidar_kf_reacquire_elapsed_init=true --set lidar_kf_ego_translation_comp=true --track-trace /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_AB/trace/syn01_ego_stop_static.trace.jsonl --run-id SYN_AB:syn01_ego_stop_static --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_AB/out/syn01_ego_stop_static.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_AB/out/syn01_ego_stop_static.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_AB/out/syn01_ego_stop_static.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_AB/out/syn01_ego_stop_static.rc",
+   "n_jobs": 10,
+   "udp": 0
+  },
+  "SYN_B": {
+   "run_meta": [
+    "name=SYN_B variant=cand mode=synthetic head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[--set lidar_kf_ego_translation_comp=true] par=6 scenes=[syn01_ego_stop_static syn02_ego_straight_static syn03_ego_turn_static syn04_ego_rotate_inplace syn05_ego_straight_moving syn06_target_turn_accel syn07_irregular_dt syn08_occlusion_reacquire syn09_ego_brake syn10_ego_accel_turn_moving ] points=1 trace=[syn01_ego_stop_static syn02_ego_straight_static syn03_ego_turn_static syn04_ego_rotate_inplace syn05_ego_straight_moving syn06_target_turn_accel syn07_irregular_dt syn08_occlusion_reacquire syn09_ego_brake syn10_ego_accel_turn_moving ] start=2026-10-22T15:45:14+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 SYN_B rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams",
+    "nonzero_rc_files=0 total_rc=10",
+    "eval pkls=10 expected=10",
+    "end=2026-10-22T15:45:26+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_B/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/synthetic/syn01_ego_stop_static/frames_comp.csv --scene syn01_ego_stop_static --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_B/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition --set lidar_kf_ego_translation_comp=true --track-trace /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_B/trace/syn01_ego_stop_static.trace.jsonl --run-id SYN_B:syn01_ego_stop_static --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_B/out/syn01_ego_stop_static.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_B/out/syn01_ego_stop_static.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_B/out/syn01_ego_stop_static.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_B/out/syn01_ego_stop_static.rc",
+   "n_jobs": 10,
+   "udp": 0
+  },
+  "SYN_BASE": {
+   "run_meta": [
+    "name=SYN_BASE variant=cand mode=synthetic head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[] par=6 scenes=[syn01_ego_stop_static syn02_ego_straight_static syn03_ego_turn_static syn04_ego_rotate_inplace syn05_ego_straight_moving syn06_target_turn_accel syn07_irregular_dt syn08_occlusion_reacquire syn09_ego_brake syn10_ego_accel_turn_moving ] points=1 trace=[syn01_ego_stop_static syn02_ego_straight_static syn03_ego_turn_static syn04_ego_rotate_inplace syn05_ego_straight_moving syn06_target_turn_accel syn07_irregular_dt syn08_occlusion_reacquire syn09_ego_brake syn10_ego_accel_turn_moving ] start=2026-10-22T15:44:50+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 SYN_BASE rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagr",
+    "nonzero_rc_files=0 total_rc=10",
+    "eval pkls=10 expected=10",
+    "end=2026-10-22T15:45:01+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_BASE/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/synthetic/syn01_ego_stop_static/frames_comp.csv --scene syn01_ego_stop_static --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_BASE/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition  --track-trace /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_BASE/trace/syn01_ego_stop_static.trace.jsonl --run-id SYN_BASE:syn01_ego_stop_static --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_BASE/out/syn01_ego_stop_static.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_BASE/out/syn01_ego_stop_static.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_BASE/out/syn01_ego_stop_static.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/SYN_BASE/out/syn01_ego_stop_static.rc",
+   "n_jobs": 10,
+   "udp": 0
+  },
+  "TRC_AB": {
+   "run_meta": [
+    "name=TRC_AB variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[--set lidar_kf_reacquire_elapsed_init=true --set lidar_kf_ego_translation_comp=true] par=6 scenes=[static_bag scen75 scen92 scen16 scen10 scen50 scen56 scen21 scen39] points=0 trace=[static_bag scen75 scen92 scen16 scen10 scen50 scen56 scen21 scen39] start=2026-10-22T15:47:45+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 TRC_AB rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagram",
+    "nonzero_rc_files=0 total_rc=9",
+    "eval pkls=9 expected=9",
+    "end=2026-10-22T15:49:01+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_AB/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/inputs_comp/static_bag/frames_comp.csv --scene static_bag --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_AB/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition --set lidar_kf_reacquire_elapsed_init=true --set lidar_kf_ego_translation_comp=true --track-trace /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_AB/trace/static_bag.trace.jsonl --run-id TRC_AB:static_bag --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_AB/out/static_bag.jsonl  > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_AB/out/static_bag.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_AB/out/static_bag.rc",
+   "n_jobs": 9,
+   "udp": 0
+  },
+  "TRC_CB": {
+   "run_meta": [
+    "name=TRC_CB variant=cand mode=competition head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[] par=6 scenes=[static_bag scen75 scen92 scen16 scen10 scen50 scen56 scen21 scen39] points=0 trace=[static_bag scen75 scen92 scen16 scen10 scen50 scen56 scen21 scen39] start=2026-10-22T15:46:27+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 TRC_CB rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagram",
+    "nonzero_rc_files=0 total_rc=9",
+    "eval pkls=9 expected=9",
+    "end=2026-10-22T15:47:45+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_CB/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/inputs_comp/static_bag/frames_comp.csv --scene static_bag --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_CB/params.yaml --set imu_yaw_is_true_enu=false --input-mode competition  --track-trace /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_CB/trace/static_bag.trace.jsonl --run-id TRC_CB:static_bag --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_CB/out/static_bag.jsonl  > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_CB/out/static_bag.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_CB/out/static_bag.rc",
+   "n_jobs": 9,
+   "udp": 0
+  },
+  "TRC_hist": {
+   "run_meta": [
+    "name=TRC_hist variant=cand mode=historical head=669859c1a8fa2a27ba2abf70b74373b5d64da913 worktree_dirty_lines=0 extra=[] par=6 scenes=[scen93 scen21 scen58 static_bag] points=1 trace=[scen93 scen21 scen58 static_bag] start=2026-10-22T15:45:39+09:00"
+   ],
+   "end": [
+    "ns_batch rc=0 TRC_hist rc=0 udp={\"start\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"end\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagrams\": 0, \"Udp6NoPorts\": 0}, \"delta\": {\"Udp.OutDatagrams\": 0, \"Udp.InDatagrams\": 0, \"Udp.NoPorts\": 0, \"Udp6OutDatagrams\": 0, \"Udp6InDatagr",
+    "nonzero_rc_files=0 total_rc=4",
+    "eval pkls=4 expected=4",
+    "end=2026-10-22T15:46:08+09:00"
+   ],
+   "binary_sha256": [
+    "d0fad8ea86702d9e1e9b3af1d88ccf82e9e3af63e262eab73621bee4ea345756  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay",
+    "834e032b32e4f16dc0dc21af1b6785fb1c4992b56f7979ec83a9020731902dc7  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/libmyHeader.so",
+    "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5  /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_hist/params.yaml"
+   ],
+   "params_yaml_sha256": "0078d28bd988fed58d6ad77e856f8de131d8244e9bf0a755dcd73aab0b18aed5",
+   "example_job": "/home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/repo/src/lidar+sensorfusion/build/exp_cand/devel/lib/Main/lidar_dataset_replay --frames /home/autonav/2026AIM/Lidar_experimments/obb_init_turn_follow_20261019_032258/work/inputs/scen93/frames.csv --scene scen93 --params /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_hist/params.yaml --set imu_yaw_is_true_enu=false   --track-trace /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_hist/trace/scen93.trace.jsonl --run-id TRC_hist:scen93 --out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_hist/out/scen93.jsonl --points-out /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_hist/out/scen93.pts.bin > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_hist/out/scen93.log 2>&1; echo $? > /home/autonav/2026AIM/Lidar_experimments/track_competition_stage1_20261022_134204/work/runs/TRC_hist/out/scen93.rc",
+   "n_jobs": 4,
+   "udp": 0
+  }
+ },
+ "execution": {
+  "isolation": "scripts/ns_batch.sh: unshare --user --map-root-user --net --pid --fork --mount-proc, lo only (0 routes), private roscore port 20000-29999, Windows interop blocked; UDP datagram delta recorded per run",
+  "replay_speed": "offline harness: synchronous, as fast as possible (no pacing), sim time ros::Time::setNow(source stamp) per scan; realtime runs: real Main node via roslaunch main_integration.launch planner_udp_enabled:=false, 15 Hz CLOCK_MONOTONIC-paced feeder (scripts/rt_feeder.py), wall ROS time",
+  "external_outputs": "planner UDP disabled (planner_udp_enabled:=false in dumped params; the offline harness never creates the sender); vehicle control not started; namespace has no route",
+  "params_source": "roslaunch --dump-params Main main_integration.launch planner_udp_enabled:=false + --set imu_yaw_is_true_enu=false (+ option --set)",
+  "threads": "one harness process per scene, xargs -P 6, LidarProcess single-threaded"
+ },
+ "current_instance": "No live MORAI/vehicle instance was used in stage 1; all results are offline replays."
+}

@@ -1,0 +1,1156 @@
+From 669859c1a8fa2a27ba2abf70b74373b5d64da913 Mon Sep 17 00:00:00 2001
+From: "Claude (stage1 experiment)" <leeyoonjae2002@gmail.com>
+Date: Thu, 22 Oct 2026 15:01:09 +0900
+Subject: [PATCH] feat(lidar): add opt-in track trace, competition replay
+ inputs and tracking frame options
+
+Stage-1 diagnosis instrumentation and two default-off tracking options on top of P0
+(916e4d9e + replay harness 39cffc57). With every option off and no trace path the
+tracker output is unchanged (verified by replay identity against the P0 run).
+
+- Lidar/Tracking/TrackTrace.hpp: bounded, buffered JSONL track trace (default off),
+  per-track selection; tracking_options::reacquire_elapsed_init and
+  tracking_options::ego_translation_comp switches.
+- Tracking/Kalman/FrameBoundary/LidarProcess: trace hooks (detections, merges,
+  association candidates, KF prior/innovation/gain/posterior, OBB stabilisation
+  before/after, births, misses, retire, drop, scan inputs and stage times).
+- reacquire_elapsed_init: second-observation velocity divides by the time elapsed
+  since the first observation instead of the last scan dt (P0 gives (k+1)x speed
+  after k missed scans).
+- ego_translation_comp: common-geometry frame alignment also removes the base_link
+  arc from vel_x and IMU yaw, so the KF velocity is ground referenced and the CAN
+  speed is no longer added to it.
+- main.cpp: ConfigureTrackingExperiment() reads the switches and trace params.
+- lidar_dataset_replay: --input-mode competition (reads only vel_x and IMU
+  attitude columns, feeds no GPS), --track-trace, publish/planner trace records.
+- test_tracking_frame_options: cause tests on ideal measurements through the
+  production FrameFilter chain (fail with the options off, pass with them on).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../src/Main/CMakeLists.txt                   |   9 +
+ .../src/Main/src/Geometry/FrameBoundary.cpp   |  22 +-
+ .../src/Main/src/Global/Global.hpp            |   6 +
+ .../src/Main/src/Lidar/Kalman/Kalman.cpp      |  57 ++++-
+ .../src/Lidar/LidarProcess/LidarProcess.cpp   |  31 +++
+ .../Main/src/Lidar/Tracking/TrackTrace.hpp    | 127 +++++++++++
+ .../src/Main/src/Lidar/Tracking/Tracking.cpp  | 111 ++++++++-
+ src/lidar+sensorfusion/src/Main/src/main.cpp  |  28 +++
+ .../src/Main/test/lidar_dataset_replay.cpp    | 157 ++++++++++++-
+ .../Main/test/test_tracking_frame_options.cpp | 211 ++++++++++++++++++
+ 10 files changed, 747 insertions(+), 12 deletions(-)
+ create mode 100644 src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/TrackTrace.hpp
+ create mode 100644 src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp
+
+diff --git a/src/lidar+sensorfusion/src/Main/CMakeLists.txt b/src/lidar+sensorfusion/src/Main/CMakeLists.txt
+index 5efc6050..5258f1ea 100644
+--- a/src/lidar+sensorfusion/src/Main/CMakeLists.txt
++++ b/src/lidar+sensorfusion/src/Main/CMakeLists.txt
+@@ -149,6 +149,15 @@ if(CATKIN_ENABLE_TESTING)
+     target_link_libraries(test_tracking_association
+       myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+   endif()
++  # Stage-1 tracking options (reacquire elapsed init, ego translation): ConfigureForTest seam, no ROS master.
++  catkin_add_gtest(test_tracking_frame_options
++    test/test_tracking_frame_options.cpp
++    test/test_runtime_globals.cpp
++  )
++  if(TARGET test_tracking_frame_options)
++    target_link_libraries(test_tracking_frame_options
++      myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
++  endif()
+   # ROS master 없이 실행: frame_boundary::ConfigureForTest seam만 사용한다.
+   catkin_add_gtest(test_leveling_contract
+     test/test_leveling_contract.cpp
+diff --git a/src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.cpp b/src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.cpp
+index fd2d236c..2ad64884 100644
+--- a/src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.cpp
++++ b/src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.cpp
+@@ -1,4 +1,5 @@
+ #include <Geometry/FrameBoundary.hpp>
++#include <Lidar/Tracking/TrackTrace.hpp>
+ #include <SensorFusion/FusionTrace.hpp>
+ #include <ros/package.h>
+ #include <openssl/sha.h>
+@@ -186,13 +187,32 @@ void RecordTrackingFrame(LiDARObjectInfo& object) {
+   object.tracking_frame_valid=true; object.tracking_height_input=object.f32_CoreZ;
+   object.tracking_yaw_from_input=YawFromInput();
+   object.tracking_origin_in_yaw=OriginInYaw();
++  object.tracking_stamp_ns=current.time.stamp_ns;
++  object.tracking_ego_speed_mps=static_cast<float>(current.ego_linear_base.x());
++}
++// base_link displacement from the recorded scan to the current scan, expressed in the recorded
++// (leveled, heading-aligned) yaw frame: constant-curvature arc with the mean of the two CAN
++// (vel_x) samples and the IMU yaw change. Zero when the record is missing or implausible.
++asmc::lidar::Vec EgoShiftSinceRecord(const LiDARObjectInfo& object,double yaw_now_rad) {
++  if(object.tracking_stamp_ns<=0 || current.time.stamp_ns<=object.tracking_stamp_ns) return asmc::lidar::Vec::Zero();
++  const double dt=1e-9*static_cast<double>(current.time.stamp_ns-object.tracking_stamp_ns);
++  const double v=0.5*(static_cast<double>(object.tracking_ego_speed_mps)+current.ego_linear_base.x());
++  if(dt>1.0 || !std::isfinite(v)) return asmc::lidar::Vec::Zero();
++  const double dpsi=std::remainder(yaw_now_rad-object.f32_PrevYaw,2.0*M_PI), s=v*dt;
++  if(std::abs(dpsi)<1e-6) return asmc::lidar::Vec(s,0.5*s*dpsi,0);
++  const double rho=s/dpsi;
++  return asmc::lidar::Vec(rho*std::sin(dpsi),rho*(1.0-std::cos(dpsi)),0);
+ }
+ void AlignTrackingFrame(LiDARObjectInfo& object,double yaw_now_rad,bool rotate_obb_yaw) {
+   if(!Enabled() || !object.tracking_frame_valid) return;
+   const auto inverse=YawFromInput().transpose().eval();
+   const auto yaw_change=asmc::lidar::rpy(0,0,object.f32_PrevYaw-yaw_now_rad);
+   const auto rotation=(inverse*yaw_change*object.tracking_yaw_from_input).eval();
+-  const auto translation=(inverse*(yaw_change*object.tracking_origin_in_yaw-OriginInYaw())).eval();
++  // P0: relative CA, the ego translation stays in the state. Option ego_translation_comp:
++  // remove the base_link arc so the state (and its velocity) is ground-referenced.
++  const asmc::lidar::Vec ego_shift=tracking_options::Get().ego_translation_comp
++      ? EgoShiftSinceRecord(object,yaw_now_rad) : asmc::lidar::Vec::Zero();
++  const auto translation=(inverse*(yaw_change*(object.tracking_origin_in_yaw-ego_shift)-OriginInYaw())).eval();
+   // Re-express the previous state before the unchanged relative CA prediction.
+   // Do not subtract CAN displacement: relative CA already models ego motion.
+   const asmc::lidar::Vec position(object.Eigen_KfState_CA(0),object.Eigen_KfState_CA(1),object.tracking_height_input);
+diff --git a/src/lidar+sensorfusion/src/Main/src/Global/Global.hpp b/src/lidar+sensorfusion/src/Main/src/Global/Global.hpp
+index 06bc5a47..65dc8c00 100644
+--- a/src/lidar+sensorfusion/src/Main/src/Global/Global.hpp
++++ b/src/lidar+sensorfusion/src/Main/src/Global/Global.hpp
+@@ -527,6 +527,12 @@ struct LiDARObjectInfo
+     float tracking_height_input = 0;
+     asmc::lidar::Rot tracking_yaw_from_input = asmc::lidar::Rot::Identity();
+     asmc::lidar::Vec tracking_origin_in_yaw = asmc::lidar::Vec::Zero();
++    // Experiment bookkeeping (behaviour changes only with tracking_options, default off):
++    // source stamp and CAN speed of the scan described by tracking_*, and the time elapsed since
++    // this track's last real measurement (missed scans accumulate their dt).
++    std::int64_t tracking_stamp_ns = 0;
++    float tracking_ego_speed_mps = 0;
++    double kf_elapsed_since_meas_s = 0;
+ 	string str_ObjectClass = "unknown";      // selected camera consumer group or unknown
+ 
+     // str_ObjectClass를 확정시킨 YOLO 원본 라벨(16종/7종; 소비 그룹과 구분).
+diff --git a/src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/Kalman.cpp b/src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/Kalman.cpp
+index 27663d59..d6f2f6de 100644
+--- a/src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/Kalman.cpp
++++ b/src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/Kalman.cpp
+@@ -1,5 +1,6 @@
+ #include "kalman_utils.hpp"
+ #include <Geometry/FrameBoundary.hpp>
++#include <Lidar/Tracking/TrackTrace.hpp>
+ 
+ 
+ 
+@@ -83,6 +84,7 @@ std::pair<float, float> predictKalmanPosition(
+         aligned.tracking_frame_valid=true;aligned.tracking_height_input=obj.tracking_height_input;
+         aligned.tracking_yaw_from_input=obj.tracking_yaw_from_input;
+         aligned.tracking_origin_in_yaw=obj.tracking_origin_in_yaw;
++        aligned.tracking_stamp_ns=obj.tracking_stamp_ns;aligned.tracking_ego_speed_mps=obj.tracking_ego_speed_mps;
+         aligned.f32_PrevYaw=obj.f32_PrevYaw;aligned.f32_OBB_YawRad=obj.f32_OBB_YawRad;
+         frame_boundary::AlignTrackingFrame(aligned,to_ccw_rad(ego_yaw_now));
+         const auto& x=aligned.Eigen_KfState_CA;
+@@ -135,6 +137,16 @@ void kalman_filter_predict(LiDARObjectInfo &o, float64 dt, float ego_yaw_now)
+     // 필요하다면 편의용 캐시(f32_CoreX/Y) 업데이트
+     o.f32_CoreX = o.Eigen_KfState_CA(0);
+     o.f32_CoreY = o.Eigen_KfState_CA(1);
++    o.kf_elapsed_since_meas_s += dt;   // bookkeeping only (used by reacquire_elapsed_init)
++    if (track_trace::Sink().WantsTrack(o.s32_Id)) {
++        track_trace::Event("kf_predict_miss", [&](std::ostream& out) {
++            out << ",\"id\":" << o.s32_Id << ",\"miss\":" << o.s32_MissCount << ",\"kfc\":" << o.s32_KfInitCount
++                << ",\"dt\":" << dt << ",\"elapsed\":" << o.kf_elapsed_since_meas_s << ",\"x\":";
++            track_trace::Arr(out, o.Eigen_KfState_CA, 6);
++            out << ",\"Pdiag\":";
++            track_trace::Arr(out, o.Eigen_KfP_CA.diagonal(), 6);
++        });
++    }
+ }
+ 
+ // 매칭된 트랙용 Update (회전 보정 → 예측 → 업데이트)
+@@ -152,8 +164,17 @@ void kalman_filter_update(LiDARObjectInfo &obj,
+         obj.s32_KfInitCount = 1;
+         obj.f32_CoreX = zx; obj.f32_CoreY = zy;
+         obj.f32_PrevYaw = to_ccw_rad(ego_yaw_now);
++        obj.kf_elapsed_since_meas_s = 0.;
++        if (track_trace::Sink().WantsTrack(obj.s32_Id)) {
++            track_trace::Event("kf_init", [&](std::ostream& out) {
++                out << ",\"id\":" << obj.s32_Id << ",\"z\":[" << zx << ',' << zy << "],\"yaw_rad\":" << obj.f32_PrevYaw;
++            });
++        }
+         return;
+     }
++    const bool trace = track_trace::Sink().WantsTrack(obj.s32_Id);
++    const Eigen::Matrix<float, 6, 1> x_in = obj.Eigen_KfState_CA;
++    const int kfc_in = obj.s32_KfInitCount;
+ 
+     // --- 프레임 정렬(수동 회전) : 지난 프레임 기준 상태/공분산을 "현재 바디 프레임"으로 재표현 ---
+     // 내부에서 PrevYaw가 ego_yaw_now로 갱신됨
+@@ -161,13 +182,24 @@ void kalman_filter_update(LiDARObjectInfo &obj,
+     // obj는 현재 검출이다. OBB yaw는 Objectinfo_for_km/stabilizeMatchedOBB가 이미 현재
+     // 프레임으로 기록했으므로 KF 상태만 정렬한다(OBB yaw 이중 회전 금지).
+     compensate_ego_yaw(obj, ego_yaw_now, false);
++    const Eigen::Matrix<float, 6, 1> x_aligned = obj.Eigen_KfState_CA;
+ 
+     // --- 두 번째 프레임: 속도 초기화 (pred_x/pred_y는 반드시 '현재 프레임 기준'이어야 함) ---
++    // P0: z - pred spans every scan since the first observation (missed scans included) but is divided
++    // by the last scan dt only. Option reacquire_elapsed_init divides by the real elapsed time.
++    double init_elapsed = dt;
+     if (obj.s32_KfInitCount == 1) {
+-        float32 vx_init = (zx - pred_x) / dt ;
+-        float32 vy_init = (zy - pred_y) / dt ;
+-
+-        obj.Eigen_KfState_CA << pred_x, pred_y, vx_init, vy_init, 0.f, 0.f;
++        // Only a track that missed scans since its first observation takes the new path; without misses
++        // the elapsed time is dt and the P0 expression is used unchanged.
++        const bool elapsed_init = tracking_options::Get().reacquire_elapsed_init && obj.kf_elapsed_since_meas_s > 0.;
++        if (elapsed_init) init_elapsed = obj.kf_elapsed_since_meas_s + dt;
++        float32 vx_init = (zx - pred_x) / init_elapsed ;
++        float32 vy_init = (zy - pred_y) / init_elapsed ;
++
++        // P0 expression kept bit-exact when the option is off. With the option the position is set one
++        // scan before z along v_init, so the CA step below lands on z (zero innovation) as in P0.
++        if (elapsed_init) obj.Eigen_KfState_CA << zx - vx_init * dt, zy - vy_init * dt, vx_init, vy_init, 0.f, 0.f;
++        else obj.Eigen_KfState_CA << pred_x, pred_y, vx_init, vy_init, 0.f, 0.f;
+         obj.s32_KfInitCount = 2;
+         // 필요하면 여기서 바로 return해도 되지만, 일반적으로 아래 예측+업데이트 계속 진행
+     }
+@@ -203,6 +235,23 @@ void kalman_filter_update(LiDARObjectInfo &obj,
+     // --- 캐시 ---
+     obj.f32_CoreX = obj.Eigen_KfState_CA(0);
+     obj.f32_CoreY = obj.Eigen_KfState_CA(1);
++    if (trace) {
++        track_trace::Event("kf_update", [&](std::ostream& out) {
++            out << ",\"id\":" << obj.s32_Id << ",\"kfc_in\":" << kfc_in << ",\"dt\":" << dt
++                << ",\"elapsed_before\":" << obj.kf_elapsed_since_meas_s << ",\"init_elapsed\":" << init_elapsed
++                << ",\"z\":[" << zx << ',' << zy << "],\"pred\":[" << pred_x << ',' << pred_y << "],\"x_in\":";
++            track_trace::Arr(out, x_in, 6);
++            out << ",\"x_aligned\":"; track_trace::Arr(out, x_aligned, 6);
++            out << ",\"x_prior\":"; track_trace::Arr(out, x_pred, 6);
++            out << ",\"P_prior_diag\":"; track_trace::Arr(out, P_pred.diagonal(), 6);
++            out << ",\"innov\":"; track_trace::Arr(out, y, 2);
++            out << ",\"S\":"; track_trace::Mat2(out, S, 2, 2);
++            out << ",\"K\":"; track_trace::Mat2(out, K, 6, 2);
++            out << ",\"x_post\":"; track_trace::Arr(out, obj.Eigen_KfState_CA, 6);
++            out << ",\"P_post_diag\":"; track_trace::Arr(out, obj.Eigen_KfP_CA.diagonal(), 6);
++        });
++    }
++    obj.kf_elapsed_since_meas_s = 0.;
+ }
+ 
+ //이거는 imm
+diff --git a/src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp b/src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp
+index 0e1cc922..b0ef2e44 100644
+--- a/src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp
++++ b/src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp
+@@ -3,6 +3,7 @@
+ #include <Lidar/Tracking/MotionClassifier.hpp>
+ #include <PlannerInterface/PlannerObjectAdapter.hpp>
+ #include <Geometry/FrameBoundary.hpp>
++#include <Lidar/Tracking/TrackTrace.hpp>
+ #include "PipelineTrace.hpp"
+ 
+ 
+@@ -180,6 +181,22 @@ bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
+ 
+     g_LidarStageProfile.Reset();
+     g_LidarStageProfile.raw_points = st_RawLiDAR.s32_Num;
++    if (track_trace::Sink().Enabled()) {
++        // Inputs actually used by this scan (after SensorPoseHistory selection) and the KF dt.
++        track_trace::Event("scan", [&](std::ostream& out) {
++            const auto& imu = st_GPSIMU.st_IMU; const auto& gps = st_GPSIMU.st_GPS;
++            out << ",\"dt_s\":" << track_trace::N{ts_PrevTime.isZero() ? NAN : (ts_CurrTime - ts_PrevTime).toSec()}
++                << ",\"raw_points\":" << st_RawLiDAR.s32_Num
++                << ",\"imu_yaw_deg\":" << imu.f32_Yaw_deg << ",\"imu_roll_deg\":" << imu.f32_Roll_deg
++                << ",\"imu_pitch_deg\":" << imu.f32_Pitch_deg << ",\"can_kph\":" << st_GPSIMU.st_CAN.f32_CurrentVel_KPH
++                << ",\"gps_e\":" << track_trace::N{gps.f64_E} << ",\"gps_n\":" << track_trace::N{gps.f64_N}
++                << ",\"gps_jamming\":" << (gps.b_isJamming ? 1 : 0)
++                << ",\"common_geometry\":" << (frame_boundary::Enabled() ? 1 : 0)
++                << ",\"map_pose_valid\":" << (frame_boundary::Enabled() && frame_boundary::Current().map_pose.valid ? 1 : 0)
++                << ",\"opt_reacquire_elapsed_init\":" << (tracking_options::Get().reacquire_elapsed_init ? 1 : 0)
++                << ",\"opt_ego_translation_comp\":" << (tracking_options::Get().ego_translation_comp ? 1 : 0);
++        });
++    }
+ 
+     deque<vector<LiDARObjectInfo>> prev_objects_queue = st_LiDAR.Prev_Objects_Queue;
+     pcl::PointCloud<pcl::PointXYZI>::Ptr roi_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+@@ -345,5 +362,19 @@ bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
+ 
+     LIDAR_STAGE(marker_ms, marker_pub.publish(marker_array));
+     g_LidarStageProfile.valid = true;
++    if (track_trace::Sink().Enabled()) {
++        const auto& p = g_LidarStageProfile;
++        track_trace::Event("scan_end", [&](std::ostream& out) {
++            int observed = 0, missed = 0;
++            for (const auto& o : object) (o.s32_MissCount == 0 ? observed : missed)++;
++            out << ",\"process_ms\":" << std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count()
++                << ",\"stage_ms\":{\"make_cloud\":" << p.make_cloud_ms << ",\"roi\":" << p.roi_ms << ",\"voxel\":" << p.voxel_ms
++                << ",\"imu_correct\":" << p.imu_correct_ms << ",\"ransac\":" << p.ransac_ms << ",\"cluster\":" << p.cluster_ms
++                << ",\"objectinfo\":" << p.objectinfo_ms << ",\"framefilter\":" << p.framefilter_ms << ",\"motion\":" << p.motion_ms
++                << ",\"marker\":" << p.marker_ms << "},\"points\":{\"roi\":" << p.roi_points << ",\"voxel\":" << p.voxel_points
++                << ",\"ransac\":" << p.ransac_points << ",\"clusters\":" << p.clusters << "},\"tracks_observed\":" << observed
++                << ",\"tracks_missed\":" << missed;
++        });
++    }
+     return true;
+ }   
+diff --git a/src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/TrackTrace.hpp b/src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/TrackTrace.hpp
+new file mode 100644
+index 00000000..f4264b9c
+--- /dev/null
++++ b/src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/TrackTrace.hpp
+@@ -0,0 +1,127 @@
++#pragma once
++
++#include <chrono>
++#include <cmath>
++#include <cstdint>
++#include <fstream>
++#include <iomanip>
++#include <mutex>
++#include <set>
++#include <sstream>
++#include <stdexcept>
++#include <string>
++
++// Opt-in tracking trace: one JSON object per line, default OFF.
++// Disabled tracing formats nothing (every hook checks Enabled() before building a record).
++// Memory and disk are bounded: records are buffered (flushed every 256 KiB, never per scan)
++// and every record beyond max_bytes is dropped and counted instead of growing the file.
++// Track selection (ids) limits per-track records; scan-level records are always written.
++namespace track_trace {
++class Recorder {
++public:
++    void Configure(const std::string& path, const std::string& run_id,
++                   const std::string& ids_csv, double max_mb) {
++        std::lock_guard<std::mutex> lock(mutex_);
++        if (path.empty()) return;
++        output_.open(path, std::ios::out | std::ios::trunc);
++        if (!output_) throw std::runtime_error("cannot open lidar track trace: " + path);
++        run_id_ = run_id;
++        max_bytes_ = max_mb > 0. ? static_cast<std::uint64_t>(max_mb * 1e6) : 0;
++        std::stringstream in(ids_csv); std::string cell;
++        while (std::getline(in, cell, ',')) if (!cell.empty()) ids_.insert(std::stoi(cell));
++        enabled_ = true;
++    }
++    bool Enabled() const { return enabled_; }
++    bool WantsTrack(int id) const { return enabled_ && (ids_.empty() || ids_.count(id) > 0); }
++    void SetScan(std::int64_t scan, std::uint64_t stamp_ns) { scan_ = scan; stamp_ns_ = stamp_ns; }
++    std::int64_t Scan() const { return scan_; }
++    std::uint64_t StampNs() const { return stamp_ns_; }
++    const std::string& RunId() const { return run_id_; }
++    void Append(const std::string& record) {
++        std::lock_guard<std::mutex> lock(mutex_);
++        if (max_bytes_ && written_ + buffer_.size() + record.size() + 1 > max_bytes_) { ++dropped_; return; }
++        buffer_ += record; buffer_ += '\n'; ++records_;
++        if (buffer_.size() >= 262144) FlushLocked();
++    }
++    void Flush() {
++        std::lock_guard<std::mutex> lock(mutex_);
++        if (!enabled_) return;
++        FlushLocked();
++        output_.flush();
++    }
++    std::uint64_t Dropped() const { return dropped_; }
++    std::uint64_t Records() const { return records_; }
++private:
++    void FlushLocked() {
++        if (buffer_.empty()) return;
++        output_ << buffer_;
++        if (!output_) throw std::runtime_error("failed writing lidar track trace");
++        written_ += buffer_.size();
++        buffer_.clear();
++    }
++    bool enabled_ = false;
++    std::ofstream output_;
++    std::string buffer_, run_id_;
++    std::set<int> ids_;
++    std::uint64_t max_bytes_ = 0, written_ = 0, dropped_ = 0, records_ = 0;
++    std::int64_t scan_ = -1;
++    std::uint64_t stamp_ns_ = 0;
++    std::mutex mutex_;
++};
++
++inline Recorder& Sink() { static Recorder recorder; return recorder; }
++
++inline std::uint64_t MonoNs() {
++    return std::chrono::duration_cast<std::chrono::nanoseconds>(
++        std::chrono::steady_clock::now().time_since_epoch()).count();
++}
++
++// JSON number, null for NaN/Inf.
++struct N { double v; };
++inline std::ostream& operator<<(std::ostream& out, N n) {
++    if (std::isfinite(n.v)) out << n.v; else out << "null";
++    return out;
++}
++template <class Vec> inline void Arr(std::ostream& out, const Vec& v, int n) {
++    out << '[';
++    for (int i = 0; i < n; ++i) { if (i) out << ','; out << N{static_cast<double>(v(i))}; }
++    out << ']';
++}
++template <class Mat> inline void Mat2(std::ostream& out, const Mat& m, int rows, int cols) {
++    out << '[';
++    for (int r = 0; r < rows; ++r) for (int c = 0; c < cols; ++c) {
++        if (r || c) out << ',';
++        out << N{static_cast<double>(m(r, c))};
++    }
++    out << ']';
++}
++
++// Every record: ev, run, scan (harness frame index or runtime generation), t_ns (LiDAR source stamp,
++// ROS clock of the bridge), mono_ns (CLOCK_MONOTONIC of this process; never subtracted from t_ns).
++template <typename Fields>
++inline void Event(const char* kind, Fields fields) {
++    auto& sink = Sink();
++    if (!sink.Enabled()) return;
++    std::ostringstream out;
++    out << std::setprecision(9);
++    out << "{\"ev\":\"" << kind << "\",\"run\":\"" << sink.RunId() << "\",\"scan\":" << sink.Scan()
++        << ",\"t_ns\":" << sink.StampNs() << ",\"mono_ns\":" << MonoNs();
++    fields(out);
++    out << '}';
++    sink.Append(out.str());
++}
++}  // namespace track_trace
++
++// Experiment switches for the tracking state (all default false = P0 behaviour).
++//   reacquire_elapsed_init: second-observation velocity uses the time elapsed since the first
++//     observation (sum of scan dt over missed scans) instead of the last scan dt only.
++//   ego_translation_comp: the common-geometry frame alignment also removes the base_link
++//     translation (arc from vel_x and IMU yaw change), so the KF velocity is ground-referenced
++//     and the published absolute velocity no longer adds the CAN speed.
++namespace tracking_options {
++struct Options {
++    bool reacquire_elapsed_init = false;
++    bool ego_translation_comp = false;
++};
++inline Options& Get() { static Options options; return options; }
++}  // namespace tracking_options
+diff --git a/src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/Tracking.cpp b/src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/Tracking.cpp
+index 74eb6363..a649bd70 100644
+--- a/src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/Tracking.cpp
++++ b/src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/Tracking.cpp
+@@ -5,6 +5,7 @@
+ #include <cstdint>
+ #include <SensorFusion/FusionClassState.hpp>
+ #include <SensorFusion/FusionStateTrace.hpp>
++#include <Lidar/Tracking/TrackTrace.hpp>
+ const double DISP_SPIKE = 0.60;  // 프레임 간 위치 점프(m) 스파이크 기준
+ const double V_SPIKE    = 6.00;  // 속도 스파이크(m/s) 기준(≈ 21.6 km/h)
+ #include <cmath>
+@@ -427,6 +428,15 @@ void ConsolidateCurrentDetections(vector<LiDARObjectInfo>& now_object) {
+                 }
+                 LiDARObjectInfo& owner = now_object[owner_index];
+                 const LiDARObjectInfo& fragment = now_object[fragment_index];
++                if (track_trace::Sink().Enabled()) {
++                    track_trace::Event("merge", [&](std::ostream& out) {
++                        out << ",\"owner_det\":" << owner.u16_Idx << ",\"fragment_det\":" << fragment.u16_Idx
++                            << ",\"owner_pts\":" << owner.pcl_ClusterPoints.size() << ",\"fragment_pts\":" << fragment.pcl_ClusterPoints.size()
++                            << ",\"obb_center_dist\":" << center_distance << ",\"aabb_iou\":" << tracking_association::AabbIou(left, right)
++                            << ",\"owner_mean\":[" << owner.f32_CoreX << ',' << owner.f32_CoreY << "],\"fragment_mean\":["
++                            << fragment.f32_CoreX << ',' << fragment.f32_CoreY << ']';
++                    });
++                }
+                 owner.pcl_ClusterPoints.points.insert(
+                     owner.pcl_ClusterPoints.points.end(),
+                     fragment.pcl_ClusterPoints.points.begin(),
+@@ -566,6 +576,21 @@ void Objectinfo_for_km(vector<LiDARObjectInfo> &vec_NowObject,
+ 
+         vec_NowObject.push_back(st_CurrentObj);
+     }
++    if (track_trace::Sink().Enabled()) {
++        // Raw detections (before duplicate consolidation): point mean (= KF measurement) and raw L-shape OBB.
++        track_trace::Event("detections", [&](std::ostream& out) {
++            out << ",\"n\":" << vec_NowObject.size() << ",\"det\":[";
++            for (std::size_t k = 0; k < vec_NowObject.size(); ++k) {
++                const auto& d = vec_NowObject[k];
++                if (k) out << ',';
++                out << "{\"det\":" << d.u16_Idx << ",\"npts\":" << d.pcl_ClusterPoints.size()
++                    << ",\"mean\":[" << d.f32_CoreX << ',' << d.f32_CoreY << ',' << d.f32_CoreZ
++                    << "],\"obb\":[" << d.f32_OBB_CenterX << ',' << d.f32_OBB_CenterY << ',' << d.f32_OBB_Width << ','
++                    << d.f32_OBB_Height << ',' << d.f32_OBB_YawRad << ',' << d.f32_OBB_ZMin << ',' << d.f32_OBB_ZMax << "]}";
++            }
++            out << ']';
++        });
++    }
+ }
+ 
+ 
+@@ -603,6 +628,9 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+     // OBB의 body-frame AABB IoU 역시 회전/자차 이동에 민감하므로 연관 비용에는
+     // 물체의 두 평면 치수가 얼마나 비슷한지만 사용한다.
+     vector<vector<double>> vec_CostMatrix(N, vector<double>(M, st_Tracking.f32_COST_INF));
++    const bool trace_on = track_trace::Sink().Enabled();
++    vector<vector<std::array<float, 3>>> cand_info;   // (distance, 1-shape, cost before gate), trace only
++    if (trace_on) cand_info.assign(N, vector<std::array<float, 3>>(M));
+     for (int32 i = 0; i < N; ++i) {
+         // 예측 위치
+         float32 f32_Pred_x = vec_PredictedPositions[i].first;
+@@ -665,7 +693,8 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+             f32_Cost = std::max(
+                 0.0F,
+                 f32_Cost - st_Tracking.f32_ContinuityBonus * age_ratio);
+-            
++            if (trace_on) cand_info[i][j] = {f32_Cost_dist, f32_Cost_shape, f32_Cost};
++
+             if (f32_Cost < st_Tracking.f32_COST_THRESHOLD) {
+                 vec_CostMatrix[i][j] = f32_Cost;
+             } else {
+@@ -691,6 +720,32 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+         }
+         out << ']';
+     });
++    if (trace_on) {
++        for (int32 i = 0; i < N; ++i) {
++            if (!track_trace::Sink().WantsTrack(vec_Compare[i].s32_Id)) continue;
++            const int aj = i < static_cast<int>(assignment.size()) ? assignment[i] : -1;
++            track_trace::Event("assoc", [&](std::ostream& out) {
++                const auto& p = vec_Compare[i];
++                out << ",\"id\":" << p.s32_Id << ",\"age\":" << p.s32_Age << ",\"miss\":" << p.s32_MissCount
++                    << ",\"kfc\":" << p.s32_KfInitCount << ",\"dt\":" << f64_Time << ",\"x_prev\":";
++                track_trace::Arr(out, p.Eigen_KfState_CA, 6);
++                out << ",\"pred\":[" << vec_PredictedPositions[i].first << ',' << vec_PredictedPositions[i].second
++                    << "],\"gate\":" << st_Tracking.f32_COST_THRESHOLD << ",\"assigned_j\":" << aj
++                    << ",\"assigned_det\":" << (aj >= 0 && aj < M ? static_cast<int>(vec_NowObject[aj].u16_Idx) : -1)
++                    << ",\"cands\":[";
++                bool first = true;
++                for (int32 j = 0; j < M; ++j) {
++                    const auto& c = cand_info[i][j];
++                    if (c[0] > 6.0F && c[2] >= st_Tracking.f32_COST_THRESHOLD) continue;
++                    if (!first) out << ','; first = false;
++                    out << "{\"j\":" << j << ",\"det\":" << vec_NowObject[j].u16_Idx << ",\"d\":" << c[0]
++                        << ",\"shape\":" << c[1] << ",\"cost\":" << c[2]
++                        << ",\"gated\":" << (c[2] < st_Tracking.f32_COST_THRESHOLD ? 0 : 1) << '}';
++                }
++                out << ']';
++            });
++        }
++    }
+ 
+     vector<bool> matched_now(M, false);
+     vector<bool> matched_prev(N, false);
+@@ -737,6 +792,14 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+             vec_NowObject[j].tracking_height_input=vec_Compare[i].tracking_height_input;
+             vec_NowObject[j].tracking_yaw_from_input=vec_Compare[i].tracking_yaw_from_input;
+             vec_NowObject[j].tracking_origin_in_yaw=vec_Compare[i].tracking_origin_in_yaw;
++            vec_NowObject[j].tracking_stamp_ns=vec_Compare[i].tracking_stamp_ns;
++            vec_NowObject[j].tracking_ego_speed_mps=vec_Compare[i].tracking_ego_speed_mps;
++            vec_NowObject[j].kf_elapsed_since_meas_s=vec_Compare[i].kf_elapsed_since_meas_s;
++            const bool trace_track = track_trace::Sink().WantsTrack(vec_NowObject[j].s32_Id);
++            std::array<float, 5> obb_raw{};
++            if (trace_track) obb_raw = {vec_NowObject[j].f32_OBB_CenterX, vec_NowObject[j].f32_OBB_CenterY,
++                                        vec_NowObject[j].f32_OBB_Width, vec_NowObject[j].f32_OBB_Height,
++                                        vec_NowObject[j].f32_OBB_YawRad};
+ 
+             if (tracking_association::ShouldCarryPreviousClass(
+                     vec_Compare[i], vec_NowObject[j])) {
+@@ -755,6 +818,8 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+                 aligned.tracking_height_input=vec_Compare[i].tracking_height_input;
+                 aligned.tracking_yaw_from_input=vec_Compare[i].tracking_yaw_from_input;
+                 aligned.tracking_origin_in_yaw=vec_Compare[i].tracking_origin_in_yaw;
++                aligned.tracking_stamp_ns=vec_Compare[i].tracking_stamp_ns;
++                aligned.tracking_ego_speed_mps=vec_Compare[i].tracking_ego_speed_mps;
+                 aligned.f32_PrevYaw=vec_Compare[i].f32_PrevYaw;
+                 aligned.f32_OBB_YawRad=vec_Compare[i].f32_OBB_YawRad;
+                 frame_boundary::AlignTrackingFrame(aligned,st_GPSIMU.st_IMU.f32_Yaw_rad);
+@@ -785,7 +850,10 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+ 
+             const float32 f32_Rel_vx = vec_NowObject[j].Eigen_KfState_CA(2);
+             const float32 f32_Rel_vy = vec_NowObject[j].Eigen_KfState_CA(3);
+-            const float32 v_mps =
++            // P0: relative KF velocity + CAN speed on the tracking x axis. With ego_translation_comp the
++            // common-geometry state velocity is already ground-referenced: nothing is added.
++            const bool ground_state = tracking_options::Get().ego_translation_comp && frame_boundary::Enabled();
++            const float32 v_mps = ground_state ? 0.0f :
+                 st_GPSIMU.st_CAN.f32_CurrentVel_KPH / 3.6f;
+             const float32 f32_Abs_vx = f32_Rel_vx + v_mps;
+             const float32 f32_Abs_vy = f32_Rel_vy;
+@@ -803,6 +871,24 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+                 vec_NowObject[j].f32_DirX = 0.0f;
+                 vec_NowObject[j].f32_DirY = 0.0f;
+             }
++            if (trace_track) {
++                const auto& n = vec_NowObject[j];
++                track_trace::Event("match", [&](std::ostream& out) {
++                    out << ",\"id\":" << n.s32_Id << ",\"j\":" << j << ",\"det\":" << n.u16_Idx << ",\"age\":" << n.s32_Age
++                        << ",\"prev_miss\":" << vec_Compare[i].s32_MissCount << ",\"cost\":" << vec_CostMatrix[i][j]
++                        << ",\"npts\":" << n.pcl_ClusterPoints.size()
++                        << ",\"z_mean\":[" << f32_Det_x << ',' << f32_Det_y << "],\"pred\":[" << f32_Pred_x << ',' << f32_Pred_y
++                        << "],\"obb_raw\":[" << obb_raw[0] << ',' << obb_raw[1] << ',' << obb_raw[2] << ',' << obb_raw[3] << ',' << obb_raw[4]
++                        << "],\"obb_stab\":[" << n.f32_OBB_CenterX << ',' << n.f32_OBB_CenterY << ',' << n.f32_OBB_Width << ','
++                        << n.f32_OBB_Height << ',' << n.f32_OBB_YawRad << "],\"stab_rule\":\""
++                        << (vec_Compare[i].s32_MissCount > 0 ? "raw_after_miss" :
++                            (obb_raw[3] > 1e-6f && obb_raw[2] / obb_raw[3] >= 1.2f ? "ema_0.25" : "predicted_yaw_only"))
++                        << "\",\"kf_post\":";
++                    track_trace::Arr(out, n.Eigen_KfState_CA, 6);
++                    out << ",\"can_mps\":" << st_GPSIMU.st_CAN.f32_CurrentVel_KPH / 3.6f << ",\"can_added\":" << v_mps
++                        << ",\"abs_v\":[" << n.f32_AbsVx << ',' << n.f32_AbsVy << ']';
++                });
++            }
+ 
+             // 동정적 판정은 트래킹의 실시간 속도를 변경하지 않는 별도
+             // MotionClassifier가 이 프레임의 모든 트랙에 대해 수행한다.
+@@ -873,6 +959,13 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+                 retire_shape_agreement) {
+                 continue;
+             }
++            if (track_trace::Sink().WantsTrack(vec_Compare[i].s32_Id)) {
++                track_trace::Event("retire", [&](std::ostream& out) {
++                    out << ",\"id\":" << vec_Compare[i].s32_Id << ",\"by_id\":" << vec_NowObject[j].s32_Id
++                        << ",\"det\":" << vec_NowObject[j].u16_Idx << ",\"dist\":" << retire_dist
++                        << ",\"reason\":\"duplicate_of_matched_track\"";
++                });
++            }
+             matched_prev[i] = true;
+             break;
+         }
+@@ -890,6 +983,15 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+             vec_NowObject[j].f32_PrevE = std::numeric_limits<float>::quiet_NaN();
+             vec_NowObject[j].f32_PrevN = std::numeric_limits<float>::quiet_NaN();
+             kalman_filter_update(vec_NowObject[j],vec_NowObject[j].f32_CoreX,vec_NowObject[j].f32_CoreY,0,0,f64_Time,st_GPSIMU.st_IMU.f32_Yaw_deg);
++            if (track_trace::Sink().WantsTrack(vec_NowObject[j].s32_Id)) {
++                const auto& n = vec_NowObject[j];
++                track_trace::Event("birth", [&](std::ostream& out) {
++                    out << ",\"id\":" << n.s32_Id << ",\"j\":" << j << ",\"det\":" << n.u16_Idx << ",\"npts\":" << n.pcl_ClusterPoints.size()
++                        << ",\"z_mean\":[" << n.f32_CoreX << ',' << n.f32_CoreY << "],\"obb\":[" << n.f32_OBB_CenterX << ','
++                        << n.f32_OBB_CenterY << ',' << n.f32_OBB_Width << ',' << n.f32_OBB_Height << ',' << n.f32_OBB_YawRad
++                        << "],\"reason\":\"unmatched_detection\"";
++                });
++            }
+             // if (!vec_NowObject[j].b_IMMInit) {
+             //     // 초기 IMM 설정
+             //     float vx_init = (f32_Det_x - f32_Pred_x) / f64_Time;
+@@ -959,6 +1061,11 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
+                 // std::cout << "[MISS] prev_id=" << vec_Compare[i].s32_Id
+                 //     << " miss=" << (vec_Compare[i].s32_MissCount + 1) << "\n";
+                 vec_NowObject.push_back(missed);
++            } else if (track_trace::Sink().WantsTrack(missed.s32_Id)) {
++                track_trace::Event("drop", [&](std::ostream& out) {
++                    out << ",\"id\":" << missed.s32_Id << ",\"miss\":" << missed.s32_MissCount
++                        << ",\"reason\":\"miss_count_limit_25\"";
++                });
+             }
+         }
+     }
+diff --git a/src/lidar+sensorfusion/src/Main/src/main.cpp b/src/lidar+sensorfusion/src/Main/src/main.cpp
+index 392b9d5f..2497604f 100644
+--- a/src/lidar+sensorfusion/src/Main/src/main.cpp
++++ b/src/lidar+sensorfusion/src/Main/src/main.cpp
+@@ -13,6 +13,7 @@
+ #include <ros/package.h>
+ #include <Geometry/FrameBoundaryPublisher.hpp>
+ #include <Geometry/OutputGate.hpp>
++#include <Lidar/Tracking/TrackTrace.hpp>
+ #include <algorithm>
+ #include <chrono>
+ #include <cmath>
+@@ -518,6 +519,7 @@ void *TemporalThread(void *p_Arg)
+                 1.0, "Skipping LiDAR frame without synchronized pose: %s",
+                 pose_reason.c_str());
+         }
++        track_trace::Sink().SetScan(static_cast<std::int64_t>(processed_lidar_generation), scan_stamp.toNSec());
+         const bool lidar_processed = pose_ready && LidarProcess(
+             st_CurrentData.st_RawLiDAR, lidar_pose, st_LiDAR,
+             *st_MotionClassifier);
+@@ -599,6 +601,25 @@ void *TemporalThread(void *p_Arg)
+     return nullptr;
+ }
+ 
++// Experiment switches and the opt-in tracking trace (all default off = unchanged behaviour).
++// Shared by main() and the offline replay harness.
++void ConfigureTrackingExperiment(ros::NodeHandle& private_node)
++{
++    auto& options = tracking_options::Get();
++    private_node.param("lidar_kf_reacquire_elapsed_init", options.reacquire_elapsed_init, false);
++    private_node.param("lidar_kf_ego_translation_comp", options.ego_translation_comp, false);
++    std::string path, ids, run_id;
++    double max_mb = 512.0;
++    private_node.param("lidar_track_trace_path", path, std::string());
++    private_node.param("lidar_track_trace_ids", ids, std::string());
++    private_node.param("lidar_track_trace_run_id", run_id, std::string("runtime"));
++    private_node.param("lidar_track_trace_max_mb", max_mb, 512.0);
++    track_trace::Sink().Configure(path, run_id, ids, max_mb);
++    ROS_INFO("tracking experiment: reacquire_elapsed_init=%d ego_translation_comp=%d track_trace=%s",
++             options.reacquire_elapsed_init ? 1 : 0, options.ego_translation_comp ? 1 : 0,
++             path.empty() ? "off" : path.c_str());
++}
++
+ void InitTemporal(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Temporal)
+ {
+     pthread_create(pth_Temporal, NULL, TemporalThread, NULL);
+@@ -655,6 +676,12 @@ int main(int argc, char **argv)
+     }
+     st_FrameBoundaryPublisher=std::make_unique<frame_boundary::Publisher>(st_NodeHandle);
+     ConfigureSensorPoseHistory(st_PrivateNodeHandle);
++    try {
++        ConfigureTrackingExperiment(st_PrivateNodeHandle);
++    } catch (const std::exception& error) {
++        ROS_FATAL("%s", error.what());
++        return 1;
++    }
+     st_MotionClassifier =
+         std::make_unique<MotionClassifier>(st_PrivateNodeHandle);
+     st_PlannerObjectRosPublisher =
+@@ -698,6 +725,7 @@ int main(int argc, char **argv)
+     ReportFusionTotals();
+     if(st_FrameBoundaryPublisher) st_FrameBoundaryPublisher->ReportTotals();
+     fusion_trace::Sink().Flush();
++    track_trace::Sink().Flush();
+     // B-15: frame_boundary::Publisher owns a ros::WallTimer. Left to static destruction it is destroyed after
+     // roscpp's function-local TimerManager<WallTime>::global() (created later, destroyed earlier) and
+     // ~WallTimer -> TimerManager::remove() locks a destroyed mutex -> boost::lock_error -> std::terminate.
+diff --git a/src/lidar+sensorfusion/src/Main/test/lidar_dataset_replay.cpp b/src/lidar+sensorfusion/src/Main/test/lidar_dataset_replay.cpp
+index 4120ef29..5343882d 100644
+--- a/src/lidar+sensorfusion/src/Main/test/lidar_dataset_replay.cpp
++++ b/src/lidar+sensorfusion/src/Main/test/lidar_dataset_replay.cpp
+@@ -10,6 +10,7 @@
+ #include "../src/main.cpp"
+ #undef main
+ #include <Lidar/ImuRansac/ImuRansac.hpp>
++#include <PlannerInterface/PlannerObjectAdapter.hpp>
+ #include <rosbag/bag.h>
+ #include <rosbag/view.h>
+ #include <sensor_msgs/Imu.h>
+@@ -57,6 +58,56 @@ std::vector<FrameRow> ReadFrames(const std::string& path) {
+     return rows;
+ }
+ 
++// Competition-restricted input stream (frames_comp.csv). Only the ALLOWED inference columns are looked up
++// by name; any other column (evaluation pose, vel_y/z, accel, ...) is never read, so it cannot reach the
++// tracker. vel_x = Competition Vehicle Status vel_x (m/s, signed), imu_* = IMU orientation (rad, ENU).
++// imu_roll_rad / imu_pitch_rad are optional and may be NaN (= not available, NOT measured zero).
++struct CompRow {
++    long idx = 0;
++    std::string stem, npy;
++    std::uint64_t stamp_ns = 0;
++    double vel_x = NAN, imu_yaw = NAN, imu_roll = NAN, imu_pitch = NAN;
++};
++
++std::vector<CompRow> ReadCompetitionFrames(const std::string& path) {
++    std::ifstream in(path); if (!in) throw std::runtime_error("frames open failed: " + path);
++    std::string line; std::getline(in, line);
++    const auto header = SplitCsv(line);
++    auto find = [&](const std::string& name) -> long {
++        for (std::size_t i = 0; i < header.size(); ++i) if (header[i] == name) return static_cast<long>(i);
++        return -1;
++    };
++    auto need = [&](const std::string& name) {
++        const long i = find(name); if (i < 0) throw std::runtime_error("missing allowed column " + name); return i;
++    };
++    const long c_idx = need("idx"), c_stem = need("stem"), c_ns = need("stamp_ns"), c_npy = need("npy"),
++        c_vx = need("vel_x_mps"), c_yaw = need("imu_yaw_rad"), c_roll = find("imu_roll_rad"), c_pitch = find("imu_pitch_rad");
++    std::vector<CompRow> rows;
++    while (std::getline(in, line)) {
++        if (line.empty()) continue;
++        const auto c = SplitCsv(line);
++        CompRow r; r.idx = std::stol(c[c_idx]); r.stem = c[c_stem]; r.stamp_ns = std::stoull(c[c_ns]); r.npy = c[c_npy];
++        r.vel_x = std::stod(c[c_vx]); r.imu_yaw = std::stod(c[c_yaw]);
++        if (c_roll >= 0) r.imu_roll = std::stod(c[c_roll]);
++        if (c_pitch >= 0) r.imu_pitch = std::stod(c[c_pitch]);
++        if (!rows.empty() && r.stamp_ns <= rows.back().stamp_ns) throw std::runtime_error("non-increasing stamp");
++        rows.push_back(r);
++    }
++    return rows;
++}
++
++// ZYX (roll, pitch, yaw) -> quaternion, same convention as Convert() below.
++sensor_msgs::Imu ImuFromRpy(std::uint64_t stamp_ns, double roll, double pitch, double yaw) {
++    sensor_msgs::Imu imu; imu.header.stamp.fromNSec(stamp_ns);
++    const double cr = std::cos(0.5 * roll), sr = std::sin(0.5 * roll), cp = std::cos(0.5 * pitch), sp = std::sin(0.5 * pitch),
++        cy = std::cos(0.5 * yaw), sy = std::sin(0.5 * yaw);
++    imu.orientation.w = cr * cp * cy + sr * sp * sy;
++    imu.orientation.x = sr * cp * cy - cr * sp * sy;
++    imu.orientation.y = cr * sp * cy + sr * cp * sy;
++    imu.orientation.z = cr * cp * sy - sr * sp * cy;
++    return imu;
++}
++
+ // Minimal .npy (v1/v2, little-endian float32, C order, shape (N, K>=4)) reader.
+ std::vector<float> LoadNpyXyzi(const std::string& path, std::size_t* count) {
+     std::ifstream in(path, std::ios::binary); if (!in) throw std::runtime_error("npy open failed: " + path);
+@@ -163,12 +214,17 @@ public:
+               std::uint64_t logical) {
+         ++generation_; ++stats_.scans;
+         ros::Time stamp; stamp.fromNSec(source_ns); ros::Time::setNow(stamp);
++        track_trace::Sink().SetScan(idx, source_ns);
+         const auto w0 = std::chrono::steady_clock::now();
+         GPS_IMU local{}; LocalInputSelection selected; std::string reason;
+         const bool ready = history.WaitForLocalLookupNs(source_ns, 0, &local, &selected, &reason);
+         out_ << "{\"scene\":" << fusion_trace::Quote(scene) << ",\"idx\":" << idx << ",\"stem\":"
+              << fusion_trace::Quote(stem) << ",\"stamp_ns\":" << source_ns << ",\"raw_points\":" << n
+-             << ",\"ready\":" << (ready ? "true" : "false") << ",\"reason\":" << fusion_trace::Quote(reason);
++             << ",\"ready\":" << (ready ? "true" : "false") << ",\"reason\":" << fusion_trace::Quote(reason)
++             << scan_extra_;
++        if (!ready && track_trace::Sink().Enabled()) {
++            track_trace::Event("scan_skipped", [&](std::ostream& o) { o << ",\"reason\":" << fusion_trace::Quote(reason); });
++        }
+         bool processed = false; double lidar_ms = 0.;
+         output_gate::Decision effective;
+         frame_boundary::V2Frame local_frame;
+@@ -222,6 +278,7 @@ public:
+             }
+         }
+         const double frame_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - w0).count();
++        if (track_trace::Sink().Enabled() && processed) TracePublish(effective, local_frame, local);
+         if (effective.v2 == output_gate::Mode::kBoth) { ++stats_.local; ++stats_.map; last_v2_stamp_ = stamp; }
+         else if (effective.v2 == output_gate::Mode::kMap) { ++stats_.map; last_v2_stamp_ = stamp; }
+         else if (effective.v2 == output_gate::Mode::kLocal) { ++stats_.local; last_v2_stamp_ = stamp; }
+@@ -295,7 +352,55 @@ public:
+         out_ << "]}\n";
+     }
+     const Stats& stats() const { return stats_; }
++    void SetScanExtra(const std::string& extra) { scan_extra_ = extra; }
+ private:
++    // Final values of this scan as a consumer would read them: the V2 local objects (base_link) and,
++    // when the map pose is valid, MakePlannerObjects (the values behind /last_lidar and the UDP sender,
++    // before the planner-side filters). Tracks that are not published get an explicit reason.
++    void TracePublish(const output_gate::Decision& effective, const frame_boundary::V2Frame& local_frame,
++                      const GPS_IMU& local) {
++        track_trace::Event("publish", [&](std::ostream& o) {
++            o << ",\"v2_mode\":\"" << output_gate::ModeName(effective.v2) << "\",\"v2_reason\":" << fusion_trace::Quote(effective.reason)
++              << ",\"local\":[";
++            bool sep = false;
++            if (effective.v2 == output_gate::Mode::kLocal || effective.v2 == output_gate::Mode::kBoth) {
++                for (const auto& ob : local_frame.array.objects) {
++                    if (sep) o << ','; sep = true;
++                    o << "{\"id\":" << ob.track_id << ",\"c\":[" << ob.center.x << ',' << ob.center.y << ',' << ob.center.z
++                      << "],\"yaw\":" << ob.yaw << ",\"l\":" << ob.length << ",\"w\":" << ob.width << ",\"h\":" << ob.height
++                      << ",\"vel_valid\":" << (ob.absolute_velocity_valid ? 1 : 0) << ",\"mv\":" << (ob.motion_valid ? 1 : 0)
++                      << ",\"ms\":" << static_cast<int>(ob.motion_state) << '}';
++                }
++            }
++            o << "],\"unpublished\":[";
++            sep = false;
++            for (const auto& t : st_LiDAR.vec_Objects) {
++                const char* why = t.s32_Id < 0 ? "no_id" : t.s32_MissCount > 0 ? "missed_scan" :
++                    t.pcl_ClusterPoints.empty() ? "no_points" :
++                    (t.str_ObjectClass == "noise" || t.str_ObjectClass == "지면노이즈") ? "noise_class" : nullptr;
++                if (!why) continue;
++                if (sep) o << ','; sep = true;
++                o << "{\"id\":" << t.s32_Id << ",\"miss\":" << t.s32_MissCount << ",\"reason\":\"" << why << "\"}";
++            }
++            o << "],\"planner\":";
++            if (frame_boundary::Current().map_pose.valid) {
++                o << '[';
++                sep = false;
++                for (const auto& p : MakePlannerObjects(st_LiDAR, local, st_VehicleSpec, 200)) {
++                    if (sep) o << ','; sep = true;
++                    o << "{\"id\":" << p.id << ",\"obb_c_map\":[" << p.obb_center_map.x << ',' << p.obb_center_map.y
++                      << "],\"yaw_map\":" << p.obb_yaw_map_rad << ",\"l\":" << p.length << ",\"w\":" << p.width
++                      << ",\"v_map\":[" << p.velocity_map_mps.x << ',' << p.velocity_map_mps.y << "],\"raw_v_map\":["
++                      << p.raw_velocity_map_mps.x << ',' << p.raw_velocity_map_mps.y << "],\"ms\":" << p.motion_state
++                      << ",\"dyn\":" << (p.is_dynamic ? 1 : 0) << '}';
++                }
++                o << ']';
++            } else {
++                o << "null,\"planner_reason\":\"map_pose_invalid_no_planner_output\"";
++            }
++        });
++    }
++    std::string scan_extra_;
+     std::ostream& out_;
+     bool log_cov_;
+     std::ostream* points_;
+@@ -323,10 +428,17 @@ int main(int argc, char** argv) {
+     std::string frames_path, bag_path, out_path, params_path, trace_path, points_path, scene = "scene";
+     std::vector<std::pair<std::string, std::string>> overrides;
+     bool log_cov = false; long max_frames = -1;
++    std::string input_mode = "historical", track_trace_path, track_trace_ids, run_id = "replay";
++    double track_trace_max_mb = 512.0;
+     for (int i = 1; i < argc; ++i) {
+         const std::string a = argv[i];
+         auto next = [&]() { if (i + 1 >= argc) throw std::runtime_error("missing value for " + a); return std::string(argv[++i]); };
+         if (a == "--frames") frames_path = next();
++        else if (a == "--input-mode") input_mode = next();
++        else if (a == "--track-trace") track_trace_path = next();
++        else if (a == "--track-trace-ids") track_trace_ids = next();
++        else if (a == "--track-trace-max-mb") track_trace_max_mb = std::stod(next());
++        else if (a == "--run-id") run_id = next();
+         else if (a == "--bag") bag_path = next();
+         else if (a == "--out") out_path = next();
+         else if (a == "--params") params_path = next();
+@@ -339,15 +451,24 @@ int main(int argc, char** argv) {
+             if (eq == std::string::npos) throw std::runtime_error("--set needs key=value"); overrides.push_back({kv.substr(0, eq), kv.substr(eq + 1)}); }
+         else { std::cerr << "unknown argument " << a << "\n"; return 2; }
+     }
+-    if ((frames_path.empty() == bag_path.empty()) || out_path.empty() || params_path.empty()) {
++    if ((frames_path.empty() == bag_path.empty()) || out_path.empty() || params_path.empty() ||
++        (input_mode != "historical" && input_mode != "competition") || (input_mode == "competition" && frames_path.empty())) {
+         std::cerr << "usage: lidar_dataset_replay (--frames FRAMES.csv | --bag BAG) --out OUT.jsonl --params DUMP.yaml"
+                      " [--scene NAME] [--set key=value]... [--trace TRACE.jsonl] [--log-cov] [--max-frames N]"
+-                     " [--points-out PTS.bin]\n";
++                     " [--points-out PTS.bin] [--input-mode historical|competition] [--track-trace PATH"
++                     " [--track-trace-ids 1,2] [--track-trace-max-mb N] [--run-id ID]]\n";
+         return 2;
+     }
+     ros::NodeHandle nh, pnh("~");
+     const std::size_t n_params = LoadMainParams(pnh, params_path);
+     for (const auto& kv : overrides) SetParam(pnh, kv.first, YAML::Node(kv.second));
++    if (!track_trace_path.empty()) {
++        pnh.setParam("lidar_track_trace_path", track_trace_path);
++        pnh.setParam("lidar_track_trace_ids", track_trace_ids);
++        pnh.setParam("lidar_track_trace_run_id", run_id);
++        pnh.setParam("lidar_track_trace_max_mb", track_trace_max_mb);
++    }
++    ConfigureTrackingExperiment(pnh);
+     std::string camera_profile;
+     pnh.param("camera_class_profile", camera_profile, std::string("mission16_v1"));
+     if (camera_profile != "legacy" && camera_profile != "mission16_v1") return 2;
+@@ -371,7 +492,31 @@ int main(int argc, char** argv) {
+     Replay replay(output, log_cov, points.get());
+     std::uint64_t first_ns = 0, frames_done = 0;
+     const auto wall0 = std::chrono::steady_clock::now();
+-    if (!frames_path.empty()) {
++    if (input_mode == "competition") {
++        // Allowed channels only: IMU attitude (yaw; roll/pitch when provided) and vel_x as CAN speed,
++        // both stamped at t_lidar. No GPS sample is fed (not available in this input) -> map pose invalid.
++        const auto rows = ReadCompetitionFrames(frames_path);
++        first_ns = rows.empty() ? 0 : rows.front().stamp_ns;
++        for (const auto& r : rows) {
++            if (max_frames >= 0 && static_cast<long>(frames_done) >= max_frames) break;
++            const std::uint64_t logical = r.stamp_ns - first_ns + 1000000000ULL;
++            const bool rp = std::isfinite(r.imu_roll) && std::isfinite(r.imu_pitch);
++            const auto imu = ImuFromRpy(r.stamp_ns, rp ? r.imu_roll : 0.0, rp ? r.imu_pitch : 0.0, r.imu_yaw);
++            if (std::isfinite(r.imu_yaw)) history.AddImu(r.stamp_ns / 1000000, Convert(imu), nullptr, r.stamp_ns, logical);
++            if (std::isfinite(r.vel_x)) {
++                CAN_DATA can{}; can.f32_CurrentVel_MPS = static_cast<float32>(r.vel_x);
++                can.f32_CurrentVel_KPH = static_cast<float32>(3.6 * r.vel_x);
++                history.AddCan(r.stamp_ns / 1000000, can, nullptr, r.stamp_ns, logical);
++            }
++            std::ostringstream extra; extra << std::setprecision(9);
++            extra << ",\"ego_in\":{\"vel_x\":" << J{r.vel_x} << ",\"imu_yaw\":" << J{r.imu_yaw}
++                  << ",\"rp_available\":" << (rp ? 1 : 0) << ",\"gps\":0}";
++            replay.SetScanExtra(extra.str());
++            std::size_t n = 0; const auto xyzi = LoadNpyXyzi(r.npy, &n);
++            replay.Scan(scene, r.idx, r.stem, r.stamp_ns, xyzi.data(), n, history, classifier, logical);
++            ++frames_done;
++        }
++    } else if (!frames_path.empty()) {
+         const auto rows = ReadFrames(frames_path);
+         first_ns = rows.empty() ? 0 : rows.front().stamp_ns;
+         const auto& g = st_VehicleSpec.st_GPSPos;
+@@ -440,9 +585,11 @@ int main(int argc, char** argv) {
+     std::cerr << "[DATASET_REPLAY_TOTAL] scene=" << scene << " scans=" << s.scans << " ready=" << s.ready
+               << " processed=" << s.processed << " local=" << s.local << " map=" << s.map << " none=" << s.none
+               << " params=" << n_params << " overrides=" << overrides.size() << " fusion=" << (b_EnableSensorFusion ? 1 : 0)
++              << " input_mode=" << input_mode << " trace_records=" << track_trace::Sink().Records()
++              << " trace_dropped=" << track_trace::Sink().Dropped()
+               << " wall_s=" << std::chrono::duration<double>(std::chrono::steady_clock::now() - wall0).count()
+               << " peak_rss_kb=" << usage.ru_maxrss << std::endl;
+-    ReportFusionTotals(); fusion_trace::Sink().Flush(); output.flush();
++    ReportFusionTotals(); fusion_trace::Sink().Flush(); track_trace::Sink().Flush(); output.flush();
+     if (points) { points->flush(); if (!*points) return 1; }
+     return output ? 0 : 1;
+ }
+diff --git a/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp b/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp
+new file mode 100644
+index 00000000..a6ef63d2
+--- /dev/null
++++ b/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp
+@@ -0,0 +1,211 @@
++// Cause tests for the stage-1 tracking options (Lidar/Tracking/TrackTrace.hpp tracking_options).
++// ROS-free: no ros::init, no master. Seam: frame_boundary::ConfigureForTest (common geometry ON).
++// Every scan runs the production chain PrepareScan -> StoreLeveling -> CompareCentroids
++// (predictKalmanPosition, stabilizeMatchedOBB, kalman_filter_update/predict, absolute velocity)
++// -> RecordTrackingFrame with IDEAL measurements: the point mean of the detection equals the exact
++// object reference point in the tracking input frame (DIAGNOSTIC_ONLY, no clustering, no noise).
++//
++// "Fix" tests assert the corrected behaviour with the option ON. Setting the environment variable
++// TRACKING_OPTIONS_FORCE_OFF=1 runs the same assertions with the option OFF (= P0 code path, proven
++// output-identical to P0 by the replay identity runs) and they must FAIL: that is the before/after
++// evidence. "Guard" tests pin behaviour that must hold in both modes.
++#include <gtest/gtest.h>
++
++#include <Geometry/FrameBoundary.hpp>
++#include <Lidar/FrameFilter/FrameFilter.hpp>
++#include <Lidar/Kalman/kalman_utils.hpp>
++#include <Lidar/Tracking/TrackTrace.hpp>
++#include <Lidar/Tracking/tracking_utils.hpp>
++#include <asmc_lidar/projection.hpp>
++
++#include <cmath>
++#include <cstdlib>
++#include <deque>
++#include <functional>
++#include <vector>
++
++extern VehicleSpec st_VehicleSpec;
++
++namespace {
++using asmc::lidar::Vec;
++constexpr double kDt = 0.1;
++constexpr std::int64_t kSec = 1000000000LL;
++
++bool ForceOff() { const char* v = std::getenv("TRACKING_OPTIONS_FORCE_OFF"); return v && std::string(v) == "1"; }
++
++void ConfigureCase(bool reacquire, bool ego_translation) {
++  frame_boundary::ConfigureForTest(true, false, "unit_test_calibration");
++  st_VehicleSpec = VehicleSpec{};
++  st_VehicleSpec.st_LiDARPos = {0.80f, 0.0f, 1.45f};
++  st_VehicleSpec.st_LiDARRotationDeg = {0.f, 0.f, 0.f};
++  st_VehicleSpec.st_GPSPos = {0.35f, 0.0f, 1.25f};
++  st_Tracking.s32_NewTrackId = 100;
++  st_Tracking.b_UseMapAssociation = true;
++  st_Tracking.f32_COST_W_DIST = 1.0F; st_Tracking.f32_COST_W_IOU = 1.0F;
++  st_Tracking.f32_COST_THRESHOLD = 3.0F; st_Tracking.f32_COST_INF = 9999.0F;
++  st_Tracking.f32_ContinuityBonus = 0.20F;
++  st_Tracking.f32_MergedTrackRetireDistance = 0.45F; st_Tracking.f32_DuplicateIouThreshold = 0.35F;
++  st_Tracking.f32_DuplicateCenterDistance = 0.60F;
++  tracking_options::Get().reacquire_elapsed_init = reacquire && !ForceOff();
++  tracking_options::Get().ego_translation_comp = ego_translation && !ForceOff();
++}
++
++struct Ego { double x = 0, y = 0, yaw = 0, v = 0; };
++struct World { double x = 0, y = 0, vx = 0, vy = 0; };
++
++// Ideal detection: point mean (KF measurement) = object reference point in the leveled sensor frame
++// (= sensor frame here: zero roll/pitch, zero mount rotation); a 4.6 x 1.9 m perimeter for the OBB.
++LiDARObjectInfo Detection(const Ego& e, const World& o) {
++  const double c = std::cos(e.yaw), s = std::sin(e.yaw);
++  const double dx = o.x - e.x, dy = o.y - e.y;
++  const double bx = c * dx + s * dy, by = -s * dx + c * dy;   // base_link
++  const float x = float(bx - st_VehicleSpec.st_LiDARPos.f32_X), y = float(by - st_VehicleSpec.st_LiDARPos.f32_Y);
++  LiDARObjectInfo d{};
++  d.f32_CoreX = x; d.f32_CoreY = y; d.f32_CoreZ = 0.f;
++  d.f32_CoreE = NAN; d.f32_CoreN = NAN;
++  d.f32_MinX = x - 2.3f; d.f32_MaxX = x + 2.3f; d.f32_MinY = y - 0.95f; d.f32_MaxY = y + 0.95f;
++  d.f32_OBB_CenterX = x; d.f32_OBB_CenterY = y; d.f32_OBB_Width = 4.6f; d.f32_OBB_Height = 1.9f;
++  for (int i = 0; i <= 10; ++i) for (int side = -1; side <= 1; side += 2) {
++    pcl::PointXYZI p; p.x = x - 2.3f + 0.46f * i; p.y = y + 0.95f * side; p.z = 0.f; p.intensity = 1.f;
++    d.pcl_ClusterPoints.push_back(p);
++  }
++  d.s32_Id = -1; d.b_KfInitialized = false; d.s32_KfInitCount = 0;
++  return d;
++}
++
++GPS_IMU Local(const Ego& e) {
++  GPS_IMU out{};
++  out.st_IMU.b_ImuReady = true;
++  out.st_IMU.f32_Yaw_rad = float(e.yaw); out.st_IMU.f32_Yaw_deg = float(e.yaw * 180. / M_PI);
++  out.st_CAN.f32_CurrentVel_MPS = float(e.v); out.st_CAN.f32_CurrentVel_KPH = float(e.v * 3.6);
++  return out;
++}
++
++struct Result { std::vector<int> ids; std::vector<double> abs_err; LiDARObjectInfo last; };
++
++// Runs n scans. visible(k) = whether the object is detected in scan k. ego(k)/object(k) give the truth.
++Result Simulate(int n, const std::function<Ego(int)>& ego, const std::function<World(int)>& object,
++           const std::function<bool(int)>& visible) {
++  Result r;
++  // Production FrameFilter (consolidation, first-scan births, CompareCentroids) with the global scan clock
++  // exactly as LidarProcess drives it. A far stationary 'anchor' car is always visible, as in real scans,
++  // so no scan has zero detections; the target detection carries u16_Idx 0.
++  std::deque<std::vector<LiDARObjectInfo>> history;
++  ts_PrevTime = ros::Time();
++  World anchor; anchor.x = -20; anchor.y = -25;
++  for (int k = 0; k < n; ++k) {
++    const Ego e = ego(k); const World o = object(k);
++    const GPS_IMU local = Local(e);
++    const std::int64_t ns = 50 * kSec + std::int64_t(k * kDt * 1e9 + 0.5);
++    ts_CurrTime.fromNSec(ns);
++    asmc::lidar::PoseSelection no_map; no_map.reason = "gps_missing";
++    frame_boundary::PrepareScan(asmc::lidar::Observation{ns, ns, ns, "ros", "bridge_receive_ns", ""}, local, st_VehicleSpec, no_map, k + 1);
++    frame_boundary::StoreLeveling(asmc::lidar::leveling_rotation(0., 0., asmc::lidar::Rot::Identity()));
++    std::vector<LiDARObjectInfo> now;
++    if (visible(k)) { now.push_back(Detection(e, o)); now.back().u16_Idx = 0; }
++    now.push_back(Detection(e, anchor)); now.back().u16_Idx = 1;
++    FrameFilter(history, now, local, st_VehicleSpec);
++    ts_PrevTime = ts_CurrTime;
++    for (auto& t : now) if (t.s32_MissCount == 0) frame_boundary::RecordTrackingFrame(t);
++    int id = -1;
++    for (const auto& t : now) if (t.s32_MissCount == 0 && t.u16_Idx == 0) { id = t.s32_Id; r.last = t; }
++    r.ids.push_back(id);
++    if (id >= 0 && r.last.s32_KfInitCount >= 2) {
++      // truth: object ground velocity in ego axes (tracking input axes = base axes here)
++      const double c = std::cos(e.yaw), s = std::sin(e.yaw);
++      const double tvx = c * o.vx + s * o.vy, tvy = -s * o.vx + c * o.vy;
++      r.abs_err.push_back(std::hypot(r.last.f32_AbsVx - tvx, r.last.f32_AbsVy - tvy));
++    } else r.abs_err.push_back(NAN);
++    history.push_back(now);
++    if (history.size() > 3) history.pop_front();
++  }
++  return r;
++}
++
++double MaxLast(const std::vector<double>& v, int count) {
++  double m = 0; int seen = 0;
++  for (auto it = v.rbegin(); it != v.rend() && seen < count; ++it) if (std::isfinite(*it)) { m = std::max(m, *it); ++seen; }
++  return m;
++}
++
++Ego Straight(int k, double v0, double a = 0.0) {
++  const double t = k * kDt; Ego e; e.v = v0 + a * t; e.x = v0 * t + 0.5 * a * t * t; return e;
++}
++Ego Arc(int k, double v, double w) {
++  const double t = k * kDt; Ego e; e.v = v; e.yaw = w * t;
++  e.x = v / w * std::sin(w * t); e.y = v / w * (1 - std::cos(w * t)); return e;
++}
++
++// ---------------------------------------------------------------------------------- reacquire (A)
++// New track (one observation) missed for 2 scans, re-acquired in scan 3 while the ego drives 5 m/s
++// past a parked car. P0 divides the 3-scan displacement by one scan dt: 3x the relative speed.
++double ReacquireAbsError(bool option) {
++  ConfigureCase(option, false);
++  auto r = Simulate(4, [](int k) { return Straight(k, 5.0); }, [](int) { World w; w.x = 25; w.y = 4; return w; },
++               [](int k) { return k == 0 || k == 3; });
++  EXPECT_EQ(r.ids[0], r.ids[3]) << "re-acquisition must keep the id";
++  return r.abs_err[3];
++}
++TEST(TrackingFrameOptions, FixReacquiredNewTrackVelocityUsesElapsedTime) {
++  EXPECT_LT(ReacquireAbsError(true), 0.05);
++}
++TEST(TrackingFrameOptions, GuardP0ReacquireDefectIsReproduced) {
++  if (ForceOff()) GTEST_SKIP();
++  EXPECT_GT(ReacquireAbsError(false), 5.0);   // documents the P0 defect: |abs v| = 10 m/s on a parked car
++}
++TEST(TrackingFrameOptions, GuardReacquireOptionIsNeutralWithoutMisses) {
++  ConfigureCase(false, false);
++  auto a = Simulate(20, [](int k) { return Straight(k, 7.0); }, [](int) { World w; w.x = 30; w.y = -3; return w; }, [](int) { return true; });
++  ConfigureCase(true, false);
++  auto b = Simulate(20, [](int k) { return Straight(k, 7.0); }, [](int) { World w; w.x = 30; w.y = -3; return w; }, [](int) { return true; });
++  for (int j = 0; j < 6; ++j) EXPECT_FLOAT_EQ(a.last.Eigen_KfState_CA(j), b.last.Eigen_KfState_CA(j));
++}
++
++// ---------------------------------------------------------------------------- ego translation (B)
++TEST(TrackingFrameOptions, FixParkedCarHasNoFakeSpeedWhileEgoTurns) {
++  ConfigureCase(true, true);
++  auto r = Simulate(40, [](int k) { return Arc(k, 8.0, 0.3); }, [](int) { World w; w.x = 10; w.y = 20; return w; }, [](int) { return true; });
++  for (std::size_t k = 1; k < r.ids.size(); ++k) EXPECT_EQ(r.ids[k], r.ids[0]);
++  EXPECT_LT(MaxLast(r.abs_err, 20), 0.05);
++}
++TEST(TrackingFrameOptions, FixParkedCarHasNoFakeSpeedWhileEgoAccelerates) {
++  ConfigureCase(true, true);
++  auto r = Simulate(40, [](int k) { return Straight(k, 2.0, 2.0); }, [](int) { World w; w.x = 40; w.y = 5; return w; }, [](int) { return true; });
++  EXPECT_LT(MaxLast(r.abs_err, 30), 0.05);
++}
++TEST(TrackingFrameOptions, FixMovingCarGroundVelocityWhileEgoTurns) {
++  ConfigureCase(true, true);
++  auto r = Simulate(40, [](int k) { return Arc(k, 8.0, 0.3); },
++               [](int k) { World w; w.vx = 0.0; w.vy = 6.0; w.x = 12; w.y = -5 + 6.0 * k * kDt; return w; },
++               [](int) { return true; });
++  EXPECT_LT(MaxLast(r.abs_err, 20), 0.05);
++}
++TEST(TrackingFrameOptions, GuardStraightConstantSpeedParkedCarIsStillInBothModes) {
++  for (bool on : {false, true}) {
++    ConfigureCase(true, on);
++    auto r = Simulate(40, [](int k) { return Straight(k, 10.0); }, [](int) { World w; w.x = 50; w.y = 6; return w; }, [](int) { return true; });
++    EXPECT_LT(MaxLast(r.abs_err, 20), 0.05) << "ego_translation_comp=" << on;
++  }
++}
++TEST(TrackingFrameOptions, GuardRotationInPlaceLeverArmHandledInBothModes) {
++  for (bool on : {false, true}) {
++    ConfigureCase(true, on);
++    auto r = Simulate(30, [](int k) { Ego e; e.yaw = 0.4 * k * kDt; return e; }, [](int) { World w; w.x = 12; w.y = 2; return w; }, [](int) { return true; });
++    EXPECT_LT(MaxLast(r.abs_err, 15), 0.05) << "ego_translation_comp=" << on;
++  }
++}
++// The new-track prior of the ground-referenced state is 'not moving in the world': a parked car seen
++// while the ego drives is predicted where it really is, so a 2-scan miss at 12 m/s keeps the id.
++TEST(TrackingFrameOptions, FixFastEgoMissedParkedCarKeepsId) {
++  ConfigureCase(true, true);
++  auto r = Simulate(8, [](int k) { return Straight(k, 12.0); }, [](int) { World w; w.x = 45; w.y = 4; return w; },
++               [](int k) { return k == 0 || k >= 3; });
++  EXPECT_EQ(r.ids[3], r.ids[0]);
++  EXPECT_EQ(r.ids[7], r.ids[0]);
++}
++}  // namespace
++
++int main(int argc, char** argv) {
++  testing::InitGoogleTest(&argc, argv);
++  return RUN_ALL_TESTS();
++}
+-- 
+2.25.1
+

@@ -1,0 +1,77 @@
+{
+  "schema": "competition_input_allowlist_v1",
+  "created": "2026-10-22",
+  "scope": "LiDAR perception/tracking inference inputs (Main: SensorPoseHistory -> PrepareScan -> LidarProcess). Evaluation-only data is listed separately and must never reach inference.",
+  "sources_of_rules": [
+    "user instruction 2026-10-22 (allowed: vel_x, provided attitude and angular rate, separate GPS; forbidden: Competition Vehicle Status pos_x/y/z, vel_y, vel_z, accel_x/y/z, tyre lateral force, slip angle and other unprovided fields)",
+    "2026-ASMC-nogps docs/competition/README.md:70-71,86-91 (GPS max 30 Hz and IMU max 50 Hz allowed; Ego Vehicle Status / Ego Detail Status are judging-only)",
+    "2026-ASMC-nogps docs/competition/rule-v1.2-impacts.md:12-24",
+    "2026-ASMC-nogps config/morai/README.md:57-73 (Competition Vehicle Status = MolitComp03 type 787, UDP 9797->9798; observed packet #DetailEgoInfo$ 105 B is not decoded by the current bridge)"
+  ],
+  "allowed_inference_inputs": [
+    {
+      "field": "vel_x",
+      "meaning": "vehicle body forward speed (signed)",
+      "source_competition": "Competition Vehicle Status (UDP 9798, MolitComp03 type 787) -> asmc_bridge morai_udp_bridge -> /Competition_topic morai_msgs/EgoVehicleStatus.velocity.x",
+      "unit": "m/s (bridge ego_velocity_in_ms=true converts km/h)",
+      "frame": "vehicle body x (forward)",
+      "timestamp": "header.stamp; bridge receive time by default (morai_udp_bridge.launch timestamp_mode)",
+      "consumer": "SensorPoseHistory::AddCan -> local lookup (IMU+CAN required) -> FrameBoundary ego_linear_base, Tracking absolute velocity, MotionClassifier, ego_translation_comp option",
+      "missing_handling": "no sample within lidar_pose_can_max_age_s (0.12 s) -> LiDAR scan not ready (skipped, reason recorded); negative value rejected by AddCan (P0 behaviour, documented as a finding)",
+      "status_in_product_P0": "VIOLATION: Parser.cpp:532-533 uses sqrt(vx^2+vy^2+vz^2) and main.launch:126-128 remaps /Competition_topic to the judging-only /Ego_topic",
+      "status_in_stage1_harness": "competition mode reads only column vel_x_mps",
+      "dataset_availability": "NOT RECORDED in Lidar_Data / dataset (ego_pose has pose only). Emulated: central difference of evaluation positions projected on the evaluation heading (vel_y excluded), stamped at t_lidar (age 0). Label: VEL_X_EMULATED_FROM_EVAL_POSE"
+    },
+    {
+      "field": "imu_orientation (roll, pitch, yaw)",
+      "source_competition": "IMU sensor (UDP #IMUData$) -> morai_sensor_bridge -> /imu sensor_msgs/Imu.orientation",
+      "unit": "quaternion -> rad",
+      "frame": "ENU (MORAI), yaw CCW+",
+      "timestamp": "header.stamp (receive time by default, timestamp_mode)",
+      "consumer": "leveling (roll/pitch), tracking yaw alignment, map rotation",
+      "missing_handling": "no IMU within lidar_pose_imu_max_age_s (0.12 s) -> scan skipped; |q|^2-1 > 0.001 -> invalid",
+      "dataset_availability": "NOT RECORDED. yaw emulated from the evaluation heading (bag evidence: IMU yaw - Ego heading p95 0.2-0.8 deg). roll/pitch NOT AVAILABLE -> NaN in frames_comp.csv; the harness then levels with roll=pitch=0 and writes rp_available=0 per scan (flat-ground assumption, leveling path not validated). Label: IMU_YAW_EMULATED_FROM_EVAL_HEADING"
+    },
+    {
+      "field": "imu_angular_velocity",
+      "source_competition": "/imu sensor_msgs/Imu.angular_velocity (rad/s)",
+      "consumer": "none in P0 or stage-1 code (yaw change is taken from consecutive orientation samples)",
+      "dataset_availability": "NOT RECORDED (imu_wz_rps = NaN)"
+    },
+    {
+      "field": "imu_linear_acceleration",
+      "source_competition": "/imu sensor_msgs/Imu.linear_acceleration (allowed sensor, distinct from the forbidden Vehicle Status accel)",
+      "consumer": "none in the LiDAR path",
+      "dataset_availability": "NOT RECORDED"
+    },
+    {
+      "field": "gps (lat, lon, alt, status, offsets)",
+      "source_competition": "GPS sensor (NMEA GGA) -> morai_sensor_bridge -> /gps morai_msgs/GPSMessage, ~5 Hz measured (setting.yaml says 30)",
+      "unit": "deg / m, UTM52N minus map offsets",
+      "consumer": "map pose (MapAt), /lidar/map_object, MotionClassifier map history, legacy /last_lidar and UDP",
+      "missing_handling": "map pose invalid when GPS older than 0.30 s or invalid -> local output continues, map output and motion_state stop",
+      "dataset_availability": "NOT RECORDED. Competition-mode runs feed NO GPS (the evaluation pose is never presented as GPS). Map-dependent outputs (motion_state, planner path values) are therefore not evaluable on this data"
+    }
+  ],
+  "forbidden_inference_inputs": [
+    {"field": "Competition Vehicle Status pos_x/pos_y/pos_z", "status_P0_product": "not read", "status_P0_harness": "VIOLATION (GPS/IMU/CAN synthesised from evaluation pose)", "stage1_competition_mode": "never read (column present only for the isolation test)"},
+    {"field": "vel_y, vel_z", "status_P0_product": "VIOLATION (speed norm, Parser.cpp:532)", "stage1_competition_mode": "never read"},
+    {"field": "accel_x/y/z (Vehicle Status)", "status_P0_product": "not read", "stage1_competition_mode": "never read"},
+    {"field": "heading (Vehicle Status / Ego)", "status_P0_product": "not read", "status_P0_harness": "used as IMU yaw (equivalent value, judging-only source)", "stage1_competition_mode": "the IMU yaw channel is emulated from it and labelled; no other use"},
+    {"field": "tyre lateral force, side slip, cornering stiffness, wheel_angle", "status_P0_product": "wheel_angle read but unused", "stage1_competition_mode": "never read"},
+    {"field": "/Ego_topic (Ego Vehicle Status, judging-only channel)", "status_P0_product": "VIOLATION via remap main.launch:126-128", "stage1_competition_mode": "not used"}
+  ],
+  "evaluation_only": [
+    "Lidar_Data labels_3d_lidar_v1 object GT (gt.csv): matching, metrics, offline trace-to-GT linking only",
+    "evaluation ego pose (frames.csv ego_x/y/z/yaw): evaluator map-aligned temporal differencing, ego-motion categories of the supplementary metrics, emulation of the allowed vel_x / IMU yaw channels (labelled)",
+    "never used for matching, observation selection, filtering, classification, online parameter tuning or the published output"
+  ],
+  "harness_contract": {
+    "file": "repo/src/lidar+sensorfusion/src/Main/test/lidar_dataset_replay.cpp",
+    "mode": "--input-mode competition",
+    "reader": "ReadCompetitionFrames(): looks up columns ONLY by the names idx, stem, stamp_ns, npy, vel_x_mps, imu_yaw_rad, imu_roll_rad (optional), imu_pitch_rad (optional)",
+    "feed_per_scan": "AddImu(stamp=t_lidar, q from roll/pitch/yaw; roll=pitch=0 when NaN), AddCan(stamp=t_lidar, vel_x); no AddGps",
+    "per_scan_record": "jsonl field ego_in {vel_x, imu_yaw, rp_available, gps:0}",
+    "isolation_test": "results/INPUT_ISOLATION_TEST.json"
+  }
+}
