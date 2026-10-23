@@ -16,7 +16,7 @@ implementation:
   camera_observation_receiver: available_library_and_probe
   ros_publishers_and_adapters: Main_opt_in_frame_boundary
   operational_default_promotion: pending
-  skeleton_publishes_topics: false  # the shadow node publishes only /asmc_lidar/shadow/*, none of planned_topics
+  skeleton_publishes_topics: false  # the shadow node publishes only /migration/lidar/*, none of planned_topics
   camera_object_producer: available_canonical_camera_launch
 source_stamp: bridge_receive_not_laser_firing_time
 frames:

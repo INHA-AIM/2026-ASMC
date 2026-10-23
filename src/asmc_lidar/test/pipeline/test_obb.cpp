@@ -1,8 +1,8 @@
 // OBB port tests: obb_util (Main Tracking.cpp:25-265 at 8f93c22e) and the
 // detection builder (Objectinfo_for_km). Expected values are computed
 // independently in the test (closed-form rectangles), never by the code under test.
-#include <asmc_lidar/pipeline/obb.hpp>
-#include <asmc_lidar/pipeline/tracker.hpp>
+#include <asmc_lidar/detection/obb.hpp>
+#include <asmc_lidar/tracking/tracker.hpp>
 
 #include <gtest/gtest.h>
 

@@ -1,7 +1,7 @@
 // RANSAC ground removal and ground evidence (Main Ransac.cpp / GroundEvidence.hpp at 8f93c22e).
-#include <asmc_lidar/pipeline/ground.hpp>
-#include <asmc_lidar/pipeline/preprocessing.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/preprocessing/ground.hpp>
+#include <asmc_lidar/preprocessing/preprocessing.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 #include <gtest/gtest.h>
 

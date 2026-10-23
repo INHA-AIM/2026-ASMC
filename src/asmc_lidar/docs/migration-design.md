@@ -10,7 +10,7 @@
 
 ## 2026-10-23 PR #103 반영과 입력 정정
 
-현재 구현은 main `281349da`의 [shadow 파이프라인](shadow-pipeline.md)이다.
+현재 구현은 main `281349da`의 [shadow 파이프라인](pipeline.md)이다.
 L1 manifest는2026-10-22 원본 기준선이며 당시 SHA와 해석을 덮어쓰지 않는다.
 [채널 실측 기록](../../../docs/records/bridge/2026-10-23-competition-channel-audit.md)과
 [추가 manifest](../../../config/baselines/competition_channel_audit_20261023.yaml)가 입력 해석을 정정한다.
@@ -24,7 +24,7 @@ L1 manifest는2026-10-22 원본 기준선이며 당시 SHA와 해석을 덮어�
 | L6 실행 | shadow launch·typed 배열·diagnostics·출력 guard | atomic 식별/4상태 계약·최종 실행/시각화 |
 | L7 수락 | PR 단위시험·기준선 bag 결과 보존 | 실시간·판제 소비·명시 전환 |
 
-현재 shadow namespace `/asmc_lidar/shadow/*`를 시험 정본으로 재사용한다. 이름만 바꾸는
+현재 shadow namespace `/migration/lidar/*`를 시험 정본으로 재사용한다. 이름만 바꾸는
 재이식이나 디렉토리 전체 재배치는 하지 않는다. `ground/clustering/obb/pose` 구조를 유지하고
 추가 변경은 확인된 책임 경계에만 적용한다. 다음 단위는 **L2 인수 확인**이며 아래 원본 추출
 목록은 코드 출처 확인표로 재사용한다. L3–L6의 구현분을 미착수로 다시 세지 않는다.
@@ -224,7 +224,7 @@ L6 추가 관측 계약은 geometry·관측 ID·객체별 운동 상태를 **한
 
 정식 후보는 `/perception/lidar/objects_local`, `/perception/lidar/objects_map`, 진단은 기존
 `/perception/lidar/diagnostics`를 기준으로 한다. 객체 관측용 additive wire의 실제 topic/type
-연결은 L6에서 명시한다. 시험 출력은 PR #103의 `/asmc_lidar/shadow/...`를 재사용하고 입력은 정본을 구독한다.
+연결은 L6에서 명시한다. 시험 출력은 PR #103의 `/migration/lidar/...`를 재사용하고 입력은 정본을 구독한다.
 Main opt-in과 동시 실행 시 같은 정식 토픽/TF를 중복 생산하지 않는다. map→base TF authority를
 새로 차지하지 않는다. 같은 이름의 wire type을 묵시적으로 바꾸지 않는다.
 

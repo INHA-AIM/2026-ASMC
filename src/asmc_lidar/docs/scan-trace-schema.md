@@ -1,8 +1,8 @@
 # Scan trace 형식 (`asmc_lidar_scan_trace_v1`)
 
-입력 PointCloud2 한 개당 JSON 객체 한 개다. `asmc_lidar_shadow_replay`는 JSONL 파일로 쓰고
-`asmc_lidar_shadow_node`는 구독자가 있을 때만 `/asmc_lidar/shadow/trace`(`std_msgs/String`)로 보낸다.
-직렬화 코드는 `include/asmc_lidar/pipeline/scan_trace.hpp`이며 [shadow 파이프라인](shadow-pipeline.md)의
+입력 PointCloud2 한 개당 JSON 객체 한 개다. `lidar_replay`는 JSONL 파일로 쓰고
+`lidar_pipeline_node`는 구독자가 있을 때만 `/migration/lidar/trace`(`std_msgs/String`)로 보낸다.
+직렬화 코드는 `include/asmc_lidar/ros/scan_trace.hpp`이며 [shadow 파이프라인](pipeline.md)의
 bag 비교에 사용한다.
 
 - 숫자는 유효숫자 17자리다(float을 double로 넓혀도 정확히 복원). 행렬은 row-major다.

@@ -80,7 +80,7 @@ jobs:
         run: |
           source /opt/ros/noetic/setup.bash
           # A missing shadow dependency fails the configure step instead of skipping the targets.
-          ./scripts/build_ws.sh -DASMC_LIDAR_SHADOW_REQUIRED=ON
+          ./scripts/build_ws.sh -DASMC_LIDAR_PIPELINE_REQUIRED=ON
 
       - name: Check LiDAR camera receiver, coordinates, time and shadow pipeline
         run: |
@@ -91,7 +91,7 @@ jobs:
           # -T Test keeps each test's status and output for the gate (the DartConfiguration.tcl notice is harmless).
           ctest --output-on-failure -T Test --no-compress-output
           # Fails when a shadow executable or a required test is missing, skipped or stale.
-          python3 ../../src/asmc_lidar/test/shadow_ci_check.py --devel ../../devel --build . --results ../test_results/asmc_lidar
+          python3 ../../src/asmc_lidar/test/pipeline_ci_check.py --devel ../../devel --build . --results ../test_results/asmc_lidar
 
       - name: Check bridge protocols, concurrent reporting and stale recovery
         run: |

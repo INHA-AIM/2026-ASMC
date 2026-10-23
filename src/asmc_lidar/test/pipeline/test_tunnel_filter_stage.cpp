@@ -2,8 +2,8 @@
 // roll/pitch smoke. Connection checks only; no filter performance is claimed.
 
 #include <asmc_lidar/pipeline/pipeline.hpp>
-#include <asmc_lidar/pipeline/tunnel_filter_stage.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/experimental/tunnel_filter_stage.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 #include <Lidar/TunnelFilter/TunnelFilterCore.hpp>
 

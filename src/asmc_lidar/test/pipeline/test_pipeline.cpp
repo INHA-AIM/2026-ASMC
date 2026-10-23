@@ -1,6 +1,6 @@
 // Pipeline::Process orchestration and CloudDigest (Main LidarProcess common path).
 #include <asmc_lidar/pipeline/pipeline.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 #include <gtest/gtest.h>
 #include <ros/time.h>

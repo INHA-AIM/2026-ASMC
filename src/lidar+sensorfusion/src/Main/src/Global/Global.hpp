@@ -2,7 +2,7 @@
 #define GLOBAL_HPP
 
 #include <ros/ros.h>
-#include <asmc_lidar/frame_time.hpp>
+#include <asmc_lidar/core/frame_time.hpp>
 #include <Lidar/ImuRansac/GroundEvidence.hpp>
 #include <iostream>
 #include <algorithm>

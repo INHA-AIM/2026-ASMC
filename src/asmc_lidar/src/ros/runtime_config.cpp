@@ -1,9 +1,9 @@
-// Shadow runtime configuration loader: config/shadow_pipeline.yaml (schema 1).
+// Shadow runtime configuration loader: config/lidar_pipeline.yaml (schema 1).
 // Values come from Main setting.yaml / main.launch / the HD-map contract (see
 // the provenance block of the file); the checks are Main's start-up checks
 // (main.cpp:608-613, FrameBoundary.cpp:54-130, Parser.cpp:21-48, FusionCamera.cpp
 // parameter clamps) for the part of the configuration this port uses.
-#include <asmc_lidar/shadow/runtime.hpp>
+#include <asmc_lidar/ros/runtime.hpp>
 
 #include <openssl/sha.h>
 #include <yaml-cpp/yaml.h>
@@ -18,7 +18,7 @@
 
 namespace asmc {
 namespace lidar {
-namespace shadow {
+namespace runtime {
 namespace {
 
 [[noreturn]] void Fail(const std::string& file, const std::string& what) {
@@ -252,6 +252,6 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   return config;
 }
 
-}  // namespace shadow
+}  // namespace runtime
 }  // namespace lidar
 }  // namespace asmc

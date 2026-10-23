@@ -8,10 +8,10 @@
 
 현재는 **좌표·시간 라이브러리, 공용 카메라 수신 컴포넌트와 계약 시험**, 그리고 Main LiDAR
 처리(ROI→Voxel→roll·pitch→RANSAC→군집→OBB→추적→전방 fusion→typed local/map)를 옮긴
-**검증용 shadow 노드와 bag replay**다. [Shadow 파이프라인](docs/shadow-pipeline.md)에 이식 경계·원본 대응·
+**검증용 shadow 노드와 bag replay**다. [Shadow 파이프라인](docs/pipeline.md)에 이식 경계·원본 대응·
 토픽·실행 방법을 정리했다. 실제 주행에는 기존 `lidar+sensorfusion` Main을 계속 사용한다.
-shadow 노드는 `/asmc_lidar/shadow/*`에만 발행하며 어떤 기존 launch에도 포함되지 않는다.
-구현·검증 상태, 미수락 항목과 저장소 Main과의 의도적 차이는 [현재 상태와 제한](docs/shadow-pipeline.md#현재-상태와-제한)에 있다.
+shadow 노드는 `/migration/lidar/*`에만 발행하며 어떤 기존 launch에도 포함되지 않는다.
+구현·검증 상태, 미수락 항목과 저장소 Main과의 의도적 차이는 [현재 상태와 제한](docs/pipeline.md#현재-상태와-제한)에 있다.
 
 [카메라 입력 API·공용 상태 전환·직접 시험](docs/camera-input.md)을 카메라 연결 시작점으로 사용한다.
 
@@ -39,17 +39,17 @@ shadow 노드는 `/asmc_lidar/shadow/*`에만 발행하며 어떤 기존 launch�
 
 | 경로 | 역할 |
 |---|---|
-| `include/asmc_lidar/frame_time.hpp`, `src/frame_time_core.cpp` | 실제 수평화 역변환·장착 변환·관측시점 pose 보간·속도 의미 변환 |
-| `include/asmc_lidar/projection.hpp`, `src/projection.cpp` | 장착 회전을 고려한 수평화와 관측별 합성 카메라 투영 |
-| `include/asmc_lidar/bounded_pose.hpp`, `src/bounded_pose.cpp` | 별도 300ms 제한 GPS 위치 보정·무효 barrier·3회 복구 API |
-| `include/asmc_lidar/imu_selection.hpp` | 이미 도착한 IMU 중 scan 시각 이전의 최신 유효 표본 선택, 누락/stale 진단 |
+| `include/asmc_lidar/core/frame_time.hpp`, `src/core/frame_time_core.cpp` | 실제 수평화 역변환·장착 변환·관측시점 pose 보간·속도 의미 변환 |
+| `include/asmc_lidar/geometry/projection.hpp`, `src/geometry/projection.cpp` | 장착 회전을 고려한 수평화와 관측별 합성 카메라 투영 |
+| `include/asmc_lidar/geometry/bounded_pose.hpp`, `src/geometry/bounded_pose.cpp` | 별도 300ms 제한 GPS 위치 보정·무효 barrier·3회 복구 API |
+| `include/asmc_lidar/core/imu_selection.hpp` | 이미 도착한 IMU 중 scan 시각 이전의 최신 유효 표본 선택, 누락/stale 진단 |
 | `config/camera_objects.yaml`, `test/camera_objects_contract_test.py` | 카메라 관측·보정·라벨 참조와 교차 검사; 실제 API/시험은 camera-input 문서 |
 | `config/autonav_v3.yaml` | 장착 변환의 출처/SHA와 값. 후속 ROS 어댑터에서 검증·로딩할 참고 설정 |
 | `camera_observations.hpp`, `camera_receiver.hpp`, `camera_calibration.hpp` | ROS 독립 버퍼·ROS 수신·보정 로더·투영 경계 |
 | `examples/camera_observation_probe.cpp` | 모드/제어/객체 출력 없이 diagnostics만 제공하는 연결 예제 |
 | `test/` | 중심/8코너·시간·pose·속도·IMU 선택의 회귀시험 |
 | `include/asmc_lidar/pipeline/`, `src/{preprocessing,ground,clustering,obb,tracking,pose,pipeline,fusion,experimental}/` | Main common-geometry 경로의 동작 보존 이식(정적 라이브러리, 외부 export 없음) |
-| `include/asmc_lidar/shadow/`, `src/ros/`, `tools/shadow_replay.cpp`, `launch/`, `config/shadow_pipeline.yaml` | shadow 노드·replay·설정. 노드와 replay는 같은 runtime을 호출 |
+| `include/migration/lidar/`, `src/ros/`, `tools/lidar_replay.cpp`, `launch/`, `config/lidar_pipeline.yaml` | shadow 노드·replay·설정. 노드와 replay는 같은 runtime을 호출 |
 | `src/experimental/tunnel_filter/`, `test/experimental/` | PR #102 TunnelFilterCore byte 동일 복사본과 27개 시험. 연결 stage는 기본 OFF |
 
 `asmc::lidar::transform()`은 local 결과와 map 가용성을 분리한다. 호출자는 실제 적용한
@@ -100,9 +100,9 @@ python3 src/asmc_msgs/test/test_message_serialization.py
 기존 라이브러리(`asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros`)와
 `catkin_package` export는 바뀌지 않았다. shadow target은 PCL·pcl_conversions·GeographicLib·
 `morai_msgs`(submodule)를 쓰는 패키지 전용 정적 라이브러리이며 의존 패키지(Main 등)에 링크되지 않는다.
-이 의존성이 없으면 shadow target만 경고와 함께 건너뛴다. CI는 `-DASMC_LIDAR_SHADOW_REQUIRED=ON`으로 이 생략을
-configure 실패로 바꾸고, `test/shadow_ci_check.py`로 shadow 실행파일과 필수 시험의 실제 생성·통과를 확인한다
-([시험](docs/shadow-pipeline.md#시험)). `Main`·`Msg` nested workspace에는 의존하지 않는다.
+이 의존성이 없으면 shadow target만 경고와 함께 건너뛴다. CI는 `-DASMC_LIDAR_PIPELINE_REQUIRED=ON`으로 이 생략을
+configure 실패로 바꾸고, `test/pipeline_ci_check.py`로 shadow 실행파일과 필수 시험의 실제 생성·통과를 확인한다
+([시험](docs/pipeline.md#시험)). `Main`·`Msg` nested workspace에는 의존하지 않는다.
 수신 확인용 probe는 diagnostics만 발행하며 LiDAR 객체를 발행하지 않는다.
 
 이전 연구 소스·보고서는 정리 전 커밋 `020f6c2`에 남아 있다. 선택적 복구는 별도
@@ -118,6 +118,6 @@ checkout에서 검토한다. 예전 `unified.launch`와 `ground_compare_live.lau
 GPS stamp가 0인 무효 입력은 bounded API의 수신 시각 barrier로만 처리한다.
 local 준비 조건은 유효 IMU·차량 속도이며 GPS와 독립적이다.
 
-shadow 경로의 bag 재현기는 `asmc_lidar_shadow_replay`다(노드와 같은 runtime 호출, 지정 토픽만 읽음).
+shadow 경로의 bag 재현기는 `lidar_replay`다(노드와 같은 runtime 호출, 지정 토픽만 읽음).
 nested Main의 연속 재현기와 그 기록은
 [연속 회귀와 재호 과제](../../docs/records/lidar/lidar-continuous-regression.md)를 참고한다.

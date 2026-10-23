@@ -3,7 +3,7 @@
 // TrackedObject and the explicit mission_profile flag, plus the box filter
 // assertions of Main test_camera_objects_adapter.py.
 
-#include <asmc_lidar/pipeline/fusion_policy.hpp>
+#include <asmc_lidar/fusion/fusion_policy.hpp>
 
 #include <gtest/gtest.h>
 

@@ -1,7 +1,7 @@
 // PoseHistory: common-path port of Main SensorPoseHistory (8f93c22e).
 // Cases from Main test/test_sensor_pose_history.cpp are ported to the ns/common
 // API; legacy Lookup/WaitForLookup cases are replaced (see comments).
-#include <asmc_lidar/pipeline/pose_history.hpp>
+#include <asmc_lidar/geometry/pose_history.hpp>
 
 #include <gtest/gtest.h>
 

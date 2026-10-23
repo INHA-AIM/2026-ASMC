@@ -2,7 +2,7 @@
 
 이 컴포넌트는 카메라 입력과 투영 근거를 제공한다. 실행 중인 YOLO는 `asmc_camera` 한 곳에
 두고, 손재호의 LiDAR 노드 안에서 `camera::Receiver`를 생성한다. 현재 운영 Main의 전방
-fusion과 이 수신 라이브러리는 별도다. opt-in shadow 노드([Shadow 파이프라인](shadow-pipeline.md))는
+fusion과 이 수신 라이브러리는 별도다. opt-in shadow 노드([Shadow 파이프라인](pipeline.md))는
 이 Receiver로 `camera_front`만 fusion에 쓴다. 전체 LiDAR 이전·3뷰 객체 매칭은 아직 완료되지 않았다.
 
 ## 공용 상태와 구형 제어 전환
@@ -27,8 +27,8 @@ fusion과 이 수신 라이브러리는 별도다. opt-in shadow 노드([Shadow 
 ## LiDAR 노드에 연결
 
 ```cpp
-#include <asmc_lidar/camera_receiver.hpp>
-#include <asmc_lidar/camera_calibration.hpp>
+#include <asmc_lidar/ros/camera_receiver.hpp>
+#include <asmc_lidar/geometry/camera_calibration.hpp>
 
 // NodeHandle와 Receiver를 LiDAR 노드의 수명 동안 유지한다. 스피닝은 호출자가 담당한다.
 const auto calibrations = asmc::lidar::camera::load_calibrations(camera_yaml_path);

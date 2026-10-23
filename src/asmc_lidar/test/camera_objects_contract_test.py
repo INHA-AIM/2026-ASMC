@@ -102,7 +102,7 @@ class CameraObjectsContractTest(unittest.TestCase):
             root = ET.parse(path).getroot()
             self.assertEqual(root.findall('.//include'), [], path)
             for node in root.findall('.//node'):
-                self.assertEqual((node.get('pkg'), node.get('type')), ('asmc_lidar', 'asmc_lidar_shadow_node'), path)
+                self.assertEqual((node.get('pkg'), node.get('type')), ('asmc_lidar', 'lidar_pipeline_node'), path)
             for element in root.iter():
                 for key in ('default', 'value', 'to'):
                     value = element.get(key) or ''
@@ -111,7 +111,7 @@ class CameraObjectsContractTest(unittest.TestCase):
                      ROOT / 'src/asmc_bridge'):
             for path in sorted(base.rglob('*.launch')):
                 text = path.read_text(errors='replace')
-                self.assertNotIn('asmc_lidar_shadow_node', text, path)
+                self.assertNotIn('lidar_pipeline_node', text, path)
                 self.assertNotRegex(text, r'asmc_lidar\)/launch/', path)
 
 

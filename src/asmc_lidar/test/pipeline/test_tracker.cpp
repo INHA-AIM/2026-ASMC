@@ -14,12 +14,12 @@
 // boxes in gravity-aligned frames; a carried box under a tilted frame change has
 // tilted corners while ZMin/ZMax keep centre z -+ extent/2 (Main rule, see
 // RunScenario).
-#include <asmc_lidar/pipeline/hungarian.hpp>
-#include <asmc_lidar/pipeline/kalman.hpp>
-#include <asmc_lidar/pipeline/obb.hpp>
-#include <asmc_lidar/pipeline/scan_frame.hpp>
-#include <asmc_lidar/pipeline/tracker.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/tracking/hungarian.hpp>
+#include <asmc_lidar/tracking/kalman.hpp>
+#include <asmc_lidar/detection/obb.hpp>
+#include <asmc_lidar/geometry/scan_frame.hpp>
+#include <asmc_lidar/tracking/tracker.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 #include <gtest/gtest.h>
 

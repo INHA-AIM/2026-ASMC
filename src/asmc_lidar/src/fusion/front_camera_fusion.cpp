@@ -1,8 +1,8 @@
 // Front-camera class fusion (Main runCameraFusion / LidarToImage / IOUFusion),
 // common-geometry branch only. See front_camera_fusion.hpp.
 
-#include <asmc_lidar/pipeline/front_camera_fusion.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/fusion/front_camera_fusion.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 #include <Eigen/Core>
 

@@ -2,7 +2,7 @@
 // Ported from Main src/Geometry/FrameBoundaryPublisher.cpp (8f93c22e) without the
 // ROS transport: publishers, TF broadcast, the 1 Hz diagnostics timer and the
 // subscriber-count shortcuts belong to the node.
-#include <asmc_lidar/shadow/runtime.hpp>
+#include <asmc_lidar/ros/runtime.hpp>
 
 #include <ros/time.h>
 
@@ -12,7 +12,7 @@
 
 namespace asmc {
 namespace lidar {
-namespace shadow {
+namespace runtime {
 namespace {
 
 using Array = asmc_msgs::LidarObjectArray;
@@ -136,6 +136,6 @@ TypedOutput::Arrays TypedOutput::Observed(const pipeline::ScanResult& result,
   return out;
 }
 
-}  // namespace shadow
+}  // namespace runtime
 }  // namespace lidar
 }  // namespace asmc

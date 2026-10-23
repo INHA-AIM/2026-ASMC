@@ -7,10 +7,10 @@
 // and the f32_PrevE/N bookkeeping (map coordinates), fusion_trace /
 // fusion_state_trace events, and dead locals (Ton/Toff/N_on/N_off, vx/vy/
 // raw_speed, f32_Distance, f32_Pred_x/y in the matched loop).
-#include <asmc_lidar/pipeline/hungarian.hpp>
-#include <asmc_lidar/pipeline/kalman.hpp>
-#include <asmc_lidar/pipeline/obb.hpp>
-#include <asmc_lidar/pipeline/tracker.hpp>
+#include <asmc_lidar/tracking/hungarian.hpp>
+#include <asmc_lidar/tracking/kalman.hpp>
+#include <asmc_lidar/detection/obb.hpp>
+#include <asmc_lidar/tracking/tracker.hpp>
 
 #include <algorithm>
 #include <cmath>

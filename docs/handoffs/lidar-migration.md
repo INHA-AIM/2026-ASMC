@@ -6,9 +6,9 @@
 
 현재 `asmc_lidar`는 **좌표·시간 기반과 공용 카메라 수신·버퍼·투영 컴포넌트**, 그리고 Main common-geometry
 LiDAR 처리(ROI·Voxel·roll·pitch 수평화·RANSAC·군집·OBB·추적·전방 fusion·typed local/map)를 동작 보존 이식한
-**shadow 노드와 bag replay**를 제공한다([Shadow 파이프라인](../../src/asmc_lidar/docs/shadow-pipeline.md)).
+**shadow 노드와 bag replay**를 제공한다([Shadow 파이프라인](../../src/asmc_lidar/docs/pipeline.md)).
 [카메라 입력 API](../../src/asmc_lidar/docs/camera-input.md)를 손재호의 연결 시작점으로 사용한다.
-shadow 노드는 기존 launch에 포함되지 않고 명시 실행할 때만 `/asmc_lidar/shadow/*`에 발행한다.
+shadow 노드는 기존 launch에 포함되지 않고 명시 실행할 때만 `/migration/lidar/*`에 발행한다.
 MotionClassifier·판제 후처리·구조물 분리·3뷰 fusion과 운영 ROS 출력 전환은 안승현의 단위별 진행과 손재호 병행 개발로 원본
 [`lidar+sensorfusion`](../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)에서 이어서 이전한다.
 기존 원본 패키지가 현재 주행 경로다. `asmc_lidar`의 probe와 shadow 노드는 운영 출력을 내지 않으며,
@@ -16,7 +16,7 @@ MotionClassifier·판제 후처리·구조물 분리·3뷰 fusion과 운영 ROS 
 
 shadow의 비교 기준선은 Tracker yaw 수정이 반영된 Main `8f93c22e`(`fix/lidar-tracking-frame-yaw`, main 미병합)이고,
 그 수정은 shadow에 이미 들어 있다. 기존 Main은 동결하며 shadow 이식은 Main Tracker 수정의 선행 병합을 요구하지 않는다.
-저장소 Main과의 OBB yaw·corner 차이는 의도된 것이다([의도적 차이](../../src/asmc_lidar/docs/shadow-pipeline.md#기준선과-저장소-main과의-의도적-차이)).
+저장소 Main과의 OBB yaw·corner 차이는 의도된 것이다([의도적 차이](../../src/asmc_lidar/docs/pipeline.md#기준선과-저장소-main과의-의도적-차이)).
 [좌표·GPS 경계 구현과 수락 보류](../records/lidar/lidar-camera-frame-boundaries.md)를 참고한다.
 [external 6개 좌표 구현과 현재 보정 검토](../records/camera/camera-lidar-coordinate-reference-review.md)에는
 행렬 수치 대조와 센서 시각·지면·pose 제공자 차이를 기록했다.
@@ -63,8 +63,8 @@ HSV 차선·정지선·신호등 처리는 새 LiDAR 경로에 이식하지 않�
 
 | 대상 | 정식 후보 | 이관 동시 비교 |
 |---|---|---|
-| local 객체 | `/perception/lidar/objects_local` | `/asmc_lidar/shadow/objects_local` |
-| map 객체 | `/perception/lidar/objects_map` | `/asmc_lidar/shadow/objects_map` |
+| local 객체 | `/perception/lidar/objects_local` | `/migration/lidar/objects_local` |
+| map 객체 | `/perception/lidar/objects_map` | `/migration/lidar/objects_map` |
 | 상태·진단 | L1에서 기존 공용 타입·경로 검토 후 확정 | 확정된 새 출력만 시험 namespace 적용 |
 
 위 시험 경로는 **PR #103 shadow launch에 구현됐다.** 기존 L1의 `/migration/lidar/*` 제안은 이 구현 이름으로 정렬한다. L2–L5의 시험 실행기는 기존
@@ -158,7 +158,7 @@ YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다.
 | v3 장착 설정 | 출처 SHA와 단위 확인. 장착 z를 노면 기준 센서 높이로 사용하지 않음 |
 | 회귀시험 | 좌표·8코너·속도·관측시각·pose/IMU 선택 의미 검사. 실제 검출 성능 시험은 후속 |
 | 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar는 수신 확인용 probe와 shadow 노드 제공(운영 typed 토픽 미발행) |
-| shadow 노드·replay | `asmc_lidar_shadow_node`·`asmc_lidar_shadow_replay`와 shadow 전용 launch 2개. 명시 실행, `/asmc_lidar/shadow/*`만 발행. 공개 속도·동정적 validity false, TunnelFilter 기본 OFF. 실제 카메라 bag·실시간·TunnelFilter ON 성능은 미수락 |
+| shadow 노드·replay | `lidar_pipeline_node`·`lidar_replay`와 shadow 전용 launch 2개. 명시 실행, `/migration/lidar/*`만 발행. 공개 속도·동정적 validity false, TunnelFilter 기본 OFF. 실제 카메라 bag·실시간·TunnelFilter ON 성능은 미수락 |
 
 빌드·시험 명령과 API 위치는 [패키지 README](../../src/asmc_lidar/README.md)에 있다.
 과거 연구용 지면·tracker 후보와 이전 `unified.launch`, `ground_compare_live.launch`는 남기지 않았으며
@@ -179,7 +179,7 @@ L5 인지 필터 → L6 발행·실행·시각화 → L7 대조·판제 전환 �
 
 [소비 계약](../contracts/lidar-planning-consumer-v1.md)과
 [기계 판독 계약](../../config/contracts/lidar_candidate_topic_contract_v1.yaml)은
-후속 구현의 목표다. 현재 publisher 목록이 아니다. shadow 노드의 `/asmc_lidar/shadow/*`는 이 계약의 토픽이 아니다.
+후속 구현의 목표다. 현재 publisher 목록이 아니다. shadow 노드의 `/migration/lidar/*`는 이 계약의 토픽이 아니다.
 
 - 현재 Main의 local 입력은 관측 시점 유효 IMU와 차량 속도(CAN)다. 각각 age 120ms, 최대 대기 50ms이며 GPS는 기다리지 않는다. CAN 없이 처리하는 LiDAR+IMU 전용 정책은 후속 설계다.
 - scan stamp는 bridge 수신 시각이며 광선 측정 시각으로 바꾸어 설명하지 않는다.

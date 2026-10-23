@@ -2,7 +2,7 @@
 // Ported from Main src/Lidar/RoiVoxel/RoiVoxel.cpp at 8f93c22e. Roi and Voxel
 // have no legacy/common branch in Main; both run in the raw sensor frame.
 
-#include <asmc_lidar/pipeline/preprocessing.hpp>
+#include <asmc_lidar/preprocessing/preprocessing.hpp>
 
 #include <Eigen/Geometry>
 #include <pcl/filters/voxel_grid.h>

@@ -1,4 +1,4 @@
-#include <asmc_lidar/camera_calibration.hpp>
+#include <asmc_lidar/geometry/camera_calibration.hpp>
 #include <cassert>
 #include <iostream>
 using namespace asmc::lidar;

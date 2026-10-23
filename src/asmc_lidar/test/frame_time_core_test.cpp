@@ -1,4 +1,4 @@
-#include <asmc_lidar/frame_time.hpp>
+#include <asmc_lidar/core/frame_time.hpp>
 #include <cmath>
 #include <cstring>
 #include <functional>

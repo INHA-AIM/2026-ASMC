@@ -4,7 +4,7 @@
 // 2D fallback stays because it is reachable on Main's common path. Not ported:
 // unused MAX_FRAMES/speed_counter/rot2 (:6-7, :42-46) and the commented IMM/CV
 // filters (:208-424).
-#include <asmc_lidar/pipeline/kalman.hpp>
+#include <asmc_lidar/tracking/kalman.hpp>
 
 #include <cmath>
 

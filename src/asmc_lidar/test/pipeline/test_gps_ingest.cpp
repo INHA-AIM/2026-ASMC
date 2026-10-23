@@ -1,6 +1,6 @@
 // GpsSanityFilter / GpsIngest / ImuFromInput / CanFromInput: common-path port of
 // Main GpsSanityFilter.cpp and the Parser.cpp callbacks (8f93c22e).
-#include <asmc_lidar/pipeline/pose_history.hpp>
+#include <asmc_lidar/geometry/pose_history.hpp>
 
 #include <GeographicLib/UTMUPS.hpp>
 #include <gtest/gtest.h>

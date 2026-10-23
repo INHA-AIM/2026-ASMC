@@ -3,9 +3,9 @@
 // camera::Buffer (fed through status()/observe() with controlled clocks) for
 // the receiver mapping. All clocks are injected; nothing reads wall time.
 
-#include <asmc_lidar/camera_calibration.hpp>
-#include <asmc_lidar/pipeline/front_camera_fusion.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/geometry/camera_calibration.hpp>
+#include <asmc_lidar/fusion/front_camera_fusion.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 #include <gtest/gtest.h>
 

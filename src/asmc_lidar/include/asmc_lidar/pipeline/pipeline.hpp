@@ -6,12 +6,12 @@
 // 8f93c22e with enable_common_geometry=true. Not included: debug publishers,
 // markers, MotionClassifier, planning filters, fusion (see FrontCameraFusion).
 
-#include <asmc_lidar/pipeline/clustering.hpp>
-#include <asmc_lidar/pipeline/ground.hpp>
-#include <asmc_lidar/pipeline/preprocessing.hpp>
-#include <asmc_lidar/pipeline/scan_frame.hpp>
-#include <asmc_lidar/pipeline/tracker.hpp>
-#include <asmc_lidar/pipeline/tunnel_filter_stage.hpp>
+#include <asmc_lidar/detection/clustering.hpp>
+#include <asmc_lidar/preprocessing/ground.hpp>
+#include <asmc_lidar/preprocessing/preprocessing.hpp>
+#include <asmc_lidar/geometry/scan_frame.hpp>
+#include <asmc_lidar/tracking/tracker.hpp>
+#include <asmc_lidar/experimental/tunnel_filter_stage.hpp>
 
 #include <memory>
 #include <string>

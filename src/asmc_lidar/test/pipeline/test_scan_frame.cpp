@@ -5,10 +5,10 @@
 //   p_scan = L * mount^-1 * (R_imu^T * w)   (zero ego translation),
 // R_imu = rpy(roll, pitch, yaw) of the stored float IMU angles, mount from the
 // float Deg2Rad of the vehicle angles, L = asmc::lidar::leveling_rotation.
-#include <asmc_lidar/pipeline/kalman.hpp>
-#include <asmc_lidar/pipeline/scan_frame.hpp>
-#include <asmc_lidar/pipeline/tracker.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/tracking/kalman.hpp>
+#include <asmc_lidar/geometry/scan_frame.hpp>
+#include <asmc_lidar/tracking/tracker.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 #include <gtest/gtest.h>
 

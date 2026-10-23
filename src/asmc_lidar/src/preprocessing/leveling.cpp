@@ -1,8 +1,8 @@
 // Roll/pitch leveling of the voxel cloud.
 // Ported from Main src/Lidar/ImuRansac/ImuFusion.cpp at 8f93c22e, common-geometry branch.
 
-#include <asmc_lidar/pipeline/preprocessing.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/preprocessing/preprocessing.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 #include <Eigen/Core>
 
