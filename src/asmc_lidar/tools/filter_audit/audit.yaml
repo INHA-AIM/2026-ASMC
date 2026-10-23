@@ -1,0 +1,13 @@
+schema_version: asmc.lidar.hd_map_filter_audit_config/v1
+# Offline comparison only. Neither value is an operational clearance approval.
+expected_map_id: waize_katri_2025-10-23
+map_origin: [302595.0, 4124145.0, 0.0]
+pose_age_limit_ms: 300.0
+candidate_guard_m: 1.0
+exception_protection_m: 10.0
+product: src/asmc_hd_map/config/kcity2025_compact_drivable_map.json
+grid: src/asmc_hd_map/config/kcity2025_compact_drivable_grid.npz
+metadata: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
+source: src/asmc_hd_map/config/kcity2025_compact_drivable_source.yaml
+legacy_image: src/planning_inputs/config/validated_0781402/road_mask.png
+legacy_metadata: src/planning_inputs/config/validated_0781402/road_mask.yaml
