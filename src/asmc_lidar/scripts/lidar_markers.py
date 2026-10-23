@@ -11,6 +11,7 @@ import time
 
 import rospy
 from asmc_msgs.msg import LidarObjectArray, LidarObservation
+from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker, MarkerArray
 
 
@@ -18,6 +19,40 @@ EDGES = ((0, 1), (1, 2), (2, 3), (3, 0), (4, 5), (5, 6),
          (6, 7), (7, 4), (0, 4), (1, 5), (2, 6), (3, 7))
 COLORS = {'vehicle': (0.2, 0.8, 1.0), 'dynamic_obstacle': (1.0, 0.45, 0.15),
           'static_obstacle': (0.3, 1.0, 0.45)}
+
+
+def ego_markers():
+    """Static footprint, not a detected object or a measured body-height box.
+
+    Matches asmc_hd_map/ego_footprint.py and planning's rear-axle base_link:
+    rear=-0.79, front=3.0+0.845, width=1.892 m. Do not alter the preserved
+    legacy detector's RearOverhang setting as part of this display change.
+    """
+    rear, front, half_width = -0.79, 3.845, 1.892 / 2.
+    markers = [Marker() for _ in range(3)]
+    for index, marker in enumerate(markers):
+        marker.header.frame_id = 'base_link'
+        marker.ns, marker.id = 'ego', index
+        marker.action = Marker.ADD
+        marker.pose.orientation.w = 1.
+        # Zero stamp/lifetime: fixed base_link reference, independent of scans.
+    fill, outline, label = markers
+    fill.type = Marker.CUBE
+    fill.pose.position.x = (front + rear) / 2.
+    fill.scale.x, fill.scale.y, fill.scale.z = front - rear, half_width * 2., .06
+    fill.color.r, fill.color.g, fill.color.b, fill.color.a = .2, .45, 1., .3
+    outline.type = Marker.LINE_STRIP
+    outline.scale.x = .06
+    outline.color.r = outline.color.g = outline.color.b = outline.color.a = 1.
+    outline.points = [Point(x, y, .04) for x, y in
+                      ((rear, half_width), (front, half_width), (front, -half_width),
+                       (rear, -half_width), (rear, half_width))]
+    label.type = Marker.TEXT_VIEW_FACING
+    label.pose.position.x, label.pose.position.z = (front + rear) / 2., .45
+    label.scale.z = .35
+    label.color.r = label.color.g = label.color.b = label.color.a = 1.
+    label.text = 'EGO (+X front)'
+    return markers
 
 
 class ObjectMarkers:
@@ -96,6 +131,7 @@ class MarkerNode:
         self.builder = ObjectMarkers(self.timeout)
         self.lock = threading.Lock()
         self.last_receipt = None
+        self.last_display_publish = 0.
         self.header = None
         self.stop = threading.Event()
         self.publisher = rospy.Publisher(rospy.get_param('~output', '/migration/lidar/markers'),
@@ -113,15 +149,26 @@ class MarkerNode:
                 return
             self.header = observation.objects.header
             self.last_receipt = time.monotonic()
-            self.publisher.publish(markers)
+            self.publish(markers)
+
+    def publish(self, markers):
+        # Keep ego in the same display topic, including after DELETEALL. It is
+        # never inserted into LidarObjectArray or used by detection/tracking.
+        markers.markers.extend(ego_markers())
+        self.publisher.publish(markers)
+        self.last_display_publish = time.monotonic()
 
     def expire(self):
         while not self.stop.wait(0.05):
             with self.lock:
                 if (self.last_receipt is not None and
                         time.monotonic() - self.last_receipt > self.timeout):
-                    self.publisher.publish(self.builder.clear(self.header))
+                    self.publish(self.builder.clear(self.header))
                     self.last_receipt = None
+                elif self.last_receipt is None and time.monotonic() - self.last_display_publish >= 1.:
+                    # Static reference only; do not revive expired detections
+                    # or assign a new source stamp to old sensor results.
+                    self.publish(MarkerArray())
 
     def shutdown(self):
         self.stop.set()
