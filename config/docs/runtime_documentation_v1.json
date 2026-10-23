@@ -57,6 +57,11 @@
       "internal_args": []
     },
     {
+      "title": "LiDAR migration pipeline",
+      "path": "src/asmc_lidar/launch/lidar.launch",
+      "internal_args": []
+    },
+    {
       "title": "Main LiDAR/fusion",
       "path": "src/lidar+sensorfusion/src/Main/main.launch",
       "internal_args": []
@@ -92,8 +97,8 @@
       "internal_args": []
     },
     {
-      "title": "LiDAR shadow web monitor",
-      "path": "src/asmc_lidar/launch/monitor.launch",
+      "title": "LiDAR read-only web viewer",
+      "path": "src/asmc_lidar/launch/view.launch",
       "internal_args": []
     },
     {
@@ -151,10 +156,12 @@
     "src/asmc_bridge/README.md",
     "src/data_collection/README.md",
     "src/asmc_hd_map/README.md",
+    "src/asmc_lidar/README.md",
+    "src/asmc_lidar/docs/pipeline.md",
     "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md",
     "src/asmc_camera/docs/bdd-pretrained-experiment.md",
     "src/asmc_lidar/README.md",
     "src/asmc_lidar/docs/web-monitor.md",
-    "src/asmc_lidar/docs/shadow-pipeline.md"
+    "src/asmc_lidar/docs/pipeline.md"
   ]
 }

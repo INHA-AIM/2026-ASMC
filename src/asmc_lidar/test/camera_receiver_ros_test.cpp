@@ -1,4 +1,4 @@
-#include <asmc_lidar/camera_receiver.hpp>
+#include <asmc_lidar/ros/camera_receiver.hpp>
 #include <gtest/gtest.h>
 #include <functional>
 using namespace asmc::lidar::camera;

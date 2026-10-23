@@ -2,7 +2,7 @@
 #define SENSOR_POSE_HISTORY_HPP
 
 #include <Global/Global.hpp>
-#include <asmc_lidar/bounded_pose.hpp>
+#include <asmc_lidar/geometry/bounded_pose.hpp>
 
 #include <cstdint>
 #include <condition_variable>

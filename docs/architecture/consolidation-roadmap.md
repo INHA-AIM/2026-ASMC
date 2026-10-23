@@ -20,7 +20,7 @@
 | 1 · 판제/제어 정윤태·양서준·이강태, 통합 공동 | 현재 단일 planner + Main + 카메라 기준선의 전체 미션 반복 | SUNNY/FOGGY×11/13/15, 실제 최고속도·충돌·정체·완주시간, STOP/재밍 진입·복귀·명령 단절 |
 | 1 · 안승현 + 소비 파트 | 관측·원본 이름/그룹·상태·pose 인계 확인 | 단일 producer, source stamp·좌표·세대·freshness, unknown/무효/빈 결과를 구분 |
 | 1 · 손재호 + 판제 | LiDAR 객체/구조물·속도·분류의 소비 신뢰성 | 객체 보존·벽 혼입·추적 ID·GPS 무효/복구, Main·판제 UTM yaw 일치, 미확정 속도를 0으로 치환하지 않음 |
-| 2 · 손재호 | `asmc_lidar` 기능 이전·3뷰 관측 통합 | 고정 bag에서 기존 Main geometry/time/filter parity 후 실제 주행, 카메라별 보정·중복 관측 처리 |
+| 2 · 안승현 HD맵/카메라, 손재호 추적/속도/fusion | [L0–L8 이관](../../src/asmc_lidar/docs/migration-tasks.md) | 기존 Main 유지·시험 namespace 격리, 전방 fusion 이관 후 소비 수락; 3뷰 매칭 확대는 L8 후속 |
 | 2 · 장원태 + 판제 | 시나리오 검증·실패 재현을 반복 가능한 팀 절차로 고정 | 객체/환경/seed/지도 SHA와 충돌·정체 이력; CP14→START 조건은 공식 모든 체크포인트 검사와 별도 |
 | 2 · 안승현 + 지도 소비 파트 | 지도·차량 상태 정본과 판제 map copy 정합 | 링크/route/원점·yaw·checkpoint parity, 출처 경로 기록 오류와 실제 지도 값 변경 구분 |
 | 3 · 안승현, 판제 요청 시 | 실패 조건만 수집·모델 추가학습 | bus/truck, 차로 앞 bicycle/dog, dog2/dog10, 터널·근거리; 기존 객체 회귀와 실행 지연 확인 |
@@ -28,9 +28,16 @@
 
 ## 지금 닫지 않은 항목
 
+2026-10-22 L0 문서 통합에 이어 [L1 설계·기준선](../../src/asmc_lidar/docs/migration-design.md)을 정리했다.
+PR #103 검출·추적·전방 fusion과 PR #105 웹 모니터를 PR #104의 구조·공용 관측 계약에 통합했다.
+PR 병합과 운영 소비 전환은 별개다. [공동 인수표](../../src/asmc_lidar/docs/migration-tasks.md#공동-개발-인수와-우선-작업)를 따른다. 이후 안승현은 HD맵 필터·카메라 연결, 손재호는 추적·속도·운동 상태·fusion을 보완한다. 구현 상태와 과거 검증
+근거는 [통합 인계](../handoffs/lidar-migration.md)에 모은다. 재호 브랜치 대기 없이 진행하되
+판제 소비는 L7까지 기존 Main을 유지한다. 최신 PR #101의 동적 장애물 판단·안전 재출발은
+판제 정책으로 남기고, 측정·지도 관련성 필터의 소유권 통합과 구분한다.
+
 카메라 TensorRT가 기본이어도 family 순간 공백250ms 기준과 freshness350ms의 남은 실패는 추적합니다.
 YOLO는 전 조건 모든 에셋 지원을 검증한 상태가 아닙니다. 추가학습은 현재 사용자 판단에 따라 보류합니다.
-`asmc_lidar`는 카메라 수신 컴포넌트·확인용 probe와 Main LiDAR 처리·전방 fusion을 옮긴 shadow 노드를 제공하지만 운영 LiDAR 실행은 계속 Main이며(shadow는 명시 실행·`/asmc_lidar/shadow/*` 전용), 3뷰 YOLO 출력이 3뷰 LiDAR fusion 완료를 뜻하지 않습니다.
+`asmc_lidar`는 카메라 수신 컴포넌트·확인용 probe와 Main LiDAR 처리·전방 fusion을 옮긴 shadow 노드를 제공하지만 운영 LiDAR 실행은 계속 Main이며(shadow는 명시 실행·`/migration/lidar/*` 전용), 3뷰 YOLO 출력이 3뷰 LiDAR fusion 완료를 뜻하지 않습니다.
 
 판제의 최신 주행 개선과 전체 회귀 통과는 다릅니다. 이전 이관 기록의 AVOID/link 실패와
 #89가 보고한 `roundabout_execution_test` 실패는 시점별로 구분해 해결·재검증합니다.
@@ -39,7 +46,7 @@ YOLO는 전 조건 모든 에셋 지원을 검증한 상태가 아닙니다. 추
 
 현재 지도 products와 판제 local map은 자동 일치하지 않습니다. 전체 지도 재생성 검사에 남은
 route source 경로 provenance 차이는 [현행화 검토 기록](../records/repository/2026-10-16-documentation-refresh.md)에 남깁니다.
-본선 type787·LAN2LAN은 local 통과 기록을 현장 수락으로 바꾸지 않습니다.
+현재 CompetitionInfoPublisher는9099→`/Ego_topic`으로 실측 확인했습니다([정정](../records/bridge/2026-10-23-competition-channel-audit.md)). 주행 부호·본선 LAN2LAN 수락은 남았습니다.
 
 ## 단계별 변경 규칙
 

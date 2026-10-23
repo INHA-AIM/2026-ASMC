@@ -1,7 +1,9 @@
+#include <asmc_lidar/detection/detections.hpp>
+#include <asmc_lidar/core/source_time.hpp>
+#include <asmc_lidar/tracking/track.hpp>
 #include <asmc_lidar/pipeline/pipeline.hpp>
 
 #include <openssl/sha.h>
-#include <ros/time.h>
 
 #include <algorithm>
 #include <chrono>
@@ -84,7 +86,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
 
   // TemporalThread prepares the scan context before LidarProcess, so a scan
   // LidarProcess rejects below still replaces the context (main.cpp:495).
-  frame_.Prepare(scan.time, local, map_pose, scan.generation);
+  frame_.Prepare(scan.time, local, map_pose, scan.scan_sequence);
 
   // Main `static uint64_t last_raw`: equal or older source stamps are skipped
   // before any state changes (LidarProcess.cpp:161-167).
@@ -102,10 +104,6 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     result.reason = "empty_scan";
     return result;
   }
-
-  // Main ts_CurrTime = frame_boundary::SourceStamp(raw) (LidarProcess.cpp:177).
-  const ros::Time current_time = ros::Time().fromNSec(static_cast<std::uint64_t>(raw));
-  const ros::Time previous_time = ros::Time().fromNSec(static_cast<std::uint64_t>(previous_stamp_ns_));
 
   StageCounts& counts = result.counts;
   StageTimings& timings = result.timings;
@@ -210,7 +208,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
 
   // Main FrameFilter (LidarProcess.cpp:260-261); f64_Dt = (ts_CurrTime -
   // ts_PrevTime).toSec() with ts_PrevTime = ros::Time(0,0) before the first scan.
-  const double dt_s = (current_time - previous_time).toSec();
+  const double dt_s = SourceDeltaSeconds(raw, previous_stamp_ns_);
   begin = Clock::now();
   tracker_.Update(object, dt_s, local, frame_);
   end = Clock::now();
@@ -228,17 +226,17 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   if (motion_map_valid) {
     const auto map_from_level = result.context.map_pose.map_from_base * *base_from_level;
     for (std::size_t i=0;i<object.size();++i) {
-      const auto& o=object[i];auto& m=motion_objects[i];m=o.display_motion;
-      m.s32_Id=o.s32_Id;m.s32_MissCount=o.s32_MissCount;
-      m.f32_AbsVx=o.f32_AbsVx;m.f32_AbsVy=o.f32_AbsVy;
-      const auto center=(map_from_level * asmc::lidar::Vec(o.f32_CoreX,o.f32_CoreY,o.f32_CoreZ)).eval();
+      const auto& o=object[i];auto& m=motion_objects[i];m=o.tracking.display_motion;
+      m.s32_Id=o.tracking.s32_Id;m.s32_MissCount=o.tracking.s32_MissCount;
+      m.f32_AbsVx=o.tracking.f32_AbsVx;m.f32_AbsVy=o.tracking.f32_AbsVy;
+      const auto center=(map_from_level * asmc::lidar::Vec(o.detection.f32_CoreX,o.detection.f32_CoreY,o.detection.f32_CoreZ)).eval();
       m.f32_CoreE=static_cast<float>(center.x());m.f32_CoreN=static_cast<float>(center.y());
-      const auto velocity=(map_from_level.linear()*asmc::lidar::Vec(o.f32_AbsVx,o.f32_AbsVy,0)).eval();
+      const auto velocity=(map_from_level.linear()*asmc::lidar::Vec(o.tracking.f32_AbsVx,o.tracking.f32_AbsVy,0)).eval();
       m.map_vx=velocity.x();m.map_vy=velocity.y();
       m.min_e=m.min_n=std::numeric_limits<double>::infinity();
       m.max_e=m.max_n=-std::numeric_limits<double>::infinity();
       m.bounds_valid=true;
-      for(const auto& corner:o.OBB_Corners_Body) {
+      for(const auto& corner:o.detection.obb_corners_level) {
         const auto p=(map_from_level * asmc::lidar::Vec(corner.x,corner.y,corner.z)).eval();
         if(!p.allFinite()){m.bounds_valid=false;break;}
         m.min_e=std::min(m.min_e,p.x());m.max_e=std::max(m.max_e,p.x());
@@ -246,21 +244,21 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
       }
       m.bounds_valid=m.bounds_valid && m.max_e-m.min_e>.05 && m.max_n-m.min_n>.05;
     }
-    display_motion_.Update(motion_objects,current_time.toSec());
+    display_motion_.Update(motion_objects, SourceDeltaSeconds(raw, 0));
   } else display_motion_.InvalidateMapHistory(motion_objects);
-  for(std::size_t i=0;i<object.size();++i)object[i].display_motion=motion_objects[i];
+  for(std::size_t i=0;i<object.size();++i)object[i].tracking.display_motion=motion_objects[i];
 
   begin = Clock::now();
   std::sort(object.begin(), object.end(),
-            [](const TrackedObject& a, const TrackedObject& b) { return a.f32_Dist < b.f32_Dist; });
+            [](const TrackedObject& a, const TrackedObject& b) { return a.detection.f32_Dist < b.detection.f32_Dist; });
   // Main LidarProcess.cpp:297-306.
   const GroundPlaneSnapshot ground_plane = ground_.CurrentPlane();
   for (auto& tracked_object : object) {
-    if (tracked_object.s32_MissCount == 0) frame_.RecordTrackingFrame(tracked_object);
-    tracked_object.ground_evidence = ObjectGroundEvidence{};
-    if (tracked_object.s32_MissCount == 0) {
-      tracked_object.ground_evidence =
-          MeasureObjectGroundEvidence(tracked_object.pcl_ClusterPoints.points, ground_plane);
+    if (tracked_object.tracking.s32_MissCount == 0) frame_.RecordTrackingFrame(tracked_object);
+    tracked_object.detection.ground_evidence = ObjectGroundEvidence{};
+    if (tracked_object.tracking.s32_MissCount == 0) {
+      tracked_object.detection.ground_evidence =
+          MeasureObjectGroundEvidence(tracked_object.detection.pcl_ClusterPoints.points, ground_plane);
     }
   }
   // Main LidarProcess.cpp:307-313: vec_Objects and the 3-frame queue.
@@ -272,7 +270,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   result.plane = ground_plane;
   counts.tracks = static_cast<int>(object.size());
   for (const auto& tracked_object : object) {
-    if (tracked_object.s32_MissCount == 0)
+    if (tracked_object.tracking.s32_MissCount == 0)
       ++counts.observed_tracks;
     else
       ++counts.predicted_tracks;

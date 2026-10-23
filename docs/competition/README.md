@@ -63,7 +63,12 @@ staleness, latency와 자원 사용량을 측정한다.
 | 최대 wheel angle | 40° |
 | 최소 회전반경 | 5.87 m |
 | 전/후 overhang | 0.845 / 0.790 m |
-| L × W × H | 4.635 × 1.892 × 2.434 m |
+| VehicleSpec L × W × H (메타데이터) | 4.635 × 1.892 × 2.434 m |
+
+2026-10-23 실제 형상 대조: `GetVehicleSpec.height`·UDP `sizeZ`의2.434m를 시각화 높이로
+그대로 쓰지 않는다. `GetActorState(Ego).bounding_box.extent.z`는5회 모두0.8220231533m로,
+실제 bounding box 높이는1.6440463066m다. RViz ego 표시는1.644m를 사용한다
+([표시 기준과 정정](../../src/asmc_lidar/README.md#처리-결과를-rviz에서-보기)).
 
 | 센서 | 수량·규정 | 현재 팀 개발 기준 |
 |---|---|---|
@@ -221,7 +226,7 @@ PR #64 후속 구현은 HD맵 source·생성 metadata·발행용 payload에 새 
 - [ ] Competition Vehicle Status·CollisionData 수신
 - [ ] 카메라·LiDAR·GPS·IMU 포트와 rate 확인
 - [ ] 체크포인트 15개, 3 m 반경과 순서 검증
-- [ ] runtime 노드가 Ego Vehicle Status 파생 토픽(`/Ego_topic`)을 소비하지 않음
+- [ ] runtime이 판정 전용 Ego/Detail 정보를 소비하지 않음. `/Ego_topic`은 현재 허용 Competition의 호환 이름이므로 이름만으로 금지하지 않는다([실측](../records/bridge/2026-10-23-competition-channel-audit.md)).
 - [ ] 모든 `/ctrl_cmd` 송신 노드가 `longlCmdType=1`만 사용
 - [ ] planning이 `route_speed_limits`의 effective 상한(60 구간 최대 60 km/h)을 지킴
 - [ ] 속도 예외 링크 경계와 15분 timeout 검증

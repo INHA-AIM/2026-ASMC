@@ -51,8 +51,8 @@ interface는 가능한 한 `asmc_msgs`를 사용하되, Phase 3 전환 PR에서 
 
 | 방향 | 현재 UDP | ROS topic·type | 비고 |
 |---|---:|---|---|
-| MORAI→팀 | Ego Host/Dest `9088/9099` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 현재 공통 상태 입력 |
-| MORAI→팀 | MolitComp Competition `9797/9798`, type 787 | `/Competition_topic`, `morai_msgs/EgoVehicleStatus` | local 선택; 주최 현장 explicit gate·live emission 대기 |
+| MORAI→팀 | Host/Dest `9088/9099` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 현재 UI CompetitionInfoPublisher·181B 실측 확인, ROS 호환 이름 |
+| MORAI→팀 | 별도 `9797/9798`, 저장 JSON type787 | `/Competition_topic`, `morai_msgs/EgoVehicleStatus` | 이번 실측 Detail138B로 decode 거부. 허용 Competition으로 단정하지 않음 |
 | MORAI→팀 | TrafficLight `7603/7502`, type 258 | 발행하지 않음 | simulator oracle, production bridge 비소비 |
 | MORAI→팀 | Object Dest `7505` | `/Object_topic`, `morai_msgs/ObjectStatusList` | privileged 개발 oracle |
 | MORAI→팀 | Collision Dest `9092` | `/CollisionData`, `morai_msgs/CollisionData` | 충돌 때만 publish |
@@ -253,7 +253,7 @@ make target”으로 실패할 수 있다.
 
 - 개발·현장의 채널과 포트는 같고 IP만 profile로 분리한다.
 - Ctrl `9093/9094`, mode 2
-- MolitComp Competition Vehicle Status `9797/9798`, type 787
+- 현재 CompetitionInfoPublisher `9088/9099` → `/Ego_topic`; 별도9798과 구분([실측](../../../docs/records/bridge/2026-10-23-competition-channel-audit.md))
 - TrafficLight status `7603/7502`, type 258은 simulator oracle이며 bridge 입력이 아님
 - GetTrafficLight/MoraiTLServiceProvider type 778은 조사한 export에 없고 필수 계약이 아님
 - CollisionData `9091/9092`
@@ -272,6 +272,10 @@ loss, processing latency와 CPU/GPU를 비교한다. 현장 실제 두 PC, firew
 복구는 Phase 6 gate이며 개발 PC loopback 성공으로 대신하지 않는다.
 
 ## 8. P3-G local closeout 결과와 남은 gate
+
+아래 P3-G는 당시 기록이다. Competition=9798이라는 해석과 현장 필수 옵션 안내는
+[2026-10-23 실측](../../../docs/records/bridge/2026-10-23-competition-channel-audit.md)으로 정정한다.
+현재9099 Competition 수신은 확인했고 전진/후진 속도·두 PC LAN 수락은 남았다.
 
 1. package/topic/port/timestamp baseline과 local live 결과를 P3-E에서 캡처했다.
 2. parser, sensor decoder, state core와 fixture/test를 동작 변경 없이 `asmc_bridge`로 옮겼다.

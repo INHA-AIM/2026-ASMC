@@ -16,7 +16,7 @@
 // not this scan's result; observers are expected to copy a bounded sample and
 // hand the work to another thread.
 
-#include <asmc_lidar/pipeline/types.hpp>
+#include <asmc_lidar/tracking/track.hpp>
 
 #include <pcl/PointIndices.h>
 

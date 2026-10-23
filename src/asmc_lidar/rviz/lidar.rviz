@@ -1,0 +1,50 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz/Grid
+      Name: Metric grid
+      Enabled: true
+      Cell Size: 1
+      Plane Cell Count: 60
+      Reference Frame: base_link
+    - Class: rviz/MarkerArray
+      Name: Processed LiDAR objects (OBB, ID, classification)
+      Enabled: true
+      Marker Topic: /migration/lidar/markers
+      Queue Size: 1
+    - Class: rviz/PointCloud2
+      Name: Raw LiDAR (optional reference)
+      Enabled: false
+      Topic: /velodyne_points
+      Queue Size: 1
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: Intensity
+  Global Options:
+    Fixed Frame: base_link
+    Frame Rate: 20
+    Background Color: 18; 20; 25
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 35
+      Pitch: 1.15
+      Yaw: 3.141592653589793
+      Target Frame: base_link
+      Focal Point:
+        X: 10
+        Y: 0
+        Z: 0
+Window Geometry:
+  Height: 900
+  Width: 1300

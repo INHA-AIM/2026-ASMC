@@ -5,10 +5,20 @@ owner: asmc_lidar
 implementation:
   coordinate_time_core: available
   imu_selection_core: available
-  detection_tracking_fusion: shadow_port_explicit_launch_not_operational
+  detection_tracking_fusion: migration_pipeline_explicit_launch_not_operational
+  migration_work_units: src/asmc_lidar/docs/migration-tasks.md
+  migration_design: src/asmc_lidar/docs/migration-design.md
+  migration_design_baseline: config/baselines/lidar_migration_l1_v1.yaml
+  migration_current_review: config/baselines/competition_channel_audit_20261023.yaml
+  target_pose_policy: bounded_300ms_recovery3_migration_implemented_acceptance_pending
+  migration_lead: ahnsh03
+  joint_development: sonshiny
+  ahn_responsibility: hd_map_filters_and_camera_connection
+  son_responsibility: tracking_speed_motion_and_fusion
+  camera_observation_receiver: available_library_and_probe
   ros_publishers_and_adapters: Main_opt_in_frame_boundary
   operational_default_promotion: pending
-  skeleton_publishes_topics: false  # the shadow node publishes only /asmc_lidar/shadow/*, none of planned_topics
+  skeleton_publishes_topics: false  # the shadow node publishes only /migration/lidar/*, none of planned_topics
   camera_object_producer: available_canonical_camera_launch
 source_stamp: bridge_receive_not_laser_firing_time
 frames:
@@ -17,6 +27,7 @@ frames:
 messages:
   asmc_msgs/LidarObject: b94cf82e0f325e9ce0364bb143df9f06
   asmc_msgs/LidarObjectArray: 5f774d07dffd4c7dfa93a8d4b62c60b4
+  asmc_msgs/LidarObservation: d11a2a270112231e4f79aaebff621d36
   asmc_msgs/CameraObjectBox: 34412c90553e06734f1acade77c8e1e3
   asmc_msgs/CameraObjectBoxArray: 310c671afb3693e7909db6453d115b79
 compatibility_messages:
@@ -68,7 +79,7 @@ planned_topics:
     implementation: available_canonical
     contract_reference: config/contracts/camera_object_observation_v1.yaml
     consumer_config: src/asmc_lidar/config/camera_objects.yaml
-    lidar_receiver: shadow_node_camera_front_only_not_operational
+    lidar_receiver: migration_node_camera_front_only_not_operational
     fusion_consumer_scope: current_Main_front_bbox_only
 rules:
   - Preserve observation stamp, point lineage, and local track state across GPS changes.
@@ -94,3 +105,15 @@ cutover_gates:
   - structure_suppression_object_preservation
   - camera_and_three_planner_consumers_acceptance
   - live_rate_latency_drop_and_combined_load_acceptance
+
+migration_observations:
+  namespace_default: /migration/lidar
+  local: {topic: observations_local, type: asmc_msgs/LidarObservation, frame: base_link}
+  map: {topic: observations_map, type: asmc_msgs/LidarObservation, frame: map}
+  identity: [producer_session_id, generation, scan_sequence]
+  metadata: [config_id, calibration_id]
+  header_authority: objects.header_stamp_and_frame_id
+  reset_service: /migration/lidar/lidar_pipeline/reset
+  reset_type: std_srvs/Trigger
+  reset_effect: retire_inflight_results_clear_pending_tracking_pose_and_trace_history
+  operational_cutover: pending

@@ -1,11 +1,11 @@
 // ROS message -> shadow pipeline input converters (see ros_inputs.hpp).
-#include <asmc_lidar/shadow/ros_inputs.hpp>
+#include <asmc_lidar/ros/ros_inputs.hpp>
 
 #include <pcl_conversions/pcl_conversions.h>
 
 namespace asmc {
 namespace lidar {
-namespace shadow {
+namespace runtime {
 
 std::int64_t StampNs(const ros::Time& stamp) {
   return static_cast<std::int64_t>(stamp.toNSec());
@@ -57,6 +57,6 @@ pipeline::CloudPtr CloudFromMsg(const sensor_msgs::PointCloud2& msg) {
   return out;
 }
 
-}  // namespace shadow
+}  // namespace runtime
 }  // namespace lidar
 }  // namespace asmc

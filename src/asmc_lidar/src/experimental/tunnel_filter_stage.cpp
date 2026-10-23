@@ -7,7 +7,7 @@
 // the core's dynamic_roi_* fields (GPS-only ROI reduction, never read by the core),
 // camera protection masks and ego motion.
 
-#include <asmc_lidar/pipeline/tunnel_filter_stage.hpp>
+#include <asmc_lidar/experimental/tunnel_filter_stage.hpp>
 
 #include <Lidar/TunnelFilter/TunnelFilterCore.hpp>
 

@@ -1,6 +1,6 @@
 // Read-only handoff example. Does not publish BBox, LiDAR objects or control.
-#include <asmc_lidar/camera_receiver.hpp>
-#include <asmc_lidar/camera_calibration.hpp>
+#include <asmc_lidar/ros/camera_receiver.hpp>
+#include <asmc_lidar/geometry/camera_calibration.hpp>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <sstream>
 

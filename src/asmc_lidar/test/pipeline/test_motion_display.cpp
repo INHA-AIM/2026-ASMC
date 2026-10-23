@@ -1,4 +1,4 @@
-#include <asmc_lidar/pipeline/motion_display.hpp>
+#include <asmc_lidar/tracking/motion_display.hpp>
 #include <gtest/gtest.h>
 using namespace asmc::lidar::pipeline::motion_display;
 

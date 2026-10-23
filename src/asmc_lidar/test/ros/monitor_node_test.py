@@ -199,7 +199,7 @@ class MonitorNodeTest(unittest.TestCase):
         self.assertTrue(status['master']['ok'])
         # The master snapshot is refreshed every ~2 s: wait for it to list this node's publisher.
         self.wait_until(lambda: self.status()['master']['points_publishers'] == 1, 10, 'points publisher seen')
-        self.assertIn('/asmc_lidar_shadow', self.status()['master']['shadow_nodes'])
+        self.assertIn('/migration/lidar/lidar_pipeline', self.status()['master']['shadow_nodes'])
         self.assertLess(status['ages_ms']['scan'], 1000)
         # Input/processing rates come from consecutive 1 Hz diagnostics samples.
         rates = self.wait_until(lambda: (lambda r: r if (r['input_hz'] or 0) > 5.0 else None)(self.status()['rates']),
@@ -332,9 +332,9 @@ class MonitorNodeTest(unittest.TestCase):
                 continue
             self.assertNotIn('/asmc_lidar_monitor', nodes, 'monitor publishes %s' % topic)
         subscribed = {topic for topic, nodes in subscribers if '/asmc_lidar_monitor' in nodes}
-        self.assertIn('/asmc_lidar/shadow/debug/scan', subscribed)
-        self.assertIn('/asmc_lidar/shadow/debug/leveled', subscribed)
-        self.assertIn('/asmc_lidar/shadow/diagnostics', subscribed)
+        self.assertIn('/migration/lidar/debug/scan', subscribed)
+        self.assertIn('/migration/lidar/debug/leveled', subscribed)
+        self.assertIn('/migration/lidar/diagnostics', subscribed)
         offered = {service for service, nodes in services if '/asmc_lidar_monitor' in nodes}
         self.assertTrue(offered <= {'/asmc_lidar_monitor/get_loggers', '/asmc_lidar_monitor/set_logger_level'}, offered)
 

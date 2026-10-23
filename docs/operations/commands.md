@@ -162,9 +162,9 @@ rostopic echo -n 1 /morai_sensor_bridge/diagnostics
 
 HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한다고 같은 publisher를 하나 더 띄우지 않습니다.
 
-shadow LiDAR(`asmc_lidar`)의 필터 단계·OBB·추적 결과를 브라우저에서 보려면 별도 터미널에서
-`roslaunch asmc_lidar monitor.launch open_browser:=true`를 실행합니다(`http://127.0.0.1:8091/`, 읽기 전용).
-이 launch는 shadow 노드와 모니터만 켜며 D의 Main과 함께 돌면 LiDAR 처리가 두 번 수행됩니다.
+이관 검증 LiDAR(`asmc_lidar`)의 필터 단계·OBB·추적 결과를 브라우저에서 보려면 별도 터미널에서
+`roslaunch asmc_lidar view.launch open_browser:=true`를 실행합니다(처리는 별도 `lidar.launch debug:=true`)(`http://127.0.0.1:8091/`, 읽기 전용).
+이 launch는 모니터만 켭니다. 별도 `lidar.launch`와 기존 Main을 함께 실행하면 LiDAR 처리가 두 번 수행됩니다.
 판제는 계속 D의 Main을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
 전방 어댑터와 nested source 순서는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
@@ -226,7 +226,7 @@ source devel/setup.bash
 |---|---:|---|
 | `--transport` | `local` | `local`, `lan2lan`; Ctrl 목적지 IP를 결정 |
 | `--gt` | OFF | 일반 입력에 Object·Semantic·Instance LiDAR 추가; local 전용 |
-| `--require-competition-status` | false | 주최 현장판 type 787을 필수 gate로 전환 |
+| `--require-competition-status` | false | 별도9798 경로를 필수화. 현재9099 Competition 설정에는 사용하지 않음 |
 | `-h`, `--help` | — | 도움말 |
 
 추가로 덮어쓸 수 있는 `bridge.launch` 인자:
@@ -242,8 +242,8 @@ source devel/setup.bash
 | `lidar_rotation_rate` | `15.0` | v3/GT 조립 참고값. 실제 송신 주기는 MORAI 센서셋 설정; v2 비교는10.0 |
 | `cmd_ip` | transport에서 결정 | local `127.0.0.1`, LAN2LAN `192.168.0.1` |
 | `cmd_port` | `9093` | MORAI Ego Ctrl Cmd listen port |
-| `competition_port` | `9798` | Competition Vehicle Status 수신 port |
-| `competition_status_required` | `false` | true면 type 787 미수신을 field gate 실패로 처리 |
+| `competition_port` | `9798` | 별도 상태 수신 port; 현재 UI Competition은 ego_port9099 경로 |
+| `competition_status_required` | `false` | true면 별도 competition 경로 미수신/미지원 형식을 실패로 처리 |
 | `enable_vehicle_state` | `true` | GPS/IMU 기반 `/vehicle/state` producer |
 
 `runtime_profile`, `transport_profile`, `stream_profile`은 wrapper가 관리한다.
@@ -400,7 +400,9 @@ ss -lunp
 ./scripts/udp_bridge.sh --transport lan2lan
 ```
 
-주최 현장판에서 type 787을 수락할 때만:
+별도9798에 허용 상태가 송신되는 것을 확인한 환경에서만 아래 검사를 쓴다.
+현재 CompetitionInfoPublisher9099→`/Ego_topic` 설정에는 적용하지 않는다
+([2026-10-23 확인](../records/bridge/2026-10-23-competition-channel-audit.md)).
 
 ```bash
 ./scripts/udp_bridge.sh --transport lan2lan --require-competition-status
@@ -439,3 +441,46 @@ xhost -local:docker
 ```
 
 주행·녹화 중에 `up`, `down`, `rebuild`로 container를 재생성하지 않는다.
+
+
+## LiDAR 이관 검증 실행
+
+기존 Main은 운영 판제 입력을 계속 제공한다. 아래 명령은 드라이버·카메라 추론을 시작하지 않고
+기존 센서/카메라 정본 입력을 구독해 `/migration/lidar/*`에만 발행한다.
+
+```bash
+source /root/ws/devel/setup.bash
+roslaunch asmc_lidar lidar.launch
+# 카메라 없이 비교할 때 위 실행 대신 사용
+roslaunch asmc_lidar lidar.launch fusion:=false
+# 명시적 초기화: 대기·추적·pose 이력을 지우고 처리 generation 증가
+rosservice call /migration/lidar/lidar_pipeline/reset "{}"
+```
+
+일반 실행 인자는 `fusion`(기본 true), `namespace`(기본 `/migration/lidar`), `pipeline_config`다.
+`fusion:=false`는 카메라 보정 조회·구독을 끄며 카메라 패키지가 없는 환경에서도 동작한다.
+fusion은 카메라 추론을 시작하는 옵션이 아니며 현재 연결은 전방 분류에 한정된다.
+기존 입력/출력 토픽·`lidar_level_roll`·`camera_calibration_config`·`experimental_tunnel_filter`·
+`publish_tf`(기본 false)·`tf_child_frame`은 내부 대조·배선 조정용으로 유지한다.
+빈 roll/tunnel override는 YAML 값을 사용하고 fusion은 launch 선택을 우선한다.
+`/perception/lidar/*` 운영 전환은 기본 차단하며 L7에서 별도 확인한다.
+처리 시작 때 RViz도 함께 켜려면 `roslaunch asmc_lidar lidar.launch rviz:=true`를 사용한다.
+기본은 OFF다. 지정한 namespace의 객체/ego Marker에 자동 연결하며 웹 화면은 켜지 않는다.
+이미 열린 RViz를 유지하려면 이 옵션을 켜지 않고 아래 수동 표시 도구를 사용한다.
+
+PR #105의 localhost 웹 화면은 `view.launch`로 별도 실행하며 처리 노드를 중복 시작하지 않는다.
+단계별 점군을 보려면 기존 처리 실행을 `roslaunch asmc_lidar lidar.launch debug:=true`로 준비한 뒤
+별도 터미널에서 `roslaunch asmc_lidar view.launch`를 실행하고 `http://127.0.0.1:8091/`을 연다.
+새 관측·배열·진단과 복구는 [asmc_lidar README](../../src/asmc_lidar/README.md)를 따른다.
+
+RViz에서 **처리된 OBB·ID·분류**를 보려면 별도 터미널에서 아래 변환기를 실행한다.
+기존 RViz의 Fixed Frame=`base_link`, MarkerArray=`/migration/lidar/markers`로 설정하거나
+`File → Open Config`에서 `/root/ws/src/asmc_lidar/rviz/lidar.rviz`를 연다.
+
+```bash
+rosrun asmc_lidar lidar_markers.py
+```
+
+이 도구는 `/migration/lidar/observations_local`만 읽고 Marker만 발행한다. 카메라 추론·검출·추적을
+재실행하지 않는다. `/velodyne_points`는 원본 점군이며 처리 결과와 구분한다. 중간 지면 제거/군집 점군은
+현재 공개되지 않는다. 이미 RViz가 열려 있으면 새 GUI를 중복 실행하지 않는다.

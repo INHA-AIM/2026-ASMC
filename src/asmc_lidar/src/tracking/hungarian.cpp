@@ -3,7 +3,7 @@
 // structure (mutually recursive step2a..step5), column-major indexing
 // row + nOfRows*col and every comparison are kept; malloc/calloc buffers are
 // replaced by zero-initialised std::vector / bool arrays.
-#include <asmc_lidar/pipeline/hungarian.hpp>
+#include <asmc_lidar/tracking/hungarian.hpp>
 
 #include <cfloat>
 #include <memory>

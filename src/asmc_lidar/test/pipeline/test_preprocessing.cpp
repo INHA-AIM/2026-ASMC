@@ -1,5 +1,5 @@
 // ROI/ego removal, voxel grid and leveling (Main RoiVoxel.cpp / ImuFusion.cpp at 8f93c22e).
-#include <asmc_lidar/pipeline/preprocessing.hpp>
+#include <asmc_lidar/preprocessing/preprocessing.hpp>
 
 #include <gtest/gtest.h>
 

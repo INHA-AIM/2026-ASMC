@@ -1,5 +1,5 @@
 // Research probe of the actual asmc_lidar core; no ROS or external dependency.
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 #include <iomanip>
 #include <iostream>
 using namespace asmc::lidar;

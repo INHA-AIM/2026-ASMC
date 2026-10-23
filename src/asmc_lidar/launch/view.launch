@@ -1,0 +1,29 @@
+<launch>
+  <!-- Read-only HTTP viewer. Never starts a driver, pipeline or camera.
+       Previous name: monitor.launch (combined execution was removed).
+       Start lidar.launch debug:=true separately to expose sampled stages. -->
+  <arg name="namespace" default="/migration/lidar"/>
+  <arg name="open_browser" default="false"/>
+  <arg name="dashboard_port" default="8091"/>
+  <arg name="bind_address" default="127.0.0.1"/>
+  <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml"/>
+  <arg name="max_clients" default="8"/>
+  <arg name="http_header_timeout_s" default="5.0"/>
+  <arg name="http_request_timeout_s" default="20.0"/>
+  <node pkg="asmc_lidar" type="asmc_lidar_monitor_node.py" name="lidar_monitor"
+        ns="$(arg namespace)" output="screen" required="false">
+    <param name="pipeline_config" value="$(arg pipeline_config)"/>
+    <param name="port" value="$(arg dashboard_port)"/>
+    <param name="bind_address" value="$(arg bind_address)"/>
+    <param name="open_browser" value="$(arg open_browser)"/>
+    <param name="max_clients" value="$(arg max_clients)"/>
+    <param name="header_timeout_s" value="$(arg http_header_timeout_s)"/>
+    <param name="request_timeout_s" value="$(arg http_request_timeout_s)"/>
+    <param name="web_dir" value="$(find asmc_lidar)/web"/>
+    <param name="debug_topic_prefix" value="debug"/>
+    <param name="diagnostics_topic" value="diagnostics"/>
+    <param name="objects_local_topic" value="objects_local"/>
+    <param name="objects_map_topic" value="objects_map"/>
+    <param name="points_topic" value="/velodyne_points"/>
+  </node>
+</launch>

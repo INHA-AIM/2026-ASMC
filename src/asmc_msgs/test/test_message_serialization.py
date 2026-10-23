@@ -29,6 +29,7 @@ EXPECTED_MD5 = {
     "TrackedObjectArray": "e127b2aabd7494ad01a5a56b005bf07e",
     "LidarObject": "b94cf82e0f325e9ce0364bb143df9f06",
     "LidarObjectArray": "5f774d07dffd4c7dfa93a8d4b62c60b4",
+    "LidarObservation": "d11a2a270112231e4f79aaebff621d36",
     "CameraObjectBox": "34412c90553e06734f1acade77c8e1e3",
     "CameraObjectBoxArray": "310c671afb3693e7909db6453d115b79",
 }
@@ -50,6 +51,19 @@ class GeneratedSerializationTest(unittest.TestCase):
         self.assertEqual(restored.source_sec, 99)
         self.assertEqual(restored.published_stamp.secs, 100)
         self.assertEqual(restored.sensor_wire_sequence, 17)
+
+    def test_lidar_observation_preserves_scan_identity_and_array(self):
+        from asmc_msgs.msg import LidarObservation, LidarObjectArray
+        import genpy
+        m = LidarObservation(producer_session_id='producer-uuid',generation=2,scan_sequence=93,
+                             config_id='config-sha',calibration_id='calibration-sha')
+        m.objects.header.stamp=genpy.Time(100,17)
+        m.objects.header.frame_id='base_link'
+        m.objects.status=LidarObjectArray.OBSERVED_EMPTY
+        raw=io.BytesIO(); m.serialize(raw)
+        restored=LidarObservation(); restored.deserialize(raw.getvalue())
+        self.assertEqual(m,restored)
+        self.assertEqual(restored.objects.header.stamp.nsecs,17)
 
     def test_default_instances_round_trip_and_match_frozen_md5(self):
         for name, expected_md5 in EXPECTED_MD5.items():

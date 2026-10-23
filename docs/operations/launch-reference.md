@@ -193,6 +193,37 @@
 | `ego_frame_id` | `base_link` | — |
 | `follow_ego` | `true` | — |
 
+## LiDAR migration pipeline
+
+[소스](../../src/asmc_lidar/launch/lidar.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `namespace` | `/migration/lidar` | Output namespace; inputs keep their canonical paths |
+| `pipeline_config` | `$(find asmc_lidar)/config/lidar_pipeline.yaml` | Processing configuration YAML |
+| `lidar_level_roll` | `(빈 문자열)` | — |
+| `fusion` | `true` | Use camera observations for classification; false runs LiDAR alone |
+| `rviz` | `false` | Open RViz and display this pipeline's published objects and ego box |
+| `camera_calibration_config` | `(빈 문자열)` | — |
+| `experimental_tunnel_filter` | `(빈 문자열)` | — |
+| `publish_tf` | `false` | — |
+| `tf_child_frame` | `lidar_pipeline/lidar_leveled` | — |
+| `debug` | `false` | Publish sampled stages for view.launch; no algorithm changes |
+| `debug_rate_hz` | `5.0` | — |
+| `debug_max_points` | `20000` | — |
+| `points_topic` | `/velodyne_points` | — |
+| `imu_topic` | `/imu` | — |
+| `can_topic` | `/Ego_topic` | — |
+| `gps_topic` | `/gps` | — |
+| `camera_observations_topic` | `/perception/camera/objects/observations` | — |
+| `camera_status_topic` | `/perception/camera/objects/status` | — |
+| `objects_local_topic` | `objects_local` | — |
+| `objects_map_topic` | `objects_map` | — |
+| `observations_local_topic` | `observations_local` | — |
+| `observations_map_topic` | `observations_map` | — |
+| `diagnostics_topic` | `diagnostics` | — |
+| `trace_topic` | `trace` | — |
+
 ## Main LiDAR/fusion
 
 [소스](../../src/lidar+sensorfusion/src/Main/main.launch)
@@ -334,39 +365,20 @@
 | `dashboard_lidar_objects_topic` | `/perception/objects_lidar_test` | — |
 | `dashboard_lidar_motion_debug_topic` | `/lidar/motion_debug` | — |
 
-## LiDAR shadow web monitor
+## LiDAR read-only web viewer
 
-[소스](../../src/asmc_lidar/launch/monitor.launch)
+[소스](../../src/asmc_lidar/launch/view.launch)
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `start_pipeline` | `true` | false: observe an already running shadow node (debug_enabled:=true) |
-| `open_browser` | `false` | open the page once after the HTTP server is ready |
-| `dashboard_port` | `8091` | HTTP port (the planner dashboard uses 8088) |
-| `bind_address` | `127.0.0.1` | HTTP bind address; 0.0.0.0 exposes the page to other hosts |
-| `max_clients` | `8` | HTTP connections handled at once (checked before parsing); more get 503 or are closed |
-| `http_header_timeout_s` | `5.0` | a connection must send its complete request headers within this |
-| `http_request_timeout_s` | `20.0` | a connection is closed this long after accept (response included) |
-| `debug_rate_hz` | `5.0` | stage snapshots per second published by the shadow node |
-| `debug_max_points` | `20000` | points per stage cloud sent; larger clouds are stride-sampled |
-| `debug_topic_prefix` | `/asmc_lidar/shadow/debug` | — |
-| `pipeline_config` | `$(find asmc_lidar)/config/shadow_pipeline.yaml` | — |
-| `lidar_level_roll` | `(빈 문자열)` | — |
-| `enable_camera_fusion` | `(빈 문자열)` | — |
-| `camera_calibration_config` | `(빈 문자열)` | — |
-| `experimental_tunnel_filter` | `(빈 문자열)` | — |
-| `publish_tf` | `false` | — |
-| `tf_child_frame` | `asmc_lidar_shadow/lidar_leveled` | — |
-| `points_topic` | `/velodyne_points` | — |
-| `imu_topic` | `/imu` | — |
-| `can_topic` | `/Ego_topic` | — |
-| `gps_topic` | `/gps` | — |
-| `camera_observations_topic` | `/perception/camera/objects/observations` | — |
-| `camera_status_topic` | `/perception/camera/objects/status` | — |
-| `objects_local_topic` | `/asmc_lidar/shadow/objects_local` | — |
-| `objects_map_topic` | `/asmc_lidar/shadow/objects_map` | — |
-| `diagnostics_topic` | `/asmc_lidar/shadow/diagnostics` | — |
-| `trace_topic` | `/asmc_lidar/shadow/trace` | — |
+| `namespace` | `/migration/lidar` | — |
+| `open_browser` | `false` | — |
+| `dashboard_port` | `8091` | — |
+| `bind_address` | `127.0.0.1` | — |
+| `pipeline_config` | `$(find asmc_lidar)/config/lidar_pipeline.yaml` | — |
+| `max_clients` | `8` | — |
+| `http_header_timeout_s` | `5.0` | — |
+| `http_request_timeout_s` | `20.0` | — |
 
 ## Read-only family monitor
 

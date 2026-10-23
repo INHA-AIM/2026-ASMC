@@ -3,7 +3,7 @@
 // (FusionCamera.cpp:69-85, 192-243): the buffer validates status, time,
 // identity and boxes; this adapter only maps its front view to CameraFrames.
 
-#include <asmc_lidar/pipeline/front_camera_fusion.hpp>
+#include <asmc_lidar/fusion/front_camera_fusion.hpp>
 
 #include <stdexcept>
 #include <string>
@@ -24,7 +24,7 @@ namespace {
 // whole (bad_box, calibration_mismatch, identity_conflict, invalid): classes are
 // reset at once. Main never saw such frames (its adapter dropped single bad boxes
 // or withheld the frame and its 0.35 s silence gate fired later); documented in
-// docs/shadow-pipeline.md.
+// docs/pipeline.md.
 bool ActiveReason(const std::string& reason) {
   return reason == "ok" || reason == "empty" || reason == "no_time_match" || reason == "missing";
 }

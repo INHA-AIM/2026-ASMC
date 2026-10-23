@@ -1,0 +1,152 @@
+# asmc_lidar shadow pipeline configuration (read by runtime::LoadRuntimeConfig).
+# Port of Main's common-geometry LiDAR path (enable_common_geometry=true).
+# Key names are Main's own names so each value can be grepped in its source:
+# setting.yaml names under vehicle/lidar, Main private ROS parameter names
+# elsewhere. Every key is required. Main code constants without a parameter
+# (voxel leaf 0.1 m, IMU/CAN plausibility limits, fusion queue bounds, OBB and
+# Kalman constants) stay code constants and are not listed here.
+schema_version: 1
+
+provenance:
+  baseline_commit: 8f93c22ec247ec8a84ef5c1512898a7d2c64e23f  # Main with the verified tracker fix
+  sources:
+    - path: src/lidar+sensorfusion/src/Main/setting.yaml
+      git_blob: a0b22195c82125839e7b03fb4204a863ecfa8d78
+      copied: "vehicle (Vehicle.Length/Width/WheelBase/FrontOverhang/RearOverhang, Vehicle.LiDAR x..yaw, Vehicle.GPS x..z); lidar.Range/ROI (LiDAR.Filter.Range/ROI); lidar.Clustering; lidar.Tracking"
+    - path: src/lidar+sensorfusion/src/Main/main.launch
+      git_blob: b7b24859da5af88c9908a2978bcb2fc4e696c7bb
+      copied: "ground.*, pose.*, gps_sanity.*, map.map_altitude_origin_m, fusion.* (arg/param values); lidar.level_roll is overridden, see deviations"
+    - path: config/contracts/hd_map_topic_contract_v1.yaml
+      git_blob: 42fc9656b6b8b792a9e438bb459f4544de65a9d6
+      copied: "map.origin = local_crop_policy.gps_imu_policy.local_origin_in_global"
+    - path: src/asmc_lidar/config/autonav_v3.yaml
+      git_blob: f64cfe4e52548b4a8274e38f6179ff2d3c5dfa0b
+      copied: "referenced by mount_config; checked against vehicle.LiDAR within 1e-6 (Main frame_boundary::Configure)"
+  deviations:
+    - "lidar.level_roll is true (roll+pitch leveling, shadow default). main.launch default lidar_level_roll=false is Main's pitch-only common profile."
+    - "calibration_id = shadow:<sha256 of this file>:<sha256 of mount_config>. Main uses sha256(lidar mount yaml):sha256(camera yaml):sha256(map contract); the two identity strings are intentionally different."
+    - "pose.lidar_pose_history_duration_s is Main's code default (not set in main.launch)."
+    - "fusion.exclude_ymin_px/exclude_ymax_px and fusion.camera_objects_conf_thres are Main/adapter code defaults (main.launch sets only conf_thres=0.0)."
+    - "ground_fallback_frames is not listed: previous-plane reuse is legacy-only in Main."
+
+# Relative to the package share directory (asmc_lidar).
+mount_config: config/autonav_v3.yaml
+
+# Main setting.yaml Vehicle (rear-axle base_link, m / deg).
+vehicle:
+  Length: 4.635
+  Width: 1.892
+  WheelBase: 3
+  FrontOverhang: 0.845
+  RearOverhang: 0.700
+  LiDAR:
+    x: 0.80
+    y: 0.00
+    z: 1.45
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+  GPS:
+    x: 0.35
+    y: 0.00
+    z: 1.25
+
+lidar:
+  # Main ~lidar_level_roll. Shadow default true; main.launch default false.
+  level_roll: true
+  # Main setting.yaml LiDAR.Filter.Range / LiDAR.Filter.ROI (sensor frame).
+  Range:
+    Min: 0.5
+    Max: 100.0
+  ROI:
+    MinX: -30.0
+    MaxX: 50.0
+    MinY: -20.0
+    MaxY: 20.0
+    MinZ: -2.0
+    MaxZ: 3.0
+  # Main setting.yaml LiDAR.Clustering (Threshold: 300 is never read by Main).
+  Clustering:
+    Enabled: true
+    Eps: 0.5
+    MinPoints: 5
+    Adaptive:
+      Enabled: true
+      NearRange: 8.0
+      FarRange: 50.0
+      NearEps: 0.55
+      FarEps: 0.85
+  # Main setting.yaml LiDAR.Tracking.
+  Tracking:
+    UseMapAssociation: true
+    DistanceWeight: 1.0
+    ShapeWeight: 1.0
+    CostThreshold: 3.0
+    ContinuityBonus: 0.20
+    DuplicateCenterDistance: 0.60
+    DuplicateIouThreshold: 0.35
+    MergedTrackRetireDistance: 0.45
+
+# Main ~ground_* (main.launch values = code defaults).
+ground:
+  ground_distance_threshold_near_m: 0.30
+  ground_distance_threshold_far_m: 0.40
+  ground_threshold_far_range_m: 50.0
+  ground_max_tilt_deg: 25.0
+  ground_seed_min_z_m: -2.0
+  ground_seed_max_z_m: -0.65
+  ground_ransac_maximum_iterations: 80
+  ground_minimum_seed_points: 30
+
+# Main SensorPoseHistory parameters (main.launch).
+pose:
+  imu_yaw_is_true_enu: true
+  lidar_pose_gps_max_age_s: 0.30   # must be in (0, 0.30]
+  lidar_pose_imu_max_age_s: 0.12
+  lidar_pose_can_max_age_s: 0.12
+  lidar_pose_maximum_speed_mps: 35.0
+  lidar_pose_history_duration_s: 5.0
+  lidar_pose_wait_timeout_s: 0.05  # local IMU/CAN wait per scan (clamped >= 0)
+
+# Main GpsSanityFilter parameters (main.launch).
+gps_sanity:
+  gps_sanity_min_x: -454.5159
+  gps_sanity_min_y: -825.0458
+  gps_sanity_max_x: 162.4841
+  gps_sanity_max_y: 621.3542
+  gps_sanity_base_jump_allowance_m: 3.0
+  gps_sanity_maximum_speed_mps: 80.0
+  gps_sanity_reanchor_after_s: 2.0
+
+map:
+  # HD-map local origin (UTM 52N E, N, z); GPSMessage offsets must equal x/y.
+  origin: [302595.0, 4124145.0, 0.0]
+  # Main ~map_altitude_origin_m; must equal origin z.
+  map_altitude_origin_m: 0.0
+
+# Main front camera fusion parameters (main.launch).
+fusion:
+  enable_sensor_fusion: true
+  camera_class_profile: mission16_v1   # legacy | mission16_v1
+  fusion_yolo_policy: unique            # unique | bounded_reuse
+  fusion_max_time_offset_sec: 0.05
+  fusion_sync_wait_timeout_sec: 0.20
+  fusion_initial_confirmations: 5
+  fusion_change_confirmations: 3
+  fusion_class_miss_grace: 3
+  fusion_iou_threshold: 0.25
+  fusion_exclude_hood_y_band: false
+  exclude_ymin_px: 637
+  exclude_ymax_px: 720
+  camera_objects_conf_thres: 0.0
+
+runtime:
+  # Main RAW_LIDAR_DATA capacity: 2,000,000 B / sizeof(pcl::PointXYZI) (32 B).
+  max_points: 62500
+
+experimental:
+  # Preserved TunnelFilterCore stage (PR #102); default OFF.
+  tunnel_filter:
+    enabled: false
+    suppress_ceiling: true
+    suppress_wall: true

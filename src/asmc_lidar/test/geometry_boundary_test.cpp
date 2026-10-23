@@ -1,5 +1,5 @@
-#include <asmc_lidar/projection.hpp>
-#include <asmc_lidar/bounded_pose.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
+#include <asmc_lidar/geometry/bounded_pose.hpp>
 #include <iostream>
 #include <stdexcept>
 

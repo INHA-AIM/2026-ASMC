@@ -1,8 +1,8 @@
 // Monitoring-only stage publisher (see shadow/debug_publisher.hpp).
-#include <asmc_lidar/shadow/debug_publisher.hpp>
+#include <asmc_lidar/ros/debug_publisher.hpp>
 
 #include <asmc_lidar/pipeline/pipeline.hpp>
-#include <asmc_lidar/pipeline/scan_trace.hpp>
+#include <asmc_lidar/ros/scan_trace.hpp>
 
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointField.h>
@@ -18,7 +18,7 @@
 
 namespace asmc {
 namespace lidar {
-namespace shadow {
+namespace runtime {
 namespace {
 
 using Clock = std::chrono::steady_clock;
@@ -63,28 +63,28 @@ void Sample(const pipeline::Cloud& cloud, std::size_t max_points, DebugPublisher
 
 DebugPublisher::ObjectSummary Summary(const pipeline::TrackedObject& o) {
   DebugPublisher::ObjectSummary s;
-  s.idx = o.u16_Idx;
-  s.id = o.s32_Id;
-  s.age = o.s32_Age;
-  s.miss = o.s32_MissCount;
-  s.points = static_cast<int>(o.pcl_ClusterPoints.size());
-  s.cls = o.str_ObjectClass;
-  s.raw_cls = o.str_YoloClass;
-  s.dist = o.f32_Dist;
-  s.cx = o.f32_OBB_CenterX;
-  s.cy = o.f32_OBB_CenterY;
-  s.cz = o.f32_OBB_CenterZ;
-  s.width = o.f32_OBB_Width;
-  s.height = o.f32_OBB_Height;
-  s.zmin = o.f32_OBB_ZMin;
-  s.zmax = o.f32_OBB_ZMax;
-  s.yaw = o.f32_OBB_YawRad;
-  s.corners = o.OBB_Corners_Body;
-  s.kf_initialized = o.b_KfInitialized;
-  s.abs_vx = o.f32_AbsVx;
-  s.abs_vy = o.f32_AbsVy;
-  s.velocity = o.f32_Velocity;
-  s.motion = o.display_motion;
+  s.idx = o.detection.u16_Idx;
+  s.id = o.tracking.s32_Id;
+  s.age = o.tracking.s32_Age;
+  s.miss = o.tracking.s32_MissCount;
+  s.points = static_cast<int>(o.detection.pcl_ClusterPoints.size());
+  s.cls = o.camera.str_ObjectClass;
+  s.raw_cls = o.camera.str_YoloClass;
+  s.dist = o.detection.f32_Dist;
+  s.cx = o.detection.f32_OBB_CenterX;
+  s.cy = o.detection.f32_OBB_CenterY;
+  s.cz = o.detection.f32_OBB_CenterZ;
+  s.width = o.detection.obb_length_m;
+  s.height = o.detection.obb_width_m;
+  s.zmin = o.detection.f32_OBB_ZMin;
+  s.zmax = o.detection.f32_OBB_ZMax;
+  s.yaw = o.detection.f32_OBB_YawRad;
+  s.corners = o.detection.obb_corners_level;
+  s.kf_initialized = o.tracking.b_KfInitialized;
+  s.abs_vx = o.tracking.f32_AbsVx;
+  s.abs_vy = o.tracking.f32_AbsVy;
+  s.velocity = o.tracking.f32_Velocity;
+  s.motion = o.tracking.display_motion;
   return s;
 }
 
@@ -392,7 +392,7 @@ void DebugPublisher::Publish(const Snapshot& s) {
 std::string DebugPublisher::ScanJson(const Snapshot& s) const {
   std::ostringstream out;
   out << std::setprecision(17);
-  out << "{\"schema\":\"asmc_lidar_debug_scan_v1\",\"producer\":\"asmc_lidar_shadow_node\",\"seq\":" << s.seq
+  out << "{\"schema\":\"asmc_lidar_debug_scan_v1\",\"producer\":\"lidar_pipeline_node\",\"seq\":" << s.seq
       << ",\"stamp_ns\":" << s.stamp_ns << ",\"arrival_ns\":" << s.arrival_ns << ",\"pose_ready\":";
   trace::Bool(out, s.pose_ready);
   out << ",\"processed\":";
@@ -522,6 +522,6 @@ DebugCounters DebugPublisher::counters() const {
   return counters_;
 }
 
-}  // namespace shadow
+}  // namespace runtime
 }  // namespace lidar
 }  // namespace asmc

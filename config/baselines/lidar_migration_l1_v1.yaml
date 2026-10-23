@@ -1,0 +1,430 @@
+schema_version: 1
+baseline_id: asmc_lidar_migration_l1_v1
+recorded_on: '2026-10-22'
+timezone: Asia/Seoul
+status: L1_design_complete_runtime_migration_not_started
+scope: Design and read-only source/data inspection; existing CPU core tests. No ROS nodes, bag replay or algorithm changes.
+migration_lead: ahnsh03
+parallel_development: sonshiny
+references:
+  design: src/asmc_lidar/docs/migration-design.md
+  work_units: src/asmc_lidar/docs/migration-tasks.md
+  handoff: docs/handoffs/lidar-migration.md
+regulation:
+  authority_url: https://morai.atlassian.net/wiki/external/ZDBiNmI0MGFiNTY2NDRkYWIyZTMzNWFkYzkwY2Q4NTU
+  web_check:
+    checked_on: '2026-10-22'
+    http_status: 200
+    dynamic_body_extracted: false
+    latest_body_parity_claimed: false
+  snapshot:
+    workspace_relative_path: docs/competition/references/regulations/source/v1.2-20260930.md
+    version: '1.2'
+    version_date: '2026-09-30'
+    copied_on: '2026-10-05'
+    bytes: 17362
+    sha256: 7d20cc1655d0856294e875aca81e5626807c401b425a0ad043cda45c53cf4726
+    portable_repo_summary: docs/competition/README.md
+  sections:
+  - 2-4 judgement-only channels
+  - 2-8 allowed UDP networks and Competition fields
+  initial_pdf_role: historical_reference_only
+  competition_status:
+    allowed: true
+    provided:
+    - attitude
+    - longitudinal_velocity
+    - angular_velocity
+    - control_inputs
+    not_provided:
+    - position_xyz
+    - velocity_yz
+    - acceleration_xyz
+    - tire_lateral_forces
+    - side_slip_angles
+    - tire_cornering_stiffness
+    field_packet_acceptance: pending
+  forbidden_runtime_inputs:
+  - Ego Detail Status
+  - Ego Vehicle Status
+  - Get TrafficLight Status
+  - Object/Semantic/Instance GT
+source:
+  runtime_revision: 19bc76978a499bddacf13f5aaf0bb6d713785657
+  l0_revision: 4a16bfda07d77d5b3e6aedfb56ecd8603e5b709d
+  remote_main_checked_on: '2026-10-22'
+  remote_main_revision: 19bc76978a499bddacf13f5aaf0bb6d713785657
+  l0_runtime_diff: []
+  subtrees:
+    src/lidar+sensorfusion: 9fd4a6b0e1614342d45acd4c914541dcf87b20fe
+    src/asmc_lidar: c22184e208efc883e6ff1454952fc54a85a6101b
+    src/asmc_msgs: 8d1848181e2eac6ba7365539bc40e7d9fed7ba6f
+    src/planning_inputs: 35a51b7d5f01dfd0930e42657682eccd6ee31e45
+    src/asmc_planner: 50b7353b1b6aacd2e4ae604eb4c345ed5c755b04
+    src/asmc_hd_map: 4017668531af6b8999a925c48416514986d2d8cc
+    src/asmc_bridge: bf42479aaf5e1bec225d2784ac393a0572f2628a
+runtime_profiles:
+  operational_reference:
+    host: nested Main
+    command: roslaunch Main main.launch rviz:=false
+    enable_common_geometry: false
+    lidar_level_roll: false
+    enable_sensor_fusion: true
+    camera_class_profile: mission16_v1
+    fusion_yolo_policy: unique
+    fusion_max_time_offset_sec: 0.05
+    fusion_sync_wait_timeout_sec: 0.2
+    input_mode: ROS
+    camera_adapter_cutoff: 0.0
+    ego_remap: /Competition_topic -> /Ego_topic
+    source_policy: validated_lidar
+    status: development parity only; ego remap is not allowed for competition runtime
+  auxiliary_reference:
+    command: roslaunch Main main.launch enable_common_geometry:=true lidar_level_roll:=false rviz:=false
+    status: opt-in geometry API comparison, not operational acceptance
+  camera_reference:
+    owner: asmc_camera
+    default_detector: mission16_v11_e8
+    confidence: 0.4
+    nms_iou: 0.5
+    fresh_inference_in_L1: false
+    frozen_yolo_role: historical fixture only
+target_policy:
+  implementation_status: design_only
+  local_frame: rear_axle_base_link
+  local_gate: valid_scan_and_IMU; not GPS or competition-speed availability
+  map_frame: map_UTM_grid
+  map_origin_easting_northing_m:
+  - 302595.0
+  - 4124145.0
+  map_altitude_origin_m: 0.0
+  pose_provider: BoundedPoseHistory
+  gps_max_age_ms: 300
+  gps_max_age_inclusive: true
+  recovery_samples: 3
+  invalid_gps_barrier: immediate
+  gps_arrival_cutoff: scan_callback_receipt_steady_ns
+  required_for_map:
+  - valid_GPS
+  - valid_scan_IMU
+  - validated_longitudinal_speed
+  strict_api: 100ms bracketing only, tests/reference; no automatic fallback
+  imu_max_source_age_ms: 120
+  speed_max_source_age_ms: 120
+  input_wait_max_ms: 50
+  leveling: same roll+pitch for all missions, exact per-scan matrix stored
+  speed_source: verified Competition Vehicle Status on /Competition_topic, signed x m/s
+  ego_fallback: false
+  missing_speed: local geometry retained; dependent velocity/motion and bounded map invalid
+  nominal_base_to_ground_m: 0.36
+  nominal_height_is_not_mount_or_map_altitude: true
+  local_map_schedule: one result pair per processed new LiDAR scan, demand-driven serialization; no repeated output timer
+  supply_target_hz_min: 10
+  diagnostics_heartbeat_hz: 1
+  operational_topics_unchanged_until: L7 consumer acceptance
+  formal_geometry_topics:
+  - /perception/lidar/objects_local
+  - /perception/lidar/objects_map
+  trial_geometry_topics:
+  - /migration/lidar/objects_local
+  - /migration/lidar/objects_map
+  future_additive_requirements:
+  - atomic_geometry_and_motion_state
+  - producer_session_id
+  - generation
+  - scan_sequence
+  - config_id
+  - calibration_id
+  - UNKNOWN/LOW_THREAT/DYNAMIC_PENDING/DYNAMIC typed states
+  future_message_implementation_unit: L6; not registered or implemented in L1
+assets:
+- path: src/lidar+sensorfusion/src/Main/CMakeLists.txt
+  bytes: 8502
+  sha256: b4160262f12cefb72aab20e435ecb244cf68a4e938dfc5eb97f9d67a6b7fc953
+- path: src/lidar+sensorfusion/src/Main/main.launch
+  bytes: 16476
+  sha256: b82f68efbb18d0727d85d88ad0e81dc10a18b4d365e73d3b2d0069f1e1b54cb2
+- path: src/lidar+sensorfusion/src/Main/setting.yaml
+  bytes: 5935
+  sha256: a6d84af1ab14015cdf555ae715cdd8288cde9f1c1ee7d8e0a96e3931751ad7a2
+- path: src/asmc_lidar/config/autonav_v3.yaml
+  bytes: 368
+  sha256: e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88
+- path: src/asmc_lidar/config/camera_objects.yaml
+  bytes: 978
+  sha256: 417d497327f56cd502aa34c7068871926f9eedda10c1f14bed521b5e51eb0f99
+- path: src/asmc_camera/config/cameras_v3.yaml
+  bytes: 2032
+  sha256: 54637d8bbbe5af9b0255824644e4118c86de4b3c683661ddc827913ed1817538
+- path: src/asmc_camera/config/camera/object_classes_mission16_v1.yaml
+  bytes: 385
+  sha256: eb8623cd1957ac7d6fcd34da38e88e486a90be398bd3a9a98fd7181f67464f48
+- path: src/asmc_camera/config/camera/yolo26l_mission16_e8_three_view.yaml
+  bytes: 728
+  sha256: bb27bf57d63fde08c043fa8c366c93cf2e02ebd7fb5202d3b179193f446be57f
+- path: config/morai/sensors/ASMC_sensor_set_v3.json
+  bytes: 21885
+  sha256: 4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f
+- path: config/morai/network/generated/ASMC_network_set_molitcomp03_local.json
+  bytes: 54409
+  sha256: bafbd9c02c0e7665f0c18dd95c4586e8003614eba3b922f679acb02a810df198
+- path: config/bridge/bridge_profiles_v1.json
+  bytes: 17938
+  sha256: ff4b6ec25a63618b8cbcfbb362ef9ae875deef54ff81b65005f272bae84523d4
+- path: config/contracts/hd_map_topic_contract_v1.yaml
+  bytes: 12331
+  sha256: 0c5a144a575372c8c0b57ebf25fd40c8b7274fad08523734d66aa90752470a5f
+- path: config/contracts/camera_object_observation_v1.yaml
+  bytes: 1987
+  sha256: bd512b49da693a91d6e699af34f0ace929693e736aced1e37d81e32061543fe3
+- path: config/contracts/camera_inference_control_v2.yaml
+  bytes: 2787
+  sha256: 4ac4bfa7bfe0c400060ce699db6a770ea0dec108915f71005750f05c0606bed5
+- path: src/planning_inputs/config/validated_0781402/road_mask.png
+  bytes: 261416
+  sha256: b27521b882486f1f46d450f455f2292044b87dae731136d0c00e5786c0605f2c
+- path: src/planning_inputs/config/validated_0781402/road_mask.yaml
+  bytes: 162
+  sha256: 3bc00b1769f6e376f9e7b34cd34cec29f5be699f9ff40746370bc5aec46f2f2e
+- path: src/planning_inputs/config/validated_0781402/known_static_objects.yaml
+  bytes: 746111
+  sha256: 2d8fe6e5b47215e85fbe05f03b552e06096499f0bba43e1a54166245ab4242a1
+- path: src/lidar+sensorfusion/src/Main/known_static_objects.yaml
+  bytes: 746111
+  sha256: 2d8fe6e5b47215e85fbe05f03b552e06096499f0bba43e1a54166245ab4242a1
+- path: src/planning_inputs/config/static_structure_exclusions.yaml
+  bytes: 1941
+  sha256: 59455834a3327f1a03675d0ef64d078d9d6f7923a34c3cfe65352239ea887e35
+- path: src/planning_inputs/config/object_filter_params.yaml
+  bytes: 968
+  sha256: e4e663079a292489fb9da1eee8867e311a405278138d0fba3dd215de3597470e
+- path: src/planning_inputs/config/motion_params.yaml
+  bytes: 610
+  sha256: 06af008b84fc00e40dfe09c8fa7deb7965cb5e0519e068f1a6ac401b077083b2
+- path: src/planning_inputs/config/vehicle_state.yaml
+  bytes: 1853
+  sha256: 3f3ec18172580f14bd802c958cf5e7e39ad5d1fc9e8d9b41ff30157f7c1786a2
+- path: src/planning_inputs/launch/objects.launch
+  bytes: 1824
+  sha256: 4ea010939c009ae36a48c4f510a57039ed64188f3f5e861f9b6150b45bc0d939
+- path: src/asmc_hd_map/config/kcity2025_compact_drivable_grid.npz
+  bytes: 46896
+  sha256: b78b5765833b04048b1d81f66d6c9c5316d995a4867382e23f563f5519769574
+- path: config/baselines/perception_camera_lidar_b1a_v1.yaml
+  bytes: 17528
+  sha256: 0e4c5dd517d6469813c8274956bb76c225c03b62817efa179bd937e49cdeddbb
+- path: config/baselines/perception_lidar_continuous_regression_v1.yaml
+  bytes: 13521
+  sha256: 8165ba807c4cfd3101041f9d356cd099b1e41241f1bd191c1dab7b24ccacb0d2
+- path: config/baselines/perception_lidar_camera_frame_boundaries_v1.yaml
+  bytes: 16385
+  sha256: 05d0520ce2d1d574b18fb49f9c611d8010789c3f77b6ef02abe2a04e3a0bbe4a
+- path: config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixture-manifest.json
+  bytes: 5603
+  sha256: 317c756cc9196be4e3ca4435dbc411c3a90f0adc96846b4d5b6057938c362980
+- path: config/baselines/evidence/lidar_continuous_regression_v1/synthetic-and-fixed-cases.tar.gz
+  bytes: 42640062
+  sha256: 2cff5e3aef226d03bb19d5a0d62fee790479a844b47b1cd46887b5632ec94c8b
+- path: config/baselines/evidence/camera_lidar_b1a_v1/cases/cases.json
+  bytes: 87053
+  sha256: 8af8b5db0dfb0dc886b689f95642a786fbf891c82fe4e17367607b858f37d20f
+- path: config/baselines/evidence/camera_lidar_b1a_v1/raw-fixed-offline.tar.gz
+  bytes: 3175693
+  sha256: 6b4342a7597611b7521ecba97a65f6d8e86d7addf9a44a8842d5f28323ad8800
+- path: config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-boundary-height-audit.json
+  bytes: 64558
+  sha256: d1d42343535e9daa892436183003e26d0616cbc76608cad5a61002437bd7950f
+wire_md5:
+  asmc_msgs/LidarObject: b94cf82e0f325e9ce0364bb143df9f06
+  asmc_msgs/LidarObjectArray: 5f774d07dffd4c7dfa93a8d4b62c60b4
+  asmc_msgs/TrackedObject: 6c96135eb03a3ee93bba474fa835f57d
+  asmc_msgs/TrackedObjectArray: e127b2aabd7494ad01a5a56b005bf07e
+  asmc_msgs/DetectedObject: a965285ae904ae3ade687b9c54c2c515
+  asmc_msgs/DetectedObjectArray: 14fbd9679c2d87ae7498e4269d9678da
+  asmc_msgs/CameraObjectObservation: fbddb8fe0071685b60811037c0302106
+  asmc_msgs/InferenceStatus: 8b2caf96bbf9a9eaea848fcb9551b79f
+  asmc_msgs/VehicleState: 7b5b81807cda33ae90638895dcf749f1
+legacy_wire_md5:
+  Msg/TrackedObject: 6c96135eb03a3ee93bba474fa835f57d
+  Msg/TrackedObjectArray: e127b2aabd7494ad01a5a56b005bf07e
+  Msg/Yolo_bbox: 605f5dd6f8f921f2dc15199c760840f9
+  Msg/Yolo_bbox_arr: 9604a9d8104d38c3bd9830382a3571d0
+inputs:
+- id: primary
+  host_path: $ASMC_STORAGE_DATA/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+  container_path: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+  resolved_host_path: /mnt/d/morai dataset/shahn03/data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+  bytes: 367087616
+  sha256: 859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02
+  hash_verified_on: '2026-10-22'
+  previous_sha256: 859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02
+  hash_matches_previous: true
+  source_duration_sec: 48.926517724990845
+  topic_counts_rechecked:
+    /Ego_topic: 2445
+    /velodyne_points: 649
+    /gps: 245
+    /imu: 2384
+    /image_jpeg/compressed: 979
+  competition_topic_present: false
+  first_lidar_message:
+    source_ns: 1790654785683737993
+    record_ns: 1790654785684641204
+    points: 9704
+  point_fields:
+  - x
+  - y
+  - z
+  - intensity
+  source_stamp_provenance: bridge_receive_not_ray_time
+  independent_GT: false
+  fixture_variants:
+  - id: normal
+    expected_sha256: ab14a17eb0ef1267cba1a1dff73a021cdce7e543e401837745ca3d8844f24a54
+    historical_path: /evidence/fixtures/primary-normal.bag
+    current_path_verified: false
+    action: discover canonical copy or regenerate before L3; no regeneration in L1
+  - id: invalid
+    expected_sha256: c6c9a3f35c6a9d10721305c532e91955b5a10daaecca1eb4635ddab0d10982b1
+    historical_path: /evidence/fixtures/primary-invalid.bag
+    current_path_verified: false
+    action: discover canonical copy or regenerate before L3; no regeneration in L1
+  - id: missing
+    expected_sha256: f12c6c5654d33f33c14a925d933dc0ade9300169645985b2f842c18c303b49b0
+    historical_path: /evidence/fixtures/primary-missing.bag
+    current_path_verified: false
+    action: discover canonical copy or regenerate before L3; no regeneration in L1
+- id: shadow
+  host_path: $ASMC_STORAGE_DATA/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+  container_path: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+  resolved_host_path: /mnt/d/morai dataset/shahn03/data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+  bytes: 175048680
+  sha256: 9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34
+  hash_verified_on: '2026-10-22'
+  previous_sha256: 9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34
+  hash_matches_previous: true
+  source_duration_sec: 24.751930475234985
+  topic_counts_rechecked:
+    /Ego_topic: 1238
+    /velodyne_points: 208
+    /gps: 124
+    /imu: 1223
+    /image_jpeg/compressed: 494
+  competition_topic_present: false
+  first_lidar_message:
+    source_ns: 1789141084551538467
+    record_ns: 1789141084553776863
+    points: 15058
+  point_fields:
+  - x
+  - y
+  - z
+  - intensity
+  source_stamp_provenance: bridge_receive_not_ray_time
+  independent_GT: false
+  fixture_variants:
+  - id: normal
+    expected_sha256: c9bdd50d53661f430826f544df35dd1b3ef56a99cf2db3918656d208bf254665
+    historical_path: /evidence/fixtures/shadow-normal.bag
+    current_path_verified: false
+    action: discover canonical copy or regenerate before L3; no regeneration in L1
+  - id: invalid
+    expected_sha256: 9d182ece0a41f893a27303941dfff55fbe00e883c12ee941dc58a0dd011133a9
+    historical_path: /evidence/fixtures/shadow-invalid.bag
+    current_path_verified: false
+    action: discover canonical copy or regenerate before L3; no regeneration in L1
+  - id: missing
+    expected_sha256: 89a73745c22831a6c985a3faceb299c29dd237fe22d4fe0cc2fdfdd7c7f9544f
+    historical_path: /evidence/fixtures/shadow-missing.bag
+    current_path_verified: false
+    action: discover canonical copy or regenerate before L3; no regeneration in L1
+limitations:
+- No actual Competition Vehicle Status live capture in these bags. Ego-derived development input cannot establish field
+  compliance.
+- Online official URL loaded only application shell; newer body changes not verified.
+- Raw PointCloud2 fields are x/y/z/intensity; no ring or per-point time for deskew.
+- Independent object position/velocity GT absent in these raw regressions.
+- Old fixture aliases are historical and not silently recreated. GPS variants need regeneration or current canonical
+  discovery before L3 replay.
+- Legacy road mask and latest HD map product are pinned separately and are not automatically interchangeable.
+- Baseline rear overhang 0.700m differs from regulation summary 0.790m; L2 parity does not silently change it.
+- Legacy pitch path does not assign output intensity; preserve XYZ parity, fix metadata/intensity separately rather than
+  compare undefined bytes.
+verification:
+  environment:
+    container: asmc-ros-noetic
+    image: asmc/ros-noetic:runtime-main-20261019
+    image_id: sha256:e7cf6ea31196c9613ff93c56bf6e6f82acdb0fec49707385efc801b2093b18b9
+    network_mode: host
+    workspace_mount: /root/ws
+    arch: x86_64
+    compiler: g++ 9.4.0
+    eigen: 3.3.7-2
+    yaml_cpp: 0.6.2-4ubuntu1
+    roscpp: 1.17.4-1focal.20250519.225343
+  cpp_core:
+    source_recompiled: true
+    output_kind: temporary_unit_test_binary
+    test_directory: /tmp/asmc-lidar-l1-core-UwvwWW
+    ros_master_used: false
+    tests:
+    - name: frame_time_core_test
+      cases: 35
+      failures: 0
+    - name: geometry_boundary_test
+      result: passed
+    - name: imu_selection_test
+      result: passed
+    warnings:
+    - Existing test aggregate initializers omit Observation.receipt_clock; default is empty, source not changed.
+    compile_flags:
+    - -std=c++17
+    - -O0
+    - -UNDEBUG
+    - -Wall
+    - -Wextra
+    source_units:
+    - src/asmc_lidar/src/frame_time_core.cpp
+    - src/asmc_lidar/src/projection.cpp
+    - src/asmc_lidar/src/bounded_pose.cpp
+  bag_checks:
+  - entire file SHA256
+  - size before/after stable
+  - read-only rosbag index
+  - first header/frame/point field inspection
+  python_contract_and_docs:
+    unittest_cases: 32
+    failures: 0
+    documentation_migration_history: passed; 5 frozen files
+    runtime_documentation: passed; 25 launches, 63 literal commands
+    shared_message_contract: passed; 38 registered messages
+    git_diff_check: passed
+  manifest_validation:
+    result: passed
+    checked_assets: 32
+    source_subtrees: 7
+    complete_bag_hashes: 2
+    rule_snapshot: matched
+    common_and_legacy_md5: matched
+    runtime_changes: false
+    historical_task_body: preserved
+  new_runtime_build: false
+  bag_replay: false
+  ROS_nodes_started: false
+  new_capture: false
+  full_stack_acceptance: false
+  push_PR_merge: false
+  reproduction:
+    python_commands:
+    - python3 tools/audit/check_documentation_migration.py --with-history
+    - python3 tools/audit/check_runtime_documentation.py
+    - python3 tools/audit/validate_p1b_contract.py
+    - python3 -m unittest tools/audit/test_documentation_migration.py tools/audit/test_runtime_documentation.py tools/audit/test_p1b_contract.py
+    - python3 src/asmc_lidar/test/camera_objects_contract_test.py
+    cpp_working_directory: /root/ws/src/asmc_lidar
+    cpp_test_source_pattern: test/<test-name>.cpp
+    cpp_includes:
+    - include
+    - /usr/include/eigen3
+    cpp_notes: Compile frame_time_core_test and geometry_boundary_test with the recorded source_units; imu_selection_test
+      is header-only. Write binaries only to a new /tmp unit-test directory; run without ROS master.

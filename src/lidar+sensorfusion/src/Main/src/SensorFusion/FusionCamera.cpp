@@ -769,7 +769,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         if(frame_boundary::Enabled())
             fusion_trace::Event("lidar_coordinate_context",lidar_stamp.toNSec(),[&](std::ostream& out) {
                 const auto& c=st_LiDAR.frame_context;
-                out<<",\"generation\":"<<c.input_generation
+                out<<",\"generation\":"<<c.scan_sequence
                     <<",\"calibration_sha\":"<<fusion_trace::Quote(c.calibration_source)
                     <<",\"input_frame\":\"leveled_sensor\",\"map_valid\":"<<(c.map_pose.valid?"true":"false")
                     <<",\"map_reason\":"<<fusion_trace::Quote(c.map_pose.reason)<<",\"leveling\":[";

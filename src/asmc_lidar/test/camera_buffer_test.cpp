@@ -1,4 +1,4 @@
-#include <asmc_lidar/camera_observations.hpp>
+#include <asmc_lidar/fusion/camera_observations.hpp>
 #include <cassert>
 #include <iostream>
 #include <limits>

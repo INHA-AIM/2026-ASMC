@@ -1,0 +1,18 @@
+{
+  "baseline_revision": "25334258551f0f963e91db9430a3c14768201415",
+  "upstream_revision": "281349da837833c2b44fe6905f8f7ff3c6168f6e",
+  "purpose": "Structure/contract refactor only; PR #103 numerical behavior is the reference, not the operational Main before its yaw fix.",
+  "files": {
+    "src/asmc_lidar/config/shadow_pipeline.yaml": "1daae73da5b94142931f7cfe262d75d83a9be0d829f947f1b8cd9fd5ad8c5aa7",
+    "src/asmc_msgs/msg/LidarObject.msg": "34a294d0c578ef5e17134ee156c5d6f9bf76d09a577442f444806e6171b66066",
+    "src/asmc_msgs/msg/LidarObjectArray.msg": "b484b53e59922fd4ad19799c46573ee7502e7edf5872834b1253dc60893db169",
+    "src/asmc_lidar/src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.cpp": "a0bef37f2ebb5aac53930514b02b345b668a57987c72b739af62259cb6c59dd3",
+    "src/asmc_lidar/src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.hpp": "b19eb10786cb1bb869b71106492fe1a02d656396a3ee8fb5da563b65a50d8f15"
+  },
+  "owners": {
+    "ahn": "HD-map filters and camera connection support",
+    "son": "tracking, speed, motion state and fusion improvements"
+  },
+  "validation_status": "local_validated",
+  "results": "config/baselines/lidar_structure_contract_result_v1.json"
+}

@@ -1,4 +1,5 @@
 #pragma once
+#include <asmc_lidar/tracking/track.hpp>
 // One LiDAR scan through the ported common-geometry path:
 //   ROI/ego -> Voxel -> roll/pitch leveling -> RANSAC ground -> [experimental
 //   tunnel stage, default OFF] -> clustering -> centroid/OBB -> tracking.
@@ -7,13 +8,13 @@
 // markers, public MotionClassifier output, planning filters, fusion (see FrontCameraFusion).
 // A diagnostic-only Main motion decision now runs on copies at full scan rate.
 
-#include <asmc_lidar/pipeline/clustering.hpp>
-#include <asmc_lidar/pipeline/ground.hpp>
-#include <asmc_lidar/pipeline/preprocessing.hpp>
-#include <asmc_lidar/pipeline/scan_frame.hpp>
+#include <asmc_lidar/detection/clustering.hpp>
 #include <asmc_lidar/pipeline/stage_observer.hpp>
-#include <asmc_lidar/pipeline/tracker.hpp>
-#include <asmc_lidar/pipeline/tunnel_filter_stage.hpp>
+#include <asmc_lidar/preprocessing/ground.hpp>
+#include <asmc_lidar/preprocessing/preprocessing.hpp>
+#include <asmc_lidar/geometry/scan_frame.hpp>
+#include <asmc_lidar/tracking/tracker.hpp>
+#include <asmc_lidar/experimental/tunnel_filter_stage.hpp>
 
 #include <memory>
 #include <string>
@@ -70,7 +71,8 @@ struct StageTimings {
 struct ScanInput {
   asmc::lidar::Observation time;  // stamp_ns = PointCloud2 header stamp
   CloudPtr points;                // sensor frame (velodyne), x/y/z/intensity
-  std::uint64_t generation = 0;
+  std::uint64_t scan_sequence = 0;
+  std::uint64_t generation = 1;  // processing-state epoch, not a per-scan counter
 };
 
 // When !processed only stamp_ns, previous_stamp_ns and reason are set (the

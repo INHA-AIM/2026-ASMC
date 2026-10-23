@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-23",
+  "run_id": "competition-channel-audit-20261023-r1",
+  "main_revision": "281349da837833c2b44fe6905f8f7ff3c6168f6e",
+  "report": "docs/records/bridge/2026-10-23-competition-channel-audit.md",
+  "supersedes_interpretation_in": "config/baselines/lidar_migration_l1_v1.yaml",
+  "historical_manifest_unchanged": true,
+  "duration_s": 8.023860957997385,
+  "bridge_sha256": "a689089ccf9065a6be3b4cc69264d05783d1e8f7ac1a9e69994093eb968404ca",
+  "ports": {
+    "9099": {
+      "count": 323,
+      "rate_hz": 40.25493483633534,
+      "lengths": [
+        181
+      ],
+      "headers": [
+        "#MoraiInfo$"
+      ],
+      "decoded_count": 323,
+      "first": {
+        "port": 9099,
+        "sender": [
+          "127.0.0.1",
+          42460
+        ],
+        "length": 181,
+        "header": "#MoraiInfo$",
+        "received_offset_s": 0.0427809510147199,
+        "decoded": {
+          "sec": 1792694402,
+          "nsec": 524000000,
+          "ctrl_mode": 1,
+          "gear": 4,
+          "signed_velocity_kph": 0.017908569425344467,
+          "map_data_id": 134,
+          "accel": 0.0,
+          "brake": 0.0,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "heading_deg": 60.49430847167969,
+          "velocity_kph": [
+            0.017908567562699318,
+            0.0,
+            0.0
+          ],
+          "angular_velocity_deg_s": [
+            -0.0017514778301119804,
+            0.0005023198900744319,
+            0.008549346588551998
+          ],
+          "acceleration_m_s2": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "front_steer_deg": 0.0,
+          "rear_steer_deg": null,
+          "link_id": "A2256W000172",
+          "extension": [],
+          "payload_length": 152,
+          "packet_length": 181
+        },
+        "ros_velocity_m_s": [
+          0.004974602100749811,
+          0.0,
+          0.0
+        ],
+        "ros_position": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "signed_velocity_kph_range": [
+        0.017908569425344467,
+        0.07274235785007477
+      ],
+      "velocity_kph_range": [
+        [
+          0.017908567562699318,
+          0.0,
+          0.0
+        ],
+        [
+          0.07274235039949417,
+          0.0,
+          0.0
+        ]
+      ],
+      "position_range": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "acceleration_m_s2_range": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "angular_velocity_deg_s_range": [
+        [
+          -0.01185245718806982,
+          0.010887221433222294,
+          0.003009566804394126
+        ],
+        [
+          0.017151987180113792,
+          -0.0041471440345048904,
+          0.016592837870121002
+        ]
+      ]
+    },
+    "9798": {
+      "count": 322,
+      "rate_hz": 40.1303065551083,
+      "lengths": [
+        138
+      ],
+      "headers": [
+        "#DetailEgoInfo$"
+      ],
+      "decoded_count": 0,
+      "first": {
+        "port": 9798,
+        "sender": [
+          "127.0.0.1",
+          42514
+        ],
+        "length": 138,
+        "header": "#DetailEgoInfo$",
+        "received_offset_s": 0.072908403002657,
+        "decode_error": "vehicle status header mismatch"
+      },
+      "signed_velocity_kph_range": null,
+      "velocity_kph_range": null,
+      "position_range": null,
+      "acceleration_m_s2_range": null,
+      "angular_velocity_deg_s_range": null
+    }
+  },
+  "max_signed_vs_velocity_x_kph_difference": 1.4901161193847656e-08,
+  "ros_transport_tested": false,
+  "moving_reverse_speed_tested": false,
+  "runtime_modified": false,
+  "artifacts": [
+    {
+      "path": "artifacts/competition-channel-audit-20261023-r1/decoded.jsonl",
+      "sha256": "8c1e2955fee9ea2700e788f971744274142187ab3fd03b3e13c6f2454f4ee7f0"
+    },
+    {
+      "path": "artifacts/competition-channel-audit-20261023-r1/inputs.json",
+      "sha256": "f6b6eab308a5bfa1c172ea7e0da119c6b86f72c5199bb18734bc4ba412857dba"
+    },
+    {
+      "path": "artifacts/competition-channel-audit-20261023-r1/packets.json",
+      "sha256": "33eca123d9e547d95dcf22fc6ff633d9dd052426ae92688772139bac8bb11c8b"
+    },
+    {
+      "path": "artifacts/competition-channel-audit-20261023-r1/probe-config.json",
+      "sha256": "3facb7dc60fde275c3d7406ede8e2fc20efeee889fc53ae45ccf4fcf963483b1"
+    },
+    {
+      "path": "artifacts/competition-channel-audit-20261023-r1/probe.py",
+      "sha256": "22472352a350c22e0341dc26aca223d411ff4ffea4db021b22bee96df23bcb2f"
+    },
+    {
+      "path": "artifacts/competition-channel-audit-20261023-r1/summary.json",
+      "sha256": "f64495b861001cbea35888bfa9e230933ca6f18b4ca3602327d909c1be1cf1d6"
+    }
+  ],
+  "run_status": "completed_frozen"
+}

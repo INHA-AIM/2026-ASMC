@@ -101,9 +101,11 @@ class CameraObjectsContractTest(unittest.TestCase):
         for path in sorted((ROOT / 'src/asmc_lidar/launch').glob('*.launch')):
             root = ET.parse(path).getroot()
             self.assertEqual(root.findall('.//include'), [], path)
-            # monitor.launch adds only the read-only web monitor (no publisher, loopback HTTP).
-            allowed = {('asmc_lidar', 'asmc_lidar_shadow_node')}
-            if path.name == 'monitor.launch':
+            # view.launch is a read-only consumer and never starts the pipeline.
+            allowed = {('asmc_lidar', 'lidar_pipeline_node')}
+            if path.name == 'lidar.launch':
+                allowed.update({('asmc_lidar', 'lidar_markers.py'), ('rviz', 'rviz')})
+            if path.name == 'view.launch':
                 allowed.add(('asmc_lidar', 'asmc_lidar_monitor_node.py'))
             for node in root.findall('.//node'):
                 self.assertIn((node.get('pkg'), node.get('type')), allowed, path)
@@ -115,7 +117,7 @@ class CameraObjectsContractTest(unittest.TestCase):
                      ROOT / 'src/asmc_bridge'):
             for path in sorted(base.rglob('*.launch')):
                 text = path.read_text(errors='replace')
-                self.assertNotIn('asmc_lidar_shadow_node', text, path)
+                self.assertNotIn('lidar_pipeline_node', text, path)
                 self.assertNotRegex(text, r'asmc_lidar\)/launch/', path)
 
 

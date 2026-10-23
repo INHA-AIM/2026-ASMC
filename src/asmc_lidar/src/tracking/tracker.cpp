@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // CA Kalman / Hungarian tracker.
 // Ported from Main src/Lidar/FrameFilter/FrameFilter.cpp (FrameFilter) and
 // src/Lidar/Tracking/Tracking.cpp (CompareCentroids) at 8f93c22e, common
@@ -7,10 +8,10 @@
 // and the f32_PrevE/N bookkeeping (map coordinates), fusion_trace /
 // fusion_state_trace events, and dead locals (Ton/Toff/N_on/N_off, vx/vy/
 // raw_speed, f32_Distance, f32_Pred_x/y in the matched loop).
-#include <asmc_lidar/pipeline/hungarian.hpp>
-#include <asmc_lidar/pipeline/kalman.hpp>
-#include <asmc_lidar/pipeline/obb.hpp>
-#include <asmc_lidar/pipeline/tracker.hpp>
+#include <asmc_lidar/tracking/hungarian.hpp>
+#include <asmc_lidar/tracking/kalman.hpp>
+#include <asmc_lidar/detection/obb.hpp>
+#include <asmc_lidar/tracking/tracker.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -22,7 +23,7 @@ namespace pipeline {
 namespace {
 
 bool IsDummy(const TrackedObject& object) {
-  return object.f32_CoreX == 0.0f && object.f32_CoreY == 0.0f && object.f32_CoreZ == 0.0f;
+  return object.detection.f32_CoreX == 0.0f && object.detection.f32_CoreY == 0.0f && object.detection.f32_CoreZ == 0.0f;
 }
 
 // Ported from Main Tracking.cpp:576-965 (8f93c22e) (CompareCentroids, common path).
@@ -49,8 +50,8 @@ void CompareCentroids(const std::vector<TrackedObject>& vec_Compare, std::vector
     float32 f32_Pred_y = vec_PredictedPositions[i].second;
 
     for (int32 j = 0; j < M; ++j) {
-      float32 f32_Det_x = vec_NowObject[j].f32_CoreX;
-      float32 f32_Det_y = vec_NowObject[j].f32_CoreY;
+      float32 f32_Det_x = vec_NowObject[j].detection.f32_CoreX;
+      float32 f32_Det_y = vec_NowObject[j].detection.f32_CoreY;
 
       // 1) Euclidean distance. Legacy-only map-centre distance
       // (!Enabled() && UseMapAssociation, Tracking.cpp:621-626) not ported.
@@ -64,7 +65,7 @@ void CompareCentroids(const std::vector<TrackedObject>& vec_Compare, std::vector
       // (commented heading term :635-654 not ported)
       float32 f32_Cost = st_Tracking.f32_COST_W_DIST * f32_Cost_dist + st_Tracking.f32_COST_W_IOU * f32_Cost_shape;
       // Prefer long-lived tracks among equal candidates; bounded by the bonus.
-      const float32 age_ratio = std::clamp(static_cast<float32>(vec_Compare[i].s32_Age) / 30.0F, 0.0F, 1.0F);
+      const float32 age_ratio = std::clamp(static_cast<float32>(vec_Compare[i].tracking.s32_Age) / 30.0F, 0.0F, 1.0F);
       f32_Cost = std::max(0.0F, f32_Cost - st_Tracking.f32_ContinuityBonus * age_ratio);
 
       if (f32_Cost < st_Tracking.f32_COST_THRESHOLD) {
@@ -87,71 +88,71 @@ void CompareCentroids(const std::vector<TrackedObject>& vec_Compare, std::vector
     int j = (i < static_cast<int>(assignment.size())) ? assignment[i] : -1;
     // Gated (COST_INF) Hungarian pairs are rejected here.
     if (j >= 0 && j < M && vec_CostMatrix[i][j] < st_Tracking.f32_COST_THRESHOLD) {
-      vec_NowObject[j].f32_PrevCoreX = vec_Compare[i].f32_CoreX;
-      vec_NowObject[j].f32_PrevCoreY = vec_Compare[i].f32_CoreY;
-      vec_NowObject[j].f32_PredCoreX = vec_PredictedPositions[i].first;
-      vec_NowObject[j].f32_PredCoreY = vec_PredictedPositions[i].second;
-      float32 f32_Det_x = vec_NowObject[j].f32_CoreX;
-      float32 f32_Det_y = vec_NowObject[j].f32_CoreY;
+      vec_NowObject[j].tracking.f32_PrevCoreX = vec_Compare[i].detection.f32_CoreX;
+      vec_NowObject[j].tracking.f32_PrevCoreY = vec_Compare[i].detection.f32_CoreY;
+      vec_NowObject[j].tracking.f32_PredCoreX = vec_PredictedPositions[i].first;
+      vec_NowObject[j].tracking.f32_PredCoreY = vec_PredictedPositions[i].second;
+      float32 f32_Det_x = vec_NowObject[j].detection.f32_CoreX;
+      float32 f32_Det_y = vec_NowObject[j].detection.f32_CoreY;
 
-      vec_NowObject[j].Eigen_KfState_CA = vec_Compare[i].Eigen_KfState_CA;
-      vec_NowObject[j].Eigen_KfP_CA = vec_Compare[i].Eigen_KfP_CA;
-      vec_NowObject[j].b_KfInitialized = vec_Compare[i].b_KfInitialized;
-      vec_NowObject[j].s32_KfInitCount = vec_Compare[i].s32_KfInitCount;
-      vec_NowObject[j].s32_Id = vec_Compare[i].s32_Id;
-      vec_NowObject[j].s32_Age = vec_Compare[i].s32_Age + 1;
-      vec_NowObject[j].s32_MissCount = 0;
-      vec_NowObject[j].s32_StaticCount = vec_Compare[i].s32_StaticCount;
-      vec_NowObject[j].s32_DynamicCount = vec_Compare[i].s32_DynamicCount;
-      vec_NowObject[j].f32_PrevYaw = vec_Compare[i].f32_PrevYaw;
-      vec_NowObject[j].tracking_frame_valid = vec_Compare[i].tracking_frame_valid;
-      vec_NowObject[j].tracking_height_input = vec_Compare[i].tracking_height_input;
-      vec_NowObject[j].tracking_yaw_from_input = vec_Compare[i].tracking_yaw_from_input;
-      vec_NowObject[j].tracking_origin_in_yaw = vec_Compare[i].tracking_origin_in_yaw;
+      vec_NowObject[j].tracking.Eigen_KfState_CA = vec_Compare[i].tracking.Eigen_KfState_CA;
+      vec_NowObject[j].tracking.Eigen_KfP_CA = vec_Compare[i].tracking.Eigen_KfP_CA;
+      vec_NowObject[j].tracking.b_KfInitialized = vec_Compare[i].tracking.b_KfInitialized;
+      vec_NowObject[j].tracking.s32_KfInitCount = vec_Compare[i].tracking.s32_KfInitCount;
+      vec_NowObject[j].tracking.s32_Id = vec_Compare[i].tracking.s32_Id;
+      vec_NowObject[j].tracking.s32_Age = vec_Compare[i].tracking.s32_Age + 1;
+      vec_NowObject[j].tracking.s32_MissCount = 0;
+      vec_NowObject[j].tracking.s32_StaticCount = vec_Compare[i].tracking.s32_StaticCount;
+      vec_NowObject[j].tracking.s32_DynamicCount = vec_Compare[i].tracking.s32_DynamicCount;
+      vec_NowObject[j].tracking.f32_PrevYaw = vec_Compare[i].tracking.f32_PrevYaw;
+      vec_NowObject[j].tracking.tracking_frame_valid = vec_Compare[i].tracking.tracking_frame_valid;
+      vec_NowObject[j].tracking.tracking_height_input = vec_Compare[i].tracking.tracking_height_input;
+      vec_NowObject[j].tracking.tracking_yaw_from_input = vec_Compare[i].tracking.tracking_yaw_from_input;
+      vec_NowObject[j].tracking.tracking_origin_in_yaw = vec_Compare[i].tracking.tracking_origin_in_yaw;
 
       if (tracking_association::ShouldCarryPreviousClass(vec_Compare[i], vec_NowObject[j])) {
         tracking_association::CopyClassState(vec_Compare[i], vec_NowObject[j]);
       }  // else: Main only emits a "class_tracking_reset" trace.
 
-      if (vec_Compare[i].tracking_frame_valid) {
+      if (vec_Compare[i].tracking.tracking_frame_valid) {
         // Heading alignment needs no point-cloud copy of the old track. Preserved:
         // value-initialized copy (OBB centre/corners zero, so the edge follow is
         // skipped and only the yaw axis is re-expressed, once).
         TrackedObject aligned{};
-        aligned.s32_MissCount = vec_Compare[i].s32_MissCount;
-        aligned.Eigen_KfState_CA = vec_Compare[i].Eigen_KfState_CA;
-        aligned.Eigen_KfP_CA = vec_Compare[i].Eigen_KfP_CA;
-        aligned.tracking_frame_valid = true;
-        aligned.tracking_height_input = vec_Compare[i].tracking_height_input;
-        aligned.tracking_yaw_from_input = vec_Compare[i].tracking_yaw_from_input;
-        aligned.tracking_origin_in_yaw = vec_Compare[i].tracking_origin_in_yaw;
-        aligned.f32_PrevYaw = vec_Compare[i].f32_PrevYaw;
-        aligned.f32_OBB_YawRad = vec_Compare[i].f32_OBB_YawRad;
+        aligned.tracking.s32_MissCount = vec_Compare[i].tracking.s32_MissCount;
+        aligned.tracking.Eigen_KfState_CA = vec_Compare[i].tracking.Eigen_KfState_CA;
+        aligned.tracking.Eigen_KfP_CA = vec_Compare[i].tracking.Eigen_KfP_CA;
+        aligned.tracking.tracking_frame_valid = true;
+        aligned.tracking.tracking_height_input = vec_Compare[i].tracking.tracking_height_input;
+        aligned.tracking.tracking_yaw_from_input = vec_Compare[i].tracking.tracking_yaw_from_input;
+        aligned.tracking.tracking_origin_in_yaw = vec_Compare[i].tracking.tracking_origin_in_yaw;
+        aligned.tracking.f32_PrevYaw = vec_Compare[i].tracking.f32_PrevYaw;
+        aligned.detection.f32_OBB_YawRad = vec_Compare[i].detection.f32_OBB_YawRad;
         frame.AlignTrackingFrame(aligned, st_GPSIMU.st_IMU.f32_Yaw_rad);
         obb_util::stabilizeMatchedOBB(aligned, vec_NowObject[j], st_GPSIMU.st_IMU.f32_Yaw_deg);
       } else {
         obb_util::stabilizeMatchedOBB(vec_Compare[i], vec_NowObject[j], st_GPSIMU.st_IMU.f32_Yaw_deg);
       }
       // Kalman update (the OBB stays this scan's detection).
-      kalman_filter_update(vec_NowObject[j], f32_Det_x, f32_Det_y, vec_NowObject[j].f32_PredCoreX,
-                           vec_NowObject[j].f32_PredCoreY, f64_Time, st_GPSIMU.st_IMU.f32_Yaw_deg, frame);
+      kalman_filter_update(vec_NowObject[j], f32_Det_x, f32_Det_y, vec_NowObject[j].tracking.f32_PredCoreX,
+                           vec_NowObject[j].tracking.f32_PredCoreY, f64_Time, st_GPSIMU.st_IMU.f32_Yaw_deg, frame);
 
       // Preserved: KF relative velocity + CAN speed on the leveled x axis only.
-      const float32 f32_Rel_vx = vec_NowObject[j].Eigen_KfState_CA(2);
-      const float32 f32_Rel_vy = vec_NowObject[j].Eigen_KfState_CA(3);
+      const float32 f32_Rel_vx = vec_NowObject[j].tracking.Eigen_KfState_CA(2);
+      const float32 f32_Rel_vy = vec_NowObject[j].tracking.Eigen_KfState_CA(3);
       const float32 v_mps = st_GPSIMU.st_CAN.f32_CurrentVel_KPH / 3.6f;
       const float32 f32_Abs_vx = f32_Rel_vx + v_mps;
       const float32 f32_Abs_vy = f32_Rel_vy;
 
-      vec_NowObject[j].f32_AbsVx = f32_Abs_vx;
-      vec_NowObject[j].f32_AbsVy = f32_Abs_vy;
-      vec_NowObject[j].f32_Velocity = std::hypot(f32_Abs_vx, f32_Abs_vy);
-      if (vec_NowObject[j].f32_Velocity > 1e-3f) {
-        vec_NowObject[j].f32_DirX = f32_Abs_vx / vec_NowObject[j].f32_Velocity;
-        vec_NowObject[j].f32_DirY = f32_Abs_vy / vec_NowObject[j].f32_Velocity;
+      vec_NowObject[j].tracking.f32_AbsVx = f32_Abs_vx;
+      vec_NowObject[j].tracking.f32_AbsVy = f32_Abs_vy;
+      vec_NowObject[j].tracking.f32_Velocity = std::hypot(f32_Abs_vx, f32_Abs_vy);
+      if (vec_NowObject[j].tracking.f32_Velocity > 1e-3f) {
+        vec_NowObject[j].tracking.f32_DirX = f32_Abs_vx / vec_NowObject[j].tracking.f32_Velocity;
+        vec_NowObject[j].tracking.f32_DirY = f32_Abs_vy / vec_NowObject[j].tracking.f32_Velocity;
       } else {
-        vec_NowObject[j].f32_DirX = 0.0f;
-        vec_NowObject[j].f32_DirY = 0.0f;
+        vec_NowObject[j].tracking.f32_DirX = 0.0f;
+        vec_NowObject[j].tracking.f32_DirY = 0.0f;
       }
 
       matched_now[j] = true;
@@ -169,8 +170,8 @@ void CompareCentroids(const std::vector<TrackedObject>& vec_Compare, std::vector
     if (matched_prev[i]) continue;
     for (int j = 0; j < M; ++j) {
       if (!matched_now[j]) continue;
-      const float retire_dist = std::hypot(vec_NowObject[j].f32_CoreX - vec_PredictedPositions[i].first,
-                                           vec_NowObject[j].f32_CoreY - vec_PredictedPositions[i].second);
+      const float retire_dist = std::hypot(vec_NowObject[j].detection.f32_CoreX - vec_PredictedPositions[i].first,
+                                           vec_NowObject[j].detection.f32_CoreY - vec_PredictedPositions[i].second);
       if (retire_dist > retire_distance) {
         continue;
       }
@@ -184,12 +185,12 @@ void CompareCentroids(const std::vector<TrackedObject>& vec_Compare, std::vector
 
   // Unmatched current detections: births (KF init only, b_KfInitialized=false).
   for (int j = 0; j < M; ++j) {
-    if (!matched_now[j] && vec_NowObject[j].s32_Id < 0) {
-      vec_NowObject[j].b_KfInitialized = false;
-      vec_NowObject[j].s32_Id = s32_NewTrackId++;
-      vec_NowObject[j].s32_Age = 1;
-      vec_NowObject[j].s32_MissCount = 0;
-      kalman_filter_update(vec_NowObject[j], vec_NowObject[j].f32_CoreX, vec_NowObject[j].f32_CoreY, 0, 0, f64_Time,
+    if (!matched_now[j] && vec_NowObject[j].tracking.s32_Id < 0) {
+      vec_NowObject[j].tracking.b_KfInitialized = false;
+      vec_NowObject[j].tracking.s32_Id = s32_NewTrackId++;
+      vec_NowObject[j].tracking.s32_Age = 1;
+      vec_NowObject[j].tracking.s32_MissCount = 0;
+      kalman_filter_update(vec_NowObject[j], vec_NowObject[j].detection.f32_CoreX, vec_NowObject[j].detection.f32_CoreY, 0, 0, f64_Time,
                            st_GPSIMU.st_IMU.f32_Yaw_deg, frame);
     }
   }
@@ -198,15 +199,15 @@ void CompareCentroids(const std::vector<TrackedObject>& vec_Compare, std::vector
   // the 25th consecutive miss. Points/AABB/f32_Dist/CoreZ/velocity/class stay
   // stale copies (preserved).
   for (int i = 0; i < N; ++i) {
-    if (!matched_prev[i] && vec_Compare[i].b_KfInitialized) {
+    if (!matched_prev[i] && vec_Compare[i].tracking.b_KfInitialized) {
       TrackedObject missed = vec_Compare[i];
-      missed.s32_Age = vec_Compare[i].s32_Age + 1;
-      missed.s32_MissCount = vec_Compare[i].s32_MissCount + 1;
+      missed.tracking.s32_Age = vec_Compare[i].tracking.s32_Age + 1;
+      missed.tracking.s32_MissCount = vec_Compare[i].tracking.s32_MissCount + 1;
 
-      if (missed.s32_MissCount < Tracker::kMaxMissCount) {
+      if (missed.tracking.s32_MissCount < Tracker::kMaxMissCount) {
         kalman_filter_predict(missed, f64_Time, st_GPSIMU.st_IMU.f32_Yaw_deg, frame);
-        missed.f32_CoreX = missed.Eigen_KfState_CA(0);
-        missed.f32_CoreY = missed.Eigen_KfState_CA(1);
+        missed.detection.f32_CoreX = missed.tracking.Eigen_KfState_CA(0);
+        missed.detection.f32_CoreY = missed.tracking.Eigen_KfState_CA(1);
         vec_NowObject.push_back(missed);
       }
     }
@@ -230,14 +231,14 @@ void Tracker::Update(std::vector<TrackedObject>& vec_Object, double dt_s, const 
       if (IsDummy(vec_Object[s32_Idx])) {
         break;
       }
-      vec_Object[s32_Idx].s32_Id = next_track_id_++;
-      vec_Object[s32_Idx].s32_Age = 1;
-      vec_Object[s32_Idx].s32_MissCount = 0;
-      vec_Object[s32_Idx].b_KfInitialized = false;
+      vec_Object[s32_Idx].tracking.s32_Id = next_track_id_++;
+      vec_Object[s32_Idx].tracking.s32_Age = 1;
+      vec_Object[s32_Idx].tracking.s32_MissCount = 0;
+      vec_Object[s32_Idx].tracking.b_KfInitialized = false;
 
       // Initialise the filter on the first observation (Main's hard-coded dt).
-      kalman_filter_update(vec_Object[s32_Idx], vec_Object[s32_Idx].f32_CoreX, vec_Object[s32_Idx].f32_CoreY,
-                           vec_Object[s32_Idx].f32_CoreX, vec_Object[s32_Idx].f32_CoreY, kBirthInitDt,
+      kalman_filter_update(vec_Object[s32_Idx], vec_Object[s32_Idx].detection.f32_CoreX, vec_Object[s32_Idx].detection.f32_CoreY,
+                           vec_Object[s32_Idx].detection.f32_CoreX, vec_Object[s32_Idx].detection.f32_CoreY, kBirthInitDt,
                            st_GPSIMU.st_IMU.f32_Yaw_deg, frame);
       // (Body2ENU/MinMax2ENU, PrevE/N = CoreE/N :57-60 not ported)
     }
@@ -265,14 +266,14 @@ void Tracker::Update(std::vector<TrackedObject>& vec_Object, double dt_s, const 
       if (IsDummy(vec_Object[s32_Idx])) {
         break;
       }
-      if (vec_Object[s32_Idx].s32_Id < 0) {
-        vec_Object[s32_Idx].s32_Id = next_track_id_++;
-        vec_Object[s32_Idx].s32_Age = 1;
-        vec_Object[s32_Idx].s32_MissCount = 0;
-        vec_Object[s32_Idx].b_KfInitialized = false;
+      if (vec_Object[s32_Idx].tracking.s32_Id < 0) {
+        vec_Object[s32_Idx].tracking.s32_Id = next_track_id_++;
+        vec_Object[s32_Idx].tracking.s32_Age = 1;
+        vec_Object[s32_Idx].tracking.s32_MissCount = 0;
+        vec_Object[s32_Idx].tracking.b_KfInitialized = false;
 
-        kalman_filter_update(vec_Object[s32_Idx], vec_Object[s32_Idx].f32_CoreX, vec_Object[s32_Idx].f32_CoreY,
-                             vec_Object[s32_Idx].f32_CoreX, vec_Object[s32_Idx].f32_CoreY, kBirthInitDt,
+        kalman_filter_update(vec_Object[s32_Idx], vec_Object[s32_Idx].detection.f32_CoreX, vec_Object[s32_Idx].detection.f32_CoreY,
+                             vec_Object[s32_Idx].detection.f32_CoreX, vec_Object[s32_Idx].detection.f32_CoreY, kBirthInitDt,
                              st_GPSIMU.st_IMU.f32_Yaw_deg, frame);
         // (Body2ENU/MinMax2ENU, PrevE/N = CoreE/N :144-147 not ported)
       }

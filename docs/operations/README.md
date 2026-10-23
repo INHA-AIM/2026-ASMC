@@ -26,7 +26,7 @@ live acceptance가 끝난 것을 구분한다.
 | 개발 IP | Host/Destination `127.0.0.1` | 동일 |
 | 현장 IP | profile 계약·생성본: MORAI `192.168.0.1`, Autonav `192.168.0.10` | 실제 두 PC 리허설 |
 | Ego Ctrl Cmd | `9093/9094`, type 1, mode 2 | local brake closed loop 통과; LAN2LAN 재검증 |
-| 차량 상태 | Ego `9088/9099`; MolitComp Competition `9797/9798` | Competition mode live packet·field 확인 |
+| 차량 상태 | UI CompetitionInfoPublisher `9088/9099` → `/Ego_topic`; 별도 `9797/9798` | 정차 packet 확인, 주행 부호·현장 LAN 미검증 |
 | TrafficLight simulator oracle | `258`, `7603/7502` | team production bridge에서 소비 금지 |
 | CollisionData | destination `9092` | `9091/9092` pair |
 | ObjectInfo | `7505`, 임시 개발 oracle | competition profile에서 제거 |
@@ -36,10 +36,11 @@ live acceptance가 끝난 것을 구분한다.
 
 정본은 [`bridge_profiles_v1.json`](../../config/bridge/bridge_profiles_v1.json)이다. generated
 network/sensor JSON·decoder·synthetic UDP publish·allowlist 계약은 검증하지만,
-실측된 `7502` packet은 Competition이 아닌 `#TrafficLight$`였다. 실제 Competition type 787의
-`9798`은 해당 local 실측에서0건이므로 **현장 live 수락 대기**다. Docker/방화벽 차단을 확정한
-결과가 아니다. 실제 LAN·채점 동시 검증도 남았다. v3는 설정과 소비 loop가
-15 Hz이고 완성 scan 약 12 Hz 입력은 허용한다.
+실측된 `7502` packet은 `#TrafficLight$`였다. 2026-10-23 사용자 UI와 실제 packet에서
+CompetitionInfoPublisher는9099→`/Ego_topic`으로 확인됐고, 별도9798은 `#DetailEgoInfo$`였다.
+과거 Competition=type787/9798이라는 해석은 [실측 정정](../records/bridge/2026-10-23-competition-channel-audit.md)을 따른다.
+ROS 이름/JSON type 번호만으로 송신 종류를 단정하지 않는다. 실제 LAN·채점 동시 검증은 남았다.
+v3 설정·소비는15Hz, local 완성 scan 약12Hz를 구분한다.
 
 type 258 TrafficLight status와 `GetTrafficLightStatus` 조회 서비스는 서로 다르다. 조사한 주최
 MolitComp03, 팀 MolitComp03, 26.R1 network export에는 type 778 MoraiTLServiceProvider가 없고
@@ -111,8 +112,8 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 
 | 채널 | 현재 포트 | ROS/소비자 |
 |---|---:|---|
-| Ego Vehicle Status | Host/Dest `9088/9099` | `/Ego_topic` |
-| Competition Vehicle Status | MolitComp Host/Dest `9797/9798`, type 787 | `/Competition_topic`; 26r1 export에는 없음 |
+| 현재 CompetitionInfoPublisher | Host/Dest `9088/9099` | `/Ego_topic`(호환 이름) |
+| 별도 상태 경로 | Host/Dest `9797/9798`, 저장본 type787 | `/Competition_topic`; 이번 Detail138B는 decoder 거부 |
 | TrafficLight status | Host/Dest `7603/7502`, type 258 | simulator oracle; canonical bridge가 소비하지 않음 |
 | Object Info | Dest `7505` | `/Object_topic`, 임시 oracle |
 | Collision Data | Host/Dest `9091/9092` | `/CollisionData` |
@@ -174,7 +175,7 @@ source devel/setup.bash
 ```bash
 ./scripts/docker_ros_up.sh verify 8 molitcomp03
 ./scripts/docker_ros_up.sh verify 8 26r1
-# 주최 현장판 type 787 수락 때만:
+# 별도9798의 허용 송신이 확인된 환경에서만(현재 설정에 적용하지 않음):
 ./scripts/docker_ros_up.sh verify-field 30 molitcomp03
 
 rostopic hz /Ego_topic
@@ -187,9 +188,9 @@ rostopic echo /Ego_topic -n1
 ```
 
 `verify`는 RGB 4대, LiDAR, GPS, IMU, Ego, 유효 `/vehicle/state`와 privileged publisher
-부재를 확인한다. 참가팀 MolitComp03 local은 JSON에 type 787 항목이 있어도 실제 packet을
-내보내지 않았으므로 `/Competition_topic`은 기본 필수가 아니다. `verify-field`만 type 787을
-추가로 요구한다. release 인자는 bridge 동작이나 필수 목록을 바꾸지 않는 provenance label이다.
+부재를 확인한다. 현재 정상 Competition은 `/Ego_topic` 경로다. `verify-field`는
+별도 `/Competition_topic`을 추가 요구하는 기존 검사이며 현재 설정의 필수 수락으로 쓰지 않는다.
+release 인자는 bridge 동작이나 필수 목록을 바꾸지 않는 provenance label이다.
 GT 실험 재현에서만 `--gt`와 `verify-gt 20 molitcomp03`을 함께 사용한다.
 
 LiDAR 실제 도착률만 별도로 검사할 때는 다음처럼 실행한다. 이 exact-arrival 진단은 v3의
@@ -288,8 +289,8 @@ asmc-ros-gui rviz -d /root/ws/<config>.rviz
 현재 구현된 profile을 실제 현장에 적용할 때 다음을 함께 검증한다.
 
 1. `local`과 `lan2lan`의 port·channel·Ctrl mode가 같고 IP만 다른지 확인한다.
-2. Ctrl `9093/9094`, Ego Vehicle Status `9088/9099`, MolitComp Competition Vehicle Status
-   `9797/9798`, Collision `9091/9092` packet 방향을 UI와 capture로 확인한다. `7603/7502`는
+2. Ctrl `9093/9094`, 현재 CompetitionInfoPublisher `9088/9099`, 별도 상태
+   `9797/9798`, Collision `9091/9092`의 실제 역할·packet 방향을 UI와 capture로 확인한다. `7603/7502`는
    TrafficLight status이며 Competition Vehicle Status로 해석하지 않는다.
 3. MORAI UI의 VLP16 15 Hz `sensorPeriod`·`frequencyIndex`와 손재호 소비 loop 15 Hz를 유지한다.
 4. `/velodyne_points`의 실제 완성 scan률(현재 약 12 Hz)과 packet/parse 오류를 확인한다.

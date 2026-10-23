@@ -109,7 +109,8 @@ ScanInput Input(int k, CloudPtr cloud = nullptr) {
   const std::int64_t stamp = kT0 + k * kPeriod;
   in.time = al::Observation{stamp, 1000 + k * 100, 1000 + k * 100, "ros", "test", "steady"};
   in.points = cloud ? cloud : Scene(k);
-  in.generation = static_cast<std::uint64_t>(k + 1);
+  in.scan_sequence = static_cast<std::uint64_t>(k + 1);
+  in.generation = 1;
   return in;
 }
 
@@ -155,7 +156,7 @@ class Recording : public StageObserver {
     for (const auto& c : view.clusters)
       for (const int j : c.indices)
         if (j < 0 || static_cast<std::size_t>(j) >= real) s.clusters_in_range = false;
-    if (!view.detections.empty()) s.first_detection_center_x = view.detections.front().f32_OBB_CenterX;
+    if (!view.detections.empty()) s.first_detection_center_x = view.detections.front().detection.f32_OBB_CenterX;
     seen.push_back(s);
   }
   struct Seen {
@@ -203,23 +204,23 @@ void ExpectSameResult(const ScanResult& a, const ScanResult& b) {
   for (std::size_t i = 0; i < a.objects.size(); ++i) {
     const auto& x = a.objects[i];
     const auto& y = b.objects[i];
-    EXPECT_EQ(x.s32_Id, y.s32_Id);
-    EXPECT_EQ(x.s32_Age, y.s32_Age);
-    EXPECT_EQ(x.s32_MissCount, y.s32_MissCount);
-    EXPECT_EQ(x.u16_Idx, y.u16_Idx);
-    EXPECT_EQ(x.f32_OBB_CenterX, y.f32_OBB_CenterX);
-    EXPECT_EQ(x.f32_OBB_CenterY, y.f32_OBB_CenterY);
-    EXPECT_EQ(x.f32_OBB_CenterZ, y.f32_OBB_CenterZ);
-    EXPECT_EQ(x.f32_OBB_YawRad, y.f32_OBB_YawRad);
-    EXPECT_EQ(x.f32_OBB_Width, y.f32_OBB_Width);
-    EXPECT_EQ(x.f32_OBB_Height, y.f32_OBB_Height);
-    EXPECT_EQ(x.pcl_ClusterPoints.size(), y.pcl_ClusterPoints.size());
+    EXPECT_EQ(x.tracking.s32_Id, y.tracking.s32_Id);
+    EXPECT_EQ(x.tracking.s32_Age, y.tracking.s32_Age);
+    EXPECT_EQ(x.tracking.s32_MissCount, y.tracking.s32_MissCount);
+    EXPECT_EQ(x.detection.u16_Idx, y.detection.u16_Idx);
+    EXPECT_EQ(x.detection.f32_OBB_CenterX, y.detection.f32_OBB_CenterX);
+    EXPECT_EQ(x.detection.f32_OBB_CenterY, y.detection.f32_OBB_CenterY);
+    EXPECT_EQ(x.detection.f32_OBB_CenterZ, y.detection.f32_OBB_CenterZ);
+    EXPECT_EQ(x.detection.f32_OBB_YawRad, y.detection.f32_OBB_YawRad);
+    EXPECT_EQ(x.detection.obb_length_m, y.detection.obb_length_m);
+    EXPECT_EQ(x.detection.obb_width_m, y.detection.obb_width_m);
+    EXPECT_EQ(x.detection.pcl_ClusterPoints.size(), y.detection.pcl_ClusterPoints.size());
     for (unsigned c = 0; c < 8; ++c) {
-      EXPECT_EQ(x.OBB_Corners_Body[c].x, y.OBB_Corners_Body[c].x);
-      EXPECT_EQ(x.OBB_Corners_Body[c].y, y.OBB_Corners_Body[c].y);
-      EXPECT_EQ(x.OBB_Corners_Body[c].z, y.OBB_Corners_Body[c].z);
+      EXPECT_EQ(x.detection.obb_corners_level[c].x, y.detection.obb_corners_level[c].x);
+      EXPECT_EQ(x.detection.obb_corners_level[c].y, y.detection.obb_corners_level[c].y);
+      EXPECT_EQ(x.detection.obb_corners_level[c].z, y.detection.obb_corners_level[c].z);
     }
-    EXPECT_TRUE(x.Eigen_KfState_CA == y.Eigen_KfState_CA);
+    EXPECT_TRUE(x.tracking.Eigen_KfState_CA == y.tracking.Eigen_KfState_CA);
   }
 }
 

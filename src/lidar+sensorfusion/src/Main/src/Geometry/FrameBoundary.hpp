@@ -1,6 +1,6 @@
 #pragma once
 #include <Global/Global.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 namespace frame_boundary {
 bool Enabled();

@@ -2,7 +2,7 @@
 <package format="2">
   <name>asmc_lidar</name>
   <version>0.1.0</version>
-  <description>LiDAR migration support: coordinate/time core, camera observation receiver/buffer/projection, and an opt-in shadow port of the Main LiDAR pipeline (node and bag replay).</description>
+  <description>LiDAR migration support: coordinate/time core, camera observation receiver/buffer/projection, and an opt-in migration port of the Main LiDAR pipeline (node and bag replay).</description>
   <maintainer email="autonav@todo.todo">Autonav</maintainer>
   <license>MIT</license>
   <buildtool_depend>catkin</buildtool_depend>
@@ -12,7 +12,7 @@
   <depend>diagnostic_msgs</depend>
   <depend>yaml-cpp</depend>
   <depend>openssl</depend>
-  <!-- Shadow pipeline (package-private, not exported to dependents such as Main).
+  <!-- Migration pipeline (package-private, not exported to dependents such as Main).
        build/exec only: no build_export_depend, so catkin_package exports stay unchanged. -->
   <build_depend>libpcl-all-dev</build_depend>
   <exec_depend>libpcl-all</exec_depend>
@@ -30,10 +30,15 @@
   <exec_depend>morai_msgs</exec_depend>
   <build_depend>rosbag</build_depend>
   <exec_depend>rosbag</exec_depend>
+  <build_depend>std_srvs</build_depend>
+  <exec_depend>std_srvs</exec_depend>
   <build_depend>tf2_ros</build_depend>
   <exec_depend>tf2_ros</exec_depend>
-  <!-- Read-only Python web monitor runtime (not merely test dependencies). -->
+  <!-- Optional read-only RViz adapter; no inference or Main dependency. -->
   <exec_depend>rospy</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>rviz</exec_depend>
+  <!-- Read-only web monitor dependencies. -->
   <exec_depend>rosgraph</exec_depend>
   <exec_depend>python3-rospkg</exec_depend>
   <exec_depend>python3-yaml</exec_depend>

@@ -1,13 +1,13 @@
 <launch>
-  <!-- rostest of the read-only web monitor against a real asmc_lidar_shadow_node with
+  <!-- rostest of the read-only web monitor against a real lidar_pipeline_node with
        synthetic inputs only (PointCloud2 + IMU + CAN, no GPS, no camera): no driver,
        bridge, camera, inference, Main or planner node. The test node reads the HTTP
        routes on 127.0.0.1:port and checks scene/stamp/frame consistency, the state
        transitions and that the monitor publishes nothing. -->
-  <arg name="pipeline_config" default="$(find asmc_lidar)/config/shadow_pipeline.yaml"/>
+  <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml"/>
   <arg name="port" default="18091"/>
 
-  <node pkg="asmc_lidar" type="asmc_lidar_shadow_node" name="asmc_lidar_shadow" output="screen">
+  <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="/migration/lidar" output="screen">
     <param name="pipeline_config" value="$(arg pipeline_config)"/>
     <param name="package_dir" value="$(find asmc_lidar)"/>
     <param name="enable_camera_fusion" value="false"/>

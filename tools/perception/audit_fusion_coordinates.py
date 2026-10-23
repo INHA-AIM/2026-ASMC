@@ -128,7 +128,7 @@ def main():
         stereo_probe={k:dict(minimum=min(v),maximum=max(v)) for k,v in stereo.items()},
         input_sha256={str(path.relative_to(ROOT)):hashlib.sha256(path.read_bytes()).hexdigest() for path in
             [ROOT/'src/asmc_camera/config/cameras_v3.yaml',ROOT/'src/asmc_lidar/config/autonav_v3.yaml',
-             ROOT/'src/asmc_lidar/src/projection.cpp',ROOT/'src/asmc_camera/src/asmc_camera/bev/calibration.py',Path(__file__),
+             ROOT/'src/asmc_lidar/src/geometry/projection.cpp',ROOT/'src/asmc_camera/src/asmc_camera/bev/calibration.py',Path(__file__),
              ROOT/'tools/perception/frame_projection_probe.cpp']},
         limits=['synthetic projection consistency, not physical extrinsic accuracy',
             'no neural inference benchmark or sensor time alignment validation',

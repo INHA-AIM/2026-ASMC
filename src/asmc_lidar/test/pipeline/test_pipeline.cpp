@@ -1,6 +1,7 @@
+#include <asmc_lidar/tracking/track.hpp>
 // Pipeline::Process orchestration and CloudDigest (Main LidarProcess common path).
 #include <asmc_lidar/pipeline/pipeline.hpp>
-#include <asmc_lidar/projection.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 
 #include <gtest/gtest.h>
 #include <ros/time.h>
@@ -155,7 +156,7 @@ al::PoseSelection MapPose(bool valid, std::int64_t stamp) {
   return m;
 }
 
-ScanInput Scan(std::int64_t stamp, CloudPtr cloud, std::uint64_t generation) {
+ScanInput Scan(std::int64_t stamp, CloudPtr cloud, std::uint64_t scan_sequence) {
   ScanInput s;
   s.time.stamp_ns = stamp;
   s.time.receipt_ns = 5000000000LL + (stamp - kT0) + 2000000;
@@ -164,7 +165,7 @@ ScanInput Scan(std::int64_t stamp, CloudPtr cloud, std::uint64_t generation) {
   s.time.stamp_provenance = "bridge_receive_ns";
   s.time.receipt_clock = "steady";
   s.points = std::move(cloud);
-  s.generation = generation;
+  s.scan_sequence = scan_sequence;
   return s;
 }
 
@@ -186,63 +187,63 @@ bool SameMatrix(const M& a, const M& b) {
   EXPECT_TRUE(SameBits((a).f, (b).f)) << where << " " #f ": " << (a).f << " vs " << (b).f
 
 void ExpectSameObject(const TrackedObject& a, const TrackedObject& b, const std::string& where) {
-  EXPECT_EQ(a.s32_Id, b.s32_Id) << where;
-  EXPECT_EQ(a.s32_Age, b.s32_Age) << where;
-  EXPECT_EQ(a.s32_MissCount, b.s32_MissCount) << where;
-  EXPECT_EQ(a.s32_KfInitCount, b.s32_KfInitCount) << where;
-  EXPECT_EQ(a.s32_DynamicCount, b.s32_DynamicCount) << where;
-  EXPECT_EQ(a.s32_StaticCount, b.s32_StaticCount) << where;
-  EXPECT_EQ(a.b_KfInitialized, b.b_KfInitialized) << where;
-  EXPECT_EQ(a.u16_Idx, b.u16_Idx) << where;
-  EXPECT_EQ(a.str_ObjectClass, b.str_ObjectClass) << where;
-  EXPECT_EQ(a.str_YoloClass, b.str_YoloClass) << where;
-  EXPECT_EQ(a.continuity_counter, b.continuity_counter) << where;
-  EXPECT_EQ(a.class_miss_counter, b.class_miss_counter) << where;
-  EXPECT_SAME_FIELD(a, b, f32_CoreX);
-  EXPECT_SAME_FIELD(a, b, f32_CoreY);
-  EXPECT_SAME_FIELD(a, b, f32_CoreZ);
-  EXPECT_SAME_FIELD(a, b, f32_PredCoreX);
-  EXPECT_SAME_FIELD(a, b, f32_PredCoreY);
-  EXPECT_SAME_FIELD(a, b, f32_PrevCoreX);
-  EXPECT_SAME_FIELD(a, b, f32_PrevCoreY);
-  EXPECT_SAME_FIELD(a, b, f32_PrevYaw);
-  EXPECT_SAME_FIELD(a, b, f32_Dist);
-  EXPECT_SAME_FIELD(a, b, f32_MinX);
-  EXPECT_SAME_FIELD(a, b, f32_MinY);
-  EXPECT_SAME_FIELD(a, b, f32_MinZ);
-  EXPECT_SAME_FIELD(a, b, f32_MaxX);
-  EXPECT_SAME_FIELD(a, b, f32_MaxY);
-  EXPECT_SAME_FIELD(a, b, f32_MaxZ);
-  EXPECT_SAME_FIELD(a, b, f32_OBB_CenterX);
-  EXPECT_SAME_FIELD(a, b, f32_OBB_CenterY);
-  EXPECT_SAME_FIELD(a, b, f32_OBB_CenterZ);
-  EXPECT_SAME_FIELD(a, b, f32_OBB_Width);
-  EXPECT_SAME_FIELD(a, b, f32_OBB_Height);
-  EXPECT_SAME_FIELD(a, b, f32_OBB_ZMin);
-  EXPECT_SAME_FIELD(a, b, f32_OBB_ZMax);
-  EXPECT_SAME_FIELD(a, b, f32_OBB_YawRad);
-  EXPECT_SAME_FIELD(a, b, f32_Velocity);
-  EXPECT_SAME_FIELD(a, b, f32_AbsVx);
-  EXPECT_SAME_FIELD(a, b, f32_AbsVy);
-  EXPECT_SAME_FIELD(a, b, f32_DirX);
-  EXPECT_SAME_FIELD(a, b, f32_DirY);
+  EXPECT_EQ(a.tracking.s32_Id, b.tracking.s32_Id) << where;
+  EXPECT_EQ(a.tracking.s32_Age, b.tracking.s32_Age) << where;
+  EXPECT_EQ(a.tracking.s32_MissCount, b.tracking.s32_MissCount) << where;
+  EXPECT_EQ(a.tracking.s32_KfInitCount, b.tracking.s32_KfInitCount) << where;
+  EXPECT_EQ(a.tracking.s32_DynamicCount, b.tracking.s32_DynamicCount) << where;
+  EXPECT_EQ(a.tracking.s32_StaticCount, b.tracking.s32_StaticCount) << where;
+  EXPECT_EQ(a.tracking.b_KfInitialized, b.tracking.b_KfInitialized) << where;
+  EXPECT_EQ(a.detection.u16_Idx, b.detection.u16_Idx) << where;
+  EXPECT_EQ(a.camera.str_ObjectClass, b.camera.str_ObjectClass) << where;
+  EXPECT_EQ(a.camera.str_YoloClass, b.camera.str_YoloClass) << where;
+  EXPECT_EQ(a.camera.continuity_counter, b.camera.continuity_counter) << where;
+  EXPECT_EQ(a.camera.class_miss_counter, b.camera.class_miss_counter) << where;
+  EXPECT_SAME_FIELD(a, b, detection.f32_CoreX);
+  EXPECT_SAME_FIELD(a, b, detection.f32_CoreY);
+  EXPECT_SAME_FIELD(a, b, detection.f32_CoreZ);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_PredCoreX);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_PredCoreY);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_PrevCoreX);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_PrevCoreY);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_PrevYaw);
+  EXPECT_SAME_FIELD(a, b, detection.f32_Dist);
+  EXPECT_SAME_FIELD(a, b, detection.f32_MinX);
+  EXPECT_SAME_FIELD(a, b, detection.f32_MinY);
+  EXPECT_SAME_FIELD(a, b, detection.f32_MinZ);
+  EXPECT_SAME_FIELD(a, b, detection.f32_MaxX);
+  EXPECT_SAME_FIELD(a, b, detection.f32_MaxY);
+  EXPECT_SAME_FIELD(a, b, detection.f32_MaxZ);
+  EXPECT_SAME_FIELD(a, b, detection.f32_OBB_CenterX);
+  EXPECT_SAME_FIELD(a, b, detection.f32_OBB_CenterY);
+  EXPECT_SAME_FIELD(a, b, detection.f32_OBB_CenterZ);
+  EXPECT_SAME_FIELD(a, b, detection.obb_length_m);
+  EXPECT_SAME_FIELD(a, b, detection.obb_width_m);
+  EXPECT_SAME_FIELD(a, b, detection.f32_OBB_ZMin);
+  EXPECT_SAME_FIELD(a, b, detection.f32_OBB_ZMax);
+  EXPECT_SAME_FIELD(a, b, detection.f32_OBB_YawRad);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_Velocity);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_AbsVx);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_AbsVy);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_DirX);
+  EXPECT_SAME_FIELD(a, b, tracking.f32_DirY);
   for (int i = 0; i < 8; ++i) {
-    EXPECT_SAME_FIELD(a, b, OBB_Corners_Body[i].x);
-    EXPECT_SAME_FIELD(a, b, OBB_Corners_Body[i].y);
-    EXPECT_SAME_FIELD(a, b, OBB_Corners_Body[i].z);
+    EXPECT_SAME_FIELD(a, b, detection.obb_corners_level[i].x);
+    EXPECT_SAME_FIELD(a, b, detection.obb_corners_level[i].y);
+    EXPECT_SAME_FIELD(a, b, detection.obb_corners_level[i].z);
   }
-  EXPECT_TRUE(SameMatrix(a.Eigen_KfState_CA, b.Eigen_KfState_CA)) << where << " kf state";
-  EXPECT_TRUE(SameMatrix(a.Eigen_KfP_CA, b.Eigen_KfP_CA)) << where << " kf P";
-  EXPECT_EQ(a.tracking_frame_valid, b.tracking_frame_valid) << where;
-  EXPECT_SAME_FIELD(a, b, tracking_height_input);
-  EXPECT_TRUE(SameMatrix(a.tracking_yaw_from_input, b.tracking_yaw_from_input)) << where;
-  EXPECT_TRUE(SameMatrix(a.tracking_origin_in_yaw, b.tracking_origin_in_yaw)) << where;
-  EXPECT_EQ(a.ground_evidence.valid, b.ground_evidence.valid) << where;
-  EXPECT_EQ(a.ground_evidence.sample_count, b.ground_evidence.sample_count) << where;
-  EXPECT_SAME_FIELD(a, b, ground_evidence.median_clearance_m);
-  EXPECT_SAME_FIELD(a, b, ground_evidence.rejection_band_m);
-  EXPECT_EQ(a.pcl_ClusterPoints.size(), b.pcl_ClusterPoints.size()) << where;
-  EXPECT_EQ(CloudDigest(a.pcl_ClusterPoints), CloudDigest(b.pcl_ClusterPoints)) << where;
+  EXPECT_TRUE(SameMatrix(a.tracking.Eigen_KfState_CA, b.tracking.Eigen_KfState_CA)) << where << " kf state";
+  EXPECT_TRUE(SameMatrix(a.tracking.Eigen_KfP_CA, b.tracking.Eigen_KfP_CA)) << where << " kf P";
+  EXPECT_EQ(a.tracking.tracking_frame_valid, b.tracking.tracking_frame_valid) << where;
+  EXPECT_SAME_FIELD(a, b, tracking.tracking_height_input);
+  EXPECT_TRUE(SameMatrix(a.tracking.tracking_yaw_from_input, b.tracking.tracking_yaw_from_input)) << where;
+  EXPECT_TRUE(SameMatrix(a.tracking.tracking_origin_in_yaw, b.tracking.tracking_origin_in_yaw)) << where;
+  EXPECT_EQ(a.detection.ground_evidence.valid, b.detection.ground_evidence.valid) << where;
+  EXPECT_EQ(a.detection.ground_evidence.sample_count, b.detection.ground_evidence.sample_count) << where;
+  EXPECT_SAME_FIELD(a, b, detection.ground_evidence.median_clearance_m);
+  EXPECT_SAME_FIELD(a, b, detection.ground_evidence.rejection_band_m);
+  EXPECT_EQ(a.detection.pcl_ClusterPoints.size(), b.detection.pcl_ClusterPoints.size()) << where;
+  EXPECT_EQ(CloudDigest(a.detection.pcl_ClusterPoints), CloudDigest(b.detection.pcl_ClusterPoints)) << where;
 }
 
 void ExpectSameObjects(const std::vector<TrackedObject>& a, const std::vector<TrackedObject>& b,
@@ -282,7 +283,7 @@ void ExpectSameLocalResult(const ScanResult& a, const ScanResult& b, const std::
   EXPECT_EQ(a.plane.valid, b.plane.valid) << where;
   for (int i = 0; i < 4; ++i) EXPECT_TRUE(SameBits(a.plane.coefficients[i], b.plane.coefficients[i])) << where;
   EXPECT_EQ(a.context.frame, b.context.frame) << where;
-  EXPECT_EQ(a.context.input_generation, b.context.input_generation) << where;
+  EXPECT_EQ(a.context.scan_sequence, b.context.scan_sequence) << where;
   EXPECT_EQ(a.context.time.stamp_ns, b.context.time.stamp_ns) << where;
   EXPECT_EQ(a.context.calibration_source, b.context.calibration_source) << where;
   EXPECT_EQ(a.context.leveling_source, b.context.leveling_source) << where;
@@ -382,20 +383,20 @@ TEST(Pipeline, ProcessesSceneInMainOrder) {
     EXPECT_TRUE(r.plane.valid) << where;
     EXPECT_EQ(r.context.frame, al::Frame::LeveledSensor);
     EXPECT_EQ(r.context.time.stamp_ns, r.stamp_ns);
-    EXPECT_EQ(r.context.input_generation, static_cast<std::uint64_t>(k + 1));
+    EXPECT_EQ(r.context.scan_sequence, static_cast<std::uint64_t>(k + 1));
     EXPECT_EQ(r.context.calibration_source, "test_autonav_v3");
     EXPECT_TRUE(r.context.map_pose.valid);
     // Main sort by f32_Dist, then the frame record and ground evidence for observed tracks.
     for (std::size_t i = 1; i < r.objects.size(); ++i)
-      EXPECT_LE(r.objects[i - 1].f32_Dist, r.objects[i].f32_Dist) << where;
+      EXPECT_LE(r.objects[i - 1].detection.f32_Dist, r.objects[i].detection.f32_Dist) << where;
     for (const auto& o : r.objects) {
-      if (o.s32_MissCount != 0) continue;
-      EXPECT_TRUE(o.tracking_frame_valid) << where;
-      EXPECT_TRUE(SameBits(o.tracking_height_input, o.f32_CoreZ)) << where;
-      EXPECT_TRUE(o.ground_evidence.valid) << where;
-      EXPECT_GE(o.s32_Id, 0) << where;
+      if (o.tracking.s32_MissCount != 0) continue;
+      EXPECT_TRUE(o.tracking.tracking_frame_valid) << where;
+      EXPECT_TRUE(SameBits(o.tracking.tracking_height_input, o.detection.f32_CoreZ)) << where;
+      EXPECT_TRUE(o.detection.ground_evidence.valid) << where;
+      EXPECT_GE(o.tracking.s32_Id, 0) << where;
     }
-    for (const auto& d : r.detections) EXPECT_LT(d.s32_Id, 0) << where;
+    for (const auto& d : r.detections) EXPECT_LT(d.tracking.s32_Id, 0) << where;
   }
   // One committed frame per processed scan; the last one = published objects.
   ASSERT_EQ(pipeline.tracker().History().size(), 3u);
@@ -413,12 +414,12 @@ TEST(Pipeline, ProcessesSceneInMainOrder) {
   // receives this scan's dt, local state and frame).
   EXPECT_EQ(results[2].counts.observed_tracks, 2);
   std::vector<int> first_ids, last_ids;
-  for (const auto& o : results[0].objects) first_ids.push_back(o.s32_Id);
+  for (const auto& o : results[0].objects) first_ids.push_back(o.tracking.s32_Id);
   for (const auto& o : results[2].objects) {
-    if (o.s32_MissCount != 0) continue;
-    last_ids.push_back(o.s32_Id);
-    EXPECT_EQ(o.s32_Age, 3);
-    EXPECT_TRUE(o.b_KfInitialized);
+    if (o.tracking.s32_MissCount != 0) continue;
+    last_ids.push_back(o.tracking.s32_Id);
+    EXPECT_EQ(o.tracking.s32_Age, 3);
+    EXPECT_TRUE(o.tracking.b_KfInitialized);
   }
   std::sort(first_ids.begin(), first_ids.end());
   std::sort(last_ids.begin(), last_ids.end());
@@ -433,12 +434,12 @@ TEST(Pipeline, MissedTrackIsCarriedWithoutGroundEvidence) {
   bool saw_missed = false;
   for (int k = 4; k < 6; ++k) {
     for (const auto& o : results[k].objects) {
-      if (o.s32_MissCount == 0) continue;
+      if (o.tracking.s32_MissCount == 0) continue;
       saw_missed = true;
-      EXPECT_FALSE(o.ground_evidence.valid);
-      EXPECT_EQ(o.ground_evidence.sample_count, 0);
-      EXPECT_EQ(o.ground_evidence.median_clearance_m, 0.0);
-      EXPECT_EQ(o.ground_evidence.rejection_band_m, 0.0);
+      EXPECT_FALSE(o.detection.ground_evidence.valid);
+      EXPECT_EQ(o.detection.ground_evidence.sample_count, 0);
+      EXPECT_EQ(o.detection.ground_evidence.median_clearance_m, 0.0);
+      EXPECT_EQ(o.detection.ground_evidence.rejection_band_m, 0.0);
     }
   }
   EXPECT_TRUE(saw_missed);
@@ -565,7 +566,7 @@ TEST(Pipeline, CaptureDebugDoesNotChangeObjects) {
     int clustered = 0;
     for (std::size_t i = 0; i < b[k].cluster_sizes.size(); ++i) {
       clustered += b[k].cluster_sizes[i];
-      EXPECT_EQ(b[k].cluster_sizes[i], static_cast<int>(b[k].detections[i].pcl_ClusterPoints.size()));
+      EXPECT_EQ(b[k].cluster_sizes[i], static_cast<int>(b[k].detections[i].detection.pcl_ClusterPoints.size()));
     }
     EXPECT_LE(clustered, b[k].counts.cluster_input_points);
     EXPECT_TRUE(IsLowerHex64(b[k].digests.roi));

@@ -1,5 +1,5 @@
 // Adaptive Euclidean clustering and centroids (Main Clustering.cpp at 8f93c22e).
-#include <asmc_lidar/pipeline/clustering.hpp>
+#include <asmc_lidar/detection/clustering.hpp>
 
 #include <gtest/gtest.h>
 

@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""Display published LiDAR observations; never run detection, tracking or fusion.
+
+The public eight OBB corners already include the frame/mount/attitude transform.
+Do not reconstruct a yaw-only box, flatten z, or apply IMU compensation again.
+This RViz adapter is separate from the localhost web viewer in view.launch.
+"""
+import math
+import threading
+import time
+
+import rospy
+from asmc_msgs.msg import LidarObjectArray, LidarObservation
+from geometry_msgs.msg import Point
+from visualization_msgs.msg import Marker, MarkerArray
+
+
+EDGES = ((0, 1), (1, 2), (2, 3), (3, 0), (4, 5), (5, 6),
+         (6, 7), (7, 4), (0, 4), (1, 5), (2, 6), (3, 7))
+COLORS = {'vehicle': (0.2, 0.8, 1.0), 'dynamic_obstacle': (1.0, 0.45, 0.15),
+          'static_obstacle': (0.3, 1.0, 0.45)}
+
+
+def ego_markers():
+    """Static ego display: body footprint plus verified geometry height.
+
+    Matches asmc_hd_map/ego_footprint.py and planning's rear-axle base_link:
+    rear=-0.79, front=3.0+0.845, width=1.892 m. Correction on 2026-10-23:
+    UDP sizeZ/GetVehicleSpec.height=2.434 is metadata, not this mesh's height.
+    Five read-only GetActorState(Ego) calls gave bounding_box.extent.z=
+    .8220231533, i.e. geometry height=1.6440463066 m (extent is half-size).
+    Only the display uses this snapshot; no live GT enters perception.
+    Ground z=-.36 is the nominal wheel-radius plane, not measured heave.
+    Keep the preserved legacy detector settings unchanged.
+    """
+    rear, front, half_width = -0.79, 3.845, 1.892 / 2.
+    height, ground_z = 1.644, -0.36
+    top_z = ground_z + height
+    markers = [Marker() for _ in range(3)]
+    for index, marker in enumerate(markers):
+        marker.header.frame_id = 'base_link'
+        marker.ns, marker.id = 'ego', index
+        marker.action = Marker.ADD
+        marker.pose.orientation.w = 1.
+        # Zero stamp/lifetime: fixed base_link reference, independent of scans.
+    fill, outline, label = markers
+    fill.type = Marker.CUBE
+    fill.pose.position.x = (front + rear) / 2.
+    fill.pose.position.z = ground_z + height / 2.
+    fill.scale.x, fill.scale.y, fill.scale.z = front - rear, half_width * 2., height
+    fill.color.r, fill.color.g, fill.color.b, fill.color.a = .2, .45, 1., .2
+    outline.type = Marker.LINE_LIST
+    outline.scale.x = .06
+    outline.color.r = outline.color.g = outline.color.b = outline.color.a = 1.
+    corners = [Point(x, y, z) for z in (ground_z, top_z) for x, y in
+               ((rear, half_width), (front, half_width), (front, -half_width), (rear, -half_width))]
+    outline.points = [corners[index] for edge in EDGES for index in edge]
+    label.type = Marker.TEXT_VIEW_FACING
+    label.pose.position.x, label.pose.position.z = (front + rear) / 2., top_z + .25
+    label.scale.z = .35
+    label.color.r = label.color.g = label.color.b = label.color.a = 1.
+    label.text = 'EGO (+X front)'
+    return markers
+
+
+class ObjectMarkers:
+    """Bounded display state: current identities only, no point clouds/history."""
+    def __init__(self, lifetime=0.35):
+        self.lifetime = lifetime
+        self.epoch = None
+        self.sequence = None
+        self.stamp = None
+        self.keys = set()
+
+    def marker(self, header, namespace, marker_id, action=Marker.ADD):
+        marker = Marker()
+        marker.header = header
+        marker.ns = namespace
+        marker.id = marker_id
+        marker.action = action
+        marker.pose.orientation.w = 1.0
+        marker.lifetime = rospy.Duration.from_sec(self.lifetime)
+        return marker
+
+    def clear(self, header):
+        result = MarkerArray()
+        result.markers = [self.marker(header, 'objects', 0, Marker.DELETEALL)]
+        self.keys.clear()
+        return result
+
+    def render(self, observation):
+        objects = observation.objects
+        epoch = (observation.producer_session_id, observation.generation)
+        # Same producer's retired generation and duplicate results cannot put
+        # old boxes back on screen. A new producer/epoch starts a new display.
+        if self.epoch and epoch[0] == self.epoch[0] and epoch[1] < self.epoch[1]:
+            return None
+        changed = epoch != self.epoch
+        if not changed and (observation.scan_sequence <= self.sequence or objects.header.stamp <= self.stamp):
+            return None
+        result = self.clear(objects.header) if changed else MarkerArray()
+        self.epoch, self.sequence, self.stamp = epoch, observation.scan_sequence, objects.header.stamp
+        keys = set()
+        if objects.status == LidarObjectArray.OBSERVED:
+            for obj in objects.objects:
+                corners = obj.obb_corners
+                if (obj.track_id < 0 or len(corners) != 8 or
+                        not all(math.isfinite(v) for p in corners for v in (p.x, p.y, p.z)) or
+                        not all(math.isfinite(v) for v in (obj.center.x, obj.center.y)) or
+                        ('obb', obj.track_id) in keys):
+                    continue
+                box = self.marker(objects.header, 'obb', obj.track_id)
+                box.type = Marker.LINE_LIST
+                box.scale.x = 0.045
+                box.color.r, box.color.g, box.color.b = COLORS.get(obj.classification, (1.0, 0.85, 0.2))
+                box.color.a = 1.0
+                box.points = [corners[index] for edge in EDGES for index in edge]
+                label = self.marker(objects.header, 'label', obj.track_id)
+                label.type = Marker.TEXT_VIEW_FACING
+                label.scale.z = 0.28
+                label.color.r = label.color.g = label.color.b = label.color.a = 1.0
+                label.pose.position.x, label.pose.position.y = obj.center.x, obj.center.y
+                label.pose.position.z = max(point.z for point in corners) + 0.25
+                label.text = '#{} {} / {}  n={}'.format(
+                    obj.track_id, obj.classification or 'unknown', obj.camera_class or 'unknown', obj.source_point_count)
+                result.markers.extend((box, label))
+                keys.update((('obb', obj.track_id), ('label', obj.track_id)))
+        # OBSERVED_EMPTY and invalid/pose-unavailable results remove old boxes
+        # immediately. Markers also expire if input stops, including paused ROS time.
+        result.markers.extend(self.marker(objects.header, namespace, marker_id, Marker.DELETE)
+                              for namespace, marker_id in sorted(self.keys - keys))
+        self.keys = keys
+        return result
+
+
+class MarkerNode:
+    def __init__(self):
+        self.timeout = 0.35
+        self.builder = ObjectMarkers(self.timeout)
+        self.lock = threading.Lock()
+        self.last_receipt = None
+        self.last_display_publish = 0.
+        self.header = None
+        self.stop = threading.Event()
+        self.publisher = rospy.Publisher(rospy.get_param('~output', '/migration/lidar/markers'),
+                                         MarkerArray, queue_size=1)
+        self.subscriber = rospy.Subscriber(rospy.get_param('~input', '/migration/lidar/observations_local'),
+                                           LidarObservation, self.receive, queue_size=1, tcp_nodelay=True)
+        self.worker = threading.Thread(target=self.expire, name='lidar_marker_expiry', daemon=True)
+        self.worker.start()
+        rospy.on_shutdown(self.shutdown)
+
+    def receive(self, observation):
+        with self.lock:
+            markers = self.builder.render(observation)
+            if markers is None:
+                return
+            self.header = observation.objects.header
+            self.last_receipt = time.monotonic()
+            self.publish(markers)
+
+    def publish(self, markers):
+        # Keep ego in the same display topic, including after DELETEALL. It is
+        # never inserted into LidarObjectArray or used by detection/tracking.
+        markers.markers.extend(ego_markers())
+        self.publisher.publish(markers)
+        self.last_display_publish = time.monotonic()
+
+    def expire(self):
+        while not self.stop.wait(0.05):
+            with self.lock:
+                if (self.last_receipt is not None and
+                        time.monotonic() - self.last_receipt > self.timeout):
+                    self.publish(self.builder.clear(self.header))
+                    self.last_receipt = None
+                elif self.last_receipt is None and time.monotonic() - self.last_display_publish >= 1.:
+                    # Static reference only; do not revive expired detections
+                    # or assign a new source stamp to old sensor results.
+                    self.publish(MarkerArray())
+
+    def shutdown(self):
+        self.stop.set()
+        self.worker.join(timeout=1.0)
+
+
+if __name__ == '__main__':
+    rospy.init_node('lidar_markers')
+    node = MarkerNode()
+    rospy.spin()

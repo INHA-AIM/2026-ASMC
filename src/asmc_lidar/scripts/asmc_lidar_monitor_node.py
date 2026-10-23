@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""asmc_lidar_monitor_node: read-only web monitor of asmc_lidar_shadow_node.
+"""asmc_lidar_monitor_node: read-only web monitor of lidar_pipeline_node.
 
 Subscribes to the shadow node's monitoring outputs (<debug_topic_prefix>/scan,
 /raw, /roi, /voxel, /leveled, the diagnostics and the typed local array), groups
@@ -26,7 +26,7 @@ from diagnostic_msgs.msg import DiagnosticArray  # noqa: E402
 from sensor_msgs.msg import PointCloud2  # noqa: E402
 from std_msgs.msg import String  # noqa: E402
 
-DIAGNOSTIC_STATUS_NAME = 'asmc_lidar_shadow'
+DIAGNOSTIC_STATUS_NAME = 'lidar_pipeline'
 
 
 def default_web_dir():
@@ -82,11 +82,11 @@ def main():
     header_timeout_s = float(rospy.get_param('~header_timeout_s', 5.0))
     request_timeout_s = float(rospy.get_param('~request_timeout_s', 20.0))
     web_dir = str(rospy.get_param('~web_dir', '')) or default_web_dir()
-    prefix = str(rospy.get_param('~debug_topic_prefix', '/asmc_lidar/shadow/debug')).rstrip('/')
-    diagnostics_topic = str(rospy.get_param('~diagnostics_topic', '/asmc_lidar/shadow/diagnostics'))
-    objects_local_topic = str(rospy.get_param('~objects_local_topic', '/asmc_lidar/shadow/objects_local'))
-    objects_map_topic = str(rospy.get_param('~objects_map_topic', '/asmc_lidar/shadow/objects_map'))
-    points_topic = str(rospy.get_param('~points_topic', '/velodyne_points'))
+    prefix = rospy.resolve_name(str(rospy.get_param('~debug_topic_prefix', '/migration/lidar/debug')).rstrip('/'))
+    diagnostics_topic = rospy.resolve_name(str(rospy.get_param('~diagnostics_topic', '/migration/lidar/diagnostics')))
+    objects_local_topic = rospy.resolve_name(str(rospy.get_param('~objects_local_topic', '/migration/lidar/objects_local')))
+    objects_map_topic = rospy.resolve_name(str(rospy.get_param('~objects_map_topic', '/migration/lidar/objects_map')))
+    points_topic = rospy.resolve_name(str(rospy.get_param('~points_topic', '/velodyne_points')))
     max_scenes = int(rospy.get_param('~max_scenes', 4))
     complete_timeout_s = float(rospy.get_param('~scene_timeout_s', 0.6))
     master_check_s = float(rospy.get_param('~master_check_s', 2.0))
@@ -99,7 +99,7 @@ def main():
         drivable = load_drivable_overlay(
             str(rospy.get_param('~drivable_map_file', os.path.join(planner, 'config/hd_map/drivable.json'))),
             str(rospy.get_param('~drivable_reference_file', os.path.join(planner, 'config/behavior/global_info.json'))),
-            str(rospy.get_param('~pipeline_config', os.path.join(lidar, 'config/shadow_pipeline.yaml'))))
+            str(rospy.get_param('~pipeline_config', os.path.join(lidar, 'config/lidar_pipeline.yaml'))))
     except rospkg.ResourceNotFound:
         pass
     if not drivable['available']:

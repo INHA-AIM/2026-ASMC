@@ -1,6 +1,7 @@
-# asmc_lidar 웹 모니터 — shadow 필터 결과를 브라우저에서 보기 (읽기 전용)
+# asmc_lidar 웹 모니터 — 처리 결과를 브라우저에서 보기 (읽기 전용)
 
-`roslaunch asmc_lidar monitor.launch`는 **shadow LiDAR 노드**와 **읽기 전용 웹 모니터**를 함께 띄운다.
+`roslaunch asmc_lidar view.launch`는 이미 실행 중인 LiDAR의 결과를 구독하는 **읽기 전용 웹 모니터만** 띄운다.
+처리는 별도 `roslaunch asmc_lidar lidar.launch debug:=true`에서 시작한다.
 목적은 "내 asmc_lidar가 실제로 어떤 점을 남겼고 어떤 객체를 추적하는지"를 확인하는 것이다.
 모니터는 ROS를 구독만 하고, 발행·서비스 호출·파라미터 변경·shell 실행을 하지 않는다.
 판제는 계속 기존 `Main`(`/last_lidar`)을 쓴다. 이 launch는 Main·planner·카메라 추론·UDP bridge·Velodyne
@@ -27,10 +28,11 @@ driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. T
 - `보기 → 화면 → 3D · 회전 보기`: 점군 XYZ와 OBB 8 corner를 직교 투영한다.
   좌클릭 드래그는 2D·3D 모두 회전, 가운데 버튼 드래그 또는 Shift+좌클릭 드래그는 이동,
   휠은 확대다. 차량 중심 버튼은 이동·회전도 초기화한다. 실시간 추론·필터링 설정은 바꾸지 않는다.
-- 3D 자차는 실제 길이·폭·축 위치를 쓰되, 높이 1.5m는 시각화용 추정 외형이다.
+- 3D 자차는 실제 길이·폭·축 위치를 쓰되, 높이 1.5m는 이 웹 UI의 추정 외형이다.
+  RViz의 형상 확인값1.644m와 다르며 인지 입력이나 필터 기준으로 사용하지 않는다.
 - 추적 OBB/라벨 색은 Main 판정 알고리즘의 **진단용** 결과다. DYNAMIC/PENDING 빨강,
   LOW_THREAT 초록, UNKNOWN/invalid 노랑. 지도 중심점 포함 판정은 객체 목록의 별도 열이다.
-  현재 shadow 출력은 지도 기반으로 걸러지지 않는다.
+  현재 이관 검증 출력은 지도 기반으로 걸러지지 않는다.
 - `motion_display`는 기존 Main `MotionClassifier`의 중앙값·급변 후보·변위 확인·상태 전이
   함수 본문을 유지한 transport-free 이식이다. 임계값은 현재 Main 기본값(x10/y4km/h,
   변위 x8/y3km/h)이며 별도 튜닝하지 않았다. map OBB bounds/벡터는 저장된 scan Context로
@@ -48,7 +50,7 @@ driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. T
 ```bash
 # outer workspace 하나만 source한다 (nested Main devel 불필요)
 source /opt/ros/noetic/setup.bash && source devel/setup.bash
-roslaunch asmc_lidar monitor.launch open_browser:=true
+roslaunch asmc_lidar view.launch open_browser:=true
 ```
 
 접속 URL: `http://127.0.0.1:8091/` (기본 포트 8091, 기존 planner dashboard 8088과 다름).
@@ -56,32 +58,32 @@ roslaunch asmc_lidar monitor.launch open_browser:=true
 
 | 상황 | 명령 |
 |---|---|
-| 기존 주행 구성(터미널 1~6)에 관측만 추가 | `roslaunch asmc_lidar monitor.launch open_browser:=true` |
-| 이미 실행 중인 shadow 노드에 모니터만 붙이기 | `roslaunch asmc_lidar monitor.launch start_pipeline:=false open_browser:=true` |
-| 카메라 없이 LiDAR만 시험 | `roslaunch asmc_lidar monitor.launch enable_camera_fusion:=false open_browser:=true` |
-| 포트 변경 | `roslaunch asmc_lidar monitor.launch dashboard_port:=8092` |
-| 다른 PC에서 접속(명시적 선택) | `roslaunch asmc_lidar monitor.launch bind_address:=0.0.0.0` |
+| 기존 처리 결과에 화면만 추가 | `roslaunch asmc_lidar view.launch open_browser:=true` |
+| 다른 namespace 결과 보기 | `roslaunch asmc_lidar view.launch namespace:=/migration/lidar_tunnel` |
+| 카메라 없이 처리 시작(별도 터미널) | `roslaunch asmc_lidar lidar.launch fusion:=false debug:=true` |
+| 포트 변경 | `roslaunch asmc_lidar view.launch dashboard_port:=8092` |
+| 다른 PC에서 접속(명시적 선택) | `roslaunch asmc_lidar view.launch bind_address:=0.0.0.0` |
 
-`start_pipeline:=false`로 붙이려면 실행 중인 shadow 노드가 `~debug_enabled:=true`로 시작돼 있어야 한다
-(`shadow_pipeline.launch`는 debug 출력이 기본 OFF다). 그렇지 않으면 화면 상단에
-"모니터 데이터: shadow 노드 debug_enabled=false"가 표시된다.
+화면에 점군이 나오려면 처리 노드를 `lidar.launch debug:=true`로 시작해야 한다.
+기본 실행은 debug OFF이고, 구독자와 rate limit이 충족된 scan만 샘플링한다.
+`view.launch`는 debug를 켜는 서비스나 파라미터 변경을 수행하지 않는다.
 
 ## 인자
 
-| 인자 | 기본값 | 의미 |
-|---|---|---|
-| `start_pipeline` | `true` | false면 shadow 노드를 시작하지 않고 모니터만 띄운다 |
-| `open_browser` | `false` | 서버의 `/api/health`가 응답한 뒤 브라우저를 **한 번만** 연다 |
-| `dashboard_port` | `8091` | HTTP 포트 |
-| `bind_address` | `127.0.0.1` | `0.0.0.0`은 외부 접속 허용(명시적 선택) |
-| `max_clients` | `8` | 동시에 처리하는 HTTP 연결 수. 요청을 읽기 전(accept 직후)에 검사하며 초과 연결은 handler thread 없이 503 후 종료 |
-| `http_header_timeout_s` | `5.0` | 연결 후 요청 줄·헤더를 모두 보내야 하는 시간. 넘으면 서버가 연결을 끊는다 |
-| `http_request_timeout_s` | `20.0` | 연결 후 응답 쓰기까지 끝나야 하는 전체 시간. 읽지 않거나 매우 느리게 읽는 연결도 이 시간에 끊긴다 |
-| `debug_rate_hz` | `5.0` | shadow 노드가 단계 점군을 내보내는 주기 |
-| `debug_max_points` | `20000` | 단계당 전송 점 상한; 초과분은 stride 샘플 |
-| `debug_topic_prefix` | `/asmc_lidar/shadow/debug` | 모니터용 토픽 접두 |
-| `enable_camera_fusion` | (YAML 값, true) | `false`면 카메라 구독·fusion 없음 |
-| `lidar_level_roll`, `experimental_tunnel_filter`, `publish_tf`, 토픽 인자 | `shadow_pipeline.launch`와 같음 | |
+| 진입점 | 인자 | 기본값 | 의미 |
+|---|---|---|---|
+| `view.launch` | `namespace` | `/migration/lidar` | 구독할 결과 namespace |
+| `view.launch` | `open_browser` | `false` | 준비 후 브라우저 한 번 열기 |
+| `view.launch` | `dashboard_port` | `8091` | HTTP 포트 |
+| `view.launch` | `bind_address` | `127.0.0.1` | `0.0.0.0`은 명시적 외부 공개 |
+| `view.launch` | `pipeline_config` | 패키지 `config/lidar_pipeline.yaml` | 지도 원점 대조용(생산자와 같은 파일 사용) |
+| `view.launch` | `max_clients` | `8` | 동시 HTTP 연결 상한 |
+| `view.launch` | `http_header_timeout_s` / `http_request_timeout_s` | `5.0` / `20.0` | 헤더/전체 요청 제한 |
+| `lidar.launch` | `debug` | `false` | 단계별 샘플 발행 활성화 |
+| `lidar.launch` | `debug_rate_hz` | `5.0` | 샘플 scan 주기 상한 |
+| `lidar.launch` | `debug_max_points` | `20000` | 단계당 전송 점 상한 |
+
+구형 `monitor.launch`와 `start_pipeline`은 제거했다. 호환 wrapper나 별칭은 없다.
 
 ## 기존 실행 구성과의 관계
 
@@ -89,17 +91,18 @@ roslaunch asmc_lidar monitor.launch open_browser:=true
 
 터미널 1~6(`udp_bridge.sh`, `asmc_camera camera.launch`, `Main main.launch`, `lane_boundary_adapter`,
 `asmc_planner autonomy_no_bridges_v2.launch`, `asmc_planner dashboard.launch`)은 그대로 둔다.
-새 터미널 7에서:
+처리가 없을 때만 새 터미널에서 `roslaunch asmc_lidar lidar.launch debug:=true`를 시작한다.
+이미 같은 namespace의 처리가 있으면 두 번째로 실행하지 않는다. 화면은 별도 터미널에서:
 
 ```bash
-cd <저장소>            # 예: /home/autonav/2026AIM/Yangtest_lidar_web_monitor 또는 컨테이너의 /root/ws
+cd <저장소>            # 컨테이너의 /root/ws
 source /opt/ros/noetic/setup.bash && source devel/setup.bash
-roslaunch asmc_lidar monitor.launch open_browser:=true
+roslaunch asmc_lidar view.launch open_browser:=true
 ```
 
-이 명령이 켜는 프로세스는 `asmc_lidar_shadow_node`와 `asmc_lidar_monitor_node.py` 둘뿐이다.
+`view.launch`가 켜는 프로세스는 `asmc_lidar_monitor_node.py` 하나다.
 bridge·카메라·Main은 이미 떠 있는 것을 구독한다(같은 토픽을 두 번 발행하지 않는다).
-**주의:** Main과 shadow가 함께 돌면 LiDAR 처리가 두 번 수행된다(독립 pipeline 2개, p50 약 35~65 ms/scan 추가).
+**주의:** Main과 새 처리가 함께 돌면 LiDAR 처리가 두 번 수행된다(독립 pipeline 2개, 추가 연산 비용은 해당 구성에서 측정해야 함).
 planner dashboard(8088, 판제 상태)와 이 LiDAR monitor(8091, 필터 단계·추적)는 서로 다른 화면이다.
 
 ### B. LiDAR 독립 시험 (Main·planner 불필요)
@@ -112,10 +115,12 @@ planner dashboard(8088, 판제 상태)와 이 LiDAR monitor(8091, 필터 단계�
 # 터미널 2 (선택): roslaunch asmc_camera camera.launch mode:=active models:=objects
 # 터미널 3:
 source /opt/ros/noetic/setup.bash && source devel/setup.bash
-roslaunch asmc_lidar monitor.launch enable_camera_fusion:=false open_browser:=true
+roslaunch asmc_lidar lidar.launch fusion:=false debug:=true
+# 별도 터미널:
+roslaunch asmc_lidar view.launch open_browser:=true
 ```
 
-bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌아가 shadow 노드가 scan을
+bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌아가 처리 노드가 scan을
 `duplicate_or_regressing_source_stamp`로 거부한다(화면은 stale). 처음부터 다시 보려면 노드를 다시 시작한다.
 
 ## 환경별 브라우저 접속
@@ -129,8 +134,8 @@ bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌�
 
 브라우저 열기에 실패해도 LiDAR 노드와 서버는 계속 동작하며 로그에 정확한 URL을 출력한다.
 재연결 때 브라우저를 다시 열지 않는다. 포트가 사용 중이면 모니터 노드만 종료되고(`required=false`)
-shadow 노드는 계속 실행된다. 이때 `dashboard_port:=8092`처럼 다른 포트로 모니터만 다시 띄운다
-(`start_pipeline:=false`).
+처리 노드는 계속 실행된다. 이때 `dashboard_port:=8092`처럼 다른 포트로 모니터만 다시 띄운다
+(`view.launch`는 항상 화면만 실행한다).
 
 ## 화면
 
@@ -172,7 +177,7 @@ OBB는 BEV에서 **회전된 footprint**(메시지 corner 0–3을 선택 frame�
 |---|---|
 | 서버: 연결 실패 / 응답 정지 (timeout) / 서버 혼잡 (503) | 모니터 HTTP 서버 접속 불가 / 3 s 안에 응답 없음(요청 취소 후 재시도) / 연결 상한 초과. 마지막 화면은 과거 데이터(붉은 배너) |
 | 서버 재시작 감지 (세션 변경) | 이전 장면과 객체를 폐기했고 새 서버의 첫 장면을 기다리는 중 |
-| pipeline: ROS 연결됨, LiDAR 입력 없음 | shadow diagnostics가 `input_silence`(scan이 1 s 이상 처리되지 않음) |
+| pipeline: ROS 연결됨, LiDAR 입력 없음 | 처리 diagnostics가 `input_silence`(scan이 1 s 이상 처리되지 않음) |
 | pipeline: LiDAR 입력 stale | 마지막 debug scan이 1 s 이상 지남 |
 | pipeline: IMU/CAN 무효 → INPUT_INVALID | 로컬 pose 없음/stale/무효; 객체 0개, 점군은 표시하지 않음 |
 | typed local: OBSERVED_EMPTY | 정상 처리, 객체 없음 |
@@ -181,7 +186,7 @@ OBB는 BEV에서 **회전된 footprint**(메시지 corner 0–3을 선택 frame�
 | 화면 정지 (Pause) | 사용자가 표시를 멈춘 것(보라 배너, BEV 라벨 `PAUSED`, 표시 장면 경과 계속 증가). 서버·pipeline은 계속 동작하고 상태값은 계속 갱신된다. 재개하면 다음 요청에서 최신 장면을 받는다 |
 | STALE 배너 + 흐린 OBB | **표시 중인 장면**이 1 s보다 오래됨. 배너는 서버가 debug scan을 받고 있는데 장면이 안 오는지, 입력 자체가 멈췄는지 구분한다. 표시 객체는 현재 장애물이 아니다 |
 
-## 모니터용 토픽 (shadow 노드 `~debug_enabled:=true`일 때만)
+## 모니터용 토픽 (처리 노드 `~debug_enabled:=true`일 때만)
 
 | 토픽 | 타입 | 내용 |
 |---|---|---|
@@ -214,7 +219,7 @@ OBB는 BEV에서 **회전된 footprint**(메시지 corner 0–3을 선택 frame�
 python3 src/asmc_lidar/test/monitor/test_monitor_core.py      # 장면 묶기·frame 인코딩·HTTP 경로·세션·연결 상한/timeout·브라우저 열기 (ROS 불필요)
 node src/asmc_lidar/test/monitor/test_monitor_view.js         # 2D/3D·지도·색상·표시 필터·ID 의심·신선도 (node >= 10, CI 포함)
 (cd build/asmc_lidar && ctest -R "stage_observer|monitor" --output-on-failure)
-rostest asmc_lidar monitor_node.test                          # 실제 shadow 노드 + 모니터 + 합성 입력
+rostest asmc_lidar monitor_node.test                          # 실제 처리 노드 + 모니터 + 합성 입력
 ```
 
 `monitor_node.test`는 합성 점군(지면 + 상자)으로 상태 전이(정상·INPUT_INVALID·입력 중단·복구), 장면/stamp/frame
