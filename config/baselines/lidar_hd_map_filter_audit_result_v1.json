@@ -1,0 +1,42 @@
+{
+  "schema_version": "asmc.lidar.hd_map_filter_audit_result/v1",
+  "status": "offline_complete_runtime_adoption_held",
+  "run_id": "lidar-hd-map-filter-audit-20261024-r2",
+  "source_revision": "845a0cda8164a1b9feae3b14930365be651e10cd",
+  "main_base": "6927fe9d9e08a2a7c19ddca4956aad6a15524ff9",
+  "evidence_directory": "artifacts/lidar-hd-map-filter-audit-20261024-r2",
+  "summary_sha256": "e823d84aac4e3c266f9798767e29d32fb39ab1491043adb81c1988cbe0bd3948",
+  "evidence_manifest_sha256": "6e22a850d6caa4c6ce4e6891507ff28654c18160e35b9d724581f6af5bea9eeb",
+  "stable_decisions_sha256": "f9def17297a6b1d7d962c8016561b48f71f1106ca1bffd67e9b44f3fbbe26c42",
+  "input_objects_sha256": "e7f7a6fcea3911b23d3539e66999997f53b748fee5ea272981e012048de3601f",
+  "real_replay_scans": 3428,
+  "real_replay_object_observations": 50635,
+  "real_keep": 38101,
+  "real_undetermined": 12534,
+  "real_exclude_candidate": 0,
+  "synthetic_cases": 36,
+  "synthetic_keep": 21,
+  "synthetic_undetermined": 8,
+  "synthetic_exclude_candidate": 7,
+  "synthetic_required_exclusion_failures": 0,
+  "gallery_svg_count": 48,
+  "core_tests": 18,
+  "existing_contract_tests": 15,
+  "documentation_unit_tests": 17,
+  "candidate_object_ms": {
+    "p50": 0.543161,
+    "p95": 1.823055,
+    "p99": 2.876621400000002
+  },
+  "geometry_authority": "v6 vector; footprint ratios computed on hash-checked derived grid",
+  "runtime_changes": false,
+  "independent_gt_available": false,
+  "limitations": [
+    "real data mainly A448/A126/A128; other mission approaches only synthetic",
+    "no validated pose-position error bound",
+    "mission polygons empty; off-route approach coverage unreviewed",
+    "legacy real-data decisions are counterfactual static probes, not recorded Main keep/drop"
+  ],
+  "failed_run_preserved": "lidar-hd-map-filter-audit-20261024-r1",
+  "next_unit": "decision-only post-OBB/tracking/fusion integration under migration namespace; actual exclusion OFF"
+}

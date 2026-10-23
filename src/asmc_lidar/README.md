@@ -11,6 +11,7 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 - [웹 모니터와 단계별 진단](docs/web-monitor.md)
 - [카메라 수신·버퍼·보정·투영 API](docs/camera-input.md)
 - [전체 이관 작업표](docs/migration-tasks.md), [팀 인계](../../docs/handoffs/lidar-migration.md)
+- [A1 기존 필터·OBB 기반 HD맵 오프라인 대조](docs/hd-map-filter-analysis.md) — 원본 객체 보존, 실제 제외 보류
 
 ## 구조
 
