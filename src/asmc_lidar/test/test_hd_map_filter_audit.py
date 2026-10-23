@@ -6,6 +6,7 @@ import json
 import math
 from pathlib import Path
 import unittest
+import tempfile
 
 import numpy as np
 
@@ -134,6 +135,19 @@ class AuditTest(unittest.TestCase):
                 self.assertEqual(f,before)
                 if f['objects'][0]['required_object']:
                     self.assertNotEqual(d['decision'],'exclude_candidate')
+
+
+    def test_gallery_draws_clipped_legacy_corners_without_mutation(self):
+        obj=box(50,40);before=copy.deepcopy(obj)
+        self.map.product['drivable_areas']=[]
+        row=dict(object=obj,candidate=self.evaluate(obj),legacy={'main':dict(geometry_clipped=True,output_corners=box(50,40,width=.5)['corners'])},
+                 frame_id='map',source_id='unit',key='test',stamp_ns=1,source_kind='synthetic_fixture',pose={})
+        with tempfile.TemporaryDirectory() as directory:
+            audit.write_gallery(Path(directory),[row],self.map)
+            svg=(Path(directory)/'case-000.svg').read_text()
+            self.assertIn('stroke-dasharray',svg)
+            self.assertTrue((Path(directory)/'index.html').is_file())
+        self.assertEqual(obj,before)
 
 
 if __name__=='__main__':

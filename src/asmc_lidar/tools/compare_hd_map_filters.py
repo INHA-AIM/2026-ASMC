@@ -334,7 +334,7 @@ def write_gallery(directory, cases, audit):
                     content.append('<polygon points="%s" fill="#cbd8e5" stroke="#687e91" stroke-width="0.7"/>' % points(poly))
         for profile, old in row["legacy"].items():
             if old.get("geometry_clipped") and old.get("output_corners"):
-                outline = cv2.convexHull(np.asarray(old["output_corners"], dtype=np.float32)[:, :2]).reshape(-1, 2)
+                outline = cv2.convexHull(np.ascontiguousarray(np.asarray(old["output_corners"], dtype=np.float32)[:, :2])).reshape(-1, 2)
                 content.append('<polygon points="%s" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="5 4"/>' % points(outline))
         content.append('<polygon points="%s" fill="none" stroke="%s" stroke-width="3"/>' % (points(hull), colors[decision["decision"]]))
         content.append('<text x="10" y="20" font-size="12">map +X right, +Y up; 50m window</text></svg>')
@@ -453,7 +453,7 @@ def main():
     args = parser.parse_args()
     try:
         return run(args)
-    except (ValueError, OSError, RuntimeError) as error:
+    except (ValueError, OSError, RuntimeError, cv2.error) as error:
         parser.exit(1, str(error) + "\n")
 
 
