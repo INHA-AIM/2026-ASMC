@@ -42,6 +42,10 @@ L1 구조·입출력·시각·pose 정책은 [이관 설계](../../src/asmc_lida
 LiDAR 단독 비교는 같은 launch에 `fusion:=false`를 준다. 이 옵션은 카메라 추론을 시작하거나
 끄지 않으며 LiDAR의 카메라 관측 사용만 선택한다. 현재 fusion은 전방만 구현되어 있다.
 
+현재 RViz 표시 도구는 `rosrun asmc_lidar lidar_markers.py`다. 원자적 local 관측에서
+실제 8코너·ID·분류를 Marker로만 변환하며 [설정 방법](../../src/asmc_lidar/README.md#처리-결과를-rviz에서-보기)을 따른다.
+재호의 향후 localhost 웹 UI와 별도이며 검출·추적·fusion 생산자를 추가하지 않는다.
+
 ## 최신 HD맵 사용 여부 — 2026-10-23 확인
 
 - 새 `asmc_lidar`는 HD맵 계약의 원점 `[302595.0, 4124145.0, 0.0]`을 사용한다.

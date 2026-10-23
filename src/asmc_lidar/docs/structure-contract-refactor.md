@@ -48,6 +48,21 @@ PR #103의 계산 결과를 보존하며 기존 Main의 판제 출력을 전환�
 - 두 시험 모두 운영 객체·TF 발행이 없고 종료 시 노드·rosout·시험 master를 정리했다.
   센서가 없는 실행 확인이므로 실제 검출 품질·공급률 검증으로 사용하지 않는다.
 
+## 처리 객체의 RViz 표시
+
+`scripts/lidar_markers.py`와 `rviz/lidar.rviz`를 추가했다. 향후 웹 `view.launch`와 별도의
+읽기 전용 표시이며 `/migration/lidar/observations_local`을 `/migration/lidar/markers`로 변환한다.
+OBB8코너·source header·추적ID·소비 그룹/카메라 원본분류를 그대로 사용한다. IMU·장착 변환이나
+검출·추적·fusion을 다시 계산하지 않고, 속도 validity가 false인 결과에 운동 화살표를 만들지 않는다.
+빈 결과·무효·세션/세대 전환에서 이전 표시를 지우고 입력350ms 중단은 wall clock으로 제거한다.
+중간 지면 제거/군집 점군은 이 표시 도구의 입력이나 출력이 아니다.
+
+2026-10-23 검증: CPU 표시 검사6개, 독립 ROS11545의8코너/header·빈 결과 삭제·wall 만료·
+Marker 전용 발행을 확인했다. 일반 `/root/ws/devel` 재빌드 후 전체 CTest27/27이 통과했다.
+실제 실행 중인 local 관측3객체와 Marker3박스의 source stamp·`base_link`·8코너가 정확히 일치했다.
+기존 bridge·처리 노드·RViz는 유지하고 표시 도구 하나만 연결했다. 알고리즘 품질·공급률의
+새 수락 시험으로 해석하지 않는다. 사용법은 [README](../README.md#처리-결과를-rviz에서-보기)를 따른다.
+
 ## 관측과 내부 데이터
 
 - `DetectionObservation`: 한 scan의 군집 점군·centroid·AABB·OBB·지면 근거.

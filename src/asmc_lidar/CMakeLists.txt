@@ -74,6 +74,9 @@ install(TARGETS asmc_lidar_frame_time asmc_lidar_camera_core asmc_lidar_camera_r
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
 install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+catkin_install_python(PROGRAMS scripts/lidar_markers.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(DIRECTORY rviz DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 # ---------------------------------------------------------------------------
 # Shadow LiDAR pipeline: port of Main's common-geometry LiDAR path
@@ -226,4 +229,6 @@ endif()
 if(CATKIN_ENABLE_TESTING)
   add_test(NAME asmc_lidar_pipeline_contract_test
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/pipeline_contract_test.py)
+  add_test(NAME asmc_lidar_object_markers_test
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/object_markers_test.py)
 endif()

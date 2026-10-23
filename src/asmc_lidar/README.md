@@ -57,6 +57,7 @@ python3 src/asmc_lidar/test/pipeline_ci_check.py --devel devel \
 
 재호의 localhost 시각화가 올라오면 `view.launch`로 별도 실행한다. 시각화는 결과를 구독하며
 처리 노드·드라이버·카메라·판제를 중복 시작하지 않는다. 현재 이 패키지에 웹 시각화 실행기는 없다.
+현재 RViz에서는 아래 읽기 전용 Marker 도구로 처리 결과를 확인한다.
 
 ```bash
 source /root/ws/devel/setup.bash
@@ -78,3 +79,25 @@ rosservice call /migration/lidar/lidar_pipeline/reset "{}"
 이 서비스는 처리 세대를 올리고 대기 scan·추적·pose·trace 이력을 비운다. 입력 공백·GPS 무효·카메라 모드 변경은 이 서비스를 자동 호출하지 않는다. 판제 입력 전환이나 운영 수락 절차가 아니다.
 
 고정 bag 대조는 `lidar_replay --help`와 [실행 안내](docs/pipeline.md)를 따른다. 결과는 저장 규약에 따라 등록한 새 run ID의 D 출력 위치에 보존한다.
+
+## 처리 결과를 RViz에서 보기
+
+bridge와 `lidar.launch`를 유지하고 별도 터미널에서 표시 변환기만 실행한다.
+
+```bash
+source /root/ws/devel/setup.bash
+rosrun asmc_lidar lidar_markers.py
+```
+
+이미 열린 RViz에서는 `File → Open Config`로 `/root/ws/src/asmc_lidar/rviz/lidar.rviz`를 연다.
+직접 설정하려면 Fixed Frame=`base_link`, Add=`MarkerArray`, Topic=`/migration/lidar/markers`다.
+새 RViz가 필요한 경우에만 `rviz -d /root/ws/src/asmc_lidar/rviz/lidar.rviz`를 실행한다.
+
+- 입력 `/migration/lidar/observations_local`의 실제 8코너를 그린다. yaw로 박스를 재구성하거나 IMU/장착 변환을 다시 적용하지 않는다.
+- 라벨은 `ID 소비분류 / 카메라 원본분류 n=voxel 이후 군집 점 수`다. vehicle은 청록, dynamic은 주황, static은 초록, unknown은 노랑이다.
+- 속도 validity가 아직 false이므로 운동·속도 화살표를 만들지 않는다. `unknown`은 카메라 분류가 확인되지 않은 상태다.
+- 정상 빈 결과·무효·세션/세대 변경에서 이전 박스를 지우고, 입력350ms 중단 시 wall clock으로 제거한다. 중복·이전 세대 관측으로 표시를 갱신하지 않는다.
+- 이 도구는 검출·추적·fusion을 계산하지 않고 Marker만 발행한다. 지면 제거/군집 점군을 새로 계산하지 않는다.
+- 프리셋의 Raw LiDAR는 기본 OFF다. 이를 켜면 원본 `/velodyne_points`와 최종 처리된 박스를 대조한다. 중간 단계 점군은 현재 공개되지 않는다.
+
+기본 출력 namespace를 바꿨다면 `rosrun asmc_lidar lidar_markers.py _input:=/다른경로/observations_local _output:=/다른경로/markers`로 맞춘다.

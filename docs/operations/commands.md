@@ -461,3 +461,15 @@ fusion은 카메라 추론을 시작하는 옵션이 아니며 현재 연결은 
 `/perception/lidar/*` 운영 전환은 기본 차단하며 L7에서 별도 확인한다.
 재호의 localhost 시각화는 추후 `view.launch`로 별도 제공하며 처리 노드를 중복 시작하지 않는다.
 새 관측·배열·진단과 복구는 [asmc_lidar README](../../src/asmc_lidar/README.md)를 따른다.
+
+RViz에서 **처리된 OBB·ID·분류**를 보려면 별도 터미널에서 아래 변환기를 실행한다.
+기존 RViz의 Fixed Frame=`base_link`, MarkerArray=`/migration/lidar/markers`로 설정하거나
+`File → Open Config`에서 `/root/ws/src/asmc_lidar/rviz/lidar.rviz`를 연다.
+
+```bash
+rosrun asmc_lidar lidar_markers.py
+```
+
+이 도구는 `/migration/lidar/observations_local`만 읽고 Marker만 발행한다. 카메라 추론·검출·추적을
+재실행하지 않는다. `/velodyne_points`는 원본 점군이며 처리 결과와 구분한다. 중간 지면 제거/군집 점군은
+현재 공개되지 않는다. 이미 RViz가 열려 있으면 새 GUI를 중복 실행하지 않는다.
