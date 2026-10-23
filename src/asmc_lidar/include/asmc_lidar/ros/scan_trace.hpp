@@ -83,30 +83,30 @@ void RowMajor(std::ostream& out, const Matrix& m) {
 
 // <object>: idx, core, min, max, dist, points, obb, corners (no braces).
 inline void ObjectFields(std::ostream& out, const pipeline::TrackedObject& o) {
-  out << "\"idx\":" << static_cast<unsigned>(o.u16_Idx) << ",\"core\":";
-  Vec3(out, o.f32_CoreX, o.f32_CoreY, o.f32_CoreZ);
+  out << "\"idx\":" << static_cast<unsigned>(o.detection.u16_Idx) << ",\"core\":";
+  Vec3(out, o.detection.f32_CoreX, o.detection.f32_CoreY, o.detection.f32_CoreZ);
   out << ",\"min\":";
-  Vec3(out, o.f32_MinX, o.f32_MinY, o.f32_MinZ);
+  Vec3(out, o.detection.f32_MinX, o.detection.f32_MinY, o.detection.f32_MinZ);
   out << ",\"max\":";
-  Vec3(out, o.f32_MaxX, o.f32_MaxY, o.f32_MaxZ);
+  Vec3(out, o.detection.f32_MaxX, o.detection.f32_MaxY, o.detection.f32_MaxZ);
   out << ",\"dist\":";
-  Num(out, o.f32_Dist);
-  out << ",\"points\":" << o.pcl_ClusterPoints.size() << ",\"obb\":{\"center\":";
-  Vec3(out, o.f32_OBB_CenterX, o.f32_OBB_CenterY, o.f32_OBB_CenterZ);
+  Num(out, o.detection.f32_Dist);
+  out << ",\"points\":" << o.detection.pcl_ClusterPoints.size() << ",\"obb\":{\"center\":";
+  Vec3(out, o.detection.f32_OBB_CenterX, o.detection.f32_OBB_CenterY, o.detection.f32_OBB_CenterZ);
   out << ",\"width\":";
-  Num(out, o.f32_OBB_Width);
+  Num(out, o.detection.obb_length_m);
   out << ",\"height\":";
-  Num(out, o.f32_OBB_Height);
+  Num(out, o.detection.obb_width_m);
   out << ",\"zmin\":";
-  Num(out, o.f32_OBB_ZMin);
+  Num(out, o.detection.f32_OBB_ZMin);
   out << ",\"zmax\":";
-  Num(out, o.f32_OBB_ZMax);
+  Num(out, o.detection.f32_OBB_ZMax);
   out << ",\"yaw\":";
-  Num(out, o.f32_OBB_YawRad);
+  Num(out, o.detection.f32_OBB_YawRad);
   out << "},\"corners\":[";
-  for (std::size_t i = 0; i < o.OBB_Corners_Body.size(); ++i) {
+  for (std::size_t i = 0; i < o.detection.obb_corners_level.size(); ++i) {
     if (i) out << ',';
-    const auto& p = o.OBB_Corners_Body[i];
+    const auto& p = o.detection.obb_corners_level[i];
     Vec3(out, p.x, p.y, p.z);
   }
   out << ']';
@@ -114,43 +114,43 @@ inline void ObjectFields(std::ostream& out, const pipeline::TrackedObject& o) {
 
 // <track fields> (no braces, leading comma).
 inline void TrackFields(std::ostream& out, const pipeline::TrackedObject& o) {
-  out << ",\"id\":" << o.s32_Id << ",\"age\":" << o.s32_Age << ",\"miss\":" << o.s32_MissCount
+  out << ",\"id\":" << o.tracking.s32_Id << ",\"age\":" << o.tracking.s32_Age << ",\"miss\":" << o.tracking.s32_MissCount
       << ",\"kf_initialized\":";
-  Bool(out, o.b_KfInitialized);
-  out << ",\"kf_init_count\":" << o.s32_KfInitCount << ",\"kf_ca\":[";
+  Bool(out, o.tracking.b_KfInitialized);
+  out << ",\"kf_init_count\":" << o.tracking.s32_KfInitCount << ",\"kf_ca\":[";
   for (int i = 0; i < 6; ++i) {
     if (i) out << ',';
-    Num(out, o.Eigen_KfState_CA(i));
+    Num(out, o.tracking.Eigen_KfState_CA(i));
   }
   out << "],\"kf_p\":";
-  RowMajor(out, o.Eigen_KfP_CA);
+  RowMajor(out, o.tracking.Eigen_KfP_CA);
   out << ",\"prev_yaw\":";
-  Num(out, o.f32_PrevYaw);
+  Num(out, o.tracking.f32_PrevYaw);
   out << ",\"pred_core\":[";
-  Num(out, o.f32_PredCoreX);
+  Num(out, o.tracking.f32_PredCoreX);
   out << ',';
-  Num(out, o.f32_PredCoreY);
+  Num(out, o.tracking.f32_PredCoreY);
   out << "],\"abs_v\":[";
-  Num(out, o.f32_AbsVx);
+  Num(out, o.tracking.f32_AbsVx);
   out << ',';
-  Num(out, o.f32_AbsVy);
+  Num(out, o.tracking.f32_AbsVy);
   out << "],\"velocity\":";
-  Num(out, o.f32_Velocity);
+  Num(out, o.tracking.f32_Velocity);
   out << ",\"tracking_frame_valid\":";
-  Bool(out, o.tracking_frame_valid);
+  Bool(out, o.tracking.tracking_frame_valid);
   out << ",\"tracking_height_input\":";
-  Num(out, o.tracking_height_input);
+  Num(out, o.tracking.tracking_height_input);
   out << ",\"class\":";
-  Str(out, o.str_ObjectClass);
+  Str(out, o.camera.str_ObjectClass);
   out << ",\"raw_class\":";
-  Str(out, o.str_YoloClass);
-  out << ",\"class_misses\":" << o.class_miss_counter << ",\"continuity\":" << o.continuity_counter
+  Str(out, o.camera.str_YoloClass);
+  out << ",\"class_misses\":" << o.camera.class_miss_counter << ",\"continuity\":" << o.camera.continuity_counter
       << ",\"ground_evidence\":{\"valid\":";
-  Bool(out, o.ground_evidence.valid);
-  out << ",\"samples\":" << o.ground_evidence.sample_count << ",\"median_clearance\":";
-  Num(out, o.ground_evidence.median_clearance_m);
+  Bool(out, o.detection.ground_evidence.valid);
+  out << ",\"samples\":" << o.detection.ground_evidence.sample_count << ",\"median_clearance\":";
+  Num(out, o.detection.ground_evidence.median_clearance_m);
   out << ",\"band\":";
-  Num(out, o.ground_evidence.rejection_band_m);
+  Num(out, o.detection.ground_evidence.rejection_band_m);
   out << '}';
 }
 

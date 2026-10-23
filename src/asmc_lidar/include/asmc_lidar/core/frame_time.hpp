@@ -70,7 +70,7 @@ enum class Frame { Sensor, LeveledSensor, Base };
 enum class VelocityMeaning { Unknown, AbsoluteInputVector, BasePositionDerivative };
 struct Context {
   Observation time;
-  std::uint64_t input_generation = 0;
+  std::uint64_t scan_sequence = 0;
   Frame frame = Frame::Sensor;
   Pose base_from_sensor = Pose::Identity();
   std::string calibration_source;

@@ -15,7 +15,7 @@
 
 #include <asmc_lidar/fusion/camera_observations.hpp>
 #include <asmc_lidar/fusion/fusion_policy.hpp>
-#include <asmc_lidar/core/types.hpp>
+#include <asmc_lidar/tracking/track.hpp>
 
 #include <cstdint>
 #include <deque>

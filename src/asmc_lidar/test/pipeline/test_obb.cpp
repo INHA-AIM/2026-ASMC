@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // OBB port tests: obb_util (Main Tracking.cpp:25-265 at 8f93c22e) and the
 // detection builder (Objectinfo_for_km). Expected values are computed
 // independently in the test (closed-form rectangles), never by the code under test.
@@ -69,9 +70,9 @@ Cloud RectCloud(const Rect& r, int per_edge) {
 void ExpectCcwFromPlusZ(const TrackedObject& o) {
   for (int face = 0; face < 2; ++face) {
     for (int i = 0; i < 4; ++i) {
-      const auto& a = o.OBB_Corners_Body[4 * face + i];
-      const auto& b = o.OBB_Corners_Body[4 * face + (i + 1) % 4];
-      const auto& c = o.OBB_Corners_Body[4 * face + (i + 2) % 4];
+      const auto& a = o.detection.obb_corners_level[4 * face + i];
+      const auto& b = o.detection.obb_corners_level[4 * face + (i + 1) % 4];
+      const auto& c = o.detection.obb_corners_level[4 * face + (i + 2) % 4];
       const double cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
       EXPECT_GT(cross, 0.) << "face " << face << " corner " << i << " not counter-clockwise";
     }
@@ -79,32 +80,32 @@ void ExpectCcwFromPlusZ(const TrackedObject& o) {
 }
 
 void ExpectObbRule(const TrackedObject& o) {
-  const auto& c0 = o.OBB_Corners_Body[0];
-  const auto& c1 = o.OBB_Corners_Body[1];
-  EXPECT_LT(AxisError(o.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol) << "yaw vs edge 0->1";
+  const auto& c0 = o.detection.obb_corners_level[0];
+  const auto& c1 = o.detection.obb_corners_level[1];
+  EXPECT_LT(AxisError(o.detection.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol) << "yaw vs edge 0->1";
   double mx = 0, my = 0, mz = 0;
-  for (const auto& c : o.OBB_Corners_Body) {
+  for (const auto& c : o.detection.obb_corners_level) {
     mx += c.x / 8.;
     my += c.y / 8.;
     mz += c.z / 8.;
   }
-  EXPECT_NEAR(mx, o.f32_OBB_CenterX, kPosTol);
-  EXPECT_NEAR(my, o.f32_OBB_CenterY, kPosTol);
-  EXPECT_NEAR(mz, o.f32_OBB_CenterZ, kPosTol);
+  EXPECT_NEAR(mx, o.detection.f32_OBB_CenterX, kPosTol);
+  EXPECT_NEAR(my, o.detection.f32_OBB_CenterY, kPosTol);
+  EXPECT_NEAR(mz, o.detection.f32_OBB_CenterZ, kPosTol);
   for (int i = 0; i < 4; ++i) {
-    EXPECT_EQ(o.OBB_Corners_Body[i].z, o.f32_OBB_ZMin) << "bottom corner " << i;
-    EXPECT_EQ(o.OBB_Corners_Body[i + 4].z, o.f32_OBB_ZMax) << "top corner " << i;
-    EXPECT_EQ(o.OBB_Corners_Body[i + 4].x, o.OBB_Corners_Body[i].x);
-    EXPECT_EQ(o.OBB_Corners_Body[i + 4].y, o.OBB_Corners_Body[i].y);
+    EXPECT_EQ(o.detection.obb_corners_level[i].z, o.detection.f32_OBB_ZMin) << "bottom corner " << i;
+    EXPECT_EQ(o.detection.obb_corners_level[i + 4].z, o.detection.f32_OBB_ZMax) << "top corner " << i;
+    EXPECT_EQ(o.detection.obb_corners_level[i + 4].x, o.detection.obb_corners_level[i].x);
+    EXPECT_EQ(o.detection.obb_corners_level[i + 4].y, o.detection.obb_corners_level[i].y);
   }
-  EXPECT_GE(o.f32_OBB_YawRad, -M_PI / 2);
-  EXPECT_LT(o.f32_OBB_YawRad, M_PI / 2);
+  EXPECT_GE(o.detection.f32_OBB_YawRad, -M_PI / 2);
+  EXPECT_LT(o.detection.f32_OBB_YawRad, M_PI / 2);
   ExpectCcwFromPlusZ(o);
 }
 
 TrackedObject FromCloud(const Cloud& cloud, double yaw) {
   TrackedObject o;
-  o.pcl_ClusterPoints = cloud;
+  o.detection.pcl_ClusterPoints = cloud;
   ou::OBB2D obb;
   double z0 = 0, z1 = 0;
   std::array<ou::P3, 8> corners{};
@@ -115,7 +116,7 @@ TrackedObject FromCloud(const Cloud& cloud, double yaw) {
 
 TrackedObject LShape(const Cloud& cloud) {
   TrackedObject o;
-  o.pcl_ClusterPoints = cloud;
+  o.detection.pcl_ClusterPoints = cloud;
   ou::OBB2D obb;
   double z0 = 0, z1 = 0;
   std::array<ou::P3, 8> corners{};
@@ -125,11 +126,11 @@ TrackedObject LShape(const Cloud& cloud) {
 }
 
 bool AllFinite(const TrackedObject& o) {
-  bool ok = std::isfinite(o.f32_OBB_CenterX) && std::isfinite(o.f32_OBB_CenterY) && std::isfinite(o.f32_OBB_CenterZ) &&
-            std::isfinite(o.f32_OBB_Width) && std::isfinite(o.f32_OBB_Height) && std::isfinite(o.f32_OBB_ZMin) &&
-            std::isfinite(o.f32_OBB_ZMax) && std::isfinite(o.f32_OBB_YawRad) && std::isfinite(o.f32_CoreX) &&
-            std::isfinite(o.f32_CoreY) && std::isfinite(o.f32_CoreZ) && std::isfinite(o.f32_Dist);
-  for (const auto& c : o.OBB_Corners_Body) ok = ok && std::isfinite(c.x) && std::isfinite(c.y) && std::isfinite(c.z);
+  bool ok = std::isfinite(o.detection.f32_OBB_CenterX) && std::isfinite(o.detection.f32_OBB_CenterY) && std::isfinite(o.detection.f32_OBB_CenterZ) &&
+            std::isfinite(o.detection.obb_length_m) && std::isfinite(o.detection.obb_width_m) && std::isfinite(o.detection.f32_OBB_ZMin) &&
+            std::isfinite(o.detection.f32_OBB_ZMax) && std::isfinite(o.detection.f32_OBB_YawRad) && std::isfinite(o.detection.f32_CoreX) &&
+            std::isfinite(o.detection.f32_CoreY) && std::isfinite(o.detection.f32_CoreZ) && std::isfinite(o.detection.f32_Dist);
+  for (const auto& c : o.detection.obb_corners_level) ok = ok && std::isfinite(c.x) && std::isfinite(c.y) && std::isfinite(c.z);
   return ok;
 }
 
@@ -154,18 +155,18 @@ TEST(ObbUtil, NormalizeAxisYawIsHalfOpenMinusHalfPiToHalfPi) {
 TEST(ObbUtil, ComputeObbAtYawRecoversRotatedRectangleInCornerOrder) {
   const Rect r{12.0, -3.0, 0.3, 4.5, 1.8, -0.7, 0.8};
   const auto o = FromCloud(RectCloud(r, 6), r.heading);
-  EXPECT_NEAR(o.f32_OBB_CenterX, r.cx, kPosTol);
-  EXPECT_NEAR(o.f32_OBB_CenterY, r.cy, kPosTol);
-  EXPECT_NEAR(o.f32_OBB_CenterZ, .5 * (r.zmin + r.zmax), kPosTol);
-  EXPECT_NEAR(o.f32_OBB_Width, r.length, kPosTol);
-  EXPECT_NEAR(o.f32_OBB_Height, r.width, kPosTol);
-  EXPECT_NEAR(o.f32_OBB_ZMin, r.zmin, kPosTol);
-  EXPECT_NEAR(o.f32_OBB_ZMax, r.zmax, kPosTol);
-  EXPECT_NEAR(o.f32_OBB_YawRad, r.heading, kAngTol);
+  EXPECT_NEAR(o.detection.f32_OBB_CenterX, r.cx, kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_CenterY, r.cy, kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_CenterZ, .5 * (r.zmin + r.zmax), kPosTol);
+  EXPECT_NEAR(o.detection.obb_length_m, r.length, kPosTol);
+  EXPECT_NEAR(o.detection.obb_width_m, r.width, kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_ZMin, r.zmin, kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_ZMax, r.zmax, kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_YawRad, r.heading, kAngTol);
   const auto expected = r.Corners(r.heading);
   for (int i = 0; i < 4; ++i) {
-    EXPECT_NEAR(o.OBB_Corners_Body[i].x, expected[i][0], kPosTol) << i;
-    EXPECT_NEAR(o.OBB_Corners_Body[i].y, expected[i][1], kPosTol) << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].x, expected[i][0], kPosTol) << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].y, expected[i][1], kPosTol) << i;
   }
   ExpectObbRule(o);
 }
@@ -175,19 +176,19 @@ TEST(ObbUtil, ComputeObbAtYawRecoversRotatedRectangleInCornerOrder) {
 TEST(ObbUtil, ComputeObbAtYawCornersUseUnnormalizedYaw) {
   const Rect r{5.0, 2.0, 2.0, 3.0, 1.2, 0.0, 1.0};
   const auto o = FromCloud(RectCloud(r, 5), 2.0);
-  EXPECT_NEAR(o.f32_OBB_YawRad, 2.0 - M_PI, kAngTol);
+  EXPECT_NEAR(o.detection.f32_OBB_YawRad, 2.0 - M_PI, kAngTol);
   const auto expected = r.Corners(2.0);  // un-normalized axes
   for (int i = 0; i < 4; ++i) {
-    EXPECT_NEAR(o.OBB_Corners_Body[i].x, expected[i][0], kPosTol) << i;
-    EXPECT_NEAR(o.OBB_Corners_Body[i].y, expected[i][1], kPosTol) << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].x, expected[i][0], kPosTol) << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].y, expected[i][1], kPosTol) << i;
   }
   const auto normalized = r.Corners(2.0 - M_PI);
-  EXPECT_NEAR(o.OBB_Corners_Body[0].x, normalized[2][0], kPosTol) << "index rotated by 2";
-  EXPECT_NEAR(o.OBB_Corners_Body[0].y, normalized[2][1], kPosTol);
+  EXPECT_NEAR(o.detection.obb_corners_level[0].x, normalized[2][0], kPosTol) << "index rotated by 2";
+  EXPECT_NEAR(o.detection.obb_corners_level[0].y, normalized[2][1], kPosTol);
   // The only invariant: edge 0->1 parallel to +-yaw (and CCW order).
-  const auto& c0 = o.OBB_Corners_Body[0];
-  const auto& c1 = o.OBB_Corners_Body[1];
-  EXPECT_LT(AxisError(o.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol);
+  const auto& c0 = o.detection.obb_corners_level[0];
+  const auto& c1 = o.detection.obb_corners_level[1];
+  EXPECT_LT(AxisError(o.detection.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol);
   ExpectCcwFromPlusZ(o);
 }
 
@@ -200,15 +201,15 @@ TEST(ObbUtil, ComputeObbAtYawSkipsNonFinitePoints) {
   dirty.push_back(Pt(-50, 3, kNaN));
   const auto a = FromCloud(clean, r.heading);
   const auto b = FromCloud(dirty, r.heading);
-  EXPECT_EQ(a.f32_OBB_CenterX, b.f32_OBB_CenterX);
-  EXPECT_EQ(a.f32_OBB_CenterY, b.f32_OBB_CenterY);
-  EXPECT_EQ(a.f32_OBB_Width, b.f32_OBB_Width);
-  EXPECT_EQ(a.f32_OBB_Height, b.f32_OBB_Height);
-  EXPECT_EQ(a.f32_OBB_ZMin, b.f32_OBB_ZMin);
-  EXPECT_EQ(a.f32_OBB_ZMax, b.f32_OBB_ZMax);
+  EXPECT_EQ(a.detection.f32_OBB_CenterX, b.detection.f32_OBB_CenterX);
+  EXPECT_EQ(a.detection.f32_OBB_CenterY, b.detection.f32_OBB_CenterY);
+  EXPECT_EQ(a.detection.obb_length_m, b.detection.obb_length_m);
+  EXPECT_EQ(a.detection.obb_width_m, b.detection.obb_width_m);
+  EXPECT_EQ(a.detection.f32_OBB_ZMin, b.detection.f32_OBB_ZMin);
+  EXPECT_EQ(a.detection.f32_OBB_ZMax, b.detection.f32_OBB_ZMax);
   for (int i = 0; i < 8; ++i) {
-    EXPECT_EQ(a.OBB_Corners_Body[i].x, b.OBB_Corners_Body[i].x);
-    EXPECT_EQ(a.OBB_Corners_Body[i].y, b.OBB_Corners_Body[i].y);
+    EXPECT_EQ(a.detection.obb_corners_level[i].x, b.detection.obb_corners_level[i].x);
+    EXPECT_EQ(a.detection.obb_corners_level[i].y, b.detection.obb_corners_level[i].y);
   }
   EXPECT_TRUE(AllFinite(b));
 }
@@ -246,15 +247,15 @@ TEST(ObbUtil, ZeroSizeIsInflatedToMinimumSideKeepingCentre) {
   Cloud cloud;
   cloud.push_back(Pt(20.0, -0.5, -1.4));
   const auto o = FromCloud(cloud, 0.0);
-  EXPECT_NEAR(o.f32_OBB_Width, ou::kMinimumObbSide, 1e-7);
-  EXPECT_NEAR(o.f32_OBB_Height, ou::kMinimumObbSide, 1e-7);
-  EXPECT_NEAR(o.f32_OBB_CenterX, 20.0, kPosTol);
-  EXPECT_NEAR(o.f32_OBB_CenterY, -0.5, kPosTol);
-  EXPECT_NEAR(o.OBB_Corners_Body[0].x, 20.0 - 0.025, kPosTol);
-  EXPECT_NEAR(o.OBB_Corners_Body[0].y, -0.5 - 0.025, kPosTol);
-  EXPECT_NEAR(o.OBB_Corners_Body[2].x, 20.0 + 0.025, kPosTol);
-  EXPECT_NEAR(o.OBB_Corners_Body[2].y, -0.5 + 0.025, kPosTol);
-  EXPECT_EQ(o.f32_OBB_ZMin, o.f32_OBB_ZMax);
+  EXPECT_NEAR(o.detection.obb_length_m, ou::kMinimumObbSide, 1e-7);
+  EXPECT_NEAR(o.detection.obb_width_m, ou::kMinimumObbSide, 1e-7);
+  EXPECT_NEAR(o.detection.f32_OBB_CenterX, 20.0, kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_CenterY, -0.5, kPosTol);
+  EXPECT_NEAR(o.detection.obb_corners_level[0].x, 20.0 - 0.025, kPosTol);
+  EXPECT_NEAR(o.detection.obb_corners_level[0].y, -0.5 - 0.025, kPosTol);
+  EXPECT_NEAR(o.detection.obb_corners_level[2].x, 20.0 + 0.025, kPosTol);
+  EXPECT_NEAR(o.detection.obb_corners_level[2].y, -0.5 + 0.025, kPosTol);
+  EXPECT_EQ(o.detection.f32_OBB_ZMin, o.detection.f32_OBB_ZMax);
   EXPECT_TRUE(AllFinite(o));
 }
 
@@ -267,15 +268,15 @@ TEST(ObbUtil, LShapeFindsIntegerDegreeHeadingWithLongSideOnYaw) {
     double expected_yaw = r.heading;
     while (expected_yaw >= M_PI / 2) expected_yaw -= M_PI;
     while (expected_yaw < -M_PI / 2) expected_yaw += M_PI;
-    EXPECT_NEAR(o.f32_OBB_YawRad, expected_yaw, kAngTol);
-    EXPECT_NEAR(o.f32_OBB_Width, r.length, kPosTol);
-    EXPECT_NEAR(o.f32_OBB_Height, r.width, kPosTol);
-    EXPECT_NEAR(o.f32_OBB_CenterX, r.cx, kPosTol);
-    EXPECT_NEAR(o.f32_OBB_CenterY, r.cy, kPosTol);
-    EXPECT_GE(o.f32_OBB_Width, o.f32_OBB_Height);
-    const auto& c0 = o.OBB_Corners_Body[0];
-    const auto& c1 = o.OBB_Corners_Body[1];
-    EXPECT_LT(AxisError(o.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol);
+    EXPECT_NEAR(o.detection.f32_OBB_YawRad, expected_yaw, kAngTol);
+    EXPECT_NEAR(o.detection.obb_length_m, r.length, kPosTol);
+    EXPECT_NEAR(o.detection.obb_width_m, r.width, kPosTol);
+    EXPECT_NEAR(o.detection.f32_OBB_CenterX, r.cx, kPosTol);
+    EXPECT_NEAR(o.detection.f32_OBB_CenterY, r.cy, kPosTol);
+    EXPECT_GE(o.detection.obb_length_m, o.detection.obb_width_m);
+    const auto& c0 = o.detection.obb_corners_level[0];
+    const auto& c1 = o.detection.obb_corners_level[1];
+    EXPECT_LT(AxisError(o.detection.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol);
     ExpectCcwFromPlusZ(o);
   }
 }
@@ -289,15 +290,15 @@ TEST(ObbUtil, LShapeScoreTiesKeepSmallestTheta) {
   const auto o = LShape(cloud);
   double theta = 0.0;
   for (int k = 0; k < 29; ++k) theta += M_PI / 180.0;  // Main's accumulated grid value
-  EXPECT_NEAR(o.f32_OBB_YawRad, theta, kAngTol);
+  EXPECT_NEAR(o.detection.f32_OBB_YawRad, theta, kAngTol);
   double umin = 1e9, umax = -1e9;
   for (const auto& p : cloud) {
     const double u = p.x * std::cos(theta) + p.y * std::sin(theta);
     umin = std::min(umin, u);
     umax = std::max(umax, u);
   }
-  EXPECT_NEAR(o.f32_OBB_Width, umax - umin, kPosTol);
-  EXPECT_GT(o.f32_OBB_Width, r.length);
+  EXPECT_NEAR(o.detection.obb_length_m, umax - umin, kPosTol);
+  EXPECT_GT(o.detection.obb_length_m, r.length);
 }
 
 TEST(ObbUtil, LShapeIgnoresNonFinitePoints) {
@@ -308,11 +309,11 @@ TEST(ObbUtil, LShapeIgnoresNonFinitePoints) {
   dirty.push_back(Pt(std::numeric_limits<double>::infinity(), 0, 0));
   const auto a = LShape(clean);
   const auto b = LShape(dirty);
-  EXPECT_EQ(a.f32_OBB_YawRad, b.f32_OBB_YawRad);
-  EXPECT_EQ(a.f32_OBB_Width, b.f32_OBB_Width);
-  EXPECT_EQ(a.f32_OBB_Height, b.f32_OBB_Height);
-  EXPECT_EQ(a.f32_OBB_CenterX, b.f32_OBB_CenterX);
-  EXPECT_EQ(a.f32_OBB_CenterY, b.f32_OBB_CenterY);
+  EXPECT_EQ(a.detection.f32_OBB_YawRad, b.detection.f32_OBB_YawRad);
+  EXPECT_EQ(a.detection.obb_length_m, b.detection.obb_length_m);
+  EXPECT_EQ(a.detection.obb_width_m, b.detection.obb_width_m);
+  EXPECT_EQ(a.detection.f32_OBB_CenterX, b.detection.f32_OBB_CenterX);
+  EXPECT_EQ(a.detection.f32_OBB_CenterY, b.detection.f32_OBB_CenterY);
   EXPECT_TRUE(AllFinite(b));
 }
 
@@ -322,26 +323,26 @@ TEST(ObbUtil, LShapeBelowTenPointsIsAabbWithLongAxisSwap) {
     Cloud cloud;
     for (int i = 0; i < 6; ++i) cloud.push_back(Pt(10.0 + 0.2 * i, 1.0, -1.0));
     const auto o = LShape(cloud);
-    EXPECT_EQ(o.f32_OBB_YawRad, 0.f);
-    EXPECT_NEAR(o.f32_OBB_Width, 1.0, kPosTol);
-    EXPECT_NEAR(o.f32_OBB_Height, ou::kMinimumObbSide, 1e-7);
+    EXPECT_EQ(o.detection.f32_OBB_YawRad, 0.f);
+    EXPECT_NEAR(o.detection.obb_length_m, 1.0, kPosTol);
+    EXPECT_NEAR(o.detection.obb_width_m, ou::kMinimumObbSide, 1e-7);
   }
   // Along y: w < h at yaw 0, recomputed at pi/2 and stored as -pi/2 (preserved).
   {
     Cloud cloud;
     for (int i = 0; i < 6; ++i) cloud.push_back(Pt(20.0, -0.5 + 0.2 * i, -1.42));
     const auto o = LShape(cloud);
-    EXPECT_NEAR(o.f32_OBB_YawRad, -M_PI / 2, kAngTol);
-    EXPECT_NEAR(o.f32_OBB_Width, 1.0, kPosTol);
-    EXPECT_NEAR(o.f32_OBB_Height, ou::kMinimumObbSide, 1e-7);
-    EXPECT_NEAR(o.f32_OBB_CenterX, 20.0, kPosTol);
-    EXPECT_NEAR(o.f32_OBB_CenterY, 0.0, kPosTol);
+    EXPECT_NEAR(o.detection.f32_OBB_YawRad, -M_PI / 2, kAngTol);
+    EXPECT_NEAR(o.detection.obb_length_m, 1.0, kPosTol);
+    EXPECT_NEAR(o.detection.obb_width_m, ou::kMinimumObbSide, 1e-7);
+    EXPECT_NEAR(o.detection.f32_OBB_CenterX, 20.0, kPosTol);
+    EXPECT_NEAR(o.detection.f32_OBB_CenterY, 0.0, kPosTol);
     // Corners from the un-normalized pi/2 axes: corner 0 = centre - halfW*(0,1) - halfH*(-1,0).
-    EXPECT_NEAR(o.OBB_Corners_Body[0].x, 20.0 + 0.025, kPosTol);
-    EXPECT_NEAR(o.OBB_Corners_Body[0].y, 0.0 - 0.5, kPosTol);
-    const auto& c0 = o.OBB_Corners_Body[0];
-    const auto& c1 = o.OBB_Corners_Body[1];
-    EXPECT_LT(AxisError(o.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol);
+    EXPECT_NEAR(o.detection.obb_corners_level[0].x, 20.0 + 0.025, kPosTol);
+    EXPECT_NEAR(o.detection.obb_corners_level[0].y, 0.0 - 0.5, kPosTol);
+    const auto& c0 = o.detection.obb_corners_level[0];
+    const auto& c1 = o.detection.obb_corners_level[1];
+    EXPECT_LT(AxisError(o.detection.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol);
     ExpectCcwFromPlusZ(o);
   }
   // Nine points of a rotated rectangle: no L-shape search, plain AABB at yaw 0.
@@ -359,17 +360,17 @@ TEST(ObbUtil, LShapeBelowTenPointsIsAabbWithLongAxisSwap) {
       ymax = std::max<double>(ymax, p.y);
     }
     const bool swap = (xmax - xmin) < (ymax - ymin);
-    EXPECT_NEAR(o.f32_OBB_YawRad, swap ? -M_PI / 2 : 0.0, kAngTol);
-    EXPECT_NEAR(o.f32_OBB_Width, std::max(xmax - xmin, ymax - ymin), kPosTol);
-    EXPECT_NEAR(o.f32_OBB_Height, std::min(xmax - xmin, ymax - ymin), kPosTol);
+    EXPECT_NEAR(o.detection.f32_OBB_YawRad, swap ? -M_PI / 2 : 0.0, kAngTol);
+    EXPECT_NEAR(o.detection.obb_length_m, std::max(xmax - xmin, ymax - ymin), kPosTol);
+    EXPECT_NEAR(o.detection.obb_width_m, std::min(xmax - xmin, ymax - ymin), kPosTol);
   }
 }
 
 TEST(ObbUtil, LShapeEmptyCloudGivesZeroBox) {
   const auto o = LShape(Cloud{});
-  EXPECT_EQ(o.f32_OBB_Width, 0.f);
-  EXPECT_EQ(o.f32_OBB_Height, 0.f);
-  EXPECT_EQ(o.f32_OBB_YawRad, 0.f);
+  EXPECT_EQ(o.detection.obb_length_m, 0.f);
+  EXPECT_EQ(o.detection.obb_width_m, 0.f);
+  EXPECT_EQ(o.detection.f32_OBB_YawRad, 0.f);
   EXPECT_TRUE(AllFinite(o));
 }
 
@@ -384,16 +385,16 @@ TEST(ObbUtil, WriteObbToObjectCastsDoubleToFloat) {
   for (int i = 0; i < 8; ++i) corners[i] = {0.1 * i, -0.2 * i, 0.3 * i};
   TrackedObject o;
   ou::writeOBBToObject(o, obb, -0.3, 1.1, corners);
-  EXPECT_EQ(o.f32_OBB_CenterX, static_cast<float>(1.0000000001));
-  EXPECT_EQ(o.f32_OBB_CenterZ, static_cast<float>(0.5 * (-0.3 + 1.1)));
-  EXPECT_EQ(o.f32_OBB_Width, 3.25f);
-  EXPECT_EQ(o.f32_OBB_Height, 1.5f);
-  EXPECT_EQ(o.f32_OBB_ZMin, static_cast<float>(-0.3));
-  EXPECT_EQ(o.f32_OBB_ZMax, static_cast<float>(1.1));
-  EXPECT_EQ(o.f32_OBB_YawRad, static_cast<float>(0.7));
+  EXPECT_EQ(o.detection.f32_OBB_CenterX, static_cast<float>(1.0000000001));
+  EXPECT_EQ(o.detection.f32_OBB_CenterZ, static_cast<float>(0.5 * (-0.3 + 1.1)));
+  EXPECT_EQ(o.detection.obb_length_m, 3.25f);
+  EXPECT_EQ(o.detection.obb_width_m, 1.5f);
+  EXPECT_EQ(o.detection.f32_OBB_ZMin, static_cast<float>(-0.3));
+  EXPECT_EQ(o.detection.f32_OBB_ZMax, static_cast<float>(1.1));
+  EXPECT_EQ(o.detection.f32_OBB_YawRad, static_cast<float>(0.7));
   for (int i = 0; i < 8; ++i) {
-    EXPECT_EQ(o.OBB_Corners_Body[i].x, static_cast<float>(0.1 * i));
-    EXPECT_EQ(o.OBB_Corners_Body[i].z, static_cast<float>(0.3 * i));
+    EXPECT_EQ(o.detection.obb_corners_level[i].x, static_cast<float>(0.1 * i));
+    EXPECT_EQ(o.detection.obb_corners_level[i].z, static_cast<float>(0.3 * i));
   }
 }
 
@@ -406,69 +407,69 @@ TrackedObject Matched(const Rect& r, double raw_yaw) {
 TEST(StabilizeMatchedObb, SkippedForEmptyClusterOrPreviouslyMissedTrack) {
   const Rect r{10, 0, 0.3, 4.0, 1.5, 0, 1};
   TrackedObject previous;
-  previous.f32_OBB_YawRad = 0.2f;
-  previous.f32_PrevYaw = 0.f;
+  previous.detection.f32_OBB_YawRad = 0.2f;
+  previous.tracking.f32_PrevYaw = 0.f;
   auto current = Matched(r, 0.3);
   const auto before = current;
-  previous.s32_MissCount = 1;
+  previous.tracking.s32_MissCount = 1;
   ou::stabilizeMatchedOBB(previous, current, 0.0);
-  EXPECT_EQ(current.f32_OBB_YawRad, before.f32_OBB_YawRad);
-  EXPECT_EQ(current.OBB_Corners_Body[0].x, before.OBB_Corners_Body[0].x);
-  previous.s32_MissCount = 0;
-  current.pcl_ClusterPoints.clear();
+  EXPECT_EQ(current.detection.f32_OBB_YawRad, before.detection.f32_OBB_YawRad);
+  EXPECT_EQ(current.detection.obb_corners_level[0].x, before.detection.obb_corners_level[0].x);
+  previous.tracking.s32_MissCount = 0;
+  current.detection.pcl_ClusterPoints.clear();
   ou::stabilizeMatchedOBB(previous, current, 0.0);
-  EXPECT_EQ(current.f32_OBB_YawRad, before.f32_OBB_YawRad);
+  EXPECT_EQ(current.detection.f32_OBB_YawRad, before.detection.f32_OBB_YawRad);
 }
 
 TEST(StabilizeMatchedObb, ReliableAspectBlendsQuarterOfAxisErrorAndRefits) {
   const Rect r{10, 0, 0.3, 4.0, 1.5, 0, 1};  // aspect 2.67
   TrackedObject previous;
-  previous.f32_OBB_YawRad = 0.2f;
-  previous.f32_PrevYaw = 0.f;
+  previous.detection.f32_OBB_YawRad = 0.2f;
+  previous.tracking.f32_PrevYaw = 0.f;
   auto current = Matched(r, 0.3);
   ou::stabilizeMatchedOBB(previous, current, 0.0);
   const double raw = static_cast<float>(0.3);
   const double expected = 0.2f + 0.25 * (raw - 0.2f);
-  EXPECT_NEAR(current.f32_OBB_YawRad, expected, kAngTol);
-  const auto refit = FromCloud(current.pcl_ClusterPoints, expected);
+  EXPECT_NEAR(current.detection.f32_OBB_YawRad, expected, kAngTol);
+  const auto refit = FromCloud(current.detection.pcl_ClusterPoints, expected);
   for (int i = 0; i < 8; ++i) {
-    EXPECT_NEAR(current.OBB_Corners_Body[i].x, refit.OBB_Corners_Body[i].x, kPosTol);
-    EXPECT_NEAR(current.OBB_Corners_Body[i].y, refit.OBB_Corners_Body[i].y, kPosTol);
+    EXPECT_NEAR(current.detection.obb_corners_level[i].x, refit.detection.obb_corners_level[i].x, kPosTol);
+    EXPECT_NEAR(current.detection.obb_corners_level[i].y, refit.detection.obb_corners_level[i].y, kPosTol);
   }
-  EXPECT_NEAR(current.f32_OBB_Width, refit.f32_OBB_Width, kPosTol);
+  EXPECT_NEAR(current.detection.obb_length_m, refit.detection.obb_length_m, kPosTol);
   ExpectObbRule(current);
 }
 
 TEST(StabilizeMatchedObb, NearSquareKeepsThePredictionOnly) {
   const Rect r{10, 0, 0.3, 1.0, 0.9, 0, 1};  // aspect 1.11 < 1.2
   TrackedObject previous;
-  previous.f32_OBB_YawRad = 0.2f;
-  previous.f32_PrevYaw = 0.f;
+  previous.detection.f32_OBB_YawRad = 0.2f;
+  previous.tracking.f32_PrevYaw = 0.f;
   auto current = Matched(r, 0.3);
   ou::stabilizeMatchedOBB(previous, current, 0.0);
-  EXPECT_NEAR(current.f32_OBB_YawRad, 0.2f, kAngTol);
+  EXPECT_NEAR(current.detection.f32_OBB_YawRad, 0.2f, kAngTol);
   ExpectObbRule(current);
 }
 
 TEST(StabilizeMatchedObb, EgoYawDeltaUsesDegreesNowAndRadiansBefore) {
   const Rect r{10, 0, 0.0, 4.0, 1.5, 0, 1};
   TrackedObject previous;
-  previous.f32_OBB_YawRad = 0.2f;
-  previous.f32_PrevYaw = 0.1f;  // rad
+  previous.detection.f32_OBB_YawRad = 0.2f;
+  previous.tracking.f32_PrevYaw = 0.1f;  // rad
   auto current = Matched(r, 0.0);
   const double ego_deg = 0.35 * 180. / M_PI;
   ou::stabilizeMatchedOBB(previous, current, ego_deg);
   const double predicted = 0.2f - (ego_deg * M_PI / 180. - 0.1f);  // -0.05
   const double expected = predicted + 0.25 * (0.0 - predicted);
-  EXPECT_NEAR(current.f32_OBB_YawRad, expected, kAngTol);
+  EXPECT_NEAR(current.detection.f32_OBB_YawRad, expected, kAngTol);
 }
 
 TEST(StabilizeMatchedObb, AxisErrorIsPiPeriodicAndResultNormalized) {
   const Rect r{10, 0, 1.5, 4.0, 1.5, 0, 1};
   TrackedObject previous;
-  previous.f32_PrevYaw = 0.f;
+  previous.tracking.f32_PrevYaw = 0.f;
   // pred 1.56, raw -1.50 (same axis as 1.6416): error +0.0816 -> 1.5804 -> -1.5612.
-  previous.f32_OBB_YawRad = 1.56f;
+  previous.detection.f32_OBB_YawRad = 1.56f;
   auto current = Matched(r, -1.50);
   ou::stabilizeMatchedOBB(previous, current, 0.0);
   const double pred = 1.56f;
@@ -476,19 +477,19 @@ TEST(StabilizeMatchedObb, AxisErrorIsPiPeriodicAndResultNormalized) {
   double expected = pred + 0.25 * std::remainder(raw - pred, M_PI);
   ASSERT_GE(expected, M_PI / 2);
   expected -= M_PI;
-  EXPECT_NEAR(current.f32_OBB_YawRad, expected, kAngTol);
-  EXPECT_LT(current.f32_OBB_YawRad, 0.f);
+  EXPECT_NEAR(current.detection.f32_OBB_YawRad, expected, kAngTol);
+  EXPECT_LT(current.detection.f32_OBB_YawRad, 0.f);
   ExpectObbRule(current);
 }
 
 TEST(StabilizeMatchedObb, ZeroHeightCountsAsReliableAspect) {
   const Rect r{10, 0, 0.3, 4.0, 1.5, 0, 1};
   TrackedObject previous;
-  previous.f32_OBB_YawRad = 0.2f;
+  previous.detection.f32_OBB_YawRad = 0.2f;
   auto current = Matched(r, 0.3);
-  current.f32_OBB_Height = 0.f;  // aspect = +inf (Main ternary)
+  current.detection.obb_width_m = 0.f;  // aspect = +inf (Main ternary)
   ou::stabilizeMatchedOBB(previous, current, 0.0);
-  EXPECT_NEAR(current.f32_OBB_YawRad, 0.2f + 0.25 * (static_cast<float>(0.3) - 0.2f), kAngTol);
+  EXPECT_NEAR(current.detection.f32_OBB_YawRad, 0.2f + 0.25 * (static_cast<float>(0.3) - 0.2f), kAngTol);
 }
 
 // ---- detection builder (Objectinfo_for_km) ----
@@ -513,9 +514,9 @@ TEST(BuildDetections, SparseLowObstacleKeepsNonDegenerateUnknownObb) {
   std::vector<TrackedObject> detections;
   BuildDetections(detections, non_ground, centroids, {indices});
   ASSERT_EQ(detections.size(), 1U);
-  EXPECT_EQ(detections.front().str_ObjectClass, "unknown");
-  EXPECT_GE(detections.front().f32_OBB_Width, 0.05F);
-  EXPECT_GE(detections.front().f32_OBB_Height, 0.05F);
+  EXPECT_EQ(detections.front().camera.str_ObjectClass, "unknown");
+  EXPECT_GE(detections.front().detection.obb_length_m, 0.05F);
+  EXPECT_GE(detections.front().detection.obb_width_m, 0.05F);
   EXPECT_TRUE(AllFinite(detections.front()));
 }
 
@@ -538,35 +539,35 @@ TEST(BuildDetections, FieldsAabbAndCentroidOrder) {
   ASSERT_EQ(detections.size(), 2u);
   for (int k = 0; k < 2; ++k) {
     const auto& d = detections[k];
-    EXPECT_EQ(d.u16_Idx, k);
-    EXPECT_EQ(d.s32_Id, -1);
-    EXPECT_EQ(d.s32_Age, 0);
-    EXPECT_EQ(d.s32_MissCount, 0);
-    EXPECT_EQ(d.s32_KfInitCount, 0);
-    EXPECT_FALSE(d.b_KfInitialized);
-    EXPECT_TRUE(d.Eigen_KfState_CA.isZero());
-    EXPECT_TRUE(d.Eigen_KfP_CA.isIdentity());
-    EXPECT_EQ(d.f32_CoreX, centroids->points[k].x);
-    EXPECT_EQ(d.f32_CoreY, centroids->points[k].y);
-    EXPECT_EQ(d.f32_CoreZ, centroids->points[k].z);
-    EXPECT_EQ(d.f32_Dist, std::hypot(d.f32_CoreX, d.f32_CoreY));
-    EXPECT_EQ(d.pcl_ClusterPoints.size(), clusters[k].indices.size());
+    EXPECT_EQ(d.detection.u16_Idx, k);
+    EXPECT_EQ(d.tracking.s32_Id, -1);
+    EXPECT_EQ(d.tracking.s32_Age, 0);
+    EXPECT_EQ(d.tracking.s32_MissCount, 0);
+    EXPECT_EQ(d.tracking.s32_KfInitCount, 0);
+    EXPECT_FALSE(d.tracking.b_KfInitialized);
+    EXPECT_TRUE(d.tracking.Eigen_KfState_CA.isZero());
+    EXPECT_TRUE(d.tracking.Eigen_KfP_CA.isIdentity());
+    EXPECT_EQ(d.detection.f32_CoreX, centroids->points[k].x);
+    EXPECT_EQ(d.detection.f32_CoreY, centroids->points[k].y);
+    EXPECT_EQ(d.detection.f32_CoreZ, centroids->points[k].z);
+    EXPECT_EQ(d.detection.f32_Dist, std::hypot(d.detection.f32_CoreX, d.detection.f32_CoreY));
+    EXPECT_EQ(d.detection.pcl_ClusterPoints.size(), clusters[k].indices.size());
     float xmin = 1e9f, xmax = -1e9f, zmin = 1e9f, zmax = -1e9f;
-    for (const auto& p : d.pcl_ClusterPoints) {
+    for (const auto& p : d.detection.pcl_ClusterPoints) {
       xmin = std::min(xmin, p.x);
       xmax = std::max(xmax, p.x);
       zmin = std::min(zmin, p.z);
       zmax = std::max(zmax, p.z);
     }
-    EXPECT_EQ(d.f32_MinX, xmin);
-    EXPECT_EQ(d.f32_MaxX, xmax);
-    EXPECT_EQ(d.f32_MinZ, zmin);
-    EXPECT_EQ(d.f32_MaxZ, zmax);
-    EXPECT_GE(d.f32_OBB_Width, d.f32_OBB_Height);
+    EXPECT_EQ(d.detection.f32_MinX, xmin);
+    EXPECT_EQ(d.detection.f32_MaxX, xmax);
+    EXPECT_EQ(d.detection.f32_MinZ, zmin);
+    EXPECT_EQ(d.detection.f32_MaxZ, zmax);
+    EXPECT_GE(d.detection.obb_length_m, d.detection.obb_width_m);
     ExpectObbRule(d);
   }
-  EXPECT_NEAR(detections[0].f32_OBB_YawRad, a.heading, kAngTol);
-  EXPECT_NEAR(detections[0].f32_OBB_Width, a.length, kPosTol);
+  EXPECT_NEAR(detections[0].detection.f32_OBB_YawRad, a.heading, kAngTol);
+  EXPECT_NEAR(detections[0].detection.obb_length_m, a.length, kPosTol);
 }
 
 TEST(BuildDetections, InvalidGeometryNeverProducesNaN) {
@@ -599,35 +600,35 @@ TEST(BuildDetections, InvalidGeometryNeverProducesNaN) {
   std::vector<TrackedObject> detections;
   BuildDetections(detections, points, centroids, clusters);
   ASSERT_EQ(detections.size(), 4u);
-  for (const auto& d : detections) EXPECT_TRUE(AllFinite(d)) << "cluster " << d.u16_Idx;
+  for (const auto& d : detections) EXPECT_TRUE(AllFinite(d)) << "cluster " << d.detection.u16_Idx;
 
   Cloud finite_only;
   for (const auto& p : RectCloud(r, 4)) finite_only.push_back(p);
   const auto reference = LShape(finite_only);
-  EXPECT_EQ(detections[0].f32_OBB_YawRad, reference.f32_OBB_YawRad);
-  EXPECT_EQ(detections[0].f32_OBB_Width, reference.f32_OBB_Width);
-  EXPECT_EQ(detections[0].f32_OBB_CenterX, reference.f32_OBB_CenterX);
+  EXPECT_EQ(detections[0].detection.f32_OBB_YawRad, reference.detection.f32_OBB_YawRad);
+  EXPECT_EQ(detections[0].detection.obb_length_m, reference.detection.obb_length_m);
+  EXPECT_EQ(detections[0].detection.f32_OBB_CenterX, reference.detection.f32_OBB_CenterX);
   float xmin = 1e9f, ymax = -1e9f, zmin = 1e9f;
   for (const auto& p : finite_only) {
     xmin = std::min(xmin, p.x);
     ymax = std::max(ymax, p.y);
     zmin = std::min(zmin, p.z);
   }
-  EXPECT_EQ(detections[0].f32_MinX, xmin);
-  EXPECT_EQ(detections[0].f32_MaxY, ymax);
-  EXPECT_EQ(detections[0].f32_MinZ, zmin);
+  EXPECT_EQ(detections[0].detection.f32_MinX, xmin);
+  EXPECT_EQ(detections[0].detection.f32_MaxY, ymax);
+  EXPECT_EQ(detections[0].detection.f32_MinZ, zmin);
 
-  EXPECT_GE(detections[1].f32_OBB_Width, detections[1].f32_OBB_Height);
-  EXPECT_TRUE(detections[1].f32_OBB_YawRad == 0.f || std::abs(detections[1].f32_OBB_YawRad + M_PI / 2) < kAngTol);
+  EXPECT_GE(detections[1].detection.obb_length_m, detections[1].detection.obb_width_m);
+  EXPECT_TRUE(detections[1].detection.f32_OBB_YawRad == 0.f || std::abs(detections[1].detection.f32_OBB_YawRad + M_PI / 2) < kAngTol);
 
-  EXPECT_EQ(detections[2].f32_OBB_Width, 0.f);
-  EXPECT_EQ(detections[2].f32_OBB_Height, 0.f);
-  EXPECT_EQ(detections[2].f32_MinX, std::numeric_limits<float>::max());
-  EXPECT_EQ(detections[2].f32_MaxX, -std::numeric_limits<float>::max());
+  EXPECT_EQ(detections[2].detection.obb_length_m, 0.f);
+  EXPECT_EQ(detections[2].detection.obb_width_m, 0.f);
+  EXPECT_EQ(detections[2].detection.f32_MinX, std::numeric_limits<float>::max());
+  EXPECT_EQ(detections[2].detection.f32_MaxX, -std::numeric_limits<float>::max());
 
-  EXPECT_NEAR(detections[3].f32_OBB_Width, ou::kMinimumObbSide, 1e-7);
-  EXPECT_NEAR(detections[3].f32_OBB_Height, ou::kMinimumObbSide, 1e-7);
-  EXPECT_NEAR(detections[3].f32_OBB_CenterX, -7.0, kPosTol);
+  EXPECT_NEAR(detections[3].detection.obb_length_m, ou::kMinimumObbSide, 1e-7);
+  EXPECT_NEAR(detections[3].detection.obb_width_m, ou::kMinimumObbSide, 1e-7);
+  EXPECT_NEAR(detections[3].detection.f32_OBB_CenterX, -7.0, kPosTol);
 }
 
 // Preserved quirk: the detection AABB has no finiteness guard, an infinite
@@ -646,9 +647,9 @@ TEST(BuildDetections, AabbHasNoFinitenessGuard) {
   std::vector<TrackedObject> detections;
   BuildDetections(detections, points, centroids, {cluster});
   ASSERT_EQ(detections.size(), 1u);
-  EXPECT_TRUE(std::isinf(detections[0].f32_MaxY));
+  EXPECT_TRUE(std::isinf(detections[0].detection.f32_MaxY));
   EXPECT_TRUE(AllFinite(detections[0]));
-  EXPECT_NEAR(detections[0].f32_OBB_Width, 0.3, kPosTol);
+  EXPECT_NEAR(detections[0].detection.obb_length_m, 0.3, kPosTol);
 }
 
 TEST(BuildDetections, StopsWithoutCentroids) {

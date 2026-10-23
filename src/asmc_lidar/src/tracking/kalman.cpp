@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // Relative constant-acceleration Kalman filter of the tracker.
 // Ported from Main src/Lidar/Kalman/Kalman.cpp at 8f93c22e (common geometry).
 // `frame_boundary::Enabled()` is always true here; the `!tracking_frame_valid`
@@ -44,23 +45,23 @@ inline void compensate_ego_yaw(TrackedObject& o, float ego_yaw_now_deg, bool pre
   // Preserved: deg * M_PI (double) / 180.0f, stored as float.
   float yaw_now = ego_yaw_now_deg * M_PI / 180.0f;
 
-  if (o.tracking_frame_valid) {
+  if (o.tracking.tracking_frame_valid) {
     if (previous_obb) frame.AlignTrackingFrame(o, yaw_now);
     else frame.AlignTrackingState(o, yaw_now);
     return;
   }
-  float dpsi = wrapToPi(yaw_now - o.f32_PrevYaw);
+  float dpsi = wrapToPi(yaw_now - o.tracking.f32_PrevYaw);
 
   if (std::fabs(dpsi) < 1e-8f) {
-    o.f32_PrevYaw = yaw_now;
+    o.tracking.f32_PrevYaw = yaw_now;
     return;
   }
 
   Eigen::Matrix<float, 6, 6> T = makeYawTransform(-dpsi);
-  o.Eigen_KfState_CA = T * o.Eigen_KfState_CA;
-  o.Eigen_KfP_CA = T * o.Eigen_KfP_CA * T.transpose();
+  o.tracking.Eigen_KfState_CA = T * o.tracking.Eigen_KfState_CA;
+  o.tracking.Eigen_KfP_CA = T * o.tracking.Eigen_KfP_CA * T.transpose();
 
-  o.f32_PrevYaw = yaw_now;
+  o.tracking.f32_PrevYaw = yaw_now;
 }
 
 }  // namespace
@@ -68,28 +69,28 @@ inline void compensate_ego_yaw(TrackedObject& o, float ego_yaw_now_deg, bool pre
 // Ported from Main Kalman.cpp:80-111 (8f93c22e)
 std::pair<float, float> predictKalmanPosition(const TrackedObject& obj, float64 dt, float ego_yaw_now_deg,
                                               const ScanFrame& frame) {
-  if (obj.tracking_frame_valid) {
+  if (obj.tracking.tracking_frame_valid) {
     TrackedObject aligned{};
-    aligned.Eigen_KfState_CA = obj.Eigen_KfState_CA;
-    aligned.Eigen_KfP_CA = obj.Eigen_KfP_CA;
-    aligned.tracking_frame_valid = true;
-    aligned.tracking_height_input = obj.tracking_height_input;
-    aligned.tracking_yaw_from_input = obj.tracking_yaw_from_input;
-    aligned.tracking_origin_in_yaw = obj.tracking_origin_in_yaw;
-    aligned.f32_PrevYaw = obj.f32_PrevYaw;
+    aligned.tracking.Eigen_KfState_CA = obj.tracking.Eigen_KfState_CA;
+    aligned.tracking.Eigen_KfP_CA = obj.tracking.Eigen_KfP_CA;
+    aligned.tracking.tracking_frame_valid = true;
+    aligned.tracking.tracking_height_input = obj.tracking.tracking_height_input;
+    aligned.tracking.tracking_yaw_from_input = obj.tracking.tracking_yaw_from_input;
+    aligned.tracking.tracking_origin_in_yaw = obj.tracking.tracking_origin_in_yaw;
+    aligned.tracking.f32_PrevYaw = obj.tracking.f32_PrevYaw;
     frame.AlignTrackingState(aligned, to_ccw_rad(ego_yaw_now_deg));
-    const auto& x = aligned.Eigen_KfState_CA;
+    const auto& x = aligned.tracking.Eigen_KfState_CA;
     // Preserved: double arithmetic (dt is double), narrowed to float on return.
     return {static_cast<float>(x(0) + dt * x(2) + .5 * dt * dt * x(4)),
             static_cast<float>(x(1) + dt * x(3) + .5 * dt * dt * x(5))};
   }
   // 1) dpsi = yaw now - yaw of the previous frame
   const float yaw_now = to_ccw_rad(ego_yaw_now_deg);
-  float dpsi = wrapToPi(yaw_now - obj.f32_PrevYaw);
+  float dpsi = wrapToPi(yaw_now - obj.tracking.f32_PrevYaw);
 
   // 2) align by -dpsi
   Eigen::Matrix<float, 6, 6> T = makeYawTransform(-dpsi);
-  Eigen::Matrix<float, 6, 1> x0 = T * obj.Eigen_KfState_CA;
+  Eigen::Matrix<float, 6, 1> x0 = T * obj.tracking.Eigen_KfState_CA;
 
   // 3) CA prediction
   Eigen::Matrix<float, 6, 6> A = Eigen::Matrix<float, 6, 6>::Identity();
@@ -114,25 +115,25 @@ void kalman_filter_predict(TrackedObject& o, float64 dt, float ego_yaw_now_deg, 
 
   Eigen::Matrix<float, 6, 6> Q = Eigen::Matrix<float, 6, 6>::Identity() * 0.003f;
 
-  o.Eigen_KfState_CA = A * o.Eigen_KfState_CA;
-  o.Eigen_KfP_CA = A * o.Eigen_KfP_CA * A.transpose() + Q;
+  o.tracking.Eigen_KfState_CA = A * o.tracking.Eigen_KfState_CA;
+  o.tracking.Eigen_KfP_CA = A * o.tracking.Eigen_KfP_CA * A.transpose() + Q;
 
-  o.f32_CoreX = o.Eigen_KfState_CA(0);
-  o.f32_CoreY = o.Eigen_KfState_CA(1);
+  o.detection.f32_CoreX = o.tracking.Eigen_KfState_CA(0);
+  o.detection.f32_CoreY = o.tracking.Eigen_KfState_CA(1);
 }
 
 // Ported from Main Kalman.cpp:143-206 (8f93c22e)
 void kalman_filter_update(TrackedObject& obj, float32 zx, float32 zy, float32 pred_x, float32 pred_y,
                           float64 dt, float ego_yaw_now_deg, const ScanFrame& frame) {
   // --- initialisation ---
-  if (!obj.b_KfInitialized) {
-    obj.Eigen_KfState_CA << zx, zy, 0.f, 0.f, 0.f, 0.f;
-    obj.Eigen_KfP_CA.setIdentity();
-    obj.b_KfInitialized = true;
-    obj.s32_KfInitCount = 1;
-    obj.f32_CoreX = zx;
-    obj.f32_CoreY = zy;
-    obj.f32_PrevYaw = to_ccw_rad(ego_yaw_now_deg);
+  if (!obj.tracking.b_KfInitialized) {
+    obj.tracking.Eigen_KfState_CA << zx, zy, 0.f, 0.f, 0.f, 0.f;
+    obj.tracking.Eigen_KfP_CA.setIdentity();
+    obj.tracking.b_KfInitialized = true;
+    obj.tracking.s32_KfInitCount = 1;
+    obj.detection.f32_CoreX = zx;
+    obj.detection.f32_CoreY = zy;
+    obj.tracking.f32_PrevYaw = to_ccw_rad(ego_yaw_now_deg);
     return;
   }
 
@@ -140,13 +141,13 @@ void kalman_filter_update(TrackedObject& obj, float32 zx, float32 zy, float32 pr
   compensate_ego_yaw(obj, ego_yaw_now_deg, false, frame);
 
   // --- second observation: velocity initialisation (pred in the current frame) ---
-  if (obj.s32_KfInitCount == 1) {
+  if (obj.tracking.s32_KfInitCount == 1) {
     // Preserved: no dt > 0 guard (Main divides unconditionally).
     float32 vx_init = (zx - pred_x) / dt;
     float32 vy_init = (zy - pred_y) / dt;
 
-    obj.Eigen_KfState_CA << pred_x, pred_y, vx_init, vy_init, 0.f, 0.f;
-    obj.s32_KfInitCount = 2;
+    obj.tracking.Eigen_KfState_CA << pred_x, pred_y, vx_init, vy_init, 0.f, 0.f;
+    obj.tracking.s32_KfInitCount = 2;
   }
 
   // --- CA model / noise ---
@@ -163,19 +164,19 @@ void kalman_filter_update(TrackedObject& obj, float32 zx, float32 zy, float32 pr
   Eigen::Vector2f z(zx, zy);
 
   // --- predict ---
-  Eigen::Matrix<float, 6, 1> x_pred = A * obj.Eigen_KfState_CA;
-  Eigen::Matrix<float, 6, 6> P_pred = A * obj.Eigen_KfP_CA * A.transpose() + Q;
+  Eigen::Matrix<float, 6, 1> x_pred = A * obj.tracking.Eigen_KfState_CA;
+  Eigen::Matrix<float, 6, 6> P_pred = A * obj.tracking.Eigen_KfP_CA * A.transpose() + Q;
 
   // --- update ---
   Eigen::Vector2f y = z - H * x_pred;
   Eigen::Matrix2f S = H * P_pred * H.transpose() + R;
   Eigen::Matrix<float, 6, 2> K = P_pred * H.transpose() * S.inverse();
 
-  obj.Eigen_KfState_CA = x_pred + K * y;
-  obj.Eigen_KfP_CA = (Eigen::Matrix<float, 6, 6>::Identity() - K * H) * P_pred;
+  obj.tracking.Eigen_KfState_CA = x_pred + K * y;
+  obj.tracking.Eigen_KfP_CA = (Eigen::Matrix<float, 6, 6>::Identity() - K * H) * P_pred;
 
-  obj.f32_CoreX = obj.Eigen_KfState_CA(0);
-  obj.f32_CoreY = obj.Eigen_KfState_CA(1);
+  obj.detection.f32_CoreX = obj.tracking.Eigen_KfState_CA(0);
+  obj.detection.f32_CoreY = obj.tracking.Eigen_KfState_CA(1);
 }
 
 }  // namespace pipeline

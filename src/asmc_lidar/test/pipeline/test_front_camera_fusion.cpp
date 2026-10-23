@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // FrontCameraFusion: Main runCameraFusion behaviour on top of the camera
 // receiver buffer. Uses a fake CameraSource for exact timing cases and a real
 // camera::Buffer (fed through status()/observe() with controlled clocks) for
@@ -72,39 +73,39 @@ pcl::PointXYZI MakePoint(double x, double y, double z) {
 // A car-sized observed track in the leveled frame, `x` m ahead.
 TrackedObject MakeCar(int id, float x) {
   TrackedObject o;
-  o.s32_Id = id;
-  o.s32_Age = 3;
+  o.tracking.s32_Id = id;
+  o.tracking.s32_Age = 3;
   for (float xi : {x, x + 1.5f})
     for (float yi : {-0.9f, -0.45f, 0.f, 0.45f, 0.9f})
-      for (float zi : {-1.2f, -0.8f, -0.4f, 0.f}) o.pcl_ClusterPoints.push_back(MakePoint(xi, yi, zi));
-  o.f32_CoreX = x + 0.75f;
-  o.f32_CoreY = 0.1f;
-  o.f32_CoreZ = -0.6f;
-  o.f32_MinX = x;
-  o.f32_MaxX = x + 1.5f;
-  o.f32_MinY = -0.9f;
-  o.f32_MaxY = 0.9f;
-  o.f32_OBB_CenterX = x + 0.75f;
-  o.f32_OBB_Width = 1.5f;
-  o.f32_OBB_YawRad = 0.2f;
+      for (float zi : {-1.2f, -0.8f, -0.4f, 0.f}) o.detection.pcl_ClusterPoints.push_back(MakePoint(xi, yi, zi));
+  o.detection.f32_CoreX = x + 0.75f;
+  o.detection.f32_CoreY = 0.1f;
+  o.detection.f32_CoreZ = -0.6f;
+  o.detection.f32_MinX = x;
+  o.detection.f32_MaxX = x + 1.5f;
+  o.detection.f32_MinY = -0.9f;
+  o.detection.f32_MaxY = 0.9f;
+  o.detection.f32_OBB_CenterX = x + 0.75f;
+  o.detection.obb_length_m = 1.5f;
+  o.detection.f32_OBB_YawRad = 0.2f;
   return o;
 }
 
 void ExpectSameGeometry(const TrackedObject& expected, const TrackedObject& actual) {
-  EXPECT_EQ(expected.s32_Id, actual.s32_Id);
-  EXPECT_EQ(expected.s32_MissCount, actual.s32_MissCount);
-  EXPECT_EQ(expected.s32_Age, actual.s32_Age);
-  EXPECT_EQ(expected.f32_CoreX, actual.f32_CoreX);
-  EXPECT_EQ(expected.f32_CoreY, actual.f32_CoreY);
-  EXPECT_EQ(expected.f32_CoreZ, actual.f32_CoreZ);
-  EXPECT_EQ(expected.f32_MinX, actual.f32_MinX);
-  EXPECT_EQ(expected.f32_MaxX, actual.f32_MaxX);
-  EXPECT_EQ(expected.f32_OBB_CenterX, actual.f32_OBB_CenterX);
-  EXPECT_EQ(expected.f32_OBB_YawRad, actual.f32_OBB_YawRad);
-  ASSERT_EQ(expected.pcl_ClusterPoints.size(), actual.pcl_ClusterPoints.size());
-  for (std::size_t i = 0; i < expected.pcl_ClusterPoints.size(); ++i) {
-    EXPECT_EQ(expected.pcl_ClusterPoints[i].x, actual.pcl_ClusterPoints[i].x);
-    EXPECT_EQ(expected.pcl_ClusterPoints[i].z, actual.pcl_ClusterPoints[i].z);
+  EXPECT_EQ(expected.tracking.s32_Id, actual.tracking.s32_Id);
+  EXPECT_EQ(expected.tracking.s32_MissCount, actual.tracking.s32_MissCount);
+  EXPECT_EQ(expected.tracking.s32_Age, actual.tracking.s32_Age);
+  EXPECT_EQ(expected.detection.f32_CoreX, actual.detection.f32_CoreX);
+  EXPECT_EQ(expected.detection.f32_CoreY, actual.detection.f32_CoreY);
+  EXPECT_EQ(expected.detection.f32_CoreZ, actual.detection.f32_CoreZ);
+  EXPECT_EQ(expected.detection.f32_MinX, actual.detection.f32_MinX);
+  EXPECT_EQ(expected.detection.f32_MaxX, actual.detection.f32_MaxX);
+  EXPECT_EQ(expected.detection.f32_OBB_CenterX, actual.detection.f32_OBB_CenterX);
+  EXPECT_EQ(expected.detection.f32_OBB_YawRad, actual.detection.f32_OBB_YawRad);
+  ASSERT_EQ(expected.detection.pcl_ClusterPoints.size(), actual.detection.pcl_ClusterPoints.size());
+  for (std::size_t i = 0; i < expected.detection.pcl_ClusterPoints.size(); ++i) {
+    EXPECT_EQ(expected.detection.pcl_ClusterPoints[i].x, actual.detection.pcl_ClusterPoints[i].x);
+    EXPECT_EQ(expected.detection.pcl_ClusterPoints[i].z, actual.detection.pcl_ClusterPoints[i].z);
   }
 }
 
@@ -139,8 +140,8 @@ Vec SensorPointForPixel(double u, double v, double depth, const Pose& base_from_
 
 using ClassState = std::tuple<std::string, std::string, std::string, int, int, std::uint64_t, std::uint64_t>;
 ClassState StateOf(const TrackedObject& o) {
-  return ClassState{o.str_ObjectClass, o.str_YoloClass, o.last_seen_class, o.continuity_counter,
-                    o.class_miss_counter, o.camera_observation_ns, o.camera_observation_epoch};
+  return ClassState{o.camera.str_ObjectClass, o.camera.str_YoloClass, o.camera.last_seen_class, o.camera.continuity_counter,
+                    o.camera.class_miss_counter, o.camera.camera_observation_ns, o.camera.camera_observation_epoch};
 }
 
 // ---------------------------------------------------------------------------
@@ -270,7 +271,7 @@ int ConfirmVehicle(BufferRig& rig, int k = 0) {
     EXPECT_TRUE(report.camera_active);
     EXPECT_EQ(1u, report.matched_this_call);
   }
-  EXPECT_EQ("vehicle", rig.Live().str_ObjectClass);
+  EXPECT_EQ("vehicle", rig.Live().camera.str_ObjectClass);
   return k;
 }
 
@@ -278,11 +279,11 @@ void ExpectInvalidated(const BufferRig& rig, const FusionReport& report, const s
   EXPECT_FALSE(report.camera_active);
   EXPECT_EQ(reason, report.camera_reason);
   ASSERT_EQ(1u, rig.tracker.live.size());  // never removed
-  EXPECT_EQ("unknown", rig.Live().str_ObjectClass);
-  EXPECT_EQ("unknown", rig.Live().str_YoloClass);
-  EXPECT_EQ(0, rig.Live().continuity_counter);
+  EXPECT_EQ("unknown", rig.Live().camera.str_ObjectClass);
+  EXPECT_EQ("unknown", rig.Live().camera.str_YoloClass);
+  EXPECT_EQ(0, rig.Live().camera.continuity_counter);
   ASSERT_EQ(1u, rig.tracker.history.size());
-  EXPECT_EQ("unknown", rig.tracker.history[0].str_ObjectClass);  // persisted
+  EXPECT_EQ("unknown", rig.tracker.history[0].camera.str_ObjectClass);  // persisted
   ExpectSameGeometry(MakeCar(7, 10.f), rig.Live());
   ExpectSameGeometry(MakeCar(7, 10.f), rig.tracker.history[0]);
 }
@@ -299,8 +300,8 @@ TEST(FusionProjection, UsesStoredLevelingInverse) {
   const Ns stamp = kT0;
 
   TrackedObject leveled_object, raw_object;
-  leveled_object.pcl_ClusterPoints.push_back(MakePoint(leveled.x(), leveled.y(), leveled.z()));
-  raw_object.pcl_ClusterPoints.push_back(MakePoint(raw.x(), raw.y(), raw.z()));
+  leveled_object.detection.pcl_ClusterPoints.push_back(MakePoint(leveled.x(), leveled.y(), leveled.z()));
+  raw_object.detection.pcl_ClusterPoints.push_back(MakePoint(raw.x(), raw.y(), raw.z()));
   Context raw_context = LeveledContext(stamp);
   raw_context.frame = Frame::Sensor;  // raw sensor point through base_from_sensor
 
@@ -334,13 +335,13 @@ TEST(FusionProjection, PreservesTruncationBoundingRectAndSkips) {
   const Vec edge = SensorPointForPixel(-0.5, 200.25, 8.0);
   const Vec inside = SensorPointForPixel(10.6, 220.7, 8.0);
   TrackedObject object;
-  object.pcl_ClusterPoints.push_back(MakePoint(edge.x(), edge.y(), edge.z()));
-  object.pcl_ClusterPoints.push_back(MakePoint(inside.x(), inside.y(), inside.z()));
-  object.pcl_ClusterPoints.push_back(MakePoint(-5.0, 0.0, 0.0));  // behind the camera
+  object.detection.pcl_ClusterPoints.push_back(MakePoint(edge.x(), edge.y(), edge.z()));
+  object.detection.pcl_ClusterPoints.push_back(MakePoint(inside.x(), inside.y(), inside.z()));
+  object.detection.pcl_ClusterPoints.push_back(MakePoint(-5.0, 0.0, 0.0));  // behind the camera
   TrackedObject ghost = object;
-  ghost.s32_MissCount = 1;  // prediction-only: never projected
+  ghost.tracking.s32_MissCount = 1;  // prediction-only: never projected
   TrackedObject noise = object;
-  noise.str_ObjectClass = "noise";
+  noise.camera.str_ObjectClass = "noise";
   std::vector<LidarImageBox> boxes;
   ASSERT_TRUE(LidarToImage({ghost, object, noise}, LeveledContext(kT0), FrontCalibration(), {}, &boxes));
   ASSERT_EQ(1u, boxes.size());
@@ -355,7 +356,7 @@ TEST(FusionProjection, PreservesTruncationBoundingRectAndSkips) {
   // Optional hood y-band (default off) rejects a box overlapping [637, 720).
   const Vec low = SensorPointForPixel(500.5, 650.5, 4.0);
   TrackedObject hood;
-  hood.pcl_ClusterPoints.push_back(MakePoint(low.x(), low.y(), low.z()));
+  hood.detection.pcl_ClusterPoints.push_back(MakePoint(low.x(), low.y(), low.z()));
   FusionConfig band;
   band.exclude_hood_y_band = true;
   ASSERT_TRUE(LidarToImage({hood}, LeveledContext(kT0), FrontCalibration(), {}, &boxes));
@@ -376,26 +377,26 @@ TEST(FusionProjection, PreservesTruncationBoundingRectAndSkips) {
 TEST(FusionIou, GreedyOneToOneStrictThresholdAndMisses) {
   FusionConfig config;
   std::vector<TrackedObject> objects(4);
-  for (int i = 0; i < 4; ++i) objects[i].s32_Id = i;
-  objects[3].s32_MissCount = 2;
-  objects[3].str_ObjectClass = "vehicle";
-  objects[2].str_ObjectClass = "vehicle";
-  objects[2].class_miss_counter = 3;
-  objects[2].camera_observation_epoch = 2;  // same epoch: counters are not reset
-  objects[2].camera_observation_ns = 500;
+  for (int i = 0; i < 4; ++i) objects[i].tracking.s32_Id = i;
+  objects[3].tracking.s32_MissCount = 2;
+  objects[3].camera.str_ObjectClass = "vehicle";
+  objects[2].camera.str_ObjectClass = "vehicle";
+  objects[2].camera.class_miss_counter = 3;
+  objects[2].camera.camera_observation_epoch = 2;  // same epoch: counters are not reset
+  objects[2].camera.camera_observation_ns = 500;
   std::vector<LidarImageBox> lidar(2);
   lidar[0] = {100.f, 100.f, 200.f, 200.f, 0};
   lidar[1] = {600.f, 300.f, 640.f, 380.f, 1};
   fusion_adapter::YoloBox a{100.f, 100.f, 200.f, 200.f, "vehicle", "truck"};
   fusion_adapter::YoloBox b{102.f, 101.f, 199.f, 201.f, "vehicle", "bus"};  // duplicate of a
   IOUFusion(objects, {a, b}, lidar, 1000, 2, config, nullptr);
-  EXPECT_EQ(1, objects[0].continuity_counter);  // one confirmation from two duplicates
-  EXPECT_EQ("vehicle", objects[0].last_seen_class);
-  EXPECT_EQ(1, objects[1].class_miss_counter);  // projected but unmatched
-  EXPECT_EQ("unknown", objects[2].str_ObjectClass);  // out of image: 4th miss
-  EXPECT_EQ(4, objects[2].class_miss_counter);
-  EXPECT_EQ("vehicle", objects[3].str_ObjectClass);  // prediction-only keeps class
-  EXPECT_EQ(0u, objects[3].camera_observation_ns);
+  EXPECT_EQ(1, objects[0].camera.continuity_counter);  // one confirmation from two duplicates
+  EXPECT_EQ("vehicle", objects[0].camera.last_seen_class);
+  EXPECT_EQ(1, objects[1].camera.class_miss_counter);  // projected but unmatched
+  EXPECT_EQ("unknown", objects[2].camera.str_ObjectClass);  // out of image: 4th miss
+  EXPECT_EQ(4, objects[2].camera.class_miss_counter);
+  EXPECT_EQ("vehicle", objects[3].camera.str_ObjectClass);  // prediction-only keeps class
+  EXPECT_EQ(0u, objects[3].camera.camera_observation_ns);
 
   // Strict iou > threshold.
   const float inflated_area = 130.f * 150.f;
@@ -404,15 +405,15 @@ TEST(FusionIou, GreedyOneToOneStrictThresholdAndMisses) {
   FusionConfig at_threshold;
   at_threshold.iou_threshold = static_cast<double>(static_cast<float>(100.f * 100.f) / inflated_area);
   IOUFusion(once, {a}, {lidar[0]}, 1000, 2, at_threshold, nullptr);
-  EXPECT_EQ(1, once[0].class_miss_counter);
-  EXPECT_EQ(0, once[0].continuity_counter);
+  EXPECT_EQ(1, once[0].camera.class_miss_counter);
+  EXPECT_EQ(0, once[0].camera.continuity_counter);
   at_threshold.iou_threshold = iou - 1e-6;
   IOUFusion(once, {a}, {lidar[0]}, 2000, 2, at_threshold, nullptr);
-  EXPECT_EQ(1, once[0].continuity_counter);
+  EXPECT_EQ(1, once[0].camera.continuity_counter);
   // Same image stamp again: neither confirmation nor miss.
   IOUFusion(once, {a}, {lidar[0]}, 2000, 2, at_threshold, nullptr);
-  EXPECT_EQ(1, once[0].continuity_counter);
-  EXPECT_EQ(0, once[0].class_miss_counter);
+  EXPECT_EQ(1, once[0].camera.continuity_counter);
+  EXPECT_EQ(0, once[0].camera.class_miss_counter);
 }
 
 // ---------------------------------------------------------------------------
@@ -430,9 +431,9 @@ TEST(FrontCameraFusion, FutureFrameSettlesImmediately) {
   EXPECT_EQ(0u, report.pending_scans);
   ASSERT_EQ(1u, report.match_offsets_ns.size());
   EXPECT_EQ(20 * kMs, report.match_offsets_ns[0]);  // recorded, not compensated
-  EXPECT_EQ(1, tracker.live[0].continuity_counter);
-  EXPECT_EQ("vehicle", tracker.live[0].last_seen_class);
-  EXPECT_EQ(1, tracker.history[0].continuity_counter);  // persisted
+  EXPECT_EQ(1, tracker.live[0].camera.continuity_counter);
+  EXPECT_EQ("vehicle", tracker.live[0].camera.last_seen_class);
+  EXPECT_EQ(1, tracker.history[0].camera.continuity_counter);  // persisted
   ASSERT_EQ(1u, source.reads.size());
   EXPECT_EQ(scan, source.reads[0].first);
   EXPECT_EQ(1000 * kMs, source.reads[0].second);  // read window, not the 50 ms tolerance
@@ -455,8 +456,8 @@ TEST(FrontCameraFusion, TimeoutDropAfter200msOfInjectedClock) {
   EXPECT_EQ(1u, fusion.counters().queued);
   EXPECT_EQ(2u, fusion.counters().waits);
   EXPECT_EQ(1u, fusion.counters().dropped);
-  EXPECT_EQ(0, tracker.live[0].continuity_counter);
-  EXPECT_EQ(0, tracker.live[0].class_miss_counter);  // a drop is not a miss
+  EXPECT_EQ(0, tracker.live[0].camera.continuity_counter);
+  EXPECT_EQ(0, tracker.live[0].camera.class_miss_counter);  // a drop is not a miss
 }
 
 TEST(FrontCameraFusion, PlusMinus50msInclusiveAndTieGoesToEarlierStamp) {
@@ -502,8 +503,8 @@ TEST(FrontCameraFusion, PlusMinus50msInclusiveAndTieGoesToEarlierStamp) {
   source.Set({MakeFrame(kT0 + 50 * kMs, {TruckBox()}), MakeFrame(kT0 - 50 * kMs, {PersonBox()})});
   const auto report = tracker.Scan(fusion, source, kT0, kT0);
   ASSERT_EQ(1u, report.matched_this_call);
-  EXPECT_EQ("dynamic_obstacle", tracker.live[0].last_seen_class);
-  EXPECT_EQ(static_cast<std::uint64_t>(kT0 - 50 * kMs), tracker.live[0].camera_observation_ns);
+  EXPECT_EQ("dynamic_obstacle", tracker.live[0].camera.last_seen_class);
+  EXPECT_EQ(static_cast<std::uint64_t>(kT0 - 50 * kMs), tracker.live[0].camera.camera_observation_ns);
 }
 
 TEST(FrontCameraFusion, DuplicateFramesAreNotDoubleCounted) {
@@ -519,7 +520,7 @@ TEST(FrontCameraFusion, DuplicateFramesAreNotDoubleCounted) {
     EXPECT_EQ(1u, report.pending_scans);  // waits: the only future frame is used
     report = tracker.Scan(fusion, source, kT0 + 260 * kMs, kT0 + 20 * kMs);
     EXPECT_EQ(1u, report.dropped_this_call);
-    EXPECT_EQ(1, tracker.live[0].continuity_counter);
+    EXPECT_EQ(1, tracker.live[0].camera.continuity_counter);
     EXPECT_EQ(1u, fusion.counters().observations);
     EXPECT_EQ(1u, fusion.consumed_size());
   }
@@ -535,8 +536,8 @@ TEST(FrontCameraFusion, DuplicateFramesAreNotDoubleCounted) {
     EXPECT_EQ(1u, tracker.Scan(fusion, source, kT0 + 60 * kMs, kT0 + 20 * kMs).matched_this_call);
     EXPECT_EQ(1u, fusion.counters().reused);
     EXPECT_EQ(1u, fusion.counters().fresh);
-    EXPECT_EQ(1, tracker.live[0].continuity_counter);
-    EXPECT_EQ(0, tracker.live[0].class_miss_counter);
+    EXPECT_EQ(1, tracker.live[0].camera.continuity_counter);
+    EXPECT_EQ(0, tracker.live[0].camera.class_miss_counter);
     EXPECT_EQ(1u, fusion.counters().observations);
   }
 }
@@ -552,7 +553,7 @@ TEST(FrontCameraFusion, BoundedReuseEmptyBarrier) {
   const auto report = tracker.Scan(fusion, source, kT0, kT0);
   ASSERT_EQ(1u, report.matched_this_call);
   EXPECT_EQ(20 * kMs, report.match_offsets_ns[0]);
-  EXPECT_EQ(1, tracker.live[0].class_miss_counter);
+  EXPECT_EQ(1, tracker.live[0].camera.class_miss_counter);
 }
 
 TEST(FrontCameraFusion, PendingBoundsStartupAndHeadOfLine) {
@@ -573,7 +574,7 @@ TEST(FrontCameraFusion, PendingBoundsStartupAndHeadOfLine) {
     EXPECT_EQ(4u, fusion.counters().startup_discarded);
     EXPECT_EQ(1u, report.matched_this_call);
     EXPECT_EQ(10 * kMs, report.match_offsets_ns[0]);
-    EXPECT_EQ("dynamic_obstacle", tracker.live[0].last_seen_class);
+    EXPECT_EQ("dynamic_obstacle", tracker.live[0].camera.last_seen_class);
     EXPECT_EQ(1u, report.pending_scans);  // 600 ms scan waits for a future frame
   }
   // Waiting scans are bounded to 32 (head-of-line blocking, clock not advancing).
@@ -598,8 +599,8 @@ TEST(FrontCameraFusion, InactiveSourceInvalidatesWithoutTouchingGeometry) {
     source.Set({MakeFrame(kT0 + k * 100 * kMs + 5 * kMs, {TruckBox()})});
     tracker.Scan(fusion, source, kT0 + k * 100 * kMs + 10 * kMs, kT0 + k * 100 * kMs);
   }
-  ASSERT_EQ("vehicle", tracker.live[0].str_ObjectClass);
-  ASSERT_EQ("truck", tracker.live[0].str_YoloClass);
+  ASSERT_EQ("vehicle", tracker.live[0].camera.str_ObjectClass);
+  ASSERT_EQ("truck", tracker.live[0].camera.str_YoloClass);
   const auto epoch = fusion.consumer_epoch();
   source.Set({}, false, "standby");
   const auto report = tracker.Scan(fusion, source, kT0 + 600 * kMs, kT0 + 500 * kMs);
@@ -608,9 +609,9 @@ TEST(FrontCameraFusion, InactiveSourceInvalidatesWithoutTouchingGeometry) {
   EXPECT_EQ(epoch + 1, fusion.consumer_epoch());
   EXPECT_EQ(0u, report.pending_scans);  // inactive scans are not queued
   ASSERT_EQ(1u, tracker.live.size());
-  EXPECT_EQ("unknown", tracker.live[0].str_ObjectClass);
-  EXPECT_EQ("unknown", tracker.history[0].str_ObjectClass);
-  EXPECT_EQ(fusion.consumer_epoch(), tracker.live[0].camera_observation_epoch);
+  EXPECT_EQ("unknown", tracker.live[0].camera.str_ObjectClass);
+  EXPECT_EQ("unknown", tracker.history[0].camera.str_ObjectClass);
+  EXPECT_EQ(fusion.consumer_epoch(), tracker.live[0].camera.camera_observation_epoch);
   ExpectSameGeometry(MakeCar(7, 10.f), tracker.live[0]);
   ExpectSameGeometry(MakeCar(7, 10.f), tracker.history[0]);
   EXPECT_EQ(1u, fusion.counters().inactive_calls);
@@ -634,10 +635,10 @@ TEST(FrontCameraFusion, NotCurrentCandidateKeepsScanPending) {
 TEST(FrontCameraFusion, EgoHoodFilterOnlyUnderLegacyProfile) {
   // A wide box at the image bottom (ego hood shape) over a projected object.
   TrackedObject hood_object;
-  hood_object.s32_Id = 3;
+  hood_object.tracking.s32_Id = 3;
   for (const auto& px : std::vector<std::pair<double, double>>{{300.5, 620.5}, {1100.5, 718.5}}) {
     const Vec p = SensorPointForPixel(px.first, px.second, 3.0);
-    hood_object.pcl_ClusterPoints.push_back(MakePoint(p.x(), p.y(), p.z()));
+    hood_object.detection.pcl_ClusterPoints.push_back(MakePoint(p.x(), p.y(), p.z()));
   }
   const auto box = ProjectedBox(hood_object);
   for (bool mission : {true, false}) {
@@ -650,11 +651,11 @@ TEST(FrontCameraFusion, EgoHoodFilterOnlyUnderLegacyProfile) {
     fusion.Process(kT0 + 10 * kMs, kT0, LeveledContext(kT0), live, &history, source, kT0, kT0);
     if (mission) {
       // Normalize("car") is "vehicle", never "car": the filter is dead (quirk).
-      EXPECT_EQ(1, live[0].continuity_counter);
-      EXPECT_EQ("vehicle", live[0].last_seen_class);
+      EXPECT_EQ(1, live[0].camera.continuity_counter);
+      EXPECT_EQ("vehicle", live[0].camera.last_seen_class);
     } else {
-      EXPECT_EQ(0, live[0].continuity_counter);
-      EXPECT_EQ(1, live[0].class_miss_counter);
+      EXPECT_EQ(0, live[0].camera.continuity_counter);
+      EXPECT_EQ(1, live[0].camera.class_miss_counter);
     }
   }
 }
@@ -733,21 +734,21 @@ TEST(FrontCameraFusionBuffer, ValidFrontObservationConfirmsAfterFiveMatches) {
     ASSERT_EQ(1u, report.matched_this_call);
     EXPECT_EQ(5 * kMs, report.match_offsets_ns.at(0));
     if (k < 4) {
-      EXPECT_EQ("unknown", rig.Live().str_ObjectClass);
-      EXPECT_EQ(k + 1, rig.Live().continuity_counter);
+      EXPECT_EQ("unknown", rig.Live().camera.str_ObjectClass);
+      EXPECT_EQ(k + 1, rig.Live().camera.continuity_counter);
     }
   }
-  EXPECT_EQ("vehicle", rig.Live().str_ObjectClass);  // mission group
-  EXPECT_EQ("truck", rig.Live().str_YoloClass);      // raw label kept
-  EXPECT_EQ("vehicle", rig.tracker.history[0].str_ObjectClass);
+  EXPECT_EQ("vehicle", rig.Live().camera.str_ObjectClass);  // mission group
+  EXPECT_EQ("truck", rig.Live().camera.str_YoloClass);      // raw label kept
+  EXPECT_EQ("vehicle", rig.tracker.history[0].camera.str_ObjectClass);
   EXPECT_EQ(1u, rig.fusion->counters().confirmations_applied);
   ExpectSameGeometry(MakeCar(7, 10.f), rig.Live());
   // Change needs 3 opposite observations once confirmed.
   for (int k = 5; k < 7; ++k) rig.Step(k, {PersonBox()});
-  EXPECT_EQ("vehicle", rig.Live().str_ObjectClass);
+  EXPECT_EQ("vehicle", rig.Live().camera.str_ObjectClass);
   rig.Step(7, {PersonBox()});
-  EXPECT_EQ("dynamic_obstacle", rig.Live().str_ObjectClass);
-  EXPECT_EQ("person", rig.Live().str_YoloClass);
+  EXPECT_EQ("dynamic_obstacle", rig.Live().camera.str_ObjectClass);
+  EXPECT_EQ("person", rig.Live().camera.str_YoloClass);
 }
 
 TEST(FrontCameraFusionBuffer, NormalEmptyFramesMissAfterGrace) {
@@ -758,8 +759,8 @@ TEST(FrontCameraFusionBuffer, NormalEmptyFramesMissAfterGrace) {
     EXPECT_TRUE(report.camera_active);
     EXPECT_EQ("empty", report.camera_reason);
     EXPECT_EQ(1u, report.matched_this_call);
-    EXPECT_EQ(miss, rig.Live().class_miss_counter);
-    EXPECT_EQ(miss <= 3 ? "vehicle" : "unknown", rig.Live().str_ObjectClass);
+    EXPECT_EQ(miss, rig.Live().camera.class_miss_counter);
+    EXPECT_EQ(miss <= 3 ? "vehicle" : "unknown", rig.Live().camera.str_ObjectClass);
     ASSERT_EQ(1u, rig.tracker.live.size());
     ExpectSameGeometry(MakeCar(7, 10.f), rig.Live());
   }
@@ -802,7 +803,7 @@ TEST(FrontCameraFusionBuffer, StaleFramesResetClassesAfterRetention) {
   for (int i = 0; i < 3; ++i, ++k) {
     report = rig.Step(k, {}, true, false);
     EXPECT_TRUE(report.camera_active);
-    EXPECT_EQ("vehicle", rig.Live().str_ObjectClass);  // no new image: no miss
+    EXPECT_EQ("vehicle", rig.Live().camera.str_ObjectClass);  // no new image: no miss
   }
   report = rig.Step(k, {}, true, false);
   ExpectInvalidated(rig, report, "stale");
@@ -834,11 +835,11 @@ TEST(FrontCameraFusionBuffer, SessionOrGenerationChangeStartsNewEpoch) {
     EXPECT_TRUE(report.camera_active);
     EXPECT_EQ(epochs + 1, rig.fusion->counters().epoch_changes);
     EXPECT_EQ(consumer + 1, rig.fusion->consumer_epoch());
-    EXPECT_EQ("unknown", rig.Live().str_ObjectClass);  // invalidated, then 1st observation
-    EXPECT_EQ(1, rig.Live().continuity_counter);
-    EXPECT_EQ(rig.fusion->consumer_epoch(), rig.Live().camera_observation_epoch);
+    EXPECT_EQ("unknown", rig.Live().camera.str_ObjectClass);  // invalidated, then 1st observation
+    EXPECT_EQ(1, rig.Live().camera.continuity_counter);
+    EXPECT_EQ(rig.fusion->consumer_epoch(), rig.Live().camera.camera_observation_epoch);
     for (int i = 0; i < 4; ++i) rig.Step(k++, {TruckBox()});
-    EXPECT_EQ("vehicle", rig.Live().str_ObjectClass);
+    EXPECT_EQ("vehicle", rig.Live().camera.str_ObjectClass);
   }
 }
 
@@ -921,7 +922,7 @@ TEST(FrontCameraFusionBuffer, SideViewsNeverAffectFrontFusion) {
       matched.push_back(report.matched_this_call);
       states.push_back(StateOf(rig.Live()));
     }
-    EXPECT_EQ("unknown", rig.Live().str_ObjectClass);  // side trucks never confirm
+    EXPECT_EQ("unknown", rig.Live().camera.str_ObjectClass);  // side trucks never confirm
     return std::make_tuple(states, matched, rig.fusion->counters().confirmations_applied);
   };
   const auto silent = run(0);
@@ -955,7 +956,7 @@ TEST(FrontCameraFusionBuffer, ScansQueueBeforeTheFirstFrontFrame) {
   EXPECT_TRUE(report.camera_active);
   EXPECT_EQ(1u, report.matched_this_call);
   EXPECT_EQ(20 * kMs, report.match_offsets_ns.at(0));
-  EXPECT_EQ(1, rig.Live().continuity_counter);
+  EXPECT_EQ(1, rig.Live().camera.continuity_counter);
 }
 
 // A status session/generation transition clears every receiver view: Main
@@ -972,13 +973,13 @@ TEST(FrontCameraFusionBuffer, RestartWithoutFramesResetsClassesImmediately) {
   EXPECT_TRUE(report.camera_active);
   EXPECT_EQ("missing", report.camera_reason);
   EXPECT_EQ(epochs + 1, rig.fusion->counters().epoch_changes);
-  EXPECT_EQ("unknown", rig.Live().str_ObjectClass);
-  EXPECT_EQ("unknown", rig.tracker.history[0].str_ObjectClass);
+  EXPECT_EQ("unknown", rig.Live().camera.str_ObjectClass);
+  EXPECT_EQ("unknown", rig.tracker.history[0].camera.str_ObjectClass);
   ExpectSameGeometry(MakeCar(7, 10.f), rig.Live());
   // Frames of the new generation then confirm again after 5 matches.
   int next = k + 1;
   for (int i = 0; i < 5; ++i) rig.Step(next++, {TruckBox()});
-  EXPECT_EQ("vehicle", rig.Live().str_ObjectClass);
+  EXPECT_EQ("vehicle", rig.Live().camera.str_ObjectClass);
   EXPECT_EQ(epochs + 1, rig.fusion->counters().epoch_changes);  // no second reset
 }
 

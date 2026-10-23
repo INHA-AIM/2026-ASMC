@@ -138,7 +138,7 @@ void Publisher::Diagnostics(const ros::WallTimerEvent&) {
   value("stamp_errors",std::to_string(stamp_errors_)); value("map_reason",map_reason_);
   value("source_stamp_ns",std::to_string(last_stamp_.toNSec())); value("calibration_sha",CalibrationId());
   value("legacy_output",legacy_reason_);
-  value("input_generation",std::to_string(last_context_.input_generation));
+  value("input_generation",std::to_string(last_context_.scan_sequence));
   value("source_clock",last_context_.time.clock);
   value("receipt_clock",last_context_.time.receipt_clock.empty()?last_context_.time.clock:last_context_.time.receipt_clock);
   value("receipt_ns",std::to_string(last_context_.time.receipt_ns));

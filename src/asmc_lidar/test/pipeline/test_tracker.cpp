@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // Tracker port tests: Hungarian, Kalman, detections/consolidation, class carry,
 // track lifecycle, the tracker-fix scenarios of Main test_frame_boundary_ros.cpp
 // (8f93c22e), the applicable cases of Main test_tracking_association.cpp, and
@@ -142,22 +143,22 @@ std::array<Vec, 8> WorldCorners(const WorldBox& box) {
 // Main test_frame_boundary_ros.cpp:220-248 BoxDetection (raw yaw = projected heading).
 TrackedObject BoxDetection(const TrackScan& scan, const WorldBox& box) {
   TrackedObject out{};
-  out.s32_Id = -1;
-  out.str_ObjectClass = "car";
-  out.str_YoloClass = "car";
+  out.tracking.s32_Id = -1;
+  out.camera.str_ObjectClass = "car";
+  out.camera.str_YoloClass = "car";
   const auto world = WorldCorners(box);
   double low = 1e9, high = -1e9;
-  out.f32_MinX = out.f32_MinY = 1e9;
-  out.f32_MaxX = out.f32_MaxY = -1e9;
+  out.detection.f32_MinX = out.detection.f32_MinY = 1e9;
+  out.detection.f32_MaxX = out.detection.f32_MaxY = -1e9;
   for (unsigned i = 0; i < 8; ++i) {
     const auto p = scan.Point(world[i]);
-    out.OBB_Corners_Body[i] = {float(p.x()), float(p.y()), float(p.z())};
+    out.detection.obb_corners_level[i] = {float(p.x()), float(p.y()), float(p.z())};
     low = std::min(low, p.z());
     high = std::max(high, p.z());
-    out.f32_MinX = std::min<float>(out.f32_MinX, p.x());
-    out.f32_MaxX = std::max<float>(out.f32_MaxX, p.x());
-    out.f32_MinY = std::min<float>(out.f32_MinY, p.y());
-    out.f32_MaxY = std::max<float>(out.f32_MaxY, p.y());
+    out.detection.f32_MinX = std::min<float>(out.detection.f32_MinX, p.x());
+    out.detection.f32_MaxX = std::max<float>(out.detection.f32_MaxX, p.x());
+    out.detection.f32_MinY = std::min<float>(out.detection.f32_MinY, p.y());
+    out.detection.f32_MaxY = std::max<float>(out.detection.f32_MaxY, p.y());
   }
   static const int edges[12][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
                                    {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
@@ -168,7 +169,7 @@ TrackedObject BoxDetection(const TrackScan& scan, const WorldBox& box) {
     p.y = q.y();
     p.z = q.z();
     p.intensity = 1;
-    out.pcl_ClusterPoints.push_back(p);
+    out.detection.pcl_ClusterPoints.push_back(p);
   }
   for (const auto& e : edges) {
     pcl::PointXYZI p;
@@ -177,69 +178,69 @@ TrackedObject BoxDetection(const TrackScan& scan, const WorldBox& box) {
     p.y = q.y();
     p.z = q.z();
     p.intensity = 1;
-    out.pcl_ClusterPoints.push_back(p);
+    out.detection.pcl_ClusterPoints.push_back(p);
   }
   const auto center = scan.Point(box.center), axis = scan.Direction(Heading(box));
-  out.f32_CoreX = out.f32_OBB_CenterX = center.x();
-  out.f32_CoreY = out.f32_OBB_CenterY = center.y();
-  out.f32_CoreZ = out.f32_OBB_CenterZ = center.z();
-  out.f32_OBB_Width = box.length;
-  out.f32_OBB_Height = box.width;
-  out.f32_OBB_ZMin = low;
-  out.f32_OBB_ZMax = high;
-  out.f32_OBB_YawRad = std::atan2(axis.y(), axis.x());
+  out.detection.f32_CoreX = out.detection.f32_OBB_CenterX = center.x();
+  out.detection.f32_CoreY = out.detection.f32_OBB_CenterY = center.y();
+  out.detection.f32_CoreZ = out.detection.f32_OBB_CenterZ = center.z();
+  out.detection.obb_length_m = box.length;
+  out.detection.obb_width_m = box.width;
+  out.detection.f32_OBB_ZMin = low;
+  out.detection.f32_OBB_ZMax = high;
+  out.detection.f32_OBB_YawRad = std::atan2(axis.y(), axis.x());
   return out;
 }
 // Main test_frame_boundary_ros.cpp:32-44 Detection.
 TrackedObject Detection(double x, double y) {
   TrackedObject out{};
-  out.s32_Id = -1;
-  out.str_ObjectClass = "car";
-  out.str_YoloClass = "car";
-  out.f32_CoreX = out.f32_OBB_CenterX = x;
-  out.f32_CoreY = out.f32_OBB_CenterY = y;
-  out.f32_CoreZ = out.f32_OBB_CenterZ = -.2;
-  out.f32_OBB_Width = 1.;
-  out.f32_OBB_Height = .8;
-  out.f32_OBB_ZMin = -.5;
-  out.f32_OBB_ZMax = .5;
-  out.f32_MinX = x - .5;
-  out.f32_MaxX = x + .5;
-  out.f32_MinY = y - .4;
-  out.f32_MaxY = y + .4;
+  out.tracking.s32_Id = -1;
+  out.camera.str_ObjectClass = "car";
+  out.camera.str_YoloClass = "car";
+  out.detection.f32_CoreX = out.detection.f32_OBB_CenterX = x;
+  out.detection.f32_CoreY = out.detection.f32_OBB_CenterY = y;
+  out.detection.f32_CoreZ = out.detection.f32_OBB_CenterZ = -.2;
+  out.detection.obb_length_m = 1.;
+  out.detection.obb_width_m = .8;
+  out.detection.f32_OBB_ZMin = -.5;
+  out.detection.f32_OBB_ZMax = .5;
+  out.detection.f32_MinX = x - .5;
+  out.detection.f32_MaxX = x + .5;
+  out.detection.f32_MinY = y - .4;
+  out.detection.f32_MaxY = y + .4;
   for (unsigned i = 0; i < 8; ++i) {
-    out.OBB_Corners_Body[i] = {float(x + ((i & 1) ? .5 : -.5)), float(y + ((i & 2) ? .4 : -.4)),
+    out.detection.obb_corners_level[i] = {float(x + ((i & 1) ? .5 : -.5)), float(y + ((i & 2) ? .4 : -.4)),
                                float((i & 4) ? .5 : -.5)};
     pcl::PointXYZI p;
-    p.x = out.OBB_Corners_Body[i].x;
-    p.y = out.OBB_Corners_Body[i].y;
-    p.z = out.OBB_Corners_Body[i].z;
+    p.x = out.detection.obb_corners_level[i].x;
+    p.y = out.detection.obb_corners_level[i].y;
+    p.z = out.detection.obb_corners_level[i].z;
     p.intensity = 1;
-    out.pcl_ClusterPoints.push_back(p);
+    out.detection.pcl_ClusterPoints.push_back(p);
   }
   return out;
 }
 // Main test_tracking_association.cpp:10-37 MakeDetection.
 TrackedObject MakeDetection(float center_x, float center_y, float width, float height, float z_offset) {
   TrackedObject object{};
-  object.f32_CoreX = center_x;
-  object.f32_CoreY = center_y;
-  object.f32_CoreZ = z_offset;
-  object.f32_MinX = center_x - width * 0.5F;
-  object.f32_MaxX = center_x + width * 0.5F;
-  object.f32_MinY = center_y - height * 0.5F;
-  object.f32_MaxY = center_y + height * 0.5F;
-  object.f32_MinZ = z_offset;
-  object.f32_MaxZ = z_offset + 0.2F;
-  object.f32_OBB_Width = width;
-  object.f32_OBB_Height = height;
+  object.detection.f32_CoreX = center_x;
+  object.detection.f32_CoreY = center_y;
+  object.detection.f32_CoreZ = z_offset;
+  object.detection.f32_MinX = center_x - width * 0.5F;
+  object.detection.f32_MaxX = center_x + width * 0.5F;
+  object.detection.f32_MinY = center_y - height * 0.5F;
+  object.detection.f32_MaxY = center_y + height * 0.5F;
+  object.detection.f32_MinZ = z_offset;
+  object.detection.f32_MaxZ = z_offset + 0.2F;
+  object.detection.obb_length_m = width;
+  object.detection.obb_width_m = height;
   for (int x_index = 0; x_index < 4; ++x_index) {
     for (int y_index = 0; y_index < 3; ++y_index) {
       pcl::PointXYZI point;
-      point.x = object.f32_MinX + width * static_cast<float>(x_index) / 3.0F;
-      point.y = object.f32_MinY + height * static_cast<float>(y_index) / 2.0F;
+      point.x = object.detection.f32_MinX + width * static_cast<float>(x_index) / 3.0F;
+      point.y = object.detection.f32_MinY + height * static_cast<float>(y_index) / 2.0F;
       point.z = z_offset;
-      object.pcl_ClusterPoints.push_back(point);
+      object.detection.pcl_ClusterPoints.push_back(point);
     }
   }
   return object;
@@ -264,19 +265,19 @@ double NormalizeAxis(double yaw) {
   return yaw;
 }
 bool Finite(const TrackedObject& o) {
-  bool ok = std::isfinite(o.f32_OBB_CenterX) && std::isfinite(o.f32_OBB_CenterY) && std::isfinite(o.f32_OBB_CenterZ) &&
-            std::isfinite(o.f32_OBB_Width) && std::isfinite(o.f32_OBB_Height) && std::isfinite(o.f32_OBB_ZMin) &&
-            std::isfinite(o.f32_OBB_ZMax) && std::isfinite(o.f32_OBB_YawRad) && std::isfinite(o.f32_CoreX) &&
-            std::isfinite(o.f32_CoreY) && std::isfinite(o.f32_CoreZ) && std::isfinite(o.f32_Dist) &&
-            std::isfinite(o.f32_AbsVx) && std::isfinite(o.f32_AbsVy) && std::isfinite(o.f32_Velocity) &&
-            std::isfinite(o.f32_DirX) && std::isfinite(o.f32_DirY) && std::isfinite(o.f32_PrevYaw) &&
-            o.Eigen_KfState_CA.allFinite() && o.Eigen_KfP_CA.allFinite();
-  for (const auto& c : o.OBB_Corners_Body) ok = ok && std::isfinite(c.x) && std::isfinite(c.y) && std::isfinite(c.z);
+  bool ok = std::isfinite(o.detection.f32_OBB_CenterX) && std::isfinite(o.detection.f32_OBB_CenterY) && std::isfinite(o.detection.f32_OBB_CenterZ) &&
+            std::isfinite(o.detection.obb_length_m) && std::isfinite(o.detection.obb_width_m) && std::isfinite(o.detection.f32_OBB_ZMin) &&
+            std::isfinite(o.detection.f32_OBB_ZMax) && std::isfinite(o.detection.f32_OBB_YawRad) && std::isfinite(o.detection.f32_CoreX) &&
+            std::isfinite(o.detection.f32_CoreY) && std::isfinite(o.detection.f32_CoreZ) && std::isfinite(o.detection.f32_Dist) &&
+            std::isfinite(o.tracking.f32_AbsVx) && std::isfinite(o.tracking.f32_AbsVy) && std::isfinite(o.tracking.f32_Velocity) &&
+            std::isfinite(o.tracking.f32_DirX) && std::isfinite(o.tracking.f32_DirY) && std::isfinite(o.tracking.f32_PrevYaw) &&
+            o.tracking.Eigen_KfState_CA.allFinite() && o.tracking.Eigen_KfP_CA.allFinite();
+  for (const auto& c : o.detection.obb_corners_level) ok = ok && std::isfinite(c.x) && std::isfinite(c.y) && std::isfinite(c.z);
   return ok;
 }
 const TrackedObject* FindId(const std::vector<TrackedObject>& objects, int id) {
   for (const auto& o : objects)
-    if (o.s32_Id == id) return &o;
+    if (o.tracking.s32_Id == id) return &o;
   return nullptr;
 }
 
@@ -288,11 +289,11 @@ struct Expected {
 };
 Expected FromDetection(const TrackedObject& d) {
   Expected e;
-  for (int i = 0; i < 8; ++i) e.corners[i] = Vec(d.OBB_Corners_Body[i].x, d.OBB_Corners_Body[i].y, d.OBB_Corners_Body[i].z);
-  e.center = Vec(d.f32_OBB_CenterX, d.f32_OBB_CenterY, d.f32_OBB_CenterZ);
-  e.yaw = d.f32_OBB_YawRad;
-  e.zmin = d.f32_OBB_ZMin;
-  e.zmax = d.f32_OBB_ZMax;
+  for (int i = 0; i < 8; ++i) e.corners[i] = Vec(d.detection.obb_corners_level[i].x, d.detection.obb_corners_level[i].y, d.detection.obb_corners_level[i].z);
+  e.center = Vec(d.detection.f32_OBB_CenterX, d.detection.f32_OBB_CenterY, d.detection.f32_OBB_CenterZ);
+  e.yaw = d.detection.f32_OBB_YawRad;
+  e.zmin = d.detection.f32_OBB_ZMin;
+  e.zmax = d.detection.f32_OBB_ZMax;
   return e;
 }
 // Definition of a refit box: the smallest box with axis `yaw` (already
@@ -343,28 +344,28 @@ Expected Carry(const Expected& last, const TrackScan& last_scan, const TrackScan
 void ExpectCcwFromPlusZ(const TrackedObject& o, const std::string& role) {
   for (int face = 0; face < 2; ++face)
     for (int i = 0; i < 4; ++i) {
-      const auto& a = o.OBB_Corners_Body[4 * face + i];
-      const auto& b = o.OBB_Corners_Body[4 * face + (i + 1) % 4];
-      const auto& c = o.OBB_Corners_Body[4 * face + (i + 2) % 4];
+      const auto& a = o.detection.obb_corners_level[4 * face + i];
+      const auto& b = o.detection.obb_corners_level[4 * face + (i + 1) % 4];
+      const auto& c = o.detection.obb_corners_level[4 * face + (i + 2) % 4];
       EXPECT_GT((b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x), 0.) << role << " face " << face << " corner " << i;
     }
-  for (int i = 0; i < 4; ++i) EXPECT_GT(o.OBB_Corners_Body[i + 4].z, o.OBB_Corners_Body[i].z) << role << " 0-3 bottom";
+  for (int i = 0; i < 4; ++i) EXPECT_GT(o.detection.obb_corners_level[i + 4].z, o.detection.obb_corners_level[i].z) << role << " 0-3 bottom";
 }
 // The coordinate rule shared by every OBB in one scan frame.
 void ExpectRule(const TrackedObject& o, const std::string& role, bool z_equals_corner_z) {
-  const auto& c0 = o.OBB_Corners_Body[0];
-  const auto& c1 = o.OBB_Corners_Body[1];
-  EXPECT_LT(AxisError(o.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol) << role << " yaw vs edge 0->1";
+  const auto& c0 = o.detection.obb_corners_level[0];
+  const auto& c1 = o.detection.obb_corners_level[1];
+  EXPECT_LT(AxisError(o.detection.f32_OBB_YawRad, std::atan2(c1.y - c0.y, c1.x - c0.x)), kAngTol) << role << " yaw vs edge 0->1";
   Vec mean = Vec::Zero();
-  for (const auto& c : o.OBB_Corners_Body) mean += Vec(c.x, c.y, c.z) / 8.;
-  EXPECT_NEAR(mean.x(), o.f32_OBB_CenterX, kPosTol) << role << " corner mean";
-  EXPECT_NEAR(mean.y(), o.f32_OBB_CenterY, kPosTol) << role << " corner mean";
-  EXPECT_NEAR(mean.z(), o.f32_OBB_CenterZ, kPosTol) << role << " corner mean";
-  EXPECT_NEAR(.5 * (o.f32_OBB_ZMin + o.f32_OBB_ZMax), o.f32_OBB_CenterZ, kPosTol) << role << " Z range centre";
+  for (const auto& c : o.detection.obb_corners_level) mean += Vec(c.x, c.y, c.z) / 8.;
+  EXPECT_NEAR(mean.x(), o.detection.f32_OBB_CenterX, kPosTol) << role << " corner mean";
+  EXPECT_NEAR(mean.y(), o.detection.f32_OBB_CenterY, kPosTol) << role << " corner mean";
+  EXPECT_NEAR(mean.z(), o.detection.f32_OBB_CenterZ, kPosTol) << role << " corner mean";
+  EXPECT_NEAR(.5 * (o.detection.f32_OBB_ZMin + o.detection.f32_OBB_ZMax), o.detection.f32_OBB_CenterZ, kPosTol) << role << " Z range centre";
   if (z_equals_corner_z) {
     for (int i = 0; i < 4; ++i) {
-      EXPECT_NEAR(o.OBB_Corners_Body[i].z, o.f32_OBB_ZMin, kPosTol) << role << " bottom corner " << i;
-      EXPECT_NEAR(o.OBB_Corners_Body[i + 4].z, o.f32_OBB_ZMax, kPosTol) << role << " top corner " << i;
+      EXPECT_NEAR(o.detection.obb_corners_level[i].z, o.detection.f32_OBB_ZMin, kPosTol) << role << " bottom corner " << i;
+      EXPECT_NEAR(o.detection.obb_corners_level[i + 4].z, o.detection.f32_OBB_ZMax, kPosTol) << role << " top corner " << i;
     }
   }
   ExpectCcwFromPlusZ(o, role);
@@ -373,19 +374,19 @@ void ExpectRule(const TrackedObject& o, const std::string& role, bool z_equals_c
 void ExpectBox(const TrackedObject& o, const Expected& e, const std::string& role, int shift = 0) {
   for (int i = 0; i < 8; ++i) {
     const int k = (i / 4) * 4 + (i % 4 + shift) % 4;
-    EXPECT_NEAR(o.OBB_Corners_Body[i].x, e.corners[k].x(), kPosTol) << role << " corner " << i;
-    EXPECT_NEAR(o.OBB_Corners_Body[i].y, e.corners[k].y(), kPosTol) << role << " corner " << i;
-    EXPECT_NEAR(o.OBB_Corners_Body[i].z, e.corners[k].z(), kPosTol) << role << " corner " << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].x, e.corners[k].x(), kPosTol) << role << " corner " << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].y, e.corners[k].y(), kPosTol) << role << " corner " << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].z, e.corners[k].z(), kPosTol) << role << " corner " << i;
   }
-  EXPECT_NEAR(o.f32_OBB_CenterX, e.center.x(), kPosTol) << role;
-  EXPECT_NEAR(o.f32_OBB_CenterY, e.center.y(), kPosTol) << role;
-  EXPECT_NEAR(o.f32_OBB_CenterZ, e.center.z(), kPosTol) << role;
-  EXPECT_LT(AxisError(o.f32_OBB_YawRad, e.yaw), kAngTol) << role << " yaw";
-  EXPECT_NEAR(o.f32_OBB_ZMin, e.zmin, kPosTol) << role;
-  EXPECT_NEAR(o.f32_OBB_ZMax, e.zmax, kPosTol) << role;
+  EXPECT_NEAR(o.detection.f32_OBB_CenterX, e.center.x(), kPosTol) << role;
+  EXPECT_NEAR(o.detection.f32_OBB_CenterY, e.center.y(), kPosTol) << role;
+  EXPECT_NEAR(o.detection.f32_OBB_CenterZ, e.center.z(), kPosTol) << role;
+  EXPECT_LT(AxisError(o.detection.f32_OBB_YawRad, e.yaw), kAngTol) << role << " yaw";
+  EXPECT_NEAR(o.detection.f32_OBB_ZMin, e.zmin, kPosTol) << role;
+  EXPECT_NEAR(o.detection.f32_OBB_ZMax, e.zmax, kPosTol) << role;
   if (e.w >= 0) {
-    EXPECT_NEAR(o.f32_OBB_Width, e.w, kPosTol) << role;
-    EXPECT_NEAR(o.f32_OBB_Height, e.h, kPosTol) << role;
+    EXPECT_NEAR(o.detection.obb_length_m, e.w, kPosTol) << role;
+    EXPECT_NEAR(o.detection.obb_width_m, e.h, kPosTol) << role;
   }
 }
 
@@ -449,19 +450,19 @@ ScenarioResult RunScenario(const Scenario& c) {
     if (s == 0) {
       for (unsigned i = 0; i < objects.size(); ++i) {
         auto& o = objects[i];
-        o.s32_Id = c.tracks[i].id;
-        o.s32_Age = 5;
-        o.b_KfInitialized = true;
-        o.s32_KfInitCount = 2;
-        o.Eigen_KfState_CA << o.f32_CoreX, o.f32_CoreY, 0, 0, 0, 0;
-        o.f32_PrevYaw = scan.local.st_IMU.f32_Yaw_rad;
+        o.tracking.s32_Id = c.tracks[i].id;
+        o.tracking.s32_Age = 5;
+        o.tracking.b_KfInitialized = true;
+        o.tracking.s32_KfInitCount = 2;
+        o.tracking.Eigen_KfState_CA << o.detection.f32_CoreX, o.detection.f32_CoreY, 0, 0, 0, 0;
+        o.tracking.f32_PrevYaw = scan.local.st_IMU.f32_Yaw_rad;
       }
     } else {
       tracker.Update(objects, .1, scan.local, frame);
     }
     // LidarProcess records the current frame for observed tracks after tracking.
     for (auto& o : objects)
-      if (o.s32_MissCount == 0) frame.RecordTrackingFrame(o);
+      if (o.tracking.s32_MissCount == 0) frame.RecordTrackingFrame(o);
     EXPECT_EQ(objects.size(), c.tracks.size()) << "no births and no lost tracks";
 
     for (const auto& t : c.tracks) {
@@ -472,16 +473,16 @@ ScenarioResult RunScenario(const Scenario& c) {
         continue;
       }
       auto& m = models[t.id];
-      EXPECT_EQ(o->s32_Age, int(5 + s)) << role;
-      result.yaw[t.id].push_back(o->f32_OBB_YawRad);
+      EXPECT_EQ(o->tracking.s32_Age, int(5 + s)) << role;
+      result.yaw[t.id].push_back(o->detection.f32_OBB_YawRad);
       if (t.Seen(s)) {
         const auto& det = detections[t.id];
-        EXPECT_EQ(o->s32_MissCount, 0) << role;
+        EXPECT_EQ(o->tracking.s32_MissCount, 0) << role;
         const bool raw = s == 0 || !m.observed_last;  // birth frame or first frame after a miss
         Expected e;
         if (raw) {
           e = FromDetection(det);
-          m.yaw = det.f32_OBB_YawRad;
+          m.yaw = det.detection.f32_OBB_YawRad;
         } else {
           // Matched prior: previous yaw axis re-expressed once (zero-corner
           // copy, no edge follow), then the stabilizer rule.
@@ -489,42 +490,42 @@ ScenarioResult RunScenario(const Scenario& c) {
           const double ego_delta = std::remainder(
               double(scan.local.st_IMU.f32_Yaw_deg) * M_PI / 180. - double(scan.local.st_IMU.f32_Yaw_rad), 2 * M_PI);
           const double pred = NormalizeAxis(std::atan2(a.y(), a.x()) - ego_delta);
-          const double raw_yaw = det.f32_OBB_YawRad;
-          const double aspect = det.f32_OBB_Height > 1e-6f ? det.f32_OBB_Width / det.f32_OBB_Height
+          const double raw_yaw = det.detection.f32_OBB_YawRad;
+          const double aspect = det.detection.obb_width_m > 1e-6f ? det.detection.obb_length_m / det.detection.obb_width_m
                                                            : std::numeric_limits<double>::infinity();
           double filtered = pred;
           if (aspect >= 1.2) filtered = pred + .25 * std::remainder(raw_yaw - pred, M_PI);
           m.yaw = NormalizeAxis(filtered);
-          e = ReferenceBoxAtYaw(det.pcl_ClusterPoints, m.yaw);
+          e = ReferenceBoxAtYaw(det.detection.pcl_ClusterPoints, m.yaw);
           ++result.matched_priors;
         }
         if (s > 0 && !m.observed_last) ++result.matched_priors;  // aligned copy also made after a miss
         ExpectRule(*o, role + " observed", !raw || c.gravity_aligned);
-        const int shift = (!raw && std::abs(o->f32_OBB_YawRad - e.yaw) > M_PI / 2) ? 2 : 0;
+        const int shift = (!raw && std::abs(o->detection.f32_OBB_YawRad - e.yaw) > M_PI / 2) ? 2 : 0;
         ExpectBox(*o, e, role + " observed", shift);
         if (!raw) {
-          EXPECT_GE(o->f32_OBB_YawRad, -M_PI / 2) << role;
-          EXPECT_LT(o->f32_OBB_YawRad, M_PI / 2) << role;
+          EXPECT_GE(o->detection.f32_OBB_YawRad, -M_PI / 2) << role;
+          EXPECT_LT(o->detection.f32_OBB_YawRad, M_PI / 2) << role;
           for (int i = 0; i < 4; ++i) {
-            EXPECT_EQ(o->OBB_Corners_Body[i + 4].x, o->OBB_Corners_Body[i].x);
-            EXPECT_EQ(o->OBB_Corners_Body[i + 4].y, o->OBB_Corners_Body[i].y);
+            EXPECT_EQ(o->detection.obb_corners_level[i + 4].x, o->detection.obb_corners_level[i].x);
+            EXPECT_EQ(o->detection.obb_corners_level[i + 4].y, o->detection.obb_corners_level[i].y);
           }
         }
         if (c.gravity_aligned) {
           const auto axis = scan.Direction(Heading(t.box));
-          EXPECT_LT(AxisError(o->f32_OBB_YawRad, std::atan2(axis.y(), axis.x())), kAngTol) << role << " vs heading";
-          EXPECT_NEAR(o->f32_OBB_Width, t.box.length, kPosTol) << role;
-          EXPECT_NEAR(o->f32_OBB_Height, t.box.width, kPosTol) << role;
+          EXPECT_LT(AxisError(o->detection.f32_OBB_YawRad, std::atan2(axis.y(), axis.x())), kAngTol) << role << " vs heading";
+          EXPECT_NEAR(o->detection.obb_length_m, t.box.length, kPosTol) << role;
+          EXPECT_NEAR(o->detection.obb_width_m, t.box.width, kPosTol) << role;
         }
         // KF: the measurement is the detection core; Core is the KF position.
         if (s > 0) {
-          EXPECT_NEAR(o->Eigen_KfState_CA(0), det.f32_CoreX, kPosTol) << role << " KF";
-          EXPECT_NEAR(o->Eigen_KfState_CA(1), det.f32_CoreY, kPosTol) << role << " KF";
-          EXPECT_EQ(o->f32_CoreX, o->Eigen_KfState_CA(0));
-          EXPECT_EQ(o->f32_CoreY, o->Eigen_KfState_CA(1));
-          EXPECT_LT(std::hypot(o->Eigen_KfState_CA(2), o->Eigen_KfState_CA(3)), kStaticVelTol) << role;
-          EXPECT_FLOAT_EQ(o->f32_AbsVx, o->Eigen_KfState_CA(2) + 7.2f / 3.6f);
-          EXPECT_FLOAT_EQ(o->f32_AbsVy, o->Eigen_KfState_CA(3));
+          EXPECT_NEAR(o->tracking.Eigen_KfState_CA(0), det.detection.f32_CoreX, kPosTol) << role << " KF";
+          EXPECT_NEAR(o->tracking.Eigen_KfState_CA(1), det.detection.f32_CoreY, kPosTol) << role << " KF";
+          EXPECT_EQ(o->detection.f32_CoreX, o->tracking.Eigen_KfState_CA(0));
+          EXPECT_EQ(o->detection.f32_CoreY, o->tracking.Eigen_KfState_CA(1));
+          EXPECT_LT(std::hypot(o->tracking.Eigen_KfState_CA(2), o->tracking.Eigen_KfState_CA(3)), kStaticVelTol) << role;
+          EXPECT_FLOAT_EQ(o->tracking.f32_AbsVx, o->tracking.Eigen_KfState_CA(2) + 7.2f / 3.6f);
+          EXPECT_FLOAT_EQ(o->tracking.f32_AbsVy, o->tracking.Eigen_KfState_CA(3));
           m.prev_yaw_eps = double(static_cast<float>(scan.local.st_IMU.f32_Yaw_deg * M_PI / 180.0f)) -
                            double(scan.local.st_IMU.f32_Yaw_rad);
         } else {
@@ -534,30 +535,30 @@ ScenarioResult RunScenario(const Scenario& c) {
         m.last_seen = s;
         m.last_scan = scan;
         m.last = e;
-        m.last_kf = Vec(det.f32_CoreX, det.f32_CoreY, det.f32_CoreZ);
-        m.last_w = o->f32_OBB_Width;
-        m.last_h = o->f32_OBB_Height;
+        m.last_kf = Vec(det.detection.f32_CoreX, det.detection.f32_CoreY, det.detection.f32_CoreZ);
+        m.last_w = o->detection.obb_length_m;
+        m.last_h = o->detection.obb_width_m;
       } else {
         // Carried (predicted-only): last observed box re-expressed into this scan.
         ++result.carried_predictions;
-        EXPECT_EQ(o->s32_MissCount, int(s - m.last_seen)) << role;
+        EXPECT_EQ(o->tracking.s32_MissCount, int(s - m.last_seen)) << role;
         const Expected e = Carry(m.last, m.last_scan, scan);
         ExpectRule(*o, role + " carried", c.gravity_aligned);
         ExpectBox(*o, e, role + " carried");
-        EXPECT_NEAR(o->f32_OBB_ZMax - o->f32_OBB_ZMin, m.last.zmax - m.last.zmin, kPosTol) << role << " Z extent";
-        EXPECT_GT(o->f32_OBB_YawRad, -M_PI - 1e-6) << role;
-        EXPECT_LE(o->f32_OBB_YawRad, M_PI + 1e-6) << role;
-        EXPECT_EQ(o->f32_OBB_Width, m.last_w) << role << " W not re-expressed";
-        EXPECT_EQ(o->f32_OBB_Height, m.last_h) << role;
+        EXPECT_NEAR(o->detection.f32_OBB_ZMax - o->detection.f32_OBB_ZMin, m.last.zmax - m.last.zmin, kPosTol) << role << " Z extent";
+        EXPECT_GT(o->detection.f32_OBB_YawRad, -M_PI - 1e-6) << role;
+        EXPECT_LE(o->detection.f32_OBB_YawRad, M_PI + 1e-6) << role;
+        EXPECT_EQ(o->detection.obb_length_m, m.last_w) << role << " W not re-expressed";
+        EXPECT_EQ(o->detection.obb_width_m, m.last_h) << role;
         const Vec kf = scan.Point(m.last_scan.World(m.last_kf));
-        EXPECT_NEAR(o->Eigen_KfState_CA(0), kf.x(), kPosTol) << role << " KF";
-        EXPECT_NEAR(o->Eigen_KfState_CA(1), kf.y(), kPosTol) << role << " KF";
-        EXPECT_EQ(o->f32_CoreX, o->Eigen_KfState_CA(0));
+        EXPECT_NEAR(o->tracking.Eigen_KfState_CA(0), kf.x(), kPosTol) << role << " KF";
+        EXPECT_NEAR(o->tracking.Eigen_KfState_CA(1), kf.y(), kPosTol) << role << " KF";
+        EXPECT_EQ(o->detection.f32_CoreX, o->tracking.Eigen_KfState_CA(0));
         for (int i = 0; i < 4; ++i) {
           result.max_carried_tilt_z = std::max<double>(
-              result.max_carried_tilt_z, std::abs(o->OBB_Corners_Body[i].z - o->f32_OBB_ZMin));
+              result.max_carried_tilt_z, std::abs(o->detection.obb_corners_level[i].z - o->detection.f32_OBB_ZMin));
           result.max_carried_tilt_z = std::max<double>(
-              result.max_carried_tilt_z, std::abs(o->OBB_Corners_Body[i + 4].z - o->f32_OBB_ZMax));
+              result.max_carried_tilt_z, std::abs(o->detection.obb_corners_level[i + 4].z - o->detection.f32_OBB_ZMax));
         }
         m.observed_last = false;
       }
@@ -656,11 +657,11 @@ TEST(Hungarian, GatedEntriesAreStillAssignedAndRejectedByTheCaller) {
   BeginTrackScan(frame, 1., 0, 0, 0, BaseVehicle(), true);
   std::vector<TrackedObject> previous{Detection(10, 0), Detection(-20, 5)};
   for (int i = 0; i < 2; ++i) {
-    previous[i].s32_Id = 10 + i;
-    previous[i].s32_Age = 3;
-    previous[i].b_KfInitialized = true;
-    previous[i].s32_KfInitCount = 2;
-    previous[i].Eigen_KfState_CA << previous[i].f32_CoreX, previous[i].f32_CoreY, 0, 0, 0, 0;
+    previous[i].tracking.s32_Id = 10 + i;
+    previous[i].tracking.s32_Age = 3;
+    previous[i].tracking.b_KfInitialized = true;
+    previous[i].tracking.s32_KfInitCount = 2;
+    previous[i].tracking.Eigen_KfState_CA << previous[i].detection.f32_CoreX, previous[i].detection.f32_CoreY, 0, 0, 0, 0;
     frame.RecordTrackingFrame(previous[i]);
   }
   Tracker tracker(MainTestConfig());
@@ -669,10 +670,10 @@ TEST(Hungarian, GatedEntriesAreStillAssignedAndRejectedByTheCaller) {
   std::vector<TrackedObject> objects{Detection(10.1, 0), Detection(40, 40)};
   tracker.Update(objects, .1, Local(), frame);
   ASSERT_EQ(objects.size(), 3u);
-  EXPECT_EQ(objects[0].s32_Id, 10);
-  EXPECT_EQ(objects[1].s32_Id, 0) << "gated pair rejected: birth";
-  EXPECT_EQ(objects[2].s32_Id, 11);
-  EXPECT_EQ(objects[2].s32_MissCount, 1);
+  EXPECT_EQ(objects[0].tracking.s32_Id, 10);
+  EXPECT_EQ(objects[1].tracking.s32_Id, 0) << "gated pair rejected: birth";
+  EXPECT_EQ(objects[2].tracking.s32_Id, 11);
+  EXPECT_EQ(objects[2].tracking.s32_MissCount, 1);
 }
 
 TEST(Hungarian, NoDetectionsGivesAllUnassigned) {
@@ -766,15 +767,15 @@ TEST(Kalman, InitialisesOnFirstObservation) {
   frame.Configure(BaseVehicle(), kCalibration);
   const auto local = Local(.3);
   TrackedObject o;
-  o.Eigen_KfP_CA *= 7.f;
+  o.tracking.Eigen_KfP_CA *= 7.f;
   kalman_filter_update(o, 3.f, 4.f, 99.f, 99.f, 0.1, local.st_IMU.f32_Yaw_deg, frame);
-  EXPECT_TRUE(o.b_KfInitialized);
-  EXPECT_EQ(o.s32_KfInitCount, 1);
-  EXPECT_TRUE(o.Eigen_KfState_CA == (Eigen::Matrix<float, 6, 1>() << 3.f, 4.f, 0, 0, 0, 0).finished());
-  EXPECT_TRUE(o.Eigen_KfP_CA == (Eigen::Matrix<float, 6, 6>::Identity()));
-  EXPECT_EQ(o.f32_CoreX, 3.f);
-  EXPECT_EQ(o.f32_CoreY, 4.f);
-  EXPECT_EQ(o.f32_PrevYaw, local.st_IMU.f32_Yaw_deg * 0.017453292519943295f) << "float deg->rad multiply";
+  EXPECT_TRUE(o.tracking.b_KfInitialized);
+  EXPECT_EQ(o.tracking.s32_KfInitCount, 1);
+  EXPECT_TRUE(o.tracking.Eigen_KfState_CA == (Eigen::Matrix<float, 6, 1>() << 3.f, 4.f, 0, 0, 0, 0).finished());
+  EXPECT_TRUE(o.tracking.Eigen_KfP_CA == (Eigen::Matrix<float, 6, 6>::Identity()));
+  EXPECT_EQ(o.detection.f32_CoreX, 3.f);
+  EXPECT_EQ(o.detection.f32_CoreY, 4.f);
+  EXPECT_EQ(o.tracking.f32_PrevYaw, local.st_IMU.f32_Yaw_deg * 0.017453292519943295f) << "float deg->rad multiply";
 }
 
 TEST(Kalman, SecondObservationInitialisesVelocityThenUpdates) {
@@ -783,54 +784,54 @@ TEST(Kalman, SecondObservationInitialisesVelocityThenUpdates) {
   TrackedObject o;  // unrecorded, yaw 0: no frame change
   kalman_filter_update(o, 10.f, 1.f, 0, 0, 0.1, 0.f, frame);
   kalman_filter_update(o, 9.8f, 1.05f, 10.f, 1.f, 0.1, 0.f, frame);
-  EXPECT_EQ(o.s32_KfInitCount, 2);
+  EXPECT_EQ(o.tracking.s32_KfInitCount, 2);
   KfRef ref;
   const float vx = (9.8f - 10.f) / 0.1, vy = (1.05f - 1.f) / 0.1;
   ref.x << 10., 1., vx, vy, 0, 0;
   ref.P = Eigen::Matrix<double, 6, 6>::Identity();
   ref.Predict(.1);
   ref.Update(9.8f, 1.05f);
-  for (int k = 0; k < 6; ++k) EXPECT_NEAR(o.Eigen_KfState_CA(k), ref.x(k), 1e-5) << k;
-  EXPECT_LT((o.Eigen_KfP_CA.cast<double>() - ref.P).cwiseAbs().maxCoeff(), 1e-6);
-  EXPECT_EQ(o.f32_CoreX, o.Eigen_KfState_CA(0));
+  for (int k = 0; k < 6; ++k) EXPECT_NEAR(o.tracking.Eigen_KfState_CA(k), ref.x(k), 1e-5) << k;
+  EXPECT_LT((o.tracking.Eigen_KfP_CA.cast<double>() - ref.P).cwiseAbs().maxCoeff(), 1e-6);
+  EXPECT_EQ(o.detection.f32_CoreX, o.tracking.Eigen_KfState_CA(0));
 }
 
 TEST(Kalman, PredictAndUpdateMatchTheCaEquations) {
   ScanFrame frame;
   frame.Configure(BaseVehicle(), kCalibration);
   TrackedObject o;
-  o.b_KfInitialized = true;
-  o.s32_KfInitCount = 2;
-  o.Eigen_KfState_CA << 12.f, -3.f, -1.5f, .4f, .2f, -.1f;
+  o.tracking.b_KfInitialized = true;
+  o.tracking.s32_KfInitCount = 2;
+  o.tracking.Eigen_KfState_CA << 12.f, -3.f, -1.5f, .4f, .2f, -.1f;
   for (int r = 0; r < 6; ++r)
-    for (int c = 0; c < 6; ++c) o.Eigen_KfP_CA(r, c) = (r == c ? .5f : 0.f) + .02f * std::min(r, c);
+    for (int c = 0; c < 6; ++c) o.tracking.Eigen_KfP_CA(r, c) = (r == c ? .5f : 0.f) + .02f * std::min(r, c);
   KfRef ref;
-  ref.x = o.Eigen_KfState_CA.cast<double>();
-  ref.P = o.Eigen_KfP_CA.cast<double>();
+  ref.x = o.tracking.Eigen_KfState_CA.cast<double>();
+  ref.P = o.tracking.Eigen_KfP_CA.cast<double>();
   auto predicted = o;
   kalman_filter_predict(predicted, .1, 0.f, frame);
   KfRef p = ref;
   p.Predict(.1);
-  for (int k = 0; k < 6; ++k) EXPECT_NEAR(predicted.Eigen_KfState_CA(k), p.x(k), 1e-5) << k;
-  EXPECT_LT((predicted.Eigen_KfP_CA.cast<double>() - p.P).cwiseAbs().maxCoeff(), 1e-6);
-  EXPECT_EQ(predicted.f32_CoreX, predicted.Eigen_KfState_CA(0));
+  for (int k = 0; k < 6; ++k) EXPECT_NEAR(predicted.tracking.Eigen_KfState_CA(k), p.x(k), 1e-5) << k;
+  EXPECT_LT((predicted.tracking.Eigen_KfP_CA.cast<double>() - p.P).cwiseAbs().maxCoeff(), 1e-6);
+  EXPECT_EQ(predicted.detection.f32_CoreX, predicted.tracking.Eigen_KfState_CA(0));
   auto updated = o;
   kalman_filter_update(updated, 11.9f, -2.9f, 0, 0, .1, 0.f, frame);
   KfRef u = ref;
   u.Predict(.1);
   u.Update(11.9f, -2.9f);
-  for (int k = 0; k < 6; ++k) EXPECT_NEAR(updated.Eigen_KfState_CA(k), u.x(k), 1e-5) << k;
-  EXPECT_LT((updated.Eigen_KfP_CA.cast<double>() - u.P).cwiseAbs().maxCoeff(), 1e-6);
+  for (int k = 0; k < 6; ++k) EXPECT_NEAR(updated.tracking.Eigen_KfState_CA(k), u.x(k), 1e-5) << k;
+  EXPECT_LT((updated.tracking.Eigen_KfP_CA.cast<double>() - u.P).cwiseAbs().maxCoeff(), 1e-6);
 }
 
 TEST(Kalman, UnrecordedTrackFallsBackToTheTwoDimensionalYawRotation) {
   ScanFrame frame;
   frame.Configure(BaseVehicle(), kCalibration);
   TrackedObject o;
-  o.b_KfInitialized = true;
-  o.s32_KfInitCount = 2;
-  o.Eigen_KfState_CA << 10.f, 0.f, 1.f, .5f, 0.f, 0.f;
-  o.f32_PrevYaw = 0.f;
+  o.tracking.b_KfInitialized = true;
+  o.tracking.s32_KfInitCount = 2;
+  o.tracking.Eigen_KfState_CA << 10.f, 0.f, 1.f, .5f, 0.f, 0.f;
+  o.tracking.f32_PrevYaw = 0.f;
   const float yaw_deg = static_cast<float>(.1 * 180 / M_PI);
   // Association prediction (float deg->rad multiply).
   const auto pp = predictKalmanPosition(o, .1, yaw_deg, frame);
@@ -841,14 +842,14 @@ TEST(Kalman, UnrecordedTrackFallsBackToTheTwoDimensionalYawRotation) {
   // Predict-only: rotate by -dpsi then CA.
   auto predicted = o;
   kalman_filter_predict(predicted, .1, yaw_deg, frame);
-  EXPECT_NEAR(predicted.f32_CoreX, pp.first, 1e-5);
-  EXPECT_NEAR(predicted.f32_CoreY, pp.second, 1e-5);
-  EXPECT_EQ(predicted.f32_PrevYaw, static_cast<float>(yaw_deg * M_PI / 180.0f));
+  EXPECT_NEAR(predicted.detection.f32_CoreX, pp.first, 1e-5);
+  EXPECT_NEAR(predicted.detection.f32_CoreY, pp.second, 1e-5);
+  EXPECT_EQ(predicted.tracking.f32_PrevYaw, static_cast<float>(yaw_deg * M_PI / 180.0f));
   // |dpsi| < 1e-8: no rotation, PrevYaw updated.
   auto still = o;
   kalman_filter_predict(still, .1, 0.f, frame);
-  EXPECT_NEAR(still.f32_CoreX, 10.1, 1e-5);
-  EXPECT_NEAR(still.f32_CoreY, .05, 1e-5);
+  EXPECT_NEAR(still.detection.f32_CoreX, 10.1, 1e-5);
+  EXPECT_NEAR(still.detection.f32_CoreY, .05, 1e-5);
 }
 
 TEST(Kalman, PredictPositionDoesNotChangeTheTrack) {
@@ -856,19 +857,19 @@ TEST(Kalman, PredictPositionDoesNotChangeTheTrack) {
   frame.Configure(MountedVehicle(), kCalibration);
   BeginTrackScan(frame, 1., .2, .03, -.02, MountedVehicle(), true);
   TrackedObject o = Detection(10, 2);
-  o.b_KfInitialized = true;
-  o.s32_KfInitCount = 2;
-  o.Eigen_KfState_CA << 10.f, 2.f, 1.f, -.3f, 0.f, 0.f;
-  o.f32_PrevYaw = .2f;
+  o.tracking.b_KfInitialized = true;
+  o.tracking.s32_KfInitCount = 2;
+  o.tracking.Eigen_KfState_CA << 10.f, 2.f, 1.f, -.3f, 0.f, 0.f;
+  o.tracking.f32_PrevYaw = .2f;
   frame.RecordTrackingFrame(o);
   const auto now = BeginTrackScan(frame, 1.1, .26, -.01, .02, MountedVehicle(), true);
   const auto before = o;
   const auto pp = predictKalmanPosition(o, .1, now.local.st_IMU.f32_Yaw_deg, frame);
-  EXPECT_TRUE(o.Eigen_KfState_CA == before.Eigen_KfState_CA);
-  EXPECT_EQ(o.f32_PrevYaw, before.f32_PrevYaw);
+  EXPECT_TRUE(o.tracking.Eigen_KfState_CA == before.tracking.Eigen_KfState_CA);
+  EXPECT_EQ(o.tracking.f32_PrevYaw, before.tracking.f32_PrevYaw);
   auto state = o;
   frame.AlignTrackingState(state, now.local.st_IMU.f32_Yaw_deg * 0.017453292519943295f);
-  const auto& x = state.Eigen_KfState_CA;
+  const auto& x = state.tracking.Eigen_KfState_CA;
   EXPECT_EQ(pp.first, static_cast<float>(x(0) + .1 * x(2) + .5 * .1 * .1 * x(4)));
   EXPECT_EQ(pp.second, static_cast<float>(x(1) + .1 * x(3) + .5 * .1 * .1 * x(5)));
 }
@@ -883,7 +884,7 @@ TEST(TrackingAssociation, ConsolidatesVerticallySplitSameOccupancy) {
   detections.push_back(MakeDetection(10.02F, 1.01F, 1.0F, 0.8F, 0.2F));
   ConsolidateCurrentDetections(detections, config);
   ASSERT_EQ(detections.size(), 1U);
-  EXPECT_EQ(detections.front().pcl_ClusterPoints.size(), 24U);
+  EXPECT_EQ(detections.front().detection.pcl_ClusterPoints.size(), 24U);
 }
 
 TEST(TrackingAssociation, KeepsNearbyNonOverlappingObjectsSeparate) {
@@ -902,29 +903,29 @@ TEST(TrackingAssociation, ConsolidationOwnerAndRecomputedGeometry) {
   // Equal point counts: the lower index owns the merge.
   {
     std::vector<TrackedObject> d{MakeDetection(10.F, 1.F, 1.F, .8F, -.5F), MakeDetection(10.F, 1.F, 1.F, .8F, .2F)};
-    d[0].u16_Idx = 3;
-    d[1].u16_Idx = 4;
+    d[0].detection.u16_Idx = 3;
+    d[1].detection.u16_Idx = 4;
     ConsolidateCurrentDetections(d, config);
     ASSERT_EQ(d.size(), 1u);
-    EXPECT_EQ(d[0].u16_Idx, 3);
+    EXPECT_EQ(d[0].detection.u16_Idx, 3);
   }
   // More points on the right: the right object owns the merge.
   {
     std::vector<TrackedObject> d{MakeDetection(10.F, 1.F, 1.F, .8F, -.5F), MakeDetection(10.F, 1.F, 1.F, .8F, .2F)};
-    d[0].u16_Idx = 3;
-    d[1].u16_Idx = 4;
-    d[1].pcl_ClusterPoints.push_back(d[1].pcl_ClusterPoints.points[0]);
+    d[0].detection.u16_Idx = 3;
+    d[1].detection.u16_Idx = 4;
+    d[1].detection.pcl_ClusterPoints.push_back(d[1].detection.pcl_ClusterPoints.points[0]);
     pcl::PointXYZI bad;
     bad.x = bad.y = bad.z = std::numeric_limits<float>::quiet_NaN();
-    d[1].pcl_ClusterPoints.push_back(bad);
+    d[1].detection.pcl_ClusterPoints.push_back(bad);
     ConsolidateCurrentDetections(d, config);
     ASSERT_EQ(d.size(), 1u);
-    EXPECT_EQ(d[0].u16_Idx, 4);
+    EXPECT_EQ(d[0].detection.u16_Idx, 4);
     const auto& o = d[0];
     double sx = 0, sy = 0, sz = 0;
     std::size_t n = 0;
     float xmin = 1e9f, zmax = -1e9f;
-    for (const auto& p : o.pcl_ClusterPoints) {
+    for (const auto& p : o.detection.pcl_ClusterPoints) {
       if (!std::isfinite(p.x)) continue;
       sx += p.x;
       sy += p.y;
@@ -934,16 +935,16 @@ TEST(TrackingAssociation, ConsolidationOwnerAndRecomputedGeometry) {
       zmax = std::max(zmax, p.z);
     }
     EXPECT_EQ(n, 25u);
-    EXPECT_EQ(o.f32_CoreX, static_cast<float>(sx / n)) << "double mean";
-    EXPECT_EQ(o.f32_CoreY, static_cast<float>(sy / n));
-    EXPECT_EQ(o.f32_CoreZ, static_cast<float>(sz / n));
-    EXPECT_EQ(o.f32_MinX, xmin);
-    EXPECT_EQ(o.f32_MaxZ, zmax);
-    EXPECT_EQ(o.f32_Dist, std::hypot(o.f32_CoreX, o.f32_CoreY));
-    EXPECT_EQ(o.pcl_ClusterPoints.width, o.pcl_ClusterPoints.size());
-    EXPECT_EQ(o.pcl_ClusterPoints.height, 1u);
-    EXPECT_FALSE(o.pcl_ClusterPoints.is_dense);
-    EXPECT_GE(o.f32_OBB_Width, o.f32_OBB_Height);
+    EXPECT_EQ(o.detection.f32_CoreX, static_cast<float>(sx / n)) << "double mean";
+    EXPECT_EQ(o.detection.f32_CoreY, static_cast<float>(sy / n));
+    EXPECT_EQ(o.detection.f32_CoreZ, static_cast<float>(sz / n));
+    EXPECT_EQ(o.detection.f32_MinX, xmin);
+    EXPECT_EQ(o.detection.f32_MaxZ, zmax);
+    EXPECT_EQ(o.detection.f32_Dist, std::hypot(o.detection.f32_CoreX, o.detection.f32_CoreY));
+    EXPECT_EQ(o.detection.pcl_ClusterPoints.width, o.detection.pcl_ClusterPoints.size());
+    EXPECT_EQ(o.detection.pcl_ClusterPoints.height, 1u);
+    EXPECT_FALSE(o.detection.pcl_ClusterPoints.is_dense);
+    EXPECT_GE(o.detection.obb_length_m, o.detection.obb_width_m);
     EXPECT_TRUE(Finite(o));
   }
   // Chain: three fragments merge into one (the scan restarts after each merge).
@@ -951,12 +952,12 @@ TEST(TrackingAssociation, ConsolidationOwnerAndRecomputedGeometry) {
     std::vector<TrackedObject> d{MakeDetection(10.F, 1.F, 1.F, .8F, -.5F), MakeDetection(10.F, 1.F, 1.F, .8F, .2F),
                                  MakeDetection(10.F, 1.F, 1.F, .8F, .9F)};
     for (auto& o : d) {  // MakeDetection leaves the OBB centre at 0; the merged owner's is recomputed
-      o.f32_OBB_CenterX = 10.F;
-      o.f32_OBB_CenterY = 1.F;
+      o.detection.f32_OBB_CenterX = 10.F;
+      o.detection.f32_OBB_CenterY = 1.F;
     }
     ConsolidateCurrentDetections(d, config);
     ASSERT_EQ(d.size(), 1u);
-    EXPECT_EQ(d[0].pcl_ClusterPoints.size(), 36u);
+    EXPECT_EQ(d[0].detection.pcl_ClusterPoints.size(), 36u);
   }
 }
 
@@ -966,21 +967,21 @@ TEST(TrackingAssociation, AabbIouAndShapeAgreement) {
   auto z = MakeDetection(0.F, 0.F, 0.F, 0.F, 0.F);
   EXPECT_EQ(tracking_association::AabbIou(z, z), 0.F) << "union <= 1e-6";
   TrackedObject l, r;
-  l.f32_OBB_Width = 4.F;
-  l.f32_OBB_Height = 2.F;
-  r.f32_OBB_Width = 2.F;  // axis swapped
-  r.f32_OBB_Height = 4.F;
+  l.detection.obb_length_m = 4.F;
+  l.detection.obb_width_m = 2.F;
+  r.detection.obb_length_m = 2.F;  // axis swapped
+  r.detection.obb_width_m = 4.F;
   EXPECT_FLOAT_EQ(tracking_association::ShapeAgreement(l, r), 1.F);
-  r.f32_OBB_Width = 1.F;
-  r.f32_OBB_Height = 0.F;  // floored at 0.05
+  r.detection.obb_length_m = 1.F;
+  r.detection.obb_width_m = 0.F;  // floored at 0.05
   EXPECT_FLOAT_EQ(tracking_association::ShapeAgreement(l, r), (1.F / 4.F) * (.05F / 2.F));
 }
 
 TEST(TrackingAssociation, ShouldCarryPreviousClassRules) {
   TrackedObject p, c;
   const auto carry = [&](const char* prev, const char* cur) {
-    p.str_ObjectClass = prev;
-    c.str_ObjectClass = cur;
+    p.camera.str_ObjectClass = prev;
+    c.camera.str_ObjectClass = cur;
     return tracking_association::ShouldCarryPreviousClass(p, c);
   };
   EXPECT_TRUE(carry("car", "unknown"));
@@ -992,23 +993,23 @@ TEST(TrackingAssociation, ShouldCarryPreviousClassRules) {
   EXPECT_TRUE(tracking_association::IsGroundNoiseClass("noise"));
   EXPECT_FALSE(tracking_association::IsGroundNoiseClass("Noise"));
   TrackedObject src, dst;
-  src.str_ObjectClass = "car";
-  src.str_YoloClass = "truck";
-  src.last_seen_class = "car";
-  src.continuity_counter = 4;
-  src.class_miss_counter = 2;
-  src.camera_observation_ns = 11;
-  src.camera_observation_epoch = 12;
-  src.is_class_locked = true;
+  src.camera.str_ObjectClass = "car";
+  src.camera.str_YoloClass = "truck";
+  src.camera.last_seen_class = "car";
+  src.camera.continuity_counter = 4;
+  src.camera.class_miss_counter = 2;
+  src.camera.camera_observation_ns = 11;
+  src.camera.camera_observation_epoch = 12;
+  src.camera.is_class_locked = true;
   tracking_association::CopyClassState(src, dst);
-  EXPECT_EQ(dst.str_ObjectClass, "car");
-  EXPECT_EQ(dst.str_YoloClass, "truck");
-  EXPECT_EQ(dst.last_seen_class, "car");
-  EXPECT_EQ(dst.continuity_counter, 4);
-  EXPECT_EQ(dst.class_miss_counter, 2);
-  EXPECT_EQ(dst.camera_observation_ns, 11u);
-  EXPECT_EQ(dst.camera_observation_epoch, 12u);
-  EXPECT_TRUE(dst.is_class_locked);
+  EXPECT_EQ(dst.camera.str_ObjectClass, "car");
+  EXPECT_EQ(dst.camera.str_YoloClass, "truck");
+  EXPECT_EQ(dst.camera.last_seen_class, "car");
+  EXPECT_EQ(dst.camera.continuity_counter, 4);
+  EXPECT_EQ(dst.camera.class_miss_counter, 2);
+  EXPECT_EQ(dst.camera.camera_observation_ns, 11u);
+  EXPECT_EQ(dst.camera.camera_observation_epoch, 12u);
+  EXPECT_TRUE(dst.camera.is_class_locked);
 }
 
 // Ports of Main test_tracking_association.cpp:99-171. Main associated these by
@@ -1019,23 +1020,23 @@ void RunClassCase(const char* previous_class, const char* current_class, float p
   frame.Configure(BaseVehicle(), kCalibration);
   BeginTrackScan(frame, 1., 0, 0, 0, BaseVehicle(), true);
   auto previous = MakeDetection(10.0F, 0.0F, 1.0F, 0.8F, prev_z);
-  previous.s32_Id = 42;
-  previous.s32_Age = 10;
-  previous.b_KfInitialized = true;
-  previous.s32_KfInitCount = 2;
-  previous.Eigen_KfState_CA << 10.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F;
-  previous.str_ObjectClass = previous_class;
+  previous.tracking.s32_Id = 42;
+  previous.tracking.s32_Age = 10;
+  previous.tracking.b_KfInitialized = true;
+  previous.tracking.s32_KfInitCount = 2;
+  previous.tracking.Eigen_KfState_CA << 10.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F;
+  previous.camera.str_ObjectClass = previous_class;
   auto current = MakeDetection(9.9F, 0.0F, 1.0F, 0.8F, cur_z);
-  current.s32_Id = -1;
-  current.str_ObjectClass = current_class;
+  current.tracking.s32_Id = -1;
+  current.camera.str_ObjectClass = current_class;
   Tracker tracker(MainTestConfig());
   tracker.Commit({previous});
   std::vector<TrackedObject> detections{current};
   tracker.Update(detections, 0.1, LocalState{}, frame);
   ASSERT_FALSE(detections.empty());
-  EXPECT_EQ(detections.front().s32_Id, 42);
-  EXPECT_EQ(detections.front().s32_Age, 11);
-  EXPECT_EQ(detections.front().str_ObjectClass, expected);
+  EXPECT_EQ(detections.front().tracking.s32_Id, 42);
+  EXPECT_EQ(detections.front().tracking.s32_Age, 11);
+  EXPECT_EQ(detections.front().camera.str_ObjectClass, expected);
 }
 TEST(TrackingAssociation, RecoversFromLegacyGroundNoiseOnCurrentObservation) {
   RunClassCase("지면노이즈", "unknown", -1.4F, -1.1F, "unknown");
@@ -1058,11 +1059,11 @@ TEST(TrackingAssociation, CommonPathLargeBodyShiftFollowsKfPredictionOnly) {
     map.reason = "gps_bounded_prediction";
     BeginTrackScan(frame, 1., 0, 0, 0, BaseVehicle(), true, &map);
     auto previous = MakeDetection(10.0F, 0.0F, 1.0F, 0.8F, 0.0F);
-    previous.s32_Id = 42;
-    previous.s32_Age = 20;
-    previous.b_KfInitialized = true;
-    previous.s32_KfInitCount = 2;
-    previous.Eigen_KfState_CA << 10.0F, 0.0F, vx, 0.0F, 0.0F, 0.0F;
+    previous.tracking.s32_Id = 42;
+    previous.tracking.s32_Age = 20;
+    previous.tracking.b_KfInitialized = true;
+    previous.tracking.s32_KfInitCount = 2;
+    previous.tracking.Eigen_KfState_CA << 10.0F, 0.0F, vx, 0.0F, 0.0F, 0.0F;
     frame.RecordTrackingFrame(previous);
     Tracker tracker(MainTestConfig());
     tracker.Commit({previous});
@@ -1072,13 +1073,13 @@ TEST(TrackingAssociation, CommonPathLargeBodyShiftFollowsKfPredictionOnly) {
     tracker.Update(detections, 0.1, scan.local, frame);
     if (vx < 0) {
       ASSERT_EQ(detections.size(), 1u);
-      EXPECT_EQ(detections.front().s32_Id, 42);
-      EXPECT_EQ(detections.front().s32_Age, 21);
+      EXPECT_EQ(detections.front().tracking.s32_Id, 42);
+      EXPECT_EQ(detections.front().tracking.s32_Age, 21);
     } else {
       ASSERT_EQ(detections.size(), 2u);
-      EXPECT_EQ(detections[0].s32_Id, 0) << "5 m without a predicting velocity: new track";
-      EXPECT_EQ(detections[1].s32_Id, 42);
-      EXPECT_EQ(detections[1].s32_MissCount, 1);
+      EXPECT_EQ(detections[0].tracking.s32_Id, 0) << "5 m without a predicting velocity: new track";
+      EXPECT_EQ(detections[1].tracking.s32_Id, 42);
+      EXPECT_EQ(detections[1].tracking.s32_MissCount, 1);
     }
   }
 }
@@ -1096,15 +1097,15 @@ TEST(TrackerLifecycle, FirstFrameBirthsWithIdsFromZero) {
   tracker.Update(objects, 123.0, scan.local, frame);  // dt unused on the first frame
   ASSERT_EQ(objects.size(), 3u);
   for (int i = 0; i < 3; ++i) {
-    EXPECT_EQ(objects[i].s32_Id, i);
-    EXPECT_EQ(objects[i].s32_Age, 1);
-    EXPECT_EQ(objects[i].s32_MissCount, 0);
-    EXPECT_TRUE(objects[i].b_KfInitialized);
-    EXPECT_EQ(objects[i].s32_KfInitCount, 1);
-    EXPECT_EQ(objects[i].Eigen_KfState_CA(0), objects[i].f32_CoreX);
-    EXPECT_EQ(objects[i].Eigen_KfState_CA(2), 0.f);
-    EXPECT_EQ(objects[i].f32_PrevYaw, scan.local.st_IMU.f32_Yaw_deg * 0.017453292519943295f);
-    EXPECT_FALSE(objects[i].tracking_frame_valid) << "the pipeline records after tracking";
+    EXPECT_EQ(objects[i].tracking.s32_Id, i);
+    EXPECT_EQ(objects[i].tracking.s32_Age, 1);
+    EXPECT_EQ(objects[i].tracking.s32_MissCount, 0);
+    EXPECT_TRUE(objects[i].tracking.b_KfInitialized);
+    EXPECT_EQ(objects[i].tracking.s32_KfInitCount, 1);
+    EXPECT_EQ(objects[i].tracking.Eigen_KfState_CA(0), objects[i].detection.f32_CoreX);
+    EXPECT_EQ(objects[i].tracking.Eigen_KfState_CA(2), 0.f);
+    EXPECT_EQ(objects[i].tracking.f32_PrevYaw, scan.local.st_IMU.f32_Yaw_deg * 0.017453292519943295f);
+    EXPECT_FALSE(objects[i].tracking.tracking_frame_valid) << "the pipeline records after tracking";
   }
   EXPECT_EQ(tracker.NextTrackId(), 3);
 }
@@ -1118,10 +1119,10 @@ TEST(TrackerLifecycle, FirstFrameStopsAtTheFirstZeroCentroid) {  // preserved qu
   std::vector<TrackedObject> objects{Detection(10, 1), dummy, Detection(20, -4)};
   tracker.Update(objects, .1, scan.local, frame);
   ASSERT_EQ(objects.size(), 3u);
-  EXPECT_EQ(objects[0].s32_Id, 0);
-  EXPECT_EQ(objects[1].s32_Id, -1);
-  EXPECT_EQ(objects[2].s32_Id, -1) << "loop breaks at the dummy";
-  EXPECT_FALSE(objects[2].b_KfInitialized);
+  EXPECT_EQ(objects[0].tracking.s32_Id, 0);
+  EXPECT_EQ(objects[1].tracking.s32_Id, -1);
+  EXPECT_EQ(objects[2].tracking.s32_Id, -1) << "loop breaks at the dummy";
+  EXPECT_FALSE(objects[2].tracking.b_KfInitialized);
 }
 
 TEST(TrackerLifecycle, AllDummyOrEmptyPreviousFrameOnlyBirths) {
@@ -1133,28 +1134,28 @@ TEST(TrackerLifecycle, AllDummyOrEmptyPreviousFrameOnlyBirths) {
     std::vector<TrackedObject> previous;
     if (!empty) {
       TrackedObject dummy{};
-      dummy.s32_Id = 7;
-      dummy.b_KfInitialized = true;
+      dummy.tracking.s32_Id = 7;
+      dummy.tracking.b_KfInitialized = true;
       previous.push_back(dummy);
     }
     tracker.Commit(previous);
     std::vector<TrackedObject> objects{Detection(10, 1), Detection(-5, 3)};
-    objects[1].s32_Id = 9;  // already identified: kept
+    objects[1].tracking.s32_Id = 9;  // already identified: kept
     tracker.Update(objects, .1, scan.local, frame);
     ASSERT_EQ(objects.size(), 2u) << "no association, previous dummy not carried";
-    EXPECT_EQ(objects[0].s32_Id, 0);
-    EXPECT_EQ(objects[0].s32_KfInitCount, 1);
-    EXPECT_EQ(objects[1].s32_Id, 9);
+    EXPECT_EQ(objects[0].tracking.s32_Id, 0);
+    EXPECT_EQ(objects[0].tracking.s32_KfInitCount, 1);
+    EXPECT_EQ(objects[1].tracking.s32_Id, 9);
   }
 }
 
 TrackedObject RecordedTrack(const ScanFrame& frame, int id, int age, double x, double y) {
   TrackedObject o = Detection(x, y);
-  o.s32_Id = id;
-  o.s32_Age = age;
-  o.b_KfInitialized = true;
-  o.s32_KfInitCount = 2;
-  o.Eigen_KfState_CA << o.f32_CoreX, o.f32_CoreY, 0, 0, 0, 0;
+  o.tracking.s32_Id = id;
+  o.tracking.s32_Age = age;
+  o.tracking.b_KfInitialized = true;
+  o.tracking.s32_KfInitCount = 2;
+  o.tracking.Eigen_KfState_CA << o.detection.f32_CoreX, o.detection.f32_CoreY, 0, 0, 0, 0;
   frame.RecordTrackingFrame(o);
   return o;
 }
@@ -1172,10 +1173,10 @@ TEST(TrackerLifecycle, MissedTrackIsDeletedAtThe25thConsecutiveMiss) {
     tracker.Update(objects, .1, scan.local, frame);
     if (miss < Tracker::kMaxMissCount) {
       ASSERT_EQ(objects.size(), 1u) << miss;
-      EXPECT_EQ(objects[0].s32_MissCount, miss);
-      EXPECT_EQ(objects[0].s32_Age, 3 + miss);
-      EXPECT_GT(objects[0].Eigen_KfP_CA(0, 0), last_p);
-      last_p = objects[0].Eigen_KfP_CA(0, 0);
+      EXPECT_EQ(objects[0].tracking.s32_MissCount, miss);
+      EXPECT_EQ(objects[0].tracking.s32_Age, 3 + miss);
+      EXPECT_GT(objects[0].tracking.Eigen_KfP_CA(0, 0), last_p);
+      last_p = objects[0].tracking.Eigen_KfP_CA(0, 0);
     } else {
       EXPECT_TRUE(objects.empty()) << "deleted at the 25th miss";
     }
@@ -1188,7 +1189,7 @@ TEST(TrackerLifecycle, UninitialisedPreviousTrackIsNotCarried) {
   frame.Configure(BaseVehicle(), kCalibration);
   const auto scan = BeginTrackScan(frame, 1., 0, 0, 0, BaseVehicle(), true);
   auto previous = RecordedTrack(frame, 5, 3, 10, 1);
-  previous.b_KfInitialized = false;
+  previous.tracking.b_KfInitialized = false;
   Tracker tracker;
   tracker.Commit({previous});
   std::vector<TrackedObject> objects;
@@ -1201,18 +1202,18 @@ TEST(TrackerLifecycle, NoDetectionsCarriesEveryTrack) {
   frame.Configure(BaseVehicle(), kCalibration);
   BeginTrackScan(frame, 1., 0, 0, 0, BaseVehicle(), true);
   auto a = RecordedTrack(frame, 1, 4, 10, 1), b = RecordedTrack(frame, 2, 9, -3, 5);
-  a.Eigen_KfState_CA(2) = -1.f;
+  a.tracking.Eigen_KfState_CA(2) = -1.f;
   Tracker tracker;
   tracker.Commit({a, b});
   const auto scan = BeginTrackScan(frame, 1.1, 0, 0, 0, BaseVehicle(), true);
   std::vector<TrackedObject> objects;
   tracker.Update(objects, .1, scan.local, frame);
   ASSERT_EQ(objects.size(), 2u);
-  EXPECT_EQ(objects[0].s32_Id, 1);
-  EXPECT_EQ(objects[1].s32_Id, 2);
-  EXPECT_EQ(objects[0].s32_MissCount, 1);
-  EXPECT_NEAR(objects[0].f32_CoreX, 9.9, 1e-5);
-  EXPECT_NEAR(objects[1].f32_CoreX, -3., 1e-5);
+  EXPECT_EQ(objects[0].tracking.s32_Id, 1);
+  EXPECT_EQ(objects[1].tracking.s32_Id, 2);
+  EXPECT_EQ(objects[0].tracking.s32_MissCount, 1);
+  EXPECT_NEAR(objects[0].detection.f32_CoreX, 9.9, 1e-5);
+  EXPECT_NEAR(objects[1].detection.f32_CoreX, -3., 1e-5);
 }
 
 TEST(TrackerLifecycle, ContinuityBonusPrefersTheOlderTrack) {
@@ -1227,7 +1228,7 @@ TEST(TrackerLifecycle, ContinuityBonusPrefersTheOlderTrack) {
     std::vector<TrackedObject> objects{Detection(10, 0)};
     tracker.Update(objects, .1, scan.local, frame);
     ASSERT_GE(objects.size(), 1u);
-    EXPECT_EQ(objects[0].s32_Id, older);
+    EXPECT_EQ(objects[0].tracking.s32_Id, older);
   }
 }
 
@@ -1240,21 +1241,21 @@ TEST(TrackerLifecycle, RetireUsesTheKfFilteredMatchedCentre) {
     frame.Configure(BaseVehicle(), kCalibration);
     BeginTrackScan(frame, 1., 0, 0, 0, BaseVehicle(), true);
     auto a = RecordedTrack(frame, 1, 30, 10, 0), b = RecordedTrack(frame, 2, 0, 10.6, 0);
-    if (tight) a.Eigen_KfP_CA = Eigen::Matrix<float, 6, 6>::Identity() * 1e-4f;
+    if (tight) a.tracking.Eigen_KfP_CA = Eigen::Matrix<float, 6, 6>::Identity() * 1e-4f;
     TrackingConfig config;  // retire 0.45, shape >= 0.28
     Tracker tracker(config);
     tracker.Commit({a, b});
     const auto scan = BeginTrackScan(frame, 1.1, 0, 0, 0, BaseVehicle(), true);
     std::vector<TrackedObject> objects{Detection(10.3, 0)};
     tracker.Update(objects, .1, scan.local, frame);
-    EXPECT_EQ(objects[0].s32_Id, 1);
-    const double filtered_gap = std::abs(objects[0].f32_CoreX - 10.6);
+    EXPECT_EQ(objects[0].tracking.s32_Id, 1);
+    const double filtered_gap = std::abs(objects[0].detection.f32_CoreX - 10.6);
     if (tight) {
       // Raw detection is 0.3 m from b, but the filtered centre stays near a.
       EXPECT_GT(filtered_gap, .45);
       ASSERT_EQ(objects.size(), 2u);
-      EXPECT_EQ(objects[1].s32_Id, 2);
-      EXPECT_EQ(objects[1].s32_MissCount, 1);
+      EXPECT_EQ(objects[1].tracking.s32_Id, 2);
+      EXPECT_EQ(objects[1].tracking.s32_MissCount, 1);
     } else {
       EXPECT_LE(filtered_gap, .45);
       EXPECT_EQ(objects.size(), 1u) << "duplicate retired";
@@ -1267,17 +1268,17 @@ TEST(TrackerLifecycle, RetireNeedsShapeAgreement) {
   frame.Configure(BaseVehicle(), kCalibration);
   BeginTrackScan(frame, 1., 0, 0, 0, BaseVehicle(), true);
   auto a = RecordedTrack(frame, 1, 30, 10, 0), b = RecordedTrack(frame, 2, 0, 10.2, 0);
-  b.f32_OBB_Width = 6.f;
-  b.f32_OBB_Height = 4.f;  // agreement with 1 x 0.8: (1/6)(0.8/4) < 0.28
+  b.detection.obb_length_m = 6.f;
+  b.detection.obb_width_m = 4.f;  // agreement with 1 x 0.8: (1/6)(0.8/4) < 0.28
   Tracker tracker;
   tracker.Commit({a, b});
   const auto scan = BeginTrackScan(frame, 1.1, 0, 0, 0, BaseVehicle(), true);
   std::vector<TrackedObject> objects{Detection(10.1, 0)};
   tracker.Update(objects, .1, scan.local, frame);
   ASSERT_EQ(objects.size(), 2u);
-  EXPECT_EQ(objects[0].s32_Id, 1);
-  EXPECT_EQ(objects[1].s32_Id, 2);
-  EXPECT_EQ(objects[1].s32_MissCount, 1);
+  EXPECT_EQ(objects[0].tracking.s32_Id, 1);
+  EXPECT_EQ(objects[1].tracking.s32_Id, 2);
+  EXPECT_EQ(objects[1].tracking.s32_MissCount, 1);
 }
 
 TEST(TrackerLifecycle, VelocityBookkeepingAddsCanSpeedOnX) {
@@ -1286,7 +1287,7 @@ TEST(TrackerLifecycle, VelocityBookkeepingAddsCanSpeedOnX) {
     frame.Configure(BaseVehicle(), kCalibration);
     BeginTrackScan(frame, 1., 0, 0, 0, BaseVehicle(), true);
     auto a = RecordedTrack(frame, 1, 5, 10, 0);
-    if (kph > 0) a.Eigen_KfState_CA(2) = -1.f;
+    if (kph > 0) a.tracking.Eigen_KfState_CA(2) = -1.f;
     Tracker tracker;
     tracker.Commit({a});
     const auto scan = BeginTrackScan(frame, 1.1, 0, 0, 0, BaseVehicle(), true);
@@ -1296,19 +1297,19 @@ TEST(TrackerLifecycle, VelocityBookkeepingAddsCanSpeedOnX) {
     tracker.Update(objects, .1, local, frame);
     ASSERT_EQ(objects.size(), 1u);
     const auto& o = objects[0];
-    const float vx = o.Eigen_KfState_CA(2), vy = o.Eigen_KfState_CA(3);
-    EXPECT_EQ(o.f32_AbsVx, vx + kph / 3.6f);
-    EXPECT_EQ(o.f32_AbsVy, vy);
-    EXPECT_EQ(o.f32_Velocity, std::hypot(o.f32_AbsVx, o.f32_AbsVy));
-    if (o.f32_Velocity > 1e-3f) {
-      EXPECT_EQ(o.f32_DirX, o.f32_AbsVx / o.f32_Velocity);
-      EXPECT_EQ(o.f32_DirY, o.f32_AbsVy / o.f32_Velocity);
+    const float vx = o.tracking.Eigen_KfState_CA(2), vy = o.tracking.Eigen_KfState_CA(3);
+    EXPECT_EQ(o.tracking.f32_AbsVx, vx + kph / 3.6f);
+    EXPECT_EQ(o.tracking.f32_AbsVy, vy);
+    EXPECT_EQ(o.tracking.f32_Velocity, std::hypot(o.tracking.f32_AbsVx, o.tracking.f32_AbsVy));
+    if (o.tracking.f32_Velocity > 1e-3f) {
+      EXPECT_EQ(o.tracking.f32_DirX, o.tracking.f32_AbsVx / o.tracking.f32_Velocity);
+      EXPECT_EQ(o.tracking.f32_DirY, o.tracking.f32_AbsVy / o.tracking.f32_Velocity);
     } else {
-      EXPECT_EQ(o.f32_DirX, 0.f);
-      EXPECT_EQ(o.f32_DirY, 0.f);
+      EXPECT_EQ(o.tracking.f32_DirX, 0.f);
+      EXPECT_EQ(o.tracking.f32_DirY, 0.f);
     }
-    EXPECT_EQ(o.f32_PrevCoreX, a.f32_CoreX);
-    EXPECT_FLOAT_EQ(o.f32_PredCoreX, 10.f + .1f * a.Eigen_KfState_CA(2));
+    EXPECT_EQ(o.tracking.f32_PrevCoreX, a.detection.f32_CoreX);
+    EXPECT_FLOAT_EQ(o.tracking.f32_PredCoreX, 10.f + .1f * a.tracking.Eigen_KfState_CA(2));
   }
 }
 
@@ -1332,9 +1333,9 @@ TEST(TrackerLifecycle, VelocityInitAfterAMissUsesOnlyTheLastInterval) {
   objects = {Detection(9.8, 0)};  // true relative speed -1 m/s over 0.2 s
   tracker.Update(objects, .1, scan.local, frame);
   ASSERT_EQ(objects.size(), 1u);
-  EXPECT_EQ(objects[0].s32_Id, 0);
-  EXPECT_EQ(objects[0].s32_KfInitCount, 2);
-  EXPECT_NEAR(objects[0].Eigen_KfState_CA(2), -2.0, 1e-4) << "(z - pred) / dt with dt = last interval";
+  EXPECT_EQ(objects[0].tracking.s32_Id, 0);
+  EXPECT_EQ(objects[0].tracking.s32_KfInitCount, 2);
+  EXPECT_NEAR(objects[0].tracking.Eigen_KfState_CA(2), -2.0, 1e-4) << "(z - pred) / dt with dt = last interval";
 }
 
 TEST(TrackerLifecycle, CommitKeepsThreeFrames) {
@@ -1366,11 +1367,11 @@ TEST(FrameBoundary, LocalAssociationIgnoresMapPoseIncludingNaN) {
       map.map_from_base.translation() = Vec(map_x, map_x, 0);
       BeginTrackScan(frame, 1., 0, 0, 0, BaseVehicle(), true, &map);
       auto previous = Detection(10, 1);
-      previous.s32_Id = 42;
-      previous.s32_Age = 20;
-      previous.b_KfInitialized = true;
-      previous.s32_KfInitCount = 2;
-      previous.Eigen_KfState_CA << 10, 1, -2, 0, 0, 0;
+      previous.tracking.s32_Id = 42;
+      previous.tracking.s32_Age = 20;
+      previous.tracking.b_KfInitialized = true;
+      previous.tracking.s32_KfInitCount = 2;
+      previous.tracking.Eigen_KfState_CA << 10, 1, -2, 0, 0, 0;
       if (recorded) frame.RecordTrackingFrame(previous);
       Tracker tracker(MainTestConfig());
       tracker.Commit({previous});
@@ -1378,8 +1379,8 @@ TEST(FrameBoundary, LocalAssociationIgnoresMapPoseIncludingNaN) {
       std::vector<TrackedObject> detections{Detection(9.8, 1)};
       tracker.Update(detections, .1, Local(), frame);
       ASSERT_FALSE(detections.empty());
-      ids.push_back(detections.front().s32_Id);
-      EXPECT_EQ(detections.front().str_YoloClass, "car");
+      ids.push_back(detections.front().tracking.s32_Id);
+      EXPECT_EQ(detections.front().camera.str_YoloClass, "car");
     }
     EXPECT_EQ(ids, std::vector<int>({42, 42, 42}));
   }
@@ -1391,18 +1392,18 @@ TEST(FrameBoundary, LocalAssociationYawPredictionUsesCurrentBodyFrame) {
   frame.Configure(BaseVehicle(), kCalibration);
   BeginTrackScan(frame, 1., .1, 0, 0, BaseVehicle(), true);
   auto previous = Detection(10, 0);
-  previous.s32_Id = 42;
-  previous.s32_Age = 20;
-  previous.b_KfInitialized = true;
-  previous.s32_KfInitCount = 2;
-  previous.Eigen_KfState_CA << 10, 0, 0, 0, 0, 0;
+  previous.tracking.s32_Id = 42;
+  previous.tracking.s32_Age = 20;
+  previous.tracking.b_KfInitialized = true;
+  previous.tracking.s32_KfInitCount = 2;
+  previous.tracking.Eigen_KfState_CA << 10, 0, 0, 0, 0, 0;
   auto current = Detection(10 * std::cos(.1), -10 * std::sin(.1));
   Tracker tracker(MainTestConfig());
   tracker.Commit({previous});
   std::vector<TrackedObject> detections{current};
   tracker.Update(detections, .1, Local(.1), frame);
   ASSERT_FALSE(detections.empty());
-  EXPECT_EQ(detections.front().s32_Id, 42);
+  EXPECT_EQ(detections.front().tracking.s32_Id, 42);
 }
 
 // Port of Main test_frame_boundary_ros.cpp:456-492.
@@ -1429,20 +1430,20 @@ TEST(FrameBoundary, ContinuousLocalTrackingStateIsIndependentOfGpsHistory) {
                                                          Rot::Identity()));
       std::vector<TrackedObject> objects{Detection(12. - .2 * f, 1.)};
       if (tracker.History().empty()) {
-        objects[0].s32_Id = 42;
-        objects[0].s32_Age = 1;
-        objects[0].b_KfInitialized = true;
-        objects[0].s32_KfInitCount = 2;
-        objects[0].Eigen_KfState_CA << 12, 1, -2, 0, 0, 0;
-        objects[0].f32_PrevYaw = 0;
+        objects[0].tracking.s32_Id = 42;
+        objects[0].tracking.s32_Age = 1;
+        objects[0].tracking.b_KfInitialized = true;
+        objects[0].tracking.s32_KfInitCount = 2;
+        objects[0].tracking.Eigen_KfState_CA << 12, 1, -2, 0, 0, 0;
+        objects[0].tracking.f32_PrevYaw = 0;
       } else {
         tracker.Update(objects, .1, local, frame);
       }
-      EXPECT_EQ(objects.front().s32_Id, 42);
+      EXPECT_EQ(objects.front().tracking.s32_Id, 42);
       frame.RecordTrackingFrame(objects.front());
       const auto& o = objects.front();
-      states.push_back({double(o.s32_Id), double(o.s32_Age), double(o.s32_MissCount), double(o.Eigen_KfState_CA(0)),
-                        double(o.Eigen_KfState_CA(1)), double(o.continuity_counter)});
+      states.push_back({double(o.tracking.s32_Id), double(o.tracking.s32_Age), double(o.tracking.s32_MissCount), double(o.tracking.Eigen_KfState_CA(0)),
+                        double(o.tracking.Eigen_KfState_CA(1)), double(o.camera.continuity_counter)});
       tracker.Commit(objects);
     }
     return states;
@@ -1603,15 +1604,15 @@ TEST(TrackerRegression, InvalidGeometryNeverProducesNaN) {
     ASSERT_EQ(objects.size(), 4u);
     tracker.Update(objects, .1, scan.local, frame);
     for (auto& o : objects)
-      if (o.s32_MissCount == 0) frame.RecordTrackingFrame(o);
+      if (o.tracking.s32_MissCount == 0) frame.RecordTrackingFrame(o);
     ASSERT_EQ(objects.size(), 4u);
     for (const auto& o : objects) {
-      EXPECT_TRUE(Finite(o)) << "id " << o.s32_Id;
-      EXPECT_EQ(o.s32_MissCount, 0);
-      EXPECT_EQ(o.s32_Id, static_cast<int>(o.u16_Idx)) << "IDs stable across scans";
-      if (!o.pcl_ClusterPoints.empty()) {
-        EXPECT_GE(o.f32_OBB_Width, .05f - 1e-7f);
-        EXPECT_GE(o.f32_OBB_Height, .05f - 1e-7f);
+      EXPECT_TRUE(Finite(o)) << "id " << o.tracking.s32_Id;
+      EXPECT_EQ(o.tracking.s32_MissCount, 0);
+      EXPECT_EQ(o.tracking.s32_Id, static_cast<int>(o.detection.u16_Idx)) << "IDs stable across scans";
+      if (!o.detection.pcl_ClusterPoints.empty()) {
+        EXPECT_GE(o.detection.obb_length_m, .05f - 1e-7f);
+        EXPECT_GE(o.detection.obb_width_m, .05f - 1e-7f);
       }
     }
     tracker.Commit(objects);

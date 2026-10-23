@@ -186,7 +186,7 @@ struct Sim {
     pl::ScanInput scan;
     scan.time.stamp_ns = Ros(t);
     scan.points.reset(new pl::Cloud(*scene));
-    scan.generation = ++generation;
+    scan.scan_sequence = ++generation;
     sh::ScanTimes times;
     times.receipt_ns = Steady(t) + 2 * kMs;
     times.processing_ns = times.receipt_ns + kMs;
@@ -520,11 +520,11 @@ TEST(LidarRuntime, A_NormalLocalAndMapOutputs) {
     EXPECT_TRUE(car);
     // Fusion enabled without camera: Main FusionLiDAR still rewrites Core to the AABB centre.
     for (const auto& o : out.result.objects) {
-      if (o.pcl_ClusterPoints.empty()) continue;
-      float min_x = o.pcl_ClusterPoints.points[0].x, max_x = min_x;
-      for (const auto& p : o.pcl_ClusterPoints.points) { min_x = std::min(min_x, p.x); max_x = std::max(max_x, p.x); }
-      EXPECT_EQ(o.f32_CoreX, 0.5f * (min_x + max_x));
-      EXPECT_EQ(o.f32_MinX, min_x);
+      if (o.detection.pcl_ClusterPoints.empty()) continue;
+      float min_x = o.detection.pcl_ClusterPoints.points[0].x, max_x = min_x;
+      for (const auto& p : o.detection.pcl_ClusterPoints.points) { min_x = std::min(min_x, p.x); max_x = std::max(max_x, p.x); }
+      EXPECT_EQ(o.detection.f32_CoreX, 0.5f * (min_x + max_x));
+      EXPECT_EQ(o.detection.f32_MinX, min_x);
     }
   }
   EXPECT_EQ(rt.output().processed(), 8u);
@@ -625,9 +625,9 @@ void ExpectInputInvalidWithoutTrackerAdvance(Sim& sim, int from, int to, const s
   const auto after = *tracker.LastFrame();
   ASSERT_EQ(after.size(), before.size());
   for (std::size_t i = 0; i < after.size(); ++i) {
-    EXPECT_EQ(after[i].s32_Id, before[i].s32_Id);
-    EXPECT_EQ(after[i].s32_Age, before[i].s32_Age);  // no hidden update
-    EXPECT_EQ(after[i].s32_MissCount, before[i].s32_MissCount);
+    EXPECT_EQ(after[i].tracking.s32_Id, before[i].tracking.s32_Id);
+    EXPECT_EQ(after[i].tracking.s32_Age, before[i].tracking.s32_Age);  // no hidden update
+    EXPECT_EQ(after[i].tracking.s32_MissCount, before[i].tracking.s32_MissCount);
   }
 }
 
@@ -638,13 +638,13 @@ TEST(LidarRuntime, D_ImuStaleIsInputInvalidAndFreezesTracker) {
   sim.imu = [](int t) { return t > 1000 && t < 1320 ? Mode::kSilent : Mode::kValid; };
   sim.RunTo(1100);  // last IMU 1000: 100 ms <= 120 ms, still ready
   EXPECT_TRUE(sim.scans.at(1100).processed);
-  const int age = rt.pipeline().tracker().LastFrame()->front().s32_Age;
+  const int age = rt.pipeline().tracker().LastFrame()->front().tracking.s32_Age;
   ExpectInputInvalidWithoutTrackerAdvance(sim, 1200, 1300, "");
   sim.RunTo(1400);
   const auto& resumed = sim.scans.at(1400);
   EXPECT_TRUE(resumed.processed);
   EXPECT_EQ(Ids(resumed.arrays.local), ids);
-  EXPECT_EQ(rt.pipeline().tracker().LastFrame()->front().s32_Age, age + 1);
+  EXPECT_EQ(rt.pipeline().tracker().LastFrame()->front().tracking.s32_Age, age + 1);
   EXPECT_EQ(rt.output().invalid(), 2u);
 }
 

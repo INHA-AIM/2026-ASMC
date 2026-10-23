@@ -9,7 +9,7 @@
 // `mission_profile` argument (FusionConfig::mission_profile).
 
 #include <asmc_lidar/fusion/camera_observations.hpp>
-#include <asmc_lidar/core/types.hpp>
+#include <asmc_lidar/tracking/track.hpp>
 
 #include <algorithm>
 #include <cctype>
@@ -154,33 +154,33 @@ inline std::string RawLabel(std::string label) {
 
 // Ported from Main FusionCamera.cpp:28-32 (8f93c22e)
 inline bool IsGroundNoise(const TrackedObject& object) {
-  return object.str_ObjectClass == "noise" || object.str_ObjectClass == "지면노이즈";
+  return object.camera.str_ObjectClass == "noise" || object.camera.str_ObjectClass == "지면노이즈";
 }
 
 // A repeated image is not another independent confirmation/miss.
 // Ported from Main FusionClassPolicy.hpp:52-61 (8f93c22e)
 inline void InvalidateObservation(TrackedObject& object, uint64 epoch) {
-  if (object.str_ObjectClass == "noise" || object.str_ObjectClass == "지면노이즈") return;
-  object.str_ObjectClass = object.str_YoloClass = "unknown";
-  object.last_seen_class = "unknown";
-  object.continuity_counter = object.class_miss_counter = 0;
-  object.is_class_locked = false;
-  object.camera_observation_ns = 0;
-  object.camera_observation_epoch = epoch;
+  if (object.camera.str_ObjectClass == "noise" || object.camera.str_ObjectClass == "지면노이즈") return;
+  object.camera.str_ObjectClass = object.camera.str_YoloClass = "unknown";
+  object.camera.last_seen_class = "unknown";
+  object.camera.continuity_counter = object.camera.class_miss_counter = 0;
+  object.camera.is_class_locked = false;
+  object.camera.camera_observation_ns = 0;
+  object.camera.camera_observation_epoch = epoch;
 }
 
 // false when this epoch already applied an image at or after stamp_ns.
 // Ported from Main FusionClassPolicy.hpp:63-74 (8f93c22e)
 inline bool BeginObservation(TrackedObject& object, uint64 stamp_ns, uint64 epoch) {
-  if (object.camera_observation_epoch == epoch && stamp_ns <= object.camera_observation_ns)
+  if (object.camera.camera_observation_epoch == epoch && stamp_ns <= object.camera.camera_observation_ns)
     return false;
-  if (object.camera_observation_epoch != epoch) {
-    object.last_seen_class = "unknown";
-    object.continuity_counter = 0;
-    object.class_miss_counter = 0;
+  if (object.camera.camera_observation_epoch != epoch) {
+    object.camera.last_seen_class = "unknown";
+    object.camera.continuity_counter = 0;
+    object.camera.class_miss_counter = 0;
   }
-  object.camera_observation_epoch = epoch;
-  object.camera_observation_ns = stamp_ns;
+  object.camera.camera_observation_epoch = epoch;
+  object.camera.camera_observation_ns = stamp_ns;
   return true;
 }
 
@@ -188,52 +188,52 @@ inline bool BeginObservation(TrackedObject& object, uint64 stamp_ns, uint64 epoc
 inline void Observe(TrackedObject& object, const std::string& label, const std::string& yolo_label,
                     int initial_confirmations, int change_confirmations, bool mission_profile) {
   const std::string observed = Normalize(label, mission_profile);
-  object.class_miss_counter = 0;
-  object.is_class_locked = false;
+  object.camera.class_miss_counter = 0;
+  object.camera.is_class_locked = false;
 
   if (observed == "unknown") {
-    if (!IsConfirmed(object.str_ObjectClass, mission_profile)) {
-      object.str_ObjectClass = "unknown";
-      object.str_YoloClass = "unknown";
+    if (!IsConfirmed(object.camera.str_ObjectClass, mission_profile)) {
+      object.camera.str_ObjectClass = "unknown";
+      object.camera.str_YoloClass = "unknown";
     }
-    object.last_seen_class = "unknown";
-    object.continuity_counter = 0;
+    object.camera.last_seen_class = "unknown";
+    object.camera.continuity_counter = 0;
     return;
   }
-  if (object.str_ObjectClass == observed) {
+  if (object.camera.str_ObjectClass == observed) {
     // Same class: still refresh the raw label from the latest observation.
-    object.str_YoloClass = RawLabel(yolo_label);
-    object.last_seen_class = "unknown";
-    object.continuity_counter = 0;
+    object.camera.str_YoloClass = RawLabel(yolo_label);
+    object.camera.last_seen_class = "unknown";
+    object.camera.continuity_counter = 0;
     return;
   }
-  if (object.last_seen_class == observed) {
-    ++object.continuity_counter;
+  if (object.camera.last_seen_class == observed) {
+    ++object.camera.continuity_counter;
   } else {
-    object.last_seen_class = observed;
-    object.continuity_counter = 1;
+    object.camera.last_seen_class = observed;
+    object.camera.continuity_counter = 1;
   }
 
-  const int required = IsConfirmed(object.str_ObjectClass, mission_profile)
+  const int required = IsConfirmed(object.camera.str_ObjectClass, mission_profile)
                            ? std::max(1, change_confirmations)
                            : std::max(1, initial_confirmations);
-  if (object.continuity_counter >= required) {
-    object.str_ObjectClass = observed;
-    object.str_YoloClass = RawLabel(yolo_label);
-    object.last_seen_class = "unknown";
-    object.continuity_counter = 0;
+  if (object.camera.continuity_counter >= required) {
+    object.camera.str_ObjectClass = observed;
+    object.camera.str_YoloClass = RawLabel(yolo_label);
+    object.camera.last_seen_class = "unknown";
+    object.camera.continuity_counter = 0;
   }
 }
 
 // Ported from Main FusionClassPolicy.hpp:118-127 (8f93c22e)
 inline void Miss(TrackedObject& object, int miss_grace) {
-  ++object.class_miss_counter;
-  object.last_seen_class = "unknown";
-  object.continuity_counter = 0;
-  object.is_class_locked = false;
-  if (object.class_miss_counter > std::max(0, miss_grace)) {
-    object.str_ObjectClass = "unknown";
-    object.str_YoloClass = "unknown";
+  ++object.camera.class_miss_counter;
+  object.camera.last_seen_class = "unknown";
+  object.camera.continuity_counter = 0;
+  object.camera.is_class_locked = false;
+  if (object.camera.class_miss_counter > std::max(0, miss_grace)) {
+    object.camera.str_ObjectClass = "unknown";
+    object.camera.str_YoloClass = "unknown";
   }
 }
 
@@ -246,27 +246,27 @@ namespace fusion_state {
 
 // Ported from Main FusionClassState.hpp:11-21 (8f93c22e)
 inline void Copy(const TrackedObject& source, TrackedObject& target, bool unlock = false) {
-  target.str_ObjectClass = source.str_ObjectClass;
-  target.str_YoloClass = source.str_YoloClass;
-  target.last_seen_class = source.last_seen_class;
-  target.continuity_counter = source.continuity_counter;
-  target.class_miss_counter = source.class_miss_counter;
-  target.camera_observation_ns = source.camera_observation_ns;
-  target.camera_observation_epoch = source.camera_observation_epoch;
-  target.is_class_locked = unlock ? false : source.is_class_locked;
+  target.camera.str_ObjectClass = source.camera.str_ObjectClass;
+  target.camera.str_YoloClass = source.camera.str_YoloClass;
+  target.camera.last_seen_class = source.camera.last_seen_class;
+  target.camera.continuity_counter = source.camera.continuity_counter;
+  target.camera.class_miss_counter = source.camera.class_miss_counter;
+  target.camera.camera_observation_ns = source.camera.camera_observation_ns;
+  target.camera.camera_observation_epoch = source.camera.camera_observation_epoch;
+  target.camera.is_class_locked = unlock ? false : source.camera.is_class_locked;
 }
 
 // Ported from Main FusionClassState.hpp:23-27 (8f93c22e)
 inline TrackedObject* Find(std::vector<TrackedObject>& objects, int32 id) {
   auto it = std::find_if(objects.begin(), objects.end(),
-                         [id](const TrackedObject& object) { return object.s32_Id == id; });
+                         [id](const TrackedObject& object) { return object.tracking.s32_Id == id; });
   return it == objects.end() ? nullptr : &*it;
 }
 
 // Ported from Main FusionClassState.hpp:29-33 (8f93c22e)
 inline void Persist(const std::vector<TrackedObject>& current, std::vector<TrackedObject>& history) {
   for (const auto& object : current)
-    if (auto* previous = Find(history, object.s32_Id)) Copy(object, *previous);
+    if (auto* previous = Find(history, object.tracking.s32_Id)) Copy(object, *previous);
 }
 
 }  // namespace fusion_state

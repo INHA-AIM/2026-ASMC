@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // Ports of Main test_fusion_time_matcher.cpp, test_fusion_class_policy.cpp,
 // test_fusion_replay.cpp and test_fusion_state_propagation.cpp (8f93c22e) onto
 // TrackedObject and the explicit mission_profile flag, plus the box filter
@@ -129,39 +130,39 @@ TEST(FusionClassPolicy, InitialClassNeedsFiveConsistentObservations) {
   TrackedObject object;
   for (int i = 0; i < 4; ++i) {
     fusion_class::Observe(object, "truck", "truck", 5, 3, kLegacy);
-    EXPECT_EQ("unknown", object.str_ObjectClass);
+    EXPECT_EQ("unknown", object.camera.str_ObjectClass);
   }
   fusion_class::Observe(object, "truck", "truck", 5, 3, kLegacy);
-  EXPECT_EQ("car", object.str_ObjectClass);
-  EXPECT_EQ("truck", object.str_YoloClass);
+  EXPECT_EQ("car", object.camera.str_ObjectClass);
+  EXPECT_EQ("truck", object.camera.str_YoloClass);
 }
 
 TEST(FusionClassPolicy, ConfirmedClassChangesAfterThreeOppositeObservations) {
   TrackedObject object;
-  object.str_ObjectClass = "car";
+  object.camera.str_ObjectClass = "car";
   fusion_class::Observe(object, "person", "person", 5, 3, kLegacy);
   fusion_class::Observe(object, "person", "person", 5, 3, kLegacy);
-  EXPECT_EQ("car", object.str_ObjectClass);
+  EXPECT_EQ("car", object.camera.str_ObjectClass);
   fusion_class::Observe(object, "person", "person", 5, 3, kLegacy);
-  EXPECT_EQ("person", object.str_ObjectClass);
+  EXPECT_EQ("person", object.camera.str_ObjectClass);
 }
 
 TEST(FusionClassPolicy, ThreeMissesKeepClassAndFourthResetsIt) {
   TrackedObject object;
-  object.str_ObjectClass = "person";
+  object.camera.str_ObjectClass = "person";
   for (int i = 0; i < 3; ++i) {
     fusion_class::Miss(object, 3);
-    EXPECT_EQ("person", object.str_ObjectClass);
+    EXPECT_EQ("person", object.camera.str_ObjectClass);
   }
   fusion_class::Miss(object, 3);
-  EXPECT_EQ("unknown", object.str_ObjectClass);
+  EXPECT_EQ("unknown", object.camera.str_ObjectClass);
 }
 
 TEST(FusionClassPolicy, UnsupportedObservationDoesNotEraseConfirmedClass) {
   TrackedObject object;
-  object.str_ObjectClass = "car";
+  object.camera.str_ObjectClass = "car";
   fusion_class::Observe(object, "train", "train", 5, 3, kLegacy);
-  EXPECT_EQ("car", object.str_ObjectClass);
+  EXPECT_EQ("car", object.camera.str_ObjectClass);
 }
 
 TEST(FusionClassPolicy, SevenLabelsAndRepeatedSourceCannotConfirm) {
@@ -172,42 +173,42 @@ TEST(FusionClassPolicy, SevenLabelsAndRepeatedSourceCannotConfirm) {
     fusion_class::Observe(object, label, label, 2, 3, kLegacy);
     EXPECT_FALSE(fusion_class::BeginObservation(object, 100, 1));
     EXPECT_FALSE(fusion_class::BeginObservation(object, 99, 1));
-    EXPECT_EQ(1, object.continuity_counter);
+    EXPECT_EQ(1, object.camera.continuity_counter);
     ASSERT_TRUE(fusion_class::BeginObservation(object, 200, 1));
     fusion_class::Observe(object, label, label, 2, 3, kLegacy);
-    EXPECT_EQ(label, object.str_YoloClass);
-    EXPECT_TRUE(fusion_class::IsConfirmed(object.str_ObjectClass, kLegacy));
+    EXPECT_EQ(label, object.camera.str_YoloClass);
+    EXPECT_TRUE(fusion_class::IsConfirmed(object.camera.str_ObjectClass, kLegacy));
     ASSERT_TRUE(fusion_class::BeginObservation(object, 201, 2));
-    EXPECT_EQ(0, object.class_miss_counter);
+    EXPECT_EQ(0, object.camera.class_miss_counter);
   }
 }
 
 TEST(FusionClassPolicy, EpochInvalidationRemovesOldClassWithoutResettingGeometryOrTrack) {
   TrackedObject object;
-  object.s32_Id = 12;
-  object.f32_CoreX = 7.5f;
-  object.pcl_ClusterPoints.push_back(pcl::PointXYZI());
-  object.str_ObjectClass = "car";
-  object.str_YoloClass = "truck";
-  object.continuity_counter = 4;
-  object.class_miss_counter = 2;
-  object.camera_observation_ns = 300;
+  object.tracking.s32_Id = 12;
+  object.detection.f32_CoreX = 7.5f;
+  object.detection.pcl_ClusterPoints.push_back(pcl::PointXYZI());
+  object.camera.str_ObjectClass = "car";
+  object.camera.str_YoloClass = "truck";
+  object.camera.continuity_counter = 4;
+  object.camera.class_miss_counter = 2;
+  object.camera.camera_observation_ns = 300;
   fusion_class::InvalidateObservation(object, 2);
-  EXPECT_EQ(12, object.s32_Id);
-  EXPECT_EQ(7.5f, object.f32_CoreX);
-  EXPECT_EQ(1u, object.pcl_ClusterPoints.size());
-  EXPECT_EQ("unknown", object.str_ObjectClass);
-  EXPECT_EQ("unknown", object.str_YoloClass);
-  EXPECT_EQ(0, object.continuity_counter);
-  EXPECT_EQ(0, object.class_miss_counter);
-  EXPECT_EQ(0u, object.camera_observation_ns);
-  EXPECT_EQ(2u, object.camera_observation_epoch);
+  EXPECT_EQ(12, object.tracking.s32_Id);
+  EXPECT_EQ(7.5f, object.detection.f32_CoreX);
+  EXPECT_EQ(1u, object.detection.pcl_ClusterPoints.size());
+  EXPECT_EQ("unknown", object.camera.str_ObjectClass);
+  EXPECT_EQ("unknown", object.camera.str_YoloClass);
+  EXPECT_EQ(0, object.camera.continuity_counter);
+  EXPECT_EQ(0, object.camera.class_miss_counter);
+  EXPECT_EQ(0u, object.camera.camera_observation_ns);
+  EXPECT_EQ(2u, object.camera.camera_observation_epoch);
   ASSERT_TRUE(fusion_class::BeginObservation(object, 400, 2));
   fusion_class::Observe(object, "truck", "truck", 5, 3, kLegacy);
-  EXPECT_EQ("unknown", object.str_ObjectClass);
-  object.str_ObjectClass = "noise";
+  EXPECT_EQ("unknown", object.camera.str_ObjectClass);
+  object.camera.str_ObjectClass = "noise";
   fusion_class::InvalidateObservation(object, 3);
-  EXPECT_EQ("noise", object.str_ObjectClass);
+  EXPECT_EQ("noise", object.camera.str_ObjectClass);
 }
 
 TEST(FusionClassPolicy, MissionGroupsPreserveRawAndDoNotSetMotion) {
@@ -218,14 +219,14 @@ TEST(FusionClassPolicy, MissionGroupsPreserveRawAndDoNotSetMotion) {
   EXPECT_EQ("unknown", fusion_class::Normalize("building", kMission));
   EXPECT_EQ("vehicle", fusion_class::Normalize("vehicle", kMission));
   TrackedObject object;
-  object.f32_Velocity = 3.f;
-  object.s32_DynamicCount = 2;
+  object.tracking.f32_Velocity = 3.f;
+  object.tracking.s32_DynamicCount = 2;
   fusion_class::Observe(object, "vehicle", "truck", 1, 1, kMission);
-  EXPECT_EQ("vehicle", object.str_ObjectClass);
-  EXPECT_EQ("truck", object.str_YoloClass);
+  EXPECT_EQ("vehicle", object.camera.str_ObjectClass);
+  EXPECT_EQ("truck", object.camera.str_YoloClass);
   // TrackedObject has no b_IsDynamic; motion bookkeeping is untouched.
-  EXPECT_EQ(3.f, object.f32_Velocity);
-  EXPECT_EQ(2, object.s32_DynamicCount);
+  EXPECT_EQ(3.f, object.tracking.f32_Velocity);
+  EXPECT_EQ(2, object.tracking.s32_DynamicCount);
   EXPECT_EQ("car", fusion_class::Normalize("truck", kLegacy));
 }
 
@@ -292,8 +293,8 @@ std::vector<ReplayObservation> Replay(int delay_ms) {
         const std::string label = image < 2500 ? "truck" : "person";
         fusion_class::Observe(object, label, label, 5, 3, kLegacy);
       }
-      output.emplace_back(lidar, image, object.str_ObjectClass, object.str_YoloClass, object.last_seen_class,
-                          object.continuity_counter, object.class_miss_counter);
+      output.emplace_back(lidar, image, object.camera.str_ObjectClass, object.camera.str_YoloClass, object.camera.last_seen_class,
+                          object.camera.continuity_counter, object.camera.class_miss_counter);
     }
   }
   return output;
@@ -326,8 +327,8 @@ TEST(FusionReplay, OffsetBoundaryAndTieRemainStrict) {
 namespace {
 using State = std::tuple<std::string, std::string, std::string, int, int, bool>;
 State state(const TrackedObject& o) {
-  return State{o.str_ObjectClass, o.str_YoloClass, o.last_seen_class, o.continuity_counter, o.class_miss_counter,
-               o.is_class_locked};
+  return State{o.camera.str_ObjectClass, o.camera.str_YoloClass, o.camera.last_seen_class, o.camera.continuity_counter, o.camera.class_miss_counter,
+               o.camera.is_class_locked};
 }
 struct PropagationResult {
   std::vector<std::tuple<int, int, State>> fused;
@@ -337,7 +338,7 @@ struct PropagationResult {
 // not a replacement for projection/IoU (see test_front_camera_fusion.cpp).
 PropagationResult run(int delay, int lidar_stride = 1, bool lose_history = false) {
   std::vector<TrackedObject> history(1);
-  history[0].s32_Id = 7;
+  history[0].tracking.s32_Id = 7;
   std::deque<std::pair<int, TrackedObject>> pending;
   std::vector<std::int64_t> yolo;
   PropagationResult result;
@@ -345,7 +346,7 @@ PropagationResult run(int delay, int lidar_stride = 1, bool lose_history = false
     for (int image = 100; image <= 800; image += 100)
       if (image + delay > wall - 100 && image + delay <= wall) yolo.push_back(image * kMs);
     std::vector<TrackedObject> current(1);
-    current[0].s32_Id = 7;
+    current[0].tracking.s32_Id = 7;
     if (!lose_history) fusion_state::Copy(history[0], current[0]);
     if (wall <= 800 && (wall / 100 - 1) % lidar_stride == 0) pending.emplace_back(wall, current[0]);
     while (!pending.empty()) {
@@ -375,38 +376,38 @@ PropagationResult run(int delay, int lidar_stride = 1, bool lose_history = false
 
 TEST(FusionStatePropagation, CopiesOnlyClassificationAndPreservesLockSemantics) {
   TrackedObject source, target;
-  source.str_ObjectClass = "car";
-  source.str_YoloClass = "truck";
-  source.last_seen_class = "person";
-  source.continuity_counter = 2;
-  source.class_miss_counter = 1;
-  source.is_class_locked = true;
-  source.camera_observation_ns = 123;
-  source.camera_observation_epoch = 9;
-  target.s32_Id = 9;
-  target.f32_CoreX = 100;
-  target.s32_MissCount = 4;
+  source.camera.str_ObjectClass = "car";
+  source.camera.str_YoloClass = "truck";
+  source.camera.last_seen_class = "person";
+  source.camera.continuity_counter = 2;
+  source.camera.class_miss_counter = 1;
+  source.camera.is_class_locked = true;
+  source.camera.camera_observation_ns = 123;
+  source.camera.camera_observation_epoch = 9;
+  target.tracking.s32_Id = 9;
+  target.detection.f32_CoreX = 100;
+  target.tracking.s32_MissCount = 4;
   fusion_state::Copy(source, target);
   EXPECT_EQ(state(source), state(target));
-  EXPECT_EQ(123u, target.camera_observation_ns);
-  EXPECT_EQ(9u, target.camera_observation_epoch);
-  EXPECT_EQ(9, target.s32_Id);
-  EXPECT_EQ(100, target.f32_CoreX);
-  EXPECT_EQ(4, target.s32_MissCount);
+  EXPECT_EQ(123u, target.camera.camera_observation_ns);
+  EXPECT_EQ(9u, target.camera.camera_observation_epoch);
+  EXPECT_EQ(9, target.tracking.s32_Id);
+  EXPECT_EQ(100, target.detection.f32_CoreX);
+  EXPECT_EQ(4, target.tracking.s32_MissCount);
   fusion_state::Copy(source, target, true);
-  EXPECT_FALSE(target.is_class_locked);
+  EXPECT_FALSE(target.camera.is_class_locked);
 }
 
 TEST(FusionStatePropagation, PersistsByIdWithoutCopyingHistoricalGeometry) {
   std::vector<TrackedObject> current(2), history(1);
-  current[0].s32_Id = history[0].s32_Id = 7;
-  current[1].s32_Id = 8;
-  current[0].str_ObjectClass = "person";
-  current[0].f32_CoreX = 99;
-  history[0].f32_CoreX = 1;
+  current[0].tracking.s32_Id = history[0].tracking.s32_Id = 7;
+  current[1].tracking.s32_Id = 8;
+  current[0].camera.str_ObjectClass = "person";
+  current[0].detection.f32_CoreX = 99;
+  history[0].detection.f32_CoreX = 1;
   fusion_state::Persist(current, history);
-  EXPECT_EQ("person", history[0].str_ObjectClass);
-  EXPECT_EQ(1, history[0].f32_CoreX);
+  EXPECT_EQ("person", history[0].camera.str_ObjectClass);
+  EXPECT_EQ(1, history[0].detection.f32_CoreX);
   EXPECT_EQ(1u, history.size());
 }
 
@@ -430,20 +431,20 @@ TEST(FusionStatePropagation, NegativeControlLosingCarryChangesContinuousResult) 
 
 TEST(FusionStatePropagation, ReuseAfterHistoryCopyCannotIncrementConfirmationOrMiss) {
   TrackedObject previous, live, historical;
-  previous.s32_Id = live.s32_Id = historical.s32_Id = 7;
+  previous.tracking.s32_Id = live.tracking.s32_Id = historical.tracking.s32_Id = 7;
   ASSERT_TRUE(fusion_class::BeginObservation(previous, 100, 1));
   fusion_class::Observe(previous, "dog", "dog", 5, 3, kLegacy);
   fusion_state::Copy(previous, live);
   fusion_state::Copy(live, historical, true);
   EXPECT_FALSE(fusion_class::BeginObservation(historical, 100, 1));
-  EXPECT_EQ(1, historical.continuity_counter);
+  EXPECT_EQ(1, historical.camera.continuity_counter);
   fusion_class::Miss(historical, 3);
   fusion_state::Copy(historical, previous);
   EXPECT_FALSE(fusion_class::BeginObservation(previous, 100, 1));
-  EXPECT_EQ(1, previous.class_miss_counter);
+  EXPECT_EQ(1, previous.camera.class_miss_counter);
   ASSERT_TRUE(fusion_class::BeginObservation(previous, 200, 1));
   fusion_class::Miss(previous, 3);
-  EXPECT_EQ(2, previous.class_miss_counter);
+  EXPECT_EQ(2, previous.camera.class_miss_counter);
 }
 
 // ---------------------------------------------------------------------------

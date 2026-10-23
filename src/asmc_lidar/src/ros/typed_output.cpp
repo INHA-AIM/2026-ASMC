@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // Typed local (base_link) / map LidarObjectArray builder.
 // Ported from Main src/Geometry/FrameBoundaryPublisher.cpp (8f93c22e) without the
 // ROS transport: publishers, TF broadcast, the 1 Hz diagnostics timer and the
@@ -30,16 +31,16 @@ void Point(const asmc::lidar::Vec& source, geometry_msgs::Point* target) {
 asmc_msgs::LidarObject Message(const pipeline::TrackedObject& original,
                                const asmc::lidar::Geometry& geometry) {
   asmc_msgs::LidarObject out;
-  out.track_id = original.s32_Id; out.detection_index = original.u16_Idx;
+  out.track_id = original.tracking.s32_Id; out.detection_index = original.detection.u16_Idx;
   out.observation_state = out.OBSERVED;
-  out.age = std::max(0, original.s32_Age); out.miss_count = 0;
-  out.classification = original.str_ObjectClass; out.camera_class = original.str_YoloClass;
+  out.age = std::max(0, original.tracking.s32_Age); out.miss_count = 0;
+  out.classification = original.camera.str_ObjectClass; out.camera_class = original.camera.str_YoloClass;
   Point(geometry.center, &out.center);
   for (unsigned i = 0; i < 8; ++i) Point(geometry.corners[i], &out.obb_corners[i]);
   out.yaw = geometry.yaw.value_or(0.);
-  out.length = original.f32_OBB_Width; out.width = original.f32_OBB_Height;
-  out.height = original.f32_OBB_ZMax - original.f32_OBB_ZMin;  // float subtraction, as Main
-  out.source_point_count = original.pcl_ClusterPoints.size();
+  out.length = original.detection.obb_length_m; out.width = original.detection.obb_width_m;
+  out.height = original.detection.f32_OBB_ZMax - original.detection.f32_OBB_ZMin;  // float subtraction, as Main
+  out.source_point_count = original.detection.pcl_ClusterPoints.size();
   // Main: the CA state is a derivative in moving leveled-sensor coordinates;
   // it must not become a valid zero/static velocity.
   out.relative_velocity_valid = false; out.absolute_velocity_valid = false;
@@ -106,18 +107,18 @@ TypedOutput::Arrays TypedOutput::Observed(const pipeline::ScanResult& result,
                   context.map_pose.valid ? "observed_empty" : context.map_pose.reason, provenance_);
   out.local.stamp_provenance = out.map.stamp_provenance = context.time.stamp_provenance;
   for (const auto& original : objects) {
-    if (original.s32_Id < 0 || original.s32_MissCount != 0 || original.pcl_ClusterPoints.empty() ||
-        original.str_ObjectClass == "noise" || original.str_ObjectClass == "지면노이즈") continue;
-    asmc::lidar::Object object; object.id = original.s32_Id; object.classification = original.str_ObjectClass;
-    object.center = asmc::lidar::Vec(original.f32_OBB_CenterX, original.f32_OBB_CenterY, original.f32_OBB_CenterZ);
+    if (original.tracking.s32_Id < 0 || original.tracking.s32_MissCount != 0 || original.detection.pcl_ClusterPoints.empty() ||
+        original.camera.str_ObjectClass == "noise" || original.camera.str_ObjectClass == "지면노이즈") continue;
+    asmc::lidar::Object object; object.id = original.tracking.s32_Id; object.classification = original.camera.str_ObjectClass;
+    object.center = asmc::lidar::Vec(original.detection.f32_OBB_CenterX, original.detection.f32_OBB_CenterY, original.detection.f32_OBB_CenterZ);
     // std::cos/std::sin of the float yaw (float overloads), as Main.
-    object.long_axis = asmc::lidar::Vec(std::cos(original.f32_OBB_YawRad), std::sin(original.f32_OBB_YawRad), 0);
+    object.long_axis = asmc::lidar::Vec(std::cos(original.detection.f32_OBB_YawRad), std::sin(original.detection.f32_OBB_YawRad), 0);
     for (unsigned i = 0; i < 8; ++i) {
-      const auto& p = original.OBB_Corners_Body[i]; object.corners[i] = asmc::lidar::Vec(p.x, p.y, p.z);
+      const auto& p = original.detection.obb_corners_level[i]; object.corners[i] = asmc::lidar::Vec(p.x, p.y, p.z);
     }
     auto transformed = asmc::lidar::transform(object, context);
-    const double dimensions[] = {original.f32_OBB_Width, original.f32_OBB_Height,
-                                 original.f32_OBB_ZMax - original.f32_OBB_ZMin};
+    const double dimensions[] = {original.detection.obb_length_m, original.detection.obb_width_m,
+                                 original.detection.f32_OBB_ZMax - original.detection.f32_OBB_ZMin};
     for (double dimension : dimensions) if (!std::isfinite(dimension) || dimension < 0) {
       transformed.valid = false; transformed.reason = "invalid_object_dimensions";
     }

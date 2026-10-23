@@ -108,68 +108,6 @@ struct ObjectGroundEvidence {
   double rejection_band_m = 0.0;
 };
 
-// Main LiDARObjectInfo, reduced to the common-geometry path. One record is a
-// detection (Id < 0) or a track. All geometry is in the scan's leveled LiDAR
-// frame ("lidar_leveled"); typed base_link/map output is produced only by
-// asmc::lidar::transform with the scan Context.
-struct TrackedObject {
-  // Common tracking frame record (Global.hpp:522-529).
-  bool tracking_frame_valid = false;
-  float tracking_height_input = 0.f;
-  asmc::lidar::Rot tracking_yaw_from_input = asmc::lidar::Rot::Identity();
-  asmc::lidar::Vec tracking_origin_in_yaw = asmc::lidar::Vec::Zero();
-
-  // Camera class state (Global.hpp:530-541). str_ObjectClass is the consumer
-  // group, str_YoloClass the original detector label.
-  std::string str_ObjectClass = "unknown";
-  std::string str_YoloClass = "unknown";
-  std::string last_seen_class = "unknown";
-  int continuity_counter = 0;
-  int class_miss_counter = 0;
-  uint64 camera_observation_ns = 0;
-  uint64 camera_observation_epoch = 0;
-  bool is_class_locked = false;
-
-  Cloud pcl_ClusterPoints;
-  ObjectGroundEvidence ground_evidence;
-
-  uint16 u16_Idx = 0;
-  float32 f32_CoreX = 0.f, f32_CoreY = 0.f, f32_CoreZ = 0.f;
-  float32 f32_PredCoreX = 0.f, f32_PredCoreY = 0.f;
-  float32 f32_PrevCoreX = 0.f, f32_PrevCoreY = 0.f;
-  float32 f32_PrevYaw = 0.f;
-  float32 f32_Dist = 0.f;
-  float32 f32_MinX = 0.f, f32_MinY = 0.f, f32_MinZ = 0.f;
-  float32 f32_MaxX = 0.f, f32_MaxY = 0.f, f32_MaxZ = 0.f;
-
-  // L-shape OBB. Width is the extent along yaw, Height the perpendicular XY
-  // extent (not the vertical size). Corners 0-3 at ZMin, 4-7 at ZMax, counter-
-  // clockwise from +z; edge 0->1 is parallel to +-yaw.
-  float f32_OBB_CenterX = 0.f, f32_OBB_CenterY = 0.f, f32_OBB_CenterZ = 0.f;
-  float f32_OBB_Width = 0.f, f32_OBB_Height = 0.f;
-  float f32_OBB_ZMin = 0.f, f32_OBB_ZMax = 0.f;
-  float f32_OBB_YawRad = 0.f;
-  std::array<P3, 8> OBB_Corners_Body{};
-
-  // Internal velocity bookkeeping kept for behaviour parity. f32_AbsVx/Vy is
-  // Main's "KF relative velocity + CAN speed on the leveled x axis"; its frame is
-  // not validated, so it is never published as an absolute velocity.
-  float32 f32_Velocity = 0.f;
-  float32 f32_AbsVx = 0.f, f32_AbsVy = 0.f;
-  float32 f32_DirX = 0.f, f32_DirY = 0.f;
-
-  int32 s32_Id = -1;
-  int32 s32_Age = 0;
-  int32 s32_MissCount = 0;
-  int32 s32_KfInitCount = 0;
-  int32 s32_DynamicCount = 0;
-  int32 s32_StaticCount = 0;
-
-  // Relative constant-acceleration state [x, y, vx, vy, ax, ay] in the leveled frame.
-  Eigen::Matrix<float, 6, 1> Eigen_KfState_CA = Eigen::Matrix<float, 6, 1>::Zero();
-  Eigen::Matrix<float, 6, 6> Eigen_KfP_CA = Eigen::Matrix<float, 6, 6>::Identity();
-  bool b_KfInitialized = false;
-};
 
 }  // namespace pipeline
 }  // namespace lidar

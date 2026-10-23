@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 #pragma once
 // One LiDAR scan through the ported common-geometry path:
 //   ROI/ego -> Voxel -> roll/pitch leveling -> RANSAC ground -> [experimental
@@ -65,7 +66,8 @@ struct StageTimings {
 struct ScanInput {
   asmc::lidar::Observation time;  // stamp_ns = PointCloud2 header stamp
   CloudPtr points;                // sensor frame (velodyne), x/y/z/intensity
-  std::uint64_t generation = 0;
+  std::uint64_t scan_sequence = 0;
+  std::uint64_t generation = 1;  // processing-state epoch, not a per-scan counter
 };
 
 // When !processed only stamp_ns, previous_stamp_ns and reason are set (the

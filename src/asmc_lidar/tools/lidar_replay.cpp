@@ -275,7 +275,7 @@ int Replay(const Options& opt) {
         ++accepted;
         // Same scan time as the node: ROS source stamp, receipt on the replay clock.
         scan.time = asmc::lidar::Observation{stamp, logical, logical, "ros", config.stamp_provenance, "steady"};
-        scan.generation = ++generation;
+        scan.scan_sequence = ++generation;
         ScanTimes times;
         times.receipt_ns = times.processing_ns = times.decision_ns = times.steady_now_ns = logical;
         times.ros_now_ns = ros_now;

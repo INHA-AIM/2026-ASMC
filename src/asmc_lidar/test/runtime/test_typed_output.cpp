@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // TypedOutput: Main FrameBoundaryPublisher Publish()/Invalid() semantics.
 #include <asmc_lidar/geometry/projection.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
@@ -51,22 +52,22 @@ ScanResult MakeResult(std::int64_t stamp, bool map_valid) {
 
 TrackedObject MakeTrack(int id, float cx, float cy, float yaw) {
   TrackedObject o;
-  o.s32_Id = id; o.u16_Idx = static_cast<std::uint16_t>(id + 3); o.s32_Age = 4; o.s32_MissCount = 0;
-  o.str_ObjectClass = "vehicle"; o.str_YoloClass = "car";
-  o.f32_OBB_CenterX = cx; o.f32_OBB_CenterY = cy; o.f32_OBB_CenterZ = -0.6f;
-  o.f32_OBB_Width = 4.2f; o.f32_OBB_Height = 1.9f; o.f32_OBB_ZMin = -1.3f; o.f32_OBB_ZMax = 0.1f;
-  o.f32_OBB_YawRad = yaw;
+  o.tracking.s32_Id = id; o.detection.u16_Idx = static_cast<std::uint16_t>(id + 3); o.tracking.s32_Age = 4; o.tracking.s32_MissCount = 0;
+  o.camera.str_ObjectClass = "vehicle"; o.camera.str_YoloClass = "car";
+  o.detection.f32_OBB_CenterX = cx; o.detection.f32_OBB_CenterY = cy; o.detection.f32_OBB_CenterZ = -0.6f;
+  o.detection.obb_length_m = 4.2f; o.detection.obb_width_m = 1.9f; o.detection.f32_OBB_ZMin = -1.3f; o.detection.f32_OBB_ZMax = 0.1f;
+  o.detection.f32_OBB_YawRad = yaw;
   const float c = std::cos(yaw), s = std::sin(yaw), hx = 2.1f, hy = 0.95f;
   const float corner[4][2] = {{-hx, -hy}, {hx, -hy}, {hx, hy}, {-hx, hy}};
   for (int i = 0; i < 4; ++i) {
     const float x = cx + c * corner[i][0] - s * corner[i][1];
     const float y = cy + s * corner[i][0] + c * corner[i][1];
-    o.OBB_Corners_Body[i] = {x, y, o.f32_OBB_ZMin};
-    o.OBB_Corners_Body[i + 4] = {x, y, o.f32_OBB_ZMax};
+    o.detection.obb_corners_level[i] = {x, y, o.detection.f32_OBB_ZMin};
+    o.detection.obb_corners_level[i + 4] = {x, y, o.detection.f32_OBB_ZMax};
   }
   for (int i = 0; i < 7; ++i) {
     pcl::PointXYZI p; p.x = cx + 0.1f * i; p.y = cy; p.z = -0.5f; p.intensity = 3.f;
-    o.pcl_ClusterPoints.push_back(p);
+    o.detection.pcl_ClusterPoints.push_back(p);
   }
   return o;
 }
@@ -82,12 +83,12 @@ Pose BaseFromLevel(const Context& c) {
 Vec ToVec(const geometry_msgs::Point& p) { return Vec(p.x, p.y, p.z); }
 
 void ExpectGeometry(const asmc_msgs::LidarObject& msg, const TrackedObject& o, const Pose& t) {
-  EXPECT_NEAR((ToVec(msg.center) - t * Vec(o.f32_OBB_CenterX, o.f32_OBB_CenterY, o.f32_OBB_CenterZ)).norm(), 0., 1e-9);
+  EXPECT_NEAR((ToVec(msg.center) - t * Vec(o.detection.f32_OBB_CenterX, o.detection.f32_OBB_CenterY, o.detection.f32_OBB_CenterZ)).norm(), 0., 1e-9);
   for (int i = 0; i < 8; ++i) {
-    const auto& p = o.OBB_Corners_Body[i];
+    const auto& p = o.detection.obb_corners_level[i];
     EXPECT_NEAR((ToVec(msg.obb_corners[i]) - t * Vec(p.x, p.y, p.z)).norm(), 0., 1e-9) << "corner " << i;
   }
-  const Vec axis = t.linear() * Vec(std::cos(o.f32_OBB_YawRad), std::sin(o.f32_OBB_YawRad), 0.);
+  const Vec axis = t.linear() * Vec(std::cos(o.detection.f32_OBB_YawRad), std::sin(o.detection.f32_OBB_YawRad), 0.);
   EXPECT_NEAR(msg.yaw, std::atan2(axis.y(), axis.x()), 1e-9);
   // The published yaw follows the transformed bottom edge 0->1 (no tilt here
   // beyond the small leveling/map angles, so only the axis is compared above).
@@ -135,8 +136,8 @@ TEST(TypedOutput, ObservedLocalAndMapMatchIndependentTransform) {
 TEST(TypedOutput, MessageFieldsFollowMain) {
   TypedOutput output;
   auto o = MakeTrack(11, 8.f, 1.f, 0.4f);
-  o.s32_Age = -3;
-  o.str_ObjectClass = "pedestrian"; o.str_YoloClass = "person";
+  o.tracking.s32_Age = -3;
+  o.camera.str_ObjectClass = "pedestrian"; o.camera.str_YoloClass = "person";
   const auto arrays = output.Observed(MakeResult(kStamp, true), {o});
   ASSERT_EQ(arrays.local.objects.size(), 1u);
   const auto& m = arrays.local.objects[0];
@@ -163,14 +164,14 @@ TEST(TypedOutput, FiltersMissedNegativeIdEmptyAndNoise) {
   std::vector<TrackedObject> objects;
   objects.push_back(MakeTrack(5, 10.f, 0.f, 0.f));
   auto detection = MakeTrack(-1, 11.f, 1.f, 0.f); objects.push_back(detection);
-  auto missed = MakeTrack(6, 12.f, 2.f, 0.f); missed.s32_MissCount = 2; objects.push_back(missed);
-  auto empty = MakeTrack(7, 13.f, 3.f, 0.f); empty.pcl_ClusterPoints.clear(); objects.push_back(empty);
-  auto noise = MakeTrack(8, 14.f, 4.f, 0.f); noise.str_ObjectClass = "noise"; objects.push_back(noise);
-  auto ground = MakeTrack(9, 15.f, 5.f, 0.f); ground.str_ObjectClass = "지면노이즈"; objects.push_back(ground);
-  auto unknown = MakeTrack(10, 16.f, 6.f, 0.f); unknown.str_ObjectClass = "unknown"; objects.push_back(unknown);
+  auto missed = MakeTrack(6, 12.f, 2.f, 0.f); missed.tracking.s32_MissCount = 2; objects.push_back(missed);
+  auto empty = MakeTrack(7, 13.f, 3.f, 0.f); empty.detection.pcl_ClusterPoints.clear(); objects.push_back(empty);
+  auto noise = MakeTrack(8, 14.f, 4.f, 0.f); noise.camera.str_ObjectClass = "noise"; objects.push_back(noise);
+  auto ground = MakeTrack(9, 15.f, 5.f, 0.f); ground.camera.str_ObjectClass = "지면노이즈"; objects.push_back(ground);
+  auto unknown = MakeTrack(10, 16.f, 6.f, 0.f); unknown.camera.str_ObjectClass = "unknown"; objects.push_back(unknown);
   // An excluded object never invalidates the frame, even with bad dimensions.
-  auto bad_missed = MakeTrack(12, 17.f, 7.f, 0.f); bad_missed.s32_MissCount = 1;
-  bad_missed.f32_OBB_Width = NAN; objects.push_back(bad_missed);
+  auto bad_missed = MakeTrack(12, 17.f, 7.f, 0.f); bad_missed.tracking.s32_MissCount = 1;
+  bad_missed.detection.obb_length_m = NAN; objects.push_back(bad_missed);
   const auto arrays = output.Observed(MakeResult(kStamp, true), objects);
   EXPECT_EQ(arrays.local.status, Array::OBSERVED);
   EXPECT_EQ(Ids(arrays.local), (std::set<int>{5, 10}));
@@ -179,7 +180,7 @@ TEST(TypedOutput, FiltersMissedNegativeIdEmptyAndNoise) {
 
 TEST(TypedOutput, ObservedEmptyWhenNothingIsExportable) {
   TypedOutput output;
-  auto missed = MakeTrack(6, 12.f, 2.f, 0.f); missed.s32_MissCount = 1;
+  auto missed = MakeTrack(6, 12.f, 2.f, 0.f); missed.tracking.s32_MissCount = 1;
   const auto arrays = output.Observed(MakeResult(kStamp, true), {missed});
   ASSERT_TRUE(arrays.accepted);
   EXPECT_EQ(arrays.local.status, Array::OBSERVED_EMPTY);
@@ -224,9 +225,9 @@ TEST(TypedOutput, InvalidDimensionMakesBothArraysInputInvalid) {
   for (int variant = 0; variant < 3; ++variant) {
     TypedOutput output;
     auto bad = MakeTrack(2, 10.f, 0.f, 0.f);
-    if (variant == 0) bad.f32_OBB_Width = NAN;
-    if (variant == 1) bad.f32_OBB_Height = -0.5f;
-    if (variant == 2) bad.f32_OBB_ZMax = bad.f32_OBB_ZMin - 0.2f;  // negative height
+    if (variant == 0) bad.detection.obb_length_m = NAN;
+    if (variant == 1) bad.detection.obb_width_m = -0.5f;
+    if (variant == 2) bad.detection.f32_OBB_ZMax = bad.detection.f32_OBB_ZMin - 0.2f;  // negative height
     const auto arrays = output.Observed(MakeResult(kStamp, true), {MakeTrack(1, 5.f, 0.f, 0.f), bad});
     ASSERT_TRUE(arrays.accepted) << variant;
     EXPECT_TRUE(arrays.observed);
@@ -246,7 +247,7 @@ TEST(TypedOutput, InvalidDimensionMakesBothArraysInputInvalid) {
 TEST(TypedOutput, NonFiniteGeometryMakesBothArraysInputInvalid) {
   TypedOutput output;
   auto bad = MakeTrack(2, 10.f, 0.f, 0.f);
-  bad.OBB_Corners_Body[5].z = NAN;
+  bad.detection.obb_corners_level[5].z = NAN;
   const auto arrays = output.Observed(MakeResult(kStamp, true), {bad});
   EXPECT_EQ(arrays.local.status, Array::INPUT_INVALID);
   EXPECT_EQ(arrays.local.reason, "nonfinite_or_invalid_geometry");

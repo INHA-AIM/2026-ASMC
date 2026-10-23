@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // L-shape OBB fitting and matched-track yaw stabilization.
 // Ported from Main src/Lidar/Tracking/Tracking.cpp namespace obb_util at 8f93c22e.
 // Operation order, double/float types and tie-breaking are kept exactly.
@@ -159,19 +160,19 @@ void computeOBB3D_LShape(const Cloud& cloud, OBB2D& obb2d, double& zMin, double&
 // Ported from Main Tracking.cpp:203-223 (8f93c22e)
 void writeOBBToObject(TrackedObject& object, const OBB2D& obb2d, double zMin, double zMax,
                       const std::array<P3, 8>& corners3d) {
-  object.f32_OBB_CenterX = static_cast<float>(obb2d.cx);
-  object.f32_OBB_CenterY = static_cast<float>(obb2d.cy);
-  object.f32_OBB_CenterZ = static_cast<float>(0.5 * (zMin + zMax));
-  object.f32_OBB_Width = static_cast<float>(obb2d.w);
-  object.f32_OBB_Height = static_cast<float>(obb2d.h);
-  object.f32_OBB_ZMin = static_cast<float>(zMin);
-  object.f32_OBB_ZMax = static_cast<float>(zMax);
-  object.f32_OBB_YawRad = static_cast<float>(obb2d.yaw);
+  object.detection.f32_OBB_CenterX = static_cast<float>(obb2d.cx);
+  object.detection.f32_OBB_CenterY = static_cast<float>(obb2d.cy);
+  object.detection.f32_OBB_CenterZ = static_cast<float>(0.5 * (zMin + zMax));
+  object.detection.obb_length_m = static_cast<float>(obb2d.w);
+  object.detection.obb_width_m = static_cast<float>(obb2d.h);
+  object.detection.f32_OBB_ZMin = static_cast<float>(zMin);
+  object.detection.f32_OBB_ZMax = static_cast<float>(zMax);
+  object.detection.f32_OBB_YawRad = static_cast<float>(obb2d.yaw);
 
   for (int i = 0; i < 8; ++i) {
-    object.OBB_Corners_Body[i].x = static_cast<float>(corners3d[i].x);
-    object.OBB_Corners_Body[i].y = static_cast<float>(corners3d[i].y);
-    object.OBB_Corners_Body[i].z = static_cast<float>(corners3d[i].z);
+    object.detection.obb_corners_level[i].x = static_cast<float>(corners3d[i].x);
+    object.detection.obb_corners_level[i].y = static_cast<float>(corners3d[i].y);
+    object.detection.obb_corners_level[i].z = static_cast<float>(corners3d[i].z);
   }
 }
 
@@ -179,14 +180,14 @@ void writeOBBToObject(TrackedObject& object, const OBB2D& obb2d, double zMin, do
 void stabilizeMatchedOBB(const TrackedObject& previous, TrackedObject& current, double egoYawNowDeg) {
   // During a miss only the filter state follows the ego frame, so the first
   // frame after a re-detection keeps the raw L-shape.
-  if (current.pcl_ClusterPoints.empty() || previous.s32_MissCount > 0) return;
+  if (current.detection.pcl_ClusterPoints.empty() || previous.tracking.s32_MissCount > 0) return;
 
   const double egoYawNow = egoYawNowDeg * kPi / 180.0;
-  const double egoYawDelta = wrapToPi(egoYawNow - previous.f32_PrevYaw);
-  const double predictedYaw = normalizeAxisYaw(static_cast<double>(previous.f32_OBB_YawRad) - egoYawDelta);
-  const double rawYaw = current.f32_OBB_YawRad;
+  const double egoYawDelta = wrapToPi(egoYawNow - previous.tracking.f32_PrevYaw);
+  const double predictedYaw = normalizeAxisYaw(static_cast<double>(previous.detection.f32_OBB_YawRad) - egoYawDelta);
+  const double rawYaw = current.detection.f32_OBB_YawRad;
   // Preserved: float W/H division, promoted to double by the ternary.
-  const double aspectRatio = current.f32_OBB_Height > 1e-6f ? current.f32_OBB_Width / current.f32_OBB_Height
+  const double aspectRatio = current.detection.obb_width_m > 1e-6f ? current.detection.obb_length_m / current.detection.obb_width_m
                                                             : std::numeric_limits<double>::infinity();
 
   double filteredYaw = predictedYaw;
@@ -200,7 +201,7 @@ void stabilizeMatchedOBB(const TrackedObject& previous, TrackedObject& current, 
   double zMin = 0.0;
   double zMax = 0.0;
   std::array<P3, 8> corners3d{};
-  if (computeOBBAtYaw(current.pcl_ClusterPoints, filteredYaw, filteredObb, zMin, zMax, corners3d)) {
+  if (computeOBBAtYaw(current.detection.pcl_ClusterPoints, filteredYaw, filteredObb, zMin, zMax, corners3d)) {
     writeOBBToObject(current, filteredObb, zMin, zMax, corners3d);
   }
 }

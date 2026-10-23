@@ -5,7 +5,7 @@
 // 8f93c22e, common-geometry path only (local association, no map-centre cost).
 
 #include <asmc_lidar/geometry/scan_frame.hpp>
-#include <asmc_lidar/core/types.hpp>
+#include <asmc_lidar/tracking/track.hpp>
 
 #include <pcl/PointIndices.h>
 

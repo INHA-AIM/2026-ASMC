@@ -8,7 +8,7 @@
 // same XY at zMax. u/v use the yaw passed in (not the normalized stored yaw),
 // so the only invariant is "edge 0->1 is parallel to +-yaw".
 
-#include <asmc_lidar/core/types.hpp>
+#include <asmc_lidar/tracking/track.hpp>
 
 #include <array>
 #include <cstddef>
@@ -65,7 +65,7 @@ void writeOBBToObject(TrackedObject& object, const OBB2D& obb2d, double zMin, do
 
 // Matched-track yaw EMA. Skipped when the current cluster is empty or the
 // previous track was missed (MissCount > 0). predicted = normalizeAxisYaw(prev yaw
-// - wrapToPi(egoYawNowDeg*pi/180 - prev.f32_PrevYaw)); aspect W/H >= 1.2 blends
+// - wrapToPi(egoYawNowDeg*pi/180 - prev.tracking.f32_PrevYaw)); aspect W/H >= 1.2 blends
 // 0.25 of the pi-periodic error, otherwise the prediction is kept. The whole box
 // is then refit to the current points at the filtered yaw.
 void stabilizeMatchedOBB(const TrackedObject& previous, TrackedObject& current, double egoYawNowDeg);

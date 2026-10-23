@@ -188,7 +188,7 @@ class LidarPipelineNode {
     std::int64_t last_output_steady_ns = 0;
     std::int64_t gps_sample_stamp_ns = 0, gps_sample_arrival_ns = 0;
     double gps_age_ms = 0.;
-    std::uint64_t input_generation = 0;
+    std::uint64_t scan_sequence = 0;
     std::string last_reject_reason;
   };
 
@@ -384,7 +384,7 @@ class LidarPipelineNode {
     }
     // Main FrameBoundary scan time: ROS source stamp, steady receipt.
     pending.scan.time = asmc::lidar::Observation{stamp, receipt, receipt, "ros", config_.stamp_provenance, "steady"};
-    pending.scan.generation = ++generation_;  // Main u64_LidarFrameGeneration
+    pending.scan.scan_sequence = ++scan_sequence_;  // Main u64_LidarFrameGeneration
     {
       std::lock_guard<std::mutex> lock(slot_mutex_);
       if (slot_) ++overwritten_scans_;  // latest frame wins (Main TemporalThread)
@@ -481,7 +481,7 @@ class LidarPipelineNode {
     stats_.last_output_steady_ns = camera::steady_now_ns();
     if (out.result.processed) {
       const auto& map = out.result.context.map_pose;
-      stats_.input_generation = out.result.context.input_generation;
+      stats_.scan_sequence = out.result.context.scan_sequence;
       if (!map.sample_stamps.empty() && !map.sample_arrivals.empty()) {
         stats_.gps_sample_stamp_ns = map.sample_stamps.back();
         stats_.gps_sample_arrival_ns = map.sample_arrivals.back();
@@ -546,7 +546,7 @@ class LidarPipelineNode {
       value("receipt_clock", "steady");
       number("receipt_ns", stats_.last_receipt_ns);
       number("processing_ns", stats_.last_processing_ns);
-      number("input_generation", stats_.input_generation);
+      number("scan_sequence", stats_.scan_sequence);
       if (stats_.gps_sample_stamp_ns) {
         number("gps_sample_stamp_ns", stats_.gps_sample_stamp_ns);
         number("gps_sample_arrival_ns", stats_.gps_sample_arrival_ns);
@@ -623,7 +623,7 @@ class LidarPipelineNode {
   std::thread worker_;
 
   std::atomic<std::uint64_t> points_received_{0}, overwritten_scans_{0}, conversion_errors_{0};
-  std::uint64_t generation_ = 0;  // LiDAR callback only
+  std::uint64_t scan_sequence_ = 0;  // LiDAR callback only
 
   std::mutex cache_mutex_;
   trace::LocalInputCache cache_;

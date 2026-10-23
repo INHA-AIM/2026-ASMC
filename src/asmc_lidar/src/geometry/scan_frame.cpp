@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // Per-scan coordinate context and track re-expression between scan frames.
 // Ported from Main src/Geometry/FrameBoundary.cpp at 8f93c22e (tracker fix),
 // common-geometry behaviour only: Main's namespace globals `current`,
@@ -46,12 +47,12 @@ void ScanFrame::Configure(const VehicleSpec& vehicle, const std::string& calibra
 
 // Ported from Main FrameBoundary.cpp:149-163 (8f93c22e)
 void ScanFrame::Prepare(const asmc::lidar::Observation& time, const LocalState& local,
-                        const asmc::lidar::PoseSelection& map_pose, std::uint64_t input_generation) {
+                        const asmc::lidar::PoseSelection& map_pose, std::uint64_t scan_sequence) {
   current_ = asmc::lidar::Context{};
   scan_attitude_ = MapRotation(local);
   scan_yaw_ = local.st_IMU.f32_Yaw_rad;
   current_.time = time;
-  current_.input_generation = input_generation;
+  current_.scan_sequence = scan_sequence;
   current_.frame = asmc::lidar::Frame::LeveledSensor;
   current_.base_from_sensor = mount_;
   current_.calibration_source = calibration_id_;
@@ -78,49 +79,49 @@ asmc::lidar::Vec ScanFrame::OriginInYaw() const {
 
 // Ported from Main FrameBoundary.cpp:181-186 (8f93c22e)
 void ScanFrame::RecordTrackingFrame(TrackedObject& object) const {
-  object.tracking_frame_valid = true;
-  object.tracking_height_input = object.f32_CoreZ;
-  object.tracking_yaw_from_input = YawFromInput();
-  object.tracking_origin_in_yaw = OriginInYaw();
+  object.tracking.tracking_frame_valid = true;
+  object.tracking.tracking_height_input = object.detection.f32_CoreZ;
+  object.tracking.tracking_yaw_from_input = YawFromInput();
+  object.tracking.tracking_origin_in_yaw = OriginInYaw();
 }
 
 // Ported from Main FrameBoundary.cpp:190-195 (8f93c22e)
 ScanFrame::FrameChange ScanFrame::ChangeSincePrevious(const TrackedObject& object, double yaw_now_rad) const {
   const auto inverse = YawFromInput().transpose().eval();
-  const auto yaw_change = asmc::lidar::rpy(0, 0, object.f32_PrevYaw - yaw_now_rad);
-  return {(inverse * yaw_change * object.tracking_yaw_from_input).eval(),
-          (inverse * (yaw_change * object.tracking_origin_in_yaw - OriginInYaw())).eval()};
+  const auto yaw_change = asmc::lidar::rpy(0, 0, object.tracking.f32_PrevYaw - yaw_now_rad);
+  return {(inverse * yaw_change * object.tracking.tracking_yaw_from_input).eval(),
+          (inverse * (yaw_change * object.tracking.tracking_origin_in_yaw - OriginInYaw())).eval()};
 }
 
 // Ported from Main FrameBoundary.cpp:196-209 (8f93c22e)
 void ScanFrame::AlignState(TrackedObject& object, const FrameChange& change, double yaw_now_rad) const {
   // Re-express the previous state before the unchanged relative CA prediction.
   // Do not subtract CAN displacement: relative CA already models ego motion.
-  const asmc::lidar::Vec position(object.Eigen_KfState_CA(0), object.Eigen_KfState_CA(1),
-                                  object.tracking_height_input);
+  const asmc::lidar::Vec position(object.tracking.Eigen_KfState_CA(0), object.tracking.Eigen_KfState_CA(1),
+                                  object.tracking.tracking_height_input);
   const auto next = (change.rotation * position + change.translation).eval();
   Eigen::Matrix<float, 6, 6> jacobian = Eigen::Matrix<float, 6, 6>::Zero();
   for (unsigned block = 0; block < 3; ++block)
     jacobian.block<2, 2>(2 * block, 2 * block) = change.rotation.topLeftCorner<2, 2>().cast<float>();
-  object.Eigen_KfState_CA = jacobian * object.Eigen_KfState_CA;
-  object.Eigen_KfState_CA(0) = next.x();
-  object.Eigen_KfState_CA(1) = next.y();
-  object.Eigen_KfP_CA = jacobian * object.Eigen_KfP_CA * jacobian.transpose();
-  object.f32_PrevYaw = yaw_now_rad;
+  object.tracking.Eigen_KfState_CA = jacobian * object.tracking.Eigen_KfState_CA;
+  object.tracking.Eigen_KfState_CA(0) = next.x();
+  object.tracking.Eigen_KfState_CA(1) = next.y();
+  object.tracking.Eigen_KfP_CA = jacobian * object.tracking.Eigen_KfP_CA * jacobian.transpose();
+  object.tracking.f32_PrevYaw = yaw_now_rad;
   RecordTrackingFrame(object);
-  object.tracking_height_input = next.z();
+  object.tracking.tracking_height_input = next.z();
 }
 
 // Ported from Main FrameBoundary.cpp:211-214 (8f93c22e)
 void ScanFrame::AlignTrackingState(TrackedObject& object, double yaw_now_rad) const {
-  if (!object.tracking_frame_valid) return;
+  if (!object.tracking.tracking_frame_valid) return;
   AlignState(object, ChangeSincePrevious(object, yaw_now_rad), yaw_now_rad);
 }
 
 // Ported from Main FrameBoundary.cpp:215-242 (8f93c22e); EdgeFollowStats added.
 void ScanFrame::AlignTrackingFrame(TrackedObject& object, double yaw_now_rad) const {
   ++edge_stats_.calls;
-  if (!object.tracking_frame_valid) {
+  if (!object.tracking.tracking_frame_valid) {
     ++edge_stats_.not_recorded;
     return;
   }
@@ -134,21 +135,21 @@ void ScanFrame::AlignTrackingFrame(TrackedObject& object, double yaw_now_rad) co
     y = p.y();
     z = p.z();
   };
-  const float previous_center_z = object.f32_OBB_CenterZ;
-  move(object.f32_OBB_CenterX, object.f32_OBB_CenterY, object.f32_OBB_CenterZ);
-  object.f32_OBB_ZMin += object.f32_OBB_CenterZ - previous_center_z;
-  object.f32_OBB_ZMax += object.f32_OBB_CenterZ - previous_center_z;
-  for (auto& corner : object.OBB_Corners_Body) move(corner.x, corner.y, corner.z);
+  const float previous_center_z = object.detection.f32_OBB_CenterZ;
+  move(object.detection.f32_OBB_CenterX, object.detection.f32_OBB_CenterY, object.detection.f32_OBB_CenterZ);
+  object.detection.f32_OBB_ZMin += object.detection.f32_OBB_CenterZ - previous_center_z;
+  object.detection.f32_OBB_ZMax += object.detection.f32_OBB_CenterZ - previous_center_z;
+  for (auto& corner : object.detection.obb_corners_level) move(corner.x, corner.y, corner.z);
   // Preserved: std::cos/std::sin of the float yaw (float overloads), as in Main.
-  const auto axis = (change.rotation * asmc::lidar::Vec(std::cos(object.f32_OBB_YawRad),
-                                                        std::sin(object.f32_OBB_YawRad), 0))
+  const auto axis = (change.rotation * asmc::lidar::Vec(std::cos(object.detection.f32_OBB_YawRad),
+                                                        std::sin(object.detection.f32_OBB_YawRad), 0))
                         .eval();
   double yaw = std::atan2(axis.y(), axis.x());
   // Corner 0->1 is the yaw edge (computeOBBAtYaw order). A tilted frame change
   // gives that edge a z component the 2D yaw cannot carry, so follow the edge.
   // That correction is tiny; a large one means another corner order, so skip it.
-  const auto& first = object.OBB_Corners_Body[0];
-  const auto& second = object.OBB_Corners_Body[1];
+  const auto& first = object.detection.obb_corners_level[0];
+  const auto& second = object.detection.obb_corners_level[1];
   if (std::hypot(second.x - first.x, second.y - first.y) > 1e-6) {
     const double correction = std::remainder(std::atan2(second.y - first.y, second.x - first.x) - yaw, M_PI);
     if (std::abs(correction) < .1) {
@@ -162,7 +163,7 @@ void ScanFrame::AlignTrackingFrame(TrackedObject& object, double yaw_now_rad) co
   } else {
     ++edge_stats_.degenerate_edge;
   }
-  object.f32_OBB_YawRad = std::atan2(std::sin(yaw), std::cos(yaw));
+  object.detection.f32_OBB_YawRad = std::atan2(std::sin(yaw), std::cos(yaw));
   AlignState(object, change, yaw_now_rad);
 }
 

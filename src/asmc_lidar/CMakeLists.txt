@@ -146,10 +146,10 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/fusion/buffer_camera_source.cpp)
   set_target_properties(asmc_lidar_pipeline PROPERTIES POSITION_INDEPENDENT_CODE ON)
   target_include_directories(asmc_lidar_pipeline
-    PUBLIC include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${ASMC_LIDAR_GEOGRAPHICLIB_INCLUDE_DIR}
+    PUBLIC include ${PCL_INCLUDE_DIRS} ${ASMC_LIDAR_GEOGRAPHICLIB_INCLUDE_DIR}
     PRIVATE src/experimental/tunnel_filter)
   target_link_libraries(asmc_lidar_pipeline PUBLIC asmc_lidar_frame_time asmc_lidar_camera_core
-    ${PCL_LIBRARIES} ${ASMC_LIDAR_GEOGRAPHICLIB_LIBRARY} ${catkin_LIBRARIES})
+    ${PCL_LIBRARIES} ${ASMC_LIDAR_GEOGRAPHICLIB_LIBRARY})
   target_compile_options(asmc_lidar_pipeline PRIVATE -Wall -Wextra)
   # Preserved PR #102 core: byte-identical copy, compiled without new warnings.
   set_source_files_properties(src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.cpp

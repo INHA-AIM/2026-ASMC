@@ -10,7 +10,7 @@
 // without one keeps Main's 2D yaw-rotation fallback.
 
 #include <asmc_lidar/geometry/scan_frame.hpp>
-#include <asmc_lidar/core/types.hpp>
+#include <asmc_lidar/tracking/track.hpp>
 
 #include <utility>
 

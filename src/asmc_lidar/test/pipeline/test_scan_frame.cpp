@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // ScanFrame port tests (Main Geometry/FrameBoundary.cpp at 8f93c22e) plus the
 // tracker-fix Kalman test and the base re-expression test of Main
 // test/test_frame_boundary_ros.cpp, with ScanFrame configured directly instead
@@ -121,22 +122,22 @@ std::array<Vec, 8> WorldCorners(const WorldBox& box) {
 // Main test_frame_boundary_ros.cpp:220-248 BoxDetection.
 TrackedObject BoxDetection(const TrackScan& scan, const WorldBox& box) {
   TrackedObject out{};
-  out.s32_Id = -1;
-  out.str_ObjectClass = "car";
-  out.str_YoloClass = "car";
+  out.tracking.s32_Id = -1;
+  out.camera.str_ObjectClass = "car";
+  out.camera.str_YoloClass = "car";
   const auto world = WorldCorners(box);
   double low = 1e9, high = -1e9;
-  out.f32_MinX = out.f32_MinY = 1e9;
-  out.f32_MaxX = out.f32_MaxY = -1e9;
+  out.detection.f32_MinX = out.detection.f32_MinY = 1e9;
+  out.detection.f32_MaxX = out.detection.f32_MaxY = -1e9;
   for (unsigned i = 0; i < 8; ++i) {
     const auto p = scan.Point(world[i]);
-    out.OBB_Corners_Body[i] = {float(p.x()), float(p.y()), float(p.z())};
+    out.detection.obb_corners_level[i] = {float(p.x()), float(p.y()), float(p.z())};
     low = std::min(low, p.z());
     high = std::max(high, p.z());
-    out.f32_MinX = std::min<float>(out.f32_MinX, p.x());
-    out.f32_MaxX = std::max<float>(out.f32_MaxX, p.x());
-    out.f32_MinY = std::min<float>(out.f32_MinY, p.y());
-    out.f32_MaxY = std::max<float>(out.f32_MaxY, p.y());
+    out.detection.f32_MinX = std::min<float>(out.detection.f32_MinX, p.x());
+    out.detection.f32_MaxX = std::max<float>(out.detection.f32_MaxX, p.x());
+    out.detection.f32_MinY = std::min<float>(out.detection.f32_MinY, p.y());
+    out.detection.f32_MaxY = std::max<float>(out.detection.f32_MaxY, p.y());
   }
   static const int edges[12][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
                                    {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
@@ -147,7 +148,7 @@ TrackedObject BoxDetection(const TrackScan& scan, const WorldBox& box) {
     p.y = q.y();
     p.z = q.z();
     p.intensity = 1;
-    out.pcl_ClusterPoints.push_back(p);
+    out.detection.pcl_ClusterPoints.push_back(p);
   }
   for (const auto& e : edges) {
     pcl::PointXYZI p;
@@ -156,53 +157,53 @@ TrackedObject BoxDetection(const TrackScan& scan, const WorldBox& box) {
     p.y = q.y();
     p.z = q.z();
     p.intensity = 1;
-    out.pcl_ClusterPoints.push_back(p);
+    out.detection.pcl_ClusterPoints.push_back(p);
   }
   const auto center = scan.Point(box.center), axis = scan.Direction(Heading(box));
-  out.f32_CoreX = out.f32_OBB_CenterX = center.x();
-  out.f32_CoreY = out.f32_OBB_CenterY = center.y();
-  out.f32_CoreZ = out.f32_OBB_CenterZ = center.z();
-  out.f32_OBB_Width = box.length;
-  out.f32_OBB_Height = box.width;
-  out.f32_OBB_ZMin = low;
-  out.f32_OBB_ZMax = high;
-  out.f32_OBB_YawRad = std::atan2(axis.y(), axis.x());
+  out.detection.f32_CoreX = out.detection.f32_OBB_CenterX = center.x();
+  out.detection.f32_CoreY = out.detection.f32_OBB_CenterY = center.y();
+  out.detection.f32_CoreZ = out.detection.f32_OBB_CenterZ = center.z();
+  out.detection.obb_length_m = box.length;
+  out.detection.obb_width_m = box.width;
+  out.detection.f32_OBB_ZMin = low;
+  out.detection.f32_OBB_ZMax = high;
+  out.detection.f32_OBB_YawRad = std::atan2(axis.y(), axis.x());
   return out;
 }
 // Main test_frame_boundary_ros.cpp:32-44 Detection.
 TrackedObject Detection(double x, double y) {
   TrackedObject out{};
-  out.s32_Id = -1;
-  out.str_ObjectClass = "car";
-  out.str_YoloClass = "car";
-  out.f32_CoreX = out.f32_OBB_CenterX = x;
-  out.f32_CoreY = out.f32_OBB_CenterY = y;
-  out.f32_CoreZ = out.f32_OBB_CenterZ = -.2;
-  out.f32_OBB_Width = 1.;
-  out.f32_OBB_Height = .8;
-  out.f32_OBB_ZMin = -.5;
-  out.f32_OBB_ZMax = .5;
-  out.f32_MinX = x - .5;
-  out.f32_MaxX = x + .5;
-  out.f32_MinY = y - .4;
-  out.f32_MaxY = y + .4;
+  out.tracking.s32_Id = -1;
+  out.camera.str_ObjectClass = "car";
+  out.camera.str_YoloClass = "car";
+  out.detection.f32_CoreX = out.detection.f32_OBB_CenterX = x;
+  out.detection.f32_CoreY = out.detection.f32_OBB_CenterY = y;
+  out.detection.f32_CoreZ = out.detection.f32_OBB_CenterZ = -.2;
+  out.detection.obb_length_m = 1.;
+  out.detection.obb_width_m = .8;
+  out.detection.f32_OBB_ZMin = -.5;
+  out.detection.f32_OBB_ZMax = .5;
+  out.detection.f32_MinX = x - .5;
+  out.detection.f32_MaxX = x + .5;
+  out.detection.f32_MinY = y - .4;
+  out.detection.f32_MaxY = y + .4;
   for (unsigned i = 0; i < 8; ++i) {
-    out.OBB_Corners_Body[i] = {float(x + ((i & 1) ? .5 : -.5)), float(y + ((i & 2) ? .4 : -.4)),
+    out.detection.obb_corners_level[i] = {float(x + ((i & 1) ? .5 : -.5)), float(y + ((i & 2) ? .4 : -.4)),
                                float((i & 4) ? .5 : -.5)};
     pcl::PointXYZI p;
-    p.x = out.OBB_Corners_Body[i].x;
-    p.y = out.OBB_Corners_Body[i].y;
-    p.z = out.OBB_Corners_Body[i].z;
+    p.x = out.detection.obb_corners_level[i].x;
+    p.y = out.detection.obb_corners_level[i].y;
+    p.z = out.detection.obb_corners_level[i].z;
     p.intensity = 1;
-    out.pcl_ClusterPoints.push_back(p);
+    out.detection.pcl_ClusterPoints.push_back(p);
   }
   return out;
 }
 
 double AxisError(double a, double b) { return std::abs(std::remainder(a - b, M_PI)); }
 double CornerYaw(const TrackedObject& o) {
-  const auto& a = o.OBB_Corners_Body[0];
-  const auto& b = o.OBB_Corners_Body[1];
+  const auto& a = o.detection.obb_corners_level[0];
+  const auto& b = o.detection.obb_corners_level[1];
   return std::atan2(b.y - a.y, b.x - a.x);
 }
 double ScanYaw(const TrackScan& scan, const Vec& world_a, const Vec& world_b) {
@@ -210,33 +211,33 @@ double ScanYaw(const TrackScan& scan, const Vec& world_a, const Vec& world_b) {
   return std::atan2(d.y(), d.x());
 }
 void ExpectObbSelfConsistent(const TrackedObject& o, const char* role) {
-  EXPECT_LT(AxisError(o.f32_OBB_YawRad, CornerYaw(o)), kAngTol) << role << " yaw axis vs corner 0->1 edge";
+  EXPECT_LT(AxisError(o.detection.f32_OBB_YawRad, CornerYaw(o)), kAngTol) << role << " yaw axis vs corner 0->1 edge";
   Vec mean = Vec::Zero();
-  for (const auto& c : o.OBB_Corners_Body) mean += Vec(c.x, c.y, c.z) / 8.;
-  EXPECT_NEAR(mean.x(), o.f32_OBB_CenterX, kPosTol) << role;
-  EXPECT_NEAR(mean.y(), o.f32_OBB_CenterY, kPosTol) << role;
-  EXPECT_NEAR(mean.z(), o.f32_OBB_CenterZ, kPosTol) << role;
+  for (const auto& c : o.detection.obb_corners_level) mean += Vec(c.x, c.y, c.z) / 8.;
+  EXPECT_NEAR(mean.x(), o.detection.f32_OBB_CenterX, kPosTol) << role;
+  EXPECT_NEAR(mean.y(), o.detection.f32_OBB_CenterY, kPosTol) << role;
+  EXPECT_NEAR(mean.z(), o.detection.f32_OBB_CenterZ, kPosTol) << role;
 }
 void ExpectCarriedBox(const TrackedObject& o, const TrackScan& scan, const WorldBox& box, double z_extent,
                       bool kf_at_center = true) {
-  EXPECT_NEAR(.5 * (o.f32_OBB_ZMin + o.f32_OBB_ZMax), o.f32_OBB_CenterZ, kPosTol);
-  EXPECT_NEAR(o.f32_OBB_ZMax - o.f32_OBB_ZMin, z_extent, kPosTol);
+  EXPECT_NEAR(.5 * (o.detection.f32_OBB_ZMin + o.detection.f32_OBB_ZMax), o.detection.f32_OBB_CenterZ, kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_ZMax - o.detection.f32_OBB_ZMin, z_extent, kPosTol);
   const auto world = WorldCorners(box);
   for (unsigned i = 0; i < 8; ++i) {
     const auto p = scan.Point(world[i]);
-    EXPECT_NEAR(o.OBB_Corners_Body[i].x, p.x(), kPosTol) << "corner " << i;
-    EXPECT_NEAR(o.OBB_Corners_Body[i].y, p.y(), kPosTol) << "corner " << i;
-    EXPECT_NEAR(o.OBB_Corners_Body[i].z, p.z(), kPosTol) << "corner " << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].x, p.x(), kPosTol) << "corner " << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].y, p.y(), kPosTol) << "corner " << i;
+    EXPECT_NEAR(o.detection.obb_corners_level[i].z, p.z(), kPosTol) << "corner " << i;
   }
   const auto center = scan.Point(box.center);
-  EXPECT_NEAR(o.f32_OBB_CenterX, center.x(), kPosTol);
-  EXPECT_NEAR(o.f32_OBB_CenterY, center.y(), kPosTol);
-  EXPECT_NEAR(o.f32_OBB_CenterZ, center.z(), kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_CenterX, center.x(), kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_CenterY, center.y(), kPosTol);
+  EXPECT_NEAR(o.detection.f32_OBB_CenterZ, center.z(), kPosTol);
   if (kf_at_center) {
-    EXPECT_NEAR(o.Eigen_KfState_CA(0), center.x(), kPosTol);
-    EXPECT_NEAR(o.Eigen_KfState_CA(1), center.y(), kPosTol);
+    EXPECT_NEAR(o.tracking.Eigen_KfState_CA(0), center.x(), kPosTol);
+    EXPECT_NEAR(o.tracking.Eigen_KfState_CA(1), center.y(), kPosTol);
   }
-  EXPECT_LT(AxisError(o.f32_OBB_YawRad, ScanYaw(scan, world[0], world[1])), kAngTol) << "carried yaw";
+  EXPECT_LT(AxisError(o.detection.f32_OBB_YawRad, ScanYaw(scan, world[0], world[1])), kAngTol) << "carried yaw";
 }
 // Independent frame change previous scan -> current scan for direction vectors.
 Rot Change(const TrackScan& previous, const TrackScan& now) {
@@ -286,7 +287,7 @@ TEST(ScanFrame, PrepareResetsContextAndStoreLevelingSetsIt) {
   const auto& c = frame.Current();
   EXPECT_TRUE(c.applied_leveling == Rot::Identity()) << "Prepare resets the Context (Main current=Context{})";
   EXPECT_EQ(c.time.stamp_ns, 10100000000LL);
-  EXPECT_EQ(c.input_generation, 8u);
+  EXPECT_EQ(c.scan_sequence, 8u);
   EXPECT_EQ(c.frame, asmc::lidar::Frame::LeveledSensor);
   EXPECT_EQ((c.base_from_sensor.matrix() - MountOf(MountedVehicle()).matrix()).norm(), 0.);
   EXPECT_EQ(c.calibration_source, kCalibration);
@@ -307,15 +308,15 @@ TEST(ScanFrame, RecordTrackingFrameStoresThisScanFrame) {
     frame.Configure(vehicle, kCalibration);
     const auto scan = BeginTrackScan(frame, 1., .4, .05, -.02, vehicle, use_roll);
     TrackedObject o;
-    o.f32_CoreZ = -.7f;
+    o.detection.f32_CoreZ = -.7f;
     frame.RecordTrackingFrame(o);
-    EXPECT_TRUE(o.tracking_frame_valid);
-    EXPECT_EQ(o.tracking_height_input, -.7f);
+    EXPECT_TRUE(o.tracking.tracking_frame_valid);
+    EXPECT_EQ(o.tracking.tracking_height_input, -.7f);
     const Rot yaw_t = asmc::lidar::rpy(0, 0, scan.local.st_IMU.f32_Yaw_rad).transpose();
     const Rot expected_y = yaw_t * Attitude(scan.local) * scan.mount.rotation() * scan.level.transpose();
     const Vec expected_o = yaw_t * Attitude(scan.local) * scan.mount.translation();
-    EXPECT_LT((o.tracking_yaw_from_input - expected_y).norm(), 1e-12);
-    EXPECT_LT((o.tracking_origin_in_yaw - expected_o).norm(), 1e-12);
+    EXPECT_LT((o.tracking.tracking_yaw_from_input - expected_y).norm(), 1e-12);
+    EXPECT_LT((o.tracking.tracking_origin_in_yaw - expected_o).norm(), 1e-12);
   }
 }
 
@@ -329,13 +330,13 @@ void MakeTwoScans(TwoScans& t, const VehicleSpec& vehicle, bool use_roll, double
   t.frame.Configure(vehicle, kCalibration);
   t.before = BeginTrackScan(t.frame, 90., yaw0, .05, -.03, vehicle, use_roll);
   t.track = BoxDetection(t.before, kMatchedBox);
-  t.track.s32_Id = 42;
-  t.track.b_KfInitialized = true;
-  t.track.s32_KfInitCount = 2;
-  t.track.Eigen_KfState_CA << t.track.f32_CoreX, t.track.f32_CoreY, 1.2f, -.4f, .3f, .1f;
+  t.track.tracking.s32_Id = 42;
+  t.track.tracking.b_KfInitialized = true;
+  t.track.tracking.s32_KfInitCount = 2;
+  t.track.tracking.Eigen_KfState_CA << t.track.detection.f32_CoreX, t.track.detection.f32_CoreY, 1.2f, -.4f, .3f, .1f;
   for (int r = 0; r < 6; ++r)
-    for (int c = 0; c < 6; ++c) t.track.Eigen_KfP_CA(r, c) = (r == c ? 1.f : 0.f) + 0.01f * (r + 1) * (c + 1);
-  t.track.f32_PrevYaw = t.before.local.st_IMU.f32_Yaw_rad;
+    for (int c = 0; c < 6; ++c) t.track.tracking.Eigen_KfP_CA(r, c) = (r == c ? 1.f : 0.f) + 0.01f * (r + 1) * (c + 1);
+  t.track.tracking.f32_PrevYaw = t.before.local.st_IMU.f32_Yaw_rad;
   t.frame.RecordTrackingFrame(t.track);
   t.now = BeginTrackScan(t.frame, 90.1, yaw1, -.02, .04, vehicle, use_roll);
 }
@@ -349,30 +350,30 @@ TEST(ScanFrame, AlignTrackingStateMovesOnlyTheCopiedFilterState) {
       auto o = t.track;
       t.frame.AlignTrackingState(o, t.now.local.st_IMU.f32_Yaw_rad);
       // Position (x, y, recorded height) as a point.
-      const Vec p_prev(t.track.Eigen_KfState_CA(0), t.track.Eigen_KfState_CA(1), t.track.tracking_height_input);
+      const Vec p_prev(t.track.tracking.Eigen_KfState_CA(0), t.track.tracking.Eigen_KfState_CA(1), t.track.tracking.tracking_height_input);
       const Vec p_now = t.now.Point(t.before.World(p_prev));
-      EXPECT_NEAR(o.Eigen_KfState_CA(0), p_now.x(), kPosTol);
-      EXPECT_NEAR(o.Eigen_KfState_CA(1), p_now.y(), kPosTol);
-      EXPECT_NEAR(o.tracking_height_input, p_now.z(), kPosTol);
+      EXPECT_NEAR(o.tracking.Eigen_KfState_CA(0), p_now.x(), kPosTol);
+      EXPECT_NEAR(o.tracking.Eigen_KfState_CA(1), p_now.y(), kPosTol);
+      EXPECT_NEAR(o.tracking.tracking_height_input, p_now.z(), kPosTol);
       // Velocity, acceleration and covariance: top-left 2x2 of the change.
       const Eigen::Matrix2d c2 = Change(t.before, t.now).topLeftCorner<2, 2>();
       Eigen::Matrix<double, 6, 6> j = Eigen::Matrix<double, 6, 6>::Zero();
       for (int b = 0; b < 3; ++b) j.block<2, 2>(2 * b, 2 * b) = c2;
-      const Eigen::Matrix<double, 6, 1> x = j * t.track.Eigen_KfState_CA.cast<double>();
-      for (int k = 2; k < 6; ++k) EXPECT_NEAR(o.Eigen_KfState_CA(k), x(k), 1e-6) << k;
-      const Eigen::Matrix<double, 6, 6> p = j * t.track.Eigen_KfP_CA.cast<double>() * j.transpose();
-      EXPECT_LT((o.Eigen_KfP_CA.cast<double>() - p).cwiseAbs().maxCoeff(), 1e-6);
-      EXPECT_EQ(o.f32_PrevYaw, t.now.local.st_IMU.f32_Yaw_rad);
+      const Eigen::Matrix<double, 6, 1> x = j * t.track.tracking.Eigen_KfState_CA.cast<double>();
+      for (int k = 2; k < 6; ++k) EXPECT_NEAR(o.tracking.Eigen_KfState_CA(k), x(k), 1e-6) << k;
+      const Eigen::Matrix<double, 6, 6> p = j * t.track.tracking.Eigen_KfP_CA.cast<double>() * j.transpose();
+      EXPECT_LT((o.tracking.Eigen_KfP_CA.cast<double>() - p).cwiseAbs().maxCoeff(), 1e-6);
+      EXPECT_EQ(o.tracking.f32_PrevYaw, t.now.local.st_IMU.f32_Yaw_rad);
       // Re-recorded with this scan's frame.
       TrackedObject record;
       t.frame.RecordTrackingFrame(record);
-      EXPECT_TRUE(o.tracking_yaw_from_input == record.tracking_yaw_from_input);
-      EXPECT_TRUE(o.tracking_origin_in_yaw == record.tracking_origin_in_yaw);
+      EXPECT_TRUE(o.tracking.tracking_yaw_from_input == record.tracking.tracking_yaw_from_input);
+      EXPECT_TRUE(o.tracking.tracking_origin_in_yaw == record.tracking.tracking_origin_in_yaw);
       // The OBB (a current detection for matched tracks) is untouched.
-      EXPECT_EQ(o.f32_OBB_YawRad, t.track.f32_OBB_YawRad);
-      EXPECT_EQ(o.f32_OBB_CenterX, t.track.f32_OBB_CenterX);
-      EXPECT_EQ(o.f32_OBB_ZMin, t.track.f32_OBB_ZMin);
-      for (int i = 0; i < 8; ++i) EXPECT_EQ(o.OBB_Corners_Body[i].z, t.track.OBB_Corners_Body[i].z);
+      EXPECT_EQ(o.detection.f32_OBB_YawRad, t.track.detection.f32_OBB_YawRad);
+      EXPECT_EQ(o.detection.f32_OBB_CenterX, t.track.detection.f32_OBB_CenterX);
+      EXPECT_EQ(o.detection.f32_OBB_ZMin, t.track.detection.f32_OBB_ZMin);
+      for (int i = 0; i < 8; ++i) EXPECT_EQ(o.detection.obb_corners_level[i].z, t.track.detection.obb_corners_level[i].z);
     }
 }
 
@@ -386,23 +387,23 @@ TEST(ScanFrame, AlignTrackingFrameCarriesTheWholeBoxOnce) {
       auto state = t.track;
       t.frame.AlignTrackingFrame(box, t.now.local.st_IMU.f32_Yaw_rad);
       t.frame.AlignTrackingState(state, t.now.local.st_IMU.f32_Yaw_rad);
-      ExpectCarriedBox(box, t.now, kMatchedBox, t.track.f32_OBB_ZMax - t.track.f32_OBB_ZMin, false);
+      ExpectCarriedBox(box, t.now, kMatchedBox, t.track.detection.f32_OBB_ZMax - t.track.detection.f32_OBB_ZMin, false);
       ExpectObbSelfConsistent(box, "carried");
-      EXPECT_NEAR(box.f32_OBB_ZMin - t.track.f32_OBB_ZMin, box.f32_OBB_CenterZ - t.track.f32_OBB_CenterZ, 1e-6)
+      EXPECT_NEAR(box.detection.f32_OBB_ZMin - t.track.detection.f32_OBB_ZMin, box.detection.f32_OBB_CenterZ - t.track.detection.f32_OBB_CenterZ, 1e-6)
           << "Z range follows the centre";
       // The filter state takes exactly the AlignTrackingState change.
-      EXPECT_TRUE(box.Eigen_KfState_CA == state.Eigen_KfState_CA);
-      EXPECT_TRUE(box.Eigen_KfP_CA == state.Eigen_KfP_CA);
-      EXPECT_EQ(box.tracking_height_input, state.tracking_height_input);
-      EXPECT_EQ(box.f32_PrevYaw, state.f32_PrevYaw);
+      EXPECT_TRUE(box.tracking.Eigen_KfState_CA == state.tracking.Eigen_KfState_CA);
+      EXPECT_TRUE(box.tracking.Eigen_KfP_CA == state.tracking.Eigen_KfP_CA);
+      EXPECT_EQ(box.tracking.tracking_height_input, state.tracking.tracking_height_input);
+      EXPECT_EQ(box.tracking.f32_PrevYaw, state.tracking.f32_PrevYaw);
       // Not re-expressed (preserved): W/H, AABB, points, CoreZ.
-      EXPECT_EQ(box.f32_OBB_Width, t.track.f32_OBB_Width);
-      EXPECT_EQ(box.f32_MinX, t.track.f32_MinX);
-      EXPECT_EQ(box.pcl_ClusterPoints.points[0].x, t.track.pcl_ClusterPoints.points[0].x);
-      EXPECT_EQ(box.f32_CoreZ, t.track.f32_CoreZ);
+      EXPECT_EQ(box.detection.obb_length_m, t.track.detection.obb_length_m);
+      EXPECT_EQ(box.detection.f32_MinX, t.track.detection.f32_MinX);
+      EXPECT_EQ(box.detection.pcl_ClusterPoints.points[0].x, t.track.detection.pcl_ClusterPoints.points[0].x);
+      EXPECT_EQ(box.detection.f32_CoreZ, t.track.detection.f32_CoreZ);
       // Yaw stays an atan2 angle in (-pi, pi], not axis-normalized.
-      EXPECT_GT(box.f32_OBB_YawRad, -M_PI - 1e-6);
-      EXPECT_LE(box.f32_OBB_YawRad, M_PI + 1e-6);
+      EXPECT_GT(box.detection.f32_OBB_YawRad, -M_PI - 1e-6);
+      EXPECT_LE(box.detection.f32_OBB_YawRad, M_PI + 1e-6);
     }
 }
 
@@ -410,15 +411,15 @@ TEST(ScanFrame, UnrecordedObjectIsLeftUnchanged) {
   TwoScans t;
   MakeTwoScans(t, BaseVehicle(), true, .3, .36);
   auto o = t.track;
-  o.tracking_frame_valid = false;
+  o.tracking.tracking_frame_valid = false;
   const auto before = o;
   t.frame.ResetEdgeFollowStats();
   t.frame.AlignTrackingFrame(o, .36);
   t.frame.AlignTrackingState(o, .36);
-  EXPECT_TRUE(o.Eigen_KfState_CA == before.Eigen_KfState_CA);
-  EXPECT_EQ(o.f32_PrevYaw, before.f32_PrevYaw);
-  EXPECT_EQ(o.f32_OBB_YawRad, before.f32_OBB_YawRad);
-  EXPECT_EQ(o.OBB_Corners_Body[3].x, before.OBB_Corners_Body[3].x);
+  EXPECT_TRUE(o.tracking.Eigen_KfState_CA == before.tracking.Eigen_KfState_CA);
+  EXPECT_EQ(o.tracking.f32_PrevYaw, before.tracking.f32_PrevYaw);
+  EXPECT_EQ(o.detection.f32_OBB_YawRad, before.detection.f32_OBB_YawRad);
+  EXPECT_EQ(o.detection.obb_corners_level[3].x, before.detection.obb_corners_level[3].x);
   EXPECT_EQ(t.frame.edge_follow_stats().calls, 1u);
   EXPECT_EQ(t.frame.edge_follow_stats().not_recorded, 1u);
 }
@@ -432,22 +433,22 @@ TEST(ScanFrame, EdgeFollowStatsCountEveryCall) {
   t.frame.AlignTrackingFrame(box, t.now.local.st_IMU.f32_Yaw_rad);
   // 2) Value-initialized yaw-prior copy (all corners at the origin): degenerate.
   TrackedObject prior{};
-  prior.tracking_frame_valid = true;
-  prior.tracking_yaw_from_input = t.track.tracking_yaw_from_input;
-  prior.tracking_origin_in_yaw = t.track.tracking_origin_in_yaw;
-  prior.f32_PrevYaw = t.track.f32_PrevYaw;
-  prior.f32_OBB_YawRad = t.track.f32_OBB_YawRad;
+  prior.tracking.tracking_frame_valid = true;
+  prior.tracking.tracking_yaw_from_input = t.track.tracking.tracking_yaw_from_input;
+  prior.tracking.tracking_origin_in_yaw = t.track.tracking.tracking_origin_in_yaw;
+  prior.tracking.f32_PrevYaw = t.track.tracking.f32_PrevYaw;
+  prior.detection.f32_OBB_YawRad = t.track.detection.f32_OBB_YawRad;
   t.frame.AlignTrackingFrame(prior, t.now.local.st_IMU.f32_Yaw_rad);
   // 3) Foreign corner order (0->1 is the short edge): rejected, ~pi/2.
   auto foreign = t.track;
-  std::rotate(foreign.OBB_Corners_Body.begin(), foreign.OBB_Corners_Body.begin() + 1,
-              foreign.OBB_Corners_Body.begin() + 4);
-  std::rotate(foreign.OBB_Corners_Body.begin() + 4, foreign.OBB_Corners_Body.begin() + 5,
-              foreign.OBB_Corners_Body.end());
+  std::rotate(foreign.detection.obb_corners_level.begin(), foreign.detection.obb_corners_level.begin() + 1,
+              foreign.detection.obb_corners_level.begin() + 4);
+  std::rotate(foreign.detection.obb_corners_level.begin() + 4, foreign.detection.obb_corners_level.begin() + 5,
+              foreign.detection.obb_corners_level.end());
   t.frame.AlignTrackingFrame(foreign, t.now.local.st_IMU.f32_Yaw_rad);
   // 4) Unrecorded.
   auto unrecorded = t.track;
-  unrecorded.tracking_frame_valid = false;
+  unrecorded.tracking.tracking_frame_valid = false;
   t.frame.AlignTrackingFrame(unrecorded, t.now.local.st_IMU.f32_Yaw_rad);
 
   const auto& s = t.frame.edge_follow_stats();
@@ -462,8 +463,8 @@ TEST(ScanFrame, EdgeFollowStatsCountEveryCall) {
   EXPECT_NEAR(s.max_rejected_abs_rad, M_PI / 2, .05);
   // The degenerate prior is the 2D axis rotation only.
   const Vec a = Change(t.before, t.now) *
-                Vec(std::cos(t.track.f32_OBB_YawRad), std::sin(t.track.f32_OBB_YawRad), 0);
-  EXPECT_NEAR(prior.f32_OBB_YawRad, std::atan2(a.y(), a.x()), kAngTol);
+                Vec(std::cos(t.track.detection.f32_OBB_YawRad), std::sin(t.track.detection.f32_OBB_YawRad), 0);
+  EXPECT_NEAR(prior.detection.f32_OBB_YawRad, std::atan2(a.y(), a.x()), kAngTol);
   t.frame.ResetEdgeFollowStats();
   EXPECT_EQ(t.frame.edge_follow_stats().calls, 0u);
 }
@@ -487,12 +488,12 @@ TEST(FrameBoundary, TrackingReexpressesRollPitchAndNonzeroMountWithoutEgoDoubleC
   const auto old_point =
       (old_level * mount.inverse() * (ScanFrame::MapRotation(local).transpose() * fixed_in_world)).eval();
   auto previous = Detection(old_point.x(), old_point.y());
-  previous.f32_CoreZ = old_point.z();
-  previous.s32_Id = 42;
-  previous.b_KfInitialized = true;
-  previous.s32_KfInitCount = 2;
-  previous.Eigen_KfState_CA << old_point.x(), old_point.y(), 0, 0, 0, 0;
-  previous.f32_PrevYaw = .2;
+  previous.detection.f32_CoreZ = old_point.z();
+  previous.tracking.s32_Id = 42;
+  previous.tracking.b_KfInitialized = true;
+  previous.tracking.s32_KfInitCount = 2;
+  previous.tracking.Eigen_KfState_CA << old_point.x(), old_point.y(), 0, 0, 0, 0;
+  previous.tracking.f32_PrevYaw = .2;
   frame.RecordTrackingFrame(previous);
   local = Local(.28);
   local.st_IMU.f32_Roll_rad = -.12;
@@ -504,12 +505,12 @@ TEST(FrameBoundary, TrackingReexpressesRollPitchAndNonzeroMountWithoutEgoDoubleC
       (new_level * mount.inverse() * (ScanFrame::MapRotation(local).transpose() * fixed_in_world)).eval();
   auto aligned = previous;
   frame.AlignTrackingFrame(aligned, .28);
-  EXPECT_NEAR(aligned.Eigen_KfState_CA(0), new_point.x(), 1e-5);
-  EXPECT_NEAR(aligned.Eigen_KfState_CA(1), new_point.y(), 1e-5);
-  EXPECT_NEAR(aligned.tracking_height_input, new_point.z(), 1e-5);
+  EXPECT_NEAR(aligned.tracking.Eigen_KfState_CA(0), new_point.x(), 1e-5);
+  EXPECT_NEAR(aligned.tracking.Eigen_KfState_CA(1), new_point.y(), 1e-5);
+  EXPECT_NEAR(aligned.tracking.tracking_height_input, new_point.z(), 1e-5);
   // CAN=2m/s does not subtract another .2m from the relative CA state.
   auto current = Detection(new_point.x(), new_point.y());
-  current.f32_CoreZ = new_point.z();
+  current.detection.f32_CoreZ = new_point.z();
   TrackingConfig config;
   config.f32_MergedTrackRetireDistance = .5f;  // Main test TrackingConfig()
   Tracker tracker(config);
@@ -517,8 +518,8 @@ TEST(FrameBoundary, TrackingReexpressesRollPitchAndNonzeroMountWithoutEgoDoubleC
   std::vector<TrackedObject> detections{current};
   tracker.Update(detections, .1, local, frame);
   ASSERT_FALSE(detections.empty());
-  EXPECT_EQ(detections.front().s32_Id, 42);
-  EXPECT_NEAR(detections.front().f32_CoreX, new_point.x(), 1e-5);
+  EXPECT_EQ(detections.front().tracking.s32_Id, 42);
+  EXPECT_NEAR(detections.front().detection.f32_CoreX, new_point.x(), 1e-5);
 }
 
 // Port of Main test_frame_boundary_ros.cpp:357-413 (tracker fix 8f93c22e).
@@ -530,59 +531,59 @@ TEST(FrameBoundary, KalmanUpdateKeepsCurrentObbWhilePredictCarriesPreviousObb) {
     frame.Configure(vehicle, kCalibration);
     const auto before = BeginTrackScan(frame, 90., .3, .05, -.03, vehicle, roll);
     auto track = BoxDetection(before, kMatchedBox);
-    track.s32_Id = 42;
-    track.b_KfInitialized = true;
-    track.s32_KfInitCount = 2;
-    track.Eigen_KfState_CA << track.f32_CoreX, track.f32_CoreY, 0, 0, 0, 0;
-    track.f32_PrevYaw = before.local.st_IMU.f32_Yaw_rad;
+    track.tracking.s32_Id = 42;
+    track.tracking.b_KfInitialized = true;
+    track.tracking.s32_KfInitCount = 2;
+    track.tracking.Eigen_KfState_CA << track.detection.f32_CoreX, track.detection.f32_CoreY, 0, 0, 0, 0;
+    track.tracking.f32_PrevYaw = before.local.st_IMU.f32_Yaw_rad;
     frame.RecordTrackingFrame(track);
     const auto now = BeginTrackScan(frame, 90.1, .36, -.02, .04, vehicle, roll);
     // Matched: the OBB is this scan's detection; only the copied filter state is old.
     auto matched = BoxDetection(now, kMatchedBox);
-    matched.Eigen_KfState_CA = track.Eigen_KfState_CA;
-    matched.Eigen_KfP_CA = track.Eigen_KfP_CA;
-    matched.b_KfInitialized = true;
-    matched.s32_KfInitCount = 2;
-    matched.f32_PrevYaw = track.f32_PrevYaw;
-    matched.tracking_frame_valid = true;
-    matched.tracking_height_input = track.tracking_height_input;
-    matched.tracking_yaw_from_input = track.tracking_yaw_from_input;
-    matched.tracking_origin_in_yaw = track.tracking_origin_in_yaw;
+    matched.tracking.Eigen_KfState_CA = track.tracking.Eigen_KfState_CA;
+    matched.tracking.Eigen_KfP_CA = track.tracking.Eigen_KfP_CA;
+    matched.tracking.b_KfInitialized = true;
+    matched.tracking.s32_KfInitCount = 2;
+    matched.tracking.f32_PrevYaw = track.tracking.f32_PrevYaw;
+    matched.tracking.tracking_frame_valid = true;
+    matched.tracking.tracking_height_input = track.tracking.tracking_height_input;
+    matched.tracking.tracking_yaw_from_input = track.tracking.tracking_yaw_from_input;
+    matched.tracking.tracking_origin_in_yaw = track.tracking.tracking_origin_in_yaw;
     const auto detected = matched;
-    kalman_filter_update(matched, matched.f32_CoreX, matched.f32_CoreY, matched.f32_CoreX, matched.f32_CoreY, .1,
+    kalman_filter_update(matched, matched.detection.f32_CoreX, matched.detection.f32_CoreY, matched.detection.f32_CoreX, matched.detection.f32_CoreY, .1,
                          now.local.st_IMU.f32_Yaw_deg, frame);
-    EXPECT_FLOAT_EQ(matched.f32_OBB_YawRad, detected.f32_OBB_YawRad) << "ego yaw applied again to a current OBB";
-    EXPECT_FLOAT_EQ(matched.f32_OBB_CenterX, detected.f32_OBB_CenterX);
-    EXPECT_FLOAT_EQ(matched.f32_OBB_CenterY, detected.f32_OBB_CenterY);
-    EXPECT_FLOAT_EQ(matched.f32_OBB_CenterZ, detected.f32_OBB_CenterZ);
-    EXPECT_FLOAT_EQ(matched.f32_OBB_ZMin, detected.f32_OBB_ZMin);
-    EXPECT_FLOAT_EQ(matched.f32_OBB_ZMax, detected.f32_OBB_ZMax);
+    EXPECT_FLOAT_EQ(matched.detection.f32_OBB_YawRad, detected.detection.f32_OBB_YawRad) << "ego yaw applied again to a current OBB";
+    EXPECT_FLOAT_EQ(matched.detection.f32_OBB_CenterX, detected.detection.f32_OBB_CenterX);
+    EXPECT_FLOAT_EQ(matched.detection.f32_OBB_CenterY, detected.detection.f32_OBB_CenterY);
+    EXPECT_FLOAT_EQ(matched.detection.f32_OBB_CenterZ, detected.detection.f32_OBB_CenterZ);
+    EXPECT_FLOAT_EQ(matched.detection.f32_OBB_ZMin, detected.detection.f32_OBB_ZMin);
+    EXPECT_FLOAT_EQ(matched.detection.f32_OBB_ZMax, detected.detection.f32_OBB_ZMax);
     for (unsigned i = 0; i < 8; ++i) {
-      EXPECT_FLOAT_EQ(matched.OBB_Corners_Body[i].x, detected.OBB_Corners_Body[i].x);
-      EXPECT_FLOAT_EQ(matched.OBB_Corners_Body[i].y, detected.OBB_Corners_Body[i].y);
-      EXPECT_FLOAT_EQ(matched.OBB_Corners_Body[i].z, detected.OBB_Corners_Body[i].z);
+      EXPECT_FLOAT_EQ(matched.detection.obb_corners_level[i].x, detected.detection.obb_corners_level[i].x);
+      EXPECT_FLOAT_EQ(matched.detection.obb_corners_level[i].y, detected.detection.obb_corners_level[i].y);
+      EXPECT_FLOAT_EQ(matched.detection.obb_corners_level[i].z, detected.detection.obb_corners_level[i].z);
     }
     ExpectObbSelfConsistent(matched, "matched");
     // The copied filter state is re-expressed once: its prior equals this scan's
     // measurement of the static box, so the update keeps it.
-    EXPECT_NEAR(matched.Eigen_KfState_CA(0), detected.f32_CoreX, 1e-5);
-    EXPECT_NEAR(matched.Eigen_KfState_CA(1), detected.f32_CoreY, 1e-5);
+    EXPECT_NEAR(matched.tracking.Eigen_KfState_CA(0), detected.detection.f32_CoreX, 1e-5);
+    EXPECT_NEAR(matched.tracking.Eigen_KfState_CA(1), detected.detection.f32_CoreY, 1e-5);
     // Predicted-only: the whole previous-scan OBB is carried by one frame change.
     frame.ResetEdgeFollowStats();
     auto predicted = track;
     kalman_filter_predict(predicted, .1, now.local.st_IMU.f32_Yaw_deg, frame);
     ExpectObbSelfConsistent(predicted, "predicted");
-    ExpectCarriedBox(predicted, now, kMatchedBox, track.f32_OBB_ZMax - track.f32_OBB_ZMin);
+    ExpectCarriedBox(predicted, now, kMatchedBox, track.detection.f32_OBB_ZMax - track.detection.f32_OBB_ZMin);
     EXPECT_EQ(frame.edge_follow_stats().applied, 1u);
     // With a relative velocity only the KF state is motion-predicted; the OBB is
     // re-expressed, not moved, so the CA displacement is not applied to it.
     auto moving = track;
-    moving.Eigen_KfState_CA(2) = 1.5;
-    moving.Eigen_KfState_CA(3) = -.5;
+    moving.tracking.Eigen_KfState_CA(2) = 1.5;
+    moving.tracking.Eigen_KfState_CA(3) = -.5;
     kalman_filter_predict(moving, .1, now.local.st_IMU.f32_Yaw_deg, frame);
-    ExpectCarriedBox(moving, now, kMatchedBox, track.f32_OBB_ZMax - track.f32_OBB_ZMin, false);
+    ExpectCarriedBox(moving, now, kMatchedBox, track.detection.f32_OBB_ZMax - track.detection.f32_OBB_ZMin, false);
     const auto center = now.Point(kMatchedBox.center);
-    const double dx = moving.Eigen_KfState_CA(0) - center.x(), dy = moving.Eigen_KfState_CA(1) - center.y();
+    const double dx = moving.tracking.Eigen_KfState_CA(0) - center.x(), dy = moving.tracking.Eigen_KfState_CA(1) - center.y();
     // Main's tolerance (1e-4): the 2x2 Jacobian of a tilted change is not
     // orthonormal, so |v| itself changes by ~1e-3 relative.
     EXPECT_NEAR(std::hypot(dx, dy), .1 * std::hypot(1.5, .5), 1e-4) << "KF moves by v*dt once";
@@ -593,18 +594,18 @@ TEST(FrameBoundary, KalmanUpdateKeepsCurrentObbWhilePredictCarriesPreviousObb) {
     // A corner order other than computeOBBAtYaw's must not snap the yaw by 90 deg.
     frame.ResetEdgeFollowStats();
     auto foreign = track;
-    std::rotate(foreign.OBB_Corners_Body.begin(), foreign.OBB_Corners_Body.begin() + 1,
-                foreign.OBB_Corners_Body.begin() + 4);
-    std::rotate(foreign.OBB_Corners_Body.begin() + 4, foreign.OBB_Corners_Body.begin() + 5,
-                foreign.OBB_Corners_Body.end());
+    std::rotate(foreign.detection.obb_corners_level.begin(), foreign.detection.obb_corners_level.begin() + 1,
+                foreign.detection.obb_corners_level.begin() + 4);
+    std::rotate(foreign.detection.obb_corners_level.begin() + 4, foreign.detection.obb_corners_level.begin() + 5,
+                foreign.detection.obb_corners_level.end());
     kalman_filter_predict(foreign, .1, now.local.st_IMU.f32_Yaw_deg, frame);
     const auto heading = now.Direction(Heading(kMatchedBox));
     // Main's tolerances: without the edge follow the 2D axis rotation keeps the
     // tilt projection error (5e-3 pitch-only).
-    EXPECT_LT(AxisError(foreign.f32_OBB_YawRad, std::atan2(heading.y(), heading.x())), roll ? 1e-5 : 5e-3)
+    EXPECT_LT(AxisError(foreign.detection.f32_OBB_YawRad, std::atan2(heading.y(), heading.x())), roll ? 1e-5 : 5e-3)
         << "yaw follows the rotated axis, not the foreign 0->1 edge";
-    const Vec axis = Change(before, now) * Vec(std::cos(track.f32_OBB_YawRad), std::sin(track.f32_OBB_YawRad), 0);
-    EXPECT_NEAR(foreign.f32_OBB_YawRad, std::atan2(axis.y(), axis.x()), kAngTol) << "exact 2D axis rotation";
+    const Vec axis = Change(before, now) * Vec(std::cos(track.detection.f32_OBB_YawRad), std::sin(track.detection.f32_OBB_YawRad), 0);
+    EXPECT_NEAR(foreign.detection.f32_OBB_YawRad, std::atan2(axis.y(), axis.x()), kAngTol) << "exact 2D axis rotation";
     EXPECT_EQ(frame.edge_follow_stats().rejected, 1u) << "corner-order violation is counted";
   }
 }

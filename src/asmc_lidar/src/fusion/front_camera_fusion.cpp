@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // Front-camera class fusion (Main runCameraFusion / LidarToImage / IOUFusion),
 // common-geometry branch only. See front_camera_fusion.hpp.
 
@@ -98,13 +99,13 @@ bool LidarToImage(const std::vector<TrackedObject>& objects, const asmc::lidar::
     const auto& det = objects[i];
     // Do not associate a detection with a prediction-only ghost: its stored
     // point cloud is from an older LiDAR frame.
-    if (det.s32_MissCount > 0) continue;
+    if (det.tracking.s32_MissCount > 0) continue;
     if (fusion_class::IsGroundNoise(det)) continue;
     // cv::boundingRect over the kept integer points.
     bool any_point = false;
     int min_u = 0, min_v = 0, max_u = 0, max_v = 0;
 
-    for (const auto& pt : det.pcl_ClusterPoints.points) {
+    for (const auto& pt : det.detection.pcl_ClusterPoints.points) {
       Eigen::Vector4d pt_vec(pt.x, pt.y, pt.z, 1.0);
       Eigen::Vector3d cam = projection * pt_vec;
 
@@ -225,13 +226,13 @@ void IOUFusion(std::vector<TrackedObject>& objects, const std::vector<YoloBox>& 
 
     // A false BeginObservation still counts as matched (no Miss below).
     if (fusion_class::BeginObservation(lid_object, image_stamp_ns, epoch)) {
-      const std::string before = lid_object.str_ObjectClass;
+      const std::string before = lid_object.camera.str_ObjectClass;
       fusion_class::Observe(lid_object, cam.str_class, cam.str_raw_class, INITIAL_CONFIRMATIONS,
                             CHANGE_CONFIRMATIONS, config.mission_profile);
       if (counters) {
         ++counters->observations;
-        if (lid_object.str_ObjectClass != before &&
-            fusion_class::IsConfirmed(lid_object.str_ObjectClass, config.mission_profile))
+        if (lid_object.camera.str_ObjectClass != before &&
+            fusion_class::IsConfirmed(lid_object.camera.str_ObjectClass, config.mission_profile))
           ++counters->confirmations_applied;
       }
     }
@@ -241,7 +242,7 @@ void IOUFusion(std::vector<TrackedObject>& objects, const std::vector<YoloBox>& 
   // the camera) receive a miss. Prediction-only tracks keep their class.
   for (std::size_t i = 0; i < objects.size(); ++i) {
     auto& object = objects[i];
-    if (object.s32_MissCount > 0 || fusion_class::IsGroundNoise(object)) continue;
+    if (object.tracking.s32_MissCount > 0 || fusion_class::IsGroundNoise(object)) continue;
     if (matched_lidar_indices_this_frame.find(i) == matched_lidar_indices_this_frame.end() &&
         fusion_class::BeginObservation(object, image_stamp_ns, epoch)) {
       fusion_class::Miss(object, CLASS_MISS_GRACE);
@@ -452,7 +453,7 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
     // continue from the current track.
     std::vector<TrackedObject>& synchronized_objects = synchronized_lidar_frame.objects;
     for (auto& historical_object : synchronized_objects) {
-      if (TrackedObject* current = fusion_state::Find(live, historical_object.s32_Id)) {
+      if (TrackedObject* current = fusion_state::Find(live, historical_object.tracking.s32_Id)) {
         fusion_state::Copy(*current, historical_object, true);
       }
     }
@@ -486,7 +487,7 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
               &counters_);
 
     for (const auto& historical_object : synchronized_objects) {
-      if (TrackedObject* current = fusion_state::Find(live, historical_object.s32_Id)) {
+      if (TrackedObject* current = fusion_state::Find(live, historical_object.tracking.s32_Id)) {
         fusion_state::Copy(historical_object, *current, true);
       }
     }

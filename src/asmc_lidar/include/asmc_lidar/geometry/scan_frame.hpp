@@ -5,7 +5,7 @@
 // namespace-scope globals; here one ScanFrame instance belongs to one pipeline.
 // Only the common-geometry behaviour exists (Main's enable_common_geometry=true).
 
-#include <asmc_lidar/core/types.hpp>
+#include <asmc_lidar/tracking/track.hpp>
 
 #include <cstdint>
 #include <string>
@@ -29,7 +29,7 @@ class ScanFrame {
   // attitude/yaw of `local`, frame=LeveledSensor, mount, calibration,
   // leveling_source, map pose and ego_linear_base=(CAN v,0,0).
   void Prepare(const asmc::lidar::Observation& time, const LocalState& local,
-               const asmc::lidar::PoseSelection& map_pose, std::uint64_t input_generation);
+               const asmc::lidar::PoseSelection& map_pose, std::uint64_t scan_sequence);
   // Main StoreLeveling(): the matrix CorrectingPoints actually applied.
   void StoreLeveling(const asmc::lidar::Rot& rotation);
 

@@ -152,7 +152,7 @@ void PrepareScan(const asmc::lidar::Observation& time,const GPS_IMU& local,
   current=asmc::lidar::Context{};
   scan_attitude=MapRotation(local); scan_yaw=local.st_IMU.f32_Yaw_rad;
   current.time=time;
-  current.input_generation=input_generation;
+  current.scan_sequence=input_generation;
   current.frame=asmc::lidar::Frame::LeveledSensor;
   current.base_from_sensor=SensorMount(vehicle);
   current.calibration_source=calibration_id;
