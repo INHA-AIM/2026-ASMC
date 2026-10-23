@@ -237,7 +237,7 @@ bool SensorPoseHistory::AddCan(
     std::uint64_t stamp_ms, const CAN_DATA& can, std::string* reason,
     std::uint64_t source_ns, std::uint64_t receipt_steady_ns) {
     const double speed_mps = can.f32_CurrentVel_MPS;
-    if (stamp_ms == 0 || !std::isfinite(speed_mps) || speed_mps < 0.0) {
+    if (stamp_ms == 0 || !std::isfinite(speed_mps)) {
         if(frame_boundary::Enabled()) {
             std::lock_guard<std::mutex> lock(mutex_);
             invalid_can_stamp_ms_=std::max(invalid_can_stamp_ms_,stamp_ms);

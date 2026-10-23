@@ -257,7 +257,7 @@ if(CATKIN_ENABLE_TESTING)
     test/test_runtime_globals.cpp
   )
   if(TARGET test_sensor_pose_history)
-    target_link_libraries(test_sensor_pose_history myHeader ${catkin_LIBRARIES})
+    target_link_libraries(test_sensor_pose_history myHeader ${catkin_LIBRARIES} ${rosbag_LIBRARIES})
   endif()
   # F1/S11: IMU/CAN invalid barriers do not depend on when later samples arrive. No ROS master.
   catkin_add_gtest(test_invalid_barrier_order_b0 test/test_invalid_barrier_order_b0.cpp test/test_runtime_globals.cpp)

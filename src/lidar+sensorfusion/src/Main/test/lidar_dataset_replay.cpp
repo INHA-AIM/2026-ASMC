@@ -552,7 +552,7 @@ int main(int argc, char** argv) {
             if (auto m = event.instantiate<sensor_msgs::Imu>()) {
                 history.AddImu(m->header.stamp.toNSec() / 1000000, Convert(*m), nullptr, m->header.stamp.toNSec(), logical);
             } else if (auto m = event.instantiate<morai_msgs::EgoVehicleStatus>()) {
-                CAN_DATA d{}; d.f32_CurrentVel_MPS = std::sqrt(m->velocity.x * m->velocity.x + m->velocity.y * m->velocity.y + m->velocity.z * m->velocity.z);
+                CAN_DATA d{}; d.f32_CurrentVel_MPS = m->velocity.x;
                 d.f32_CurrentVel_KPH = 3.6 * d.f32_CurrentVel_MPS;
                 history.AddCan(m->header.stamp.toNSec() / 1000000, d, nullptr, m->header.stamp.toNSec(), logical);
             } else if (auto m = event.instantiate<morai_msgs::GPSMessage>()) {

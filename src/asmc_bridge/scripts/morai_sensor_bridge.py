@@ -162,6 +162,9 @@ class SensorBridge(object):
 
     def __init__(self):
         p = rospy.get_param
+        self.publisher_queue_size = int(p("~publisher_queue_size", 1))
+        if not 1 <= self.publisher_queue_size <= 10000:
+            raise ValueError("publisher_queue_size outside 1..10000")
         self.frame_lidar = p("~lidar_frame", "velodyne")
         self.frame_imu = p("~imu_frame", "imu")
         self.frame_gps = p("~gps_frame", "gps")
@@ -224,7 +227,7 @@ class SensorBridge(object):
         self.optional_streams = set()
         self._last_source_ns = {}
         self.pub_diagnostics = rospy.Publisher(
-            "/morai_sensor_bridge/diagnostics", DiagnosticArray, queue_size=1
+            "/morai_sensor_bridge/diagnostics", DiagnosticArray, queue_size=self.publisher_queue_size
         )
         self._start_all(p)
         start_reporting(self, 'morai_sensor_bridge')
@@ -310,12 +313,12 @@ class SensorBridge(object):
 
 
         if p("~enable_gps", True):
-            self.pub_gps = rospy.Publisher("/gps", GPSMessage, queue_size=1)
-            self.pub_fix = rospy.Publisher("/gps/fix", NavSatFix, queue_size=1)
+            self.pub_gps = rospy.Publisher("/gps", GPSMessage, queue_size=self.publisher_queue_size)
+            self.pub_fix = rospy.Publisher("/gps/fix", NavSatFix, queue_size=self.publisher_queue_size)
             self._spawn("gps", int(p("~gps_port", 9301)), self._gps)
 
         if p("~enable_imu", True):
-            self.pub_imu = rospy.Publisher("/imu", Imu, queue_size=1)
+            self.pub_imu = rospy.Publisher("/imu", Imu, queue_size=self.publisher_queue_size)
             self._spawn("imu", int(p("~imu_port", 9303)), self._imu)
 
     def _start_camera(self, cam):
@@ -323,14 +326,14 @@ class SensorBridge(object):
         port = int(cam["port"])
         topic = str(cam.get("topic", "/image_jpeg/compressed"))
         frame = str(cam.get("frame", "camera"))
-        pub_c = rospy.Publisher(topic, CompressedImage, queue_size=1)
+        pub_c = rospy.Publisher(topic, CompressedImage, queue_size=self.publisher_queue_size)
         pub_r = None
         if self.publish_raw:
             raw_topic = topic.replace("/compressed", "") \
                 if topic.endswith("/compressed") else topic + "_raw"
             if raw_topic == topic:
                 raw_topic = topic + "/raw"
-            pub_r = rospy.Publisher(raw_topic, Image, queue_size=1)
+            pub_r = rospy.Publisher(raw_topic, Image, queue_size=self.publisher_queue_size)
         rospy.loginfo("camera %s udp/%d -> %s", name, port, topic)
 
         def loop(sock, stat_name):
@@ -343,7 +346,7 @@ class SensorBridge(object):
         model = config["model"]
         vertical = np.array([VERTICAL_ANGLES[model]], dtype=np.float32)
         channel = vertical.shape[1]
-        publisher = rospy.Publisher(config["topic"], PointCloud2, queue_size=1)
+        publisher = rospy.Publisher(config["topic"], PointCloud2, queue_size=self.publisher_queue_size)
         rospy.loginfo(
             "%s model=%s ch=%d frame_mode=%s fallback_packets=%d udp/%d -> %s field=%s",
             config["name"],

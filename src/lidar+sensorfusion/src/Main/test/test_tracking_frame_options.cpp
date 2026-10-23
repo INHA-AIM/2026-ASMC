@@ -235,3 +235,54 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+
+// Isolate yaw toggle: identical observations, A+B, Q/R, association and lifecycle.
+namespace {
+LiDARObjectInfo YawPair(bool enabled,double raw_yaw) {
+  ConfigureCase(true,true);
+  tracking_options::Get().yaw_ema_enabled=enabled;
+  std::deque<std::vector<LiDARObjectInfo>> history;
+  LiDARObjectInfo result{};
+  ts_PrevTime=ros::Time();
+  for (int k=0;k<2;++k) {
+    Ego e;e.yaw=k*.1;World world;world.x=15;world.y=2;
+    auto local=Local(e);
+    const std::int64_t ns=80*kSec+k*100000000LL;ts_CurrTime.fromNSec(ns);
+    asmc::lidar::PoseSelection no_map;no_map.reason="gps_missing";
+    frame_boundary::PrepareScan(asmc::lidar::Observation{ns,ns,ns,"ros","test",""},local,st_VehicleSpec,no_map,k+1);
+    frame_boundary::StoreLeveling(asmc::lidar::Rot::Identity());
+    auto d=Detection(e,world);const double yaw=k?raw_yaw:.2;
+    for(auto& p:d.pcl_ClusterPoints) {
+      double x=p.x-d.f32_CoreX,y=p.y-d.f32_CoreY;
+      p.x=d.f32_CoreX+std::cos(yaw)*x-std::sin(yaw)*y;
+      p.y=d.f32_CoreY+std::sin(yaw)*x+std::cos(yaw)*y;
+    }
+    d.f32_OBB_YawRad=yaw;d.u16_Idx=0;
+    std::vector<LiDARObjectInfo> now{d};FrameFilter(history,now,local,st_VehicleSpec);
+    EXPECT_EQ(1u,now.size());
+    if(now.empty())return result;
+    frame_boundary::RecordTrackingFrame(now[0]);result=now[0];
+    history.push_back(now);ts_PrevTime=ts_CurrTime;
+  }
+  tracking_options::Get().yaw_ema_enabled=true;
+  return result;
+}
+}
+TEST(YawEmaOnly, RawPiAxisAndSingleEgoRotation) {
+  const auto on=YawPair(true,.6),off=YawPair(false,.6),wrapped=YawPair(false,.6+M_PI);
+  EXPECT_NEAR(.225,on.f32_OBB_YawRad,1e-5); // (.2-.1)+.25*(.6-(.2-.1))
+  EXPECT_NEAR(.6,off.f32_OBB_YawRad,1e-5);
+  EXPECT_NEAR(0.,std::remainder(off.f32_OBB_YawRad-wrapped.f32_OBB_YawRad,M_PI),1e-5);
+  EXPECT_NEAR(off.f32_OBB_CenterX,wrapped.f32_OBB_CenterX,1e-5);
+  EXPECT_NEAR(off.f32_OBB_Width,wrapped.f32_OBB_Width,1e-5);
+  EXPECT_EQ(on.s32_Id,off.s32_Id);EXPECT_EQ(on.s32_KfInitCount,off.s32_KfInitCount);
+  EXPECT_LT((on.Eigen_KfState_CA-off.Eigen_KfState_CA).norm(),1e-6);
+  EXPECT_LT((on.Eigen_KfP_CA-off.Eigen_KfP_CA).norm(),1e-6);
+}
+
+TEST(TrackingFrameOptions, SignedReverseEgoKeepsParkedGroundVelocityZero) {
+  ConfigureCase(true,true);
+  auto r=Simulate(30,[](int k){return Straight(k,-2.);},
+      [](int){World w;w.x=15;w.y=3;return w;},[](int){return true;});
+  EXPECT_LT(MaxLast(r.abs_err,10),.05);
+}

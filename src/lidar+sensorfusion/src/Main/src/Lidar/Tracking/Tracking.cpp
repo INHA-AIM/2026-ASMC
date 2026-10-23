@@ -249,6 +249,11 @@ inline void stabilizeMatchedOBB(
         filteredYaw = predictedYaw + kYawFilterAlpha * yawError;
     }
     filteredYaw = normalizeAxisYaw(filteredYaw);
+    const double emaYaw = filteredYaw;
+    if (!tracking_options::Get().yaw_ema_enabled)
+        filteredYaw = normalizeAxisYaw(predictedYaw + std::remainder(rawYaw-predictedYaw,kPi));
+    const std::array<double,4> before{current.f32_OBB_CenterX,current.f32_OBB_CenterY,
+                                    current.f32_OBB_Width,current.f32_OBB_Height};
 
     OBB2D filteredObb;
     double zMin = 0.0;
@@ -258,6 +263,17 @@ inline void stabilizeMatchedOBB(
             current.pcl_ClusterPoints, filteredYaw,
             filteredObb, zMin, zMax, corners3d)) {
         writeOBBToObject(current, filteredObb, zMin, zMax, corners3d);
+        if (track_trace::Sink().WantsTrack(current.s32_Id)) {
+            track_trace::Event("yaw_repack", [&](std::ostream& out) {
+                out << ",\"id\":" << current.s32_Id
+                    << ",\"raw_yaw\":" << rawYaw << ",\"previous_aligned_yaw\":" << predictedYaw
+                    << ",\"ema_yaw\":" << emaYaw << ",\"selected_yaw\":" << filteredYaw
+                    << ",\"ema_enabled\":" << (tracking_options::Get().yaw_ema_enabled?1:0)
+                    << ",\"before\":[" << before[0] << ',' << before[1] << ',' << before[2] << ',' << before[3]
+                    << "],\"after\":[" << current.f32_OBB_CenterX << ',' << current.f32_OBB_CenterY
+                    << ',' << current.f32_OBB_Width << ',' << current.f32_OBB_Height << ']';
+            });
+        }
     }
 }
 

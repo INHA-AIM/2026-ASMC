@@ -194,6 +194,9 @@ class MoraiUdpBridge(object):
 
     def __init__(self):
         p = rospy.get_param
+        self.publisher_queue_size = int(p("~publisher_queue_size", 1))
+        if not 1 <= self.publisher_queue_size <= 10000:
+            raise ValueError("publisher_queue_size outside 1..10000")
         self.ego_port = p("~ego_port", 9099)
         self.competition_port = p("~competition_port", 9798)
         self.obj_port = p("~object_port", 9021)
@@ -233,23 +236,23 @@ class MoraiUdpBridge(object):
             raise ValueError("timestamp_mode must be receive or source")
 
         self.pub_ego = (
-            rospy.Publisher("/Ego_topic", EgoVehicleStatus, queue_size=1)
+            rospy.Publisher("/Ego_topic", EgoVehicleStatus, queue_size=self.publisher_queue_size)
             if self.enabled_inputs["ego"] else None
         )
         self.pub_competition = (
-            rospy.Publisher("/Competition_topic", EgoVehicleStatus, queue_size=1)
+            rospy.Publisher("/Competition_topic", EgoVehicleStatus, queue_size=self.publisher_queue_size)
             if self.enabled_inputs["competition"] else None
         )
         self.pub_obj = (
-            rospy.Publisher("/Object_topic", ObjectStatusList, queue_size=1)
+            rospy.Publisher("/Object_topic", ObjectStatusList, queue_size=self.publisher_queue_size)
             if self.enabled_inputs["obj"] else None
         )
         self.pub_col = (
-            rospy.Publisher("/CollisionData", CollisionData, queue_size=1)
+            rospy.Publisher("/CollisionData", CollisionData, queue_size=self.publisher_queue_size)
             if self.enabled_inputs["col"] else None
         )
         self.pub_diagnostics = rospy.Publisher(
-            "/morai_udp_bridge/diagnostics", DiagnosticArray, queue_size=1
+            "/morai_udp_bridge/diagnostics", DiagnosticArray, queue_size=self.publisher_queue_size
         )
 
         self.cmd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

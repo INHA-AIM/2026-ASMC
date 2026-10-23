@@ -606,6 +606,7 @@ void *TemporalThread(void *p_Arg)
 void ConfigureTrackingExperiment(ros::NodeHandle& private_node)
 {
     auto& options = tracking_options::Get();
+    private_node.param("lidar_yaw_ema_enabled", options.yaw_ema_enabled, true);
     private_node.param("lidar_kf_reacquire_elapsed_init", options.reacquire_elapsed_init, false);
     private_node.param("lidar_kf_ego_translation_comp", options.ego_translation_comp, false);
     private_node.param("lidar_observation_quality_r", options.observation_quality_r, false);

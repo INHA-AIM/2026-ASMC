@@ -128,6 +128,7 @@ struct Options {
     double jerk_spectral_density = 1.0; // m^2/s^5, continuous white jerk (per axis).
     bool ego_gap_reset = false; // explicit reset instead of silently skipping unsupported B translation.
     bool two_point_init_cov = false;
+    bool yaw_ema_enabled = true; // Preserve baseline; OFF is a diagnostic only.
 };
 inline Options& Get() { static Options options; return options; }
 }  // namespace tracking_options

@@ -529,8 +529,9 @@ void CANParser_Callback(const morai_msgs::EgoVehicleStatus::ConstPtr& st_Msg)
 {
     const auto receipt_steady=fusion_trace::SteadyNowNs();
     CAN_DATA st_CANData;
-    st_CANData.f32_CurrentVel_KPH = 3.6 * sqrt(pow(st_Msg->velocity.x, 2) + pow(st_Msg->velocity.y, 2) + pow(st_Msg->velocity.z, 2));
-    st_CANData.f32_CurrentVel_MPS = sqrt(pow(st_Msg->velocity.x, 2) + pow(st_Msg->velocity.y, 2) + pow(st_Msg->velocity.z, 2));
+    // Competition longitudinal speed is signed ROS m/s; lateral/vertical GT is not input.
+    st_CANData.f32_CurrentVel_KPH = 3.6 * st_Msg->velocity.x;
+    st_CANData.f32_CurrentVel_MPS = st_Msg->velocity.x;
     if(frame_boundary::Enabled() && st_Msg->header.stamp.isZero()) {
         st_CANData.f32_CurrentVel_MPS=NAN; st_CANData.f32_CurrentVel_KPH=NAN;
     }
