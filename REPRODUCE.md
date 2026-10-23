@@ -32,3 +32,5 @@ User PC: separate checkout/worktree at the exact commit -> build/bag replay/MORA
 Results must name real executing commit/config; no adoption before results. Keep data branch outside operational/main merges. Main review is an explicit human step.
 
 Portable tests actually run: python3 -B handoff/lidar/evaluation_tests/test_response_eval.py (11 pass); python3 -B handoff/lidar/evaluation_tests/test_alignment.py (12 pass). Prefix replay at af346e9ea7c4520378f9424e1be4294e69efd680:1156/1156 identical numeric/discrete output excluding timing, tolerance0. Evaluation performed separately with fixed aligned GT. The final handoff only adds documentation/evidence around the unchanged algorithm.
+
+End-to-end download confirmation: pinned data commit446cf839f66e45641274fd4e5669b865108e429d downloaded from GitHub, all file hashes verified. Replayed using handoff entrypoint commit5e84ac5152fe8eaeb11aaf230a1f98c9bd6e49c1:1156/1156 exact excluding timing, tolerance0. DOWNLOADED_PREFIX_* records this execution; EVENT_WINDOW.csv isolates1086..1155 after full warmup.
