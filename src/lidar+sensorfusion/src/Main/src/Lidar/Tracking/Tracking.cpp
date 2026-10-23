@@ -899,7 +899,8 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
                         << "],\"obb_stab\":[" << n.f32_OBB_CenterX << ',' << n.f32_OBB_CenterY << ',' << n.f32_OBB_Width << ','
                         << n.f32_OBB_Height << ',' << n.f32_OBB_YawRad << "],\"stab_rule\":\""
                         << (vec_Compare[i].s32_MissCount > 0 ? "raw_after_miss" :
-                            (obb_raw[3] > 1e-6f && obb_raw[2] / obb_raw[3] >= 1.2f ? "ema_0.25" : "predicted_yaw_only"))
+                            (!tracking_options::Get().yaw_ema_enabled ? "raw_pi_axis" :
+                            (obb_raw[3] > 1e-6f && obb_raw[2] / obb_raw[3] >= 1.2f ? "ema_0.25" : "predicted_yaw_only")))
                         << "\",\"kf_post\":";
                     track_trace::Arr(out, n.Eigen_KfState_CA, 6);
                     out << ",\"can_mps\":" << st_GPSIMU.st_CAN.f32_CurrentVel_KPH / 3.6f << ",\"can_added\":" << v_mps
