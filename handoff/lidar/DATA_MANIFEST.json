@@ -1,0 +1,30 @@
+{
+  "version": "actual_prefix_0_1155_v1",
+  "source_code": "a6fcf88294db2e44fe303580e54c1f3fcff9065e",
+  "source_bag_sha256": "d5387398b5b2241703cb494ab2f9c39c099e0256230e37ab64c9eb6a507b1bc4",
+  "warmup": "all scans0..1085; score1086..1155; replay complete prefix to preserve state",
+  "scan_count": 1156,
+  "receipt_cutoff_ns": 1792762343214128735,
+  "GT": "gt_aligned_v1; evaluation-only",
+  "frame": "tracking leveled sensor; evaluator base_link; GT planar body",
+  "timestamp": "original source headers and original receipt order; GT CSV relative to original first lidar ns",
+  "sharing": "User explicitly authorized minimal dataset on separate Git branch; excluded from main merge; deletion does not remove history.",
+  "files": {
+    "inference.bag": {
+      "size": 180356390,
+      "sha256": "abc2673dd915ec1aa0206bf6f1146ef4e85e5a632323a1e02298729551f88b92"
+    },
+    "expected.jsonl": {
+      "size": 7801626,
+      "sha256": "98e69307ec2d3716c33d6b13062dbf953d451db51a187ff51118a4cfd5c11cce"
+    },
+    "evaluation/actual_lap/frames.csv": {
+      "size": 281027,
+      "sha256": "2c19213dd4584a26b20b3e007ba0cee6f11c21f54f8657e6937a9b7b9529306d"
+    },
+    "evaluation/actual_lap/gt.csv": {
+      "size": 7328996,
+      "sha256": "6b1a8a1e2ca94f38fab1f80db937f700e6badb1945d9dbfdf70ff394896c4243"
+    }
+  }
+}

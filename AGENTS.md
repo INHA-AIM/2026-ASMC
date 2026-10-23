@@ -1,0 +1,11 @@
+# LiDAR handoff rules
+- Preserve P0-derived A+B+EMA ON baseline, user branches, uncommitted work and results. Never force-reset or replace with Yangtest.
+- New candidates: separate branch/worktree and default OFF; preserve rejected code OFF.
+- Keep permitted inference inputs separate from evaluator GT/future GT. Never insert GT IDs/pose/dimensions into inference.
+- Deleted static_bag and derivatives are invalid evidence; never restore/reuse.
+- Record actual executed commit, binary/library/config/data hashes and command. Never claim unrun tests passed.
+- Distinguish existing defects from new regressions; explicitly flag contradictory ground truth requirements for identical observations.
+- Before algorithm work, state targeted cause and effect-isolation test.
+- Fetch/check out commits into separate worktrees; never forcibly switch the user's working branch.
+- Raw data remain on the dedicated handoff data branch, authorized by the user for this handoff, not a main merge. Removing files later does not remove Git history.
+- Follow the existing team ownership/review policy. No operational settings/MORAI/control changes, main push or auto-merge.

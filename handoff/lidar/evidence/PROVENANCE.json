@@ -1,0 +1,7 @@
+{
+  "baseline_run": "point_support_ownership_20261024/actual_OFF",
+  "rejected_run": "point_support_ownership_20261024/actual_ON",
+  "source": "a6fcf88294db2e44fe303580e54c1f3fcff9065e",
+  "GT": "gt_aligned_v1",
+  "invalid_static_excluded": true
+}
