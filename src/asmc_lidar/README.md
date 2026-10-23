@@ -99,6 +99,6 @@ rosrun asmc_lidar lidar_markers.py
 - 정상 빈 결과·무효·세션/세대 변경에서 이전 박스를 지우고, 입력350ms 중단 시 wall clock으로 제거한다. 중복·이전 세대 관측으로 표시를 갱신하지 않는다.
 - 이 도구는 검출·추적·fusion을 계산하지 않고 Marker만 발행한다. 지면 제거/군집 점군을 새로 계산하지 않는다.
 - 프리셋의 Raw LiDAR는 기본 OFF다. 이를 켜면 원본 `/velodyne_points`와 최종 처리된 박스를 대조한다. 중간 단계 점군은 현재 공개되지 않는다.
-- 같은 Marker 토픽에 ego를 파란 반투명 평면 박스·흰 외곽선·EGO 라벨로 표시한다. 후륜축 기준 x=-0.79~3.845m, 폭1.892m이며 HD맵/판제 footprint와 같다. 얇은 표시 두께는 실제 차체 높이가 아니다. 입력이 끊겨도 ego 기준선만 유지하며 검출 객체 배열에는 추가하지 않는다.
+- 같은 Marker 토픽에 ego를 파란 반투명3D 박스·흰12개 모서리·EGO 라벨로 표시한다. 2026-10-23 실제 MORAI UDP9099 패킷20개에서 확인한 size=4.635×1.892×2.434m를 사용한다. 후륜축 기준 x=-0.79~3.845m, 명목 지면 z=-0.36m·상단 z=2.074m다. 높이는 시뮬레이터 bounding size이며 실차 제원이나 실시간 높이 추정값이 아니다. 입력이 끊겨도 ego 기준선만 유지하며 검출 객체 배열에는 추가하지 않는다.
 
 기본 출력 namespace를 바꿨다면 `rosrun asmc_lidar lidar_markers.py _input:=/다른경로/observations_local _output:=/다른경로/markers`로 맞춘다.

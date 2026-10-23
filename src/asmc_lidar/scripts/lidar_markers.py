@@ -22,13 +22,18 @@ COLORS = {'vehicle': (0.2, 0.8, 1.0), 'dynamic_obstacle': (1.0, 0.45, 0.15),
 
 
 def ego_markers():
-    """Static footprint, not a detected object or a measured body-height box.
+    """Static MORAI ego bounding box, never a detected object.
 
     Matches asmc_hd_map/ego_footprint.py and planning's rear-axle base_link:
-    rear=-0.79, front=3.0+0.845, width=1.892 m. Do not alter the preserved
-    legacy detector's RearOverhang setting as part of this display change.
+    rear=-0.79, front=3.0+0.845, width=1.892 m. On 2026-10-23 twenty live
+    UDP9099 #MoraiInfo$ packets reported size=(4.635,1.892,2.434) and rear=.79.
+    Height is the simulator-reported bounding size, not a real-car spec or
+    inferred suspension state. Ground z=-.36 matches cameras_v3.yaml's nominal
+    wheel-radius plane. Keep the preserved legacy detector settings unchanged.
     """
     rear, front, half_width = -0.79, 3.845, 1.892 / 2.
+    height, ground_z = 2.434, -0.36
+    top_z = ground_z + height
     markers = [Marker() for _ in range(3)]
     for index, marker in enumerate(markers):
         marker.header.frame_id = 'base_link'
@@ -39,16 +44,17 @@ def ego_markers():
     fill, outline, label = markers
     fill.type = Marker.CUBE
     fill.pose.position.x = (front + rear) / 2.
-    fill.scale.x, fill.scale.y, fill.scale.z = front - rear, half_width * 2., .06
-    fill.color.r, fill.color.g, fill.color.b, fill.color.a = .2, .45, 1., .3
-    outline.type = Marker.LINE_STRIP
+    fill.pose.position.z = ground_z + height / 2.
+    fill.scale.x, fill.scale.y, fill.scale.z = front - rear, half_width * 2., height
+    fill.color.r, fill.color.g, fill.color.b, fill.color.a = .2, .45, 1., .2
+    outline.type = Marker.LINE_LIST
     outline.scale.x = .06
     outline.color.r = outline.color.g = outline.color.b = outline.color.a = 1.
-    outline.points = [Point(x, y, .04) for x, y in
-                      ((rear, half_width), (front, half_width), (front, -half_width),
-                       (rear, -half_width), (rear, half_width))]
+    corners = [Point(x, y, z) for z in (ground_z, top_z) for x, y in
+               ((rear, half_width), (front, half_width), (front, -half_width), (rear, -half_width))]
+    outline.points = [corners[index] for edge in EDGES for index in edge]
     label.type = Marker.TEXT_VIEW_FACING
-    label.pose.position.x, label.pose.position.z = (front + rear) / 2., .45
+    label.pose.position.x, label.pose.position.z = (front + rear) / 2., top_z + .25
     label.scale.z = .35
     label.color.r = label.color.g = label.color.b = label.color.a = 1.
     label.text = 'EGO (+X front)'
