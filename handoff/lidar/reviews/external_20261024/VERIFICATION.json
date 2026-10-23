@@ -1,0 +1,191 @@
+{
+  "scope": "Frozen saved-output re-evaluation; NOT a C++/ROS inference replay",
+  "reviewed_source_commit": "6c5dba83333c908a8d0d265d64d0f79754523291",
+  "data_commit": "446cf839f66e45641274fd4e5669b865108e429d",
+  "environment": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "pandas": "2.2.3"
+  },
+  "inputs": [
+    {
+      "path": "inference.bag",
+      "size": 180356390,
+      "sha256": "abc2673dd915ec1aa0206bf6f1146ef4e85e5a632323a1e02298729551f88b92"
+    },
+    {
+      "path": "expected.jsonl",
+      "size": 7801626,
+      "sha256": "98e69307ec2d3716c33d6b13062dbf953d451db51a187ff51118a4cfd5c11cce"
+    },
+    {
+      "path": "evaluation/actual_lap/frames.csv",
+      "size": 281027,
+      "sha256": "2c19213dd4584a26b20b3e007ba0cee6f11c21f54f8657e6937a9b7b9529306d"
+    },
+    {
+      "path": "evaluation/actual_lap/gt.csv",
+      "size": 7328996,
+      "sha256": "6b1a8a1e2ca94f38fab1f80db937f700e6badb1945d9dbfdf70ff394896c4243"
+    }
+  ],
+  "portable_tests": [
+    {
+      "test": "test_alignment.py",
+      "count": 12,
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "test": "test_response_eval.py",
+      "count": 11,
+      "returncode": 0,
+      "passed": true
+    }
+  ],
+  "metrics": {
+    "n_input_scans": {
+      "actual": 1156,
+      "reference": 1156,
+      "exact_equal": true,
+      "absolute_difference": 0,
+      "within_roundoff_tolerance": true
+    },
+    "tp": {
+      "actual": 53,
+      "reference": 53,
+      "exact_equal": true,
+      "absolute_difference": 0,
+      "within_roundoff_tolerance": true
+    },
+    "fn": {
+      "actual": 19,
+      "reference": 19,
+      "exact_equal": true,
+      "absolute_difference": 0,
+      "within_roundoff_tolerance": true
+    },
+    "fp": {
+      "actual": 3229,
+      "reference": 3229,
+      "exact_equal": true,
+      "absolute_difference": 0,
+      "within_roundoff_tolerance": true
+    },
+    "velocity_n": {
+      "actual": 50,
+      "reference": 50,
+      "exact_equal": true,
+      "absolute_difference": 0,
+      "within_roundoff_tolerance": true
+    },
+    "velocity_error_mae": {
+      "actual": 1.4412416676315347,
+      "reference": 1.4412416676315347,
+      "exact_equal": true,
+      "absolute_difference": 0.0,
+      "within_roundoff_tolerance": true
+    },
+    "velocity_error_p95": {
+      "actual": 3.0305398102221974,
+      "reference": 3.0305398102221974,
+      "exact_equal": true,
+      "absolute_difference": 0.0,
+      "within_roundoff_tolerance": true
+    },
+    "center_mae_vehicle": {
+      "actual": 0.9725934895063376,
+      "reference": 0.9725934895063376,
+      "exact_equal": true,
+      "absolute_difference": 0.0,
+      "within_roundoff_tolerance": true
+    },
+    "center_p95_vehicle": {
+      "actual": 1.8863831737669603,
+      "reference": 1.8863831737669605,
+      "exact_equal": false,
+      "absolute_difference": 2.220446049250313e-16,
+      "within_roundoff_tolerance": true
+    },
+    "long_mae_vehicle": {
+      "actual": 2.270660309763079,
+      "reference": 2.270660309763079,
+      "exact_equal": true,
+      "absolute_difference": 0.0,
+      "within_roundoff_tolerance": true
+    },
+    "short_mae_vehicle": {
+      "actual": 1.552937777883597,
+      "reference": 1.552937777883597,
+      "exact_equal": true,
+      "absolute_difference": 0.0,
+      "within_roundoff_tolerance": true
+    },
+    "yaw_mae_vehicle_deg": {
+      "actual": 3.2218962954136967,
+      "reference": 3.2218962954136967,
+      "exact_equal": true,
+      "absolute_difference": 0.0,
+      "within_roundoff_tolerance": true
+    },
+    "yaw_p95_vehicle_deg": {
+      "actual": 6.085127675695068,
+      "reference": 6.085127675695068,
+      "exact_equal": true,
+      "absolute_difference": 0.0,
+      "within_roundoff_tolerance": true
+    },
+    "idsw": {
+      "actual": 4,
+      "reference": 4,
+      "exact_equal": true,
+      "absolute_difference": 0,
+      "within_roundoff_tolerance": true
+    },
+    "fragmentations": {
+      "actual": 2,
+      "reference": 2,
+      "exact_equal": true,
+      "absolute_difference": 0,
+      "within_roundoff_tolerance": true
+    },
+    "scans_emitted_local": {
+      "actual": 1155,
+      "reference": 1155,
+      "exact_equal": true,
+      "absolute_difference": 0,
+      "within_roundoff_tolerance": true
+    },
+    "scans_dropped": {
+      "actual": 1,
+      "reference": 1,
+      "exact_equal": true,
+      "absolute_difference": 0,
+      "within_roundoff_tolerance": true
+    }
+  },
+  "event_1086_1155": {
+    "TP": 14,
+    "velocity_n": 12,
+    "velocity_mae": 4.459922652260885,
+    "velocity_max": 15.767372792195657
+  },
+  "event_equal": {
+    "TP": true,
+    "velocity_n": true,
+    "velocity_mae": true,
+    "velocity_max": true
+  },
+  "all_selected_metrics_exact": false,
+  "floating_metric_absolute_tolerance": 1e-12,
+  "discrete_count_tolerance": 0,
+  "result": "MATCH_WITH_ROUNDOFF",
+  "not_verified": [
+    "C++ build and unit tests",
+    "1156-scan inference replay",
+    "point-level split/overmerge (no replay points.bin)",
+    "live MORAI",
+    "full-load real-time operation",
+    "physical correctness of provisional GT"
+  ]
+}
