@@ -47,6 +47,10 @@ ev.segment_gt=segment
 metrics={}
 for arm,pred,points in [('new',a.out/'out.jsonl',a.out/'points.bin'),('expected',a.data/'expected.jsonl',a.out/'points.bin')]:
  sample=ev.eval_scene(contract,str(a.data/'evaluation'),str(pred),'actual_lap',str(points));metrics[arm]=ev.compute_metrics([sample],contract)
+ tp=sample['tp'];z=tp[tp.idx.between(1086,1155)];v=z[(z.kfc>=2)&ev.np.isfinite(z[['pvx','pvy','gvx','gvy']]).all(axis=1)]
+ errors=ev.np.hypot(v.pvx-v.gvx,v.pvy-v.gvy)
+ metrics[arm]['event_window_1086_1155']={'TP':len(z),'velocity_n':len(v),'velocity_mae':float(errors.mean()) if len(v) else None,'velocity_max':float(errors.max()) if len(v) else None,'definition':'evaluation-only slice; inference always replays full prefix0..1155'}
+
 (a.out/'evaluation.json').write_text(json.dumps(metrics,indent=2))
 result={'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),'binary_build_source':'a6fcf88294db2e44fe303580e54c1f3fcff9065e','command':cmd,'n_expected':len(old),'n_actual':len(new),'different_frames':different,'numeric_tolerance':0,'timing_excluded':True,'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'library_sha256':hashlib.sha256(library.read_bytes()).hexdigest(),'data_manifest_sha256':hashlib.sha256((a.data/'MANIFEST.json').read_bytes()).hexdigest(),'result':'PASS' if len(old)==len(new)==1156 and not different else 'FAIL','limits':'same exact outputs; evaluation reuses new unchanged detection point sets for expected comparison; no fresh dependency installation or MORAI/full-load test'}
 (a.out/'RUN_MANIFEST.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
