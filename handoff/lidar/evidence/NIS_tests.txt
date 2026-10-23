@@ -1,0 +1,61 @@
+Note: Google Test filter = AssociationInnovation.*
+[==========] Running 12 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 12 tests from AssociationInnovation
+[ RUN      ] AssociationInnovation.OffReproducesIncompatibleStateInheritance
+[       OK ] AssociationInnovation.OffReproducesIncompatibleStateInheritance (1 ms)
+[ RUN      ] AssociationInnovation.OnRejectsIncompatibleStateInheritance
+[       OK ] AssociationInnovation.OnRejectsIncompatibleStateInheritance (0 ms)
+[ RUN      ] AssociationInnovation.UncertainCoastedTrackMayReacquire
+[       OK ] AssociationInnovation.UncertainCoastedTrackMayReacquire (0 ms)
+[ RUN      ] AssociationInnovation.FastCorrectPredictionIsAccepted
+[       OK ] AssociationInnovation.FastCorrectPredictionIsAccepted (0 ms)
+[ RUN      ] AssociationInnovation.ExistingFiniteRotationIsUsedOnce
+[       OK ] AssociationInnovation.ExistingFiniteRotationIsUsedOnce (0 ms)
+[ RUN      ] AssociationInnovation.InvalidCovarianceDoesNotSilentlyDeleteDetection
+[       OK ] AssociationInnovation.InvalidCovarianceDoesNotSilentlyDeleteDetection (0 ms)
+[ RUN      ] AssociationInnovation.RealAccelerationKeepsId
+[       OK ] AssociationInnovation.RealAccelerationKeepsId (8 ms)
+[ RUN      ] AssociationInnovation.GuardSameVehicleFaceSwitchMustKeepIdentity
+@EXPERIMENT@/repo/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp:392: Failure
+Expected equality of these values:
+  100
+  InnovationPair(true,.8,0.)
+    Which is: 101
+[  FAILED  ] AssociationInnovation.GuardSameVehicleFaceSwitchMustKeepIdentity (0 ms)
+[ RUN      ] AssociationInnovation.GuardAdjacentVehiclesPedestrianAndNormalNewBirth
+[       OK ] AssociationInnovation.GuardAdjacentVehiclesPedestrianAndNormalNewBirth (11 ms)
+[ RUN      ] AssociationInnovation.GuardShortOcclusionReacquiresSameIdentity
+[       OK ] AssociationInnovation.GuardShortOcclusionReacquiresSameIdentity (6 ms)
+[ RUN      ] AssociationInnovation.GuardSplitRejoinRetainsPhysicalObjectIdentity
+@EXPERIMENT@/repo/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp:452: Failure
+Value of: ids[k][0]==ids[0][0] || ids[k][1]==ids[0][0]
+  Actual: false
+Expected: true
+@EXPERIMENT@/repo/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp:452: Failure
+Value of: ids[k][0]==ids[0][0] || ids[k][1]==ids[0][0]
+  Actual: false
+Expected: true
+@EXPERIMENT@/repo/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp:452: Failure
+Value of: ids[k][0]==ids[0][0] || ids[k][1]==ids[0][0]
+  Actual: false
+Expected: true
+[  FAILED  ] AssociationInnovation.GuardSplitRejoinRetainsPhysicalObjectIdentity (7 ms)
+[ RUN      ] AssociationInnovation.GuardFaceSwitchWhileEgoRotatesKeepsIdentity
+@EXPERIMENT@/repo/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp:456: Failure
+Expected equality of these values:
+  100
+  InnovationPair(true,.8,0.,.01,0.,.2)
+    Which is: 101
+[  FAILED  ] AssociationInnovation.GuardFaceSwitchWhileEgoRotatesKeepsIdentity (0 ms)
+[----------] 12 tests from AssociationInnovation (33 ms total)
+
+[----------] Global test environment tear-down
+[==========] 12 tests from 1 test suite ran. (33 ms total)
+[  PASSED  ] 9 tests.
+[  FAILED  ] 3 tests, listed below:
+[  FAILED  ] AssociationInnovation.GuardSameVehicleFaceSwitchMustKeepIdentity
+[  FAILED  ] AssociationInnovation.GuardSplitRejoinRetainsPhysicalObjectIdentity
+[  FAILED  ] AssociationInnovation.GuardFaceSwitchWhileEgoRotatesKeepsIdentity
+
+ 3 FAILED TESTS

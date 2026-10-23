@@ -8,8 +8,7 @@ Build outer message/dependency workspace using scripts/build_ws.sh (review its e
     source /opt/ros/noetic/setup.bash
     source devel/setup.bash
     catkin_make -C src/lidar+sensorfusion --build build/handoff -DCATKIN_DEVEL_PREFIX="$PWD/src/lidar+sensorfusion/build/handoff/devel" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O2 -DCMAKE_C_FLAGS_RELEASE=-O2 -DCATKIN_ENABLE_TESTING=ON -j2
-    make -C src/lidar+sensorfusion/build/handoff Main/lidar_dataset_replay
-If that generated make target is unavailable, use make -C ... lidar_dataset_replay.
+    make -C src/lidar+sensorfusion/build/handoff lidar_dataset_replay
 The original machine reused an existing outer dependency workspace and compiled identical frozen algorithm source; a brand-new dependency installation/container build is NOT yet validated.
 
 ## Representative data and one-command replay/evaluation
@@ -31,3 +30,5 @@ Actual user PC only: live packets, MORAI sensor mount/GT reference, manual forwa
 External: inspect code/data -> separate branch -> available tests -> record changes/evidence.
 User PC: separate checkout/worktree at the exact commit -> build/bag replay/MORAI checks -> commit curated result/manifest/logs back to a results branch (no secrets/host paths). Do not force-switch existing work.
 Results must name real executing commit/config; no adoption before results. Keep data branch outside operational/main merges. Main review is an explicit human step.
+
+Portable tests actually run: python3 -B handoff/lidar/evaluation_tests/test_response_eval.py (11 pass); python3 -B handoff/lidar/evaluation_tests/test_alignment.py (12 pass). Prefix replay at af346e9ea7c4520378f9424e1be4294e69efd680:1156/1156 identical numeric/discrete output excluding timing, tolerance0. Evaluation performed separately with fixed aligned GT. The final handoff only adds documentation/evidence around the unchanged algorithm.

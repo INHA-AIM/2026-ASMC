@@ -1,0 +1,51 @@
+Note: Google Test filter = PointSupportOwnership.*
+[==========] Running 13 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 13 tests from PointSupportOwnership
+[ RUN      ] PointSupportOwnership.OffReproducesWrongInitialInheritance
+[       OK ] PointSupportOwnership.OffReproducesWrongInitialInheritance (1 ms)
+[ RUN      ] PointSupportOwnership.OnEndsContainedDuplicateWithoutSuppressingDetection
+[       OK ] PointSupportOwnership.OnEndsContainedDuplicateWithoutSuppressingDetection (0 ms)
+[ RUN      ] PointSupportOwnership.SparseInsufficientEvidenceFallsBack
+[       OK ] PointSupportOwnership.SparseInsufficientEvidenceFallsBack (0 ms)
+[ RUN      ] PointSupportOwnership.LongGapFallsBack
+[       OK ] PointSupportOwnership.LongGapFallsBack (1 ms)
+[ RUN      ] PointSupportOwnership.InvalidFrameFallsBack
+[       OK ] PointSupportOwnership.InvalidFrameFallsBack (0 ms)
+[ RUN      ] PointSupportOwnership.SameVehicleFaceSwitchKeepsId
+[       OK ] PointSupportOwnership.SameVehicleFaceSwitchKeepsId (0 ms)
+[ RUN      ] PointSupportOwnership.RotationAndFaceSwitchKeepsId
+[       OK ] PointSupportOwnership.RotationAndFaceSwitchKeepsId (0 ms)
+[ RUN      ] PointSupportOwnership.SplitRejoinRetainsId
+@EXPERIMENT@/repo/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp:510: Failure
+Expected equality of these values:
+  ids[0][0]
+    Which is: 100
+  ids[11][0]
+    Which is: 102
+[  FAILED  ] PointSupportOwnership.SplitRejoinRetainsId (10 ms)
+[ RUN      ] PointSupportOwnership.AdjacentObjectsAndNewBirth
+[       OK ] PointSupportOwnership.AdjacentObjectsAndNewBirth (14 ms)
+[ RUN      ] PointSupportOwnership.ShortOcclusionReacquires
+[       OK ] PointSupportOwnership.ShortOcclusionReacquires (6 ms)
+[ RUN      ] PointSupportOwnership.FastNewObjectAndAccelerationAreNotVetoed
+[       OK ] PointSupportOwnership.FastNewObjectAndAccelerationAreNotVetoed (10 ms)
+[ RUN      ] PointSupportOwnership.AmbiguousFastObjectRevealingBackgroundMustNotBeRetired
+@EXPERIMENT@/repo/src/lidar+sensorfusion/src/Main/test/test_tracking_frame_options.cpp:533: Failure
+Expected equality of these values:
+  100
+  OwnedSparsePair(true)
+    Which is: 300
+[  FAILED  ] PointSupportOwnership.AmbiguousFastObjectRevealingBackgroundMustNotBeRetired (0 ms)
+[ RUN      ] PointSupportOwnership.SplitRejoinBaselineControl
+[       OK ] PointSupportOwnership.SplitRejoinBaselineControl (17 ms)
+[----------] 13 tests from PointSupportOwnership (60 ms total)
+
+[----------] Global test environment tear-down
+[==========] 13 tests from 1 test suite ran. (60 ms total)
+[  PASSED  ] 11 tests.
+[  FAILED  ] 2 tests, listed below:
+[  FAILED  ] PointSupportOwnership.SplitRejoinRetainsId
+[  FAILED  ] PointSupportOwnership.AmbiguousFastObjectRevealingBackgroundMustNotBeRetired
+
+ 2 FAILED TESTS
