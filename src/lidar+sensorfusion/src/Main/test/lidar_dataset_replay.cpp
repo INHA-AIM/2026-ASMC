@@ -549,17 +549,21 @@ int main(int argc, char** argv) {
             if (max_frames >= 0 && static_cast<long>(frames_done) >= max_frames) break;
             const auto arrival = event.getTime().toNSec(); const auto logical = arrival - first + 1000000000ULL;
             ros::Time::setNow(event.getTime());
-            if (auto m = event.instantiate<sensor_msgs::Imu>()) {
+            if (event.getTopic() == "/imu" && event.isType<sensor_msgs::Imu>()) {
+                auto m = event.instantiate<sensor_msgs::Imu>();
                 history.AddImu(m->header.stamp.toNSec() / 1000000, Convert(*m), nullptr, m->header.stamp.toNSec(), logical);
-            } else if (auto m = event.instantiate<morai_msgs::EgoVehicleStatus>()) {
+            } else if (event.getTopic() == "/Ego_topic" && event.isType<morai_msgs::EgoVehicleStatus>()) {
+                auto m = event.instantiate<morai_msgs::EgoVehicleStatus>();
                 CAN_DATA d{}; d.f32_CurrentVel_MPS = m->velocity.x;
                 d.f32_CurrentVel_KPH = 3.6 * d.f32_CurrentVel_MPS;
                 history.AddCan(m->header.stamp.toNSec() / 1000000, d, nullptr, m->header.stamp.toNSec(), logical);
-            } else if (auto m = event.instantiate<morai_msgs::GPSMessage>()) {
+            } else if (event.getTopic() == "/gps" && event.isType<morai_msgs::GPSMessage>()) {
+                auto m = event.instantiate<morai_msgs::GPSMessage>();
                 const auto source = m->header.stamp.toNSec();
                 if (!m->status || (!m->latitude && !m->longitude)) history.AddGpsInvalidAt(source, logical);
                 else {
                     GPS_DATA gps{}; int zone = 52; bool north = true; double east, nn;
+                    gps.f64_Latitude=m->latitude; gps.f64_Longitude=m->longitude;
                     GeographicLib::UTMUPS::Forward(m->latitude, m->longitude, zone, north, east, nn);
                     gps.f64_E = east - m->eastOffset; gps.f64_N = nn - m->northOffset;
                     gps.f64_U = m->altitude - frame_boundary::MapAltitudeOrigin();
