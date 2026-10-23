@@ -63,7 +63,12 @@ staleness, latency와 자원 사용량을 측정한다.
 | 최대 wheel angle | 40° |
 | 최소 회전반경 | 5.87 m |
 | 전/후 overhang | 0.845 / 0.790 m |
-| L × W × H | 4.635 × 1.892 × 2.434 m |
+| VehicleSpec L × W × H (메타데이터) | 4.635 × 1.892 × 2.434 m |
+
+2026-10-23 실제 형상 대조: `GetVehicleSpec.height`·UDP `sizeZ`의2.434m를 시각화 높이로
+그대로 쓰지 않는다. `GetActorState(Ego).bounding_box.extent.z`는5회 모두0.8220231533m로,
+실제 bounding box 높이는1.6440463066m다. RViz ego 표시는1.644m를 사용한다
+([표시 기준과 정정](../../src/asmc_lidar/README.md#처리-결과를-rviz에서-보기)).
 
 | 센서 | 수량·규정 | 현재 팀 개발 기준 |
 |---|---|---|

@@ -99,6 +99,12 @@ rosrun asmc_lidar lidar_markers.py
 - 정상 빈 결과·무효·세션/세대 변경에서 이전 박스를 지우고, 입력350ms 중단 시 wall clock으로 제거한다. 중복·이전 세대 관측으로 표시를 갱신하지 않는다.
 - 이 도구는 검출·추적·fusion을 계산하지 않고 Marker만 발행한다. 지면 제거/군집 점군을 새로 계산하지 않는다.
 - 프리셋의 Raw LiDAR는 기본 OFF다. 이를 켜면 원본 `/velodyne_points`와 최종 처리된 박스를 대조한다. 중간 단계 점군은 현재 공개되지 않는다.
-- 같은 Marker 토픽에 ego를 파란 반투명3D 박스·흰12개 모서리·EGO 라벨로 표시한다. 2026-10-23 실제 MORAI UDP9099 패킷20개에서 확인한 size=4.635×1.892×2.434m를 사용한다. 후륜축 기준 x=-0.79~3.845m, 명목 지면 z=-0.36m·상단 z=2.074m다. 높이는 시뮬레이터 bounding size이며 실차 제원이나 실시간 높이 추정값이 아니다. 입력이 끊겨도 ego 기준선만 유지하며 검출 객체 배열에는 추가하지 않는다.
+- 같은 Marker 토픽에 ego를 파란 반투명3D 박스·흰12개 모서리·EGO 라벨로 표시한다. 차체 footprint는4.635×1.892m, 높이는 실제 형상에서 확인한1.644m다. 후륜축 기준 x=-0.79~3.845m, 명목 지면 z=-0.36m·상단 z=1.284m다. 입력이 끊겨도 ego 기준선만 유지하며 검출 객체 배열에는 추가하지 않는다.
+
+**2026-10-23 높이 정정:** UDP20개와 `GetVehicleSpec.height`는2.434m지만, `GetActorState(Ego)`
+5회의 `bounding_box.extent.z`는 모두0.8220231533m였다. 실제 형상의 높이는 half-extent의2배인
+1.6440463066m이므로 표시에는1.644m를 사용한다. 앞서2.434m 메타데이터를 형상 높이로 사용한 것은
+잘못이었다. XY는 기존 차체 footprint를 유지하므로 전체 mesh bounding box를 그대로 복제한 것은 아니다.
+명목 지면과 높이 snapshot은 표시용이며 실시간 자세/상하 운동 추정이나 인지 GT 입력이 아니다.
 
 기본 출력 namespace를 바꿨다면 `rosrun asmc_lidar lidar_markers.py _input:=/다른경로/observations_local _output:=/다른경로/markers`로 맞춘다.

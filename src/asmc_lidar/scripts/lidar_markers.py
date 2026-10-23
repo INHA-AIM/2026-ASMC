@@ -22,17 +22,19 @@ COLORS = {'vehicle': (0.2, 0.8, 1.0), 'dynamic_obstacle': (1.0, 0.45, 0.15),
 
 
 def ego_markers():
-    """Static MORAI ego bounding box, never a detected object.
+    """Static ego display: body footprint plus verified geometry height.
 
     Matches asmc_hd_map/ego_footprint.py and planning's rear-axle base_link:
-    rear=-0.79, front=3.0+0.845, width=1.892 m. On 2026-10-23 twenty live
-    UDP9099 #MoraiInfo$ packets reported size=(4.635,1.892,2.434) and rear=.79.
-    Height is the simulator-reported bounding size, not a real-car spec or
-    inferred suspension state. Ground z=-.36 matches cameras_v3.yaml's nominal
-    wheel-radius plane. Keep the preserved legacy detector settings unchanged.
+    rear=-0.79, front=3.0+0.845, width=1.892 m. Correction on 2026-10-23:
+    UDP sizeZ/GetVehicleSpec.height=2.434 is metadata, not this mesh's height.
+    Five read-only GetActorState(Ego) calls gave bounding_box.extent.z=
+    .8220231533, i.e. geometry height=1.6440463066 m (extent is half-size).
+    Only the display uses this snapshot; no live GT enters perception.
+    Ground z=-.36 is the nominal wheel-radius plane, not measured heave.
+    Keep the preserved legacy detector settings unchanged.
     """
     rear, front, half_width = -0.79, 3.845, 1.892 / 2.
-    height, ground_z = 2.434, -0.36
+    height, ground_z = 1.644, -0.36
     top_z = ground_z + height
     markers = [Marker() for _ in range(3)]
     for index, marker in enumerate(markers):
