@@ -164,6 +164,12 @@ struct Parameters {
     // 5개 기준선(1 왼쪽 끝, 2 왼쪽 차로 중앙, 3 중앙선, 4 오른쪽 차로 중앙, 5 오른쪽 끝) 사이를 이 간격으로 나눈
     // 후보 주행선 중 장애물 간격·주행 영역을 지키며 내 차로 중앙(2 또는 4)에 가장 가까운 선을 고른다.
     double avoid_line_step = 0.25;
+    // 회피 선을 고른 뒤 같은 방향으로 더 밀어 여유를 늘린다. 0이면 기존처럼
+    // 통과 가능한 가장 가까운 선(최소 횡이동)을 쓴다. 단위는 선 번호.
+    double avoid_line_extra = 0.0;
+    // [m] 기준선 1(좌)·5(우)를 도로 바깥으로 각각 확장한다. 선 좌표 매핑과 목표선
+    // 범위만 넓히며, 실제 주행 한계는 corridorAt(차로 샘플 + overrun)이 그대로 정한다.
+    double line_edge_expand = 0.0;
     // 선 선택 중 카메라 차선이 끊기면(차량이 크게 틀어진 회피 중 등) 마지막 정상 차선을 IMU 회전·차속 추측
     // 항법으로 옮겨 계속 쓴다. 거리·시간 중 하나라도 넘으면 정지한다. 0이면 사용 안 함.
     double lane_hold_distance = 15.0;       // [m] 장애물 옆을 지나는 동안(가림) 차선이 끊겨도 유지.
@@ -1771,6 +1777,8 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("avoid_wall_margin", params.avoid_wall_margin, params.avoid_wall_margin);
     private_nh.param("avoid_line_overrun", params.avoid_line_overrun, params.avoid_line_overrun);
     private_nh.param("avoid_line_step", params.avoid_line_step, params.avoid_line_step);
+    private_nh.param("avoid_line_extra", params.avoid_line_extra, params.avoid_line_extra);
+    private_nh.param("line_edge_expand", params.line_edge_expand, params.line_edge_expand);
     private_nh.param("lane_hold_distance", params.lane_hold_distance, params.lane_hold_distance);
     private_nh.param("lane_hold_time", params.lane_hold_time, params.lane_hold_time);
     private_nh.param("imu_topic", params.imu_topic, params.imu_topic);
@@ -2228,11 +2236,11 @@ bool lineFrameAt(double x, LineFrame& frame) {
     LaneSample left, right;
     if (!sampleLaneIndexAt(0, x, left) || !sampleLaneIndexAt(1, x, right)) return false;
     frame.y[0] = 0.0;
-    frame.y[1] = left.left.y;
+    frame.y[1] = left.left.y + params.line_edge_expand;
     frame.y[2] = left.center.y;
     frame.y[3] = 0.5 * (left.right.y + right.left.y);
     frame.y[4] = right.center.y;
-    frame.y[5] = right.right.y;
+    frame.y[5] = right.right.y - params.line_edge_expand;
     for (int line = 1; line < 5; ++line) {
         if (!(frame.y[line] > frame.y[line + 1])) return false;
     }
@@ -2548,9 +2556,21 @@ double lineObstacleX(const LineObstacle& obstacle) {
 // 기억한 장애물의 현재 영역. 시작·끝 x의 기준선으로 도로 방향에 맞추고 간격(차체 여유 제외분)을 더한다.
 bool lineObstacleArea(const LineObstacle& obstacle, std::array<FamilyPoint2d, 4>& area) {
     const double x0 = lineObstacleX(obstacle), x1 = x0 + obstacle.length;
+    const double near_x = std::max(x0, params.planning_start_x);
+    const double far_x = std::max(x1, near_x);
     LineFrame start, end;
-    if (!lineFrameAt(std::max(x0, params.planning_start_x), start) ||
-        !lineFrameAt(std::max(x1, params.planning_start_x), end)) return false;
+    if (!lineFrameAt(near_x, start)) return false;
+    // 먼 끝이 관측 범위를 넘어도 장애물 전체를 포기하지 않는다. 관측되는 가장 먼
+    // 기준선을 쓰고, 없으면 가까운 끝의 기준선을 쓴다(차선 유지의 끝 연장과 같은 취급).
+    // 한 장애물의 먼 끝을 못 잡았다고 모든 후보 선을 막으면, 차로를 일부만 덮은
+    // 장애물에서도 회피 경로를 못 그리고 no_clear_line으로 정지한다.
+    if (!lineFrameAt(far_x, end)) {
+        end = start;
+        for (double x = far_x - params.path_sample_step; x > near_x; x -= params.path_sample_step) {
+            LineFrame candidate;
+            if (lineFrameAt(x, candidate)) { end = candidate; break; }
+        }
+    }
     const double extra = std::max(0.0, params.avoid_clearance - params.obstacle_lateral_margin);
     area = {{{x0, lineY(start, obstacle.line_left) + extra}, {x1, lineY(end, obstacle.line_left) + extra},
              {x1, lineY(end, obstacle.line_right) - extra}, {x0, lineY(start, obstacle.line_right) - extra}}};
@@ -2626,7 +2646,12 @@ bool pathClearOfLineObstacles(const std::vector<FamilyPoint2d>& path) {
     for (const auto& obstacle : line_state.obstacles) {
         if (!lineObstacleConfirmed(obstacle)) continue;
         std::array<FamilyPoint2d, 4> area;
-        if (!lineObstacleArea(obstacle, area)) return false;  // 위치를 다시 잡을 수 없으면 보수적으로 거부.
+        if (!lineObstacleArea(obstacle, area)) {
+            // 가까운 끝조차 기준선을 못 잡으면 보수적으로 거부한다. 실제 충돌과
+            // 구분되도록 사유를 남긴다.
+            path_block_reason = "obstacle_frame_unavailable";
+            return false;
+        }
         areas.push_back(area);
     }
     const double front = params.vehicle_front + params.obstacle_longitudinal_margin + params.path_sample_step;
@@ -2736,9 +2761,24 @@ std::string updateLinePlan(bool new_scan) {
         for (int k = 1; k <= steps && !found; ++k) {
             for (int side : {1, -1}) {
                 const double line = line_state.target + side * k * params.avoid_line_step;
-                if (line < 0.5 || line > 5.5 || !lineClear(line, path)) continue;
-                ROS_INFO("Line selection: %.2f blocked -> %.2f", line_state.target, line);
-                line_state.target = line;
+                // 선 1/5가 도로 경계다. 그 바깥은 avoid_line_overrun과 avoid_max_shoulder가
+                // 허용하는 만큼만 실제로 쓸 수 있고, 가능 여부는 lineClear 안의
+                // pathInsideRoad(corridorAt)가 판정한다. 따라서 숫자 한계는 갓길까지
+                // 후보로 낼 수 있도록 한 칸 넓히고, 실제 제약은 corridor에 맡긴다.
+                if (line < 0.0 || line > 6.0 || !lineClear(line, path)) continue;
+                // 통과 가능한 가장 가까운 선은 장애물을 바짝 스친다. avoid_line_extra만큼
+                // 같은 방향으로 더 밀어 여유를 늘린다. 추가 후보가 막히면 직전 값을 쓴다.
+                double chosen = line;
+                for (double extra = params.avoid_line_step; extra <= params.avoid_line_extra + params.epsilon;
+                     extra += params.avoid_line_step) {
+                    const double pushed = line + side * extra;
+                    std::vector<FamilyPoint2d> pushed_path;
+                    if (pushed < 0.0 || pushed > 6.0 || !lineClear(pushed, pushed_path)) break;
+                    chosen = pushed;
+                    path = pushed_path;
+                }
+                ROS_INFO("Line selection: %.2f blocked -> %.2f", line_state.target, chosen);
+                line_state.target = chosen;
                 found = true;
                 break;
             }
@@ -2803,8 +2843,16 @@ std::string updateLaneChangePlan() {
     change_state.decision_sequence = observationSequence();
     // 기본: 1~5 기준선 중 따라갈 선(=내 차선)을 고른다. 속도 입력이 없으면(통과 판단 불가) 기존 동작.
     // 기존 방식으로 진행 중인 차선변경/회피가 있으면 그것을 먼저 끝낸다.
+    // 점유 라벨은 유효한데 접점만 측정되지 않은 경우(보닛 마스크 가림·하단 잘림 등)
+    // 선 선택은 장애물을 기억하지 못해 line_state.obstacles가 비고 "깨끗함"으로 단정해
+    // 그대로 직진한다. 내 차로 검출을 알고도 비껴가지 않고 박는 경로가 이것이다.
+    // 이때는 점유 라벨만으로 판단하는 기존 경로에 넘겨 차선변경/정지를 하게 한다.
+    // BBOX 자체가 없는 경우는 포함하지 않는다. 그 상황은 bboxStopReason과 차선 유지
+    // (lane hold)가 담당하며, 여기서 끄면 차선 유실 중 추측 항법 주행이 깨진다.
+    const bool unmeasured_occupancy =
+        change_state.bbox_valid && !change_state.measured_complete && !lidarFresh();
     line_mode_active = params.straddle_avoidance && params.avoid_line_straddle && egoSpeedFresh() &&
-        !change_state.changing && !avoid_state.active;
+        !unmeasured_occupancy && !change_state.changing && !avoid_state.active;
     if (line_mode_active) return updateLinePlan(new_scan);
     // 속도를 적분할 수 없으면 장애물 옆을 지났는지 알 수 없으므로 회피 중에는 정지한다.
     if (avoid_state.active && !egoSpeedFresh()) return "avoid_ego_speed_timeout";
@@ -3119,6 +3167,8 @@ void validateLaneChangeParameters() {
         !std::isfinite(params.avoid_max_shoulder) || params.avoid_max_shoulder < 0 ||
         !std::isfinite(params.avoid_wall_margin) || params.avoid_wall_margin < 0 ||
         !std::isfinite(params.avoid_line_overrun) || params.avoid_line_overrun < 0 ||
+        !std::isfinite(params.avoid_line_extra) || params.avoid_line_extra < 0.0 || params.avoid_line_extra > 2.0 ||
+        !std::isfinite(params.line_edge_expand) || params.line_edge_expand < 0.0 || params.line_edge_expand > 0.5 ||
         !std::isfinite(params.avoid_line_step) || params.avoid_line_step < 0.05 || params.avoid_line_step > 1.0 ||
         !std::isfinite(params.lane_hold_distance) || params.lane_hold_distance < 0 ||
         !std::isfinite(params.lane_hold_time) || params.lane_hold_time < 0 ||

@@ -655,6 +655,11 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
         camera.selected_plane=projection->plane;
         camera.homography=lane_boundary_adapter::groundHomography(camera.intrinsic,camera.rotation,
             camera.translation,camera.selected_plane);
+        // 역행렬도 같은 프레임 평면으로 갱신한다. 갱신하지 않으면 imageToGround가
+        // 정적 평면으로 역투영하고 projectPoint가 프레임 평면으로 재투영해 왕복 검사가
+        // 어긋나고, BBOX 하단 접점이 항상 측정 실패(nan)가 된다.
+        if (std::abs(cv::determinant(camera.homography)) >= 1e-12)
+            camera.ground_from_image=camera.homography.inv();
     }
     Result result;
     result.header = message->header;
@@ -697,6 +702,12 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
         if (!associated && (assignment == Result::OWN || assignment == Result::ADJACENT || assignment == Result::BOTH) &&
             !measureGroundContact(box, contact_x, contact_y_min, contact_y_max)) {
             contact_x = contact_y_min = contact_y_max = std::numeric_limits<double>::quiet_NaN();
+            // 측정 실패와 "측정 대상이 아님"을 진단에서 구분한다. 회피 판단은 접점이
+            // 없으면 장애물을 기억하지 못하므로 어느 쪽인지가 중요하다.
+            char detail[96];
+            std::snprintf(detail, sizeof(detail), ";ground_contact_unprojectable:u=%.0f-%.0f,v=%.0f",
+                          box.xmin, box.xmax, box.ymax);
+            result.box_reasons.back() += detail;
         }
         result.contact_x.push_back(contact_x);
         result.contact_y_min.push_back(contact_y_min);

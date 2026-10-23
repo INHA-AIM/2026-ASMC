@@ -97,6 +97,10 @@
   <arg name="avoid_wall_margin" default="0.3"/>
   <arg name="avoid_line_overrun" default="1.0"/>
   <arg name="avoid_line_step" default="0.25"/>
+  <!-- 고른 회피 선을 같은 방향으로 더 밀어 여유를 늘린다(선 번호 단위). 0은 기존 동작. -->
+  <arg name="avoid_line_extra" default="0.0"/>
+  <!-- [m] 기준선 1·5를 도로 바깥으로 확장. 주행 한계는 corridor가 정한다. -->
+  <arg name="line_edge_expand" default="0.0"/>
   <!-- Keep the last camera lanes by dead reckoning (IMU yaw rate + /Ego_topic speed) when they drop out. -->
   <arg name="lane_hold_distance" default="15.0"/>
   <arg name="lane_hold_time" default="8.0"/>
@@ -234,6 +238,8 @@
     <param name="avoid_wall_margin" type="double" value="$(arg avoid_wall_margin)"/>
     <param name="avoid_line_overrun" type="double" value="$(arg avoid_line_overrun)"/>
     <param name="avoid_line_step" type="double" value="$(arg avoid_line_step)"/>
+    <param name="avoid_line_extra" type="double" value="$(arg avoid_line_extra)"/>
+    <param name="line_edge_expand" type="double" value="$(arg line_edge_expand)"/>
     <param name="lane_hold_distance" type="double" value="$(arg lane_hold_distance)"/>
     <param name="lane_hold_time" type="double" value="$(arg lane_hold_time)"/>
     <param name="imu_topic" type="str" value="$(arg imu_topic)"/>
