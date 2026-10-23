@@ -1,5 +1,5 @@
-#include <asmc_lidar/tracking/track.hpp>
 #pragma once
+#include <asmc_lidar/tracking/track.hpp>
 // One LiDAR scan through the ported common-geometry path:
 //   ROI/ego -> Voxel -> roll/pitch leveling -> RANSAC ground -> [experimental
 //   tunnel stage, default OFF] -> clustering -> centroid/OBB -> tracking.

@@ -247,9 +247,27 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   config.config_path = yaml_path;
   config.config_sha256 = Sha256(yaml_path);
   config.mount_config_sha256 = Sha256(config.mount_config_path);
-  // Shadow identity (Main: sha(lidar yaml):sha(camera yaml):sha(map contract)).
+  // Historical PR #103 comparison identity (not observation.calibration_id; Main: sha(lidar yaml):sha(camera yaml):sha(map contract)).
   p.calibration_id = "shadow:" + config.config_sha256 + ":" + config.mount_config_sha256;
   return config;
+}
+
+void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_calibration_id) {
+  auto hash = [](const std::string& bytes) {
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(bytes.data()), bytes.size(), digest);
+    std::ostringstream out;
+    for (auto byte : digest) out << std::hex << std::setfill('0') << std::setw(2) << unsigned(byte);
+    return out.str();
+  };
+  config.calibration_id = "sha256:" + hash(config.mount_config_sha256 + "\n" + camera_calibration_id);
+  // File bytes cover every strict YAML setting; explicit effective choices cover
+  // all launch/replay overrides. No host path, UUID or generation enters the hash.
+  std::ostringstream effective;
+  effective << "lidar-runtime-v1\n" << config.config_sha256 << '\n' << config.calibration_id << '\n'
+            << config.pipeline.use_roll << ',' << config.enable_camera_fusion << ','
+            << config.pipeline.tunnel.enabled << ',' << config.pipeline.capture_debug << '\n';
+  config.config_id = hash(effective.str());
 }
 
 }  // namespace runtime

@@ -7,7 +7,7 @@
        CMake registers this test only when the file exists). -->
   <arg name="camera_calibration_config" default="$(find asmc_lidar)/../asmc_camera/config/cameras_v3.yaml"/>
 
-  <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" output="screen">
+  <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="/migration/lidar" output="screen" respawn="true" respawn_delay="0.2">
     <param name="pipeline_config" value="$(arg pipeline_config)"/>
     <param name="package_dir" value="$(find asmc_lidar)"/>
     <param name="camera_calibration_config" value="$(arg camera_calibration_config)"/>
@@ -18,7 +18,7 @@
 
   <test test-name="lidar_pipeline_node" pkg="asmc_lidar" type="lidar_pipeline_node_test.py" name="lidar_pipeline_node_test"
         time-limit="180">
-    <param name="node_name" value="/lidar_pipeline"/>
+    <param name="node_name" value="/migration/lidar/lidar_pipeline"/>
     <param name="pipeline_config" value="$(arg pipeline_config)"/>
     <param name="camera_calibration_config" value="$(arg camera_calibration_config)"/>
     <param name="mount_config" value="$(find asmc_lidar)/config/autonav_v3.yaml"/>

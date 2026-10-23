@@ -1,3 +1,4 @@
+#include <asmc_lidar/detection/detections.hpp>
 #include <asmc_lidar/tracking/track.hpp>
 // OBB port tests: obb_util (Main Tracking.cpp:25-265 at 8f93c22e) and the
 // detection builder (Objectinfo_for_km). Expected values are computed

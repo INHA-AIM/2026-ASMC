@@ -1,7 +1,9 @@
-# Shadow LiDAR 파이프라인 — Main 이식본
+# LiDAR 파이프라인 — Main 이식본과 이관 검증
+
+현재 구조·이름·식별 계약은 [첫 단위 정리](structure-contract-refactor.md)와 [이전표](name-mapping.md)가 정본이다. 아래 PR #103 수치·실패와 비교 기준선은 당시 근거를 보존한다.
 
 nested `Main`의 common-geometry LiDAR 처리를 `asmc_lidar` 안에 동작 보존 방식으로 옮긴
-**검증용 shadow 노드**다. 기준은 Tracker 수정이 반영된 Main `8f93c22e`
+**검증용 이관 검증 노드**다. 기준은 Tracker 수정이 반영된 Main `8f93c22e`
 (`enable_common_geometry=true`)이다. 판제는 계속 기존 Main의 `/last_lidar`를 소비한다.
 이 노드는 어떤 기존 launch에도 포함되지 않으며 `/migration/lidar/*`에만 발행한다.
 운영 전환·기본값 승격·실시간 성능 수락은 이 문서의 범위가 아니다.
@@ -159,7 +161,7 @@ source /opt/ros/noetic/setup.bash
 cd <repo> && catkin_make -DCATKIN_WHITELIST_PACKAGES=""
 source devel/setup.bash
 
-# shadow 노드 (기존 bridge/카메라가 발행 중인 ROS 입력을 구독)
+# 이관 검증 노드 (기존 bridge/카메라가 발행 중인 ROS 입력을 구독)
 roslaunch asmc_lidar lidar_pipeline.launch
 # LiDAR 단독 (카메라 구독 없음)
 roslaunch asmc_lidar lidar_only.launch
@@ -177,7 +179,7 @@ rosrun asmc_lidar lidar_replay --bag in.bag --output out.jsonl \
   --config $(rospack find asmc_lidar)/config/lidar_pipeline.yaml --profile roll_pitch
 ```
 
-기존 실행으로 돌아가려면 shadow 노드만 종료한다. 이 노드는 운영 토픽·TF·서비스를 소유하지
+기존 실행으로 돌아가려면 이관 검증 노드만 종료한다. 이 노드는 운영 토픽·TF·차량 제어 서비스를 소유하지
 않으므로 기존 Main 실행 구성은 변하지 않는다.
 
 ## 시험
@@ -191,11 +193,11 @@ catkin_make && catkin_make camera_receiver_ros_test   # 기존 rostest gtest는 
 GPS 무효·중단·복구, IMU stale·무효, 카메라 정상·empty·invalid·STANDBY·세션 변경·중복·중단, 격리·guard;
 `../asmc_camera/config/cameras_v3.yaml`이 있을 때만 등록), 격리 계약 시험(`test/pipeline_contract_test.py`)이다.
 합성 카메라 관측은 인터페이스·동기화 시험이며 YOLO 정확도 시험이 아니다.
-PCL·pcl_conversions·GeographicLib·morai_msgs가 없는 환경에서는 shadow target을 경고와 함께 건너뛰고
+PCL·pcl_conversions·GeographicLib·morai_msgs가 없는 환경에서는 pipeline target을 경고와 함께 건너뛰고
 기존 target만 빌드한다(기본값). CI는 이 생략을 허용하지 않는다.
 
 - `ci.yml`은 의존성을 설치하고 `-DASMC_LIDAR_PIPELINE_REQUIRED=ON`으로 빌드한다. 의존성이나 rostest 보정 파일이 없으면
-  configure가 실패한다. `ctest -T Test` 뒤 `test/pipeline_ci_check.py`가 두 shadow 실행파일, 필수 시험 25개의
+  configure가 실패한다. `ctest -T Test` 뒤 `test/pipeline_ci_check.py`가 두 shadow 실행파일, 필수 시험 26개의
   등록·통과·결과 갱신·최소 사례 수, skip 0, catkin export 불변을 확인하며 하나라도 어긋나면 실패한다.
 - `planning-integration.yml`의 `validated-lidar-build`는 shadow가 활성인 `asmc_lidar` 위에서 nested Main을 빌드·시험하고,
   Main 링크에 shadow 라이브러리가 없는지 같은 스크립트(`--dependent-build`)로 검사한다.

@@ -29,14 +29,14 @@
 ## 지금 닫지 않은 항목
 
 2026-10-22 L0 문서 통합에 이어 [L1 설계·기준선](../../src/asmc_lidar/docs/migration-design.md)을 정리했다.
-PR #103 검출·추적·전방 fusion shadow를 재사용해 다음은 L2 인수 확인만 구체화한다. 구현 상태와 과거 검증
+PR #103 검출·추적·전방 fusion을 재사용해 구조·공용 관측 계약을 정리한다. 이후 안승현은 HD맵 필터·카메라 연결, 손재호는 추적·속도·운동 상태·fusion을 보완한다. 구현 상태와 과거 검증
 근거는 [통합 인계](../handoffs/lidar-migration.md)에 모은다. 재호 브랜치 대기 없이 진행하되
 판제 소비는 L7까지 기존 Main을 유지한다. 최신 PR #101의 동적 장애물 판단·안전 재출발은
 판제 정책으로 남기고, 측정·지도 관련성 필터의 소유권 통합과 구분한다.
 
 카메라 TensorRT가 기본이어도 family 순간 공백250ms 기준과 freshness350ms의 남은 실패는 추적합니다.
 YOLO는 전 조건 모든 에셋 지원을 검증한 상태가 아닙니다. 추가학습은 현재 사용자 판단에 따라 보류합니다.
-`asmc_lidar`는 카메라 수신 컴포넌트·확인용 probe와 Main LiDAR 처리·전방 fusion을 옮긴 shadow 노드를 제공하지만 운영 LiDAR 실행은 계속 Main이며(shadow는 명시 실행·`/asmc_lidar/shadow/*` 전용), 3뷰 YOLO 출력이 3뷰 LiDAR fusion 완료를 뜻하지 않습니다.
+`asmc_lidar`는 카메라 수신 컴포넌트·확인용 probe와 Main LiDAR 처리·전방 fusion을 옮긴 shadow 노드를 제공하지만 운영 LiDAR 실행은 계속 Main이며(shadow는 명시 실행·`/migration/lidar/*` 전용), 3뷰 YOLO 출력이 3뷰 LiDAR fusion 완료를 뜻하지 않습니다.
 
 판제의 최신 주행 개선과 전체 회귀 통과는 다릅니다. 이전 이관 기록의 AVOID/link 실패와
 #89가 보고한 `roundabout_execution_test` 실패는 시점별로 구분해 해결·재검증합니다.

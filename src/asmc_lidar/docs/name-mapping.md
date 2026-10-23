@@ -5,7 +5,7 @@
 | 이전 | 현재 |
 |---|---|
 | `src/asmc_lidar/config/shadow_pipeline.yaml` | `src/asmc_lidar/config/lidar_pipeline.yaml` |
-| `src/asmc_lidar/docs/shadow-pipeline.md` | `src/asmc_lidar/docs/pipeline.md` |
+| `src/asmc_lidar/docs/pipeline.md` | `src/asmc_lidar/docs/pipeline.md` |
 | `src/asmc_lidar/include/asmc_lidar/bounded_pose.hpp` | `src/asmc_lidar/include/asmc_lidar/geometry/bounded_pose.hpp` |
 | `src/asmc_lidar/include/asmc_lidar/camera_calibration.hpp` | `src/asmc_lidar/include/asmc_lidar/geometry/camera_calibration.hpp` |
 | `src/asmc_lidar/include/asmc_lidar/camera_observations.hpp` | `src/asmc_lidar/include/asmc_lidar/fusion/camera_observations.hpp` |
@@ -56,3 +56,19 @@
 
 `asmc_lidar_shadow_node` → `lidar_pipeline_node`, `asmc_lidar_shadow_replay` → `lidar_replay`.
 출력 namespace는 `/asmc_lidar/shadow`에서 `/migration/lidar`로 변경했다.
+
+## 내부 필드와 공용 타입
+
+| 이전 표현 | 현재 표현 | 의미 |
+|---|---|---|
+| 한 `TrackedObject`의 혼합 필드 | `detection`, `tracking`, `camera` | 점군·측정 기하 / 추적 상태 / 카메라 근거 |
+| `f32_OBB_Width` | `detection.obb_length_m` | yaw 방향 수평 변 |
+| `f32_OBB_Height` | `detection.obb_width_m` | yaw 수직 방향 수평 변. 수직 높이가 아님 |
+| `OBB_Corners_Body` | `detection.obb_corners_level` | 수평화 센서 좌표의 8코너 |
+| `ScanInput.generation`, `Context.input_generation` | `scan_sequence` | scan 순번. 새 `generation`은 처리 초기화 세대 |
+| `Msg/TrackedObject*` 운영 wire | 현재 유지 | 새 `LidarObject*`와 필드·의미가 달라 이름만 치환하지 않음 |
+| `asmc_msgs/LidarObject*` | 이름 유지 | 기존 local/map typed 객체·상태, MD5 보존 |
+| 신규 `asmc_msgs/LidarObservation` | 원자적 관측 계약 | 배열 + 생산자 UUID·세대·scan 순번·설정/보정 ID |
+
+`detection/detections.hpp`가 검출 생성 선언을 소유한다(이전 `pipeline/tracker.hpp`).
+기존 Main의 공유 헤더 include와 Context 필드 참조도 새 경로로 바꿨으며 계산·운영 출력은 바꾸지 않았다.

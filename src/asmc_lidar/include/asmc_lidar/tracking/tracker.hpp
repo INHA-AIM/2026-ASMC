@@ -34,11 +34,6 @@ struct TrackingConfig {
   float32 f32_MergedTrackRetireDistance = 0.45f;
 };
 
-// Main Objectinfo_for_km(): one detection per cluster (points from `points`,
-// centroid from `centroids`, AABB and raw L-shape OBB).
-void BuildDetections(std::vector<TrackedObject>& detections, const CloudPtr& points,
-                     const CloudPtr& centroids, const std::vector<pcl::PointIndices>& clusters);
-
 // Main ConsolidateCurrentDetections(): repeated pairwise merge while the OBB
 // centre distance <= DuplicateCenterDistance and the body AABB IoU >=
 // DuplicateIouThreshold; the object with more points (lower index on a tie)

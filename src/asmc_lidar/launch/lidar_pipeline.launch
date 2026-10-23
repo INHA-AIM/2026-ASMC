@@ -28,6 +28,8 @@
 
   <arg name="objects_local_topic" default="objects_local"/>
   <arg name="objects_map_topic" default="objects_map"/>
+  <arg name="observations_local_topic" default="observations_local"/>
+  <arg name="observations_map_topic" default="observations_map"/>
   <arg name="diagnostics_topic" default="diagnostics"/>
   <arg name="trace_topic" default="trace"/>
 
@@ -50,6 +52,8 @@
     <param name="camera_status_topic" value="$(arg camera_status_topic)"/>
     <param name="objects_local_topic" value="$(arg objects_local_topic)"/>
     <param name="objects_map_topic" value="$(arg objects_map_topic)"/>
+    <param name="observations_local_topic" value="$(arg observations_local_topic)"/>
+    <param name="observations_map_topic" value="$(arg observations_map_topic)"/>
     <param name="diagnostics_topic" value="$(arg diagnostics_topic)"/>
     <param name="trace_topic" value="$(arg trace_topic)"/>
   </node>

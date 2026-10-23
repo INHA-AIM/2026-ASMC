@@ -55,6 +55,7 @@ add_message_files(
   # producers run in asmc_camera today. Existing operational MD5s stay frozen.
   LidarObject.msg
   LidarObjectArray.msg
+  LidarObservation.msg
   CameraObjectBox.msg
   CameraObjectBoxArray.msg
   CameraObjectObservation.msg

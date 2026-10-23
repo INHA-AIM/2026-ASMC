@@ -1,4 +1,5 @@
 #pragma once
+#include <asmc_lidar/tracking/track.hpp>
 // asmc_lidar_scan_trace_v1: one JSON object per input PointCloud2.
 // Written as JSONL by lidar_replay and published (std_msgs/String,
 // only while subscribed) by lidar_pipeline_node. Field names and order follow
@@ -230,6 +231,8 @@ class LocalInputCache {
 
 struct LineInput {
   std::string producer;
+  std::string session_id, config_id, calibration_id;
+  std::uint64_t generation = 1;
   std::uint64_t seq = 0;          // 1-based index on the points topic
   std::int64_t stamp_ns = 0;      // PointCloud2 header stamp
   std::int64_t arrival_ns = 0;    // bag record time (replay) / ROS receipt time (node)
@@ -246,6 +249,12 @@ inline std::string Line(const LineInput& in) {
   out << std::setprecision(17);
   out << "{\"schema\":\"asmc_lidar_scan_trace_v1\",\"producer\":";
   Str(out, in.producer);
+  out << ",\"producer_session_id\":";
+  Str(out, in.session_id);
+  out << ",\"generation\":" << in.generation << ",\"config_id\":";
+  Str(out, in.config_id);
+  out << ",\"calibration_id\":";
+  Str(out, in.calibration_id);
   out << ",\"seq\":" << in.seq << ",\"stamp_ns\":" << in.stamp_ns << ",\"arrival_ns\":" << in.arrival_ns
       << ",\"accepted\":";
   Bool(out, in.accepted && in.output);
@@ -358,6 +367,11 @@ inline std::string Line(const LineInput& in) {
       out << ']';
     }
   }
+  out << ",\"timings_ms\":{\"total\":" << o.total_ms
+      << ",\"roi\":" << r.timings.roi_ms << ",\"voxel\":" << r.timings.voxel_ms
+      << ",\"level\":" << r.timings.level_ms << ",\"ground\":" << r.timings.ground_ms
+      << ",\"cluster\":" << r.timings.cluster_ms << ",\"detection\":" << r.timings.detection_ms
+      << ",\"tracking\":" << r.timings.tracking_ms << '}';
   out << ",\"typed\":{\"local\":";
   Array(out, o.arrays.accepted, o.arrays.local);
   out << ",\"map\":";

@@ -13,5 +13,6 @@
     "ahn": "HD-map filters and camera connection support",
     "son": "tracking, speed, motion state and fusion improvements"
   },
-  "validation_status": "pending"
+  "validation_status": "local_validated",
+  "results": "config/baselines/lidar_structure_contract_result_v1.json"
 }

@@ -34,11 +34,13 @@ import rospy
 import rostest
 import yaml
 from asmc_msgs.msg import (CameraObjectBox, CameraObjectObservation, InferenceStatus,
-                           LidarObjectArray)
+                           LidarObjectArray, LidarObservation)
 from diagnostic_msgs.msg import DiagnosticArray
 from morai_msgs.msg import EgoVehicleStatus, GPSMessage
 from sensor_msgs.msg import Imu, PointCloud2, PointField
 from std_msgs.msg import String
+from std_srvs.srv import Trigger
+import rosnode
 from tf2_msgs.msg import TFMessage
 
 PKG = 'asmc_lidar'
@@ -141,6 +143,9 @@ class LidarPipelineNodeTest(unittest.TestCase):
         cls.state = dict(imu='normal', gps='normal', camera=None)
         cls.scans, cls.gps_log, cls.imu_log, cls.obs_log = [], [], [], []
         cls.local, cls.map, cls.diagnostics, cls.tf, cls.traces = [], [], [], [], []
+        cls.local_observations, cls.map_observations = [], []
+        rospy.Subscriber("/migration/lidar/observations_local", LidarObservation, cls.store(cls.local_observations), queue_size=50)
+        rospy.Subscriber("/migration/lidar/observations_map", LidarObservation, cls.store(cls.map_observations), queue_size=50)
         rospy.Subscriber('/migration/lidar/objects_local', LidarObjectArray, cls.store(cls.local), queue_size=50)
         rospy.Subscriber('/migration/lidar/objects_map', LidarObjectArray, cls.store(cls.map), queue_size=50)
         rospy.Subscriber('/migration/lidar/diagnostics', DiagnosticArray, cls.store(cls.diagnostics),
@@ -636,10 +641,14 @@ class LidarPipelineNodeTest(unittest.TestCase):
         time.sleep(1.2)
         resume = self.latest_scan()
         self.set_state(imu='normal')
-        first_invalid = self.log_after('imu_log', start, 'invalid')[0]
+        invalid_samples = self.log_after('imu_log', start, 'invalid')
+        first_invalid = invalid_samples[0]
+        # Bound the fault phase by IMU source stamps, not the last scan emitted
+        # just before the publishing thread receives the resume command.
+        invalid_end = invalid_samples[-1] - 1000000
         window_start = first_invalid + 60000000
         for arrays in (self.local_after(window_start), self.map_after(window_start)):
-            bad = [m for m in arrays if self.stamp(m) <= resume]
+            bad = [m for m in arrays if self.stamp(m) <= invalid_end]
             self.assertGreaterEqual(len(bad), 5)
             for m in bad:
                 self.assertEqual((m.status, len(m.objects)), (INPUT_INVALID, 0), m.reason)
@@ -654,7 +663,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
         for topic in published:
             self.assertTrue(topic.startswith('/migration/lidar/') or topic in allowed, topic)
         self.assertEqual(sorted(s for s, providers in services if self.node in providers),
-                         sorted([self.node + '/get_loggers', self.node + '/set_logger_level']))
+                         sorted([self.node + '/get_loggers', self.node + '/set_logger_level', self.node + '/reset']))
 
     def test_08_guard_refuses_operational_output(self):
         executable = rospy.get_param('~node_executable', '')
@@ -665,6 +674,8 @@ class LidarPipelineNodeTest(unittest.TestCase):
             ['/migration/lidar/objects_map:=/perception/lidar/objects_map'],
             ['/migration/lidar/objects_local:=/last_lidar'],
             ['_diagnostics_topic:=/perception/lidar/diagnostics'],
+            ['_observations_local_topic:=/last_lidar'],
+            ['/migration/lidar/observations_map:=/perception/lidar/observations_map'],
             ['_trace_topic:=/planning/shadow_trace'],
             ['_tf_child_frame:=lidar_leveled'],
             ['_objects_local_topic:=/perception/lidar/objects'],
@@ -674,7 +685,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
         master = rosgraph.Master('/lidar_pipeline_node_test')
         for index, case in enumerate(cases):
             name = 'lidar_pipeline_guard_%d' % index
-            command = [executable, '__name:=' + name, '_pipeline_config:=' + self.pipeline_config,
+            command = [executable, '__name:=' + name, '__ns:=/migration/lidar', '_pipeline_config:=' + self.pipeline_config,
                        '_enable_camera_fusion:=false'] + case
             try:
                 result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -687,6 +698,64 @@ class LidarPipelineNodeTest(unittest.TestCase):
             for topic, nodes in publications:
                 self.assertFalse(topic in OPERATIONAL or topic.startswith('/planning/'),
                                  'operational topic advertised: %s by %s' % (topic, nodes))
+
+    def observation_after(self, predicate, timeout=10.0):
+        deadline = time.monotonic()+timeout
+        while time.monotonic() < deadline:
+            with self.lock:
+                values = list(self.local_observations)
+            matching = [m for m in values if predicate(m)]
+            if matching:
+                return matching[-1]
+            time.sleep(.02)
+        self.fail('no matching LiDAR observation')
+
+    def test_09_observation_identity_and_explicit_reset(self):
+        first = self.observation_after(lambda m: m.objects.status == OBSERVED)
+        uuid.UUID(first.producer_session_id)
+        self.assertEqual(first.generation, 1)
+        self.assertTrue(first.config_id and first.calibration_id)
+        with self.lock:
+            local = list(self.local_observations)
+            mapped = {m.objects.header.stamp.to_nsec(): m for m in self.map_observations}
+            arrays = {m.header.stamp.to_nsec(): m for m in self.local}
+        paired = 0
+        for m in local:
+            stamp = m.objects.header.stamp.to_nsec()
+            if stamp in mapped and stamp in arrays:
+                other = mapped[stamp]
+                self.assertEqual((m.producer_session_id,m.generation,m.scan_sequence,m.config_id,m.calibration_id),
+                                 (other.producer_session_id,other.generation,other.scan_sequence,other.config_id,other.calibration_id))
+                # ROS1 assigns a transport seq to a top-level Header only.
+                # Nested objects.header keeps the producer value; scan_sequence is the identity.
+                expected=arrays[stamp]
+                self.assertEqual(m.objects.header.stamp,expected.header.stamp)
+                self.assertEqual(m.objects.header.frame_id,expected.header.frame_id)
+                self.assertEqual((m.objects.status,m.objects.reason,m.objects.stamp_provenance,m.objects.objects),
+                                 (expected.status,expected.reason,expected.stamp_provenance,expected.objects))
+                paired += 1
+        self.assertGreaterEqual(paired,10)
+        rospy.wait_for_service(self.node+'/reset',timeout=5)
+        response = rospy.ServiceProxy(self.node+'/reset',Trigger)()
+        self.assertTrue(response.success)
+        after = self.observation_after(lambda m: m.generation == 2 and m.objects.status == OBSERVED)
+        self.assertEqual(first.producer_session_id,after.producer_session_id)
+        self.assertGreater(after.scan_sequence,first.scan_sequence)
+        self.assertEqual(first.config_id,after.config_id)
+        time.sleep(.4)
+        with self.lock:
+            gens=[m.generation for m in self.local_observations]
+        self.assertTrue(all(g==2 for g in gens[gens.index(2):]))
+
+    def test_10_restart_changes_session(self):
+        before = self.observation_after(lambda m: m.generation==2 and m.objects.status==OBSERVED)
+        killed,failed=rosnode.kill_nodes([self.node])
+        self.assertFalse(failed)
+        self.assertIn(self.node,killed)
+        after=self.observation_after(lambda m: m.producer_session_id != before.producer_session_id and m.objects.status==OBSERVED)
+        self.assertEqual(after.generation,1)
+        self.assertEqual(after.config_id,before.config_id)
+        self.assertEqual(after.calibration_id,before.calibration_id)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+#include <asmc_lidar/detection/detections.hpp>
 #include <asmc_lidar/tracking/track.hpp>
 // Detection records and same-scan consolidation.
 // Ported from Main src/Lidar/Tracking/Tracking.cpp (namespace tracking_association,

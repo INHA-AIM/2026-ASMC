@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/track.hpp>
 // Shadow runtime: sensor input gates and the per-scan sequence of Main's
 // TemporalThread (common geometry), transport-free (see shadow/runtime.hpp).
 #include <asmc_lidar/ros/runtime.hpp>
@@ -42,10 +43,10 @@ void BackFillAntenna(const asmc::lidar::PoseSelection& map, const pipeline::Vehi
 // PublishBoxesAndPcl (visualization) is not ported.
 void UpdateAABB(std::vector<pipeline::TrackedObject>& objects) {
   for (auto& obj : objects) {
-    if (obj.pcl_ClusterPoints.empty()) {
-      obj.f32_MinX = obj.f32_MaxX = obj.f32_CoreX;
-      obj.f32_MinY = obj.f32_MaxY = obj.f32_CoreY;
-      obj.f32_MinZ = obj.f32_MaxZ = obj.f32_CoreZ;
+    if (obj.detection.pcl_ClusterPoints.empty()) {
+      obj.detection.f32_MinX = obj.detection.f32_MaxX = obj.detection.f32_CoreX;
+      obj.detection.f32_MinY = obj.detection.f32_MaxY = obj.detection.f32_CoreY;
+      obj.detection.f32_MinZ = obj.detection.f32_MaxZ = obj.detection.f32_CoreZ;
       continue;
     }
     pipeline::float32 minX = std::numeric_limits<pipeline::float32>::max();
@@ -54,7 +55,7 @@ void UpdateAABB(std::vector<pipeline::TrackedObject>& objects) {
     pipeline::float32 maxX = -std::numeric_limits<pipeline::float32>::max();
     pipeline::float32 maxY = -std::numeric_limits<pipeline::float32>::max();
     pipeline::float32 maxZ = -std::numeric_limits<pipeline::float32>::max();
-    for (const auto& pt : obj.pcl_ClusterPoints.points) {
+    for (const auto& pt : obj.detection.pcl_ClusterPoints.points) {
       if (pt.x < minX) minX = pt.x;
       if (pt.y < minY) minY = pt.y;
       if (pt.z < minZ) minZ = pt.z;
@@ -62,12 +63,12 @@ void UpdateAABB(std::vector<pipeline::TrackedObject>& objects) {
       if (pt.y > maxY) maxY = pt.y;
       if (pt.z > maxZ) maxZ = pt.z;
     }
-    obj.f32_MinX = minX; obj.f32_MaxX = maxX;
-    obj.f32_MinY = minY; obj.f32_MaxY = maxY;
-    obj.f32_MinZ = minZ; obj.f32_MaxZ = maxZ;
-    obj.f32_CoreX = 0.5f * (minX + maxX);
-    obj.f32_CoreY = 0.5f * (minY + maxY);
-    obj.f32_CoreZ = 0.5f * (minZ + maxZ);
+    obj.detection.f32_MinX = minX; obj.detection.f32_MaxX = maxX;
+    obj.detection.f32_MinY = minY; obj.detection.f32_MaxY = maxY;
+    obj.detection.f32_MinZ = minZ; obj.detection.f32_MaxZ = maxZ;
+    obj.detection.f32_CoreX = 0.5f * (minX + maxX);
+    obj.detection.f32_CoreY = 0.5f * (minY + maxY);
+    obj.detection.f32_CoreZ = 0.5f * (minZ + maxZ);
   }
 }
 

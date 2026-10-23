@@ -24,6 +24,7 @@
 #include <asmc_lidar/ros/scan_trace.hpp>
 #include <asmc_lidar/ros/ros_inputs.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
+#include <asmc_lidar/core/processing_epoch.hpp>
 
 #include <asmc_msgs/CameraObjectObservation.h>
 #include <asmc_msgs/InferenceStatus.h>
@@ -200,7 +201,9 @@ int Replay(const Options& opt) {
     buffer = std::make_shared<camera::Buffer>(calibrations, camera::Limits{});  // Receiver defaults
     source = std::make_shared<fusion::BufferCameraSource>(buffer, "camera_front");
   }
+  FinalizeRuntimeIdentity(config, front ? front->id : "");
   LidarRuntime runtime(config, source, front);
+  const ProcessingEpoch epoch;
 
   std::ofstream output(opt.output);
   if (!output) throw std::runtime_error("cannot open " + opt.output);
@@ -216,7 +219,7 @@ int Replay(const Options& opt) {
   rosbag::View view(bag, rosbag::TopicQuery(topics));
 
   trace::LocalInputCache cache;
-  std::uint64_t seq = 0, generation = 0, accepted = 0, processed = 0, ready = 0;
+  std::uint64_t seq = 0, accepted = 0, processed = 0, ready = 0;
   std::uint64_t gps_dropped = 0, gps_forced_invalid = 0, imu = 0, can = 0, gps = 0, camera_msgs = 0;
   std::map<std::string, std::uint64_t> camera_results;
   for (const rosbag::MessageInstance& m : view) {
@@ -264,6 +267,10 @@ int Replay(const Options& opt) {
       trace::LineInput line;
       line.producer = "lidar_replay";
       line.seq = ++seq;
+      line.session_id = epoch.session();
+      line.generation = epoch.generation();
+      line.config_id = config.config_id;
+      line.calibration_id = config.calibration_id;
       line.stamp_ns = stamp;
       line.arrival_ns = static_cast<std::int64_t>(arrival);
       line.debug = opt.capture_debug;
@@ -275,7 +282,8 @@ int Replay(const Options& opt) {
         ++accepted;
         // Same scan time as the node: ROS source stamp, receipt on the replay clock.
         scan.time = asmc::lidar::Observation{stamp, logical, logical, "ros", config.stamp_provenance, "steady"};
-        scan.scan_sequence = ++generation;
+        scan.scan_sequence = seq;
+        scan.generation = epoch.generation();
         ScanTimes times;
         times.receipt_ns = times.processing_ns = times.decision_ns = times.steady_now_ns = logical;
         times.ros_now_ns = ros_now;

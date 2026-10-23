@@ -436,3 +436,24 @@ xhost -local:docker
 ```
 
 주행·녹화 중에 `up`, `down`, `rebuild`로 container를 재생성하지 않는다.
+
+
+## LiDAR 이관 검증 실행
+
+기존 Main은 운영 판제 입력을 계속 제공한다. 아래 명령은 드라이버·카메라 추론을 시작하지 않고
+기존 센서/카메라 정본 입력을 구독해 `/migration/lidar/*`에만 발행한다.
+
+```bash
+source /root/ws/devel/setup.bash
+roslaunch asmc_lidar lidar_pipeline.launch
+# 카메라 없이 비교할 때 위 실행 대신 사용
+roslaunch asmc_lidar lidar_only.launch
+# 명시적 초기화: 대기·추적·pose 이력을 지우고 처리 generation 증가
+rosservice call /migration/lidar/lidar_pipeline/reset "{}"
+```
+
+공개 인자는 `namespace`(기본 `/migration/lidar`), `pipeline_config`, 기존 입력/출력 토픽,
+`lidar_level_roll`, `enable_camera_fusion`(통합 launch만), `camera_calibration_config`(통합 launch만),
+`experimental_tunnel_filter`, `publish_tf`(기본 false), `tf_child_frame`이다.
+빈 override는 YAML 값을 사용한다. `/perception/lidar/*` 운영 전환은 기본 차단하며 L7에서 별도 확인한다.
+새 관측·배열·진단과 복구는 [asmc_lidar README](../../src/asmc_lidar/README.md)를 따른다.

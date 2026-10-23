@@ -1,0 +1,696 @@
+{
+  "schema_version": 1,
+  "result_id": "lidar_structure_contract_v1",
+  "run_id": "lidar-structure-contract-20261023-r3",
+  "run_status": "completed_frozen",
+  "source_state": "working tree over 8618f535; exact source SHA and copies in source_snapshot.json and validation/source-tree",
+  "baseline_revision": "25334258551f0f963e91db9430a3c14768201415",
+  "upstream_revision": "281349da837833c2b44fe6905f8f7ff3c6168f6e",
+  "local_checks": {
+    "lidar_required_ctest": 26,
+    "lidar_ctest_passed": 26,
+    "main_unique_cases": 203,
+    "main_failures": 0,
+    "main_private_library_link_lines_checked": 28,
+    "message_serialization_tests": 4,
+    "registered_messages": 39,
+    "old_message_md5_preserved": true,
+    "tunnel_filter_source_sha_preserved": true,
+    "documentation_history_frozen_files": 5
+  },
+  "replay": {
+    "independent_scans": 857,
+    "condition_replays": 8,
+    "compared_scans": 3428,
+    "exact_numerical_equality": true,
+    "cases": [
+      {
+        "case": "primary-roll_pitch-normal",
+        "scans": 649,
+        "exact_equal": true,
+        "baseline": {
+          "total": {
+            "p50": 12.194001,
+            "p95": 16.089128
+          },
+          "roi": {
+            "p50": 0.048918,
+            "p95": 0.090405
+          },
+          "voxel": {
+            "p50": 0.699171,
+            "p95": 0.990382
+          },
+          "level": {
+            "p50": 0.070449,
+            "p95": 0.104331
+          },
+          "ground": {
+            "p50": 0.520636,
+            "p95": 0.779238
+          },
+          "cluster": {
+            "p50": 8.539573,
+            "p95": 11.231598
+          },
+          "detection": {
+            "p50": 1.281694,
+            "p95": 2.066407
+          },
+          "tracking": {
+            "p50": 0.186487,
+            "p95": 0.426235
+          }
+        },
+        "candidate": {
+          "total": {
+            "p50": 12.405469,
+            "p95": 16.793265
+          },
+          "roi": {
+            "p50": 0.049458,
+            "p95": 0.091183
+          },
+          "voxel": {
+            "p50": 0.694414,
+            "p95": 1.032618
+          },
+          "level": {
+            "p50": 0.074883,
+            "p95": 0.158986
+          },
+          "ground": {
+            "p50": 0.530296,
+            "p95": 0.783249
+          },
+          "cluster": {
+            "p50": 8.7683,
+            "p95": 11.823436
+          },
+          "detection": {
+            "p50": 1.266661,
+            "p95": 2.141772
+          },
+          "tracking": {
+            "p50": 0.193745,
+            "p95": 0.440364
+          }
+        }
+      },
+      {
+        "case": "primary-pitch-normal",
+        "scans": 649,
+        "exact_equal": true,
+        "baseline": {
+          "total": {
+            "p50": 12.150108,
+            "p95": 15.948251
+          },
+          "roi": {
+            "p50": 0.049176,
+            "p95": 0.090422
+          },
+          "voxel": {
+            "p50": 0.696799,
+            "p95": 1.02198
+          },
+          "level": {
+            "p50": 0.069919,
+            "p95": 0.116671
+          },
+          "ground": {
+            "p50": 0.528223,
+            "p95": 0.793858
+          },
+          "cluster": {
+            "p50": 8.417307,
+            "p95": 11.171416
+          },
+          "detection": {
+            "p50": 1.307831,
+            "p95": 2.027322
+          },
+          "tracking": {
+            "p50": 0.19582,
+            "p95": 0.432601
+          }
+        },
+        "candidate": {
+          "total": {
+            "p50": 12.625577,
+            "p95": 16.880852
+          },
+          "roi": {
+            "p50": 0.048421,
+            "p95": 0.090315
+          },
+          "voxel": {
+            "p50": 0.70131,
+            "p95": 1.038489
+          },
+          "level": {
+            "p50": 0.068811,
+            "p95": 0.120392
+          },
+          "ground": {
+            "p50": 0.532964,
+            "p95": 0.8016
+          },
+          "cluster": {
+            "p50": 8.834961,
+            "p95": 11.734699
+          },
+          "detection": {
+            "p50": 1.291686,
+            "p95": 2.133896
+          },
+          "tracking": {
+            "p50": 0.196297,
+            "p95": 0.477634
+          }
+        }
+      },
+      {
+        "case": "primary-roll_pitch-invalid",
+        "scans": 649,
+        "exact_equal": true,
+        "baseline": {
+          "total": {
+            "p50": 12.238563,
+            "p95": 16.311085
+          },
+          "roi": {
+            "p50": 0.049514,
+            "p95": 0.090421
+          },
+          "voxel": {
+            "p50": 0.694716,
+            "p95": 1.003613
+          },
+          "level": {
+            "p50": 0.071269,
+            "p95": 0.1167
+          },
+          "ground": {
+            "p50": 0.511403,
+            "p95": 0.772478
+          },
+          "cluster": {
+            "p50": 8.658915,
+            "p95": 11.635812
+          },
+          "detection": {
+            "p50": 1.274357,
+            "p95": 2.006907
+          },
+          "tracking": {
+            "p50": 0.193846,
+            "p95": 0.415687
+          }
+        },
+        "candidate": {
+          "total": {
+            "p50": 12.423991,
+            "p95": 17.491383
+          },
+          "roi": {
+            "p50": 0.049298,
+            "p95": 0.091039
+          },
+          "voxel": {
+            "p50": 0.698258,
+            "p95": 1.054265
+          },
+          "level": {
+            "p50": 0.074573,
+            "p95": 0.131322
+          },
+          "ground": {
+            "p50": 0.526564,
+            "p95": 0.865787
+          },
+          "cluster": {
+            "p50": 8.75166,
+            "p95": 12.292705
+          },
+          "detection": {
+            "p50": 1.292515,
+            "p95": 2.191877
+          },
+          "tracking": {
+            "p50": 0.197676,
+            "p95": 0.445308
+          }
+        }
+      },
+      {
+        "case": "primary-roll_pitch-missing",
+        "scans": 649,
+        "exact_equal": true,
+        "baseline": {
+          "total": {
+            "p50": 12.012846,
+            "p95": 16.38326
+          },
+          "roi": {
+            "p50": 0.048897,
+            "p95": 0.090461
+          },
+          "voxel": {
+            "p50": 0.699428,
+            "p95": 1.02962
+          },
+          "level": {
+            "p50": 0.069836,
+            "p95": 0.120278
+          },
+          "ground": {
+            "p50": 0.514738,
+            "p95": 0.777571
+          },
+          "cluster": {
+            "p50": 8.368027,
+            "p95": 11.561906
+          },
+          "detection": {
+            "p50": 1.230097,
+            "p95": 2.017939
+          },
+          "tracking": {
+            "p50": 0.199296,
+            "p95": 0.424116
+          }
+        },
+        "candidate": {
+          "total": {
+            "p50": 12.309461,
+            "p95": 16.760525
+          },
+          "roi": {
+            "p50": 0.048983,
+            "p95": 0.09856
+          },
+          "voxel": {
+            "p50": 0.698727,
+            "p95": 1.016412
+          },
+          "level": {
+            "p50": 0.069051,
+            "p95": 0.108465
+          },
+          "ground": {
+            "p50": 0.527909,
+            "p95": 0.764572
+          },
+          "cluster": {
+            "p50": 8.732697,
+            "p95": 11.997985
+          },
+          "detection": {
+            "p50": 1.286555,
+            "p95": 2.106673
+          },
+          "tracking": {
+            "p50": 0.196377,
+            "p95": 0.42462
+          }
+        }
+      },
+      {
+        "case": "tunnel-roll_pitch-normal",
+        "scans": 208,
+        "exact_equal": true,
+        "baseline": {
+          "total": {
+            "p50": 13.935306,
+            "p95": 19.584965
+          },
+          "roi": {
+            "p50": 0.078299,
+            "p95": 0.154665
+          },
+          "voxel": {
+            "p50": 1.063615,
+            "p95": 1.506711
+          },
+          "level": {
+            "p50": 0.084011,
+            "p95": 0.139536
+          },
+          "ground": {
+            "p50": 0.518402,
+            "p95": 0.79356
+          },
+          "cluster": {
+            "p50": 9.028595,
+            "p95": 13.659465
+          },
+          "detection": {
+            "p50": 1.304161,
+            "p95": 2.189258
+          },
+          "tracking": {
+            "p50": 0.341778,
+            "p95": 0.982727
+          }
+        },
+        "candidate": {
+          "total": {
+            "p50": 13.654801,
+            "p95": 19.449923
+          },
+          "roi": {
+            "p50": 0.074652,
+            "p95": 0.154513
+          },
+          "voxel": {
+            "p50": 1.047593,
+            "p95": 1.488997
+          },
+          "level": {
+            "p50": 0.084042,
+            "p95": 0.15288
+          },
+          "ground": {
+            "p50": 0.52439,
+            "p95": 0.825818
+          },
+          "cluster": {
+            "p50": 9.002083,
+            "p95": 13.37347
+          },
+          "detection": {
+            "p50": 1.262281,
+            "p95": 2.264197
+          },
+          "tracking": {
+            "p50": 0.354265,
+            "p95": 1.01428
+          }
+        }
+      },
+      {
+        "case": "tunnel-pitch-normal",
+        "scans": 208,
+        "exact_equal": true,
+        "baseline": {
+          "total": {
+            "p50": 13.235475,
+            "p95": 19.631861
+          },
+          "roi": {
+            "p50": 0.075366,
+            "p95": 0.166768
+          },
+          "voxel": {
+            "p50": 1.06055,
+            "p95": 1.483167
+          },
+          "level": {
+            "p50": 0.083781,
+            "p95": 0.158277
+          },
+          "ground": {
+            "p50": 0.518946,
+            "p95": 0.794601
+          },
+          "cluster": {
+            "p50": 8.671483,
+            "p95": 13.566966
+          },
+          "detection": {
+            "p50": 1.288372,
+            "p95": 2.167218
+          },
+          "tracking": {
+            "p50": 0.343586,
+            "p95": 0.930561
+          }
+        },
+        "candidate": {
+          "total": {
+            "p50": 13.451594,
+            "p95": 19.917945
+          },
+          "roi": {
+            "p50": 0.075241,
+            "p95": 0.16774
+          },
+          "voxel": {
+            "p50": 1.074627,
+            "p95": 1.512727
+          },
+          "level": {
+            "p50": 0.083234,
+            "p95": 0.157351
+          },
+          "ground": {
+            "p50": 0.515378,
+            "p95": 0.817431
+          },
+          "cluster": {
+            "p50": 8.7547,
+            "p95": 13.773238
+          },
+          "detection": {
+            "p50": 1.256901,
+            "p95": 2.29095
+          },
+          "tracking": {
+            "p50": 0.356437,
+            "p95": 0.815766
+          }
+        }
+      },
+      {
+        "case": "tunnel-roll_pitch-invalid",
+        "scans": 208,
+        "exact_equal": true,
+        "baseline": {
+          "total": {
+            "p50": 13.061692,
+            "p95": 19.2579
+          },
+          "roi": {
+            "p50": 0.074663,
+            "p95": 0.13397
+          },
+          "voxel": {
+            "p50": 1.066068,
+            "p95": 1.481946
+          },
+          "level": {
+            "p50": 0.081189,
+            "p95": 0.147464
+          },
+          "ground": {
+            "p50": 0.510449,
+            "p95": 0.757598
+          },
+          "cluster": {
+            "p50": 8.656758,
+            "p95": 13.144282
+          },
+          "detection": {
+            "p50": 1.292629,
+            "p95": 2.096337
+          },
+          "tracking": {
+            "p50": 0.36886,
+            "p95": 0.901608
+          }
+        },
+        "candidate": {
+          "total": {
+            "p50": 13.146151,
+            "p95": 19.64044
+          },
+          "roi": {
+            "p50": 0.075729,
+            "p95": 0.146269
+          },
+          "voxel": {
+            "p50": 1.047489,
+            "p95": 1.467308
+          },
+          "level": {
+            "p50": 0.084152,
+            "p95": 0.127587
+          },
+          "ground": {
+            "p50": 0.503399,
+            "p95": 0.760993
+          },
+          "cluster": {
+            "p50": 8.820082,
+            "p95": 13.434273
+          },
+          "detection": {
+            "p50": 1.255299,
+            "p95": 2.357412
+          },
+          "tracking": {
+            "p50": 0.354375,
+            "p95": 0.896749
+          }
+        }
+      },
+      {
+        "case": "tunnel-roll_pitch-missing",
+        "scans": 208,
+        "exact_equal": true,
+        "baseline": {
+          "total": {
+            "p50": 13.221938,
+            "p95": 19.959631
+          },
+          "roi": {
+            "p50": 0.07633,
+            "p95": 0.155099
+          },
+          "voxel": {
+            "p50": 1.056273,
+            "p95": 1.493835
+          },
+          "level": {
+            "p50": 0.084134,
+            "p95": 0.136924
+          },
+          "ground": {
+            "p50": 0.517932,
+            "p95": 0.789752
+          },
+          "cluster": {
+            "p50": 8.791662,
+            "p95": 13.906745
+          },
+          "detection": {
+            "p50": 1.2676,
+            "p95": 2.256996
+          },
+          "tracking": {
+            "p50": 0.360798,
+            "p95": 0.961444
+          }
+        },
+        "candidate": {
+          "total": {
+            "p50": 13.877294,
+            "p95": 19.314834
+          },
+          "roi": {
+            "p50": 0.075454,
+            "p95": 0.137671
+          },
+          "voxel": {
+            "p50": 1.054125,
+            "p95": 1.476646
+          },
+          "level": {
+            "p50": 0.083709,
+            "p95": 0.139312
+          },
+          "ground": {
+            "p50": 0.52357,
+            "p95": 0.788156
+          },
+          "cluster": {
+            "p50": 8.933324,
+            "p95": 12.946747
+          },
+          "detection": {
+            "p50": 1.316546,
+            "p95": 2.299164
+          },
+          "tracking": {
+            "p50": 0.378158,
+            "p95": 0.865765
+          }
+        }
+      }
+    ]
+  },
+  "paired_repeat": [
+    {
+      "phase": "baseline",
+      "repeat": 1,
+      "p95_ms": 16.144467,
+      "wall_s": 9.54159434599569,
+      "max_rss_kib": 64696,
+      "user_s": 6.978483
+    },
+    {
+      "phase": "candidate",
+      "repeat": 1,
+      "p95_ms": 16.783336,
+      "wall_s": 9.721150040975772,
+      "max_rss_kib": 65120,
+      "user_s": 6.996925
+    },
+    {
+      "phase": "candidate",
+      "repeat": 2,
+      "p95_ms": 16.352259,
+      "wall_s": 9.5207192490343,
+      "max_rss_kib": 64512,
+      "user_s": 7.044721
+    },
+    {
+      "phase": "baseline",
+      "repeat": 2,
+      "p95_ms": 16.537247,
+      "wall_s": 9.713704805995803,
+      "max_rss_kib": 64216,
+      "user_s": 7.098537
+    },
+    {
+      "phase": "baseline",
+      "repeat": 3,
+      "p95_ms": 16.725906,
+      "wall_s": 9.739205017045606,
+      "max_rss_kib": 64812,
+      "user_s": 7.001308
+    },
+    {
+      "phase": "candidate",
+      "repeat": 3,
+      "p95_ms": 18.094268,
+      "wall_s": 10.51254094298929,
+      "max_rss_kib": 64344,
+      "user_s": 7.648463
+    }
+  ],
+  "object_layout_bytes": {
+    "baseline": 832,
+    "candidate": 832
+  },
+  "evidence": {
+    "comparison-final.json": "2a402f5a6580fc8496ee45d7daf50d6743978bb54113e847fc41eb95ed98a3c8",
+    "paired-repeat-streamed-summary.json": "d204131eceddfe8f0247324a4d018934cc4954c08fac1b8d4cb2a8ac775f33da",
+    "source_snapshot.json": "505018d781d55ee041b9a7037e7fe4aa018c0d1c9431eb3d8370e81cdeb0f6ab",
+    "binary-sha.json": "d4c0ca3021a0f16fc1ae4c8749464606af9b598247cf9f84b778e1ad6afe3dc7",
+    "evidence-manifest.json": "eeae88a86571ab5c66cfe10faf77bdff1fcd0c13cd2fdb157c16350877b6dbdc"
+  },
+  "limitations": [
+    "Offline replay only, no independent object GT and no live supply acceptance.",
+    "Two bags have no canonical CameraObjectObservation; real-image camera fusion quality not evaluated. Synthetic ROS camera interface tests passed.",
+    "Historical bag key tunnel means shadow-static input, not a newly verified ODD segment.",
+    "Latency is single-machine serial paired measurement with background processes preserved; do not claim a speed improvement.",
+    "Discarded initial paired RSS inherited Python parent highwater; streamed repeat is authoritative.",
+    "Operational Main/planning consumers are not switched.",
+    "Hosted CI is separate; inspect the PR checks."
+  ],
+  "freeze_audit": {
+    "run_id": "lidar-structure-freeze-audit-20261023-r1",
+    "status": "completed_frozen",
+    "verification_sha256": "5c7d8a5c8ce78ed538add331a85290dd6998d42a43d109221e47790e1995c10f",
+    "subject": "lidar-structure-contract-20261023-r3",
+    "verified_files": 325,
+    "all_sha_match": true,
+    "changed_files": [],
+    "extra_files": [],
+    "missing_files": [],
+    "manifest_sha256": "eeae88a86571ab5c66cfe10faf77bdff1fcd0c13cd2fdb157c16350877b6dbdc",
+    "ordering_note": "aggregate manifest finalized ~12ms after subject registry close; all data unchanged; audited after all writers completed; subject not rewritten"
+  }
+}

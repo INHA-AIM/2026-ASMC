@@ -10,8 +10,8 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 
 
 > 상태: **기존 Main 운영 + 새 `asmc_lidar` 이관 목표 계약**. 좌표·시간 코어와 카메라
-> 수신·버퍼·투영은 구현됐고 Main의 공용 local/map 출력은 opt-in이다. 새 LiDAR 처리 shadow 노드는 PR #103에서 구현됐다(운영 미연결). 안승현이 [L0–L8](../../src/asmc_lidar/docs/migration-tasks.md)을 진행하며,
-> 손재호 개발은 병행한다. 판제는 L7 소비 전환 전까지 기존 `lidar+sensorfusion`을 사용한다.
+> 수신·버퍼·투영은 구현됐고 Main의 공용 local/map 출력은 opt-in이다. 새 LiDAR 처리 이관 검증 노드는 PR #103에서 구현됐다(운영 미연결). 안승현이 [L0–L8](../../src/asmc_lidar/docs/migration-tasks.md)을 진행하며,
+> 안승현은 HD맵 필터·카메라 연결을, 손재호는 추적·속도·운동 상태·fusion을 진행한다. 판제는 L7 소비 전환 전까지 기존 `lidar+sensorfusion`을 사용한다.
 > [기계 판독 상태](../../config/contracts/lidar_candidate_topic_contract_v1.yaml)와 현재/목표를 함께 확인한다.
 
 ## 현재 소비와 이관 중 격리
@@ -22,7 +22,7 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 새 정본 전달의 JSON 진단 의존 해소는 L6이며 아직 구현하지 않았다.
 
 정식 후보 local/map 경로는 아래 표를 유지하되, 새 실행의 동시 비교 출력만
-PR #103의 `/asmc_lidar/shadow/objects_local`, `/asmc_lidar/shadow/objects_map`을 사용한다.
+PR #103의 `/migration/lidar/objects_local`, `/migration/lidar/objects_map`을 사용한다.
 센서·카메라 입력은 정본 경로를 구독한다. 새 상태·진단 타입, session/ID·소비자 캐시 초기화,
 pose 선택과 시간 한계는 [L1 설계](../../src/asmc_lidar/docs/migration-design.md)로 고정한다. 현재 없는 타입을 구현된 계약으로 등록하지 않는다.
 L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험 생산자를 연결하지 않는다.
@@ -38,7 +38,7 @@ L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험
 | `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. 현재 Main opt-in; 새 패키지 생산자는 L6 |
 | `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. 현재 Main opt-in; 새 패키지는 L3/L6 |
 | `/perception/camera/objects` | 3뷰 원본 픽셀 검출. 현재 Main 어댑터는 전방만 소비 |
-| `/perception/camera/objects/observations` | session/generation·보정/모델/설정 ID 포함. asmc_lidar 수신·버퍼·투영 지원 제공, shadow 노드는 `camera_front`만 매칭·fusion; 3뷰 객체 매칭/fusion은 손재호의 후속 구현 |
+| `/perception/camera/objects/observations` | session/generation·보정/모델/설정 ID 포함. asmc_lidar 수신·버퍼·투영 지원 제공, 이관 검증 노드는 `camera_front`만 매칭·fusion; 3뷰 객체 매칭/fusion은 손재호의 후속 구현 |
 
 기존 `TrackedObject*`, `DetectedObject*`의 MD5는 유지한다. 기존 `/last_lidar`,
 `/lidar_nogps`, `/perception/objects`를 자동 remap하지 않는다. 구 타입으로 표현할 수
@@ -49,6 +49,18 @@ L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험
 있으면 미확정이며, 지속 ID 미할당은 `track_id=-1`로 문서화해 사용한다.
 카메라 입력의 원래 라벨은 `source_class_name`, LiDAR 출력에서는 `camera_class`에 보존한다. 원본 COCO 숫자 ID나 다른 정보가 필요하면 additive/versioned
 계약을 검토한다. 현 필드를 임의 의미로 재사용하거나 MD5를 묵시 변경하지 않는다.
+
+## 관측 식별 계약
+
+이관 검증 출력 `observations_local/map`은 `asmc_msgs/LidarObservation`이다.
+배열의 stamp·frame·상태·객체를 보존하며 session UUID·초기화 generation·scan_sequence와
+설정/보정 ID를 같은 결과에 담는다. local/map을 별도 시간 관측 두 번으로 세지 않는다.
+`objects.header.seq`는 ROS1 top-level 배열 발행 시 전송 계층에서 바뀔 수 있으므로 연결 키로 쓰지 않는다.
+연결 키는 `(producer_session_id, generation, scan_sequence)`다.
+
+기존 `LidarObject`·`LidarObjectArray`와 운영 `Msg` MD5는 유지한다.
+`LidarObservation`은 구형 이름 alias가 아니며 새 타입으로 빌드한 소비자가 사용한다.
+기하·속도·상태의 자세한 의미는 [관측 계약](../../src/asmc_lidar/docs/structure-contract-refactor.md)을 따른다.
 
 ## 좌표·시간·속도
 

@@ -766,3 +766,14 @@ TEST(LidarRuntime, CameraSourceRunsFusionWithoutChangingGeometry) {
 }  // namespace
 
 int main(int argc, char** argv) { testing::InitGoogleTest(&argc, argv); return RUN_ALL_TESTS(); }
+
+TEST(RuntimeIdentity, EffectiveChoicesAndCalibrationAreBoundToConfigId) {
+  auto cfg = sh::LoadRuntimeConfig(ShippedConfig(), PackageDir());
+  sh::FinalizeRuntimeIdentity(cfg, "camera-a");
+  const auto id=cfg.config_id, calibration=cfg.calibration_id;
+  sh::FinalizeRuntimeIdentity(cfg, "camera-a"); EXPECT_EQ(cfg.config_id,id);
+  cfg.pipeline.use_roll=!cfg.pipeline.use_roll;
+  sh::FinalizeRuntimeIdentity(cfg,"camera-a"); EXPECT_NE(cfg.config_id,id);
+  EXPECT_EQ(cfg.calibration_id,calibration);
+  sh::FinalizeRuntimeIdentity(cfg,"camera-b"); EXPECT_NE(cfg.calibration_id,calibration);
+}

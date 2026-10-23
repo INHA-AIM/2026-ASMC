@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Camera receiver is reusable handoff infrastructure. Detection/tracking/front
-# fusion are ported below as an opt-in shadow pipeline; 3-view fusion and the
+# fusion are ported below as an opt-in migration pipeline; 3-view fusion and the
 # operational cutover remain Jaeho migration work. No camera inference or nested
 # Main dependencies.
 find_package(catkin REQUIRED COMPONENTS asmc_msgs roscpp diagnostic_msgs)
@@ -78,42 +78,42 @@ install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 # ---------------------------------------------------------------------------
 # Shadow LiDAR pipeline: port of Main's common-geometry LiDAR path
 # (ROI -> voxel -> roll/pitch leveling -> RANSAC -> clustering -> OBB ->
-# tracking -> front camera fusion -> typed local/map), a ROS shadow node and a
+# tracking -> front camera fusion -> typed local/map), a ROS migration node and a
 # bag replay that both call the same runtime.
 #
 # Package-private on purpose: these libraries are STATIC and are NOT listed in
 # catkin_package(LIBRARIES ...) above, so Main (which links ${catkin_LIBRARIES}
 # of asmc_lidar) never links them. The catkin_package() exports above are
 # unchanged. When PCL, pcl_conversions, GeographicLib or morai_msgs are not
-# available the shadow targets are skipped with a warning; the targets above
+# available the pipeline targets are skipped with a warning; the targets above
 # build exactly as before. CI configures with ASMC_LIDAR_PIPELINE_REQUIRED=ON so
 # that a missing dependency (or missing rostest data) fails instead of skipping.
 # ---------------------------------------------------------------------------
-option(ASMC_LIDAR_PIPELINE "Build the asmc_lidar shadow pipeline, node and replay" ON)
-option(ASMC_LIDAR_PIPELINE_REQUIRED "Fail the configure step instead of skipping shadow targets or tests" OFF)
+option(ASMC_LIDAR_PIPELINE "Build the asmc_lidar migration pipeline, node and replay" ON)
+option(ASMC_LIDAR_PIPELINE_REQUIRED "Fail the configure step instead of skipping pipeline targets or tests" OFF)
 if(ASMC_LIDAR_PIPELINE_REQUIRED AND NOT ASMC_LIDAR_PIPELINE)
   message(FATAL_ERROR "ASMC_LIDAR_PIPELINE_REQUIRED=ON needs ASMC_LIDAR_PIPELINE=ON")
 endif()
 set(ASMC_LIDAR_PIPELINE_ACTIVE OFF)
 if(ASMC_LIDAR_PIPELINE)
   find_package(PCL 1.10 QUIET COMPONENTS common filters kdtree search sample_consensus segmentation)
-  foreach(pipeline_dep pcl_conversions sensor_msgs std_msgs geometry_msgs morai_msgs rosbag tf2_ros)
+  foreach(pipeline_dep pcl_conversions sensor_msgs std_msgs geometry_msgs morai_msgs rosbag tf2_ros std_srvs)
     find_package(${pipeline_dep} QUIET)
   endforeach()
   find_path(ASMC_LIDAR_GEOGRAPHICLIB_INCLUDE_DIR GeographicLib/UTMUPS.hpp)
   find_library(ASMC_LIDAR_GEOGRAPHICLIB_LIBRARY NAMES Geographic)
   set(pipeline_missing "")
   foreach(pipeline_flag PCL_FOUND pcl_conversions_FOUND sensor_msgs_FOUND std_msgs_FOUND
-      geometry_msgs_FOUND morai_msgs_FOUND rosbag_FOUND tf2_ros_FOUND
+      geometry_msgs_FOUND morai_msgs_FOUND rosbag_FOUND tf2_ros_FOUND std_srvs_FOUND
       ASMC_LIDAR_GEOGRAPHICLIB_INCLUDE_DIR ASMC_LIDAR_GEOGRAPHICLIB_LIBRARY)
     if(NOT ${pipeline_flag})
       list(APPEND pipeline_missing ${pipeline_flag})
     endif()
   endforeach()
   if(pipeline_missing AND ASMC_LIDAR_PIPELINE_REQUIRED)
-    message(FATAL_ERROR "asmc_lidar shadow pipeline is required but cannot be built; missing: ${pipeline_missing}")
+    message(FATAL_ERROR "asmc_lidar migration pipeline is required but cannot be built; missing: ${pipeline_missing}")
   elseif(pipeline_missing)
-    message(WARNING "asmc_lidar shadow pipeline not built; missing: ${pipeline_missing}")
+    message(WARNING "asmc_lidar migration pipeline not built; missing: ${pipeline_missing}")
   else()
     set(ASMC_LIDAR_PIPELINE_ACTIVE ON)
   endif()
@@ -206,6 +206,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_fusion_policy test/pipeline/test_fusion_policy.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_front_camera_fusion test/pipeline/test_front_camera_fusion.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_tunnel_filter_stage test/pipeline/test_tunnel_filter_stage.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_source_time test/pipeline/test_source_time.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_pipeline test/pipeline/test_pipeline.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_typed_output test/runtime/test_typed_output.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_runtime test/runtime/test_runtime.cpp)
@@ -214,9 +215,9 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../asmc_camera/config/cameras_v3.yaml)
       add_rostest(test/ros/lidar_pipeline_node.test DEPENDENCIES lidar_pipeline_node)
     elseif(ASMC_LIDAR_PIPELINE_REQUIRED)
-      message(FATAL_ERROR "asmc_lidar shadow rostest is required but ../asmc_camera/config/cameras_v3.yaml was not found")
+      message(FATAL_ERROR "asmc_lidar pipeline rostest is required but ../asmc_camera/config/cameras_v3.yaml was not found")
     else()
-      message(STATUS "asmc_lidar shadow rostest skipped: ../asmc_camera/config/cameras_v3.yaml not found")
+      message(STATUS "asmc_lidar pipeline rostest skipped: ../asmc_camera/config/cameras_v3.yaml not found")
     endif()
   endif()
 endif()

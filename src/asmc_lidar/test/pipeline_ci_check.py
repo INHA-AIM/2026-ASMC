@@ -42,11 +42,11 @@ GTESTS = {'asmc_lidar_test_tunnel_filter_core': 27, 'asmc_lidar_test_preprocessi
           'asmc_lidar_test_scan_frame': 11, 'asmc_lidar_test_tracker': 52,
           'asmc_lidar_test_pose_history': 32, 'asmc_lidar_test_gps_ingest': 15,
           'asmc_lidar_test_fusion_policy': 30, 'asmc_lidar_test_front_camera_fusion': 27,
-          'asmc_lidar_test_tunnel_filter_stage': 7, 'asmc_lidar_test_pipeline': 15,
+          'asmc_lidar_test_tunnel_filter_stage': 7, 'asmc_lidar_test_pipeline': 15, 'asmc_lidar_test_source_time': 3,
           'asmc_lidar_test_typed_output': 11, 'asmc_lidar_test_runtime': 16}
 # rostest file stem -> (rosunit result name, minimum number of cases).
 ROSTESTS = {'test_camera_receiver_ros': ('camera_receiver_ros', 1),
-            'test_ros_lidar_pipeline_node': ('lidar_pipeline_node', 14)}
+            'test_ros_lidar_pipeline_node': ('lidar_pipeline_node', 16)}
 
 
 def required_tests():
@@ -207,7 +207,7 @@ def main(argv=None):
         print('cases: ' + ', '.join('%s=%d' % item for item in sorted(counts.items())))
     for error in gate.errors:
         print('FAIL: ' + error, file=sys.stderr)
-    print('asmc_lidar shadow CI gate: %s' % ('FAILED' if gate.errors else 'PASSED'))
+    print('asmc_lidar pipeline CI gate: %s' % ('FAILED' if gate.errors else 'PASSED'))
     return 1 if gate.errors else 0
 
 

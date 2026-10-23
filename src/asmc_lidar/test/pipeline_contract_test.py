@@ -26,7 +26,7 @@ PACKAGE = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE.parents[1]  # repository root when the package sits in <root>/src/asmc_lidar
 SELF = Path(__file__).resolve()
 PIPELINE_NODE = 'lidar_pipeline_node'
-OUTPUT_ARGS = ('objects_local_topic', 'objects_map_topic', 'diagnostics_topic', 'trace_topic')
+OUTPUT_ARGS = ('objects_local_topic', 'objects_map_topic', 'diagnostics_topic', 'trace_topic', 'observations_local_topic', 'observations_map_topic')
 FORBIDDEN_DEPENDENCIES = {'Main', 'Msg', 'asmc_camera', 'tensorrt', 'torch'}
 SOURCE_SUFFIXES = {'.c', '.cc', '.cpp', '.h', '.hpp', '.py', '.launch', '.test', '.yaml', '.yml', '.xml',
                    '.txt', '.cmake', '.sh'}
@@ -63,7 +63,7 @@ def without_comments(text, marker):
     return '\n'.join(line.split(marker, 1)[0] for line in text.splitlines())
 
 
-class ShadowContractTest(unittest.TestCase):
+class PipelineContractTest(unittest.TestCase):
     def test_package_xml_has_no_forbidden_dependency(self):
         package = ET.parse(PACKAGE / 'package.xml').getroot()
         dependencies = {node.text.strip() for node in package if node.tag.endswith('depend') and node.text}
@@ -95,7 +95,7 @@ class ShadowContractTest(unittest.TestCase):
                 offenders.append('%s hard-codes a /home path' % path)
         self.assertEqual(offenders, [])
 
-    def test_launch_files_start_only_the_shadow_node(self):
+    def test_launch_files_start_only_the_pipeline_node(self):
         launches = sorted((PACKAGE / 'launch').glob('*.launch'))
         self.assertTrue(launches, 'shadow launch files are expected')
         for path in launches:
@@ -116,7 +116,7 @@ class ShadowContractTest(unittest.TestCase):
             self.assertEqual(arguments.get('namespace'), '/migration/lidar')
             self.assertEqual(nodes[0].get('ns'), '$(arg namespace)')
 
-    def test_no_other_launch_file_starts_the_shadow_node(self):
+    def test_no_other_launch_file_starts_the_pipeline_node(self):
         if not repository_available():
             self.skipTest('repository root not reachable from the package directory')
         candidates = {p for p in walk(ROOT / 'src', {'.launch', '.test', '.xml'})

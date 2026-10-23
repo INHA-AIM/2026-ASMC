@@ -1,3 +1,4 @@
+#include <asmc_lidar/detection/detections.hpp>
 #include <asmc_lidar/core/source_time.hpp>
 #include <asmc_lidar/tracking/track.hpp>
 #include <asmc_lidar/pipeline/pipeline.hpp>

@@ -1,4 +1,5 @@
 #pragma once
+#include <asmc_lidar/tracking/track.hpp>
 // Shadow runtime shared by the ROS node (lidar_pipeline_node) and the bag
 // replay (lidar_replay). Both call the same entry points (OnImu,
 // OnCan, OnGps, AcceptScan, ProcessScan). They differ in clocks (steady/ROS time
@@ -40,6 +41,7 @@ struct RuntimeConfig {
   std::string stamp_provenance = "bridge_receive_ns";
   // Paths/identity resolved by LoadRuntimeConfig (for diagnostics).
   std::string config_path, config_sha256, mount_config_path, mount_config_sha256;
+  std::string config_id, calibration_id;
 };
 
 // Reads config/lidar_pipeline.yaml (schema_version 1) and the LiDAR mount
@@ -51,6 +53,9 @@ struct RuntimeConfig {
 // at start-up: camera_class_profile not legacy|mission16_v1, fusion_yolo_policy
 // not unique|bounded_reuse. pipeline.calibration_id =
 // "shadow:" + sha256(yaml) + ":" + sha256(mount file) (not Main's id string).
+// Recompute identity after launch/replay overrides, including camera calibration.
+void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_calibration_id = "");
+
 RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string& package_share_dir);
 
 // Main FrameBoundaryPublisher Publish()/Invalid() semantics, transport-free.

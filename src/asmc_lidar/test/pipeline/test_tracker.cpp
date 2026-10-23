@@ -1,3 +1,4 @@
+#include <asmc_lidar/detection/detections.hpp>
 #include <asmc_lidar/tracking/track.hpp>
 // Tracker port tests: Hungarian, Kalman, detections/consolidation, class carry,
 // track lifecycle, the tracker-fix scenarios of Main test_frame_boundary_ros.cpp

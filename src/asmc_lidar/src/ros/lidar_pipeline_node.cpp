@@ -7,7 +7,8 @@
 // while subscribed) and, with ~publish_tf, base_link -> ~tf_child_frame.
 //
 // Isolation: every output name is resolved (remaps applied) and the node refuses
-// to start on an operational name unless ~allow_operational_output. It calls no
+// to start on an operational name unless ~allow_operational_output. Its private
+// reset service retires processing state; it calls no external mode/control
 // service, sets no parameter and starts no driver or bridge.
 //
 // Threads (Main TemporalThread semantics): an AsyncSpinner serves all
@@ -33,6 +34,9 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/String.h>
+#include <std_srvs/Trigger.h>
+#include <asmc_msgs/LidarObservation.h>
+#include <asmc_lidar/core/processing_epoch.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
 #include <Eigen/Geometry>
@@ -135,9 +139,11 @@ class LidarPipelineNode {
     Guard();  // before any file is read or anything is advertised
     LoadConfig();
     SetUpCamera();
-    runtime_ = std::make_unique<LidarRuntime>(config_, camera_, front_);
+    FinalizeRuntimeIdentity(config_, front_ ? front_->id : "");
+    runtime_ = std::make_shared<LidarRuntime>(config_, camera_, front_);
     Advertise();
     Subscribe();
+    reset_service_ = pnh_.advertiseService("reset", &LidarPipelineNode::Reset, this);
   }
 
   // Ported from Main src/main.cpp:648-688 (threads, waitForShutdown, joins) (8f93c22e).
@@ -172,6 +178,7 @@ class LidarPipelineNode {
  private:
   struct PendingScan {
     pipeline::ScanInput scan;
+    std::shared_ptr<LidarRuntime> runtime;
     std::int64_t receipt_steady_ns = 0;
     std::int64_t receipt_ros_ns = 0;
     std::uint64_t seq = 0;
@@ -192,6 +199,46 @@ class LidarPipelineNode {
     std::string last_reject_reason;
   };
 
+  std::shared_ptr<LidarRuntime> RuntimeSnapshot() {
+    std::lock_guard<std::mutex> lock(epoch_mutex_);
+    return runtime_;
+  }
+
+  bool Reset(std_srvs::Trigger::Request&, std_srvs::Trigger::Response& reply) {
+    auto next = std::make_shared<LidarRuntime>(config_, camera_, front_);
+    std::lock_guard<std::mutex> epoch(epoch_mutex_);
+    epoch_.Reset();
+    runtime_ = std::move(next);  // old worker owns its retired runtime until it finishes
+    {
+      std::lock_guard<std::mutex> slot_lock(slot_mutex_);
+      slot_.reset();
+    }
+    {
+      std::lock_guard<std::mutex> cache_lock(cache_mutex_);
+      cache_ = trace::LocalInputCache{};
+    }
+    {
+      std::lock_guard<std::mutex> stats_lock(stats_mutex_);
+      stats_ = Stats{};
+    }
+    reply.success = true;
+    reply.message = "processing generation " + std::to_string(epoch_.generation());
+    return true;
+  }
+
+  void PublishObservation(const ros::Publisher& publisher, const asmc_msgs::LidarObjectArray& objects,
+                          const PendingScan& pending) {
+    if (!publisher.getNumSubscribers()) return;
+    asmc_msgs::LidarObservation observation;
+    observation.objects = objects;
+    observation.producer_session_id = epoch_.session();
+    observation.generation = pending.scan.generation;
+    observation.scan_sequence = pending.scan.scan_sequence;
+    observation.config_id = config_.config_id;
+    observation.calibration_id = config_.calibration_id;
+    publisher.publish(observation);
+  }
+
   void ReadTopics() {
     pnh_.param<std::string>("points_topic", points_topic_, "/velodyne_points");
     pnh_.param<std::string>("imu_topic", imu_topic_, "/imu");
@@ -202,6 +249,8 @@ class LidarPipelineNode {
     pnh_.param<std::string>("camera_status_topic", camera_status_topic_, "/perception/camera/objects/status");
     pnh_.param<std::string>("objects_local_topic", local_topic_, "objects_local");
     pnh_.param<std::string>("objects_map_topic", map_topic_, "objects_map");
+    pnh_.param<std::string>("observations_local_topic", local_observation_topic_, "observations_local");
+    pnh_.param<std::string>("observations_map_topic", map_observation_topic_, "observations_map");
     pnh_.param<std::string>("diagnostics_topic", diagnostics_topic_, "diagnostics");
     pnh_.param<std::string>("trace_topic", trace_topic_, "trace");
     pnh_.param("publish_tf", publish_tf_, false);
@@ -215,7 +264,7 @@ class LidarPipelineNode {
   // resolves them (namespace and remaps applied).
   void Guard() {
     std::vector<std::string> refused;
-    for (const std::string* topic : {&local_topic_, &map_topic_, &diagnostics_topic_, &trace_topic_}) {
+    for (const std::string* topic : {&local_topic_, &map_topic_, &diagnostics_topic_, &trace_topic_, &local_observation_topic_, &map_observation_topic_}) {
       const std::string resolved = nh_.resolveName(*topic);
       if (OperationalTopic(resolved)) refused.push_back(*topic + " -> " + resolved);
       for (const std::string* input : {&points_topic_, &imu_topic_, &can_topic_, &gps_topic_,
@@ -296,6 +345,8 @@ class LidarPipelineNode {
 
   // Ported from Main src/Geometry/FrameBoundaryPublisher.cpp:36-43 (Publisher ctor) (8f93c22e).
   void Advertise() {
+    local_observation_pub_ = nh_.advertise<asmc_msgs::LidarObservation>(local_observation_topic_, 5);
+    map_observation_pub_ = nh_.advertise<asmc_msgs::LidarObservation>(map_observation_topic_, 5);
     local_pub_ = nh_.advertise<asmc_msgs::LidarObjectArray>(local_topic_, 5);
     map_pub_ = nh_.advertise<asmc_msgs::LidarObjectArray>(map_topic_, 5);
     diagnostics_pub_ = nh_.advertise<diagnostic_msgs::DiagnosticArray>(diagnostics_topic_, 2);
@@ -318,11 +369,14 @@ class LidarPipelineNode {
 
   // Ported from Main src/Parser/Parser.cpp:566-612 (IMUParser_Callback transport) (8f93c22e).
   void OnImu(const sensor_msgs::Imu::ConstPtr& msg) {
+    const auto runtime = RuntimeSnapshot();
     const std::int64_t receipt = camera::steady_now_ns();
     const auto input = ImuInputFromMsg(*msg);
-    const auto before = runtime_->imu_rejected();
-    runtime_->OnImu(input, receipt, RosNow());
-    if (runtime_->imu_rejected() == before) {
+    const auto before = runtime->imu_rejected();
+    runtime->OnImu(input, receipt, RosNow());
+    if (runtime->imu_rejected() == before) {
+      std::lock_guard<std::mutex> epoch(epoch_mutex_);
+      if (runtime != runtime_) return;
       std::lock_guard<std::mutex> lock(cache_mutex_);
       cache_.AddImu(input.stamp_ns, pipeline::ImuFromInput(input));
     }
@@ -330,11 +384,14 @@ class LidarPipelineNode {
 
   // Ported from Main src/Parser/Parser.cpp:519-543 (CANParser_Callback transport) (8f93c22e).
   void OnCan(const morai_msgs::EgoVehicleStatus::ConstPtr& msg) {
+    const auto runtime = RuntimeSnapshot();
     const std::int64_t receipt = camera::steady_now_ns();
     const auto input = CanInputFromMsg(*msg);
-    const auto before = runtime_->can_rejected();
-    runtime_->OnCan(input, receipt, RosNow());
-    if (runtime_->can_rejected() == before) {
+    const auto before = runtime->can_rejected();
+    runtime->OnCan(input, receipt, RosNow());
+    if (runtime->can_rejected() == before) {
+      std::lock_guard<std::mutex> epoch(epoch_mutex_);
+      if (runtime != runtime_) return;
       std::lock_guard<std::mutex> lock(cache_mutex_);
       cache_.AddCan(input.stamp_ns, pipeline::CanFromInput(input));
     }
@@ -342,7 +399,8 @@ class LidarPipelineNode {
 
   // Ported from Main src/Parser/Parser.cpp:398-468 (GPSParser_Callback transport) (8f93c22e).
   void OnGps(const morai_msgs::GPSMessage::ConstPtr& msg) {
-    runtime_->OnGps(GpsInputFromMsg(*msg), camera::steady_now_ns(), RosNow());
+    const auto runtime = RuntimeSnapshot();
+    runtime->OnGps(GpsInputFromMsg(*msg), camera::steady_now_ns(), RosNow());
   }
 
   // Ported from Main src/Parser/Parser.cpp:270-350 (LiDARParser_Callback, common gates) (8f93c22e).
@@ -353,6 +411,11 @@ class LidarPipelineNode {
     const std::int64_t stamp = StampNs(msg->header.stamp);
     PendingScan pending;
     pending.seq = seq;
+    {
+      std::lock_guard<std::mutex> epoch(epoch_mutex_);
+      pending.runtime = runtime_;
+      pending.scan.generation = epoch_.generation();
+    }
     pending.receipt_steady_ns = receipt;
     pending.receipt_ros_ns = receipt_ros;
     std::string reason;
@@ -363,8 +426,10 @@ class LidarPipelineNode {
       reason = std::string("point_conversion_failed: ") + e.what();
       ++conversion_errors_;
     }
-    if (pending.scan.points) accepted = runtime_->AcceptScan(stamp, pending.scan.points->size(), &reason);
+    if (pending.scan.points) accepted = pending.runtime->AcceptScan(stamp, pending.scan.points->size(), &reason);
     if (!accepted) {
+      std::lock_guard<std::mutex> epoch(epoch_mutex_);
+      if (!epoch_.IsCurrent(pending.scan.generation)) return;
       {
         std::lock_guard<std::mutex> lock(stats_mutex_);
         stats_.last_reject_reason = reason;
@@ -384,8 +449,10 @@ class LidarPipelineNode {
     }
     // Main FrameBoundary scan time: ROS source stamp, steady receipt.
     pending.scan.time = asmc::lidar::Observation{stamp, receipt, receipt, "ros", config_.stamp_provenance, "steady"};
-    pending.scan.scan_sequence = ++scan_sequence_;  // Main u64_LidarFrameGeneration
+    pending.scan.scan_sequence = seq;  // former per-scan generation; includes rejected-input gaps
     {
+      std::lock_guard<std::mutex> epoch(epoch_mutex_);
+      if (!epoch_.IsCurrent(pending.scan.generation)) return;
       std::lock_guard<std::mutex> lock(slot_mutex_);
       if (slot_) ++overwritten_scans_;  // latest frame wins (Main TemporalThread)
       slot_ = std::move(pending);
@@ -428,11 +495,16 @@ class LidarPipelineNode {
       now.decision_ns = now.steady_now_ns;
       now.ros_now_ns = RosNow();
     };
-    const ScanOutput out = runtime_->ProcessScan(pending.scan, config_.local_wait_timeout_s, times);
+    const ScanOutput out = pending.runtime->ProcessScan(pending.scan, config_.local_wait_timeout_s, times);
     if (!ros::ok()) return;
+    // Reset and publishing share this short lock. Computation never holds it.
+    std::lock_guard<std::mutex> epoch(epoch_mutex_);
+    if (!epoch_.IsCurrent(pending.scan.generation)) { ++retired_results_; return; }
     if (out.arrays.accepted) {
-      local_pub_.publish(out.arrays.local);
-      map_pub_.publish(out.arrays.map);
+      if (local_pub_.getNumSubscribers()) local_pub_.publish(out.arrays.local);
+      if (map_pub_.getNumSubscribers()) map_pub_.publish(out.arrays.map);
+      PublishObservation(local_observation_pub_, out.arrays.local, pending);
+      PublishObservation(map_observation_pub_, out.arrays.map, pending);
     }
     if (tf_ && out.arrays.accepted && out.arrays.observed) PublishTf(out);
     Record(pending, out);
@@ -458,7 +530,7 @@ class LidarPipelineNode {
   }
 
   void Record(const PendingScan& pending, const ScanOutput& out) {
-    const auto& output = runtime_->output();
+    const auto& output = pending.runtime->output();
     std::lock_guard<std::mutex> lock(stats_mutex_);
     ++stats_.scans_processed;
     stats_.processed = output.processed();
@@ -472,7 +544,7 @@ class LidarPipelineNode {
       stats_.camera_reason = out.fusion.camera_reason;
       stats_.pending_scans = out.fusion.pending_scans;
     }
-    if (const auto* camera_fusion = runtime_->fusion()) stats_.fusion = camera_fusion->counters();
+    if (const auto* camera_fusion = pending.runtime->fusion()) stats_.fusion = camera_fusion->counters();
     stats_.total_ms.push_back(out.total_ms);
     while (stats_.total_ms.size() > kTimingWindow) stats_.total_ms.pop_front();
     stats_.last_stamp_ns = pending.scan.time.stamp_ns;
@@ -493,6 +565,10 @@ class LidarPipelineNode {
   void PublishTrace(const PendingScan& pending, const ScanOutput& out) {
     trace::LineInput line;
     line.producer = kProducer;
+    line.session_id = epoch_.session();
+    line.generation = pending.scan.generation;
+    line.config_id = config_.config_id;
+    line.calibration_id = config_.calibration_id;
     line.seq = pending.seq;
     line.stamp_ns = pending.scan.time.stamp_ns;
     line.arrival_ns = pending.receipt_ros_ns;
@@ -522,7 +598,8 @@ class LidarPipelineNode {
       status.values.push_back(kv);
     };
     auto number = [&value](const std::string& key, auto n) { value(key, std::to_string(n)); };
-    const auto& config = runtime_->config();
+    std::lock_guard<std::mutex> epoch(epoch_mutex_);
+    const auto& config = config_;
     {
       std::lock_guard<std::mutex> lock(stats_mutex_);
       const auto now = camera::steady_now_ns();
@@ -580,6 +657,11 @@ class LidarPipelineNode {
       number("processing_ms_p95", Percentile(window, .95));
       number("processing_ms_max", window.empty() ? 0. : *std::max_element(window.begin(), window.end()));
     }
+    value("producer_session_id", epoch_.session());
+    number("generation", epoch_.generation());
+    number("retired_results", retired_results_.load());
+    value("config_id", config.config_id);
+    value("observation_calibration_id", config.calibration_id);
     value("config_path", config.config_path);
     value("config_sha256", config.config_sha256);
     value("mount_config_path", config.mount_config_path);
@@ -609,9 +691,15 @@ class LidarPipelineNode {
   std::unique_ptr<camera::Receiver> receiver_;
   std::shared_ptr<fusion::CameraSource> camera_;
   std::string camera_reason_;
-  std::unique_ptr<LidarRuntime> runtime_;
+  std::shared_ptr<LidarRuntime> runtime_;
+  std::mutex epoch_mutex_;
+  ProcessingEpoch epoch_;
+  std::atomic<std::uint64_t> retired_results_{0};
+  ros::ServiceServer reset_service_;
 
   ros::Publisher local_pub_, map_pub_, diagnostics_pub_, trace_pub_;
+  ros::Publisher local_observation_pub_, map_observation_pub_;
+  std::string local_observation_topic_, map_observation_topic_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_;
   ros::Subscriber points_sub_, imu_sub_, can_sub_, gps_sub_;
   ros::WallTimer diagnostics_timer_;
@@ -623,7 +711,7 @@ class LidarPipelineNode {
   std::thread worker_;
 
   std::atomic<std::uint64_t> points_received_{0}, overwritten_scans_{0}, conversion_errors_{0};
-  std::uint64_t scan_sequence_ = 0;  // LiDAR callback only
+  // points_received_ is the scan sequence; epoch_ is the processing reset generation.
 
   std::mutex cache_mutex_;
   trace::LocalInputCache cache_;

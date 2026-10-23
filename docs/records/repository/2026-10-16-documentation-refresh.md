@@ -53,7 +53,7 @@ source/config의 주석을 검색하고 실행 진입점·단위/좌표/시각·
 - [src/asmc_camera/scripts/camera_runtime_node.py](../../../src/asmc_camera/scripts/camera_runtime_node.py)
 - [src/asmc_controller/src/Control.cpp](../../../src/asmc_controller/src/Control.cpp)
 - [src/asmc_hd_map/launch/competition_map.launch](../../../src/asmc_hd_map/launch/competition_map.launch)
-- [src/asmc_lidar/include/asmc_lidar/frame_time.hpp](../../../src/asmc_lidar/include/asmc_lidar/frame_time.hpp)
+- [src/asmc_lidar/include/asmc_lidar/frame_time.hpp](../../../src/asmc_lidar/include/asmc_lidar/core/frame_time.hpp)
 - [src/asmc_msgs/CMakeLists.txt](../../../src/asmc_msgs/CMakeLists.txt)
 - [src/asmc_msgs/msg/CameraObjectBox.msg](../../../src/asmc_msgs/msg/CameraObjectBox.msg)
 - [src/asmc_msgs/msg/CameraObjectBoxArray.msg](../../../src/asmc_msgs/msg/CameraObjectBoxArray.msg)
