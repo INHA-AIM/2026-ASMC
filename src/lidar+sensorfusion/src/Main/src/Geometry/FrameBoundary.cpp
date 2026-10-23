@@ -208,6 +208,10 @@ void AlignTrackingFrame(LiDARObjectInfo& object,double yaw_now_rad,bool rotate_o
   const auto inverse=YawFromInput().transpose().eval();
   const auto yaw_change=asmc::lidar::rpy(0,0,object.f32_PrevYaw-yaw_now_rad);
   const auto rotation=(inverse*yaw_change*object.tracking_yaw_from_input).eval();
+  if(tracking_options::Get().two_point_init_cov) {
+    const Eigen::Matrix2f r=rotation.topLeftCorner<2,2>().cast<float>();
+    object.first_observation_R=(r*object.first_observation_R*r.transpose()).eval();
+  }
   // P0: relative CA, the ego translation stays in the state. Option ego_translation_comp:
   // remove the base_link arc so the state (and its velocity) is ground-referenced.
   const asmc::lidar::Vec ego_shift=tracking_options::Get().ego_translation_comp

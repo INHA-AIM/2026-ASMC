@@ -49,6 +49,7 @@ void ConfigureCase(bool reacquire, bool ego_translation) {
   tracking_options::Get().reacquire_elapsed_init = reacquire && !ForceOff();
   tracking_options::Get().ego_translation_comp = ego_translation && !ForceOff();
   tracking_options::Get().ego_gap_reset = false;
+  tracking_options::Get().two_point_init_cov = false;
 }
 
 struct Ego { double x = 0, y = 0, yaw = 0, v = 0; };
@@ -218,6 +219,15 @@ TEST(TrackingFrameOptions, FixUnsupportedEgoGapStartsNewGeneration) {
   auto r=Simulate(3,[&](int k){Ego e;e.v=2;e.x=2*clock(k);return e;},
                  [](int){World w;w.x=25;w.y=4;return w;},[](int){return true;},false,clock);
   EXPECT_NE(r.ids[1],r.ids[2]);EXPECT_EQ(r.last.s32_KfInitCount,1);
+}
+TEST(TrackingFrameOptions, GuardBWithoutGapResetReproducesFakeVelocity) {
+  if(ForceOff()) GTEST_SKIP() << "isolated B control requires B to remain enabled";
+  ConfigureCase(true,true); // A+B ON; only the new gap reset remains OFF.
+  auto clock=[](int k){return k<2?k*.1:1.6+(k-2)*.1;};
+  auto r=Simulate(3,[&](int k){Ego e;e.v=2;e.x=2*clock(k);return e;},
+                 [](int){World w;w.x=25;w.y=4;return w;},[](int){return true;},false,clock);
+  EXPECT_EQ(r.ids[1],r.ids[2]);
+  EXPECT_GT(std::hypot(r.last.f32_AbsVx,r.last.f32_AbsVy),.5);
 }
 }  // namespace
 

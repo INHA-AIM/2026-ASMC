@@ -795,6 +795,7 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             vec_NowObject[j].tracking_stamp_ns=vec_Compare[i].tracking_stamp_ns;
             vec_NowObject[j].tracking_ego_speed_mps=vec_Compare[i].tracking_ego_speed_mps;
             vec_NowObject[j].kf_elapsed_since_meas_s=vec_Compare[i].kf_elapsed_since_meas_s;
+            vec_NowObject[j].first_observation_R=vec_Compare[i].first_observation_R;
             const bool trace_track = track_trace::Sink().WantsTrack(vec_NowObject[j].s32_Id);
             std::array<float, 5> obb_raw{};
             if (trace_track) obb_raw = {vec_NowObject[j].f32_OBB_CenterX, vec_NowObject[j].f32_OBB_CenterY,

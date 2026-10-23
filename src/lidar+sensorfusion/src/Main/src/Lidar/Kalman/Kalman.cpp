@@ -70,6 +70,10 @@ inline void compensate_ego_yaw(LiDARObjectInfo &o, float ego_yaw_now_deg, bool r
     Eigen::Matrix<float,6,6> T = makeYawTransform(-dpsi);
     o.Eigen_KfState_CA = T * o.Eigen_KfState_CA;
     o.Eigen_KfP_CA     = T * o.Eigen_KfP_CA * T.transpose();
+    if(tracking_options::Get().two_point_init_cov) {
+        const Eigen::Matrix2f r=T.block<2,2>(0,0);
+        o.first_observation_R=(r*o.first_observation_R*r.transpose()).eval();
+    }
 
     // 4) 현재 yaw 저장 (rad)
     o.f32_PrevYaw = yaw_now;
@@ -166,6 +170,8 @@ void kalman_filter_update(LiDARObjectInfo &obj,
         obj.f32_CoreX = zx; obj.f32_CoreY = zy;
         obj.f32_PrevYaw = to_ccw_rad(ego_yaw_now);
         obj.kf_elapsed_since_meas_s = 0.;
+        obj.first_observation_R=obj.observation_R_valid?obj.observation_R:Eigen::Matrix2f::Identity()*.01f;
+        if(tracking_options::Get().two_point_init_cov)obj.Eigen_KfP_CA.block<2,2>(0,0)=obj.first_observation_R;
         if (track_trace::Sink().WantsTrack(obj.s32_Id)) {
             track_trace::Event("kf_init", [&](std::ostream& out) {
                 out << ",\"id\":" << obj.s32_Id << ",\"z\":[" << zx << ',' << zy << "],\"yaw_rad\":" << obj.f32_PrevYaw;
@@ -190,6 +196,30 @@ void kalman_filter_update(LiDARObjectInfo &obj,
     // by the last scan dt only. Option reacquire_elapsed_init divides by the real elapsed time.
     double init_elapsed = dt;
     if (obj.s32_KfInitCount == 1) {
+        if(tracking_options::Get().two_point_init_cov) {
+            const double elapsed=obj.kf_elapsed_since_meas_s+dt;
+            if(!std::isfinite(elapsed)||elapsed<=0.)throw std::runtime_error("invalid two-observation interval");
+            const Eigen::Matrix2f r1=obj.observation_R_valid?obj.observation_R:Eigen::Matrix2f::Identity()*.01f;
+            const Eigen::Matrix2f r0=obj.first_observation_R;
+            const Eigen::Vector2f velocity((zx-pred_x)/elapsed,(zy-pred_y)/elapsed);
+            obj.Eigen_KfState_CA<<zx,zy,velocity.x(),velocity.y(),0.f,0.f;
+            obj.Eigen_KfP_CA.setZero();
+            // Current p=e1, v=(e1-e0)/T + T*a/2 with independent measurement noises
+            // and an acceleration prior I (m^2/s^4). Retain p-v and v-a correlations.
+            obj.Eigen_KfP_CA.block<2,2>(0,0)=r1;
+            obj.Eigen_KfP_CA.block<2,2>(0,2)=r1/elapsed;
+            obj.Eigen_KfP_CA.block<2,2>(2,0)=r1/elapsed;
+            obj.Eigen_KfP_CA.block<2,2>(2,2)=(r0+r1)/(elapsed*elapsed)+Eigen::Matrix2f::Identity()*(elapsed*elapsed*.25);
+            obj.Eigen_KfP_CA.block<2,2>(4,4)=Eigen::Matrix2f::Identity();
+            obj.Eigen_KfP_CA.block<2,2>(2,4)=Eigen::Matrix2f::Identity()*(elapsed*.5);
+            obj.Eigen_KfP_CA.block<2,2>(4,2)=Eigen::Matrix2f::Identity()*(elapsed*.5);
+            obj.s32_KfInitCount=2;obj.kf_elapsed_since_meas_s=0.;obj.f32_CoreX=zx;obj.f32_CoreY=zy;
+            track_trace::Event("kf_two_point_init",[&](std::ostream& out){
+                out<<",\"id\":"<<obj.s32_Id<<",\"elapsed\":"<<elapsed<<",\"x_post\":";
+                track_trace::Arr(out,obj.Eigen_KfState_CA,6);out<<",\"P\":";track_trace::Mat2(out,obj.Eigen_KfP_CA,6,6);
+            });
+            return; // Do not count z1 again in a second posterior update.
+        }
         // Only a track that missed scans since its first observation takes the new path; without misses
         // the elapsed time is dt and the P0 expression is used unchanged.
         const bool elapsed_init = tracking_options::Get().reacquire_elapsed_init && obj.kf_elapsed_since_meas_s > 0.;
