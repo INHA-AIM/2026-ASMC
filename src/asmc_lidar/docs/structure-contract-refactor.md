@@ -139,6 +139,7 @@ python3 src/asmc_lidar/tools/compare_traces.py \
   --candidate /artifacts/lidar-structure-contract-20261023-r3/candidate-final
 ```
 
+담당별 최신 인수·보완 순서는 [공동 개발 인수표](migration-tasks.md#공동-개발-인수와-우선-작업)를 따른다.
 다음 안승현 작업은 기존 인지 필터 소유권·HD맵 최종 관련성의 오프라인 대조다.
 점군 ROI 변경과 실제 객체 제거는 이 첫 단위에 섞지 않았다.
 

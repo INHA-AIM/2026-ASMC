@@ -1,8 +1,9 @@
 # 카메라 YOLO → 기존 Main → asmc_lidar 연결
 
-2026-10-23 공동 개발: 안승현은 HD맵 기반 필터·카메라 연결 지원, 손재호는 추적·속도·운동 상태·fusion을 진행한다.
+2026-10-24 공동 개발 인계: 안승현은 HD맵 기반 필터·카메라 연결 지원, 손재호는 추적·속도·운동 상태·fusion을 진행한다.
 순서·완료 기준은 [L0–L8 작업표](../../src/asmc_lidar/docs/migration-tasks.md), 시작점은 [LiDAR 인계](lidar-migration.md)다. 카메라 실행은 [카메라 계약](../contracts/camera-runtime-v1.md),
 관측 metadata는 [기계 정본](../../config/contracts/camera_object_observation_v1.yaml)을 따른다.
+재호의 새 구조 인수·실행 구분·우선 과제는 [PR #104 인수 시작](lidar-migration.md#재호의-pr-104-인수-시작)을 먼저 읽는다.
 현재 판제는 nested `lidar+sensorfusion`의 Main 출력을 소비한다. `asmc_lidar` 전체 이전은 완료되지 않았다.
 Main LiDAR 처리와 전방 fusion은 `asmc_lidar` 이관 검증 노드로 이식했으나 명시 실행·`/migration/lidar/*` 전용이며 운영에 연결하지 않았다.
 
@@ -20,7 +21,7 @@ asmc_camera/camera.launch — 3뷰 YOLO, 독립 실행
 
 - **안승현/카메라:** 모델·전처리·bbox·세 그룹·confidence·3뷰 관측과 실행 성능, 공용 제어·LiDAR 카메라 입력 지원.
 - **PR #87에서 완료한 Main 정리:** 독립 YOLO 노드/래퍼/전용 가중치/설치 경로를 제거했다. Main은 카메라 모델을 시작하거나 로드하지 않는다.
-- **안승현:** 구조·공용 계약을 정리한 뒤 HD맵 필터와 카메라 연결을 지원한다. **손재호:** 추적·속도·운동 상태와 fusion을 보완한다. 전방 fusion은 L4, 3뷰 확대는 L8 후속이다.
+- **안승현:** 구조·공용 관측 계약을 제공하고 HD맵 필터와 카메라 연결을 지원한다. **손재호:** 추적·속도·운동 상태와 fusion을 보완한다. 전방 fusion은 L4, 3뷰 확대는 L8 후속이다.
 - **판제:** 결과 소비·행동 정책·음영 lane 사용. 기본은 세 모델 상시 ACTIVE이며 이번 변경은 판제 입력 토픽·MD5·정책을 바꾸지 않는다.
 
 음영 어댑터의 `camera_bbox_detector.launch`도 별도 추론 없이 전방 CPU 변환만 제공한다. 전용 출력 토픽과 소비 cutoff0.7은 그대로이며 Main 어댑터의 기본0.0과 구분한다.

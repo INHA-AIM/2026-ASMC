@@ -1,6 +1,6 @@
 # LiDAR 이관 작업표 — L0–L8
 
-2026-10-23 기준(PR #103 반영). 안승현은 **HD맵 필터·카메라 연결**, 손재호는 **추적·속도·운동 상태·fusion**을 진행한다.
+2026-10-24 공동 개발 인계(PR #103·#105를 PR #104 구조에 통합). 안승현은 **HD맵 필터·카메라 연결**, 손재호는 **추적·속도·운동 상태·fusion**을 진행한다.
 [통합 인계](../../../docs/handoffs/lidar-migration.md)가 전체 흐름·책임·전환 규칙의 정본이다.
 현재 첫 단위는 [구조·관측 계약 정리](structure-contract-refactor.md)다. 기존 Main이 판제 입력을 계속 제공하며 운영 전환은 없다.
 
@@ -16,12 +16,36 @@
 | L1 구조·계약·기준선 | 완료 | L0 | [설계](migration-design.md)·[기준선 manifest](../../../config/baselines/lidar_migration_l1_v1.yaml) |
 | 구조·관측 계약 정리 | 완료 | PR #103·L1 | 책임별 구조·관측 식별 구현, [검증 기록](structure-contract-refactor.md) |
 | L2 검출 경로 | 검증 대기 | L1 | PR #103 검출·시험 경로 구현됨. L1 요구와 차이 인수 확인 |
-| L3 좌표·시간·추적 | 검증 대기 | L2 | 추적·roll/pitch·base/map 구현. 속도 gate·부호·운동 validity·재시작 보완 |
+| L3 좌표·시간·추적 | 검증 대기 | L2 | 추적·roll/pitch·base/map·명시적 reset 구현. IMU 초기 무효 경계·속도 gate/부호·공개 운동 validity 보완 |
 | L4 카메라 fusion | 검증 대기 | L3 | 전방 fusion 구현. 실제 영상 bag 수락 남음 |
 | L5 인지 필터 | 미착수 | L4 | 중복 필터의 단일 인지 구현 |
-| L6 발행·실행·시각화 | 검증 대기 | L5 | 이관 실행·typed 배열/관측 구현. 정식 실행·시각화·소비 전환 남음 |
+| L6 발행·실행·시각화 | 검증 대기 | L5 | typed 배열/관측·단일 lidar.launch·RViz 옵션·별도 웹 view.launch 구현. 운영 수락·소비 전환 남음 |
 | L7 대조·판제 전환 | 미착수 | L6 | 소비 검증·명시적 cutover·복구 |
 | L8 개선 우선순위 | 미착수 | L7 | 다음 한 가지 개선과 근거 |
+
+## 공동 개발 인수와 우선 작업
+
+현재 인수 코드 기준은 `56b1caaa`다. PR #104 병합 후 각자의 작업 브랜치에 main을 반영한다.
+실행/빌드/메시지 확인 순서는 [재호의 PR #104 인수 시작](../../../docs/handoffs/lidar-migration.md#재호의-pr-104-인수-시작)을 따른다.
+아래는 **담당자가 다음에 완료할 작업**이며 이번 문서 갱신으로 완료 처리하지 않는다.
+새 실험은 [데이터 위치·저장 정책](../../../docs/operations/data-preparation.md#데이터-위치와-로컬-저장-정책)을 확인하고,
+새 run ID와 입력/설정/소스 SHA를 기록한다. 개인 관리 정책이 있는 PC는 해당 run 등록 절차도 따른다.
+
+| 순서·담당 | 작업과 위치 | 완료 근거 |
+|---|---|---|
+| J0 · 손재호 | 로컬 변경을 새 include·`detection/tracking/camera`·관측 식별·launch 이름에 맞춰 반영. 기존 tracker/fusion/웹은 재사용 | asmc_msgs·asmc_lidar 재빌드, 필수 CI gate, 처리/GUI 단일 생산자와 namespace 확인 |
+| J1 · 손재호(L3) | `geometry/pose_history.*`의 IMU 무효 초기 경계: 과거 scan보다 새 무효 표본이 먼저 도착하는 순서·중단·복귀를 재현 | 첫120ms의 정상 표본 재사용 여부와 의도한 무효 정책을 명시하고 결정적인 단위/ROS 시험 추가. 현재의 지속 무효 검사만으로 완료하지 않음 |
+| J2 · 손재호, 승현 자료/지도 지원(L2·L3) | 음영구간 박스 튐: 같은 raw의 TunnelFilter OFF/ON → RANSAC/군집/OBB → track ID/예측 → 진단용 운동 상태를 차례로 대조 | 점군 변화·OBB 형상 변화·연관 오류를 구분한 동일 stamp 사례와 객체 보존/연산 비용. 한 번에 임계값을 여러 개 바꾸지 않음 |
+| J3 · 손재호(L3) | `tracking/`의 속도·운동 상태: signed 입력/후진·dt·자차 운동·출력 좌표와 단위를 확인 | 상대/절대속도와 개발용 GT 기준점 정합, GPS 무효/복귀·정지 객체 회귀 후 공개 validity 승격 여부를 별도 결정 |
+| J4 · 손재호, 승현 카메라 지원(L4) | `fusion/front_camera_fusion.hpp`, `ros/camera_receiver.hpp`와 Receiver의 실제 관측 연결 검증 | 같은 scan/영상의 matching·분류 확인 횟수·stale/empty/재시작·보정/세대 전환 검증.3뷰 확대는 별도 단위 |
+| A1 · 안승현(L5·L8) | Main/planning_inputs 인지 필터 소유권 정리와 HD맵 v6 오프라인 관련성 대조 | 기존 keep/drop 사유와 새 지도 차이, 동적 장애물 진입·인접 차로·GPS 무효에서 실제 객체 보존. 삭제/점군 ROI 적용은 다음 검증 단위 |
+| A2 · 안승현(L4) | 카메라 수신·보정·시각·16종→3그룹 연결 지원 | 원본 영상 픽셀/ID·source stamp·calibration ID와 라벨 의미 보존; 카메라 미검출을 객체 삭제 근거로 사용하지 않음 |
+| 공동 · L6–L7 | 공용 메시지/좌표/시간 변경 리뷰와 기존 Main → 새 경로의 소비 전환 | 같은 입력의 전체 대조·부하·판제 인수·단일 발행자·복구 확인 후 명시적 전환 |
+
+J1–J4는 우선 확인 순서다. J3·J4는 원인이 확인된 작은 변경으로 각각 제출할 수 있으며
+한 PR에 필터·추적·메시지·판제 정책을 함께 바꾸지 않는다. 승현의 A1/A2도 재호 작업과 병행한다.
+공통 경계 변경은 서로 먼저 확인하고, 판제의 TTC·추종·회피·정지·장애 대응은 인지로 옮기지 않는다.
+웹의 동정적 색·속도와 지도상 객체 숨김은 진단/표시이며 공개 validity·인지 필터와 구분한다.
 
 ## 단위별 실행 카드
 
@@ -64,7 +88,8 @@ L1 raw점 계보와62500점 상한, 빈 입력/가짜점, pitch-only/common 지�
 
 PR #103의 추적/roll-pitch/base/map/bounded300ms·복구3회는 재사용한다. 현재 속도 미수신 시
 local도 invalid인 gate를 L1 목표와 분리하고, `/Ego_topic`의 허용 x속도·부호·시간·단위를 검증한다.
-XYZ norm의 부호 손실·음수 거부, dt 초기화/시각 역행·reset, 공개 속도·dynamic validity는 미완료다.
+XYZ norm의 부호 손실·음수 거부, IMU 무효 초기 경계, 공개 속도·dynamic validity가 남았다.
+명시적 reset·세대 변경·이전 결과 발행 차단은 구현/회귀 완료이며 이를 다시 미구현으로 취급하지 않는다.
 
 - **입력·재사용:** L2 검출, 기존 tracker/KF/연관, frame_time·projection·IMU 선택·strict/bounded pose 코어.
 - **범위:** 추적 동작 보존 이식과 좌표 수정은 별도 커밋으로 분리한다. 관측시각의 roll/pitch 정책, 실제 base_link 출력과 유효 pose map 변환을 연결하고 GPS와 local ID 생애주기를 분리한다.

@@ -4,6 +4,7 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 
 안승현은 **HD맵 기반 필터·카메라 연결 지원**, 손재호는 **추적·속도·운동 상태·fusion 보완**을 진행한다. 좌표·시간·공용 계약과 판제 전환은 공동 확인한다.
 
+- [재호의 PR #104 인수 시작](../../docs/handoffs/lidar-migration.md#재호의-pr-104-인수-시작) · [담당별 다음 작업](docs/migration-tasks.md#공동-개발-인수와-우선-작업)
 - [구조·관측 계약과 이번 검증](docs/structure-contract-refactor.md)
 - [이름·경로 이전표](docs/name-mapping.md): 옛 이름은 참고용이며 wrapper를 제공하지 않는다.
 - [실행 경로·PR #103 기준선과 제한](docs/pipeline.md)
@@ -114,7 +115,7 @@ rosrun asmc_lidar lidar_markers.py
 - 속도 validity가 아직 false이므로 운동·속도 화살표를 만들지 않는다. `unknown`은 카메라 분류가 확인되지 않은 상태다.
 - 정상 빈 결과·무효·세션/세대 변경에서 이전 박스를 지우고, 입력350ms 중단 시 wall clock으로 제거한다. 중복·이전 세대 관측으로 표시를 갱신하지 않는다.
 - 이 도구는 검출·추적·fusion을 계산하지 않고 Marker만 발행한다. 지면 제거/군집 점군을 새로 계산하지 않는다.
-- 프리셋의 Raw LiDAR는 기본 OFF다. 이를 켜면 원본 `/velodyne_points`와 최종 처리된 박스를 대조한다. 중간 단계 점군은 현재 공개되지 않는다.
+- 프리셋의 Raw LiDAR는 기본 OFF다. 이를 켜면 원본 `/velodyne_points`와 최종 처리된 박스를 대조한다. 중간 단계 점군은 이 Marker 도구가 발행하지 않는다. PR #105의 단계별 샘플은 `debug:=true`와 [웹 모니터](docs/web-monitor.md)로 따로 확인한다.
 - 같은 Marker 토픽에 ego를 파란 반투명3D 박스·흰12개 모서리·EGO 라벨로 표시한다. 차체 footprint는4.635×1.892m, 높이는 실제 형상에서 확인한1.644m다. 후륜축 기준 x=-0.79~3.845m, 명목 지면 z=-0.36m·상단 z=1.284m다. 입력이 끊겨도 ego 기준선만 유지하며 검출 객체 배열에는 추가하지 않는다.
 
 **2026-10-23 높이 정정:** UDP20개와 `GetVehicleSpec.height`는2.434m지만, `GetActorState(Ego)`
