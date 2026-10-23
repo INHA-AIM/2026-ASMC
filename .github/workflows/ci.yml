@@ -23,7 +23,7 @@ jobs:
           apt-get -o Acquire::Retries=3 update
           # Last line: asmc_lidar shadow pipeline build_depend (PCL, GeographicLib, pcl_conversions, rosbag).
           apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
-            git ca-certificates libyaml-cpp-dev libssl-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-pil python3-nose python3-pip \
+            git ca-certificates nodejs libyaml-cpp-dev libssl-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-pil python3-nose python3-pip \
             ros-noetic-tf ros-noetic-tf2-ros ros-noetic-rostest \
             libpcl-dev libgeographic-dev ros-noetic-pcl-conversions ros-noetic-rosbag
           rm -rf /var/lib/apt/lists/*
@@ -92,6 +92,9 @@ jobs:
           ctest --output-on-failure -T Test --no-compress-output
           # Fails when a shadow executable or a required test is missing, skipped or stale.
           python3 ../../src/asmc_lidar/test/shadow_ci_check.py --devel ../../devel --build . --results ../test_results/asmc_lidar
+
+      - name: Check LiDAR web view logic
+        run: node src/asmc_lidar/test/monitor/test_monitor_view.js
 
       - name: Check bridge protocols, concurrent reporting and stale recovery
         run: |

@@ -92,6 +92,11 @@
       "internal_args": []
     },
     {
+      "title": "LiDAR shadow web monitor",
+      "path": "src/asmc_lidar/launch/monitor.launch",
+      "internal_args": []
+    },
+    {
       "title": "Read-only family monitor",
       "path": "src/jamming_lane_boundary_adapter/launch/shadow_boundary_family_candidate.launch",
       "internal_args": []
@@ -147,6 +152,9 @@
     "src/data_collection/README.md",
     "src/asmc_hd_map/README.md",
     "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md",
-    "src/asmc_camera/docs/bdd-pretrained-experiment.md"
+    "src/asmc_camera/docs/bdd-pretrained-experiment.md",
+    "src/asmc_lidar/README.md",
+    "src/asmc_lidar/docs/web-monitor.md",
+    "src/asmc_lidar/docs/shadow-pipeline.md"
   ]
 }

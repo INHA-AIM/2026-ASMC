@@ -35,7 +35,7 @@ LEGACY_PROGRAMS = ('asmc_lidar_camera_buffer_test', 'asmc_lidar_camera_calibrati
                    'asmc_lidar_imu_selection_test')
 # Python unittest scripts registered with add_test: minimum number of cases.
 UNITTESTS = {'asmc_lidar_camera_calibration_hash_test': 2, 'asmc_lidar_camera_contract_test': 5,
-             'asmc_lidar_shadow_contract_test': 8}
+             'asmc_lidar_shadow_contract_test': 9, 'asmc_lidar_monitor_core_test': 29}
 # catkin_add_gtest targets: minimum number of cases.
 GTESTS = {'asmc_lidar_test_tunnel_filter_core': 27, 'asmc_lidar_test_preprocessing': 18,
           'asmc_lidar_test_ground': 17, 'asmc_lidar_test_clustering': 15, 'asmc_lidar_test_obb': 24,
@@ -43,10 +43,13 @@ GTESTS = {'asmc_lidar_test_tunnel_filter_core': 27, 'asmc_lidar_test_preprocessi
           'asmc_lidar_test_pose_history': 32, 'asmc_lidar_test_gps_ingest': 15,
           'asmc_lidar_test_fusion_policy': 30, 'asmc_lidar_test_front_camera_fusion': 27,
           'asmc_lidar_test_tunnel_filter_stage': 7, 'asmc_lidar_test_pipeline': 15,
+          'asmc_lidar_test_stage_observer': 5,
+          'asmc_lidar_test_motion_display': 6,
           'asmc_lidar_test_typed_output': 11, 'asmc_lidar_test_runtime': 16}
 # rostest file stem -> (rosunit result name, minimum number of cases).
 ROSTESTS = {'test_camera_receiver_ros': ('camera_receiver_ros', 1),
-            'test_ros_shadow_node': ('shadow_node', 14)}
+            'test_ros_shadow_node': ('shadow_node', 14),
+            'test_ros_monitor_node': ('monitor_node', 7)}
 
 
 def required_tests():

@@ -101,8 +101,12 @@ class CameraObjectsContractTest(unittest.TestCase):
         for path in sorted((ROOT / 'src/asmc_lidar/launch').glob('*.launch')):
             root = ET.parse(path).getroot()
             self.assertEqual(root.findall('.//include'), [], path)
+            # monitor.launch adds only the read-only web monitor (no publisher, loopback HTTP).
+            allowed = {('asmc_lidar', 'asmc_lidar_shadow_node')}
+            if path.name == 'monitor.launch':
+                allowed.add(('asmc_lidar', 'asmc_lidar_monitor_node.py'))
             for node in root.findall('.//node'):
-                self.assertEqual((node.get('pkg'), node.get('type')), ('asmc_lidar', 'asmc_lidar_shadow_node'), path)
+                self.assertIn((node.get('pkg'), node.get('type')), allowed, path)
             for element in root.iter():
                 for key in ('default', 'value', 'to'):
                     value = element.get(key) or ''

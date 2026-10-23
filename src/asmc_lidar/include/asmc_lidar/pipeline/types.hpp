@@ -8,6 +8,7 @@
 // not part of this package (see docs/shadow-pipeline.md, "port boundary").
 
 #include <asmc_lidar/frame_time.hpp>
+#include <asmc_lidar/pipeline/motion_display.hpp>
 
 #include <Eigen/Core>
 #include <pcl/point_cloud.h>
@@ -113,6 +114,8 @@ struct ObjectGroundEvidence {
 // frame ("lidar_leveled"); typed base_link/map output is produced only by
 // asmc::lidar::transform with the scan Context.
 struct TrackedObject {
+  // Main decision algorithm, monitoring-only. Not a public velocity validity.
+  motion_display::MotionObject display_motion;
   // Common tracking frame record (Global.hpp:522-529).
   bool tracking_frame_valid = false;
   float tracking_height_input = 0.f;

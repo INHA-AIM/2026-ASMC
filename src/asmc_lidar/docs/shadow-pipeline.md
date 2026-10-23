@@ -13,7 +13,9 @@ nested `Main`의 common-geometry LiDAR 처리를 `asmc_lidar` 안에 동작 보�
   같았고, GPS 무효·중단·복구와 IMU stale·무효를 실제 노드 rostest로 시험했다.
 - 기존 Main과 판제는 계속 기존 실행 경로(`/last_lidar` 등)를 쓴다. 이 패키지는 그 경로를 바꾸지 않는다.
 - 새 노드는 명시적으로 실행해야 하며 `/asmc_lidar/shadow/*`만 발행한다.
-- MotionClassifier와 판제 후처리(road mask·known static·structure exclusion·relevance)는 이번 이식 범위 밖이다.
+- MotionClassifier의 공개 출력과 판제 후처리(road mask·known static·structure exclusion·relevance)는 이식 범위 밖이다.
+  웹 모니터용 `motion_display`는 이후 추가되었다. Main 판정 알고리즘을 full-scan 이력에 적용해
+  debug JSON에만 싣고 typed dynamic/velocity validity는 승격하지 않는다. `web-monitor.md` 참고.
 - 공개 속도·동정적 validity(`relative_velocity_valid`·`absolute_velocity_valid`·`dynamic_valid`)는 항상 false다.
 - 실제 카메라 bag에서의 fusion 성능과 실시간 처리 성능은 수락하지 않았다.
 - TunnelFilter는 기본 OFF이며 ON 성능은 수락하지 않았다.
@@ -92,6 +94,7 @@ bag 비교의 동등성 경계는 **추적 결과와 typed local/map 배열**이
 | `/asmc_lidar/shadow/objects_map` | `asmc_msgs/LidarObjectArray` | frame `map`, 같은 객체·ID를 관측 시각 pose로 변환 |
 | `/asmc_lidar/shadow/diagnostics` | `diagnostic_msgs/DiagnosticArray` | 1Hz. 처리·무효·덮어쓴 scan 수, 처리시간 p50/p95, map·카메라 사유 |
 | `/asmc_lidar/shadow/trace` | `std_msgs/String` | 구독자가 있을 때만 scan별 JSON ([형식](scan-trace-schema.md), debug 필드 제외) |
+| `/asmc_lidar/shadow/debug/{raw,roi,voxel,leveled,scan}` | `sensor_msgs/PointCloud2`, `std_msgs/String` | `~debug_enabled:=true`(`monitor.launch`)일 때만, 구독자가 있을 때만, 기본 5 Hz. 단계별 점군(stride 샘플)과 scan JSON. [웹 모니터](web-monitor.md) |
 
 - `OBSERVED`/`OBSERVED_EMPTY`: 정상 처리. 두 배열 모두 `INPUT_INVALID`(객체 0)인 경우는
   (a) scan 시각의 IMU/CAN이 없거나 stale·무효(reason=pose 사유), (b) 점 0개 scan
@@ -150,6 +153,8 @@ source devel/setup.bash
 
 # shadow 노드 (기존 bridge/카메라가 발행 중인 ROS 입력을 구독)
 roslaunch asmc_lidar shadow_pipeline.launch
+# shadow 노드 + 읽기 전용 웹 모니터 (http://127.0.0.1:8091/, docs/web-monitor.md)
+roslaunch asmc_lidar monitor.launch open_browser:=true
 # LiDAR 단독 (카메라 구독 없음)
 roslaunch asmc_lidar shadow_pipeline_lidar_only.launch
 # pitch-only 수평화 / 실험 TunnelFilter ON (인자를 주지 않으면 config/shadow_pipeline.yaml 값)
@@ -176,16 +181,18 @@ catkin_make && catkin_make camera_receiver_ros_test   # 기존 rostest gtest는 
 (cd build/asmc_lidar && ctest --output-on-failure)
 ```
 
-이식 모듈 gtest 15개(TunnelFilterCore 27개 사례 포함), 실제 노드 rostest(`test/ros/shadow_node.test`:
+이식 모듈 gtest 16개(TunnelFilterCore 27개 사례, stage observer 무영향 시험 포함), 실제 노드 rostest(`test/ros/shadow_node.test`:
 GPS 무효·중단·복구, IMU stale·무효, 카메라 정상·empty·invalid·STANDBY·세션 변경·중복·중단, 격리·guard;
 `../asmc_camera/config/cameras_v3.yaml`이 있을 때만 등록), 격리 계약 시험(`test/shadow_contract_test.py`)이다.
 합성 카메라 관측은 인터페이스·동기화 시험이며 YOLO 정확도 시험이 아니다.
+웹 모니터는 `test/monitor/test_monitor_core.py`(ROS 불필요)와 `test/ros/monitor_node.test`(실제 shadow 노드 + 모니터 + 합성 입력)로 시험한다.
 PCL·pcl_conversions·GeographicLib·morai_msgs가 없는 환경에서는 shadow target을 경고와 함께 건너뛰고
 기존 target만 빌드한다(기본값). CI는 이 생략을 허용하지 않는다.
 
 - `ci.yml`은 의존성을 설치하고 `-DASMC_LIDAR_SHADOW_REQUIRED=ON`으로 빌드한다. 의존성이나 rostest 보정 파일이 없으면
   configure가 실패한다. `ctest -T Test` 뒤 `test/shadow_ci_check.py`가 두 shadow 실행파일, 필수 시험 25개의
-  등록·통과·결과 갱신·최소 사례 수, skip 0, catkin export 불변을 확인하며 하나라도 어긋나면 실패한다.
+  등록·통과·결과 갱신·최소 사례 수, skip 0, catkin export 불변을 확인하며 하나라도 어긋나면 실패한다
+  (모니터 추가 후 필수 시험 28개: gtest 16, python 4, rostest 3 + legacy 5).
 - `planning-integration.yml`의 `validated-lidar-build`는 shadow가 활성인 `asmc_lidar` 위에서 nested Main을 빌드·시험하고,
   Main 링크에 shadow 라이브러리가 없는지 같은 스크립트(`--dependent-build`)로 검사한다.
 
