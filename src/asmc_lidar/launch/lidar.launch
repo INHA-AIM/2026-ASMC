@@ -1,20 +1,25 @@
 <launch>
-  <!-- asmc_lidar shadow pipeline: port of Main's common-geometry LiDAR path.
+  <!-- Canonical asmc_lidar entry point: port of Main's common-geometry path.
        Starts ONLY lidar_pipeline_node. No LiDAR driver, MORAI bridge, camera,
        inference or planner node, and no operational output: outputs default to
        /migration/lidar/* and the node refuses operational names
        (/last_lidar, /lidar_nogps, /YOLO/BBox, /perception/lidar/*, /planning/*,
        /tf, /tf_static, its own input topics; TF child lidar_leveled/base_link/map/velodyne).
-       Not included by any other launch file.
-       LiDAR-only without the asmc_camera package: lidar_only.launch -->
-  <arg name="namespace" default="/migration/lidar"/>
-  <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml"/>
+       No visualization server or browser is started here. Jaeho's future
+       read-only localhost viewer belongs in view.launch.
+       Previous entry points: lidar_pipeline.launch and lidar_only.launch.
+       LiDAR-only, including without asmc_camera installed: fusion:=false. -->
+  <arg name="namespace" default="/migration/lidar" doc="Output namespace; inputs keep their canonical paths"/>
+  <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml" doc="Processing configuration YAML"/>
   <!-- Empty = keep config/lidar_pipeline.yaml (lidar.level_roll: true, experimental
        tunnel_filter.enabled: false); a value overrides the file. -->
   <arg name="lidar_level_roll" default=""/>
-  <!-- Empty = fusion.enable_sensor_fusion of the YAML (true). -->
-  <arg name="enable_camera_fusion" default=""/>
-  <arg name="camera_calibration_config" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
+  <!-- Public switch. The internal parameter/YAML names stay unchanged. -->
+  <arg name="fusion" default="true" doc="Use camera observations for classification; false runs LiDAR alone"/>
+  <!-- Resolve the camera-owned file in SetUpCamera only when fusion is on.
+       An eager camera-package lookup would break camera-free installations.
+       Empty keeps the node's existing discovery policy. -->
+  <arg name="camera_calibration_config" default=""/>
   <arg name="experimental_tunnel_filter" default=""/>
   <arg name="publish_tf" default="false"/>
   <arg name="tf_child_frame" default="lidar_pipeline/lidar_leveled"/>
@@ -37,8 +42,7 @@
     <param name="pipeline_config" value="$(arg pipeline_config)"/>
     <param name="package_dir" value="$(find asmc_lidar)"/>
     <param if="$(eval arg('lidar_level_roll') != '')" name="lidar_level_roll" value="$(arg lidar_level_roll)"/>
-    <param if="$(eval arg('enable_camera_fusion') != '')" name="enable_camera_fusion"
-           value="$(arg enable_camera_fusion)"/>
+    <param name="enable_camera_fusion" value="$(arg fusion)"/>
     <param name="camera_calibration_config" value="$(arg camera_calibration_config)"/>
     <param if="$(eval arg('experimental_tunnel_filter') != '')" name="experimental_tunnel_filter"
            value="$(arg experimental_tunnel_filter)"/>

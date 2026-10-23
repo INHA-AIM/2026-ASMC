@@ -193,6 +193,33 @@
 | `ego_frame_id` | `base_link` | — |
 | `follow_ego` | `true` | — |
 
+## LiDAR migration pipeline
+
+[소스](../../src/asmc_lidar/launch/lidar.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `namespace` | `/migration/lidar` | Output namespace; inputs keep their canonical paths |
+| `pipeline_config` | `$(find asmc_lidar)/config/lidar_pipeline.yaml` | Processing configuration YAML |
+| `lidar_level_roll` | `(빈 문자열)` | — |
+| `fusion` | `true` | Use camera observations for classification; false runs LiDAR alone |
+| `camera_calibration_config` | `(빈 문자열)` | — |
+| `experimental_tunnel_filter` | `(빈 문자열)` | — |
+| `publish_tf` | `false` | — |
+| `tf_child_frame` | `lidar_pipeline/lidar_leveled` | — |
+| `points_topic` | `/velodyne_points` | — |
+| `imu_topic` | `/imu` | — |
+| `can_topic` | `/Ego_topic` | — |
+| `gps_topic` | `/gps` | — |
+| `camera_observations_topic` | `/perception/camera/objects/observations` | — |
+| `camera_status_topic` | `/perception/camera/objects/status` | — |
+| `objects_local_topic` | `objects_local` | — |
+| `objects_map_topic` | `objects_map` | — |
+| `observations_local_topic` | `observations_local` | — |
+| `observations_map_topic` | `observations_map` | — |
+| `diagnostics_topic` | `diagnostics` | — |
+| `trace_topic` | `trace` | — |
+
 ## Main LiDAR/fusion
 
 [소스](../../src/lidar+sensorfusion/src/Main/main.launch)

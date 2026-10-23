@@ -28,6 +28,35 @@ L1 구조·입출력·시각·pose 정책은 [이관 설계](../../src/asmc_lida
 현재 판제는 nested `lidar+sensorfusion`의 Main과 `/last_lidar`·tracked/motion 경로를 계속 쓴다.
 새 경로의 검증과 판제 인수 전에는 이 실행 경로·기본 설정·출력을 변경하지 않는다.
 
+## 이번 PR 이후 공동 작업 순서
+
+1. 구조·공용 관측 계약 PR을 검토·병합해 두 담당의 공통 기준선을 고정한다.
+2. 손재호는 최신 main을 자신의 작업 브랜치에 반영하고 새 include·타입·launch 이름에
+   맞춰 추적·속도·운동 상태·matching/fusion 변경을 올린다. 로컬 웹 시각화는 `view.launch`로
+   분리하고, 기존 관측을 구독하며 `lidar_pipeline_node`를 중복 실행하지 않는다.
+3. 안승현은 같은 기준선에서 인지 필터 소유권과 최신 HD맵 기반 필터를 오프라인 대조한다.
+   카메라 보정·시각·라벨 수신 연결도 지원한다. 실제 제거 정책은 별도 검증 후 적용한다.
+4. 공용 메시지·좌표·시간·발행 정책 변경은 공동 확인한다. 기존 Main 판제 입력 전환은 L7이다.
+
+실행 정본은 `roslaunch asmc_lidar lidar.launch`이고 카메라 fusion이 기본 ON이다.
+LiDAR 단독 비교는 같은 launch에 `fusion:=false`를 준다. 이 옵션은 카메라 추론을 시작하거나
+끄지 않으며 LiDAR의 카메라 관측 사용만 선택한다. 현재 fusion은 전방만 구현되어 있다.
+
+## 최신 HD맵 사용 여부 — 2026-10-23 확인
+
+- 새 `asmc_lidar`는 HD맵 계약의 원점 `[302595.0, 4124145.0, 0.0]`을 사용한다.
+  최신 주행가능영역·차선·미션 토픽을 구독하거나 이 영역으로 객체를 제거하는 기능은 아직 없다.
+  원점 일치를 최신 HD맵 필터 연결 완료로 해석하지 않는다.
+- 운영 Main의 `main.launch`는 `planning_inputs/config/validated_0781402/road_mask.png`와
+  같은 이름의 YAML을 사용한다. PNG SHA는 `b27521b882486f1f46d450f455f2292044b87dae731136d0c00e5786c0605f2c`다.
+- 최신 `asmc_hd_map` 주행가능영역 정본은 `kcity2025_static_junction_widened_drivable_v6`이며
+  `config/kcity2025_compact_drivable_map.json`과 파생 `kcity2025_compact_drivable_grid.npz`다.
+  기존 mask와 `map_id`·원점이 같아도 같은 geometry가 아니다. 기존 PNG의 흰 영역은
+  2,678,451픽셀, v6 grid의 drivable=0은373,708셀이다. PNG는 흰색이 주행가능,
+  OccupancyGrid는0이 주행가능이므로 값도 그대로 치환하지 않는다.
+- 안승현의 다음 작업에서 v6 벡터/격자와 기존 필터를 대조하고 동적 장애물 진입·인접 차로·
+  로터리 접근과 GPS 무효 시 처리를 확인한다. 이번 구조 PR에서 지도를 바꾸거나 객체를 추가 제거하지 않는다.
+
 | 구분 | 현재 구현 | 이번 이관에서 할 일 |
 |---|---|---|
 | 센서 처리·검출·추적·전방 fusion | Main 운영 + PR #103 shadow 구현 | shadow를 재사용하고 L1 요구 차이·미수락만 보완 |

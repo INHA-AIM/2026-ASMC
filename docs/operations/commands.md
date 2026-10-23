@@ -445,15 +445,19 @@ xhost -local:docker
 
 ```bash
 source /root/ws/devel/setup.bash
-roslaunch asmc_lidar lidar_pipeline.launch
+roslaunch asmc_lidar lidar.launch
 # 카메라 없이 비교할 때 위 실행 대신 사용
-roslaunch asmc_lidar lidar_only.launch
+roslaunch asmc_lidar lidar.launch fusion:=false
 # 명시적 초기화: 대기·추적·pose 이력을 지우고 처리 generation 증가
 rosservice call /migration/lidar/lidar_pipeline/reset "{}"
 ```
 
-공개 인자는 `namespace`(기본 `/migration/lidar`), `pipeline_config`, 기존 입력/출력 토픽,
-`lidar_level_roll`, `enable_camera_fusion`(통합 launch만), `camera_calibration_config`(통합 launch만),
-`experimental_tunnel_filter`, `publish_tf`(기본 false), `tf_child_frame`이다.
-빈 override는 YAML 값을 사용한다. `/perception/lidar/*` 운영 전환은 기본 차단하며 L7에서 별도 확인한다.
+일반 실행 인자는 `fusion`(기본 true), `namespace`(기본 `/migration/lidar`), `pipeline_config`다.
+`fusion:=false`는 카메라 보정 조회·구독을 끄며 카메라 패키지가 없는 환경에서도 동작한다.
+fusion은 카메라 추론을 시작하는 옵션이 아니며 현재 연결은 전방 분류에 한정된다.
+기존 입력/출력 토픽·`lidar_level_roll`·`camera_calibration_config`·`experimental_tunnel_filter`·
+`publish_tf`(기본 false)·`tf_child_frame`은 내부 대조·배선 조정용으로 유지한다.
+빈 roll/tunnel override는 YAML 값을 사용하고 fusion은 launch 선택을 우선한다.
+`/perception/lidar/*` 운영 전환은 기본 차단하며 L7에서 별도 확인한다.
+재호의 localhost 시각화는 추후 `view.launch`로 별도 제공하며 처리 노드를 중복 시작하지 않는다.
 새 관측·배열·진단과 복구는 [asmc_lidar README](../../src/asmc_lidar/README.md)를 따른다.

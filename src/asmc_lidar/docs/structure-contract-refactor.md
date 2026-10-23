@@ -26,6 +26,28 @@ PR #103의 계산 결과를 보존하며 기존 Main의 판제 출력을 전환�
 
 상태: 구현·로컬 구조/계약 회귀 완료. 운영 수락·판제 전환은 아직 하지 않았다. Hosted CI는 PR 결과와 별도로 확인한다.
 
+## 실행 진입점 마무리
+
+`lidar.launch` 하나가 `lidar_pipeline_node`를 실행하고 기본 `fusion:=true`를 적용한다.
+`fusion:=false`는 카메라 보정 조회와 구독을 끄므로 카메라 패키지가 없어도 같은 launch를 사용한다.
+내부 `enable_camera_fusion`·YAML 이름과 계산 알고리즘은 유지한다. 이전 두 launch는 wrapper 없이 통합했다.
+`lidar_replay`는 오프라인 대조 도구로 분리한다. 재호의 로컬 웹 시각화는 추후 `view.launch`에서
+결과만 구독하도록 연결하며, 현재 이 PR에서 구현·검증한 웹 UI로 표시하지 않는다.
+
+이 후속 변경은 launch·문서·구조 검사만 바꾼다. 아래 3,428회 대조는 계산 소스가 동일하므로
+재사용하며, 최종 launch의 ROS 해석과 카메라 없는 환경은 별도로 검사한다.
+최신 HD맵 적용 상태와 병합 후 담당별 순서는 [통합 인계](../../../docs/handoffs/lidar-migration.md#이번-pr-이후-공동-작업-순서)를 따른다.
+
+후속 실행 검사(2026-10-23):
+
+- 구조 계약8개, 문서 unit17개, runtime 문서26 launch·71개 literal 명령과 history/동결5개 검사를 통과했다.
+- 독립 ROS master11541에서 기본 launch가 처리 노드 하나를 시작하고 카메라 관측·공용 상태 두 토픽을
+  구독하며 diagnostics의 `camera_fusion=enabled`를 확인했다.
+- 별도 master11542와 카메라 패키지가 없는 `ROS_PACKAGE_PATH`에서 `fusion:=false`를 실행해
+  `camera_fusion=disabled`, `camera_reason=disabled_by_config`, 카메라 구독0개를 확인했다.
+- 두 시험 모두 운영 객체·TF 발행이 없고 종료 시 노드·rosout·시험 master를 정리했다.
+  센서가 없는 실행 확인이므로 실제 검출 품질·공급률 검증으로 사용하지 않는다.
+
 ## 관측과 내부 데이터
 
 - `DetectionObservation`: 한 scan의 군집 점군·centroid·AABB·OBB·지면 근거.

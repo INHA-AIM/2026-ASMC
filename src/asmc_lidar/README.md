@@ -49,13 +49,20 @@ python3 src/asmc_lidar/test/pipeline_ci_check.py --devel devel \
 
 ## 실행
 
-기존 bridge와 카메라는 별도로 실행한다. 이 launch는 드라이버·카메라 추론·판제를 시작하지 않는다.
+기존 bridge와 카메라는 별도로 실행한다. `lidar.launch`는 처리 노드 하나를 시작한다.
+기본 `fusion:=true`는 카메라 관측을 분류에 사용하며, 카메라 추론을 시작하지 않는다.
+`fusion:=false`는 카메라 보정 조회·구독 없이 실행하므로 카메라 패키지가 없는 환경에서도 사용할 수 있다.
+일반 실행은 `fusion`, `namespace`, `pipeline_config`를 사용하고 나머지 인자는 내부 대조·배선 조정용이다.
+상세 알고리즘 값은 YAML로 관리한다.
+
+재호의 localhost 시각화가 올라오면 `view.launch`로 별도 실행한다. 시각화는 결과를 구독하며
+처리 노드·드라이버·카메라·판제를 중복 시작하지 않는다. 현재 이 패키지에 웹 시각화 실행기는 없다.
 
 ```bash
 source /root/ws/devel/setup.bash
-roslaunch asmc_lidar lidar_pipeline.launch
+roslaunch asmc_lidar lidar.launch
 # 카메라 없이 LiDAR만 비교하려면 위 명령 대신 사용
-roslaunch asmc_lidar lidar_only.launch
+roslaunch asmc_lidar lidar.launch fusion:=false
 ```
 
 출력 기본값은 `/migration/lidar/{objects_local,objects_map,observations_local,observations_map,diagnostics,trace}`다. 입력은 절대 경로 정본을 유지하고 출력 상대 이름은 `namespace` 인자로 결정한다. 운영 출력 차단과 TF 기본 OFF를 유지한다. 기존 Main과 동일 운영 토픽에 동시에 발행하지 않는다.

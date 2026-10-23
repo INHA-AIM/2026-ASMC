@@ -5,7 +5,7 @@
 - catkin_package() exports are exactly the pre-shadow ones (the shadow
   libraries stay package-private, so Main never links them);
 - no asmc_lidar source includes Main/Msg headers or hard-codes /home paths;
-- launch files start only lidar_pipeline_node with outputs under
+- the single lidar.launch starts only lidar_pipeline_node with outputs under
   /migration/lidar, and no other launch file in the repository starts or
   includes it;
 - config/lidar_pipeline.yaml uses the mount of config/autonav_v3.yaml and the
@@ -95,26 +95,42 @@ class PipelineContractTest(unittest.TestCase):
                 offenders.append('%s hard-codes a /home path' % path)
         self.assertEqual(offenders, [])
 
-    def test_launch_files_start_only_the_pipeline_node(self):
-        launches = sorted((PACKAGE / 'launch').glob('*.launch'))
-        self.assertTrue(launches, 'shadow launch files are expected')
-        for path in launches:
+    def test_lidar_launch_is_the_only_pipeline_entry_point(self):
+        entry_point = PACKAGE / 'launch/lidar.launch'
+        self.assertTrue(entry_point.is_file())
+        path = entry_point
+        root = ET.parse(path).getroot()
+        self.assertEqual(root.findall('.//include'), [], path)
+        nodes = root.findall('.//node')
+        self.assertEqual([(n.get('pkg'), n.get('type')) for n in nodes], [('asmc_lidar', PIPELINE_NODE)], path)
+        arguments = {a.get('name'): a.get('default', a.get('value')) for a in root.findall('.//arg')}
+        for name in OUTPUT_ARGS:
+            self.assertIn(name, arguments, '%s: %s' % (path, name))
+            self.assertTrue(not arguments[name].startswith('/'), '%s: %s' % (path, name))
+        params = {p.get('name'): p.get('value') for p in nodes[0].findall('param')}
+        for name in OUTPUT_ARGS:
+            self.assertEqual(params.get(name), '$(arg %s)' % name, '%s: %s' % (path, name))
+        self.assertNotIn('allow_operational_output', params, path)
+        self.assertEqual(root.findall('.//remap'), [], path)
+        self.assertEqual(arguments.get('publish_tf'), 'false', path)
+        self.assertEqual(arguments.get('namespace'), '/migration/lidar')
+        self.assertEqual(nodes[0].get('ns'), '$(arg namespace)')
+        self.assertEqual(arguments.get('fusion'), 'true')
+        self.assertEqual(params.get('enable_camera_fusion'), '$(arg fusion)')
+        # The same launch must resolve on a LiDAR-only checkout. Camera
+        # calibration discovery belongs to the enabled runtime branch.
+        self.assertNotIn('enable_camera_fusion', arguments)
+        self.assertNotIn('$(find asmc_camera)', ET.tostring(root, encoding='unicode'))
+        # A future read-only view.launch is allowed; it must not start a second
+        # pipeline, either directly or by including the inference entry point.
+        for path in (PACKAGE / 'launch').glob('*.launch'):
+            if path == entry_point:
+                continue
             root = ET.parse(path).getroot()
-            self.assertEqual(root.findall('.//include'), [], path)
-            nodes = root.findall('.//node')
-            self.assertEqual([(n.get('pkg'), n.get('type')) for n in nodes], [('asmc_lidar', PIPELINE_NODE)], path)
-            arguments = {a.get('name'): a.get('default', a.get('value')) for a in root.findall('.//arg')}
-            for name in OUTPUT_ARGS:
-                self.assertIn(name, arguments, '%s: %s' % (path, name))
-                self.assertTrue(not arguments[name].startswith('/'), '%s: %s' % (path, name))
-            params = {p.get('name'): p.get('value') for p in nodes[0].findall('param')}
-            for name in OUTPUT_ARGS:
-                self.assertEqual(params.get(name), '$(arg %s)' % name, '%s: %s' % (path, name))
-            self.assertNotIn('allow_operational_output', params, path)
-            self.assertEqual(root.findall('.//remap'), [], path)
-            self.assertEqual(arguments.get('publish_tf'), 'false', path)
-            self.assertEqual(arguments.get('namespace'), '/migration/lidar')
-            self.assertEqual(nodes[0].get('ns'), '$(arg namespace)')
+            self.assertFalse(any(n.get('pkg') == 'asmc_lidar' and n.get('type') == PIPELINE_NODE
+                                 for n in root.findall('.//node')), path)
+            self.assertFalse(any(re.search(r'asmc_lidar\)?/launch/lidar\.launch', n.get('file', ''))
+                                 for n in root.findall('.//include')), path)
 
     def test_no_other_launch_file_starts_the_pipeline_node(self):
         if not repository_available():
@@ -129,7 +145,7 @@ class PipelineContractTest(unittest.TestCase):
             if PACKAGE in path.resolve().parents:
                 continue
             text = path.read_text(errors='replace')
-            if PIPELINE_NODE in text or re.search(r'asmc_lidar\)?/launch/lidar_pipeline', text):
+            if PIPELINE_NODE in text or re.search(r'asmc_lidar\)?/launch/lidar\.launch', text):
                 offenders.append(str(path))
         self.assertEqual(offenders, [])
 

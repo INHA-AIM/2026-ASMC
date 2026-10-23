@@ -29,8 +29,8 @@
 | `src/asmc_lidar/include/asmc_lidar/projection.hpp` | `src/asmc_lidar/include/asmc_lidar/geometry/projection.hpp` |
 | `src/asmc_lidar/include/asmc_lidar/shadow/ros_inputs.hpp` | `src/asmc_lidar/include/asmc_lidar/ros/ros_inputs.hpp` |
 | `src/asmc_lidar/include/asmc_lidar/shadow/runtime.hpp` | `src/asmc_lidar/include/asmc_lidar/ros/runtime.hpp` |
-| `src/asmc_lidar/launch/shadow_pipeline.launch` | `src/asmc_lidar/launch/lidar_pipeline.launch` |
-| `src/asmc_lidar/launch/shadow_pipeline_lidar_only.launch` | `src/asmc_lidar/launch/lidar_only.launch` |
+| `src/asmc_lidar/launch/shadow_pipeline.launch` | `src/asmc_lidar/launch/lidar.launch` (기본 fusion) |
+| `src/asmc_lidar/launch/shadow_pipeline_lidar_only.launch` | `src/asmc_lidar/launch/lidar.launch` + `fusion:=false` |
 | `src/asmc_lidar/src/bounded_pose.cpp` | `src/asmc_lidar/src/geometry/bounded_pose.cpp` |
 | `src/asmc_lidar/src/camera_calibration.cpp` | `src/asmc_lidar/src/geometry/camera_calibration.cpp` |
 | `src/asmc_lidar/src/camera_observations.cpp` | `src/asmc_lidar/src/fusion/camera_observations.cpp` |
@@ -56,6 +56,10 @@
 
 `asmc_lidar_shadow_node` → `lidar_pipeline_node`, `asmc_lidar_shadow_replay` → `lidar_replay`.
 출력 namespace는 `/asmc_lidar/shadow`에서 `/migration/lidar`로 변경했다.
+
+이 PR의 초기 이름 `lidar_pipeline.launch`와 `lidar_only.launch`도 최종적으로
+`lidar.launch` 하나로 합쳤다. 일반 launch 인자는 `fusion`이며 내부 파라미터
+`enable_camera_fusion`은 그대로다. 옛 launch와 인자 alias는 제공하지 않는다.
 
 ## 내부 필드와 공용 타입
 

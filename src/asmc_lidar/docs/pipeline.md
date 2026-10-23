@@ -162,12 +162,12 @@ cd <repo> && catkin_make -DCATKIN_WHITELIST_PACKAGES=""
 source devel/setup.bash
 
 # 이관 검증 노드 (기존 bridge/카메라가 발행 중인 ROS 입력을 구독)
-roslaunch asmc_lidar lidar_pipeline.launch
+roslaunch asmc_lidar lidar.launch
 # LiDAR 단독 (카메라 구독 없음)
-roslaunch asmc_lidar lidar_only.launch
+roslaunch asmc_lidar lidar.launch fusion:=false
 # pitch-only 수평화 / 실험 TunnelFilter ON (인자를 주지 않으면 config/lidar_pipeline.yaml 값)
-roslaunch asmc_lidar lidar_pipeline.launch lidar_level_roll:=false
-roslaunch asmc_lidar lidar_pipeline.launch experimental_tunnel_filter:=true
+roslaunch asmc_lidar lidar.launch lidar_level_roll:=false
+roslaunch asmc_lidar lidar.launch experimental_tunnel_filter:=true
 
 # local/map 상태 확인
 rostopic echo -n1 /migration/lidar/objects_local/status

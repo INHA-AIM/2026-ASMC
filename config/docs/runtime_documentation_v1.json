@@ -57,6 +57,11 @@
       "internal_args": []
     },
     {
+      "title": "LiDAR migration pipeline",
+      "path": "src/asmc_lidar/launch/lidar.launch",
+      "internal_args": []
+    },
+    {
       "title": "Main LiDAR/fusion",
       "path": "src/lidar+sensorfusion/src/Main/main.launch",
       "internal_args": []
@@ -146,6 +151,8 @@
     "src/asmc_bridge/README.md",
     "src/data_collection/README.md",
     "src/asmc_hd_map/README.md",
+    "src/asmc_lidar/README.md",
+    "src/asmc_lidar/docs/pipeline.md",
     "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md",
     "src/asmc_camera/docs/bdd-pretrained-experiment.md"
   ]
