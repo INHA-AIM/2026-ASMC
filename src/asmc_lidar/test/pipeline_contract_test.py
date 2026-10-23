@@ -105,7 +105,7 @@ class PipelineContractTest(unittest.TestCase):
         path = entry_point
         root = ET.parse(path).getroot()
         self.assertEqual(root.findall('.//include'), [], path)
-        nodes = root.findall('.//node')
+        nodes = [n for n in root.findall('.//node') if n.get('type') == PIPELINE_NODE]
         self.assertEqual([(n.get('pkg'), n.get('type')) for n in nodes], [('asmc_lidar', PIPELINE_NODE)], path)
         arguments = {a.get('name'): a.get('default', a.get('value')) for a in root.findall('.//arg')}
         for name in OUTPUT_ARGS:
@@ -115,12 +115,24 @@ class PipelineContractTest(unittest.TestCase):
         for name in OUTPUT_ARGS:
             self.assertEqual(params.get(name), '$(arg %s)' % name, '%s: %s' % (path, name))
         self.assertNotIn('allow_operational_output', params, path)
-        self.assertEqual(root.findall('.//remap'), [], path)
+        self.assertEqual(nodes[0].findall('remap'), [], path)
         self.assertEqual(arguments.get('publish_tf'), 'false', path)
         self.assertEqual(arguments.get('namespace'), '/migration/lidar')
         self.assertEqual(nodes[0].get('ns'), '$(arg namespace)')
         self.assertEqual(arguments.get('fusion'), 'true')
         self.assertEqual(params.get('enable_camera_fusion'), '$(arg fusion)')
+        self.assertEqual(arguments.get('rviz'), 'false')
+        displays = root.find("group[@if='$(arg rviz)']")
+        self.assertIsNotNone(displays)
+        self.assertEqual([(n.get('pkg'), n.get('type')) for n in displays.findall('node')],
+                         [('asmc_lidar', 'lidar_markers.py'), ('rviz', 'rviz')])
+        markers, rviz = displays.findall('node')
+        self.assertEqual(markers.get('ns'), '$(arg namespace)')
+        self.assertEqual(rviz.get('ns'), '$(arg namespace)')
+        marker_params = {p.get('name'): p.get('value') for p in markers.findall('param')}
+        self.assertEqual(marker_params, {'input': '$(arg observations_local_topic)', 'output': 'markers'})
+        self.assertEqual({p.get('from'): p.get('to') for p in rviz.findall('remap')},
+                         {'/migration/lidar/markers': 'markers', '/velodyne_points': '$(arg points_topic)'})
         # The same launch must resolve on a LiDAR-only checkout. Camera
         # calibration discovery belongs to the enabled runtime branch.
         self.assertNotIn('enable_camera_fusion', arguments)

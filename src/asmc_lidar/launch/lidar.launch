@@ -1,6 +1,7 @@
 <launch>
   <!-- Canonical asmc_lidar entry point: port of Main's common-geometry path.
-       Starts ONLY lidar_pipeline_node. No LiDAR driver, MORAI bridge, camera,
+       Starts one lidar_pipeline_node, optionally RViz + a read-only marker adapter.
+       No LiDAR driver, MORAI bridge, camera,
        inference or planner node, and no operational output: outputs default to
        /migration/lidar/* and the node refuses operational names
        (/last_lidar, /lidar_nogps, /YOLO/BBox, /perception/lidar/*, /planning/*,
@@ -16,6 +17,7 @@
   <arg name="lidar_level_roll" default=""/>
   <!-- Public switch. The internal parameter/YAML names stay unchanged. -->
   <arg name="fusion" default="true" doc="Use camera observations for classification; false runs LiDAR alone"/>
+  <arg name="rviz" default="false" doc="Open RViz and display this pipeline's published objects and ego box"/>
   <!-- Resolve the camera-owned file in SetUpCamera only when fusion is on.
        An eager camera-package lookup would break camera-free installations.
        Empty keeps the node's existing discovery policy. -->
@@ -70,4 +72,19 @@
     <param name="diagnostics_topic" value="$(arg diagnostics_topic)"/>
     <param name="trace_topic" value="$(arg trace_topic)"/>
   </node>
+
+  <!-- Explicit GUI request only. Never starts another perception pipeline.
+       Keep rviz:=false when attaching an already open RViz manually. -->
+  <group if="$(arg rviz)">
+    <node pkg="asmc_lidar" type="lidar_markers.py" name="lidar_markers" ns="$(arg namespace)" output="screen">
+      <param name="input" value="$(arg observations_local_topic)"/>
+      <param name="output" value="markers"/>
+    </node>
+    <node pkg="rviz" type="rviz" name="lidar_rviz" ns="$(arg namespace)"
+          args="-d $(find asmc_lidar)/rviz/lidar.rviz" required="false">
+      <!-- The standalone preset keeps the default namespace; remap for this launch. -->
+      <remap from="/migration/lidar/markers" to="markers"/>
+      <remap from="/velodyne_points" to="$(arg points_topic)"/>
+    </node>
+  </group>
 </launch>

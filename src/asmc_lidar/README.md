@@ -51,9 +51,10 @@ python3 src/asmc_lidar/test/pipeline_ci_check.py --devel devel \
 ## 실행
 
 기존 bridge와 카메라는 별도로 실행한다. `lidar.launch`는 처리 노드 하나를 시작한다.
+`rviz:=true`를 주면 같은 namespace의 관측을 표시하는 Marker 도구와 RViz도 함께 시작한다(기본 OFF).
 기본 `fusion:=true`는 카메라 관측을 분류에 사용하며, 카메라 추론을 시작하지 않는다.
 `fusion:=false`는 카메라 보정 조회·구독 없이 실행하므로 카메라 패키지가 없는 환경에서도 사용할 수 있다.
-일반 실행은 `fusion`, `namespace`, `pipeline_config`를 사용하고 나머지 인자는 내부 대조·배선 조정용이다.
+일반 실행은 `fusion`, `rviz`, `namespace`, `pipeline_config`를 사용하고 나머지 인자는 내부 대조·배선 조정용이다.
 상세 알고리즘 값은 YAML로 관리한다.
 
 재호의 PR #105 웹 모니터를 `view.launch`로 분리했다. 시각화는 결과만 구독하며
@@ -84,6 +85,18 @@ rosservice call /migration/lidar/lidar_pipeline/reset "{}"
 고정 bag 대조는 `lidar_replay --help`와 [실행 안내](docs/pipeline.md)를 따른다. 결과는 저장 규약에 따라 등록한 새 run ID의 D 출력 위치에 보존한다.
 
 ## 처리 결과를 RViz에서 보기
+
+새로 처리와 RViz를 함께 시작하려면 다음을 사용한다. 객체/ego 박스를 즉시 표시하며 `debug:=true`는 필요 없다.
+
+```bash
+roslaunch asmc_lidar lidar.launch rviz:=true
+# 다른 namespace나 터널 필터를 지정해도 RViz가 해당 결과를 자동으로 구독한다.
+roslaunch asmc_lidar lidar.launch namespace:=/migration/lidar_tunnel experimental_tunnel_filter:=true rviz:=true
+```
+
+두 명령은 대안이며 하나만 실행한다. 이미 같은 처리가 켜져 있으면 두 번째 처리를 시작하지 않는다.
+이미 열린 RViz를 사용하려면 `rviz:=false`를 유지하고 아래 수동 연결을 사용한다.
+`view.launch`는 별도의 웹 화면이며 이 옵션으로 시작하지 않는다.
 
 bridge와 `lidar.launch`를 유지하고 별도 터미널에서 표시 변환기만 실행한다.
 

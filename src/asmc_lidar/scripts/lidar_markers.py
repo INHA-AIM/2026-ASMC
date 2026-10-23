@@ -3,7 +3,7 @@
 
 The public eight OBB corners already include the frame/mount/attitude transform.
 Do not reconstruct a yaw-only box, flatten z, or apply IMU compensation again.
-This RViz adapter is separate from Jaeho's future localhost web viewer.
+This RViz adapter is separate from the localhost web viewer in view.launch.
 """
 import math
 import threading

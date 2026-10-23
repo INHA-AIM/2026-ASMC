@@ -30,6 +30,8 @@ PR #103의 계산 결과를 보존하며 기존 Main의 판제 출력을 전환�
 
 `lidar.launch` 하나가 `lidar_pipeline_node`를 실행하고 기본 `fusion:=true`를 적용한다.
 `fusion:=false`는 카메라 보정 조회와 구독을 끄므로 카메라 패키지가 없어도 같은 launch를 사용한다.
+`rviz:=true`는 같은 namespace에 읽기 전용 Marker 도구와 RViz를 추가한다. 기본은 OFF이며
+`view.launch`의 웹 모니터와 구분한다. 기존 RViz/처리가 있다면 두 번째 실행을 시작하지 않는다.
 내부 `enable_camera_fusion`·YAML 이름과 계산 알고리즘은 유지한다. 이전 두 launch는 wrapper 없이 통합했다.
 `lidar_replay`는 오프라인 대조 도구로 분리한다. 재호의 PR #105 웹 시각화를 현재 구조로 통합해 `view.launch`에서
 결과만 구독한다. 처리 시작은 `lidar.launch debug:=true`로 분리한다.
@@ -164,3 +166,7 @@ python3 src/asmc_lidar/tools/compare_traces.py \
 카메라 계약5개·공용 메시지39개 검사를 통과했다. 초기 CTest는30/31이었고 위 IMU 전환
 검사창 수정 후 전체를 다시 실행했다. 이전 실패 로그와 최종 로그는 컨테이너 `/tmp/`에 구분해 보존한다.
 실행 중 bridge·LiDAR·RViz는 재시작하지 않았으며 신규 실시간 공급/음영구간 품질 수락으로 세지 않는다.
+
+RViz 실행 옵션 후속: 기본 OFF/ON과 터널 namespace·대체 관측/점군 토픽의 실제 ROS launch
+해석을 확인했다(기본1노드, ON3노드). 구조 계약10개·카메라 계약5개·문서 unit17개와
+runtime27 launch/99명령·동결5개 검사를 통과했다. 새 GUI를 실행하거나 운영 노드를 재시작하지 않았다.

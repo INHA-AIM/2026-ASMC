@@ -464,6 +464,10 @@ fusion은 카메라 추론을 시작하는 옵션이 아니며 현재 연결은 
 `publish_tf`(기본 false)·`tf_child_frame`은 내부 대조·배선 조정용으로 유지한다.
 빈 roll/tunnel override는 YAML 값을 사용하고 fusion은 launch 선택을 우선한다.
 `/perception/lidar/*` 운영 전환은 기본 차단하며 L7에서 별도 확인한다.
+처리 시작 때 RViz도 함께 켜려면 `roslaunch asmc_lidar lidar.launch rviz:=true`를 사용한다.
+기본은 OFF다. 지정한 namespace의 객체/ego Marker에 자동 연결하며 웹 화면은 켜지 않는다.
+이미 열린 RViz를 유지하려면 이 옵션을 켜지 않고 아래 수동 표시 도구를 사용한다.
+
 PR #105의 localhost 웹 화면은 `view.launch`로 별도 실행하며 처리 노드를 중복 시작하지 않는다.
 단계별 점군을 보려면 기존 처리 실행을 `roslaunch asmc_lidar lidar.launch debug:=true`로 준비한 뒤
 별도 터미널에서 `roslaunch asmc_lidar view.launch`를 실행하고 `http://127.0.0.1:8091/`을 연다.

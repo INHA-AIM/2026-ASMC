@@ -103,6 +103,8 @@ class CameraObjectsContractTest(unittest.TestCase):
             self.assertEqual(root.findall('.//include'), [], path)
             # view.launch is a read-only consumer and never starts the pipeline.
             allowed = {('asmc_lidar', 'lidar_pipeline_node')}
+            if path.name == 'lidar.launch':
+                allowed.update({('asmc_lidar', 'lidar_markers.py'), ('rviz', 'rviz')})
             if path.name == 'view.launch':
                 allowed.add(('asmc_lidar', 'asmc_lidar_monitor_node.py'))
             for node in root.findall('.//node'):
