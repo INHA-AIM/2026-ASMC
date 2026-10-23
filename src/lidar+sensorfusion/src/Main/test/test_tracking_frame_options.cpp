@@ -34,6 +34,7 @@ constexpr std::int64_t kSec = 1000000000LL;
 bool ForceOff() { const char* v = std::getenv("TRACKING_OPTIONS_FORCE_OFF"); return v && std::string(v) == "1"; }
 
 void ConfigureCase(bool reacquire, bool ego_translation) {
+  tracking_options::Get().association_innovation_gate = false;
   frame_boundary::ConfigureForTest(true, false, "unit_test_calibration");
   st_VehicleSpec = VehicleSpec{};
   st_VehicleSpec.st_LiDARPos = {0.80f, 0.0f, 1.45f};
@@ -318,4 +319,136 @@ TEST(ObbAxisCandidate, LongAxisAndSquareRemainUnchanged) {
     Box b{4.,h,.7,{}};std::array<P,8> c{};
     EXPECT_FALSE(obb_axis::Canonicalize(b,c));EXPECT_DOUBLE_EQ(.7,b.yaw);
   }
+}
+
+#include "../src/Lidar/Tracking/AssociationInnovation.hpp"
+namespace {
+int InnovationPair(bool enabled, double dx, double dy, double variance=.01, double vx=0.,
+                   double ego_yaw=0.) {
+  ConfigureCase(true,true);
+  tracking_options::Get().association_innovation_gate=enabled;
+  st_Tracking.s32_NewTrackId=101;
+  Ego e0; World world;world.x=20;world.y=4;
+  auto previous=Detection(e0,world);
+  previous.s32_Id=100;previous.s32_Age=20;previous.b_KfInitialized=true;previous.s32_KfInitCount=20;
+  previous.Eigen_KfState_CA<<previous.f32_CoreX,previous.f32_CoreY,vx,0,0,0;
+  previous.Eigen_KfP_CA=Eigen::Matrix<float,6,6>::Identity()*variance;
+  const std::int64_t ns=100*kSec;ts_CurrTime.fromNSec(ns);
+  asmc::lidar::PoseSelection no_map;no_map.reason="test";
+  auto prepare=[&](std::int64_t stamp,const Ego& ego) {
+    ts_CurrTime.fromNSec(stamp);
+    frame_boundary::PrepareScan(asmc::lidar::Observation{stamp,stamp,stamp,"ros","test",""},Local(ego),
+        st_VehicleSpec,no_map,1);
+    frame_boundary::StoreLeveling(asmc::lidar::Rot::Identity());
+  };
+  prepare(ns,e0);frame_boundary::RecordTrackingFrame(previous);
+  Ego e1;e1.yaw=ego_yaw;
+  prepare(ns+100000000LL,e1);
+  world.x+=vx*.1;
+  auto detection=Detection(e1,world);
+  detection.f32_CoreX+=dx;detection.f32_CoreY+=dy;detection.u16_Idx=0;
+  for(auto& p:detection.pcl_ClusterPoints){p.x+=dx;p.y+=dy;}
+  detection.f32_OBB_CenterX+=dx;detection.f32_OBB_CenterY+=dy;
+  std::deque<std::vector<LiDARObjectInfo>> history{{previous}};
+  std::vector<LiDARObjectInfo> now{detection};
+  CompareCentroids(history,now,.1,Local(e1));
+  int id=-1;
+  for(const auto& t:now)if(t.s32_MissCount==0 && t.u16_Idx==0)id=t.s32_Id;
+  tracking_options::Get().association_innovation_gate=false;
+  return id;
+}
+}
+TEST(AssociationInnovation, OffReproducesIncompatibleStateInheritance) {
+  EXPECT_EQ(100,InnovationPair(false,.881,-1.392));
+}
+TEST(AssociationInnovation, OnRejectsIncompatibleStateInheritance) {
+  EXPECT_NE(100,InnovationPair(true,.881,-1.392));
+}
+TEST(AssociationInnovation, UncertainCoastedTrackMayReacquire) {
+  EXPECT_EQ(100,InnovationPair(true,.881,-1.392,1.));
+}
+TEST(AssociationInnovation, FastCorrectPredictionIsAccepted) {
+  EXPECT_EQ(100,InnovationPair(true,.03,-.02,.01,25.));
+}
+TEST(AssociationInnovation, ExistingFiniteRotationIsUsedOnce) {
+  EXPECT_EQ(100,InnovationPair(true,.03,-.02,.01,5.,.2));
+}
+TEST(AssociationInnovation, InvalidCovarianceDoesNotSilentlyDeleteDetection) {
+  EXPECT_EQ(100,InnovationPair(true,.5,0.,NAN));
+}
+TEST(AssociationInnovation, RealAccelerationKeepsId) {
+  ConfigureCase(true,true);tracking_options::Get().association_innovation_gate=true;
+  auto r=Simulate(25,[](int){return Ego{};},[](int k) {
+    const double t=k*kDt;World w;w.x=20+10*t+4*t*t;w.y=3;w.vx=10+8*t;return w;
+  },[](int){return true;});
+  for(const auto id:r.ids)EXPECT_EQ(r.ids[0],id);
+  tracking_options::Get().association_innovation_gate=false;
+}
+TEST(AssociationInnovation, GuardSameVehicleFaceSwitchMustKeepIdentity) {
+  // One physical car, two visible surfaces: centroid moves 0.8 m without physical motion.
+  // This required guard intentionally exposes whether a statistical gate rejects fragment changes.
+  EXPECT_EQ(100,InnovationPair(true,.8,0.));
+}
+
+namespace {
+using ObservedIds=std::vector<std::vector<int>>;
+ObservedIds FragmentScenario(bool split,bool occlude,bool neighbors) {
+  ConfigureCase(true,true);tracking_options::Get().association_innovation_gate=true;
+  std::deque<std::vector<LiDARObjectInfo>> history;
+  ObservedIds ids;
+  ts_PrevTime=ros::Time();
+  for(int k=0;k<18;++k) {
+    Ego ego;auto local=Local(ego);const std::int64_t ns=150*kSec+k*100000000LL;
+    ts_CurrTime.fromNSec(ns);asmc::lidar::PoseSelection no_map;no_map.reason="test";
+    frame_boundary::PrepareScan(asmc::lidar::Observation{ns,ns,ns,"ros","test",""},local,st_VehicleSpec,no_map,k+1);
+    frame_boundary::StoreLeveling(asmc::lidar::Rot::Identity());
+    std::vector<LiDARObjectInfo> now;
+    auto add=[&](double x,double y,int index,double length=4.6,double width=1.9) {
+      World w;w.x=x;w.y=y;auto d=Detection(ego,w);d.u16_Idx=index;
+      for(auto& p:d.pcl_ClusterPoints) {
+        p.x=d.f32_CoreX+(p.x-d.f32_CoreX)*length/4.6;
+        p.y=d.f32_CoreY+(p.y-d.f32_CoreY)*width/1.9;
+      }
+      d.f32_OBB_Width=length;d.f32_OBB_Height=width;
+      d.f32_MinX=d.f32_CoreX-length/2;d.f32_MaxX=d.f32_CoreX+length/2;
+      d.f32_MinY=d.f32_CoreY-width/2;d.f32_MaxY=d.f32_CoreY+width/2;
+      now.push_back(d);
+    };
+    if(!(occlude&&k>=8&&k<=10)) {
+      // Two point sets are the left/right halves of ONE fixed 4.6 m physical rectangle.
+      if(split&&k>=8&&k<=10){add(18.85,3,0,2.3);add(21.15,3,1,2.3);}
+      else add(20,3,0);
+    }
+    if(neighbors) {add(20,6.2,2);if(k>=4)add(22,0,3,.6,.6);}
+    add(-20,-20,9); // Keeps unrelated detections alive through an occlusion.
+    FrameFilter(history,now,local,st_VehicleSpec);
+    std::vector<int> row(4,-1);
+    for(auto& t:now)if(t.s32_MissCount==0) {
+      frame_boundary::RecordTrackingFrame(t);
+      if(t.u16_Idx<4)row[t.u16_Idx]=t.s32_Id;
+    }
+    ids.push_back(row);history.push_back(now);if(history.size()>3)history.pop_front();
+    ts_PrevTime=ts_CurrTime;
+  }
+  tracking_options::Get().association_innovation_gate=false;
+  return ids;
+}
+}
+TEST(AssociationInnovation, GuardAdjacentVehiclesPedestrianAndNormalNewBirth) {
+  const auto ids=FragmentScenario(false,false,true);
+  EXPECT_NE(ids[4][3],ids[4][0]);EXPECT_NE(ids[4][3],ids[4][2]);
+  for(int k=1;k<18;++k){EXPECT_EQ(ids[0][0],ids[k][0]);EXPECT_EQ(ids[0][2],ids[k][2]);}
+  for(int k=5;k<18;++k)EXPECT_EQ(ids[4][3],ids[k][3]);
+}
+TEST(AssociationInnovation, GuardShortOcclusionReacquiresSameIdentity) {
+  const auto ids=FragmentScenario(false,true,false);
+  EXPECT_EQ(ids[0][0],ids[11][0]);EXPECT_EQ(ids[0][0],ids[17][0]);
+}
+TEST(AssociationInnovation, GuardSplitRejoinRetainsPhysicalObjectIdentity) {
+  const auto ids=FragmentScenario(true,false,false);
+  for(int k=8;k<=10;++k)EXPECT_TRUE(ids[k][0]==ids[0][0] || ids[k][1]==ids[0][0]);
+  EXPECT_EQ(ids[0][0],ids[11][0]);
+}
+TEST(AssociationInnovation, GuardFaceSwitchWhileEgoRotatesKeepsIdentity) {
+  EXPECT_EQ(100,InnovationPair(true,.8,0.,.01,0.,.2));
 }

@@ -1,3 +1,4 @@
+#include "AssociationInnovation.hpp"
 #include "ObbAxisCanonical.hpp"
 #include <Geometry/FrameBoundary.hpp>
 #include <Lidar/Tracking/tracking_utils.hpp>
@@ -651,7 +652,15 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
     const bool trace_on = track_trace::Sink().Enabled();
     vector<vector<std::array<float, 3>>> cand_info;   // (distance, 1-shape, cost before gate), trace only
     if (trace_on) cand_info.assign(N, vector<std::array<float, 3>>(M));
+    const bool innovation_gate = tracking_options::Get().association_innovation_gate && frame_boundary::Enabled();
+    vector<vector<double>> candidate_nis;
+    if (innovation_gate) candidate_nis.assign(N, vector<double>(M, std::numeric_limits<double>::quiet_NaN()));
     for (int32 i = 0; i < N; ++i) {
+        const bool gate_track = innovation_gate && vec_Compare[i].tracking_frame_valid &&
+            vec_Compare[i].b_KfInitialized && vec_Compare[i].s32_KfInitCount >= 2;
+        Eigen::Matrix2f predicted_covariance=Eigen::Matrix2f::Zero();
+        if(gate_track) predicted_covariance=association_innovation::PredictedPositionCovariance(
+            vec_Compare[i],f64_Time,st_GPSIMU.st_IMU.f32_Yaw_rad);
         // 예측 위치
         float32 f32_Pred_x = vec_PredictedPositions[i].first;
         float32 f32_Pred_y = vec_PredictedPositions[i].second;
@@ -715,7 +724,16 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
                 f32_Cost - st_Tracking.f32_ContinuityBonus * age_ratio);
             if (trace_on) cand_info[i][j] = {f32_Cost_dist, f32_Cost_shape, f32_Cost};
 
-            if (f32_Cost < st_Tracking.f32_COST_THRESHOLD) {
+            bool reject_innovation=false;
+            if(gate_track) {
+                const auto& detection=vec_NowObject[j];
+                const Eigen::Matrix2f measurement=detection.observation_R_valid ? detection.observation_R :
+                    Eigen::Matrix2f::Identity()*.01f;
+                candidate_nis[i][j]=association_innovation::NormalizedInnovation(
+                    Eigen::Vector2f(f32_Dx,f32_Dy),predicted_covariance,measurement);
+                reject_innovation=association_innovation::Reject(candidate_nis[i][j]);
+            }
+            if (f32_Cost < st_Tracking.f32_COST_THRESHOLD && !reject_innovation) {
                 vec_CostMatrix[i][j] = f32_Cost;
             } else {
                 vec_CostMatrix[i][j] = st_Tracking.f32_COST_INF;
@@ -760,7 +778,10 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
                     if (!first) out << ','; first = false;
                     out << "{\"j\":" << j << ",\"det\":" << vec_NowObject[j].u16_Idx << ",\"d\":" << c[0]
                         << ",\"shape\":" << c[1] << ",\"cost\":" << c[2]
-                        << ",\"gated\":" << (c[2] < st_Tracking.f32_COST_THRESHOLD ? 0 : 1) << '}';
+                        << ",\"gated\":" << (vec_CostMatrix[i][j] < st_Tracking.f32_COST_THRESHOLD ? 0 : 1);
+                    if(innovation_gate)out << ",\"nis\":" << track_trace::N{candidate_nis[i][j]}
+                        << ",\"nis_rejected\":" << (association_innovation::Reject(candidate_nis[i][j]) ? "true" : "false");
+                    out << '}';
                 }
                 out << ']';
             });
