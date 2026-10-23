@@ -26,7 +26,8 @@ nested `Main`의 common-geometry LiDAR 처리를 `asmc_lidar` 안에 동작 보�
   같았고, GPS 무효·중단·복구와 IMU stale·무효를 실제 노드 rostest로 시험했다.
 - 기존 Main과 판제는 계속 기존 실행 경로(`/last_lidar` 등)를 쓴다. 이 패키지는 그 경로를 바꾸지 않는다.
 - 새 노드는 명시적으로 실행해야 하며 `/migration/lidar/*`만 발행한다.
-- MotionClassifier와 판제 후처리(road mask·known static·structure exclusion·relevance)는 이번 이식 범위 밖이다.
+- PR #105의 Main MotionClassifier는 진단 전용 복사본으로 연결했다. 공개 속도·운동 validity는 false다. 판제 후처리(road mask·known static·structure exclusion·relevance)는 이번 이식 범위 밖이다.
+- 웹 화면은 별도 `view.launch`, 단계 샘플은 `lidar.launch debug:=true`로 요청한다. [웹 모니터](web-monitor.md)를 따른다.
 - 공개 속도·동정적 validity(`relative_velocity_valid`·`absolute_velocity_valid`·`dynamic_valid`)는 항상 false다.
 - 실제 카메라 bag에서의 fusion 성능과 실시간 처리 성능은 수락하지 않았다.
 - TunnelFilter는 기본 OFF이며 ON 성능은 수락하지 않았다.
@@ -189,7 +190,7 @@ catkin_make && catkin_make camera_receiver_ros_test   # 기존 rostest gtest는 
 (cd build/asmc_lidar && ctest --output-on-failure)
 ```
 
-이식 모듈 gtest 15개(TunnelFilterCore 27개 사례 포함), 실제 노드 rostest(`test/ros/lidar_pipeline_node.test`:
+이식 모듈 gtest 18개(TunnelFilterCore 27개 사례 포함), 실제 노드 rostest(`test/ros/lidar_pipeline_node.test`:
 GPS 무효·중단·복구, IMU stale·무효, 카메라 정상·empty·invalid·STANDBY·세션 변경·중복·중단, 격리·guard;
 `../asmc_camera/config/cameras_v3.yaml`이 있을 때만 등록), 격리 계약 시험(`test/pipeline_contract_test.py`)이다.
 합성 카메라 관측은 인터페이스·동기화 시험이며 YOLO 정확도 시험이 아니다.
@@ -197,7 +198,7 @@ PCL·pcl_conversions·GeographicLib·morai_msgs가 없는 환경에서는 pipeli
 기존 target만 빌드한다(기본값). CI는 이 생략을 허용하지 않는다.
 
 - `ci.yml`은 의존성을 설치하고 `-DASMC_LIDAR_PIPELINE_REQUIRED=ON`으로 빌드한다. 의존성이나 rostest 보정 파일이 없으면
-  configure가 실패한다. `ctest -T Test` 뒤 `test/pipeline_ci_check.py`가 두 shadow 실행파일, 필수 시험 26개의
+  configure가 실패한다. `ctest -T Test` 뒤 `test/pipeline_ci_check.py`가 두 실행파일, 필수 시험 31개의
   등록·통과·결과 갱신·최소 사례 수, skip 0, catkin export 불변을 확인하며 하나라도 어긋나면 실패한다.
 - `planning-integration.yml`의 `validated-lidar-build`는 shadow가 활성인 `asmc_lidar` 위에서 nested Main을 빌드·시험하고,
   Main 링크에 shadow 라이브러리가 없는지 같은 스크립트(`--dependent-build`)로 검사한다.

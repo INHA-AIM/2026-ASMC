@@ -5,9 +5,11 @@
 //   tunnel stage, default OFF] -> clustering -> centroid/OBB -> tracking.
 // Equivalent to Main TemporalThread (after the local lookup) + LidarProcess at
 // 8f93c22e with enable_common_geometry=true. Not included: debug publishers,
-// markers, MotionClassifier, planning filters, fusion (see FrontCameraFusion).
+// markers, public MotionClassifier output, planning filters, fusion (see FrontCameraFusion).
+// A diagnostic-only Main motion decision now runs on copies at full scan rate.
 
 #include <asmc_lidar/detection/clustering.hpp>
+#include <asmc_lidar/pipeline/stage_observer.hpp>
 #include <asmc_lidar/preprocessing/ground.hpp>
 #include <asmc_lidar/preprocessing/preprocessing.hpp>
 #include <asmc_lidar/geometry/scan_frame.hpp>
@@ -37,6 +39,9 @@ struct PipelineConfig {
   TunnelFilterStageConfig tunnel;
   // Keep detections/centroids/stage clouds in ScanResult (replay and tests).
   bool capture_debug = false;
+  // Monitoring-only observation hook (stage_observer.hpp), non-owning. nullptr =
+  // no observation; never changes an algorithm input or output.
+  StageObserver* observer = nullptr;
 };
 
 struct StageCounts {
@@ -120,6 +125,7 @@ class Pipeline {
   PipelineConfig config_;
   GroundFilter ground_;
   Tracker tracker_;
+  motion_display::MotionClassifier display_motion_;
   ScanFrame frame_;
   std::unique_ptr<TunnelFilterStage> tunnel_;
   std::int64_t last_raw_ns_ = 0;

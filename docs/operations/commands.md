@@ -161,6 +161,11 @@ rostopic echo -n 1 /morai_sensor_bridge/diagnostics
 ```
 
 HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한다고 같은 publisher를 하나 더 띄우지 않습니다.
+
+이관 검증 LiDAR(`asmc_lidar`)의 필터 단계·OBB·추적 결과를 브라우저에서 보려면 별도 터미널에서
+`roslaunch asmc_lidar view.launch open_browser:=true`를 실행합니다(처리는 별도 `lidar.launch debug:=true`)(`http://127.0.0.1:8091/`, 읽기 전용).
+이 launch는 모니터만 켭니다. 별도 `lidar.launch`와 기존 Main을 함께 실행하면 LiDAR 처리가 두 번 수행됩니다.
+판제는 계속 D의 Main을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
 전방 어댑터와 nested source 순서는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
 판제 단독/통합 차이는 [판제 운영](planning-control.md)을 봅니다.
@@ -459,7 +464,9 @@ fusion은 카메라 추론을 시작하는 옵션이 아니며 현재 연결은 
 `publish_tf`(기본 false)·`tf_child_frame`은 내부 대조·배선 조정용으로 유지한다.
 빈 roll/tunnel override는 YAML 값을 사용하고 fusion은 launch 선택을 우선한다.
 `/perception/lidar/*` 운영 전환은 기본 차단하며 L7에서 별도 확인한다.
-재호의 localhost 시각화는 추후 `view.launch`로 별도 제공하며 처리 노드를 중복 시작하지 않는다.
+PR #105의 localhost 웹 화면은 `view.launch`로 별도 실행하며 처리 노드를 중복 시작하지 않는다.
+단계별 점군을 보려면 기존 처리 실행을 `roslaunch asmc_lidar lidar.launch debug:=true`로 준비한 뒤
+별도 터미널에서 `roslaunch asmc_lidar view.launch`를 실행하고 `http://127.0.0.1:8091/`을 연다.
 새 관측·배열·진단과 복구는 [asmc_lidar README](../../src/asmc_lidar/README.md)를 따른다.
 
 RViz에서 **처리된 OBB·ID·분류**를 보려면 별도 터미널에서 아래 변환기를 실행한다.

@@ -7,6 +7,7 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 - [구조·관측 계약과 이번 검증](docs/structure-contract-refactor.md)
 - [이름·경로 이전표](docs/name-mapping.md): 옛 이름은 참고용이며 wrapper를 제공하지 않는다.
 - [실행 경로·PR #103 기준선과 제한](docs/pipeline.md)
+- [웹 모니터와 단계별 진단](docs/web-monitor.md)
 - [카메라 수신·버퍼·보정·투영 API](docs/camera-input.md)
 - [전체 이관 작업표](docs/migration-tasks.md), [팀 인계](../../docs/handoffs/lidar-migration.md)
 
@@ -55,8 +56,10 @@ python3 src/asmc_lidar/test/pipeline_ci_check.py --devel devel \
 일반 실행은 `fusion`, `namespace`, `pipeline_config`를 사용하고 나머지 인자는 내부 대조·배선 조정용이다.
 상세 알고리즘 값은 YAML로 관리한다.
 
-재호의 localhost 시각화가 올라오면 `view.launch`로 별도 실행한다. 시각화는 결과를 구독하며
-처리 노드·드라이버·카메라·판제를 중복 시작하지 않는다. 현재 이 패키지에 웹 시각화 실행기는 없다.
+재호의 PR #105 웹 모니터를 `view.launch`로 분리했다. 시각화는 결과만 구독하며
+처리 노드·드라이버·카메라·판제를 중복 시작하지 않는다. 단계별 점군이 필요할 때는
+`lidar.launch debug:=true`로 처리 노드를 시작하고 별도 터미널에서
+`roslaunch asmc_lidar view.launch` 후 `http://127.0.0.1:8091/`에 접속한다.
 현재 RViz에서는 아래 읽기 전용 Marker 도구로 처리 결과를 확인한다.
 
 ```bash
@@ -108,3 +111,13 @@ rosrun asmc_lidar lidar_markers.py
 명목 지면과 높이 snapshot은 표시용이며 실시간 자세/상하 운동 추정이나 인지 GT 입력이 아니다.
 
 기본 출력 namespace를 바꿨다면 `rosrun asmc_lidar lidar_markers.py _input:=/다른경로/observations_local _output:=/다른경로/markers`로 맞춘다.
+
+## 2026-10-23 음영구간 직접 확인
+
+터널 필터 ON 경로에서 RViz의 객체/ego 표시를 확인했으나, 사용자 관찰상 박스가 많이 튀었다.
+표시 연결 성공은 검출·OBB·추적 안정성 수락이 아니다. TunnelFilter는 기본 OFF를 유지한다.
+같은 점군의 OFF/ON, 구조물 잔존·군집/OBB 변화·ID 전환을 다음 단위에서 분리 검토한다.
+카메라 미실행 시 분류는 unknown일 수 있으며 지도 표시/화면 숨김은 인지 필터가 아니다.
+
+ROS master를 소유한 launch를 종료하면 남은 bridge/RViz가 새 master에 자동 등록되지 않을 수 있다.
+반복 대조는 먼저 독립 `roscore`를 실행하고 같은 master를 유지한다. 이미 켜진 RViz를 중복 실행하지 않는다.

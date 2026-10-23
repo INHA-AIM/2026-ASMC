@@ -137,6 +137,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/detection/obb.cpp
     src/geometry/scan_frame.cpp
     src/tracking/kalman.cpp
+    src/tracking/motion_display.cpp
     src/tracking/hungarian.cpp
     src/detection/detections.cpp
     src/tracking/tracker.cpp
@@ -169,7 +170,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
   target_compile_options(asmc_lidar_runtime PRIVATE -Wall -Wextra)
   add_dependencies(asmc_lidar_runtime ${pipeline_msg_targets})
 
-  add_executable(lidar_pipeline_node src/ros/lidar_pipeline_node.cpp)
+  add_executable(lidar_pipeline_node src/ros/lidar_pipeline_node.cpp src/ros/debug_publisher.cpp)
   target_link_libraries(lidar_pipeline_node asmc_lidar_runtime asmc_lidar_camera_ros
     ${tf2_ros_LIBRARIES} ${catkin_LIBRARIES})
   target_compile_options(lidar_pipeline_node PRIVATE -Wall -Wextra)
@@ -183,6 +184,10 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
   install(TARGETS lidar_pipeline_node lidar_replay
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+  # Read-only web monitor (python, no build): node script, pure-python core and web assets.
+  catkin_install_python(PROGRAMS scripts/asmc_lidar_monitor_node.py scripts/asmc_lidar_monitor_core.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  install(DIRECTORY web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
   if(CATKIN_ENABLE_TESTING)
     find_package(rostest REQUIRED)
@@ -211,10 +216,14 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_tunnel_filter_stage test/pipeline/test_tunnel_filter_stage.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_source_time test/pipeline/test_source_time.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_pipeline test/pipeline/test_pipeline.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_motion_display test/pipeline/test_motion_display.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_stage_observer test/pipeline/test_stage_observer.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_typed_output test/runtime/test_typed_output.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_runtime test/runtime/test_runtime.cpp)
     # The node rostest needs the camera calibration data of the sibling asmc_camera
     # source package (data only; no build or package.xml dependency).
+    # Web monitor rostest: shadow node (debug stages on) + monitor node + synthetic inputs, no camera data needed.
+    add_rostest(test/ros/monitor_node.test DEPENDENCIES lidar_pipeline_node)
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../asmc_camera/config/cameras_v3.yaml)
       add_rostest(test/ros/lidar_pipeline_node.test DEPENDENCIES lidar_pipeline_node)
     elseif(ASMC_LIDAR_PIPELINE_REQUIRED)
@@ -229,6 +238,8 @@ endif()
 if(CATKIN_ENABLE_TESTING)
   add_test(NAME asmc_lidar_pipeline_contract_test
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/pipeline_contract_test.py)
+  add_test(NAME asmc_lidar_monitor_core_test
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/monitor/test_monitor_core.py)
   add_test(NAME asmc_lidar_object_markers_test
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/object_markers_test.py)
 endif()

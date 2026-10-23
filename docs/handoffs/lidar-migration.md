@@ -192,11 +192,12 @@ YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다.
 | v3 장착 설정 | 출처 SHA와 단위 확인. 장착 z를 노면 기준 센서 높이로 사용하지 않음 |
 | 회귀시험 | 좌표·8코너·속도·관측시각·pose/IMU 선택 의미 검사. 실제 검출 성능 시험은 후속 |
 | 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar는 수신 확인용 probe와 이관 검증 노드 제공(운영 typed 토픽 미발행) |
-| 이관 검증 노드·replay | `lidar_pipeline_node`·`lidar_replay`와 이관 검증 launch 2개. 명시 실행, `/migration/lidar/*`만 발행. 공개 속도·동정적 validity false, TunnelFilter 기본 OFF. 실제 카메라 bag·실시간·TunnelFilter ON 성능은 미수락 |
+| 이관 검증 노드·replay | `lidar_pipeline_node`·`lidar_replay`와 처리 `lidar.launch` 하나. 명시 실행, `/migration/lidar/*`만 발행. 공개 속도·동정적 validity false, TunnelFilter 기본 OFF. 실제 카메라 bag·실시간·TunnelFilter ON 성능은 미수락 |
+| 웹 모니터 | PR #105를 현재 구조에 연결. `lidar.launch debug:=true`와 별도 `view.launch`, 기본 localhost:8091. 진단용 운동 표시와 지도 overlay는 운영 속도 validity·HD맵 필터 적용이 아님. [상세](../../src/asmc_lidar/docs/web-monitor.md) |
 
 빌드·시험 명령과 API 위치는 [패키지 README](../../src/asmc_lidar/README.md)에 있다.
 과거 연구용 지면·tracker 후보와 이전 `unified.launch`, `ground_compare_live.launch`는 남기지 않았으며
-이를 안내하는 명령은 현재 버전에서 사용할 수 없다. 현재 launch는 shadow 전용 2개뿐이다.
+이를 안내하는 명령은 현재 버전에서 사용할 수 없다. 현재 처리는 `lidar.launch`, 읽기 전용 웹 화면은 `view.launch`로 분리한다.
 
 ## 통합 이관 순서
 
@@ -408,3 +409,5 @@ git log --all -- src/asmc_lidar
 ```
 
 복구가 필요하면 별도 worktree에서 검토하고 현재 골격에 연구 폴더를 일괄 복사하지 않는다.
+
+2026-10-23 사용자 직접 확인: 음영구간 TunnelFilter ON 시 객체 박스가 많이 튐. 표시 연결만 확인했으며 안정성 미수락, 필터 기본 OFF 유지. 재호의 추적·속도·fusion과 안승현의 HD맵 필터 후속 검토에서 같은 입력으로 원인을 분리한다.

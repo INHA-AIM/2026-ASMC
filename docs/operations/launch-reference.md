@@ -207,6 +207,9 @@
 | `experimental_tunnel_filter` | `(빈 문자열)` | — |
 | `publish_tf` | `false` | — |
 | `tf_child_frame` | `lidar_pipeline/lidar_leveled` | — |
+| `debug` | `false` | Publish sampled stages for view.launch; no algorithm changes |
+| `debug_rate_hz` | `5.0` | — |
+| `debug_max_points` | `20000` | — |
 | `points_topic` | `/velodyne_points` | — |
 | `imu_topic` | `/imu` | — |
 | `can_topic` | `/Ego_topic` | — |
@@ -360,6 +363,21 @@
 | `open_dashboard` | `false` | — |
 | `dashboard_lidar_objects_topic` | `/perception/objects_lidar_test` | — |
 | `dashboard_lidar_motion_debug_topic` | `/lidar/motion_debug` | — |
+
+## LiDAR read-only web viewer
+
+[소스](../../src/asmc_lidar/launch/view.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `namespace` | `/migration/lidar` | — |
+| `open_browser` | `false` | — |
+| `dashboard_port` | `8091` | — |
+| `bind_address` | `127.0.0.1` | — |
+| `pipeline_config` | `$(find asmc_lidar)/config/lidar_pipeline.yaml` | — |
+| `max_clients` | `8` | — |
+| `http_header_timeout_s` | `5.0` | — |
+| `http_request_timeout_s` | `20.0` | — |
 
 ## Read-only family monitor
 

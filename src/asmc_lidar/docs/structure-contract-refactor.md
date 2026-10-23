@@ -31,8 +31,8 @@ PR #103의 계산 결과를 보존하며 기존 Main의 판제 출력을 전환�
 `lidar.launch` 하나가 `lidar_pipeline_node`를 실행하고 기본 `fusion:=true`를 적용한다.
 `fusion:=false`는 카메라 보정 조회와 구독을 끄므로 카메라 패키지가 없어도 같은 launch를 사용한다.
 내부 `enable_camera_fusion`·YAML 이름과 계산 알고리즘은 유지한다. 이전 두 launch는 wrapper 없이 통합했다.
-`lidar_replay`는 오프라인 대조 도구로 분리한다. 재호의 로컬 웹 시각화는 추후 `view.launch`에서
-결과만 구독하도록 연결하며, 현재 이 PR에서 구현·검증한 웹 UI로 표시하지 않는다.
+`lidar_replay`는 오프라인 대조 도구로 분리한다. 재호의 PR #105 웹 시각화를 현재 구조로 통합해 `view.launch`에서
+결과만 구독한다. 처리 시작은 `lidar.launch debug:=true`로 분리한다.
 
 이 후속 변경은 launch·문서·구조 검사만 바꾼다. 아래 3,428회 대조는 계산 소스가 동일하므로
 재사용하며, 최종 launch의 ROS 해석과 카메라 없는 환경은 별도로 검사한다.
@@ -50,7 +50,7 @@ PR #103의 계산 결과를 보존하며 기존 Main의 판제 출력을 전환�
 
 ## 처리 객체의 RViz 표시
 
-`scripts/lidar_markers.py`와 `rviz/lidar.rviz`를 추가했다. 향후 웹 `view.launch`와 별도의
+`scripts/lidar_markers.py`와 `rviz/lidar.rviz`를 추가했다. 웹 `view.launch`와 별도의
 읽기 전용 표시이며 `/migration/lidar/observations_local`을 `/migration/lidar/markers`로 변환한다.
 OBB8코너·source header·추적ID·소비 그룹/카메라 원본분류를 그대로 사용한다. IMU·장착 변환이나
 검출·추적·fusion을 다시 계산하지 않고, 속도 validity가 false인 결과에 운동 화살표를 만들지 않는다.
@@ -139,3 +139,28 @@ python3 src/asmc_lidar/tools/compare_traces.py \
 
 다음 안승현 작업은 기존 인지 필터 소유권·HD맵 최종 관련성의 오프라인 대조다.
 점군 ROI 변경과 실제 객체 제거는 이 첫 단위에 섞지 않았다.
+
+## PR #105 통합 및 직접 확인 후속
+
+최신 main `a63727c5`(PR #105, 원본 `2648f117`)의 단계 observer·debug 발행·웹 모니터와
+진단용 motion history를 보존했다. 헤더를 `tracking/`·`ros/`로 옮기고 분리된
+`detection/tracking/camera` 필드, `scan_sequence`와 처리 epoch에 맞춰 연결했다.
+`view.launch`는 구독 전용이며 처리 시작 기능·구형 launch wrapper는 없다.
+기존 공용 메시지·속도/운동 validity와 Main·판제 출력은 유지한다.
+과거3,428회 동등성은 PR #103 기준 구조 변경의 증거로 보존한다. PR #105의 진단용
+이력 추가로 객체 크기/전체 처리 비용이 달라질 수 있으므로 기존832B·p95를 최신 통합본 실측으로 표시하지 않는다.
+
+사용자는 음영구간에서 박스가 많이 튀는 현상을 확인했다. 현재는 시각화 연결 확인만 완료했으며,
+지면·구조물·군집/OBB·추적·TunnelFilter OFF/ON을 같은 입력에서 분리 확인할 후속 과제다.
+필터 기본 OFF·운영 입력 미전환을 유지한다. 표시 UI의 지도 숨김을 HD맵 필터 구현으로 세지 않는다.
+
+통합 회귀의 IMU 무효 전환 시험에서 정상 결과1건이 나타났다. 기존 PoseHistory는 마지막 무효 stamp
+하나만 저장하므로 다음 무효 표본이 대기 scan보다 미래로 이동했을 때, 아직120ms 이내인 이전 정상
+표본이 선택될 수 있다. 이번 구조 통합에서는 이 정책을 바꾸지 않았다. 지속 무효 검사는 이전 정상
+표본의 최대 age 이후를 대상으로 하며, 초기 전환의 fail-closed 보장은 후속 과제다.
+
+통합 최종 로컬 검증: Noetic 필수 build 성공, CTest **31/31**·CI gate 통과(생략0),
+웹 core29개·JS 표시61개, 문서 unit17개·runtime27 launch/94명령·history/동결5개,
+카메라 계약5개·공용 메시지39개 검사를 통과했다. 초기 CTest는30/31이었고 위 IMU 전환
+검사창 수정 후 전체를 다시 실행했다. 이전 실패 로그와 최종 로그는 컨테이너 `/tmp/`에 구분해 보존한다.
+실행 중 bridge·LiDAR·RViz는 재시작하지 않았으며 신규 실시간 공급/음영구간 품질 수락으로 세지 않는다.

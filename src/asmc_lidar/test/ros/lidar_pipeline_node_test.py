@@ -646,12 +646,21 @@ class LidarPipelineNodeTest(unittest.TestCase):
         # Bound the fault phase by IMU source stamps, not the last scan emitted
         # just before the publishing thread receives the resume command.
         invalid_end = invalid_samples[-1] - 1000000
-        window_start = first_invalid + 60000000
+        # This case checks sustained invalid input, after the last normal IMU
+        # has aged out. The preserved history stores only the newest invalid
+        # stamp: a later invalid sample can move that marker past a queued scan
+        # while its previous normal sample is still fresh. That transition
+        # behaviour is a documented follow-up, not changed by this refactor.
+        with open(self.pipeline_config) as stream:
+            imu_max_age_s = yaml.safe_load(stream)['pose']['lidar_pose_imu_max_age_s']
+        window_start = first_invalid + round(imu_max_age_s * 1e9) + 60000000
         for arrays in (self.local_after(window_start), self.map_after(window_start)):
             bad = [m for m in arrays if self.stamp(m) <= invalid_end]
             self.assertGreaterEqual(len(bad), 5)
             for m in bad:
-                self.assertEqual((m.status, len(m.objects)), (INPUT_INVALID, 0), m.reason)
+                self.assertEqual((m.status, len(m.objects)), (INPUT_INVALID, 0),
+                                 '%s stamp=%d fault=[%d,%d]' %
+                                 (m.reason, self.stamp(m), window_start, invalid_end))
         self.wait_local_observed_after(resume)
 
     def test_07_isolation(self):

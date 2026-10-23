@@ -5,8 +5,8 @@
        /migration/lidar/* and the node refuses operational names
        (/last_lidar, /lidar_nogps, /YOLO/BBox, /perception/lidar/*, /planning/*,
        /tf, /tf_static, its own input topics; TF child lidar_leveled/base_link/map/velodyne).
-       No visualization server or browser is started here. Jaeho's future
-       read-only localhost viewer belongs in view.launch.
+       No visualization server or browser is started here. The read-only
+       localhost viewer runs separately in view.launch.
        Previous entry points: lidar_pipeline.launch and lidar_only.launch.
        LiDAR-only, including without asmc_camera installed: fusion:=false. -->
   <arg name="namespace" default="/migration/lidar" doc="Output namespace; inputs keep their canonical paths"/>
@@ -24,6 +24,11 @@
   <arg name="publish_tf" default="false"/>
   <arg name="tf_child_frame" default="lidar_pipeline/lidar_leveled"/>
 
+  <!-- Monitoring only: subscribers and rate limit still gate each snapshot. -->
+  <arg name="debug" default="false" doc="Publish sampled stages for view.launch; no algorithm changes"/>
+  <arg name="debug_rate_hz" default="5.0"/>
+  <arg name="debug_max_points" default="20000"/>
+
   <arg name="points_topic" default="/velodyne_points"/>
   <arg name="imu_topic" default="/imu"/>
   <arg name="can_topic" default="/Ego_topic"/>
@@ -39,6 +44,10 @@
   <arg name="trace_topic" default="trace"/>
 
   <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="$(arg namespace)" output="screen">
+    <param name="debug_enabled" value="$(arg debug)"/>
+    <param name="debug_topic_prefix" value="debug"/>
+    <param name="debug_rate_hz" value="$(arg debug_rate_hz)"/>
+    <param name="debug_max_points" value="$(arg debug_max_points)"/>
     <param name="pipeline_config" value="$(arg pipeline_config)"/>
     <param name="package_dir" value="$(find asmc_lidar)"/>
     <param if="$(eval arg('lidar_level_roll') != '')" name="lidar_level_roll" value="$(arg lidar_level_roll)"/>

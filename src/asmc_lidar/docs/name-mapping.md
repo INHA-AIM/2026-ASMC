@@ -5,7 +5,7 @@
 | 이전 | 현재 |
 |---|---|
 | `src/asmc_lidar/config/shadow_pipeline.yaml` | `src/asmc_lidar/config/lidar_pipeline.yaml` |
-| `src/asmc_lidar/docs/pipeline.md` | `src/asmc_lidar/docs/pipeline.md` |
+| `src/asmc_lidar/docs/shadow-pipeline.md` | `src/asmc_lidar/docs/pipeline.md` |
 | `src/asmc_lidar/include/asmc_lidar/bounded_pose.hpp` | `src/asmc_lidar/include/asmc_lidar/geometry/bounded_pose.hpp` |
 | `src/asmc_lidar/include/asmc_lidar/camera_calibration.hpp` | `src/asmc_lidar/include/asmc_lidar/geometry/camera_calibration.hpp` |
 | `src/asmc_lidar/include/asmc_lidar/camera_observations.hpp` | `src/asmc_lidar/include/asmc_lidar/fusion/camera_observations.hpp` |
@@ -76,3 +76,14 @@
 
 `detection/detections.hpp`가 검출 생성 선언을 소유한다(이전 `pipeline/tracker.hpp`).
 기존 Main의 공유 헤더 include와 Context 필드 참조도 새 경로로 바꿨으며 계산·운영 출력은 바꾸지 않았다.
+
+## PR #105 웹 모니터 통합
+
+| 이전 | 현재 |
+|---|---|
+| `launch/monitor.launch` (처리+화면) | `launch/lidar.launch debug:=true`와 별도 `launch/view.launch` |
+| `pipeline/motion_display.hpp`, `motion_evidence.hpp` | `tracking/`의 같은 파일명 |
+| `shadow/debug_publisher.hpp` | `ros/debug_publisher.hpp` |
+| `TrackedObject.display_motion` | `TrackedObject.tracking.display_motion` (진단 전용) |
+
+기존 HTTP·binary/JSON v1 형식은 보존하며, JSON의 역사적 `shadow_nodes` 키는 실행 이름 alias가 아니다.

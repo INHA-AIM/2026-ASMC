@@ -26,6 +26,10 @@ PACKAGE = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE.parents[1]  # repository root when the package sits in <root>/src/asmc_lidar
 SELF = Path(__file__).resolve()
 PIPELINE_NODE = 'lidar_pipeline_node'
+MONITOR_NODE = 'asmc_lidar_monitor_node.py'
+MONITOR_SCRIPTS = ('scripts/asmc_lidar_monitor_node.py', 'scripts/asmc_lidar_monitor_core.py')
+WEB_ASSETS = ('web/index.html', 'web/app.js', 'web/monitor_view.js', 'web/app.css')
+PLANNER_DASHBOARD_PORT = '8088'
 OUTPUT_ARGS = ('objects_local_topic', 'objects_map_topic', 'diagnostics_topic', 'trace_topic', 'observations_local_topic', 'observations_map_topic')
 FORBIDDEN_DEPENDENCIES = {'Main', 'Msg', 'asmc_camera', 'tensorrt', 'torch'}
 SOURCE_SUFFIXES = {'.c', '.cc', '.cpp', '.h', '.hpp', '.py', '.launch', '.test', '.yaml', '.yml', '.xml',
@@ -132,6 +136,23 @@ class PipelineContractTest(unittest.TestCase):
             self.assertFalse(any(re.search(r'asmc_lidar\)?/launch/lidar\.launch', n.get('file', ''))
                                  for n in root.findall('.//include')), path)
 
+    def test_view_launch_is_read_only_and_namespaced(self):
+        root = ET.parse(PACKAGE / 'launch/view.launch').getroot()
+        self.assertEqual(root.findall('.//include'), [])
+        nodes = root.findall('.//node')
+        self.assertEqual([(n.get('pkg'), n.get('type')) for n in nodes], [('asmc_lidar', MONITOR_NODE)])
+        self.assertEqual(nodes[0].get('ns'), '$(arg namespace)')
+        args = {a.get('name'): a.get('default') for a in root.findall('arg')}
+        self.assertEqual(args['namespace'], '/migration/lidar')
+        self.assertEqual(args['bind_address'], '127.0.0.1')
+        self.assertEqual(args['open_browser'], 'false')
+        self.assertNotEqual(args['dashboard_port'], PLANNER_DASHBOARD_PORT)
+        self.assertNotIn('start_pipeline', args)
+        params = {a.get('name'): a.get('value') for a in nodes[0].findall('param')}
+        self.assertEqual(params['debug_topic_prefix'], 'debug')
+        self.assertEqual(params['diagnostics_topic'], 'diagnostics')
+        self.assertEqual(params['points_topic'], '/velodyne_points')
+
     def test_no_other_launch_file_starts_the_pipeline_node(self):
         if not repository_available():
             self.skipTest('repository root not reachable from the package directory')
@@ -169,6 +190,35 @@ class PipelineContractTest(unittest.TestCase):
         if not out:
             self.skipTest('not tracked yet (stage it with git add --chmod=+x)')
         self.assertEqual(out[0], '100755', 'index mode of %s' % script)
+
+    def test_monitor_scripts_are_executable_and_read_only(self):
+        for relative in MONITOR_SCRIPTS:
+            script = PACKAGE / relative
+            self.assertTrue(script.is_file(), script)
+            self.assertTrue(os.access(str(script), os.X_OK), '%s is not executable' % script)
+            text = script.read_text()
+            self.assertTrue(text.startswith('#!/usr/bin/env python3'), script)
+            # Read-only: no ROS publisher, service call/proxy, parameter write or shell execution.
+            for forbidden in ('rospy.Publisher', 'ServiceProxy', 'rospy.Service(', 'set_param', 'os.system(',
+                              'shell=True'):
+                self.assertNotIn(forbidden, text, '%s uses %s' % (script, forbidden))
+        core = (PACKAGE / 'scripts/asmc_lidar_monitor_core.py').read_text()
+        self.assertNotIn('import rospy', core)
+        for relative in WEB_ASSETS:
+            asset = PACKAGE / relative
+            self.assertTrue(asset.is_file(), asset)
+            text = asset.read_text()
+            self.assertIsNone(re.search(r'https?://|//cdn\.|<script[^>]+src="(?!(?:app|monitor_view)\.js")', text), asset)
+        if (ROOT / '.git').exists():
+            command = ['git', '--git-dir=%s' % (ROOT / '.git'), '--work-tree=%s' % ROOT, 'ls-files', '-s', '--']
+            command += [str(PACKAGE / relative) for relative in MONITOR_SCRIPTS]
+            try:
+                out = subprocess.run(command, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                     universal_newlines=True, timeout=30).stdout.splitlines()
+            except (OSError, subprocess.SubprocessError):
+                out = []
+            for line in out:  # tracked entries must be 100755 (core.filemode=false: git add --chmod=+x)
+                self.assertEqual(line.split()[0], '100755', line)
 
     def test_rostest_node_cases_cannot_skip(self):
         # rosunit's XML runner records a skipped case as passed, so CI could not see it.

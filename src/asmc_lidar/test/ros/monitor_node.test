@@ -1,0 +1,31 @@
+<launch>
+  <!-- rostest of the read-only web monitor against a real lidar_pipeline_node with
+       synthetic inputs only (PointCloud2 + IMU + CAN, no GPS, no camera): no driver,
+       bridge, camera, inference, Main or planner node. The test node reads the HTTP
+       routes on 127.0.0.1:port and checks scene/stamp/frame consistency, the state
+       transitions and that the monitor publishes nothing. -->
+  <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml"/>
+  <arg name="port" default="18091"/>
+
+  <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="/migration/lidar" output="screen">
+    <param name="pipeline_config" value="$(arg pipeline_config)"/>
+    <param name="package_dir" value="$(find asmc_lidar)"/>
+    <param name="enable_camera_fusion" value="false"/>
+    <param name="lidar_level_roll" value="true"/>
+    <param name="debug_enabled" value="true"/>
+    <param name="debug_rate_hz" value="5.0"/>
+    <param name="debug_max_points" value="3000"/>
+  </node>
+
+  <node pkg="asmc_lidar" type="asmc_lidar_monitor_node.py" name="asmc_lidar_monitor" output="screen">
+    <param name="port" value="$(arg port)"/>
+    <param name="bind_address" value="127.0.0.1"/>
+    <param name="web_dir" value="$(find asmc_lidar)/web"/>
+  </node>
+
+  <test test-name="monitor_node" pkg="asmc_lidar" type="monitor_node_test.py" name="monitor_node_test"
+        time-limit="240">
+    <param name="port" value="$(arg port)"/>
+    <param name="mount_config" value="$(find asmc_lidar)/config/autonav_v3.yaml"/>
+  </test>
+</launch>
