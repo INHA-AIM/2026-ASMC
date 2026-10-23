@@ -96,6 +96,10 @@ target_link_libraries(main myHeader
 )
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(test_observation_model test/test_observation_model.cpp test/test_runtime_globals.cpp)
+  if(TARGET test_observation_model)
+    target_link_libraries(test_observation_model myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  endif()
   add_executable(warmup_motion_evidence_test test/test_warmup_motion_evidence.cpp)
   target_include_directories(warmup_motion_evidence_test PRIVATE src)
   add_test(NAME warmup_motion_evidence_test COMMAND warmup_motion_evidence_test)

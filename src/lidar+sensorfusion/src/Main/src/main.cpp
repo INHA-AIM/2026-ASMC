@@ -608,6 +608,11 @@ void ConfigureTrackingExperiment(ros::NodeHandle& private_node)
     auto& options = tracking_options::Get();
     private_node.param("lidar_kf_reacquire_elapsed_init", options.reacquire_elapsed_init, false);
     private_node.param("lidar_kf_ego_translation_comp", options.ego_translation_comp, false);
+    private_node.param("lidar_observation_quality_r", options.observation_quality_r, false);
+    private_node.param("lidar_observation_obb_center", options.observation_obb_center, false);
+    private_node.param("lidar_kf_jerk_q", options.jerk_q, false);
+    private_node.param("lidar_kf_jerk_spectral_density", options.jerk_spectral_density, 1.0);
+    private_node.param("lidar_ego_gap_reset", options.ego_gap_reset, false);
     std::string path, ids, run_id;
     double max_mb = 512.0;
     private_node.param("lidar_track_trace_path", path, std::string());

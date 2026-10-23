@@ -1,6 +1,7 @@
 #include "kalman_utils.hpp"
 #include <Geometry/FrameBoundary.hpp>
 #include <Lidar/Tracking/TrackTrace.hpp>
+#include <Lidar/Tracking/ObservationModel.hpp>
 
 
 
@@ -129,7 +130,7 @@ void kalman_filter_predict(LiDARObjectInfo &o, float64 dt, float ego_yaw_now)
     A(2,4)=dt; A(3,5)=dt;
 
     // 간단한 등방성 Q (튜닝 지점)
-    Eigen::Matrix<float, 6, 6> Q = Eigen::Matrix<float, 6, 6>::Identity() * 0.003f;
+    Eigen::Matrix<float, 6, 6> Q = observation_model::ProcessCovariance(dt);
 
     o.Eigen_KfState_CA = A * o.Eigen_KfState_CA;
     o.Eigen_KfP_CA     = A * o.Eigen_KfP_CA * A.transpose() + Q;
@@ -213,8 +214,8 @@ void kalman_filter_update(LiDARObjectInfo &obj,
     Eigen::Matrix<float, 2, 6> H = Eigen::Matrix<float, 2, 6>::Zero();
     H(0,0)=1.f; H(1,1)=1.f;
 
-    Eigen::Matrix<float, 6, 6> Q = Eigen::Matrix<float, 6, 6>::Identity() * 0.003f; // 튜닝 포인트 0.003
-    Eigen::Matrix2f R = Eigen::Matrix2f::Identity() * 0.01f;                          // 튜닝 포인트 0.01
+    Eigen::Matrix<float, 6, 6> Q = observation_model::ProcessCovariance(dt);
+    Eigen::Matrix2f R = obj.observation_R_valid ? obj.observation_R : Eigen::Matrix2f::Identity() * 0.01f;
     Eigen::Vector2f z(zx, zy);
 
     // --- 예측 ---
@@ -231,6 +232,10 @@ void kalman_filter_update(LiDARObjectInfo &obj,
     // auto I = Eigen::Matrix<float,6,6>::Identity();
     // obj.Eigen_KfP_CA = (I - K*H) * P_pred * (I - K*H).transpose() + K*R*K.transpose();
     obj.Eigen_KfP_CA = (Eigen::Matrix<float,6,6>::Identity() - K * H) * P_pred;
+    if(obj.observation_R_valid) {
+        const auto ikh=(Eigen::Matrix<float,6,6>::Identity()-K*H).eval();
+        obj.Eigen_KfP_CA=ikh*P_pred*ikh.transpose()+K*R*K.transpose();
+    }
 
     // --- 캐시 ---
     obj.f32_CoreX = obj.Eigen_KfState_CA(0);
@@ -241,6 +246,7 @@ void kalman_filter_update(LiDARObjectInfo &obj,
                 << ",\"elapsed_before\":" << obj.kf_elapsed_since_meas_s << ",\"init_elapsed\":" << init_elapsed
                 << ",\"z\":[" << zx << ',' << zy << "],\"pred\":[" << pred_x << ',' << pred_y << "],\"x_in\":";
             track_trace::Arr(out, x_in, 6);
+            out << ",\"measurement_R\":";track_trace::Mat2(out,R,2,2);
             out << ",\"x_aligned\":"; track_trace::Arr(out, x_aligned, 6);
             out << ",\"x_prior\":"; track_trace::Arr(out, x_pred, 6);
             out << ",\"P_prior_diag\":"; track_trace::Arr(out, P_pred.diagonal(), 6);

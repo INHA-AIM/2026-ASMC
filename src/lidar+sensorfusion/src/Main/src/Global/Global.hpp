@@ -533,6 +533,9 @@ struct LiDARObjectInfo
     std::int64_t tracking_stamp_ns = 0;
     float tracking_ego_speed_mps = 0;
     double kf_elapsed_since_meas_s = 0;
+    // Fresh detection covariance in the SAME tracking axes as its position measurement.
+    Eigen::Matrix2f observation_R = Eigen::Matrix2f::Identity() * 0.01f;
+    bool observation_R_valid = false;
 	string str_ObjectClass = "unknown";      // selected camera consumer group or unknown
 
     // str_ObjectClass를 확정시킨 YOLO 원본 라벨(16종/7종; 소비 그룹과 구분).

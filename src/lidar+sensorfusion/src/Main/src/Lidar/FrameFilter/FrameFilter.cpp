@@ -1,6 +1,8 @@
 #include <Lidar/FrameFilter/FrameFilter.hpp>
 #include <Lidar/Kalman/kalman_utils.hpp>
 #include <SensorFusion/FusionStateTrace.hpp>
+#include <Lidar/Tracking/ObservationModel.hpp>
+#include <Geometry/FrameBoundary.hpp>
 
 constexpr float Ton  = 0.8f;  // m/s
 constexpr float Toff = 0.5f;  // m/s
@@ -10,6 +12,19 @@ constexpr int   N_off = 3;
 void FrameFilter(deque<vector<LiDARObjectInfo>>& prev_ObjectsQueue,
                  vector<LiDARObjectInfo>& vec_Object, const GPS_IMU& st_GPSIMU, VehicleSpec &st_VehicleSpec)
 {
+    if(tracking_options::Get().ego_gap_reset && tracking_options::Get().ego_translation_comp &&
+       frame_boundary::Enabled() && !prev_ObjectsQueue.empty()) {
+        const double gap=(ts_CurrTime-ts_PrevTime).toSec();
+        if(!std::isfinite(gap) || gap<=0. || gap>1.) {
+            const auto retired=prev_ObjectsQueue.back().size();
+            // B deliberately cannot integrate this interval. Do not keep a ground-velocity
+            // state after a zero-displacement fallback; a new generation must warm up.
+            prev_ObjectsQueue.clear();
+            track_trace::Event("tracking_gap_reset",[&](std::ostream& out){
+                out << ",\"dt\":" << track_trace::N{gap} << ",\"retired_tracks\":" << retired;
+            });
+        }
+    }
     // VehicleSpec st_VehicleSpec ; //일단 0으로 초기화 함
     // cout<<"라이다 위치:"<<st_VehicleSpec.st_LiDARPos.f32_X<<endl;
     // {
@@ -25,6 +40,8 @@ void FrameFilter(deque<vector<LiDARObjectInfo>>& prev_ObjectsQueue,
     // 계산해야 자차가 빠르게 움직여도 이전 프레임과 같은 좌표계에서 연관된다.
     ConsolidateCurrentDetections(vec_Object);
     for (auto& object : vec_Object) {
+        // Before map conversion, association and ALL birth/update paths: no mixed reference points.
+        observation_model::Prepare(object);
         Body2ENU(st_VehicleSpec, st_GPSIMU, object);
         MinMax2ENU(st_VehicleSpec, st_GPSIMU, object);
     }

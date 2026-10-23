@@ -48,6 +48,7 @@ void ConfigureCase(bool reacquire, bool ego_translation) {
   st_Tracking.f32_DuplicateCenterDistance = 0.60F;
   tracking_options::Get().reacquire_elapsed_init = reacquire && !ForceOff();
   tracking_options::Get().ego_translation_comp = ego_translation && !ForceOff();
+  tracking_options::Get().ego_gap_reset = false;
 }
 
 struct Ego { double x = 0, y = 0, yaw = 0, v = 0; };
@@ -85,7 +86,8 @@ struct Result { std::vector<int> ids; std::vector<double> abs_err; LiDARObjectIn
 
 // Runs n scans. visible(k) = whether the object is detected in scan k. ego(k)/object(k) give the truth.
 Result Simulate(int n, const std::function<Ego(int)>& ego, const std::function<World(int)>& object,
-           const std::function<bool(int)>& visible) {
+           const std::function<bool(int)>& visible, bool include_anchor=true,
+           const std::function<double(int)>& clock=[](int k){return k*kDt;}) {
   Result r;
   // Production FrameFilter (consolidation, first-scan births, CompareCentroids) with the global scan clock
   // exactly as LidarProcess drives it. A far stationary 'anchor' car is always visible, as in real scans,
@@ -96,14 +98,14 @@ Result Simulate(int n, const std::function<Ego(int)>& ego, const std::function<W
   for (int k = 0; k < n; ++k) {
     const Ego e = ego(k); const World o = object(k);
     const GPS_IMU local = Local(e);
-    const std::int64_t ns = 50 * kSec + std::int64_t(k * kDt * 1e9 + 0.5);
+    const std::int64_t ns = 50 * kSec + std::int64_t(clock(k) * 1e9 + 0.5);
     ts_CurrTime.fromNSec(ns);
     asmc::lidar::PoseSelection no_map; no_map.reason = "gps_missing";
     frame_boundary::PrepareScan(asmc::lidar::Observation{ns, ns, ns, "ros", "bridge_receive_ns", ""}, local, st_VehicleSpec, no_map, k + 1);
     frame_boundary::StoreLeveling(asmc::lidar::leveling_rotation(0., 0., asmc::lidar::Rot::Identity()));
     std::vector<LiDARObjectInfo> now;
     if (visible(k)) { now.push_back(Detection(e, o)); now.back().u16_Idx = 0; }
-    now.push_back(Detection(e, anchor)); now.back().u16_Idx = 1;
+    if(include_anchor) {now.push_back(Detection(e, anchor)); now.back().u16_Idx = 1;}
     FrameFilter(history, now, local, st_VehicleSpec);
     ts_PrevTime = ts_CurrTime;
     for (auto& t : now) if (t.s32_MissCount == 0) frame_boundary::RecordTrackingFrame(t);
@@ -202,6 +204,20 @@ TEST(TrackingFrameOptions, FixFastEgoMissedParkedCarKeepsId) {
                [](int k) { return k == 0 || k >= 3; });
   EXPECT_EQ(r.ids[3], r.ids[0]);
   EXPECT_EQ(r.ids[7], r.ids[0]);
+}
+TEST(TrackingFrameOptions, GuardEmptyDetectionScansKeepGroundTrackWithoutAnchor) {
+  ConfigureCase(true,true);
+  auto r=Simulate(8,[](int k){return Straight(k,5.);},[](int){World w;w.x=25;w.y=4;return w;},
+                 [](int k){return k==0 || k>=3;},false);
+  EXPECT_EQ(r.ids[0],r.ids[3]);EXPECT_EQ(r.ids[0],r.ids[7]);
+}
+TEST(TrackingFrameOptions, FixUnsupportedEgoGapStartsNewGeneration) {
+  ConfigureCase(true,true);
+  tracking_options::Get().ego_gap_reset=!ForceOff();
+  auto clock=[](int k){return k<2?k*.1:1.6+(k-2)*.1;};
+  auto r=Simulate(3,[&](int k){Ego e;e.v=2;e.x=2*clock(k);return e;},
+                 [](int){World w;w.x=25;w.y=4;return w;},[](int){return true;},false,clock);
+  EXPECT_NE(r.ids[1],r.ids[2]);EXPECT_EQ(r.last.s32_KfInitCount,1);
 }
 }  // namespace
 

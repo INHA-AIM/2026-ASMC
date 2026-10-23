@@ -122,6 +122,11 @@ namespace tracking_options {
 struct Options {
     bool reacquire_elapsed_init = false;
     bool ego_translation_comp = false;
+    bool observation_quality_r = false;
+    bool observation_obb_center = false;
+    bool jerk_q = false;
+    double jerk_spectral_density = 1.0; // m^2/s^5, continuous white jerk (per axis).
+    bool ego_gap_reset = false; // explicit reset instead of silently skipping unsupported B translation.
 };
 inline Options& Get() { static Options options; return options; }
 }  // namespace tracking_options
