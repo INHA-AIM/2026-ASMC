@@ -50,6 +50,13 @@ road/known-static/structure 세 구현은 include 경로를 정규화하면 Main
 파란 점선은 기존 필터가 clipping한 형상이다. 지도 +X가 오른쪽, +Y가 위다.
 원본 RGB나 독립 GT 영상으로 오인하지 않는다.
 
+전체 혼합 갤러리는 대표48개다. **세 미션 예외·GPS·경계 합성 사례 전체**는 별도 동결 run
+`artifacts/lidar-hd-map-filter-cases-20261024-r1/index.html`에35개 SVG로 제공한다.
+36사례 중 잘못된 형상1개는 판정 JSON에만 남고 그리지 않는다. `case-labels.json`은
+SVG와 fixture 사례 이름의 대응표다. 이 갤러리는 합성임을 표시하며 실제 미션 자료를 보강한
+것으로 세지 않는다. 저장소의 작은 [결과 포인터](../../../config/baselines/lidar_hd_map_filter_audit_result_v1.json)에
+두 run ID와 동결 manifest SHA를 기록했다.
+
 | 입력/결과 | 수량·해석 |
 |---|---|
 | 실제 자료 | 기존 동결 bag 두 개의 857scan을 pitch/roll-pitch 및 GPS normal/invalid/missing 조건에 재사용한 trace 8개, 3,428scan. 반복 재생을 독립 장면으로 세지 않음 |

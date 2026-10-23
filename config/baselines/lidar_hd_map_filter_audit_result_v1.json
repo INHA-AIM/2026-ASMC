@@ -38,5 +38,12 @@
     "legacy real-data decisions are counterfactual static probes, not recorded Main keep/drop"
   ],
   "failed_run_preserved": "lidar-hd-map-filter-audit-20261024-r1",
-  "next_unit": "decision-only post-OBB/tracking/fusion integration under migration namespace; actual exclusion OFF"
+  "next_unit": "decision-only post-OBB/tracking/fusion integration under migration namespace; actual exclusion OFF",
+  "synthetic_gallery": {
+    "run_id": "lidar-hd-map-filter-cases-20261024-r1",
+    "evidence_directory": "artifacts/lidar-hd-map-filter-cases-20261024-r1",
+    "svg_count": 35,
+    "all_three_mission_types_included": true,
+    "manifest_sha256": "5b1d6096ca7539f0531a09fc49b6727bbc3188e9f3445116f80ff19906681001"
+  }
 }
