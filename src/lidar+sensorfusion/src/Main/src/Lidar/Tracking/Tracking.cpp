@@ -1,3 +1,4 @@
+#include "ObbAxisCanonical.hpp"
 #include <Geometry/FrameBoundary.hpp>
 #include <Lidar/Tracking/tracking_utils.hpp>
 #include <Lidar/Kalman/kalman_utils.hpp>
@@ -207,19 +208,22 @@ inline void writeOBBToObject(
     double zMin, double zMax,
     const std::array<P3,8>& corners3d
 ) {
-    object.f32_OBB_CenterX = static_cast<float>(obb2d.cx);
-    object.f32_OBB_CenterY = static_cast<float>(obb2d.cy);
+    auto stored=obb2d;auto stored3=corners3d;
+    if(tracking_options::Get().obb_long_axis_state) obb_axis::Canonicalize(stored,stored3);
+
+    object.f32_OBB_CenterX = static_cast<float>(stored.cx);
+    object.f32_OBB_CenterY = static_cast<float>(stored.cy);
     object.f32_OBB_CenterZ = static_cast<float>(0.5 * (zMin + zMax));
-    object.f32_OBB_Width = static_cast<float>(obb2d.w);
-    object.f32_OBB_Height = static_cast<float>(obb2d.h);
+    object.f32_OBB_Width = static_cast<float>(stored.w);
+    object.f32_OBB_Height = static_cast<float>(stored.h);
     object.f32_OBB_ZMin = static_cast<float>(zMin);
     object.f32_OBB_ZMax = static_cast<float>(zMax);
-    object.f32_OBB_YawRad = static_cast<float>(obb2d.yaw);
+    object.f32_OBB_YawRad = static_cast<float>(stored.yaw);
 
     for (int i = 0; i < 8; ++i) {
-        object.OBB_Corners_Body[i].x = static_cast<float>(corners3d[i].x);
-        object.OBB_Corners_Body[i].y = static_cast<float>(corners3d[i].y);
-        object.OBB_Corners_Body[i].z = static_cast<float>(corners3d[i].z);
+        object.OBB_Corners_Body[i].x = static_cast<float>(stored3[i].x);
+        object.OBB_Corners_Body[i].y = static_cast<float>(stored3[i].y);
+        object.OBB_Corners_Body[i].z = static_cast<float>(stored3[i].z);
     }
 }
 

@@ -286,3 +286,36 @@ TEST(TrackingFrameOptions, SignedReverseEgoKeepsParkedGroundVelocityZero) {
       [](int){World w;w.x=15;w.y=3;return w;},[](int){return true;});
   EXPECT_LT(MaxLast(r.abs_err,10),.05);
 }
+
+#include "../src/Lidar/Tracking/ObbAxisCanonical.hpp"
+TEST(ObbAxisCandidate, ExactCornersInvariantAndIdempotent) {
+  struct Point {double x,y,z;};
+  struct Box {double w,h,yaw;std::array<Point,4> corners;};
+  Box box{1.,4.,0.,{{{-0.5,-2,0},{0.5,-2,0},{0.5,2,0},{-0.5,2,0}}}};
+  std::array<Point,8> xyz;
+  for(int i=0;i<8;++i){xyz[i]=box.corners[i%4];xyz[i].z=i<4?0:2;}
+  const auto old=xyz;
+  EXPECT_TRUE(obb_axis::Canonicalize(box,xyz));
+  EXPECT_DOUBLE_EQ(4.,box.w);EXPECT_DOUBLE_EQ(1.,box.h);
+  EXPECT_NEAR(M_PI/2,std::abs(box.yaw),1e-12);
+  for(const auto& p:old) {
+    int found=0;for(const auto& q:xyz)if(p.x==q.x&&p.y==q.y&&p.z==q.z)++found;
+    EXPECT_EQ(1,found);
+  }
+  // Reconstruct from the new scalar representation independently of stored corners.
+  for(const auto& pt:old) {
+    const double u=pt.x*std::cos(box.yaw)+pt.y*std::sin(box.yaw);
+    const double v=-pt.x*std::sin(box.yaw)+pt.y*std::cos(box.yaw);
+    EXPECT_NEAR(box.w/2,std::abs(u),1e-12);
+    EXPECT_NEAR(box.h/2,std::abs(v),1e-12);
+  }
+  EXPECT_FALSE(obb_axis::Canonicalize(box,xyz));
+}
+TEST(ObbAxisCandidate, LongAxisAndSquareRemainUnchanged) {
+  struct P {double x,y;};
+  struct Box {double w,h,yaw;std::array<P,4> corners;};
+  for(double h:{1.,4.}) {
+    Box b{4.,h,.7,{}};std::array<P,8> c{};
+    EXPECT_FALSE(obb_axis::Canonicalize(b,c));EXPECT_DOUBLE_EQ(.7,b.yaw);
+  }
+}
