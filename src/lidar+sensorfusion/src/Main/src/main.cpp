@@ -609,6 +609,7 @@ void ConfigureTrackingExperiment(ros::NodeHandle& private_node)
     private_node.param("lidar_yaw_ema_enabled", options.yaw_ema_enabled, true);
     private_node.param("lidar_obb_long_axis_state", options.obb_long_axis_state, false);
     private_node.param("lidar_association_innovation_gate", options.association_innovation_gate, false);
+    private_node.param("lidar_point_support_ownership", options.point_support_ownership, false);
     private_node.param("lidar_kf_reacquire_elapsed_init", options.reacquire_elapsed_init, false);
     private_node.param("lidar_kf_ego_translation_comp", options.ego_translation_comp, false);
     private_node.param("lidar_observation_quality_r", options.observation_quality_r, false);

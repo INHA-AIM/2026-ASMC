@@ -1,3 +1,4 @@
+#include "PointSupportOwnership.hpp"
 #include "AssociationInnovation.hpp"
 #include "ObbAxisCanonical.hpp"
 #include <Geometry/FrameBoundary.hpp>
@@ -790,6 +791,16 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
 
     vector<bool> matched_now(M, false);
     vector<bool> matched_prev(N, false);
+    std::vector<bool> support_retired(N,false);
+    if(tracking_options::Get().point_support_ownership && frame_boundary::Enabled()) {
+        support_retired=point_support::Retire(vec_Compare,vec_NowObject,assignment,vec_CostMatrix,
+            st_GPSIMU.st_IMU.f32_Yaw_rad);
+        for(int i=0;i<N;++i)if(support_retired[i]) {
+            if(i<int(assignment.size()))assignment[i]=-1;
+            matched_prev[i]=true; // Contained duplicate ends; no coast or state transfer.
+        }
+    }
+
 
     
     int matched_count = 0;

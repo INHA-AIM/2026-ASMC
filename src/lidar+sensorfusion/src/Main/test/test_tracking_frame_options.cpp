@@ -34,6 +34,7 @@ constexpr std::int64_t kSec = 1000000000LL;
 bool ForceOff() { const char* v = std::getenv("TRACKING_OPTIONS_FORCE_OFF"); return v && std::string(v) == "1"; }
 
 void ConfigureCase(bool reacquire, bool ego_translation) {
+  tracking_options::Get().point_support_ownership = false;
   tracking_options::Get().association_innovation_gate = false;
   frame_boundary::ConfigureForTest(true, false, "unit_test_calibration");
   st_VehicleSpec = VehicleSpec{};
@@ -324,9 +325,10 @@ TEST(ObbAxisCandidate, LongAxisAndSquareRemainUnchanged) {
 #include "../src/Lidar/Tracking/AssociationInnovation.hpp"
 namespace {
 int InnovationPair(bool enabled, double dx, double dy, double variance=.01, double vx=0.,
-                   double ego_yaw=0.) {
+                   double ego_yaw=0.,bool support=false) {
   ConfigureCase(true,true);
   tracking_options::Get().association_innovation_gate=enabled;
+  tracking_options::Get().point_support_ownership=support;
   st_Tracking.s32_NewTrackId=101;
   Ego e0; World world;world.x=20;world.y=4;
   auto previous=Detection(e0,world);
@@ -392,8 +394,9 @@ TEST(AssociationInnovation, GuardSameVehicleFaceSwitchMustKeepIdentity) {
 
 namespace {
 using ObservedIds=std::vector<std::vector<int>>;
-ObservedIds FragmentScenario(bool split,bool occlude,bool neighbors) {
-  ConfigureCase(true,true);tracking_options::Get().association_innovation_gate=true;
+ObservedIds FragmentScenario(bool split,bool occlude,bool neighbors,bool support=false,bool nis=true) {
+  ConfigureCase(true,true);tracking_options::Get().association_innovation_gate=!support&&nis;
+  tracking_options::Get().point_support_ownership=support;
   std::deque<std::vector<LiDARObjectInfo>> history;
   ObservedIds ids;
   ts_PrevTime=ros::Time();
@@ -451,4 +454,88 @@ TEST(AssociationInnovation, GuardSplitRejoinRetainsPhysicalObjectIdentity) {
 }
 TEST(AssociationInnovation, GuardFaceSwitchWhileEgoRotatesKeepsIdentity) {
   EXPECT_EQ(100,InnovationPair(true,.8,0.,.01,0.,.2));
+}
+
+#include "../src/Lidar/Tracking/PointSupportOwnership.hpp"
+namespace {
+int OwnedSparsePair(bool enabled,int n=5,double dt=.1,bool valid_frame=true) {
+  ConfigureCase(true,true);point_support::Reset();
+  tracking_options::Get().point_support_ownership=enabled;
+  st_Tracking.s32_NewTrackId=300;
+  Ego ego;auto local=Local(ego);World w;w.x=20;w.y=3;
+  auto small=Detection(ego,w);small.u16_Idx=1;small.s32_Id=100;small.s32_Age=1;
+  small.b_KfInitialized=true;small.s32_KfInitCount=1;
+  small.Eigen_KfState_CA<<small.f32_CoreX,small.f32_CoreY,0,0,0,0;small.Eigen_KfP_CA.setIdentity();
+  small.pcl_ClusterPoints.clear();
+  for(int i=0;i<n;++i){pcl::PointXYZI q;q.x=small.f32_CoreX+.03*(i%2);q.y=3;q.z=-.8+.15*i;q.intensity=1;small.pcl_ClusterPoints.push_back(q);}
+  small.f32_OBB_Width=.1;small.f32_OBB_Height=.05;
+  w.x=12;auto owner=Detection(ego,w);owner.s32_Id=200;owner.u16_Idx=0;owner.s32_Age=40;
+  owner.b_KfInitialized=true;owner.s32_KfInitCount=2;
+  owner.Eigen_KfState_CA<<owner.f32_CoreX,owner.f32_CoreY,0,0,0,0;owner.Eigen_KfP_CA.setIdentity();
+  auto current_owner=owner;
+  for(const auto& q:small.pcl_ClusterPoints)current_owner.pcl_ClusterPoints.push_back(q);
+  const std::int64_t ns=250*kSec;asmc::lidar::PoseSelection no_map;no_map.reason="test";
+  auto prepare=[&](std::int64_t t){
+    ts_CurrTime.fromNSec(t);frame_boundary::PrepareScan(asmc::lidar::Observation{t,t,t,"ros","test",""},local,st_VehicleSpec,no_map,1);
+    frame_boundary::StoreLeveling(asmc::lidar::Rot::Identity());
+  };
+  prepare(ns);frame_boundary::RecordTrackingFrame(small);frame_boundary::RecordTrackingFrame(owner);
+  small.tracking_frame_valid=valid_frame;
+  auto fragment=small;fragment.s32_Id=-1;fragment.u16_Idx=1;fragment.f32_CoreX+=2.6;
+  fragment.f32_OBB_CenterX+=2.6;
+  for(auto& q:fragment.pcl_ClusterPoints)q.x+=2.6;
+  std::deque<std::vector<LiDARObjectInfo>> history{{small,owner}};
+  std::vector<LiDARObjectInfo> now{fragment,current_owner};
+  prepare(ns+std::int64_t(dt*1e9));CompareCentroids(history,now,dt,local);
+  int result=-1;bool owner_alive=false;
+  for(const auto& t:now)if(t.s32_MissCount==0) {
+    if(t.u16_Idx==1)result=t.s32_Id;
+    if(t.s32_Id==200) {owner_alive=true;EXPECT_EQ(std::size_t(22+n),t.pcl_ClusterPoints.size());}
+  }
+  EXPECT_TRUE(owner_alive);EXPECT_GE(result,0); // Both original support and new detection survive.
+  tracking_options::Get().point_support_ownership=false;point_support::Reset();
+  return result;
+}
+}
+TEST(PointSupportOwnership, OffReproducesWrongInitialInheritance) {EXPECT_EQ(100,OwnedSparsePair(false));}
+TEST(PointSupportOwnership, OnEndsContainedDuplicateWithoutSuppressingDetection) {EXPECT_NE(100,OwnedSparsePair(true));}
+TEST(PointSupportOwnership, SparseInsufficientEvidenceFallsBack) {EXPECT_EQ(100,OwnedSparsePair(true,4));}
+TEST(PointSupportOwnership, LongGapFallsBack) {EXPECT_EQ(100,OwnedSparsePair(true,5,.6));}
+TEST(PointSupportOwnership, InvalidFrameFallsBack) {EXPECT_EQ(100,OwnedSparsePair(true,5,.1,false));}
+TEST(PointSupportOwnership, SameVehicleFaceSwitchKeepsId) {EXPECT_EQ(100,InnovationPair(false,.8,0.,.01,0.,0.,true));}
+TEST(PointSupportOwnership, RotationAndFaceSwitchKeepsId) {EXPECT_EQ(100,InnovationPair(false,.8,0.,.01,0.,.2,true));}
+TEST(PointSupportOwnership, SplitRejoinRetainsId) {
+  const auto ids=FragmentScenario(true,false,false,true);
+  for(int k=8;k<=10;++k)EXPECT_TRUE(ids[k][0]==ids[0][0]||ids[k][1]==ids[0][0]);
+  EXPECT_EQ(ids[0][0],ids[11][0]);
+}
+TEST(PointSupportOwnership, AdjacentObjectsAndNewBirth) {
+  const auto ids=FragmentScenario(false,false,true,true);
+  for(int k=1;k<18;++k){EXPECT_EQ(ids[0][0],ids[k][0]);EXPECT_EQ(ids[0][2],ids[k][2]);}
+  EXPECT_NE(ids[4][3],ids[4][0]);EXPECT_NE(ids[4][3],ids[4][2]);
+}
+TEST(PointSupportOwnership, ShortOcclusionReacquires) {
+  const auto ids=FragmentScenario(false,true,false,true);EXPECT_EQ(ids[0][0],ids[11][0]);
+}
+TEST(PointSupportOwnership, FastNewObjectAndAccelerationAreNotVetoed) {
+  ConfigureCase(true,true);tracking_options::Get().point_support_ownership=true;
+  auto r=Simulate(25,[](int){return Ego{};},[](int k) {
+    double t=k*kDt;World w;w.x=20+20*t+4*t*t;w.y=3;w.vx=20+8*t;return w;
+  },[](int){return true;});
+  for(auto id:r.ids)EXPECT_EQ(r.ids[0],id);
+  tracking_options::Get().point_support_ownership=false;
+}
+
+TEST(PointSupportOwnership, AmbiguousFastObjectRevealingBackgroundMustNotBeRetired) {
+  // Same sparse observation geometry also admits a moving foreground object revealing
+  // background at its old position. Without pre-birth surface history, ownership is ambiguous.
+  // The known physical moving-object identity must survive; a support-only retirement may fail.
+  EXPECT_EQ(100,OwnedSparsePair(true));
+}
+
+TEST(PointSupportOwnership, SplitRejoinBaselineControl) {
+ const auto legacy=FragmentScenario(true,false,false,false,false);
+ const auto candidate=FragmentScenario(true,false,false,true,false);
+ EXPECT_EQ(legacy,candidate);
+ EXPECT_NE(legacy[0][0],legacy[11][0]); // Existing production split/rejoin limitation, not a pass of the physical-ID requirement.
 }
