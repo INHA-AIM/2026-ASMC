@@ -4,7 +4,9 @@
 // and the canonical camera observation/status topics (camera::Receiver).
 // Outputs, by default only under /asmc_lidar/shadow/*: typed local/map
 // LidarObjectArray, 1 Hz diagnostics, a per-scan JSON trace (serialized only
-// while subscribed) and, with ~publish_tf, base_link -> ~tf_child_frame.
+// while subscribed), with ~publish_tf base_link -> ~tf_child_frame and, with
+// ~debug_enabled (default false), rate-limited stage clouds and a scan JSON
+// under ~debug_topic_prefix for the read-only web monitor (DebugPublisher).
 //
 // Isolation: every output name is resolved (remaps applied) and the node refuses
 // to start on an operational name unless ~allow_operational_output. It calls no
@@ -20,6 +22,7 @@
 #include <asmc_lidar/frame_time.hpp>
 #include <asmc_lidar/pipeline/front_camera_fusion.hpp>
 #include <asmc_lidar/pipeline/scan_trace.hpp>
+#include <asmc_lidar/shadow/debug_publisher.hpp>
 #include <asmc_lidar/shadow/ros_inputs.hpp>
 #include <asmc_lidar/shadow/runtime.hpp>
 
@@ -135,6 +138,7 @@ class ShadowNode {
     Guard();  // before any file is read or anything is advertised
     LoadConfig();
     SetUpCamera();
+    SetUpDebug();  // sets config_.pipeline.observer before the runtime copies the config
     runtime_ = std::make_unique<ShadowRuntime>(config_, camera_, front_);
     Advertise();
     Subscribe();
@@ -147,7 +151,8 @@ class ShadowNode {
     spinner.start();
     ROS_INFO_STREAM("asmc_lidar_shadow: running; outputs " << local_topic_ << ", " << map_topic_ << ", "
                     << diagnostics_topic_ << ", " << trace_topic_ << (publish_tf_ ? ", /tf" : "")
-                    << "; camera fusion " << (camera_ ? std::string("on") : "off (" + camera_reason_ + ")"));
+                    << "; camera fusion " << (camera_ ? std::string("on") : "off (" + camera_reason_ + ")")
+                    << "; debug stages " << (debug_ ? "on under " + debug_config_.topic_prefix : std::string("off")));
     ros::waitForShutdown();
     spinner.stop();  // joins the callback threads: no callback touches the runtime after this
     {
@@ -175,6 +180,7 @@ class ShadowNode {
     std::int64_t receipt_steady_ns = 0;
     std::int64_t receipt_ros_ns = 0;
     std::uint64_t seq = 0;
+    std::string sensor_frame;
   };
   struct Stats {
     std::uint64_t processed = 0, invalid = 0, stamp_errors = 0, scans_processed = 0;
@@ -209,13 +215,24 @@ class ShadowNode {
     pnh_.param("allow_operational_output", allow_operational_, false);
     pnh_.param("spinner_threads", spinner_threads_, 4);
     spinner_threads_ = std::max(2, spinner_threads_);
+    // Monitoring-only stage output, default OFF (see shadow/debug_publisher.hpp).
+    pnh_.param("debug_enabled", debug_config_.enabled, false);
+    pnh_.param<std::string>("debug_topic_prefix", debug_config_.topic_prefix, "/asmc_lidar/shadow/debug");
+    pnh_.param("debug_rate_hz", debug_config_.rate_hz, 5.0);
+    int debug_max_points = 20000;
+    pnh_.param("debug_max_points", debug_max_points, 20000);
+    debug_config_.max_points = static_cast<std::size_t>(std::max(1, debug_max_points));
+    debug_config_.leveled_frame = tf_child_frame_;
   }
 
   // Refuses operational outputs. Names are resolved exactly as advertise()
   // resolves them (namespace and remaps applied).
   void Guard() {
     std::vector<std::string> refused;
-    for (const std::string* topic : {&local_topic_, &map_topic_, &diagnostics_topic_, &trace_topic_}) {
+    std::vector<const std::string*> outputs = {&local_topic_, &map_topic_, &diagnostics_topic_, &trace_topic_};
+    const auto debug_topics = DebugPublisher::TopicNames(debug_config_.topic_prefix);
+    for (const auto& topic : debug_topics) outputs.push_back(&topic);
+    for (const std::string* topic : outputs) {
       const std::string resolved = nh_.resolveName(*topic);
       if (OperationalTopic(resolved)) refused.push_back(*topic + " -> " + resolved);
       for (const std::string* input : {&points_topic_, &imu_topic_, &can_topic_, &gps_topic_,
@@ -294,6 +311,14 @@ class ShadowNode {
     }
   }
 
+  // Monitoring-only stage publisher; the pipeline observer pointer is set in the
+  // config the runtime is constructed from (Pipeline keeps a copy of it).
+  void SetUpDebug() {
+    if (!debug_config_.enabled) return;
+    debug_ = std::make_unique<DebugPublisher>(nh_, debug_config_, config_);
+    config_.pipeline.observer = debug_.get();
+  }
+
   // Ported from Main src/Geometry/FrameBoundaryPublisher.cpp:36-43 (Publisher ctor) (8f93c22e).
   void Advertise() {
     local_pub_ = nh_.advertise<asmc_msgs::LidarObjectArray>(local_topic_, 5);
@@ -355,6 +380,7 @@ class ShadowNode {
     pending.seq = seq;
     pending.receipt_steady_ns = receipt;
     pending.receipt_ros_ns = receipt_ros;
+    pending.sensor_frame = msg->header.frame_id;
     std::string reason;
     bool accepted = false;
     try {
@@ -428,6 +454,7 @@ class ShadowNode {
       now.decision_ns = now.steady_now_ns;
       now.ros_now_ns = RosNow();
     };
+    if (debug_) debug_->SetScanContext(pending.sensor_frame, pending.seq, pending.receipt_ros_ns);
     const ScanOutput out = runtime_->ProcessScan(pending.scan, config_.local_wait_timeout_s, times);
     if (!ros::ok()) return;
     if (out.arrays.accepted) {
@@ -437,6 +464,7 @@ class ShadowNode {
     if (tf_ && out.arrays.accepted && out.arrays.observed) PublishTf(out);
     Record(pending, out);
     if (trace_pub_.getNumSubscribers() > 0) PublishTrace(pending, out);
+    if (debug_) debug_->Finish(pending.scan.time.stamp_ns, out);
   }
 
   // Ported from Main src/Geometry/FrameBoundaryPublisher.cpp:80-87 (TF; child renamed, opt-in) (8f93c22e).
@@ -589,6 +617,22 @@ class ShadowNode {
     value("tunnel_filter", config.pipeline.tunnel.enabled ? "true" : "false");
     value("publish_tf", publish_tf_ ? tf_child_frame_ : "false");
     value("velocity_status", kVelocityStatus);
+    value("debug_enabled", debug_ ? "true" : "false");
+    if (debug_) {
+      const DebugCounters d = debug_->counters();
+      value("debug_topic_prefix", debug_config_.topic_prefix);
+      number("debug_rate_hz", debug_config_.rate_hz);
+      number("debug_max_points", debug_config_.max_points);
+      number("debug_admitted", d.admitted);
+      number("debug_published", d.published);
+      number("debug_skipped_no_subscriber", d.skipped_no_subscriber);
+      number("debug_skipped_throttle", d.skipped_throttle);
+      number("debug_overwritten", d.overwritten);
+      number("debug_capture_ms_last", d.capture_ms_last);
+      number("debug_capture_ms_max", d.capture_ms_max);
+      number("debug_encode_ms_last", d.encode_ms_last);
+      number("debug_encode_ms_max", d.encode_ms_max);
+    }
     number("local_subscribers", local_pub_.getNumSubscribers());
     number("map_subscribers", map_pub_.getNumSubscribers());
     array.status.push_back(status);
@@ -609,6 +653,8 @@ class ShadowNode {
   std::unique_ptr<camera::Receiver> receiver_;
   std::shared_ptr<fusion::CameraSource> camera_;
   std::string camera_reason_;
+  DebugPublisherConfig debug_config_;
+  std::unique_ptr<DebugPublisher> debug_;  // before runtime_: the pipeline holds a raw observer pointer
   std::unique_ptr<ShadowRuntime> runtime_;
 
   ros::Publisher local_pub_, map_pub_, diagnostics_pub_, trace_pub_;

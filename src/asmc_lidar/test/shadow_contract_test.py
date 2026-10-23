@@ -5,9 +5,12 @@
 - catkin_package() exports are exactly the pre-shadow ones (the shadow
   libraries stay package-private, so Main never links them);
 - no asmc_lidar source includes Main/Msg headers or hard-codes /home paths;
-- launch files start only asmc_lidar_shadow_node with outputs under
-  /asmc_lidar/shadow, and no other launch file in the repository starts or
-  includes it;
+- launch files start only asmc_lidar_shadow_node (outputs under
+  /asmc_lidar/shadow) and, in monitor.launch, the read-only web monitor node
+  bound to loopback on a port other than the planner dashboard's 8088;
+  no other launch file in the repository starts or includes the shadow node;
+- the monitor scripts are executable, import no ROS message publisher and
+  the web assets reference no external URL;
 - config/shadow_pipeline.yaml uses the mount of config/autonav_v3.yaml and the
   HD-map origin of config/contracts/hd_map_topic_contract_v1.yaml;
 - the rostest node script is executable (and tracked as 100755 once staged) and never skips
@@ -26,6 +29,10 @@ PACKAGE = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE.parents[1]  # repository root when the package sits in <root>/src/asmc_lidar
 SELF = Path(__file__).resolve()
 SHADOW_NODE = 'asmc_lidar_shadow_node'
+MONITOR_NODE = 'asmc_lidar_monitor_node.py'
+MONITOR_SCRIPTS = ('scripts/asmc_lidar_monitor_node.py', 'scripts/asmc_lidar_monitor_core.py')
+WEB_ASSETS = ('web/index.html', 'web/app.js', 'web/monitor_view.js', 'web/app.css')
+PLANNER_DASHBOARD_PORT = '8088'
 OUTPUT_ARGS = ('objects_local_topic', 'objects_map_topic', 'diagnostics_topic', 'trace_topic')
 FORBIDDEN_DEPENDENCIES = {'Main', 'Msg', 'asmc_camera', 'tensorrt', 'torch'}
 SOURCE_SUFFIXES = {'.c', '.cc', '.cpp', '.h', '.hpp', '.py', '.launch', '.test', '.yaml', '.yml', '.xml',
@@ -101,9 +108,26 @@ class ShadowContractTest(unittest.TestCase):
         for path in launches:
             root = ET.parse(path).getroot()
             self.assertEqual(root.findall('.//include'), [], path)
-            nodes = root.findall('.//node')
+            all_nodes = root.findall('.//node')
+            monitors = [n for n in all_nodes if n.get('type') == MONITOR_NODE]
+            nodes = [n for n in all_nodes if n.get('type') != MONITOR_NODE]
             self.assertEqual([(n.get('pkg'), n.get('type')) for n in nodes], [('asmc_lidar', SHADOW_NODE)], path)
             arguments = {a.get('name'): a.get('default', a.get('value')) for a in root.findall('.//arg')}
+            if path.name == 'monitor.launch':
+                self.assertEqual([(n.get('pkg'), n.get('required')) for n in monitors], [('asmc_lidar', 'false')], path)
+                self.assertEqual(arguments.get('start_pipeline'), 'true', path)
+                self.assertEqual(nodes[0].get('if'), '$(arg start_pipeline)', path)
+                self.assertEqual(arguments.get('bind_address'), '127.0.0.1', path)
+                self.assertEqual(arguments.get('open_browser'), 'false', path)
+                self.assertNotEqual(arguments.get('dashboard_port'), PLANNER_DASHBOARD_PORT, path)
+                self.assertTrue(arguments.get('debug_topic_prefix', '').startswith('/asmc_lidar/shadow/'), path)
+                monitor_params = {p.get('name'): p.get('value') for p in monitors[0].findall('param')}
+                self.assertEqual(monitor_params.get('bind_address'), '$(arg bind_address)', path)
+                self.assertEqual(monitor_params.get('port'), '$(arg dashboard_port)', path)
+                self.assertEqual(monitor_params.get('web_dir'), '$(find asmc_lidar)/web', path)
+            else:
+                self.assertEqual(monitors, [], path)
+                self.assertNotIn('debug_enabled', {p.get('name') for p in nodes[0].findall('param')}, path)
             for name in OUTPUT_ARGS:
                 self.assertIn(name, arguments, '%s: %s' % (path, name))
                 self.assertTrue(arguments[name].startswith('/asmc_lidar/shadow/'), '%s: %s' % (path, name))
@@ -135,8 +159,9 @@ class ShadowContractTest(unittest.TestCase):
         # rostest finds <test type="shadow_node_test.py"> only if it is executable.
         # The repository uses core.filemode=false, so a plain `git add` would record
         # 100644: stage it with `git add --chmod=+x`; this check catches a 100644 entry.
-        script = PACKAGE / 'test' / 'ros' / 'shadow_node_test.py'
-        self.assertTrue(os.access(str(script), os.X_OK), '%s is not executable' % script)
+        for name in ('shadow_node_test.py', 'monitor_node_test.py'):
+            script = PACKAGE / 'test' / 'ros' / name
+            self.assertTrue(os.access(str(script), os.X_OK), '%s is not executable' % script)
         if not (ROOT / '.git').exists():
             self.skipTest('not a git checkout')
         # Explicit git-dir/work-tree: CI and docker run as root on a checkout owned by
@@ -152,10 +177,40 @@ class ShadowContractTest(unittest.TestCase):
             self.skipTest('not tracked yet (stage it with git add --chmod=+x)')
         self.assertEqual(out[0], '100755', 'index mode of %s' % script)
 
+    def test_monitor_scripts_are_executable_and_read_only(self):
+        for relative in MONITOR_SCRIPTS:
+            script = PACKAGE / relative
+            self.assertTrue(script.is_file(), script)
+            self.assertTrue(os.access(str(script), os.X_OK), '%s is not executable' % script)
+            text = script.read_text()
+            self.assertTrue(text.startswith('#!/usr/bin/env python3'), script)
+            # Read-only: no ROS publisher, service call/proxy, parameter write or shell execution.
+            for forbidden in ('rospy.Publisher', 'ServiceProxy', 'rospy.Service(', 'set_param', 'os.system(',
+                              'shell=True'):
+                self.assertNotIn(forbidden, text, '%s uses %s' % (script, forbidden))
+        core = (PACKAGE / 'scripts/asmc_lidar_monitor_core.py').read_text()
+        self.assertNotIn('import rospy', core)
+        for relative in WEB_ASSETS:
+            asset = PACKAGE / relative
+            self.assertTrue(asset.is_file(), asset)
+            text = asset.read_text()
+            self.assertIsNone(re.search(r'https?://|//cdn\.|<script[^>]+src="(?!(?:app|monitor_view)\.js")', text), asset)
+        if (ROOT / '.git').exists():
+            command = ['git', '--git-dir=%s' % (ROOT / '.git'), '--work-tree=%s' % ROOT, 'ls-files', '-s', '--']
+            command += [str(PACKAGE / relative) for relative in MONITOR_SCRIPTS]
+            try:
+                out = subprocess.run(command, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                     universal_newlines=True, timeout=30).stdout.splitlines()
+            except (OSError, subprocess.SubprocessError):
+                out = []
+            for line in out:  # tracked entries must be 100755 (core.filemode=false: git add --chmod=+x)
+                self.assertEqual(line.split()[0], '100755', line)
+
     def test_rostest_node_cases_cannot_skip(self):
         # rosunit's XML runner records a skipped case as passed, so CI could not see it.
-        text = (PACKAGE / 'test' / 'ros' / 'shadow_node_test.py').read_text()
-        self.assertIsNone(re.search(r'skipTest|unittest\.skip|skipIf|skipUnless|SkipTest', text))
+        for name in ('shadow_node_test.py', 'monitor_node_test.py'):
+            text = (PACKAGE / 'test' / 'ros' / name).read_text()
+            self.assertIsNone(re.search(r'skipTest|unittest\.skip|skipIf|skipUnless|SkipTest', text), name)
 
     def test_pipeline_config_matches_mount_and_map_contract(self):
         config = yaml.safe_load((PACKAGE / 'config/shadow_pipeline.yaml').read_text())

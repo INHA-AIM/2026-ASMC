@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>asmc_lidar shadow monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header id="status-bar">
+  <div class="chips">
+    <span class="chip" id="chip-server">서버: 연결 중</span>
+    <span class="chip" id="chip-ros">ROS: -</span>
+    <span class="chip" id="chip-pipeline">pipeline: -</span>
+    <span class="chip" id="chip-debug">모니터 데이터: -</span>
+    <span class="chip" id="chip-typed">typed local: -</span>
+    <span class="chip" id="chip-map">map: -</span>
+    <span class="chip" id="chip-camera">camera: -</span>
+    <span class="chip" id="chip-leveling">roll/pitch: -</span>
+    <span class="chip" id="chip-tunnel">TunnelFilter: -</span>
+  </div>
+  <details class="runtime-details"><summary>실행 수치 · Hz / 처리시간</summary><div class="numbers">
+    <span>표시 장면 stamp <b id="n-stamp">-</b></span>
+    <span>표시 장면 경과 <b id="n-age">-</b></span>
+    <span>서버 scan 수신 경과 <b id="n-server-age">-</b></span>
+    <span>세션 <b id="n-session">-</b> · frame 표시/서버 <b id="n-frame">-</b></span>
+    <span>입력 <b id="n-input-hz">-</b> Hz · 처리 <b id="n-proc-hz">-</b> Hz · 모니터 전송 <b id="n-debug-hz">-</b> Hz · 웹 표시 <b id="n-web-hz">-</b> Hz</span>
+    <span>scan 입력 <b id="n-received">-</b> · 처리 <b id="n-processed">-</b> · 덮어씀 <b id="n-overwritten">-</b> · 거부 <b id="n-rejected">-</b></span>
+    <span>처리시간 p50 <b id="n-p50">-</b> ms · p95 <b id="n-p95">-</b> ms</span>
+  </div></details>
+  <div id="banner" class="banner hidden"></div>
+</header>
+
+<main>
+  <aside id="left">
+    <section>
+      <h2>좌표계</h2>
+      <label><input type="radio" name="frame" value="base" checked> Local · 차량 기준</label>
+      <label><input type="radio" name="frame" value="map" id="frame-map" disabled> Map · 절대좌표 <span id="frame-map-note" class="note">(유효한 pose 대기)</span></label>
+    </section>
+    <section>
+      <h2>점군 단계 · 하나 선택</h2>
+      <label><span class="sw" style="background:#6b7280"></span><input type="radio" name="stage" data-stage="raw"> Raw · 원본 <span class="cnt" id="c-raw">-</span></label>
+      <label><span class="sw" style="background:#a78bfa"></span><input type="radio" name="stage" data-stage="roi"> ROI · 관심영역 <span class="cnt" id="c-roi">-</span></label>
+      <div hidden>
+      <label><span class="sw" style="background:#60a5fa"></span><input type="checkbox" data-stage="voxel"> voxel <span class="cnt" id="c-voxel">-</span></label>
+      <label><span class="sw" style="background:#38bdf8"></span><input type="checkbox" data-stage="leveled"> leveled (전체) <span class="cnt" id="c-leveled">-</span></label>
+      <label><span class="sw" style="background:#4b5563"></span><input type="checkbox" data-stage="ground"> RANSAC 제거 지면 <span class="cnt" id="c-ground">-</span></label>
+      <label><span class="sw" style="background:#fb923c"></span><input type="checkbox" data-stage="tunnel"> tunnel 제거 <span class="cnt" id="c-tunnel">-</span></label>
+      <label><span class="sw sw-multi"></span><input type="checkbox" data-stage="clusters"> cluster 색 구분 <span class="cnt" id="c-clusters">-</span></label>
+      <label><span class="sw" style="border:1px dashed #fbbf24"></span><input type="checkbox" data-stage="detections"> detection OBB (추적 전) <span class="cnt" id="c-detections">-</span></label>
+      <label><span class="sw" style="border:2px solid #facc15"></span><input type="checkbox" data-stage="typed"> typed local 배열 (base_link) <span class="cnt" id="c-typed">-</span></label>
+      </div>
+      <label><span class="sw" style="background:#34d399"></span><input type="radio" name="stage" data-stage="nonground" checked> RANSAC 이후 · 지면 제외 <span class="cnt" id="c-nonground">-</span></label>
+      <p class="note">점 수 / 화면 샘플 수. 화면 샘플링은 실제 필터 삭제와 다릅니다.</p>
+    </section>
+    <section>
+      <h2>최종 추적 결과</h2>
+      <label><input type="checkbox" data-stage="tracks" checked> 추적 OBB <span class="cnt" id="c-tracks">-</span></label>
+      <label><input type="checkbox" id="opt-show-pred"> 예측 트랙(pred) 표시</label>
+      <label><input type="checkbox" id="opt-hide-outside"> 주행가능영역 밖 객체 숨기기</label>
+      <p class="note">객체 박스·목록만 숨깁니다. 점군·토픽은 유지하며 판정 불가는 숨기지 않습니다.</p>
+      <label><input type="checkbox" id="opt-labels" checked> ID · 카메라 분류 표시</label>
+      <p class="note">색은 기존 Main 알고리즘의 동정적 진단입니다.<br>공개 토픽의 유효성·필터는 바꾸지 않습니다.</p>
+    </section>
+    <section>
+      <h2>보기</h2>
+      <label>화면 <select id="opt-view"><option value="bev">2D · 위에서</option><option value="orbit">3D · 회전 보기</option></select></label>
+      <label><input type="checkbox" id="opt-road" checked> 주행가능영역 · 연보라</label>
+      <p id="road-note" class="note">베이크 지도 확인 중</p>
+      <div hidden><input type="checkbox" id="opt-compare"><select id="opt-side"><option value="xz">xz</option></select></div>
+      <label>점 크기 <select id="opt-psize"><option value="1">1 px</option><option value="2" selected>2 px</option><option value="3">3 px</option></select></label>
+      <div class="buttons">
+        <button id="btn-center">차량 중심</button>
+        <button id="btn-zoom-in">+</button>
+        <button id="btn-zoom-out">−</button>
+        <button id="btn-pause">일시정지</button>
+      </div>
+      <p class="note">좌클릭 드래그: 2D·3D 회전<br>가운데 버튼 드래그: 이동<br>Shift+좌클릭 드래그: 이동<br>휠: 확대/축소 · 좌클릭: 객체 선택<br>3D 자차 높이 1.5m는 시각화용입니다.</p>
+    </section>
+    <section id="legend">
+      <h2>범례</h2>
+      <div>관측 track(miss=0): 실선 · 예측 track(miss&gt;0): 점선 회색</div>
+      <div>! ID 변경 의심: 영역 안에서 가까운 위치·유사 크기의 ID 교체 (확정 아님, 3초 표시)</div>
+      <div><span style="color:#ff4545">빨강: 동적 / 동적 의심</span><br><span style="color:#22c55e">초록: 정적에 준함</span><br><span style="color:#facc15">노랑: 판정 불가 / 초기 관측 / GPS 무효</span><br>영역 안·밖은 객체 목록에서 별도 확인</div>
+    </section>
+  </aside>
+
+  <section id="views">
+    <div class="view" id="view-bev">
+      <canvas id="bev"></canvas>
+      <div class="view-label" id="bev-label">BEV · frame: base_link · x 전방↑ · y 좌←</div>
+    </div>
+    <div class="view" id="view-side" hidden>
+      <canvas id="side"></canvas>
+      <div class="view-label" id="side-label">측면 X–Z · 같은 scan</div>
+    </div>
+  </section>
+
+  <aside id="right">
+    <details>
+      <summary>선택 객체 상세</summary>
+      <div id="detail" class="detail">객체를 클릭하면 상세값을 표시합니다.</div>
+    </details>
+    <section>
+      <h2>객체 (track) — 클릭하여 선택</h2>
+      <div class="list-wrap">
+      <table class="list" id="track-table">
+        <thead><tr><th>ID</th><th>class</th><th>동정적</th><th>영역</th><th>거리</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </section>
+    <details>
+      <summary>상세 진단 · 문제가 있을 때 확인</summary>
+      <table class="kv" id="status-table"></table>
+    </details>
+  </aside>
+</main>
+<script src="monitor_view.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

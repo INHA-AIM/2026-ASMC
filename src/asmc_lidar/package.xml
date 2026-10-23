@@ -32,6 +32,12 @@
   <exec_depend>rosbag</exec_depend>
   <build_depend>tf2_ros</build_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <!-- Read-only Python web monitor runtime (not merely test dependencies). -->
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>rosgraph</exec_depend>
+  <exec_depend>python3-rospkg</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
   <test_depend>rostest</test_depend>
   <test_depend>rospy</test_depend>
   <test_depend>python3-yaml</test_depend>

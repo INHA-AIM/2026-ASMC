@@ -161,6 +161,11 @@ rostopic echo -n 1 /morai_sensor_bridge/diagnostics
 ```
 
 HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한다고 같은 publisher를 하나 더 띄우지 않습니다.
+
+shadow LiDAR(`asmc_lidar`)의 필터 단계·OBB·추적 결과를 브라우저에서 보려면 별도 터미널에서
+`roslaunch asmc_lidar monitor.launch open_browser:=true`를 실행합니다(`http://127.0.0.1:8091/`, 읽기 전용).
+이 launch는 shadow 노드와 모니터만 켜며 D의 Main과 함께 돌면 LiDAR 처리가 두 번 수행됩니다.
+판제는 계속 D의 Main을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
 전방 어댑터와 nested source 순서는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
 판제 단독/통합 차이는 [판제 운영](planning-control.md)을 봅니다.

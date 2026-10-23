@@ -11,6 +11,9 @@
 토픽·실행 방법을 정리했다. 실제 주행에는 기존 `lidar+sensorfusion` Main을 계속 사용한다.
 shadow 노드는 `/asmc_lidar/shadow/*`에만 발행하며 어떤 기존 launch에도 포함되지 않는다.
 구현·검증 상태, 미수락 항목과 저장소 Main과의 의도적 차이는 [현재 상태와 제한](docs/shadow-pipeline.md#현재-상태와-제한)에 있다.
+shadow 필터 단계별 점군·OBB·추적 결과를 브라우저에서 확인하는 **읽기 전용 웹 모니터**는
+`roslaunch asmc_lidar monitor.launch open_browser:=true`로 띄우며(기본 `http://127.0.0.1:8091/`),
+실행 방법·화면·상태 구분은 [웹 모니터](docs/web-monitor.md)에 있다.
 
 [카메라 입력 API·공용 상태 전환·직접 시험](docs/camera-input.md)을 손재호의 연결 시작점으로 사용한다.
 
@@ -38,6 +41,8 @@ shadow 노드는 `/asmc_lidar/shadow/*`에만 발행하며 어떤 기존 launch�
 | `test/` | 중심/8코너·시간·pose·속도·IMU 선택의 회귀시험 |
 | `include/asmc_lidar/pipeline/`, `src/{preprocessing,ground,clustering,obb,tracking,pose,pipeline,fusion,experimental}/` | Main common-geometry 경로의 동작 보존 이식(정적 라이브러리, 외부 export 없음) |
 | `include/asmc_lidar/shadow/`, `src/ros/`, `tools/shadow_replay.cpp`, `launch/`, `config/shadow_pipeline.yaml` | shadow 노드·replay·설정. 노드와 replay는 같은 runtime을 호출 |
+| `pipeline/stage_observer.hpp`, `shadow/debug_publisher.hpp`, `src/ros/debug_publisher.cpp` | 관측 전용 stage hook(기본 OFF)과 모니터용 단계 점군·scan JSON 발행 |
+| `scripts/asmc_lidar_monitor_*.py`, `web/`, `launch/monitor.launch`, `test/monitor/`, `test/ros/monitor_node.test` | 읽기 전용 웹 모니터(HTTP, loopback 기본)와 그 시험 |
 | `src/experimental/tunnel_filter/`, `test/experimental/` | PR #102 TunnelFilterCore byte 동일 복사본과 27개 시험. 연결 stage는 기본 OFF |
 
 `asmc::lidar::transform()`은 local 결과와 map 가용성을 분리한다. 호출자는 실제 적용한

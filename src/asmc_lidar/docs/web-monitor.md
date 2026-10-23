@@ -1,0 +1,221 @@
+# asmc_lidar 웹 모니터 — shadow 필터 결과를 브라우저에서 보기 (읽기 전용)
+
+`roslaunch asmc_lidar monitor.launch`는 **shadow LiDAR 노드**와 **읽기 전용 웹 모니터**를 함께 띄운다.
+목적은 "내 asmc_lidar가 실제로 어떤 점을 남겼고 어떤 객체를 추적하는지"를 확인하는 것이다.
+모니터는 ROS를 구독만 하고, 발행·서비스 호출·파라미터 변경·shell 실행을 하지 않는다.
+판제는 계속 기존 `Main`(`/last_lidar`)을 쓴다. 이 launch는 Main·planner·카메라 추론·UDP bridge·Velodyne
+driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. TunnelFilter는 기본 OFF다.
+
+## 가장 짧은 실행
+
+### 간소화 화면 / 3D / 베이크 지도
+
+- `예측 트랙(pred) 표시`는 기본 OFF다. miss>0 객체의 박스·라벨·목록·선택만 숨기며
+  추적기의 예측 계산이나 토픽은 바꾸지 않는다.
+
+- `주행가능영역 밖 객체 숨기기`(기본 OFF)는 OBB·라벨·객체 목록·선택에만 적용한다.
+  점군과 ROS 토픽은 유지한다. 영역 판정 불가는 외부로 단정해 숨기지 않는다.
+- `! ID 변경 의심`은 화면에서 관측한 교체 후보이며 동일 물체의 확정 식별이 아니다.
+  유효 map pose/영역 안 객체에 대해 최근 0.8초의 map 중심(거리 2m 이하),
+  OBB 크기비(1.8 이하), class 호환성을 비교한다. 기존 ID가 관측 중이거나 후보가
+  0.5m 이내 점수 차로 모호하면 표시하지 않는다. 의심 배지는 3 scan초 동안 유지한다.
+  GPS 무효, 세션 변경, scan 시각 역행, 1초 초과 공백은 이력을 초기화한다.
+  5Hz 화면 관측 기반이므로 모든 ID 전환을 잡지 못하며 실제 새 객체를 혼동할 수도 있다.
+
+- 좌표계는 Local(base_link) / Map만 선택한다. 점군은 Raw / ROI / RANSAC 이후 중 하나,
+  최종 추적 OBB와 ID·class는 별도 ON/OFF다. 측면 화면은 숨기고 수치·객체 상세는 접는다.
+- `보기 → 화면 → 3D · 회전 보기`: 점군 XYZ와 OBB 8 corner를 직교 투영한다.
+  좌클릭 드래그는 2D·3D 모두 회전, 가운데 버튼 드래그 또는 Shift+좌클릭 드래그는 이동,
+  휠은 확대다. 차량 중심 버튼은 이동·회전도 초기화한다. 실시간 추론·필터링 설정은 바꾸지 않는다.
+- 3D 자차는 실제 길이·폭·축 위치를 쓰되, 높이 1.5m는 시각화용 추정 외형이다.
+- 추적 OBB/라벨 색은 Main 판정 알고리즘의 **진단용** 결과다. DYNAMIC/PENDING 빨강,
+  LOW_THREAT 초록, UNKNOWN/invalid 노랑. 지도 중심점 포함 판정은 객체 목록의 별도 열이다.
+  현재 shadow 출력은 지도 기반으로 걸러지지 않는다.
+- `motion_display`는 기존 Main `MotionClassifier`의 중앙값·급변 후보·변위 확인·상태 전이
+  함수 본문을 유지한 transport-free 이식이다. 임계값은 현재 Main 기본값(x10/y4km/h,
+  변위 x8/y3km/h)이며 별도 튜닝하지 않았다. map OBB bounds/벡터는 저장된 scan Context로
+  계산하고 모든 처리 scan마다 갱신한다. GPS 무효 시 이력을 지워 UNKNOWN으로 복구한다.
+  이는 주행 성능 수락이나 typed dynamic/velocity validity 승격이 아니다. 판제는 미연결이다.
+- `주행가능영역 · 연보라`: 판제 패키지의 `config/hd_map/drivable.json`을 읽기 전용으로
+  표시한다. 원점은 판제 `config/behavior/global_info.json`과 pipeline YAML의 map.origin을
+  대조한다. 불일치·파일 누락이면 숨기고 사유를 표시한다. 판제 노드를 켤 필요는 없다.
+- `/api/drivable`은 서버 시작 때 읽은 지도 polygon만 제공한다. 원본/운영 지도를 수정하거나
+  이 영역으로 LiDAR 객체를 제거하지 않는다. 지도 부재가 LiDAR 처리를 막지 않는다.
+- scan의 map pose가 무효하면 Local 보기에서도 지도는 숨긴다. 3D 지도는 고도 모델이
+  아닌 자차 높이의 참고 평면이다. 과거 GPS 위치로 지도를 고정해 계속 표시하지 않는다.
+- 지도 파일이 바뀌면 모니터를 재시작한다. Python/launch 변경 후에는 launch 재시작이 필요하다.
+
+```bash
+# outer workspace 하나만 source한다 (nested Main devel 불필요)
+source /opt/ros/noetic/setup.bash && source devel/setup.bash
+roslaunch asmc_lidar monitor.launch open_browser:=true
+```
+
+접속 URL: `http://127.0.0.1:8091/` (기본 포트 8091, 기존 planner dashboard 8088과 다름).
+서버는 기본으로 loopback(127.0.0.1)에만 바인딩한다.
+
+| 상황 | 명령 |
+|---|---|
+| 기존 주행 구성(터미널 1~6)에 관측만 추가 | `roslaunch asmc_lidar monitor.launch open_browser:=true` |
+| 이미 실행 중인 shadow 노드에 모니터만 붙이기 | `roslaunch asmc_lidar monitor.launch start_pipeline:=false open_browser:=true` |
+| 카메라 없이 LiDAR만 시험 | `roslaunch asmc_lidar monitor.launch enable_camera_fusion:=false open_browser:=true` |
+| 포트 변경 | `roslaunch asmc_lidar monitor.launch dashboard_port:=8092` |
+| 다른 PC에서 접속(명시적 선택) | `roslaunch asmc_lidar monitor.launch bind_address:=0.0.0.0` |
+
+`start_pipeline:=false`로 붙이려면 실행 중인 shadow 노드가 `~debug_enabled:=true`로 시작돼 있어야 한다
+(`shadow_pipeline.launch`는 debug 출력이 기본 OFF다). 그렇지 않으면 화면 상단에
+"모니터 데이터: shadow 노드 debug_enabled=false"가 표시된다.
+
+## 인자
+
+| 인자 | 기본값 | 의미 |
+|---|---|---|
+| `start_pipeline` | `true` | false면 shadow 노드를 시작하지 않고 모니터만 띄운다 |
+| `open_browser` | `false` | 서버의 `/api/health`가 응답한 뒤 브라우저를 **한 번만** 연다 |
+| `dashboard_port` | `8091` | HTTP 포트 |
+| `bind_address` | `127.0.0.1` | `0.0.0.0`은 외부 접속 허용(명시적 선택) |
+| `max_clients` | `8` | 동시에 처리하는 HTTP 연결 수. 요청을 읽기 전(accept 직후)에 검사하며 초과 연결은 handler thread 없이 503 후 종료 |
+| `http_header_timeout_s` | `5.0` | 연결 후 요청 줄·헤더를 모두 보내야 하는 시간. 넘으면 서버가 연결을 끊는다 |
+| `http_request_timeout_s` | `20.0` | 연결 후 응답 쓰기까지 끝나야 하는 전체 시간. 읽지 않거나 매우 느리게 읽는 연결도 이 시간에 끊긴다 |
+| `debug_rate_hz` | `5.0` | shadow 노드가 단계 점군을 내보내는 주기 |
+| `debug_max_points` | `20000` | 단계당 전송 점 상한; 초과분은 stride 샘플 |
+| `debug_topic_prefix` | `/asmc_lidar/shadow/debug` | 모니터용 토픽 접두 |
+| `enable_camera_fusion` | (YAML 값, true) | `false`면 카메라 구독·fusion 없음 |
+| `lidar_level_roll`, `experimental_tunnel_filter`, `publish_tf`, 토픽 인자 | `shadow_pipeline.launch`와 같음 | |
+
+## 기존 실행 구성과의 관계
+
+### A. 기존 주행을 유지하면서 관측 추가
+
+터미널 1~6(`udp_bridge.sh`, `asmc_camera camera.launch`, `Main main.launch`, `lane_boundary_adapter`,
+`asmc_planner autonomy_no_bridges_v2.launch`, `asmc_planner dashboard.launch`)은 그대로 둔다.
+새 터미널 7에서:
+
+```bash
+cd <저장소>            # 예: /home/autonav/2026AIM/Yangtest_lidar_web_monitor 또는 컨테이너의 /root/ws
+source /opt/ros/noetic/setup.bash && source devel/setup.bash
+roslaunch asmc_lidar monitor.launch open_browser:=true
+```
+
+이 명령이 켜는 프로세스는 `asmc_lidar_shadow_node`와 `asmc_lidar_monitor_node.py` 둘뿐이다.
+bridge·카메라·Main은 이미 떠 있는 것을 구독한다(같은 토픽을 두 번 발행하지 않는다).
+**주의:** Main과 shadow가 함께 돌면 LiDAR 처리가 두 번 수행된다(독립 pipeline 2개, p50 약 35~65 ms/scan 추가).
+planner dashboard(8088, 판제 상태)와 이 LiDAR monitor(8091, 필터 단계·추적)는 서로 다른 화면이다.
+
+### B. LiDAR 독립 시험 (Main·planner 불필요)
+
+입력은 bridge(`./scripts/udp_bridge.sh`) 또는 bag(`rosbag play --clock in.bag` + `rosparam set use_sim_time true`)이다.
+카메라 class를 보려면 기존 `asmc_camera camera.launch` 한 세트만 추가한다. 관측 시험이므로 Main과 planner는 켜지 않는다.
+
+```bash
+# 터미널 1: roscore 또는 bridge/bag
+# 터미널 2 (선택): roslaunch asmc_camera camera.launch mode:=active models:=objects
+# 터미널 3:
+source /opt/ros/noetic/setup.bash && source devel/setup.bash
+roslaunch asmc_lidar monitor.launch enable_camera_fusion:=false open_browser:=true
+```
+
+bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌아가 shadow 노드가 scan을
+`duplicate_or_regressing_source_stamp`로 거부한다(화면은 stale). 처음부터 다시 보려면 노드를 다시 시작한다.
+
+## 환경별 브라우저 접속
+
+| 환경 | `open_browser:=true` 동작 | 수동 접속 |
+|---|---|---|
+| 일반 Ubuntu(데스크톱) | `xdg-open` → python `webbrowser` | `http://127.0.0.1:8091/` |
+| WSL Ubuntu + Windows 브라우저 | `wslview` → `powershell.exe Start-Process` → `cmd.exe start` | Windows 브라우저에서 `http://127.0.0.1:8091/` (WSL2 localhost 전달; 127.0.0.1 바인딩으로 확인됨) |
+| Docker(`docker/ros-noetic`, `network_mode: host`) | 컨테이너 안에서는 열지 않고 URL만 출력 | 호스트 브라우저에서 `http://127.0.0.1:8091/` (host 네트워크는 loopback을 공유) |
+| Docker 포트 매핑 없는 bridge 네트워크 | 열지 않음 | 기존 컨테이너를 재생성하지 않는다. 새 컨테이너를 만들 때만 `-p 8091:8091`과 `bind_address:=0.0.0.0`을 함께 쓴다 |
+
+브라우저 열기에 실패해도 LiDAR 노드와 서버는 계속 동작하며 로그에 정확한 URL을 출력한다.
+재연결 때 브라우저를 다시 열지 않는다. 포트가 사용 중이면 모니터 노드만 종료되고(`required=false`)
+shadow 노드는 계속 실행된다. 이때 `dashboard_port:=8092`처럼 다른 포트로 모니터만 다시 띄운다
+(`start_pipeline:=false`).
+
+## 화면
+
+- **큰 화면**: BEV 또는 3D 점군·OBB·자차. 좌클릭 드래그 회전, 가운데 드래그 이동,
+  휠 확대/축소, `차량 중심` 복귀. 별도 측면 화면은 표시하지 않는다.
+- **단계 선택**: Raw / ROI / RANSAC 이후(지면 제외) 중 하나. 추적 OBB·ID·class는 별도 ON/OFF다.
+  pred 표시는 기본 OFF, 영역 밖 객체 숨기기는 기본 OFF다. 실제 점 수와 화면 샘플 수는 구분한다.
+- **좌표계**: Local(base_link) / Map. 그 scan의 수평화·장착·map pose로 변환하며,
+  map pose 무효 시 Local은 유지하고 지도 오버레이와 Map 선택은 비활성화한다.
+- **상태**: 서버·pipeline·map·카메라 상태는 상단, Hz·처리시간 등은 접힌 실행 수치에 있다.
+- **객체 상세**(오른쪽): track ID·age·miss, classification·camera_class, frame·stamp, OBB center(표시 frame과
+  leveled), length/width/height, yaw, source point count, distance. 속도·동정적 validity가 false이므로
+  **"미검증/미제공"**으로 표시한다. KF 내부값(`abs_v`, `velocity`)은 아래 "진단용 미검증 값"에만 보인다.
+- 오른쪽 상태 표: 단계별 실제 점 수, RANSAC 비지면/제거 지면, cluster 수, detections/tracks(관측/예측),
+  roll/pitch/yaw/속도, 지면 평면 계수, map pose, 처리·capture ms, 누락 단계(waiting/missing), 모니터 수신 통계.
+
+같은 scan stamp의 점군·OBB·메타데이터만 한 장면으로 묶는다. 일부 단계가 아직 오지 않은 scan은 0.6 s까지
+기다렸다가 누락 단계를 `missing`으로 표시한다. 다른 시각의 데이터를 섞지 않는다.
+
+OBB는 BEV에서 **회전된 footprint**(메시지 corner 0–3을 선택 frame으로 변환·투영한 다각형)로 그린다. 상자 안의
+선은 중심에서 corner 1–2 변의 중점까지로, OBB 축(corner 0→1 변, yaw 방향)과 평행하다.
+3D는 8개 corner의 12개 변을 그린다. 화면 표시를 위해 ROS 객체의 yaw·corner를 바꾸지 않는다.
+
+### 표시 장면의 신선도와 서버 재시작
+
+- 서버는 실행마다 새 **세션 ID**를 만들고 frame 번호를 1부터 다시 센다. 브라우저는 `since=<frame>&session=<세션>`으로
+  요청하며, 세션이 다르면(또는 cursor가 서버 번호보다 크면) 서버는 최신 장면을 즉시 보낸다. 브라우저는 세션이 바뀌면
+  이전 장면·점군·객체를 버리고 새 장면부터 그린다(페이지 새로고침 불필요, 이전 번호를 따라잡을 때까지 기다리지 않음).
+- **표시 장면 경과** = 서버가 그 장면을 보낼 때의 나이(모니터의 monotonic 시계, 장면 첫 조각 수신 시점부터) + 브라우저가
+  받은 뒤 지난 시간(`performance.now`). 상태값(`/api/status`, 서버의 scan 수신 경과)과 분리해서 판단하므로 상태만
+  갱신되고 장면이 오지 않으면 STALE이 된다. 새로 받은 장면이라도 이미 오래된 것이면 fresh가 아니다. ROS `/clock`을 쓰지 않아
+  bag/시뮬레이터 시계가 멈춰도 경과·STALE이 계속 갱신된다.
+- 요청은 3 s 안에 응답이 없으면 취소하고 다음 주기(0.2 s)에 다시 시도한다. 연결 실패·응답 정지(timeout)·서버 혼잡(503)을
+  구분해 표시한다.
+
+### 상태 구분
+
+| 표시 | 뜻 |
+|---|---|
+| 서버: 연결 실패 / 응답 정지 (timeout) / 서버 혼잡 (503) | 모니터 HTTP 서버 접속 불가 / 3 s 안에 응답 없음(요청 취소 후 재시도) / 연결 상한 초과. 마지막 화면은 과거 데이터(붉은 배너) |
+| 서버 재시작 감지 (세션 변경) | 이전 장면과 객체를 폐기했고 새 서버의 첫 장면을 기다리는 중 |
+| pipeline: ROS 연결됨, LiDAR 입력 없음 | shadow diagnostics가 `input_silence`(scan이 1 s 이상 처리되지 않음) |
+| pipeline: LiDAR 입력 stale | 마지막 debug scan이 1 s 이상 지남 |
+| pipeline: IMU/CAN 무효 → INPUT_INVALID | 로컬 pose 없음/stale/무효; 객체 0개, 점군은 표시하지 않음 |
+| typed local: OBSERVED_EMPTY | 정상 처리, 객체 없음 |
+| map: 사용 불가 — POSE_UNAVAILABLE | GPS 없음/stale/무효; local 화면은 계속 동작 |
+| camera: LiDAR 단독 / fusion 비활성 / 비활성(사유) | 카메라 보정 파일 없음 / `enable_camera_fusion:=false` / 카메라 missing·stale·invalid |
+| 화면 정지 (Pause) | 사용자가 표시를 멈춘 것(보라 배너, BEV 라벨 `PAUSED`, 표시 장면 경과 계속 증가). 서버·pipeline은 계속 동작하고 상태값은 계속 갱신된다. 재개하면 다음 요청에서 최신 장면을 받는다 |
+| STALE 배너 + 흐린 OBB | **표시 중인 장면**이 1 s보다 오래됨. 배너는 서버가 debug scan을 받고 있는데 장면이 안 오는지, 입력 자체가 멈췄는지 구분한다. 표시 객체는 현재 장애물이 아니다 |
+
+## 모니터용 토픽 (shadow 노드 `~debug_enabled:=true`일 때만)
+
+| 토픽 | 타입 | 내용 |
+|---|---|---|
+| `<prefix>/raw`, `/roi`, `/voxel` | `sensor_msgs/PointCloud2` | sensor frame(velodyne) x y z intensity |
+| `<prefix>/leveled` | `sensor_msgs/PointCloud2` | 수평화 frame + `label`(uint8: 0 군집 입력, 1 RANSAC 제거 지면, 2 tunnel 제거) + `cluster`(int32, −1 없음) |
+| `<prefix>/scan` | `std_msgs/String` | `asmc_lidar_debug_scan_v1` JSON: frame 이름, 수평화 행렬, `base_from_sensor`, `base_from_leveled`, map pose, counts, timings, 샘플 정보(actual/sent/stride), 지면 평면, detection·track OBB(수평화 frame), typed local/map 배열, fusion 상태, 차량 치수 |
+
+- `debug_rate_hz`로 제한된 scan만 내보내며 구독자가 없으면 아무것도 직렬화하지 않는다.
+- 캡처는 pipeline 스레드에서 bounded stride 복사만 하고(실측 1~3 ms) 직렬화·발행은 별도 스레드가 한다.
+  최신 snapshot 하나만 보관한다(덮어쓴 수는 diagnostics `debug_overwritten`).
+- 알고리즘 입력·출력은 바꾸지 않는다(`test/pipeline/test_stage_observer.cpp`: observer 유무와 무관하게 digest·track 동일).
+- 제거된 지면은 RANSAC이 실제로 남긴 index로 표시한다(raw/voxel 좌표 차집합이 아니다).
+- 공용 `asmc_msgs` 계약은 바꾸지 않았다. `debug/*` 이름도 운영 이름 guard를 거친다.
+
+## 성능과 제한
+
+- 기본 5 Hz, 단계당 최대 20000점. 실제 bag(raw 18k, voxel 9.7k)에서 frame 한 장 약 1 MB, loopback fetch 2~4 ms.
+- 브라우저가 느리면 폴링 간격만 늘어난다(서버는 최신 장면을 캐시하고 pipeline은 기다리지 않는다).
+- HTTP 연결은 `max_clients`개까지만 handler thread를 가진다. 초과 연결은 bounded queue(32)의 rejecter thread 하나가
+  non-blocking 503으로 닫고, queue가 차면 즉시 닫는다. 헤더를 끝내지 않는 연결은 `http_header_timeout_s`, 큰 응답을 읽지 않거나
+  천천히 읽는 연결은 `http_request_timeout_s`에서 reaper thread가 끊고 slot을 돌려준다. handler는 store/state lock을 짧게 복사할
+  때만 잡으므로 느린 client가 ROS callback을 기다리게 하지 않는다. 연결 통계는 `/api/status`의 `http`에 있다.
+  장면 보관은 최대 4개, 무제한 history·trail·journal은 없다.
+- 2D Canvas만 사용하며 외부 라이브러리·CDN·인터넷이 필요 없다.
+- 속도 정확도·동정적 판정·카메라 fusion 성능은 이 화면의 검증 범위가 아니다.
+
+## 시험
+
+```bash
+python3 src/asmc_lidar/test/monitor/test_monitor_core.py      # 장면 묶기·frame 인코딩·HTTP 경로·세션·연결 상한/timeout·브라우저 열기 (ROS 불필요)
+node src/asmc_lidar/test/monitor/test_monitor_view.js         # 2D/3D·지도·색상·표시 필터·ID 의심·신선도 (node >= 10, CI 포함)
+(cd build/asmc_lidar && ctest -R "stage_observer|monitor" --output-on-failure)
+rostest asmc_lidar monitor_node.test                          # 실제 shadow 노드 + 모니터 + 합성 입력
+```
+
+`monitor_node.test`는 합성 점군(지면 + 상자)으로 상태 전이(정상·INPUT_INVALID·입력 중단·복구), 장면/stamp/frame
+정합, 고정 경로만 제공, 모니터가 아무것도 발행하지 않음을 확인한다. 합성 입력은 인터페이스 시험이며 정확도 시험이 아니다.

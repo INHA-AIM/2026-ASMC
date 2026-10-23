@@ -91,6 +91,7 @@ YOLO26l E8/사전학습 생산자를 `asmc_camera`의 정본으로 제공한다.
 | 회귀시험 | 좌표·8코너·속도·관측시각·pose/IMU 선택 의미 검사. 실제 검출 성능 시험은 후속 |
 | 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자는 정본 실행, Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar는 수신 확인용 probe와 shadow 노드 제공(운영 typed 토픽 미발행) |
 | shadow 노드·replay | `asmc_lidar_shadow_node`·`asmc_lidar_shadow_replay`와 shadow 전용 launch 2개. 명시 실행, `/asmc_lidar/shadow/*`만 발행. 공개 속도·동정적 validity false, TunnelFilter 기본 OFF. 실제 카메라 bag·실시간·TunnelFilter ON 성능은 미수락 |
+| 웹 모니터 | `monitor.launch`(shadow 노드 + 읽기 전용 HTTP 모니터, 기본 `127.0.0.1:8091`). 단계별 점군·OBB·추적·상태를 브라우저에서 확인. 관측 hook은 알고리즘 출력을 바꾸지 않음([웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)) |
 
 빌드·시험 명령과 API 위치는 [패키지 README](../../src/asmc_lidar/README.md)에 있다.
 과거 연구용 지면·tracker 후보와 이전 `unified.launch`, `ground_compare_live.launch`는 남기지 않았으며
