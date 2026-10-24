@@ -1,7 +1,7 @@
 # A1 — OBB 기반 HD맵 전달 필터 분석
 
 2026-10-24. 담당 안승현. PR #104 병합 main `6927fe9d`를 기준으로 한다.
-이번 단위는 기존 필터 감사와 **삭제 없는 오프라인 판정 비교**다. 운영 Main·판제 입력,
+A1은 기존 필터 감사와 **삭제 없는 오프라인 판정 비교**다. 아래 A1.1은 실행 경로의 판정·진단을 다룬다. 운영 Main·판제 입력,
 기본 ROI·검출·OBB·tracker·fusion을 변경하지 않는다. 점군 HD맵 ROI는 보류한다.
 
 ## 실제 호출 경로와 소유권
@@ -126,7 +126,7 @@ python3 src/asmc_lidar/tools/compare_hd_map_filters.py \
   --output "/artifacts/$ASMC_AUDIT_RUN_ID"
 ```
 
-入力은 기존 `asmc_lidar_scan_trace_v1` JSONL 또는 offline `asmc.lidar.hd_map_filter_audit/v1`
+입력은 기존 `asmc_lidar_scan_trace_v1` JSONL 또는 offline `asmc.lidar.hd_map_filter_audit/v1`
 fixture다. 후자는 frame/status/map 원점·ID·scan 시각의 pose·선택 근거·객체 목록과
 8코너를 제공한다. `position_error_verified`, `position_error_bound_m`, `mission_scope_verified`
 등은 **오프라인 검토 근거**이며 공개 ROS 메시지에 추가한 필드가 아니다.
@@ -140,9 +140,109 @@ fixture다. 후자는 frame/status/map 원점·ID·scan 시각의 pose·선택 �
 
 필터는 OBB·추적·camera fusion 뒤의 전달 판정에만 연결한다. tracker에 삭제를 피드백하지
 않고 원본 중심·8코너·속도·ID를 보존한다. 정상 빈 결과와 센서/pose 무효를 구분한다.
-실제 제거·새 ROS 출력·판제 전환·기존 중복 코드 삭제는 A1 결과 검토 이후 별도 작업이다.
+실제 제거·새 공개 객체 출력·판제 전환·기존 중복 코드 삭제는 A1/A1.1 결과 검토 이후 별도 작업이다.
 
-**다음 한 단위:** 우선 `/migration/lidar`에서 전달 필터의 **판정만** 계산하는 경계를 연결하고
-원본 객체/추적과 분리해 확인한다. 실제 제외는 OFF로 둔다. 동시에 scan 시각 pose의 검증된
+**A1 이후 연결:** 아래 A1.1에서 `/migration/lidar`의 전달 **판정만** 계산하도록 연결한다.
+원본 객체/추적은 보존하고 실제 제외 모드는 두지 않는다. 동시에 scan 시각 pose의 검증된
 위치 오차와 세 예외 공간의 외부 접근 범위를 확보한다. 현재 자료만으로 여유를 확정하거나
 메타데이터의 `verified`를 자동 승격하지 않는다. 이 두 근거가 부족하면 제거 활성화를 보류한다.
+
+
+## A1.1 실행 연결과 진단
+
+구현 소스 `ca9ac202`. runtime의 **fusion → 최종 local/map 배열 구성 직후** C++ 코어를
+호출하고 원본 배열을 그대로 발행한다. 계산은 epoch 잠금 밖에서 수행하며 기존 세대 검사
+안에서 발행한다. tracker에 제거를 피드백하거나 OBB를 자르지 않는다. 새 공개 타입·노드·
+launch 옵션은 없다. 기본 `hd_map_audit.mode: "off"`, 내부 시험만 `audit`다.
+기존 schema1 설정에 새 블록이 없으면 OFF로 읽어 과거 재현 설정을 유지한다.
+
+`prepare_hd_map_audit.py`는 SHA 검증한 v6 NPZ·미션 공간을 row-major int8/uint8 배열과
+manifest로 내보낸다. vector가 정본이며 이 bundle은 판정 계산용 파생 입력이다. 원본 SHA,
+원점·해상도·크기, 정책 canonical bytes·SHA와 각 배열 SHA를 기록한다. C++는 manifest의
+기대한 SHA와 **실제로 메모리에 읽은 배열**을 검증한다. 준비 완료 후에는 읽기 전용으로
+공유해 reset 때 재로딩하지 않는다. 프레임마다 파일·Python을 호출하지 않는다.
+지도 누락·해시 오류는 audit만 사용 불가로 표시하며 local/map 기존 발행을 유지한다.
+`off/audit` 이외의 모드는 설정 오류다. 실제 제외 모드는 제공하지 않는다.
+
+파생 bundle은 동결 run `lidar-hd-map-audit-bundle-20261024-r1`이다.
+manifest SHA는 `1c250f4192ea21babefd71c64eaacaa7f0917b4a9251ba447759b66ed26d4c97`다.
+다른 PC에서는 해당 지도 정본으로 새 등록 run에 다시 export하고 새 manifest SHA를 설정한다.
+개인 D 경로를 패키지 기본값으로 고정하거나 이전 run을 덮어쓰지 않는다.
+
+```bash
+# 저장 규약으로 AUDIT_RUN_ID/출력 위치를 등록한 뒤, 컨테이너 /root/ws에서 준비.
+python3 src/asmc_lidar/tools/prepare_hd_map_audit.py \
+  --config src/asmc_lidar/tools/filter_audit/audit.yaml \
+  --output "/artifacts/$AUDIT_RUN_ID/bundle"
+```
+
+실험용 runtime YAML은 기존 `lidar_pipeline.yaml` 전체를 복사해 아래 블록만 바꾼다.
+실험 경로의 YAML에 쓴 manifest SHA와 실제 적용 설정 SHA를 run 근거에 보존한다.
+
+```yaml
+hd_map_audit:
+  mode: audit
+  manifest: /artifacts/<등록한-run-id>/bundle/manifest.json
+  manifest_sha256: <준비 도구가 출력한 SHA>
+```
+
+```bash
+# 기존 처리와 대안으로 실행하며 동일 namespace의 두 생산자를 켜지 않는다.
+roslaunch asmc_lidar lidar.launch pipeline_config:="$AUDIT_CONFIG"
+rostopic echo /migration/lidar/diagnostics
+```
+
+1Hz diagnostics는 최근100scan의 판정·사유별 수량, 계산 p95, 지도 오류를 제공한다.
+기존 trace는 수요가 있을 때만 선택 블록을 직렬화한다. session/generation/scan sequence와
+객체 ID로 원본 배열에 대응하고 제품/정책 SHA를 남긴다. 지도 오류·정상 빈 결과·입력/pose
+무효를 구분한다. 진단과 갤러리는 판제 입력이나 실제 제외로 해석하지 않는다.
+[trace 형식](scan-trace-schema.md#선택적인-hd맵-audit와-발행-지연)을 함께 참고한다.
+
+A1 Python과 C++의 합성36사례와 실제 trace31,801관측에서 판정·사유·격자 비율이 정확히
+일치했다. 실제 자료는 GPS normal/invalid/missing 변형을 포함하며 독립 장면 수가 아니다.
+runtime 검사는 OFF/ON 객체 배열의 ROS 직렬화 바이트, GPS 장애/복귀·빈 결과·지도 오류·
+reset 후 map 공유와 상태 초기화를 확인한다. 공개 속도 validity나 위치 오차 근거는 승격하지 않았다.
+
+OFF/ON 비교 도구 `tools/filter_audit/check_runtime.py`는 고정 bag을 각각3회 교차 replay하고
+공개 객체·tracker digest, 계산 p95·RSS를 기록한다. unpaced replay 처리율은 실시간 공급률이 아니다.
+`check_runtime_ros.py`는 독립 master에서 네 입력 토픽만 실제 속도로 재생하고 callback→publish,
+소비자 수신 공백·5초 창 공급·RSS를 기록한다. 자기 master/node/player만 종료하며 차량 제어를
+발행하지 않는다. 새 run ID를 전달하며 입력 bag·설정·소스 SHA를 등록해야 한다.
+
+실제 제외를 검토하기 전 **검증된 scan 시각 위치 오차와 세 예외 공간의 외부 접근 범위**가
+추가로 필요하다. 현재 GPS age와 비어 있는 mission polygon만으로 승인하지 않는다.
+
+
+### A1.1 검증 완료 — 2026-10-24
+
+근거 run `lidar-hd-map-runtime-20261024-r1`의 `verification.json`, `evidence-manifest.json`,
+`paired/`, `paced/`, `validation/`, `gallery/index.html`을 보존한다.
+[작은 결과 포인터](../../../config/baselines/lidar_hd_map_runtime_audit_result_v1.json)에 SHA와 경로를 기록했다.
+
+| 비교 | 결과 |
+|---|---|
+| 필수 빌드/회귀 | CTest32개·필수 gate 통과. audit ON 별도 ROS17사례 통과 |
+| 같은 bag OFF/ON 각각3회 replay | 각649scan, 원본 공개 객체·track digest가6회 모두 동일 |
+| replay audit 계산 p95 | 0.720–0.744ms/scan, 전체 runtime p95 증가0.153–0.491ms |
+| 실제 속도 ROS OFF/ON 각각3회 | 입력/출력 매회649개 일치. 중복/역행 stamp·덮어쓴 scan0 |
+| audit ON callback→publish p95 / p99 | p95 17.15–17.37ms / p99 18.45–18.71ms |
+| OFF 대비 callback→publish p95 증가 | 0.209–0.649ms, 모든 반복5ms 이내 |
+| ROS audit 계산 p95 | 0.767–0.781ms/scan, 모든 반복5ms 이내 |
+| 실제 신규 공급/공백 | 완전5초 창 최소13.0Hz.6회 전체 최대 수신 공백97.8ms≤250ms |
+| RSS | audit 최대106.31–106.66MiB, OFF62.38–62.57MiB. 두 지도 배열의 고정42.55MiB 추가 + 기존 계산/allocator 변동 |
+| 실제 runtime trace 갤러리 | 649scan의9,572객체 판정과 Python 재계산 일치. 합성36사례를 함께 표시, 실패0 |
+
+원본 객체·track digest:
+`830e76a5debdad6f6db4c35b3e02a8179d07f46a200a31900d17ffc5e982b115`.
+실제 runtime 자료는 유지8,450 / 판단 불가1,122 / 제외 후보0이다. 합성 제외 후보7개는
+위치 오차·범위 검증 근거를 명시한 합성 입력이며 실제 객체 제거·검증 성공률로 합치지 않는다.
+
+RSS는 약49초 bag을 반복한 결과이며 장기간 leak 부재의 증명은 아니다. 초기/후반의 수MiB
+변화는 OFF에도 있고 지도 배열 증가와 분리해 전체 표본을 보존했다. audit 최대값은3회간
+0.36MiB 범위였고 큐·진단 창 상한을 확인했다. 카메라 모델·MORAI 동시 부하나3뷰 fusion·
+판제 공동 주행 수락으로 확대하지 않는다. 초기 isolated overlay의 Python `morai_msgs` 경로
+누락은 기존 생성 경로를 source/PYTHONPATH에 포함한 후 전체 검사로 재확인했다.
+
+**완료 판정:** 시험 경로에서 HD맵 판정과 비용 검증 완료. 기본 audit OFF·실제 제외 미구현·
+기존 판제 입력 유지. 다음 우선 과제는 scan 시각 위치 오차와 세 예외 공간의 외부 접근 범위
+검증이며, 실제 전달 제외와 판제의 중복 처리 정리는 별도 PR이다.

@@ -1,0 +1,43 @@
+{
+  "run_id": "lidar-hd-map-runtime-20261024-r1",
+  "source_revision": "ca9ac202",
+  "main_base": "6927fe9d",
+  "default_mode": "off",
+  "decision_only": true,
+  "actual_exclusion_implemented": false,
+  "public_messages_changed": false,
+  "planner_input_changed": false,
+  "ctest_entries_passed": 32,
+  "audit_on_ros_cases_passed": 17,
+  "same_bag_off_on_repetitions": 3,
+  "offline_objects_and_tracks_identical": true,
+  "paced_no_missing_outputs": true,
+  "paced_no_stamp_errors": true,
+  "audit_scan_p95_ms": [
+    0.770744,
+    0.767209,
+    0.780622
+  ],
+  "paced_input_to_publish_p95_delta_ms": [
+    0.37234300000000076,
+    0.6487880000000033,
+    0.20884200000000064
+  ],
+  "paced_max_gap_ms": 97.76265197433531,
+  "min_complete_5s_hz": 13.0,
+  "rss_audit_peaks_bytes": [
+    111837184,
+    111480832,
+    111468544
+  ],
+  "bounded_maps_bytes": 44621440,
+  "rss_note": "Fixed map overhead plus baseline-like geometry/allocator variation; three ~49s repetitions, not a long-term leak proof.",
+  "scope": "isolated stored-bag integration; no MORAI or planner cutover; exception approaches and position uncertainty unverified",
+  "environment_note": "Initial isolated CTest lacked the existing morai_msgs Python path. Reran all tests with /root/ws/devel/lib/python3/dist-packages plus the isolated overlay. No tracked code workaround.",
+  "schema_version": "asmc.lidar.hd_map_runtime_audit_result/v1",
+  "evidence_root_relative": "artifacts/lidar-hd-map-runtime-20261024-r1",
+  "evidence_manifest_sha256": "0fa389e6c368ab608e98e80e0bf6ebbdf23fa46942f9a4f22273f870f4e592d5",
+  "gallery_relative": "artifacts/lidar-hd-map-runtime-20261024-r1/gallery/index.html",
+  "bundle_relative": "artifacts/lidar-hd-map-audit-bundle-20261024-r1/manifest.json",
+  "bundle_sha256": "1c250f4192ea21babefd71c64eaacaa7f0917b4a9251ba447759b66ed26d4c97"
+}

@@ -11,7 +11,7 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 - [웹 모니터와 단계별 진단](docs/web-monitor.md)
 - [카메라 수신·버퍼·보정·투영 API](docs/camera-input.md)
 - [전체 이관 작업표](docs/migration-tasks.md), [팀 인계](../../docs/handoffs/lidar-migration.md)
-- [A1 기존 필터·OBB 기반 HD맵 오프라인 대조](docs/hd-map-filter-analysis.md) — 원본 객체 보존, 실제 제외 보류
+- [A1/A1.1 HD맵 전달 판정·검증](docs/hd-map-filter-analysis.md) — 원본 객체 보존, 기본 OFF인 audit, 실제 제외 보류
 
 ## 구조
 
@@ -25,13 +25,14 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 | `detection/` | 군집·검출 관측·OBB |
 | `tracking/` | 연결·Kalman·track 상태 |
 | `fusion/` | 카메라 관측 버퍼·분류 근거·전방 fusion |
+| `filtering/` | ROS 독립 HD맵 전달 판정. audit만 제공하며 객체를 제거하지 않음 |
 | `pipeline/` | 처리 단계 조합·scan context와 결과 |
 | `ros/` | 센서 수신·설정·메시지 변환·진단·실행 |
 | `experimental/` | 기본 OFF인 기존 TunnelFilter 원본과 연결 stage |
 
-`DetectionObservation`이 점군과 현재 기하를 한 번 소유하고, `TrackState`와 `CameraClassEvidence`를 조합해 `TrackedObject`를 만든다. 기존 tracker 이력의 복사 정책은 유지한다. `filtering/`은 HD맵 필터를 구현할 때 생성한다.
+`DetectionObservation`이 점군과 현재 기하를 한 번 소유하고, `TrackState`와 `CameraClassEvidence`를 조합해 `TrackedObject`를 만든다. 기존 tracker 이력의 복사 정책은 유지한다. `filtering/`은 원본 객체와 분리된 작은 판정 결과만 소유한다.
 
-계산 라이브러리는 ROS 메시지·시간 타입을 사용하지 않는다. 외부 catkin export는 `asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros` 세 개다. 검출·추적/runtime 정적 라이브러리는 패키지 내부에 두어 Main 링크를 바꾸지 않는다.
+계산 라이브러리는 ROS 메시지·시간 타입을 사용하지 않는다. 외부 catkin export는 `asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros` 세 개다. 검출·추적/runtime·HD맵 audit 정적 라이브러리는 패키지 내부에 두어 Main 링크를 바꾸지 않는다.
 
 ## 빌드·시험
 
@@ -83,6 +84,8 @@ rosservice call /migration/lidar/lidar_pipeline/reset "{}"
 ```
 
 이 서비스는 처리 세대를 올리고 대기 scan·추적·pose·trace 이력을 비운다. 입력 공백·GPS 무효·카메라 모드 변경은 이 서비스를 자동 호출하지 않는다. 판제 입력 전환이나 운영 수락 절차가 아니다.
+
+HD맵 판정의 기본값은 YAML `hd_map_audit.mode: "off"`다. 내부 시험용 `audit`는 SHA로 고정한 지도 파생 bundle이 필요하며 [준비·검증](docs/hd-map-filter-analysis.md#a11-실행-연결과-진단)을 따른다. 실제 제외 모드는 없고 공개 객체 메시지·판제 입력은 바뀌지 않는다.
 
 고정 bag 대조는 `lidar_replay --help`와 [실행 안내](docs/pipeline.md)를 따른다. 결과는 저장 규약에 따라 등록한 새 run ID의 D 출력 위치에 보존한다.
 

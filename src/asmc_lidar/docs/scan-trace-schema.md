@@ -42,3 +42,24 @@ SHA-256(소문자 hex)이다. 빈 cloud는 0바이트의 해시다. `accepted=fa
 scan에는 그 시점까지 알 수 있는 필드와 `typed`(INPUT_INVALID 배열 또는 `accepted:false`)만 있다.
 `abs_v`는 Main 내부의 "KF 상대속도 + CAN 속도" 값이며 좌표계가 검증되지 않아 typed 출력에서는
 속도 validity가 항상 false다.
+
+## 선택적인 HD맵 audit와 발행 지연
+
+A1.1의 내부 설정이 `audit`일 때만 `hd_map_audit` 블록을 추가한다. 기존 `typed`·`tracks`는
+수정하지 않는다. 구형 trace는 이 필드가 없어도 유효하고 공개 ROS 메시지·MD5는 그대로다.
+상위 `producer_session_id`·`generation`·`seq`·`stamp_ns`·`config_id`와 각 `track_id`로 연결한다.
+
+- `enabled`, `available`, `reason`: OFF면 블록 없음. 지도 오류는 `map_audit_unavailable`이며 객체 발행은 유지.
+- `map_id`, `map_sha256`, `bundle_sha256`, `policy_sha256`: 로딩 시 검증한 제품·파생 입력·정책 식별.
+- `map_identity_provenance`: pinned bundle 및 실제 runtime 원점 설정에서 가져온 ID임을 표시.
+- `position_error_verified`, `mission_scope_verified`: 현재 항상 false. GPS age 통과를 정확도 검증으로 바꾸지 않음.
+- `calculation_ms`, `objects[]`: scan 계산 비용과 객체별 판정. `decision`은 keep/exclude_candidate/undetermined,
+  `reason`은 사유, `spatial`은 파생 grid의 겹침·보호 범위·unknown·예외 공간이다.
+- 객체별 `input_state`는 observed/predicted를 구분한다. 이 값과 분류 그룹은 실제 운동 판정이 아니다.
+
+실제 노드의 `input_to_publish_ms`는 PointCloud callback 시작부터 객체 배열/관측의 ROS publish
+호출 완료까지 **동일 monotonic clock**으로 측정한다. 네트워크 소비자 수신·노출/laser 발사 시각을
+포함하는 end-to-end 지연은 아니다. replay에는 실제 발행이 없어 이 필드를 만들지 않는다.
+기존 `timings_ms.total`은 runtime 내부 대기·계산이며 이 지연과 구분한다.
+1Hz diagnostics는 최근100scan의 판정/사유 수·계산 p95·설정 오류와 callback→publish p95를
+제공한다. 상세 trace는 구독할 때만 직렬화하며 판제 정본 입력으로 사용하지 않는다.
