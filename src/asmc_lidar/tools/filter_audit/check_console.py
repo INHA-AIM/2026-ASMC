@@ -73,6 +73,7 @@ def main(a):
                                    '__ns:=/migration/lidar','_port:='+str(a.port),'_pipeline_config:='+a.config,
                                    '_web_dir:='+str(source/'web'),'_drivable_map_file:='+a.map],name+'-monitor')
                     page=browser.new_page(viewport={'width':1440,'height':900});errors=[]
+                    page.set_default_timeout(5000)
                     page.on('pageerror',lambda error:errors.append(str(error)))
                     deadline=time.monotonic()+15
                     while True:
@@ -101,6 +102,7 @@ def main(a):
                         page.select_option('#opt-color','audit')
                         first=page.locator('#track-table tbody tr').first
                         if first.count():first.click();assert '군집 도로 점' in page.locator('#detail').inner_text()
+                        page.locator('details').filter(has=page.locator('#opt-side-show')).locator('summary').click()
                         page.check('#opt-side-show');page.wait_for_timeout(100)
                         if repeat==0:page.screenshot(path=str(root/(name+'-detail.png')))
                     time.sleep(.2);stop(node);stop(monitor)
@@ -123,6 +125,9 @@ def main(a):
         (root/'summary.json').write_text(json.dumps({'run_id':a.run_id,'runs':rows,
           'note':'Age is monitor first-part to browser display, not camera exposure or physical sensor latency.'},indent=2)+'\n')
         if any(r['errors'] or r['stamp_errors'] for r in rows):raise RuntimeError('browser/stamp errors')
+    except Exception as error:
+        (root/'failure.json').write_text(json.dumps({'error':str(error),'completed_runs':rows if 'rows' in locals() else []},indent=2)+'\n')
+        raise
     finally:
         for p in reversed(processes):stop(p)
         for f in files:f.close()
