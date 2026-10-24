@@ -7,6 +7,8 @@
 #include <gtest/gtest.h>
 #include <openssl/sha.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
+#include <ros/serialization.h>
+#include <asmc_lidar/ros/scan_trace.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include <unistd.h>
@@ -63,6 +65,11 @@ class TempDir {
   ~TempDir() {
     for (const auto& f : files_) std::remove(f.c_str());
     rmdir(path_.c_str());
+  }
+  std::string Bytes(const std::string& name, const std::string& bytes) {
+    const std::string file = path_ + "/" + name;
+    std::ofstream out(file, std::ios::binary); out.write(bytes.data(), bytes.size());
+    files_.push_back(file); return file;
   }
   std::string Write(const std::string& name, const YAML::Node& node) {
     const std::string file = path_ + "/" + name;
@@ -229,6 +236,92 @@ std::set<int> RunNormal(Sim& sim, int to) {
   return ids;
 }
 
+
+std::vector<std::uint8_t> Wire(const Array& array) {
+  std::vector<std::uint8_t> bytes(ros::serialization::serializationLength(array));
+  ros::serialization::OStream stream(bytes.data(), bytes.size());
+  ros::serialization::serialize(stream, array); return bytes;
+}
+
+// Tiny map fixture: local/map identity is the shipped origin; no external data.
+void WithAudit(TempDir& dir, sh::RuntimeConfig& cfg) {
+  const auto occupancy=dir.Bytes("occupancy.bin",std::string(160000, char(100)));
+  const auto exceptions=dir.Bytes("exceptions.bin",std::string(160000, char(0)));
+  const std::string policy=R"({"expected_map_id":"fixture","map_origin":[302595,4124145,0],"pose_age_limit_ms":300,"candidate_guard_m":1,"exception_protection_m":10})";
+  const auto policy_file=dir.Bytes("policy.json",policy);
+  YAML::Node m;
+  m["schema_version"]="asmc.lidar.hd_map_audit_bundle/v1";m["frame_id"]="map";m["map_id"]="fixture";
+  m["map_origin"].push_back(302595);m["map_origin"].push_back(4124145);m["map_origin"].push_back(0);
+  m["origin_xy"].push_back(-100);m["origin_xy"].push_back(-100);
+  m["height"]=400;m["width"]=400;m["resolution_m"]=1;
+  m["policy_canonical"]=policy;m["policy_sha256"]=FileSha256(policy_file);
+  m["source_sha256"]["product"]=std::string(64,'a');
+  for(const auto& pair:std::vector<std::pair<std::string,std::string>>{{"occupancy",occupancy},{"exceptions",exceptions}}){
+    auto n=m["arrays"][pair.first];n["file"]=pair.first+".bin";n["bytes"]=160000;n["sha256"]=FileSha256(pair.second);
+  }
+  cfg.hd_map_audit_mode="audit";cfg.hd_map_manifest=dir.Write("manifest.yaml",m);
+  cfg.hd_map_manifest_sha256=FileSha256(cfg.hd_map_manifest);
+  cfg.hd_map_audit=std::make_shared<const asmc::lidar::filtering::HdMapAudit>(cfg.hd_map_manifest,cfg.hd_map_manifest_sha256);
+}
+
+TEST(HdMapAuditRuntime, PreservesEveryObjectByteAcrossGpsFaultAndRecovery) {
+  auto off=ShippedRuntimeConfig(),on=off;TempDir dir;WithAudit(dir,on);
+  sh::LidarRuntime a(off,nullptr,nullptr),b(on,nullptr,nullptr);Sim base(a),audit(b);
+  base.gps=audit.gps=[](int t){return t>=600&&t<1000?Mode::kInvalid:Mode::kValid;};
+  base.RunTo(1400);audit.RunTo(1400);
+  for(const auto& row:base.scans){
+    const auto& expected=row.second;const auto& actual=audit.scans.at(row.first);
+    EXPECT_EQ(Wire(expected.arrays.local),Wire(actual.arrays.local));
+    EXPECT_EQ(Wire(expected.arrays.map),Wire(actual.arrays.map));
+    EXPECT_EQ(expected.result.counts.tracks,actual.result.counts.tracks);
+    EXPECT_FALSE(expected.hd_map_audit.enabled);EXPECT_TRUE(actual.hd_map_audit.enabled);
+    ASSERT_EQ(actual.hd_map_audit.objects.size(),actual.arrays.local.objects.size());
+    for(const auto& d:actual.hd_map_audit.objects){
+      EXPECT_EQ(d.decision,"undetermined");
+      EXPECT_EQ(d.reason,actual.arrays.map.status==Array::POSE_UNAVAILABLE?
+          "map_frame_or_array_status_unavailable":"pose_error_bound_unverified");
+    }
+    sh::trace::LineInput line;line.accepted=true;line.output=&actual;
+    const auto json=YAML::Load(sh::trace::Line(line));
+    EXPECT_TRUE(json["hd_map_audit"]["enabled"].as<bool>());
+    EXPECT_FALSE(json["hd_map_audit"]["position_error_verified"].as<bool>());
+  }
+}
+TEST(HdMapAuditRuntime, MissingMapPreservesOutputAndTracks) {
+  auto off=ShippedRuntimeConfig(),on=off;on.hd_map_audit_mode="audit";on.hd_map_audit_error="fixture_missing";
+  sh::LidarRuntime a(off,nullptr,nullptr),b(on,nullptr,nullptr);Sim base(a),audit(b);
+  base.RunTo(600);audit.RunTo(600);
+  for(const auto& row:base.scans){
+    const auto& actual=audit.scans.at(row.first);
+    EXPECT_EQ(Wire(row.second.arrays.local),Wire(actual.arrays.local));
+    EXPECT_EQ(Wire(row.second.arrays.map),Wire(actual.arrays.map));
+    EXPECT_EQ(actual.hd_map_audit.reason,"map_audit_unavailable");
+    for(const auto& d:actual.hd_map_audit.objects)EXPECT_EQ(d.reason,"map_audit_unavailable");
+  }
+}
+TEST(HdMapAuditRuntime, EmptyAndInvalidInputsRemainDistinct) {
+  auto cfg=ShippedRuntimeConfig();TempDir dir;WithAudit(dir,cfg);
+  sh::LidarRuntime runtime(cfg,nullptr,nullptr);Sim sim(runtime);
+  sim.imu=[](int){return Mode::kSilent;};sim.RunTo(300);
+  EXPECT_EQ(sim.scans.at(300).arrays.local.status,Array::INPUT_INVALID);
+  EXPECT_EQ(sim.scans.at(300).hd_map_audit.reason,"input_or_pose_unavailable");
+  // A ground-only scan is valid and empty; it must not be mistaken for an error.
+  sh::LidarRuntime empty(cfg,nullptr,nullptr);Sim ground(empty);
+  ground.scene.reset(new pl::Cloud());
+  for(int x=-10;x<=20;++x)for(int y=-10;y<=10;++y){pcl::PointXYZI p;p.x=x;p.y=y;p.z=-1.7;p.intensity=0;ground.scene->push_back(p);}
+  ground.RunTo(500);const auto& out=ground.scans.at(500);
+  EXPECT_EQ(out.arrays.map.status,Array::OBSERVED_EMPTY);
+  EXPECT_EQ(out.hd_map_audit.reason,"valid_empty");EXPECT_TRUE(out.hd_map_audit.objects.empty());
+}
+TEST(HdMapAuditRuntime, ResetReusesImmutableMapButNotState) {
+  auto cfg=ShippedRuntimeConfig();TempDir dir;WithAudit(dir,cfg);
+  sh::LidarRuntime first(cfg,nullptr,nullptr),next(cfg,nullptr,nullptr);
+  Sim a(first),b(next);a.RunTo(500);b.RunTo(500);
+  EXPECT_EQ(Wire(a.scans.at(300).arrays.local),Wire(b.scans.at(300).arrays.local));
+  EXPECT_EQ(first.config().hd_map_audit.get(),next.config().hd_map_audit.get());
+  EXPECT_EQ(a.scans.at(500).hd_map_audit.bundle_sha256,b.scans.at(500).hd_map_audit.bundle_sha256);
+}
+
 // ---------------------------------------------------------------------------
 // LoadRuntimeConfig
 // ---------------------------------------------------------------------------
@@ -351,6 +444,15 @@ TEST(RuntimeConfig, RejectsSchemaMissingKeysAndBadChoices) {
   ExpectConfigError([](YAML::Node& n) { n["lidar"]["level_roll"] = "maybe"; }, "lidar.level_roll");
   EXPECT_THROW(sh::LoadRuntimeConfig(PackageDir() + "/config/no_such_file.yaml", PackageDir()),
                std::runtime_error);
+}
+
+TEST(RuntimeConfig, AuditSetupFailureDoesNotFailLidarConfiguration) {
+  TempDir dir;auto n=YAML::LoadFile(ShippedConfig());n["hd_map_audit"]["mode"]="audit";
+  n["hd_map_audit"]["manifest"]="/no/such/map";
+  const auto cfg=sh::LoadRuntimeConfig(dir.Write("missing-map.yaml",n),PackageDir());
+  EXPECT_EQ(cfg.hd_map_audit_mode,"audit");EXPECT_FALSE(cfg.hd_map_audit);
+  EXPECT_FALSE(cfg.hd_map_audit_error.empty());
+  ExpectConfigError([](YAML::Node& x){x["hd_map_audit"]["mode"]="exclude";},"off or audit");
 }
 
 TEST(RuntimeConfig, AppliesMainClamps) {

@@ -342,7 +342,8 @@ def write_gallery(directory, cases, audit):
         (directory / name).write_text("".join(content))
         text = {"source": row["source_id"], "key": row["key"], "stamp_ns": row["stamp_ns"],
                 "track_id": obj.get("track_id"), "decision": decision, "legacy": row["legacy"],
-                "source_kind": row["source_kind"], "pose": row["pose"]}
+                "source_kind": row["source_kind"], "pose": row["pose"],
+                "runtime_audit": row.get("runtime_audit"), "runtime_audit_identity": row.get("runtime_audit_identity")}
         cards.append('<article><img src="%s"/><pre>%s</pre></article>' % (name, html.escape(json.dumps(text, ensure_ascii=False, indent=2))))
     (directory / "index.html").write_text('<!doctype html><meta charset="utf-8"><title>A1 HD map filter audit</title><style>body{font:14px sans-serif}article{display:flex;border-top:1px solid #aaa}img{width:500px}pre{white-space:pre-wrap;max-width:850px}</style><h1>A1 OBB filter audit — offline / no deletion</h1><p>Blue: v6 vector. Original projected eight-corner footprint. No independent GT; local-only cases have no map overlay.</p>' + "".join(cards))
 
@@ -386,6 +387,16 @@ def run(args):
                     for index, obj in enumerate(frame["objects"]):
                         key = hashlib.sha256((frame_key + ":" + str(index)).encode()).hexdigest()
                         candidate = audit.evaluate(frame, obj, config)
+                        runtime_audit = original.get("hd_map_audit")
+                        runtime_decision = None
+                        if runtime_audit and runtime_audit.get("available"):
+                            matches = [d for d in runtime_audit.get("objects", []) if d["track_id"] == obj["track_id"]]
+                            if len(matches) != 1:
+                                raise ValueError("runtime_audit_object_identity_mismatch")
+                            runtime_decision = matches[0]
+                            for field in ("decision", "reason", "spatial"):
+                                if runtime_decision[field] != candidate[field]:
+                                    raise ValueError("runtime_python_audit_mismatch:" + field)
                         legacy = {name: probe.evaluate(key, frame, obj) for name, probe in probes.items()}
                         row = {"schema": SCHEMA, "key": key, "run_id": args.run_id, "source_id": source.name,
                                "source_sha256": source_sha, "source_kind": frame.get("source_kind", "synthetic_fixture"),
@@ -393,6 +404,10 @@ def run(args):
                                "frame_id": frame.get("frame_id"), "pose": frame.get("pose"), "object": obj,
                                "candidate": candidate, "legacy": legacy, "map_build_id": audit.product["build_id"],
                                "required_object": obj.get("required_object"), "review_provenance": obj.get("review_provenance")}
+                        if runtime_decision is not None:
+                            row["runtime_audit"] = runtime_decision
+                            row["runtime_audit_identity"] = {k: runtime_audit[k] for k in
+                                ("map_sha256", "bundle_sha256", "policy_sha256")}
                         counts[candidate["decision"]] += 1; reasons[candidate["reason"]] += 1
                         strata[row["source_kind"] + ":" + candidate["decision"]] += 1
                         states[str(obj.get("observation_state", "unknown"))] += 1
@@ -408,6 +423,8 @@ def run(args):
                         # Timings and the distinct run ID do not define numerical equivalence.
                         stable = json.loads(canonical(row)); stable.pop("run_id", None)
                         stable["candidate"].pop("comparison_ms", None)
+                        if "runtime_audit" in stable:
+                            stable["runtime_audit"].pop("comparison_ms", None)
                         for old in stable["legacy"].values():
                             old.pop("comparison_ms", None)
                         hashes.update((canonical(stable) + "\n").encode())

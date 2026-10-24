@@ -37,6 +37,9 @@ def prepare(config, output):
                 'source_paths': audit.paths, 'missions': audit.mission_audit,
                 'mission_scope_verified': False,
                 'note': 'Audit only. No position bound or external approach approval.'}
+    for name, path in audit.paths.items():
+        if sha256(path) != audit.shas[name]:
+            raise ValueError('map_input_changed_during_export:' + name)
     target = output / 'manifest.json'
     target.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
     return {'manifest': str(target), 'manifest_sha256': sha256(target)}

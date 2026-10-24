@@ -150,3 +150,11 @@ experimental:
     enabled: false
     suppress_ceiling: true
     suppress_wall: true
+
+# Decision-only post-fusion HD-map audit. No exclusion mode or object mutation.
+# For an internal audit profile, use an exported, SHA-pinned bundle. Missing or
+# corrupt audit data disables only the diagnostic calculation, not LiDAR output.
+hd_map_audit:
+  mode: "off"
+  manifest: ""
+  manifest_sha256: ""

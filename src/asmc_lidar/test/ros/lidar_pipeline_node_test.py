@@ -766,6 +766,44 @@ class LidarPipelineNodeTest(unittest.TestCase):
         self.assertEqual(after.config_id,before.config_id)
         self.assertEqual(after.calibration_id,before.calibration_id)
 
+    def test_11_hd_map_audit_is_diagnostic_only(self):
+        from collections import deque
+        traces = deque(maxlen=100)
+        subscriber = rospy.Subscriber('/migration/lidar/trace', String, traces.append, queue_size=1)
+        try:
+            self.wait_for(lambda: traces, 5.0, 'trace for HD-map audit')
+            row = json.loads(traces[-1].data)
+            cfg = yaml.safe_load(open(rospy.get_param('~pipeline_config')))
+            enabled = cfg.get('hd_map_audit', {}).get('mode', 'off') == 'audit'
+            if not enabled:
+                self.assertNotIn('hd_map_audit', row)
+            else:
+                self.assertTrue(row['hd_map_audit']['enabled'])
+                expected_ids = [o['track_id'] for o in row['typed']['map']['objects']
+                                if row['typed']['map']['status'] in (1,2)]
+                if row['typed']['map']['status'] not in (1,2):
+                    expected_ids = [o['track_id'] for o in row['typed']['local']['objects']]
+                self.assertEqual(expected_ids, [d['track_id'] for d in row['hd_map_audit']['objects']])
+                self.assertFalse(row['hd_map_audit']['position_error_verified'])
+                self.assertFalse(row['hd_map_audit']['mission_scope_verified'])
+                self.assertTrue(all(d['decision'] != 'exclude_candidate' for d in row['hd_map_audit']['objects']))
+                self.assertEqual(row['generation'], 1)  # fresh producer after test_10
+                response = rospy.ServiceProxy(self.node+'/reset', Trigger)()
+                self.assertTrue(response.success)
+                self.wait_for(lambda: any(json.loads(m.data)['generation']==2 for m in traces),
+                              5.0, 'new audit generation')
+                time.sleep(.3)
+                rows = [json.loads(m.data) for m in traces]
+                first = next(i for i,m in enumerate(rows) if m['generation']==2)
+                self.assertTrue(all(m['generation']==2 for m in rows[first:]))
+            self.wait_for(lambda: any(dict((v.key,v.value) for v in m.status[0].values).get(
+                'hd_map_audit_mode') == ('audit' if enabled else 'off') for m in self.snapshot('diagnostics')),
+                5.0, 'HD-map diagnostic mode')
+            values = dict((v.key,v.value) for v in self.snapshot('diagnostics')[-1].status[0].values)
+            self.assertLessEqual(int(values['hd_map_audit_window_scans']),100)
+        finally:
+            subscriber.unregister()
+
 
 if __name__ == '__main__':
     rospy.init_node('lidar_pipeline_node_test')

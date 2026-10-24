@@ -14,13 +14,14 @@
 namespace asmc::lidar::filtering {
 namespace {
 const std::array<std::string, 3> kKinds{{"static_obstacle", "dynamic_obstacle", "roundabout"}};
-std::string Hash(const std::string& bytes) {
+std::string Hash(const unsigned char* bytes, std::size_t size) {
   unsigned char d[SHA256_DIGEST_LENGTH];
-  SHA256(reinterpret_cast<const unsigned char*>(bytes.data()), bytes.size(), d);
+  SHA256(bytes, size, d);
   std::ostringstream out;
   for (auto b : d) out << std::hex << std::setw(2) << std::setfill('0') << unsigned(b);
   return out.str();
 }
+std::string Hash(const std::string& s) { return Hash(reinterpret_cast<const unsigned char*>(s.data()),s.size()); }
 void Require(bool ok, const char* reason) { if (!ok) throw std::runtime_error(reason); }
 void Str(std::ostream& out, const std::string& s) {
   out << '"';
@@ -105,9 +106,13 @@ struct HdMapAudit::Impl {
 };
 HdMapAudit::HdMapAudit(const std::string& path,const std::string& expected) {
   auto p=std::make_shared<Impl>();
-  p->bundle_sha=FileSha256(path);
+  Require(std::filesystem::file_size(path) <= 8*1024*1024,"audit_manifest_too_large");
+  std::ifstream file(path,std::ios::binary);
+  Require(bool(file),"audit_manifest_unreadable");
+  std::ostringstream content;content << file.rdbuf();const auto bytes=content.str();
+  p->bundle_sha=Hash(bytes);
   Require(expected.size()==64 && p->bundle_sha==expected,"audit_manifest_sha_mismatch");
-  const auto m=YAML::LoadFile(path);
+  const auto m=YAML::Load(bytes);
   Require(m["schema_version"].as<std::string>()=="asmc.lidar.hd_map_audit_bundle/v1","audit_schema_mismatch");
   Require(m["frame_id"].as<std::string>()=="map","audit_frame_mismatch");
   p->map_id=m["map_id"].as<std::string>();
@@ -142,10 +147,11 @@ HdMapAudit::HdMapAudit(const std::string& path,const std::string& expected) {
     Require(!file.empty()&&std::filesystem::path(file).filename()==file,"audit_array_path_invalid");
     const auto full=(std::filesystem::path(path).parent_path()/file).string();
     Require(std::filesystem::file_size(full)==std::uint64_t(h)*w&&spec["bytes"].as<std::uint64_t>()==std::uint64_t(h)*w,"audit_array_size_mismatch");
-    Require(FileSha256(full)==spec["sha256"].as<std::string>(),"audit_array_sha_mismatch");
     cv::Mat out(h,w,type);
     std::ifstream in(full,std::ios::binary);in.read(reinterpret_cast<char*>(out.data),std::int64_t(h)*w);
-    Require(bool(in),"audit_array_read_error");return out;
+    Require(bool(in),"audit_array_read_error");
+    Require(Hash(out.data,out.total())==spec["sha256"].as<std::string>(),"audit_array_sha_mismatch");
+    return out;
   };
   p->occupancy=load("occupancy",CV_8S);p->exceptions=load("exceptions",CV_8U);
   for(int y=0;y<h;++y) for(int x=0;x<w;++x) {
@@ -213,7 +219,7 @@ void WriteAuditReport(std::ostream& out,const AuditReport& r) {
   out<<",\"reason\":";Str(out,r.reason);out<<",\"map_id\":";Str(out,r.map_id);
   out<<",\"map_sha256\":";Str(out,r.map_sha256);out<<",\"bundle_sha256\":";Str(out,r.bundle_sha256);
   out<<",\"policy_sha256\":";Str(out,r.policy_sha256);
-  out<<",\"geometry_authority\":\"vector; grid ratios are diagnostic approximation\",\"position_error_verified\":false,\"mission_scope_verified\":false,\"calculation_ms\":"<<r.calculation_ms<<",\"objects\":[";
+  out<<",\"map_identity_provenance\":\"pinned_bundle_and_runtime_origin_config\",\"geometry_authority\":\"vector; grid ratios are diagnostic approximation\",\"position_error_verified\":false,\"mission_scope_verified\":false,\"calculation_ms\":"<<r.calculation_ms<<",\"objects\":[";
   for(std::size_t i=0;i<r.objects.size();++i){if(i)out<<',';WriteAuditDecision(out,r.objects[i]);}out<<"]}";
 }
 }  // namespace asmc::lidar::filtering

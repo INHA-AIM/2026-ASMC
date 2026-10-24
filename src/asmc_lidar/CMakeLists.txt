@@ -179,7 +179,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/ros/ros_inputs.cpp)
   set_target_properties(asmc_lidar_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
   target_include_directories(asmc_lidar_runtime PUBLIC include ${catkin_INCLUDE_DIRS} ${pipeline_msg_include_dirs})
-  target_link_libraries(asmc_lidar_runtime PUBLIC asmc_lidar_pipeline yaml-cpp OpenSSL::Crypto ${catkin_LIBRARIES})
+  target_link_libraries(asmc_lidar_runtime PUBLIC asmc_lidar_pipeline asmc_lidar_hd_map_audit yaml-cpp OpenSSL::Crypto ${catkin_LIBRARIES})
   target_compile_options(asmc_lidar_runtime PRIVATE -Wall -Wextra)
   add_dependencies(asmc_lidar_runtime ${pipeline_msg_targets})
 

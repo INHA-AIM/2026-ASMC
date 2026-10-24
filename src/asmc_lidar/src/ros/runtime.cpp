@@ -4,6 +4,7 @@
 #include <asmc_lidar/ros/runtime.hpp>
 
 #include <chrono>
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
@@ -167,6 +168,7 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
     // Main skips LidarProcess: the tracker is not advanced.
     out.reason = pose_reason;
     out.arrays = output_.Invalid(scan_stamp, pose_reason);
+    Audit(out);
     out.total_ms = Ms(start, Clock::now());
     return out;
   }
@@ -181,6 +183,7 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
   if (!out.processed) {
     out.reason = "empty_or_invalid_lidar_input";
     out.arrays = output_.Invalid(scan_stamp, out.reason);
+    Audit(out);
     out.total_ms = Ms(start, Clock::now());
     return out;
   }
@@ -199,8 +202,66 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
     UpdateAABB(out.result.objects);
   }
   out.arrays = output_.Observed(out.result, out.result.objects);
+  Audit(out);
   out.total_ms = Ms(start, Clock::now());
   return out;
+}
+
+void LidarRuntime::Audit(ScanOutput& out) const {
+  if (config_.hd_map_audit_mode != "audit") return;
+  const auto start = Clock::now();
+  auto& report = out.hd_map_audit;
+  report.enabled = true;
+  report.bundle_sha256 = config_.hd_map_manifest_sha256;
+  const auto& mapped = out.arrays.map;
+  const bool valid_map = out.arrays.accepted && (mapped.status == 1 || mapped.status == 2)
+                         && out.result.context.map_pose.valid;
+  const auto& objects = valid_map ? mapped : out.arrays.local;
+  const auto& audit = config_.hd_map_audit;
+  report.reason = audit ? (objects.objects.empty() ?
+      (valid_map ? "valid_empty" : "input_or_pose_unavailable") : "evaluated") : "map_audit_unavailable";
+  report.available = bool(audit);
+  if (audit) {
+    report.map_id = audit->map_id(); report.map_sha256 = audit->map_sha256();
+    report.bundle_sha256 = audit->bundle_sha256(); report.policy_sha256 = audit->policy_sha256();
+  }
+  // Identity is derived from the pinned bundle and effective map-origin config,
+  // not a new claim that the sensor measured a map ID or a position error bound.
+  filtering::AuditFrame frame;
+  frame.frame_id = valid_map ? "map" : objects.header.frame_id;
+  frame.status = objects.status;
+  frame.map_id = report.map_id;
+  for (int i=0;i<3;++i) frame.map_origin[i] = config_.gps.map_origin[i];
+  frame.stamp_ns = static_cast<std::int64_t>(objects.header.stamp.toNSec());
+  frame.pose_stamp_ns = frame.stamp_ns;
+  frame.pose_valid = valid_map;
+  const auto& stamps = out.result.context.map_pose.sample_stamps;
+  if (!stamps.empty()) frame.source_age_ms = double(frame.stamp_ns -
+      static_cast<std::int64_t>(*std::max_element(stamps.begin(), stamps.end()))) / 1e6;
+  // Deliberately false: no independent positional bound/approach validation exists.
+  frame.position_error_verified = false; frame.mission_scope_verified = false;
+  report.objects.reserve(objects.objects.size());
+  for (const auto& obj : objects.objects) {
+    filtering::AuditObject input;
+    input.track_id = obj.track_id;
+    input.observation_state = obj.observation_state == asmc_msgs::LidarObject::PREDICTED ? "predicted" : "observed";
+    for (const auto& p : obj.obb_corners) input.corners.push_back({p.x,p.y,p.z});
+    try {
+      if (audit) report.objects.push_back(audit->Evaluate(frame, input));
+      else {
+        filtering::AuditDecision decision;
+        decision.track_id=input.track_id; decision.input_state=input.observation_state;
+        decision.reason="map_audit_unavailable"; report.objects.push_back(std::move(decision));
+      }
+    } catch (const std::exception&) {
+      // Diagnostic failure is visible but cannot suppress a scan or mutate tracks.
+      filtering::AuditDecision decision;
+      decision.track_id=input.track_id; decision.input_state=input.observation_state;
+      decision.reason="map_audit_calculation_error"; report.objects.push_back(std::move(decision));
+      report.reason="calculation_error";
+    }
+  }
+  report.calculation_ms = Ms(start, Clock::now());
 }
 
 }  // namespace runtime

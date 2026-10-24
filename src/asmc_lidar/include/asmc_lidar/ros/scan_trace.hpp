@@ -241,6 +241,7 @@ struct LineInput {
   const ScanOutput* output = nullptr;      // null when not accepted
   const pipeline::ImuData* imu = nullptr;  // selected samples, when known
   const pipeline::CanData* can = nullptr;
+  double input_to_publish_ms = -1;  // live node only, monotonic callback entry -> arrays enqueued
   bool debug = false;  // digests/clusters/detections (PipelineConfig::capture_debug)
 };
 
@@ -376,7 +377,13 @@ inline std::string Line(const LineInput& in) {
   Array(out, o.arrays.accepted, o.arrays.local);
   out << ",\"map\":";
   Array(out, o.arrays.accepted, o.arrays.map);
-  out << "}}";
+  out << '}';
+  if (in.input_to_publish_ms >= 0) out << ",\"input_to_publish_ms\":" << in.input_to_publish_ms;
+  if (o.hd_map_audit.enabled) {
+    out << ",\"hd_map_audit\":";
+    filtering::WriteAuditReport(out, o.hd_map_audit);
+  }
+  out << '}';
   return out.str();
 }
 

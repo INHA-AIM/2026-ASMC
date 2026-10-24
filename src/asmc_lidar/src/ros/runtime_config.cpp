@@ -244,6 +244,23 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   Near(v.st_LiDARRotationDeg.f32_Y, m.Get<double>("sensor_pose_base_link.pitch_deg"), file, "LiDAR pitch");
   Near(v.st_LiDARRotationDeg.f32_Z, m.Get<double>("sensor_pose_base_link.yaw_deg"), file, "LiDAR yaw");
 
+  // New optional block keeps historical schema-1 replay profiles readable.
+  const auto root = LoadYaml(yaml_path);
+  if (root["hd_map_audit"]) {
+    config.hd_map_audit_mode = root["hd_map_audit"]["mode"].as<std::string>();
+    if (config.hd_map_audit_mode != "off" && config.hd_map_audit_mode != "audit")
+      Fail(file, "hd_map_audit.mode must be off or audit (no exclusion mode)");
+    if (config.hd_map_audit_mode == "audit") {
+      // Audit setup failure must never disable the original LiDAR outputs.
+      try {
+        config.hd_map_manifest = Resolve(root["hd_map_audit"]["manifest"].as<std::string>(), package_share_dir);
+        config.hd_map_manifest_sha256 = root["hd_map_audit"]["manifest_sha256"].as<std::string>();
+        config.hd_map_audit = std::make_shared<const filtering::HdMapAudit>(
+            config.hd_map_manifest, config.hd_map_manifest_sha256);
+      } catch (const std::exception& e) { config.hd_map_audit_error = e.what(); }
+    }
+  }
+
   config.config_path = yaml_path;
   config.config_sha256 = Sha256(yaml_path);
   config.mount_config_sha256 = Sha256(config.mount_config_path);
@@ -267,6 +284,9 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   effective << "lidar-runtime-v1\n" << config.config_sha256 << '\n' << config.calibration_id << '\n'
             << config.pipeline.use_roll << ',' << config.enable_camera_fusion << ','
             << config.pipeline.tunnel.enabled << ',' << config.pipeline.capture_debug << '\n';
+  effective << config.hd_map_audit_mode << '\n' << config.hd_map_manifest_sha256 << '\n';
+  if (config.hd_map_audit) effective << config.hd_map_audit->bundle_sha256() << '\n'
+      << config.hd_map_audit->policy_sha256() << '\n';
   config.config_id = hash(effective.str());
 }
 
