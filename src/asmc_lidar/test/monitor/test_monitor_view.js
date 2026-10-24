@@ -374,5 +374,17 @@ test('fetch error kinds', () => {
   assert.strictEqual(V.fetchErrorKind(new Error('bad frame magic'), 0), 'protocol');
 });
 
+test('audit preview never hides protected or uncertain objects',()=>{
+  const scene={hd_map_audit:{enabled:true,objects:[
+    {track_id:1,decision:'undetermined',preview:{decision:'exclude_candidate',reason:'cluster_support_outside'}},
+    {track_id:2,decision:'keep',preview:{decision:'keep',reason:'camera_dynamic_protected'}},
+    {track_id:3,decision:'undetermined'}]}};
+  assert.equal(V.previewVisible(scene,{id:1,miss:0},false,true),false);
+  assert.equal(V.previewVisible(scene,{id:2,miss:0},false,true),true);
+  assert.equal(V.previewVisible(scene,{id:3,miss:0},false,true),true);
+  assert.equal(V.previewVisible({}, {id:1,miss:0},false,true),true);
+  assert.equal(V.auditAppearance(scene,{id:2}).detail,'카메라 동적 그룹 보호');
+  assert.equal(scene.hd_map_audit.objects.length,3);
+});
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');
 process.exit(failures.length ? 1 : 0);

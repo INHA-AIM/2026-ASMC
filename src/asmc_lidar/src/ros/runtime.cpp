@@ -212,6 +212,7 @@ void LidarRuntime::Audit(ScanOutput& out) const {
   const auto start = Clock::now();
   auto& report = out.hd_map_audit;
   report.enabled = true;
+  if(config_.delivery_preview.enabled) report.preview_config_id=config_.config_id;
   report.bundle_sha256 = config_.hd_map_manifest_sha256;
   const auto& mapped = out.arrays.map;
   const bool valid_map = out.arrays.accepted && (mapped.status == 1 || mapped.status == 2)
@@ -241,13 +242,45 @@ void LidarRuntime::Audit(ScanOutput& out) const {
   // Deliberately false: no independent positional bound/approach validation exists.
   frame.position_error_verified = false; frame.mission_scope_verified = false;
   report.objects.reserve(objects.objects.size());
+  const auto base_from_level=asmc::lidar::base_from_input(out.result.context);
   for (const auto& obj : objects.objects) {
     filtering::AuditObject input;
     input.track_id = obj.track_id;
     input.observation_state = obj.observation_state == asmc_msgs::LidarObject::PREDICTED ? "predicted" : "observed";
     for (const auto& p : obj.obb_corners) input.corners.push_back({p.x,p.y,p.z});
     try {
-      if (audit) report.objects.push_back(audit->Evaluate(frame, input));
+      if (audit) {
+        const auto object_start=Clock::now();
+        auto decision=audit->Evaluate(frame,input);
+        if(config_.delivery_preview.enabled) {
+          const auto source=std::find_if(out.result.objects.begin(),out.result.objects.end(),
+              [&](const auto& o){return o.tracking.s32_Id==obj.track_id;});
+          filtering::PointEvidence evidence;
+          bool dynamic=false,known=false;
+          double bottom=std::numeric_limits<double>::quiet_NaN();
+          if(source!=out.result.objects.end()&&base_from_level) {
+            bottom=INFINITY;
+            for(const auto& p:source->detection.obb_corners_level)
+              bottom=std::min(bottom,((*base_from_level)*Vec(p.x,p.y,p.z)).z());
+            for(const auto& p:source->detection.pcl_ClusterPoints.points) {
+              const Vec base=(*base_from_level)*Vec(p.x,p.y,p.z);
+              const Vec mapped=valid_map?out.result.context.map_pose.map_from_base*base:Vec(NAN,NAN,NAN);
+              audit->Accumulate(evidence,{mapped.x(),mapped.y(),mapped.z()},base.z());
+            }
+            const auto& c=source->camera;
+            const bool positive=filtering::PositiveCameraEvidence(frame.stamp_ns,c.camera_observation_ns,
+              fusion_?fusion_->consumer_epoch():0,c.camera_observation_epoch,c.class_miss_counter,
+              config_.delivery_preview.camera_age_ms,config_.fusion.max_time_offset_s*1e3);
+            const auto group=pipeline::fusion_class::Normalize(
+                c.last_seen_class!="unknown"?c.last_seen_class:c.str_YoloClass,true);
+            known=positive&&group!="unknown";
+            dynamic=known&&group=="dynamic_obstacle";
+          }
+          filtering::ApplyDeliveryPreview(decision,evidence,config_.delivery_preview,valid_map,dynamic,known,bottom);
+        }
+        decision.comparison_ms=Ms(object_start,Clock::now());
+        report.objects.push_back(std::move(decision));
+      }
       else {
         filtering::AuditDecision decision;
         decision.track_id=input.track_id; decision.input_state=input.observation_state;

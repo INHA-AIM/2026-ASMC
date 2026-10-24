@@ -259,7 +259,8 @@ void WithAudit(TempDir& dir, sh::RuntimeConfig& cfg) {
   for(const auto& pair:std::vector<std::pair<std::string,std::string>>{{"occupancy",occupancy},{"exceptions",exceptions}}){
     auto n=m["arrays"][pair.first];n["file"]=pair.first+".bin";n["bytes"]=160000;n["sha256"]=FileSha256(pair.second);
   }
-  cfg.hd_map_audit_mode="audit";cfg.hd_map_manifest=dir.Write("manifest.yaml",m);
+  cfg.hd_map_audit_mode="audit";cfg.delivery_preview.enabled=false; // legacy A1 geometry fixture
+  cfg.hd_map_manifest=dir.Write("manifest.yaml",m);
   cfg.hd_map_manifest_sha256=FileSha256(cfg.hd_map_manifest);
   cfg.hd_map_audit=std::make_shared<const asmc::lidar::filtering::HdMapAudit>(cfg.hd_map_manifest,cfg.hd_map_manifest_sha256);
 }
@@ -285,6 +286,25 @@ TEST(HdMapAuditRuntime, PreservesEveryObjectByteAcrossGpsFaultAndRecovery) {
     const auto json=YAML::Load(sh::trace::Line(line));
     EXPECT_TRUE(json["hd_map_audit"]["enabled"].as<bool>());
     EXPECT_FALSE(json["hd_map_audit"]["position_error_verified"].as<bool>());
+  }
+}
+TEST(HdMapAuditRuntime, PointPreviewUsesFullClusterWithoutChangingOutput) {
+  auto off=ShippedRuntimeConfig(),on=off;TempDir dir;WithAudit(dir,on);on.delivery_preview.enabled=true;
+  sh::LidarRuntime a(off,nullptr,nullptr),b(on,nullptr,nullptr);Sim base(a),audit(b);
+  base.RunTo(600);audit.RunTo(600);
+  for(const auto& row:base.scans) {
+    const auto& actual=audit.scans.at(row.first);
+    EXPECT_EQ(Wire(row.second.arrays.local),Wire(actual.arrays.local));
+    EXPECT_EQ(Wire(row.second.arrays.map),Wire(actual.arrays.map));
+    for(const auto& d:actual.hd_map_audit.objects) {
+      EXPECT_TRUE(d.preview_enabled);
+      const auto obj=std::find_if(actual.arrays.local.objects.begin(),actual.arrays.local.objects.end(),[&](const auto& o){return o.track_id==d.track_id;});
+      ASSERT_NE(obj,actual.arrays.local.objects.end());
+      EXPECT_EQ(d.support_points,obj->source_point_count);
+      EXPECT_EQ(d.road_points,0u); // tiny fixture is entirely non-road
+      EXPECT_EQ(d.preview_decision,"exclude_candidate");
+      EXPECT_EQ(d.decision,"undetermined"); // uncertainty remains unverified
+    }
   }
 }
 TEST(HdMapAuditRuntime, MissingMapPreservesOutputAndTracks) {

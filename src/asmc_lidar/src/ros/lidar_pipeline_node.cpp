@@ -530,7 +530,7 @@ class LidarPipelineNode {
       now.decision_ns = now.steady_now_ns;
       now.ros_now_ns = RosNow();
     };
-    if (debug_) debug_->SetScanContext(pending.sensor_frame, pending.seq, pending.receipt_ros_ns);
+    if (debug_) debug_->SetScanContext(pending.sensor_frame,pending.seq,pending.receipt_ros_ns,epoch_.session(),pending.scan.generation,config_.config_id);
     const ScanOutput out = pending.runtime->ProcessScan(pending.scan, config_.local_wait_timeout_s, times);
     if (!ros::ok()) return;
     // Reset and publishing share this short lock. Computation never holds it.
@@ -589,6 +589,7 @@ class LidarPipelineNode {
       sample.ms = out.hd_map_audit.calculation_ms;
       for (const auto& d : out.hd_map_audit.objects) {
         ++sample.decisions[d.decision]; ++sample.reasons[d.reason];
+        if(d.preview_enabled) ++sample.reasons["preview:"+d.preview_reason];
       }
       stats_.audit_window.push_back(std::move(sample));
       while (stats_.audit_window.size() > kTimingWindow) stats_.audit_window.pop_front();

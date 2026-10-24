@@ -1,4 +1,5 @@
 #include <asmc_lidar/filtering/hd_map_audit.hpp>
+#include <asmc_lidar/filtering/delivery_preview.hpp>
 #include <opencv2/imgproc.hpp>
 #include <openssl/sha.h>
 #include <yaml-cpp/yaml.h>
@@ -55,7 +56,7 @@ struct HdMapAudit::Impl {
   std::string map_id, map_sha, bundle_sha, policy_sha;
   std::array<double,3> map_origin{};
   double res = 0, ox = 0, oy = 0, age_limit = 0, guard = 0, exception_guard = 0;
-  cv::Mat occupancy, exceptions;
+  cv::Mat occupancy, exceptions, guarded_road;
   SpatialRelation Relation(const std::vector<cv::Point2d>& hull, double expansion) const {
     SpatialRelation r;
     if (!std::isfinite(expansion) || expansion < 0 || expansion > 20) {
@@ -158,7 +159,22 @@ HdMapAudit::HdMapAudit(const std::string& path,const std::string& expected) {
     const auto o=p->occupancy.at<std::int8_t>(y,x);const auto e=p->exceptions.at<std::uint8_t>(y,x);
     Require(o==-1||o==0||o==100,"audit_occupancy_invalid"); Require(e<=3,"audit_exception_invalid");
   }
+  cv::Mat road;
+  cv::compare(p->occupancy,cv::Scalar(0),road,cv::CMP_EQ);
+  const int radius=int(std::ceil(p->guard/p->res))+1;
+  cv::dilate(road,p->guarded_road,cv::getStructuringElement(cv::MORPH_RECT,cv::Size(2*radius+1,2*radius+1)));
   impl_=std::move(p);
+}
+void HdMapAudit::Accumulate(PointEvidence& e,const Point& p,double base_z) const {
+  ++e.total;
+  if (!std::isfinite(base_z)) return;
+  ++e.finite; e.min_base_z=std::min(e.min_base_z,base_z);
+  if (!std::isfinite(p[0])||!std::isfinite(p[1])) {++e.unknown;return;}
+  const double x=std::floor((p[0]-impl_->ox)/impl_->res),y=std::floor((p[1]-impl_->oy)/impl_->res);
+  if (x<0||y<0||x>=impl_->occupancy.cols||y>=impl_->occupancy.rows) {++e.unknown;return;}
+  const auto v=impl_->occupancy.at<std::int8_t>(int(y),int(x));
+  e.road += v==0; e.unknown += v==-1;
+  e.guard += impl_->guarded_road.at<std::uint8_t>(int(y),int(x))!=0;
 }
 const std::string& HdMapAudit::map_id()const{return impl_->map_id;}
 const std::string& HdMapAudit::map_sha256()const{return impl_->map_sha;}
@@ -204,6 +220,19 @@ void WriteAuditDecision(std::ostream& out,const AuditDecision& d) {
   out<<"{\"track_id\":"<<d.track_id<<",\"input_state\":";Str(out,d.input_state);
   out<<",\"decision\":";Str(out,d.decision);out<<",\"reason\":";Str(out,d.reason);
   out<<",\"comparison_ms\":"<<d.comparison_ms<<",\"exception_types\":";Strings(out,d.exception_types);
+  if(d.preview_enabled) {
+    out<<",\"obb_reference_decision\":";Str(out,d.obb_reference_decision);
+    out<<",\"obb_reference_reason\":";Str(out,d.obb_reference_reason);
+    out<<",\"preview\":{\"decision\":";Str(out,d.preview_decision);out<<",\"reason\":";Str(out,d.preview_reason);
+    out<<",\"support_points\":"<<d.support_points<<",\"road_points\":"<<d.road_points
+       <<",\"guard_points\":"<<d.guard_points<<",\"unknown_points\":"<<d.unknown_points
+       <<",\"road_point_ratio\":"<<d.road_point_ratio<<",\"camera_dynamic_protected\":";Bool(out,d.camera_dynamic_protected);
+    out<<",\"camera_known\":";Bool(out,d.camera_known);
+    out<<",\"roof_limit_base_z\":"<<d.roof_limit_z<<",\"min_support_base_z\":";
+    if(d.height_available)out<<d.min_base_z;else out<<"null";
+    out<<",\"obb_bottom_base_z\":";if(std::isfinite(d.obb_bottom_base_z))out<<d.obb_bottom_base_z;else out<<"null";
+    out<<'}';
+  }
   out<<",\"spatial\":";
   if(!d.has_spatial)out<<"null";
   else {const auto& s=d.spatial;out<<"{\"available\":";Bool(out,s.available);
@@ -219,6 +248,7 @@ void WriteAuditReport(std::ostream& out,const AuditReport& r) {
   out<<",\"reason\":";Str(out,r.reason);out<<",\"map_id\":";Str(out,r.map_id);
   out<<",\"map_sha256\":";Str(out,r.map_sha256);out<<",\"bundle_sha256\":";Str(out,r.bundle_sha256);
   out<<",\"policy_sha256\":";Str(out,r.policy_sha256);
+  out<<",\"preview_config_id\":";Str(out,r.preview_config_id);
   out<<",\"map_identity_provenance\":\"pinned_bundle_and_runtime_origin_config\",\"geometry_authority\":\"vector; grid ratios are diagnostic approximation\",\"position_error_verified\":false,\"mission_scope_verified\":false,\"calculation_ms\":"<<r.calculation_ms<<",\"objects\":[";
   for(std::size_t i=0;i<r.objects.size();++i){if(i)out<<',';WriteAuditDecision(out,r.objects[i]);}out<<"]}";
 }

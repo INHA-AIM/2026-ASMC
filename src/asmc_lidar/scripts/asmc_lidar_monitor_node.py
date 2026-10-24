@@ -9,6 +9,7 @@ It publishes nothing, calls no service and sets no parameter. With ~open_browser
 it opens the page once after the server answered its own health check.
 """
 import os
+import hashlib
 import json
 import math
 import sys
@@ -55,8 +56,10 @@ def load_drivable_overlay(map_path, reference_path, pipeline_path):
             raise ValueError('지도와 LiDAR 원점 불일치')
         if os.path.getsize(map_path) > 16 * 1024 * 1024:
             raise ValueError('지도 크기 제한 초과')
-        with open(map_path) as stream:
-            product = json.load(stream)
+        with open(map_path, 'rb') as stream:
+            raw=stream.read()
+        product=json.loads(raw)
+        map_sha=hashlib.sha256(raw).hexdigest()
         if product.get('frame_id') != 'map':
             raise ValueError('지원하지 않는 지도 frame')
         polygons = []
@@ -67,7 +70,7 @@ def load_drivable_overlay(map_path, reference_path, pipeline_path):
             polygons.append(polygon)
         if not polygons:
             raise ValueError('빈 주행가능영역')
-        return {'available': True, 'build_id': product.get('build_id'), 'frame_id': 'map',
+        return {'available': True, 'build_id': product.get('build_id'), 'sha256':map_sha, 'frame_id': 'map',
                 'origin': reference, 'polygons': polygons, 'height_mode': 'ego_reference_plane'}
     except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
         return {'available': False, 'reason': str(exc)}
@@ -95,9 +98,10 @@ def main():
     try:
         packages = rospkg.RosPack()
         planner = packages.get_path('asmc_planner')
+        hd_map = packages.get_path('asmc_hd_map')
         lidar = packages.get_path('asmc_lidar')
         drivable = load_drivable_overlay(
-            str(rospy.get_param('~drivable_map_file', os.path.join(planner, 'config/hd_map/drivable.json'))),
+            str(rospy.get_param('~drivable_map_file', os.path.join(hd_map, 'config/kcity2025_compact_drivable_map.json'))),
             str(rospy.get_param('~drivable_reference_file', os.path.join(planner, 'config/behavior/global_info.json'))),
             str(rospy.get_param('~pipeline_config', os.path.join(lidar, 'config/lidar_pipeline.yaml'))))
     except rospkg.ResourceNotFound:
@@ -107,7 +111,8 @@ def main():
 
     topics = {stage: '%s/%s' % (prefix, stage) for stage in core.STAGES}
     topics['scan'] = prefix + '/scan'
-    store = core.SceneStore(max_scenes=max_scenes, complete_timeout_s=complete_timeout_s)
+    store = core.SceneStore(max_scenes=max_scenes, complete_timeout_s=complete_timeout_s,
+                            metadata_first=bool(rospy.get_param("~metadata_first", True)))
     state = core.MonitorState(store, config={
         'topics': dict(topics, diagnostics=diagnostics_topic, objects_local=objects_local_topic,
                        objects_map=objects_map_topic, points=points_topic),

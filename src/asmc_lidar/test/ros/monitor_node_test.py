@@ -209,7 +209,7 @@ class MonitorNodeTest(unittest.TestCase):
 
     def test_02_frame_scene_consistency(self):
         header, arrays = self.wait_until(
-            lambda: (lambda f: f if f[0]['scene'] and f[0]['scene']['stages'] else None)(self.frame(0)),
+            lambda: (lambda f: f if f[0]['scene'] and f[0]['scene']['stages'] and not f[0]['scene'].get('missing') else None)(self.frame(0)),
             30, 'scene with stages')
         scene = header['scene']
         self.assertEqual(scene['schema'], 'asmc_lidar_debug_scan_v1')
@@ -279,7 +279,8 @@ class MonitorNodeTest(unittest.TestCase):
     def test_04_only_fixed_routes(self):
         code, body = self.get('/')
         self.assertEqual(code, 200)
-        self.assertIn(b'asmc_lidar', body)
+        self.assertIn(b'<canvas id="bev">', body)
+        self.assertIn(b'id="audit-summary"', body)
         self.assertEqual(self.get('/app.js')[0], 200)
         self.assertEqual(self.get('/app.css')[0], 200)
         for path in ('/scripts/asmc_lidar_monitor_core.py', '/../package.xml', '/web/index.html', '/api',

@@ -208,8 +208,10 @@ DebugPublisher::~DebugPublisher() {
   if (thread_.joinable()) thread_.join();
 }
 
-void DebugPublisher::SetScanContext(const std::string& sensor_frame, std::uint64_t seq, std::int64_t arrival_ros_ns) {
+void DebugPublisher::SetScanContext(const std::string& sensor_frame, std::uint64_t seq, std::int64_t arrival_ros_ns,
+                                    const std::string& session,std::uint64_t generation,const std::string& config_id) {
   sensor_frame_ = sensor_frame;
+  producer_session_id_=session;generation_=generation;config_id_=config_id;
   seq_ = seq;
   arrival_ns_ = arrival_ros_ns;
 }
@@ -327,6 +329,7 @@ void DebugPublisher::Finish(std::int64_t stamp_ns, const ScanOutput& out) {
     s->arrival_ns = arrival_ns_;
     s->sensor_frame = sensor_frame_;
   }
+  s->producer_session_id=producer_session_id_;s->generation=generation_;s->config_id=config_id_;
   s->pose_ready = out.pose_ready;
   s->processed = out.processed;
   s->reason = out.reason;
@@ -334,6 +337,7 @@ void DebugPublisher::Finish(std::int64_t stamp_ns, const ScanOutput& out) {
   s->camera_active = out.fusion.camera_active;
   s->camera_reason = out.fusion.camera_reason;
   s->arrays = out.arrays;
+  s->hd_map_audit = out.hd_map_audit;
   s->tracks.clear();
   if (out.processed) {
     s->tracks.reserve(out.result.objects.size());
@@ -399,6 +403,8 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
   trace::Bool(out, s.processed);
   out << ",\"reason\":";
   trace::Str(out, s.reason);
+  out << ",\"producer_session_id\":";trace::Str(out,s.producer_session_id);
+  out << ",\"generation\":"<<s.generation<<",\"config_id\":";trace::Str(out,s.config_id);
   out << ",\"frames\":{\"sensor\":";
   trace::Str(out, s.sensor_frame);
   out << ",\"leveled\":";
@@ -513,7 +519,9 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
   trace::Array(out, s.arrays.accepted, s.arrays.local);
   out << ",\"map\":";
   trace::Array(out, s.arrays.accepted, s.arrays.map);
-  out << "}}";
+  out << '}';
+  if(s.hd_map_audit.enabled){out << ",\"hd_map_audit\":";filtering::WriteAuditReport(out,s.hd_map_audit);}
+  out << '}';
   return out.str();
 }
 

@@ -43,7 +43,7 @@ def main(a):
     pkg=Path(a.package_share);config=yaml.safe_load((pkg/'config/lidar_pipeline.yaml').read_text())
     configs={}
     for mode in ('off','audit'):
-        cfg=json.loads(json.dumps(config));cfg['hd_map_audit']={'mode':mode,'manifest':a.manifest,'manifest_sha256':a.manifest_sha256}
+        cfg=json.loads(json.dumps(config));cfg.setdefault('hd_map_audit',{}).update(mode=mode,manifest=a.manifest,manifest_sha256=a.manifest_sha256)
         target=root/('config-'+mode+'.yaml');target.write_text(yaml.safe_dump(cfg,sort_keys=False));configs[mode]=target
     results=[]
     for i in range(3):

@@ -2,12 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<title>asmc_lidar shadow monitor</title>
+<title>LiDAR 인지 디버거</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
 <header id="status-bar">
+  <div class="console-heading"><strong>LiDAR 인지 디버거</strong><span>원본 발행 유지 · 필터는 검수용 미리보기</span></div>
+  <div id="audit-summary" class="audit-summary">audit 대기</div>
   <div class="chips">
     <span class="chip" id="chip-server">서버: 연결 중</span>
     <span class="chip" id="chip-ros">ROS: -</span>
@@ -42,7 +44,7 @@
       <h2>점군 단계 · 하나 선택</h2>
       <label><span class="sw" style="background:#6b7280"></span><input type="radio" name="stage" data-stage="raw"> Raw · 원본 <span class="cnt" id="c-raw">-</span></label>
       <label><span class="sw" style="background:#a78bfa"></span><input type="radio" name="stage" data-stage="roi"> ROI · 관심영역 <span class="cnt" id="c-roi">-</span></label>
-      <div hidden>
+      <details><summary>전처리·군집 상세</summary>
       <label><span class="sw" style="background:#60a5fa"></span><input type="checkbox" data-stage="voxel"> voxel <span class="cnt" id="c-voxel">-</span></label>
       <label><span class="sw" style="background:#38bdf8"></span><input type="checkbox" data-stage="leveled"> leveled (전체) <span class="cnt" id="c-leveled">-</span></label>
       <label><span class="sw" style="background:#4b5563"></span><input type="checkbox" data-stage="ground"> RANSAC 제거 지면 <span class="cnt" id="c-ground">-</span></label>
@@ -50,25 +52,30 @@
       <label><span class="sw sw-multi"></span><input type="checkbox" data-stage="clusters"> cluster 색 구분 <span class="cnt" id="c-clusters">-</span></label>
       <label><span class="sw" style="border:1px dashed #fbbf24"></span><input type="checkbox" data-stage="detections"> detection OBB (추적 전) <span class="cnt" id="c-detections">-</span></label>
       <label><span class="sw" style="border:2px solid #facc15"></span><input type="checkbox" data-stage="typed"> typed local 배열 (base_link) <span class="cnt" id="c-typed">-</span></label>
-      </div>
+      </details>
       <label><span class="sw" style="background:#34d399"></span><input type="radio" name="stage" data-stage="nonground" checked> RANSAC 이후 · 지면 제외 <span class="cnt" id="c-nonground">-</span></label>
       <p class="note">점 수 / 화면 샘플 수. 화면 샘플링은 실제 필터 삭제와 다릅니다.</p>
     </section>
     <section>
-      <h2>최종 추적 결과</h2>
+      <h2>객체와 필터 미리보기</h2>
       <label><input type="checkbox" data-stage="tracks" checked> 추적 OBB <span class="cnt" id="c-tracks">-</span></label>
       <label><input type="checkbox" id="opt-show-pred"> 예측 트랙(pred) 표시</label>
-      <label><input type="checkbox" id="opt-hide-outside"> 주행가능영역 밖 객체 숨기기</label>
-      <p class="note">객체 박스·목록만 숨깁니다. 점군·토픽은 유지하며 판정 불가는 숨기지 않습니다.</p>
+      <label><input type="checkbox" id="opt-hide-candidates"> 제외 후보 숨기기 (화면만)</label>
+      <p class="note">목록과 토픽은 유지합니다. 선택한 객체는 다시 표시됩니다. 보류 객체는 숨기지 않습니다.</p>
+      <label>색상 <select id="opt-color"><option value="audit">필터 판정</option><option value="motion">운동 진단 (재호)</option><option value="class">카메라 그룹</option></select></label>
       <label><input type="checkbox" id="opt-labels" checked> ID · 카메라 분류 표시</label>
-      <p class="note">색은 기존 Main 알고리즘의 동정적 진단입니다.<br>공개 토픽의 유효성·필터는 바꾸지 않습니다.</p>
+      <p class="note">필터: 초록 유지 · 분홍 제외 후보 · 노랑 보류.<br>카메라 그룹은 실제 운동 상태가 아닙니다.</p>
     </section>
     <section>
       <h2>보기</h2>
       <label>화면 <select id="opt-view"><option value="bev">2D · 위에서</option><option value="orbit">3D · 회전 보기</option></select></label>
       <label><input type="checkbox" id="opt-road" checked> 주행가능영역 · 연보라</label>
       <p id="road-note" class="note">베이크 지도 확인 중</p>
-      <div hidden><input type="checkbox" id="opt-compare"><select id="opt-side"><option value="xz">xz</option></select></div>
+      <details><summary>높이·보정 비교</summary>
+      <label><input type="checkbox" id="opt-side-show">측면 높이 보기</label>
+      <label><input type="checkbox" id="opt-compare">voxel 수평화 전후 중첩</label>
+      <select id="opt-side"><option value="xz">X–Z 전후 높이</option><option value="yz">Y–Z 좌우 높이</option></select>
+      </details>
       <label>점 크기 <select id="opt-psize"><option value="1">1 px</option><option value="2" selected>2 px</option><option value="3">3 px</option></select></label>
       <div class="buttons">
         <button id="btn-center">차량 중심</button>
@@ -76,7 +83,7 @@
         <button id="btn-zoom-out">−</button>
         <button id="btn-pause">일시정지</button>
       </div>
-      <p class="note">좌클릭 드래그: 2D·3D 회전<br>가운데 버튼 드래그: 이동<br>Shift+좌클릭 드래그: 이동<br>휠: 확대/축소 · 좌클릭: 객체 선택<br>3D 자차 높이 1.5m는 시각화용입니다.</p>
+      <p class="note">좌클릭 드래그: 2D·3D 회전<br>가운데 버튼 드래그: 이동<br>Shift+좌클릭 드래그: 이동<br>휠: 확대/축소 · 좌클릭: 객체 선택<br>자차 지면 -0.36m · 지붕 1.284m (base_link).</p>
     </section>
     <section id="legend">
       <h2>범례</h2>
@@ -98,15 +105,15 @@
   </section>
 
   <aside id="right">
-    <details>
-      <summary>선택 객체 상세</summary>
+    <details open id="object-details">
+      <summary>선택 객체 · 제외/보호 근거</summary>
       <div id="detail" class="detail">객체를 클릭하면 상세값을 표시합니다.</div>
     </details>
     <section>
-      <h2>객체 (track) — 클릭하여 선택</h2>
+      <h2>객체 · 클릭하여 근거 확인</h2>
       <div class="list-wrap">
       <table class="list" id="track-table">
-        <thead><tr><th>ID</th><th>class</th><th>동정적</th><th>영역</th><th>거리</th></tr></thead>
+        <thead><tr><th>ID</th><th>카메라</th><th>필터</th><th>점/OBB %</th><th>하부 m</th><th>운동</th></tr></thead>
         <tbody></tbody>
       </table>
       </div>

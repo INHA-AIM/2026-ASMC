@@ -27,6 +27,7 @@ struct SpatialRelation {
   std::string reason;
   std::vector<std::string> exception_types;
 };
+struct PointEvidence;
 struct AuditDecision {
   int track_id = -1;
   std::string input_state = "unknown", decision = "undetermined", reason = "uninitialized";
@@ -34,10 +35,17 @@ struct AuditDecision {
   SpatialRelation spatial;
   std::vector<std::string> exception_types;
   double comparison_ms = 0;
+  bool preview_enabled=false;
+  std::string preview_decision="undetermined", preview_reason="not_evaluated";
+  std::string obb_reference_decision, obb_reference_reason;
+  std::size_t support_points=0, road_points=0, guard_points=0, unknown_points=0;
+  double road_point_ratio=0, min_base_z=0, obb_bottom_base_z=0, roof_limit_z=0;
+  bool height_available=false, camera_dynamic_protected=false, camera_known=false;
+
 };
 struct AuditReport {
   bool enabled = false, available = false;
-  std::string reason = "off", map_id, map_sha256, bundle_sha256, policy_sha256;
+  std::string reason = "off", map_id, map_sha256, bundle_sha256, policy_sha256, preview_config_id;
   double calculation_ms = 0;
   std::vector<AuditDecision> objects;
 };
@@ -47,6 +55,8 @@ class HdMapAudit {
   // Identity/hash failure throws here; runtime catches it and preserves outputs.
   HdMapAudit(const std::string& manifest, const std::string& expected_manifest_sha256);
   AuditDecision Evaluate(const AuditFrame&, const AuditObject&) const;
+  // Constant-time road/guard lookup; caller transforms each support point once.
+  void Accumulate(PointEvidence&, const Point& map_xyz, double base_z) const;
   const std::string& map_id() const;
   const std::string& map_sha256() const;
   const std::string& bundle_sha256() const;

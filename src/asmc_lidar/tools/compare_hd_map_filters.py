@@ -395,8 +395,12 @@ def run(args):
                                 raise ValueError("runtime_audit_object_identity_mismatch")
                             runtime_decision = matches[0]
                             for field in ("decision", "reason", "spatial"):
-                                if runtime_decision[field] != candidate[field]:
+                                key_name="obb_reference_"+field if runtime_decision.get("preview") and field!="spatial" else field
+                                if runtime_decision[key_name] != candidate[field]:
                                     raise ValueError("runtime_python_audit_mismatch:" + field)
+                            if runtime_decision.get("preview"):
+                                candidate=dict(runtime_decision)  # effective point/height preview, retains OBB reference
+
                         legacy = {name: probe.evaluate(key, frame, obj) for name, probe in probes.items()}
                         row = {"schema": SCHEMA, "key": key, "run_id": args.run_id, "source_id": source.name,
                                "source_sha256": source_sha, "source_kind": frame.get("source_kind", "synthetic_fixture"),

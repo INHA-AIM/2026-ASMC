@@ -15,6 +15,7 @@
 
 #include <asmc_lidar/fusion/front_camera_fusion.hpp>
 #include <asmc_lidar/filtering/hd_map_audit.hpp>
+#include <asmc_lidar/filtering/delivery_preview.hpp>
 #include <asmc_lidar/pipeline/pipeline.hpp>
 #include <asmc_lidar/geometry/pose_history.hpp>
 
@@ -45,6 +46,7 @@ struct RuntimeConfig {
   std::string hd_map_audit_mode = "off", hd_map_manifest, hd_map_manifest_sha256;
   std::string hd_map_audit_error;
   std::shared_ptr<const filtering::HdMapAudit> hd_map_audit;
+  filtering::DeliveryPolicy delivery_preview;
 
   // Paths/identity resolved by LoadRuntimeConfig (for diagnostics).
   std::string config_path, config_sha256, mount_config_path, mount_config_sha256;

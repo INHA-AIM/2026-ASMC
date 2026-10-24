@@ -125,7 +125,7 @@ endif()
 if(ASMC_LIDAR_PIPELINE_ACTIVE)
   find_package(OpenCV REQUIRED COMPONENTS core imgproc)
   # Private decision-only library; never exported to Main and never owns ROS state.
-  add_library(asmc_lidar_hd_map_audit STATIC src/filtering/hd_map_audit.cpp)
+  add_library(asmc_lidar_hd_map_audit STATIC src/filtering/hd_map_audit.cpp src/filtering/delivery_preview.cpp)
   target_include_directories(asmc_lidar_hd_map_audit PUBLIC include ${OpenCV_INCLUDE_DIRS})
   target_link_libraries(asmc_lidar_hd_map_audit PUBLIC yaml-cpp OpenSSL::Crypto ${OpenCV_LIBRARIES})
   target_compile_options(asmc_lidar_hd_map_audit PRIVATE -Wall -Wextra)
@@ -233,6 +233,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_stage_observer test/pipeline/test_stage_observer.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_typed_output test/runtime/test_typed_output.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_runtime test/runtime/test_runtime.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_delivery_preview test/runtime/test_delivery_preview.cpp)
     # The node rostest needs the camera calibration data of the sibling asmc_camera
     # source package (data only; no build or package.xml dependency).
     # Web monitor rostest: shadow node (debug stages on) + monitor node + synthetic inputs, no camera data needed.
