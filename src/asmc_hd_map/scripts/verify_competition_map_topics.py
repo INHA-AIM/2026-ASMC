@@ -145,21 +145,21 @@ def main() -> int:
     ):
         _require(message.header.frame_id == "map", "%s left the map frame" % name)
 
-    _require(meta.geometry_sha256 == "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf", "geometry SHA drift")
-    _require(meta.build_id == "kcity2025_static_junction_widened_drivable_v6", "P2-B v6 build ID drift")
+    _require(meta.geometry_sha256 == "521b1fde181a0c10ce71696f7f05010138c041dd067ad531dce23ff5da6ad24f", "geometry SHA drift")
+    _require(meta.build_id == "kcity2025_reviewed_high_speed_adjacent_drivable_v7", "P2-B v7 build ID drift")
     _require(meta.operational and meta.complete, "P2-B map must be operational and complete")
-    _require(meta.lane_count == 70 and meta.drivable_area_count == 102, "P2-B v6 product count drift")
+    _require(meta.lane_count == 73 and meta.drivable_area_count == 115, "P2-B v7 product count drift")
     _require(
         "compact_drivable_product" in meta.source_ids and "legacy_drivable_h5" in meta.source_ids,
         "P2-B provenance is missing from HdMapMeta",
     )
-    _require(meta.lane_marking_count == 128, "metadata marking count must include 121 lanes + 7 stoplines")
-    _require(markings.complete and len(markings.markings) == 128, "global marking array is incomplete")
+    _require(meta.lane_marking_count == 133, "metadata marking count must include 126 lanes + 7 stoplines")
+    _require(markings.complete and len(markings.markings) == 133, "global marking array is incomplete")
     _require(markings.build_id == meta.build_id and markings.map_id == meta.map_id,
              "marking/meta identity mismatch")
     _require(markings.geometry_sha256 == meta.geometry_sha256, "marking/meta geometry SHA mismatch")
-    _require(lanes.complete and len(lanes.lanes) == 70, "global lane product is incomplete")
-    _require(areas.complete and len(areas.areas) == 102, "global drivable vector product is incomplete")
+    _require(lanes.complete and len(lanes.lanes) == 73, "global lane product is incomplete")
+    _require(areas.complete and len(areas.areas) == 115, "global drivable vector product is incomplete")
     _require(lanes.build_id == meta.build_id and lanes.map_id == meta.map_id,
              "lane/meta identity mismatch")
     _require(areas.build_id == meta.build_id and areas.map_id == meta.map_id,
@@ -190,7 +190,10 @@ def main() -> int:
         _require(value.width_m > 0.0 and value.source_dataset and value.source_feature_id,
                  "marking width/provenance is incomplete: %s" % value.id)
     lane_by_link = {value.link_id: value for value in lanes.lanes}
-    _require(len(lane_by_link) == 70, "lane link IDs are not unique")
+    _require(len(lane_by_link) == 73, "lane link IDs are not unique")
+    _require(all('A2256W000'+value in lane_by_link for value in ('029','175','406')),
+             'reviewed high-speed adjacent lanes are missing')
+    _require('A2256W000010' not in lane_by_link, 'unreviewed adjacent A010 was automatically added')
     _require("A2256W000427" not in lane_by_link, "unused toll lane A427 must remain excluded")
     _require("A2256W000179" not in lane_by_link, "exit-only lane A179 must remain excluded")
     excluded_bus_links = {

@@ -31,9 +31,9 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 | 토픽 | 타입 | 전달 | 내용 |
 |---|---|---|---|
 | `/hd_map/meta` | `asmc_msgs/HdMapMeta` | latched | build/map/geometry/manifest SHA와 준비 상태 |
-| `/hd_map/global/lane_markings` | `asmc_msgs/LaneMarkingArray` | latched | 차선 도색 121개와 정지선 7개 |
-| `/hd_map/global/lanes` | `asmc_msgs/LaneArray` | latched | route/same-direction/mission lane, A134 로터리와 음영 반대차로 총 70개 |
-| `/hd_map/global/drivable_areas` | `asmc_msgs/DrivableAreaArray` | latched | Lane 70 + corridor fill 18 + surface patch 14 = vector area 102개 |
+| `/hd_map/global/lane_markings` | `asmc_msgs/LaneMarkingArray` | latched | 차선 도색126개와 정지선7개 |
+| `/hd_map/global/lanes` | `asmc_msgs/LaneArray` | latched | route/same-direction/mission 및 검토한 A029/A175/A406, 총73개 |
+| `/hd_map/global/drivable_areas` | `asmc_msgs/DrivableAreaArray` | latched | 기존102개 면을 보존하고 검토 corridor를 추가한115개 면 |
 | `/hd_map/global/drivable_grid` | `nav_msgs/OccupancyGrid` | latched | vector area에서 만든 0.2 m lookup raster |
 | `/hd_map/global/checkpoints` | `asmc_msgs/CompetitionCheckpointArray` | latched | 공식 체크포인트 15개(규정집 v1.2), 3 m, yaw, route/link station |
 | `/hd_map/global/mission_zones` | `asmc_msgs/MissionZoneArray` | latched | 미션·속도 profile·상시 인지 policy zone 15개 |
@@ -42,8 +42,8 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 | `/hd_map/local/current_lane` | `asmc_msgs/LaneAssociation` | pose update, non-latched | 후륜축 중심 현재 허용 차로와 경계/이탈/전환 상태 |
 | `/hd_map/debug/markers` | `visualization_msgs/MarkerArray` | 1 Hz, non-latched | 차선·경로·link 방향·station·체크포인트·미션·build 정보 |
 
-P2-B v6의 `HdMapMeta.operational=true`, `complete=true`, `lane_count=70`,
-`drivable_area_count=102`가 현재 기준이다. `lane_marking_count=128`은 물리 차선 도색 121개와
+P2-B v7의 `HdMapMeta.operational=true`, `complete=true`, `lane_count=73`,
+`drivable_area_count=115`가 현재 기준이다. `lane_marking_count=133`은 물리 차선 도색126개와
 정지선 7개를 같은 `LaneMarking` 계약으로 전달하기 때문이다.
 
 ### 2.1 판제의 권장 소비 방식
@@ -383,12 +383,12 @@ A866·A054·A846은 일반 전역경로 추종 구간이며, 이 구간에 보�
 
 - 정확한 topic type 11개(global/meta/debug 8개 + local 3개)
 - local topic 3개의 등록과 별도 smoke 검사에서 global/local lane·grid parity 및 현재 차로 상태
-- geometry SHA `01ec671f…4bcfbf`
-- marking 128개 = lane marking 121개 + stopline 7개
-- Lane 70개/vector area 102개, A432·A131·A134 포함/A427·A179·A1212 제외
+- geometry SHA `521b1fde…ad24f`
+- marking133개 = lane marking126개 + stopline7개
+- Lane73개/vector area115개, A029·A175·A406·A432·A131·A134 포함/A010·A427·A179·A1212 제외
 - non-route 교차로가 reviewed set 15개와 정확히 일치
 - 동적 장애물 node-pair closure 8개와 파생 link `A066/A087/A211/A1125`
-- 인접차로 fill 18개, H5-검증 patch 14개, 정적·동적 면의 단일 연결성과 내부 hole 0개
+- 인접차로 fill20개 중 신규 corridor2개는 해당 H5 surface로 통합, 기존 H5 patch14개 보존. 정적·동적 면의 단일 연결성과 내부 hole0개
 - A222 교차로 모서리 probe `(-54.38,-131.38)`·`(-55.07,-149.22)`=0, 그 바깥 probe=100
 - A134 로터리·A151 접속부의 단일 연결성, H5 기반 2 m envelope 확장과 중앙 섬 비주행 보존
 - 음영구간 `A126/A131` bridge와 일반도로 reviewed-boundary refinement
