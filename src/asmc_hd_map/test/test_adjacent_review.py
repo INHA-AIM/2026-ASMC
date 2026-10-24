@@ -76,6 +76,20 @@ class AdjacentReviewTest(unittest.TestCase):
                 components.append(int(labels[j,i]))
             self.assertGreater(components[0],0)
             self.assertEqual(len(set(components)),1)
+            # Check the actual seam locally as well; a connection elsewhere on
+            # the course must not mask a gap between the new and old surfaces.
+            origin=data['origin_xy'];res=float(data['resolution_m'])
+            lo=np.rint((np.array([60,248])-origin)/res).astype(int)
+            hi=np.rint((np.array([78,265])-origin)/res).astype(int)
+            _,seam=cv2.connectedComponents((data['occupancy'][lo[1]:hi[1]+1,lo[0]:hi[0]+1]==0).astype(np.uint8))
+            joined=[]
+            for suffix,y in [('029',262),('175',262),('406',262),('411',250),('418',250)]:
+                points=np.asarray(links['A2256W000'+suffix]['points'])
+                xy=points[np.argmin(abs(points[:,1]-y)),:2]
+                i,j=np.rint((xy-origin)/res).astype(int)-lo
+                joined.append(int(seam[j,i]))
+            self.assertGreater(joined[0],0)
+            self.assertEqual(len(set(joined)),1)
 
     def test_existing_102_road_areas_and_ids_are_unchanged(self):
         product=json.loads((PKG/'config/kcity2025_compact_drivable_map.json').read_text())
