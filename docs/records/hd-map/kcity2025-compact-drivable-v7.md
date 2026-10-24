@@ -1,20 +1,21 @@
-# K-City 2025 P2-B v5 A134 로터리·A151 접속부 주행가능영역
+# K-City 2025 주행가능영역 — kcity2025_reviewed_high_speed_adjacent_drivable_v7
 
-> **상태:** 생성·검증 가능한 P2-B product. reviewed 차선 geometry는 변경하지 않음.
+> **상태:** 현재 reviewed 차선 SHA와 묶어 생성·검증하는 P2-B product.
 
 ## 선택 정책
 
 - 전역경로 39개 링크와 같은 방향의 사용 가능 동일-road 차로를 기본 Lane으로 채택했다.
 - Lane과 추가 surface patch를 합친 vector polygon 집합이 geometry 정본이다.
 - polygon 끝은 round buffer가 아니라 endpoint node의 법선에서 flat cap으로 절단한다.
-- 일반도로는 신뢰 가능한 reviewed paint의 국소 횡거리로 41개 Lane의 경계를 보정했다.
-- 선택된 인접 차로 17쌍과 음영구간 A126/A131 사이를 vector corridor로 채웠다.
+- 일반도로는 reviewed paint의 국소 횡거리로 44개 Lane의 경계를 보정했다.
+- 인접 차로와 음영구간 A126/A131의 20쌍을 corridor 대상으로 선택했다.
 - 교차로의 거리/반경 확장을 폐기하고 reviewed link set만 추가했다.
 - 동적 장애물 교차로는 검토된 4개 anchor의 directed start/end node-pair closure 8개 link를 사용한다.
 - 정적·동적 교차로는 선택 link envelope 안의 legacy H5 road만 gap patch로 사용한다.
 - A134 로터리는 2.0 m 확장 link envelope와 A151 접속부 안의 legacy H5 포장면을 사용하고 중앙 섬은 비주행으로 보존한다.
 - 일반 교차로는 전역경로 link만, 정적·동적 장애물 교차로는 검토된 회피 link만 포함한다.
-- 반대차로는 음영구간 A131만 명시적으로 포함하고, 그 밖의 대회 외 도로는 제거했다.
+- 음영 A131 및 명시적으로 검토한 인접 lane group만 추가하며 다른 도로로 자동 확장하지 않는다.
+- 인접 검토 그룹: `gps_shadow_opposite_lane, high_speed_preentry_029_175_406`. H5 사용은 해당 lane envelope 안으로 제한한다.
 - `OccupancyGrid`는 vector product를 0.20 m/px로 rasterize한 파생 표현이다.
 
 ## 결과

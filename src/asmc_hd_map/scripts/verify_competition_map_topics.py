@@ -396,10 +396,10 @@ def main() -> int:
     color_counts = Counter(value.color for value in markings.markings)
     pattern_counts = Counter(value.pattern for value in markings.markings)
     _require(role_counts[LaneMarking.ROLE_STOP_LINE] == 7, "expected seven stoplines")
-    _require(color_counts[LaneMarking.COLOR_WHITE] == 101, "expected 94 white lanes + 7 stoplines")
+    _require(color_counts[LaneMarking.COLOR_WHITE] == 106, "expected 99 white lanes + 7 stoplines")
     _require(color_counts[LaneMarking.COLOR_YELLOW] == 27, "expected 27 yellow markings")
-    _require(pattern_counts[LaneMarking.PATTERN_SOLID] == 97, "expected 90 solid lanes + 7 stoplines")
-    _require(pattern_counts[LaneMarking.PATTERN_BROKEN] == 31, "expected 31 broken markings")
+    _require(pattern_counts[LaneMarking.PATTERN_SOLID] == 98, "expected 91 solid lanes + 7 stoplines")
+    _require(pattern_counts[LaneMarking.PATTERN_BROKEN] == 35, "expected 35 broken markings")
 
     _require(len(checkpoints.checkpoints) == 15, "expected 15 checkpoints (rule book v1.2)")
     _require(
