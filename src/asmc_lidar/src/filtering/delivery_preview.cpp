@@ -20,23 +20,34 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   d.camera_dynamic_protected=dynamic;d.camera_known=known;
   const auto preview=[&](const char* v,const char* why){d.preview_decision=v;d.preview_reason=why;};
   const auto keep=[&](const char* why){preview("keep",why);d.decision="keep";d.reason=why;};
+  // Independent geometric facets reuse the already computed footprint/support.
+  // They are provisional display evidence, not final exclusion authorization.
+  if(map_valid&&d.has_spatial&&d.spatial.available&&!d.spatial.unknown_cells)
+    d.obb_preview=d.spatial.road_ratio_grid>0?"keep":"exclude_candidate";
   // A mobility group is a protection policy, never a measured moving flag.
-  if(dynamic){keep("camera_dynamic_protected");return;}
-  if(e.total<p.minimum_points||e.finite!=e.total){preview("undetermined","insufficient_cluster_support");return;}
+  if(dynamic){d.point_preview=d.obb_preview=d.height_preview="keep";keep("camera_dynamic_protected");return;}
+  if(!d.exception_types.empty())d.point_preview=d.obb_preview="keep";
+  if(e.total<p.minimum_points||e.finite!=e.total){
+    preview(d.obb_preview=="exclude_candidate"?"exclude_candidate":"undetermined",
+            d.obb_preview=="exclude_candidate"?"obb_support_outside":"insufficient_cluster_support");return;
+  }
   // Both the lowest support point AND the OBB must clear the body + margin.
   // Never discard a recognized car/person/obstacle solely because only its top
   // was scanned. Sparse/occluded unknown structures remain review candidates.
   if(!known&&d.height_available&&std::isfinite(obb_bottom)&&
       std::min(e.min_base_z,obb_bottom)>d.roof_limit_z) {
+    d.height_preview="exclude_candidate";
     preview("exclude_candidate","overhead_clearance_candidate");
     // Position is irrelevant here, but completeness of the lower surface is
     // unproven. Do not promote a preview to final exclusion authorization.
     d.decision="undetermined";d.reason="overhead_lower_surface_unverified";return;
   }
+  d.height_preview="keep";
   if(!map_valid||!d.has_spatial||!d.spatial.available){preview("undetermined","map_or_pose_unavailable");return;}
-  if(!d.exception_types.empty()){keep("exception_space_protected");return;}
+  if(!d.exception_types.empty()){d.point_preview="keep";keep("exception_space_protected");return;}
   if(e.unknown){preview("undetermined","unknown_support_map_cells");d.decision="undetermined";d.reason="unknown_support_map_cells";return;}
-  if(e.road>=p.minimum_road_points||d.road_point_ratio>=p.minimum_road_ratio){keep("cluster_drivable_support");return;}
+  if(e.road>=p.minimum_road_points||d.road_point_ratio>=p.minimum_road_ratio){d.point_preview="keep";keep("cluster_drivable_support");return;}
+  d.point_preview="exclude_candidate";
   if(e.guard){
     // A road-exterior rail entirely inside the uncertainty band is still an
     // outside-support PREVIEW. Retain the uncertainty in the final decision;

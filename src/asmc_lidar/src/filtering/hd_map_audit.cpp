@@ -238,6 +238,8 @@ void WriteAuditDecision(std::ostream& out,const AuditDecision& d) {
     out<<",\"obb_reference_decision\":";Str(out,d.obb_reference_decision);
     out<<",\"obb_reference_reason\":";Str(out,d.obb_reference_reason);
     out<<",\"preview\":{\"decision\":";Str(out,d.preview_decision);out<<",\"reason\":";Str(out,d.preview_reason);
+    out<<",\"point_decision\":";Str(out,d.point_preview);out<<",\"obb_decision\":";Str(out,d.obb_preview);
+    out<<",\"height_decision\":";Str(out,d.height_preview);
     out<<",\"support_points\":"<<d.support_points<<",\"road_points\":"<<d.road_points
        <<",\"guard_points\":"<<d.guard_points<<",\"unknown_points\":"<<d.unknown_points
        <<",\"road_point_ratio\":"<<d.road_point_ratio<<",\"camera_dynamic_protected\":";Bool(out,d.camera_dynamic_protected);
@@ -264,6 +266,8 @@ void WriteAuditReport(std::ostream& out,const AuditReport& r) {
   out<<",\"policy_sha256\":";Str(out,r.policy_sha256);
   out<<",\"preview_config_id\":";Str(out,r.preview_config_id);
   out<<",\"pose_source_age_ms\":"<<r.pose_source_age_ms<<",\"pose_method\":";Str(out,r.pose_method);
+  out<<",\"minimum_support_points\":"<<r.minimum_support_points<<",\"minimum_road_points\":"<<r.minimum_road_points
+     <<",\"minimum_road_ratio\":"<<r.minimum_road_ratio<<",\"roof_limit_base_z\":"<<r.roof_limit_base_z;
   out<<",\"map_identity_provenance\":\"pinned_bundle_and_runtime_origin_config\",\"geometry_authority\":\"vector; grid ratios are diagnostic approximation\",\"position_error_verified\":false,\"mission_scope_verified\":false,\"calculation_ms\":"<<r.calculation_ms<<",\"objects\":[";
   for(std::size_t i=0;i<r.objects.size();++i){if(i)out<<',';WriteAuditDecision(out,r.objects[i]);}out<<"]}";
 }

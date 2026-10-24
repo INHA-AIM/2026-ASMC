@@ -34,7 +34,7 @@
     paused: false, inflight: false, inflightSince: 0, controller: null,
     view: { frame: 'base', mode: 'bev', bevYaw: 0, yaw: -0.4, pitch: 0.65, road: true, scale: 9, panX: 0, panY: 0, side: 'xz', psize: 2, compare: false, labels: true },
     road: null,
-    hideCandidates:true,hideReasons:{points:true,obb:true,height:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
+    hideCandidates:false,hideReasons:{points:true,obb:false,height:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
     stages: {}, selected: null, webFrames: [], matrices: null,
   };
 
@@ -265,6 +265,7 @@
   }
 
   function renderStatusTable(st) {
+    const report=state.scene&&state.scene.hd_map_audit;
     const v = st.diagnostics || {};
     const sc = state.scene;
     const rows = [];
@@ -332,6 +333,10 @@
     el('roi-xy').textContent=roi?'센서 X '+roi.x_m.join('–')+'m · Y '+roi.y_m.join('–')+'m':'';
     el('roi-sensor-z').textContent=roi?'센서 Z '+roi.sensor_z_m.join('–')+'m':'';
     el('roi-height').textContent=roi?(roi.height_enabled?'평지 지면 위 ≤'+roi.height_above_ground_m+'m · IMU 수평화':'OFF'):'';
+    el('criteria-points').textContent=report&&report.minimum_support_points?
+      '도로 점 <'+report.minimum_road_points+'개 및 <'+fmt(report.minimum_road_ratio*100,1)+'% · 전체 ≥'+report.minimum_support_points+'점':'판정 설정 수신 대기';
+    el('criteria-height').textContent=report&&report.roof_limit_base_z?
+      '하부 점·OBB 하단 >'+fmt(report.roof_limit_base_z,3)+'m (base_link)':'판정 설정 수신 대기';
     cnt('c-tunnel', c ? (sc.tunnel && sc.tunnel.ran ? String(c.tunnel_removed) : 'OFF') : '-');
     cnt('c-nonground', c ? String(c.ground_kept) : '-');
     cnt('c-clusters', c ? String(c.clusters) : '-');
@@ -615,6 +620,7 @@
     const audit=V.auditForTrack(sc,t),a=V.auditAppearance(sc,t),p=audit&&audit.preview;
     const rows = [
       ['필터 미리보기',a.label+' · '+a.detail],
+      ['독립 근거 · 점군 / OBB / 높이',p?[p.point_decision,p.obb_decision,p.height_decision].map(x=>({keep:'유지',exclude_candidate:'후보',undetermined:'보류'}[x]||'이전 버전')).join(' / '):'미계산'],
       ['전달 판단 / 보류 근거',audit?audit.decision+' / '+audit.reason:'OFF'],
       ['군집 도로 점 / 전체',p?p.road_points+' / '+p.support_points+' ('+fmt(p.road_point_ratio*100,1)+'%)':'미계산'],
       ['OBB 겹침률',audit&&audit.spatial&&audit.spatial.available?fmt(audit.spatial.road_ratio_grid*100,1)+'%':'미계산'],
@@ -668,11 +674,13 @@
   el('opt-view').addEventListener('change', e => {state.view.mode=e.target.value;renderScene();});
   el('opt-road').addEventListener('change', e => {state.view.road=e.target.checked;renderScene();});
   el('opt-hide-candidates').addEventListener('change',e=>{
+    e.target.indeterminate=false;
     state.hideCandidates=e.target.checked;
     for(const k of ['points','obb','height']){state.hideReasons[k]=e.target.checked;el('opt-hide-'+k).checked=e.target.checked;}
     renderScene();renderTracks();renderDetail();});
   for(const k of ['points','obb','height'])el('opt-hide-'+k).addEventListener('change',e=>{
     state.hideCandidates=false;el('opt-hide-candidates').checked=false;state.hideReasons[k]=e.target.checked;
+    el('opt-hide-candidates').indeterminate=Object.values(state.hideReasons).some(Boolean);
     renderScene();renderTracks();renderDetail();});
   el('opt-color').addEventListener('change',e=>{state.colorMode=e.target.value;renderScene();renderTracks();});
   el('opt-side-show').addEventListener('change',e=>{el('view-side').hidden=!e.target.checked;el('views').style.gridTemplateRows=e.target.checked?'2fr 1fr':'1fr';renderScene();});
@@ -745,6 +753,7 @@
   };
 
   readStages();
+  el('opt-hide-candidates').indeterminate=true;
   fetch('/api/drivable',{cache:'no-store',signal:AbortSignal.timeout(5000)})
     .then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();})
     .then(data=>{data.index=(data.polygons||[]).map(polygon=>({polygon,bounds:polygon.reduce((b,p)=>[Math.min(b[0],p[0]),Math.min(b[1],p[1]),Math.max(b[2],p[0]),Math.max(b[3],p[1])],[Infinity,Infinity,-Infinity,-Infinity])}));state.road=data;renderScene();renderTracks();renderDetail();})

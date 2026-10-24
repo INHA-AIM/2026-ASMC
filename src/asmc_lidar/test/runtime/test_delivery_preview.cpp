@@ -9,6 +9,15 @@ TEST(DeliveryPreview, LargeObbCannotReplaceOutsidePointSupport){auto d=Base();au
 TEST(DeliveryPreview, CameraDynamicProtectedOutsideAndWithoutGps){for(bool gps:{false,true}){auto d=Base();auto e=Points();ApplyDeliveryPreview(d,e,Policy(),gps,true,true,.1);EXPECT_EQ(d.decision,"keep");EXPECT_TRUE(d.camera_dynamic_protected);EXPECT_EQ(d.preview_reason,"camera_dynamic_protected");}}
 TEST(DeliveryPreview, RoadSupportPreservesRealObjects){for(int kind:{0,1}){auto d=Base();auto e=Points();if(kind==0)e.road=3;if(kind==1){e.total=e.finite=20;e.road=1;}ApplyDeliveryPreview(d,e,Policy(),true,false,false,.1);EXPECT_EQ(d.preview_decision,"keep");}}
 TEST(DeliveryPreview, GuardBandDoesNotInventRoadSupport){auto d=Base();auto e=Points();e.total=e.finite=e.guard=736;ApplyDeliveryPreview(d,e,Policy(),true,false,false,.1);EXPECT_EQ(d.preview_reason,"cluster_outside_boundary_uncertain");EXPECT_EQ(d.preview_decision,"exclude_candidate");EXPECT_EQ(d.decision,"undetermined");EXPECT_EQ(d.road_points,0u);}
+TEST(DeliveryPreview, PointAndObbComparisonsAreIndependent) {
+  auto d=Base();auto e=Points();e.guard=100;
+  ApplyDeliveryPreview(d,e,Policy(),true,false,false,.1);
+  EXPECT_EQ(d.point_preview,"exclude_candidate");EXPECT_EQ(d.obb_preview,"keep");
+  d=Base();d.spatial.road_ratio_grid=0;d.decision="undetermined";e.total=e.finite=5;
+  ApplyDeliveryPreview(d,e,Policy(),true,false,false,.1);
+  EXPECT_EQ(d.point_preview,"undetermined");EXPECT_EQ(d.obb_preview,"exclude_candidate");
+  EXPECT_EQ(d.preview_reason,"obb_support_outside");EXPECT_EQ(d.decision,"undetermined");
+}
 TEST(DeliveryPreview, MissionApproachProtectedBeforeEgoEntry){auto d=Base();d.exception_types={"dynamic_obstacle"};ApplyDeliveryPreview(d,Points(),Policy(),true,false,false,.1);EXPECT_EQ(d.preview_reason,"exception_space_protected");}
 TEST(DeliveryPreview, UnknownMapOrNoGpsNotOutside){for(int kind:{0,1}){auto d=Base();auto e=Points();e.unknown=kind;ApplyDeliveryPreview(d,e,Policy(),kind==1,false,false,.1);EXPECT_EQ(d.preview_decision,"undetermined");}}
 TEST(DeliveryPreview, SparseAndNonFiniteSupportHeld){for(int kind:{0,1}){auto d=Base();auto e=Points();if(kind==0)e.total=e.finite=2;else e.finite=99;ApplyDeliveryPreview(d,e,Policy(),true,false,false,3);EXPECT_EQ(d.preview_reason,"insufficient_cluster_support");}}

@@ -68,10 +68,11 @@
       <h2>객체와 필터 미리보기</h2>
       <label><input type="checkbox" data-stage="tracks" checked> 추적 OBB <span class="cnt" id="c-tracks">-</span></label>
       <label><input type="checkbox" id="opt-show-pred"> 예측 트랙(pred) 표시</label>
-      <label><input type="checkbox" id="opt-hide-candidates" checked> 제외 후보 모두 숨기기 (화면만)</label>
-      <label><input type="checkbox" id="opt-hide-points" checked> 점군 근거 후보 숨김 · 도로 점 &lt;3개 및 &lt;5%</label>
-      <label><input type="checkbox" id="opt-hide-obb" checked> OBB 근거 후보 숨김 · 도로 겹침0</label>
-      <label><input type="checkbox" id="opt-hide-height" checked> 상부 객체 후보 숨김 · 하단&gt;지붕+0.60m</label>
+      <label><input type="checkbox" id="opt-hide-candidates"> 제외 후보 모두 숨기기 (화면만)</label>
+      <label><input type="checkbox" id="opt-hide-points" checked> 점군 근거 후보 숨김 <span id="criteria-points" class="note"></span></label>
+      <label><input type="checkbox" id="opt-hide-obb"> OBB 비교 후보 숨김 · 도로 겹침0</label>
+      <label><input type="checkbox" id="opt-hide-height" checked> 상부 객체 후보 숨김 <span id="criteria-height" class="note"></span></label>
+      <p class="note">점군·OBB 근거는 별도 판정입니다. 복수 사유 객체는 체크한 사유 중 하나라도 해당하면 숨깁니다.</p>
       <p class="note">목록과 토픽은 유지합니다. 선택한 객체는 다시 표시됩니다. 보류 객체는 숨기지 않습니다.</p>
       <label>색상 <select id="opt-color"><option value="audit">필터 판정</option><option value="motion">운동 진단 (재호)</option><option value="class">카메라 그룹</option></select></label>
       <label><input type="checkbox" id="opt-labels" checked> ID · 카메라 분류 표시</label>

@@ -36,7 +36,7 @@ aside section { margin-bottom: 14px; }
 aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; }
 aside label { display: block; margin: 3px 0; cursor: pointer; }
 aside label input { vertical-align: middle; margin-right: 4px; }
-label [id^="roi-"] { display: block; padding-left: 22px; }
+label [id^="roi-"], label [id^="criteria-"] { display: block; padding-left: 22px; }
 .sw { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: middle; border-radius: 2px; }
 .sw-multi { background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e, #3b82f6); }
 .cnt { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 4px; }

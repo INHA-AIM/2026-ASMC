@@ -397,5 +397,12 @@ test('independent support/footprint/height switches preserve inspection',()=>{
   }
 });
 
+test('OBB alternative cannot override point keep unless its display switch is enabled',()=>{
+ const t={id:3,miss:0},scene={hd_map_audit:{enabled:true,objects:[{track_id:3,preview:{decision:'keep',reason:'cluster_drivable_support',point_decision:'keep',obb_decision:'exclude_candidate',height_decision:'keep'}}]}};
+ assert.deepStrictEqual(V.exclusionKinds(scene.hd_map_audit.objects[0]),['obb']);
+ assert(V.previewVisible(scene,t,false,false,{points:true,height:true,obb:false}));
+ assert(!V.previewVisible(scene,t,false,false,{obb:true}));
+});
+
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');
 process.exit(failures.length ? 1 : 0);

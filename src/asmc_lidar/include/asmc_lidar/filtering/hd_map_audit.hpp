@@ -37,6 +37,7 @@ struct AuditDecision {
   double comparison_ms = 0;
   bool preview_enabled=false;
   std::string preview_decision="undetermined", preview_reason="not_evaluated";
+  std::string point_preview="undetermined",obb_preview="undetermined",height_preview="undetermined";
   std::string obb_reference_decision, obb_reference_reason;
   std::size_t support_points=0, road_points=0, guard_points=0, unknown_points=0;
   double road_point_ratio=0, min_base_z=0, obb_bottom_base_z=0, roof_limit_z=0;
@@ -49,6 +50,8 @@ struct AuditReport {
   double calculation_ms = 0;
   double pose_source_age_ms = -1;
   std::string pose_method;
+  std::size_t minimum_support_points=0,minimum_road_points=0;
+  double minimum_road_ratio=0,roof_limit_base_z=0;
   std::vector<AuditDecision> objects;
 };
 class HdMapAudit {

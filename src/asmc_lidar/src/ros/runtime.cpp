@@ -212,6 +212,10 @@ void LidarRuntime::Audit(ScanOutput& out) const {
   const auto start = Clock::now();
   auto& report = out.hd_map_audit;
   report.enabled = true;
+  report.minimum_support_points=config_.delivery_preview.minimum_points;
+  report.minimum_road_points=config_.delivery_preview.minimum_road_points;
+  report.minimum_road_ratio=config_.delivery_preview.minimum_road_ratio;
+  report.roof_limit_base_z=config_.delivery_preview.roof_base_z_m+config_.delivery_preview.roof_margin_m;
   if(config_.delivery_preview.enabled) report.preview_config_id=config_.config_id;
   report.bundle_sha256 = config_.hd_map_manifest_sha256;
   const auto& mapped = out.arrays.map;

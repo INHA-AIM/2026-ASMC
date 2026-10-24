@@ -395,6 +395,24 @@ TEST(RoiProvenance, ReusesProductionInclusiveBoundsAndReasons) {
   EXPECT_EQ(f(P(1,0,0)),RoiReason::Ego);
   EXPECT_EQ(f(P(kNaN,0,0)),RoiReason::NonFinite);
 }
+TEST(HeightRoi, FarCollisionPointsAreStableAcrossBodyRollPitch) {
+  HeightRoiConfig cfg;cfg.enabled=true;
+  for(float pitch:{-.08f,.08f}) {
+    const float roll=.04f;
+    const Rot expected=asmc::lidar::rpy(roll,pitch,0);
+    const double sensor_height=.36+(expected*asmc::lidar::Vec(.8,0,1.45)).z();
+    CloudPtr raw(new Cloud),leveled(new Cloud),kept(new Cloud);
+    // Known flat-world heights, well separated from the 2.5m cap. A sensor-Z
+    // cap before leveling would change the answer at this 40m range.
+    for(double height:{1.0,3.5}) {
+      const auto p=(expected.transpose()*asmc::lidar::Vec(40,15,height-sensor_height)).eval();
+      raw->push_back(P(p.x(),p.y(),p.z()));
+    }
+    LevelPoints(raw,leveled,roll,pitch,Rot::Identity(),true);
+    std::vector<int> indices;HeightRoi(leveled,kept,sensor_height,cfg,indices);
+    EXPECT_EQ(indices,(std::vector<int>{0}));
+  }
+}
 }  // namespace
 
 int main(int argc, char** argv) { testing::InitGoogleTest(&argc, argv); return RUN_ALL_TESTS(); }
