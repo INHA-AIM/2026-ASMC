@@ -27,6 +27,12 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   // A mobility group is a protection policy, never a measured moving flag.
   if(dynamic){d.point_preview=d.obb_preview=d.height_preview="keep";keep("camera_dynamic_protected");return;}
   if(!d.exception_types.empty())d.point_preview=d.obb_preview="keep";
+  if(e.total>=p.minimum_points&&e.finite==e.total) {
+    if(d.height_available&&std::isfinite(obb_bottom))
+      d.height_preview=!known&&std::min(e.min_base_z,obb_bottom)>d.roof_limit_z?"exclude_candidate":"keep";
+    if(map_valid&&d.has_spatial&&d.spatial.available&&!e.unknown&&d.exception_types.empty())
+      d.point_preview=(e.road>=p.minimum_road_points||d.road_point_ratio>=p.minimum_road_ratio)?"keep":"exclude_candidate";
+  }
   if(e.total<p.minimum_points||e.finite!=e.total){
     preview(d.obb_preview=="exclude_candidate"?"exclude_candidate":"undetermined",
             d.obb_preview=="exclude_candidate"?"obb_support_outside":"insufficient_cluster_support");return;

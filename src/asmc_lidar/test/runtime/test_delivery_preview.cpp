@@ -17,6 +17,9 @@ TEST(DeliveryPreview, PointAndObbComparisonsAreIndependent) {
   ApplyDeliveryPreview(d,e,Policy(),true,false,false,.1);
   EXPECT_EQ(d.point_preview,"undetermined");EXPECT_EQ(d.obb_preview,"exclude_candidate");
   EXPECT_EQ(d.preview_reason,"obb_support_outside");EXPECT_EQ(d.decision,"undetermined");
+  d=Base();e=Points();e.min_base_z=3;
+  ApplyDeliveryPreview(d,e,Policy(),true,false,false,3);
+  EXPECT_EQ(d.point_preview,"exclude_candidate");EXPECT_EQ(d.height_preview,"exclude_candidate");
 }
 TEST(DeliveryPreview, MissionApproachProtectedBeforeEgoEntry){auto d=Base();d.exception_types={"dynamic_obstacle"};ApplyDeliveryPreview(d,Points(),Policy(),true,false,false,.1);EXPECT_EQ(d.preview_reason,"exception_space_protected");}
 TEST(DeliveryPreview, UnknownMapOrNoGpsNotOutside){for(int kind:{0,1}){auto d=Base();auto e=Points();e.unknown=kind;ApplyDeliveryPreview(d,e,Policy(),kind==1,false,false,.1);EXPECT_EQ(d.preview_decision,"undetermined");}}
