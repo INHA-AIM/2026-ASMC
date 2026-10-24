@@ -16,6 +16,7 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <filesystem>
 #include <functional>
 #include <iomanip>
 #include <map>
@@ -84,7 +85,31 @@ class TempDir {
   std::vector<std::string> files_;
 };
 
-sh::RuntimeConfig ShippedRuntimeConfig() { return sh::LoadRuntimeConfig(ShippedConfig(), PackageDir()); }
+sh::RuntimeConfig ShippedRuntimeConfig() {
+  auto cfg=sh::LoadRuntimeConfig(ShippedConfig(), PackageDir());
+  // Existing Main-equivalence fixtures use the pre-height/audit path. Production
+  // defaults are checked independently below and in the ROS integration tests.
+  cfg.pipeline.height_roi.enabled=false;cfg.hd_map_audit_mode="off";
+  cfg.hd_map_audit.reset();return cfg;
+}
+
+TEST(RuntimeDeployment, DefaultMapIsPinnedAndHeightCapIsLocal) {
+  const auto cfg=sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
+  if(!std::filesystem::exists(PackageDir()+"/../asmc_hd_map/config/kcity2025_compact_drivable_map.json")) {
+    EXPECT_FALSE(cfg.hd_map_audit);EXPECT_FALSE(cfg.hd_map_audit_error.empty());return;
+  }
+  ASSERT_TRUE(cfg.hd_map_audit) << cfg.hd_map_audit_error;
+  EXPECT_EQ(cfg.hd_map_audit_mode,"audit");EXPECT_TRUE(cfg.pipeline.height_roi.enabled);
+  EXPECT_DOUBLE_EQ(cfg.pipeline.height_roi.max_height_above_ground_m,2.5);
+  EXPECT_EQ(cfg.hd_map_audit->map_sha256(),FileSha256(PackageDir()+"/../asmc_hd_map/config/kcity2025_compact_drivable_map.json"));
+}
+
+TEST(RuntimeDeployment, MissingCurrentProductCannotKeepLoadedOldAudit) {
+  TempDir dir;auto yaml=YAML::LoadFile(ShippedConfig());
+  yaml["hd_map_audit"]["source_product"]="/no/current-map-product";
+  const auto cfg=sh::LoadRuntimeConfig(dir.Write("stale-product.yaml",yaml),PackageDir());
+  EXPECT_FALSE(cfg.hd_map_audit);EXPECT_FALSE(cfg.hd_map_audit_error.empty());
+}
 
 // ---------------------------------------------------------------------------
 // Synthetic scene and sensor streams

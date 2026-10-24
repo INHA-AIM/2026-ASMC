@@ -34,7 +34,7 @@
     paused: false, inflight: false, inflightSince: 0, controller: null,
     view: { frame: 'base', mode: 'bev', bevYaw: 0, yaw: -0.4, pitch: 0.65, road: true, scale: 9, panX: 0, panY: 0, side: 'xz', psize: 2, compare: false, labels: true },
     road: null,
-    hideCandidates:false,colorMode:"audit",showPred:false,idWarnings:new Map(),
+    hideCandidates:true,hideReasons:{points:true,obb:true,height:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
     stages: {}, selected: null, webFrames: [], matrices: null,
   };
 
@@ -169,7 +169,8 @@
     const report=state.scene&&state.scene.hd_map_audit;
     for(const d of report&&report.objects||[]) {const v=d.preview?d.preview.decision:d.decision;counts[v]=(counts[v]||0)+1;}
     const mapMismatch=report&&report.map_sha256&&state.road&&state.road.sha256&&report.map_sha256!==state.road.sha256;
-    el('audit-summary').textContent=(report&&report.enabled?'원본 '+(report.objects||[]).length+' · 유지 '+counts.keep+' · 제외 후보 '+counts.exclude_candidate+' · 보류 '+counts.undetermined:'audit OFF · 원본 표시')+(mapMismatch?' · 주의: 배경/판정 지도 SHA 다름':'')+' · 그리기 '+fmt(state.lastRenderMs,1)+'ms';
+    el('audit-summary').textContent=(report&&report.enabled?'원본 '+(report.objects||[]).length+' · 유지 '+counts.keep+' · 제외 후보 '+counts.exclude_candidate+' · 보류 '+counts.undetermined:'audit OFF · 원본 표시')+(mapMismatch?' · 주의: 배경/판정 지도 SHA 다름':'')+
+      (report&&report.pose_source_age_ms>=0?' · GPS age '+fmt(report.pose_source_age_ms,0)+'ms':'')+' · 그리기 '+fmt(state.lastRenderMs,1)+'ms';
     const now = performance.now();
     state.webFrames = state.webFrames.filter((t) => now - t < 2000);
     const sinceServer = state.statusAt ? now - state.statusAt : null;
@@ -324,7 +325,13 @@
     cnt('c-roi', c ? c.roi + ' / ' + s.roi.sent : '-');
     cnt('c-voxel', c ? c.voxel + ' / ' + s.voxel.sent : '-');
     cnt('c-leveled', c ? c.leveled + ' / ' + s.leveled.sent : '-');
-    cnt('c-ground', c ? String(c.leveled - c.ground_kept) : '-');
+    cnt('c-ground', c ? String((c.height_kept===undefined?c.leveled:c.height_kept) - c.ground_kept) : '-');
+    cnt('c-height',c?String(c.height_removed||0):'-');
+    const roi=sc&&sc.config&&sc.config.roi;
+    el('roi-range').textContent=roi?'3D '+roi.range_m.join('–')+'m':'';
+    el('roi-xy').textContent=roi?'센서 X '+roi.x_m.join('–')+'m · Y '+roi.y_m.join('–')+'m':'';
+    el('roi-sensor-z').textContent=roi?'센서 Z '+roi.sensor_z_m.join('–')+'m':'';
+    el('roi-height').textContent=roi?(roi.height_enabled?'평지 지면 위 ≤'+roi.height_above_ground_m+'m · IMU 수평화':'OFF'):'';
     cnt('c-tunnel', c ? (sc.tunnel && sc.tunnel.ran ? String(c.tunnel_removed) : 'OFF') : '-');
     cnt('c-nonground', c ? String(c.ground_kept) : '-');
     cnt('c-clusters', c ? String(c.clusters) : '-');
@@ -433,24 +440,37 @@
     }
     ctx.globalAlpha = 1;
   }
-  function leveledColor(label, cluster) {
+  function leveledColor(label, cluster, track) {
     const st = state.stages;
+    const styles=new Map((state.scene.tracks||[]).map(t=>[t.id,{color:V.auditAppearance(state.scene,t).color,visible:visibleTrack(t)}]));
     return (i) => {
       const l = label ? label[i] : 0;
+      if (l === 3) return st.height_removed ? '#fb923c' : null;
       if (l === 1) return st.ground ? COLORS.ground : null;
       // RANSAC-after includes all non-ground points, even points a later
       // experimental tunnel stage would remove. Never mislabel cluster input.
       if (l === 2) return st.nonground ? COLORS.nonground : (st.tunnel ? COLORS.tunnel : null);
       if (!st.nonground) return null;
+      const style=track&&styles.get(track[i]);
+      if(style&&!style.visible)return null;
       if (st.clusters && cluster) { const c = cluster[i]; return c >= 0 ? CLUSTER_PALETTE[c % CLUSTER_PALETTE.length] : '#166534'; }
+      if(state.colorMode==='audit')return style?style.color:'#64748b';
       return COLORS.nonground;
     };
+  }
+  function rawColor(labels) {
+    const reasons={1:['range_removed','#9ca3af'],2:['xy_removed','#a78bfa'],3:['sensor_z_removed','#60a5fa'],4:['ego_removed','#f87171'],5:['range_removed','#9ca3af']};
+    return i=>{const r=labels?reasons[labels[i]]:null;return r?(state.stages.raw||state.stages[r[0]]?r[1]:null):state.stages.raw?COLORS.raw:null;};
   }
   function classColor(cls) { return CLASS_COLORS[cls] || CLASS_COLORS[String(cls).toLowerCase()] || '#7dd3fc'; }
   const ROAD_COLORS={inside:'#ff4545',outside:'#ffffff',unknown:'#facc15'};
   const ROAD_NAMES={inside:'영역 안',outside:'영역 밖',unknown:'판정 불가'};
   function membership(t){return V.roadMembership(state.scene,state.road,t.obb.center);}
-  function visibleTrack(t){return state.selected===t.id || V.previewVisible(state.scene,t,state.showPred,state.hideCandidates);}
+  function visibleTrack(t){
+    const report=state.scene&&state.scene.hd_map_audit;
+    const mismatch=report&&state.road&&report.map_sha256&&state.road.sha256&&report.map_sha256!==state.road.sha256;
+    return state.selected===t.id || (mismatch ? (state.showPred||t.miss===0) : V.previewVisible(state.scene,t,state.showPred,state.hideCandidates,state.hideReasons));
+  }
 
   // The view kind is explicit ('bev' rotated footprint, 'side' screen rectangle); see monitor_view.js.
   function drawBox(ctx, view, corners, matrix, style) {
@@ -463,7 +483,8 @@
     const note = el('road-note');
     if (!road || !road.available) { note.textContent = '지도 미표시: ' + (road ? road.reason : '불러오는 중'); return; }
     if (!map || !state.matrices || !state.matrices.map) { note.textContent = '지도 숨김 · 유효한 GPS pose 필요'; return; }
-    note.textContent = (road.build_id||'지도')+' · '+(road.lanes_available?'실제 차선':'차선 미표시: '+(road.lane_reason||'없음'))+' · 지면 높이는 참고';
+    const version=(road.build_id||'').match(/_v(\d+)$/);
+    note.textContent = 'HD맵 '+(version?'v'+version[1]:'')+' · '+(road.lanes_available?'실제 차선':'차선 미표시: '+(road.lane_reason||'없음'))+' · 지면 높이는 참고';
     note.title = road.build_id || '';
     if (!state.view.road) return;
     const o = apply(map,0,0,0), transform = state.matrices.map;
@@ -519,12 +540,13 @@
       ...(!el('view-side').hidden ? [{ kind: 'side', ctx: S.ctx, w: S.w, h: S.h, project: sideProject }] : [])];
     for (const view of views) {
       const { ctx, w, h, project } = view;
-      if (st.raw) drawPoints(ctx, w, h, stagePoints('raw'), m.sensor, () => COLORS.raw, project, alphaPts);
+      if (st.raw||st.range_removed||st.xy_removed||st.sensor_z_removed||st.ego_removed)
+        drawPoints(ctx,w,h,stagePoints('raw'),m.sensor,rawColor(state.arrays['raw.label']),project,alphaPts);
       if (st.roi) drawPoints(ctx, w, h, stagePoints('roi'), m.sensor, () => COLORS.roi, project, alphaPts);
       if (st.voxel) drawPoints(ctx, w, h, stagePoints('voxel'), m.sensor, () => COLORS.voxel, project, alphaPts);
       if (state.view.compare) drawPoints(ctx, w, h, stagePoints('voxel'), m.leveled, () => COLORS.compare, project, alphaPts * 0.9);
       if (st.leveled) drawPoints(ctx, w, h, stagePoints('leveled'), m.leveled, () => COLORS.leveled, project, alphaPts);
-      if (st.ground || st.tunnel || st.nonground) drawPoints(ctx, w, h, stagePoints('leveled'), m.leveled, leveledColor(label, cluster), project, alphaPts);
+      if (st.ground || st.tunnel || st.nonground || st.height_removed) drawPoints(ctx, w, h, stagePoints('leveled'), m.leveled, leveledColor(label, cluster,state.arrays['leveled.track']), project, alphaPts);
       ctx.globalAlpha = alphaBox;
       if (st.detections) for (const d of sc.detections || []) drawBox(ctx, view, d.corners, m.leveled, { color: COLORS.detections, dash: [4, 3], width: 1 });
       if (st.typed && sc.typed && sc.typed.local && sc.typed.local.accepted) for (const o of sc.typed.local.objects || []) drawBox(ctx, view, o.corners, m.base, { color: COLORS.typed, width: 1, dash: [2, 2] });
@@ -645,7 +667,13 @@
   el('opt-psize').addEventListener('change', (e) => { state.view.psize = Number(e.target.value); renderScene(); });
   el('opt-view').addEventListener('change', e => {state.view.mode=e.target.value;renderScene();});
   el('opt-road').addEventListener('change', e => {state.view.road=e.target.checked;renderScene();});
-  el('opt-hide-candidates').addEventListener('change',e=>{state.hideCandidates=e.target.checked;renderScene();renderTracks();renderDetail();});
+  el('opt-hide-candidates').addEventListener('change',e=>{
+    state.hideCandidates=e.target.checked;
+    for(const k of ['points','obb','height']){state.hideReasons[k]=e.target.checked;el('opt-hide-'+k).checked=e.target.checked;}
+    renderScene();renderTracks();renderDetail();});
+  for(const k of ['points','obb','height'])el('opt-hide-'+k).addEventListener('change',e=>{
+    state.hideCandidates=false;el('opt-hide-candidates').checked=false;state.hideReasons[k]=e.target.checked;
+    renderScene();renderTracks();renderDetail();});
   el('opt-color').addEventListener('change',e=>{state.colorMode=e.target.value;renderScene();renderTracks();});
   el('opt-side-show').addEventListener('change',e=>{el('view-side').hidden=!e.target.checked;el('views').style.gridTemplateRows=e.target.checked?'2fr 1fr':'1fr';renderScene();});
   el('opt-show-pred').addEventListener('change',e=>{state.showPred=e.target.checked;renderScene();renderTracks();renderDetail();});

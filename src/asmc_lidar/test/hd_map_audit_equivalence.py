@@ -49,6 +49,15 @@ def run(probe, inputs):
         finally:
             if p.poll() is None:
                 p.kill(); p.wait()
+        zipped = prepare(cfg_path, Path(td) / 'compressed', compressed=True)
+        request=json.dumps({'frame':frame,'object':obj},allow_nan=False)+'\n'
+        result=subprocess.run([str(probe),zipped['manifest'],zipped['manifest_sha256']],input=request,capture_output=True,text=True,check=True)
+        compressed=json.loads(result.stdout)
+        for key in ('decision','reason','spatial'):assert compressed[key]==actual[key],key
+        compressed_array=Path(td)/'compressed/occupancy.bin.gz'
+        with compressed_array.open('r+b') as stream:stream.seek(15);stream.write(b'\xff')
+        bad=subprocess.run([str(probe),zipped['manifest'],zipped['manifest_sha256']],capture_output=True,text=True)
+        assert bad.returncode!=0 and 'audit_array_sha_mismatch' in bad.stderr
         # Manifest pinning and array corruption must be detected at preparation.
         bad = subprocess.run([str(probe), bundle['manifest'], '0' * 64], capture_output=True, text=True)
         assert bad.returncode != 0 and 'audit_manifest_sha_mismatch' in bad.stderr

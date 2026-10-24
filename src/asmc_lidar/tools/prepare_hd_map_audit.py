@@ -7,12 +7,14 @@ Source paths stay provenance; the runtime needs only this manifest and two array
 import argparse
 import hashlib
 import json
+import gzip
+import io
 from pathlib import Path
 import yaml
 from compare_hd_map_filters import MapAudit, REPO, canonical, sha256
 
 
-def prepare(config, output):
+def prepare(config, output, compressed=False):
     cfg = yaml.safe_load(Path(config).read_text())
     args = {k: REPO / cfg[k] for k in ('product', 'grid', 'metadata', 'source')}
     audit = MapAudit(**args)
@@ -22,9 +24,17 @@ def prepare(config, output):
     output.mkdir(parents=True, exist_ok=False)
     arrays = {}
     for name, values in [('occupancy', audit.occupancy.astype('int8')), ('exceptions', audit.exceptions)]:
-        target = output / (name + '.bin')
-        target.write_bytes(values.tobytes(order='C'))
-        arrays[name] = {'file': target.name, 'sha256': sha256(target), 'bytes': target.stat().st_size}
+        raw=values.tobytes(order='C')
+        target = output / (name + ('.bin.gz' if compressed else '.bin'))
+        if compressed:
+            data=io.BytesIO()
+            with gzip.GzipFile(fileobj=data,filename='',mode='wb',mtime=0) as zipped:zipped.write(raw)
+            target.write_bytes(data.getvalue())
+        else:target.write_bytes(raw)
+        arrays[name] = {'file': target.name, 'sha256': sha256(target), 'bytes': len(raw)}
+        if compressed:
+            arrays[name].update(compression='gzip',stored_bytes=target.stat().st_size,
+                                raw_sha256=hashlib.sha256(raw).hexdigest())
     policy = {k: cfg[k] for k in ('expected_map_id', 'map_origin', 'pose_age_limit_ms',
                                 'candidate_guard_m', 'exception_protection_m')}
     manifest = {'schema_version': 'asmc.lidar.hd_map_audit_bundle/v1',
@@ -34,7 +44,7 @@ def prepare(config, output):
                 'origin_xy': audit.origin.tolist(), 'arrays': arrays,
                 'policy': policy, 'policy_sha256': hashlib.sha256(canonical(policy).encode()).hexdigest(),
                 'policy_canonical': canonical(policy), 'source_sha256': audit.shas,
-                'source_paths': audit.paths, 'missions': audit.mission_audit,
+                'source_paths': ({k:str(Path(v).relative_to(REPO)) for k,v in audit.paths.items()} if compressed else audit.paths), 'missions': audit.mission_audit,
                 'mission_scope_verified': False,
                 'note': 'Audit only. No position bound or external approach approval.'}
     for name, path in audit.paths.items():
@@ -48,5 +58,6 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--config', required=True)
     p.add_argument('--output', required=True)
+    p.add_argument('--compressed',action='store_true')
     args = p.parse_args()
-    print(json.dumps(prepare(args.config, args.output)))
+    print(json.dumps(prepare(args.config, args.output,args.compressed)))

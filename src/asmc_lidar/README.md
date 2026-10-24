@@ -11,7 +11,7 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 - [웹 모니터와 단계별 진단](docs/web-monitor.md)
 - [카메라 수신·버퍼·보정·투영 API](docs/camera-input.md)
 - [전체 이관 작업표](docs/migration-tasks.md), [팀 인계](../../docs/handoffs/lidar-migration.md)
-- [A1/A1.1 HD맵 전달 판정·검증](docs/hd-map-filter-analysis.md) — 원본 객체 보존, 기본 OFF인 audit, 실제 제외 보류
+- [HD맵 전달 판정·검증](docs/hd-map-filter-analysis.md) — 패키지 기본 audit, 원본 객체 보존, 실제 전달 제외 보류
 
 ## 구조
 
@@ -85,7 +85,11 @@ rosservice call /migration/lidar/lidar_pipeline/reset "{}"
 
 이 서비스는 처리 세대를 올리고 대기 scan·추적·pose·trace 이력을 비운다. 입력 공백·GPS 무효·카메라 모드 변경은 이 서비스를 자동 호출하지 않는다. 판제 입력 전환이나 운영 수락 절차가 아니다.
 
-HD맵 판정의 기본값은 YAML `hd_map_audit.mode: "off"`다. 내부 시험용 `audit`는 SHA로 고정한 지도 파생 bundle이 필요하며 [준비·검증](docs/hd-map-filter-analysis.md#a11-실행-연결과-진단)을 따른다. 실제 제외 모드는 없고 공개 객체 메시지·판제 입력은 바뀌지 않는다.
+HD맵 판정의 기본값은 YAML `hd_map_audit.mode: "audit"`다. Git에 포함한 작은 gzip bundle을
+한 번 로드하고 현재 HD맵 제품 SHA까지 검사한다. 개인 D 경로는 필요 없다. `mode: "off"`로
+계산을 끌 수 있다. 실제 전달 제외 모드는 없으며 기존 Main·판제 입력은 유지한다.
+기본 높이 ROI는 IMU 수평화 후 **평지 지면 위2.5m**를 넘는 점을 군집 전에 제외한다.
+ROI 기준과 복구·표시 규칙은 [현재 설정](docs/hd-map-filter-analysis.md#a14-기본-hd맵높이-roi와-제외-근거--2026-10-25)을 따른다.
 
 audit 미리보기는 OBB 겹침과 **전체 cluster support의 도로 점 비율**을 함께 제공한다.
 카메라로 연결된 `dynamic_obstacle`은 모든 구간에서 보호하고, 머리 위 구조물은 최저 점·OBB 하단과

@@ -44,6 +44,14 @@
       <h2>점군 단계 · 하나 선택</h2>
       <label><span class="sw" style="background:#6b7280"></span><input type="radio" name="stage" data-stage="raw"> Raw · 원본 <span class="cnt" id="c-raw">-</span></label>
       <label><span class="sw" style="background:#a78bfa"></span><input type="radio" name="stage" data-stage="roi"> ROI · 관심영역 <span class="cnt" id="c-roi">-</span></label>
+      <details><summary>제외점 다시 표시 · 색상별 원인</summary>
+      <label><input type="checkbox" data-stage="range_removed">거리 ROI 제외 <span id="roi-range" class="note">기준 수신 대기</span></label>
+      <label><input type="checkbox" data-stage="xy_removed">전후·좌우 ROI 제외 <span id="roi-xy" class="note"></span></label>
+      <label><input type="checkbox" data-stage="sensor_z_removed">센서 Z ROI 제외 <span id="roi-sensor-z" class="note"></span></label>
+      <label><input type="checkbox" data-stage="ego_removed">자차 영역 제외 · 후륜축 차체 직사각형</label>
+      <label><input type="checkbox" data-stage="height_removed">상부 높이 ROI 제외 <span id="roi-height" class="note"></span> <span class="cnt" id="c-height">-</span></label>
+      <p class="note">체크하면 처리에서 빠진 점을 다시 그립니다. 추론/필터 설정은 바꾸지 않습니다.<br>거리: 회색 · XY: 보라 · 센서 Z: 파랑 · 자차: 빨강 · 상부 높이: 주황 · 지면: 진회색.</p>
+      </details>
       <details><summary>전처리·군집 상세</summary>
       <label><span class="sw" style="background:#60a5fa"></span><input type="checkbox" data-stage="voxel"> voxel <span class="cnt" id="c-voxel">-</span></label>
       <label><span class="sw" style="background:#38bdf8"></span><input type="checkbox" data-stage="leveled"> leveled (전체) <span class="cnt" id="c-leveled">-</span></label>
@@ -60,11 +68,14 @@
       <h2>객체와 필터 미리보기</h2>
       <label><input type="checkbox" data-stage="tracks" checked> 추적 OBB <span class="cnt" id="c-tracks">-</span></label>
       <label><input type="checkbox" id="opt-show-pred"> 예측 트랙(pred) 표시</label>
-      <label><input type="checkbox" id="opt-hide-candidates"> 제외 후보 숨기기 (화면만)</label>
+      <label><input type="checkbox" id="opt-hide-candidates" checked> 제외 후보 모두 숨기기 (화면만)</label>
+      <label><input type="checkbox" id="opt-hide-points" checked> 점군 근거 후보 숨김 · 도로 점 &lt;3개 및 &lt;5%</label>
+      <label><input type="checkbox" id="opt-hide-obb" checked> OBB 근거 후보 숨김 · 도로 겹침0</label>
+      <label><input type="checkbox" id="opt-hide-height" checked> 상부 객체 후보 숨김 · 하단&gt;지붕+0.60m</label>
       <p class="note">목록과 토픽은 유지합니다. 선택한 객체는 다시 표시됩니다. 보류 객체는 숨기지 않습니다.</p>
       <label>색상 <select id="opt-color"><option value="audit">필터 판정</option><option value="motion">운동 진단 (재호)</option><option value="class">카메라 그룹</option></select></label>
       <label><input type="checkbox" id="opt-labels" checked> ID · 카메라 분류 표시</label>
-      <p class="note">필터: 초록 유지 · 분홍 제외 후보 · 노랑 보류.<br>카메라 그룹은 실제 운동 상태가 아닙니다.</p>
+      <p class="note">숨김을 끄면 OBB와 소속 점을 같은 원인 색으로 표시합니다.<br>초록 유지 · 분홍 점군 후보 · 보라 OBB 후보 · 주황 상부 후보 · 노랑 보류.<br>경계 여유 내 후보는 위치 오차가 미확정입니다. 카메라 동적 그룹·미션 예외는 보호합니다.</p>
     </section>
     <section>
       <h2>보기</h2>

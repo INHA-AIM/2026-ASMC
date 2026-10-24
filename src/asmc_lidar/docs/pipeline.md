@@ -56,7 +56,7 @@ Main 공통의 의도적 차이는 따로 있다. 운영 출력은 제외했고(
 /velodyne_points ─┐                     /imu, /Ego_topic(CAN) → scan 시각 local 입력(≤120ms, 최대 50ms 대기)
                   ▼                     /gps → sanity·HD맵 원점 검사 → bounded map pose(300ms, 3회 복구)
  ROI·자차 제거 → Voxel 0.1m → roll·pitch 수평화(행렬을 scan Context에 저장)
- → RANSAC 지면 제거 → [실험 TunnelFilter, 기본 OFF] → 적응 군집 → centroid·L-shape OBB
+ → IMU 수평 지면 기준 높이 ROI(2.5m) → RANSAC 지면 제거 → [실험 TunnelFilter, 기본 OFF] → 적응 군집 → centroid·L-shape OBB
  → CA Kalman/Hungarian 추적(local) → 전방 카메라 class fusion → typed local/map 출력
 ```
 

@@ -47,6 +47,8 @@ struct AuditReport {
   bool enabled = false, available = false;
   std::string reason = "off", map_id, map_sha256, bundle_sha256, policy_sha256, preview_config_id;
   double calculation_ms = 0;
+  double pose_source_age_ms = -1;
+  std::string pose_method;
   std::vector<AuditDecision> objects;
 };
 class HdMapAudit {

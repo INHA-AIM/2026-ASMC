@@ -369,6 +369,32 @@ TEST(LevelPoints, NonFiniteAnglesOrMountThrowWithoutTouchingOutput) {
   EXPECT_EQ(out->points[0].x, 42.f);
 }
 
+using asmc::lidar::pipeline::HeightRoi;
+using asmc::lidar::pipeline::HeightRoiConfig;
+using asmc::lidar::pipeline::RoiClassifier;
+using asmc::lidar::pipeline::RoiReason;
+
+TEST(HeightRoi, KeepsCollisionSupportOfTallVehicleAndRejectsCeiling) {
+  CloudPtr in(new Cloud),out(new Cloud);
+  for(float z:{-1.8f,-.9f,.6f,1.5f,3.f})in->push_back(P(10,2,z));
+  HeightRoiConfig cfg;cfg.enabled=true;cfg.max_height_above_ground_m=2.5;
+  std::vector<int> kept;HeightRoi(in,out,1.8,cfg,kept);
+  ASSERT_EQ(out->size(),3u);EXPECT_EQ(kept,(std::vector<int>{0,1,2}));
+  EXPECT_FLOAT_EQ(in->points.back().z,3.f); // raw input retained
+  cfg.enabled=false;HeightRoi(in,out,1.8,cfg,kept);
+  EXPECT_EQ(out->size(),in->size());
+}
+TEST(RoiProvenance, ReusesProductionInclusiveBoundsAndReasons) {
+  RangeConfig range;RoiConfig roi;VehicleSpec vehicle;
+  vehicle.f32_Width=1.892;vehicle.f32_WheelBase=3;vehicle.f32_FrontOverhang=.845;vehicle.f32_RearOverhang=.7;
+  RoiClassifier f(range,roi,vehicle);
+  EXPECT_EQ(f(P(10,2,0)),RoiReason::Keep);
+  EXPECT_EQ(f(P(101,0,0)),RoiReason::Range);
+  EXPECT_EQ(f(P(51,0,0)),RoiReason::XY);
+  EXPECT_EQ(f(P(10,0,3.1)),RoiReason::SensorZ);
+  EXPECT_EQ(f(P(1,0,0)),RoiReason::Ego);
+  EXPECT_EQ(f(P(kNaN,0,0)),RoiReason::NonFinite);
+}
 }  // namespace
 
 int main(int argc, char** argv) { testing::InitGoogleTest(&argc, argv); return RUN_ALL_TESTS(); }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A1 offline audit only: reads trace/fixture JSONL, never publishes or removes objects.
 
-The v6 vector product owns geometry; its SHA-checked derived grid is used for
+The pinned asmc_hd_map vector product owns geometry; its SHA-checked derived grid is used for
 bounded raster footprint comparison. Decisions are not an operational filter.
 Missing pose accuracy/mission-scope evidence prevents exclusion candidates.
 """

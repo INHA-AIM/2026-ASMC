@@ -1,5 +1,6 @@
 #include <asmc_lidar/filtering/hd_map_audit.hpp>
 #include <asmc_lidar/filtering/delivery_preview.hpp>
+#include <zlib.h>
 #include <opencv2/imgproc.hpp>
 #include <openssl/sha.h>
 #include <yaml-cpp/yaml.h>
@@ -147,11 +148,24 @@ HdMapAudit::HdMapAudit(const std::string& path,const std::string& expected) {
     const auto file=spec["file"].as<std::string>();
     Require(!file.empty()&&std::filesystem::path(file).filename()==file,"audit_array_path_invalid");
     const auto full=(std::filesystem::path(path).parent_path()/file).string();
-    Require(std::filesystem::file_size(full)==std::uint64_t(h)*w&&spec["bytes"].as<std::uint64_t>()==std::uint64_t(h)*w,"audit_array_size_mismatch");
+    const auto count=std::uint64_t(h)*w;
+    Require(spec["bytes"].as<std::uint64_t>()==count,"audit_array_size_mismatch");
     cv::Mat out(h,w,type);
-    std::ifstream in(full,std::ios::binary);in.read(reinterpret_cast<char*>(out.data),std::int64_t(h)*w);
-    Require(bool(in),"audit_array_read_error");
-    Require(Hash(out.data,out.total())==spec["sha256"].as<std::string>(),"audit_array_sha_mismatch");
+    if(spec["compression"]&&spec["compression"].as<std::string>()=="gzip") {
+      Require(std::filesystem::file_size(full)<=count+65536&&
+              std::filesystem::file_size(full)==spec["stored_bytes"].as<std::uint64_t>()&&
+              FileSha256(full)==spec["sha256"].as<std::string>(),"audit_array_sha_mismatch");
+      gzFile in=gzopen(full.c_str(),"rb");Require(in!=nullptr,"audit_array_read_error");
+      const int n=gzread(in,out.data,static_cast<unsigned int>(count));
+      unsigned char extra;const int tail=gzread(in,&extra,1);const int closed=gzclose(in);
+      Require(n==static_cast<int>(count)&&tail==0&&closed==Z_OK,"audit_array_read_error");
+      Require(Hash(out.data,out.total())==spec["raw_sha256"].as<std::string>(),"audit_array_sha_mismatch");
+    } else {
+      Require(!spec["compression"]&&std::filesystem::file_size(full)==count,"audit_array_size_mismatch");
+      std::ifstream in(full,std::ios::binary);in.read(reinterpret_cast<char*>(out.data),count);
+      Require(bool(in),"audit_array_read_error");
+      Require(Hash(out.data,out.total())==spec["sha256"].as<std::string>(),"audit_array_sha_mismatch");
+    }
     return out;
   };
   p->occupancy=load("occupancy",CV_8S);p->exceptions=load("exceptions",CV_8U);
@@ -249,6 +263,7 @@ void WriteAuditReport(std::ostream& out,const AuditReport& r) {
   out<<",\"map_sha256\":";Str(out,r.map_sha256);out<<",\"bundle_sha256\":";Str(out,r.bundle_sha256);
   out<<",\"policy_sha256\":";Str(out,r.policy_sha256);
   out<<",\"preview_config_id\":";Str(out,r.preview_config_id);
+  out<<",\"pose_source_age_ms\":"<<r.pose_source_age_ms<<",\"pose_method\":";Str(out,r.pose_method);
   out<<",\"map_identity_provenance\":\"pinned_bundle_and_runtime_origin_config\",\"geometry_authority\":\"vector; grid ratios are diagnostic approximation\",\"position_error_verified\":false,\"mission_scope_verified\":false,\"calculation_ms\":"<<r.calculation_ms<<",\"objects\":[";
   for(std::size_t i=0;i<r.objects.size();++i){if(i)out<<',';WriteAuditDecision(out,r.objects[i]);}out<<"]}";
 }

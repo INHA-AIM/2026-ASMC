@@ -102,7 +102,8 @@ std::string Resolve(const std::string& path, const std::string& package_share_di
 }  // namespace
 
 RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string& package_share_dir) {
-  const Reader r(LoadYaml(yaml_path), yaml_path);
+  const auto root=LoadYaml(yaml_path);
+  const Reader r(root, yaml_path);
   const auto& file = r.file();
   if (r.Get<int>("schema_version") != 1) Fail(file, "unsupported schema_version (expected 1)");
 
@@ -137,6 +138,16 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   p.roi.f32_MaxY = r.Get<float>("lidar.ROI.MaxY");
   p.roi.f32_MinZ = r.Get<float>("lidar.ROI.MinZ");
   p.roi.f32_MaxZ = r.Get<float>("lidar.ROI.MaxZ");
+  if(root["lidar"]["height_roi"]) {
+    const auto h=root["lidar"]["height_roi"];
+    p.height_roi.enabled=h["enabled"].as<bool>();
+    p.height_roi.max_height_above_ground_m=h["max_height_above_ground_m"].as<double>();
+    p.height_roi.nominal_base_height_m=h["nominal_base_height_m"].as<double>();
+    if(!std::isfinite(p.height_roi.max_height_above_ground_m)||p.height_roi.max_height_above_ground_m<2.0||
+       p.height_roi.max_height_above_ground_m>5.0||!std::isfinite(p.height_roi.nominal_base_height_m)||
+       p.height_roi.nominal_base_height_m<0.1||p.height_roi.nominal_base_height_m>1.0)
+      Fail(file,"invalid gravity-aligned height ROI");
+  }
   auto& cl = p.clustering;
   cl.b_Enabled = r.Get<bool>("lidar.Clustering.Enabled");
   cl.f32_Eps = r.Get<float>("lidar.Clustering.Eps");
@@ -245,7 +256,6 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   Near(v.st_LiDARRotationDeg.f32_Z, m.Get<double>("sensor_pose_base_link.yaw_deg"), file, "LiDAR yaw");
 
   // New optional block keeps historical schema-1 replay profiles readable.
-  const auto root = LoadYaml(yaml_path);
   if (root["hd_map_audit"]) {
     const auto preview=root["hd_map_audit"]["delivery_preview"];
     if(preview) {
@@ -273,7 +283,11 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
         config.hd_map_manifest_sha256 = root["hd_map_audit"]["manifest_sha256"].as<std::string>();
         config.hd_map_audit = std::make_shared<const filtering::HdMapAudit>(
             config.hd_map_manifest, config.hd_map_manifest_sha256);
-      } catch (const std::exception& e) { config.hd_map_audit_error = e.what(); }
+        const auto product=root["hd_map_audit"]["source_product"];
+        if(product&&filtering::FileSha256(Resolve(product.as<std::string>(),package_share_dir))!=config.hd_map_audit->map_sha256()) {
+          config.hd_map_audit.reset();throw std::runtime_error("audit_current_product_sha_mismatch");
+        }
+      } catch (const std::exception& e) { config.hd_map_audit.reset();config.hd_map_audit_error = e.what(); }
     }
   }
 
@@ -301,6 +315,8 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
             << config.pipeline.use_roll << ',' << config.enable_camera_fusion << ','
             << config.pipeline.tunnel.enabled << ',' << config.pipeline.capture_debug << '\n';
   effective << config.hd_map_audit_mode << '\n' << config.hd_map_manifest_sha256 << '\n';
+  effective << config.pipeline.height_roi.enabled << ',' << config.pipeline.height_roi.max_height_above_ground_m
+            << ',' << config.pipeline.height_roi.nominal_base_height_m << '\n';
   if (config.hd_map_audit) effective << config.hd_map_audit->bundle_sha256() << '\n'
       << config.hd_map_audit->policy_sha256() << '\n';
   const auto& p=config.delivery_preview;

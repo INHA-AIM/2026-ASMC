@@ -83,7 +83,8 @@ def parse_point_cloud(fields, point_step, width, height, data, is_bigendian=Fals
     xyzi[:, 3] = arr['intensity'] if 'intensity' in names else 0.0
     label = np.ascontiguousarray(arr['label'], dtype=np.uint8) if 'label' in names else None
     cluster = np.ascontiguousarray(arr['cluster'], dtype=np.int32) if 'cluster' in names else None
-    return {'xyzi': xyzi, 'label': label, 'cluster': cluster, 'count': n}
+    track = np.ascontiguousarray(arr['track'], dtype=np.int32) if 'track' in names else None
+    return {'xyzi': xyzi, 'label': label, 'cluster': cluster, 'track':track, 'count': n}
 
 
 # --------------------------------------------------------------------------- scenes
@@ -128,6 +129,8 @@ def encode_scene(clouds):
             put(stage + '.label', cloud['label'])
         if cloud.get('cluster') is not None:
             put(stage + '.cluster', cloud['cluster'])
+        if cloud.get('track') is not None:
+            put(stage + '.track', cloud['track'])
     return table, b''.join(parts)
 
 

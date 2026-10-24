@@ -386,5 +386,16 @@ test('audit preview never hides protected or uncertain objects',()=>{
   assert.equal(V.auditAppearance(scene,{id:2}).detail,'카메라 동적 그룹 보호');
   assert.equal(scene.hd_map_audit.objects.length,3);
 });
+// Distinct support/footprint/height candidate switches must not hide protected objects.
+test('independent support/footprint/height switches preserve inspection',()=>{
+  const t={id:42,miss:0};
+  for(const [reason,kind] of [['cluster_outside_boundary_uncertain','points'],['ordinary_space_clearly_outside','obb'],['overhead_clearance_candidate','height']]) {
+    const scene={hd_map_audit:{enabled:true,objects:[{track_id:42,preview:{decision:'exclude_candidate',reason}}]}};
+    if(V.auditAppearance(scene,t).category!==kind)throw new Error('candidate reason category');
+    if(V.previewVisible(scene,t,true,false,{[kind]:true}))throw new Error('reason filter failed');
+    if(!V.previewVisible(scene,t,true,false,{}))throw new Error('candidate cannot be inspected');
+  }
+});
+
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');
 process.exit(failures.length ? 1 : 0);

@@ -124,10 +124,11 @@ endif()
 
 if(ASMC_LIDAR_PIPELINE_ACTIVE)
   find_package(OpenCV REQUIRED COMPONENTS core imgproc)
+  find_package(ZLIB REQUIRED)
   # Private decision-only library; never exported to Main and never owns ROS state.
   add_library(asmc_lidar_hd_map_audit STATIC src/filtering/hd_map_audit.cpp src/filtering/delivery_preview.cpp)
   target_include_directories(asmc_lidar_hd_map_audit PUBLIC include ${OpenCV_INCLUDE_DIRS})
-  target_link_libraries(asmc_lidar_hd_map_audit PUBLIC yaml-cpp OpenSSL::Crypto ${OpenCV_LIBRARIES})
+  target_link_libraries(asmc_lidar_hd_map_audit PUBLIC yaml-cpp OpenSSL::Crypto ZLIB::ZLIB ${OpenCV_LIBRARIES})
   target_compile_options(asmc_lidar_hd_map_audit PRIVATE -Wall -Wextra)
   if(CATKIN_ENABLE_TESTING)
     add_executable(asmc_lidar_hd_map_audit_probe test/hd_map_audit_probe.cpp)

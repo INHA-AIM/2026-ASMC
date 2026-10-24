@@ -112,6 +112,7 @@
   const auditIndices=new WeakMap();
   const AUDIT_REASONS={camera_dynamic_protected:'카메라 동적 그룹 보호',cluster_drivable_support:'군집 점이 도로 안',
     cluster_boundary_protected:'경계 여유 보호',exception_space_protected:'미션 예외 공간 보호',
+    cluster_outside_boundary_uncertain:'도로 점 없음 · 경계 오차 미확정',
     cluster_support_outside:'군집 점이 도로 밖',overhead_clearance_candidate:'자차 상부 높이 후보',
     overhead_lower_surface_unverified:'하부 관측 검증 대기',insufficient_cluster_support:'근거 점 부족',
     unknown_support_map_cells:'점 위치의 지도 근거 부족',map_or_pose_unavailable:'지도/위치 무효',
@@ -123,17 +124,26 @@
     if(!index){index=new Map((report.objects||[]).map(d=>[d.track_id,d]));auditIndices.set(report,index);}
     return index.get(track.id)||null;
   }
+  function exclusionKind(d) {
+    const p=d&&d.preview,decision=p?p.decision:d&&d.decision,reason=p?p.reason:d&&d.reason;
+    if(decision!=='exclude_candidate')return null;
+    if(reason && reason.startsWith('cluster_'))return 'points';
+    if(reason==='overhead_clearance_candidate')return 'height';
+    return 'obb';
+  }
   function auditAppearance(scene,track){
     const d=auditForTrack(scene,track),p=d&&d.preview;
     const kind=p?p.decision:d?d.decision:'unavailable';
-    return {decision:kind,reason:p?p.reason:d?d.reason:'audit_off',
+    const category=exclusionKind(d);
+    return {decision:kind,category,reason:p?p.reason:d?d.reason:'audit_off',
       label:{keep:'유지',exclude_candidate:'제외 후보',undetermined:'보류',unavailable:'미실행'}[kind]||'보류',
-      color:{keep:'#34d399',exclude_candidate:'#fb7185',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',
+      color:category?{points:'#f472b6',obb:'#c084fc',height:'#fb923c'}[category]:{keep:'#34d399',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',
       detail:AUDIT_REASONS[p?p.reason:d?d.reason:'']||(p?p.reason:d?d.reason:'audit OFF')};
   }
-  function previewVisible(scene,track,showPred,hideCandidates){
+  function previewVisible(scene,track,showPred,hideCandidates,hideReasons={}){
     if(!showPred&&track.miss>0)return false;
-    return !hideCandidates||auditAppearance(scene,track).decision!=='exclude_candidate';
+    const a=auditAppearance(scene,track);
+    return a.decision!=='exclude_candidate'||(!hideCandidates&&!hideReasons[a.category]);
   }
   function trackVisible(scene,road,track,hideOutside,showPred=true) {
     if(!showPred && track.miss>0)return false;
@@ -274,5 +284,5 @@
 
   return { I4, rot3To4, mul, invRigid, apply, isMatrix, frameMatrices, bevProject, bevUnproject, sideProject, orbitProject,
     boxOutline, drawBox, frameAction, sceneFreshness, fetchErrorKind, pointInPolygon, roadMembership, motionAppearance,
-    trackVisible, IdChangeMonitor, auditForTrack, auditAppearance, previewVisible };
+    trackVisible, IdChangeMonitor, auditForTrack, auditAppearance, previewVisible, exclusionKind };
 });

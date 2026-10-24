@@ -99,6 +99,8 @@ class DebugPublisher : public pipeline::StageObserver {
     bool stages = false;  // stage clouds captured (scan reached the pipeline)
     StageSample raw, roi, voxel, leveled;
     std::vector<std::uint8_t> leveled_label;   // per sent leveled point
+    std::vector<std::uint8_t> raw_label;
+    std::vector<std::int32_t> leveled_track;  // exact support ownership, -1 if none/ambiguous
     std::vector<std::int32_t> leveled_cluster;  // per sent leveled point, -1 = none
     pipeline::StageCounts counts;
     pipeline::StageTimings timings;
@@ -134,6 +136,9 @@ class DebugPublisher : public pipeline::StageObserver {
   DebugPublisherConfig config_;
   bool use_roll_ = true, tunnel_enabled_ = false;
   pipeline::VehicleSpec vehicle_;  // outline/LiDAR position for the page
+  pipeline::RangeConfig range_;
+  pipeline::RoiConfig roi_;
+  pipeline::HeightRoiConfig height_roi_;
   ros::Publisher raw_pub_, roi_pub_, voxel_pub_, leveled_pub_, scan_pub_;
 
   // Worker-thread state.

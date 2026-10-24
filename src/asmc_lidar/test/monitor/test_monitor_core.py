@@ -56,6 +56,12 @@ class FakeClock(object):
 
 
 class CloudParsingTest(unittest.TestCase):
+    def test_exact_support_track_survives_binary_cloud_decode(self):
+        data=struct.pack('<ffffBxxxii',1,2,3,4,3,7,42)
+        cloud=core.parse_point_cloud(fields(True)+[('track',24,5,1)],28,1,1,data)
+        np.testing.assert_array_equal(cloud['track'],np.array([42],np.int32))
+        np.testing.assert_array_equal(cloud['label'],np.array([3],np.uint8))
+
     def test_xyzi_and_labels(self):
         pts = [(1.0, 2.0, 3.0, 9.0), (-1.5, 0.5, 0.25, 1.0), (0.0, 0.0, -1.0, 4.0)]
         cloud = core.parse_point_cloud(fields(True), 24, 3, 1, cloud_bytes(pts, True))

@@ -65,6 +65,12 @@ lidar:
     MaxY: 20.0
     MinZ: -2.0
     MaxZ: 3.0
+  # Flat K-City course. Upright height after IMU leveling, before ground/cluster.
+  # A tall truck retains its lower collision support; upper shape is truncated.
+  height_roi:
+    enabled: true
+    max_height_above_ground_m: 2.50
+    nominal_base_height_m: 0.36
   # Main setting.yaml LiDAR.Clustering (Threshold: 300 is never read by Main).
   Clustering:
     Enabled: true
@@ -155,9 +161,10 @@ experimental:
 # For an internal audit profile, use an exported, SHA-pinned bundle. Missing or
 # corrupt audit data disables only the diagnostic calculation, not LiDAR output.
 hd_map_audit:
-  mode: "off"
-  manifest: ""
-  manifest_sha256: ""
+  mode: "audit"
+  manifest: "config/hd_map_audit/manifest.json"
+  manifest_sha256: "010ff355322edbb492034dce13332b08a715c63cf344b515918c92cb4c32a96b"
+  source_product: "../asmc_hd_map/config/kcity2025_compact_drivable_map.json"
   # Preview only: no ROS exclusion. Positive camera dynamic evidence is protected
   # in all zones; raw point support is voxel/filter/cluster output, not GUI samples.
   delivery_preview:

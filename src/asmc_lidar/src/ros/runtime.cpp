@@ -239,10 +239,14 @@ void LidarRuntime::Audit(ScanOutput& out) const {
   const auto& stamps = out.result.context.map_pose.sample_stamps;
   if (!stamps.empty()) frame.source_age_ms = double(frame.stamp_ns -
       static_cast<std::int64_t>(*std::max_element(stamps.begin(), stamps.end()))) / 1e6;
+  report.pose_source_age_ms=frame.source_age_ms;
+  report.pose_method=out.result.context.map_pose.reason;
   // Deliberately false: no independent positional bound/approach validation exists.
   frame.position_error_verified = false; frame.mission_scope_verified = false;
   report.objects.reserve(objects.objects.size());
   const auto base_from_level=asmc::lidar::base_from_input(out.result.context);
+  const Pose map_from_level=base_from_level ?
+      Pose(out.result.context.map_pose.map_from_base * *base_from_level) : Pose::Identity();
   for (const auto& obj : objects.objects) {
     filtering::AuditObject input;
     input.track_id = obj.track_id;
@@ -263,9 +267,10 @@ void LidarRuntime::Audit(ScanOutput& out) const {
             for(const auto& p:source->detection.obb_corners_level)
               bottom=std::min(bottom,((*base_from_level)*Vec(p.x,p.y,p.z)).z());
             for(const auto& p:source->detection.pcl_ClusterPoints.points) {
-              const Vec base=(*base_from_level)*Vec(p.x,p.y,p.z);
-              const Vec mapped=valid_map?out.result.context.map_pose.map_from_base*base:Vec(NAN,NAN,NAN);
-              audit->Accumulate(evidence,{mapped.x(),mapped.y(),mapped.z()},base.z());
+              const Vec point(p.x,p.y,p.z);
+              const double base_z=base_from_level->linear().row(2).dot(point)+base_from_level->translation().z();
+              const Vec mapped=valid_map?map_from_level*point:Vec(NAN,NAN,NAN);
+              audit->Accumulate(evidence,{mapped.x(),mapped.y(),mapped.z()},base_z);
             }
             const auto& c=source->camera;
             const bool positive=filtering::PositiveCameraEvidence(frame.stamp_ns,c.camera_observation_ns,

@@ -37,7 +37,13 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   if(!d.exception_types.empty()){keep("exception_space_protected");return;}
   if(e.unknown){preview("undetermined","unknown_support_map_cells");d.decision="undetermined";d.reason="unknown_support_map_cells";return;}
   if(e.road>=p.minimum_road_points||d.road_point_ratio>=p.minimum_road_ratio){keep("cluster_drivable_support");return;}
-  if(e.guard){keep("cluster_boundary_protected");return;}
+  if(e.guard){
+    // A road-exterior rail entirely inside the uncertainty band is still an
+    // outside-support PREVIEW. Retain the uncertainty in the final decision;
+    // a 1m guard must not silently turn 0 road points into measured road support.
+    preview("exclude_candidate","cluster_outside_boundary_uncertain");
+    d.decision="undetermined";d.reason="boundary_pose_uncertainty_unverified";return;
+  }
   // Large OBBs can enter the road while the underlying guardrail points do not.
   // Keep the old OBB relation as diagnostics, use the support for the preview.
   preview("exclude_candidate","cluster_support_outside");
