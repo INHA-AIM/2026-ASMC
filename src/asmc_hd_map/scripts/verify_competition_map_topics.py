@@ -145,7 +145,7 @@ def main() -> int:
     ):
         _require(message.header.frame_id == "map", "%s left the map frame" % name)
 
-    _require(meta.geometry_sha256 == "521b1fde181a0c10ce71696f7f05010138c041dd067ad531dce23ff5da6ad24f", "geometry SHA drift")
+    _require(meta.geometry_sha256 == "e836f762dbbad4f02aaa6b37f486439aa02d3d5f961fa72b162cde4ebd24a3b3", "geometry SHA drift")
     _require(meta.build_id == "kcity2025_reviewed_high_speed_adjacent_drivable_v7", "P2-B v7 build ID drift")
     _require(meta.operational and meta.complete, "P2-B map must be operational and complete")
     _require(meta.lane_count == 73 and meta.drivable_area_count == 115, "P2-B v7 product count drift")
@@ -153,8 +153,8 @@ def main() -> int:
         "compact_drivable_product" in meta.source_ids and "legacy_drivable_h5" in meta.source_ids,
         "P2-B provenance is missing from HdMapMeta",
     )
-    _require(meta.lane_marking_count == 133, "metadata marking count must include 126 lanes + 7 stoplines")
-    _require(markings.complete and len(markings.markings) == 133, "global marking array is incomplete")
+    _require(meta.lane_marking_count == 134, "metadata marking count must include 127 lanes + 7 stoplines")
+    _require(markings.complete and len(markings.markings) == 134, "global marking array is incomplete")
     _require(markings.build_id == meta.build_id and markings.map_id == meta.map_id,
              "marking/meta identity mismatch")
     _require(markings.geometry_sha256 == meta.geometry_sha256, "marking/meta geometry SHA mismatch")
@@ -396,9 +396,9 @@ def main() -> int:
     color_counts = Counter(value.color for value in markings.markings)
     pattern_counts = Counter(value.pattern for value in markings.markings)
     _require(role_counts[LaneMarking.ROLE_STOP_LINE] == 7, "expected seven stoplines")
-    _require(color_counts[LaneMarking.COLOR_WHITE] == 106, "expected 99 white lanes + 7 stoplines")
+    _require(color_counts[LaneMarking.COLOR_WHITE] == 107, "expected 100 white lanes + 7 stoplines")
     _require(color_counts[LaneMarking.COLOR_YELLOW] == 27, "expected 27 yellow markings")
-    _require(pattern_counts[LaneMarking.PATTERN_SOLID] == 98, "expected 91 solid lanes + 7 stoplines")
+    _require(pattern_counts[LaneMarking.PATTERN_SOLID] == 99, "expected 92 solid lanes + 7 stoplines")
     _require(pattern_counts[LaneMarking.PATTERN_BROKEN] == 35, "expected 35 broken markings")
 
     _require(len(checkpoints.checkpoints) == 15, "expected 15 checkpoints (rule book v1.2)")

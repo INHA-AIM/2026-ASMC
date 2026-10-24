@@ -53,7 +53,7 @@ class RouteCurationTest(unittest.TestCase):
                 "stage14_return_332_to_finish",
             ])
             self.assertEqual(summary["planned_segment_count"], 0)
-            self.assertEqual(summary["selected_marking_count"], 126)
+            self.assertEqual(summary["selected_marking_count"], 127)
             self.assertTrue(summary["stoplines_included"])
             self.assertEqual(summary["selected_stopline_count"], 7)
             self.assertEqual(
@@ -902,7 +902,7 @@ class RouteCurationTest(unittest.TestCase):
                 and feature["attributes"]["curation_segment_id"]
                 == "stage12_high_speed_entry_and_body"
             ]
-            self.assertEqual(len(stage12), 36)
+            self.assertEqual(len(stage12), 37)
             self.assertEqual(
                 {feature["attributes"]["color"] for feature in stage12},
                 {"white"},
@@ -913,7 +913,7 @@ class RouteCurationTest(unittest.TestCase):
             )
             self.assertEqual(
                 sum(feature["attributes"]["pattern"] == "solid" for feature in stage12),
-                20,
+                21,
             )
             self.assertFalse(any(
                 feature["provenance"]["source_id"] in {

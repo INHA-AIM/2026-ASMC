@@ -86,6 +86,19 @@ def _doc_manifest(repo_root: Path, write: bool) -> bool:
     return current
 
 
+def _consumer_bundle(repo_root: Path, check: bool) -> bool:
+    # Optional monorepo deployment export. asmc_hd_map remains the geometry
+    # authority and can be built alone; no LiDAR runtime or ROS is imported.
+    script=repo_root/"src/asmc_lidar/tools/sync_default_hd_map.py"
+    if not script.is_file():
+        return True
+    result=subprocess.run([sys.executable,str(script)]+(["--check"] if check else []),
+                          cwd=repo_root,capture_output=True,text=True)
+    print("[%s] LiDAR deployment derivative" % ("ok" if result.returncode==0 else "STALE"))
+    print((result.stdout+result.stderr).strip())
+    return result.returncode==0
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[3])
@@ -101,6 +114,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             _run(repo_root, "build_drivable_area_input_audit.py", "--check"),
             _run(repo_root, "build_compact_drivable_map.py", "--repo-root", root, "--check"),
             _run(repo_root, "build_runtime_pins.py", "--check"),
+            _consumer_bundle(repo_root, check=True),
             _doc_manifest(repo_root, write=False),
         ]
         return 0 if all(results) else 1
@@ -111,6 +125,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         lambda: _run(repo_root, "build_drivable_area_input_audit.py"),
         lambda: _run(repo_root, "build_compact_drivable_map.py", "--repo-root", root),
         lambda: _run(repo_root, "build_runtime_pins.py", "--write"),
+        lambda: _consumer_bundle(repo_root, check=False),
         lambda: _doc_manifest(repo_root, write=True),
     )
     for step in steps:

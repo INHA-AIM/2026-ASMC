@@ -41,7 +41,7 @@ GPS가 끊기면 현재값을 무효화하고 정적 전역 정보와 명시적�
 | `global/lanes` | 70개 차로 polygon/centerline, link ID·선후행·인접 관계·차로 번호 | 현재 후보 또는 전체 경로와 교차하는 차로 선택 |
 | `global/drivable_areas` | 102개 영역, 교차로·support lane 포함 | 모든 후보 경로와 차량 몸체의 주행가능 여부 검사 |
 | `global/drivable_grid` | 3085×7232, 0.2 m, `0=free`, `100=nonfree` | 필요 시 한번 받아 빠른 cell 조회; raster는 vector 파생물 |
-| `global/lane_markings` | 물리 차선126 + 정지선7; 색·실선/점선·역할 | 도색 정책과 정지선 연결, 신호 색상은 별도 인지에서 수신 |
+| `global/lane_markings` | 물리 차선127 + 정지선7; 색·실선/점선·역할 | 도색 정책과 정지선 연결, 신호 색상은 별도 인지에서 수신 |
 | `global/mission_zones` | 미션/정책 15개, effective speed 39개 link | ID별 payload 캐시; 구간·속도·인지 활성 조건 선택 |
 | `global/checkpoints` | 15개 공식 pose, 3 m 반경, yaw, station | 체크포인트 통과와 경계 연결 |
 | `global/route` | 공식 path 4430점 + XY 누적거리, route SHA·origin | HD station 정본, 경계 좌표 재투영 기준 |

@@ -40,7 +40,7 @@ class DevelopmentVisualizationContractTest(unittest.TestCase):
             kind: sum(feature.get("feature_type") == kind for feature in document["features"])
             for kind in ("lane_marking", "stopline")
         }
-        self.assertEqual(counts, {"lane_marking": 126, "stopline": 7})
+        self.assertEqual(counts, {"lane_marking": 127, "stopline": 7})
 
     def test_won_tae_source_is_archived_inside_package(self):
         path = self.layers["source_paths"]["won_tae_h5"]

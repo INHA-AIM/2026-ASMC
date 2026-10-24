@@ -5,7 +5,7 @@ status: p2a_complete_no_geometry_change
 sources:
   competition_metadata:
     path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
-    sha256: 282db31857c7140b48ee5847732346735f8d3dfe3863db365ea2aff65f6261f5
+    sha256: 5e829605ed5d225b68d0454e0e313a48657ef5ee08e19ac0781d1d78c5bd10f4
     bytes: 45479
   current_global_info:
     path: src/behavior_planner/src/config/global_info.json
@@ -25,8 +25,8 @@ sources:
     bytes: 1683347
   reviewed_lane_markings:
     path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
-    sha256: 21f7da31ec592089264fe604310f7bedcd005818e2f2b2e0ac2c4d44454c05a2
-    bytes: 2002472
+    sha256: ca985c66a33d5b3d327119e03a4ac450f83fcf1032ede68e2b7a3b1ff6292628
+    bytes: 2004830
   reviewed_route_links:
     path: src/behavior_planner/src/config/route_links_1.yaml
     sha256: d5444dce6da7bb7da1f88c3cdf1cbdef4e1a0eebcf8d0d7a5db03830a97554bf
@@ -39,8 +39,8 @@ frame:
   - 4124145.0
   - 0.0
 reviewed_hd_map:
-  geometry_sha256: 521b1fde181a0c10ce71696f7f05010138c041dd067ad531dce23ff5da6ad24f
-  lane_marking_count: 126
+  geometry_sha256: e836f762dbbad4f02aaa6b37f486439aa02d3d5f961fa72b162cde4ebd24a3b3
+  lane_marking_count: 127
   stopline_count: 7
 legacy_drivable_prior:
   representation: node_link_centerline_buffer_raster_with_reviewed_observation_adjustments

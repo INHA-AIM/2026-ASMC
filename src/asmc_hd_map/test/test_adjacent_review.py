@@ -24,12 +24,12 @@ class AdjacentReviewTest(unittest.TestCase):
         self.assertEqual(geometry_sha256({'features':original}),
                          '01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf')
 
-    def test_only_three_reviewed_links_receive_five_markings(self):
-        self.assertEqual(len(self.new),5)
+    def test_only_three_reviewed_links_receive_six_markings(self):
+        self.assertEqual(len(self.new),6)
         ids={v for f in self.new for v in f['topology']['current_link_ids']}
         self.assertEqual(ids,{'A2256W000029','A2256W000175','A2256W000406'})
         inferred=[f for f in self.new if f['validation']['inferred_missing_paint']]
-        self.assertEqual(len(inferred),1)
+        self.assertEqual(len(inferred),2)
         self.assertEqual(inferred[0]['topology']['current_link_ids'],['A2256W000029'])
         self.assertIn('nominal_width_offset',inferred[0]['provenance']['transform'])
 
@@ -39,9 +39,19 @@ class AdjacentReviewTest(unittest.TestCase):
             if not suffix:continue
             target=next(q for q in self.map['features'] if q['id'].endswith(suffix))
             np.testing.assert_allclose(f['geometry']['coordinates'][-1],target['geometry']['coordinates'][0],atol=1e-9)
-            a=f['attributes'];self.assertEqual((a['dash_length_m'],a['dash_gap_m']),(3,3))
+            a=f['attributes']
+            if a['pattern']=='solid':continue
+            self.assertEqual((a['dash_length_m'],a['dash_gap_m']),(3,3))
             p=np.asarray(f['geometry']['coordinates']);length=np.linalg.norm(np.diff(p[:,:2],axis=0),axis=1).sum()
             self.assertAlmostEqual((length+a['dash_phase_m'])%6,0,places=8)
+
+    def test_a029_merge_is_solid_and_continuous_with_broken_predecessor(self):
+        broken=next(f for f in self.new if f['id'].endswith('a029_left_missing_broken'))
+        solid=next(f for f in self.new if f['id'].endswith('a029_left_missing_broken:merge_solid'))
+        self.assertEqual(solid['attributes']['pattern'],'solid')
+        self.assertEqual(solid['validation']['pattern_reference_ids'],['B219BS011115','B219BS011118'])
+        np.testing.assert_allclose(solid['geometry']['coordinates'][-1],broken['geometry']['coordinates'][0],atol=1e-9)
+        self.assertLess(solid['geometry']['coordinates'][-1][1],solid['geometry']['coordinates'][0][1])
 
     def test_three_lane_centers_are_in_surface_but_unreviewed_a010_is_not_selected(self):
         product=json.loads((PKG/'config/kcity2025_compact_drivable_map.json').read_text())
@@ -53,6 +63,19 @@ class AdjacentReviewTest(unittest.TestCase):
             for x in (65.824,69.385,72.369):
                 i,j=np.rint((np.array([x,300])-o)/res).astype(int)
                 self.assertEqual(grid[j,i],0)
+
+    def test_added_roads_are_connected_to_existing_a411_a418(self):
+        import cv2
+        links={r['idx']:r for r in json.loads((ROOT/'src/asmc_planner/config/behavior/link_set.json').read_text())}
+        with np.load(PKG/'config/kcity2025_compact_drivable_grid.npz') as data:
+            _,labels=cv2.connectedComponents((data['occupancy']==0).astype(np.uint8))
+            components=[]
+            for suffix in ['029','175','406','411','418']:
+                points=links['A2256W000'+suffix]['points'];xy=np.asarray(points[len(points)//2][:2])
+                i,j=np.rint((xy-data['origin_xy'])/float(data['resolution_m'])).astype(int)
+                components.append(int(labels[j,i]))
+            self.assertGreater(components[0],0)
+            self.assertEqual(len(set(components)),1)
 
     def test_existing_102_road_areas_and_ids_are_unchanged(self):
         product=json.loads((PKG/'config/kcity2025_compact_drivable_map.json').read_text())
@@ -98,7 +121,7 @@ class AdjacentReviewTest(unittest.TestCase):
         lane=str(PKG/'reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json')
         good=module.load_drivable_overlay(*args,lane)
         self.assertTrue(good['available']);self.assertTrue(good['lanes_available'])
-        self.assertEqual(len(good['lane_markings']),133)
+        self.assertEqual(len(good['lane_markings']),134)
         self.assertTrue(all('segments' in row and 'centerline' not in row for row in good['lane_markings']))
         with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write('{}');f.flush()

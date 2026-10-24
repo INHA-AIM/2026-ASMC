@@ -28,7 +28,7 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
     def test_frozen_geometry_and_selection(self):
         stats = self.artifact["statistics"]
         self.assertEqual(self.artifact["reviewed_geometry_sha256"],
-                         "521b1fde181a0c10ce71696f7f05010138c041dd067ad531dce23ff5da6ad24f")
+                         "e836f762dbbad4f02aaa6b37f486439aa02d3d5f961fa72b162cde4ebd24a3b3")
         self.assertEqual(stats["route_lane_count"], 39)
         self.assertEqual(stats["selected_lane_count"], 73)
         self.assertEqual(stats["drivable_area_count"], 115)

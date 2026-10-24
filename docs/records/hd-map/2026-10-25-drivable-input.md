@@ -8,7 +8,7 @@
 - 기존 주행가능영역은 진짜 vector road mesh가 아니라 Node/Link 중심선 buffer에 검수 보정을 더한 H5 raster다.
 - 기존 road 면적은 `89834.44 m²`, 공식 checkpoint 중심은 `15/15` 모두 road 안에 있다.
 - 보호구간은 `984.488 m`, 차선 기반 clip 후보는 `1200.123 m`이며 합계가 전역경로를 정확히 한 번 덮는다.
-- stage14 geometry hash는 `521b1fde181a0c10ce71696f7f05010138c041dd067ad531dce23ff5da6ad24f`로 유지됐다.
+- stage14 geometry hash는 `e836f762dbbad4f02aaa6b37f486439aa02d3d5f961fa72b162cde4ebd24a3b3`로 유지됐다.
 
 ## 분류 규칙
 

@@ -80,20 +80,38 @@ def adjacent_markings(config, review, features, repo_root):
                 if np.linalg.norm(points[-1,:2]-anchor[:2])>0.5:
                     raise ValueError('adjacent endpoint differs from reviewed final marking by >0.5m')
                 points[-1]=anchor
-            pattern=marking['pattern'];length=np.linalg.norm(np.diff(points[:,:2],axis=0),axis=1).sum()
-            phase=float((-length)%6.0) if pattern=='broken' and anchor is not None else 0.0
-            f=make_candidate_feature(
-                feature_type='lane_marking',canonical_id=config['map_id']+':lane_marking:adjacent:'+marking['id'],
-                points=points,attributes=dict(color='white',pattern=pattern,line_group='single',
-                    line_width_m=0.15,dash_length_m=3.0 if pattern=='broken' else 0.0,
-                    dash_gap_m=3.0 if pattern=='broken' else 0.0,dash_phase_m=phase,
-                    functional_role='lane_boundary_paint',curation_segment_id=group['curation_segment_id'],
-                    reviewed_adjacent_group_id=group['id'],source_display='reviewed_adjacent_corridor'),
-                source_id=source_id,source_sha256=source_sha,target_link_ids=targets,
-                validation=dict(human_reviewed=True,evidence_ids=group['evidence'],
-                    inferred_missing_paint=not bool(marking.get('legacy_source_ids')),
-                    join_feature_suffix=marking.get('join_feature_suffix'),
-                    dash_phase_aligned_to_join=pattern=='broken' and anchor is not None))
-            f['provenance'].update(source_kind=source_kind,transform=transform)
-            f['status']='reviewed';output.append(f)
+            parts=[(marking['id'],points,marking['pattern'],marking.get('join_feature_suffix'))]
+            transition=marking.get('solid_before_map_xy')
+            if transition is not None:
+                # A paint transition splits one continuous curve. Never append
+                # an independent overlay or change the neighboring road scope.
+                origin=np.r_[np.asarray(transition,float),0.0]
+                before=_clip(points,origin,direction,-1)
+                after=_clip(points,origin,direction,1)
+                if np.linalg.norm(before[-1]-after[0])>1e-8:
+                    raise ValueError('paint transition must be continuous')
+                for ref_id in marking.get('pattern_reference_ids',[]):
+                    if refs[ref_id]['shape'].lower()!='solid':
+                        raise ValueError('merge paint reference is not solid')
+                parts=[(marking['id']+':merge_solid',before,'solid',None),
+                       (marking['id'],after,'broken',marking.get('join_feature_suffix'))]
+            for part_id,curve,pattern,join in parts:
+                length=np.linalg.norm(np.diff(curve[:,:2],axis=0),axis=1).sum()
+                phase=float((-length)%6.0) if pattern=='broken' else 0.0
+                f=make_candidate_feature(
+                    feature_type='lane_marking',canonical_id=config['map_id']+':lane_marking:adjacent:'+part_id,
+                    points=curve,attributes=dict(color='white',pattern=pattern,line_group='single',
+                        line_width_m=0.15,dash_length_m=3.0 if pattern=='broken' else 0.0,
+                        dash_gap_m=3.0 if pattern=='broken' else 0.0,dash_phase_m=phase,
+                        functional_role='lane_boundary_paint',curation_segment_id=group['curation_segment_id'],
+                        reviewed_adjacent_group_id=group['id'],source_display='reviewed_adjacent_corridor'),
+                    source_id=source_id,source_sha256=source_sha,target_link_ids=targets,
+                    validation=dict(human_reviewed=True,evidence_ids=group['evidence'],
+                        inferred_missing_paint=not bool(marking.get('legacy_source_ids')),
+                        pattern_reference_ids=marking.get('pattern_reference_ids',[]),
+                        pattern_transition_map_xy=transition,
+                        join_feature_suffix=join,
+                        dash_phase_aligned_to_join=pattern=='broken'))
+                f['provenance'].update(source_kind=source_kind,transform=transform)
+                f['status']='reviewed';output.append(f)
     return output

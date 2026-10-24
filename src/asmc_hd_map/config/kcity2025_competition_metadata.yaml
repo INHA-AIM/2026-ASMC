@@ -25,8 +25,8 @@ sources:
     authority: team_reviewed_route_decomposition
   reviewed_hd_map:
     path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
-    sha256: 21f7da31ec592089264fe604310f7bedcd005818e2f2b2e0ac2c4d44454c05a2
-    bytes: 2002472
+    sha256: ca985c66a33d5b3d327119e03a4ac450f83fcf1032ede68e2b7a3b1ff6292628
+    bytes: 2004830
     authority: team_reviewed_candidate
 official_notice:
   source: 대회 규정집 v1.2 (2026.09.30) 체크포인트 별 Ego 위치 및 Heading 각도 정보

@@ -124,4 +124,5 @@ stage12_high_speed_entry_and_body,B219BS010440+B219BS011094+B219BS011095,0,white
 stage12_high_speed_entry_and_body,B219BS011113+B219BS011097,0,white,broken,broken,A2256W000406,,,,reviewed_adjacent_corridor,,
 stage12_high_speed_entry_and_body,B219BS011101+B219BS011111+B219BS011114+B219BS011098,0,white,broken,broken,A2256W000406;A2256W000175,,,,reviewed_adjacent_corridor,,
 stage12_high_speed_entry_and_body,B219BS011121+B219BS011120+B219BS011117,0,white,broken,broken,A2256W000175;A2256W000029,,,,reviewed_adjacent_corridor,,
+stage12_high_speed_entry_and_body,A2256W000029,0,white,solid,solid,A2256W000029,,,,reviewed_adjacent_corridor,,
 stage12_high_speed_entry_and_body,A2256W000029,0,white,broken,broken,A2256W000029,,,,reviewed_adjacent_corridor,,

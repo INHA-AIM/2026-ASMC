@@ -31,7 +31,7 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 | 토픽 | 타입 | 전달 | 내용 |
 |---|---|---|---|
 | `/hd_map/meta` | `asmc_msgs/HdMapMeta` | latched | build/map/geometry/manifest SHA와 준비 상태 |
-| `/hd_map/global/lane_markings` | `asmc_msgs/LaneMarkingArray` | latched | 차선 도색126개와 정지선7개 |
+| `/hd_map/global/lane_markings` | `asmc_msgs/LaneMarkingArray` | latched | 차선 도색127개와 정지선7개 |
 | `/hd_map/global/lanes` | `asmc_msgs/LaneArray` | latched | route/same-direction/mission 및 검토한 A029/A175/A406, 총73개 |
 | `/hd_map/global/drivable_areas` | `asmc_msgs/DrivableAreaArray` | latched | 기존102개 면을 보존하고 검토 corridor를 추가한115개 면 |
 | `/hd_map/global/drivable_grid` | `nav_msgs/OccupancyGrid` | latched | vector area에서 만든 0.2 m lookup raster |
@@ -43,7 +43,7 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 | `/hd_map/debug/markers` | `visualization_msgs/MarkerArray` | 1 Hz, non-latched | 차선·경로·link 방향·station·체크포인트·미션·build 정보 |
 
 P2-B v7의 `HdMapMeta.operational=true`, `complete=true`, `lane_count=73`,
-`drivable_area_count=115`가 현재 기준이다. `lane_marking_count=133`은 물리 차선 도색126개와
+`drivable_area_count=115`가 현재 기준이다. `lane_marking_count=134`은 물리 차선 도색127개와
 정지선 7개를 같은 `LaneMarking` 계약으로 전달하기 때문이다.
 
 ### 2.1 판제의 권장 소비 방식
@@ -384,7 +384,7 @@ A866·A054·A846은 일반 전역경로 추종 구간이며, 이 구간에 보�
 - 정확한 topic type 11개(global/meta/debug 8개 + local 3개)
 - local topic 3개의 등록과 별도 smoke 검사에서 global/local lane·grid parity 및 현재 차로 상태
 - geometry SHA `521b1fde…ad24f`
-- marking133개 = lane marking126개 + stopline7개
+- marking134개 = lane marking127개 + stopline7개
 - Lane73개/vector area115개, A029·A175·A406·A432·A131·A134 포함/A010·A427·A179·A1212 제외
 - non-route 교차로가 reviewed set 15개와 정확히 일치
 - 동적 장애물 node-pair closure 8개와 파생 link `A066/A087/A211/A1125`

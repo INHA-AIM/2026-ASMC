@@ -24,9 +24,9 @@ class DrivableAreaAuditWorkspaceTest(unittest.TestCase):
     def test_frozen_geometry_and_prior_invariants(self):
         self.assertEqual(
             self.document["reviewed_hd_map"]["geometry_sha256"],
-            "521b1fde181a0c10ce71696f7f05010138c041dd067ad531dce23ff5da6ad24f",
+            "e836f762dbbad4f02aaa6b37f486439aa02d3d5f961fa72b162cde4ebd24a3b3",
         )
-        self.assertEqual(self.document["reviewed_hd_map"]["lane_marking_count"], 126)
+        self.assertEqual(self.document["reviewed_hd_map"]["lane_marking_count"], 127)
         self.assertEqual(self.document["reviewed_hd_map"]["stopline_count"], 7)
         self.assertEqual(self.document["legacy_drivable_prior"]["checkpoint_centers_inside"], 15)
         self.assertEqual(self.document["legacy_drivable_prior"]["checkpoint_count"], 15)

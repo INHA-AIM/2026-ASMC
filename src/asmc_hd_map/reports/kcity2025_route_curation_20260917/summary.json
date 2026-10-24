@@ -23,14 +23,14 @@
   "partial_candidate": true,
   "planned_segment_count": 0,
   "selected_by_color": {
-    "white": 99,
+    "white": 100,
     "yellow": 27
   },
   "selected_by_pattern": {
     "broken": 35,
-    "solid": 91
+    "solid": 92
   },
-  "selected_marking_count": 126,
+  "selected_marking_count": 127,
   "selected_stopline_count": 7,
   "stoplines_included": true
 }

@@ -53,6 +53,10 @@ reviewed_adjacent_corridors:
         current_link_id: A2256W000029
         left_offset_m: 1.75
         pattern: broken
+        # Owner's red-marked merge interval (2026-10-25). Legacy B011115 /
+        # B011118 are solid here; retain current-link curvature, change paint.
+        solid_before_map_xy: [74.0, 314.0]
+        pattern_reference_ids: [B219BS011115, B219BS011118]
         target_current_link_ids: [A2256W000029]
         join_feature_suffix: stage12_high_speed_entry_and_body:a418_lane_1_left_solid:00
 

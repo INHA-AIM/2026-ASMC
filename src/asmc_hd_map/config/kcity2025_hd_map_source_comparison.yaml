@@ -27,7 +27,7 @@ comparison:
 source_roles:
   final_curated:
     description: reviewed competition lane markings completed by the team
-    expected_lane_markings: 126
+    expected_lane_markings: 127
     expected_stoplines: 7
   legacy_origin_aligned:
     description: old KATRI lane geometry with origin translation only
