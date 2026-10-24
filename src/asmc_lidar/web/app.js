@@ -1,5 +1,5 @@
-// asmc_lidar shadow monitor — read-only 2D canvas viewer of the shadow node's
-// stage clouds and tracks. Polls /api/frame (binary) at ~5 Hz; every control on
+// asmc_lidar read-only canvas viewer of pipeline stage clouds and tracks.
+// Polls /api/frame (binary) at up to 10 Hz; every control on
 // this page changes only how data is drawn. No external library; the pure view
 // logic (matrices, projection, OBB outlines, cursor, freshness) is monitor_view.js.
 'use strict';
@@ -582,11 +582,11 @@
     const audit=V.auditForTrack(sc,t),a=V.auditAppearance(sc,t),p=audit&&audit.preview;
     const rows = [
       ['필터 미리보기',a.label+' · '+a.detail],
-      ['확정 audit / 근거',audit?audit.decision+' / '+audit.reason:'OFF'],
+      ['전달 판단 / 보류 근거',audit?audit.decision+' / '+audit.reason:'OFF'],
       ['군집 도로 점 / 전체',p?p.road_points+' / '+p.support_points+' ('+fmt(p.road_point_ratio*100,1)+'%)':'미계산'],
       ['OBB 겹침률',audit&&audit.spatial&&audit.spatial.available?fmt(audit.spatial.road_ratio_grid*100,1)+'%':'미계산'],
       ['경계 보호 점 / 지도 불명 점',p?p.guard_points+' / '+p.unknown_points:'미계산'],
-      ['하부 점 / OBB 하단 / 안전 높이',p?[p.min_support_base_z,p.obb_bottom_base_z,p.roof_limit_base_z].map(x=>fmt(x,2)).join(' / ')+'m (base_link)':'미계산'],
+      ['하부 점 / OBB 하단 / 지붕+여유',p?[p.min_support_base_z,p.obb_bottom_base_z,p.roof_limit_base_z].map(x=>fmt(x,2)).join(' / ')+'m (base_link)':'미계산'],
       ['카메라 동적 그룹 보호',p?(p.camera_dynamic_protected?'전 구간 보호':'해당 없음'):'미계산'],
       ['track ID / age / miss' , t.id + ' / ' + t.age + ' / ' + t.miss + (t.miss ? ' (예측, 관측 없음)' : ' (관측)')],
       ['classification / camera_class', t.class + ' / ' + t.raw_class],

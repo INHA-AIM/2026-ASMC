@@ -246,3 +246,104 @@ RSS는 약49초 bag을 반복한 결과이며 장기간 leak 부재의 증명은
 **완료 판정:** 시험 경로에서 HD맵 판정과 비용 검증 완료. 기본 audit OFF·실제 제외 미구현·
 기존 판제 입력 유지. 다음 우선 과제는 scan 시각 위치 오차와 세 예외 공간의 외부 접근 범위
 검증이며, 실제 전달 제외와 판제의 중복 처리 정리는 별도 PR이다.
+
+## 점군·높이·카메라 보호 미리보기
+
+2026-10-24 후속 A1.2. 사용자가 지적한 A304의 큰 OBB, 머리 위 구조물, 지도 밖 카메라
+동적 그룹을 함께 검수한다. **이번 PR도 원본 ROS 배열·tracker를 수정하거나 객체를 제거하지 않는다.**
+웹에서 미리보기 제외 후보만 숨겨 비교하며, 최종 전달 판정과 검수 후보를 별도 필드로 남긴다.
+
+| 근거/순서 | 구현과 보류 조건 |
+|---|---|
+| 카메라 양성 보호 | 원본16종→`dynamic_obstacle`에 해당하고 같은 fusion consumer epoch의 최신 연결이면 **모든 구간**에서 keep. scan 기준 과거500ms·미래50ms 이내, class miss=0. `dynamic_object`라는 새 그룹은 만들지 않음 |
+| 점군 support | 해당 객체의 전체 `pcl_ClusterPoints`를 scan context로 실제 `base_link`와 map에 한 번 변환. voxel·지면 제거·군집 이후의 점이며 raw UDP 전체나 웹 샘플이 아님 |
+| 최소 근거 | 기본10점 이상·전부 유한값. 부족하면 미리보기 보류. 별도 cloud를 복사하지 않고 수량과 최저 높이만 누적 |
+| 머리 위 후보 | 알려진 카메라 객체는 보호. 최저 점과 OBB 하단 **둘 다** base 지붕1.284m+여유0.60m를 넘을 때만 후보. 하단 가림은 확인되지 않아 최종 판정은 `overhead_lower_surface_unverified`로 보류 |
+| 지도/예외 보호 | 유효 map pose·geometry 필요. 세 미션 예외 공간 또는 unknown 셀이면 보호/보류. GPS age 통과만으로 제외 근거를 승인하지 않음 |
+| 도로 support | 도로 점3개 이상 **또는** 비율5% 이상이면 keep. 기존1m 비교용 경계 여유 근처 점도 보존. 격자 dilation은 보수적으로 올림하므로 정확한1m 거리 측정으로 해석하지 않음 |
+| 도로 밖 support | 모든 점이 도로/경계 밖이면 `cluster_support_outside` 미리보기 후보. OBB 겹침은 원래 판정으로 보존. 위치 오차·범위 검증이 없으므로 최종 제외 허가로 승격하지 않음 |
+
+이는 **비교용 정책**이다. 경계 점 하나도 보호하므로 A304 가드레일이 도로에 매우 가까우면
+keep이 나올 수 있다. 실제 원본 support와 지도 정합을 검수한 뒤 조정하며, 합성 oversized OBB
+검사가 통과했다는 이유로 A304 실차 장면의 문제가 해결됐다고 표시하지 않는다.
+상부만 스캔된 미분류 물체는 여전히 머리 위 후보가 될 수 있으므로 임의 자동 삭제를 하지 않는다.
+
+카메라 buffer는3뷰지만 현재 객체 matching은 **전방만 구현**돼 있다. 첫 양성 관측도 보호할 수
+있으나 정식 class 확인 횟수나 tracker 분류를 바꾸지는 않는다. 카메라-only bbox를 임의3D 객체로
+생성하지 않는다. 좌우 또는 미연결 dynamic 객체의3D matching은 재호의 후속 fusion 작업이다.
+
+### 웹 디버거와 지도 확인
+
+[웹 모니터](web-monitor.md)는 상단 수량, 객체별 점/OBB 비율, 최저 높이, 카메라 보호와 보류
+사유를 기본 화면에 모은다. OBB/audit metadata를 먼저 표시하고 점군은 같은 stamp로만 붙인다.
+브라우저 조회100ms·단일 요청·단일 예약 그리기, 숨긴 측면 그리기 중단, 지도 polygon bounds
+재사용으로 대기/반복 작업을 줄인다. producer session/generation 전환은 캐시를 비우며 경계
+scan의 모호한 점군은 생략한다. metadata와 점군 완료를 별도 관측 두 개로 Hz 집계하지 않는다.
+
+배경 지도는 planner의 v5 사본에서 `asmc_hd_map` **v6 정본**으로 변경했다. 실제 파일 SHA와
+audit map SHA를 화면에서 대조한다. 지도 파일이 없으면 명확히 사용 불가로 표시한다.
+독립 GT가 없는 웹 표시를 지도/위치 정확도의 증명으로 사용하지 않는다.
+
+사용자 요청 **A029·A175·A406**의 주행영역/차선 추가는3-source 비교 후 별도 지도 작업이다.
+이번 PR에서 지도 JSON·NPZ·원본 선택 설정은 변경하지 않았다. audit는 tracker를 삭제하지
+않으므로 고주로 객체가 사라진 경우 기존 Main 필터·예측 숨김·matching도 따로 확인한다.
+
+```bash
+# 컨테이너 /root/ws: 최신/기존 주행영역과3개 차선 source 비교
+source /root/ws/devel/setup.bash
+roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
+# 이미 RViz가 실행 중이면 위 명령에 rviz:=false 추가
+```
+
+### 실행과 검증 기록
+
+현재 PC의 새 시험 설정은 `/artifacts/lidar-delivery-console-20261024-r2/runtime.yaml`이다.
+동결 설정을 수정하지 않고 재사용하며, 새 비교 결과를 만들 때는 새 run을 등록한다.
+
+```bash
+# 컨테이너 /root/ws, bridge/camera는 기존 한 세트 유지
+roslaunch asmc_lidar lidar.launch debug:=true \
+  pipeline_config:=/artifacts/lidar-delivery-console-20261024-r2/runtime.yaml
+# 별도 터미널, http://127.0.0.1:8091/
+roslaunch asmc_lidar view.launch \
+  pipeline_config:=/artifacts/lidar-delivery-console-20261024-r2/runtime.yaml
+```
+
+첫 run `lidar-delivery-console-20261024-r1`은 브라우저 시험기가 접힌 측면 메뉴를 열지 않고
+조작해 중단됐다. baseline 수치와 두 metadata 스트림을 보존하고 실패로 동결했다. 메뉴를
+실제 사용자 순서로 펼치도록 고친 새 run r2에서 전체를 재검증한다. 테스트용 headless 브라우저의
+한글 글꼴도 PC의 기존 맑은 고딕으로 연결했으며 배포 웹에 폰트 파일을 추가하지 않았다.
+
+### A1.2 대조 결과 — 2026-10-24
+
+근거 run `lidar-delivery-console-20261024-r2`. 알고리즘/웹 대조 소스 `6fa5f05b`, 이전 구현
+`c883e549`. 고정49초 bag을 같은 설정·headless Chromium·1440×900·debug5Hz에서 각각3회
+교차 재생했다. GPU 추론·MORAI·사용자 ROS는 실행/종료하지 않고 별도 master11435를 썼다.
+최종 문구와 표 줄바꿈 정리는 성능 대조 이후의 표시 변경이며 계산/정책을 바꾸지 않았다.
+run은 동결했으며 [결과 포인터](../../../config/baselines/lidar_delivery_console_result_v1.json)에
+전체 갤러리 `index.html`, `verification.json`, 파일 manifest SHA를 연결했다.
+
+| 항목 | 이전 / 신규 |
+|---|---|
+| 표시 장면 경과시간 p50 | 212.5–220.6ms / 164.8–168.0ms |
+| 표시 장면 경과시간 p95 | 365.0–368.0ms / 279.2–287.3ms. 반복 p95 평균 약22.6% 감소 |
+| 브라우저 그리기 p95 | 6.9–7.4ms / 4.5–5.0ms |
+| 실제 ROS 객체 수신 | 6회 모두649개. 중복/역행 stamp·브라우저 오류0 |
+| ROS 객체 수신 최대 공백 | 이전104.1–116.7ms / 신규97.6–102.7ms |
+| 점군 미완성 표시 | 신규 샘플의0.87–1.30%. 같은 stamp 점군이 아직 준비되지 않은 OBB 우선 장면이며 다른 scan 점군으로 채우지 않음 |
+| OFF/ON 각각3회 replay | 각649scan의 객체·track digest가6회 모두 기존 A1.1과 동일 |
+| 점군 포함 audit 계산 p95 | 1.071–1.306ms/scan, 최대4.709ms |
+| 전체 runtime p95 증가 | 0.279–1.000ms. 단독 unpaced 계산 비교이며 실시간 공급 수락으로 확대하지 않음 |
+| replay RSS | OFF66.18–67.10MiB / audit134.69–134.96MiB. occupancy/exception/경계 mask 총63.83MiB 고정 + 기존 allocator 변동. 장기 leak 증명 아님 |
+
+표시 경과시간은 **모니터에 해당 scan의 첫 부분이 도착한 때부터 브라우저 샘플 때까지**다.
+센서 취득→ROS→화면 전체 지연이 아니다. metadata 우선 표시와 polling100ms의 효과를
+함께 비교했으며 순수 그리기 시간과 분리했다. 점군 없이 먼저 표시한 장면 비율도 숨기지 않았다.
+지도/pose 근거를 승인하지 않았으므로 최종 전달 판정의 제외 후보는 여전히0이다.
+
+실제 bag은 주로 A448/A126/A128 자료로 카메라 fusion을 껐다. 카메라 양성 보호·오래된 양성
+배제·상부만 보인 알려진 물체 보호는 코어 회귀로 확인했고, 실제 A304 가드레일·동적 미션
+카메라 matching·새 지도 범위·하부 가림에 대한 운영 수락은 남아 있다. 웹의 분홍 후보 수를
+실제 제거 성공률로 해석하지 않는다. 이 제한을 유지하면서 다음 검수에 사용할 수 있는 상태다.
+이번 bag에는 **도로 OBB 겹침이 양수인 제외 미리보기 후보가0**이었다. 따라서 큰 OBB만 도로에
+걸친 반례의 동작은 합성 회귀 근거이며 실제 A304 가드레일 해결 근거로 바꾸지 않는다.

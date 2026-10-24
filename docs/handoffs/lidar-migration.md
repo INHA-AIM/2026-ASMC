@@ -246,6 +246,12 @@ fusion 보완과 판제 정책은 변경하지 않는다. 계산·공급 비교�
 다음 단위에서 위치 오차와 미션 접근 범위를 검증한 뒤 실제 제외·소비 전환을 별도 PR로
 검토한다. audit 연결을 기존 판제 필터 제거 완료로 해석하지 않는다.
 
+후속 검수 미리보기는 OBB 겹침과 객체 전체 cluster support를 비교한다. 카메라의 최신 양성
+`dynamic_obstacle` 연결은 모든 구간에서 보호하며, 머리 위 후보는 최저 점·OBB 하단을 함께 본다.
+현재 matching은 전방이며3뷰 matching 확대는 재호의 후속 책임이다. 후보 숨김은 웹에서만 적용하고
+원본 ROS 객체·tracker·판제 소비 경로는 유지한다. [정책과 한계](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#점군높이카메라-보호-미리보기),
+[디버거 사용](../../src/asmc_lidar/docs/web-monitor.md#hd맵-필터-디버깅)을 참고한다.
+
 ## 판제 소비 전환 시 정리할 중복 처리
 
 이 절은 판제 입력 전환 PR의 정리 목록이다. A1과 후속 audit-only 연결은 실제 필터

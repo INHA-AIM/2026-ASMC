@@ -87,6 +87,11 @@ rosservice call /migration/lidar/lidar_pipeline/reset "{}"
 
 HD맵 판정의 기본값은 YAML `hd_map_audit.mode: "off"`다. 내부 시험용 `audit`는 SHA로 고정한 지도 파생 bundle이 필요하며 [준비·검증](docs/hd-map-filter-analysis.md#a11-실행-연결과-진단)을 따른다. 실제 제외 모드는 없고 공개 객체 메시지·판제 입력은 바뀌지 않는다.
 
+audit 미리보기는 OBB 겹침과 **전체 cluster support의 도로 점 비율**을 함께 제공한다.
+카메라로 연결된 `dynamic_obstacle`은 모든 구간에서 보호하고, 머리 위 구조물은 최저 점·OBB 하단과
+지붕 여유로 후보만 표시한다. [웹 디버거](docs/web-monitor.md#hd맵-필터-디버깅)의 후보 숨김은 화면에만 적용된다.
+배경 지도는 `asmc_hd_map` v6 정본이며, 판제의 별도 v5 사본과 혼용하지 않는다.
+
 고정 bag 대조는 `lidar_replay --help`와 [실행 안내](docs/pipeline.md)를 따른다. 결과는 저장 규약에 따라 등록한 새 run ID의 D 출력 위치에 보존한다.
 
 ## 처리 결과를 RViz에서 보기

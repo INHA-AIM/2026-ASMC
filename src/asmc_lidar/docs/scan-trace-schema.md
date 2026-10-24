@@ -57,6 +57,22 @@ A1.1의 내부 설정이 `audit`일 때만 `hd_map_audit` 블록을 추가한다
   `reason`은 사유, `spatial`은 파생 grid의 겹침·보호 범위·unknown·예외 공간이다.
 - 객체별 `input_state`는 observed/predicted를 구분한다. 이 값과 분류 그룹은 실제 운동 판정이 아니다.
 
+점군/높이 미리보기를 켜면 `preview_config_id`에 실제 runtime 설정 SHA를 더한다.
+기존 bundle의 `policy_sha256`를 새 정책 SHA로 가장하지 않는다. 객체별 선택 블록은 다음과 같다.
+
+- `obb_reference_decision/reason`: 기존 A1 OBB 판정. Python/C++ 기하 대조는 이 값을 비교한다.
+- `preview.decision/reason`: 검수용 keep/exclude_candidate/undetermined. 실제 전달 제외 허가와 다르다.
+- `preview.support_points/road_points/guard_points/unknown_points/road_point_ratio`:
+  화면 샘플이 아닌 객체 전체 cluster support의 지도 관계. voxel 이전 원본 점 비율은 아니다.
+- `preview.min_support_base_z/obb_bottom_base_z/roof_limit_base_z`: `base_link` 높이. 근거가 없으면 null.
+- `preview.camera_dynamic_protected/camera_known`: 같은 fusion consumer epoch의 최신 양성 연결 근거.
+  실제 이동 여부나 카메라만으로 생성한3D 객체가 아니다.
+
+`decision/reason`은 미검증 하부면·점군 정책·위치 오차를 계속 보류할 수 있다. 따라서 preview의
+제외 후보 수와 최종 제외 후보 수를 혼합하지 않는다. 기존 trace에 이 선택 블록이 없어도 유효하다.
+웹용 `asmc_lidar_debug_scan_v1`도 같은 audit 결과와 producer session/generation/config ID를
+구독 수요가 있을 때 제공한다. 웹을 위해 큰 전체 trace를 추가 구독할 필요는 없다.
+
 실제 노드의 `input_to_publish_ms`는 PointCloud callback 시작부터 객체 배열/관측의 ROS publish
 호출 완료까지 **동일 monotonic clock**으로 측정한다. 네트워크 소비자 수신·노출/laser 발사 시각을
 포함하는 end-to-end 지연은 아니다. replay에는 실제 발행이 없어 이 필드를 만들지 않는다.

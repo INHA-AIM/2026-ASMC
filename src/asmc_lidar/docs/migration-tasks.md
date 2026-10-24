@@ -41,6 +41,7 @@ PR #104 구조 정리는 병합됐고, 승현의 [A1 기존 필터·HD맵 오프
 | J4 · 손재호, 승현 카메라 지원(L4) | `fusion/front_camera_fusion.hpp`, `ros/camera_receiver.hpp`와 Receiver의 실제 관측 연결 검증 | 같은 scan/영상의 matching·분류 확인 횟수·stale/empty/재시작·보정/세대 전환 검증.3뷰 확대는 별도 단위 |
 | A1 · 안승현(L5·L8), 조사 완료 | Main/planning_inputs 호출 경로·소유권·기존 C++ 필터 재사용 비교와 HD맵 v6 오프라인 대조 | [결과](hd-map-filter-analysis.md). 실제 3,428 replay scan·50,635객체 관측 + 합성36개. 원본 보존·수치 재현 확인. 실제 예외 공간·위치 오차 근거 부족으로 제외 활성화 보류 |
 | A1.1 · 안승현(L5), 완료 | OBB·추적·fusion 뒤의 HD맵 전달 **판정만** 이관 검증 경로에 연결. 원본 배열·track 보존, 실제 제외 구현/활성화는 후속 | [실행 검증](hd-map-filter-analysis.md#a11-검증-완료--2026-10-24). 필수 CTest32·audit ON ROS17 통과. 같은 bag OFF/ON 각3회 객체/track 동일·출력 누락0·계산 p95<0.8ms. 실제 제외·판제 전환 없음 |
+| A1.2 · 안승현(L5·L6), 미리보기 검증 완료 | 점군 support/머리 위 높이/카메라 dynamic 보호 후보와 웹 디버거 개선. 원본 배열·tracker 유지 | [정책·결과](hd-map-filter-analysis.md#점군높이카메라-보호-미리보기). CTest33·audit ON ROS17·웹JS62, browser 각3회 및 배열/track 불변성 통과. 실제 A304 가드레일·미션 외부 접근·하부 가림 수락은 후속 |
 | A2 · 안승현(L4) | 카메라 수신·보정·시각·16종→3그룹 연결 지원 | 원본 영상 픽셀/ID·source stamp·calibration ID와 라벨 의미 보존; 카메라 미검출을 객체 삭제 근거로 사용하지 않음 |
 | 공동 · L6–L7 | 공용 메시지/좌표/시간 변경 리뷰와 기존 Main → 새 경로의 소비 전환 | 같은 입력의 전체 대조·부하·판제 인수·단일 발행자·복구 확인 후 명시적 전환 |
 
@@ -55,6 +56,10 @@ A1은 [구간 전제와 5Hz GPS의 검토 조건](../../../docs/handoffs/lidar-m
 기본 ROI·OBB·tracker는 유지한다. A1.1은 OBB/추적/fusion 뒤의 전달 판정만
 `/migration/lidar`에 연결하며 기본 audit OFF·실제 제외 모드 없음이다. GPS 갱신 사이 위치 정합과 예외 공간의
 외부 접근 근거가 확보되지 않으면 제거를 활성화하지 않는다. 점군 HD맵 ROI는 후속으로 둔다.
+
+추가 지도 검토 요청: **A029·A175·A406**의 고주로 주행영역과 차선. 사용자가3-source 비교로
+지정한 뒤 별도 지도 작업으로 반영한다. 이번 필터/웹 PR에서 지도 형상은 변경하지 않는다.
+현재 audit는 track을 삭제하지 않으므로 화면에서 사라진 경우 예측 숨김·기존 Main 필터와 구분한다.
 
 ### A1 조사·오프라인 검증 완료 — 2026-10-24
 
