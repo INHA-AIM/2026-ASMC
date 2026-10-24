@@ -231,6 +231,27 @@ L7에서 기존 발행자·호환 어댑터를 정지하고 새 경로를 정식
 재시작 ID·소비자 캐시 초기화를 확인하고 같은 토픽의 생산자는 하나만 유지한다.
 복구는 새 생산자·어댑터를 정지한 뒤 고정한 기존 Main과 판제 입력 설정을 함께 복원한다.
 
+## 판제 소비 전환 시 정리할 중복 처리
+
+이 절은 판제 입력 전환 PR의 정리 목록이다. A1과 후속 audit-only 연결은 실제 필터
+활성화·판제 전환이 아니다. 기존 Main의 `/last_lidar` 소비·복구가 남아 있는 동안
+legacy 필터를 먼저 삭제하지 않는다.
+
+| 대상 | 전환 PR에서 확인할 일 |
+|---|---|
+| `planning_inputs` 입력 어댑터 | `LidarObservation`의 공용 타입·session/generation·scan 식별·frame/stamp·상태를 처리. `/last_lidar` 타입에 토픽명만 바꾸어 연결하지 않음 |
+| road/known-static/structure | 새 인지 경로에서 **실제로 검증·활성화한 기능만** 판제 측 중복 호출·설정에서 제거. audit-only이면 기존 필터를 대체했다고 간주하지 않음 |
+| OBB clipping·재구성 | 새 경로에서는 원본 중심·8코너를 보존. 예전 Main/planning_inputs의 clipping을 자동 재적용하지 않음 |
+| 운동 상태·속도 | 재호가 검증한 공개 validity를 소비. 진단 색·JSON·UNKNOWN을 측정된 static/0속도로 바꾸지 않음. private classifier의 대체·유지는 별도 검증 후 결정 |
+| wire/debug 결합 | 현재 `/lidar/motion_debug`와 exact stamp/ID를 맞추는 gate를 공용 관측 계약으로 대체 검증한 뒤 정리. 단순 삭제로 준비 상태·유효성 검사를 잃지 않음 |
+| 유지할 판제 책임 | TTC·추종 대상·정지·회피·재출발·센서 장애 대응, local/map 선택과 상태 확인. 인지 필터 이관을 이유로 삭제하지 않음 |
+
+새 경로/기존 경로별 비교, 정상 빈 결과와 입력/pose 무효, GPS 중단·복귀, 생산자 재시작,
+단일 발행자와 rollback을 판제 담당과 확인한다. 변경 파일·기능·영향을 먼저 공유하고
+판제 소비 전환은 별도 PR로 검토한다. 기존 필터 전체를 끄는 설정 변경과 토픽 remap만으로
+전환을 완료하지 않는다. A1의 분석 정본은
+[필터 소유권·오프라인 검증](../../src/asmc_lidar/docs/hd-map-filter-analysis.md)이다.
+
 ## 이관 전 단계의 공통 기준
 
 - local 처리·발행은 GPS·미션 구간에 종속시키지 않는다. 실제 후륜축 `base_link`와 내부
