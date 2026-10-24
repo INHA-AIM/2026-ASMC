@@ -129,6 +129,7 @@ struct Options {
     bool ego_gap_reset = false; // explicit reset instead of silently skipping unsupported B translation.
     bool two_point_init_cov = false;
     bool point_support_ownership = false; // Sparse initial-fragment containment with competing owner.
+    bool assignment_allow_unmatched = false; // Experimental cost-limit matching.
     bool association_innovation_gate = false; // Experimental 2D 99% prior gate; no noise/model change.
     bool obb_long_axis_state = false; // Candidate: canonicalize representation, no shape history.
     bool yaw_ema_enabled = true; // Preserve baseline; OFF is a diagnostic only.

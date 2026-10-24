@@ -1,0 +1,39 @@
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp: In member function ‘void AssignmentProblemSolver::step3(int*, double*, bool*, bool*, bool*, bool*, bool*, int, int, int)’:
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:320:49: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  320 |                                                 for(starCol=0; starCol<nOfColumns; starCol++)
+      |                                                 ^~~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:325:57: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  325 |                                                         if(starCol == nOfColumns) /* no starred zero found */
+      |                                                         ^~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp: In member function ‘void AssignmentProblemSolver::assignmentsuboptimal2(int*, double*, double*, int, int)’:
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:492:17: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  492 |                 for(row=0; row<nOfRows; row++)
+      |                 ^~~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:504:25: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  504 |                         if(minValue!=DBL_MAX)
+      |                         ^~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp: In member function ‘void AssignmentProblemSolver::assignmentsuboptimal1(int*, double*, double*, int, int)’:
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:588:33: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  588 |                                 for(row=0; row<nOfRows; row++)
+      |                                 ^~~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:595:41: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  595 |                                         if(singleValidationFound)
+      |                                         ^~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:727:17: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  727 |                 for(row=0; row<nOfRows; row++)
+      |                 ^~~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:739:25: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  739 |                         if(minValue!=DBL_MAX)
+      |                         ^~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:668:57: warning: ‘tmpCol’ may be used uninitialized [-Wmaybe-uninitialized]
+  668 |                                         assignment[row] = tmpCol;
+      |                                         ~~~~~~~~~~~~~~~~^~~~~~~~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:530:34: note: ‘tmpCol’ was declared here
+  530 |         int n, row, col, tmpRow, tmpCol, nOfElements;
+      |                                  ^~~~~~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:710:52: warning: ‘tmpRow’ may be used uninitialized [-Wmaybe-uninitialized]
+  710 |                                         assignment[tmpRow] = col;
+      |                                                    ^~~~~~
+src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp:530:26: note: ‘tmpRow’ was declared here
+  530 |         int n, row, col, tmpRow, tmpCol, nOfElements;
+      |                          ^~~~~~

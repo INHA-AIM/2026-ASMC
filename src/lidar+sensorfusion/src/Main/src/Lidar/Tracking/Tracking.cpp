@@ -1,4 +1,5 @@
 #include "PointSupportOwnership.hpp"
+#include "OptionalAssignment.hpp"
 #include "AssociationInnovation.hpp"
 #include "ObbAxisCanonical.hpp"
 #include <Geometry/FrameBoundary.hpp>
@@ -745,7 +746,15 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
 
     AssignmentProblemSolver solver;
     vector<int32> assignment;
-    solver.Solve(vec_CostMatrix, assignment, AssignmentProblemSolver::optimal);
+    if (tracking_options::Get().assignment_allow_unmatched) {
+        assignment = optional_assignment::Solve(vec_CostMatrix, st_Tracking.f32_COST_THRESHOLD);
+    } else {
+        solver.Solve(vec_CostMatrix, assignment, AssignmentProblemSolver::optimal);
+    }
+    track_trace::Event("assignment_policy", [&](std::ostream& out) {
+        out << ",\"allow_unmatched\":" << (tracking_options::Get().assignment_allow_unmatched ? "true" : "false")
+            << ",\"tracks\":" << N << ",\"detections\":" << M;
+    });
     fusion_trace::Event("tracking_assignment",ts_CurrTime.toNSec(),[&](std::ostream& out) {
         out << ",\"source_dt_sec\":" << f64_Time << ",\"pairs\":[";
         bool first=true;

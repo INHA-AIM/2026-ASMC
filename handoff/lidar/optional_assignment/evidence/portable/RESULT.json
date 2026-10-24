@@ -1,0 +1,134 @@
+{
+  "status": "PASS_SOLVER_ONLY",
+  "generated_cases": 607,
+  "exhaustive_objective_cases": 107,
+  "frozen_frames": 71,
+  "legacy_assignments_reproduced": true,
+  "matched_edges_off_on": [
+    1054,
+    1048
+  ],
+  "changed_frames": [
+    {
+      "scan": 1091,
+      "changes": [
+        {
+          "id": 357,
+          "off": 6,
+          "on": 7
+        },
+        {
+          "id": 260,
+          "off": 7,
+          "on": 5
+        },
+        {
+          "id": 351,
+          "off": 5,
+          "on": -1
+        }
+      ]
+    },
+    {
+      "scan": 1093,
+      "changes": [
+        {
+          "id": 356,
+          "off": 4,
+          "on": -1
+        },
+        {
+          "id": 345,
+          "off": 6,
+          "on": 4
+        }
+      ]
+    },
+    {
+      "scan": 1099,
+      "changes": [
+        {
+          "id": 326,
+          "off": 7,
+          "on": 3
+        },
+        {
+          "id": 359,
+          "off": 3,
+          "on": -1
+        }
+      ]
+    },
+    {
+      "scan": 1101,
+      "changes": [
+        {
+          "id": 360,
+          "off": 11,
+          "on": 12
+        },
+        {
+          "id": 357,
+          "off": 12,
+          "on": 10
+        },
+        {
+          "id": 363,
+          "off": 9,
+          "on": 11
+        },
+        {
+          "id": 260,
+          "off": 10,
+          "on": -1
+        }
+      ]
+    },
+    {
+      "scan": 1144,
+      "changes": [
+        {
+          "id": 353,
+          "off": 14,
+          "on": -1
+        },
+        {
+          "id": 340,
+          "off": 10,
+          "on": 15
+        },
+        {
+          "id": 387,
+          "off": 15,
+          "on": 14
+        }
+      ]
+    },
+    {
+      "scan": 1149,
+      "changes": [
+        {
+          "id": 353,
+          "off": 14,
+          "on": -1
+        },
+        {
+          "id": 375,
+          "off": 13,
+          "on": 14
+        }
+      ]
+    }
+  ],
+  "sanitizers": false,
+  "ASAN_OPTIONS": "",
+  "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+  "source_sha256": {
+    "handoff/lidar/optional_assignment/verify.py": "1eb7f144c43eb955b903a4c9bd6be0d4b7221864100d3f749afcb5e5e3592acf",
+    "handoff/lidar/optional_assignment/probe.cpp": "36114defb4808520db4c5837fecb2ad4e5f396c1370fb983e4150807accfb6d7",
+    "handoff/lidar/optional_assignment/frozen_cost_cases.json": "2fbc44957a3c063218790ef39c6c5484880b70765f13f1d248d597381e3c8a36",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/OptionalAssignment.hpp": "be91fd36fb38a6af9f45a2507bb0d94958987f4207f6d9c59e320d6e383f5e5b",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp": "b8080233674d5d188cb2ec5f96ec9c7efc518cb7963372136a976e0a8da465b0"
+  },
+  "limits": "Real C++ solver compiled with STL-only Global.hpp shim; not ROS build. Frozen costs, no state feedback. No IDSW/speed/recall/runtime adoption claim."
+}

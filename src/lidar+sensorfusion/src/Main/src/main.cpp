@@ -606,6 +606,7 @@ void *TemporalThread(void *p_Arg)
 void ConfigureTrackingExperiment(ros::NodeHandle& private_node)
 {
     auto& options = tracking_options::Get();
+    private_node.param("lidar_assignment_allow_unmatched", options.assignment_allow_unmatched, false);
     private_node.param("lidar_yaw_ema_enabled", options.yaw_ema_enabled, true);
     private_node.param("lidar_obb_long_axis_state", options.obb_long_axis_state, false);
     private_node.param("lidar_association_innovation_gate", options.association_innovation_gate, false);

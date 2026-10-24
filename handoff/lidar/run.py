@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os,sys,json,subprocess,signal,time,xmlrpc.client,hashlib,argparse,importlib.util
 from pathlib import Path
-p=argparse.ArgumentParser();p.add_argument('--data',required=True,type=Path);p.add_argument('--out',required=True,type=Path);p.add_argument('--setup',default=os.environ.get('LIDAR_SETUP'));p.add_argument('--inner',action='store_true');a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--data',required=True,type=Path);p.add_argument('--out',required=True,type=Path);p.add_argument('--setup',default=os.environ.get('LIDAR_SETUP'));p.add_argument('--inner',action='store_true');p.add_argument('--assignment-allow-unmatched',action='store_true');a=p.parse_args()
 if not a.inner:raise SystemExit(subprocess.call(['unshare','--user','--map-root-user','--net','--pid','--fork','--mount-proc',sys.executable,__file__,*sys.argv[1:],'--inner']))
 if not a.setup:raise SystemExit('Set LIDAR_SETUP to the compiled nested devel/setup.bash')
 subprocess.run(['ip','link','set','lo','up'],check=True)
@@ -23,6 +23,11 @@ prefix=Path(a.setup).resolve().parent
 binary=prefix/'lib/Main/lidar_dataset_replay';library=prefix/'lib/libmyHeader.so'
 cmd=[str(binary),'--bag',str(a.data/'inference.bag'),'--params',str(param),'--scene','actual_lap','--max-frames','1156','--out',str(a.out/'out.jsonl'),'--points-out',str(a.out/'points.bin'),'--track-trace',str(a.out/'trace.jsonl'),'--run-id','handoff_baseline']
 for v in ['lidar_kf_reacquire_elapsed_init=true','lidar_kf_ego_translation_comp=true','lidar_yaw_ema_enabled=true','lidar_obb_long_axis_state=false','lidar_association_innovation_gate=false','lidar_point_support_ownership=false','lidar_observation_quality_r=false','lidar_observation_obb_center=false','lidar_kf_jerk_q=false','lidar_ego_gap_reset=false','lidar_kf_two_point_init_cov=false','planner_udp_enabled=false','imu_yaw_is_true_enu=true']:cmd+=['--set',v]
+cmd+=['--set','lidar_assignment_allow_unmatched='+str(a.assignment_allow_unmatched).lower()]
+if a.assignment_allow_unmatched:cmd[cmd.index('--run-id')+1]='optional_assignment'
+source_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
+source_dirty=subprocess.check_output(['git','status','--porcelain'],cwd=repo,text=True).strip()
+build_hashes={x.name:hashlib.sha256(x.read_bytes()).hexdigest() for x in [binary,library]}
 log=(a.out/'roscore.log').open('w');master=subprocess.Popen(['roscore','-p','24789'],env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
 try:
  for _ in range(100):
@@ -38,6 +43,12 @@ def rows(path):
 old=rows(a.data/'expected.jsonl');new=rows(a.out/'out.jsonl');different=[i for i,(x,y) in enumerate(zip(old,new)) if x!=y]
 spec=importlib.util.spec_from_file_location('ev',repo/'tools/experiments/lidar_obb_quality_temporal/eval_lib.py');ev=importlib.util.module_from_spec(spec);spec.loader.exec_module(ev)
 contract=json.loads((repo/'tools/experiments/lidar_obb_quality_temporal/EVAL_CONTRACT.json').read_text())
+policy=[]
+for line in (a.out/'trace.jsonl').open():
+ e=json.loads(line)
+ if e.get('ev')=='assignment_policy':policy.append(e)
+if not policy or any(e.get('allow_unmatched')!=a.assignment_allow_unmatched for e in policy):raise SystemExit('Missing/wrong runtime option evidence: rebuild candidate commit')
+if build_hashes!={x.name:hashlib.sha256(x.read_bytes()).hexdigest() for x in [binary,library]}:raise SystemExit('Executed files changed during replay')
 original=ev.segment_gt
 def segment(gt,frames,c):
  x=original(gt,frames,c)
@@ -45,13 +56,17 @@ def segment(gt,frames,c):
  return x
 ev.segment_gt=segment
 metrics={}
-for arm,pred,points in [('new',a.out/'out.jsonl',a.out/'points.bin'),('expected',a.data/'expected.jsonl',a.out/'points.bin')]:
+arms=[('new',a.out/'out.jsonl',a.out/'points.bin')]
+if not a.assignment_allow_unmatched:arms.append(('expected',a.data/'expected.jsonl',a.out/'points.bin'))
+for arm,pred,points in arms:
  sample=ev.eval_scene(contract,str(a.data/'evaluation'),str(pred),'actual_lap',str(points));metrics[arm]=ev.compute_metrics([sample],contract)
- tp=sample['tp'];z=tp[tp.idx.between(1086,1155)];v=z[(z.kfc>=2)&ev.np.isfinite(z[['pvx','pvy','gvx','gvy']]).all(axis=1)]
+ tp=sample['tp']
+ if arm=='new':tp.to_csv(a.out/'tp.csv',index=False)
+ z=tp[tp.idx.between(1086,1155)];v=z[(z.kfc>=2)&ev.np.isfinite(z[['pvx','pvy','gvx','gvy']]).all(axis=1)]
  errors=ev.np.hypot(v.pvx-v.gvx,v.pvy-v.gvy)
  metrics[arm]['event_window_1086_1155']={'TP':len(z),'velocity_n':len(v),'velocity_mae':float(errors.mean()) if len(v) else None,'velocity_max':float(errors.max()) if len(v) else None,'definition':'evaluation-only slice; inference always replays full prefix0..1155'}
 
 (a.out/'evaluation.json').write_text(json.dumps(metrics,indent=2))
-result={'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),'binary_build_source':'a6fcf88294db2e44fe303580e54c1f3fcff9065e','command':cmd,'n_expected':len(old),'n_actual':len(new),'different_frames':different,'numeric_tolerance':0,'timing_excluded':True,'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'library_sha256':hashlib.sha256(library.read_bytes()).hexdigest(),'data_manifest_sha256':hashlib.sha256((a.data/'MANIFEST.json').read_bytes()).hexdigest(),'result':'PASS' if len(old)==len(new)==1156 and not different else 'FAIL','limits':'same exact outputs; evaluation reuses new unchanged detection point sets for expected comparison; no fresh dependency installation or MORAI/full-load test'}
+result={'source_commit':source_commit,'source_dirty':source_dirty,'binary_build_source':None,'build_note':'Checkout is not proof of build origin. Preserve clean build logs. Hashes identify executed files.','assignment_allow_unmatched':a.assignment_allow_unmatched,'policy_events':len(policy),'command':cmd,'n_expected':len(old),'n_actual':len(new),'different_frames':different,'numeric_tolerance':0,'timing_excluded':True,'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'library_sha256':hashlib.sha256(library.read_bytes()).hexdigest(),'data_manifest_sha256':hashlib.sha256((a.data/'MANIFEST.json').read_bytes()).hexdigest(),'result':('COMPLETED_NOT_ACCEPTED' if len(old)==len(new)==1156 else 'FAIL') if a.assignment_allow_unmatched else ('PASS' if len(old)==len(new)==1156 and not different else 'FAIL'),'limits':'Prefix only. Candidate completion is not acceptance. Candidate evaluated with its own point file; expected metrics only for OFF. No full-load MORAI proof.'}
 (a.out/'RUN_MANIFEST.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
-raise SystemExit(0 if result['result']=='PASS' else 1)
+raise SystemExit(0 if result['result'] in ('PASS','COMPLETED_NOT_ACCEPTED') else 1)
