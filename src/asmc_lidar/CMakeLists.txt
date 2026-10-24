@@ -123,6 +123,19 @@ if(ASMC_LIDAR_PIPELINE)
 endif()
 
 if(ASMC_LIDAR_PIPELINE_ACTIVE)
+  find_package(OpenCV REQUIRED COMPONENTS core imgproc)
+  # Private decision-only library; never exported to Main and never owns ROS state.
+  add_library(asmc_lidar_hd_map_audit STATIC src/filtering/hd_map_audit.cpp)
+  target_include_directories(asmc_lidar_hd_map_audit PUBLIC include ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(asmc_lidar_hd_map_audit PUBLIC yaml-cpp OpenSSL::Crypto ${OpenCV_LIBRARIES})
+  target_compile_options(asmc_lidar_hd_map_audit PRIVATE -Wall -Wextra)
+  if(CATKIN_ENABLE_TESTING)
+    add_executable(asmc_lidar_hd_map_audit_probe test/hd_map_audit_probe.cpp)
+    target_link_libraries(asmc_lidar_hd_map_audit_probe asmc_lidar_hd_map_audit)
+    add_test(NAME asmc_lidar_hd_map_audit_equivalence
+      COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/hd_map_audit_equivalence.py
+        --probe $<TARGET_FILE:asmc_lidar_hd_map_audit_probe>)
+  endif()
   set(pipeline_msg_include_dirs ${sensor_msgs_INCLUDE_DIRS} ${std_msgs_INCLUDE_DIRS}
     ${geometry_msgs_INCLUDE_DIRS} ${morai_msgs_INCLUDE_DIRS} ${pcl_conversions_INCLUDE_DIRS}
     ${rosbag_INCLUDE_DIRS} ${tf2_ros_INCLUDE_DIRS})
