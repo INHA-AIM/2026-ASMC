@@ -1,6 +1,6 @@
 {
   "attribute_override_count": 22,
-  "build_id": "kcity2025_route_curation_stage14_20260918",
+  "build_id": "kcity2025_route_curation_stage14_adjacent_20261025",
   "decision": "only explicitly implemented review segments are emitted; every planned decision remains documentation-only",
   "implemented_segments": [
     "stage01_start_legacy",
@@ -23,14 +23,14 @@
   "partial_candidate": true,
   "planned_segment_count": 0,
   "selected_by_color": {
-    "white": 94,
+    "white": 99,
     "yellow": 27
   },
   "selected_by_pattern": {
-    "broken": 31,
-    "solid": 90
+    "broken": 35,
+    "solid": 91
   },
-  "selected_marking_count": 121,
+  "selected_marking_count": 126,
   "selected_stopline_count": 7,
   "stoplines_included": true
 }

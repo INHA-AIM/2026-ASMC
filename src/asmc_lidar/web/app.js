@@ -463,16 +463,27 @@
     const note = el('road-note');
     if (!road || !road.available) { note.textContent = '지도 미표시: ' + (road ? road.reason : '불러오는 중'); return; }
     if (!map || !state.matrices || !state.matrices.map) { note.textContent = '지도 숨김 · 유효한 GPS pose 필요'; return; }
-    note.textContent = (road.build_id||'지도')+' · 지면 높이는 참고';
+    note.textContent = (road.build_id||'지도')+' · '+(road.lanes_available?'실제 차선':'차선 미표시: '+(road.lane_reason||'없음'))+' · 지면 높이는 참고';
     note.title = road.build_id || '';
     if (!state.view.road) return;
     const o = apply(map,0,0,0), transform = state.matrices.map;
-    ctx.fillStyle = 'rgba(190,150,255,0.16)'; ctx.strokeStyle = 'rgba(200,170,255,0.48)'; ctx.lineWidth = 1;ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(190,150,255,0.16)';ctx.setLineDash([]);ctx.beginPath();
     for (const {polygon,bounds:b} of (road.index||[])) {
       if(b[2]<o[0]-160||b[0]>o[0]+160||b[3]<o[1]-160||b[1]>o[1]+160)continue;
-      ctx.beginPath();
       polygon.forEach((p,i)=>{const q=projectMain(w,h,apply(transform,p[0],p[1],o[2]));if(i)ctx.lineTo(...q);else ctx.moveTo(...q);});
-      ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.closePath();
+    }
+    ctx.fill('nonzero'); // No per-link borders, centers or lane divider guides.
+    for(const lane of road.lane_markings||[]) {
+      ctx.strokeStyle=lane.color==='yellow'?'#ffdc55':lane.color==='blue'?'#62a8ff':'#f5f5f5';
+      ctx.lineWidth=Math.max(1,Math.min(4,lane.width_m*state.view.scale));ctx.beginPath();
+      for(const segment of lane.segments){
+        if(segment.every(p=>Math.abs(p[0]-o[0])>160||Math.abs(p[1]-o[1])>160))continue;
+        const a=projectMain(w,h,apply(transform,...segment[0],o[2]));
+        const b=projectMain(w,h,apply(transform,...segment[1],o[2]));
+        ctx.moveTo(...a);ctx.lineTo(...b);
+      }
+      ctx.stroke();
     }
   }
 

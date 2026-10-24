@@ -19,14 +19,14 @@ sources:
     bytes: 9112815
     authority: organizer_map
   route_links:
-    path: src/behavior_planner/src/config/route_links_1.yaml
+    path: src/asmc_planner/config/behavior/route_links_1.yaml
     sha256: d5444dce6da7bb7da1f88c3cdf1cbdef4e1a0eebcf8d0d7a5db03830a97554bf
     bytes: 991
     authority: team_reviewed_route_decomposition
   reviewed_hd_map:
     path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
-    sha256: ffcccb478ab9fea5232631dab49145eb59c9211a88c6d2f460108355fc4c54ee
-    bytes: 1957494
+    sha256: 21f7da31ec592089264fe604310f7bedcd005818e2f2b2e0ac2c4d44454c05a2
+    bytes: 2002472
     authority: team_reviewed_candidate
 official_notice:
   source: 대회 규정집 v1.2 (2026.09.30) 체크포인트 별 Ego 위치 및 Heading 각도 정보

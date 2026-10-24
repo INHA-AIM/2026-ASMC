@@ -24,6 +24,7 @@ from asmc_hd_map.map_overlay import (
     SegmentLayer,
     dashed_polyline_segments,
     lane_shape_group,
+    feature_paint_segments,
 )
 from asmc_hd_map.review_bundle import load_review_layers
 
@@ -76,15 +77,7 @@ def _canonical_lane_layer(features, shape: str) -> SegmentLayer:
         return _as_layer(_canonical_coordinates(selected))
     segments = []
     for feature in selected:
-        attributes = feature.get("attributes") or {}
-        mgeo = attributes.get("mgeo") or {}
-        dash_length = float(attributes.get("dash_length_m", mgeo.get("dash_interval_L1", 3.0)))
-        dash_gap = float(attributes.get("dash_gap_m", mgeo.get("dash_interval_L2", 3.0)))
-        dash_phase = float(attributes.get("dash_phase_m", 0.0))
-        value = dashed_polyline_segments(
-            [(feature.get("geometry") or {}).get("coordinates", ())],
-            dash_length, dash_gap, dash_phase,
-        )
+        value = feature_paint_segments(feature)
         if len(value):
             segments.append(value)
     return SegmentLayer(
@@ -732,16 +725,19 @@ class CandidateMapOverlayNode:
                 if layer is None:
                     continue
                 local = layer.around_ego(pose[:2], pose[2], self.radius_m)
+                if not len(local):
+                    continue  # RViz rejects empty LINE_LIST; DELETEALL already cleared it.
                 markers.append(_line_marker(
                     f"{namespace}_{color}_{shape}", marker_id, local, stamp, 0.12,
                     colors[color],
                 ))
                 marker_id += 1
         stops = stoplines.around_ego(pose[:2], pose[2], self.radius_m)
-        markers.append(_line_marker(
-            f"{namespace}_stopline", marker_id, stops, stamp, 0.20,
-            (1.0, 0.1, 0.1, 0.95),
-        ))
+        if len(stops):
+            markers.append(_line_marker(
+                f"{namespace}_stopline", marker_id, stops, stamp, 0.20,
+                (1.0, 0.1, 0.1, 0.95),
+            ))
         publisher.publish(MarkerArray(markers=markers))
 
     def _publish_drivable_comparison(self, pose, stamp) -> None:

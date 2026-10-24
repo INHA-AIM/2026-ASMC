@@ -41,12 +41,17 @@ driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. T
   변위 x8/y3km/h)이며 별도 튜닝하지 않았다. map OBB bounds/벡터는 저장된 scan Context로
   계산하고 모든 처리 scan마다 갱신한다. GPS 무효 시 이력을 지워 UNKNOWN으로 복구한다.
   이는 주행 성능 수락이나 typed dynamic/velocity validity 승격이 아니다. 판제는 미연결이다.
-- `주행가능영역 · 연보라`: **`asmc_hd_map`의 최신 v6 정본**
+- `주행가능영역·실제 차선`: **`asmc_hd_map`의 최신 v7 정본**
   `config/kcity2025_compact_drivable_map.json`을 읽기 전용으로 표시한다.
   판제의 별도 v5 사본으로 자동 대체하지 않는다. 원점은 판제 `config/behavior/global_info.json`과 pipeline YAML의 map.origin을
   대조한다. 불일치·파일 누락이면 숨기고 사유를 표시한다. 판제 노드를 켤 필요는 없다.
-- `/api/drivable`은 서버 시작 때 읽은 지도 polygon만 제공한다. 원본/운영 지도를 수정하거나
+- `/api/drivable`은 서버 시작 때 검증한 도로 면·실제 paint segment를 제공한다. 원본/운영 지도를 수정하거나
   이 영역으로 LiDAR 객체를 제거하지 않는다. 지도 부재가 LiDAR 처리를 막지 않는다.
+
+2026-10-25부터 도로 면을 한 번에 채워 링크별 polygon 테두리와 내부 겹침 띠를 표시하지 않는다.
+별도 링크 중심선·차로 안내 구분선은 추가하지 않는다. 같은 product가 SHA로 고정한 실제 차선·정지선만
+덧그리며 RViz와 같은 metric 점선 분할 함수를 사용한다. 선과 도로의 SHA가 맞지 않으면 선을 숨기고
+사유를 표시한다. 이는 표시 변경이며 local/map 객체 좌표나 tracker를 수정하지 않는다.
 - scan의 map pose가 무효하면 Local 보기에서도 지도는 숨긴다. 3D 지도는 고도 모델이
   아닌 자차 높이의 참고 평면이다. 과거 GPS 위치로 지도를 고정해 계속 표시하지 않는다.
 - 지도 파일이 바뀌면 모니터를 재시작한다. Python/launch 변경 후에는 launch 재시작이 필요하다.

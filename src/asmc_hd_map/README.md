@@ -2,7 +2,7 @@
 
 AutoNav K-City 2025 HD맵의 deterministic builder, 운영 publisher, local cache와 개발 검수
 도구를 소유하는 ROS1 package다. Phase 2 통합이 완료됐으며 운영 제품은
-`kcity2025_static_junction_widened_drivable_v6`다.
+`kcity2025_reviewed_high_speed_adjacent_drivable_v7`다.
 
 > **문서 역할:** Active Package Guide — deterministic builder, runtime publisher와 개발 검수
 
@@ -71,11 +71,18 @@ publisher는 입력 SHA나 build 조합이 맞지 않으면 일부 토픽을 내
 
 ## 현재 제품
 
+2026-10-25 사용자3-source 주행 검수에 따라 A029·A175·A406을 명시적 인접 corridor로 추가했다.
+기존121개 차선과102개 도로 면의 형상·ID는 보존한다. 추가5개 선은 legacy origin-aligned
+참조4개 묶음과 A029 왼쪽 누락 보완1개다. 점선은 최종 규약3m/3m와 연결부 위상을 사용한다.
+A029 보완선은 현재 링크 중심선의 왼쪽1.75m와 기존 끝점으로 생성했으며 관측 선으로 가장하지 않는다.
+도로 면은 세 링크의 제한된 envelope 안에서만 사용자 확인 H5를 사용하며, A010 등 다른 링크를
+자동 포함하지 않는다. 비교 노드는 source를 표시할 뿐 자동 병합하지 않는다.
+
 | 항목 | 개수·기준 |
 |---|---|
-| 물리 차선·정지선 | 121 + 7 = 128 `LaneMarking` |
-| 차로 | 70 `Lane` |
-| vector 주행가능영역 | 102 `DrivableArea` = Lane 70 + corridor fill 18 + surface patch 14 |
+| 물리 차선·정지선 | 126 + 7 = 133 `LaneMarking` |
+| 차로 | 73 `Lane` |
+| vector 주행가능영역 | 115 `DrivableArea` (기존 구간 유지 + 검토한3링크의 H5 제한 surface) |
 | 체크포인트 | 15 (규정집 v1.2), 통과 반경 3 m |
 | mission/policy/speed zone | 15 |
 | raster | 0.2 m/cell, vector product의 파생 lookup |
@@ -117,7 +124,7 @@ RViz 기본 프리셋은 주행가능영역의 전역 외곽선을 표시한다.
 |---|---|---|
 | 현재 K-City Node/Link | topology, link ID와 진행 관계 | 정본 입력 |
 | 공식 global path/checkpoint | route station과 통과 기준 | 정본 입력 |
-| route curation stage14 | 최종 물리 차선 121·정지선 7 | 검토 완료 입력 |
+| route curation stage14 | 기존121개 + 인접 보완5개·정지선7개 | 검토 완료 입력 |
 | legacy origin-aligned map | 구간별 geometry/paint provenance | builder가 승인한 부분만 반영 |
 | 원태 H5/vector | 관측과 포장면 provenance | 승인된 patch·검수에 한정 |
 | source-comparison topic | 사람 검수 | 운영 토픽과 절대 혼합하지 않음 |

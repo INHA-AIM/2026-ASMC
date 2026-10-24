@@ -2,10 +2,11 @@
 """Rebuild the asmc_hd_map artifact chain after a source edit, in one step.
 
 Order: competition metadata -> P2-A audit source pin -> P2-A audit -> compact
-drivable product -> runtime pins -> documentation-migration record SHAs.
+drivable product -> runtime pins -> historical-record integrity check.
 Zones, speeds and surfaces are expected to change while planning integrates
 the map; review the result with ``git diff`` instead of editing the pins by
-hand. ``--check`` writes nothing and lists every stale step.
+hand. Historical v1 reports stay frozen; new revisions select new report paths.
+``--check`` writes nothing and lists every stale step.
 """
 
 from __future__ import annotations
@@ -68,6 +69,8 @@ def _audit_pin(repo_root: Path, write: bool) -> bool:
 
 
 def _doc_manifest(repo_root: Path, write: bool) -> bool:
+    # These v1 records are historical snapshots, not current builder outputs.
+    # A new map revision must select new report paths instead of re-pinning them.
     path = repo_root / DOC_MANIFEST
     text = path.read_text(encoding="utf-8")
     current = True
@@ -79,11 +82,6 @@ def _doc_manifest(repo_root: Path, write: bool) -> bool:
         actual = _sha256(repo_root / record)
         if match.group(2) != actual:
             current = False
-            if write:
-                text = text[: match.start(2)] + actual + text[match.end(2) :]
-    if write:
-        path.write_text(text, encoding="utf-8")
-        current = True
     print("[%s] documentation-migration record SHAs" % ("ok" if current else "STALE"))
     return current
 

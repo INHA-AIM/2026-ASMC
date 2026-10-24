@@ -28,10 +28,10 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
     def test_frozen_geometry_and_selection(self):
         stats = self.artifact["statistics"]
         self.assertEqual(self.artifact["reviewed_geometry_sha256"],
-                         "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf")
+                         "521b1fde181a0c10ce71696f7f05010138c041dd067ad531dce23ff5da6ad24f")
         self.assertEqual(stats["route_lane_count"], 39)
-        self.assertEqual(stats["selected_lane_count"], 70)
-        self.assertEqual(stats["drivable_area_count"], 102)
+        self.assertEqual(stats["selected_lane_count"], 73)
+        self.assertEqual(stats["drivable_area_count"], 115)
         self.assertEqual(stats["checkpoint_centers_inside"], 15)
         self.assertLess(stats["compact_fraction_of_legacy"], 0.20)
         self.assertEqual(self.artifact["grid"]["resolution_m"], 0.2)
@@ -45,9 +45,9 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
             ["A2256W000131"],
         )
         self.assertIn("A2256W000131", self.artifact["selection"]["selected_lane_link_ids"])
-        self.assertEqual(stats["boundary_refined_lane_count"], 41)
-        self.assertEqual(stats["boundary_refined_side_count"], 74)
-        self.assertEqual(stats["corridor_fill_area_count"], 18)
+        self.assertEqual(stats["boundary_refined_lane_count"], 44)
+        self.assertEqual(stats["boundary_refined_side_count"], 80)
+        self.assertEqual(stats["corridor_fill_area_count"], 20)
         self.assertEqual(stats["intersection_surface_patch_count"], 14)
         self.assertEqual(
             self.artifact["selection"]["intersection_groups"]["roundabout_maneuver"],

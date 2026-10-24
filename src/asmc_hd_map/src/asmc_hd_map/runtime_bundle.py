@@ -415,8 +415,8 @@ def load_runtime_bundle(
     checkpoints = list(metadata.get("checkpoints") or [])
     mission_zones = list(metadata.get("mission_zones") or [])
     expected_counts = (
-        (feature_counts["lane_marking"], 121, "lane marking count"),
-        (feature_counts["stopline"], 7, "stopline count"),
+        (feature_counts["lane_marking"], int(hd_baseline.get("feature_counts", {}).get("lane_marking", -1)), "lane marking count"),
+        (feature_counts["stopline"], int(hd_baseline.get("feature_counts", {}).get("stopline", -1)), "stopline count"),
         (len(checkpoints), int(competition_baseline.get("checkpoint_count", -1)), "checkpoint count"),
         (len(mission_zones), int(competition_baseline.get("mission_zone_count", -1)), "mission count"),
     )

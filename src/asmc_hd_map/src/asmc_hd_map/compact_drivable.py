@@ -7,6 +7,8 @@ junction node-pair closure. Ordinary lane polygons can follow reviewed paint,
 adjacent lanes are joined as a corridor, and obstacle-junction gaps use legacy
 H5 only inside the selected flat-ended link envelope. No radius/proximity
 expansion is allowed to pull unrelated roads into the product.
+An explicit user-reviewed adjacent corridor can use H5 clipped to its selected
+lane envelope; it cannot expand selection to the rest of the H5 map.
 """
 
 from __future__ import annotations
@@ -505,6 +507,46 @@ def _legacy_surface_geometry(
     return unary_union(polygons) if polygons else Polygon()
 
 
+def reviewed_lane_surfaces(lanes, areas, road, ppm, offset, groups):
+    """Use H5 only within an explicitly approved adjacent corridor envelope.
+
+    Replace that group's delivery surface, not other lane geometry or tracker
+    state. The envelope prevents the old whole-map H5 from adding nearby roads.
+    """
+    from shapely.geometry import Polygon, LineString
+    from shapely.ops import unary_union, split
+    for group in groups:
+        selected=[lane for lane in lanes if lane['drivable_group']==group]
+        if not selected:raise CompactDrivableError('reviewed H5 lane group is empty: '+group)
+        ids={lane['link_id'] for lane in selected}
+        envelope=unary_union([Polygon([p[:2] for p in lane['polygon']]).buffer(0) for lane in selected])
+        surface=_legacy_surface_geometry(road,ppm,offset,envelope.bounds).intersection(envelope).buffer(0)
+        if surface.is_empty:raise CompactDrivableError('reviewed H5 surface is empty: '+group)
+        areas[:]=[area for area in areas if not set(area['link_ids']).issubset(ids)]
+        # Cut through holes rather than fan-triangulating hundreds of H5 edge
+        # vertices. Preserve every hole while keeping simple delivery rings few.
+        pieces=[];pending=list(_polygon_parts(surface));cuts=0
+        while pending:
+            part=pending.pop()
+            if not part.interiors:
+                pieces.append(part);continue
+            cuts+=1
+            if cuts>128:raise CompactDrivableError('too many reviewed surface hole cuts')
+            y=Polygon(part.interiors[0]).representative_point().y
+            x0,_,x1,_=part.bounds
+            divided=_polygon_parts(split(part,LineString([(x0-1,y),(x1+1,y)])))
+            if len(divided)<2:raise CompactDrivableError('could not split reviewed surface hole')
+            pending.extend(divided)
+        for i,part in enumerate(pieces):
+            if part.area<0.01:continue
+            areas.append(dict(id='drivable:reviewed_h5:'+group+':'+str(i),area_type='lane',
+                validity='validated',source_type='hybrid',intersection_guarded=False,
+                polygon=[[round(x,4),round(y,4),0.0] for x,y in list(part.exterior.coords)[:-1]],
+                link_ids=sorted(ids),lane_ids=[lane['id'] for lane in selected],
+                source_dataset='legacy_h5_user_reviewed_bounded_corridor',source_feature_id=group,
+                surface_group=group))
+
+
 def legacy_intersection_surface_patches(
     lanes: Sequence[Mapping[str, Any]],
     road: np.ndarray,
@@ -866,6 +908,10 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
             "explicit_bridge_pairs": surface_policy.get("explicit_bridge_pairs", []),
         }
     )
+    reviewed_ids={lane['link_id'] for lane in lanes if lane['drivable_group'] in
+                  surface_policy.get('legacy_h5_reviewed_lane_groups',[])}
+    # Append newly reviewed pairs so existing corridor IDs do not shift.
+    bridge_pairs.sort(key=lambda pair:bool(set(pair['link_ids']) & reviewed_ids))
     for index, pair in enumerate(bridge_pairs):
         first, second = pair["link_ids"]
         polygon = corridor_bridge_polygon(links[first], links[second], step_m)
@@ -896,6 +942,8 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
         float(surface_policy["vector_simplify_tolerance_m"]),
     )
     areas.extend(intersection_surface_patches)
+    reviewed_lane_surfaces(lanes,areas,road,legacy_ppm,offset,
+                          surface_policy.get('legacy_h5_reviewed_lane_groups',[]))
     for area in areas:
         polygon = np.asarray(area["polygon"], dtype=np.float64)
         if len(polygon) < 3:

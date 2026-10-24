@@ -44,9 +44,9 @@ class RuntimeBundleTest(unittest.TestCase):
     def test_frozen_artifacts_load_without_geometry_mutation(self):
         self.assertEqual(
             self.bundle["geometry_sha256"],
-            "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf",
+            "521b1fde181a0c10ce71696f7f05010138c041dd067ad531dce23ff5da6ad24f",
         )
-        self.assertEqual(self.bundle["feature_counts"], {"lane_marking": 121, "stopline": 7})
+        self.assertEqual(self.bundle["feature_counts"], {"lane_marking": 126, "stopline": 7})
         self.assertEqual(len(self.bundle["checkpoints"]), 15)
         self.assertEqual(len(self.bundle["mission_zones"]), 15)
         self.assertAlmostEqual(self.bundle["route_stations"][-1], 2184.611723336, places=6)
