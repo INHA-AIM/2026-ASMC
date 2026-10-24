@@ -90,7 +90,8 @@ HD맵 판정의 기본값은 YAML `hd_map_audit.mode: "off"`다. 내부 시험�
 audit 미리보기는 OBB 겹침과 **전체 cluster support의 도로 점 비율**을 함께 제공한다.
 카메라로 연결된 `dynamic_obstacle`은 모든 구간에서 보호하고, 머리 위 구조물은 최저 점·OBB 하단과
 지붕 여유로 후보만 표시한다. [웹 디버거](docs/web-monitor.md#hd맵-필터-디버깅)의 후보 숨김은 화면에만 적용된다.
-배경 지도는 `asmc_hd_map` v6 정본이며, 판제의 별도 v5 사본과 혼용하지 않는다.
+배경 지도는 `asmc_hd_map` v7 정본이며, 판제의 별도 v5 사본과 혼용하지 않는다.
+웹은 도로 면과 SHA가 일치하는 물리 차선만 그린다. 링크 중심선·도로 분할 테두리는 표시하지 않는다.
 
 고정 bag 대조는 `lidar_replay --help`와 [실행 안내](docs/pipeline.md)를 따른다. 결과는 저장 규약에 따라 등록한 새 run ID의 D 출력 위치에 보존한다.
 

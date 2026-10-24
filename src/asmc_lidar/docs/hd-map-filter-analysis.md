@@ -347,3 +347,50 @@ run은 동결했으며 [결과 포인터](../../../config/baselines/lidar_delive
 실제 제거 성공률로 해석하지 않는다. 이 제한을 유지하면서 다음 검수에 사용할 수 있는 상태다.
 이번 bag에는 **도로 OBB 겹침이 양수인 제외 미리보기 후보가0**이었다. 따라서 큰 OBB만 도로에
 걸친 반례의 동작은 합성 회귀 근거이며 실제 A304 가드레일 해결 근거로 바꾸지 않는다.
+
+## A1.3 인접 도로와 차선 검수 반영 — 2026-10-25
+
+사용자가3-source 화면과 MORAI를 대조해 승인한 **A029·A175·A406**을 v7 주행가능영역에
+추가했다. H5 전체를 가져오지 않고 세 링크 envelope 안에서만 표면을 사용한다. 기존102개
+도로 면과 ID, 기존121개 paint의 형상은 보존 검사로 확인한다. 최종 제품은73차로·115개 면·
+126차선·7정지선이다. 위 A1/A1.1/A1.2의 v6 SHA·수치는 당시 결과로 유지한다.
+
+추가5개 선은 legacy origin-aligned 참조4개 묶음과 A029 왼쪽 누락 보완1개다. 점선은
+최종3m/3m 규약을 사용하고 기존 endpoint와 phase를 맞춘다. A029 왼쪽은 관측 원본이 없어
+현재 A029 중심선의 왼쪽1.75m로 생성하고 기존 최종 선 endpoint에 연결했다. inference/provenance를
+명시했으며 독립 측정 정확도나 RGB GT 검증 완료로 바꾸지 않는다. 비교 그림의 청록색이 이 보완선이다.
+
+RViz 비교 노드가 빈 `LINE_LIST`를 발행할 수 있던 경로를 수정했다. source 레이어를 지우는
+`DELETEALL`은 유지하고 주변에 실제 선이 있는 레이어만 발행한다. 스크린샷의 상세 오류 문구는
+접혀 있었고 비교 노드는 종료된 상태여서 그 에러 문구와 직접 대응시키지는 못했다. 설치 RViz의
+빈 점 배열 오류와 해당 코드 경로를 확인했고, 실시간 세 source에서도 빈/홀수 Marker0을 확인했다.
+
+웹에는 도로 면을 한 번에 채워 내부 링크 경계를 제거하고, 같은 product가 고정한 실제 차선만
+그린다. RViz와 동일한 점선 생성 함수를 쓰며 파일 SHA가 다르면 차선을 숨긴다. 실제 객체 제외·
+tracker 변경·판제 사본 교체는 하지 않는다. 현재 PC의 실행 설정은 다음과 같다.
+
+```bash
+# 컨테이너 /root/ws: 기존 같은 namespace의 lidar/view를 먼저 종료한 뒤 각각 실행
+roslaunch asmc_lidar lidar.launch debug:=true \
+  pipeline_config:=/artifacts/hd-map-adjacent-review-20261025-r1/runtime.yaml
+# 별도 터미널
+roslaunch asmc_lidar view.launch \
+  pipeline_config:=/artifacts/hd-map-adjacent-review-20261025-r1/runtime.yaml
+```
+
+새 지도 번들은 `hd-map-adjacent-bundle-20261025-r1`이며 manifest SHA는
+`f2ea9bc0619788291b0d9e7bcb4e578b021db15b238c0ad6bd782e102a9a8934`다. 기존 v6 프로필을
+덮어쓰지 않는다. 새 그림·웹 화면·검증은 `hd-map-adjacent-review-20261025-r1`에 보존한다.
+현재 설정으로 두 노드를 재시작하고 브라우저를 새로고침해야 기존 캐시와 v6 audit를 혼용하지 않는다.
+
+### 검증 결과
+
+- HD맵182개·LiDAR CTest33개·웹 JavaScript62개 통과. 실제 HD맵 토픽에서도133개 marking·
+  73차로·115개 면과 geometry SHA를 확인했다. 과거 동결 보고서5개는 바이트를 보존한다.
+- 같은649scan replay의 원본 객체·track digest는 기존 A1.1/A1.2와 동일하다. 새 v7 audit
+  계산 p95는1.019ms/scan이다. 지도 추가가 tracker의 탐지·삭제 정책을 바꾸지는 않는다.
+- 웹 한 쌍 smoke에서 오류·중복/역행 stamp0, 그리기 p95는6.8→6.1ms였다. 병행 단위시험이
+  있던 저장 bag 검사이므로 기존3회 성능 측정이나 실제 주행 수락을 대체하지 않는다.
+- [결과 포인터](../../../config/baselines/hd_map_adjacent_review_result_v1.json)의 동결 run에서
+  `index.html`, `adjacent-map.png`, `browser/candidate-1-detail.png`를 검토한다. A029 보완선의
+  실제 노면 밀착도는 사용자 확인이 남아 있다. 최초 기대 수량·색 집계 오류의 실패 로그도 보존했다.

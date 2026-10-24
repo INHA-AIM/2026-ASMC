@@ -136,20 +136,20 @@ PR #105 통합 CTest31/31, 웹 core29개·JS61개와 문서/계약 검사는
 - **속도·fusion:** signed 속도/후진·절대속도·운동 상태의 공개 validity, 실제 카메라 bag 품질과3뷰
   matching, HD맵 필터, 공동 주행·판제 전환은 완료되지 않았다. 팀 주행은 계속 기존 Main을 쓴다.
 
-## 최신 HD맵 사용 여부 — 2026-10-23 확인
+## 최신 HD맵 사용 여부 — 2026-10-25
 
 - 새 `asmc_lidar`는 HD맵 계약의 원점 `[302595.0, 4124145.0, 0.0]`을 사용한다.
-  최신 주행가능영역·차선·미션 토픽을 구독하거나 이 영역으로 객체를 제거하는 기능은 아직 없다.
-  원점 일치를 최신 HD맵 필터 연결 완료로 해석하지 않는다.
+  A1.1에서 정본으로부터 만든 SHA 고정 bundle을 audit에 연결했고 A1.3에서 v7로 대조했다.
+  최신 주행가능영역·차선·미션 토픽 구독이나 실제 객체 제거는 구현하지 않았다.
 - 운영 Main의 `main.launch`는 `planning_inputs/config/validated_0781402/road_mask.png`와
   같은 이름의 YAML을 사용한다. PNG SHA는 `b27521b882486f1f46d450f455f2292044b87dae731136d0c00e5786c0605f2c`다.
-- 최신 `asmc_hd_map` 주행가능영역 정본은 `kcity2025_static_junction_widened_drivable_v6`이며
+- 최신 `asmc_hd_map` 주행가능영역 정본은 `kcity2025_reviewed_high_speed_adjacent_drivable_v7`이며
   `config/kcity2025_compact_drivable_map.json`과 파생 `kcity2025_compact_drivable_grid.npz`다.
   기존 mask와 `map_id`·원점이 같아도 같은 geometry가 아니다. 기존 PNG의 흰 영역은
-  2,678,451픽셀, v6 grid의 drivable=0은373,708셀이다. PNG는 흰색이 주행가능,
+  2,678,451픽셀이다. PNG는 흰색이 주행가능,
   OccupancyGrid는0이 주행가능이므로 값도 그대로 치환하지 않는다.
-- 안승현의 다음 작업에서 v6 벡터/격자와 기존 필터를 대조하고 동적 장애물 진입·인접 차로·
-  로터리 접근과 GPS 무효 시 처리를 확인한다. 이번 구조 PR에서 지도를 바꾸거나 객체를 추가 제거하지 않는다.
+- A1의 기존 v6 대조 결과는 보존한다. 최신 v7과 판제 v5 사본은 구분하며, 동적 장애물 진입·
+  로터리 접근·위치 오차와 실제 전달 제외/판제 소비 전환은 후속 검증이다.
 
 ### A1 ROI 검토 조건 — 구간 전제와 5Hz GPS
 
@@ -251,6 +251,11 @@ fusion 보완과 판제 정책은 변경하지 않는다. 계산·공급 비교�
 현재 matching은 전방이며3뷰 matching 확대는 재호의 후속 책임이다. 후보 숨김은 웹에서만 적용하고
 원본 ROS 객체·tracker·판제 소비 경로는 유지한다. [정책과 한계](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#점군높이카메라-보호-미리보기),
 [디버거 사용](../../src/asmc_lidar/docs/web-monitor.md#hd맵-필터-디버깅)을 참고한다.
+
+2026-10-25 사용자 검수로 A029·A175·A406을 추가한 v7 정본과 물리 차선5개를 반영했다.
+기존102개 도로 면/ID와121개 차선 형상은 보존한다. 새 시험 프로필·bundle SHA와 보완선의
+추정 근거는 [A1.3](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#a13-인접-도로와-차선-검수-반영--2026-10-25)에 둔다.
+웹의 도로 분할 테두리는 제거했으며 실제 객체 제외·판제 입력 전환을 완료한 것은 아니다.
 
 ## 판제 소비 전환 시 정리할 중복 처리
 
