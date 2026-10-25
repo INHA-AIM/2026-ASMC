@@ -82,6 +82,31 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
             ],
         )
 
+    def test_tollgate_islands_are_outside_both_lane_road_vectors_and_grid(self):
+        from shapely.geometry import Polygon
+        product, arrays = self.generated, self.arrays
+        self.assertEqual(product["statistics"]["reviewed_non_drivable_island_count"], 2)
+        islands = product["non_drivable_areas"]
+        self.assertEqual({item["id"] for item in islands},
+                         {"non_drivable:tollgate_first_island", "non_drivable:tollgate_second_island"})
+        grid = product["grid"]
+        for item in islands:
+            island = Polygon([p[:2] for p in item["polygon"]])
+            self.assertTrue(island.is_valid)
+            self.assertGreater(island.area, 40.)
+            for record in product["lanes"] + product["drivable_areas"]:
+                shape = Polygon([p[:2] for p in record["polygon"]])
+                self.assertLess(shape.intersection(island).area, .005, record["id"])
+            center = island.representative_point()
+            x = round((center.x - grid["origin_x"]) / grid["resolution_m"])
+            y = round((center.y - grid["origin_y"]) / grid["resolution_m"])
+            self.assertEqual(int(arrays["occupancy"][y, x]), 100)
+        # The actual usable toll passage between the road edge and first island
+        # remains drivable; the island correction is not a blanket toll ROI.
+        x = round((70. - grid["origin_x"]) / grid["resolution_m"])
+        y = round((-365. - grid["origin_y"]) / grid["resolution_m"])
+        self.assertEqual(int(arrays["occupancy"][y, x]), 0)
+
     def test_dynamic_junction_vector_union_is_one_connected_surface(self):
         dynamic_ids = set(
             self.artifact["selection"]["intersection_groups"]["dynamic_obstacle_maneuver"]

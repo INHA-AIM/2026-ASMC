@@ -83,6 +83,18 @@ selection:
   centerline_resample_m: 0.25
 
 surface_refinement:
+  # The reviewed white paint closes these two physical tollgate islands.
+  # Subtract AFTER lane/corridor fills so a bridge cannot paint them back in.
+  # Each chain is ordered from the upstream split tip to the downstream tip.
+  non_drivable_islands:
+    - id: tollgate_first_island
+      boundary_chains:
+        - [a153_left_split_boundary, a451_route_left_transition]
+        - [adjacent_lane_split_boundary, a451_tollgate_first_island_outer_boundary]
+    - id: tollgate_second_island
+      boundary_chains:
+        - [second_tollgate_island_split_inner, a451_tollgate_second_island_inner_boundary]
+        - [second_tollgate_island_split_outer, a451_tollgate_second_island_outer_boundary]
   # User approved H5 surface only inside these three explicit lane envelopes.
   legacy_h5_reviewed_lane_groups: [high_speed_preentry_029_175_406]
   # On ordinary roads, follow a reviewed marking when its local signed lateral

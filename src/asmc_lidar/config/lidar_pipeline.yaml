@@ -164,7 +164,7 @@ experimental:
 hd_map_audit:
   mode: "filter"
   manifest: "config/hd_map_audit/manifest.json"
-  manifest_sha256: "010ff355322edbb492034dce13332b08a715c63cf344b515918c92cb4c32a96b"
+  manifest_sha256: "13c517e3fffee3bfd64fabdb6f473c6c668d3d87e2142c38ff756e3650b98f2e"
   source_product: "../asmc_hd_map/config/kcity2025_compact_drivable_map.json"
   # Positive camera vehicle/dynamic evidence is protected
   # in all zones; raw point support is voxel/filter/cluster output, not GUI samples.

@@ -25,15 +25,16 @@
 - base lane areas: `73`, adjacent corridor fills: `20`, intersection gap patches: `14`
 - reviewed-boundary refinement: `44` lanes / `80` sides
 - explicit shadow opposite lane: `A2256W000131` beside route `A2256W000126`
+- reviewed tollgate islands excluded from lanes and final road: `2`
 - reviewed non-route intersection lanes: `15`
 - static allowlist: `A2256W000100, A2256W000111, A2256W000221, A2256W000222, A2256W000226, A2256W000227, A2256W000746`
 - dynamic allowlist: `A2256W000066, A2256W000087, A2256W000206, A2256W000211, A2256W000599, A2256W000636, A2256W001124, A2256W001125`
 - roundabout extension: `A2256W000134`
 - roundabout surface stitch: `A2256W000151` (envelope reference only; not a new lane)
-- legacy road: `89834.44 m²`, compact road: `15730.84 m²` (`17.51%`)
+- legacy road: `89834.44 m²`, compact road: `15703.40 m²` (`17.48%`)
 - reviewed geometry SHA: `e836f762dbbad4f02aaa6b37f486439aa02d3d5f961fa72b162cde4ebd24a3b3`
-- product SHA: `653af54bb9b2e3ac6de9efd31ef871ab15f2eda1c0d96dee7b43c734a7debc58`
-- grid SHA: `83d5ba63c5bab2c0d802c7c018d4ef3787be79a5e89060d78e6b2111199afda7`
+- product SHA: `099f75685c23f28b89bc7fd50c24a6b6e0f9b3ba580665bed483503e1de37dfd`
+- grid SHA: `abbdc067b0b8cc32f644a57b179c9657c948670efb3931430effacb2c13989d0`
 
 ## 소비 규칙
 

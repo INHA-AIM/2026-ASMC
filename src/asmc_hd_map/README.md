@@ -160,6 +160,12 @@ PYTHONPATH=src/asmc_hd_map/src \
 generated YAML/JSON/NPZ를 손으로 고치지 않는다. 입력과 source hash를 변경한 뒤 builder로
 재생성하고 geometry/count/hash, RViz와 consumer 회귀를 함께 리뷰한다.
 
+톨게이트 두 섬은 `surface_refinement.non_drivable_islands`에서 검수된 흰 실선 체인을 지정한다.
+닫힌 섬 내부는 인접 차로 corridor-fill까지 만든 **뒤에** Lane·DrivableArea에서 함께 뺀다.
+따라서 다음 재생성 때 섬이 다시 도로로 채워지지 않는다. 섬 경계와 근거 feature ID는 제품의
+`non_drivable_areas`에 남기며 OccupancyGrid와 LiDAR 배포 bundle도 같은 최종 도로 면에서 파생한다.
+차선 paint·링크 선택·토폴로지 ID는 유지한다. 지도 배포 갱신은 LiDAR의 `filter/audit/off` 선택을 바꾸지 않는다.
+
 `--check`는 파일을 고치지 않고 입력 hash와 재생성 결과가 committed artifact와 같은지 검사한다.
 입력을 의도적으로 변경할 때만 builder의 write 경로를 실행하고 source·output·사람 검수 결과를
 같은 PR에 포함한다.

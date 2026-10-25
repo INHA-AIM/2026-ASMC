@@ -19,9 +19,11 @@ def sync(check=False):
         exported=Path(temporary)/'bundle'
         result=prepare(PKG/'tools/filter_audit/audit.yaml',exported,compressed=True)
         text=config.read_text()
-        expected=re.sub(r'(hd_map_audit:\n)  mode: [^\n]+\n  manifest: [^\n]+\n  manifest_sha256: [^\n]+',
-            r'\1  mode: "audit"\n  manifest: "config/hd_map_audit/manifest.json"\n  manifest_sha256: "'+result['manifest_sha256']+'"',text)
-        if expected==text and 'mode: "audit"' not in text:raise ValueError('default audit block not found')
+        # Geometry deployment must not turn the active delivery filter back
+        # into diagnostic-only audit (or enable a deliberately disabled mode).
+        expected,count=re.subn(r'(hd_map_audit:\n  mode: [^\n]+\n)  manifest: [^\n]+\n  manifest_sha256: [^\n]+',
+            r'\1  manifest: "config/hd_map_audit/manifest.json"\n  manifest_sha256: "'+result['manifest_sha256']+'"',text)
+        if count!=1:raise ValueError('default audit block not found or ambiguous')
         files={p.name:p.read_bytes() for p in exported.iterdir()}
         changed=expected!=text or not target.exists() or any(not (target/n).is_file() or (target/n).read_bytes()!=b for n,b in files.items())
         if check and changed:raise ValueError('default HD map bundle is stale; run sync_default_hd_map.py')

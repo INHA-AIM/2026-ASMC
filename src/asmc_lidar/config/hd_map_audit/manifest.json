@@ -17,11 +17,11 @@
   "arrays": {
     "occupancy": {
       "file": "occupancy.bin.gz",
-      "sha256": "3d87d901f9e13a231acb3a551691be625c3bc20e263b4e511c84d10f036431d1",
+      "sha256": "dc02fa610c62201bce1b21cec3c2f9e63c0a1011f23b1656602378fbbfd1341b",
       "bytes": 22310720,
       "compression": "gzip",
-      "stored_bytes": 40714,
-      "raw_sha256": "133f9ff7f0041b9ce6c3a03121fbb38ca23610463e0e09194b65c2df7a0c1360"
+      "stored_bytes": 40745,
+      "raw_sha256": "f8947c34755496284a6ceb86a91048264bae136011ad1170d0309b8abbce47f4"
     },
     "exceptions": {
       "file": "exceptions.bin.gz",
@@ -46,10 +46,10 @@
   "policy_sha256": "799babf2a52878ae51078ffe86f1e53c4c4a0905adb187eefe368371b222bda5",
   "policy_canonical": "{\"candidate_guard_m\":1.0,\"exception_protection_m\":10.0,\"expected_map_id\":\"waize_katri_2025-10-23\",\"map_origin\":[302595.0,4124145.0,0.0],\"pose_age_limit_ms\":300.0}",
   "source_sha256": {
-    "product": "f2edc8188c5269942a970820b515aa5037b39b51f79f883f545758581d6570c1",
-    "grid": "83d5ba63c5bab2c0d802c7c018d4ef3787be79a5e89060d78e6b2111199afda7",
+    "product": "16b8f5f811ec08ef0a7827546f4450302b69533be44952a030bf8c9c79825b7d",
+    "grid": "abbdc067b0b8cc32f644a57b179c9657c948670efb3931430effacb2c13989d0",
     "metadata": "5e829605ed5d225b68d0454e0e313a48657ef5ee08e19ac0781d1d78c5bd10f4",
-    "source": "63804b935f23f28e58756b89c8f7a0f2e9b2ff97d04a0c0327b96473b1388549"
+    "source": "b202a61a50193e2386d161770b725252f96b8d177af7f1ad81bcb562d22e02e1"
   },
   "source_paths": {
     "product": "src/asmc_hd_map/config/kcity2025_compact_drivable_map.json",

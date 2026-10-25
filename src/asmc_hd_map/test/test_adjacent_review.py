@@ -91,12 +91,19 @@ class AdjacentReviewTest(unittest.TestCase):
             self.assertGreater(joined[0],0)
             self.assertEqual(len(set(joined)),1)
 
-    def test_existing_102_road_areas_and_ids_are_unchanged(self):
+    def test_existing_roads_are_preserved_except_reviewed_tollgate_islands(self):
         product=json.loads((PKG/'config/kcity2025_compact_drivable_map.json').read_text())
         original=[a for a in product['drivable_areas'] if not a['id'].startswith('drivable:reviewed_h5:')]
         self.assertEqual(len(original),102)
-        digest=hashlib.sha256(json.dumps(original,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-        self.assertEqual(digest,'995f63679d91e63788a37961d04c348b2b4e4e9be1027311ea04be933b218a16')
+        approved={'drivable:A2256W000153','drivable:A2256W000432',
+                  'drivable:A2256W000451','drivable:corridor_fill:002'}
+        self.assertEqual({a['id'] for a in original if a.get('excluded_island_ids')},approved)
+        preserved=[a for a in original if a['id'] not in approved]
+        self.assertEqual(len(preserved),98)
+        # Digest computed from the pre-island product; keep every other area
+        # byte-for-byte stable rather than re-pinning all 102 changed records.
+        digest=hashlib.sha256(json.dumps(preserved,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        self.assertEqual(digest,'f07bb27e9d94ef5d5c9c5a2dfdb86bcb7eaa55e77a2bedde5b2e2d16ea455cf2')
 
     def test_shared_paint_renderer_excludes_centerlines_and_retains_metric_gaps(self):
         f={'feature_type':'centerline','geometry':{'coordinates':[[0,0],[10,0]]}}
