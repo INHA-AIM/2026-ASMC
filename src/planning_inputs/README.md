@@ -2,6 +2,13 @@
 
 > **Document role:** Active Package Guide — Behavior/Frenet/MPC inputs.
 
+`asmc_lidar` 전환은 아직 적용하지 않았다. PR #108의 새 객체 배열에는 HD맵·상부 전달 필터가
+적용되지만, 현재 어댑터는 구 `TrackedObjectArray`와 exact-stamp motion JSON을 받는다.
+새 공용 출력의 속도/dynamic validity는 false이며 private 판제 메시지는 속도 validity를
+그대로 표현하지 못한다. 단순 remap 대신 [전환 기반 B1/B2](../asmc_lidar/docs/cutover-foundation.md#전환-기반-작업-단위)에서
+공용 관측 직접 소비·미확정 속도/상태·local/map·stale/빈 결과 정책을 합의/구현한다.
+그 전까지 아래 validated 실행·기본값과 판제 행동 코드는 유지한다.
+
 ## Validated LiDAR policy (default)
 
 The pre-rebase reference is 0781402 on

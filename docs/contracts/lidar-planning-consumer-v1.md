@@ -10,16 +10,22 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 
 
 > 상태: **기존 Main 운영 + 새 `asmc_lidar` 이관 목표 계약**. 좌표·시간 코어와 카메라
-> 수신·버퍼·투영은 구현됐고 Main의 공용 local/map 출력은 opt-in이다. 새 LiDAR 처리 이관 검증 노드는 PR #103에서 구현됐다(운영 미연결). 안승현이 [L0–L8](../../src/asmc_lidar/docs/migration-tasks.md)을 진행하며,
+> 수신·버퍼·투영, 독립 검출·추적·전방 fusion과 공용 관측 생산자가 구현됐다. PR #108(main `ab8db094`)의 HD맵·상부 전달 필터도 새 발행 배열에 적용된다. Main의 opt-in 출력은 별도다. [L0–L8](../../src/asmc_lidar/docs/migration-tasks.md)을 공동 진행하며,
 > 안승현은 HD맵 필터·카메라 연결을, 손재호는 추적·속도·운동 상태·fusion을 진행한다. 판제는 L7 소비 전환 전까지 기존 `lidar+sensorfusion`을 사용한다.
 > [기계 판독 상태](../../config/contracts/lidar_candidate_topic_contract_v1.yaml)와 현재/목표를 함께 확인한다.
+
+현재 설정·구 기능 차이와 다음 순서는 [정본화·전환 기반 B0–B4](../../src/asmc_lidar/docs/cutover-foundation.md)를 따른다.
+**내부 속도·MotionClassifier 진단은 있으나 판제용 속도·운동 상태는 공용 출력에 미연결**이다.
+상대/절대속도·dynamic validity를 false로 발행하는 현재 상태를 구 `/last_lidar`와 동등하다고 보지 않는다.
 
 ## 현재 소비와 이관 중 격리
 
 현재 기본은 Main의 `/last_lidar`와 같은 stamp의 `/lidar/motion_debug`를
 `planning_inputs`가 연결하는 `validated_lidar` 경로다. 선택 `main_raw`는 별도 필터·운동
 분류를 실행한다. 기본 경로에서 양쪽 필터가 모두 중복 실행된다고 설명하지 않는다.
-새 정본 전달의 JSON 진단 의존 해소는 L6이며 아직 구현하지 않았다.
+새 공용 관측 생산자는 있지만 판제의 JSON 진단 의존 해소와 직접 소비 경계(B2/L6–L7)는 미구현이다.
+현재 wire bridge가 요구하는 구 타입·MD5·map frame은 토픽 remap으로 바뀌지 않는다.
+private 판제 메시지에 속도 validity 필드가 없으므로 미확정을 어떻게 표현/소비할지도 B1/B2에서 합의한다.
 
 정식 후보 local/map 경로는 아래 표를 유지하되, 새 실행의 동시 비교 출력만
 PR #103의 `/migration/lidar/objects_local`, `/migration/lidar/objects_map`을 사용한다.
@@ -35,8 +41,8 @@ L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험
 | `asmc_msgs/LidarObject` | 지속 ID/검출 번호·관측/예측·중심/8코너·속도/동정적 유효성 |
 | `asmc_msgs/CameraObjectBoxArray` | source header·영상 크기·입력 유효성·원본 픽셀 box 배열 |
 | `asmc_msgs/CameraObjectBox` | box·그룹 class_name·원래 라벨 source_class_name·confidence/유효성. 원본 numeric class ID는 현 타입에 없음 |
-| `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. 현재 Main opt-in; 새 패키지 생산자는 L6 |
-| `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. 현재 Main opt-in; 새 패키지는 L3/L6 |
+| `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. Main opt-in과 새 독립 생산자는 별도. 새 생산자는 현재 `/migration/lidar/objects_local`에 격리 |
+| `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. 새 생산자는 `/migration/lidar/objects_map`에 격리. 정식 경로/소비 연결은 B2/B3에서 확정 |
 | `/perception/camera/objects` | 3뷰 원본 픽셀 검출. 현재 Main 어댑터는 전방만 소비 |
 | `/perception/camera/objects/observations` | session/generation·보정/모델/설정 ID 포함. asmc_lidar 수신·버퍼·투영 지원 제공, 이관 검증 노드는 `camera_front`만 매칭·fusion; 3뷰 객체 매칭/fusion은 손재호의 후속 구현 |
 
@@ -67,8 +73,9 @@ L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험
 아래 strict 보간은 기존 코어 API의 계약이다. 새 실행 정책은 L1에서 **bounded300ms·복구3회**로
 선택했으며 유효 IMU·속도가 전제다. IMU/속도 age120ms·대기50ms, source/receipt 분리는
 [L1 설계](../../src/asmc_lidar/docs/migration-design.md)를 따른다. PR #103의 pose/추적 구현을 재사용하고 L3에서 미충족을 보완한다. 목표는 GPS/미션과
-무관한 local 처리·발행과 scan 시각의 유효 pose에서만 생성하는 map 객체다. map 무효는
-정상 빈 객체로 위장하지 않고 상태로 구분한다. 지금 실행 기본값을 바꾼 것은 아니다.
+무관한 local 처리·발행과 scan 시각의 유효 pose에서만 생성하는 map 객체다. 현재 새 생산자도
+유효 IMU·CAN이 있어야 local을 처리한다. GPS만 무효이면 local을 유지하고 map 무효는
+정상 빈 객체로 위장하지 않고 상태로 구분한다. 이 문서 갱신으로 실행 정책을 변경하지 않는다.
 
 - `base_link`는 차량에 고정된 후륜축 기준이다. 센서 원점의 중력 수평화 좌표와 다르다.
   실제 적용한 수평화의 역변환 → sensor-to-base 장착 변환 → 유효할 때 map pose 순서다.
@@ -95,6 +102,11 @@ L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험
 이유로 LiDAR 객체를 지우지 않는다. 카메라 drivable의 장애물 구멍도 삭제 근거가 아니다.
 HD맵·카메라 문맥의 frame/시간·유효 범위가 맞지 않으면 관련성은 unknown이다.
 
+새 생산자는 PR #108의 기본 `filter`에서 HD맵 안쪽10cm·점군3점/10% AND OBB10% 및
+상부 객체 제외를 발행 배열에 적용한다. 실제 최신 YOLO vehicle/dynamic 연결을 보호하고
+지도/pose 무효에서는 지도 제외를 중단한다. tracker 삭제·OBB clipping은 수행하지 않는다.
+현재 구 Main/planning_inputs의 전체 필터를 대체한 것은 아니다([소유권](../../src/asmc_lidar/docs/filter-migration.md)).
+
 객체 footprint와 차로/주행영역/경로의 관계는 별도 속성으로 계산한다. 인접·진입·횡단
 가능 객체를 남기고 경계에 걸친 객체의 차로를 하나로 강제하지 않는다. 현재 경로 밖이라는
 이유만으로 객체를 제거하지 않는다. 구조물은 충돌 경계이며 자동으로 무시 가능한 객체가 아니다.
@@ -108,7 +120,8 @@ L8 후속 후보인 모드 없는 처리의 [구조물 분리 인계 계약](../
 
 현재 `LidarObject*`에는 구조물 지지 범위·표면·품질 계약이 없다. 새 구조물 표현 구현을 L2–L7 이관의 선행조건으로 두지 않는다. 구조물 경계와 미확정
 점유의 표현/상태/freshness를 판제와 별도 additive/versioned 계약으로 확정하기 전에는
-객체 목록에서 구조물을 빼는 변경을 운영 승격하지 않는다. MarkerArray는 검토 수단일 뿐
+새 일반 벽 억제를 경계 전달 없이 안전하다고 승인하지 않는다. 이미 적용된 높이 ROI·상부
+전달 제외와 후속 구조물 표현 설계를 구분한다. MarkerArray는 검토 수단일 뿐
 판제용 경계 계약을 대신하지 않는다. 이번 문서 갱신은 새 메시지나 토픽을 추가하지 않는다.
 
 ## 판제 공동 확인 사항
@@ -137,6 +150,7 @@ TTC·추종·정지/재출발·회피·센서 장애 대응은 판제에 유지�
 `enable_common_geometry:=true`에서 기존 `asmc_msgs/LidarObjectArray`로
 `/perception/lidar/objects_local` (`base_link`)과 `objects_map` (`map`)을 제공한다.
 [구현·시간 정책·직접 launch·수락 상태](../records/lidar/lidar-camera-frame-boundaries.md)를
-확인한다. 생산 호스트는 아직 nested Main이며 골격의 전체 기능 이전은 완료되지 않았다.
+확인한다. **이 절의 opt-in 생산 호스트**는 nested Main이다. 새 `asmc_lidar` 독립 생산자는
+이미 `/migration/lidar/*`에 있으며 이 절의 Main 어댑터와 구분한다. 판제 소비 전환은 미완료다.
 관측 상태·속도/dynamic validity를 소비자가 확인해야 하며 자동 remap·판제 cutover는 없다.
 strict 100ms bracketing API와 opt-in 300ms 제한 GPS 보정 API를 구분한다.

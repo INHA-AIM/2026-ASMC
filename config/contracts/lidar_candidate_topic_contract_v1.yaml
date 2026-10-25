@@ -1,6 +1,6 @@
 schema_version: 1
 contract_id: asmc_lidar_handoff_v1
-status: common_core_main_adapter_opt_in_acceptance_pending
+status: migration_pipeline_delivery_filter_available_planning_cutover_pending
 owner: asmc_lidar
 implementation:
   coordinate_time_core: available
@@ -8,17 +8,24 @@ implementation:
   detection_tracking_fusion: migration_pipeline_explicit_launch_not_operational
   migration_work_units: src/asmc_lidar/docs/migration-tasks.md
   migration_design: src/asmc_lidar/docs/migration-design.md
+  cutover_foundation: src/asmc_lidar/docs/cutover-foundation.md
   migration_design_baseline: config/baselines/lidar_migration_l1_v1.yaml
   migration_current_review: config/baselines/competition_channel_audit_20261023.yaml
   target_pose_policy: bounded_300ms_recovery3_migration_implemented_acceptance_pending
   migration_lead: ahnsh03
   joint_development: sonshiny
   ahn_responsibility: hd_map_filters_and_camera_connection
-  son_responsibility: tracking_speed_motion_and_fusion
+  son_responsibility: tracking_speed_motion_fusion_and_gps_denied_local_tunnel_perception
   camera_observation_receiver: available_library_and_probe
-  ros_publishers_and_adapters: Main_opt_in_frame_boundary
+  ros_publishers_and_adapters: migration_pipeline_arrays_observations_and_separate_Main_opt_in
+  delivery_filter: hd_map_v7_inset_10cm_points_3_and_10pct_obb_10pct_guarded_overhead
+  delivery_filter_preserves: raw_tracker_and_measurement_geometry
+  public_velocity_and_motion: invalid_not_connected_diagnostic_only
+  planning_direct_common_observation_consumer: not_implemented
+  tunnel_structure_suppression: experimental_default_off_acceptance_pending
+  tunnel_camera_semantic_family_assistance: not_implemented
   operational_default_promotion: pending
-  skeleton_publishes_topics: false  # the shadow node publishes only /migration/lidar/*, none of planned_topics
+  skeleton_publishes_topics: false  # Independent pipeline publishes /migration/lidar/*, not the planned operational topics below.
   camera_object_producer: available_canonical_camera_launch
 source_stamp: bridge_receive_not_laser_firing_time
 frames:

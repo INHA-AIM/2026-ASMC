@@ -7,6 +7,13 @@
 현재 판제는 nested `lidar+sensorfusion`의 Main 출력을 소비한다. `asmc_lidar` 전체 이전은 완료되지 않았다.
 Main LiDAR 처리와 전방 fusion은 `asmc_lidar` 이관 검증 노드로 이식했으나 명시 실행·`/migration/lidar/*` 전용이며 운영에 연결하지 않았다.
 
+**2026-10-25 PR #108 반영:** 새 발행 배열에는 HD맵·상부 전달 필터가 적용된다. 다음은
+[판제 전환 기반·구 기능 차이·폐기 순서](../../src/asmc_lidar/docs/cutover-foundation.md)다.
+속도/운동 상태와 판제 직접 소비를 먼저 맞추고 3뷰 fusion을 확장한다. 손재호는 GPS 없는
+터널 local 객체·벽/천장 처리를, 안승현은 카메라/family·시각·보정 연결을 지원한다.
+카메라 drivable/family로 벽을 보조하는 기능은 아직 미구현이며 바깥 흰선 밖 점군을
+일괄 삭제하지 않는다([터널 원칙](../../src/asmc_lidar/docs/cutover-foundation.md#손재호-gps-없는-터널-local-인식)).
+
 ## 현재 연결과 소유권
 
 ```text
