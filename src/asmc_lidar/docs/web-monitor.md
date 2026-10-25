@@ -167,6 +167,18 @@ bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌�
 처리 노드는 계속 실행된다. 이때 `dashboard_port:=8092`처럼 다른 포트로 모니터만 다시 띄운다
 (`view.launch`는 항상 화면만 실행한다).
 
+## 8091 포트 충돌과 기존 시험 웹
+
+`Address already in use`는 기존 웹이 같은 포트를 쓰는 상태다. 현재 ROS namespace와 기존
+웹의 `config.topics.scan`을 확인한다. 구 `/migration/lidar` 웹이면 해당 시험 launch를 먼저
+종료하고 정식 `view.launch` 하나만 실행한다. 운영 처리 노드나 ROS master를 종료할 이유는 없다.
+임시 병행이 필요할 때만 기존 인자 `dashboard_port:=8092`를 사용하며 두 화면의 namespace를 구분한다.
+
+2026-10-26 수정: bind 실패 시 Python TCPServer가 초기화 중 `server_close()`를 호출할 수
+있다. worker 목록을 bind 전에 초기화하여 `_workers` AttributeError가 원래 포트 충돌을
+가리지 않게 했다. 기존 서버 정상 응답·추가 worker 생성 없음까지 포함한 HTTP core34개
+회귀를 통과했다. 이 웹 시작 오류는 판제 조향/가속 계산을 변경하지 않는다.
+
 ## 화면
 
 - **큰 화면**: BEV 또는 3D 점군·OBB·자차. 좌클릭 드래그 회전, 가운데 드래그 이동,

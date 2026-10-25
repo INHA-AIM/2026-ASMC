@@ -360,6 +360,17 @@ class HttpTest(unittest.TestCase):
         finally:
             server.server_close()
 
+    def test_occupied_port_preserves_bind_error_and_existing_server(self):
+        port = self.server.server_address[1]
+        workers_before = {t.ident for t in threading.enumerate()
+                          if t.name.startswith('monitor_http_')}
+        with self.assertRaises(OSError):
+            core.MonitorServer('127.0.0.1', port, self.state, self.tmp)
+        self.assertEqual(self.get('/api/health')[0], 200)
+        workers_after = {t.ident for t in threading.enumerate()
+                         if t.name.startswith('monitor_http_')}
+        self.assertEqual(workers_before, workers_after)
+
 
 class SessionFrameTest(unittest.TestCase):
     """Server restart: a client cursor of another session gets the newest scene at once."""

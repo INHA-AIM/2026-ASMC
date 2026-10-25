@@ -636,6 +636,10 @@ class MonitorServer(http.server.HTTPServer):
                        'errors': 0}
         self._rejects = queue.Queue(maxsize=self.REJECT_QUEUE)
         self._stop = threading.Event()
+        # TCPServer.__init__ calls our server_close() if bind/activate fails.
+        # Initialise cleanup state before binding so the original OSError
+        # reaches the node's clear port-conflict handler without being masked.
+        self._workers = []
         super().__init__((bind_address, int(port)), MonitorHandler)
         self.socket.settimeout(None)
         self._workers = [threading.Thread(target=self._reap_loop, name='monitor_http_reaper', daemon=True),

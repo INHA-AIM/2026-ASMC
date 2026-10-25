@@ -35,7 +35,7 @@ LEGACY_PROGRAMS = ('asmc_lidar_camera_buffer_test', 'asmc_lidar_camera_calibrati
                    'asmc_lidar_imu_selection_test')
 # Python unittest scripts registered with add_test: minimum number of cases.
 UNITTESTS = {'asmc_lidar_camera_calibration_hash_test': 2, 'asmc_lidar_camera_contract_test': 5,
-             'asmc_lidar_pipeline_contract_test': 10, 'asmc_lidar_object_markers_test': 6, 'asmc_lidar_monitor_core_test': 33}
+             'asmc_lidar_pipeline_contract_test': 10, 'asmc_lidar_object_markers_test': 6, 'asmc_lidar_monitor_core_test': 34}
 # catkin_add_gtest targets: minimum number of cases.
 GTESTS = {'asmc_lidar_test_tunnel_filter_core': 27, 'asmc_lidar_test_preprocessing': 21,
           'asmc_lidar_test_ground': 17, 'asmc_lidar_test_clustering': 15, 'asmc_lidar_test_obb': 24,
