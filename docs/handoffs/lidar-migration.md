@@ -252,6 +252,9 @@ fusion 보완과 판제 정책은 변경하지 않는다. 계산·공급 비교�
 
 후속 검수 미리보기는 OBB 겹침과 객체 전체 cluster support를 비교한다. 카메라의 최신 양성
 `dynamic_obstacle` 연결은 모든 구간에서 보호하며, 머리 위 후보는 최저 점·OBB 하단을 함께 본다.
+보호는 person/dog/deer/bicycle/stroller의 실제 최신 YOLO matching과 시간/epoch 유효성에 한한다.
+`yolo_positive_only_v2`에서는 LiDAR motion/속도·미션10m 영역만으로 unknown을 보호하지 않는다.
+유지 분류와 최신 양성 매칭을 분리하고, 이후 unknown·miss·세대 변경이면 보호 근거를 비운다.
 현재 matching은 전방이며3뷰 matching 확대는 재호의 후속 책임이다. 후보 숨김은 웹에서만 적용하고
 원본 ROS 객체·tracker·판제 소비 경로는 유지한다. [정책과 한계](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#점군높이카메라-보호-미리보기),
 [디버거 사용](../../src/asmc_lidar/docs/web-monitor.md#hd맵-필터-디버깅)을 참고한다.

@@ -67,6 +67,10 @@ A1.1의 내부 설정이 `audit`일 때만 `hd_map_audit` 블록을 추가한다
 - `preview.min_support_base_z/obb_bottom_base_z/roof_limit_base_z`: `base_link` 높이. 근거가 없으면 null.
 - `preview.camera_dynamic_protected/camera_known`: 같은 fusion consumer epoch의 최신 양성 연결 근거.
   실제 이동 여부나 카메라만으로 생성한3D 객체가 아니다.
+- `preview.protection_policy`: 현재 `yolo_positive_only_v2`. 미션 영역만으로 unknown을 보호하지 않는다.
+- `preview.camera_raw_class/camera_group`: 확정/유지 클래스와 분리한 최신 실제 매칭 YOLO 원본/그룹.
+  이후 unknown·miss는 지우며, 시간/epoch gate까지 통과해야 `camera_dynamic_protected`가 true다.
+  LiDAR motion state나 속도는 이 gate의 입력이 아니다.
 
 `decision/reason`은 미검증 하부면·점군 정책·위치 오차를 계속 보류할 수 있다. 따라서 preview의
 제외 후보 수와 최종 제외 후보 수를 혼합하지 않는다. 기존 trace에 이 선택 블록이 없어도 유효하다.

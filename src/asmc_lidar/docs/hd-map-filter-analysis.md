@@ -438,7 +438,8 @@ roslaunch asmc_lidar view.launch
 
 도로 점이 없는 경계 여유 내 군집은 이제 `cluster_outside_boundary_uncertain` **미리보기 후보**다.
 최종 판단은 위치 오차 미검증으로 보류하고 ROS 배열·tracker는 유지한다. 기존 road support
-기준(도로 점3개 이상 또는5% 이상), 카메라 dynamic 전 구간 보호·미션 예외 보호는 유지한다.
+기준(도로 점3개 이상 또는5% 이상)은 유지한다. 당시 미션 예외 보호는 아래 A1.5에서 변경됐으며,
+현재 미리보기는 YOLO 양성 매칭만 영역 밖 보호에 사용한다.
 도로 안 점이 소수라도 나타나는 주행 사례의 경계 안정성은 후속 검수 대상이며, 이를 전체
 가드레일 제거 수락으로 표시하지 않는다. 웹 후보 숨김은 OBB와 정확한 소속 표시 점에만 적용한다.
 
@@ -515,3 +516,56 @@ HD맵 전체183개와 추가 국소 연결성 회귀(10개 묶음, 고유 총184
 115areas와 현재 geometry SHA를 확인했다. 기본 workspace도 재빌드했다. 최초 고정 SHA 기대값
 실패와 접힌 UI를 검사한 도구 실패는 별도로 보존했다. 시험 노드·브라우저만 정리했고 기존 실행은
 유지했으므로 새 기본값을 보려면 기존 lidar/view 및 지도 비교 생산자를 재시작해야 한다.
+
+## A1.5 YOLO 양성 매칭과 미션 영역 보호 구분 — 2026-10-25
+
+사용자는 도로 밖 보호를 **YOLO가 dynamic_obstacle로 분류한 객체와 LiDAR의 실제 matching**으로
+명확히 했다. LiDAR 속도 추정의 동적 상태나 미션 영역 위치를 카메라 분류로 취급하지 않는다.
+
+현재 실행에서 사용자 화면의 `#4059`를 조회했다. 원본·유지 클래스 unknown, 도로 점0/259개,
+OBB 도로 겹침0%, `camera_dynamic_protected=false`, `camera_known=false`였다.
+사유는 `exception_space_protected`, 예외 유형 dynamic_obstacle이었다. 이는 지도에 둔 미션
+주변10m 공간에 unknown 군집도 일괄 보호하던 규칙이며 LiDAR 속도 판정에서 유래한 것이 아니다.
+이 조회는 실행 중 metadata의 직접 점검이며 새로운 주행 성능·위치 오차 수락이 아니다.
+
+현재 미리보기 정책 `yolo_positive_only_v2`는 다음과 같다.
+
+- 미션 근접만으로 point/OBB 후보를 keep으로 덮지 않는다. 기존 OBB audit의 미션 판단은
+  `obb_reference_*`와 exception metadata로 보존하되 최종 제외를 승인한 것으로 해석하지 않는다.
+- person/dog/deer/bicycle/stroller의 최신 실제 양성 매칭만 전 구간 보호한다.
+  같은 fusion consumer epoch, 기존500ms 나이 한계·미래50ms 한계, 이후 miss0을 확인한다.
+- 확인 횟수·class 유지 정책은 그대로다. 보호 근거는 `observed_class/observed_raw_class`로 별도 보존한다.
+  최신 unknown 또는 miss가 도착했는데 과거 유지된 dog 등으로 다시 보호하지 않는다.
+- vehicle·static_obstacle·unknown은 LiDAR 속도/운동 진단이 dynamic이어도 영역 밖 보호를 받지 않는다.
+  road support·높이·지도/위치 근거에 따라 평가한다. 근거가 부족하면 보류다.
+- 웹은 `YOLO 동적 보호`, `도로 근거 유지`, `구형 미션 보호`를 구분하고 보호 정책·최신 YOLO 원본/그룹을
+  상세에 표시한다. 구형 표시는 이전 C++ 프로세스이며 최신 바이너리로 재시작해야 한다.
+- 원본 ROS 객체·tracker·운영 Main·판제 입력을 제거하거나 전환하지 않는다.
+
+공개 ROS 메시지·MD5는 바꾸지 않는다. 유효 config ID에는 이 preview 정책 버전을 포함한다.
+현재 matching은 전방이며3뷰 matching 완료나 실제 운동 상태 측정으로 표현하지 않는다.
+
+검증에서는 세 미션 종류·영역 밖0/259점·카메라 양성/vehicle·unknown/miss/세대 변경·분류 유지와
+최신 매칭의 분리·고속 LiDAR 진단만 있는 unknown을 포함했다. CTest33개는 모두 통과했다.
+처음 ROS 환경을 source하지 않은 실행에서 Python 메시지 import로3개가 실행 실패했고,
+outer/독립 devel을 source한 뒤 해당3개를 명시 선택해 모두 통과했다. 알고리즘 실패로 면제한 것이 아니다.
+웹JS66개·Chrome 합성 UI12개·문서/history 검사도 통과했다. 합성 검사는 실제 주행 품질 수락과 구분한다.
+
+기본 workspace를 재빌드하고 새 바이너리의 정책 문자열을 확인했다. 사용자가 시험 LiDAR만 재시작을
+승인한 뒤 점검했을 때 LiDAR·카메라·웹은 이미 종료돼 있었다. bridge/master는 유지하고
+`/migration/lidar/lidar_pipeline` 한 개만 `lidar.launch debug:=true`로 실행했다.
+새 session은 `79cb9b7c-2295-44f9-b3f0-c63fca11e7c0`, 유효 config ID는
+`2ecf16d4b3c5ceac8a3bb1b5b8f175ca65e2aabe50c644b0c528be5082d0ccc6`이었다.
+
+정차 상태 신규10scan(seq512–521)의 객체50건 모두 정책 v2를 사용했다. 도로 점0개인 관측5개가
+모두 점군 제외 후보였고, 미션 공간만으로 적용된 preview keep은0건이었다. 이전 `#4059`와 동일한
+수평화 중심(8.4157, -11.3543)m·support259개/도로0개인 객체는 재시작 후 ID2로 대응했고
+`cluster_support_outside`였다. 비교용 `obb_reference_reason=exception_space_protected`는 남지만
+현재 숨김 정책에는 적용되지 않는다. 독립 메시지 발행자는 하나였다.
+
+이10scan의 audit 최대1.525ms·callback→발행 최대4.478ms는 짧은 정차 확인값이며 p95 성능 수락이나
+주행 위치 오차 검증이 아니다. 카메라가 꺼져 `status_missing`이었으므로 실제 YOLO 양성 보호는 이번
+정차 확인에서 검증했다고 주장하지 않는다. 양성/unknown/miss/epoch gate는 위 회귀 검사로 확인했다.
+웹도 꺼져 있어 실제 HTTP 화면 재검수는 하지 않았으며 다시 실행한 뒤 새로고침해야 한다.
+최초 임시 trace 점검기는 nullable `spatial`을 dict로 취급해 실패했다. 점검기의 null 처리를 수정한 뒤
+위10scan을 별도로 확인했으며 생산자 오류로 집계하거나 최초 실패를 숨기지 않는다.
