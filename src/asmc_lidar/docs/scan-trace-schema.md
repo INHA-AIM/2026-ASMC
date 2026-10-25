@@ -41,14 +41,19 @@ track fields = {"id", "age", "miss", "kf_initialized", "kf_init_count", "kf_ca":
             "ground_evidence": {"valid", "samples", "median_clearance", "band"}}
 <array> = {"accepted", "status", "reason", "frame", "stamp_ns", "provenance",
            "objects": [{"track_id", "detection_index", "center": [3], "corners": [[3] x 8], "yaw",
-                        "length", "width", "height", "points", "classification", "camera_class"}]}
+                        "length", "width", "height", "points", "classification", "camera_class",
+                        "absolute_velocity": [3], "absolute_velocity_valid", "relative_velocity_valid",
+                        "dynamic_valid", "is_dynamic"}]}
 ```
 
 `digests.*`는 점마다 `float x, y, z, intensity` 16바이트(little endian)를 cloud 순서로 이은 값의
 SHA-256(소문자 hex)이다. 빈 cloud는 0바이트의 해시다. `accepted=false`이거나 `pose_ready=false`인
 scan에는 그 시점까지 알 수 있는 필드와 `typed`(INPUT_INVALID 배열 또는 `accepted:false`)만 있다.
-`abs_v`는 Main 내부의 "KF 상대속도 + CAN 속도" 값이며 좌표계가 검증되지 않아 typed 출력에서는
-속도 validity가 항상 false다.
+`abs_v`는 Main 내부의 "KF 상대속도 + CAN 속도" 진단값이다. 2026-10-26부터 typed의
+`absolute_velocity`는 별도의 기존 판제 적용 벡터를 실제 출력 frame으로 한 번 변환한 값이다.
+진단 `abs_v`를 정본으로 대체하지 않는다. 속도/운동 validity는 scan pose와 해당 track 근거에
+따르며 UNKNOWN은 정지 확인이 아니다. 구 생산자의 누락 필드는 무효0으로 추측하지 않는다.
+[공용 속도 의미와 판제 연결](planning-runtime.md)을 따른다.
 
 ## 선택적인 HD맵 audit와 발행 지연
 

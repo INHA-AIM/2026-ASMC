@@ -1,5 +1,10 @@
 # 카메라 YOLO → 기존 Main → asmc_lidar 연결
 
+**2026-10-26 연결 갱신:** 새 `asmc_lidar`의 전방 fusion·적용 속도/운동 상태·전달 필터와
+공용 관측 직접 판제 입력을 [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)에 연결했다.
+운영 Main 삭제·실제 판제 주행 전환은 아직이다. 3뷰 확대와 GPS 없는 터널 개선은 이후이며
+카메라 추론·시각·보정·원본 라벨 계약은 유지한다.
+
 2026-10-24 공동 개발 인계: 안승현은 HD맵 기반 필터·카메라 연결 지원, 손재호는 추적·속도·운동 상태·fusion을 진행한다.
 순서·완료 기준은 [L0–L8 작업표](../../src/asmc_lidar/docs/migration-tasks.md), 시작점은 [LiDAR 인계](lidar-migration.md)다. 카메라 실행은 [카메라 계약](../contracts/camera-runtime-v1.md),
 관측 metadata는 [기계 정본](../../config/contracts/camera_object_observation_v1.yaml)을 따른다.
@@ -31,7 +36,7 @@ asmc_camera/camera.launch — 3뷰 YOLO, 독립 실행
 - **안승현:** 구조·공용 관측 계약을 제공하고 HD맵 필터와 카메라 연결을 지원한다. **손재호:** 추적·속도·운동 상태와 fusion을 보완한다. 전방 fusion은 L4, 3뷰 확대는 L8 후속이다.
 - **판제:** 결과 소비·행동 정책·음영 lane 사용. 기본은 세 모델 상시 ACTIVE이며 이번 변경은 판제 입력 토픽·MD5·정책을 바꾸지 않는다.
 
-음영 어댑터의 `camera_bbox_detector.launch`도 별도 추론 없이 전방 CPU 변환만 제공한다. 전용 출력 토픽과 소비 cutoff0.7은 그대로이며 Main 어댑터의 기본0.0과 구분한다.
+음영 어댑터는 공용 `/perception/camera/objects`를 기존 frame bridge에서 직접 소비한다. 구 detector launch·Main/Msg 의존성은 제거했다. 소비 cutoff0.7과 원본 영상 대응을 유지하며, LiDAR 추가 cutoff0.0과 구분한다.
 수집/시나리오 launch의 폐기 `start_yolo` 인자도 제거했다.
 
 Main은 이미 외부 카메라가 기본이었다. PR #87에서 `start_yolo`와 `yolo_device/yolo_require_cuda/yolo_perf_log_interval_sec` 복구 옵션을 없앴다.

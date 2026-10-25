@@ -3,8 +3,8 @@
 현재 구조·이름·식별 계약은 [첫 단위 정리](structure-contract-refactor.md)와 [이전표](name-mapping.md)가 정본이다. 아래 PR #103 수치·실패와 비교 기준선은 당시 근거를 보존한다.
 
 **2026-10-25 현행:** PR #108은 main `ab8db094`에 병합됐다. 새 경로의 발행 배열에는 HD맵·상부
-전달 필터가 기본 적용된다. 판제는 아직 기존 Main을 쓰며 다음 작업은
-[공용 속도/상태·판제 직접 소비·구 패키지 폐기 기반](cutover-foundation.md)이다. 광범위한
+전달 필터가 기본 적용된다. 판제는 아직 기존 Main을 쓰며 기존 기능 보존 이식·공용 속도/상태·판제 직접 소비는
+[현재 실행 기준선](planning-runtime.md)에서 구현했다. 다음은 실제 소비 인수와 구 패키지 폐기다. 광범위한
 리팩토링·3뷰 확대보다 이 기반을 먼저 진행한다.
 
 nested `Main`의 common-geometry LiDAR 처리를 `asmc_lidar` 안에 동작 보존 방식으로 옮긴
@@ -32,10 +32,10 @@ nested `Main`의 common-geometry LiDAR 처리를 `asmc_lidar` 안에 동작 보�
   같았고, GPS 무효·중단·복구와 IMU stale·무효를 실제 노드 rostest로 시험했다.
 - 기존 Main과 판제는 계속 기존 실행 경로(`/last_lidar` 등)를 쓴다. 이 패키지는 그 경로를 바꾸지 않는다.
 - 새 노드는 명시적으로 실행해야 하며 `/migration/lidar/*`만 발행한다.
-- PR #105의 Main MotionClassifier는 진단 전용 복사본으로 연결했다. 공개 속도·운동 validity는 false다. 구 Main의 판제용 최종 속도는 아직 공용 출력에 연결하지 않았다.
+- PR #105의 Main MotionClassifier는 진단 전용 복사본으로 연결했다. 기존 판제용 최종 속도·4단계 상태를 공용 추적 관측에 연결했다. 유효 근거와 map 가용성을 검사하며 새 정확도 개선을 뜻하지 않는다.
 - PR #108은 v7 HD맵·높이 ROI·상부 전달 필터를 추가했다. 구 known-static·structure catalog·relevance와 OBB clipping을 그대로 이식한 것은 아니다([편입 경계](filter-migration.md)).
 - 웹 화면은 별도 `view.launch`, 단계 샘플은 `lidar.launch debug:=true`로 요청한다. [웹 모니터](web-monitor.md)를 따른다.
-- 공개 속도·동정적 validity(`relative_velocity_valid`·`absolute_velocity_valid`·`dynamic_valid`)는 항상 false다.
+- 상대속도 validity는 false이며 절대 적용 추정값·운동 validity는 유효 map/계산 근거에 따른다. UNKNOWN의 수치0은 정지 확인이 아니다.
 - 실제 카메라 bag에서의 fusion 성능과 실시간 처리 성능은 수락하지 않았다.
 - TunnelFilter는 기본 OFF이며 ON 성능은 수락하지 않았다.
 
@@ -74,7 +74,7 @@ local 처리는 GPS와 독립이다. GPS 정상/음영/복구는 map 가용성�
 
 ## 이식 경계
 
-아래 표는 **PR #103 당시 이식 범위**다. 현재 추가된 전달 필터와 미연결 정보는
+아래 표는 **PR #103 당시 이식 범위**다. 현재 추가된 전달 필터·속도/운동 연결은
 [현행 기능 대조](cutover-foundation.md#구-main과-새-패키지의-기능-대조)를 따른다.
 
 | 포함 (Main 동작 보존) | 제외 (이번 경계 밖, 사유) |
@@ -128,8 +128,8 @@ bag 비교의 동등성 경계는 **추적 결과와 typed local/map 배열**이
   빈 관측을 만들지 않는다.
 - 발행 객체는 관측된 track(`miss_count=0`)뿐이다. 중심·8코너·축은 저장된 수평화의 역변환 →
   장착 변환 → (map) 유효 pose를 각각 한 번 적용한 결과다(`asmc::lidar::transform`).
-- `relative_velocity_valid`·`absolute_velocity_valid`·`dynamic_valid`는 항상 false다. 내부 CA
-  상태는 Main과 같이 유지하지만 좌표계가 검증되지 않아 공개하지 않는다.
+- `relative_velocity_valid`는 false다. 구 MotionClassifier 적용 속도를 공개 절대속도 추정값으로
+  연결하고4단계 운동 상태와 함께 제공한다. GPS 무효에서는 둘 다 invalid다([현재 의미](planning-runtime.md#공용-메시지와-속도의-의미)).
 - TF는 기본 OFF다(`~publish_tf`). 켜면 `base_link → lidar_pipeline/lidar_leveled`로 보내며
   Main의 `lidar_leveled`와 child를 공유하지 않는다.
 - 출력 이름(param·remap 적용 후)이 `/last_lidar`, `/lidar_nogps`, `/YOLO/BBox`, `/tf`, `/tf_static`,
@@ -175,7 +175,7 @@ cd <repo> && catkin_make -DCATKIN_WHITELIST_PACKAGES=""
 source devel/setup.bash
 
 # 이관 검증 노드 (기존 bridge/카메라가 발행 중인 ROS 입력을 구독)
-roslaunch asmc_lidar lidar.launch
+roslaunch asmc_lidar lidar.launch namespace:=/migration/lidar
 # LiDAR 단독 (카메라 구독 없음)
 roslaunch asmc_lidar lidar.launch fusion:=false
 # pitch-only 수평화 / 실험 TunnelFilter ON (인자를 주지 않으면 config/lidar_pipeline.yaml 값)

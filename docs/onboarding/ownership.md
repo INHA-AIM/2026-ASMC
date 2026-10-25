@@ -29,7 +29,7 @@
 | UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../../src/asmc_bridge/docs/integration.md) | 이강태·안승현, planning consumer 공동 리뷰 |
 | Perception façade와 typed 계약 | `src/asmc_camera/`; [runtime 계약](../contracts/perception-runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |
 | Camera/BEV/traffic | `src/asmc_camera/` | 안승현, perception·planning consumer 공동 리뷰 |
-| LiDAR/3D·camera fusion | 운영 원본 `src/lidar+sensorfusion/`, 공동 개발 `src/asmc_lidar/` | 안승현: HD맵 필터·카메라 연결 지원. 손재호: 추적·속도·운동 상태·matching/fusion, GPS 없는 터널 local 인식·벽/천장 보완. 공용 계약·판제 전환은 공동 리뷰 |
+| LiDAR/3D·camera fusion | 운영 원본 `src/lidar+sensorfusion/`, 공동 개발 `src/asmc_lidar/` | 안승현: HD맵 필터·카메라 연결 지원. 손재호: 추적·속도·운동 상태·matching/fusion, GPS 없는 터널 local 인식·벽/천장 보완. 기존 기능 보존 이식·판제 직접 소비는 안승현이 진행하고 실제 인수는 공동 리뷰 |
 | 데이터 수집 | `src/data_collection/` | 안승현, perception 공동 리뷰 |
 | Scenario/gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | 공용 infra | `docker/`, `.github/`, `docs/`, `scripts/` 공용 진입점 | 통합 리뷰 필수 |

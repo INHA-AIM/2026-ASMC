@@ -7,7 +7,7 @@
 [투영 계약과 검증](../../docs/records/camera/2026-10-18-imu-bbox-projection.md)을 참고한다.
 실제 차선변경 제어 인수는 [판제 체크리스트](../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)로 별도 확인한다.
 
-현재 YOLO 추론은 별도 `asmc_camera/camera.launch`가 소유한다. `camera_bbox_detector.launch`는 카메라 전방 결과를 전용 토픽으로 바꾸는 CPU 어댑터뿐이다.
+현재 YOLO 추론은 별도 `asmc_camera/camera.launch`가 소유한다. `camera_bbox_frame_bridge`가 공용 `/perception/camera/objects`를 직접 소비한다. 구 detector launch와 Main/Msg 의존성은 제거했다. 추가 소비 cutoff0.7·정확한 영상 대응은 유지한다.
 구형 cropped YOLO/가중치/실행 옵션은 제거했고 기존 차로 판정·제어 정책과 소비 cutoff0.7은 유지한다.
 [카메라→Main/LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 참고한다.
 
@@ -46,7 +46,7 @@ strip/centerline segment로 변환한다. independent pilot과
 기존 shared-family monitor와 별도로 core를 재사용하는 BBOX 차선변경 노드를 제공한다.
 `camera_bbox_lane_change.launch`는 기본값이 preview이고, `enable_control:=true`일 때만
 JAMMING 모드에서 `/ctrl_cmd/jamming`을 발행한다. 통합 selector만 MORAI용
-`/ctrl_cmd`를 발행한다. `camera_bbox_detector.launch`가 변환하는 외부 카메라 결과와 외부 차선 인식의
+`/ctrl_cmd`를 발행한다. 공용 카메라 검출과 외부 차선 인식의
 `/perception/lane/boundary_family`를 소비한다. 실행·튜닝은
 [카메라 차선 변경 안내](docs/bbox-lane-change.md)를 따른다.
 음영구간 on/off, route 의미, camera drivable threshold, LiDAR occupancy 차감과 fallback은 이

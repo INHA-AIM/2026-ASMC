@@ -1,10 +1,11 @@
 # asmc_lidar
 
-ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 전방 카메라 fusion → local/map 객체를 처리한다. 현재는 **이관 검증 경로**이며 판제는 기존 `lidar+sensorfusion` Main을 사용한다.
+ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 전방 카메라 fusion → local/map 객체를 처리한다. 공용 추적 관측을 판제가 직접 소비할 수 있다. 통합 판제의 기존 기본 입력은 실제 인수 전까지 `lidar+sensorfusion` Main이며, 새 경로는 명시적으로 선택한다.
 
 안승현은 **HD맵 기반 필터·카메라 연결 지원**, 손재호는 **추적·속도·운동 상태·fusion 보완**을 진행한다. 좌표·시간·공용 계약과 판제 전환은 공동 확인한다.
 
-- [판제 전환 기반·구 기능 대조·다음 작업](docs/cutover-foundation.md) — PR #108 병합 기준. 속도/운동 정보 연결과 직접 소비·구 패키지 폐기를 먼저 준비하며, GPS 없는 터널 local 개선은 손재호가 담당한다.
+- [현재 판제 실행·이식 기능·검증·복구](docs/planning-runtime.md) — 구 Main의 적용 속도/4단계 운동·시설물·구조물·관측 확인 정책과 직접 소비 연결.
+- [판제 전환 기반·구 기능 대조·다음 작업](docs/cutover-foundation.md) — PR #108 당시 대조를 보존. 현재 구현은 위 실행 기준선, 실제 인수/폐기와 터널 개선은 후속이다.
 - [재호의 PR #104 인수 시작](../../docs/handoffs/lidar-migration.md#재호의-pr-104-인수-시작) · [담당별 다음 작업](docs/migration-tasks.md#공동-개발-인수와-우선-작업)
 - [구조·관측 계약과 이번 검증](docs/structure-contract-refactor.md)
 - [이름·경로 이전표](docs/name-mapping.md): 옛 이름은 참고용이며 wrapper를 제공하지 않는다.
@@ -12,10 +13,10 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 - [웹 모니터와 단계별 진단](docs/web-monitor.md)
 - [카메라 수신·버퍼·보정·투영 API](docs/camera-input.md)
 - [전체 이관 작업표](docs/migration-tasks.md), [팀 인계](../../docs/handoffs/lidar-migration.md)
-- [다음 PR의 판제 필터 편입표](docs/filter-migration.md) — 계산 품질과 행동 정책 분리, 실제 이전은 미착수
+- [판제 필터 소유권·편입표](docs/filter-migration.md) — 기존 필터 보존 이식 후 혼합된 행동 책임의 후속 분리
 - [HD맵 전달 필터·검증](docs/hd-map-filter-analysis.md#a19-10cm-경계와-실제-발행-필터--2026-10-25) — 기본 filter: 안쪽10cm·점군3점/10%·OBB10%, 상부 객체 제외. 원본 tracker 보존
 
-기본 `lidar.launch`의 `/migration/lidar/objects_local/map` 및 `observations_local/map`에는
+기본 `lidar.launch`의 `/perception/lidar/objects_local/map` 및 `observations_local/map`에는
 HD맵·상부 객체 전달 필터가 적용된다. 동일 scan의 두 좌표계는 같은 ID를 제외한다.
 지도/pose 무효에서는 지도 제외를 중단하고, 최근 YOLO vehicle/dynamic 매칭은 모든 구간에서 보호한다.
 debug의 원본 tracker/점군은 검수를 위해 남긴다. 기존 Main·판제 입력은 전환하지 않았다.
@@ -39,7 +40,7 @@ debug의 원본 tracker/점군은 검수를 위해 남긴다. 기존 Main·판�
 
 `DetectionObservation`이 점군과 현재 기하를 한 번 소유하고, `TrackState`와 `CameraClassEvidence`를 조합해 `TrackedObject`를 만든다. 기존 tracker 이력의 복사 정책은 유지한다. `filtering/`은 원본 객체와 분리된 작은 판정 결과만 소유한다.
 
-계산 라이브러리는 ROS 메시지·시간 타입을 사용하지 않는다. 외부 catkin export는 `asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros` 세 개다. 검출·추적/runtime·HD맵 audit 정적 라이브러리는 패키지 내부에 두어 Main 링크를 바꾸지 않는다.
+계산 라이브러리는 ROS 메시지·시간 타입을 사용하지 않는다. 고정 시설물·구조물·관측 확인 정책은 `filtering/`의 ROS 독립 포팅 코어에 있다. 외부 catkin export는 `asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros` 세 개다. 검출·추적/runtime·HD맵 audit 정적 라이브러리는 패키지 내부에 두어 Main 링크를 바꾸지 않는다.
 
 ## 빌드·시험
 
@@ -80,14 +81,14 @@ roslaunch asmc_lidar lidar.launch
 roslaunch asmc_lidar lidar.launch fusion:=false
 ```
 
-출력 기본값은 `/migration/lidar/{objects_local,objects_map,observations_local,observations_map,diagnostics,trace}`다. 입력은 절대 경로 정본을 유지하고 출력 상대 이름은 `namespace` 인자로 결정한다. 운영 출력 차단과 TF 기본 OFF를 유지한다. 기존 Main과 동일 운영 토픽에 동시에 발행하지 않는다.
+출력 기본값은 `/perception/lidar/{objects_local,objects_map,observations_local,observations_map,tracks_local,tracks_map,diagnostics,trace}`다. 입력은 절대 경로 정본을 유지하고 출력 상대 이름은 `namespace` 인자로 결정한다. 정본 namespace만 launch에서 명시 허용하며, 입력 덮어쓰기·중복 출력 차단과 TF 기본 OFF를 유지한다. 기존 Main과 동일 운영 토픽에 동시에 발행하지 않는다.
 
-관측의 `objects.header`가 source stamp·frame의 정본이다. 정상 빈 결과·입력 무효·map pose 무효는 기존 `LidarObjectArray` 상태로 구분한다. 센서가 조용하다고 과거 결과를 새 stamp로 재발행하지 않는다. 현재 속도·운동 validity는 모두 false다. 내부 Kalman·MotionClassifier와 웹 진단이 있어도 판제용 보정 속도가 공용 출력에 연결된 것은 아니다. 구 `/last_lidar`와 메시지가 달라 단순 remap으로 판제 전환할 수 없다([기능 차이](docs/cutover-foundation.md#구-main과-새-패키지의-기능-대조)).
+관측의 `objects.header`가 source stamp·frame의 정본이다. 정상 빈 결과·입력 무효·map pose 무효는 기존 `LidarObjectArray` 상태로 구분한다. 센서가 조용하다고 과거 결과를 새 stamp로 재발행하지 않는다. 기존 MotionClassifier의 적용 속도·4단계 상태를 연결했다. 유효 map/계산 근거에서 절대속도 추정값을 제공하며, UNKNOWN의 수치0은 정지 확인이 아니다. GPS 무효에서는 local 속도/운동 validity를 false로 유지한다. 판제는 `LidarTrackingObservation`을 직접 소비한다([현재 의미](docs/planning-runtime.md#공용-메시지와-속도의-의미)).
 
 명시적 처리 초기화:
 
 ```bash
-rosservice call /migration/lidar/lidar_pipeline/reset "{}"
+rosservice call /perception/lidar/lidar_pipeline/reset "{}"
 ```
 
 이 서비스는 처리 세대를 올리고 대기 scan·추적·pose·trace 이력을 비운다. 입력 공백·GPS 무효·카메라 모드 변경은 이 서비스를 자동 호출하지 않는다. 판제 입력 전환이나 운영 수락 절차가 아니다.
@@ -135,12 +136,12 @@ rosrun asmc_lidar lidar_markers.py
 ```
 
 이미 열린 RViz에서는 `File → Open Config`로 `/root/ws/src/asmc_lidar/rviz/lidar.rviz`를 연다.
-직접 설정하려면 Fixed Frame=`base_link`, Add=`MarkerArray`, Topic=`/migration/lidar/markers`다.
+직접 설정하려면 Fixed Frame=`base_link`, Add=`MarkerArray`, Topic=`/perception/lidar/markers`다.
 새 RViz가 필요한 경우에만 `rviz -d /root/ws/src/asmc_lidar/rviz/lidar.rviz`를 실행한다.
 
-- 입력 `/migration/lidar/observations_local`의 실제 8코너를 그린다. yaw로 박스를 재구성하거나 IMU/장착 변환을 다시 적용하지 않는다.
+- 입력 `/perception/lidar/observations_local`의 실제 8코너를 그린다. yaw로 박스를 재구성하거나 IMU/장착 변환을 다시 적용하지 않는다.
 - 라벨은 `ID 소비분류 / 카메라 원본분류 n=voxel 이후 군집 점 수`다. vehicle은 청록, dynamic은 주황, static은 초록, unknown은 노랑이다.
-- 속도 validity가 아직 false이므로 운동·속도 화살표를 만들지 않는다. `unknown`은 카메라 분류가 확인되지 않은 상태다.
+- 이 Marker 도구는 형상 표시만 하며 속도 화살표를 만들지 않는다. 적용 속도·운동 상태는 공용 추적 관측과 웹 진단에서 확인한다. `unknown`은 카메라 분류가 확인되지 않은 상태다.
 - 정상 빈 결과·무효·세션/세대 변경에서 이전 박스를 지우고, 입력350ms 중단 시 wall clock으로 제거한다. 중복·이전 세대 관측으로 표시를 갱신하지 않는다.
 - 이 도구는 검출·추적·fusion을 계산하지 않고 Marker만 발행한다. 지면 제거/군집 점군을 새로 계산하지 않는다.
 - 프리셋의 Raw LiDAR는 기본 OFF다. 이를 켜면 원본 `/velodyne_points`와 최종 처리된 박스를 대조한다. 중간 단계 점군은 이 Marker 도구가 발행하지 않는다. PR #105의 단계별 샘플은 `debug:=true`와 [웹 모니터](docs/web-monitor.md)로 따로 확인한다.

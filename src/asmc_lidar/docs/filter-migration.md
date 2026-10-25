@@ -1,8 +1,14 @@
 # 판제 인지 필터 편입 목록
 
+**2026-10-26 보존 이식 반영:** [판제 실행 기준선](planning-runtime.md)에서 구 known-static·
+구조물 구역·관측 확인/해제를 `filtering/`에 이식했다. 새 판제 경계에서는 이 필터를 다시 계산하지
+않는다. 현재 v7 HD맵·높이/상부 필터와 원본 OBB는 유지하며 구 road mask/clipping은 이식하지 않는다.
+이전 표의 "통째로 옮기지 않음"은 광범위한 개선 계획이었다. 사용자 선택에 따라 이번에는
+기존 근접 보존까지 동작 보존을 우선하고 혼합된 행동 책임의 분리는 후속으로 둔다.
+
 PR #108 이후 기능 대조·필터 소유권 정리의 입력 목록이다. 먼저
-[판제 전환 기반 B0–B4](cutover-foundation.md)를 마련하며 광범위한 필터 공통화는 그 뒤로 둔다. **이번에는 소유권·위험·완료 조건만 정리하며 기존 Main과
-planning_inputs의 실행·기본값·판제 입력을 변경하지 않는다.** 전체 전환은
+[판제 전환 기반 B0–B4](cutover-foundation.md)를 마련하며 광범위한 필터 공통화는 그 뒤로 둔다. 이 표는 B0 당시 소유권·위험·완료 조건의 조사 근거다. 10월26일 구현은 아래 현재 호출
+경계와 실행 기준선을 따른다. 기존 Main·통합 판제의 기본 선택은 인수 전까지 유지한다. 전체 전환은
 [LiDAR 인계](../../../docs/handoffs/lidar-migration.md#판제-소비-전환-시-정리할-중복-처리)를 따른다.
 안승현은 지도·카메라 연결을, 손재호는 추적·속도·운동 상태·matching을 담당한다.
 
@@ -12,7 +18,8 @@ planning_inputs의 실행·기본값·판제 입력을 변경하지 않는다.**
 |---|---|
 | 기존 Main `PlannerObjectRosPublisher.cpp` | road → known-static → configured structure → PlanningRelevance → OBB clipping → `/last_lidar` |
 | `planning_inputs`의 `objects_node.cpp`·`PlanningObjectFilter.cpp` | 선택 입력 변환·private MotionClassifier, 설정된 경로에서 road/known-static/structure → clipping → 판제 배열 |
-| 새 `asmc_lidar` | 군집·OBB·추적·카메라 fusion → 원본 배열/판정 → HD맵·상부 전달 필터. 발행 배열만 제외하며 tracker/원본 측정은 유지. Main·판제 입력은 기존 경로 |
+| 새 `asmc_lidar` | 군집·OBB·추적·카메라 fusion → HD맵·상부 → 기존 시설물/구조물/관측 확인. 최종 ID 집합을 공용 배열·추적 관측에 적용하며 tracker/원본 측정은 유지 |
+| 새 `planning_inputs` (`asmc_lidar`) | 공용 추적 관측의 타입·시각·상태/속도 검사와 private 변환만 수행. 위 필터·classifier·clipping 재실행 없음 |
 
 동명 필터가 Main과 planning_inputs 양쪽에 있다. 두 경로가 한 실행에서 모두 적용된다고 가정하지
 않고 입력 선택·launch·활성 파라미터를 먼저 기록한다. 코드 중복과 실행 중 이중 적용은 구분한다.
@@ -33,7 +40,9 @@ planning_inputs의 실행·기본값·판제 입력을 변경하지 않는다.**
 | `PlanningRelevanceFilter`의 근접 긴급 보존 | 판제에 유지 | ego 속도·차량 길이로 계산하는 emergency distance·확인 횟수 우회는 행동 위험 정책 | 인지 품질 근거를 받아 판제에서 보수적으로 소비. TTC·정지·추종·회피·재출발과 함께 검토 |
 | `objects_node`·`converter`의 wire/유효성 검사 | 생산자 측 수치/좌표 정합성은 인지, 수신 어댑터·age/session 검사는 판제에도 유지 | 원본 enum·16종/3그룹·관측/예측·local/map 유효성·헤더를 잃으면 필터가 UNKNOWN을 오해할 수 있음 | 공용 `asmc_msgs` 계약으로 변환을 검증하고 센서 장애/정상 빈 결과·stale·재시작을 구분 |
 
-`PlanningRelevanceFilter`는 지면 품질과 ego 위험 정책이 섞여 있어 파일 전체를 인지로 옮기지 않는다.
+B0 분리 제안에서 `PlanningRelevanceFilter`는 지면 품질과 ego 위험 정책이 섞여 있어 전체 이식을
+보류했었다. 이번에는 사용자 요청대로 `ObservationQualityFilter`에 기존 근접 보존까지 이식했다.
+행동 책임 분리와 tracking 확인 중복 해소는 다음 개선이며 현재 판단 임계값은 바꾸지 않았다.
 현재 pedestrian/dog·known vehicle의 즉시 보존도 각 소비 경로의 원본 분류와 확인 정책이 다르다.
 최신 양성 매칭·확정 분류·추정 운동 상태를 서로 대체하지 않는다.
 
@@ -63,9 +72,9 @@ bicycle/stroller의 보호 누락이나 motorcycle의 그룹 변경이 생기지
 
 ## 다음 PR 작업 카드
 
-후속 공통화는 **미착수**다. 기준선은 PR #108 병합 main `ab8db094`이며 새 발행 배열에는
-HD맵·상부 전달 제외가 이미 적용된다. 원본 tracker/측정 형상은 유지한다. 먼저 B1/B2에서
-속도·상태·직접 소비와 필요한 구 필터의 차이를 확정한다. 아래 추출 작업은 선택한 기능에만 적용한다.
+보존 이식과 직접 소비(B1/B2)는 구현·자동 검증했다. 필요한 세 계산의 ROS 독립 경계는
+이미 `filtering/`에 있다. **광범위한 공통화·혼합 책임 분리는 미착수**이며 아래 카드는 그 후속
+작업에만 적용한다. 기존 Main/복구 코드를 먼저 삭제하지 않는다.
 
 1. **호출·설정 고정:** 두 기존 경로의 실제 입력 선택·필터 순서·설정/지도 SHA·단위·frame을 기록한다.
 2. **공통 계산 추출:** road/구조물/품질의 ROS 독립 계산을 기존 geometry/filtering 경계에 배치한다.

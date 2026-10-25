@@ -162,6 +162,7 @@
     "src/asmc_camera/docs/bdd-pretrained-experiment.md",
     "src/asmc_lidar/README.md",
     "src/asmc_lidar/docs/web-monitor.md",
-    "src/asmc_lidar/docs/pipeline.md"
+    "src/asmc_lidar/docs/pipeline.md",
+    "src/asmc_lidar/docs/planning-runtime.md"
   ]
 }

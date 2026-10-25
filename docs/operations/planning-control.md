@@ -1,20 +1,20 @@
 # Planning/Control 실행·검증
 
 현재 패키지는 `asmc_planner`, `asmc_controller`, `planning_inputs`입니다.
-bridge·카메라·nested Main은 별도 실행합니다. 전체 시작 순서는 [실행 명령](commands.md),
+bridge·카메라·LiDAR는 별도 실행합니다. 새 경로는 `asmc_lidar`, 구 Main은 인수 전 기존 실행/복구용입니다. 전체 시작 순서는 [실행 명령](commands.md),
 실제 인자/기본값은 [launch 목록](launch-reference.md)이 정본입니다.
 
 ## 빌드와 통합 실행
 
-`asmc-ros-noetic`의 저장소 루트에서 실행합니다. nested Main도 새 코드로 별도 빌드해야 합니다.
+`asmc-ros-noetic`의 저장소 루트에서 실행합니다. 새 경로는 outer 빌드만 필요하며 nested Main 빌드는 구 경로 실행/복구에 한정합니다.
 
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 ./scripts/build_ws.sh -j2
 source devel/setup.bash
-# bridge·카메라·Main을 별도 준비한 뒤
-roslaunch asmc_planner autonomy_no_bridges_v2.launch
+# bridge·카메라·asmc_lidar를 별도 준비한 뒤
+roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_lidar
 ```
 
 이 명령은 차량 제어를 시작합니다. 신호등 추론·발행은 카메라 담당의 `asmc_camera`만 소유하며,
@@ -23,9 +23,7 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 구간별 소비 책임은 유지합니다. [소비·제어 안내](../handoffs/perception-to-planning.md)를 따릅니다.
 
 `state_source:=gps_imu`는 `/planning/vehicle/state` producer를 포함하고 `external`은 외부 producer를 요구합니다.
-통합 객체 source는 `lidar`만 지원하며 `/last_lidar`와 exact source stamp의 `/lidar/motion_debug`를 소비합니다.
-기본 `validated_lidar`에서 정렬되지 않은 진단·ID는 유효 planning frame으로 꾸미지 않습니다.
-이 설정은 별도 내부 motion/filter 재분류를 중복 적용하지 않습니다. `main_raw`는 명시적 비교용입니다.
+통합 객체 source는 `lidar`이며 새 선택 `lidar_source_policy:=asmc_lidar`는 `/perception/lidar/tracks_map`을 직접 소비합니다. 속도/4단계 운동·원본 OBB·세대/시각/상태를 확인하고 두 번째 인지 필터·JSON join을 실행하지 않습니다. 실제 인수 전 통합 기본은 구 `validated_lidar`입니다. 이 구 경로는 `/last_lidar`와 exact source stamp의 `/lidar/motion_debug`를 연결하며 `main_raw`는 기존 비교용입니다. [연결 의미와 복구](../../src/asmc_lidar/docs/planning-runtime.md)를 따릅니다.
 통합 launch에는 제어 선택기와 `enable_control=true`인 재밍 어댑터가 포함됩니다.
 
 ## 개별 실행

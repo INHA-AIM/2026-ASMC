@@ -1,5 +1,13 @@
 # LiDAR → 판단제어 공통 소비 계약
 
+**2026-10-26 구현 기준:** [공용 추적 관측과 직접 소비](../../src/asmc_lidar/docs/planning-runtime.md)를
+구현했다. `LidarTrackingObservation`이 기존 관측과4단계 운동 상태를 원자적으로 전달한다.
+기존 메시지 MD5는 유지하며, 기존 MotionClassifier의 적용 속도를 공개 절대속도 **추정값**으로
+연결했다. GPS/근거 무효에서는 false, UNKNOWN 예열 수치0은 정지 확인이 아니다.
+새 판제 선택은 `source_policy:=asmc_lidar`; 구 wire·JSON join·재분류·중복 인지 필터를 거치지 않는다.
+실제 소비 전환은 명시적으로 수행하며 구 패키지·rollback은 인수까지 보존한다. 아래 구 경로 설명은
+기존 운영/복구 계약이며 "직접 소비 미구현"으로 적힌 과거 대조는 이 구현으로 보완됐다.
+
 **2026-10-16 카메라 연결:** 독립 Main YOLO는 제거하고 `asmc_camera/camera.launch`만 추론을 소유한다.
 [현재 실행·3뷰 인계](../handoffs/camera-to-lidar.md)를 따른다.
 
@@ -15,20 +23,20 @@ unknown 타입도 기하·속도를 가진 장애물입니다. [모델과 소비
 > [기계 판독 상태](../../config/contracts/lidar_candidate_topic_contract_v1.yaml)와 현재/목표를 함께 확인한다.
 
 현재 설정·구 기능 차이와 다음 순서는 [정본화·전환 기반 B0–B4](../../src/asmc_lidar/docs/cutover-foundation.md)를 따른다.
-**내부 속도·MotionClassifier 진단은 있으나 판제용 속도·운동 상태는 공용 출력에 미연결**이다.
-상대/절대속도·dynamic validity를 false로 발행하는 현재 상태를 구 `/last_lidar`와 동등하다고 보지 않는다.
+구 Main의 적용 속도와4단계 운동 상태를 새 공용 추적 관측에 연결했다. 기존 계산의 한계와
+UNKNOWN·validity 의미를 보존하며 새 속도 정확도 개선이나 실제 판제 주행 수락으로 확대하지 않는다.
 
 ## 현재 소비와 이관 중 격리
 
 현재 기본은 Main의 `/last_lidar`와 같은 stamp의 `/lidar/motion_debug`를
 `planning_inputs`가 연결하는 `validated_lidar` 경로다. 선택 `main_raw`는 별도 필터·운동
 분류를 실행한다. 기본 경로에서 양쪽 필터가 모두 중복 실행된다고 설명하지 않는다.
-새 공용 관측 생산자는 있지만 판제의 JSON 진단 의존 해소와 직접 소비 경계(B2/L6–L7)는 미구현이다.
-현재 wire bridge가 요구하는 구 타입·MD5·map frame은 토픽 remap으로 바뀌지 않는다.
-private 판제 메시지에 속도 validity 필드가 없으므로 미확정을 어떻게 표현/소비할지도 B1/B2에서 합의한다.
+새 선택 `source_policy:=asmc_lidar`는 공용 추적 관측을 직접 소비하며 JSON join을 사용하지 않는다.
+구 wire bridge는 기존 입력에만 사용한다. private 판제 타입으로 표현할 수 없는 속도·출력 무효는
+새 빈 배열/유효0으로 바꾸지 않고 발행을 보류한다. UNKNOWN 예열의 기존 적용 추정값은 UNKNOWN으로 전달한다.
 
-정식 후보 local/map 경로는 아래 표를 유지하되, 새 실행의 동시 비교 출력만
-PR #103의 `/migration/lidar/objects_local`, `/migration/lidar/objects_map`을 사용한다.
+새 실행의 기본 출력은 `/perception/lidar/*`다. 동시 비교할 때만
+`namespace:=/migration/lidar`를 사용하고 판제 입력도 해당 `tracks_map`으로 지정한다.
 센서·카메라 입력은 정본 경로를 구독한다. 새 상태·진단 타입, session/ID·소비자 캐시 초기화,
 pose 선택과 시간 한계는 [L1 설계](../../src/asmc_lidar/docs/migration-design.md)로 고정한다. 현재 없는 타입을 구현된 계약으로 등록하지 않는다.
 L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험 생산자를 연결하지 않는다.
@@ -37,12 +45,14 @@ L7 전까지 `/last_lidar`·`/lidar_nogps`·판제 입력은 유지하고 시험
 
 | 대상 | 의미 |
 |---|---|
+| `asmc_msgs/LidarTrackingObservation` | 기존 관측과 동순서/동일ID의4단계 tracking 상태. 직접 판제 소비 타입 |
+| `asmc_msgs/LidarTrackingState` | track ID·별도 cluster 기준점·운동 상태. 신규 additive 타입 |
 | `asmc_msgs/LidarObjectArray` | frame·관측 stamp·출력 상태와 객체 배열 |
 | `asmc_msgs/LidarObject` | 지속 ID/검출 번호·관측/예측·중심/8코너·속도/동정적 유효성 |
 | `asmc_msgs/CameraObjectBoxArray` | source header·영상 크기·입력 유효성·원본 픽셀 box 배열 |
 | `asmc_msgs/CameraObjectBox` | box·그룹 class_name·원래 라벨 source_class_name·confidence/유효성. 원본 numeric class ID는 현 타입에 없음 |
-| `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. Main opt-in과 새 독립 생산자는 별도. 새 생산자는 현재 `/migration/lidar/objects_local`에 격리 |
-| `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. 새 생산자는 `/migration/lidar/objects_map`에 격리. 정식 경로/소비 연결은 B2/B3에서 확정 |
+| `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. Main opt-in과 새 독립 생산자는 별도. 새 생산자는 이 경로가 기본이며 비교 시 namespace를 변경 |
+| `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. 새 생산자는 이 경로가 기본이며 직접 판제 입력은 `tracks_map`. 실제 소비 전환은 B3에서 확인 |
 | `/perception/camera/objects` | 3뷰 원본 픽셀 검출. 현재 Main 어댑터는 전방만 소비 |
 | `/perception/camera/objects/observations` | session/generation·보정/모델/설정 ID 포함. asmc_lidar 수신·버퍼·투영 지원 제공, 이관 검증 노드는 `camera_front`만 매칭·fusion; 3뷰 객체 매칭/fusion은 손재호의 후속 구현 |
 
