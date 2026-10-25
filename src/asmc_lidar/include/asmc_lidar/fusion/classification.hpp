@@ -14,6 +14,10 @@ struct CameraClassEvidence {
   int class_miss_counter = 0;
   std::uint64_t camera_observation_ns = 0;
   std::uint64_t camera_observation_epoch = 0;
+  // Exact latest matched YOLO observation, separate from confirmation/retention.
+  // Unknown or a miss clears it even if str_YoloClass retains an older class.
+  std::string observed_class = "unknown";
+  std::string observed_raw_class = "unknown";
   bool is_class_locked = false;
 
 };

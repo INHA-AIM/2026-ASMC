@@ -280,8 +280,9 @@ void LidarRuntime::Audit(ScanOutput& out) const {
             const bool positive=filtering::PositiveCameraEvidence(frame.stamp_ns,c.camera_observation_ns,
               fusion_?fusion_->consumer_epoch():0,c.camera_observation_epoch,c.class_miss_counter,
               config_.delivery_preview.camera_age_ms,config_.fusion.max_time_offset_s*1e3);
-            const auto group=pipeline::fusion_class::Normalize(
-                c.last_seen_class!="unknown"?c.last_seen_class:c.str_YoloClass,true);
+            const auto group=pipeline::fusion_class::ObservedMissionGroup(c);
+            decision.camera_observed_group=group;
+            decision.camera_observed_raw=c.observed_raw_class;
             known=positive&&group!="unknown";
             dynamic=known&&group=="dynamic_obstacle";
           }

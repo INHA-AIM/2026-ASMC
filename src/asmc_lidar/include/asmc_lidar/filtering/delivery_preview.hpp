@@ -2,6 +2,7 @@
 #include <asmc_lidar/filtering/hd_map_audit.hpp>
 #include <limits>
 namespace asmc::lidar::filtering {
+inline constexpr const char* kDeliveryProtectionPolicy = "yolo_positive_only_v2";
 // Evidence comes from the full voxel/filter/cluster support, never GUI sampling.
 struct PointEvidence {
   std::size_t total=0, finite=0, road=0, guard=0, unknown=0;

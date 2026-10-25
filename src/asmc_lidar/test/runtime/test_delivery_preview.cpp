@@ -21,7 +21,40 @@ TEST(DeliveryPreview, PointAndObbComparisonsAreIndependent) {
   ApplyDeliveryPreview(d,e,Policy(),true,false,false,3);
   EXPECT_EQ(d.point_preview,"exclude_candidate");EXPECT_EQ(d.height_preview,"exclude_candidate");
 }
-TEST(DeliveryPreview, MissionApproachProtectedBeforeEgoEntry){auto d=Base();d.exception_types={"dynamic_obstacle"};ApplyDeliveryPreview(d,Points(),Policy(),true,false,false,.1);EXPECT_EQ(d.preview_reason,"exception_space_protected");}
+TEST(DeliveryPreview, MissionRegionDoesNotProtectUnknownOutsideSupport){
+  for(const auto* mission:{"dynamic_obstacle","static_obstacle","roundabout"}){
+    auto d=Base();d.exception_types={mission};d.reason="exception_space_protected";
+    d.spatial.road_ratio_grid=0;
+    ApplyDeliveryPreview(d,Points(),Policy(),true,false,false,.1);
+    EXPECT_EQ(d.preview_reason,"cluster_support_outside");
+    EXPECT_EQ(d.preview_decision,"exclude_candidate");
+    EXPECT_EQ(d.point_preview,"exclude_candidate");EXPECT_EQ(d.obb_preview,"exclude_candidate");
+    EXPECT_EQ(d.obb_reference_reason,"exception_space_protected");
+    EXPECT_EQ(d.decision,"undetermined");
+    EXPECT_EQ(d.preview_protection_policy,"yolo_positive_only_v2");
+  }
+}
+TEST(DeliveryPreview, PositiveCameraDynamicProtectsInAnyMissionWhileVehicleDoesNot){
+  for(bool dynamic:{false,true}){
+    auto d=Base();d.exception_types={"dynamic_obstacle"};
+    ApplyDeliveryPreview(d,Points(),Policy(),true,dynamic,true,.1);
+    EXPECT_EQ(d.preview_decision,dynamic?"keep":"exclude_candidate");
+    EXPECT_EQ(d.camera_dynamic_protected,dynamic);
+  }
+}
+TEST(DeliveryPreview, Unknown4059OutsideMissionIsNotProtectedByLocation){
+  auto d=Base();d.exception_types={"dynamic_obstacle"};d.reason="exception_space_protected";
+  d.spatial.road_ratio_grid=0;auto e=Points();e.total=e.finite=259;e.min_base_z=.029;
+  ApplyDeliveryPreview(d,e,Policy(),true,false,false,.028);
+  EXPECT_EQ(d.road_points,0u);EXPECT_EQ(d.preview_decision,"exclude_candidate");
+  EXPECT_FALSE(d.camera_dynamic_protected);EXPECT_EQ(d.point_preview,"exclude_candidate");
+  EXPECT_EQ(d.obb_preview,"exclude_candidate");EXPECT_EQ(d.decision,"undetermined");
+  // With insufficient points, do not retain a final "keep" from the old region gate.
+  d=Base();d.exception_types={"dynamic_obstacle"};d.reason="exception_space_protected";
+  d.spatial.road_ratio_grid=0;e.total=e.finite=5;
+  ApplyDeliveryPreview(d,e,Policy(),true,false,false,.028);
+  EXPECT_EQ(d.decision,"undetermined");EXPECT_EQ(d.reason,"mission_region_is_context_only");
+}
 TEST(DeliveryPreview, UnknownMapOrNoGpsNotOutside){for(int kind:{0,1}){auto d=Base();auto e=Points();e.unknown=kind;ApplyDeliveryPreview(d,e,Policy(),kind==1,false,false,.1);EXPECT_EQ(d.preview_decision,"undetermined");}}
 TEST(DeliveryPreview, SparseAndNonFiniteSupportHeld){for(int kind:{0,1}){auto d=Base();auto e=Points();if(kind==0)e.total=e.finite=2;else e.finite=99;ApplyDeliveryPreview(d,e,Policy(),true,false,false,3);EXPECT_EQ(d.preview_reason,"insufficient_cluster_support");}}
 TEST(DeliveryPreview, OverheadNeedsBothLowPointAndObbClearance){auto e=Points();e.min_base_z=2.5;for(double bottom:{.1,2.5}){auto d=Base();ApplyDeliveryPreview(d,e,Policy(),true,false,false,bottom);EXPECT_EQ(d.preview_reason,bottom>2?"overhead_clearance_candidate":"cluster_support_outside");EXPECT_EQ(d.decision,"undetermined");}}

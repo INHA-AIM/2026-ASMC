@@ -322,6 +322,7 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   const auto& p=config.delivery_preview;
   effective << p.enabled << ',' << p.roof_base_z_m << ',' << p.roof_margin_m << ','
     << p.minimum_points << ',' << p.minimum_road_points << ',' << p.minimum_road_ratio << ',' << p.camera_age_ms;
+  if(p.enabled)effective << ',' << filtering::kDeliveryProtectionPolicy;
   config.config_id = hash(effective.str());
 }
 

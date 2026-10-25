@@ -42,6 +42,7 @@ struct AuditDecision {
   std::size_t support_points=0, road_points=0, guard_points=0, unknown_points=0;
   double road_point_ratio=0, min_base_z=0, obb_bottom_base_z=0, roof_limit_z=0;
   bool height_available=false, camera_dynamic_protected=false, camera_known=false;
+  std::string preview_protection_policy, camera_observed_group="unknown", camera_observed_raw="unknown";
 
 };
 struct AuditReport {

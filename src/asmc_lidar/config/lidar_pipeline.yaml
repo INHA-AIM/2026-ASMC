@@ -167,6 +167,9 @@ hd_map_audit:
   source_product: "../asmc_hd_map/config/kcity2025_compact_drivable_map.json"
   # Preview only: no ROS exclusion. Positive camera dynamic evidence is protected
   # in all zones; raw point support is voxel/filter/cluster output, not GUI samples.
+  # Policy yolo_positive_only_v2: latest matched person/dog/deer/bicycle/stroller
+  # only. LiDAR motion state and proximity to a mission region never protect an
+  # outside cluster. Legacy mission exceptions remain OBB comparison metadata.
   delivery_preview:
     enabled: true
     roof_base_z_m: 1.284  # verified mesh1.644m + road z=-0.36m; not UDP sizeZ

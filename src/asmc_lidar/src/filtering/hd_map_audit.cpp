@@ -244,6 +244,9 @@ void WriteAuditDecision(std::ostream& out,const AuditDecision& d) {
        <<",\"guard_points\":"<<d.guard_points<<",\"unknown_points\":"<<d.unknown_points
        <<",\"road_point_ratio\":"<<d.road_point_ratio<<",\"camera_dynamic_protected\":";Bool(out,d.camera_dynamic_protected);
     out<<",\"camera_known\":";Bool(out,d.camera_known);
+    out<<",\"protection_policy\":";Str(out,d.preview_protection_policy);
+    out<<",\"camera_group\":";Str(out,d.camera_observed_group);
+    out<<",\"camera_raw_class\":";Str(out,d.camera_observed_raw);
     out<<",\"roof_limit_base_z\":"<<d.roof_limit_z<<",\"min_support_base_z\":";
     if(d.height_available)out<<d.min_base_z;else out<<"null";
     out<<",\"obb_bottom_base_z\":";if(std::isfinite(d.obb_bottom_base_z))out<<d.obb_bottom_base_z;else out<<"null";

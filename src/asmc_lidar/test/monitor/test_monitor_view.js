@@ -383,7 +383,7 @@ test('audit preview never hides protected or uncertain objects',()=>{
   assert.equal(V.previewVisible(scene,{id:2,miss:0},false,true),true);
   assert.equal(V.previewVisible(scene,{id:3,miss:0},false,true),true);
   assert.equal(V.previewVisible({}, {id:1,miss:0},false,true),true);
-  assert.equal(V.auditAppearance(scene,{id:2}).detail,'카메라 동적 그룹 보호');
+  assert.equal(V.auditAppearance(scene,{id:2}).detail,'YOLO 동적 그룹의 유효한 양성 매칭');
   assert.equal(scene.hd_map_audit.objects.length,3);
 });
 // Distinct support/footprint/height candidate switches must not hide protected objects.
@@ -417,6 +417,18 @@ test('final tracks and typed boxes use the same hide decision',()=>{
   assert.equal(V.displayVisibility(scene,{sha256:'other'},track,false,true,{}).reason,'map_mismatch');
   assert.equal(V.displayVisibility(scene,{sha256:'other'},{id:7,miss:1},false,true,{}).reason,'prediction_hidden');
   assert.equal(V.displayVisibility(scene,{sha256:'v7'},track,false,false,{points:true}).visible,false);
+});
+
+test('YOLO protection and old region protection are distinguished from motion',()=>{
+  const scene={hd_map_audit:{enabled:true,objects:[
+    {track_id:1,preview:{decision:'keep',reason:'camera_dynamic_protected'}},
+    {track_id:2,preview:{decision:'keep',reason:'exception_space_protected'}},
+    {track_id:3,preview:{decision:'exclude_candidate',reason:'cluster_support_outside',point_decision:'exclude_candidate',obb_decision:'keep',height_decision:'keep'}}]}};
+  assert.equal(V.auditAppearance(scene,{id:1}).label,'YOLO 동적 보호');
+  assert.equal(V.auditAppearance(scene,{id:2}).label,'구형 미션 보호');
+  const movingUnknown={id:3,miss:0,class:'unknown',motion:{state:3,valid:true}};
+  assert.equal(V.auditAppearance(scene,movingUnknown).label,'제외 후보');
+  assert.equal(V.previewVisible(scene,movingUnknown,false,true),false);
 });
 
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');

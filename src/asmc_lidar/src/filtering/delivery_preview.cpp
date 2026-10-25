@@ -12,6 +12,7 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   if(!p.enabled)return;
   d.obb_reference_decision=d.decision;d.obb_reference_reason=d.reason;
   d.preview_enabled=true;d.support_points=e.total;d.road_points=e.road;
+  d.preview_protection_policy=kDeliveryProtectionPolicy;
   d.guard_points=e.guard;d.unknown_points=e.unknown;
   d.road_point_ratio=e.total?double(e.road)/e.total:0;
   d.height_available=e.finite==e.total&&e.total>0&&std::isfinite(e.min_base_z);
@@ -26,11 +27,16 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
     d.obb_preview=d.spatial.road_ratio_grid>0?"keep":"exclude_candidate";
   // A mobility group is a protection policy, never a measured moving flag.
   if(dynamic){d.point_preview=d.obb_preview=d.height_preview="keep";keep("camera_dynamic_protected");return;}
-  if(!d.exception_types.empty())d.point_preview=d.obb_preview="keep";
+  // Mission proximity is context, not evidence that an unknown LiDAR cluster
+  // is an entering person/dog/bicycle. Retain the original exception decision
+  // in obb_reference_*, but never blanket-protect the preview by region alone.
+  if(d.reason=="exception_space_protected") {
+    d.decision="undetermined";d.reason="mission_region_is_context_only";
+  }
   if(e.total>=p.minimum_points&&e.finite==e.total) {
     if(d.height_available&&std::isfinite(obb_bottom))
       d.height_preview=!known&&std::min(e.min_base_z,obb_bottom)>d.roof_limit_z?"exclude_candidate":"keep";
-    if(map_valid&&d.has_spatial&&d.spatial.available&&!e.unknown&&d.exception_types.empty())
+    if(map_valid&&d.has_spatial&&d.spatial.available&&!e.unknown)
       d.point_preview=(e.road>=p.minimum_road_points||d.road_point_ratio>=p.minimum_road_ratio)?"keep":"exclude_candidate";
   }
   if(e.total<p.minimum_points||e.finite!=e.total){
@@ -50,7 +56,6 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   }
   d.height_preview="keep";
   if(!map_valid||!d.has_spatial||!d.spatial.available){preview("undetermined","map_or_pose_unavailable");return;}
-  if(!d.exception_types.empty()){d.point_preview="keep";keep("exception_space_protected");return;}
   if(e.unknown){preview("undetermined","unknown_support_map_cells");d.decision="undetermined";d.reason="unknown_support_map_cells";return;}
   if(e.road>=p.minimum_road_points||d.road_point_ratio>=p.minimum_road_ratio){d.point_preview="keep";keep("cluster_drivable_support");return;}
   d.point_preview="exclude_candidate";

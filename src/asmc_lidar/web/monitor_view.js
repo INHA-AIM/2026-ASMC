@@ -110,8 +110,8 @@
   }
 
   const auditIndices=new WeakMap();
-  const AUDIT_REASONS={camera_dynamic_protected:'카메라 동적 그룹 보호',cluster_drivable_support:'군집 점이 도로 안',
-    cluster_boundary_protected:'경계 여유 보호',exception_space_protected:'미션 예외 공간 보호',
+  const AUDIT_REASONS={camera_dynamic_protected:'YOLO 동적 그룹의 유효한 양성 매칭',cluster_drivable_support:'군집 점이 도로 안',
+    cluster_boundary_protected:'경계 여유 보호',exception_space_protected:'구형 미션 영역 일괄 보호 · 생산자 재시작 필요',
     cluster_outside_boundary_uncertain:'도로 점 없음 · 경계 오차 미확정',
     obb_support_outside:'OBB 도로 겹침 없음 · 점 근거 부족',
     cluster_support_outside:'군집 점이 도로 밖',overhead_clearance_candidate:'자차 상부 높이 후보',
@@ -140,7 +140,9 @@
     const kind=p?p.decision:d?d.decision:'unavailable';
     const categories=exclusionKinds(d),category=categories[0]||null;
     return {decision:kind,category,categories,reason:p?p.reason:d?d.reason:'audit_off',
-      label:kind==='keep'&&category==='obb'?'유지·OBB 비교 후보':{keep:'유지',exclude_candidate:'제외 후보',undetermined:'보류',unavailable:'미실행'}[kind]||'보류',
+      label:kind==='keep'&&category==='obb'?'유지·OBB 비교 후보':kind==='keep'&&p&&p.reason==='camera_dynamic_protected'?'YOLO 동적 보호':
+        kind==='keep'&&p&&p.reason==='exception_space_protected'?'구형 미션 보호':kind==='keep'&&p&&p.reason==='cluster_drivable_support'?'도로 근거 유지':
+        {keep:'유지',exclude_candidate:'제외 후보',undetermined:'보류',unavailable:'미실행'}[kind]||'보류',
       color:category?{points:'#f472b6',obb:'#c084fc',height:'#fb923c'}[category]:{keep:'#34d399',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',
       detail:AUDIT_REASONS[p?p.reason:d?d.reason:'']||(p?p.reason:d?d.reason:'audit OFF')};
   }
