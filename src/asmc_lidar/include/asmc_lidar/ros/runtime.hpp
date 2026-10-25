@@ -50,7 +50,6 @@ struct RuntimeConfig {
   std::shared_ptr<const filtering::HdMapAudit> hd_map_audit;
   filtering::DeliveryPolicy delivery_preview;
   std::shared_ptr<const filtering::DeliveryFilters> delivery_filters;
-  std::string delivery_assets_id;
 
   // Paths/identity resolved by LoadRuntimeConfig (for diagnostics).
   std::string config_path, config_sha256, mount_config_path, mount_config_sha256;

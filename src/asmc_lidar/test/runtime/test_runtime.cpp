@@ -98,7 +98,7 @@ TEST(RuntimeDeployment, DefaultMapIsPinnedAndHeightCapIsLocal) {
   const auto cfg=sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
   ASSERT_TRUE(cfg.delivery_filters);
   EXPECT_TRUE(cfg.delivery_filters->enabled());
-  EXPECT_EQ(cfg.delivery_filters->status(),"ready");
+  EXPECT_EQ(cfg.delivery_filters->status(),"observation_quality_only");
   EXPECT_DOUBLE_EQ(cfg.delivery_preview.minimum_road_ratio,.10);
   EXPECT_DOUBLE_EQ(cfg.delivery_preview.minimum_obb_road_ratio,.10);
   EXPECT_DOUBLE_EQ(cfg.delivery_preview.road_inset_m,.10);
@@ -362,7 +362,7 @@ TEST(HdMapAuditRuntime, SubcellMarginsAreDistinctAndObbUsesFractionalBoundaryAre
   }
 }
 
-TEST(RuntimeDelivery, LegacyPoliciesDoNotMutateTracksAndGpsLossPreservesLocal) {
+TEST(RuntimeDelivery, ObservationQualityDoesNotMutateTracksAndGpsLossPreservesLocal) {
   auto raw=ShippedRuntimeConfig(),cfg=raw;
   cfg.delivery_filters=sh::LoadRuntimeConfig(ShippedConfig(),PackageDir()).delivery_filters;
   sh::LidarRuntime first(raw,nullptr,nullptr),second(cfg,nullptr,nullptr);

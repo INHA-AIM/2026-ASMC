@@ -150,20 +150,12 @@ runtime:
   # Main RAW_LIDAR_DATA capacity: 2,000,000 B / sizeof(pcl::PointXYZI) (32 B).
   max_points: 62500
 
-# Main final-publication policy port. Thresholds/acquire/release are preserved.
-# Current v7 HD-map replaces the old road mask; OBB clipping is not reintroduced.
-# Catalog/zones retain their source identity and are used only with valid map pose.
+# Ground-fragment evidence and observation acquire/release are independent of
+# road membership. Fixed-center catalogs and rectangular structure blacklists
+# are deliberately absent: current HD-map/support/overhead rules own that work.
+# Existing quality thresholds and near-object preservation remain unchanged.
 delivery:
   enabled: true
-  known_static_catalog: config/delivery/known_static_objects.yaml
-  structure_zones: config/delivery/structure_exclusions.yaml
-  catalog_map_id: waize_katri_2025-10-23
-  center_tolerance_m: 2.5
-  application_regions:
-    - [-35.0, 15.0, 108.0, 180.0]
-    - [-107.0, 15.0, 175.0, 345.0]
-  structure_height_m: 2.5
-  structure_bottom_m: 2.0
   minimum_obstacle_height_m: 0.10
   confirmation_frames: 3
   release_frames: 5

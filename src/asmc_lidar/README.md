@@ -4,7 +4,7 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 
 안승현은 **HD맵 기반 필터·카메라 연결 지원**, 손재호는 **추적·속도·운동 상태·fusion 보완**을 진행한다. 좌표·시간·공용 계약과 판제 전환은 공동 확인한다.
 
-- [현재 판제 실행·이식 기능·검증·복구](docs/planning-runtime.md) — 구 Main의 적용 속도/4단계 운동·시설물·구조물·관측 확인 정책과 직접 소비 연결.
+- [현재 판제 실행·이식 기능·검증·복구](docs/planning-runtime.md) — 구 Main의 적용 속도/4단계 운동·관측 품질과 직접 소비 연결. 고정 시설물/구역 blacklist 제거.
 - [판제 전환 기반·구 기능 대조·다음 작업](docs/cutover-foundation.md) — PR #108 당시 대조를 보존. 현재 구현은 위 실행 기준선, 실제 인수/폐기와 터널 개선은 후속이다.
 - [재호의 PR #104 인수 시작](../../docs/handoffs/lidar-migration.md#재호의-pr-104-인수-시작) · [담당별 다음 작업](docs/migration-tasks.md#공동-개발-인수와-우선-작업)
 - [구조·관측 계약과 이번 검증](docs/structure-contract-refactor.md)
@@ -40,7 +40,7 @@ debug의 원본 tracker/점군은 검수를 위해 남긴다. 기존 Main·판�
 
 `DetectionObservation`이 점군과 현재 기하를 한 번 소유하고, `TrackState`와 `CameraClassEvidence`를 조합해 `TrackedObject`를 만든다. 기존 tracker 이력의 복사 정책은 유지한다. `filtering/`은 원본 객체와 분리된 작은 판정 결과만 소유한다.
 
-계산 라이브러리는 ROS 메시지·시간 타입을 사용하지 않는다. 고정 시설물·구조물·관측 확인 정책은 `filtering/`의 ROS 독립 포팅 코어에 있다. 외부 catkin export는 `asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros` 세 개다. 검출·추적/runtime·HD맵 audit 정적 라이브러리는 패키지 내부에 두어 Main 링크를 바꾸지 않는다.
+계산 라이브러리는 ROS 메시지·시간 타입을 사용하지 않는다. HD맵/상부 근거와 관측 확인 정책은 `filtering/`의 ROS 독립 코어에 있다. 고정 중심 catalog·사각 구조물 blacklist는 새 실행에서 사용하지 않는다. 외부 catkin export는 `asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros` 세 개다. 검출·추적/runtime·HD맵 audit 정적 라이브러리는 패키지 내부에 두어 Main 링크를 바꾸지 않는다.
 
 ## 빌드·시험
 

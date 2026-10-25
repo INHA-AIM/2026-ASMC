@@ -351,12 +351,8 @@ void LidarRuntime::FilterDelivery(ScanOutput& out) {
       if(original==out.result.objects.end())continue;
       filtering::DeliveryObject candidate;
       candidate.id=object.track_id;candidate.classification=object.classification;
-      candidate.yolo_class=object.camera_class;candidate.is_dynamic=object.is_dynamic;
-      candidate.motion_state=out.arrays.map_tracking[i].motion_state;
-      const auto& center=out.arrays.map_tracking[i].cluster_center;
-      candidate.cluster_center_map={center.x,center.y,center.z};
+      candidate.yolo_class=object.camera_class;
       candidate.obb_center_map={object.center.x,object.center.y,object.center.z};
-      for(unsigned k=0;k<8;++k){const auto& p=object.obb_corners[k];candidate.obb_corners_map[k]={p.x,p.y,p.z};}
       candidate.length=object.length;candidate.width=object.width;candidate.height=object.height;
       candidate.ground_evidence=original->detection.ground_evidence;
       const auto reason=delivery_filters_.Exclusion(candidate,antenna.x(),antenna.y(),out.ego_speed_mps,vehicle.f32_Length);

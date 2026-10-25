@@ -304,24 +304,9 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
     filtering::DeliveryConfig policy;
     policy.enabled=d["enabled"].as<bool>();
     if(policy.enabled) {
-      policy.catalog=Resolve(d["known_static_catalog"].as<std::string>(),package_share_dir);
-      policy.zones=Resolve(d["structure_zones"].as<std::string>(),package_share_dir);
-      policy.catalog_map_id=d["catalog_map_id"].as<std::string>();
-      for(int i=0;i<3;++i)policy.origin[i]=config.gps.map_origin[i];
-      policy.center_tolerance_m=d["center_tolerance_m"].as<double>();
-      policy.structure_height_m=d["structure_height_m"].as<double>();
-      policy.structure_bottom_m=d["structure_bottom_m"].as<double>();
       policy.minimum_obstacle_height_m=d["minimum_obstacle_height_m"].as<double>();
       policy.confirmation_frames=d["confirmation_frames"].as<int>();
       policy.release_frames=d["release_frames"].as<int>();
-      for(const auto& row:d["application_regions"])
-        policy.regions.push_back({row[0].as<double>(),row[1].as<double>(),row[2].as<double>(),row[3].as<double>()});
-      // The catalog has its own historical map identity/origin; never relabel it
-      // as v7 geometry. Unavailable assets fail open in their original filters.
-      const auto asset_id=[](const std::string& path){
-        try{return Sha256(path);}catch(const std::exception&){return std::string("unavailable");}
-      };
-      config.delivery_assets_id=asset_id(policy.catalog)+":"+asset_id(policy.zones);
     }
     config.delivery_filters=std::make_shared<const filtering::DeliveryFilters>(policy);
   }
@@ -348,7 +333,6 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
             << config.pipeline.use_roll << ',' << config.enable_camera_fusion << ','
             << config.pipeline.tunnel.enabled << ',' << config.pipeline.capture_debug << '\n';
   effective << config.hd_map_audit_mode << '\n' << config.hd_map_manifest_sha256 << '\n';
-  effective << config.delivery_assets_id << '\n';
   effective << config.pipeline.height_roi.enabled << ',' << config.pipeline.height_roi.max_height_above_ground_m
             << ',' << config.pipeline.height_roi.nominal_base_height_m << '\n';
   if (config.hd_map_audit) effective << config.hd_map_audit->bundle_sha256() << '\n'

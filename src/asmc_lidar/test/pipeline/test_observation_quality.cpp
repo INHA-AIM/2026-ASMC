@@ -3,7 +3,6 @@
 #include <asmc_lidar/preprocessing/ground.hpp>
 using asmc::lidar::pipeline::GroundPlaneSnapshot;
 using asmc::lidar::pipeline::MeasureObjectGroundEvidence;
-#include <asmc_lidar/filtering/delivery_filters.hpp>
 
 #include <gtest/gtest.h>
 
@@ -443,4 +442,22 @@ TEST(ObservationQualityFilter, UpstreamRejectedReappearanceStaysRejected) {
     ASSERT_TRUE(Next(&filter, object).planning_confirmed);
     filter.BeginFrame();
     EXPECT_FALSE(Next(&filter, object, false).keep);
+}
+
+TEST(ObservationQualityFilter, FormerCatalogAndBlacklistLocationsAreNotDeletionEvidence) {
+    DeliveryConfig config;
+    config.enabled = true;
+    // A recorded guardrail center and an old unconditional artifact rectangle.
+    // An unclassified real obstacle at either location must have the same
+    // evidence-based acquisition as one anywhere else; no positional veto.
+    for (const auto& xy : {std::pair<double, double>{-4.0633, 134.2587},
+                           std::pair<double, double>{-80., -44.}}) {
+        DeliveryFilters filter(config);
+        const auto object = ObjectAt(xy.first, xy.second, 1.0);
+        for (int frame = 0; frame < 3; ++frame) {
+            filter.BeginFrame(true);
+            const auto reason = filter.Exclusion(object, 0., 0., 0., 4.6);
+            EXPECT_EQ(frame < 2 ? "observation_quality:obstacle_confirmation_pending" : "", reason);
+        }
+    }
 }

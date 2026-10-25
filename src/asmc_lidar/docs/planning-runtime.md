@@ -19,20 +19,19 @@
 | CA Kalman 추정과 MotionClassifier | 기존 `tracking/motion_display` 계산 재사용. 동일 scan의 판제용 보정 벡터와4단계 운동 상태를 공용 출력에 연결 |
 | 최종 속도 | `f32_PlannerVxKPH/VyKPH ÷ 3.6`을 scan의 실제 수평화 역변환·장착 회전·map 회전으로 한 번 변환. CAN을 다시 더하지 않음 |
 | 추적 정보 | ID·age·관측 상태, OBB 중심과 별도의 `cluster_center` 유지. 후자는 구 Core/fusion 기준점이며 KF 중심과 같다고 보장하지 않음 |
-| 알려진 고정 시설물 | `filtering/known_static.*`와 배포 catalog로 이식. UNKNOWN-only·중심2.5m·두 적용 구역을 유지 |
-| 설정된 구조물 구역 | `filtering/structure_exclusion.*`로 이식. 기존 구역·분류/운동 보호·높이2.5m/하단2m 유지 |
+| 알려진 고정 시설물 | **새 경로에서 제거**. 과거 기록 중심2.5m 근접만으로 unknown 실제 객체를 삭제할 수 있음. 현재 HD맵·점군 근거로 판단 |
+| 설정된 구조물 구역 | **새 경로에서 제거**. 고정 map 사각형·map Z 조건은 semantic 근거가 아님. 현재 HD맵·base 기준 상부 근거로 판단 |
 | 지면 파편·관측 확인/해제 | `filtering/observation_quality.*`로 이식. 지면 근거·최소 높이0.10m·확인3회/해제5회·기존 근접 예외를 유지 |
 | road mask·OBB clipping | 현재 v7·10cm·점군3점/10% AND OBB10%·상부 필터를 유지. 구 mask와 OBB clipping을 다시 넣지 않음 |
 | 기존 wire·JSON 결합 | 새 경로에서 사용하지 않음. 판제가 공용 추적 관측을 직접 소비 |
 
-포팅한 세 계산의 함수 본문과 임계값은 유지하고 namespace·입출력 타입·include를 정리했다.
-정본은 [현재 YAML](../config/lidar_pipeline.yaml), 원본 파일/SHA·차이는
-[provenance](../config/delivery/provenance.yaml)다. catalog와 구역은 기존 Git 배포 설정을 가져온
-것이며 D/reference나 옛 지도 snapshot을 자동 통합한 것이 아니다. catalog의 기존 map ID·원점·
-출처를 그대로 검사한다. 같은 map ID를 현재 v7 도로 형상과 동일하다는 근거로 사용하지 않는다.
+처음 보존 이식한 세 계산 중 좌표 catalog와 사각 구역 필터는 재검토 후 제거했다. 코드·설정·
+불필요한 catalog 사본도 새 패키지에서 제거했으며 구 Main/복구 경로는 유지한다. 관측 품질의
+기존 함수·임계값은 유지한다. 정본은 [현재 YAML](../config/lidar_pipeline.yaml), 출처와 제거 이유는
+[provenance](../config/delivery/provenance.yaml), 상세는 [필터 소유권](filter-migration.md)다.
 
 현재 최신 YOLO vehicle/dynamic 보호는 이 포팅 필터보다 우선한다. 이는 PR #108의8종
-보호를 유지하기 위한 의도적 차이다. 지도 기반 제외 뒤 시설물·구조물·관측 품질을 평가하며
+보호를 유지하기 위한 의도적 차이다. 지도 기반 제외 뒤 관측 품질을 평가하며
 최종 ID 집합을 local/map·배열·두 관측 타입에 동일하게 적용한다. 원본 점군·OBB·tracker를
 바꾸거나, 제거된 객체를 tracking 삭제로 연결하지 않는다.
 
@@ -102,10 +101,11 @@ bridge·카메라 (각각 별도 실행)
 - `/planning_objects_adapter/diagnostics`에 수신/발행/거부 수와 최근 사유를1Hz로 제공한다.
   기록은 bounded이며 진단을 다시 판제 정본으로 join하지 않는다.
 
-시설물/구역 파일은 시작 때 한 번 검증·로딩하고 reset에서도 준비된 설정을 복사해 사용한다.
-파일 누락/불일치는 해당 필터가 fail-open하며 `delivery_policy_partial`·개별 사유·asset ID를
-진단한다. GPS 무효에서는 모든 map 기반 이식 정책을 멈추고 local을 보존한다. HD맵 제품과
-구 catalog는 독립 근거이므로 HD맵만 불가하다고 유효한 catalog까지 같은 상태로 취급하지 않는다.
+시설물/구역 파일을 로딩하지 않는다. `delivery_policy=observation_quality_only`로 남은 정책을
+진단한다. 도로 안 잡음의 높이/지면 근거와 시간적 확인은 HD맵 안/밖 판정으로 대체되지 않는다.
+기존 최소 두께0.10m보다 얇더라도 지면 위 clearance 근거가 충분하면 보존하고, 확인3회·해제5회를
+유지한다. 예측만으로 재발행하지 않는다. 기존 근접 보존·확정 분류 보존도 유지한다. GPS 무효에서는
+map 기준 품질 이력을 비우고 local을 보존한다. HD맵 누락/무효는 지도 제외를 중단한다.
 
 ## 실행·시험·복구
 
@@ -152,7 +152,7 @@ GUI는 필요할 때 별도로 `roslaunch asmc_lidar view.launch` 후 `http://12
 합성 입력 시험은 이동 객체의 속도 정확도·전체 코스 recall·공동 자율주행 수락이 아니다.
 Hosted CI는 push 후 별도로 확인한다.
 
-2026-10-26 로컬 완료 근거(기능 `dd7a229c`, 카메라 입력 `c508b165`, 표시 `a32a3a97`):
+2026-10-26 최초 연결 완료 근거(시설물/구조물 제거 전, 기능 `dd7a229c`, 카메라 입력 `c508b165`, 표시 `a32a3a97`):
 
 | 검사 | 결과와 범위 |
 |---|---|
@@ -164,6 +164,12 @@ Hosted CI는 push 후 별도로 확인한다.
 | 마지막 typed/표시 회귀 | typed output 13개, 웹 순수 JS68개, 실제 Chrome21개 확인. 무효 운동을 정지로 표시하지 않음 |
 | 문서·계약 | 현재 링크/동결5개/history, launch27개·직접 명령108개, 관련 unittest27개·Main 카메라 소유권4개 통과 |
 | 기본 컨테이너 | outer workspace 전체 재빌드, 새 메시지/실행파일 확인. 운영 bridge/master와 기존 시험 LiDAR·웹은 재시작하지 않음 |
+
+같은 날 후속 정리에서는 고정 시설물/사각 구조물 필터 두 개를 제거하고 **LiDAR/판제 입력
+CTest39/39·필수 gate34/34·직접 ROS 연결16개**를 다시 통과했다. 관측 품질은28개 회귀로
+검사했으며 과거 catalog/blacklist 위치에 있는 unknown도 위치만으로 삭제하지 않음을 포함한다.
+구 Main 복구 분기와 판제 본체·제어 알고리즘은 이 정리에서 변경하지 않았다. CI cache/concurrency는
+YAML·내부 bash 구문을 확인했으며 hosted 실행 시간 개선은 아직 측정하지 않았다.
 
 직접 연결 시험의 scan은 합성 자료다. 실제 전 미션 주행 인수·3뷰 fusion·GPS 없는 터널 속도 및
 벽/천장 품질 수락은 이 결과에 포함하지 않는다. 기존 trial이 `/migration/lidar`로 실행 중이라면

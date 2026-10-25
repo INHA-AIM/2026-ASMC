@@ -688,10 +688,9 @@ class LidarPipelineNode {
       std::lock_guard<std::mutex> lock(stats_mutex_);
       const auto now = camera::steady_now_ns();
       const bool silent = !stats_.last_output_steady_ns || now - stats_.last_output_steady_ns > 1000000000LL;
-      const bool partial = runtime_->delivery_status().find("partial:") == 0;
-      status.level = silent || partial || stats_.input_reason != "valid" ? diagnostic_msgs::DiagnosticStatus::WARN
+      status.level = silent || stats_.input_reason != "valid" ? diagnostic_msgs::DiagnosticStatus::WARN
                                                                : diagnostic_msgs::DiagnosticStatus::OK;
-      status.message = silent ? "input_silence" : partial ? "delivery_policy_partial" : stats_.input_reason;
+      status.message = silent ? "input_silence" : stats_.input_reason;
       number("processed", stats_.processed);
       number("invalid", stats_.invalid);
       number("stamp_errors", stats_.stamp_errors);
@@ -719,7 +718,6 @@ class LidarPipelineNode {
       number("gps_rejected", runtime_->gps_rejected());
       value("last_gps_reason", runtime_->last_gps_reason());
       value("delivery_policy", runtime_->delivery_status());
-      value("delivery_assets_id", config.delivery_assets_id);
       value("camera_fusion", camera_ ? "enabled" : config.enable_camera_fusion ? "lidar_only" : "disabled");
       value("camera_active", stats_.camera_active ? "true" : "false");
       value("camera_reason", camera_ ? stats_.camera_reason : camera_reason_);

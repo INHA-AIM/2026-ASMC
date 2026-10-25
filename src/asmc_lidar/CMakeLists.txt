@@ -174,8 +174,6 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     PROPERTIES COMPILE_OPTIONS "-w")
 
   add_library(asmc_lidar_runtime STATIC
-    src/filtering/known_static.cpp
-    src/filtering/structure_exclusion.cpp
     src/filtering/observation_quality.cpp
     src/ros/runtime_config.cpp
     src/ros/typed_output.cpp
@@ -234,8 +232,6 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_source_time test/pipeline/test_source_time.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_pipeline test/pipeline/test_pipeline.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_motion_display test/pipeline/test_motion_display.cpp)
-    lidar_pipeline_gtest(asmc_lidar_test_known_static test/pipeline/test_known_static.cpp)
-    lidar_pipeline_gtest(asmc_lidar_test_structure_exclusion test/pipeline/test_structure_exclusion.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_observation_quality test/pipeline/test_observation_quality.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_stage_observer test/pipeline/test_stage_observer.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_typed_output test/runtime/test_typed_output.cpp)
