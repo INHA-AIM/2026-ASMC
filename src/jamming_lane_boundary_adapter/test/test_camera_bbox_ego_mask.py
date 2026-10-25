@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 import unittest
 import rostest
-from test_camera_bbox_lane import BboxLaneTest
-from Msg.msg import Yolo_bbox
+from test_camera_bbox_lane import BboxLaneTest, camera_box
 from lane_boundary_adapter.msg import CameraBBoxLaneResult as Result
 
 
@@ -12,7 +11,7 @@ class EgoMaskTest(unittest.TestCase):
     feed = BboxLaneTest.feed
 
     def test_occluded_contact_is_retained_as_unknown(self):
-        self.feed([Yolo_bbox(480, 450, 800, 715, 'car')])
+        self.feed([camera_box(480, 450, 800, 715, 'car')])
         self.assertFalse(self.result.valid)
         self.assertEqual(self.result.reason, "some_boxes_unclassified")
         self.assertEqual(list(self.result.assignments), [Result.UNKNOWN])

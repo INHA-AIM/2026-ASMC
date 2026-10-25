@@ -54,21 +54,10 @@ jobs:
           catkin_make planning_filter_test
           ./devel/lib/planning_inputs/planning_filter_test
 
-      - name: Build legacy camera message dependency for runtime launch
-        run: |
-          source /opt/ros/noetic/setup.bash
-          source devel/setup.bash
-          # The full launch includes the legacy camera BBOX bridge importing Msg.
-          # Jobs have isolated workspaces; the LiDAR job's Msg build is unavailable here.
-          cd src/lidar+sensorfusion
-          catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=OFF -DCATKIN_WHITELIST_PACKAGES='Msg'
-
       - name: Check real ROS planning input boundary
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
-          source src/lidar+sensorfusion/devel/setup.bash
-          python3 -c "from Msg.msg import Yolo_bbox_arr; print('Legacy camera Msg import OK')"
           python3 src/planning_inputs/test/ros_boundary_smoke_test.py
 
   validated-lidar-build:
@@ -94,7 +83,7 @@ jobs:
           source /opt/ros/noetic/setup.bash
           # morai_msgs lets asmc_lidar build its required shadow targets, so nested Main is
           # built and tested against the same asmc_lidar underlay as a full workspace build.
-          catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='asmc_msgs;asmc_lidar;asmc_camera;morai_msgs' -DASMC_LIDAR_PIPELINE_REQUIRED=ON
+          catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='asmc_msgs;asmc_lidar;asmc_camera;morai_msgs;planning_inputs' -DASMC_LIDAR_PIPELINE_REQUIRED=ON
           source devel/setup.bash
           cd src/lidar+sensorfusion
           catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=ON -DCATKIN_WHITELIST_PACKAGES='Main;Msg;morai_msgs'
@@ -103,6 +92,13 @@ jobs:
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
           python3 src/asmc_lidar/test/pipeline_ci_check.py --devel devel --dependent-build src/lidar+sensorfusion/build
+      - name: Check direct common LiDAR planning input without Main wire
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          catkin_make planning_lidar_observation_test -j2 -l2
+          devel/lib/planning_inputs/planning_lidar_observation_test
+          python3 src/planning_inputs/test/common_lidar_ros_test.py
       - name: Run validated LiDAR regressions
         run: |
           source /opt/ros/noetic/setup.bash

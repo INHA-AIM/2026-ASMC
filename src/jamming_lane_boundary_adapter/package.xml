@@ -18,8 +18,6 @@
   <depend>libssl-dev</depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
-  <exec_depend>Msg</exec_depend>
-  <exec_depend>Main</exec_depend>
   <exec_depend>asmc_camera</exec_depend>
   <depend>asmc_msgs</depend>
   <depend>diagnostic_msgs</depend>

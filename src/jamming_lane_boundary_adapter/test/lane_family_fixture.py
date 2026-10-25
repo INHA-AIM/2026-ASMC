@@ -36,3 +36,14 @@ def family(curve=0.0, shift=0.0, gap=False, inferred=False, stop_x=15.0):
             member.support_state.append(state)
         msg.boundaries.append(member)
     return msg
+def camera_box(xmin, ymin, xmax, ymax, label='car'):
+    from asmc_msgs.msg import CameraObjectBox
+    return CameraObjectBox(xmin=xmin,ymin=ymin,xmax=xmax,ymax=ymax,
+                           class_name=label,source_class_name=label,
+                           confidence=.9,confidence_valid=True)
+
+
+def camera_boxes(header, boxes=(), valid=True):
+    from asmc_msgs.msg import CameraObjectBoxArray
+    return CameraObjectBoxArray(header=header,image_width=1280,image_height=720,
+                                valid=valid,boxes=list(boxes))
