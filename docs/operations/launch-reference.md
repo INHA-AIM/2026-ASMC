@@ -22,6 +22,7 @@
 | `lidar_rotation_rate` | `15.0` | v3/GT assembly reference Hz; sensor rate is set in MORAI |
 | `cmd_ip` | `$(optenv MORAI_CMD_IP 127.0.0.1)` | — |
 | `cmd_port` | `9093` | — |
+| `invert_steer` | `false` | Transport steering sign; AIM06 R1.H3 verified with true, team default retained |
 | `competition_port` | `9798` | — |
 | `competition_status_required` | `false` | — |
 | `enable_vehicle_state` | `true` | — |
@@ -47,6 +48,7 @@
 | `cmd_ip` | `127.0.0.1` | — |
 | `cmd_port` | `9093` | — |
 | `max_steer_deg` | `40.0` | — |
+| `invert_steer` | `false` | Preserve team default; current AIM06 R1.H3 requires true, verified against vehicle yaw |
 | `timestamp_mode` | `receive` | — |
 
 ## Sensor bridge component

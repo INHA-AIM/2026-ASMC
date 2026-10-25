@@ -394,6 +394,19 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             )
             generated_document = json.loads(output_path.read_text(encoding="utf-8"))
             _validate_generated_ips(generated_document, release, transport, contract)
+            generated_ctrl = _ctrl_entry(generated_document)
+            import_config = generated_ctrl["EgoCtrlConfig"]
+            import_udp = import_config["udpConfig"]
+            _require(
+                generated_ctrl["PUBSUB_TYPE"] == 771
+                and import_config["commType"] == 1
+                and import_config["egoCtrlMode"] == (3 if release == "26r1" else 2)
+                and import_udp["receiveBufferSize"] == (59 if release == "26r1" else 55),
+                f"{release}/{transport} must select MoraiCmdController, not TrajectoryTrackingCmd",
+            )
+            if release == "26r1":
+                _require(import_config["_PUBSUB_TYPE"] == 771,
+                         "26r1 explicit control selection is missing")
             ego_entries = [
                 entry
                 for entry in _network_entries(generated_document)
@@ -705,7 +718,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "canonical_launch": "asmc_bridge/bridge.launch",
         "packages": implementation["packages"],
         "published_topic_count": len(implementation["published_topics"]),
-        "ctrl": "9093/9094 mode 2",
+        "ctrl": "9093/9094 mode 2",  # UDP AutoMode byte, not import egoCtrlMode.
         "ego_status": "9088/9099",
         "competition_status": "9797/9798 type 787; local optional, field gate pending",
         "lidar_frame_mode": composition["lidar_frame_mode"],

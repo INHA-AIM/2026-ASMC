@@ -114,6 +114,50 @@ runtime을 별도 프로토콜로 나누는 것과 다르며 옛 enum 숫자로 
 같은23바이트 제어의 D·브레이크1.0·조향0.1 적용을 확인했다. UDP send 성공/20Hz만으로
 시뮬레이터가 명령을 수락했다고 표시하지 않는다.
 
+추가로 **제어 종류의 불일치와 조향 부호 불일치는 별개 문제**였다. 현재 PC의 R1.H3·IONIQ5에서
+기존 `invert_steer=false`는 좌회전 양수 MPC 명령을 실제 우회전으로 적용했다. 같은 경로 시작점과
+새 LiDAR 입력을 유지한 제한 시험은3.67초·11.82m에서 횡오차0.8831m로 중단했다. ROS 명령과
+차량 yaw 변화를 함께 확인했고, 제어기 알고리즘·지도 필터·장애물 임계값은 수정하지 않았다.
+
+현재 PC의 수정은 bridge 송신 경계에서 **좌회전 양수 rad → 우회전 양수 정규값**으로 한 번
+반전하는 것이다. **AIM06 R1.H3는 `invert_steer:=true`**, 공용 기본값은 기존 false를 유지한다.
+Git `f84a62ce`(2026-09-02)에 팀원의 false 주행 확인 기록이 있어, 대회용 실행판도 같은 응답이라고
+가정하지 않는다. `/ctrl_cmd/normal`, `/ctrl_cmd/jamming`과 MPC bicycle model의 좌회전 양수
+계약은 유지한다. ROS WebSocket은 이 UDP 인코더를 거치지 않는다. 다른 PC의 정상 주행과 비교할 때
+release·차량40도 조향 한계·통신 방식·bridge revision/설정을 함께 확인한다.
+다른 PC도 동일 증상이라고 단정하거나 제어기 부호를 함께 뒤집지 않는다.
+
+```bash
+./scripts/udp_bridge.sh invert_steer:=true
+```
+
+임시 송신기에 동일 부호 수정을 적용한 후 첫 대조는5.30초·25.05m, 최대 횡오차0.0536m였다.
+추가 계측 대조는16.00초·106.64m의 직선·곡선에서158개 조회 표본 모두 plan_valid=true,
+최대 횡오차0.0972m, LiDAR source age 최대109.6ms·판제 객체 수신 age 최대105.2ms였다.
+해당 구간의 전달 객체는 정상 빈 배열이므로 장애물 회피·추적 속도 품질을 검증한 시험은 아니다.
+이 단계는 임시 송신기의 후보 대조이며 운영 bridge 적용 결과와 구분한다.
+
+이후 사용자 승인으로 `/morai_udp_bridge`만 `invert_steer:=true`로 재시작하고, 임시 송신기의
+추가 반전을 제거해 실제 bridge를 검증했다. 같은 시작점의16.00초·107.00m에서158개 조회 표본
+모두 plan_valid=true, 최대 횡오차0.1235m, 최대 LiDAR source age114.5ms·판제 객체 수신
+age109.5ms였다. 센서 bridge·카메라·LiDAR·master는 유지했고, 생성한 시험 판제만 종료한 뒤
+Keyboard/P와 `/ctrl_cmd` 발행자0을 확인했다. 해당 PC의 직접 명령은 위 true override를 사용한다.
+
+연장 대조 중 별도1회는2.85초에 `ego/object input is not fresh`로 정지했다. 이 실행은 당시
+입력별 계측이 없어 차량 상태와 LiDAR 중 어느 입력인지 확정하지 못했다. 이후 계측 대조의 성공이
+그 실패를 면제하지 않는다. 입력 중단 재현 시 `/planning/vehicle/state`와 `/perception/lidar/tracks_map`,
+`/planning/objects`, 어댑터 diagnostics의 시각·유효성·탈락 사유를 함께 확인하며 timeout을 늘리거나
+센서 무효를 정상 빈 결과로 바꾸지 않는다.
+
+네트워크 파일의 release별 제어 선택은 [MORAI 설정표](../../config/morai/README.md#network-export-차이)가
+정본이다. 26R1 생성본은 type786→771, import `egoCtrlMode`2→3으로 수정했고 MolitComp03의
+type771·import mode2는 유지했다. 두 경우 모두 UDP payload CtrlMode는2다. 현재 PC 저장본과
+소스 template의 SHA를 구분해 계약에 보존했다. Windows SaveFile의 옛 복사본은 자동 갱신되지 않는다.
+
+`/morai_udp_bridge/diagnostics`의 cmd 항목에 실제 로딩한 `cmd_ip`, `cmd_port`, `cmd_bytes`,
+`max_steer_deg`, `invert_steer`가 포함된다. 이 값은 해당 프로세스가 사용하는 값이며,
+`rosparam set`만으로 이미 초기화된 인코더가 바뀌지 않는다. 변경 적용에는 제어 bridge의 재시작이 필요하다.
+
 정차·종료는 **autonomy/명령 발행부터 종료 → 키보드 제어·속도0·P 확인** 순서다.
 브릿지는 각 Ctrl 패킷에 Auto2·D4를 포함하므로 발행자가 계속 살아 있으면 기어/모드만
 수동 변경한 상태가 다음 명령으로 덮어써질 수 있다. camera/lidar/view는 구동 명령을 발행하지 않는다.

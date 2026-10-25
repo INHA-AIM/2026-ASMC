@@ -16,6 +16,7 @@
   <arg name="cmd_ip"         default="127.0.0.1"/>
   <arg name="cmd_port"       default="9093"/>   <!-- Ego Ctrl Cmd Host (SIM listen) -->
   <arg name="max_steer_deg"  default="40.0"/>
+  <arg name="invert_steer" default="false" doc="Preserve team default; current AIM06 R1.H3 requires true, verified against vehicle yaw"/>
   <arg name="timestamp_mode" default="receive"/>
 
   <node pkg="asmc_bridge" type="morai_udp_bridge.py"
@@ -38,7 +39,9 @@
     <param name="max_steer_deg"      value="$(arg max_steer_deg)"/>
     <param name="timestamp_mode"     value="$(arg timestamp_mode)"/>
     <param name="cmd_payload_bytes"  value="23"/>
-    <param name="invert_steer"       value="false"/>
+    <!-- Sign is verified for the actual simulator/vehicle/transport. Current
+         AIM06 R1.H3 uses true; do not also reverse MPC or camera follower signs. -->
+    <param name="invert_steer"       value="$(arg invert_steer)"/>
     <param name="ego_velocity_in_ms" value="true"/>
     <param name="frame_id"           value="base_link"/>
   </node>

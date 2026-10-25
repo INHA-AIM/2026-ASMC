@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import math
 import os
 import struct
 import sys
@@ -55,6 +56,36 @@ class VehicleStatusPacketTest(unittest.TestCase):
             MODULE.decode_vehicle_status_packet(packet)
 
 
+class ControlPacketTest(unittest.TestCase):
+    def test_ros_left_positive_steering_encodes_as_morai_negative(self):
+        for size in (23,27):
+            for angle, expected in ((10,-.25),(-10,.25),(90,-1),(-90,1),(0,0)):
+                with self.subTest(payload=size, ros_degrees=angle):
+                    bridge=MODULE.MoraiUdpBridge.__new__(MODULE.MoraiUdpBridge)
+                    bridge.max_steer_deg=40.0
+                    bridge.invert_steer=True
+                    bridge.cmd_bytes=size
+                    bridge.cmd_ip='127.0.0.1'
+                    bridge.cmd_port=9093
+                    bridge.cmd_sock=mock.Mock()
+                    bridge.telemetry=MODULE.BridgeTelemetry()
+                    bridge.telemetry.register('cmd',transmit=True)
+                    msg=SimpleNamespace(steering=math.radians(angle),longlCmdType=1,
+                                        velocity=0.0,acceleration=0.0,accel=.2,brake=0.0)
+                    bridge.on_ctrl_cmd(msg)
+                    packet,address=bridge.cmd_sock.sendto.call_args[0]
+                    self.assertEqual(address,('127.0.0.1',9093))
+                    start=len(MODULE.CMD_HDR)
+                    self.assertEqual(struct.unpack('<i',packet[start:start+4])[0],size)
+                    values=struct.unpack(MODULE.CMD_FMT_23 if size==23 else MODULE.CMD_FMT_27,
+                                         packet[start+16:-2])
+                    self.assertEqual(values[:3],(2,4,1))
+                    self.assertAlmostEqual(values[7],expected)
+                    self.assertAlmostEqual(values[5],.2,places=6)
+                    self.assertEqual(values[6],0.0)
+                    self.assertEqual(packet[-2:],b'\r\n')
+
+
 class InputRequirementTest(unittest.TestCase):
     def test_competition_status_is_optional_by_default(self):
         self.assertFalse(MODULE.input_required("competition"))
@@ -88,6 +119,24 @@ class InputRequirementTest(unittest.TestCase):
 
 
 class ReportingStatusTest(unittest.TestCase):
+    def test_control_diagnostics_include_loaded_transport_and_steering(self):
+        telemetry = MODULE.BridgeTelemetry()
+        telemetry.register('cmd', transmit=True)
+        owner = SimpleNamespace(telemetry=telemetry, _health={},
+            _next_console=float('inf'), reporter=SimpleNamespace(failures=0),
+            runtime_profile='morai_udp', transport_profile='local',
+            stream_profile='competition', timestamp_mode='receive',
+            cmd_ip='127.0.0.1', cmd_port=9093, cmd_bytes=23,
+            max_steer_deg=40.0, invert_steer=True, pub_diagnostics=mock.Mock())
+        with mock.patch.object(MODULE.rospy.Time, 'now', return_value=MODULE.rospy.Time(1)):
+            MODULE.publish_report(owner, 'morai_udp_bridge')
+        status = owner.pub_diagnostics.publish.call_args[0][0].status[0]
+        values = {value.key: value.value for value in status.values}
+        self.assertEqual(values['invert_steer'], 'true')
+        self.assertEqual(values['cmd_ip'], '127.0.0.1')
+        self.assertEqual(values['cmd_port'], '9093')
+        self.assertEqual(values['cmd_bytes'], '23')
+
     def test_send_failure_is_visible_then_idle_recovery_preserves_history(self):
         telemetry = MODULE.BridgeTelemetry()
         telemetry.register('cmd', transmit=True)

@@ -9,9 +9,13 @@
 
 파일 로드 뒤에는 **Network Settings의 Cmd Control 표시 이름이 `MoraiCmdController`인지**
 확인한다. `TrajectoryTrackingCmd`는 다른 제어 프로토콜이며 포트가9093으로 같아도 현재
-`/ctrl_cmd` 패킷을 소비하지 않는다. 2026-10-26 실제 UI에서 이 불일치를 확인하고 local
-MoraiCmdController·9093/9094로 재연결해 브레이크/조향 적용을 확인했다. 이 수정은 현재
-시뮬레이터 설정에 적용한 것이며 raw template·enum을 검수 없이 다시 쓰지 않았다.
+`/ctrl_cmd` 패킷을 소비하지 않는다. 2026-10-26 실제 UI와 현재 PC 저장본을 대조해
+26R1 생성본의 제어 선택을 수정했다. `templates/`의 과거 export는 출처로 보존하고,
+`bridge_profiles_v1.json`의 `control_import`가 검증된 제어 선택만 적용한다.
+기존에 Windows SaveFile로 복사한 JSON은 저장소 수정으로 자동 갱신되지 않는다.
+새 `generated/` 파일을 불러온 뒤 실제 드롭다운 이름·포트·연결 상태를 다시 확인한다.
+2026-10-26에는 현재 PC의 `SaveFile/Network/26.R1.H3`에 있는 생성본4개도 저장소와
+바이트 일치를 확인했다. 과거 원본 export는 수정하지 않았으며, 이 복사는 다른 PC에 자동 전파되지 않는다.
 실제 응답 확인과 정지 순서는 [판제 실행 안내](../../docs/operations/planning-control.md#morai-제어-프로토콜과-정지-순서)를 따른다.
 
 현장 정본 조합은 `molitcomp03 + lan2lan`이다. 두 release의 import schema와
@@ -51,15 +55,39 @@ python3 tools/bridge/render_morai_sensor_profiles.py --check
 
 ## Network export 차이
 
-release JSON은 단순 IP 변형이 아니다. 팀이 26r1 UI에서 저장한 v2 export는 23개 entry,
-MolitComp local dev export는 12개 entry다. Ctrl도 각각 type 786/771이고 Ego status는
-type 770/295다. renderer는 release별 template을 유지하면서 Ctrl을 `9093/9094 mode 2`, Ego를
-`9088/9099`로 정규화한다. bridge binary와 ROS topic은 하나로 유지한다.
+release JSON은 단순 IP 변형이 아니다. 팀이 26r1 UI에서 저장한 과거 v2 export는 23개 entry,
+MolitComp local dev export는 12개 entry다. 과거 26R1의 type786은 TrajectoryTrackingCmd로,
+현재 UDP bridge와 맞지 않았다. 생성본은 두 release 모두 type771 MoraiCmdController를 사용한다.
+Ego status의 type770/295와 나머지 release별 schema는 유지한다.
+
+| 제어 설정 | 26.R1.H3 생성본 | 25.S4.MolitComp03 생성본 |
+|---|---|---|
+| Cmd Control | MoraiCmdController (`PUBSUB_TYPE=771`) | MoraiCmdController (`PUBSUB_TYPE=771`) |
+| import의 `egoCtrlMode` | 3 (현재 PC UI 저장본으로 확인) | 2 (기존 팀/주최 import 계약) |
+| import의 `receiveBufferSize` | 59 | 55 |
+| Host/Destination PORT | 9093/9094 | 9093/9094 |
+| UDP payload의 CtrlMode | 2=AutoMode | 2=AutoMode |
+
+import 선택값과 UDP payload의 AutoMode 바이트는 서로 다른 enum이다. 이를 같은 숫자로
+일괄 정규화하지 않는다. 현재 bridge는 검증된23바이트 payload(전체55B)를 유지한다.
+26R1의 조향·제동 수락은 현재 PC에서 확인했으며 대회용 실행판에서의 차량 응답 확인은 별도다.
+ROS 메시지·bridge runtime을 release별로 나누지 않는다.
+
+ROS 조향은 좌회전 양수 rad다. 2026-10-26 현재 AIM06의 R1.H3·IONIQ5·UDP 대조에서는
+`invert_steer=false`가 반대 yaw 응답을 내어 **이 PC에서 `invert_steer:=true`를 사용**한다.
+팀원이2026-09-02 false로 주행을 확인한 이력(`f84a62ce`)도 있으므로, 팀 공용 기본값 false를
+일괄 변경하거나 대회용 실행판도 동일 부호라고 가정하지 않는다. 최대40도와 변환 경계는 유지한다.
+다른 PC와의 차이는 release·차량·통신 방식·실행 binary/설정으로 대조한다. ROS WebSocket은
+이 UDP 변환을 거치지 않는다. 현재 PC 실행은 다음과 같으며, 이미 실행한 bridge와 중복 시작하지 않는다.
+
+```bash
+./scripts/udp_bridge.sh invert_steer:=true
+```
 
 주최 PC MolitComp network의 10개 type은 팀 local dev의 공통 부분이며, 팀 dev에만 type 266
 SensorSync와 type 783 MoraiSL subscriber가 더 있다. 이 둘은 LAN으로 승격하지 않는다. 두
 MolitComp 원본에서 공통 entry의 종류 차이는 없고, 설정 차이는 TF2(type 267)의 network 활성
-상태와 Ctrl mode(주최 2, 팀 원본 1)다. 생성기는 Ctrl만 mode 2로 정규화한다.
+상태와 Ctrl mode(주최 2, 팀 원본 1)다. MolitComp 생성기는 Ctrl을 mode2로 정규화한다.
 
 type 787 `9797→9798`이 Competition Vehicle Status이고 MolitComp에만 있다. type 258
 `7603→7502`는 연속 송신형 TrafficLight Status publisher다. 이것은

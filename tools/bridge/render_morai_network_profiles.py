@@ -50,6 +50,7 @@ def render_profile(
     morai_ip = transport_data["morai_ip"]
     autonav_ip = transport_data["autonav_ip"]
     channels = contract["channels"]
+    controller = contract["network_templates"][release].get("control_import", {})
     field_transport = transport == "lan2lan"
     default_morai_ip = "127.0.0.1" if field_transport else morai_ip
     default_autonav_ip = "127.0.0.1" if field_transport else autonav_ip
@@ -78,7 +79,18 @@ def render_profile(
             ctrl = entry["EgoCtrlConfig"]
             udp = ctrl["udpConfig"]
             _rewrite_udp_ips(ctrl, morai_ip, autonav_ip)
-            ctrl["egoCtrlMode"] = channels["ego_ctrl_cmd"]["ctrl_mode"]
+            # Import selection enums are release-specific and are unrelated
+            # to the AutoMode byte (2) in a #MoraiCtrlCmd$ UDP payload. The
+            # retained R1 source export selected TrajectoryTrackingCmd (786).
+            # Apply the verified MoraiCmdController selection without rewriting
+            # that historical source/template or unrelated network entries.
+            if controller:
+                entry["PUBSUB_TYPE"] = controller["pubsub_type"]
+                ctrl["_PUBSUB_TYPE"] = controller["pubsub_type"]
+                udp["receiveBufferSize"] = controller["receive_buffer_size"]
+            ctrl["egoCtrlMode"] = controller.get(
+                "ego_ctrl_mode", channels["ego_ctrl_cmd"]["ctrl_mode"]
+            )
             udp["hostPort"] = channels["ego_ctrl_cmd"]["host_port"]
             udp["destinationPort"] = channels["ego_ctrl_cmd"]["destination_port"]
             ctrl_found = True
