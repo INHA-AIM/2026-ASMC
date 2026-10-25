@@ -65,7 +65,7 @@ A1.1의 내부 설정이 `audit`일 때만 `hd_map_audit` 블록을 추가한다
 - `preview.support_points/road_points/guard_points/unknown_points/road_point_ratio`:
   화면 샘플이 아닌 객체 전체 cluster support의 지도 관계. voxel 이전 원본 점 비율은 아니다.
 - `preview.interior_road_points/interior_road_ratio`: 도로 합집합 바깥을 inset한 내부의 support 수/전체 비율.
-  기존 road_points/road_point_ratio는 원래 도로 기준이다. v3 유지는 내부3점 이상 AND5% 이상이다.
+  기존 road_points/road_point_ratio는 원래 도로 기준이다. v3 유지는 내부3점 이상 AND10% 이상이다.
 - report의 `road_inset_m`은 격자로 올림한 실제 적용 여유(기본0.2m), `road_support_rule`은 count_and_ratio다.
 - `preview.min_support_base_z/obb_bottom_base_z/roof_limit_base_z`: `base_link` 높이. 근거가 없으면 null.
 - `preview.camera_dynamic_protected/camera_vehicle_protected/camera_known`: 같은 fusion consumer epoch의 최신 양성 연결 근거.

@@ -176,8 +176,8 @@ hd_map_audit:
     roof_margin_m: 0.60
     minimum_points: 10
     minimum_road_points: 3
-    minimum_road_ratio: 0.05
+    minimum_road_ratio: 0.10
     # Compare original road support with its union inset by one 0.2m grid cell.
-    # KEEP requires BOTH >=3 inset-road points AND >=5% of full cluster support.
+    # KEEP requires BOTH >=3 inset-road points AND >=10% of full cluster support.
     road_inset_m: 0.20
     camera_age_ms: 500.0

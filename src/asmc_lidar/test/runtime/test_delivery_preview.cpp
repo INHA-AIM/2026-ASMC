@@ -10,9 +10,10 @@ TEST(DeliveryPreview, CameraDynamicProtectedOutsideAndWithoutGps){for(bool gps:{
 TEST(DeliveryPreview, CameraVehicleProtectedOutsideAndWithoutGps){for(bool gps:{false,true}){auto d=Base();auto e=Points();ApplyDeliveryPreview(d,e,Policy(),gps,"vehicle",.1);EXPECT_EQ(d.decision,"keep");EXPECT_TRUE(d.camera_vehicle_protected);EXPECT_FALSE(d.camera_dynamic_protected);EXPECT_EQ(d.preview_reason,"camera_vehicle_protected");}}
 TEST(DeliveryPreview, InteriorSupportRequiresBothCountAndRatio) {
   for(const auto& counts:std::vector<std::array<std::size_t,3>>{
-      {100,3,0},{100,3,3},{100,5,5},{20,1,1},{20,3,3},{736,8,8},{736,40,40}}) {
+      {100,3,0},{100,3,3},{100,5,5},{100,9,9},{100,10,10},
+      {20,1,1},{20,3,3},{736,8,8},{736,40,40},{736,74,74}}) {
     auto d=Base();auto e=Points();e.total=e.finite=counts[0];e.road=counts[1];e.interior_road=counts[2];
-    const bool keep=e.interior_road>=3&&double(e.interior_road)/e.total>=.05;
+    const bool keep=e.interior_road>=3&&double(e.interior_road)/e.total>=.10;
     ApplyDeliveryPreview(d,e,Policy(),true,"unknown",.1);
     EXPECT_EQ(d.point_preview,keep?"keep":"exclude_candidate");
     EXPECT_EQ(d.preview_decision,keep?"keep":"exclude_candidate");

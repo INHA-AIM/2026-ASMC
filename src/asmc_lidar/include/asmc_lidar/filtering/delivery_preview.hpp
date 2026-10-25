@@ -15,7 +15,7 @@ struct DeliveryPolicy {
   std::size_t minimum_points=10, minimum_road_points=3;
   // Both minimum count and fraction must be met in the inset road mask.
   // The original road count remains available for comparison; no map is edited.
-  double minimum_road_ratio=0.05, road_inset_m=0.20, camera_age_ms=500;
+  double minimum_road_ratio=0.10, road_inset_m=0.20, camera_age_ms=500;
 };
 bool PositiveCameraEvidence(std::int64_t scan_ns, std::uint64_t observation_ns,
                             std::uint64_t active_epoch, std::uint64_t observation_epoch,
