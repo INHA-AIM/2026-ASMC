@@ -856,6 +856,11 @@ private:
     //
     // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
     AvoidRoadMap avoid_road_map_;
+    // Physical solid-paint contact belongs to the vehicle, not a local AVOID
+    // trajectory; replanning and maneuver changes must not restart its clock.
+    bool solid_paint_contact_active_ = false;
+    std::chrono::steady_clock::time_point solid_paint_contact_started_at_{};
+    double solid_paint_contact_elapsed_s_ = 0.0;
     RoundaboutMergeConfig roundabout_merge_cfg_;
     RoundaboutMergeZone roundabout_zone_;
     double roundabout_preferred_d_ = 0;
@@ -901,6 +906,11 @@ private:
         // 점유폭이 아니다. 현재 ref 접선/법선에 투영한 실제 반폭을 보존한다.
         double obstacle_lateral_half_extent = 0.0;
         double obstacle_longitudinal_half_extent = 0.0;
+        // Last perception-sourced OBB for a committed static target.  A tracker
+        // blackout must not remove the obstacle from collision checks while
+        // its AVOID transaction is still active.
+        TrackedObject last_static_target{};
+        bool has_last_static_target = false;
         double target_d = 0.0;
 
         // 대상의 일시적 미관측 누적. PREPARE와 COMMIT 후 TRACKING에서
@@ -925,6 +935,10 @@ private:
         // blocked side; explicit FSM direction/pose remains authoritative.
         double map_lateral_origin_d = 0.0;
         bool map_lateral_started = false;
+        // A blocked, still-straight committed bypass may choose the other
+        // checked side once.  Further flips while moving undo the lateral
+        // progress and can leave the vehicle stopped beside the obstacle.
+        bool map_side_reselected = false;
         // Enumeration progress only: no unchecked path/geometry crosses cycles.
         std::size_t map_search_cursor = 0;
         std::size_t map_reconnection_cursor = 0;
@@ -1280,6 +1294,10 @@ private:
     EmergencyStopConfig emergency_stop_cfg_{};
     MergeConfig merge_cfg_{};
     HighwayMergeConfig highway_merge_cfg_{};
+    // KEEP remains the external command; a checked STOP may temporarily hold
+    // it at a highway conflict frontier while the measured merge gap is unsafe.
+    double highway_merge_checkpoint_s_ = -1.0;
+    int highway_merge_safe_count_ = 0;
     PlannerVisualizationConfig visualization_cfg_{};
     ObjectTrackingConfig object_tracking_cfg_{};
     std::unique_ptr<PlannerDebugWriter> debug_writer_;

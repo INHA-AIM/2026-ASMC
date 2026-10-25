@@ -146,8 +146,16 @@ def analyze(directory):
                             feedback.trajectory_source==feedback.TRAJECTORY_NEW and bool(trajectory.points) and
                             abs(trajectory.points[-1].velocity)<=.01 and
                             all(math.isfinite(p.velocity) and p.velocity>=-.01 for p in trajectory.points))
+                        avoid_waiting=(command.maneuver_type==command.AVOID and
+                            command.execution_request in (command.PREPARE,command.EXECUTE) and
+                            not row['signal']['enabled'] and not row['recovery_release'] and row['brake_level']==0 and
+                            feedback.execution_state in (feedback.PREPARING,feedback.WAITING) and
+                            feedback.result_code==feedback.RESULT_NONE and
+                            feedback.trajectory_source==feedback.TRAJECTORY_NEW and len(trajectory.points)>=2 and
+                            abs(trajectory.points[-1].velocity)<=.01 and
+                            all(math.isfinite(p.velocity) and p.velocity>=0 for p in trajectory.points))
                         valid=(feedback.command_accepted and feedback.command_id==command.command_id and
-                            feedback.active_maneuver==command.maneuver_type and (feedback.plan_valid or hold or waiting) and
+                            feedback.active_maneuver==command.maneuver_type and (feedback.plan_valid or hold or waiting or avoid_waiting) and
                             trajectory.valid and trajectory.failure_reason==0 and bool(trajectory.points) and
                             feedback.trajectory_source in (feedback.TRAJECTORY_NEW,feedback.TRAJECTORY_LOCKED))
                         plans.append(dict(token=row['token'],planner_epoch=row['planner_epoch'],

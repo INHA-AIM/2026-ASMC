@@ -10,9 +10,11 @@ from scen_runner.runtime.validation_episode import EpisodeController
 
 
 class SignalTrialScenario:
-    def __init__(self, link, route, seed, lease, emit):
+    def __init__(self, link, route, seed, lease, emit, section=None):
         self.link, self.route, self.emit = link, route, emit
-        self.episode = EpisodeController(link, route, seed=seed, lease=lease)
+        self.episode = EpisodeController(link, route,
+            mode='section' if section else 'scene', section=section or 'static',
+            seed=seed, lease=lease)
         # Every section creates its own connection. Use the endpoint of this
         # trial, not a possibly different optional workstation configuration.
         self.episode.base['morai'].update(host=link.host, port=link.port)

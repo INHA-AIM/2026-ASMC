@@ -71,8 +71,9 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     const double clearance=front+v2_avoidance_.obstacle_longitudinal_half_extent+collision_cfg_.safety_margin;
     const double crawl=std::min(speed,avoid_cfg_.bypass_speed_cap);
     const double dt=path_cfg_.dt;
-    const bool initial_inside=avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,vehicle_shape_);
-    VehicleShape settled_shape=vehicle_shape_;
+    const VehicleShape map_shape=vehicle_shape_;
+    const bool initial_inside=avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,map_shape);
+    VehicleShape settled_shape=map_shape;
     settled_shape.width+=.10;settled_shape.length+=.10;settled_shape.rear_overhang+=.05;
     const bool initial_settled=avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,settled_shape);
     if(v2_avoidance_.map_recovery_active){
@@ -92,7 +93,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         v2_avoidance_.map_recovery_travel_m=0;
         v2_avoidance_.map_recovery_settled_travel_m=0;
         v2_avoidance_.map_recovery_overlap_limit_m=std::min(.35,
-            avoid_road_map_.FootprintOverlapDepth(ego.x,ego.y,ego.yaw,vehicle_shape_)+.10);
+            avoid_road_map_.FootprintOverlapDepth(ego.x,ego.y,ego.yaw,map_shape)+.10);
     }
     const double recovery_budget=std::max(0.0,6.0-v2_avoidance_.map_recovery_travel_m);
     const double decel=limits_.max_longitudinal_accel*.8;
@@ -102,7 +103,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     if(committed&&std::fabs(d-v2_avoidance_.map_lateral_origin_d)>=.20)
         v2_avoidance_.map_lateral_started=true;
     const bool may_retime=committed&&!returning&&!v2_avoidance_.map_lateral_started&&gap>clearance+4.0;
-    const bool may_reselect_side=may_retime&&static_confirmed&&
+    const bool may_reselect_side=may_retime&&!v2_avoidance_.map_side_reselected&&static_confirmed&&
         (execution_->avoid.phase==AvoidPhase::TRACKING||execution_->avoid.phase==AvoidPhase::SHIFT)&&
         !v2_avoidance_.has_requested_target_d&&
         execution_->avoid.requested_direction==LateralDirection::NONE&&
@@ -249,8 +250,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                 if(i&&(std::fabs(continuation.v[i]-continuation.v[i-1])/dt>limits_.max_longitudinal_accel+1e-6||
                        std::fabs(continuation.a[i]-continuation.a[i-1])/dt>limits_.max_longitudinal_jerk+1e-6))kinematic=false;
             }
-            const auto road=avoid_road_map_.EvaluateRecoveryPath(continuation,vehicle_shape_,dt,
-                recovery_budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,v2_avoidance_.map_recovery_settled_travel_m);
+            const auto road=avoid_road_map_.EvaluateRecoveryPath(continuation,map_shape,dt,
+                recovery_budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,v2_avoidance_.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_);
             int blocking=-1;bool margin_recovery=false;
             const bool clear=kinematic&&road.drivable&&lane_clear(continuation)&&CartesianAvoidTrajectoryClear(continuation,obstacles,
                 vehicle_shape_,collision_cfg_,dt,&blocking,execution_->avoid.obstacle_id,&margin_recovery);
@@ -296,6 +297,11 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             if(bound>0) {targets.push_back(-bound);targets.push_back(bound);}
         }
         if(!committed)std::stable_sort(targets.begin(),targets.end(),[&](double a,double b){
+            // The nearer lateral escape avoids searching wide, off-road
+            // shifts first on a narrow approach. Full-body road and obstacle
+            // checks remain mandatory for the selected candidate.
+            const double da=std::fabs(a-d),db=std::fabs(b-d);
+            if(std::fabs(da-db)>1e-6)return da<db;
             const bool a_preferred=((a<v2_avoidance_.obstacle_d)==avoid_cfg_.prefer_right_when_equal);
             const bool b_preferred=((b<v2_avoidance_.obstacle_d)==avoid_cfg_.prefer_right_when_equal);
             return a_preferred&&!b_preferred;
@@ -360,7 +366,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                         double return_start=0,return_end=0;
                         const bool generated=generate(target_d,delay,transition,return_distance,return_advance,direct_return,false,candidate,&return_start,&return_end);
                         const auto road_evaluation=generated
-                            ? avoid_road_map_.EvaluateRecoveryPath(candidate,vehicle_shape_,dt,recovery_budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,v2_avoidance_.map_recovery_settled_travel_m)
+                            ? avoid_road_map_.EvaluateRecoveryPath(candidate,map_shape,dt,recovery_budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,v2_avoidance_.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_)
                             : AvoidRoadMap::PathEvaluation{};
                         const bool road=road_evaluation.drivable;
                         const bool clear=generated&&road&&lane_clear(candidate)&&
@@ -498,11 +504,12 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     if(result.candidate_valid && !lane_clear(result.candidate_path)) result.candidate_valid=false;
     if(result.candidate_valid){
         result.blocking_object_id=-1;
-        // Keep the successful search position for dynamic PREPARE -> EXECUTE
-        // revalidation. Restarting at zero repeatedly exhausts the slice
-        // before reaching the READY candidate. Only the search position is
-        // retained: geometry and every road/lane/object check run afresh.
-        v2_avoidance_.map_search_cursor=!committed&&v2_avoidance_.dynamic_target&&indexed_candidate_selected
+        // Keep the successful search position for PREPARE -> EXECUTE
+        // revalidation, including static obstacles. Restarting at zero can
+        // alternate READY/WAITING forever when the checked candidate lies
+        // beyond one search slice. Only the position is retained; geometry,
+        // road and all current objects are checked again on every cycle.
+        v2_avoidance_.map_search_cursor=!committed&&indexed_candidate_selected
             ? selected_search_index : 0;
         v2_avoidance_.map_reconnection_cursor=0;
     }
@@ -523,6 +530,10 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         if(selected_direct_return){
             execution_.observeEarlyReturnCandidate(true);
         } else {
+            if ((result.selected_target_d >= v2_avoidance_.obstacle_d) !=
+                (v2_avoidance_.target_d >= v2_avoidance_.obstacle_d)) {
+                v2_avoidance_.map_side_reselected = true;
+            }
             v2_avoidance_.target_d=result.selected_target_d;
             if(may_retime||selected_fresh_entry){
                 const double entry_gap=ForwardArcDistance(s,result.map_entry_s,length);
@@ -551,13 +562,51 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     // classification and a complete road-constrained bypass are both available.
     CartesianPath approach;
     const bool approach_generated=generate(0,0,1,1,0,false,true,approach);
-    const bool approach_road=approach_generated&&avoid_road_map_.EvaluateRecoveryPath(approach,vehicle_shape_,dt,recovery_budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,v2_avoidance_.map_recovery_settled_travel_m).drivable;
+    // The Controller can follow a WAITING approach only if the same checked
+    // trajectory includes its stop. Complete the usual three-second prefix
+    // with the common jerk-limited braking generator; then recheck the entire
+    // combined path against current objects at their original time origin.
+    // An incomplete prefix retains the existing fail-closed Controller hold.
+    if(approach_generated && !approach.v.empty() && approach.v.back()>.1) {
+        const std::size_t n=approach.x.size()-1;
+        CartesianState tail_ego{approach.x[n],approach.y[n],approach.yaw[n],
+            approach.kappa[n],approach.v[n],approach.a[n]};
+        double tail_s=s,tail_d=d;
+        CartesianPath tail;
+        if(ProjectPointToFrenet(tail_ego.x,tail_ego.y,s,100,5,tail_s,tail_d) &&
+           PlanCollisionBrakingPath(tail_ego,tail_s,tail_d,{},tail,decel) &&
+           tail.x.size()>1) {
+            auto append=[](std::vector<double>& into,const std::vector<double>& from) {
+                into.insert(into.end(),from.begin()+1,from.end());
+            };
+            CartesianPath complete=approach;
+            append(complete.x,tail.x);append(complete.y,tail.y);append(complete.yaw,tail.yaw);
+            append(complete.kappa,tail.kappa);append(complete.v,tail.v);append(complete.a,tail.a);
+            if(avoid_road_map_.EvaluateRecoveryPath(complete,map_shape,dt,recovery_budget,
+                   v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,
+                   v2_avoidance_.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_).drivable &&
+               CartesianAvoidTrajectoryClear(complete,obstacles,vehicle_shape_,collision_cfg_,dt))
+                approach=std::move(complete);
+        }
+    }
+    // The gradual prefix may already consume the available stopping distance.
+    // In that case start the common braking profile at the measured state;
+    // never certify a moving endpoint as a complete waiting trajectory.
+    if(approach_generated && !approach.v.empty() && approach.v.back()>.01) {
+        CartesianPath immediate;
+        if(PlanCollisionBrakingPath(ego,s,d,obstacles,immediate,decel) &&
+           avoid_road_map_.EvaluateRecoveryPath(immediate,map_shape,dt,recovery_budget,
+               v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,
+               v2_avoidance_.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_).drivable)
+            approach=std::move(immediate);
+    }
+    const bool approach_road=approach_generated&&avoid_road_map_.EvaluateRecoveryPath(approach,map_shape,dt,recovery_budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,v2_avoidance_.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_).drivable;
     if(approach_generated&&approach_road&&
        CartesianAvoidTrajectoryClear(approach,obstacles,vehicle_shape_,collision_cfg_,dt))output=std::move(approach);
     else {
         PlannerCommand base=command;base.target_speed=crawl;
         if(!BuildAvoidMaintenancePath(ego,start,base,obstacles,output))return false;
-        if(output.x.size()>1&&!avoid_road_map_.EvaluateRecoveryPath(output,vehicle_shape_,dt,recovery_budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,v2_avoidance_.map_recovery_settled_travel_m).drivable)BuildZeroSpeedHoldPath(ego,s,output);
+        if(output.x.size()>1&&!avoid_road_map_.EvaluateRecoveryPath(output,map_shape,dt,recovery_budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,v2_avoidance_.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_).drivable)BuildZeroSpeedHoldPath(ego,s,output);
         if(output.x.size()>1&&!CartesianAvoidTrajectoryClear(output,obstacles,
             vehicle_shape_,collision_cfg_,dt)){
             output=CartesianPath{};last_failure_reason_=PlanFailureReason::COLLISION_BLOCKED;return false;

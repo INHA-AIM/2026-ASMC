@@ -113,6 +113,14 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // 읽는다. 값/동작은 기존과 완전히 동일하다(순수 구조 이동).
     const auto base = MakePipelineConfigBundle();
     auto scoped_path=base.path;
+    if(command.mode==LANE_KEEPING && !command.recovery_clear &&
+       std::isfinite(ego.v) && ego.v<7.0) {
+        // After a signal STOP (and other low-speed departures), forcing d=0
+        // in the shortest 1.5 s horizon causes an unnecessary S-turn from a
+        // small measured offset. Give the checked KEEP candidates at least
+        // 2.5 s to recenter; no road, collision or steering filter is relaxed.
+        scoped_path.time_horizon.min=std::max(2.5,scoped_path.time_horizon.min);
+    }
     if(command.recovery_clear) {
         // A complete curved exit can satisfy curvature/lateral acceleration
         // yet require slower steering than a short KEEP preview. Generate at

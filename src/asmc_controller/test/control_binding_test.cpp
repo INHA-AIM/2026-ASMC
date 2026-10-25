@@ -69,6 +69,40 @@ TEST(ControlBinding,LegacyWireVersionCannotReleaseAnActiveVersionTwoConsumer) {
  auto packet=b::Encode(Plan(Request()));packet.data[4]=1;
  b::Plan decoded;EXPECT_FALSE(b::Decode(packet,decoded));
 }
+TEST(ControlBinding,AvoidWaitingUsesOnlyTheCurrentCommandsCheckedStopPath) {
+ auto r=Request();r.command.maneuver_type=asmc_msgs::BehaviorCommand::AVOID;
+ auto p=Plan(r);p.feedback.plan_valid=false;
+ p.feedback.execution_state=asmc_msgs::FrenetFeedback::WAITING;
+ p.trajectory.points[0].velocity=4;p.trajectory.points[1].velocity=2;
+ b::Gate gate(controller);ASSERT_TRUE(gate.RequestReceived(r));
+ EXPECT_TRUE(gate.PlanReceived(p));EXPECT_FALSE(gate.plan().feedback.plan_valid);
+ EXPECT_EQ(gate.plan().feedback.execution_state,asmc_msgs::FrenetFeedback::WAITING);
+ auto newer=r;newer.token.revision=2;newer.command.command_id=2;
+ ASSERT_TRUE(gate.RequestReceived(newer));p.sequence=2;
+ p.trajectory.header.stamp=ros::Time(999);
+ EXPECT_FALSE(gate.PlanReceived(p));EXPECT_FALSE(gate.linked());
+}
+TEST(ControlBinding,AvoidWaitingCannotReleaseHazardsOrUseAnIncompleteStop) {
+ auto r=Request();r.command.maneuver_type=asmc_msgs::BehaviorCommand::AVOID;
+ for(int variant=0;variant<11;++variant){
+  auto p=Plan(r);p.feedback.plan_valid=false;
+  p.feedback.execution_state=asmc_msgs::FrenetFeedback::WAITING;
+  p.trajectory.points[0].velocity=4;p.trajectory.points[1].velocity=2;
+  if(variant==0)p.request.signal.enabled=true;
+  if(variant==1)p.request.recovery_release=true;
+  if(variant==2)p.request.brake_level=1;
+  if(variant==3)p.feedback.execution_state=asmc_msgs::FrenetFeedback::COMMITTED;
+  if(variant==4)p.trajectory.points.back().velocity=.2;
+  if(variant==5)p.feedback.trajectory_source=asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP;
+  if(variant==6)p.trajectory.points.back().velocity=NAN;
+  if(variant==7)p.feedback.result_code=asmc_msgs::FrenetFeedback::COLLISION_BLOCKED;
+  if(variant==8)p.trajectory.failure_reason=asmc_msgs::Trajectory::FAILURE_GENERATION;
+  if(variant==9)p.feedback.command_accepted=false;
+  if(variant==10)p.feedback.command_id=999;
+  b::Gate gate(controller);ASSERT_TRUE(gate.RequestReceived(p.request));
+  EXPECT_FALSE(gate.PlanReceived(p))<<variant;EXPECT_FALSE(gate.linked());
+ }
+}
 TEST(ControlBinding,PlanMayArriveBeforeRequestWithoutAssumingOwnership) {
  b::Gate gate(controller);auto r=Request();EXPECT_FALSE(gate.PlanReceived(Plan(r)));
  EXPECT_FALSE(gate.linked());EXPECT_TRUE(gate.RequestReceived(r));EXPECT_TRUE(gate.linked());

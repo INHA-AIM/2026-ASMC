@@ -12,6 +12,7 @@
 
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Maneuver/KeepCruise.hpp"
+#include "Frenet/Maneuver/Merge/MergeGapEvaluator.hpp"
 #include "Frenet/Math/Utils.hpp"
 #include "Frenet/Generator/LongitudinalGenerator.hpp"
 #include "Signal/BrakingModel.hpp"
@@ -38,6 +39,10 @@ bool PathObeysCurvatureLimit(const CartesianPath& path, double limit) {
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     ref_loaded_ = false;
+    solid_paint_contact_active_ = false;
+    solid_paint_contact_elapsed_s_ = 0.0;
+    highway_merge_checkpoint_s_ = -1.0;
+    highway_merge_safe_count_ = 0;
     roundabout_merge_cfg_ = RoundaboutMergeConfig{};
     roundabout_zone_ = RoundaboutMergeZone{};
     ResetRoundaboutMerge();
@@ -1005,6 +1010,23 @@ bool FrenetPlanner::PlanInternal(
         return false;
     }
 
+    if (avoid_road_map_.enabled()) {
+        const auto now = std::chrono::steady_clock::now();
+        const bool contact = avoid_road_map_.PoseTouchesSolidPaint(
+            ego.x, ego.y, ego.yaw, vehicle_shape_);
+        if (contact) {
+            if (!solid_paint_contact_active_) {
+                solid_paint_contact_started_at_ = now;
+                solid_paint_contact_active_ = true;
+            }
+            solid_paint_contact_elapsed_s_ = std::chrono::duration<double>(
+                now - solid_paint_contact_started_at_).count();
+        } else {
+            solid_paint_contact_active_ = false;
+            solid_paint_contact_elapsed_s_ = 0.0;
+        }
+    }
+
     // ===== 공용 준비(§3): Cartesian->Frenet, object tracking/예측, target
     // speed 해석/연속성, 모드 전환 시 v2 FOLLOW/AVOID context reset. =====
     PlanningContext ctx = PreparePlanningContext(ego, obstacles, *external_command);
@@ -1200,6 +1222,66 @@ bool FrenetPlanner::PlanInternal(
     s_ddot = start.s_dd;
     d_dot = start.d_d;
     d_ddot = start.d_dd;
+
+    // The route already supplies the highway lateral shape. Before its first
+    // conflict frontier, require a current, full-body checked entry gap. A
+    // delayed future gap is not permission to enter at the present speed.
+    // This is a longitudinal KEEP safety constraint, not an unsupported
+    // external MERGE command or an unchecked object exemption.
+    if(highway_merge_cfg_.enabled && external_command->mode==LANE_KEEPING &&
+       !external_command->recovery_clear) {
+        const HighwayMergeCheckpoint* next=nullptr;
+        const HighwayMergeZone* next_zone=nullptr;
+        for(const auto& zone:highway_merge_cfg_.zones) {
+            if(s<zone.start_s-highway_merge_cfg_.approach_distance ||
+               s>=zone.completion_s) continue;
+            for(const auto& checkpoint:zone.checkpoints) {
+                // Zone 1's earlier wait point must retain its unsafe-gap stop
+                // until the conflict. Other zones keep their prior frontier.
+                const double release_frontier = zone.hold_unsafe_gap_until_conflict
+                    ? checkpoint.conflict_s
+                    : checkpoint.conflict_s-zone.stop_buffer;
+                if(s<release_frontier) {
+                    next=&checkpoint;next_zone=&zone;break;
+                }
+            }
+            if(next)break;
+        }
+        if(next) {
+            if(std::fabs(highway_merge_checkpoint_s_-next->conflict_s)>1e-6) {
+                highway_merge_checkpoint_s_=next->conflict_s;
+                highway_merge_safe_count_=0;
+            }
+            const auto gap=FindHighwayMergeGap(ref_,start,predicted_obstacles,
+                highway_merge_cfg_,*next,vehicle_shape_,collision_cfg_,
+                std::max(0.1,resolved_target_speed),limits_.max_longitudinal_accel);
+            const double distance=next->conflict_s-s;
+            const bool immediate=gap.safe && gap.entry_time<=
+                distance/std::max(4.0,ego.v)+0.5;
+            if(gap.confirmed && immediate)
+                highway_merge_safe_count_=std::min(highway_merge_safe_count_+1,
+                    highway_merge_cfg_.safe_confirm_cycles);
+            else highway_merge_safe_count_=0;
+            if(gap.confirmed && highway_merge_safe_count_<
+                                   highway_merge_cfg_.safe_confirm_cycles) {
+                PlannerCommand wait=*external_command;
+                wait.mode=STOP;
+                // STOP's existing 0.5 m endpoint buffer is applied once by
+                // its generator. Keep the rear axle at the selected zone's
+                // wait point to reserve front overhang and map error.
+                wait.stop_position=next->conflict_s-
+                    next_zone->stop_buffer+stop_cfg_.stop_buffer;
+                const bool ok=StopProcess(ego,start,s,d,s_dot,s_ddot,d_dot,d_ddot,
+                    obstacles,predicted_obstacles,resolved_target_speed,wait,out_path);
+                if(!ok && last_failure_reason_==PlanFailureReason::NONE)
+                    last_failure_reason_=PlanFailureReason::COLLISION_BLOCKED;
+                return ok;
+            }
+        } else {
+            highway_merge_checkpoint_s_=-1.0;
+            highway_merge_safe_count_=0;
+        }
+    }
 
     // =====================================================================
     // AVOID PREPARE: 후보 평가와 유지 궤적을 한 사이클에서 만든다 (D6-2b)

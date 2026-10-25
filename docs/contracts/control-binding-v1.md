@@ -61,6 +61,16 @@ EXECUTE 또는 COMMIT을 의미하지 않으며, `feedback.plan_valid`와 `gap_s
 기존의 전체 진입 후보 판정을 유지한다. AVOID·LANE_CHANGE·고속도로 MERGE나
 임의 fallback에는 적용하지 않는다.
 
+AVOID 준비 중 `plan_valid=false`는 횡방향 회피 후보 미확정을 뜻하며, 같은 cycle의
+유효한 감속 접근 경로까지 무효라는 뜻은 아니다. 현재 명령의 AVOID·PREPARING/WAITING,
+RESULT_NONE·TRAJECTORY_NEW이고, 끝 속도가 0인 새 유효 경로만 Controller에 연결한다.
+Planner는 기존 접근 경로에 공통 jerk 제한 정지 구간을 연결한 뒤 전체 경로를 원래
+관측 시각 기준의 장애물·도로 조건으로 재검증한다. 그 접근 구간 뒤에 안전하게
+정지할 수 없으면 현재 측정 상태부터 공통 제동 경로를 평가한다. 정지 구간을 포함할 수 없는
+짧은 경로는 해제 근거가 되지 않는다. 신호 제약·복구 이탈·별도 제동 요구가 있거나
+COMMITTED·SAFE_STOP·실패 경로인 경우 이 예외를 적용하지 않는다. 기존 메시지·전송
+필드로 구분하며 READY/COMMIT 상태나 `plan_valid`를 성공으로 바꾸지 않는다.
+
 Plan이 먼저 오면 pending에 보관하고 C가 와야 연결한다. C가 먼저 오면 해당 Plan을
 기다린다. 과거 revision·이미 폐기된 Behavior/Planner epoch·역순 계획 sequence는
 해제에 쓰지 않는다. 늦은 과거 결과는 현재 경로의 신선도를 갱신하지 않는다.

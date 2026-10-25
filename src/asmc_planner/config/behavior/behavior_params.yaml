@@ -26,6 +26,9 @@ normal_cruise:
   # Ordinary exit road after roundabout merge; merge links retain their limits.
   link_speed_caps_kph:
     A2256W000054: 50.0
+    # First ramp entry has fast mainline traffic alongside the merging curve.
+    # Leave stopping distance when an NPC first appears near the conflict.
+    A2256W000411: 45.0
     # Initial two bends: request headroom; native curvature/kinematic limits
     # still determine the actual lower corner speed. Provisional MORAI tune.
     A2256W000182: 40.0

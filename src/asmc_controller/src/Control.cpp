@@ -366,6 +366,16 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
     PlannedPath path;
     const TrajectoryStatus status = ConvertTrajectory(g_control.latest_trajectory, path);
     if (status == TrajectoryStatus::STOP_TRAJECTORY) {
+        // A planner failure is not a completed, intentional STOP. In
+        // particular, a collision-blocked one-point fallback at road speed
+        // needs maximum braking immediately; the ordinary hold uses only 0.3.
+        if (g_control.latest_trajectory.failure_reason ==
+            asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED) {
+            g_control.emergency_stop_active = true;
+            PublishEmergencyStop();
+            ROS_WARN_THROTTLE(1.0, "Planner trajectory collision blocked: emergency brake");
+            return;
+        }
         stop_brake_response.Reset();
         stop_acceleration_response.Reset();
         MPCState stop_state;

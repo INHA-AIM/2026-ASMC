@@ -133,7 +133,9 @@ def main():
     p.add_argument('--trigger-distance',type=float)
     p.add_argument('--deadline',type=float,default=150.)
     p.add_argument('--full-route',action='store_true',help='official start, CP14, then START/END; no 800m finish')
-    p.add_argument('--natural-signals',action='store_true',help='full-route corridor only: retain automatic signal cycles')
+    p.add_argument('--highway-merge-1',action='store_true',
+        help='isolated high-speed actor section from s=985 through the first merge exit')
+    p.add_argument('--natural-signals',action='store_true',help='corridor trials only: retain automatic signal cycles')
     p.add_argument('--record-bag',action='store_true',help='record raw operational inputs and bound command/control outputs')
     p.add_argument('--scenario-seed',type=int,help='canonical full-scene actors and checkpoint weather; requires natural signals')
     p.add_argument('--c091-bollard',action='store_true',
@@ -143,12 +145,16 @@ def main():
     p.add_argument('--collect-road-failures',action='store_true',
         help='diagnostic run only: retain small road failures while collecting signal behavior; never passes those runs')
     args=p.parse_args()
-    if args.natural_signals and (not args.full_route or args.case!='corridor'):
-        p.error('--natural-signals requires --full-route --case corridor')
+    if args.full_route and args.highway_merge_1:
+        p.error('--full-route and --highway-merge-1 are mutually exclusive')
+    if args.highway_merge_1 and (args.case!='corridor' or args.scenario_seed is None):
+        p.error('--highway-merge-1 requires --case corridor and --scenario-seed')
+    if args.natural_signals and args.case!='corridor':
+        p.error('--natural-signals requires a route corridor trial')
     if args.full_route and args.case in ('recovery','yellow_close'):
         p.error('recovery and unavoidable close-yellow remain isolated local trials')
     if args.scenario_seed is not None and not args.natural_signals:
-        p.error('--scenario-seed requires --full-route --case corridor --natural-signals')
+        p.error('--scenario-seed requires --case corridor --natural-signals')
     if args.c091_bollard and (args.light!='C1256W000091' or args.full_route or args.scenario_seed is not None):
         p.error('--c091-bollard requires an isolated C1256W000091 trial')
     os.environ.setdefault('GRPC_POLL_STRATEGY','epoll1')
@@ -204,15 +210,21 @@ def main():
     bindings=yaml.safe_load(geometry.read_text())['reviewed_bindings'];target=next(b for b in bindings if b['traffic_light_id']==args.light)
     coordinates=Coordinates([302595.,4124145.])  # Actual map global_info origin, UTM52N.
     sline,_=route.curve.project(*target['line_point']);sexit,_=route.curve.project(*target['exit_point'])
-    scene_start=args.full_route or args.case=='corridor'
-    start=0. if scene_start else sline+8. if args.case=='recovery' else max(0.,sline-args.start_distance)
-    end=route.curve.length if args.full_route else 800. if args.case=='corridor' else min(800.,sexit+15.)
+    scene_start=args.full_route or (args.case=='corridor' and not args.highway_merge_1)
+    start=(route.section('high_speed')['start'] if args.highway_merge_1 else
+           0. if scene_start else sline+8. if args.case=='recovery' else max(0.,sline-args.start_distance))
+    end=(1290. if args.highway_merge_1 else route.curve.length if args.full_route else
+         800. if args.case=='corridor' else min(800.,sexit+15.))
     x,y,z,h=route.curve.pose(start)
     pose=dict(route.scene_start) if scene_start else dict(x=x,y=y,z=z+.35,roll=0.,pitch=0.,yaw=math.degrees(h))
     reset_pose=dict(pose)
     if scene_start:
         pose['yaw']=math.degrees(coordinates.grid_yaw(pose['x'],pose['y'],pose['yaw']))
     else:reset_pose['yaw']=coordinates.enu_yaw_degrees(x,y,h)
+    if args.highway_merge_1:
+        # The section episode performs its own reset. Give it the simulator
+        # heading while readiness still compares the map-frame vehicle yaw.
+        route.section('high_speed')['pose']['yaw']=reset_pose['yaw']
     cfg={'morai':dict(host=args.host,port=args.port,client_key='asmc_yellow_validation',ego_id='Ego',grpc_src='tools/grpc_inha_univ/src')}
     source_snapshot=fingerprint()
     (args.output/'source-manifest.json').write_text(json.dumps(source_snapshot,indent=2))
@@ -243,7 +255,8 @@ def main():
                 owner.begin(light['traffic_light_id'],light['intersection_id'],light['green_phase'],light['green_color'],light['phase_duration_s'])
         if args.case in ('red_stop','recovery'):owner.set_aspect(args.light,1)
         if args.scenario_seed is not None:
-            scenario=SignalTrialScenario(link,route,args.scenario_seed,lease,lambda e:emit('scenario',e))
+            scenario=SignalTrialScenario(link,route,args.scenario_seed,lease,
+                lambda e:emit('scenario',e),section='high_speed' if args.highway_merge_1 else None)
             scenario.prepare(clock)
         else:link.reset(reset_pose)
         if not link.held_at(reset_pose):raise RuntimeError('spawn hold/pose check failed')

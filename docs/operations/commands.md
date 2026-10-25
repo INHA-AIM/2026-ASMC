@@ -47,12 +47,12 @@ source /root/ws/src/lidar+sensorfusion/devel/setup.bash
 | B | `roslaunch asmc_hd_map competition_map.launch` | 정적 지도·metadata; 현재 Planner local map copy를 자동 대체하지 않음 |
 | C | `roslaunch asmc_camera camera.launch` | 세 모델 상시 ACTIVE·발행, E8 기본; GUI 별도 |
 | D | `roslaunch Main main.launch rviz:=false` | LiDAR·전방 어댑터/fusion·추적; YOLO 모델 미실행 |
-| E | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, 판제 입력/MPC/selector/재밍 어댑터; 카메라 모델 미실행 |
+| E | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, GPS/IMU 위치와 Competition 종방향 실측 속도 조합, 판제 입력/MPC/selector/재밍 어댑터; 카메라 모델 미실행 |
 
 신호등의 단일 추론·발행자는 카메라 담당의 `asmc_camera`입니다. 판제는 결과만 소비하고
 `traffic_light:=false` 인자는 제거되어 지정하지 않습니다. 중단/재개·주기 제어는 카메라의
 `/perception/camera/traffic_light/set_mode`를 사용합니다. 판제 신호 규칙은 유지합니다. bridge `/vehicle/state`와
-판제 `/planning/vehicle/state`는 다른 토픽·추정기이며 같은 토픽의 중복 producer는 금지합니다.
+판제 `/planning/vehicle/state`는 다른 토픽·추정기이며 같은 토픽의 중복 producer는 금지합니다. 기본 E는 `/Ego_topic`의 허용된 종방향 속도만 `/planning/vehicle/gps_imu_state`의 GPS/IMU 위치와 결합합니다. 두 입력의 시각이 맞지 않거나 끊기면 상태를 무효로 처리합니다.
 
 기본 카메라는 세 모델 모두 추론·발행합니다. 준비가 끝나기 전에 판제가 결과를 사용하지 않도록
 상태와 새 결과의 validity/freshness를 확인합니다. [구간별 소비 안내](../handoffs/perception-to-planning.md)는

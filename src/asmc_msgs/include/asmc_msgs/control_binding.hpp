@@ -203,6 +203,31 @@ inline bool CertifiedMergeWaitingPath(const Plan& p) {
   return true;
 }
 
+// V2 AVOID PREPARE publishes a freshly collision/road-checked maintenance
+// trajectory as NEW/RESULT_NONE even when the lateral candidate is WAITING.
+// Candidate readiness and this stopping trajectory are different outcomes.
+// No new wire field is needed: these existing producer fields identify that
+// path unambiguously; failed/reused/committed paths do not match this contract.
+inline bool CertifiedAvoidWaitingPath(const Plan& p) {
+  const auto& c=p.request.command;const auto& f=p.feedback;
+  if(c.maneuver_type!=asmc_msgs::BehaviorCommand::AVOID ||
+     (c.execution_request!=asmc_msgs::BehaviorCommand::PREPARE &&
+      c.execution_request!=asmc_msgs::BehaviorCommand::EXECUTE) ||
+     p.request.signal.enabled || p.request.recovery_release ||
+     p.request.brake_level!=0 ||
+     (f.execution_state!=asmc_msgs::FrenetFeedback::PREPARING &&
+      f.execution_state!=asmc_msgs::FrenetFeedback::WAITING) ||
+     f.result_code!=asmc_msgs::FrenetFeedback::RESULT_NONE ||
+     f.trajectory_source!=asmc_msgs::FrenetFeedback::TRAJECTORY_NEW ||
+     !p.trajectory.valid || p.trajectory.failure_reason!=0 ||
+     p.trajectory.points.size()<2 ||
+     !std::isfinite(p.trajectory.points.back().velocity) ||
+     std::abs(p.trajectory.points.back().velocity)>.01)return false;
+  for(const auto& point:p.trajectory.points)
+    if(!std::isfinite(point.velocity) || point.velocity<0)return false;
+  return true;
+}
+
 // Reusable consumer state machine. Freshness/road/dynamics are independent
 // checks performed by the Controller; they never replace this identity proof.
 class Gate {
@@ -249,7 +274,8 @@ class Gate {
     // requests/old locked paths cannot be relabelled with the latest token.
     if(!p.feedback.command_accepted || p.feedback.command_id!=request_.command.command_id ||
        p.feedback.active_maneuver!=request_.command.maneuver_type ||
-       (!p.feedback.plan_valid && !p.stationary_hold && !CertifiedMergeWaitingPath(p)) || !p.trajectory.valid || p.trajectory.failure_reason!=0 ||
+       (!p.feedback.plan_valid && !p.stationary_hold && !CertifiedMergeWaitingPath(p) &&
+        !CertifiedAvoidWaitingPath(p)) || !p.trajectory.valid || p.trajectory.failure_reason!=0 ||
        p.trajectory.points.empty() ||
        (p.feedback.trajectory_source!=asmc_msgs::FrenetFeedback::TRAJECTORY_NEW &&
         p.feedback.trajectory_source!=asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED))

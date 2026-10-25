@@ -306,7 +306,7 @@
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
 | `objects_source` | `lidar` | Supported source: lidar |
-| `state_source` | `gps_imu` | gps_imu or external |
+| `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
 | `lidar_input_topic` | `/last_lidar` | — |

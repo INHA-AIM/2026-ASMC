@@ -119,6 +119,12 @@ void FrenetPlanner::RefreshAvoidObservation(
     context.obstacle_length = object.length;
     context.obstacle_lateral_half_extent = lateral_half_extent;
     context.obstacle_longitudinal_half_extent = longitudinal_half_extent;
+    if (!context.dynamic_target &&
+        object.type == static_cast<int>(asmc_planner::ObjectType::STATIC_OBSTACLE) &&
+        object.geometry_valid) {
+        context.last_static_target = object;
+        context.has_last_static_target = true;
+    }
 
     // Dynamic map AVOID owns a fully checked in-lane offset. The scalar
     // static-clearance heuristic may disagree with authoritative corners and
@@ -238,7 +244,9 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
         return AvoidTargetStatus::LOST;
     }
 
-    if (execution_.observeAvoidMissing(avoid_cfg_.dropout_grace_cycles)) {
+    const int grace_cycles=context.dynamic_target
+        ? avoid_cfg_.dropout_grace_cycles : avoid_cfg_.static_dropout_grace_cycles;
+    if (execution_.observeAvoidMissing(grace_cycles)) {
         execution_.clearAvoidBinding();
         return AvoidTargetStatus::LOST;
     }
