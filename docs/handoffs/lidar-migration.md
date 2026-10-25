@@ -251,10 +251,12 @@ fusion 보완과 판제 정책은 변경하지 않는다. 계산·공급 비교�
 검토한다. audit 연결을 기존 판제 필터 제거 완료로 해석하지 않는다.
 
 후속 검수 미리보기는 OBB 겹침과 객체 전체 cluster support를 비교한다. 카메라의 최신 양성
-`dynamic_obstacle` 연결은 모든 구간에서 보호하며, 머리 위 후보는 최저 점·OBB 하단을 함께 본다.
-보호는 person/dog/deer/bicycle/stroller의 실제 최신 YOLO matching과 시간/epoch 유효성에 한한다.
-`yolo_positive_only_v2`에서는 LiDAR motion/속도·미션10m 영역만으로 unknown을 보호하지 않는다.
+`dynamic_obstacle`·`vehicle` 연결은 모든 구간에서 보호하며, 머리 위 후보는 최저 점·OBB 하단을 함께 본다.
+보호는 person/dog/deer/bicycle/stroller와 car/bus/truck의 실제 최신 YOLO matching과 시간/epoch 유효성에 한한다.
+`yolo_vehicle_dynamic_interior_v3`에서는 LiDAR motion/속도·미션10m 영역만으로 unknown을 보호하지 않는다.
 유지 분류와 최신 양성 매칭을 분리하고, 이후 unknown·miss·세대 변경이면 보호 근거를 비운다.
+미리보기의 일반 객체는 도로 합집합 바깥 경계20cm 안쪽에서3점 이상 AND5% 이상을 유지 근거로 요구한다.
+카메라 보호·지도/pose 불명·원본 배열 보존을 우선하며, 이 기준을 판제의 실제 전달 필터로 전환하지 않는다.
 현재 matching은 전방이며3뷰 matching 확대는 재호의 후속 책임이다. 후보 숨김은 웹에서만 적용하고
 원본 ROS 객체·tracker·판제 소비 경로는 유지한다. [정책과 한계](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#점군높이카메라-보호-미리보기),
 [디버거 사용](../../src/asmc_lidar/docs/web-monitor.md#hd맵-필터-디버깅)을 참고한다.

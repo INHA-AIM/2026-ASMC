@@ -92,11 +92,13 @@ HD맵 판정의 기본값은 YAML `hd_map_audit.mode: "audit"`다. Git에 포함
 ROI 기준과 복구·표시 규칙은 [현재 설정](docs/hd-map-filter-analysis.md#a14-기본-hd맵높이-roi와-제외-근거--2026-10-25)을 따른다.
 
 audit 미리보기는 OBB 겹침과 **전체 cluster support의 도로 점 비율**을 함께 제공한다.
-카메라로 연결된 `dynamic_obstacle`은 모든 구간에서 보호하고, 머리 위 구조물은 최저 점·OBB 하단과
+카메라로 연결된 `dynamic_obstacle`·`vehicle`은 모든 구간에서 보호하고, 머리 위 구조물은 최저 점·OBB 하단과
 지붕 여유로 후보만 표시한다. [웹 디버거](docs/web-monitor.md#hd맵-필터-디버깅)의 후보 숨김은 화면에만 적용된다.
-보호는 최신 실제 YOLO 양성 매칭의 person/dog/deer/bicycle/stroller에 한한다. LiDAR 동적 속도 판정이나
-미션 주변10m라는 이유로 unknown을 보호하지 않는다. 현재 `yolo_positive_only_v2` 정책과 원본 YOLO
+보호는 최신 실제 YOLO 양성 매칭의 person/dog/deer/bicycle/stroller와 car/bus/truck에 한한다. LiDAR 동적 속도 판정이나
+미션 주변10m라는 이유로 unknown을 보호하지 않는다. 현재 `yolo_vehicle_dynamic_interior_v3` 정책과 원본 YOLO
 매칭 분류를 상세 화면에 표시한다. 기존 판정 프로세스에는 재시작이 필요하다.
+점군 유지는 도로 면 합집합의 바깥을20cm(0.2m 격자1셀) 줄인 내부에서 **3점 이상 AND 전체5% 이상**이다.
+원본 도로 점 수·비율은 비교용으로 함께 표시한다. HD맵 정본·OBB·tracker·ROS 객체는 변경하지 않는다.
 배경 지도는 `asmc_hd_map` v7 정본이며, 판제의 별도 v5 사본과 혼용하지 않는다.
 웹은 도로 면과 SHA가 일치하는 물리 차선만 그린다. 링크 중심선·도로 분할 테두리는 표시하지 않는다.
 

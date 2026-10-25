@@ -64,12 +64,15 @@ A1.1의 내부 설정이 `audit`일 때만 `hd_map_audit` 블록을 추가한다
 - `preview.decision/reason`: 검수용 keep/exclude_candidate/undetermined. 실제 전달 제외 허가와 다르다.
 - `preview.support_points/road_points/guard_points/unknown_points/road_point_ratio`:
   화면 샘플이 아닌 객체 전체 cluster support의 지도 관계. voxel 이전 원본 점 비율은 아니다.
+- `preview.interior_road_points/interior_road_ratio`: 도로 합집합 바깥을 inset한 내부의 support 수/전체 비율.
+  기존 road_points/road_point_ratio는 원래 도로 기준이다. v3 유지는 내부3점 이상 AND5% 이상이다.
+- report의 `road_inset_m`은 격자로 올림한 실제 적용 여유(기본0.2m), `road_support_rule`은 count_and_ratio다.
 - `preview.min_support_base_z/obb_bottom_base_z/roof_limit_base_z`: `base_link` 높이. 근거가 없으면 null.
-- `preview.camera_dynamic_protected/camera_known`: 같은 fusion consumer epoch의 최신 양성 연결 근거.
+- `preview.camera_dynamic_protected/camera_vehicle_protected/camera_known`: 같은 fusion consumer epoch의 최신 양성 연결 근거.
   실제 이동 여부나 카메라만으로 생성한3D 객체가 아니다.
-- `preview.protection_policy`: 현재 `yolo_positive_only_v2`. 미션 영역만으로 unknown을 보호하지 않는다.
+- `preview.protection_policy`: 현재 `yolo_vehicle_dynamic_interior_v3`. 미션 영역만으로 unknown을 보호하지 않는다.
 - `preview.camera_raw_class/camera_group`: 확정/유지 클래스와 분리한 최신 실제 매칭 YOLO 원본/그룹.
-  이후 unknown·miss는 지우며, 시간/epoch gate까지 통과해야 `camera_dynamic_protected`가 true다.
+  이후 unknown·miss는 지우며, 시간/epoch gate까지 통과해야 해당 그룹의 보호 flag가 true다.
   LiDAR motion state나 속도는 이 gate의 입력이 아니다.
 
 `decision/reason`은 미검증 하부면·점군 정책·위치 오차를 계속 보류할 수 있다. 따라서 preview의

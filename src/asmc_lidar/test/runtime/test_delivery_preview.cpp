@@ -7,6 +7,7 @@ PointEvidence Points(){PointEvidence e;e.total=e.finite=100;e.min_base_z=.2;retu
 DeliveryPolicy Policy(){DeliveryPolicy p;p.enabled=true;return p;}
 TEST(DeliveryPreview, LargeObbCannotReplaceOutsidePointSupport){auto d=Base();auto e=Points();ApplyDeliveryPreview(d,e,Policy(),true,"unknown",.1);EXPECT_EQ(d.preview_decision,"exclude_candidate");EXPECT_EQ(d.preview_reason,"cluster_support_outside");EXPECT_EQ(d.decision,"undetermined");EXPECT_DOUBLE_EQ(d.spatial.road_ratio_grid,.6);}
 TEST(DeliveryPreview, CameraDynamicProtectedOutsideAndWithoutGps){for(bool gps:{false,true}){auto d=Base();auto e=Points();ApplyDeliveryPreview(d,e,Policy(),gps,"dynamic_obstacle",.1);EXPECT_EQ(d.decision,"keep");EXPECT_TRUE(d.camera_dynamic_protected);EXPECT_EQ(d.preview_reason,"camera_dynamic_protected");}}
+TEST(DeliveryPreview, CameraVehicleProtectedOutsideAndWithoutGps){for(bool gps:{false,true}){auto d=Base();auto e=Points();ApplyDeliveryPreview(d,e,Policy(),gps,"vehicle",.1);EXPECT_EQ(d.decision,"keep");EXPECT_TRUE(d.camera_vehicle_protected);EXPECT_FALSE(d.camera_dynamic_protected);EXPECT_EQ(d.preview_reason,"camera_vehicle_protected");}}
 TEST(DeliveryPreview, InteriorSupportRequiresBothCountAndRatio) {
   for(const auto& counts:std::vector<std::array<std::size_t,3>>{
       {100,3,0},{100,3,3},{100,5,5},{20,1,1},{20,3,3},{736,8,8},{736,40,40}}) {
