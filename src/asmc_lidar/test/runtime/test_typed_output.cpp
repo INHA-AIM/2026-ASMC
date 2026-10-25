@@ -2,6 +2,7 @@
 // TypedOutput: Main FrameBoundaryPublisher Publish()/Invalid() semantics.
 #include <asmc_lidar/geometry/projection.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
+#include <asmc_lidar/ros/scan_trace.hpp>
 
 #include <gtest/gtest.h>
 
@@ -349,6 +350,11 @@ TEST(TypedOutput, PreservesLegacyAppliedMotionAndRotatesVectorsOnce) {
   EXPECT_EQ(2, arrays.map_tracking[0].motion_state);
   EXPECT_EQ(17, arrays.map_tracking[0].track_id);
   EXPECT_NE(arrays.map_tracking[0].cluster_center, arrays.map.objects[0].center);
+  std::ostringstream trace;
+  asmc::lidar::runtime::trace::Array(trace, true, arrays.local);
+  EXPECT_NE(std::string::npos, trace.str().find("\"absolute_velocity_valid\":true"));
+  EXPECT_NE(std::string::npos, trace.str().find("\"dynamic_valid\":true"));
+  EXPECT_NE(std::string::npos, trace.str().find("\"is_dynamic\":true"));
 }
 
 TEST(TypedOutput, WarmupEstimateIsUnknownAndGpsLossDoesNotInventMotion) {
@@ -368,6 +374,10 @@ TEST(TypedOutput, WarmupEstimateIsUnknownAndGpsLossDoesNotInventMotion) {
   EXPECT_FALSE(arrays.local.objects[0].absolute_velocity_valid);
   EXPECT_FALSE(arrays.local.objects[0].dynamic_valid);
   EXPECT_EQ(0, arrays.local_tracking[0].motion_state);
+  std::ostringstream trace;
+  asmc::lidar::runtime::trace::Array(trace, true, arrays.local);
+  EXPECT_NE(std::string::npos, trace.str().find("\"absolute_velocity_valid\":false"));
+  EXPECT_NE(std::string::npos, trace.str().find("\"dynamic_valid\":false"));
 }
 
 }  // namespace
