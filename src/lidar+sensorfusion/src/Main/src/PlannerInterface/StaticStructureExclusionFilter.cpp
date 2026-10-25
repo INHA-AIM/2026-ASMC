@@ -80,6 +80,10 @@ bool StaticStructureExclusionFilter::Configure(
                 zone.require_infrastructure_shape =
                     node["require_infrastructure_shape"].as<bool>();
             }
+            if (node["require_elevated_pole_shape"]) {
+                zone.require_elevated_pole_shape =
+                    node["require_elevated_pole_shape"].as<bool>();
+            }
             if (zone.name.empty() || !std::isfinite(zone.min_x) ||
                 !std::isfinite(zone.max_x) ||
                 !std::isfinite(zone.min_y) ||
@@ -114,10 +118,6 @@ StaticStructureExclusionFilter::Evaluate(
         decision.reason = "classified_object_keep";
         return decision;
     }
-    if (HasMotionEvidence(object)) {
-        decision.reason = "motion_evidence_keep";
-        return decision;
-    }
     if (!std::isfinite(object.obb_center_map.x) ||
         !std::isfinite(object.obb_center_map.y) ||
         !std::isfinite(object.height)) {
@@ -143,6 +143,32 @@ StaticStructureExclusionFilter::Evaluate(
         }
         decision.policy_applied = true;
         decision.zone_name = zone.name;
+        if (zone.require_elevated_pole_shape) {
+            // The C091 sign is elevated above the road. Partial scans can
+            // report only a thin slice of its full height, and the tracker
+            // may call the sliding partial view PENDING. In this narrow
+            // map zone require narrow geometry and measured ground clearance.
+            const bool elevated_pole =
+                std::isfinite(object.length) && object.length >= 0.15 &&
+                object.length <= 1.5 && std::isfinite(object.width) &&
+                object.width >= 0.05 && object.width <= 0.5 &&
+                object.height >= 0.0 && object.height <= 3.5 &&
+                object.ground_evidence.valid &&
+                object.ground_evidence.sample_count >= 5 &&
+                std::isfinite(object.ground_evidence.median_clearance_m) &&
+                object.ground_evidence.median_clearance_m >= 1.8;
+            if (!elevated_pole) {
+                decision.reason = "elevated_pole_evidence_missing_keep";
+                return decision;
+            }
+            decision.keep = false;
+            decision.reason = "configured_elevated_pole_drop";
+            return decision;
+        }
+        if (HasMotionEvidence(object)) {
+            decision.reason = "motion_evidence_keep";
+            return decision;
+        }
         const bool infrastructure_shape =
             object.height >= minimum_height_m_ ||
             bottom_z >= minimum_bottom_z_m_;
@@ -155,6 +181,7 @@ StaticStructureExclusionFilter::Evaluate(
         return decision;
     }
 
-    decision.reason = "outside_static_zone_keep";
+    decision.reason = HasMotionEvidence(object)
+        ? "motion_evidence_keep" : "outside_static_zone_keep";
     return decision;
 }

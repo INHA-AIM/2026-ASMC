@@ -16,6 +16,7 @@
  */
 
 #include "Frenet/frenet_planner.hpp"
+#include "Signal/BrakingModel.hpp"
 #include "Frenet/Generator/StoppingLateralGeometry.hpp"
 #include "Frenet/Maneuver/KeepCruise.hpp"
 #include "Frenet/Maneuver/KeepDepartureGeometry.hpp"
@@ -70,12 +71,12 @@ bool FrenetPlanner::PlanExternalKeepLowSpeedFallback(const CartesianState& ego,
                                                       double s, double d,
                                                       double resolved_target_speed,
                                                       const std::vector<TrackedObject>& predicted_obstacles,
-                                                      CartesianPath& out_path) {
+                                                      CartesianPath& out_path,double minimum_path_distance) {
     bool road_blocked=false;
     bool actuation_blocked=false;
     const bool generated = PlanCurvatureFeasibleKeepLowSpeedFallback(
         ego, s, d, resolved_target_speed, out_path,
-        limits_.low_speed_crawl_duration_s,&road_blocked,&actuation_blocked);
+        limits_.low_speed_crawl_duration_s,&road_blocked,&actuation_blocked,minimum_path_distance);
     int blocking_id=-1;
     const bool fallback_ok=generated&&CartesianTrajectoryClear(out_path,
         predicted_obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt,&blocking_id);
@@ -110,7 +111,20 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // Pipeline/TrajectoryPipeline 분리(R3 1/4단계)를 위한 선행 작업 - 이
     // pipeline이 참조하는 config를 번들 하나로 묶어 그 필드를 통해서만
     // 읽는다. 값/동작은 기존과 완전히 동일하다(순수 구조 이동).
-    const PlannerConfigBundle cfg = MakePipelineConfigBundle();
+    const auto base = MakePipelineConfigBundle();
+    auto scoped_path=base.path;
+    if(command.recovery_clear) {
+        // A complete curved exit can satisfy curvature/lateral acceleration
+        // yet require slower steering than a short KEEP preview. Generate at
+        // a cautious ceiling and cover the entire exit at that speed. All
+        // ordinary road, steering, dynamics and collision checks remain on.
+        resolved_target_speed=std::min(resolved_target_speed,base.limits.low_speed_crawl_speed_cap);
+        const double distance=std::max(0.,command.recovery_min_end_s-s);
+        const double horizon=std::clamp(2*distance/std::max(.5,resolved_target_speed)+2.,5.,32.);
+        scoped_path.time_horizon={horizon,std::min(32.,horizon+2.),.5};
+    }
+    const PlannerConfigBundle cfg{scoped_path,base.limits,base.cost_weights,base.keep_cruise,
+        base.vehicle_shape,base.collision,base.stop,base.merge,base.avoid,base.following,base.curve_speed,base.lane_width};
     const PlannerCommand* external_command = &command;
     // 외부 command 경로는 FSM이 지정한 mode를 그대로 받아 실행한다. 진입
     // 가능한 모드는 ValidateExternalCommand의 whitelist가 이미 걸러낸 상태다.
@@ -149,8 +163,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             : CartesianGeometryMode::HYBRID;
     double stop_distance = 0.0;
     if (external_stop_mode) {
-        UpdateExternalStopExecution(s, s_dot, cmd, stop_distance);
-        if (!roundabout_waiting && execution_->stop_phase == StopExecutionPhase::BRAKING &&
+        UpdateExternalStopExecution(ego,s, s_dot, cmd, stop_distance);
+        if (!cmd.signal_stop.valid() && !roundabout_waiting && execution_->stop_phase == StopExecutionPhase::BRAKING &&
             s_dot <= cfg.stop.speed_tolerance &&
             stop_distance > cfg.stop.position_tolerance)
             stop_.reapproaching = true;
@@ -322,17 +336,27 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     const bool spatial_stop = external_stop_mode && !roundabout_waiting;
     if (spatial_stop) {
         // Buffer belongs to the actual endpoint, not only the diagnostic cap.
-        // Keep the external target fixed across replanning.
+        // Keep the external target fixed across replanning. Signal STOP also
+        // reserves 0.10 m inside the allowed target tolerance: a measured
+        // C052 path missed the full-body line clearance by 0.004 m as its
+        // terminal yaw varied, latching an emergency stop 15 m before the
+        // line. The reserve moves the planned endpoint back, while the
+        // selected target, revision, and 0.5 m Frenet buffer stay unchanged.
+        constexpr double kSignalStopGeometryReserveM = 0.10;
         request.longitudinal_mode = LongitudinalMode::STOPPING;
         const double track_length = ref_.points.empty() ? 0.0 : ref_.points.back().s;
         request.stop.stop_s = s + std::max(0.0,
-            ForwardArcDistance(s, stop_.target_s, track_length) - cfg.stop.stop_buffer);
+            (cmd.signal_stop.valid() ? stop_.target_s-s :
+             ForwardArcDistance(s, stop_.target_s, track_length)) - cfg.stop.stop_buffer -
+            (cmd.signal_stop.valid() ? kSignalStopGeometryReserveM : 0.0));
         request.stop.terminal_offset = {0.0,0.0,0.0};
         request.stop.spatial_profile = true;
         request.stop.comfortable_decel = cfg.stop.comfortable_decel;
         request.stop.cruise_speed = stop_.reapproaching
             ? std::min(resolved_target_speed, cfg.stop.reapproach_speed) : resolved_target_speed;
         request.stop.acceleration_limit = cfg.stop.reapproach_accel;
+        request.stop.braking_only = cmd.signal_stop.valid() &&
+            (cmd.signal_stop.braking_only || execution_->stop_phase == StopExecutionPhase::BRAKING);
     }
     const bool keep_departure_hold=external_keep_candidates &&
         KeepDepartureOffsetHoldAllowed(ego,ref_,s,cfg.vehicle_shape,cfg.lane_width,
@@ -393,11 +417,11 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     bool keep_road_rejected=false;
     bool keep_actuation_rejected=false;
     const bool guard_keep_departure_road=is_true_external_keep &&
-        std::fabs(ego.v)<cfg.limits.near_low_speed_fallback_v;
+        (command.recovery_clear || std::fabs(ego.v)<cfg.limits.near_low_speed_fallback_v);
     const bool guard_keep_departure_actuation=is_true_external_keep &&
         std::fabs(ego.v)<std::max(cfg.limits.near_low_speed_fallback_v,
                                 cfg.limits.steering.reference_speed);
-    bool reachable_speed_alternative = is_true_external_keep && blocked_low_speed_crawl;
+    bool reachable_speed_alternative = is_true_external_keep && (blocked_low_speed_crawl || command.recovery_clear);
     for (int generation_pass = 0;
          generation_pass < generation_pass_limit; ++generation_pass) {
         FrenetState pass_start = start;
@@ -406,13 +430,12 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             // boundary cap. Project only an unreleasable low-speed boundary.
             const double jerk = maneuver_limits.max_longitudinal_jerk *
                 maneuver_limits.boundary_condition_accel_fraction;
-            const double brake_limit = std::min(
-                maneuver_limits.max_longitudinal_accel *
-                    maneuver_limits.boundary_condition_accel_fraction,
-                std::sqrt(2.0 * jerk * std::max(0.0, start.s_d)));
-            pass_start.s_dd = std::clamp(stop_boundary_acceleration, -brake_limit,
-                cfg.limits.max_longitudinal_accel *
-                    cfg.limits.boundary_condition_accel_fraction);
+            pass_start.s_dd = asmc_planner::signal::StopBoundaryAcceleration(
+                start.s_d, stop_boundary_acceleration,
+                {maneuver_limits.max_longitudinal_accel *
+                     maneuver_limits.boundary_condition_accel_fraction, jerk,
+                 cfg.limits.max_longitudinal_accel *
+                     cfg.limits.boundary_condition_accel_fraction});
         }
         request.target_speed = final_applied_target_speed;
         PlannerDebugStats pass_stats;
@@ -451,6 +474,11 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                 pass_start, request, maneuver_limits,
                 planning_collision_obstacles,
                 append_keep_continuity_candidates, &pass_stats, geometry_mode);
+            if(command.recovery_clear)for(auto& candidate:candidates) {
+                if(candidate.valid && (candidate.s.empty() || candidate.s.back()<command.recovery_min_end_s)) {
+                    candidate.valid=false;candidate.rejection_reason=RejectionReason::ROAD_BOUNDARY;
+                }
+            }
             if (guard_keep_departure_road || guard_keep_departure_actuation) {
                 for (auto& candidate:candidates) {
                     if (!candidate.valid) continue;

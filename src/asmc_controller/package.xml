@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>asmc_controller</name>
+  <depend>std_msgs</depend>
   <version>0.1.0</version>
   <description>MPC controller with a ROS runtime.</description>
   <maintainer email="autonav@todo.todo">autonav</maintainer>

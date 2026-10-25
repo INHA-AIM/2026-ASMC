@@ -7,6 +7,9 @@
 #include "MPC/Reference/reference_validator.hpp"
 
 double BrakePedalDeceleration(double pedal, const MPCParams& params) {
+    // Full braking has its own nominal profile, not an extrapolation of a
+    // partial-pedal calibration table. 8.9 is an initial model, not a guarantee.
+    if (pedal >= 1.0) return params.brake_full_decel;
     pedal = std::clamp(pedal, 0.0, 1.0);
     const auto& x = params.brake_pedal_lut;
     const auto& y = params.brake_response_lut;
@@ -19,7 +22,8 @@ double BrakePedalDeceleration(double pedal, const MPCParams& params) {
 }
 
 ReferencePath MakeBrakingReference(const ReferencePath& geometry,
-    const MPCState& ego, double deceleration, const MPCParams& params) {
+    const MPCState& ego, double deceleration, const MPCParams& params,
+    bool allow_terminal_extension) {
     ReferencePath out;
     if (geometry.size() < 2 || !ValidateReference(geometry, params).ok() ||
         !std::isfinite(deceleration) || deceleration <= 0.0 ||
@@ -63,6 +67,7 @@ ReferencePath MakeBrakingReference(const ReferencePath& geometry,
         const double s = start + travel;
         double x, y, yaw, curvature;
         if (s >= arc.back()) {
+            if (!allow_terminal_extension && s > arc.back()+1e-6) return {};
             const double d = s-arc.back();
             yaw = yaw_end+k_end*d;
             x = geometry.x_ref.back() + (std::abs(k_end)<1e-6 ?

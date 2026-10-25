@@ -10,7 +10,8 @@ class RequestTransaction {
  public:
   asmc_msgs::BehaviorCommand update(asmc_msgs::BehaviorCommand candidate,
       const asmc_msgs::FrenetFeedback* feedback, const ros::Time& now,
-      double validity_seconds, bool prepare, bool intersection_approach);
+      double validity_seconds, bool prepare, bool intersection_approach,
+      bool signal_recovery_speed=false);
   uint32_t issuedCommandId() const { return has_issued_request_ ? issued_request_.command_id : 0; }
  private:
   static bool sameIdentity(const asmc_msgs::BehaviorCommand&,const asmc_msgs::BehaviorCommand&);
@@ -20,5 +21,6 @@ class RequestTransaction {
   bool has_issued_request_ = false;
   bool request_identity_locked_ = false;
   bool issued_intersection_approach_ = false;
+  bool issued_signal_recovery_speed_ = false;
 };
 }

@@ -140,7 +140,10 @@ std::vector<PlannerObject> MakePlannerObjects(
             object.pcl_ClusterPoints.empty() || IsNoise(object.str_ObjectClass)) {
             continue;
         }
-        if (object.s32_Id >= std::numeric_limits<std::int16_t>::max()) continue;
+        // The shared native/ROS contract carries int32 IDs. Only the legacy
+        // UDP sender has an int16 slot (and enforces that limit itself).
+        // Applying its limit here erased every long-running ROS track once
+        // the monotonically increasing tracker ID reached 32767.
         if (!IsFinitePositive(object.f32_OBB_Width) ||
             !IsFinitePositive(object.f32_OBB_Height)) {
             continue;

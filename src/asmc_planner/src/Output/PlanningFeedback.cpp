@@ -133,6 +133,68 @@ void PlanningPort::publishFeedbackV2(
     }
     (void)trajectory;
     feedback_v2_pub_.publish(feedback);
+    if(control_binding_enabled_ && cycle_control_request_.token.valid() && trajectory) {
+        asmc_msgs::binding::Plan packet;
+        packet.request=cycle_control_request_;
+        packet.planner_epoch=planner_epoch_;packet.sequence=++control_plan_sequence_;
+        packet.feedback=feedback;packet.trajectory=*trajectory;
+        packet.stationary_hold=command_manager_.completed_normally() && planner_.stop_holding() &&
+            packet.request.command.maneuver_type==asmc_msgs::BehaviorCommand::STOP;
+        // Preserve feedback.plan_valid as the departure-candidate result.
+        // The bound envelope separately certifies this cycle's checked,
+        // stop-capable PREPARE path; it never grants READY/EXECUTE authority.
+        packet.merge_waiting_path_valid=
+            packet.request.command.maneuver_type==asmc_msgs::BehaviorCommand::MERGE &&
+            packet.request.command.merge_type==asmc_msgs::BehaviorCommand::MERGE_ROUNDABOUT &&
+            packet.request.command.execution_request==asmc_msgs::BehaviorCommand::PREPARE &&
+            !planner_.roundabout_merge_committed() && planner_.last_roundabout_result().waiting_path_valid &&
+            trajectory_source==asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
+        packet.goal_satisfied=!packet.request.signal.enabled || !planner_.signal_stop_goal_violated();
+        if(packet.request.signal.recovery_geometry &&
+           plan_valid && trajectory->valid && !trajectory->points.empty()) {
+            const auto& end=trajectory->points.back();const auto& shape=planner_.vehicle_shape();
+            const auto& g=packet.request.signal;
+            const double rear=planner_.rear_overhang(),front=shape.length-rear,error=g.position_error;
+            bool outside=std::isfinite(g.exit_x) && std::isfinite(g.exit_y) &&
+                std::abs(std::hypot(g.exit_normal_x,g.exit_normal_y)-1)<1e-5;
+            CartesianPath path;
+            for(const auto& p:trajectory->points) {
+                path.x.push_back(p.x);path.y.push_back(p.y);path.yaw.push_back(p.yaw);
+                path.v.push_back(p.velocity);path.a.push_back(p.acceleration);path.kappa.push_back(p.curvature);
+            }
+            outside=outside && planner_.road_map().EvaluateRecoveryPath(path,shape,trajectory->dt).drivable;
+            const double width=std::max(shape.width,shape.road_outer_width);
+            for(double x:{-rear-error,front+error})for(double y:{-width/2-error,width/2+error}) {
+                const double px=end.x+x*std::cos(end.yaw)-y*std::sin(end.yaw);
+                const double py=end.y+y*std::cos(end.yaw)+x*std::sin(end.yaw);
+                outside=outside && (px-g.exit_x)*g.exit_normal_x+(py-g.exit_y)*g.exit_normal_y>0;
+            }
+            packet.exit_path_valid=outside;
+        }
+        if(plan_valid && trajectory->valid && feedback.command_accepted &&
+           feedback.active_maneuver==packet.request.command.maneuver_type) {
+            const auto snapshot=takeSnapshot();
+            const double age=(ros::SteadyTime::now()-snapshot.vehicle_received_at).toSec();
+            if(snapshot.has_vehicle && snapshot.vehicle.valid && age>=0 && age<=.2 &&
+               std::abs(snapshot.vehicle.speed)<=.15) {
+                const auto& g=packet.request.signal;
+                const auto& v=snapshot.vehicle;const auto shape=planner_.vehicle_shape();
+                bool before=std::abs(std::hypot(g.normal_x,g.normal_y)-1)<1e-5;
+                for(double x:{-planner_.rear_overhang()-g.position_error,
+                    shape.length-planner_.rear_overhang()+g.position_error})
+                  for(double y:{-std::max(shape.width,shape.road_outer_width)/2-g.position_error,
+                      std::max(shape.width,shape.road_outer_width)/2+g.position_error}) {
+                    const double px=v.x+x*std::cos(v.yaw)-y*std::sin(v.yaw);
+                    const double py=v.y+y*std::cos(v.yaw)+x*std::sin(v.yaw);
+                    before=before && (g.line_x-px)*g.normal_x+(g.line_y-py)*g.normal_y>=g.clearance;
+                  }
+                packet.execution_recovery_safe=packet.exit_path_valid || before;
+            }
+        }
+        // Reused/fallback paths never establish release. A completed stationary
+        // STOP is separately marked for holding, not as a new moving plan.
+        control_plan_pub_.publish(asmc_msgs::binding::Encode(packet));
+    }
     if (feedback_sink_) feedback_sink_(feedback);
 }
 

@@ -4,6 +4,9 @@
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
 #include <ros/ros.h>
+#include <asmc_msgs/control_binding.hpp>
+#include "Util/EmergencySteering.hpp"
+#include "Util/BrakeResponseWatchdog.hpp"
 
 struct ControlContext {
     ros::Publisher control_pub;
@@ -21,6 +24,23 @@ struct ControlContext {
     ros::SteadyTime last_successful_control_at;
     bool has_successful_control = false;
     bool emergency_stop_active = false;
+    EmergencySteeringState emergency_steering;
+    double braking_geometry_stamp=0;
+    // Enabled by explicit wire binding. The legacy-only test gate also uses
+    // this latch to reject unrelated fresh trajectories.
+    bool require_verified_release=false;
+    std::uint32_t pending_release_command=0;
+    bool binding_enabled=false;
+    double last_published_brake=0;
+    asmc_msgs::binding::Gate binding_gate;
+    ros::SteadyTime binding_request_received_at,binding_plan_received_at;
+    ros::SteadyTime pending_plan_received_at;
+    std::uint64_t pending_plan_sequence=0;
+    std::string pending_planner_epoch;
+    ros::Publisher control_status_pub;
+    std::uint64_t output_sequence=0;
+    BrakeResponseWatchdog brake_watchdog;
+    double stopped_since=-1;
 };
 
 extern ControlContext g_control;

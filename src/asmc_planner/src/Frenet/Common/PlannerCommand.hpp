@@ -7,6 +7,7 @@
 #include <string>
 
 #include "Frenet/Common/BehaviorTypes.hpp"
+#include "Signal/StopConstraint.hpp"
 
 // aggregate 구조를 유지하되(생성자 없음) 모든 필드에 안전한 기본값을 준다.
 // PlannerCommand cmd; / PlannerCommand cmd{}; 두 형태 모두 미초기화 필드가
@@ -34,6 +35,10 @@ struct PlannerCommand {
     // direction을 명시적 매핑으로 변환해 채운다(static_cast 금지 - 두 enum의
     // 번호 체계가 다르다. 계약 문서 2절).
     BehaviorState mode = LANE_KEEPING;
+    // Bound recovery preview must cover a complete exit, not the ordinary
+    // short low-speed crawl. This is never a new-entry permission.
+    bool recovery_clear=false;
+    double recovery_min_end_s=std::numeric_limits<double>::quiet_NaN();
 
     // 기동 대상 객체 ID. FOLLOW의 선행차와 AVOID의 회피 장애물이 같은 필드를
     // 쓴다 - BehaviorCommand가 둘 다 primary_object_id 하나로 주기 때문이다
@@ -59,6 +64,7 @@ struct PlannerCommand {
     // 기본값을 NaN으로 두어 std::isfinite(stop_position)로 지정 여부를 판별한다.
     // v2에서는 target_pose_map을 RefLine에 투영해 채운다.
     double stop_position = std::numeric_limits<double>::quiet_NaN();
+    asmc_planner::signal::StopConstraint signal_stop;
 
     // FOLLOW 간격 설정. v2 매핑: use_custom_follow_gap=true일 때
     // desired_time_gap_s / minimum_gap_m를 그대로, false이면 config 기본값.

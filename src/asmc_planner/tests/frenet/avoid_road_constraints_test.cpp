@@ -213,6 +213,25 @@ int main(){
  const bool junction_ok=AwaitPrepare(junction,junction_ego,junction_objects,command,path,result);
  Expect(junction_ok&&result.candidate_valid&&result.selected_target_d<0,"recorded junction state has a right bypass");
  Expect(result.candidate_valid&&map.PathClear(result.candidate_path,shape),"right bypass includes a road-constrained return");
+ FrenetPlanner recovery_avoid;
+ Expect(recovery_avoid.Init("avoid_road_constraints_params.yaml"),"recovery AVOID planner loads");
+ double recovery_start_s=0,recovery_end_s=0;
+ Expect(recovery_avoid.ProjectEgoToS(junction_ego,recovery_start_s),"recovery start projects");
+ PlannerCommand recovery_command=command;
+ recovery_command.recovery_clear=true;
+ recovery_command.recovery_min_end_s=recovery_start_s+32.0;
+ CartesianPath recovery_maintenance;
+ FrenetPlanner::AvoidPrepareResult recovery_result;
+ const bool recovery_ok=AwaitPrepare(recovery_avoid,junction_ego,junction_objects,
+                                     recovery_command,recovery_maintenance,recovery_result);
+ const bool recovery_reaches=recovery_result.candidate_valid &&
+     recovery_avoid.ProjectPointToS(recovery_result.candidate_path.x.back(),
+         recovery_result.candidate_path.y.back(),recovery_command.recovery_min_end_s,
+         recovery_end_s) && recovery_end_s>=recovery_command.recovery_min_end_s;
+ Expect(recovery_ok&&recovery_reaches,"recovery AVOID reaches the conflict exit");
+ Expect(recovery_reaches&&map.EvaluateRecoveryPath(recovery_result.candidate_path,
+     shape,recovery_avoid.sample_dt()).drivable,
+     "recovery AVOID complete exit remains on road");
  // A paint-scored fallback must never override a physical OBB collision.
  auto barrier=junction_objects.front();barrier.id=900;
  barrier.motion_state=ObjectMotionState::LOW_THREAT;

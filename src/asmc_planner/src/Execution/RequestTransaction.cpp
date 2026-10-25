@@ -50,7 +50,8 @@ bool RequestTransaction::sameIdentity(const Command& lhs, const Command& rhs) {
 
 asmc_msgs::BehaviorCommand RequestTransaction::update(
     Command candidate, const Feedback* feedback, const ros::Time& now,
-    double validity_seconds, bool prepare, bool intersection_approach) {
+    double validity_seconds, bool prepare, bool intersection_approach,
+    bool signal_recovery_speed) {
   const bool feedback_matches =
       feedback && has_issued_request_ &&
       feedback->command_id == issued_request_.command_id;
@@ -103,9 +104,12 @@ asmc_msgs::BehaviorCommand RequestTransaction::update(
   // when its transaction completes.
   const bool intersection_approach_policy_changed =
       has_issued_request_ && candidate.maneuver_type != Command::MERGE &&
+      !(signal_recovery_speed && issued_signal_recovery_speed_) &&
       candidate_intersection_approach != issued_intersection_approach_;
+  const bool signal_recovery_policy_changed=has_issued_request_ &&
+      signal_recovery_speed!=issued_signal_recovery_speed_;
   if (!has_issued_request_ || !sameIdentity(issued_request_, candidate) ||
-      restart_terminal_identity || intersection_approach_policy_changed) {
+      restart_terminal_identity || intersection_approach_policy_changed || signal_recovery_policy_changed) {
     if (!request_identity_locked_ || emergency || fsm_changed_maneuver) {
       ++next_command_id_;
       if (next_command_id_ == 0) ++next_command_id_;
@@ -114,6 +118,7 @@ asmc_msgs::BehaviorCommand RequestTransaction::update(
       has_issued_request_ = true;
       request_identity_locked_ = false;
       issued_intersection_approach_ = candidate_intersection_approach;
+      issued_signal_recovery_speed_ = signal_recovery_speed;
     }
   }
 

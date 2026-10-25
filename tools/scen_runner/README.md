@@ -320,6 +320,95 @@ Simulator 종료 후 **두 수정 모두 주최측 원본으로 원복**하려�
 
 과거 중간 빌드 DLL은 정리했고 로컬에서 빌드했던 해시만 `dll/builds/out_legacy_hashes/`에 보존해 원복 검증에 사용한다. 현재 설치된 Simulator 파일과 Managed 원본/직전 백업은 소스 정리로 변경하지 않는다. 수정 소스·빌드/설치/원복 스크립트·검사는 팀 레포에 포함하고 설치 DLL·빌드 DLL·개인 로그는 포함하지 않는다.
 
+## 황색 정책의 통제된 신호 시험
+
+[정책 계약](../../docs/contracts/yellow-signal-policy.md)과
+[명령–궤적 연결](../../docs/contracts/control-binding-v1.md)을 함께 빌드한다.
+기본 운영 설정은 관측 모드다. 아래 실행기만 `active`와 추가 연결을 명시적으로
+선택하고 자신의 판제·MPC·입력 adapter를 기동한다. 기존 판제 실행을 먼저 종료하고
+Bridge·Main·카메라는 유지한다. 실행기는 다른 판제의 ROS 이름을 빼앗지 않는다.
+
+신호는 `SetTrafficLightState`로 바꾸고 `GetTrafficLightInfo`로 실제 값을 확인한다.
+종료 시 원래 교차로 phase에서 자동 주기를 재개한다. 원래 phase의 경과 시간은
+복원하지 않는다. 강제 황색/적색은 phase 유효 기한 전에 끝내며 초록 갱신으로
+덮어쓰지 않는다. 무응답·색상 불일치·시계 변동은 합격 처리하지 않는다.
+적색 복구의 신호 유지 구간은 정책 EXITED와 독립 실제 차체의 이탈 경계 여유
+0.5m를 모두 확인할 때까지다. 그 뒤 신호를 복원하고 출구 뒤 15m의 끝점까지
+주행을 계속 검사한다. 이탈 전 녹색 flash를 만드는 phase 갱신은 하지 않는다.
+
+시험 전 동일 Windows의 MORAI 원본 시계와 ROS 시계를 확인하고 로컬 clock profile을
+만든다. 읽기 전용 `scen_runner.morai.clock_contract.calibrate_local_windows()`의
+offset/불확실성은 해당 실행 환경의 측정값이다. 원본 JPEG와 SensorFrameTiming의
+시계영역·세대·식별자 연결까지 확인한 뒤에만 `source_clock_verified`를 설정한다.
+이 도구는 OS 시계를 수정하지 않는다. 다른 PC의 profile을 복사해 사용하지 않는다.
+
+도로 평가 자료는 실제 실행 중인 지도 번들의 물리 road MeshCollider를
+`export_signal_trial_surface.py`로 읽어 `.runtime/`에 생성한다. 별도의 Python 3.9
+이상 검사 환경에 UnityPy·numpy·scipy·shapely가 필요하며 설치된 번들을 수정하지 않는다.
+일반 시험에는 `requirements.txt`의 pyproj도 필요하다. 지도·차량 정답이나 gRPC의
+신호 색상은 운영 정책 입력으로 발행하지 않는다.
+실행기와 평가기는 MGeo 환경의 shapely도 사용한다. 제공 Docker 환경에서는
+`docker/ros-noetic/requirements-mgeo.txt` 및 HD Map 의존성으로 설치한다.
+
+컨테이너 `/root/ws`에서, 검증한 endpoint와 로컬 자료를 지정한다.
+
+```bash
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+export PYTHONPATH="tools/scen_runner:$PYTHONPATH"
+python3 tools/scen_runner/run_yellow_signal_trial.py \
+  --host 127.0.0.1 --port 7789 \
+  --clock-profile tools/scen_runner/.runtime/yellow/current-clock.yaml \
+  --physical-road tools/scen_runner/.runtime/yellow/physical-road-oracle.json \
+  --light C1256W000077 --case yellow_stop --start-distance 40 \
+  --output tools/scen_runner/.runtime/yellow/trials/new-yellow-stop
+```
+
+`--record-bag`는 원본 카메라·센서·frame timing과 실제 명령·궤적·제어를 함께 기록한다.
+분할 bag은 정상 종료 후 닫힘·필수 토픽·SHA를 확인한다. 원본 bag은 수정하지 않는다.
+`analyze_signal_bag.py <회차 폴더>`는 Controller가 실제 사용한 token·Planner 세대·
+sequence를 해당 요청과 궤적에 연결해 검사한다. 생성 시각으로 명령 소속을 추정하지 않는다.
+이 bag 검사는 독립 물리 주행 판정을 대신하지 않는다.
+
+`--full-route`는 800m에서 종료하지 않고 CP14를 통과한 뒤 START/END로 복귀해야
+완주로 인정한다. 이때 `export_signal_trial_surface.py --full-route`로 만든 전체
+경로 자료와 원본 경로 SHA가 필요하다. 기존 800m 자료를 전체 경로 합격에 사용하지 않는다.
+`--full-route --case corridor --natural-signals`는 신호를 고정하지 않고 기존 자동
+주기를 사용한다. 전체 경로 기능은 시계 수락과 실제 주행 검증을 생략하지 않으며,
+옵션이 준비됐다는 이유로 기본 운영 모드를 활성화하지 않는다.
+
+지원 사례는 `green`, `red_stop`, `yellow_stop`, `yellow_close`, `yellow_inside`,
+`recovery`, `corridor`다. `corridor`는 공식 출발점부터 s=800m까지이며 회전교차로
+시작 약 s=858.5m 전에 끝난다. 나머지는 선택한 신호 접근/출구 구간이다.
+`yellow_close --trigger-distance 6` 같은 불가능 조건은 무위반 주행 합격과 구분한다.
+`analyze_yellow_signal_trial.py <회차 폴더들> --output <새 분석.json>`은 원본 result를
+바꾸지 않고 최대제동 선행·초과 기록 보존·실제 도로 이탈을 따로 평가한다.
+
+`--park-static ID:DX:DY`는 명시한 기존 정적 prop만 임시 이동한다. 원래 상태를 쓰기
+전에 기록하고 물리 위치·방향 readback과 원위치 복원을 확인한다. 다른 객체를
+삭제하거나 재생성하지 않는다. 복원 실패는 회차 실패로 남기고 snapshot을 보존한다.
+이 옵션을 쓰지 않은 장애물 유지 사례와 비어 있는 신호 기본 사례를 구분한다.
+
+`qualify_yellow_blockage.py`는 같은 profile·도로·endpoint와 명시한 `--static-id`로
+실제 정적 prop을 사용하는 추가 연결 시험이다. `--case red_recovery_blocked`는
+C091 내부에 차량을 정지시킨 상태에서 전체 이탈 경로를 막고 제동 유지를 확인한다.
+이는 held preflight 평가이며 이동 중 돌발 장애물 제동 시험으로 집계하지 않는다.
+장애물을 검증된 임시 주차 위치로 옮긴 뒤 현재 명령의 새 안전 경로로 실제
+주행을 완료해야 합격한다. 원본 prop을 복원하기 전 자차는 공식 출발점에 정지한다.
+예를 들어 위 명령과 같은 공통 인자에 `--case red_recovery_blocked --static-id 2`
+및 새 `--output`을 지정한다. 이 ID는 이 설치본에서 확인한 정적 prop이므로 다른
+scene에 그대로 적용하지 않는다. 다른 차량·보행자 유형이면 이동을 거부한다.
+
+회차마다 소스·실행 바이너리·지도·clock profile 지문, 원본 인식, 정책 사건·원인,
+원자적 요청/경로, 실제 제어 출력, MORAI 실제 차량·신호 평가를 저장한다.
+소스가 도중에 바뀌면 해당 회차는 합격으로 집계하지 않는다. 정상/오류 종료 모두
+ego를 pause·속도 0으로 유지하고 자신의 launch를 종료한 뒤 신호·시험 fixture와
+이전 binding 설정을 복원한다. SIGKILL·통신 단절의 원격 복원은 보장하지 않는다.
+이 경우 남은 snapshot과 실제 simulator 상태를 확인한 후 재개한다.
+
+이 설치본에서 수행한 회차·실측·실패 기록은
+[2026-10-22 검증 기록](../../docs/records/planning/2026-10-22-yellow-light-validation.md)에 있다.
+
 ## 검사와 공유 범위
 
 남긴 테스트는 통합 실행의 배치 계산, 생성/정리·ID 재사용, 접촉, 환경, 완주/구간 종료, 주행 횟수·정체, 저장/재현, GUI·진입 명령을 검사한다.

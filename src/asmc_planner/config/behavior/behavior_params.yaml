@@ -118,6 +118,18 @@ stop:
   braking_margin: 4.0
   planner_stop_buffer: 0.5
 score_weight: {safety: 1.0, route: 0.8, efficiency: 0.5, comfort: 0.2}
+signal_policy:
+  # active is deliberately rejected until Controller can prove path ownership.
+  mode: shadow
+  source_clock_verified: false
+  measured_max_delay_s: 0.0  # Initial budget max(0.5, measured_max + 0.1).
+  freshness_s: 0.3
+  observation_gap_s: 0.3
+  position_error_m: 0.5  # INITIAL combined pose/map/tracking uncertainty.
+  entry_observation_error_m: -1.0  # Unqualified: use the full body uncertainty.
+  entry_observation_speed_max_mps: 0.0
+  front_clearance_m: 0.5
+  # geometry_path and measured half_track_m are intentionally not fabricated.
 topics: {ego: "/vehicle/state", objects: "/Object_topic", plan_feedback: "/planning/feedback", frenet_feedback_v2: "/planning/frenet_feedback_v2"}
 publish_topics: {behavior_context: "/behavior/context", behavior_command_v2: "/behavior/command_v2", feature_debug: "/behavior/feature_debug", marker: "/behavior/markers"}
 

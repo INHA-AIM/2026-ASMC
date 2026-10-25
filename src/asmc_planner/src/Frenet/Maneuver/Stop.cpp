@@ -141,16 +141,54 @@ bool FrenetPlanner::EmergencyStopProcess(const CartesianState& ego, double s,
     return true;
 }
 
-void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
+bool FrenetPlanner::SignalStopFootprintBeforeLine(const CartesianState& ego,
+    const asmc_planner::signal::StopConstraint& signal) const {
+    asmc_planner::signal::Geometry physical;
+    physical.key=signal.key;physical.reviewed=signal.valid();
+    physical.line=signal.physical_line;physical.approach=signal.approach;
+    asmc_planner::signal::Pose pose;
+    pose.valid=true;pose.x=ego.x;pose.y=ego.y;pose.yaw=ego.yaw;
+    pose.speed=std::max(0.,ego.v);pose.acceleration=ego.a;
+    asmc_planner::signal::Config shape;
+    shape.front_extent=vehicle_shape_.length-avoid_cfg_.rear_overhang;
+    shape.rear_extent=avoid_cfg_.rear_overhang;
+    shape.half_width=std::max(vehicle_shape_.width,vehicle_shape_.road_outer_width)/2;
+    shape.position_error=signal.position_error;shape.clearance=signal.clearance;
+    return asmc_planner::signal::BodyBeforeLine(pose,physical,shape);
+}
+
+void FrenetPlanner::UpdateExternalStopExecution(const CartesianState& ego,double s, double s_dot,
                                                  PlannerCommand& cmd,
                                                  double& out_stop_distance) {
     const double s_max = ref_.points.empty() ? 0.0 : ref_.points.back().s;
     out_stop_distance = ForwardArcDistance(s, cmd.stop_position, s_max);
-    const double stop_distance = out_stop_distance;
+    double stop_distance = out_stop_distance;
 
     // 목표가 바뀌면 새 STOP 명령으로 보고 실행 단계를 리셋한다. command_id는
     // publish마다 증가할 수 있어 phase 유지 판단 기준으로 쓸 수 없다.
-    if (!stop_.target_valid ||
+    const bool signal_stop=cmd.signal_stop.valid();
+    if (signal_stop) {
+        const bool new_signal_target = !stop_.target_valid ||
+            stop_.signal.key != cmd.signal_stop.key;
+        if (new_signal_target) {
+            // A completed stop belongs to one physical line and movement.
+            // A later light must never inherit its HOLD phase, even when KEEP
+            // commands were executed between the two signal requests.
+            execution_.resetStopTarget();
+            stop_.goal_failed=false;
+        }
+        // A revision is an explicit update even below the legacy 2m threshold.
+        // Preserve BRAKING/HOLD only within the same signal key; updating its
+        // goal never grants forward motion.
+        if (stop_.signal.key!=cmd.signal_stop.key ||
+            stop_.signal.target_revision!=cmd.signal_stop.target_revision ||
+            stop_.target_s!=cmd.stop_position) stop_.goal_reached=false;
+        stop_.signal=cmd.signal_stop;
+        stop_.target_s=cmd.stop_position;stop_.target_valid=true;
+        stop_.reapproaching=false;
+        out_stop_distance=cmd.stop_position-s;
+        stop_distance=out_stop_distance;
+    } else if (!stop_.target_valid ||
         !std::isfinite(stop_.target_s) ||
         std::fabs(cmd.stop_position - stop_.target_s) >
             stop_cfg_.target_change_tolerance) {
@@ -158,6 +196,7 @@ void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
         stop_.target_s = cmd.stop_position;
         stop_.target_valid = true;
         stop_.reapproaching = false;
+        stop_.signal={};
     }
 
     const double comfortable_decel = std::max(0.1, stop_cfg_.comfortable_decel);
@@ -182,9 +221,25 @@ void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
 
     // APPROACH -> BRAKING은 단방향(latch). 경계에서 측정 노이즈로 왕복하면
     // 후보 생성기가 매 사이클 바뀌어 속도 프로파일이 흔들린다.
-    const bool at_target = stop_distance <= stop_cfg_.position_tolerance;
-    execution_.observeStop({stop_distance <= trigger_distance, at_target,
-                           std::fabs(s_dot) <= stop_cfg_.speed_tolerance});
+    const double final_distance=cmd.stop_position-s-stop_cfg_.stop_buffer;
+    // The 0.5 m endpoint buffer is a planning margin, not a zero-tolerance
+    // physical line. A small measured tracking/projection error inside the
+    // configured target tolerance is still checked against the full body and
+    // physical line below; it must not become a latched execution failure.
+    if(signal_stop && final_distance<-stop_cfg_.position_tolerance)
+        stop_.goal_failed=true;
+    const bool low_speed=std::fabs(s_dot)<=stop_cfg_.speed_tolerance;
+    const bool at_target = signal_stop ?
+        std::abs(final_distance)<=stop_cfg_.position_tolerance &&
+        SignalStopFootprintBeforeLine(ego,cmd.signal_stop) :
+        stop_distance <= stop_cfg_.position_tolerance;
+    if(signal_stop) {
+        stop_.goal_reached=low_speed && at_target;
+        if(low_speed && execution_->stop_phase!=StopExecutionPhase::APPROACH)
+            execution_.holdStop();
+    }
+    execution_.observeStop({(signal_stop && cmd.signal_stop.braking_only) ||
+        stop_distance <= trigger_distance, at_target,low_speed});
 
     if (execution_->stop_phase == StopExecutionPhase::APPROACH) {
         // 목표점이 아니라 buffer만큼 앞을 향해 감속한다.
@@ -236,8 +291,16 @@ bool FrenetPlanner::PlanExternalStopBrakingFallback(
     // This is the final fallback, after target-preserving spatial STOP
     // candidates. Do not publish an unchecked constant-d path or pretend that
     // stopping early means the requested target has been reached (no HOLD latch).
-    const double settle = std::max(1.0, std::min(
-        std::max(1.0, stop_distance), std::max(10.0, ego.v * 2.5)));
+    // A signal STOP can reach its terminal longitudinal buffer while still
+    // moving slowly. Forcing the remaining lateral error to zero within that
+    // last metre can require impossible curvature and reject an otherwise
+    // safe braking path. Preserve the current steering trend over a normal
+    // lateral settling distance; the produced short path is still checked
+    // against the road, obstacles and physical stop line before publication.
+    const double settle = stop_.signal.valid()
+        ? std::max(10.0, ego.v * 2.5)
+        : std::max(1.0, std::min(
+            std::max(1.0, stop_distance), std::max(10.0, ego.v * 2.5)));
     CartesianState braking_ego = ego;
     // Ordinary distance-native STOP retains achieved service braking. Legacy
     // roundabout waiting keeps its existing boundary policy.
@@ -267,7 +330,9 @@ bool FrenetPlanner::PlanExternalStopBrakingFallback(
         double hint = s;
         for (std::size_t i=0; i<out_path.x.size(); ++i) {
             hint = FindClosestS(ref_,out_path.x[i],out_path.y[i],&hint,5);
-            if (hint > s + stop_distance + 0.02) {
+            const double final_s=s+stop_distance-(stop_.signal.valid() ? stop_cfg_.stop_buffer : 0.0);
+            if (hint > final_s + stop_cfg_.position_tolerance) {
+                if(stop_.signal.valid()) stop_.goal_failed=true;
                 // The strongest checked service stop cannot meet this late
                 // target. Keep its braking/steering rather than replacing it
                 // with an unchecked straight stop. Never report goal arrival.
@@ -298,7 +363,7 @@ void FrenetPlanner::AppendExternalStopSpatialCandidates(
         longitudinal = request.stop.spatial_profile
             ? GenerateSpatialStoppingCandidates(start, request.stop.stop_s,
                 request.stop.cruise_speed, request.stop.comfortable_decel,
-                generator, limits, request.stop.acceleration_limit)
+                generator, limits, request.stop.acceleration_limit,request.stop.braking_only)
             : GenerateStoppingCandidates(start, request.stop.stop_s, generator);
     } else {
         longitudinal = GenerateVelocityKeepingCandidates(start, request.target_speed, generator);

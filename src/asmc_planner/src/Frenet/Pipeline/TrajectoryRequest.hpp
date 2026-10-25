@@ -78,6 +78,7 @@ struct StopRequest {
     // Ordinary external STOP uses a distance-native, jerk-limited profile.
     // Roundabout waiting keeps its frontier-specific timing contract.
     bool spatial_profile = false;
+    bool braking_only = false;
     double comfortable_decel = 0.0;
     double cruise_speed = 0.0;
     double acceleration_limit = 0.0; // zero keeps the generator default

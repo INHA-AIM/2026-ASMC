@@ -239,6 +239,9 @@ UrbanFeature FeatureBuilder::build(
     feature.signal.distance_to_stop_line = stop_distance;
     feature.signal.stop_line_x = stop_line.point.x;
     feature.signal.stop_line_y = stop_line.point.y;
+    Point2D physical_pose;
+    route_manager.getRoutePose(feature.signal.stop_line_s, &physical_pose,
+                               &feature.signal.stop_line_yaw);
     // VehicleState x/y is the rear-axle GPS reference.  Move the commanded
     // stop target backward along the route so the vehicle front, plus a small
     // safety clearance, remains before the physical stop line.  Converting
@@ -249,9 +252,10 @@ UrbanFeature FeatureBuilder::build(
     feature.signal.stop_target_s = adjusted_stop_s;
     if (stop_target_offset_m_ > 0.0 &&
         route_manager.getRoutePose(adjusted_stop_s, &adjusted_stop,
-                                   &feature.signal.stop_line_yaw)) {
-      feature.signal.stop_line_x = adjusted_stop.x;
-      feature.signal.stop_line_y = adjusted_stop.y;
+                                   &feature.signal.stop_target_yaw)) {
+      feature.signal.stop_target_x = adjusted_stop.x;
+      feature.signal.stop_target_y = adjusted_stop.y;
+      feature.signal.stop_target_pose_valid = true;
     } else {
       Point2D stop_pose;
       route_manager.getRoutePose(feature.signal.stop_line_s, &stop_pose,
@@ -701,9 +705,22 @@ UrbanFeature FeatureBuilder::build(
     }
 
     const bool followable_object = IsLongitudinalLeadCandidate(object);
+    // A stationary, low-threat roadside object can be briefly labelled
+    // "person" by the camera even though its OBB never enters the vehicle's
+    // swept corridor. Keep the wide acquisition band for unconfirmed or
+    // moving pedestrians, but require physical path overlap for the verified
+    // low-motion case. This avoids a STOP after a cleared signal for a fixed
+    // roadside pole while preserving braking for anyone in the path.
+    const bool low_motion_roadside_person =
+        object.motion_state == MotionState::LOW_THREAT &&
+        object_motion_speed <= 0.1;
+    const double pedestrian_lateral_limit = low_motion_roadside_person
+        ? physical_corridor_half_width + avoid_target_.path_margin_m +
+              obstacle_lateral_half_extent
+        : kLaneWidth;
     if (object.type == ObjectType::PEDESTRIAN && object.gap > 0.0 &&
         object.gap < safety_.pedestrian_stop_distance &&
-        std::abs(relative_d) < kLaneWidth) {
+        std::abs(relative_d) < pedestrian_lateral_limit) {
       feature.risk.pedestrian_risk = true;
       feature.risk.nearest_pedestrian_s =
           std::min(feature.risk.nearest_pedestrian_s, object.s);

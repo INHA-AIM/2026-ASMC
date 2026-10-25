@@ -47,6 +47,14 @@ int main() {
           "retained warm-start controls obey the active STOP ceiling");
     check(stop.first_used_reference_acceleration<=.5&&GetMPCParams().accel_max==2,
           "STOP reference clipping does not mutate the global driving limit");
+    for(double limit:{0.,-.5}) {
+        auto bounded=MPCProcess(ego,reference,limit);
+        check(bounded.success && bounded.control.accel<=limit+1e-9,
+              "zero and negative ceilings constrain the solver, not just its published output");
+        check(std::all_of(g_mpc.warm_start.begin(),g_mpc.warm_start.end(),
+              [=](const MPCControl& u){return u.accel<=limit+1e-9;}),
+              "a previous accelerating warm start cannot bypass a nonpositive ceiling");
+    }
     auto driving=MPCProcess(ego,reference);
     check(driving.success&&GetMPCParams().accel_max==2,
           "leaving STOP restores the original limit without a parameter reset");

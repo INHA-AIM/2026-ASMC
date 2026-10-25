@@ -20,7 +20,10 @@ std::string WriteConfig() {
         << "    bounds: [0.0, 10.0, 0.0, 10.0]\n"
         << "  - name: unconditional\n"
         << "    bounds: [20.0, 30.0, 20.0, 30.0]\n"
-        << "    require_infrastructure_shape: false\n";
+        << "    require_infrastructure_shape: false\n"
+        << "  - name: elevated_pole\n"
+        << "    bounds: [-60.9, -60.2, -180.8, -179.0]\n"
+        << "    require_elevated_pole_shape: true\n";
     return path;
 }
 
@@ -86,6 +89,82 @@ TEST(StaticStructureExclusionFilter, KeepsShapeMismatchAndFailsOpen) {
     StaticStructureExclusionFilter unavailable;
     EXPECT_FALSE(unavailable.Configure("/does/not/exist.yaml", 2.5, 2.0));
     EXPECT_TRUE(unavailable.Evaluate(low).keep);
+
+    std::remove(path.c_str());
+}
+
+TEST(StaticStructureExclusionFilter, C091SignNeedsPoleAndGroundEvidence) {
+    const std::string path = WriteConfig();
+    StaticStructureExclusionFilter filter;
+    ASSERT_TRUE(filter.Configure(path, 2.5, 2.0));
+
+    PlannerObject sign = ObjectAt(-60.56466, -179.97424);
+    sign.length = 1.10427;
+    sign.width = 0.16487;
+    sign.height = 2.41325;
+    sign.ground_evidence.valid = true;
+    sign.ground_evidence.sample_count = 26;
+    sign.ground_evidence.median_clearance_m = 2.43769;
+    EXPECT_FALSE(filter.Evaluate(sign).keep);
+    EXPECT_EQ("configured_elevated_pole_drop", filter.Evaluate(sign).reason);
+
+    // One partial scan of the C091 speed sign previously fell 5 cm beyond
+    // the zone and blocked every signal-stop path candidate.
+    sign.obb_center_map.x = -60.25853736;
+    sign.obb_center_map.y = -179.2504595;
+    sign.length = 0.3700;
+    sign.width = 0.19495;
+    sign.height = 0.42665;
+    sign.ground_evidence.sample_count = 8;
+    sign.ground_evidence.median_clearance_m = 2.731;
+    sign.motion_state = 2;
+    EXPECT_FALSE(filter.Evaluate(sign).keep);
+    EXPECT_EQ("configured_elevated_pole_drop", filter.Evaluate(sign).reason);
+    sign.ground_evidence.median_clearance_m = 0.2;
+    EXPECT_TRUE(filter.Evaluate(sign).keep);
+    sign.ground_evidence.median_clearance_m = 2.731;
+    sign.classification = "car";
+    EXPECT_TRUE(filter.Evaluate(sign).keep);
+
+    sign = ObjectAt(-60.56466, -179.97424);
+    sign.length = 1.10427;
+    sign.width = 0.16487;
+    sign.height = 2.41325;
+    sign.ground_evidence.valid = true;
+    sign.ground_evidence.sample_count = 26;
+    sign.ground_evidence.median_clearance_m = 2.43769;
+
+    sign.ground_evidence.valid = false;
+    EXPECT_TRUE(filter.Evaluate(sign).keep);
+    sign.ground_evidence.valid = true;
+    sign.ground_evidence.sample_count = 4;
+    EXPECT_TRUE(filter.Evaluate(sign).keep);
+    sign.ground_evidence.sample_count = 26;
+    sign.ground_evidence.median_clearance_m = 0.2;
+    EXPECT_TRUE(filter.Evaluate(sign).keep);
+    sign.ground_evidence.median_clearance_m = 2.43769;
+    sign.height = 0.05;
+    sign.length = 0.39;
+    sign.ground_evidence.sample_count = 5;
+    EXPECT_FALSE(filter.Evaluate(sign).keep);
+    sign.height = 2.41325;
+    sign.length = 1.10427;
+    sign.width = 0.8;
+    EXPECT_TRUE(filter.Evaluate(sign).keep);
+    sign.width = 0.16487;
+    sign.motion_state = 2;
+    sign.is_dynamic = true;
+    EXPECT_FALSE(filter.Evaluate(sign).keep);
+    sign.ground_evidence.valid = false;
+    EXPECT_TRUE(filter.Evaluate(sign).keep);
+    sign.ground_evidence.valid = true;
+    sign.motion_state = 1;
+    sign.is_dynamic = false;
+    sign.classification = "person";
+    EXPECT_TRUE(filter.Evaluate(sign).keep);
+    sign.classification = "unknown";
+    sign.obb_center_map.x = -61.2;
+    EXPECT_TRUE(filter.Evaluate(sign).keep);
 
     std::remove(path.c_str());
 }

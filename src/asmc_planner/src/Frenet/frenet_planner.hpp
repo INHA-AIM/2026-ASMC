@@ -39,6 +39,7 @@ class FrenetPlanner {
 public:
     const AvoidRoadMap& road_map() const { return avoid_road_map_; }
     VehicleShape vehicle_shape() const { return vehicle_shape_; }
+    double rear_overhang() const { return avoid_cfg_.rear_overhang; }
     CollisionCheckConfig collision_config() const { return collision_cfg_; }
     // Actual perception timestamp; empty frames carry time too.
     void SetObjectObservationTime(double time, double evaluation_time = -1) {
@@ -88,6 +89,9 @@ public:
 
     struct MergePrepareResult {
         bool candidate_valid = false, ready = false, maneuver_completed = false;
+        // A checked PREPARE approach is usable even before a complete
+        // departure fits the horizon. This never grants gap/COMMIT authority.
+        bool waiting_path_valid = false;
         std::uint64_t epoch = 0;
         double entry_time = -1, exit_time = -1, progress = 0;
         std::size_t generated = 0, valid = 0;
@@ -208,6 +212,10 @@ public:
     bool stop_holding() const {
         return execution_->stop_phase == StopExecutionPhase::HOLD;
     }
+    bool stop_goal_reached() const {
+        return stop_holding() && (!stop_.signal.valid() || (stop_.goal_reached && !stop_.goal_failed));
+    }
+    bool signal_stop_goal_violated() const { return stop_.signal.valid() && stop_.goal_failed; }
 
     // v2 FOLLOW가 실제로 추종 중인 leader ID. FrenetFeedback.active_leader_id
     // 용이다. node가 command.primary_object_id를 그대로 되돌려 보내면
@@ -980,6 +988,9 @@ private:
     using StopExecutionPhase = asmc_planner::execution::StopExecutionPhase;
 
     struct StopContext {
+        asmc_planner::signal::StopConstraint signal;
+        bool goal_reached=false;
+        bool goal_failed=false;
         // 이 context가 추종 중인 정지 목표 s. 목표가 크게 바뀌면 새 명령으로
         // 보고 phase를 리셋한다.
         double target_s = std::numeric_limits<double>::quiet_NaN();
@@ -1017,7 +1028,7 @@ private:
         const CartesianState& ego, double s, double d,
         double resolved_target_speed, CartesianPath& out_path,
         double duration_s = 2.0, bool* road_blocked = nullptr,
-        bool* actuation_blocked = nullptr) const;
+        bool* actuation_blocked = nullptr, double minimum_path_distance = -1.0) const;
     bool KeepDepartureRoadClear(const CartesianPath& path) const;
 
     // FSM이 지정한 FOLLOW 대상의 확보 결과.
@@ -1060,7 +1071,7 @@ private:
     bool PlanExternalKeepLowSpeedFallback(const CartesianState& ego, double s,
                                           double d, double resolved_target_speed,
                                           const std::vector<TrackedObject>& predicted_obstacles,
-                                          CartesianPath& out_path);
+                                          CartesianPath& out_path, double minimum_path_distance = -1.0);
 
     // 외부 EMERGENCY_STOP 실행부. 후보 파이프라인을 건너뛰고 직접 감속한다.
     // 호출 위치(v2 FOLLOW/AVOID context reset 다음, 저속 fallback/AVOID 대상
@@ -1080,8 +1091,10 @@ private:
     // PlanInternal이 last_mode_ = STOP으로 별도 유지한다 - 그 진단용
     // ordering은 이 함수가 아니라 호출부 책임이므로 여기서 last_mode_를
     // 건드리지 않는다.
-    void UpdateExternalStopExecution(double s, double s_dot, PlannerCommand& cmd,
+    void UpdateExternalStopExecution(const CartesianState& ego,double s, double s_dot, PlannerCommand& cmd,
                                       double& out_stop_distance);
+    bool SignalStopFootprintBeforeLine(const CartesianState&,
+        const asmc_planner::signal::StopConstraint&) const;
 
     // 외부 STOP이 HOLD phase에 도달했을 때의 0속도 1-point 궤적 출력부.
     // 호출 gate(external_stop_mode && phase==HOLD)는 PlanInternal에 유지한다.

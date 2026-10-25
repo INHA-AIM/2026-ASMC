@@ -124,6 +124,14 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         bypass_active,v2_avoidance_.map_recovery_path.a,dt,elapsed,
         decel,limits_.max_longitudinal_accel,release_cap_unchanged,
         v2_avoidance_.dynamic_target && release_cap_unchanged);
+    const auto reaches_recovery_exit=[&](const CartesianPath& path) {
+        if(!command.recovery_clear)return true;
+        if(path.x.empty() || path.y.empty())return false;
+        double end_s=0;
+        return ProjectPointToS(path.x.back(),path.y.back(),
+                   command.recovery_min_end_s,end_s) &&
+               end_s>=command.recovery_min_end_s;
+    };
 
     // Generate in distance, then time-sample with observed initial v/a. Approach,
     // shift, pass and return are validated together, including the rear-axle body.
@@ -146,8 +154,16 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         if(return_start)*return_start=std::fmod(s+(direct_return?0.0:pass_end)+length,length);
         if(return_end)*return_end=std::fmod(s+(direct_return?transition:pass_end+return_distance)+length,length);
         const auto back=MakeQuintic(target_d,0,0,0,0,0,return_distance);
-        const double total=maintenance?std::max(1.0,gap-clearance):
+        const double ordinary_total=maintenance?std::max(1.0,gap-clearance):
             (direct_return?transition:pass_end+return_distance);
+        // Recovery may only release the signal brake with a single checked
+        // path beyond the conflict exit. After the normal bypass returns to
+        // d=0, continue on the same reference with every road/collision and
+        // dynamics check still active.
+        const double total=!maintenance&&command.recovery_clear?
+            std::max(ordinary_total,
+                     std::max(0.0,command.recovery_min_end_s-s)+.5):
+            ordinary_total;
         // Never accept a short return that ends before the target can be
         // passed; completion must not hand KEEP an obstacle still ahead.
         if(direct_return&&total<gap+v2_avoidance_.obstacle_longitudinal_half_extent+
@@ -238,7 +254,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             int blocking=-1;bool margin_recovery=false;
             const bool clear=kinematic&&road.drivable&&lane_clear(continuation)&&CartesianAvoidTrajectoryClear(continuation,obstacles,
                 vehicle_shape_,collision_cfg_,dt,&blocking,execution_->avoid.obstacle_id,&margin_recovery);
-            if(clear){
+            if(clear && reaches_recovery_exit(continuation)){
                 ++result.generated_candidate_count;++result.valid_candidate_count;
                 last_candidate_paths_.push_back(continuation);last_candidate_validity_.push_back(true);
                 result.candidate_valid=true;result.spatial_candidate_selected=true;

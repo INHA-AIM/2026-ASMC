@@ -101,6 +101,18 @@ CommandExecutionManager MakeFullManager() {
 }  // namespace
 
 int main() {
+    for(const auto maneuver:{Command::AVOID,Command::LANE_CHANGE,Command::MERGE}) {
+        auto manager=MakeFullManager();auto ongoing=MakeLaneChange(900,Command::PREPARE);
+        ongoing.maneuver_type=maneuver;ongoing.primary_object_id=7;
+        if(maneuver==Command::MERGE)ongoing.merge_type=Command::MERGE_ROUNDABOUT;
+        manager.Accept(ongoing);manager.NotifyPlanSucceeded();manager.NotifyCommitted();
+        Expect(manager.execution_state()==Feedback::COMMITTED,"signal handoff starts from committed maneuver");
+        const auto stop=MakeStop(901);
+        const auto accepted=manager.AcceptRequest({stop,false,true});
+        Expect(accepted.transaction_started && accepted.command_accepted && accepted.should_plan() &&
+               manager.command_id()==901 && manager.maneuver_type()==Command::STOP,
+               "bound signal STOP preempts AVOID/LANE_CHANGE/MERGE for checked braking");
+    }
     // ================= 새 transaction =================
     {
         CommandExecutionManager manager = MakeD4Manager();

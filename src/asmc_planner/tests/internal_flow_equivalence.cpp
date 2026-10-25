@@ -6,6 +6,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <limits>
+#include "Signal/SignalPolicy.hpp"
 
 using Command = asmc_msgs::BehaviorCommand;
 using Feedback = asmc_msgs::FrenetFeedback;
@@ -62,12 +63,31 @@ int main() {
   }
   size_t cycles=0;
   for (int scenario=0;scenario<1000;++scenario) {
+    asmc_planner::signal::Config shadow_config;shadow_config.half_track=.8;
+    asmc_planner::signal::Policy shadow(shadow_config);
+    asmc_planner::signal::Geometry geometry;geometry.key={1,"isolation","straight"};
+    geometry.reviewed=true;geometry.line={20,0};geometry.approach={1,0};geometry.route_s=20;
+    shadow.Bind(geometry);shadow.SetTarget(5.5,false);
     InputPort legacy, direct;
     frenet_planner_ros::CommandExecutionManager a,b;
     for (uint8_t type=0;type<=6;++type) {
       a.SetImplementedManeuver(type,true); b.SetImplementedManeuver(type,true);
     }
     for (int cycle=0;cycle<200;++cycle,++cycles) {
+      // Exercise independent policy state between operational cycles. The
+      // equality checks below still include exact wire bytes, IDs and latches.
+      asmc_planner::signal::Observation observation;
+      observation.source_epoch=1;observation.key=geometry.key;observation.frame="camera";
+      observation.stamp=1+cycle*.05;observation.received=observation.stamp+10;
+      observation.valid=true;observation.stale=false;observation.clock_verified=true;
+      observation.association_valid=true;
+      observation.color=static_cast<asmc_planner::signal::Color>(cycle%4);
+      shadow.Observe(observation,observation.stamp,observation.received);
+      asmc_planner::signal::Pose pose;pose.valid=true;pose.stamp=observation.stamp;
+      pose.x=cycle*.2;pose.route_s=pose.x;pose.speed=4;
+      asmc_planner::signal::Evidence evidence;evidence.position_valid=evidence.risks_fresh=true;
+      const auto shadow_result=shadow.Step(pose,observation.stamp,observation.received,evidence,{});
+      require(!shadow_result.actual_control_allowed);
       // Several Behavior events may precede one planning event: both paths
       // consume/reuse only the latest value (old subscriber queue size one).
       for (unsigned n=0,count=random()%4;n<count;++n) {

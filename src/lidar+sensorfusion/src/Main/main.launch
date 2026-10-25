@@ -61,6 +61,8 @@
   <arg name="known_static_guardrail_extension_max_x" default="15.0"/>
   <arg name="known_static_guardrail_extension_min_y" default="175.0"/>
   <arg name="known_static_guardrail_extension_max_y" default="345.0"/>
+  <arg name="known_static_c052_structure_enabled" default="true"/>
+  <arg name="known_static_c091_rail_enabled" default="true"/>
   <!-- Bag-verified, narrowly bounded static structures. This filter is
        fail-open and applies only to static UNKNOWN objects. -->
   <arg name="static_structure_exclusion_enabled" default="true"/>
@@ -164,6 +166,10 @@
            value="$(arg known_static_center_tolerance_m)"/>
     <param name="known_static_application_region_enabled"
            value="$(arg known_static_application_region_enabled)"/>
+    <param name="known_static_c052_structure_enabled"
+           value="$(arg known_static_c052_structure_enabled)"/>
+    <param name="known_static_c091_rail_enabled"
+           value="$(arg known_static_c091_rail_enabled)"/>
     <param name="known_static_application_min_x"
            value="$(arg known_static_application_min_x)"/>
     <param name="known_static_application_max_x"

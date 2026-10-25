@@ -270,6 +270,8 @@
 | `known_static_guardrail_extension_max_x` | `15.0` | — |
 | `known_static_guardrail_extension_min_y` | `175.0` | — |
 | `known_static_guardrail_extension_max_y` | `345.0` | — |
+| `known_static_c052_structure_enabled` | `true` | — |
+| `known_static_c091_rail_enabled` | `true` | — |
 | `static_structure_exclusion_enabled` | `true` | — |
 | `static_structure_exclusion_config` | `$(find Main)/../../../planning_inputs/config/static_structure_exclusions.yaml` | — |
 | `static_structure_minimum_height_m` | `2.5` | — |

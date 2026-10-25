@@ -3,6 +3,8 @@
 #include "Global/ControlContext.hpp"
 
 namespace mpc_controller_ros {
+void ControlRequestCallback(const std_msgs::UInt8MultiArray::ConstPtr&);
+void ControlPlanCallback(const std_msgs::UInt8MultiArray::ConstPtr&);
 
 void TrajectoryCallback(const asmc_msgs::Trajectory::ConstPtr& message);
 void VehicleStateCallback(const asmc_msgs::VehicleState::ConstPtr& message);

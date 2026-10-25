@@ -198,6 +198,7 @@ struct ExecutionSnapshot {
 struct ExecutionRequest {
     const asmc_msgs::BehaviorCommand& command;
     bool avoid_tracking; // Calculation fact, sampled at the original call site.
+    bool signal_stop_preemption=false; // Bound signal owner; safe braking path is still required.
 };
 
 class CommandExecutionManager {
