@@ -28,6 +28,7 @@
 
   <!-- Monitoring only: subscribers and rate limit still gate each snapshot. -->
   <arg name="debug" default="false" doc="Publish sampled stages for view.launch; no algorithm changes"/>
+  <arg name="clustering_tuning" default="false" doc="Allow isolated live clustering changes between scans"/>
   <arg name="debug_rate_hz" default="5.0"/>
   <arg name="debug_max_points" default="20000"/>
 
@@ -47,6 +48,7 @@
 
   <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="$(arg namespace)" output="screen">
     <param name="debug_enabled" value="$(arg debug)"/>
+    <param name="enable_clustering_tuning" value="$(arg clustering_tuning)"/>
     <param name="debug_topic_prefix" value="debug"/>
     <param name="debug_rate_hz" value="$(arg debug_rate_hz)"/>
     <param name="debug_max_points" value="$(arg debug_max_points)"/>

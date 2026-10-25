@@ -522,6 +522,34 @@ class MonitorHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         self._handle(head=False)
 
+    def do_POST(self):
+        server = self.server
+        try:
+            if self.path != '/api/clustering' or server.clustering_tuning is None:
+                self._send(501, 'text/plain', b'POST is disabled for this route', False)
+                return
+            # JSON + unpredictable same-origin token blocks cross-site blind writes.
+            host = self.headers.get('Host', '')
+            allowed = ('127.0.0.1', 'localhost')
+            if host not in tuple('%s:%d' % (h, server.server_port) for h in allowed):
+                raise ValueError('localhost Host required')
+            origin = self.headers.get('Origin')
+            if origin is not None and origin != 'http://' + host:
+                raise ValueError('same-origin request required')
+            if (self.headers.get('Content-Type', '').split(';')[0] != 'application/json'
+                    or self.headers.get('X-Clustering-Token') != server.clustering_tuning.token):
+                raise ValueError('invalid content type or session token; reload the page')
+            if self.headers.get('Transfer-Encoding'):
+                raise ValueError('transfer encoding is not supported')
+            length = int(self.headers.get('Content-Length', '0'))
+            if not 0 < length <= 2048:
+                raise ValueError('request size limit')
+            data = json.loads(self.rfile.read(length).decode('utf-8'))
+            result = server.clustering_tuning.submit(data)
+            self._send(202, 'application/json', json.dumps(result).encode(), False)
+        except (ValueError, TypeError, UnicodeError) as exc:
+            self._send(400, 'application/json', json.dumps({'error': str(exc)}).encode(), False)
+
     def _handle(self, head):
         server = self.server
         path, _, query = self.path.partition('?')
@@ -537,6 +565,10 @@ class MonitorHandler(http.server.BaseHTTPRequestHandler):
             self._send(200, 'application/json', body, head)
         elif path == '/api/drivable':
             self._send(200, 'application/json', server.drivable_body, head)
+        elif path == '/api/clustering':
+            result = (server.clustering_tuning.snapshot() if server.clustering_tuning is not None
+                      else {'enabled': False})
+            self._send(200, 'application/json', json.dumps(result, allow_nan=False).encode(), head)
         elif path == '/api/frame':
             self._frame(query, head)
         else:
@@ -620,7 +652,10 @@ class MonitorServer(http.server.HTTPServer):
                        b'Content-Length: 17\r\nCache-Control: no-store\r\nConnection: close\r\n\r\ntoo many clients\n')
 
     def __init__(self, bind_address, port, state, web_dir, max_clients=8, logger=None,
-                 header_timeout_s=5.0, request_timeout_s=20.0, drivable=None):
+                 header_timeout_s=5.0, request_timeout_s=20.0, drivable=None, clustering_tuning=None):
+        if clustering_tuning is not None and bind_address not in ('127.0.0.1', 'localhost'):
+            raise ValueError('clustering tuning requires a loopback bind')
+        self.clustering_tuning = clustering_tuning
         self.state = state
         self.drivable_body = json.dumps(drivable or {'available': False, 'reason': '지도 미설정'},
                                         separators=(',', ':'), allow_nan=False).encode()

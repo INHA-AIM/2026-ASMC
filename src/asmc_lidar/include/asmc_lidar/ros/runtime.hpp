@@ -140,6 +140,12 @@ class LidarRuntime {
                 std::shared_ptr<pipeline::fusion::CameraSource> camera,
                 const asmc::lidar::camera::Calibration* front_calibration);
   const RuntimeConfig& config() const { return config_; }
+  // Single processing worker only, between scans (not a sensor callback).
+  void SetClusteringConfig(const pipeline::ClusteringConfig& config, const std::string& config_id) {
+    config_.pipeline.clustering = config;
+    config_.config_id = config_id;
+    pipeline_.SetClusteringConfig(config);
+  }
 
   void OnImu(const pipeline::ImuInput& input, std::int64_t receipt_ns, std::int64_t ros_now_ns);
   void OnCan(const pipeline::CanInput& input, std::int64_t receipt_ns, std::int64_t ros_now_ns);

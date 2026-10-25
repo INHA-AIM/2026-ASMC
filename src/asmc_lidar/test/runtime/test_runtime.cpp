@@ -114,6 +114,40 @@ TEST(RuntimeDeployment, MissingCurrentProductCannotKeepLoadedOldAudit) {
   EXPECT_FALSE(cfg.hd_map_audit);EXPECT_FALSE(cfg.hd_map_audit_error.empty());
 }
 
+TEST(LiveClusteringTuning, UpdatesRuntimeAndPipelineWithoutReconstruction) {
+  auto cfg = ShippedRuntimeConfig();
+  sh::FinalizeRuntimeIdentity(cfg);
+  sh::LidarRuntime runtime(cfg, nullptr, nullptr);
+  const auto* tracker = &runtime.pipeline().tracker();
+  const auto original_id = cfg.config_id;
+  cfg.pipeline.clustering.f32_AdaptiveNearRange = 10.f;
+  cfg.pipeline.clustering.f32_AdaptiveFarRange = 40.f;
+  cfg.pipeline.clustering.f32_AdaptiveNearEps = 0.3f;
+  cfg.pipeline.clustering.f32_AdaptiveFarEps = 0.9f;
+  sh::FinalizeRuntimeIdentity(cfg);
+  EXPECT_NE(original_id, cfg.config_id);
+  runtime.SetClusteringConfig(cfg.pipeline.clustering, cfg.config_id);
+  EXPECT_EQ(tracker, &runtime.pipeline().tracker());
+  EXPECT_EQ(runtime.config().config_id, cfg.config_id);
+  const auto& c = runtime.pipeline().config().clustering;
+  EXPECT_FLOAT_EQ(pl::AdaptiveClusterTolerance(5.f, c), 0.3f);
+  EXPECT_NEAR(pl::AdaptiveClusterTolerance(25.f, c), 0.6f, 1e-6f);
+  EXPECT_FLOAT_EQ(pl::AdaptiveClusterTolerance(60.f, c), 0.9f);
+  // Same points actually switch from connected to separate components.
+  pl::CloudPtr cloud(new pl::Cloud), centers(new pl::Cloud);
+  for (int i = 0; i < 10; ++i) {
+    pcl::PointXYZI p; p.x = 4.f; p.y = (i < 5 ? 0.f : 0.45f) + (i % 5) * 0.005f;
+    p.z = 0.f; p.intensity = 1.f; cloud->push_back(p);
+  }
+  std::vector<pcl::PointIndices> groups;
+  pl::Clustering(cloud, centers, groups, c);
+  EXPECT_EQ(groups.size(), 2U);
+  auto old = ShippedRuntimeConfig().pipeline.clustering;
+  centers->clear(); groups.clear();
+  pl::Clustering(cloud, centers, groups, old);
+  EXPECT_EQ(groups.size(), 1U);
+}
+
 // ---------------------------------------------------------------------------
 // Synthetic scene and sensor streams
 // ---------------------------------------------------------------------------

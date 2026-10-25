@@ -1,5 +1,9 @@
 # asmc_lidar 웹 모니터 — 처리 결과를 브라우저에서 보기 (읽기 전용)
 
+추가 기능: 명시적으로 두 launch에 `clustering_tuning:=true`를 지정하면
+localhost 웹의 군집 설정만 실제 처리값을 변경할 수 있다. 기본값은 계속 읽기 전용이다.
+설정·검증·재시작 명령은 [실시간 군집 설정](clustering-live-tuning.md)을 참고한다.
+
 `roslaunch asmc_lidar view.launch`는 이미 실행 중인 LiDAR의 결과를 구독하는 **읽기 전용 웹 모니터만** 띄운다.
 처리는 별도 `roslaunch asmc_lidar lidar.launch debug:=true`에서 시작한다.
 목적은 "내 asmc_lidar가 실제로 어떤 점을 남겼고 어떤 객체를 추적하는지"를 확인하는 것이다.

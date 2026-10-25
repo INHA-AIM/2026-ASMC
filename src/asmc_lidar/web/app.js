@@ -1,6 +1,6 @@
-// asmc_lidar read-only canvas viewer of pipeline stage clouds and tracks.
-// Polls /api/frame (binary) at up to 10 Hz; every control on
-// this page changes only how data is drawn. No external library; the pure view
+// asmc_lidar canvas viewer of pipeline stage clouds and tracks.
+// Polls /api/frame (binary) at up to 10 Hz. Display controls only change drawing;
+// the opt-in clustering form changes actual processing settings. No external library; the pure view
 // logic (matrices, projection, OBB outlines, cursor, freshness) is monitor_view.js.
 'use strict';
 (function () {
@@ -779,6 +779,78 @@
     pan: (dx, dy) => { state.view.panX += dx; state.view.panY += dy; renderScene(); },
     bevUnproject: (px, py) => bevUnproject(bev.getBoundingClientRect().width, bev.getBoundingClientRect().height, px, py),
   };
+
+  // Explicit opt-in algorithm settings. All other controls remain display-only.
+  const tuningForm = el('clustering-form');
+  const tuningKeys = ['NearRange', 'FarRange', 'NearEps', 'FarEps'];
+  let tuningData = null, tuningInitialized = false, tuningBusy = false, tuningPosting = false;
+  let tuningSubmitError = '';
+  function draftValues() {
+    return Object.fromEntries(tuningKeys.map(k => [k, Number(tuningForm.elements.namedItem(k).value)]));
+  }
+  function setTuningDraft(v) {
+    for (const k of tuningKeys) tuningForm.elements.namedItem(k).value = Number(v[k]).toFixed(2);
+    previewTuning();
+  }
+  function tuningDescription(v) {
+    return `0–${fmt(v.NearRange)}m: 연결 ${fmt(v.NearEps)}m\n${fmt(v.NearRange)}–${fmt(v.FarRange)}m: ${fmt(v.NearEps)} → ${fmt(v.FarEps)}m 선형 보간\n${fmt(v.FarRange)}m 이상: 연결 ${fmt(v.FarEps)}m`;
+  }
+  function previewTuning() { el('clustering-preview').textContent = '입력 중인 값\n' + tuningDescription(draftValues()); }
+  async function pollTuning() {
+    if (tuningBusy) return;
+    tuningBusy = true;
+    try {
+      const response = await fetch('/api/clustering', {cache:'no-store', signal:AbortSignal.timeout(2500)});
+      if (!response.ok) throw Error('HTTP ' + response.status);
+      tuningData = await response.json();
+      const p = tuningData.pipeline;
+      const available = tuningData.enabled && p && p.enabled && p.adaptive && tuningData.status_age_s < 3;
+      el('clustering-fields').disabled = !available || Boolean(tuningData.pending) || tuningPosting || (p && ['pending','waiting_for_valid_scan'].includes(p.state));
+      if (p) {
+        if (!tuningInitialized) { setTuningDraft(p.current); tuningInitialized = true; }
+        el('clustering-current').textContent = `처리 노드 설정 · rev ${p.revision}\n` + tuningDescription(p.current);
+        el('clustering-current').style.whiteSpace = 'pre-line';
+      }
+      if (!tuningData.enabled) el('clustering-status').textContent = '설정 OFF: 처리·웹 두 launch에 clustering_tuning:=true가 필요합니다.';
+      else if (!available) el('clustering-status').textContent = '처리 노드 설정 연결 대기 또는 상태 stale · 적용 불가';
+      else if (tuningSubmitError) el('clustering-status').textContent = tuningSubmitError;
+      else if (tuningData.last_error) el('clustering-status').textContent = '적용 미확정/거부: ' + tuningData.last_error;
+      else if (tuningData.pending || p.state === 'pending' || p.state === 'waiting_for_valid_scan')
+        el('clustering-status').textContent = '요청 대기 · 유효한 다음 LiDAR 프레임의 적용 확인 중';
+      else if (p.state === 'rejected') el('clustering-status').textContent = '적용 거부: ' + p.error;
+      else if (p.state === 'applied') el('clustering-status').textContent = `적용 확인 · rev ${p.revision} · 최초 적용 stamp ${p.applied_stamp_ns}`;
+      else el('clustering-status').textContent = '입력 가능 · 아직 적용 프레임 없음';
+      const sc = state.scene && state.scene.clustering;
+      el('clustering-frame').textContent = sc ? `현재 표시 장면 · rev ${sc.revision} · NearEps ${fmt(sc.NearEps)} / FarEps ${fmt(sc.FarEps)}m` : '현재 표시 장면의 설정 정보 대기';
+    } catch (e) {
+      el('clustering-fields').disabled = true;
+      el('clustering-status').textContent = '설정 서버 연결 실패: ' + String(e);
+    } finally { tuningBusy = false; }
+  }
+  tuningForm.addEventListener('input', () => { tuningSubmitError = ''; previewTuning(); });
+  el('clustering-load').addEventListener('click', () => { if (tuningData && tuningData.pipeline) setTuningDraft(tuningData.pipeline.current); });
+  el('clustering-reset').addEventListener('click', () => { if (tuningData && tuningData.pipeline) setTuningDraft(tuningData.pipeline.startup); });
+  tuningForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!tuningData || tuningPosting) return;
+    const v = draftValues();
+    if (!Object.values(v).every(Number.isFinite) || v.NearRange < 0.1 || v.FarRange < v.NearRange+1 || v.FarRange > 200 || v.NearEps < 0.05 || v.FarEps < v.NearEps || v.FarEps > 5) {
+      tuningSubmitError = '입력 오류: 경계 간격 ≥1m, 0.05 ≤ NearEps ≤ FarEps ≤ 5m을 확인하세요.';
+      el('clustering-status').textContent = tuningSubmitError; return;
+    }
+    tuningSubmitError = ''; tuningPosting = true; el('clustering-fields').disabled = true;
+    try {
+      const r = await fetch('/api/clustering', {method:'POST', headers:{'Content-Type':'application/json', 'X-Clustering-Token':tuningData.token}, body:JSON.stringify(v), signal:AbortSignal.timeout(3000)});
+      const result = await r.json();
+      if (!r.ok) throw Error(result.error || 'HTTP '+r.status);
+      el('clustering-status').textContent = '전송됨 · 프레임 적용 확인 대기';
+    } catch (e) {
+      tuningSubmitError = '적용 확인 필요: ' + String(e) + ' (자동 재전송 없음)';
+      el('clustering-status').textContent = tuningSubmitError;
+    }
+    finally { tuningPosting = false; }
+  });
+  pollTuning(); setInterval(pollTuning, 750);
 
   readStages();
   el('opt-hide-candidates').indeterminate=true;

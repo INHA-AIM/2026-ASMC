@@ -110,6 +110,8 @@ class Pipeline {
  public:
   explicit Pipeline(const PipelineConfig& config);
   const PipelineConfig& config() const { return config_; }
+  // Single processing worker only, between scans. Tracking state is preserved.
+  void SetClusteringConfig(const ClusteringConfig& config) { config_.clustering = config; }
 
   // Called only after the local IMU/CAN lookup succeeded for this scan
   // (Main skips LidarProcess otherwise and the tracker is not advanced).

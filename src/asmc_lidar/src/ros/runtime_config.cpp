@@ -331,6 +331,11 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
     << p.minimum_points << ',' << p.minimum_road_points << ',' << p.minimum_road_ratio << ','
     << p.minimum_obb_road_ratio << ',' << p.road_inset_m << ',' << p.camera_age_ms;
   if(p.enabled)effective << ',' << filtering::kDeliveryProtectionPolicy;
+  effective << '\n';
+  const auto& cl = config.pipeline.clustering;
+  effective << std::setprecision(9) << "clustering-v1," << cl.b_Adaptive << ',' << cl.f32_Eps << ','
+            << cl.s32_MinPoints << ',' << cl.f32_AdaptiveNearRange << ',' << cl.f32_AdaptiveFarRange
+            << ',' << cl.f32_AdaptiveNearEps << ',' << cl.f32_AdaptiveFarEps << '\n';
   config.config_id = hash(effective.str());
 }
 

@@ -41,6 +41,7 @@
 #include <asmc_msgs/LidarObservation.h>
 #include <asmc_lidar/core/processing_epoch.hpp>
 #include <tf2_ros/transform_broadcaster.h>
+#include <yaml-cpp/yaml.h>
 
 #include <Eigen/Geometry>
 
@@ -55,6 +56,7 @@
 #include <deque>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -148,6 +150,15 @@ class LidarPipelineNode {
     runtime_ = std::make_shared<LidarRuntime>(config_, camera_, front_);
     Advertise();
     Subscribe();
+    pnh_.param("enable_clustering_tuning", tuning_enabled_, false);
+    tuning_startup_ = config_.pipeline.clustering;
+    tuning_pub_ = pnh_.advertise<std_msgs::String>("clustering_status", 1, true);
+    if (tuning_enabled_) {
+      if (OperationalTopic(nh_.getNamespace()) || nh_.getNamespace() == "/")
+        throw StartupRefused("clustering tuning requires an isolated namespace");
+      tuning_sub_ = pnh_.subscribe("clustering_request", 1, &LidarPipelineNode::OnClusteringRequest, this);
+    }
+    PublishClusteringStatus();
     reset_service_ = pnh_.advertiseService("reset", &LidarPipelineNode::Reset, this);
   }
 
@@ -182,6 +193,80 @@ class LidarPipelineNode {
   }
 
  private:
+  struct TuningRequest {
+    pipeline::ClusteringConfig config;
+    std::string id;
+  };
+
+  static void ClusteringJson(std::ostream& out, const pipeline::ClusteringConfig& c) {
+    out << std::setprecision(9) << "{\"NearRange\":" << c.f32_AdaptiveNearRange
+        << ",\"FarRange\":" << c.f32_AdaptiveFarRange << ",\"NearEps\":" << c.f32_AdaptiveNearEps
+        << ",\"FarEps\":" << c.f32_AdaptiveFarEps << '}';
+  }
+
+  // Called under epoch_mutex_ (or during construction), never from HTTP threads.
+  void PublishClusteringStatus() {
+    std::ostringstream out;
+    out << "{\"enabled\":" << (tuning_enabled_ ? "true" : "false") << ",\"adaptive\":"
+        << (config_.pipeline.clustering.b_Adaptive ? "true" : "false")
+        << ",\"revision\":" << tuning_revision_ << ",\"current\":";
+    ClusteringJson(out, config_.pipeline.clustering);
+    out << ",\"startup\":"; ClusteringJson(out, tuning_startup_);
+    out << ",\"request_id\":"; trace::Str(out, tuning_last_id_);
+    out << ",\"rejected_request_id\":"; trace::Str(out, tuning_rejected_id_);
+    out << ",\"rejection_error\":"; trace::Str(out, tuning_rejection_);
+    out << ",\"producer_session_id\":"; trace::Str(out, epoch_.session());
+    out << ",\"state\":"; trace::Str(out, tuning_state_);
+    out << ",\"error\":"; trace::Str(out, tuning_error_);
+    out << ",\"applied_stamp_ns\":"; trace::Str(out, std::to_string(tuning_applied_stamp_));
+    out << ",\"config_id\":"; trace::Str(out, config_.config_id);
+    out << ",\"config_path\":"; trace::Str(out, config_.config_path);
+    out << ",\"min_points\":" << config_.pipeline.clustering.s32_MinPoints << '}';
+    std_msgs::String msg; msg.data = out.str(); tuning_pub_.publish(msg);
+  }
+
+  void OnClusteringRequest(const std_msgs::String::ConstPtr& msg) {
+    std::lock_guard<std::mutex> lock(epoch_mutex_);
+    std::string id;
+    try {
+      if (msg->data.size() > 2048) throw std::runtime_error("request too large");
+      const auto data = YAML::Load(msg->data);
+      if (!data.IsMap() || data.size() != 5) throw std::runtime_error("expected four settings and request_id");
+      id = data["request_id"].as<std::string>();
+      if (id.size() != 32 || id.find_first_not_of("0123456789abcdef") != std::string::npos)
+        throw std::runtime_error("invalid request_id");
+      if (!config_.pipeline.clustering.b_Adaptive) throw std::runtime_error("Adaptive.Enabled must be true");
+      if (tuning_pending_ || tuning_waiting_) throw std::runtime_error("another request is awaiting a valid scan");
+      auto c = config_.pipeline.clustering;
+      c.f32_AdaptiveNearRange = data["NearRange"].as<float>();
+      c.f32_AdaptiveFarRange = data["FarRange"].as<float>();
+      c.f32_AdaptiveNearEps = data["NearEps"].as<float>();
+      c.f32_AdaptiveFarEps = data["FarEps"].as<float>();
+      const float n = c.f32_AdaptiveNearRange, f = c.f32_AdaptiveFarRange;
+      const float a = c.f32_AdaptiveNearEps, b = c.f32_AdaptiveFarEps;
+      if (!std::isfinite(n) || !std::isfinite(f) || !std::isfinite(a) || !std::isfinite(b) ||
+          n < 0.1f || f > 200.f || f < n + 1.f || a < 0.05f || b > 5.f || b < a)
+        throw std::runtime_error("require 0.1<=NearRange, NearRange+1<=FarRange<=200, 0.05<=NearEps<=FarEps<=5");
+      tuning_pending_ = TuningRequest{c, id};
+      tuning_last_id_ = id;
+      tuning_state_ = "pending";
+      tuning_error_.clear();
+      tuning_rejected_id_.clear();
+      tuning_rejection_.clear();
+    } catch (const std::exception& e) {
+      // A rejected second request must not replace an earlier pending request's identity.
+      ROS_WARN_STREAM("clustering request rejected: " << e.what());
+      tuning_rejected_id_ = id;
+      tuning_rejection_ = e.what();
+      if (!tuning_pending_ && !tuning_waiting_) {
+        tuning_last_id_ = id;
+        tuning_state_ = "rejected";
+        tuning_error_ = e.what();
+      }
+    }
+    PublishClusteringStatus();
+  }
+
   struct PendingScan {
     pipeline::ScanInput scan;
     std::shared_ptr<LidarRuntime> runtime;
@@ -221,8 +306,8 @@ class LidarPipelineNode {
   }
 
   bool Reset(std_srvs::Trigger::Request&, std_srvs::Trigger::Response& reply) {
-    auto next = std::make_shared<LidarRuntime>(config_, camera_, front_);
     std::lock_guard<std::mutex> epoch(epoch_mutex_);
+    auto next = std::make_shared<LidarRuntime>(config_, camera_, front_);
     epoch_.Reset();
     runtime_ = std::move(next);  // old worker owns its retired runtime until it finishes
     {
@@ -519,6 +604,22 @@ class LidarPipelineNode {
 
   // Ported from Main src/main.cpp:483-540 (TemporalThread scan step; outputs via FrameBoundaryPublisher) (8f93c22e).
   void Process(PendingScan& pending) {
+    {
+      std::lock_guard<std::mutex> lock(epoch_mutex_);
+      if (!epoch_.IsCurrent(pending.scan.generation)) { ++retired_results_; return; }
+      if (tuning_pending_) {
+        config_.pipeline.clustering = tuning_pending_->config;
+        FinalizeRuntimeIdentity(config_, front_ ? front_->id : "");
+        pending.runtime->SetClusteringConfig(config_.pipeline.clustering, config_.config_id);
+        tuning_pending_.reset();
+        ++tuning_revision_;
+        tuning_waiting_ = true;
+        tuning_applied_stamp_ = 0;
+        tuning_state_ = "waiting_for_valid_scan";
+        PublishClusteringStatus();
+      }
+      if (debug_) debug_->SetClusteringContext(config_.pipeline.clustering, tuning_revision_, config_.config_id);
+    }
     const std::int64_t start = camera::steady_now_ns();
     pending.scan.time.processing_ns = start;
     ScanTimes times;
@@ -538,6 +639,12 @@ class LidarPipelineNode {
     // Reset and publishing share this short lock. Computation never holds it.
     std::lock_guard<std::mutex> epoch(epoch_mutex_);
     if (!epoch_.IsCurrent(pending.scan.generation)) { ++retired_results_; return; }
+    if (out.processed && (tuning_waiting_ || tuning_applied_stamp_ == 0)) {
+      tuning_waiting_ = false;
+      tuning_applied_stamp_ = pending.scan.time.stamp_ns;
+      tuning_state_ = "applied";
+      PublishClusteringStatus();
+    }
     if (out.arrays.accepted) {
       if (local_pub_.getNumSubscribers()) local_pub_.publish(out.arrays.local);
       if (map_pub_.getNumSubscribers()) map_pub_.publish(out.arrays.map);
@@ -740,6 +847,7 @@ class LidarPipelineNode {
       number("processing_ms_max", window.empty() ? 0. : *std::max_element(window.begin(), window.end()));
     }
     value("producer_session_id", epoch_.session());
+    PublishClusteringStatus();
     number("generation", epoch_.generation());
     number("retired_results", retired_results_.load());
     value("config_id", config.config_id);
@@ -796,6 +904,15 @@ class LidarPipelineNode {
   ProcessingEpoch epoch_;
   std::atomic<std::uint64_t> retired_results_{0};
   ros::ServiceServer reset_service_;
+  bool tuning_enabled_ = false, tuning_waiting_ = false;
+  pipeline::ClusteringConfig tuning_startup_;
+  std::optional<TuningRequest> tuning_pending_;
+  std::uint64_t tuning_revision_ = 0;
+  std::int64_t tuning_applied_stamp_ = 0;
+  std::string tuning_last_id_, tuning_error_, tuning_state_ = "ready";
+  std::string tuning_rejected_id_, tuning_rejection_;
+  ros::Publisher tuning_pub_;
+  ros::Subscriber tuning_sub_;
 
   ros::Publisher local_pub_, map_pub_, diagnostics_pub_, trace_pub_;
   ros::Publisher local_observation_pub_, map_observation_pub_;

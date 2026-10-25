@@ -199,7 +199,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
   # Read-only web monitor (python, no build): node script, pure-python core and web assets.
-  catkin_install_python(PROGRAMS scripts/asmc_lidar_monitor_node.py scripts/asmc_lidar_monitor_core.py
+  catkin_install_python(PROGRAMS scripts/asmc_lidar_monitor_node.py scripts/asmc_lidar_monitor_core.py scripts/asmc_lidar_clustering_tuning.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   install(DIRECTORY web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
@@ -255,6 +255,8 @@ if(CATKIN_ENABLE_TESTING)
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/pipeline_contract_test.py)
   add_test(NAME asmc_lidar_monitor_core_test
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/monitor/test_monitor_core.py)
+  add_test(NAME asmc_lidar_clustering_tuning_test
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/monitor/test_clustering_tuning.py)
   add_test(NAME asmc_lidar_object_markers_test
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/object_markers_test.py)
 endif()

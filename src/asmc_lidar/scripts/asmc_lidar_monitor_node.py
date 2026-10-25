@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""asmc_lidar_monitor_node: read-only web monitor of lidar_pipeline_node.
+"""asmc_lidar_monitor_node: web monitor of lidar_pipeline_node.
 
 Subscribes to the shadow node's monitoring outputs (<debug_topic_prefix>/scan,
 /raw, /roi, /voxel, /leveled, the diagnostics and the typed local array), groups
 them by scan stamp and serves a fixed set of HTTP routes (web assets,
 /api/health, /api/status, /api/frame) on the loopback address by default.
-It publishes nothing, calls no service and sets no parameter. With ~open_browser
+By default it publishes nothing, calls no service and sets no parameter.
+Explicit ~enable_clustering_tuning delegates four-value requests to the isolated
+pipeline via asmc_lidar_clustering_tuning (localhost HTTP only, no YAML writes).
+With ~open_browser
 it opens the page once after the server answered its own health check.
 """
 import os
@@ -117,6 +120,10 @@ def main():
     max_scenes = int(rospy.get_param('~max_scenes', 4))
     complete_timeout_s = float(rospy.get_param('~scene_timeout_s', 0.6))
     master_check_s = float(rospy.get_param('~master_check_s', 2.0))
+    tuning = None
+    if bool(rospy.get_param('~enable_clustering_tuning', False)):
+        from asmc_lidar_clustering_tuning import ClusteringTuning
+        tuning = ClusteringTuning(rospy, rospy.resolve_name('lidar_pipeline'))
 
     drivable = {'available': False, 'reason': '지도 패키지 없음'}
     try:
@@ -148,7 +155,7 @@ def main():
     try:
         server = core.MonitorServer(bind_address, port, state, web_dir, max_clients=max_clients, logger=ros_logger,
                                     header_timeout_s=header_timeout_s, request_timeout_s=request_timeout_s,
-                                    drivable=drivable)
+                                    drivable=drivable, clustering_tuning=tuning)
     except OSError as exc:
         rospy.logerr('asmc_lidar_monitor: cannot bind http://%s:%d/ (%s). The LiDAR node keeps running; '
                      'start the monitor again with another port, e.g. dashboard_port:=%d',

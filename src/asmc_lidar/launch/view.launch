@@ -4,6 +4,7 @@
        Start lidar.launch debug:=true separately to expose sampled stages. -->
   <arg name="namespace" default="/migration/lidar"/>
   <arg name="open_browser" default="false"/>
+  <arg name="clustering_tuning" default="false" doc="Enable localhost-only clustering Apply controls"/>
   <arg name="dashboard_port" default="8091"/>
   <arg name="bind_address" default="127.0.0.1"/>
   <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml"/>
@@ -16,6 +17,7 @@
     <param name="port" value="$(arg dashboard_port)"/>
     <param name="bind_address" value="$(arg bind_address)"/>
     <param name="open_browser" value="$(arg open_browser)"/>
+    <param name="enable_clustering_tuning" value="$(arg clustering_tuning)"/>
     <param name="max_clients" value="$(arg max_clients)"/>
     <param name="header_timeout_s" value="$(arg http_header_timeout_s)"/>
     <param name="request_timeout_s" value="$(arg http_request_timeout_s)"/>

@@ -349,6 +349,9 @@ void DebugPublisher::Finish(std::int64_t stamp_ns, const ScanOutput& out) {
   }
   s->producer_session_id=producer_session_id_;s->generation=generation_;s->config_id=config_id_;
   s->pose_ready = out.pose_ready;
+  s->clustering = clustering_;
+  s->clustering_revision = clustering_revision_;
+  s->clustering_config_id = clustering_config_id_;
   s->processed = out.processed;
   s->reason = out.reason;
   s->fusion_ran = out.fusion_ran;
@@ -446,6 +449,12 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
   trace::Str(out, s.reason);
   out << ",\"producer_session_id\":";trace::Str(out,s.producer_session_id);
   out << ",\"generation\":"<<s.generation<<",\"config_id\":";trace::Str(out,s.config_id);
+  out << ",\"clustering\":{\"revision\":" << s.clustering_revision << ",\"config_id\":";
+  trace::Str(out, s.clustering_config_id);
+  out << ",\"NearRange\":" << s.clustering.f32_AdaptiveNearRange
+      << ",\"FarRange\":" << s.clustering.f32_AdaptiveFarRange
+      << ",\"NearEps\":" << s.clustering.f32_AdaptiveNearEps
+      << ",\"FarEps\":" << s.clustering.f32_AdaptiveFarEps << '}';
   out << ",\"frames\":{\"sensor\":";
   trace::Str(out, s.sensor_frame);
   out << ",\"leveled\":";

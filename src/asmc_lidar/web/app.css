@@ -84,3 +84,9 @@ table.list tr.predicted td { color: var(--muted); font-style: italic; }
 .audit-summary{padding:7px 10px;background:#162736;border-left:3px solid #38bdf8;margin-bottom:6px;font-variant-numeric:tabular-nums}
 .preview-hidden{opacity:.55}.list-wrap th{position:sticky;top:0;background:var(--panel);white-space:nowrap}
 #object-details{margin-bottom:10px}#object-details .detail{max-height:38vh;overflow:auto}
+/* Explicit algorithm controls, separate from display switches. */
+#clustering-tuning { border: 1px solid #547ab4; border-radius: 6px; }
+#clustering-tuning fieldset { border: 0; padding: 0; min-width: 0; }
+#clustering-tuning label { display: block; margin: 8px 0; }
+#clustering-tuning input { display: block; width: 100%; box-sizing: border-box; background: #101c2d; color: #eef5ff; border: 1px solid #6080a5; padding: 5px; }
+#clustering-tuning pre { white-space: pre-wrap; }

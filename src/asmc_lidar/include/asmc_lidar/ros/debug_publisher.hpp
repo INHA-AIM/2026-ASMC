@@ -67,6 +67,10 @@ class DebugPublisher : public pipeline::StageObserver {
   // Pipeline worker thread, before LidarRuntime::ProcessScan of this scan.
   void SetScanContext(const std::string& sensor_frame, std::uint64_t seq, std::int64_t arrival_ros_ns,
                       const std::string& session="", std::uint64_t generation=1, const std::string& config_id="");
+  void SetClusteringContext(const pipeline::ClusteringConfig& config, std::uint64_t revision,
+                            const std::string& config_id) {
+    clustering_ = config; clustering_revision_ = revision; clustering_config_id_ = config_id;
+  }
   // StageObserver (pipeline worker thread, inside Pipeline::Process).
   bool Begin(std::int64_t stamp_ns) override;
   void OnScan(const pipeline::StageView& view) override;
@@ -96,6 +100,9 @@ class DebugPublisher : public pipeline::StageObserver {
     std::uint64_t seq = 0;
     std::string sensor_frame, producer_session_id, config_id;
     std::uint64_t generation=1;
+    pipeline::ClusteringConfig clustering;
+    std::uint64_t clustering_revision = 0;
+    std::string clustering_config_id;
     bool stages = false;  // stage clouds captured (scan reached the pipeline)
     StageSample raw, roi, voxel, leveled;
     std::vector<std::uint8_t> leveled_label;   // per sent leveled point
@@ -145,6 +152,9 @@ class DebugPublisher : public pipeline::StageObserver {
   std::string sensor_frame_;
   std::string producer_session_id_, config_id_;
   std::uint64_t generation_=1;
+  pipeline::ClusteringConfig clustering_;
+  std::uint64_t clustering_revision_ = 0;
+  std::string clustering_config_id_;
   std::uint64_t seq_ = 0;
   std::int64_t arrival_ns_ = 0;
   std::int64_t last_admit_steady_ns_ = 0;
