@@ -60,13 +60,13 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
       std::min(e.min_base_z,obb_bottom)>d.roof_limit_z) {
     d.height_preview="exclude_candidate";
     preview("exclude_candidate","overhead_clearance_candidate");
-    // Position is irrelevant here, but completeness of the lower surface is
-    // unproven. Do not promote a preview to final exclusion authorization.
+    // Preserve the historical uncertainty audit separately. Explicit runtime
+    // filter mode may apply this guarded clearance policy to delivery only.
     d.decision="undetermined";d.reason="overhead_lower_surface_unverified";return;
   }
   d.height_preview="keep";
   if(!map_valid||!d.has_spatial||!d.spatial.available){preview("undetermined","map_or_pose_unavailable");return;}
-  if(e.unknown){preview("undetermined","unknown_support_map_cells");d.decision="undetermined";d.reason="unknown_support_map_cells";return;}
+  if(e.unknown||d.spatial.unknown_cells){preview("undetermined","unknown_support_map_cells");d.decision="undetermined";d.reason="unknown_support_map_cells";return;}
   if(road_support) {
     d.point_preview="keep";
     if(d.obb_preview=="keep") {keep("joint_drivable_support");return;}

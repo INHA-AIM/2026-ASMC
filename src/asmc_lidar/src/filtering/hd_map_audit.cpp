@@ -59,6 +59,22 @@ struct HdMapAudit::Impl {
   double res = 0, ox = 0, oy = 0, age_limit = 0, guard = 0, exception_guard = 0;
   cv::Mat occupancy, exceptions, guarded_road, interior_road;
   double road_inset_m=0;
+  // Continuous L-infinity inset of the UNION of road cells. Do not round a
+  // 10/15cm request up to a whole 20cm cell. Outside/unknown cells are barriers.
+  bool Interior(double gx,double gy) const {
+    const int x=int(std::floor(gx)),y=int(std::floor(gy));
+    if(x<0||y<0||x>=occupancy.cols||y>=occupancy.rows||occupancy.at<std::int8_t>(y,x)!=0)return false;
+    if(road_inset_m==0)return true;
+    const double margin=road_inset_m/res;
+    const int radius=int(std::ceil(margin));
+    for(int dy=-radius;dy<=radius;++dy)for(int dx=-radius;dx<=radius;++dx) {
+      const int xx=x+dx,yy=y+dy;
+      if(xx>=0&&yy>=0&&xx<occupancy.cols&&yy<occupancy.rows&&occupancy.at<std::int8_t>(yy,xx)==0)continue;
+      const double distance=std::max({double(xx)-gx,gx-double(xx+1),double(yy)-gy,gy-double(yy+1),0.});
+      if(distance<margin-1e-9)return false;
+    }
+    return true;
+  }
   SpatialRelation Relation(const std::vector<cv::Point2d>& hull, double expansion) const {
     SpatialRelation r;
     if (!std::isfinite(expansion) || expansion < 0 || expansion > 20) {
@@ -90,7 +106,7 @@ struct HdMapAudit::Impl {
       const auto* m=mask.ptr<std::uint8_t>(row);
       const auto* o=occupancy.ptr<std::int8_t>(y+row)+x;
       const auto* inside=interior_road.ptr<std::uint8_t>(y+row)+x;
-      for(int col=0;col<w;++col) if(m[col]) {++total; road += o[col]==0;interior += inside[col]!=0;}
+      for(int col=0;col<w;++col) if(m[col]) {++total; road += o[col]==0;interior += inside[col];}
     }
     if(!total) {r.reason="empty_raster_footprint"; return r;}
     std::array<bool,3> kinds{};
@@ -104,7 +120,9 @@ struct HdMapAudit::Impl {
       }
     }
     r.available=true; r.road_ratio_grid=double(road)/total; r.raster_resolution_m=res;
-    r.interior_road_ratio_grid=double(interior)/total;
+    // Boundary-cell area uses 4x4 subcell centers (5cm on the deployed grid).
+    // Full interior cells use 16, outside cells 0; no larger per-scan raster.
+    r.interior_road_ratio_grid=double(interior)/(16.*total);
     for(std::size_t i=0;i<kinds.size();++i) if(kinds[i]) r.exception_types.push_back(kKinds[i]);
     return r;
   }
@@ -182,14 +200,23 @@ HdMapAudit::HdMapAudit(const std::string& path,const std::string& expected,doubl
   cv::dilate(road,p->guarded_road,cv::getStructuringElement(cv::MORPH_RECT,cv::Size(2*radius+1,2*radius+1)));
   Require(std::isfinite(road_inset_m)&&road_inset_m>=0&&road_inset_m<=0.6,"audit_road_inset_invalid");
   const int inset_cells=int(std::ceil(road_inset_m/p->res-1e-9));
-  p->road_inset_m=inset_cells*p->res;
+  p->road_inset_m=road_inset_m;
   if(inset_cells) {
     // One immutable byte per cell, prepared once. Erode the union of road
     // areas so adjacent lanes have no artificial interior boundary.
     cv::erode(road,p->interior_road,
       cv::getStructuringElement(cv::MORPH_RECT,cv::Size(2*inset_cells+1,2*inset_cells+1)),
       cv::Point(-1,-1),1,cv::BORDER_CONSTANT,cv::Scalar(0));
-  } else p->interior_road=road;
+  } else p->interior_road=road.clone();
+  // Reuse the same byte/cell allocation. Only the narrow boundary band needs
+  // subcell work; no fine-resolution copy of the 22M-cell map is allocated.
+  for(int y=0;y<h;++y)for(int x=0;x<w;++x) {
+    auto& coverage=p->interior_road.at<std::uint8_t>(y,x);
+    if(coverage){coverage=16;continue;}
+    if(p->occupancy.at<std::int8_t>(y,x)!=0)continue;
+    for(int sy=0;sy<4;++sy)for(int sx=0;sx<4;++sx)
+      coverage+=p->Interior(x+(sx+.5)/4,y+(sy+.5)/4);
+  }
   impl_=std::move(p);
 }
 void HdMapAudit::Accumulate(PointEvidence& e,const Point& p,double base_z) const {
@@ -201,7 +228,8 @@ void HdMapAudit::Accumulate(PointEvidence& e,const Point& p,double base_z) const
   if (x<0||y<0||x>=impl_->occupancy.cols||y>=impl_->occupancy.rows) {++e.unknown;return;}
   const auto v=impl_->occupancy.at<std::int8_t>(int(y),int(x));
   e.road += v==0; e.unknown += v==-1;
-  e.interior_road += impl_->interior_road.at<std::uint8_t>(int(y),int(x))!=0;
+  const auto coverage=impl_->interior_road.at<std::uint8_t>(int(y),int(x));
+  e.interior_road += coverage==16 || (v==0 && impl_->Interior((p[0]-impl_->ox)/impl_->res,(p[1]-impl_->oy)/impl_->res));
   e.guard += impl_->guarded_road.at<std::uint8_t>(int(y),int(x))!=0;
 }
 const std::string& HdMapAudit::map_id()const{return impl_->map_id;}
@@ -248,6 +276,7 @@ AuditDecision HdMapAudit::Evaluate(const AuditFrame& f,const AuditObject& o) con
 void WriteAuditDecision(std::ostream& out,const AuditDecision& d) {
   out<<"{\"track_id\":"<<d.track_id<<",\"input_state\":";Str(out,d.input_state);
   out<<",\"decision\":";Str(out,d.decision);out<<",\"reason\":";Str(out,d.reason);
+  out<<",\"delivery_excluded\":";Bool(out,d.delivery_excluded);
   out<<",\"comparison_ms\":"<<d.comparison_ms<<",\"exception_types\":";Strings(out,d.exception_types);
   if(d.preview_enabled) {
     out<<",\"obb_reference_decision\":";Str(out,d.obb_reference_decision);
@@ -289,6 +318,10 @@ void WriteAuditReport(std::ostream& out,const AuditReport& r) {
   out<<",\"map_sha256\":";Str(out,r.map_sha256);out<<",\"bundle_sha256\":";Str(out,r.bundle_sha256);
   out<<",\"policy_sha256\":";Str(out,r.policy_sha256);
   out<<",\"preview_config_id\":";Str(out,r.preview_config_id);
+  out<<",\"delivery_applied\":";Bool(out,r.delivery_applied);
+  out<<",\"delivery_input_count\":"<<r.delivery_input_count
+     <<",\"delivery_excluded_count\":"<<r.delivery_excluded_count
+     <<",\"delivery_output_count\":"<<r.delivery_output_count;
   out<<",\"pose_source_age_ms\":"<<r.pose_source_age_ms<<",\"pose_method\":";Str(out,r.pose_method);
   out<<",\"minimum_support_points\":"<<r.minimum_support_points<<",\"minimum_road_points\":"<<r.minimum_road_points
      <<",\"minimum_road_ratio\":"<<r.minimum_road_ratio<<",\"minimum_obb_road_ratio\":"<<r.minimum_obb_road_ratio

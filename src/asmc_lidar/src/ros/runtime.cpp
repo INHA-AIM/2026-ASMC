@@ -8,6 +8,7 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 namespace asmc {
@@ -203,12 +204,13 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
   }
   out.arrays = output_.Observed(out.result, out.result.objects);
   Audit(out);
+  FilterDelivery(out);
   out.total_ms = Ms(start, Clock::now());
   return out;
 }
 
 void LidarRuntime::Audit(ScanOutput& out) const {
-  if (config_.hd_map_audit_mode != "audit") return;
+  if (config_.hd_map_audit_mode == "off") return;
   const auto start = Clock::now();
   auto& report = out.hd_map_audit;
   report.enabled = true;
@@ -259,9 +261,13 @@ void LidarRuntime::Audit(ScanOutput& out) const {
     input.observation_state = obj.observation_state == asmc_msgs::LidarObject::PREDICTED ? "predicted" : "observed";
     for (const auto& p : obj.obb_corners) input.corners.push_back({p.x,p.y,p.z});
     try {
-      if (audit) {
         const auto object_start=Clock::now();
-        auto decision=audit->Evaluate(frame,input);
+        filtering::AuditDecision decision;
+        if(audit) decision=audit->Evaluate(frame,input);
+        else {
+          decision.track_id=input.track_id;decision.input_state=input.observation_state;
+          decision.reason="map_audit_unavailable";
+        }
         if(config_.delivery_preview.enabled) {
           const auto source=std::find_if(out.result.objects.begin(),out.result.objects.end(),
               [&](const auto& o){return o.tracking.s32_Id==obj.track_id;});
@@ -276,7 +282,11 @@ void LidarRuntime::Audit(ScanOutput& out) const {
               const Vec point(p.x,p.y,p.z);
               const double base_z=base_from_level->linear().row(2).dot(point)+base_from_level->translation().z();
               const Vec mapped=valid_map?map_from_level*point:Vec(NAN,NAN,NAN);
-              audit->Accumulate(evidence,{mapped.x(),mapped.y(),mapped.z()},base_z);
+              if(audit) audit->Accumulate(evidence,{mapped.x(),mapped.y(),mapped.z()},base_z);
+              else {
+                ++evidence.total;++evidence.unknown;
+                if(std::isfinite(base_z)){++evidence.finite;evidence.min_base_z=std::min(evidence.min_base_z,base_z);}
+              }
             }
             const auto& c=source->camera;
             const bool positive=filtering::PositiveCameraEvidence(frame.stamp_ns,c.camera_observation_ns,
@@ -287,16 +297,10 @@ void LidarRuntime::Audit(ScanOutput& out) const {
             decision.camera_observed_raw=c.observed_raw_class;
             if(positive)matched_group=group;
           }
-          filtering::ApplyDeliveryPreview(decision,evidence,config_.delivery_preview,valid_map,matched_group,bottom);
+          filtering::ApplyDeliveryPreview(decision,evidence,config_.delivery_preview,valid_map&&bool(audit),matched_group,bottom);
         }
         decision.comparison_ms=Ms(object_start,Clock::now());
         report.objects.push_back(std::move(decision));
-      }
-      else {
-        filtering::AuditDecision decision;
-        decision.track_id=input.track_id; decision.input_state=input.observation_state;
-        decision.reason="map_audit_unavailable"; report.objects.push_back(std::move(decision));
-      }
     } catch (const std::exception&) {
       // Diagnostic failure is visible but cannot suppress a scan or mutate tracks.
       filtering::AuditDecision decision;
@@ -306,6 +310,35 @@ void LidarRuntime::Audit(ScanOutput& out) const {
     }
   }
   report.calculation_ms = Ms(start, Clock::now());
+}
+
+void LidarRuntime::FilterDelivery(ScanOutput& out) const {
+  auto& report=out.hd_map_audit;
+  report.delivery_input_count=out.arrays.local.objects.size();
+  report.delivery_output_count=report.delivery_input_count;
+  if(config_.hd_map_audit_mode!="filter"||!report.enabled||!out.arrays.accepted||
+     (out.arrays.local.status!=asmc_msgs::LidarObjectArray::OBSERVED&&
+      out.arrays.local.status!=asmc_msgs::LidarObjectArray::OBSERVED_EMPTY))return;
+  report.delivery_applied=true;
+  std::unordered_set<int> excluded;
+  for(auto& d:report.objects) {
+    d.delivery_excluded=d.preview_enabled&&d.preview_decision=="exclude_candidate";
+    if(d.delivery_excluded)excluded.insert(d.track_id);
+  }
+  // One decision set for both coordinate frames and both observation wrappers.
+  // Stable in-place compaction: no cloud copies, tracker deletion or OBB edits.
+  const auto filter=[&](auto& array){
+    const auto before=array.objects.size();
+    array.objects.erase(std::remove_if(array.objects.begin(),array.objects.end(),
+      [&](const auto& obj){return excluded.count(obj.track_id);}),array.objects.end());
+    if(before&&!array.objects.size()&&array.status==asmc_msgs::LidarObjectArray::OBSERVED){
+      array.status=asmc_msgs::LidarObjectArray::OBSERVED_EMPTY;
+      array.reason="delivery_filtered_empty";
+    }
+  };
+  filter(out.arrays.local);filter(out.arrays.map);
+  report.delivery_output_count=out.arrays.local.objects.size();
+  report.delivery_excluded_count=report.delivery_input_count-report.delivery_output_count;
 }
 
 }  // namespace runtime

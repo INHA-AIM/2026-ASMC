@@ -68,7 +68,7 @@ TEST(DeliveryPreview, MissionRegionDoesNotProtectUnknownOutsideSupport){
     EXPECT_EQ(d.point_preview,"exclude_candidate");EXPECT_EQ(d.obb_preview,"exclude_candidate");
     EXPECT_EQ(d.obb_reference_reason,"exception_space_protected");
     EXPECT_EQ(d.decision,"undetermined");
-    EXPECT_EQ(d.preview_protection_policy,"yolo_points_and_obb_v4");
+    EXPECT_EQ(d.preview_protection_policy,"yolo_points_and_obb_subcell_v5");
   }
 }
 TEST(DeliveryPreview, PositiveVehicleAndDynamicProtectOutsideWhileStaticDoesNot) {

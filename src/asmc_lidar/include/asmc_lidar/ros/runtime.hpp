@@ -41,7 +41,7 @@ struct RuntimeConfig {
   bool enable_camera_fusion = true;
   pipeline::fusion::FusionConfig fusion;
   std::string stamp_provenance = "bridge_receive_ns";
-  // Optional post-fusion audit only. Loaded once before runtime creation; shared
+  // Post-fusion off/audit/filter policy. Loaded once before runtime creation; shared
   // read-only across explicit resets, never loaded while holding epoch_mutex.
   std::string hd_map_audit_mode = "off", hd_map_manifest, hd_map_manifest_sha256;
   std::string hd_map_audit_error;
@@ -172,6 +172,7 @@ class LidarRuntime {
 
  private:
   void Audit(ScanOutput& out) const;
+  void FilterDelivery(ScanOutput& out) const;
   RuntimeConfig config_;
   pipeline::PoseHistory pose_;
   pipeline::GpsIngest gps_;

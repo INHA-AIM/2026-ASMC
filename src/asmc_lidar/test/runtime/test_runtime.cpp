@@ -334,6 +334,79 @@ TEST(HdMapAuditRuntime, InsetShrinksOnlyUnionBoundaryAndPreservesRawAndUnknownCo
   EXPECT_THROW(f::HdMapAudit(path,sha,.7),std::runtime_error);
 }
 
+TEST(HdMapAuditRuntime, SubcellMarginsAreDistinctAndObbUsesFractionalBoundaryArea) {
+  namespace f=asmc::lidar::filtering;
+  TempDir dir;auto cfg=ShippedRuntimeConfig();std::string cells(160000,char(100));
+  for(int y=100;y<120;++y)for(int x=100;x<120;++x)cells[y*400+x]=0;
+  WithAudit(dir,cfg,cells);
+  auto manifest=YAML::LoadFile(cfg.hd_map_manifest);manifest["resolution_m"]=.2;
+  const auto path=dir.Write("subcell.yaml",manifest),sha=FileSha256(path);
+  for(double margin:{.10,.15,.20}) {
+    f::HdMapAudit map(path,sha,margin);EXPECT_DOUBLE_EQ(map.road_inset_m(),margin);
+    f::PointEvidence evidence;
+    // 5, 12.5 and 17.5cm inside a straight road boundary.
+    for(double offset:{.05,.125,.175})map.Accumulate(evidence,{-80+offset,-78,0},0);
+    EXPECT_EQ(evidence.interior_road,margin==.10?2u:margin==.15?1u:0u);
+    f::AuditFrame frame;frame.frame_id="map";frame.status=1;frame.map_id="fixture";
+    frame.map_origin={302595,4124145,0};frame.pose_valid=true;frame.stamp_ns=frame.pose_stamp_ns=1;
+    f::AuditObject box;
+    for(double z:{0.,1.})for(const auto& xy:std::vector<std::array<double,2>>{
+        {-79.95,-77.95},{-79.91,-77.95},{-79.91,-77.55},{-79.95,-77.55}})
+      box.corners.push_back({xy[0],xy[1],z});
+    const auto d=map.Evaluate(frame,box);ASSERT_TRUE(d.spatial.available);
+    EXPECT_DOUBLE_EQ(d.spatial.interior_road_ratio_grid,margin==.10?.5:margin==.15?.25:0.);
+  }
+}
+
+TEST(HdMapAuditRuntime, DeliveryFilterCompactsBothFramesButPreservesRawTracksAndGpsFailure) {
+  auto off=ShippedRuntimeConfig(),on=off;TempDir dir;WithAudit(dir,on);
+  on.hd_map_audit_mode="filter";on.delivery_preview.enabled=true;
+  sh::LidarRuntime a(off,nullptr,nullptr),b(on,nullptr,nullptr);Sim base(a),filtered(b);
+  base.gps=filtered.gps=[](int t){return t>=600&&t<1000?Mode::kInvalid:Mode::kValid;};
+  base.RunTo(1400);filtered.RunTo(1400);std::size_t removed=0,unavailable=0;
+  for(const auto& row:base.scans) {
+    const auto& expected=row.second;const auto& actual=filtered.scans.at(row.first);
+    EXPECT_EQ(actual.result.objects.size(),expected.result.objects.size());
+    EXPECT_EQ(actual.result.counts.tracks,expected.result.counts.tracks);
+    for(std::size_t i=0;i<actual.result.objects.size();++i) {
+      EXPECT_EQ(actual.result.objects[i].tracking.s32_Id,expected.result.objects[i].tracking.s32_Id);
+      EXPECT_EQ(actual.result.objects[i].detection.pcl_ClusterPoints.size(),expected.result.objects[i].detection.pcl_ClusterPoints.size());
+      EXPECT_EQ(actual.result.objects[i].detection.f32_OBB_CenterX,expected.result.objects[i].detection.f32_OBB_CenterX);
+    }
+    if(expected.arrays.map.status==Array::POSE_UNAVAILABLE) {
+      ++unavailable;EXPECT_EQ(Wire(expected.arrays.local),Wire(actual.arrays.local));
+      EXPECT_EQ(Wire(expected.arrays.map),Wire(actual.arrays.map));
+    } else {
+      removed+=actual.hd_map_audit.delivery_excluded_count;
+      EXPECT_TRUE(actual.arrays.local.objects.empty());EXPECT_TRUE(actual.arrays.map.objects.empty());
+      EXPECT_EQ(actual.arrays.local.status,Array::OBSERVED_EMPTY);
+      EXPECT_EQ(actual.arrays.map.status,Array::OBSERVED_EMPTY);
+      EXPECT_EQ(actual.hd_map_audit.delivery_input_count,expected.arrays.local.objects.size());
+    }
+    EXPECT_EQ(actual.arrays.local.header.stamp,expected.arrays.local.header.stamp);
+    for(const auto& d:actual.hd_map_audit.objects)
+      EXPECT_EQ(d.delivery_excluded,d.preview_decision=="exclude_candidate");
+  }
+  EXPECT_GT(removed,0u);EXPECT_GT(unavailable,0u);
+}
+
+TEST(HdMapAuditRuntime, OverheadDeliveryExclusionWorksWithoutMapOrGps) {
+  auto cfg=ShippedRuntimeConfig();cfg.hd_map_audit_mode="filter";
+  cfg.delivery_preview.enabled=true;cfg.hd_map_audit.reset();
+  sh::LidarRuntime runtime(cfg,nullptr,nullptr);Sim sim(runtime);
+  // Leave the ground plane in place, lift only objects above the roof+margin.
+  for(auto& p:sim.scene->points)if(p.z>-1.6)p.z+=3.;
+  sim.gps=[](int){return Mode::kSilent;};sim.RunTo(600);std::size_t overhead=0;
+  for(const auto& row:sim.scans)for(const auto& d:row.second.hd_map_audit.objects) {
+    if(d.height_preview=="exclude_candidate") {
+      ++overhead;EXPECT_TRUE(d.delivery_excluded);
+      EXPECT_EQ(d.preview_reason,"overhead_clearance_candidate");
+    }
+    EXPECT_EQ(row.second.arrays.map.status,Array::POSE_UNAVAILABLE);
+  }
+  EXPECT_GT(overhead,0u);
+}
+
 TEST(HdMapAuditRuntime, PreservesEveryObjectByteAcrossGpsFaultAndRecovery) {
   auto off=ShippedRuntimeConfig(),on=off;TempDir dir;WithAudit(dir,on);
   sh::LidarRuntime a(off,nullptr,nullptr),b(on,nullptr,nullptr);Sim base(a),audit(b);
@@ -541,7 +614,8 @@ TEST(RuntimeConfig, AuditSetupFailureDoesNotFailLidarConfiguration) {
   const auto cfg=sh::LoadRuntimeConfig(dir.Write("missing-map.yaml",n),PackageDir());
   EXPECT_EQ(cfg.hd_map_audit_mode,"audit");EXPECT_FALSE(cfg.hd_map_audit);
   EXPECT_FALSE(cfg.hd_map_audit_error.empty());
-  ExpectConfigError([](YAML::Node& x){x["hd_map_audit"]["mode"]="exclude";},"off or audit");
+  ExpectConfigError([](YAML::Node& x){x["hd_map_audit"]["mode"]="exclude";},"off, audit or filter");
+  ExpectConfigError([](YAML::Node& x){x["hd_map_audit"]["mode"]="filter";x["hd_map_audit"]["delivery_preview"]["enabled"]=false;},"requires delivery_preview.enabled");
 }
 
 TEST(RuntimeConfig, AppliesMainClamps) {

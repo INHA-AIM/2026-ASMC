@@ -1,5 +1,5 @@
 #pragma once
-// Decision-only post-fusion audit. No ROS, PCL, track mutation or exclusion API.
+// Post-fusion decisions. No ROS, PCL or tracker mutation; runtime owns delivery.
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -42,6 +42,7 @@ struct AuditDecision {
   std::size_t support_points=0, road_points=0, interior_road_points=0, guard_points=0, unknown_points=0;
   double road_point_ratio=0, interior_road_ratio=0, obb_interior_road_ratio=0, min_base_z=0, obb_bottom_base_z=0, roof_limit_z=0;
   bool height_available=false, camera_dynamic_protected=false, camera_vehicle_protected=false, camera_known=false;
+  bool delivery_excluded=false;
   std::string preview_protection_policy, camera_observed_group="unknown", camera_observed_raw="unknown";
 
 };
@@ -49,6 +50,8 @@ struct AuditReport {
   bool enabled = false, available = false;
   std::string reason = "off", map_id, map_sha256, bundle_sha256, policy_sha256, preview_config_id;
   double calculation_ms = 0;
+  bool delivery_applied=false;
+  std::size_t delivery_input_count=0,delivery_excluded_count=0,delivery_output_count=0;
   double pose_source_age_ms = -1;
   std::string pose_method;
   std::size_t minimum_support_points=0,minimum_road_points=0;

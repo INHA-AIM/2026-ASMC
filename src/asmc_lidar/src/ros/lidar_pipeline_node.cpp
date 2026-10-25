@@ -204,6 +204,8 @@ class LidarPipelineNode {
     };
     std::deque<AuditSample> audit_window;
     std::string audit_reason = "off";
+    bool delivery_filter_applied=false;
+    std::size_t delivery_input=0,delivery_excluded=0,delivery_output=0;
 
     std::int64_t last_stamp_ns = 0, last_receipt_ns = 0, last_processing_ns = 0;
     std::int64_t last_output_steady_ns = 0;
@@ -584,6 +586,10 @@ class LidarPipelineNode {
     }
     if (const auto* camera_fusion = pending.runtime->fusion()) stats_.fusion = camera_fusion->counters();
     stats_.audit_reason = out.hd_map_audit.reason;
+    stats_.delivery_filter_applied=out.hd_map_audit.delivery_applied;
+    stats_.delivery_input=out.hd_map_audit.delivery_input_count;
+    stats_.delivery_excluded=out.hd_map_audit.delivery_excluded_count;
+    stats_.delivery_output=out.hd_map_audit.delivery_output_count;
     if (out.hd_map_audit.enabled) {
       Stats::AuditSample sample;
       sample.ms = out.hd_map_audit.calculation_ms;
@@ -705,6 +711,10 @@ class LidarPipelineNode {
       number("fusion_pending_scans", stats_.pending_scans);
       const std::vector<double> window(stats_.total_ms.begin(), stats_.total_ms.end());
       value("hd_map_audit_mode", config.hd_map_audit_mode);
+      value("delivery_filter_applied",stats_.delivery_filter_applied?"true":"false");
+      number("delivery_input_count",stats_.delivery_input);
+      number("delivery_excluded_count",stats_.delivery_excluded);
+      number("delivery_output_count",stats_.delivery_output);
       value("hd_map_audit_reason", stats_.audit_reason);
       value("hd_map_audit_setup_error", config.hd_map_audit_error);
       value("hd_map_audit_bundle_sha256", config.hd_map_manifest_sha256);

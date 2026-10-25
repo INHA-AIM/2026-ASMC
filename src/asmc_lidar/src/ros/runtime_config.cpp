@@ -278,9 +278,11 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
         Fail(file,"invalid delivery preview safety limits");
     }
     config.hd_map_audit_mode = root["hd_map_audit"]["mode"].as<std::string>();
-    if (config.hd_map_audit_mode != "off" && config.hd_map_audit_mode != "audit")
-      Fail(file, "hd_map_audit.mode must be off or audit (no exclusion mode)");
-    if (config.hd_map_audit_mode == "audit") {
+    if (config.hd_map_audit_mode != "off" && config.hd_map_audit_mode != "audit" && config.hd_map_audit_mode != "filter")
+      Fail(file, "hd_map_audit.mode must be off, audit or filter");
+    if(config.hd_map_audit_mode=="filter"&&!config.delivery_preview.enabled)
+      Fail(file,"filter mode requires delivery_preview.enabled");
+    if (config.hd_map_audit_mode != "off") {
       // Audit setup failure must never disable the original LiDAR outputs.
       try {
         config.hd_map_manifest = Resolve(root["hd_map_audit"]["manifest"].as<std::string>(), package_share_dir);
