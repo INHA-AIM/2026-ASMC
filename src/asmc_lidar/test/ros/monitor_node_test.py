@@ -196,10 +196,16 @@ class MonitorNodeTest(unittest.TestCase):
         self.assertEqual(status['objects_map']['status'], POSE_UNAVAILABLE)
         self.assertEqual(status['camera_state'], 'disabled')
         self.assertEqual(status['debug_enabled'], 'true')
-        self.assertTrue(status['master']['ok'])
-        # The master snapshot is refreshed every ~2 s: wait for it to list this node's publisher.
-        self.wait_until(lambda: self.status()['master']['points_publishers'] == 1, 10, 'points publisher seen')
-        self.assertIn('/migration/lidar/lidar_pipeline', self.status()['master']['shadow_nodes'])
+        # The master poll is independent of diagnostics/scene reception. Its
+        # first snapshot can see the fixture's points publisher before it sees
+        # the pipeline. Wait for BOTH in the same snapshot, within the existing
+        # timeout; pipeline_state=ok does not make that first snapshot current.
+        master = self.wait_until(
+            lambda: (lambda m: m if m['ok'] and m['points_publishers'] == 1
+                     and '/migration/lidar/lidar_pipeline' in m['shadow_nodes'] else None)(self.status()['master']),
+            10, 'points publisher and pipeline seen by master')
+        self.assertTrue(master['ok'])
+        self.assertIn('/migration/lidar/lidar_pipeline', master['shadow_nodes'])
         self.assertLess(status['ages_ms']['scan'], 1000)
         # Input/processing rates come from consecutive 1 Hz diagnostics samples.
         rates = self.wait_until(lambda: (lambda r: r if (r['input_hz'] or 0) > 5.0 else None)(self.status()['rates']),

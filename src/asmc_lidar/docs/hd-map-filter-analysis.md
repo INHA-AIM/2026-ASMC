@@ -830,3 +830,8 @@ bundle manifest SHA는 `13c517e3fffee3bfd64fabdb6f473c6c668d3d87e2142c38ff756e36
 시각화는 보존한 원본 tracker와 필터 후 typed 배열을 함께 전달한다. 실제 처리 순서는
 판정→배열 필터→객체/관측 발행→debug snapshot이며, 발행 제외 객체가 원본 레이어에 보이는 것은
 검수용이다. 화면을 먼저 발행해서 제외가 늦게 적용되는 것이 아니다.
+
+병합 전 hosted CI에서 모니터 상태 시험의 시작 순서 경합1건이 확인됐다
+([실행 근거](https://github.com/INHAautonav/2026-ASMC/actions/runs/40198658906/job/121184924872)).
+같은 master snapshot에 점군 발행자와 pipeline이 모두 나타날 때까지 기존10초 한계 안에서
+기다리도록 시험만 수정했다. 운영 코드·timeout은 바꾸지 않았고 독립 ROS 모니터7시험을 다시 통과했다.
