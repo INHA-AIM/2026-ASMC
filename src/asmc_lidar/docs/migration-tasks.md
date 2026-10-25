@@ -44,6 +44,8 @@ PR #104 구조 정리는 병합됐고, 승현의 [A1 기존 필터·HD맵 오프
 | A1.2 · 안승현(L5·L6), 미리보기 검증 완료 | 점군 support/머리 위 높이/카메라 dynamic 보호 후보와 웹 디버거 개선. 원본 배열·tracker 유지 | [정책·결과](hd-map-filter-analysis.md#점군높이카메라-보호-미리보기). CTest33·audit ON ROS17·웹JS62, browser 각3회 및 배열/track 불변성 통과. 실제 A304 가드레일·미션 외부 접근·하부 가림 수락은 후속 |
 | A1.3 · 안승현, 지도 검수 반영 | 승인된 A029·A175·A406 도로/차선을 v7에 추가하고 웹은 도로 면·실제 paint만 표시 | [결과](hd-map-filter-analysis.md#a13-인접-도로와-차선-검수-반영--2026-10-25). HD맵182·CTest33 통과,649scan 객체/track 동일. A029 추정 왼쪽 점선은 사용자 시각 확인 대기 |
 | A1.4 · 안승현, 기본 설정/단계 표시 검증 | 현재 HD맵 배포 bundle 기본 audit·높이 ROI와 원인별 점군/OBB 표시 | [현재 규칙](hd-map-filter-analysis.md#a14-기본-hd맵높이-roi와-제외-근거--2026-10-25). map 전달 제외·판제 전환은 여전히 후속 |
+| A1.8 · 안승현, 표시 규칙 구현 | 공통20cm 안쪽 도로 마스크에서 점군3점·10% AND OBB10%, YOLO 보호·보류 유지 | [현행 규칙](hd-map-filter-analysis.md#a18-공통-도로-영역의-점군obb-and--2026-10-25). 실제 ROS 전달 제외·판제 전환 없음 |
+| F1 · 다음 PR, 미착수 | Main/planning_inputs의 인지 계산과 행동 정책을 분리해 공통 코어로 정리 | [편입표·완료 조건](filter-migration.md). 기존 실행 유지, 원본 OBB/track·소비 계약 대조 뒤 기능별 소비 전환 |
 | A2 · 안승현(L4) | 카메라 수신·보정·시각·16종→3그룹 연결 지원 | 원본 영상 픽셀/ID·source stamp·calibration ID와 라벨 의미 보존; 카메라 미검출을 객체 삭제 근거로 사용하지 않음 |
 | 공동 · L6–L7 | 공용 메시지/좌표/시간 변경 리뷰와 기존 Main → 새 경로의 소비 전환 | 같은 입력의 전체 대조·부하·판제 인수·단일 발행자·복구 확인 후 명시적 전환 |
 
@@ -56,7 +58,7 @@ J1–J4는 우선 확인 순서다. J3·J4는 원인이 확인된 작은 변경�
 
 A1은 [구간 전제와 5Hz GPS의 검토 조건](../../../docs/handoffs/lidar-migration.md#a1-roi-검토-조건--구간-전제와-5hz-gps)을 따른다.
 기본 ROI·OBB·tracker는 유지한다. A1.1은 OBB/추적/fusion 뒤의 전달 판정만
-`/migration/lidar`에 연결하며 기본 audit OFF·실제 제외 모드 없음이다. GPS 갱신 사이 위치 정합과 예외 공간의
+`/migration/lidar`에 연결했다. 당시 audit 기본OFF였으며 현재 패키지 기본은 audit ON·실제 제외 모드 없음이다. GPS 갱신 사이 위치 정합과 예외 공간의
 외부 접근 근거가 확보되지 않으면 제거를 활성화하지 않는다. 점군 HD맵 ROI는 후속으로 둔다.
 
 추가 지도 검토 요청 **A029·A175·A406**은 사용자3-source 검수를 받아 A1.3에서 v7에 반영했다.

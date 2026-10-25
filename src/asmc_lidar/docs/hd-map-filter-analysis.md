@@ -665,7 +665,7 @@ config ID가 새 비율을 반영하며, 보호 정책의 종류는 같아 버�
 새 주행 수락이나 실제 장애물 recall 검증으로 표시하지 않는다. 과거 YAML의 명시적0.05는 재생 시
 그대로 사용할 수 있다.
 
-OBB 비교는 현재 `road_ratio_grid>0`이면 keep이고0이면 후보다. 고정된15% 전달 조건이 아니며
+A1.7 당시 OBB 비교는 `road_ratio_grid>0`이면 keep이고0이면 후보였다. 현행 AND/10%는 A1.8을 따른다. 고정된15% 전달 조건이 아니며
 점군/높이 판정과 별도 checkbox다. OBB 비교 체크를 켜면 그 독립 후보 숨김도 적용하므로 점군으로
 유지된 객체가 OBB 비교 때문에 숨겨질 수 있다. 기본 OBB 비교 숨김은 OFF다. 새 패키지는 아직
 HD맵 사유로 ROS 객체를 제외하지 않는다. 기존 Main/planning_inputs의 별도 road filter 기본값
@@ -677,3 +677,44 @@ HD맵 사유로 ROS 객체를 제외하지 않는다. 기존 Main/planning_input
 유지했고 웹 metadata에서20cm·3점·0.10·count_and_ratio와 단일 발행자를 확인했다. 새 유효
 config ID는 `77b30bdd5177baabb9a1c6b2235454fd3a8eb266ce995ead6075b166a22c72e7`이다.
 새 주행·수집은 수행하지 않았으며 기존 동결 실험 파일은 수정하지 않았다.
+
+
+## A1.8 공통 도로 영역의 점군·OBB AND — 2026-10-25
+
+사용자는 동일 영역·점군 조건에 OBB10%를 더하고 OBB가 통과해도 점군 미달을 보완하지 않도록
+요청했다. 현재 `yolo_points_and_obb_v4`의 일반 유효 관측 표시는 다음을 모두 요구한다.
+
+- 영역: 기존 결정과 같은 도로 합집합 바깥 경계20cm 안쪽(0.2m grid1셀 직사각 침식).
+- 점군: 전체 cluster support의3점 이상 AND10% 이상이 이 영역 안에 있음. 전체 근거10점 이상 품질 gate 유지.
+- OBB: 원본8코너의 XY convex footprint raster 셀 중 같은 영역과 겹치는 비율10% 이상.
+- 높이 후보는 별도 적용한다. camera vehicle/dynamic의 유효 최신 양성 보호는 유지하며 속도·미션 위치는 보호 근거가 아니다.
+
+원본 도로 점/OBB 겹침과 기존 A1 `obb_reference_*`를 보존한다. 새 OBB 내부 겹침은 같은 footprint
+루프에서 mask를 한 번 더 읽어 계산한다. 추가 영상·지도·점군을 복사하거나 scan마다 mask를 만들지
+않는다. 격자 비율은 연속 면적의 정확한 기하 교차값이 아닌0.2m 근사임을 유지한다. 독립 근거는
+각각 기록하지만 종합 preview keep은 AND다. 정상 YOLO 보호 외에 한쪽 근거만으로 keep하지 않는다.
+
+기본 웹의 점군·OBB·높이 후보 숨김을 모두 ON으로 맞췄다. 선택 track·typed box·소속 점은 같은
+표시 함수를 쓴다. 원인별 숨김을 해제하면 사유 색으로 제외 후보를 다시 검수할 수 있다. 지도 SHA
+불일치·map/pose 불명·근거 부족은 후보로 확정하지 않으며 기존 보류를 유지한다.
+
+공개 메시지·MD5·ROS 객체·tracker·기존 Main·판제 입력은 바꾸지 않는다. 실제 HD맵 전달 제외는
+여전히 미적용이다. A1.6의 반복 주행 수치는 당시5% 정책이며 현행10%+OBB AND의 새 주행 수락으로
+표기하지 않는다. 기존 frozen run과 결과 포인터는 수정하지 않았다.
+
+다음 PR의 기존 필터 편입 목록은 [별도 정리](filter-migration.md)를 따른다. road/known-static/
+structure/ground 품질·추적 확인과 속도는 인지 후보이고 긴급 거리·행동·센서 장애 대응은 판제에 남긴다.
+OBB clipping은 새 인지 정본에 편입하지 않는다. 기존 코드 삭제와 실제 소비 전환은 기능별 검증 이후다.
+
+검증은 CTest33개·웹JS67개·Chrome 합성 UI17개를 통과했다. OBB9.9/10/10.1%와 점군 통과/실패의
+조합, 같은 마스크의 footprint 침식, unknown/무효·보호·typed/선택 객체 우회·검수용 해제를 포함한다.
+OBB 미계산을 정상0%로 표시하지 않도록 null을 보완한 뒤 관련 runtime/delivery·기존 A1 공간 대조
+3개를 다시 통과했다. 마지막 추가 검사 명령의 probe target 이름 오류는 바로잡아 재실행했으며
+실행되지 않은 검사를 통과로 집계하지 않았다.
+
+기본 workspace를 재빌드하고 시험 LiDAR 한 개를 적용했다. 종료된 launcher의 zombie 기록 때문에
+첫 재시작 guard가 중단됐고, 실제 처리 노드·ROS 발행자가 없음을 확인한 뒤 새 노드 하나만 시작했다.
+bridge·카메라·웹·master PID는 유지했다. 웹 신규5프레임·81객체에서 v4·20cm·점군3/10%·OBB10%·
+points_and_obb를 확인했다. 새 유효 config ID는
+`30456322794a6c4facdbfe4dac69abff021064dfa34cf5ac0892fc23293a2c96`이다. 이는 적용 확인이며
+새 반복 주행·실제 장애물 recall·전체 연산 수락으로 표시하지 않는다. 새 수집이나 학습은 하지 않았다.

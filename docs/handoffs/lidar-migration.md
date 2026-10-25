@@ -253,9 +253,10 @@ fusion 보완과 판제 정책은 변경하지 않는다. 계산·공급 비교�
 후속 검수 미리보기는 OBB 겹침과 객체 전체 cluster support를 비교한다. 카메라의 최신 양성
 `dynamic_obstacle`·`vehicle` 연결은 모든 구간에서 보호하며, 머리 위 후보는 최저 점·OBB 하단을 함께 본다.
 보호는 person/dog/deer/bicycle/stroller와 car/bus/truck의 실제 최신 YOLO matching과 시간/epoch 유효성에 한한다.
-`yolo_vehicle_dynamic_interior_v3`에서는 LiDAR motion/속도·미션10m 영역만으로 unknown을 보호하지 않는다.
+`yolo_points_and_obb_v4`에서는 LiDAR motion/속도·미션10m 영역만으로 unknown을 보호하지 않는다.
 유지 분류와 최신 양성 매칭을 분리하고, 이후 unknown·miss·세대 변경이면 보호 근거를 비운다.
-미리보기의 일반 객체는 도로 합집합 바깥 경계20cm 안쪽에서3점 이상 AND10% 이상을 유지 근거로 요구한다.
+미리보기의 일반 객체는 도로 합집합 바깥 경계20cm 안쪽에서3점 이상 AND10% 이상을 요구하고,
+OBB도 같은 영역과 면적10% 이상 겹쳐야 한다. 기본 표시는 점군 AND OBB로 한쪽 미달을 다른 쪽이 보완하지 않는다.
 카메라 보호·지도/pose 불명·원본 배열 보존을 우선하며, 이 기준을 판제의 실제 전달 필터로 전환하지 않는다.
 현재 matching은 전방이며3뷰 matching 확대는 재호의 후속 책임이다. 후보 숨김은 웹에서만 적용하고
 원본 ROS 객체·tracker·판제 소비 경로는 유지한다. [정책과 한계](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#점군높이카메라-보호-미리보기),
@@ -269,6 +270,9 @@ fusion 보완과 판제 정책은 변경하지 않는다. 계산·공급 비교�
 현재 기본은 패키지 HD맵 audit·IMU 수평 높이 ROI다. A029 합류부 실선과 연결성, 가드레일 경계 여유의 미리보기/최종 보류 구분은 [A1.4](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#a14-기본-hd맵높이-roi와-제외-근거--2026-10-25)를 따른다. 높이 ROI는 새 군집 입력을 바꾸지만 지도 판정은 원본 객체를 제거하지 않는다.
 
 ## 판제 소비 전환 시 정리할 중복 처리
+
+다음 PR의 기능별 원본·목표 소유권·편입/분리 조건은
+[판제 필터 편입표](../../src/asmc_lidar/docs/filter-migration.md)에 따로 정리했다. 실제 이전은 미착수다.
 
 이 절은 판제 입력 전환 PR의 정리 목록이다. A1과 후속 audit-only 연결은 실제 필터
 활성화·판제 전환이 아니다. 기존 Main의 `/last_lidar` 소비·복구가 남아 있는 동안

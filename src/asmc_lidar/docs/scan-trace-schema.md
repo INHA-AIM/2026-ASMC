@@ -65,12 +65,17 @@ A1.1의 내부 설정이 `audit`일 때만 `hd_map_audit` 블록을 추가한다
 - `preview.support_points/road_points/guard_points/unknown_points/road_point_ratio`:
   화면 샘플이 아닌 객체 전체 cluster support의 지도 관계. voxel 이전 원본 점 비율은 아니다.
 - `preview.interior_road_points/interior_road_ratio`: 도로 합집합 바깥을 inset한 내부의 support 수/전체 비율.
-  기존 road_points/road_point_ratio는 원래 도로 기준이다. v3 유지는 내부3점 이상 AND10% 이상이다.
+  기존 road_points/road_point_ratio는 원래 도로 기준이다. v4 점군 통과는 내부3점 이상 AND10% 이상이다.
 - report의 `road_inset_m`은 격자로 올림한 실제 적용 여유(기본0.2m), `road_support_rule`은 count_and_ratio다.
+- `preview.obb_interior_road_ratio`: 같은 inset 도로 마스크가 차지하는 OBB footprint raster 셀 비율.
+  기하 근거가 없으면 null이며 정상0%와 구분한다. 기존 `spatial.road_ratio_grid`는 원본 도로/기존 A1 비교로 유지한다.
+- report의 `minimum_obb_road_ratio=0.10`, `display_support_rule=points_and_obb`:
+  종합 preview keep에는 점군 AND OBB가 필요하다. `joint_drivable_support`는 둘 다 통과,
+  `obb_overlap_below_threshold`는 점군 통과/OBB 미달이다. 유효 YOLO 보호는 예외다.
 - `preview.min_support_base_z/obb_bottom_base_z/roof_limit_base_z`: `base_link` 높이. 근거가 없으면 null.
 - `preview.camera_dynamic_protected/camera_vehicle_protected/camera_known`: 같은 fusion consumer epoch의 최신 양성 연결 근거.
   실제 이동 여부나 카메라만으로 생성한3D 객체가 아니다.
-- `preview.protection_policy`: 현재 `yolo_vehicle_dynamic_interior_v3`. 미션 영역만으로 unknown을 보호하지 않는다.
+- `preview.protection_policy`: 현재 `yolo_points_and_obb_v4`. 미션 영역만으로 unknown을 보호하지 않는다.
 - `preview.camera_raw_class/camera_group`: 확정/유지 클래스와 분리한 최신 실제 매칭 YOLO 원본/그룹.
   이후 unknown·miss는 지우며, 시간/epoch gate까지 통과해야 해당 그룹의 보호 flag가 true다.
   LiDAR motion state나 속도는 이 gate의 입력이 아니다.
