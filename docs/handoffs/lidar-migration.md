@@ -237,6 +237,8 @@ L7에서 기존 발행자·호환 어댑터를 정지하고 새 경로를 정식
 
 ## A1.1 HD맵 판정 연결
 
+아래 두 단락은 A1.1 착수 당시 범위다. 현재 발행 필터는 뒤의 A1.9 안내와 분석 정본을 따른다.
+
 안승현의 A1 조사 다음 단위는 `filtering/` C++ 코어를 기존 runtime/replay에 연결하는
 **판정·진단 전용** 작업이다. 원본 객체·tracker·fusion 결과와 판제 입력은 유지한다.
 기본 YAML은 OFF, 내부 audit 설정은 SHA로 고정한 지도 파생 bundle을 읽어 유지/제외 후보/
@@ -253,21 +255,23 @@ fusion 보완과 판제 정책은 변경하지 않는다. 계산·공급 비교�
 후속 검수 미리보기는 OBB 겹침과 객체 전체 cluster support를 비교한다. 카메라의 최신 양성
 `dynamic_obstacle`·`vehicle` 연결은 모든 구간에서 보호하며, 머리 위 후보는 최저 점·OBB 하단을 함께 본다.
 보호는 person/dog/deer/bicycle/stroller와 car/bus/truck의 실제 최신 YOLO matching과 시간/epoch 유효성에 한한다.
-`yolo_points_and_obb_v4`에서는 LiDAR motion/속도·미션10m 영역만으로 unknown을 보호하지 않는다.
+`yolo_points_and_obb_subcell_v5`에서는 LiDAR motion/속도·미션10m 영역만으로 unknown을 보호하지 않는다.
 유지 분류와 최신 양성 매칭을 분리하고, 이후 unknown·miss·세대 변경이면 보호 근거를 비운다.
-미리보기의 일반 객체는 도로 합집합 바깥 경계20cm 안쪽에서3점 이상 AND10% 이상을 요구하고,
+일반 객체는 도로 합집합 바깥 경계10cm 안쪽에서3점 이상 AND10% 이상을 요구하고,
 OBB도 같은 영역과 면적10% 이상 겹쳐야 한다. 기본 표시는 점군 AND OBB로 한쪽 미달을 다른 쪽이 보완하지 않는다.
-카메라 보호·지도/pose 불명·원본 배열 보존을 우선하며, 이 기준을 판제의 실제 전달 필터로 전환하지 않는다.
-현재 matching은 전방이며3뷰 matching 확대는 재호의 후속 책임이다. 후보 숨김은 웹에서만 적용하고
-원본 ROS 객체·tracker·판제 소비 경로는 유지한다. [정책과 한계](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#점군높이카메라-보호-미리보기),
+카메라 보호·지도/pose 불명 보존을 우선하며, 현재 **새 패키지의 발행 배열에는 제외를 적용**한다.
+현재 matching은 전방이며3뷰 matching 확대는 재호의 후속 책임이다. 체크박스는 화면만 바꾸고
+원본 tracker·기존 Main·판제 소비 경로는 유지한다. [정책과 한계](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#a19-10cm-경계와-실제-발행-필터--2026-10-25),
 [디버거 사용](../../src/asmc_lidar/docs/web-monitor.md#hd맵-필터-디버깅)을 참고한다.
 
 2026-10-25 사용자 검수로 A029·A175·A406을 추가한 v7 정본과 물리 차선5개를 반영했다.
 기존102개 도로 면/ID와121개 차선 형상은 보존한다. 새 시험 프로필·bundle SHA와 보완선의
 추정 근거는 [A1.3](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#a13-인접-도로와-차선-검수-반영--2026-10-25)에 둔다.
-웹의 도로 분할 테두리는 제거했으며 실제 객체 제외·판제 입력 전환을 완료한 것은 아니다.
+웹의 도로 분할 테두리는 제거했다. 새 패키지의 전달 제외는 A1.9에서 연결했고 판제 입력 전환은 미완료다.
 
-현재 기본은 패키지 HD맵 audit·IMU 수평 높이 ROI다. A029 합류부 실선과 연결성, 가드레일 경계 여유의 미리보기/최종 보류 구분은 [A1.4](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#a14-기본-hd맵높이-roi와-제외-근거--2026-10-25)를 따른다. 높이 ROI는 새 군집 입력을 바꾸지만 지도 판정은 원본 객체를 제거하지 않는다.
+현재 기본은 HD맵 filter·IMU 수평 높이 ROI다. 높이 ROI는 군집 입력을 바꾸고,
+HD맵·상부 전달 필터는 tracker를 보존하면서 발행 배열에서 제외한다.
+현재 규칙·복구·검증 범위는 [A1.9](../../src/asmc_lidar/docs/hd-map-filter-analysis.md#a19-10cm-경계와-실제-발행-필터--2026-10-25)를 따른다.
 
 ## 판제 소비 전환 시 정리할 중복 처리
 

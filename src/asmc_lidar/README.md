@@ -12,7 +12,12 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 - [카메라 수신·버퍼·보정·투영 API](docs/camera-input.md)
 - [전체 이관 작업표](docs/migration-tasks.md), [팀 인계](../../docs/handoffs/lidar-migration.md)
 - [다음 PR의 판제 필터 편입표](docs/filter-migration.md) — 계산 품질과 행동 정책 분리, 실제 이전은 미착수
-- [HD맵 전달 판정·검증](docs/hd-map-filter-analysis.md) — 패키지 기본 audit, 원본 객체 보존, 실제 전달 제외 보류
+- [HD맵 전달 필터·검증](docs/hd-map-filter-analysis.md#a19-10cm-경계와-실제-발행-필터--2026-10-25) — 기본 filter: 안쪽10cm·점군3점/10%·OBB10%, 상부 객체 제외. 원본 tracker 보존
+
+기본 `lidar.launch`의 `/migration/lidar/objects_local/map` 및 `observations_local/map`에는
+HD맵·상부 객체 전달 필터가 적용된다. 동일 scan의 두 좌표계는 같은 ID를 제외한다.
+지도/pose 무효에서는 지도 제외를 중단하고, 최근 YOLO vehicle/dynamic 매칭은 모든 구간에서 보호한다.
+debug의 원본 tracker/점군은 검수를 위해 남긴다. 기존 Main·판제 입력은 전환하지 않았다.
 
 ## 구조
 

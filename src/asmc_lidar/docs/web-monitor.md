@@ -196,13 +196,14 @@ Raw/ROI/voxel/leveled 전체와 **추적 전 detection OBB**는 원본 단계 �
 카메라로 연결된 `dynamic_obstacle`·`vehicle`은 구간에 관계없이 지도 밖 제외 후보에서 보호한다.
 이는 현재 **전방 matching**이 확보한 유효하고 최신인 양성 근거에 적용한다. 좌우 카메라 bbox만으로
 임의3D 객체를 만들거나 미구현3뷰 matching이 동작한다고 표시하지 않는다.
-현재 정책은 `yolo_points_and_obb_v4`다. person/dog/deer/bicycle/stroller와 car/bus/truck의 **최신 실제 매칭 원본과 그룹**을
+현재 정책은 `yolo_points_and_obb_subcell_v5`다. person/dog/deer/bicycle/stroller와 car/bus/truck의 **최신 실제 매칭 원본과 그룹**을
 확인하고 같은 consumer epoch·시간 한계500ms·후속 미검출0을 요구한다. 과거 확정 분류를 보존하는
 `str_YoloClass`나 LiDAR 속도/운동 진단을 양성 관측 대신 쓰지 않는다. 이후 unknown·미검출·세대 변경은
 보호 근거를 비운다. `YOLO 동적 보호`·`YOLO 차량 보호`와 `점군·OBB 유지`를 화면에서 구분한다.
-도로 근거는 합집합 바깥 경계를20cm 줄인 내부에서3점 이상 AND 전체10% 이상이다. 격자0.2m의
-1셀 직사각 침식으로 시작 시 한 번 계산하며 내부 차로 경계는 침식하지 않는다. OBB 지면 footprint도
-동일 마스크의 겹침10% 이상을 요구한다. 기본 표시는 점군 AND OBB이며 한쪽 통과가 다른 쪽 미달을
+도로 근거는 합집합 바깥 경계를10cm 줄인 내부에서3점 이상 AND 전체10% 이상이다. 격자0.2m의
+셀 합집합에서 실제 점의 안쪽 거리를 검사하며 20cm로 올림하지 않는다. OBB는 같은 영역의 경계 셀을
+5cm 하위 샘플로 면적 집계하며 내부 차로 경계는 줄이지 않는다. OBB 지면 footprint도
+같은 영역과 겹침10% 이상을 요구한다. 기본 표시는 점군 AND OBB이며 한쪽 통과가 다른 쪽 미달을
 덮지 않는다. 원인별 숨김을 해제하는 경우에만 제외 후보를 검수용으로 다시 표시한다. 실제 HD맵은 변경하지 않는다.
 각 checkbox 옆 기준과 상세의 원본/안쪽 도로 점 수·비율로 비교한다. 확정 클래스 unknown이라도
 최신 유효한 YOLO 양성 연결이 있으면 보호할 수 있다. 이 경우 상세의 원본 매칭 분류를 확인한다.
@@ -212,7 +213,8 @@ LiDAR 처리 노드를 재시작해야 하며 브라우저 새로고침만으로
 높이 후보는 알려진 카메라 객체를 보호하고 최저 점과 OBB 하단 모두 지붕+0.60m를 넘을 때만
 표시한다. 하부 가림·위치 오차·예외 공간의 미검증은 최종 판정에서 계속 보류한다.
 
-기본 설정은 패키지 HD맵 audit와 높이 ROI다. 개인 실험 프로필 없이 다음으로 실행한다.
+기본 설정은 HD맵 **10cm·점군3점/10% AND OBB10% 전달 필터**와 높이 ROI다.
+상부 객체 제외도 ROS 배열에 적용한다. 개인 실험 프로필 없이 다음으로 실행한다.
 
 ```bash
 roslaunch asmc_lidar lidar.launch debug:=true
@@ -236,7 +238,10 @@ roslaunch asmc_lidar view.launch pipeline_config:=/artifacts/<새-run>/runtime.y
 ```
 
 현재 PC에서 검증한 설정·성능·제한은 [필터 분석](hd-map-filter-analysis.md)에 연결한다.
-화면에서 숨겨도 판제 전달 제외는 활성화되지 않는다.
+ROS 필터는 생산자 설정 `hd_map_audit.mode: filter`에 의해 적용된다. 상단의 **ROS 발행/실제 제외**와
+객체 상세의 **실제 ROS 전달**로 확인한다. 체크박스는 화면만 바꾸므로 해제하면 제외 객체를
+원본 tracker로 다시 볼 수 있지만 발행 배열에 되살아나지 않는다. `audit`로 복구하면 판정만 수행한다.
+기존 Main·판제 소비는 별도 경로이며 이번 설정 변경으로 전환하지 않는다.
 
 OBB는 BEV에서 **회전된 footprint**(메시지 corner 0–3을 선택 frame으로 변환·투영한 다각형)로 그린다. 상자 안의
 선은 중심에서 corner 1–2 변의 중점까지로, OBB 축(corner 0→1 변, yaw 방향)과 평행하다.

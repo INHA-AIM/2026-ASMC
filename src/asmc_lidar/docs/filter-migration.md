@@ -11,7 +11,7 @@ planning_inputs의 실행·기본값·판제 입력을 변경하지 않는다.**
 |---|---|
 | 기존 Main `PlannerObjectRosPublisher.cpp` | road → known-static → configured structure → PlanningRelevance → OBB clipping → `/last_lidar` |
 | `planning_inputs`의 `objects_node.cpp`·`PlanningObjectFilter.cpp` | 선택 입력 변환·private MotionClassifier, 설정된 경로에서 road/known-static/structure → clipping → 판제 배열 |
-| 새 `asmc_lidar` | 군집·OBB·추적·카메라 fusion → 원본 local/map 배열 구성 → HD맵 audit/미리보기. HD맵 후보로 tracker·ROS 객체를 삭제하지 않음 |
+| 새 `asmc_lidar` | 군집·OBB·추적·카메라 fusion → 원본 배열/판정 → HD맵·상부 전달 필터. 발행 배열만 제외하며 tracker/원본 측정은 유지. Main·판제 입력은 기존 경로 |
 
 동명 필터가 Main과 planning_inputs 양쪽에 있다. 두 경로가 한 실행에서 모두 적용된다고 가정하지
 않고 입력 선택·launch·활성 파라미터를 먼저 기록한다. 코드 중복과 실행 중 이중 적용은 구분한다.
@@ -21,7 +21,7 @@ planning_inputs의 실행·기본값·판제 입력을 변경하지 않는다.**
 
 | 기능·현재 위치 | 목표 소유권·구현 위치 | 그대로 복사하면 안 되는 부분 | 다음 PR 완료 기준 |
 |---|---|---|---|
-| `DrivableBoundaryFilter`·`DrivableFootprint`(Main 및 planning_inputs) | 지도와 관측 객체의 물리적 관련성 계산은 `asmc_lidar/filtering` | 구 도로 mask·기본0.15·보행자 예외를 현재 v7/20cm/점군3점·10% AND OBB10%로 무조건 섞지 않음 | 같은 좌표·stamp의 원본 점군/footprint·원래 지도/현행 지도·임계값을 분리 대조하고 지도/pose 무효 시 local 보존 |
+| `DrivableBoundaryFilter`·`DrivableFootprint`(Main 및 planning_inputs) | 지도와 관측 객체의 물리적 관련성 계산은 `asmc_lidar/filtering` | 구 도로 mask·기본0.15·보행자 예외를 현재 v7/10cm/점군3점·10% AND OBB10%로 무조건 섞지 않음 | 같은 좌표·stamp의 원본 점군/footprint·원래 지도/현행 지도·임계값을 분리 대조하고 지도/pose 무효 시 local 보존 |
 | `KnownStaticObjectFilter`(양쪽) | 검증된 고정 시설물과의 일치 근거는 `filtering` | 현재 기본 중심2.5m 이내·UNKNOWN-only·구간 bounds·확정 클래스 보호. 중심 거리만으로 실제 주차 차량도 지울 수 있어 catalog를 자동 이식하지 않음 | 원본 catalog SHA·생성 조건·현재 맵/보정 일치·실제 장애물 보존을 검수한 항목만 후보 근거로 제공 |
 | `StaticStructureExclusionFilter`(양쪽) | 구조물의 위치·형상·충돌 높이 근거는 `filtering` | UNKNOWN-only·motion 보호와 고정 map bounds, 높이2.5m/하단2m 기본값. map Z와 base/지면 상대 높이를 혼동하지 않음 | 수평화/장착 변환을 한 번 적용하고 관측 하부·상부만 보이는 큰 차량·음영/GPS 무효를 대조. YOLO 그룹과 운동 상태 분리 |
 | `PlanningRelevanceFilter`의 지면 파편/높이 근거 | 측정 품질 부분만 `detection/filtering` | OBB Z span이 작아도 물체가 지면 위에 떠 있는 관측일 수 있음. 현재 ground_evidence의 median clearance·rejection band·표본 수를 함께 봄 | 낮은 장애물·얇은 단일 ring·노면 파편·기울어짐·가림에서 원래 근거와 판단을 재현 |
@@ -72,8 +72,9 @@ bicycle/stroller의 보호 누락이나 motorcycle의 그룹 변경이 생기지
 4. **동일 입력 대조:** 정상 장애물·가드레일·터널 벽/천장·partial box·GPS5Hz 사이·GPS0/중단·복귀·
    카메라 miss/세대 전환에서 원본 OBB/ID·후보 사유·계산 비용·메모리 상한을 비교한다.
 5. **적용 경계 검수:** 시험 namespace의 필터 전후 후보와 판제의 실제 입력을 별도로 검수한다.
-   정본 객체를 보존하며, 실제 전달 제외와 판제 중복 호출 제거는 해당 기능의 활성화·공동 확인 후
-   별도 소비 전환 변경으로 제출한다. 기존 Main·복구 경로를 먼저 삭제하지 않는다.
+   원본 추적 객체를 보존한다. 새 패키지의 HD맵·상부 전달 제외는 A1.9에서 활성화했다.
+   판제 중복 호출 제거와 후속 편입 필터의 활성화는 공동 확인 후 별도 소비 전환 변경으로 제출한다.
+   기존 Main·복구 경로를 먼저 삭제하지 않는다.
 
 완료 근거에는 원본/새 코드 대응표·판정 차이·필요 객체의 보존·시간/좌표 유효성·성능·복구를 둔다.
 리팩토링 완료를 운영 필터 수락이나 판제 인수 완료로 기록하지 않는다.

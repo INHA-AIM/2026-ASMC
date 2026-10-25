@@ -5,6 +5,13 @@
 직렬화 코드는 `include/asmc_lidar/ros/scan_trace.hpp`이며 [shadow 파이프라인](pipeline.md)의
 bag 비교에 사용한다.
 
+현재 기본 `hd_map_audit.mode: filter`에서 `tracks`는 원본 추적 상태이고 `typed`는 전달 필터 적용 후 배열이다.
+`hd_map_audit.delivery_applied`, `delivery_input_count/excluded_count/output_count`와 객체별
+`delivery_excluded`로 실제 전달을 확인한다. 제외 사유는 같은 객체의 `preview.reason`이다.
+기존 `decision/reason`은 독립 위치 오차 등이 검증되지 않은 역사적 audit 판단이므로,
+실제 발행 여부를 이 값만으로 해석하지 않는다. `audit` 모드는 판정만 계산하고 배열을 보존한다.
+HD맵·상부 제외는 tracker를 삭제하지 않으며 local/map 관측 wrapper도 필터 후 배열을 감싼다.
+
 - 숫자는 유효숫자 17자리다(float을 double로 넓혀도 정확히 복원). 행렬은 row-major다.
 - 값이 없으면 필드를 생략한다(가짜 0을 쓰지 않음). JSON에는 NaN/Inf가 없으므로 비유한 값은 `null`이다.
 - `tracks` 순서는 Main `st_LiDAR.vec_Objects`와 같다(`f32_Dist` 정렬).
