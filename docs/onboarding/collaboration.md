@@ -129,3 +129,27 @@ docker exec -it asmc-ros-noetic bash -lc 'cd /root/ws && ./scripts/build_ws.sh'
 Phase 0 개인 레포, Wave 1/2 이식과 `main` 직푸시 Path A 설명은 현재 실행 규칙이 아니다.
 역사적 판단은 [Wave 1/2 기록](../records/archive/wave1-wave2-plan.md)과 Git 이력에 남긴다.
 현재 구현 순서는 [통합 로드맵](../architecture/consolidation-roadmap.md)을 따른다.
+
+## 8. CI 실행 비용과 검증 범위
+
+현재 CI는 `ros:noetic`에서 ROS/PCL 의존성을 설치하고 일반·판제·기존 LiDAR 복구 job이
+각자 빌드한다. CPU PyTorch/vision도 설치하므로 첫 실행은 무겁다. 실제 hosted 단계 시간을
+확인하기 전에는 특정 검사만 원인이라고 단정하거나 단축 비율을 보장하지 않는다.
+
+2026-10-26 적용한 범위:
+
+- 같은 PR에 새 commit이 오면 두 workflow의 이전 실행을 취소한다. 서로 다른 PR·workflow는
+  취소하지 않고 main push의 검증도 중단하지 않는다.
+- C/C++는 ccache를 compiler launcher로 사용한다. compiler 내용·header·옵션이 유효한 cache만
+  재사용하며 job별 최대400MB로 제한한다. build/devel·시험 결과·성공 상태는 캐시하지 않는다.
+- CPU runtime은 고정 버전을 유지하고 pip 다운로드를 재사용한다. cache가 없어도 정상 설치한다.
+- 모든 기존 검사와 구 Main 복구 회귀를 유지한다. 제거한 두 LiDAR 필터의 시험은 해당 구현과
+  함께 제거하고, 과거 blacklist 위치의 실제 unknown이 관측 근거에 따라 보존되는 회귀를 추가한다.
+- 마지막 ccache 통계로 적중 여부를 확인한다. hosted 시간 개선은 push 후 이전 run과 대조한다.
+
+다음 최적화 후보는 의존성이 준비된 CI 이미지와 변경 범위별 카메라/지도/인지 검사 분리다.
+공용 메시지·좌표·CI 변경은 관련 전체 검사를 실행하고 required check가 누락되거나 생략을
+통과로 기록하지 않도록 설계한다. 팀 확인 전 검사 축소나 새 이미지 게시를 하지 않는다.
+
+근거: [GitHub concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),
+[actions/cache](https://github.com/actions/cache), [ccache](https://ccache.dev/manual/latest.html).
