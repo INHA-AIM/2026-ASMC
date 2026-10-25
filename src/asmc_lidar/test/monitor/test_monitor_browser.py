@@ -116,6 +116,13 @@ window.addEventListener('error',e=>{document.body.dataset.testError=e.message;})
   check(boxes.includes(9),'pre-tracking comparison remains original');
   await sleep();
   check(document.getElementById('filter-layer-note').textContent.includes('detections'),'unfiltered original overlay is explicitly labelled');
+  Object.assign(app.state.scene.hd_map_audit,{delivery_applied:true,delivery_input_count:4,
+    delivery_excluded_count:2,delivery_output_count:2,road_inset_m:.1});
+  app.state.scene.hd_map_audit.objects[0].delivery_excluded=true;
+  app.selectTrack(2);app.selectTrack(1);render();for(let i=0;i<4;i++)await sleep();
+  check(document.getElementById('audit-summary').textContent.includes('ROS 발행 2 / 4')&&
+    document.getElementById('audit-summary').textContent.includes('안쪽 경계 10cm'),'actual ROS delivery and 10cm inset are displayed');
+  check(document.getElementById('detail').textContent.includes('제외 · 원본 tracker는 유지'),'actual delivery exclusion is distinct from screen hiding');
   check(!document.body.dataset.testError,'no uncaught application errors');
   const pre=document.createElement('pre');pre.id='browser-test-result';pre.textContent=JSON.stringify({ok:true,checks});document.body.appendChild(pre);
  }catch(e){const pre=document.createElement('pre');pre.id='browser-test-result';pre.textContent=JSON.stringify({ok:false,error:String(e),checks});document.body.appendChild(pre);}

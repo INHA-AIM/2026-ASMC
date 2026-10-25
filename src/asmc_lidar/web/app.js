@@ -169,7 +169,9 @@
     const report=state.scene&&state.scene.hd_map_audit;
     for(const d of report&&report.objects||[]) {const v=d.preview?d.preview.decision:d.decision;counts[v]=(counts[v]||0)+1;}
     const mapMismatch=report&&report.map_sha256&&state.road&&state.road.sha256&&report.map_sha256!==state.road.sha256;
-    el('audit-summary').textContent=(report&&report.enabled?'원본 '+(report.objects||[]).length+' · 유지 '+counts.keep+' · 제외 후보 '+counts.exclude_candidate+' · 보류 '+counts.undetermined:'audit OFF · 원본 표시')+(mapMismatch?' · 주의: 배경/판정 지도 SHA 다름':'')+
+    el('audit-summary').textContent=(report&&report.enabled?'원본 '+(report.objects||[]).length+' · 유지 '+counts.keep+' · 제외 후보 '+counts.exclude_candidate+' · 보류 '+counts.undetermined:'audit OFF · 원본 표시')+
+      (report&&report.delivery_applied?' · ROS 발행 '+report.delivery_output_count+' / '+report.delivery_input_count+' · 실제 제외 '+report.delivery_excluded_count:' · ROS 전달 필터 OFF')+
+      (report?' · 안쪽 경계 '+fmt(report.road_inset_m*100,0)+'cm':'')+(mapMismatch?' · 주의: 배경/판정 지도 SHA 다름':'')+
       (report&&report.pose_source_age_ms>=0?' · GPS age '+fmt(report.pose_source_age_ms,0)+'ms':'')+' · 그리기 '+fmt(state.lastRenderMs,1)+'ms';
     const tracks=state.scene&&state.scene.tracks||[];
     const observed=tracks.filter(t=>t.miss===0),shown=observed.filter(visibleTrack).length;
@@ -637,6 +639,7 @@
     const rows = [
       ['화면 표시',visibleTrack(t)?'표시 대상 · 레이어 선택에 따름':'숨김 유지 · 상세 선택은 숨김을 해제하지 않음'],
       ['필터 미리보기',a.label+' · '+a.detail],
+      ['실제 ROS 전달',audit&&audit.delivery_excluded?'제외 · 원본 tracker는 유지':sc.hd_map_audit&&sc.hd_map_audit.delivery_applied?'보존':'전달 필터 OFF'],
       ['독립 근거 · 점군 / OBB / 높이',p?[p.point_decision,p.obb_decision,p.height_decision].map(x=>({keep:'유지',exclude_candidate:'후보',undetermined:'보류'}[x]||'이전 버전')).join(' / '):'미계산'],
       ['전달 판단 / 보류 근거',audit?audit.decision+' / '+audit.reason:'OFF'],
       ['군집 도로 점 / 전체',p?p.road_points+' / '+p.support_points+' ('+fmt(p.road_point_ratio*100,1)+'%)':'미계산'],

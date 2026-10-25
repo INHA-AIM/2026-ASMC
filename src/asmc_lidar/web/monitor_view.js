@@ -144,7 +144,7 @@
     const kind=p?p.decision:d?d.decision:'unavailable';
     const categories=exclusionKinds(d),category=categories[0]||null;
     return {decision:kind,category,categories,reason:p?p.reason:d?d.reason:'audit_off',
-      label:kind==='keep'&&category==='obb'?'유지·OBB 비교 후보':kind==='keep'&&p&&p.reason==='camera_dynamic_protected'?'YOLO 동적 보호':
+      label:d&&d.delivery_excluded?'발행 제외':kind==='keep'&&category==='obb'?'유지·OBB 비교 후보':kind==='keep'&&p&&p.reason==='camera_dynamic_protected'?'YOLO 동적 보호':
         kind==='keep'&&p&&p.reason==='camera_vehicle_protected'?'YOLO 차량 보호':
         kind==='keep'&&p&&p.reason==='exception_space_protected'?'구형 미션 보호':kind==='keep'&&p&&p.reason==='joint_drivable_support'?'점군·OBB 유지':
         kind==='keep'&&p&&p.reason==='cluster_drivable_support'?'구형 점군 유지':

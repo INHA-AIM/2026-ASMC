@@ -157,17 +157,18 @@ experimental:
     suppress_ceiling: true
     suppress_wall: true
 
-# Decision-only post-fusion HD-map audit. No exclusion mode or object mutation.
-# For an internal audit profile, use an exported, SHA-pinned bundle. Missing or
-# corrupt audit data disables only the diagnostic calculation, not LiDAR output.
+# Post-fusion delivery filter. Tracker/OBB remain raw; both published arrays use
+# the same keep set. audit computes decisions only, off bypasses this stage.
+# Missing/corrupt map or invalid pose preserves objects for the map rule;
+# the local, guarded overhead rule remains independent of GPS/map availability.
 hd_map_audit:
-  mode: "audit"
+  mode: "filter"
   manifest: "config/hd_map_audit/manifest.json"
   manifest_sha256: "010ff355322edbb492034dce13332b08a715c63cf344b515918c92cb4c32a96b"
   source_product: "../asmc_hd_map/config/kcity2025_compact_drivable_map.json"
-  # Preview only: no ROS exclusion. Positive camera vehicle/dynamic evidence is protected
+  # Positive camera vehicle/dynamic evidence is protected
   # in all zones; raw point support is voxel/filter/cluster output, not GUI samples.
-  # Policy yolo_points_and_obb_v4: latest matched vehicle or dynamic_obstacle
+  # Policy yolo_points_and_obb_subcell_v5: latest matched vehicle or dynamic_obstacle
   # only. LiDAR motion state and proximity to a mission region never protect an
   # outside cluster. Legacy mission exceptions remain OBB comparison metadata.
   delivery_preview:
@@ -178,8 +179,9 @@ hd_map_audit:
     minimum_road_points: 3
     minimum_road_ratio: 0.10
     minimum_obb_road_ratio: 0.10
-    # Compare original road support with its union inset by one 0.2m grid cell.
+    # Continuous 10cm union-boundary inset; point queries do not round up to a
+    # 20cm cell. OBB area weights boundary cells at 5cm subcell centers.
     # KEEP requires >=3 inset-road points AND >=10% of full support AND
     # >=10% OBB footprint overlap with that same inset road mask.
-    road_inset_m: 0.20
+    road_inset_m: 0.10
     camera_age_ms: 500.0

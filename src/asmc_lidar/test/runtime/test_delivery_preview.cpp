@@ -40,6 +40,7 @@ TEST(DeliveryPreview, InvalidMapEvidenceCannotJustifyJointHiding) {
   d.spatial.unknown_cells=true;
   ApplyDeliveryPreview(d,e,Policy(),true,"unknown",.1);
   EXPECT_EQ(d.preview_decision,"undetermined");EXPECT_EQ(d.obb_preview,"undetermined");
+  EXPECT_EQ(d.point_preview,"undetermined");
   d=Base();d.spatial.interior_road_ratio_grid=0;e.unknown=1;
   ApplyDeliveryPreview(d,e,Policy(),true,"unknown",.1);
   EXPECT_EQ(d.preview_decision,"undetermined");EXPECT_EQ(d.point_preview,"undetermined");

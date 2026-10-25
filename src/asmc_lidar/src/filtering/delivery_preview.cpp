@@ -46,7 +46,7 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   if(e.total>=p.minimum_points&&e.finite==e.total) {
     if(d.height_available&&std::isfinite(obb_bottom))
       d.height_preview=!known&&std::min(e.min_base_z,obb_bottom)>d.roof_limit_z?"exclude_candidate":"keep";
-    if(map_valid&&d.has_spatial&&d.spatial.available&&!e.unknown)
+    if(map_valid&&d.has_spatial&&d.spatial.available&&!d.spatial.unknown_cells&&!e.unknown)
       d.point_preview=road_support?"keep":"exclude_candidate";
   }
   if(e.total<p.minimum_points||e.finite!=e.total){

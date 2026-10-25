@@ -97,12 +97,12 @@ TEST(RuntimeDeployment, DefaultMapIsPinnedAndHeightCapIsLocal) {
   const auto cfg=sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
   EXPECT_DOUBLE_EQ(cfg.delivery_preview.minimum_road_ratio,.10);
   EXPECT_DOUBLE_EQ(cfg.delivery_preview.minimum_obb_road_ratio,.10);
-  EXPECT_DOUBLE_EQ(cfg.delivery_preview.road_inset_m,.20);
+  EXPECT_DOUBLE_EQ(cfg.delivery_preview.road_inset_m,.10);
   if(!std::filesystem::exists(PackageDir()+"/../asmc_hd_map/config/kcity2025_compact_drivable_map.json")) {
     EXPECT_FALSE(cfg.hd_map_audit);EXPECT_FALSE(cfg.hd_map_audit_error.empty());return;
   }
   ASSERT_TRUE(cfg.hd_map_audit) << cfg.hd_map_audit_error;
-  EXPECT_EQ(cfg.hd_map_audit_mode,"audit");EXPECT_TRUE(cfg.pipeline.height_roi.enabled);
+  EXPECT_EQ(cfg.hd_map_audit_mode,"filter");EXPECT_TRUE(cfg.pipeline.height_roi.enabled);
   EXPECT_DOUBLE_EQ(cfg.pipeline.height_roi.max_height_above_ground_m,2.5);
   EXPECT_EQ(cfg.hd_map_audit->map_sha256(),FileSha256(PackageDir()+"/../asmc_hd_map/config/kcity2025_compact_drivable_map.json"));
 }

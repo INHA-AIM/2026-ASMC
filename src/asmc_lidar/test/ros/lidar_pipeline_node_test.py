@@ -48,7 +48,10 @@ OBSERVED, OBSERVED_EMPTY, INPUT_INVALID, POSE_UNAVAILABLE = 1, 2, 3, 4
 
 # HD-map origin (config/contracts/hd_map_topic_contract_v1.yaml) = GPSMessage offsets.
 MAP_ORIGIN = (302595.0, 4124145.0)
-ANTENNA_LOCAL = (25.0, 40.0)   # inside Main's GPS sanity bounds
+# The old arbitrary (25,40) fixture places the box OFF the deployed v7 road.
+# Pin a road-interior fixture (5.8m x 3.4m clear rectangle) so geometry/fusion
+# tests exercise valid delivery. A separate phase below tests real exclusion.
+ANTENNA_LOCAL = (58.73410034179694, 40.0542236328125)
 ANTENNA_ALTITUDE = 0.5
 GPS_IN_BASE = (float(np.float32(0.35)), 0.0, float(np.float32(1.25)))  # setting.yaml Vehicle.GPS (float)
 WHEEL_RADIUS = 0.36            # base_link height above the road (cameras_v3.yaml ground_plane)
@@ -766,7 +769,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
         self.assertEqual(after.config_id,before.config_id)
         self.assertEqual(after.calibration_id,before.calibration_id)
 
-    def test_11_hd_map_audit_is_diagnostic_only(self):
+    def test_11_hd_map_decisions_match_delivery_mode(self):
         from collections import deque
         traces = deque(maxlen=100)
         subscriber = rospy.Subscriber('/migration/lidar/trace', String, traces.append, queue_size=1)
@@ -774,7 +777,8 @@ class LidarPipelineNodeTest(unittest.TestCase):
             self.wait_for(lambda: traces, 5.0, 'trace for HD-map audit')
             row = json.loads(traces[-1].data)
             cfg = yaml.safe_load(open(rospy.get_param('~pipeline_config')))
-            enabled = cfg.get('hd_map_audit', {}).get('mode', 'off') == 'audit'
+            mode = cfg.get('hd_map_audit', {}).get('mode', 'off')
+            enabled = mode != 'off'
             if not enabled:
                 self.assertNotIn('hd_map_audit', row)
             else:
@@ -783,7 +787,13 @@ class LidarPipelineNodeTest(unittest.TestCase):
                                 if row['typed']['map']['status'] in (1,2)]
                 if row['typed']['map']['status'] not in (1,2):
                     expected_ids = [o['track_id'] for o in row['typed']['local']['objects']]
-                self.assertEqual(expected_ids, [d['track_id'] for d in row['hd_map_audit']['objects']])
+                decisions=row['hd_map_audit']['objects']
+                self.assertEqual(expected_ids, [d['track_id'] for d in decisions if not d['delivery_excluded']])
+                report=row['hd_map_audit']
+                self.assertEqual(report['delivery_applied'],mode=='filter')
+                self.assertEqual(report['delivery_input_count']-report['delivery_excluded_count'],report['delivery_output_count'])
+                if mode=='filter':
+                    self.assertTrue(all(d['delivery_excluded']==(d.get('preview',{}).get('decision')=='exclude_candidate') for d in decisions))
                 self.assertFalse(row['hd_map_audit']['position_error_verified'])
                 self.assertFalse(row['hd_map_audit']['mission_scope_verified'])
                 self.assertTrue(all(d['decision'] != 'exclude_candidate' for d in row['hd_map_audit']['objects']))
@@ -797,12 +807,47 @@ class LidarPipelineNodeTest(unittest.TestCase):
                 first = next(i for i,m in enumerate(rows) if m['generation']==2)
                 self.assertTrue(all(m['generation']==2 for m in rows[first:]))
             self.wait_for(lambda: any(dict((v.key,v.value) for v in m.status[0].values).get(
-                'hd_map_audit_mode') == ('audit' if enabled else 'off') for m in self.snapshot('diagnostics')),
+                'hd_map_audit_mode') == mode for m in self.snapshot('diagnostics')),
                 5.0, 'HD-map diagnostic mode')
             values = dict((v.key,v.value) for v in self.snapshot('diagnostics')[-1].status[0].values)
             self.assertLessEqual(int(values['hd_map_audit_window_scans']),100)
         finally:
             subscriber.unregister()
+
+
+    def test_12_outside_delivery_and_gps_fail_open(self):
+        from collections import deque
+        cfg=yaml.safe_load(open(self.pipeline_config))
+        if cfg.get('hd_map_audit',{}).get('mode')!='filter':
+            self.skipTest('explicit audit/off profile does not apply delivery filtering')
+        traces=deque(maxlen=100)
+        sub=rospy.Subscriber('/migration/lidar/trace',String,traces.append,queue_size=1)
+        cls=type(self);old=(cls.lat,cls.lon)
+        try:
+            # Same local box/points, deliberately outside the road. Reset only
+            # this isolated test producer so the intentional GPS jump is not
+            # interpreted as a real vehicle's instantaneous displacement.
+            cls.lat,cls.lon=utm_inverse(MAP_ORIGIN[0]+25.,MAP_ORIGIN[1]+40.)
+            self.set_state(camera=None,imu='normal',gps='normal')
+            self.assertTrue(rospy.ServiceProxy(self.node+'/reset',Trigger)().success)
+            start=self.latest_scan()
+            filtered=self.wait_for(lambda:[m for m in self.local_after(start)
+                if m.status==OBSERVED_EMPTY and m.reason=='delivery_filtered_empty'],8.,'actual delivery exclusion')[-1]
+            self.wait_for(lambda:any(json.loads(m.data)['stamp_ns']>=self.stamp(filtered)
+                and json.loads(m.data).get('hd_map_audit',{}).get('delivery_excluded_count',0)>0
+                for m in traces),5.,'exclusion trace')
+            row=next(json.loads(m.data) for m in traces if json.loads(m.data)['stamp_ns']>=self.stamp(filtered)
+                and json.loads(m.data).get('hd_map_audit',{}).get('delivery_excluded_count',0)>0)
+            self.assertTrue(row['tracks'],'raw tracker survives delivery exclusion')
+            self.assertEqual(row['typed']['local']['objects'],[])
+            self.assertEqual(row['typed']['map']['objects'],[])
+            track_ids={d['track_id'] for d in row['hd_map_audit']['objects'] if d['delivery_excluded']}
+            self.set_state(gps='invalid');start=self.latest_scan()
+            local=self.wait_local_observed_after(start)[-1]
+            self.assertIn(self.box(local).track_id,track_ids,'map failure must reveal the same preserved tracker')
+            self.wait_for(lambda:any(m.status==POSE_UNAVAILABLE for m in self.map_after(start)),5.,'invalid map output')
+        finally:
+            cls.lat,cls.lon=old;sub.unregister()
 
 
 if __name__ == '__main__':
