@@ -83,7 +83,8 @@ def parse_point_cloud(fields, point_step, width, height, data, is_bigendian=Fals
     xyzi[:, 3] = arr['intensity'] if 'intensity' in names else 0.0
     label = np.ascontiguousarray(arr['label'], dtype=np.uint8) if 'label' in names else None
     cluster = np.ascontiguousarray(arr['cluster'], dtype=np.int32) if 'cluster' in names else None
-    return {'xyzi': xyzi, 'label': label, 'cluster': cluster, 'count': n}
+    track = np.ascontiguousarray(arr['track'], dtype=np.int32) if 'track' in names else None
+    return {'xyzi': xyzi, 'label': label, 'cluster': cluster, 'track':track, 'count': n}
 
 
 # --------------------------------------------------------------------------- scenes
@@ -128,6 +129,8 @@ def encode_scene(clouds):
             put(stage + '.label', cloud['label'])
         if cloud.get('cluster') is not None:
             put(stage + '.cluster', cloud['cluster'])
+        if cloud.get('track') is not None:
+            put(stage + '.track', cloud['track'])
     return table, b''.join(parts)
 
 
@@ -140,7 +143,8 @@ class SceneStore(object):
     scene is served; older ones are evicted.
     """
 
-    def __init__(self, max_scenes=4, complete_timeout_s=0.6, clock=time.monotonic):
+    def __init__(self, max_scenes=4, complete_timeout_s=0.6, clock=time.monotonic, metadata_first=False):
+        self.metadata_first = bool(metadata_first)
         self.max_scenes = max(1, int(max_scenes))
         self.complete_timeout_s = float(complete_timeout_s)
         self.clock = clock
@@ -149,6 +153,7 @@ class SceneStore(object):
         self._order = []
         self._frame_seq = 0
         self._latest = None
+        self._producer_session=None;self._generation=0;self._retired_sessions=[];self._cloud_floor=-1
         self.counters = {'scan': 0, 'raw': 0, 'roi': 0, 'voxel': 0, 'leveled': 0, 'bad': 0,
                          'evicted_incomplete': 0, 'partial': 0, 'complete': 0}
 
@@ -164,6 +169,17 @@ class SceneStore(object):
         stamp = int(meta['stamp_ns'])
         meta['stamp_ns'] = stamp
         with self._lock:
+            session=meta.get('producer_session_id');generation=int(meta.get('generation',1))
+            if session:
+                if session in self._retired_sessions or (session==self._producer_session and generation<self._generation):
+                    return None
+                if session!=self._producer_session or generation>self._generation:
+                    if self._producer_session and session!=self._producer_session:
+                        self._retired_sessions=(self._retired_sessions+[self._producer_session])[-16:]
+                    # Debug clouds have only a stamp, no producer UUID. Discard
+                    # the ambiguous boundary scan's clouds after a restart/reset.
+                    self._scenes.clear();self._order.clear();self._latest=None;self._cloud_floor=stamp
+                    self._producer_session=session;self._generation=generation
             self.counters['scan'] += 1
             scene = self._get(stamp)
             scene.meta = meta
@@ -175,6 +191,15 @@ class SceneStore(object):
                         expected.add(stage)
             scene.expected = expected
             self._check(scene)
+            if self.metadata_first and not scene.ready and (self._latest is None or stamp > self._latest.stamp_ns):
+                # Immutable metadata-only snapshot: show this scan's OBB/audit
+                # immediately. Never reuse another scan's cloud or refresh age.
+                preview=Scene(stamp,scene.created)
+                preview.meta=meta;preview.expected=set(scene.expected)
+                preview.ready=True;preview.missing=sorted(scene.expected)
+                preview.ready_at=self.clock()
+                self._frame_seq+=1;preview.frame_seq=self._frame_seq
+                self._latest=preview
             self._sweep()
         return meta
 
@@ -183,6 +208,7 @@ class SceneStore(object):
             self.counters['bad'] += 1
             return
         with self._lock:
+            if int(stamp_ns)<=self._cloud_floor:return
             self.counters[stage] += 1
             scene = self._get(int(stamp_ns))
             scene.clouds[stage] = cloud

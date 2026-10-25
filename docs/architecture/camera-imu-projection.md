@@ -1,5 +1,8 @@
 # 원본 시각 IMU 기반 차체 자세 보정
 
+카메라·LiDAR·판제 전체의 좌표·시각 공통화는 [후속 분석](perception-coordinate-refactoring.md)에서
+현행 구현과 후보안을 구분한다. PR #108을 마무리한 뒤 별도 단위로 진행하며 이 문서의 기본 보정은 유지한다.
+
 ## 적용 경계
 
 현재 구현은 TwinLite Large TensorRT 이후의 **model-grid→지면 근거→family** 경로에

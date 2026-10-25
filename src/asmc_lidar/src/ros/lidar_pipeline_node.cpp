@@ -45,6 +45,7 @@
 #include <Eigen/Geometry>
 
 #include <algorithm>
+#include <map>
 #include <atomic>
 #include <condition_variable>
 #include <cmath>
@@ -196,7 +197,16 @@ class LidarPipelineNode {
     std::string camera_reason;
     fusion::FusionCounters fusion;
     std::size_t pending_scans = 0;
-    std::deque<double> total_ms;
+    std::deque<double> total_ms, delivery_ms;
+    struct AuditSample {
+      double ms = 0;
+      std::map<std::string, std::size_t> decisions, reasons;
+    };
+    std::deque<AuditSample> audit_window;
+    std::string audit_reason = "off";
+    bool delivery_filter_applied=false;
+    std::size_t delivery_input=0,delivery_excluded=0,delivery_output=0;
+
     std::int64_t last_stamp_ns = 0, last_receipt_ns = 0, last_processing_ns = 0;
     std::int64_t last_output_steady_ns = 0;
     std::int64_t gps_sample_stamp_ns = 0, gps_sample_arrival_ns = 0;
@@ -522,7 +532,7 @@ class LidarPipelineNode {
       now.decision_ns = now.steady_now_ns;
       now.ros_now_ns = RosNow();
     };
-    if (debug_) debug_->SetScanContext(pending.sensor_frame, pending.seq, pending.receipt_ros_ns);
+    if (debug_) debug_->SetScanContext(pending.sensor_frame,pending.seq,pending.receipt_ros_ns,epoch_.session(),pending.scan.generation,config_.config_id);
     const ScanOutput out = pending.runtime->ProcessScan(pending.scan, config_.local_wait_timeout_s, times);
     if (!ros::ok()) return;
     // Reset and publishing share this short lock. Computation never holds it.
@@ -534,9 +544,10 @@ class LidarPipelineNode {
       PublishObservation(local_observation_pub_, out.arrays.local, pending);
       PublishObservation(map_observation_pub_, out.arrays.map, pending);
     }
+    const double delivery_ms = double(camera::steady_now_ns() - pending.receipt_steady_ns) / 1e6;
     if (tf_ && out.arrays.accepted && out.arrays.observed) PublishTf(out);
-    Record(pending, out);
-    if (trace_pub_.getNumSubscribers() > 0) PublishTrace(pending, out);
+    Record(pending, out, delivery_ms);
+    if (trace_pub_.getNumSubscribers() > 0) PublishTrace(pending, out, delivery_ms);
     if (debug_) debug_->Finish(pending.scan.time.stamp_ns, out);
   }
 
@@ -558,7 +569,7 @@ class LidarPipelineNode {
     tf_->sendTransform(tf);
   }
 
-  void Record(const PendingScan& pending, const ScanOutput& out) {
+  void Record(const PendingScan& pending, const ScanOutput& out, double delivery_ms) {
     const auto& output = pending.runtime->output();
     std::lock_guard<std::mutex> lock(stats_mutex_);
     ++stats_.scans_processed;
@@ -574,6 +585,23 @@ class LidarPipelineNode {
       stats_.pending_scans = out.fusion.pending_scans;
     }
     if (const auto* camera_fusion = pending.runtime->fusion()) stats_.fusion = camera_fusion->counters();
+    stats_.audit_reason = out.hd_map_audit.reason;
+    stats_.delivery_filter_applied=out.hd_map_audit.delivery_applied;
+    stats_.delivery_input=out.hd_map_audit.delivery_input_count;
+    stats_.delivery_excluded=out.hd_map_audit.delivery_excluded_count;
+    stats_.delivery_output=out.hd_map_audit.delivery_output_count;
+    if (out.hd_map_audit.enabled) {
+      Stats::AuditSample sample;
+      sample.ms = out.hd_map_audit.calculation_ms;
+      for (const auto& d : out.hd_map_audit.objects) {
+        ++sample.decisions[d.decision]; ++sample.reasons[d.reason];
+        if(d.preview_enabled) ++sample.reasons["preview:"+d.preview_reason];
+      }
+      stats_.audit_window.push_back(std::move(sample));
+      while (stats_.audit_window.size() > kTimingWindow) stats_.audit_window.pop_front();
+    }
+    stats_.delivery_ms.push_back(delivery_ms);
+    while (stats_.delivery_ms.size() > kTimingWindow) stats_.delivery_ms.pop_front();
     stats_.total_ms.push_back(out.total_ms);
     while (stats_.total_ms.size() > kTimingWindow) stats_.total_ms.pop_front();
     stats_.last_stamp_ns = pending.scan.time.stamp_ns;
@@ -591,7 +619,7 @@ class LidarPipelineNode {
     }
   }
 
-  void PublishTrace(const PendingScan& pending, const ScanOutput& out) {
+  void PublishTrace(const PendingScan& pending, const ScanOutput& out, double delivery_ms) {
     trace::LineInput line;
     line.producer = kProducer;
     line.session_id = epoch_.session();
@@ -603,6 +631,7 @@ class LidarPipelineNode {
     line.arrival_ns = pending.receipt_ros_ns;
     line.accepted = true;
     line.output = &out;
+    line.input_to_publish_ms = delivery_ms;
     std_msgs::String text;
     {
       std::lock_guard<std::mutex> lock(cache_mutex_);
@@ -681,6 +710,30 @@ class LidarPipelineNode {
       number("fusion_misses_applied", f.misses_applied);
       number("fusion_pending_scans", stats_.pending_scans);
       const std::vector<double> window(stats_.total_ms.begin(), stats_.total_ms.end());
+      value("hd_map_audit_mode", config.hd_map_audit_mode);
+      value("delivery_filter_applied",stats_.delivery_filter_applied?"true":"false");
+      number("delivery_input_count",stats_.delivery_input);
+      number("delivery_excluded_count",stats_.delivery_excluded);
+      number("delivery_output_count",stats_.delivery_output);
+      value("hd_map_audit_reason", stats_.audit_reason);
+      value("hd_map_audit_setup_error", config.hd_map_audit_error);
+      value("hd_map_audit_bundle_sha256", config.hd_map_manifest_sha256);
+      if (config.hd_map_audit) {
+        value("hd_map_audit_map_sha256", config.hd_map_audit->map_sha256());
+        value("hd_map_audit_policy_sha256", config.hd_map_audit->policy_sha256());
+      }
+      std::vector<double> audit_times;
+      std::map<std::string, std::size_t> decisions, reasons;
+      for (const auto& sample : stats_.audit_window) {
+        audit_times.push_back(sample.ms);
+        for (const auto& d : sample.decisions) decisions[d.first] += d.second;
+        for (const auto& r : sample.reasons) reasons[r.first] += r.second;
+      }
+      number("hd_map_audit_window_scans", audit_times.size());
+      number("hd_map_audit_ms_p95", Percentile(audit_times, .95));
+      for (const auto& d : decisions) number("hd_map_audit_decision/"+d.first, d.second);
+      for (const auto& r : reasons) number("hd_map_audit_reason/"+r.first, r.second);
+      number("input_to_publish_ms_p95", Percentile(std::vector<double>(stats_.delivery_ms.begin(), stats_.delivery_ms.end()), .95));
       number("processing_window_scans", window.size());
       number("processing_ms_p50", Percentile(window, .50));
       number("processing_ms_p95", Percentile(window, .95));

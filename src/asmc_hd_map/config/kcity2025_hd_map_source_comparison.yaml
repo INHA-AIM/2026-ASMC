@@ -27,7 +27,7 @@ comparison:
 source_roles:
   final_curated:
     description: reviewed competition lane markings completed by the team
-    expected_lane_markings: 121
+    expected_lane_markings: 127
     expected_stoplines: 7
   legacy_origin_aligned:
     description: old KATRI lane geometry with origin translation only
@@ -37,7 +37,7 @@ source_roles:
     vector_only: true
   latest_drivable:
     description: reviewed compact competition drivable grid derived from the vector product
-    build_id: kcity2025_static_junction_widened_drivable_v6
+    build_id: kcity2025_reviewed_high_speed_adjacent_drivable_v7
   legacy_h5_bake:
     description: uncut Won-tae H5 road bake retained only as a visual reference
     comparison_only: true

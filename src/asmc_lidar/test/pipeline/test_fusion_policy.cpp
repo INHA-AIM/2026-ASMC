@@ -230,6 +230,41 @@ TEST(FusionClassPolicy, MissionGroupsPreserveRawAndDoNotSetMotion) {
   EXPECT_EQ("car", fusion_class::Normalize("truck", kLegacy));
 }
 
+TEST(FusionClassPolicy, PositiveProtectionIgnoresLidarMotionAndUsesMatchedYoloOnly) {
+  TrackedObject object;
+  object.tracking.f32_Velocity=30;object.tracking.s32_DynamicCount=100;
+  EXPECT_EQ("unknown",fusion_class::ObservedMissionGroup(object.camera));
+  for(const auto* name:{"person","dog","deer","bicycle","stroller"}) {
+    fusion_class::Observe(object,"dynamic_obstacle",name,5,3,kMission);
+    EXPECT_EQ("dynamic_obstacle",fusion_class::ObservedMissionGroup(object.camera));
+  }
+  fusion_class::Observe(object,"vehicle","truck",5,3,kMission);
+  EXPECT_EQ("vehicle",fusion_class::ObservedMissionGroup(object.camera));
+  fusion_class::Observe(object,"dynamic_obstacle","truck",5,3,kMission);
+  EXPECT_EQ("unknown",fusion_class::ObservedMissionGroup(object.camera));
+}
+
+TEST(FusionClassPolicy, LatestUnknownOrMissCannotBorrowRetainedDynamicClass) {
+  TrackedObject object;
+  ASSERT_TRUE(fusion_class::BeginObservation(object,100,1));
+  fusion_class::Observe(object,"dynamic_obstacle","dog",1,1,kMission);
+  ASSERT_EQ("dog",object.camera.str_YoloClass);
+  ASSERT_EQ("dynamic_obstacle",fusion_class::ObservedMissionGroup(object.camera));
+  ASSERT_TRUE(fusion_class::BeginObservation(object,200,1));
+  EXPECT_EQ("unknown",fusion_class::ObservedMissionGroup(object.camera));
+  fusion_class::Observe(object,"unknown","unknown",1,1,kMission);
+  EXPECT_EQ("dog",object.camera.str_YoloClass); // retained classification is unchanged
+  EXPECT_EQ("unknown",fusion_class::ObservedMissionGroup(object.camera));
+  ASSERT_TRUE(fusion_class::BeginObservation(object,300,1));
+  fusion_class::Observe(object,"dynamic_obstacle","dog",1,1,kMission);
+  fusion_class::Miss(object,3);
+  EXPECT_EQ("dog",object.camera.str_YoloClass);
+  EXPECT_EQ("unknown",fusion_class::ObservedMissionGroup(object.camera));
+  fusion_class::Observe(object,"dynamic_obstacle","dog",1,1,kMission);
+  fusion_class::InvalidateObservation(object,2);
+  EXPECT_EQ("unknown",fusion_class::ObservedMissionGroup(object.camera));
+}
+
 TEST(FusionClassPolicy, MissionGroupsMatchAsmcCameraMissionTable) {
   // asmc_camera/detection/mission.py GROUPS.
   const std::map<std::string, std::vector<std::string>> groups{
@@ -384,6 +419,8 @@ TEST(FusionStatePropagation, CopiesOnlyClassificationAndPreservesLockSemantics) 
   source.camera.is_class_locked = true;
   source.camera.camera_observation_ns = 123;
   source.camera.camera_observation_epoch = 9;
+  source.camera.observed_class="dynamic_obstacle";
+  source.camera.observed_raw_class="bicycle";
   target.tracking.s32_Id = 9;
   target.detection.f32_CoreX = 100;
   target.tracking.s32_MissCount = 4;
@@ -391,6 +428,8 @@ TEST(FusionStatePropagation, CopiesOnlyClassificationAndPreservesLockSemantics) 
   EXPECT_EQ(state(source), state(target));
   EXPECT_EQ(123u, target.camera.camera_observation_ns);
   EXPECT_EQ(9u, target.camera.camera_observation_epoch);
+  EXPECT_EQ("dynamic_obstacle",fusion_class::ObservedMissionGroup(target.camera));
+  EXPECT_EQ("bicycle",target.camera.observed_raw_class);
   EXPECT_EQ(9, target.tracking.s32_Id);
   EXPECT_EQ(100, target.detection.f32_CoreX);
   EXPECT_EQ(4, target.tracking.s32_MissCount);

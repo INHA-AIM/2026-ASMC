@@ -123,6 +123,20 @@ if(ASMC_LIDAR_PIPELINE)
 endif()
 
 if(ASMC_LIDAR_PIPELINE_ACTIVE)
+  find_package(OpenCV REQUIRED COMPONENTS core imgproc)
+  find_package(ZLIB REQUIRED)
+  # Private decision-only library; never exported to Main and never owns ROS state.
+  add_library(asmc_lidar_hd_map_audit STATIC src/filtering/hd_map_audit.cpp src/filtering/delivery_preview.cpp)
+  target_include_directories(asmc_lidar_hd_map_audit PUBLIC include ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(asmc_lidar_hd_map_audit PUBLIC yaml-cpp OpenSSL::Crypto ZLIB::ZLIB ${OpenCV_LIBRARIES})
+  target_compile_options(asmc_lidar_hd_map_audit PRIVATE -Wall -Wextra)
+  if(CATKIN_ENABLE_TESTING)
+    add_executable(asmc_lidar_hd_map_audit_probe test/hd_map_audit_probe.cpp)
+    target_link_libraries(asmc_lidar_hd_map_audit_probe asmc_lidar_hd_map_audit)
+    add_test(NAME asmc_lidar_hd_map_audit_equivalence
+      COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/hd_map_audit_equivalence.py
+        --probe $<TARGET_FILE:asmc_lidar_hd_map_audit_probe>)
+  endif()
   set(pipeline_msg_include_dirs ${sensor_msgs_INCLUDE_DIRS} ${std_msgs_INCLUDE_DIRS}
     ${geometry_msgs_INCLUDE_DIRS} ${morai_msgs_INCLUDE_DIRS} ${pcl_conversions_INCLUDE_DIRS}
     ${rosbag_INCLUDE_DIRS} ${tf2_ros_INCLUDE_DIRS})
@@ -166,7 +180,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/ros/ros_inputs.cpp)
   set_target_properties(asmc_lidar_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
   target_include_directories(asmc_lidar_runtime PUBLIC include ${catkin_INCLUDE_DIRS} ${pipeline_msg_include_dirs})
-  target_link_libraries(asmc_lidar_runtime PUBLIC asmc_lidar_pipeline yaml-cpp OpenSSL::Crypto ${catkin_LIBRARIES})
+  target_link_libraries(asmc_lidar_runtime PUBLIC asmc_lidar_pipeline asmc_lidar_hd_map_audit yaml-cpp OpenSSL::Crypto ${catkin_LIBRARIES})
   target_compile_options(asmc_lidar_runtime PRIVATE -Wall -Wextra)
   add_dependencies(asmc_lidar_runtime ${pipeline_msg_targets})
 
@@ -220,6 +234,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_stage_observer test/pipeline/test_stage_observer.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_typed_output test/runtime/test_typed_output.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_runtime test/runtime/test_runtime.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_delivery_preview test/runtime/test_delivery_preview.cpp)
     # The node rostest needs the camera calibration data of the sibling asmc_camera
     # source package (data only; no build or package.xml dependency).
     # Web monitor rostest: shadow node (debug stages on) + monitor node + synthetic inputs, no camera data needed.

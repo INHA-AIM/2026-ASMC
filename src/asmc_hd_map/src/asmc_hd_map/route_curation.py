@@ -3052,6 +3052,17 @@ def build_route_curation(config_path: Path, repo_root: Path, output_dir: Path) -
                 "reason": str(selection["reason"]),
             })
 
+    from .adjacent_review import adjacent_markings
+    adjacent = adjacent_markings(config, review, features, repo_root)
+    features.extend(adjacent)
+    for feature in adjacent:
+        a=feature['attributes']
+        inventory.append(dict(segment_id=a['curation_segment_id'],
+            source_id=feature['provenance']['source_id'],run_index=0,color=a['color'],
+            source_pattern=a['pattern'],output_pattern=a['pattern'],
+            current_link_ids=';'.join(feature['topology']['current_link_ids']),
+            route_s_min_m='',route_s_max_m='',attribute_override_ids='',
+            source_display=a['source_display'],source_vector_indices='',gap_bridge_lengths_m=''))
     features.sort(key=lambda row: row["id"])
     document = {
         "schema_version": SCHEMA_VERSION,

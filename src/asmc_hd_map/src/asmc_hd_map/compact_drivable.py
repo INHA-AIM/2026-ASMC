@@ -7,6 +7,8 @@ junction node-pair closure. Ordinary lane polygons can follow reviewed paint,
 adjacent lanes are joined as a corridor, and obstacle-junction gaps use legacy
 H5 only inside the selected flat-ended link envelope. No radius/proximity
 expansion is allowed to pull unrelated roads into the product.
+An explicit user-reviewed adjacent corridor can use H5 clipped to its selected
+lane envelope; it cannot expand selection to the rest of the H5 map.
 """
 
 from __future__ import annotations
@@ -505,6 +507,46 @@ def _legacy_surface_geometry(
     return unary_union(polygons) if polygons else Polygon()
 
 
+def reviewed_lane_surfaces(lanes, areas, road, ppm, offset, groups):
+    """Use H5 only within an explicitly approved adjacent corridor envelope.
+
+    Replace that group's delivery surface, not other lane geometry or tracker
+    state. The envelope prevents the old whole-map H5 from adding nearby roads.
+    """
+    from shapely.geometry import Polygon, LineString
+    from shapely.ops import unary_union, split
+    for group in groups:
+        selected=[lane for lane in lanes if lane['drivable_group']==group]
+        if not selected:raise CompactDrivableError('reviewed H5 lane group is empty: '+group)
+        ids={lane['link_id'] for lane in selected}
+        envelope=unary_union([Polygon([p[:2] for p in lane['polygon']]).buffer(0) for lane in selected])
+        surface=_legacy_surface_geometry(road,ppm,offset,envelope.bounds).intersection(envelope).buffer(0)
+        if surface.is_empty:raise CompactDrivableError('reviewed H5 surface is empty: '+group)
+        areas[:]=[area for area in areas if not set(area['link_ids']).issubset(ids)]
+        # Cut through holes rather than fan-triangulating hundreds of H5 edge
+        # vertices. Preserve every hole while keeping simple delivery rings few.
+        pieces=[];pending=list(_polygon_parts(surface));cuts=0
+        while pending:
+            part=pending.pop()
+            if not part.interiors:
+                pieces.append(part);continue
+            cuts+=1
+            if cuts>128:raise CompactDrivableError('too many reviewed surface hole cuts')
+            y=Polygon(part.interiors[0]).representative_point().y
+            x0,_,x1,_=part.bounds
+            divided=_polygon_parts(split(part,LineString([(x0-1,y),(x1+1,y)])))
+            if len(divided)<2:raise CompactDrivableError('could not split reviewed surface hole')
+            pending.extend(divided)
+        for i,part in enumerate(pieces):
+            if part.area<0.01:continue
+            areas.append(dict(id='drivable:reviewed_h5:'+group+':'+str(i),area_type='lane',
+                validity='validated',source_type='hybrid',intersection_guarded=False,
+                polygon=[[round(x,4),round(y,4),0.0] for x,y in list(part.exterior.coords)[:-1]],
+                link_ids=sorted(ids),lane_ids=[lane['id'] for lane in selected],
+                source_dataset='legacy_h5_user_reviewed_bounded_corridor',source_feature_id=group,
+                surface_group=group))
+
+
 def legacy_intersection_surface_patches(
     lanes: Sequence[Mapping[str, Any]],
     road: np.ndarray,
@@ -727,6 +769,81 @@ def _attach_topology(lanes: List[Dict[str, Any]], links: Mapping[str, Mapping[st
         ]
 
 
+def reviewed_non_drivable_islands(reviewed, policies):
+    """Close only explicitly selected, already reviewed paint boundary chains.
+
+    Never infer an island from nearby lines or close an unsupported endpoint
+    gap. The feature IDs provide provenance without a second hand-drawn map.
+    """
+    from shapely.geometry import Polygon
+    by_role = defaultdict(list)
+    for feature in reviewed.get("features", []):
+        by_role[feature.get("attributes", {}).get("functional_role")].append(feature)
+    islands = []
+    for policy in policies:
+        chains, ids = [], []
+        if len(policy["boundary_chains"]) != 2:
+            raise CompactDrivableError("island requires two boundary chains")
+        for roles in policy["boundary_chains"]:
+            chain = []
+            for role in roles:
+                matches = by_role.get(role, [])
+                if len(matches) != 1:
+                    raise CompactDrivableError("island boundary must be unique: " + role)
+                feature = matches[0]
+                if feature["geometry"]["type"] != "LineString":
+                    raise CompactDrivableError("island boundary must be a LineString")
+                points = _xy(feature["geometry"]["coordinates"])
+                if not np.isfinite(points).all():
+                    raise CompactDrivableError("island boundary is not finite")
+                if chain and np.linalg.norm(chain[-1] - points[0]) > 0.05:
+                    raise CompactDrivableError("island boundary chain has an unsupported gap")
+                chain.extend(points if not chain else points[1:])
+                ids.append(feature["id"])
+            if len(chain) < 2:
+                raise CompactDrivableError("island boundary chain is empty")
+            chains.append(np.asarray(chain))
+        if any(np.linalg.norm(chains[0][i] - chains[1][i]) > 0.05 for i in (0, -1)):
+            raise CompactDrivableError("island boundary tips do not close")
+        ring = np.vstack((chains[0], chains[1][::-1]))
+        shape = Polygon(ring)
+        if not shape.is_valid or shape.area < 0.01:
+            raise CompactDrivableError("island polygon is invalid")
+        islands.append({
+            "id": "non_drivable:" + str(policy["id"]),
+            "area_type": "tollgate_island", "source_type": "reviewed_paint_boundary",
+            "boundary_feature_ids": ids,
+            "polygon": [[float(x), float(y), 0.0] for x, y in ring],
+            "area_m2": round(shape.area, 4),
+        })
+    return islands
+
+
+def subtract_reviewed_islands(records, islands):
+    """Clip both Lane and DrivableArea, keeping IDs/topology and other geometry.
+
+    An exclusion that would split a record or create a hole requires explicit
+    topology work. Do not flatten a hole, discard a component or invent an ID.
+    """
+    from shapely.geometry import Polygon
+    shapes = [(item["id"], Polygon(_xy(item["polygon"]))) for item in islands]
+    for record in records:
+        original = Polygon(_xy(record["polygon"])).buffer(0)
+        remaining, applied = original, []
+        for island_id, island in shapes:
+            if remaining.intersection(island).area <= 1e-8:
+                continue
+            remaining = remaining.difference(island)
+            applied.append(island_id)
+        if not applied:
+            continue
+        if remaining.is_empty or remaining.geom_type != "Polygon" or remaining.interiors:
+            raise CompactDrivableError("island requires explicit topology split: " + record["id"])
+        record["polygon"] = [[round(x, 4), round(y, 4), 0.0]
+                             for x, y in list(remaining.exterior.coords)[:-1]]
+        record["excluded_island_ids"] = applied
+
+
 def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[str, Any], Dict[str, np.ndarray]]:
     repo_root = repo_root.resolve()
     config = load_yaml(source_config)
@@ -866,6 +983,10 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
             "explicit_bridge_pairs": surface_policy.get("explicit_bridge_pairs", []),
         }
     )
+    reviewed_ids={lane['link_id'] for lane in lanes if lane['drivable_group'] in
+                  surface_policy.get('legacy_h5_reviewed_lane_groups',[])}
+    # Append newly reviewed pairs so existing corridor IDs do not shift.
+    bridge_pairs.sort(key=lambda pair:bool(set(pair['link_ids']) & reviewed_ids))
     for index, pair in enumerate(bridge_pairs):
         first, second = pair["link_ids"]
         polygon = corridor_bridge_polygon(links[first], links[second], step_m)
@@ -896,6 +1017,11 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
         float(surface_policy["vector_simplify_tolerance_m"]),
     )
     areas.extend(intersection_surface_patches)
+    reviewed_lane_surfaces(lanes,areas,road,legacy_ppm,offset,
+                          surface_policy.get('legacy_h5_reviewed_lane_groups',[]))
+    islands = reviewed_non_drivable_islands(reviewed, surface_policy.get("non_drivable_islands", []))
+    subtract_reviewed_islands(lanes, islands)
+    subtract_reviewed_islands(areas, islands)
     for area in areas:
         polygon = np.asarray(area["polygon"], dtype=np.float64)
         if len(polygon) < 3:
@@ -952,6 +1078,7 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
         },
         "lanes": lanes,
         "drivable_areas": areas,
+        "non_drivable_areas": islands,
         "grid": {
             "path": str(config["outputs"]["grid"]),
             "resolution_m": grid_resolution,
@@ -969,6 +1096,7 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
             "intersection_support_link_count": len(support_ids),
             "explicit_additional_lane_count": len(explicit_lane_ids),
             "drivable_area_count": len(areas),
+            "reviewed_non_drivable_island_count": len(islands),
             "base_lane_area_count": len(lanes),
             "corridor_fill_area_count": len(bridge_pairs),
             "intersection_surface_patch_count": len(intersection_surface_patches),
@@ -999,6 +1127,7 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
             "The reviewed dynamic junction uses directed node-pair closure links to avoid internal seams.",
             "Ordinary-road polygons locally follow reviewed paint where its signed lateral support is valid.",
             "Selected adjacent lane pairs are joined by canonical vector corridor-fill areas.",
+            "Reviewed tollgate islands are subtracted from both Lane and DrivableArea after all corridor fills.",
             "Legacy H5 contributes only gap patches inside explicitly reviewed envelopes.",
             "A134 roundabout pavement uses the legacy H5 only inside its 2.0 m padded envelope plus the selected A151 stitch envelope, and preserves the center island.",
             "A131 is available only as the explicitly reviewed opposite lane beside shadow-zone A126.",
@@ -1032,23 +1161,24 @@ def write_product(repo_root: Path, source_config: Path) -> Dict[str, Any]:
 def render_report(product: Mapping[str, Any]) -> str:
     stats = product["statistics"]
     return "\n".join([
-        "# K-City 2025 P2-B v5 A134 로터리·A151 접속부 주행가능영역",
+        "# K-City 2025 주행가능영역 — %s" % product['build_id'],
         "",
-        "> **상태:** 생성·검증 가능한 P2-B product. reviewed 차선 geometry는 변경하지 않음.",
+        "> **상태:** 현재 reviewed 차선 SHA와 묶어 생성·검증하는 P2-B product.",
         "",
         "## 선택 정책",
         "",
         "- 전역경로 39개 링크와 같은 방향의 사용 가능 동일-road 차로를 기본 Lane으로 채택했다.",
         "- Lane과 추가 surface patch를 합친 vector polygon 집합이 geometry 정본이다.",
         "- polygon 끝은 round buffer가 아니라 endpoint node의 법선에서 flat cap으로 절단한다.",
-        "- 일반도로는 신뢰 가능한 reviewed paint의 국소 횡거리로 41개 Lane의 경계를 보정했다.",
-        "- 선택된 인접 차로 17쌍과 음영구간 A126/A131 사이를 vector corridor로 채웠다.",
+        "- 일반도로는 reviewed paint의 국소 횡거리로 %d개 Lane의 경계를 보정했다." % stats['boundary_refined_lane_count'],
+        "- 인접 차로와 음영구간 A126/A131의 %d쌍을 corridor 대상으로 선택했다." % stats['corridor_fill_area_count'],
         "- 교차로의 거리/반경 확장을 폐기하고 reviewed link set만 추가했다.",
         "- 동적 장애물 교차로는 검토된 4개 anchor의 directed start/end node-pair closure 8개 link를 사용한다.",
         "- 정적·동적 교차로는 선택 link envelope 안의 legacy H5 road만 gap patch로 사용한다.",
         "- A134 로터리는 2.0 m 확장 link envelope와 A151 접속부 안의 legacy H5 포장면을 사용하고 중앙 섬은 비주행으로 보존한다.",
         "- 일반 교차로는 전역경로 link만, 정적·동적 장애물 교차로는 검토된 회피 link만 포함한다.",
-        "- 반대차로는 음영구간 A131만 명시적으로 포함하고, 그 밖의 대회 외 도로는 제거했다.",
+        "- 음영 A131 및 명시적으로 검토한 인접 lane group만 추가하며 다른 도로로 자동 확장하지 않는다.",
+        "- 인접 검토 그룹: `%s`. H5 사용은 해당 lane envelope 안으로 제한한다." % ', '.join(product['selection']['explicit_lane_groups']),
         "- `OccupancyGrid`는 vector product를 0.20 m/px로 rasterize한 파생 표현이다.",
         "",
         "## 결과",
@@ -1063,6 +1193,7 @@ def render_report(product: Mapping[str, Any]) -> str:
         "- reviewed-boundary refinement: `%d` lanes / `%d` sides" % (
             stats["boundary_refined_lane_count"], stats["boundary_refined_side_count"]),
         "- explicit shadow opposite lane: `A2256W000131` beside route `A2256W000126`",
+        "- reviewed tollgate islands excluded from lanes and final road: `%d`" % stats["reviewed_non_drivable_island_count"],
         "- reviewed non-route intersection lanes: `%d`" %
         stats["explicit_non_route_intersection_lane_count"],
         "- static allowlist: `%s`" % ", ".join(

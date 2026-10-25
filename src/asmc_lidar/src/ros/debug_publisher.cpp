@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <sstream>
 #include <utility>
+#include <unordered_map>
 
 namespace asmc {
 namespace lidar {
@@ -99,19 +100,23 @@ sensor_msgs::PointField Field(const char* name, std::uint32_t offset, std::uint8
 
 sensor_msgs::PointCloud2 CloudMsg(const DebugPublisher::StageSample& s, std::int64_t stamp_ns,
                                   const std::string& frame, const std::vector<std::uint8_t>* label,
-                                  const std::vector<std::int32_t>* cluster) {
+                                  const std::vector<std::int32_t>* cluster,
+                                  const std::vector<std::int32_t>* track=nullptr) {
   sensor_msgs::PointCloud2 msg;
   msg.header.stamp.fromNSec(static_cast<std::uint64_t>(stamp_ns));
   msg.header.frame_id = frame;
   msg.fields = {Field("x", 0, sensor_msgs::PointField::FLOAT32), Field("y", 4, sensor_msgs::PointField::FLOAT32),
                 Field("z", 8, sensor_msgs::PointField::FLOAT32),
                 Field("intensity", 12, sensor_msgs::PointField::FLOAT32)};
-  const bool labelled = label && cluster;
+  const bool labelled = label != nullptr;
   if (labelled) {
     msg.fields.push_back(Field("label", 16, sensor_msgs::PointField::UINT8));
+  }
+  if(cluster) {
     msg.fields.push_back(Field("cluster", 20, sensor_msgs::PointField::INT32));
   }
-  msg.point_step = labelled ? 24 : 16;
+  if(track)msg.fields.push_back(Field("track",24,sensor_msgs::PointField::INT32));
+  msg.point_step = track ? 28 : cluster ? 24 : labelled ? 20 : 16;
   msg.height = 1;
   msg.width = s.sent;
   msg.row_step = msg.point_step * msg.width;
@@ -123,9 +128,12 @@ sensor_msgs::PointCloud2 CloudMsg(const DebugPublisher::StageSample& s, std::int
     std::memcpy(out, s.xyzi.data() + 4 * static_cast<std::size_t>(i), 16);
     if (labelled) {
       out[16] = i < label->size() ? (*label)[i] : 0;
+    }
+    if(cluster) {
       const std::int32_t c = i < cluster->size() ? (*cluster)[i] : -1;
       std::memcpy(out + 20, &c, 4);
     }
+    if(track){const std::int32_t id=i<track->size()?(*track)[i]:-1;std::memcpy(out+24,&id,4);}
   }
   return msg;
 }
@@ -189,7 +197,7 @@ std::vector<std::string> DebugPublisher::TopicNames(const std::string& prefix) {
 
 DebugPublisher::DebugPublisher(ros::NodeHandle& nh, const DebugPublisherConfig& config, const RuntimeConfig& runtime)
     : config_(config), use_roll_(runtime.pipeline.use_roll), tunnel_enabled_(runtime.pipeline.tunnel.enabled),
-      vehicle_(runtime.pipeline.vehicle) {
+      vehicle_(runtime.pipeline.vehicle),range_(runtime.pipeline.range),roi_(runtime.pipeline.roi),height_roi_(runtime.pipeline.height_roi) {
   const auto names = TopicNames(config_.topic_prefix);
   raw_pub_ = nh.advertise<sensor_msgs::PointCloud2>(names[0], 1);
   roi_pub_ = nh.advertise<sensor_msgs::PointCloud2>(names[1], 1);
@@ -208,8 +216,10 @@ DebugPublisher::~DebugPublisher() {
   if (thread_.joinable()) thread_.join();
 }
 
-void DebugPublisher::SetScanContext(const std::string& sensor_frame, std::uint64_t seq, std::int64_t arrival_ros_ns) {
+void DebugPublisher::SetScanContext(const std::string& sensor_frame, std::uint64_t seq, std::int64_t arrival_ros_ns,
+                                    const std::string& session,std::uint64_t generation,const std::string& config_id) {
   sensor_frame_ = sensor_frame;
+  producer_session_id_=session;generation_=generation;config_id_=config_id;
   seq_ = seq;
   arrival_ns_ = arrival_ros_ns;
 }
@@ -257,6 +267,12 @@ void DebugPublisher::OnScan(const pipeline::StageView& view) {
   Snapshot& s = *pending_;
   s.stages = true;
   if (view.scan.points) Sample(*view.scan.points, config_.max_points, s.raw, nullptr);
+  const pipeline::RoiClassifier classify(range_,roi_,vehicle_);
+  s.raw_label.reserve(s.raw.sent);
+  for(std::size_t i=0;i<s.raw.xyzi.size();i+=4) {
+    pcl::PointXYZI p;p.x=s.raw.xyzi[i];p.y=s.raw.xyzi[i+1];p.z=s.raw.xyzi[i+2];
+    s.raw_label.push_back(static_cast<std::uint8_t>(classify(p)));
+  }
   Sample(view.roi, config_.max_points, s.roi, nullptr);
   Sample(view.voxel, config_.max_points, s.voxel, nullptr);
   std::vector<std::uint32_t> picked;
@@ -265,6 +281,10 @@ void DebugPublisher::OnScan(const pipeline::StageView& view) {
   // Per-point provenance over the full leveled cloud, then the sampled subset.
   const std::size_t n = view.leveled.points.size();
   std::vector<std::uint8_t> label(n, 1);
+  if(height_roi_.enabled) {
+    std::fill(label.begin(),label.end(),3);
+    for(int i:view.height_kept_indices)if(i>=0&&std::size_t(i)<n)label[i]=1;
+  }
   std::vector<std::int32_t> cluster(n, -1);
   const bool tunnel = view.result.tunnel.ran;
   for (const int i : view.ground_kept_indices)
@@ -327,6 +347,7 @@ void DebugPublisher::Finish(std::int64_t stamp_ns, const ScanOutput& out) {
     s->arrival_ns = arrival_ns_;
     s->sensor_frame = sensor_frame_;
   }
+  s->producer_session_id=producer_session_id_;s->generation=generation_;s->config_id=config_id_;
   s->pose_ready = out.pose_ready;
   s->processed = out.processed;
   s->reason = out.reason;
@@ -334,6 +355,30 @@ void DebugPublisher::Finish(std::int64_t stamp_ns, const ScanOutput& out) {
   s->camera_active = out.fusion.camera_active;
   s->camera_reason = out.fusion.camera_reason;
   s->arrays = out.arrays;
+  s->hd_map_audit = out.hd_map_audit;
+  const auto ownership_start=Clock::now();
+  // Exact sampled XYZ membership, never an OBB test or a second map query.
+  // Read-only and bounded by the existing sampled cloud cap.
+  if(s->stages&&s->hd_map_audit.enabled) {
+    using Key=std::array<std::uint32_t,3>;
+    struct Hasher {std::size_t operator()(const Key& k)const{return (std::size_t(k[0])*73856093)^(std::size_t(k[1])*19349663)^(std::size_t(k[2])*83492791);}};
+    const auto key=[](const float* p){Key k;std::memcpy(k.data(),p,12);return k;};
+    std::unordered_map<Key,std::size_t,Hasher> samples;samples.reserve(s->leveled.sent);
+    s->leveled_track.assign(s->leveled.sent,-1);
+    for(std::size_t i=0;i<s->leveled.sent;++i)samples.emplace(key(s->leveled.xyzi.data()+4*i),i);
+    for(const auto& obj:out.result.objects)if(obj.tracking.s32_MissCount==0)
+      for(const auto& p:obj.detection.pcl_ClusterPoints.points) {
+        const float xyz[3]={p.x,p.y,p.z};const auto it=samples.find(key(xyz));
+        if(it!=samples.end()) {
+          auto& id=s->leveled_track[it->second];
+          id=(id==-1||id==obj.tracking.s32_Id)?obj.tracking.s32_Id:-2;
+        }
+      }
+    s->capture_ms+=Ms(ownership_start,Clock::now());
+    std::lock_guard<std::mutex> lock(counters_mutex_);
+    counters_.capture_ms_last=s->capture_ms;
+    counters_.capture_ms_max=std::max(counters_.capture_ms_max,s->capture_ms);
+  }
   s->tracks.clear();
   if (out.processed) {
     s->tracks.reserve(out.result.objects.size());
@@ -370,12 +415,12 @@ void DebugPublisher::PublishLoop() {
 void DebugPublisher::Publish(const Snapshot& s) {
   const auto t0 = Clock::now();
   if (s.stages) {
-    if (raw_pub_.getNumSubscribers() > 0) raw_pub_.publish(CloudMsg(s.raw, s.stamp_ns, s.sensor_frame, nullptr, nullptr));
+    if (raw_pub_.getNumSubscribers() > 0) raw_pub_.publish(CloudMsg(s.raw, s.stamp_ns, s.sensor_frame, &s.raw_label, nullptr));
     if (roi_pub_.getNumSubscribers() > 0) roi_pub_.publish(CloudMsg(s.roi, s.stamp_ns, s.sensor_frame, nullptr, nullptr));
     if (voxel_pub_.getNumSubscribers() > 0)
       voxel_pub_.publish(CloudMsg(s.voxel, s.stamp_ns, s.sensor_frame, nullptr, nullptr));
     if (leveled_pub_.getNumSubscribers() > 0)
-      leveled_pub_.publish(CloudMsg(s.leveled, s.stamp_ns, config_.leveled_frame, &s.leveled_label, &s.leveled_cluster));
+      leveled_pub_.publish(CloudMsg(s.leveled, s.stamp_ns, config_.leveled_frame, &s.leveled_label, &s.leveled_cluster,s.leveled_track.empty()?nullptr:&s.leveled_track));
   }
   if (scan_pub_.getNumSubscribers() > 0) {
     std_msgs::String text;
@@ -399,6 +444,8 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
   trace::Bool(out, s.processed);
   out << ",\"reason\":";
   trace::Str(out, s.reason);
+  out << ",\"producer_session_id\":";trace::Str(out,s.producer_session_id);
+  out << ",\"generation\":"<<s.generation<<",\"config_id\":";trace::Str(out,s.config_id);
   out << ",\"frames\":{\"sensor\":";
   trace::Str(out, s.sensor_frame);
   out << ",\"leveled\":";
@@ -409,7 +456,11 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
   trace::Bool(out, tunnel_enabled_);
   out << ",\"rate_hz\":";
   trace::Num(out, config_.rate_hz);
-  out << ",\"max_points\":" << config_.max_points << "},\"vehicle\":{\"length\":";
+  out << ",\"max_points\":" << config_.max_points << ",\"roi\":{\"range_m\":["<<range_.f32_Min<<','<<range_.f32_Max
+      <<"],\"x_m\":["<<roi_.f32_MinX<<','<<roi_.f32_MaxX<<"],\"y_m\":["<<roi_.f32_MinY<<','<<roi_.f32_MaxY
+      <<"],\"sensor_z_m\":["<<roi_.f32_MinZ<<','<<roi_.f32_MaxZ<<"],\"height_enabled\":";
+  trace::Bool(out,height_roi_.enabled);out<<",\"height_above_ground_m\":"<<height_roi_.max_height_above_ground_m
+      <<",\"base_height_m\":"<<height_roi_.nominal_base_height_m<<"}},\"vehicle\":{\"length\":";
   trace::Num(out, vehicle_.f32_Length);
   out << ",\"width\":";
   trace::Num(out, vehicle_.f32_Width);
@@ -448,6 +499,7 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
     const auto& n = s.counts;
     out << "},\"counts\":{\"raw\":" << n.raw_points << ",\"roi\":" << n.roi_points << ",\"voxel\":" << n.voxel_points
         << ",\"leveled\":" << n.leveled_points << ",\"ground_kept\":" << n.ground_kept_points
+        << ",\"height_kept\":"<<n.height_kept_points<<",\"height_removed\":"<<n.height_removed_points
         << ",\"tunnel_removed\":" << n.tunnel_removed_points << ",\"cluster_input\":" << n.cluster_input_points
         << ",\"clusters\":" << n.clusters << ",\"centroids\":" << n.centroids << ",\"detections\":" << n.detections
         << ",\"tracks\":" << n.tracks << ",\"observed\":" << n.observed_tracks << ",\"predicted\":" << n.predicted_tracks
@@ -459,6 +511,7 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
     trace::Num(out, t.voxel_ms);
     out << ",\"level_ms\":";
     trace::Num(out, t.level_ms);
+  out << ",\"height_ms\":";trace::Num(out,t.height_ms);
     out << ",\"ground_ms\":";
     trace::Num(out, t.ground_ms);
     out << ",\"tunnel_ms\":";
@@ -513,7 +566,9 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
   trace::Array(out, s.arrays.accepted, s.arrays.local);
   out << ",\"map\":";
   trace::Array(out, s.arrays.accepted, s.arrays.map);
-  out << "}}";
+  out << '}';
+  if(s.hd_map_audit.enabled){out << ",\"hd_map_audit\":";filtering::WriteAuditReport(out,s.hd_map_audit);}
+  out << '}';
   return out.str();
 }
 

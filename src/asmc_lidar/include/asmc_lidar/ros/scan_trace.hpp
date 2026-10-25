@@ -241,6 +241,7 @@ struct LineInput {
   const ScanOutput* output = nullptr;      // null when not accepted
   const pipeline::ImuData* imu = nullptr;  // selected samples, when known
   const pipeline::CanData* can = nullptr;
+  double input_to_publish_ms = -1;  // live node only, monotonic callback entry -> arrays enqueued
   bool debug = false;  // digests/clusters/detections (PipelineConfig::capture_debug)
 };
 
@@ -307,6 +308,7 @@ inline std::string Line(const LineInput& in) {
       out << ",\"dt_s\":";
       Num(out, r.dt_s);
       out << ",\"counts\":{\"raw\":" << n.raw_points << ",\"roi\":" << n.roi_points
+          << ",\"height_kept\":"<<n.height_kept_points<<",\"height_removed\":"<<n.height_removed_points
           << ",\"voxel\":" << n.voxel_points << ",\"leveled\":" << n.leveled_points
           << ",\"ground_kept\":" << n.ground_kept_points << ",\"tunnel_removed\":" << n.tunnel_removed_points
           << ",\"cluster_input\":" << n.cluster_input_points << ",\"clusters\":" << n.clusters
@@ -369,14 +371,20 @@ inline std::string Line(const LineInput& in) {
   }
   out << ",\"timings_ms\":{\"total\":" << o.total_ms
       << ",\"roi\":" << r.timings.roi_ms << ",\"voxel\":" << r.timings.voxel_ms
-      << ",\"level\":" << r.timings.level_ms << ",\"ground\":" << r.timings.ground_ms
+      << ",\"level\":" << r.timings.level_ms << ",\"height\":" << r.timings.height_ms << ",\"ground\":" << r.timings.ground_ms
       << ",\"cluster\":" << r.timings.cluster_ms << ",\"detection\":" << r.timings.detection_ms
       << ",\"tracking\":" << r.timings.tracking_ms << '}';
   out << ",\"typed\":{\"local\":";
   Array(out, o.arrays.accepted, o.arrays.local);
   out << ",\"map\":";
   Array(out, o.arrays.accepted, o.arrays.map);
-  out << "}}";
+  out << '}';
+  if (in.input_to_publish_ms >= 0) out << ",\"input_to_publish_ms\":" << in.input_to_publish_ms;
+  if (o.hd_map_audit.enabled) {
+    out << ",\"hd_map_audit\":";
+    filtering::WriteAuditReport(out, o.hd_map_audit);
+  }
+  out << '}';
   return out.str();
 }
 

@@ -102,7 +102,8 @@ std::string Resolve(const std::string& path, const std::string& package_share_di
 }  // namespace
 
 RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string& package_share_dir) {
-  const Reader r(LoadYaml(yaml_path), yaml_path);
+  const auto root=LoadYaml(yaml_path);
+  const Reader r(root, yaml_path);
   const auto& file = r.file();
   if (r.Get<int>("schema_version") != 1) Fail(file, "unsupported schema_version (expected 1)");
 
@@ -137,6 +138,16 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   p.roi.f32_MaxY = r.Get<float>("lidar.ROI.MaxY");
   p.roi.f32_MinZ = r.Get<float>("lidar.ROI.MinZ");
   p.roi.f32_MaxZ = r.Get<float>("lidar.ROI.MaxZ");
+  if(root["lidar"]["height_roi"]) {
+    const auto h=root["lidar"]["height_roi"];
+    p.height_roi.enabled=h["enabled"].as<bool>();
+    p.height_roi.max_height_above_ground_m=h["max_height_above_ground_m"].as<double>();
+    p.height_roi.nominal_base_height_m=h["nominal_base_height_m"].as<double>();
+    if(!std::isfinite(p.height_roi.max_height_above_ground_m)||p.height_roi.max_height_above_ground_m<2.0||
+       p.height_roi.max_height_above_ground_m>5.0||!std::isfinite(p.height_roi.nominal_base_height_m)||
+       p.height_roi.nominal_base_height_m<0.1||p.height_roi.nominal_base_height_m>1.0)
+      Fail(file,"invalid gravity-aligned height ROI");
+  }
   auto& cl = p.clustering;
   cl.b_Enabled = r.Get<bool>("lidar.Clustering.Enabled");
   cl.f32_Eps = r.Get<float>("lidar.Clustering.Eps");
@@ -244,6 +255,49 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   Near(v.st_LiDARRotationDeg.f32_Y, m.Get<double>("sensor_pose_base_link.pitch_deg"), file, "LiDAR pitch");
   Near(v.st_LiDARRotationDeg.f32_Z, m.Get<double>("sensor_pose_base_link.yaw_deg"), file, "LiDAR yaw");
 
+  // New optional block keeps historical schema-1 replay profiles readable.
+  if (root["hd_map_audit"]) {
+    const auto preview=root["hd_map_audit"]["delivery_preview"];
+    if(preview) {
+      auto& p=config.delivery_preview;
+      p.enabled=preview["enabled"].as<bool>();
+      p.roof_base_z_m=preview["roof_base_z_m"].as<double>();
+      p.roof_margin_m=preview["roof_margin_m"].as<double>();
+      p.minimum_points=preview["minimum_points"].as<unsigned>();
+      p.minimum_road_points=preview["minimum_road_points"].as<unsigned>();
+      p.minimum_road_ratio=preview["minimum_road_ratio"].as<double>();
+      p.minimum_obb_road_ratio=preview["minimum_obb_road_ratio"]?preview["minimum_obb_road_ratio"].as<double>():0.10;
+      p.road_inset_m=preview["road_inset_m"]?preview["road_inset_m"].as<double>():0.20;
+      p.camera_age_ms=preview["camera_age_ms"].as<double>();
+      if(!std::isfinite(p.roof_base_z_m)||p.roof_base_z_m<1||p.roof_base_z_m>3||
+         !std::isfinite(p.roof_margin_m)||p.roof_margin_m<0.3||p.roof_margin_m>2||
+         p.minimum_points<3||p.minimum_road_points<1||!std::isfinite(p.minimum_road_ratio)||
+         p.minimum_road_ratio<=0||p.minimum_road_ratio>1||!std::isfinite(p.minimum_obb_road_ratio)||
+         p.minimum_obb_road_ratio<=0||p.minimum_obb_road_ratio>1||!std::isfinite(p.road_inset_m)||p.road_inset_m<0||p.road_inset_m>0.6||
+         !std::isfinite(p.camera_age_ms)||p.camera_age_ms<=0||p.camera_age_ms>500)
+        Fail(file,"invalid delivery preview safety limits");
+    }
+    config.hd_map_audit_mode = root["hd_map_audit"]["mode"].as<std::string>();
+    if (config.hd_map_audit_mode != "off" && config.hd_map_audit_mode != "audit" && config.hd_map_audit_mode != "filter")
+      Fail(file, "hd_map_audit.mode must be off, audit or filter");
+    if(config.hd_map_audit_mode=="filter"&&!config.delivery_preview.enabled)
+      Fail(file,"filter mode requires delivery_preview.enabled");
+    if (config.hd_map_audit_mode != "off") {
+      // Audit setup failure must never disable the original LiDAR outputs.
+      try {
+        config.hd_map_manifest = Resolve(root["hd_map_audit"]["manifest"].as<std::string>(), package_share_dir);
+        config.hd_map_manifest_sha256 = root["hd_map_audit"]["manifest_sha256"].as<std::string>();
+        config.hd_map_audit = std::make_shared<const filtering::HdMapAudit>(
+            config.hd_map_manifest, config.hd_map_manifest_sha256,
+            config.delivery_preview.enabled?config.delivery_preview.road_inset_m:0);
+        const auto product=root["hd_map_audit"]["source_product"];
+        if(product&&filtering::FileSha256(Resolve(product.as<std::string>(),package_share_dir))!=config.hd_map_audit->map_sha256()) {
+          config.hd_map_audit.reset();throw std::runtime_error("audit_current_product_sha_mismatch");
+        }
+      } catch (const std::exception& e) { config.hd_map_audit.reset();config.hd_map_audit_error = e.what(); }
+    }
+  }
+
   config.config_path = yaml_path;
   config.config_sha256 = Sha256(yaml_path);
   config.mount_config_sha256 = Sha256(config.mount_config_path);
@@ -267,6 +321,16 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   effective << "lidar-runtime-v1\n" << config.config_sha256 << '\n' << config.calibration_id << '\n'
             << config.pipeline.use_roll << ',' << config.enable_camera_fusion << ','
             << config.pipeline.tunnel.enabled << ',' << config.pipeline.capture_debug << '\n';
+  effective << config.hd_map_audit_mode << '\n' << config.hd_map_manifest_sha256 << '\n';
+  effective << config.pipeline.height_roi.enabled << ',' << config.pipeline.height_roi.max_height_above_ground_m
+            << ',' << config.pipeline.height_roi.nominal_base_height_m << '\n';
+  if (config.hd_map_audit) effective << config.hd_map_audit->bundle_sha256() << '\n'
+      << config.hd_map_audit->policy_sha256() << '\n';
+  const auto& p=config.delivery_preview;
+  effective << p.enabled << ',' << p.roof_base_z_m << ',' << p.roof_margin_m << ','
+    << p.minimum_points << ',' << p.minimum_road_points << ',' << p.minimum_road_ratio << ','
+    << p.minimum_obb_road_ratio << ',' << p.road_inset_m << ',' << p.camera_age_ms;
+  if(p.enabled)effective << ',' << filtering::kDeliveryProtectionPolicy;
   config.config_id = hash(effective.str());
 }
 

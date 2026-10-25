@@ -5,16 +5,16 @@ purpose: asmc_hd_map runtime publisher pins; supersedes only the hd_map and comp
 hd_map:
   path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
   map_id: kcity2025_competition_route_curation_candidate_v14
-  build_id: kcity2025_route_curation_stage14_20260918
-  file_sha256: ffcccb478ab9fea5232631dab49145eb59c9211a88c6d2f460108355fc4c54ee
-  geometry_sha256: 01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf
+  build_id: kcity2025_route_curation_stage14_adjacent_20261025
+  file_sha256: ca985c66a33d5b3d327119e03a4ac450f83fcf1032ede68e2b7a3b1ff6292628
+  geometry_sha256: e836f762dbbad4f02aaa6b37f486439aa02d3d5f961fa72b162cde4ebd24a3b3
   feature_counts:
-    lane_marking: 121
+    lane_marking: 127
     stopline: 7
 competition_inputs:
   metadata_bundle:
     path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
-    sha256: 0ed56169908a4f8a2e44e3ca5d09f355acdd483127f055fe0fef79b6e904b17b
+    sha256: 5e829605ed5d225b68d0454e0e313a48657ef5ee08e19ac0781d1d78c5bd10f4
     schema_version: asmc.competition_metadata/v1
     checkpoint_count: 15
     mission_zone_count: 15

@@ -152,6 +152,15 @@ inline std::string RawLabel(std::string label) {
   return label.empty() ? "unknown" : label;
 }
 
+// Protection may use only the latest matched detector class, never the motion
+// classifier, latched class or a previous unconfirmed class. Timing/epoch/age
+// validation remains the caller's separate gate.
+inline std::string ObservedMissionGroup(const CameraClassEvidence& evidence) {
+  const auto group = Normalize(evidence.observed_class, true);
+  return group != "unknown" && group == Normalize(evidence.observed_raw_class, true)
+             ? group : "unknown";
+}
+
 // Ported from Main FusionCamera.cpp:28-32 (8f93c22e)
 inline bool IsGroundNoise(const TrackedObject& object) {
   return object.camera.str_ObjectClass == "noise" || object.camera.str_ObjectClass == "지면노이즈";
@@ -167,6 +176,7 @@ inline void InvalidateObservation(TrackedObject& object, uint64 epoch) {
   object.camera.is_class_locked = false;
   object.camera.camera_observation_ns = 0;
   object.camera.camera_observation_epoch = epoch;
+  object.camera.observed_class = object.camera.observed_raw_class = "unknown";
 }
 
 // false when this epoch already applied an image at or after stamp_ns.
@@ -181,6 +191,7 @@ inline bool BeginObservation(TrackedObject& object, uint64 stamp_ns, uint64 epoc
   }
   object.camera.camera_observation_epoch = epoch;
   object.camera.camera_observation_ns = stamp_ns;
+  object.camera.observed_class = object.camera.observed_raw_class = "unknown";
   return true;
 }
 
@@ -188,6 +199,8 @@ inline bool BeginObservation(TrackedObject& object, uint64 stamp_ns, uint64 epoc
 inline void Observe(TrackedObject& object, const std::string& label, const std::string& yolo_label,
                     int initial_confirmations, int change_confirmations, bool mission_profile) {
   const std::string observed = Normalize(label, mission_profile);
+  object.camera.observed_class = observed;
+  object.camera.observed_raw_class = RawLabel(yolo_label);
   object.camera.class_miss_counter = 0;
   object.camera.is_class_locked = false;
 
@@ -227,6 +240,7 @@ inline void Observe(TrackedObject& object, const std::string& label, const std::
 
 // Ported from Main FusionClassPolicy.hpp:118-127 (8f93c22e)
 inline void Miss(TrackedObject& object, int miss_grace) {
+  object.camera.observed_class = object.camera.observed_raw_class = "unknown";
   ++object.camera.class_miss_counter;
   object.camera.last_seen_class = "unknown";
   object.camera.continuity_counter = 0;
@@ -253,6 +267,8 @@ inline void Copy(const TrackedObject& source, TrackedObject& target, bool unlock
   target.camera.class_miss_counter = source.camera.class_miss_counter;
   target.camera.camera_observation_ns = source.camera.camera_observation_ns;
   target.camera.camera_observation_epoch = source.camera.camera_observation_epoch;
+  target.camera.observed_class = source.camera.observed_class;
+  target.camera.observed_raw_class = source.camera.observed_raw_class;
   target.camera.is_class_locked = unlock ? false : source.camera.is_class_locked;
 }
 

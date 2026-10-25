@@ -28,32 +28,32 @@ import zlib
 
 EXECUTABLES = ('lidar_pipeline_node', 'lidar_replay')
 EXPORTED_LIBRARIES = ['asmc_lidar_frame_time', 'asmc_lidar_camera_core', 'asmc_lidar_camera_ros']
-PRIVATE_LIBRARIES = ('asmc_lidar_pipeline', 'asmc_lidar_runtime')
+PRIVATE_LIBRARIES = ('asmc_lidar_pipeline', 'asmc_lidar_runtime', 'asmc_lidar_hd_map_audit')
 # Plain executables (assert-based) of the pre-shadow package.
 LEGACY_PROGRAMS = ('asmc_lidar_camera_buffer_test', 'asmc_lidar_camera_calibration_test',
                    'asmc_lidar_geometry_boundary_test', 'asmc_lidar_frame_time_core_test',
                    'asmc_lidar_imu_selection_test')
 # Python unittest scripts registered with add_test: minimum number of cases.
 UNITTESTS = {'asmc_lidar_camera_calibration_hash_test': 2, 'asmc_lidar_camera_contract_test': 5,
-             'asmc_lidar_pipeline_contract_test': 10, 'asmc_lidar_object_markers_test': 6, 'asmc_lidar_monitor_core_test': 29}
+             'asmc_lidar_pipeline_contract_test': 10, 'asmc_lidar_object_markers_test': 6, 'asmc_lidar_monitor_core_test': 33}
 # catkin_add_gtest targets: minimum number of cases.
-GTESTS = {'asmc_lidar_test_tunnel_filter_core': 27, 'asmc_lidar_test_preprocessing': 18,
+GTESTS = {'asmc_lidar_test_tunnel_filter_core': 27, 'asmc_lidar_test_preprocessing': 21,
           'asmc_lidar_test_ground': 17, 'asmc_lidar_test_clustering': 15, 'asmc_lidar_test_obb': 24,
           'asmc_lidar_test_scan_frame': 11, 'asmc_lidar_test_tracker': 52,
           'asmc_lidar_test_pose_history': 32, 'asmc_lidar_test_gps_ingest': 15,
           'asmc_lidar_test_fusion_policy': 30, 'asmc_lidar_test_front_camera_fusion': 27,
           'asmc_lidar_test_tunnel_filter_stage': 7, 'asmc_lidar_test_pipeline': 15, 'asmc_lidar_test_source_time': 3,
           'asmc_lidar_test_stage_observer': 5, 'asmc_lidar_test_motion_display': 6,
-          'asmc_lidar_test_typed_output': 11, 'asmc_lidar_test_runtime': 16}
+          'asmc_lidar_test_typed_output': 11, 'asmc_lidar_test_runtime': 25, 'asmc_lidar_test_delivery_preview': 14}
 # rostest file stem -> (rosunit result name, minimum number of cases).
 ROSTESTS = {'test_camera_receiver_ros': ('camera_receiver_ros', 1),
-            'test_ros_lidar_pipeline_node': ('lidar_pipeline_node', 16),
+            'test_ros_lidar_pipeline_node': ('lidar_pipeline_node', 17),
             'test_ros_monitor_node': ('monitor_node', 7)}
 
 
 def required_tests():
     """ctest names: catkin prefixes gtest/rostest entries with _ctest_<package>_<kind>_."""
-    names = list(LEGACY_PROGRAMS) + list(UNITTESTS)
+    names = list(LEGACY_PROGRAMS) + list(UNITTESTS) + ['asmc_lidar_hd_map_audit_equivalence']
     names += ['_ctest_asmc_lidar_gtest_%s' % name for name in GTESTS]
     names += ['_ctest_asmc_lidar_rostest_%s.test' % stem for stem in ROSTESTS]
     return names

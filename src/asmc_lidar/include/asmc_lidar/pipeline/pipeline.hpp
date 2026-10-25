@@ -27,6 +27,7 @@ namespace pipeline {
 struct PipelineConfig {
   RangeConfig range;
   RoiConfig roi;
+  HeightRoiConfig height_roi;
   float voxel_leaf_m = 0.1f;
   // Roll+pitch leveling is the shadow default. false = Main's pitch-only
   // common profile (lidar_level_roll=false).
@@ -49,6 +50,7 @@ struct StageCounts {
   int roi_points = 0;
   int voxel_points = 0;
   int leveled_points = 0;
+  int height_kept_points = 0, height_removed_points = 0;
   int ground_kept_points = 0;   // Main g_LidarStageProfile.ransac_points
   int tunnel_removed_points = 0;
   int cluster_input_points = 0;  // after the tunnel stage (== ground_kept when OFF)
@@ -64,7 +66,7 @@ struct StageCounts {
 };
 
 struct StageTimings {
-  double roi_ms = 0, voxel_ms = 0, level_ms = 0, ground_ms = 0, tunnel_ms = 0;
+  double roi_ms = 0, voxel_ms = 0, level_ms = 0, height_ms = 0, ground_ms = 0, tunnel_ms = 0;
   double cluster_ms = 0, detection_ms = 0, tracking_ms = 0, post_ms = 0, total_ms = 0;
 };
 

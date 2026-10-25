@@ -12,7 +12,7 @@ from asmc_hd_map.drivable_area_audit import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SOURCE_PATH = REPO_ROOT / "src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml"
 MANIFEST_PATH = REPO_ROOT / "src/asmc_hd_map/config/kcity2025_drivable_area_input_audit.yaml"
-REPORT_PATH = REPO_ROOT / "docs/records/hd-map/kcity2025-drivable-input-v1.md"
+REPORT_PATH = REPO_ROOT / "docs/records/hd-map/2026-10-25-drivable-input.md"
 
 
 class DrivableAreaAuditWorkspaceTest(unittest.TestCase):
@@ -24,9 +24,9 @@ class DrivableAreaAuditWorkspaceTest(unittest.TestCase):
     def test_frozen_geometry_and_prior_invariants(self):
         self.assertEqual(
             self.document["reviewed_hd_map"]["geometry_sha256"],
-            "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf",
+            "e836f762dbbad4f02aaa6b37f486439aa02d3d5f961fa72b162cde4ebd24a3b3",
         )
-        self.assertEqual(self.document["reviewed_hd_map"]["lane_marking_count"], 121)
+        self.assertEqual(self.document["reviewed_hd_map"]["lane_marking_count"], 127)
         self.assertEqual(self.document["reviewed_hd_map"]["stopline_count"], 7)
         self.assertEqual(self.document["legacy_drivable_prior"]["checkpoint_centers_inside"], 15)
         self.assertEqual(self.document["legacy_drivable_prior"]["checkpoint_count"], 15)

@@ -41,7 +41,7 @@ GPS가 끊기면 현재값을 무효화하고 정적 전역 정보와 명시적�
 | `global/lanes` | 70개 차로 polygon/centerline, link ID·선후행·인접 관계·차로 번호 | 현재 후보 또는 전체 경로와 교차하는 차로 선택 |
 | `global/drivable_areas` | 102개 영역, 교차로·support lane 포함 | 모든 후보 경로와 차량 몸체의 주행가능 여부 검사 |
 | `global/drivable_grid` | 3085×7232, 0.2 m, `0=free`, `100=nonfree` | 필요 시 한번 받아 빠른 cell 조회; raster는 vector 파생물 |
-| `global/lane_markings` | 물리 차선 121 + 정지선 7; 색·실선/점선·역할 | 도색 정책과 정지선 연결, 신호 색상은 별도 인지에서 수신 |
+| `global/lane_markings` | 물리 차선127 + 정지선7; 색·실선/점선·역할 | 도색 정책과 정지선 연결, 신호 색상은 별도 인지에서 수신 |
 | `global/mission_zones` | 미션/정책 15개, effective speed 39개 link | ID별 payload 캐시; 구간·속도·인지 활성 조건 선택 |
 | `global/checkpoints` | 15개 공식 pose, 3 m 반경, yaw, station | 체크포인트 통과와 경계 연결 |
 | `global/route` | 공식 path 4430점 + XY 누적거리, route SHA·origin | HD station 정본, 경계 좌표 재투영 기준 |
@@ -94,14 +94,17 @@ HD가 camera 노드를 직접 켜고 끄지는 않는다. 판제가 유효한 co
 
 ## 2. 교차로 패치와 현재 main 지도 갱신
 
-HD 제품은 `kcity2025_static_junction_widened_drivable_v6`다.
+HD 제품은 `kcity2025_reviewed_high_speed_adjacent_drivable_v7`다.
 main Frenet의 `config/hd_map/drivable.json`은 이전
 `kcity2025_roundabout_extended_drivable_v5` 사본이다. A226(`A2256W000226`)과
 A111(`A2256W000111`)의 교차로 주행 여유 및 대응 surface patch가 다르다.
-개수만 비교하면 둘 다 Lane 70·Area 102라서 차이를 놓친다.
+기존 v6는 v5와 둘 다 Lane70·Area102여서 개수만으로 차이를 놓칠 수 있었다.
+현재 v7은 A029·A175·A406을 추가해 Lane73·Area115이며, 기존102개 면과 ID를 유지한다.
+물리 차선도121개를 보존하고5개를 보완했다. A029 왼쪽은 현재 링크 폭을 이용한 보완선이며
+관측 원본과 구분한다. planner 파일 사본을 이번 검수 PR에서 자동 교체하지 않는다.
 
 현재 geometry SHA는
-`01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf`다.
+`521b1fde181a0c10ce71696f7f05010138c041dd067ad531dce23ff5da6ad24f`다.
 `DrivableArea.intersection_guarded=true`의 교차로·합류 road mesh를 차선 안쪽으로 다시
 잘라내지 않는다. support link를 공식 전역경로의 순서에 무조건 추가하거나, 모든 미션을
 현재 support link ID 하나로만 활성화하지 않는다. 실제 차로 ID와 공식 route station을 구분한다.

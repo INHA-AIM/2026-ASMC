@@ -149,11 +149,30 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   counts.leveled_points = static_cast<int>(leveled_cloud->points.size());
   if (debug) result.digests.leveled = CloudDigest(*leveled_cloud);
 
+  // Cheap gravity-aligned cap before RANSAC/cluster/OBB. The mount's vertical
+  // lever is rotated once per scan; no GPS or per-point map projection is used.
+  CloudPtr height_cloud=leveled_cloud;
+  std::vector<int> height_kept_indices;
+  begin=Clock::now();
+  if(config_.height_roi.enabled) {
+    height_cloud.reset(new Cloud);
+    const auto mount=ScanFrame::SensorMount(config_.vehicle);
+    const auto upright_from_base=(leveling*mount.rotation().transpose()).eval();
+    const double sensor_height=config_.height_roi.nominal_base_height_m+
+        (upright_from_base*mount.translation()).z();
+    HeightRoi(leveled_cloud,height_cloud,sensor_height,config_.height_roi,height_kept_indices);
+  }
+  counts.height_kept_points=static_cast<int>(height_cloud->size());
+  counts.height_removed_points=counts.leveled_points-counts.height_kept_points;
+  timings.height_ms=Ms(begin,Clock::now());
+
   // Main NormalVectorFiltering (LidarProcess.cpp:211-216). ransac_points is
   // taken here, before Clustering pushes its dummy point.
   std::vector<int> ground_kept_indices;
   begin = Clock::now();
-  ground_.Filter(leveled_cloud, ground_cloud, &ground_kept_indices);
+  ground_.Filter(height_cloud, ground_cloud, &ground_kept_indices);
+  if(config_.height_roi.enabled)
+    for(auto& i:ground_kept_indices)i=height_kept_indices.at(static_cast<std::size_t>(i));
   end = Clock::now();
   timings.ground_ms = Ms(begin, end);
   counts.ground_kept_points = static_cast<int>(ground_cloud->points.size());
@@ -286,6 +305,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
                          *roi_cloud,
                          *voxeled_cloud,
                          *leveled_cloud,
+                         height_kept_indices,
                          *ground_cloud,
                          ground_kept_indices,
                          tunnel_ ? pre_tunnel_kept_indices : ground_kept_indices,

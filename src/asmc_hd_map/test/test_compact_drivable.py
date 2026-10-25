@@ -13,6 +13,8 @@ from asmc_hd_map.compact_drivable import (
     intersection_link_widening,
     lane_boundary_polygon,
     lane_width_polygon,
+    reviewed_non_drivable_islands,
+    subtract_reviewed_islands,
 )
 
 
@@ -26,6 +28,30 @@ def link(idx, road, points, link_type="6"):
 
 
 class CompactDrivableUnitTest(unittest.TestCase):
+    def test_reviewed_island_requires_closed_unique_chains_and_preserves_other_geometry(self):
+        from shapely.geometry import Polygon
+        reviewed = {"features": [
+            {"id": "left", "attributes": {"functional_role": "left"},
+             "geometry": {"type": "LineString", "coordinates": [[0, 0], [-1, 2], [0, 4]]}},
+            {"id": "right", "attributes": {"functional_role": "right"},
+             "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 2], [0, 4]]}},
+        ]}
+        policy = [{"id": "fixture", "boundary_chains": [["left"], ["right"]]}]
+        islands = reviewed_non_drivable_islands(reviewed, policy)
+        records = [{"id": "near", "polygon": [[-2, -1], [.5, -1], [.5, 5], [-2, 5]]},
+                   {"id": "far", "polygon": [[10, 0], [12, 0], [12, 5], [10, 5]]}]
+        original_far = list(records[1]["polygon"])
+        subtract_reviewed_islands(records, islands)
+        self.assertEqual(records[1]["polygon"], original_far)
+        self.assertEqual(records[0]["id"], "near")
+        self.assertLess(Polygon(_p[:2] for _p in records[0]["polygon"]).intersection(
+            Polygon(_p[:2] for _p in islands[0]["polygon"])).area, 1e-6)
+        with self.assertRaisesRegex(CompactDrivableError, "unique"):
+            reviewed_non_drivable_islands({"features": reviewed["features"] * 2}, policy)
+        reviewed["features"][1]["geometry"]["coordinates"][-1] = [0, 5]
+        with self.assertRaisesRegex(CompactDrivableError, "tips do not close"):
+            reviewed_non_drivable_islands(reviewed, policy)
+
     def test_same_direction_siblings_rejects_opposite_and_explicit_exclusion(self):
         links = {
             "route": link("route", "road", [(0, 0), (10, 0)]),

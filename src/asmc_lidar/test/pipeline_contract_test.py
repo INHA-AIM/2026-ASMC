@@ -68,6 +68,31 @@ def without_comments(text, marker):
 
 
 class PipelineContractTest(unittest.TestCase):
+    def test_map_bundle_refresh_preserves_filter_audit_and_off_modes(self):
+        import importlib.util
+        import tempfile
+        import types
+        from unittest import mock
+        def prepare(_config, output, compressed=False):
+            output.mkdir()
+            (output/'manifest.json').write_text('{}')
+            return {'manifest_sha256': 'b'*64}
+        with tempfile.TemporaryDirectory() as temporary:
+            package=Path(temporary);(package/'config').mkdir()
+            spec=importlib.util.spec_from_file_location('sync_default_hd_map', PACKAGE/'tools/sync_default_hd_map.py')
+            module=importlib.util.module_from_spec(spec)
+            with mock.patch.dict('sys.modules', {'prepare_hd_map_audit':types.SimpleNamespace(prepare=prepare)}):
+                spec.loader.exec_module(module)
+            module.PKG=package
+            for mode in ('filter','audit','off'):
+                config=package/'config/lidar_pipeline.yaml'
+                config.write_text('hd_map_audit:\n  mode: "'+mode+'"\n  manifest: "old.json"\n  manifest_sha256: "'+('a'*64)+'"\n')
+                module.sync()
+                updated=yaml.safe_load(config.read_text())['hd_map_audit']
+                self.assertEqual(updated['mode'],mode)
+                self.assertEqual(updated['manifest_sha256'],'b'*64)
+                module.sync(check=True)
+
     def test_package_xml_has_no_forbidden_dependency(self):
         package = ET.parse(PACKAGE / 'package.xml').getroot()
         dependencies = {node.text.strip() for node in package if node.tag.endswith('depend') and node.text}

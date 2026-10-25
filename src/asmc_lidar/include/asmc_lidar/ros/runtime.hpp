@@ -14,6 +14,8 @@
 //   -> typed local (base_link) / map arrays.
 
 #include <asmc_lidar/fusion/front_camera_fusion.hpp>
+#include <asmc_lidar/filtering/hd_map_audit.hpp>
+#include <asmc_lidar/filtering/delivery_preview.hpp>
 #include <asmc_lidar/pipeline/pipeline.hpp>
 #include <asmc_lidar/geometry/pose_history.hpp>
 
@@ -39,6 +41,13 @@ struct RuntimeConfig {
   bool enable_camera_fusion = true;
   pipeline::fusion::FusionConfig fusion;
   std::string stamp_provenance = "bridge_receive_ns";
+  // Post-fusion off/audit/filter policy. Loaded once before runtime creation; shared
+  // read-only across explicit resets, never loaded while holding epoch_mutex.
+  std::string hd_map_audit_mode = "off", hd_map_manifest, hd_map_manifest_sha256;
+  std::string hd_map_audit_error;
+  std::shared_ptr<const filtering::HdMapAudit> hd_map_audit;
+  filtering::DeliveryPolicy delivery_preview;
+
   // Paths/identity resolved by LoadRuntimeConfig (for diagnostics).
   std::string config_path, config_sha256, mount_config_path, mount_config_sha256;
   std::string config_id, calibration_id;
@@ -120,6 +129,7 @@ struct ScanOutput {
   pipeline::fusion::FusionReport fusion;
   bool fusion_ran = false;
   TypedOutput::Arrays arrays;
+  filtering::AuditReport hd_map_audit;
   double wait_ms = 0., total_ms = 0.;
 };
 
@@ -161,6 +171,8 @@ class LidarRuntime {
   // LiDAR callback thread; ProcessScan/pipeline()/output() to one worker.
 
  private:
+  void Audit(ScanOutput& out) const;
+  void FilterDelivery(ScanOutput& out) const;
   RuntimeConfig config_;
   pipeline::PoseHistory pose_;
   pipeline::GpsIngest gps_;

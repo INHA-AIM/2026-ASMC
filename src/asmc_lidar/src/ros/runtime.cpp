@@ -4,9 +4,11 @@
 #include <asmc_lidar/ros/runtime.hpp>
 
 #include <chrono>
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 namespace asmc {
@@ -167,6 +169,7 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
     // Main skips LidarProcess: the tracker is not advanced.
     out.reason = pose_reason;
     out.arrays = output_.Invalid(scan_stamp, pose_reason);
+    Audit(out);
     out.total_ms = Ms(start, Clock::now());
     return out;
   }
@@ -181,6 +184,7 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
   if (!out.processed) {
     out.reason = "empty_or_invalid_lidar_input";
     out.arrays = output_.Invalid(scan_stamp, out.reason);
+    Audit(out);
     out.total_ms = Ms(start, Clock::now());
     return out;
   }
@@ -199,8 +203,142 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
     UpdateAABB(out.result.objects);
   }
   out.arrays = output_.Observed(out.result, out.result.objects);
+  Audit(out);
+  FilterDelivery(out);
   out.total_ms = Ms(start, Clock::now());
   return out;
+}
+
+void LidarRuntime::Audit(ScanOutput& out) const {
+  if (config_.hd_map_audit_mode == "off") return;
+  const auto start = Clock::now();
+  auto& report = out.hd_map_audit;
+  report.enabled = true;
+  report.minimum_support_points=config_.delivery_preview.minimum_points;
+  report.minimum_road_points=config_.delivery_preview.minimum_road_points;
+  report.minimum_road_ratio=config_.delivery_preview.minimum_road_ratio;
+  report.minimum_obb_road_ratio=config_.delivery_preview.minimum_obb_road_ratio;
+  report.road_inset_m=config_.hd_map_audit?config_.hd_map_audit->road_inset_m():config_.delivery_preview.road_inset_m;
+  report.roof_limit_base_z=config_.delivery_preview.roof_base_z_m+config_.delivery_preview.roof_margin_m;
+  if(config_.delivery_preview.enabled) report.preview_config_id=config_.config_id;
+  report.bundle_sha256 = config_.hd_map_manifest_sha256;
+  const auto& mapped = out.arrays.map;
+  const bool valid_map = out.arrays.accepted && (mapped.status == 1 || mapped.status == 2)
+                         && out.result.context.map_pose.valid;
+  const auto& objects = valid_map ? mapped : out.arrays.local;
+  const auto& audit = config_.hd_map_audit;
+  report.reason = audit ? (objects.objects.empty() ?
+      (valid_map ? "valid_empty" : "input_or_pose_unavailable") : "evaluated") : "map_audit_unavailable";
+  report.available = bool(audit);
+  if (audit) {
+    report.map_id = audit->map_id(); report.map_sha256 = audit->map_sha256();
+    report.bundle_sha256 = audit->bundle_sha256(); report.policy_sha256 = audit->policy_sha256();
+  }
+  // Identity is derived from the pinned bundle and effective map-origin config,
+  // not a new claim that the sensor measured a map ID or a position error bound.
+  filtering::AuditFrame frame;
+  frame.frame_id = valid_map ? "map" : objects.header.frame_id;
+  frame.status = objects.status;
+  frame.map_id = report.map_id;
+  for (int i=0;i<3;++i) frame.map_origin[i] = config_.gps.map_origin[i];
+  frame.stamp_ns = static_cast<std::int64_t>(objects.header.stamp.toNSec());
+  frame.pose_stamp_ns = frame.stamp_ns;
+  frame.pose_valid = valid_map;
+  const auto& stamps = out.result.context.map_pose.sample_stamps;
+  if (!stamps.empty()) frame.source_age_ms = double(frame.stamp_ns -
+      static_cast<std::int64_t>(*std::max_element(stamps.begin(), stamps.end()))) / 1e6;
+  report.pose_source_age_ms=frame.source_age_ms;
+  report.pose_method=out.result.context.map_pose.reason;
+  // Deliberately false: no independent positional bound/approach validation exists.
+  frame.position_error_verified = false; frame.mission_scope_verified = false;
+  report.objects.reserve(objects.objects.size());
+  const auto base_from_level=asmc::lidar::base_from_input(out.result.context);
+  const Pose map_from_level=base_from_level ?
+      Pose(out.result.context.map_pose.map_from_base * *base_from_level) : Pose::Identity();
+  for (const auto& obj : objects.objects) {
+    filtering::AuditObject input;
+    input.track_id = obj.track_id;
+    input.observation_state = obj.observation_state == asmc_msgs::LidarObject::PREDICTED ? "predicted" : "observed";
+    for (const auto& p : obj.obb_corners) input.corners.push_back({p.x,p.y,p.z});
+    try {
+        const auto object_start=Clock::now();
+        filtering::AuditDecision decision;
+        if(audit) decision=audit->Evaluate(frame,input);
+        else {
+          decision.track_id=input.track_id;decision.input_state=input.observation_state;
+          decision.reason="map_audit_unavailable";
+        }
+        if(config_.delivery_preview.enabled) {
+          const auto source=std::find_if(out.result.objects.begin(),out.result.objects.end(),
+              [&](const auto& o){return o.tracking.s32_Id==obj.track_id;});
+          filtering::PointEvidence evidence;
+          std::string matched_group="unknown";
+          double bottom=std::numeric_limits<double>::quiet_NaN();
+          if(source!=out.result.objects.end()&&base_from_level) {
+            bottom=INFINITY;
+            for(const auto& p:source->detection.obb_corners_level)
+              bottom=std::min(bottom,((*base_from_level)*Vec(p.x,p.y,p.z)).z());
+            for(const auto& p:source->detection.pcl_ClusterPoints.points) {
+              const Vec point(p.x,p.y,p.z);
+              const double base_z=base_from_level->linear().row(2).dot(point)+base_from_level->translation().z();
+              const Vec mapped=valid_map?map_from_level*point:Vec(NAN,NAN,NAN);
+              if(audit) audit->Accumulate(evidence,{mapped.x(),mapped.y(),mapped.z()},base_z);
+              else {
+                ++evidence.total;++evidence.unknown;
+                if(std::isfinite(base_z)){++evidence.finite;evidence.min_base_z=std::min(evidence.min_base_z,base_z);}
+              }
+            }
+            const auto& c=source->camera;
+            const bool positive=filtering::PositiveCameraEvidence(frame.stamp_ns,c.camera_observation_ns,
+              fusion_?fusion_->consumer_epoch():0,c.camera_observation_epoch,c.class_miss_counter,
+              config_.delivery_preview.camera_age_ms,config_.fusion.max_time_offset_s*1e3);
+            const auto group=pipeline::fusion_class::ObservedMissionGroup(c);
+            decision.camera_observed_group=group;
+            decision.camera_observed_raw=c.observed_raw_class;
+            if(positive)matched_group=group;
+          }
+          filtering::ApplyDeliveryPreview(decision,evidence,config_.delivery_preview,valid_map&&bool(audit),matched_group,bottom);
+        }
+        decision.comparison_ms=Ms(object_start,Clock::now());
+        report.objects.push_back(std::move(decision));
+    } catch (const std::exception&) {
+      // Diagnostic failure is visible but cannot suppress a scan or mutate tracks.
+      filtering::AuditDecision decision;
+      decision.track_id=input.track_id; decision.input_state=input.observation_state;
+      decision.reason="map_audit_calculation_error"; report.objects.push_back(std::move(decision));
+      report.reason="calculation_error";
+    }
+  }
+  report.calculation_ms = Ms(start, Clock::now());
+}
+
+void LidarRuntime::FilterDelivery(ScanOutput& out) const {
+  auto& report=out.hd_map_audit;
+  report.delivery_input_count=out.arrays.local.objects.size();
+  report.delivery_output_count=report.delivery_input_count;
+  if(config_.hd_map_audit_mode!="filter"||!report.enabled||!out.arrays.accepted||
+     (out.arrays.local.status!=asmc_msgs::LidarObjectArray::OBSERVED&&
+      out.arrays.local.status!=asmc_msgs::LidarObjectArray::OBSERVED_EMPTY))return;
+  report.delivery_applied=true;
+  std::unordered_set<int> excluded;
+  for(auto& d:report.objects) {
+    d.delivery_excluded=d.preview_enabled&&d.preview_decision=="exclude_candidate";
+    if(d.delivery_excluded)excluded.insert(d.track_id);
+  }
+  // One decision set for both coordinate frames and both observation wrappers.
+  // Stable in-place compaction: no cloud copies, tracker deletion or OBB edits.
+  const auto filter=[&](auto& array){
+    const auto before=array.objects.size();
+    array.objects.erase(std::remove_if(array.objects.begin(),array.objects.end(),
+      [&](const auto& obj){return excluded.count(obj.track_id);}),array.objects.end());
+    if(before&&!array.objects.size()&&array.status==asmc_msgs::LidarObjectArray::OBSERVED){
+      array.status=asmc_msgs::LidarObjectArray::OBSERVED_EMPTY;
+      array.reason="delivery_filtered_empty";
+    }
+  };
+  filter(out.arrays.local);filter(out.arrays.map);
+  report.delivery_output_count=out.arrays.local.objects.size();
+  report.delivery_excluded_count=report.delivery_input_count-report.delivery_output_count;
 }
 
 }  // namespace runtime

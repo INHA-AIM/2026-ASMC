@@ -65,7 +65,8 @@ class DebugPublisher : public pipeline::StageObserver {
   const DebugPublisherConfig& config() const { return config_; }
 
   // Pipeline worker thread, before LidarRuntime::ProcessScan of this scan.
-  void SetScanContext(const std::string& sensor_frame, std::uint64_t seq, std::int64_t arrival_ros_ns);
+  void SetScanContext(const std::string& sensor_frame, std::uint64_t seq, std::int64_t arrival_ros_ns,
+                      const std::string& session="", std::uint64_t generation=1, const std::string& config_id="");
   // StageObserver (pipeline worker thread, inside Pipeline::Process).
   bool Begin(std::int64_t stamp_ns) override;
   void OnScan(const pipeline::StageView& view) override;
@@ -93,10 +94,13 @@ class DebugPublisher : public pipeline::StageObserver {
   struct Snapshot {
     std::int64_t stamp_ns = 0, arrival_ns = 0;
     std::uint64_t seq = 0;
-    std::string sensor_frame;
+    std::string sensor_frame, producer_session_id, config_id;
+    std::uint64_t generation=1;
     bool stages = false;  // stage clouds captured (scan reached the pipeline)
     StageSample raw, roi, voxel, leveled;
     std::vector<std::uint8_t> leveled_label;   // per sent leveled point
+    std::vector<std::uint8_t> raw_label;
+    std::vector<std::int32_t> leveled_track;  // exact support ownership, -1 if none/ambiguous
     std::vector<std::int32_t> leveled_cluster;  // per sent leveled point, -1 = none
     pipeline::StageCounts counts;
     pipeline::StageTimings timings;
@@ -116,6 +120,7 @@ class DebugPublisher : public pipeline::StageObserver {
     bool fusion_ran = false, camera_active = false;
     std::string camera_reason;
     TypedOutput::Arrays arrays;
+    filtering::AuditReport hd_map_audit;
     double capture_ms = 0.;
   };
 
@@ -131,10 +136,15 @@ class DebugPublisher : public pipeline::StageObserver {
   DebugPublisherConfig config_;
   bool use_roll_ = true, tunnel_enabled_ = false;
   pipeline::VehicleSpec vehicle_;  // outline/LiDAR position for the page
+  pipeline::RangeConfig range_;
+  pipeline::RoiConfig roi_;
+  pipeline::HeightRoiConfig height_roi_;
   ros::Publisher raw_pub_, roi_pub_, voxel_pub_, leveled_pub_, scan_pub_;
 
   // Worker-thread state.
   std::string sensor_frame_;
+  std::string producer_session_id_, config_id_;
+  std::uint64_t generation_=1;
   std::uint64_t seq_ = 0;
   std::int64_t arrival_ns_ = 0;
   std::int64_t last_admit_steady_ns_ = 0;

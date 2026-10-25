@@ -65,6 +65,12 @@ lidar:
     MaxY: 20.0
     MinZ: -2.0
     MaxZ: 3.0
+  # Flat K-City course. Upright height after IMU leveling, before ground/cluster.
+  # A tall truck retains its lower collision support; upper shape is truncated.
+  height_roi:
+    enabled: true
+    max_height_above_ground_m: 2.50
+    nominal_base_height_m: 0.36
   # Main setting.yaml LiDAR.Clustering (Threshold: 300 is never read by Main).
   Clustering:
     Enabled: true
@@ -150,3 +156,32 @@ experimental:
     enabled: false
     suppress_ceiling: true
     suppress_wall: true
+
+# Post-fusion delivery filter. Tracker/OBB remain raw; both published arrays use
+# the same keep set. audit computes decisions only, off bypasses this stage.
+# Missing/corrupt map or invalid pose preserves objects for the map rule;
+# the local, guarded overhead rule remains independent of GPS/map availability.
+hd_map_audit:
+  mode: "filter"
+  manifest: "config/hd_map_audit/manifest.json"
+  manifest_sha256: "13c517e3fffee3bfd64fabdb6f473c6c668d3d87e2142c38ff756e3650b98f2e"
+  source_product: "../asmc_hd_map/config/kcity2025_compact_drivable_map.json"
+  # Positive camera vehicle/dynamic evidence is protected
+  # in all zones; raw point support is voxel/filter/cluster output, not GUI samples.
+  # Policy yolo_points_and_obb_subcell_v5: latest matched vehicle or dynamic_obstacle
+  # only. LiDAR motion state and proximity to a mission region never protect an
+  # outside cluster. Legacy mission exceptions remain OBB comparison metadata.
+  delivery_preview:
+    enabled: true
+    roof_base_z_m: 1.284  # verified mesh1.644m + road z=-0.36m; not UDP sizeZ
+    roof_margin_m: 0.60
+    minimum_points: 10
+    minimum_road_points: 3
+    minimum_road_ratio: 0.10
+    minimum_obb_road_ratio: 0.10
+    # Continuous 10cm union-boundary inset; point queries do not round up to a
+    # 20cm cell. OBB area weights boundary cells at 5cm subcell centers.
+    # KEEP requires >=3 inset-road points AND >=10% of full support AND
+    # >=10% OBB footprint overlap with that same inset road mask.
+    road_inset_m: 0.10
+    camera_age_ms: 500.0

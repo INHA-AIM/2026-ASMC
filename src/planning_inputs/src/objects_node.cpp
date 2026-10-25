@@ -114,6 +114,12 @@ class ObjectsNode {
     publisher_=node_.advertise<DetectedObjectArray>(output,2);
     std::string policy;
     private_.param<std::string>("source_policy",policy,"validated_lidar");
+    // asmc_lidar 전환 인계: source_policy 문자열/토픽만 바꾸어 새 LidarObservation을
+    // 연결하지 않는다. 공용 타입·session/generation·frame/시각·velocity validity를
+    // 처리하는 입력 경계를 먼저 검증한다. 전환 후 인지에서 소유한 road/static 필터와
+    // OBB clipping은 이 어댑터에서 중복 적용하지 않는다. TTC/추종/정지/회피·센서 장애
+    // 대응은 판제에 유지한다. 현행 Main 경로는 그 전까지 유지한다.
+    // 정본: docs/handoffs/lidar-migration.md#판제-소비-전환-시-정리할-중복-처리
     if(policy=="validated_lidar") {
       input_=node_.subscribe(input,2,&ObjectsNode::ValidatedObjects,this);
     } else if(policy=="main_raw") {
@@ -142,6 +148,8 @@ class ObjectsNode {
     }
     last_source_=t;
     // Preserve Main's exact filtered geometry and applied velocity.
+    // 이 규칙은 현재 legacy 계약이다. 새 asmc_lidar 경로는 원본 OBB/validity를
+    // 보존하며, 기존 Main clipping이나 진단 JSON의 운동 상태를 재적용하지 않는다.
     publisher_.publish(out);
   }
   void State(const asmc_msgs::VehicleState::ConstPtr& s) {

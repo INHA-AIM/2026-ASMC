@@ -56,6 +56,12 @@ class FakeClock(object):
 
 
 class CloudParsingTest(unittest.TestCase):
+    def test_exact_support_track_survives_binary_cloud_decode(self):
+        data=struct.pack('<ffffBxxxii',1,2,3,4,3,7,42)
+        cloud=core.parse_point_cloud(fields(True)+[('track',24,5,1)],28,1,1,data)
+        np.testing.assert_array_equal(cloud['track'],np.array([42],np.int32))
+        np.testing.assert_array_equal(cloud['label'],np.array([3],np.uint8))
+
     def test_xyzi_and_labels(self):
         pts = [(1.0, 2.0, 3.0, 9.0), (-1.5, 0.5, 0.25, 1.0), (0.0, 0.0, -1.0, 4.0)]
         cloud = core.parse_point_cloud(fields(True), 24, 3, 1, cloud_bytes(pts, True))
@@ -139,6 +145,41 @@ class SceneStoreTest(unittest.TestCase):
         self.assertIsNone(self.store.add_scan('{"schema":"other","stamp_ns":1}'))
         self.assertIsNone(self.store.add_scan('not json'))
         self.assertEqual(self.store.counters['bad'], 2)
+
+
+class MetadataFirstTest(unittest.TestCase):
+    def test_new_obb_is_visible_without_waiting_for_clouds(self):
+        clock=FakeClock();store=core.SceneStore(clock=clock,metadata_first=True)
+        store.add_scan(scan_json(1,{'raw':2},extra={'tracks':[{'id':7}]}))
+        before=store.latest();self.assertEqual(before.stamp_ns,1);self.assertEqual(before.meta['tracks'][0]['id'],7)
+        self.assertEqual(before.payload,b'');self.assertEqual(before.missing,['raw'])
+        clock.t+=.2
+        cloud=core.parse_point_cloud(fields(False),16,2,1,cloud_bytes([(1,0,0,1),(2,0,0,1)],False))
+        store.add_cloud('raw',1,cloud);after=store.latest()
+        self.assertEqual(after.stamp_ns,1);self.assertGreater(after.frame_seq,before.frame_seq)
+        self.assertEqual(after.created,before.created);self.assertEqual(before.payload,b'')
+        self.assertEqual(after.missing,[])
+
+    def test_late_old_cloud_cannot_replace_new_object_scene(self):
+        store=core.SceneStore(metadata_first=True)
+        store.add_scan(scan_json(1,{'raw':1}));store.add_scan(scan_json(2,{'raw':1}))
+        cloud=core.parse_point_cloud(fields(False),16,1,1,cloud_bytes([(1,0,0,1)],False))
+        store.add_cloud('raw',1,cloud)
+        self.assertEqual(store.latest().stamp_ns,2)
+        self.assertEqual(store.latest().payload,b'')
+
+    def test_generation_change_rejects_old_metadata_and_ambiguous_cloud(self):
+        store=core.SceneStore(metadata_first=True)
+        def meta(stamp,session,generation):
+            return scan_json(stamp,{'raw':1},extra={'producer_session_id':session,'generation':generation})
+        store.add_scan(meta(1,'a',1));store.add_scan(meta(2,'a',2))
+        self.assertIsNone(store.add_scan(meta(3,'a',1)))
+        self.assertEqual(store.latest().stamp_ns,2)
+        store.add_scan(meta(1,'b',1))
+        self.assertIsNone(store.add_scan(meta(3,'a',2)))
+        cloud=core.parse_point_cloud(fields(False),16,1,1,cloud_bytes([(1,0,0,1)],False))
+        store.add_cloud('raw',1,cloud)
+        self.assertEqual(store.latest().payload,b'')
 
 
 class FrameTest(unittest.TestCase):

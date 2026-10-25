@@ -54,6 +54,12 @@ PlanningObjectFilter::PlanningObjectFilter(ros::NodeHandle& p) {
 }
 void PlanningObjectFilter::Apply(const asmc_msgs::TrackedObjectArray& source,
                                 DetectedObjectArray* output) {
+  // 이관 인계: 현재 main_raw 선택 경로의 legacy publication 필터다.
+  // asmc_lidar의 인지 소유 필터가 검증·활성화된 경로에는 road/known-static/structure와
+  // 아래 OBB clipping을 다시 적용하지 않는다. 기존 Main 소비·복구 경로가 남아 있는
+  // 동안 이 구현을 먼저 삭제하지 말고, 판제 입력 전환 PR에서 호출부·설정을 함께 정리한다.
+  // 실제 제외가 OFF인 audit-only 구현을 필터 완료로 간주하지 않는다.
+  // 정본: docs/handoffs/lidar-migration.md#판제-소비-전환-시-정리할-중복-처리
   // Conversion is atomic and preserves source order; validate before filtering.
   if(!output || source.objects.size()!=output->objects.size())
     throw std::runtime_error("Planning filter source/output alignment mismatch");

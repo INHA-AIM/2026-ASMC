@@ -53,7 +53,7 @@ class RouteCurationTest(unittest.TestCase):
                 "stage14_return_332_to_finish",
             ])
             self.assertEqual(summary["planned_segment_count"], 0)
-            self.assertEqual(summary["selected_marking_count"], 121)
+            self.assertEqual(summary["selected_marking_count"], 127)
             self.assertTrue(summary["stoplines_included"])
             self.assertEqual(summary["selected_stopline_count"], 7)
             self.assertEqual(
@@ -87,7 +87,7 @@ class RouteCurationTest(unittest.TestCase):
                 "A2256W000866", "A2256W000054", "A2256W000846",
                 "A2256W000411", "A2256W000420", "A2256W000408",
                 "A2256W000445", "A2256W000153",
-                "A2256W000175", "A2256W000406", "A2256W000409",
+                "A2256W000029", "A2256W000175", "A2256W000406", "A2256W000409",
                 "A2256W000410", "A2256W000179", "A2256W000430",
                 "A2256W000434", "A2256W000431", "A2256W000433",
                 "A2256W000422", "A2256W000435", "A2256W000421",
@@ -902,18 +902,18 @@ class RouteCurationTest(unittest.TestCase):
                 and feature["attributes"]["curation_segment_id"]
                 == "stage12_high_speed_entry_and_body"
             ]
-            self.assertEqual(len(stage12), 31)
+            self.assertEqual(len(stage12), 37)
             self.assertEqual(
                 {feature["attributes"]["color"] for feature in stage12},
                 {"white"},
             )
             self.assertEqual(
                 sum(feature["attributes"]["pattern"] == "broken" for feature in stage12),
-                12,
+                16,
             )
             self.assertEqual(
                 sum(feature["attributes"]["pattern"] == "solid" for feature in stage12),
-                19,
+                21,
             )
             self.assertFalse(any(
                 feature["provenance"]["source_id"] in {

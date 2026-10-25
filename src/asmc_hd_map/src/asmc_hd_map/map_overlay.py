@@ -8,6 +8,20 @@ from typing import Iterable
 import numpy as np
 
 
+def feature_paint_segments(feature):
+    """Physical paint only; shared by RViz and the LiDAR web overlay."""
+    if feature.get('feature_type') not in ('lane_marking','lane_boundary','stopline'):
+        return np.zeros((0,2,2),dtype=np.float64)
+    points=np.asarray((feature.get('geometry') or {}).get('coordinates',[]),dtype=np.float64)
+    if points.ndim!=2 or len(points)<2 or not np.isfinite(points).all():
+        return np.zeros((0,2,2),dtype=np.float64)
+    a=feature.get('attributes') or {};m=a.get('mgeo') or {}
+    if lane_shape_group(feature)=='broken':
+        return dashed_polyline_segments([points],float(a.get('dash_length_m',m.get('dash_interval_L1',3))),
+            float(a.get('dash_gap_m',m.get('dash_interval_L2',3))),float(a.get('dash_phase_m',0)))
+    return np.stack([points[:-1,:2],points[1:,:2]],axis=1)
+
+
 def lane_shape_group(feature: dict) -> str:
     """Normalize canonical or preserved-MGeo lane shape for visualization."""
 

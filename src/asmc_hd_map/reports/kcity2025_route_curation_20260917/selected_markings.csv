@@ -120,3 +120,9 @@ stage13_high_speed_tail_to_333,continuity:A2256W000126+A2256W000446+A2256W000448
 stage13_high_speed_tail_to_333,continuity:B219BS011264:B219BS011267,0,yellow,solid,solid,A2256W000128,,,stage13_a128_left_gap_closed,reviewed_same_pattern_continuity,,0.249961
 stage13_high_speed_tail_to_333,continuity:B219BS010443:B219BS010473,0,white,solid,solid,A2256W000128,,,stage13_a128_right_gap_closed,reviewed_same_pattern_continuity,,0.244804
 stage14_return_332_to_finish,continuity:B219BS010472:B219BS010472,0,white,solid,solid,A2256W000154;A2256W000332,,,stage14_a154_a332_right_gap_closed,reviewed_same_pattern_continuity,,0.243498
+stage12_high_speed_entry_and_body,B219BS010440+B219BS011094+B219BS011095,0,white,solid,solid,A2256W000406,,,,reviewed_adjacent_corridor,,
+stage12_high_speed_entry_and_body,B219BS011113+B219BS011097,0,white,broken,broken,A2256W000406,,,,reviewed_adjacent_corridor,,
+stage12_high_speed_entry_and_body,B219BS011101+B219BS011111+B219BS011114+B219BS011098,0,white,broken,broken,A2256W000406;A2256W000175,,,,reviewed_adjacent_corridor,,
+stage12_high_speed_entry_and_body,B219BS011121+B219BS011120+B219BS011117,0,white,broken,broken,A2256W000175;A2256W000029,,,,reviewed_adjacent_corridor,,
+stage12_high_speed_entry_and_body,A2256W000029,0,white,solid,solid,A2256W000029,,,,reviewed_adjacent_corridor,,
+stage12_high_speed_entry_and_body,A2256W000029,0,white,broken,broken,A2256W000029,,,,reviewed_adjacent_corridor,,

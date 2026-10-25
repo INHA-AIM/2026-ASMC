@@ -1,5 +1,5 @@
 schema_version: asmc.hd_map.route_curation/v1
-build_id: kcity2025_route_curation_stage14_20260918
+build_id: kcity2025_route_curation_stage14_adjacent_20261025
 map_id: kcity2025_competition_route_curation_candidate_v14
 
 promotion_policy:
@@ -20,6 +20,45 @@ deferred_non_route_reviews:
 
 sources:
   comparison_config: src/asmc_hd_map/config/kcity2025_three_source_compare.yaml
+
+# User review against K-City 2025, 2026-10-25. Keep the existing route feature
+# IDs/geometry stable. Only this explicitly approved non-route corridor is added.
+reviewed_adjacent_corridors:
+  - id: high_speed_preentry_029_175_406
+    link_ids: [A2256W000029, A2256W000175, A2256W000406]
+    axis_link_id: A2256W000175
+    curation_segment_id: stage12_high_speed_entry_and_body
+    evidence: [user_three_source_driving_review_20261025]
+    markings:
+      - id: a406_right_solid
+        legacy_source_ids: [B219BS010440, B219BS011094, B219BS011095]
+        pattern: solid
+        target_current_link_ids: [A2256W000406]
+      - id: a406_right_merge_broken
+        legacy_source_ids: [B219BS011113, B219BS011097]
+        pattern: broken
+        target_current_link_ids: [A2256W000406]
+        join_feature_suffix: a411_left_merge_broken:00
+      - id: a406_a175_broken
+        legacy_source_ids: [B219BS011101, B219BS011111, B219BS011114, B219BS011098]
+        pattern: broken
+        target_current_link_ids: [A2256W000406, A2256W000175]
+        join_feature_suffix: a411_lane_2_3_broken:00
+      - id: a175_a029_broken
+        legacy_source_ids: [B219BS011121, B219BS011120, B219BS011117]
+        pattern: broken
+        target_current_link_ids: [A2256W000175, A2256W000029]
+        join_feature_suffix: a411_lane_1_2_broken:00
+      - id: a029_left_missing_broken
+        current_link_id: A2256W000029
+        left_offset_m: 1.75
+        pattern: broken
+        # Owner's red-marked merge interval (2026-10-25). Legacy B011115 /
+        # B011118 are solid here; retain current-link curvature, change paint.
+        solid_before_map_xy: [74.0, 314.0]
+        pattern_reference_ids: [B219BS011115, B219BS011118]
+        target_current_link_ids: [A2256W000029]
+        join_feature_suffix: stage12_high_speed_entry_and_body:a418_lane_1_left_solid:00
 
 geometry:
   sample_step_m: 0.25

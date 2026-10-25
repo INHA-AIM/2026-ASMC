@@ -1,0 +1,132 @@
+{
+  "schema_version": "asmc.lidar.hd_map_audit_bundle/v1",
+  "frame_id": "map",
+  "map_id": "waize_katri_2025-10-23",
+  "map_origin": [
+    302595.0,
+    4124145.0,
+    0.0
+  ],
+  "height": 7232,
+  "width": 3085,
+  "resolution_m": 0.2,
+  "origin_xy": [
+    -454.5158996582031,
+    -825.0457763671875
+  ],
+  "arrays": {
+    "occupancy": {
+      "file": "occupancy.bin.gz",
+      "sha256": "dc02fa610c62201bce1b21cec3c2f9e63c0a1011f23b1656602378fbbfd1341b",
+      "bytes": 22310720,
+      "compression": "gzip",
+      "stored_bytes": 40745,
+      "raw_sha256": "f8947c34755496284a6ceb86a91048264bae136011ad1170d0309b8abbce47f4"
+    },
+    "exceptions": {
+      "file": "exceptions.bin.gz",
+      "sha256": "4f1bffab700ede71e527f43f96b4ed19686426801cea2611543c16f675bb2d0c",
+      "bytes": 22310720,
+      "compression": "gzip",
+      "stored_bytes": 25367,
+      "raw_sha256": "13f6334a5ea97ae79fbea7ff7793c3a4343b3d6dfd20b14d2aae44431d2325bf"
+    }
+  },
+  "policy": {
+    "expected_map_id": "waize_katri_2025-10-23",
+    "map_origin": [
+      302595.0,
+      4124145.0,
+      0.0
+    ],
+    "pose_age_limit_ms": 300.0,
+    "candidate_guard_m": 1.0,
+    "exception_protection_m": 10.0
+  },
+  "policy_sha256": "799babf2a52878ae51078ffe86f1e53c4c4a0905adb187eefe368371b222bda5",
+  "policy_canonical": "{\"candidate_guard_m\":1.0,\"exception_protection_m\":10.0,\"expected_map_id\":\"waize_katri_2025-10-23\",\"map_origin\":[302595.0,4124145.0,0.0],\"pose_age_limit_ms\":300.0}",
+  "source_sha256": {
+    "product": "16b8f5f811ec08ef0a7827546f4450302b69533be44952a030bf8c9c79825b7d",
+    "grid": "abbdc067b0b8cc32f644a57b179c9657c948670efb3931430effacb2c13989d0",
+    "metadata": "5e829605ed5d225b68d0454e0e313a48657ef5ee08e19ac0781d1d78c5bd10f4",
+    "source": "b202a61a50193e2386d161770b725252f96b8d177af7f1ad81bcb562d22e02e1"
+  },
+  "source_paths": {
+    "product": "src/asmc_hd_map/config/kcity2025_compact_drivable_map.json",
+    "grid": "src/asmc_hd_map/config/kcity2025_compact_drivable_grid.npz",
+    "metadata": "src/asmc_hd_map/config/kcity2025_competition_metadata.yaml",
+    "source": "src/asmc_hd_map/config/kcity2025_compact_drivable_source.yaml"
+  },
+  "missions": [
+    {
+      "type": "static_obstacle",
+      "metadata_links": [
+        "A2256W000213",
+        "A2256W000220",
+        "A2256W000222"
+      ],
+      "protected_links": [
+        "A2256W000100",
+        "A2256W000111",
+        "A2256W000213",
+        "A2256W000220",
+        "A2256W000221",
+        "A2256W000222",
+        "A2256W000226",
+        "A2256W000227",
+        "A2256W000746"
+      ],
+      "links_without_area": [],
+      "metadata_polygon_empty": true,
+      "external_approach_review": "unverified"
+    },
+    {
+      "type": "dynamic_obstacle",
+      "metadata_links": [
+        "A2256W000202",
+        "A2256W000205",
+        "A2256W000207",
+        "A2256W000315",
+        "A2256W000599",
+        "A2256W000728"
+      ],
+      "protected_links": [
+        "A2256W000066",
+        "A2256W000087",
+        "A2256W000202",
+        "A2256W000205",
+        "A2256W000206",
+        "A2256W000207",
+        "A2256W000211",
+        "A2256W000315",
+        "A2256W000599",
+        "A2256W000636",
+        "A2256W000728",
+        "A2256W001124",
+        "A2256W001125"
+      ],
+      "links_without_area": [],
+      "metadata_polygon_empty": true,
+      "external_approach_review": "unverified"
+    },
+    {
+      "type": "roundabout",
+      "metadata_links": [
+        "A2256W000146",
+        "A2256W000148",
+        "A2256W000151"
+      ],
+      "protected_links": [
+        "A2256W000134",
+        "A2256W000146",
+        "A2256W000148",
+        "A2256W000151"
+      ],
+      "links_without_area": [],
+      "metadata_polygon_empty": true,
+      "external_approach_review": "unverified"
+    }
+  ],
+  "mission_scope_verified": false,
+  "note": "Audit only. No position bound or external approach approval."
+}

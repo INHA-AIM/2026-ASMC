@@ -37,6 +37,7 @@ struct StageView {
   const Cloud& roi;             // sensor frame
   const Cloud& voxel;           // sensor frame; leveled[i] = leveling * voxel[i]
   const Cloud& leveled;         // leveled frame, same order as voxel
+  const std::vector<int>& height_kept_indices;  // empty iff height ROI is disabled
   // Clustering input after RANSAC (and the tunnel stage when ON). Only the
   // first result.counts.cluster_input_points entries are real points:
   // Clustering appends one (0,0,0) dummy when nothing was clustered.

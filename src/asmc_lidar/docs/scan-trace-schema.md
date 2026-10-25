@@ -5,6 +5,13 @@
 직렬화 코드는 `include/asmc_lidar/ros/scan_trace.hpp`이며 [shadow 파이프라인](pipeline.md)의
 bag 비교에 사용한다.
 
+현재 기본 `hd_map_audit.mode: filter`에서 `tracks`는 원본 추적 상태이고 `typed`는 전달 필터 적용 후 배열이다.
+`hd_map_audit.delivery_applied`, `delivery_input_count/excluded_count/output_count`와 객체별
+`delivery_excluded`로 실제 전달을 확인한다. 제외 사유는 같은 객체의 `preview.reason`이다.
+기존 `decision/reason`은 독립 위치 오차 등이 검증되지 않은 역사적 audit 판단이므로,
+실제 발행 여부를 이 값만으로 해석하지 않는다. `audit` 모드는 판정만 계산하고 배열을 보존한다.
+HD맵·상부 제외는 tracker를 삭제하지 않으며 local/map 관측 wrapper도 필터 후 배열을 감싼다.
+
 - 숫자는 유효숫자 17자리다(float을 double로 넓혀도 정확히 복원). 행렬은 row-major다.
 - 값이 없으면 필드를 생략한다(가짜 0을 쓰지 않음). JSON에는 NaN/Inf가 없으므로 비유한 값은 `null`이다.
 - `tracks` 순서는 Main `st_LiDAR.vec_Objects`와 같다(`f32_Dist` 정렬).
@@ -42,3 +49,52 @@ SHA-256(소문자 hex)이다. 빈 cloud는 0바이트의 해시다. `accepted=fa
 scan에는 그 시점까지 알 수 있는 필드와 `typed`(INPUT_INVALID 배열 또는 `accepted:false`)만 있다.
 `abs_v`는 Main 내부의 "KF 상대속도 + CAN 속도" 값이며 좌표계가 검증되지 않아 typed 출력에서는
 속도 validity가 항상 false다.
+
+## 선택적인 HD맵 audit와 발행 지연
+
+A1.1의 내부 설정이 `audit`일 때만 `hd_map_audit` 블록을 추가한다. 기존 `typed`·`tracks`는
+수정하지 않는다. 구형 trace는 이 필드가 없어도 유효하고 공개 ROS 메시지·MD5는 그대로다.
+상위 `producer_session_id`·`generation`·`seq`·`stamp_ns`·`config_id`와 각 `track_id`로 연결한다.
+
+- `enabled`, `available`, `reason`: OFF면 블록 없음. 지도 오류는 `map_audit_unavailable`이며 객체 발행은 유지.
+- `map_id`, `map_sha256`, `bundle_sha256`, `policy_sha256`: 로딩 시 검증한 제품·파생 입력·정책 식별.
+- `map_identity_provenance`: pinned bundle 및 실제 runtime 원점 설정에서 가져온 ID임을 표시.
+- `position_error_verified`, `mission_scope_verified`: 현재 항상 false. GPS age 통과를 정확도 검증으로 바꾸지 않음.
+- `calculation_ms`, `objects[]`: scan 계산 비용과 객체별 판정. `decision`은 keep/exclude_candidate/undetermined,
+  `reason`은 사유, `spatial`은 파생 grid의 겹침·보호 범위·unknown·예외 공간이다.
+- 객체별 `input_state`는 observed/predicted를 구분한다. 이 값과 분류 그룹은 실제 운동 판정이 아니다.
+
+점군/높이 미리보기를 켜면 `preview_config_id`에 실제 runtime 설정 SHA를 더한다.
+기존 bundle의 `policy_sha256`를 새 정책 SHA로 가장하지 않는다. 객체별 선택 블록은 다음과 같다.
+
+- `obb_reference_decision/reason`: 기존 A1 OBB 판정. Python/C++ 기하 대조는 이 값을 비교한다.
+- `preview.decision/reason`: 검수용 keep/exclude_candidate/undetermined. 실제 전달 제외 허가와 다르다.
+- `preview.support_points/road_points/guard_points/unknown_points/road_point_ratio`:
+  화면 샘플이 아닌 객체 전체 cluster support의 지도 관계. voxel 이전 원본 점 비율은 아니다.
+- `preview.interior_road_points/interior_road_ratio`: 도로 합집합 바깥을 inset한 내부의 support 수/전체 비율.
+  기존 road_points/road_point_ratio는 원래 도로 기준이다. v4 점군 통과는 내부3점 이상 AND10% 이상이다.
+- report의 `road_inset_m`은 격자로 올림한 실제 적용 여유(기본0.2m), `road_support_rule`은 count_and_ratio다.
+- `preview.obb_interior_road_ratio`: 같은 inset 도로 마스크가 차지하는 OBB footprint raster 셀 비율.
+  기하 근거가 없으면 null이며 정상0%와 구분한다. 기존 `spatial.road_ratio_grid`는 원본 도로/기존 A1 비교로 유지한다.
+- report의 `minimum_obb_road_ratio=0.10`, `display_support_rule=points_and_obb`:
+  종합 preview keep에는 점군 AND OBB가 필요하다. `joint_drivable_support`는 둘 다 통과,
+  `obb_overlap_below_threshold`는 점군 통과/OBB 미달이다. 유효 YOLO 보호는 예외다.
+- `preview.min_support_base_z/obb_bottom_base_z/roof_limit_base_z`: `base_link` 높이. 근거가 없으면 null.
+- `preview.camera_dynamic_protected/camera_vehicle_protected/camera_known`: 같은 fusion consumer epoch의 최신 양성 연결 근거.
+  실제 이동 여부나 카메라만으로 생성한3D 객체가 아니다.
+- `preview.protection_policy`: 현재 `yolo_points_and_obb_v4`. 미션 영역만으로 unknown을 보호하지 않는다.
+- `preview.camera_raw_class/camera_group`: 확정/유지 클래스와 분리한 최신 실제 매칭 YOLO 원본/그룹.
+  이후 unknown·miss는 지우며, 시간/epoch gate까지 통과해야 해당 그룹의 보호 flag가 true다.
+  LiDAR motion state나 속도는 이 gate의 입력이 아니다.
+
+`decision/reason`은 미검증 하부면·점군 정책·위치 오차를 계속 보류할 수 있다. 따라서 preview의
+제외 후보 수와 최종 제외 후보 수를 혼합하지 않는다. 기존 trace에 이 선택 블록이 없어도 유효하다.
+웹용 `asmc_lidar_debug_scan_v1`도 같은 audit 결과와 producer session/generation/config ID를
+구독 수요가 있을 때 제공한다. 웹을 위해 큰 전체 trace를 추가 구독할 필요는 없다.
+
+실제 노드의 `input_to_publish_ms`는 PointCloud callback 시작부터 객체 배열/관측의 ROS publish
+호출 완료까지 **동일 monotonic clock**으로 측정한다. 네트워크 소비자 수신·노출/laser 발사 시각을
+포함하는 end-to-end 지연은 아니다. replay에는 실제 발행이 없어 이 필드를 만들지 않는다.
+기존 `timings_ms.total`은 runtime 내부 대기·계산이며 이 지연과 구분한다.
+1Hz diagnostics는 최근100scan의 판정/사유 수·계산 p95·설정 오류와 callback→publish p95를
+제공한다. 상세 trace는 구독할 때만 직렬화하며 판제 정본 입력으로 사용하지 않는다.

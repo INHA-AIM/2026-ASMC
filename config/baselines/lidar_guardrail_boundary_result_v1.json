@@ -1,0 +1,87 @@
+{
+  "schema": "asmc.lidar.guardrail_boundary_result_pointer/v1",
+  "run_id": "lidar-vehicle-guardrail-20261025-r1",
+  "source_revision": "01f68bfc2dd2094ab66784c2e7aeea0f7e7018fe",
+  "main_base": "6927fe9d9e08a2a7c19ddca4956aad6a15524ff9",
+  "evidence_root_relative": "artifacts/lidar-vehicle-guardrail-20261025-r1",
+  "evidence_manifest": "evidence-manifest-final.json",
+  "evidence_manifest_sha256": "46440ec834a77baf192ed17824c6eca65edc284633e06465973c9508c34661d3",
+  "result": "result.json",
+  "result_sha256": "06b0a5eef222a3912c4dd459fd4be641794a1239586a3d73a7a1d0c14b3f6f1a",
+  "gallery_relative": "artifacts/lidar-vehicle-guardrail-20261025-r1/index-v2.html",
+  "map_file_sha256": "f2edc8188c5269942a970820b515aa5037b39b51f79f883f545758581d6570c1",
+  "selected_policy": "yolo_vehicle_dynamic_interior_v3",
+  "protected_groups": [
+    "vehicle",
+    "dynamic_obstacle"
+  ],
+  "protected_classes": [
+    "car",
+    "bus",
+    "truck",
+    "person",
+    "dog",
+    "deer",
+    "bicycle",
+    "stroller"
+  ],
+  "road_inset_m": 0.2,
+  "road_inset_grid_cells": 1,
+  "minimum_interior_road_points": 3,
+  "minimum_interior_road_ratio": 0.05,
+  "road_support_rule": "count_and_ratio",
+  "replay_scans": 639,
+  "offline_road_keeps_and0_and20_and40": [
+    1,
+    0,
+    0
+  ],
+  "replay_geometry_and_tracks_unchanged": true,
+  "live_passes_per_configuration": 3,
+  "live_scans_before_after": [
+    639,
+    638
+  ],
+  "live_road_support_keeps_before_after": [
+    10,
+    0
+  ],
+  "live_person_positive_protections_before_after": [
+    1,
+    2
+  ],
+  "live_vehicle_positive_protections_before_after": [
+    0,
+    0
+  ],
+  "live_audit_p95_ms_before_after": [
+    0.38698,
+    0.401515
+  ],
+  "live_callback_p95_ms_before_after": [
+    3.683433,
+    3.62457
+  ],
+  "live_callback_p99_ms_before_after": [
+    5.558103,
+    4.779968
+  ],
+  "ego_restored_before_after": [
+    true,
+    true
+  ],
+  "ctest_entries": 33,
+  "javascript_cases": 66,
+  "chrome_synthetic_ui_checks": 12,
+  "actual_map_object_exclusion": false,
+  "planner_input_cutover": false,
+  "independent_obstacle_recall_verified": false,
+  "limitations": [
+    "Three15s A304 passes/config; not whole-course or independent GPS accuracy acceptance.",
+    "Person positive matching1/2 object-frames retained by explicit protection; possible camera/matching false positives.",
+    "No live car/bus/truck matches present; vehicle protection uses regression evidence.",
+    "20cm rectangular grid erosion affects only preview evidence; canonical map, objects and tracker remain unchanged.",
+    "No new GPS/IMU position integration or ego-motion correction.",
+    "Replay map/pose unknown127 and sparse281 object-frames remain undetermined."
+  ]
+}

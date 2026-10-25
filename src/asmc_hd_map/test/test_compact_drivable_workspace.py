@@ -28,10 +28,10 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
     def test_frozen_geometry_and_selection(self):
         stats = self.artifact["statistics"]
         self.assertEqual(self.artifact["reviewed_geometry_sha256"],
-                         "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf")
+                         "e836f762dbbad4f02aaa6b37f486439aa02d3d5f961fa72b162cde4ebd24a3b3")
         self.assertEqual(stats["route_lane_count"], 39)
-        self.assertEqual(stats["selected_lane_count"], 70)
-        self.assertEqual(stats["drivable_area_count"], 102)
+        self.assertEqual(stats["selected_lane_count"], 73)
+        self.assertEqual(stats["drivable_area_count"], 115)
         self.assertEqual(stats["checkpoint_centers_inside"], 15)
         self.assertLess(stats["compact_fraction_of_legacy"], 0.20)
         self.assertEqual(self.artifact["grid"]["resolution_m"], 0.2)
@@ -45,9 +45,9 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
             ["A2256W000131"],
         )
         self.assertIn("A2256W000131", self.artifact["selection"]["selected_lane_link_ids"])
-        self.assertEqual(stats["boundary_refined_lane_count"], 41)
-        self.assertEqual(stats["boundary_refined_side_count"], 74)
-        self.assertEqual(stats["corridor_fill_area_count"], 18)
+        self.assertEqual(stats["boundary_refined_lane_count"], 44)
+        self.assertEqual(stats["boundary_refined_side_count"], 80)
+        self.assertEqual(stats["corridor_fill_area_count"], 20)
         self.assertEqual(stats["intersection_surface_patch_count"], 14)
         self.assertEqual(
             self.artifact["selection"]["intersection_groups"]["roundabout_maneuver"],
@@ -81,6 +81,31 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
                 "A2256W000599", "A2256W000636", "A2256W001124", "A2256W001125",
             ],
         )
+
+    def test_tollgate_islands_are_outside_both_lane_road_vectors_and_grid(self):
+        from shapely.geometry import Polygon
+        product, arrays = self.generated, self.arrays
+        self.assertEqual(product["statistics"]["reviewed_non_drivable_island_count"], 2)
+        islands = product["non_drivable_areas"]
+        self.assertEqual({item["id"] for item in islands},
+                         {"non_drivable:tollgate_first_island", "non_drivable:tollgate_second_island"})
+        grid = product["grid"]
+        for item in islands:
+            island = Polygon([p[:2] for p in item["polygon"]])
+            self.assertTrue(island.is_valid)
+            self.assertGreater(island.area, 40.)
+            for record in product["lanes"] + product["drivable_areas"]:
+                shape = Polygon([p[:2] for p in record["polygon"]])
+                self.assertLess(shape.intersection(island).area, .005, record["id"])
+            center = island.representative_point()
+            x = round((center.x - grid["origin_x"]) / grid["resolution_m"])
+            y = round((center.y - grid["origin_y"]) / grid["resolution_m"])
+            self.assertEqual(int(arrays["occupancy"][y, x]), 100)
+        # The actual usable toll passage between the road edge and first island
+        # remains drivable; the island correction is not a blanket toll ROI.
+        x = round((70. - grid["origin_x"]) / grid["resolution_m"])
+        y = round((-365. - grid["origin_y"]) / grid["resolution_m"])
+        self.assertEqual(int(arrays["occupancy"][y, x]), 0)
 
     def test_dynamic_junction_vector_union_is_one_connected_surface(self):
         dynamic_ids = set(

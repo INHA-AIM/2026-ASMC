@@ -14,8 +14,10 @@ driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. T
 - `예측 트랙(pred) 표시`는 기본 OFF다. miss>0 객체의 박스·라벨·목록·선택만 숨기며
   추적기의 예측 계산이나 토픽은 바꾸지 않는다.
 
-- `주행가능영역 밖 객체 숨기기`(기본 OFF)는 OBB·라벨·객체 목록·선택에만 적용한다.
-  점군과 ROS 토픽은 유지한다. 영역 판정 불가는 외부로 단정해 숨기지 않는다.
+- 기본 숨김은 점군·OBB·높이 후보 모두 ON이다. `제외 후보 모두 숨기기 (화면만)`로 전체를 바꾼다. 점군 근거/OBB 근거/상부 높이 후보를
+  개별로 켜고 끌 수 있으며 같은 객체가 여러 사유에 해당할 수 있다. OBB·라벨과 **정확히 소속이 확인된 표시 점**을 함께 숨긴다.
+  **목록·원본 ROS 객체·tracker는 유지**한다. 목록에서 선택한 후보는 다시 그려 근거를 확인한다.
+  보류·지도/pose 무효 객체는 숨기지 않는다. 중심점 하나의 도로 포함 여부로 삭제하지 않는다.
 - `! ID 변경 의심`은 화면에서 관측한 교체 후보이며 동일 물체의 확정 식별이 아니다.
   유효 map pose/영역 안 객체에 대해 최근 0.8초의 map 중심(거리 2m 이하),
   OBB 크기비(1.8 이하), class 호환성을 비교한다. 기존 ID가 관측 중이거나 후보가
@@ -24,25 +26,36 @@ driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. T
   5Hz 화면 관측 기반이므로 모든 ID 전환을 잡지 못하며 실제 새 객체를 혼동할 수도 있다.
 
 - 좌표계는 Local(base_link) / Map만 선택한다. 점군은 Raw / ROI / RANSAC 이후 중 하나,
-  최종 추적 OBB와 ID·class는 별도 ON/OFF다. 측면 화면은 숨기고 수치·객체 상세는 접는다.
+  최종 추적 OBB와 ID·class는 별도 ON/OFF다. 측면·전처리 상세는 필요할 때 펼치고,
+  객체 목록과 선택 객체의 필터 근거는 기본으로 표시한다.
 - `보기 → 화면 → 3D · 회전 보기`: 점군 XYZ와 OBB 8 corner를 직교 투영한다.
   좌클릭 드래그는 2D·3D 모두 회전, 가운데 버튼 드래그 또는 Shift+좌클릭 드래그는 이동,
   휠은 확대다. 차량 중심 버튼은 이동·회전도 초기화한다. 실시간 추론·필터링 설정은 바꾸지 않는다.
-- 3D 자차는 실제 길이·폭·축 위치를 쓰되, 높이 1.5m는 이 웹 UI의 추정 외형이다.
-  RViz의 형상 확인값1.644m와 다르며 인지 입력이나 필터 기준으로 사용하지 않는다.
-- 추적 OBB/라벨 색은 Main 판정 알고리즘의 **진단용** 결과다. DYNAMIC/PENDING 빨강,
-  LOW_THREAT 초록, UNKNOWN/invalid 노랑. 지도 중심점 포함 판정은 객체 목록의 별도 열이다.
-  현재 이관 검증 출력은 지도 기반으로 걸러지지 않는다.
+- 3D 자차는 RViz와 같은 길이·폭·축 위치와 형상 확인 높이1.644m를 사용한다.
+  명목 지면 z=-0.36m, 지붕 z=1.284m는 `base_link` 기준이다.
+- 기본 OBB 색은 **필터 미리보기**다: 초록 유지, 분홍 점군 후보, 보라 OBB 후보,
+  주황 상부 후보, 노랑 보류. 소속 점도 같은 색이다. 객체에 연결되지 않은 점은 회청색이다.
+  `제외점 다시 표시`의 거리/XY/센서Z/자차/상부 높이 항목은 체크하면 제거점을 다시 그린다.
+  옆의 값은 해당 scan의 실제 적용 설정이며 웹 체크는 필터를 재실행하지 않는다.
+  `운동 진단 (재호)`를 선택하면 기존 DYNAMIC/PENDING 빨강, LOW_THREAT 초록,
+  UNKNOWN/invalid 노랑으로 바뀐다. 카메라 그룹도 별도로 선택할 수 있다.
+  소비 그룹을 실제 운동 판정으로 해석하지 않는다.
 - `motion_display`는 기존 Main `MotionClassifier`의 중앙값·급변 후보·변위 확인·상태 전이
   함수 본문을 유지한 transport-free 이식이다. 임계값은 현재 Main 기본값(x10/y4km/h,
   변위 x8/y3km/h)이며 별도 튜닝하지 않았다. map OBB bounds/벡터는 저장된 scan Context로
   계산하고 모든 처리 scan마다 갱신한다. GPS 무효 시 이력을 지워 UNKNOWN으로 복구한다.
   이는 주행 성능 수락이나 typed dynamic/velocity validity 승격이 아니다. 판제는 미연결이다.
-- `주행가능영역 · 연보라`: 판제 패키지의 `config/hd_map/drivable.json`을 읽기 전용으로
-  표시한다. 원점은 판제 `config/behavior/global_info.json`과 pipeline YAML의 map.origin을
+- `주행가능영역·실제 차선`: **`asmc_hd_map`의 최신 v7 정본**
+  `config/kcity2025_compact_drivable_map.json`을 읽기 전용으로 표시한다.
+  판제의 별도 v5 사본으로 자동 대체하지 않는다. 원점은 판제 `config/behavior/global_info.json`과 pipeline YAML의 map.origin을
   대조한다. 불일치·파일 누락이면 숨기고 사유를 표시한다. 판제 노드를 켤 필요는 없다.
-- `/api/drivable`은 서버 시작 때 읽은 지도 polygon만 제공한다. 원본/운영 지도를 수정하거나
+- `/api/drivable`은 서버 시작 때 검증한 도로 면·실제 paint segment를 제공한다. 원본/운영 지도를 수정하거나
   이 영역으로 LiDAR 객체를 제거하지 않는다. 지도 부재가 LiDAR 처리를 막지 않는다.
+
+2026-10-25부터 도로 면을 한 번에 채워 링크별 polygon 테두리와 내부 겹침 띠를 표시하지 않는다.
+별도 링크 중심선·차로 안내 구분선은 추가하지 않는다. 같은 product가 SHA로 고정한 실제 차선·정지선만
+덧그리며 RViz와 같은 metric 점선 분할 함수를 사용한다. 선과 도로의 SHA가 맞지 않으면 선을 숨기고
+사유를 표시한다. 이는 표시 변경이며 local/map 객체 좌표나 tracker를 수정하지 않는다.
 - scan의 map pose가 무효하면 Local 보기에서도 지도는 숨긴다. 3D 지도는 고도 모델이
   아닌 자차 높이의 참고 평면이다. 과거 GPS 위치로 지도를 고정해 계속 표시하지 않는다.
 - 지도 파일이 바뀌면 모니터를 재시작한다. Python/launch 변경 후에는 launch 재시작이 필요하다.
@@ -142,7 +155,7 @@ bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌�
 - **큰 화면**: BEV 또는 3D 점군·OBB·자차. 좌클릭 드래그 회전, 가운데 드래그 이동,
   휠 확대/축소, `차량 중심` 복귀. 별도 측면 화면은 표시하지 않는다.
 - **단계 선택**: Raw / ROI / RANSAC 이후(지면 제외) 중 하나. 추적 OBB·ID·class는 별도 ON/OFF다.
-  pred 표시는 기본 OFF, 영역 밖 객체 숨기기는 기본 OFF다. 실제 점 수와 화면 샘플 수는 구분한다.
+  pred 표시는 기본 OFF, 점군·높이 후보 숨김은 기본 ON이다. 실제 점 수와 화면 샘플 수는 구분한다.
 - **좌표계**: Local(base_link) / Map. 그 scan의 수평화·장착·map pose로 변환하며,
   map pose 무효 시 Local은 유지하고 지도 오버레이와 Map 선택은 비활성화한다.
 - **상태**: 서버·pipeline·map·카메라 상태는 상단, Hz·처리시간 등은 접힌 실행 수치에 있다.
@@ -152,8 +165,88 @@ bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌�
 - 오른쪽 상태 표: 단계별 실제 점 수, RANSAC 비지면/제거 지면, cluster 수, detections/tracks(관측/예측),
   roll/pitch/yaw/속도, 지면 평면 계수, map pose, 처리·capture ms, 누락 단계(waiting/missing), 모니터 수신 통계.
 
-같은 scan stamp의 점군·OBB·메타데이터만 한 장면으로 묶는다. 일부 단계가 아직 오지 않은 scan은 0.6 s까지
-기다렸다가 누락 단계를 `missing`으로 표시한다. 다른 시각의 데이터를 섞지 않는다.
+OBB·판정 메타데이터는 점군 네 단계의 도착을 기다리지 않고 먼저 표시한다. 점군은
+**같은 scan stamp**의 자료가 준비되면 추가한다. 다른 scan의 점군을 현재 박스에 붙이지 않는다.
+미완성 묶음은 기존0.6초 한도 내에서 정리하며, producer session/generation 전환 때 이전
+묶음을 비운다. reset 경계 scan의 식별 불가능한 점군은 섞는 대신 생략한다.
+브라우저는100ms마다 최신 결과를 조회하고, 한 번에 요청 하나와 그리기 하나만 대기한다.
+숨긴 측면 화면은 점을 그리지 않는다. 점군 전송 기본5Hz와 실제 LiDAR 처리율은 별개다.
+
+## HD맵 필터 디버깅
+
+상단은 원본/유지/제외 후보/보류 수, 지도 일치 여부와 그리기 시간을 보여준다.
+목록의 `점/OBB %`는 **전체 cluster support의 도로 점 비율 / 기존 OBB 겹침 비율**이다.
+실제 점은 voxel·지면 제거·군집 이후의 해당 객체 점이며, 화면 샘플이나 원본 UDP 전체 점이 아니다.
+객체를 선택하면 support 수, 도로/경계/미지 셀 수, 최저 점·OBB 하단·지붕+여유,
+카메라 보호 여부, 원래 OBB 판정과 보류 사유를 함께 본다.
+
+`제외 후보 모두 숨기기`는 독립 점군/OBB/높이 근거의 후보를 합쳐 **추적 OBB·typed local 비교 OBB·
+해당 track에 연결된 근거 점**에 같은 기준으로 적용한다. 선택한 객체도 숨김을 유지하고 목록/상세만
+열린다. 목록의 흐린 행과 상세의 `화면 표시`에서 상태를 확인한다. 상단 후보 수는 종합 preview 판정,
+`현재 관측/표시 대상/숨김`은 독립 사유 스위치까지 적용한 수다. 기본값은 점군·OBB·높이 후보 숨김 ON이고, 해제는 검수용이다.
+표시 대상 수는 레이어를 실제로 켰는지와 별개인 필터 통과 수다.
+
+이는 도로 밖 모든 객체를 숨기는 기능이 아니다. YOLO 동적·차량 그룹 보호, 지도/위치/점 근거 부족,
+지도 SHA 불일치와 예측 track 표시를 구분한다. 근거가 없는 객체를 중심점 위치만 보고 제외하지 않는다.
+Raw/ROI/voxel/leveled 전체와 **추적 전 detection OBB**는 원본 단계 비교이므로 후보 숨김을 적용하지 않는다.
+이 레이어가 켜져 있으면 화면에 별도 안내한다. 같은 위치의 원본 점·추적 전 박스를 확인하려면 사용하고,
+최종 후보 숨김을 검수할 때는 끈다. tracker 이전 detection에는 검증된 최종 track/audit 대응이 없으므로
+가까운 중심이나 같은 index만으로 최종 판정을 추측하지 않는다.
+
+카메라로 연결된 `dynamic_obstacle`·`vehicle`은 구간에 관계없이 지도 밖 제외 후보에서 보호한다.
+이는 현재 **전방 matching**이 확보한 유효하고 최신인 양성 근거에 적용한다. 좌우 카메라 bbox만으로
+임의3D 객체를 만들거나 미구현3뷰 matching이 동작한다고 표시하지 않는다.
+현재 정책은 `yolo_points_and_obb_subcell_v5`다. person/dog/deer/bicycle/stroller와 car/bus/truck의 **최신 실제 매칭 원본과 그룹**을
+확인하고 같은 consumer epoch·시간 한계500ms·후속 미검출0을 요구한다. 과거 확정 분류를 보존하는
+`str_YoloClass`나 LiDAR 속도/운동 진단을 양성 관측 대신 쓰지 않는다. 이후 unknown·미검출·세대 변경은
+보호 근거를 비운다. `YOLO 동적 보호`·`YOLO 차량 보호`와 `점군·OBB 유지`를 화면에서 구분한다.
+도로 근거는 합집합 바깥 경계를10cm 줄인 내부에서3점 이상 AND 전체10% 이상이다. 격자0.2m의
+셀 합집합에서 실제 점의 안쪽 거리를 검사하며 20cm로 올림하지 않는다. OBB는 같은 영역의 경계 셀을
+5cm 하위 샘플로 면적 집계하며 내부 차로 경계는 줄이지 않는다. OBB 지면 footprint도
+같은 영역과 겹침10% 이상을 요구한다. 기본 표시는 점군 AND OBB이며 한쪽 통과가 다른 쪽 미달을
+덮지 않는다. 원인별 숨김을 해제하는 경우에만 제외 후보를 검수용으로 다시 표시한다. 실제 HD맵은 변경하지 않는다.
+각 checkbox 옆 기준과 상세의 원본/안쪽 도로 점 수·비율로 비교한다. 확정 클래스 unknown이라도
+최신 유효한 YOLO 양성 연결이 있으면 보호할 수 있다. 이 경우 상세의 원본 매칭 분류를 확인한다.
+미션 주변10m에 있다는 이유로 unknown을 전부 보호하던 규칙은 미리보기에서 제거했다.
+미션 범위는 OBB 비교용 metadata에만 남는다. `구형 미션 보호`가 보이면 이전 실행 바이너리이므로
+LiDAR 처리 노드를 재시작해야 하며 브라우저 새로고침만으로 C++ 판정은 바뀌지 않는다.
+높이 후보는 알려진 카메라 객체를 보호하고 최저 점과 OBB 하단 모두 지붕+0.60m를 넘을 때만
+표시한다. 하부 가림·위치 오차·예외 공간의 미검증은 최종 판정에서 계속 보류한다.
+
+기본 설정은 HD맵 **10cm·점군3점/10% AND OBB10% 전달 필터**와 높이 ROI다.
+상부 객체 제외도 ROS 배열에 적용한다. 개인 실험 프로필 없이 다음으로 실행한다.
+
+```bash
+roslaunch asmc_lidar lidar.launch debug:=true
+# 별도 터미널
+roslaunch asmc_lidar view.launch
+```
+
+브라우저는 `http://localhost:8091/`다. 같은 namespace의 기존 두 실행을 종료한 뒤 시작한다.
+다른 프로필을 대조할 때만 아래와 같이 생산자와 모니터에 **동일 파일**을 전달한다.
+완료 run은 덮어쓰지 않는다.
+
+```bash
+# 호스트 저장 규약으로 새 run을 등록한 뒤, 컨테이너 /root/ws
+python3 src/asmc_lidar/tools/filter_audit/prepare_runtime_profile.py \
+  --template src/asmc_lidar/config/lidar_pipeline.yaml \
+  --manifest /artifacts/<검증한-번들-run>/manifest.json \
+  --output /artifacts/<새-run>/runtime.yaml
+roslaunch asmc_lidar lidar.launch debug:=true pipeline_config:=/artifacts/<새-run>/runtime.yaml
+# 별도 터미널
+roslaunch asmc_lidar view.launch pipeline_config:=/artifacts/<새-run>/runtime.yaml
+```
+
+현재 PC에서 검증한 설정·성능·제한은 [필터 분석](hd-map-filter-analysis.md)에 연결한다.
+ROS 필터는 생산자 설정 `hd_map_audit.mode: filter`에 의해 적용된다. 상단의 **ROS 발행/실제 제외**와
+객체 상세의 **실제 ROS 전달**로 확인한다. 체크박스는 화면만 바꾸므로 해제하면 제외 객체를
+원본 tracker로 다시 볼 수 있지만 발행 배열에 되살아나지 않는다. `audit`로 복구하면 판정만 수행한다.
+기존 Main·판제 소비는 별도 경로이며 이번 설정 변경으로 전환하지 않는다.
+
+처리 순서는 **판정 → 전달 배열 필터 → 객체/관측 발행 → debug snapshot**이다.
+snapshot의 `tracks`는 보존한 필터 전 tracker이고 `typed`는 실제 필터 후 배열이다.
+따라서 ‘발행 제외’가 원본 레이어에서 보이는 것은 디버깅용 보존이며, 시각화를 먼저 발행해서
+필터가 뒤늦게 적용되는 현상이 아니다. 원본 점군·추적 전 detection도 전달 객체와 구분해서 본다.
 
 OBB는 BEV에서 **회전된 footprint**(메시지 corner 0–3을 선택 frame으로 변환·투영한 다각형)로 그린다. 상자 안의
 선은 중심에서 corner 1–2 변의 중점까지로, OBB 축(corner 0→1 변, yaw 방향)과 평행하다.
@@ -218,9 +311,14 @@ OBB는 BEV에서 **회전된 footprint**(메시지 corner 0–3을 선택 frame�
 ```bash
 python3 src/asmc_lidar/test/monitor/test_monitor_core.py      # 장면 묶기·frame 인코딩·HTTP 경로·세션·연결 상한/timeout·브라우저 열기 (ROS 불필요)
 node src/asmc_lidar/test/monitor/test_monitor_view.js         # 2D/3D·지도·색상·표시 필터·ID 의심·신선도 (node >= 10, CI 포함)
+python3 src/asmc_lidar/test/monitor/test_monitor_browser.py   # 실제 UI 선택·숨김·typed/소속 점·보호/보류 (Chrome/Chromium 필요)
 (cd build/asmc_lidar && ctest -R "stage_observer|monitor" --output-on-failure)
 rostest asmc_lidar monitor_node.test                          # 실제 처리 노드 + 모니터 + 합성 입력
 ```
 
 `monitor_node.test`는 합성 점군(지면 + 상자)으로 상태 전이(정상·INPUT_INVALID·입력 중단·복구), 장면/stamp/frame
 정합, 고정 경로만 제공, 모니터가 아무것도 발행하지 않음을 확인한다. 합성 입력은 인터페이스 시험이며 정확도 시험이 아니다.
+
+브라우저 검사는 외부 Python/JS 패키지 없이 합성 장면을 임시 loopback 서버로 제공한다.
+별도 임시 Chrome profile을 사용하고 종료하므로 사용자의 브라우저·ROS·rqt를 건드리지 않는다.
+실행 파일을 못 찾으면 `--chrome /path/to/chrome`을 지정한다. 기존 Node CI와 달리 Chrome 실행은 별도 로컬 검사다.
