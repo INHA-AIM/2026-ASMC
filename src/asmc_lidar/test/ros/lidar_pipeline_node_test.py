@@ -818,8 +818,8 @@ class LidarPipelineNodeTest(unittest.TestCase):
     def test_12_outside_delivery_and_gps_fail_open(self):
         from collections import deque
         cfg=yaml.safe_load(open(self.pipeline_config))
-        if cfg.get('hd_map_audit',{}).get('mode')!='filter':
-            self.skipTest('explicit audit/off profile does not apply delivery filtering')
+        self.assertEqual(cfg.get('hd_map_audit',{}).get('mode'),'filter',
+                         'this delivery suite requires the filter profile')
         traces=deque(maxlen=100)
         sub=rospy.Subscriber('/migration/lidar/trace',String,traces.append,queue_size=1)
         cls=type(self);old=(cls.lat,cls.lon)
