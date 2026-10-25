@@ -397,11 +397,22 @@ test('independent support/footprint/height switches preserve inspection',()=>{
   }
 });
 
-test('OBB alternative cannot override point keep unless its display switch is enabled',()=>{
+test('legacy OBB comparison remains inspectable when its hide switch is disabled',()=>{
  const t={id:3,miss:0},scene={hd_map_audit:{enabled:true,objects:[{track_id:3,preview:{decision:'keep',reason:'cluster_drivable_support',point_decision:'keep',obb_decision:'exclude_candidate',height_decision:'keep'}}]}};
  assert.deepStrictEqual(V.exclusionKinds(scene.hd_map_audit.objects[0]),['obb']);
  assert(V.previewVisible(scene,t,false,false,{points:true,height:true,obb:false}));
  assert(!V.previewVisible(scene,t,false,false,{obb:true}));
+});
+
+test('joint preview cannot use OBB success to rescue failed point support',()=>{
+ for(const points of [false,true])for(const obb of [false,true]) {
+  const d={track_id:2,preview:{decision:points&&obb?'keep':'exclude_candidate',
+    reason:points&&obb?'joint_drivable_support':points?'obb_overlap_below_threshold':'cluster_support_outside',
+    point_decision:points?'keep':'exclude_candidate',obb_decision:obb?'keep':'exclude_candidate',height_decision:'keep'}};
+  const scene={hd_map_audit:{enabled:true,map_sha256:'v7',objects:[d]}},track={id:2,miss:0};
+  assert.equal(V.displayVisibility(scene,{sha256:'v7'},track,false,false,{points:true,obb:true,height:true}).visible,points&&obb);
+  assert.equal(V.previewVisible(scene,track,false,true),points&&obb);
+ }
 });
 
 test('final tracks and typed boxes use the same hide decision',()=>{

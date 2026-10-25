@@ -2,7 +2,7 @@
 #include <asmc_lidar/filtering/hd_map_audit.hpp>
 #include <limits>
 namespace asmc::lidar::filtering {
-inline constexpr const char* kDeliveryProtectionPolicy = "yolo_vehicle_dynamic_interior_v3";
+inline constexpr const char* kDeliveryProtectionPolicy = "yolo_points_and_obb_v4";
 // Evidence comes from the full voxel/filter/cluster support, never GUI sampling.
 struct PointEvidence {
   std::size_t total=0, finite=0, road=0, interior_road=0, guard=0, unknown=0;
@@ -16,6 +16,7 @@ struct DeliveryPolicy {
   // Both minimum count and fraction must be met in the inset road mask.
   // The original road count remains available for comparison; no map is edited.
   double minimum_road_ratio=0.10, road_inset_m=0.20, camera_age_ms=500;
+  double minimum_obb_road_ratio=0.10;
 };
 bool PositiveCameraEvidence(std::int64_t scan_ns, std::uint64_t observation_ns,
                             std::uint64_t active_epoch, std::uint64_t observation_epoch,

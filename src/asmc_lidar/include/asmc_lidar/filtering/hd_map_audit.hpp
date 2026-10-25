@@ -23,7 +23,7 @@ struct AuditObject {
 };
 struct SpatialRelation {
   bool available = false, boundary_protected = false, unknown_cells = false;
-  double road_ratio_grid = 0, raster_resolution_m = 0;
+  double road_ratio_grid = 0, interior_road_ratio_grid = 0, raster_resolution_m = 0;
   std::string reason;
   std::vector<std::string> exception_types;
 };
@@ -40,7 +40,7 @@ struct AuditDecision {
   std::string point_preview="undetermined",obb_preview="undetermined",height_preview="undetermined";
   std::string obb_reference_decision, obb_reference_reason;
   std::size_t support_points=0, road_points=0, interior_road_points=0, guard_points=0, unknown_points=0;
-  double road_point_ratio=0, interior_road_ratio=0, min_base_z=0, obb_bottom_base_z=0, roof_limit_z=0;
+  double road_point_ratio=0, interior_road_ratio=0, obb_interior_road_ratio=0, min_base_z=0, obb_bottom_base_z=0, roof_limit_z=0;
   bool height_available=false, camera_dynamic_protected=false, camera_vehicle_protected=false, camera_known=false;
   std::string preview_protection_policy, camera_observed_group="unknown", camera_observed_raw="unknown";
 
@@ -52,7 +52,7 @@ struct AuditReport {
   double pose_source_age_ms = -1;
   std::string pose_method;
   std::size_t minimum_support_points=0,minimum_road_points=0;
-  double minimum_road_ratio=0,road_inset_m=0,roof_limit_base_z=0;
+  double minimum_road_ratio=0,minimum_obb_road_ratio=0,road_inset_m=0,roof_limit_base_z=0;
   std::vector<AuditDecision> objects;
 };
 class HdMapAudit {

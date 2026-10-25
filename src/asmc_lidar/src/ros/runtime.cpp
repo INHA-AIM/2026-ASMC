@@ -215,6 +215,7 @@ void LidarRuntime::Audit(ScanOutput& out) const {
   report.minimum_support_points=config_.delivery_preview.minimum_points;
   report.minimum_road_points=config_.delivery_preview.minimum_road_points;
   report.minimum_road_ratio=config_.delivery_preview.minimum_road_ratio;
+  report.minimum_obb_road_ratio=config_.delivery_preview.minimum_obb_road_ratio;
   report.road_inset_m=config_.hd_map_audit?config_.hd_map_audit->road_inset_m():config_.delivery_preview.road_inset_m;
   report.roof_limit_base_z=config_.delivery_preview.roof_base_z_m+config_.delivery_preview.roof_margin_m;
   if(config_.delivery_preview.enabled) report.preview_config_id=config_.config_id;

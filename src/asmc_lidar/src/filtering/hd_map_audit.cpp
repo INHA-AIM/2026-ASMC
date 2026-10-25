@@ -85,11 +85,12 @@ struct HdMapAudit::Impl {
     // NumPy rint uses ties-to-even; nearbyint uses the default FE_TONEAREST too.
     for (const auto& p:px) polygon.emplace_back(int(std::nearbyint(p.x-x)),int(std::nearbyint(p.y-y)));
     cv::fillConvexPoly(mask,polygon,cv::Scalar(1));
-    int total=0, road=0;
+    int total=0, road=0, interior=0;
     for(int row=0;row<h;++row) {
       const auto* m=mask.ptr<std::uint8_t>(row);
       const auto* o=occupancy.ptr<std::int8_t>(y+row)+x;
-      for(int col=0;col<w;++col) if(m[col]) {++total; road += o[col]==0;}
+      const auto* inside=interior_road.ptr<std::uint8_t>(y+row)+x;
+      for(int col=0;col<w;++col) if(m[col]) {++total; road += o[col]==0;interior += inside[col]!=0;}
     }
     if(!total) {r.reason="empty_raster_footprint"; return r;}
     std::array<bool,3> kinds{};
@@ -103,6 +104,7 @@ struct HdMapAudit::Impl {
       }
     }
     r.available=true; r.road_ratio_grid=double(road)/total; r.raster_resolution_m=res;
+    r.interior_road_ratio_grid=double(interior)/total;
     for(std::size_t i=0;i<kinds.size();++i) if(kinds[i]) r.exception_types.push_back(kKinds[i]);
     return r;
   }
@@ -257,7 +259,10 @@ void WriteAuditDecision(std::ostream& out,const AuditDecision& d) {
        <<",\"guard_points\":"<<d.guard_points<<",\"unknown_points\":"<<d.unknown_points
        <<",\"road_point_ratio\":"<<d.road_point_ratio
        <<",\"interior_road_points\":"<<d.interior_road_points<<",\"interior_road_ratio\":"<<d.interior_road_ratio
-       <<",\"camera_vehicle_protected\":";Bool(out,d.camera_vehicle_protected);
+       <<",\"obb_interior_road_ratio\":";
+    if(d.has_spatial&&d.spatial.available&&std::isfinite(d.obb_interior_road_ratio))out<<d.obb_interior_road_ratio;
+    else out<<"null";
+    out<<",\"camera_vehicle_protected\":";Bool(out,d.camera_vehicle_protected);
     out<<",\"camera_dynamic_protected\":";Bool(out,d.camera_dynamic_protected);
     out<<",\"camera_known\":";Bool(out,d.camera_known);
     out<<",\"protection_policy\":";Str(out,d.preview_protection_policy);
@@ -286,7 +291,8 @@ void WriteAuditReport(std::ostream& out,const AuditReport& r) {
   out<<",\"preview_config_id\":";Str(out,r.preview_config_id);
   out<<",\"pose_source_age_ms\":"<<r.pose_source_age_ms<<",\"pose_method\":";Str(out,r.pose_method);
   out<<",\"minimum_support_points\":"<<r.minimum_support_points<<",\"minimum_road_points\":"<<r.minimum_road_points
-     <<",\"minimum_road_ratio\":"<<r.minimum_road_ratio<<",\"road_inset_m\":"<<r.road_inset_m
+     <<",\"minimum_road_ratio\":"<<r.minimum_road_ratio<<",\"minimum_obb_road_ratio\":"<<r.minimum_obb_road_ratio
+     <<",\"display_support_rule\":\"points_and_obb\",\"road_inset_m\":"<<r.road_inset_m
      <<",\"road_support_rule\":\"count_and_ratio\",\"roof_limit_base_z\":"<<r.roof_limit_base_z;
   out<<",\"map_identity_provenance\":\"pinned_bundle_and_runtime_origin_config\",\"geometry_authority\":\"vector; grid ratios are diagnostic approximation\",\"position_error_verified\":false,\"mission_scope_verified\":false,\"calculation_ms\":"<<r.calculation_ms<<",\"objects\":[";
   for(std::size_t i=0;i<r.objects.size();++i){if(i)out<<',';WriteAuditDecision(out,r.objects[i]);}out<<"]}";

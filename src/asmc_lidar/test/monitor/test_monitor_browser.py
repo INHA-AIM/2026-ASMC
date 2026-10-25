@@ -31,7 +31,7 @@ def fixture():
                    raw_class='unknown', **{'class': 'unknown'}, corners=corners(x),
                    obb=dict(center=[x, 0, .5], width=2, height=2, zmin=0, zmax=1, yaw=0),
                    abs_v=[0, 0], velocity=0, kf_initialized=False)
-              for i, x in ((1, 10), (2, 20), (3, 30))]
+              for i, x in ((1, 10), (2, 20), (3, 30), (4, 40))]
     typed = [dict(track_id=t['id'], corners=t['corners'], center=t['obb']['center'],
                   classification='unknown', camera_class='unknown', points=10) for t in tracks]
     decisions = [dict(track_id=1, decision='undetermined', preview=dict(
@@ -39,16 +39,27 @@ def fixture():
         obb_decision='keep', height_decision='keep')),
         dict(track_id=2, decision='keep', preview=dict(decision='keep', reason='camera_dynamic_protected',
              point_decision='keep', obb_decision='keep', height_decision='keep')),
-        dict(track_id=3, decision='undetermined', reason='pose_error_bound_unverified')]
+        dict(track_id=3, decision='undetermined', reason='pose_error_bound_unverified',
+             preview=dict(decision='undetermined',reason='obb_overlap_unavailable',
+                          point_decision='undetermined',obb_decision='undetermined',
+                          height_decision='keep',obb_interior_road_ratio=None)),
+        dict(track_id=4, decision='undetermined', preview=dict(decision='exclude_candidate',
+             reason='obb_overlap_below_threshold', point_decision='keep',
+             obb_decision='exclude_candidate', height_decision='keep',
+             interior_road_ratio=.20, obb_interior_road_ratio=.05))]
     scene = dict(stages=True, stamp_ns=1000000000, seq=1, tracks=tracks, detections=[tracks[0]],
                  typed=dict(local=dict(accepted=True, objects=typed)),
                  base_from_sensor=IDENTITY, base_from_leveled=IDENTITY,
                  leveling=[1, 0, 0, 0, 1, 0, 0, 0, 1], map=dict(valid=True, map_from_base=IDENTITY),
                  counts=dict(raw=3, roi=3, voxel=3, leveled=3, ground_kept=3, cluster_input=3,
-                             clusters=3, detections=3, tracks=3, observed=3, predicted=0),
+                             clusters=4, detections=4, tracks=4, observed=4, predicted=0),
                  sampled={s: dict(sent=3, actual=3) for s in ('raw', 'roi', 'voxel', 'leveled')},
                  local=dict(roll_rad=0, pitch_rad=0, yaw_rad=0, speed_mps=0),
-                 hd_map_audit=dict(enabled=True, map_sha256='fixture-v7', objects=decisions))
+                 hd_map_audit=dict(enabled=True, map_sha256='fixture-v7', objects=decisions,
+                                  minimum_support_points=10,minimum_road_points=3,
+                                  minimum_road_ratio=.1,minimum_obb_road_ratio=.1,
+                                  road_inset_m=.2,road_support_rule='count_and_ratio',
+                                  display_support_rule='points_and_obb'))
     # Real binary point provenance: the candidate point belongs to track #1.
     parts = [('leveled.xyzi', 'f32', '<12f', [10, 0, 0, 1, 20, 0, 0, 1, 30, 0, 0, 1]),
              ('leveled.label', 'u8', '<3B', [0, 0, 0]),
@@ -79,6 +90,12 @@ window.addEventListener('error',e=>{document.body.dataset.testError=e.message;})
   V.drawBox=(...a)=>{boxes.push(a[2][0][0]);return draw(...a);};
   CanvasRenderingContext2D.prototype.fillRect=function(...a){if(a[2]===2&&a[3]===2)points.push(this.fillStyle);return fill.apply(this,a);};
   const render=()=>{boxes=[];points=[];app.renderNow();};
+  render();
+  check(document.getElementById('opt-hide-obb').checked&&app.state.hideReasons.obb,'OBB threshold filter defaults ON');
+  check(!boxes.includes(9)&&!boxes.includes(39),'default display requires points AND OBB');
+  check(document.getElementById('criteria-obb').textContent.includes('10.0%'),'actual OBB threshold is displayed');
+  app.selectTrack(3);render();
+  check(document.getElementById('detail').textContent.includes('근거 없음 · 미계산'),'unavailable OBB ratio is not a measured zero');
   toggle('opt-hide-candidates',true);app.selectTrack(1);render();
   check(!boxes.includes(9)&&boxes.includes(19)&&boxes.includes(29),'selected candidate stays hidden, protected and uncertain stay visible: '+JSON.stringify(boxes));
   check(!points.includes('#f472b6'),'selected candidate support stays hidden');
@@ -87,11 +104,13 @@ window.addEventListener('error',e=>{document.body.dataset.testError=e.message;})
   app.setStage('tracks',false);app.setStage('typed',true);render();
   check(new Set(boxes).size===2&&!boxes.includes(9),'typed overlay cannot bypass candidate hiding: '+JSON.stringify(boxes));
   toggle('opt-hide-candidates',false);render();
-  check(new Set(boxes).size===3&&points.includes('#f472b6'),'turning filters off restores original boxes and support');
+  check(new Set(boxes).size===4&&points.includes('#f472b6'),'turning filters off restores original boxes and support');
   toggle('opt-hide-points',true);render();
-  check(new Set(boxes).size===2&&!boxes.includes(9),'individual point switch also filters typed overlay');
+  check(new Set(boxes).size===3&&!boxes.includes(9),'individual point switch also filters typed overlay');
+  toggle('opt-hide-obb',true);render();
+  check(new Set(boxes).size===2&&!boxes.includes(39),'OBB failure is hidden even when point support passes');
   app.state.road={available:true,sha256:'different-map'};render();
-  check(new Set(boxes).size===3,'map mismatch preserves objects');
+  check(new Set(boxes).size===4,'map mismatch preserves objects');
   app.state.road={available:true,sha256:'fixture-v7'};
   app.setStage('detections',true);render();
   check(boxes.includes(9),'pre-tracking comparison remains original');

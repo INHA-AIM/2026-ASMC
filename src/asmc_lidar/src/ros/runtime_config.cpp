@@ -266,12 +266,14 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
       p.minimum_points=preview["minimum_points"].as<unsigned>();
       p.minimum_road_points=preview["minimum_road_points"].as<unsigned>();
       p.minimum_road_ratio=preview["minimum_road_ratio"].as<double>();
+      p.minimum_obb_road_ratio=preview["minimum_obb_road_ratio"]?preview["minimum_obb_road_ratio"].as<double>():0.10;
       p.road_inset_m=preview["road_inset_m"]?preview["road_inset_m"].as<double>():0.20;
       p.camera_age_ms=preview["camera_age_ms"].as<double>();
       if(!std::isfinite(p.roof_base_z_m)||p.roof_base_z_m<1||p.roof_base_z_m>3||
          !std::isfinite(p.roof_margin_m)||p.roof_margin_m<0.3||p.roof_margin_m>2||
          p.minimum_points<3||p.minimum_road_points<1||!std::isfinite(p.minimum_road_ratio)||
-         p.minimum_road_ratio<=0||p.minimum_road_ratio>1||!std::isfinite(p.road_inset_m)||p.road_inset_m<0||p.road_inset_m>0.6||
+         p.minimum_road_ratio<=0||p.minimum_road_ratio>1||!std::isfinite(p.minimum_obb_road_ratio)||
+         p.minimum_obb_road_ratio<=0||p.minimum_obb_road_ratio>1||!std::isfinite(p.road_inset_m)||p.road_inset_m<0||p.road_inset_m>0.6||
          !std::isfinite(p.camera_age_ms)||p.camera_age_ms<=0||p.camera_age_ms>500)
         Fail(file,"invalid delivery preview safety limits");
     }
@@ -325,7 +327,7 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   const auto& p=config.delivery_preview;
   effective << p.enabled << ',' << p.roof_base_z_m << ',' << p.roof_margin_m << ','
     << p.minimum_points << ',' << p.minimum_road_points << ',' << p.minimum_road_ratio << ','
-    << p.road_inset_m << ',' << p.camera_age_ms;
+    << p.minimum_obb_road_ratio << ',' << p.road_inset_m << ',' << p.camera_age_ms;
   if(p.enabled)effective << ',' << filtering::kDeliveryProtectionPolicy;
   config.config_id = hash(effective.str());
 }

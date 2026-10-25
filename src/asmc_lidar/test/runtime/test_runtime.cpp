@@ -95,6 +95,9 @@ sh::RuntimeConfig ShippedRuntimeConfig() {
 
 TEST(RuntimeDeployment, DefaultMapIsPinnedAndHeightCapIsLocal) {
   const auto cfg=sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
+  EXPECT_DOUBLE_EQ(cfg.delivery_preview.minimum_road_ratio,.10);
+  EXPECT_DOUBLE_EQ(cfg.delivery_preview.minimum_obb_road_ratio,.10);
+  EXPECT_DOUBLE_EQ(cfg.delivery_preview.road_inset_m,.20);
   if(!std::filesystem::exists(PackageDir()+"/../asmc_hd_map/config/kcity2025_compact_drivable_map.json")) {
     EXPECT_FALSE(cfg.hd_map_audit);EXPECT_FALSE(cfg.hd_map_audit_error.empty());return;
   }
@@ -310,6 +313,23 @@ TEST(HdMapAuditRuntime, InsetShrinksOnlyUnionBoundaryAndPreservesRawAndUnknownCo
   EXPECT_EQ(raw.road,3u);EXPECT_EQ(raw.interior_road,3u);
   EXPECT_EQ(inside.road,raw.road);EXPECT_EQ(inside.interior_road,2u);
   EXPECT_EQ(inside.unknown,1u);EXPECT_EQ(inside.total,4u);
+  f::AuditFrame frame;frame.frame_id="map";frame.status=1;frame.map_id="fixture";
+  frame.map_origin={302595,4124145,0};frame.pose_valid=true;frame.stamp_ns=frame.pose_stamp_ns=1;
+  f::AuditObject box;
+  for(double z:{0.,1.})for(const auto& xy:std::vector<std::array<double,2>>{
+      {-79.95,-77.95},{-79.91,-77.95},{-79.91,-77.55},{-79.95,-77.55}})
+    box.corners.push_back({xy[0],xy[1],z});
+  const auto before=plain.Evaluate(frame,box),after=inset.Evaluate(frame,box);
+  ASSERT_TRUE(before.spatial.available);ASSERT_TRUE(after.spatial.available);
+  EXPECT_DOUBLE_EQ(before.spatial.road_ratio_grid,after.spatial.road_ratio_grid);
+  EXPECT_DOUBLE_EQ(after.spatial.road_ratio_grid,1.);
+  EXPECT_DOUBLE_EQ(after.spatial.interior_road_ratio_grid,0.);
+  f::AuditDecision missing;missing.preview_enabled=true;
+  std::ostringstream unknown_json;f::WriteAuditDecision(unknown_json,missing);
+  EXPECT_TRUE(YAML::Load(unknown_json.str())["preview"]["obb_interior_road_ratio"].IsNull());
+  auto measured=after;measured.preview_enabled=true;measured.obb_interior_road_ratio=0.;
+  std::ostringstream zero_json;f::WriteAuditDecision(zero_json,measured);
+  EXPECT_DOUBLE_EQ(YAML::Load(zero_json.str())["preview"]["obb_interior_road_ratio"].as<double>(),0.);
   EXPECT_THROW(f::HdMapAudit(path,sha,-.1),std::runtime_error);
   EXPECT_THROW(f::HdMapAudit(path,sha,.7),std::runtime_error);
 }

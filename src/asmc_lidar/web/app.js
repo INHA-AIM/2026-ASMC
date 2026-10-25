@@ -34,7 +34,7 @@
     paused: false, inflight: false, inflightSince: 0, controller: null,
     view: { frame: 'base', mode: 'bev', bevYaw: 0, yaw: -0.4, pitch: 0.65, road: true, scale: 9, panX: 0, panY: 0, side: 'xz', psize: 2, compare: false, labels: true },
     road: null,
-    hideCandidates:false,hideReasons:{points:true,obb:false,height:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
+    hideCandidates:false,hideReasons:{points:true,obb:true,height:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
     stages: {}, selected: null, webFrames: [], matrices: null,
   };
 
@@ -347,6 +347,8 @@
         ' · 전체 ≥'+report.minimum_support_points+'점':'판정 설정 수신 대기';
     el('criteria-height').textContent=report&&report.roof_limit_base_z?
       '하부 점·OBB 하단 >'+fmt(report.roof_limit_base_z,3)+'m (base_link)':'판정 설정 수신 대기';
+    el('criteria-obb').textContent=report&&report.minimum_obb_road_ratio!==undefined?
+      '도로 안쪽 '+fmt(report.road_inset_m,2)+'m · OBB 면적 ≥'+fmt(report.minimum_obb_road_ratio*100,1)+'%':'구형 비교 · 겹침0% 초과';
     cnt('c-tunnel', c ? (sc.tunnel && sc.tunnel.ran ? String(c.tunnel_removed) : 'OFF') : '-');
     cnt('c-nonground', c ? String(c.ground_kept) : '-');
     cnt('c-clusters', c ? String(c.clusters) : '-');
@@ -608,7 +610,8 @@
       const motion=V.motionAppearance(t.motion);
       const warning=state.idWarnings.get(t.id);
       const d=V.auditForTrack(sc,t),audit=V.auditAppearance(sc,t),p=d&&d.preview;
-      const ratios=p?fmt(p.road_point_ratio*100,0)+' / '+(d.spatial&&d.spatial.available?fmt(d.spatial.road_ratio_grid*100,0):'—'):'—';
+      const ratios=p?fmt((p.interior_road_ratio===undefined?p.road_point_ratio:p.interior_road_ratio)*100,0)+' / '+
+        (p.obb_interior_road_ratio!==undefined?(Number.isFinite(p.obb_interior_road_ratio)?fmt(p.obb_interior_road_ratio*100,0):'—'):d.spatial&&d.spatial.available?fmt(d.spatial.road_ratio_grid*100,0):'—'):'—';
       const visibility=trackVisibility(t);
       const values=[String(t.id)+(warning && area==='inside'?' !':''),t.raw_class,audit.label,ratios,p?fmt(p.min_support_base_z,2):'—',motion.label];
       for (const v of values) {const td=document.createElement('td');td.textContent=v;tr.appendChild(td);}
@@ -638,7 +641,9 @@
       ['전달 판단 / 보류 근거',audit?audit.decision+' / '+audit.reason:'OFF'],
       ['군집 도로 점 / 전체',p?p.road_points+' / '+p.support_points+' ('+fmt(p.road_point_ratio*100,1)+'%)':'미계산'],
       ['안쪽 도로 점 / 전체',p&&p.interior_road_points!==undefined?p.interior_road_points+' / '+p.support_points+' ('+fmt(p.interior_road_ratio*100,1)+'%)':'이전 생산자 · 미계산'],
-      ['OBB 겹침률',audit&&audit.spatial&&audit.spatial.available?fmt(audit.spatial.road_ratio_grid*100,1)+'%':'미계산'],
+      ['OBB 원본 도로 겹침률',audit&&audit.spatial&&audit.spatial.available?fmt(audit.spatial.road_ratio_grid*100,1)+'%':'미계산'],
+      ['OBB 안쪽 도로 겹침률',p&&Number.isFinite(p.obb_interior_road_ratio)?fmt(p.obb_interior_road_ratio*100,1)+'%':'근거 없음 · 미계산'],
+      ['종합 표시 규칙',sc&&sc.hd_map_audit&&sc.hd_map_audit.display_support_rule==='points_and_obb'?'점군 AND OBB · 유효 YOLO 보호 예외':'구형 비교 생산자'],
       ['경계 보호 점 / 지도 불명 점',p?p.guard_points+' / '+p.unknown_points:'미계산'],
       ['하부 점 / OBB 하단 / 지붕+여유',p?[p.min_support_base_z,p.obb_bottom_base_z,p.roof_limit_base_z].map(x=>fmt(x,2)).join(' / ')+'m (base_link)':'미계산'],
       ['카메라 동적 그룹 보호',p?(p.camera_dynamic_protected?'YOLO 양성 매칭 · 세대/시간 유효 · 전 구간 보호':'해당 없음 · LiDAR 운동 판정은 사용하지 않음'):'미계산'],

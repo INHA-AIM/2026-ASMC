@@ -70,15 +70,15 @@
       <label><input type="checkbox" id="opt-show-pred"> 예측 트랙(pred) 표시</label>
       <label><input type="checkbox" id="opt-hide-candidates"> 제외 후보 모두 숨기기 (화면만)</label>
       <label><input type="checkbox" id="opt-hide-points" checked> 점군 근거 후보 숨김 <span id="criteria-points" class="note"></span></label>
-      <label><input type="checkbox" id="opt-hide-obb"> OBB 비교 후보 숨김 · 도로 겹침0</label>
+      <label><input type="checkbox" id="opt-hide-obb" checked> OBB 근거 후보 숨김 <span id="criteria-obb" class="note"></span></label>
       <label><input type="checkbox" id="opt-hide-height" checked> 상부 객체 후보 숨김 <span id="criteria-height" class="note"></span></label>
-      <p class="note">점군·OBB 근거는 별도 판정입니다. 복수 사유 객체는 체크한 사유 중 하나라도 해당하면 숨깁니다.</p>
+      <p class="note">기본 표시는 점군 AND OBB 통과입니다. OBB가 통과해도 점군 미달이면 숨깁니다. 원인별 숨김 해제는 검수용이며 제외된 박스·점을 사유 색으로 다시 표시합니다.</p>
       <p id="filter-summary" class="note">화면 표시 수 대기</p>
       <p class="note">목록과 토픽은 유지합니다. 객체를 선택해도 숨김은 유지하고 상세값만 엽니다.<br>YOLO의 person/dog/deer/bicycle/stroller 및 car/bus/truck이 실제 매칭되면 전 구간 보호합니다. LiDAR 속도·동적 판정, 미션 근접만으로 보호하지 않습니다. 제외 근거 없는 보류 객체와 예측 트랙 표시는 별도입니다.</p>
       <p id="filter-layer-note" class="note"></p>
       <label>색상 <select id="opt-color"><option value="audit">필터 판정</option><option value="motion">운동 진단 (재호)</option><option value="class">카메라 그룹</option></select></label>
       <label><input type="checkbox" id="opt-labels" checked> ID · 카메라 분류 표시</label>
-      <p class="note">숨김을 끄면 OBB와 소속 점을 같은 원인 색으로 표시합니다.<br>초록 도로 근거 유지/YOLO 보호 · 분홍 점군 후보 · 보라 OBB 후보 · 주황 상부 후보 · 노랑 보류.<br>경계 여유 내 후보는 위치 오차가 미확정입니다. 구형 미션 일괄 보호는 최신 노드 재시작 전의 표시입니다.</p>
+      <p class="note">숨김을 끄면 OBB와 소속 점을 같은 원인 색으로 표시합니다.<br>초록 점군·OBB 통과/YOLO 보호 · 분홍 점군 후보 · 보라 OBB 후보 · 주황 상부 후보 · 노랑 보류.<br>경계 여유 내 후보는 위치 오차가 미확정입니다. 구형 미션 일괄 보호는 최신 노드 재시작 전의 표시입니다.</p>
     </section>
     <section>
       <h2>보기</h2>

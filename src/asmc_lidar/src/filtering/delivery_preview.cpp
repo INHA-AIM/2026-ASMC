@@ -21,19 +21,22 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   d.road_point_ratio=e.total?double(e.road)/e.total:0;
   d.interior_road_points=e.interior_road;
   d.interior_road_ratio=e.total?double(e.interior_road)/e.total:0;
+  d.obb_interior_road_ratio=d.spatial.interior_road_ratio_grid;
   d.height_available=e.finite==e.total&&e.total>0&&std::isfinite(e.min_base_z);
   if(d.height_available)d.min_base_z=e.min_base_z;
   d.obb_bottom_base_z=obb_bottom;d.roof_limit_z=p.roof_base_z_m+p.roof_margin_m;
   d.camera_dynamic_protected=dynamic;d.camera_vehicle_protected=vehicle;d.camera_known=known;
   const auto preview=[&](const char* v,const char* why){d.preview_decision=v;d.preview_reason=why;};
   const auto keep=[&](const char* why){preview("keep",why);d.decision="keep";d.reason=why;};
-  // Independent geometric facets reuse the already computed footprint/support.
-  // They are provisional display evidence, not final exclusion authorization.
-  if(map_valid&&d.has_spatial&&d.spatial.available&&!d.spatial.unknown_cells)
-    d.obb_preview=d.spatial.road_ratio_grid>0?"keep":"exclude_candidate";
+  // Each facet remains inspectable, but normal display needs BOTH to pass.
+  // Use the same inset mask for support and OBB; never infer support from a box.
+  if(map_valid&&d.has_spatial&&d.spatial.available&&!d.spatial.unknown_cells&&
+     std::isfinite(d.spatial.interior_road_ratio_grid))
+    d.obb_preview=d.spatial.interior_road_ratio_grid>=p.minimum_obb_road_ratio?"keep":"exclude_candidate";
   // A mobility group is a protection policy, never a measured moving flag.
   if(dynamic||vehicle){d.point_preview=d.obb_preview=d.height_preview="keep";
     keep(dynamic?"camera_dynamic_protected":"camera_vehicle_protected");return;}
+  if(e.unknown||e.finite!=e.total)d.obb_preview="undetermined";
   // Mission proximity is context, not evidence that an unknown LiDAR cluster
   // is an entering person/dog/bicycle. Retain the original exception decision
   // in obb_reference_*, but never blanket-protect the preview by region alone.
@@ -64,7 +67,16 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   d.height_preview="keep";
   if(!map_valid||!d.has_spatial||!d.spatial.available){preview("undetermined","map_or_pose_unavailable");return;}
   if(e.unknown){preview("undetermined","unknown_support_map_cells");d.decision="undetermined";d.reason="unknown_support_map_cells";return;}
-  if(road_support){d.point_preview="keep";keep("cluster_drivable_support");return;}
+  if(road_support) {
+    d.point_preview="keep";
+    if(d.obb_preview=="keep") {keep("joint_drivable_support");return;}
+    if(d.obb_preview=="exclude_candidate") {
+      preview("exclude_candidate","obb_overlap_below_threshold");
+      d.decision="undetermined";d.reason="obb_policy_pose_and_scope_unverified";return;
+    }
+    preview("undetermined","obb_overlap_unavailable");
+    d.decision="undetermined";d.reason="obb_overlap_unavailable";return;
+  }
   d.point_preview="exclude_candidate";
   if(e.guard){
     // A road-exterior rail entirely inside the uncertainty band is still an
