@@ -341,7 +341,10 @@
     el('roi-sensor-z').textContent=roi?'센서 Z '+roi.sensor_z_m.join('–')+'m':'';
     el('roi-height').textContent=roi?(roi.height_enabled?'평지 지면 위 ≤'+roi.height_above_ground_m+'m · IMU 수평화':'OFF'):'';
     el('criteria-points').textContent=report&&report.minimum_support_points?
-      '도로 점 <'+report.minimum_road_points+'개 및 <'+fmt(report.minimum_road_ratio*100,1)+'% · 전체 ≥'+report.minimum_support_points+'점':'판정 설정 수신 대기';
+      (report.road_support_rule==='count_and_ratio'?
+        '도로 안쪽 '+fmt(report.road_inset_m,2)+'m · 유지 ≥'+report.minimum_road_points+'개 AND ≥'+fmt(report.minimum_road_ratio*100,1)+'%':
+        '구형 기준: 도로 점 ≥'+report.minimum_road_points+'개 OR ≥'+fmt(report.minimum_road_ratio*100,1)+'%')+
+        ' · 전체 ≥'+report.minimum_support_points+'점':'판정 설정 수신 대기';
     el('criteria-height').textContent=report&&report.roof_limit_base_z?
       '하부 점·OBB 하단 >'+fmt(report.roof_limit_base_z,3)+'m (base_link)':'판정 설정 수신 대기';
     cnt('c-tunnel', c ? (sc.tunnel && sc.tunnel.ran ? String(c.tunnel_removed) : 'OFF') : '-');
@@ -634,10 +637,12 @@
       ['독립 근거 · 점군 / OBB / 높이',p?[p.point_decision,p.obb_decision,p.height_decision].map(x=>({keep:'유지',exclude_candidate:'후보',undetermined:'보류'}[x]||'이전 버전')).join(' / '):'미계산'],
       ['전달 판단 / 보류 근거',audit?audit.decision+' / '+audit.reason:'OFF'],
       ['군집 도로 점 / 전체',p?p.road_points+' / '+p.support_points+' ('+fmt(p.road_point_ratio*100,1)+'%)':'미계산'],
+      ['안쪽 도로 점 / 전체',p&&p.interior_road_points!==undefined?p.interior_road_points+' / '+p.support_points+' ('+fmt(p.interior_road_ratio*100,1)+'%)':'이전 생산자 · 미계산'],
       ['OBB 겹침률',audit&&audit.spatial&&audit.spatial.available?fmt(audit.spatial.road_ratio_grid*100,1)+'%':'미계산'],
       ['경계 보호 점 / 지도 불명 점',p?p.guard_points+' / '+p.unknown_points:'미계산'],
       ['하부 점 / OBB 하단 / 지붕+여유',p?[p.min_support_base_z,p.obb_bottom_base_z,p.roof_limit_base_z].map(x=>fmt(x,2)).join(' / ')+'m (base_link)':'미계산'],
       ['카메라 동적 그룹 보호',p?(p.camera_dynamic_protected?'YOLO 양성 매칭 · 세대/시간 유효 · 전 구간 보호':'해당 없음 · LiDAR 운동 판정은 사용하지 않음'):'미계산'],
+      ['카메라 차량 그룹 보호',p?(p.camera_vehicle_protected?'YOLO car/bus/truck 양성 매칭 · 세대/시간 유효 · 전 구간 보호':'해당 없음'):'미계산'],
       ['보호 정책',p&&p.protection_policy||'구형 생산자 · 최신 바이너리로 재시작 필요'],
       ['최신 YOLO 매칭 원본 / 그룹',p?[p.camera_raw_class||'미기록',p.camera_group||'미기록'].join(' / '):'미계산'],
       ['미션 예외 공간 (비교용)',audit?(audit.exception_types||[]).join(', ')+' · YOLO 분류 근거 아님':'미계산'],

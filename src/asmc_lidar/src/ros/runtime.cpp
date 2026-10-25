@@ -215,6 +215,7 @@ void LidarRuntime::Audit(ScanOutput& out) const {
   report.minimum_support_points=config_.delivery_preview.minimum_points;
   report.minimum_road_points=config_.delivery_preview.minimum_road_points;
   report.minimum_road_ratio=config_.delivery_preview.minimum_road_ratio;
+  report.road_inset_m=config_.hd_map_audit?config_.hd_map_audit->road_inset_m():config_.delivery_preview.road_inset_m;
   report.roof_limit_base_z=config_.delivery_preview.roof_base_z_m+config_.delivery_preview.roof_margin_m;
   if(config_.delivery_preview.enabled) report.preview_config_id=config_.config_id;
   report.bundle_sha256 = config_.hd_map_manifest_sha256;
@@ -264,7 +265,7 @@ void LidarRuntime::Audit(ScanOutput& out) const {
           const auto source=std::find_if(out.result.objects.begin(),out.result.objects.end(),
               [&](const auto& o){return o.tracking.s32_Id==obj.track_id;});
           filtering::PointEvidence evidence;
-          bool dynamic=false,known=false;
+          std::string matched_group="unknown";
           double bottom=std::numeric_limits<double>::quiet_NaN();
           if(source!=out.result.objects.end()&&base_from_level) {
             bottom=INFINITY;
@@ -283,10 +284,9 @@ void LidarRuntime::Audit(ScanOutput& out) const {
             const auto group=pipeline::fusion_class::ObservedMissionGroup(c);
             decision.camera_observed_group=group;
             decision.camera_observed_raw=c.observed_raw_class;
-            known=positive&&group!="unknown";
-            dynamic=known&&group=="dynamic_obstacle";
+            if(positive)matched_group=group;
           }
-          filtering::ApplyDeliveryPreview(decision,evidence,config_.delivery_preview,valid_map,dynamic,known,bottom);
+          filtering::ApplyDeliveryPreview(decision,evidence,config_.delivery_preview,valid_map,matched_group,bottom);
         }
         decision.comparison_ms=Ms(object_start,Clock::now());
         report.objects.push_back(std::move(decision));

@@ -8,17 +8,23 @@ bool PositiveCameraEvidence(std::int64_t scan,std::uint64_t observation,std::uin
   return age>=-future_limit&&age<=age_limit;
 }
 void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const DeliveryPolicy& p,
-                          bool map_valid,bool dynamic,bool known,double obb_bottom) {
+                          bool map_valid,const std::string& group,double obb_bottom) {
   if(!p.enabled)return;
+  const bool dynamic=group=="dynamic_obstacle",vehicle=group=="vehicle";
+  const bool known=dynamic||vehicle||group=="static_obstacle";
+  const bool road_support=e.interior_road>=p.minimum_road_points&&
+      e.total&&double(e.interior_road)/e.total>=p.minimum_road_ratio;
   d.obb_reference_decision=d.decision;d.obb_reference_reason=d.reason;
   d.preview_enabled=true;d.support_points=e.total;d.road_points=e.road;
   d.preview_protection_policy=kDeliveryProtectionPolicy;
   d.guard_points=e.guard;d.unknown_points=e.unknown;
   d.road_point_ratio=e.total?double(e.road)/e.total:0;
+  d.interior_road_points=e.interior_road;
+  d.interior_road_ratio=e.total?double(e.interior_road)/e.total:0;
   d.height_available=e.finite==e.total&&e.total>0&&std::isfinite(e.min_base_z);
   if(d.height_available)d.min_base_z=e.min_base_z;
   d.obb_bottom_base_z=obb_bottom;d.roof_limit_z=p.roof_base_z_m+p.roof_margin_m;
-  d.camera_dynamic_protected=dynamic;d.camera_known=known;
+  d.camera_dynamic_protected=dynamic;d.camera_vehicle_protected=vehicle;d.camera_known=known;
   const auto preview=[&](const char* v,const char* why){d.preview_decision=v;d.preview_reason=why;};
   const auto keep=[&](const char* why){preview("keep",why);d.decision="keep";d.reason=why;};
   // Independent geometric facets reuse the already computed footprint/support.
@@ -26,7 +32,8 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   if(map_valid&&d.has_spatial&&d.spatial.available&&!d.spatial.unknown_cells)
     d.obb_preview=d.spatial.road_ratio_grid>0?"keep":"exclude_candidate";
   // A mobility group is a protection policy, never a measured moving flag.
-  if(dynamic){d.point_preview=d.obb_preview=d.height_preview="keep";keep("camera_dynamic_protected");return;}
+  if(dynamic||vehicle){d.point_preview=d.obb_preview=d.height_preview="keep";
+    keep(dynamic?"camera_dynamic_protected":"camera_vehicle_protected");return;}
   // Mission proximity is context, not evidence that an unknown LiDAR cluster
   // is an entering person/dog/bicycle. Retain the original exception decision
   // in obb_reference_*, but never blanket-protect the preview by region alone.
@@ -37,7 +44,7 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
     if(d.height_available&&std::isfinite(obb_bottom))
       d.height_preview=!known&&std::min(e.min_base_z,obb_bottom)>d.roof_limit_z?"exclude_candidate":"keep";
     if(map_valid&&d.has_spatial&&d.spatial.available&&!e.unknown)
-      d.point_preview=(e.road>=p.minimum_road_points||d.road_point_ratio>=p.minimum_road_ratio)?"keep":"exclude_candidate";
+      d.point_preview=road_support?"keep":"exclude_candidate";
   }
   if(e.total<p.minimum_points||e.finite!=e.total){
     preview(d.obb_preview=="exclude_candidate"?"exclude_candidate":"undetermined",
@@ -57,7 +64,7 @@ void ApplyDeliveryPreview(AuditDecision& d,const PointEvidence& e,const Delivery
   d.height_preview="keep";
   if(!map_valid||!d.has_spatial||!d.spatial.available){preview("undetermined","map_or_pose_unavailable");return;}
   if(e.unknown){preview("undetermined","unknown_support_map_cells");d.decision="undetermined";d.reason="unknown_support_map_cells";return;}
-  if(e.road>=p.minimum_road_points||d.road_point_ratio>=p.minimum_road_ratio){d.point_preview="keep";keep("cluster_drivable_support");return;}
+  if(road_support){d.point_preview="keep";keep("cluster_drivable_support");return;}
   d.point_preview="exclude_candidate";
   if(e.guard){
     // A road-exterior rail entirely inside the uncertainty band is still an

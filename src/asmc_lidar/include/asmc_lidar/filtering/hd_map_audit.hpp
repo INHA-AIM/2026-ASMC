@@ -39,9 +39,9 @@ struct AuditDecision {
   std::string preview_decision="undetermined", preview_reason="not_evaluated";
   std::string point_preview="undetermined",obb_preview="undetermined",height_preview="undetermined";
   std::string obb_reference_decision, obb_reference_reason;
-  std::size_t support_points=0, road_points=0, guard_points=0, unknown_points=0;
-  double road_point_ratio=0, min_base_z=0, obb_bottom_base_z=0, roof_limit_z=0;
-  bool height_available=false, camera_dynamic_protected=false, camera_known=false;
+  std::size_t support_points=0, road_points=0, interior_road_points=0, guard_points=0, unknown_points=0;
+  double road_point_ratio=0, interior_road_ratio=0, min_base_z=0, obb_bottom_base_z=0, roof_limit_z=0;
+  bool height_available=false, camera_dynamic_protected=false, camera_vehicle_protected=false, camera_known=false;
   std::string preview_protection_policy, camera_observed_group="unknown", camera_observed_raw="unknown";
 
 };
@@ -52,14 +52,15 @@ struct AuditReport {
   double pose_source_age_ms = -1;
   std::string pose_method;
   std::size_t minimum_support_points=0,minimum_road_points=0;
-  double minimum_road_ratio=0,roof_limit_base_z=0;
+  double minimum_road_ratio=0,road_inset_m=0,roof_limit_base_z=0;
   std::vector<AuditDecision> objects;
 };
 class HdMapAudit {
  public:
   // Load and verify once. All files are bounded raw arrays next to the manifest.
   // Identity/hash failure throws here; runtime catches it and preserves outputs.
-  HdMapAudit(const std::string& manifest, const std::string& expected_manifest_sha256);
+  HdMapAudit(const std::string& manifest, const std::string& expected_manifest_sha256,
+             double road_inset_m = 0);
   AuditDecision Evaluate(const AuditFrame&, const AuditObject&) const;
   // Constant-time road/guard lookup; caller transforms each support point once.
   void Accumulate(PointEvidence&, const Point& map_xyz, double base_z) const;
@@ -67,6 +68,7 @@ class HdMapAudit {
   const std::string& map_sha256() const;
   const std::string& bundle_sha256() const;
   const std::string& policy_sha256() const;
+  double road_inset_m() const;
  private:
   struct Impl;
   std::shared_ptr<const Impl> impl_;

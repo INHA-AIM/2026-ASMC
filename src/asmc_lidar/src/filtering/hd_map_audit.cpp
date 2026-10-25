@@ -57,7 +57,8 @@ struct HdMapAudit::Impl {
   std::string map_id, map_sha, bundle_sha, policy_sha;
   std::array<double,3> map_origin{};
   double res = 0, ox = 0, oy = 0, age_limit = 0, guard = 0, exception_guard = 0;
-  cv::Mat occupancy, exceptions, guarded_road;
+  cv::Mat occupancy, exceptions, guarded_road, interior_road;
+  double road_inset_m=0;
   SpatialRelation Relation(const std::vector<cv::Point2d>& hull, double expansion) const {
     SpatialRelation r;
     if (!std::isfinite(expansion) || expansion < 0 || expansion > 20) {
@@ -106,7 +107,7 @@ struct HdMapAudit::Impl {
     return r;
   }
 };
-HdMapAudit::HdMapAudit(const std::string& path,const std::string& expected) {
+HdMapAudit::HdMapAudit(const std::string& path,const std::string& expected,double road_inset_m) {
   auto p=std::make_shared<Impl>();
   Require(std::filesystem::file_size(path) <= 8*1024*1024,"audit_manifest_too_large");
   std::ifstream file(path,std::ios::binary);
@@ -177,6 +178,16 @@ HdMapAudit::HdMapAudit(const std::string& path,const std::string& expected) {
   cv::compare(p->occupancy,cv::Scalar(0),road,cv::CMP_EQ);
   const int radius=int(std::ceil(p->guard/p->res))+1;
   cv::dilate(road,p->guarded_road,cv::getStructuringElement(cv::MORPH_RECT,cv::Size(2*radius+1,2*radius+1)));
+  Require(std::isfinite(road_inset_m)&&road_inset_m>=0&&road_inset_m<=0.6,"audit_road_inset_invalid");
+  const int inset_cells=int(std::ceil(road_inset_m/p->res-1e-9));
+  p->road_inset_m=inset_cells*p->res;
+  if(inset_cells) {
+    // One immutable byte per cell, prepared once. Erode the union of road
+    // areas so adjacent lanes have no artificial interior boundary.
+    cv::erode(road,p->interior_road,
+      cv::getStructuringElement(cv::MORPH_RECT,cv::Size(2*inset_cells+1,2*inset_cells+1)),
+      cv::Point(-1,-1),1,cv::BORDER_CONSTANT,cv::Scalar(0));
+  } else p->interior_road=road;
   impl_=std::move(p);
 }
 void HdMapAudit::Accumulate(PointEvidence& e,const Point& p,double base_z) const {
@@ -188,12 +199,14 @@ void HdMapAudit::Accumulate(PointEvidence& e,const Point& p,double base_z) const
   if (x<0||y<0||x>=impl_->occupancy.cols||y>=impl_->occupancy.rows) {++e.unknown;return;}
   const auto v=impl_->occupancy.at<std::int8_t>(int(y),int(x));
   e.road += v==0; e.unknown += v==-1;
+  e.interior_road += impl_->interior_road.at<std::uint8_t>(int(y),int(x))!=0;
   e.guard += impl_->guarded_road.at<std::uint8_t>(int(y),int(x))!=0;
 }
 const std::string& HdMapAudit::map_id()const{return impl_->map_id;}
 const std::string& HdMapAudit::map_sha256()const{return impl_->map_sha;}
 const std::string& HdMapAudit::bundle_sha256()const{return impl_->bundle_sha;}
 const std::string& HdMapAudit::policy_sha256()const{return impl_->policy_sha;}
+double HdMapAudit::road_inset_m()const{return impl_->road_inset_m;}
 AuditDecision HdMapAudit::Evaluate(const AuditFrame& f,const AuditObject& o) const {
   const auto start=std::chrono::steady_clock::now();AuditDecision r;r.track_id=o.track_id;r.input_state=o.observation_state;
   auto finish=[&](const char* d,const std::string& why) {
@@ -242,7 +255,10 @@ void WriteAuditDecision(std::ostream& out,const AuditDecision& d) {
     out<<",\"height_decision\":";Str(out,d.height_preview);
     out<<",\"support_points\":"<<d.support_points<<",\"road_points\":"<<d.road_points
        <<",\"guard_points\":"<<d.guard_points<<",\"unknown_points\":"<<d.unknown_points
-       <<",\"road_point_ratio\":"<<d.road_point_ratio<<",\"camera_dynamic_protected\":";Bool(out,d.camera_dynamic_protected);
+       <<",\"road_point_ratio\":"<<d.road_point_ratio
+       <<",\"interior_road_points\":"<<d.interior_road_points<<",\"interior_road_ratio\":"<<d.interior_road_ratio
+       <<",\"camera_vehicle_protected\":";Bool(out,d.camera_vehicle_protected);
+    out<<",\"camera_dynamic_protected\":";Bool(out,d.camera_dynamic_protected);
     out<<",\"camera_known\":";Bool(out,d.camera_known);
     out<<",\"protection_policy\":";Str(out,d.preview_protection_policy);
     out<<",\"camera_group\":";Str(out,d.camera_observed_group);
@@ -270,7 +286,8 @@ void WriteAuditReport(std::ostream& out,const AuditReport& r) {
   out<<",\"preview_config_id\":";Str(out,r.preview_config_id);
   out<<",\"pose_source_age_ms\":"<<r.pose_source_age_ms<<",\"pose_method\":";Str(out,r.pose_method);
   out<<",\"minimum_support_points\":"<<r.minimum_support_points<<",\"minimum_road_points\":"<<r.minimum_road_points
-     <<",\"minimum_road_ratio\":"<<r.minimum_road_ratio<<",\"roof_limit_base_z\":"<<r.roof_limit_base_z;
+     <<",\"minimum_road_ratio\":"<<r.minimum_road_ratio<<",\"road_inset_m\":"<<r.road_inset_m
+     <<",\"road_support_rule\":\"count_and_ratio\",\"roof_limit_base_z\":"<<r.roof_limit_base_z;
   out<<",\"map_identity_provenance\":\"pinned_bundle_and_runtime_origin_config\",\"geometry_authority\":\"vector; grid ratios are diagnostic approximation\",\"position_error_verified\":false,\"mission_scope_verified\":false,\"calculation_ms\":"<<r.calculation_ms<<",\"objects\":[";
   for(std::size_t i=0;i<r.objects.size();++i){if(i)out<<',';WriteAuditDecision(out,r.objects[i]);}out<<"]}";
 }

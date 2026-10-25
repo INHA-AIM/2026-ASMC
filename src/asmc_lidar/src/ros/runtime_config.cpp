@@ -266,11 +266,13 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
       p.minimum_points=preview["minimum_points"].as<unsigned>();
       p.minimum_road_points=preview["minimum_road_points"].as<unsigned>();
       p.minimum_road_ratio=preview["minimum_road_ratio"].as<double>();
+      p.road_inset_m=preview["road_inset_m"]?preview["road_inset_m"].as<double>():0.20;
       p.camera_age_ms=preview["camera_age_ms"].as<double>();
       if(!std::isfinite(p.roof_base_z_m)||p.roof_base_z_m<1||p.roof_base_z_m>3||
          !std::isfinite(p.roof_margin_m)||p.roof_margin_m<0.3||p.roof_margin_m>2||
          p.minimum_points<3||p.minimum_road_points<1||!std::isfinite(p.minimum_road_ratio)||
-         p.minimum_road_ratio<=0||p.minimum_road_ratio>1||!std::isfinite(p.camera_age_ms)||p.camera_age_ms<=0||p.camera_age_ms>500)
+         p.minimum_road_ratio<=0||p.minimum_road_ratio>1||!std::isfinite(p.road_inset_m)||p.road_inset_m<0||p.road_inset_m>0.6||
+         !std::isfinite(p.camera_age_ms)||p.camera_age_ms<=0||p.camera_age_ms>500)
         Fail(file,"invalid delivery preview safety limits");
     }
     config.hd_map_audit_mode = root["hd_map_audit"]["mode"].as<std::string>();
@@ -282,7 +284,8 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
         config.hd_map_manifest = Resolve(root["hd_map_audit"]["manifest"].as<std::string>(), package_share_dir);
         config.hd_map_manifest_sha256 = root["hd_map_audit"]["manifest_sha256"].as<std::string>();
         config.hd_map_audit = std::make_shared<const filtering::HdMapAudit>(
-            config.hd_map_manifest, config.hd_map_manifest_sha256);
+            config.hd_map_manifest, config.hd_map_manifest_sha256,
+            config.delivery_preview.enabled?config.delivery_preview.road_inset_m:0);
         const auto product=root["hd_map_audit"]["source_product"];
         if(product&&filtering::FileSha256(Resolve(product.as<std::string>(),package_share_dir))!=config.hd_map_audit->map_sha256()) {
           config.hd_map_audit.reset();throw std::runtime_error("audit_current_product_sha_mismatch");
@@ -321,7 +324,8 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
       << config.hd_map_audit->policy_sha256() << '\n';
   const auto& p=config.delivery_preview;
   effective << p.enabled << ',' << p.roof_base_z_m << ',' << p.roof_margin_m << ','
-    << p.minimum_points << ',' << p.minimum_road_points << ',' << p.minimum_road_ratio << ',' << p.camera_age_ms;
+    << p.minimum_points << ',' << p.minimum_road_points << ',' << p.minimum_road_ratio << ','
+    << p.road_inset_m << ',' << p.camera_age_ms;
   if(p.enabled)effective << ',' << filtering::kDeliveryProtectionPolicy;
   config.config_id = hash(effective.str());
 }

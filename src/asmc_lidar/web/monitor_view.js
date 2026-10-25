@@ -110,11 +110,12 @@
   }
 
   const auditIndices=new WeakMap();
-  const AUDIT_REASONS={camera_dynamic_protected:'YOLO 동적 그룹의 유효한 양성 매칭',cluster_drivable_support:'군집 점이 도로 안',
+  const AUDIT_REASONS={camera_dynamic_protected:'YOLO 동적 그룹의 유효한 양성 매칭',camera_vehicle_protected:'YOLO 차량 그룹의 유효한 양성 매칭',
+    cluster_drivable_support:'도로 내부 점 개수·비율 기준 모두 충족',
     cluster_boundary_protected:'경계 여유 보호',exception_space_protected:'구형 미션 영역 일괄 보호 · 생산자 재시작 필요',
-    cluster_outside_boundary_uncertain:'도로 점 없음 · 경계 오차 미확정',
+    cluster_outside_boundary_uncertain:'도로 내부 근거 부족 · 경계 오차 미확정',
     obb_support_outside:'OBB 도로 겹침 없음 · 점 근거 부족',
-    cluster_support_outside:'군집 점이 도로 밖',overhead_clearance_candidate:'자차 상부 높이 후보',
+    cluster_support_outside:'도로 내부 근거 부족',overhead_clearance_candidate:'자차 상부 높이 후보',
     overhead_lower_surface_unverified:'하부 관측 검증 대기',insufficient_cluster_support:'근거 점 부족',
     unknown_support_map_cells:'점 위치의 지도 근거 부족',map_or_pose_unavailable:'지도/위치 무효',
     pose_error_bound_unverified:'위치 오차 검증 대기',point_policy_pose_and_scope_unverified:'위치·구간 검증 대기'};
@@ -141,6 +142,7 @@
     const categories=exclusionKinds(d),category=categories[0]||null;
     return {decision:kind,category,categories,reason:p?p.reason:d?d.reason:'audit_off',
       label:kind==='keep'&&category==='obb'?'유지·OBB 비교 후보':kind==='keep'&&p&&p.reason==='camera_dynamic_protected'?'YOLO 동적 보호':
+        kind==='keep'&&p&&p.reason==='camera_vehicle_protected'?'YOLO 차량 보호':
         kind==='keep'&&p&&p.reason==='exception_space_protected'?'구형 미션 보호':kind==='keep'&&p&&p.reason==='cluster_drivable_support'?'도로 근거 유지':
         {keep:'유지',exclude_candidate:'제외 후보',undetermined:'보류',unavailable:'미실행'}[kind]||'보류',
       color:category?{points:'#f472b6',obb:'#c084fc',height:'#fb923c'}[category]:{keep:'#34d399',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',

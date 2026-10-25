@@ -269,8 +269,9 @@ std::vector<std::uint8_t> Wire(const Array& array) {
 }
 
 // Tiny map fixture: local/map identity is the shipped origin; no external data.
-void WithAudit(TempDir& dir, sh::RuntimeConfig& cfg) {
-  const auto occupancy=dir.Bytes("occupancy.bin",std::string(160000, char(100)));
+void WithAudit(TempDir& dir, sh::RuntimeConfig& cfg,
+               const std::string& cells=std::string(160000,char(100))) {
+  const auto occupancy=dir.Bytes("occupancy.bin",cells);
   const auto exceptions=dir.Bytes("exceptions.bin",std::string(160000, char(0)));
   const std::string policy=R"({"expected_map_id":"fixture","map_origin":[302595,4124145,0],"pose_age_limit_ms":300,"candidate_guard_m":1,"exception_protection_m":10})";
   const auto policy_file=dir.Bytes("policy.json",policy);
@@ -288,6 +289,29 @@ void WithAudit(TempDir& dir, sh::RuntimeConfig& cfg) {
   cfg.hd_map_manifest=dir.Write("manifest.yaml",m);
   cfg.hd_map_manifest_sha256=FileSha256(cfg.hd_map_manifest);
   cfg.hd_map_audit=std::make_shared<const asmc::lidar::filtering::HdMapAudit>(cfg.hd_map_manifest,cfg.hd_map_manifest_sha256);
+}
+
+TEST(HdMapAuditRuntime, InsetShrinksOnlyUnionBoundaryAndPreservesRawAndUnknownCounts) {
+  namespace f=asmc::lidar::filtering;
+  TempDir dir;auto cfg=ShippedRuntimeConfig();std::string cells(160000,char(100));
+  for(int y=100;y<120;++y)for(int x=100;x<120;++x)cells[y*400+x]=0;
+  cells[110*400+99]=char(-1);
+  WithAudit(dir,cfg,cells);
+  auto manifest=YAML::LoadFile(cfg.hd_map_manifest);manifest["resolution_m"]=.2;
+  const auto path=dir.Write("inset.yaml",manifest),sha=FileSha256(path);
+  f::HdMapAudit plain(path,sha),inset(path,sha,.2);
+  EXPECT_DOUBLE_EQ(inset.road_inset_m(),.2);
+  f::PointEvidence raw,inside;
+  // First road cell, inner road cell, union middle (no per-lane erosion), unknown.
+  for(const auto& p:std::vector<f::Point>{{-79.9,-77.9,0},{-79.7,-77.9,0},
+                                          {-78.1,-77.9,0},{-80.1,-77.9,0}}) {
+    plain.Accumulate(raw,p,.1);inset.Accumulate(inside,p,.1);
+  }
+  EXPECT_EQ(raw.road,3u);EXPECT_EQ(raw.interior_road,3u);
+  EXPECT_EQ(inside.road,raw.road);EXPECT_EQ(inside.interior_road,2u);
+  EXPECT_EQ(inside.unknown,1u);EXPECT_EQ(inside.total,4u);
+  EXPECT_THROW(f::HdMapAudit(path,sha,-.1),std::runtime_error);
+  EXPECT_THROW(f::HdMapAudit(path,sha,.7),std::runtime_error);
 }
 
 TEST(HdMapAuditRuntime, PreservesEveryObjectByteAcrossGpsFaultAndRecovery) {

@@ -423,9 +423,12 @@ test('YOLO protection and old region protection are distinguished from motion',(
   const scene={hd_map_audit:{enabled:true,objects:[
     {track_id:1,preview:{decision:'keep',reason:'camera_dynamic_protected'}},
     {track_id:2,preview:{decision:'keep',reason:'exception_space_protected'}},
+    {track_id:4,preview:{decision:'keep',reason:'camera_vehicle_protected',point_decision:'keep',obb_decision:'keep',height_decision:'keep'}},
     {track_id:3,preview:{decision:'exclude_candidate',reason:'cluster_support_outside',point_decision:'exclude_candidate',obb_decision:'keep',height_decision:'keep'}}]}};
   assert.equal(V.auditAppearance(scene,{id:1}).label,'YOLO 동적 보호');
   assert.equal(V.auditAppearance(scene,{id:2}).label,'구형 미션 보호');
+  assert.equal(V.auditAppearance(scene,{id:4}).label,'YOLO 차량 보호');
+  assert.equal(V.previewVisible(scene,{id:4,miss:0},false,true),true);
   const movingUnknown={id:3,miss:0,class:'unknown',motion:{state:3,valid:true}};
   assert.equal(V.auditAppearance(scene,movingUnknown).label,'제외 후보');
   assert.equal(V.previewVisible(scene,movingUnknown,false,true),false);
