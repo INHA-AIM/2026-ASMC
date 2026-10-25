@@ -322,6 +322,54 @@ TEST(TypedOutput, StampGuardRejectsZeroDuplicateAndRegressing) {
   EXPECT_EQ(output.invalid(), 1u);
 }
 
+TEST(TypedOutput, PreservesLegacyAppliedMotionAndRotatesVectorsOnce) {
+  auto result = MakeResult(kStamp, true);
+  auto object = MakeTrack(17, 7.f, 2.f, .3f);
+  object.detection.f32_CoreX = 6.f;
+  object.detection.f32_CoreY = 1.f;
+  auto& motion = object.tracking.display_motion;
+  motion.s32_Id = 17; motion.s32_MotionValidObservations = 8;
+  motion.s32_MotionState = 2; motion.motion_valid = true; motion.b_IsDynamic = true;
+  motion.f32_PlannerVxKPH = 18.; motion.f32_PlannerVyKPH = -3.6;
+  TypedOutput output;
+  const auto arrays = output.Observed(result, {object});
+  ASSERT_EQ(1u, arrays.map.objects.size());
+  ASSERT_EQ(1u, arrays.local_tracking.size());
+  const auto base = BaseFromLevel(result.context);
+  const auto map = result.context.map_pose.map_from_base * base;
+  const Vec original(5., -1., 0.);
+  for (const auto* message : {&arrays.local.objects[0], &arrays.map.objects[0]}) {
+    EXPECT_TRUE(message->absolute_velocity_valid);
+    EXPECT_TRUE(message->dynamic_valid); EXPECT_TRUE(message->is_dynamic);
+    EXPECT_FALSE(message->relative_velocity_valid);
+  }
+  const auto& velocity = arrays.map.objects[0].absolute_velocity_mps;
+  EXPECT_NEAR((Vec(velocity.x,velocity.y,velocity.z)-map.linear()*original).norm(),0.,1e-10);
+  EXPECT_NEAR((ToVec(arrays.map_tracking[0].cluster_center)-map*Vec(6,1,0)).norm(),0.,1e-10);
+  EXPECT_EQ(2, arrays.map_tracking[0].motion_state);
+  EXPECT_EQ(17, arrays.map_tracking[0].track_id);
+  EXPECT_NE(arrays.map_tracking[0].cluster_center, arrays.map.objects[0].center);
+}
+
+TEST(TypedOutput, WarmupEstimateIsUnknownAndGpsLossDoesNotInventMotion) {
+  auto object = MakeTrack(7, 5.f, 0.f, 0.f);
+  auto& motion = object.tracking.display_motion;
+  motion.s32_Id = 7; motion.s32_MotionValidObservations = 1;
+  TypedOutput output;
+  auto arrays = output.Observed(MakeResult(kStamp, true), {object});
+  ASSERT_EQ(1u, arrays.map.objects.size());
+  EXPECT_TRUE(arrays.map.objects[0].absolute_velocity_valid);  // legacy policy estimate, not confirmed stationary
+  EXPECT_FALSE(arrays.map.objects[0].dynamic_valid);
+  EXPECT_EQ(0, arrays.map_tracking[0].motion_state);
+  motion.motion_valid = true; motion.s32_MotionState = 3; motion.b_IsDynamic = true;
+  arrays = output.Observed(MakeResult(kStamp+1, false), {object});
+  EXPECT_EQ(asmc_msgs::LidarObjectArray::POSE_UNAVAILABLE, arrays.map.status);
+  EXPECT_TRUE(arrays.map_tracking.empty());
+  EXPECT_FALSE(arrays.local.objects[0].absolute_velocity_valid);
+  EXPECT_FALSE(arrays.local.objects[0].dynamic_valid);
+  EXPECT_EQ(0, arrays.local_tracking[0].motion_state);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) { testing::InitGoogleTest(&argc, argv); return RUN_ALL_TESTS(); }

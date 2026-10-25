@@ -34,7 +34,7 @@
     paused: false, inflight: false, inflightSince: 0, controller: null,
     view: { frame: 'base', mode: 'bev', bevYaw: 0, yaw: -0.4, pitch: 0.65, road: true, scale: 9, panX: 0, panY: 0, side: 'xz', psize: 2, compare: false, labels: true },
     road: null,
-    hideCandidates:false,hideReasons:{points:true,obb:true,height:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
+    hideCandidates:false,hideReasons:{points:true,obb:true,height:true,policy:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
     stages: {}, selected: null, webFrames: [], matrices: null,
   };
 
@@ -703,9 +703,9 @@
   el('opt-hide-candidates').addEventListener('change',e=>{
     e.target.indeterminate=false;
     state.hideCandidates=e.target.checked;
-    for(const k of ['points','obb','height']){state.hideReasons[k]=e.target.checked;el('opt-hide-'+k).checked=e.target.checked;}
+    for(const k of ['points','obb','height','policy']){state.hideReasons[k]=e.target.checked;el('opt-hide-'+k).checked=e.target.checked;}
     renderScene();renderTracks();renderDetail();});
-  for(const k of ['points','obb','height'])el('opt-hide-'+k).addEventListener('change',e=>{
+  for(const k of ['points','obb','height','policy'])el('opt-hide-'+k).addEventListener('change',e=>{
     state.hideCandidates=false;el('opt-hide-candidates').checked=false;state.hideReasons[k]=e.target.checked;
     el('opt-hide-candidates').indeterminate=Object.values(state.hideReasons).some(Boolean);
     renderScene();renderTracks();renderDetail();});

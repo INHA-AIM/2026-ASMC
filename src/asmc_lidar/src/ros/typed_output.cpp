@@ -29,7 +29,9 @@ void Point(const asmc::lidar::Vec& source, geometry_msgs::Point* target) {
 
 // Ported from Main src/Geometry/FrameBoundaryPublisher.cpp:12-29 (8f93c22e).
 asmc_msgs::LidarObject Message(const pipeline::TrackedObject& original,
-                               const asmc::lidar::Geometry& geometry) {
+                               const asmc::lidar::Geometry& geometry,
+                               const asmc::lidar::Rot& output_from_level,
+                               bool map_valid) {
   asmc_msgs::LidarObject out;
   out.track_id = original.tracking.s32_Id; out.detection_index = original.detection.u16_Idx;
   out.observation_state = out.OBSERVED;
@@ -41,10 +43,37 @@ asmc_msgs::LidarObject Message(const pipeline::TrackedObject& original,
   out.length = original.detection.obb_length_m; out.width = original.detection.obb_width_m;
   out.height = original.detection.f32_OBB_ZMax - original.detection.f32_OBB_ZMin;  // float subtraction, as Main
   out.source_point_count = original.detection.pcl_ClusterPoints.size();
-  // Main: the CA state is a derivative in moving leveled-sensor coordinates;
-  // it must not become a valid zero/static velocity.
-  out.relative_velocity_valid = false; out.absolute_velocity_valid = false;
-  out.dynamic_valid = false;
+  // Port Main PlannerObjectAdapter's *applied* velocity, not its raw KF
+  // derivative. LOW_THREAT zeros and UNKNOWN warmup estimates are the existing
+  // MotionClassifier policy. Valid means a finite source-time estimate exists,
+  // never that the estimate has independent-GT accuracy or confirmed motion.
+  const auto& m = original.tracking.display_motion;
+  const Vec applied = output_from_level * Vec(m.f32_PlannerVxKPH / 3.6,
+                                              m.f32_PlannerVyKPH / 3.6, 0.);
+  out.relative_velocity_valid = false;  // moving-frame derivative is not certified
+  out.absolute_velocity_valid = map_valid && m.s32_Id == out.track_id &&
+      m.s32_MotionValidObservations > 0 && applied.allFinite() &&
+      std::isfinite(original.tracking.f32_AbsVx) && std::isfinite(original.tracking.f32_AbsVy) &&
+      m.s32_MotionState >= 0 && m.s32_MotionState <= 3;
+  if (out.absolute_velocity_valid) {
+    out.absolute_velocity_mps.x = applied.x();
+    out.absolute_velocity_mps.y = applied.y();
+    out.absolute_velocity_mps.z = applied.z();
+  }
+  out.dynamic_valid = out.absolute_velocity_valid && m.motion_valid;
+  out.is_dynamic = out.dynamic_valid && m.b_IsDynamic;
+  return out;
+}
+
+asmc_msgs::LidarTrackingState Tracking(const pipeline::TrackedObject& object,
+                                      const Pose& output_from_level, bool motion_valid) {
+  asmc_msgs::LidarTrackingState out;
+  out.track_id = object.tracking.s32_Id;
+  const auto& m = object.tracking.display_motion;
+  out.motion_state = motion_valid && m.s32_Id == out.track_id && m.motion_valid &&
+      m.s32_MotionState >= 1 && m.s32_MotionState <= 3 ? m.s32_MotionState : out.UNKNOWN;
+  Point(output_from_level * Vec(object.detection.f32_CoreX,
+                               object.detection.f32_CoreY, object.detection.f32_CoreZ), &out.cluster_center);
   return out;
 }
 
@@ -122,16 +151,25 @@ TypedOutput::Arrays TypedOutput::Observed(const pipeline::ScanResult& result,
     for (double dimension : dimensions) if (!std::isfinite(dimension) || dimension < 0) {
       transformed.valid = false; transformed.reason = "invalid_object_dimensions";
     }
+    if (!std::isfinite(original.detection.f32_CoreX) || !std::isfinite(original.detection.f32_CoreY) ||
+        !std::isfinite(original.detection.f32_CoreZ)) {
+      transformed.valid = false; transformed.reason = "invalid_tracking_center";
+    }
     if (!transformed.valid) {
       out.local.status = Array::INPUT_INVALID; out.local.reason = transformed.reason; out.local.objects.clear();
       out.map.status = Array::INPUT_INVALID; out.map.reason = transformed.reason; out.map.objects.clear();
+      out.local_tracking.clear(); out.map_tracking.clear();
       input_reason_ = transformed.reason; ++invalid_; break;
     }
     out.local.status = Array::OBSERVED; out.local.reason = "observed";
-    out.local.objects.push_back(Message(original, transformed.base));
+    out.local.objects.push_back(Message(original, transformed.base, base_from_level->linear(),
+                                        context.map_pose.valid));
+    out.local_tracking.push_back(Tracking(original, *base_from_level, out.local.objects.back().dynamic_valid));
     if (transformed.map) {
       out.map.status = Array::OBSERVED; out.map.reason = context.map_pose.reason;
-      out.map.objects.push_back(Message(original, *transformed.map));
+      const Pose map_from_level = context.map_pose.map_from_base * *base_from_level;
+      out.map.objects.push_back(Message(original, *transformed.map, map_from_level.linear(), true));
+      out.map_tracking.push_back(Tracking(original, map_from_level, out.map.objects.back().dynamic_valid));
     }
   }
   return out;

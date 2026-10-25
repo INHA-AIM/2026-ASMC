@@ -16,10 +16,12 @@
 #include <asmc_lidar/fusion/front_camera_fusion.hpp>
 #include <asmc_lidar/filtering/hd_map_audit.hpp>
 #include <asmc_lidar/filtering/delivery_preview.hpp>
+#include <asmc_lidar/filtering/delivery_filters.hpp>
 #include <asmc_lidar/pipeline/pipeline.hpp>
 #include <asmc_lidar/geometry/pose_history.hpp>
 
 #include <asmc_msgs/LidarObjectArray.h>
+#include <asmc_msgs/LidarTrackingState.h>
 
 #include <atomic>
 #include <cstdint>
@@ -47,6 +49,8 @@ struct RuntimeConfig {
   std::string hd_map_audit_error;
   std::shared_ptr<const filtering::HdMapAudit> hd_map_audit;
   filtering::DeliveryPolicy delivery_preview;
+  std::shared_ptr<const filtering::DeliveryFilters> delivery_filters;
+  std::string delivery_assets_id;
 
   // Paths/identity resolved by LoadRuntimeConfig (for diagnostics).
   std::string config_path, config_sha256, mount_config_path, mount_config_sha256;
@@ -74,6 +78,7 @@ class TypedOutput {
     bool accepted = false;  // false: zero or non-increasing stamp, nothing to publish
     asmc_msgs::LidarObjectArray local;  // frame base_link
     asmc_msgs::LidarObjectArray map;    // frame map
+    std::vector<asmc_msgs::LidarTrackingState> local_tracking, map_tracking;
     // true only when Observed() accepted the scan (Main Publish() past Accept):
     // exactly then Main sends the base_link -> lidar_leveled TF, even if an
     // object later turns the arrays INPUT_INVALID. base_from_level is that TF.
@@ -131,6 +136,7 @@ struct ScanOutput {
   TypedOutput::Arrays arrays;
   filtering::AuditReport hd_map_audit;
   double wait_ms = 0., total_ms = 0.;
+  double ego_speed_mps = 0.;
 };
 
 class LidarRuntime {
@@ -155,6 +161,7 @@ class LidarRuntime {
   const pipeline::PoseHistory& pose() const { return pose_; }
   const TypedOutput& output() const { return output_; }
   const pipeline::fusion::FrontCameraFusion* fusion() const { return fusion_.get(); }
+  const std::string& delivery_status() const { return delivery_filters_.status(); }
   std::uint64_t rejected_scans() const { return rejected_scans_; }
   std::uint64_t imu_rejected() const { return imu_rejected_; }
   std::uint64_t can_rejected() const { return can_rejected_; }
@@ -172,7 +179,7 @@ class LidarRuntime {
 
  private:
   void Audit(ScanOutput& out) const;
-  void FilterDelivery(ScanOutput& out) const;
+  void FilterDelivery(ScanOutput& out);
   RuntimeConfig config_;
   pipeline::PoseHistory pose_;
   pipeline::GpsIngest gps_;
@@ -180,6 +187,7 @@ class LidarRuntime {
   std::shared_ptr<pipeline::fusion::CameraSource> camera_;
   std::unique_ptr<pipeline::fusion::FrontCameraFusion> fusion_;
   TypedOutput output_;
+  filtering::DeliveryFilters delivery_filters_;
   std::int64_t last_accepted_scan_ns_ = 0;
   std::atomic<std::uint64_t> rejected_scans_{0}, imu_rejected_{0}, can_rejected_{0}, gps_rejected_{0};
   mutable std::mutex gps_mutex_;  // guards gps_ and last_gps_reason_

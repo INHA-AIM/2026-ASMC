@@ -1,10 +1,11 @@
 <launch>
-  <arg name="input_topic" default="/last_lidar"/>
-  <arg name="source_policy" default="validated_lidar"/>
+  <arg name="source_policy" default="asmc_lidar"/>
+  <arg name="input_topic" default="$(eval '/perception/lidar/tracks_map' if arg('source_policy') == 'asmc_lidar' else '/last_lidar')"/>
   <arg name="motion_debug_topic" default="/lidar/motion_debug"/>
   <arg name="output_topic" default="/planning/objects"/>
   <arg name="state_topic" default="/planning/vehicle/state"/>
-  <node pkg="planning_inputs" type="tracked_wire_bridge.py" name="planning_tracked_wire_bridge" output="screen">
+  <!-- Frozen legacy wire is rollback-only. Common observations are consumed directly. -->
+  <node unless="$(eval arg('source_policy') == 'asmc_lidar')" pkg="planning_inputs" type="tracked_wire_bridge.py" name="planning_tracked_wire_bridge" output="screen">
     <param name="source_policy" value="$(arg source_policy)"/>
     <param name="motion_debug_topic" value="$(arg motion_debug_topic)"/>
     <param name="input_topic" value="$(arg input_topic)"/>
@@ -19,7 +20,7 @@
     <param name="static_structure_exclusion_config" value="$(find planning_inputs)/config/static_structure_exclusions.yaml"/>
     <param name="source_policy" value="$(arg source_policy)"/>
     <param name="motion_debug_topic" value="$(arg motion_debug_topic)"/>
-    <param name="input_topic" value="/planning/input/tracked_objects"/>
+    <param name="input_topic" value="$(eval arg('input_topic') if arg('source_policy') == 'asmc_lidar' else '/planning/input/tracked_objects')"/>
     <param name="output_topic" value="$(arg output_topic)"/>
     <param name="state_topic" value="$(arg state_topic)"/>
   </node>

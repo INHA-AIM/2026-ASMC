@@ -237,8 +237,8 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   result.context = frame_.Current();  // Main st_LiDAR.frame_context (LidarProcess.cpp:272)
 
   // Main decision history runs at full scan rate, never at the throttled web
-  // refresh rate. Only a diagnostic copy is modified; tracker/KF and typed
-  // velocity/dynamic validity remain untouched.
+  // refresh rate. The copy supplies public applied velocity/motion, while the
+  // raw tracker/KF remains unchanged. Map loss invalidates this estimate.
   std::vector<motion_display::MotionObject> motion_objects(object.size());
   const auto base_from_level = asmc::lidar::base_from_input(result.context);
   const bool motion_map_valid = result.context.map_pose.valid && base_from_level.has_value();

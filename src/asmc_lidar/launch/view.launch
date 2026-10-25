@@ -2,7 +2,7 @@
   <!-- Read-only HTTP viewer. Never starts a driver, pipeline or camera.
        Previous name: monitor.launch (combined execution was removed).
        Start lidar.launch debug:=true separately to expose sampled stages. -->
-  <arg name="namespace" default="/migration/lidar"/>
+  <arg name="namespace" default="/perception/lidar"/>
   <arg name="open_browser" default="false"/>
   <arg name="dashboard_port" default="8091"/>
   <arg name="bind_address" default="127.0.0.1"/>

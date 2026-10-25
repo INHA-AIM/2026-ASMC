@@ -1,0 +1,27 @@
+schema_version: 1
+source_revision: ab8db0944c88f6450fd12107d9620a690f733b9e
+purpose: existing final-publication policy transfer, no tuning
+sources:
+- path: src/lidar+sensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.hpp
+  sha256: e6b38578eaeb81f0ed033daf9c4527a4f35981b7a057d5ad855dc6cfe813289e
+- path: src/lidar+sensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.cpp
+  sha256: 5b932c69fbb454ddb0004cd504e39c4637617a1b9fbd3a2d5fb80acfa394fce2
+- path: src/lidar+sensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.hpp
+  sha256: 6b4f24ae5e496732520a6f743f0c396e9ab3c9ea5858ec7644c1e84db291c2a7
+- path: src/lidar+sensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.cpp
+  sha256: 35029c449040b63517b9bed41dd31b5833f422c3af467a43ffb27095ebcd60c0
+- path: src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.hpp
+  sha256: ec68501a9fdfb0e0f26f69c9826c2ae56733e4a3d70932de03f5213932192127
+- path: src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.cpp
+  sha256: 82ce7022935fd9d5c5bbd2a67e543fde5c1bf695ff4fca7181b69eca1b3d0edd
+- path: src/lidar+sensorfusion/src/Main/known_static_objects.yaml
+  sha256: 2d8fe6e5b47215e85fbe05f03b552e06096499f0bba43e1a54166245ab4242a1
+- path: src/planning_inputs/config/static_structure_exclusions.yaml
+  sha256: 59455834a3327f1a03675d0ef64d078d9d6f7923a34c3cfe65352239ea887e35
+intentional_differences:
+- Current v7 HD-map and height delivery filter replaces the old road mask; no OBB
+  clipping.
+- PR108 fresh YOLO vehicle/dynamic protection takes precedence over the ported filters.
+- Map-only policies stop and quality history resets on invalid map pose; local objects
+  remain available.
+- No Main/Msg dependency, UDP object sender, camera inference or vehicle-control publisher.
