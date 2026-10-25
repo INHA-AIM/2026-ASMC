@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "c98db3c6",
+  "baseline_failed_checks": 117,
+  "working_failed_checks": 117,
+  "identical_failure_multiset": true,
+  "introduced": [],
+  "resolved": []
+}

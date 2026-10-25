@@ -108,8 +108,9 @@ DynamicDecision DynamicObjectPolicy::evaluate(const UrbanFeature& feature,const 
     // samples to settle its motion flag. Waiting for PENDING lost ~0.7 s in
     // the captured deer collision. Evaluate the observed occupancy now, using
     // the same shared motion model, but grant no lead/bypass ownership.
-    const bool unmeasured=source.motion_state==ObjectMotionState::UNKNOWN &&
-        (known_mobile || source.type==static_cast<int>(ObjectType::UNKNOWN));
+    const bool unmeasured=source.velocity_unavailable ||
+        (source.motion_state==ObjectMotionState::UNKNOWN &&
+         (known_mobile || source.type==static_cast<int>(ObjectType::UNKNOWN)));
     // LOW_THREAT describes measured motion, not semantics or proven rest.
     // A late camera label must not postpone an occupancy brake. Unclassified
     // LOW objects may nominate a bounded in-lane path; the native planner must

@@ -10,6 +10,8 @@
 수정할 때는 [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)를
 함께 본다.
 
+새 LiDAR 선택 실행과 기존 패키지 복구는 [LiDAR 전환·재밍 연결](lidar-cutover.md)을 따른다.
+
 두 Windows PC 연습은 [LAN2LAN·채점 채널 확인](lan2lan-rehearsal.md)을 따른다.
 팀 sensor/bridge allowlist와 주최 채점 프로그램의 endpoint를 구분하며,
 현재 generated JSON의 채점 경로 차이는 [2026-10-20 대조](../records/bridge/2026-10-20-lan-channel-review.md)에 남긴다.

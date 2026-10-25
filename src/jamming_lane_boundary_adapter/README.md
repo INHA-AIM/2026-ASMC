@@ -7,7 +7,7 @@
 [투영 계약과 검증](../../docs/records/camera/2026-10-18-imu-bbox-projection.md)을 참고한다.
 실제 차선변경 제어 인수는 [판제 체크리스트](../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)로 별도 확인한다.
 
-현재 YOLO 추론은 별도 `asmc_camera/camera.launch`가 소유한다. `camera_bbox_detector.launch`는 카메라 전방 결과를 전용 토픽으로 바꾸는 CPU 어댑터뿐이다.
+현재 YOLO 추론은 별도 `asmc_camera/camera.launch`가 소유한다. 기본 프레임 브리지는 `/perception/camera/objects`의 `camera_front` 결과를 직접 받아 같은 시각의 원본 영상과 연결한다. Main이나 별도 YOLO 어댑터를 시작할 필요가 없다. 옛 입력은 `camera_bbox_lane.launch bbox_source_type:=legacy_yolo bbox_topic:=/YOLO/BBox`로만 선택한다.
 구형 cropped YOLO/가중치/실행 옵션은 제거했고 기존 차로 판정·제어 정책과 소비 cutoff0.7은 유지한다.
 [카메라→Main/LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 참고한다.
 

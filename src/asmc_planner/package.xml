@@ -17,6 +17,7 @@
   <depend>roscpp</depend>
   <exec_depend>asmc_controller</exec_depend>
   <exec_depend>asmc_camera</exec_depend>
+  <exec_depend>asmc_lidar</exec_depend>
   <exec_depend>lane_boundary_adapter</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>rospkg</exec_depend>

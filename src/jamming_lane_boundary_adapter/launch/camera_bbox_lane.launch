@@ -9,7 +9,9 @@
   <arg name="ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
   <arg name="use_rviz" default="true"/>
   <arg name="image_topic" default="/image_jpeg/compressed"/>
-  <arg name="bbox_topic" default="/planning/camera_bbox_lane/yolo"/>
+  <arg name="bbox_topic" default="/perception/camera/objects"/>
+  <arg name="bbox_source_type" default="camera_objects"/>
+  <arg name="conf_thres" default="0.7"/>
   <!-- Current M1 geometry requires the same original image's selected plane.
        Never substitute latest IMU or fixed YAML height for missing context.
        Legacy replay must explicitly select old hash/calibration and disable context. -->
@@ -27,6 +29,8 @@
         name="camera_bbox_frame_bridge" output="screen" required="true">
     <param name="image_topic" value="$(arg image_topic)"/>
     <param name="bbox_topic" value="$(arg bbox_topic)"/>
+    <param name="source_type" value="$(arg bbox_source_type)"/>
+    <param name="confidence_threshold" value="$(arg conf_thres)"/>
   </node>
   <node pkg="lane_boundary_adapter" type="camera_bbox_lane_node"
         name="camera_bbox_lane" output="screen" required="true">

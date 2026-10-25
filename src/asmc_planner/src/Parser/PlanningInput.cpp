@@ -144,7 +144,10 @@ ConversionStatus ConvertDetectedObjects(
             return ConversionStatus::NON_FINITE_VALUE;
         }
         if (message_object.motion_state >
-            planning_inputs::DetectedObject::MOTION_DYNAMIC) {
+            planning_inputs::DetectedObject::MOTION_DYNAMIC ||
+            (message_object.velocity_unavailable &&
+             (message_object.motion_state != planning_inputs::DetectedObject::MOTION_UNKNOWN ||
+              message_object.vx != 0. || message_object.vy != 0.))) {
             return ConversionStatus::INVALID_FLAG;
         }
 
@@ -153,6 +156,7 @@ ConversionStatus ConvertDetectedObjects(
         object.type = message_object.type;
         object.motion_state =
             static_cast<ObjectMotionState>(message_object.motion_state);
+        object.velocity_unavailable = message_object.velocity_unavailable;
         object.x = message_object.center.x;
         object.y = message_object.center.y;
         object.z = message_object.center.z;

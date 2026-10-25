@@ -275,6 +275,19 @@ int main() {
                objects[0].corners[1].z == 0.0,
            "LiDAR OBB corners are copied unchanged to TrackedObject");
 
+    auto unmeasured_message = object_message;
+    auto& unmeasured = unmeasured_message.objects[0];
+    unmeasured.velocity_unavailable = true;
+    unmeasured.motion_state = unmeasured.MOTION_UNKNOWN;
+    unmeasured.vx = unmeasured.vy = 0.;
+    Expect(frenet_planner_ros::ConvertDetectedObjects(unmeasured_message, objects) == ConversionStatus::OK &&
+           objects.size() == 1 && objects[0].velocity_unavailable && objects[0].geometry_valid &&
+           objects[0].motion_state == ObjectMotionState::UNKNOWN,
+           "unmeasured velocity retains authoritative occupied geometry and its explicit flag");
+    unmeasured.motion_state = unmeasured.MOTION_LOW_THREAT;
+    Expect(frenet_planner_ros::ConvertDetectedObjects(unmeasured_message, objects) == ConversionStatus::INVALID_FLAG,
+           "unmeasured velocity cannot be promoted to measured low threat");
+
     auto malformed_message = MakeEmptyObjects();
     malformed_message.objects.push_back(MakeObject(10.0, 20.0));
     malformed_message.objects[0].obb_corners[3].x =

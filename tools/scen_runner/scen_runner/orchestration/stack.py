@@ -51,7 +51,8 @@ def check_conflicts(role, nodes, graph):
     topics = ({'/ctrl_cmd', '/planning/vehicle/state', '/planning/objects', '/planning/trajectory'}
               if role == 'planning' else
               {'/perception/camera/objects', '/perception/lane/boundary_family',
-               '/traffic_light/state', '/last_lidar', '/YOLO/BBox'})
+               '/traffic_light/state', '/last_lidar', '/YOLO/BBox',
+               '/migration/lidar/objects_local', '/migration/lidar/planning_observations_map'})
     conflicts += [topic+' ('+', '.join(names)+')' for topic, names in graph[0] if topic in topics and names]
     if conflicts:
         raise RuntimeError('중복 노드/발행자가 이미 실행 중입니다: '+', '.join(conflicts))
@@ -97,7 +98,9 @@ def launch_configuration(role, config):
     else:
         file = TOOL_ROOT/'launch'/f'{role}.launch'
     # None preserves ROS_MASTER_URI, including isolated verification masters.
-    launch_config = roslaunch.config.load_config_default([str(file)], None)
+    launch_files = [str(file)] if role == 'bridge' else [(str(file),
+        ['lidar_backend:=' + config.get('lidar_backend', 'main')])]
+    launch_config = roslaunch.config.load_config_default(launch_files, None)
     if role == 'perception':
         configure_nodes(config, launch_config)
     else:

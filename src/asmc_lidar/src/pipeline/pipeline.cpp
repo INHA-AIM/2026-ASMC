@@ -1,3 +1,4 @@
+#include <asmc_lidar/tracking/planning_velocity.hpp>
 #include <asmc_lidar/detection/detections.hpp>
 #include <asmc_lidar/core/source_time.hpp>
 #include <asmc_lidar/tracking/track.hpp>
@@ -247,11 +248,14 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     for (std::size_t i=0;i<object.size();++i) {
       const auto& o=object[i];auto& m=motion_objects[i];m=o.tracking.display_motion;
       m.s32_Id=o.tracking.s32_Id;m.s32_MissCount=o.tracking.s32_MissCount;
-      m.f32_AbsVx=o.tracking.f32_AbsVx;m.f32_AbsVy=o.tracking.f32_AbsVy;
       const auto center=(map_from_level * asmc::lidar::Vec(o.detection.f32_CoreX,o.detection.f32_CoreY,o.detection.f32_CoreZ)).eval();
       m.f32_CoreE=static_cast<float>(center.x());m.f32_CoreN=static_cast<float>(center.y());
-      const auto velocity=(map_from_level.linear()*asmc::lidar::Vec(o.tracking.f32_AbsVx,o.tracking.f32_AbsVy,0)).eval();
-      m.map_vx=velocity.x();m.map_vy=velocity.y();
+      // Classifier and optional planning companion use one compensation rule.
+      // CAN translation belongs to base axes, not the tilted sensor axes.
+      const auto velocity=PlanningVelocity(o, result);
+      m.map_vx=velocity ? velocity->x() : NAN;
+      m.map_vy=velocity ? velocity->y() : NAN;
+      m.f32_AbsVx=m.map_vx; m.f32_AbsVy=m.map_vy;
       m.min_e=m.min_n=std::numeric_limits<double>::infinity();
       m.max_e=m.max_n=-std::numeric_limits<double>::infinity();
       m.bounds_valid=true;

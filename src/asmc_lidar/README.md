@@ -1,6 +1,6 @@
 # asmc_lidar
 
-ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 전방 카메라 fusion → local/map 객체를 처리한다. 현재는 **이관 검증 경로**이며 판제는 기존 `lidar+sensorfusion` Main을 사용한다.
+ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 전방 카메라 fusion → local/map 객체를 처리한다. **2026-10-26:** `autonomy_asmc_lidar.launch`에서 새 판제 연결을 선택할 수 있다. 기존 `lidar+sensorfusion`은 삭제하지 않는다. [전환·검증·복구 안내](../../docs/operations/lidar-cutover.md)를 따른다.
 
 안승현은 **HD맵 기반 필터·카메라 연결 지원**, 손재호는 **추적·속도·운동 상태·fusion 보완**을 진행한다. 좌표·시간·공용 계약과 판제 전환은 공동 확인한다.
 
@@ -17,7 +17,8 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 기본 `lidar.launch`의 `/migration/lidar/objects_local/map` 및 `observations_local/map`에는
 HD맵·상부 객체 전달 필터가 적용된다. 동일 scan의 두 좌표계는 같은 ID를 제외한다.
 지도/pose 무효에서는 지도 제외를 중단하고, 최근 YOLO vehicle/dynamic 매칭은 모든 구간에서 보호한다.
-debug의 원본 tracker/점군은 검수를 위해 남긴다. 기존 Main·판제 입력은 전환하지 않았다.
+debug의 원본 tracker/점군은 검수를 위해 남긴다. 기본 shadow 출력의 속도 validity는 그대로이며,
+`planning_output:=true`에서만 별도 `planning_observations_map`에 판제용 관측을 발행한다.
 
 ## 구조
 

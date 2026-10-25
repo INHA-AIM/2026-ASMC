@@ -59,7 +59,7 @@ M2 병진/yaw 정렬은 없으며, 뷰 간35ms 한계와 움직이는 물체의 
 
 | 토픽 | 역할 |
 |---|---|
-| `/planning/camera_bbox_lane/yolo` | 기존 `Msg/Yolo_bbox_arr`, 별도 detector 출력 |
+| `/perception/camera/objects` | `asmc_msgs/CameraObjectBoxArray`, 전방 결과를 직접 소비 |
 | `/perception/lane/ground_projection` | 같은 영상의 선택 평면·보정·세대 metadata |
 | `/perception/camera/lane/status` | ACTIVE·세션·generation·cutoff 검증 |
 | `/planning/camera_bbox_lane/frame` | 정확한 원본 영상+BBOX 내부 연결 |
@@ -107,32 +107,19 @@ docker exec -it asmc-ros-noetic bash -lc 'source /opt/ros/noetic/setup.bash && s
 
 브리지와 기존 카메라 차선 인식은 켜둔다. 자동 주행을 시험하지 않을 때는 기존
 camera follower/avoidance 노드도 종료한다. 아래 명령은 기존 주행 노드를 중지시키지 않는다.
-LiDAR Main 실행은 필요 없다. 중첩 workspace는 CPU 호환 어댑터와 Msg를 읽기 위해 source한다.
+LiDAR Main과 중첩 workspace source는 필요 없다. 전방 결과를 기본 cutoff 0.7로 직접 소비한다.
 추론은 별도 `asmc_camera` 한 곳만 소유한다. 이미 실행 중이면 추가로 시작하지 않는다.
 
 ```bash
 roslaunch asmc_camera camera.launch mode:=active models:=objects
 ```
 
-터미널 1: 카메라 결과의 전방 CPU 변환만 실행한다. 기존 fusion의 `/YOLO/BBox`와 분리된 토픽을 사용한다.
-이 launch는 모델을 시작하지 않는다. 기존 소비 cutoff0.7은 유지하며 구형 detector_source/weights/device/crop 옵션은 제거됐다.
-
-```bash
-docker exec -it asmc-ros-noetic bash -lc '
-source /opt/ros/noetic/setup.bash &&
-source /root/ws/devel/setup.bash &&
-source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&
-roslaunch lane_boundary_adapter camera_bbox_detector.launch
-'
-```
-
-터미널 2: 차로 판정과 RViz.
+차로 판정과 RViz를 실행한다. 별도 detector 어댑터는 시작하지 않는다.
 
 ```bash
 docker exec -it -e DISPLAY="$DISPLAY" asmc-ros-noetic bash -lc '
 source /opt/ros/noetic/setup.bash &&
 source /root/ws/devel/setup.bash &&
-source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&
 roslaunch lane_boundary_adapter camera_bbox_lane.launch use_rviz:=true
 '
 ```
@@ -146,7 +133,7 @@ MY_LANE·BOTH는 빨간색, ADJACENT는 파란색, 나머지는 노란색이다.
 
 ## 검증
 
-별도 ROS master에서 실제 `Msg/Yolo_bbox_arr` → 영상 동기화 → C++ 판정 연결을 검사한다.
+기본 경로는 `camera_frame_bridge.test`와 `camera_bbox_lane_change.test`로 검사한다. 아래 `camera_bbox_lane.test`는 명시한 legacy_yolo 호환 경로의 회귀시험이다.
 
 ```bash
 docker exec -it asmc-ros-noetic bash -lc 'source /opt/ros/noetic/setup.bash && source /root/ws/devel/setup.bash && source /root/ws/src/lidar+sensorfusion/devel/setup.bash && rostest lane_boundary_adapter camera_bbox_lane.test'
@@ -166,6 +153,8 @@ YOLO 단독 launch로 합성 영상 12 frame의 GPU 추론과 원본 stamp 보�
 
 
 ## YOLO 보닛 제외
+
+아래 crop 설명은 구형 입력의 기록이다. 현재 기본은 카메라 원본 검출과 classifier의 ego mask이며, 주행 전용 crop 추론을 시작하지 않는다.
 
 현재 전방 1280×720 프레임에서 자차 보닛이 y≈578부터 보이며 YOLO가 이를 car로 검출했다.
 `camera_bbox_crop.py`가 주행 전용 YOLO 입력의 아래 21%를 제외해 1280×568로 전달한다.

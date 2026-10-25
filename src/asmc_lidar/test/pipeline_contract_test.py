@@ -5,9 +5,8 @@
 - catkin_package() exports are exactly the pre-shadow ones (the shadow
   libraries stay package-private, so Main never links them);
 - no asmc_lidar source includes Main/Msg headers or hard-codes /home paths;
-- the single lidar.launch starts only lidar_pipeline_node with outputs under
-  /migration/lidar, and no other launch file in the repository starts or
-  includes it;
+- lidar.launch owns the single pipeline node; only the explicit migration
+  autonomy wrapper and backend-selected scenario runner may include it;
 - config/lidar_pipeline.yaml uses the mount of config/autonav_v3.yaml and the
   HD-map origin of config/contracts/hd_map_topic_contract_v1.yaml;
 - the rostest node script is executable (and tracked as 100755 once staged) and never skips
@@ -201,6 +200,16 @@ class PipelineContractTest(unittest.TestCase):
         offenders = []
         for path in sorted(candidates):
             if PACKAGE in path.resolve().parents:
+                continue
+            relative = str(path.relative_to(ROOT))
+            if relative in ('src/asmc_planner/launch/autonomy_asmc_lidar.launch',
+                            'tools/scen_runner/launch/perception.launch'):
+                root = ET.parse(path).getroot()
+                includes = [n for n in root.findall('.//include')
+                            if n.get('file') == '$(find asmc_lidar)/launch/lidar.launch']
+                self.assertEqual(len(includes), 1, relative)
+                self.assertEqual(includes[0].find("arg[@name='planning_output']").get('value'), 'true')
+                self.assertFalse(any(n.get('type') == PIPELINE_NODE for n in root.findall('.//node')))
                 continue
             text = path.read_text(errors='replace')
             if PIPELINE_NODE in text or re.search(r'asmc_lidar\)?/launch/lidar\.launch', text):

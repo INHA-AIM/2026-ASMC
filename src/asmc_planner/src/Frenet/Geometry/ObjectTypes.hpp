@@ -54,6 +54,7 @@ struct TrackedObject {
     geometry::Corners8 corners{};
     bool geometry_valid = false;
     bool z_valid = false;
+    bool velocity_unavailable = false;  // observed occupancy, not measured rest
 };
 
 #endif  // PLANNER_COMMON_OBJECT_TYPES_HPP

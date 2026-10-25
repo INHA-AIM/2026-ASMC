@@ -47,7 +47,7 @@ MPC 입력 누락 시 STOP은 fail-safe 확인이며 정상 추종 증거가 아
 # 관찰용 dashboard; 새 planner를 실행하지 않음
 roslaunch asmc_planner dashboard.launch state_topic:=/planning/vehicle/state
 rostopic info /ctrl_cmd
-rostopic info /YOLO/BBox
+rostopic info /perception/camera/objects
 rostopic hz /planning/vehicle/state
 rostopic hz /planning/objects
 rostopic hz /planning/trajectory

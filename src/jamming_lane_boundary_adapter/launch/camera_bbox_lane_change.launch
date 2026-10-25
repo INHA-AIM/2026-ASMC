@@ -52,6 +52,7 @@
   <arg name="diagnostics_topic" default="/planning/camera_bbox_lane_change/diagnostics"/>
   <arg name="emergency_stop_topic" default="/planning/camera_bbox_lane_change/emergency_stop"/>
   <arg name="bbox_topic" default="/planning/camera_bbox_lane/result"/>
+  <arg name="bbox_conf_thres" default="0.7"/>
   <arg name="reference_lane_topic" default="/planning/camera_bbox_lane_change/reference_lane"/>
   <arg name="far_obstacle_speed_kph" default="5.0"/>
   <arg name="bbox_source_timeout" default="0.5"/>
@@ -85,6 +86,7 @@
   <arg name="projection_manifest" default="$(find asmc_camera)/config/bev/projection_context_v1.yaml"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <include if="$(arg start_classifier)" file="$(find lane_boundary_adapter)/launch/camera_bbox_lane.launch">
+    <arg name="conf_thres" value="$(arg bbox_conf_thres)"/>
     <arg name="use_rviz" value="false"/>
     <arg name="contact_band_height_px" value="$(arg contact_band_height_px)"/>
     <arg name="contact_row_tolerance_px" value="$(arg contact_row_tolerance_px)"/>

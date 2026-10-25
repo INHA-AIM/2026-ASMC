@@ -82,16 +82,7 @@ BBOX 판정 노드도 함께 실행한다. GPU detector는 중복 실행하지 �
 roslaunch asmc_camera camera.launch mode:=active models:=objects
 ```
 
-아래는 별도 GPU 모델이 아니라 카메라 결과의 전방 CPU 변환이다. 이미 변환 노드가 실행 중이면 추가로 시작하지 않는다:
-
-```bash
-docker exec -it asmc-ros-noetic bash -lc '
-source /opt/ros/noetic/setup.bash &&
-source /root/ws/devel/setup.bash &&
-source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&
-roslaunch lane_boundary_adapter camera_bbox_detector.launch
-'
-```
+전방 검출은 `/perception/camera/objects`에서 직접 받는다. 별도 detector 어댑터와 중첩 workspace source는 필요 없다. 기본 소비 cutoff는 0.7이며 `bbox_conf_thres`로 지정한다.
 
 차선 추종 + BBOX 차선변경 + RViz (**JAMMING 모드에서 `/ctrl_cmd/jamming` 발행**):
 
@@ -99,7 +90,6 @@ roslaunch lane_boundary_adapter camera_bbox_detector.launch
 docker exec -it -e DISPLAY="$DISPLAY" asmc-ros-noetic bash -lc '
 source /opt/ros/noetic/setup.bash &&
 source /root/ws/devel/setup.bash &&
-source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&
 roslaunch lane_boundary_adapter camera_bbox_lane_change.launch \
   enable_control:=true \
   target_speed_kph:=20.0 \
@@ -209,6 +199,8 @@ BBOX나 경로 조건 때문에 정지해도 최신 유효 차선은 계속 표�
 
 
 ## YOLO 보닛 제외
+
+아래 crop 설명은 구형 입력의 기록이다. 현재 기본은 카메라 원본 검출과 classifier의 ego mask이며, 주행 전용 crop 추론을 시작하지 않는다.
 
 현재 전방 1280×720 프레임에서 자차 보닛이 y≈578부터 보이며 YOLO가 이를 car로 검출했다.
 `camera_bbox_crop.py`가 주행 전용 YOLO 입력의 아래 21%를 제외해 1280×568로 전달한다.

@@ -4,6 +4,13 @@
   <arg name="motion_debug_topic" default="/lidar/motion_debug"/>
   <arg name="output_topic" default="/planning/objects"/>
   <arg name="state_topic" default="/planning/vehicle/state"/>
+  <arg name="asmc_input_topic" default="/migration/lidar/planning_observations_map"/>
+  <node if="$(eval arg('source_policy') == 'asmc_lidar')" pkg="planning_inputs" type="asmc_lidar_planning_adapter"
+        name="asmc_lidar_planning_adapter" output="screen" required="true">
+    <param name="input_topic" value="$(arg asmc_input_topic)"/>
+    <param name="output_topic" value="$(arg output_topic)"/>
+  </node>
+  <group unless="$(eval arg('source_policy') == 'asmc_lidar')">
   <node pkg="planning_inputs" type="tracked_wire_bridge.py" name="planning_tracked_wire_bridge" output="screen">
     <param name="source_policy" value="$(arg source_policy)"/>
     <param name="motion_debug_topic" value="$(arg motion_debug_topic)"/>
@@ -23,4 +30,5 @@
     <param name="output_topic" value="$(arg output_topic)"/>
     <param name="state_topic" value="$(arg state_topic)"/>
   </node>
+</group>
 </launch>

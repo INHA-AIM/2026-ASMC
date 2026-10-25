@@ -19,7 +19,16 @@ from asmc_camera.bev.calibration import load_calibration_snapshot
 from geometry_msgs.msg import PointStamped
 from lane_boundary_adapter.msg import CameraBBoxLaneResult
 from morai_msgs.msg import CtrlCmd
-from Msg.msg import Yolo_bbox,Yolo_bbox_arr
+from dataclasses import dataclass
+from asmc_msgs.msg import CameraObjectBox, CameraObjectBoxArray
+
+@dataclass
+class Yolo_bbox:
+    xMin: float
+    yMin: float
+    xMax: float
+    yMax: float
+    classes: str
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Header,Bool,Int8,UInt8
 from visualization_msgs.msg import MarkerArray,Marker
@@ -37,7 +46,7 @@ class LaneChangeTest(unittest.TestCase):
         cls.jpeg=cv2.imencode('.jpg',np.zeros((720,1280,3),dtype=np.uint8))[1].tobytes()
         cls.lane_pub=rospy.Publisher('/perception/lane/boundary_family',LaneBoundaryFamily,queue_size=1)
         cls.image_pub=rospy.Publisher('/image_jpeg/compressed',CompressedImage,queue_size=1)
-        cls.box_pub=rospy.Publisher('/planning/camera_bbox_lane/yolo',Yolo_bbox_arr,queue_size=1)
+        cls.box_pub=rospy.Publisher('/perception/camera/objects',CameraObjectBoxArray,queue_size=1)
         cls.stop_pub=rospy.Publisher('/planning/camera_bbox_lane_change/emergency_stop',Bool,queue_size=1)
         # The legacy ACTIVE algorithm is exercised under its required mode.
         cls.mode_pub=rospy.Publisher('/planning/mode',UInt8,queue_size=1,latch=True)
@@ -110,7 +119,11 @@ class LaneChangeTest(unittest.TestCase):
                 if raw_boxes is not None:boxes=raw_boxes
                 header=Header(stamp=source,frame_id='camera_front')
                 self.image_pub.publish(CompressedImage(header=header,format='jpeg',data=self.jpeg))
-                self.box_pub.publish(Yolo_bbox_arr(header=header,objc=len(boxes),yolo_bbox_arr=boxes))
+                self.box_pub.publish(CameraObjectBoxArray(header=header, image_width=1280,
+                    image_height=720, valid=True, boxes=[CameraObjectBox(
+                        xmin=b.xMin, ymin=b.yMin, xmax=b.xMax, ymax=b.yMax,
+                        class_name='vehicle', source_class_name=b.classes,
+                        confidence=.9, confidence_valid=True) for b in boxes]))
             time.sleep(.05)
         time.sleep(.03)
 

@@ -53,12 +53,16 @@ jobs:
           ./devel/lib/planning_inputs/planning_motion_test
           catkin_make planning_filter_test
           ./devel/lib/planning_inputs/planning_filter_test
+          catkin_make planning_lidar_observation_test
+          ./devel/lib/planning_inputs/planning_lidar_observation_test
+          rostest planning_inputs lidar_observation.test
+          rostest lane_boundary_adapter camera_frame_bridge.test
 
       - name: Build legacy camera message dependency for runtime launch
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
-          # The full launch includes the legacy camera BBOX bridge importing Msg.
+          # Keep legacy wire smoke coverage; the default camera bridge uses asmc_msgs.
           # Jobs have isolated workspaces; the LiDAR job's Msg build is unavailable here.
           cd src/lidar+sensorfusion
           catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=OFF -DCATKIN_WHITELIST_PACKAGES='Msg'

@@ -10,6 +10,12 @@ uint8 MOTION_DYNAMIC_PENDING=2
 uint8 MOTION_DYNAMIC=3
 uint8 motion_state
 
+# Private planning boundary only. True means vx/vy are placeholders for the
+# observed-occupancy hypothesis, never a measured stationary velocity. Such an
+# object must stay UNKNOWN; retain its geometry and uncertainty. Legacy sources
+# default false. Rebuild the complete outer workspace when this type changes.
+bool velocity_unavailable
+
 geometry_msgs/Point center
 float64 yaw
 float64 vx

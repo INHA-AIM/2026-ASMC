@@ -2,6 +2,17 @@
 
 > **Document role:** Active Package Guide — Behavior/Frenet/MPC inputs.
 
+`source_policy:=asmc_lidar` selects the typed `/migration/lidar/planning_observations_map`
+adapter. It preserves scan time, validates producer/generation/sequence, distinguishes
+observed empty from unavailable input, and does not invent valid zero velocities.
+Objects whose speed is not yet measured keep their geometry with `motion_state=UNKNOWN`
+and `velocity_unavailable=true`; finite zero slots represent only the existing
+uncertain occupancy hypothesis. They cannot become measured LOW_THREAT objects.
+This changes the **private** `planning_inputs/DetectedObject*` MD5: rebuild the whole
+outer workspace. Frozen `asmc_msgs` and nested `Msg` formats are unchanged.
+See [cutover and rollback](../../docs/operations/lidar-cutover.md).
+The standalone `objects.launch` default below remains the legacy rollback path.
+
 ## Validated LiDAR policy (default)
 
 The pre-rebase reference is 0781402 on

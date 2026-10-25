@@ -1,11 +1,11 @@
 schema_version: 1
 contract_id: asmc_lidar_handoff_v1
-status: common_core_main_adapter_opt_in_acceptance_pending
+status: typed_planning_cutover_implemented_closed_loop_acceptance_pending
 owner: asmc_lidar
 implementation:
   coordinate_time_core: available
   imu_selection_core: available
-  detection_tracking_fusion: migration_pipeline_explicit_launch_not_operational
+  detection_tracking_fusion: migration_pipeline_with_optional_typed_planning_adapter
   migration_work_units: src/asmc_lidar/docs/migration-tasks.md
   migration_design: src/asmc_lidar/docs/migration-design.md
   migration_design_baseline: config/baselines/lidar_migration_l1_v1.yaml
@@ -28,6 +28,7 @@ messages:
   asmc_msgs/LidarObject: b94cf82e0f325e9ce0364bb143df9f06
   asmc_msgs/LidarObjectArray: 5f774d07dffd4c7dfa93a8d4b62c60b4
   asmc_msgs/LidarObservation: d11a2a270112231e4f79aaebff621d36
+  asmc_msgs/LidarPlanningObservation: 670b15bd7bb1bc58e0640c2a35054936
   asmc_msgs/CameraObjectBox: 34412c90553e06734f1acade77c8e1e3
   asmc_msgs/CameraObjectBoxArray: 310c671afb3693e7909db6453d115b79
 compatibility_messages:

@@ -1,0 +1,15 @@
+<launch>
+  <!-- Camera and sensor bridges are started separately. Do not also start Main
+       or another lidar.launch instance with this entry point. Legacy launch
+       autonomy_no_bridges_v2.launch remains available for rollback. -->
+  <arg name="fusion" default="true"/>
+  <arg name="state_source" default="competition"/>
+  <include file="$(find asmc_lidar)/launch/lidar.launch">
+    <arg name="planning_output" value="true"/>
+    <arg name="fusion" value="$(arg fusion)"/>
+  </include>
+  <include file="$(find asmc_planner)/launch/autonomy_no_bridges_v2.launch">
+    <arg name="lidar_source_policy" value="asmc_lidar"/>
+    <arg name="state_source" value="$(arg state_source)"/>
+  </include>
+</launch>

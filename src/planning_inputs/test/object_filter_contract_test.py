@@ -12,7 +12,7 @@ class FilterContract(unittest.TestCase):
         self.assertEqual(root.find("arg[@name='input_topic']").get('default'),
                          '/last_lidar')
         self.assertEqual(root.find("arg[@name='source_policy']").get('default'), 'validated_lidar')
-        node = root.find("node[@name='planning_objects_adapter']")
+        node = root.find(".//node[@name='planning_objects_adapter']")
         self.assertEqual(node.get('required'), 'true')
         launch = ET.parse(ROOT / 'src/asmc_planner/launch/autonomy_no_bridges_v2.launch').getroot()
         self.assertEqual(launch.find("arg[@name='lidar_input_topic']").get('default'),
