@@ -73,7 +73,9 @@
       <label><input type="checkbox" id="opt-hide-obb"> OBB 비교 후보 숨김 · 도로 겹침0</label>
       <label><input type="checkbox" id="opt-hide-height" checked> 상부 객체 후보 숨김 <span id="criteria-height" class="note"></span></label>
       <p class="note">점군·OBB 근거는 별도 판정입니다. 복수 사유 객체는 체크한 사유 중 하나라도 해당하면 숨깁니다.</p>
-      <p class="note">목록과 토픽은 유지합니다. 선택한 객체는 다시 표시됩니다. 보류 객체는 숨기지 않습니다.</p>
+      <p id="filter-summary" class="note">화면 표시 수 대기</p>
+      <p class="note">목록과 토픽은 유지합니다. 객체를 선택해도 숨김은 유지하고 상세값만 엽니다.<br>도로 밖 모두 숨김이 아닙니다. 카메라 동적 그룹·미션 예외 보호, 제외 근거 없는 보류 객체는 남습니다. 예측 트랙은 별도 스위치입니다.</p>
+      <p id="filter-layer-note" class="note"></p>
       <label>색상 <select id="opt-color"><option value="audit">필터 판정</option><option value="motion">운동 진단 (재호)</option><option value="class">카메라 그룹</option></select></label>
       <label><input type="checkbox" id="opt-labels" checked> ID · 카메라 분류 표시</label>
       <p class="note">숨김을 끄면 OBB와 소속 점을 같은 원인 색으로 표시합니다.<br>초록 유지 · 분홍 점군 후보 · 보라 OBB 후보 · 주황 상부 후보 · 노랑 보류.<br>경계 여유 내 후보는 위치 오차가 미확정입니다. 카메라 동적 그룹·미션 예외는 보호합니다.</p>

@@ -171,6 +171,13 @@
     const mapMismatch=report&&report.map_sha256&&state.road&&state.road.sha256&&report.map_sha256!==state.road.sha256;
     el('audit-summary').textContent=(report&&report.enabled?'원본 '+(report.objects||[]).length+' · 유지 '+counts.keep+' · 제외 후보 '+counts.exclude_candidate+' · 보류 '+counts.undetermined:'audit OFF · 원본 표시')+(mapMismatch?' · 주의: 배경/판정 지도 SHA 다름':'')+
       (report&&report.pose_source_age_ms>=0?' · GPS age '+fmt(report.pose_source_age_ms,0)+'ms':'')+' · 그리기 '+fmt(state.lastRenderMs,1)+'ms';
+    const tracks=state.scene&&state.scene.tracks||[];
+    const observed=tracks.filter(t=>t.miss===0),shown=observed.filter(visibleTrack).length;
+    el('filter-summary').textContent='현재 관측 '+observed.length+' · 표시 대상 '+shown+' · 숨김 '+(observed.length-shown)+
+      ' · 예측 '+(tracks.length-observed.length)+' (별도 스위치)';
+    const originals=['raw','roi','voxel','leveled','detections'].filter(k=>state.stages[k]);
+    if(state.view.compare)originals.push('voxel 비교');
+    el('filter-layer-note').textContent=originals.length?'원본 대조 레이어 ON: '+originals.join(', ')+' · 후보 숨김 미적용':'';
     const now = performance.now();
     state.webFrames = state.webFrames.filter((t) => now - t < 2000);
     const sinceServer = state.statusAt ? now - state.statusAt : null;
@@ -471,11 +478,10 @@
   const ROAD_COLORS={inside:'#ff4545',outside:'#ffffff',unknown:'#facc15'};
   const ROAD_NAMES={inside:'영역 안',outside:'영역 밖',unknown:'판정 불가'};
   function membership(t){return V.roadMembership(state.scene,state.road,t.obb.center);}
-  function visibleTrack(t){
-    const report=state.scene&&state.scene.hd_map_audit;
-    const mismatch=report&&state.road&&report.map_sha256&&state.road.sha256&&report.map_sha256!==state.road.sha256;
-    return state.selected===t.id || (mismatch ? (state.showPred||t.miss===0) : V.previewVisible(state.scene,t,state.showPred,state.hideCandidates,state.hideReasons));
+  function trackVisibility(t){
+    return V.displayVisibility(state.scene,state.road,t,state.showPred,state.hideCandidates,state.hideReasons);
   }
+  function visibleTrack(t){return trackVisibility(t).visible;}
 
   // The view kind is explicit ('bev' rotated footprint, 'side' screen rectangle); see monitor_view.js.
   function drawBox(ctx, view, corners, matrix, style) {
@@ -554,7 +560,10 @@
       if (st.ground || st.tunnel || st.nonground || st.height_removed) drawPoints(ctx, w, h, stagePoints('leveled'), m.leveled, leveledColor(label, cluster,state.arrays['leveled.track']), project, alphaPts);
       ctx.globalAlpha = alphaBox;
       if (st.detections) for (const d of sc.detections || []) drawBox(ctx, view, d.corners, m.leveled, { color: COLORS.detections, dash: [4, 3], width: 1 });
-      if (st.typed && sc.typed && sc.typed.local && sc.typed.local.accepted) for (const o of sc.typed.local.objects || []) drawBox(ctx, view, o.corners, m.base, { color: COLORS.typed, width: 1, dash: [2, 2] });
+      if (st.typed && sc.typed && sc.typed.local && sc.typed.local.accepted) for (const o of sc.typed.local.objects || []) {
+        if(!visibleTrack({id:o.track_id,miss:0}))continue;
+        drawBox(ctx, view, o.corners, m.base, { color: COLORS.typed, width: 1, dash: [2, 2] });
+      }
       if (st.tracks) for (const t of sc.tracks || []) {
         if(!visibleTrack(t))continue;
         const observed = t.miss === 0;
@@ -597,11 +606,12 @@
       const warning=state.idWarnings.get(t.id);
       const d=V.auditForTrack(sc,t),audit=V.auditAppearance(sc,t),p=d&&d.preview;
       const ratios=p?fmt(p.road_point_ratio*100,0)+' / '+(d.spatial&&d.spatial.available?fmt(d.spatial.road_ratio_grid*100,0):'—'):'—';
+      const visibility=trackVisibility(t);
       const values=[String(t.id)+(warning && area==='inside'?' !':''),t.raw_class,audit.label,ratios,p?fmt(p.min_support_base_z,2):'—',motion.label];
       for (const v of values) {const td=document.createElement('td');td.textContent=v;tr.appendChild(td);}
-      tr.title=audit.detail+' · group '+t.class+' · '+audit.reason;
-      if(state.hideCandidates && audit.decision==='exclude_candidate')tr.classList.add('preview-hidden');
-      if(warning && area==='inside')tr.title='ID 변경 의심 '+warning.from+' → '+t.id+' (위치·크기 기반, 확정 아님)';
+      tr.title=(visibility.visible?'화면 표시':'화면 숨김')+' · '+audit.detail+' · group '+t.class+' · '+audit.reason;
+      if(!visibility.visible)tr.classList.add('preview-hidden');
+      if(warning && area==='inside')tr.title+=' · ID 변경 의심 '+warning.from+' → '+t.id+' (위치·크기 기반, 확정 아님)';
       tr.style.color=state.colorMode==="audit"?audit.color:state.colorMode==="class"?classColor(t.class):motion.color;
       tr.addEventListener('click', () => selectTrack(t.id));
       tbody.appendChild(tr);
@@ -619,6 +629,7 @@
     if (m && m.leveled) { const d = [Math.cos(t.obb.yaw), Math.sin(t.obb.yaw), 0]; const r = m.leveled; yawView = Math.atan2(r[4] * d[0] + r[5] * d[1], r[0] * d[0] + r[1] * d[1]); }
     const audit=V.auditForTrack(sc,t),a=V.auditAppearance(sc,t),p=audit&&audit.preview;
     const rows = [
+      ['화면 표시',visibleTrack(t)?'표시 대상 · 레이어 선택에 따름':'숨김 유지 · 상세 선택은 숨김을 해제하지 않음'],
       ['필터 미리보기',a.label+' · '+a.detail],
       ['독립 근거 · 점군 / OBB / 높이',p?[p.point_decision,p.obb_decision,p.height_decision].map(x=>({keep:'유지',exclude_candidate:'후보',undetermined:'보류'}[x]||'이전 버전')).join(' / '):'미계산'],
       ['전달 판단 / 보류 근거',audit?audit.decision+' / '+audit.reason:'OFF'],
@@ -748,6 +759,7 @@
     setStage: (name, on) => { const c = document.querySelector('input[data-stage="' + name + '"]'); if (c) { c.checked = on; readStages(); renderScene(); } },
     pause: setPaused, freshness,
     render: () => renderScene(),
+    renderNow: () => renderSceneNow(),
     pan: (dx, dy) => { state.view.panX += dx; state.view.panY += dy; renderScene(); },
     bevUnproject: (px, py) => bevUnproject(bev.getBoundingClientRect().width, bev.getBoundingClientRect().height, px, py),
   };

@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""Exercise the real app's hide controls in headless Chrome with synthetic data.
+
+No ROS, MORAI, npm or third-party Python module. A private loopback server and
+temporary browser profile are closed on exit. --chrome may select Chromium.
+"""
+import argparse
+import html
+import http.server
+import json
+from pathlib import Path
+import re
+import shutil
+import struct
+import subprocess
+import tempfile
+import threading
+import urllib.parse
+
+
+WEB = Path(__file__).resolve().parents[2] / 'web'
+IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+
+
+def corners(x):
+    return [[x + dx, dy, z] for z in (0, 1) for dx, dy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+
+
+def fixture():
+    tracks = [dict(id=i, idx=i, miss=0, age=10, points=10, dist=x,
+                   raw_class='unknown', **{'class': 'unknown'}, corners=corners(x),
+                   obb=dict(center=[x, 0, .5], width=2, height=2, zmin=0, zmax=1, yaw=0),
+                   abs_v=[0, 0], velocity=0, kf_initialized=False)
+              for i, x in ((1, 10), (2, 20), (3, 30))]
+    typed = [dict(track_id=t['id'], corners=t['corners'], center=t['obb']['center'],
+                  classification='unknown', camera_class='unknown', points=10) for t in tracks]
+    decisions = [dict(track_id=1, decision='undetermined', preview=dict(
+        decision='exclude_candidate', reason='cluster_support_outside', point_decision='exclude_candidate',
+        obb_decision='keep', height_decision='keep')),
+        dict(track_id=2, decision='keep', preview=dict(decision='keep', reason='camera_dynamic_protected',
+             point_decision='keep', obb_decision='keep', height_decision='keep')),
+        dict(track_id=3, decision='undetermined', reason='pose_error_bound_unverified')]
+    scene = dict(stages=True, stamp_ns=1000000000, seq=1, tracks=tracks, detections=[tracks[0]],
+                 typed=dict(local=dict(accepted=True, objects=typed)),
+                 base_from_sensor=IDENTITY, base_from_leveled=IDENTITY,
+                 leveling=[1, 0, 0, 0, 1, 0, 0, 0, 1], map=dict(valid=True, map_from_base=IDENTITY),
+                 counts=dict(raw=3, roi=3, voxel=3, leveled=3, ground_kept=3, cluster_input=3,
+                             clusters=3, detections=3, tracks=3, observed=3, predicted=0),
+                 sampled={s: dict(sent=3, actual=3) for s in ('raw', 'roi', 'voxel', 'leveled')},
+                 local=dict(roll_rad=0, pitch_rad=0, yaw_rad=0, speed_mps=0),
+                 hd_map_audit=dict(enabled=True, map_sha256='fixture-v7', objects=decisions))
+    # Real binary point provenance: the candidate point belongs to track #1.
+    parts = [('leveled.xyzi', 'f32', '<12f', [10, 0, 0, 1, 20, 0, 0, 1, 30, 0, 0, 1]),
+             ('leveled.label', 'u8', '<3B', [0, 0, 0]),
+             ('leveled.cluster', 'i32', '<3i', [0, 1, 2]),
+             ('leveled.track', 'i32', '<3i', [1, 2, 3])]
+    arrays, payload = {}, b''
+    for name, dtype, fmt, values in parts:
+        arrays[name] = dict(offset=len(payload), length=len(values), dtype=dtype)
+        value = struct.pack(fmt, *values)
+        payload += value + b'\0' * (-len(value) % 4)
+    header = dict(session='browser-fixture', frame_seq=1, scene_age_ms=0,
+                  status={}, scene=scene, arrays=arrays)
+    encoded = json.dumps(header).encode()
+    return b'ALMF' + struct.pack('<II', len(encoded), len(payload)) + encoded + b'\0' * (-len(encoded) % 4) + payload
+
+
+CHECKS = r"""
+window.addEventListener('error',e=>{document.body.dataset.testError=e.message;});
+(async()=>{
+ const checks=[],sleep=()=>new Promise(r=>setTimeout(r,80));
+ const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name);};
+ try{
+  for(let i=0;i<40 && !(window.__asmcMonitor&&window.__asmcMonitor.state.scene);i++)await sleep();
+  const app=window.__asmcMonitor,V=window.AsmcMonitorView;
+  check(app&&app.state.scene,'fixture delivered to real app');app.pause(true);
+  const toggle=(id,on)=>{const e=document.getElementById(id);e.checked=on;e.dispatchEvent(new Event('change'));};
+  let boxes=[],points=[];const draw=V.drawBox,fill=CanvasRenderingContext2D.prototype.fillRect;
+  V.drawBox=(...a)=>{boxes.push(a[2][0][0]);return draw(...a);};
+  CanvasRenderingContext2D.prototype.fillRect=function(...a){if(a[2]===2&&a[3]===2)points.push(this.fillStyle);return fill.apply(this,a);};
+  const render=()=>{boxes=[];points=[];app.renderNow();};
+  toggle('opt-hide-candidates',true);app.selectTrack(1);render();
+  check(!boxes.includes(9)&&boxes.includes(19)&&boxes.includes(29),'selected candidate stays hidden, protected and uncertain stay visible: '+JSON.stringify(boxes));
+  check(!points.includes('#f472b6'),'selected candidate support stays hidden');
+  check(document.getElementById('detail').textContent.includes('숨김 유지'),'hidden selection is explained in details');
+  check(document.querySelector('#track-table tbody tr').classList.contains('preview-hidden'),'hidden table row agrees with canvas');
+  app.setStage('tracks',false);app.setStage('typed',true);render();
+  check(new Set(boxes).size===2&&!boxes.includes(9),'typed overlay cannot bypass candidate hiding: '+JSON.stringify(boxes));
+  toggle('opt-hide-candidates',false);render();
+  check(new Set(boxes).size===3&&points.includes('#f472b6'),'turning filters off restores original boxes and support');
+  toggle('opt-hide-points',true);render();
+  check(new Set(boxes).size===2&&!boxes.includes(9),'individual point switch also filters typed overlay');
+  app.state.road={available:true,sha256:'different-map'};render();
+  check(new Set(boxes).size===3,'map mismatch preserves objects');
+  app.state.road={available:true,sha256:'fixture-v7'};
+  app.setStage('detections',true);render();
+  check(boxes.includes(9),'pre-tracking comparison remains original');
+  await sleep();
+  check(document.getElementById('filter-layer-note').textContent.includes('detections'),'unfiltered original overlay is explicitly labelled');
+  check(!document.body.dataset.testError,'no uncaught application errors');
+  const pre=document.createElement('pre');pre.id='browser-test-result';pre.textContent=JSON.stringify({ok:true,checks});document.body.appendChild(pre);
+ }catch(e){const pre=document.createElement('pre');pre.id='browser-test-result';pre.textContent=JSON.stringify({ok:false,error:String(e),checks});document.body.appendChild(pre);}
+})();
+"""
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--chrome', default=shutil.which('google-chrome') or shutil.which('chromium'))
+    args = parser.parse_args()
+    if not args.chrome:
+        parser.error('Chrome/Chromium required; specify --chrome')
+    frame = fixture()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *_):
+            pass
+
+        def do_GET(self):
+            path = urllib.parse.urlsplit(self.path).path
+            if path == '/api/frame':
+                body, content = frame, 'application/octet-stream'
+            elif path == '/api/drivable':
+                body, content = b'{"available":false,"sha256":"fixture-v7"}', 'application/json'
+            elif path == '/api/status':
+                body, content = b'{}', 'application/json'
+            elif path in ('/', '/app.js', '/monitor_view.js', '/app.css'):
+                name = 'index.html' if path == '/' else path[1:]
+                body = (WEB / name).read_bytes()
+                content = {'html': 'text/html', 'js': 'application/javascript', 'css': 'text/css'}[name.rsplit('.', 1)[1]]
+                if path == '/':
+                    body = body.replace(b'</body>', ('<script>' + CHECKS + '</script></body>').encode())
+            else:
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', content + '; charset=utf-8')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with tempfile.TemporaryDirectory(prefix='asmc-lidar-browser-') as profile:
+            result = subprocess.run([args.chrome, '--headless', '--no-sandbox', '--disable-gpu',
+                                     '--disable-dev-shm-usage', '--disable-background-networking',
+                                     '--no-first-run', '--user-data-dir=' + profile,
+                                     '--virtual-time-budget=6000', '--dump-dom',
+                                     'http://127.0.0.1:' + str(server.server_port)],
+                                    capture_output=True, text=True, timeout=40)
+        match = re.search(r'<pre id="browser-test-result">(.*?)</pre>', result.stdout, re.S)
+        if not match:
+            raise RuntimeError('browser did not complete checks: ' + result.stderr[-1200:] + result.stdout[-1000:])
+        report = json.loads(html.unescape(match[1]))
+        print(json.dumps(report, ensure_ascii=False))
+        return 0 if report['ok'] else 1
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

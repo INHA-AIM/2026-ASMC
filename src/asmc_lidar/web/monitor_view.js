@@ -149,6 +149,18 @@
     const a=auditAppearance(scene,track);
     return !a.categories.length||(!hideCandidates&&!a.categories.some(k=>hideReasons[k]));
   }
+  // One policy for final track boxes, typed boxes and their support points.
+  // Selection only opens details; it must not bypass an explicit hide switch.
+  // An incompatible map cannot justify hiding, even when a candidate was
+  // computed against another map. Prediction visibility stays independent.
+  function displayVisibility(scene,road,track,showPred,hideCandidates,hideReasons={}) {
+    if(!showPred&&track.miss>0)return {visible:false,reason:'prediction_hidden'};
+    const report=scene&&scene.hd_map_audit;
+    if(report&&road&&report.map_sha256&&road.sha256&&report.map_sha256!==road.sha256)
+      return {visible:true,reason:'map_mismatch'};
+    const visible=previewVisible(scene,track,showPred,hideCandidates,hideReasons);
+    return {visible,reason:visible?'visible':'candidate_hidden'};
+  }
   function trackVisible(scene,road,track,hideOutside,showPred=true) {
     if(!showPred && track.miss>0)return false;
     // Unknown is not outside: never silently hide objects after GPS loss.
@@ -288,5 +300,5 @@
 
   return { I4, rot3To4, mul, invRigid, apply, isMatrix, frameMatrices, bevProject, bevUnproject, sideProject, orbitProject,
     boxOutline, drawBox, frameAction, sceneFreshness, fetchErrorKind, pointInPolygon, roadMembership, motionAppearance,
-    trackVisible, IdChangeMonitor, auditForTrack, auditAppearance, previewVisible, exclusionKind, exclusionKinds };
+    trackVisible, IdChangeMonitor, auditForTrack, auditAppearance, previewVisible, displayVisibility, exclusionKind, exclusionKinds };
 });

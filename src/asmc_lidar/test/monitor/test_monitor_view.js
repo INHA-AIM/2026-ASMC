@@ -404,5 +404,20 @@ test('OBB alternative cannot override point keep unless its display switch is en
  assert(!V.previewVisible(scene,t,false,false,{obb:true}));
 });
 
+test('final tracks and typed boxes use the same hide decision',()=>{
+  const scene={hd_map_audit:{enabled:true,map_sha256:'v7',objects:[
+    {track_id:7,preview:{decision:'exclude_candidate',reason:'cluster_support_outside',point_decision:'exclude_candidate',obb_decision:'keep',height_decision:'keep'}},
+    {track_id:8,preview:{decision:'keep',reason:'camera_dynamic_protected',point_decision:'keep',obb_decision:'keep',height_decision:'keep'}}]}};
+  const track={id:7,miss:0},typed={track_id:7};
+  const check=t=>V.displayVisibility(scene,{sha256:'v7'},t,false,true,{});
+  assert.deepStrictEqual(check(track),{visible:false,reason:'candidate_hidden'});
+  assert.deepStrictEqual(check({id:typed.track_id,miss:0}),check(track));
+  assert(check({id:8,miss:0}).visible);
+  assert(check({id:9,miss:0}).visible); // No evidence does not mean outside.
+  assert.equal(V.displayVisibility(scene,{sha256:'other'},track,false,true,{}).reason,'map_mismatch');
+  assert.equal(V.displayVisibility(scene,{sha256:'other'},{id:7,miss:1},false,true,{}).reason,'prediction_hidden');
+  assert.equal(V.displayVisibility(scene,{sha256:'v7'},track,false,false,{points:true}).visible,false);
+});
+
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');
 process.exit(failures.length ? 1 : 0);

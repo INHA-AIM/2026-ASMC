@@ -180,6 +180,19 @@ OBB·판정 메타데이터는 점군 네 단계의 도착을 기다리지 않�
 객체를 선택하면 support 수, 도로/경계/미지 셀 수, 최저 점·OBB 하단·지붕+여유,
 카메라 보호 여부, 원래 OBB 판정과 보류 사유를 함께 본다.
 
+`제외 후보 모두 숨기기`는 독립 점군/OBB/높이 근거의 후보를 합쳐 **추적 OBB·typed local 비교 OBB·
+해당 track에 연결된 근거 점**에 같은 기준으로 적용한다. 선택한 객체도 숨김을 유지하고 목록/상세만
+열린다. 목록의 흐린 행과 상세의 `화면 표시`에서 상태를 확인한다. 상단 후보 수는 종합 preview 판정,
+`현재 관측/표시 대상/숨김`은 독립 사유 스위치까지 적용한 수로, OBB 비교 후보 때문에 서로 다를 수 있다.
+표시 대상 수는 레이어를 실제로 켰는지와 별개인 필터 통과 수다.
+
+이는 도로 밖 모든 객체를 숨기는 기능이 아니다. 카메라 동적 그룹·미션 예외 보호, 지도/위치/점 근거 부족,
+지도 SHA 불일치와 예측 track 표시를 구분한다. 근거가 없는 객체를 중심점 위치만 보고 제외하지 않는다.
+Raw/ROI/voxel/leveled 전체와 **추적 전 detection OBB**는 원본 단계 비교이므로 후보 숨김을 적용하지 않는다.
+이 레이어가 켜져 있으면 화면에 별도 안내한다. 같은 위치의 원본 점·추적 전 박스를 확인하려면 사용하고,
+최종 후보 숨김을 검수할 때는 끈다. tracker 이전 detection에는 검증된 최종 track/audit 대응이 없으므로
+가까운 중심이나 같은 index만으로 최종 판정을 추측하지 않는다.
+
 카메라로 연결된 `dynamic_obstacle`은 구간에 관계없이 지도 밖 제외 후보에서 보호한다.
 이는 현재 **전방 matching**이 확보한 유효하고 최신인 양성 근거에 적용한다. 좌우 카메라 bbox만으로
 임의3D 객체를 만들거나 미구현3뷰 matching이 동작한다고 표시하지 않는다.
@@ -275,9 +288,14 @@ OBB는 BEV에서 **회전된 footprint**(메시지 corner 0–3을 선택 frame�
 ```bash
 python3 src/asmc_lidar/test/monitor/test_monitor_core.py      # 장면 묶기·frame 인코딩·HTTP 경로·세션·연결 상한/timeout·브라우저 열기 (ROS 불필요)
 node src/asmc_lidar/test/monitor/test_monitor_view.js         # 2D/3D·지도·색상·표시 필터·ID 의심·신선도 (node >= 10, CI 포함)
+python3 src/asmc_lidar/test/monitor/test_monitor_browser.py   # 실제 UI 선택·숨김·typed/소속 점·보호/보류 (Chrome/Chromium 필요)
 (cd build/asmc_lidar && ctest -R "stage_observer|monitor" --output-on-failure)
 rostest asmc_lidar monitor_node.test                          # 실제 처리 노드 + 모니터 + 합성 입력
 ```
 
 `monitor_node.test`는 합성 점군(지면 + 상자)으로 상태 전이(정상·INPUT_INVALID·입력 중단·복구), 장면/stamp/frame
 정합, 고정 경로만 제공, 모니터가 아무것도 발행하지 않음을 확인한다. 합성 입력은 인터페이스 시험이며 정확도 시험이 아니다.
+
+브라우저 검사는 외부 Python/JS 패키지 없이 합성 장면을 임시 loopback 서버로 제공한다.
+별도 임시 Chrome profile을 사용하고 종료하므로 사용자의 브라우저·ROS·rqt를 건드리지 않는다.
+실행 파일을 못 찾으면 `--chrome /path/to/chrome`을 지정한다. 기존 Node CI와 달리 Chrome 실행은 별도 로컬 검사다.
