@@ -33,6 +33,10 @@ L1 구조·입출력·시각·pose 정책은 [이관 설계](../../src/asmc_lida
 
 ## 이번 PR 이후 공동 작업 순서
 
+PR #108의 지도·웹 검수를 마친 뒤 검토할 **local/map·IMU·pose 공통화**는
+[상세 분석과 C0–C4 작업 후보](../architecture/perception-coordinate-refactoring.md)로 모았다.
+현재 위치 추정기 세 경로의 차이를 먼저 고정하며, 이번 PR에서 생산자·판제 소비를 전환하지 않는다.
+
 ### 재호의 PR #104 인수 시작
 
 이 절이 현재 인수의 시작점이다. **PR #104는 main `6927fe9d`로 병합**됐다.
