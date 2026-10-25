@@ -7,6 +7,13 @@
 | 26.R1.H3 | `network/generated/ASMC_network_set_26r1_local.json` | 검증용 `..._26r1_lan2lan.json` |
 | 25.S4.MolitComp03 | `network/generated/ASMC_network_set_molitcomp03_local.json` | `network/generated/ASMC_network_set_molitcomp03_lan2lan.json` |
 
+파일 로드 뒤에는 **Network Settings의 Cmd Control 표시 이름이 `MoraiCmdController`인지**
+확인한다. `TrajectoryTrackingCmd`는 다른 제어 프로토콜이며 포트가9093으로 같아도 현재
+`/ctrl_cmd` 패킷을 소비하지 않는다. 2026-10-26 실제 UI에서 이 불일치를 확인하고 local
+MoraiCmdController·9093/9094로 재연결해 브레이크/조향 적용을 확인했다. 이 수정은 현재
+시뮬레이터 설정에 적용한 것이며 raw template·enum을 검수 없이 다시 쓰지 않았다.
+실제 응답 확인과 정지 순서는 [판제 실행 안내](../../docs/operations/planning-control.md#morai-제어-프로토콜과-정지-순서)를 따른다.
+
 현장 정본 조합은 `molitcomp03 + lan2lan`이다. 두 release의 import schema와
 `PUBSUB_TYPE`은 다르므로 파일을 교차 import하지 않는다. 반면 ROS bridge runtime은 둘 다
 `morai_udp` 하나다. `generated/`는 `templates/`와

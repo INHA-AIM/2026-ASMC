@@ -99,3 +99,31 @@ catkin_test_results build/test_results
 과거 테스트 개수를 현재 숫자로 복사하지 않습니다. 전체 씬·단일 구간·충돌/정체 재현은
 [scen_runner](../../tools/scen_runner/README.md)를 사용합니다. 개발용 gRPC/DLL 도구의 성공은 본선 허용 입력 수락과 별도입니다.
 최종 목표·소비자 남은 작업은 [대회 로드맵](../architecture/consolidation-roadmap.md)을 따릅니다.
+
+## MORAI 제어 프로토콜과 정지 순서
+
+실주행 전 Network Settings → Ego Network에서 **Cmd Control = MoraiCmdController**,
+UDP, local Host/Destination IP127.0.0.1, Host PORT9093·Destination PORT9094를 확인한다.
+`TrajectoryTrackingCmd`는 다른 프로토콜이다. 포트 숫자가 같아도 `/ctrl_cmd`를 인코딩한
+`#MoraiCtrlCmd$` 패킷의 수신·적용을 보장하지 않는다. 네트워크 파일을 다시 불러온 뒤에는
+드롭다운의 실제 표시 이름과 연결 상태도 확인한다. sensor JSON·raw export의 release 차이는
+runtime을 별도 프로토콜로 나누는 것과 다르며 옛 enum 숫자로 UI 이름을 추측하지 않는다.
+
+2026-10-26 현장 진단: 잘못된 TrajectoryTrackingCmd에서는 Docker와 Windows에서 보낸
+가속0·브레이크1 제어가 적용되지 않았다. MoraiCmdController·9093/9094로 재연결한 뒤
+같은23바이트 제어의 D·브레이크1.0·조향0.1 적용을 확인했다. UDP send 성공/20Hz만으로
+시뮬레이터가 명령을 수락했다고 표시하지 않는다.
+
+정차·종료는 **autonomy/명령 발행부터 종료 → 키보드 제어·속도0·P 확인** 순서다.
+브릿지는 각 Ctrl 패킷에 Auto2·D4를 포함하므로 발행자가 계속 살아 있으면 기어/모드만
+수동 변경한 상태가 다음 명령으로 덮어써질 수 있다. camera/lidar/view는 구동 명령을 발행하지 않는다.
+`Camera lane follower STOP: inactive_mode`는 NORMAL 모드에서 음영 follower가 선택되지
+않았다는 진단이다. 실제 차를 정지시켰는지는 control selector·Frenet feedback·최종 `/ctrl_cmd`로 확인한다.
+
+제어 채널을 복구한 뒤에도 `low-speed KEEP blocked by drivable-road boundary`가 나오면
+객체 필터나 도로 경계 검사를 끄지 않는다. 현재 rear-axle 위치·방향·전역경로와 planner의 고정
+도로 bundle을 대조한다. 같은 날 전역경로20번 표본 중심에서 새 판제 상태로 시작한 제한 대조는
+약1.8초·약2m, 7개 조회 표본의 plan_valid가 모두 true였고 판제 횡오차 최대0.045m였다.
+실제 throttle·normalized steer가 명령에 따라 바뀌는 것까지 확인했으며 전 코스·고속·미션
+주행 수락이나 속도 GT 정확도 검증을 뜻하지 않는다. 시험 종료 후 명령 발행자부터 정리하고
+키보드/P·정차를 조회로 확인했다. 위치 순간이동 후 남은 이전 estimator/planner 이력도 구분한다.
