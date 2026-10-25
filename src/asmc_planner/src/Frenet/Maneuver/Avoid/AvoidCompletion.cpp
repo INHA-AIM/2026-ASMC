@@ -100,9 +100,11 @@ bool FrenetPlanner::CanHandoffAvoidToKeep(
     if (!best) return false;
     const auto path=ConvertToCartesianPath(*best,ref_);
     if (path.x.size()<2) return false;
+    const VehicleShape map_shape=vehicle_shape_;
     if (avoid_road_map_.enabled() &&
-        !avoid_road_map_.EvaluateRecoveryPath(path,vehicle_shape_,path_cfg_.dt,
-                                              0.0,0.0,false).drivable) return false;
+        !avoid_road_map_.EvaluateRecoveryPath(path,map_shape,path_cfg_.dt,
+                                              0.0,0.0,false,0.0,true,
+                                              solid_paint_contact_elapsed_s_).drivable) return false;
     // Preserve the AVOID dual stationary/moving hypothesis even though
     // normal KEEP's pipeline has already applied its collision filter.
     return CartesianAvoidTrajectoryClear(path,obstacles,vehicle_shape_,

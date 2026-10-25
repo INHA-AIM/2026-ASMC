@@ -194,6 +194,7 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/avoid/low_speed_transition_scale_step", avoid_cfg.low_speed_transition_scale_step);
     REQUIRE("planner/avoid/low_speed_path_extension",   avoid_cfg.low_speed_path_extension);
     REQUIRE("planner/avoid/dropout_grace_cycles",       avoid_cfg.dropout_grace_cycles);
+    REQUIRE("planner/avoid/static_dropout_grace_cycles", avoid_cfg.static_dropout_grace_cycles);
     REQUIRE("planner/avoid/committed_target_index_cost_scale",
             avoid_cfg.committed_target_index_cost_scale);
     REQUIRE("planner/avoid/direction_tiebreak_cost",    avoid_cfg.direction_tiebreak_cost);
@@ -299,9 +300,13 @@ bool LoadParams(const std::string& yaml_path,
             try {
                 zone.start_s = node["start_s"].as<double>();
                 zone.completion_s = node["completion_s"].as<double>();
+                zone.stop_buffer = node["stop_buffer"]
+                    ? node["stop_buffer"].as<double>() : highway_merge_cfg.stop_buffer;
+                zone.hold_unsafe_gap_until_conflict = node["hold_unsafe_gap_until_conflict"]
+                    ? node["hold_unsafe_gap_until_conflict"].as<bool>() : false;
             } catch (const std::exception&) {
                 error_message =
-                    "planner/highway_merge/zones start_s/completion_s must be numeric";
+                    "planner/highway_merge/zones start_s/completion_s/stop_buffer/hold flag invalid";
                 return false;
             }
             const YAML::Node checkpoints = node["checkpoints"];

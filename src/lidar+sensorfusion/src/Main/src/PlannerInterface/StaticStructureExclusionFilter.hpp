@@ -34,6 +34,7 @@ private:
         double min_y = 0.0;
         double max_y = 0.0;
         bool require_infrastructure_shape = true;
+        bool require_elevated_pole_shape = false;
     };
 
     void Reset(const std::string& message);

@@ -67,13 +67,23 @@ bool AvoidRoadMap::Load(const std::string& areas, const std::string& lines,
     for (const auto& feature : markings["features"]) {
       const auto attributes = feature["attributes"];
       if (feature["feature_type"].as<std::string>() != "lane_marking" ||
-          attributes["pattern"].as<std::string>() != "solid" ||
-          attributes["functional_role"].as<std::string>() != "lane_boundary_paint") continue;
+          attributes["pattern"].as<std::string>() != "solid") continue;
+      const std::string color = attributes["color"]
+          ? attributes["color"].as<std::string>() : "";
+      if (!color.empty() && color != "yellow" && color != "white") continue;
+      const double half_width = attributes["line_width_m"]
+          ? attributes["line_width_m"].as<double>() * 0.5 : 0.0;
+      if (!std::isfinite(half_width) || half_width < 0.0)
+        throw std::runtime_error("invalid HD map solid-paint width");
       const auto coordinates=feature["geometry"]["coordinates"];
       for (std::size_t i=1; i<coordinates.size(); ++i) {
         const Point a{coordinates[i-1][0].as<double>(),coordinates[i-1][1].as<double>()};
         const Point b{coordinates[i][0].as<double>(),coordinates[i][1].as<double>()};
-        protected_lines_.push_back({a,b,std::min(a.x,b.x),std::min(a.y,b.y),std::max(a.x,b.x),std::max(a.y,b.y)});
+        protected_lines_.push_back({a,b,std::min(a.x,b.x)-half_width,
+            std::min(a.y,b.y)-half_width,std::max(a.x,b.x)+half_width,
+            std::max(a.y,b.y)+half_width,half_width,
+            attributes["functional_role"] &&
+                attributes["functional_role"].as<std::string>() == "lane_boundary_paint"});
       }
     }
     if (areas_.empty() || protected_lines_.empty()) throw std::runtime_error("empty HD map");
@@ -158,11 +168,15 @@ AvoidRoadMap::Overlap AvoidRoadMap::FootprintOverlap(
   result.fraction=double(outside)/((nx+1)*(ny+1));return result;
 }
 
-bool AvoidRoadMap::TouchesPaint(double x,double y,double yaw,const VehicleShape& shape) const {
+bool AvoidRoadMap::TouchesPaint(double x,double y,double yaw,const VehicleShape& shape,
+                                bool all_solids) const {
   const double c=std::cos(yaw),s=std::sin(yaw);
-  const double rear=shape.rear_overhang,front=shape.length-rear,half=shape.width*.5;
-  // Clip actual paint segments against the body rectangle. Do not bridge paint
-  // gaps or infer pattern from them, and do not reject junction guide paint.
+  const double rear=shape.rear_overhang,front=shape.length-rear;
+  // AVOID counts the exterior body as a conservative proxy for the referee's
+  // wheel contacts. The 0.5 s duration reserve handles tracking/sampling error.
+  const double half=(all_solids?std::max(shape.width,shape.road_outer_width):shape.width)*.5;
+  // Clip actual paint segments against the body rectangle. Do not bridge gaps
+  // or infer paint from them; broken guides are absent from protected_lines_.
   const double center_x=x+c*(front-rear)*.5,center_y=y+s*(front-rear)*.5;
   const double radius_x=std::fabs(c)*shape.length*.5+std::fabs(s)*half;
   const double radius_y=std::fabs(s)*shape.length*.5+std::fabs(c)*half;
@@ -172,8 +186,14 @@ bool AvoidRoadMap::TouchesPaint(double x,double y,double yaw,const VehicleShape&
     if(found==line_bins_.end())continue;
     for(const auto index:found->second) {
     const auto& line=protected_lines_[index];
-    if(line.xmax<center_x-radius_x||line.xmin>center_x+radius_x||
-       line.ymax<center_y-radius_y||line.ymin>center_y+radius_y)continue;
+    if(!all_solids&&!line.legacy_boundary)continue;
+    const double paint_pad=all_solids?line.half_width:0.0;
+    const double xmin=all_solids?line.xmin:std::min(line.a.x,line.b.x);
+    const double xmax=all_solids?line.xmax:std::max(line.a.x,line.b.x);
+    const double ymin=all_solids?line.ymin:std::min(line.a.y,line.b.y);
+    const double ymax=all_solids?line.ymax:std::max(line.a.y,line.b.y);
+    if(xmax<center_x-radius_x||xmin>center_x+radius_x||
+       ymax<center_y-radius_y||ymin>center_y+radius_y)continue;
     const double ax=c*(line.a.x-x)+s*(line.a.y-y),ay=-s*(line.a.x-x)+c*(line.a.y-y);
     const double bx=c*(line.b.x-x)+s*(line.b.y-y),by=-s*(line.b.x-x)+c*(line.b.y-y);
     double lo=0,hi=1;
@@ -184,7 +204,8 @@ bool AvoidRoadMap::TouchesPaint(double x,double y,double yaw,const VehicleShape&
       if(u>v)std::swap(u,v);
       lo=std::max(lo,u);hi=std::min(hi,v);return lo<=hi;
     };
-    if(clip(ax,bx,-rear,front)&&clip(ay,by,-half,half))return true;
+    if(clip(ax,bx,-rear-paint_pad,front+paint_pad)&&
+       clip(ay,by,-half-paint_pad,half+paint_pad))return true;
   }
   }
   return false;
@@ -195,15 +216,17 @@ bool AvoidRoadMap::PoseClear(double x,double y,double yaw,const VehicleShape& sh
 }
 
 AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluatePath(
-    const CartesianPath& path,const VehicleShape& shape,double dt) const {
-  return Evaluate(path,shape,dt,0.0,0.0,false);
+    const CartesianPath& path,const VehicleShape& shape,double dt,bool budget_paint,
+    double prior_contact_s) const {
+  return Evaluate(path,shape,dt,0.0,0.0,false,0.0,false,5.0,budget_paint,prior_contact_s);
 }
 
 AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluateRecoveryPath(
-    const CartesianPath& path,const VehicleShape& shape,double dt,double budget,double overlap_limit,bool continuing_recovery,double settled_travel_m) const {
+    const CartesianPath& path,const VehicleShape& shape,double dt,double budget,double overlap_limit,bool continuing_recovery,double settled_travel_m,bool budget_paint,double prior_contact_s) const {
   if(!std::isfinite(budget)||budget<0||!std::isfinite(overlap_limit)||overlap_limit<0||
-     !std::isfinite(settled_travel_m)||settled_travel_m<0)return {};
-  return Evaluate(path,shape,dt,budget,std::min(.35,overlap_limit),continuing_recovery,settled_travel_m);
+     !std::isfinite(settled_travel_m)||settled_travel_m<0||
+     !std::isfinite(prior_contact_s)||prior_contact_s<0)return {};
+  return Evaluate(path,shape,dt,budget,std::min(.35,overlap_limit),continuing_recovery,settled_travel_m,false,5.0,budget_paint,prior_contact_s);
 }
 
 AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluateMergeBoundaryBridge(
@@ -215,10 +238,10 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluateMergeBoundaryBridge(
 }
 
 AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
-    const CartesianPath& path,const VehicleShape& shape,double dt,double recovery_distance_m,double overlap_limit_m,bool continuing_recovery,double settled_travel_m,bool allow_initial_excursion,double time_budget_s) const {
+    const CartesianPath& path,const VehicleShape& shape,double dt,double recovery_distance_m,double overlap_limit_m,bool continuing_recovery,double settled_travel_m,bool allow_initial_excursion,double time_budget_s,bool budget_paint,double prior_contact_s) const {
   PathEvaluation result;
   if(path.x.empty()||path.y.size()!=path.x.size()||path.yaw.size()!=path.x.size()||
-     !std::isfinite(dt)||dt<=0)return result;
+     !std::isfinite(dt)||dt<=0||!std::isfinite(prior_contact_s)||prior_contact_s<0)return result;
   if(!enabled_){result.drivable=true;return result;}
   const auto initial=FootprintOverlap(path.x[0],path.y[0],path.yaw[0],shape);
   VehicleShape settled_shape=shape;
@@ -227,6 +250,9 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
   if(recovery&&(recovery_distance_m<=0||initial.maximum>overlap_limit_m||initial.fraction>.10))return result;
   result.initial_overlap_m=initial.maximum;
   double continuous=0,travel=0,elapsed_total=0,settled_travel=0;
+  // The referee penalizes a wheel on solid paint after 3 s. The planner uses
+  // the larger body footprint and reserves 0.5 s for tracking/sampling error.
+  constexpr double kAvoidContinuousPaintLimitS=2.5;
   // Credit actual settled travel from this episode only while the enlarged
   // body is still inside. Replanning must not restart the 0.5 m confirmation,
   // nor renew the original distance/overlap limits.
@@ -235,6 +261,8 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
   double previous_x=path.x[0],previous_y=path.y[0];
   bool recovered=!recovery||settled_travel>=.5;
   bool previous_contact=false;
+  bool first_sample=true,initial_contact=false,left_initial_contact=false;
+  bool reentered_paint=false;
   auto sample=[&](double x,double y,double yaw,double elapsed){
     if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(yaw))return false;
     const double movement=std::hypot(x-previous_x,y-previous_y);
@@ -255,7 +283,15 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
       if(settled_travel>=.5)recovered=true;
       if(!recovered)result.recovery_seconds=elapsed_total;
     }
-    const bool contact=TouchesPaint(x,y,yaw,shape);
+    const bool contact=TouchesPaint(x,y,yaw,shape,budget_paint);
+    if(first_sample){
+      initial_contact=contact;
+      first_sample=false;
+      if(budget_paint&&contact)continuous=prior_contact_s;
+    }else if(initial_contact){
+      if(!contact)left_initial_contact=true;
+      else if(left_initial_contact)reentered_paint=true;
+    }
     // Conservatively count the interval touching either endpoint. Dense samples
     // prevent skipping a line between trajectory points; duplicates cost no time.
     if(contact||previous_contact){
@@ -281,8 +317,21 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
                  path.yaw[i-1]+f*angle,dt/count))return result;
     }
   }
-  result.drivable=recovered;
+  const bool over_budget=budget_paint&&
+      result.longest_paint_contact_seconds>=kAvoidContinuousPaintLimitS;
+  // Once actual contact has already consumed the planning reserve, refusing
+  // every exit would hold the body on paint indefinitely. Keep only a path
+  // which clears this same episode and stays clear; PaintCost makes it lose to
+  // every compliant path. Road and collision checks still apply at the caller.
+  result.best_effort_paint_exit=over_budget&&prior_contact_s>0&&
+      initial_contact&&left_initial_contact&&!reentered_paint&&!previous_contact;
+  result.drivable=recovered&&(!over_budget||result.best_effort_paint_exit);
   return result;
+}
+
+bool AvoidRoadMap::PoseTouchesSolidPaint(double x,double y,double yaw,
+                                         const VehicleShape& shape) const {
+  return enabled_&&TouchesPaint(x,y,yaw,shape,true);
 }
 
 bool AvoidRoadMap::PathClear(const CartesianPath& path,const VehicleShape& shape) const {
@@ -290,11 +339,10 @@ bool AvoidRoadMap::PathClear(const CartesianPath& path,const VehicleShape& shape
 }
 
 double AvoidRoadMap::PaintCost(const PathEvaluation& evaluation) {
-  // User-specified competition policy: prolonged paint contact is penalized,
-  // not a physical obstacle. Prefer no contact, then a short recovery. Even a
-  // >3s contact remains an option when safer candidates do not exist. The 2.5s
-  // knee reserves 0.5s for tracking error; this is prediction, not a referee timer.
+  // Prefer no contact; duration-limited AVOID paths are still possible when a
+  // strict no-contact route would leave the vehicle stopped in the corridor.
   const double prolonged=std::max(0.0,evaluation.longest_paint_contact_seconds-2.5);
-  return 20.0*evaluation.paint_contact_seconds+100.0*prolonged*prolonged
+  return (evaluation.best_effort_paint_exit?1e6:0.0)+
+      20.0*evaluation.paint_contact_seconds+100.0*prolonged*prolonged
       +100.0*evaluation.maximum_overlap_m+20.0*evaluation.recovery_seconds;
 }

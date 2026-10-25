@@ -382,6 +382,31 @@ int main() {
            physically_blocked.last_failure_reason()==FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED,
            "braking fallback cannot override an actual body collision");
 
+    // First highway merge: a vehicle occupying the conflict frontier must
+    // constrain ordinary KEEP before its normal collision horizon reaches it.
+    FrenetPlanner highway;
+    Expect(highway.Init(config), "highway frontier planner initializes");
+    const auto highway_ego=LoadPoseNearArcLength(waypoints,1180.0,10.0);
+    const auto conflict_pose=LoadPoseNearArcLength(waypoints,1237.04,0.0);
+    const auto conflict_vehicle=MakeAuthoritativeBox(901,conflict_pose.x,conflict_pose.y);
+    PlannerCommand highway_keep{};
+    highway_keep.mode=LANE_KEEPING;
+    highway_keep.has_target_speed=true;
+    highway_keep.target_speed=57.5/3.6;
+    CartesianPath highway_path;
+    const bool highway_wait=highway.Plan(highway_ego,{conflict_vehicle},
+                                         highway_keep,highway_path);
+    Expect(highway_wait && highway.last_mode()==STOP,
+           "unsafe first highway gap hands KEEP to a checked stop before conflict");
+    bool highway_release=false;
+    for(int i=0;i<3;++i) {
+        highway_path={};
+        highway_release=highway.Plan(highway_ego,{},highway_keep,highway_path);
+    }
+    Expect(highway_release && highway.last_mode()==LANE_KEEPING &&
+           !highway_path.x.empty(),
+           "three fresh safe gap checks release highway waiting path");
+
     if (g_failures == 0) {
         std::cout << "All command KEEP plan tests passed\n";
         return 0;

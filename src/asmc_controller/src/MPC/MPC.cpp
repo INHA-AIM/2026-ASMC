@@ -104,8 +104,8 @@ MPCOutput MPCProcess(
     }
 
     auto solve_params = g_mpc.params;
-    if (std::isfinite(acceleration_limit) && acceleration_limit > 0)
-        solve_params.accel_max = std::min(solve_params.accel_max,acceleration_limit);
+    if (std::isfinite(acceleration_limit))
+        solve_params.accel_max = std::clamp(acceleration_limit,solve_params.accel_min,solve_params.accel_max);
     const MPCControl optimization_previous_control = g_mpc.last_control;
     const MPCResult result = solveMPC(
         ego_state, reference, optimization_previous_control, g_mpc.warm_start,

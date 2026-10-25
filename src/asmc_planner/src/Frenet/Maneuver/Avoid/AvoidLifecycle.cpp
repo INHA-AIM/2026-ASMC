@@ -34,11 +34,9 @@ bool FrenetPlanner::CommitAvoid(const AvoidPrepareResult& result) {
 void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     execution_.beginAvoidCommit();
     // COMMIT uses a different candidate grid (the chosen offset is locked).
-    // The dynamic PREPARE search hint is an index into the old grid only.
-    if (v2_avoidance_.dynamic_target) {
-        v2_avoidance_.map_search_cursor = 0;
-        v2_avoidance_.map_reconnection_cursor = 0;
-    }
+    // A PREPARE hint is never a valid index in that grid, for static or dynamic targets.
+    v2_avoidance_.map_search_cursor = 0;
+    v2_avoidance_.map_reconnection_cursor = 0;
     v2_avoidance_.escape_recovery_active = false;
     v2_avoidance_.maneuver_progress = 0.0;
     // 이 시점에 처음 lock한다. PREPARE에서는 사이클마다 좌/우가 바뀔 수

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <cstdint>
 #include <vector>
 
 #include "Behavior/Context/behavior_types.hpp"
@@ -23,6 +24,11 @@ class RouteManager {
   bool projectEgo(double x, double y, double* out_s, double* out_d,
                   std::string* out_link_id) const;
   bool findStopLineByNode(const std::string& node_id, StopLineInfo* out) const;
+  // false means the scope/stop cannot be established, rather than outside.
+  bool stopInRouteSpan(const std::string& node_id, const std::string& first_link,
+                       const std::string& last_link, bool* inside) const;
+  bool routeSpan(const std::string& first_link,const std::string& last_link,
+                 double* first_s,double* last_s) const;
   bool findNextStopLine(double ego_s, StopLineInfo* out_stop_line) const;
   bool findNextSignalizedStopLine(double ego_s, double max_distance,
                                   StopLineInfo* out_stop_line,
@@ -55,9 +61,11 @@ class RouteManager {
   bool findNextSignalMovement(double ego_route_s, double max_distance,
                               RouteSignalMovement* out) const;
   const std::vector<Point2D>& referenceLine() const { return reference_; }
+  std::uint64_t generation() const { return generation_; }
 
  private:
   const MGeoLoader* map_ = nullptr;
+  std::uint64_t generation_ = 0;
   std::vector<std::string> ids_;
   std::vector<Point2D> reference_;
   std::vector<double> cumulative_;

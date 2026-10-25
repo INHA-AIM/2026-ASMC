@@ -81,7 +81,30 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
                              IntentSink intent_sink,DynamicEnvironment environment)
     : nh_(std::move(nh)),pnh_(std::move(pnh)),intent_sink_(std::move(intent_sink)),
       dynamic_policy_(environment,LoadDynamicPolicyConfig(pnh_)) {
+  nh_.param("/control_binding/enabled",control_binding_enabled_,false);
+  if(control_binding_enabled_) {
+    control_request_pub_=nh_.advertise<std_msgs::UInt8MultiArray>("/behavior/control_request",10);
+    controller_epoch_sub_=nh_.subscribe<std_msgs::String>("/control/binding_epoch",1,
+        [this](const std_msgs::String::ConstPtr& m) {
+          if(m && m->data.size()==32 && m->data!=controller_epoch_) {
+            controller_epoch_=m->data;control_status_sequence_=0;control_status_={};
+          }
+        });
+    control_status_sub_=nh_.subscribe<std_msgs::UInt8MultiArray>("/control/binding_status",64,
+        [this](const std_msgs::UInt8MultiArray::ConstPtr& m) {
+          asmc_msgs::binding::Status status;
+          if(m && asmc_msgs::binding::Decode(*m,status) && status.token==last_control_request_.token &&
+             status.output_sequence>control_status_sequence_) {
+            control_status_=status;control_status_sequence_=status.output_sequence;
+            execution_recovery_.Observe(status.execution_failed,status.failure_mask,status.linked,
+                last_control_request_.execution_recovery_ack);
+            control_status_received_at_=ros::SteadyTime::now();
+          }
+        });
+  }
   pnh_.param("dynamic_behavior/enabled",dynamic_enabled_,true);
+  signal_shadow_=std::make_unique<SignalShadow>(nh_,pnh_);
+  signal_active_=std::make_unique<SignalShadow>(nh_,pnh_,true);
   dynamic_diagnostics_pub_=nh_.advertise<std_msgs::String>("/planning/dynamic_behavior",10);
   std::string ego_topic = "/vehicle/state";
   std::string objects_topic = "/Object_topic";
@@ -445,6 +468,7 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
            avoid_release_grace_cycles);
 
   if (use_traffic_light_mock) {
+    if(signal_active_->enabled())throw std::runtime_error("active signal policy forbids mock traffic lights");
     auto mock = std::make_shared<MockTrafficLightProvider>();
     if (!mock->load(traffic_light_path)) {
       ROS_WARN("Traffic-light mock loading failed; default GREEN is used");
@@ -455,12 +479,39 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
   } else {
     lights_ = std::make_shared<RosTrafficLightProvider>(
         nh_, traffic_light_typed_topic, traffic_light_legacy_topic,
-        traffic_light_stale_seconds, traffic_light_detection_grace_seconds);
+        traffic_light_stale_seconds, traffic_light_detection_grace_seconds,
+        signal_shadow_ && signal_shadow_->enabled());
     ROS_INFO("Behavior traffic-light sources: typed=%s legacy_fallback=%s "
              "(stale after %.2f s)",
              traffic_light_typed_topic.c_str(),
              traffic_light_legacy_topic.c_str(),
              traffic_light_stale_seconds);
+  }
+
+  if(signal_active_->enabled()) {
+    signal_active_source_=std::make_unique<RosTrafficLightProvider>(nh_,traffic_light_typed_topic,
+        traffic_light_legacy_topic,traffic_light_stale_seconds,traffic_light_detection_grace_seconds,true);
+    double offset=0,uncertainty=0;std::string camera_topic="/cam_extra/image_jpeg/compressed";
+    if(!pnh_.getParam("signal_policy/source_to_ros_offset_s",offset) ||
+       !pnh_.getParam("signal_policy/source_clock_uncertainty_s",uncertainty))
+      throw std::runtime_error("active signal policy requires measured source-to-ROS clock bounds");
+    pnh_.param("signal_policy/camera_topic",camera_topic,camera_topic);
+    signal_active_source_->requireOriginalFrames(nh_,camera_topic,offset,uncertainty);
+    signal_active_source_->setStopObservationWakeup([this] {
+      // ProductionRuntime has one Behavior callback thread. Evaluate the same
+      // policy with current pose/risks, including normal-entry exemption and
+      // cause arbitration; never publish a camera-only brake/release command.
+      if(signal_active_ && signal_active_->inScope())runOnce();
+    });
+  }
+  if(signal_shadow_->enabled()) {
+    double offset=0,uncertainty=0;std::string camera_topic="/cam_extra/image_jpeg/compressed";
+    if(pnh_.getParam("signal_policy/source_to_ros_offset_s",offset) &&
+       pnh_.getParam("signal_policy/source_clock_uncertainty_s",uncertainty)) {
+      pnh_.param("signal_policy/camera_topic",camera_topic,camera_topic);
+      if(auto* source=dynamic_cast<RosTrafficLightProvider*>(lights_.get()))
+        source->requireOriginalFrames(nh_,camera_topic,offset,uncertainty);
+    }
   }
 
   use_v2_interface_ = interface_version == "v2";
@@ -526,6 +577,10 @@ void BehaviorInput::timerCallback(const ros::SteadyTimerEvent&) { runOnce(); }
 
 void BehaviorInput::runOnce() {
   if (!ego_received_) {
+    if(signal_shadow_) signal_shadow_->Update(ego_,false,false,nullptr,route_,
+        dynamic_cast<RosTrafficLightProvider*>(lights_.get()));
+    if(signal_active_ && signal_active_->enabled())
+      signal_active_->Update(ego_,false,false,nullptr,route_,signal_active_source_.get());
     ROS_WARN_THROTTLE(5.0, "Waiting for valid asmc_msgs/VehicleState");
     return;
   }
@@ -642,15 +697,205 @@ void BehaviorInput::runOnce() {
             feedback_v2_stale_seconds_;
     feedback = feedback_fresh ? &feedback_snapshot : nullptr;
   }
-  const BehaviorContextData context = use_v2_interface_
-      ? decision_.decide(feature, NormalizeFeedback(feedback),
+  asmc_msgs::binding::SignalStop signal_constraint;
+  bool release_authorized=true,recovery_release=false,signal_stop_owned=false;
+  if(signal_active_ && signal_active_->enabled()) {
+    asmc_planner::signal::Evidence evidence;
+    const double status_age=(steady_now-control_status_received_at_).toSec();
+    const bool status_fresh=control_status_sequence_ && status_age>=0 && status_age<=.25 &&
+        control_status_.token==last_control_request_.token;
+    evidence.linked=evidence.command_accepted=evidence.trajectory_belongs_to_command=
+        status_fresh && control_status_.linked;
+    evidence.command_id=last_control_request_.command.command_id;
+    const bool recovery_ack=status_fresh && control_status_.failure_mask==2 &&
+        control_status_.linked && control_status_.execution_recovery_safe && ego_.speed<=.15;
+    evidence.planning_checked=status_fresh && control_status_.planning_checked &&
+        (last_control_request_.signal.enabled || recovery_ack);
+    evidence.stop_path_valid=control_status_.stop_path_valid;
+    evidence.path_goal_satisfied=control_status_.goal_satisfied;
+    evidence.exit_path_valid=status_fresh && control_status_.exit_path_valid;
+    evidence.execution_failed=execution_recovery_.failed() && !execution_recovery_.pending();
+    evidence.execution_failure_mask=control_status_.failure_mask;
+    evidence.execution_recovery_acknowledged=recovery_ack;
+    evidence.response_delay_known=status_fresh && brake_level_ &&
+        control_status_.brake_generation==brake_generation_ && control_status_.brake_level==brake_level_ &&
+        std::isfinite(control_status_.response_remaining) && control_status_.response_remaining>=0;
+    evidence.response_delay_remaining=control_status_.response_remaining;
+    evidence.response_observed=control_status_.response_observed;
+    // Actuator response monitoring is connected separately to the original
+    // decision baseline; a receipt alone must not restart its delay budget.
+    signal_active_->ExecutionEvidence(evidence);
+    signal_active_->Update(ego_,(steady_now-ego_received_at_).toSec()>=0 &&
+        (steady_now-ego_received_at_).toSec()<=.3,objects_fresh,&feature,route_,signal_active_source_.get());
+    execution_recovery_.Authorize(signal_active_->output().execution_recovery_acknowledged);
+  }
+  UrbanFeature decision_feature=feature;
+  const bool signal_scoped=signal_active_ && signal_active_->enabled() && signal_active_->inScope();
+  if(signal_scoped)decision_feature.signal.light_state=TrafficLightState::GREEN;
+  BehaviorContextData context = use_v2_interface_
+      ? decision_.decide(decision_feature, NormalizeFeedback(feedback),
                          v2_command_manager_.activeCommandId())
-      : decision_.decide(feature, feedback_);
+      : decision_.decide(decision_feature, feedback_);
+  if(signal_scoped) {
+    namespace sig=asmc_planner::signal;
+    const auto& result=signal_active_->output();const auto& g=signal_active_->geometry();
+    const auto& cfg=signal_active_->config();
+    // A momentary loss/reclassification of the bollard after entering this
+    // signal's conflict area can make Behavior nominate another ordinary
+    // maneuver while Execution still owns a committed AVOID. Execution
+    // correctly refuses that new ID;
+    // sending it anyway disconnects Controller from the safe AVOID path.
+    // Continue the accepted maneuver until terminal feedback. STOP and any
+    // other risk retain their own precedence below.
+    const bool committed_signal_avoid=
+        result.severity==sig::Severity::NONE &&
+        context.selected_behavior!=BehaviorType::AVOID &&
+        context.selected_behavior!=BehaviorType::STOP &&
+        context.selected_behavior!=BehaviorType::EMERGENCY_STOP &&
+        !context.hard.planned_stop && !context.hard.force_stop &&
+        feedback && feedback->command_id==last_control_request_.command.command_id &&
+        feedback->active_maneuver==asmc_msgs::BehaviorCommand::AVOID &&
+        (feedback->execution_state==asmc_msgs::FrenetFeedback::COMMITTED ||
+         feedback->execution_state==asmc_msgs::FrenetFeedback::EXECUTING) &&
+        last_control_request_.command.maneuver_type==asmc_msgs::BehaviorCommand::AVOID &&
+        last_control_request_.signal.route_generation==g.key.route_generation &&
+        last_control_request_.signal.stop_line==g.key.stop_line &&
+        last_control_request_.signal.movement==g.key.movement;
+    if(committed_signal_avoid) {
+      context.selected_behavior=BehaviorType::AVOID;
+      context.state=BehaviorState::AVOID_EXECUTE;
+      context.maneuver_phase=ManeuverPhase::COMMITTED;
+      context.target.avoidance_object_id=last_control_request_.command.primary_object_id;
+      context.debug.selected_reason="signal_committed_avoid_continuation";
+    }
+    signal_constraint.route_generation=g.key.route_generation;signal_constraint.stop_line=g.key.stop_line;
+    signal_constraint.movement=g.key.movement;signal_constraint.target_revision=result.target_revision;
+    signal_constraint.line_x=g.line.x;signal_constraint.line_y=g.line.y;
+    signal_constraint.normal_x=g.approach.x;signal_constraint.normal_y=g.approach.y;
+    signal_constraint.clearance=cfg.clearance;signal_constraint.position_error=cfg.position_error;
+    signal_constraint.recovery_geometry=g.conflict_reviewed;
+    signal_constraint.exit_x=g.exit.x;signal_constraint.exit_y=g.exit.y;
+    signal_constraint.exit_normal_x=g.exit_direction.x;signal_constraint.exit_normal_y=g.exit_direction.y;
+    const bool other_stop=context.selected_behavior==BehaviorType::STOP ||
+        context.selected_behavior==BehaviorType::EMERGENCY_STOP || context.hard.force_stop;
+    const bool continuing_recovery_avoid=feedback &&
+        feedback->active_maneuver==asmc_msgs::BehaviorCommand::AVOID &&
+        last_control_request_.recovery_release &&
+        last_control_request_.command.maneuver_type==asmc_msgs::BehaviorCommand::AVOID &&
+        last_control_request_.signal.route_generation==g.key.route_generation &&
+        last_control_request_.signal.stop_line==g.key.stop_line &&
+        last_control_request_.signal.movement==g.key.movement;
+    const bool committed_lateral=feedback && !continuing_recovery_avoid &&
+        (feedback->active_maneuver==asmc_msgs::BehaviorCommand::AVOID ||
+         feedback->active_maneuver==asmc_msgs::BehaviorCommand::LANE_CHANGE ||
+         feedback->active_maneuver==asmc_msgs::BehaviorCommand::MERGE) &&
+        (feedback->execution_state==asmc_msgs::FrenetFeedback::COMMITTED ||
+         feedback->execution_state==asmc_msgs::FrenetFeedback::EXECUTING);
+    // Hand a committed maneuver to actual signal braking before asking KEEP
+    // to preview a new exit. An ordinary KEEP cannot bypass Execution's lock.
+    const bool preflight=!other_stop && !committed_lateral && (result.motion==sig::Motion::RELEASE_PENDING ||
+        result.motion==sig::Motion::RECOVERY_CLEAR_PENDING || signal_active_->recoveryCandidate() ||
+        signal_active_->pathRecoveryCandidate());
+    recovery_release=preflight && (signal_active_->recoveryCandidate() ||
+        signal_active_->pathRecoveryRequiresExit());
+    if(preflight) {
+      // A collision-checked AVOID is required when the exit contains an
+      // obstacle. Keep its target and transaction while Controller holds the
+      // brake until this command's complete exit path is proven.
+      const bool recovery_avoid=recovery_release &&
+          context.selected_behavior==BehaviorType::AVOID;
+      if(!recovery_avoid) {
+        context.selected_behavior=BehaviorType::KEEP;context.state=BehaviorState::KEEP_LANE;
+        context.target.has_target_pose=context.target.has_stop_target=false;
+      }
+      context.target.desired_speed=std::min(25./3.6,feature.route.speed_limit>0?feature.route.speed_limit:25./3.6);
+      if(recovery_release) {
+        context.target.desired_speed=std::min(context.target.desired_speed,cfg.recovery_speed);
+        context.extra_flags["signal_recovery_speed_limit"]=true;
+      }
+      context.debug.selected_reason=recovery_avoid?"signal_recovery_avoid_preflight":
+          recovery_release?"signal_recovery_preflight":"signal_release_preflight";
+      const auto& previous=last_control_request_;
+      const uint8_t expected_maneuver=recovery_avoid?
+          asmc_msgs::BehaviorCommand::AVOID:asmc_msgs::BehaviorCommand::KEEP;
+      const bool previous_candidate=previous.command.maneuver_type==expected_maneuver &&
+          previous.signal.route_generation==g.key.route_generation && previous.signal.stop_line==g.key.stop_line &&
+          previous.signal.movement==g.key.movement && previous.recovery_release==recovery_release;
+      release_authorized=release_commit_.Authorize(g.key,recovery_release,
+          !execution_recovery_.failed() || execution_recovery_.pending(),result.severity==sig::Severity::NONE,
+          previous_candidate && previous.release_authorized,steady_now.toSec());
+      signal_stop_owned=!release_authorized;
+    } else if(result.severity==sig::Severity::EMERGENCY) {
+      context.selected_behavior=BehaviorType::EMERGENCY_STOP;context.state=BehaviorState::EMERGENCY_STOP;
+      context.hard.force_stop=context.hard.emergency_stop=true;context.target.desired_speed=0;
+      context.debug.selected_reason="signal_emergency";
+      signal_stop_owned=true;
+    } else if(result.severity==sig::Severity::STOP && context.selected_behavior!=BehaviorType::EMERGENCY_STOP) {
+      const double anchor_s=g.route_s-signal_active_->targetOffset()+cfg.buffer;
+      if(!other_stop || !context.target.has_stop_target || context.target.stop_before_s>anchor_s) {
+        Point2D goal;double yaw=0;
+        if(route_.getRoutePose(anchor_s,&goal,&yaw)) {
+          context.selected_behavior=BehaviorType::STOP;context.state=BehaviorState::STOP;
+          context.hard.planned_stop=true;context.hard.force_stop=false;
+          context.target.has_stop_target=context.target.has_target_pose=true;
+          context.target.stop_x=context.target.target_x=goal.x;
+          context.target.stop_y=context.target.target_y=goal.y;context.target.target_yaw=yaw;
+          context.target.stop_before_s=anchor_s;
+          context.target.desired_speed=result.motion==sig::Motion::APPROACH ? 25./3.6 : 0.;
+          context.debug.selected_reason="signal_stop";signal_stop_owned=true;
+          signal_constraint.enabled=true;signal_constraint.braking_only=result.motion!=sig::Motion::APPROACH;
+        } else {
+          context.selected_behavior=BehaviorType::EMERGENCY_STOP;context.hard.force_stop=true;
+          context.target.desired_speed=0;context.debug.selected_reason="signal_target_invalid";
+        }
+      } else {
+        // A nearer pedestrian/collision STOP still carries the outstanding
+        // signal's physical constraint and braking latch. Replacing its target
+        // must not reopen legacy reapproach while SIGNAL(K) remains asserted.
+        signal_stop_owned=true;signal_constraint.enabled=true;
+        signal_constraint.braking_only=result.motion!=sig::Motion::APPROACH;
+      }
+    }
+    if((signal_stop_owned || preflight) && !(preflight && recovery_release &&
+        context.selected_behavior==BehaviorType::AVOID))decision_.preemptLateralForSignal();
+    if(!preflight)release_commit_.Reset();
+  }
+  if(!signal_scoped)release_commit_.Reset();
   if (use_v2_interface_) {
     const auto command = v2_command_manager_.update(
         context, feedback, ros::Time::now(), command_validity_seconds_);
     command_v2_pub_.publish(command); // external compatibility mirror
-    if (intent_sink_) intent_sink_({context, command});
+    asmc_msgs::binding::Request request;
+    if(control_binding_enabled_ && !controller_epoch_.empty()) {
+      request.command=command;
+      request.signal=signal_constraint;request.release_authorized=release_authorized;
+      request.recovery_release=recovery_release;
+      request.execution_recovery_ack=signal_scoped && execution_recovery_.pending();
+      const unsigned level=signal_stop_owned &&
+          (command.maneuver_type==asmc_msgs::BehaviorCommand::EMERGENCY_STOP || signal_constraint.braking_only || !release_authorized) ?
+          (signal_active_->output().severity==asmc_planner::signal::Severity::EMERGENCY?2:1) : 0;
+      if(level && (!brake_level_ || level>brake_level_)) {
+        ++brake_generation_;brake_level_=level;
+        brake_baseline_.brake_decision_ros=ros::Time::now().toSec();
+        brake_baseline_.brake_state_stamp=ego_.stamp;brake_baseline_.brake_speed=ego_.speed;
+        brake_baseline_.brake_acceleration=ego_.acceleration;
+      }
+      if(!level && release_authorized)brake_level_=0;
+      if(level) {
+        request.brake_generation=brake_generation_;request.brake_level=level;
+        request.brake_decision_ros=brake_baseline_.brake_decision_ros;
+        request.brake_state_stamp=brake_baseline_.brake_state_stamp;
+        request.brake_speed=brake_baseline_.brake_speed;request.brake_acceleration=brake_baseline_.brake_acceleration;
+        request.brake_budget=asmc_planner::signal::ResponseBudget(signal_active_->config().measured_max_delay);
+      }
+      if(last_control_request_.token.controller_epoch!=controller_epoch_ ||
+         asmc_msgs::binding::SemanticBytes(request)!=asmc_msgs::binding::SemanticBytes(last_control_request_))
+        ++control_request_revision_;
+      request.token={controller_epoch_,behavior_epoch_,control_request_revision_};
+      last_control_request_=request;
+      control_request_pub_.publish(asmc_msgs::binding::Encode(request));
+    }
+    if (intent_sink_) intent_sink_({context, command,control_binding_enabled_?&request:nullptr});
   } else {
     asmc_msgs::BehaviorContext command = MsgConverter::toMsg(context, 0);
     command.header.stamp = ros::Time::now();
@@ -666,6 +911,10 @@ void BehaviorInput::runOnce() {
   debug_pub_.publish(MsgConverter::toDebugMsg(feature, context));
   visualization_.publish(feature, context, route_, map_, *lights_);
   logger_.write(feature, context);
+  if(signal_shadow_) signal_shadow_->Update(ego_,
+      (steady_now-ego_received_at_).toSec()>=0 &&
+      (steady_now-ego_received_at_).toSec()<=.3,objects_fresh,&feature,route_,
+      dynamic_cast<RosTrafficLightProvider*>(lights_.get()));
 }
 
 void BehaviorInput::egoCallback(
@@ -674,7 +923,11 @@ void BehaviorInput::egoCallback(
   if (!message->valid || !std::isfinite(message->x) ||
       !std::isfinite(message->y) || !std::isfinite(message->yaw) ||
       !std::isfinite(message->speed) || message->header.stamp.isZero()) {
-    ego_received_ = false;
+    if(signal_active_ && signal_active_->enabled() && ego_received_) {
+      // Keep the episode but invalidate its position so the active arbiter
+      // emits INPUT_INVALID rather than silently disappearing from control.
+      ego_.valid=false;ego_received_at_=ros::SteadyTime::now();
+    } else ego_received_ = false;
     ROS_WARN_THROTTLE(2.0, "Behavior received invalid /vehicle/state");
     return;
   }
@@ -684,8 +937,13 @@ void BehaviorInput::egoCallback(
   ego_.speed = std::abs(message->speed);
   ego_.stamp = message->header.stamp.toSec();
   ego_.source = message->source;
+  ego_.acceleration = message->acceleration;
+  ego_.acceleration_valid = std::isfinite(message->acceleration);
   ego_.valid = true;
   ego_received_ = true;
+  ego_received_at_=ros::SteadyTime::now();
+  if(signal_shadow_) signal_shadow_->PushPose(ego_,route_);
+  if(signal_active_) signal_active_->PushPose(ego_,route_);
 }
 
 void BehaviorInput::moraiObjectsCallback(

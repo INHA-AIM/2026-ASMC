@@ -26,6 +26,7 @@ SignalMovement ParseSignalMovement(const std::string& related_signal) {
 
 bool RouteManager::initialize(const MGeoLoader& map,
                               const std::vector<std::string>& ids) {
+  ++generation_;
   map_ = &map;
   ids_ = ids;
   reference_.clear();
@@ -135,6 +136,27 @@ bool RouteManager::findNextStopLine(double ego_s,
     }
   }
   return false;
+}
+
+bool RouteManager::stopInRouteSpan(const std::string& node_id,
+    const std::string& first_link, const std::string& last_link, bool* inside) const {
+  double first=0,last=0;StopLineInfo stop;
+  if(!inside || !routeSpan(first_link,last_link,&first,&last) ||
+     !findStopLineByNode(node_id,&stop) || !stop.valid || !std::isfinite(stop.route_s))return false;
+  *inside=stop.route_s>=first-1e-6 && stop.route_s<=last+1e-6;
+  return true;
+}
+bool RouteManager::routeSpan(const std::string& first_link,const std::string& last_link,
+                            double* first_s,double* last_s) const {
+  if(!first_s || !last_s || first_link.empty() || last_link.empty())return false;
+  const RouteLinkSpan* first=nullptr;const RouteLinkSpan* last=nullptr;
+  for(const auto& span:link_spans_) {
+    if(span.link_id==first_link){if(first)return false;first=&span;}
+    if(span.link_id==last_link){if(last)return false;last=&span;}
+  }
+  if(!first || !last || first->start_s>last->start_s)return false;
+  *first_s=first->start_s;*last_s=last->end_s;
+  return true;
 }
 
 bool RouteManager::findNextSignalizedStopLine(

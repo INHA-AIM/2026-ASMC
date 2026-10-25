@@ -32,6 +32,10 @@ struct KnownStaticApplicationRegion {
     double max_x = 0.0;
     double min_y = 0.0;
     double max_y = 0.0;
+    bool require_offroad_infrastructure_shape = false;
+    bool require_offroad_rail_shape = false;
+    bool require_offroad_elevated_panel_shape = false;
+    bool require_offroad_low_structure_shape = false;
 };
 
 // Filters clean-lap background objects only at the final planner publication
@@ -60,7 +64,8 @@ public:
         double center_tolerance_m,
         const std::vector<KnownStaticApplicationRegion>& application_regions);
 
-    KnownStaticDecision Evaluate(const PlannerObject& object) const;
+    KnownStaticDecision Evaluate(const PlannerObject& object,
+                                 double road_ratio = -1.0) const;
 
     bool ready() const {
         return status_ == KnownStaticCatalogStatus::kReady;

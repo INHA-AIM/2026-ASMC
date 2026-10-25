@@ -564,6 +564,165 @@ int main() {
         Expect(ok&&peak_v<=ego.v+.01,"braking fallback does not repeat measured throttle acceleration");
     }
 
+    // Native signal target revisions must update below 2m without reusing HOLD
+    // completion or asking a stationary car to approach the new endpoint.
+    for(bool completed : {false,true}) {
+        if (!fresh(planner)) return 1;
+        auto ego=PoseAtArcLength(wp,kEgoS,completed ? 0.0 : 5.0);
+        double station=0;planner->ProjectEgoToS(ego,station);
+        PlannerCommand stop{};stop.mode=STOP;stop.has_target_speed=true;stop.target_speed=25/3.6;
+        stop.stop_position=station+(completed ? .5 : 8.0);
+        stop.signal_stop.key={1,"signal-stop","straight"};stop.signal_stop.target_revision=1;
+        stop.signal_stop.physical_line_s=station+(completed ? 5.5 : 13.0);
+        const auto physical=Interpolate(reference,stop.signal_stop.physical_line_s);
+        stop.signal_stop.physical_line={physical.x,physical.y};
+        stop.signal_stop.approach={std::cos(physical.theta),std::sin(physical.theta)};
+        Expect(planner->Plan(ego,no_objects,stop,path),"native initial signal STOP plans");
+        if(completed)Expect(planner->stop_goal_reached(),"initial current revision reaches goal");
+        stop.stop_position+=1.155;++stop.signal_stop.target_revision;
+        const bool ok=planner->Plan(ego,no_objects,stop,path);
+        Expect(ok,"1.155m signal revision plans without the legacy 2m threshold");
+        if(completed) {
+            Expect(planner->stop_holding() && !planner->stop_goal_reached(),
+                   "revised stationary HOLD discards previous goal completion");
+            Expect(MaxSpeed(path)<=1e-9 && std::hypot(path.x.back()-ego.x,path.y.back()-ego.y)<1e-6,
+                   "revised HOLD stays at the current pose rather than its new goal");
+        } else {
+            double end=0;const bool projected=ok && planner->ProjectPointToS(path.x.back(),path.y.back(),station,end);
+            Expect(projected && std::abs(end-(stop.stop_position-.6))<.1,
+                   "revised moving brake path reserves geometry margin beyond the 0.5m buffer");
+            double max_a=0;for(double a:path.a)max_a=std::max(max_a,a);
+            Expect(max_a<.05,"signal target revision does not create reacceleration");
+            Expect(planner->signal_stop_goal_violated(),
+                   "valid braking path does not hide an unsafe 4.345m target with 0.5m pose error");
+        }
+    }
+
+    // A later traffic light must not reuse the previous light's HOLD latch.
+    // This is the full-route sequence: stop at K1, drive between signals,
+    // then receive K2 while moving. Reusing HOLD would publish one zero-speed
+    // point at the moving ego pose, far before K2's physical stop line.
+    {
+        if (!fresh(planner)) return 1;
+        auto first_ego=PoseAtArcLength(wp,kEgoS,0.0);
+        double first_s=0;planner->ProjectEgoToS(first_ego,first_s);
+        PlannerCommand first{};first.mode=STOP;first.has_target_speed=true;
+        first.target_speed=25/3.6;first.stop_position=first_s+.5;
+        first.signal_stop.key={1,"first-line","straight"};
+        first.signal_stop.target_revision=1;
+        first.signal_stop.physical_line_s=first_s+5.5;
+        const auto first_line=Interpolate(reference,first.signal_stop.physical_line_s);
+        first.signal_stop.physical_line={first_line.x,first_line.y};
+        first.signal_stop.approach={std::cos(first_line.theta),std::sin(first_line.theta)};
+        Expect(planner->Plan(first_ego,no_objects,first,path) && planner->stop_holding(),
+               "first signal reaches HOLD before the next signal");
+
+        auto moving=PoseAtArcLength(wp,kEgoS+60.0,5.0);
+        double moving_s=0;planner->ProjectEgoToS(moving,moving_s);
+        PlannerCommand keep{};keep.mode=LANE_KEEPING;keep.has_target_speed=true;
+        keep.target_speed=25/3.6;
+        Expect(planner->Plan(moving,no_objects,keep,path),
+               "intervening KEEP plans between two signals");
+
+        PlannerCommand second=first;
+        second.signal_stop.key={1,"second-line","straight"};
+        second.stop_position=moving_s+25.0;
+        second.signal_stop.physical_line_s=moving_s+30.0;
+        const auto second_line=Interpolate(reference,second.signal_stop.physical_line_s);
+        second.signal_stop.physical_line={second_line.x,second_line.y};
+        second.signal_stop.approach={std::cos(second_line.theta),std::sin(second_line.theta)};
+        second.signal_stop.braking_only=true;
+        const bool ok=planner->Plan(moving,no_objects,second,path);
+        Expect(ok && !planner->stop_holding() && path.v.size()>1 &&
+                   path.v.front()>0.1,
+               "second signal starts its own moving brake path, not the old HOLD");
+    }
+
+    {
+        if (!fresh(planner)) return 1;
+        auto ego=PoseAtArcLength(wp,kEgoS,0);double station=0;planner->ProjectEgoToS(ego,station);
+        PlannerCommand stop{};stop.mode=STOP;stop.stop_position=station+20;
+        stop.signal_stop.key={1,"partial","straight"};stop.signal_stop.target_revision=1;
+        stop.signal_stop.physical_line_s=station+25;
+        Expect(!planner->Plan(ego,no_objects,stop,path) && planner->last_failure_reason()==Reason::INVALID_COMMAND,
+               "missing native physical geometry never silently uses legacy reapproach");
+    }
+
+    // C052 yellow STOP, 2026-10-22: near the terminal pose at 0.8 m/s,
+    // spatial candidates ran out and a 1 m lateral-settling fallback also
+    // failed, despite no tracked obstacle and ample physical-line clearance.
+    // The checked brake must continue from this measured boundary.
+    {
+        if (!fresh(planner)) return 1;
+        CartesianState ego{};
+        ego.x=-18.4606148544;ego.y=98.8544398065;ego.yaw=-0.126;
+        ego.v=0.804;ego.a=-1.423;
+        double station=0,target=0,line=0;
+        Expect(planner->ProjectEgoToS(ego,station) &&
+               planner->ProjectPointToS(-17.6931285684,98.9044796263,station,target) &&
+               planner->ProjectPointToS(-12.6932215605,98.9326184201,station,line),
+               "recorded C052 terminal STOP geometry projects");
+        PlannerCommand stop{};stop.mode=STOP;stop.has_target_speed=true;
+        stop.target_speed=25/3.6;stop.stop_position=target;
+        stop.signal_stop.key={2,"A1256W000742","left"};
+        stop.signal_stop.target_revision=1;stop.signal_stop.braking_only=true;
+        stop.signal_stop.physical_line_s=line;
+        stop.signal_stop.physical_line={-12.6932215605,98.9326184201};
+        stop.signal_stop.approach={0.9999969669,-0.0024629539};
+        stop.signal_stop.clearance=.5;stop.signal_stop.position_error=.8;
+        const bool ok=planner->Plan(ego,no_objects,stop,path);
+        Expect(ok && path.v.size()>1 && MaxSpeed(path)<=ego.v+.01 &&
+                   !planner->signal_stop_goal_violated(),
+               "recorded low-speed C052 signal STOP keeps a checked braking path");
+    }
+    if (g_failures == 0) {
+        if (!fresh(planner)) return 1;
+        auto ego=PoseAtArcLength(wp,kEgoS,0);double station=0;planner->ProjectEgoToS(ego,station);
+        PlannerCommand clear{};clear.mode=LANE_KEEPING;clear.has_target_speed=true;clear.target_speed=25/3.6;
+        clear.recovery_clear=true;clear.recovery_min_end_s=station+12;
+        const bool ok=planner->Plan(ego,no_objects,clear,path);double end=0;
+        Expect(ok && planner->ProjectPointToS(path.x.back(),path.y.back(),station,end) && end>=clear.recovery_min_end_s,
+               "stationary recovery generates a complete exit rather than the 1m low-speed crawl");
+        if(ok)Expect(AllFinite(path) && NoReverse(path) && MaxSpeed(path)<=25/3.6+.01,
+                     "full recovery preview retains speed and dynamics bounds");
+        clear.recovery_min_end_s=std::numeric_limits<double>::quiet_NaN();
+        Expect(!planner->Plan(ego,no_objects,clear,path),"partial recovery exit constraint is rejected");
+    }
+    if(g_failures==0) {
+        if(!fresh(planner))return 1;
+        CartesianState ego{};ego.x=-11.5722092545;ego.y=99.1761075414;ego.yaw=.0744833651317;
+        double station=0,exit=0;planner->ProjectEgoToS(ego,station);
+        Expect(planner->ProjectPointToS(2.90278904745,114.942183921,station,exit),
+               "reviewed left-turn exit projects to the current route");
+        PlannerCommand clear{};clear.mode=LANE_KEEPING;clear.has_target_speed=true;clear.target_speed=25/3.6;
+        clear.recovery_clear=true;clear.recovery_min_end_s=exit+1.79;
+        const bool ok=planner->Plan(ego,no_objects,clear,path);double end=0;
+        Expect(ok && planner->ProjectPointToS(path.x.back(),path.y.back(),station,end) && end>=clear.recovery_min_end_s,
+               "stationary left-turn recovery covers the complete exit without bypassing steering checks");
+        if(ok) {
+            Expect(std::abs(path.v.front()-ego.v)<1e-9 && std::abs(path.a.front()-ego.a)<1e-9,
+                   "stationary recovery preserves measured velocity and acceleration boundaries");
+            Expect(path.v.size()>4 && path.v[4]>.1,
+                   "recovery begins bounded acceleration now rather than postponing it with every horizon");
+            Expect(MaxSpeed(path)<=2.01 && AllFinite(path) && NoReverse(path),
+                   "curved recovery uses its cautious ceiling and finite forward-only path");
+            Expect(PathObeysSteeringRate(path,.1,3.,{.844,1.,5.,.1}),
+                   "curved recovery respects the Controller steering-rate envelope");
+            TrackedObject obstacle{};obstacle.id=781;obstacle.length=4;obstacle.width=3;
+            const auto blocking=Interpolate(reference,station+12);
+            obstacle.x=blocking.x;obstacle.y=blocking.y;obstacle.heading=blocking.theta;
+            obstacle.geometry_valid=true;obstacle.z_valid=false;
+            const double local[4][2]={{-2,-1.5},{2,-1.5},{2,1.5},{-2,1.5}};
+            for(unsigned i=0;i<4;++i) {
+                const double x=blocking.x+std::cos(blocking.theta)*local[i][0]-std::sin(blocking.theta)*local[i][1];
+                const double y=blocking.y+std::sin(blocking.theta)*local[i][0]+std::cos(blocking.theta)*local[i][1];
+                obstacle.corners[i]={x,y,0};obstacle.corners[i+4]={x,y,2};
+            }
+            Expect(!planner->Plan(ego,{obstacle},clear,path) &&
+                   planner->last_failure_reason()==Reason::COLLISION_BLOCKED,
+                   "complete curved recovery remains blocked by a real obstacle on the exit");
+        }
+    }
     if (g_failures == 0) {
         std::cout << "All command STOP plan tests passed\n";
         return 0;

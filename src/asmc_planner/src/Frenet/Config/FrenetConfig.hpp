@@ -126,6 +126,9 @@ struct AvoidConfig {
     // FollowingConfig.dropout_grace_cycles를 가져다 쓰지 않는다 - 서로 다른
     // 행동의 config가 강하게 결합되면 FOLLOW 튜닝이 AVOID 동작을 바꾼다.
     int dropout_grace_cycles;
+    // Stationary AVOID targets may disappear briefly behind the vehicle or
+    // sensor occlusion while their last fixed position remains relevant.
+    int static_dropout_grace_cycles;
 
     // COMMIT 이후 target_index별 비용 분리폭. 잠긴(먼저 나열된) target을
     // 다른 target보다 항상 우선시키기 위해, 물리적 전환거리 비용 차이보다
@@ -276,6 +279,8 @@ struct HighwayMergeZone {
     std::string name;  // 비어 있으면 로더가 "highway_merge"로 채운다.
     double start_s;              // [m] 합류 정책 활성 시작점
     double completion_s;         // [m] 본선 중앙 정렬이 끝나는 점
+    double stop_buffer;          // [m] 이 구간의 conflict 전 안전 대기 거리
+    bool hold_unsafe_gap_until_conflict = false;
     std::vector<HighwayMergeCheckpoint> checkpoints;
 };
 

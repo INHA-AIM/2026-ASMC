@@ -268,7 +268,8 @@ CommandAcceptance CommandExecutionManager::AcceptRequest(const ExecutionRequest&
         state_.has_active_command_ &&
         state_.maneuver_type_ == Command::AVOID &&
         state_.command_id_ != request.command.command_id && request.avoid_tracking;
-    return Accept(request.command, allow_tracking_preemption);
+    return Accept(request.command, allow_tracking_preemption ||
+        (request.signal_stop_preemption && request.command.maneuver_type==Command::STOP));
 }
 
 void CommandExecutionManager::NotifyInputDataStale() {

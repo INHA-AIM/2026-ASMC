@@ -270,6 +270,8 @@
 | `known_static_guardrail_extension_max_x` | `15.0` | — |
 | `known_static_guardrail_extension_min_y` | `175.0` | — |
 | `known_static_guardrail_extension_max_y` | `345.0` | — |
+| `known_static_c052_structure_enabled` | `true` | — |
+| `known_static_c091_rail_enabled` | `true` | — |
 | `static_structure_exclusion_enabled` | `true` | — |
 | `static_structure_exclusion_config` | `$(find Main)/../../../planning_inputs/config/static_structure_exclusions.yaml` | — |
 | `static_structure_minimum_height_m` | `2.5` | — |
@@ -304,7 +306,7 @@
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
 | `objects_source` | `lidar` | Supported source: lidar |
-| `state_source` | `gps_imu` | gps_imu or external |
+| `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
 | `lidar_input_topic` | `/last_lidar` | — |

@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -62,6 +64,41 @@ TEST_F(RouteSignalMovementTest, FindsStraightMovement) {
   EXPECT_EQ(SignalMovement::STRAIGHT, movement.movement);
   EXPECT_EQ("straight", movement.related_signal);
   EXPECT_EQ("A2256W000599", movement.link_id);
+}
+
+TEST_F(RouteSignalMovementTest, CapturedOriginalNearFirstLineHasStableLineIdentity) {
+  // Original green frame 290866 in full-scene-natural-05. The old generic
+  // next-movement lookup intermittently disagreed with its current K.
+  double s=0,d=0;std::string link;
+  ASSERT_TRUE(route_.projectEgo(-98.31924176511038,-263.5717489846787,&s,&d,&link));
+  StopLineInfo stop;double remaining=0;
+  ASSERT_TRUE(route_.findNextSignalizedStopLine(s,200,&stop,&remaining));
+  EXPECT_EQ(stop.node_id,"A1256W000682");
+  EXPECT_LT(std::abs(d),1.75);
+  RouteSignalMovement movement;
+  const bool found=route_.findNextSignalMovement(s,200,&movement);
+  std::cout << "capture s=" << s << " d=" << d << " link=" << link
+            << " next_signal=" << stop.node_id << " movement_found=" << found
+            << " movement=" << (found?movement.related_signal:"") << '\n';
+}
+
+TEST_F(RouteSignalMovementTest, YellowScopeIncludesApproachesButDoesNotReclassifyLaterLcs) {
+  bool inside=false;
+  for(const auto& node:{"A1256W000682","A1256W000807","A1256W000208","A1256W000742"}) {
+    ASSERT_TRUE(route_.stopInRouteSpan(node,"A2256W000748","A2256W000148",&inside));
+    EXPECT_TRUE(inside)<<node;
+  }
+  for(const auto& node:{"A1256W000831"}) {
+    ASSERT_TRUE(route_.stopInRouteSpan(node,"A2256W000748","A2256W000148",&inside));
+    EXPECT_FALSE(inside)<<node;
+    StopLineInfo stop;ASSERT_TRUE(route_.findStopLineByNode(node,&stop));
+    EXPECT_FALSE(stop.traffic_light_id.empty()); // Existing map contract unchanged.
+  }
+  // The reverse-direction LCS02 is not an end node of this route at all.
+  EXPECT_FALSE(route_.stopInRouteSpan("A1256W000840","A2256W000748","A2256W000148",&inside));
+  EXPECT_FALSE(route_.stopInRouteSpan("A1256W000831","missing","A2256W000148",&inside));
+  EXPECT_FALSE(route_.stopInRouteSpan("A1256W000831","A2256W000148","A2256W000748",&inside));
+  EXPECT_FALSE(route_.stopInRouteSpan("missing","A2256W000748","A2256W000148",&inside));
 }
 
 TEST_F(RouteSignalMovementTest,

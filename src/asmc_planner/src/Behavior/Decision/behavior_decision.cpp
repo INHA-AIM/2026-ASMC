@@ -94,12 +94,17 @@ BehaviorContextData BehaviorDecision::decide(
       feature.signal.required_movement==SignalMovement::RIGHT_UNPROTECTED;
   if (context.hard.planned_stop && feature.signal.stop_line_valid && signal_stop_aspect && !signal_exempt) {
     context.target.has_stop_target = true;
-    context.target.stop_x = feature.signal.stop_line_x;
-    context.target.stop_y = feature.signal.stop_line_y;
+    const double target_x = feature.signal.stop_target_pose_valid ?
+        feature.signal.stop_target_x : feature.signal.stop_line_x;
+    const double target_y = feature.signal.stop_target_pose_valid ?
+        feature.signal.stop_target_y : feature.signal.stop_line_y;
+    context.target.stop_x = target_x;
+    context.target.stop_y = target_y;
     context.target.has_target_pose = true;
-    context.target.target_x = feature.signal.stop_line_x;
-    context.target.target_y = feature.signal.stop_line_y;
-    context.target.target_yaw = feature.signal.stop_line_yaw;
+    context.target.target_x = target_x;
+    context.target.target_y = target_y;
+    context.target.target_yaw = feature.signal.stop_target_pose_valid ?
+        feature.signal.stop_target_yaw : feature.signal.stop_line_yaw;
   }
   if (feature.surrounding.has_front_vehicle) {
     const ObjectFeature& lead = feature.surrounding.front_vehicle;

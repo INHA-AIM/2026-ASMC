@@ -1,7 +1,7 @@
 # MORAI integration test settings; not certified sensor-error bounds.
 # Source/reference time alignment and steady receive freshness are separate.
 source_age_s: 0.10
-receive_age_s: 0.15
+receive_age_s: 0.30 # merge bag p99 receive gap 0.253 s; source alignment remains <=0.10 s
 restart_jump_s: 0.50
 # Full-run 8: signed stationary jitter reached -0.041m/s. This provisional
 # band is below existing 0.1m/s MERGE hold and 0.15m/s STOP tolerances.

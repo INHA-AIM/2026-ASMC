@@ -62,6 +62,7 @@ class ManeuverExecution {
   void resetFollow() const { writable()->follow = FollowState{}; }
   void resetMerge() const { writable()->merge = MergeState{}; }
   void resetStopTarget() const { writable()->stop_phase = StopExecutionPhase::APPROACH; }
+  void holdStop() const { writable()->stop_phase = StopExecutionPhase::HOLD; }
   void observeAvoidObject(int observation_id) const {
     auto& state = writable()->avoid;
     state.active = true; state.obstacle_id = observation_id;

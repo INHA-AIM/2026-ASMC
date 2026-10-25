@@ -319,7 +319,7 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
             longitudinal_set = request.stop.spatial_profile
                 ? GenerateSpatialStoppingCandidates(start, request.stop.stop_s,
                     request.stop.cruise_speed, request.stop.comfortable_decel,
-                    stop_delta_cfg, limits, request.stop.acceleration_limit)
+                    stop_delta_cfg, limits, request.stop.acceleration_limit,request.stop.braking_only)
                 : GenerateStoppingCandidates(start, request.stop.stop_s, stop_delta_cfg);
             break;
         }

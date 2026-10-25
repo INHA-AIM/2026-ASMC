@@ -9,7 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs visualization_msgs)
 find_package(yaml-cpp REQUIRED)
 catkin_package(INCLUDE_DIRS src
-  LIBRARIES asmc_planner_frenet_core asmc_planner_behavior_core
+  LIBRARIES asmc_signal_policy_core asmc_planner_frenet_core asmc_planner_behavior_core
     asmc_planner_execution_core asmc_planner_behavior_module asmc_planner_ros_adapters
   CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp std_msgs
     geometry_msgs sensor_msgs visualization_msgs)
@@ -27,6 +27,11 @@ set_target_properties(asmc_planner_execution_core PROPERTIES CXX_EXTENSIONS OFF)
 set_source_files_properties(src/Execution/Acceptance/CommandExecutionManager.cpp
   src/Execution/Acceptance/CommandFingerprint.cpp PROPERTIES COMPILE_OPTIONS "-O2")
 
+add_library(asmc_signal_policy_core src/Signal/SignalPolicy.cpp)
+target_include_directories(asmc_signal_policy_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${asmc_msgs_INCLUDE_DIRS})
+target_compile_options(asmc_signal_policy_core PRIVATE -Wall -Wextra)
+set_target_properties(asmc_signal_policy_core PROPERTIES CXX_EXTENSIONS OFF)
+
 add_library(asmc_planner_behavior_core
   src/Behavior/FSM/DecisionStability.cpp
   src/Execution/ManeuverLifecycle.cpp
@@ -35,6 +40,7 @@ target_include_directories(asmc_planner_behavior_core PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set_target_properties(asmc_planner_behavior_core PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_options(asmc_planner_behavior_core PRIVATE -Wall -Wextra)
+target_link_libraries(asmc_planner_behavior_core asmc_signal_policy_core)
 
 add_library(asmc_planner_frenet_core
   src/Frenet/Config/ConfigLoader.cpp
@@ -81,7 +87,7 @@ set_target_properties(asmc_planner_frenet_core PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_options(asmc_planner_frenet_core PRIVATE -O2)
 target_compile_definitions(asmc_planner_frenet_core PRIVATE
   FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src")
-target_link_libraries(asmc_planner_frenet_core yaml-cpp)
+target_link_libraries(asmc_planner_frenet_core yaml-cpp asmc_signal_policy_core)
 
 # Phase 1 executable remains inert while pure Frenet calculations are linked
 # through the separate library above.
@@ -93,7 +99,7 @@ target_include_directories(asmc_planner_scaffold PRIVATE src)
 install(TARGETS asmc_planner_scaffold
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-install(TARGETS asmc_planner_frenet_core asmc_planner_behavior_core asmc_planner_execution_core
+install(TARGETS asmc_signal_policy_core asmc_planner_frenet_core asmc_planner_behavior_core asmc_planner_execution_core
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 install(DIRECTORY src/Frenet/
@@ -102,7 +108,7 @@ install(DIRECTORY src/Frenet/
 install(DIRECTORY src/Global/
   DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}/Global
   FILES_MATCHING PATTERN "*.hpp")
-install(DIRECTORY src/Behavior src/Execution src/Planning
+install(DIRECTORY src/Behavior src/Execution src/Planning src/Signal
   DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.hpp")
 
@@ -127,6 +133,7 @@ target_link_libraries(asmc_planner_behavior_module
   asmc_planner_behavior_core asmc_planner_execution_core asmc_planner_frenet_core yaml-cpp ${catkin_LIBRARIES})
 
 add_library(asmc_planner_ros_adapters
+  src/Signal/SignalShadow.cpp
   src/Output/BehaviorMessages.cpp
   src/Output/PlanningFeedback.cpp
   src/Output/PlanningOutput.cpp
@@ -205,6 +212,7 @@ if(CATKIN_ENABLE_TESTING)
   add_dependencies(asmc_internal_flow_equivalence ${catkin_EXPORTED_TARGETS})
   target_link_libraries(asmc_internal_flow_equivalence
     asmc_planner_execution_core asmc_planner_ros_adapters ${catkin_LIBRARIES})
+  add_test(NAME signal_shadow_isolation COMMAND asmc_internal_flow_equivalence)
 endif()
 
 # Regression assets transferred without changing assertions.
@@ -792,5 +800,23 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET competition_speed_alignment_test)
     target_include_directories(competition_speed_alignment_test PRIVATE src)
     target_link_libraries(competition_speed_alignment_test gtest_main)
+  endif()
+endif()
+
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(signal_policy_test tests/behavior/signal_policy_test.cpp)
+  catkin_add_gtest(original_frame_test tests/behavior/original_frame_test.cpp)
+  if(TARGET original_frame_test)
+    add_dependencies(original_frame_test ${catkin_EXPORTED_TARGETS})
+    target_include_directories(original_frame_test PRIVATE src ${catkin_INCLUDE_DIRS})
+    target_link_libraries(original_frame_test ${catkin_LIBRARIES} gtest_main)
+  endif()
+  if(TARGET signal_policy_test)
+    target_link_libraries(signal_policy_test asmc_planner_behavior_core asmc_planner_frenet_core gtest_main)
+  endif()
+  add_rostest_gtest(signal_journal_test tests/signal_journal.test tests/behavior/signal_journal_test.cpp)
+  if(TARGET signal_journal_test)
+    add_dependencies(signal_journal_test ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(signal_journal_test asmc_planner_ros_adapters ${catkin_LIBRARIES})
   endif()
 endif()

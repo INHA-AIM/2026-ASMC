@@ -1,0 +1,17 @@
+# No geometry or signal association is certified by this change.
+# Reviewed site data is required before these bindings can authorize even a
+# shadow entry. Do not copy a stop-node position as an intersection polygon.
+reviewed_bindings: []
+
+# Each reviewed binding requires:
+# reviewed: true
+# stop_node_id: <route stop node>
+# movement: straight | left | left_unprotected | right_unprotected | uturn
+# camera_frame: <original source frame_id>
+# line_point: [map_x, map_y]
+# approach_direction: [unit_normal_x, unit_normal_y]  # into intersection
+# Optional, separately reviewed recovery geometry:
+# conflict_reviewed: true
+# conflict_polygon: [[x,y], [x,y], [x,y], ...]
+# exit_point: [x,y]
+# exit_direction: [unit_normal_x, unit_normal_y]  # out of intersection

@@ -612,6 +612,25 @@ PlannerObjectRosPublisher::PlannerObjectRosPublisher(
             known_static_guardrail_extension_min_y,
             known_static_guardrail_extension_max_y});
     }
+    bool known_static_c052_structure_enabled = true;
+    private_node.param("known_static_c052_structure_enabled",
+                       known_static_c052_structure_enabled,
+                       known_static_c052_structure_enabled);
+    if (known_static_c052_structure_enabled) {
+        known_static_regions.push_back({12.0, 16.0, 87.0, 91.0, true});
+        known_static_regions.push_back({15.0, 18.0, 104.0, 109.0,
+                                        false, false, true});
+        known_static_regions.push_back({10.0, 13.0, 87.0, 92.0,
+                                        false, false, false, true});
+    }
+    bool known_static_c091_rail_enabled = true;
+    private_node.param("known_static_c091_rail_enabled",
+                       known_static_c091_rail_enabled,
+                       known_static_c091_rail_enabled);
+    if (known_static_c091_rail_enabled) {
+        known_static_regions.push_back({-77.0, -69.0, -211.0, -180.0,
+                                        false, true});
+    }
     if (!known_static_filter_enabled) {
         ROS_WARN("Known-static object filter explicitly disabled; fail-safe KEEP");
     } else if (!known_static_filter_.ConfigureWithRegions(
@@ -793,7 +812,7 @@ void PlannerObjectRosPublisher::Publish(
         const DrivableFilterDecision boundary_filter =
             drivable_filter_.Evaluate(object);
         const KnownStaticDecision static_filter =
-            known_static_filter_.Evaluate(object);
+            known_static_filter_.Evaluate(object, boundary_filter.road_ratio);
         const StaticStructureExclusionDecision configured_static_filter =
             static_structure_exclusion_filter_.Evaluate(object);
         const bool upstream_keep =

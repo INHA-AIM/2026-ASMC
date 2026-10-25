@@ -626,6 +626,23 @@ TEST_F(Scene, LowMotionOwnershipRunsOnceBeforeLegacyPersonRiskAndEncodesPlannedS
   const auto unowned=fallback.build(ego,source,route,light);
   EXPECT_TRUE(unowned.risk.pedestrian_risk);
 }
+TEST_F(Scene, LowMotionRoadsidePersonDoesNotStopAReleasedSignal) {
+  PerceptionObjects source;
+  behavior_planner::TrackedObject person;
+  person.id=799;person.type=ObjectType::PEDESTRIAN;
+  person.motion_state=MotionState::LOW_THREAT;
+  person.x=33;person.y=3.2;person.length=.6;person.width=.2;
+  source.pedestrians.push_back(person);
+  EgoState ego;ego.x=20;ego.y=0;ego.speed=4;ego.valid=true;ego.stamp=100;
+  FeatureBuilder builder;OwnershipGreenLight light;
+  EXPECT_FALSE(builder.build(ego,source,route,light).risk.pedestrian_risk);
+  source.pedestrians.front().y=.2;
+  EXPECT_TRUE(builder.build(ego,source,route,light).risk.pedestrian_risk);
+  source.pedestrians.front().y=3.2;
+  source.pedestrians.front().motion_state=MotionState::DYNAMIC_PENDING;
+  source.pedestrians.front().vx=1.0;
+  EXPECT_TRUE(builder.build(ego,source,route,light).risk.pedestrian_risk);
+}
 TEST_F(Scene, EmergencyOverridesFollowAcrossMultipleObjects) {
   EXPECT_EQ(DynamicAction::EMERGENCY,decide({box(1,45,0,3,0),box(2,23,0)}).action);
 }

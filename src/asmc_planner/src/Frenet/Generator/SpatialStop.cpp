@@ -1,5 +1,6 @@
 #include "Frenet/Generator/SpatialStop.hpp"
 #include "Frenet/Generator/SamplingUtils.hpp"
+#include "Signal/BrakingModel.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -59,12 +60,29 @@ Profile At(State x) { return {x,x,{},0}; }
 
 bool BuildProfile(State initial, double target, double cruise,
                   double comfortable, double max_decel, double jerk, double max_accel,
-                  Profile& result) {
+                  Profile& result, bool braking_only) {
     if (target < initial.s-1e-8 || initial.v<0 ||
         std::fabs(initial.a)>max_decel+1e-9) return false;
     Profile hardest = At(initial);
     if (!Brake(hardest,max_decel,jerk) || hardest.end.s>target+1e-7)
         return false;
+    if (braking_only) {
+        // Once signal braking starts, a farther revision may reduce braking
+        // strength but cannot coast back into an accelerating/reapproach phase.
+        // Measured negative acceleration is a boundary condition, not a
+        // minimum braking strength for every future sample. Releasing it with
+        // bounded positive jerk while a<=0 can place the stop at the target
+        // without accelerating the vehicle or starting a new approach.
+        double lo=1e-4,hi=max_decel;
+        result=hardest;
+        for(int i=0;i<48;++i) {
+            const double mid=.5*(lo+hi);
+            Profile candidate=At(initial);
+            if(!Brake(candidate,mid,jerk) || candidate.end.s>target)lo=mid;
+            else {hi=mid;result=std::move(candidate);}
+        }
+        return result.end.s<=target+1e-7;
+    }
 
     // The backward ceiling is the inverse of jerk-limited stopping distance.
     // Use comfortable braking when it fits. If the current speed is above that
@@ -150,7 +168,7 @@ State Sample(const Profile& p,double time) {
 std::vector<FrenetPath> GenerateSpatialStoppingCandidates(
     const FrenetState& start,double stop_s,double cruise_speed,
     double comfortable_decel,const PathGeneratorConfig& cfg,
-    const KinematicLimits& limits, double acceleration_limit) {
+    const KinematicLimits& limits, double acceleration_limit, bool braking_only) {
     if(!std::isfinite(start.s) || !std::isfinite(start.s_d) ||
        !std::isfinite(start.s_dd) || !std::isfinite(stop_s) ||
        !std::isfinite(cruise_speed) || !std::isfinite(comfortable_decel) ||
@@ -164,13 +182,17 @@ std::vector<FrenetPath> GenerateSpatialStoppingCandidates(
     const double max_decel=limits.max_longitudinal_accel*headroom;
     const double jerk=limits.max_longitudinal_jerk*headroom;
     const double comfortable=std::min(comfortable_decel,max_decel);
+    const asmc_planner::signal::BrakeLimits braking{max_decel,jerk,max_decel};
+    if (asmc_planner::signal::MinimumStoppingDistance(start.s_d,start.s_dd,braking) >
+        stop_s-start.s+1e-7) return {};
     std::vector<FrenetPath> paths;
     for(double offset:SampleRange(cfg.delta_s)) {
         if(offset>1e-9)continue;
         Profile profile;
         if(!BuildProfile({start.s,start.s_d,start.s_dd},stop_s+offset,
                          cruise_speed,comfortable,max_decel,jerk,
-                         acceleration_limit > 0 ? std::min(acceleration_limit,max_decel) : comfortable,profile))continue;
+                         acceleration_limit > 0 ? std::min(acceleration_limit,max_decel) : comfortable,
+                         profile,braking_only))continue;
         for(double horizon:SampleRange(cfg.time_horizon)) {
             if(horizon<=0)continue;
             // If the stop fits in the planning horizon, publish it through

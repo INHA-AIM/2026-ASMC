@@ -108,6 +108,12 @@ if(CATKIN_ENABLE_TESTING)
   add_test(NAME warmup_motion_evidence_test COMMAND warmup_motion_evidence_test)
   find_package(rostest REQUIRED)
   find_package(rosbag REQUIRED)
+  catkin_add_gtest(test_planner_object_adapter
+    test/test_planner_object_adapter.cpp
+    test/test_runtime_globals.cpp)
+  if(TARGET test_planner_object_adapter)
+    target_link_libraries(test_planner_object_adapter myHeader ${catkin_LIBRARIES})
+  endif()
   add_executable(lidar_continuous_replay test/lidar_continuous_replay.cpp)
   target_include_directories(lidar_continuous_replay PRIVATE ${rosbag_INCLUDE_DIRS})
   add_dependencies(lidar_continuous_replay ${catkin_EXPORTED_TARGETS})

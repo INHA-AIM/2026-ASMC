@@ -39,6 +39,7 @@ class FrenetPlanner {
 public:
     const AvoidRoadMap& road_map() const { return avoid_road_map_; }
     VehicleShape vehicle_shape() const { return vehicle_shape_; }
+    double rear_overhang() const { return avoid_cfg_.rear_overhang; }
     CollisionCheckConfig collision_config() const { return collision_cfg_; }
     // Actual perception timestamp; empty frames carry time too.
     void SetObjectObservationTime(double time, double evaluation_time = -1) {
@@ -88,6 +89,9 @@ public:
 
     struct MergePrepareResult {
         bool candidate_valid = false, ready = false, maneuver_completed = false;
+        // A checked PREPARE approach is usable even before a complete
+        // departure fits the horizon. This never grants gap/COMMIT authority.
+        bool waiting_path_valid = false;
         std::uint64_t epoch = 0;
         double entry_time = -1, exit_time = -1, progress = 0;
         std::size_t generated = 0, valid = 0;
@@ -208,6 +212,10 @@ public:
     bool stop_holding() const {
         return execution_->stop_phase == StopExecutionPhase::HOLD;
     }
+    bool stop_goal_reached() const {
+        return stop_holding() && (!stop_.signal.valid() || (stop_.goal_reached && !stop_.goal_failed));
+    }
+    bool signal_stop_goal_violated() const { return stop_.signal.valid() && stop_.goal_failed; }
 
     // v2 FOLLOW가 실제로 추종 중인 leader ID. FrenetFeedback.active_leader_id
     // 용이다. node가 command.primary_object_id를 그대로 되돌려 보내면
@@ -848,6 +856,11 @@ private:
     //
     // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
     AvoidRoadMap avoid_road_map_;
+    // Physical solid-paint contact belongs to the vehicle, not a local AVOID
+    // trajectory; replanning and maneuver changes must not restart its clock.
+    bool solid_paint_contact_active_ = false;
+    std::chrono::steady_clock::time_point solid_paint_contact_started_at_{};
+    double solid_paint_contact_elapsed_s_ = 0.0;
     RoundaboutMergeConfig roundabout_merge_cfg_;
     RoundaboutMergeZone roundabout_zone_;
     double roundabout_preferred_d_ = 0;
@@ -893,6 +906,11 @@ private:
         // 점유폭이 아니다. 현재 ref 접선/법선에 투영한 실제 반폭을 보존한다.
         double obstacle_lateral_half_extent = 0.0;
         double obstacle_longitudinal_half_extent = 0.0;
+        // Last perception-sourced OBB for a committed static target.  A tracker
+        // blackout must not remove the obstacle from collision checks while
+        // its AVOID transaction is still active.
+        TrackedObject last_static_target{};
+        bool has_last_static_target = false;
         double target_d = 0.0;
 
         // 대상의 일시적 미관측 누적. PREPARE와 COMMIT 후 TRACKING에서
@@ -917,6 +935,10 @@ private:
         // blocked side; explicit FSM direction/pose remains authoritative.
         double map_lateral_origin_d = 0.0;
         bool map_lateral_started = false;
+        // A blocked, still-straight committed bypass may choose the other
+        // checked side once.  Further flips while moving undo the lateral
+        // progress and can leave the vehicle stopped beside the obstacle.
+        bool map_side_reselected = false;
         // Enumeration progress only: no unchecked path/geometry crosses cycles.
         std::size_t map_search_cursor = 0;
         std::size_t map_reconnection_cursor = 0;
@@ -980,6 +1002,9 @@ private:
     using StopExecutionPhase = asmc_planner::execution::StopExecutionPhase;
 
     struct StopContext {
+        asmc_planner::signal::StopConstraint signal;
+        bool goal_reached=false;
+        bool goal_failed=false;
         // 이 context가 추종 중인 정지 목표 s. 목표가 크게 바뀌면 새 명령으로
         // 보고 phase를 리셋한다.
         double target_s = std::numeric_limits<double>::quiet_NaN();
@@ -1017,7 +1042,7 @@ private:
         const CartesianState& ego, double s, double d,
         double resolved_target_speed, CartesianPath& out_path,
         double duration_s = 2.0, bool* road_blocked = nullptr,
-        bool* actuation_blocked = nullptr) const;
+        bool* actuation_blocked = nullptr, double minimum_path_distance = -1.0) const;
     bool KeepDepartureRoadClear(const CartesianPath& path) const;
 
     // FSM이 지정한 FOLLOW 대상의 확보 결과.
@@ -1060,7 +1085,7 @@ private:
     bool PlanExternalKeepLowSpeedFallback(const CartesianState& ego, double s,
                                           double d, double resolved_target_speed,
                                           const std::vector<TrackedObject>& predicted_obstacles,
-                                          CartesianPath& out_path);
+                                          CartesianPath& out_path, double minimum_path_distance = -1.0);
 
     // 외부 EMERGENCY_STOP 실행부. 후보 파이프라인을 건너뛰고 직접 감속한다.
     // 호출 위치(v2 FOLLOW/AVOID context reset 다음, 저속 fallback/AVOID 대상
@@ -1080,8 +1105,10 @@ private:
     // PlanInternal이 last_mode_ = STOP으로 별도 유지한다 - 그 진단용
     // ordering은 이 함수가 아니라 호출부 책임이므로 여기서 last_mode_를
     // 건드리지 않는다.
-    void UpdateExternalStopExecution(double s, double s_dot, PlannerCommand& cmd,
+    void UpdateExternalStopExecution(const CartesianState& ego,double s, double s_dot, PlannerCommand& cmd,
                                       double& out_stop_distance);
+    bool SignalStopFootprintBeforeLine(const CartesianState&,
+        const asmc_planner::signal::StopConstraint&) const;
 
     // 외부 STOP이 HOLD phase에 도달했을 때의 0속도 1-point 궤적 출력부.
     // 호출 gate(external_stop_mode && phase==HOLD)는 PlanInternal에 유지한다.
@@ -1267,6 +1294,10 @@ private:
     EmergencyStopConfig emergency_stop_cfg_{};
     MergeConfig merge_cfg_{};
     HighwayMergeConfig highway_merge_cfg_{};
+    // KEEP remains the external command; a checked STOP may temporarily hold
+    // it at a highway conflict frontier while the measured merge gap is unsafe.
+    double highway_merge_checkpoint_s_ = -1.0;
+    int highway_merge_safe_count_ = 0;
     PlannerVisualizationConfig visualization_cfg_{};
     ObjectTrackingConfig object_tracking_cfg_{};
     std::unique_ptr<PlannerDebugWriter> debug_writer_;

@@ -49,7 +49,7 @@ void SyntheticReplanning(const YAML::Node& original) {
  cfg["planner"]["collision_check"]["margin_growth_rate"]=0.0;
  {std::ofstream f(dir/"params.yaml");f<<cfg;}
  auto box=[](int id,double x,double y,double width){
-  TrackedObject o{};o.id=id;o.x=x;o.y=y;o.z=0;o.width=width;o.length=1;o.height=1;o.heading=0;
+  TrackedObject o{};o.id=id;o.type=static_cast<int>(asmc_planner::ObjectType::STATIC_OBSTACLE);o.x=x;o.y=y;o.z=0;o.width=width;o.length=1;o.height=1;o.heading=0;
   o.geometry_valid=o.z_valid=true;o.motion_state=ObjectMotionState::LOW_THREAT;
   for(int i=0;i<8;++i){const double xs[4]={-.5,.5,.5,-.5},ys[4]={-.5,-.5,.5,.5};o.corners[i]={x+xs[i%4],y+width*ys[i%4],double(i/4)};}
   return o;
@@ -68,6 +68,27 @@ void SyntheticReplanning(const YAML::Node& original) {
  const double entry=r.map_entry_s;
  p={};r={};retime.PlanCommittedAvoid(ego,objects,cmd,p,r);
  Expect(r.candidate_valid&&std::fabs(r.map_entry_s-entry)<1e-6,"valid retimed bypass keeps its entry station");
+ // The C091 bollard can disappear from tracking for about two seconds, then
+ // return under a new ID.  The committed static AVOID must remain owned.
+ FrenetPlanner dropout;Expect(dropout.Init((dir/"params.yaml").string()),"static dropout fixture loads");
+ CartesianState dropout_ego{};dropout_ego.x=30;dropout_ego.y=-.7;dropout_ego.v=2;
+ auto original_target=std::vector<TrackedObject>{box(1,80,1.1,.3)};
+ CartesianPath dropout_path;FrenetPlanner::AvoidPrepareResult dropout_result;
+ const bool dropout_ready=AwaitPrepare(dropout,dropout_ego,original_target,cmd,dropout_path,dropout_result);
+ const bool dropout_committed=dropout_ready&&dropout.CommitAvoid(dropout_result);
+ bool retained=dropout_committed;
+ for(int cycle=0;cycle<25&&retained;++cycle){
+  dropout_path={};dropout_result={};
+  dropout.PlanCommittedAvoid(dropout_ego,{},cmd,dropout_path,dropout_result);
+  retained=dropout.avoid_committed()&&
+      dropout.last_failure_reason()!=FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST;
+ }
+ Expect(retained,"committed static target survives a two-second tracker gap");
+ auto replacement=std::vector<TrackedObject>{box(2,80.1,1.1,.1)};
+ dropout_path={};dropout_result={};
+ dropout.PlanCommittedAvoid(dropout_ego,replacement,cmd,dropout_path,dropout_result);
+ Expect(retained&&dropout.active_avoid_target_id()==2&&dropout.avoid_committed(),
+        "static target reconnects under a narrower new tracker ID");
  grid(false);FrenetPlanner multi;Expect(multi.Init((dir/"params.yaml").string()),"synthetic wide road loads");
  ego={};ego.x=30;ego.v=2;objects={box(1,80,.5,.3)};p={};r={};
  multi.PrepareAvoid(ego,objects,cmd,p,r);const bool first=multi.CommitAvoid(r);const double nominal=r.selected_target_d;
@@ -124,8 +145,9 @@ int main(){
    const double x=coordinates[i][0].as<double>(),y=coordinates[i][1].as<double>();
    const double yaw=std::atan2(y-coordinates[i-1][1].as<double>(),x-coordinates[i-1][0].as<double>());
    painted={};painted.x={x,x};painted.y={y,y};painted.yaw={yaw,yaw};
-   const auto evaluation=map.EvaluatePath(painted,shape,.1);
-   if(evaluation.drivable&&evaluation.paint_contact_seconds>0)found_paint=true;
+   const auto evaluation=map.EvaluatePath(painted,shape,.1,true);
+   if(evaluation.drivable&&evaluation.paint_contact_seconds>0&&
+      map.FootprintInside(x,y,yaw,shape))found_paint=true;
   }
   if(found_paint)break;
  }
@@ -133,23 +155,110 @@ int main(){
  if(found_paint){
   const auto brief=map.EvaluatePath(painted,shape,.1);
   Expect(!map.PoseClear(painted.x[0],painted.y[0],painted.yaw[0],shape),"strict diagnostic detects initial paint contact");
-  Expect(map.PathClear(painted,shape),"initial paint contact alone does not kill recovery candidates");
+  Expect(map.EvaluatePath(painted,shape,.1,true).drivable,
+         "brief solid-paint contact remains available to AVOID");
+  CartesianPath short_contact=painted;
+  short_contact.x.assign(24,painted.x[0]);short_contact.y.assign(24,painted.y[0]);
+  short_contact.yaw.assign(24,painted.yaw[0]);
+  Expect(map.EvaluatePath(short_contact,shape,.1,true).drivable,
+         "predicted continuous contact below the 2.5 s planning reserve is allowed");
+  Expect(!map.EvaluatePath(short_contact,shape,.1,true,.3).drivable,
+         "elapsed contact from earlier replans consumes the same episode budget");
   CartesianPath long_contact=painted;
   long_contact.x.assign(41,painted.x[0]);long_contact.y.assign(41,painted.y[0]);long_contact.yaw.assign(41,painted.yaw[0]);
-  const auto prolonged=map.EvaluatePath(long_contact,shape,.1);
-  Expect(prolonged.drivable&&prolonged.longest_paint_contact_seconds>3,"prolonged paint contact is a scored fallback, not a wall");
-  Expect(AvoidRoadMap::PaintCost(prolonged)>AvoidRoadMap::PaintCost(brief)+200,"long contact costs more than brief contact");
+  const auto prolonged=map.EvaluatePath(long_contact,shape,.1,true);
+  Expect(!prolonged.drivable&&prolonged.longest_paint_contact_seconds>3,
+         "prolonged solid-paint contact cannot become a planned route");
+  Expect(!map.EvaluatePath(long_contact,shape,.1,true,.3).drivable,
+         "an over-budget stationary path cannot keep the body on paint");
+  Expect(AvoidRoadMap::PaintCost(prolonged)>AvoidRoadMap::PaintCost(brief)+200,
+         "diagnostics still distinguish prolonged from brief contact");
+  VehicleShape tiny{};tiny.width=.10;tiny.length=.10;tiny.rear_overhang=.05;
+  bool safe_exit_found=false;
+  for(double side:{-1.0,1.0})for(int step=2;step<=20&&!safe_exit_found;++step){
+   CartesianPath exit_path;
+   exit_path.x.assign(27,painted.x[0]);exit_path.y.assign(27,painted.y[0]);
+   exit_path.yaw.assign(27,painted.yaw[0]);
+   const double offset=.1*step*side;
+   exit_path.x.push_back(painted.x[0]-std::sin(painted.yaw[0])*offset);
+   exit_path.y.push_back(painted.y[0]+std::cos(painted.yaw[0])*offset);
+   exit_path.yaw.push_back(painted.yaw[0]);
+   const auto exit=map.EvaluatePath(exit_path,tiny,.1,true,.3);
+   safe_exit_found=exit.drivable&&exit.best_effort_paint_exit&&
+       AvoidRoadMap::PaintCost(exit)>1e6;
+  }
+  Expect(safe_exit_found,"an already over-budget body can still take a safe paint exit");
+  bool width_edge_rejected=false;
+  for(double side:{-1.0,1.0}){
+   CartesianPath near_paint;
+   const double x=painted.x[0]-std::sin(painted.yaw[0])*.10*side;
+   const double y=painted.y[0]+std::cos(painted.yaw[0])*.10*side;
+   near_paint.x={x,x};near_paint.y={y,y};near_paint.yaw=painted.yaw;
+   if(map.EvaluatePath(near_paint,tiny,.1).paint_contact_seconds==0 &&
+      map.EvaluatePath(near_paint,tiny,.1,true).paint_contact_seconds>0)
+    width_edge_rejected=true;
+  }
+  Expect(width_edge_rejected,
+         "AVOID counts the 0.15 m paint edge even without centreline overlap");
+  bool exterior_edge_rejected=false;
+  for(double side:{-1.0,1.0})for(int step=10;step<=40;++step){
+   const double offset=.01*step;
+   CartesianPath near_paint;
+   const double x=painted.x[0]-std::sin(painted.yaw[0])*offset*side;
+   const double y=painted.y[0]+std::cos(painted.yaw[0])*offset*side;
+   near_paint.x={x,x};near_paint.y={y,y};near_paint.yaw=painted.yaw;
+   auto exterior=tiny;exterior.road_outer_width=.35;
+   if(map.EvaluatePath(near_paint,tiny,.1,true).paint_contact_seconds==0 &&
+      map.EvaluatePath(near_paint,exterior,.1,true).paint_contact_seconds>0)
+    exterior_edge_rejected=true;
+  }
+  Expect(exterior_edge_rejected,
+         "AVOID paint-contact duration uses the exterior body width");
+  bool broken_guide_allowed=false;
+  for(auto feature:lines["features"]){
+   const auto attr=feature["attributes"];
+   if(feature["feature_type"].as<std::string>()!="lane_marking" ||
+      attr["pattern"].as<std::string>()!="broken")continue;
+   const auto coordinates=feature["geometry"]["coordinates"];
+   for(std::size_t i=1;i<coordinates.size()&&!broken_guide_allowed;++i){
+    const double x=.5*(coordinates[i-1][0].as<double>()+coordinates[i][0].as<double>());
+    const double y=.5*(coordinates[i-1][1].as<double>()+coordinates[i][1].as<double>());
+    const double yaw=std::atan2(coordinates[i][1].as<double>()-coordinates[i-1][1].as<double>(),
+                                coordinates[i][0].as<double>()-coordinates[i-1][0].as<double>());
+    CartesianPath guide;guide.x={x,x};guide.y={y,y};guide.yaw={yaw,yaw};
+    broken_guide_allowed=map.EvaluatePath(guide,tiny,.1,true).drivable;
+   }
+   if(broken_guide_allowed)break;
+  }
+  Expect(broken_guide_allowed,"broken white guide is traversable inside the road");
   painted.x.assign(2,10000);painted.y.assign(2,10000);
   Expect(!map.PathClear(painted,shape),"paint policy does not relax physical road containment");
  }
  FrenetPlanner planner;Expect(planner.Init("avoid_road_constraints_params.yaml"),"planner loads map");
  auto ego=Ego(fixture["approach"]["ego"]);auto objects=Objects(fixture["approach"]["objects"]);
+ // The earlier recorded pose is already outside the newly protected solid
+ // paint corridor. Start the completion fixture from a centered C091 pose.
+ ego.x=-63.366336822509766;ego.y=-186.8097381591797;ego.yaw=1.3565301825698568;
+ const auto initial_ego=ego;
  PlannerCommand command;command.mode=AVOID;command.target_object_id=83;command.has_target_speed=true;command.target_speed=50./3.6;
  CartesianPath path;FrenetPlanner::AvoidPrepareResult result;
  Expect(planner.PrepareAvoid(ego,objects,command,path,result),"unknown target has a maintenance trajectory");
  Expect(!result.candidate_valid&&!planner.CanCommitAvoid(result),"unknown motion cannot commit a transient bypass");
  Expect(path.x.size()>2&&std::fabs(path.v.front()-ego.v)<1e-9&&path.v.back()<ego.v-2,"moving approach brakes from measured speed");
  Expect(map.PathClear(path,shape),"braking approach stays on road");
+ // The recorded high-speed sample has measured deceleration outside the
+ // generator's configured bounds: no complete-path guarantee is made for it.
+ // For the normal signal-approach state, WAITING can instead provide the
+ // Controller with a complete checked stop without granting bypass readiness.
+ {
+  FrenetPlanner waiting;Expect(waiting.Init("avoid_road_constraints_params.yaml"),"waiting-stop planner loads");
+  auto waiting_ego=ego;waiting_ego.v=25./3.6;waiting_ego.a=0;
+  CartesianPath stopping;FrenetPlanner::AvoidPrepareResult pending;
+  const bool available=waiting.PrepareAvoid(waiting_ego,objects,command,stopping,pending);
+  Expect(available&&!pending.candidate_valid&&stopping.x.size()>2&&stopping.v.back()<=.01,
+         "normal WAITING approach includes a checked stop without bypass readiness");
+  Expect(map.PathClear(stopping,shape),"complete WAITING stop remains on road");
+ }
  // Counterfactual ideal tracking: same fixed OBB, static confirmation after 2s.
  // This tests planner continuity, not MORAI vehicle dynamics or detector recall.
  bool committed=false,complete=false;double locked=0;int stalls=0;double max_ms=0;
@@ -175,10 +284,12 @@ int main(){
  // remaining lateral displacement must not imply a short heading transition.
  FrenetPlanner disturbed;
  Expect(disturbed.Init("avoid_road_constraints_params.yaml"),"disturbed planner loads");
- auto disturbed_ego=Ego(fixture["approach"]["ego"]);
+ auto disturbed_ego=initial_ego;
+ auto disturbed_objects=Objects(fixture["approach"]["objects"]);
  bool disturbed_committed=false,heading_injected=false,heading_resume_valid=false;
  int disturbed_stalls=0;
  for(int step=0;step<500;++step){
+   if(step>=20)for(auto& object:disturbed_objects)object.motion_state=ObjectMotionState::LOW_THREAT;
    if(disturbed_committed&&!heading_injected&&
       std::fabs(disturbed.last_d()-disturbed.avoid_locked_target_d())<.06&&
       disturbed.avoid_phase_name()==std::string("PASS")){
@@ -187,8 +298,8 @@ int main(){
    }
    path={};result={};
    const bool ok=disturbed_committed
-     ? disturbed.PlanCommittedAvoid(disturbed_ego,objects,command,path,result)
-     : disturbed.PrepareAvoid(disturbed_ego,objects,command,path,result);
+     ? disturbed.PlanCommittedAvoid(disturbed_ego,disturbed_objects,command,path,result)
+     : disturbed.PrepareAvoid(disturbed_ego,disturbed_objects,command,path,result);
    if(!ok||path.x.size()<2){++disturbed_stalls;break;}
    if(!disturbed_committed&&result.candidate_valid){
      disturbed_committed=disturbed.CommitAvoid(result);path=result.candidate_path;
@@ -213,6 +324,25 @@ int main(){
  const bool junction_ok=AwaitPrepare(junction,junction_ego,junction_objects,command,path,result);
  Expect(junction_ok&&result.candidate_valid&&result.selected_target_d<0,"recorded junction state has a right bypass");
  Expect(result.candidate_valid&&map.PathClear(result.candidate_path,shape),"right bypass includes a road-constrained return");
+ FrenetPlanner recovery_avoid;
+ Expect(recovery_avoid.Init("avoid_road_constraints_params.yaml"),"recovery AVOID planner loads");
+ double recovery_start_s=0,recovery_end_s=0;
+ Expect(recovery_avoid.ProjectEgoToS(junction_ego,recovery_start_s),"recovery start projects");
+ PlannerCommand recovery_command=command;
+ recovery_command.recovery_clear=true;
+ recovery_command.recovery_min_end_s=recovery_start_s+32.0;
+ CartesianPath recovery_maintenance;
+ FrenetPlanner::AvoidPrepareResult recovery_result;
+ const bool recovery_ok=AwaitPrepare(recovery_avoid,junction_ego,junction_objects,
+                                     recovery_command,recovery_maintenance,recovery_result);
+ const bool recovery_reaches=recovery_result.candidate_valid &&
+     recovery_avoid.ProjectPointToS(recovery_result.candidate_path.x.back(),
+         recovery_result.candidate_path.y.back(),recovery_command.recovery_min_end_s,
+         recovery_end_s) && recovery_end_s>=recovery_command.recovery_min_end_s;
+ Expect(recovery_ok&&recovery_reaches,"recovery AVOID reaches the conflict exit");
+ Expect(recovery_reaches&&map.EvaluateRecoveryPath(recovery_result.candidate_path,
+     shape,recovery_avoid.sample_dt()).drivable,
+     "recovery AVOID complete exit remains on road");
  // A paint-scored fallback must never override a physical OBB collision.
  auto barrier=junction_objects.front();barrier.id=900;
  barrier.motion_state=ObjectMotionState::LOW_THREAT;

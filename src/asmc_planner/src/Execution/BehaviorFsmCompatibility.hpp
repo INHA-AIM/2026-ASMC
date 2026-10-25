@@ -36,6 +36,12 @@ class Fsm {
   bool followReleaseGraceActive() const {
     return stability_.followReleaseGraceActive();
   }
+  // Retire the preempted lateral lifecycle only. Independent emergency and
+  // FOLLOW stability keep their own release rules.
+  void preemptLateralForSignal() {
+    lifecycle_=ManeuverLifecycle{};
+    stability_.resetAvoidRelease();
+  }
 
  private:
   DecisionStability stability_;

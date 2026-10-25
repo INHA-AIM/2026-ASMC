@@ -1,0 +1,40 @@
+<launch>
+  <!-- Explicit opt-in, separately owned trial. Bridges/Main/camera are external.
+       The per-run clock profile is produced only after clock acceptance. -->
+  <arg name="clock_profile"/>
+  <arg name="mode" default="shadow"/>
+  <include file="$(find asmc_planner)/launch/dynamic_obstacle_autonomy.launch"/>
+  <param name="/control_binding/enabled" value="true"/>
+  <rosparam ns="/behavior_planner/signal_policy">
+    half_track_m: 0.814
+    wheelbase_m: 3.0
+    front_extent_m: 3.845
+    rear_extent_m: 0.79
+    # GetActorState exterior box width 2.160835m; distinct from 1.892m body spec.
+    half_width_m: 1.0805
+    # Active-signal high-speed sample: full-body discrepancy 0.521m.
+    # Reserve includes pose, map and tracking uncertainty; revalidate this rig.
+    position_error_m: 0.8
+    # 0.17s is the observed full-scene IMU original gap bound. An independent
+    # road oracle measured up to 0.719m pose/interpolation error in that band;
+    # 0.8m is the initial conservative pose error for this sensor preset.
+    position_interpolation_gap_s: 0.17
+    # Measured wheel observations up to 7m/s; the 25km/h cap is unchanged.
+    entry_observation_error_m: 0.5
+    entry_observation_speed_max_mps: 7.0
+    front_clearance_m: 0.5
+    # Separate position continuity from the additional longitudinal-speed
+    # assembly validity. Missing speed still brakes; no GPS/IMU bypass.
+    localization_history_topic: /planning/vehicle/gps_imu_state
+    localization_history_caller: /planning_gps_imu_state_adapter
+    freshness_s: 0.3
+    observation_gap_s: 0.3
+    recovery_speed_mps: 2.0
+  </rosparam>
+  <!-- IMU and ActorState share true ENU heading; local positions are UTM52.
+       Keep the production ENU-to-grid conversion. The oracle converts too. -->
+  <param name="/behavior_planner/signal_policy/mode" value="$(arg mode)"/>
+  <param name="/behavior_planner/signal_policy/geometry_path"
+         value="$(find asmc_planner)/config/behavior/signal_policy_geometry_kcity2025.yaml"/>
+  <rosparam ns="/behavior_planner/signal_policy" command="load" file="$(arg clock_profile)"/>
+</launch>

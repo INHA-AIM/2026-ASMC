@@ -56,6 +56,22 @@ int main() {
     auto strong=Generate(6,-3.5,6);
     Expect(!strong.empty() && strong[0].s_dd.front()==-3.5,
            "achieved strong braking is preserved at the next plan boundary");
+    FrenetState red_replan{};
+    red_replan.s_d=4.37;red_replan.s_dd=-3.64;
+    auto released=GenerateSpatialStoppingCandidates(red_replan,9.24,6.94,1.5,
+        Grid(20),Limits(),.5,true);
+    bool released_safe=!released.empty();
+    if(released_safe) {
+        const auto& path=released.front();
+        released_safe=Safe(path,9.24) &&
+            std::fabs(path.s.back()-9.24)<1e-4 && path.s_d.back()<1e-7;
+        for(std::size_t i=0;i<path.s_d.size();++i) {
+            released_safe &= path.s_dd[i]<=1e-7;
+            if(i)released_safe &= path.s_d[i]<=path.s_d[i-1]+1e-7;
+        }
+    }
+    Expect(released_safe,
+           "red-stop measured braking releases within jerk bound and reaches the target without reacceleration");
     Expect(Generate(8,0,3).empty(),"physically impossible target is rejected instead of moving it");
     auto far=Generate(5,0,60,5);
     Expect(!far.empty() && std::fabs(far[0].s_d[10]-5)<1e-9,

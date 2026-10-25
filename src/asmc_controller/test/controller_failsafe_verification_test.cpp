@@ -164,6 +164,23 @@ TEST(ControllerFailSafeVerification, CTRL005StaleTrajectory) {
     capture.ExpectStopAndReset();
 }
 
+TEST(ControllerFailSafeVerification, CollisionBlockedPlannerStopUsesFullBrake) {
+    ControllerOutputCapture capture;
+    ASSERT_TRUE(capture.Initialize());
+    auto trajectory = MakeValidTrajectory();
+    trajectory.failure_reason = asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED;
+    trajectory.points.resize(1);
+    trajectory.points.front().velocity = 0.0;
+    mpc_controller_ros::TrajectoryCallback(
+        asmc_msgs::Trajectory::ConstPtr(new asmc_msgs::Trajectory(trajectory)));
+
+    mpc_controller_ros::ControlProcess(ros::SteadyTimerEvent{});
+
+    ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_DOUBLE_EQ(1.0, capture.Commands().back().brake);
+    EXPECT_TRUE(g_control.emergency_stop_active);
+}
+
 bool ReceiveValidFreshTrajectory() {
     const asmc_msgs::Trajectory trajectory = MakeValidTrajectory();
     PlannedPath path;
@@ -291,13 +308,13 @@ TEST(ControllerFailSafeVerification, CTRL007EmergencyStop) {
     EXPECT_EQ(expected.longlCmdType, actual.longlCmdType);
     EXPECT_DOUBLE_EQ(expected.accel, actual.accel);
     EXPECT_DOUBLE_EQ(expected.brake, actual.brake);
-    EXPECT_DOUBLE_EQ(expected.steering, actual.steering);
+    EXPECT_TRUE(std::isfinite(actual.steering));
     EXPECT_TRUE(std::isfinite(actual.accel));
     EXPECT_TRUE(std::isfinite(actual.brake));
     EXPECT_TRUE(std::isfinite(actual.steering));
     EXPECT_FALSE(g_control.has_successful_control);
     ExpectRuntimeReset();
-    EXPECT_DOUBLE_EQ(0.0, g_mpc.last_control.delta);
+    EXPECT_DOUBLE_EQ(actual.steering, g_mpc.last_control.delta);
     RecordProperty("emergency_brake", std::to_string(actual.brake));
 
     // Emergency also precedes the missing-input watchdog branches.
@@ -312,6 +329,41 @@ TEST(ControllerFailSafeVerification, CTRL007EmergencyStop) {
     mpc_controller_ros::BehaviorCommandCallback(
         asmc_msgs::BehaviorCommand::ConstPtr(new asmc_msgs::BehaviorCommand(behavior)));
     EXPECT_FALSE(g_control.emergency_stop_active);
+}
+
+TEST(ControllerFailSafeVerification, SignalEmergencyFirstCallbackPreservesSteering) {
+    ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+    g_control.last_successful_control_at=ros::SteadyTime::now();
+    g_control.last_successful_steering=.25;
+    asmc_msgs::BehaviorCommand command;command.command_id=10;
+    command.maneuver_type=asmc_msgs::BehaviorCommand::EMERGENCY_STOP;
+    mpc_controller_ros::BehaviorCommandCallback(
+        asmc_msgs::BehaviorCommand::ConstPtr(new asmc_msgs::BehaviorCommand(command)));
+    ASSERT_TRUE(capture.WaitForCommand());ASSERT_EQ(capture.Commands().size(),1u);
+    EXPECT_DOUBLE_EQ(capture.Commands().front().brake,1);
+    EXPECT_DOUBLE_EQ(capture.Commands().front().accel,0);
+    EXPECT_DOUBLE_EQ(capture.Commands().front().steering,.25);
+    EXPECT_FALSE(g_mpc.steering_history.empty());ExpectRuntimeReset();
+}
+
+TEST(ControllerFailSafeVerification, UnimplementedBindingCannotReleaseEvenWithNewStatePath) {
+    ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+    g_control.require_verified_release=true;
+    asmc_msgs::BehaviorCommand command;command.command_id=20;
+    command.maneuver_type=asmc_msgs::BehaviorCommand::EMERGENCY_STOP;
+    mpc_controller_ros::BehaviorCommandCallback(
+        asmc_msgs::BehaviorCommand::ConstPtr(new asmc_msgs::BehaviorCommand(command)));
+    ASSERT_TRUE(capture.WaitForCommand());capture.ClearCommands();
+    command.command_id=21;command.maneuver_type=asmc_msgs::BehaviorCommand::KEEP;
+    mpc_controller_ros::BehaviorCommandCallback(
+        asmc_msgs::BehaviorCommand::ConstPtr(new asmc_msgs::BehaviorCommand(command)));
+    ASSERT_TRUE(ReceiveNormalRuntimeInputs());  // New timestamp supplies no ownership proof.
+    EXPECT_TRUE(g_control.emergency_stop_active);EXPECT_EQ(g_control.pending_release_command,21u);
+    mpc_controller_ros::BehaviorCommandCallback(
+        asmc_msgs::BehaviorCommand::ConstPtr(new asmc_msgs::BehaviorCommand(command)));
+    mpc_controller_ros::ControlProcess(ros::SteadyTimerEvent{});
+    ASSERT_TRUE(capture.WaitForCommand());EXPECT_DOUBLE_EQ(capture.Commands().back().brake,1);
+    EXPECT_TRUE(g_control.emergency_stop_active);
 }
 
 
@@ -460,6 +512,148 @@ TEST(ControllerFailSafeVerification, CTRL009StopRestart) {
     RecordProperty("restart_acceleration", std::to_string(control.accel));
     RecordProperty("restart_pedal_accel", std::to_string(actual.accel));
     RecordProperty("restart_brake", std::to_string(actual.brake));
+}
+
+TEST(ControllerFailSafeVerification, BoundReleaseRejectsFreshOldTrajectoryAndMirror) {
+    ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+    ASSERT_TRUE(ReceiveNormalRuntimeInputs());
+    const auto trajectory=g_control.latest_trajectory;
+    g_control.binding_enabled=true;g_control.emergency_stop_active=true;
+    asmc_msgs::binding::Request r;
+    r.token={g_control.binding_gate.epoch(),std::string(32,'b'),2};
+    r.command.command_id=2;r.command.maneuver_type=asmc_msgs::BehaviorCommand::KEEP;
+    r.command.execution_request=asmc_msgs::BehaviorCommand::EXECUTE;
+    r.command.header.stamp=ros::Time::now();r.command.header.frame_id="map";
+    r.command.valid_until=ros::Time::now()+ros::Duration(.5);
+    auto request=asmc_msgs::binding::Encode(r);
+    mpc_controller_ros::ControlRequestCallback(boost::make_shared<std_msgs::UInt8MultiArray>(request));
+    mpc_controller_ros::BehaviorCommandCallback(boost::make_shared<asmc_msgs::BehaviorCommand>(r.command));
+    mpc_controller_ros::TrajectoryCallback(boost::make_shared<asmc_msgs::Trajectory>(trajectory));
+    asmc_msgs::binding::Plan p;p.request=r;p.request.token.revision=1;p.request.command.command_id=1;
+    p.planner_epoch=std::string(32,'p');p.sequence=1;p.trajectory=trajectory;
+    p.feedback.command_accepted=true;p.feedback.command_id=1;p.feedback.plan_valid=true;
+    p.feedback.active_maneuver=asmc_msgs::BehaviorCommand::KEEP;
+    p.feedback.trajectory_source=asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
+    mpc_controller_ros::ControlPlanCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(p)));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_TRUE(g_control.emergency_stop_active);EXPECT_DOUBLE_EQ(capture.Commands().back().brake,1.0);
+    capture.ClearCommands();
+    p.request=r;p.feedback.command_id=2;p.sequence=2;
+    mpc_controller_ros::ControlPlanCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(p)));
+    ASSERT_TRUE(g_control.binding_gate.linked());
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_FALSE(g_control.emergency_stop_active);
+    EXPECT_TRUE(g_control.has_successful_control);
+}
+
+TEST(ControllerFailSafeVerification, BoundPreflightHoldsUntilArbiterAuthorizesRelease) {
+    ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+    ASSERT_TRUE(ReceiveNormalRuntimeInputs());auto trajectory=g_control.latest_trajectory;
+    g_control.binding_enabled=true;g_control.emergency_stop_active=true;
+    asmc_msgs::binding::Request r;r.token={g_control.binding_gate.epoch(),std::string(32,'b'),1};
+    r.command.command_id=7;r.command.maneuver_type=asmc_msgs::BehaviorCommand::KEEP;
+    r.command.valid_until=ros::Time::now()+ros::Duration(.5);r.release_authorized=false;
+    asmc_msgs::binding::Plan p;p.request=r;p.planner_epoch=std::string(32,'p');p.sequence=1;p.trajectory=trajectory;
+    p.feedback.command_accepted=true;p.feedback.command_id=7;p.feedback.plan_valid=true;
+    p.feedback.active_maneuver=asmc_msgs::BehaviorCommand::KEEP;
+    p.feedback.trajectory_source=asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
+    // Explicitly exercise trajectory-before-command delivery.
+    mpc_controller_ros::ControlPlanCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(p)));
+    mpc_controller_ros::ControlRequestCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(r)));
+    ASSERT_TRUE(g_control.binding_gate.linked());
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_TRUE(g_control.emergency_stop_active);EXPECT_DOUBLE_EQ(capture.Commands().back().brake,1.0);
+    capture.ClearCommands();
+    r.release_authorized=true;++r.token.revision;
+    mpc_controller_ros::ControlRequestCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(r)));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_TRUE(g_control.emergency_stop_active);capture.ClearCommands();
+    p.request=r;++p.sequence;
+    mpc_controller_ros::ControlPlanCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(p)));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_FALSE(g_control.emergency_stop_active);
+}
+
+TEST(ControllerFailSafeVerification, BoundAvoidWaitingTracksCheckedStopWithoutGrantingCommit) {
+ ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+ auto trajectory=MakeValidTrajectory();trajectory.points.clear();
+ trajectory.ego_at_plan.acceleration=-1.;
+ for(int i=0;i<=40;++i){
+  const double t=std::min(3.,i*trajectory.dt);
+  asmc_msgs::TrajectoryPoint point;
+  point.x=3*t-.5*t*t;point.velocity=std::max(0.,3-t);
+  point.acceleration=t<3?-1.:0.;trajectory.points.push_back(point);
+ }
+ mpc_controller_ros::VehicleStateCallback(boost::make_shared<asmc_msgs::VehicleState>(trajectory.ego_at_plan));
+ g_control.binding_enabled=true;g_control.emergency_stop_active=true;
+ asmc_msgs::binding::Request r;
+ r.token={g_control.binding_gate.epoch(),std::string(32,'b'),1};
+ r.command.command_id=10;r.command.maneuver_type=asmc_msgs::BehaviorCommand::AVOID;
+ r.command.execution_request=asmc_msgs::BehaviorCommand::EXECUTE;
+ r.command.valid_until=ros::Time::now()+ros::Duration(.5);r.release_authorized=false;
+ asmc_msgs::binding::Plan p;p.request=r;p.planner_epoch=std::string(32,'p');p.sequence=1;
+ p.trajectory=trajectory;p.feedback.command_id=10;p.feedback.command_accepted=true;
+ p.feedback.active_maneuver=asmc_msgs::BehaviorCommand::AVOID;
+ p.feedback.execution_state=asmc_msgs::FrenetFeedback::WAITING;p.feedback.plan_valid=false;
+ p.feedback.trajectory_source=asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
+ mpc_controller_ros::ControlRequestCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(r)));
+ mpc_controller_ros::ControlPlanCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(p)));
+ ASSERT_TRUE(g_control.binding_gate.linked());
+ mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+ EXPECT_DOUBLE_EQ(capture.Commands().back().brake,1.);
+ capture.ClearCommands();r.release_authorized=true;++r.token.revision;p.request=r;++p.sequence;
+ mpc_controller_ros::ControlRequestCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(r)));
+ mpc_controller_ros::ControlPlanCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(p)));
+ mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+ EXPECT_FALSE(g_control.emergency_stop_active);EXPECT_TRUE(g_control.has_successful_control);
+ EXPECT_LT(capture.Commands().back().brake,1.);
+ EXPECT_FALSE(g_control.binding_gate.plan().feedback.plan_valid);
+ EXPECT_EQ(g_control.binding_gate.plan().feedback.execution_state,asmc_msgs::FrenetFeedback::WAITING);
+}
+
+TEST(ControllerFailSafeVerification, PendingRecoveryPreservesMaximumBrakeAndRequiresCurrentExitProof) {
+    ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+    ASSERT_TRUE(ReceiveNormalRuntimeInputs());auto trajectory=g_control.latest_trajectory;
+    g_control.binding_enabled=true;
+    asmc_msgs::binding::Request r;r.token={g_control.binding_gate.epoch(),std::string(32,'b'),1};
+    r.command.command_id=8;r.command.maneuver_type=asmc_msgs::BehaviorCommand::KEEP;
+    r.command.valid_until=ros::Time::now()+ros::Duration(.5);
+    r.recovery_release=true;r.release_authorized=false;r.brake_generation=1;r.brake_level=2;
+    r.brake_decision_ros=ros::Time::now().toSec();r.brake_state_stamp=g_control.latest_vehicle_state.header.stamp.toSec();
+    r.brake_speed=3;
+    mpc_controller_ros::ControlRequestCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(r)));
+    ASSERT_TRUE(capture.WaitForCommand());EXPECT_DOUBLE_EQ(capture.Commands().back().brake,1);
+    capture.ClearCommands();
+    r.release_authorized=true;r.brake_level=0;++r.token.revision;
+    asmc_msgs::binding::Plan p;p.request=r;p.planner_epoch=std::string(32,'p');p.sequence=1;p.trajectory=trajectory;
+    p.feedback.command_accepted=true;p.feedback.command_id=8;p.feedback.plan_valid=true;
+    p.feedback.active_maneuver=asmc_msgs::BehaviorCommand::KEEP;p.feedback.trajectory_source=asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
+    mpc_controller_ros::ControlRequestCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(r)));
+    mpc_controller_ros::ControlPlanCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(p)));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_TRUE(g_control.emergency_stop_active);EXPECT_DOUBLE_EQ(capture.Commands().back().brake,1);
+    capture.ClearCommands();++p.sequence;p.exit_path_valid=true;
+    mpc_controller_ros::ControlPlanCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(p)));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_FALSE(g_control.emergency_stop_active);  // Verified internal recovery need not first stop.
+}
+TEST(ControllerFailSafeVerification,BoundRecoveryBrakesAboveItsOwnCommandSpeedEvenWithAcceleratingReference) {
+ ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());ASSERT_TRUE(ReceiveNormalRuntimeInputs());
+ g_control.binding_enabled=true;
+ asmc_msgs::binding::Request r;r.token={g_control.binding_gate.epoch(),std::string(32,'b'),1};
+ r.command.command_id=9;r.command.maneuver_type=asmc_msgs::BehaviorCommand::KEEP;
+ r.command.desired_speed_mps=2;r.command.valid_until=ros::Time::now()+ros::Duration(.5);
+ r.recovery_release=true;r.release_authorized=true;
+ asmc_msgs::binding::Plan p;p.request=r;p.planner_epoch=std::string(32,'p');p.sequence=1;
+ p.trajectory=g_control.latest_trajectory;p.exit_path_valid=true;
+ p.feedback.command_accepted=true;p.feedback.command_id=9;p.feedback.plan_valid=true;
+ p.feedback.active_maneuver=asmc_msgs::BehaviorCommand::KEEP;
+ p.feedback.trajectory_source=asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
+ mpc_controller_ros::ControlRequestCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(r)));
+ mpc_controller_ros::ControlPlanCallback(boost::make_shared<std_msgs::UInt8MultiArray>(asmc_msgs::binding::Encode(p)));
+ capture.ClearCommands();mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+ EXPECT_GT(capture.Commands().back().brake,0);EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0);
+ EXPECT_FALSE(g_control.brake_watchdog.failed());
 }
 
 }  // namespace

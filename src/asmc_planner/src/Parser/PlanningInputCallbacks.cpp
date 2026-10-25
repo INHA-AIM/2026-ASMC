@@ -63,6 +63,7 @@ void PlanningPort::behaviorCommandV2Callback(
     const ros::MessageEvent<const asmc_msgs::BehaviorCommand>& event) {
     const auto message = event.getConstMessage();
     if (!message) return;
+    if(control_binding_enabled_)return; // The explicit request channel owns this mode.
     // Internal intent is authoritative; do not consume its ROS mirror twice.
     // Commands from external peers still use this compatibility input adapter.
     if (feedback_sink_ && event.getPublisherName() == ros::this_node::getName()) return;
@@ -70,6 +71,14 @@ void PlanningPort::behaviorCommandV2Callback(
     // (runV2PlanningCycle 주석 참고).
     const behavior_planner::BehaviorContextData external_intent{};
     receiveIntent({external_intent, *message});
+}
+
+void PlanningPort::controlRequestCallback(const ros::MessageEvent<const std_msgs::UInt8MultiArray>& event) {
+    if(native_control_input_)return;
+    asmc_msgs::binding::Request request;
+    if(!event.getConstMessage() || !asmc_msgs::binding::Decode(*event.getConstMessage(),request) || !request.token.valid())return;
+    const behavior_planner::BehaviorContextData external{};
+    receiveIntent({external,request.command,&request});
 }
 
 void PlanningPort::receiveIntent(const asmc_planner::RequestedIntent& request) {
