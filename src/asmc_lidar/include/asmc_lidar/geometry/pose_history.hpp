@@ -13,6 +13,7 @@
 #include <deque>
 #include <mutex>
 #include <string>
+#include <utility>
 
 namespace asmc {
 namespace lidar {
@@ -67,12 +68,10 @@ class PoseHistory {
               std::uint64_t receipt_ns, std::uint64_t ros_now_ns = 0);
   void AddGpsInvalidAt(std::uint64_t source_ns, std::uint64_t receipt_ns);
 
-  // Main WaitForLocalLookupNs: latest IMU and CAN at or before stamp_ns within
-  // their max ages, no interpolation. The newer-invalid barrier is Main's single
-  // latest-rejected stamp per stream (max of rejected IMU/CAN stamps): it blocks
-  // falling back to an older valid sample only while that latest rejection lies
-  // between the selected sample and the scan. Waits at most timeout_s for
-  // samples that can still satisfy the stamp.
+  // Latest IMU/CAN at or before the scan within their maximum ages. Rejected
+  // samples use the same causal lookup: a future rejection must never hide a
+  // rejection between the selected good sample and this scan (PR #115).
+  // No interpolation; wait at most timeout_s for usable past samples.
   bool WaitForLocalLookupNs(std::uint64_t stamp_ns, double timeout_s, LocalState* local,
                             LocalInputSelection* selection, std::string* reason) const;
 
@@ -111,10 +110,10 @@ class PoseHistory {
   std::deque<TimedGps> gps_;
   std::deque<TimedImu> imu_;
   std::deque<TimedCan> can_;
-  std::uint64_t invalid_imu_stamp_ms_ = 0, invalid_can_stamp_ms_ = 0;
-  std::uint64_t invalid_imu_stamp_ns_ = 0, invalid_can_stamp_ns_ = 0;
+  // Bounded source-time barriers, independent of latest accepted/received data.
+  using Rejection = std::pair<std::uint64_t, const char*>;
+  std::deque<Rejection> invalid_imu_, invalid_can_;
   std::uint64_t imu_latest_seen_ns_ = 0, imu_latest_receipt_ns_ = 0;
-  std::string imu_rejection_reason_;
   bool has_accepted_imu_ = false;
   double accepted_imu_yaw_rad_ = 0.0;
   std::uint64_t accepted_imu_stamp_ms_ = 0;

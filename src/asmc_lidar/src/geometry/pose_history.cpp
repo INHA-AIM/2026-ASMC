@@ -39,6 +39,28 @@ void InsertOrdered(std::deque<Sample>* samples, const Sample& sample) {
   }
 }
 
+// A single latest-error timestamp loses causality while a worker waits for a
+// scan: callbacks can already receive a rejected sample newer than that scan.
+// Keep only a bounded time window and never retain message objects.
+void RecordRejection(std::deque<std::pair<std::uint64_t, const char*>>& history,
+                     std::uint64_t stamp, const char* reason, double duration_s) {
+  if (!stamp) return;
+  auto at = std::lower_bound(history.begin(), history.end(), stamp,
+      [](const auto& item, std::uint64_t value) { return item.first < value; });
+  if (at != history.end() && at->first == stamp) at->second = reason;
+  else history.insert(at, {stamp, reason});
+  const auto span = static_cast<std::uint64_t>(std::max(1., duration_s) * 1e9);
+  while (history.size() > 1 &&
+         (history.size() > 1024 || history.back().first - history.front().first > span))
+    history.pop_front();
+}
+std::pair<std::uint64_t, const char*> RejectionAt(
+    const std::deque<std::pair<std::uint64_t, const char*>>& history, std::uint64_t stamp) {
+  const auto it = asmc::geometry::LatestAtOrBefore(history, stamp,
+      [](const auto& item) { return item.first; });
+  return it == history.end() ? std::make_pair(std::uint64_t{0}, "") : *it;
+}
+
 // Ported from Main SensorPoseHistory.cpp:47-56 (8f93c22e). Used only by AddGps
 // for a sample without a source stamp.
 template <typename Sample>
@@ -106,10 +128,9 @@ void PoseHistory::Configure(const PoseHistoryConfig& config) {
     gps_.clear();
     imu_.clear();
     can_.clear();
-    invalid_imu_stamp_ms_ = invalid_can_stamp_ms_ = 0;
-    invalid_imu_stamp_ns_ = invalid_can_stamp_ns_ = 0;
+    invalid_imu_.clear();
+    invalid_can_.clear();
     imu_latest_seen_ns_ = imu_latest_receipt_ns_ = 0;
-    imu_rejection_reason_.clear();
     has_accepted_imu_ = false;
     has_accepted_can_ = false;
     last_seen_imu_stamp_ms_ = 0;
@@ -150,8 +171,7 @@ void PoseHistory::AddGps(std::uint64_t stamp_ms, const GpsData& gps, std::uint64
     }
     const auto attitude_ns = attitude == imu_.end() ? 0 : SampleNs(*attitude);
     if (!asmc::geometry::WithinAge(attitude_ns,sample.stamp_ns,config_.imu_max_age_s) ||
-        (invalid_imu_stamp_ns_ <= static_cast<std::uint64_t>(sample.stamp_ns) &&
-         invalid_imu_stamp_ns_ >= attitude_ns)) {
+        (RejectionAt(invalid_imu_, sample.stamp_ns).first >= attitude_ns && attitude_ns != 0)) {
       sample.valid = false;
     } else {
       LocalState at_gps{};
@@ -173,17 +193,14 @@ bool PoseHistory::AddImu(std::uint64_t stamp_ms, const ImuData& imu, std::string
   if (stamp_ms == 0 || !imu.b_ImuReady || !std::isfinite(imu.f32_Yaw_rad) || !std::isfinite(imu.f32_Roll_rad) ||
       !std::isfinite(imu.f32_Pitch_rad)) {
     {
-      imu_rejection_reason_="invalid IMU sample";
-      invalid_imu_stamp_ms_ = std::max(invalid_imu_stamp_ms_, stamp_ms);
-      invalid_imu_stamp_ns_ =
-          std::max<std::uint64_t>(invalid_imu_stamp_ns_, source_ns ? source_ns : stamp_ms * 1000000ULL);
+      RecordRejection(invalid_imu_, source_ns ? source_ns : stamp_ms * 1000000ULL,
+                      "invalid IMU sample", config_.history_duration_s);
     }
     SetReason(reason, "invalid IMU sample");
     return false;
   }
   const double yaw = std::remainder(static_cast<double>(imu.f32_Yaw_rad), 2.0 * kPi);
   if (last_seen_imu_stamp_ms_ != 0 && stamp_ms < last_seen_imu_stamp_ms_) {
-    imu_rejection_reason_="IMU timestamp moved backwards";
     SetReason(reason, "IMU timestamp moved backwards");
     return false;
   }
@@ -192,7 +209,6 @@ bool PoseHistory::AddImu(std::uint64_t stamp_ms, const ImuData& imu, std::string
   last_seen_imu_stamp_ms_ = stamp_ms;
   if (has_accepted_imu_ && seen_gap_s < config_.stream_reanchor_after_s) {
     if (stamp_ms < accepted_imu_stamp_ms_) {
-      imu_rejection_reason_="IMU timestamp moved backwards";
       SetReason(reason, "IMU timestamp moved backwards");
       return false;
     }
@@ -200,10 +216,8 @@ bool PoseHistory::AddImu(std::uint64_t stamp_ms, const ImuData& imu, std::string
     const double allowed = config_.imu_base_yaw_allowance_rad + config_.imu_maximum_yaw_rate_radps * elapsed_s;
     const double jump = std::abs(std::remainder(yaw - accepted_imu_yaw_rad_, 2.0 * kPi));
     if (jump > allowed) {
-      invalid_imu_stamp_ms_ = std::max(invalid_imu_stamp_ms_, stamp_ms);
-      invalid_imu_stamp_ns_ =
-          std::max<std::uint64_t>(invalid_imu_stamp_ns_, source_ns ? source_ns : stamp_ms * 1000000ULL);
-      imu_rejection_reason_="implausible IMU yaw jump";
+      RecordRejection(invalid_imu_, source_ns ? source_ns : stamp_ms * 1000000ULL,
+                      "implausible IMU yaw jump", config_.history_duration_s);
       SetReason(reason, "implausible IMU yaw jump");
       return false;
     }
@@ -225,9 +239,8 @@ bool PoseHistory::AddCan(std::uint64_t stamp_ms, const CanData& can, std::string
   if (stamp_ms == 0 || !std::isfinite(speed_mps) || speed_mps < 0.0) {
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      invalid_can_stamp_ms_ = std::max(invalid_can_stamp_ms_, stamp_ms);
-      invalid_can_stamp_ns_ =
-          std::max<std::uint64_t>(invalid_can_stamp_ns_, source_ns ? source_ns : stamp_ms * 1000000ULL);
+      RecordRejection(invalid_can_, source_ns ? source_ns : stamp_ms * 1000000ULL,
+                      "invalid vehicle-speed sample", config_.history_duration_s);
     }
     SetReason(reason, "invalid vehicle-speed sample");
     return false;
@@ -249,9 +262,8 @@ bool PoseHistory::AddCan(std::uint64_t stamp_ms, const CanData& can, std::string
     const double allowed =
         config_.can_base_speed_allowance_mps + config_.can_maximum_acceleration_mps2 * elapsed_s;
     if (std::abs(speed_mps - accepted_can_speed_mps_) > allowed) {
-      invalid_can_stamp_ms_ = std::max(invalid_can_stamp_ms_, stamp_ms);
-      invalid_can_stamp_ns_ =
-          std::max<std::uint64_t>(invalid_can_stamp_ns_, source_ns ? source_ns : stamp_ms * 1000000ULL);
+      RecordRejection(invalid_can_, source_ns ? source_ns : stamp_ms * 1000000ULL,
+                      "implausible vehicle-speed jump", config_.history_duration_s);
       SetReason(reason, "implausible vehicle-speed jump");
       return false;
     }
@@ -270,14 +282,16 @@ bool PoseHistory::AddCan(std::uint64_t stamp_ms, const CanData& can, std::string
 // branch only (the ms LatestAtOrBefore result is overwritten there in Main).
 bool PoseHistory::LookupLocalLocked(std::uint64_t source_ns, LocalState* local, std::string* reason,
                                     LocalInputSelection* selection) const {
+  const auto rejected_imu = RejectionAt(invalid_imu_, source_ns);
+  const auto rejected_can = RejectionAt(invalid_can_, source_ns);
   const auto imu_latest=LatestSource(imu_,source_ns);
   const auto can_latest=LatestSource(can_,source_ns);
   if(selection) {
     *selection={};
     selection->imu_latest_seen_ns=imu_latest_seen_ns_;
     selection->imu_latest_receipt_ns=imu_latest_receipt_ns_;
-    selection->imu_invalid_ns=invalid_imu_stamp_ns_;
-    selection->imu_rejection_reason=imu_rejection_reason_;
+    selection->imu_invalid_ns=rejected_imu.first;
+    selection->imu_rejection_reason=rejected_imu.second;
     if(imu_latest!=imu_.end()) {
       selection->imu_stamp_ns=SampleNs(*imu_latest);
       selection->imu_receipt_ns=imu_latest->receipt_ns;
@@ -293,7 +307,7 @@ bool PoseHistory::LookupLocalLocked(std::uint64_t source_ns, LocalState* local, 
   }
   // A fresh-but-rejected sample is not a sensor Hz outage. Report its barrier
   // before age; never use the rejected orientation or loosen the 120ms bound.
-  if(invalid_imu_stamp_ns_<=source_ns && invalid_imu_stamp_ns_>=SampleNs(*imu_latest)) {
+  if(rejected_imu.first >= SampleNs(*imu_latest)) {
     SetReason(reason,"imu_input_invalid"); return false;
   }
   if (!asmc::geometry::WithinAge(SampleNs(*imu_latest),source_ns,config_.imu_max_age_s)) {
@@ -305,7 +319,7 @@ bool PoseHistory::LookupLocalLocked(std::uint64_t source_ns, LocalState* local, 
     SetReason(reason, "no vehicle speed at or before LiDAR scan");
     return false;
   }
-  if(invalid_can_stamp_ns_<=source_ns && invalid_can_stamp_ns_>=SampleNs(*can_latest)) {
+  if(rejected_can.first >= SampleNs(*can_latest)) {
     SetReason(reason,"speed_input_invalid"); return false;
   }
   if (!asmc::geometry::WithinAge(SampleNs(*can_latest),source_ns,config_.can_max_age_s)) {

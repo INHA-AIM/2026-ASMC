@@ -734,7 +734,7 @@ class LidarPipelineNode {
       number("imu_latest_receipt_ns", stats_.selected.imu_latest_receipt_ns);
       number("imu_invalid_stamp_ns", stats_.selected.imu_invalid_ns);
       value("imu_rejection_reason", stats_.selected.imu_rejection_reason);
-      if(stats_.selected.imu_stamp_ns && stats_.last_stamp_ns>=stats_.selected.imu_stamp_ns)
+      if(stats_.selected.imu_stamp_ns && stats_.last_stamp_ns>0 && static_cast<std::uint64_t>(stats_.last_stamp_ns)>=stats_.selected.imu_stamp_ns)
         number("imu_selected_age_ms",double(stats_.last_stamp_ns-stats_.selected.imu_stamp_ns)/1e6);
       number("imu_rejected", runtime_->imu_rejected());
       number("can_rejected", runtime_->can_rejected());
