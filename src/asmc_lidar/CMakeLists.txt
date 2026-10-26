@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # fusion form the canonical pipeline below. Jaeho owns subsequent tracking,
 # velocity and 3-view fusion improvements. No camera inference or nested
 # Main dependencies.
-find_package(catkin REQUIRED COMPONENTS asmc_msgs roscpp diagnostic_msgs)
+find_package(catkin REQUIRED COMPONENTS asmc_geometry asmc_msgs roscpp diagnostic_msgs)
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -19,11 +19,11 @@ set(OpenSSL_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
 set(OpenSSL_LIBRARIES ${OPENSSL_LIBRARIES})
 catkin_package(INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS}
   LIBRARIES asmc_lidar_frame_time asmc_lidar_camera_core asmc_lidar_camera_ros
-  CATKIN_DEPENDS asmc_msgs roscpp diagnostic_msgs
+  CATKIN_DEPENDS asmc_geometry asmc_msgs roscpp diagnostic_msgs
   DEPENDS Eigen3 yaml-cpp OpenSSL)
 
 add_library(asmc_lidar_frame_time src/core/frame_time_core.cpp src/geometry/projection.cpp src/geometry/bounded_pose.cpp)
-target_include_directories(asmc_lidar_frame_time PUBLIC include)
+target_include_directories(asmc_lidar_frame_time PUBLIC include ${catkin_INCLUDE_DIRS})
 target_link_libraries(asmc_lidar_frame_time PUBLIC Eigen3::Eigen)
 target_compile_options(asmc_lidar_frame_time PRIVATE -Wall -Wextra)
 

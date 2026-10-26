@@ -284,6 +284,10 @@ inline std::string Line(const LineInput& in) {
   out << ",\"reason\":";
   Str(out, o.pose_ready ? std::string() : o.reason);
   out << ",\"imu_ns\":" << o.selected.imu_stamp_ns << ",\"can_ns\":" << o.selected.can_stamp_ns;
+  out << ",\"input_selection\":{\"imu_latest_seen_ns\":" << o.selected.imu_latest_seen_ns
+      << ",\"imu_latest_receipt_ns\":" << o.selected.imu_latest_receipt_ns
+      << ",\"imu_invalid_ns\":" << o.selected.imu_invalid_ns << ",\"imu_rejection_reason\":";
+  Str(out,o.selected.imu_rejection_reason);out << '}';
   if (o.pose_ready) {
     if (in.imu && in.can) {
       out << ",\"local\":{\"roll_rad\":";

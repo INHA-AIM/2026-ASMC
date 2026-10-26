@@ -3,7 +3,10 @@
 #include <algorithm>
 #include <cmath>
 
-#include "asmc_bridge/gps_transform.hpp"
+#include <asmc_geometry/geodesy.hpp>
+using asmc::geometry::GpsToUtm52N;
+using asmc::geometry::QuaternionToYaw;
+using asmc::geometry::Utm52NYawOffset;
 #include "asmc_bridge/steady_freshness.hpp"
 
 namespace frenet_planner_ros {
@@ -14,14 +17,9 @@ bool IsFinite(double value) { return std::isfinite(value); }
 bool ValidStamp(const ros::Time& stamp) { return !stamp.isZero(); }
 
 bool ValidGps(const morai_msgs::GPSMessage& gps) {
-    // MORAI keeps status=1 while publishing (0,0) in GPS-denied sections.
-    // This is an invalid sentinel for our UTM 52N map, not a position fix.
-    if (gps.latitude == 0.0 && gps.longitude == 0.0) return false;
-    return gps.status > 0 && ValidStamp(gps.header.stamp) &&
-           IsFinite(gps.latitude) && gps.latitude >= -90.0 &&
-           gps.latitude <= 90.0 && IsFinite(gps.longitude) &&
-           gps.longitude >= -180.0 && gps.longitude <= 180.0 &&
-           IsFinite(gps.eastOffset) && IsFinite(gps.northOffset);
+    // Shared input validity; this estimator still owns its recovery and gain policy.
+    return asmc::geometry::ValidGpsFix(gps.status, ValidStamp(gps.header.stamp),
+        gps.latitude, gps.longitude, gps.eastOffset, gps.northOffset);
 }
 
 bool ValidImu(const sensor_msgs::Imu& imu) {

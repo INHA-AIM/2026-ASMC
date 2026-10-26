@@ -70,7 +70,7 @@ jobs:
       - name: Build ROS workspace
         run: |
           source /opt/ros/noetic/setup.bash
-          ./scripts/build_ws.sh -j2 -l2 -DCATKIN_WHITELIST_PACKAGES="asmc_msgs;morai_msgs;planning_inputs;asmc_planner;asmc_controller" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          ./scripts/build_ws.sh -j2 -l2 -DCATKIN_WHITELIST_PACKAGES="asmc_geometry;asmc_msgs;morai_msgs;planning_inputs;asmc_planner;asmc_controller" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
       - name: Build explicit input and perception-consumer tests
         run: |
           source /opt/ros/noetic/setup.bash

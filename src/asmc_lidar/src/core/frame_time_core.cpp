@@ -118,22 +118,33 @@ Geometry geometry(const Object& o, const Pose& t) {
   if (g.long_axis.head<2>().norm() > 1e-9) g.yaw = std::atan2(g.long_axis.y(), g.long_axis.x());
   return g;
 }
+PreparedTransform prepare_transform(const Context& c) {
+  PreparedTransform p;p.context=c;p.reason=validate_time(c.time);
+  if(!p.reason.empty()) return p;
+  p.base_from_input=base_from_input(c);
+  if(!p.base_from_input) {p.reason="input_transform_invalid_or_unproven";return p;}
+  p.map_reason=c.map_pose.reason;
+  if(c.map_pose.valid && c.map_pose.query_stamp_ns==c.time.stamp_ns &&
+      c.map_pose.clock==c.time.clock && pose_valid(c.map_pose.map_from_base)) {
+    p.map_from_input=c.map_pose.map_from_base * *p.base_from_input;p.map_reason="valid";
+  } else if(c.map_pose.valid) p.map_reason="pose_invalid_or_time_mismatch";
+  return p;
+}
 Result transform(const Object& o, const Context& c) {
+  return transform(o,prepare_transform(c));
+}
+Result transform(const Object& o, const PreparedTransform& p) {
+  const auto& c=p.context;
   Result r; r.time=c.time; r.id=o.id; r.classification=o.classification;
-  r.reason=validate_time(c.time);
-  if (!r.reason.empty()) return r;
-  const auto t=base_from_input(c);
-  if (!t) { r.reason="input_transform_invalid_or_unproven"; return r; }
+  r.reason=p.reason;if(!r.reason.empty()) return r;
+  const auto& t=p.base_from_input;
   if (!o.center.allFinite() || !o.long_axis.allFinite() || o.long_axis.norm()<1e-12 ||
       !std::all_of(o.corners.begin(),o.corners.end(),[](const Vec& p){return p.allFinite();})) {
     r.reason="nonfinite_or_invalid_geometry"; return r;
   }
   r.base=geometry(o,*t); r.valid=true; r.reason="valid";
-  r.map_reason=c.map_pose.reason;
-  if (c.map_pose.valid && c.map_pose.query_stamp_ns==c.time.stamp_ns &&
-      c.map_pose.clock==c.time.clock && pose_valid(c.map_pose.map_from_base)) {
-    r.map=geometry(o,c.map_pose.map_from_base * *t); r.map_reason="valid";
-  } else if(c.map_pose.valid) r.map_reason="pose_invalid_or_time_mismatch";
+  r.map_reason=p.map_reason;
+  if(p.map_from_input) r.map=geometry(o,*p.map_from_input);
   r.velocity_reason="legacy_meaning_unknown";
   if (o.velocity_meaning != VelocityMeaning::Unknown && !o.velocity.allFinite())
     r.velocity_reason="velocity_nonfinite";

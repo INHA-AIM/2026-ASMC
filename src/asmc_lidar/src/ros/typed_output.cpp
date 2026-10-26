@@ -124,7 +124,8 @@ TypedOutput::Arrays TypedOutput::Observed(const pipeline::ScanResult& result,
   const std::int64_t stamp_ns = context.time.stamp_ns;
   const auto time_error = asmc::lidar::validate_time(context.time);
   if (!time_error.empty()) return Invalid(stamp_ns, time_error);
-  const auto base_from_level = asmc::lidar::base_from_input(context);
+  const auto prepared = asmc::lidar::prepare_transform(context);
+  const auto& base_from_level = prepared.base_from_input;
   if (!base_from_level) return Invalid(stamp_ns, "leveling_transform_invalid");
   Arrays out;
   if (!Accept(stamp_ns)) return out;
@@ -135,6 +136,8 @@ TypedOutput::Arrays TypedOutput::Observed(const pipeline::ScanResult& result,
   out.map = Empty(stamp, "map", context.map_pose.valid ? Array::OBSERVED_EMPTY : Array::POSE_UNAVAILABLE,
                   context.map_pose.valid ? "observed_empty" : context.map_pose.reason, provenance_);
   out.local.stamp_provenance = out.map.stamp_provenance = context.time.stamp_provenance;
+  out.local.objects.reserve(objects.size());out.map.objects.reserve(objects.size());
+  out.local_tracking.reserve(objects.size());out.map_tracking.reserve(objects.size());
   for (const auto& original : objects) {
     if (original.tracking.s32_Id < 0 || original.tracking.s32_MissCount != 0 || original.detection.pcl_ClusterPoints.empty() ||
         original.camera.str_ObjectClass == "noise" || original.camera.str_ObjectClass == "지면노이즈") continue;
@@ -145,7 +148,7 @@ TypedOutput::Arrays TypedOutput::Observed(const pipeline::ScanResult& result,
     for (unsigned i = 0; i < 8; ++i) {
       const auto& p = original.detection.obb_corners_level[i]; object.corners[i] = asmc::lidar::Vec(p.x, p.y, p.z);
     }
-    auto transformed = asmc::lidar::transform(object, context);
+    auto transformed = asmc::lidar::transform(object, prepared);
     const double dimensions[] = {original.detection.obb_length_m, original.detection.obb_width_m,
                                  original.detection.f32_OBB_ZMax - original.detection.f32_OBB_ZMin};
     for (double dimension : dimensions) if (!std::isfinite(dimension) || dimension < 0) {
@@ -167,7 +170,7 @@ TypedOutput::Arrays TypedOutput::Observed(const pipeline::ScanResult& result,
     out.local_tracking.push_back(Tracking(original, *base_from_level, out.local.objects.back().dynamic_valid));
     if (transformed.map) {
       out.map.status = Array::OBSERVED; out.map.reason = context.map_pose.reason;
-      const Pose map_from_level = context.map_pose.map_from_base * *base_from_level;
+      const Pose& map_from_level = *prepared.map_from_input;
       out.map.objects.push_back(Message(original, *transformed.map, map_from_level.linear(), true));
       out.map_tracking.push_back(Tracking(original, map_from_level, out.map.objects.back().dynamic_valid));
     }

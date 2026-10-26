@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run from the repository root after the single workspace build.
 source .github/ci/ros-env.sh
+( cd "$ASMC_CI_BUILD/asmc_geometry"; ctest --output-on-failure )
 # CTest retains the former checks and includes the GPS recovery publication test.
 (
   cd "$ASMC_CI_BUILD/asmc_bridge"

@@ -1,14 +1,16 @@
-#include "planning_inputs/gps_transform.hpp"
+#pragma once
+// Shared numeric conversion only. Estimator history/gains remain with each consumer.
 
 #include <cmath>
 
-namespace {
+namespace asmc { namespace geometry {
+namespace detail {
 constexpr double kPi = M_PI;
 constexpr double kWgs84A = 6378137.0;          // WGS-84 타원체 장축 반경 [m]
 constexpr double kWgs84E2 = 0.006694379991;    // WGS-84 타원체 이심률의 제곱
 
 // WGS84 위/경도/고도 -> ECEF(x,y,z). lat/lon은 라디안.
-void LlaToEcef(double lat_rad, double lon_rad, double alt_m,
+inline void LlaToEcef(double lat_rad, double lon_rad, double alt_m,
                double& x, double& y, double& z) {
     const double sin_lat = std::sin(lat_rad);
     const double n = kWgs84A / std::sqrt(1.0 - kWgs84E2 * sin_lat * sin_lat);
@@ -16,9 +18,13 @@ void LlaToEcef(double lat_rad, double lon_rad, double alt_m,
     y = (n + alt_m) * std::cos(lat_rad) * std::sin(lon_rad);
     z = (n * (1.0 - kWgs84E2) + alt_m) * sin_lat;
 }
-}  // namespace
+}  // namespace detail
+using detail::kPi;
+using detail::kWgs84A;
+using detail::kWgs84E2;
+using detail::LlaToEcef;
 
-void GpsToEnu(double lat_deg, double lon_deg, double alt_m,
+inline void GpsToEnu(double lat_deg, double lon_deg, double alt_m,
               double ref_lat_deg, double ref_lon_deg, double ref_alt_m,
               double& out_e, double& out_n, double& out_u) {
     const double lat_rad = lat_deg * kPi / 180.0;
@@ -45,7 +51,7 @@ void GpsToEnu(double lat_deg, double lon_deg, double alt_m,
     out_u = cos_lat * cos_lon * dx + cos_lat * sin_lon * dy + sin_lat * dz;
 }
 
-void GpsToUtm52N(double lat_deg, double lon_deg,
+inline void GpsToUtm52N(double lat_deg, double lon_deg,
                  double& out_easting, double& out_northing) {
     constexpr double kScale = 0.9996;
     constexpr double kFalseEasting = 500000.0;
@@ -85,15 +91,31 @@ void GpsToUtm52N(double lat_deg, double lon_deg,
     if (lat_deg < 0.0) out_northing += 10000000.0;
 }
 
-double Utm52NYawOffset(double lat_deg, double lon_deg) {
+// Projection callable stays explicit: planning uses the existing series, LiDAR
+// uses GeographicLib. Sharing yaw convention must not silently change either
+// projection's numerical policy. This derivative runs once per GPS fix.
+template<class Projection>
+inline double GridYawOffset(double lat_deg, double lon_deg, Projection project) {
     constexpr double step_deg = 1e-5;
-    double east_before, north_before, east_after, north_after;
-    GpsToUtm52N(lat_deg - step_deg, lon_deg, east_before, north_before);
-    GpsToUtm52N(lat_deg + step_deg, lon_deg, east_after, north_after);
-    return std::atan2(north_after - north_before, east_after - east_before)
-        - kPi / 2.0;
+    double e0,n0,e1,n1;
+    project(lat_deg-step_deg,lon_deg,e0,n0);
+    project(lat_deg+step_deg,lon_deg,e1,n1);
+    return std::atan2(n1-n0,e1-e0)-kPi/2.0;
+}
+inline double Utm52NYawOffset(double lat_deg,double lon_deg) {
+    return GridYawOffset(lat_deg,lon_deg,GpsToUtm52N);
+}
+// MORAI GPS-zero is not a fix even if its status byte remains positive.
+inline bool ValidGpsFix(int status, bool stamped, double lat, double lon,
+                        double east_offset, double north_offset) {
+    return status>0 && stamped && !(lat==0. && lon==0.) &&
+        std::isfinite(lat) && lat>=-90. && lat<=90. &&
+        std::isfinite(lon) && lon>=-180. && lon<=180. &&
+        std::isfinite(east_offset) && std::isfinite(north_offset);
 }
 
-double QuaternionToYaw(double w, double x, double y, double z) {
+inline double QuaternionToYaw(double w, double x, double y, double z) {
     return std::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z));
 }
+
+} }  // namespace asmc::geometry

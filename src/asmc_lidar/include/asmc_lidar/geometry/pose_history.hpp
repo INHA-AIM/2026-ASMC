@@ -40,6 +40,10 @@ struct PoseHistoryConfig {
 struct LocalInputSelection {
   std::uint64_t imu_stamp_ns = 0, imu_receipt_ns = 0;
   std::uint64_t can_stamp_ns = 0, can_receipt_ns = 0;
+  // Filled on failure too: distinguish network silence from rejected attitude.
+  std::uint64_t imu_latest_seen_ns = 0, imu_latest_receipt_ns = 0, imu_invalid_ns = 0;
+  std::string imu_rejection_reason;
+
 };
 
 // Main SensorPoseHistory, common path. receipt_ns is the arrival clock of the
@@ -82,6 +86,7 @@ class PoseHistory {
     std::uint64_t stamp_ms = 0;
     GpsData data{};
     std::uint64_t source_ns = 0;
+    double grid_yaw_offset = 0.;
   };
   struct TimedImu {
     std::uint64_t stamp_ms = 0;
@@ -108,6 +113,8 @@ class PoseHistory {
   std::deque<TimedCan> can_;
   std::uint64_t invalid_imu_stamp_ms_ = 0, invalid_can_stamp_ms_ = 0;
   std::uint64_t invalid_imu_stamp_ns_ = 0, invalid_can_stamp_ns_ = 0;
+  std::uint64_t imu_latest_seen_ns_ = 0, imu_latest_receipt_ns_ = 0;
+  std::string imu_rejection_reason_;
   bool has_accepted_imu_ = false;
   double accepted_imu_yaw_rad_ = 0.0;
   std::uint64_t accepted_imu_stamp_ms_ = 0;

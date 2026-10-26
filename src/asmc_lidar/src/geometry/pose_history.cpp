@@ -6,6 +6,8 @@
 #include <asmc_lidar/geometry/pose_history.hpp>
 
 #include <GeographicLib/UTMUPS.hpp>
+#include <asmc_geometry/geodesy.hpp>
+#include <asmc_geometry/time.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -60,19 +62,27 @@ asmc::lidar::Rot MapRotation(const LocalState& pose) {
 }  // namespace
 
 // Ported from Main SensorPoseHistory.cpp:15-30 (8f93c22e)
-ImuData GridImu(const ImuData& imu, const GpsData& gps, bool true_enu) {
-  if (!true_enu) return imu;
-  constexpr double step = 1e-5;
-  double e0, n0, e1, n1;
-  int zone = 52;
-  bool north = true;
-  GeographicLib::UTMUPS::Forward(gps.f64_Latitude - step, gps.f64_Longitude, zone, north, e0, n0, 52);
-  GeographicLib::UTMUPS::Forward(gps.f64_Latitude + step, gps.f64_Longitude, zone, north, e1, n1, 52);
-  const double offset = std::atan2(n1 - n0, e1 - e0) - kPi / 2.;
-  ImuData out = imu;
-  out.f32_Yaw_rad = std::remainder(double(imu.f32_Yaw_rad) + offset, 2. * kPi);
-  out.f32_Yaw_deg = out.f32_Yaw_rad * 180. / kPi;
+namespace {
+double GridOffset(const GpsData& gps) {
+  return asmc::geometry::GridYawOffset(gps.f64_Latitude,gps.f64_Longitude,
+      [](double lat,double lon,double& e,double& n){
+        int zone=52;bool north=true;
+        GeographicLib::UTMUPS::Forward(lat,lon,zone,north,e,n,52);
+      });
+}
+ImuData ApplyGridOffset(const ImuData& imu,double offset) {
+  ImuData out=imu;
+  out.f32_Yaw_rad=std::remainder(double(imu.f32_Yaw_rad)+offset,2.*kPi);
+  out.f32_Yaw_deg=out.f32_Yaw_rad*180./kPi;
   return out;
+}
+template<class Range>
+auto LatestSource(const Range& samples,std::uint64_t ns) -> decltype(samples.begin()) {
+  return asmc::geometry::LatestAtOrBefore(samples,ns,[](const auto& s){return SampleNs(s);});
+}
+}  // namespace
+ImuData GridImu(const ImuData& imu,const GpsData& gps,bool true_enu) {
+  return true_enu?ApplyGridOffset(imu,GridOffset(gps)):imu;
 }
 
 // Ported from Main Parser.cpp:531-534/600-603 (8f93c22e): ros::Time toNSec()/1000000.
@@ -98,6 +108,8 @@ void PoseHistory::Configure(const PoseHistoryConfig& config) {
     can_.clear();
     invalid_imu_stamp_ms_ = invalid_can_stamp_ms_ = 0;
     invalid_imu_stamp_ns_ = invalid_can_stamp_ns_ = 0;
+    imu_latest_seen_ns_ = imu_latest_receipt_ns_ = 0;
+    imu_rejection_reason_.clear();
     has_accepted_imu_ = false;
     has_accepted_can_ = false;
     last_seen_imu_stamp_ms_ = 0;
@@ -119,7 +131,8 @@ void PoseHistory::AddGps(std::uint64_t stamp_ms, const GpsData& gps, std::uint64
          gps.f64_Latitude > 84. || gps.f64_Longitude < 126. || gps.f64_Longitude > 132. || gps.b_isJamming)) {
       return;  // This deployment's map contract is UTM zone 52N.
     }
-    InsertOrdered(&gps_, TimedGps{stamp_ms, gps, source_ns});
+    const double grid_offset=config_.imu_yaw_is_true_enu?GridOffset(gps):0.;
+    InsertOrdered(&gps_, TimedGps{stamp_ms, gps, source_ns, grid_offset});
     // Common branch (frame_boundary::Enabled()); the legacy path stores only gps_.
     asmc::lidar::PoseSample sample;
     sample.stamp_ns = source_ns ? source_ns : static_cast<asmc::lidar::Ns>(stamp_ms) * 1000000LL;
@@ -133,18 +146,16 @@ void PoseHistory::AddGps(std::uint64_t stamp_ms, const GpsData& gps, std::uint64
     sample.map_from_reference.translation() = asmc::lidar::Vec(gps.f64_E, gps.f64_N, gps.f64_U);
     auto attitude = LatestAtOrBefore(imu_, stamp_ms);
     if (source_ns) {
-      attitude = imu_.end();
-      for (auto it = imu_.begin(); it != imu_.end(); ++it)
-        if (SampleNs(*it) <= source_ns) attitude = it;
+      attitude = LatestSource(imu_,source_ns);
     }
     const auto attitude_ns = attitude == imu_.end() ? 0 : SampleNs(*attitude);
-    if (!attitude_ns || double(sample.stamp_ns - attitude_ns) * 1e-9 > config_.imu_max_age_s ||
+    if (!asmc::geometry::WithinAge(attitude_ns,sample.stamp_ns,config_.imu_max_age_s) ||
         (invalid_imu_stamp_ns_ <= static_cast<std::uint64_t>(sample.stamp_ns) &&
          invalid_imu_stamp_ns_ >= attitude_ns)) {
       sample.valid = false;
     } else {
       LocalState at_gps{};
-      at_gps.st_IMU = GridImu(attitude->data, gps, config_.imu_yaw_is_true_enu);
+      at_gps.st_IMU = config_.imu_yaw_is_true_enu?ApplyGridOffset(attitude->data,grid_offset):attitude->data;
       sample.map_from_reference.linear() = MapRotation(at_gps);
     }
     bounded_gps_.append(sample);  // Main ignores the append result.
@@ -156,10 +167,13 @@ void PoseHistory::AddGps(std::uint64_t stamp_ms, const GpsData& gps, std::uint64
 // Ported from Main SensorPoseHistory.cpp:136-186 (8f93c22e)
 bool PoseHistory::AddImu(std::uint64_t stamp_ms, const ImuData& imu, std::string* reason,
                          std::uint64_t source_ns, std::uint64_t receipt_ns) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  imu_latest_seen_ns_=source_ns?source_ns:stamp_ms*1000000ULL;
+  imu_latest_receipt_ns_=receipt_ns;
   if (stamp_ms == 0 || !imu.b_ImuReady || !std::isfinite(imu.f32_Yaw_rad) || !std::isfinite(imu.f32_Roll_rad) ||
       !std::isfinite(imu.f32_Pitch_rad)) {
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      imu_rejection_reason_="invalid IMU sample";
       invalid_imu_stamp_ms_ = std::max(invalid_imu_stamp_ms_, stamp_ms);
       invalid_imu_stamp_ns_ =
           std::max<std::uint64_t>(invalid_imu_stamp_ns_, source_ns ? source_ns : stamp_ms * 1000000ULL);
@@ -167,9 +181,9 @@ bool PoseHistory::AddImu(std::uint64_t stamp_ms, const ImuData& imu, std::string
     SetReason(reason, "invalid IMU sample");
     return false;
   }
-  std::lock_guard<std::mutex> lock(mutex_);
   const double yaw = std::remainder(static_cast<double>(imu.f32_Yaw_rad), 2.0 * kPi);
   if (last_seen_imu_stamp_ms_ != 0 && stamp_ms < last_seen_imu_stamp_ms_) {
+    imu_rejection_reason_="IMU timestamp moved backwards";
     SetReason(reason, "IMU timestamp moved backwards");
     return false;
   }
@@ -178,6 +192,7 @@ bool PoseHistory::AddImu(std::uint64_t stamp_ms, const ImuData& imu, std::string
   last_seen_imu_stamp_ms_ = stamp_ms;
   if (has_accepted_imu_ && seen_gap_s < config_.stream_reanchor_after_s) {
     if (stamp_ms < accepted_imu_stamp_ms_) {
+      imu_rejection_reason_="IMU timestamp moved backwards";
       SetReason(reason, "IMU timestamp moved backwards");
       return false;
     }
@@ -188,6 +203,7 @@ bool PoseHistory::AddImu(std::uint64_t stamp_ms, const ImuData& imu, std::string
       invalid_imu_stamp_ms_ = std::max(invalid_imu_stamp_ms_, stamp_ms);
       invalid_imu_stamp_ns_ =
           std::max<std::uint64_t>(invalid_imu_stamp_ns_, source_ns ? source_ns : stamp_ms * 1000000ULL);
+      imu_rejection_reason_="implausible IMU yaw jump";
       SetReason(reason, "implausible IMU yaw jump");
       return false;
     }
@@ -254,44 +270,49 @@ bool PoseHistory::AddCan(std::uint64_t stamp_ms, const CanData& can, std::string
 // branch only (the ms LatestAtOrBefore result is overwritten there in Main).
 bool PoseHistory::LookupLocalLocked(std::uint64_t source_ns, LocalState* local, std::string* reason,
                                     LocalInputSelection* selection) const {
-  auto imu_latest = imu_.end();
-  for (auto it = imu_.begin(); it != imu_.end(); ++it)
-    if (SampleNs(*it) <= source_ns) imu_latest = it;
+  const auto imu_latest=LatestSource(imu_,source_ns);
+  const auto can_latest=LatestSource(can_,source_ns);
+  if(selection) {
+    *selection={};
+    selection->imu_latest_seen_ns=imu_latest_seen_ns_;
+    selection->imu_latest_receipt_ns=imu_latest_receipt_ns_;
+    selection->imu_invalid_ns=invalid_imu_stamp_ns_;
+    selection->imu_rejection_reason=imu_rejection_reason_;
+    if(imu_latest!=imu_.end()) {
+      selection->imu_stamp_ns=SampleNs(*imu_latest);
+      selection->imu_receipt_ns=imu_latest->receipt_ns;
+    }
+    if(can_latest!=can_.end()) {
+      selection->can_stamp_ns=SampleNs(*can_latest);
+      selection->can_receipt_ns=can_latest->receipt_ns;
+    }
+  }
   if (imu_latest == imu_.end()) {
     SetReason(reason, "no IMU at or before LiDAR scan");
     return false;
   }
-  const double imu_age_s = double(source_ns - SampleNs(*imu_latest)) * 1e-9;
-  if (imu_age_s > config_.imu_max_age_s) {
+  // A fresh-but-rejected sample is not a sensor Hz outage. Report its barrier
+  // before age; never use the rejected orientation or loosen the 120ms bound.
+  if(invalid_imu_stamp_ns_<=source_ns && invalid_imu_stamp_ns_>=SampleNs(*imu_latest)) {
+    SetReason(reason,"imu_input_invalid"); return false;
+  }
+  if (!asmc::geometry::WithinAge(SampleNs(*imu_latest),source_ns,config_.imu_max_age_s)) {
     SetReason(reason, "IMU is stale for LiDAR scan");
     return false;
   }
 
-  auto can_latest = can_.end();
-  for (auto it = can_.begin(); it != can_.end(); ++it)
-    if (SampleNs(*it) <= source_ns) can_latest = it;
   if (can_latest == can_.end()) {
     SetReason(reason, "no vehicle speed at or before LiDAR scan");
     return false;
   }
-  const double can_age_s = double(source_ns - SampleNs(*can_latest)) * 1e-9;
-  if (can_age_s > config_.can_max_age_s) {
+  if(invalid_can_stamp_ns_<=source_ns && invalid_can_stamp_ns_>=SampleNs(*can_latest)) {
+    SetReason(reason,"speed_input_invalid"); return false;
+  }
+  if (!asmc::geometry::WithinAge(SampleNs(*can_latest),source_ns,config_.can_max_age_s)) {
     SetReason(reason, "vehicle speed is stale for LiDAR scan");
     return false;
   }
 
-  const auto query_ns = source_ns;
-  const auto imu_ns = SampleNs(*imu_latest);
-  const auto can_ns = SampleNs(*can_latest);
-  if (invalid_imu_stamp_ns_ <= query_ns && invalid_imu_stamp_ns_ >= imu_ns) {
-    SetReason(reason, "imu_input_invalid");
-    return false;
-  }
-  if (invalid_can_stamp_ns_ <= query_ns && invalid_can_stamp_ns_ >= can_ns) {
-    SetReason(reason, "speed_input_invalid");
-    return false;
-  }
-  if (selection) *selection = {imu_ns, imu_latest->receipt_ns, can_ns, can_latest->receipt_ns};
   local->st_IMU = imu_latest->data;
   local->st_CAN = can_latest->data;
   SetReason(reason, "local_ready");
@@ -339,15 +360,13 @@ asmc::lidar::PoseSelection PoseHistory::MapAt(const asmc::lidar::Observation& t,
   }
   LocalState map_local = local;
   if (config_.imu_yaw_is_true_enu) {
-    auto gps = gps_.end();
-    for (auto it = gps_.begin(); it != gps_.end(); ++it)
-      if (static_cast<asmc::lidar::Ns>(SampleNs(*it)) <= t.stamp_ns) gps = it;
+    const auto gps=LatestSource(gps_,t.stamp_ns);
     if (gps == gps_.end()) {
       asmc::lidar::PoseSelection invalid;
       invalid.reason = "gps_missing";
       return invalid;
     }
-    map_local.st_IMU = GridImu(local.st_IMU, gps->data, true);
+    map_local.st_IMU = ApplyGridOffset(local.st_IMU,gps->grid_yaw_offset);
   }
   return bounded_gps_.at(t, MapRotation(map_local), asmc::lidar::Vec(local.st_CAN.f32_CurrentVel_MPS, 0, 0));
 }
