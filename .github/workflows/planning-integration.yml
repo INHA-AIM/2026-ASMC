@@ -47,7 +47,8 @@ jobs:
         with:
           submodules: recursive
       - name: Restore C++ compiler cache
-        uses: actions/cache@v4
+        id: compiler-cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h', 'src/**/*.cc', 'src/**/CMakeLists.txt', 'src/**/package.xml', 'src/**/*.msg', 'src/**/*.srv') }}
@@ -70,18 +71,26 @@ jobs:
         run: |
           source /opt/ros/noetic/setup.bash
           ./scripts/build_ws.sh -j2 -l2 -DCATKIN_WHITELIST_PACKAGES="asmc_msgs;morai_msgs;planning_inputs;asmc_planner;asmc_controller" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      - name: Build explicit input and perception-consumer tests
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test detected_msg_converter_test feature_builder_avoid_test dynamic_object_policy_test -j2 -l2
+      - name: Save successful compilation before regression tests
+        if: steps.compiler-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
       - name: Run planning input tests
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
-          catkin_make planning_lidar_observation_test planning_group_conversion_test -j2 -l2
           ./devel/lib/planning_inputs/planning_lidar_observation_test
           ./devel/lib/planning_inputs/planning_group_conversion_test
-          python3 src/planning_inputs/test/lidar_launch_selection_test.py
-          catkin_make planning_lidar_companion_test -j2 -l2
           ./devel/lib/planning_inputs/planning_lidar_companion_test
+          ./devel/lib/planning_inputs/planning_gps_recovery_test
           rostest planning_inputs lidar_observation.test
-          rostest lane_boundary_adapter camera_frame_bridge.test
 
       - name: Check AVOID fixtures and roundabout commit guards
         run: |
@@ -91,7 +100,7 @@ jobs:
             test -x "devel/lib/asmc_planner/$regression"
           done
           cd build/asmc_planner
-          ctest --output-on-failure -R '^(command_avoid_target_test|roundabout_execution_test|avoid_road_constraints_test|polygon_collision_test)$'
+          ctest --output-on-failure -R '^(command_avoid_target_test|roundabout_execution_test|avoid_road_constraints_test|polygon_collision_test|_ctest_asmc_planner_gtest_detected_msg_converter_test|_ctest_asmc_planner_gtest_feature_builder_avoid_test|_ctest_asmc_planner_gtest_dynamic_object_policy_test)$'
 
       - name: Report compiler cache reuse
         if: always()

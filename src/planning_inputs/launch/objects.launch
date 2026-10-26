@@ -1,5 +1,5 @@
 <launch>
-  <arg name="input_topic" default="/perception/lidar/tracks_map"/>
+  <arg name="input_topic" default="/perception/lidar/planning_observations_map"/>
   <arg name="output_topic" default="/planning/objects"/>
   <!-- Common typed observations only. Filtering and motion are producer-owned. -->
   <node pkg="planning_inputs" type="planning_objects_adapter" name="planning_objects_adapter" output="screen" required="true">

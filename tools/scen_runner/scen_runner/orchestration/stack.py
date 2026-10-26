@@ -52,7 +52,8 @@ def check_conflicts(role, nodes, graph):
               if role == 'planning' else
               {'/perception/camera/objects', '/perception/lane/boundary_family',
                '/traffic_light/state', '/perception/lidar/tracks_local',
-               '/perception/lidar/tracks_map', '/perception/lidar/observations_local',
+               '/perception/lidar/tracks_map', '/perception/lidar/planning_observations_map',
+                '/perception/lidar/observations_local',
                '/perception/lidar/objects_local'})
     conflicts += [topic+' ('+', '.join(names)+')' for topic, names in graph[0] if topic in topics and names]
     if conflicts:
@@ -99,8 +100,7 @@ def launch_configuration(role, config):
     else:
         file = TOOL_ROOT/'launch'/f'{role}.launch'
     # None preserves ROS_MASTER_URI, including isolated verification masters.
-    launch_files = [str(file)] if role == 'bridge' else [(str(file),
-        ['lidar_backend:=' + config.get('lidar_backend', 'main')])]
+    launch_files = [str(file)]
     launch_config = roslaunch.config.load_config_default(launch_files, None)
     if role == 'perception':
         configure_nodes(config, launch_config)

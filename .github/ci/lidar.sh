@@ -6,6 +6,10 @@ python3 src/asmc_lidar/test/test_tracking_samples.py
 python3 src/asmc_lidar/test/test_compare_traces.py
 "${ASMC_CI_DEVEL:-devel}/lib/planning_inputs/planning_lidar_observation_test"
 "${ASMC_CI_DEVEL:-devel}/lib/planning_inputs/planning_group_conversion_test"
+"${ASMC_CI_DEVEL:-devel}/lib/planning_inputs/planning_lidar_companion_test"
+"${ASMC_CI_DEVEL:-devel}/lib/planning_inputs/planning_gps_recovery_test"
+python3 src/planning_inputs/test/lidar_launch_selection_test.py
+rostest planning_inputs lidar_observation.test
 (
   cd "$ASMC_CI_BUILD/asmc_lidar"
   ctest --output-on-failure -T Test --no-compress-output

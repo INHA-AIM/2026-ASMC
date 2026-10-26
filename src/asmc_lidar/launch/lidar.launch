@@ -24,7 +24,6 @@
   <arg name="camera_calibration_config" default=""/>
   <arg name="experimental_tunnel_filter" default=""/>
   <arg name="publish_tf" default="false"/>
-  <arg name="planning_output" default="false" doc="Opt-in qualified planning companion; normal shadow arrays stay unchanged"/>
   <arg name="tf_child_frame" default="lidar_pipeline/lidar_leveled"/>
 
   <!-- Monitoring only: subscribers and rate limit still gate each snapshot. -->
@@ -45,6 +44,7 @@
   <arg name="observations_map_topic" default="observations_map"/>
   <arg name="tracks_local_topic" default="tracks_local"/>
   <arg name="tracks_map_topic" default="tracks_map"/>
+  <arg name="planning_observations_topic" default="planning_observations_map"/>
   <arg name="diagnostics_topic" default="diagnostics"/>
   <arg name="trace_topic" default="trace"/>
 
@@ -53,6 +53,7 @@
     <param name="allow_operational_output" value="$(eval arg('namespace') == '/perception/lidar')"/>
     <param name="tracks_local_topic" value="$(arg tracks_local_topic)"/>
     <param name="tracks_map_topic" value="$(arg tracks_map_topic)"/>
+    <param name="planning_observations_topic" value="$(arg planning_observations_topic)"/>
     <param name="debug_enabled" value="$(arg debug)"/>
     <param name="debug_topic_prefix" value="debug"/>
     <param name="debug_rate_hz" value="$(arg debug_rate_hz)"/>
@@ -65,7 +66,6 @@
     <param if="$(eval arg('experimental_tunnel_filter') != '')" name="experimental_tunnel_filter"
            value="$(arg experimental_tunnel_filter)"/>
     <param name="publish_tf" value="$(arg publish_tf)"/>
-    <param name="planning_output" value="$(arg planning_output)"/>
     <param name="tf_child_frame" value="$(arg tf_child_frame)"/>
     <param name="points_topic" value="$(arg points_topic)"/>
     <param name="imu_topic" value="$(arg imu_topic)"/>

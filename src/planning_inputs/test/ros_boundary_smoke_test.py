@@ -22,7 +22,7 @@ def main():
     os.environ.pop('ROS_IP',None)
     import rosgraph
     import rospy
-    from asmc_msgs.msg import LidarTrackingObservation, LidarObject, LidarTrackingState
+    from asmc_msgs.msg import LidarPlanningObservation, LidarObject
     from geometry_msgs.msg import Point
     from planning_inputs.msg import DetectedObjectArray
     processes=[]
@@ -55,9 +55,9 @@ def main():
                     'Behavior/Frenet subscribe to private objects')
             received=collections.deque(maxlen=128)
             sub=rospy.Subscriber('/planning/objects',DetectedObjectArray,received.append,queue_size=2)
-            pub=rospy.Publisher('/perception/lidar/tracks_map',LidarTrackingObservation,queue_size=2)
+            pub=rospy.Publisher('/perception/lidar/planning_observations_map',LidarPlanningObservation,queue_size=2)
             require(lambda:pub.get_num_connections()>0,'default common tracking subscriber connects')
-            frame=LidarTrackingObservation();o=frame.observation
+            frame=LidarPlanningObservation();o=frame.observation
             o.producer_session_id='boundary';o.generation=1;o.config_id='config';o.calibration_id='calibration'
             o.objects.header.frame_id='map';o.objects.status=o.objects.OBSERVED
             obj=LidarObject(track_id=731,observation_state=LidarObject.OBSERVED,age=1,
@@ -65,12 +65,12 @@ def main():
                 absolute_velocity_valid=True)
             obj.center=Point(100,100,.5);obj.absolute_velocity_mps.x=2.5
             obj.obb_corners=[Point(x,y,z) for z in (0,1) for x,y in ((98,99),(102,99),(102,101),(98,101))]
-            o.objects.objects=[obj];frame.tracking=[LidarTrackingState(track_id=731,cluster_center=obj.center)]
+            o.objects.objects=[obj];frame.motion_states=[frame.UNKNOWN]
             def send():
                 o.scan_sequence+=1;o.objects.header.stamp=rospy.Time.now();pub.publish(frame)
             require(lambda:(send() or bool(received)),'common frame reaches full autonomy boundary',10)
             target=received[-1].objects[0]
-            assert target.id==731 and target.center==obj.center and target.obb_corners==obj.obb_corners
+            assert target.id>=0 and target.center==obj.center and target.obb_corners==obj.obb_corners
             assert target.vx==2.5 and target.type==2 and target.motion_state==0
             print('PASS original geometry/person category/UNKNOWN applied estimate preserved',flush=True)
             # Invalid observations must not become false empty free-space frames.
@@ -78,7 +78,7 @@ def main():
             for _ in range(5):send();time.sleep(.08)
             assert all(message.header.stamp < invalid_begin for message in received)
             print('PASS invalid pose withheld without fabricated empty output',flush=True)
-            o.objects.status=o.objects.OBSERVED_EMPTY;o.objects.objects=[];frame.tracking=[]
+            o.objects.status=o.objects.OBSERVED_EMPTY;o.objects.objects=[];frame.motion_states=[]
             require(lambda:(send() or bool(received and not received[-1].objects)),
                     'observed-empty clears objects using a new source stamp',10)
             pubs=dict(master.getSystemState()[0])

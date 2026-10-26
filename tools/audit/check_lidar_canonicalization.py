@@ -47,7 +47,7 @@ def check(root=ROOT):
     adapter=(root/'src/planning_inputs/src/objects_node.cpp').read_text()
     if any(n in adapter for n in ('MotionClassifier','PlanningObjectFilter','ValidatedTrackedObjectArray','source_policy')):
         errors.append('planning adapter repeats retired perception policy')
-    if '#include <asmc_msgs/LidarTrackingObservation.h>' not in adapter:errors.append('missing typed common consumer')
+    if '#include <asmc_msgs/LidarPlanningObservation.h>' not in adapter:errors.append('missing typed common consumer')
     for relative in ('src/asmc_planner/launch/autonomy_no_bridges_v2.launch','src/planning_inputs/launch/objects.launch'):
         xml=ET.parse(root/relative).getroot()
         if any(n.get('name') in ('source_policy','lidar_source_policy','objects_source') for n in xml.iter('arg')):

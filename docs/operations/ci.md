@@ -15,7 +15,7 @@
 같은 job의 LiDAR/음영 어댑터/카메라/bridge 시험은 각각 다른 ROS master와 시험 소유 프로세스를
 사용한다. ROS 시험 내부 timeout·freshness·수치 기준은 줄이지 않는다. 같은 workspace에서 반복하던
 YOLO baseline/all·segmentation 세 fixture만 한 번씩 실행하고 `--batched` 등 다른 옵션 검사는 유지한다.
-[보존 검사](../../tools/ci/check_coverage.py)가 이전141개 고유 명령·옵션 조합과 필수 그룹을 대조한다.
+[보존 검사](../../tools/ci/check_coverage.py)가 이전141개와 PR #114 신규4개(총145개) 고유 명령·옵션 조합과 필수 그룹을 대조한다.
 
 ## 실패·취소와 로그
 
@@ -50,7 +50,7 @@ Noetic에서 전체 workspace와 필요한 시험 executable을 먼저 빌드한
 ```bash
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-catkin_make planning_lidar_observation_test planning_group_conversion_test ground_projection_test -j2 -l2
+catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test ground_projection_test -j2 -l2
 python3 tools/ci/check_coverage.py
 python3 -m unittest discover -s tools/ci -p 'test_*.py'
 python3 tools/ci/run_checks.py --workers 2 --output /tmp/asmc-ci-local-unique-run

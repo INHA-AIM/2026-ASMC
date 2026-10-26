@@ -59,8 +59,8 @@ BAG_TOPICS = [
 
 
 ASMC_LIDAR_TOPICS = [
-    '/migration/lidar/planning_observations_map',
-    '/migration/lidar/objects_local', '/migration/lidar/diagnostics',
+    '/perception/lidar/planning_observations_map',
+    '/perception/lidar/objects_local', '/perception/lidar/diagnostics',
     '/perception/camera/objects', '/perception/lane/boundary_family',
     '/perception/camera/objects/status', '/perception/camera/lane/status',
     '/planning/camera_bbox_lane_change/diagnostics',

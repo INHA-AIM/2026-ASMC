@@ -15,9 +15,6 @@ target_link_libraries(planning_vehicle_state_node planning_state_core ${catkin_L
 add_executable(planning_objects_adapter src/objects_node.cpp src/converter.cpp)
 add_dependencies(planning_objects_adapter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(planning_objects_adapter ${catkin_LIBRARIES})
-add_executable(asmc_lidar_planning_adapter src/lidar_observation_node.cpp src/converter.cpp)
-add_dependencies(asmc_lidar_planning_adapter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(asmc_lidar_planning_adapter ${catkin_LIBRARIES})
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
   find_package(rosbag REQUIRED)
@@ -25,7 +22,7 @@ if(CATKIN_ENABLE_TESTING)
   target_include_directories(planning_lidar_bag_check PRIVATE ${rosbag_INCLUDE_DIRS})
   target_link_libraries(planning_lidar_bag_check ${catkin_LIBRARIES} ${rosbag_LIBRARIES})
   add_dependencies(planning_lidar_bag_check ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-  add_rostest(test/lidar_observation.test DEPENDENCIES asmc_lidar_planning_adapter)
+  add_rostest(test/lidar_observation.test DEPENDENCIES planning_objects_adapter)
   catkin_add_gtest(planning_lidar_companion_test test/test_lidar_planning_observation.cpp src/converter.cpp)
   if(TARGET planning_lidar_companion_test)
     add_dependencies(planning_lidar_companion_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -46,7 +43,7 @@ if(CATKIN_ENABLE_TESTING)
     endif()
   endforeach()
 endif()
-install(TARGETS asmc_lidar_planning_adapter planning_state_core planning_vehicle_state_node planning_objects_adapter
+install(TARGETS planning_state_core planning_vehicle_state_node planning_objects_adapter
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

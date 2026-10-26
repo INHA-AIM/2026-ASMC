@@ -95,7 +95,7 @@ GUI의 `선택 모드로 시작`과 `다음 반복 · 다시 준비`도 같은 �
 
 연동 설정은 `config/stack.yaml`에 있다. `instance`가 같은 실행기들이 `.runtime/stack/<instance>/`의 회차별 요청/응답과 heartbeat로 연결된다. 기존 회차의 준비 응답을 새 회차에서 재사용하지 않는다. 모든 실행기에 `--stack-config <같은 YAML 경로>`를 전달해 다른 설정을 사용할 수 있다.
 
-인지 실행기는 `asmc_camera/camera.launch`와 `asmc_lidar/lidar.launch`를 한 세트씩 포함한다. 판제는 `/perception/lidar/tracks_map`을 직접 소비한다. 카메라 세 모델의 GPU Python은 이미지의 `ASMC_YOLO_PYTHON`으로 선택한다. CPU 후처리·LiDAR는 기존 실행 파일을 사용한다. 음영 BBox는 공용 카메라 검출을 frame bridge에서 직접 소비하며 구 정수 wire나 nested 메시지 overlay를 사용하지 않는다.
+인지 실행기는 `asmc_camera/camera.launch`와 `asmc_lidar/lidar.launch`를 한 세트씩 포함한다. 판제는 `/perception/lidar/planning_observations_map`의 KF 품질 관측을 직접 소비한다. 카메라 세 모델의 GPU Python은 이미지의 `ASMC_YOLO_PYTHON`으로 선택한다. CPU 후처리·LiDAR는 기존 실행 파일을 사용한다. 음영 BBox는 공용 카메라 검출을 frame bridge에서 직접 소비하며 구 정수 wire나 nested 메시지 overlay를 사용하지 않는다.
 
 `config/stack.yaml`의 `camera_runtime: auto`는 로컬에 `.runtime/camera_runtime.json`이 있으면 검증된 GPU용 엔진을 선택한다. RTX 5070용 E8 모델은 같은 학습 체크포인트로 변환한 `/data/models/camera_mission16_v11_e8_rtx5070/yolo26l.engine`을 사용하고, TensorRT·Ultralytics 의존성은 `.runtime/inference_rtx50/python`에서 객체 인식 노드에만 추가한다. 팀 launch의 엔진 경로와 검증 SHA만 바꾸며 클래스·임계값·배치·해상도 설정은 그대로 읽는다. 실행 시 `[카메라 엔진]`에 선택 경로와 SHA가 표시된다.
 

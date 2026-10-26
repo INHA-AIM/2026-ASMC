@@ -113,7 +113,7 @@ jobs:
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
-          catkin_make planning_lidar_observation_test planning_group_conversion_test ground_projection_test -j2 -l2
+          catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test ground_projection_test -j2 -l2
           test -x devel/lib/asmc_lidar/camera_receiver_ros_test
 
       - name: Save successful compilation before regression tests

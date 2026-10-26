@@ -209,7 +209,6 @@
 | `camera_calibration_config` | `(빈 문자열)` | — |
 | `experimental_tunnel_filter` | `(빈 문자열)` | — |
 | `publish_tf` | `false` | — |
-| `planning_output` | `false` | Opt-in qualified planning companion; normal shadow arrays stay unchanged |
 | `tf_child_frame` | `lidar_pipeline/lidar_leveled` | — |
 | `debug` | `false` | Publish sampled stages for view.launch; no algorithm changes |
 | `debug_rate_hz` | `5.0` | — |
@@ -226,6 +225,7 @@
 | `observations_map_topic` | `observations_map` | — |
 | `tracks_local_topic` | `tracks_local` | — |
 | `tracks_map_topic` | `tracks_map` | — |
+| `planning_observations_topic` | `planning_observations_map` | — |
 | `diagnostics_topic` | `diagnostics` | — |
 | `trace_topic` | `trace` | — |
 
@@ -238,7 +238,7 @@
 | `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
-| `lidar_input_topic` | `/perception/lidar/tracks_map` | — |
+| `lidar_input_topic` | `/perception/lidar/planning_observations_map` | — |
 | `avoid_path_margin_m` | `0.4` | — |
 | `expected_config_sha256` | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | — |
 | `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
@@ -277,7 +277,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `input_topic` | `/perception/lidar/tracks_map` | — |
+| `input_topic` | `/perception/lidar/planning_observations_map` | — |
 | `output_topic` | `/planning/objects` | — |
 
 ## Dashboard
@@ -493,7 +493,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `lidar_backend` | `main` | — |
+| — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |
 
 ## Scenario planning composition
 
@@ -501,4 +501,4 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `lidar_backend` | `main` | — |
+| — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |

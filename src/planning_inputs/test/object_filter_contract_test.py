@@ -8,13 +8,13 @@ ROOT=Path(__file__).resolve().parents[3]
 class InputContract(unittest.TestCase):
     def test_direct_common_input_without_source_selection_or_producer(self):
         root=ET.parse(ROOT/'src/planning_inputs/launch/objects.launch').getroot()
-        self.assertEqual(root.find("arg[@name='input_topic']").get('default'), '/perception/lidar/tracks_map')
+        self.assertEqual(root.find("arg[@name='input_topic']").get('default'), '/perception/lidar/planning_observations_map')
         self.assertEqual(len(root.findall('node')),1)
         self.assertEqual(root.find('node').get('required'),'true')
         self.assertEqual(root.findall('.//rosparam'),[])
         self.assertEqual({p.get('name') for p in root.findall('.//param')},{'input_topic','output_topic'})
         launch=ET.parse(ROOT/'src/asmc_planner/launch/autonomy_no_bridges_v2.launch').getroot()
-        self.assertEqual(launch.find("arg[@name='lidar_input_topic']").get('default'),'/perception/lidar/tracks_map')
+        self.assertEqual(launch.find("arg[@name='lidar_input_topic']").get('default'),'/perception/lidar/planning_observations_map')
         args={a.get('name') for a in launch.findall('arg')}
         self.assertTrue({'lidar_source_policy','objects_source'}.isdisjoint(args))
         self.assertFalse(any(n.get('pkg')=='asmc_lidar' for n in launch.iter('node')))

@@ -1,14 +1,14 @@
 # LiDAR 공동 개발 인계
 
 `asmc_lidar`가 판제·수집·시나리오의 LiDAR 정본이다. 브릿지와 카메라는 각각 실행하고,
-판제는 `/perception/lidar/tracks_map`의 공용 추적 관측을 직접 소비한다. 구 Main/Msg/nested workspace는
+판제는 `/perception/lidar/planning_observations_map`의 공용 추적 관측을 직접 소비한다. 구 Main/Msg/nested workspace는
 B4에서 폐기한다. 사용자와 판제의 새 경로 주행 확인을 기반으로 정본화하며, 전체 미션·속도 정확도 수락은 별도다.
 
 ## 현재 실행과 계약
 
 ```text
 bridge → asmc_lidar (검출·추적·전방 카메라 fusion·전달 필터)
-       → /perception/lidar/tracks_map → planning_inputs → /planning/objects → 판제
+       → /perception/lidar/planning_observations_map → planning_inputs → /planning/objects → 판제
        → /perception/lidar/tracks_local (GPS 무효에도 local 기하 유지)
 asmc_camera → /perception/camera/objects/observations → asmc_lidar
 ```
@@ -16,6 +16,7 @@ asmc_camera → /perception/camera/objects/observations → asmc_lidar
 - [실행·메시지·속도 의미·검증·복구](../../src/asmc_lidar/docs/planning-runtime.md)
 - [작업표와 공동 개발 경계](../../src/asmc_lidar/docs/migration-tasks.md)
 - [카메라 연결](camera-to-lidar.md) · [공용 소비 계약](../contracts/lidar-planning-consumer-v1.md)
+- [PR #114 통합·판제 변경 대응표](../records/lidar/2026-10-26-pr114-canonical-integration.md)
 - [직접 실행 명령](../operations/commands.md) · [정본화 검증 기록](../records/lidar/runtime-canonicalization.md)
 
 ## 담당과 후속 순서

@@ -4,12 +4,12 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <asmc_msgs/LidarTrackingObservation.h>
+#include <asmc_msgs/LidarPlanningObservation.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <planning_inputs/DetectedObjectArray.h>
 #include <ros/ros.h>
 #include "planning_inputs/converter.hpp"
-#include "planning_inputs/observation_sequence.hpp"
+#include "planning_inputs/lidar_observation_gate.hpp"
 
 namespace planning_inputs {
 // Perception owns geometry, filtering and motion estimation. This boundary
@@ -19,23 +19,23 @@ class ObjectsNode {
  public:
   ObjectsNode() : private_("~") {
     std::string input, output;
-    private_.param<std::string>("input_topic", input, "/perception/lidar/tracks_map");
+    private_.param<std::string>("input_topic", input, "/perception/lidar/planning_observations_map");
     private_.param<std::string>("output_topic", output, "/planning/objects");
     if (input == output) throw std::runtime_error("planning object topics must differ");
-    private_.param("source_max_age_s", source_max_age_s_, .35);
+    private_.param("source_max_age_s", source_max_age_s_, .30);
     private_.param("source_future_tolerance_s", source_future_s_, .05);
     if (!std::isfinite(source_max_age_s_) || source_max_age_s_ <= 0 ||
         !std::isfinite(source_future_s_) || source_future_s_ < 0)
       throw std::runtime_error("invalid LiDAR source time limits");
     publisher_ = node_.advertise<DetectedObjectArray>(output, 2);
-    input_ = node_.subscribe<asmc_msgs::LidarTrackingObservation>(
+    input_ = node_.subscribe<asmc_msgs::LidarPlanningObservation>(
         input, 1, &ObjectsNode::LidarObjects, this, ros::TransportHints().tcpNoDelay());
     diagnostics_ = private_.advertise<diagnostic_msgs::DiagnosticArray>("diagnostics", 1);
     diagnostics_timer_ = private_.createWallTimer(ros::WallDuration(1.), &ObjectsNode::Diagnostics, this);
     ROS_INFO("Planning LiDAR input: %s -> %s", input.c_str(), output.c_str());
   }
  private:
-  void LidarObjects(const asmc_msgs::LidarTrackingObservation::ConstPtr& source) {
+  void LidarObjects(const asmc_msgs::LidarPlanningObservation::ConstPtr& source) {
     if (!source) return;
     ++received_;
     const double age = ros::Time::now().toSec() - source->observation.objects.header.stamp.toSec();
@@ -43,11 +43,8 @@ class ObjectsNode {
       ++rejected_; source_reason_ = "source_stale_or_future"; return;
     }
     std::string reason;
-    if (!sequence_.Accept(source->observation, &reason)) {
-      ++rejected_; source_reason_ = reason; return;
-    }
     DetectedObjectArray out;
-    if (ConvertLidarObservation(*source, &out, nullptr, &reason) != ConversionStatus::OK) {
+    if (!gate_.Convert(*source, ros::Time::now().toSec(), &out, &reason)) {
       ++rejected_; source_reason_ = reason;
       ROS_WARN_THROTTLE(1., "Withheld common LiDAR input: %s", reason.c_str());
       return;  // invalid/pose-unavailable != an observed-empty free-space frame
@@ -80,9 +77,9 @@ class ObjectsNode {
   ros::Subscriber input_;
   ros::Publisher publisher_, diagnostics_;
   ros::WallTimer diagnostics_timer_;
-  ObservationSequence sequence_;
+  LidarObservationGate gate_;
   ros::SteadyTime last_common_;
-  double source_max_age_s_ = .35, source_future_s_ = .05;
+  double source_max_age_s_ = .30, source_future_s_ = .05;
   std::string source_reason_ = "waiting_for_input";
   std::uint64_t received_ = 0, published_ = 0, rejected_ = 0;
 };

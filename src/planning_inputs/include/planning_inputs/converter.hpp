@@ -46,6 +46,12 @@ struct ConversionStats {
 
 const char* ConversionStatusName(ConversionStatus status);
 
+// Geometry/velocity validation shared with the qualified planning gate. Invalid
+// velocity retains occupancy with velocity_unavailable; it is not measured zero.
+ConversionStatus ConvertPlanningGeometry(
+    const asmc_msgs::LidarObjectArray& input, DetectedObjectArray* output,
+    ConversionStats* stats = nullptr, std::string* detail = nullptr);
+
 // Direct common contract. No legacy wire, JSON join, clipping or second
 // classifier. Invalid/pose-unavailable/unrepresentable frames are withheld,
 // never converted into an observed-empty planning frame.

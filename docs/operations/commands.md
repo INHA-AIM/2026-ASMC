@@ -40,17 +40,22 @@ source /root/ws/devel/setup.bash
 | 순서 | 실행 | 포함·주의 |
 |---|---|---|
 | A | `./scripts/udp_bridge.sh` | 허용 센서·기본 `/vehicle/state`, UDP 포트당 수신자 하나 |
-| B | `roslaunch asmc_hd_map competition_map.launch` | 정적 지도·metadata; 현재 Planner local map copy를 자동 대체하지 않음 |
-| C | `roslaunch asmc_camera camera.launch` | 세 모델 상시 ACTIVE·발행, E8 기본; GUI 별도 |
-| D | `roslaunch asmc_lidar lidar.launch` | 공용 local/map 추적·속도/운동·전달 필터; 카메라 모델 미실행 |
-| E | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, 새 공용 관측 직접 소비; GPS/IMU 위치와 Competition 종방향 실측 속도 조합, MPC/selector/재밍 어댑터 |
+| B | `roslaunch asmc_camera camera.launch` | 세 모델 상시 ACTIVE·발행, E8 기본; GUI 별도 |
+| C | `roslaunch asmc_lidar lidar.launch` | 공용 local/map 추적·속도/운동·전달 필터; 카메라 모델 미실행 |
+| D | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, 새 공용 관측 직접 소비; GPS/IMU 위치와 Competition 종방향 실측 속도 조합, MPC/selector/재밍 어댑터 |
 
-D/E는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)을 따릅니다. 전체 미션·속도 정확도 인수는 후속입니다.
+C/D는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)을 따릅니다. 전체 미션·속도 정확도 인수는 후속입니다.
+
+`roslaunch asmc_hd_map competition_map.launch`는 **선택 실행**입니다. 지도·미션 ROS 토픽과
+현재 lane/context 또는 지도 RViz가 필요할 때 사용합니다. 현재 판제/Frenet과 LiDAR는 각 설정에
+지정된 지도 파일을 직접 읽으므로 이 launch 없이도 지도 기반 주행·객체 필터가 작동합니다.
+지도 토픽을 켜는 것만으로 판제의 파일 bundle이 자동 교체되지는 않습니다.
+[역할과 소비 경계](../../src/asmc_lidar/docs/planning-runtime.md#hd맵-launch의-역할)를 참고하세요.
 
 신호등의 단일 추론·발행자는 카메라 담당의 `asmc_camera`입니다. 판제는 결과만 소비하고
 `traffic_light:=false` 인자는 제거되어 지정하지 않습니다. 중단/재개·주기 제어는 카메라의
 `/perception/camera/traffic_light/set_mode`를 사용합니다. 판제 신호 규칙은 유지합니다. bridge `/vehicle/state`와
-판제 `/planning/vehicle/state`는 다른 토픽·추정기이며 같은 토픽의 중복 producer는 금지합니다. 기본 E는 `/Ego_topic`의 허용된 종방향 속도만 `/planning/vehicle/gps_imu_state`의 GPS/IMU 위치와 결합합니다. 두 입력의 시각이 맞지 않거나 끊기면 상태를 무효로 처리합니다.
+판제 `/planning/vehicle/state`는 다른 토픽·추정기이며 같은 토픽의 중복 producer는 금지합니다. 기본 D는 `/Ego_topic`의 허용된 종방향 속도만 `/planning/vehicle/gps_imu_state`의 GPS/IMU 위치와 결합합니다. 두 입력의 시각이 맞지 않거나 끊기면 상태를 무효로 처리합니다.
 
 기본 카메라는 세 모델 모두 추론·발행합니다. 준비가 끝나기 전에 판제가 결과를 사용하지 않도록
 상태와 새 결과의 validity/freshness를 확인합니다. [구간별 소비 안내](../handoffs/perception-to-planning.md)는
@@ -60,9 +65,9 @@ D/E는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [�
 현재 차선 기본 모델은 Large v7 E8 TensorRT다. 사용자가 알려진 공급·freshness 제한을 확인한 뒤 전환을 승인했다.
 [선정·실측·Medium 복구](../records/camera/2026-10-18-twinlite-large-deployment.md)를 확인한다.
 공식 BDD100K Large의 추가학습 전 결과는 [별도 실험 실행 안내](../../src/asmc_camera/docs/bdd-pretrained-experiment.md)를
-따릅니다. 이진 차선 시각화 실험이며 위 C의 운영 family를 대체하지 않습니다.
+따릅니다. 이진 차선 시각화 실험이며 위 B의 운영 family를 대체하지 않습니다.
 
-명시적으로 대기 실행이 필요하면 C 대신 `roslaunch asmc_camera camera.launch mode:=standby`를
+명시적으로 대기 실행이 필요하면 B 대신 `roslaunch asmc_camera camera.launch mode:=standby`를
 사용합니다. 다음은 그 경우에만 필요한 객체/신호등 복구 예입니다. 모드 요청자는 하나만 둡니다.
 
 ```bash
@@ -90,12 +95,12 @@ rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
 
 ### 개별 디버그·시각화
 
-일반 사용은 위 C의 `camera.launch`와 아래 `view.launch`를 각각 한 번 실행합니다.
+일반 사용은 위 B의 `camera.launch`와 아래 `view.launch`를 각각 한 번 실행합니다.
 두 launch 모두 `models:=all`이 기본이며, `camera.launch`는 `mode:=active`도 기본이므로
 이 인자를 반복 지정할 필요가 없습니다. 추론과 시각화 선택은 서로 독립적입니다.
 
 ```bash
-# C에서 이미 camera.launch를 실행했다면 추론을 또 시작하지 않음
+# B에서 이미 camera.launch를 실행했다면 추론을 또 시작하지 않음
 roslaunch asmc_camera view.launch
 # 별도 터미널: rqt는 한 개만 실행
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
@@ -149,7 +154,7 @@ GUI 종료 후 사용한 process가 남지 않았는지
 ```bash
 roslaunch asmc_hd_map competition_map.launch rviz:=true
 roslaunch asmc_planner dashboard.launch
-rostopic info /perception/lidar/tracks_map
+rostopic info /perception/lidar/planning_observations_map
 rostopic info /ctrl_cmd
 rostopic hz /image_jpeg/compressed
 rostopic hz /velodyne_points
@@ -163,7 +168,7 @@ HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한�
 정본 LiDAR(`asmc_lidar`)의 필터 단계·OBB·추적 결과를 브라우저에서 보려면 별도 터미널에서
 `roslaunch asmc_lidar view.launch open_browser:=true`를 실행합니다(처리는 별도 `lidar.launch debug:=true`)(`http://127.0.0.1:8091/`, 읽기 전용).
 이 launch는 모니터만 켭니다. 기존 `lidar.launch`가 있다면 두 번째 처리 노드를 시작하지 않습니다.
-판제는 D의 공용 추적 관측을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
+판제는 C의 `planning_observations_map`을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
 
 판제 웹은 `http://127.0.0.1:8088/web/index_v2.html`, LiDAR 웹은 `http://127.0.0.1:8091/`입니다.
 기본 포트·ROS 노드 이름이 서로 다르고 두 웹 모두 관측만 합니다. 하나씩 사용하려면 해당 웹 launch

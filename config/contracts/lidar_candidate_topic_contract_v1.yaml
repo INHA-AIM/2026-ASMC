@@ -140,25 +140,22 @@ tracking_observations:
   geometry_identity_authority: observation
   tracking_join: same_order_same_track_id_exactly_once
   motion_states: {UNKNOWN: 0, LOW_THREAT: 1, DYNAMIC_PENDING: 2, DYNAMIC: 3}
-  consumer: planning_inputs/objects.launch
-  consumer_selection: single_common_input_no_policy_selector
-  default_global_input: /perception/lidar/tracks_map
-  private_output: /planning/objects
-  invalid_policy: withhold_not_empty_preserve_existing_planner_timeout
-  duplicate_policy: reject_retired_session_generation_and_nonincreasing_stamp_sequence
-  source_max_age_s: 0.35
-  source_future_tolerance_s: 0.05
+  consumer: analysis_and_monitoring
   legacy_wire_or_json_join: false
 
-planning_companion:
-  enabled_by: planning_output_true
-  topic: /migration/lidar/planning_observations_map
+planning_observations:
+  topic: /perception/lidar/planning_observations_map
   type: asmc_msgs/LidarPlanningObservation
-  consumer_selection: source_policy_asmc_lidar_companion
+  consumer: planning_inputs/objects.launch
+  consumer_selection: single_common_input_no_policy_selector
   private_output: /planning/objects
   velocity_policy: planar_kf_relative_plus_ego_translation_once
   unmeasured_velocity_policy: geometry_retained_unknown_velocity_unavailable
-  simultaneous_tracking_consumer: false
+  private_track_id_policy: unique_across_session_generation
+  invalid_policy: withhold_not_empty_preserve_existing_planner_timeout
+  source_max_age_s: 0.30
+  source_future_tolerance_s: 0.05
+  legacy_wire_or_json_join: false
   validation_guide: docs/operations/lidar-cutover.md
 
 retired_runtime:

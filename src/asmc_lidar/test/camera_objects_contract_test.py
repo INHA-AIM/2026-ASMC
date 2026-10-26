@@ -120,7 +120,6 @@ class CameraObjectsContractTest(unittest.TestCase):
                     tree = ET.parse(path).getroot()
                     include = tree.find("include[@file='$(find asmc_lidar)/launch/lidar.launch']")
                     self.assertIsNotNone(include)
-                    self.assertEqual(include.find("arg[@name='planning_output']").get('value'), 'true')
                     continue
                 text = path.read_text(errors='replace')
                 self.assertNotIn('lidar_pipeline_node', text, path)

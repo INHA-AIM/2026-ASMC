@@ -207,7 +207,6 @@ class PipelineContractTest(unittest.TestCase):
                 includes = [n for n in root.findall('.//include')
                             if n.get('file') == '$(find asmc_lidar)/launch/lidar.launch']
                 self.assertEqual(len(includes), 1, relative)
-                self.assertEqual(includes[0].find("arg[@name='planning_output']").get('value'), 'true')
                 self.assertFalse(any(n.get('type') == PIPELINE_NODE for n in root.findall('.//node')))
                 continue
             text = path.read_text(errors='replace')

@@ -14,7 +14,6 @@
     <param name="enable_camera_fusion" value="true"/>
     <param name="lidar_level_roll" value="true"/>
     <param name="publish_tf" value="true"/>
-    <param name="planning_output" value="true"/>
   </node>
 
   <test test-name="lidar_pipeline_node" pkg="asmc_lidar" type="lidar_pipeline_node_test.py" name="lidar_pipeline_node_test"

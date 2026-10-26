@@ -201,6 +201,64 @@ const char* ConversionStatusName(ConversionStatus status) {
   return "UNKNOWN_STATUS";
 }
 
+ConversionStatus ConvertPlanningGeometry(
+    const asmc_msgs::LidarObjectArray& array,
+    planning_inputs::DetectedObjectArray* output, ConversionStats* stats,
+    std::string* detail) {
+  if (!output) return Fail(ConversionStatus::INVALID_ARGUMENT, 0, -1, "null output", detail);
+  if (array.header.frame_id != "map")
+    return Fail(ConversionStatus::INVALID_FRAME, 0, -1, "global planning requires map", detail);
+  if (array.header.stamp.isZero())
+    return Fail(ConversionStatus::INVALID_TIMESTAMP, 0, -1, "zero source stamp", detail);
+  DetectedObjectArray converted;
+  converted.header = array.header;
+  ConversionStats counts;
+  counts.total = array.objects.size();
+  std::unordered_set<std::int32_t> ids;
+  for (std::size_t i = 0; i < array.objects.size(); ++i) {
+    const auto& object = array.objects[i];
+    if (object.track_id < 0 || !ids.insert(object.track_id).second ||
+        object.observation_state != object.OBSERVED || object.miss_count)
+      return Fail(ConversionStatus::INVALID_ID, i, object.track_id, "duplicate, mismatched or non-observed ID", detail);
+    if (!IsFinitePoint(object.center) || !IsFinite(object.yaw))
+      return Fail(ConversionStatus::NON_FINITE_VALUE, i, object.track_id, "non-finite geometry", detail);
+    if (!IsFinite(object.length) || object.length <= 0 || !IsFinite(object.width) ||
+        object.width <= 0 || !IsFinite(object.height) || object.height <= 0)
+      return Fail(ConversionStatus::INVALID_DIMENSIONS, i, object.track_id, "invalid dimensions", detail);
+    std::string reason;
+    if (!ValidateObb(object, &reason))
+      return Fail(ConversionStatus::INVALID_OBB, i, object.track_id, reason, detail);
+    if (object.absolute_velocity_valid && (!IsFiniteVector(object.absolute_velocity_mps) ||
+        !IsFinite(3.6 * std::hypot(object.absolute_velocity_mps.x, object.absolute_velocity_mps.y))))
+      return Fail(ConversionStatus::INVALID_VELOCITY, i, object.track_id, "non-finite qualified velocity", detail);
+    bool supported = true;
+    DetectedObject target;
+    target.id = object.track_id;
+    target.type = ConvertClassification(object.classification == "dynamic_obstacle" &&
+        object.camera_class == "person" ? "person" : object.classification, &supported);
+    target.velocity_unavailable = !object.absolute_velocity_valid;
+    target.center = object.center;
+    target.yaw = object.yaw;
+    if (object.absolute_velocity_valid) {
+      target.vx = object.absolute_velocity_mps.x;
+      target.vy = object.absolute_velocity_mps.y;
+    }
+    // Preserve PR #114's stateless yaw-rate policy; OBB yaw derivative is not measured.
+    target.yaw_rate = 0.;
+    target.width = object.width; target.length = object.length; target.height = object.height;
+    target.obb_corners = object.obb_corners;
+    if (!supported) ++counts.unsupported_classification;
+    if (target.type == kObjectVehicle) ++counts.vehicle;
+    else if (target.type == kObjectPedestrian) ++counts.pedestrian;
+    else ++counts.unknown;
+    converted.objects.push_back(std::move(target));
+  }
+  *output = std::move(converted);
+  if (stats) *stats = counts;
+  if (detail) detail->clear();
+  return ConversionStatus::OK;
+}
+
 ConversionStatus ConvertLidarObservation(
     const asmc_msgs::LidarTrackingObservation& input,
     planning_inputs::DetectedObjectArray* output, ConversionStats* stats,

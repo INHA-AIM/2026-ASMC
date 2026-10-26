@@ -19,7 +19,7 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 기본 `lidar.launch`의 `/perception/lidar/objects_local/map` 및 `observations_local/map`에는
 HD맵·상부 객체 전달 필터가 적용된다. 동일 scan의 두 좌표계는 같은 ID를 제외한다.
 지도/pose 무효에서는 지도 제외를 중단하고, 최근 YOLO vehicle/dynamic 매칭은 모든 구간에서 보호한다.
-debug의 원본 tracker/점군은 검수를 위해 남긴다. 판제 기본 입력도 공용 tracks_map으로 전환했다. 구 패키지·wire/JSON 중계는 폐기했다.
+debug의 원본 tracker/점군은 검수를 위해 남긴다. 판제 기본 입력은 `planning_observations_map`의 공용 KF 품질 관측이다. 구 패키지·wire/JSON 중계는 폐기했다.
 
 ## 구조
 
@@ -81,9 +81,9 @@ roslaunch asmc_lidar lidar.launch
 roslaunch asmc_lidar lidar.launch fusion:=false
 ```
 
-출력 기본값은 `/perception/lidar/{objects_local,objects_map,observations_local,observations_map,tracks_local,tracks_map,diagnostics,trace}`다. 입력은 절대 경로 정본을 유지하고 출력 상대 이름은 `namespace` 인자로 결정한다. 정본 namespace만 launch에서 명시 허용하며, 입력 덮어쓰기·중복 출력 차단과 TF 기본 OFF를 유지한다. 기존 Main과 동일 운영 토픽에 동시에 발행하지 않는다.
+출력 기본값은 `/perception/lidar/{objects_local,objects_map,observations_local,observations_map,tracks_local,tracks_map,planning_observations_map,diagnostics,trace}`다. 입력은 절대 경로 정본을 유지하고 출력 상대 이름은 `namespace` 인자로 결정한다. 정본 namespace만 launch에서 명시 허용하며, 입력 덮어쓰기·중복 출력 차단과 TF 기본 OFF를 유지한다. 기존 Main과 동일 운영 토픽에 동시에 발행하지 않는다.
 
-관측의 `objects.header`가 source stamp·frame의 정본이다. 정상 빈 결과·입력 무효·map pose 무효는 기존 `LidarObjectArray` 상태로 구분한다. 센서가 조용하다고 과거 결과를 새 stamp로 재발행하지 않는다. 기존 MotionClassifier의 적용 속도·4단계 상태를 연결했다. 유효 map/계산 근거에서 절대속도 추정값을 제공하며, UNKNOWN의 수치0은 정지 확인이 아니다. GPS 무효에서는 local 속도/운동 validity를 false로 유지한다. 판제는 `LidarTrackingObservation`을 직접 소비한다([현재 의미](../../docs/records/lidar/planning-runtime-through-pr111.md#공용-메시지와-속도의-의미)).
+관측의 `objects.header`가 source stamp·frame의 정본이다. 정상 빈 결과·입력 무효·map pose 무효는 기존 `LidarObjectArray` 상태로 구분한다. 센서가 조용하다고 과거 결과를 새 stamp로 재발행하지 않는다. 기존 MotionClassifier의 적용 속도·4단계 상태를 연결했다. 유효 map/계산 근거에서 절대속도 추정값을 제공하며, UNKNOWN의 수치0은 정지 확인이 아니다. GPS 무효에서는 local 속도/운동 validity를 false로 유지한다. 판제는 `planning_observations_map`의 `LidarPlanningObservation`을 직접 소비한다. KF 품질/미확정 속도 기하 보존 규칙은 [실행 정본](docs/planning-runtime.md)을 따른다. 일반 `tracks_local/map`의 classifier 추정값과 구분한다.
 
 명시적 처리 초기화:
 

@@ -26,7 +26,7 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 `competition_speed_state.yaml`이 지정한 `/Ego_topic` 종방향 속도를 결합하며, 센서 이름을 보고
 다른 상태 입력으로 자동 전환하지 않습니다. `state_source:=gps_imu`는 GPS/IMU 추정만 사용하고
 `external`은 외부 `/planning/vehicle/state` producer를 요구합니다.
-객체 입력은 `/perception/lidar/tracks_map`의 공용 추적 관측으로 단일화했습니다. 속도/4단계 운동·원본 OBB·세대/시각/상태를 검사하고 인지 필터·classifier·JSON join을 다시 실행하지 않습니다. [연결 의미와 복구](../../src/asmc_lidar/docs/planning-runtime.md)를 따릅니다.
+객체 입력은 `/perception/lidar/planning_observations_map`의 공용 추적 관측으로 단일화했습니다. 속도/4단계 운동·원본 OBB·세대/시각/상태를 검사하고 인지 필터·classifier·JSON join을 다시 실행하지 않습니다. [연결 의미와 복구](../../src/asmc_lidar/docs/planning-runtime.md)를 따릅니다.
 
 ## 개별 실행
 
@@ -127,7 +127,8 @@ Git `f84a62ce`(2026-09-02)에 팀원의 false 주행 확인 기록이 있어, �
 가정하지 않았다. 이후2026-10-26 사용자가 **대회용 MolitComp03에서 기본값 false로 새 LiDAR
 판제 주행이 동작함을 직접 확인**했다. 같은 시점의 읽기 전용 조회에서 실행판
 `Simulator_v.S4.251001.MolitComp03_Window`, bridge `invert_steer=false`·local UDP,
-`planning_objects_adapter/source_policy=asmc_lidar`와 입력 `/perception/lidar/tracks_map`을 확인했다.
+당시 `planning_objects_adapter/source_policy=asmc_lidar`와 `/perception/lidar/tracks_map` 입력을 확인했다.
+B4의 현행 단일 입력은 [KF 품질 관측 정본](../../src/asmc_lidar/docs/planning-runtime.md)으로 변경됐다.
 따라서 대회용 공용 기본값 false를 유지하고, 확인한26R1 개발 조합만 true를 명시한다.
 `/ctrl_cmd/normal`, `/ctrl_cmd/jamming`과 MPC bicycle model의 좌회전 양수
 계약은 유지한다. ROS WebSocket은 이 UDP 인코더를 거치지 않는다. 다른 PC의 정상 주행과 비교할 때
@@ -158,7 +159,7 @@ Keyboard/P와 `/ctrl_cmd` 발행자0을 확인했다. 이26R1 대조의 직접 �
 
 연장 대조 중 별도1회는2.85초에 `ego/object input is not fresh`로 정지했다. 이 실행은 당시
 입력별 계측이 없어 차량 상태와 LiDAR 중 어느 입력인지 확정하지 못했다. 이후 계측 대조의 성공이
-그 실패를 면제하지 않는다. 입력 중단 재현 시 `/planning/vehicle/state`와 `/perception/lidar/tracks_map`,
+그 실패를 면제하지 않는다. 입력 중단 재현 시 `/planning/vehicle/state`와 `/perception/lidar/planning_observations_map`,
 `/planning/objects`, 어댑터 diagnostics의 시각·유효성·탈락 사유를 함께 확인하며 timeout을 늘리거나
 센서 무효를 정상 빈 결과로 바꾸지 않는다.
 
