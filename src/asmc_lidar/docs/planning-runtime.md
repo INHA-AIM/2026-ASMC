@@ -19,7 +19,7 @@
 별도 시험1회의 입력 freshness 정지는 원인 미확정으로 남긴다. LiDAR 필터나 TTC를 완화해
 이 증상을 우회하지 않는다. [제어 설정·대조 근거·남은 검증](../../../docs/operations/planning-control.md#morai-제어-프로토콜과-정지-순서)을 따른다.
 
-같은 날 사용자가 **대회용 MolitComp03의 기본 bridge 설정(`invert_steer=false`)으로 새 LiDAR
+같은 날 코드 `b6776464`에서 사용자가 **대회용 MolitComp03의 기본 bridge 설정(`invert_steer=false`)으로 새 LiDAR
 판제 주행이 동작함을 직접 확인**했다. 실행 조회에서도 해당 release·local UDP와
 `source_policy=asmc_lidar`, `/perception/lidar/tracks_map` 소비를 확인했다. 이는 사용자 직접
 연결 확인이며 전 미션·장애물 속도 정확도·LAN2LAN 수락은 아니다. 공용 조향 기본값은 false를
@@ -137,7 +137,10 @@ python3 src/planning_inputs/test/common_lidar_ros_test.py
 
 실행은 별도 터미널에서 각각 시작한다. 두 번째 명령은 차량 제어를 포함하므로 주행 인수
 상황에서 사용한다. 자동 전체 실행 회귀는 **별도 ROS master와 합성 입력**에서만 수행했다.
-운영 master의 차량 제어·판제 소비는 전환하지 않았다.
+사용자는 이후 새 LiDAR 옵션으로 직접 주행을 확인했다. 통합 launch의 기본 LiDAR source는
+구 복구 경로로 유지하며, 자동 검증기가 운영 master의 소비 경로를 전환하지는 않는다.
+최신 main PR #109의 `state_source=competition`(GPS/IMU pose와 지정된 Competition 속도 결합)도
+유지한다. 이 LiDAR 연결 변경 때문에 판제의 새 신호·제동 정책이나 상태 source를 되돌리지 않는다.
 
 ```bash
 roslaunch asmc_lidar lidar.launch debug:=true
@@ -184,6 +187,12 @@ CTest39/39·필수 gate34/34·직접 ROS 연결16개**를 다시 통과했다. �
 검사했으며 과거 catalog/blacklist 위치에 있는 unknown도 위치만으로 삭제하지 않음을 포함한다.
 구 Main 복구 분기와 판제 본체·제어 알고리즘은 이 정리에서 변경하지 않았다. CI cache/concurrency는
 YAML·내부 bash 구문을 확인했으며 hosted 실행 시간 개선은 아직 측정하지 않았다.
+
+최신 main `c98db3c6` 통합(`f974a9a2`) 후 격리 빌드·LiDAR 필수34개·판제 입력6개·제어18개·
+직접 ROS16개·전체 경계11개·구 Main 빌드/링크 검증을 통과했다. 플래너는62/64로,
+main과 동일한 회피/로터리 검사 두 개가 실패했다. 코드/기대값을 임의 변경하지 않고
+[통합 검증 기록](../../../docs/records/lidar/2026-10-26-planning-runtime-integration.md)에 근거와
+Draft 사유를 남겼다. 사용자 기능 확인을 전체 플래너 수락으로 확대하지 않는다.
 
 직접 연결 시험의 scan은 합성 자료다. 실제 전 미션 주행 인수·3뷰 fusion·GPS 없는 터널 속도 및
 벽/천장 품질 수락은 이 결과에 포함하지 않는다. 기존 trial이 `/migration/lidar`로 실행 중이라면

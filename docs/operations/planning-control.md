@@ -22,7 +22,10 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_l
 실행 중 중단/재개·주기는 카메라의 `set_mode`에서 제어합니다. 판제 신호 규칙·stale/invalid 처리와
 구간별 소비 책임은 유지합니다. [소비·제어 안내](../handoffs/perception-to-planning.md)를 따릅니다.
 
-`state_source:=gps_imu`는 `/planning/vehicle/state` producer를 포함하고 `external`은 외부 producer를 요구합니다.
+최신 main PR #109의 기본 `state_source:=competition`을 유지합니다. GPS/IMU의 map pose에
+`competition_speed_state.yaml`이 지정한 `/Ego_topic` 종방향 속도를 결합하며, 센서 이름을 보고
+다른 상태 입력으로 자동 전환하지 않습니다. `state_source:=gps_imu`는 GPS/IMU 추정만 사용하고
+`external`은 외부 `/planning/vehicle/state` producer를 요구합니다.
 통합 객체 source는 `lidar`이며 새 선택 `lidar_source_policy:=asmc_lidar`는 `/perception/lidar/tracks_map`을 직접 소비합니다. 속도/4단계 운동·원본 OBB·세대/시각/상태를 확인하고 두 번째 인지 필터·JSON join을 실행하지 않습니다. 실제 인수 전 통합 기본은 구 `validated_lidar`입니다. 이 구 경로는 `/last_lidar`와 exact source stamp의 `/lidar/motion_debug`를 연결하며 `main_raw`는 기존 비교용입니다. [연결 의미와 복구](../../src/asmc_lidar/docs/planning-runtime.md)를 따릅니다.
 통합 launch에는 제어 선택기와 `enable_control=true`인 재밍 어댑터가 포함됩니다.
 
@@ -149,7 +152,7 @@ release·차량40도 조향 한계·통신 방식·bridge revision/설정을 함
 추가 반전을 제거해 실제 bridge를 검증했다. 같은 시작점의16.00초·107.00m에서158개 조회 표본
 모두 plan_valid=true, 최대 횡오차0.1235m, 최대 LiDAR source age114.5ms·판제 객체 수신
 age109.5ms였다. 센서 bridge·카메라·LiDAR·master는 유지했고, 생성한 시험 판제만 종료한 뒤
-Keyboard/P와 `/ctrl_cmd` 발행자0을 확인했다. 해당 PC의 직접 명령은 위 true override를 사용한다.
+Keyboard/P와 `/ctrl_cmd` 발행자0을 확인했다. 이26R1 대조의 직접 명령은 위 true override를 사용한다.
 
 대회 버전의 사용자 직접 확인은 새 LiDAR 연결의 기능 확인이다. 구간·시간·장애물 조건을 계측한
 전 미션 수락이나 LAN2LAN 시험으로 확대하지 않는다. 위 수치가 있는26R1 제한 대조와도 구분한다.
