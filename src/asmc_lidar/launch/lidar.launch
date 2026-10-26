@@ -24,6 +24,8 @@
   <arg name="camera_calibration_config" default=""/>
   <arg name="experimental_tunnel_filter" default=""/>
   <arg name="publish_tf" default="false"/>
+  <!-- /planning/mode=1(JAMMING) 동안 스캔 처리를 멈춘다. 재밍 제어는 카메라만 쓴다. -->
+  <arg name="skip_lidar_in_jamming" default="true"/>
   <arg name="tf_child_frame" default="lidar_pipeline/lidar_leveled"/>
 
   <!-- Monitoring only: subscribers and rate limit still gate each snapshot. -->
@@ -66,6 +68,7 @@
     <param if="$(eval arg('experimental_tunnel_filter') != '')" name="experimental_tunnel_filter"
            value="$(arg experimental_tunnel_filter)"/>
     <param name="publish_tf" value="$(arg publish_tf)"/>
+    <param name="skip_lidar_in_jamming" value="$(arg skip_lidar_in_jamming)"/>
     <param name="tf_child_frame" value="$(arg tf_child_frame)"/>
     <param name="points_topic" value="$(arg points_topic)"/>
     <param name="imu_topic" value="$(arg imu_topic)"/>

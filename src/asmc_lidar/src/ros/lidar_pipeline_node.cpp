@@ -38,6 +38,7 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/String.h>
+#include <std_msgs/UInt8.h>
 #include <std_srvs/Trigger.h>
 #include <asmc_msgs/LidarObservation.h>
 #include <asmc_msgs/LidarTrackingObservation.h>
@@ -298,6 +299,7 @@ class LidarPipelineNode {
     pnh_.param("allow_operational_output", allow_operational_, false);
     pnh_.param("spinner_threads", spinner_threads_, 4);
     spinner_threads_ = std::max(2, spinner_threads_);
+    pnh_.param("skip_lidar_in_jamming", skip_lidar_in_jamming_, true);
     // Monitoring-only stage output, default OFF (see ros/debug_publisher.hpp).
     pnh_.param("debug_enabled", debug_config_.enabled, false);
     pnh_.param<std::string>("debug_topic_prefix", debug_config_.topic_prefix, "debug");
@@ -432,6 +434,18 @@ class LidarPipelineNode {
     imu_sub_ = nh_.subscribe(imu_topic_, 1, &LidarPipelineNode::OnImu, this, hints);
     can_sub_ = nh_.subscribe(can_topic_, 1, &LidarPipelineNode::OnCan, this, hints);
     gps_sub_ = nh_.subscribe(gps_topic_, 1, &LidarPipelineNode::OnGps, this, hints);
+    // latched 토픽이다. 재밍 제어는 카메라만 쓰므로 그동안 스캔 처리를 멈춘다.
+    if (skip_lidar_in_jamming_)
+      planning_mode_sub_ = nh_.subscribe("/planning/mode", 1, &LidarPipelineNode::OnPlanningMode, this);
+  }
+
+  // 음영(JAMMING)에서는 selector가 /ctrl_cmd/normal을 내보내지 않는다. 그동안 LiDAR
+  // 스캔 처리를 멈춰 CPU를 카메라에 돌려준다. IMU/CAN/GPS는 계속 runtime에 들어가므로
+  // 추측항법은 끊기지 않는다.
+  void OnPlanningMode(const std_msgs::UInt8::ConstPtr& msg) {
+    const bool jamming = msg->data == 1;
+    if (paused_.exchange(jamming) != jamming)
+      ROS_WARN("LiDAR pipeline %s (/planning/mode=%u)", jamming ? "paused" : "resumed", msg->data);
   }
 
   static std::int64_t RosNow() { return static_cast<std::int64_t>(ros::Time::now().toNSec()); }
@@ -474,6 +488,11 @@ class LidarPipelineNode {
 
   // Ported from Main src/Parser/Parser.cpp:270-350 (LiDARParser_Callback, common gates) (8f93c22e).
   void OnPoints(const sensor_msgs::PointCloud2::ConstPtr& msg) {
+    if (paused_.load()) {
+      ++paused_scans_;
+      ROS_INFO_THROTTLE(5.0, "JAMMING: LiDAR pipeline paused");
+      return;
+    }
     const std::int64_t receipt = camera::steady_now_ns();
     const std::int64_t receipt_ros = RosNow();
     const std::uint64_t seq = ++points_received_;
@@ -850,6 +869,8 @@ class LidarPipelineNode {
       number("debug_encode_ms_last", d.encode_ms_last);
       number("debug_encode_ms_max", d.encode_ms_max);
     }
+    number("jamming_paused", paused_.load() ? 1 : 0);
+    number("jamming_paused_scans", paused_scans_.load());
     number("local_subscribers", local_pub_.getNumSubscribers());
     number("map_subscribers", map_pub_.getNumSubscribers());
     array.status.push_back(status);
@@ -886,7 +907,10 @@ class LidarPipelineNode {
   std::string local_observation_topic_, map_observation_topic_;
   std::string local_tracking_topic_, map_tracking_topic_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_;
-  ros::Subscriber points_sub_, imu_sub_, can_sub_, gps_sub_;
+  ros::Subscriber points_sub_, imu_sub_, can_sub_, gps_sub_, planning_mode_sub_;
+  bool skip_lidar_in_jamming_ = true;
+  std::atomic<bool> paused_{false};
+  std::atomic<std::uint64_t> paused_scans_{0};
   ros::WallTimer diagnostics_timer_;
 
   std::mutex slot_mutex_;
