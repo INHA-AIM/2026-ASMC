@@ -106,6 +106,14 @@ planning job은 판제/메시지만 빌드하고 AVOID·로터리·도로 제약
 캐시와 이전 PR 실행 취소 설정은 보존했다. Hosted 성공 여부·소요 시간은 PR의 실제 Actions 결과에서
 별도로 확인하며, 로컬 결과를 hosted 성공이나 시간 단축 비율로 표시하지 않는다.
 
+첫 [Hosted CI](https://github.com/INHAautonav/2026-ASMC/actions/runs/40275847115)에서는34개 중
+웹 모니터 ROS fixture 하나가 실패했다. 직접 실행 기본 토픽을 `/perception/lidar`로 바꾼 뒤,
+fixture의 생산자는 `/migration/lidar`에 두고 모니터의 구독 경로는 명시하지 않은 것이 원인이었다.
+시험 XML에 debug/diagnostics/objects의 시험 경로를 모두 주입해 격리를 복구했고, 로컬 ROS
+7개 검사를10.93초에 통과했다. 운영 토픽 기본값이나 판정 코드는 변경하지 않았다.
+이 시험 전용 후속 수정은 고정 bag run 동결 후 별도 커밋으로 남긴다. 동결된 replay 소스와 결과를
+덮어쓰지 않으며 최종 hosted 상태는 [PR #112](https://github.com/INHAautonav/2026-ASMC/pull/112)에서 확인한다.
+
 ## 저장과 복구·남은 제한
 
 시작 당시 D 여유49.52GiB였고 사용자가 **이번 고정 bag 결과 저장에 한해서**50GiB 미만 실행을 승인했다.

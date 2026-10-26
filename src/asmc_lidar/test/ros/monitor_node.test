@@ -18,6 +18,11 @@
   </node>
 
   <node pkg="asmc_lidar" type="asmc_lidar_monitor_node.py" name="asmc_lidar_monitor" output="screen">
+    <!-- Test traffic stays isolated even when direct-run defaults are canonical. -->
+    <param name="debug_topic_prefix" value="/migration/lidar/debug"/>
+    <param name="diagnostics_topic" value="/migration/lidar/diagnostics"/>
+    <param name="objects_local_topic" value="/migration/lidar/objects_local"/>
+    <param name="objects_map_topic" value="/migration/lidar/objects_map"/>
     <param name="port" value="$(arg port)"/>
     <param name="bind_address" value="127.0.0.1"/>
     <param name="web_dir" value="$(find asmc_lidar)/web"/>
