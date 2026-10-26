@@ -80,7 +80,7 @@ def pose_comparison(scan, state):
 def invariant(row):
     # Process identities/timing costs vary between runs; none are object behavior.
     result=copy.deepcopy(row)
-    for key in ('producer','producer_session_id','session_id','timing','cost_ms'):
+    for key in ('producer','producer_session_id','session_id','timing','timings_ms','cost_ms'):
         result.pop(key,None)
     def clean(x):
         if isinstance(x,dict):
@@ -235,7 +235,7 @@ def main():
     args=p.parse_args(); manifest=json.loads(args.manifest.read_text())
     if args.output.name!=args.run_id:raise ValueError('run ID/output mismatch')
     if args.output.exists():raise ValueError('output exists; use a newly registered run')
-    for path,digest in manifest['configs'].items():
+    for path,digest in dict(manifest['configs'],**manifest.get('sources',{})).items():
         if sha(ROOT/path)!=digest:raise ValueError('changed config: '+path)
     inputs={}
     for item in manifest['inputs']:
@@ -252,6 +252,7 @@ def main():
                  manifest=manifest,bag={},limitations=['Receive-only bag headers are not measurement stamps.',
                  'No cross-recording joins. No independent GT.',
                  'Camera publication queries are causal sensitivity, not measured worker timing.'])
+    summary['binaries']={str(p):sha(p) for p in [args.replay,*[args.probes/name for name in ('frame_projection_probe','context_probe','bridge_state_probe','planning_state_probe')]]}
     summary['projection']=projection_cases(args.probes/'frame_projection_probe')
     for name in ('normal','tunnel'):
         path=inputs[name]; directory=args.output/name;directory.mkdir()
