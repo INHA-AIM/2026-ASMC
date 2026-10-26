@@ -532,9 +532,6 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
     // Main FusionCamera.cpp:892-935 (JPEG lookup within 2 ms, decode, decode
     // drop) not ported: no image is used; the size comes from the calibration.
 
-    const bool reused = fusion_sync::ConsumeMatchedFrame(yolo_history, decision.yolo_index, reuse_);
-    consumed_[yolo_frame.identity] = yolo_frame.stamp_ns;
-    if (diagnostic) diagnostic->reused = reused;
 
     // Geometry from the synchronized historical frame; class counters
     // continue from the current track.
@@ -573,6 +570,21 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
       diagnostic->projection_valid = projection_valid;
       diagnostic->boxes_admitted = detected_objects.size();
     }
+
+    // A failed geometric contract is not an observed empty camera result.
+    // Do not issue misses, refresh evidence timestamps, or consume the image.
+    if (!projection_valid) {
+      ++counters_.projection_invalid;
+      ++counters_.dropped;
+      ++report.dropped_this_call;
+      if (diagnostic) { diagnostic->action="drop"; diagnostic->reason="projection_invalid"; }
+      PruneInputsBefore(yolo_history, synchronized_lidar_frame.stamp_ns,
+                        config_.max_time_offset_s, &prune_before_ns_);
+      continue;
+    }
+    const bool reused = fusion_sync::ConsumeMatchedFrame(yolo_history, decision.yolo_index, reuse_);
+    consumed_[yolo_frame.identity] = yolo_frame.stamp_ns;
+    if (diagnostic) diagnostic->reused = reused;
 
     IOUFusion(synchronized_objects, detected_objects, lidar_boxes,
               static_cast<std::uint64_t>(yolo_frame.stamp_ns), processing_camera_epoch, config_,

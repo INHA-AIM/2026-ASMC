@@ -1054,3 +1054,18 @@ TEST(FusionDiagnostics, TimeoutAndCurrentRejectionHaveDistinctReasons) {
   report=tracker.Scan(fusion,source,kT0+310*kMs,kT0+310*kMs);
   ASSERT_FALSE(report.decisions.empty()); EXPECT_EQ(report.decisions.front().reason,"observation_no_longer_current");
 }
+
+TEST(FusionContract, InvalidProjectionIsNotAnEmptyCameraObservation) {
+  FusionConfig config; config.initial_confirmations=1;
+  FrontCameraFusion fusion(config,FrontCalibration()); FakeSource source; TrackerSim tracker;
+  source.Set({MakeFrame(kT0,{TruckBox()})}); tracker.Scan(fusion,source,kT0,kT0);
+  const auto state=StateOf(tracker.live[0]);
+  source.Set({MakeFrame(kT0+100*kMs,{TruckBox()})});
+  auto invalid=LeveledContext(kT0+100*kMs); invalid.leveling_source.clear();
+  const auto report=fusion.Process(kT0+100*kMs,invalid.time.stamp_ns,invalid,
+                                   tracker.live,&tracker.history,source,kT0+100*kMs,kT0+100*kMs);
+  EXPECT_EQ(StateOf(tracker.live[0]),state);
+  EXPECT_EQ(report.matched_this_call,0u);
+  ASSERT_FALSE(report.decisions.empty());
+  EXPECT_EQ(report.decisions.back().reason,"projection_invalid");
+}
