@@ -12,6 +12,13 @@ from data_collection.bag_run import build_rosbag_command, make_bag_run_id
 
 
 class BagProfileTest(unittest.TestCase):
+    def test_lan_recording_uses_verified_competition_alias(self):
+        root = os.path.join(os.path.dirname(__file__), '..', 'config', 'bag_profiles')
+        profile = load_bag_profile(root, 'competition_raw')
+        self.assertIn('/Ego_topic', profile['required_topics'])
+        self.assertNotIn('/Competition_topic', profile['required_topics'] + profile['optional_topics'])
+        self.assertFalse(profile['privileged_gt'])
+
     def write(self, root, name, value):
         with open(os.path.join(root, name + ".yaml"), "w") as stream:
             yaml.safe_dump(value, stream)

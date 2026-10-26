@@ -167,11 +167,13 @@ verify_topics() {
     die "Competition Vehicle Status field gate is only defined for molitcomp03"
   fi
   local competition_arg=""
+  local transport="local"
   if [ "$require_competition_status" = "true" ]; then
     competition_arg="--require-competition-status"
+    transport="lan2lan"
   fi
   docker exec "$CONTAINER" bash -lc \
-    "cd /root/ws && source /opt/ros/noetic/setup.bash && source devel/setup.bash && python3 scripts/verify_morai_topics.py --profile $profile --duration $duration --simulator-release $simulator_release $competition_arg"
+    "cd /root/ws && source /opt/ros/noetic/setup.bash && source devel/setup.bash && python3 scripts/verify_morai_topics.py --profile $profile --transport $transport --duration $duration --simulator-release $simulator_release $competition_arg"
 }
 
 print_next() {

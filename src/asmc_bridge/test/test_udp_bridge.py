@@ -55,6 +55,35 @@ class VehicleStatusPacketTest(unittest.TestCase):
             MODULE.decode_vehicle_status_packet(packet)
 
 
+class MeasuredCompetitionPacketTest(unittest.TestCase):
+    def load_measured(self, name):
+        path = os.path.join(os.path.dirname(FIXTURE), name)
+        with open(path) as stream:
+            return bytes.fromhex(stream.read())
+
+    def test_real_9099_decodes_and_publishes_through_legacy_ego_handler(self):
+        packet = self.load_measured('measured_competition_9099_181.hex')
+        decoded = MODULE.decode_vehicle_status_packet(packet)
+        self.assertEqual((181, 152), (decoded['packet_length'], decoded['payload_length']))
+        self.assertEqual((0.0, 0.0, 0.0), decoded['position'])
+        bridge = MODULE.MoraiUdpBridge.__new__(MODULE.MoraiUdpBridge)
+        bridge.frame_id = 'base_link'
+        bridge.ego_vel_ms = True
+        bridge.packet_stamp = lambda sec, nsec, kind: MODULE.rospy.Time(sec, nsec)
+        bridge.pub_ego = mock.Mock()
+        bridge.handle_ego(packet)
+        message = bridge.pub_ego.publish.call_args[0][0]
+        self.assertAlmostEqual(decoded['velocity_kph'][0] / 3.6, message.velocity.x)
+        self.assertEqual((0.0, 0.0), (message.velocity.y, message.velocity.z))
+        self.assertEqual(decoded['sec'], message.header.stamp.secs)
+
+    def test_measured_detail_cannot_supply_9099_competition(self):
+        packet = self.load_measured('measured_detail_9798_138.hex')
+        self.assertEqual(138, len(packet))
+        with self.assertRaisesRegex(ValueError, 'header mismatch'):
+            MODULE.decode_vehicle_status_packet(packet)
+
+
 class InputRequirementTest(unittest.TestCase):
     def test_competition_status_is_optional_by_default(self):
         self.assertFalse(MODULE.input_required("competition"))
@@ -62,7 +91,8 @@ class InputRequirementTest(unittest.TestCase):
         self.assertTrue(MODULE.input_required("col"))
 
     def test_field_gate_can_require_competition_status(self):
-        self.assertTrue(MODULE.input_required("competition", True))
+        self.assertFalse(MODULE.input_required("competition", True))
+        self.assertTrue(MODULE.input_required("ego", True))
 
     @staticmethod
     def detail_packet():
@@ -72,7 +102,8 @@ class InputRequirementTest(unittest.TestCase):
         packet = self.detail_packet()
         self.assertEqual(len(packet), 138)
         self.assertTrue(MODULE.is_optional_competition_variant('competition', packet, 'local', False))
-        for kind, transport, required in [('ego', 'local', False), ('competition', 'lan2lan', False), ('competition', 'local', True)]:
+        self.assertTrue(MODULE.is_optional_competition_variant('competition', packet, 'local', True))
+        for kind, transport, required in [('ego', 'local', False), ('competition', 'lan2lan', False), ('competition', 'lan2lan', True)]:
             with self.subTest(kind=kind, transport=transport, required=required):
                 self.assertFalse(MODULE.is_optional_competition_variant(kind, packet, transport, required))
         with self.assertRaisesRegex(ValueError, 'header mismatch'):

@@ -1,5 +1,11 @@
 # asmc_bridge
 
+> **2026-10-27 현재 실행 기준:** CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.
+> `--require-competition-status`/`verify-field`도 이9099 입력을 검사하도록 정정했다.
+> 9798은 로컬 Detail 진단이며 LAN 운영·수락에서 제외한다. 아래 과거 P3 설명과 현재 역할은
+> [정정 기록](../../docs/records/bridge/2026-10-27-competition-9099-correction.md)을 기준으로 구분한다.
+
+
 MORAI Network UDP, Sensor UDP와 GPS/IMU 기반 `/vehicle/state`를 소유하는 단일 ROS1
 패키지다. P3-F에서 `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`,
 `integration_launch`의 구현을 이 패키지로 물리 통합했다. node와 diagnostics 이름은 소비자
@@ -36,19 +42,19 @@ GT 센서셋의 Intensity·Instance LiDAR 모두15Hz이며, 변경된 JSON을 MO
 Bridge의 기본 `lidar_rotation_rate=15`는 조립 참고값이고 실제 센서 송신 주기를 바꾸지 않는다.
 
 v3는 MORAI 저장 설정과 손재호 소비 loop가 15 Hz이며 완성 scan 약 12 Hz 입력은 허용한다.
-bridge는 azimuth wrap으로 실제 회전을 조립하고 중복 cloud를 만들지 않는다. MolitComp
-Competition Vehicle Status는 type 787 `9797→9798`이고, type 258 `7603→7502`는
-TrafficLight oracle이라 production bridge에서 소비하지 않는다.
+bridge는 azimuth wrap으로 실제 회전을 조립하고 중복 cloud를 만들지 않는다.
 
-참가팀 local에서는 type 787 packet이 나오지 않아도 정상이다. decoder와
-`/Competition_topic` publisher는 유지하며, 주최 현장판을 검사할 때만 다음처럼 필수화한다.
+**2026-10-23 채널 정정:** 사용자 UI의 CompetitionInfoPublisher는9088→9099이고,
+181B `#MoraiInfo$`를 정상 수신했다. 기존 bridge는 이를 `/Ego_topic`으로 발행한다.
+`/Ego_topic`·`EgoVehicleStatus`는 호환 이름/타입이며 실제 판정 전용 정보임을 뜻하지 않는다.
+별도9798은 이번 환경에서138B `#DetailEgoInfo$`로 들어와 decoder가 거부했다.
+[실측과 한계](../../docs/records/bridge/2026-10-23-competition-channel-audit.md)를 따른다.
 
-```bash
-./scripts/udp_bridge.sh --transport lan2lan --require-competition-status
-./scripts/docker_ros_up.sh verify-field 30 molitcomp03
-```
-
-기본 diagnostics는 미수신 Competition 입력을 `optional; no data`로 표시한다.
+`--require-competition-status`와 `verify-field`는 현재9099의 `/Ego_topic`을 검사한다.
+9798 Detail을 추가 요구하거나 정상 Competition 대신 사용하지 않는다.
+현재 정상 Competition은9099→`/Ego_topic` 경로로 확인하며, 현장판에서 UI·송신 설정을 다시 대조한다.
+이름을 바꾸거나 별도 Detail 채널로 자동 fallback하지 않는다. type258 TrafficLight oracle은
+production bridge에서 소비하지 않는다. 기존 미수신 선택 입력 diagnostics는 유지한다.
 
 콘솔은 Network와 Sensor가 각각 **5초마다 줄바꿈한 요약 블록**으로 출력한다.
 `RX`는 MORAI에서 수신, `TX`는 MORAI로 송신이며 현재 링크도 함께 표시한다.
@@ -70,7 +76,7 @@ socket drop은 `DEGRADED`로 표시한다. 이 진단 기준은 차량 상태·f
 통계는 잠금 안에서 제한된 표본을 복사한 뒤 잠금 밖에서 집계한다. 진단 callback 실패는
 오류 로그와 `reporter_failures`에 남기고 다음 주기에 재시도한다.
 
-26.R1 export에는 Competition(type787)이 없다. 참가팀 MolitComp local에서 관측한
+기존 export의 type 번호만으로 Competition 여부를 확정하지 않는다. 별도9798에서 관측한
 `#DetailEgoInfo$`(본문105B·전체138B)는 기존 `#MoraiInfo$`(본문152B)와 다른 형식이다.
 Local의 선택 입력일 때만 이 정상 길이·CRLF envelope를1회 INFO로 안내하고,
 `UNSUPPORTED`·`unsupported_packets`·`data_available=false`로 diagnostics에 남긴다.
