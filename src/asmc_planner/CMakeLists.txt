@@ -196,6 +196,8 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(asmc_mode_detector_test tests/mode_detector_test.cpp)
   if(TARGET asmc_mode_detector_test)
     target_include_directories(asmc_mode_detector_test PRIVATE src ${catkin_INCLUDE_DIRS})
+    target_compile_definitions(asmc_mode_detector_test PRIVATE
+      ASMC_REPO_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/../..")
     add_dependencies(asmc_mode_detector_test ${catkin_EXPORTED_TARGETS})
     target_link_libraries(asmc_mode_detector_test ${catkin_LIBRARIES} gtest_main)
   endif()

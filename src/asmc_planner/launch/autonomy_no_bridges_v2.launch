@@ -19,6 +19,19 @@
        default="2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
 
+  <!-- 재밍 판정(/planning/mode, asmc_planner 내부 GpsModeSource). 별도 인자 없이 자동이다.
+       진입: raw GPS 0 좌표 | no-fix | 1s 이상 끊김 | GPS 위치가 음영 구간 안.
+       복귀: 모든 원인이 1s 연속으로 없을 때. 상태: rostopic echo /planning/mode/status
+       음영 구간 = competition metadata gps_shadow_candidate (A448 종료 ~ A126 종료)의
+       전역경로 station. 시뮬레이터가 blackout을 주지 않아도 구간에서 분리된다. -->
+  <group ns="planning_mode">
+    <param name="shadow_zone/path_file"
+           value="$(find asmc_planner)/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"/>
+    <param name="shadow_zone/station_start_m" value="1877.744798966"/>
+    <param name="shadow_zone/station_end_m" value="1996.730791531"/>
+    <param name="shadow_zone/state_topic" value="$(arg state_topic)"/>
+  </group>
+
   <!-- Dictionary lookup rejects unsupported sources during launch loading. -->
   <include if="$(eval {'competition': False, 'gps_imu': True, 'external': False}[arg('state_source')])"
            file="$(find planning_inputs)/launch/vehicle_state.launch">
@@ -54,6 +67,12 @@
   </include>
   <node pkg="asmc_planner" type="asmc_control_selector_node"
         name="asmc_control_selector" output="screen" required="true"/>
+  <!-- 재밍 BBOX 입력(카메라 객체 결과 -> /planning/camera_bbox_lane/yolo) CPU 변환.
+       없으면 재밍 노드가 bbox_timestamp_expired로 정지한다. jamming_dev.launch와 같다.
+       camera_bbox_detector.launch를 따로 띄웠다면 false로 중복을 막는다. -->
+  <arg name="start_bbox_adapter" default="true"/>
+  <include if="$(arg start_bbox_adapter)"
+           file="$(find lane_boundary_adapter)/launch/camera_bbox_detector.launch"/>
   <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
     <arg name="enable_control" value="true"/>
     <arg name="return_to_entry_lane" value="true"/>
@@ -61,5 +80,23 @@
     <arg name="expected_config_sha256" value="$(arg expected_config_sha256)"/>
     <arg name="calibration_file" value="$(arg calibration_file)"/>
     <arg name="use_rviz" value="false"/>
+    <!-- jamming_dev.launch에서 실주행 통과를 확인한 재밍 튜닝값. 두 곳을 함께 바꾼다. -->
+    <arg name="straddle_avoidance" value="true"/>
+    <arg name="line_edge_expand" value="0.10"/>
+    <arg name="avoid_line_extra" value="0.5"/>
+    <arg name="avoid_clearance" value="0.2"/>
+    <arg name="obstacle_lateral_margin" value="0.2"/>
+    <arg name="avoid_line_overrun" value="1.0"/>
+    <arg name="avoid_max_shoulder" value="2.0"/>
+    <arg name="target_speed_kph" value="20.0"/>
+    <arg name="avoid_speed_kph" value="10.0"/>
+    <arg name="avoid_shift_length" value="7.0"/>
+    <arg name="max_lateral_accel" value="1.8"/>
+    <arg name="max_steering_rate" value="1.0"/>
+    <arg name="stop_brake" value="0.5"/>
+    <arg name="speed_kp" value="0.3"/>
+    <arg name="speed_ki" value="0.1"/>
+    <arg name="max_accel_pedal" value="0.5"/>
+    <arg name="max_brake_pedal" value="0.5"/>
   </include>
 </launch>

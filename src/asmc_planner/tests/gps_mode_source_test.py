@@ -33,7 +33,7 @@ class GpsModeSourceTest(unittest.TestCase):
         self.assertEqual(expected, self.modes[-1])
 
     def test_normal_jamming_recovery(self):
-        nonzero = GPSMessage(latitude=37.0, longitude=126.0, altitude=12.0)
+        nonzero = GPSMessage(latitude=37.0, longitude=126.0, altitude=12.0, status=1)
         self.gps.publish(nonzero)
         time.sleep(.1)
         self.assertEqual(0, self.modes[-1])
@@ -57,7 +57,7 @@ class GpsModeSourceTest(unittest.TestCase):
 
     def recover(self):
         self.publish_until(GPSMessage(), 1)
-        self.gps.publish(GPSMessage(latitude=37., longitude=126., altitude=12.))
+        self.gps.publish(GPSMessage(latitude=37., longitude=126., altitude=12., status=1))
         time.sleep(.1)
 
     def test_cached_stale_duplicate_and_failed_plans_cannot_handoff(self):
@@ -81,7 +81,7 @@ class GpsModeSourceTest(unittest.TestCase):
         time.sleep(.1)
         self.ready(); self.ready()
         self.assertEqual(1, self.modes[-1])
-        self.gps.publish(GPSMessage(latitude=37., longitude=126., altitude=12.))
+        self.gps.publish(GPSMessage(latitude=37., longitude=126., altitude=12., status=1))
         time.sleep(.1)
         self.ready(); self.ready()
         self.assertEqual(0, self.modes[-1])
