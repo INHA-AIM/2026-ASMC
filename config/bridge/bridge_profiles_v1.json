@@ -74,7 +74,7 @@
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "dc5635fa0ceec444612baa9316594024e80fa08354a70fb8fd757d06b29291cb"
+        "sha256": "d58d19e3b147d9cf9a0e9152a18a6edd16e52e1c83acd3a26acb8278299b6e6c"
       },
       "network_launch": {
         "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
@@ -106,7 +106,7 @@
       },
       "network_profile_renderer": {
         "path": "tools/bridge/render_morai_network_profiles.py",
-        "sha256": "cb88f57837a1d8dd1699ef08652cf234ff7e09b16ef7bdaef958f33452f6a662"
+        "sha256": "10a5c0f2c095beb36db8ae6c33443aeed195ac530c2ab1d69c6d458d1a52c85a"
       },
       "sensor_profile_renderer": {
         "path": "tools/bridge/render_morai_sensor_profiles.py",
@@ -342,7 +342,8 @@
         "verified_release": "26.R1.H3",
         "verified_export": "C:/MoraiLauncher_Win/MoraiLauncher_Win_Data/SaveFile/Network/26.R1.H3/NetworkInfo_2023_Hyundai_Ioniq5.json",
         "verified_export_sha256": "8b0af6432ba9f94e3ed5bda13e35a3010830caa47d8a677c9f7b8cc8b46421ba",
-        "note": "2026-10-26 UI/export verification: source type 786 is TrajectoryTrackingCmd. Import egoCtrlMode=3 selects MoraiCmdController in this release; the UDP AutoMode byte remains 2."
+        "note": "PUBSUB_TYPE=771 selects MoraiCmdController; JSON egoCtrlMode=3 is AutoMode. UDP payload AutoMode remains 2. Installed assembly enum verified 2026-10-27.",
+        "enum_evidence": "config/morai/control-mode-enums-20261027.json"
       },
       "generated": {
         "local": "config/morai/network/generated/ASMC_network_set_26r1_local.json",
@@ -397,8 +398,17 @@
         "lan2lan": "config/morai/network/generated/ASMC_network_set_molitcomp03_lan2lan.json"
       },
       "generated_sha256": {
-        "local": "bafbd9c02c0e7665f0c18dd95c4586e8003614eba3b922f679acb02a810df198",
-        "lan2lan": "ac16afa3e59d1fa6c9b91ba9cfff059e3ebd2fe4dbc459d3379b1d3770d15cae"
+        "local": "7c3c112b1029fa8b081c1bde25b42b90aa8b918ceea2905b5b7ed1849acf9aed",
+        "lan2lan": "268a3c46d479ed6aada1bb5bbd02a8472693b452badf1a7d39bd856cae911bd4"
+      },
+      "control_import": {
+        "controller": "MoraiCmdController",
+        "pubsub_type": 771,
+        "ego_ctrl_mode": 3,
+        "receive_buffer_size": 55,
+        "verified_release": "25.S4.MolitComp03",
+        "enum_evidence": "config/morai/control-mode-enums-20261027.json",
+        "note": "Installed enum: Keyboard=1, GameWheel=2, AutoMode=3. Historical template value 2 is preserved as provenance, not used as the autonomous preset mode. UDP payload AutoMode remains 2."
       }
     }
   },

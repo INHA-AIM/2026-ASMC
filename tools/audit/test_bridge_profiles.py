@@ -63,6 +63,51 @@ class BridgeProfileContractTest(unittest.TestCase):
         network = next(i for i in root.findall('include') if i.get('file').endswith('/morai_udp_bridge.launch'))
         self.assertEqual(next(a.get('value') for a in network.findall('arg') if a.get('name')=='invert_steer'),'$(arg invert_steer)')
 
+    def test_missing_import_mode_cannot_fall_back_to_udp_mode(self):
+        for release in ('26r1', 'molitcomp03'):
+            for bad in (None, 2):
+                contract = copy.deepcopy(load_contract())
+                if bad is None:
+                    del contract['network_templates'][release]['control_import']
+                else:
+                    contract['network_templates'][release]['control_import']['ego_ctrl_mode'] = bad
+                with self.assertRaisesRegex(RuntimeError, 'JSON AutoMode=3'):
+                    render_profile(contract, release, 'lan2lan')
+
+    def test_driving_mode_and_udp_mode_are_distinct(self):
+        contract = load_contract()
+        evidence = json.loads((REPO_ROOT / 'config/morai/control-mode-enums-20261027.json').read_text())
+        self.assertEqual({'Keyboard': 1, 'GameWheel': 2, 'AutoMode': 3},
+                         {key: evidence['values'][key] for key in ('Keyboard', 'GameWheel', 'AutoMode')})
+        for release in ('26r1', 'molitcomp03'):
+            for transport in ('local', 'lan2lan'):
+                document = render_profile(contract, release, transport)
+                rows = [e for ego in document['egoNetworkData'] for e in ego['listEgoNetworkInfo']]
+                control = next(e for e in rows if e['Division_TYPE'] == 3)
+                self.assertEqual(3, control['EgoCtrlConfig']['egoCtrlMode'])
+                self.assertEqual(771, control['PUBSUB_TYPE'])
+                tf = next(e for e in rows if e['PUBSUB_TYPE'] == 267)
+                self.assertFalse(tf['config']['udpConfig']['isBufferThreadActivated'])
+        self.assertEqual(2, contract['channels']['ego_ctrl_cmd']['ctrl_mode'])
+
+    def test_versioned_catalog_cannot_mix_releases_or_gt_transport(self):
+        from render_morai_release_presets import render_catalog, CATALOG
+        catalog = json.loads(CATALOG.read_text())
+        rendered = render_catalog(load_contract(), catalog)
+        self.assertEqual(10, len(rendered))
+        for title in ('Local', 'LAN2LAN'):
+            self.assertEqual(rendered[f'261027_ASMC_{title}_Sensor_26.R1.H3.json'],
+                             rendered[f'261027_ASMC_{title}_Sensor_25.S4.MolitComp03.json'])
+        broken = copy.deepcopy(catalog)
+        name = '261027_ASMC_LAN2LAN_Sensor_26.R1.H3.json'
+        broken['files'][name]['version'] = '25.S4.MolitComp03'
+        with self.assertRaisesRegex(ValueError, 'Mismatched'):
+            render_catalog(load_contract(), broken)
+        broken = copy.deepcopy(catalog)
+        broken['files']['261027_ASMC_Local_SensorGT_26.R1.H3.json']['transport'] = 'lan2lan'
+        with self.assertRaisesRegex(ValueError, 'GT presets'):
+            render_catalog(load_contract(), broken)
+
     def test_repository_contract_is_valid(self):
         result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
         self.assertEqual("p3g_bridge_local_closeout_v1", result["baseline_id"])

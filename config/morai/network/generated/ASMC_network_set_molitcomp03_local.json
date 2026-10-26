@@ -81,8 +81,8 @@
             }
           },
           "EgoCtrlConfig": {
-            "egoCtrlMode": 2,
-            "_PUBSUB_TYPE": 0,
+            "egoCtrlMode": 3,
+            "_PUBSUB_TYPE": 771,
             "commType": 1,
             "ctrlSleepTime": 0.016666999086737633,
             "udpConfig": {

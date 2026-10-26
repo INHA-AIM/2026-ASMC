@@ -139,22 +139,27 @@ if [ "$REQUIRE_COMPETITION_STATUS" = true ] && [ "$GT" = true ]; then
   echo "[udp_bridge] ERROR: strict Competition acceptance cannot be combined with --gt." >&2
   exit 2
 fi
-NETWORK_PRESET_26R1="config/morai/network/generated/ASMC_network_set_26r1_${TRANSPORT_PROFILE}.json"
-NETWORK_PRESET_COMP="config/morai/network/generated/ASMC_network_set_molitcomp03_${TRANSPORT_PROFILE}.json"
+PRESET_TRANSPORT="Local"
+if [ "$TRANSPORT_PROFILE" = "lan2lan" ]; then PRESET_TRANSPORT="LAN2LAN"; fi
+NETWORK_PRESET_26R1="config/morai/presets/261027_ASMC_${PRESET_TRANSPORT}_Network_26.R1.H3.json"
+NETWORK_PRESET_COMP="config/morai/presets/261027_ASMC_${PRESET_TRANSPORT}_Network_25.S4.MolitComp03.json"
 SENSOR_PRESET_V2="config/morai/sensors/generated/ASMC_sensor_set_v2_${TRANSPORT_PROFILE}.json"
-SENSOR_PRESET_V3="config/morai/sensors/generated/ASMC_sensor_set_v3_${TRANSPORT_PROFILE}.json"
-SENSOR_PRESET_GT="config/morai/sensors/ASMC_sensor_set_GT.json"
+SENSOR_PRESET_V3="config/morai/presets/261027_ASMC_${PRESET_TRANSPORT}_Sensor_25.S4.MolitComp03.json"
+SENSOR_PRESET_R1="config/morai/presets/261027_ASMC_${PRESET_TRANSPORT}_Sensor_26.R1.H3.json"
+SENSOR_PRESET_GT="config/morai/presets/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json"
+SENSOR_PRESET_GT_R1="config/morai/presets/261027_ASMC_Local_SensorGT_26.R1.H3.json"
 
 # Parse and shift our CLI arguments before sourcing catkin setup files. Catkin
 # setup forwards the caller's positional parameters to _setup_util.py.
 cd "$ASMC_WS_ROOT"
-PRESETS=( "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP" "$SENSOR_PRESET_V2" "$SENSOR_PRESET_V3" )
-if [ "$GT" = true ]; then PRESETS+=( "$SENSOR_PRESET_GT" ); fi
+PRESETS=( "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP" "$SENSOR_PRESET_V2" "$SENSOR_PRESET_V3" "$SENSOR_PRESET_R1" )
+if [ "$GT" = true ]; then PRESETS+=( "$SENSOR_PRESET_GT" "$SENSOR_PRESET_GT_R1" ); fi
 for preset in "${PRESETS[@]}"; do
   if [ ! -f "$ASMC_WS_ROOT/$preset" ]; then
     echo "[udp_bridge] ERROR: generated MORAI preset is missing: $preset" >&2
     echo "  python3 tools/bridge/render_morai_network_profiles.py --write" >&2
-    echo "  python3 tools/bridge/render_morai_sensor_profiles.py --write" >&2
+    echo "  python3 tools/bridge/render_morai_sensor_profiles.py --write"
+    echo "  python3 tools/bridge/render_morai_release_presets.py --write" >&2
     exit 1
   fi
 done
@@ -201,10 +206,12 @@ echo "  MORAI preset   : import ONE file matching the installed release"
 echo "                   26r1       -> ${NETWORK_PRESET_26R1}"
 echo "                   competition -> ${NETWORK_PRESET_COMP}"
 if [ "$GT" = true ]; then
-  echo "  Sensor preset  : GT development -> ${SENSOR_PRESET_GT}"
+  echo "  Sensor preset  : MolitComp03 GT -> ${SENSOR_PRESET_GT}"
+  echo "                   26r1 GT -> ${SENSOR_PRESET_GT_R1}"
   echo "                   Intensity + Instance LiDAR configured 15 Hz; reload in MORAI UI"
 else
-  echo "  Sensor preset  : v3 deployment -> ${SENSOR_PRESET_V3}"
+  echo "  Sensor preset  : MolitComp03 v3 -> ${SENSOR_PRESET_V3}"
+  echo "                   26r1 v3 -> ${SENSOR_PRESET_R1}"
   echo "                   configured 15 Hz; actual complete scans may arrive slower"
   echo "                   v2 regression -> ${SENSOR_PRESET_V2} (lidar_rotation_rate:=10.0)"
 fi

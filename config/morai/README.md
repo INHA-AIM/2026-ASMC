@@ -8,16 +8,46 @@
 
 ## 어떤 파일을 로드하는가
 
-| MORAI release | 개발 PC 한 대 | 현장 두 PC |
-|---|---|---|
-| 26.R1.H3 | `network/generated/ASMC_network_set_26r1_local.json` | 검증용 `..._26r1_lan2lan.json` |
-| 25.S4.MolitComp03 | `network/generated/ASMC_network_set_molitcomp03_local.json` | `network/generated/ASMC_network_set_molitcomp03_lan2lan.json` |
+사용자가 불러올 정본은 [presets/catalog.json](presets/catalog.json)에 있는10개 파일이다.
+이름은 `YYMMDD_ASMC_LAN2LAN/Local_Network/Sensor_시뮬레이터버전.json` 형식이며 날짜는
+프리셋 개정일이다. GT는 일반 센서와 구분해 `SensorGT`를 쓰며 Local만 제공한다.
+
+| 버전 | 모드 | Network | Sensor |
+|---|---|---|---|
+|26.R1.H3|Local|[Network](presets/261027_ASMC_Local_Network_26.R1.H3.json)|[Sensor](presets/261027_ASMC_Local_Sensor_26.R1.H3.json)|
+|26.R1.H3|LAN2LAN|[Network](presets/261027_ASMC_LAN2LAN_Network_26.R1.H3.json)|[Sensor](presets/261027_ASMC_LAN2LAN_Sensor_26.R1.H3.json)|
+|25.S4.MolitComp03|Local|[Network](presets/261027_ASMC_Local_Network_25.S4.MolitComp03.json)|[Sensor](presets/261027_ASMC_Local_Sensor_25.S4.MolitComp03.json)|
+|25.S4.MolitComp03|LAN2LAN|[Network](presets/261027_ASMC_LAN2LAN_Network_25.S4.MolitComp03.json)|[Sensor](presets/261027_ASMC_LAN2LAN_Sensor_25.S4.MolitComp03.json)|
+
+각 Network/Sensor는 해당 버전의 `SaveFile/Network/<버전>` 또는
+`SaveFile/Sensor/<버전>`에만 배포한다. 자동저장 `NetworkInfo_*`/`SensorInfo_*`와 NPCGhost는
+MORAI 소유 파일이며 배포 이름으로 바꾸지 않는다. 기존 `network/generated`·`sensors/generated`
+이름은 호환·회귀 출처로 유지하고 UI 배포명은 위 정본으로 통일한다.
+일반 Sensor는 v3(카메라4대·VLP16·GPS·IMU)이며 LAN2LAN 내용은 사용자
+`8_Autonav_sensor.json`과 JSON 필드가 전부 같다. Local은 UDP IP만127.0.0.1로 바꾼다.
+26.R1.H3와 MolitComp03 Sensor의 내용은 같아도 버전 폴더 오선택 방지를 위해 별도 이름으로 배포한다.
+
+**모드 숫자:** [설치 바이너리 enum 근거](control-mode-enums-20261027.json)에서 두 버전 모두
+JSON `egoCtrlMode`는1=Keyboard,2=GameWheel,3=AutoMode다. 자율주행 정본은3으로 저장한다.
+UDP `#MoraiCtrlCmd$` payload의 CtrlMode는 별도 enum으로2=Auto이며 바꾸지 않는다.
+`PUBSUB_TYPE=771`이 MoraiCmdController 선택이다. 파일 로드만으로 실제 Auto 상태나 주행
+성공을 판정하지 않고 UI의 Control Mode·연결을 확인한다. 이 배포는 파일만 준비하며 새 제어를 보내지 않는다.
+이전 생성기의 MolitComp03 JSON mode2는 GameWheel 값이므로 정정했다.
+
+**9798·TF2:** Detail9798은 MolitComp03에 있는 별도138B 채널이며26.R1 원본에는 없다.
+LAN이라고 모든 채널을 상대 PC로 보내는 것은 아니다. 팀 bridge는 LAN에서 Detail을 수신·발행하지
+않으므로 기본 정본은 loopback을 유지한다. 별도 진단/주최 채점 수신에 필요한 경우 그 소비자와
+endpoint를 확인한 설정을 사용한다. type267은 TF2이고 팀 bridge 입력에 사용하지 않으므로
+버퍼 스레드 OFF·loopback을 유지한다. 이 플래그는 전체 센서·9099의 queue 설정이 아니다.
+
+팀 runtime 정본은 주최 채점 프로그램의 전체 설정을 대체하지 않는다.
+[채점 채널 경계](../../docs/operations/lan2lan-rehearsal.md#채점-전용-채널-아직-닫지-않은-경계)를 유지한다.
 
 파일 로드 뒤에는 **Network Settings의 Cmd Control 표시 이름이 `MoraiCmdController`인지**
 확인한다. `TrajectoryTrackingCmd`는 다른 제어 프로토콜이며 포트가9093으로 같아도 현재
 `/ctrl_cmd` 패킷을 소비하지 않는다. 2026-10-26 실제 UI와 현재 PC 저장본을 대조해
 26R1 생성본의 제어 선택을 수정했다. `templates/`의 과거 export는 출처로 보존하고,
-`bridge_profiles_v1.json`의 `control_import`가 검증된 제어 선택만 적용한다.
+`bridge_profiles_v1.json`의 `control_import`가 controller 선택과 JSON 주행 모드를 명시한다.
 기존에 Windows SaveFile로 복사한 JSON은 저장소 수정으로 자동 갱신되지 않는다.
 새 `generated/` 파일을 불러온 뒤 실제 드롭다운 이름·포트·연결 상태를 다시 확인한다.
 2026-10-26에는 현재 PC의 `SaveFile/Network/26.R1.H3`에 있는 생성본4개도 저장소와
@@ -54,6 +84,8 @@ python3 tools/bridge/render_morai_network_profiles.py --write
 python3 tools/bridge/render_morai_network_profiles.py --check
 python3 tools/bridge/render_morai_sensor_profiles.py --write
 python3 tools/bridge/render_morai_sensor_profiles.py --check
+python3 tools/bridge/render_morai_release_presets.py --write
+python3 tools/bridge/render_morai_release_presets.py --check
 ```
 
 `archive/ASMC_network_set_26r1_local_legacy_9111.json`은 과거 bag/run 재현용이다. 새 실행에
@@ -69,7 +101,7 @@ Ego status의 type770/295와 나머지 release별 schema는 유지한다.
 | 제어 설정 | 26.R1.H3 생성본 | 25.S4.MolitComp03 생성본 |
 |---|---|---|
 | Cmd Control | MoraiCmdController (`PUBSUB_TYPE=771`) | MoraiCmdController (`PUBSUB_TYPE=771`) |
-| import의 `egoCtrlMode` | 3 (현재 PC UI 저장본으로 확인) | 2 (기존 팀/주최 import 계약) |
+| import의 `egoCtrlMode` | 3=AutoMode | 3=AutoMode (설치 enum으로 정정) |
 | import의 `receiveBufferSize` | 59 | 55 |
 | Host/Destination PORT | 9093/9094 | 9093/9094 |
 | UDP payload의 CtrlMode | 2=AutoMode | 2=AutoMode |
@@ -100,7 +132,7 @@ ROS 조향은 좌회전 양수 rad다. **대회용 MolitComp03는 검증된 기�
 주최 PC MolitComp network의 10개 type은 팀 local dev의 공통 부분이며, 팀 dev에만 type 266
 SensorSync와 type 783 MoraiSL subscriber가 더 있다. 이 둘은 LAN으로 승격하지 않는다. 두
 MolitComp 원본에서 공통 entry의 종류 차이는 없고, 설정 차이는 TF2(type 267)의 network 활성
-상태와 Ctrl mode(주최 2, 팀 원본 1)다. MolitComp 생성기는 Ctrl을 mode2로 정규화한다.
+상태와 Ctrl mode(주최 2, 팀 원본 1)다. 과거 생성기는 이 값을 UDP mode2와 혼동했다. 현재 생성본의 JSON 주행 모드는3이며 원본은 보존한다.
 
 현재 MolitComp03의 CompetitionInfoPublisher는 type295 `9088→9099`다. type787 `9797→9798`은 별도 Detail이다. type 258
 `7603→7502`는 연속 송신형 TrafficLight Status publisher다. 이것은

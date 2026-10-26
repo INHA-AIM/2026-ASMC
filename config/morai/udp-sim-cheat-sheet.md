@@ -26,7 +26,7 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
    (10 Hz 과거 회귀가 필요할 때만 `...v2_local.json`)
 4. **Network Settings**: `network/generated/ASMC_network_set_26r1_local.json` Import
    (현재 bridge 호환 Ego **9099** · Object **7505** · Collision **9092** 포함)
-5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9093 / 9094**, mode **2**
+5. **Cmd Control**: MoraiCmdController(type771), Host/Dest **9093 / 9094**. JSON `egoCtrlMode=3`(Auto), UDP payload `CtrlMode=2`(Auto).
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
 7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/vehicle/state`
 

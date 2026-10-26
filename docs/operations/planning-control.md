@@ -165,7 +165,8 @@ Keyboard/P와 `/ctrl_cmd` 발행자0을 확인했다. 이26R1 대조의 직접 �
 
 네트워크 파일의 release별 제어 선택은 [MORAI 설정표](../../config/morai/README.md#network-export-차이)가
 정본이다. 26R1 생성본은 type786→771, import `egoCtrlMode`2→3으로 수정했고 MolitComp03의
-type771·import mode2는 유지했다. 두 경우 모두 UDP payload CtrlMode는2다. 현재 PC 저장본과
+type771은 유지하고 import mode는 설치 enum 확인 후3=AutoMode로 정정했다. 두 버전 모두
+JSON1=Keyboard,2=GameWheel,3=AutoMode이며 UDP payload CtrlMode는 별도로2다. 현재 PC 저장본과
 소스 template의 SHA를 구분해 계약에 보존했다. Windows SaveFile의 옛 복사본은 자동 갱신되지 않는다.
 
 `/morai_udp_bridge/diagnostics`의 cmd 항목에 실제 로딩한 `cmd_ip`, `cmd_port`, `cmd_bytes`,

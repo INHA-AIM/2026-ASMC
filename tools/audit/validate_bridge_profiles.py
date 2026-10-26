@@ -425,9 +425,9 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             _require(
                 generated_ctrl["PUBSUB_TYPE"] == 771
                 and import_config["commType"] == 1
-                and import_config["egoCtrlMode"] == (3 if release == "26r1" else 2)
+                and import_config["egoCtrlMode"] == 3
                 and import_udp["receiveBufferSize"] == (59 if release == "26r1" else 55),
-                f"{release}/{transport} must select MoraiCmdController, not TrajectoryTrackingCmd",
+                f"{release}/{transport} must select MoraiCmdController and JSON AutoMode=3",
             )
             if release == "26r1":
                 _require(import_config["_PUBSUB_TYPE"] == 771,
@@ -724,6 +724,9 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         },
         "P3-G local closeout evidence changed",
     )
+
+    from render_morai_release_presets import check_all as check_release_presets
+    check_release_presets(contract)
 
     return {
         "baseline_id": contract["baseline_id"],
