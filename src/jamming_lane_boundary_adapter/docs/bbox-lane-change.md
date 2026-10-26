@@ -24,7 +24,7 @@ JAMMING 진입 시 이전에 실행되지 않은 명령의 차선변경 진행�
 
 ## 동작
 
-기본 `ignore_bbox_during_lane_change=true`: 차선변경 시작 조건을 통과한 후부터 이동 완료까지는
+기본 `ignore_bbox_during_lane_change=true`: 장애물 회피용 차선변경 시작 조건을 통과한 후부터 이동 완료까지는
 BBOX 검출(목표 차로 포함), UNKNOWN/보닛 잘림, 먼 물체 판정, BBOX 유실·지연으로 제동하지 않는다.
 BBOX 기반 속도 상한도 이 구간에서는 제외하며 변경 속도/곡률 상한은 유지한다.
 카메라 차선 입력 유실, 경로 생성 실패, 비상정지, 변경 시간 초과에서는 여전히 정지한다.
@@ -55,8 +55,18 @@ BBOX 기반 속도 상한도 이 구간에서는 제외하며 변경 속도/곡�
   변경 중 정지나 입력 유실이 생겨도 출발 차로로 되돌리지 않는다.
 - 기본 `one_lane_change_only=false`: 완료 후 새 내 차로에 장애물이 생기면 반대편 차로로 다시 변경한다.
   변경 완료 후 `lane_change_cooldown=4.0`초 동안은 재변경을 대기하며, 이때 내 차로 장애물이 있으면 제동한다.
-  대기 후에도 옆 차로 연속 미검출과 유효 경로가 확인되어야 변경한다. 장애물 없는 자동 복귀는 하지 않는다.
+  대기 후에도 옆 차로 연속 미검출과 유효 경로가 확인되어야 변경한다. standalone 기본 설정에서는 장애물 없는 자동 복귀를 하지 않는다.
   한 번만 변경하려면 `one_lane_change_only:=true`로 실행한다. 각 변경 시작 시 완료 상태를 초기화한다.
+- `return_to_entry_lane=true`인 통합 `autonomy_no_bridges_v2.launch`에서는 회피 후 진입 차로로
+  복귀할 수 있다. 변경 완료 후 기존 4초 대기, 양쪽 차로의 1초 연속 미검출과 서로 다른
+  BBOX 3 frame, 관측된 목표 차로와 차체 경계 내 경로를 모두 확인한다. UNKNOWN, 먼 물체,
+  잘림 추적, 입력 유실은 복귀 확인을 초기화한다. 복귀 조건이 부족하면 현재의 안전한 차로를
+  계속 따라간다. 복귀 중에는 `ignore_bbox_during_lane_change=true`여도 목표 차로 검출과
+  BBOX 신선도 검사를 유지한다. `one_lane_change_only=true`이면 복귀하지 않는다.
+  이미 시작한 복귀가 입력 공백으로 멈췄다면, 새 유효 frame에서 목표 차로 미검출을
+  확인하는 즉시 같은 복귀를 재개한다. 시작 전의 1초/3 frame 대기를 매번 반복하지 않는다.
+  standalone 기본값은 false다. 진입 차로는 JAMMING 진입 때 새로 관측해 저장하며
+  `entry_lane`, `returning_to_entry` 진단으로 확인한다. 전방 미검출의 한계는 아래 설명과 같다.
 - 차선 입력 누락/차선 단절/비상정지는 항상 제동한다. 오래된 BBOX/UNKNOWN/양 차로 점유는
   변경 전후 또는 `ignore_bbox_during_lane_change=false`인 변경 중에 제동한다.
 - 변경 중에는 목표 차로를 추종한다. 원래 차로의 먼 부분이 가려져도 목표 경로와 차량
@@ -86,15 +96,7 @@ BBOX 판정 노드도 함께 실행한다. GPU detector는 중복 실행하지 �
 roslaunch asmc_camera camera.launch mode:=active models:=objects
 ```
 
-아래는 별도 GPU 모델이 아니라 카메라 결과의 전방 CPU 변환이다. 이미 변환 노드가 실행 중이면 추가로 시작하지 않는다:
-
-```bash
-docker exec -it asmc-ros-noetic bash -lc '
-source /opt/ros/noetic/setup.bash &&
-source /root/ws/devel/setup.bash &&
-source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&
-'
-```
+전방 검출은 `/perception/camera/objects`에서 직접 받는다. 별도 detector 어댑터와 중첩 workspace source는 필요 없다. 기본 소비 cutoff는 0.7이며 `bbox_conf_thres`로 지정한다.
 
 차선 추종 + BBOX 차선변경 + RViz (**JAMMING 모드에서 `/ctrl_cmd/jamming` 발행**):
 
@@ -102,7 +104,6 @@ source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&
 docker exec -it -e DISPLAY="$DISPLAY" asmc-ros-noetic bash -lc '
 source /opt/ros/noetic/setup.bash &&
 source /root/ws/devel/setup.bash &&
-source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&
 roslaunch lane_boundary_adapter camera_bbox_lane_change.launch \
   enable_control:=true \
   target_speed_kph:=20.0 \
@@ -212,6 +213,8 @@ BBOX나 경로 조건 때문에 정지해도 최신 유효 차선은 계속 표�
 
 
 ## YOLO 보닛 제외
+
+아래 crop 설명은 구형 입력의 기록이다. 현재 기본은 카메라 원본 검출과 classifier의 ego mask이며, 주행 전용 crop 추론을 시작하지 않는다.
 
 현재 전방 1280×720 프레임에서 자차 보닛이 y≈578부터 보이며 YOLO가 이를 car로 검출했다.
 `camera_bbox_crop.py`가 주행 전용 YOLO 입력의 아래 21%를 제외해 1280×568로 전달한다.

@@ -209,6 +209,7 @@
 | `camera_calibration_config` | `(빈 문자열)` | — |
 | `experimental_tunnel_filter` | `(빈 문자열)` | — |
 | `publish_tf` | `false` | — |
+| `planning_output` | `false` | Opt-in qualified planning companion; normal shadow arrays stay unchanged |
 | `tf_child_frame` | `lidar_pipeline/lidar_leveled` | — |
 | `debug` | `false` | Publish sampled stages for view.launch; no algorithm changes |
 | `debug_rate_hz` | `5.0` | — |
@@ -358,6 +359,7 @@
 | `motion_debug_topic` | `/lidar/motion_debug` | — |
 | `output_topic` | `/planning/objects` | — |
 | `state_topic` | `/planning/vehicle/state` | — |
+| `asmc_input_topic` | `/migration/lidar/planning_observations_map` | — |
 
 ## Dashboard
 
@@ -451,6 +453,7 @@
 | `diagnostics_topic` | `/planning/camera_bbox_lane_change/diagnostics` | — |
 | `emergency_stop_topic` | `/planning/camera_bbox_lane_change/emergency_stop` | — |
 | `bbox_topic` | `/planning/camera_bbox_lane/result` | — |
+| `bbox_conf_thres` | `0.7` | — |
 | `reference_lane_topic` | `/planning/camera_bbox_lane_change/reference_lane` | — |
 | `far_obstacle_speed_kph` | `5.0` | — |
 | `bbox_source_timeout` | `0.5` | — |
@@ -460,6 +463,7 @@
 | `adjacent_clear_frames` | `3` | — |
 | `ignore_bbox_during_lane_change` | `true` | — |
 | `one_lane_change_only` | `false` | — |
+| `return_to_entry_lane` | `false` | — |
 | `obstacle_lateral_margin` | `0.30` | — |
 | `obstacle_longitudinal_margin` | `0.5` | — |
 | `vehicle_front` | `3.845` | — |
@@ -570,7 +574,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |
+| `lidar_backend` | `main` | — |
 
 ## Scenario planning composition
 
@@ -578,4 +582,4 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |
+| `lidar_backend` | `main` | — |

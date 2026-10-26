@@ -23,13 +23,15 @@ bool DetectedMsgConverter::toTrackedObject(
   if (!object || message.id < 0 || !std::isfinite(message.center.x) ||
       !std::isfinite(message.center.y) || !std::isfinite(message.yaw) ||
       !std::isfinite(message.vx) || !std::isfinite(message.vy) ||
-      message.motion_state > kMotionDynamic) {
+      message.motion_state > kMotionDynamic ||
+      (message.velocity_unavailable && (message.motion_state != 0 || message.vx != 0. || message.vy != 0.))) {
     return false;
   }
 
   object->id = message.id;
   object->type = type;
   object->motion_state = static_cast<MotionState>(message.motion_state);
+  object->velocity_unavailable = message.velocity_unavailable;
   object->x = message.center.x;
   object->y = message.center.y;
   object->yaw = message.yaw;

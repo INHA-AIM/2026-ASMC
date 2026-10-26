@@ -25,6 +25,7 @@
 #include <asmc_lidar/ros/scan_trace.hpp>
 #include <asmc_lidar/ros/ros_inputs.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
+#include <asmc_lidar/ros/planning_output.hpp>
 #include <asmc_lidar/ros/debug_publisher.hpp>
 
 #include <diagnostic_msgs/DiagnosticArray.h>
@@ -283,6 +284,8 @@ class LidarPipelineNode {
     pnh_.param<std::string>("objects_map_topic", map_topic_, "objects_map");
     pnh_.param<std::string>("observations_local_topic", local_observation_topic_, "observations_local");
     pnh_.param<std::string>("observations_map_topic", map_observation_topic_, "observations_map");
+    pnh_.param("planning_output", planning_output_, false);
+    pnh_.param<std::string>("planning_observations_topic", planning_topic_, "planning_observations_map");
     pnh_.param<std::string>("tracks_local_topic", local_tracking_topic_, "tracks_local");
     pnh_.param<std::string>("tracks_map_topic", map_tracking_topic_, "tracks_map");
     pnh_.param<std::string>("diagnostics_topic", diagnostics_topic_, "diagnostics");
@@ -309,6 +312,7 @@ class LidarPipelineNode {
     std::vector<std::string> refused;
     std::set<std::string> output_names;
     std::vector<const std::string*> outputs = {&local_topic_, &map_topic_, &diagnostics_topic_, &trace_topic_, &local_observation_topic_, &map_observation_topic_, &local_tracking_topic_, &map_tracking_topic_};
+    if (planning_output_) outputs.push_back(&planning_topic_);
     const auto debug_topics = DebugPublisher::TopicNames(debug_config_.topic_prefix);
     for (const auto& topic : debug_topics) outputs.push_back(&topic);
     for (const std::string* topic : outputs) {
@@ -405,6 +409,7 @@ class LidarPipelineNode {
   void Advertise() {
     local_observation_pub_ = nh_.advertise<asmc_msgs::LidarObservation>(local_observation_topic_, 5);
     map_observation_pub_ = nh_.advertise<asmc_msgs::LidarObservation>(map_observation_topic_, 5);
+    if (planning_output_) planning_pub_ = nh_.advertise<asmc_msgs::LidarPlanningObservation>(planning_topic_, 2);
     local_tracking_pub_ = nh_.advertise<asmc_msgs::LidarTrackingObservation>(local_tracking_topic_, 2);
     map_tracking_pub_ = nh_.advertise<asmc_msgs::LidarTrackingObservation>(map_tracking_topic_, 2);
     local_pub_ = nh_.advertise<asmc_msgs::LidarObjectArray>(local_topic_, 5);
@@ -567,6 +572,16 @@ class LidarPipelineNode {
       if (map_pub_.getNumSubscribers()) map_pub_.publish(out.arrays.map);
       PublishObservation(local_observation_pub_, out.arrays.local, pending);
       PublishObservation(map_observation_pub_, out.arrays.map, pending);
+      if (planning_output_) {
+        asmc_msgs::LidarObservation observation;
+        observation.objects = out.arrays.map;
+        observation.producer_session_id = epoch_.session();
+        observation.generation = pending.scan.generation;
+        observation.scan_sequence = pending.scan.scan_sequence;
+        observation.config_id = config_.config_id;
+        observation.calibration_id = config_.calibration_id;
+        planning_pub_.publish(asmc::lidar::runtime::PlanningOutput(observation, out.result));
+      }
       PublishTracking(local_tracking_pub_, out.arrays.local, out.arrays.local_tracking, pending);
       PublishTracking(map_tracking_pub_, out.arrays.map, out.arrays.map_tracking, pending);
     }
@@ -826,6 +841,9 @@ class LidarPipelineNode {
 
   ros::Publisher local_pub_, map_pub_, diagnostics_pub_, trace_pub_;
   ros::Publisher local_observation_pub_, map_observation_pub_;
+  ros::Publisher planning_pub_;
+  bool planning_output_ = false;
+  std::string planning_topic_;
   ros::Publisher local_tracking_pub_, map_tracking_pub_;
   std::string local_observation_topic_, map_observation_topic_;
   std::string local_tracking_topic_, map_tracking_topic_;

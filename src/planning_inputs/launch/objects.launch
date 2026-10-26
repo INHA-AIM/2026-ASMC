@@ -4,14 +4,22 @@
   <arg name="motion_debug_topic" default="/lidar/motion_debug"/>
   <arg name="output_topic" default="/planning/objects"/>
   <arg name="state_topic" default="/planning/vehicle/state"/>
+  <!-- Retain the branch's measured-KF companion for reproducible bag validation.
+       Exactly one adapter publishes output_topic for each source policy. -->
+  <arg name="asmc_input_topic" default="/migration/lidar/planning_observations_map"/>
+  <node if="$(eval arg('source_policy') == 'asmc_lidar_companion')" pkg="planning_inputs" type="asmc_lidar_planning_adapter"
+        name="asmc_lidar_planning_adapter" output="screen" required="true">
+    <param name="input_topic" value="$(arg asmc_input_topic)"/>
+    <param name="output_topic" value="$(arg output_topic)"/>
+  </node>
   <!-- Frozen legacy wire is rollback-only. Common observations are consumed directly. -->
-  <node unless="$(eval arg('source_policy') == 'asmc_lidar')" pkg="planning_inputs" type="tracked_wire_bridge.py" name="planning_tracked_wire_bridge" output="screen">
+  <node unless="$(eval arg('source_policy') in ['asmc_lidar', 'asmc_lidar_companion'])" pkg="planning_inputs" type="tracked_wire_bridge.py" name="planning_tracked_wire_bridge" output="screen">
     <param name="source_policy" value="$(arg source_policy)"/>
     <param name="motion_debug_topic" value="$(arg motion_debug_topic)"/>
     <param name="input_topic" value="$(arg input_topic)"/>
     <param name="output_topic" value="/planning/input/tracked_objects"/>
   </node>
-  <node pkg="planning_inputs" type="planning_objects_adapter" name="planning_objects_adapter" output="screen" required="true">
+  <node unless="$(eval arg('source_policy') == 'asmc_lidar_companion')" pkg="planning_inputs" type="planning_objects_adapter" name="planning_objects_adapter" output="screen" required="true">
     <rosparam command="load" file="$(find planning_inputs)/config/motion_params.yaml"/>
     <rosparam command="load" file="$(find planning_inputs)/config/object_filter_params.yaml"/>
     <param name="drivable_mask_image" value="$(find planning_inputs)/config/validated_0781402/road_mask.png"/>

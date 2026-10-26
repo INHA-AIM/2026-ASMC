@@ -1,0 +1,49 @@
+{
+  "source": "/data/rosbags/driving_debug/drive_2026-10-26-00-43-15_0.bag",
+  "duration_s": 572.4784750938416,
+  "tail_s": 20,
+  "gps_loss_s": 564.4526946544647,
+  "gps_recovery_s": null,
+  "camera": {
+    "front_frames": 146,
+    "converted_valid": 146,
+    "exact_image_match": 146,
+    "age_over_500ms": 0
+  },
+  "max_camera_age_s": 0.2459402084350586,
+  "strict_velocity_gate_before_fix": {
+    "counts": {
+      "frames": 5771,
+      "status:4": 97,
+      "duplicate_stamp": 0,
+      "velocity_withheld_frames": 141,
+      "velocity_qualified_frames": 5533,
+      "objects": 4525,
+      "objects_without_velocity": 160,
+      "status:2": 4190,
+      "map_valid_gaps_over_300ms": 17,
+      "status:1": 1484,
+      "map_observed_after_gps_timeout": 0
+    },
+    "motion_states": {
+      "0": 624,
+      "1": 711,
+      "2": 492,
+      "3": 2698
+    },
+    "max_usable_frame_gap_before_jamming_s": 0.7130308151245117,
+    "max_map_valid_usable_frame_gap_s": 0.7130308151245117
+  },
+  "planning_gate": {
+    "accepted": 5674,
+    "rejected": 97,
+    "objects": 4525,
+    "unmeasured_objects_retained": 160,
+    "bad_unmeasured_flags": 0,
+    "map_valid_max_gap_s": 0.225314,
+    "map_valid_gaps_over_300ms": 0,
+    "reasons": {
+      "map_observation_unavailable": 97
+    }
+  }
+}

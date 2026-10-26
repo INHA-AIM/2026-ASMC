@@ -59,6 +59,21 @@ TEST(DetectedMsgConverter, LowThreatPreservesVectorButUsesStaticSpeed) {
   EXPECT_DOUBLE_EQ(converted.obstacles.front().speed, 0.0);
 }
 
+TEST(DetectedMsgConverter, UnavailableVelocityRemainsExplicitUnknownOccupancy) {
+  planning_inputs::DetectedObjectArray message;
+  auto object = MakeObject(8, 1);
+  object.motion_state = object.MOTION_UNKNOWN;
+  object.velocity_unavailable = true;
+  object.vx = object.vy = 0.;
+  message.objects.push_back(object);
+  const auto converted = DetectedMsgConverter::toPerceptionObjects(message);
+  ASSERT_EQ(converted.vehicles.size(), 1u);
+  EXPECT_TRUE(converted.vehicles[0].velocity_unavailable);
+  EXPECT_EQ(converted.vehicles[0].motion_state, MotionState::UNKNOWN);
+  message.objects[0].motion_state = object.MOTION_LOW_THREAT;
+  EXPECT_TRUE(DetectedMsgConverter::toPerceptionObjects(message).vehicles.empty());
+}
+
 TEST(DetectedMsgConverter, RejectsInvalidNumericObjects) {
   planning_inputs::DetectedObjectArray message;
   auto invalid = MakeObject(2, 2);

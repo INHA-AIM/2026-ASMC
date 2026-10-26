@@ -27,6 +27,9 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_l
 다른 상태 입력으로 자동 전환하지 않습니다. `state_source:=gps_imu`는 GPS/IMU 추정만 사용하고
 `external`은 외부 `/planning/vehicle/state` producer를 요구합니다.
 통합 객체 source는 `lidar`이며 새 선택 `lidar_source_policy:=asmc_lidar`는 `/perception/lidar/tracks_map`을 직접 소비합니다. 속도/4단계 운동·원본 OBB·세대/시각/상태를 확인하고 두 번째 인지 필터·JSON join을 실행하지 않습니다. 실제 인수 전 통합 기본은 구 `validated_lidar`입니다. 이 구 경로는 `/last_lidar`와 exact source stamp의 `/lidar/motion_debug`를 연결하며 `main_raw`는 기존 비교용입니다. [연결 의미와 복구](../../src/asmc_lidar/docs/planning-runtime.md)를 따릅니다.
+기존 scen_runner 인지 실행기의 `/migration/lidar/planning_observations_map`을 사용할 때는
+`lidar_source_policy:=asmc_lidar_companion`을 선택합니다. `asmc_lidar`의 공용 추적 메시지와
+서로 바꿔 연결하지 않습니다. [입력 경로별 실행](lidar-cutover.md#main-병합-후-입력-선택)을 참고하세요.
 통합 launch에는 제어 선택기와 `enable_control=true`인 재밍 어댑터가 포함됩니다.
 
 ## 개별 실행
@@ -48,7 +51,7 @@ MPC 입력 누락 시 STOP은 fail-safe 확인이며 정상 추종 증거가 아
 # 관찰용 dashboard; 새 planner를 실행하지 않음
 roslaunch asmc_planner dashboard.launch state_topic:=/planning/vehicle/state
 rostopic info /ctrl_cmd
-rostopic info /YOLO/BBox
+rostopic info /perception/camera/objects
 rostopic hz /planning/vehicle/state
 rostopic hz /planning/objects
 rostopic hz /planning/trajectory

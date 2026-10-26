@@ -16,6 +16,9 @@ class PlanningUnavailable(ConnectionError):
 
 def settings(path=None):
     data = load_yaml(Path(path) if path else TOOL_ROOT/'config/stack.yaml')
+    data.setdefault('lidar_backend', 'main')
+    if data['lidar_backend'] not in ('main', 'asmc_lidar'):
+        raise ValueError('lidar_backend must be main or asmc_lidar')
     if not re.fullmatch(r'[a-zA-Z0-9_-]+', str(data.get('instance', ''))):
         raise ValueError('stack instance must contain only letters, numbers, _ or -')
     for name in ('startup_timeout_s', 'stop_timeout_s', 'heartbeat_timeout_s', 'client_timeout_s'):

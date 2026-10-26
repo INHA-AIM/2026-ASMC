@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -68,6 +69,40 @@ class CameraRuntimeTest(unittest.TestCase):
             self.write_profile()
             with self.assertRaises(ValueError):
                 configure_camera_runtime({}, self.launch, self.root)
+
+    def add_lane(self):
+        for name in ('source-manifest', 'checkpoint', 'local-manifest'):
+            (self.root/name).write_text(name)
+        digest = lambda name: hashlib.sha256((self.root/name).read_bytes()).hexdigest()
+        self.profile['lane'] = dict(engine_manifest='local-manifest',
+            source_manifest_sha256=digest('source-manifest'), checkpoint_sha256=digest('checkpoint'),
+            validation=dict(passed=True, manifest_sha256=digest('local-manifest')))
+        self.launch.nodes.append(S(type='semantic_inference_node.py', namespace='/', name='camera_lane'))
+        self.launch.params.update({
+            '/camera_lane/backend': S(value='twinlite_tensorrt'),
+            '/camera_lane/checkpoint': S(value=str(self.root/'checkpoint')),
+            '/camera_lane/engine_manifest': S(value=str(self.root/'source-manifest'))})
+        self.write_profile()
+
+    def test_local_lane_selected_without_replacing_checkpoint(self):
+        self.add_lane()
+        configure_camera_runtime({}, self.launch, self.root)
+        self.assertEqual(self.launch.params['/camera_lane/engine_manifest'].value,
+                         str(self.root/'local-manifest'))
+        self.assertEqual(self.launch.params['/camera_lane/checkpoint'].value,
+                         str(self.root/'checkpoint'))
+
+    def test_changed_lane_source_or_candidate_rejected_before_any_mutation(self):
+        self.add_lane()
+        for name in ('source-manifest', 'checkpoint', 'local-manifest'):
+            with self.subTest(name=name):
+                before = copy.deepcopy(self.launch)
+                path = self.root/name
+                path.write_text('changed')
+                with self.assertRaises(ValueError):
+                    configure_camera_runtime({}, self.launch, self.root)
+                self.assertEqual(self.launch, before)
+                path.write_text(name)
 
 
 if __name__ == '__main__':

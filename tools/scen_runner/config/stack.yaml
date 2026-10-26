@@ -1,6 +1,7 @@
 # Four terminals in the same ROS container/workspace. Physics/model settings
 # come from the team's existing launches; these values only coordinate startup.
 instance: validation
+lidar_backend: asmc_lidar  # main restores the retained legacy pipeline
 gpu_python: auto  # ASMC_YOLO_PYTHON, otherwise the ROS system Python
 twinlite_root: auto  # existing /opt checkout, or .runtime/TwinLiteNetPlus
 camera_runtime: auto  # .runtime/camera_runtime.json when prepared; off uses the team engine

@@ -1,11 +1,39 @@
 """Select a locally verified camera engine without copying the team's model settings."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
 import sys
 
 from scen_runner.config import TOOL_ROOT
+
+
+def lane_override(profile, launch, tool_root):
+    """Validate the optional local lane engine before changing any launch params."""
+    lane = profile.get('lane')
+    if lane is None:
+        return None
+    nodes = [n for n in launch.nodes if n.type == 'semantic_inference_node.py']
+    if len(nodes) != 1:
+        raise ValueError('로컬 차선 엔진에는 차선 노드 하나가 필요합니다.')
+    prefix = nodes[0].namespace+nodes[0].name+'/'
+    params = launch.params
+    manifest = Path(lane['engine_manifest'])
+    if not manifest.is_absolute():
+        manifest = tool_root/manifest
+    def sha(path):
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    if (params[prefix+'backend'].value != 'twinlite_tensorrt' or
+            sha(params[prefix+'engine_manifest'].value) != lane.get('source_manifest_sha256') or
+            sha(params[prefix+'checkpoint'].value) != lane.get('checkpoint_sha256')):
+        raise ValueError('팀 차선 모델 설정이 변경됐습니다. 로컬 엔진을 다시 변환하세요.')
+    validation = lane.get('validation', {})
+    if (validation.get('passed') is not True or
+            validation.get('manifest_sha256') != sha(manifest)):
+        raise ValueError('차선 엔진 기본 동작 검사 기록이 일치하지 않습니다.')
+    # Runtime checks the manifest's engine hashes, GPU, TRT, shapes and classes.
+    return prefix+'engine_manifest', str(manifest)
 
 
 def configure_camera_runtime(config, launch, tool_root=TOOL_ROOT):
@@ -46,6 +74,7 @@ def configure_camera_runtime(config, launch, tool_root=TOOL_ROOT):
         dependencies = tool_root/dependencies
     if not engine.is_file() or not dependencies.is_dir():
         raise ValueError('로컬 카메라 엔진 또는 실행 환경이 없습니다: '+str(path))
+    lane = lane_override(profile, launch, tool_root)
     # The original detector verifies the engine SHA and class/head metadata
     # before inference. All other parameters remain owned by the team launch.
     params[prefix+'weights'].value = str(engine)
@@ -55,4 +84,7 @@ def configure_camera_runtime(config, launch, tool_root=TOOL_ROOT):
     env['PYTHONPATH'] = str(dependencies)+(os.pathsep+existing if existing else '')
     env['YOLO_AUTOINSTALL'] = 'false'
     node.env_args = list(env.items())
+    if lane:
+        params[lane[0]].value = lane[1]
+        print('[차선 엔진] '+lane[1], file=sys.stderr)
     print('[카메라 엔진] '+str(engine)+' · SHA256='+engine_sha[:12], file=sys.stderr)

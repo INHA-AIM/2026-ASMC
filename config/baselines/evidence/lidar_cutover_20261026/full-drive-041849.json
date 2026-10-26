@@ -1,0 +1,593 @@
+{
+  "files": [
+    {
+      "file": "asmc_lidar_full_2026-10-26-04-18-49_0.bag",
+      "duration_s": 182.8183147907257,
+      "bytes": 4298271822,
+      "start": "2026-10-26T04:18:50.096+09:00",
+      "end": "2026-10-26T04:21:52.914+09:00"
+    },
+    {
+      "file": "asmc_lidar_full_2026-10-26-04-21-52_1.bag",
+      "duration_s": 128.2045876979828,
+      "bytes": 4298569818,
+      "start": "2026-10-26T04:21:52.914+09:00",
+      "end": "2026-10-26T04:24:01.118+09:00"
+    },
+    {
+      "file": "asmc_lidar_full_2026-10-26-04-24-01_2.bag",
+      "duration_s": 20.779187202453613,
+      "bytes": 487164540,
+      "start": "2026-10-26T04:24:01.119+09:00",
+      "end": "2026-10-26T04:24:21.898+09:00"
+    }
+  ],
+  "duration_s": 331.8024866580963,
+  "split_gaps_s": [
+    3.24249267578125e-05,
+    0.00036454200744628906
+  ],
+  "recorded_topic_count": 104,
+  "raw_scan_count": 3370,
+  "control_publishers": [
+    "/asmc_control_selector"
+  ],
+  "mode_events": [
+    {
+      "t": 1792955941.2854533,
+      "elapsed_s": 11.189398050308228,
+      "time": "2026-10-26T04:19:01.285+09:00",
+      "value": 0
+    },
+    {
+      "t": 1792956213.6588666,
+      "elapsed_s": 283.5628113746643,
+      "time": "2026-10-26T04:23:33.658+09:00",
+      "value": 1
+    },
+    {
+      "t": 1792956242.0505114,
+      "elapsed_s": 311.9544560909271,
+      "time": "2026-10-26T04:24:02.050+09:00",
+      "value": 0
+    }
+  ],
+  "gps_events": [
+    {
+      "t": 1792955930.479999,
+      "elapsed_s": 0.3839437961578369,
+      "time": "2026-10-26T04:18:50.479+09:00",
+      "value": false
+    },
+    {
+      "t": 1792956213.6588676,
+      "elapsed_s": 283.5628123283386,
+      "time": "2026-10-26T04:23:33.658+09:00",
+      "value": true
+    },
+    {
+      "t": 1792956242.0501175,
+      "elapsed_s": 311.95406222343445,
+      "time": "2026-10-26T04:24:02.050+09:00",
+      "value": false
+    }
+  ],
+  "jamming": [
+    {
+      "start": "2026-10-26T04:23:33.658+09:00",
+      "end": "2026-10-26T04:24:02.050+09:00",
+      "duration_s": 28.391644716262817,
+      "complete_exit": true,
+      "speed_kph": {
+        "n": 1018,
+        "min": 0.03363742679357529,
+        "p50": 15.634634017944336,
+        "p95": 21.699848175048828,
+        "max": 24.81308937072754
+      },
+      "longest_speed_under_0_36kph_s": 0.13434457778930664,
+      "follower_reasons": {
+        "confirming_own_lane": 8,
+        "following": 404,
+        "following_path_outside_road": 31,
+        "bbox_classification_invalid:projection_source_expired": 88,
+        "approaching_unresolved_far_obstacle": 37
+      },
+      "bbox_input_errors": {
+        "waiting_for_bbox_after_activation": 2,
+        "waiting_for_bbox_matching_observed_lane": 6,
+        "": 472,
+        "bbox_classification_invalid:projection_source_expired": 88
+      },
+      "selector": {
+        "/ctrl_cmd/jamming fresh=false": 1,
+        "/ctrl_cmd/jamming fresh=true": 30
+      },
+      "post_exit_10s_speed_kph": {
+        "n": 337,
+        "min": 8.152270317077637,
+        "p50": 36.3859748840332,
+        "p95": 40.95256423950196,
+        "max": 41.26458740234375
+      },
+      "stop_diagnostic_bursts_s": [
+        {
+          "elapsed_s": 283.5856873989105,
+          "duration_s": 0.40051913261413574
+        },
+        {
+          "elapsed_s": 284.3359363079071,
+          "duration_s": 0.09994697570800781
+        },
+        {
+          "elapsed_s": 284.4856870174408,
+          "duration_s": 0.10024070739746094
+        },
+        {
+          "elapsed_s": 285.035507440567,
+          "duration_s": 0.15026640892028809
+        },
+        {
+          "elapsed_s": 288.98555874824524,
+          "duration_s": 0.05403852462768555
+        },
+        {
+          "elapsed_s": 289.18572998046875,
+          "duration_s": 0.10031604766845703
+        },
+        {
+          "elapsed_s": 289.6358571052551,
+          "duration_s": 0.1998763084411621
+        },
+        {
+          "elapsed_s": 290.2855477333069,
+          "duration_s": 0.05036568641662598
+        },
+        {
+          "elapsed_s": 290.4855303764343,
+          "duration_s": 0.05026364326477051
+        },
+        {
+          "elapsed_s": 291.2861089706421,
+          "duration_s": 0.299652099609375
+        },
+        {
+          "elapsed_s": 291.9356062412262,
+          "duration_s": 0.05014610290527344
+        },
+        {
+          "elapsed_s": 292.4356517791748,
+          "duration_s": 0.10017204284667969
+        },
+        {
+          "elapsed_s": 292.93578124046326,
+          "duration_s": 0.19996070861816406
+        },
+        {
+          "elapsed_s": 293.5366714000702,
+          "duration_s": 0.09917235374450684
+        },
+        {
+          "elapsed_s": 294.3356328010559,
+          "duration_s": 0.14999628067016602
+        },
+        {
+          "elapsed_s": 294.98594427108765,
+          "duration_s": 0.10012936592102051
+        },
+        {
+          "elapsed_s": 296.1854588985443,
+          "duration_s": 0.1003563404083252
+        },
+        {
+          "elapsed_s": 296.7861831188202,
+          "duration_s": 0.14977645874023438
+        },
+        {
+          "elapsed_s": 298.2359356880188,
+          "duration_s": 0.2999260425567627
+        },
+        {
+          "elapsed_s": 298.78595089912415,
+          "duration_s": 0.0997309684753418
+        },
+        {
+          "elapsed_s": 298.9863910675049,
+          "duration_s": 0.19975972175598145
+        },
+        {
+          "elapsed_s": 299.3357717990875,
+          "duration_s": 0.05005455017089844
+        },
+        {
+          "elapsed_s": 299.58577013015747,
+          "duration_s": 0.19988203048706055
+        },
+        {
+          "elapsed_s": 299.93558382987976,
+          "duration_s": 0.1502072811126709
+        },
+        {
+          "elapsed_s": 300.5356538295746,
+          "duration_s": 0.05043482780456543
+        },
+        {
+          "elapsed_s": 300.78575110435486,
+          "duration_s": 0.05012035369873047
+        },
+        {
+          "elapsed_s": 301.13560819625854,
+          "duration_s": 0.05028796195983887
+        },
+        {
+          "elapsed_s": 301.8858549594879,
+          "duration_s": 0.2501540184020996
+        },
+        {
+          "elapsed_s": 302.484335899353,
+          "duration_s": 0.20026230812072754
+        },
+        {
+          "elapsed_s": 302.7842435836792,
+          "duration_s": 0.15036988258361816
+        },
+        {
+          "elapsed_s": 303.0342752933502,
+          "duration_s": 0.3002433776855469
+        },
+        {
+          "elapsed_s": 304.58442521095276,
+          "duration_s": 0.1001441478729248
+        },
+        {
+          "elapsed_s": 305.6343312263489,
+          "duration_s": 0.15036988258361816
+        },
+        {
+          "elapsed_s": 306.1346650123596,
+          "duration_s": 0.1500563621520996
+        },
+        {
+          "elapsed_s": 306.5845718383789,
+          "duration_s": 0.10009384155273438
+        },
+        {
+          "elapsed_s": 306.9845771789551,
+          "duration_s": 0.10020804405212402
+        },
+        {
+          "elapsed_s": 307.2845814228058,
+          "duration_s": 0.24989032745361328
+        },
+        {
+          "elapsed_s": 308.03474259376526,
+          "duration_s": 0.15039396286010742
+        },
+        {
+          "elapsed_s": 308.2356970310211,
+          "duration_s": 0.0987851619720459
+        },
+        {
+          "elapsed_s": 308.834840297699,
+          "duration_s": 0.14938831329345703
+        },
+        {
+          "elapsed_s": 309.036105632782,
+          "duration_s": 0.04860544204711914
+        },
+        {
+          "elapsed_s": 309.2342281341553,
+          "duration_s": 0.15048789978027344
+        },
+        {
+          "elapsed_s": 310.0341897010803,
+          "duration_s": 0.050254106521606445
+        },
+        {
+          "elapsed_s": 310.284241437912,
+          "duration_s": 0.15104198455810547
+        },
+        {
+          "elapsed_s": 311.0345628261566,
+          "duration_s": 0.1498279571533203
+        },
+        {
+          "elapsed_s": 311.8840229511261,
+          "duration_s": 0.050369977951049805
+        }
+      ],
+      "private_objects_resume_after_exit_s": 0.461209774017334,
+      "normal_command_after_exit_s": 0.001325368881225586
+    }
+  ],
+  "lidar": {
+    "local_status": {
+      "(2, 'delivery_filtered_empty')": 1858,
+      "(2, 'observed_empty')": 208,
+      "(1, 'observed')": 1303
+    },
+    "planning_status": {
+      "(2, 'delivery_filtered_empty')": 1858,
+      "(2, 'observed_empty')": 208,
+      "(1, 'gps_bounded_prediction')": 948,
+      "(4, 'gps_recovering')": 11,
+      "(4, 'gps_invalid')": 344
+    },
+    "planning_packets": 3369,
+    "private_packets": 2944,
+    "private_objects": 2881,
+    "unmeasured_objects": 87,
+    "unmatched_private_packets": 0,
+    "private_geometry_count_or_validity_mismatch": 0,
+    "private_age_s": {
+      "n": 2944,
+      "min": 0.002687692642211914,
+      "p50": 0.005199909210205078,
+      "p95": 0.011430978775024414,
+      "max": 0.0684659481048584
+    },
+    "private_gaps_over_300ms": [
+      {
+        "elapsed_s": 117.2164740562439,
+        "duration_s": 0.3860197067260742,
+        "map_unavailable": true
+      },
+      {
+        "elapsed_s": 165.10915541648865,
+        "duration_s": 0.5338273048400879,
+        "map_unavailable": true
+      },
+      {
+        "elapsed_s": 283.5437841415405,
+        "duration_s": 28.87188172340393,
+        "map_unavailable": true
+      }
+    ],
+    "diagnostic_counter_deltas": {
+      "processed": 3355,
+      "invalid": 0,
+      "scans_received": 3355,
+      "scans_processed": 3355,
+      "stamp_errors": 0,
+      "conversion_errors": 0,
+      "overwritten_scans": 0,
+      "rejected_scans": 0,
+      "fusion_calls": 3355,
+      "fusion_matched": 3238,
+      "fusion_dropped": 118,
+      "fusion_confirmations_applied": 17,
+      "imu_rejected": 0,
+      "gps_rejected": 142,
+      "can_rejected": 0
+    },
+    "diagnostic_first": {
+      "processed": "7135",
+      "invalid": "1559",
+      "stamp_errors": "0",
+      "scans_received": "8694",
+      "scans_processed": "8694",
+      "overwritten_scans": "0",
+      "rejected_scans": "0",
+      "conversion_errors": "0",
+      "last_reject_reason": "",
+      "input_reason": "valid",
+      "map_reason": "gps_bounded_prediction",
+      "pose_reason": "ready",
+      "source_stamp_ns": "1792955931018611431",
+      "receipt_clock": "steady",
+      "receipt_ns": "378545536975706",
+      "processing_ns": "378545537195628",
+      "scan_sequence": "8694",
+      "gps_sample_stamp_ns": "1792955930862873077",
+      "gps_sample_arrival_ns": "378545381475577",
+      "gps_age_ms": "155.738354",
+      "imu_rejected": "5130",
+      "can_rejected": "7",
+      "gps_rejected": "120",
+      "last_gps_reason": "accepted",
+      "camera_fusion": "enabled",
+      "camera_active": "true",
+      "camera_reason": "empty",
+      "fusion_calls": "7135",
+      "fusion_queued": "7133",
+      "fusion_matched": "6838",
+      "fusion_dropped": "292",
+      "fusion_waits": "7129",
+      "fusion_reused": "0",
+      "fusion_inactive_calls": "2",
+      "fusion_epoch_changes": "3",
+      "fusion_startup_discarded": "0",
+      "fusion_bound_discarded": "0",
+      "fusion_observations": "1671",
+      "fusion_confirmations_applied": "51",
+      "fusion_misses_applied": "41497",
+      "fusion_pending_scans": "2",
+      "hd_map_audit_mode": "filter",
+      "delivery_filter_applied": "true",
+      "delivery_input_count": "6",
+      "delivery_excluded_count": "6",
+      "delivery_output_count": "0",
+      "hd_map_audit_reason": "evaluated",
+      "hd_map_audit_setup_error": "",
+      "hd_map_audit_bundle_sha256": "13c517e3fffee3bfd64fabdb6f473c6c668d3d87e2142c38ff756e3650b98f2e",
+      "hd_map_audit_map_sha256": "16b8f5f811ec08ef0a7827546f4450302b69533be44952a030bf8c9c79825b7d",
+      "hd_map_audit_policy_sha256": "799babf2a52878ae51078ffe86f1e53c4c4a0905adb187eefe368371b222bda5",
+      "hd_map_audit_window_scans": "100",
+      "hd_map_audit_ms_p95": "0.522910",
+      "hd_map_audit_decision/undetermined": "600",
+      "hd_map_audit_reason/point_policy_pose_and_scope_unverified": "500",
+      "hd_map_audit_reason/pose_error_bound_unverified": "100",
+      "hd_map_audit_reason/preview:cluster_support_outside": "500",
+      "hd_map_audit_reason/preview:obb_support_outside": "100",
+      "input_to_publish_ms_p95": "3.976545",
+      "processing_window_scans": "100",
+      "processing_ms_p50": "1.912782",
+      "processing_ms_p95": "3.618102",
+      "processing_ms_max": "7.633715",
+      "producer_session_id": "40a16d66-e7ec-4d4b-aa07-7dd1b7c4223a",
+      "generation": "1",
+      "retired_results": "0",
+      "config_id": "cfe908b7c17612517e2ee5cc68c869b48801689462c1048e9bb918b7cb335506",
+      "observation_calibration_id": "sha256:9db9a718b4b40866637a590416e87505ff57a27fda9899e8baf67c5dc15dd81f",
+      "config_path": "/root/ws/src/asmc_lidar/config/lidar_pipeline.yaml",
+      "config_sha256": "2f2f73bcf7682eff20834f47e3fcf8f12b7d3898fd6973d521ae1cb9bfd338b1",
+      "mount_config_path": "/root/ws/src/asmc_lidar/config/autonav_v3.yaml",
+      "mount_config_sha256": "e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88",
+      "calibration_id": "shadow:2f2f73bcf7682eff20834f47e3fcf8f12b7d3898fd6973d521ae1cb9bfd338b1:e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88",
+      "roll_leveling": "true",
+      "tunnel_filter": "false",
+      "publish_tf": "false",
+      "velocity_status": "unproven_moving_sensor_derivative",
+      "debug_enabled": "false",
+      "local_subscribers": "1",
+      "map_subscribers": "1"
+    },
+    "diagnostic_last": {
+      "processed": "10490",
+      "invalid": "1559",
+      "stamp_errors": "0",
+      "scans_received": "12049",
+      "scans_processed": "12049",
+      "overwritten_scans": "0",
+      "rejected_scans": "0",
+      "conversion_errors": "0",
+      "last_reject_reason": "",
+      "input_reason": "valid",
+      "map_reason": "gps_bounded_prediction",
+      "pose_reason": "ready",
+      "source_stamp_ns": "1792956261014512062",
+      "receipt_clock": "steady",
+      "receipt_ns": "378875551789817",
+      "processing_ns": "378875552120941",
+      "scan_sequence": "12049",
+      "gps_sample_stamp_ns": "1792956260885338068",
+      "gps_sample_arrival_ns": "378875422793194",
+      "gps_age_ms": "129.173994",
+      "imu_rejected": "5130",
+      "can_rejected": "7",
+      "gps_rejected": "262",
+      "last_gps_reason": "accepted",
+      "camera_fusion": "enabled",
+      "camera_active": "true",
+      "camera_reason": "empty",
+      "fusion_calls": "10490",
+      "fusion_queued": "10488",
+      "fusion_matched": "10076",
+      "fusion_dropped": "410",
+      "fusion_waits": "10484",
+      "fusion_reused": "0",
+      "fusion_inactive_calls": "2",
+      "fusion_epoch_changes": "3",
+      "fusion_startup_discarded": "0",
+      "fusion_bound_discarded": "0",
+      "fusion_observations": "2236",
+      "fusion_confirmations_applied": "68",
+      "fusion_misses_applied": "65399",
+      "fusion_pending_scans": "1",
+      "hd_map_audit_mode": "filter",
+      "delivery_filter_applied": "true",
+      "delivery_input_count": "7",
+      "delivery_excluded_count": "7",
+      "delivery_output_count": "0",
+      "hd_map_audit_reason": "evaluated",
+      "hd_map_audit_setup_error": "",
+      "hd_map_audit_bundle_sha256": "13c517e3fffee3bfd64fabdb6f473c6c668d3d87e2142c38ff756e3650b98f2e",
+      "hd_map_audit_map_sha256": "16b8f5f811ec08ef0a7827546f4450302b69533be44952a030bf8c9c79825b7d",
+      "hd_map_audit_policy_sha256": "799babf2a52878ae51078ffe86f1e53c4c4a0905adb187eefe368371b222bda5",
+      "hd_map_audit_window_scans": "100",
+      "hd_map_audit_ms_p95": "0.630167",
+      "hd_map_audit_decision/keep": "5",
+      "hd_map_audit_decision/undetermined": "529",
+      "hd_map_audit_reason/boundary_or_uncertainty_protected": "5",
+      "hd_map_audit_reason/boundary_pose_uncertainty_unverified": "29",
+      "hd_map_audit_reason/overhead_lower_surface_unverified": "1",
+      "hd_map_audit_reason/point_policy_pose_and_scope_unverified": "403",
+      "hd_map_audit_reason/pose_error_bound_unverified": "96",
+      "hd_map_audit_reason/preview:cluster_outside_boundary_uncertain": "29",
+      "hd_map_audit_reason/preview:cluster_support_outside": "403",
+      "hd_map_audit_reason/preview:obb_support_outside": "101",
+      "hd_map_audit_reason/preview:overhead_clearance_candidate": "1",
+      "input_to_publish_ms_p95": "6.950281",
+      "processing_window_scans": "100",
+      "processing_ms_p50": "2.112773",
+      "processing_ms_p95": "6.684411",
+      "processing_ms_max": "10.064545",
+      "producer_session_id": "40a16d66-e7ec-4d4b-aa07-7dd1b7c4223a",
+      "generation": "1",
+      "retired_results": "0",
+      "config_id": "cfe908b7c17612517e2ee5cc68c869b48801689462c1048e9bb918b7cb335506",
+      "observation_calibration_id": "sha256:9db9a718b4b40866637a590416e87505ff57a27fda9899e8baf67c5dc15dd81f",
+      "config_path": "/root/ws/src/asmc_lidar/config/lidar_pipeline.yaml",
+      "config_sha256": "2f2f73bcf7682eff20834f47e3fcf8f12b7d3898fd6973d521ae1cb9bfd338b1",
+      "mount_config_path": "/root/ws/src/asmc_lidar/config/autonav_v3.yaml",
+      "mount_config_sha256": "e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88",
+      "calibration_id": "shadow:2f2f73bcf7682eff20834f47e3fcf8f12b7d3898fd6973d521ae1cb9bfd338b1:e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88",
+      "roll_leveling": "true",
+      "tunnel_filter": "false",
+      "publish_tf": "false",
+      "velocity_status": "unproven_moving_sensor_derivative",
+      "debug_enabled": "false",
+      "local_subscribers": "1",
+      "map_subscribers": "1"
+    },
+    "adapter_status": {
+      "accepted": 1481,
+      "map_observation_unavailable": 148
+    }
+  },
+  "camera": {
+    "frame_status": {
+      "(True, '')": 4779
+    },
+    "image_stamp_mismatch": 0,
+    "objects_status": {
+      "(True, True, 0, 'running')": 1651
+    },
+    "lane_status": {
+      "(True, True, 0, 'running')": 1070,
+      "(False, True, 0, 'running')": 94,
+      "(False, True, 0, 'source_image_stale')": 4,
+      "(False, False, 0, 'running')": 448,
+      "(False, False, 0, 'source_image_stale')": 2
+    }
+  },
+  "speed_kph": {
+    "n": 10733,
+    "min": 1.5315890777856112e-09,
+    "p50": 24.53118324279785,
+    "p95": 54.62961196899414,
+    "max": 57.21395111083985
+  },
+  "trajectory_failure": {
+    "(True, 3)": 18,
+    "(True, 4)": 2,
+    "(True, 0)": 5766,
+    "(True, 1)": 6,
+    "(True, 2)": 51,
+    "(True, 6)": 569
+  },
+  "collision_records": {
+    "[{'id': 0, 'type': -1, 'name': ''}]": 9253
+  },
+  "warning_counts": {
+    "/mpc_controller: MPC fail-safe STOP: trajectory missing": 4,
+    "/camera_bbox_lane_change: Camera lane follower STOP: inactive_mode (source age=#s)": 147,
+    "/mpc_controller: MPC planner STOP braking: steering=+#": 63,
+    "/asmc_control_selector: Control selector source: NONE -> NORMAL": 1,
+    "/mpc_controller: MPC stuck recovery start: ego_v=# max_ref_v=# path_progress=# duration=#s launch_accel=#": 1,
+    "/mpc_controller: MPC planner STOP braking: steering=-#": 10,
+    "/mpc_controller: Planner trajectory collision blocked: emergency brake": 2,
+    "/mpc_controller: MPC emergency brake override RELEASED (command_id=#)": 5,
+    "/asmc_lidar_planning_adapter: asmc_lidar planning input withheld: map_observation_unavailable": 30,
+    "/mpc_controller: MPC emergency brake override ACTIVE (command_id=#)": 1,
+    "/asmc_control_selector: Control selector source: NORMAL -> JAMMING": 1,
+    "/planning_gps_imu_state_adapter: GPS/IMU vehicle state unavailable, invalid, or stale": 15,
+    "/camera_bbox_lane_change: Jamming control lifecycle ACTIVE": 1,
+    "/mpc_controller: MPC fail-safe STOP: INVALID_EGO": 28,
+    "/camera_bbox_lane_change: Camera lane follower STOP: bbox_classification_invalid:projection_source_expired (source age=#s)": 10,
+    "/camera_bbox_lane_change: Camera lane follower STOP: following_path_outside_road (source age=#s)": 1,
+    "/asmc_control_selector: Control selector source: JAMMING -> NORMAL": 1,
+    "/camera_bbox_lane_change: Jamming control lifecycle INACTIVE": 1
+  },
+  "scope": "Read-only analysis of three recorded split bags; no replay, control publishing, code tuning, or raw-bag changes."
+}

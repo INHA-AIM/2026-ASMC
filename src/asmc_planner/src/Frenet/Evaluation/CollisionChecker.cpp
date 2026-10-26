@@ -29,7 +29,7 @@ double EffectiveSafetyMargin(const CollisionCheckConfig& cfg,
     // LOW_THREAT는 perception이 고정 구조물/정적으로 확정한 상태다. 시간에
     // 따른 위치 불확실성이 누적되지 않으므로 고정 base margin만 적용한다.
     // UNKNOWN/PENDING/DYNAMIC은 전달 속도 예측의 불확실성을 반영해 성장시킨다.
-    if (object.motion_state != ObjectMotionState::LOW_THREAT) {
+    if (object.velocity_unavailable || object.motion_state != ObjectMotionState::LOW_THREAT) {
         margin += std::max(0.0, cfg.margin_growth_rate) *
                   std::max(0.0, prediction_time);
     }
@@ -165,7 +165,7 @@ std::pair<double, double> EffectiveObjectVelocity(
     const TrackedObject& object) {
     // LOW_THREAT만 perception이 정적으로 확정한 상태다. 원본 vx/vy는
     // 메시지와 TrackedObject에 보존하되 미래 충돌 위치에는 잡음을 쓰지 않는다.
-    if (object.motion_state == ObjectMotionState::LOW_THREAT) {
+    if (object.velocity_unavailable || object.motion_state == ObjectMotionState::LOW_THREAT) {
         return {0.0, 0.0};
     }
     return {object.vx, object.vy};

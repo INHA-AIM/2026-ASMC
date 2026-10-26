@@ -2,6 +2,7 @@
 // TypedOutput: Main FrameBoundaryPublisher Publish()/Invalid() semantics.
 #include <asmc_lidar/geometry/projection.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
+#include <asmc_lidar/ros/planning_output.hpp>
 #include <asmc_lidar/ros/scan_trace.hpp>
 
 #include <gtest/gtest.h>
@@ -321,6 +322,59 @@ TEST(TypedOutput, StampGuardRejectsZeroDuplicateAndRegressing) {
   EXPECT_TRUE(output.Observed(MakeResult(kStamp + 2, true), {}).accepted);
   EXPECT_EQ(output.processed(), 2u);
   EXPECT_EQ(output.invalid(), 1u);
+}
+
+TEST(PlanningOutput, StationaryAndMovingVelocityWithMountAndMapRotation) {
+  auto scan = MakeResult(kStamp, true);
+  scan.dt_s = .1;
+  // A yawed mount and a yawed vehicle: ego forward 10 m/s, relative sensor
+  // velocity corresponding to base -10 m/s must give stationary map velocity.
+  scan.context.base_from_sensor.linear() = asmc::lidar::rpy(0., 0., .4);
+  scan.context.applied_leveling.setIdentity();
+  scan.context.map_pose.map_from_base.linear() = asmc::lidar::rpy(0., 0., 1.1);
+  scan.context.ego_linear_base = Vec(10., 0., 0.);
+  auto track = MakeTrack(1, 8.f, 0.f, 0.f);
+  track.tracking.b_KfInitialized = true; track.tracking.s32_KfInitCount = 3;
+  track.tracking.tracking_frame_valid = true;
+  track.tracking.Eigen_KfState_CA.setZero();
+  for (double forward : {0., 5., -2.}) {
+    const Vec rel = asmc::lidar::rpy(0., 0., -.4) * Vec(forward - 10., 0., 0.);
+    track.tracking.Eigen_KfState_CA(2) = rel.x(); track.tracking.Eigen_KfState_CA(3) = rel.y();
+    const auto v = asmc::lidar::runtime::PlanningVelocity(track, scan);
+    ASSERT_TRUE(v);
+    const Vec expected = asmc::lidar::rpy(0., 0., 1.1) * Vec(forward, 0., 0.);
+    EXPECT_NEAR((*v - expected).norm(), 0., 1e-5);
+  }
+}
+TEST(PlanningOutput, InvalidVelocityStaysInvalidAndPublicArrayUnchanged) {
+  for (int variant = 0; variant < 6; ++variant) {
+    auto scan = MakeResult(kStamp, true); scan.dt_s = .1;
+    auto track = MakeTrack(1, 8.f, 0.f, 0.f);
+    track.tracking.b_KfInitialized = true; track.tracking.s32_KfInitCount = 3;
+    track.tracking.tracking_frame_valid = true; track.tracking.Eigen_KfState_CA.setZero();
+    if (variant == 0) track.tracking.s32_KfInitCount = 1;
+    if (variant == 1) scan.context.map_pose.valid = false;
+    if (variant == 2) scan.dt_s = .5;
+    if (variant == 3) track.tracking.s32_MissCount = 1;
+    if (variant == 4) track.tracking.Eigen_KfState_CA(2) = NAN;
+    if (variant == 5) scan.context.map_pose.query_stamp_ns--;
+    EXPECT_FALSE(asmc::lidar::runtime::PlanningVelocity(track, scan));
+  }
+  auto scan = MakeResult(kStamp, true); scan.dt_s = .1;
+  auto track = MakeTrack(1, 8.f, 0.f, 0.f);
+  track.tracking.b_KfInitialized = true; track.tracking.s32_KfInitCount = 3;
+  track.tracking.tracking_frame_valid = true; track.tracking.Eigen_KfState_CA.setZero();
+  scan.objects = {track};
+  TypedOutput typed;
+  asmc_msgs::LidarObservation observation; observation.objects = typed.Observed(scan, scan.objects).map;
+  observation.producer_session_id = "fixture"; observation.scan_sequence = 7;
+  const auto original = observation;
+  auto packet = asmc::lidar::runtime::PlanningOutput(observation, scan);
+  EXPECT_EQ(observation, original);
+  EXPECT_TRUE(packet.observation.objects.objects[0].absolute_velocity_valid);
+  EXPECT_EQ(packet.observation.producer_session_id, "fixture");
+  EXPECT_EQ(packet.observation.scan_sequence, 7u);
+  ASSERT_EQ(packet.motion_states.size(), 1u); EXPECT_EQ(packet.motion_states[0], packet.UNKNOWN);
 }
 
 TEST(TypedOutput, PreservesLegacyAppliedMotionAndRotatesVectorsOnce) {

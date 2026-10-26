@@ -32,6 +32,7 @@
 #include <morai_msgs/GPSMessage.h>
 #include <ros/time.h>
 #include <rosbag/bag.h>
+#include <asmc_lidar/ros/planning_output.hpp>
 #include <rosbag/view.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -61,7 +62,7 @@ constexpr char kUsage[] =
     "  [--gps-mode normal|invalid|missing --gps-begin S --gps-end S]\n"
     "  [--points-topic /velodyne_points --imu-topic /imu --can-topic /Ego_topic --gps-topic /gps]\n"
     "  [--camera-observations-topic T --camera-status-topic S] (default: camera disabled)\n"
-    "  [--tunnel-filter on|off] [--capture-debug]\n";
+    "  [--tunnel-filter on|off] [--capture-debug] [--planning-output NEW.bag]\n";
 
 struct UsageError : std::runtime_error {
   using std::runtime_error::runtime_error;
@@ -69,6 +70,7 @@ struct UsageError : std::runtime_error {
 
 struct Options {
   std::string bag, output, config, package_share, camera_calibration;
+  std::string planning_output;
   std::string profile;  // empty: keep the configured leveling
   std::string gps_mode = "normal";
   double gps_begin = 0., gps_end = 0.;
@@ -83,6 +85,7 @@ Options Parse(int argc, char** argv) {
   const std::map<std::string, std::string*> text = {
       {"--bag", &o.bag},
       {"--output", &o.output},
+      {"--planning-output", &o.planning_output},
       {"--config", &o.config},
       {"--package-share", &o.package_share},
       {"--camera-calibration", &o.camera_calibration},
@@ -205,6 +208,12 @@ int Replay(const Options& opt) {
   LidarRuntime runtime(config, source, front);
   const ProcessingEpoch epoch;
 
+  rosbag::Bag planning_bag;
+  if (!opt.planning_output.empty()) {
+    if (std::ifstream(opt.planning_output).good()) throw std::runtime_error("planning output already exists");
+    planning_bag.open(opt.planning_output, rosbag::bagmode::Write);
+  }
+
   std::ofstream output(opt.output);
   if (!output) throw std::runtime_error("cannot open " + opt.output);
 
@@ -293,6 +302,16 @@ int Replay(const Options& opt) {
         line.output = &out;
         line.imu = cache.Imu(out.selected.imu_stamp_ns);
         line.can = cache.Can(out.selected.can_stamp_ns);
+        if (!opt.planning_output.empty() && out.arrays.accepted) {
+          asmc_msgs::LidarObservation observation;
+          observation.objects = out.arrays.map;
+          observation.producer_session_id = epoch.session();
+          observation.generation = epoch.generation();
+          observation.scan_sequence = seq;
+          observation.config_id = config.config_id;
+          observation.calibration_id = config.calibration_id;
+          planning_bag.write("/migration/lidar/planning_observations_map", m.getTime(), PlanningOutput(observation, out.result));
+        }
       }
       output << trace::Line(line) << '\n';
     }

@@ -8,6 +8,23 @@
 실제 소비 전환은 명시적으로 수행하며 구 패키지·rollback은 인수까지 보존한다. 아래 구 경로 설명은
 기존 운영/복구 계약이며 "직접 소비 미구현"으로 적힌 과거 대조는 이 구현으로 보완됐다.
 
+### 별도 검증 companion 경로
+
+**병합 전 전체 주행에서 사용한 추가 계약:** `source_policy:=asmc_lidar_companion`는 atomic
+`asmc_msgs/LidarPlanningObservation`을 받는다. 기존 타입의 MD5는 변경하지 않는다.
+`observation`은 같은 scan의 session/generation/sequence/config/calibration과 map 객체를 묶고,
+`motion_states`는 객체 배열 순서의 UNKNOWN/LOW_THREAT/DYNAMIC_PENDING/DYNAMIC(0/1/2/3)이다.
+원본 shadow 배열을 승격하지 않고 `planning_output:=true`의 companion만 사용한다.
+계산은 전진 주행의 평면 KF 속도에 base 축 ego 이동을 한 번 보상한 map 속도다.
+초기 추적·잘못된 dt 등으로 velocity invalid이면, 유효한 현재 기하는 유지하고
+private `planning_inputs/DetectedObject.velocity_unavailable=true`, `motion_state=UNKNOWN`으로 전달한다.
+이때 vx/vy의 0은 관측 위치 점유 가설을 위한 자리값이며 측정된 정지 속도가 아니다.
+판제는 이 상태를 LOW_THREAT로 수락하지 않고 기존 미확정 점유·불확실성 정책으로 처리한다.
+map/기하가 무효이면 프레임을 보류하며 정상 빈 관측만 빈 배열로 발행한다.
+private 메시지 MD5가 바뀌므로 상위 workspace 전체를 재빌드한다. frozen `asmc_msgs`와 nested `Msg`는 유지한다.
+새 session/generation의 raw track ID는 판제 내부 ID를 재사용하지 않는다.
+아래 Main 경로는 복구용으로 보존한다. [실행·검증 범위](../operations/lidar-cutover.md).
+
 **2026-10-16 카메라 연결:** 독립 Main YOLO는 제거하고 `asmc_camera/camera.launch`만 추론을 소유한다.
 [현재 실행·3뷰 인계](../handoffs/camera-to-lidar.md)를 따른다.
 

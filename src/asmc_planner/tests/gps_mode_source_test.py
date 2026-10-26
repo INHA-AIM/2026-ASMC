@@ -6,6 +6,7 @@ import rospy
 import rostest
 from morai_msgs.msg import GPSMessage
 from std_msgs.msg import UInt8
+from asmc_msgs.msg import FrenetFeedback
 
 
 class GpsModeSourceTest(unittest.TestCase):
@@ -15,6 +16,7 @@ class GpsModeSourceTest(unittest.TestCase):
                                     lambda msg: self.modes.append(msg.data),
                                     queue_size=10)
         self.gps = rospy.Publisher('/gps', GPSMessage, queue_size=1)
+        self.feedback = rospy.Publisher('/planning/frenet_feedback_v2', FrenetFeedback, queue_size=1)
         deadline = time.monotonic() + 5
         while (not self.modes or not self.gps.get_num_connections()) and time.monotonic() < deadline:
             time.sleep(.02)
@@ -36,7 +38,60 @@ class GpsModeSourceTest(unittest.TestCase):
         time.sleep(.1)
         self.assertEqual(0, self.modes[-1])
         self.publish_until(GPSMessage(latitude=0.0, longitude=0.0, altitude=0.0), 1)
-        self.publish_until(nonzero, 0)
+        self.gps.publish(nonzero)
+        time.sleep(.1)
+        self.assertEqual(1, self.modes[-1])
+        self.ready()
+        self.assertEqual(1, self.modes[-1])
+        self.ready()
+        self.assertEqual(0, self.modes[-1])
+
+    def ready(self, stamp=None, valid=True, source=FrenetFeedback.TRAJECTORY_NEW):
+        feedback = FrenetFeedback(command_accepted=True, plan_valid=valid,
+                                  trajectory_source=source)
+        feedback.header.frame_id = 'map'
+        feedback.header.stamp = stamp if stamp is not None else rospy.Time.now()
+        self.feedback.publish(feedback)
+        time.sleep(.07)
+        return feedback.header.stamp
+
+    def recover(self):
+        self.publish_until(GPSMessage(), 1)
+        self.gps.publish(GPSMessage(latitude=37., longitude=126., altitude=12.))
+        time.sleep(.1)
+
+    def test_cached_stale_duplicate_and_failed_plans_cannot_handoff(self):
+        self.recover()
+        self.ready(stamp=rospy.Time.now()-rospy.Duration(1.))
+        self.ready(source=FrenetFeedback.TRAJECTORY_REUSED)
+        self.assertEqual(1, self.modes[-1])
+        stamp=self.ready()
+        self.ready(stamp=stamp)
+        self.assertEqual(1, self.modes[-1])
+        self.ready(valid=False)
+        self.ready()
+        self.assertEqual(1, self.modes[-1])
+        self.ready()
+        self.assertEqual(0, self.modes[-1])
+
+    def test_rejamming_cancels_pending_handoff(self):
+        self.recover()
+        self.ready()
+        self.gps.publish(GPSMessage())
+        time.sleep(.1)
+        self.ready(); self.ready()
+        self.assertEqual(1, self.modes[-1])
+        self.gps.publish(GPSMessage(latitude=37., longitude=126., altitude=12.))
+        time.sleep(.1)
+        self.ready(); self.ready()
+        self.assertEqual(0, self.modes[-1])
+
+    def test_unready_recovery_has_bounded_deadline(self):
+        self.recover()
+        time.sleep(.3)
+        self.assertEqual(1, self.modes[-1])
+        time.sleep(4.9)
+        self.assertEqual(0, self.modes[-1])
 
 
 if __name__ == '__main__':

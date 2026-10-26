@@ -24,7 +24,7 @@ publisher나 변환 로직은 포함하지 않는다.
 - 기존 planning/perception 타입: 13개, ROS1 MD5 동결
 - HD Map/competition 타입: 12개
 - perception runtime additive 타입: 3개
-- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은39개 메시지·1개 서비스이며 UrbanFeatureDebug, LiDAR/camera handoff·공용 추론 제어·센서/grid timing·시각화 지면 metadata를 포함
+- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은42개 메시지·1개 서비스이며 UrbanFeatureDebug, LiDAR/camera handoff·공용 추론 제어·센서/grid timing·시각화 지면 metadata·LiDAR planning companion·공용 tracking 상태/관측을 포함
 - 외부 MORAI wire type: pinned `src/MORAI-ROS_morai_msgs`, 이 패키지로 복사하지 않음
 - 중복 `Msg` package: consumer 이관과 clean build 전까지 삭제하지 않음
 
@@ -36,7 +36,7 @@ publisher나 변환 로직은 포함하지 않는다.
 | HD Map | `HdMapMeta`, `LaneMarking*`, `Lane*`, `LaneAssociation`, `DrivableArea*` |
 | competition | `CompetitionCheckpoint*`, `MissionZone*` |
 | perception runtime v1 | `TrafficLightDetection`, `TrackedObject*` |
-| 카메라/이전용 LiDAR | `CameraObjectBox*`, `CameraObjectObservation`, `LidarObject*`, `LidarObservation` |
+| 카메라/이전용 LiDAR | `CameraObjectBox*`, `CameraObjectObservation`, `LidarObject*`, `LidarObservation`, `LidarPlanningObservation` |
 | 추론 제어 v2 | `InferenceStatus`, `SetInferenceMode.srv` — 생산자 UUID·모드·준비 상태 |
 | 판제 debug | `UrbanFeatureDebug` |
 | 센서 timing v1 | `SensorFrameTiming` — 원본/수신/발행 clock과 기존 sensor wire의 연결 키 |

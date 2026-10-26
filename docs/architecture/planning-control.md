@@ -24,6 +24,12 @@ Main /last_lidar + /lidar/motion_debug → planning_inputs → /planning/objects
 | 제어 선택기 | NORMAL/JAMMING 선택·watchdog·최종 단일 `/ctrl_cmd` | 선택 입력250ms 단절/무효 모드는 제동 |
 | 재밍 어댑터 | family/BBox 기반 음영 후보·조향 | read-only monitor와 제어 launch는 서로 다름 |
 
+GPS 재밍 sentinel이면 즉시 JAMMING으로 전환합니다. GPS 복귀 후에는 복귀 시각보다 새롭고
+150ms 이내인 정상 신규 경로 피드백을 서로 다른 2 frame 확인한 뒤 NORMAL로 넘깁니다.
+그동안 기존 카메라 제어의 입력/경계/비상정지 검사는 유지됩니다. 준비 대기는 steady time
+최대 5초이며, 시간 초과 시 NORMAL의 기존 안전 정지 판단으로 넘겨 카메라 주행이 무한히
+이어지지 않게 합니다. selector의 단일 출력과 250ms watchdog은 유지됩니다.
+
 통합 launch는 LiDAR 입력이 기본입니다. `planner_v2.launch` 단독의 기본은 개발용 `/Object_topic`이므로
 sensor-only 실행에는 detected 입력·판제 상태/객체 토픽을 명시합니다.
 통합 launch가 모델·bridge·Main을 모두 띄우는 것은 아닙니다. [실행 순서](../operations/commands.md)를 따릅니다.

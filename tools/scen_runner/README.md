@@ -95,11 +95,31 @@ GUI의 `선택 모드로 시작`과 `다음 반복 · 다시 준비`도 같은 �
 
 연동 설정은 `config/stack.yaml`에 있다. `instance`가 같은 실행기들이 `.runtime/stack/<instance>/`의 회차별 요청/응답과 heartbeat로 연결된다. 기존 회차의 준비 응답을 새 회차에서 재사용하지 않는다. 모든 실행기에 `--stack-config <같은 YAML 경로>`를 전달해 다른 설정을 사용할 수 있다.
 
-인지 실행기는 기존 `asmc_camera/perception.launch`와 `Main/main.launch`를 포함하며, YOLO 결과를 Main으로 전달하는 기존 어댑터를 사용한다. 카메라 차선·YOLO·신호등 세 GPU 노드의 Python만 이미지의 `ASMC_YOLO_PYTHON`으로 선택한다(RTX50: `/opt/yolo-venv/bin/python`, RTX40: 시스템 Python). CPU의 BEV·차선 후처리, LiDAR·추적·퓨전은 기존 인터프리터/실행 파일을 사용한다. 모델/임계값/제어 파라미터는 팀 소스의 YAML/launch를 읽는다. 차선 제어의 BBOX 입력은 이 구성의 전방 YOLO 출력 `/YOLO/BBox`에 연결한다.
+인지 실행기는 `asmc_camera/camera.launch`와 선택한 LiDAR를 실행한다. `config/stack.yaml`의 `lidar_backend: main`은 기존 Main을, `asmc_lidar`는 새 typed 판제 연결을 선택한다. 저장소 기본은 `asmc_lidar`이며, 기존 사용자별 설정에 키가 없으면 `main`을 유지한다. 실제 시뮬레이터 출구 수락은 별도다. [전환과 복구](../../docs/operations/lidar-cutover.md)를 따른다. 카메라 차선·YOLO·신호등 세 GPU 노드의 Python만 이미지의 `ASMC_YOLO_PYTHON`으로 선택한다(RTX50: `/opt/yolo-venv/bin/python`, RTX40: 시스템 Python). CPU의 BEV·차선 후처리, LiDAR·추적·퓨전은 기존 인터프리터/실행 파일을 사용한다. 모델/임계값/제어 파라미터는 팀 소스의 YAML/launch를 읽는다. 차선 제어의 BBOX 입력은 카메라 정본 `/perception/camera/objects`의 전방 결과를 직접 받는다. Main 실행 여부와 무관하다.
 
 `config/stack.yaml`의 `camera_runtime: auto`는 로컬에 `.runtime/camera_runtime.json`이 있으면 검증된 GPU용 엔진을 선택한다. RTX 5070용 E8 모델은 같은 학습 체크포인트로 변환한 `/data/models/camera_mission16_v11_e8_rtx5070/yolo26l.engine`을 사용하고, TensorRT·Ultralytics 의존성은 `.runtime/inference_rtx50/python`에서 객체 인식 노드에만 추가한다. 팀 launch의 엔진 경로와 검증 SHA만 바꾸며 클래스·임계값·배치·해상도 설정은 그대로 읽는다. 실행 시 `[카메라 엔진]`에 선택 경로와 SHA가 표시된다.
 
 로컬 프로필과 의존성은 Git에 포함되지 않는다. 프로필이 없는 PC는 팀 기본 엔진을 사용하며, GPU가 다른 PC는 해당 GPU에서 같은 체크포인트를 변환·검증한 뒤 프로필을 준비해야 한다. 프로필에는 원본 배포 엔진 SHA, 변환 엔진 SHA, 통과한 추론 검증 기록이 필요하다. 팀 모델이 바뀌어 원본 SHA가 달라지면 예전 로컬 엔진을 계속 쓰지 않고 시작 오류로 알린다. `camera_runtime: off`로 팀 기본 엔진 선택으로 되돌릴 수 있지만, RTX 4060 Ti용 배포 엔진은 RTX 5070에서 사용할 수 없다.
+
+RTX 4060처럼 배포 엔진의 GPU와 다른 PC에서는 MORAI와 카메라·판제 실행을 종료한 뒤,
+같은 컨테이너에서 아래 명령으로 현재 E8 객체·Large E8 차선 모델을 다시 변환할 수 있다.
+
+```bash
+cd /root/ws
+bash tools/scen_runner/prepare_camera_engines.sh --check  # 변경 없는 사전 점검
+bash tools/scen_runner/prepare_camera_engines.sh
+```
+
+빌드에 필요한 ONNX Runtime 의존성만 `.runtime/engine_build_python`에 설치하고,
+원본 `.pt`와 공용 `.engine`을 보존한 채 `.runtime/camera_engines/`에 새 파일을 만든다.
+객체·차선의 기본 추론 검사가 모두 성공하면 `.runtime/camera_runtime.json`을 원자적으로
+갱신한다. 기존 프로필은 새 산출물 폴더에 백업한다. `READY` 출력 후 기존
+`run_perception.sh`가 두 새 엔진을 선택한다. 중간 실패 시 실행 프로필은 유지된다.
+이는 GPU 로딩·기본 추론 검사이며 실제 영상 인식 정확도·처리 속도·주행 검증을 대신하지 않는다.
+이 명령은 ROS 노드나 차량 제어를 시작하지 않는다.
+엔진 생성은 끝났지만 마지막 검사에서 실패했다면 처음부터 생성하지 않고
+`bash tools/scen_runner/prepare_camera_engines.sh --resume <출력된 Artifacts 절대경로>`로
+기존 파일의 출처를 확인한 뒤 검사·연결만 다시 실행할 수 있다.
 
 최신 소스를 받은 PC에서는 기존 빌드를 먼저 수행한다(브릿지·주행을 시작하기 전).
 

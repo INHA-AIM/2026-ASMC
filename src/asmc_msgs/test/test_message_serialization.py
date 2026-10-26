@@ -30,6 +30,7 @@ EXPECTED_MD5 = {
     "LidarObject": "b94cf82e0f325e9ce0364bb143df9f06",
     "LidarObjectArray": "5f774d07dffd4c7dfa93a8d4b62c60b4",
     "LidarObservation": "d11a2a270112231e4f79aaebff621d36",
+    "LidarPlanningObservation": "670b15bd7bb1bc58e0640c2a35054936",
     "LidarTrackingState": "14d1c31a2f234cf60a5d30079d2efe81",
     "LidarTrackingObservation": "d8d18207872b81a51f7c8a8973c823aa",
     "CameraObjectBox": "34412c90553e06734f1acade77c8e1e3",

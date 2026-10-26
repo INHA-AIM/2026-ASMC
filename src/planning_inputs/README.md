@@ -18,6 +18,14 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_l
 실제 소비 인수 때 명시적으로 새 경로를 선택한다. 새 경로는 outer workspace만 빌드하고 source한다.
 아래 구 경로는 인수 전 기존 실행·복구를 위한 안내다.
 
+### 검증 companion 입력
+
+`source_policy:=asmc_lidar_companion`은 기존 전체 주행에서 사용한
+`/migration/lidar/planning_observations_map`의 `LidarPlanningObservation`을 소비한다.
+`asmc_input_topic`으로 입력을 바꿀 수 있다. 직접 추적 입력과 동시에 켜지지 않는다.
+측정 속도가 없는 객체는 `velocity_unavailable=true`의 UNKNOWN 점유로 유지하며,
+session/generation 변경 시 내부 ID를 분리한다. [실행·복구 안내](../../docs/operations/lidar-cutover.md).
+
 ## Validated LiDAR 기존 실행·복구 (통합 launch 기본)
 
 The pre-rebase reference is 0781402 on

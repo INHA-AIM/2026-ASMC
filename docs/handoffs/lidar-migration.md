@@ -9,6 +9,12 @@
 같은 날 사용자가 대회용 MolitComp03·기본 bridge 조향 false로 새 LiDAR 판제 주행을 확인했다.
 이는 직접 연결의 기능 확인이며 B3 공동 전 미션 인수와 B4 구 패키지 폐기를 완료한 뜻은 아니다.
 
+**병합 시 보존한 별도 검증 경로:** `autonomy_asmc_lidar.launch`와 scen_runner는
+`LidarPlanningObservation` companion을 `asmc_lidar_companion` 정책으로 소비한다.
+main의 공용 `asmc_lidar` 직접 소비와 메시지·토픽을 구분하며 동시에 판제에 발행하지 않는다.
+재밍 출구 GPS 재정렬·차로 복귀·경로 준비 후 모드 전환 수정은 유지한다.
+[실행 선택과 병합 전 검증 범위](../operations/lidar-cutover.md#main-병합-후-입력-선택)를 따른다.
+
 **역할·PR #108 기준(2026-10-25, 현재 구현은 위 링크):** PR #108은 main `ab8db094`에 병합됐다. 안승현은 **HD맵 필터·카메라 연결 지원**,
 손재호는 **추적·속도·운동 상태·fusion 및 GPS 없는 터널 local 인식**을 담당한다.
 좌표·시간·공용 메시지와 판제 전환은 공동 확인한다.

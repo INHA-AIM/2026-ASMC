@@ -56,6 +56,7 @@ add_message_files(
   LidarObject.msg
   LidarObjectArray.msg
   LidarObservation.msg
+  LidarPlanningObservation.msg
   LidarTrackingState.msg
   LidarTrackingObservation.msg
   CameraObjectBox.msg

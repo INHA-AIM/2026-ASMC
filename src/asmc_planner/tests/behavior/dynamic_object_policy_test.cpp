@@ -141,6 +141,16 @@ TEST_F(Scene, UnmeasuredConflictBrakesAndKeepsLegacyOwnership) {
     EXPECT_TRUE(decide({o}).evaluated_provisional_ids.empty());
   }
 }
+TEST_F(Scene, ExplicitUnavailableVelocityKeepsObstacleWithoutBrakingForRemoteObjects) {
+  auto o=box(88,23,0); o.motion_state=ObjectMotionState::UNKNOWN;
+  o.velocity_unavailable=true; o.vx=o.vy=o.speed=0.;
+  auto result=decide({o});
+  EXPECT_EQ(DynamicAction::EMERGENCY,result.action);
+  EXPECT_TRUE(result.evaluated_provisional_ids.empty());
+  o=box(88,23,8); o.motion_state=ObjectMotionState::UNKNOWN;
+  o.velocity_unavailable=true; o.vx=o.vy=o.speed=0.;
+  EXPECT_EQ(DynamicAction::KEEP,decide({o}).action);
+}
 TEST_F(Scene, UnclassifiedLowOccupancyCanOnlyNominateAFullyCheckedInLaneBypass) {
   auto object=box(98,33,0);object.type=static_cast<int>(ObjectType::UNKNOWN);
   object.motion_state=ObjectMotionState::LOW_THREAT;feature.ego.speed=3;

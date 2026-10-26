@@ -17,7 +17,7 @@ struct ObservedObjectMotion {
         if (stamp >= 0 && time - stamp > .5) samples.clear();
         last = object; stamp = time; missing_cycles = 0;
         const double speed = std::hypot(object.vx, object.vy);
-        if (object.motion_state == ObjectMotionState::LOW_THREAT || speed < .5) {
+        if (object.velocity_unavailable || object.motion_state == ObjectMotionState::LOW_THREAT || speed < .5) {
             samples.clear(); yaw_rate = 0; return;
         }
         double direction = std::atan2(object.vy, object.vx);

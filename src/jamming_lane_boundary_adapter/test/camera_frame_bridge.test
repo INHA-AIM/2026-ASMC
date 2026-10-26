@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="lane_boundary_adapter" type="camera_bbox_frame_bridge.py" name="camera_bbox_frame_bridge"/>
+  <test pkg="lane_boundary_adapter" type="test_camera_frame_bridge.py" test-name="camera_frame_bridge" time-limit="25"/>
+</launch>

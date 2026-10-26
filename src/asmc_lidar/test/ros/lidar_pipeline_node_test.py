@@ -34,7 +34,7 @@ import rospy
 import rostest
 import yaml
 from asmc_msgs.msg import (CameraObjectBox, CameraObjectObservation, InferenceStatus,
-                           LidarObjectArray, LidarObservation)
+                           LidarObjectArray, LidarObservation, LidarPlanningObservation)
 from diagnostic_msgs.msg import DiagnosticArray
 from morai_msgs.msg import EgoVehicleStatus, GPSMessage
 from sensor_msgs.msg import Imu, PointCloud2, PointField
@@ -147,6 +147,9 @@ class LidarPipelineNodeTest(unittest.TestCase):
         cls.scans, cls.gps_log, cls.imu_log, cls.obs_log = [], [], [], []
         cls.local, cls.map, cls.diagnostics, cls.tf, cls.traces = [], [], [], [], []
         cls.local_observations, cls.map_observations = [], []
+        cls.planning_observations = []
+        rospy.Subscriber('/migration/lidar/planning_observations_map', LidarPlanningObservation,
+                         cls.store(cls.planning_observations), queue_size=50)
         rospy.Subscriber("/migration/lidar/observations_local", LidarObservation, cls.store(cls.local_observations), queue_size=50)
         rospy.Subscriber("/migration/lidar/observations_map", LidarObservation, cls.store(cls.map_observations), queue_size=50)
         rospy.Subscriber('/migration/lidar/objects_local', LidarObjectArray, cls.store(cls.local), queue_size=50)
@@ -752,6 +755,29 @@ class LidarPipelineNodeTest(unittest.TestCase):
                                  (expected.status,expected.reason,expected.stamp_provenance,expected.objects))
                 paired += 1
         self.assertGreaterEqual(paired,10)
+        with self.lock:
+            packets = list(self.planning_observations)
+        paired_planning = 0
+        valid_velocities = 0
+        for packet in packets:
+            observation = packet.observation
+            source = mapped.get(observation.objects.header.stamp.to_nsec())
+            if source is None:
+                continue
+            for key in ('producer_session_id', 'generation', 'scan_sequence', 'config_id', 'calibration_id'):
+                self.assertEqual(getattr(observation, key), getattr(source, key))
+            self.assertEqual(len(packet.motion_states), len(observation.objects.objects))
+            self.assertEqual([o.track_id for o in observation.objects.objects],
+                             [o.track_id for o in source.objects.objects])
+            # Main now publishes its own applied motion estimate. The optional
+            # companion changes velocity policy only; identity and geometry agree.
+            for companion, public in zip(observation.objects.objects, source.objects.objects):
+                self.assertEqual(companion.center, public.center)
+                self.assertEqual(companion.obb_corners, public.obb_corners)
+            valid_velocities += sum(o.absolute_velocity_valid for o in observation.objects.objects)
+            paired_planning += 1
+        self.assertGreaterEqual(paired_planning, 10)
+        self.assertGreater(valid_velocities, 0)
         rospy.wait_for_service(self.node+'/reset',timeout=5)
         response = rospy.ServiceProxy(self.node+'/reset',Trigger)()
         self.assertTrue(response.success)

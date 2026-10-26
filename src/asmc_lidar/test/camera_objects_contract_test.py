@@ -116,6 +116,12 @@ class CameraObjectsContractTest(unittest.TestCase):
         for base in (ROOT / 'src/lidar+sensorfusion/src/Main', ROOT / 'src/asmc_planner', CAMERA,
                      ROOT / 'src/asmc_bridge'):
             for path in sorted(base.rglob('*.launch')):
+                if path == ROOT / 'src/asmc_planner/launch/autonomy_asmc_lidar.launch':
+                    tree = ET.parse(path).getroot()
+                    include = tree.find("include[@file='$(find asmc_lidar)/launch/lidar.launch']")
+                    self.assertIsNotNone(include)
+                    self.assertEqual(include.find("arg[@name='planning_output']").get('value'), 'true')
+                    continue
                 text = path.read_text(errors='replace')
                 self.assertNotIn('lidar_pipeline_node', text, path)
                 self.assertNotRegex(text, r'asmc_lidar\)/launch/', path)

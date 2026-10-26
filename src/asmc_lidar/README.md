@@ -19,7 +19,9 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 기본 `lidar.launch`의 `/perception/lidar/objects_local/map` 및 `observations_local/map`에는
 HD맵·상부 객체 전달 필터가 적용된다. 동일 scan의 두 좌표계는 같은 ID를 제외한다.
 지도/pose 무효에서는 지도 제외를 중단하고, 최근 YOLO vehicle/dynamic 매칭은 모든 구간에서 보호한다.
-debug의 원본 tracker/점군은 검수를 위해 남긴다. 기존 Main·판제 입력은 전환하지 않았다.
+debug의 원본 tracker/점군은 검수를 위해 남긴다. 공용 `tracks_local/map`은 main의 적용 속도·운동 상태를 전달한다.
+`planning_output:=true`는 별도 `planning_observations_map`에 KF 기반 검증 companion을 추가한다.
+두 형식은 별도 소비 경로다. [companion 실행·검증·복구](../../docs/operations/lidar-cutover.md)를 따른다.
 
 ## 구조
 

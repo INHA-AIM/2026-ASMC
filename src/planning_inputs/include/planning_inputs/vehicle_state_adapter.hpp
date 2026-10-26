@@ -77,6 +77,7 @@ private:
     bool has_imu_ = false;
     bool latest_gps_valid_ = false;
     bool latest_imu_valid_ = false;
+    bool gps_recovery_pending_ = false;
     bool has_speed_ = false;
     struct PositionSample {
         double x = 0.0;
@@ -118,6 +119,7 @@ private:
     bool imuAt(const ros::Time& stamp, ImuSample& sample) const;
     bool poseAt(const ros::Time& stamp, PoseSample& pose) const;
     void processPendingGps();
+    void beginGpsRecovery();
     void processGpsMeasurement(const GpsMeasurement& measurement,
                                const ImuSample& aligned_imu);
     void updateSpeedFromGps(const PositionSample& position,

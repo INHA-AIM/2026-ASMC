@@ -275,10 +275,21 @@ class MonitorNodeTest(unittest.TestCase):
         header, _ = self.frame(0)
         seq = header['frame_seq']
         self.assertGreater(seq, 0)
-        same, arrays = self.frame(seq)
-        self.assertIsNone(same['scene'])
-        self.assertEqual(arrays, {})
-        self.assertIn('pipeline_state', same['status'])
+        # Live input can advance between the two HTTP requests. A newer scene
+        # is correct; validate it and retry against that sequence. Still require
+        # a real unchanged/status-only response, never skip that assertion.
+        for _ in range(20):
+            same, arrays = self.frame(seq)
+            self.assertIn('pipeline_state', same['status'])
+            if same['frame_seq'] == seq:
+                self.assertIsNone(same['scene'])
+                self.assertEqual(arrays, {})
+                break
+            self.assertGreater(same['frame_seq'], seq)
+            self.assertIsNotNone(same['scene'])
+            seq = same['frame_seq']
+        else:
+            self.fail('no unchanged frame response in 20 consecutive requests')
         older, _ = self.frame(seq - 1)
         self.assertIsNotNone(older['scene'])
 

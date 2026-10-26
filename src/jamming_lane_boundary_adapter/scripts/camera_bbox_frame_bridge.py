@@ -16,7 +16,7 @@ from asmc_msgs.msg import CameraObjectBoxArray
 from asmc_camera.detection.mission import CLASSES
 from lane_boundary_adapter.msg import CameraBBox, CameraBBoxFrame
 
-# 모든 설정 기본값. YOLO 토픽은 주행 전용 remap으로 기존 fusion과 분리한다.
+# 전방 공용 검출을 같은 시각의 원본 영상과 연결한다.
 IMAGE_TOPIC = '/image_jpeg/compressed'  # 원본 전방 영상
 BBOX_TOPIC = '/perception/camera/objects'
 OUTPUT_TOPIC = '/planning/camera_bbox_lane/frame'  # 판정 입력
@@ -80,6 +80,12 @@ class FrameBridge:
         except (ValueError, TypeError, rospy.ROSException):
             rospy.logerr_throttle(5., 'camera frame withheld: invalid consumer cutoff')
             return
+        # Invalid evidence must not be converted to valid empty/free space.
+        # Keep clipped/non-finite geometry for the C++ UNKNOWN classifier.
+        for b in msg.boxes:
+            if (not b.confidence_valid or not math.isfinite(b.confidence) or
+                    not 0 <= b.confidence <= 1 or not b.source_class_name):
+                msg.valid = False
         msg.boxes = [b for b in msg.boxes if b.source_class_name.lower() in CLASSES and
                      b.confidence_valid and math.isfinite(b.confidence) and b.confidence >= threshold]
         key = msg.header.stamp.to_nsec()

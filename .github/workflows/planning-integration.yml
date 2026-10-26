@@ -40,7 +40,7 @@ jobs:
           sed -i -e 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' \
             -e 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
           apt-get -o Acquire::Retries=3 update
-          apt-get -o Acquire::Retries=3 install -y --no-install-recommends git ca-certificates ccache libyaml-cpp-dev libopencv-dev libeigen3-dev libssl-dev python3-nose ros-noetic-rostest ros-noetic-tf ros-noetic-tf2-ros
+          apt-get -o Acquire::Retries=3 install -y --no-install-recommends git ca-certificates ccache libyaml-cpp-dev libopencv-dev libeigen3-dev libssl-dev python3-nose ros-noetic-rostest ros-noetic-rosbag ros-noetic-tf ros-noetic-tf2-ros
           rm -rf /var/lib/apt/lists/*
       - uses: actions/checkout@v4
         with:
@@ -69,9 +69,15 @@ jobs:
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
+          python3 src/planning_inputs/test/lidar_launch_selection_test.py
           ./devel/lib/planning_inputs/planning_motion_test
           catkin_make planning_filter_test
           ./devel/lib/planning_inputs/planning_filter_test
+          catkin_make planning_lidar_observation_test planning_lidar_companion_test
+          ./devel/lib/planning_inputs/planning_lidar_observation_test
+          ./devel/lib/planning_inputs/planning_lidar_companion_test
+          rostest planning_inputs lidar_observation.test
+          rostest lane_boundary_adapter camera_frame_bridge.test
 
       - name: Check AVOID fixtures and roundabout commit guards
         run: |
