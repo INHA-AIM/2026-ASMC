@@ -27,6 +27,14 @@ def paint(image,camera,points,color):
             cv2.circle(image,tuple(np.rint(pixel).astype(int)),3,color,-1)
 
 
+def occupancy_colors(values):
+    """HD-map occupancy wire: 0 drivable, 100 outside, -1 unknown (signed)."""
+    colors=np.zeros((*values.shape,3),np.uint8)
+    colors[values==0]=(75,60,55)
+    colors[values==-1]=(28,28,28)
+    return colors
+
+
 def render(args,inputs,camera_rows):
     from audit_frame_time import ROOT, read, sha, json_probe, write_rows, stats
     _,cameras=load_calibration_snapshot(ROOT/'src/asmc_camera/config/cameras_v3.yaml')
@@ -36,7 +44,7 @@ def render(args,inputs,camera_rows):
     topics={'/image_jpeg/compressed':'front','/cam_left/image_jpeg/compressed':'left','/cam_right/image_jpeg/compressed':'right'}
     bundle=json.loads((ROOT/'src/asmc_lidar/config/hd_map_audit/manifest.json').read_text())
     root=ROOT/'src/asmc_lidar/config/hd_map_audit'
-    desc=bundle['arrays']['occupancy'];occupancy=np.frombuffer(gzip.decompress((root/desc['file']).read_bytes()),np.uint8).reshape(bundle['height'],bundle['width'])
+    desc=bundle['arrays']['occupancy'];occupancy=np.frombuffer(gzip.decompress((root/desc['file']).read_bytes()),np.int8).reshape(bundle['height'],bundle['width'])
     origin=np.array(bundle['origin_xy']);res=bundle['resolution_m']
     for name in ('normal','tunnel'):
         scans=list(read(out/name/'lidar.jsonl'));states=list(read(out/name/'planning.jsonl'))
@@ -70,7 +78,7 @@ def render(args,inputs,camera_rows):
                     if arrival.to_nsec()>scan['arrival_ns']:continue
                     delta=abs(stamp-scan['stamp_ns']);key=scan['seq'],view
                     if delta<=50e6 and (wanted[key] is None or delta<wanted[key][0]):wanted[key]=(delta,bytes(msg.data),stamp)
-        section='<h2>'+name+' — receive-header RGB overlay</h2><p>Green: delivered local OBB corners. Map: green current, orange asynchronous planning pose sensitivity. Corner points are not semantic GT.</p>'
+        section='<h2>'+name+' — receive-header RGB overlay</h2><p>Green: delivered local OBB corners. Map: shaded drivable area, black outside, dark gray unknown; green current, orange asynchronous planning pose sensitivity. Corner points are not semantic GT.</p>'
         for scan in selected:
             panels=[]
             for view in ('left','front','right'):
@@ -93,7 +101,7 @@ def render(args,inputs,camera_rows):
                     x0=max(0,ix-size//2);x1=min(occupancy.shape[1],ix+size//2)
                     if 0<=yy<occupancy.shape[0] and x0<x1:
                         v=occupancy[yy,x0:x1];start=x0-(ix-size//2)
-                        canvas[y,start:start+len(v)][v>0]=(75,60,55)
+                        canvas[y,start:start+len(v)]=occupancy_colors(v)
                 for row in records:
                     if row['seq']!=scan['seq']:continue
                     for key,col in [('original',(0,255,0)),('alternative',(0,140,255))]:

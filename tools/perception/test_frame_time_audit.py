@@ -35,6 +35,14 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(stats([1,2,3])['p50'],2)
 
 class CoreTests(unittest.TestCase):
+    def test_gallery_uses_signed_drivable_cells(self):
+        import numpy as np
+        from frame_time.gallery import occupancy_colors
+        values=np.array([-1,0,100],dtype=np.int8)
+        colors=occupancy_colors(values)
+        self.assertEqual(colors.tolist(),[[28,28,28],[75,60,55],[0,0,0]])
+        self.assertEqual(values.tolist(),[-1,0,100])
+
     def test_54_original_pixel_cases(self):
         result=projection_cases(Path(os.environ['C0_PROBES'])/'frame_projection_probe')
         self.assertEqual(len(result['cases']),54);self.assertTrue(result['passed'])
