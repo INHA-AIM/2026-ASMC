@@ -35,6 +35,12 @@ RViz 추가는 `rviz:=true`, 병행 비교는 `namespace:=/migration/lidar`를 �
 시작하고 별도 터미널에서 `roslaunch asmc_lidar view.launch` 후 `http://127.0.0.1:8091/`에 접속한다.
 `view.launch`는 구독만 하며 새 처리 노드를 시작하지 않는다. debug OFF에서도 판제 출력은 제공된다.
 
+`debug`는 중간 점군·웹 scan 표현만 제어한다. 검출·추적·카메라 fusion·HD맵/높이 전달 필터와
+공용 `tracks_local/map` 발행은 계속 동작한다. 웹·trace·RViz를 실행하지 않아도 판제의
+`tracks_map` 구독만으로 새 객체가 공급된다. debug OFF 웹에서 단계별 점군이 없는 것은 정상이다.
+2026-10-26 시험은 이 판제 단독 수요와 GPS/IMU 중단·복귀·reset/restart를 실제 ROS로 확인했다.
+운영 읽기 확인과 새 폐루프 주행의 구분은 [CI·디버그 검증 기록](../../../docs/records/repository/2026-10-26-ci-runtime.md)에 있다.
+
 ## 토픽과 공용 메시지
 
 | 토픽 (`/perception/lidar/` 아래) | 타입·용도 |

@@ -19,6 +19,7 @@
 | 대회 입력·객체 범위 확인 | [대회 환경](competition/README.md), [에셋과 라벨](competition/obstacle-assets-and-labels.md) |
 | 데이터 수집·라벨·재현 | [데이터 준비](operations/data-preparation.md), [데이터 계약](contracts/dataset-labeling-split.md), [bag 평가](operations/rosbag-evaluation.md) |
 | 실험 결과·실패 근거 확인 | [기록 목록](records/README.md) |
+| CI 비용·병렬 회귀·실패 로그 확인 | [CI 운영](operations/ci.md) |
 
 ## 문서 배치와 갱신
 

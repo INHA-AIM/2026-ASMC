@@ -47,10 +47,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-noetic-ccache-${{ github.job }}-v1-${{ github.sha }}
+          key: ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h', 'src/**/*.cc', 'src/**/CMakeLists.txt', 'src/**/package.xml', 'src/**/*.msg', 'src/**/*.srv') }}
           restore-keys: |
-            ${{ runner.os }}-noetic-ccache-${{ github.job }}-v1-
+            ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-
+            ${{ runner.os }}-noetic-ccache-v2-
+            ${{ runner.os }}-noetic-ccache-
 
+      - name: Reset cache statistics and check CI coverage
+        run: |
+          ccache --zero-stats
+          python3 tools/ci/check_coverage.py
+          python3 -m unittest discover -s tools/ci -p 'test_*.py'
       - name: Verify morai_msgs submodule
         run: |
           test -d src/MORAI-ROS_morai_msgs/.git || test -f src/MORAI-ROS_morai_msgs/package.xml
@@ -101,180 +108,35 @@ jobs:
           # A missing pipeline dependency fails the configure step instead of skipping the targets.
           ./scripts/build_ws.sh -j2 -l2 -DASMC_LIDAR_PIPELINE_REQUIRED=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
-      - name: Check LiDAR camera receiver, coordinates, time and canonical pipeline
+      - name: Build explicit test executables once
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
-          catkin_make camera_receiver_ros_test -j2 -l2
-          cd build/asmc_lidar
-          # -T Test keeps each test's status and output for the gate (the DartConfiguration.tcl notice is harmless).
-          ctest --output-on-failure -T Test --no-compress-output
-          # Fails when a pipeline executable or a required test is missing, skipped or stale.
-          python3 ../../src/asmc_lidar/test/pipeline_ci_check.py --devel ../../devel --build . --results ../test_results/asmc_lidar
-
-      - name: Check direct common LiDAR planning and camera contracts
-        run: |
-          source /opt/ros/noetic/setup.bash
-          source devel/setup.bash
-          python3 tools/audit/check_lidar_canonicalization.py
-          python3 src/asmc_lidar/test/test_tracking_samples.py
-          python3 src/asmc_lidar/test/test_compare_traces.py
           catkin_make planning_lidar_observation_test planning_group_conversion_test ground_projection_test -j2 -l2
-          devel/lib/planning_inputs/planning_lidar_observation_test
-          devel/lib/planning_inputs/planning_group_conversion_test
-          python3 src/planning_inputs/test/common_lidar_ros_test.py
-          python3 src/planning_inputs/test/ros_boundary_smoke_test.py
-          devel/lib/lane_boundary_adapter/ground_projection_test
-          for fixture_case in camera_bbox_lane camera_bbox_clipped camera_bbox_lane_change camera_bbox_ego_mask camera_bbox_imu_projection; do
-            rostest lane_boundary_adapter "$fixture_case.test"
-          done
-          export ROS_MASTER_URI=http://127.0.0.1:11316
-          export ROS_HOSTNAME=localhost
-          roscore -p 11316 > /tmp/camera-contract-master.log 2>&1 &
-          camera_core_pid=$!
-          trap 'kill "$camera_core_pid" 2>/dev/null || true' EXIT
-          python3 tools/perception/check_camera_coco_ros.py --profile baseline
-          python3 tools/perception/check_camera_coco_ros.py --profile all
-          python3 tools/perception/check_camera_seg_ros.py
-
-      - name: Check LiDAR web view logic
-        run: node src/asmc_lidar/test/monitor/test_monitor_view.js
-
-      - name: Check bridge protocols, concurrent reporting and stale recovery
-        run: |
-          source /opt/ros/noetic/setup.bash
-          source devel/setup.bash
-          catkin_make run_tests_asmc_bridge -j2 -l2
-          catkin_test_results --verbose build/test_results/asmc_bridge
+          test -x devel/lib/asmc_lidar/camera_receiver_ros_test
 
       - name: Restore pinned CPU runtime downloads
         uses: actions/cache@v4
         with:
           path: ${{ env.PIP_CACHE_DIR }}
-          key: ${{ runner.os }}-noetic-pip-v1-${{ hashFiles('.github/workflows/ci.yml') }}
+          key: ${{ runner.os }}-noetic-pip-v1-${{ hashFiles('.github/ci/cpu-requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-noetic-pip-v1-
       - name: Install CPU tensor runtime for preprocessing regression
         run: |
-          python3 -m pip install --disable-pip-version-check --index-url https://download.pytorch.org/whl/cpu 'torch==2.1.2+cpu' 'torchvision==0.16.2+cpu'
-          python3 -m pip install --disable-pip-version-check 'numpy<2' 'ultralytics==8.4.150'
+          python3 -m pip install --disable-pip-version-check -r .github/ci/cpu-requirements.txt
 
-      - name: Check camera object processing without a GPU
-        run: |
-          source /opt/ros/noetic/setup.bash
-          source devel/setup.bash
-          python3 -m unittest discover -s tools/perception -p 'test_camera_model_release.py'
-          python3 -m unittest discover -s src/asmc_camera/test -p 'test_facade_contract.py'
-          python3 -m unittest discover -s src/asmc_camera/test/detection -p 'test_*.py'
-          python3 -m unittest discover -s src/asmc_camera/test/camera -p 'test_*.py'
-          python3 -m unittest tools/perception/test_package_twinlite_checkpoint.py
-          python3 -m unittest tools/perception/test_assess_twinlite_deployment.py
-          python3 -m unittest discover -s src/asmc_camera/test/bev -p 'test_*.py'
-          python3 -m unittest tools/perception/test_hood_evaluation.py
-          python3 -m unittest tools/perception/test_lifecycle_measurements.py
-          python3 -m unittest tools/perception/test_b0_measurements.py
-          python3 -m unittest tools/perception/test_coco7_evaluation.py
-          python3 -m unittest discover -s tools/perception -p 'test_coco7_weather.py'
-          python3 -m unittest discover -s tools/perception -p 'test_coco7_batch_benchmark.py'
-          python3 -m unittest discover -s tools/perception -p 'test_coco7_range_batches.py'
-          python3 -m unittest discover -s tools/perception -p 'test_coco7_finalists.py'
-          python3 -m unittest discover -s tools/perception -p 'test_coco7_broad_selection.py'
-          python3 -m unittest discover -s tools/perception -p 'test_coco7_confidence_followup.py'
-          python3 -m unittest discover -s tools/perception -p 'test_experiment_gallery_hub.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_coco_measurements.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_coco_matrix.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_seg_gt.py'
-          python3 -m unittest discover -s tools/perception -p 'test_seg_measurements.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_seg_matrix.py'
-          python3 -m unittest discover -s tools/perception -p 'test_seg_lidar_support.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_seg_accuracy.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_mission_classes.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_data_audit.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_data_readiness.py'
-          python3 -m unittest discover -s tools/perception -p 'test_prepare_camera_direct_review.py'
-          python3 -m unittest discover -s tools/perception -p 'test_prepare_camera_breadth_dataset.py'
-          python3 -m unittest discover -s tools/perception -p 'test_prepare_camera_obstacle_review.py'
-          python3 -m unittest discover -s tools/perception -p 'test_prepare_capture_training_data.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_bbox_pilot.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_bbox_training.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_pretrain.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_bbox_main.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_evaluation_inputs.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_capture_restoration.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_lr_branch.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_map_background.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_prediction_nms.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_preflight_revision.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_pretrain_torch.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_pretrain_v10.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_small_supervision.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_spatial_background.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_supervision_policy_review.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_validation16.py'
-          python3 -m unittest discover -s tools/perception -p 'test_fixed_map_drums.py'
-          python3 -m unittest discover -s tools/perception -p 'test_mission16_evaluation.py'
-          python3 -m unittest discover -s tools/perception -p 'test_rfdetr_candidate.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_label_changes.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_teacher_audit.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_teacher_expansion.py'
-          python3 -m unittest discover -s tools/perception -p 'test_capture_route_export.py'
-          python3 -m unittest discover -s tools/perception -p 'test_capture_collection_guard.py'
-          python3 -m unittest discover -s tools/perception -p 'test_capture_gt_sizes.py'
-          python3 -m unittest discover -s tools/perception -p 'test_capture_pedestrian_respawn.py'
-          PYTHONPATH=src/data_collection/src python3 -m unittest discover -s src/data_collection/test -p 'test_capture*.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_data_expansion_v7.py'
-          python3 -m unittest discover -s tools/perception -p 'test_yoloe_l_measurements.py'
-          python3 -m unittest discover -s tools/perception -p 'test_yoloe_selection.py'
-          python3 -m unittest discover -s tools/perception -p 'test_yoloe_l_diagnostics.py'
-          python3 -m unittest tools/perception/test_b1a_protocol.py
-          python3 -m unittest tools/perception/test_frame_boundary_measurements.py
-          python3 -m unittest tools/perception/test_lidar_continuous_measurements.py
-          python3 -m unittest tools/perception/test_tunnel_case_geometry.py
-          python3 -m unittest tools/perception/test_tunnel_summary.py
-          python3 -m unittest tools/perception/test_camera_lidar_evidence.py
-          python3 -m unittest discover -s src/asmc_camera/test/runtime -p 'test_*.py'
-          python3 -m unittest discover -s tools/perception -p 'test_camera_runtime_measurements.py'
-          python3 -m unittest discover -s tools/perception -p 'test_imu_runtime_metrics.py'
-          python3 -m unittest discover -s tools/perception -p 'test_imu_width_acceptance.py'
-          python3 -m unittest discover -s tools/perception -p 'test_shadow_family_validation.py'
-
-      - name: Check inference control faults with generated ROS messages
-        run: |
-          source /opt/ros/noetic/setup.bash
-          source devel/setup.bash
-          export ROS_MASTER_URI=http://127.0.0.1:11312
-          export ROS_HOSTNAME=localhost
-          roscore -p 11312 > /tmp/camera-control-roscore.log 2>&1 &
-          core_pid=$!
-          trap 'kill "$core_pid" 2>/dev/null || true' EXIT
-          python3 tools/perception/check_inference_control_ros.py
-          python3 tools/perception/check_camera_coco_ros.py --profile baseline
-          python3 tools/perception/check_camera_coco_ros.py --profile all
-          python3 tools/perception/check_camera_seg_ros.py
-          python3 tools/perception/check_camera_seg_ros.py --batched
-          roslaunch --nodes asmc_camera camera_objects_coco_experiment.launch classes:=all
-          roslaunch --nodes asmc_camera camera_objects_coco_experiment.launch classes:=baseline debug:=false
-          roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yolo26 views:=front debug:=false
-          roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yoloe views:=all debug:=false
-          roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yolo26 classes:=mission debug:=false
-          roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yoloe classes:=mission views:=all debug:=false
-          roslaunch --nodes asmc_camera camera_objects_yoloe_l_experiment.launch debug:=false
-          roslaunch --nodes asmc_camera camera_objects_yoloe_l_experiment.launch prompt_profile:=base27 batch_mode:=batch3 debug:=false
-          roslaunch --nodes asmc_camera camera_objects_three_view_experiment.launch debug:=false
-          roslaunch --nodes asmc_camera camera_objects_three_view_experiment.launch debug:=true
-          roslaunch --nodes asmc_camera camera_yoloe_experiment.launch model:=m front_width:=640 prompt_profile:=obstacle17
-          roslaunch --nodes asmc_camera camera_yoloe_experiment.launch model:=l front_width:=1280 start_camera_lane:=true start_traffic_light:=true
-          python3 tools/perception/check_region_example_ros.py
-          python3 tools/perception/check_object_visualization_ros.py
-          python3 tools/perception/check_object_visualization_ros.py --hood-mask
-          python3 tools/perception/check_object_visualization_ros.py --hood-mask --debug-raw
-          python3 tools/perception/check_object_visualization_ros.py --hood-mask --view left
-          python3 tools/perception/check_object_visualization_ros.py --hood-mask --view right
-          python3 tools/perception/check_object_mosaic_ros.py --output /tmp/object-mosaic-ros-check.json
-          python3 tools/perception/check_object_view_ros.py
-          python3 tools/perception/check_hood_mask_ros.py
-          python3 tools/perception/check_ego_hood_filter_ros.py
-          python3 tools/perception/check_object_visualization_ros.py --ego-hood-filter
+      - name: Run all isolated regression groups
+        run: python3 tools/ci/run_checks.py --output .ci-results --workers 2
+      - name: Preserve regression logs and status even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci-results
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: warn
       - name: Report compiler cache reuse
         if: always()
         run: command -v ccache >/dev/null && ccache --show-stats || true

@@ -12,6 +12,8 @@ on:
       - 'src/asmc_camera/**'
       - 'src/jamming_lane_boundary_adapter/**'
       - '.github/workflows/planning-integration.yml'
+      - '.github/ci/**'
+      - 'tools/ci/**'
 
 # A newer PR revision supersedes older checks; main push validation completes.
 concurrency:
@@ -48,9 +50,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-noetic-ccache-${{ github.job }}-v1-${{ github.sha }}
+          key: ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h', 'src/**/*.cc', 'src/**/CMakeLists.txt', 'src/**/package.xml', 'src/**/*.msg', 'src/**/*.srv') }}
           restore-keys: |
-            ${{ runner.os }}-noetic-ccache-${{ github.job }}-v1-
+            ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-
+            ${{ runner.os }}-noetic-ccache-v2-
+            ${{ runner.os }}-noetic-ccache-
+      - name: Reset cache statistics
+        run: ccache --zero-stats
       - name: Check runtime launch contracts
         run: |
           python3 src/planning_inputs/test/runtime_launch_contract_test.py

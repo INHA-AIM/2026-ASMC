@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "groups": [
+    {
+      "name": "lane",
+      "script": ".github/ci/lane.sh",
+      "timeout_s": 600
+    },
+    {
+      "name": "lidar",
+      "script": ".github/ci/lidar.sh",
+      "timeout_s": 600
+    },
+    {
+      "name": "camera-unit",
+      "script": ".github/ci/camera-unit.sh",
+      "timeout_s": 600
+    },
+    {
+      "name": "camera-ros",
+      "script": ".github/ci/camera-ros.sh",
+      "timeout_s": 600
+    },
+    {
+      "name": "bridge",
+      "script": ".github/ci/bridge.sh",
+      "timeout_s": 600
+    }
+  ]
+}
