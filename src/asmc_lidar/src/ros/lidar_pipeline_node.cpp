@@ -194,6 +194,7 @@ class LidarPipelineNode {
     std::string sensor_frame;
   };
   struct Stats {
+    pipeline::LocalInputSelection selected;
     std::uint64_t processed = 0, invalid = 0, stamp_errors = 0, scans_processed = 0;
     std::string input_reason = "waiting_for_input", map_reason = "gps_missing", pose_reason;
     bool camera_active = false;
@@ -619,6 +620,7 @@ class LidarPipelineNode {
     stats_.input_reason = output.input_reason();
     stats_.map_reason = output.map_reason();
     stats_.pose_reason = out.pose_ready ? "ready" : out.reason;
+    stats_.selected = out.selected;
     if (out.fusion_ran) {
       stats_.camera_active = out.fusion.camera_active;
       stats_.camera_reason = out.fusion.camera_reason;
@@ -727,6 +729,13 @@ class LidarPipelineNode {
         number("gps_sample_arrival_ns", stats_.gps_sample_arrival_ns);
         number("gps_age_ms", stats_.gps_age_ms);
       }
+      number("imu_selected_stamp_ns", stats_.selected.imu_stamp_ns);
+      number("imu_latest_seen_ns", stats_.selected.imu_latest_seen_ns);
+      number("imu_latest_receipt_ns", stats_.selected.imu_latest_receipt_ns);
+      number("imu_invalid_stamp_ns", stats_.selected.imu_invalid_ns);
+      value("imu_rejection_reason", stats_.selected.imu_rejection_reason);
+      if(stats_.selected.imu_stamp_ns && stats_.last_stamp_ns>0 && static_cast<std::uint64_t>(stats_.last_stamp_ns)>=stats_.selected.imu_stamp_ns)
+        number("imu_selected_age_ms",double(stats_.last_stamp_ns-stats_.selected.imu_stamp_ns)/1e6);
       number("imu_rejected", runtime_->imu_rejected());
       number("can_rejected", runtime_->can_rejected());
       number("gps_rejected", runtime_->gps_rejected());

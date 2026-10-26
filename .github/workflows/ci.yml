@@ -116,6 +116,14 @@ jobs:
           catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test ground_projection_test -j2 -l2
           test -x devel/lib/asmc_lidar/camera_receiver_ros_test
 
+      - name: C0 coordinate and clock regression (small synthetic inputs)
+        run: |
+          source devel/setup.bash
+          cmake -S tools/perception/frame_time -B /tmp/asmc-c0-probes -DASMC_C0_RUNTIME_LIB_DIR="$PWD/devel/lib" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build /tmp/asmc-c0-probes -j2
+          C0_PROBES=/tmp/asmc-c0-probes python3 tools/perception/test_frame_time_audit.py
+          python3 tools/perception/frame_time/test_state_probes.py --probes /tmp/asmc-c0-probes
+
       - name: Save successful compilation before regression tests
         if: steps.compiler-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4

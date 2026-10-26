@@ -3,7 +3,10 @@
 #include <algorithm>
 #include <cmath>
 
-#include "asmc_bridge/gps_transform.hpp"
+#include <asmc_geometry/geodesy.hpp>
+using asmc::geometry::GpsToUtm52N;
+using asmc::geometry::QuaternionToYaw;
+using asmc::geometry::Utm52NYawOffset;
 #include "asmc_bridge/steady_freshness.hpp"
 
 namespace frenet_planner_ros {
@@ -14,11 +17,9 @@ bool IsFinite(double value) { return std::isfinite(value); }
 bool ValidStamp(const ros::Time& stamp) { return !stamp.isZero(); }
 
 bool ValidGps(const morai_msgs::GPSMessage& gps) {
-    return gps.status > 0 && ValidStamp(gps.header.stamp) &&
-           IsFinite(gps.latitude) && gps.latitude >= -90.0 &&
-           gps.latitude <= 90.0 && IsFinite(gps.longitude) &&
-           gps.longitude >= -180.0 && gps.longitude <= 180.0 &&
-           IsFinite(gps.eastOffset) && IsFinite(gps.northOffset);
+    // Shared input validity; this estimator still owns its recovery and gain policy.
+    return asmc::geometry::ValidGpsFix(gps.status, ValidStamp(gps.header.stamp),
+        gps.latitude, gps.longitude, gps.eastOffset, gps.northOffset);
 }
 
 bool ValidImu(const sensor_msgs::Imu& imu) {
@@ -48,6 +49,16 @@ GpsImuStateEstimator::GpsImuStateEstimator(const StateAdapterConfig& config)
 
 void GpsImuStateEstimator::updateGps(
     const morai_msgs::GPSMessage& gps, const ros::SteadyTime& received_at) {
+    // Preserve this adapter's steady-receipt-time policy. After invalid input,
+    // timeout or receipt regression, require a fresh velocity baseline instead
+    // of differencing across the gap or reviving the previous speed.
+    if (!ValidGps(gps) ||
+        (has_gps_ &&
+         (received_at <= gps_received_at_ ||
+          (received_at - gps_received_at_).toSec() >
+              config_.gps_timeout_s + 1e-6))) {
+        resetGpsBaseline();
+    }
     gps_ = gps;
     has_gps_ = true;
     gps_received_at_ = received_at;
@@ -59,11 +70,6 @@ void GpsImuStateEstimator::updateGps(
     const double x = easting - gps.eastOffset;
     const double y = northing - gps.northOffset;
 
-    if (!position_window_.empty() &&
-        received_at <= position_window_.back().received_at) {
-        position_window_.clear();
-        has_stationary_anchor_ = false;
-    }
     position_window_.push_back({x, y, received_at});
     while (position_window_.size() > 2 &&
            (received_at - position_window_.front().received_at).toSec() >
@@ -134,6 +140,16 @@ void GpsImuStateEstimator::updateGps(
     speed_mps_ = std::clamp(
         speed_mps_, 0.0, config_.maximum_speed_mps);
     has_speed_ = true;
+}
+
+void GpsImuStateEstimator::resetGpsBaseline() {
+    position_window_.clear();
+    has_speed_ = false;
+    speed_mps_ = 0.0;
+    has_stationary_anchor_ = false;
+    has_filtered_acceleration_ = false;
+    filtered_acceleration_mps2_ = 0.0;
+    previous_imu_received_at_ = ros::SteadyTime();
 }
 
 void GpsImuStateEstimator::updateImu(

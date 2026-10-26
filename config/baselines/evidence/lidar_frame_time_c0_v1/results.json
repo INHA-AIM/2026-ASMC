@@ -1,0 +1,917 @@
+{
+  "schema": "asmc.frame_time_evidence.v1",
+  "offline": {
+    "schema": "asmc.frame_time_audit.v1",
+    "run_id": "lidar-frame-time-c0-20261026-r4",
+    "source_revision": "3ecc167c649cf7fbed180ae9144b968b049cbcc3",
+    "manifest_sha256": "412529b1b88ebc42cd79fb0759a934248449caace55561cb3bad0431e7ce3b43",
+    "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bag": {
+      "normal": {
+        "topics": {
+          "/Ego_topic": {
+            "type": "morai_msgs/EgoVehicleStatus",
+            "count": 2445
+          },
+          "/cam_extra/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 490
+          },
+          "/cam_left/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 979
+          },
+          "/cam_right/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 979
+          },
+          "/gps": {
+            "type": "morai_msgs/GPSMessage",
+            "count": 245
+          },
+          "/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 979
+          },
+          "/imu": {
+            "type": "sensor_msgs/Imu",
+            "count": 2384
+          },
+          "/morai_sensor_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 10
+          },
+          "/morai_udp_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 10
+          },
+          "/tf_static": {
+            "type": "tf2_msgs/TFMessage",
+            "count": 1
+          },
+          "/velodyne_points": {
+            "type": "sensor_msgs/PointCloud2",
+            "count": 649
+          }
+        },
+        "scans": 649,
+        "replay_equal": true,
+        "local_status": {
+          "1": 497,
+          "2": 152
+        },
+        "map_reasons": {
+          "gps_missing": 1,
+          "gps_recovering": 5,
+          "gps_bounded_prediction": 643
+        },
+        "imu_age_ms": {
+          "count": 649,
+          "p50": 0.835181,
+          "p95": 24.6528148,
+          "p99": 28.023566999999996,
+          "max": 44.176102
+        },
+        "gps_age_ms": {
+          "count": 648,
+          "p50": 104.0680405,
+          "p95": 191.6746861,
+          "p99": 196.50072575,
+          "max": 208.344937
+        },
+        "planning": {
+          "reasons": {
+            "pose_unavailable": 6,
+            "asynchronous_policy_difference": 643
+          },
+          "sample_delta_ms": {
+            "count": 643,
+            "p50": -0.830174,
+            "p95": -0.455523,
+            "p99": -0.34897329999999915,
+            "max": 0.571489
+          },
+          "asynchronous_position_m": {
+            "count": 643,
+            "p50": 0.051624393558525807,
+            "p95": 0.18660339635251072,
+            "p99": 0.26712629631968754,
+            "max": 0.37657769445298594
+          },
+          "asynchronous_yaw_rad": {
+            "count": 643,
+            "p50": 7.037955951361141e-08,
+            "p95": 1.315424540848653e-07,
+            "p99": 2.431330996532927e-07,
+            "max": 0.004423812481060718
+          },
+          "same_time_position_m": {
+            "count": 0
+          }
+        },
+        "bridge": {
+          "reasons": {
+            "pose_unavailable": 6,
+            "asynchronous_policy_difference": 643
+          },
+          "sample_delta_ms": {
+            "count": 643,
+            "p50": -104.166507,
+            "p95": -1.2871509000000005,
+            "p99": -1.0593937799999995,
+            "max": -0.708104
+          },
+          "asynchronous_position_m": {
+            "count": 643,
+            "p50": 0.3521134032048753,
+            "p95": 0.9210515254195621,
+            "p99": 1.3860757096028042,
+            "max": 1.954450109066382
+          },
+          "asynchronous_yaw_rad": {
+            "count": 643,
+            "p50": 0.023513803811383127,
+            "p95": 0.023523800750937338,
+            "p99": 0.023523812260112374,
+            "max": 0.02352381732536779
+          },
+          "same_time_position_m": {
+            "count": 0
+          }
+        },
+        "images": {
+          "front": {
+            "reasons": {
+              "header_match_only": 526,
+              "outside_50ms": 123
+            },
+            "dt_ms": {
+              "count": 649,
+              "p50": -20.417452,
+              "p95": -0.9195806,
+              "p99": -0.38954788,
+              "max": 0.298738
+            }
+          },
+          "left": {
+            "reasons": {
+              "header_match_only": 523,
+              "outside_50ms": 126
+            },
+            "dt_ms": {
+              "count": 649,
+              "p50": -22.777558,
+              "p95": -2.9026986,
+              "p99": -2.000093440000002,
+              "max": -1.393795
+            }
+          },
+          "right": {
+            "reasons": {
+              "header_match_only": 530,
+              "outside_50ms": 119
+            },
+            "dt_ms": {
+              "count": 649,
+              "p50": -21.885395,
+              "p95": -2.3319241999999996,
+              "p99": -1.6910652400000004,
+              "max": -1.297474
+            }
+          }
+        }
+      },
+      "tunnel": {
+        "topics": {
+          "/Ego_topic": {
+            "type": "morai_msgs/EgoVehicleStatus",
+            "count": 1238
+          },
+          "/cam_extra/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 247
+          },
+          "/cam_left/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 494
+          },
+          "/cam_right/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 494
+          },
+          "/gps": {
+            "type": "morai_msgs/GPSMessage",
+            "count": 124
+          },
+          "/gps/fix": {
+            "type": "sensor_msgs/NavSatFix",
+            "count": 124
+          },
+          "/image_jpeg/compressed": {
+            "type": "sensor_msgs/CompressedImage",
+            "count": 494
+          },
+          "/imu": {
+            "type": "sensor_msgs/Imu",
+            "count": 1223
+          },
+          "/morai_sensor_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 5
+          },
+          "/morai_udp_bridge/diagnostics": {
+            "type": "diagnostic_msgs/DiagnosticArray",
+            "count": 5
+          },
+          "/tf_static": {
+            "type": "tf2_msgs/TFMessage",
+            "count": 1
+          },
+          "/velodyne_points": {
+            "type": "sensor_msgs/PointCloud2",
+            "count": 208
+          }
+        },
+        "scans": 208,
+        "replay_equal": true,
+        "local_status": {
+          "1": 148,
+          "2": 60
+        },
+        "map_reasons": {
+          "gps_recovering": 3,
+          "gps_bounded_prediction": 205
+        },
+        "imu_age_ms": {
+          "count": 208,
+          "p50": 1.7038585,
+          "p95": 6.977510099999993,
+          "p99": 29.618856280000006,
+          "max": 30.146599
+        },
+        "gps_age_ms": {
+          "count": 208,
+          "p50": 101.7296315,
+          "p95": 196.7007879,
+          "p99": 211.57361967,
+          "max": 212.783098
+        },
+        "planning": {
+          "reasons": {
+            "pose_unavailable": 3,
+            "asynchronous_policy_difference": 205
+          },
+          "sample_delta_ms": {
+            "count": 205,
+            "p50": -1.702309,
+            "p95": -0.7065296000000001,
+            "p99": -0.49871399999999955,
+            "max": 0.110865
+          },
+          "asynchronous_position_m": {
+            "count": 205,
+            "p50": 0.05906031394593438,
+            "p95": 0.1216601735426208,
+            "p99": 0.1889431521204512,
+            "max": 0.307294685593197
+          },
+          "asynchronous_yaw_rad": {
+            "count": 205,
+            "p50": 6.187883894170909e-08,
+            "p95": 1.455630755486936e-07,
+            "p99": 2.7594006475339937e-07,
+            "max": 0.0005848339333351937
+          },
+          "same_time_position_m": {
+            "count": 0
+          }
+        },
+        "bridge": {
+          "reasons": {
+            "pose_unavailable": 3,
+            "asynchronous_policy_difference": 205
+          },
+          "sample_delta_ms": {
+            "count": 205,
+            "p50": -101.645231,
+            "p95": -5.249309200000013,
+            "p99": -2.0699406799999926,
+            "max": -1.509666
+          },
+          "asynchronous_position_m": {
+            "count": 205,
+            "p50": 0.35338183119707506,
+            "p95": 1.26071162666745,
+            "p99": 1.4747429866856143,
+            "max": 1.5301252713533737
+          },
+          "asynchronous_yaw_rad": {
+            "count": 205,
+            "p50": 0.023513559043070845,
+            "p95": 0.02352166601592849,
+            "p99": 0.02352168327021964,
+            "max": 0.024094568015984304
+          },
+          "same_time_position_m": {
+            "count": 0
+          }
+        },
+        "images": {
+          "front": {
+            "reasons": {
+              "header_match_only": 159,
+              "outside_50ms": 49
+            },
+            "dt_ms": {
+              "count": 208,
+              "p50": -23.1723785,
+              "p95": -1.9610052500000001,
+              "p99": -1.5234184199999996,
+              "max": -1.116991
+            }
+          },
+          "left": {
+            "reasons": {
+              "header_match_only": 162,
+              "outside_50ms": 46
+            },
+            "dt_ms": {
+              "count": 208,
+              "p50": -7.8154805,
+              "p95": -3.164613300000001,
+              "p99": -2.71682031,
+              "max": -2.340079
+            }
+          },
+          "right": {
+            "reasons": {
+              "header_match_only": 157,
+              "outside_50ms": 51
+            },
+            "dt_ms": {
+              "count": 208,
+              "p50": -24.480700499999998,
+              "p95": -2.95784485,
+              "p99": -2.6508643899999997,
+              "max": -2.461671
+            }
+          }
+        }
+      }
+    },
+    "limitations": [
+      "Receive-only bag headers are not measurement stamps.",
+      "No cross-recording joins. No independent GT.",
+      "Camera publication queries are causal sensitivity, not measured worker timing."
+    ],
+    "binaries": {
+      "/tmp/asmc-b4-devel/lib/asmc_lidar/lidar_replay": "d97b4c33f92720cc6aabdb986b17eb0d84e5cd5bbc8c5123b999ccfc7e643314",
+      "/tmp/asmc-c0-probes/frame_projection_probe": "17947ea0d4e6d2aa7b7a3cdf72d9267f20c6cf58f5b7cc4f7b9cbfdef938d65e",
+      "/tmp/asmc-c0-probes/context_probe": "4841eb08fa803204d105cf4b5f23e8ed70161bcf2a49eb034668978199db4efa",
+      "/tmp/asmc-c0-probes/bridge_state_probe": "80062906d0cad0ee9d7fb4045d8ea9bcdfb9941166730c3d0091e9ba2f3991d1",
+      "/tmp/asmc-c0-probes/planning_state_probe": "de124257ac18718a3c8b885c722a87d0c4e9a0d75832237535cd9b40bd5b471f",
+      "/tmp/asmc-c0-probes/support_probe": "066e4ce88fe327c7c3082ceeb432be04c1ca0221fe4de6292fa9ade0e3d1e53b"
+    },
+    "projection": {
+      "passed": true,
+      "maximum_error_px": 2.5421149729252077e-13,
+      "negative_control_min_px": {
+        "missing_inverse": 11.913831259418046,
+        "double_inverse": 11.874721900042898,
+        "wrong_attitude": 8.028741591007375
+      }
+    },
+    "camera": {
+      "frames": 226,
+      "views": 678,
+      "query": "bridge publication + delay; not recorded worker start",
+      "delays": {
+        "0": {
+          "reasons": {
+            "exact": 60,
+            "imu_not_bracketed": 613,
+            "interpolated": 5
+          },
+          "bracket_ms": {
+            "count": 65,
+            "p50": 0.0,
+            "p95": 42.8,
+            "p99": 43.0,
+            "max": 43.0
+          }
+        },
+        "10": {
+          "reasons": {
+            "exact": 108,
+            "imu_not_bracketed": 329,
+            "interpolated": 241
+          },
+          "bracket_ms": {
+            "count": 349,
+            "p50": 42.0,
+            "p95": 47.0,
+            "p99": 50.0,
+            "max": 80.0
+          }
+        },
+        "100": {
+          "reasons": {
+            "exact": 108,
+            "interpolated": 570
+          },
+          "bracket_ms": {
+            "count": 678,
+            "p50": 43.0,
+            "p95": 77.0,
+            "p99": 80.0,
+            "max": 81.0
+          }
+        }
+      },
+      "counters": {
+        "joined": 1032,
+        "duplicate_or_invalid_source": 398
+      }
+    },
+    "gallery": {
+      "normal": {
+        "objects": 980,
+        "corner_delta_m": {
+          "count": 980,
+          "p50": 0.05238375618005228,
+          "p95": 0.16996646325741355,
+          "p99": 0.2606063497996102,
+          "max": 0.3765777044868664
+        },
+        "roundtrip_m": {
+          "count": 980,
+          "p50": 7.973939422849546e-14,
+          "p95": 1.2506167233976116e-13,
+          "p99": 1.4518149468121488e-13,
+          "max": 1.7903625995052421e-13
+        },
+        "relation_changes": 0,
+        "note": "Fixed delivered OBB, alternative xy/yaw only; supports not recovered from trace, no filter adoption"
+      },
+      "tunnel": {
+        "objects": 158,
+        "corner_delta_m": {
+          "count": 158,
+          "p50": 0.06512861747390189,
+          "p95": 0.13233180490730567,
+          "p99": 0.214884704395539,
+          "max": 0.3072946866694068
+        },
+        "roundtrip_m": {
+          "count": 158,
+          "p50": 8.657065336790577e-14,
+          "p95": 1.2537542352934156e-13,
+          "p99": 1.4881998150865215e-13,
+          "max": 1.5753841734370145e-13
+        },
+        "relation_changes": 0,
+        "note": "Fixed delivered OBB, alternative xy/yaw only; supports not recovered from trace, no filter adoption"
+      }
+    },
+    "support": {
+      "schema": "asmc.frame_time_support.v1",
+      "bags": {
+        "normal": {
+          "scans": 649,
+          "unchanged_delivery_arrays": true,
+          "objects": 8440,
+          "support_points": 1446370,
+          "decision_changes": [
+            {
+              "seq": 126,
+              "track_id": 6,
+              "before": "obb_support_outside",
+              "after": "insufficient_cluster_support"
+            },
+            {
+              "seq": 188,
+              "track_id": 96,
+              "before": "cluster_outside_boundary_uncertain",
+              "after": "joint_drivable_support"
+            },
+            {
+              "seq": 286,
+              "track_id": 221,
+              "before": "insufficient_cluster_support",
+              "after": "obb_support_outside"
+            }
+          ],
+          "interior_ratio_delta": {
+            "count": 8440,
+            "p50": 0.0,
+            "p95": 0.006253955696202502,
+            "p99": 0.09090909090909088,
+            "max": 0.25
+          },
+          "velocity": {
+            "identity_and_validity_passed": true,
+            "counts": {
+              "qualified_valid": 959,
+              "motion_0": 157,
+              "motion_1": 519,
+              "motion_2": 114,
+              "motion_3": 190,
+              "qualified_unknown": 21
+            },
+            "qualified_vs_classifier_speed_vector_delta_mps": {
+              "count": 959,
+              "p50": 0.9331237343736204,
+              "p95": 6.727223333995478,
+              "p99": 12.100616272617412,
+              "max": 29.079489185816772
+            },
+            "meaning": "Different estimators; difference is not velocity error. No GT comparison."
+          }
+        },
+        "tunnel": {
+          "scans": 208,
+          "unchanged_delivery_arrays": true,
+          "objects": 2490,
+          "support_points": 466825,
+          "decision_changes": [
+            {
+              "seq": 62,
+              "track_id": 18,
+              "before": "joint_drivable_support",
+              "after": "cluster_outside_boundary_uncertain"
+            },
+            {
+              "seq": 100,
+              "track_id": 138,
+              "before": "joint_drivable_support",
+              "after": "obb_overlap_below_threshold"
+            }
+          ],
+          "interior_ratio_delta": {
+            "count": 2490,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.05882352941176472,
+            "max": 0.13333333333333336
+          },
+          "velocity": {
+            "identity_and_validity_passed": true,
+            "counts": {
+              "qualified_valid": 151,
+              "motion_0": 58,
+              "motion_1": 100,
+              "qualified_unknown": 7
+            },
+            "qualified_vs_classifier_speed_vector_delta_mps": {
+              "count": 151,
+              "p50": 0.43403243155828175,
+              "p95": 2.3880340698962526,
+              "p99": 6.248368642794713,
+              "max": 8.858313953972603
+            },
+            "meaning": "Different estimators; difference is not velocity error. No GT comparison."
+          }
+        }
+      },
+      "pins": {
+        "/artifacts/lidar-frame-time-c0-20261026-r4/normal/planning.jsonl": "1774810697e46ac6901c61b24c86c6ef1735763127e1bf604b031681ed2a700c",
+        "/artifacts/lidar-frame-time-c0-20261026-r4/normal/lidar.jsonl": "b3d00a65d8410771f67e8b98c230a04d7f7a2653239148ef05f24244f9c46f70",
+        "/artifacts/lidar-frame-time-c0-20261026-r4/tunnel/planning.jsonl": "23f69152afc14d6fd71050a6e365e2a9efd03c7a8d246125eb7a7927e0791576",
+        "/artifacts/lidar-frame-time-c0-20261026-r4/tunnel/lidar.jsonl": "d9c81723b3942bb414ad4f87a8a1246e8a7633ee59f5b1a21e711350b3f1056c"
+      },
+      "passed": true,
+      "limits": [
+        "All observed pre-delivery objects, fixed OBB and full voxel cluster supports.",
+        "Alternative xy/yaw from asynchronous planning state; preserves original roll/pitch/z.",
+        "No new pose extrapolation, no independent positional bound.",
+        "Camera protection absent in these bags; no simulated camera labels added.",
+        "Map classification changes are sensitivity, never an operating policy recommendation."
+      ]
+    },
+    "passed": true
+  },
+  "live": {
+    "schema": "asmc.frame_time_live.v1",
+    "bag_sha256": "d0cdfeb5c692e5b2ef0af1a0a4d351e899947e054779de27cfef9f4de3268272",
+    "topics": {
+      "/planning/vehicle/state": 2374,
+      "/Ego_topic": 1856,
+      "/imu": 1984,
+      "/morai_sensor_bridge/frame_timing": 5865,
+      "/vehicle/state": 2374,
+      "/gps": 238,
+      "/migration/lidar/observations_local": 565,
+      "/migration/lidar/observations_map": 565,
+      "/migration/lidar/planning_observations_map": 565,
+      "/migration/lidar/tracks_map": 565,
+      "/planning/objects": 170,
+      "/migration/lidar/trace": 565,
+      "/migration/lidar/diagnostics": 47
+    },
+    "supply": {
+      "/planning/vehicle/state": {
+        "mean_hz": 50.00369169269506,
+        "receive_gap_ms": {
+          "count": 2373,
+          "p50": 20.001052,
+          "p95": 20.1217908,
+          "p99": 20.1916622,
+          "max": 20.452371
+        }
+      },
+      "/Ego_topic": {
+        "mean_hz": 39.09300851379021,
+        "receive_gap_ms": {
+          "count": 1855,
+          "p50": 33.03348,
+          "p95": 34.4296387,
+          "p99": 35.034863619999996,
+          "max": 159.462504
+        }
+      },
+      "/imu": {
+        "mean_hz": 41.78199495205727,
+        "receive_gap_ms": {
+          "count": 1983,
+          "p50": 24.316548,
+          "p95": 43.2438954,
+          "p99": 44.767173480000004,
+          "max": 147.873898
+        }
+      },
+      "/morai_sensor_bridge/frame_timing": {
+        "mean_hz": 123.55704893868116,
+        "receive_gap_ms": {
+          "count": 5864,
+          "p50": 1.2255485,
+          "p95": 38.13047225,
+          "p99": 40.35182613,
+          "max": 146.095184
+        }
+      },
+      "/vehicle/state": {
+        "mean_hz": 50.00303838837539,
+        "receive_gap_ms": {
+          "count": 2373,
+          "p50": 20.000765,
+          "p95": 20.1248244,
+          "p99": 20.17670412,
+          "max": 20.522793
+        }
+      },
+      "/gps": {
+        "mean_hz": 5.002782292305757,
+        "receive_gap_ms": {
+          "count": 237,
+          "p50": 199.865946,
+          "p95": 242.9587168,
+          "p99": 246.59339328,
+          "max": 275.698806
+        }
+      },
+      "/migration/lidar/observations_local": {
+        "mean_hz": 11.911503841833142,
+        "receive_gap_ms": {
+          "count": 564,
+          "p50": 89.8052565,
+          "p95": 102.58984545,
+          "p99": 105.74007306,
+          "max": 232.645137
+        }
+      },
+      "/migration/lidar/observations_map": {
+        "mean_hz": 11.911528582516386,
+        "receive_gap_ms": {
+          "count": 564,
+          "p50": 89.868831,
+          "p95": 102.55566329999999,
+          "p99": 105.73554365999999,
+          "max": 232.651689
+        }
+      },
+      "/migration/lidar/planning_observations_map": {
+        "mean_hz": 11.911520581140865,
+        "receive_gap_ms": {
+          "count": 564,
+          "p50": 89.8342275,
+          "p95": 102.54062880000001,
+          "p99": 105.80455788,
+          "max": 232.793415
+        }
+      },
+      "/migration/lidar/tracks_map": {
+        "mean_hz": 11.911471626219424,
+        "receive_gap_ms": {
+          "count": 564,
+          "p50": 89.8628775,
+          "p95": 102.4982762,
+          "p99": 105.77799505,
+          "max": 232.637179
+        }
+      },
+      "/planning/objects": {
+        "mean_hz": 3.569208825775198,
+        "receive_gap_ms": {
+          "count": 169,
+          "p50": 97.22793,
+          "p95": 102.529333,
+          "p99": 105.81454879999998,
+          "max": 33086.336617
+        }
+      },
+      "/migration/lidar/trace": {
+        "mean_hz": 11.911468809688497,
+        "receive_gap_ms": {
+          "count": 564,
+          "p50": 89.9706095,
+          "p95": 102.59096195000001,
+          "p99": 105.8275486,
+          "max": 232.646084
+        }
+      },
+      "/migration/lidar/diagnostics": {
+        "mean_hz": 1.0000014031976212,
+        "receive_gap_ms": {
+          "count": 46,
+          "p50": 999.9865775,
+          "p95": 1000.1697485,
+          "p99": 1000.31637995,
+          "max": 1000.329281
+        }
+      }
+    },
+    "states": {
+      "/planning/vehicle/state | gps_nonzero | True": 789,
+      "/vehicle/state | gps_nonzero | True": 796,
+      "/planning/vehicle/state | gps_zero | False": 1561,
+      "/vehicle/state | gps_zero | True": 1560,
+      "/planning/vehicle/state | gps_nonzero | False": 6
+    },
+    "lidar_status": {
+      "/migration/lidar/observations_local | 2 | observed_empty": 179,
+      "/migration/lidar/observations_map | 2 | observed_empty": 170,
+      "/migration/lidar/observations_local | 1 | observed": 360,
+      "/migration/lidar/observations_map | 4 | gps_invalid": 365,
+      "/migration/lidar/observations_local | 3 | IMU is stale for LiDAR scan": 26,
+      "/migration/lidar/observations_map | 3 | IMU is stale for LiDAR scan": 26,
+      "/migration/lidar/observations_map | 4 | gps_recovering": 4
+    },
+    "gps_zero_local": {
+      "1 | observed": 360,
+      "3 | IMU is stale for LiDAR scan": 14,
+      "2 | observed_empty": 2
+    },
+    "bridge_zero_gps_valid_examples": [
+      {
+        "topic": "/vehicle/state",
+        "x": -42025237.1284903,
+        "y": -4124145.0,
+        "stamp_ns": 1793016171246366262
+      },
+      {
+        "topic": "/vehicle/state",
+        "x": -42025237.1284903,
+        "y": -4124145.0,
+        "stamp_ns": 1793016171363504648
+      },
+      {
+        "topic": "/vehicle/state",
+        "x": -42025237.1284903,
+        "y": -4124145.0,
+        "stamp_ns": 1793016171363504648
+      }
+    ],
+    "trace_reasons": {
+      "": 539,
+      "IMU is stale for LiDAR scan": 26
+    },
+    "imu_selected_age_ms": {
+      "count": 539,
+      "p50": 2.147675,
+      "p95": 3.1104808999999998,
+      "p99": 3.971948920000001,
+      "max": 115.285158
+    },
+    "timing": {
+      "imu": {
+        "morai_sensor | True | receive": 1983
+      },
+      "cam3": {
+        "morai_sensor | True | receive": 948
+      },
+      "cam2": {
+        "morai_sensor | True | receive": 948
+      },
+      "cam1": {
+        "morai_sensor | True | receive": 947
+      },
+      "cam4": {
+        "morai_sensor | True | receive": 474
+      },
+      "lidar": {
+        "velodyne_device_hour | True | receive": 565
+      }
+    },
+    "lidar_device_scan_span_ms": {
+      "count": 565,
+      "p50": 97.159,
+      "p95": 101.67060000000001,
+      "p99": 103.74980000000002,
+      "max": 177.197
+    },
+    "limits": [
+      "Receive cadence is metadata-bag subscriber timing, not pure model latency.",
+      "velodyne_device_hour cannot be subtracted from morai_sensor without an established clock mapping.",
+      "No camera inference performance acceptance: duplicate pre-existing GPU allocations.",
+      "State comparison excludes 100ms after GPS-zero transitions."
+    ]
+  },
+  "trial": {
+    "link": "A2256W000126",
+    "command_seconds": 25.0,
+    "maximum_lateral_error_m": 0.1299803645814746,
+    "maximum_speed_mps": 5.526111473222571,
+    "restored": true
+  },
+  "heading_restoration": {
+    "action": "restored_heading",
+    "observed_heading_delta_deg": 1.3442535400390625,
+    "residual_heading_deg": -0.017608642578125
+  },
+  "artifacts": {
+    "lidar-frame-time-c0-20261026-r3/summary.json": {
+      "bytes": 57593,
+      "sha256": "a3477ab64f200f0d1994a917006904cf6b4041be420ca59b4a3c7233000669eb"
+    },
+    "lidar-frame-time-c0-20261026-r3/gallery.html": {
+      "bytes": 2969,
+      "sha256": "35373065e049d50c22f4fa423b7569942c2c601d2088be3341341e90bc4abcf2"
+    },
+    "lidar-frame-time-c0-20261026-r3/source.patch": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "lidar-frame-time-c0-live-20261026-r1/analysis.json": {
+      "bytes": 6338,
+      "sha256": "0a7a80902d89dcae24584dc6ca8d23dc08a201f5296a17fa1491c415c74f0ea0"
+    },
+    "lidar-frame-time-c0-live-20261026-r1/timing.bag": {
+      "bytes": 35417283,
+      "sha256": "d0cdfeb5c692e5b2ef0af1a0a4d351e899947e054779de27cfef9f4de3268272"
+    },
+    "lidar-frame-time-c0-live-20261026-r1/motion/report.json": {
+      "bytes": 5728,
+      "sha256": "e4a4e74ea7c300919c81cc5646e8627acc49ac5cbd8cbb5e0ed7649264974ada"
+    },
+    "lidar-frame-time-c0-live-20261026-r1/trial-source.py": {
+      "bytes": 11762,
+      "sha256": "b1714edfe6ecbe5880198bdce73b9b1c998429d7d833bbfa83f15bdfa4242337"
+    },
+    "lidar-frame-time-c0-live-20261026-r1/runtime-parameters.yaml": {
+      "bytes": 18945,
+      "sha256": "137e968231054198a2a02f85c7e26095f8fdc4235d66e4030618dda8c8fab08c"
+    },
+    "lidar-frame-time-c0-live-20261026-r1/cleanup.json": {
+      "bytes": 448,
+      "sha256": "41bc05bafd789f90171d7be84d45f9f86a6d4e221ced347fc6e50322bb178f93"
+    },
+    "lidar-frame-time-c0-live-20261026-r1/restoration-heading.json": {
+      "bytes": 3614,
+      "sha256": "1cfe247dbc87115b4f9cbf88631a843e2329cc38f78d8ea2f9372865ee273ac9"
+    },
+    "lidar-frame-time-c0-20261026-r4/summary.json": {
+      "bytes": 57593,
+      "sha256": "4cf5866adcadcd6c2069c149d7a3598681373dd68800a8bf5ebc9653f9ddcce4"
+    },
+    "lidar-frame-time-c0-20261026-r4/gallery.html": {
+      "bytes": 3081,
+      "sha256": "468c735a942dd8eef3e7b076c438a14fb13ec30607209e83e99377b254d3802d"
+    },
+    "lidar-frame-time-c0-20261026-r4/source.patch": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "checks": {
+    "c0_synthetic": 7,
+    "state_probe_scans_each": 75,
+    "state_probe_zero_gps_valid": {
+      "planning": 0,
+      "bridge": 9
+    },
+    "camera_sensor_timing": 10,
+    "camera_ground_projection": 4,
+    "lidar_frame_time_core": 35,
+    "lidar_scan_frame": 11,
+    "lidar_gps_ingest": 15,
+    "lidar_pose_history": 32,
+    "lidar_geometry_boundary": "passed",
+    "lidar_camera_buffer": "passed",
+    "lidar_imu_selection": "passed",
+    "lidar_source_time": 3,
+    "lidar_front_camera_fusion": 27,
+    "lidar_typed_output": 15,
+    "documentation_unit_tests": 17
+  },
+  "meaning": "Diagnostic consistency only. Not full autonomy or sensor accuracy acceptance; production code unchanged."
+}

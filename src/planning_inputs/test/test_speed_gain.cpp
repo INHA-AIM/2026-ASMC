@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 #include <cmath>
 #include <vector>
-#include "planning_inputs/gps_transform.hpp"
+#include <asmc_geometry/geodesy.hpp>
+using asmc::geometry::Utm52NYawOffset;
+using asmc::geometry::GpsToUtm52N;
 #include "planning_inputs/vehicle_state_adapter.hpp"
 
 namespace {

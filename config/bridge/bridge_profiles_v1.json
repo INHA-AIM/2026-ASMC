@@ -68,7 +68,9 @@
       },
       "facade_package": {
         "path": "src/asmc_bridge/package.xml",
-        "sha256": "f892471e9d9da9bb3a28b45a66b62b3d8bff390b24bf0fc7c0eeae5de5a7f95f"
+        "sha256": "29077c6ac511069f1061a6469314e14702d33f9798abccb00b9e35236614ed37",
+        "previous_sha256": "f892471e9d9da9bb3a28b45a66b62b3d8bff390b24bf0fc7c0eeae5de5a7f95f",
+        "revision_reason": "20261027_shared_geometry_dependency_without_transport_or_topic_changes"
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",

@@ -4,6 +4,7 @@ project(asmc_bridge)
 add_compile_options(-std=c++17 -O2)
 
 find_package(catkin REQUIRED COMPONENTS
+  asmc_geometry
   asmc_msgs
   diagnostic_msgs
   geometry_msgs
@@ -20,7 +21,7 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES asmc_vehicle_state_adapter
   CATKIN_DEPENDS
-    asmc_msgs diagnostic_msgs geometry_msgs morai_msgs roscpp rospy
+    asmc_geometry asmc_msgs diagnostic_msgs geometry_msgs morai_msgs roscpp rospy
     sensor_msgs std_msgs
 )
 
@@ -31,7 +32,6 @@ include_directories(
 
 add_library(asmc_vehicle_state_adapter
   src/vehicle_state/vehicle_state_adapter.cpp
-  src/vehicle_state/gps_transform.cpp
 )
 add_dependencies(asmc_vehicle_state_adapter ${catkin_EXPORTED_TARGETS})
 target_link_libraries(asmc_vehicle_state_adapter ${catkin_LIBRARIES})
@@ -51,9 +51,11 @@ target_link_libraries(ego_vehicle_state_dev_node
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
   catkin_install_python(PROGRAMS test/check_reporting_ros.py test/check_frame_timing_ros.py
+    test/check_vehicle_state_ros.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   add_rostest(test/reporting.test)
   add_rostest(test/frame_timing.test)
+  add_rostest(test/vehicle_state.test)
   catkin_add_nosetests(test/test_udp_bridge.py)
   catkin_add_nosetests(test/test_sensor_bridge.py)
   catkin_add_nosetests(test/test_topic_verifier.py)

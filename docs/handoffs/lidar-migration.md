@@ -2,7 +2,7 @@
 
 `asmc_lidar`가 판제·수집·시나리오의 LiDAR 정본이다. 브릿지와 카메라는 각각 실행하고,
 판제는 `/perception/lidar/planning_observations_map`의 공용 추적 관측을 직접 소비한다. 구 Main/Msg/nested workspace는
-B4에서 폐기한다. 사용자와 판제의 새 경로 주행 확인을 기반으로 정본화하며, 전체 미션·속도 정확도 수락은 별도다.
+B4에서 폐기했다. 사용자와 판제의 새 경로 주행 확인을 기반으로 정본화했으며, 전체 미션·속도 정확도 수락은 별도다.
 
 ## 현재 실행과 계약
 
@@ -18,12 +18,14 @@ asmc_camera → /perception/camera/objects/observations → asmc_lidar
 - [카메라 연결](camera-to-lidar.md) · [공용 소비 계약](../contracts/lidar-planning-consumer-v1.md)
 - [PR #114 통합·판제 변경 대응표](../records/lidar/2026-10-26-pr114-canonical-integration.md)
 - [직접 실행 명령](../operations/commands.md) · [정본화 검증 기록](../records/lidar/runtime-canonicalization.md)
+- [C0 좌표·시각 대조](../records/lidar/2026-10-26-frame-time-baseline.md)
+- [공용 좌표 수학·IMU26건 원인과 리팩토링 검증](../records/lidar/2026-10-27-frame-time-refactor.md)
 
 ## 담당과 후속 순서
 
 | 담당 | 다음 작업 |
 |---|---|
-| 안승현 | HD맵 필터·카메라 수신/보정/시각/라벨 연결 지원. 좌표·IMU 공통화는 기존 설계의 C0 조사부터 |
+| 안승현 | HD맵 필터·카메라 수신/보정/시각/라벨 연결 지원. C0·bridge GPS0 복귀·공용 geodesy·IMU 거부 이력 수정 완료. 다음은 실제 source clock 대응 근거이며 LAN2LAN 설정과 분리 |
 | 손재호 | 추적·속도·운동 상태 정확도, GPS 없는 터널 local 객체·벽/천장 처리, 이후 3뷰 matching/fusion |
 | 판제 | TTC·추종·정지·회피·센서 장애 대응과 local/map의 미션별 소비 |
 | 공동 | 좌표·시간·공용 계약 변경과 전체 미션 검증 |

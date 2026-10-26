@@ -983,7 +983,7 @@ TEST(LidarRuntime, D_CanInvalidOrStaleIsInputInvalid) {
   // No CAN 1120..1480: the last valid sample (1080) is stale from 1300 on.
   sim.can = [](int t) { return t > 1100 && t < 1500 ? Mode::kSilent : Mode::kValid; };
   ExpectInputInvalidWithoutTrackerAdvance(sim, 1200, 1400, "");
-  EXPECT_NE(sim.scans.at(1300).reason, "speed_input_invalid");  // stale, checked before barriers
+  EXPECT_EQ(sim.scans.at(1300).reason, "speed_input_invalid");  // Rejected input outranks age in diagnostics.
   sim.RunTo(1500);
   EXPECT_TRUE(sim.scans.at(1500).processed);
   EXPECT_EQ(Ids(sim.scans.at(1500).arrays.local), ids);

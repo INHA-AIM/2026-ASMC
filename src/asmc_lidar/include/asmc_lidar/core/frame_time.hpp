@@ -1,7 +1,7 @@
 #pragma once
 // Coordinate/time foundation for the LiDAR migration. ROS adapters provide
 // validated observations, extrinsics and pose samples; this library has no I/O.
-// Current runtime is nested Main; this core does not implement a receiver/fuser.
+// Used by asmc_lidar and camera projection adapters; no ROS transport or estimator.
 #include <Eigen/Geometry>
 #include <array>
 #include <cstdint>
@@ -110,6 +110,15 @@ struct Result {
   std::optional<Vec> absolute_velocity_base, absolute_velocity_map;
 };
 std::optional<Pose> base_from_input(const Context& c);
+// Immutable per-scan preparation: validate time/mount/map once, then reuse the
+// same exact transforms for every OBB and velocity. No point-cloud ownership.
+struct PreparedTransform {
+  Context context;
+  std::optional<Pose> base_from_input, map_from_input;
+  std::string reason, map_reason;
+};
+PreparedTransform prepare_transform(const Context& context);
+Result transform(const Object& object, const PreparedTransform& prepared);
 Result transform(const Object& object, const Context& context);
 struct Point { Vec xyz; float intensity; };
 std::vector<Point> transform_points(const std::vector<Point>& points, const Pose& transform);
