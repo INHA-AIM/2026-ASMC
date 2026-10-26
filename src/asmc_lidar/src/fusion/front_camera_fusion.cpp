@@ -152,8 +152,27 @@ bool LidarToImage(const std::vector<TrackedObject>& objects, const asmc::lidar::
 // Ported from Main FusionCamera.cpp:357-493 (8f93c22e)
 void IOUFusion(std::vector<TrackedObject>& objects, const std::vector<YoloBox>& detected,
                const std::vector<LidarImageBox>& lidar_boxes, std::uint64_t image_stamp_ns,
-               std::uint64_t epoch, const FusionConfig& config, FusionCounters* counters) {
+               std::uint64_t epoch, const FusionConfig& config, FusionCounters* counters, MatchDiagnostic* diagnostic) {
   const float32 fusion_x_offset = 0;
+  if (diagnostic) {
+    const auto n = std::min<std::size_t>(128, objects.size());
+    diagnostic->associations.resize(n);
+    diagnostic->associations_omitted = objects.size() - n;
+    for (std::size_t i = 0; i < n; ++i) {
+      auto& d = diagnostic->associations[i];
+      d.track_id = objects[i].tracking.s32_Id;
+      d.class_before = d.class_after = objects[i].camera.str_ObjectClass;
+      d.reason = objects[i].tracking.s32_MissCount > 0 ? "prediction_only" :
+          fusion_class::IsGroundNoise(objects[i]) ? "ground_noise" : "not_projected";
+    }
+    for (const auto& b : lidar_boxes) {
+      if (b.c_idx < 0 || std::size_t(b.c_idx) >= n) continue;
+      auto& d = diagnostic->associations[b.c_idx];
+      d.projected = true;
+      d.projected_box = {b.min_x, b.min_y, b.max_x, b.max_y};
+      d.reason = detected.empty() ? "empty_detection" : "iou_below_threshold";
+    }
+  }
 
   // Main loads these once and clamps them (:366-384).
   const int INITIAL_CONFIRMATIONS = std::max(1, config.initial_confirmations);
@@ -197,6 +216,18 @@ void IOUFusion(std::vector<TrackedObject>& objects, const std::vector<YoloBox>& 
                                std::max(0.0f, scaled_lid_box.max_y - scaled_lid_box.min_y);
       const float32 union_area = cam_area + lid_area - inter_area;
       const double iou = union_area > 1e-6f ? inter_area / union_area : 0.0;
+      if (diagnostic && lid_bbox.c_idx >= 0 &&
+          std::size_t(lid_bbox.c_idx) < diagnostic->associations.size()) {
+        auto& d = diagnostic->associations[lid_bbox.c_idx];
+        if (d.source_box_index < 0 || iou > d.iou) {
+          d.iou = iou;
+          d.source_box_index = cam.source_index;
+          d.camera_box = {cam.min_x, cam.min_y, cam.max_x, cam.max_y};
+          d.raw_class = cam.str_raw_class;
+          d.group = fusion_class::Normalize(cam.str_class, config.mission_profile);
+          if (iou > FUSION_IOU_THRESHOLD) d.reason = "one_to_one_conflict";
+        }
+      }
       if (iou > FUSION_IOU_THRESHOLD) {
         candidates.push_back({iou, i, j});
       }
@@ -225,7 +256,18 @@ void IOUFusion(std::vector<TrackedObject>& objects, const std::vector<YoloBox>& 
     const auto& cam = detected[candidate.camera_idx];
 
     // A false BeginObservation still counts as matched (no Miss below).
-    if (fusion_class::BeginObservation(lid_object, image_stamp_ns, epoch)) {
+    const bool applied = fusion_class::BeginObservation(lid_object, image_stamp_ns, epoch);
+    if (diagnostic && lidar_idx < diagnostic->associations.size()) {
+      auto& d = diagnostic->associations[lidar_idx];
+      d.applied = applied;
+      d.reason = applied ? "new_observation" : "already_observed";
+      d.iou = candidate.iou;
+      d.source_box_index = cam.source_index;
+      d.camera_box = {cam.min_x, cam.min_y, cam.max_x, cam.max_y};
+      d.raw_class = cam.str_raw_class;
+      d.group = fusion_class::Normalize(cam.str_class, config.mission_profile);
+    }
+    if (applied) {
       const std::string before = lid_object.camera.str_ObjectClass;
       fusion_class::Observe(lid_object, cam.str_class, cam.str_raw_class, INITIAL_CONFIRMATIONS,
                             CHANGE_CONFIRMATIONS, config.mission_profile);
@@ -249,6 +291,9 @@ void IOUFusion(std::vector<TrackedObject>& objects, const std::vector<YoloBox>& 
       if (counters) ++counters->misses_applied;
     }
   }
+  if (diagnostic)
+    for (std::size_t i = 0; i < diagnostic->associations.size(); ++i)
+      diagnostic->associations[i].class_after = objects[i].camera.str_ObjectClass;
 }
 
 FrontCameraFusion::FrontCameraFusion(const FusionConfig& config, const camera::Calibration& front)
@@ -291,6 +336,21 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
                                         std::vector<TrackedObject>* history, CameraSource& camera,
                                         std::int64_t ros_now_ns, std::int64_t steady_now_ns) {
   FusionReport report;
+  report.diagnostics_enabled = config_.capture_diagnostics;
+  report.emitting_scan_sequence = context.scan_sequence;
+  report.emitting_scan_stamp_ns = scan_stamp_ns;
+  auto record = [&](const PendingScan& scan, const std::string& action,
+                    const std::string& reason) -> MatchDiagnostic* {
+    if (!config_.capture_diagnostics) return nullptr;
+    if (report.decisions.size() >= 64) { ++report.decisions_omitted; return nullptr; }
+    MatchDiagnostic d;
+    d.scan_sequence = scan.context.scan_sequence;
+    d.scan_stamp_ns = scan.stamp_ns;
+    d.wait_ns = decision_ns - scan.queued_ns;
+    d.action = action; d.reason = reason;
+    report.decisions.push_back(std::move(d));
+    return &report.decisions.back();
+  };
   ++counters_.calls;
 
   // One non-consuming read per call (Main swaps the callback queues once).
@@ -298,6 +358,7 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
   const CameraSnapshot snapshot = camera.Read(reference_ns, read_window_ns_, ros_now_ns, steady_now_ns);
   report.camera_active = snapshot.active;
   report.camera_reason = snapshot.reason;
+  if (config_.capture_diagnostics) report.views = snapshot.views;
 
   // Main CameraControl and the control-stale / YOLO-silence gates
   // (FusionCamera.cpp:69-85, 712-722) mapped onto the source state: every
@@ -319,6 +380,7 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
   // Ported from Main FusionCamera.cpp:723-740 (8f93c22e)
   if (admitted_epoch_ != consumer_epoch_) {
     ++counters_.epoch_changes;
+    for (const auto& p : pending_) record(p, "drop", "camera_epoch_changed");
     pending_.clear();
     consumed_.clear();
     prune_before_ns_ = 0;
@@ -386,6 +448,7 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
     const std::int64_t earliest_matchable_yolo =
         first_arriving_yolo_stamp_ns - RosDurationNs(config_.max_time_offset_s);
     while (!pending_.empty() && pending_.front().stamp_ns < earliest_matchable_yolo) {
+      record(pending_.front(), "drop", "before_first_camera_frame");
       pending_.pop_front();
       ++counters_.startup_discarded;
     }
@@ -395,9 +458,11 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
   // Ported from Main FusionCamera.cpp:820-833 (8f93c22e)
   if (!received_any_frame_) {
     while (pending_.size() > config_.max_pending_before_first_frame) {
+      record(pending_.front(), "drop", "startup_queue_bound");
       pending_.pop_front();
       ++counters_.startup_discarded;
     }
+    if (!pending_.empty()) record(pending_.front(), "wait", "first_camera_frame");
     report.pending_scans = pending_.size();
     return report;
   }
@@ -419,6 +484,7 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
 
     if (decision.action == fusion_sync::MatchAction::Wait) {
       ++counters_.waits;
+      record(lidar_frame, "wait", "awaiting_at_or_after_scan");
       break;
     }
     // Receiver contract: re-check the record right before applying it. A
@@ -426,6 +492,7 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
     if (decision.action == fusion_sync::MatchAction::Match &&
         !camera.Current(*yolo_history[decision.yolo_index].source, ros_now_ns, steady_now_ns)) {
       ++counters_.not_current;
+      record(lidar_frame, "wait", "observation_no_longer_current");
       break;
     }
 
@@ -433,6 +500,8 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
     pending_.pop_front();
 
     if (decision.action == fusion_sync::MatchAction::Drop) {
+      record(synchronized_lidar_frame, "drop",
+             waited_ns >= wait_timeout_ns_ ? "timeout_no_time_match" : "outside_time_window");
       ++counters_.dropped;
       ++report.dropped_this_call;
       PruneInputsBefore(yolo_history, synchronized_lidar_frame.stamp_ns, config_.max_time_offset_s,
@@ -441,6 +510,23 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
     }
 
     TimedYoloFrame yolo_frame = yolo_history[decision.yolo_index];
+    auto* diagnostic = record(synchronized_lidar_frame, "match", "matched");
+    if (diagnostic) {
+      diagnostic->image_stamp_ns = yolo_frame.stamp_ns;
+      diagnostic->image_minus_scan_ns = yolo_frame.stamp_ns - synchronized_lidar_frame.stamp_ns;
+      diagnostic->observation_id = yolo_frame.identity;
+      diagnostic->camera_id = front_.frame_id;
+      diagnostic->calibration_id = front_.id;
+      diagnostic->boxes_received = yolo_frame.source->boxes.size();
+      if (yolo_frame.source->record) {
+        const auto& o = yolo_frame.source->record->observation;
+        diagnostic->session = o.session;
+        diagnostic->generation = o.generation;
+        diagnostic->wire_sequence = o.header.sequence;
+        diagnostic->model_id = o.model_id;
+        diagnostic->config_id = o.config_id;
+      }
+    }
     const std::uint64_t processing_camera_epoch = yolo_frame.epoch;  // Main g_ProcessingCameraEpoch
 
     // Main FusionCamera.cpp:892-935 (JPEG lookup within 2 ms, decode, decode
@@ -448,6 +534,7 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
 
     const bool reused = fusion_sync::ConsumeMatchedFrame(yolo_history, decision.yolo_index, reuse_);
     consumed_[yolo_frame.identity] = yolo_frame.stamp_ns;
+    if (diagnostic) diagnostic->reused = reused;
 
     // Geometry from the synchronized historical frame; class counters
     // continue from the current track.
@@ -480,11 +567,16 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
     }
 
     std::vector<LidarImageBox> lidar_boxes;
-    LidarToImage(synchronized_objects, synchronized_lidar_frame.context, front_, config_, &lidar_boxes);
+    const bool projection_valid = LidarToImage(synchronized_objects, synchronized_lidar_frame.context,
+                                               front_, config_, &lidar_boxes);
+    if (diagnostic) {
+      diagnostic->projection_valid = projection_valid;
+      diagnostic->boxes_admitted = detected_objects.size();
+    }
 
     IOUFusion(synchronized_objects, detected_objects, lidar_boxes,
               static_cast<std::uint64_t>(yolo_frame.stamp_ns), processing_camera_epoch, config_,
-              &counters_);
+              &counters_, diagnostic);
 
     for (const auto& historical_object : synchronized_objects) {
       if (TrackedObject* current = fusion_state::Find(live, historical_object.tracking.s32_Id)) {
@@ -509,6 +601,7 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
   // Hard bound against a stopped camera or malformed stamps.
   // Ported from Main FusionCamera.cpp:1032-1038 (8f93c22e)
   while (pending_.size() > config_.max_pending_scans) {
+    record(pending_.front(), "drop", "pending_queue_bound");
     pending_.pop_front();
     ++counters_.bound_discarded;
   }

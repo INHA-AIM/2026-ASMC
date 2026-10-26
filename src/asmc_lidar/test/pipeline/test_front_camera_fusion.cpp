@@ -987,3 +987,70 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+
+TEST(FusionDiagnostics, HistoricalScanIdentityAndOriginalBoxIndex) {
+  FusionConfig config;
+  config.initial_confirmations = 1;
+  FrontCameraFusion fusion(config, FrontCalibration());
+  FakeSource source;
+  auto filtered = TruckBox(); filtered.confidence_valid = false;
+  source.Set({MakeFrame(kT0, {filtered, TruckBox()})});
+  auto first = std::vector<TrackedObject>{MakeCar(7, 10.f)};
+  auto c1 = LeveledContext(kT0 + 20*kMs); c1.scan_sequence = 41;
+  const auto waiting = fusion.Process(kT0, c1.time.stamp_ns, c1, first, nullptr, source, kT0, kT0);
+  ASSERT_EQ(waiting.decisions.size(), 1u);
+  EXPECT_EQ(waiting.decisions[0].action, "wait");
+  source.Set({MakeFrame(kT0 + 30*kMs, {filtered, TruckBox()})});
+  auto c2 = LeveledContext(kT0 + 100*kMs); c2.scan_sequence = 42;
+  auto second = std::vector<TrackedObject>{MakeCar(7, 15.f)};
+  const auto report = fusion.Process(kT0+100*kMs, c2.time.stamp_ns, c2, second, nullptr,
+                                     source, kT0+100*kMs, kT0+100*kMs);
+  ASSERT_FALSE(report.decisions.empty());
+  const auto& d = report.decisions.front();
+  EXPECT_EQ(report.emitting_scan_sequence, 42u);
+  EXPECT_EQ(d.scan_sequence, 41u);
+  EXPECT_EQ(d.scan_stamp_ns, kT0+20*kMs);
+  EXPECT_EQ(d.image_minus_scan_ns, 10*kMs);
+  EXPECT_EQ(d.wait_ns, 100*kMs);
+  ASSERT_EQ(d.associations.size(), 1u);
+  EXPECT_EQ(d.associations[0].source_box_index, 1);
+  EXPECT_TRUE(d.associations[0].applied);
+  EXPECT_EQ(d.associations[0].reason, "new_observation");
+  EXPECT_EQ(second[0].camera.str_ObjectClass, "vehicle");
+  const auto expected = ProjectedBox(first[0], c1);
+  EXPECT_EQ(d.associations[0].projected_box[0], expected.min_x);
+}
+
+TEST(FusionDiagnostics, OnOffParityAndBoundedObjects) {
+  FusionConfig on, off; off.capture_diagnostics=false;
+  FrontCameraFusion a(on, FrontCalibration()), b(off, FrontCalibration());
+  FakeSource source;
+  for (int frame=0; frame<8; ++frame) {
+    const auto stamp=kT0+frame*100*kMs;
+    source.Set({MakeFrame(stamp, {TruckBox()})});
+    std::vector<TrackedObject> x, y;
+    for (int id=0;id<150;++id) x.push_back(MakeCar(id,10.f));
+    y=x;
+    auto ra=a.Process(stamp,stamp,LeveledContext(stamp),x,nullptr,source,stamp,stamp);
+    auto rb=b.Process(stamp,stamp,LeveledContext(stamp),y,nullptr,source,stamp,stamp);
+    ASSERT_EQ(ra.decisions.size(),1u);
+    EXPECT_EQ(ra.decisions[0].associations.size(),128u);
+    EXPECT_EQ(ra.decisions[0].associations_omitted,22u);
+    EXPECT_TRUE(rb.decisions.empty());
+    EXPECT_EQ(ra.matched_this_call,rb.matched_this_call);
+    for (std::size_t i=0;i<x.size();++i) { EXPECT_EQ(StateOf(x[i]),StateOf(y[i])); ExpectSameGeometry(x[i],y[i]); }
+  }
+}
+
+TEST(FusionDiagnostics, TimeoutAndCurrentRejectionHaveDistinctReasons) {
+  FrontCameraFusion fusion(FusionConfig{},FrontCalibration()); FakeSource source; TrackerSim tracker;
+  source.Set({MakeFrame(kT0,{TruckBox()})});
+  tracker.Scan(fusion,source,kT0,kT0);
+  auto report=tracker.Scan(fusion,source,kT0+100*kMs,kT0+100*kMs);
+  ASSERT_FALSE(report.decisions.empty()); EXPECT_EQ(report.decisions.back().action,"wait");
+  report=tracker.Scan(fusion,source,kT0+300*kMs,kT0+300*kMs);
+  ASSERT_FALSE(report.decisions.empty()); EXPECT_EQ(report.decisions.front().reason,"timeout_no_time_match");
+  source.Set({MakeFrame(kT0+300*kMs,{TruckBox()})}); source.current=false;
+  report=tracker.Scan(fusion,source,kT0+310*kMs,kT0+310*kMs);
+  ASSERT_FALSE(report.decisions.empty()); EXPECT_EQ(report.decisions.front().reason,"observation_no_longer_current");
+}
