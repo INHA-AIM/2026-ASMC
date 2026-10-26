@@ -73,6 +73,16 @@ jobs:
           catkin_make planning_filter_test
           ./devel/lib/planning_inputs/planning_filter_test
 
+      - name: Check AVOID fixtures and roundabout commit guards
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          for regression in command_avoid_target_test roundabout_execution_test avoid_road_constraints_test polygon_collision_test; do
+            test -x "devel/lib/asmc_planner/$regression"
+          done
+          cd build/asmc_planner
+          ctest --output-on-failure -R '^(command_avoid_target_test|roundabout_execution_test|avoid_road_constraints_test|polygon_collision_test)$'
+
       - name: Check real ROS planning input boundary
         run: |
           source /opt/ros/noetic/setup.bash
