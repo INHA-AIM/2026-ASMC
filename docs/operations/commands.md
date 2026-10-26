@@ -172,6 +172,19 @@ HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한�
 포함돼 있으므로 별도 차선변경 제어 launch도 추가하지 않습니다.
 LiDAR `debug:=true`는 중간 점군과 필터 전후 표현을 위한 샘플 발행입니다. 기본은 OFF이며
 추적·속도·HD맵/높이 필터·판제 발행은 유지됩니다. 웹 체크박스는 표시만 바꾸고 실제 발행 필터를 변경하지 않습니다.
+
+주행·웹 확인에 필요한 주요 옵션은 아래와 같습니다. 전체 목록은 [launch 인자](launch-reference.md)를 봅니다.
+
+| 실행 | 옵션·기본값 | 용도 |
+|---|---|---|
+| `asmc_camera camera.launch` | `models:=all`, `mode:=active` | 세 모델 상시 추론·발행; 기본 실행에는 반복 지정 불필요 |
+| `asmc_lidar lidar.launch` | `fusion:=true` | 카메라 분류 연결. `false`는 LiDAR 단독 진단용 |
+| `asmc_lidar lidar.launch` | `debug:=false` | `true`에서 필터 전후 점군·원본/발행 객체 비교용 샘플 제공 |
+| `asmc_lidar lidar.launch` | `rviz:=false` | 웹만 쓸 때 그대로 유지 |
+| `asmc_lidar lidar.launch` | `debug_rate_hz:=5.0`, `debug_max_points:=20000` | 화면 샘플 상한. 실제 검출·판제 발행 주기나 처리 점 수를 바꾸지 않음 |
+| `asmc_planner dashboard.launch` | `dashboard_port:=8088` | 판제 웹, 기본 state/객체 토픽은 정본 |
+| `asmc_lidar view.launch` | `dashboard_port:=8091` | LiDAR 웹. 처리 노드와 독립적인 관측용 실행 |
+
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
 카메라 공용 관측과 전방 matching 계약는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
 판제 단독/통합 차이는 [판제 운영](planning-control.md)을 봅니다.
