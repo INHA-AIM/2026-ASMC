@@ -195,7 +195,7 @@
 | `ego_frame_id` | `base_link` | — |
 | `follow_ego` | `true` | — |
 
-## LiDAR migration pipeline
+## LiDAR canonical runtime
 
 [소스](../../src/asmc_lidar/launch/lidar.launch)
 
@@ -229,93 +229,16 @@
 | `diagnostics_topic` | `diagnostics` | — |
 | `trace_topic` | `trace` | — |
 
-## Main LiDAR/fusion
-
-[소스](../../src/lidar+sensorfusion/src/Main/main.launch)
-
-| 인자 | 기본값 / 필수 | 소스 설명 |
-|---|---|---|
-| `camera_class_profile` | `mission16_v1` | — |
-| `enable_common_geometry` | `false` | — |
-| `lidar_level_roll` | `false` | — |
-| `lidar_mount_config` | `$(find asmc_lidar)/config/autonav_v3.yaml` | — |
-| `fusion_camera_config` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
-| `map_altitude_origin_m` | `0.0` | — |
-| `fusion_yolo_policy` | `unique` | unique &#124; bounded_reuse |
-| `camera_objects_conf_thres` | `0.0` | Optional stricter adapter cutoff. Camera already filters confidence; 0 passes its accepted candidates without a hidden 0.7 gate. |
-| `lidar_port` | `9299` | — |
-| `start_velodyne_driver` | `false` | — |
-| `rviz` | `false` | — |
-| `enable_sensor_fusion` | `true` | — |
-| `fusion_max_time_offset_sec` | `0.05` | — |
-| `fusion_sync_wait_timeout_sec` | `0.20` | — |
-| `fusion_trace_path` | `(빈 문자열)` | — |
-| `roi_min_x` | `-30.0` | — |
-| `roi_max_x` | `50.0` | — |
-| `roi_min_y` | `-20.0` | — |
-| `roi_max_y` | `20.0` | — |
-| `motion_debug_topic` | `/lidar/motion_debug` | — |
-| `drivable_filter_enabled` | `true` | — |
-| `drivable_margin_m` | `0.0` | — |
-| `drivable_ratio_threshold` | `0.15` | — |
-| `drivable_supersample` | `5` | — |
-| `planning_minimum_obstacle_height_m` | `0.10` | — |
-| `planning_confirmation_frames` | `3` | — |
-| `planning_release_frames` | `5` | — |
-| `known_static_filter_enabled` | `true` | — |
-| `known_static_catalog` | `$(find Main)/known_static_objects.yaml` | — |
-| `known_static_center_tolerance_m` | `2.5` | — |
-| `known_static_application_region_enabled` | `true` | — |
-| `known_static_application_min_x` | `-35.0` | — |
-| `known_static_application_max_x` | `15.0` | — |
-| `known_static_application_min_y` | `108.0` | — |
-| `known_static_application_max_y` | `180.0` | — |
-| `known_static_guardrail_extension_enabled` | `true` | — |
-| `known_static_guardrail_extension_min_x` | `-107.0` | — |
-| `known_static_guardrail_extension_max_x` | `15.0` | — |
-| `known_static_guardrail_extension_min_y` | `175.0` | — |
-| `known_static_guardrail_extension_max_y` | `345.0` | — |
-| `known_static_c052_structure_enabled` | `true` | — |
-| `known_static_c091_rail_enabled` | `true` | — |
-| `static_structure_exclusion_enabled` | `true` | — |
-| `static_structure_exclusion_config` | `$(find Main)/../../../planning_inputs/config/static_structure_exclusions.yaml` | — |
-| `static_structure_minimum_height_m` | `2.5` | — |
-| `static_structure_minimum_bottom_z_m` | `2.0` | — |
-| `ground_distance_threshold_near_m` | `0.30` | — |
-| `ground_distance_threshold_far_m` | `0.40` | — |
-| `ground_threshold_far_range_m` | `50.0` | — |
-| `ground_max_tilt_deg` | `25.0` | — |
-| `ground_seed_min_z_m` | `-2.0` | — |
-| `ground_seed_max_z_m` | `-0.65` | — |
-| `ground_ransac_maximum_iterations` | `80` | — |
-| `ground_minimum_seed_points` | `30` | — |
-| `ground_fallback_frames` | `2` | — |
-| `gps_sanity_maximum_speed_mps` | `80.0` | — |
-| `gps_sanity_base_jump_allowance_m` | `3.0` | — |
-| `gps_sanity_reanchor_after_s` | `2.0` | — |
-| `lidar_pose_gps_max_age_s` | `0.30` | — |
-| `imu_yaw_is_true_enu` | `true` | — |
-| `lidar_pose_imu_max_age_s` | `0.12` | — |
-| `lidar_pose_can_max_age_s` | `0.12` | — |
-| `lidar_pose_wait_timeout_s` | `0.05` | — |
-| `lidar_pose_maximum_speed_mps` | `35.0` | — |
-| `benchmark_lidar_pipeline` | `false` | — |
-| `benchmark_warmup_frames` | `30` | — |
-| `benchmark_sample_frames` | `200` | — |
-| `lidar_cut_angle` | `0.0` | — |
-
 ## Integrated planning/control
 
 [소스](../../src/asmc_planner/launch/autonomy_no_bridges_v2.launch)
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `objects_source` | `lidar` | Supported source: lidar |
 | `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
-| `lidar_source_policy` | `validated_lidar` | — |
-| `lidar_input_topic` | `$(eval '/perception/lidar/tracks_map' if arg('lidar_source_policy') == 'asmc_lidar' else '/last_lidar')` | — |
+| `lidar_input_topic` | `/perception/lidar/tracks_map` | — |
 | `avoid_path_margin_m` | `0.4` | — |
 | `expected_config_sha256` | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | — |
 | `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
@@ -354,12 +277,8 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `source_policy` | `asmc_lidar` | — |
-| `input_topic` | `$(eval '/perception/lidar/tracks_map' if arg('source_policy') == 'asmc_lidar' else '/last_lidar')` | — |
-| `motion_debug_topic` | `/lidar/motion_debug` | — |
+| `input_topic` | `/perception/lidar/tracks_map` | — |
 | `output_topic` | `/planning/objects` | — |
-| `state_topic` | `/planning/vehicle/state` | — |
-| `asmc_input_topic` | `/migration/lidar/planning_observations_map` | — |
 
 ## Dashboard
 

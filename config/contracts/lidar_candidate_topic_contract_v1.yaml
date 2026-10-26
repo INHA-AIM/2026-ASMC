@@ -1,11 +1,11 @@
 schema_version: 1
 contract_id: asmc_lidar_handoff_v1
-status: typed_tracking_input_available_consumer_acceptance_pending
+status: canonical_runtime_single_planning_input
 owner: asmc_lidar
 implementation:
   coordinate_time_core: available
   imu_selection_core: available
-  detection_tracking_fusion: migration_pipeline_with_optional_typed_planning_adapter
+  detection_tracking_fusion: canonical_runtime_front_camera_fusion
   migration_work_units: src/asmc_lidar/docs/migration-tasks.md
   migration_design: src/asmc_lidar/docs/migration-design.md
   cutover_foundation: src/asmc_lidar/docs/cutover-foundation.md
@@ -17,18 +17,18 @@ implementation:
   ahn_responsibility: hd_map_filters_and_camera_connection
   son_responsibility: tracking_speed_motion_fusion_and_gps_denied_local_tunnel_perception
   camera_observation_receiver: available_library_and_probe
-  ros_publishers_and_adapters: asmc_lidar_and_direct_planning_input_legacy_Main_rollback_retained
+  ros_publishers_and_adapters: asmc_lidar_and_direct_common_planning_input
   delivery_filter: hd_map_v7_inset_10cm_points_3_and_10pct_obb_10pct_guarded_overhead
   delivery_filter_preserves: raw_tracker_and_measurement_geometry
   public_velocity_and_motion: Main_applied_estimate_and_four_state_connected_map_conditioned
-  planning_direct_common_observation_consumer: available_source_policy_asmc_lidar
-  planning_default_source: validated_lidar_until_consumer_acceptance
+  planning_direct_common_observation_consumer: sole_input
+  planning_default_source: asmc_lidar_tracks_map
   package_output_namespace: /perception/lidar
-  inherited_delivery_policies: known_static_structure_and_observation_quality_preserved
+  inherited_delivery_policies: observation_quality_preserved_static_catalog_and_rectangles_retired
   implementation_guide: src/asmc_lidar/docs/planning-runtime.md
   tunnel_structure_suppression: experimental_default_off_acceptance_pending
   tunnel_camera_semantic_family_assistance: not_implemented
-  operational_default_promotion: package_outputs_canonical_planning_cutover_explicit
+  operational_default_promotion: package_and_planning_default_canonical_full_mission_acceptance_separate
   skeleton_publishes_topics: false  # Historical core/probe itself never publishes; independent runtime below does.
   camera_object_producer: available_canonical_camera_launch
 source_stamp: bridge_receive_not_laser_firing_time
@@ -72,7 +72,7 @@ planned_topics:
     producer_owner: asmc_camera
     implementation: available_canonical
     launch: roslaunch asmc_camera camera.launch mode:=active models:=objects
-    compatibility_adapter: src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py
+    consumer: asmc_lidar_front_camera_fusion_common_observation
     parity_evidence: config/baselines/perception_camera_objects_parity_v1.yaml
     experimental_profiles:
       coco7_three_view:
@@ -93,8 +93,8 @@ planned_topics:
     implementation: available_canonical
     contract_reference: config/contracts/camera_object_observation_v1.yaml
     consumer_config: src/asmc_lidar/config/camera_objects.yaml
-    lidar_receiver: migration_node_camera_front_only_not_operational
-    fusion_consumer_scope: current_Main_front_bbox_only
+    lidar_receiver: canonical_runtime_camera_front_matching_three_view_receiver
+    fusion_consumer_scope: asmc_lidar_front_matching
 rules:
   - Preserve observation stamp, point lineage, and local track state across GPS changes.
   - Distinguish observed-empty, predicted, input-invalid, pose-unavailable and sensor silence.
@@ -103,7 +103,7 @@ rules:
   - The canonical mission16 profile preserves raw source_class_name and vehicle/dynamic_obstacle/static_obstacle in class_name.
   - A camera profile declares class_name semantics; raw COCO7 outputs preserve original labels and never silently group them.
   - Reused camera evidence keeps its source stamp and does not duplicate a track's temporal class confirmation or miss evidence.
-  - Three-view object publication does not imply three-view LiDAR fusion; the current compatibility adapter consumes camera_front only.
+  - Three-view object publication does not imply three-view LiDAR fusion; the current matching consumes camera_front only.
   - Strict PoseHistory API uses already-arrived bracketing samples at most 100 ms apart, without extrapolation.
   - Main opt-in BoundedPoseHistory API uses causal normal GPS at most 300 ms old with valid scan IMU and vehicle speed.
   - Invalid GPS disables map immediately; silence exceeding 300 ms disables map; recovery requires three consecutive normal samples.
@@ -129,10 +129,10 @@ migration_observations:
   identity: [producer_session_id, generation, scan_sequence]
   metadata: [config_id, calibration_id]
   header_authority: objects.header_stamp_and_frame_id
-  reset_service: /migration/lidar/lidar_pipeline/reset
+  reset_service: /perception/lidar/lidar_pipeline/reset
   reset_type: std_srvs/Trigger
   reset_effect: retire_inflight_results_clear_pending_tracking_pose_and_trace_history
-  operational_cutover: pending
+  operational_cutover: canonical_default_user_functional_driving_confirmed_full_mission_pending
 
 tracking_observations:
   local: {topic: tracks_local, type: asmc_msgs/LidarTrackingObservation, frame: base_link}
@@ -141,7 +141,7 @@ tracking_observations:
   tracking_join: same_order_same_track_id_exactly_once
   motion_states: {UNKNOWN: 0, LOW_THREAT: 1, DYNAMIC_PENDING: 2, DYNAMIC: 3}
   consumer: planning_inputs/objects.launch
-  consumer_selection: source_policy_asmc_lidar
+  consumer_selection: single_common_input_no_policy_selector
   default_global_input: /perception/lidar/tracks_map
   private_output: /planning/objects
   invalid_policy: withhold_not_empty_preserve_existing_planner_timeout
@@ -160,3 +160,9 @@ planning_companion:
   unmeasured_velocity_policy: geometry_retained_unknown_velocity_unavailable
   simultaneous_tracking_consumer: false
   validation_guide: docs/operations/lidar-cutover.md
+
+retired_runtime:
+  revision: b2e8329f1cb71f11150d5125335e01c5b8d252c5
+  package: src/lidar+sensorfusion
+  reproduction: isolated_historical_checkout_only
+  inventory: config/baselines/lidar_canonicalization_v1.json

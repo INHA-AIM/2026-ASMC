@@ -220,7 +220,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             self.runtime["external_components"]["recorder"]["owner_package"],
         )
         self.assertEqual(
-            "src/lidar+sensorfusion",
+            "src/asmc_lidar",
             self.runtime["external_components"]["lidar_fusion"]["owner_workspace"],
         )
         self.assertEqual(

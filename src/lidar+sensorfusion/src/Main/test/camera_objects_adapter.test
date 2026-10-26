@@ -1,4 +1,0 @@
-<launch>
-  <node pkg="Main" type="camera_objects_yolo_bbox_adapter.py" name="camera_objects_yolo_bbox_adapter"/>
-  <test pkg="Main" type="test_camera_objects_adapter_ros.py" test-name="camera_objects_adapter_test" time-limit="30"/>
-</launch>

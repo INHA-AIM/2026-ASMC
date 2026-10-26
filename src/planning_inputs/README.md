@@ -1,78 +1,27 @@
 # Planning input adapters
 
-> **Document role:** Active Package Guide — Behavior/Frenet/MPC inputs.
-
-## asmc_lidar 직접 입력
-
-`source_policy:=asmc_lidar`는 `asmc_msgs/LidarTrackingObservation`을 직접 받아 source stamp·
-ID·원본 OBB·적용 속도·4단계 운동 상태를 전달한다. 구 wire/JSON join·두 번째 classifier·
-필터/clipping을 실행하지 않는다. session/generation·설정/보정 ID·freshness·정렬을 검사하고
-정상 빈 결과와 무효/미수신을 구분한다. [속도 의미·검증·복구](../asmc_lidar/docs/planning-runtime.md)를 따른다.
+공용 LiDAR 관측과 차량 상태를 판제 내부 입력으로 연결한다. 객체 입력은
+`/perception/lidar/tracks_map`의 `asmc_msgs/LidarTrackingObservation` 하나다.
 
 ```bash
 roslaunch asmc_lidar lidar.launch
-roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_lidar
+roslaunch asmc_planner autonomy_no_bridges_v2.launch
 ```
 
-두 번째 명령은 차량 제어를 포함한다. 현재 통합 판제 기본은 기존 `validated_lidar`로 유지하며
-실제 소비 인수 때 명시적으로 새 경로를 선택한다. 새 경로는 outer workspace만 빌드하고 source한다.
-아래 구 경로는 인수 전 기존 실행·복구를 위한 안내다.
+두 번째 명령은 차량 제어를 포함한다. 브릿지·카메라는 별도 실행한다. nested workspace를 source하지 않는다.
 
-### 검증 companion 입력
+## 객체 입력 계약
 
-`source_policy:=asmc_lidar_companion`은 기존 전체 주행에서 사용한
-`/migration/lidar/planning_observations_map`의 `LidarPlanningObservation`을 소비한다.
-`asmc_input_topic`으로 입력을 바꿀 수 있다. 직접 추적 입력과 동시에 켜지지 않는다.
-측정 속도가 없는 객체는 `velocity_unavailable=true`의 UNKNOWN 점유로 유지하며,
-session/generation 변경 시 내부 ID를 분리한다. [실행·복구 안내](../../docs/operations/lidar-cutover.md).
+session/generation·source stamp·scan sequence·설정/보정 ID·원본 OBB·속도 validity·운동 상태를
+검사해 `/planning/objects`로 변환한다. queue1·source age350ms·미래 허용50ms를 유지한다.
+정상 빈 결과는 전달하고 무효/stale/pose 부족/표현 불가능 속도는 빈 객체로 만들지 않고 발행을 보류한다.
+TTC·추종·정지·회피·센서 장애 정책은 판제에 있다. 인지 필터·속도 계산·JSON join은 수행하지 않는다.
 
-## Validated LiDAR 기존 실행·복구 (통합 launch 기본)
+원본 클래스/그룹은 공용 관측에 있고 private numeric enum의 unknown은 객체 부재를 뜻하지 않는다.
+GPS 없는 local 객체를 global Frenet에 이름만 remap하지 않는다.
+[속도 의미·현재 제한·검증](../asmc_lidar/docs/planning-runtime.md)을 따른다.
 
-The pre-rebase reference is 0781402 on
-backup/avoid-merge-validated-20261005. Its complete nested Main LiDAR processing
-and final-publication policy are restored: constrained near/far ground fitting,
-robust ground-clearance evidence, adaptive clustering, tracking association,
-frame filtering, four-state motion history, synchronized source-time pose and
-GPS sanity checks, road overlap/prediction and static boundary clipping,
-known-static catalog and zones, and planning height acquisition/release grace.
-
-The Main cpp/hpp processing and original tests are carried from that reference.
-Current asmc_bridge topic remaps and relocated asset paths are retained.
-Frozen Msg/TrackedObject and shared asmc_msgs schemas remain unchanged:
-Main sends source-aligned motion state through /lidar/motion_debug JSON with
-exact integer stamp_secs/stamp_nsecs.
-
-Build both workspaces after pulling. Do not keep running an old Main executable:
-
-```bash
-# Main ROS workspace
-./scripts/build_ws.sh
-# Nested LiDAR workspace
-cd src/lidar+sensorfusion
-catkin_make -j2 -l2
-source devel/setup.bash
-```
-
-Start Main/main.launch and the simulator bridge, then start the planning stack
-from the root workspace environment:
-
-```bash
-roslaunch asmc_planner autonomy_no_bridges_v2.launch objects_source:=lidar
-```
-
-Default lidar_source_policy:=validated_lidar consumes Main's fully filtered
-/last_lidar. The wire bridge requires matching exact source timestamps and
-delivered IDs in /lidar/motion_debug, then carries the authoritative state into
-the private planning schema. No second classifier, geometry clipping, or
-height gate is applied. Missing/mismatched diagnostics produce no fabricated
-planning frames. Empty aligned frames still clear prior objects.
-
-The optional lidar_source_policy:=main_raw with
-lidar_input_topic:=/lidar/tracked_objects_map keeps the earlier private
-motion and three-filter adapter for integrations that explicitly use main's
-unfiltered schema. It does not reproduce the complete validated sensor policy.
-
-## Other integration contracts
+## 차량 상태 계약
 
 Private planning state keeps source-time GPS/IMU propagation and the 0.35 m
 antenna lever arm; all three planners share /planning/vehicle/state.
@@ -93,24 +42,6 @@ jamming sentinel is rejected even if its status is positive. It invalidates
 the GPS-based planning state without adding the sentinel to its histories;
 the existing jamming-mode selector still owns camera-control handover.
 
-Latest driving/merge/avoidance parameter files and Frenet map snapshot are kept.
-asmc_bridge, traffic-light inference, asmc_hd_map runtime, and jamming code are
-unchanged by the LiDAR restoration. 현재 신호등 생산자는 카메라 담당의 asmc_camera로 단일화했습니다.
-판제 launch는 추론을 시작하지 않으며 폐기된 traffic_light:=false 인자를 지정하지 않습니다.
-중단·재개·주기는 카메라 set_mode에서 제어하고 판제는 신호 규칙과 freshness 처리를 유지합니다.
-
-The dashboard consumes /planning/objects and now receives restored Main
-/lidar/motion_debug filter and motion diagnostics. Record both topics,
-/last_lidar, /lidar/tracked_objects_map, /planning/vehicle/state, raw sensors,
-trajectories, commands, feedback and /ctrl_cmd.
-
-## Verification
-
-CI builds the root workspace and the nested Main workspace with the frozen
-message schema, runs original sensor/filter regressions, and checks actual
-ROS transport for exact-time motion/geometry preservation and empty frames.
-Old successful drives establish the reference policy; new MORAI driving must
-confirm closed-loop behavior after integration. Main 연결은 main에 반영됐으며, asmc_lidar로의 기능 이전은 아직 완료되지 않았습니다.
 
 고속의 GPS 차분 속도 잡음은 `speed/gps_gain_reference_speed_mps: 5.0`과
 `speed/gps_gain_minimum: 0.08`로 완화합니다. GPS 속도와 예측 속도 중 작은 값이
@@ -118,3 +49,9 @@ confirm closed-loop behavior after integration. Main 연결은 main에 반영됐
 적용합니다. 감속·저속에서는 기존 강한 보정을 사용하므로, 전체 속도 영역의 이득을
 0.08로 낮췄을 때 생기는 정지 후 속도 오차 지속을 피합니다. IMU 가속도 예측·입력
 유효성·정지 판정 기준은 유지됩니다. 기준 속도 0으로 기존 고정 이득과 비교할 수 있습니다.
+
+## 검증과 과거 실행
+
+`test/common_lidar_ros_test.py`는 독립 master에서 실제 LiDAR·공용 입력·GPS/IMU/재시작 전환을 검사한다.
+`test/ros_boundary_smoke_test.py`는 별도 master에서 통합 autonomy 구독·변환을 검사하며 차량 전송을 시작하지 않는다.
+구 wire/필터 실행과 근거는 [PR #111까지의 기록](../../docs/records/lidar/planning-input-through-pr111.md)에 보존한다.

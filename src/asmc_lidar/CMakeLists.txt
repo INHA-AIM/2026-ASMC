@@ -4,8 +4,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Camera receiver is reusable handoff infrastructure. Detection/tracking/front
-# fusion are ported below as an opt-in migration pipeline; 3-view fusion and the
-# operational cutover remain Jaeho migration work. No camera inference or nested
+# fusion form the canonical pipeline below. Jaeho owns subsequent tracking,
+# velocity and 3-view fusion improvements. No camera inference or nested
 # Main dependencies.
 find_package(catkin REQUIRED COMPONENTS asmc_msgs roscpp diagnostic_msgs)
 find_package(Eigen3 REQUIRED)
@@ -43,6 +43,7 @@ if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
   add_rostest_gtest(camera_receiver_ros_test test/camera_receiver_ros.test test/camera_receiver_ros_test.cpp)
   if(TARGET camera_receiver_ros_test)
+    set_target_properties(camera_receiver_ros_test PROPERTIES EXCLUDE_FROM_ALL FALSE)
     target_link_libraries(camera_receiver_ros_test asmc_lidar_camera_ros)
     add_dependencies(camera_receiver_ros_test ${catkin_EXPORTED_TARGETS})
   endif()
@@ -79,20 +80,17 @@ catkin_install_python(PROGRAMS scripts/lidar_markers.py
 install(DIRECTORY rviz DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 # ---------------------------------------------------------------------------
-# Shadow LiDAR pipeline: port of Main's common-geometry LiDAR path
+# Canonical LiDAR pipeline: preserved common-geometry LiDAR path
 # (ROI -> voxel -> roll/pitch leveling -> RANSAC -> clustering -> OBB ->
 # tracking -> front camera fusion -> typed local/map), a ROS migration node and a
 # bag replay that both call the same runtime.
 #
-# Package-private on purpose: these libraries are STATIC and are NOT listed in
-# catkin_package(LIBRARIES ...) above, so Main (which links ${catkin_LIBRARIES}
-# of asmc_lidar) never links them. The catkin_package() exports above are
-# unchanged. When PCL, pcl_conversions, GeographicLib or morai_msgs are not
-# available the pipeline targets are skipped with a warning; the targets above
-# build exactly as before. CI configures with ASMC_LIDAR_PIPELINE_REQUIRED=ON so
-# that a missing dependency (or missing rostest data) fails instead of skipping.
+# Processing libraries remain package-private; only coordinate/time and camera
+# receiver libraries are exported. Normal builds require all pipeline inputs.
+# A receiver-only development build explicitly sets both PIPELINE and
+# PIPELINE_REQUIRED to OFF. CI requires the full pipeline and its test data.
 # ---------------------------------------------------------------------------
-option(ASMC_LIDAR_PIPELINE "Build the asmc_lidar migration pipeline, node and replay" ON)
+option(ASMC_LIDAR_PIPELINE "Build the canonical pipeline, node and replay" ON)
 option(ASMC_LIDAR_PIPELINE_REQUIRED "Fail the configure step instead of skipping pipeline targets or tests" ON)
 if(ASMC_LIDAR_PIPELINE_REQUIRED AND NOT ASMC_LIDAR_PIPELINE)
   message(FATAL_ERROR "ASMC_LIDAR_PIPELINE_REQUIRED=ON needs ASMC_LIDAR_PIPELINE=ON")
@@ -114,7 +112,7 @@ if(ASMC_LIDAR_PIPELINE)
     endif()
   endforeach()
   if(pipeline_missing AND ASMC_LIDAR_PIPELINE_REQUIRED)
-    message(FATAL_ERROR "asmc_lidar migration pipeline is required but cannot be built; missing: ${pipeline_missing}")
+    message(FATAL_ERROR "asmc_lidar canonical pipeline is required but cannot be built; missing: ${pipeline_missing}")
   elseif(pipeline_missing)
     message(WARNING "asmc_lidar migration pipeline not built; missing: ${pipeline_missing}")
   else()
@@ -195,6 +193,10 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
   target_link_libraries(lidar_replay asmc_lidar_runtime ${rosbag_LIBRARIES} ${catkin_LIBRARIES})
   target_compile_options(lidar_replay PRIVATE -Wall -Wextra)
   add_dependencies(lidar_replay ${pipeline_msg_targets})
+
+  install(PROGRAMS tools/analyze_velocity_bag.py tools/measure_velocity_response.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  install(FILES tools/tracking_samples.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
   install(TARGETS lidar_pipeline_node lidar_replay
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

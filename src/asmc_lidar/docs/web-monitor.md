@@ -17,7 +17,7 @@ debug에 남으므로 원본 계층의 박스와 전달 배열을 구분한다. 
 처리는 별도 `roslaunch asmc_lidar lidar.launch debug:=true`에서 시작한다.
 목적은 "내 asmc_lidar가 실제로 어떤 점을 남겼고 어떤 객체를 추적하는지"를 확인하는 것이다.
 모니터는 ROS를 구독만 하고, 발행·서비스 호출·파라미터 변경·shell 실행을 하지 않는다.
-통합 판제 기본은 인수 전까지 기존 `Main`(`/last_lidar`)이며 새 typed 입력은 명시적으로 선택한다.
+통합 판제 기본은 `/perception/lidar/tracks_map` 공용 추적 관측이다.
 이 launch는 Main·planner·카메라 추론·UDP bridge·Velodyne
 driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. TunnelFilter는 기본 OFF다.
 
@@ -55,7 +55,7 @@ driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. T
   `운동 진단 (재호)`를 선택하면 기존 DYNAMIC/PENDING 빨강, LOW_THREAT 초록,
   UNKNOWN/invalid 노랑으로 바뀐다. 카메라 그룹도 별도로 선택할 수 있다.
   소비 그룹을 실제 운동 판정으로 해석하지 않는다.
-- `motion_display`는 기존 Main `MotionClassifier`의 중앙값·급변 후보·변위 확인·상태 전이
+- `motion_classifier`는 기존 Main `MotionClassifier`의 중앙값·급변 후보·변위 확인·상태 전이
   함수 본문을 유지한 transport-free 이식이다. 임계값은 현재 Main 기본값(x10/y4km/h,
   변위 x8/y3km/h)이며 별도 튜닝하지 않았다. map OBB bounds/벡터는 저장된 scan Context로
   계산하고 모든 처리 scan마다 갱신한다. GPS 무효 시 이력을 지워 UNKNOWN으로 복구한다.
@@ -119,7 +119,7 @@ roslaunch asmc_lidar view.launch open_browser:=true
 
 ### A. 기존 주행을 유지하면서 관측 추가
 
-터미널 1~6(`udp_bridge.sh`, `asmc_camera camera.launch`, `Main main.launch`, `lane_boundary_adapter`,
+터미널 1~6(`udp_bridge.sh`, `asmc_camera camera.launch`, `asmc_lidar lidar.launch`, `lane_boundary_adapter`,
 `asmc_planner autonomy_no_bridges_v2.launch`, `asmc_planner dashboard.launch`)은 그대로 둔다.
 처리가 없을 때만 새 터미널에서 `roslaunch asmc_lidar lidar.launch debug:=true`를 시작한다.
 이미 같은 namespace의 처리가 있으면 두 번째로 실행하지 않는다. 화면은 별도 터미널에서:
@@ -131,8 +131,8 @@ roslaunch asmc_lidar view.launch open_browser:=true
 ```
 
 `view.launch`가 켜는 프로세스는 `asmc_lidar_monitor_node.py` 하나다.
-bridge·카메라·Main은 이미 떠 있는 것을 구독한다(같은 토픽을 두 번 발행하지 않는다).
-**주의:** Main과 새 처리가 함께 돌면 LiDAR 처리가 두 번 수행된다(독립 pipeline 2개, 추가 연산 비용은 해당 구성에서 측정해야 함).
+bridge·카메라·LiDAR는 이미 떠 있는 것을 구독한다(같은 토픽을 두 번 발행하지 않는다).
+**주의:** 같은 namespace의 lidar.launch를 중복 실행하지 않는다. 병행 비교는 별도 namespace로 격리하고 추가 연산 비용을 구분한다.
 planner dashboard(8088, 판제 상태)와 이 LiDAR monitor(8091, 필터 단계·추적)는 서로 다른 화면이다.
 
 ### B. LiDAR 독립 시험 (Main·planner 불필요)
@@ -271,7 +271,7 @@ roslaunch asmc_lidar view.launch pipeline_config:=/artifacts/<새-run>/runtime.y
 ROS 필터는 생산자 설정 `hd_map_audit.mode: filter`에 의해 적용된다. 상단의 **ROS 발행/실제 제외**와
 객체 상세의 **실제 ROS 전달**로 확인한다. 체크박스는 화면만 바꾸므로 해제하면 제외 객체를
 원본 tracker로 다시 볼 수 있지만 발행 배열에 되살아나지 않는다. `audit`로 복구하면 판정만 수행한다.
-기존 Main·판제 소비는 별도 경로이며 이번 설정 변경으로 전환하지 않는다.
+판제는 같은 전달 필터가 적용된 정본 공용 관측을 소비하며, 웹은 원본/제외/발행 결과를 구분해 표시한다.
 
 처리 순서는 **판정 → 전달 배열 필터 → 객체/관측 발행 → debug snapshot**이다.
 snapshot의 `tracks`는 보존한 필터 전 tracker이고 `typed`는 실제 필터 후 배열이다.

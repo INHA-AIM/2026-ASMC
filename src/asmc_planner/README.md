@@ -7,7 +7,7 @@ Planning runs at 20 Hz. ROS topic and parameter contracts remain unchanged,
 except `UrbanFeatureDebug` is now `asmc_msgs/UrbanFeatureDebug`.
 
 ```bash
-roslaunch asmc_planner autonomy_no_bridges_v2.launch objects_source:=lidar
+roslaunch asmc_planner autonomy_no_bridges_v2.launch
 ```
 
 신호등 추론·발행은 카메라 담당의 `asmc_camera/camera.launch`가 단독 소유합니다.

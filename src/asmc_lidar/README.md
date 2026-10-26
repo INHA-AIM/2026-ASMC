@@ -1,12 +1,12 @@
 # asmc_lidar
 
-ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 전방 카메라 fusion → local/map 객체를 처리한다. 공용 추적 관측을 판제가 직접 소비할 수 있다. 통합 판제의 기존 기본 입력은 실제 인수 전까지 `lidar+sensorfusion` Main이며, 새 경로는 명시적으로 선택한다.
+ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 전방 카메라 fusion → local/map 객체를 처리한다. 공용 추적 관측을 판제가 직접 소비할 수 있다. 판제·수집·시나리오는 이 패키지를 정본으로 사용하며 nested Main/Msg 빌드·source는 폐기했다.
 
 안승현은 **HD맵 기반 필터·카메라 연결 지원**, 손재호는 **추적·속도·운동 상태·fusion 보완**을 진행한다. 좌표·시간·공용 계약과 판제 전환은 공동 확인한다.
 
 - [현재 판제 실행·이식 기능·검증·복구](docs/planning-runtime.md) — 구 Main의 적용 속도/4단계 운동·관측 품질과 직접 소비 연결. 고정 시설물/구역 blacklist 제거.
-- [판제 전환 기반·구 기능 대조·다음 작업](docs/cutover-foundation.md) — PR #108 당시 대조를 보존. 현재 구현은 위 실행 기준선, 실제 인수/폐기와 터널 개선은 후속이다.
-- [재호의 PR #104 인수 시작](../../docs/handoffs/lidar-migration.md#재호의-pr-104-인수-시작) · [담당별 다음 작업](docs/migration-tasks.md#공동-개발-인수와-우선-작업)
+- [판제 전환 기반·구 기능 대조·다음 작업](docs/cutover-foundation.md) — PR #108 당시 대조를 보존. 현재 구현은 위 실행 기준선, 구 실행 폐기 기록과 별도의 터널 개선 목록을 제공한다.
+- [재호의 PR #104 인수 시작](../../docs/records/lidar/migration-through-pr111.md#재호의-pr-104-인수-시작) · [담당별 다음 작업](docs/migration-tasks.md#공동-개발-인수와-우선-작업)
 - [구조·관측 계약과 이번 검증](docs/structure-contract-refactor.md)
 - [이름·경로 이전표](docs/name-mapping.md): 옛 이름은 참고용이며 wrapper를 제공하지 않는다.
 - [실행 경로·PR #103 기준선과 제한](docs/pipeline.md)
@@ -19,9 +19,7 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 기본 `lidar.launch`의 `/perception/lidar/objects_local/map` 및 `observations_local/map`에는
 HD맵·상부 객체 전달 필터가 적용된다. 동일 scan의 두 좌표계는 같은 ID를 제외한다.
 지도/pose 무효에서는 지도 제외를 중단하고, 최근 YOLO vehicle/dynamic 매칭은 모든 구간에서 보호한다.
-debug의 원본 tracker/점군은 검수를 위해 남긴다. 공용 `tracks_local/map`은 main의 적용 속도·운동 상태를 전달한다.
-`planning_output:=true`는 별도 `planning_observations_map`에 KF 기반 검증 companion을 추가한다.
-두 형식은 별도 소비 경로다. [companion 실행·검증·복구](../../docs/operations/lidar-cutover.md)를 따른다.
+debug의 원본 tracker/점군은 검수를 위해 남긴다. 판제 기본 입력도 공용 tracks_map으로 전환했다. 구 패키지·wire/JSON 중계는 폐기했다.
 
 ## 구조
 
@@ -42,7 +40,7 @@ debug의 원본 tracker/점군은 검수를 위해 남긴다. 공용 `tracks_loc
 
 `DetectionObservation`이 점군과 현재 기하를 한 번 소유하고, `TrackState`와 `CameraClassEvidence`를 조합해 `TrackedObject`를 만든다. 기존 tracker 이력의 복사 정책은 유지한다. `filtering/`은 원본 객체와 분리된 작은 판정 결과만 소유한다.
 
-계산 라이브러리는 ROS 메시지·시간 타입을 사용하지 않는다. HD맵/상부 근거와 관측 확인 정책은 `filtering/`의 ROS 독립 코어에 있다. 고정 중심 catalog·사각 구조물 blacklist는 새 실행에서 사용하지 않는다. 외부 catkin export는 `asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros` 세 개다. 검출·추적/runtime·HD맵 audit 정적 라이브러리는 패키지 내부에 두어 Main 링크를 바꾸지 않는다.
+계산 라이브러리는 ROS 메시지·시간 타입을 사용하지 않는다. HD맵/상부 근거와 관측 확인 정책은 `filtering/`의 ROS 독립 코어에 있다. 고정 중심 catalog·사각 구조물 blacklist는 새 실행에서 사용하지 않는다. 외부 catkin export는 `asmc_lidar_frame_time`, `asmc_lidar_camera_core`, `asmc_lidar_camera_ros` 세 개다. 검출·추적/runtime·HD맵 audit 정적 라이브러리는 패키지 내부에 두어 다른 패키지에 private 처리 구현을 노출하지 않는다.
 
 ## 빌드·시험
 
@@ -85,7 +83,7 @@ roslaunch asmc_lidar lidar.launch fusion:=false
 
 출력 기본값은 `/perception/lidar/{objects_local,objects_map,observations_local,observations_map,tracks_local,tracks_map,diagnostics,trace}`다. 입력은 절대 경로 정본을 유지하고 출력 상대 이름은 `namespace` 인자로 결정한다. 정본 namespace만 launch에서 명시 허용하며, 입력 덮어쓰기·중복 출력 차단과 TF 기본 OFF를 유지한다. 기존 Main과 동일 운영 토픽에 동시에 발행하지 않는다.
 
-관측의 `objects.header`가 source stamp·frame의 정본이다. 정상 빈 결과·입력 무효·map pose 무효는 기존 `LidarObjectArray` 상태로 구분한다. 센서가 조용하다고 과거 결과를 새 stamp로 재발행하지 않는다. 기존 MotionClassifier의 적용 속도·4단계 상태를 연결했다. 유효 map/계산 근거에서 절대속도 추정값을 제공하며, UNKNOWN의 수치0은 정지 확인이 아니다. GPS 무효에서는 local 속도/운동 validity를 false로 유지한다. 판제는 `LidarTrackingObservation`을 직접 소비한다([현재 의미](docs/planning-runtime.md#공용-메시지와-속도의-의미)).
+관측의 `objects.header`가 source stamp·frame의 정본이다. 정상 빈 결과·입력 무효·map pose 무효는 기존 `LidarObjectArray` 상태로 구분한다. 센서가 조용하다고 과거 결과를 새 stamp로 재발행하지 않는다. 기존 MotionClassifier의 적용 속도·4단계 상태를 연결했다. 유효 map/계산 근거에서 절대속도 추정값을 제공하며, UNKNOWN의 수치0은 정지 확인이 아니다. GPS 무효에서는 local 속도/운동 validity를 false로 유지한다. 판제는 `LidarTrackingObservation`을 직접 소비한다([현재 의미](../../docs/records/lidar/planning-runtime-through-pr111.md#공용-메시지와-속도의-의미)).
 
 명시적 처리 초기화:
 

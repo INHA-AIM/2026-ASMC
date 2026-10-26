@@ -1,12 +1,12 @@
 # Planning/Control 실행·검증
 
 현재 패키지는 `asmc_planner`, `asmc_controller`, `planning_inputs`입니다.
-bridge·카메라·LiDAR는 별도 실행합니다. 새 경로는 `asmc_lidar`, 구 Main은 인수 전 기존 실행/복구용입니다. 전체 시작 순서는 [실행 명령](commands.md),
+bridge·카메라·LiDAR는 별도 실행합니다. LiDAR 정본은 `asmc_lidar`이며 구 Main은 고정 revision에서만 재현합니다. 전체 시작 순서는 [실행 명령](commands.md),
 실제 인자/기본값은 [launch 목록](launch-reference.md)이 정본입니다.
 
 ## 빌드와 통합 실행
 
-`asmc-ros-noetic`의 저장소 루트에서 실행합니다. 새 경로는 outer 빌드만 필요하며 nested Main 빌드는 구 경로 실행/복구에 한정합니다.
+`asmc-ros-noetic`의 저장소 루트에서 실행합니다. 현행 실행은 outer 빌드와 setup만 사용합니다.
 
 ```bash
 cd /root/ws
@@ -14,7 +14,7 @@ source /opt/ros/noetic/setup.bash
 ./scripts/build_ws.sh -j2
 source devel/setup.bash
 # bridge·카메라·asmc_lidar를 별도 준비한 뒤
-roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_lidar
+roslaunch asmc_planner autonomy_no_bridges_v2.launch
 ```
 
 이 명령은 차량 제어를 시작합니다. 신호등 추론·발행은 카메라 담당의 `asmc_camera`만 소유하며,
@@ -26,11 +26,7 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_l
 `competition_speed_state.yaml`이 지정한 `/Ego_topic` 종방향 속도를 결합하며, 센서 이름을 보고
 다른 상태 입력으로 자동 전환하지 않습니다. `state_source:=gps_imu`는 GPS/IMU 추정만 사용하고
 `external`은 외부 `/planning/vehicle/state` producer를 요구합니다.
-통합 객체 source는 `lidar`이며 새 선택 `lidar_source_policy:=asmc_lidar`는 `/perception/lidar/tracks_map`을 직접 소비합니다. 속도/4단계 운동·원본 OBB·세대/시각/상태를 확인하고 두 번째 인지 필터·JSON join을 실행하지 않습니다. 실제 인수 전 통합 기본은 구 `validated_lidar`입니다. 이 구 경로는 `/last_lidar`와 exact source stamp의 `/lidar/motion_debug`를 연결하며 `main_raw`는 기존 비교용입니다. [연결 의미와 복구](../../src/asmc_lidar/docs/planning-runtime.md)를 따릅니다.
-기존 scen_runner 인지 실행기의 `/migration/lidar/planning_observations_map`을 사용할 때는
-`lidar_source_policy:=asmc_lidar_companion`을 선택합니다. `asmc_lidar`의 공용 추적 메시지와
-서로 바꿔 연결하지 않습니다. [입력 경로별 실행](lidar-cutover.md#main-병합-후-입력-선택)을 참고하세요.
-통합 launch에는 제어 선택기와 `enable_control=true`인 재밍 어댑터가 포함됩니다.
+객체 입력은 `/perception/lidar/tracks_map`의 공용 추적 관측으로 단일화했습니다. 속도/4단계 운동·원본 OBB·세대/시각/상태를 검사하고 인지 필터·classifier·JSON join을 다시 실행하지 않습니다. [연결 의미와 복구](../../src/asmc_lidar/docs/planning-runtime.md)를 따릅니다.
 
 ## 개별 실행
 
@@ -78,7 +74,7 @@ source stamp·valid·failure code·OBB·실제 제동 응답도 확인하고 Hz�
 
 ## #89 설정과 검증 범위
 
-차량 상태와 Main의 `imu_yaw_is_true_enu=true`는 MORAI true ENU yaw를 UTM52N map 방향으로 보정합니다.
+차량 상태와 LiDAR의 `imu_yaw_is_true_enu=true`는 MORAI true ENU yaw를 UTM52N map 방향으로 보정합니다.
 이미 보정된 producer는 양쪽 설정을 함께 false로 바꿉니다. 관련 패키지를 재빌드·재시작합니다.
 GPS 위치 gain0.35, 속도별 gain, 조향0.15초 지연·29step×0.05초·속도별 변화 한계는
 [planning_inputs](../../src/planning_inputs/README.md)와 [MPC](../../src/asmc_controller/README.md)에 설명합니다.

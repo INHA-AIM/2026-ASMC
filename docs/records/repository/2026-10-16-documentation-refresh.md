@@ -61,8 +61,8 @@ source/config의 주석을 검색하고 실행 진입점·단위/좌표/시각·
 - [src/asmc_msgs/msg/VehicleState.msg](../../../src/asmc_msgs/msg/VehicleState.msg)
 - [src/asmc_planner/launch/planner_v2.launch](../../../src/asmc_planner/launch/planner_v2.launch)
 - [src/data_collection/scripts/sync_collector_node.py](../../../src/data_collection/scripts/sync_collector_node.py)
-- [src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.hpp](../../../src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.hpp)
-- [src/lidar+sensorfusion/src/Msg/msg/TrackedObject.msg](../../../src/lidar+sensorfusion/src/Msg/msg/TrackedObject.msg)
+- [src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.hpp](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/Parser/SensorPoseHistory.hpp)
+- [src/lidar+sensorfusion/src/Msg/msg/TrackedObject.msg](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Msg/msg/TrackedObject.msg)
 - [src/planning_inputs/include/planning_inputs/converter.hpp](../../../src/planning_inputs/include/planning_inputs/converter.hpp)
 
 시작점과 비교해 Python AST(docstring 제외), C++ token(comment 제외), XML 구조,

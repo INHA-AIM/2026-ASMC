@@ -86,12 +86,12 @@ compatibility_topics:
   /lidar/tracked_objects_map:
     type: Msg/TrackedObjectArray
     md5: e127b2aabd7494ad01a5a56b005bf07e
-    producer_status: active_nested_workspace
+    producer_status: retired_b4_historical_bags_only
     retire_gate: bag_parity_and_all_consumers_use_asmc_msgs
   /last_lidar:
     type: Msg/TrackedObjectArray
     md5: e127b2aabd7494ad01a5a56b005bf07e
-    producer_status: active_nested_workspace
+    producer_status: retired_b4_historical_bags_only
     retire_gate: hd_map_filter_parity_and_all_consumers_use_asmc_msgs
 
 consumer_bindings:
@@ -126,3 +126,11 @@ cutover_gates:
     - raw/result bag object count, ID, OBB, velocity and dynamic-state parity
     - final asmc_hd_map drivable-area filter parity replaces legacy link_node mask
     - all consumers leave Msg before nested package deletion
+
+current_lidar_runtime:
+  contract: config/contracts/lidar_candidate_topic_contract_v1.yaml
+  authoritative_map_topic: /perception/lidar/tracks_map
+  authoritative_local_topic: /perception/lidar/tracks_local
+  type: asmc_msgs/LidarTrackingObservation
+  legacy_producers: removed
+  retired_source_revision: b2e8329f1cb71f11150d5125335e01c5b8d252c5

@@ -261,9 +261,9 @@ runtime 적용은 한 번에 하나씩 비교한다. 각 단계의 PR은 독립�
 
 - [rename 실행 검증 기록](../../../config/baselines/perception_camera_rename_verification_v1.yaml)
 - [카메라 상위 launch](../../../src/asmc_camera/launch/perception.launch)
-- [fusion 시간 설정](../../../src/lidar+sensorfusion/src/Main/main.launch)
-- [fusion 시간 매칭](../../../src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionTimeMatcher.hpp)
-- [YOLO 결과 소비와 큐 제거](../../../src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp)
+- [fusion 시간 설정](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/main.launch)
+- [fusion 시간 매칭](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/SensorFusion/FusionTimeMatcher.hpp)
+- [YOLO 결과 소비와 큐 제거](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp)
 
 공용 메시지·topic 정본은 기존 contracts와 각 메시지 정의가 소유한다. 이 계획은 후속 변경을
 자동으로 적용하거나 기존 계약을 동결 해제하지 않는다.

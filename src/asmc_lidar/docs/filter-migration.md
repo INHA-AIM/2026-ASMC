@@ -3,7 +3,7 @@
 **2026-10-26 재검토:** 새 `asmc_lidar`에서 고정 시설물 중심 catalog와 사각 구조물
 blacklist를 코드·설정·catalog 사본까지 제거했다. HD맵 v7의 점군/OBB AND 판정과 base 기준
 상부 제외를 사용한다. 관측 품질 확인/해제는 지도 안 잡음과 일시적 관측을 위한 별도 근거로
-유지한다. 구 Main 및 `planning_inputs`의 기존/복구 분기는 변경하지 않는다.
+유지한다. B4에서 구 Main 및 planning_inputs의 구 입력·중복 필터 분기를 폐기했다.
 [실행·전환 정본](planning-runtime.md)을 따른다.
 
 ## 제거와 유지 판단
@@ -22,8 +22,7 @@ GPS/지도 무효에서는 지도 제외를 중단한다. 관측 품질도 map �
 정상 관측이 없는 동안 결과를 재발행하지 않으며 원본 tracker·OBB·측정 좌표는 바꾸지 않는다.
 
 새 런타임은 최종 kept ID를 local/map 배열·관측·추적 관측에 동일 적용한다. 새 판제 입력은
-변환/시각/유효성만 검사하고 같은 필터를 두 번째 실행하지 않는다. 전체 판제 기본은 실제
-인수 전까지 기존 입력이며 `lidar_source_policy:=asmc_lidar`로 명시적으로 선택한다.
+변환/시각/유효성만 검사하고 같은 필터를 두 번째 실행하지 않는다. 전체 판제 기본도 공용 tracks_map 직접 입력이며 source 선택 인자는 제거했다.
 
 ## B0 당시 조사와 후속 분리 근거
 
@@ -33,7 +32,7 @@ GPS/지도 무효에서는 지도 제외를 중단한다. 관측 품질도 map �
 PR #108 이후 기능 대조·필터 소유권 정리의 입력 목록이다. 먼저
 [판제 전환 기반 B0–B4](cutover-foundation.md)를 마련하며 광범위한 필터 공통화는 그 뒤로 둔다. 이 표는 B0 당시 소유권·위험·완료 조건의 조사 근거다. 10월26일 구현은 아래 현재 호출
 경계와 실행 기준선을 따른다. 기존 Main·통합 판제의 기본 선택은 인수 전까지 유지한다. 전체 전환은
-[LiDAR 인계](../../../docs/handoffs/lidar-migration.md#판제-소비-전환-시-정리할-중복-처리)를 따른다.
+[LiDAR 인계](../../../docs/records/lidar/migration-through-pr111.md#판제-소비-전환-시-정리할-중복-처리)를 따른다.
 안승현은 지도·카메라 연결을, 손재호는 추적·속도·운동 상태·matching을 담당한다.
 
 ## 현재 호출 경계
@@ -77,20 +76,20 @@ bicycle/stroller의 보호 누락이나 motorcycle의 그룹 변경이 생기지
 
 ## 원본 위치
 
-- Main: [발행 조합](../../lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp),
-  [road](../../lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableBoundaryFilter.cpp),
-  [known-static](../../lidar+sensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.cpp),
-  [구조물](../../lidar+sensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.cpp),
-  [relevance](../../lidar+sensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.cpp).
-- 판제 입력: [필터 조합](../../planning_inputs/src/filters/PlanningObjectFilter.cpp),
-  [road](../../planning_inputs/src/filters/DrivableBoundaryFilter.cpp),
-  [footprint](../../planning_inputs/src/filters/DrivableFootprint.cpp),
-  [known-static](../../planning_inputs/src/filters/KnownStaticObjectFilter.cpp),
-  [구조물](../../planning_inputs/src/filters/StaticStructureExclusionFilter.cpp),
-  [운동 추정](../../planning_inputs/src/MotionClassifier.cpp),
+- Main: [발행 조합](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp),
+  [road](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/PlannerInterface/DrivableBoundaryFilter.cpp),
+  [known-static](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.cpp),
+  [구조물](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.cpp),
+  [relevance](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.cpp).
+- 판제 입력: [필터 조합](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/planning_inputs/src/filters/PlanningObjectFilter.cpp),
+  [road](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/planning_inputs/src/filters/DrivableBoundaryFilter.cpp),
+  [footprint](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/planning_inputs/src/filters/DrivableFootprint.cpp),
+  [known-static](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/planning_inputs/src/filters/KnownStaticObjectFilter.cpp),
+  [구조물](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/planning_inputs/src/filters/StaticStructureExclusionFilter.cpp),
+  [운동 추정](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/planning_inputs/src/MotionClassifier.cpp),
   [입력/운동 조합](../../planning_inputs/src/objects_node.cpp),
   [변환 검사](../../planning_inputs/src/converter.cpp),
-  [현재 기본 설정](../../planning_inputs/config/object_filter_params.yaml).
+  [현재 기본 설정](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/planning_inputs/config/object_filter_params.yaml).
 - 현재 분석·비교 정본은 [HD맵 필터 분석](hd-map-filter-analysis.md), 좌표/공통 IMU 리팩토링은
   [후속 설계](../../../docs/architecture/perception-coordinate-refactoring.md)를 따른다.
 

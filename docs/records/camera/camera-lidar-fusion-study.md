@@ -37,13 +37,13 @@
 | 목표 `asmc_lidar` | 공통 좌표·시간 골격과 인계 계약 | 이 기준 main에는 완성된 검출 실행기가 없음. 실제 비교 대상은 nested `Main` |
 
 확인할 소스는 [객체 설정](../../../src/asmc_camera/config/camera/yolo11m_coco.yaml),
-[FusionCamera.cpp](../../../src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp),
-[LiDAR 처리](../../../src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp),
+[FusionCamera.cpp](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp),
+[LiDAR 처리](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp),
 [음영 box 차로 판단](../../../src/jamming_lane_boundary_adapter/src/camera_bbox_lane_node.cpp)이다.
 
-현재 main의 [main.cpp](../../../src/lidar+sensorfusion/src/Main/src/main.cpp)는
+현재 main의 [main.cpp](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/main.cpp)는
 `pose_ready && LidarProcess(...)`를 사용하며,
-[SensorPoseHistory.cpp](../../../src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.cpp)는
+[SensorPoseHistory.cpp](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/Parser/SensorPoseHistory.cpp)는
 stale GPS를 거부한다. 따라서 카메라 모델만 바꿔도 GPS 중단 중 LiDAR local 결과가 계속
 나온다고 가정할 수 없다. **local 인지 지속과 map 출력 가용성을 분리하는 작업**이 선행 조건이다.
 이것은 소스상의 의존성 지적이며 이번 검토에서 live 장애를 새로 재현한 결과는 아니다.

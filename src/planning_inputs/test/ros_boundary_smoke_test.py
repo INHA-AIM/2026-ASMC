@@ -74,9 +74,9 @@ def main():
             assert target.vx==2.5 and target.type==2 and target.motion_state==0
             print('PASS original geometry/person category/UNKNOWN applied estimate preserved',flush=True)
             # Invalid observations must not become false empty free-space frames.
-            count=len(received);o.objects.status=o.objects.POSE_UNAVAILABLE
+            invalid_begin=rospy.Time.now();o.objects.status=o.objects.POSE_UNAVAILABLE
             for _ in range(5):send();time.sleep(.08)
-            assert len(received)==count
+            assert all(message.header.stamp < invalid_begin for message in received)
             print('PASS invalid pose withheld without fabricated empty output',flush=True)
             o.objects.status=o.objects.OBSERVED_EMPTY;o.objects.objects=[];frame.tracking=[]
             require(lambda:(send() or bool(received and not received[-1].objects)),

@@ -98,10 +98,10 @@ jobs:
       - name: catkin_make
         run: |
           source /opt/ros/noetic/setup.bash
-          # A missing shadow dependency fails the configure step instead of skipping the targets.
+          # A missing pipeline dependency fails the configure step instead of skipping the targets.
           ./scripts/build_ws.sh -j2 -l2 -DASMC_LIDAR_PIPELINE_REQUIRED=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
-      - name: Check LiDAR camera receiver, coordinates, time and shadow pipeline
+      - name: Check LiDAR camera receiver, coordinates, time and canonical pipeline
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
@@ -109,8 +109,33 @@ jobs:
           cd build/asmc_lidar
           # -T Test keeps each test's status and output for the gate (the DartConfiguration.tcl notice is harmless).
           ctest --output-on-failure -T Test --no-compress-output
-          # Fails when a shadow executable or a required test is missing, skipped or stale.
+          # Fails when a pipeline executable or a required test is missing, skipped or stale.
           python3 ../../src/asmc_lidar/test/pipeline_ci_check.py --devel ../../devel --build . --results ../test_results/asmc_lidar
+
+      - name: Check direct common LiDAR planning and camera contracts
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          python3 tools/audit/check_lidar_canonicalization.py
+          python3 src/asmc_lidar/test/test_tracking_samples.py
+          python3 src/asmc_lidar/test/test_compare_traces.py
+          catkin_make planning_lidar_observation_test planning_group_conversion_test ground_projection_test -j2 -l2
+          devel/lib/planning_inputs/planning_lidar_observation_test
+          devel/lib/planning_inputs/planning_group_conversion_test
+          python3 src/planning_inputs/test/common_lidar_ros_test.py
+          python3 src/planning_inputs/test/ros_boundary_smoke_test.py
+          devel/lib/lane_boundary_adapter/ground_projection_test
+          for fixture_case in camera_bbox_lane camera_bbox_clipped camera_bbox_lane_change camera_bbox_ego_mask camera_bbox_imu_projection; do
+            rostest lane_boundary_adapter "$fixture_case.test"
+          done
+          export ROS_MASTER_URI=http://127.0.0.1:11316
+          export ROS_HOSTNAME=localhost
+          roscore -p 11316 > /tmp/camera-contract-master.log 2>&1 &
+          camera_core_pid=$!
+          trap 'kill "$camera_core_pid" 2>/dev/null || true' EXIT
+          python3 tools/perception/check_camera_coco_ros.py --profile baseline
+          python3 tools/perception/check_camera_coco_ros.py --profile all
+          python3 tools/perception/check_camera_seg_ros.py
 
       - name: Check LiDAR web view logic
         run: node src/asmc_lidar/test/monitor/test_monitor_view.js

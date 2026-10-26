@@ -50,7 +50,7 @@ python3 tools/perception/install_camera_model_release.py \
 ## 직접 실행
 
 현재 정본은 `camera.launch`·`view.launch`다. 최신 checkout을 빌드/source한 `asmc-ros-noetic`에서 실행한다.
-Main의 독립 YOLO는 제거됐다. 바깥/nested 빌드 순서와 전방 연결은 [LiDAR 인계](../handoffs/camera-to-lidar.md)를 따른다.
+카메라가 YOLO 단일 생산자이고 LiDAR는 공용 관측을 소비한다. outer 빌드와 전방 연결은 [LiDAR 인계](../handoffs/camera-to-lidar.md)를 따른다.
 
 ```bash
 roslaunch asmc_camera camera.launch mode:=active models:=objects
@@ -101,20 +101,19 @@ CargoBox/WoodBox는 box, Scooter/SportBike는 motorcycle, PE_Firewall은 plastic
   view(`camera_front/left/right`), 원본 이름·그룹·confidence 보존. 메시지·서비스 MD5는 유지한다.
 - `valid=true`·빈 boxes는 정상 빈 관측이다. `valid=false`, 오래된 stamp, 중단 입력은 새 빈 관측과 구분한다.
   카메라 bbox만으로 map 위치·거리·속도를 만들지 않는다.
-- Main의 기본은 `camera_class_profile:=mission16_v1`이며 독립 YOLO 옵션은 제거됐다. 전방만 기존
-  `/YOLO/BBox`로 변환하며 producer는 하나다. 이 구형 wire에는 원본 이름·bbox·header만 있고
-  confidence/그룹 필드는 없다. confidence는 변환 전 필터링하고 그룹은 같은 고정 표로 재구성한다.
+- LiDAR는 공용 `CameraObjectObservation`의 원본 이름·그룹·confidence·식별자를 직접 수신한다.
+  구 `/YOLO/BBox` 어댑터와 nested 메시지 workspace는 폐기했다.
 - fusion은 **전방 bbox·unique·±50ms·200ms 대기**다. 좌우 bbox는 독립 출력이며 아직3뷰 fusion이 아니다.
   분류 확인은 새로운 카메라 관측만 세고, 이미지 source stamp를 유지한다.
-- `/lidar/tracked_objects_map`와 validated tracked companion은 `classification`에3그룹,
-  `yolo_class`에원본 이름을 보존한다. track의 실측 속도·기하·운동 판정은 별도다.
+- `/perception/lidar/tracks_local/map`의 공용 관측은 `classification`에3그룹,
+  `camera_class`에원본 이름을 보존한다. track의 실측 속도·기하·운동 판정은 별도다.
 - 기존 `planning_inputs/DetectedObject` 숫자 enum은 vehicle/pedestrian/unknown이다.
   vehicle은vehicle, dynamic_obstacle+원본person은pedestrian, 나머지 장애물은unknown으로
   기하·속도를 보존한다. **unknown을 객체 없음 또는 정적으로 해석하면 안 된다.**
   판제가3그룹별 정책을 구현할 때는 문자열을 보존한 tracked companion을 함께 사용한다.
 - 미등록 라벨은unknown/진단으로 남긴다. 클래스 이름만 보고 static으로 자동 배정하지 않는다.
 
-과거 분류 정책의 재현은 `camera_coco7.launch`와 Main의 `camera_class_profile:=legacy`를 명시한다. Main 독립 YOLO를 다시 시작하는 경로는 없다.
+과거 Main/wire 분류 정책은 삭제 전 고정 revision에서 재현한다. 현재 모델 대조는 카메라 프로필을 선택하고 LiDAR 공용 관측 계약을 따른다.
 이는 위 `pretrained_coco7` 선택(동일3그룹 계약 유지)과 다르다.
 
 ## 검증 범위와 남은 과제

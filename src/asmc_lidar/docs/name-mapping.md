@@ -87,3 +87,17 @@
 | `TrackedObject.display_motion` | `TrackedObject.tracking.display_motion` (진단 전용) |
 
 기존 HTTP·binary/JSON v1 형식은 보존하며, JSON의 역사적 `shadow_nodes` 키는 실행 이름 alias가 아니다.
+
+## B4 정본화 대응
+
+| 이전 이름·경로 | 현행 |
+|---|---|
+| `tracking/motion_display.hpp/.cpp` | `tracking/motion_classifier.hpp/.cpp` |
+| `TrackState.display_motion`, `Pipeline.display_motion_` | `TrackState.motion`, `Pipeline.motion_classifier_` |
+| `/last_lidar` + `/lidar/motion_debug` 결합 | `/perception/lidar/tracks_map`, 공용 원자적 관측 |
+| `lidar_source_policy` / `source_policy` | 선택 인자 제거, 공용 map 입력이 기본 |
+| nested Main/Msg source·빌드 | outer workspace만 빌드·source |
+
+속도 계산과4단계 상태·진단 필드 의미는 유지했다. 옛 이름은 이전 설명이며 alias/wrapper를 제공하지 않는다.
+손재호의 진행 브랜치는 정본화 revision 위에 반영하고 새 헤더·필드를 사용한다. 필요 원본·시험 근거는
+[보존 manifest](../../../config/baselines/lidar_canonicalization_v1.json)에서 찾는다.

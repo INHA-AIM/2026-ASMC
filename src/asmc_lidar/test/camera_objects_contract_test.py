@@ -84,9 +84,9 @@ class CameraObjectsContractTest(unittest.TestCase):
 
     def test_receiver_does_not_claim_or_depend_on_runtime_fusion(self):
         self.assertEqual(self.config['implementation_status'], 'receiver_buffer_projection_ready_fusion_not_implemented')
-        compatibility = self.config['current_compatibility']
+        compatibility = self.config['current_consumer']
         self.assertEqual(compatibility['camera_scope'], 'front')
-        self.assertEqual(compatibility['output_topic'], '/YOLO/BBox')
+        self.assertEqual(compatibility['output_topic'], '/perception/lidar/tracks_map')
         package = ET.parse(ROOT / 'src/asmc_lidar/package.xml').getroot()
         dependencies = {node.text for node in package if node.tag.endswith('depend')}
         self.assertFalse({'Main', 'Msg', 'asmc_camera', 'tensorrt', 'torch'} & dependencies)
@@ -113,7 +113,7 @@ class CameraObjectsContractTest(unittest.TestCase):
                 for key in ('default', 'value', 'to'):
                     value = element.get(key) or ''
                     self.assertFalse(value in operational or value.startswith('/planning/'), (path, value))
-        for base in (ROOT / 'src/lidar+sensorfusion/src/Main', ROOT / 'src/asmc_planner', CAMERA,
+        for base in (ROOT / 'src/asmc_planner', CAMERA,
                      ROOT / 'src/asmc_bridge'):
             for path in sorted(base.rglob('*.launch')):
                 if path == ROOT / 'src/asmc_planner/launch/autonomy_asmc_lidar.launch':

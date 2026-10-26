@@ -105,7 +105,7 @@ CUDA 드라이버는 호스트에만 설치한다. 컨테이너 안에서 NVIDIA
 | 영역 | 기준 |
 |---|---|
 | ROS Python | Python 3.8 호환 문법과 package |
-| Planning/Control과 LiDAR Main | C++17 |
+| Planning/Control과 asmc_lidar | C++17 |
 | Catkin/upstream package | 각 패키지 CMake 기준 유지; Velodyne vendor는 C++11 포함 |
 | `morai_msgs` | pinned `src/MORAI-ROS_morai_msgs`, 복사본 생성 금지 |
 

@@ -2,16 +2,11 @@
 
 현재 구조·이름·식별 계약은 [첫 단위 정리](structure-contract-refactor.md)와 [이전표](name-mapping.md)가 정본이다. 아래 PR #103 수치·실패와 비교 기준선은 당시 근거를 보존한다.
 
-**2026-10-25 현행:** PR #108은 main `ab8db094`에 병합됐다. 새 경로의 발행 배열에는 HD맵·상부
-전달 필터가 기본 적용된다. 판제는 아직 기존 Main을 쓰며 기존 기능 보존 이식·공용 속도/상태·판제 직접 소비는
-[현재 실행 기준선](planning-runtime.md)에서 구현했다. 다음은 실제 소비 인수와 구 패키지 폐기다. 광범위한
-리팩토링·3뷰 확대보다 이 기반을 먼저 진행한다.
+**B4 현행:** `asmc_lidar`가 정본이며 판제 기본은 공용 `tracks_map` 직접 입력이다.
+수집·시나리오도 같은 런타임을 쓰고 구 Main/Msg는 폐기했다. 기본 namespace는 `/perception/lidar`,
+병행 비교는 `/migration/lidar`다. [현재 실행·메시지·제한](planning-runtime.md)을 먼저 읽는다.
 
-nested `Main`의 common-geometry LiDAR 처리를 `asmc_lidar` 안에 동작 보존 방식으로 옮긴
-**검증용 이관 검증 노드**다. 기준은 Tracker 수정이 반영된 Main `8f93c22e`
-(`enable_common_geometry=true`)이다. 판제는 계속 기존 Main의 `/last_lidar`를 소비한다.
-이 노드는 어떤 기존 launch에도 포함되지 않으며 `/migration/lidar/*`에만 발행한다.
-운영 전환·기본값 승격·실시간 성능 수락은 이 문서의 범위가 아니다.
+아래 PR #103–105 비교 기준선·수치와 미수락은 당시 근거다. 구 Main 실행은 삭제 전 고정 revision에서만 재현한다.
 
 ## 2026-10-23 입력 확인과 L1 연결
 
@@ -30,8 +25,8 @@ nested `Main`의 common-geometry LiDAR 처리를 `asmc_lidar` 안에 동작 보�
 - 구현 완료: 독립 LiDAR pipeline(아래 처리 흐름)과 전방(`camera_front`) class fusion.
 - 검증 완료: roll·pitch 수평화와 local/map 출력. 일반·터널 bag replay가 Main `8f93c22e` 기준선과 bit 단위로
   같았고, GPS 무효·중단·복구와 IMU stale·무효를 실제 노드 rostest로 시험했다.
-- 기존 Main과 판제는 계속 기존 실행 경로(`/last_lidar` 등)를 쓴다. 이 패키지는 그 경로를 바꾸지 않는다.
-- 새 노드는 명시적으로 실행해야 하며 `/migration/lidar/*`만 발행한다.
+- B4에서 판제·수집·시나리오의 구 입력 분기와 중복 필터를 제거했다.
+- 독립 실행은 `lidar.launch`이며 기본 `/perception/lidar/*`, 병행 비교 namespace만 변경한다.
 - PR #105의 Main MotionClassifier는 진단 전용 복사본으로 연결했다. 기존 판제용 최종 속도·4단계 상태를 공용 추적 관측에 연결했다. 유효 근거와 map 가용성을 검사하며 새 정확도 개선을 뜻하지 않는다.
 - PR #108은 v7 HD맵·높이 ROI·상부 전달 필터를 추가했다. 구 known-static·structure catalog·relevance와 OBB clipping을 그대로 이식한 것은 아니다([편입 경계](filter-migration.md)).
 - 웹 화면은 별도 `view.launch`, 단계 샘플은 `lidar.launch debug:=true`로 요청한다. [웹 모니터](web-monitor.md)를 따른다.
@@ -75,7 +70,7 @@ local 처리는 GPS와 독립이다. GPS 정상/음영/복구는 map 가용성�
 ## 이식 경계
 
 아래 표는 **PR #103 당시 이식 범위**다. 현재 추가된 전달 필터·속도/운동 연결은
-[현행 기능 대조](cutover-foundation.md#구-main과-새-패키지의-기능-대조)를 따른다.
+[현행 기능 대조](../../../docs/records/lidar/cutover-foundation-through-pr111.md#구-main과-새-패키지의-기능-대조)를 따른다.
 
 | 포함 (Main 동작 보존) | 제외 (이번 경계 밖, 사유) |
 |---|---|
@@ -129,7 +124,7 @@ bag 비교의 동등성 경계는 **추적 결과와 typed local/map 배열**이
 - 발행 객체는 관측된 track(`miss_count=0`)뿐이다. 중심·8코너·축은 저장된 수평화의 역변환 →
   장착 변환 → (map) 유효 pose를 각각 한 번 적용한 결과다(`asmc::lidar::transform`).
 - `relative_velocity_valid`는 false다. 구 MotionClassifier 적용 속도를 공개 절대속도 추정값으로
-  연결하고4단계 운동 상태와 함께 제공한다. GPS 무효에서는 둘 다 invalid다([현재 의미](planning-runtime.md#공용-메시지와-속도의-의미)).
+  연결하고4단계 운동 상태와 함께 제공한다. GPS 무효에서는 둘 다 invalid다([현재 의미](../../../docs/records/lidar/planning-runtime-through-pr111.md#공용-메시지와-속도의-의미)).
 - TF는 기본 OFF다(`~publish_tf`). 켜면 `base_link → lidar_pipeline/lidar_leveled`로 보내며
   Main의 `lidar_leveled`와 child를 공유하지 않는다.
 - 출력 이름(param·remap 적용 후)이 `/last_lidar`, `/lidar_nogps`, `/YOLO/BBox`, `/tf`, `/tf_static`,

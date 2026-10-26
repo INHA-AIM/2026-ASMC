@@ -1592,58 +1592,7 @@ def test_filter_threshold_keeps_road_edge_and_drops_roadside(data, grid):
     assert ratio(dm0, 0.0) == pytest.approx(1.0)
 
 
-def test_filter_node_reads_bottom_obb_corners():
-    """노드가 메시지에서 하층 꼭짓점 4개를 뽑고 축퇴 박스를 걸러내야 한다.
 
-    rospy / Msg 는 중첩 워크스페이스에만 있으므로 stub 을 끼워 import 한다.
-    """
-    import types
-    import importlib.util
-
-    stub_rospy = types.ModuleType('rospy')
-    for name in ('loginfo', 'logwarn', 'logerr', 'logfatal', 'spin'):
-        setattr(stub_rospy, name, lambda *a, **k: None)
-    stub_msg = types.ModuleType('Msg')
-    stub_msg_msg = types.ModuleType('Msg.msg')
-    stub_msg_msg.TrackedObjectArray = type('TrackedObjectArray', (), {})
-    saved = {k: sys.modules.get(k) for k in ('rospy', 'Msg', 'Msg.msg')}
-    sys.modules['rospy'] = stub_rospy
-    sys.modules['Msg'] = stub_msg
-    sys.modules['Msg.msg'] = stub_msg_msg
-    try:
-        spec = importlib.util.spec_from_file_location(
-            'drivable_filter_node', PKG_ROOT / 'drivable_filter_node.py')
-        node = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(node)
-    finally:
-        for k, v in saved.items():
-            if v is None:
-                sys.modules.pop(k, None)
-            else:
-                sys.modules[k] = v
-
-    class P:
-        def __init__(self, x, y, z=0.0):
-            self.x, self.y, self.z = x, y, z
-
-    class Obj:
-        def __init__(self, corners):
-            self.obb_corners = corners
-
-    # 하층 0-3 은 사각형, 상층 4-7 은 z 만 다르다. 상층을 섞어 읽으면 안 된다.
-    bottom = [P(0, 0), P(4, 0), P(4, 2), P(0, 2)]
-    top = [P(99, 99, 1.5)] * 4
-    good = Obj(bottom + top)
-    degenerate = Obj([P(1, 1)] * 8)
-    nan_box = Obj([P(float('nan'), 0)] * 8)
-
-    quads, usable = node.quads_from_message([good, degenerate, nan_box])
-    assert quads.shape == (3, 4, 2)
-    assert np.array_equal(quads[0], [[0, 0], [4, 0], [4, 2], [0, 2]])
-    assert usable.tolist() == [True, False, False]
-
-
-@needs_map
 def test_drivable_query_margin_and_map_guard():
     import sys as _sys
     _sys.path.insert(0, str(PKG_ROOT))

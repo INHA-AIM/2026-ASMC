@@ -62,7 +62,7 @@ class Coco7RuntimeTest(unittest.TestCase):
         for value in [0., .55, .6, .7, 1., '0.60']:
             self.assertEqual(float(value), validate_confidence(value))
 
-    def test_selected_launch_override_follows_config_and_adapter_has_no_hidden_cut(self):
+    def test_selected_launch_override_follows_config_and_fusion_has_no_hidden_cut(self):
         from pathlib import Path
         import xml.etree.ElementTree as ET
         import yaml
@@ -73,9 +73,8 @@ class Coco7RuntimeTest(unittest.TestCase):
         self.assertGreater(list(node).index(override), next(i for i,p in enumerate(node)
                            if p.tag == 'rosparam' and p.get('file') == '$(arg config)'))
         self.assertEqual('double', override.get('type'))
-        main = ET.parse(package.parent/'lidar+sensorfusion/src/Main/main.launch').getroot()
-        self.assertEqual('0.0', next(p.get('default') for p in main.findall('arg')
-                                   if p.get('name') == 'camera_objects_conf_thres'))
+        lidar = yaml.safe_load((package.parent/'asmc_lidar/config/lidar_pipeline.yaml').read_text())
+        self.assertEqual(0.0, lidar['fusion']['camera_objects_conf_thres'])
         selected = ET.parse(package/'launch/camera_coco7.launch').getroot()
         path = next(p.get('default') for p in selected.findall('arg') if p.get('name') == 'camera_objects_config')
         config = yaml.safe_load((package/path.replace('$(find asmc_camera)/', '')).read_text())

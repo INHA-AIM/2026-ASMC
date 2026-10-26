@@ -17,7 +17,7 @@ xhost +local:docker
 docker exec -it asmc-ros-noetic bash
 ```
 
-새 LiDAR 연결은 컨테이너의 outer workspace만 빌드합니다. 주행 중 container 재생성이나 빌드를 하지 않습니다. 구 Main 실행/복구에만 별도 nested 빌드가 필요합니다. 절차는 아래 구 Main 안내 링크를 따릅니다.
+LiDAR·판제·수집은 outer workspace만 빌드합니다. 주행 중 container 재생성이나 빌드를 하지 않습니다. 구 패키지는 폐기했고 재현은 고정 revision의 별도 checkout을 사용합니다.
 
 ```bash
 cd /root/ws
@@ -26,8 +26,7 @@ source /opt/ros/noetic/setup.bash
 source devel/setup.bash
 ```
 
-이후 새 경로의 각 터미널에서는 outer 환경을 적용합니다. 구 Main 실행/복구만 바깥→nested 순서를 지킵니다([구 Main 안내](../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)).
-
+각 터미널은 아래 outer 환경만 적용합니다.
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
@@ -44,9 +43,9 @@ source /root/ws/devel/setup.bash
 | B | `roslaunch asmc_hd_map competition_map.launch` | 정적 지도·metadata; 현재 Planner local map copy를 자동 대체하지 않음 |
 | C | `roslaunch asmc_camera camera.launch` | 세 모델 상시 ACTIVE·발행, E8 기본; GUI 별도 |
 | D | `roslaunch asmc_lidar lidar.launch` | 공용 local/map 추적·속도/운동·전달 필터; 카메라 모델 미실행 |
-| E | `roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_lidar` | **차량 제어 포함**, 새 공용 관측 직접 소비; GPS/IMU 위치와 Competition 종방향 실측 속도 조합, MPC/selector/재밍 어댑터 |
+| E | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, 새 공용 관측 직접 소비; GPS/IMU 위치와 Competition 종방향 실측 속도 조합, MPC/selector/재밍 어댑터 |
 
-위 D/E는 새 LiDAR 경로의 조합입니다. 통합 판제 인자를 생략한 기본은 아직 구 `validated_lidar`입니다. 구 Main 실행·복구와 새 조합을 섞지 않습니다. 실제 미션 인수/구 패키지 폐기는 후속이며 [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)을 확인합니다.
+D/E는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)을 따릅니다. 전체 미션·속도 정확도 인수는 후속입니다.
 
 신호등의 단일 추론·발행자는 카메라 담당의 `asmc_camera`입니다. 판제는 결과만 소비하고
 `traffic_light:=false` 인자는 제거되어 지정하지 않습니다. 중단/재개·주기 제어는 카메라의
@@ -150,7 +149,7 @@ GUI 종료 후 사용한 process가 남지 않았는지
 ```bash
 roslaunch asmc_hd_map competition_map.launch rviz:=true
 roslaunch asmc_planner dashboard.launch state_topic:=/planning/vehicle/state
-rostopic info /YOLO/BBox
+rostopic info /perception/lidar/tracks_map
 rostopic info /ctrl_cmd
 rostopic hz /image_jpeg/compressed
 rostopic hz /velodyne_points
@@ -161,12 +160,12 @@ rostopic echo -n 1 /morai_sensor_bridge/diagnostics
 
 HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한다고 같은 publisher를 하나 더 띄우지 않습니다.
 
-이관 검증 LiDAR(`asmc_lidar`)의 필터 단계·OBB·추적 결과를 브라우저에서 보려면 별도 터미널에서
+정본 LiDAR(`asmc_lidar`)의 필터 단계·OBB·추적 결과를 브라우저에서 보려면 별도 터미널에서
 `roslaunch asmc_lidar view.launch open_browser:=true`를 실행합니다(처리는 별도 `lidar.launch debug:=true`)(`http://127.0.0.1:8091/`, 읽기 전용).
-이 launch는 모니터만 켭니다. 별도 `lidar.launch`와 기존 Main을 함께 실행하면 LiDAR 처리가 두 번 수행됩니다.
-판제는 계속 D의 Main을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
+이 launch는 모니터만 켭니다. 기존 `lidar.launch`가 있다면 두 번째 처리 노드를 시작하지 않습니다.
+판제는 D의 공용 추적 관측을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
-전방 어댑터와 nested source 순서는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
+카메라 공용 관측과 전방 matching 계약는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
 판제 단독/통합 차이는 [판제 운영](planning-control.md)을 봅니다.
 
 ## 2. Container·build 명령
@@ -442,9 +441,9 @@ xhost -local:docker
 주행·녹화 중에 `up`, `down`, `rebuild`로 container를 재생성하지 않는다.
 
 
-## LiDAR 이관 검증 실행
+## LiDAR 병행 비교 실행
 
-기존 Main은 운영 판제 입력을 계속 제공한다. 아래 명령은 드라이버·카메라 추론을 시작하지 않고
+운영 LiDAR는 유지하고 별도 namespace에서 비교한다. 아래 명령은 드라이버·카메라 추론을 시작하지 않고
 기존 센서/카메라 정본 입력을 구독해 `/migration/lidar/*`에만 발행한다.
 
 ```bash

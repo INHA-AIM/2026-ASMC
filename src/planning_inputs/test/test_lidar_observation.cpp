@@ -36,9 +36,17 @@ TEST(CommonLidar, PreservesGeometryClassificationAndAllFourStates) {
   }
 }
 TEST(CommonLidar, RawClassesAndGroupsNeverInventMotion) {
-  for(const auto& raw:std::vector<std::string>{"person","dog","deer","bicycle","stroller","car","bus","truck"}) {
+  const std::vector<std::pair<std::string,std::string>> classes={
+    {"person","dynamic_obstacle"},{"dog","dynamic_obstacle"},{"deer","dynamic_obstacle"},
+    {"bicycle","dynamic_obstacle"},{"stroller","dynamic_obstacle"},
+    {"car","vehicle"},{"bus","vehicle"},{"truck","vehicle"},
+    {"motorcycle","static_obstacle"},{"bollard","static_obstacle"},{"box","static_obstacle"},
+    {"concrete_barrier","static_obstacle"},{"steel_barricade","static_obstacle"},
+    {"traffic_drum","static_obstacle"},{"plastic_barrier","static_obstacle"},{"traffic_cone","static_obstacle"}};
+  for(const auto& entry:classes) {
+    const auto& raw=entry.first;
     auto m=Frame();auto& p=m.observation.objects.objects[0];
-    p.classification=(raw=="car"||raw=="bus"||raw=="truck")?"vehicle":"dynamic_obstacle";p.camera_class=raw;
+    p.classification=entry.second;p.camera_class=raw;
     DetectedObjectArray out;ASSERT_EQ(ConversionStatus::OK,ConvertLidarObservation(m,&out));
     EXPECT_EQ(raw=="person"?kObjectPedestrian:p.classification=="vehicle"?kObjectVehicle:kObjectUnknown,out.objects[0].type);
     EXPECT_EQ(kMotionUnknown,out.objects[0].motion_state);
