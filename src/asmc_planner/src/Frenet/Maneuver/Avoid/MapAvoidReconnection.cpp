@@ -41,6 +41,7 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
     std::size_t ordinal=0;
     const std::size_t resume=v2_avoidance_.map_reconnection_cursor;
     const double budget=std::max(0.0,6.0-v2_avoidance_.map_recovery_travel_m);
+    const VehicleShape map_shape=vehicle_shape_;
     for(double first_length:{3.0,4.5,6.0,8.0,10.0,12.0,16.0,20.0,24.0,32.0}){
         if(first_length<pass)continue;
         for(double via:offsets){
@@ -94,9 +95,10 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
                     v=next_v;a=next_a;
                 }
                 if(!complete)continue;
-                const auto road=avoid_road_map_.EvaluateRecoveryPath(candidate,vehicle_shape_,path_cfg_.dt,
+                const auto road=avoid_road_map_.EvaluateRecoveryPath(candidate,map_shape,path_cfg_.dt,
                     budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,
-                    v2_avoidance_.map_recovery_settled_travel_m);
+                    v2_avoidance_.map_recovery_settled_travel_m,true,
+                    solid_paint_contact_elapsed_s_);
                 int blocking=-1;bool recovery=false;
                 const bool clear=road.drivable&&CartesianAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,
                     path_cfg_.dt,&blocking,execution_->avoid.obstacle_id,&recovery);

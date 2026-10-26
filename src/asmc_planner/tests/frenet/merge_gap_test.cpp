@@ -338,6 +338,38 @@ void TestHighwayGapDisabledConfigIsNeverSafe() {
            "TEST6: 비활성 checkpoint는 gap 판단이 confirmed되지 않는다");
 }
 
+void TestHighwayGapRejectsFastUnknownVehicleFragment() {
+    const RefLine ref = MakeStraightRefLine(200.0);
+    HighwayMergeConfig cfg = MakeHighwayCfg();
+    cfg.max_wait_time = 3.4;
+    cfg.min_front_gap = cfg.min_rear_gap = 0.0;
+    cfg.min_front_ttc = cfg.min_rear_ttc = 0.0;
+    const HighwayMergeCheckpoint checkpoint{100.0, 135.0};
+    FrenetState ego{};
+    ego.s = 50.0;
+    ego.s_d = 15.0;
+    // The original first-merge bag showed a vehicle-sized actor as a
+    // 0.16 m wide UNKNOWN cluster while it moved near 12 m/s. Its small
+    // authoritative OBB alone misses a side overlap 2.05 m off route.
+    TrackedObject fragment = MakeVehicleAt(1433, 70.0, 2.05, 0.0, 10.0);
+    fragment.type = 0;
+    fragment.motion_state = ObjectMotionState::DYNAMIC;
+    fragment.width = 0.16;
+    fragment.length = 1.6;
+    fragment.height = 0.05;
+    for (int i = 0; i < 4; ++i) {
+        const double dx = i == 0 || i == 3 ? -0.8 : 0.8;
+        const double dy = i < 2 ? -0.08 : 0.08;
+        fragment.corners[i] = {fragment.x + dx, fragment.y + dy, 0.0};
+        fragment.corners[i + 4] = {fragment.x + dx, fragment.y + dy, 0.05};
+    }
+    const RoundaboutGap gap = FindHighwayMergeGap(
+        ref, ego, {fragment}, cfg, checkpoint, MakeEgoShape(),
+        MakeCollisionCfg(), 15.0, 2.0);
+    Expect(gap.confirmed && !gap.safe,
+           "TEST7: fast UNKNOWN fragment cannot clear a side-overlapping highway gap");
+}
+
 int main() {
     TestRoundaboutGapSafeWhenNoTraffic();
     TestRoundaboutGapBlockedByPrecedingVehicle();
@@ -345,6 +377,7 @@ int main() {
     TestHighwayGapSafeWhenCorridorEmpty();
     TestHighwayGapRejectsInsufficientFrontGap();
     TestHighwayGapDisabledConfigIsNeverSafe();
+    TestHighwayGapRejectsFastUnknownVehicleFragment();
 
     if (g_failures == 0) {
         std::cout << "[ALL PASS]\n";

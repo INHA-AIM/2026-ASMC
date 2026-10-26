@@ -31,6 +31,12 @@ class PlanningPort {
     PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh);
     PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh, FeedbackSink);
     void receiveIntent(const asmc_planner::RequestedIntent&);
+    // Composition selects the native owner before either spinner starts.
+    // Public diagnostic mirrors must never overwrite a newer native request.
+    void useNativeControlInput() {
+      native_control_input_=true;
+      control_request_sub_.shutdown();
+    }
     behavior_planner::DynamicEnvironment dynamicEnvironment() const {
       return {planner_initialized_?&planner_.road_map():nullptr,
               planner_.vehicle_shape(),planner_.collision_config(),planner_.lane_width()};
@@ -42,6 +48,7 @@ class PlanningPort {
     friend class asmc_planner::Planner;
     asmc_planner::Planner coordinator_;
     FeedbackSink feedback_sink_;
+    bool native_control_input_=false;
     // ===== R8: Runtime 책임 구획 =====
     //
     // 이 클래스는 ROS 리소스와 runtime 상태를 계속 소유하지만, 실제 구현은
@@ -97,6 +104,7 @@ class PlanningPort {
     // 실제 궤적 생성 연결은 D4부터다(계약 12.4절).
     void behaviorCommandV2Callback(
         const ros::MessageEvent<const asmc_msgs::BehaviorCommand>& event);
+    void controlRequestCallback(const ros::MessageEvent<const std_msgs::UInt8MultiArray>& event);
 
     // v2 planning cycle. v1과 동일하게 20 Hz timer가 주도한다.
     //
@@ -254,6 +262,12 @@ class PlanningPort {
     ros::Publisher feedback_pub_;
     ros::Publisher feedback_v2_pub_;
     ros::Publisher marker_pub_;
+    bool control_binding_enabled_=false;
+    ros::Subscriber control_request_sub_;
+    ros::Publisher control_plan_pub_;
+    std::string planner_epoch_=asmc_msgs::binding::NewEpoch();
+    std::uint64_t control_plan_sequence_=0;
+    asmc_msgs::binding::Request latest_control_request_,cycle_control_request_;
     ros::SteadyTimer planning_timer_;
 
     // v2 명령 처리. adapter는 stateless이므로 멤버가 필요 없고, transaction

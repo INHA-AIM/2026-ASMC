@@ -1437,6 +1437,28 @@ TEST(NormalCruiseTest, InvalidExplicitLinkCapsDisableTheEntireProfile) {
   EXPECT_FALSE(decision.setNormalCruiseConfig(config));
 }
 
+TEST(V2CommandManagerTest,RecoverySpeedStartsAndEndsWithNewCommandWhileHeartbeatsStayFrozen) {
+ V2CommandManager manager;BehaviorContextData context;
+ context.selected_behavior=BehaviorType::KEEP;
+ context.target.desired_speed=11.;
+ const auto normal=manager.update(context,nullptr,ros::Time(1),.3);
+ context.extra_flags["signal_recovery_speed_limit"]=true;context.target.desired_speed=2.;
+ const auto recovery=manager.update(context,nullptr,ros::Time(2),.3);
+ EXPECT_NE(recovery.command_id,normal.command_id);EXPECT_DOUBLE_EQ(recovery.desired_speed_mps,2.);
+ context.target.desired_speed=2.1;
+ const auto heartbeat=manager.update(context,nullptr,ros::Time(3),.3);
+ EXPECT_EQ(heartbeat.command_id,recovery.command_id);EXPECT_DOUBLE_EQ(heartbeat.desired_speed_mps,2.);
+ context.extra_flags["intersection_approach_speed_limit"]=true;
+ const auto approach_entered=manager.update(context,nullptr,ros::Time(3,100000000),.3);
+ EXPECT_EQ(approach_entered.command_id,recovery.command_id);
+ context.extra_flags["intersection_approach_speed_limit"]=false;
+ const auto approach_left=manager.update(context,nullptr,ros::Time(3,200000000),.3);
+ EXPECT_EQ(approach_left.command_id,recovery.command_id);
+ context.extra_flags["signal_recovery_speed_limit"]=false;context.target.desired_speed=11.;
+ const auto cleared=manager.update(context,nullptr,ros::Time(4),.3);
+ EXPECT_NE(cleared.command_id,recovery.command_id);EXPECT_DOUBLE_EQ(cleared.desired_speed_mps,11.);
+}
+
 }  // namespace behavior_planner
 
 int main(int argc, char** argv) {

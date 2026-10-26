@@ -453,6 +453,9 @@ class EpisodeController:
                 return self.end_run('stagnation')
             for adapter in self.adapters:
                 if self.cancelled.is_set():break
+                guard=getattr(self,'adapter_tick_guard',None)
+                if guard is not None and not guard(adapter,ego,now):
+                    continue
                 self.current_operation=dict(section=adapter.name,action='tick')
                 adapter.tick()
                 self.refresh_owned()

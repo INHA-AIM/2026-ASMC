@@ -390,6 +390,10 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         error_message = "planner/avoid/dropout_grace_cycles must be >= 0";
         return false;
     }
+    if (avoid_cfg.static_dropout_grace_cycles < avoid_cfg.dropout_grace_cycles) {
+        error_message = "planner/avoid/static_dropout_grace_cycles must be >= dropout_grace_cycles";
+        return false;
+    }
     if (!CheckPositiveFinite(avoid_cfg.committed_target_index_cost_scale,
                               "planner/avoid/committed_target_index_cost_scale", error_message))
         return false;
@@ -633,6 +637,14 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
             error_message =
                 "planner/highway_merge/zones/" + zone.name +
                 ": start_s/completion_s must be finite with completion_s >= start_s";
+            return false;
+        }
+        if (!IsFinite(zone.stop_buffer) || zone.stop_buffer < 0.0 ||
+            (!zone.checkpoints.empty() &&
+             zone.checkpoints.front().conflict_s - zone.stop_buffer <= zone.start_s)) {
+            error_message =
+                "planner/highway_merge/zones/" + zone.name +
+                ": stop_buffer must leave a wait point after start_s";
             return false;
         }
         double previous_clear_s = zone.start_s;

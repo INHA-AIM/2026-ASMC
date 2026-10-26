@@ -21,11 +21,17 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     // 대상으로 다시 묶는다(PlanningTarget).
     asmc_msgs::BehaviorCommand command;
     bool requested_in_lane_avoid=false;
+    bool requested_signal_stop=false;
     uint32_t constraints_command_id=0;
     {
         std::lock_guard<std::mutex> lock(port.input_mutex_);
         if (!port.has_v2_command_) return false;
         command = port.latest_v2_command_;
+        if constexpr(std::is_same_v<RuntimePort,frenet_planner_ros::PlanningPort>) {
+            port.cycle_control_request_=port.latest_control_request_;
+            requested_signal_stop=port.control_binding_enabled_ && port.cycle_control_request_.token.valid() &&
+                port.cycle_control_request_.signal.enabled && command.maneuver_type==asmc_msgs::BehaviorCommand::STOP;
+        }
         requested_in_lane_avoid=port.latest_v2_avoid_in_lane_only_;
         constraints_command_id=command.command_id;
     }
@@ -128,7 +134,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     // 경로에 들어오지 않으므로 잘못된 명령이 잠금을 해제하지도 않는다.
     const CommandAcceptance acceptance = has_rejected_acceptance
         ? rejected_acceptance
-        : port.command_manager_.AcceptRequest({command, port.planner_.avoid_tracking()});
+        : port.command_manager_.AcceptRequest({command, port.planner_.avoid_tracking(),requested_signal_stop});
 
     // manager와 core의 transaction boundary를 맞춘다. 새 AVOID/LANE_CHANGE뿐
     // 아니라 새 KEEP/FOLLOW/STOP/E-STOP도 freshness/conversion 조기 반환
@@ -288,10 +294,15 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     // stale을 판정하게 된다.
     const ros::SteadyTime steady_now = ros::SteadyTime::now();
     const double source_skew = (context.ego.header.stamp - context.perception.header.stamp).toSec();
-    // Arrival freshness alone cannot authorize extrapolation of an arbitrarily
-    // old sensor frame. Reuse the configured input timeouts for source skew.
+    // The 10 Hz object source is delayed by clustering and tracking. In two
+    // C052 bags, otherwise fresh frames measured up to 0.388 s of source
+    // skew and each produced a one-cycle emergency stop. Allow 0.15 s beyond
+    // the 0.30 s configured skew bound, for a 0.45 s source-skew ceiling.
+    // Receive-age limits are unchanged, so a
+    // stopped object stream still fails closed instead of renewing its age.
+    constexpr double kObjectSourceAlignmentJitterS = 0.15;
     const bool source_times_ready = std::isfinite(source_skew) &&
-        source_skew <= port.runtime_.objects_timeout_s &&
+        source_skew <= port.runtime_.objects_timeout_s + kObjectSourceAlignmentJitterS &&
         source_skew >= -port.runtime_.vehicle_state_timeout_s;
     const bool inputs_ready =
         snapshot.has_vehicle && snapshot.has_objects && source_times_ready &&
@@ -391,6 +402,27 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     // request's constraint must never be applied to that different identity.
     planner_command.avoid_in_lane_only=requested_in_lane_avoid &&
         command.command_id==constraints_command_id && planner_command.mode==AVOID;
+    if constexpr(std::is_same_v<RuntimePort,frenet_planner_ros::PlanningPort>) {
+        const auto& bound=port.cycle_control_request_;
+        if(port.control_binding_enabled_ && bound.token.valid() && bound.recovery_release &&
+           bound.signal.recovery_geometry && command.command_id==constraints_command_id &&
+           (planner_command.mode==LANE_KEEPING || planner_command.mode==AVOID)) {
+            planner_command.recovery_clear=true;
+            double end_s=0;
+            if(ego_s_valid && port.planner_.ProjectPointToS(bound.signal.exit_x,bound.signal.exit_y,ego_s,end_s))
+                planner_command.recovery_min_end_s=end_s+port.planner_.rear_overhang()+bound.signal.position_error+.5;
+        }
+    }
+    const auto complete_recovery_path=[&](const CartesianPath& path) {
+        if(!planner_command.recovery_clear)return true;
+        if(path.x.empty() || path.y.empty() || !ego_s_valid)return false;
+        double end_s=0;
+        return port.planner_.ProjectPointToS(path.x.back(),path.y.back(),
+                   planner_command.recovery_min_end_s,end_s) &&
+               end_s>=planner_command.recovery_min_end_s &&
+               port.planner_.road_map().EvaluateRecoveryPath(
+                   path,port.planner_.vehicle_shape(),port.planner_.sample_dt()).drivable;
+    };
 
     if (planner_command.mode == MERGE) {
         using Feedback = asmc_msgs::FrenetFeedback;
@@ -836,7 +868,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         FrenetPlanner::AvoidPrepareResult committed;
         const bool plan_ok = CalculateFrenet(committed_path, [&] { return port.planner_.PlanCommittedAvoid(
             ego, objects, planner_command, committed_path,
-            committed); }).success;
+            committed); }).success && complete_recovery_path(committed_path);
 
         if (!plan_ok) {
             ++port.v2_plan_fail_streak_;
@@ -1212,6 +1244,11 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         const bool prepare_ok = port.planner_.PrepareAvoid(
             ego, objects, planner_command, maintenance,
             prepare);
+
+        if(prepare.candidate_valid && !complete_recovery_path(prepare.candidate_path)) {
+            prepare.candidate_valid=false;
+            prepare.candidate_path=CartesianPath{};
+        }
 
         if (!prepare_ok) {
             // maintenance조차 만들지 못했다. 실패 종류를 구분해야 한다 -
@@ -1768,7 +1805,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     //
     // COMPLETED로 latch되면 다음 사이클부터 위 latch 분기가 이 궤적을 계속
     // 보낸다(TRAJECTORY_LOCKED).
-    if (planner_command.mode == STOP && port.planner_.stop_holding()) {
+    if (planner_command.mode == STOP && port.planner_.stop_goal_reached()) {
         port.command_manager_.NotifyManeuverCompleted();
     }
 

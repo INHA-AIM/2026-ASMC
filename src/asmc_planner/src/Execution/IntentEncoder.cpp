@@ -131,10 +131,12 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
     const BehaviorContextData& context, const Feedback* feedback,
     const ros::Time& now, double validity_seconds) {
   const auto approach = context.extra_flags.find("intersection_approach_speed_limit");
+  const auto recovery = context.extra_flags.find("signal_recovery_speed_limit");
   return request_transaction_.update(makeCandidate(context, now, validity_seconds),
       feedback, now, validity_seconds,
       context.maneuver_phase == ManeuverPhase::PREPARE,
-      approach != context.extra_flags.end() && approach->second);
+      approach != context.extra_flags.end() && approach->second,
+      recovery != context.extra_flags.end() && recovery->second);
 }
 
 }  // namespace behavior_planner

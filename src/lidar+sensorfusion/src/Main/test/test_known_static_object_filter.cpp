@@ -220,6 +220,146 @@ TEST(KnownStaticObjectFilter, DropsFollowingLongGuardrailInSecondRegion) {
     EXPECT_TRUE(filter.Evaluate(vehicle).keep);
 }
 
+TEST(KnownStaticObjectFilter, C052OffroadStructureNeedsIndependentEvidence) {
+    KnownStaticObjectFilter filter;
+    const std::string catalog_path =
+        (std::filesystem::path(__FILE__).parent_path().parent_path() /
+         "known_static_objects.yaml").string();
+    ASSERT_TRUE(filter.ConfigureWithRegions(
+        catalog_path, "waize_katri_2025-10-23",
+        {{302595.0, 4124145.0, 0.0}}, 2.5,
+        {{12.0, 16.0, 87.0, 91.0, true}}));
+    PlannerObject landmark = UnknownAt(14.69, 88.26);
+    landmark.motion_state = 3;
+    landmark.is_dynamic = true;
+    landmark.length = 14.7;
+    landmark.width = 7.6;
+    landmark.ground_evidence = {true, 317, 2.25, 0.35};
+    EXPECT_FALSE(filter.Evaluate(landmark, 0.0).keep);
+    EXPECT_TRUE(filter.Evaluate(landmark, 0.19).keep);
+    EXPECT_TRUE(filter.Evaluate(landmark, -1.0).keep);
+    PlannerObject vehicle = landmark;
+    vehicle.width = 3.0;
+    EXPECT_TRUE(filter.Evaluate(vehicle, 0.0).keep);
+    PlannerObject uncertain = landmark;
+    uncertain.ground_evidence.valid = false;
+    EXPECT_TRUE(filter.Evaluate(uncertain, 0.0).keep);
+    PlannerObject classified = landmark;
+    classified.classification = "bus";
+    EXPECT_TRUE(filter.Evaluate(classified, 0.0).keep);
+}
+
+TEST(KnownStaticObjectFilter, C091OffroadRailNeedsCatalogAndShape) {
+    KnownStaticObjectFilter filter;
+    const std::string catalog_path =
+        (std::filesystem::path(__FILE__).parent_path().parent_path() /
+         "known_static_objects.yaml").string();
+    ASSERT_TRUE(filter.ConfigureWithRegions(
+        catalog_path, "waize_katri_2025-10-23",
+        {{302595.0, 4124145.0, 0.0}}, 2.5,
+        {{-77.0, -69.0, -211.0, -180.0, false, true}}));
+    PlannerObject rail = UnknownAt(-71.83, -194.92);
+    rail.motion_state = 3;  // Partial-view center drift is false motion.
+    rail.is_dynamic = true;
+    rail.length = 17.5;
+    rail.width = 0.82;
+    rail.height = 0.35;
+    rail.ground_evidence = {true, 217, 0.48, 0.31};
+    EXPECT_FALSE(filter.Evaluate(rail, 0.0).keep);
+    EXPECT_EQ("known_static_match_drop", filter.Evaluate(rail, 0.0).reason);
+
+    PlannerObject section = rail;
+    section.cluster_center_map.x = -69.79;
+    section.cluster_center_map.y = -183.51;
+    section.length = 2.89;
+    section.width = 0.15;
+    section.ground_evidence.sample_count = 15;
+    EXPECT_FALSE(filter.Evaluate(section, 0.0).keep);
+
+    EXPECT_TRUE(filter.Evaluate(rail, 0.15).keep);
+    EXPECT_TRUE(filter.Evaluate(rail, -1.0).keep);
+    rail.width = 2.0;
+    EXPECT_TRUE(filter.Evaluate(rail, 0.0).keep);
+    rail.width = 0.82;
+    rail.ground_evidence.valid = false;
+    EXPECT_TRUE(filter.Evaluate(rail, 0.0).keep);
+    rail.ground_evidence.valid = true;
+    rail.classification = "car";
+    EXPECT_TRUE(filter.Evaluate(rail, 0.0).keep);
+    rail.classification = "unknown";
+    rail.cluster_center_map.x = -69.0;
+    rail.cluster_center_map.y = -205.0;
+    EXPECT_TRUE(filter.Evaluate(rail, 0.0).keep);
+}
+
+TEST(KnownStaticObjectFilter, C052ElevatedPanelPartialScanNeedsIndependentEvidence) {
+    KnownStaticObjectFilter filter;
+    const std::string catalog_path =
+        (std::filesystem::path(__FILE__).parent_path().parent_path() /
+         "known_static_objects.yaml").string();
+    ASSERT_TRUE(filter.ConfigureWithRegions(
+        catalog_path, "waize_katri_2025-10-23",
+        {{302595.0, 4124145.0, 0.0}}, 2.5,
+        {{15.0, 18.0, 104.0, 109.0, false, false, true}}));
+    PlannerObject panel = UnknownAt(16.0931, 106.6091);
+    panel.motion_state = 3;
+    panel.is_dynamic = true;
+    panel.length = 4.8264;
+    panel.width = 0.0908;
+    panel.height = 1.8012;
+    panel.ground_evidence = {true, 57, 1.3741, 0.35};
+    EXPECT_FALSE(filter.Evaluate(panel, 0.0).keep);
+    EXPECT_TRUE(filter.Evaluate(panel, 0.03).keep);
+    PlannerObject on_road = panel;
+    on_road.cluster_center_map.x = 13.0;
+    EXPECT_TRUE(filter.Evaluate(on_road, 0.0).keep);
+    PlannerObject vehicle = panel;
+    vehicle.classification = "car";
+    EXPECT_TRUE(filter.Evaluate(vehicle, 0.0).keep);
+    PlannerObject ground_unknown = panel;
+    ground_unknown.ground_evidence.valid = false;
+    EXPECT_TRUE(filter.Evaluate(ground_unknown, 0.0).keep);
+    PlannerObject wide_unknown = panel;
+    wide_unknown.width = 0.5;
+    EXPECT_TRUE(filter.Evaluate(wide_unknown, 0.0).keep);
+}
+
+TEST(KnownStaticObjectFilter, C052LowOffroadFragmentsNeedIndependentEvidence) {
+    KnownStaticObjectFilter filter;
+    const std::string catalog_path =
+        (std::filesystem::path(__FILE__).parent_path().parent_path() /
+         "known_static_objects.yaml").string();
+    ASSERT_TRUE(filter.ConfigureWithRegions(
+        catalog_path, "waize_katri_2025-10-23",
+        {{302595.0, 4124145.0, 0.0}}, 2.5,
+        {{12.0, 16.0, 87.0, 91.0, true},
+         {10.0, 13.0, 87.0, 92.0, false, false, false, true}}));
+
+    PlannerObject fragment = UnknownAt(11.2, 89.7);
+    fragment.motion_state = 3;
+    fragment.is_dynamic = true;
+    fragment.length = 5.0;
+    fragment.width = 3.0;
+    fragment.height = 0.12;
+    fragment.ground_evidence = {true, 16, 0.39, 0.31};
+    EXPECT_FALSE(filter.Evaluate(fragment, 0.0).keep);
+    fragment.cluster_center_map = UnknownAt(12.7, 89.8).cluster_center_map;
+    fragment.length = 9.0;
+    fragment.width = 3.8;
+    fragment.ground_evidence.sample_count = 6;
+    EXPECT_FALSE(filter.Evaluate(fragment, 0.0).keep);
+
+    EXPECT_TRUE(filter.Evaluate(fragment, 0.03).keep);
+    fragment.classification = "car";
+    EXPECT_TRUE(filter.Evaluate(fragment, 0.0).keep);
+    fragment.classification = "unknown";
+    fragment.ground_evidence.valid = false;
+    EXPECT_TRUE(filter.Evaluate(fragment, 0.0).keep);
+    fragment.ground_evidence.valid = true;
+    fragment.cluster_center_map = UnknownAt(13.5, 89.8).cluster_center_map;
+    EXPECT_TRUE(filter.Evaluate(fragment, 0.0).keep);
+}
+
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

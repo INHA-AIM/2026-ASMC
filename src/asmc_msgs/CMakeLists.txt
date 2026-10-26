@@ -72,11 +72,14 @@ generate_messages(
 )
 
 catkin_package(
+  INCLUDE_DIRS include
   CATKIN_DEPENDS
   geometry_msgs
   message_runtime
   std_msgs
 )
+
+install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_message_serialization.py)

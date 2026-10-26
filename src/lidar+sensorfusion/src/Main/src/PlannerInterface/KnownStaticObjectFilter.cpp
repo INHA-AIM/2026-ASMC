@@ -221,7 +221,7 @@ bool KnownStaticObjectFilter::ConfigureWithRegions(
 }
 
 KnownStaticDecision KnownStaticObjectFilter::Evaluate(
-    const PlannerObject& object) const {
+    const PlannerObject& object, double road_ratio) const {
     KnownStaticDecision decision;
     decision.filter_available = ready();
     if (!ready()) return decision;
@@ -242,6 +242,121 @@ KnownStaticDecision KnownStaticObjectFilter::Evaluate(
             object.cluster_center_map.x, object.cluster_center_map.y)) {
         decision.reason = "outside_application_region_keep";
         return decision;
+    }
+    const auto low_region = std::find_if(
+        application_regions_.begin(), application_regions_.end(),
+        [&object](const KnownStaticApplicationRegion& region) {
+            return region.require_offroad_low_structure_shape &&
+                   object.cluster_center_map.x >= region.min_x &&
+                   object.cluster_center_map.x <= region.max_x &&
+                   object.cluster_center_map.y >= region.min_y &&
+                   object.cluster_center_map.y <= region.max_y;
+        });
+    const bool low_fragment = low_region != application_regions_.end() &&
+        std::isfinite(object.height) && object.height <= 0.5;
+    const auto guarded_region = std::find_if(
+        application_regions_.begin(), application_regions_.end(),
+        [&object](const KnownStaticApplicationRegion& region) {
+            return region.require_offroad_infrastructure_shape &&
+                   object.cluster_center_map.x >= region.min_x &&
+                   object.cluster_center_map.x <= region.max_x &&
+                   object.cluster_center_map.y >= region.min_y &&
+                   object.cluster_center_map.y <= region.max_y;
+        });
+    if (guarded_region != application_regions_.end() && !low_fragment) {
+        const auto& ground = object.ground_evidence;
+        const bool landmark_shape = std::isfinite(object.length) &&
+            std::isfinite(object.width) && object.length >= 10.0 &&
+            object.width >= 6.0;
+        const bool elevated = ground.valid && ground.sample_count >= 30 &&
+            std::isfinite(ground.median_clearance_m) &&
+            ground.median_clearance_m >= 1.5;
+        const bool offroad = std::isfinite(road_ratio) &&
+            road_ratio >= 0.0 && road_ratio <= 0.02;
+        // Velocity on this fixed structure fluctuates with LiDAR visibility;
+        // the independent clean-lap catalog, large footprint, elevated
+        // returns, and measured road exclusion must all agree instead.
+        if (!landmark_shape || !elevated || !offroad) {
+            decision.reason = "offroad_infrastructure_unconfirmed_keep";
+            return decision;
+        }
+    }
+    const auto rail_region = std::find_if(
+        application_regions_.begin(), application_regions_.end(),
+        [&object](const KnownStaticApplicationRegion& region) {
+            return region.require_offroad_rail_shape &&
+                   object.cluster_center_map.x >= region.min_x &&
+                   object.cluster_center_map.x <= region.max_x &&
+                   object.cluster_center_map.y >= region.min_y &&
+                   object.cluster_center_map.y <= region.max_y;
+        });
+    if (rail_region != application_regions_.end()) {
+        const auto& ground = object.ground_evidence;
+        const bool rail_shape = std::isfinite(object.length) &&
+            std::isfinite(object.width) && std::isfinite(object.height) &&
+            object.length >= 2.5 && object.width <= 1.5 &&
+            object.height <= 0.8;
+        const bool ground_level = ground.valid && ground.sample_count >= 10 &&
+            std::isfinite(ground.median_clearance_m) &&
+            ground.median_clearance_m <= 0.9;
+        const bool offroad = std::isfinite(road_ratio) &&
+            road_ratio >= 0.0 && road_ratio <= 0.02;
+        // Partial visibility makes this fixed rail's tracked center slide
+        // as Ego advances. Require a clean-lap match and current evidence.
+        if (!rail_shape || !ground_level || !offroad) {
+            decision.reason = "offroad_rail_unconfirmed_keep";
+            return decision;
+        }
+    }
+    const auto panel_region = std::find_if(
+        application_regions_.begin(), application_regions_.end(),
+        [&object](const KnownStaticApplicationRegion& region) {
+            return region.require_offroad_elevated_panel_shape &&
+                   object.cluster_center_map.x >= region.min_x &&
+                   object.cluster_center_map.x <= region.max_x &&
+                   object.cluster_center_map.y >= region.min_y &&
+                   object.cluster_center_map.y <= region.max_y;
+        });
+    if (panel_region != application_regions_.end()) {
+        const auto& ground = object.ground_evidence;
+        const bool panel_shape = std::isfinite(object.length) &&
+            std::isfinite(object.width) && std::isfinite(object.height) &&
+            object.length >= 2.5 && object.length <= 6.0 &&
+            object.width <= 0.25 && object.height >= 1.2 &&
+            object.height <= 2.3;
+        const bool elevated = ground.valid && ground.sample_count >= 30 &&
+            std::isfinite(ground.median_clearance_m) &&
+            ground.median_clearance_m >= 1.0 &&
+            ground.median_clearance_m <= 2.0;
+        const bool offroad = std::isfinite(road_ratio) &&
+            road_ratio >= 0.0 && road_ratio <= 0.02;
+        // Partial scans of the fixed roadside panel look like fast leftward
+        // motion. Keep every object unless current off-road/elevation/shape
+        // evidence agrees with the independently recorded clean-lap center.
+        if (!panel_shape || !elevated || !offroad) {
+            decision.reason = "offroad_panel_unconfirmed_keep";
+            return decision;
+        }
+    }
+    if (low_fragment) {
+        const auto& ground = object.ground_evidence;
+        const bool fragment_shape = std::isfinite(object.length) &&
+            std::isfinite(object.width) && object.length >= 0.3 &&
+            object.length <= 10.0 && object.width > 0.0 &&
+            object.width <= 4.0 && object.height >= 0.04;
+        const bool ground_level = ground.valid && ground.sample_count >= 5 &&
+            std::isfinite(ground.median_clearance_m) &&
+            ground.median_clearance_m >= 0.0 &&
+            ground.median_clearance_m <= 0.9;
+        const bool offroad = std::isfinite(road_ratio) &&
+            road_ratio >= 0.0 && road_ratio <= 0.02;
+        // C052's fixed structure fragments slide across the clean-lap
+        // centers and can acquire false velocity. Restrict removal to the
+        // observed off-road location, low returns, and catalog agreement.
+        if (!fragment_shape || !ground_level || !offroad) {
+            decision.reason = "offroad_low_structure_unconfirmed_keep";
+            return decision;
+        }
     }
     decision.policy_applied = true;
 

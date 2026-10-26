@@ -7,6 +7,41 @@
 namespace {
 struct Arrival { int id; double time; };
 
+// A fast UNKNOWN cluster can be only a visible fragment of a car. Keep its
+// authoritative OBB for ordinary collision checking, but also test a
+// vehicle-sized envelope at highway entry. The recorded first-merge actor
+// began as a 0.16 m wide, 0.05 m high cluster while moving at 12 m/s.
+TrackedObject HighwayEntryEnvelope(const TrackedObject& object,
+                                   const VehicleShape& ego_shape) {
+    const double speed = std::hypot(object.vx, object.vy);
+    if (!object.geometry_valid || object.type != 0 ||
+        object.motion_state == ObjectMotionState::LOW_THREAT ||
+        !std::isfinite(speed) || speed < 7.0 ||
+        (object.width >= ego_shape.width &&
+         object.length >= ego_shape.length)) return object;
+
+    TrackedObject envelope = object;
+    const double heading = std::atan2(object.vy, object.vx);
+    const double c = std::cos(heading), s = std::sin(heading);
+    const double half_length = std::max(object.length, ego_shape.length) * 0.5;
+    const double half_width = std::max(object.width, ego_shape.width) * 0.5;
+    const double local[4][2] = {
+        {-half_length, -half_width}, {half_length, -half_width},
+        {half_length, half_width}, {-half_length, half_width}};
+    for (int i = 0; i < 4; ++i) {
+        const double x = object.x + c * local[i][0] - s * local[i][1];
+        const double y = object.y + s * local[i][0] + c * local[i][1];
+        envelope.corners[i] = {x, y, object.z};
+        envelope.corners[i + 4] = {x, y, object.z + std::max(object.height, 1.0)};
+    }
+    envelope.width = 2.0 * half_width;
+    envelope.length = 2.0 * half_length;
+    envelope.height = std::max(object.height, 1.0);
+    envelope.heading = heading;
+    envelope.z_valid = false; // Entry gap has no reliable ego Z plane.
+    return envelope;
+}
+
 // 현재 속도에서 accel로 desired_speed까지 가속한 뒤 정속 주행할 때의
 // 최소 도달시간. MERGE gap 판정과 실제 종방향 후보가 서로 다른 속도를
 // 가정하지 않도록 정지 상태에서도 가속 시간을 명시적으로 포함한다.
@@ -168,6 +203,11 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
     }
     result.confirmed = true;
 
+    std::vector<TrackedObject> entry_envelopes;
+    entry_envelopes.reserve(objects.size());
+    for (const auto& object : objects)
+        entry_envelopes.push_back(HighwayEntryEnvelope(object, ego_shape));
+
     for (double entry = earliest; entry <= cfg.max_wait_time + 1e-9;
          entry += cfg.entry_search_dt) {
         int front_id = -1, rear_id = -1;
@@ -201,8 +241,11 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
                 collision_cfg.margin_growth_rate * t;
             const geometry::Polygon2D ego_footprint =
                 MakeEgoFootprint(ego_cs, ego_shape, margin);
-            for (const auto& obj : objects) {
-                if (CheckObstacleOverlap(ego_footprint, {}, obj, t)) {
+            for (std::size_t i = 0; i < objects.size(); ++i) {
+                const auto& obj = objects[i];
+                const auto& envelope = entry_envelopes[i];
+                if (CheckObstacleOverlap(ego_footprint, {}, obj, t) ||
+                    CheckObstacleOverlap(ego_footprint, {}, envelope, t)) {
                     collision_free = false;
                     break;
                 }

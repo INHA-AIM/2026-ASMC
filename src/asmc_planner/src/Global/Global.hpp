@@ -38,6 +38,6 @@ enum class MergeType {
 struct Point2D { double x = 0.0; double y = 0.0; };
 
 // Parser snapshot used by Behavior/Map. Frenet CartesianState is distinct.
-struct EgoState { double x=0,y=0,yaw=0,speed=0,stamp=0; std::uint8_t source=0; bool valid=false; };
+struct EgoState { double x=0,y=0,yaw=0,speed=0,stamp=0; std::uint8_t source=0; bool valid=false; double acceleration=0; bool acceleration_valid=false; };
 
 }  // namespace asmc_planner

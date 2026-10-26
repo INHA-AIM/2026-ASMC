@@ -49,6 +49,11 @@ int main(){
  const double accepted=r.selected_target_d;
  planner.PlanCommittedAvoid(ego,objects,cmd,p,r);
  Expect(r.candidate_valid&&std::fabs(r.selected_target_d-accepted)<1e-6,"a safe opposite path does not oscillate back");
+ const auto transient_blocker=objects.back();objects.pop_back();
+ planner.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ Expect(!r.candidate_valid||r.selected_target_d<0,
+        "a reselected side stays locked when the blocking observation disappears");
+ objects.push_back(transient_blocker);
  bool completed=false,no_reversal=true;
  for(int i=0;i<600;++i){
   p={};r={};if(!planner.PlanCommittedAvoid(ego,objects,cmd,p,r)||p.x.size()<2)break;
@@ -92,6 +97,26 @@ int main(){
  objects={box(1,80,0,1),box(2,80,2.5,5)};bool ready=false;
  for(int i=0;i<300&&!ready;++i){sliced.PlanCommittedAvoid(ego,objects,cmd,p,r);ready=r.candidate_valid;}
  Expect(ready&&r.selected_target_d<0,"unfinished candidate enumeration resumes with fresh safety checks");
+ // Static PREPARE needs the same cursor continuity as dynamic PREPARE: a
+ // candidate found in a later search slice must remain READY long enough for
+ // the following EXECUTE request to revalidate it on fresh inputs.
+ FrenetPlanner static_prepare;
+ Expect(static_prepare.Init((dir/"params.yaml").string()),
+        "sliced static PREPARE planner initializes");
+ ego={};ego.x=50;ego.v=4;
+ objects={box(1,80,0,1),box(2,80,2.5,5)};
+ bool static_ready=false;
+ for(int i=0;i<300&&!static_ready;++i){
+  p={};r={};static_prepare.PrepareAvoid(ego,objects,cmd,p,r);
+  static_ready=r.candidate_valid&&r.selected_target_d<0;
+ }
+ bool steady_ready=static_ready;
+ for(int i=0;i<3&&steady_ready;++i){
+  p={};r={};static_prepare.PrepareAvoid(ego,objects,cmd,p,r);
+  steady_ready=r.candidate_valid&&r.selected_target_d<0;
+ }
+ Expect(static_ready&&steady_ready,
+        "late static candidate stays READY across PREPARE to EXECUTE revalidation");
  objects.push_back(box(999,ego.x,ego.y,20));
  sliced.PlanCommittedAvoid(ego,objects,cmd,p,r);
  Expect(!r.candidate_valid&&p.x.empty(),"an unsafe braking path is not supplied to the runtime");

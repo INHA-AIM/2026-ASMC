@@ -9,4 +9,5 @@
 std::vector<FrenetPath> GenerateSpatialStoppingCandidates(
     const FrenetState& start, double stop_s, double cruise_speed,
     double comfortable_decel, const PathGeneratorConfig& cfg,
-    const KinematicLimits& limits, double acceleration_limit = 0.0);
+    const KinematicLimits& limits, double acceleration_limit = 0.0,
+    bool braking_only = false);

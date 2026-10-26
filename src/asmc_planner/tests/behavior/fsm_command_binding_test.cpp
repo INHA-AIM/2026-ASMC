@@ -131,5 +131,17 @@ TEST(FsmCommandBinding, InvalidFeedbackDoesNotExecuteReplacement) {
             ManeuverPhase::PREPARE);
 }
 
+TEST(FsmCommandBinding,SignalOverrideRetiresAllCommittedLateralStatesAndKeepsOtherSafety) {
+  for(const auto behavior:{BehaviorType::AVOID,BehaviorType::LEFT_CHANGE,BehaviorType::RIGHT_CHANGE,BehaviorType::MERGE}) {
+    Fsm fsm;Prepare(fsm,behavior,19);
+    ASSERT_EQ(fsm.updateManeuver(behavior,Feedback(19,PlannerExecutionState::COMMITTED),19,false).behavior,behavior);
+    ASSERT_TRUE(fsm.updateEmergency(true,0.,1.));
+    fsm.preemptLateralForSignal();
+    EXPECT_TRUE(fsm.emergencyLatched());
+    const auto resumed=fsm.updateManeuver(BehaviorType::KEEP,Feedback(19,PlannerExecutionState::EXECUTING),20,false);
+    EXPECT_EQ(resumed.behavior,BehaviorType::KEEP);EXPECT_EQ(resumed.phase,ManeuverPhase::NONE);
+  }
+}
+
 }  // namespace
 }  // namespace behavior_planner

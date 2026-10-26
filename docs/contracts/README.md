@@ -10,6 +10,8 @@
 | 카메라→LiDAR/판제 | [LiDAR 소비 v1](lidar-planning-consumer-v1.md), [현재 인계](../handoffs/camera-to-lidar.md) | 현재 Main 전방 어댑터·후속3뷰 관측 설정 |
 | typed 신호등·tracked 객체 | [perception runtime v1](perception-runtime-v1.md) | `perception_runtime_topic_contract_v1.yaml` |
 | Behavior/Frenet transaction | [FSM/Frenet v2](planning-fsm-frenet-v2.md) | 공용 msg·asmc_planner 내부 직접 호출/관찰 출력 |
+| 황색 신호 관측·정지 | [신호 정책 구현 경계](yellow-signal-policy.md) | 관측 기본값·좌표/제동·통제된 active 검증 |
+| Controller 명령–궤적 | [연결 v1](control-binding-v1.md) | 추가 원자적 payload·세대/revision·실제 해제 gate |
 | HD Map message/topic | [HD Map topic v1](hd-map-topic-v1.md) | `hd_map_topic_contract_v1.yaml`, asmc_msgs registry |
 | HD Map 실행/조회/RViz | [HD Map runtime v1](hd-map-runtime-v1.md) | competition_map launch·runtime pins |
 | checkpoint·mission metadata | [K-City metadata v1](competition-kcity2025-metadata-v1.md) | 현재 metadata YAML·출처/authority |

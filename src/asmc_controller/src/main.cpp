@@ -4,6 +4,7 @@
 
 #include <ros/ros.h>
 #include <morai_msgs/CtrlCmd.h>
+#include <std_msgs/String.h>
 
 #include "Control.hpp"
 #include "Global/ControlContext.hpp"
@@ -67,6 +68,17 @@ int main(int argc, char** argv) {
     g_control.control_pub = control_pub;
     g_control.trajectory_timeout = trajectory_timeout;
     g_control.vehicle_state_timeout = vehicle_state_timeout;
+    nh.param("/control_binding/enabled",g_control.binding_enabled,false);
+    ros::Publisher binding_epoch_pub;
+    ros::Subscriber control_request_sub,control_plan_sub;
+    if(g_control.binding_enabled) {
+        g_control.require_verified_release=true;
+        binding_epoch_pub=nh.advertise<std_msgs::String>("/control/binding_epoch",1,true);
+        g_control.control_status_pub=nh.advertise<std_msgs::UInt8MultiArray>("/control/binding_status",10);
+        std_msgs::String epoch;epoch.data=g_control.binding_gate.epoch();binding_epoch_pub.publish(epoch);
+        control_request_sub=nh.subscribe("/behavior/control_request",10,&mpc_controller_ros::ControlRequestCallback);
+        control_plan_sub=nh.subscribe("/planning/control_plan",10,&mpc_controller_ros::ControlPlanCallback);
+    }
     auto trajectory_sub = nh.subscribe(
         trajectory_topic, 1, &mpc_controller_ros::TrajectoryCallback);
     auto vehicle_state_sub = nh.subscribe(

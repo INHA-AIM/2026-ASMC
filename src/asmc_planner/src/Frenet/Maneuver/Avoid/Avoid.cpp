@@ -140,6 +140,7 @@ bool FrenetPlanner::AvoidProcess(
     // 현재 ID를 우선하고, 그 ID가 사라졌을 때만 유일한 공간 일치 대상을
     // 같은 물체로 재연결한다.
     const TrackedObject* observed_target = nullptr;
+    std::vector<TrackedObject> collision_obstacles = predicted_collision_obstacles;
     if (avoid_committed) {
         const auto exact = std::find_if(
             predicted_collision_obstacles.begin(),
@@ -158,6 +159,12 @@ bool FrenetPlanner::AvoidProcess(
             RefreshAvoidObservation(
                 s, *observed_target, v2_avoidance_,
                 /*refresh_committed_target=*/true);
+        } else if (!v2_avoidance_.dynamic_target &&
+                   v2_avoidance_.has_last_static_target) {
+            // Keep the last authoritative static OBB in the collision set for
+            // the dropout grace.  Otherwise a planner can accelerate through
+            // the temporarily invisible target before the tracker reconnects.
+            collision_obstacles.push_back(v2_avoidance_.last_static_target);
         }
     }
 
@@ -168,8 +175,10 @@ bool FrenetPlanner::AvoidProcess(
 
         // 아직 회피를 시작하지 않은 TRACKING에서만 영구 소실을 실패로
         // 처리한다. SHIFT/PASS 중 관측 누락으로 KEEP에 급복귀하면 더 위험하다.
+        const int grace_cycles=v2_avoidance_.dynamic_target
+            ? avoid_cfg_.dropout_grace_cycles : avoid_cfg_.static_dropout_grace_cycles;
         if (!execution_.observeCommittedAvoidTarget(observed_target != nullptr,
-                                                    avoid_cfg_.dropout_grace_cycles)) {
+                                                    grace_cycles)) {
             last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
             return false;
         }
@@ -177,7 +186,7 @@ bool FrenetPlanner::AvoidProcess(
 
     if (avoid_road_map_.enabled()) {
         return MapAvoidProcess(ego, start, s, d, resolved_target_speed,
-            predicted_collision_obstacles, command, avoid_prepare,
+            collision_obstacles, command, avoid_prepare,
             avoid_committed, out_path, result);
     }
 

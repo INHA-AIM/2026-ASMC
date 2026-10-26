@@ -12,7 +12,10 @@
 
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Maneuver/KeepCruise.hpp"
+#include "Frenet/Maneuver/Merge/MergeGapEvaluator.hpp"
 #include "Frenet/Math/Utils.hpp"
+#include "Frenet/Generator/LongitudinalGenerator.hpp"
+#include "Signal/BrakingModel.hpp"
 #include "Frenet/Speed/CurveSpeed.hpp"
 #include "Frenet/Speed/SpeedProfiler.hpp"
 #include "Frenet/Speed/TargetSpeedResolver.hpp"
@@ -36,6 +39,10 @@ bool PathObeysCurvatureLimit(const CartesianPath& path, double limit) {
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     ref_loaded_ = false;
+    solid_paint_contact_active_ = false;
+    solid_paint_contact_elapsed_s_ = 0.0;
+    highway_merge_checkpoint_s_ = -1.0;
+    highway_merge_safe_count_ = 0;
     roundabout_merge_cfg_ = RoundaboutMergeConfig{};
     roundabout_zone_ = RoundaboutMergeZone{};
     ResetRoundaboutMerge();
@@ -250,6 +257,40 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
         std::isfinite(minimum_path_distance) && minimum_path_distance > 0.0
             ? std::max(transition_distance, minimum_path_distance)
             : -1.0;
+    // A full signal exit uses distance-domain lateral geometry even at v=0.
+    // Reuse the common jerk-limited longitudinal integrator: a horizon-based
+    // velocity polynomial would postpone its initial jerk on every replan.
+    const bool complete_exit=required_distance>0;
+    const double exit_cap=std::min(speed_cap,limits_.low_speed_crawl_speed_cap);
+    const double initial_acceleration=complete_exit ? asmc_planner::signal::StopBoundaryAcceleration(
+        std::max(0.,ego.v),ego.a,{limits_.max_longitudinal_accel*limits_.boundary_condition_accel_fraction,
+        limits_.max_longitudinal_jerk*limits_.boundary_condition_accel_fraction,
+        limits_.max_longitudinal_accel*limits_.boundary_condition_accel_fraction}) : ego.a;
+    constexpr int kMaximumSamples = 600;
+    FrenetPath exit_profile;
+    if(complete_exit) {
+        if(!std::isfinite(exit_cap) || exit_cap<=0)return false;
+        auto cfg=path_cfg_;const double duration=(kMaximumSamples-1)*cfg.dt;
+        cfg.time_horizon={duration,duration,1.};cfg.delta_s_dot={0,0,1.};
+        auto profile_limits=limits_;
+        profile_limits.max_longitudinal_accel=std::min(limits_.max_longitudinal_accel,
+            std::max(limits_.low_speed_crawl_accel,std::abs(initial_acceleration))/
+                limits_.boundary_condition_accel_fraction);
+        // Reserve the speed gained while positive acceleration is released
+        // plus one integration interval. A desired ceiling alone would allow
+        // this discrete jerk-limited integrator to overshoot the 2m/s exit cap.
+        const double a_limit=profile_limits.max_longitudinal_accel*profile_limits.boundary_condition_accel_fraction;
+        const double j_limit=profile_limits.max_longitudinal_jerk*profile_limits.boundary_condition_accel_fraction;
+        const double tracking_cap=exit_cap-a_limit*a_limit/(2*j_limit)-a_limit*cfg.dt;
+        if(tracking_cap<=0)return false;
+        FrenetState initial{};initial.s=s;initial.s_d=std::max(0.,ego.v);initial.s_dd=initial_acceleration;
+        const double span=std::max(required_distance,std::max(exit_cap,initial.s_d)*duration)+10.;
+        auto profiles=GenerateEnvelopeVelocityCandidates(initial,tracking_cap,
+            {{s,tracking_cap*tracking_cap},{s+span,tracking_cap*tracking_cap}},cfg,profile_limits);
+        FilterLongitudinalByKinematicLimits(profiles,profile_limits);
+        if(profiles.size()!=1 || !profiles.front().valid || profiles.front().s.size()<kMaximumSamples)return false;
+        exit_profile=std::move(profiles.front());
+    }
 
     // The distance-based fallback must start with the vehicle's observed
     // heading.  Starting every spatial profile with d'=0 snaps the footprint
@@ -294,17 +335,18 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
     out_path.v.reserve(minimum_samples); out_path.a.reserve(minimum_samples);
 
     double s_i = s;
-    double v_prev = std::max(ego.v, limits_.low_speed_min_creep_speed);
+    double v_prev = complete_exit ? std::max(0.,ego.v) : std::max(ego.v, limits_.low_speed_min_creep_speed);
     // 거리 기반 후보는 목표 횡이동을 실제로 끝낼 때까지 생성한다. 안전을
     // 위해 비정상 파라미터에도 유한한 상한을 둔다(0.1 s 기준 60 s).
-    constexpr int kMaximumSamples = 600;
     for (int i = 0; i < kMaximumSamples; ++i) {
         const double t = i * path_cfg_.dt;
         const double crawl_speed = clip(
             ego.v + limits_.low_speed_crawl_accel * t,
             limits_.low_speed_min_creep_speed, limits_.low_speed_crawl_speed_cap);
-        const double v_i = std::min(crawl_speed, speed_cap);
-        if (i > 0) s_i += 0.5 * (v_i + v_prev) * path_cfg_.dt;
+        const double v_i = complete_exit ? exit_profile.s_d[i] :
+            std::min(crawl_speed, speed_cap);
+        if(complete_exit)s_i=exit_profile.s[i];
+        else if (i > 0) s_i += 0.5 * (v_i + v_prev) * path_cfg_.dt;
         v_prev = v_i;
 
         const double ds = s_i - s;
@@ -330,8 +372,8 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
                   (transition_distance * transition_distance);
 
         RefPoint rp = Interpolate(ref_, s_i);
-        const double a_i = (v_i < limits_.low_speed_crawl_speed_cap)
-                               ? limits_.low_speed_crawl_accel : 0.0;
+        const double a_i = complete_exit ? exit_profile.s_dd[i] :
+            (v_i < limits_.low_speed_crawl_speed_cap ? limits_.low_speed_crawl_accel : 0.0);
         CartesianState cs = FrenetToCartesian(rp, s_i, v_i, a_i, d_i, d_prime, d_pprime);
 
         out_path.x.push_back(cs.x);
@@ -359,7 +401,7 @@ bool FrenetPlanner::KeepDepartureRoadClear(const CartesianPath& path) const {
 bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
     const CartesianState& ego, double s, double d,
     double resolved_target_speed, CartesianPath& out_path,
-    double duration_s, bool* road_blocked,bool* actuation_blocked) const {
+    double duration_s, bool* road_blocked,bool* actuation_blocked,double minimum_path_distance) const {
     if (road_blocked) *road_blocked=false;
     if (actuation_blocked) *actuation_blocked=false;
     CartesianPath initial_pose;
@@ -374,10 +416,13 @@ bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
                         CartesianPath& candidate) {
         if (!PlanLowSpeedFallback(ego, s, d, target_d, candidate, duration_s,
                                   resolved_target_speed,
-                                  transition_distance)) {
+                                  transition_distance,minimum_path_distance)) {
             return false;
         }
         if (!PathObeysCurvatureLimit(candidate, limits_.max_curvature)) return false;
+        if(minimum_path_distance>0)for(std::size_t i=0;i<candidate.v.size();++i)
+            if(candidate.v[i]*candidate.v[i]*std::abs(candidate.kappa[i])>limits_.max_lateral_accel)
+                return false;
         if (!PathObeysSteeringRate(candidate,path_cfg_.dt,wheelbase_,limits_.steering)) {
             if (actuation_blocked) *actuation_blocked=true;
             return false;
@@ -604,6 +649,25 @@ bool ValidateExternalCommand(const PlannerCommand& command,
         reason = FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR;
         return false;
     }
+    if(command.recovery_clear &&
+       ((command.mode!=LANE_KEEPING && command.mode!=AVOID) ||
+        !std::isfinite(command.recovery_min_end_s))) {
+        reason=FrenetPlanner::PlanFailureReason::INVALID_COMMAND;return false;
+    }
+    const auto& signal=command.signal_stop;
+    const bool native_signal=signal.target_revision || signal.key.route_generation ||
+        !signal.key.stop_line.empty() || !signal.key.movement.empty();
+    if(native_signal && command.mode!=EMERGENCY &&
+       (command.mode!=STOP || !signal.valid() ||
+        !std::isfinite(signal.physical_line.x) || !std::isfinite(signal.physical_line.y) ||
+        !std::isfinite(signal.approach.x) || !std::isfinite(signal.approach.y) ||
+        std::abs(std::hypot(signal.approach.x,signal.approach.y)-1)>1e-5 ||
+        !std::isfinite(signal.position_error) || signal.position_error<0 ||
+        !std::isfinite(signal.clearance) || signal.clearance<0)) {
+        // A partial native constraint must not silently become a legacy STOP.
+        reason=FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
 
     // 전 모드 공통: 외부가 지정한 속도는 유한하고 음수가 아니어야 한다.
     if (!IsValidOptionalSpeed(command.has_target_speed, command.target_speed) ||
@@ -678,8 +742,39 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
         last_failure_reason_ = reason;
         return false;
     }
-    return PlanInternal(ego, obstacles, &command,
+    const bool valid=PlanInternal(ego, obstacles, &command,
                         ExternalPlanningPurpose::NORMAL, out_path, nullptr);
+    if(valid && command.mode==STOP && command.signal_stop.valid()) {
+        // A checked braking path can still violate its signal constraint.
+        // Preserve the braking geometry but expose failure independently of
+        // Plan() success; the (currently gated) owner must escalate braking.
+        for(std::size_t i=0;i<out_path.x.size();++i) {
+            if(i>=out_path.y.size() || i>=out_path.yaw.size() || i>=out_path.v.size() ||
+               i>=out_path.a.size()) {stop_.goal_failed=true;break;}
+            CartesianState sample{};sample.x=out_path.x[i];sample.y=out_path.y[i];
+            sample.yaw=out_path.yaw[i];sample.v=out_path.v[i];sample.a=out_path.a[i];
+            if(!SignalStopFootprintBeforeLine(sample,command.signal_stop)) {
+                stop_.goal_failed=true;break;
+            }
+            double sample_s=0;
+            if(!ProjectPointToS(sample.x,sample.y,command.stop_position,sample_s) ||
+               sample_s>command.stop_position-stop_cfg_.stop_buffer+
+                            stop_cfg_.position_tolerance) {
+                // A road-valid fallback before the physical line can still
+                // overshoot this selected endpoint; keep both results apart.
+                stop_.goal_failed=true;break;
+            }
+        }
+    }
+    if(valid && command.recovery_clear) {
+        double end_s=0;
+        if(out_path.x.empty() || !ProjectPointToS(out_path.x.back(),out_path.y.back(),command.recovery_min_end_s,end_s) ||
+           end_s<command.recovery_min_end_s ||
+           !avoid_road_map_.EvaluateRecoveryPath(out_path,vehicle_shape_,path_cfg_.dt).drivable) {
+            last_failure_reason_=PlanFailureReason::ROAD_BOUNDARY_BLOCKED;return false;
+        }
+    }
+    return valid;
 }
 
 bool FrenetPlanner::PrepareAvoid(
@@ -915,6 +1010,23 @@ bool FrenetPlanner::PlanInternal(
         return false;
     }
 
+    if (avoid_road_map_.enabled()) {
+        const auto now = std::chrono::steady_clock::now();
+        const bool contact = avoid_road_map_.PoseTouchesSolidPaint(
+            ego.x, ego.y, ego.yaw, vehicle_shape_);
+        if (contact) {
+            if (!solid_paint_contact_active_) {
+                solid_paint_contact_started_at_ = now;
+                solid_paint_contact_active_ = true;
+            }
+            solid_paint_contact_elapsed_s_ = std::chrono::duration<double>(
+                now - solid_paint_contact_started_at_).count();
+        } else {
+            solid_paint_contact_active_ = false;
+            solid_paint_contact_elapsed_s_ = 0.0;
+        }
+    }
+
     // ===== 공용 준비(§3): Cartesian->Frenet, object tracking/예측, target
     // speed 해석/연속성, 모드 전환 시 v2 FOLLOW/AVOID context reset. =====
     PlanningContext ctx = PreparePlanningContext(ego, obstacles, *external_command);
@@ -1042,7 +1154,15 @@ bool FrenetPlanner::PlanInternal(
     // 먼저 return하기 때문이다(실측으로 확인: v=0.3에서 low_speed_context이
     // 0으로 나오고 maintenance가 미검사 crawl이었다).
     bool blocked_low_speed_crawl = false;
+    if(external_command->recovery_clear && external_command->mode==LANE_KEEPING) {
+        speed_profiler_.Reset();last_profiled_acceleration_=0;last_mode_=LANE_KEEPING;
+        const bool ok=PlanExternalKeepLowSpeedFallback(ego,s,d,std::min(limits_.low_speed_crawl_speed_cap,resolved_target_speed),
+            predicted_obstacles,out_path,std::max(.1,external_command->recovery_min_end_s-s));
+        if(ok) {last_candidate_paths_.push_back(out_path);last_candidate_validity_.push_back(true);}
+        return ok;
+    }
     if (std::fabs(ego.v) < limits_.low_speed_fallback_v &&
+        !external_command->recovery_clear &&
         !external_stop && !external_follow && !avoid_prepare &&
         !avoid_committed && !lane_change_prepare && !lane_change_committed) {
         static int low_speed_log_tick = 0;
@@ -1102,6 +1222,66 @@ bool FrenetPlanner::PlanInternal(
     s_ddot = start.s_dd;
     d_dot = start.d_d;
     d_ddot = start.d_dd;
+
+    // The route already supplies the highway lateral shape. Before its first
+    // conflict frontier, require a current, full-body checked entry gap. A
+    // delayed future gap is not permission to enter at the present speed.
+    // This is a longitudinal KEEP safety constraint, not an unsupported
+    // external MERGE command or an unchecked object exemption.
+    if(highway_merge_cfg_.enabled && external_command->mode==LANE_KEEPING &&
+       !external_command->recovery_clear) {
+        const HighwayMergeCheckpoint* next=nullptr;
+        const HighwayMergeZone* next_zone=nullptr;
+        for(const auto& zone:highway_merge_cfg_.zones) {
+            if(s<zone.start_s-highway_merge_cfg_.approach_distance ||
+               s>=zone.completion_s) continue;
+            for(const auto& checkpoint:zone.checkpoints) {
+                // Zone 1's earlier wait point must retain its unsafe-gap stop
+                // until the conflict. Other zones keep their prior frontier.
+                const double release_frontier = zone.hold_unsafe_gap_until_conflict
+                    ? checkpoint.conflict_s
+                    : checkpoint.conflict_s-zone.stop_buffer;
+                if(s<release_frontier) {
+                    next=&checkpoint;next_zone=&zone;break;
+                }
+            }
+            if(next)break;
+        }
+        if(next) {
+            if(std::fabs(highway_merge_checkpoint_s_-next->conflict_s)>1e-6) {
+                highway_merge_checkpoint_s_=next->conflict_s;
+                highway_merge_safe_count_=0;
+            }
+            const auto gap=FindHighwayMergeGap(ref_,start,predicted_obstacles,
+                highway_merge_cfg_,*next,vehicle_shape_,collision_cfg_,
+                std::max(0.1,resolved_target_speed),limits_.max_longitudinal_accel);
+            const double distance=next->conflict_s-s;
+            const bool immediate=gap.safe && gap.entry_time<=
+                distance/std::max(4.0,ego.v)+0.5;
+            if(gap.confirmed && immediate)
+                highway_merge_safe_count_=std::min(highway_merge_safe_count_+1,
+                    highway_merge_cfg_.safe_confirm_cycles);
+            else highway_merge_safe_count_=0;
+            if(gap.confirmed && highway_merge_safe_count_<
+                                   highway_merge_cfg_.safe_confirm_cycles) {
+                PlannerCommand wait=*external_command;
+                wait.mode=STOP;
+                // STOP's existing 0.5 m endpoint buffer is applied once by
+                // its generator. Keep the rear axle at the selected zone's
+                // wait point to reserve front overhang and map error.
+                wait.stop_position=next->conflict_s-
+                    next_zone->stop_buffer+stop_cfg_.stop_buffer;
+                const bool ok=StopProcess(ego,start,s,d,s_dot,s_ddot,d_dot,d_ddot,
+                    obstacles,predicted_obstacles,resolved_target_speed,wait,out_path);
+                if(!ok && last_failure_reason_==PlanFailureReason::NONE)
+                    last_failure_reason_=PlanFailureReason::COLLISION_BLOCKED;
+                return ok;
+            }
+        } else {
+            highway_merge_checkpoint_s_=-1.0;
+            highway_merge_safe_count_=0;
+        }
+    }
 
     // =====================================================================
     // AVOID PREPARE: 후보 평가와 유지 궤적을 한 사이클에서 만든다 (D6-2b)

@@ -3,10 +3,10 @@ project(asmc_controller)
 
 add_compile_options(-std=c++17 -O2 -Wall -Wextra)
 
-find_package(catkin REQUIRED COMPONENTS asmc_msgs morai_msgs roscpp)
+find_package(catkin REQUIRED COMPONENTS asmc_msgs morai_msgs roscpp std_msgs)
 find_package(yaml-cpp REQUIRED)
 
-catkin_package(CATKIN_DEPENDS asmc_msgs morai_msgs roscpp)
+catkin_package(CATKIN_DEPENDS asmc_msgs morai_msgs roscpp std_msgs)
 
 include_directories(src ${catkin_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIRS})
 
@@ -44,6 +44,11 @@ install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(control_binding_test test/control_binding_test.cpp)
+  if(TARGET control_binding_test)
+    add_dependencies(control_binding_test ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(control_binding_test ${catkin_LIBRARIES} gtest_main)
+  endif()
   catkin_add_gtest(stop_acceleration_limit_test test/stop_acceleration_limit_test.cpp)
   if(TARGET stop_acceleration_limit_test)
     target_link_libraries(stop_acceleration_limit_test mpc_core gtest_main)

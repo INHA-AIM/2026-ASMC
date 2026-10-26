@@ -137,6 +137,20 @@ bool PlanningPort::prepareStopTarget(
     }
 
     planner_command.stop_position = stop_s;
+    const auto& signal=cycle_control_request_.signal;
+    if(control_binding_enabled_ && cycle_control_request_.token.valid() && signal.enabled &&
+       cycle_control_request_.command.command_id==command.command_id) {
+        auto& target=planner_command.signal_stop;
+        target.key={signal.route_generation,signal.stop_line,signal.movement};
+        target.target_revision=signal.target_revision;
+        target.physical_line={signal.line_x,signal.line_y};target.approach={signal.normal_x,signal.normal_y};
+        target.clearance=signal.clearance;target.position_error=signal.position_error;
+        if(!planner_.ProjectPointToS(signal.line_x,signal.line_y,ego_s,target.physical_line_s))
+            target.physical_line_s=std::numeric_limits<double>::quiet_NaN();
+        target.braking_only=signal.braking_only;
+        // A malformed partial constraint is rejected by native Plan(), never
+        // downgraded to a legacy STOP or a forward-arc target behind the car.
+    }
     return false;
 }
 

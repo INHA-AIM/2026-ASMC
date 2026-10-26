@@ -10,6 +10,7 @@ ProductionRuntime::ProductionRuntime()
   planning_.reset(new frenet_planner_ros::PlanningPort(
       handle("", planning_queue_), handle("/frenet_planner", planning_queue_),
       [this](const asmc_msgs::FrenetFeedback& feedback) { behavior_->receiveFeedback(feedback); }));
+  planning_->useNativeControlInput();
   behavior_.reset(new behavior_planner::BehaviorInput(
       handle("", behavior_queue_), handle("/behavior_planner", behavior_queue_),
       [this](const RequestedIntent& request) { planning_->receiveIntent(request); },

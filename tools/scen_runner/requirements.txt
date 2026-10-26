@@ -5,3 +5,4 @@ scipy
 PyYAML
 grpcio
 protobuf
+pyproj==3.5.0

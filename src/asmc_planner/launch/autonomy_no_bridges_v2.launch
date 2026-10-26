@@ -2,7 +2,7 @@
   <!-- Integrated planner, input adapters and controller. Bridges and asmc_lidar
        remain separately managed. This wrapper currently supports LiDAR input. -->
   <arg name="objects_source" default="lidar" doc="Supported source: lidar"/>
-  <arg name="state_source" default="gps_imu" doc="gps_imu or external"/>
+  <arg name="state_source" default="competition" doc="competition, gps_imu or external"/>
   <arg name="state_topic" default="/planning/vehicle/state"/>
   <arg name="canonical_objects_topic" default="/planning/objects"/>
   <!-- Consumer cutover is explicit while the legacy rollback remains in use.
@@ -24,10 +24,23 @@
   <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
 
   <!-- Dictionary lookup rejects unsupported sources during launch loading. -->
-  <include if="$(eval {'gps_imu': True, 'external': False}[arg('state_source')])"
+  <include if="$(eval {'competition': False, 'gps_imu': True, 'external': False}[arg('state_source')])"
            file="$(find planning_inputs)/launch/vehicle_state.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>
   </include>
+  <!-- The default MORAI run uses the measured competition longitudinal speed
+       with the unchanged GPS/IMU map pose. The former GPS-only default could
+       underestimate speed by about 25% in the first highway merge. -->
+  <include if="$(eval {'competition': True, 'gps_imu': False, 'external': False}[arg('state_source')])"
+           file="$(find planning_inputs)/launch/vehicle_state.launch">
+    <arg name="state_topic" value="/planning/vehicle/gps_imu_state"/>
+  </include>
+  <node if="$(eval {'competition': True, 'gps_imu': False, 'external': False}[arg('state_source')])"
+        pkg="asmc_planner" type="asmc_competition_speed_state_node"
+        name="planning_competition_speed_state" output="screen" required="true">
+    <rosparam command="load" file="$(find asmc_planner)/config/competition_speed_state.yaml"/>
+    <param name="state_topic" value="$(arg state_topic)"/>
+  </node>
   <include file="$(eval find('planning_inputs') + '/launch/' + {'lidar': 'objects.launch'}[arg('objects_source')])">
     <arg name="input_topic" value="$(arg lidar_input_topic)"/>
     <arg name="source_policy" value="$(arg lidar_source_policy)"/>

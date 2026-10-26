@@ -1,0 +1,3471 @@
+{
+  "schema_version": 2,
+  "branch": "feature/yuntae-yellow-light-policy",
+  "base_head": "19bc76978a499bddacf13f5aaf0bb6d713785657",
+  "uncommitted": true,
+  "message_definitions_changed": false,
+  "runtime_manifest_sha256": "f2c8a8470bbda664c6913e3051fc266a8724b10cca674c9dfef21adcfdcf1ccd",
+  "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+  "source_manifests_sha256": [
+    "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+    "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c"
+  ],
+  "harness_revisions": {
+    "tools/scen_runner/run_yellow_signal_trial.py": [
+      "b323f15547282fd8dbf8ad3163e469f106d474d3d1d2206be640482760d428de",
+      "b698fe41c9e07b9428b83a6a8363c40f8df022dc0fd388575353b99434ea552d"
+    ],
+    "tools/scen_runner/scen_runner/runtime/signal_trial_oracle.py": [
+      "2e1826b2ab753571539aac101bae91d67646d60f4c227908f9d8683534fb86bd",
+      "b23dd18ab78283073891a54fac0b434c39103bcdb0e14f81770ebc61f1675329"
+    ]
+  },
+  "harness_revision_reason": "Restore the test stimulus only after independent full-body exit +0.5m AND policy EXITED under red; the +15m endpoint remains required. Earlier passing recoveries held red through the stronger full endpoint. Production sources and all binaries are identical.",
+  "source_files": 494,
+  "binaries": {
+    "devel/lib/asmc_planner/asmc_planner_node": "0e38661c7001a7a1ff3e412f47132d896e8abe536d6af3005217c5f518c7332e",
+    "devel/lib/asmc_controller/mpc_controller_node": "a1d6952e8ab266ca1696c0addc43979dac729cc993cbd3b4fca41bc50a65a177",
+    "devel/lib/libasmc_lidar_camera_core.so": "e11b8ac49b5d40547162b403b35100d5b7577ad24420cb26d80361fed679fe49",
+    "devel/lib/libasmc_lidar_camera_ros.so": "49e6d3d418b75a9f849a7fadef94a6c58073ce7220de8dc44be1787bbcd26b66",
+    "devel/lib/libasmc_lidar_frame_time.so": "4578e29c5db0d5a21aa9721a002476dda0dbc533962fe11ccce6f640e2e8511d",
+    "devel/lib/libasmc_planner_behavior_core.so": "a619c872433b3b61a6d4109ad8c2ad12c756fdbb906da7f6bf76ad66288e4bd3",
+    "devel/lib/libasmc_planner_behavior_module.so": "fae45464976f698c967e506c6bf376efbd0e6381be9ea166d2c62213110e15de",
+    "devel/lib/libasmc_planner_dynamic_risk.so": "cd9921c6695d43b5a8f10c29b32635fd8f6e564e9ffb3543397350d87f27ed23",
+    "devel/lib/libasmc_planner_execution_core.so": "cfb6a3a56daeb912fa98967f50211422cf78c82762dfc1a78c31ad34b1252b8f",
+    "devel/lib/libasmc_planner_frenet_core.so": "9ee0ef98e3b4421c9569dea3ae6df294c91d646ac5a721332546d8d4c16ce442",
+    "devel/lib/libasmc_planner_message_converters.so": "e69b0216c5caf6570ad521f501371f2373deea320c65419b4324bbb1e5e3a043",
+    "devel/lib/libasmc_planner_ros_adapters.so": "8ef162b43c90946f4b51a480e0847b9d2f03227367066181805d31a1cef89e05",
+    "devel/lib/libasmc_planner_semantic_input.so": "8373c8bdd9beee24f98917a7d78cd65d376335ab3573ade777a0b1d0df6bbbc3",
+    "devel/lib/libasmc_signal_policy_core.so": "30b167f3fa45d22c0a9675abda4fdbacb5dcf7210258b902891133c7577be1bc",
+    "devel/lib/libasmc_vehicle_state_adapter.so": "6d096e3401ae51ed98f5d14e5ad28dc1c1e4793c25b54f43b7fd0834182ddd70"
+  },
+  "acceptance": {
+    "violation_free_driving_cases": 18,
+    "failure_response_cases": 2,
+    "corridor_completions": 2,
+    "positive_runs_with_target_overrun_records": [
+      "final-04-077-recovery-39-1",
+      "final-07-091-recovery-39-1",
+      "final-10-016-recovery-42-1",
+      "final-11-052-green-42-1",
+      "final-12-052-yellow_stop-42-1",
+      "final-13-052-recovery-42-1",
+      "final-16-077-corridor-42-1",
+      "final-17-077-corridor-42-1",
+      "trial",
+      "tracking-052-green-43"
+    ],
+    "positive_runs_with_uncertainty_records": [
+      "final-04-077-recovery-39-1",
+      "final-07-091-recovery-39-1",
+      "final-10-016-recovery-42-1",
+      "final-11-052-green-42-1",
+      "final-12-052-yellow_stop-42-1",
+      "final-13-052-recovery-42-1",
+      "final-16-077-corridor-42-1",
+      "final-17-077-corridor-42-1",
+      "trial",
+      "tracking-052-green-43"
+    ],
+    "positive_runs_with_execution_failure_records": {
+      "final-16-077-corridor-42-1": [
+        2
+      ]
+    },
+    "controlled_scope": "four reviewed lights, official start to route station 800m, before roundabout 858.5m",
+    "default_mode": "shadow",
+    "unconditional_production_activation": false,
+    "unresolved_environment": "WSL chronyd rate rewrite captured; persistent host remediation not accepted. Runtime rate/step guard retained."
+  },
+  "camera_qualification": {
+    "raw_summary_sha256": "2662aff184248147315bb7caf610786e985e49493c61cbb71df71133c7a43df2",
+    "conditions": 36,
+    "near_conditions": 24,
+    "near_all_frames_correct": 24,
+    "far30m_not_detected_conditions": 8,
+    "cases": [
+      {
+        "light": "C1256W000077",
+        "distance": 30.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 11,
+        "matching": 0,
+        "different": 0
+      },
+      {
+        "light": "C1256W000077",
+        "distance": 30.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 12,
+        "matching": 0,
+        "different": 0
+      },
+      {
+        "light": "C1256W000077",
+        "distance": 30.0,
+        "requested": 16,
+        "actual": 16,
+        "sample_count": 12,
+        "matching": 0,
+        "different": 0
+      },
+      {
+        "light": "C1256W000077",
+        "distance": 15.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000077",
+        "distance": 15.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000077",
+        "distance": 15.0,
+        "requested": 16,
+        "actual": 16,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000077",
+        "distance": 6.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000077",
+        "distance": 6.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000077",
+        "distance": 6.0,
+        "requested": 16,
+        "actual": 16,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000091",
+        "distance": 30.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 12,
+        "matching": 0,
+        "different": 0
+      },
+      {
+        "light": "C1256W000091",
+        "distance": 30.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 11,
+        "matching": 0,
+        "different": 0
+      },
+      {
+        "light": "C1256W000091",
+        "distance": 30.0,
+        "requested": 16,
+        "actual": 16,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000091",
+        "distance": 15.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000091",
+        "distance": 15.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000091",
+        "distance": 15.0,
+        "requested": 16,
+        "actual": 16,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000091",
+        "distance": 6.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000091",
+        "distance": 6.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000091",
+        "distance": 6.0,
+        "requested": 16,
+        "actual": 16,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000016",
+        "distance": 30.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 12,
+        "matching": 0,
+        "different": 0
+      },
+      {
+        "light": "C1256W000016",
+        "distance": 30.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 11,
+        "matching": 0,
+        "different": 0
+      },
+      {
+        "light": "C1256W000016",
+        "distance": 30.0,
+        "requested": 48,
+        "actual": 48,
+        "sample_count": 12,
+        "matching": 0,
+        "different": 0
+      },
+      {
+        "light": "C1256W000016",
+        "distance": 15.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000016",
+        "distance": 15.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000016",
+        "distance": 15.0,
+        "requested": 48,
+        "actual": 48,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000016",
+        "distance": 6.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000016",
+        "distance": 6.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000016",
+        "distance": 6.0,
+        "requested": 48,
+        "actual": 48,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000052",
+        "distance": 30.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000052",
+        "distance": 30.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000052",
+        "distance": 30.0,
+        "requested": 33,
+        "actual": 33,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000052",
+        "distance": 15.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000052",
+        "distance": 15.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000052",
+        "distance": 15.0,
+        "requested": 33,
+        "actual": 33,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000052",
+        "distance": 6.0,
+        "requested": 1,
+        "actual": 1,
+        "sample_count": 11,
+        "matching": 11,
+        "different": 0
+      },
+      {
+        "light": "C1256W000052",
+        "distance": 6.0,
+        "requested": 4,
+        "actual": 4,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      },
+      {
+        "light": "C1256W000052",
+        "distance": 6.0,
+        "requested": 33,
+        "actual": 33,
+        "sample_count": 12,
+        "matching": 12,
+        "different": 0
+      }
+    ]
+  },
+  "offline": {
+    "ctest_log_sha256": "e3e4f92969eec1c801c2c0013744c0b409aec987ba856534b9e0e1ea299f2dcf",
+    "ctest_targets": 18,
+    "ctest_passed": 18,
+    "shadow_equivalence_cycles": 200000,
+    "python_tests": 31
+  },
+  "independent_road": {
+    "sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+    "bundle_sha256": "490953ee1b00d9abc156fe10f043f4e02eb0203da9ac843e6594f51a56b3719a",
+    "global_path_sha256": "f74ff6f53e27c0c4b2cc0e004e5873f7ee1f68f2107f0429f0aad55254d73ee6",
+    "route_points_covered": 1749,
+    "route_point_count": 1749
+  },
+  "stop_observation_wakeup_comparison": [
+    {
+      "run": "final-15-091-yellow_close-29-1",
+      "source_manifest_sha256": "7879b85fee3bec2163ce261af0948fd110d315bf8f4494b114d5a4ff06317934",
+      "first_yellow_received_to_policy_s": 0.10344879999320256,
+      "first_yellow_received_to_maximum_output_notification_s": 0.10602490499877604,
+      "output_before_earliest_actual_crossing": false,
+      "raw_violation_free": false
+    },
+    {
+      "run": "probe-091-yellow_close-32",
+      "source_manifest_sha256": "cbb82cfda5b79178d6edfc1b6ca4695c65447e89d6d87b4f7f2ea22979f7eac8",
+      "first_yellow_received_to_policy_s": 0.010015300002123695,
+      "first_yellow_received_to_maximum_output_notification_s": 0.012799214004189707,
+      "output_before_earliest_actual_crossing": true,
+      "raw_violation_free": false
+    }
+  ],
+  "selected_trajectory_tracking": {
+    "samples": 773,
+    "maximum_actual_rear_axle_distance_to_current_trajectory_m": 0.06798234571985345,
+    "maximum_heading_to_current_trajectory_rad": 0.03535980867672839,
+    "maximum_sampled_speed_mps": 7.106852029325832,
+    "method": "actual RPC midpoint; preceding linked/actuated Controller status <=0.15s; exact token/planner_epoch/sequence to atomic accepted T; T source age <=0.3s; actual speed >=0.5m/s; nearest finite polyline segment, final endpoint projections excluded",
+    "scope": "one C1256W000052 curved green passage; geometric tracking only, not temporal tracking or universal bound",
+    "bag_sha256": "de6f08a6cdbe42682dcf761ca9f4fdb79610d55dc0e00b2003e738ba4a8747f2",
+    "worst": {
+      "ros_time": 1792627487.2092307,
+      "distance_m": 0.06798234571985345,
+      "heading_error_rad": 0.0020413875035340187,
+      "speed_mps": 6.411458310958848,
+      "token": [
+        "44da250480354a24b61447e9945aa98f",
+        "7936878ccd955bcaa1b37f5035f0c085",
+        4
+      ],
+      "plan_sequence": 100,
+      "segment": 0
+    }
+  },
+  "cleanup": {
+    "at": 1792627686.3587134,
+    "ros_nodes": [
+      "/camera_lane_vectorizer",
+      "/camera_objects_yolo_bbox_adapter",
+      "/jamming_camera_objects_adapter",
+      "/camera_objects",
+      "/yellow_final_cleanup_942352_1792627686175",
+      "/base_to_velodyne",
+      "/camera_lane",
+      "/morai_udp_bridge",
+      "/gps_imu_vehicle_state_adapter",
+      "/morai_sensor_bridge",
+      "/Main",
+      "/camera_bev_fusion",
+      "/rostopic_436296_1792608130859",
+      "/camera_traffic_light",
+      "/rosout",
+      "/camera_bev",
+      "/behavior_dashboard_server",
+      "/yellow_final_batch_897576_1792625574501"
+    ],
+    "official_start_hold_verified": true,
+    "original_fixture_run": "matrix-091-green-02",
+    "fixture_before": {
+      "pose": {
+        "x": -60.637210845947266,
+        "y": -142.2183380126953,
+        "z": 28.374502182006836,
+        "roll": -0.19867485761642456,
+        "pitch": -0.0006124667124822736,
+        "yaw": -81.943603515625
+      }
+    },
+    "fixture_restored": {
+      "x": -60.61031723022461,
+      "y": -142.17857360839844,
+      "z": 28.374372482299805,
+      "roll": -0.19893024861812592,
+      "pitch": 0.004199748393148184,
+      "yaw": -81.87307739257812
+    },
+    "ego": {
+      "x": -131.48599243164062,
+      "y": -427.96099853515625,
+      "z": 28.89372444152832,
+      "yaw": 62.51481628417969,
+      "speed_kmh": 0.0
+    },
+    "actors": [
+      {
+        "id": "Ego",
+        "kind": 1
+      },
+      {
+        "id": "2",
+        "kind": 3
+      },
+      {
+        "id": "3",
+        "kind": 2
+      }
+    ],
+    "binding_parameter_absent": true,
+    "trial_signal_parameters_removed": true,
+    "passed": true
+  },
+  "final_runtime_state": {
+    "nodes": [
+      "/rosout",
+      "/camera_lane_vectorizer",
+      "/gps_imu_vehicle_state_adapter",
+      "/camera_bev",
+      "/jamming_camera_objects_adapter",
+      "/morai_sensor_bridge",
+      "/camera_lane",
+      "/camera_objects",
+      "/base_to_velodyne",
+      "/behavior_dashboard_server",
+      "/morai_udp_bridge",
+      "/Main",
+      "/camera_bev_fusion",
+      "/camera_objects_yolo_bbox_adapter",
+      "/camera_traffic_light"
+    ],
+    "kernel_rate": {
+      "tick_us": 10000,
+      "frequency_ppm": 0.0
+    }
+  },
+  "trace_cleanup": {
+    "instance": "/sys/kernel/tracing/instances/asmc_yellow_rate_20261022",
+    "probe": "asmc_yellow_rate_20261022",
+    "own_instance_removed": true,
+    "own_probe_removed": true
+  },
+  "clock_trace_sha256": "212bd458d4b16e4ab7d5da87c4ac3caed6b9d66a1560e1299af62a4fc3694091",
+  "metrics": {
+    "actual_response_samples": 22,
+    "new_onset_or_escalation_samples": 20,
+    "maximum_new_onset_or_escalation_upper_s": 0.23176477198285284,
+    "ongoing_ordinary_confirmation_samples": 2,
+    "maximum_actual_response_upper_s": 0.23176477198285284,
+    "maximum_controller_response_notification_s": 0.19964838027954102,
+    "response_budget_s": 0.5,
+    "paired_position_samples": 19364,
+    "maximum_observed_position_discrepancy_m": 0.6194396854347006,
+    "maximum_active_signal_body_discrepancy_m": 0.39267233560714687,
+    "maximum_qualified_front_wheel_discrepancy_m": 0.38913283679377325,
+    "qualified_front_wheel_samples": 15467,
+    "maximum_observed_body_footprint_discrepancy_m": 0.6201912258829383,
+    "maximum_observed_yaw_discrepancy_rad": 0.015360033289573138,
+    "maximum_actual_distance_to_sampled_global_route_m": 0.518600046363229,
+    "minimum_stopped_body_clearance_positive_stop_m": 1.5022438298705785,
+    "full_brake_settled": {
+      "samples": 82,
+      "minimum_observed_deceleration_mps2": 8.838522911071777,
+      "median_mps2": 9.8125901222229,
+      "maximum_mps2": 10.941023826599121,
+      "condition": "actual pedal >=0.99 continuously for >=0.2s, actual speed >=1m/s; finite observations, not a guaranteed lower bound"
+    }
+  },
+  "cases": [
+    {
+      "run": "trials/final-00-077-green-39-1",
+      "light": "C1256W000077",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "a11b54161271b454a2989bf494c67511644db7e7a65ef9cf286025d7738747fb",
+      "trial_configuration_sha256": "928e95da7af24ca824c07293165da73dd808311d25d008ff20f2b6be4fc35a91",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-00-077-green-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000077",
+        "case": "green",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-00-077-green-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "green",
+        "start_s": 168.5,
+        "end_s": 252.5,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000077",
+              "begin": 47987.940735067,
+              "end": 47988.041669251,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [],
+      "maximum_recorded_speed_mps": 11.12144515446727,
+      "independent_actual_samples": 397,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.12466034395352121,
+      "actual_stopped_front_clearance_m": null,
+      "position_pairing": {
+        "samples": 397,
+        "max_error_m": 0.4129482530900186,
+        "max_yaw_error_rad": 0.0023862881060821017,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.41262404510500417,
+        "active_signal_max_body_discrepancy_m": 0.3224505085360229,
+        "max_front_wheel_discrepancy_m": 0.41355931131178075,
+        "qualified_front_wheel_max_discrepancy_m": 0.32000273187167005,
+        "qualified_front_wheel_samples": 279,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null
+    },
+    {
+      "run": "trials/final-01-077-yellow_stop-39-1",
+      "light": "C1256W000077",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "b24ddcb379742cc87521fa50d8cda6ccfba28bb236cd6d9280472ea960978c41",
+      "trial_configuration_sha256": "eba67c3274c8a1dc67b057a366c1c8f5792f454f2b783e9b09e087134156e743",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-01-077-yellow_stop-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000077",
+        "case": "yellow_stop",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-01-077-yellow_stop-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "yellow_stop",
+        "start_s": 168.5,
+        "end_s": 252.5,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "stop_station": 200.25,
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000077",
+              "begin": 48018.205066855,
+              "end": 48018.230280358,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "BRAKING",
+        "STATIONARY_HOLD",
+        "RELEASE_PENDING",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 1,
+          "decision_ros": 1792626158.1643782,
+          "initial_speed": 6.708312559929626,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.1737825870513916,
+          "independent_actual": {
+            "response_upper_s": 0.10718200902920216,
+            "baseline_age_s": 0.09880318697105395,
+            "response_kind": "continued_ordinary_deceleration",
+            "actual_baseline_speed_mps": 6.735429387946587,
+            "actual_baseline_acceleration_mps2": -0.3682446777820587,
+            "response_speed_mps": 6.555545160662553,
+            "response_acceleration_mps2": -3.809016227722168,
+            "response_query_interval_s": 0.0019233330021961592
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 10.687362681474628,
+      "independent_actual_samples": 591,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.13155101232978633,
+      "actual_stopped_front_clearance_m": 4.468116545345155,
+      "position_pairing": {
+        "samples": 591,
+        "max_error_m": 0.33367472650441693,
+        "max_yaw_error_rad": 0.0028945529989650165,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.3350293159501841,
+        "active_signal_max_body_discrepancy_m": 0.3350293159501841,
+        "max_front_wheel_discrepancy_m": 0.33380290071379365,
+        "qualified_front_wheel_max_discrepancy_m": 0.31479487841471876,
+        "qualified_front_wheel_samples": 480,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null
+    },
+    {
+      "run": "trials/final-02-077-red_stop-39-1",
+      "light": "C1256W000077",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "3b3f2c6cde2d3f9f8d643f33554cf70aa6c057147d9ea27826cee726c5a1076e",
+      "trial_configuration_sha256": "b972024ce147f26dae02d1bec237c58347e440b49bd4138c2c3b4b4e6662c08a",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-02-077-red_stop-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000077",
+        "case": "red_stop",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-02-077-red_stop-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "red_stop",
+        "start_s": 168.5,
+        "end_s": 252.5,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "stop_station": 200.25,
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000077",
+              "begin": 48050.533855835,
+              "end": 48050.56026362,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "BRAKING",
+        "STATIONARY_HOLD",
+        "RELEASE_PENDING",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 1,
+          "decision_ros": 1792626190.8734303,
+          "initial_speed": 3.3654482362893026,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.0550234317779541,
+          "independent_actual": {
+            "response_upper_s": 0.006311949829978403,
+            "baseline_age_s": 0.019357326171302702,
+            "response_kind": "continued_ordinary_deceleration",
+            "actual_baseline_speed_mps": 3.358339419547327,
+            "actual_baseline_acceleration_mps2": -0.7548776865005493,
+            "response_speed_mps": 3.328264898525208,
+            "response_acceleration_mps2": -0.7520098686218262,
+            "response_query_interval_s": 0.0024455439997836947
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 11.389667535018772,
+      "independent_actual_samples": 654,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.12521911102938724,
+      "actual_stopped_front_clearance_m": 4.461842736611814,
+      "position_pairing": {
+        "samples": 654,
+        "max_error_m": 0.39089651089504784,
+        "max_yaw_error_rad": 0.0029718378530203537,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.3933756594053279,
+        "active_signal_max_body_discrepancy_m": 0.3603575073246897,
+        "max_front_wheel_discrepancy_m": 0.39089653993257634,
+        "qualified_front_wheel_max_discrepancy_m": 0.22866131607119125,
+        "qualified_front_wheel_samples": 548,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null
+    },
+    {
+      "run": "trials/final-03-077-yellow_inside-39-1",
+      "light": "C1256W000077",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "52ed4cbad76fc57f17f9f77c235499a325c0ef06f5e38d908fc32e8b4f8d8811",
+      "trial_configuration_sha256": "6ec9a39da69a53f256af7de2305cbc3540b67b343d4e4f5a63874a12ebbaf31c",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-03-077-yellow_inside-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000077",
+        "case": "yellow_inside",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-03-077-yellow_inside-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "yellow_inside",
+        "start_s": 168.5,
+        "end_s": 252.5,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000077",
+              "begin": 48075.532196659,
+              "end": 48075.557142348,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [],
+      "maximum_recorded_speed_mps": 10.736396676850326,
+      "independent_actual_samples": 408,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.12914614830389576,
+      "actual_stopped_front_clearance_m": null,
+      "position_pairing": {
+        "samples": 408,
+        "max_error_m": 0.35601812530451193,
+        "max_yaw_error_rad": 0.0023968262703304433,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.35835140608881494,
+        "active_signal_max_body_discrepancy_m": 0.3575273690133229,
+        "max_front_wheel_discrepancy_m": 0.3566877883380112,
+        "qualified_front_wheel_max_discrepancy_m": 0.27976143576123724,
+        "qualified_front_wheel_samples": 297,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null
+    },
+    {
+      "run": "trials/final-04-077-recovery-39-1",
+      "light": "C1256W000077",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "458e98a6b7f8f87d4be86ffe2987437fa2a53d9add1996b0698093f0b39656ff",
+      "trial_configuration_sha256": "e4ab2a307dfcf4bdeda60d50910af03ba71316dc58a6780df165b5117ffb5727",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-04-077-recovery-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000077",
+        "case": "recovery",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-04-077-recovery-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "recovery",
+        "start_s": 216.5,
+        "end_s": 252.5,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        1,
+        3
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [],
+      "maximum_recorded_speed_mps": 7.10722132561558,
+      "independent_actual_samples": 531,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.12455297950974943,
+      "actual_stopped_front_clearance_m": -11.915263517761591,
+      "position_pairing": {
+        "samples": 531,
+        "max_error_m": 0.2733115567069673,
+        "max_yaw_error_rad": 0.001472464398577511,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.27428358915820855,
+        "active_signal_max_body_discrepancy_m": 0.17766900910365965,
+        "max_front_wheel_discrepancy_m": 0.27422934068693244,
+        "qualified_front_wheel_max_discrepancy_m": 0.23091272754071637,
+        "qualified_front_wheel_samples": 527,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null,
+      "red_recovery_exit_validation": {
+        "verified": true,
+        "mode": "red_retained_through_endpoint",
+        "actual_rear_body_exit_clearance_m": 0.8586997007031021,
+        "policy_route_generation": 2,
+        "policy_decision_ros": 1792626253.66,
+        "actual_aspect": 1
+      }
+    },
+    {
+      "run": "trials/final-05-091-green-39-1",
+      "light": "C1256W000091",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "459d7e7f02a3e3095974162275a9c49e9824a1790a80e23443e9289d651ebb4a",
+      "trial_configuration_sha256": "f88b5c6c3ad4f120c57f64a58c2cae0536f6af1194c46bfd7487cefb1433d986",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-05-091-green-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000091",
+        "case": "green",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-05-091-green-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "green",
+        "start_s": 276.0,
+        "end_s": 361.75,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000091",
+              "begin": 48128.487564497,
+              "end": 48128.518836747,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [],
+      "maximum_recorded_speed_mps": 11.7179678566108,
+      "independent_actual_samples": 406,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.140340985277838,
+      "actual_stopped_front_clearance_m": null,
+      "position_pairing": {
+        "samples": 406,
+        "max_error_m": 0.3760233599961514,
+        "max_yaw_error_rad": 0.001612261459319475,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.38130533474964723,
+        "active_signal_max_body_discrepancy_m": 0.38130533474964723,
+        "max_front_wheel_discrepancy_m": 0.3760508930605252,
+        "qualified_front_wheel_max_discrepancy_m": 0.3167409137301466,
+        "qualified_front_wheel_samples": 285,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null
+    },
+    {
+      "run": "trials/final-06-091-yellow_stop-39-1",
+      "light": "C1256W000091",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "4e09dc10c91120354143e482dc2b284eeafcbd63d402d3925f1f5fef9efa5173",
+      "trial_configuration_sha256": "d1cd97622b674805e689574c6041d70bd9789548f3b541834d93de6ec0227ac1",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-06-091-yellow_stop-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000091",
+        "case": "yellow_stop",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-06-091-yellow_stop-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "yellow_stop",
+        "start_s": 276.0,
+        "end_s": 361.75,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "stop_station": 310.5,
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000091",
+              "begin": 48159.444473236,
+              "end": 48159.471222563,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "BRAKING",
+        "STATIONARY_HOLD",
+        "RELEASE_PENDING",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 1,
+          "decision_ros": 1792626298.8645875,
+          "initial_speed": 5.874433408782363,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.19964838027954102,
+          "independent_actual": {
+            "response_upper_s": 0.23176477198285284,
+            "baseline_age_s": 0.004869399010203779,
+            "response_kind": "ordinary_onset",
+            "actual_baseline_speed_mps": 5.869945312361574,
+            "actual_baseline_acceleration_mps2": 0.28924131393432617,
+            "response_speed_mps": 5.814846067465173,
+            "response_acceleration_mps2": -0.9171825647354126,
+            "response_query_interval_s": 0.0017181029979838058
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 12.11347744929697,
+      "independent_actual_samples": 619,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.16402930732156376,
+      "actual_stopped_front_clearance_m": 1.5022438298705785,
+      "position_pairing": {
+        "samples": 619,
+        "max_error_m": 0.36833105959960555,
+        "max_yaw_error_rad": 0.0031117233651187792,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.3701556367644012,
+        "active_signal_max_body_discrepancy_m": 0.3701556367644012,
+        "max_front_wheel_discrepancy_m": 0.3684487139585162,
+        "qualified_front_wheel_max_discrepancy_m": 0.28837344224206296,
+        "qualified_front_wheel_samples": 505,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null
+    },
+    {
+      "run": "trials/final-07-091-recovery-39-1",
+      "light": "C1256W000091",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "756d887fe2320b16d5b3270c4dfef96adde9564104232562baee430d62019c93",
+      "trial_configuration_sha256": "25ed5fec185e06b61f3fde51ed0a7504f0ea25a369aee159df969297b7da06c4",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-07-091-recovery-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000091",
+        "case": "recovery",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-07-091-recovery-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "recovery",
+        "start_s": 324.0,
+        "end_s": 361.75,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        1,
+        3
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 2,
+          "level": 2,
+          "decision_ros": 1792626338.314889,
+          "initial_speed": 1.9129439194997153,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.08897566795349121,
+          "independent_actual": {
+            "response_upper_s": 0.08259841718245298,
+            "baseline_age_s": 0.0180703888181597,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 1.9127783162686762,
+            "actual_baseline_acceleration_mps2": -0.008310203440487385,
+            "response_speed_mps": 1.5755958589907566,
+            "response_acceleration_mps2": -5.510595321655273,
+            "response_query_interval_s": 0.0013721889990847558
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 7.416357455781143,
+      "independent_actual_samples": 599,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.13559242594022727,
+      "actual_stopped_front_clearance_m": -35.45627938561671,
+      "position_pairing": {
+        "samples": 599,
+        "max_error_m": 0.22827399111933833,
+        "max_yaw_error_rad": 0.0013697280100866127,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.2360331653462795,
+        "active_signal_max_body_discrepancy_m": 0.16713018493503004,
+        "max_front_wheel_discrepancy_m": 0.22865239046809258,
+        "qualified_front_wheel_max_discrepancy_m": 0.22865239046809258,
+        "qualified_front_wheel_samples": 583,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": -9.625988401472569,
+      "red_recovery_exit_validation": {
+        "verified": true,
+        "mode": "red_retained_through_endpoint",
+        "actual_rear_body_exit_clearance_m": 0.8265066472710739,
+        "policy_route_generation": 2,
+        "policy_decision_ros": 1792626339.91,
+        "actual_aspect": 1
+      }
+    },
+    {
+      "run": "trials/final-08-016-green-39-1",
+      "light": "C1256W000016",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "437fdfd29c8fd36e58faa287a43601952a9d49a8d7fbb1e1e8da393321dccfa6",
+      "trial_configuration_sha256": "22244025f1c62232a7a3928dad3e38438478fdd330f0c1d238f67364691e1a87",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-08-016-green-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000016",
+        "case": "green",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-08-016-green-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "green",
+        "start_s": 396.75,
+        "end_s": 478.0,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000016",
+              "begin": 48214.749126463,
+              "end": 48214.841924976,
+              "before_aspect": 48,
+              "after_aspect": 48,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [],
+      "maximum_recorded_speed_mps": 6.932610405815972,
+      "independent_actual_samples": 452,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.12465862810760323,
+      "actual_stopped_front_clearance_m": null,
+      "position_pairing": {
+        "samples": 452,
+        "max_error_m": 0.28873764427034304,
+        "max_yaw_error_rad": 0.0005482050309506548,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.2896952571515035,
+        "active_signal_max_body_discrepancy_m": 0.2896952571515035,
+        "max_front_wheel_discrepancy_m": 0.2888500769622027,
+        "qualified_front_wheel_max_discrepancy_m": 0.2888500769622027,
+        "qualified_front_wheel_samples": 452,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null
+    },
+    {
+      "run": "trials/final-09-016-yellow_stop-39-1",
+      "light": "C1256W000016",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "9b9e6164e21dcc1d0172cdd0a5bd776204bc4a5d3d6f387f509bae370e9a281c",
+      "raw_result_sha256": "c223a2382ac3f3c8a9463464e5aa4cc4a893e573895e020b2ece29c6c4af2dba",
+      "trial_configuration_sha256": "8a8af61ef1bb73430c9627b7abda5e8564c344df2941aa372bae47ef28defa17",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-09-016-yellow_stop-39-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000016",
+        "case": "yellow_stop",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-09-016-yellow_stop-39-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "yellow_stop",
+        "start_s": 396.75,
+        "end_s": 478.0,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "stop_station": 423.25,
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000016",
+              "begin": 48246.414628032,
+              "end": 48246.520867976,
+              "before_aspect": 48,
+              "after_aspect": 48,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "BRAKING",
+        "STATIONARY_HOLD",
+        "RELEASE_PENDING",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 1,
+          "decision_ros": 1792626386.2330644,
+          "initial_speed": 5.186763252172302,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.16774702072143555,
+          "independent_actual": {
+            "response_upper_s": 0.1761508994823089,
+            "baseline_age_s": 0.0048634965205565095,
+            "response_kind": "ordinary_onset",
+            "actual_baseline_speed_mps": 5.190405587260275,
+            "actual_baseline_acceleration_mps2": 1.5505274534225464,
+            "response_speed_mps": 5.11074818906634,
+            "response_acceleration_mps2": -4.747492790222168,
+            "response_query_interval_s": 0.0022481970008811913
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 6.955890655518579,
+      "independent_actual_samples": 627,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.1247622461755558,
+      "actual_stopped_front_clearance_m": 9.802193151811275,
+      "position_pairing": {
+        "samples": 625,
+        "max_error_m": 0.3281954641532604,
+        "max_yaw_error_rad": 0.002399721927277332,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.328619047691555,
+        "active_signal_max_body_discrepancy_m": 0.328619047691555,
+        "max_front_wheel_discrepancy_m": 0.3283536993361337,
+        "qualified_front_wheel_max_discrepancy_m": 0.3283536993361337,
+        "qualified_front_wheel_samples": 625,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null
+    },
+    {
+      "run": "trials/final-10-016-recovery-42-1",
+      "light": "C1256W000016",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "478237f4d718812ab90d80598bd132a698bb427971e35c4f880393f5e4c688cd",
+      "trial_configuration_sha256": "617f278296a3f7d17660b796fa6929c6d7e48f6d164c4b9e9e87a09b9d6c5691",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-10-016-recovery-42-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000016",
+        "case": "recovery",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-10-016-recovery-42-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "recovery",
+        "start_s": 444.75,
+        "end_s": 478.0,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "red_recovery_exit": {
+          "actual_rear_body_exit_clearance_m": 0.9278019772915148,
+          "policy_route_generation": 2,
+          "policy_decision_ros": 1792626978.78,
+          "actual_aspect": 1
+        },
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        1,
+        3
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [],
+      "maximum_recorded_speed_mps": 6.757739332757807,
+      "independent_actual_samples": 528,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.13141465857276097,
+      "actual_stopped_front_clearance_m": -11.811118235762297,
+      "position_pairing": {
+        "samples": 528,
+        "max_error_m": 0.19021873173214449,
+        "max_yaw_error_rad": 0.0012778641878650188,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.19330078070638598,
+        "active_signal_max_body_discrepancy_m": 0.14828322144506392,
+        "max_front_wheel_discrepancy_m": 0.19090269007140465,
+        "qualified_front_wheel_max_discrepancy_m": 0.19090269007140465,
+        "qualified_front_wheel_samples": 528,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null,
+      "red_recovery_exit_validation": {
+        "verified": true,
+        "mode": "verified_exit_then_post_exit_green",
+        "actual_rear_body_exit_clearance_m": 0.9278019772915148,
+        "policy_route_generation": 2,
+        "policy_decision_ros": 1792626978.78,
+        "actual_aspect": 1
+      }
+    },
+    {
+      "run": "trials/final-11-052-green-42-1",
+      "light": "C1256W000052",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "0869b690a3b3ac94c27c483171e80b27f9f967d8f67dfdffc3a0e156ed08f5fd",
+      "trial_configuration_sha256": "bce51e1df78c410510ff0ced7983729f191bffe41ebddb493a23e3f9086f2ca9",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-11-052-green-42-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000052",
+        "case": "green",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-11-052-green-42-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "green",
+        "start_s": 570.0,
+        "end_s": 650.0,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000052",
+              "begin": 48852.966016352,
+              "end": 48853.058348937,
+              "before_aspect": 33,
+              "after_aspect": 33,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        1,
+        3
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 2,
+          "decision_ros": 1792627001.2300417,
+          "initial_speed": 6.454254590740833,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.17864227294921875,
+          "independent_actual": {
+            "response_upper_s": 0.13847742691723397,
+            "baseline_age_s": 0.03641682308079908,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.501822801395249,
+            "actual_baseline_acceleration_mps2": -0.9477798342704773,
+            "response_speed_mps": 6.057955843641242,
+            "response_acceleration_mps2": -7.060115814208984,
+            "response_query_interval_s": 0.001984690003155265
+          }
+        },
+        {
+          "generation": 2,
+          "level": 2,
+          "decision_ros": 1792627002.127311,
+          "initial_speed": 2.0634936903129217,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.03117990493774414,
+          "independent_actual": {
+            "response_upper_s": 0.07563369327544933,
+            "baseline_age_s": 0.021269335724355187,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 2.1696499990796587,
+            "actual_baseline_acceleration_mps2": -2.658935070037842,
+            "response_speed_mps": 1.6970489746277013,
+            "response_acceleration_mps2": -5.759913444519043,
+            "response_query_interval_s": 0.0019964480015914887
+          }
+        },
+        {
+          "generation": 3,
+          "level": 2,
+          "decision_ros": 1792627003.4264712,
+          "initial_speed": 0.39359619486826064,
+          "budget": 0.5,
+          "response_notification_upper_s": null,
+          "independent_actual": {
+            "response_upper_s": 0.09783621398673858,
+            "baseline_age_s": 0.02553035300661577,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 0.3498289024876778,
+            "actual_baseline_acceleration_mps2": 1.0700676441192627,
+            "response_speed_mps": 0.17853483323398933,
+            "response_acceleration_mps2": -5.690402030944824,
+            "response_query_interval_s": 0.003341160998388659
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 7.086929378711138,
+      "independent_actual_samples": 834,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.4711073353628531,
+      "actual_stopped_front_clearance_m": null,
+      "position_pairing": {
+        "samples": 834,
+        "max_error_m": 0.28111551294076015,
+        "max_yaw_error_rad": 0.009389376805643779,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.28199573572249054,
+        "active_signal_max_body_discrepancy_m": 0.2665474854551118,
+        "max_front_wheel_discrepancy_m": 0.2815048027140592,
+        "qualified_front_wheel_max_discrepancy_m": 0.2815048027140592,
+        "qualified_front_wheel_samples": 828,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": -10.192369678211314
+    },
+    {
+      "run": "trials/final-12-052-yellow_stop-42-1",
+      "light": "C1256W000052",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "de086a12c2b773886283b0aca163a12e09cbea736bc06b8e649eb8d75ed8d11c",
+      "trial_configuration_sha256": "dea5c395137041ec064c3d010abb9116fa82c21fb21a39f10a137a1f05f5f67c",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-12-052-yellow_stop-42-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000052",
+        "case": "yellow_stop",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-12-052-yellow_stop-42-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "yellow_stop",
+        "start_s": 570.0,
+        "end_s": 650.0,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "stop_station": 595.0,
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000052",
+              "begin": 48896.366507168,
+              "end": 48896.392130906,
+              "before_aspect": 33,
+              "after_aspect": 33,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "BRAKING",
+        "STATIONARY_HOLD",
+        "BRAKING",
+        "STATIONARY_HOLD",
+        "RELEASE_PENDING",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        1,
+        3
+      ],
+      "active_causes": [
+        "INPUT_INVALID",
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 2,
+          "decision_ros": 1792627036.941936,
+          "initial_speed": 6.836421186515361,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.10239338874816895,
+          "independent_actual": {
+            "response_upper_s": 0.14214272397657624,
+            "baseline_age_s": 0.01222044102178188,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.832581129844145,
+            "actual_baseline_acceleration_mps2": 0.3813881576061249,
+            "response_speed_mps": 6.1679734287988275,
+            "response_acceleration_mps2": -8.87679672241211,
+            "response_query_interval_s": 0.0016456829980597831
+          }
+        },
+        {
+          "generation": 2,
+          "level": 2,
+          "decision_ros": 1792627044.5436704,
+          "initial_speed": 6.068320936642199,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.10102009773254395,
+          "independent_actual": {
+            "response_upper_s": 0.20047819388855714,
+            "baseline_age_s": 0.010915546110481955,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.081722048396482,
+            "actual_baseline_acceleration_mps2": -0.4593181014060974,
+            "response_speed_mps": 4.983394875577309,
+            "response_acceleration_mps2": -8.931528091430664,
+            "response_query_interval_s": 0.0017744740034686401
+          }
+        },
+        {
+          "generation": 3,
+          "level": 2,
+          "decision_ros": 1792627060.1411197,
+          "initial_speed": 1.7917198605007596,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.11945652961730957,
+          "independent_actual": {
+            "response_upper_s": 0.07988690067577409,
+            "baseline_age_s": 0.0007889053231338039,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 1.794059949744354,
+            "actual_baseline_acceleration_mps2": -0.02136952430009842,
+            "response_speed_mps": 1.3485786430444833,
+            "response_acceleration_mps2": -5.575145721435547,
+            "response_query_interval_s": 0.0017651669986662455
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 7.292975397778245,
+      "independent_actual_samples": 1069,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.4014902191542812,
+      "actual_stopped_front_clearance_m": 11.069235481905613,
+      "position_pairing": {
+        "samples": 1058,
+        "max_error_m": 0.2517022162784301,
+        "max_yaw_error_rad": 0.012000178370378978,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.2540831193945927,
+        "active_signal_max_body_discrepancy_m": 0.21987077933836416,
+        "max_front_wheel_discrepancy_m": 0.2533751753851609,
+        "qualified_front_wheel_max_discrepancy_m": 0.2533751753851609,
+        "qualified_front_wheel_samples": 1049,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": -11.034860903411632
+    },
+    {
+      "run": "trials/final-13-052-recovery-42-1",
+      "light": "C1256W000052",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "a29b606469d15d8b24256ea980a6531ee33b66cb6673a79f337f1303c59d0a4b",
+      "trial_configuration_sha256": "0c6cb0d99f8b49800ea63ca48119c3a6ee6c6f35859569c3ec1e28d8536632cb",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-13-052-recovery-42-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000052",
+        "case": "recovery",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-13-052-recovery-42-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "recovery",
+        "start_s": 618.0,
+        "end_s": 650.0,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "red_recovery_exit": {
+          "actual_rear_body_exit_clearance_m": 0.9319617833498818,
+          "policy_route_generation": 2,
+          "policy_decision_ros": 1792627088.18,
+          "actual_aspect": 1
+        },
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        1,
+        3
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [],
+      "maximum_recorded_speed_mps": 7.126915757882846,
+      "independent_actual_samples": 459,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.48382991823697996,
+      "actual_stopped_front_clearance_m": -11.739294166221317,
+      "position_pairing": {
+        "samples": 453,
+        "max_error_m": 0.23695022819547412,
+        "max_yaw_error_rad": 0.005679643084278263,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.2391079583848838,
+        "active_signal_max_body_discrepancy_m": 0.1402188332479138,
+        "max_front_wheel_discrepancy_m": 0.23786102836891646,
+        "qualified_front_wheel_max_discrepancy_m": 0.22461524466369687,
+        "qualified_front_wheel_samples": 447,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": null,
+      "red_recovery_exit_validation": {
+        "verified": true,
+        "mode": "verified_exit_then_post_exit_green",
+        "actual_rear_body_exit_clearance_m": 0.9319617833498818,
+        "policy_route_generation": 2,
+        "policy_decision_ros": 1792627088.18,
+        "actual_aspect": 1
+      }
+    },
+    {
+      "run": "trials/final-14-077-yellow_close-42-1",
+      "light": "C1256W000077",
+      "acceptance": "failure_response",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "099a194022a58507c79120a7d2dd6b5da13fce74c07bb3c4e0662f01630f1ef9",
+      "trial_configuration_sha256": "50b5b5ec73f6bcbb2646042b6491672cdcb91f0c5976d2aeeb42471558965760",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-14-077-yellow_close-42-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000077",
+        "case": "yellow_close",
+        "start_distance": 40.0,
+        "trigger_distance": 6.0,
+        "deadline": 45.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-14-077-yellow_close-42-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "yellow_close",
+        "start_s": 168.5,
+        "end_s": 252.5,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "stop_station": 207.0,
+        "independent_evaluation": {
+          "violation_free": false,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000077",
+              "begin": 48962.086312647,
+              "end": 48962.187778379,
+              "before_aspect": 4,
+              "after_aspect": 4,
+              "legal_confirmed": false,
+              "classification": "red_or_yellow"
+            }
+          ],
+          "signal_violations_or_uncertain": [
+            {
+              "light": "C1256W000077",
+              "begin": 48962.086312647,
+              "end": 48962.187778379,
+              "before_aspect": 4,
+              "after_aspect": 4,
+              "legal_confirmed": false,
+              "classification": "red_or_yellow"
+            }
+          ],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": false
+      },
+      "motions": [
+        "APPROACH",
+        "BRAKING",
+        "RECOVERY_BRAKE",
+        "RELEASE_PENDING",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        1,
+        2,
+        3
+      ],
+      "active_causes": [
+        "INPUT_INVALID",
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 2,
+          "decision_ros": 1792627109.872613,
+          "initial_speed": 6.863602532143596,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.15044760704040527,
+          "independent_actual": {
+            "response_upper_s": 0.13660019322560402,
+            "baseline_age_s": 0.023634583776583895,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.863954049045456,
+            "actual_baseline_acceleration_mps2": 0.0037263482809066772,
+            "response_speed_mps": 6.542483954903201,
+            "response_acceleration_mps2": -7.032165050506592,
+            "response_query_interval_s": 0.0036689499975182116
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 7.007193262609567,
+      "independent_actual_samples": 981,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.1283386216730392,
+      "actual_stopped_front_clearance_m": -2.3502729840579133,
+      "position_pairing": {
+        "samples": 975,
+        "max_error_m": 0.26891026060668993,
+        "max_yaw_error_rad": 0.0017242717076759728,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.2747505284958503,
+        "active_signal_max_body_discrepancy_m": 0.2747505284958503,
+        "max_front_wheel_discrepancy_m": 0.2689364376713135,
+        "qualified_front_wheel_max_discrepancy_m": 0.2689364376713135,
+        "qualified_front_wheel_samples": 971,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": -10.964387682135111,
+      "failure_response": {
+        "accepted": true,
+        "maximum_brake_before_crossing": true,
+        "overshoot_records_retained": true,
+        "confirmed_crossing_recorded": true,
+        "uncertainty_recorded": true,
+        "normal_reclassification": false,
+        "other_physical_failures": false,
+        "violation_free_driving": false,
+        "held_without_entry_permission": false,
+        "post_crossing_outcome": "endpoint_completed",
+        "run_qualified": true
+      }
+    },
+    {
+      "run": "trials/final-15-091-yellow_close-42-1",
+      "light": "C1256W000091",
+      "acceptance": "failure_response",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "46a4926d45db9623c76bb89228876c7b4697a53b3bcca6fca4a3145f13d6220f",
+      "trial_configuration_sha256": "a74c94f42843b91868fdfb4051052488925a386dc2ea8ff495bf0a97906f3665",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-15-091-yellow_close-42-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000091",
+        "case": "yellow_close",
+        "start_distance": 40.0,
+        "trigger_distance": 6.0,
+        "deadline": 45.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-15-091-yellow_close-42-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": false,
+        "case": "yellow_close",
+        "start_s": 276.0,
+        "end_s": 361.75,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "stop_station": 314.5,
+        "error": "trial deadline without endpoint completion",
+        "independent_evaluation": {
+          "violation_free": false,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000091",
+              "begin": 49006.106918763,
+              "end": 49006.133240243,
+              "before_aspect": 4,
+              "after_aspect": 4,
+              "legal_confirmed": false,
+              "classification": "red_or_yellow"
+            }
+          ],
+          "signal_violations_or_uncertain": [
+            {
+              "light": "C1256W000091",
+              "begin": 49006.106918763,
+              "end": 49006.133240243,
+              "before_aspect": 4,
+              "after_aspect": 4,
+              "legal_confirmed": false,
+              "classification": "red_or_yellow"
+            }
+          ],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": false
+      },
+      "motions": [
+        "APPROACH",
+        "BRAKING",
+        "RECOVERY_BRAKE"
+      ],
+      "event_kinds": [
+        1,
+        2,
+        3
+      ],
+      "active_causes": [
+        "INPUT_INVALID",
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 2,
+          "decision_ros": 1792627153.8422482,
+          "initial_speed": 6.899620162124404,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.11210441589355469,
+          "independent_actual": {
+            "response_upper_s": 0.08414596792135853,
+            "baseline_age_s": 0.08542344207671704,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.902565889958677,
+            "actual_baseline_acceleration_mps2": -0.04800374060869217,
+            "response_speed_mps": 6.577700906010757,
+            "response_acceleration_mps2": -6.973210334777832,
+            "response_query_interval_s": 0.001849027001298964
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 6.915152203770588,
+      "independent_actual_samples": 1389,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.1328424448121612,
+      "actual_stopped_front_clearance_m": -2.447132511057766,
+      "position_pairing": {
+        "samples": 1382,
+        "max_error_m": 0.2621963344047358,
+        "max_yaw_error_rad": 0.001912860372076608,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.26498309811479,
+        "active_signal_max_body_discrepancy_m": 0.26498309811479,
+        "max_front_wheel_discrepancy_m": 0.2621978446317542,
+        "qualified_front_wheel_max_discrepancy_m": 0.2621978446317542,
+        "qualified_front_wheel_samples": 1382,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": -11.039935275339054,
+      "failure_response": {
+        "accepted": true,
+        "maximum_brake_before_crossing": true,
+        "overshoot_records_retained": true,
+        "confirmed_crossing_recorded": true,
+        "uncertainty_recorded": true,
+        "normal_reclassification": false,
+        "other_physical_failures": false,
+        "violation_free_driving": false,
+        "held_without_entry_permission": true,
+        "post_crossing_outcome": "safe_hold_without_entry_permission",
+        "run_qualified": true
+      }
+    },
+    {
+      "run": "trials/final-16-077-corridor-42-1",
+      "light": "C1256W000077",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "a391deefa6c8586844c54cbdaf11c7a0cb8900e195cb6597f23b4449379656cb",
+      "trial_configuration_sha256": "df9bd07c563bcc09a7ea45b699e4995465c06c15cf471abc542b4abae0ec863d",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-16-077-corridor-42-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000077",
+        "case": "corridor",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 240.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-16-077-corridor-42-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "corridor",
+        "start_s": 0.0,
+        "end_s": 800.0,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000077",
+              "begin": 49084.146205864,
+              "end": 49084.171743591,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            },
+            {
+              "light": "C1256W000091",
+              "begin": 49097.456460778,
+              "end": 49097.481989398,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            },
+            {
+              "light": "C1256W000016",
+              "begin": 49111.799503775,
+              "end": 49111.826099497,
+              "before_aspect": 48,
+              "after_aspect": 48,
+              "legal_confirmed": true,
+              "classification": "green"
+            },
+            {
+              "light": "C1256W000052",
+              "begin": 49139.717737765,
+              "end": 49139.748532555,
+              "before_aspect": 33,
+              "after_aspect": 33,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED",
+        "APPROACH",
+        "BRAKING",
+        "STATIONARY_HOLD",
+        "BRAKING",
+        "STATIONARY_HOLD",
+        "RELEASE_PENDING",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0,
+        1,
+        3,
+        5
+      ],
+      "active_causes": [
+        "EXECUTION_FAILURE",
+        "INPUT_INVALID",
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [
+        2
+      ],
+      "response": [
+        {
+          "generation": 1,
+          "level": 2,
+          "decision_ros": 1792627280.711964,
+          "initial_speed": 6.453440213553118,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.04591822624206543,
+          "independent_actual": {
+            "response_upper_s": 0.017245033392100595,
+            "baseline_age_s": 0.007935775611258578,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.485934923944498,
+            "actual_baseline_acceleration_mps2": -0.7503826022148132,
+            "response_speed_mps": 6.1612105435832865,
+            "response_acceleration_mps2": -7.376720428466797,
+            "response_query_interval_s": 0.0014330930061987601
+          }
+        },
+        {
+          "generation": 2,
+          "level": 2,
+          "decision_ros": 1792627287.8153281,
+          "initial_speed": 6.591787309507697,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.08930301666259766,
+          "independent_actual": {
+            "response_upper_s": 0.116261211966048,
+            "baseline_age_s": 0.0644384400366107,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.630765289913409,
+            "actual_baseline_acceleration_mps2": -0.7865149974822998,
+            "response_speed_mps": 6.20604386717898,
+            "response_acceleration_mps2": -7.000918865203857,
+            "response_query_interval_s": 0.0019330830036778934
+          }
+        },
+        {
+          "generation": 5,
+          "level": 2,
+          "decision_ros": 1792627293.3101192,
+          "initial_speed": 1.903225686655485,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.04462790489196777,
+          "independent_actual": {
+            "response_upper_s": 0.08123316066485131,
+            "baseline_age_s": 0.023347953334450722,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 1.910361823748047,
+            "actual_baseline_acceleration_mps2": 0.6488862633705139,
+            "response_speed_mps": 1.4402139343115319,
+            "response_acceleration_mps2": -5.581007957458496,
+            "response_query_interval_s": 0.0016812789981486276
+          }
+        },
+        {
+          "generation": 6,
+          "level": 2,
+          "decision_ros": 1792627293.9107502,
+          "initial_speed": 0.010041733040896618,
+          "budget": 0.5,
+          "response_notification_upper_s": null,
+          "independent_actual": {
+            "response_upper_s": null,
+            "reason": "no qualifying actual response in two seconds"
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 13.23063283206359,
+      "independent_actual_samples": 3816,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.45371238890506255,
+      "actual_stopped_front_clearance_m": null,
+      "position_pairing": {
+        "samples": 3804,
+        "max_error_m": 0.6194396854347006,
+        "max_yaw_error_rad": 0.015360033289573138,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.6201912258829383,
+        "active_signal_max_body_discrepancy_m": 0.3438093069035097,
+        "max_front_wheel_discrepancy_m": 0.6201622182238329,
+        "qualified_front_wheel_max_discrepancy_m": 0.31626563348338754,
+        "qualified_front_wheel_samples": 2261,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": -11.062109670053296
+    },
+    {
+      "run": "trials/final-17-077-corridor-42-1",
+      "light": "C1256W000077",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "297806effb6c11427094138a90cf9c006f629358c677821d4e78c33adb06ecd7",
+      "trial_configuration_sha256": "769690d7db19b349040ca12d840eb296ba0239639ef8342115998b3898475b4e",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/final-17-077-corridor-42-1",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000077",
+        "case": "corridor",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 240.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "final-17-077-corridor-42-1",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "corridor",
+        "start_s": 0.0,
+        "end_s": 800.0,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000077",
+              "begin": 49215.996854332,
+              "end": 49216.0217055,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            },
+            {
+              "light": "C1256W000091",
+              "begin": 49229.333983074,
+              "end": 49229.439334242,
+              "before_aspect": 16,
+              "after_aspect": 16,
+              "legal_confirmed": true,
+              "classification": "green"
+            },
+            {
+              "light": "C1256W000016",
+              "begin": 49242.993165355,
+              "end": 49243.020168815,
+              "before_aspect": 48,
+              "after_aspect": 48,
+              "legal_confirmed": true,
+              "classification": "green"
+            },
+            {
+              "light": "C1256W000052",
+              "begin": 49267.564346305,
+              "end": 49267.589624656,
+              "before_aspect": 33,
+              "after_aspect": 33,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "NORMAL_CLEAR",
+        "EXITED",
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        0,
+        1,
+        3
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 2,
+          "decision_ros": 1792627409.1988246,
+          "initial_speed": 6.437652776509719,
+          "budget": 0.5,
+          "response_notification_upper_s": null,
+          "independent_actual": {
+            "response_upper_s": 0.07966435854905285,
+            "baseline_age_s": 0.01586680344917113,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.475457217188946,
+            "actual_baseline_acceleration_mps2": 0.012261390686035156,
+            "response_speed_mps": 6.15411049233623,
+            "response_acceleration_mps2": -7.171173095703125,
+            "response_query_interval_s": 0.0014816620023339055
+          }
+        },
+        {
+          "generation": 2,
+          "level": 2,
+          "decision_ros": 1792627415.699783,
+          "initial_speed": 6.367112625101866,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.14808416366577148,
+          "independent_actual": {
+            "response_upper_s": 0.11557137839554343,
+            "baseline_age_s": 0.017555391605128534,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.368144078927362,
+            "actual_baseline_acceleration_mps2": -0.9094182848930359,
+            "response_speed_mps": 5.973982048274782,
+            "response_acceleration_mps2": -7.021003723144531,
+            "response_query_interval_s": 0.0024167230003513396
+          }
+        },
+        {
+          "generation": 3,
+          "level": 2,
+          "decision_ros": 1792627416.7016828,
+          "initial_speed": 0.7611779241781007,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.04588437080383301,
+          "independent_actual": {
+            "response_upper_s": null,
+            "reason": "no qualifying actual response in two seconds"
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 13.439549797103117,
+      "independent_actual_samples": 3612,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.518600046363229,
+      "actual_stopped_front_clearance_m": null,
+      "position_pairing": {
+        "samples": 3592,
+        "max_error_m": 0.6081355178199304,
+        "max_yaw_error_rad": 0.014524124039090758,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.6160370115934649,
+        "active_signal_max_body_discrepancy_m": 0.39267233560714687,
+        "max_front_wheel_discrepancy_m": 0.6082365037440781,
+        "qualified_front_wheel_max_discrepancy_m": 0.38913283679377325,
+        "qualified_front_wheel_samples": 1982,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": -10.513464272650417
+    },
+    {
+      "run": "trials/blocked-red-recovery-44/trial",
+      "light": "C1256W000091",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "568446bb1b3fcce5c2c0d9db0b19fbd011708dda7afeda151b81d941741dc092",
+      "trial_configuration_sha256": "dd8c69966cf9e25b8e3116a7dbba1d3c770073806e8676bd4f3297cbad6bfc8f",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "/root/ws/tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "/root/ws/tools/scen_runner/.runtime/yellow/trials/blocked-red-recovery-44/trial",
+        "physical_road": "/root/ws/tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000091",
+        "case": "recovery",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "trial",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "recovery",
+        "start_s": 324.0,
+        "end_s": 361.75,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "red_recovery_exit": {
+          "actual_rear_body_exit_clearance_m": 0.8337843147488162,
+          "policy_route_generation": 2,
+          "policy_decision_ros": 1792627620.5,
+          "actual_aspect": 1
+        },
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        1,
+        3
+      ],
+      "active_causes": [
+        "INPUT_INVALID",
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 2,
+          "level": 2,
+          "decision_ros": 1792627618.8012378,
+          "initial_speed": 1.912031306160821,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.09103775024414062,
+          "independent_actual": {
+            "response_upper_s": 0.10354087233281462,
+            "baseline_age_s": 0.024932477666880004,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 1.9122848261500776,
+            "actual_baseline_acceleration_mps2": -0.010917790234088898,
+            "response_speed_mps": 1.388669879260063,
+            "response_acceleration_mps2": -9.453361511230469,
+            "response_query_interval_s": 0.0016125839974847622
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 7.349973692801398,
+      "independent_actual_samples": 584,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.13395201809153595,
+      "actual_stopped_front_clearance_m": -35.50436405298987,
+      "position_pairing": {
+        "samples": 584,
+        "max_error_m": 0.23793342264915307,
+        "max_yaw_error_rad": 0.0009153559525871824,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.23850527007496744,
+        "active_signal_max_body_discrepancy_m": 0.1584299250106957,
+        "max_front_wheel_discrepancy_m": 0.23810455589806837,
+        "qualified_front_wheel_max_discrepancy_m": 0.23810455589806837,
+        "qualified_front_wheel_samples": 573,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": -10.016598969697952,
+      "red_recovery_exit_validation": {
+        "verified": true,
+        "mode": "verified_exit_then_post_exit_green",
+        "actual_rear_body_exit_clearance_m": 0.8337843147488162,
+        "policy_route_generation": 2,
+        "policy_decision_ros": 1792627620.5,
+        "actual_aspect": 1
+      }
+    },
+    {
+      "run": "trials/tracking-052-green-43",
+      "light": "C1256W000052",
+      "acceptance": "violation_free_driving",
+      "source_manifest_sha256": "3919a0139770235fb2612dde56bf454c4ce111a530620963505505a126cf396c",
+      "raw_result_sha256": "f1dfe441768d46ec7d9cd5e2749369b48d90d4f8f96a369c9be2bfceaeeac7f2",
+      "trial_configuration_sha256": "dd3f2955c1d2ddcfa688021afcf780bcef7971b5d617a53a56e364d82f9e31a3",
+      "arguments": {
+        "host": "127.0.0.1",
+        "port": 7789,
+        "clock_profile": "tools/scen_runner/.runtime/yellow/clock-profile-r21.yaml",
+        "output": "tools/scen_runner/.runtime/yellow/trials/tracking-052-green-43",
+        "physical_road": "tools/scen_runner/.runtime/yellow/physical-road-oracle-v2.json",
+        "light": "C1256W000052",
+        "case": "green",
+        "start_distance": 40.0,
+        "trigger_distance": null,
+        "deadline": 150.0,
+        "park_static": [
+          "2:30:0"
+        ],
+        "collect_road_failures": false
+      },
+      "source_clock": {
+        "source_clock_uncertainty_s": 0.001171912,
+        "source_clock_verified": true,
+        "source_to_ros_offset_s": -0.0007513890000000001
+      },
+      "clock_profile_sha256": "615cef869963103bb2ea586e0bea4634bdaf3be86df8ab47dce26ad6ddb40f5d",
+      "trial": "tracking-052-green-43",
+      "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+      "recorded_result": {
+        "completed": true,
+        "case": "green",
+        "start_s": 570.0,
+        "end_s": 650.0,
+        "physical_road_sha256": "7997d5a76dd195229ed0d5338f672f8945a9a84f6087ddb28f7581b0379e404b",
+        "independent_evaluation": {
+          "violation_free": true,
+          "observation_gaps": [],
+          "crossings": [
+            {
+              "light": "C1256W000052",
+              "begin": 49342.459146366,
+              "end": 49342.48519059,
+              "before_aspect": 33,
+              "after_aspect": 33,
+              "legal_confirmed": true,
+              "classification": "green"
+            }
+          ],
+          "signal_violations_or_uncertain": [],
+          "road_departure_samples": 0,
+          "collisions": []
+        },
+        "passed": true
+      },
+      "motions": [
+        "APPROACH",
+        "ENTRY_PENDING_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "RECOVERY_BRAKE",
+        "RECOVERY_CLEAR",
+        "EXITED"
+      ],
+      "event_kinds": [
+        1,
+        3
+      ],
+      "active_causes": [
+        "SIGNAL"
+      ],
+      "execution_failure_masks": [],
+      "response": [
+        {
+          "generation": 1,
+          "level": 2,
+          "decision_ros": 1792627490.6097436,
+          "initial_speed": 6.3501967667613775,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.06879377365112305,
+          "independent_actual": {
+            "response_upper_s": 0.08451679755671648,
+            "baseline_age_s": 0.018668599441298284,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 6.3516495394637875,
+            "actual_baseline_acceleration_mps2": -0.7483265995979309,
+            "response_speed_mps": 6.255214336171263,
+            "response_acceleration_mps2": -1.0497914552688599,
+            "response_query_interval_s": 0.0019216410000808537
+          }
+        },
+        {
+          "generation": 2,
+          "level": 2,
+          "decision_ros": 1792627491.5074131,
+          "initial_speed": 0.9576980356038493,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.1714928150177002,
+          "independent_actual": {
+            "response_upper_s": 0.15968968530069105,
+            "baseline_age_s": 0.001376827698550187,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 0.9571867443107918,
+            "actual_baseline_acceleration_mps2": -5.588146686553955,
+            "response_speed_mps": 0.1027359453229889,
+            "response_acceleration_mps2": -8.03449821472168,
+            "response_query_interval_s": 0.0020986310046282597
+          }
+        },
+        {
+          "generation": 3,
+          "level": 2,
+          "decision_ros": 1792627495.007984,
+          "initial_speed": 1.8315175271552377,
+          "budget": 0.5,
+          "response_notification_upper_s": 0.07067179679870605,
+          "independent_actual": {
+            "response_upper_s": 0.056023931298113894,
+            "baseline_age_s": 0.019733783701667562,
+            "response_kind": "additional_maximum_deceleration",
+            "actual_baseline_speed_mps": 1.836205096035763,
+            "actual_baseline_acceleration_mps2": -0.37363070249557495,
+            "response_speed_mps": 1.4842122448936814,
+            "response_acceleration_mps2": -5.566105842590332,
+            "response_query_interval_s": 0.0018853620058507659
+          }
+        }
+      ],
+      "maximum_recorded_speed_mps": 7.157231692816716,
+      "independent_actual_samples": 874,
+      "maximum_actual_distance_to_sampled_global_route_m": 0.4522069703439251,
+      "actual_stopped_front_clearance_m": null,
+      "position_pairing": {
+        "samples": 872,
+        "max_error_m": 0.2323856827977018,
+        "max_yaw_error_rad": 0.008506325125379827,
+        "maximum_rpc_interval_s": 0.04,
+        "max_body_footprint_discrepancy_m": 0.23561786982607263,
+        "active_signal_max_body_discrepancy_m": 0.23561786982607263,
+        "max_front_wheel_discrepancy_m": 0.23239579312003653,
+        "qualified_front_wheel_max_discrepancy_m": 0.23239579312003653,
+        "qualified_front_wheel_samples": 865,
+        "wheel_qualification_speed_max_mps": 7.0,
+        "wheel_positive_acceleration_horizon_s": 0.1,
+        "maximum_source_interpolation_gap_s": 0.1,
+        "method": "RPC midpoint bracket + original-state interpolation"
+      },
+      "maximum_brake_observed_acceleration_mps2": -10.077195875975251
+    }
+  ],
+  "retained_failed_or_incomplete_runs": [
+    {
+      "run": "trials/blocked-green-17",
+      "passed": false,
+      "error": "blockage qualification deadline",
+      "completed": null
+    },
+    {
+      "run": "trials/blocked-green-17/trial",
+      "passed": false,
+      "error": null,
+      "completed": false
+    },
+    {
+      "run": "trials/blocked-red-recovery-13",
+      "passed": false,
+      "error": null,
+      "completed": null
+    },
+    {
+      "run": "trials/blocked-red-recovery-13/trial",
+      "passed": false,
+      "error": "forced aspect would outlive its controlled intersection phase",
+      "completed": false
+    },
+    {
+      "run": "trials/blocked-red-recovery-14",
+      "passed": false,
+      "error": "fixture pose readback mismatch: 2",
+      "completed": null
+    },
+    {
+      "run": "trials/blocked-red-recovery-14/trial",
+      "passed": false,
+      "error": null,
+      "completed": false
+    },
+    {
+      "run": "trials/blocked-red-recovery-15",
+      "passed": false,
+      "error": null,
+      "completed": null
+    },
+    {
+      "run": "trials/blocked-red-recovery-15/trial",
+      "passed": false,
+      "error": "forced aspect would outlive its controlled intersection phase",
+      "completed": false
+    },
+    {
+      "run": "trials/final-01-077-yellow_stop-27-1",
+      "passed": false,
+      "error": "independent oracle observation interval unavailable or expired",
+      "completed": false
+    },
+    {
+      "run": "trials/final-02-077-red_stop-33-1",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/final-05-091-green-23-1",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/final-05-091-green-27-1",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/final-10-016-recovery-39-1",
+      "passed": false,
+      "error": "forced aspect would outlive its controlled intersection phase",
+      "completed": false
+    },
+    {
+      "run": "trials/final-11-052-green-29-1",
+      "passed": false,
+      "error": "independent oracle observation interval unavailable or expired",
+      "completed": false
+    },
+    {
+      "run": "trials/final-14-077-yellow_close-19-1",
+      "passed": false,
+      "error": null,
+      "completed": true
+    },
+    {
+      "run": "trials/final-14-077-yellow_close-29-1",
+      "passed": false,
+      "error": "independent oracle observation interval unavailable or expired",
+      "completed": false
+    },
+    {
+      "run": "trials/final-14-077-yellow_close-29-2",
+      "passed": false,
+      "error": null,
+      "completed": true
+    },
+    {
+      "run": "trials/final-15-091-yellow_close-19-1",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/final-15-091-yellow_close-29-1",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/final-16-077-corridor-19-1",
+      "passed": false,
+      "error": "independent oracle observation interval unavailable or expired",
+      "completed": false
+    },
+    {
+      "run": "trials/final-16-077-corridor-19-2",
+      "passed": false,
+      "error": "clock environment changed; stop the trial: {\"tick_us\": 10460, \"frequency_ppm\": -36.23323059082031}",
+      "completed": false
+    },
+    {
+      "run": "trials/final-16-077-corridor-21-1",
+      "passed": false,
+      "error": "independent oracle observation interval unavailable or expired",
+      "completed": false
+    },
+    {
+      "run": "trials/green-077-01",
+      "passed": false,
+      "error": "trial planner launch exited",
+      "completed": false
+    },
+    {
+      "run": "trials/green-077-02",
+      "passed": false,
+      "error": "independent oracle: actual vehicle left the reviewed road",
+      "completed": false
+    },
+    {
+      "run": "trials/green-077-03",
+      "passed": false,
+      "error": null,
+      "completed": false
+    },
+    {
+      "run": "trials/green-077-04",
+      "passed": false,
+      "error": "independent oracle: actual vehicle left the reviewed road",
+      "completed": false
+    },
+    {
+      "run": "trials/green-077-05",
+      "passed": false,
+      "error": "independent oracle: actual vehicle left the reviewed road",
+      "completed": false
+    },
+    {
+      "run": "trials/green-077-06",
+      "passed": false,
+      "error": "independent oracle: actual vehicle left the reviewed road",
+      "completed": false
+    },
+    {
+      "run": "trials/green-077-07",
+      "passed": false,
+      "error": "independent oracle: actual vehicle left the reviewed road",
+      "completed": false
+    },
+    {
+      "run": "trials/green-077-08-diagnostic",
+      "passed": false,
+      "error": null,
+      "completed": true
+    },
+    {
+      "run": "trials/matrix-016-yellow_stop-03",
+      "passed": false,
+      "error": "planner terminated during driving",
+      "completed": false
+    },
+    {
+      "run": "trials/matrix-052-green-04",
+      "passed": false,
+      "error": "planner terminated during driving",
+      "completed": false
+    },
+    {
+      "run": "trials/matrix-052-green-05",
+      "passed": false,
+      "error": "planner terminated during driving",
+      "completed": false
+    },
+    {
+      "run": "trials/matrix-052-green-06",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/matrix-077-corridor-10",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/matrix-077-green-07",
+      "passed": false,
+      "error": "independent oracle observation interval unavailable or expired",
+      "completed": false
+    },
+    {
+      "run": "trials/matrix-077-yellow_stop-08",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/matrix-077-yellow_stop-09",
+      "passed": false,
+      "error": "independent oracle observation interval unavailable or expired",
+      "completed": false
+    },
+    {
+      "run": "trials/matrix-091-green-01",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/matrix-091-green-02",
+      "passed": false,
+      "error": "fixture pose readback mismatch: 2",
+      "completed": false
+    },
+    {
+      "run": "trials/negative-077-yellow_close-11",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/negative-077-yellow_close-12",
+      "passed": false,
+      "error": null,
+      "completed": true
+    },
+    {
+      "run": "trials/pilot-091-green-25",
+      "passed": false,
+      "error": "trial planner launch exited",
+      "completed": false
+    },
+    {
+      "run": "trials/probe-091-yellow_close-32",
+      "passed": false,
+      "error": "trial deadline without endpoint completion",
+      "completed": false
+    },
+    {
+      "run": "trials/recovery-077-03-physical",
+      "passed": false,
+      "error": "forced aspect would outlive its controlled intersection phase",
+      "completed": false
+    },
+    {
+      "run": "trials/recovery-077-04-physical",
+      "passed": false,
+      "error": "forced aspect would outlive its controlled intersection phase",
+      "completed": false
+    },
+    {
+      "run": "trials/yellow-stop-077-01-diagnostic",
+      "passed": false,
+      "error": null,
+      "completed": true
+    }
+  ],
+  "analysis_source_sha256": "b691f4f587585f405565c2d81970967d204d34c756362f3f4c7ac67198bcd000",
+  "vehicle_geometry": {
+    "version": "v.S4.251001.MolitComp03",
+    "bundle_name": "hyundai_ioniq5.vehicle",
+    "bundle_sha256": "96fe94edce6b530092c0a4b71945eeb20d7f3fb2ac2bef4890fda40092f5da3a",
+    "inspection": "read-only UnityPy 1.25.4; no model changes",
+    "wheel_transforms": [
+      {
+        "name": "Wheel_R1R",
+        "parent": "WheelColliders",
+        "position": {
+          "x": 0.8140000104904175,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "rotation": {
+          "x": -0.0,
+          "y": -0.0,
+          "z": -0.0,
+          "w": 1.0
+        }
+      },
+      {
+        "name": "Wheel_F1R",
+        "parent": "WheelColliders",
+        "position": {
+          "x": 0.8140000104904175,
+          "y": 0.0,
+          "z": 3.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "rotation": {
+          "x": -0.0,
+          "y": -0.0,
+          "z": -0.0,
+          "w": 1.0
+        }
+      },
+      {
+        "name": "Wheel_F1L",
+        "parent": "WheelColliders",
+        "position": {
+          "x": -0.8140000104904175,
+          "y": 0.0,
+          "z": 3.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "rotation": {
+          "x": -0.0,
+          "y": -0.0,
+          "z": -0.0,
+          "w": 1.0
+        }
+      },
+      {
+        "name": "Wheel_R1L",
+        "parent": "WheelColliders",
+        "position": {
+          "x": -0.8140000104904175,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "rotation": {
+          "x": -0.0,
+          "y": -0.0,
+          "z": -0.0,
+          "w": 1.0
+        }
+      }
+    ],
+    "half_track_m": 0.8140000104904175,
+    "wheelbase_m": 3.0
+  }
+}

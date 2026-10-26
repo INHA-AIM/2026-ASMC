@@ -17,6 +17,11 @@ PlanningPort::PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh,
                            FeedbackSink feedback_sink)
     : feedback_sink_(std::move(feedback_sink)),
       nh_(std::move(nh)), pnh_(std::move(pnh)) {
+    nh_.param("/control_binding/enabled",control_binding_enabled_,false);
+    if(control_binding_enabled_) {
+      control_plan_pub_=nh_.advertise<std_msgs::UInt8MultiArray>("/planning/control_plan",10);
+      control_request_sub_=nh_.subscribe("/behavior/control_request",10,&PlanningPort::controlRequestCallback,this);
+    }
     planner_.BindExecutionState(command_manager_.maneuvers());
     std::string planner_config_path;
     pnh_.param<std::string>("planner/config_path", planner_config_path, "");
