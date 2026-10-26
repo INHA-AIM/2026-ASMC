@@ -47,9 +47,10 @@ class CoreTests(unittest.TestCase):
         result=projection_cases(Path(os.environ['C0_PROBES'])/'frame_projection_probe')
         self.assertEqual(len(result['cases']),54);self.assertTrue(result['passed'])
     def test_context_roundtrip_and_invalid_rotation(self):
-        from scipy.spatial.transform import Rotation
         import numpy as np
-        p=np.eye(4);p[:3,:3]=Rotation.from_euler('xyz',[.1,-.08,.9]).as_matrix();p[:3,3]=[15,20,.36]
+        # Fixed nontrivial rigid rotation; independent of SciPy's as_dcm/as_matrix
+        # version split in the supported Ubuntu 20.04 ROS image.
+        p=np.eye(4);p[:3,:3]=[[.8,-.48,.36],[.6,.64,-.48],[0,.6,.8]];p[:3,3]=[15,20,.36]
         data=dict(map_from_base=p.ravel().tolist(),alternative=dict(x=16,y=21,yaw=1.),points=[[1,2,3],[-4,5,6],[10,-3,-.36]])
         result=json_probe(Path(os.environ['C0_PROBES'])/'context_probe',[data])[0]
         self.assertLess(result['roundtrip_m'],1e-8)

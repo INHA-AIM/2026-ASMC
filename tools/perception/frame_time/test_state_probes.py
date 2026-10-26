@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Tiny generated GPS-zero/missing/recovery recording; compares production cores.
 
-The bridge sentinel mismatch is a frozen C0 finding, not a desired future policy.
-A follow-up fix must deliberately update this diagnostic baseline.
+The original mismatch is preserved in C0 evidence. Current bridge and planning
+cores must both reject the sentinel and reacquire a fresh baseline on recovery.
 """
 import argparse
 import json
@@ -40,8 +40,8 @@ def main(probes):
             assert count(1,2.9,True)>10,kind+' did not initialize'
             assert count(5.5,6,True)>2,kind+' did not recover'
             assert count(4.6,4.8,False)>0,kind+' stale gate missing'
-            if kind=='planning':assert count(3.2,3.9,True)==0,'planning accepted zero GPS'
-            else:assert count(3.2,3.9,True)>3,'C0 bridge finding changed: review/fix baseline explicitly'
+            assert count(3.2,3.9,True)==0,kind+' accepted zero GPS'
+            assert count(4.8,4.96,True)==0,kind+' reused pre-dropout speed on the first recovered fix'
             result[kind]=dict(scans=len(rows),zero_gps_valid=count(3.2,3.9,True),recovered=count(5.5,6,True))
         print(json.dumps(result))
 if __name__=='__main__':

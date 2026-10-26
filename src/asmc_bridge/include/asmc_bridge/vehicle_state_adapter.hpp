@@ -38,6 +38,8 @@ public:
     asmc_msgs::VehicleState makeState(const ros::SteadyTime& now) const;
 
 private:
+    // A new GPS window must never inherit speed/acceleration across a dropout.
+    void resetGpsBaseline();
     StateAdapterConfig config_;
     morai_msgs::GPSMessage gps_;
     sensor_msgs::Imu imu_;

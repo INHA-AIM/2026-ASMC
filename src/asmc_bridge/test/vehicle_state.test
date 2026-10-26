@@ -1,0 +1,10 @@
+<launch>
+  <node pkg="asmc_bridge" type="vehicle_state_node" name="vehicle_state_fixture" output="screen">
+    <rosparam command="load" file="$(find asmc_bridge)/config/vehicle_state.yaml"/>
+    <param name="topics/gps" value="/bridge_fixture/gps"/>
+    <param name="topics/imu" value="/bridge_fixture/imu"/>
+    <param name="publish_topic" value="/bridge_fixture/state"/>
+  </node>
+  <test test-name="vehicle_state_recovery" pkg="asmc_bridge"
+        type="check_vehicle_state_ros.py" time-limit="25"/>
+</launch>
