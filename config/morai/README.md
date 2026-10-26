@@ -70,17 +70,24 @@ Ego status의 type770/295와 나머지 release별 schema는 유지한다.
 
 import 선택값과 UDP payload의 AutoMode 바이트는 서로 다른 enum이다. 이를 같은 숫자로
 일괄 정규화하지 않는다. 현재 bridge는 검증된23바이트 payload(전체55B)를 유지한다.
-26R1의 조향·제동 수락은 현재 PC에서 확인했으며 대회용 실행판에서의 차량 응답 확인은 별도다.
+26R1의 조향·제동은 제한 대조로 확인했다. 2026-10-26에는 사용자가 대회용
+MolitComp03에서 기본 설정으로 새 LiDAR 판제 주행이 동작함을 확인했다. 실행 중인
+`Simulator_v.S4.251001.MolitComp03_Window`, `invert_steer=false`, local UDP와
+`/perception/lidar/tracks_map` 직접 소비도 읽기 전용 조회로 확인했다.
+주행 거리·전 미션·LAN2LAN 수락을 이 확인으로 대체하지 않는다.
 ROS 메시지·bridge runtime을 release별로 나누지 않는다.
 
-ROS 조향은 좌회전 양수 rad다. 2026-10-26 현재 AIM06의 R1.H3·IONIQ5·UDP 대조에서는
-`invert_steer=false`가 반대 yaw 응답을 내어 **이 PC에서 `invert_steer:=true`를 사용**한다.
-팀원이2026-09-02 false로 주행을 확인한 이력(`f84a62ce`)도 있으므로, 팀 공용 기본값 false를
-일괄 변경하거나 대회용 실행판도 동일 부호라고 가정하지 않는다. 최대40도와 변환 경계는 유지한다.
-다른 PC와의 차이는 release·차량·통신 방식·실행 binary/설정으로 대조한다. ROS WebSocket은
-이 UDP 변환을 거치지 않는다. 현재 PC 실행은 다음과 같으며, 이미 실행한 bridge와 중복 시작하지 않는다.
+ROS 조향은 좌회전 양수 rad다. **대회용 MolitComp03는 검증된 기본값 `invert_steer=false`를 유지**한다.
+같은 PC라도 확인한 R1.H3·IONIQ5·UDP 조합은 반대 yaw 응답을 내어 `invert_steer:=true`가 필요했다.
+두 결과를 PC 이름으로 선택하거나 모든 release에 true를 적용하지 않는다. 동일 실행 조합에서는
+일관된 부호를 사용하고, 부호 변환은 bridge에서 한 번만 수행한다. 최대40도와 판제 내부 계약은 유지한다.
+팀원의 과거 false 주행 기록(`f84a62ce`)도 보존한다. ROS WebSocket은 이 UDP 변환을 거치지 않는다.
+실행 중인 bridge와 중복 시작하지 않는다.
 
 ```bash
+# 대회용 MolitComp03: 공용 기본값 false
+./scripts/udp_bridge.sh
+# 확인한 26R1 개발 조합: 명시적 override
 ./scripts/udp_bridge.sh invert_steer:=true
 ```
 

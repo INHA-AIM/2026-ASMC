@@ -122,12 +122,20 @@ runtime을 별도 프로토콜로 나누는 것과 다르며 옛 enum 숫자로 
 현재 PC의 수정은 bridge 송신 경계에서 **좌회전 양수 rad → 우회전 양수 정규값**으로 한 번
 반전하는 것이다. **AIM06 R1.H3는 `invert_steer:=true`**, 공용 기본값은 기존 false를 유지한다.
 Git `f84a62ce`(2026-09-02)에 팀원의 false 주행 확인 기록이 있어, 대회용 실행판도 같은 응답이라고
-가정하지 않는다. `/ctrl_cmd/normal`, `/ctrl_cmd/jamming`과 MPC bicycle model의 좌회전 양수
+가정하지 않았다. 이후2026-10-26 사용자가 **대회용 MolitComp03에서 기본값 false로 새 LiDAR
+판제 주행이 동작함을 직접 확인**했다. 같은 시점의 읽기 전용 조회에서 실행판
+`Simulator_v.S4.251001.MolitComp03_Window`, bridge `invert_steer=false`·local UDP,
+`planning_objects_adapter/source_policy=asmc_lidar`와 입력 `/perception/lidar/tracks_map`을 확인했다.
+따라서 대회용 공용 기본값 false를 유지하고, 확인한26R1 개발 조합만 true를 명시한다.
+`/ctrl_cmd/normal`, `/ctrl_cmd/jamming`과 MPC bicycle model의 좌회전 양수
 계약은 유지한다. ROS WebSocket은 이 UDP 인코더를 거치지 않는다. 다른 PC의 정상 주행과 비교할 때
 release·차량40도 조향 한계·통신 방식·bridge revision/설정을 함께 확인한다.
 다른 PC도 동일 증상이라고 단정하거나 제어기 부호를 함께 뒤집지 않는다.
 
 ```bash
+# 대회용 MolitComp03
+./scripts/udp_bridge.sh
+# 확인한 26R1 개발 조합
 ./scripts/udp_bridge.sh invert_steer:=true
 ```
 
@@ -142,6 +150,9 @@ release·차량40도 조향 한계·통신 방식·bridge revision/설정을 함
 모두 plan_valid=true, 최대 횡오차0.1235m, 최대 LiDAR source age114.5ms·판제 객체 수신
 age109.5ms였다. 센서 bridge·카메라·LiDAR·master는 유지했고, 생성한 시험 판제만 종료한 뒤
 Keyboard/P와 `/ctrl_cmd` 발행자0을 확인했다. 해당 PC의 직접 명령은 위 true override를 사용한다.
+
+대회 버전의 사용자 직접 확인은 새 LiDAR 연결의 기능 확인이다. 구간·시간·장애물 조건을 계측한
+전 미션 수락이나 LAN2LAN 시험으로 확대하지 않는다. 위 수치가 있는26R1 제한 대조와도 구분한다.
 
 연장 대조 중 별도1회는2.85초에 `ego/object input is not fresh`로 정지했다. 이 실행은 당시
 입력별 계측이 없어 차량 상태와 LiDAR 중 어느 입력인지 확정하지 못했다. 이후 계측 대조의 성공이

@@ -19,6 +19,13 @@
 별도 시험1회의 입력 freshness 정지는 원인 미확정으로 남긴다. LiDAR 필터나 TTC를 완화해
 이 증상을 우회하지 않는다. [제어 설정·대조 근거·남은 검증](../../../docs/operations/planning-control.md#morai-제어-프로토콜과-정지-순서)을 따른다.
 
+같은 날 사용자가 **대회용 MolitComp03의 기본 bridge 설정(`invert_steer=false`)으로 새 LiDAR
+판제 주행이 동작함을 직접 확인**했다. 실행 조회에서도 해당 release·local UDP와
+`source_policy=asmc_lidar`, `/perception/lidar/tracks_map` 소비를 확인했다. 이는 사용자 직접
+연결 확인이며 전 미션·장애물 속도 정확도·LAN2LAN 수락은 아니다. 공용 조향 기본값은 false를
+유지하고, 별도로 확인한26R1 조합은 true override를 사용한다. 통합 판제의 기본 source 전환과
+구 패키지 삭제는 공동 인수 단계에서 진행한다.
+
 ## 가져온 기능과 의도적 차이
 
 | 구 Main 기능 | 이번 연결 |
