@@ -3,8 +3,9 @@
 **2026-10-26 현재 기준:** PR #112 `0dab4adf`에서 B4 정본화를 완료했다.
 [판제 직접 소비](../../src/asmc_lidar/docs/planning-runtime.md)는 `asmc_lidar`만 사용한다.
 C0는 [좌표·시각 대조 결과](../records/lidar/2026-10-26-frame-time-baseline.md)와 재현 도구까지 완료했다.
-운영 변환·필터·메시지는 바꾸지 않았다. 다음 우선 수정은 실시간·합성 입력에서 재현한
-**bridge의 GPS `(0,0)` 유효성 경계**다. 공용 라이브러리나 pose 생산자 통합은 아직 후보안이다.
+운영 변환·필터·메시지는 바꾸지 않았다. 후속 사용자 승인으로 같은 PR에서
+[bridge GPS `(0,0)` 유효성·복귀 경계](../records/bridge/2026-10-26-gps-validity-recovery.md)를 수정했다.
+공용 라이브러리나 pose 생산자 통합은 아직 후보안이다.
 
 ## 상태와 착수 순서
 
@@ -149,7 +150,9 @@ HD맵 판정이 5건 달라졌다. pose 교체나 10cm 경계값 변경을 채�
 bridge `/vehicle/state`는 큰 비정상 좌표를 `valid=true`로 제공했다. 합성 fixture로도 재현했다.
 현행 autonomy 기본 `competition` 경로는 판제 GPS/IMU pose에 별도 속도 입력을 결합하며
 이 bridge 상태를 직접 소비하지 않는다. C0 probe는 pose 코어를 대조하며 그 속도 결합까지 재현하지 않는다.
-이 결함은 LAN2LAN/bridge 작업과 중복 수정하지 않도록 입력 유효성 수정 한 단위로 인계한다.
+이 결함은 같은 PR에서 sentinel 거부와 무효/timeout 뒤의 속도 기준 재확보로 수정했다.
+LAN2LAN worktree의 UDP/IP 설정은 변경하지 않았다. bridge의 안테나 원점·ENU yaw·수신 시각 기반
+추정 정책까지 판제와 같게 만든 것은 아니다. 수정 전 자료는 v1, 수정 후 자료는 v2 manifest로 구분한다.
 
 현재 [VehicleState](../../src/asmc_msgs/msg/VehicleState.msg)는 map의 x/y/yaw와 하나의 valid를 제공한다.
 이를 그대로 local IMU 입력 대신 쓰면 GPS 무효가 local 처리를 막을 수 있다.
@@ -214,14 +217,15 @@ Python binding은 배포·호출 비용까지 비교한 뒤 결정한다. 즉시
 | 순서 | 작업 | 완료 근거 | 제외 범위 |
 |---|---|---|---|
 | C0 · 완료 | 현행 생산자·소비자·frame/time/기준점 목록과 동일 입력 fixture 고정 | 54 투영 사례·857 scan 동등성·실시간 GPS0 재현. 동일 시각 pose/독립 GT 부족은 명시 | 알고리즘·토픽 변경 |
-| 다음 입력 경계 수정 | bridge GPS0·결측·복귀 유효성 일치 | C0 합성 fixture와 짧은 터널 상태 재검증 | pose 생산자 통합·좌표/속도 정책 변경 |
+| 입력 경계 수정 · 완료 | bridge GPS0·결측·복귀 유효성 일치 | C0 합성 fixture·기록 재생·실제 노드 발행 회귀 | pose 생산자 통합·좌표/속도 추정식 변경 |
+| 다음 진단 후보 | LiDAR IMU stale 원인과 clock 대응 근거 | 수신 지연/표본 선택/scan 취득 구간을 분리 | age 제한 완화·원본 clock 임의 환산 |
 | C1 | 기하·시각 공통 라이브러리 최소 분리 | 기존 수학·무효 처리 동등성, C++/Python fixture, 독립 빌드 | 위치 추정 gain·보간 정책 변경 |
 | C2 | 자세 조회를 센서별 정책으로 연결 | 카메라 M1/M0 동등성, LiDAR leveling·카메라 투영 동등성, 시각 실패 재현 | 새 ego motion·점별 deskew |
 | C3 | pose 정본과 scan 시각 조회 설계·대조 | lever arm·yaw·원점·GPS0/중단/복귀·예측 오차 비교 | 판제 단독 정책 변경 |
 | C4 | 중복 계산/출력 조립 축소 | 입력→출력 p50/p95/p99·최대 공백·RSS/CPU·복사 수 비교 | 근거 없는 품질 경량화 |
 | 공동 전환 | 검증된 pose/객체 소비 경계 연결 | 판제·재호와 고정 bag 및 실제 구간 수락·복구 확인 | 사용자 확인 없는 운영 전환 |
 
-공통화할 패키지 이름이나 새 메시지는 C0 결과와 입력 경계 수정 후 확정한다.
+공통화할 패키지 이름이나 새 메시지는 C0 결과와 수정 후 경계를 검토해 확정한다.
 서로 다른 clock을 억지로 통일하거나 현재 pose gain·보간을 공통 코드라는 이유로 바꾸지 않는다.
 안승현은 카메라·HD맵 연결과 공통 기하 대조, 재호는 추적·속도·fusion 의미를 확인한다.
 판제 담당은 현재 pose/궤적·Frenet 소비와 fallback 정책을 확인한다. 관련 공개 계약 변경은 공동 검토한다.

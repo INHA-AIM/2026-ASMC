@@ -3,8 +3,10 @@
 This directory contains offline probes only. It is not a catkin package and is
 not installed by an operating launch. `audit_frame_time.py` orchestrates it.
 
-The frozen input/config inventory is
-`config/baselines/lidar_frame_time_c0_v1.json`. Inputs are resolved beneath an
+The current input/config inventory is
+`config/baselines/lidar_frame_time_c0_v2.json` (bridge GPS-validity fix).
+The v1 manifest and its source revision remain the pre-fix reproduction baseline.
+Inputs are resolved beneath an
 explicit storage root; no workstation path is an operating default.
 
 ## Boundaries
@@ -46,9 +48,9 @@ C0_PROBES=/tmp/asmc-c0-probes python3 tools/perception/test_frame_time_audit.py
 python3 tools/perception/frame_time/test_state_probes.py --probes /tmp/asmc-c0-probes
 ```
 
-The last fixture intentionally **reproduces the current bridge GPS-zero defect**:
-planning zero-GPS valid count0, bridge count9. It is evidence, not an endorsement
-of that behavior. Update the assertion when the separate production fix lands.
+The last fixture now requires **both cores to reject GPS-zero and reacquire a
+fresh velocity baseline**. The pre-fix bridge count9 is preserved in v1 evidence;
+the current expected count is0. No assertion freezes the old defect as desired behavior.
 CI runs these small regressions and compiles the support probe; it does not fetch
 private recordings or run MORAI. Eigen, YAML, OpenCV, OpenSSL, Zlib, PCL and
 GeographicLib are the existing ROS/LiDAR build dependencies.
@@ -61,7 +63,7 @@ In the container, use its mounted storage paths, not the host `.storage/env.sh`.
 
 ```bash
 python3 tools/perception/audit_frame_time.py \
-  --manifest config/baselines/lidar_frame_time_c0_v1.json \
+  --manifest config/baselines/lidar_frame_time_c0_v2.json \
   --storage-root '/mnt/d/morai dataset/shahn03' \
   --run-id '<registered-new-run-id>' --output '/artifacts/<registered-new-run-id>' \
   --probes /tmp/asmc-c0-probes --replay "$PWD/devel/lib/asmc_lidar/lidar_replay"
@@ -100,4 +102,23 @@ python3 tools/perception/frame_time/summarize_live.py \
 Supply statistics are subscriber arrival times, not pure algorithm latency.
 Different device and camera clocks are never subtracted without a proven mapping.
 See [2026-10-26 results](../../../docs/records/lidar/2026-10-26-frame-time-baseline.md)
-for the actual inputs, live-test limitations and the next production fix.
+for the original inputs and live-test limitations, and the
+[GPS recovery follow-up](../../../docs/records/bridge/2026-10-26-gps-validity-recovery.md)
+for the production fix in this PR.
+
+`replay_gps_recovery.py` additionally compares pre-fix and fixed native bridge
+probes against the already-recorded live GPS/IMU inputs. VehicleState arrival
+events are query triggers, not an exact reconstruction of ROS callback timing.
+Keep the pre-fix binary SHA (or rebuild the v1 revision) and register a fresh output:
+
+```bash
+python3 tools/perception/frame_time/replay_gps_recovery.py \
+  --input '/artifacts/<recorded-live-run>/timing.bag' \
+  --baseline-probe /tmp/c0-bridge-state-before-gps-fix \
+  --fixed-probe /tmp/asmc-c0-probes/bridge_state_probe \
+  --output '/artifacts/<registered-new-run>/gps-recovery'
+```
+
+The actual ROS publication contract is also covered by
+`rostest asmc_bridge vehicle_state.test` in an isolated master. It publishes only
+`/bridge_fixture/*` synthetic sensors/state and never vehicle controls.
