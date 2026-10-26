@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from audit_frame_time import ROOT, invariant, read, sha, stats, write_json
 
@@ -47,12 +48,15 @@ def main(args):
                 env = os.environ.copy()
                 if name == 'before':
                     env['LD_LIBRARY_PATH'] = str(args.before_lib) + ':' + env.get('LD_LIBRARY_PATH', '')
-                command = ['/usr/bin/time', '-f', '{"wall_s":%e,"user_s":%U,"system_s":%S,"rss_kib":%M}',
-                           '-o', str(directory / 'resource.json'), str(getattr(args, name)),
+                command = [str(getattr(args, name)),
                            '--bag', str(bag), '--config', str(ROOT / 'src/asmc_lidar/config/lidar_pipeline.yaml'),
                            '--package-share', str(ROOT / 'src/asmc_lidar'), '--output', str(directory / 'trace.jsonl')]
                 with (directory / 'replay.log').open('xb') as log:
-                    subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+                    # A fresh small supervisor prevents the native child from
+                    # inheriting the large JSON-comparison parent's RSS watermark.
+                    subprocess.run([sys.executable, __file__, '--measure-child',
+                        str(directory / 'resource.json'), *command], env=env,
+                        stdout=log, stderr=subprocess.STDOUT, check=True)
                 rows = list(read(directory / 'trace.jsonl'))
                 outputs[name] = [behavior(r) for r in rows]
                 report['runs'].append(dict(dataset=item['id'], repeat=repeat, variant=name, scans=len(rows),
@@ -71,6 +75,14 @@ def main(args):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] == '--measure-child':
+        started = time.perf_counter()
+        child = subprocess.Popen(sys.argv[3:])
+        _, status, usage = os.wait4(child.pid, 0)
+        child.returncode = os.WEXITSTATUS(status) if os.WIFEXITED(status) else -os.WTERMSIG(status)
+        write_json(Path(sys.argv[2]), dict(wall_s=time.perf_counter()-started,
+            user_s=usage.ru_utime, system_s=usage.ru_stime, rss_kib=usage.ru_maxrss))
+        sys.exit(child.returncode)
     p = argparse.ArgumentParser(description=__doc__)
     for name in ('before', 'after', 'before-lib', 'manifest', 'storage-root', 'output'):
         p.add_argument('--' + name, required=True, type=Path)
