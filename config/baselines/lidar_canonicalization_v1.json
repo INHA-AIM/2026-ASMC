@@ -1,0 +1,1968 @@
+{
+  "schema_version": 1,
+  "baseline_revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+  "purpose": "B4 canonical asmc_lidar runtime; preserve current new-path behavior, retire nested Main/Msg",
+  "legacy_sources": [
+    {
+      "path": "src/lidar+sensorfusion/.start_main.lock",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "src/lidar+sensorfusion/CATKIN_IGNORE",
+      "sha256": "a991fe6ddfc3e68c136e3804c1a7771355ccbec138a793bb03d7e6029a269009"
+    },
+    {
+      "path": "src/lidar+sensorfusion/MORAI_SENSOR_CONFIG_FINAL.json",
+      "sha256": "0e02f2a76accfb4085276896f3dfa20e8c8e84062f7eace7d79e3f0786ba376c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/MORAI_START_COMMANDS.txt",
+      "sha256": "30c4fd7bb92a5b341fad183154ef7aebcd9268ec053b8211e20363b6a1171a5c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/RUN_SENSOR_FUSION.md",
+      "sha256": "f0f994dab9284125f4095e228ec5852995ede4f87059a2c6b45b5ee11f76e941"
+    },
+    {
+      "path": "src/lidar+sensorfusion/analyze_velocity_bag.py",
+      "sha256": "788eaa487e694426b3840e49f8e39cec8dabceaeeaf3a3ad3e5d04eda66874ae"
+    },
+    {
+      "path": "src/lidar+sensorfusion/measure_velocity_response.py",
+      "sha256": "a061abdbfe986ece8ea9ba53fc657098a0e58956589dab431ac0d43412f51196"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/CMakeLists.txt",
+      "sha256": "9efca781907b0c5506782ec05e493709f348b8b8e24b9cd82ec41cd7b3ce865a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/CMakeLists.txt",
+      "sha256": "22382c142e640b90a44b271b4b5967dccd1c85432aa90c1d5894ba403f5fb6b1"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/known_static_objects.yaml",
+      "sha256": "2d8fe6e5b47215e85fbe05f03b552e06096499f0bba43e1a54166245ab4242a1"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/main.launch",
+      "sha256": "a7774d76a38f7d2cf63ce7f2c95d7f90e7cee8475d7d0b857c700b47a4bca3fb"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/package.xml",
+      "sha256": "d9f4f512a4765efc89aabc128f511641c5d755f5ba006c0fb50c0614381c4d5b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/scripts/build_known_static_object_catalog.py",
+      "sha256": "7d1c771dccb004e22e21ba594f02ce0a77cb9a86c6530299e1f0e06241fdbb99"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py",
+      "sha256": "437d39db4d7814efa30e2927941e39e9884d90017e9c52a3a71c66015a75c798"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/setting.yaml",
+      "sha256": "a6d84af1ab14015cdf555ae715cdd8288cde9f1c1ee7d8e0a96e3931751ad7a2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Camera/Camera.cpp",
+      "sha256": "39415a2d39df556d0d1b8109b2cbd04b0dd289f8f0ff0b40a4d71901a2292493"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Camera/Camera.hpp",
+      "sha256": "1bac11f0a0f25e39d92c4fcdd1e3e2de88a7c493a9f193a7bdbe3bdba1e6d304"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Camera/LaneDetection.cpp",
+      "sha256": "52770b12ebcc27fa984541c495abc7a59b5ca4d6b3f1a008782685580a03aeaa"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Camera/StopLine.cpp",
+      "sha256": "7124cd819ff23dc4b6836a2a9e43c0100dbe295d9e7be5f980beba5069001f72"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Camera/TrafficLight.cpp",
+      "sha256": "3fef4a73f4072a152f62c7562a2e5b5278f46fd2d634e2a22051d132bdb3ec4d"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/DeadReckoning/DeadReckoning.cpp",
+      "sha256": "7d5fa205c5704f9866ae7edab79b19935467ed0b688b73f13c73c17966fb6c30"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/DeadReckoning/DeadReckoning.hpp",
+      "sha256": "f23566901228535e0d00861645928909ed28a31f639cde196328804b70d31c46"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.cpp",
+      "sha256": "16069ba663e2bda6e2d720400c77c50270a4183cc0b1ee796288b3728d673bbc"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.hpp",
+      "sha256": "41cf0ed6d9f1183220f6a35cdb991f92026545787b37cb35e742d9aa61dcda8d"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundaryPublisher.cpp",
+      "sha256": "a98a4aa63188fe3ced3ec666897134cff65167991f43f8651fe91ced522c32af"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundaryPublisher.hpp",
+      "sha256": "5136354e7827f9cce67cb26ec213c0b584455d6e0faaa79866d5bccb7fb32724"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Global/Global.cpp",
+      "sha256": "707589ca0a5d043831e20f10a7b96a45cc63074268a82b2e6f305a801fd01d60"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Global/Global.hpp",
+      "sha256": "da810b4843e9d53106b4351e60cd12eb6859ecec46973c8de4576ef7b6658a3f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Clustering/Clustering.cpp",
+      "sha256": "2c80ca4c576a4ab93c6cb670bb5a5500509e8d8bb1977313b754065255cff6b3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Clustering/Clustering.hpp",
+      "sha256": "f6c5d3bce5699db032d9af622f3ec672d36b9b60eaa55f2adf12db0c9903e42a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/FrameFilter/FrameFilter.cpp",
+      "sha256": "af413aa180b26a968f413cd2052bc718e78a1d7a94764186748596dfe1fbb155"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/FrameFilter/FrameFilter.hpp",
+      "sha256": "f89b4428a7c006d3c478e0b27985c00520c9b0fc2c292aa15fec3d377d204043"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp",
+      "sha256": "b8080233674d5d188cb2ec5f96ec9c7efc518cb7963372136a976e0a8da465b0"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.hpp",
+      "sha256": "0ac41f97d1205feca7ce76d4a8fd96af225ab187a4e3ea1cd84392b849a8f6df"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/IMMFilter/IMMFilter.cpp",
+      "sha256": "b41ed97aadf35c4b6dcaf33e312ecb650d06dcb49da601fc16b7363652c6bfb1"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/IMMFilter/IMMFilter.hpp",
+      "sha256": "996c70cf2bb2bcf20223f70605b45ee27ee5093e6f81c6acc1d6765fcc0860e1"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/GroundEvidence.hpp",
+      "sha256": "b1af1be8a3a0f6f228ffbed9a9937d908351149af89409ccadded7efb1938e22"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/ImuFusion.cpp",
+      "sha256": "fa38728eb231a7f6f6f77b06f4823b53a7642364435e3598b42706ecf7389f5c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/ImuRansac.hpp",
+      "sha256": "70b378dd851d2e6b14e10cce1ad24f53358d72ae6230d6b080568c6cda75bbb7"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/Ransac.cpp",
+      "sha256": "6411f75bd17f8c079063e381b8c94c869334d080fdaab72eb1879172d62616b9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/Kalman.cpp",
+      "sha256": "b12660ab57b1433b09ab876c7fa73f8dcf38788220e263ce21708b78076615ba"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/kalman_utils.hpp",
+      "sha256": "0e7905fd97a2aa8219e58a8a86549910f44cc967a61f059283ee6c54bdb69500"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp",
+      "sha256": "73bc82e56a9e3ab5628d7d6d86f582a533ef79b44f980edfc9e539322443c9df"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.hpp",
+      "sha256": "3fd777ca746949b1be4c6e75e57be2d2509565caca2bfa8752ab3b68a5246029"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/PipelineProfile.hpp",
+      "sha256": "6356f0ed778f102f73297d8a09df65cc3e0f39c875f72a4a0f5c6baf7a0f02f2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/PipelineTrace.hpp",
+      "sha256": "2472b549128ea6376de488dd7a565914dc1c705896ceb4d8cbf2b97ed463680b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/RoiVoxel/RoiVoxel.cpp",
+      "sha256": "0d0ade13762fe75b6934203790041baa697053b17edadf4cde0589f795d64d2d"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/RoiVoxel/RoiVoxel.hpp",
+      "sha256": "87e774a14559a11f8a1485a42b1e51857504adf09740c434fc69cfda7fe9f4c0"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/MotionClassifier.cpp",
+      "sha256": "82348081d8d0db4055b3eab7232a38360a20419ec52d29c8d9befa058840ee34"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/MotionClassifier.hpp",
+      "sha256": "5e0b0a5bc9d59c3e18597124156c9b25e13cf8e14ae1c4a876d6ebbe7a019475"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/Tracking.cpp",
+      "sha256": "87a2e6c0f8b246bc7574903d0e2bf8403a16b6367c39d368d4adca3806fd213f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/WarmupMotionEvidence.hpp",
+      "sha256": "d9ff4edda59a197c1fba8a9c6020e0333caec912267f86a39996999f4ff31764"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/tracking_utils.hpp",
+      "sha256": "ef6e8dd459374afffff8308d990a481de7d37708d7387dcc78d2932bef1e3967"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/TunnelFilter/TunnelFilterCore.cpp",
+      "sha256": "a0bef37f2ebb5aac53930514b02b345b668a57987c72b739af62259cb6c59dd3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/TunnelFilter/TunnelFilterCore.hpp",
+      "sha256": "b19eb10786cb1bb869b71106492fe1a02d656396a3ee8fb5da563b65a50d8f15"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/UDPReceive/LiDARReceiver.cpp",
+      "sha256": "3b589d44ac3d167e28c89a9c74444d7015ae1bf3a25c087b3fc54a6f6beecb57"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/UDPReceive/LiDARReceiver.hpp",
+      "sha256": "48579e358c2bc0da2030e072d94f45ba1d26a188e3741a6250b49335e624d0e8"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Visualization/Visualization.cpp",
+      "sha256": "db324fd0276b3fe8c1f1d8487cb91c3f4cb492b89afe16d10c672cfd957e7c96"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/Visualization/Visualization.hpp",
+      "sha256": "2bf6f170a9bed8381a907988014e7b85658c13112ccc62610bf2e17292cbb9c2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Lidar/revision.txt",
+      "sha256": "6793772a7b3481d5cef2c03dcf8a6545ec0a57a77d39c11beb2d6bb6d74ff1b7"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Parser/GpsSanityFilter.cpp",
+      "sha256": "ff1090eb1f5b1f7a47b2e3a32731a3fcc7f6f82c2bab634aec272f0961233b82"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Parser/GpsSanityFilter.hpp",
+      "sha256": "aa57d7bc5fc1043cefe2fa903e25561e9f0ce37a0f8845a93506e0149369682a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp",
+      "sha256": "c39cc330ccbeb97ee016b4ada6becc912bcf9672baf64ce81beb753746c6d7a8"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Parser/Parser.hpp",
+      "sha256": "4ebfbcd14199b6d3419c3c92d6a940358b43a8cc1d654dc5483563123a90ee80"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.cpp",
+      "sha256": "8f783df20824e014c510cb42c4211916e69077fff28a2eb3c13b1bb87c0a5385"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.hpp",
+      "sha256": "119efb502b9ce08e25672baca5bf9bc4c32d6e1f0e14b9d801068361d6fd8038"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableBoundaryFilter.cpp",
+      "sha256": "088796cf4153a6cf9c7a791ce6c96b670624fc2a28473daa4e3b2ab3929b2b7a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableBoundaryFilter.hpp",
+      "sha256": "9e39f5c92a508e91963de0385cb9613949fb7b5b649431e2694294b1434b2786"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableFootprint.cpp",
+      "sha256": "e8028b9cca8e07f97471c23642c4db1e8cd0dfd43110a18e5bd59090e31e092e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableFootprint.hpp",
+      "sha256": "2e52903fc0978c9547ea833223610842145fe5b09dd00be07d288a4d2affc194"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.cpp",
+      "sha256": "2533f5d0e7a56da2b96b8b877e568aff658747937749b43bd7f2a428185ff493"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.hpp",
+      "sha256": "c9b861d95d6b8acb7abe2b9cccb96446f9f570b4eeba158a2484e12e639c6935"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectAdapter.cpp",
+      "sha256": "82d07dcd686f0efe59686809bef83f72abada91b375baf6b6636d72e17ce99e3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectAdapter.hpp",
+      "sha256": "68aac75f6ca683ef3865db8c46f369d14086ddc680c81a31bc0a0e8581744bb2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp",
+      "sha256": "1c760a48ed1f2e0fc9be28b349a1d62f2ef2a8fc711d86f39f9ebeb5644e2339"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.hpp",
+      "sha256": "eff6c628373cbe121af149a66b3f735a1d905803fe15ddd269d3bc442227979b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectSender.cpp",
+      "sha256": "b52b5d6dd3fbccb254c29813de869516c69b9185fb7393a2c18917a8ee4ef6d4"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectSender.hpp",
+      "sha256": "1e3aa05c54823b64eeb28673207252854c604ce433e4b87467edd9b16cdaf221"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectTypes.hpp",
+      "sha256": "345206350c0eda0530e0344ddbfed9f0d36b9ad1698a0322a861c893521bff25"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.cpp",
+      "sha256": "82ce7022935fd9d5c5bbd2a67e543fde5c1bf695ff4fca7181b69eca1b3d0edd"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.hpp",
+      "sha256": "ec68501a9fdfb0e0f26f69c9826c2ae56733e4a3d70932de03f5213932192127"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.cpp",
+      "sha256": "5002bd37a541099842b07b03e4f213acc5338601b1dd50c3c34a577277d7d451"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.hpp",
+      "sha256": "eec1d67938fd5999ce6938e2b469b0e0205f2032a3ff77c40d4516962578d575"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp",
+      "sha256": "38021f638ca2fcd1fb0bfe3c1d21e11305329147ea9b287ca7c15e5a3a6ef0a2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionClassPolicy.hpp",
+      "sha256": "3ccf2be51840c682a7e7dc3ec6af3d53c0c5abeec135d38d38e16ea1dd8b5e7a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionClassState.hpp",
+      "sha256": "70311226df274fa340cad4ef380bffca247088216d9461a423105eaab9606734"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionLiDAR.cpp",
+      "sha256": "81d57dddacf8d800937fbbdfd968d48d05303f619458527e1ddaa98a01d79a69"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionStateTrace.hpp",
+      "sha256": "e0958747025923739e114ae0b88f7cfbf90b9b2d90c24d8ceb4adc7df3f7ff6b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionTimeMatcher.hpp",
+      "sha256": "e0a452954260ced78ea4373d4f2a5b43a20eb7c4cfbe99b266d3b05ee5533a7c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionTrace.hpp",
+      "sha256": "1c8f56b950316454bc5e1aa10b4ef43aad4d23b9852f816e6f6bb30e6d146191"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/SensorFusion/SensorFusion.cpp",
+      "sha256": "2665005c5288453af0a68c421f8e53bfc5876ef8721b16792c6defcfba904813"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/SensorFusion/SensorFusion.hpp",
+      "sha256": "6c6161f42a336db3595d9f8c6ff4e67dbd5c63b8f2c4f07b1a9c53b8908d2035"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/src/main.cpp",
+      "sha256": "74547ba3cb92669a2c0dd7667ed02a36ca9dfc171ead123e51feffc63ae77373"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/camera_objects_adapter.test",
+      "sha256": "6617432bb998cba285a68f77537017ba0d5dc4d00ef2c694a11f67a203d484c4"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/frame_boundary.test",
+      "sha256": "8286dfdf4d0e1aeffa65ef362659370d0b557a7c7e345fe9f6241112e871696f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/fusion_class_trace_replay.cpp",
+      "sha256": "0c4bafb4c1c40d0c4e99db95bfdffd727deab86f8b0d86c5f734c6087761a3f6"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/fusion_continuous_trace_replay.cpp",
+      "sha256": "b2d88795702acc70bb67b210825203138768e61e2d60dfcf0e91964d09ee0d4b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/lidar_continuous_replay.cpp",
+      "sha256": "7d0c464578d9503577c8d51fb967ca85af7a24219f2a18d1aa44f5d48f09d972"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_adaptive_clustering.cpp",
+      "sha256": "8eafa530f27bf9113eaba311229e8e342a16e1d87bf31f9f6b1a11f3e6d56d47"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_camera_inference_ownership.py",
+      "sha256": "7159031913ff75dab1523a8070a13919def1d7b2d3dc749297a9c657de8b0245"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_camera_objects_adapter.py",
+      "sha256": "f627a87fd7737e35cedcefb5b208b1ee6c94ddf4e3cefc9d7cedb271fb8ddd0f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_camera_objects_adapter_ros.py",
+      "sha256": "dc4841b23e8703764b6cc16c01c36e55d730d7f3101866a5321a38466d73e460"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_drivable_boundary_filter.cpp",
+      "sha256": "f4dc5f5d1cb53ee1d659dd0298d059bc4c1104ff66e88e81f9e7384c20b6b782"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_drivable_footprint.cpp",
+      "sha256": "2aa782d0fe4a4bc6e8a8c920114416e58df6a9cb7f505f6c3f7db7a95b5818d9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_frame_boundary_ros.cpp",
+      "sha256": "cabd15567a23ee64b04c49b6e96f4911537b366e3d6732fcda5d5aa8331df86d"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_fusion_class_policy.cpp",
+      "sha256": "ebf460330a285ba0766690763483c1471ce9ec7238c76bcb758160b6ef57ff67"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_fusion_continuous_replay.py",
+      "sha256": "528f22d309ddc9f09590d8abe1837cca3e898d9ddbe4a5ea232fb8697de72e73"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_fusion_replay.cpp",
+      "sha256": "0764e682e6fb4d416f47b9992f10840167f44f176f9256d0e0aaaff8fb6a33a7"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_fusion_state_propagation.cpp",
+      "sha256": "a04ad844819dbcd40785dcbe4825327d006f7193345ffd584e68b13dbb41cb39"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_fusion_time_matcher.cpp",
+      "sha256": "f54fc5ef3ef4726de9252ec29ab8236f3e1a7a0e1eea9f215b9413ad55d7b9ca"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_gps_sanity_filter.cpp",
+      "sha256": "78e053d5d1ab565d65cdd72848044aa66909b600bab3118fb4a08f66044bf4f8"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_ground_evidence.cpp",
+      "sha256": "2e34ee478a15f02b05f884bd81ef286b5f03657a58eaf918bba37c216efa4e02"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_known_static_object_filter.cpp",
+      "sha256": "837f7bce99b292d5d4e54c267eabd1d5ca05a32045f7bdd752e6717fa2e55b4a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_motion_classifier.cpp",
+      "sha256": "a2a02ec7b1e5e1531b7b561fdb8864655a3da52f7fed2b3aa8540e0edd4eb619"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_planner_object_adapter.cpp",
+      "sha256": "7b81ce9d8b3538881344044857231ebebaef151af46f1022b00fd3cddfa6e455"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_planning_relevance_filter.cpp",
+      "sha256": "0cb08ccce599d8643021a269470f37d6f2ef5b702378f16d10bca34e6246f4c3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_runtime_globals.cpp",
+      "sha256": "6ee38e9d9b7f9a64ddd17a67fafd6a0eafb545d6706faec454fa58dedc71f53b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_sensor_pose_history.cpp",
+      "sha256": "e11bba51892c9a8d09c70f36ddd5d72d41e4807d33d47f7b8f1f9c082e447fbd"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_static_structure_exclusion_filter.cpp",
+      "sha256": "70b32c9dfd1aa0c13a83312a689da935345e89962b4eb3e25a3099588b31e1b5"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_tracking_association.cpp",
+      "sha256": "941cd26e9767fd0d12b404d55a85e9d2e5bc71ae4ea3dbed959708abc059332c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_tunnel_filter_core.cpp",
+      "sha256": "4fe9f3d99049cc6d7b47fd441a8b48d879ed760028c89b932ec70f8ea3e7fa00"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Main/test/test_warmup_motion_evidence.cpp",
+      "sha256": "cb3b95db6aec7629417c353c7e9dd06210b287692ea3e8dc600dcf2d2275c994"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Msg/CMakeLists.txt",
+      "sha256": "ba56cc678cb6269c650bca7f4e18c3115355d4f682c85cc761a7a2014a4aa54e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Msg/msg/TrackedObject.msg",
+      "sha256": "ae55b648ac346875e8fc9cb61695d8fb3d3ce414cd325b234227ae65564a2c59"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Msg/msg/TrackedObjectArray.msg",
+      "sha256": "e3ae24a4bc2f200044be54f8f219504fa2e721f58b846c188b4ce38ed111251a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Msg/msg/Yolo_bbox.msg",
+      "sha256": "e18df2183cb2d19ebfcf5e03fd01aec48a93fe83f156197460b8f848eb1bf4b8"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Msg/msg/Yolo_bbox_arr.msg",
+      "sha256": "24f263d3ccbb64879554db75104f6e1283f12e875478a48982af60c39371d214"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/Msg/package.xml",
+      "sha256": "58125f8136bc2e0e78f0f66fdc6502bde254b340f00dcd16ea251065e797c6f3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/CMakeLists.txt",
+      "sha256": "cfff33fcf1a5428db3593ba32dc15268b16e33e5cf5dc90a176d1d7eea0811bd"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/README.md",
+      "sha256": "d871e0b51835078d665a58f89c88964378dac3d0169e6d95d967338fddb08c37"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/AttachmentDeviceState.msg",
+      "sha256": "7ca39dd16ecd6584e846da885d5dfce5cc1acac79ae16be4e179563e64b70440"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/CMDConveyor.msg",
+      "sha256": "7ad7833ff46bffc32fbd69e210a8ef38caa2956dd9ae3a083485d69a7bc7163c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/CollisionData.msg",
+      "sha256": "0df1eedd0639246faf38078b92f2519bf052a8a64165149f42c4f2c549368ae6"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/Competition.msg",
+      "sha256": "63ae934b4fa204694ec9ecd455fffa315515fd488099c9775e45209de0fb31c2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/Conveyor.msg",
+      "sha256": "9da74243ae6fd4bc1fb5fc4c8a589a641c818f1daf6a6b1009b8055bceabaa5e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/CtrlCmd.msg",
+      "sha256": "decbc7270384f85fa33ab1d084754931a09ddbc9425cc5b8625e60e43dd2aa5e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/DdCtrlCmd.msg",
+      "sha256": "274753f5ae6dd4fc677e5e29a0e2fbf2b3c16166f2505df39f7be88815c48786"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/DillyCmd.msg",
+      "sha256": "9d2385e4686776d290ca9b2317e8940f454cc2da04aa219314d3390ccc07a998"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/DillyCmdResponse.msg",
+      "sha256": "050088de3458282d2e645b5fba838e068192dc1fe8ec9052d9afbb0455527197"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ENU.msg",
+      "sha256": "82d9c600b22e5f3ad2505b61002852947044a4328ddf3730266c998ec1d79b14"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ERP42Info.msg",
+      "sha256": "e85a9143cee21a7d68c5ebcc8c585bd512a91b82c41db058696e85761622696b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/EgoDdVehicleStatus.msg",
+      "sha256": "715c37bb0cd80e8f4a7481991c5bab459a0eb107688a29d5d780dc7977043856"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/EgoDetailStatus.msg",
+      "sha256": "25adb4ab08c6f2e3add8793f829a1e348063912602c784f572c367834ad22bb3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/EgoNoisyStatus.msg",
+      "sha256": "3c35165ec3cdcf55dc5948d2a108a1e3b0df02ed9a11ceb81692cc153cd9e4b7"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/EgoVehicleStatus.msg",
+      "sha256": "4a9c7255e41433d977a845988854eec1f179a84f8de8301c98434069ffa331c4"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/EgoVehicleStatusExtended.msg",
+      "sha256": "3e214f357dba42aba39867549d523855a1341279660bab241639167ea4a0adb3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/EventInfo.msg",
+      "sha256": "cea4bc7c942914d74a51c4518b0c0d7a0dcd1eb397a51c9d7f2509403783a48e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ExternalForce.msg",
+      "sha256": "5d5f4bec0465384bfed7ca54b083931d5f49092b3e9e8497c8aafe198f4a9572"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/FaultInjection_Controller.msg",
+      "sha256": "d0ef4735fb04b2b0028b91eacadc9c7a6150e6683c046bc1a12c2a7ea38c23c6"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/FaultInjection_Response.msg",
+      "sha256": "81110ce9a1ff7d9619983ed198705ef86a8fc195cf176ca11c5326565a7af58e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/FaultInjection_Sensor.msg",
+      "sha256": "7f328241a8d6e36efa27c71ae228eb3011afa6a9a7cbc77f90458bb1a96e58da"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/FaultInjection_Tire.msg",
+      "sha256": "de6dc2b5e78cfc215247e1a50adf4c18cd719005656397df8e3d2c05bdb8cd5e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/FaultStatusInfo.msg",
+      "sha256": "57701a8f7151a13b564ceb78ff3daf7f6da4bbbbbee41dca050254d7254aa602"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/FaultStatusInfo_Overall.msg",
+      "sha256": "e344c7f9727fa7b18a225de093e2b4a2bd28b7eb66d70728f8b0ae443746349a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/FaultStatusInfo_Sensor.msg",
+      "sha256": "73afeab942f3c332b543c419ee08ac273261f52d46d6700683bd5ceea1bbf17f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/FaultStatusInfo_Vehicle.msg",
+      "sha256": "3a13c0f0fbd2d1d9855cb73e86a754eccd653a7e6f09b400b681f0b587e5b6ef"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/GPSMessage.msg",
+      "sha256": "aeaade6bcf0e4fe01bdc471526e2efe52dcbd2d2fa619743b6f3452d5b13d69b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/GVDirectCmd.msg",
+      "sha256": "d5990e2a6b4f943d7680461360b95b379e945591ed9f5c7d2ca3f51f04b7b875"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/GVStateCmd.msg",
+      "sha256": "c5b8eb977b06048f7db58e5cffbf557920e416f2d5ec266adc14228201addce3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/GeoVector3Message.msg",
+      "sha256": "0d0c93dcd9cb6e5f1ee6168b77b3917eb08a607db9e04f99d9714d539b998009"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/GetTrafficLightStatus.msg",
+      "sha256": "45b2f251d7d2a62141bdf33af305a5589501af98d2d5b85c0044b40a31851572"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/GhostMessage.msg",
+      "sha256": "2556128dc06317a141ee6398da37e7a5bedd92f87883376656120cc16f955e45"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/GripperState.msg",
+      "sha256": "17462158aca51b5b4b90d50fb8069571bde074fa780024dad2465d97b9771fc2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/IntersectionControl.msg",
+      "sha256": "d013784d387468c3543fc7c4688b5c44078e857e50ea317d3c374e8888933f76"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/IntersectionStatus.msg",
+      "sha256": "d013784d387468c3543fc7c4688b5c44078e857e50ea317d3c374e8888933f76"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/IntscnTL.msg",
+      "sha256": "c94f39d54a6d53b9d5a05f4f3f2cae32ee6594045302ec8eafef691fa6706327"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/Lamps.msg",
+      "sha256": "eddce26a5ff28765e20db9c7a39b41ab3ce784b685831cab2b290a77df3bd8e9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MSITCustomMessage.msg",
+      "sha256": "18488fab153ffaced6ecf07932db6f5be36ce1e55d18ffd3c7ce740b26694b0f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ManipulatorControl.msg",
+      "sha256": "1e8dbfb2cbc96776527763a78b7d5e3fcb48d5b02630818818afd49c7052115c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MapSpec.msg",
+      "sha256": "5c4da4e38caf5e7b090cab82db7f134e7a4c041e438c117aa241da3868ec5d86"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MapSpecIndex.msg",
+      "sha256": "b55ab23d5a8a68e78ab0c4c34c4d09e30e3267b214f17a321889cfea6e954bc4"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MoraiSimProcHandle.msg",
+      "sha256": "5ed508ccc281328ef84cbcb68aeb501f8356fdcfe35e4f580a35674de109a20b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MoraiSimProcStatus.msg",
+      "sha256": "20978faa4ea4ebf1784b929eea03a938e6deeb3296f2b73dc6d1c69e2f57d8ba"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MoraiSrvResponse.msg",
+      "sha256": "5fdc6141482ec6844a3aae8041aa164ff6d1d3f983323f5210645bf11a852a63"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MoraiTLIndex.msg",
+      "sha256": "004bea493c2f76628d60d8d39145df82d6afbc9bf41c8fcf8949882b446db6ca"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MoraiTLInfo.msg",
+      "sha256": "345fafb0aa3ebd98eff3112964123f55c03c187248f11bf4ef28e67d58d60345"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MultiEgoSetting.msg",
+      "sha256": "f3c63315a20c9ffeb57beead30dc2a71009dfbf2ff2e40adf326997390ec1cc2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MultiPlayEventRequest.msg",
+      "sha256": "763b1b7752a8337a19b7f88814be78dc16ea39ba68fc77cac20316be25eaf280"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/MultiPlayEventResponse.msg",
+      "sha256": "050088de3458282d2e645b5fba838e068192dc1fe8ec9052d9afbb0455527197"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/NpcGhostCmd.msg",
+      "sha256": "faa1cf8015b0da2e182318de40b29efd5d416492ba7d9ce654549ce688f0b76f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/NpcGhostInfo.msg",
+      "sha256": "81ec6ee3ca461c007321d941fae2a5e9b735354f15f446f9d3f42ea68f581748"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ObjectStatus.msg",
+      "sha256": "c043e44831ec4d5b68bce0beba85853d4565c6c705bec8562d1fad6aee52d3b9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ObjectStatusExtended.msg",
+      "sha256": "10a07bce8a95ed7000399c397a5ec49b233ed2f17bdc0b84a5c2765c4d8702c7"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ObjectStatusList.msg",
+      "sha256": "3b180c10bdf94dbc774c4b0cb07848580162feb2d6ab23b5def743731e5764cd"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ObjectStatusListExtended.msg",
+      "sha256": "ad845c67d3f20577e074bd0395474260ac1d32f74e35038c2c4ae7650e5b8504"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/Obstacle.msg",
+      "sha256": "7ea1cdecaaaf0613eee7a73808642dc815a5d8011deabc3b224251a15e965cf0"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/Obstacles.msg",
+      "sha256": "91650a81c6d3684e2f0ef04b9593d7ac360eb6c662b87ab152ad91b6249b98a3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/PRCtrlCmd.msg",
+      "sha256": "8b7757cebe96f046635dcf3254292d33c74015a5a37a6e7c5751375d25cb58c2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/PREvent.msg",
+      "sha256": "21778eb7b5d5468924b146bd3b53822eb47f5823975a50f6fc9a2acfb1a2d4a0"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/PRStatus.msg",
+      "sha256": "26995cc98a34a3301a6d967a0dfb1fd50f8742c4e172fe1b77125c12565d65a6"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/RPY.msg",
+      "sha256": "db7c9089ba40732d480aa5b06b2dd916c1cade6cb018a01c4caf1d641060ef4a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/RadarDetection.msg",
+      "sha256": "09b6cb7b9d039213d43471f840afb3e118a3ee57e1d5791674c137471673db80"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/RadarDetections.msg",
+      "sha256": "9c67c0b6f381f9b2686c6b74db5095c15e47f62c1fc0e7fea79479b6ba17f35a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ReplayInfo.msg",
+      "sha256": "ce36e4fd09b4cb6112ba1aef0facf737b1c138ca1192fef18cee335b393b9712"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/RobotOutput.msg",
+      "sha256": "c3839b2bc76c36424f296d1710ab937df0d9f6fe1fbfa5402bc174059de2d7ff"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/RobotPose.msg",
+      "sha256": "15ed42c402f58c21f844dabef6ae0467008ab4c4110a45893718cd974198c396"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/RobotState.msg",
+      "sha256": "f9cd367b839759a682cf311174d7d5452d3fdb47a3df5044b58c0a1c493ddc7a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SVADC.msg",
+      "sha256": "cea63823ffbf0e979735f20af910967907e784493768ad285301bae20cbe2f21"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SaveSensorData.msg",
+      "sha256": "112377b7590ec7cfd3097ff65d284bd297696a2e0b365d0208021ac9f7790866"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ScenarioLoad.msg",
+      "sha256": "f65071b5acccefbcad0cf1259b910a36082c6504bfd75fca8e0c249a042a4cb7"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SensorPosControl.msg",
+      "sha256": "0c867d6543e60d696a583e8ef6d2d7430f289625afb38dd6d6f955ba81328717"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SetTrafficLight.msg",
+      "sha256": "9b180dacbc4bc127c326d95baa8ef7171125d87245cf69c34b1b642d7bf4e53c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ShipCtrlCmd.msg",
+      "sha256": "0f1861ad645fb9fa539dd58e08350d6a021c1deecfefe79ad1d3bd50673396f6"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/ShipState.msg",
+      "sha256": "b70b58ad4d2ef4046b2fdb491cce44782e929fdf9571d22909629813b9e538bb"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SkateboardCtrlCmd.msg",
+      "sha256": "13f712af2802174d2f2f20c8302e166e1d7d6b36aee7e5361678a103a3f801eb"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SkateboardStatus.msg",
+      "sha256": "bf74c0b9f790bb4485870fc7c2e16aa698873a99ce4b4d478db5fd03710338f4"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SkidSteer6wUGVCtrlCmd.msg",
+      "sha256": "0b062f1a6d4e44f630e3d35c3a862d4576fad4c93b9859f0c1aa0c2701a61075"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SkidSteer6wUGVStatus.msg",
+      "sha256": "18d63093be70e4b4c40269f774d159c58d5c819f633b4db21f53bed1bba5c8fd"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SyncModeAddObject.msg",
+      "sha256": "c8f9d24de69b52a4865cea9ff8a4773c70732aa7205865ddc51b587536cf4068"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SyncModeCmd.msg",
+      "sha256": "e1de433920d3ae28e3b5ae06dcd2b9a549578c0693eac5c615157b06a2ef5db9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SyncModeCmdResponse.msg",
+      "sha256": "7ce115ff91084f8215346adc8a7a5b052cbbb28914783f7e1cc29b5ac4734d1b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SyncModeCtrlCmd.msg",
+      "sha256": "6f94d33be709e1723a768bb0f62de183b6fbf1810e6f87feadaeabd2b1721331"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SyncModeInfo.msg",
+      "sha256": "c6a8b6367b62296e1bf25162bb704dee2b952bad3b6c95685738160e01393870"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SyncModeRemoveObject.msg",
+      "sha256": "1587f346115a5aacaeafe786010f496423d30cba88e9768b665c18a600d02c52"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SyncModeResultResponse.msg",
+      "sha256": "5fdc6141482ec6844a3aae8041aa164ff6d1d3f983323f5210645bf11a852a63"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SyncModeScenarioLoad.msg",
+      "sha256": "c54cf01957ef943f05cab824c75028f69dc1e72201c09c3602a3eb5f29b64908"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/SyncModeSetGear.msg",
+      "sha256": "0a8c38880adf80d7825d80b94bdc9962f41fb9e7a8fe27eaf89fbf69d3242294"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/TOF.msg",
+      "sha256": "286d9c1142627945209cf6a2a4519654e1c1f30cf288b4f391d8d5513551fd7a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/TrafficLight.msg",
+      "sha256": "04b84a476f2f5f8ab5576ffd254d04aef8f7a5873acd47ba20dd6c7e530a5fa7"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/Transforms.msg",
+      "sha256": "c4eca5d2ce24bce7c7a12af0eed741dad50bbb5ab3f3abe97b1bf73ad0902a90"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/UGVServeSkidCtrlCmd.msg",
+      "sha256": "1bb8f408ff34170c8ceaeaa75c37a14ff0d8211a1e43018a6f6e7ebf613798e9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/VehicleCollision.msg",
+      "sha256": "e488930ea8fb05a7454a00bddc6920228543bb4d52b8dbbbe2a84e1e3cb3723a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/VehicleCollisionData.msg",
+      "sha256": "5840f8b73c8133c6313d59a48c273fdfc712b4b8378ae5c0fa932cbe400b9dc8"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/VehicleSpec.msg",
+      "sha256": "8f148bc6b3f1f16be8453ac06857550da8dbf06edd863406bca2ef0547fe0037"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/VehicleSpecIndex.msg",
+      "sha256": "9a2aacce47335c05f53e358fb14b1e18f7bf46afc3cd67c530710c5c96c3b8fc"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/VelocityCmd.msg",
+      "sha256": "85ca5ccada396cce3828e10a49b1819324510d9e3646f51156c69864c750b245"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/WaitForTick.msg",
+      "sha256": "57617dc5bd8b5776783ab691c33cc386364d9a2e76c8e96001dc19a57c80e8ac"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/WaitForTickResponse.msg",
+      "sha256": "ef6d59a79fdf4bba87c9a225a01d9f542ebb7b176874d36a89cda215659bddad"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/WheelControl.msg",
+      "sha256": "9d37a587388c358fe620fdec3d91bcafb2a5733174a6e1bf365345fb0afc7993"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/WoowaDillyStatus.msg",
+      "sha256": "2028150353af7db892a50afc3853ed63725a1047f1eca08250a482f56bd18643"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/msg/XYZ.msg",
+      "sha256": "56a0e0da8274dc8cd2ead5bdd7f3596ef913a26cf358968d50f5531f0dc246d6"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/package.xml",
+      "sha256": "0697fe0871f772ef50e7b7cd47d8217821ceb7781211411de55cf912beaa8071"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/FaultInjectionCtrlSrv.srv",
+      "sha256": "c5e6b56f73a81f7307dfd8a5329b92f1062166fb9b1330fec2025193c9ff2986"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/FaultInjectionSensorSrv.srv",
+      "sha256": "3734670fa1dca1d4a005155a1b90561d937f70bc1eb4a75f744fda160643a948"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/FaultInjectionTireSrv.srv",
+      "sha256": "206889fca0db2eaa97fedba51485f2a1ea57e879588e08fb47bf8237e5f712a6"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiEventCmdSrv.srv",
+      "sha256": "1a36ad9729b002d9ad998b23ad8b5b510adfb2b451a3bdcf74c6f1819a3f18ed"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiMapSpecSrv.srv",
+      "sha256": "89a0da8b6bd0aaedbf2afbf07fc2548a1f9af7a8151cb442c2c380b6e1c321cc"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiScenarioLoadSrv.srv",
+      "sha256": "16463d32343476f569615839d5fc46c79c57eecd3bee261262952d649c0317b7"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiSimProcSrv.srv",
+      "sha256": "a118abd9fd7525d2a04548cfbc9d8617508bd0d414ac9c555d1dca91729ae391"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiSyncModeAddObjectSrv.srv",
+      "sha256": "44cbfb0fd0f810042d8337f6fbaa5e30e6af76326a33aa006eedf95335603d04"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiSyncModeCmdSrv.srv",
+      "sha256": "133a2bf54b97285bb772c337a1c946bf00276faa3c04f29ae8816fa9a0125acb"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiSyncModeCtrlCmdSrv.srv",
+      "sha256": "4283c4331605b4c797e21a033d7b036550211b66976721a0f2cc657ca747dee9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiSyncModeRemoveObjectSrv.srv",
+      "sha256": "1e2b602c7b57dcd9404ceeedbaba2d337c025bdf6b6356547b1c904651517d2a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiSyncModeSLSrv.srv",
+      "sha256": "0fd986086f0dd72a9416fa1e0ec4349080f8fb8823b4c0a1b612eed82d2bf2ee"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiSyncModeSetGearSrv.srv",
+      "sha256": "0bbb7e57146063cef655f633d7bb98481c9e1e96300fbddb7870583d79baa242"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiTLInfoSrv.srv",
+      "sha256": "6a00aa1abaddf61472944b4d6934b4daffc7311ecb1dafcfd8a4da6eb4ec37fd"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiVehicleSpecSrv.srv",
+      "sha256": "fa8ad76fbc2586c301a1e050acc24424a9e68de3c62d8fc142c4b879469964b5"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MoraiWaitForTickSrv.srv",
+      "sha256": "e89a0900537b47ebcea636ec930411a7f6e6190e8abca6c8e0eaa34d44973eb9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/MultiPlayEventSrv.srv",
+      "sha256": "3245a37012a5ed291f295e79717c04b87fe9311f8ab3d834b025b86ec715787c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/PREventSrv.srv",
+      "sha256": "67a636c01ece94b5ee76fa9896101b7336f27821ddbbdacf2ff554c6a4c00954"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/morai_msgs/srv/WoowaDillyEventCmdSrv.srv",
+      "sha256": "8ae3f49f284e6296158b05aabbe9e3e3d7e7ef4117cbdfded20e89548b2898f5"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/.github/ISSUE_TEMPLATE/bug_report.md",
+      "sha256": "3a4b63665fa20180d64fe2c7c18892d9c6d6783849c42c25dcace9d67c272109"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/.github/ISSUE_TEMPLATE/feature_request.md",
+      "sha256": "90613f3fc675d4d7c5df92989d91b716c528d34c2de3697572358f6aafe39c32"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/.github/workflows/basic-build-ci.yaml",
+      "sha256": "246c45a9be7f59544e0a052291b3d803fcbf7d391a92bf836ad03db33b5e92b4"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/.gitignore",
+      "sha256": "f9e1d159205efcbcddaf185e38f90df36bf3f261cb4e32bbf68651800744b750"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/COPYING",
+      "sha256": "fa58565b853d84ba2182dae2918fbc291253a079c639b79c76534bba14b22b18"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/README.md",
+      "sha256": "b31874462fa18f82e5f4eae3a4ad9b59feb41d600f4345335b065a1e6bd5997e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne/CHANGELOG.rst",
+      "sha256": "dc0c6e433bc3074fe4fa4cf9630d2a1984b482e738b4c8ec01408e8088525752"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne/CMakeLists.txt",
+      "sha256": "248705070981d2242ef4b5a1c0644bcb2d6557685cb531c0dd76686eef3c641d"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne/package.xml",
+      "sha256": "e6f4cfdafca99a29e59e2adaf4b4c92016b62e61b67c2e80ef20111c353e3f44"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/CHANGELOG.rst",
+      "sha256": "dbe467b48a5f246ca6619fbfd656530102e6298251cc24fc7e55a2b5eb1c6c1e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/CMakeLists.txt",
+      "sha256": "0e193f8911564cfbe323bfb280bfce85cd6df7933702334442eb000b591f401c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/cfg/VelodyneNode.cfg",
+      "sha256": "eb0b7fef7f6784d392fb9ca7c4615d92b6a88a9b7e00ff8ee810bf0dd91cb24d"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/include/velodyne_driver/driver.h",
+      "sha256": "925a004bb4fe66590b9dfd6fd28e8e0261177af08f9b12f9607ea5a8f7aab22c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/include/velodyne_driver/input.h",
+      "sha256": "1570b7c205838c40dd07995c5b637e71a0071de64459d14677c43ac55b8f0360"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/include/velodyne_driver/ring_sequence.h",
+      "sha256": "1fe773ed8609d400befa29935446c530d4c8b340feba9288a4bc84a87123c4fc"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/include/velodyne_driver/time_conversion.hpp",
+      "sha256": "8e8733d4f4b233176dfe347eaf6245c5be05336c350dc7e482b2b60551989882"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/launch/nodelet_manager.launch",
+      "sha256": "d4482f4e36ef1b589c3602be1037030231b041140f245ed6cd051dd77987d2ba"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/mainpage.dox",
+      "sha256": "6ad556fea00d9bb8a8b460ea6ca5c2409aa6066e7804e3cec9c0345f6e059e1c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/nodelet_velodyne.xml",
+      "sha256": "a434fc02594c6d55a34017f4722dd11c7dc43f7597f8228cc4d7aa78348bfb38"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/package.xml",
+      "sha256": "2efbbb88fa11a9b6c0a6e697e948d991effdc8e039230f5e4e7c44cdbb0f7665"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/driver/CMakeLists.txt",
+      "sha256": "eb08bff5b069136cd31bec0e3f11f2f3fbc256578190232f48b4b49bae1657f5"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/driver/driver.cc",
+      "sha256": "e405bed75b2af1472587868143decdb01523d569eb21aa603f0e7da213bdae35"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/driver/nodelet.cc",
+      "sha256": "17b6a62bf4db3021dc878ab3b7116d51435d6356e0dec865eb5c190b9c65685c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/driver/velodyne_node.cc",
+      "sha256": "260f16d80cd7b324ec8e2ad1dc1309586ba6b3422e7b0d18353fdd7d81a9c975"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/lib/CMakeLists.txt",
+      "sha256": "731550180ef72121c0a767fab09b3a8ef61b384db945fa8d8a68fdef463632fa"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/lib/input.cc",
+      "sha256": "d26bc71f6641b931189bf853395a06ef179f08340103c8b76d2cba937a605714"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/vdump",
+      "sha256": "0df1c4f927abcc7f236a5e8aa30ad658add28dc9fb420bca2d1146acc35d9d69"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/tests/diagnostic_agg.yaml",
+      "sha256": "45b45b43cd9f3c1dab0924d782480fdc94d4ce52420d02bf58ee666363008b99"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/tests/pcap_32e_node_hertz.test",
+      "sha256": "d618ce409c463833a14574ebee1e5d9f2dccf1400535cba7e86b6a4b0f1f2342"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/tests/pcap_32e_nodelet_hertz.test",
+      "sha256": "c17d54f2ce6e5995d9a200f2e3a34286d50cc7ef3ecaf44019a7652415ac4945"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/tests/pcap_node_hertz.test",
+      "sha256": "85e98d1f46e22b92feca68507368d886a297937ad09605a046e19295a2aa3e8d"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/tests/pcap_nodelet_hertz.test",
+      "sha256": "1073e60dec4d51a828688887616243a31587bfce3a4eef5d5ec77be9baadd0c8"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/tests/pcap_vlp16_node_hertz.test",
+      "sha256": "042d5f7c269b6377e42a467003db90e3ad8da001c9271d448745e6bd63d3a06c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/tests/pcap_vlp16_nodelet_hertz.test",
+      "sha256": "0a035b86aea942196de1491bef9cc3e5ff22badd3278c343644840eb86c0376f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_driver/tests/timeconversiontest.cpp",
+      "sha256": "030006c0387f2f6d8a9cef8d021c5f1fc3cc08da701fca6a55db2e9f50701c58"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/CHANGELOG.rst",
+      "sha256": "74314981432539f6562fda23d69515e296f4ca34da8cccf031c00fc0fc9467f3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/CMakeLists.txt",
+      "sha256": "73b0934879081f895440261a7bd85b3d46fc2b396dad6edddd8274b51132f489"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/cfg/VelodyneLaserScan.cfg",
+      "sha256": "1b805fcfad8bad31d5c916d3f88f8af291176fcf56e28d6f279f62ced752d8c2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/include/velodyne_laserscan/velodyne_laserscan.h",
+      "sha256": "b92ca6c48635b945a251d5a981b968d67709c38d0de1eff71db4d89e383e7d73"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/nodelets.xml",
+      "sha256": "8c367390e3a0052a1fde27a3ff69b198d5aaba4189686acb94c7b727eae047a5"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/package.xml",
+      "sha256": "ff4525c02053cbf7fb8d274ad36a2eae609690c21353995ae124d4d58490d80b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/src/node.cpp",
+      "sha256": "bd3cbe95d77bc0c63f59c4cb2bb56f474e7a062c1a800beba83fe3bbeff7dfaf"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/src/nodelet.cpp",
+      "sha256": "11991e3aab56f8ce0a329ee5029098ee1f053072ad24e28253f5a2962fed5323"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/src/velodyne_laserscan.cpp",
+      "sha256": "92fabcd1e77aa2bd41856387264e3816f290cebe837f9acf6217e16c50daf91f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/tests/CMakeLists.txt",
+      "sha256": "3b376c89e2356446647f29186cf823526c47bed62300e216fa44ec56505c15c9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/tests/lazy_subscriber.cpp",
+      "sha256": "3c39f89932c0e97d4c9e3c9253e3e6388d28cb1b67d383939fdbb9ba63c89867"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/tests/lazy_subscriber_node.test",
+      "sha256": "c485cfd512c79a6767c298b878119cc585bb3cf0d4c5ac6feaae8c97dc224b17"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/tests/lazy_subscriber_nodelet.test",
+      "sha256": "8e5be6dd61e2f08953c910418db6862da3f91a50549a17ba6d1f741544879d5c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/tests/system.cpp",
+      "sha256": "a961703779e1a5a786475fdc1efb9364ec071cf08dfbb344c15280ab5842f142"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/tests/system_node.test",
+      "sha256": "ab124af71a845c37fadd38f1623b420cb05a55f6cf9af67335dd89fb85deafe6"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/tests/system_nodelet.test",
+      "sha256": "23ec1dce17e30c33eb585abe39edc3397d62acc5cf61c073fe112f5706264067"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_msgs/CHANGELOG.rst",
+      "sha256": "86df3ff2aceef44fcfc5c96d887b23c5bd05436e86275f119331cbf7647f6637"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_msgs/CMakeLists.txt",
+      "sha256": "27d1290720b894efe4ab23080e9c020ae3eeda2b5ff0a7cd59e674dfd6d2bf82"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_msgs/mainpage.dox",
+      "sha256": "c5643ba94df79d90ef220f44b017710d64efcf11b1dccdbbc5d028f490e0602a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_msgs/msg/VelodynePacket.msg",
+      "sha256": "87a00a34f67cb7320d810736dc10b575c63db73dd25a4c46a0dccd0f41916ee0"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_msgs/msg/VelodyneScan.msg",
+      "sha256": "2ae7c1ca2f72bb060be7bdbd65ec5cd781529ca4be44e2593a522470aa228a1a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_msgs/package.xml",
+      "sha256": "8fb6241be57531a0ba607d9e33f513a7c0b20c8a98e21b715df84909fc799987"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pcl/CHANGELOG.rst",
+      "sha256": "6d3c9fe6a06e22226486f296d6d1615b7fefd717e0efff18d15b0bf172a20f6d"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pcl/CMakeLists.txt",
+      "sha256": "a751fedbb6da9c797ad82c0c887447db92c8f4ce15085b70d819b5fdd0a56cc5"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pcl/README.md",
+      "sha256": "1436dc61e5a9b47e242e9b101cc779f3530c8a420a5dcdb10b81e99fd1ec9450"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pcl/include/velodyne_pcl/point_types.h",
+      "sha256": "1c708bf4de2c563257d2ce485c89b44d5fbc9deae55b649ea5710d15637afe79"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pcl/package.xml",
+      "sha256": "e83fb370067004fca910d35b041c5092d9daa4b3eaac1e7b19f6a6b0a17b934b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/CHANGELOG.rst",
+      "sha256": "e795ba6d83516e3a029b0a4e75bfcf165f9d157388416e75fde4eabf7679967f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/CMakeLists.txt",
+      "sha256": "fd372c451cb66d77f6cc298dfbda316ecf05d5e50b427c8537e92e02f0043402"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/cfg/TransformNode.cfg",
+      "sha256": "fb0ee6a343ed7e2479ddcafdaf268b48930c843a268f96aa7b93376470949551"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/include/velodyne_pointcloud/calibration.h",
+      "sha256": "95509bd523448e40e9b2b8ad5ec7168c32dcf1448c4897a27126e03eab48cbf7"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/include/velodyne_pointcloud/datacontainerbase.h",
+      "sha256": "f141dbc69a22b11cf4e1fdf3c13d93651c23953dbe9365279748543de8eb5a63"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/include/velodyne_pointcloud/organized_cloudXYZIRT.h",
+      "sha256": "f77c10d893e2d7848b068df707d70b45b966ce197997196ad83732ab1c5ad55c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/include/velodyne_pointcloud/pointcloudXYZIRT.h",
+      "sha256": "3a5b181d40f84081cccb62dcc8876bfd34a9ff50938412ecee6f72347bfad1a1"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/include/velodyne_pointcloud/rawdata.h",
+      "sha256": "467fa257d67c13b7fed7858b234c08b2f75eda79fa65b14f2c4b10341282b8b8"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/include/velodyne_pointcloud/transform.h",
+      "sha256": "2217ed5d05d7b1d7a981a2d5823d5aed5409d54dd4744bcd5639b35e972af562"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/32e_points.launch",
+      "sha256": "16a5a2f393a7f45668e9832b3588a1b52d8abd41e3106193812c97cd024da8dd"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/64e_S3.launch",
+      "sha256": "59aa27567725979adfd1f4ec3ce3519e65423a94466d0be03fa9375bfa5affa9"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/VLP-32C_points.launch",
+      "sha256": "1276099d0023fa25944fca2add1c56dc4ae597313727b076603dd5efc4cb4598"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/VLP16_points.launch",
+      "sha256": "e431eea8ad3f1483f75b715389568536024aa9ac40afeee03e43e692a77e0ac4"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/VLS128_points.launch",
+      "sha256": "33a5af52c7e389aa2e6932d9b42236652ec4f33bf26b347526c137629714535d"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/laserscan_nodelet.launch",
+      "sha256": "b8ee2d4227799e1428954c61fada7e533fdd120ae345ed0e8849e35e1201849b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/transform_nodelet.launch",
+      "sha256": "455b75a4fe114371d24e4796ec66f7bf4e574f9e7781b774df49a2a625be1dc3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/mainpage.dox",
+      "sha256": "a0b90fc0af5627158b25dfb10850b9a62ce507316249624169da6d5cb3d8c934"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/nodelets.xml",
+      "sha256": "e6d11b9087518bdd2f720297eff9a4d08d17780daedbccc31d696e408ccf5579"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/package.xml",
+      "sha256": "868ccd6556523e7162e3be52a536771500022d546bf8fd8cea4132be274588de"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/params/32db.yaml",
+      "sha256": "6add15673fe0bf6febd99096f7310f6c1545dcc9830ffcc71a74f90fb4779d05"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/params/64e_s2.1-sztaki.yaml",
+      "sha256": "9ee677683fa268c67656ff646c643f55029abafd9ce50366e949d1067c2a144e"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/params/64e_s3-xiesc.yaml",
+      "sha256": "380d46e31160ffe3ecd678f53148a0e02698ccd43d9c7fb72b7be3fad513bfd8"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/params/64e_utexas.yaml",
+      "sha256": "2d8c588cb53b6e23f8c4cb8ac690b82faf3efdf448f0d2534c149d969a8c257a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/params/VLP16_hires_db.yaml",
+      "sha256": "b4a1dc1d38b995dbb19ad426ec12cf8aba10740cd8764133348d95c337bc9c52"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/params/VLP16db.yaml",
+      "sha256": "171e5fbf3c17256ca1fdc4098a3d190f668d414b1212a8f90bbf0fe6956a11bc"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/params/VLS128.yaml",
+      "sha256": "e88312606c4ee59b2ce97ed5e5d131754b756fc600c44fd209d7a9bdbc085f91"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/params/VeloView-VLP-32C.yaml",
+      "sha256": "0de4774bc80d465c1e7c6fcbeda01c5c71efa696f97fdaf7d372a2c83f28598f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/params/rviz_points.vcg",
+      "sha256": "393f0a18ea97ac1ca02abdc40c97eadf57837a6af26ec5966acaeb3252d6f55f"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/scripts/add_two_pt.py",
+      "sha256": "81199699af9d91a0901e3a5622c2c828f287e4b19b0d099eb1d485fe9073ffe5"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/scripts/gen_calibration.py",
+      "sha256": "502445cf5a6319b1e77e2e365216865286205ed0cc4643e631bef223462052db"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/conversions/CMakeLists.txt",
+      "sha256": "228089d0930594d330fa2b73b328541609a6efcfeff71b814a16420679b2ee19"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/conversions/organized_cloudXYZIRT.cc",
+      "sha256": "1ee431c409fe06d1d5d1f959ade76e4132108cdff817ee38a512b54e170ac4ed"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/conversions/pointcloudXYZIRT.cc",
+      "sha256": "8189c67b10809e584988759227f0e4beada5ddb2105c4ea8d62062ed87acc36b"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/conversions/transform.cc",
+      "sha256": "daac16d713a348859ad6ce0abbadf0f5c4f871f73fbcf420e6286ba519b5b768"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/conversions/transform_node.cc",
+      "sha256": "3e41c0ac67ae91acb29748160074ca0892e6e17b7057e96452457f81c0ba81b1"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/conversions/transform_nodelet.cc",
+      "sha256": "6d011ecdaff77b1d0055fb53d64389b09bd2c93fcc9fcc824c54048e09215457"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/lib/CMakeLists.txt",
+      "sha256": "e665cb60454d6c6085509f1c9179907c519e176cef12c27f4360d4dd79e216b6"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/lib/calibration.cc",
+      "sha256": "8e31932f91a4c6a76d39a3b70fcaf7e80f3e3971d4950b4f9a28c4dcddd023ea"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/lib/rawdata.cc",
+      "sha256": "bf4f6459f5f9e8a1cb37028a911f43e9e57454cd30f291108360d120c910a0c0"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/32db.xml",
+      "sha256": "125089178c4799f9646f26f0bd46573dbd31e88dc4ff7a99bbc76f43ab65d0e4"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/64e_s2.1-sztaki.xml",
+      "sha256": "9cb1a16ebd869fb8c3820c90634e282a1d880527ef9d961f47632324de527390"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/CMakeLists.txt",
+      "sha256": "055c2459e97fc8199720f1860066ca6dbb752b3a43303dbf7de5374270d826c8"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/angles-calibrated.yaml",
+      "sha256": "44e3f20e71bea97f76c7e9f362f54a475491a36f06ebd13f0b76846591eab554"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/angles.yaml",
+      "sha256": "20774d118881c4c7c0dbbab402553cff2941f5dc623eb3ad26a34b12e4cc17f3"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/empty.xml",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/issue_84_float_intensities.yaml",
+      "sha256": "75e68907651630df183c6a082192d01c3a0f83aa6ffdb34f78f16586110d7a3c"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/static_vehicle_tf.launch",
+      "sha256": "a47486c83051e294e52fa4963707e82180b01de44961181cb2a28dd6054050ae"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/test_calibration.cpp",
+      "sha256": "cb4120ce5f94077edca305541cbff807732a200b38629907f7d16708915d27a4"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/test_db_without_intensities.xml",
+      "sha256": "1173b47084e87806454f2225da020d95aff4aa2b98414b74d84da17ce8c08033"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/transform_node_32e_hz.test",
+      "sha256": "470e976b998ebd1ff3dae27b0cebac642b6939758704e3c3633964a249d2f403"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/transform_node_64e_s2.1_hz.test",
+      "sha256": "cdbffca0c5f08f1f5e020f1549573e726b753d0bfc9a017166d818d73ce264a1"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/transform_node_hz.test",
+      "sha256": "fc9a07e00a524c014c0a34d09c68955b465feeb1966b76145bc98ee530df1b99"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/transform_node_vlp16_hz.test",
+      "sha256": "342695d8165f9711cd82160497561610d28ef159216b1242bbb7c65c69ca9203"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/transform_nodelet_32e_hz.test",
+      "sha256": "6589b9350d882996f585abc0f216723d504dacf88a39006ef3b3534df8822e26"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/transform_nodelet_64e_s2.1_hz.test",
+      "sha256": "6951cc1945c1ccbca8f59cfd10a8822364624d4b7744f592e79b35b48598c36a"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/transform_nodelet_hz.test",
+      "sha256": "bdb4671dc8e4bd9d5f411287fc490deb9b2a846a1e5d446145fb21d8a37e5289"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/transform_nodelet_vlp16_hz.test",
+      "sha256": "15e2b265dff627790d3bd39459f774e37f7d130060d2bad9452324a5b9539f28"
+    },
+    {
+      "path": "src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/two_nodelet_managers.test",
+      "sha256": "7648b24568e302839db4f35db73e399f8a891bc719bbc796e1933673800d08ca"
+    },
+    {
+      "path": "src/lidar+sensorfusion/start_main.sh",
+      "sha256": "b52507606141f2d4e74b907be27f0441a4e740fa066812f34cda6b1f9ccd7e39"
+    },
+    {
+      "path": "src/lidar+sensorfusion/start_rosbridge.sh",
+      "sha256": "911496a846717797a46c3418f1c97d8c47023834a1e49847856843590074e298"
+    },
+    {
+      "path": "src/lidar+sensorfusion/tools_offline_bag_test.sh",
+      "sha256": "620b7475f86d1faf2905f1111f945920f864abdaff491afd01c53a6d6b0681b2"
+    },
+    {
+      "path": "src/lidar+sensorfusion/verify_morai_setup.sh",
+      "sha256": "fb879e4e447c54b56f2ed6c37221d2a9c9094892c1f56ac011c0cd8af0b93e1b"
+    }
+  ],
+  "runtime_sources": [
+    {
+      "path": "src/asmc_lidar/config/autonav_v3.yaml",
+      "sha256": "e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88"
+    },
+    {
+      "path": "src/asmc_lidar/config/camera_objects.yaml",
+      "sha256": "d9e450e1a0c1f3028554a6fab75dacebe353c426b89b7c8324dd8092256730c0"
+    },
+    {
+      "path": "src/asmc_lidar/config/delivery/provenance.yaml",
+      "sha256": "cd55456f5502503d22e0ac1f47129b2248a3c095b55604c11bb4d7330139fef8"
+    },
+    {
+      "path": "src/asmc_lidar/config/hd_map_audit/manifest.json",
+      "sha256": "13c517e3fffee3bfd64fabdb6f473c6c668d3d87e2142c38ff756e3650b98f2e"
+    },
+    {
+      "path": "src/asmc_lidar/config/lidar_pipeline.yaml",
+      "sha256": "3ba22270599474819739e600df1d99505acd4bc332458bdabfcb8411b4b0cf89"
+    },
+    {
+      "path": "src/asmc_lidar/examples/camera_observation_probe.cpp",
+      "sha256": "18d8dfc63ec05b3e9f7dd3c7910dd64b58a4cfc5dd81a2fd365eb8c0e5ecc321"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/core/frame_time.hpp",
+      "sha256": "3985acac561db4f94b94f9372b703d5f31df343415c530bbf523bf670578f204"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/core/imu_selection.hpp",
+      "sha256": "4729d03c5fa0fec28e129e9efccc23781711783aa6feac19b7796144dde514f5"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/core/processing_epoch.hpp",
+      "sha256": "b418c82699b17b630de1a54d6b4f93ec0df0cb0725ea50a29fb701dc16e826ae"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/core/source_time.hpp",
+      "sha256": "9da7b08f25436df31bc31f0c55686d4e99bcbe064d03e6929d2f28293566423a"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/core/types.hpp",
+      "sha256": "681568c96334eb83e9cf6e0c0e6dbbcbc6f21bfb60988748866b5fd1be213071"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/detection/clustering.hpp",
+      "sha256": "1200b1e313e8215571cbee8b8a362c4e071d34aaa7c392c6236efc528df1f72c"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/detection/detections.hpp",
+      "sha256": "409c3aadfb6f39a49495d0e69707ddf34956fda9bc526710b51454ce684b15a1"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/detection/obb.hpp",
+      "sha256": "e7523b36ab8ae906fc05cf19f3ca6b9fffc8c385ac3ecff4e3e3ba921016aa21"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/detection/observation.hpp",
+      "sha256": "7ac4cc981c32fa53cff93957b7072bf0c95757be5bd53d893795dba6c2f92ea0"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/experimental/tunnel_filter_stage.hpp",
+      "sha256": "67d37aa2aa78e11d4367e17ed1c37a4dced223e492e6ffb8671552af5996e7ff"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/filtering/delivery_filters.hpp",
+      "sha256": "5f60175d4a118e51c0e8bedfc0812efc5ea58274d1e2e804b4d86be1fd48884b"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/filtering/delivery_object.hpp",
+      "sha256": "ffc069ea44e21db368a3edee127ab5c5a24e04101c4b3ea6fd20ccb1992d166c"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/filtering/delivery_preview.hpp",
+      "sha256": "a3576396e0d9b29e9b70fa6d34c3ece4c15bbf3c9bd31bcde01537997a5419da"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/filtering/hd_map_audit.hpp",
+      "sha256": "d179b0774300995a56a5874172e7c3765c7f62082d25cc37ca1cad0ee68a2f24"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/filtering/observation_quality.hpp",
+      "sha256": "712a7c0d159115458652a37952041bbb10a6453ebf5eb7ff826fdd53e596ffc6"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/fusion/camera_observations.hpp",
+      "sha256": "5edd90a513aa20611f3dc1e43ae220478394f4f95478aa82ea22d16a546af181"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/fusion/classification.hpp",
+      "sha256": "08fe0178cbf1c8d2a3752102749ab85f1bb8ace522a166c422aec4d1865c57b8"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/fusion/front_camera_fusion.hpp",
+      "sha256": "da6860a9eaab0fc44a5c6472595a80c4ae432db32e7f1e72438c85cea95f495d"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/fusion/fusion_policy.hpp",
+      "sha256": "e26fe9640160278c4744256e0050e64ab2df8e61a44ad34e4af070784f8ac67d"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/geometry/bounded_pose.hpp",
+      "sha256": "974bd38f3f5816c41849184efbb6d9a510698b6f339be8f69915a86e67f107da"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/geometry/camera_calibration.hpp",
+      "sha256": "c942011b64ad9148c1d48228c743f55af3513fb4deb696f6334351d827a26a1d"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/geometry/pose_history.hpp",
+      "sha256": "fd04d184351d1eeeef73c997c4876bde214613cba6fd07169dea1b32e940309f"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/geometry/projection.hpp",
+      "sha256": "d5a80e9cf65cb39d61ad11042dd1f6f5e675f856c4f040884ce5a194df1ed09c"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/geometry/scan_frame.hpp",
+      "sha256": "97c47fc2fe6af6c2eefadb734d957a3c89e42f4a535a27380ba0ba30fec22528"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/pipeline/pipeline.hpp",
+      "sha256": "c6f195fee8ae0a0687bec10714c6c364b163cebdf4ed228ac9145803f2097e96"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/pipeline/stage_observer.hpp",
+      "sha256": "2781ee36f0ac0a96fe71c02e112e4438544344253f2772dca0b742831bd88f17"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/preprocessing/ground.hpp",
+      "sha256": "1b69188a929ad7c7fec0e6f016b9fb57c209dcc7b6f9289c87eaaae493b6f0f5"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/preprocessing/preprocessing.hpp",
+      "sha256": "3353dc5993c00bf2d693aa09ad3070d80c8a5f44916a69499334e1452d8d5a43"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/ros/camera_receiver.hpp",
+      "sha256": "952ddb5fe9f0571743120f68db526d2f6907bbe12fbdecbc9930fd118d1f46be"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/ros/debug_publisher.hpp",
+      "sha256": "4dad185edfdf3837d0dc76aa9f3f42a6b79f7f17651147a34f51b3dfd6172da1"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/ros/ros_inputs.hpp",
+      "sha256": "1a0fc301768cf47e89e85f64df8359303807a5519326e400f1f04506b8d806cc"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/ros/runtime.hpp",
+      "sha256": "2768c1449118a4504957a01ab53c6a81580dc214667cb5486274bae208a2598a"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/ros/scan_trace.hpp",
+      "sha256": "760943341d2896ee8338804146916d30b851bce336054fbc1b9a673e0282b1ee"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/tracking/hungarian.hpp",
+      "sha256": "e50200b3966ee0b2d92613e775bda9b0c58dd140aaaeb30d09aa5f92aab9bbfe"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/tracking/kalman.hpp",
+      "sha256": "2ea4b95290418f0b6e16a5c7ed38a320928251082699a89387271e7022841b96"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/tracking/motion_display.hpp",
+      "sha256": "8e309c23f6fe6c94dd38e13d1b7f4ee9d219c1e9358fa82f2d12ea99fb92b13f"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/tracking/motion_evidence.hpp",
+      "sha256": "411700879dd66092ff42aed51d39ed8189dcd40880cf08db2b22c93bafb4b5ed"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/tracking/track.hpp",
+      "sha256": "92978e01f6919455b832405a99a01429d34221a3762df2c152c4450f3efbc43b"
+    },
+    {
+      "path": "src/asmc_lidar/include/asmc_lidar/tracking/tracker.hpp",
+      "sha256": "8dad9d8bb4d988dab2e6147e906884e5720c6264d2c049378a3a96130e364f20"
+    },
+    {
+      "path": "src/asmc_lidar/src/core/frame_time_core.cpp",
+      "sha256": "dc99ebb746dd6cddba169e81cffdb3629ab553dfb2acf916838263f0d6eeb6d2"
+    },
+    {
+      "path": "src/asmc_lidar/src/detection/clustering.cpp",
+      "sha256": "755ea3f791751b28f54a921336125088999e06df8b99fe23d376a4bdf6445201"
+    },
+    {
+      "path": "src/asmc_lidar/src/detection/detections.cpp",
+      "sha256": "d2750f3fba6894f51b3c5d4e41bd7ca1bc3dfba48b43f0d7696b5c209da3361e"
+    },
+    {
+      "path": "src/asmc_lidar/src/detection/obb.cpp",
+      "sha256": "8084f9b53a424a6fdba0c77174f2e34f4ff30760cbd58432ec5dfab4afd47bf8"
+    },
+    {
+      "path": "src/asmc_lidar/src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.cpp",
+      "sha256": "a0bef37f2ebb5aac53930514b02b345b668a57987c72b739af62259cb6c59dd3"
+    },
+    {
+      "path": "src/asmc_lidar/src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.hpp",
+      "sha256": "b19eb10786cb1bb869b71106492fe1a02d656396a3ee8fb5da563b65a50d8f15"
+    },
+    {
+      "path": "src/asmc_lidar/src/experimental/tunnel_filter_stage.cpp",
+      "sha256": "f5f45bbf3cc4988979fb6fe8e6116c8d40a305ebe08715e27235adedad442816"
+    },
+    {
+      "path": "src/asmc_lidar/src/filtering/delivery_preview.cpp",
+      "sha256": "408d23066d4e010285a5f1d1bcc1fc9bcc84d614017fe261cf2be98a6d656627"
+    },
+    {
+      "path": "src/asmc_lidar/src/filtering/hd_map_audit.cpp",
+      "sha256": "f5ff971b079c02305bf7b6a32dfa36da5962db6b3a39e1afe665124b04cfa5eb"
+    },
+    {
+      "path": "src/asmc_lidar/src/filtering/observation_quality.cpp",
+      "sha256": "fac4933626b4b8b4e5223bc99c96688ffb5b8f80c71f18487135c0e4cd236034"
+    },
+    {
+      "path": "src/asmc_lidar/src/fusion/buffer_camera_source.cpp",
+      "sha256": "bf1492990d42b13c3c9d46b0b0da0969834f7ca0ec6d571b5beff5e6d48a95a2"
+    },
+    {
+      "path": "src/asmc_lidar/src/fusion/camera_observations.cpp",
+      "sha256": "cb5c07c246929f372cf704ab92a19c46a02fd3d99a25953448e568a1652b23f9"
+    },
+    {
+      "path": "src/asmc_lidar/src/fusion/front_camera_fusion.cpp",
+      "sha256": "6fb9e0aa23c971476561f0e953d5c689627bb9bcd6088ef2f18bde1f64348aeb"
+    },
+    {
+      "path": "src/asmc_lidar/src/geometry/bounded_pose.cpp",
+      "sha256": "257124211e81a169175efe6f6336b1a67b23c22b46fac1e0d926d73705a56b7f"
+    },
+    {
+      "path": "src/asmc_lidar/src/geometry/camera_calibration.cpp",
+      "sha256": "12bc4aceca2c585f6099fef2aa76d4b80c9a4157447ad526872c7a45c1bae3ec"
+    },
+    {
+      "path": "src/asmc_lidar/src/geometry/gps_ingest.cpp",
+      "sha256": "459868f6c4a0a21ea2f94939499103025291d74fae4fc1306f87e8b9c2d0a55a"
+    },
+    {
+      "path": "src/asmc_lidar/src/geometry/pose_history.cpp",
+      "sha256": "15b933629ab9c620bc6449e99300bfe6f483143d51cdf0c3e8d2094bde0696f4"
+    },
+    {
+      "path": "src/asmc_lidar/src/geometry/projection.cpp",
+      "sha256": "5e442f565743fed55de2dde4f6a0e4557a5bdbf6c278a93c4643944e7a667f26"
+    },
+    {
+      "path": "src/asmc_lidar/src/geometry/scan_frame.cpp",
+      "sha256": "13c74274c4a08ec9b30729e0ce4db4d8fe44ad879b3735b1262c261e20b0da4b"
+    },
+    {
+      "path": "src/asmc_lidar/src/pipeline/pipeline.cpp",
+      "sha256": "23fc5baa6d530f6a31f595185c87580db08e815952e26e3b5c75840909e5139a"
+    },
+    {
+      "path": "src/asmc_lidar/src/preprocessing/ground_filter.cpp",
+      "sha256": "2c7b2abe7b24cc1e896446cc73d6630866ed733ca3a383669f384309b3514aa0"
+    },
+    {
+      "path": "src/asmc_lidar/src/preprocessing/leveling.cpp",
+      "sha256": "614a8b5cb35df969d89981714a70e872093783c95e0dd1f86123548e61148555"
+    },
+    {
+      "path": "src/asmc_lidar/src/preprocessing/roi_voxel.cpp",
+      "sha256": "f2ad729f2843213b43a744dc68e8f1cd422c3e49b99dffae982c5bef93976261"
+    },
+    {
+      "path": "src/asmc_lidar/src/ros/camera_receiver.cpp",
+      "sha256": "2e69f70a39b36f43699ac0bb6b8567a7a0339aeb1df8a79764ce1011599db953"
+    },
+    {
+      "path": "src/asmc_lidar/src/ros/debug_publisher.cpp",
+      "sha256": "27f2ac3a5960c5dd7a7a98b300fe4a40536efaf81b758f0ae3dd03ca1fb80154"
+    },
+    {
+      "path": "src/asmc_lidar/src/ros/lidar_pipeline_node.cpp",
+      "sha256": "fc7664c017ea454ae9a2d7ea1dfbcb86809bcbf84ac03cf78a905c14c568ca55"
+    },
+    {
+      "path": "src/asmc_lidar/src/ros/ros_inputs.cpp",
+      "sha256": "4482d83ba8d296752af9878463f89491496231d5d0f3e1250f290a87abdcd035"
+    },
+    {
+      "path": "src/asmc_lidar/src/ros/runtime.cpp",
+      "sha256": "fbad46a4767588f063e9698d804e7c10bd69a95177499566f69f07e97cf27adb"
+    },
+    {
+      "path": "src/asmc_lidar/src/ros/runtime_config.cpp",
+      "sha256": "aa11bf6156d68a03c6935a6dbb2bea137bcc6a402cdaca1cd1e13eaf18b154db"
+    },
+    {
+      "path": "src/asmc_lidar/src/ros/typed_output.cpp",
+      "sha256": "1f39eca079a8e103de56edc3efb6904cd06937f6029199c4a34f11576fe2b7ee"
+    },
+    {
+      "path": "src/asmc_lidar/src/tracking/hungarian.cpp",
+      "sha256": "3d381b7f813cf40c06c3cdee92a7ddbeba8445068359f50eb9907380fd5fa020"
+    },
+    {
+      "path": "src/asmc_lidar/src/tracking/kalman.cpp",
+      "sha256": "1ace0d17598ad17dc4ddde576aef10916a08bd4461be7c7f22edfc6a12354bf4"
+    },
+    {
+      "path": "src/asmc_lidar/src/tracking/motion_display.cpp",
+      "sha256": "4563fa10ef9535597f788935c8913f7b57dfad5f7e877065a00f553b7c87819b"
+    },
+    {
+      "path": "src/asmc_lidar/src/tracking/tracker.cpp",
+      "sha256": "88fbe8d889bc8468943d0714a95c4325a5179dd15d43b3f27c41207f583be084"
+    },
+    {
+      "path": "src/asmc_lidar/test/camera_buffer_test.cpp",
+      "sha256": "90701118c6990e62e4dfbb9783738cf88293688898d3f506177ff3146ec9f1d6"
+    },
+    {
+      "path": "src/asmc_lidar/test/camera_calibration_test.cpp",
+      "sha256": "1daa85aba4a5433d24c44387124c707ddb5ec0f5edd38793a827c9add6c63ad9"
+    },
+    {
+      "path": "src/asmc_lidar/test/camera_receiver_ros_test.cpp",
+      "sha256": "0b3434e053b47833d520285b952ce79c45fe5b169b26f4a7a989e22c4fccc950"
+    },
+    {
+      "path": "src/asmc_lidar/test/experimental/test_tunnel_filter_core.cpp",
+      "sha256": "4fe9f3d99049cc6d7b47fd441a8b48d879ed760028c89b932ec70f8ea3e7fa00"
+    },
+    {
+      "path": "src/asmc_lidar/test/frame_time_core_test.cpp",
+      "sha256": "014d315d14de97952cc88789c258383fa4f0bb5eb993f34b9c932a06e599f352"
+    },
+    {
+      "path": "src/asmc_lidar/test/geometry_boundary_test.cpp",
+      "sha256": "4c88c7f8786a3e909d2817d538fbf638e04a858cdfbf1e336fad65b4d1ddad1e"
+    },
+    {
+      "path": "src/asmc_lidar/test/hd_map_audit_probe.cpp",
+      "sha256": "de6655dd0d8b3e320f9655a8bd42392e0a22d6a990338c2cedac0be83f6b03d6"
+    },
+    {
+      "path": "src/asmc_lidar/test/imu_selection_test.cpp",
+      "sha256": "6781f736a6d73dd466c2a3815b5b2b5ff70ef74ce2aee112da9686e75e9a0905"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_clustering.cpp",
+      "sha256": "b27acf783ffa00f3b1167359907cf25969450197856ef087a9270ee26b80028b"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_front_camera_fusion.cpp",
+      "sha256": "2ba25c44ae200b1975b9d7d8cd604a4ff2de0e96ea6128fbdd353f896d12365f"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_fusion_policy.cpp",
+      "sha256": "aac1b7b67e46227693f189e1904217cc403ef3dd8277a47a6e0829eafc3c1e72"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_gps_ingest.cpp",
+      "sha256": "b956e53e5cc03155dfaabf8f3d66a7af4c68fd018512836b0a80d17ec39ad397"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_ground.cpp",
+      "sha256": "457f586ba76002e415f15b41812501998ee8265c9ca43c2431f2e2881b5aa182"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_motion_display.cpp",
+      "sha256": "41965c5e61aa42b5969fa1d2bbde55d926bfd5f4c5d5fce887b6b1a3434893b9"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_obb.cpp",
+      "sha256": "aa7b69d46b64411a77065c324efd20f660b40c9250ad3b317b00a2ec191da57e"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_observation_quality.cpp",
+      "sha256": "7290601671eb71c7fc2b0b7ebb09071207c47f7f4886f0a7341ae9b03b8ea153"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_pipeline.cpp",
+      "sha256": "b9ffb6c75943f713a3dcbd126a52035c8a51f0ccbe59c0bf689bcfe14b4e601c"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_pose_history.cpp",
+      "sha256": "67f64e683d98c5109e603da0a53f7391b2d20815852132a6912a9f06a2b1d05e"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_preprocessing.cpp",
+      "sha256": "aa66e1fd3f612112e72402d4d1499d8fb6d199ead48e69c2f04de90df8d5369c"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_scan_frame.cpp",
+      "sha256": "7963e599d49dd4317b906063a5d6d99ebd965fe3cb91db1bd763f7885f6cfc77"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_source_time.cpp",
+      "sha256": "53d46dd559a0d1139f616cafaa437b8e8cc38db6a4c0fe20f80e8547a6d6f40e"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_stage_observer.cpp",
+      "sha256": "b923552cd694b2dc1bec362138309c9b40719b81ad241b0a3d98d7565c368669"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_tracker.cpp",
+      "sha256": "f643e7eddefae88680d2a469a86eeae89cae939efdda6619799baa5c9099d386"
+    },
+    {
+      "path": "src/asmc_lidar/test/pipeline/test_tunnel_filter_stage.cpp",
+      "sha256": "8258e5ae98eda8ee5247bc5c0574a8f835faa89b8a20495502d310fa184f5c46"
+    },
+    {
+      "path": "src/asmc_lidar/test/runtime/test_delivery_preview.cpp",
+      "sha256": "07c8d636f3e62e3dff503c1d1d552968c35c3c17284c3448fcac4c8ff6bf7383"
+    },
+    {
+      "path": "src/asmc_lidar/test/runtime/test_runtime.cpp",
+      "sha256": "581c1ea3a4c39adf265020e2350578124e94a1ae6d5a0406da1285b93157a632"
+    },
+    {
+      "path": "src/asmc_lidar/test/runtime/test_typed_output.cpp",
+      "sha256": "ed6935709771d327c62fd166b5a23526fbe19e3c7aafc6c2eddf07d49b82f0ff"
+    },
+    {
+      "path": "src/asmc_lidar/tools/filter_audit/audit.yaml",
+      "sha256": "3f5757372eaf9c44aacdb0e60b9138b2c99e821d1c236c30f55a0e8ef079de47"
+    },
+    {
+      "path": "src/asmc_lidar/tools/lidar_replay.cpp",
+      "sha256": "8821300dbf338eb5c2d62f666e704a65e02599376d39ca1943433e72c5ed24c9"
+    }
+  ],
+  "public_topics": {
+    "tracks_local": "asmc_msgs/LidarTrackingObservation",
+    "tracks_map": "asmc_msgs/LidarTrackingObservation",
+    "observations_local": "asmc_msgs/LidarObservation",
+    "observations_map": "asmc_msgs/LidarObservation",
+    "objects_local": "asmc_msgs/LidarObjectArray",
+    "objects_map": "asmc_msgs/LidarObjectArray"
+  },
+  "retention": {
+    "ported": [
+      "tracking/CA Kalman, motion classifier and warmup evidence",
+      "scan-time pose/GPS sanity and camera matching/class propagation",
+      "ground evidence and observation acquisition3/release5",
+      "experimental tunnel filter"
+    ],
+    "replaced": [
+      "old road mask, center catalogs and structure rectangles by current HD-map/support/height rules",
+      "OBB clipping by preserved measured geometry and delivery selection"
+    ],
+    "retired": [
+      "UDP7510 object sender",
+      "HSV perception and LiDAR vehicle control",
+      "nested morai_msgs/velodyne build",
+      "unused alternative tracking experiments"
+    ]
+  },
+  "status": "baseline_recorded"
+}
