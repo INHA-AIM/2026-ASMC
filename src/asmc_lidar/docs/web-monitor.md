@@ -15,9 +15,12 @@ debug에 남으므로 원본 계층의 박스와 전달 배열을 구분한다. 
 
 `roslaunch asmc_lidar view.launch`는 이미 실행 중인 LiDAR의 결과를 구독하는 **읽기 전용 웹 모니터만** 띄운다.
 처리는 별도 `roslaunch asmc_lidar lidar.launch debug:=true`에서 시작한다.
+기본 `debug:=false`에서도 웹 서버는 실행되고 발행 객체 수·진단 상태를 확인할 수 있다.
+웹의 점군·OBB 그림과 필터 전후 비교에는 `debug:=true` 샘플이 필요하며, 판제 주행에는 필요하지 않다.
 목적은 "내 asmc_lidar가 실제로 어떤 점을 남겼고 어떤 객체를 추적하는지"를 확인하는 것이다.
 모니터는 ROS를 구독만 하고, 발행·서비스 호출·파라미터 변경·shell 실행을 하지 않는다.
-통합 판제 기본은 `/perception/lidar/tracks_map` 공용 추적 관측이다.
+통합 판제 기본은 `/perception/lidar/planning_observations_map`의
+`asmc_msgs/LidarPlanningObservation`이다. `tracks_map`의 분석용 속도와 구분한다.
 이 launch는 Main·planner·카메라 추론·UDP bridge·Velodyne
 driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. TunnelFilter는 기본 OFF다.
 
@@ -60,7 +63,8 @@ driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. T
   변위 x8/y3km/h)이며 별도 튜닝하지 않았다. map OBB bounds/벡터는 저장된 scan Context로
   계산하고 모든 처리 scan마다 갱신한다. GPS 무효 시 이력을 지워 UNKNOWN으로 복구한다.
   이는 속도 정확도의 주행 수락이 아니다. 동일 계산의 적용 속도/4단계 상태는 공용 관측으로
-  연결했고 판제의 `asmc_lidar` 선택에서 직접 소비한다. GPS 무효에서는 validity를 내린다.
+  연결했다. 현행 판제는 별도 `planning_observations_map`의 KF 속도 품질 계약을 소비하며,
+  분석용 `tracks_map`과 혼용하지 않는다. GPS 무효에서는 validity를 내린다.
 - `주행가능영역·실제 차선`: **`asmc_hd_map`의 최신 v7 정본**
   `config/kcity2025_compact_drivable_map.json`을 읽기 전용으로 표시한다.
   판제의 별도 v5 사본으로 자동 대체하지 않는다. 원점은 판제 `config/behavior/global_info.json`과 pipeline YAML의 map.origin을

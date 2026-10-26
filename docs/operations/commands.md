@@ -35,7 +35,8 @@ source /root/ws/devel/setup.bash
 
 ### 터미널별 실행
 
-각 행은 별도 터미널에서 foreground로 실행합니다. 이 구성과 아래 시나리오 통합 구성을 동시에 켜지 않습니다.
+각 행은 별도 터미널에서 foreground로 실행합니다. 기본 실행 명령은 인자 없이 사용하고,
+일부 모델 점검·복구에 필요한 옵션은 아래 별도 표에서 확인합니다. 이 구성과 아래 시나리오 통합 구성을 동시에 켜지 않습니다.
 
 | 순서 | 실행 | 포함·주의 |
 |---|---|---|
@@ -67,32 +68,6 @@ C/D는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [�
 공식 BDD100K Large의 추가학습 전 결과는 [별도 실험 실행 안내](../../src/asmc_camera/docs/bdd-pretrained-experiment.md)를
 따릅니다. 이진 차선 시각화 실험이며 위 B의 운영 family를 대체하지 않습니다.
 
-명시적으로 대기 실행이 필요하면 B 대신 `roslaunch asmc_camera camera.launch mode:=standby`를
-사용합니다. 다음은 그 경우에만 필요한 객체/신호등 복구 예입니다. 모드 요청자는 하나만 둡니다.
-
-```bash
-rosservice call /perception/camera/objects/set_mode '{mode: 1, target_hz: 0.0}'
-rostopic echo /perception/camera/objects/status
-# prepared=true 확인 후 echo 종료, ACTIVE
-rosservice call /perception/camera/objects/set_mode '{mode: 2, target_hz: 0.0}'
-rosservice call /perception/camera/traffic_light/set_mode '{mode: 1, target_hz: 0.0}'
-rostopic echo /perception/camera/traffic_light/status
-# 같은 generation 준비 확인 후
-rosservice call /perception/camera/traffic_light/set_mode '{mode: 2, target_hz: 0.0}'
-```
-
-Lane도 기본 상시 ACTIVE입니다. 수동으로 대기시켰다면 다음 PREPARE → prepared/pipeline_ready
-확인 → ACTIVE 순서로 복구합니다. 현재 구간 진입/이탈로 자동 중단하지 않습니다.
-
-```bash
-rosservice call /perception/camera/lane/set_mode '{mode: 1, target_hz: 0.0}'
-rostopic echo /perception/camera/lane/status
-# 준비 확인 후
-rosservice call /perception/camera/lane/set_mode '{mode: 2, target_hz: 0.0}'
-# 수동 중단이 필요한 경우에만 (기본 운용에서는 호출하지 않음)
-rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
-```
-
 ### 개별 디버그·시각화
 
 일반 사용은 위 B의 `camera.launch`와 아래 `view.launch`를 각각 한 번 실행합니다.
@@ -121,27 +96,10 @@ Family 화면은 새 family 도착 즉시 갱신합니다. 신호등도 결과 �
 Family는 원본 시각 IMU 자세·공동 폭 피팅을 기본 사용합니다. IMU/timing 근거가 부족하면
 세 뷰 모두 고정 평면·폭 prior0.35로 처리하며 명목 거리는0.36m 그대로입니다.
 [기본 전환과10분 검증](../records/camera/2026-10-18-joint-family-stabilization.md)을 확인합니다.
-고정 평면 복구가 필요하면 기존 `camera.launch`를 종료한 뒤
-`roslaunch asmc_camera _imu_compare.launch enabled:=false`로 대체합니다. `view.launch`는 그대로 사용합니다.
-[0.36m·표시 검증](../records/camera/2026-10-18-nominal-ground-and-arrival-view.md)을 함께 확인합니다.
+고정 평면 복구는 [IMU 비교·복구 안내](../records/camera/2026-10-18-joint-family-stabilization.md)를
+따릅니다. [0.36m·표시 검증](../records/camera/2026-10-18-nominal-ground-and-arrival-view.md)을 함께 확인합니다.
 `view.launch`는 시각화 worker만 시작하며, 추론 모델이나 rqt 창을 시작하지 않습니다.
-
-일부 모델만 점검할 때는 기존 `camera.launch`를 종료한 뒤 다음 중 하나로 대체합니다.
-아래 두 줄은 서로 다른 추론 실행 예시입니다.
-
-```bash
-# YOLO만 추론: lane·신호등 모델은 시작하지 않음
-roslaunch asmc_camera camera.launch models:=objects
-# 위 추론 실행을 종료한 뒤 사전학습7종만 대조
-roslaunch asmc_camera camera.launch models:=objects detector:=pretrained
-```
-
-추론은 기본 전체 실행을 유지하고 화면만 객체+차선으로 제한하려면, 기존 `view.launch`만
-종료한 뒤 다음으로 대체합니다. 신호등 추론·발행은 계속 동작합니다.
-
-```bash
-roslaunch asmc_camera view.launch models:=objects,lane
-```
+일부 모델만 추론하거나 표시하는 `models` 옵션은 아래 선택 옵션 표에서 안내합니다.
 
 `visualization.launch`는 `view.launch`와 구형 실행 경로가 공유하는 내부 시각화 구성입니다.
 단독 기본 실행은 세 표시 플래그가 모두 false라 시각화 노드를 만들지 않습니다. 일반 사용자는
@@ -152,8 +110,6 @@ GUI 종료 후 사용한 process가 남지 않았는지
 사용자/다른 작업의 프로세스를 일괄 종료하지 않습니다.
 
 ```bash
-roslaunch asmc_hd_map competition_map.launch rviz:=true
-roslaunch asmc_planner dashboard.launch
 rostopic info /perception/lidar/planning_observations_map
 rostopic info /ctrl_cmd
 rostopic hz /image_jpeg/compressed
@@ -163,11 +119,17 @@ rostopic hz /planning/vehicle/state
 rostopic echo -n 1 /morai_sensor_bridge/diagnostics
 ```
 
-HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한다고 같은 publisher를 하나 더 띄우지 않습니다.
+웹 화면은 아래 기본 명령 중 필요한 것을 별도 터미널에서 실행하고 주소를 직접 엽니다.
 
-정본 LiDAR(`asmc_lidar`)의 필터 단계·OBB·추적 결과를 브라우저에서 보려면 별도 터미널에서
-`roslaunch asmc_lidar view.launch open_browser:=true`를 실행합니다(처리는 별도 `lidar.launch debug:=true`)(`http://127.0.0.1:8091/`, 읽기 전용).
-이 launch는 모니터만 켭니다. 기존 `lidar.launch`가 있다면 두 번째 처리 노드를 시작하지 않습니다.
+| 화면 | 기본 실행 | 주소 |
+|---|---|---|
+| 판제 웹 콘솔 | `roslaunch asmc_planner dashboard.launch` | `http://127.0.0.1:8088/web/index_v2.html` |
+| LiDAR 웹 시각화 | `roslaunch asmc_lidar view.launch` | `http://127.0.0.1:8091/` |
+
+LiDAR `view.launch`는 모니터만 시작합니다. 기본 `debug:=false`에서도 발행 객체 수·진단 상태를
+확인할 수 있습니다. 웹의 OBB·점군 그림과 필터 전후·ROI 단계를 보려면 처리 노드의
+`debug` 옵션을 켭니다. 판제 주행에는 이 옵션이 필요하지 않습니다.
+기존 `lidar.launch`가 있다면 두 번째 처리 노드를 시작하지 않습니다.
 판제는 C의 `planning_observations_map`을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
 
 판제 웹은 `http://127.0.0.1:8088/web/index_v2.html`, LiDAR 웹은 `http://127.0.0.1:8091/`입니다.
@@ -178,17 +140,54 @@ HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한�
 LiDAR `debug:=true`는 중간 점군과 필터 전후 표현을 위한 샘플 발행입니다. 기본은 OFF이며
 추적·속도·HD맵/높이 필터·판제 발행은 유지됩니다. 웹 체크박스는 표시만 바꾸고 실제 발행 필터를 변경하지 않습니다.
 
-주행·웹 확인에 필요한 주요 옵션은 아래와 같습니다. 전체 목록은 [launch 인자](launch-reference.md)를 봅니다.
+### 선택 옵션·수동 모드 제어
+
+아래는 기본 실행에서 바꿀 필요가 있을 때만 사용하는 인자입니다. 일반 주행은 위 기본 명령을
+그대로 사용합니다. 전체 목록은 [launch 인자](launch-reference.md)를 봅니다.
+`camera.launch`의 `models`는 **추론할 모델**, `view.launch`의 `models`는 **표시할 결과**를 선택합니다.
+예를 들어 `models:=objects`는 객체만, `models:=objects,lane`은 객체와 차선을 선택하며
+`view.launch`에서 선택을 바꿔도 추론·발행 모델은 바뀌지 않습니다.
+실행 선택을 바꿀 때는 해당 launch를 종료한 뒤 대체하며 같은 생산자나 시각화 worker를 중복 시작하지 않습니다.
 
 | 실행 | 옵션·기본값 | 용도 |
 |---|---|---|
-| `asmc_camera camera.launch` | `models:=all`, `mode:=active` | 세 모델 상시 추론·발행; 기본 실행에는 반복 지정 불필요 |
+| `asmc_camera camera.launch` | `models:=all` | 기본 객체·차선·신호등 모두 추론. 선택값은 `objects`, `lane`, `traffic_light`의 쉼표 조합 |
+| `asmc_camera camera.launch` | `mode:=active` | 기본 상시 추론·발행. `standby`는 로드·예열 후 대기, `off`는 모델 미실행 |
+| `asmc_camera camera.launch` | `detector:=e8` | `pretrained`는 사전학습 COCO7 대조용. 가중치 변경 시 재시작 |
+| `asmc_camera camera.launch` | `confidence:=0.40`, `nms_iou:=0.50` | 현재 검증된 객체 검출 기본값 |
+| `asmc_camera view.launch` | `models:=all` | 기본 세 모델의 결과 표시. 일부 화면만 선택해도 추론은 유지 |
 | `asmc_lidar lidar.launch` | `fusion:=true` | 카메라 분류 연결. `false`는 LiDAR 단독 진단용 |
-| `asmc_lidar lidar.launch` | `debug:=false` | `true`에서 필터 전후 점군·원본/발행 객체 비교용 샘플 제공 |
+| `asmc_lidar lidar.launch` | `debug:=false` | 웹 OBB·점군 그림과 필터 전후 비교가 필요할 때 `true`; 주행에는 불필요 |
 | `asmc_lidar lidar.launch` | `rviz:=false` | 웹만 쓸 때 그대로 유지 |
 | `asmc_lidar lidar.launch` | `debug_rate_hz:=5.0`, `debug_max_points:=20000` | 화면 샘플 상한. 실제 검출·판제 발행 주기나 처리 점 수를 바꾸지 않음 |
 | `asmc_planner dashboard.launch` | `dashboard_port:=8088` | 판제 웹, 기본 state/객체 토픽은 정본 |
-| `asmc_lidar view.launch` | `dashboard_port:=8091` | LiDAR 웹. 처리 노드와 독립적인 관측용 실행 |
+| `asmc_lidar view.launch` | `dashboard_port:=8091`, `open_browser:=false` | LiDAR 웹. 처리 노드와 독립적인 관측용 실행; 주소는 직접 열기 |
+| `asmc_hd_map competition_map.launch` | `rviz:=false` | 선택 지도 publisher. `true`면 지도 RViz도 실행; 기존 지도 launch를 대체하고 중복 시작하지 않음 |
+
+명시적으로 대기 실행이 필요하면 `camera.launch`의 `mode`를 `standby`로 지정합니다. 다음은 그 경우에만 필요한 객체/신호등 복구 예입니다. 모드 요청자는 하나만 둡니다.
+
+```bash
+rosservice call /perception/camera/objects/set_mode '{mode: 1, target_hz: 0.0}'
+rostopic echo /perception/camera/objects/status
+# prepared=true 확인 후 echo 종료, ACTIVE
+rosservice call /perception/camera/objects/set_mode '{mode: 2, target_hz: 0.0}'
+rosservice call /perception/camera/traffic_light/set_mode '{mode: 1, target_hz: 0.0}'
+rostopic echo /perception/camera/traffic_light/status
+# 같은 generation 준비 확인 후
+rosservice call /perception/camera/traffic_light/set_mode '{mode: 2, target_hz: 0.0}'
+```
+
+Lane도 기본 상시 ACTIVE입니다. 수동으로 대기시켰다면 다음 PREPARE → prepared/pipeline_ready
+확인 → ACTIVE 순서로 복구합니다. 현재 구간 진입/이탈로 자동 중단하지 않습니다.
+
+```bash
+rosservice call /perception/camera/lane/set_mode '{mode: 1, target_hz: 0.0}'
+rostopic echo /perception/camera/lane/status
+# 준비 확인 후
+rosservice call /perception/camera/lane/set_mode '{mode: 2, target_hz: 0.0}'
+# 수동 중단이 필요한 경우에만 (기본 운용에서는 호출하지 않음)
+rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
+```
 
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
 카메라 공용 관측과 전방 matching 계약는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
@@ -321,8 +320,8 @@ roslaunch asmc_bridge bridge.launch \
 `--section`은 static/dynamic/roundabout/high_speed/tunnel입니다.
 난수·날씨·주행 횟수·정체 시간은 공유 YAML, PC 주소/DLL 경로는 Git 제외 local.yaml이 소유합니다.
 시나리오 자체의 gRPC/DLL/신호 고정은 개발 검증용입니다. 본선 입력 경로가 아닙니다.
-현재 시나리오 perception 구성은 카메라 전체 ACTIVE입니다. 음영에서만 lane을 활성화하는
-판제 운영 정책과 구분하고 full-stack 부하/모드 gate는 별도 확인합니다.
+현재 시나리오 perception 구성도 카메라 전체 ACTIVE입니다. 판제가 lane 결과를 음영 구간에서
+소비하는 정책과 모델 활성화는 구분하며, full-stack 부하/모드 gate는 별도 확인합니다.
 
 ## 5. 수집·bag·오프라인 진입점
 
@@ -469,42 +468,32 @@ xhost -local:docker
 
 ## LiDAR 병행 비교 실행
 
-운영 LiDAR는 유지하고 별도 namespace에서 비교한다. 아래 명령은 드라이버·카메라 추론을 시작하지 않고
-기존 센서/카메라 정본 입력을 구독해 `/migration/lidar/*`에만 발행한다.
+일반 주행은 앞의 기본 명령과 `/perception/lidar` namespace를 사용합니다.
+운영 LiDAR와 별도 시험 처리를 **동시에 비교할 때만** 아래처럼 시험 namespace를 명시합니다.
+여기서는 출력 격리를 위한 인자가 필수입니다. 센서·카메라 입력은 기존 정본을 공유하며
+판제는 운영 namespace를 계속 소비합니다.
 
 ```bash
-source /root/ws/devel/setup.bash
-roslaunch asmc_lidar lidar.launch
-# 카메라 없이 비교할 때 위 실행 대신 사용
-roslaunch asmc_lidar lidar.launch fusion:=false
-# 명시적 초기화: 대기·추적·pose 이력을 지우고 처리 generation 증가
+roslaunch asmc_lidar lidar.launch namespace:=/migration/lidar
+```
+
+이 시험 결과를 웹으로 볼 때는 기존 웹 launch를 종료한 뒤 같은 namespace로 실행합니다.
+포트가 같은 웹 서버를 중복 실행하지 않습니다.
+
+```bash
+roslaunch asmc_lidar view.launch namespace:=/migration/lidar
+```
+
+선택 옵션은 앞의 표와 동일합니다. `fusion:=false`는 카메라 연결 없는 비교,
+`debug:=true`는 중간 점군·필터 전후 표시, `rviz:=true`는 해당 namespace의 처리된
+OBB·ID·분류와 ego box 표시입니다. 원본 `/velodyne_points`와 처리 결과를 구분합니다.
+리셋이 필요한 시험에서만 다음 서비스를 호출합니다. 대기·추적·pose 이력이 초기화되고
+processing generation이 증가합니다.
+
+```bash
 rosservice call /migration/lidar/lidar_pipeline/reset "{}"
 ```
 
-일반 실행 인자는 `fusion`(기본 true), `namespace`(기본 `/migration/lidar`), `pipeline_config`다.
-`fusion:=false`는 카메라 보정 조회·구독을 끄며 카메라 패키지가 없는 환경에서도 동작한다.
-fusion은 카메라 추론을 시작하는 옵션이 아니며 현재 연결은 전방 분류에 한정된다.
-기존 입력/출력 토픽·`lidar_level_roll`·`camera_calibration_config`·`experimental_tunnel_filter`·
-`publish_tf`(기본 false)·`tf_child_frame`은 내부 대조·배선 조정용으로 유지한다.
-빈 roll/tunnel override는 YAML 값을 사용하고 fusion은 launch 선택을 우선한다.
-`/perception/lidar/*` 운영 전환은 기본 차단하며 L7에서 별도 확인한다.
-처리 시작 때 RViz도 함께 켜려면 `roslaunch asmc_lidar lidar.launch rviz:=true`를 사용한다.
-기본은 OFF다. 지정한 namespace의 객체/ego Marker에 자동 연결하며 웹 화면은 켜지 않는다.
-이미 열린 RViz를 유지하려면 이 옵션을 켜지 않고 아래 수동 표시 도구를 사용한다.
-
-PR #105의 localhost 웹 화면은 `view.launch`로 별도 실행하며 처리 노드를 중복 시작하지 않는다.
-단계별 점군을 보려면 기존 처리 실행을 `roslaunch asmc_lidar lidar.launch debug:=true`로 준비한 뒤
-별도 터미널에서 `roslaunch asmc_lidar view.launch`를 실행하고 `http://127.0.0.1:8091/`을 연다.
-새 관측·배열·진단과 복구는 [asmc_lidar README](../../src/asmc_lidar/README.md)를 따른다.
-
-RViz에서 **처리된 OBB·ID·분류**를 보려면 별도 터미널에서 아래 변환기를 실행한다.
-기존 RViz의 Fixed Frame=`base_link`, MarkerArray=`/migration/lidar/markers`로 설정하거나
-`File → Open Config`에서 `/root/ws/src/asmc_lidar/rviz/lidar.rviz`를 연다.
-
-```bash
-rosrun asmc_lidar lidar_markers.py
-```
-
-이 도구는 `/migration/lidar/observations_local`만 읽고 Marker만 발행한다. 카메라 추론·검출·추적을
-재실행하지 않는다. `/velodyne_points`는 원본 점군이며 처리 결과와 구분한다. 중간 지면 제거/군집 점군은
-현재 공개되지 않는다. 이미 RViz가 열려 있으면 새 GUI를 중복 실행하지 않는다.
+보정·시간·터널 비교 등의 내부 옵션과 관측·진단 규칙은
+[asmc_lidar README](../../src/asmc_lidar/README.md),
+[웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 따릅니다.
