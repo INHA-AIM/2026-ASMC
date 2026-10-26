@@ -6,7 +6,7 @@ export ROS_MASTER_URI=http://127.0.0.1:$port
 export ROS_HOSTNAME=localhost
 roscore -p "$port" > "$ASMC_CI_OUTPUT/camera-control-roscore.log" 2>&1 &
 core_pid=$!
-trap 'kill "$core_pid" 2>/dev/null || true' EXIT
+trap 'kill "$core_pid" 2>/dev/null || true; wait "$core_pid" 2>/dev/null || true' EXIT
 python3 tools/perception/check_inference_control_ros.py
 python3 tools/perception/check_camera_coco_ros.py --profile baseline
 python3 tools/perception/check_camera_coco_ros.py --profile all

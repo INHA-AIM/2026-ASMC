@@ -9,7 +9,8 @@
     {
       "name": "lidar",
       "script": ".github/ci/lidar.sh",
-      "timeout_s": 600
+      "timeout_s": 600,
+      "exclusive": true
     },
     {
       "name": "camera-unit",

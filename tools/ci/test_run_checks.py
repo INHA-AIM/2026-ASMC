@@ -46,6 +46,18 @@ class GroupsTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 run_groups(invalid,root/'new',root=root)
 
+    def test_exclusive_group_finishes_before_parallel_load_even_if_it_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            (root/'exclusive.sh').write_text('sleep .1; touch "$ASMC_CI_OUTPUT/finished"; exit 9')
+            (root/'normal.sh').write_text('test -f "$ASMC_CI_OUTPUT/finished"')
+            groups=[dict(name='normal',script='normal.sh',timeout_s=2),
+                    dict(name='exclusive',script='exclusive.sh',timeout_s=2,exclusive=True)]
+            result=run_groups(groups,root/'out',root=root)
+            self.assertFalse(result['passed'])
+            self.assertEqual([(g['name'],g['returncode']) for g in result['groups']],
+                             [('exclusive',9),('normal',0)])
+
 
 if __name__ == '__main__':
     unittest.main()

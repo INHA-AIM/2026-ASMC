@@ -61,6 +61,8 @@ def audit(root=ROOT):
         errors.append('missing former check: '+shlex.join(command))
     if {g['name'] for g in groups} != {'lane','lidar','camera-unit','camera-ros','bridge'}:
         errors.append('required regression group missing')
+    if not any(g['name']=='lidar' and g.get('exclusive') is True for g in groups):
+        errors.append('wall-time-sensitive HTTP/LiDAR tests must run without parallel test load')
     for group in groups:
         if not (root/group['script']).is_file():
             errors.append('missing group script: '+group['script'])

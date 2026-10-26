@@ -119,12 +119,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.PIP_CACHE_DIR }}
-          key: ${{ runner.os }}-noetic-pip-v1-${{ hashFiles('.github/ci/cpu-requirements.txt') }}
+          key: ${{ runner.os }}-noetic-pip-v1-${{ hashFiles('.github/ci/cpu-requirements.txt', '.github/ci/bootstrap-requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-noetic-pip-v1-
       - name: Install CPU tensor runtime for preprocessing regression
         run: |
+          python3 -m pip install --disable-pip-version-check -r .github/ci/bootstrap-requirements.txt
           python3 -m pip install --disable-pip-version-check -r .github/ci/cpu-requirements.txt
+          python3 -m pip check
 
       - name: Run all isolated regression groups
         run: python3 tools/ci/run_checks.py --output .ci-results --workers 2

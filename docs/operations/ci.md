@@ -6,6 +6,7 @@
 ## 구성
 
 - `CI / catkin-build`: 환경·문서·공용 계약 검사, 전체 클린 빌드와 명시적인 시험 executable 준비 후
+  시간 민감 HTTP 검사를 포함한 LiDAR 그룹을 단독 실행한 뒤 나머지
   [회귀 그룹](../../.github/ci/groups.json)을 최대2개씩 실행한다. 같은 build tree에서 병렬 컴파일하지 않는다.
 - `Planning integration build / planning-catkin-build`: 기존 whitelist만 새 환경에 빌드하고 입력 변환,
   dashboard·launch·AVOID·로터리·도로 제약·충돌 회귀를 유지한다.
@@ -33,6 +34,8 @@ ccache key는 commit SHA 대신 C++/header/CMake/package/message/service 내용�
 링크·시험은 매번 수행한다. 통계는 복원 후0으로 초기화해 누적 hit 수치를 이번 실행으로 오해하지 않는다.
 CPU wheel cache는 [실제 설치 requirements](../../.github/ci/cpu-requirements.txt)에 연결한다. 의존성
 설치·검증은 생략하지 않으며 일반 workflow 편집만으로 같은 다운로드 cache를 새로 만들지 않는다.
+Noetic Python3.8을 지원하는 pip24.3.1 resolver를 CI에서 먼저 준비하고 설치 후 `pip check`를 실행한다.
+이전 pip의 dependency conflict 경고를 성공으로 넘기지 않는다. 운영 컨테이너의 pip/모델 환경은 변경하지 않는다.
 
 소요 시간은 runner·cache 영향을 받으므로 wall time과 병렬 job 시간 합계를 함께 비교한다.
 [초기 측정·debug OFF 확인](../records/repository/2026-10-26-ci-runtime.md)을 기준으로 실제 Actions 결과를 확인한다.

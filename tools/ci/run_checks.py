@@ -89,11 +89,20 @@ def run_groups(groups, output, workers=2, root=ROOT):
 
     started = time.monotonic()
     try:
+        # Deadline/HTTP admission tests measure real wall time. Do not add
+        # unrelated test load while these groups execute; keep their limits.
+        results = []
+        for group in groups:
+            if group.get('exclusive', False):
+                try:
+                    results.append(execute(group))
+                except Exception as error:
+                    results.append(dict(name=group['name'], status='error', error=str(error)))
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
             # No fail-fast: another failing group never silently skips coverage.
-            futures = [pool.submit(execute, group) for group in groups]
-            results = []
-            for group, future in zip(groups, futures):
+            parallel = [group for group in groups if not group.get('exclusive', False)]
+            futures = [pool.submit(execute, group) for group in parallel]
+            for group, future in zip(parallel, futures):
                 try:
                     results.append(future.result())
                 except Exception as error:
