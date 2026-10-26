@@ -82,3 +82,9 @@ Actions 단축률을 주장하지 않는다. 최종 hosted 결과와 이전12분
 최초 전면 병렬화203.373s보다 느리지만 시간 민감 검사의 외부 부하를 줄이는 구성을 택했다.
 서버 헤더0.5s/전체 요청1.5s와 시험 내부 기준은 유지한다.
 CI pip bootstrap wheel은 Noetic Python3.8에서 다운로드 호환성을 확인했으며 운영 pip에는 설치하지 않았다.
+
+후속 hosted 실행에서는 HTTP/LiDAR가 통과했으나 NumPy1.24와 Ubuntu 기본 SciPy의
+`np.typeDict` API 불일치가 드러났다. pip metadata 검사는 이 구형 SciPy의 API 호환성까지 보장하지
+않는다. 로컬 전체 회귀가 통과한 NumPy1.24.4·SciPy1.10.1 조합을 CI에 명시하고 공간 검색/회전,
+OpenCV·Torch의 import smoke를 긴 시험 앞에 추가했다. NumPy shim이나 시험 생략은 사용하지 않았다.
+성공한 C++ 컴파일 cache는 시험 전에 저장해 후속 실패 때 같은 컴파일을 반복하는 비용도 줄였다.

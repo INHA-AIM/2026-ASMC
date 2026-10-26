@@ -44,7 +44,8 @@ jobs:
         with:
           submodules: recursive
       - name: Restore C++ compiler cache
-        uses: actions/cache@v4
+        id: compiler-cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h', 'src/**/*.cc', 'src/**/CMakeLists.txt', 'src/**/package.xml', 'src/**/*.msg', 'src/**/*.srv') }}
@@ -115,6 +116,13 @@ jobs:
           catkin_make planning_lidar_observation_test planning_group_conversion_test ground_projection_test -j2 -l2
           test -x devel/lib/asmc_lidar/camera_receiver_ros_test
 
+      - name: Save successful compilation before regression tests
+        if: steps.compiler-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
+
       - name: Restore pinned CPU runtime downloads
         uses: actions/cache@v4
         with:
@@ -127,6 +135,7 @@ jobs:
           python3 -m pip install --disable-pip-version-check -r .github/ci/bootstrap-requirements.txt
           python3 -m pip install --disable-pip-version-check -r .github/ci/cpu-requirements.txt
           python3 -m pip check
+          python3 -c 'import numpy, scipy, cv2, torch, torchvision; from scipy.spatial import cKDTree; from scipy.spatial.transform import Rotation; print("CI stack:", numpy.__version__, scipy.__version__, cv2.__version__, torch.__version__)'
 
       - name: Run all isolated regression groups
         run: python3 tools/ci/run_checks.py --output .ci-results --workers 2

@@ -35,7 +35,9 @@ ccache key는 commit SHA 대신 C++/header/CMake/package/message/service 내용�
 CPU wheel cache는 [실제 설치 requirements](../../.github/ci/cpu-requirements.txt)에 연결한다. 의존성
 설치·검증은 생략하지 않으며 일반 workflow 편집만으로 같은 다운로드 cache를 새로 만들지 않는다.
 Noetic Python3.8을 지원하는 pip24.3.1 resolver를 CI에서 먼저 준비하고 설치 후 `pip check`를 실행한다.
-이전 pip의 dependency conflict 경고를 성공으로 넘기지 않는다. 운영 컨테이너의 pip/모델 환경은 변경하지 않는다.
+이전 pip의 dependency conflict 경고를 성공으로 넘기지 않는다. 운영 컨테이너의 pip/모델 환경은 변경하지 않는다. NumPy1.24.4·SciPy1.10.1을 함께 고정하고
+설치 후 공간 검색/회전·OpenCV·Torch의 실제 import도 확인한다. C++ cache는 빌드 성공 직후 저장해
+나중의 시험 실패로 같은 소스를 다시 컴파일하는 낭비를 줄인다. 시험 성공이나 build/devel은 저장하지 않는다.
 
 소요 시간은 runner·cache 영향을 받으므로 wall time과 병렬 job 시간 합계를 함께 비교한다.
 [초기 측정·debug OFF 확인](../records/repository/2026-10-26-ci-runtime.md)을 기준으로 실제 Actions 결과를 확인한다.
