@@ -7,6 +7,19 @@ import xml.etree.ElementTree as ET
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 class LaunchContracts(unittest.TestCase):
+    def test_web_console_defaults_are_canonical_and_distinct(self):
+        dashboard=ET.parse(ROOT/'src/asmc_planner/launch/dashboard.launch').getroot()
+        lidar=ET.parse(ROOT/'src/asmc_lidar/launch/view.launch').getroot()
+        args=lambda tree:{arg.get('name'):arg.get('default') for arg in tree.findall('arg')}
+        self.assertEqual(args(dashboard)['state_topic'],'/planning/vehicle/state')
+        self.assertEqual(args(dashboard)['dashboard_lidar_objects_topic'],'/planning/objects')
+        self.assertEqual(args(dashboard)['dashboard_lidar_motion_debug_topic'],'')
+        self.assertEqual(args(dashboard)['dashboard_port'],'8088')
+        self.assertEqual(args(lidar)['dashboard_port'],'8091')
+        self.assertNotEqual(args(dashboard)['dashboard_port'],args(lidar)['dashboard_port'])
+        self.assertTrue(all(n.get('type') not in ('lidar_pipeline_node','asmc_planner_node')
+                            for tree in (dashboard,lidar) for n in tree.findall('node')))
+
     def test_planning_never_starts_a_camera_signal_producer(self):
         for name in ('autonomy_no_bridges_v2.launch', 'mode_control_integration.launch'):
             tree = ET.parse(ROOT / 'src/asmc_planner/launch' / name)

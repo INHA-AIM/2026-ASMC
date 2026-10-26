@@ -148,7 +148,7 @@ GUI 종료 후 사용한 process가 남지 않았는지
 
 ```bash
 roslaunch asmc_hd_map competition_map.launch rviz:=true
-roslaunch asmc_planner dashboard.launch state_topic:=/planning/vehicle/state
+roslaunch asmc_planner dashboard.launch
 rostopic info /perception/lidar/tracks_map
 rostopic info /ctrl_cmd
 rostopic hz /image_jpeg/compressed
@@ -164,6 +164,14 @@ HD Map RViz 명령은 기존 지도 launch를 대체합니다. GUI만 추가한�
 `roslaunch asmc_lidar view.launch open_browser:=true`를 실행합니다(처리는 별도 `lidar.launch debug:=true`)(`http://127.0.0.1:8091/`, 읽기 전용).
 이 launch는 모니터만 켭니다. 기존 `lidar.launch`가 있다면 두 번째 처리 노드를 시작하지 않습니다.
 판제는 D의 공용 추적 관측을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
+
+판제 웹은 `http://127.0.0.1:8088/web/index_v2.html`, LiDAR 웹은 `http://127.0.0.1:8091/`입니다.
+기본 포트·ROS 노드 이름이 서로 다르고 두 웹 모두 관측만 합니다. 하나씩 사용하려면 해당 웹 launch
+터미널만 Ctrl+C로 종료하고 다른 웹을 실행합니다. 브라우저 탭 종료는 서버 종료가 아닙니다.
+동일한 웹 launch를 중복 실행하지 않습니다. `autonomy_no_bridges_v2.launch`에 음영 어댑터가
+포함돼 있으므로 별도 차선변경 제어 launch도 추가하지 않습니다.
+LiDAR `debug:=true`는 중간 점군과 필터 전후 표현을 위한 샘플 발행입니다. 기본은 OFF이며
+추적·속도·HD맵/높이 필터·판제 발행은 유지됩니다. 웹 체크박스는 표시만 바꾸고 실제 발행 필터를 변경하지 않습니다.
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
 카메라 공용 관측과 전방 matching 계약는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
 판제 단독/통합 차이는 [판제 운영](planning-control.md)을 봅니다.

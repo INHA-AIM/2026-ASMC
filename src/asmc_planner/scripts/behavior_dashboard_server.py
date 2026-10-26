@@ -239,20 +239,21 @@ def main():
             FrenetFeedback,
             set_frenet_feedback, queue_size=10)
         lidar_objects_topic = rospy.get_param(
-            "~lidar_objects_topic", "/perception/objects_lidar_test")
+            "~lidar_objects_topic", "/planning/objects")
         rospy.Subscriber(
             lidar_objects_topic, DetectedObjectArray,
             lambda message: set_snapshot("lidar_objects", message),
             queue_size=1)
         lidar_motion_debug_topic = rospy.get_param(
-            "~lidar_motion_debug_topic", "/lidar/motion_debug")
-        rospy.Subscriber(
-            lidar_motion_debug_topic, String,
-            set_lidar_motion_debug, queue_size=1)
+            "~lidar_motion_debug_topic", "")
+        if lidar_motion_debug_topic:
+            rospy.Subscriber(
+                lidar_motion_debug_topic, String,
+                set_lidar_motion_debug, queue_size=1)
         rospy.loginfo("Dashboard LiDAR objects: %s", lidar_objects_topic)
         rospy.loginfo(
             "Dashboard LiDAR motion diagnostics: %s",
-            lidar_motion_debug_topic)
+            lidar_motion_debug_topic or "disabled (typed objects)")
     else:
         rospy.Subscriber(
             rospy.get_param("~context_topic", "/behavior/context"),

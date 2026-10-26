@@ -1,10 +1,11 @@
 <launch>
   <!-- Observer-only ownership migration of the legacy dashboard group. -->
-  <arg name="state_topic" default="/vehicle/state"/>
+  <arg name="state_topic" default="/planning/vehicle/state"/>
   <arg name="dashboard_port" default="8088"/>
   <arg name="open_dashboard" default="false"/>
-  <arg name="dashboard_lidar_objects_topic" default="/perception/objects_lidar_test"/>
-  <arg name="dashboard_lidar_motion_debug_topic" default="/lidar/motion_debug"/>
+  <arg name="dashboard_lidar_objects_topic" default="/planning/objects"/>
+  <!-- Current motion state is in typed planning objects. Historical JSON is opt-in. -->
+  <arg name="dashboard_lidar_motion_debug_topic" default=""/>
   <node pkg="asmc_planner" type="behavior_dashboard_server.py"
         name="behavior_dashboard_server" output="screen">
     <remap from="/vehicle/state" to="$(arg state_topic)"/>

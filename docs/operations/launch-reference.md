@@ -286,11 +286,11 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `state_topic` | `/vehicle/state` | — |
+| `state_topic` | `/planning/vehicle/state` | — |
 | `dashboard_port` | `8088` | — |
 | `open_dashboard` | `false` | — |
-| `dashboard_lidar_objects_topic` | `/perception/objects_lidar_test` | — |
-| `dashboard_lidar_motion_debug_topic` | `/lidar/motion_debug` | — |
+| `dashboard_lidar_objects_topic` | `/planning/objects` | — |
+| `dashboard_lidar_motion_debug_topic` | `(빈 문자열)` | — |
 
 ## LiDAR read-only web viewer
 

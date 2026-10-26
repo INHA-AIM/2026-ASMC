@@ -119,10 +119,10 @@ roslaunch asmc_lidar view.launch open_browser:=true
 
 ### A. 기존 주행을 유지하면서 관측 추가
 
-터미널 1~6(`udp_bridge.sh`, `asmc_camera camera.launch`, `asmc_lidar lidar.launch`, `lane_boundary_adapter`,
-`asmc_planner autonomy_no_bridges_v2.launch`, `asmc_planner dashboard.launch`)은 그대로 둔다.
-처리가 없을 때만 새 터미널에서 `roslaunch asmc_lidar lidar.launch debug:=true`를 시작한다.
-이미 같은 namespace의 처리가 있으면 두 번째로 실행하지 않는다. 화면은 별도 터미널에서:
+브릿지·HD맵·카메라·LiDAR·autonomy는 각각 한 세트만 실행한다. autonomy에는 음영 제어 어댑터가
+포함되므로 이를 따로 시작하지 않는다. 단계별 점군을 확인할 주행은 시작 전 LiDAR를
+`roslaunch asmc_lidar lidar.launch debug:=true`로 준비한다. 기존 debug OFF 실행은 해당 터미널에서
+종료한 뒤 교체하며 같은 namespace의 두 번째 처리 노드를 추가하지 않는다. 화면은 별도 터미널에서:
 
 ```bash
 cd <저장소>            # 컨테이너의 /root/ws
@@ -134,6 +134,10 @@ roslaunch asmc_lidar view.launch open_browser:=true
 bridge·카메라·LiDAR는 이미 떠 있는 것을 구독한다(같은 토픽을 두 번 발행하지 않는다).
 **주의:** 같은 namespace의 lidar.launch를 중복 실행하지 않는다. 병행 비교는 별도 namespace로 격리하고 추가 연산 비용을 구분한다.
 planner dashboard(8088, 판제 상태)와 이 LiDAR monitor(8091, 필터 단계·추적)는 서로 다른 화면이다.
+판제 웹은 `roslaunch asmc_planner dashboard.launch`와 `http://127.0.0.1:8088/web/index_v2.html`을
+사용한다. 기본 입력은 `/planning/vehicle/state`·`/planning/objects`이며 과거 motion JSON은 기본 구독하지 않는다.
+두 웹의 ROS 이름과 포트는 다르고 모두 제어를 발행하지 않는다. 하나씩 볼 때는 해당 웹 launch만
+Ctrl+C로 바꾸면 된다. 브라우저를 닫아도 서버는 남는다.
 
 ### B. LiDAR 독립 시험 (Main·planner 불필요)
 
