@@ -115,9 +115,30 @@ bool RoundaboutMergeZone::Load(const std::string& areas_path,
         // Read the SAME compact product as all ego modes. An ego exit link
         // (A151) is not the circulating actor's successor. Do not invent an
         // actor route by following the route-compact successor list.
-        for(const auto& lane:areas["lanes"])
-            if(lane["drivable_group"].as<std::string>("")=="roundabout_maneuver")
-                circulating_areas.push_back(ReadPolygon(lane["polygon"]));
+        for(const auto& lane:areas["lanes"]) {
+            if(lane["drivable_group"].as<std::string>("")!="roundabout_maneuver")continue;
+            circulating_areas.push_back(ReadPolygon(lane["polygon"]));
+            auto line=std::make_shared<RefLine>();
+            for(const auto& p:lane["centerline"]) {
+                const double x=p[0].as<double>(),y=p[1].as<double>();
+                if(!std::isfinite(x)||!std::isfinite(y))throw std::runtime_error("invalid circulating centerline");
+                const double ds=line->points.empty()?0:std::hypot(x-line->points.back().x,y-line->points.back().y);
+                if(!line->points.empty()&&ds<1e-5)continue;
+                line->length+=ds;line->points.push_back({x,y,line->length,0,0,0});
+            }
+            if(line->points.size()<3)continue;
+            for(size_t i=0;i<line->points.size();++i) {
+                const auto& a=line->points[i?i-1:0];
+                const auto& b=line->points[std::min(i+1,line->points.size()-1)];
+                line->points[i].theta=std::atan2(b.y-a.y,b.x-a.x);
+            }
+            for(size_t i=0;i<line->points.size();++i) {
+                const auto& a=line->points[i?i-1:0];
+                const auto& b=line->points[std::min(i+1,line->points.size()-1)];
+                line->points[i].kappa=std::remainder(b.theta-a.theta,2*M_PI)/(b.s-a.s);
+            }
+            circulating_references.push_back(std::move(line));
+        }
         if(!found_source||!found_target||!found_stop||scan_end<=stop_s)
             throw std::runtime_error("roundabout topology/stopline is missing");
         valid=true;

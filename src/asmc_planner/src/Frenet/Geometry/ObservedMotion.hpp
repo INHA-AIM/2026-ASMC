@@ -15,12 +15,18 @@ struct ObservedObjectMotion {
     bool continuity_reset = false;
     void Observe(const TrackedObject& object, double time, double clamp,
                  double minimum_direction_change=.05,std::size_t maximum_samples=6,
-                 double history_window_s=.5) {
+                 double history_window_s=.5,bool preserve_missing_velocity=false) {
         if (!std::isfinite(time) || time <= stamp + 1e-9) return;
         continuity_reset=stamp>=0&&!ObservationContinuous(last,object,time-stamp);
         if (continuity_reset) { samples.clear(); yaw_rate=0; }
         last = object; stamp = time; missing_cycles = 0;
         const double speed = std::hypot(object.vx, object.vy);
+        // Highway callers may bridge a missing velocity using still-fresh
+        // VALID samples. Do not append the missing value as measured zero.
+        if (preserve_missing_velocity && object.velocity_unavailable) {
+            while(!samples.empty()&&time-samples.front().time>history_window_s) samples.pop_front();
+            yaw_rate=0;return;
+        }
         if (object.velocity_unavailable || object.motion_state == ObjectMotionState::LOW_THREAT || speed < .5) {
             samples.clear(); yaw_rate = 0; return;
         }

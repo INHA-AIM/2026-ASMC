@@ -1,3 +1,4 @@
+#include "Frenet/Maneuver/Merge/ProgressStoppingCertificate.hpp"
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Generator/LongitudinalGenerator.hpp"
@@ -482,8 +483,12 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     auto ctx=PreparePlanningContext(ego,obstacles,command);
     roundabout_prediction_.Observe(obstacles,observation_stamp,
         object_tracking_cfg_.yaw_rate_clamp_rad_s,roundabout_merge_cfg_.speed_measurement_error);
-    for(auto& object:ctx.predicted_obstacles)
+    for(auto& object:ctx.predicted_obstacles) {
         object.yaw_rate=roundabout_prediction_.Rate(object.id);
+        if(execution_->merge.committed)
+            object=roundabout_prediction_.MappedMotion(object,roundabout_zone_.circulating_references,
+                roundabout_merge_cfg_.max_horizon);
+    }
     auto departure_obstacles=ctx.predicted_obstacles;
     std::vector<TrackedObject> departure_bounds;
     if(!execution_->merge.committed) {
@@ -500,6 +505,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             roundabout_prediction_.WithObservedSpeedRanges(departure_obstacles),
             object_tracking_cfg_.yaw_rate_clamp_rad_s);
     }
+    const auto sensor_model_obstacles=ctx.predicted_obstacles;
     const double observation_age=std::max(0.0,evaluation_time-observation_stamp);
     for(auto& object:ctx.predicted_obstacles)object=AdvanceObjectObservation(object,observation_age);
     for(auto& object:departure_obstacles)object=AdvanceObjectObservation(object,observation_age);
@@ -602,6 +608,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         ctx.s >= roundabout_zone_.stop_s-1.0 &&
         !avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,vehicle_shape_);
     bool selected_bridge=false, profile_failed=false;
+    CartesianPath progress_certificate;bool progress_checked=false;
     double selected_d=roundabout_preferred_d_;
     last_candidate_paths_.clear();last_candidate_validity_.clear();
     const double ordinary_settle=std::max(10.0,std::min(25.0,ego.v*2.5));
@@ -647,6 +654,35 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                 merge_cfg_.min_rear_time_gap,!execution_->merge.committed);
             valid=check.safe;
             if(check.blocking_object_id>=0)result.blocking_object_id=check.blocking_object_id;
+            // One bounded alternative, only after COMMIT and on an ordinary
+            // road-contained preferred geometry. Keep every object and the
+            // full stationary tail; entry/gap approval is never shortened.
+            if(!valid&&execution_->merge.committed&&!bridge&&!progress_checked) {
+                progress_checked=true;
+                const double prefix_time=std::max(path_cfg_.dt,replanning_period_s_+observation_age);
+                auto certified=MakeProgressStoppingCertificate(path,prefix_time,path_cfg_.dt,
+                    stop_cfg_.max_service_decel,limits_.max_longitudinal_jerk,
+                    prefix_time,.25);
+                bool physical=!certified.x.empty()&&certified.v.back()<=.05;
+                for(size_t i=0;i<certified.x.size()&&physical;++i)
+                    physical=std::isfinite(certified.kappa[i])&&std::fabs(certified.kappa[i])<=limits_.max_curvature&&
+                        certified.v[i]*certified.v[i]*std::fabs(certified.kappa[i])<=limits_.max_lateral_accel&&
+                        std::fabs(certified.a[i])<=stop_cfg_.max_service_decel;
+                if(physical&&avoid_road_map_.EvaluatePath(certified,vehicle_shape_,path_cfg_.dt).drivable) {
+                    auto progress_obstacles=sensor_model_obstacles;
+                    const double horizon=(certified.x.size()-1)*path_cfg_.dt+observation_age;
+                    for(auto& object:progress_obstacles) {
+                        object=roundabout_prediction_.MappedMotion(object,roundabout_zone_.circulating_references,horizon);
+                        object=AdvanceObjectObservation(object,observation_age);
+                    }
+                    auto safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
+                        vehicle_shape_,collision_cfg_,path_cfg_.dt);
+                    if(!safety.clear&&safety.blocking_sample_index==0)
+                        safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
+                            vehicle_shape_,collision_cfg_,path_cfg_.dt,safety.blocking_object_id);
+                    if(safety.clear)progress_certificate=std::move(certified);
+                }
+            }
         }
         double cost=check.exit_time+AvoidRoadMap::PaintCost(road)+std::fabs(geometry.second);
         if(valid) {
@@ -680,7 +716,11 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     if(!execution_->merge.committed&&uncertain>=0)result.blocking_object_id=uncertain;
     else if(result.candidate_valid)result.blocking_object_id=-1;
     if(execution_->merge.committed) {
-        if(result.candidate_valid){
+        if(!result.candidate_valid&&!progress_certificate.x.empty()) {
+            result.progress_stopping=true;
+            result.candidate_path=std::move(progress_certificate);++result.valid;
+        }
+        if(result.candidate_valid||result.progress_stopping){
             if(selected_bridge&&!roundabout_bridge_active_&&
                !avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,vehicle_shape_)) {
                 roundabout_bridge_active_=roundabout_bridge_used_=true;

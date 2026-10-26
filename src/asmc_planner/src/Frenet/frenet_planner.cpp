@@ -930,7 +930,8 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
     object_motion_time_ = observation_time;
     const bool highway_normal=(external_command.mode==LANE_KEEPING||external_command.mode==FOLLOWING)&&
         (highway_prediction_map_ || (highway_route_&&HighwayApproachAt(*highway_route_,ego,&ctx.s).valid));
-    const bool highway_observation=highway_normal||(external_command.mode==MERGE&&
+    const bool highway_observation=highway_normal||external_command.mode==LANE_CHANGE_LEFT||
+        external_command.mode==LANE_CHANGE_RIGHT||(external_command.mode==MERGE&&
         external_command.merge_type==MergeType::HIGHWAY);
     std::unordered_map<int, double> object_yaw_rates;
     for (auto& item : object_tracks_) ++item.second.missing_cycles;
@@ -938,7 +939,7 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
         auto& track = object_tracks_[obj.id];
         track.Observe(obj, observation_time, object_tracking_cfg_.yaw_rate_clamp_rad_s,
             object_tracking_cfg_.min_motion_direction_change_rad,
-            highway_observation?12:6,highway_observation?.8:.5);
+            highway_observation?12:6,highway_observation?.8:.5,highway_observation);
         track.missing_cycles = 0;
         object_yaw_rates[obj.id] = track.yaw_rate;
         if(track.continuity_reset&&execution_->follow.leader_id==obj.id) {

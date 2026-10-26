@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <memory>
+#include "Frenet/Reference/Reference.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 
 // A single map-defined roundabout entry. Highway merge/reference switching
@@ -33,6 +35,7 @@ struct RoundaboutMergeZone {
     CartesianState waiting_pose{};
     std::vector<geometry::Polygon2D> conflict_areas;
     std::vector<geometry::Polygon2D> circulating_areas;
+    std::vector<std::shared_ptr<const RefLine>> circulating_references;
     bool Load(const std::string& areas_path, const std::string& lines_path,
               const RefLine& ref, const VehicleShape& shape,
               const RoundaboutMergeConfig& config, double margin,

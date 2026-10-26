@@ -1,6 +1,7 @@
 #pragma once
 #include "Frenet/Common/ObjectTypes.hpp"
 #include "Frenet/Geometry/ObservationContinuity.hpp"
+#include "Frenet/Reference/Reference.hpp"
 #include <algorithm>
 #include <cmath>
 #include <deque>
@@ -175,6 +176,48 @@ public:
         }
         for(auto it=tracks_.begin();it!=tracks_.end();)
             if(stamp-it->second.stamp>1)it=tracks_.erase(it);else ++it;
+    }
+    // Map constrains a supported circulating actor's FUTURE displacement.
+    // Preserve the measured current center/corners and do not follow ego's exit.
+    TrackedObject MappedMotion(const TrackedObject& object,
+        const std::vector<std::shared_ptr<const RefLine>>& references,double horizon=0) const {
+        const auto found=tracks_.find(object.id);
+        if(object.velocity_unavailable||object.motion_state==ObjectMotionState::LOW_THREAT||
+           (object.type!=0&&object.type!=1)||found==tracks_.end())return object;
+        // A lane match alone cannot repair disputed velocity or an unstable
+        // fragment. Keep the original prediction until independent motion and
+        // a recently observed whole body support this road constraint.
+        if(!found->second.reliable||!found->second.complete)return object;
+        double position_vx=0,position_vy=0,position_error=0;
+        if(!PositionVelocity(found->second,position_vx,position_vy,position_error)||
+           std::hypot(position_vx-object.vx,position_vy-object.vy)>position_error)return object;
+        const auto& samples=found->second.samples;
+        const double speed=std::hypot(object.vx,object.vy);
+        if(samples.size()<3||samples.back().t-samples.front().t<.2||speed<.5)return object;
+        std::shared_ptr<const RefLine> best;double best_s=0,best_d=0,distance=INFINITY;
+        for(const auto& line:references) {
+            const double station=FindClosestS(*line,object.x,object.y,nullptr,1e6);
+            const auto point=Interpolate(*line,station);
+            const double dx=object.x-point.x,dy=object.y-point.y;
+            const double error=std::hypot(dx,dy);
+            if(error>2||station>=line->length-.1||station+speed*std::max(0.0,horizon)>line->length||
+               (object.vx*std::cos(point.theta)+object.vy*std::sin(point.theta))/speed<.7)continue;
+            bool stable=true;size_t count=0;
+            for(auto it=samples.rbegin();it!=samples.rend()&&count<3;++it,++count) {
+                const auto q=Interpolate(*line,FindClosestS(*line,it->x,it->y,nullptr,1e6));
+                if(std::hypot(it->x-q.x,it->y-q.y)>2){stable=false;break;}
+            }
+            if(stable&&error<distance){best=line;best_s=station;best_d=-dx*std::sin(point.theta)+dy*std::cos(point.theta);distance=error;}
+        }
+        if(!best)return object;
+        auto result=object;const auto at=Interpolate(*best,best_s);
+        result.prediction_lane=best;result.prediction_lane_s=best_s;result.prediction_lane_d=best_d;
+        result.prediction_lane_anchor_x=at.x-best_d*std::sin(at.theta);
+        result.prediction_lane_anchor_y=at.y+best_d*std::cos(at.theta);
+        result.prediction_lane_heading=at.theta;result.prediction_lane_end_s=best->length;
+        // Caller certifies only spans fully covered by this supplied lane.
+        // No unobserved circular successor or ego exit is invented.
+        result.yaw_rate=0;return result;
     }
     double Rate(int id) const {
         const auto it=tracks_.find(id);return it==tracks_.end()?0:it->second.rate;

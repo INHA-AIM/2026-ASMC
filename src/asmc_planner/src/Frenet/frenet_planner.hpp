@@ -104,6 +104,7 @@ public:
         // A checked PREPARE approach is usable even before a complete
         // departure fits the horizon. This never grants gap/COMMIT authority.
         bool waiting_path_valid = false;
+        bool progress_stopping = false;  // post-commit prefix plus certified complete stop
         std::uint64_t epoch = 0;
         double entry_time = -1, exit_time = -1, progress = 0;
         std::size_t generated = 0, valid = 0;
@@ -958,6 +959,8 @@ private:
     std::vector<std::shared_ptr<const asmc_planner::lane_reference::LaneReference>> highway_traffic_lanes_;
     bool highway_committed_=false;
     bool highway_returning_to_source_=false;
+    int highway_unresolved_return_object_=-1;
+    double highway_unresolved_return_stamp_=-1;
     double highway_transition_terminal_s_=0;
     HighwayTransitionGeometry highway_transition_geometry_;
     int highway_zone_index_=-1;
