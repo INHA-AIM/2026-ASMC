@@ -161,6 +161,12 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             self.calibration["source_sensor_set"],
         )
 
+    def test_projection_manifest_tracks_calibration_file_after_path_moves(self):
+        calibration = PACKAGE_ROOT / 'config/cameras_v3.yaml'
+        manifest = yaml.safe_load((PACKAGE_ROOT / 'config/bev/projection_context_v1.yaml').read_text())
+        self.assertEqual(hashlib.sha256(calibration.read_bytes()).hexdigest(),
+                         manifest['calibration_sha256'])
+
     def test_v2_and_v3_camera_runtime_contracts_are_identical(self):
         values = []
         for name in ('v2', 'v3'):
