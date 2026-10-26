@@ -51,5 +51,14 @@ PCAPNG SHA256: `8d43f826b136370342dc9e7b868fd5b7d4007d371a16a5ccc161c23f583ff0a2
 방화벽은 이를 강제하지 않는다. pktmon counter1274와 export64의 집계 범위가 달라
 완전한 패킷 수·손실률·송신률은 확정하지 않았다. 영상 frame 성능의 근거도 아니다.
 
-실행 PC의 최신 revision/r2/dirty 상태와 실제 decode·`/Ego_topic` stamp 갱신·센서 검사는
-아직 외부 확인 대기다. 송신 성공과 전체 수락 완료를 구분하여 이 PR은 Draft로 유지한다.
+재호 PC는 `exp/lidar-web-clustering-tuning-20261025`, 보고된 HEAD `24af6f8e`이며
+미커밋 변경은 라이다 실험에 있다. ROS `/Ego_topic`의 실제 메시지1건을 수신했다
+(seq2, stamp1793036612.015177965, frame base_link). 이는 수신 경로의 부분 근거다.
+현재 공개 원격 브랜치에는 해당 로컬 HEAD가 없어 r2 적용 여부와 패치 적용성은
+현지 preflight로 확인해야 한다. 지속적인 stamp 갱신과 센서30초 검사는 외부 확인 대기다.
+라이다 dirty 파일을 강제로 덮어쓰지 않는다. 전체 수락 전까지 이 PR은 Draft로 유지한다.
+
+사용자가 목록을 확인한 구 UI 배포본12개는 로더 밖 복구 폴더로 옮겼다. 교체되는
+Network/GT 구본2개도 보존했고 최신 표준5개를 배치/확인했다. 활성 자동저장본과
+지금 연결한 Competition 전용 변경본은 유지했다. 이 정리는 센서 reload를 수행하지 않는다.
+Git의 v1/v2·26.R1·과거 template은 회귀·재현 용도로 보존한다.
