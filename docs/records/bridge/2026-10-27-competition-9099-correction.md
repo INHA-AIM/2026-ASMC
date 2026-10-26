@@ -51,11 +51,15 @@ PCAPNG SHA256: `8d43f826b136370342dc9e7b868fd5b7d4007d371a16a5ccc161c23f583ff0a2
 방화벽은 이를 강제하지 않는다. pktmon counter1274와 export64의 집계 범위가 달라
 완전한 패킷 수·손실률·송신률은 확정하지 않았다. 영상 frame 성능의 근거도 아니다.
 
-재호 PC는 `exp/lidar-web-clustering-tuning-20261025`, 보고된 HEAD `24af6f8e`이며
+재호 PC는 `exp/lidar-web-clustering-tuning-20261025`, 보고된 HEAD `24af6f8ee4b54d4f034210d8089bbba7895d850a`이며
 미커밋 변경은 라이다 실험에 있다. ROS `/Ego_topic`의 실제 메시지1건을 수신했다
 (seq2, stamp1793036612.015177965, frame base_link). 이는 수신 경로의 부분 근거다.
 현재 공개 원격 브랜치에는 해당 로컬 HEAD가 없어 r2 적용 여부와 패치 적용성은
 현지 preflight로 확인해야 한다. 지속적인 stamp 갱신과 센서30초 검사는 외부 확인 대기다.
+추가 현지 결과에서 WSL은 아직 `nat`, 컨테이너 설정은 `host`였다. 이후30초 검사 시
+`asmc-ros-noetic`가 중지 상태여서 실행하지 못했다. 앞의 메시지1건이 현재 지속 수신을
+보장하지 않는다. 실제 WSL/Hyper-V 및 Docker Desktop 설정 반영 후 기존 컨테이너를 다시
+실행하여 확인해야 한다. 시뮬레이터 PC의 WSL/Docker는 재시작하지 않는다.
 라이다 dirty 파일을 강제로 덮어쓰지 않는다. 전체 수락 전까지 이 PR은 Draft로 유지한다.
 
 사용자가 목록을 확인한 구 UI 배포본12개는 로더 밖 복구 폴더로 옮겼다. 교체되는

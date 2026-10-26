@@ -23,6 +23,9 @@
 | `cmd_ip` | `$(optenv MORAI_CMD_IP 127.0.0.1)` | — |
 | `cmd_port` | `9093` | — |
 | `invert_steer` | `false` | Transport steering sign; AIM06 R1.H3 verified with true, team default retained |
+| `ego_port` | `9099` | — |
+| `enable_ego_status` | `true` | — |
+| `enable_competition_status` | `$(eval arg('transport_profile') == 'local')` | — |
 | `competition_port` | `9798` | — |
 | `competition_status_required` | `false` | — |
 | `enable_vehicle_state` | `true` | — |
@@ -37,7 +40,7 @@
 | `transport_profile` | `local` | — |
 | `stream_profile` | `competition` | — |
 | `enable_ego_status` | `true` | — |
-| `enable_competition_status` | `true` | — |
+| `enable_competition_status` | `$(eval arg('transport_profile') == 'local')` | — |
 | `competition_status_required` | `false` | — |
 | `enable_object` | `$(eval arg('stream_profile') == 'development')` | — |
 | `enable_collision` | `true` | — |
