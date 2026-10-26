@@ -63,6 +63,7 @@ void GpsImuStateEstimator::updateGps(
     const morai_msgs::GPSMessage& gps, const ros::SteadyTime& received_at) {
     has_gps_ = true;
     if (!ValidGps(gps)) {
+        beginGpsRecovery();
         latest_gps_valid_ = false;
         gps_received_at_ = received_at;
         return;
@@ -72,6 +73,11 @@ void GpsImuStateEstimator::updateGps(
         return;
     }
 
+    if (!latest_gps_source_stamp_.isZero() &&
+        ((gps.header.stamp - latest_gps_source_stamp_).toSec() > config_.gps_timeout_s + 1e-6 ||
+         (received_at - gps_received_at_).toSec() > config_.gps_timeout_s + 1e-6)) {
+        beginGpsRecovery();
+    }
     latest_gps_valid_ = true;
     gps_received_at_ = received_at;
     latest_gps_source_stamp_ = gps.header.stamp;
@@ -183,7 +189,7 @@ asmc_msgs::VehicleState GpsImuStateEstimator::makeState(
     // This stamp is the sensor source time represented coherently by
     // x/y/yaw/speed below. It is never replaced with publication time.
     state.header.stamp = state_source_stamp_;
-    if (!latest_gps_valid_ || !latest_imu_valid_ || !pose_initialized_ ||
+    if (!latest_gps_valid_ || gps_recovery_pending_ || !latest_imu_valid_ || !pose_initialized_ ||
         !has_speed_ ||
         !IsSteadyFresh(gps_received_at_, now, config_.gps_timeout_s) ||
         !IsSteadyFresh(imu_received_at_, now, config_.imu_timeout_s)) {
@@ -304,6 +310,17 @@ void GpsImuStateEstimator::processPendingGps() {
     }
 }
 
+void GpsImuStateEstimator::beginGpsRecovery() {
+    // An outage breaks the GPS velocity baseline and absolute pose continuity.
+    // Never advertise the old dead-reckoned pose as valid while a recovered
+    // fix is still waiting for its matching IMU sample.
+    gps_recovery_pending_ = true;
+    pending_gps_.clear();
+    position_window_.clear();
+    has_stationary_anchor_ = false;
+    has_speed_ = false;
+}
+
 void GpsImuStateEstimator::processGpsMeasurement(
     const GpsMeasurement& measurement, const ImuSample& aligned_imu) {
     const double cosine = std::cos(aligned_imu.yaw);
@@ -320,8 +337,11 @@ void GpsImuStateEstimator::processGpsMeasurement(
         measurement.source_stamp};
 
     updateSpeedFromGps(rear_axle, aligned_imu.yaw);
-    if (!pose_initialized_) {
+    if (!pose_initialized_ || gps_recovery_pending_) {
         initializePose(rear_axle, aligned_imu);
+        // Keep re-anchoring while collecting the new velocity baseline; a
+        // zero-speed prediction during that interval must not pull GPS back.
+        gps_recovery_pending_ = !has_speed_;
     } else {
         applyPositionCorrection(rear_axle, aligned_imu);
     }

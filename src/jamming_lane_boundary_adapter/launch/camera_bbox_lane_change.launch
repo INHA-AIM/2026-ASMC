@@ -62,6 +62,7 @@
   <arg name="adjacent_clear_frames" default="3"/>
   <arg name="ignore_bbox_during_lane_change" default="true"/>
   <arg name="one_lane_change_only" default="false"/>
+  <arg name="return_to_entry_lane" default="false"/>
   <arg name="obstacle_lateral_margin" default="0.30"/>
   <arg name="obstacle_longitudinal_margin" default="0.5"/>
   <arg name="vehicle_front" default="3.845"/>
@@ -158,6 +159,7 @@
     <param name="adjacent_clear_frames" type="int" value="$(arg adjacent_clear_frames)"/>
     <param name="ignore_bbox_during_lane_change" type="bool" value="$(arg ignore_bbox_during_lane_change)"/>
     <param name="one_lane_change_only" type="bool" value="$(arg one_lane_change_only)"/>
+    <param name="return_to_entry_lane" type="bool" value="$(arg return_to_entry_lane)"/>
     <param name="obstacle_lateral_margin" type="double" value="$(arg obstacle_lateral_margin)"/>
     <param name="obstacle_longitudinal_margin" type="double" value="$(arg obstacle_longitudinal_margin)"/>
     <param name="vehicle_front" type="double" value="$(arg vehicle_front)"/>

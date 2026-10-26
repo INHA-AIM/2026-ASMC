@@ -18,6 +18,9 @@ timeouts:
 # GPS is an absolute rear-axle position correction. The innovation is computed
 # against the predicted pose at the same sensor header.stamp, then translated
 # forward to the current predicted pose without rewinding its timestamp.
+# After invalid GPS or a timeout-sized gap, discard the old velocity baseline,
+# re-anchor at source-aligned recovered fixes, and remain invalid until a new
+# GPS velocity baseline is available. Normal continuous tracking uses this gain.
 position:
   gps_correction_gain: 0.35
 

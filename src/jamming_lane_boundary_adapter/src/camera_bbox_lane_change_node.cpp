@@ -112,7 +112,8 @@ struct Parameters {
     int obstacle_confirm_frames = 2;      // 내 차로 검출을 연속 확인할 서로 다른 BBOX frame 수.
     int adjacent_clear_frames = 3;        // 옆 차로 NO_DETECTION 연속 확인 수. 실제 빈 공간 보장은 아님.
     bool ignore_bbox_during_lane_change = true; // 변경 중 BBOX 검출/UNKNOWN/유실에 의한 정지·감속 제외. 완료 즉시 복원.
-    bool one_lane_change_only = false;    // false: 새 내 차로의 장애물에 따라 반복 변경. 장애물 없는 자동 복귀는 하지 않음.
+    bool one_lane_change_only = false;
+    bool return_to_entry_lane = false;    // 통합 재밍 주행: 양 차로 연속 미검출 후 진입 차로 복귀.
     double obstacle_lateral_margin = 0.30; // [m] 도로 경계 검사에 사용할 차량 좌우 여유.
     double obstacle_longitudinal_margin = 0.5; // [m] 차량 전후 여유. 장애물 거리 여유가 아님.
     double vehicle_front = 3.845;           // [m] base_link(후륜축)에서 앞범퍼까지.
@@ -198,6 +199,9 @@ struct LaneChangeState {
     int obstacle_hits = 0;
     int clear_hits = 0;
     int target_lane = -1;
+    int entry_lane = -1;
+    bool returning_to_entry = false;
+    ros::SteadyTime return_clear_since;
     bool changing = false;
     bool change_failed = false;
     std::string change_failure_reason;
@@ -359,6 +363,9 @@ void resetActuationLifecycle() {
     change_state.change_started = ros::SteadyTime();
     change_state.completed_at = ros::SteadyTime();
     change_state.has_completed = false;
+    change_state.entry_lane = -1;
+    change_state.returning_to_entry = false;
+    change_state.return_clear_since = ros::SteadyTime();
     change_state.maximum_path_curvature = 0.0;
     // The classifier may still hold a recently published reference lane from
     // the previous driving episode. Discard labels made against that reference.
@@ -412,7 +419,9 @@ void updateLaneChangeTiming(const ros::SteadyTime& now) {
 }
 
 bool ignoreBboxDuringLaneChange() {
-    return params.ignore_bbox_during_lane_change && change_state.changing;
+    // A voluntary return always keeps live target-obstacle/freshness checks.
+    return params.ignore_bbox_during_lane_change && change_state.changing &&
+           !change_state.returning_to_entry;
 }
 
 void cameraLaneFollowingProcess() {
@@ -435,6 +444,7 @@ void cameraLaneFollowingProcess() {
     } else {
         change_state.obstacle_hits = 0;
         change_state.clear_hits = 0;
+        change_state.return_clear_since = ros::SteadyTime();
     }
     if (!stop_reason.empty()) change_state.completion_hits = 0;
     const bool tracking = stop_reason.empty() && follower_state.target_ready;
@@ -1006,6 +1016,8 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "active_lane", std::to_string(follower_state.locked_lane));
     addDiagnosticValue(status, "clipped_obstacle_tracking", change_state.clipped_association ? "true" : "false");
     addDiagnosticValue(status, "locked_lane", std::to_string(follower_state.locked_lane));
+    addDiagnosticValue(status, "entry_lane", std::to_string(change_state.entry_lane));
+    addDiagnosticValue(status, "returning_to_entry", change_state.returning_to_entry ? "true" : "false");
     addDiagnosticValue(status, "source_age_sec", std::to_string(source_age));
     addDiagnosticValue(status, "lookahead_distance", std::to_string(params.lookahead_distance));
     addDiagnosticValue(status, "target_y_m", tracking ? std::to_string(follower_state.target_point.y) : "unavailable");
@@ -1090,6 +1102,7 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("bbox_receive_timeout", params.bbox_receive_timeout, params.bbox_receive_timeout);
     private_nh.param("ignore_bbox_during_lane_change", params.ignore_bbox_during_lane_change, params.ignore_bbox_during_lane_change);
     private_nh.param("one_lane_change_only", params.one_lane_change_only, params.one_lane_change_only);
+    private_nh.param("return_to_entry_lane", params.return_to_entry_lane, params.return_to_entry_lane);
     private_nh.param("max_lateral_step", params.max_lateral_step, params.max_lateral_step);
     private_nh.param("max_sensor_skew", params.max_sensor_skew, params.max_sensor_skew);
     private_nh.param("obstacle_confirm_frames", params.obstacle_confirm_frames, params.obstacle_confirm_frames);
@@ -1232,6 +1245,7 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
         change_state.bbox_valid = false;
         change_state.bbox_error = reason;
         change_state.obstacle_hits = change_state.clear_hits = 0;
+        change_state.return_clear_since = ros::SteadyTime();
     };
     const auto stamp = message->header.stamp;
     const double age = (ros::Time::now() - stamp).toSec();
@@ -1441,6 +1455,7 @@ void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>&
 // ============================================================================
 std::string updateLaneChangePlan() {
     if (change_state.change_failed) return change_state.change_failure_reason;
+    if (change_state.entry_lane < 0) change_state.entry_lane = follower_state.locked_lane;
     const auto now = ros::SteadyTime::now();
     const bool new_scan = change_state.decision_sequence != change_state.bbox_sequence;
     change_state.decision_sequence = change_state.bbox_sequence;
@@ -1457,7 +1472,13 @@ std::string updateLaneChangePlan() {
                 return "target_lane_detected";
             }
             if (new_scan) change_state.clear_hits = std::min(change_state.clear_hits + 1, params.adjacent_clear_frames);
-            if (change_state.clear_hits < params.adjacent_clear_frames) return "confirming_target_lane_after_stop";
+            // Return initiation already required a full clear interval. After
+            // a brief input gap, stop until a *new*, valid target-clear frame
+            // arrives, then continue that same checked maneuver. Repeating the
+            // initiation dwell after every transient frame gap caused stop/go
+            // starvation at the exit. A detected/unknown target still stops.
+            const int resume_frames = change_state.returning_to_entry ? 1 : params.adjacent_clear_frames;
+            if (change_state.clear_hits < resume_frames) return "confirming_target_lane_after_stop";
         }
         std::vector<FamilyPoint2d> path;
         if (!buildRoadBoundedChangePath(*target, path)) return "lane_change_path_blocked";
@@ -1480,6 +1501,8 @@ std::string updateLaneChangePlan() {
             // 내 차로는 시작 때 이미 전환했다. 여기서는 차량의 이동 완료만 기록한다.
             change_state.changing = false;
             change_state.has_completed = true;
+            change_state.returning_to_entry = false;
+            change_state.return_clear_since = ros::SteadyTime();
             change_state.completed_at = now;
             change_state.obstacle_hits = 0;
             change_state.clear_hits = 0;
@@ -1502,16 +1525,28 @@ std::string updateLaneChangePlan() {
             std::min(change_state.clear_hits + 1, params.adjacent_clear_frames) : 0;
     }
     const bool detected = change_state.occupancy[follower_state.locked_lane] == BboxResult::DETECTED;
+    const bool both_clear = !change_state.deferred_far && !change_state.clipped_association &&
+        change_state.occupancy[0] == BboxResult::NO_DETECTION &&
+        change_state.occupancy[1] == BboxResult::NO_DETECTION;
+    if (!both_clear) change_state.return_clear_since = ros::SteadyTime();
+    else if (new_scan && change_state.return_clear_since.isZero()) change_state.return_clear_since = now;
+    const bool return_ready = params.return_to_entry_lane && !params.one_lane_change_only &&
+        change_state.has_completed && change_state.entry_lane == adjacent_index && both_clear &&
+        !change_state.return_clear_since.isZero() &&
+        (now - change_state.return_clear_since).toSec() >= 1.0 &&
+        (now - change_state.completed_at).toSec() >= params.lane_change_cooldown &&
+        change_state.clear_hits >= params.adjacent_clear_frames;
     if (change_state.deferred_far && detected) return "far_obstacle_lane_unresolved";
     if (change_state.deferred_far && params.far_obstacle_speed_kph <= params.epsilon) return "far_obstacle_approach_disabled";
-    if (!detected) {
+    const auto follow_current = [&]() -> std::string {
         change_state.obstacle_hits = 0;
         std::vector<FamilyPoint2d> path;
         if (!buildPath(*current, false, path) || !pathInsideRoad(path)) return "following_path_outside_road";
         storePlannedTarget(*current, path);
         change_state.target_lane = follower_state.locked_lane;
         return "";
-    }
+    };
+    if (!detected && !return_ready) return follow_current();
     if (change_state.has_completed && params.one_lane_change_only) return "lane_change_already_completed";
     if (change_state.has_completed && (now-change_state.completed_at).toSec() < params.lane_change_cooldown) return "lane_change_cooldown";
     if (new_scan) change_state.obstacle_hits++;
@@ -1519,14 +1554,16 @@ std::string updateLaneChangePlan() {
     const LaneChain* adjacent = getPlanningLane(adjacent_index);
     if (adjacent == nullptr) {
         change_state.clear_hits = 0;
+        if (return_ready) return follow_current();
         return "adjacent_lane_horizon_missing";
     }
     std::vector<FamilyPoint2d> path;
     if (change_state.occupancy[adjacent_index] != BboxResult::NO_DETECTION || !buildRoadBoundedChangePath(*adjacent, path)) {
         change_state.clear_hits = 0;
+        if (return_ready) return follow_current();
         return "adjacent_lane_detected_or_path_invalid";
     }
-    if (change_state.obstacle_hits < params.obstacle_confirm_frames ||
+    if ((!return_ready && change_state.obstacle_hits < params.obstacle_confirm_frames) ||
         change_state.clear_hits < params.adjacent_clear_frames) return "confirming_bbox_lane_change";
 
     // 모든 변경 조건이 충족되면 옆 차로를 즉시 내 차로로 지정한다.
@@ -1535,6 +1572,8 @@ std::string updateLaneChangePlan() {
     follower_state.locked_lane = adjacent_index;
     change_state.target_lane = follower_state.locked_lane;
     change_state.changing = true;
+    change_state.returning_to_entry = return_ready;
+    change_state.return_clear_since = ros::SteadyTime();
     change_state.has_completed = false; // 이번 변경의 완료 여부를 새로 기록한다.
     change_state.change_started = now;
     change_state.timing_updated_at = now;

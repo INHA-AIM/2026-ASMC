@@ -60,6 +60,7 @@
         name="asmc_control_selector" output="screen" required="true"/>
   <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
     <arg name="enable_control" value="true"/>
+    <arg name="return_to_entry_lane" value="true"/>
     <arg name="control_topic" value="/ctrl_cmd/jamming"/>
     <arg name="expected_config_sha256" value="$(arg expected_config_sha256)"/>
     <arg name="calibration_file" value="$(arg calibration_file)"/>

@@ -19,9 +19,10 @@ from pathlib import Path
 import rospy
 import numpy as np
 import yaml
-from asmc_msgs.msg import VehicleState,BehaviorCommand,TrafficLightDetection,UrbanFeatureDebug
+from asmc_msgs.msg import VehicleState,BehaviorCommand,TrafficLightDetection,UrbanFeatureDebug,FrenetFeedback
 from planning_inputs.msg import DetectedObjectArray
-from std_msgs.msg import String,UInt8MultiArray
+from std_msgs.msg import String,UInt8MultiArray,UInt8
+from diagnostic_msgs.msg import DiagnosticArray
 from morai_msgs.msg import CtrlCmd
 from scen_runner.config import REPO_ROOT,repo_path,load_config
 from scen_runner.morai.clock_contract import ClockGuard
@@ -56,7 +57,17 @@ BAG_TOPICS = [
 ]
 
 
-def closed_bag_manifest(directory):
+ASMC_LIDAR_TOPICS = [
+    '/migration/lidar/planning_observations_map',
+    '/migration/lidar/objects_local', '/migration/lidar/diagnostics',
+    '/perception/camera/objects', '/perception/lane/boundary_family',
+    '/perception/camera/objects/status', '/perception/camera/lane/status',
+    '/planning/camera_bbox_lane_change/diagnostics',
+    '/planning/camera_bbox_lane/result',
+]
+
+
+def closed_bag_manifest(directory, production_stack=False):
     import rosbag
     if list(directory.glob('drive*.bag.active')):
         raise RuntimeError('recording is not closed; raw bag retained')
@@ -73,13 +84,18 @@ def closed_bag_manifest(directory):
             for name,count in topics.items():counts[name]=counts.get(name,0)+count
             manifest.append(dict(file=path.name,bytes=path.stat().st_size,sha256=digest.hexdigest(),
                 start=bag.get_start_time(),end=bag.get_end_time(),topics=topics))
-    required=('/planning/vehicle/state','/planning/objects','/behavior/control_request',
-        '/planning/control_plan','/control/binding_status','/ctrl_cmd',
+    required=('/planning/vehicle/state','/planning/objects','/ctrl_cmd',
         '/perception/traffic_light/detection','/cam_extra/image_jpeg/compressed',
         '/morai_sensor_bridge/frame_timing','/Ego_topic','/planning/vehicle/gps_imu_state',
         '/planning/vehicle/speed_diagnostics','/planning/mode','/planning/control_selector/diagnostics')
-    required+=('/lidar/motion_debug','/lidar/tracked_objects_map',
-               '/planning/input/tracked_objects','/behavior/feature_debug')
+    required+=('/behavior/feature_debug',)
+    if production_stack:
+        required+=('/migration/lidar/planning_observations_map',
+                   '/migration/lidar/diagnostics')
+    else:
+        required+=('/lidar/motion_debug','/lidar/tracked_objects_map',
+                   '/planning/input/tracked_objects','/behavior/control_request',
+                   '/planning/control_plan','/control/binding_status')
     missing=[name for name in required if not counts.get(name)]
     if missing:raise RuntimeError('required bag evidence missing: '+str(missing))
     return dict(schema_version=4,files=manifest,topic_counts=counts)
@@ -88,12 +104,14 @@ def closed_bag_manifest(directory):
 def fingerprint():
     sources={};extensions={'.py','.cpp','.hpp','.h','.yaml','.launch','.msg','.json'}
     roots=['src/asmc_planner','src/asmc_controller','src/asmc_msgs','src/lidar+sensorfusion/src/Main',
+           'src/asmc_lidar','src/planning_inputs','src/jamming_lane_boundary_adapter',
            'tools/scen_runner/scen_runner','tools/scen_runner/launch']
     for root in roots:
         for path in sorted((REPO_ROOT/root).rglob('*')):
             if path.is_file() and (path.suffix in extensions or path.name in ('CMakeLists.txt','package.xml')) and '__pycache__' not in path.parts:
                 sources[path.relative_to(REPO_ROOT).as_posix()]=hashlib.sha256(path.read_bytes()).hexdigest()
     for name in ('tools/scen_runner/run_yellow_signal_trial.py','tools/scen_runner/export_signal_trial_surface.py',
+                 'tools/scen_runner/run_slowdown_survey.py',
                  'tools/scen_runner/analyze_signal_bag.py','tools/scen_runner/analyze_yellow_signal_trial.py',
                  'tools/scen_runner/qualify_yellow_blockage.py',
                  'tools/scen_runner/requirements.txt','src/asmc_hd_map/config/kcity2025_compact_drivable_map.json'):
@@ -101,6 +119,9 @@ def fingerprint():
     binaries={}
     for path in [REPO_ROOT/'devel/lib/asmc_planner/asmc_planner_node',
                  REPO_ROOT/'devel/lib/asmc_controller/mpc_controller_node',
+                 REPO_ROOT/'devel/lib/planning_inputs/planning_vehicle_state_node',
+                 REPO_ROOT/'devel/lib/libplanning_state_core.so',
+                 REPO_ROOT/'devel/lib/lane_boundary_adapter/camera_bbox_lane_change_node',
                  REPO_ROOT/'src/lidar+sensorfusion/devel/lib/Main/main',
                  REPO_ROOT/'src/lidar+sensorfusion/devel/lib/libmyHeader.so',
                  *sorted((REPO_ROOT/'devel/lib').glob('libasmc*.so'))]:
@@ -125,7 +146,9 @@ def fingerprint():
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--host',required=True);p.add_argument('--port',type=int,default=7789)
-    p.add_argument('--clock-profile',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--clock-profile',type=Path);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--production-stack',action='store_true',
+        help='use the ordinary asmc_lidar autonomy launch, without trial signal-policy overrides')
     p.add_argument('--physical-road',type=Path,required=True,help='verified actual simulator pavement snapshot, kept outside Git')
     p.add_argument('--light',default='C1256W000077')
     p.add_argument('--case',choices=['green','red_stop','yellow_stop','yellow_close','yellow_inside','recovery','corridor'],default='green')
@@ -135,6 +158,8 @@ def main():
     p.add_argument('--full-route',action='store_true',help='official start, CP14, then START/END; no 800m finish')
     p.add_argument('--highway-merge-1',action='store_true',
         help='isolated high-speed actor section from s=985 through the first merge exit')
+    p.add_argument('--jamming-exit',action='store_true',
+        help='diagnostic scene starting before jamming and ending at s=2050; NOT a full lap')
     p.add_argument('--natural-signals',action='store_true',help='corridor trials only: retain automatic signal cycles')
     p.add_argument('--record-bag',action='store_true',help='record raw operational inputs and bound command/control outputs')
     p.add_argument('--scenario-seed',type=int,help='canonical full-scene actors and checkpoint weather; requires natural signals')
@@ -145,8 +170,18 @@ def main():
     p.add_argument('--collect-road-failures',action='store_true',
         help='diagnostic run only: retain small road failures while collecting signal behavior; never passes those runs')
     args=p.parse_args()
+    if not args.production_stack and args.clock_profile is None:
+        p.error('--clock-profile is required for the yellow-policy stack')
+    if args.production_stack and (args.case!='corridor' or not args.natural_signals):
+        p.error('--production-stack requires --case corridor --natural-signals')
+    import rosnode
+    if '/asmc_planner' in rosnode.get_node_names():
+        p.error('another planner is running; no simulator state was changed')
     if args.full_route and args.highway_merge_1:
         p.error('--full-route and --highway-merge-1 are mutually exclusive')
+    if args.jamming_exit and (args.full_route or args.highway_merge_1 or
+                             args.case!='corridor' or args.scenario_seed is None):
+        p.error('--jamming-exit requires a seeded corridor and cannot be a full lap/highway trial')
     if args.highway_merge_1 and (args.case!='corridor' or args.scenario_seed is None):
         p.error('--highway-merge-1 requires --case corridor and --scenario-seed')
     if args.natural_signals and args.case!='corridor':
@@ -197,13 +232,34 @@ def main():
             elif name=='features':emit('ros',dict(topic=name,stamp=msg.header.stamp.to_sec(),
                 ego_s=msg.ego_s,selected=msg.selected_behavior,reason=msg.decision_reason,
                 pedestrian_risk=msg.pedestrian_risk,emergency_risk=msg.emergency_risk,
-                static_obstacle_ahead=msg.static_obstacle_ahead,avoidance_object_id=msg.avoidance_object_id))
+                static_obstacle_ahead=msg.static_obstacle_ahead,avoidance_object_id=msg.avoidance_object_id,
+                **{key:getattr(msg,key) for key in (
+                    'hard_rule_reason','current_link_id','ego_speed','desired_speed','has_max_speed','max_speed',
+                    'has_front_vehicle','front_gap','front_ttc','has_stop_line','distance_to_stop_line',
+                    'intersection_approach_active','intersection_approach_speed_limit','traffic_light_id',
+                    'traffic_light_state','traffic_light_raw_label','planned_stop','force_stop')}))
+            elif name=='command':emit('ros',dict(topic=name,stamp=msg.header.stamp.to_sec(),
+                **{key:getattr(msg,key) for key in ('command_id','maneuver_type','execution_request',
+                    'desired_speed_mps','primary_object_id','reason')}))
+            elif name=='feedback':emit('ros',dict(topic=name,stamp=msg.header.stamp.to_sec(),
+                **{key:getattr(msg,key) for key in ('command_id','active_maneuver','plan_valid',
+                    'trajectory_source','execution_state','current_s','current_d','applied_speed_mps',
+                    'gap_evaluated','gap_safe','generated_candidate_count','valid_candidate_count',
+                    'blocking_object_id','result_code','result_detail')}))
+            elif name=='mode':emit('ros',dict(topic=name,mode=msg.data))
+            elif name=='jamming':emit('ros',dict(topic=name,stamp=msg.header.stamp.to_sec(),
+                statuses=[dict(name=s.name,level=s.level,message=s.message,
+                    values={v.key:v.value for v in s.values}) for s in msg.status]))
         except Exception as error:
             with lock:latest['decode_error']=str(error)
     topics=[('state','/planning/vehicle/state',VehicleState),('objects','/planning/objects',DetectedObjectArray),
         ('request','/behavior/control_request',UInt8MultiArray),('plan','/planning/control_plan',UInt8MultiArray),
         ('status','/control/binding_status',UInt8MultiArray),('control','/ctrl_cmd',CtrlCmd),
         ('features','/behavior/feature_debug',UrbanFeatureDebug),
+        ('command','/behavior/command_v2',BehaviorCommand),
+        ('feedback','/planning/frenet_feedback_v2',FrenetFeedback),
+        ('mode','/planning/mode',UInt8),
+        ('jamming','/planning/camera_bbox_lane_change/diagnostics',DiagnosticArray),
         ('policy','/planning/signal_policy',String),('detection','/perception/traffic_light/detection',TrafficLightDetection)]
     subs=[rospy.Subscriber(topic,cls,lambda msg,n=name:callback(n,msg),queue_size=128) for name,topic,cls in topics]
     route=EpisodeRoute();geometry=REPO_ROOT/'src/asmc_planner/config/behavior/signal_policy_geometry_kcity2025.yaml'
@@ -215,6 +271,14 @@ def main():
            0. if scene_start else sline+8. if args.case=='recovery' else max(0.,sline-args.start_distance))
     end=(1290. if args.highway_merge_1 else route.curve.length if args.full_route else
          800. if args.case=='corridor' else min(800.,sexit+15.))
+    if args.jamming_exit:
+        start=max(0.,route.section('tunnel')['start']-10.)
+        end=2050.
+        sx,sy,sz,sh=route.curve.pose(start)
+        # Reset only while held, before observation/release. Canonical actors
+        # and ownership cleanup remain unchanged; this is explicitly partial.
+        route.scene_start=dict(x=sx,y=sy,z=sz+.35,roll=0.,pitch=0.,
+                               yaw=coordinates.enu_yaw_degrees(sx,sy,sh))
     x,y,z,h=route.curve.pose(start)
     pose=dict(route.scene_start) if scene_start else dict(x=x,y=y,z=z+.35,roll=0.,pitch=0.,yaw=math.degrees(h))
     reset_pose=dict(pose)
@@ -229,8 +293,8 @@ def main():
     source_snapshot=fingerprint()
     (args.output/'source-manifest.json').write_text(json.dumps(source_snapshot,indent=2))
     (args.output/'trial-config.json').write_text(json.dumps(dict(arguments=vars(args),
-        source_clock=yaml.safe_load(args.clock_profile.read_text()),
-        clock_profile_sha256=hashlib.sha256(args.clock_profile.read_bytes()).hexdigest(),
+        source_clock=yaml.safe_load(args.clock_profile.read_text()) if args.clock_profile else None,
+        clock_profile_sha256=hashlib.sha256(args.clock_profile.read_bytes()).hexdigest() if args.clock_profile else None,
         reviewed_bindings=bindings),indent=2,default=str))
     lease=ValidationLease(args.host,args.port);lease.acquire()
     link=EpisodeLink(cfg)
@@ -243,7 +307,7 @@ def main():
     launch=None;log=None;recorder=None;record_log=None;scenario=None;local_obstacle_id=None
     result={'completed':False,'case':args.case,'start_s':start,'end_s':end,
             'full_route':args.full_route,'natural_signals':args.natural_signals,
-            'scenario_seed':args.scenario_seed};oracle=None
+            'scenario_seed':args.scenario_seed,'jamming_exit':args.jamming_exit};oracle=None
     prior_binding=rospy.get_param('/control_binding/enabled',None)
     prior_policy=rospy.get_param('/behavior_planner/signal_policy',None)
     try:
@@ -281,7 +345,8 @@ def main():
                 raise RuntimeError('less than 20GiB free; recording refused')
             record_log=(args.output/'recorder.log').open('w')
             recorder=OwnedProcess(['rosbag','record','--split','--size=4096','--buffsize=1024',
-                '-O',str(args.output/'drive.bag'),*BAG_TOPICS],stdout=record_log,stderr=record_log)
+                '-O',str(args.output/'drive.bag'),*BAG_TOPICS,
+                *(ASMC_LIDAR_TOPICS if args.production_stack else [])],stdout=record_log,stderr=record_log)
             time.sleep(1.)
             if recorder.observe() is not None:raise RuntimeError('bag recorder failed before launch')
         log=(args.output/'planning.log').open('w')
@@ -290,8 +355,11 @@ def main():
         messages=REPO_ROOT/'src/lidar+sensorfusion/devel/lib/python3/dist-packages'
         if messages.is_dir():
             environment['PYTHONPATH']=environment.get('PYTHONPATH','')+os.pathsep+str(messages)
-        launch=OwnedProcess(['roslaunch',str(REPO_ROOT/'tools/scen_runner/launch/yellow_signal_trial.launch'),
-            'clock_profile:='+str(args.clock_profile.resolve()),'mode:=active'],stdout=log,stderr=log,
+        command=(['roslaunch','asmc_planner','autonomy_no_bridges_v2.launch',
+                  'lidar_source_policy:=asmc_lidar'] if args.production_stack else
+                 ['roslaunch',str(REPO_ROOT/'tools/scen_runner/launch/yellow_signal_trial.launch'),
+                  'clock_profile:='+str(args.clock_profile.resolve()),'mode:=active'])
+        launch=OwnedProcess(command,stdout=log,stderr=log,
             cwd=str(REPO_ROOT),env=environment)
         ready_deadline=time.monotonic()+35;stable=None
         while time.monotonic()<ready_deadline:
@@ -300,11 +368,14 @@ def main():
             with lock:
                 rows=dict(latest)
             now=time.monotonic();state=rows.get('state');objects=rows.get('objects');status=rows.get('status_decoded')
-            ready=state and objects and status and now-state[1]<.2 and now-objects[1]<.3 and now-status[1]<.25
+            control=rows.get('control')
+            output_ready=(control and now-control[1]<.25 if args.production_stack else
+                          status and now-status[1]<.25 and status[0]['linked'] and not status[0]['execution_failed'])
+            ready=state and objects and output_ready and now-state[1]<.2 and now-objects[1]<.3
             if ready:
-                v=state[0];s=status[0]
+                v=state[0]
                 heading=abs(math.remainder(v.yaw-math.radians(pose['yaw']),2*math.pi))
-                ready=v.valid and abs(v.speed)<.15 and math.hypot(v.x-pose['x'],v.y-pose['y'])<.75 and heading<math.radians(1) and s['linked'] and not s['execution_failed']
+                ready=v.valid and abs(v.speed)<.15 and math.hypot(v.x-pose['x'],v.y-pose['y'])<.75 and heading<math.radians(1)
             if ready:
                 stable=now if stable is None else stable
                 if now-stable>.5:break
@@ -334,7 +405,7 @@ def main():
         oracle=Oracle(drivable,bindings,coordinates,maximum_gap_s=.3)
         if scenario:scenario.start(clock)
         else:link.release()
-        begun=time.monotonic();last_clock=begun;last_tick=0
+        begun=time.monotonic();last_clock=begun;last_tick=0;maximum_station=0.
         triggered=args.case in ('red_stop','recovery');yellow_at=None;stopped_at=None;released=False
         trigger=args.trigger_distance if args.trigger_distance is not None else {'yellow_stop':20.,'yellow_close':9.,'yellow_inside':-7.}.get(args.case)
         while time.monotonic()-begun<args.deadline:
@@ -352,6 +423,8 @@ def main():
             row=oracle.observe(actor,query_end,aspects);row.update(station=station,route_error=error,aspects=aspects,
                 state_query_interval=[query_begin,query_end])
             emit('oracle',row)
+            if args.production_stack and row['speed_kmh']>59.:
+                raise RuntimeError('measured speed exceeded the 59 km/h ceiling')
             if query_end-query_begin>.1 or not row['observation_complete']:
                 raise RuntimeError('independent oracle observation interval unavailable or expired')
             # Apply deliberate transitions AFTER evaluating this captured pose.
@@ -384,6 +457,11 @@ def main():
                 completion.update(actor,query_end)
                 result['lap_completion']=completion.snapshot()
                 finished=completion.completed
+                maximum_station=max(maximum_station,station)
+                if not finished and maximum_station>route.curve.length*.95 and \
+                        math.hypot(row['x']-completion.finish['xy'][0],
+                                   row['y']-completion.finish['xy'][1])<=completion.finish['radius']:
+                    raise RuntimeError('returned to finish without CP14; lap not accepted')
             else:finished=station>=end
             if finished:
                 result['completed']=True;break
@@ -394,6 +472,8 @@ def main():
                     target_remaining=round(sline-station,2))),flush=True)
             last_clock=now;time.sleep(.02)
         if not result['completed']:raise RuntimeError('trial deadline without endpoint completion')
+    except KeyboardInterrupt:
+        result['error']='trial interrupted; completion not certified'
     except Exception as error:
         result['error']=str(error);print('TRIAL FAILURE: '+str(error),flush=True)
     finally:
@@ -416,7 +496,7 @@ def main():
         if recorder:
             try:
                 recorder.stop(durations=(30,2,2))
-                result['recording']=closed_bag_manifest(args.output)
+                result['recording']=closed_bag_manifest(args.output,args.production_stack)
             except Exception as error:result['recording_error']=str(error)
         if record_log:record_log.close()
         try:owner.restore()

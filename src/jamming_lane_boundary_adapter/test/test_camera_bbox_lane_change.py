@@ -71,8 +71,9 @@ class LaneChangeTest(unittest.TestCase):
             'calibration_file:='+rospkg.RosPack().get_path('asmc_camera')+'/config/bev/cameras_v2.yaml',
             'expected_config_sha256:='+fixture.HASH,
             'lane_change_timeout:='+('10.0' if self._testMethodName.startswith('test_ignore') else '5.0'),
-            *([] if self._testMethodName.startswith(('test_ignore','test_repeat')) else ['ignore_bbox_during_lane_change:=false']),
-            *([] if self._testMethodName.startswith('test_repeat') else
+            'return_to_entry_lane:='+('true' if self._testMethodName.startswith('test_return') else 'false'),
+            *([] if self._testMethodName.startswith(('test_ignore','test_repeat','test_return')) else ['ignore_bbox_during_lane_change:=false']),
+            *([] if self._testMethodName.startswith(('test_repeat','test_return')) else
               ['one_lane_change_only:='+('false' if self._testMethodName=='test_clipped_cannot_start_second_change' else 'true')]),
             'hood_crop_bottom_ratio:='+('0.21' if self._testMethodName.startswith(('test_clipped','test_ignore')) else '0.0'),
             'far_obstacle_speed_kph:='+('0.0' if self._testMethodName in ('test_far_approach_can_be_disabled','test_ignore_far_zero_speed_during_change') else '5.0'),
@@ -135,6 +136,50 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(self.command.longlCmdType,1,self.status())
         self.assertEqual(self.command.brake,1)
         if reason:self.assertEqual(self.status()[0],reason)
+
+    def test_return_clear_entry_lane_and_keep_target_obstacle_stop(self):
+        self.feed()
+        self.feed([0])
+        self.feed([], shift=-3.5, duration=.65)
+        self.assertEqual(self.status()[1]['entry_lane'], '1')
+        self.assertEqual(self.status()[1]['change_completed'], 'true')
+        # A blocked entry lane never becomes a voluntary return target, even
+        # after the cooldown. Continue in the currently clear lane.
+        self.feed([0], shift=-3.5, duration=4.1)
+        self.following()
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, duration=1.5)
+        self.following()
+        self.assertEqual(self.status()[1]['locked_lane'], '1')
+        self.assertEqual(self.status()[1]['returning_to_entry'], 'true')
+        self.assertEqual(self.status()[1]['bbox_stop_suppressed'], 'false')
+        self.feed([0], shift=-3.5)
+        self.stopped('target_lane_detected')
+        # Exactly one fresh BBOX source frame (duplicates do not count) can
+        # resume an already-authorized return after observing the target clear.
+        self.feed([], shift=-3.5, duration=.2, stamp=rospy.Time.now())
+        self.following()
+        self.feed([], shift=0., duration=.65)
+        self.assertEqual(self.status()[1]['change_completed'], 'true')
+        self.assertEqual(self.status()[1]['returning_to_entry'], 'false')
+        self.feed([], duration=4.1)
+        self.assertEqual(self.status()[1]['locked_lane'], '1')
+
+    def test_return_rejects_unresolved_or_stale_observations(self):
+        self.feed()
+        self.feed([0])
+        self.feed([], shift=-3.5, duration=.65)
+        self.feed([], shift=-3.5, far=True, duration=4.1)
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, duration=.6)
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, bbox=False, duration=.8)
+        self.stopped()
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, duration=.65)
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, duration=.9)
+        self.assertEqual(self.status()[1]['locked_lane'], '1')
 
     def test_repeat_changes_use_new_own_lane_and_reset_completion(self):
         self.feed()
