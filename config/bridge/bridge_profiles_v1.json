@@ -74,7 +74,7 @@
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "42d8b39d01fa9b641bb455dd9fa9417c4a9ed765e8111123d8b7d2efccb56eb9"
+        "sha256": "d8b1edf447e41f8d01f82761ef9ff84e395c4e3ddb9f91e1d54e38fdaaa4f7cc"
       },
       "network_launch": {
         "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",

@@ -237,7 +237,8 @@ EXTRA+=( "transport_profile:=${TRANSPORT_PROFILE}" )
 EXTRA+=( "stream_profile:=${STREAM_PROFILE}" )
 EXTRA+=( "competition_status_required:=${REQUIRE_COMPETITION_STATUS}" )
 echo "  cmd_ip         : ${CMD_IP} (Ctrl → Windows MORAI Host PORT)"
-echo "  Ctrl default   : 9093/9094, mode 2"
+echo "  Ctrl default   : 9093/9094, UDP CtrlMode=2 (Auto)"
+echo "  MORAI JSON     : egoCtrlMode=3 (Auto); separate from UDP CtrlMode"
 echo "  Status 9099    : verified MolitComp03 CompetitionInfoPublisher -> /Ego_topic"
 echo "  Detail 9798    : local diagnostic only; disabled on LAN"
 echo "  9099 gate      : required=${REQUIRE_COMPETITION_STATUS}; LAN input is always enabled"

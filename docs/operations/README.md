@@ -8,7 +8,7 @@
 
 > **문서 역할:** Canonical — Docker, MORAI UDP profile, bridge 기동과 시뮬 검증
 >
-> **현재 기준:** 공통 `morai_udp` bridge + 본선 `ASMC_sensor_set_v3.json` + ROS1 Noetic + Docker host network
+> **현재 기준:** 공통 `morai_udp` bridge + [버전별 v3 Sensor 정본](../../config/morai/README.md) + ROS1 Noetic + Docker host network
 
 대회 허용 범위는 [대회 환경](../competition/README.md), Planning/Control의 실행은
 [Planning/Control 규약](./planning-control.md), bag 기록·재생은
@@ -33,7 +33,7 @@ live acceptance가 끝난 것을 구분한다.
 |---|---|---|
 | 개발 IP | Host/Destination `127.0.0.1` | 동일 |
 | 현장 IP | profile 계약·생성본: MORAI `192.168.0.1`, Autonav `192.168.0.10` | 실제 두 PC 리허설 |
-| Ego Ctrl Cmd | `9093/9094`, type 1, mode 2 | local brake closed loop 통과; LAN2LAN 재검증 |
+| Ego Ctrl Cmd | `9093/9094`, UDP type 1·CtrlMode 2 | local brake closed loop 통과; LAN2LAN 재검증 |
 | 차량 상태 | UI CompetitionInfoPublisher `9088/9099` → `/Ego_topic`; 별도 `9797/9798` | 정차 packet 확인, 주행 부호·현장 LAN 미검증 |
 | TrafficLight simulator oracle | `258`, `7603/7502` | team production bridge에서 소비 금지 |
 | CollisionData | destination `9092` | `9091/9092` pair |
@@ -125,7 +125,7 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 | TrafficLight status | Host/Dest `7603/7502`, type 258 | simulator oracle; canonical bridge가 소비하지 않음 |
 | Object Info | Dest `7505` | `/Object_topic`, 임시 oracle |
 | Collision Data | Host/Dest `9091/9092` | `/CollisionData` |
-| Ego Ctrl Cmd | Host/Dest `9093/9094`, mode 2 | `asmc_bridge` network node가 `/ctrl_cmd`를 UDP로 전송 |
+| Ego Ctrl Cmd | Host/Dest `9093/9094`, UDP CtrlMode 2 | `asmc_bridge` network node가 `/ctrl_cmd`를 UDP로 전송 |
 
 ### 센서
 

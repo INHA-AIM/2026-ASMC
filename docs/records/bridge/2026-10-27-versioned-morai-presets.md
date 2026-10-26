@@ -70,3 +70,10 @@ Network4개·Sensor6개의 JSON byte는 기존 SaveFile 배포본과 동일하�
 현재 camera/BEV/LiDAR 설정은 입력 경로 문자열만 바꿨고 수치·원본 sensor SHA를 유지했다.
 현재 parity 목록에는 metadata 경로 수정의 previous SHA를 남겼다. 과거 run·동결 기록은 바꾸지 않았다.
 config 하위에 중복 presets/archive/generated/templates 폴더가 다시 생기면 계약 검사가 실패한다.
+
+## 병합 전 확인
+
+정본·공용bridge README, 치트시트, 규정 해설과 실행 로그에서 JSON 주행모드3과
+UDP CtrlMode2를 구분한다. GT catalog의release/sensor_set 오표기 거부와 누락 출력 디렉터리의
+정확한 재생성도 검사한다. 원본10개 SaveFile·8_Autonav 센서의 내용은 유지한다.
+실제 주행·채점 검증은 수행하지 않았으며 팀 통신 정본을 주최 전체 설정으로 승인하지 않는다.

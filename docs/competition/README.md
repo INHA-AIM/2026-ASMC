@@ -87,7 +87,7 @@ staleness, latency와 자원 사용량을 측정한다.
 
 - 맵: `R_KR_PG_K-City_2025`
 - 대회 SIM: `25.S4.MolitComp03`, System Time Scale 1·Target FPS 60, Rendering Quality High 고정
-- 차량 제어: Ego Ctrl Cmd, `cmd type 1`(accel/brake), `ctrl mode 2`만 허용
+- 차량 제어: Ego Ctrl Cmd, `cmd type 1`(accel/brake), UDP payload `CtrlMode=2`만 허용
 - 상태: Competition Vehicle Status와 CollisionData
 - **판정 전용:** Ego Detail Status, Ego Vehicle Status, Get TrafficLight Status는 판정 프로그램만
   쓰며 본선에서 참가팀은 사용할 수 없다. 팀 bridge는 26r1 호환을 위해 수신할 수 있지만 runtime
@@ -235,7 +235,7 @@ PR #64 후속 구현은 HD맵 source·생성 metadata·발행용 payload에 새 
 6. 주행 종료 후 판정 데이터를 저장하고 2번부터 다음 차시를 준비한다.
 
 - [ ] 허용 UDP 채널만 competition profile에서 기동
-- [ ] Ctrl mode 2와 packet 목적지 확인
+- [ ] UDP CtrlMode=2·JSON egoCtrlMode=3와 packet 목적지 확인
 - [ ] Competition Vehicle Status·CollisionData 수신
 - [ ] 카메라·LiDAR·GPS·IMU 포트와 rate 확인
 - [ ] 체크포인트 15개, 3 m 반경과 순서 검증

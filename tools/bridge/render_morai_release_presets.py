@@ -39,7 +39,9 @@ def render_catalog(contract, catalog):
             if (udp['hostIP'], udp['destinationIP']) != ('127.0.0.1', '127.0.0.1'):
                 raise ValueError('GT source must remain local-only')
         entry = catalog['files'].get(filename, {})
-        if (entry.get('transport'), entry.get('kind'), entry.get('version')) != ('local', 'SensorGT', version):
+        expected_gt = {'release': release, 'version': version, 'transport': 'local',
+                       'kind': 'SensorGT', 'sensor_set': 'GT'}
+        if any(entry.get(key) != value for key, value in expected_gt.items()):
             raise ValueError('GT presets must be local and release-specific')
         result[filename] = rendered_bytes(gt)
     if set(catalog['files']) != set(result):
@@ -57,6 +59,15 @@ def check_all(contract=None, catalog=None):
     print('Versioned MORAI presets: 8 runtime + 2 local GT; names and contents current')
 
 
+def write_all(contract, catalog, output_root=None):
+    root = CATALOG.parent if output_root is None else Path(output_root)
+    for name, content in render_catalog(contract, catalog).items():
+        output = root / name
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_bytes(content)
+        print('wrote ' + name)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     action = parser.add_mutually_exclusive_group(required=True)
@@ -68,9 +79,7 @@ def main():
     if args.check:
         check_all(contract, catalog)
     else:
-        for name, content in render_catalog(contract, catalog).items():
-            (CATALOG.parent / name).write_bytes(content)
-            print('wrote config/morai/' + name)
+        write_all(contract, catalog)
 
 
 if __name__ == '__main__':

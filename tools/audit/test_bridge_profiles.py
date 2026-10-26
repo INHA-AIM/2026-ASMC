@@ -6,6 +6,9 @@ import json
 import subprocess
 import unittest
 import copy
+import tempfile
+import contextlib
+import io
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -103,10 +106,28 @@ class BridgeProfileContractTest(unittest.TestCase):
         broken['files'][name]['version'] = '25.S4.MolitComp03'
         with self.assertRaisesRegex(ValueError, 'Mismatched'):
             render_catalog(load_contract(), broken)
+        for field, value in (('release', 'molitcomp03'), ('sensor_set', 'v3')):
+            broken = copy.deepcopy(catalog)
+            broken['files']['sensors/261027_ASMC_Local_SensorGT_26.R1.H3.json'][field] = value
+            with self.assertRaisesRegex(ValueError, 'GT presets'):
+                render_catalog(load_contract(), broken)
         broken = copy.deepcopy(catalog)
         broken['files']['sensors/261027_ASMC_Local_SensorGT_26.R1.H3.json']['transport'] = 'lan2lan'
         with self.assertRaisesRegex(ValueError, 'GT presets'):
             render_catalog(load_contract(), broken)
+
+    def test_release_generator_recreates_missing_output_directories(self):
+        from render_morai_release_presets import render_catalog, write_all, CATALOG
+        catalog = json.loads(CATALOG.read_text())
+        contract = load_contract()
+        with tempfile.TemporaryDirectory(prefix='asmc-morai-write-') as directory:
+            root = Path(directory) / 'missing' / 'morai'
+            with contextlib.redirect_stdout(io.StringIO()):
+                write_all(contract, catalog, root)
+            expected = render_catalog(contract, catalog)
+            self.assertEqual(set(expected), {str(p.relative_to(root)) for p in root.rglob('*.json')})
+            for name, data in expected.items():
+                self.assertEqual(data, (root / name).read_bytes())
 
     def test_config_folders_contain_only_canonical_imports(self):
         from render_morai_release_presets import CATALOG
