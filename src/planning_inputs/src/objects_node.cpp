@@ -8,11 +8,13 @@
 #include <vector>
 #include <asmc_msgs/TrackedObjectArray.h>
 #include <asmc_msgs/VehicleState.h>
+#include <diagnostic_msgs/DiagnosticArray.h>
 #include <planning_inputs/DetectedObjectArray.h>
 #include <ros/ros.h>
 #include "planning_inputs/converter.hpp"
 #include "planning_inputs/MotionClassifier.hpp"
 #include "planning_inputs/heading_history.hpp"
+#include "planning_inputs/observation_sequence.hpp"
 #include "planning_inputs/filters/PlanningObjectFilter.hpp"
 
 namespace planning_inputs {
@@ -107,29 +109,77 @@ class ObjectsNode {
  public:
   ObjectsNode() : private_("~"), classifier_(LoadMotionConfig(private_)) {
     std::string input,output,state;
-    private_.param<std::string>("input_topic",input,"/planning/input/tracked_objects");
+    std::string policy;
+    private_.param<std::string>("source_policy",policy,"asmc_lidar");
+    private_.param<std::string>("input_topic",input,policy == "asmc_lidar" ?
+        "/perception/lidar/tracks_map" : "/planning/input/tracked_objects");
     private_.param<std::string>("output_topic",output,"/planning/objects");
     private_.param<std::string>("state_topic",state,"/planning/vehicle/state");
     if(input==output) throw std::runtime_error("planning object topics must differ");
     publisher_=node_.advertise<DetectedObjectArray>(output,2);
-    std::string policy;
-    private_.param<std::string>("source_policy",policy,"validated_lidar");
-    // asmc_lidar 전환 인계: source_policy 문자열/토픽만 바꾸어 새 LidarObservation을
-    // 연결하지 않는다. 공용 타입·session/generation·frame/시각·velocity validity를
-    // 처리하는 입력 경계를 먼저 검증한다. 전환 후 인지에서 소유한 road/static 필터와
-    // OBB clipping은 이 어댑터에서 중복 적용하지 않는다. TTC/추종/정지/회피·센서 장애
-    // 대응은 판제에 유지한다. 현행 Main 경로는 그 전까지 유지한다.
-    // 정본: docs/handoffs/lidar-migration.md#판제-소비-전환-시-정리할-중복-처리
-    if(policy=="validated_lidar") {
+    // Direct public contract, no JSON join or repeated perception filters.
+    // TTC/follow/stop/avoid/sensor-failure actions remain planner-owned.
+    if(policy=="asmc_lidar") {
+      private_.param("source_max_age_s", source_max_age_s_, .35);
+      private_.param("source_future_tolerance_s", source_future_s_, .05);
+      if (!std::isfinite(source_max_age_s_) || source_max_age_s_ <= 0 ||
+          !std::isfinite(source_future_s_) || source_future_s_ < 0)
+        throw std::runtime_error("invalid LiDAR source time limits");
+      input_=node_.subscribe<asmc_msgs::LidarTrackingObservation>(input,1,&ObjectsNode::LidarObjects,this,
+                                                                 ros::TransportHints().tcpNoDelay());
+      diagnostics_=private_.advertise<diagnostic_msgs::DiagnosticArray>("diagnostics",1);
+      diagnostics_timer_=private_.createWallTimer(ros::WallDuration(1.),&ObjectsNode::Diagnostics,this);
+    } else if(policy=="validated_lidar") {
       input_=node_.subscribe(input,2,&ObjectsNode::ValidatedObjects,this);
     } else if(policy=="main_raw") {
       filters_=std::make_unique<PlanningObjectFilter>(private_);
       input_=node_.subscribe(input,2,&ObjectsNode::Objects,this);
     } else throw std::runtime_error("unsupported planning LiDAR source_policy");
     state_=node_.subscribe(state,50,&ObjectsNode::State,this);
-    ROS_INFO("Planning input: canonical main %s -> private %s; main sensor messages remain unchanged",input.c_str(),output.c_str());
+    ROS_INFO("Planning input (%s): %s -> %s",policy.c_str(),input.c_str(),output.c_str());
   }
  private:
+  void LidarObjects(const asmc_msgs::LidarTrackingObservation::ConstPtr& source) {
+    if (!source) return;
+    ++received_;
+    const double age = ros::Time::now().toSec() - source->observation.objects.header.stamp.toSec();
+    if (!std::isfinite(age) || age > source_max_age_s_ || age < -source_future_s_) {
+      ++rejected_; source_reason_ = "source_stale_or_future"; return;
+    }
+    std::string reason;
+    if (!sequence_.Accept(source->observation, &reason)) {
+      ++rejected_; source_reason_ = reason; return;
+    }
+    DetectedObjectArray out;
+    if (ConvertLidarObservation(*source, &out, nullptr, &reason) != ConversionStatus::OK) {
+      ++rejected_; source_reason_ = reason;
+      ROS_WARN_THROTTLE(1., "Withheld common LiDAR input: %s", reason.c_str());
+      return;  // invalid/pose-unavailable != an observed-empty free-space frame
+    }
+    publisher_.publish(out);
+    source_reason_ = out.objects.empty() ? "observed_empty" : "observed";
+    last_common_ = ros::SteadyTime::now();
+    ++published_;
+  }
+
+  void Diagnostics(const ros::WallTimerEvent&) {
+    diagnostic_msgs::DiagnosticArray message;
+    message.header.stamp = ros::Time::now();
+    diagnostic_msgs::DiagnosticStatus status;
+    status.name = "planning_inputs/common_lidar";
+    status.hardware_id = "asmc_lidar";
+    const bool stale = last_common_.isZero() ||
+        (ros::SteadyTime::now() - last_common_).toSec() > source_max_age_s_;
+    status.level = stale || (source_reason_!="observed" && source_reason_!="observed_empty") ? status.WARN : status.OK;
+    status.message = stale ? "no_fresh_representable_observation: " + source_reason_ : source_reason_;
+    for (const auto& item : std::vector<std::pair<std::string, std::uint64_t>>{
+        {"received",received_},{"published",published_},{"rejected",rejected_}}) {
+      diagnostic_msgs::KeyValue value; value.key=item.first; value.value=std::to_string(item.second);
+      status.values.push_back(std::move(value));
+    }
+    message.status.push_back(std::move(status));
+    diagnostics_.publish(message);
+  }
   void ValidatedObjects(const ValidatedTrackedObjectArray::ConstPtr& source) {
     if(!source) return;
     DetectedObjectArray out;
@@ -210,6 +260,13 @@ class ObjectsNode {
   HeadingHistory headings_; MotionClassifier classifier_;
   std::unique_ptr<PlanningObjectFilter> filters_;
   double last_source_=0;
+  ObservationSequence sequence_;
+  ros::Publisher diagnostics_;
+  ros::WallTimer diagnostics_timer_;
+  ros::SteadyTime last_common_;
+  double source_max_age_s_=.35, source_future_s_=.05;
+  std::string source_reason_="waiting_for_input";
+  std::uint64_t received_=0, published_=0, rejected_=0;
 };
 }
 int main(int argc,char** argv) {

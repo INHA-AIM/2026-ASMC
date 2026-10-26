@@ -19,16 +19,7 @@ from asmc_camera.bev.calibration import load_calibration_snapshot
 from geometry_msgs.msg import PointStamped
 from lane_boundary_adapter.msg import CameraBBoxLaneResult
 from morai_msgs.msg import CtrlCmd
-from dataclasses import dataclass
-from asmc_msgs.msg import CameraObjectBox, CameraObjectBoxArray
-
-@dataclass
-class Yolo_bbox:
-    xMin: float
-    yMin: float
-    xMax: float
-    yMax: float
-    classes: str
+from asmc_msgs.msg import CameraObjectBoxArray
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Header,Bool,Int8,UInt8
 from visualization_msgs.msg import MarkerArray,Marker
@@ -112,19 +103,15 @@ class LaneChangeTest(unittest.TestCase):
                 for y in ys:
                     uv,_=self.camera.project_ground(np.array([[box_x,y+shift+slope*box_x]]))
                     u,v=uv[0]
-                    boxes.append(Yolo_bbox(u-15,v-60,u+15,v,'car'))
+                    boxes.append(fixture.camera_box(u-15,v-60,u+15,v,'car'))
                 if far:
                     uv,_=self.camera.project_ground(np.array([[30.,shift]]))
                     u,v=uv[0]
-                    boxes.append(Yolo_bbox(u-15,v-50,u+15,v,'car'))
+                    boxes.append(fixture.camera_box(u-15,v-50,u+15,v,'car'))
                 if raw_boxes is not None:boxes=raw_boxes
                 header=Header(stamp=source,frame_id='camera_front')
                 self.image_pub.publish(CompressedImage(header=header,format='jpeg',data=self.jpeg))
-                self.box_pub.publish(CameraObjectBoxArray(header=header, image_width=1280,
-                    image_height=720, valid=True, boxes=[CameraObjectBox(
-                        xmin=b.xMin, ymin=b.yMin, xmax=b.xMax, ymax=b.yMax,
-                        class_name='vehicle', source_class_name=b.classes,
-                        confidence=.9, confidence_valid=True) for b in boxes]))
+                self.box_pub.publish(fixture.camera_boxes(header,boxes))
             time.sleep(.05)
         time.sleep(.03)
 
@@ -237,7 +224,7 @@ class LaneChangeTest(unittest.TestCase):
         self.following()
         self.assertEqual(self.status()[1]['bbox_stop_suppressed'],'true')
         self.assertEqual(self.status()[1]['locked_lane'],'0')
-        self.feed(raw_boxes=[Yolo_bbox(600,480,680,568,'car')])
+        self.feed(raw_boxes=[fixture.camera_box(600,480,680,568,'car')])
         self.assertFalse(self.classification.valid)
         self.following()
         self.feed(bbox=False,duration=.7)  # Keep fresh lanes, lose BBOX input.
@@ -449,8 +436,8 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(self.status()[1]['target_lane'],'0')
 
     def test_clipped_known_source_continues_and_target_still_stops(self):
-        normal=Yolo_bbox(600,480,680,560,'car')
-        clipped=Yolo_bbox(600,480,680,568,'car')
+        normal=fixture.camera_box(600,480,680,560,'car')
+        clipped=fixture.camera_box(600,480,680,568,'car')
         self.feed()
         self.feed(raw_boxes=[normal])
         self.following()
@@ -465,10 +452,10 @@ class LaneChangeTest(unittest.TestCase):
         self.following()
         self.assertLessEqual(self.command.velocity,5.)
         self.assertEqual(list(self.classification.clipped_association),[True])
-        target=Yolo_bbox(200,480,280,560,'car')
+        target=fixture.camera_box(200,480,280,560,'car')
         self.feed(raw_boxes=[target])
         self.stopped('target_lane_detected')
-        target.yMax=568
+        target.ymax=568
         self.feed(raw_boxes=[target])
         self.assertTrue(self.classification.valid,self.classification)
         self.assertEqual(list(self.classification.clipped_association),[True])
@@ -479,17 +466,17 @@ class LaneChangeTest(unittest.TestCase):
         self.feed([0])
         self.feed([0],shift=-3.5,duration=.65)
         self.assertEqual(self.status()[1]['change_completed'],'true')
-        normal=Yolo_bbox(600,480,680,560,'car')
+        normal=fixture.camera_box(600,480,680,560,'car')
         self.feed(raw_boxes=[normal],shift=-3.5)
-        normal.yMax=568
+        normal.ymax=568
         self.feed(raw_boxes=[normal],shift=-3.5)
         self.assertEqual(list(self.classification.clipped_association),[True])
         self.stopped('clipped_obstacle_cannot_start_change')
         self.assertEqual(self.status()[1]['change_state'],'following_lane')
 
     def test_clipped_new_object_and_expired_track_stop(self):
-        normal=Yolo_bbox(600,480,680,560,'car')
-        clipped=Yolo_bbox(600,480,680,568,'car')
+        normal=fixture.camera_box(600,480,680,560,'car')
+        clipped=fixture.camera_box(600,480,680,568,'car')
         self.feed()
         self.feed(raw_boxes=[clipped])
         self.stopped()

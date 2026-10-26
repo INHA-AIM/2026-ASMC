@@ -1,5 +1,9 @@
 # BBOX가 내 차로 / 옆 차로에 있는지 판정
 
+2026-10-26: 공용 카메라 결과를 기존 frame bridge가 직접 소비한다. 구 Main CPU 변환과
+`camera_bbox_detector.launch`는 제거했고 Main/Msg가 필요 없다. cutoff0.7과 판정/주행 계산은 유지하며
+원본 subpixel bbox를 private frame에 보존한다. 별도 detector 실행 없이 카메라와 아래 launch를 사용한다.
+
 **기본값은 현재 IMU family와 원본 시각 투영이다.** 카메라의 보정 선택을 재사용하며
 새 IMU 조회나 픽셀 왜곡을 추가하지 않는다. SHA·보정 ID·영상 원본 header가 모두 맞아야 한다.
 [판제 인수 체크리스트](../../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)의 폐루프 시험은 별도다.
@@ -59,7 +63,7 @@ M2 병진/yaw 정렬은 없으며, 뷰 간35ms 한계와 움직이는 물체의 
 
 | 토픽 | 역할 |
 |---|---|
-| `/perception/camera/objects` | `asmc_msgs/CameraObjectBoxArray`, 전방 결과를 직접 소비 |
+| `/perception/camera/objects` | 공용 `asmc_msgs/CameraObjectBoxArray`, 전방만 소비·추가 cutoff0.7 |
 | `/perception/lane/ground_projection` | 같은 영상의 선택 평면·보정·세대 metadata |
 | `/perception/camera/lane/status` | ACTIVE·세션·generation·cutoff 검증 |
 | `/planning/camera_bbox_lane/frame` | 정확한 원본 영상+BBOX 내부 연결 |
@@ -133,7 +137,7 @@ MY_LANE·BOTH는 빨간색, ADJACENT는 파란색, 나머지는 노란색이다.
 
 ## 검증
 
-기본 경로는 `camera_frame_bridge.test`와 `camera_bbox_lane_change.test`로 검사한다. 아래 `camera_bbox_lane.test`는 명시한 legacy_yolo 호환 경로의 회귀시험이다.
+별도 ROS master에서 실제 공용 `CameraObjectBoxArray` → 영상 동기화 → C++ 판정 연결을 검사한다.
 
 ```bash
 docker exec -it asmc-ros-noetic bash -lc 'source /opt/ros/noetic/setup.bash && source /root/ws/devel/setup.bash && source /root/ws/src/lidar+sensorfusion/devel/setup.bash && rostest lane_boundary_adapter camera_bbox_lane.test'

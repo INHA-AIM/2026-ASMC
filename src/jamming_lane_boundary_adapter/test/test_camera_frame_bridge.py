@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Real public camera wire, no Main/Msg dependency and no simulator connection."""
 import time
+import math
 import unittest
 import rospy
 import rostest
@@ -41,13 +42,18 @@ class FrameBridgeTest(unittest.TestCase):
             if case == 'side': self.assertEqual(matching, []); continue
             self.assertEqual(len(matching), 1, case)
             result = matching[0]
-            self.assertEqual(result.valid, case in ('box', 'empty', 'low_confidence'), (case, result.reason))
+            self.assertEqual(result.valid, case in ('box', 'empty', 'low_confidence', 'nan'), (case, result.reason))
             self.assertEqual(result.header.stamp, header.stamp)
             self.assertEqual(result.header.frame_id, header.frame_id)
             if case in ('box', 'empty', 'low_confidence'):
                 self.assertEqual(result.image.header.stamp, stamp)
                 self.assertEqual(result.image.data, b'fixture')
             if case == 'box': self.assertEqual(result.boxes[0].label, 'car')
+            if case == 'nan':
+                # Preserve malformed evidence for the C++ per-box UNKNOWN gate.
+                # test_camera_bbox_lane verifies it never becomes a clear lane.
+                self.assertEqual(len(result.boxes), 1)
+                self.assertTrue(math.isnan(result.boxes[0].xmin))
             if case in ('empty', 'low_confidence'): self.assertEqual(result.boxes, [])
             if case == 'missing': self.assertEqual(result.reason, 'matching_image_missing')
         sub.unregister()

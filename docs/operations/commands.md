@@ -17,24 +17,21 @@ xhost +local:docker
 docker exec -it asmc-ros-noetic bash
 ```
 
-컨테이너 안에서 두 workspace를 빌드합니다. 주행 중 container 재생성이나 빌드를 하지 않습니다.
+새 LiDAR 연결은 컨테이너의 outer workspace만 빌드합니다. 주행 중 container 재생성이나 빌드를 하지 않습니다. 구 Main 실행/복구에만 별도 nested 빌드가 필요합니다. 절차는 아래 구 Main 안내 링크를 따릅니다.
 
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 ./scripts/build_ws.sh -j2
 source devel/setup.bash
-cd /root/ws/src/lidar+sensorfusion
-catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='Main;Msg;morai_msgs'
 ```
 
-이후 각 터미널에서 공통 환경을 적용합니다. Main/Msg를 찾을 때 바깥→nested 순서를 지킵니다.
+이후 새 경로의 각 터미널에서는 outer 환경을 적용합니다. 구 Main 실행/복구만 바깥→nested 순서를 지킵니다([구 Main 안내](../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)).
 
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
-source /root/ws/src/lidar+sensorfusion/devel/setup.bash
 ```
 
 ### 터미널별 실행
@@ -46,8 +43,10 @@ source /root/ws/src/lidar+sensorfusion/devel/setup.bash
 | A | `./scripts/udp_bridge.sh` | 허용 센서·기본 `/vehicle/state`, UDP 포트당 수신자 하나 |
 | B | `roslaunch asmc_hd_map competition_map.launch` | 정적 지도·metadata; 현재 Planner local map copy를 자동 대체하지 않음 |
 | C | `roslaunch asmc_camera camera.launch` | 세 모델 상시 ACTIVE·발행, E8 기본; GUI 별도 |
-| D | `roslaunch Main main.launch rviz:=false` | LiDAR·전방 어댑터/fusion·추적; YOLO 모델 미실행 |
-| E | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, GPS/IMU 위치와 Competition 종방향 실측 속도 조합, 판제 입력/MPC/selector/재밍 어댑터; 카메라 모델 미실행 |
+| D | `roslaunch asmc_lidar lidar.launch` | 공용 local/map 추적·속도/운동·전달 필터; 카메라 모델 미실행 |
+| E | `roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_lidar` | **차량 제어 포함**, 새 공용 관측 직접 소비; GPS/IMU 위치와 Competition 종방향 실측 속도 조합, MPC/selector/재밍 어댑터 |
+
+위 D/E는 새 LiDAR 경로의 조합입니다. 통합 판제 인자를 생략한 기본은 아직 구 `validated_lidar`입니다. 구 Main 실행·복구와 새 조합을 섞지 않습니다. 실제 미션 인수/구 패키지 폐기는 후속이며 [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)을 확인합니다.
 
 신호등의 단일 추론·발행자는 카메라 담당의 `asmc_camera`입니다. 판제는 결과만 소비하고
 `traffic_light:=false` 인자는 제거되어 지정하지 않습니다. 중단/재개·주기 제어는 카메라의

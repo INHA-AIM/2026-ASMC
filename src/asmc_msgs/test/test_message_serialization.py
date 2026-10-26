@@ -31,12 +31,29 @@ EXPECTED_MD5 = {
     "LidarObjectArray": "5f774d07dffd4c7dfa93a8d4b62c60b4",
     "LidarObservation": "d11a2a270112231e4f79aaebff621d36",
     "LidarPlanningObservation": "670b15bd7bb1bc58e0640c2a35054936",
+    "LidarTrackingState": "14d1c31a2f234cf60a5d30079d2efe81",
+    "LidarTrackingObservation": "d8d18207872b81a51f7c8a8973c823aa",
     "CameraObjectBox": "34412c90553e06734f1acade77c8e1e3",
     "CameraObjectBoxArray": "310c671afb3693e7909db6453d115b79",
 }
 
 
 class GeneratedSerializationTest(unittest.TestCase):
+    def test_lidar_tracking_is_atomic_and_preserves_motion_states(self):
+        from asmc_msgs.msg import LidarTrackingObservation, LidarTrackingState, LidarObject
+        message = LidarTrackingObservation()
+        message.observation.producer_session_id = 'session'
+        message.observation.generation = 3
+        message.observation.scan_sequence = 17
+        for state in range(4):
+            obj = LidarObject(track_id=state, absolute_velocity_valid=True)
+            message.observation.objects.objects.append(obj)
+            message.tracking.append(LidarTrackingState(track_id=state, motion_state=state))
+        raw = io.BytesIO(); message.serialize(raw)
+        restored = LidarTrackingObservation(); restored.deserialize(raw.getvalue())
+        self.assertEqual(message, restored)
+        self.assertEqual([t.motion_state for t in restored.tracking], [0, 1, 2, 3])
+
     def test_sensor_frame_timing_keeps_raw_and_selected_clocks_separate(self):
         from asmc_msgs.msg import SensorFrameTiming
         import genpy

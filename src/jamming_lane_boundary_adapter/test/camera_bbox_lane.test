@@ -8,7 +8,6 @@
     <arg name="use_rviz" value="false"/>
     <arg name="image_topic" value="/bbox_test/image"/>
     <arg name="bbox_topic" value="/bbox_test/yolo"/>
-    <arg name="bbox_source_type" value="legacy_yolo"/>
   </include>
   <test pkg="lane_boundary_adapter" type="test_camera_bbox_lane.py" test-name="camera_bbox_lane_integration" time-limit="90"/>
 </launch>

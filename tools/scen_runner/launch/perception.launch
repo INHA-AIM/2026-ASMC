@@ -10,6 +10,7 @@
     <arg name="rviz" value="false"/>
   </include>
   <include if="$(eval {'main': False, 'asmc_lidar': True}[arg('lidar_backend')])" file="$(find asmc_lidar)/launch/lidar.launch">
+    <arg name="namespace" value="/migration/lidar"/>
     <arg name="planning_output" value="true"/>
   </include>
 </launch>

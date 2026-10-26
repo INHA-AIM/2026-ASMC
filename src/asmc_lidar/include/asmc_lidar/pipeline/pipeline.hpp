@@ -6,7 +6,7 @@
 // Equivalent to Main TemporalThread (after the local lookup) + LidarProcess at
 // 8f93c22e with enable_common_geometry=true. Not included: debug publishers,
 // markers, public MotionClassifier output, planning filters, fusion (see FrontCameraFusion).
-// A diagnostic-only Main motion decision now runs on copies at full scan rate.
+// The Main motion decision runs on copies at full scan rate; raw tracker is unchanged.
 
 #include <asmc_lidar/detection/clustering.hpp>
 #include <asmc_lidar/pipeline/stage_observer.hpp>

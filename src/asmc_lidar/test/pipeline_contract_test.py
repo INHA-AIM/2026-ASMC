@@ -29,7 +29,7 @@ MONITOR_NODE = 'asmc_lidar_monitor_node.py'
 MONITOR_SCRIPTS = ('scripts/asmc_lidar_monitor_node.py', 'scripts/asmc_lidar_monitor_core.py')
 WEB_ASSETS = ('web/index.html', 'web/app.js', 'web/monitor_view.js', 'web/app.css')
 PLANNER_DASHBOARD_PORT = '8088'
-OUTPUT_ARGS = ('objects_local_topic', 'objects_map_topic', 'diagnostics_topic', 'trace_topic', 'observations_local_topic', 'observations_map_topic')
+OUTPUT_ARGS = ('objects_local_topic', 'objects_map_topic', 'diagnostics_topic', 'trace_topic', 'observations_local_topic', 'observations_map_topic', 'tracks_local_topic', 'tracks_map_topic')
 FORBIDDEN_DEPENDENCIES = {'Main', 'Msg', 'asmc_camera', 'tensorrt', 'torch'}
 SOURCE_SUFFIXES = {'.c', '.cc', '.cpp', '.h', '.hpp', '.py', '.launch', '.test', '.yaml', '.yml', '.xml',
                    '.txt', '.cmake', '.sh'}
@@ -138,10 +138,10 @@ class PipelineContractTest(unittest.TestCase):
         params = {p.get('name'): p.get('value') for p in nodes[0].findall('param')}
         for name in OUTPUT_ARGS:
             self.assertEqual(params.get(name), '$(arg %s)' % name, '%s: %s' % (path, name))
-        self.assertNotIn('allow_operational_output', params, path)
+        self.assertEqual(params['allow_operational_output'], "$(eval arg('namespace') == '/perception/lidar')")
         self.assertEqual(nodes[0].findall('remap'), [], path)
         self.assertEqual(arguments.get('publish_tf'), 'false', path)
-        self.assertEqual(arguments.get('namespace'), '/migration/lidar')
+        self.assertEqual(arguments.get('namespace'), '/perception/lidar')
         self.assertEqual(nodes[0].get('ns'), '$(arg namespace)')
         self.assertEqual(arguments.get('fusion'), 'true')
         self.assertEqual(params.get('enable_camera_fusion'), '$(arg fusion)')
@@ -156,7 +156,7 @@ class PipelineContractTest(unittest.TestCase):
         marker_params = {p.get('name'): p.get('value') for p in markers.findall('param')}
         self.assertEqual(marker_params, {'input': '$(arg observations_local_topic)', 'output': 'markers'})
         self.assertEqual({p.get('from'): p.get('to') for p in rviz.findall('remap')},
-                         {'/migration/lidar/markers': 'markers', '/velodyne_points': '$(arg points_topic)'})
+                         {'/perception/lidar/markers': 'markers', '/velodyne_points': '$(arg points_topic)'})
         # The same launch must resolve on a LiDAR-only checkout. Camera
         # calibration discovery belongs to the enabled runtime branch.
         self.assertNotIn('enable_camera_fusion', arguments)
@@ -179,7 +179,7 @@ class PipelineContractTest(unittest.TestCase):
         self.assertEqual([(n.get('pkg'), n.get('type')) for n in nodes], [('asmc_lidar', MONITOR_NODE)])
         self.assertEqual(nodes[0].get('ns'), '$(arg namespace)')
         args = {a.get('name'): a.get('default') for a in root.findall('arg')}
-        self.assertEqual(args['namespace'], '/migration/lidar')
+        self.assertEqual(args['namespace'], '/perception/lidar')
         self.assertEqual(args['bind_address'], '127.0.0.1')
         self.assertEqual(args['open_browser'], 'false')
         self.assertNotEqual(args['dashboard_port'], PLANNER_DASHBOARD_PORT)

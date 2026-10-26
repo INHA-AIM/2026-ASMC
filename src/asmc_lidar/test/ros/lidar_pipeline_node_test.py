@@ -464,9 +464,12 @@ class LidarPipelineNodeTest(unittest.TestCase):
             self.assertAlmostEqual(dims[1], max(BOX_SIZE), delta=0.5)
             self.assertAlmostEqual(dims[0], min(BOX_SIZE), delta=0.5)
             self.assertAlmostEqual(obj.height, BOX_Z[1] - BOX_Z[0], delta=0.4)
-            self.assertFalse(obj.relative_velocity_valid or obj.absolute_velocity_valid or obj.dynamic_valid)
+            self.assertFalse(obj.relative_velocity_valid)
+            if obj.absolute_velocity_valid:
+                self.assertTrue(all(math.isfinite(getattr(obj.absolute_velocity_mps, axis)) for axis in 'xyz'))
             ids.add(obj.track_id)
         self.assertEqual(len(ids), 1, 'one stable track id')
+        self.assertTrue(any(self.box(m).absolute_velocity_valid for m in local), 'source-time estimate connected')
         type(self).track_id = ids.pop()
         self.check_pairs(local, mapped, 10)
 
@@ -696,6 +699,8 @@ class LidarPipelineNodeTest(unittest.TestCase):
             ['_objects_local_topic:=/perception/lidar/objects'],
             ['_trace_topic:=/velodyne_points'],
             ['_tf_child_frame:=velodyne'],
+            ['_allow_operational_output:=true', '_tracks_map_topic:=/velodyne_points'],
+            ['_allow_operational_output:=true', '_tracks_map_topic:=objects_map'],
         ]
         master = rosgraph.Master('/lidar_pipeline_node_test')
         for index, case in enumerate(cases):
@@ -764,7 +769,11 @@ class LidarPipelineNodeTest(unittest.TestCase):
             self.assertEqual(len(packet.motion_states), len(observation.objects.objects))
             self.assertEqual([o.track_id for o in observation.objects.objects],
                              [o.track_id for o in source.objects.objects])
-            self.assertTrue(all(not o.absolute_velocity_valid for o in source.objects.objects))
+            # Main now publishes its own applied motion estimate. The optional
+            # companion changes velocity policy only; identity and geometry agree.
+            for companion, public in zip(observation.objects.objects, source.objects.objects):
+                self.assertEqual(companion.center, public.center)
+                self.assertEqual(companion.obb_corners, public.obb_corners)
             valid_velocities += sum(o.absolute_velocity_valid for o in observation.objects.objects)
             paired_planning += 1
         self.assertGreaterEqual(paired_planning, 10)

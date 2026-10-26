@@ -51,13 +51,16 @@ class CameraInferenceOwnershipTest(unittest.TestCase):
         self.assertEqual(camera.find('arg').get('value'), 'active')
 
     def test_jamming_converter_cannot_start_an_independent_detector(self):
-        tree = ET.parse(ROOT / 'src/jamming_lane_boundary_adapter/launch/camera_bbox_detector.launch')
+        tree = ET.parse(ROOT / 'src/jamming_lane_boundary_adapter/launch/camera_bbox_lane.launch')
         args = {node.get('name'): node.get('default') for node in tree.getroot().findall('arg')}
-        self.assertEqual(args, {'bbox_topic': '/planning/camera_bbox_lane/yolo', 'conf_thres': '0.7'})
+        self.assertEqual(args['bbox_topic'], '/perception/camera/objects')
+        self.assertEqual(args['conf_thres'], '0.7')
         nodes = list(tree.iter('node'))
-        self.assertEqual(len(nodes), 1)
-        self.assertEqual(nodes[0].get('type'), 'camera_objects_yolo_bbox_adapter.py')
-        self.assertEqual(nodes[0].find('remap').get('to'), '$(arg bbox_topic)')
+        self.assertFalse(any(node.get('pkg') in ('Main','Msg','asmc_camera') for node in nodes))
+        bridge=(ROOT/'src/jamming_lane_boundary_adapter/scripts/camera_bbox_frame_bridge.py').read_text()
+        self.assertIn('from asmc_msgs.msg import CameraObjectBoxArray',bridge)
+        self.assertNotIn('from Msg',bridge)
+        self.assertFalse((ROOT/'src/jamming_lane_boundary_adapter/launch/camera_bbox_detector.launch').exists())
 
 
 if __name__ == '__main__':

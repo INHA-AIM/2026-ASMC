@@ -29,7 +29,7 @@
 | UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../../src/asmc_bridge/docs/integration.md) | 이강태·안승현, planning consumer 공동 리뷰 |
 | Perception façade와 typed 계약 | `src/asmc_camera/`; [runtime 계약](../contracts/perception-runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |
 | Camera/BEV/traffic | `src/asmc_camera/` | 안승현, perception·planning consumer 공동 리뷰 |
-| LiDAR/3D·camera fusion | 운영 원본 `src/lidar+sensorfusion/`, 공동 개발 `src/asmc_lidar/` | 안승현: HD맵 필터·카메라 연결 지원. 손재호: 추적·속도·운동 상태·matching/fusion. 공용 계약·판제 전환은 공동 리뷰 |
+| LiDAR/3D·camera fusion | 운영 원본 `src/lidar+sensorfusion/`, 공동 개발 `src/asmc_lidar/` | 안승현: HD맵 필터·카메라 연결 지원. 손재호: 추적·속도·운동 상태·matching/fusion, GPS 없는 터널 local 인식·벽/천장 보완. 기존 기능 보존 이식·판제 직접 소비는 안승현이 진행하고 실제 인수는 공동 리뷰 |
 | 데이터 수집 | `src/data_collection/` | 안승현, perception 공동 리뷰 |
 | Scenario/gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | 공용 infra | `docker/`, `.github/`, `docs/`, `scripts/` 공용 진입점 | 통합 리뷰 필수 |
@@ -44,7 +44,7 @@
 | `asmc_bridge` | P3-G local closeout 완료. 실제 두 PC LAN2LAN은 6단계 현장 리허설에서 검증 |
 | `asmc_camera`(구 `asmc_perception`) | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 Main은 카메라 외부 결과 소비로 연결됨. LiDAR 이관은 아래 L0–L8 담당을 따름 |
 | `asmc_camera` 현재 | rename·3뷰 YOLO 단일화·TensorRT·family 최적화 병합. 원본16종/소비3그룹 계약 제공. 추가학습은 판제 요청 시 |
-| 목표 `asmc_lidar` | PR #103·#105 계산/웹을 PR #104 구조·공용 관측에 통합. 담당별 작업은 [공동 인수표](../../src/asmc_lidar/docs/migration-tasks.md#공동-개발-인수와-우선-작업), 운영은 기존 Main 유지 |
+| 목표 `asmc_lidar` | PR #108까지 전달 필터 적용. 다음은 [전환 기반·구 패키지 폐기 B0–B4](../../src/asmc_lidar/docs/cutover-foundation.md); 리팩토링·3뷰 확대는 이후. 담당별 작업은 [공동 인수표](../../src/asmc_lidar/docs/migration-tasks.md#공동-개발-인수와-우선-작업), 운영은 기존 Main 유지 |
 | `learning*` 정리 | 완료. LBC teacher/debug 필요 기능만 `tools/research/lbc_teacher_bev` 이관 |
 | 실행·시각화 | P5-A~E 완료 기록 유지. bridge 별도 실행. LiDAR는 lidar.launch·RViz 선택 옵션, 웹은 구독 전용 view.launch |
 | LAN2LAN 현장 리허설 | 6단계 예정 |

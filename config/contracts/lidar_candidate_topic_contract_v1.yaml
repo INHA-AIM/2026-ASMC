@@ -1,6 +1,6 @@
 schema_version: 1
 contract_id: asmc_lidar_handoff_v1
-status: typed_planning_cutover_implemented_closed_loop_acceptance_pending
+status: typed_tracking_input_available_consumer_acceptance_pending
 owner: asmc_lidar
 implementation:
   coordinate_time_core: available
@@ -8,17 +8,28 @@ implementation:
   detection_tracking_fusion: migration_pipeline_with_optional_typed_planning_adapter
   migration_work_units: src/asmc_lidar/docs/migration-tasks.md
   migration_design: src/asmc_lidar/docs/migration-design.md
+  cutover_foundation: src/asmc_lidar/docs/cutover-foundation.md
   migration_design_baseline: config/baselines/lidar_migration_l1_v1.yaml
   migration_current_review: config/baselines/competition_channel_audit_20261023.yaml
   target_pose_policy: bounded_300ms_recovery3_migration_implemented_acceptance_pending
   migration_lead: ahnsh03
   joint_development: sonshiny
   ahn_responsibility: hd_map_filters_and_camera_connection
-  son_responsibility: tracking_speed_motion_and_fusion
+  son_responsibility: tracking_speed_motion_fusion_and_gps_denied_local_tunnel_perception
   camera_observation_receiver: available_library_and_probe
-  ros_publishers_and_adapters: Main_opt_in_frame_boundary
-  operational_default_promotion: pending
-  skeleton_publishes_topics: false  # the shadow node publishes only /migration/lidar/*, none of planned_topics
+  ros_publishers_and_adapters: asmc_lidar_and_direct_planning_input_legacy_Main_rollback_retained
+  delivery_filter: hd_map_v7_inset_10cm_points_3_and_10pct_obb_10pct_guarded_overhead
+  delivery_filter_preserves: raw_tracker_and_measurement_geometry
+  public_velocity_and_motion: Main_applied_estimate_and_four_state_connected_map_conditioned
+  planning_direct_common_observation_consumer: available_source_policy_asmc_lidar
+  planning_default_source: validated_lidar_until_consumer_acceptance
+  package_output_namespace: /perception/lidar
+  inherited_delivery_policies: known_static_structure_and_observation_quality_preserved
+  implementation_guide: src/asmc_lidar/docs/planning-runtime.md
+  tunnel_structure_suppression: experimental_default_off_acceptance_pending
+  tunnel_camera_semantic_family_assistance: not_implemented
+  operational_default_promotion: package_outputs_canonical_planning_cutover_explicit
+  skeleton_publishes_topics: false  # Historical core/probe itself never publishes; independent runtime below does.
   camera_object_producer: available_canonical_camera_launch
 source_stamp: bridge_receive_not_laser_firing_time
 frames:
@@ -29,6 +40,8 @@ messages:
   asmc_msgs/LidarObjectArray: 5f774d07dffd4c7dfa93a8d4b62c60b4
   asmc_msgs/LidarObservation: d11a2a270112231e4f79aaebff621d36
   asmc_msgs/LidarPlanningObservation: 670b15bd7bb1bc58e0640c2a35054936
+  asmc_msgs/LidarTrackingState: 14d1c31a2f234cf60a5d30079d2efe81
+  asmc_msgs/LidarTrackingObservation: d8d18207872b81a51f7c8a8973c823aa
   asmc_msgs/CameraObjectBox: 34412c90553e06734f1acade77c8e1e3
   asmc_msgs/CameraObjectBoxArray: 310c671afb3693e7909db6453d115b79
 compatibility_messages:
@@ -41,17 +54,17 @@ planned_topics:
     type: asmc_msgs/LidarObjectArray
     frame: base_link
     producer_owner: asmc_lidar
-    implementation: available_opt_in
-    runtime_host: src/lidar+sensorfusion/src/Main
-    launch: roslaunch Main main.launch enable_common_geometry:=true
+    implementation: available_canonical
+    runtime_host: src/asmc_lidar
+    launch: roslaunch asmc_lidar lidar.launch
     subscriber_demand: true
   /perception/lidar/objects_map:
     type: asmc_msgs/LidarObjectArray
     frame: map
     producer_owner: asmc_lidar
-    implementation: available_opt_in
-    runtime_host: src/lidar+sensorfusion/src/Main
-    launch: roslaunch Main main.launch enable_common_geometry:=true
+    implementation: available_canonical
+    runtime_host: src/asmc_lidar
+    launch: roslaunch asmc_lidar lidar.launch
     subscriber_demand: true
   /perception/camera/objects:
     type: asmc_msgs/CameraObjectBoxArray
@@ -95,7 +108,8 @@ rules:
   - Main opt-in BoundedPoseHistory API uses causal normal GPS at most 300 ms old with valid scan IMU and vehicle speed.
   - Invalid GPS disables map immediately; silence exceeding 300 ms disables map; recovery requires three consecutive normal samples.
   - No continued map localization inside GPS-denied regions; no pre/post-outage map velocity difference.
-  - Typed observed geometry remains available with unknown velocity and dynamic flags false.
+  - Typed observed geometry remains available when velocity or motion is unavailable; unavailable flags stay false.
+  - Published absolute velocity is the preserved Main classifier-applied estimate, not a new accuracy claim; UNKNOWN warmup zero is not confirmed static.
   - Opt-in legacy outputs are withheld if pose or motion validity cannot be represented.
   - Validate antenna/rear-axle offset, HD-map origin and height before map output.
   - Legacy adapters withhold unrepresentable outputs and report why.
@@ -108,7 +122,8 @@ cutover_gates:
   - live_rate_latency_drop_and_combined_load_acceptance
 
 migration_observations:
-  namespace_default: /migration/lidar
+  namespace_default: /perception/lidar
+  comparison_namespace: /migration/lidar
   local: {topic: observations_local, type: asmc_msgs/LidarObservation, frame: base_link}
   map: {topic: observations_map, type: asmc_msgs/LidarObservation, frame: map}
   identity: [producer_session_id, generation, scan_sequence]
@@ -118,3 +133,30 @@ migration_observations:
   reset_type: std_srvs/Trigger
   reset_effect: retire_inflight_results_clear_pending_tracking_pose_and_trace_history
   operational_cutover: pending
+
+tracking_observations:
+  local: {topic: tracks_local, type: asmc_msgs/LidarTrackingObservation, frame: base_link}
+  map: {topic: tracks_map, type: asmc_msgs/LidarTrackingObservation, frame: map}
+  geometry_identity_authority: observation
+  tracking_join: same_order_same_track_id_exactly_once
+  motion_states: {UNKNOWN: 0, LOW_THREAT: 1, DYNAMIC_PENDING: 2, DYNAMIC: 3}
+  consumer: planning_inputs/objects.launch
+  consumer_selection: source_policy_asmc_lidar
+  default_global_input: /perception/lidar/tracks_map
+  private_output: /planning/objects
+  invalid_policy: withhold_not_empty_preserve_existing_planner_timeout
+  duplicate_policy: reject_retired_session_generation_and_nonincreasing_stamp_sequence
+  source_max_age_s: 0.35
+  source_future_tolerance_s: 0.05
+  legacy_wire_or_json_join: false
+
+planning_companion:
+  enabled_by: planning_output_true
+  topic: /migration/lidar/planning_observations_map
+  type: asmc_msgs/LidarPlanningObservation
+  consumer_selection: source_policy_asmc_lidar_companion
+  private_output: /planning/objects
+  velocity_policy: planar_kf_relative_plus_ego_translation_once
+  unmeasured_velocity_policy: geometry_retained_unknown_velocity_unavailable
+  simultaneous_tracking_consumer: false
+  validation_guide: docs/operations/lidar-cutover.md

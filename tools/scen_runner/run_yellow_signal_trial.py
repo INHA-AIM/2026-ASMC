@@ -356,7 +356,7 @@ def main():
         if messages.is_dir():
             environment['PYTHONPATH']=environment.get('PYTHONPATH','')+os.pathsep+str(messages)
         command=(['roslaunch','asmc_planner','autonomy_no_bridges_v2.launch',
-                  'lidar_source_policy:=asmc_lidar'] if args.production_stack else
+                  'lidar_source_policy:=asmc_lidar_companion'] if args.production_stack else
                  ['roslaunch',str(REPO_ROOT/'tools/scen_runner/launch/yellow_signal_trial.launch'),
                   'clock_profile:='+str(args.clock_profile.resolve()),'mode:=active'])
         launch=OwnedProcess(command,stdout=log,stderr=log,

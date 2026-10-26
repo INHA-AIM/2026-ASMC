@@ -27,12 +27,33 @@ source devel/setup.bash
 roslaunch asmc_planner autonomy_asmc_lidar.launch
 ```
 
-LiDAR만 확인하려면 `roslaunch asmc_lidar lidar.launch planning_output:=true`를 사용한다.
+LiDAR만 확인하려면 `roslaunch asmc_lidar lidar.launch namespace:=/migration/lidar planning_output:=true`를 사용한다.
 관측은 `/migration/lidar/planning_observations_map`, 최종 판제 입력은 `/planning/objects`,
 어댑터 상태는 `/asmc_lidar_planning_adapter/diagnostics`다.
 `scen_runner`는 `config/stack.yaml`의 `lidar_backend` 한 설정을 perception/planning에 함께 전달한다.
 저장소 기본은 `asmc_lidar`이며, `main`으로 기존 경로를 복구할 수 있다.
 기존 사용자별 stack 설정에 이 키가 없으면 이전 `main`을 유지한다.
+
+## main 병합 후 입력 선택
+
+두 경로의 메시지와 속도 정책이 다르므로 자동으로 섞지 않는다.
+
+| 선택 | 생산자 토픽 / 형식 | 판제 선택 |
+|---|---|---|
+| main 공용 추적 입력 | `/perception/lidar/tracks_map` / `LidarTrackingObservation` | `lidar_source_policy:=asmc_lidar` |
+| 기존 주행 검증 companion | `/migration/lidar/planning_observations_map` / `LidarPlanningObservation` | `lidar_source_policy:=asmc_lidar_companion` |
+
+`autonomy_asmc_lidar.launch`와 scen_runner의 `lidar_backend: asmc_lidar`는
+기존 검증 companion을 명시적으로 선택한다. main의 기본 `lidar.launch`는
+`/perception/lidar`를 유지한다. 기존 인지 실행기를 사용하면서 판제만 직접 실행할 때는:
+
+```bash
+roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_lidar_companion
+```
+
+과거 전체 주행 bag은 **main 병합 전**의 증거다. main에서 관측 확인·필터·bridge 등이
+변경됐으므로 병합 후 전체 주행 결과로 재사용하지 않는다. main에서 들어온 기존 패키지의
+카메라 ownership 테스트 변경은 유지하며, 이 병합에서 구 패키지를 삭제하지 않는다.
 
 ## 재밍 수정
 

@@ -6,6 +6,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>message_generation</build_depend><exec_depend>message_runtime</exec_depend>
   <depend>asmc_msgs</depend><depend>geometry_msgs</depend><depend>morai_msgs</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>roscpp</depend><depend>sensor_msgs</depend><depend>std_msgs</depend>
   <exec_depend>rospy</exec_depend>
   <depend>libopencv-dev</depend><depend>yaml-cpp</depend>

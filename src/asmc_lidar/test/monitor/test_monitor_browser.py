@@ -96,6 +96,18 @@ window.addEventListener('error',e=>{document.body.dataset.testError=e.message;})
   check(document.getElementById('criteria-obb').textContent.includes('10.0%'),'actual OBB threshold is displayed');
   app.selectTrack(3);render();
   check(document.getElementById('detail').textContent.includes('근거 없음 · 미계산'),'unavailable OBB ratio is not a measured zero');
+  const live=app.state.scene.typed.local.objects.find(o=>o.track_id===3);
+  Object.assign(live,{absolute_velocity:[1.25,-.5,0],absolute_velocity_valid:true,
+    relative_velocity_valid:false,dynamic_valid:true,is_dynamic:true});
+  app.selectTrack(3);app.selectTrack(3);render();
+  check(document.getElementById('detail').textContent.includes('1.25 / -0.50 / 0.00')&&
+    document.getElementById('detail').textContent.includes('동적 (PENDING/DYNAMIC)'),
+    'detail shows actual public applied velocity and valid motion');
+  Object.assign(live,{absolute_velocity_valid:false,dynamic_valid:false});
+  app.selectTrack(3);app.selectTrack(3);render();
+  check(document.getElementById('detail').textContent.includes('무효 · pose/운동 근거 확인')&&
+    document.getElementById('detail').textContent.includes('UNKNOWN / 미제공 · 정지 확정 아님'),
+    'invalid public motion never becomes confirmed stationary');
   toggle('opt-hide-candidates',true);app.selectTrack(1);render();
   check(!boxes.includes(9)&&boxes.includes(19)&&boxes.includes(29),'selected candidate stays hidden, protected and uncertain stay visible: '+JSON.stringify(boxes));
   check(!points.includes('#f472b6'),'selected candidate support stays hidden');

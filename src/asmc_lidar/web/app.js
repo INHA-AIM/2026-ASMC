@@ -34,7 +34,7 @@
     paused: false, inflight: false, inflightSince: 0, controller: null,
     view: { frame: 'base', mode: 'bev', bevYaw: 0, yaw: -0.4, pitch: 0.65, road: true, scale: 9, panX: 0, panY: 0, side: 'xz', psize: 2, compare: false, labels: true },
     road: null,
-    hideCandidates:false,hideReasons:{points:true,obb:true,height:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
+    hideCandidates:false,hideReasons:{points:true,obb:true,height:true,policy:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
     stages: {}, selected: null, webFrames: [], matrices: null,
   };
 
@@ -667,8 +667,9 @@
       ['yaw (표시 frame / leveled) deg', fmt(yawView * 57.29578, 1) + ' / ' + fmt(t.obb.yaw * 57.29578, 1)],
       ['source point count', t.points],
       ['distance (leveled) m', fmt(t.dist, 2)],
-      ['속도 (relative/absolute)', '미검증/미제공 (validity=false)'],
-      ['dynamic', '미검증/미제공 (dynamic_valid=false)'],
+      ['공용 적용 속도 (base_link) m/s', typed && typed.absolute_velocity_valid && Array.isArray(typed.absolute_velocity) ? typed.absolute_velocity.map(x=>fmt(x,2)).join(' / ')+' · 기존 판제 추정값 (UNKNOWN은 정지 확인 아님)' : typed && Object.prototype.hasOwnProperty.call(typed,'absolute_velocity_valid') ? '무효 · pose/운동 근거 확인' : '이 scan에 미제공 · 구 생산자는 validity 미기록'],
+      ['공용 상대속도', typed && typed.relative_velocity_valid ? '유효' : '미제공 (validity=false)'],
+      ['공용 실제 운동 판정', typed && typed.dynamic_valid ? (typed.is_dynamic?'동적 (PENDING/DYNAMIC)':'LOW_THREAT') : 'UNKNOWN / 미제공 · 정지 확정 아님'],
       ['typed local 배열', typed ? 'base_link center ' + typed.center.map((x) => fmt(x, 2)).join(', ') + ' · ' + typed.classification + '/' + typed.camera_class + ' · ' + typed.points + ' pts' : (t.miss ? '미발행 (예측 track)' : '이 scan 배열에 없음')],
     ];
     box.innerHTML = '';
@@ -703,9 +704,9 @@
   el('opt-hide-candidates').addEventListener('change',e=>{
     e.target.indeterminate=false;
     state.hideCandidates=e.target.checked;
-    for(const k of ['points','obb','height']){state.hideReasons[k]=e.target.checked;el('opt-hide-'+k).checked=e.target.checked;}
+    for(const k of ['points','obb','height','policy']){state.hideReasons[k]=e.target.checked;el('opt-hide-'+k).checked=e.target.checked;}
     renderScene();renderTracks();renderDetail();});
-  for(const k of ['points','obb','height'])el('opt-hide-'+k).addEventListener('change',e=>{
+  for(const k of ['points','obb','height','policy'])el('opt-hide-'+k).addEventListener('change',e=>{
     state.hideCandidates=false;el('opt-hide-candidates').checked=false;state.hideReasons[k]=e.target.checked;
     el('opt-hide-candidates').indeterminate=Object.values(state.hideReasons).some(Boolean);
     renderScene();renderTracks();renderDetail();});

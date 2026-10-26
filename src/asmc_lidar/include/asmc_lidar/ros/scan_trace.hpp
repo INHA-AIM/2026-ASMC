@@ -193,6 +193,18 @@ inline void Array(std::ostream& out, bool accepted, const asmc_msgs::LidarObject
     Str(out, o.classification);
     out << ",\"camera_class\":";
     Str(out, o.camera_class);
+    // Same published values and validity; the monitor must not infer these
+    // from its diagnostic KF copy or equate UNKNOWN with measured zero speed.
+    out << ",\"absolute_velocity\":";
+    Vec3(out, o.absolute_velocity_mps.x, o.absolute_velocity_mps.y, o.absolute_velocity_mps.z);
+    out << ",\"absolute_velocity_valid\":";
+    Bool(out, o.absolute_velocity_valid);
+    out << ",\"relative_velocity_valid\":";
+    Bool(out, o.relative_velocity_valid);
+    out << ",\"dynamic_valid\":";
+    Bool(out, o.dynamic_valid);
+    out << ",\"is_dynamic\":";
+    Bool(out, o.is_dynamic);
     out << '}';
   }
   out << "]}";

@@ -2,15 +2,15 @@
   <!-- Canonical asmc_lidar entry point: port of Main's common-geometry path.
        Starts one lidar_pipeline_node, optionally RViz + a read-only marker adapter.
        No LiDAR driver, MORAI bridge, camera,
-       inference or planner node, and no operational output: outputs default to
-       /migration/lidar/* and the node refuses operational names
+       inference or planner node, with canonical outputs: outputs default to
+       /perception/lidar/*; direct executable startup still guards operational names
        (/last_lidar, /lidar_nogps, /YOLO/BBox, /perception/lidar/*, /planning/*,
        /tf, /tf_static, its own input topics; TF child lidar_leveled/base_link/map/velodyne).
        No visualization server or browser is started here. The read-only
        localhost viewer runs separately in view.launch.
        Previous entry points: lidar_pipeline.launch and lidar_only.launch.
        LiDAR-only, including without asmc_camera installed: fusion:=false. -->
-  <arg name="namespace" default="/migration/lidar" doc="Output namespace; inputs keep their canonical paths"/>
+  <arg name="namespace" default="/perception/lidar" doc="Output namespace; inputs keep their canonical paths"/>
   <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml" doc="Processing configuration YAML"/>
   <!-- Empty = keep config/lidar_pipeline.yaml (lidar.level_roll: true, experimental
        tunnel_filter.enabled: false); a value overrides the file. -->
@@ -43,10 +43,16 @@
   <arg name="objects_map_topic" default="objects_map"/>
   <arg name="observations_local_topic" default="observations_local"/>
   <arg name="observations_map_topic" default="observations_map"/>
+  <arg name="tracks_local_topic" default="tracks_local"/>
+  <arg name="tracks_map_topic" default="tracks_map"/>
   <arg name="diagnostics_topic" default="diagnostics"/>
   <arg name="trace_topic" default="trace"/>
 
   <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="$(arg namespace)" output="screen">
+    <!-- Canonical launch explicitly opts into its canonical namespace only. -->
+    <param name="allow_operational_output" value="$(eval arg('namespace') == '/perception/lidar')"/>
+    <param name="tracks_local_topic" value="$(arg tracks_local_topic)"/>
+    <param name="tracks_map_topic" value="$(arg tracks_map_topic)"/>
     <param name="debug_enabled" value="$(arg debug)"/>
     <param name="debug_topic_prefix" value="debug"/>
     <param name="debug_rate_hz" value="$(arg debug_rate_hz)"/>
@@ -85,7 +91,7 @@
     <node pkg="rviz" type="rviz" name="lidar_rviz" ns="$(arg namespace)"
           args="-d $(find asmc_lidar)/rviz/lidar.rviz" required="false">
       <!-- The standalone preset keeps the default namespace; remap for this launch. -->
-      <remap from="/migration/lidar/markers" to="markers"/>
+      <remap from="/perception/lidar/markers" to="markers"/>
       <remap from="/velodyne_points" to="$(arg points_topic)"/>
     </node>
   </group>

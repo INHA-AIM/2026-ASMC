@@ -299,6 +299,17 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   }
 
   config.config_path = yaml_path;
+  if (root["delivery"]) {
+    const auto d=root["delivery"];
+    filtering::DeliveryConfig policy;
+    policy.enabled=d["enabled"].as<bool>();
+    if(policy.enabled) {
+      policy.minimum_obstacle_height_m=d["minimum_obstacle_height_m"].as<double>();
+      policy.confirmation_frames=d["confirmation_frames"].as<int>();
+      policy.release_frames=d["release_frames"].as<int>();
+    }
+    config.delivery_filters=std::make_shared<const filtering::DeliveryFilters>(policy);
+  }
   config.config_sha256 = Sha256(yaml_path);
   config.mount_config_sha256 = Sha256(config.mount_config_path);
   // Historical PR #103 comparison identity (not observation.calibration_id; Main: sha(lidar yaml):sha(camera yaml):sha(map contract)).

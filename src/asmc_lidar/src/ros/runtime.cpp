@@ -80,7 +80,8 @@ LidarRuntime::LidarRuntime(const RuntimeConfig& config,
                              std::shared_ptr<pipeline::fusion::CameraSource> camera,
                              const asmc::lidar::camera::Calibration* front_calibration)
     : config_(config), pose_(config.pose), gps_(config.gps), pipeline_(config.pipeline),
-      camera_(std::move(camera)), output_(config.stamp_provenance) {
+      camera_(std::move(camera)), output_(config.stamp_provenance),
+      delivery_filters_(config.delivery_filters ? *config.delivery_filters : filtering::DeliveryFilters{}) {
   if (config_.enable_camera_fusion && camera_) {
     if (!front_calibration)
       throw std::invalid_argument("LidarRuntime: camera fusion needs the front camera calibration");
@@ -166,6 +167,7 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
                                               &local, &out.selected, &pose_reason);
   out.wait_ms = Ms(start, Clock::now());
   if (!out.pose_ready) {
+    delivery_filters_.BeginFrame(false);
     // Main skips LidarProcess: the tracker is not advanced.
     out.reason = pose_reason;
     out.arrays = output_.Invalid(scan_stamp, pose_reason);
@@ -178,10 +180,12 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
   input.time = asmc::lidar::Observation{scan_stamp, times.receipt_ns, times.processing_ns, "ros",
                                         config_.stamp_provenance, "steady"};
   const auto map = pose_.MapAt(input.time, local);
+  out.ego_speed_mps = local.st_CAN.f32_CurrentVel_MPS;
   BackFillAntenna(map, config_.pipeline.vehicle, &local);
   out.result = pipeline_.Process(input, local, map);
   out.processed = out.result.processed;
   if (!out.processed) {
+    delivery_filters_.BeginFrame(false);
     out.reason = "empty_or_invalid_lidar_input";
     out.arrays = output_.Invalid(scan_stamp, out.reason);
     Audit(out);
@@ -312,18 +316,56 @@ void LidarRuntime::Audit(ScanOutput& out) const {
   report.calculation_ms = Ms(start, Clock::now());
 }
 
-void LidarRuntime::FilterDelivery(ScanOutput& out) const {
+void LidarRuntime::FilterDelivery(ScanOutput& out) {
   auto& report=out.hd_map_audit;
   report.delivery_input_count=out.arrays.local.objects.size();
   report.delivery_output_count=report.delivery_input_count;
-  if(config_.hd_map_audit_mode!="filter"||!report.enabled||!out.arrays.accepted||
+  const bool map_filter=config_.hd_map_audit_mode=="filter"&&report.enabled;
+  if((!map_filter&&!delivery_filters_.enabled())||!out.arrays.accepted||
      (out.arrays.local.status!=asmc_msgs::LidarObjectArray::OBSERVED&&
       out.arrays.local.status!=asmc_msgs::LidarObjectArray::OBSERVED_EMPTY))return;
   report.delivery_applied=true;
   std::unordered_set<int> excluded;
   for(auto& d:report.objects) {
-    d.delivery_excluded=d.preview_enabled&&d.preview_decision=="exclude_candidate";
+    d.delivery_excluded=map_filter&&d.preview_enabled&&d.preview_decision=="exclude_candidate";
     if(d.delivery_excluded)excluded.insert(d.track_id);
+  }
+  const bool valid_map=out.result.context.map_pose.valid&&
+      (out.arrays.map.status==asmc_msgs::LidarObjectArray::OBSERVED||
+       out.arrays.map.status==asmc_msgs::LidarObjectArray::OBSERVED_EMPTY);
+  delivery_filters_.BeginFrame(valid_map);
+  if(delivery_filters_.enabled()&&valid_map) {
+    report.enabled=true;
+    const auto& vehicle=config_.pipeline.vehicle;
+    const Vec antenna=out.result.context.map_pose.map_from_base *
+        Vec(vehicle.st_GPSPos.f32_X,vehicle.st_GPSPos.f32_Y,vehicle.st_GPSPos.f32_Z);
+    for(std::size_t i=0;i<out.arrays.map.objects.size();++i) {
+      const auto& object=out.arrays.map.objects[i];
+      if(excluded.count(object.track_id))continue;
+      auto decision=std::find_if(report.objects.begin(),report.objects.end(),
+          [&](const auto& d){return d.track_id==object.track_id;});
+      // Preserve PR #108's explicit fresh-camera protection, including deer/stroller.
+      if(decision!=report.objects.end()&&(decision->camera_dynamic_protected||decision->camera_vehicle_protected))continue;
+      const auto original=std::find_if(out.result.objects.begin(),out.result.objects.end(),
+          [&](const auto& o){return o.tracking.s32_Id==object.track_id;});
+      if(original==out.result.objects.end())continue;
+      filtering::DeliveryObject candidate;
+      candidate.id=object.track_id;candidate.classification=object.classification;
+      candidate.yolo_class=object.camera_class;
+      candidate.obb_center_map={object.center.x,object.center.y,object.center.z};
+      candidate.length=object.length;candidate.width=object.width;candidate.height=object.height;
+      candidate.ground_evidence=original->detection.ground_evidence;
+      const auto reason=delivery_filters_.Exclusion(candidate,antenna.x(),antenna.y(),out.ego_speed_mps,vehicle.f32_Length);
+      if(reason.empty())continue;
+      excluded.insert(object.track_id);
+      if(decision==report.objects.end()) {
+        filtering::AuditDecision fresh;fresh.track_id=object.track_id;
+        report.objects.push_back(std::move(fresh));decision=std::prev(report.objects.end());
+      }
+      decision->delivery_excluded=true;decision->preview_enabled=true;
+      decision->preview_decision="exclude_candidate";decision->preview_reason=reason;
+      decision->reason=reason;
+    }
   }
   // One decision set for both coordinate frames and both observation wrappers.
   // Stable in-place compaction: no cloud copies, tracker deletion or OBB edits.
@@ -337,6 +379,10 @@ void LidarRuntime::FilterDelivery(ScanOutput& out) const {
     }
   };
   filter(out.arrays.local);filter(out.arrays.map);
+  for (auto* tracking : {&out.arrays.local_tracking, &out.arrays.map_tracking}) {
+    tracking->erase(std::remove_if(tracking->begin(), tracking->end(),
+        [&](const auto& state) { return excluded.count(state.track_id); }), tracking->end());
+  }
   report.delivery_output_count=out.arrays.local.objects.size();
   report.delivery_excluded_count=report.delivery_input_count-report.delivery_output_count;
 }

@@ -40,6 +40,8 @@
 #include <std_msgs/String.h>
 #include <std_srvs/Trigger.h>
 #include <asmc_msgs/LidarObservation.h>
+#include <asmc_msgs/LidarTrackingObservation.h>
+#include <set>
 #include <asmc_lidar/core/processing_epoch.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
@@ -243,9 +245,8 @@ class LidarPipelineNode {
     return true;
   }
 
-  void PublishObservation(const ros::Publisher& publisher, const asmc_msgs::LidarObjectArray& objects,
-                          const PendingScan& pending) {
-    if (!publisher.getNumSubscribers()) return;
+  asmc_msgs::LidarObservation Observation(const asmc_msgs::LidarObjectArray& objects,
+                                         const PendingScan& pending) const {
     asmc_msgs::LidarObservation observation;
     observation.objects = objects;
     observation.producer_session_id = epoch_.session();
@@ -253,7 +254,22 @@ class LidarPipelineNode {
     observation.scan_sequence = pending.scan.scan_sequence;
     observation.config_id = config_.config_id;
     observation.calibration_id = config_.calibration_id;
-    publisher.publish(observation);
+    return observation;
+  }
+
+  void PublishObservation(const ros::Publisher& publisher, const asmc_msgs::LidarObjectArray& objects,
+                          const PendingScan& pending) {
+    if (publisher.getNumSubscribers()) publisher.publish(Observation(objects, pending));
+  }
+
+  void PublishTracking(const ros::Publisher& publisher, const asmc_msgs::LidarObjectArray& objects,
+                       const std::vector<asmc_msgs::LidarTrackingState>& tracking,
+                       const PendingScan& pending) {
+    if (!publisher.getNumSubscribers()) return;
+    asmc_msgs::LidarTrackingObservation message;
+    message.observation = Observation(objects, pending);
+    message.tracking = tracking;
+    publisher.publish(message);
   }
 
   void ReadTopics() {
@@ -270,6 +286,8 @@ class LidarPipelineNode {
     pnh_.param<std::string>("observations_map_topic", map_observation_topic_, "observations_map");
     pnh_.param("planning_output", planning_output_, false);
     pnh_.param<std::string>("planning_observations_topic", planning_topic_, "planning_observations_map");
+    pnh_.param<std::string>("tracks_local_topic", local_tracking_topic_, "tracks_local");
+    pnh_.param<std::string>("tracks_map_topic", map_tracking_topic_, "tracks_map");
     pnh_.param<std::string>("diagnostics_topic", diagnostics_topic_, "diagnostics");
     pnh_.param<std::string>("trace_topic", trace_topic_, "trace");
     pnh_.param("publish_tf", publish_tf_, false);
@@ -292,16 +310,20 @@ class LidarPipelineNode {
   // resolves them (namespace and remaps applied).
   void Guard() {
     std::vector<std::string> refused;
-    std::vector<const std::string*> outputs = {&local_topic_, &map_topic_, &diagnostics_topic_, &trace_topic_, &local_observation_topic_, &map_observation_topic_};
+    std::set<std::string> output_names;
+    std::vector<const std::string*> outputs = {&local_topic_, &map_topic_, &diagnostics_topic_, &trace_topic_, &local_observation_topic_, &map_observation_topic_, &local_tracking_topic_, &map_tracking_topic_};
     if (planning_output_) outputs.push_back(&planning_topic_);
     const auto debug_topics = DebugPublisher::TopicNames(debug_config_.topic_prefix);
     for (const auto& topic : debug_topics) outputs.push_back(&topic);
     for (const std::string* topic : outputs) {
       const std::string resolved = nh_.resolveName(*topic);
+      if (!output_names.insert(resolved).second)
+        throw StartupRefused("output refused: duplicate topic: " + resolved);
       if (OperationalTopic(resolved)) refused.push_back(*topic + " -> " + resolved);
       for (const std::string* input : {&points_topic_, &imu_topic_, &can_topic_, &gps_topic_,
                                        &camera_observations_topic_, &camera_status_topic_})
-        if (resolved == nh_.resolveName(*input)) refused.push_back(*topic + " -> " + resolved + " (an input)");
+        if (resolved == nh_.resolveName(*input))
+          throw StartupRefused("output refused: sensor/camera input: " + resolved);
     }
     const std::string child = StripSlash(tf_child_frame_);
     if (child.empty()) throw StartupRefused("~tf_child_frame must not be empty");
@@ -388,6 +410,8 @@ class LidarPipelineNode {
     local_observation_pub_ = nh_.advertise<asmc_msgs::LidarObservation>(local_observation_topic_, 5);
     map_observation_pub_ = nh_.advertise<asmc_msgs::LidarObservation>(map_observation_topic_, 5);
     if (planning_output_) planning_pub_ = nh_.advertise<asmc_msgs::LidarPlanningObservation>(planning_topic_, 2);
+    local_tracking_pub_ = nh_.advertise<asmc_msgs::LidarTrackingObservation>(local_tracking_topic_, 2);
+    map_tracking_pub_ = nh_.advertise<asmc_msgs::LidarTrackingObservation>(map_tracking_topic_, 2);
     local_pub_ = nh_.advertise<asmc_msgs::LidarObjectArray>(local_topic_, 5);
     map_pub_ = nh_.advertise<asmc_msgs::LidarObjectArray>(map_topic_, 5);
     diagnostics_pub_ = nh_.advertise<diagnostic_msgs::DiagnosticArray>(diagnostics_topic_, 2);
@@ -558,6 +582,8 @@ class LidarPipelineNode {
         observation.calibration_id = config_.calibration_id;
         planning_pub_.publish(asmc::lidar::runtime::PlanningOutput(observation, out.result));
       }
+      PublishTracking(local_tracking_pub_, out.arrays.local, out.arrays.local_tracking, pending);
+      PublishTracking(map_tracking_pub_, out.arrays.map, out.arrays.map_tracking, pending);
     }
     const double delivery_ms = double(camera::steady_now_ns() - pending.receipt_steady_ns) / 1e6;
     if (tf_ && out.arrays.accepted && out.arrays.observed) PublishTf(out);
@@ -706,6 +732,7 @@ class LidarPipelineNode {
       number("can_rejected", runtime_->can_rejected());
       number("gps_rejected", runtime_->gps_rejected());
       value("last_gps_reason", runtime_->last_gps_reason());
+      value("delivery_policy", runtime_->delivery_status());
       value("camera_fusion", camera_ ? "enabled" : config.enable_camera_fusion ? "lidar_only" : "disabled");
       value("camera_active", stats_.camera_active ? "true" : "false");
       value("camera_reason", camera_ ? stats_.camera_reason : camera_reason_);
@@ -817,7 +844,9 @@ class LidarPipelineNode {
   ros::Publisher planning_pub_;
   bool planning_output_ = false;
   std::string planning_topic_;
+  ros::Publisher local_tracking_pub_, map_tracking_pub_;
   std::string local_observation_topic_, map_observation_topic_;
+  std::string local_tracking_topic_, map_tracking_topic_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_;
   ros::Subscriber points_sub_, imu_sub_, can_sub_, gps_sub_;
   ros::WallTimer diagnostics_timer_;

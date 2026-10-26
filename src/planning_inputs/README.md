@@ -2,18 +2,31 @@
 
 > **Document role:** Active Package Guide — Behavior/Frenet/MPC inputs.
 
-`source_policy:=asmc_lidar` selects the typed `/migration/lidar/planning_observations_map`
-adapter. It preserves scan time, validates producer/generation/sequence, distinguishes
-observed empty from unavailable input, and does not invent valid zero velocities.
-Objects whose speed is not yet measured keep their geometry with `motion_state=UNKNOWN`
-and `velocity_unavailable=true`; finite zero slots represent only the existing
-uncertain occupancy hypothesis. They cannot become measured LOW_THREAT objects.
-This changes the **private** `planning_inputs/DetectedObject*` MD5: rebuild the whole
-outer workspace. Frozen `asmc_msgs` and nested `Msg` formats are unchanged.
-See [cutover and rollback](../../docs/operations/lidar-cutover.md).
-The standalone `objects.launch` default below remains the legacy rollback path.
+## asmc_lidar 직접 입력
 
-## Validated LiDAR policy (default)
+`source_policy:=asmc_lidar`는 `asmc_msgs/LidarTrackingObservation`을 직접 받아 source stamp·
+ID·원본 OBB·적용 속도·4단계 운동 상태를 전달한다. 구 wire/JSON join·두 번째 classifier·
+필터/clipping을 실행하지 않는다. session/generation·설정/보정 ID·freshness·정렬을 검사하고
+정상 빈 결과와 무효/미수신을 구분한다. [속도 의미·검증·복구](../asmc_lidar/docs/planning-runtime.md)를 따른다.
+
+```bash
+roslaunch asmc_lidar lidar.launch
+roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_lidar
+```
+
+두 번째 명령은 차량 제어를 포함한다. 현재 통합 판제 기본은 기존 `validated_lidar`로 유지하며
+실제 소비 인수 때 명시적으로 새 경로를 선택한다. 새 경로는 outer workspace만 빌드하고 source한다.
+아래 구 경로는 인수 전 기존 실행·복구를 위한 안내다.
+
+### 검증 companion 입력
+
+`source_policy:=asmc_lidar_companion`은 기존 전체 주행에서 사용한
+`/migration/lidar/planning_observations_map`의 `LidarPlanningObservation`을 소비한다.
+`asmc_input_topic`으로 입력을 바꿀 수 있다. 직접 추적 입력과 동시에 켜지지 않는다.
+측정 속도가 없는 객체는 `velocity_unavailable=true`의 UNKNOWN 점유로 유지하며,
+session/generation 변경 시 내부 ID를 분리한다. [실행·복구 안내](../../docs/operations/lidar-cutover.md).
+
+## Validated LiDAR 기존 실행·복구 (통합 launch 기본)
 
 The pre-rebase reference is 0781402 on
 backup/avoid-merge-validated-20261005. Its complete nested Main LiDAR processing

@@ -445,5 +445,19 @@ test('YOLO protection and old region protection are distinguished from motion',(
   assert.equal(V.previewVisible(scene,movingUnknown,false,true),false);
 });
 
+test('ported delivery policies keep their reason and hide independently of point/OBB tests',()=>{
+  for(const prefix of ['known_static','structure','observation_quality']) {
+    const scene={hd_map_audit:{enabled:true,objects:[{track_id:7,delivery_excluded:true,
+      preview:{decision:'exclude_candidate',reason:prefix+':preserved_policy',
+        point_decision:'keep',obb_decision:'keep',height_decision:'keep'}}]}};
+    const track={id:7,miss:0};
+    assert.deepStrictEqual(V.auditAppearance(scene,track).categories,['policy']);
+    assert.equal(V.auditAppearance(scene,track).label,'발행 제외');
+    assert.equal(V.previewVisible(scene,track,false,true),false);
+    assert.equal(V.previewVisible(scene,track,false,false,{policy:true}),false);
+    assert.equal(V.previewVisible(scene,track,false,false,{points:true,obb:true,height:true,policy:false}),true);
+  }
+});
+
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');
 process.exit(failures.length ? 1 : 0);

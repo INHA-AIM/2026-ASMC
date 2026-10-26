@@ -20,7 +20,7 @@
 | 1 · 판제/제어 정윤태·양서준·이강태, 통합 공동 | 현재 단일 planner + Main + 카메라 기준선의 전체 미션 반복 | SUNNY/FOGGY×11/13/15, 실제 최고속도·충돌·정체·완주시간, STOP/재밍 진입·복귀·명령 단절 |
 | 1 · 안승현 + 소비 파트 | 관측·원본 이름/그룹·상태·pose 인계 확인 | 단일 producer, source stamp·좌표·세대·freshness, unknown/무효/빈 결과를 구분 |
 | 1 · 손재호 + 판제 | LiDAR 객체/구조물·속도·분류의 소비 신뢰성 | 객체 보존·벽 혼입·추적 ID·GPS 무효/복구, Main·판제 UTM yaw 일치, 미확정 속도를 0으로 치환하지 않음 |
-| 2 · 안승현 HD맵/카메라, 손재호 추적/속도/fusion | [L0–L8 이관](../../src/asmc_lidar/docs/migration-tasks.md) | 기존 Main 유지·시험 namespace 격리, 전방 fusion 이관 후 소비 수락; 3뷰 매칭 확대는 L8 후속 |
+| 1 · 안승현 HD맵/카메라·판제 연결, 손재호 추적/속도/fusion·터널 | [판제 전환·정본화 B0–B4](../../src/asmc_lidar/docs/cutover-foundation.md) | 공용 속도/상태 → 직접 소비 → 비교/전환 → 구 패키지 폐기. GPS 없는 터널 local 개선 병행; 광범위한 리팩토링·3뷰 확대는 이후 |
 | 2 · 장원태 + 판제 | 시나리오 검증·실패 재현을 반복 가능한 팀 절차로 고정 | 객체/환경/seed/지도 SHA와 충돌·정체 이력; CP14→START 조건은 공식 모든 체크포인트 검사와 별도 |
 | 2 · 안승현 + 지도 소비 파트 | 지도·차량 상태 정본과 판제 map copy 정합 | 링크/route/원점·yaw·checkpoint parity, 출처 경로 기록 오류와 실제 지도 값 변경 구분 |
 | 3 · 안승현, 판제 요청 시 | 실패 조건만 수집·모델 추가학습 | bus/truck, 차로 앞 bicycle/dog, dog2/dog10, 터널·근거리; 기존 객체 회귀와 실행 지연 확인 |
@@ -30,14 +30,14 @@
 
 2026-10-22 L0 문서 통합에 이어 [L1 설계·기준선](../../src/asmc_lidar/docs/migration-design.md)을 정리했다.
 PR #103 검출·추적·전방 fusion과 PR #105 웹 모니터를 PR #104의 구조·공용 관측 계약에 통합했다.
-PR 병합과 운영 소비 전환은 별개다. [공동 인수표](../../src/asmc_lidar/docs/migration-tasks.md#공동-개발-인수와-우선-작업)를 따른다. 이후 안승현은 HD맵 필터·카메라 연결, 손재호는 추적·속도·운동 상태·fusion을 보완한다. 구현 상태와 과거 검증
+PR #108(main `ab8db094`)의 HD맵·상부 전달 필터는 새 발행 배열에 적용됐다. 2026-10-26 승현이 기존 속도/4단계 운동·시설물/구조물/관측 확인 보존 이식과 판제 직접 소비를 구현했다. [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)으로 실제 소비 인수와 구 패키지 폐기를 마무리한다. PR 병합과 운영 소비 전환은 별개다. [공동 인수표](../../src/asmc_lidar/docs/migration-tasks.md#공동-개발-인수와-우선-작업)를 따른다. 이후 안승현은 HD맵 필터·카메라 연결, 손재호는 추적·속도·운동 상태·fusion을 보완한다. 구현 상태와 과거 검증
 근거는 [통합 인계](../handoffs/lidar-migration.md)에 모은다. 재호 브랜치 대기 없이 진행하되
 판제 소비는 L7까지 기존 Main을 유지한다. 최신 PR #101의 동적 장애물 판단·안전 재출발은
 판제 정책으로 남기고, 측정·지도 관련성 필터의 소유권 통합과 구분한다.
 
 카메라 TensorRT가 기본이어도 family 순간 공백250ms 기준과 freshness350ms의 남은 실패는 추적합니다.
 YOLO는 전 조건 모든 에셋 지원을 검증한 상태가 아닙니다. 추가학습은 현재 사용자 판단에 따라 보류합니다.
-`asmc_lidar`는 카메라 수신 컴포넌트·확인용 probe와 Main LiDAR 처리·전방 fusion을 옮긴 shadow 노드를 제공하지만 운영 LiDAR 실행은 계속 Main이며(shadow는 명시 실행·`/migration/lidar/*` 전용), 3뷰 YOLO 출력이 3뷰 LiDAR fusion 완료를 뜻하지 않습니다.
+`asmc_lidar`는 검출·추적·전방 fusion·공용 관측·전달 필터를 제공하지만 판제 운영 입력은 계속 Main입니다. 새 실행은 `/migration/lidar/*` 전용이며 3뷰 YOLO 출력이 3뷰 LiDAR fusion 완료를 뜻하지 않습니다. 손재호는 GPS 없는 터널 local 객체·벽/천장 보완을 맡고, 안승현은 카메라/family 근거 연결을 지원합니다. 흰선 밖의 여유 공간에 놓인 객체를 일괄 제거하지 않습니다.
 
 판제의 최신 주행 개선과 전체 회귀 통과는 다릅니다. 이전 이관 기록의 AVOID/link 실패와
 #89가 보고한 `roundabout_execution_test` 실패는 시점별로 구분해 해결·재검증합니다.

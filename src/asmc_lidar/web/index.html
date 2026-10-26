@@ -72,6 +72,7 @@
       <label><input type="checkbox" id="opt-hide-points" checked> 점군 근거 후보 숨김 <span id="criteria-points" class="note"></span></label>
       <label><input type="checkbox" id="opt-hide-obb" checked> OBB 근거 후보 숨김 <span id="criteria-obb" class="note"></span></label>
       <label><input type="checkbox" id="opt-hide-height" checked> 상부 객체 후보 숨김 <span id="criteria-height" class="note"></span></label>
+      <label><input id="opt-hide-policy" type="checkbox" checked> 관측 품질 제외 숨김 (구 시설물 사유 포함)</label>
       <p class="note">기본 표시는 점군 AND OBB 통과입니다. OBB가 통과해도 점군 미달이면 숨깁니다. 원인별 숨김 해제는 검수용이며 제외된 박스·점을 사유 색으로 다시 표시합니다.</p>
       <p id="filter-summary" class="note">화면 표시 수 대기</p>
       <p class="note">목록과 토픽은 유지합니다. 객체를 선택해도 숨김은 유지하고 상세값만 엽니다.<br>YOLO의 person/dog/deer/bicycle/stroller 및 car/bus/truck이 실제 매칭되면 전 구간 보호합니다. LiDAR 속도·동적 판정, 미션 근접만으로 보호하지 않습니다. 제외 근거 없는 보류 객체와 예측 트랙 표시는 별도입니다.</p>

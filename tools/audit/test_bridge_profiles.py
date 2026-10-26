@@ -5,15 +5,45 @@ import os
 import json
 import subprocess
 import unittest
+import copy
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "tools/audit"))
 from validate_bridge_profiles import validate  # noqa: E402
+from render_morai_network_profiles import load_contract, render_profile  # noqa: E402
 
 
 class BridgeProfileContractTest(unittest.TestCase):
+    def test_r1_controller_selection_matches_verified_export(self):
+        contract = load_contract()
+        source = json.loads((REPO_ROOT / contract['network_templates']['26r1']['template']).read_text())
+        original = copy.deepcopy(source)
+        for transport in ('local', 'lan2lan'):
+            with self.subTest(transport=transport):
+                rendered = render_profile(contract, '26r1', transport)
+                control = next(e for ego in rendered['egoNetworkData'] for e in ego['listEgoNetworkInfo'] if e['Division_TYPE']==3)
+                self.assertEqual(control['PUBSUB_TYPE'], 771)
+                self.assertEqual(control['EgoCtrlConfig']['_PUBSUB_TYPE'], 771)
+                self.assertEqual(control['EgoCtrlConfig']['egoCtrlMode'], 3)
+                self.assertEqual(control['EgoCtrlConfig']['udpConfig']['receiveBufferSize'], 59)
+        # The historical 786/531-byte source is provenance, not a new default.
+        self.assertEqual(source, original)
+        self.assertEqual(next(e for ego in source['egoNetworkData'] for e in ego['listEgoNetworkInfo'] if e['Division_TYPE']==3)['PUBSUB_TYPE'],786)
+
+    def test_canonical_udp_boundary_exposes_sign_without_changing_team_default(self):
+        launch = ET.parse(REPO_ROOT / 'src/asmc_bridge/launch/morai_udp_bridge.launch').getroot()
+        params = {p.get('name'):p.get('value') for p in launch.find('node').findall('param')}
+        self.assertEqual(params['invert_steer'], '$(arg invert_steer)')
+        self.assertEqual(params['cmd_payload_bytes'], '23')
+        self.assertEqual(next(a.get('default') for a in launch.findall('arg') if a.get('name')=='invert_steer'),'false')
+        root = ET.parse(REPO_ROOT / 'src/asmc_bridge/launch/bridge.launch').getroot()
+        self.assertEqual(next(a.get('default') for a in root.findall('arg') if a.get('name')=='invert_steer'),'false')
+        network = next(i for i in root.findall('include') if i.get('file').endswith('/morai_udp_bridge.launch'))
+        self.assertEqual(next(a.get('value') for a in network.findall('arg') if a.get('name')=='invert_steer'),'$(arg invert_steer)')
+
     def test_repository_contract_is_valid(self):
         result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
         self.assertEqual("p3g_bridge_local_closeout_v1", result["baseline_id"])
@@ -73,6 +103,10 @@ class BridgeCommandLineTest(unittest.TestCase):
         self.assertEqual(gt.returncode, 0, gt.stderr)
         self.assertEqual(gt.stdout.splitlines(), ['local', 'development', 'false',
                          'timestamp_mode:=source', 'cmd_port:=9093'])
+        steering = self.parse('invert_steer:=true')
+        self.assertEqual(steering.returncode, 0, steering.stderr)
+        self.assertEqual(steering.stdout.splitlines(),
+                         ['local', 'competition', 'false', 'invert_steer:=true'])
 
     def test_transport_and_field_gate_remain_independent_of_gt(self):
         field = self.parse('--transport', 'lan2lan', '--require-competition-status')

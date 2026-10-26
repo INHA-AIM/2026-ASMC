@@ -22,6 +22,7 @@
 | `lidar_rotation_rate` | `15.0` | v3/GT assembly reference Hz; sensor rate is set in MORAI |
 | `cmd_ip` | `$(optenv MORAI_CMD_IP 127.0.0.1)` | — |
 | `cmd_port` | `9093` | — |
+| `invert_steer` | `false` | Transport steering sign; AIM06 R1.H3 verified with true, team default retained |
 | `competition_port` | `9798` | — |
 | `competition_status_required` | `false` | — |
 | `enable_vehicle_state` | `true` | — |
@@ -47,6 +48,7 @@
 | `cmd_ip` | `127.0.0.1` | — |
 | `cmd_port` | `9093` | — |
 | `max_steer_deg` | `40.0` | — |
+| `invert_steer` | `false` | Preserve team default; current AIM06 R1.H3 requires true, verified against vehicle yaw |
 | `timestamp_mode` | `receive` | — |
 
 ## Sensor bridge component
@@ -199,7 +201,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `namespace` | `/migration/lidar` | Output namespace; inputs keep their canonical paths |
+| `namespace` | `/perception/lidar` | Output namespace; inputs keep their canonical paths |
 | `pipeline_config` | `$(find asmc_lidar)/config/lidar_pipeline.yaml` | Processing configuration YAML |
 | `lidar_level_roll` | `(빈 문자열)` | — |
 | `fusion` | `true` | Use camera observations for classification; false runs LiDAR alone |
@@ -207,6 +209,7 @@
 | `camera_calibration_config` | `(빈 문자열)` | — |
 | `experimental_tunnel_filter` | `(빈 문자열)` | — |
 | `publish_tf` | `false` | — |
+| `planning_output` | `false` | Opt-in qualified planning companion; normal shadow arrays stay unchanged |
 | `tf_child_frame` | `lidar_pipeline/lidar_leveled` | — |
 | `debug` | `false` | Publish sampled stages for view.launch; no algorithm changes |
 | `debug_rate_hz` | `5.0` | — |
@@ -221,6 +224,8 @@
 | `objects_map_topic` | `objects_map` | — |
 | `observations_local_topic` | `observations_local` | — |
 | `observations_map_topic` | `observations_map` | — |
+| `tracks_local_topic` | `tracks_local` | — |
+| `tracks_map_topic` | `tracks_map` | — |
 | `diagnostics_topic` | `diagnostics` | — |
 | `trace_topic` | `trace` | — |
 
@@ -309,8 +314,8 @@
 | `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
-| `lidar_input_topic` | `/last_lidar` | — |
 | `lidar_source_policy` | `validated_lidar` | — |
+| `lidar_input_topic` | `$(eval '/perception/lidar/tracks_map' if arg('lidar_source_policy') == 'asmc_lidar' else '/last_lidar')` | — |
 | `avoid_path_margin_m` | `0.4` | — |
 | `expected_config_sha256` | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | — |
 | `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
@@ -349,11 +354,12 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `input_topic` | `/last_lidar` | — |
-| `source_policy` | `validated_lidar` | — |
+| `source_policy` | `asmc_lidar` | — |
+| `input_topic` | `$(eval '/perception/lidar/tracks_map' if arg('source_policy') == 'asmc_lidar' else '/last_lidar')` | — |
 | `motion_debug_topic` | `/lidar/motion_debug` | — |
 | `output_topic` | `/planning/objects` | — |
 | `state_topic` | `/planning/vehicle/state` | — |
+| `asmc_input_topic` | `/migration/lidar/planning_observations_map` | — |
 
 ## Dashboard
 
@@ -373,7 +379,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `namespace` | `/migration/lidar` | — |
+| `namespace` | `/perception/lidar` | — |
 | `open_browser` | `false` | — |
 | `dashboard_port` | `8091` | — |
 | `bind_address` | `127.0.0.1` | — |
@@ -447,6 +453,7 @@
 | `diagnostics_topic` | `/planning/camera_bbox_lane_change/diagnostics` | — |
 | `emergency_stop_topic` | `/planning/camera_bbox_lane_change/emergency_stop` | — |
 | `bbox_topic` | `/planning/camera_bbox_lane/result` | — |
+| `bbox_conf_thres` | `0.7` | — |
 | `reference_lane_topic` | `/planning/camera_bbox_lane_change/reference_lane` | — |
 | `far_obstacle_speed_kph` | `5.0` | — |
 | `bbox_source_timeout` | `0.5` | — |
@@ -456,6 +463,7 @@
 | `adjacent_clear_frames` | `3` | — |
 | `ignore_bbox_during_lane_change` | `true` | — |
 | `one_lane_change_only` | `false` | — |
+| `return_to_entry_lane` | `false` | — |
 | `obstacle_lateral_margin` | `0.30` | — |
 | `obstacle_longitudinal_margin` | `0.5` | — |
 | `vehicle_front` | `3.845` | — |
@@ -566,7 +574,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |
+| `lidar_backend` | `main` | — |
 
 ## Scenario planning composition
 
@@ -574,4 +582,4 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |
+| `lidar_backend` | `main` | — |

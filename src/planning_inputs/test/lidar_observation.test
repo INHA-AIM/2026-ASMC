@@ -1,6 +1,6 @@
 <launch>
   <include file="$(find planning_inputs)/launch/objects.launch">
-    <arg name="source_policy" value="asmc_lidar"/>
+    <arg name="source_policy" value="asmc_lidar_companion"/>
   </include>
   <test pkg="planning_inputs" type="test_lidar_observation_ros.py" test-name="lidar_observation_ros" time-limit="30"/>
 </launch>

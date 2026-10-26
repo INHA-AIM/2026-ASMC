@@ -254,3 +254,46 @@ seed 43/42에서 각각 약 0.67/0.71초의 실선 접촉을 추정했다(차체
 센서를 기록한 결과는 아니므로, 실선 무접촉/무감점 또는 완전한 차선 준수 인증을 하지 않는다.
 3초 미만이라는 이유만으로 최초 접촉 벌점이 없다고 해석하지 않는다. 이 기록은 출구의
 장기 정지 수정 검증이며, 실선 경계 전 복귀 완료 여유는 후속 확인 대상으로 남는다.
+
+
+### main 병합 충돌 해결 후 회귀 검증 (2026-10-26)
+
+`feature/yuntae-asmc-lidar-migration`의 `35ce21ad`와 main `b2e8329f` 사이
+22개 충돌 파일을 비교·통합했다. 재밍 출구 제어·GPS 복구 구현은 그대로 보존했다.
+main의 공용 추적 입력과 기존 KF companion은 속도/메시지 계약이 달라 두 경로를 남겼다.
+`asmc_lidar`는 main의 `LidarTrackingObservation`, `asmc_lidar_companion`은 기존
+`LidarPlanningObservation`을 소비한다. 실행 설정 검사에서 정책별 어댑터 하나와
+생산자/소비자 토픽 일치를 확인했다. scen_runner와 `autonomy_asmc_lidar.launch`는
+후자를 명시적으로 선택한다. [실행 명령](../../operations/lidar-cutover.md#main-병합-후-입력-선택).
+
+main의 카메라 공용 입력·클래스/cutoff·정확한 영상 대응을 유지하면서 confidence 무효를
+정상 빈 검출로 바꾸지 않도록 통합했다. 잘림/비정상 좌표는 C++의 UNKNOWN 차로 판정으로
+전달한다. 구 Main/Msg 카메라 relay는 main의 제거를 유지하되 `src/lidar+sensorfusion`
+패키지는 삭제하지 않았다. 해당 패키지의 차이는 main에서 들어온 camera ownership 테스트
+수정뿐이며, 병합 해결 과정에서 별도로 수정하지 않았다.
+
+검증 (Noetic Docker, 실제 MORAI와 분리):
+
+- 전체 outer workspace 빌드 통과 (`./scripts/build_ws.sh -j2 -l2 -DCATKIN_WHITELIST_PACKAGES= -DCATKIN_ENABLE_TESTING=ON`).
+- LiDAR CTest 34개 항목 및 `pipeline_ci_check.py` 전체 gate 통과. 항목 안의 개별 test case는 별도 집계다.
+- planning_inputs 단위 테스트 50개와 motion executable 통과. 공용/companion 두 관측 경로,
+  GPS 복구, 기존 필터·그룹 변환·속도/좌표 변환을 포함한다.
+- 실제 공용 LiDAR → planning ROS 연결 및 companion의 invalid/stale/duplicate/복구 시험 통과.
+- 카메라 frame bridge 1개, 차로 판정 11개, clipped 3개, ego mask 1개,
+  차로 변경·진입 차로 복귀 24개 통과.
+- GPS 모드 전환 4개, 제어 selector 3개 통과.
+- planner의 회피 대상·회전교차로·도로 제약·충돌 CTest 4개 항목 통과.
+- 공용 메시지 직렬화/MD5 5개, 실행 경로 선택 2개, 시나리오 trial 단위시험 49개 통과.
+- P1B 계약, 실행 문서 정합성, 문서 이동, Python/XML 구문, `git diff --check` 통과.
+
+검증 중 발견한 문제도 숨기지 않는다. companion ROS fixture에 남아 있던 이전 정책명을
+수정했고, 카메라 per-box UNKNOWN 처리에 맞춰 브리지 검증을 정렬했다. monitor의
+연속 HTTP 요청 사이 새 프레임이 도착하는 정상 상황을 실패로 보던 시험은 새 sequence를
+확인한 뒤 실제 unchanged/status-only 응답을 반드시 검사하도록 고쳤다. LiDAR receiver
+시험 실행 파일은 별도 test target을 빌드한 뒤 재검증했다. host에 없는 scipy/shapely/pyproj는
+설치하지 않고 기존 Docker 환경에서 trial 시험을 실행했다.
+
+로그는 `$ASMC_DATA/derived/merge-lidar-main-20261026/`에 보관한다.
+**병합 후 실제 MORAI 전체 주행은 수행하지 않았다.** 위 두 차례 완주와 실선 접촉 추정은
+병합 전 코드의 결과이며, main의 필터·관측 정책·bridge 변경까지 포함한 전체 주행 보증이 아니다.
+충돌 해결은 staged 상태로 남기고 커밋·푸시·PR 조작은 수행하지 않는다.

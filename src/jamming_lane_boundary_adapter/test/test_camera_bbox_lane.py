@@ -11,7 +11,7 @@ import rospy
 import rospkg
 import rostest
 from asmc_msgs.msg import LaneBoundaryFamily
-from Msg.msg import Yolo_bbox, Yolo_bbox_arr
+from asmc_msgs.msg import CameraObjectBoxArray
 from sensor_msgs.msg import CompressedImage, Image
 from std_msgs.msg import Header
 from lane_boundary_adapter.msg import CameraBBoxLaneResult as Result
@@ -20,6 +20,7 @@ from asmc_camera.bev.calibration import load_calibration_snapshot
 spec = importlib.util.spec_from_file_location('fixture', str(Path(__file__).with_name('lane_family_fixture.py')))
 fixture = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fixture)
+camera_box = fixture.camera_box
 
 
 class BboxLaneTest(unittest.TestCase):
@@ -30,7 +31,7 @@ class BboxLaneTest(unittest.TestCase):
         cls.result = cls.overlay = None
         cls.lane_pub = rospy.Publisher('/perception/lane/boundary_family', LaneBoundaryFamily, queue_size=1)
         cls.image_pub = rospy.Publisher('/bbox_test/image', CompressedImage, queue_size=1)
-        cls.box_pub = rospy.Publisher('/bbox_test/yolo', Yolo_bbox_arr, queue_size=1)
+        cls.box_pub = rospy.Publisher('/bbox_test/yolo', CameraObjectBoxArray, queue_size=1)
         cls.sub = rospy.Subscriber('/planning/camera_bbox_lane/result', Result, lambda m: setattr(cls, 'result', m))
         cls.img_sub = rospy.Subscriber('/planning/camera_bbox_lane/image', Image, lambda m: setattr(cls, 'overlay', m))
         cls.jpeg = cv2.imencode('.jpg', np.zeros((720,1280,3),dtype=np.uint8))[1].tobytes()
@@ -42,7 +43,7 @@ class BboxLaneTest(unittest.TestCase):
     def box(cls,x,y,width=30):
         uv,_=cls.camera.project_ground(np.array([[x,y]]))
         u,v=uv[0]
-        return Yolo_bbox(u-width/2,v-60,u+width/2,v,'car')
+        return fixture.camera_box(u-width/2,v-60,u+width/2,v,'car')
 
     def feed(self, boxes=(), duration=.5, shift=0., gap=False, camera=True, image=True, stamp=None, invalid_lane=False, stop_x=15.0, far_gap=False, uneven_end=False):
         end=time.monotonic()+duration
@@ -66,7 +67,7 @@ class BboxLaneTest(unittest.TestCase):
                 self.lane_pub.publish(lane)
             if image:
                 self.image_pub.publish(CompressedImage(header=header,format='jpeg',data=self.jpeg))
-            self.box_pub.publish(Yolo_bbox_arr(header=header,objc=len(boxes),yolo_bbox_arr=list(boxes)))
+            self.box_pub.publish(fixture.camera_boxes(header,boxes))
             time.sleep(.05)
         time.sleep(.025)
         self.assertIsNotNone(self.result)
@@ -112,7 +113,7 @@ class BboxLaneTest(unittest.TestCase):
     def test_contact_overlap_tolerates_far_end_pixel_jitter(self):
         original=self.box(15,0)
         for dy in [-5.,-3.,0.,3.]:
-            box=Yolo_bbox(original.xMin,original.yMin+dy,original.xMax,original.yMax+dy,'car')
+            box=fixture.camera_box(original.xmin,original.ymin+dy,original.xmax,original.ymax+dy,'car')
             self.feed([box],stop_x=15.,duration=.3)
             self.assertTrue(self.result.valid,(dy,self.result.reason))
             self.assertEqual(list(self.result.assignments),[Result.OWN])
@@ -130,8 +131,8 @@ class BboxLaneTest(unittest.TestCase):
 
     def test_small_contact_is_unknown_and_shared_contact_is_both(self):
         edge=self.box(10,-1.75)
-        u=(edge.xMin+edge.xMax)/2
-        self.feed([Yolo_bbox(u-1,edge.yMin,u+199,edge.yMax,'car')])
+        u=(edge.xmin+edge.xmax)/2
+        self.feed([fixture.camera_box(u-1,edge.ymin,u+199,edge.ymax,'car')])
         self.assertFalse(self.result.valid,self.result)
         self.assertEqual(list(self.result.assignments),[Result.UNKNOWN])
         self.feed([self.box(10,1.75,width=100)])
@@ -154,9 +155,9 @@ class BboxLaneTest(unittest.TestCase):
 
     def test_gap_far_and_clipped_are_unknown(self):
         for box,kwargs in [(self.box(6,0),{'gap':True}),(self.box(24,0),{'stop_x':10.0}),
-                           (Yolo_bbox(610,270,690,320,'car'),{}),
-                           (Yolo_bbox(600,600,700,720,'car'),{}),
-                           (Yolo_bbox(float('nan'),500,700,600,'car'),{})]:
+                           (fixture.camera_box(610,270,690,320,'car'),{}),
+                           (fixture.camera_box(600,600,700,720,'car'),{}),
+                           (fixture.camera_box(float('nan'),500,700,600,'car'),{})]:
             self.feed([box],**kwargs)
             self.assertFalse(self.result.valid,self.result)
             self.assertEqual(list(self.result.assignments),[Result.UNKNOWN])
@@ -182,21 +183,33 @@ class BboxLaneTest(unittest.TestCase):
         self.feed([],invalid_lane=True)
         self.assertFalse(self.result.valid)
 
-    def test_resolution_and_count_contract(self):
+    def test_public_front_view_and_consumer_cutoff(self):
+        box=self.box(10,0);box.confidence=.6
+        self.feed([box]);self.assertTrue(self.result.valid)
+        self.assertEqual(self.result.own_state,Result.NO_DETECTION)
+        box.confidence=.9
+        self.feed([box]);self.assertEqual(self.result.own_state,Result.DETECTED)
+        header=Header(stamp=rospy.Time.now(),frame_id='camera_left')
+        self.box_pub.publish(fixture.camera_boxes(header,[self.box(10,0)]))
+        time.sleep(.18)
+        self.assertTrue(self.result.valid,self.result.reason)
+        self.assertEqual(self.result.own_state,Result.DETECTED)
+
+    def test_resolution_and_validity_contract(self):
         self.feed()
         header=Header(stamp=rospy.Time.now(),frame_id='camera_front')
         self.image_pub.publish(CompressedImage(header=header,format='jpeg',data=cv2.imencode('.jpg',np.zeros((480,640,3),dtype=np.uint8))[1].tobytes()))
-        self.box_pub.publish(Yolo_bbox_arr(header=header,objc=0,yolo_bbox_arr=[]))
+        self.box_pub.publish(fixture.camera_boxes(header))
         time.sleep(.15)
         self.assertFalse(self.result.valid)
         self.assertEqual(self.result.reason,'image_size_calibration_mismatch')
         self.feed()
         header.stamp=rospy.Time.now()
         self.image_pub.publish(CompressedImage(header=header,format='jpeg',data=self.jpeg))
-        self.box_pub.publish(Yolo_bbox_arr(header=header,objc=1,yolo_bbox_arr=[]))
+        self.box_pub.publish(fixture.camera_boxes(header,valid=False))
         time.sleep(.15)
         self.assertFalse(self.result.valid)
-        self.assertEqual(self.result.reason,'bbox_count_mismatch')
+        self.assertEqual(self.result.reason,'invalid_camera_detections')
 
 
 if __name__=='__main__':

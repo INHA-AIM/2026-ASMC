@@ -393,7 +393,14 @@ def publish_report(owner, namespace):
             socket_rcvbuf_bytes=row['socket_rcvbuf'], statistics_window='rolling_last_4096_samples',
             reporter_failures=owner.reporter.failures)
         if namespace == 'morai_udp_bridge':
-            if name == 'ego':
+            if name == 'cmd':
+                # Report the values actually loaded by this process. A later
+                # rosparam set does not change its cached command conversion.
+                for field in ('cmd_ip', 'cmd_port', 'cmd_bytes', 'max_steer_deg', 'invert_steer'):
+                    if hasattr(owner, field):
+                        value = getattr(owner, field)
+                        values[field] = str(value).lower() if isinstance(value, bool) else value
+            elif name == 'ego':
                 values['last_link_id'] = owner.last_link_id
             elif name == 'competition':
                 values['last_link_id'] = owner.last_competition_link_id

@@ -90,11 +90,15 @@ sh::RuntimeConfig ShippedRuntimeConfig() {
   // Existing Main-equivalence fixtures use the pre-height/audit path. Production
   // defaults are checked independently below and in the ROS integration tests.
   cfg.pipeline.height_roi.enabled=false;cfg.hd_map_audit_mode="off";
+  cfg.delivery_filters.reset();  // pre-final-publication reference, tested separately below
   cfg.hd_map_audit.reset();return cfg;
 }
 
 TEST(RuntimeDeployment, DefaultMapIsPinnedAndHeightCapIsLocal) {
   const auto cfg=sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
+  ASSERT_TRUE(cfg.delivery_filters);
+  EXPECT_TRUE(cfg.delivery_filters->enabled());
+  EXPECT_EQ(cfg.delivery_filters->status(),"observation_quality_only");
   EXPECT_DOUBLE_EQ(cfg.delivery_preview.minimum_road_ratio,.10);
   EXPECT_DOUBLE_EQ(cfg.delivery_preview.minimum_obb_road_ratio,.10);
   EXPECT_DOUBLE_EQ(cfg.delivery_preview.road_inset_m,.10);
@@ -358,6 +362,38 @@ TEST(HdMapAuditRuntime, SubcellMarginsAreDistinctAndObbUsesFractionalBoundaryAre
   }
 }
 
+TEST(RuntimeDelivery, ObservationQualityDoesNotMutateTracksAndGpsLossPreservesLocal) {
+  auto raw=ShippedRuntimeConfig(),cfg=raw;
+  cfg.delivery_filters=sh::LoadRuntimeConfig(ShippedConfig(),PackageDir()).delivery_filters;
+  sh::LidarRuntime first(raw,nullptr,nullptr),second(cfg,nullptr,nullptr);
+  Sim reference(first),delivery(second);
+  reference.gps=delivery.gps=[](int t){return t>=600&&t<1000?Mode::kInvalid:Mode::kValid;};
+  reference.RunTo(1400);delivery.RunTo(1400);
+  std::size_t excluded=0,unavailable=0;
+  for(const auto& row:reference.scans) {
+    const auto& before=row.second;const auto& after=delivery.scans.at(row.first);
+    ASSERT_EQ(before.result.objects.size(),after.result.objects.size());
+    EXPECT_EQ(before.result.counts.tracks,after.result.counts.tracks);
+    ASSERT_EQ(after.arrays.local.objects.size(),after.arrays.local_tracking.size());
+    ASSERT_EQ(after.arrays.map.objects.size(),after.arrays.map_tracking.size());
+    for(std::size_t i=0;i<after.arrays.local.objects.size();++i) {
+      const auto& object=after.arrays.local.objects[i];
+      EXPECT_EQ(object.track_id,after.arrays.local_tracking[i].track_id);
+      const auto old=std::find_if(before.arrays.local.objects.begin(),before.arrays.local.objects.end(),
+          [&](const auto& o){return o.track_id==object.track_id;});
+      ASSERT_NE(old,before.arrays.local.objects.end());
+      EXPECT_EQ(*old,object);  // center, all corners, velocity and class unchanged
+    }
+    if(before.arrays.map.status==Array::POSE_UNAVAILABLE) {
+      ++unavailable;EXPECT_EQ(Wire(before.arrays.local),Wire(after.arrays.local));
+    } else {
+      excluded+=before.arrays.local.objects.size()-after.arrays.local.objects.size();
+      EXPECT_EQ(Ids(after.arrays.local),Ids(after.arrays.map));
+    }
+  }
+  EXPECT_GT(excluded,0u);EXPECT_GT(unavailable,0u);
+}
+
 TEST(HdMapAuditRuntime, DeliveryFilterCompactsBothFramesButPreservesRawTracksAndGpsFailure) {
   auto off=ShippedRuntimeConfig(),on=off;TempDir dir;WithAudit(dir,on);
   on.hd_map_audit_mode="filter";on.delivery_preview.enabled=true;
@@ -379,6 +415,7 @@ TEST(HdMapAuditRuntime, DeliveryFilterCompactsBothFramesButPreservesRawTracksAnd
     } else {
       removed+=actual.hd_map_audit.delivery_excluded_count;
       EXPECT_TRUE(actual.arrays.local.objects.empty());EXPECT_TRUE(actual.arrays.map.objects.empty());
+      EXPECT_TRUE(actual.arrays.local_tracking.empty());EXPECT_TRUE(actual.arrays.map_tracking.empty());
       EXPECT_EQ(actual.arrays.local.status,Array::OBSERVED_EMPTY);
       EXPECT_EQ(actual.arrays.map.status,Array::OBSERVED_EMPTY);
       EXPECT_EQ(actual.hd_map_audit.delivery_input_count,expected.arrays.local.objects.size());

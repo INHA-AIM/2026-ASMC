@@ -6,7 +6,7 @@
 namespace asmc::lidar::pipeline {
 // Filter/frame state, separate from current scan geometry and camera evidence.
 struct TrackState {
-  // PR #105 diagnostic-only motion history. Public velocity validity is unchanged.
+  // Main-compatible applied motion history (formerly PR #105 diagnostics only).
   motion_display::MotionObject display_motion;
   // Common tracking frame record (Global.hpp:522-529).
   bool tracking_frame_valid = false;
@@ -19,7 +19,7 @@ struct TrackState {
   float32 f32_PrevYaw = 0.f;
   // Internal velocity bookkeeping kept for behaviour parity. f32_AbsVx/Vy is
   // Main's "KF relative velocity + CAN speed on the leveled x axis"; its frame is
-  // not validated, so it is never published as an absolute velocity.
+  // not a certified absolute vector; public output uses the classifier-applied estimate.
   float32 f32_Velocity = 0.f;
   float32 f32_AbsVx = 0.f, f32_AbsVy = 0.f;
   float32 f32_DirX = 0.f, f32_DirY = 0.f;

@@ -5,7 +5,6 @@ from pathlib import Path
 import unittest
 import rospy
 import rostest
-from Msg.msg import Yolo_bbox
 from lane_boundary_adapter.msg import CameraBBoxLaneResult as Result
 spec=importlib.util.spec_from_file_location('bbox_fixture',str(Path(__file__).with_name('test_camera_bbox_lane.py')))
 fixture=importlib.util.module_from_spec(spec);spec.loader.exec_module(fixture)
@@ -20,8 +19,8 @@ class ClippedTrackingTest(unittest.TestCase):
         self.b=fixture.BboxLaneTest()
         self.b.feed([],duration=.3)
 
-    def normal(self):return Yolo_bbox(600,480,680,560,'car')
-    def clipped(self):return Yolo_bbox(600,480,680,568,'car')
+    def normal(self):return fixture.camera_box(600,480,680,560,'car')
+    def clipped(self):return fixture.camera_box(600,480,680,568,'car')
 
     def test_confirmed_track_continues_but_never_renews_ground_age(self):
         self.b.feed([self.clipped()])
@@ -57,7 +56,7 @@ class ClippedTrackingTest(unittest.TestCase):
         self.b.feed([self.clipped()],shift=-1.75)
         self.assertFalse(self.b.result.valid)
         self.b.feed([self.normal()])
-        box=self.clipped();box.yMax=650
+        box=self.clipped();box.ymax=650
         self.b.feed([box])
         self.assertFalse(self.b.result.valid)
 
