@@ -1,5 +1,11 @@
 # MORAI network and sensor presets
 
+> **2026-10-27 현재 실행 기준:** CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.
+> `--require-competition-status`/`verify-field`도 이9099 입력을 검사하도록 정정했다.
+> 9798은 로컬 Detail 진단이며 LAN 운영·수락에서 제외한다. 아래 과거 P3 설명과 현재 역할은
+> [정정 기록](../../docs/records/bridge/2026-10-27-competition-9099-correction.md)을 기준으로 구분한다.
+
+
 ## 어떤 파일을 로드하는가
 
 | MORAI release | 개발 PC 한 대 | 현장 두 PC |
@@ -96,7 +102,7 @@ SensorSync와 type 783 MoraiSL subscriber가 더 있다. 이 둘은 LAN으로 �
 MolitComp 원본에서 공통 entry의 종류 차이는 없고, 설정 차이는 TF2(type 267)의 network 활성
 상태와 Ctrl mode(주최 2, 팀 원본 1)다. MolitComp 생성기는 Ctrl을 mode2로 정규화한다.
 
-type 787 `9797→9798`이 Competition Vehicle Status이고 MolitComp에만 있다. type 258
+현재 MolitComp03의 CompetitionInfoPublisher는 type295 `9088→9099`다. type787 `9797→9798`은 별도 Detail이다. type 258
 `7603→7502`는 연속 송신형 TrafficLight Status publisher다. 이것은
 `GetTrafficLightStatus`/`MoraiTLServiceProvider`와 같은 조회 서비스가 아니다. 조사한 주최
 MolitComp, 팀 MolitComp, 26.R1 export 모두 type 778 MoraiTLServiceProvider를 포함하지 않으며,
@@ -107,13 +113,10 @@ MolitComp, 팀 MolitComp, 26.R1 export 모두 type 778 MoraiTLServiceProvider를
 판단은 카메라 인지 결과를 사용한다. 주최 network에 있는 항목 전체를 팀 runtime 필수 입력으로
 해석하지 않는다.
 
-팀 MolitComp 직접 저장본과 주최 저장본 모두 type 787 항목을 포함한다. 과거 참가팀 local
-검사에서는9798 packet이 없었고, 2026-10-17에는 `#DetailEgoInfo$`·본문105B가 관측됐다.
-이는 기존 검증 decoder의 `#MoraiInfo$`·본문152B와 달라 현재 `/Competition_topic`으로
-변환하지 않는다. Local의 선택 입력에서만 관측한 envelope를1회 안내하고 diagnostics의
-`UNSUPPORTED`로 보존한다. 일반 `verify`는 이를 요구하지 않고, 주최 현장판을 검사할 때만
-`verify-field` 또는 `--require-competition-status`로 필수화한다. 필수화 또는 LAN2LAN에서
-형식 불일치를 정상으로 면제하지 않는다. JSON 항목 존재와 runtime 발행·decode 수락은 별도다.
+팀 MolitComp 직접 저장본과 주최 저장본은 type787 항목을 포함하지만, 현재 실측은 별도
+Detail138B다. v1의 `competition_vehicle_status`는 이 endpoint의 호환 키이고 실제 역할은
+verified_status_bindings의 UI·실측 매핑을 따른다. LAN에서는 이 endpoint를 loopback에 두며
+브릿지 수신·발행과 수락에서 제외한다. 실제9099 Competition은 LAN에 포함한다.
 
 정확한 원본 inventory는 다음과 같다. `Division_TYPE` 1/2/3/4는 각각 publisher,
 subscriber, controller, service다.
@@ -130,12 +133,12 @@ subscriber, controller, service다.
 `271=SyncModeInfoPublisher`, `770=MoraiInfoPublisher`, `772=MoraiObjectInfoPublisher`,
 `776=MoraiLampsSubscriber`, `779=MoraiReplayInfoPublisher`, `780=MoraiEventCmdServiceProvider`,
 `782=MoraiMapSpecServiceProvider`, `783=MoraiSLSubscriber`, `4865=MoraiService(gRPC)`다.
-MolitComp 전용 `295/771/787`은 해당 실행판 UI/export와 live packet을 기준으로 각각 Ego
-Vehicle Status, Ego Ctrl Cmd, Competition Vehicle Status로 고정했다. 릴리스가 다른 enum 이름을
+MolitComp 전용 `295/771/787`은 해당 실행판 UI/export와 live packet을 기준으로 각각 CompetitionInfoPublisher,
+Ego Ctrl Cmd, 별도 Detail로 확인했다. 릴리스가 다른 enum 이름을
 숫자만 보고 교차 적용하지 않는다.
 
-26.R1의 type 770은 Ego/MoraiInfo이고 MolitComp03의 type 295가 Ego Vehicle Status다. type
-787 Competition Vehicle Status는 26.R1에 없다. 따라서 release JSON 하나로의 병합은 하지
+26.R1의 type 770은 Ego/MoraiInfo이고 MolitComp03의 type295는 CompetitionInfoPublisher다.
+type787 Detail은26.R1 원본에 없다. 따라서 release JSON 하나로의 병합은 하지
 않지만 ROS bridge binary, 포트 계약, ROS topic API는 공통으로 유지한다.
 
 ## 센서셋
@@ -199,7 +202,7 @@ bridge 수신 socket은 `0.0.0.0`과 기존 destination port에 bind하므로 �
 현장은 `--transport lan2lan`을 명시한다. sender IP 자동 추론은 다중 NIC·NAT·mirrored 환경과
 첫 status packet 이전 제어에서 모호하므로 기본 정책으로 사용하지 않는다.
 Windows Firewall과 Hyper-V firewall에서는 MORAI `192.168.0.1` source에 대해 Autonav inbound UDP
-`9798`, `9092`, `9099`, `9291/9293/9295/9297/9299`, `9301/9303`만 허용한다. TrafficLight
+`9092`, `9099`, `9291/9293/9295/9297/9299`, `9301/9303`만 허용한다. TrafficLight
 oracle `7502`, GT 전용
 `9305/9307/9309/9311`과 Object oracle `7505`는 본선 allowlist에 넣지 않는다. Ctrl `9093`은
 Autonav에서 MORAI로 나가는 목적지다. 기본 inbound action 전체를 Allow로 바꾸지 않는다.

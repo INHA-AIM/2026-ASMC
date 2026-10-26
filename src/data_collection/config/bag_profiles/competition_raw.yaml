@@ -1,0 +1,43 @@
+name: competition_raw
+description: MolitComp03 LAN inputs with CompetitionInfoPublisher 9099 via /Ego_topic.
+kind: raw
+transport: udp
+timestamp_mode: receive
+sensor_set: ASMC_sensor_set_v3
+map: kcity2025
+compression: none
+privileged_gt: false
+deployment_allowed: true
+required_topics:
+  - /image_jpeg/compressed
+  - /cam_left/image_jpeg/compressed
+  - /cam_right/image_jpeg/compressed
+  - /velodyne_points
+  - /gps
+  - /imu
+  - /Ego_topic
+  - /vehicle/state
+optional_topics:
+  - /morai_sensor_bridge/frame_timing
+  - /cam_extra/image_jpeg/compressed
+  - /gps/fix
+  - /CollisionData
+  - /ctrl_cmd
+  - /tf
+  - /tf_static
+  - /morai_sensor_bridge/diagnostics
+  - /morai_udp_bridge/diagnostics
+expected_types:
+  /morai_sensor_bridge/frame_timing: asmc_msgs/SensorFrameTiming
+  /image_jpeg/compressed: sensor_msgs/CompressedImage
+  /cam_left/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /cam_right/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /velodyne_points: sensor_msgs/PointCloud2
+  /gps: morai_msgs/GPSMessage
+  /imu: sensor_msgs/Imu
+  /Ego_topic: morai_msgs/EgoVehicleStatus
+  /vehicle/state: asmc_msgs/VehicleState
+timestamp_provenance:
+  camera_lidar_imu_status: bridge_receive_time
+  gps: bridge_receive_time
+  vehicle_state: gps_imu_adapter

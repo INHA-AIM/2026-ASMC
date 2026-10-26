@@ -10,6 +10,10 @@
   <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP 127.0.0.1)"/>
   <arg name="cmd_port" default="9093"/>
   <arg name="invert_steer" default="false" doc="Transport steering sign; AIM06 R1.H3 verified with true, team default retained"/>
+  <!-- Legacy port/enable names retained; this endpoint is local Detail. -->
+  <arg name="ego_port" default="9099"/>
+  <arg name="enable_ego_status" default="true"/>
+  <arg name="enable_competition_status" default="$(eval arg('transport_profile') == 'local')"/>
   <arg name="competition_port" default="9798"/>
   <arg name="competition_status_required" default="false"/>
   <arg name="enable_vehicle_state" default="true"/>
@@ -24,6 +28,9 @@
     <arg name="cmd_ip" value="$(arg cmd_ip)"/>
     <arg name="cmd_port" value="$(arg cmd_port)"/>
     <arg name="invert_steer" value="$(arg invert_steer)"/>
+    <arg name="ego_port" value="$(arg ego_port)"/>
+    <arg name="enable_ego_status" value="$(arg enable_ego_status)"/>
+    <arg name="enable_competition_status" value="$(arg enable_competition_status)"/>
     <arg name="competition_port" value="$(arg competition_port)"/>
     <arg name="competition_status_required" value="$(arg competition_status_required)"/>
   </include>

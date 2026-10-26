@@ -1,5 +1,11 @@
 # 두 Windows PC의 MORAI LAN2LAN 준비·채점 채널 확인
 
+> **2026-10-27 현재 실행 기준:** CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.
+> `--require-competition-status`/`verify-field`도 이9099 입력을 검사하도록 정정했다.
+> 9798은 로컬 Detail 진단이며 LAN 운영·수락에서 제외한다. 아래 과거 P3 설명과 현재 역할은
+> [정정 기록](../records/bridge/2026-10-27-competition-9099-correction.md)을 기준으로 구분한다.
+
+
 안승현 PC는 MORAI 송신/제어 수신, 정윤태 PC는 Windows·WSL2·Docker 추론을 담당한다.
 현장점검의 채점·녹화 프로그램도 **추론 PC에서 실행**했다는 사용자 확인을 2026-10-20 반영했다.
 프로그램이 Windows native인지 WSL/컨테이너인지와 실제 listen endpoint는 별도 확인한다.
@@ -87,8 +93,8 @@ ss -lunp
 현재 UI의 CompetitionInfoPublisher는9099이며 `/Ego_topic`으로 전달된다.
 [2026-10-23 loopback 점검](../records/bridge/2026-10-23-competition-channel-audit.md)은
 실제 packet 해석까지 확인했으며 두 PC LAN 시험을 대신하지 않는다.
-기존 `--require-competition-status`/`verify-field`의 competition gate는 별도9798을 검사하므로
-이 환경의 필수 수락 명령으로 쓰지 않는다. 현장 UI·목적지·허용 필드와 실제 소비를 대조한다.
+`--require-competition-status`/`verify-field`는2026-10-27에9099 `/Ego_topic` 검사로 정정했다.
+9798의 유무는 이 수락 결과에 사용하지 않는다. UI publisher·목적지·실제 소비를 함께 대조한다.
 
 ## Wireshark와 단계별 관측
 

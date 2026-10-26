@@ -58,23 +58,43 @@ NOMINAL_RATES_HZ = {
 }
 
 
-def default_required_topics(profile, require_competition_status=False):
+def default_required_topics(profile, require_competition_status=False, transport_profile="local"):
     """Build a capability-based topic gate, independent of MORAI release."""
     normalized = {"runtime": "competition", "gt": "development"}.get(
         profile, profile
     )
     if normalized not in ("competition", "development"):
         raise ValueError("profile must be competition or development")
+    if transport_profile not in ("local", "lan2lan"):
+        raise ValueError("transport must be local or lan2lan")
+    if transport_profile == "lan2lan" and normalized != "competition":
+        raise ValueError("LAN2LAN verification only permits competition inputs")
+    # /Ego_topic is already required: it carries the verified 9099 publisher.
     topics = COMPETITION_COMMON_REQUIRED_TOPICS
-    if require_competition_status:
-        topics += ("/Competition_topic",)
     if normalized == "development":
         topics += DEVELOPMENT_EXTRA_TOPICS
     return normalized, topics
 
 
+def forbidden_topics(profile, transport_profile="local"):
+    if profile != "competition":
+        return ()
+    return COMPETITION_FORBIDDEN_TOPICS + (("/Competition_topic",) if transport_profile == "lan2lan" else ())
+
+
+def resolve_required_topics(defaults, overrides, transport, require_competition_status):
+    topics = tuple(overrides or defaults)
+    if transport == "lan2lan" and "/Competition_topic" in topics:
+        raise ValueError("9798 /Competition_topic is not a LAN Competition input")
+    if transport == "lan2lan" or require_competition_status:
+        if "/Ego_topic" not in topics:
+            topics += ("/Ego_topic",)
+    return topics
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--transport", choices=("local", "lan2lan"), default="local")
     parser.add_argument("--duration", type=float, default=8.0)
     parser.add_argument("--min-messages", type=int, default=2)
     parser.add_argument(
@@ -111,7 +131,7 @@ def parse_args():
     parser.add_argument(
         "--require-competition-status",
         action="store_true",
-        help=("field-only gate: require type-787 /Competition_topic in addition "
+        help=("require verified MolitComp03 9099 /Ego_topic in addition "
               "to the participant runtime topics"),
     )
     return parser.parse_args()
@@ -195,11 +215,18 @@ def main():
             "ROS message packages are required; run this inside asmc-ros-noetic"
         ) from exc
 
-    profile, defaults = default_required_topics(
-        args.profile, args.require_competition_status
-    )
-    topics = tuple(args.required_topics or defaults)
-    competition_status_required = "/Competition_topic" in topics
+    try:
+        profile, defaults = default_required_topics(
+            args.profile, args.require_competition_status, args.transport
+        )
+        if args.require_competition_status and args.simulator_release != "molitcomp03":
+            raise ValueError("verified Competition acceptance is defined for molitcomp03 only")
+        topics = resolve_required_topics(
+            defaults, args.required_topics, args.transport, args.require_competition_status
+        )
+    except ValueError as error:
+        raise SystemExit(str(error))
+    competition_status_required = "/Ego_topic" in topics
     lock = threading.Lock()
     samples = {topic: [] for topic in topics}
     source_stamps = {topic: [] for topic in topics}
@@ -283,6 +310,13 @@ def main():
     report = {
         "stream_profile": profile,
         "simulator_release": args.simulator_release,
+        "transport_profile": args.transport,
+        "competition_status_topic": "/Ego_topic",
+        "competition_status_destination_port": 9099,
+        "competition_status_identity": (
+            "configured_molitcomp03_CompetitionInfoPublisher; UI/wire provenance must be verified separately"
+            if args.simulator_release == "molitcomp03" else
+            "unverified_release_9099_compatibility_input; no Competition permission claim"),
         "competition_status_required": competition_status_required,
         "duration_seconds": round(finished - started, 6),
         "min_messages": args.min_messages,
@@ -300,7 +334,7 @@ def main():
     published_topics = dict(rospy.get_published_topics())
     forbidden_publishers = (
         sorted(
-            topic for topic in COMPETITION_FORBIDDEN_TOPICS
+            topic for topic in forbidden_topics(profile, args.transport)
             if topic in published_topics
         )
         if profile == "competition" else []

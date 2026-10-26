@@ -59,6 +59,7 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_udp_bridge.py)
   catkin_add_nosetests(test/test_sensor_bridge.py)
   catkin_add_nosetests(test/test_topic_verifier.py)
+  catkin_add_nosetests(test/test_transport_policy.py)
   catkin_add_nosetests(test/test_telemetry.py)
   catkin_add_nosetests(test/test_frame_timing.py)
 

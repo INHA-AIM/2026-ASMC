@@ -1,5 +1,11 @@
 # MORAI bridge 개발·통합 가이드
 
+> **현재 상태 입력:** MolitComp03 CompetitionInfoPublisher9088/9099 → `/Ego_topic`.
+> CLI `--require-competition-status`/`verify-field`와 ROS `competition_status_required`도9099를
+> 검사한다. `competition_port=9798`은 로컬 진단 호환 이름이며 LAN에서는 꺼진다.
+> [2026-10-27 정정](../../../docs/records/bridge/2026-10-27-competition-9099-correction.md).
+
+
 > **문서 역할:** Active Package-Group Guide — 현재 bridge/state 구현과 Phase 3 통합 gate
 >
 > **현재 상태:** P3-G local closeout 완료. Network/Sensor/VehicleState/launch는 `asmc_bridge` 하나

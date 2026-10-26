@@ -76,7 +76,12 @@ def _validate_generated_ips(
         contract["channels"]["collision_data"]["morai_pubsub_type"],
         contract["channels"]["ego_vehicle_status"]["morai_pubsub_type_by_release"][release],
     }
-    if competition_pubsub is not None:
+    binding = contract.get("verified_status_bindings", {}).get(release)
+    if binding:
+        allowed_pubsub = {contract["channels"]["collision_data"]["morai_pubsub_type"]}
+        allowed_pubsub.update(row["pubsub_type"] for row in binding.values()
+                              if isinstance(row, dict) and row.get("lan_allowed"))
+    elif competition_pubsub is not None:
         allowed_pubsub.add(competition_pubsub)
     for entry in _network_entries(document):
         config_udp = entry.get("config", {}).get("udpConfig", {})
@@ -256,13 +261,13 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     )
     _require(
         competition_status["state"]
-        == "decoder_active_participant_optional_field_pending",
+        == "legacy_name_local_detail_diagnostic",
         "Competition decoder acceptance state changed",
     )
     _require(
-        competition_status["local_requirement"] == "optional_participant_simulator"
+        competition_status["local_requirement"] == "optional_diagnostic"
         and competition_status["field_requirement"]
-        == "explicit_gate_pending_live_acceptance",
+        == "not_used_for_competition_acceptance",
         "Competition local/field requirement split changed",
     )
     packet_contract = competition_status["packet_contract"]
@@ -282,9 +287,29 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     )
     _require(
         packet_contract["live_acceptance"]
-        == "pending_molitcomp03_competition_mode_packet_capture",
+        == "not_applicable_to_current_detail_endpoint",
         "Competition live acceptance state changed",
     )
+    bindings = contract["verified_status_bindings"]["molitcomp03"]
+    verified = bindings["competition"]
+    _require((verified["ui_publisher"], verified["pubsub_type"], verified["host_port"],
+              verified["destination_port"], verified["ros_topic"], verified["header_ascii"],
+              verified["payload_bytes"], verified["datagram_bytes"], verified["lan_allowed"])
+             == ("CompetitionInfoPublisher", 295, 9088, 9099, "/Ego_topic", "#MoraiInfo$", 152, 181, True),
+             "Verified MolitComp03 Competition binding changed")
+    _require(verified["legacy_channel_key"] == "ego_vehicle_status",
+             "9099 compatibility endpoint must identify Competition")
+    _require((bindings["ego_judge"]["ui_publisher"], bindings["ego_judge"]["pubsub_type"],
+              bindings["ego_judge"]["host_port"], bindings["ego_judge"]["destination_port"],
+              bindings["ego_judge"]["lan_allowed"])
+             == ("MoraiInfoPublisher", 770, 910, 911, False), "Judging Ego must stay off the team LAN")
+    _require((bindings["detail"]["pubsub_type"], bindings["detail"]["destination_port"],
+              bindings["detail"]["header_ascii"], bindings["detail"]["datagram_bytes"], bindings["detail"]["lan_allowed"])
+             == (787, 9798, "#DetailEgoInfo$", 138, False), "Detail must not become a Competition gate")
+    for role in ("competition", "detail"):
+        row = bindings[role]
+        _require(_sha256(REPO_ROOT / row["fixture_path"]) == row["fixture_sha256"],
+                 "Measured status fixture SHA changed")
     traffic_light = contract["channels"]["traffic_light_status_oracle"]
     _require(
         (
@@ -675,7 +700,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         competition_live["configured_pubsub_type"] == 787
         and competition_live["observed_packets_in_8_seconds"] == 0
         and not competition_live["accepted"],
-        "UDP 9798 live Competition stream must remain pending",
+        "Historical P3-E 9798 observation must remain unchanged",
     )
     traffic_light_live = live["traffic_light_udp_7502"]
     _require(
@@ -720,7 +745,8 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "published_topic_count": len(implementation["published_topics"]),
         "ctrl": "9093/9094 mode 2",  # UDP AutoMode byte, not import egoCtrlMode.
         "ego_status": "9088/9099",
-        "competition_status": "9797/9798 type 787; local optional, field gate pending",
+        "competition_status": "9088/9099 CompetitionInfoPublisher -> /Ego_topic (MolitComp03)",
+        "detail_status": "9797/9798 local diagnostic only",
         "lidar_frame_mode": composition["lidar_frame_mode"],
         "v3_configured_cycle_accepted": lidar_live["accepted"],
         "full_graph_tests": local_closeout["full_graph_tests"],

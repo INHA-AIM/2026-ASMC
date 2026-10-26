@@ -17,6 +17,25 @@ from render_morai_network_profiles import load_contract, render_profile  # noqa:
 
 
 class BridgeProfileContractTest(unittest.TestCase):
+    def test_molitcomp_lan_promotes_only_verified_competition(self):
+        contract = load_contract()
+        document = render_profile(contract, 'molitcomp03', 'lan2lan')
+        rows = {e['PUBSUB_TYPE']: e for ego in document['egoNetworkData'] for e in ego['listEgoNetworkInfo']}
+        self.assertEqual(rows[295]['config']['udpConfig']['destinationIP'], '192.168.0.10')
+        self.assertEqual(rows[295]['config']['udpConfig']['destinationPort'], 9099)
+        for kind in (770, 787):
+            self.assertEqual(rows[kind]['config']['udpConfig']['destinationIP'], '127.0.0.1')
+
+    def test_old_or_misclassified_contract_is_rejected(self):
+        for change in ('missing', 'detail_lan'):
+            contract = copy.deepcopy(load_contract())
+            if change == 'missing':
+                del contract['verified_status_bindings']
+            else:
+                contract['verified_status_bindings']['molitcomp03']['detail']['lan_allowed'] = True
+            with self.assertRaises(RuntimeError):
+                render_profile(contract, 'molitcomp03', 'lan2lan')
+
     def test_r1_controller_selection_matches_verified_export(self):
         contract = load_contract()
         source = json.loads((REPO_ROOT / contract['network_templates']['26r1']['template']).read_text())
@@ -51,7 +70,7 @@ class BridgeProfileContractTest(unittest.TestCase):
         self.assertEqual("9093/9094 mode 2", result["ctrl"])
         self.assertEqual("9088/9099", result["ego_status"])
         self.assertEqual(
-            "9797/9798 type 787; local optional, field gate pending",
+            "9088/9099 CompetitionInfoPublisher -> /Ego_topic (MolitComp03)",
             result["competition_status"],
         )
         self.assertFalse(result["competition_status_required_default"])

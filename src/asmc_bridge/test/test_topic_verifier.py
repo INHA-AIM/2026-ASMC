@@ -27,7 +27,8 @@ class RequiredTopicsTest(unittest.TestCase):
         _, topics = MODULE.default_required_topics(
             "competition", require_competition_status=True
         )
-        self.assertIn("/Competition_topic", topics)
+        self.assertIn("/Ego_topic", topics)
+        self.assertNotIn("/Competition_topic", topics)
 
     def test_development_alias_adds_oracles_without_field_status(self):
         profile, topics = MODULE.default_required_topics("gt")
@@ -35,6 +36,22 @@ class RequiredTopicsTest(unittest.TestCase):
         self.assertIn("/Object_topic", topics)
         self.assertIn("/velodyne_points_instance", topics)
         self.assertNotIn("/Competition_topic", topics)
+
+
+    def test_lan_requires_9099_and_forbids_detail_and_gt(self):
+        _, topics = MODULE.default_required_topics('competition', True, 'lan2lan')
+        self.assertIn('/Ego_topic', topics)
+        self.assertNotIn('/Competition_topic', topics)
+        self.assertIn('/Competition_topic', MODULE.forbidden_topics('competition', 'lan2lan'))
+        self.assertNotIn('/Ego_topic', MODULE.forbidden_topics('competition', 'lan2lan'))
+        with self.assertRaises(ValueError):
+            MODULE.default_required_topics('gt', transport_profile='lan2lan')
+
+    def test_overrides_cannot_replace_9099_with_detail(self):
+        topics = MODULE.resolve_required_topics((), ['/gps'], 'lan2lan', True)
+        self.assertIn('/Ego_topic', topics)
+        with self.assertRaises(ValueError):
+            MODULE.resolve_required_topics((), ['/Competition_topic'], 'lan2lan', True)
 
 
 if __name__ == "__main__":

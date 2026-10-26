@@ -45,6 +45,13 @@ def render_profile(
     except KeyError as exc:
         raise ProfileError(f"unknown profile key: {exc.args[0]}") from exc
 
+    if release == "molitcomp03":
+        verified = contract.get("verified_status_bindings", {}).get(release, {})
+        status = verified.get("competition", {})
+        detail = verified.get("detail", {})
+        if (status.get("pubsub_type"), status.get("destination_port"), status.get("lan_allowed"),
+                detail.get("pubsub_type"), detail.get("lan_allowed")) != (295, 9099, True, 787, False):
+            raise ProfileError("MolitComp03 requires the verified 9099 Competition / local-only Detail mapping")
     template = json.loads((REPO_ROOT / template_rel).read_text(encoding="utf-8"))
     result = copy.deepcopy(template)
     morai_ip = transport_data["morai_ip"]
@@ -98,7 +105,9 @@ def render_profile(
         pubsub = entry.get("PUBSUB_TYPE")
         if status_pubsub is not None and pubsub == status_pubsub:
             udp = entry["config"]["udpConfig"]
-            _rewrite_udp_ips(entry["config"], morai_ip, autonav_ip)
+            binding = contract.get("verified_status_bindings", {}).get(release, {})
+            if not field_transport or binding.get("detail", {}).get("lan_allowed", True):
+                _rewrite_udp_ips(entry["config"], morai_ip, autonav_ip)
             udp["hostPort"] = channels["competition_vehicle_status"]["host_port"]
             udp["destinationPort"] = channels["competition_vehicle_status"]["destination_port"]
             status_found = True
