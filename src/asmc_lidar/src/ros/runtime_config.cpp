@@ -157,6 +157,16 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   cl.f32_AdaptiveFarRange = r.Get<float>("lidar.Clustering.Adaptive.FarRange");
   cl.f32_AdaptiveNearEps = r.Get<float>("lidar.Clustering.Adaptive.NearEps");
   cl.f32_AdaptiveFarEps = r.Get<float>("lidar.Clustering.Adaptive.FarEps");
+  // Older schema-1 configurations remain symmetric when rear keys are absent.
+  const auto adaptive = root["lidar"]["Clustering"]["Adaptive"];
+  cl.f32_AdaptiveRearNearEps = adaptive["RearNearEps"]
+      ? r.Get<float>("lidar.Clustering.Adaptive.RearNearEps") : cl.f32_AdaptiveNearEps;
+  cl.f32_AdaptiveRearFarEps = adaptive["RearFarEps"]
+      ? r.Get<float>("lidar.Clustering.Adaptive.RearFarEps") : cl.f32_AdaptiveFarEps;
+  if (!std::isfinite(cl.f32_AdaptiveRearNearEps) || !std::isfinite(cl.f32_AdaptiveRearFarEps) ||
+      cl.f32_AdaptiveRearNearEps < 0.05f || cl.f32_AdaptiveRearFarEps > 5.f ||
+      cl.f32_AdaptiveRearFarEps < cl.f32_AdaptiveRearNearEps)
+    Fail(file, "require 0.05<=RearNearEps<=RearFarEps<=5");
   auto& tr = p.tracking;
   tr.b_UseMapAssociation = r.Get<bool>("lidar.Tracking.UseMapAssociation");
   tr.f32_COST_W_DIST = r.Get<float>("lidar.Tracking.DistanceWeight");
@@ -333,9 +343,10 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   if(p.enabled)effective << ',' << filtering::kDeliveryProtectionPolicy;
   effective << '\n';
   const auto& cl = config.pipeline.clustering;
-  effective << std::setprecision(9) << "clustering-v1," << cl.b_Adaptive << ',' << cl.f32_Eps << ','
+  effective << std::setprecision(9) << "clustering-x-split-v2," << cl.b_Adaptive << ',' << cl.f32_Eps << ','
             << cl.s32_MinPoints << ',' << cl.f32_AdaptiveNearRange << ',' << cl.f32_AdaptiveFarRange
-            << ',' << cl.f32_AdaptiveNearEps << ',' << cl.f32_AdaptiveFarEps << '\n';
+            << ',' << cl.f32_AdaptiveNearEps << ',' << cl.f32_AdaptiveFarEps
+            << ',' << cl.f32_AdaptiveRearNearEps << ',' << cl.f32_AdaptiveRearFarEps << '\n';
   config.config_id = hash(effective.str());
 }
 

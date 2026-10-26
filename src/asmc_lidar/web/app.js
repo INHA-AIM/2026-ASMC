@@ -782,7 +782,7 @@
 
   // Explicit opt-in algorithm settings. All other controls remain display-only.
   const tuningForm = el('clustering-form');
-  const tuningKeys = ['NearRange', 'FarRange', 'NearEps', 'FarEps'];
+  const tuningKeys = ['NearRange', 'FarRange', 'NearEps', 'FarEps', 'RearNearEps', 'RearFarEps'];
   let tuningData = null, tuningInitialized = false, tuningBusy = false, tuningPosting = false;
   let tuningSubmitError = '';
   function draftValues() {
@@ -793,7 +793,7 @@
     previewTuning();
   }
   function tuningDescription(v) {
-    return `0–${fmt(v.NearRange)}m: 연결 ${fmt(v.NearEps)}m\n${fmt(v.NearRange)}–${fmt(v.FarRange)}m: ${fmt(v.NearEps)} → ${fmt(v.FarEps)}m 선형 보간\n${fmt(v.FarRange)}m 이상: 연결 ${fmt(v.FarEps)}m`;
+    return `거리: 0–${fmt(v.NearRange)}m / ${fmt(v.NearRange)}–${fmt(v.FarRange)}m / ${fmt(v.FarRange)}m 이상\n앞(x≥0): ${fmt(v.NearEps)} / ${fmt(v.NearEps)}→${fmt(v.FarEps)} / ${fmt(v.FarEps)}m\n뒤(x<0): ${fmt(v.RearNearEps)} / ${fmt(v.RearNearEps)}→${fmt(v.RearFarEps)} / ${fmt(v.RearFarEps)}m`;
   }
   function previewTuning() { el('clustering-preview').textContent = '입력 중인 값\n' + tuningDescription(draftValues()); }
   async function pollTuning() {
@@ -804,14 +804,16 @@
       if (!response.ok) throw Error('HTTP ' + response.status);
       tuningData = await response.json();
       const p = tuningData.pipeline;
-      const available = tuningData.enabled && p && p.enabled && p.adaptive && tuningData.status_age_s < 3;
+      const compatible = p && p.current && tuningKeys.every(k => Number.isFinite(p.current[k]));
+      const available = tuningData.enabled && compatible && p.enabled && p.adaptive && tuningData.status_age_s < 3;
       el('clustering-fields').disabled = !available || Boolean(tuningData.pending) || tuningPosting || (p && ['pending','waiting_for_valid_scan'].includes(p.state));
-      if (p) {
+      if (compatible) {
         if (!tuningInitialized) { setTuningDraft(p.current); tuningInitialized = true; }
         el('clustering-current').textContent = `처리 노드 설정 · rev ${p.revision}\n` + tuningDescription(p.current);
         el('clustering-current').style.whiteSpace = 'pre-line';
       }
       if (!tuningData.enabled) el('clustering-status').textContent = '설정 OFF: 처리·웹 두 launch에 clustering_tuning:=true가 필요합니다.';
+      else if (p && !compatible) el('clustering-status').textContent = '앞·뒤 분리 설정을 지원하는 새 LiDAR 처리·웹 노드로 재시작해야 합니다.';
       else if (!available) el('clustering-status').textContent = '처리 노드 설정 연결 대기 또는 상태 stale · 적용 불가';
       else if (tuningSubmitError) el('clustering-status').textContent = tuningSubmitError;
       else if (tuningData.last_error) el('clustering-status').textContent = '적용 미확정/거부: ' + tuningData.last_error;
@@ -821,7 +823,8 @@
       else if (p.state === 'applied') el('clustering-status').textContent = `적용 확인 · rev ${p.revision} · 최초 적용 stamp ${p.applied_stamp_ns}`;
       else el('clustering-status').textContent = '입력 가능 · 아직 적용 프레임 없음';
       const sc = state.scene && state.scene.clustering;
-      el('clustering-frame').textContent = sc ? `현재 표시 장면 · rev ${sc.revision} · NearEps ${fmt(sc.NearEps)} / FarEps ${fmt(sc.FarEps)}m` : '현재 표시 장면의 설정 정보 대기';
+      el('clustering-frame').textContent = sc ? `현재 표시 장면 · rev ${sc.revision}\n` + tuningDescription(sc) : '현재 표시 장면의 설정 정보 대기';
+      el('clustering-frame').style.whiteSpace = 'pre-line';
     } catch (e) {
       el('clustering-fields').disabled = true;
       el('clustering-status').textContent = '설정 서버 연결 실패: ' + String(e);
@@ -834,8 +837,8 @@
     event.preventDefault();
     if (!tuningData || tuningPosting) return;
     const v = draftValues();
-    if (!Object.values(v).every(Number.isFinite) || v.NearRange < 0.1 || v.FarRange < v.NearRange+1 || v.FarRange > 200 || v.NearEps < 0.05 || v.FarEps < v.NearEps || v.FarEps > 5) {
-      tuningSubmitError = '입력 오류: 경계 간격 ≥1m, 0.05 ≤ NearEps ≤ FarEps ≤ 5m을 확인하세요.';
+    if (!Object.values(v).every(Number.isFinite) || v.NearRange < 0.1 || v.FarRange < v.NearRange+1 || v.FarRange > 200 || v.NearEps < 0.05 || v.FarEps < v.NearEps || v.FarEps > 5 || v.RearNearEps < 0.05 || v.RearFarEps < v.RearNearEps || v.RearFarEps > 5) {
+      tuningSubmitError = '입력 오류: 경계 간격 ≥1m, 앞·뒤 각각 0.05 ≤ 근거리 연결 ≤ 원거리 연결 ≤ 5m을 확인하세요.';
       el('clustering-status').textContent = tuningSubmitError; return;
     }
     tuningSubmitError = ''; tuningPosting = true; el('clustering-fields').disabled = true;

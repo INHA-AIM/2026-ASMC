@@ -454,7 +454,9 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
   out << ",\"NearRange\":" << s.clustering.f32_AdaptiveNearRange
       << ",\"FarRange\":" << s.clustering.f32_AdaptiveFarRange
       << ",\"NearEps\":" << s.clustering.f32_AdaptiveNearEps
-      << ",\"FarEps\":" << s.clustering.f32_AdaptiveFarEps << '}';
+      << ",\"FarEps\":" << s.clustering.f32_AdaptiveFarEps
+      << ",\"RearNearEps\":" << s.clustering.f32_AdaptiveRearNearEps
+      << ",\"RearFarEps\":" << s.clustering.f32_AdaptiveRearFarEps << '}';
   out << ",\"frames\":{\"sensor\":";
   trace::Str(out, s.sensor_frame);
   out << ",\"leveled\":";

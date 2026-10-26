@@ -15,7 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
 import asmc_lidar_monitor_core as core
 from asmc_lidar_clustering_tuning import ClusteringTuning, validate
 
-DEFAULT = dict(NearRange=8.0, FarRange=50.0, NearEps=0.55, FarEps=0.85)
+DEFAULT = dict(NearRange=10.0, FarRange=50.0, NearEps=1.30, FarEps=1.32,
+               RearNearEps=1.60, RearFarEps=1.62)
 
 
 def backend():
@@ -36,9 +37,20 @@ class TuningTests(unittest.TestCase):
         self.assertEqual(validate(DEFAULT), DEFAULT)
         for delta in (dict(NearRange=0), dict(FarRange=8.5), dict(FarRange=201),
                       dict(NearEps=0), dict(FarEps=0.2), dict(NearEps=float('nan')),
-                      dict(FarEps=float('inf')), dict(NearRange=True)):
+                      dict(FarEps=float('inf')), dict(NearRange=True),
+                      dict(RearNearEps=0), dict(RearFarEps=1.59),
+                      dict(RearNearEps=float('nan')), dict(RearFarEps=float('inf'))):
             with self.assertRaises(ValueError):
                 validate(dict(DEFAULT, **delta))
+
+    def test_legacy_or_partial_four_value_request_cannot_silently_change_rear(self):
+        with self.assertRaises(ValueError):
+            validate({k: DEFAULT[k] for k in ('NearRange', 'FarRange', 'NearEps', 'FarEps')})
+        b = backend()
+        b.submit(DEFAULT)
+        sent = json.loads(b.sent[0].data)
+        self.assertEqual(sent['RearNearEps'], 1.60)
+        self.assertEqual(sent['RearFarEps'], 1.62)
 
     def test_publication_is_pending_until_pipeline_ack(self):
         b = backend()

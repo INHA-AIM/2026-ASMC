@@ -2,7 +2,8 @@
 # Port of Main's common-geometry LiDAR path (enable_common_geometry=true).
 # Key names are Main's own names so each value can be grepped in its source:
 # setting.yaml names under vehicle/lidar, Main private ROS parameter names
-# elsewhere. Every key is required. Main code constants without a parameter
+# elsewhere. RearNearEps/RearFarEps are optional experimental additions.
+# Main code constants without a parameter
 # (voxel leaf 0.1 m, IMU/CAN plausibility limits, fusion queue bounds, OBB and
 # Kalman constants) stay code constants and are not listed here.
 schema_version: 1
@@ -23,6 +24,7 @@ provenance:
       git_blob: f64cfe4e52548b4a8274e38f6179ff2d3c5dfa0b
       copied: "referenced by mount_config; checked against vehicle.LiDAR within 1e-6 (Main frame_boundary::Configure)"
   deviations:
+    - "2026-10-26 tuning experiment: NearRange=10m; front(x>=0) Near/FarEps=1.30/1.32m; rear(x<0)=1.60/1.62m. These are user trial values, not validated segmentation improvements."
     - "lidar.level_roll is true (roll+pitch leveling, shadow default). main.launch default lidar_level_roll=false is Main's pitch-only common profile."
     - "calibration_id = shadow:<sha256 of this file>:<sha256 of mount_config>. Main uses sha256(lidar mount yaml):sha256(camera yaml):sha256(map contract); the two identity strings are intentionally different."
     - "pose.lidar_pose_history_duration_s is Main's code default (not set in main.launch)."
@@ -78,10 +80,14 @@ lidar:
     MinPoints: 5
     Adaptive:
       Enabled: true
-      NearRange: 8.0
+      NearRange: 10.0
       FarRange: 50.0
-      NearEps: 0.55
-      FarEps: 0.85
+      # Leveled LiDAR x >= 0 (front); x == 0 uses this profile.
+      NearEps: 1.30
+      FarEps: 1.32
+      # Leveled LiDAR x < 0 (rear), same 10m/50m range boundaries.
+      RearNearEps: 1.60
+      RearFarEps: 1.62
   # Main setting.yaml LiDAR.Tracking.
   Tracking:
     UseMapAssociation: true

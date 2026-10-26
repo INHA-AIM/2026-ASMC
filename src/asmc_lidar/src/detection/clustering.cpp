@@ -59,7 +59,7 @@ std::vector<pcl::PointIndices> ExtractAdaptiveClusters(
       const int point_index = queue[cursor];
       const auto& point = cloud->points[point_index];
       const float point_range = std::hypot(point.x, point.y);
-      const float point_tolerance = AdaptiveClusterTolerance(point_range, config);
+      const float point_tolerance = AdaptiveClusterTolerance(point_range, config, point.x);
 
       neighbors.clear();
       squared_distances.clear();
@@ -74,7 +74,7 @@ std::vector<pcl::PointIndices> ExtractAdaptiveClusters(
         }
         const auto& neighbor = cloud->points[neighbor_index];
         const float neighbor_tolerance =
-            AdaptiveClusterTolerance(std::hypot(neighbor.x, neighbor.y), config);
+            AdaptiveClusterTolerance(std::hypot(neighbor.x, neighbor.y), config, neighbor.x);
         const float symmetric_tolerance = std::min(point_tolerance, neighbor_tolerance);
         if (squared_distances[n] > symmetric_tolerance * symmetric_tolerance) {
           continue;
@@ -99,7 +99,8 @@ std::vector<pcl::PointIndices> ExtractAdaptiveClusters(
 }  // namespace
 
 // Ported from Main src/Lidar/Clustering/Clustering.cpp:97-118 (8f93c22e)
-float AdaptiveClusterTolerance(float horizontal_range_m, const ClusteringConfig& config) {
+float AdaptiveClusterTolerance(float horizontal_range_m, const ClusteringConfig& config,
+                               float local_x_m) {
   const float fixed = PositiveOr(config.f32_Eps, kDefaultClusterTolerance);
   if (!config.b_Adaptive) return fixed;
 
@@ -107,9 +108,12 @@ float AdaptiveClusterTolerance(float horizontal_range_m, const ClusteringConfig&
   const float near_range = std::max(0.0F, PositiveOr(config.f32_AdaptiveNearRange, 8.0F));
   const float far_range =
       std::max(near_range + 1.0F, PositiveOr(config.f32_AdaptiveFarRange, 50.0F));
-  const float near_tolerance = PositiveOr(config.f32_AdaptiveNearEps, fixed);
+  const bool rear = local_x_m < 0.f;
+  const float front_near = PositiveOr(config.f32_AdaptiveNearEps, fixed);
+  const float front_far = std::max(front_near, PositiveOr(config.f32_AdaptiveFarEps, front_near));
+  const float near_tolerance = rear ? PositiveOr(config.f32_AdaptiveRearNearEps, front_near) : front_near;
   const float far_tolerance =
-      std::max(near_tolerance, PositiveOr(config.f32_AdaptiveFarEps, near_tolerance));
+      rear ? std::max(near_tolerance, PositiveOr(config.f32_AdaptiveRearFarEps, front_far)) : front_far;
   const float range =
       std::isfinite(horizontal_range_m) ? std::max(0.0F, horizontal_range_m) : near_range;
   const float alpha =

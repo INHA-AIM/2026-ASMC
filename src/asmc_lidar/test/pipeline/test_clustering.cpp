@@ -144,6 +144,55 @@ TEST(Clustering, ConnectedComponentsIndependentOfPointOrder) {
   EXPECT_EQ(ClusterSets(*a, ra.clusters), ClusterSets(*b, rb.clusters));
 }
 
+ClusteringConfig FrontRearConfig() {
+  auto c = AdaptiveConfig();
+  c.f32_AdaptiveNearRange = 10.f;
+  c.f32_AdaptiveNearEps = 1.30f; c.f32_AdaptiveFarEps = 1.32f;
+  c.f32_AdaptiveRearNearEps = 1.60f; c.f32_AdaptiveRearFarEps = 1.62f;
+  c.s32_MinPoints = 1;
+  return c;
+}
+
+TEST(AdaptiveClustering, FrontRearRangeProfileAndZeroBoundary) {
+  const auto c = FrontRearConfig();
+  for (float r : {0.f, 10.f}) {
+    EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(r, c, 1.f), 1.30f);
+    EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(r, c, -1.f), 1.60f);
+  }
+  EXPECT_NEAR(AdaptiveClusterTolerance(30.f, c, 1.f), 1.31f, 1e-6f);
+  EXPECT_NEAR(AdaptiveClusterTolerance(30.f, c, -1.f), 1.61f, 1e-6f);
+  for (float r : {50.f, 80.f}) {
+    EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(r, c, 1.f), 1.32f);
+    EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(r, c, -1.f), 1.62f);
+  }
+  EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(5.f, c, 0.f), 1.30f);
+  EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(5.f, c, -0.f), 1.30f);
+  const auto legacy = AdaptiveConfig();
+  EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(30.f, legacy, -1.f),
+                  AdaptiveClusterTolerance(30.f, legacy, 1.f));
+}
+
+TEST(Clustering, MirroredFrontRearActuallyProduceDifferentComponents) {
+  const auto c = FrontRearConfig();
+  for (float x : {4.f, -4.f}) {
+    auto cloud = NewCloud();
+    cloud->push_back(P(x, 0, 0)); cloud->push_back(P(x, 1.45f, 0));
+    EXPECT_EQ(RunClustering(cloud, c).clusters.size(), x < 0 ? 1U : 2U);
+  }
+}
+
+TEST(Clustering, AcrossXZeroUsesSmallerToleranceIndependentOfSeedOrder) {
+  const auto c = FrontRearConfig();
+  for (float half_distance : {0.6f, 0.71f}) {
+    for (bool rear_first : {false, true}) {
+      auto cloud = NewCloud();
+      const float first = rear_first ? -half_distance : half_distance;
+      cloud->push_back(P(first, 0, 0)); cloud->push_back(P(-first, 0, 0));
+      EXPECT_EQ(RunClustering(cloud, c).clusters.size(), half_distance < 0.65f ? 1U : 2U);
+    }
+  }
+}
+
 TEST(Clustering, EdgeUsesTheSmallerOfBothTolerances) {
   // tol(30) = 0.70714 < d = 0.709 < tol(30.709) = 0.71221: the far point's search
   // radius reaches the near one, but the edge needs d <= min(tol): two clusters,

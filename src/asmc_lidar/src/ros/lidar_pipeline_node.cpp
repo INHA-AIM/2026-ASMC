@@ -201,7 +201,9 @@ class LidarPipelineNode {
   static void ClusteringJson(std::ostream& out, const pipeline::ClusteringConfig& c) {
     out << std::setprecision(9) << "{\"NearRange\":" << c.f32_AdaptiveNearRange
         << ",\"FarRange\":" << c.f32_AdaptiveFarRange << ",\"NearEps\":" << c.f32_AdaptiveNearEps
-        << ",\"FarEps\":" << c.f32_AdaptiveFarEps << '}';
+        << ",\"FarEps\":" << c.f32_AdaptiveFarEps
+        << ",\"RearNearEps\":" << c.f32_AdaptiveRearNearEps
+        << ",\"RearFarEps\":" << c.f32_AdaptiveRearFarEps << '}';
   }
 
   // Called under epoch_mutex_ (or during construction), never from HTTP threads.
@@ -231,7 +233,7 @@ class LidarPipelineNode {
     try {
       if (msg->data.size() > 2048) throw std::runtime_error("request too large");
       const auto data = YAML::Load(msg->data);
-      if (!data.IsMap() || data.size() != 5) throw std::runtime_error("expected four settings and request_id");
+      if (!data.IsMap() || data.size() != 7) throw std::runtime_error("expected six settings and request_id");
       id = data["request_id"].as<std::string>();
       if (id.size() != 32 || id.find_first_not_of("0123456789abcdef") != std::string::npos)
         throw std::runtime_error("invalid request_id");
@@ -242,11 +244,16 @@ class LidarPipelineNode {
       c.f32_AdaptiveFarRange = data["FarRange"].as<float>();
       c.f32_AdaptiveNearEps = data["NearEps"].as<float>();
       c.f32_AdaptiveFarEps = data["FarEps"].as<float>();
+      c.f32_AdaptiveRearNearEps = data["RearNearEps"].as<float>();
+      c.f32_AdaptiveRearFarEps = data["RearFarEps"].as<float>();
       const float n = c.f32_AdaptiveNearRange, f = c.f32_AdaptiveFarRange;
       const float a = c.f32_AdaptiveNearEps, b = c.f32_AdaptiveFarEps;
+      const float ra = c.f32_AdaptiveRearNearEps, rb = c.f32_AdaptiveRearFarEps;
       if (!std::isfinite(n) || !std::isfinite(f) || !std::isfinite(a) || !std::isfinite(b) ||
-          n < 0.1f || f > 200.f || f < n + 1.f || a < 0.05f || b > 5.f || b < a)
-        throw std::runtime_error("require 0.1<=NearRange, NearRange+1<=FarRange<=200, 0.05<=NearEps<=FarEps<=5");
+          !std::isfinite(ra) || !std::isfinite(rb) ||
+          n < 0.1f || f > 200.f || f < n + 1.f || a < 0.05f || b > 5.f || b < a ||
+          ra < 0.05f || rb > 5.f || rb < ra)
+        throw std::runtime_error("require valid range boundaries and 0.05<=near<=far<=5 for both front and rear");
       tuning_pending_ = TuningRequest{c, id};
       tuning_last_id_ = id;
       tuning_state_ = "pending";

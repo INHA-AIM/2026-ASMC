@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Explicit opt-in control for the isolated pipeline, never the operational Main.
 
-One four-value request at a time. The pipeline acknowledges at a scan boundary;
+One six-value request at a time. The pipeline acknowledges at a scan boundary;
 HTTP publication alone is not application. YAML and ROS parameters are not written.
 """
 import copy
@@ -11,12 +11,12 @@ import threading
 import time
 import uuid
 
-KEYS = ('NearRange', 'FarRange', 'NearEps', 'FarEps')
+KEYS = ('NearRange', 'FarRange', 'NearEps', 'FarEps', 'RearNearEps', 'RearFarEps')
 
 
 def validate(values):
     if not isinstance(values, dict) or set(values) != set(KEYS):
-        raise ValueError('NearRange/FarRange/NearEps/FarEps 네 값이 필요합니다.')
+        raise ValueError('거리 경계 2개와 앞·뒤 연결 거리 4개가 필요합니다. 처리·웹 노드 버전을 확인하세요.')
     if any(isinstance(values[k], bool) or not isinstance(values[k], (int, float)) for k in KEYS):
         raise ValueError('설정값은 숫자여야 합니다.')
     v = {k: float(values[k]) for k in KEYS}
@@ -25,7 +25,9 @@ def validate(values):
     if not (0.1 <= v['NearRange'] and v['NearRange'] + 1 <= v['FarRange'] <= 200):
         raise ValueError('거리 경계: 0.1 ≤ NearRange, NearRange+1 ≤ FarRange ≤ 200m')
     if not (0.05 <= v['NearEps'] <= v['FarEps'] <= 5):
-        raise ValueError('연결 거리: 0.05 ≤ NearEps ≤ FarEps ≤ 5m')
+        raise ValueError('앞 연결 거리: 0.05 ≤ NearEps ≤ FarEps ≤ 5m')
+    if not (0.05 <= v['RearNearEps'] <= v['RearFarEps'] <= 5):
+        raise ValueError('뒤 연결 거리: 0.05 ≤ RearNearEps ≤ RearFarEps ≤ 5m')
     return v
 
 

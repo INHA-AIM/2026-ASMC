@@ -38,13 +38,15 @@
     <section id="clustering-tuning">
       <details open>
         <summary><strong>군집 연결 거리 · 실시간 설정</strong></summary>
-        <p class="note">화면 필터가 아니라 실제 군집화에 적용됩니다. 거리 기준: LiDAR 원점의 수평거리(m).</p>
+        <p class="note">실제 군집화 설정입니다. 수평화 LiDAR의 x≥0은 앞, x&lt;0은 뒤입니다. 거리 기준은 LiDAR 원점의 수평거리(m)이며 차량 기준 화면의 원점과 다릅니다.</p>
         <form id="clustering-form">
           <fieldset id="clustering-fields" disabled>
             <label>근거리 경계(m) · NearRange <input name="NearRange" type="number" min="0.1" max="199" step="0.1" required></label>
             <label>원거리 경계(m) · FarRange <input name="FarRange" type="number" min="1.1" max="200" step="0.1" required></label>
-            <label>근거리 연결(m) · NearEps <input name="NearEps" type="number" min="0.05" max="5" step="0.01" required></label>
-            <label>원거리 연결(m) · FarEps <input name="FarEps" type="number" min="0.05" max="5" step="0.01" required></label>
+            <label>앞 근거리 연결(m) · NearEps <input name="NearEps" type="number" min="0.05" max="5" step="0.01" required></label>
+            <label>앞 원거리 연결(m) · FarEps <input name="FarEps" type="number" min="0.05" max="5" step="0.01" required></label>
+            <label>뒤 근거리 연결(m) · RearNearEps <input name="RearNearEps" type="number" min="0.05" max="5" step="0.01" required></label>
+            <label>뒤 원거리 연결(m) · RearFarEps <input name="RearFarEps" type="number" min="0.05" max="5" step="0.01" required></label>
             <pre id="clustering-preview" class="note"></pre>
             <div class="buttons"><button type="submit">실시간 적용</button><button type="button" id="clustering-load">적용값 불러오기</button><button type="button" id="clustering-reset">시작값 복원 준비</button></div>
           </fieldset>
@@ -52,7 +54,7 @@
         <p id="clustering-status" role="status" aria-live="polite" class="note">설정 상태 확인 중</p>
         <p id="clustering-current" class="note"></p>
         <p id="clustering-frame" class="note"></p>
-        <p class="note">중간 구간은 두 연결 거리의 선형 보간입니다. FarEps ≥ NearEps, 거리 경계 간격 ≥ 1m. 재시작 시 YAML 값으로 복귀합니다. 복원 준비 후에도 적용 버튼을 눌러야 합니다.</p>
+        <p class="note">10~50m 등 중간 구간은 앞·뒤 각각 선형 보간합니다. 각 방향의 원거리 연결 ≥ 근거리 연결, 경계 간격 ≥1m. x=0을 가로지르는 점도 작은 쪽 연결 거리로 연결할 수 있습니다. 재시작 시 YAML 값으로 복귀하며 복원 준비 후에도 적용 버튼을 눌러야 합니다.</p>
       </details>
     </section>
     <section>

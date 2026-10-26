@@ -90,6 +90,9 @@ sh::RuntimeConfig ShippedRuntimeConfig() {
   // Existing Main-equivalence fixtures use the pre-height/audit path. Production
   // defaults are checked independently below and in the ROS integration tests.
   cfg.pipeline.height_roi.enabled=false;cfg.hd_map_audit_mode="off";
+  // Keep historical synthetic output fixtures on their original symmetric profile.
+  // The experiment's shipped front/rear values are checked separately below.
+  cfg.pipeline.clustering = pl::ClusteringConfig{};
   cfg.hd_map_audit.reset();return cfg;
 }
 
@@ -114,6 +117,30 @@ TEST(RuntimeDeployment, MissingCurrentProductCannotKeepLoadedOldAudit) {
   EXPECT_FALSE(cfg.hd_map_audit);EXPECT_FALSE(cfg.hd_map_audit_error.empty());
 }
 
+TEST(RuntimeDeployment, ExperimentalFrontRearProfileAndLegacyYamlFallback) {
+  const auto cfg = sh::LoadRuntimeConfig(ShippedConfig(), PackageDir());
+  const auto& c = cfg.pipeline.clustering;
+  EXPECT_FLOAT_EQ(c.f32_AdaptiveNearRange, 10.f);
+  EXPECT_FLOAT_EQ(c.f32_AdaptiveFarRange, 50.f);
+  EXPECT_FLOAT_EQ(pl::AdaptiveClusterTolerance(30.f, c, 1.f), 1.31f);
+  EXPECT_FLOAT_EQ(pl::AdaptiveClusterTolerance(30.f, c, -1.f), 1.61f);
+  auto changed = cfg;
+  sh::FinalizeRuntimeIdentity(changed);
+  const auto old_id = changed.config_id;
+  changed.pipeline.clustering.f32_AdaptiveRearFarEps += .01f;
+  sh::FinalizeRuntimeIdentity(changed);
+  EXPECT_NE(changed.config_id, old_id);
+
+  TempDir dir; auto yaml = YAML::LoadFile(ShippedConfig());
+  auto a = yaml["lidar"]["Clustering"]["Adaptive"];
+  a.remove("RearNearEps"); a.remove("RearFarEps");
+  const auto legacy = sh::LoadRuntimeConfig(dir.Write("legacy.yaml", yaml), PackageDir()).pipeline.clustering;
+  EXPECT_FLOAT_EQ(pl::AdaptiveClusterTolerance(30.f, legacy, -1.f),
+                  pl::AdaptiveClusterTolerance(30.f, legacy, 1.f));
+  a["RearNearEps"] = 2.f; a["RearFarEps"] = 1.f;
+  EXPECT_THROW(sh::LoadRuntimeConfig(dir.Write("invalid-rear.yaml", yaml), PackageDir()), std::runtime_error);
+}
+
 TEST(LiveClusteringTuning, UpdatesRuntimeAndPipelineWithoutReconstruction) {
   auto cfg = ShippedRuntimeConfig();
   sh::FinalizeRuntimeIdentity(cfg);
@@ -124,6 +151,8 @@ TEST(LiveClusteringTuning, UpdatesRuntimeAndPipelineWithoutReconstruction) {
   cfg.pipeline.clustering.f32_AdaptiveFarRange = 40.f;
   cfg.pipeline.clustering.f32_AdaptiveNearEps = 0.3f;
   cfg.pipeline.clustering.f32_AdaptiveFarEps = 0.9f;
+  cfg.pipeline.clustering.f32_AdaptiveRearNearEps = 1.6f;
+  cfg.pipeline.clustering.f32_AdaptiveRearFarEps = 1.62f;
   sh::FinalizeRuntimeIdentity(cfg);
   EXPECT_NE(original_id, cfg.config_id);
   runtime.SetClusteringConfig(cfg.pipeline.clustering, cfg.config_id);
@@ -133,6 +162,8 @@ TEST(LiveClusteringTuning, UpdatesRuntimeAndPipelineWithoutReconstruction) {
   EXPECT_FLOAT_EQ(pl::AdaptiveClusterTolerance(5.f, c), 0.3f);
   EXPECT_NEAR(pl::AdaptiveClusterTolerance(25.f, c), 0.6f, 1e-6f);
   EXPECT_FLOAT_EQ(pl::AdaptiveClusterTolerance(60.f, c), 0.9f);
+  EXPECT_FLOAT_EQ(pl::AdaptiveClusterTolerance(5.f, c, -4.f), 1.6f);
+  EXPECT_FLOAT_EQ(pl::AdaptiveClusterTolerance(60.f, c, -4.f), 1.62f);
   // Same points actually switch from connected to separate components.
   pl::CloudPtr cloud(new pl::Cloud), centers(new pl::Cloud);
   for (int i = 0; i < 10; ++i) {

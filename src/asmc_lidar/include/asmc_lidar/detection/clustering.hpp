@@ -23,9 +23,14 @@ struct ClusteringConfig {
   float32 f32_AdaptiveFarRange = 50.f;
   float32 f32_AdaptiveNearEps = 0.55f;
   float32 f32_AdaptiveFarEps = 0.85f;
+  // x < 0 in the leveled LiDAR frame. Zero keeps legacy symmetric tolerance.
+  float32 f32_AdaptiveRearNearEps = 0.f;
+  float32 f32_AdaptiveRearFarEps = 0.f;
 };
 
-float AdaptiveClusterTolerance(float horizontal_range_m, const ClusteringConfig& config);
+// x == 0 belongs to the front profile. No sensor->body translation is applied.
+float AdaptiveClusterTolerance(float horizontal_range_m, const ClusteringConfig& config,
+                               float local_x_m = 0.f);
 
 // Main Clustering(). input is the non-ground leveled cloud. Like Main it MUTATES
 // input: a single (0,0,0) point is pushed when input is empty or no cluster is
