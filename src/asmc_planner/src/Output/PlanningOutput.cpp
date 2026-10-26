@@ -19,7 +19,7 @@
 namespace frenet_planner_ros {
 
 double PlanningPort::trajectoryDt() const {
-    const double dt = planner_.sample_dt();
+    const double dt = planner().sample_dt();
     return planner_initialized_ && std::isfinite(dt) && dt > 0.0 ? dt : 0.1;
 }
 

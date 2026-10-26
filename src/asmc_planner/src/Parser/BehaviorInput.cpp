@@ -360,10 +360,12 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
   pnh_.param<std::string>("roundabout_merge/source_link",roundabout_source,"A2256W000148");
   pnh_.param<std::string>("roundabout_merge/target_link",roundabout_target,"A2256W000146");
   builder_.setRoundaboutMerge(roundabout_enabled,roundabout_stop_node,roundabout_source,roundabout_target);
-  if (!map_.load(link_path, node_path)) {
+  map_loaded_=map_.load(link_path, node_path);
+  if (!map_loaded_) {
     ROS_ERROR("MGeo loading failed; check map paths");
   }
-  if (!route_.initialize(map_, loadRouteLinks(route_path))) {
+  route_loaded_=route_.initialize(map_, loadRouteLinks(route_path));
+  if (!route_loaded_) {
     ROS_ERROR("Route initialization failed; check route_links.yaml");
   }
   builder_.setStopTargetOffset(stop_target_offset_m);
@@ -637,9 +639,10 @@ void BehaviorInput::runOnce() {
   // occupancy brake decision. The canonical collision input is never filtered.
   const asmc_planner::BehaviorContext input{
       ego_, objects_fresh?objects_:empty_objects, route_, *lights_};
+  if(highway_reference_source_)builder_.setHighwayReference(highway_reference_source_());
   bool reserved_static_avoid = false;
   UrbanFeature feature = builder_.build(
-      input.ego, input.perception, input.route, input.traffic,
+      input.ego, input.perception, input.route, input.traffic,ros::Time::now().toSec(),
       [&](const ObjectFeature& object) {
         if (!dynamic_enabled_ || !dynamic_policy_.enabled() || complex) return true;
         const bool allowed=dynamic_policy_.allowsStaticAvoid(object,route_);
@@ -950,6 +953,7 @@ void BehaviorInput::moraiObjectsCallback(
     const morai_msgs::ObjectStatusList::ConstPtr& message) {
   if (!message) return;
   objects_ = MoraiMsgConverter::toPerceptionObjects(*message);
+  objects_.source_stamp=message->header.stamp.toSec();
   objects_received_at_ = ros::SteadyTime::now();
   objects_received_ = true;
 }
@@ -966,6 +970,7 @@ void BehaviorInput::detectedObjectsCallback(
   frenet_planner_ros::ConvertDetectedObjects(*message,canonical_objects_);
   objects_source_time_=message->header.stamp.toSec();
   objects_ = DetectedMsgConverter::toPerceptionObjects(*message);
+  objects_.source_stamp=message->header.stamp.toSec();
   objects_received_at_ = ros::SteadyTime::now();
   objects_received_ = true;
 }

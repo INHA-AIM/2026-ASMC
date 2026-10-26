@@ -687,7 +687,7 @@ TEST(SignalBraking, BrakingOnlyRevisionDoesNotCreatePositiveAcceleration) {
   FrenetState start{};start.s_d=5;start.s_dd=-1;
   PathGeneratorConfig cfg;cfg.dt=.05;cfg.delta_s={0,0,0};cfg.time_horizon={1,12,1};
   KinematicLimits l;l.max_longitudinal_accel=5;l.max_longitudinal_jerk=6;l.boundary_condition_accel_fraction=.8;
-  auto paths=GenerateSpatialStoppingCandidates(start,10,13.8,1.5,cfg,l,.5,true);
+  auto paths=GenerateSpatialStoppingCandidates(start,10,13.8,1.5,cfg,l,.5,SpatialStopOptions{true,false});
   ASSERT_FALSE(paths.empty());for(const auto& p:paths)for(double a:p.s_dd)EXPECT_LE(a,1e-6);
 }
 

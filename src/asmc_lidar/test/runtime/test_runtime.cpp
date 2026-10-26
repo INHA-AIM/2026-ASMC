@@ -525,6 +525,22 @@ TEST(HdMapAuditRuntime, ResetReusesImmutableMapButNotState) {
 // LoadRuntimeConfig
 // ---------------------------------------------------------------------------
 
+TEST(RuntimeConfig, FrontRearReleaseProfileAndLegacyYamlFallback) {
+  const auto shipped=sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
+  const auto& c=shipped.pipeline.clustering;
+  EXPECT_FLOAT_EQ(c.f32_AdaptiveNearRange,10.f);
+  EXPECT_FLOAT_EQ(c.f32_AdaptiveNearEps,1.30f);
+  EXPECT_FLOAT_EQ(c.f32_AdaptiveFarEps,1.32f);
+  EXPECT_FLOAT_EQ(c.f32_AdaptiveRearNearEps,1.60f);
+  EXPECT_FLOAT_EQ(c.f32_AdaptiveRearFarEps,1.62f);
+  TempDir dir;auto yaml=YAML::LoadFile(ShippedConfig());
+  auto adaptive=yaml["lidar"]["Clustering"]["Adaptive"];
+  adaptive.remove("RearNearEps");adaptive.remove("RearFarEps");
+  const auto legacy=sh::LoadRuntimeConfig(dir.Write("legacy-clustering.yaml",yaml),PackageDir());
+  EXPECT_FLOAT_EQ(legacy.pipeline.clustering.f32_AdaptiveRearNearEps,c.f32_AdaptiveNearEps);
+  EXPECT_FLOAT_EQ(legacy.pipeline.clustering.f32_AdaptiveRearFarEps,c.f32_AdaptiveFarEps);
+}
+
 TEST(RuntimeConfig, LoadsShippedConfigWithMainValues) {
   const auto c = ShippedRuntimeConfig();
   const auto& p = c.pipeline;
@@ -548,8 +564,8 @@ TEST(RuntimeConfig, LoadsShippedConfigWithMainValues) {
   EXPECT_EQ(p.clustering.f32_Eps, 0.5f);
   EXPECT_EQ(p.clustering.s32_MinPoints, 5);
   EXPECT_TRUE(p.clustering.b_Adaptive);
-  EXPECT_EQ(p.clustering.f32_AdaptiveNearEps, 0.55f);
-  EXPECT_EQ(p.clustering.f32_AdaptiveFarEps, 0.85f);
+  EXPECT_EQ(p.clustering.f32_AdaptiveNearEps, 1.30f);
+  EXPECT_EQ(p.clustering.f32_AdaptiveFarEps, 1.32f);
   EXPECT_EQ(p.tracking.f32_COST_THRESHOLD, 3.0f);
   EXPECT_EQ(p.tracking.f32_ContinuityBonus, 0.20f);
   EXPECT_EQ(p.tracking.f32_DuplicateCenterDistance, 0.60f);

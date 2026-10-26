@@ -128,7 +128,11 @@ int main(){
         "consistent real circular motion retains its original long-horizon turn prediction");
     expect(history.UncertainNear(20,0)<0,
         "consistent full-body circular history still satisfies the original confidence gate");
-    object.id=22;history.Reset();
+    object.x+=10;object.length=.4;object.width=.2;observe(710.6,1);
+    expect(history.Rate(21)==0&&history.ConservativeOccupancies({object}).empty()&&
+        history.UncertainNear(object.x,object.y)==21,
+        "discontinuous same ID cannot inherit a roundabout body or departure certificate");
+    object.id=22;object.length=4.5;object.width=1.9;history.Reset();
     for(int i=0;i<6;++i){object.x=20+6*i*.1+(i%2?2:-2);object.y=0;
         object.vx=2;object.vy=0;observe(720+i*.1,1);}
     auto fragment_input=object;fragment_input.yaw_rate=history.Rate(22);

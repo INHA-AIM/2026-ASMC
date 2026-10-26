@@ -1,6 +1,8 @@
 #include "Frenet/Evaluation/Cost.hpp"
 
 #include <cmath>
+#include <algorithm>
+#include <limits>
 
 double ComputeLateralCost(const FrenetPath& path, const CostWeights& w,
                           double target_d) {
@@ -40,6 +42,35 @@ void EvaluateCosts(std::vector<FrenetPath>& candidates, const CostWeights& w,
         path.cost_lat   = ComputeLateralCost(path, w, target_d);
         path.cost_lon   = ComputeLongitudinalCost(path, w);
         path.cost_total = ComputeTotalCost(path.cost_lat, path.cost_lon, w);
+    }
+}
+
+void EvaluateApproachCosts(std::vector<FrenetPath>& candidates,double preferred,
+    double acceleration_limit,double jerk_limit,double target_d,
+    const ApproachCostWeights& weights) {
+    const double scale=std::max(1.0,preferred);
+    for(auto& path:candidates) {
+        path.cost_total=std::numeric_limits<double>::infinity();
+        const std::size_t n=path.t.size();
+        if(n<2||path.s.size()!=n||path.s_d.size()!=n||path.s_dd.size()!=n||
+           path.s_ddd.size()!=n||path.d.size()!=n||preferred<=0||
+           acceleration_limit<=0||jerk_limit<=0)continue;
+        const double duration=path.t.back()-path.t.front();
+        if(duration<=0)continue;
+        double speed=0,accel=0,jerk=0,lateral=0;
+        for(std::size_t i=1;i<n;++i) {
+            const double dt=path.t[i]-path.t[i-1];
+            const auto square=[](double x){return x*x;};
+            speed+=.5*(square((path.s_d[i-1]-preferred)/scale)+square((path.s_d[i]-preferred)/scale))*dt;
+            accel+=.5*(square(path.s_dd[i-1]/acceleration_limit)+square(path.s_dd[i]/acceleration_limit))*dt;
+            jerk+=.5*(square(path.s_ddd[i-1]/jerk_limit)+square(path.s_ddd[i]/jerk_limit))*dt;
+            lateral+=.5*(square(path.d[i-1]-target_d)+square(path.d[i]-target_d))*dt;
+        }
+        const double deficit=std::max(0.0,1-(path.s.back()-path.s.front())/(scale*duration));
+        path.cost_lat=weights.lateral*lateral/duration;
+        path.cost_lon=(weights.speed*speed+weights.acceleration*accel+weights.jerk*jerk)/duration+
+            weights.progress*deficit*deficit+weights.horizon/duration;
+        path.cost_total=path.cost_lat+path.cost_lon;
     }
 }
 

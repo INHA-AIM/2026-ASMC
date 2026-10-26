@@ -19,7 +19,7 @@ class ManeuverLifecycle {
   Output update(BehaviorType candidate, const PlannerFeedbackData& feedback,
                 uint32_t active_command_id, bool stop_preempts_committed,
                 bool cancel_reclassified_avoid, bool follow_owns_avoid_target,
-                DecisionStability& stability);
+                DecisionStability& stability,bool allow_merge_left_prepare=false);
 
  private:
   BehaviorType active_lateral_behavior_ = BehaviorType::KEEP;

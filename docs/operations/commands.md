@@ -45,6 +45,10 @@ source /root/ws/devel/setup.bash
 | C | `roslaunch asmc_lidar lidar.launch` | 공용 local/map 추적·속도/운동·전달 필터; 카메라 모델 미실행 |
 | D | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, 새 공용 관측 직접 소비; GPS/IMU 위치와 Competition 종방향 실측 속도 조합, MPC/selector/재밍 어댑터 |
 
+고주로 통합 브랜치에서는 D에 `highway_merge:=true`를 지정합니다.
+판제 대시보드는 D에 포함되어 별도 실행하지 않습니다. 실행·보존·검증 범위는
+[통합 안내](../../src/asmc_planner/docs/main-integration-20261026.md)를 참고하세요.
+
 C/D는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)을 따릅니다. 전체 미션·속도 정확도 인수는 후속입니다.
 
 `roslaunch asmc_hd_map competition_map.launch`는 **선택 실행**입니다. 지도·미션 ROS 토픽과

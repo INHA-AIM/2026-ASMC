@@ -486,7 +486,22 @@ double FindClosestS(const RefLine& ref, double x, double y,
     double best_d2 = std::numeric_limits<double>::max();
     bool found = false;
     if (s_hint) {
-        for (const auto& pt : ref.points) {
+        auto first=ref.points.begin(),last=ref.points.end();
+        if(!ref.closed_loop&&std::isfinite(*s_hint)&&std::isfinite(window)&&window>=0) {
+            // Prepared open references have sorted station coordinates.
+            // Search the SAME rounded-distance predicate as the legacy scan,
+            // rather than subtracting window from hint (which can move a
+            // floating-point boundary). Point order and nearest-point ties
+            // remain unchanged. Closed-loop wrapping retains the old scan.
+            first=std::lower_bound(first,last,*s_hint,[window](const RefPoint& p,double hint){
+                return p.s<hint&&hint-p.s>window;
+            });
+            last=std::upper_bound(first,last,*s_hint,[window](double hint,const RefPoint& p){
+                return p.s>hint&&p.s-hint>window;
+            });
+        }
+        for(auto it=first;it!=last;++it) {
+            const auto& pt=*it;
             double diff = std::fabs(pt.s - *s_hint);
             // 폐루프만 이음새 건너편을 원형 거리로 가깝다고 본다. 열린
             // 경로는 끝점 너머가 물리적으로 이어지지 않으므로 선형 거리만

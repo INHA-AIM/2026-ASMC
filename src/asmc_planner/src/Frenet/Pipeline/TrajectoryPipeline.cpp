@@ -36,7 +36,11 @@ void TrajectoryPipeline::AppendKeepContinuityCandidates(
     if (!planning_collision_obstacles.empty()) {
         FilterByCollision(continuity_combined, ref_,
                           planning_collision_obstacles, config_.vehicle_shape,
-                          config_.collision, /*coast_exempt_id=*/-1);
+                          config_.collision, request.collision.coast_exempt_object_id,
+                          request.collision.margin_recovery_object_id,
+                          request.collision.following_lane_half_width,
+                          request.collision.stopping.decel>0?&request.collision.stopping:nullptr,
+                          request.collision.reuse_object_predictions);
     }
     candidates.insert(candidates.end(),
                       std::make_move_iterator(continuity_combined.begin()),

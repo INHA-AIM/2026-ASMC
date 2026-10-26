@@ -22,6 +22,11 @@
 #include "Frenet/Common/PlannerCommand.hpp"
 #include "Frenet/Generator/GeneratorConfig.hpp"
 
+// Attach distance-native geometry to a longitudinal motion. The resulting
+// derivatives remain time derivatives, as required by the shared filters.
+FrenetPath SampleSpatialLateralMotion(const FrenetPath& motion,
+                                    const SpatialLateralProfile& geometry);
+
 // low_speed_threshold: KinematicLimits.low_speed_fallback_v와 같은 값을
 // 넘겨야 한다 - PlanLowSpeedFallback이 crawl로 전환하는 속도 경계와
 // 이 함수의 저속-처리 경계가 어긋나면 두 경로 사이에 사각지대가 생긴다.

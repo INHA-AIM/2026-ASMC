@@ -144,6 +144,15 @@ UrbanFeature FeatureBuilder::build(
     const TrafficLightProvider& traffic_light_provider,
     const std::function<bool(const ObjectFeature&)>& static_avoid_eligible,
     const std::function<PerceptionObjects(UrbanFeature&,const PerceptionObjects&)>& object_policy) {
+  return build(ego,objects,route_manager,traffic_light_provider,ego.stamp,
+               static_avoid_eligible,object_policy);
+}
+UrbanFeature FeatureBuilder::build(
+    const EgoState& ego,const PerceptionObjects& objects,
+    const RouteManager& route_manager,const TrafficLightProvider& traffic_light_provider,
+    double evaluation_time,
+    const std::function<bool(const ObjectFeature&)>& static_avoid_eligible,
+    const std::function<PerceptionObjects(UrbanFeature&,const PerceptionObjects&)>& object_policy) {
   // The same eligibility applies to acquisition and re-identification, before
   // any static overlap latch is created. Physical observations are untouched.
   const auto IsStaticAvoidCandidate = [&](const ObjectFeature& object) {
@@ -160,6 +169,17 @@ UrbanFeature FeatureBuilder::build(
   feature.ego.speed = ego.speed;
   feature.ego.source = ego.source;
   feature.ego.state_valid = ego.valid;
+  if(highway_route_&&ego.valid) {
+    feature.highway=UpdateHighwayApproach(*highway_route_,
+      CartesianState{ego.x,ego.y,ego.yaw,0,ego.speed,0},highway_approach_,
+      highway_reference_.lane?highway_route_->config.target_corridor_half_width:2.0);
+    if(feature.highway.valid&&feature.highway.zone_index<highway_reference_.completed.size()&&
+       highway_reference_.completed[feature.highway.zone_index])feature.highway.approach=false;
+    if(highway_reference_.lane) {
+      feature.highway.cruising=true;
+      feature.highway.speed_cap_mps=highway_route_->config.speed_cap_mps;
+    }
+  }
 
   const bool route_projection_valid = route_manager.projectEgo(
       ego.x, ego.y, &feature.ego.s, &feature.ego.d,
@@ -282,6 +302,16 @@ UrbanFeature FeatureBuilder::build(
   PerceptionObjects policy_objects;
   const PerceptionObjects* effective=&objects;
   if(object_policy){policy_objects=object_policy(feature,objects);effective=&policy_objects;}
+
+  // Signal/mission distances above retain official-route s. Driving features
+  // below use one active lane basis for ego, objects, leader and AVOID.
+  const auto active_lane=highway_reference_.lane;
+  if(active_lane) {
+    const auto p=asmc_planner::lane_reference::ProjectOnLaneReference(*active_lane,
+        ego.x,ego.y,ego.yaw,ego.speed);
+    feature.ego.valid=feature.ego.valid&&p.valid;
+    feature.ego.s=p.s;feature.ego.d=p.d;
+  }
   std::vector<ObjectFeature> projected_objects;
   projected_objects.reserve(effective->vehicles.size() + effective->pedestrians.size() +
                             effective->obstacles.size());
@@ -296,6 +326,32 @@ UrbanFeature FeatureBuilder::build(
   for (const auto& object : effective->obstacles) {
     projected_objects.push_back(
         projector_.project(object, feature.ego, route_manager));
+  }
+  if(active_lane)for(auto& object:projected_objects) {
+    const auto p=asmc_planner::lane_reference::ProjectOnLaneReference(*active_lane,
+        object.x,object.y,object.yaw,object.vx,object.vy);
+    object.valid=object.valid&&p.valid;
+    object.s=p.s;object.d=p.d;object.gap=object.s-feature.ego.s;
+    object.ttc=object.gap>0&&object.relative_speed>0?object.gap/object.relative_speed:1e9;
+  }
+
+  if(highway_reference_.network&&active_lane) {
+    const auto& network=*highway_reference_.network;
+    const auto index=network.indexForLink(feature.route.current_link_id);
+    if(index<network.lanes.size()&&active_lane.get()==network.lanes[index].get()) {
+      const auto& first=network.common->line().points.front();
+      const double end=FindClosestS(active_lane->line(),first.x,first.y,nullptr,100);
+      const double distance=end-feature.ego.s;
+      const double preview=ego.speed*ego.speed/(2*highway_route_->approach_decel_mps2)+
+          highway_route_->config.approach_distance;
+      feature.highway.valid=true;
+      feature.highway.zone_index=highway_route_->zones.size()-1;
+      feature.highway.approach=distance>0&&distance<=preview&&
+          !highway_reference_.completed.back();
+      feature.highway.source_link=feature.route.current_link_id;
+      feature.highway.target_link=network.common->lanes().front().substr(5);
+      feature.highway.route_s=FindClosestS(highway_route_->reference,ego.x,ego.y,nullptr,100);
+    }
   }
 
   // AVOID overlap history must follow the physical object, not a short-lived
@@ -321,7 +377,7 @@ UrbanFeature FeatureBuilder::build(
         object.link_id == feature.route.current_link_id ||
         object.link_id == feature.route.left_target_link_id ||
         object.link_id == feature.route.right_target_link_id;
-    if (physical_neighbor_lane) {
+    if (physical_neighbor_lane&&!active_lane) {
       object.gap = object.link_s - feature.ego.map_s;
       object.ttc = object.gap > 0.0 && object.relative_speed > 0.0
                        ? object.gap / object.relative_speed
@@ -340,7 +396,7 @@ UrbanFeature FeatureBuilder::build(
     const bool same_direction =
         std::cos(object_motion_yaw - feature.ego.yaw) > 0.5;
     double topology_gap = 1e9;
-    const bool forward_in_topology = route_manager.forwardDistance(
+    const bool forward_in_topology = active_lane?(topology_gap=object.s-feature.ego.s,topology_gap>0):route_manager.forwardDistance(
         feature.route.current_link_id, feature.ego.map_s, object.link_id,
         object.link_s, front_lookahead, &topology_gap);
     const bool geometry_front_gate =
@@ -599,7 +655,7 @@ UrbanFeature FeatureBuilder::build(
         object.link_id == feature.route.current_link_id ||
         object.link_id == feature.route.left_target_link_id ||
         object.link_id == feature.route.right_target_link_id;
-    if (physical_neighbor_lane) {
+    if (physical_neighbor_lane&&!active_lane) {
       object.gap = object.link_s - feature.ego.map_s;
       object.ttc = object.gap > 0.0 && object.relative_speed > 0.0
                        ? object.gap / object.relative_speed
@@ -621,7 +677,7 @@ UrbanFeature FeatureBuilder::build(
     const bool same_direction =
         std::cos(object_motion_yaw - feature.ego.yaw) > 0.5;
     double follow_topology_gap = 1e9;
-    const bool follow_forward_in_topology = route_manager.forwardDistance(
+    const bool follow_forward_in_topology = active_lane?(follow_topology_gap=object.s-feature.ego.s,follow_topology_gap>0):route_manager.forwardDistance(
         feature.route.current_link_id, feature.ego.map_s, object.link_id,
         object.link_s, front_lookahead, &follow_topology_gap);
     const bool follow_geometry_front_gate =
@@ -643,7 +699,8 @@ UrbanFeature FeatureBuilder::build(
     // the route normal represented by Frenet d.
     double route_yaw = feature.ego.yaw;
     Point2D obstacle_route_pose;
-    route_manager.getRoutePose(object.s, &obstacle_route_pose, &route_yaw);
+    if(active_lane)route_yaw=Interpolate(active_lane->line(),object.s).theta;
+    else route_manager.getRoutePose(object.s, &obstacle_route_pose, &route_yaw);
     const double obstacle_yaw_delta = object.yaw - route_yaw;
     const double obstacle_lateral_half_extent =
         0.5 * std::abs(object.length * std::sin(obstacle_yaw_delta)) +
@@ -957,7 +1014,80 @@ UrbanFeature FeatureBuilder::build(
       feature.risk.min_ttc < safety_.emergency_ttc_enter ||
       predicted_front_ttc < safety_.emergency_predicted_ttc ||
       required_deceleration > safety_.emergency_required_decel;
+  buildHighwayLaneChange(feature,objects,evaluation_time);
   return feature;
+}
+
+// Behavior requests a prepared adjacent lane from fresh, bounded observations.
+// Frenet certifies the actual timed gap; occupancy is not an empty-road veto.
+void FeatureBuilder::buildHighwayLaneChange(UrbanFeature& f,const PerceptionObjects& objects,
+    double evaluation_time) {
+  using namespace asmc_planner::lane_reference;
+  const auto network=highway_reference_.network;
+  auto& result=f.lane_change;result.network=network;result.reference_epoch=highway_reference_.epoch;
+  f.extra_flags["highway_transition_interrupted"]=highway_reference_.transition_interrupted;
+  if(!network||!network->policy.enabled||!highway_reference_.lane||!highway_route_||!f.ego.valid)return;
+  if(highway_reference_.transition_interrupted)return;
+  const auto& policy=network->policy;
+  result.observation_stamp=objects.source_stamp;
+  result.evaluation_stamp=evaluation_time;
+  auto fresh=[&](double stamp) {
+    return std::isfinite(evaluation_time)&&std::isfinite(stamp)&&stamp>0&&
+        evaluation_time>=stamp&&evaluation_time-stamp<=highway_route_->config.source_max_age_s;
+  };
+  // Independently received ego and objects need not be ordered by source time.
+  // Compare both against this decision's ROS time, never against each other.
+  result.fresh=fresh(f.timestamp)&&fresh(objects.source_stamp);
+  if(!result.fresh)return;
+  const auto source=network->indexForLink(f.route.current_link_id);
+  if(source>=network->lanes.size())return;
+  const auto& lane=*network->lanes[source];
+  const auto ego=ProjectOnLaneReference(lane,f.ego.x,f.ego.y,f.ego.yaw,f.ego.speed);
+  if(!ego.valid||std::fabs(ego.d)>.35||std::fabs(ego.heading_error_rad)>.08)return;
+  const auto& common=network->common->line().points.front();
+  result.remaining_m=FindClosestS(lane.line(),common.x,common.y,nullptr,100)-ego.s;
+  result.free_speed=highway_route_->config.speed_cap_mps;
+  double maximum_curvature=0;
+  for(double ds=0;ds<=std::max(20.0,f.ego.speed*3);ds+=1)
+    maximum_curvature=std::max(maximum_curvature,std::fabs(Interpolate(lane.line(),ego.s+ds).kappa));
+  if(maximum_curvature>1e-6)result.free_speed=std::min(result.free_speed,
+      std::sqrt(lane.options().max_lateral_accel*highway_route_->config.curve_lateral_accel_safety_factor/maximum_curvature));
+  const auto* current=highway_route_->map->lane("lane:"+f.route.current_link_id);
+  if(!current)return;
+  std::vector<const TrackedObject*> all;
+  for(const auto* list:{&objects.vehicles,&objects.pedestrians,&objects.obstacles})
+    for(const auto& object:*list)all.push_back(&object);
+  std::vector<HighwayObservedBox> boxes;
+  for(const auto* object:all)boxes.push_back({object->x,object->y,object->yaw,object->length,object->width});
+  auto offer=[&](const std::string& adjacent,bool allowed,HighwayLaneChangeOffer& out) {
+    if(!allowed)return;
+    const auto target=network->indexForLink(adjacent.substr(adjacent.empty()?0:5));
+    if(target>=network->lanes.size()||target==source)return;
+    const auto& reference=*network->lanes[target];
+    const auto at=ProjectOnLaneReference(reference,f.ego.x,f.ego.y,f.ego.yaw,f.ego.speed);
+    if(!at.valid)return;
+    if(!HighwayTargetWindowObserved(reference,
+        CartesianState{f.ego.x,f.ego.y,f.ego.yaw,0,f.ego.speed,0},boxes,policy))return;
+    const auto target_pose=Interpolate(reference.line(),at.s+std::max(20.0,f.ego.speed*3));
+    out={true,f.route.current_link_id,adjacent.substr(5),target_pose.x,target_pose.y,target_pose.theta,std::fabs(at.d)};
+    out.free_speed=result.free_speed;
+    double front=policy.observation_front_m;
+    for(const auto* object:all) {
+      // Current lane ownership provides a coarse benefit estimate only.
+      // Full measured OBBs, including adjacent-lane intrusions, still enter
+      // Frenet's physical collision and actual-arrival gap certification.
+      if(!reference.coversCenter(object->x,object->y))continue;
+      const auto p=ProjectOnLaneReference(reference,object->x,object->y,0,0);
+      const double gap=p.s-at.s;
+      if(!p.valid||gap<=0||gap>front)continue;
+      const auto tangent=Interpolate(reference.line(),p.s);
+      const double speed=object->motion_state==MotionState::LOW_THREAT?0:
+          std::max(0.0,object->vx*std::cos(tangent.theta)+object->vy*std::sin(tangent.theta));
+      out.free_speed=std::min(result.free_speed,speed);front=gap;
+    }
+  };
+  offer(current->left_adjacent,f.route.lane_change_left_allowed,result.left);
+  offer(current->right_adjacent,f.route.lane_change_right_allowed,result.right);
 }
 
 }  // namespace behavior_planner
