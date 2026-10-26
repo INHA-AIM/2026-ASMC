@@ -19,7 +19,8 @@
 |---|---|
 | `lidar-frame-time-c0-20261026-r1` | 실패 보존. 반복 결과의 `timings_ms`까지 동일성에 포함한 계측 오류. 객체 차이로 해석하지 않음 |
 | `lidar-frame-time-c0-20261026-r2` | 객체 동일성·투영·카메라 시각·갤러리 통과. support 확장 이전 결과 |
-| `lidar-frame-time-c0-20261026-r3` | 최종 오프라인 결과. 소스 `7229ed60`, dirty patch 없음. 전체 support·속도 경계 포함 |
+| `lidar-frame-time-c0-20261026-r3` | 전체 support·속도 경계 결과. 지도 표시 색 오류가 있어 갤러리는 r4 사용 |
+| `lidar-frame-time-c0-20261026-r4` | 최종 오프라인 결과. 소스 `3ecc167c`, dirty patch 없음. 격자 표시 수정 후 전체 재실행, r3와 수치 동일 |
 | `lidar-frame-time-c0-live-20261026-r1` | 별도 실시간 메타데이터·터널 주행·종료 복원 기록. 이전 bag과 동시 수집처럼 합치지 않음 |
 
 최종 `summary.json`에는 실행 binary SHA도 있다. `gallery.html`은 RGB의 local OBB 코너 투영,
@@ -44,6 +45,21 @@
    이번 native probe는 GPS/IMU **pose 코어**를 직접 호출하며 그 속도 결합까지 복제하지 않는다.
 6. 기록 도착 순서를 보존하고 미래 표본을 소급 사용하지 않았다. 오프라인 replay는 실시간 worker의 최대50ms 대기·최신 scan 대체까지 재현하지 않는다.
 
+저장소 센서셋 v3와 현재 카메라/LiDAR 설정을 대조한 장착 기준은 다음과 같다. 위치는 후륜축 base 기준 m,
+각도는 설정 파일의 roll/pitch/yaw 도 단위다. 이는 파일 간 일치 확인이며 실시간 시뮬 설정을 독립 실측한 값은 아니다.
+
+| 센서 | 위치 x/y/z | 설정 회전 | 확인 |
+|---|---|---|---|
+| 전방 카메라 | 1.90 / 0 / 1.20 | 0 / 2 / 0 | 원본1280×720·FOV90° 일치 |
+| 좌 카메라 | 1.15 / 0.65 / 1.20 | 0 / 10 / 70 | 원본640×480·FOV130° 일치 |
+| 우 카메라 | 1.15 / −0.65 / 1.20 | 0 / 10 / −70 | 센서셋290°와 동치 |
+| LiDAR | 0.80 / 0 / 1.45 | 0 / 0 / 0 | `autonav_v3`와 pipeline mount 일치 |
+| GPS | 0.35 / 0 / 1.25 | 0 / 0 / 0 | LiDAR/판제는 x lever arm 제거, bridge pose는 안테나 기준 |
+| IMU | 0 / 0 / 0 | 0 / 0 / 0 | 비영 mount를 적용한 것으로 가정하지 않음 |
+
+지도 원점은 UTM52N `[302595, 4124145, 0]`다. YOLO 최종 픽셀 투영에 이 map 원점은 필요하지 않으며,
+원본 축→optical 축 변환은 현재 보정 클래스가 담당한다. mount와 optical 변환을 각각 다시 적용하지 않는다.
+
 ## 수치·객체 회귀
 
 | 검사 | 결과 | 해석 |
@@ -58,7 +74,9 @@
 기존 scan float 변환 기준 `1e-5m/rad`는 그대로다. 별도로 frame_time_core 35,
 scan_frame 11, gps_ingest 15, pose_history 32 및 geometry boundary·camera buffer 검사를 통과했다.
 카메라 sensor timing 10·ground projection 4 검사도 통과했다.
-C0 새 합성 회귀 6개와 각 추정기75 scan의 GPS 정상→0→중단→복귀 fixture를 CI에 추가했다.
+추가로 IMU 선택, source/epoch 3·전방 fusion 27·typed/planning output 15 검사에서
+중단·정상 빈 결과·session/generation·속도 무효·중복/역행 경계를 확인했다.
+C0 새 합성 회귀 7개와 각 추정기75 scan의 GPS 정상→0→중단→복귀 fixture를 CI에 추가했다.
 대용량 bag·GPU·MORAI·외부 연구 저장소는 hosted CI의 필수 입력이 아니다.
 
 ## pose 차이와 HD맵 민감도
@@ -117,6 +135,8 @@ bridge(local)·LiDAR(`/migration/lidar`, debug OFF)·판제 GPS/IMU 상태·객�
 - A126에서 25초 가속·정속·제동·작은 조향: 최대 **5.53m/s**, 횡오차 최대 **0.130m**.
 - 다른 actor는 그대로 유지하고, 12m 이내 접근 시 중단 조건을 추가했다. 명령 상한6.5m/s·횡오차 상한0.6m.
 - 원래 위치·P 기어·제어 모드로 복구하고 이번 시험의 ROS/bridge/LiDAR 프로세스를 종료했다. 복원 기록은 live run에 보존한다.
+- 초기 복원에는 yaw 1.344° 잔차가 있었다. 정차·원래 위치·제어 모드가 그대로인지 확인한 후 한 번 보정해
+  잔차 −0.0176°를 기록했다. 텔레포트의 ACK만으로 정확한 좌표 복원을 선언하지 않는다.
 - 기존 GPU 모델 메모리가 남은 상태에서 별도 카메라 실행이 겹쳐 큰 지연이 있었다. 시험용 카메라만 종료했다.
   이 조건은 3모델 성능 수락이나 카메라 처리율 비교에 사용하지 않는다.
 

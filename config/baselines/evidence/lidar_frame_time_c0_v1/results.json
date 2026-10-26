@@ -2,8 +2,8 @@
   "schema": "asmc.frame_time_evidence.v1",
   "offline": {
     "schema": "asmc.frame_time_audit.v1",
-    "run_id": "lidar-frame-time-c0-20261026-r3",
-    "source_revision": "7229ed606b5024d44d31d0025a5f804b9c4d3eb5",
+    "run_id": "lidar-frame-time-c0-20261026-r4",
+    "source_revision": "3ecc167c649cf7fbed180ae9144b968b049cbcc3",
     "manifest_sha256": "412529b1b88ebc42cd79fb0759a934248449caace55561cb3bad0431e7ce3b43",
     "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "bag": {
@@ -574,10 +574,10 @@
         }
       },
       "pins": {
-        "/artifacts/lidar-frame-time-c0-20261026-r3/normal/planning.jsonl": "1774810697e46ac6901c61b24c86c6ef1735763127e1bf604b031681ed2a700c",
-        "/artifacts/lidar-frame-time-c0-20261026-r3/normal/lidar.jsonl": "89fc40a14f0c7d8c333cd142eeab0d7d0bf5706136c03a744aef239f5a873d34",
-        "/artifacts/lidar-frame-time-c0-20261026-r3/tunnel/planning.jsonl": "23f69152afc14d6fd71050a6e365e2a9efd03c7a8d246125eb7a7927e0791576",
-        "/artifacts/lidar-frame-time-c0-20261026-r3/tunnel/lidar.jsonl": "84760b2173c37462b16bf8606b9efb30e9d447c1f23655427e62da2a9f8a3292"
+        "/artifacts/lidar-frame-time-c0-20261026-r4/normal/planning.jsonl": "1774810697e46ac6901c61b24c86c6ef1735763127e1bf604b031681ed2a700c",
+        "/artifacts/lidar-frame-time-c0-20261026-r4/normal/lidar.jsonl": "b3d00a65d8410771f67e8b98c230a04d7f7a2653239148ef05f24244f9c46f70",
+        "/artifacts/lidar-frame-time-c0-20261026-r4/tunnel/planning.jsonl": "23f69152afc14d6fd71050a6e365e2a9efd03c7a8d246125eb7a7927e0791576",
+        "/artifacts/lidar-frame-time-c0-20261026-r4/tunnel/lidar.jsonl": "d9c81723b3942bb414ad4f87a8a1246e8a7633ee59f5b1a21e711350b3f1056c"
       },
       "passed": true,
       "limits": [
@@ -878,10 +878,22 @@
     "lidar-frame-time-c0-live-20261026-r1/restoration-heading.json": {
       "bytes": 3614,
       "sha256": "1cfe247dbc87115b4f9cbf88631a843e2329cc38f78d8ea2f9372865ee273ac9"
+    },
+    "lidar-frame-time-c0-20261026-r4/summary.json": {
+      "bytes": 57593,
+      "sha256": "4cf5866adcadcd6c2069c149d7a3598681373dd68800a8bf5ebc9653f9ddcce4"
+    },
+    "lidar-frame-time-c0-20261026-r4/gallery.html": {
+      "bytes": 3081,
+      "sha256": "468c735a942dd8eef3e7b076c438a14fb13ec30607209e83e99377b254d3802d"
+    },
+    "lidar-frame-time-c0-20261026-r4/source.patch": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   },
   "checks": {
-    "c0_synthetic": 6,
+    "c0_synthetic": 7,
     "state_probe_scans_each": 75,
     "state_probe_zero_gps_valid": {
       "planning": 0,
@@ -894,7 +906,12 @@
     "lidar_gps_ingest": 15,
     "lidar_pose_history": 32,
     "lidar_geometry_boundary": "passed",
-    "lidar_camera_buffer": "passed"
+    "lidar_camera_buffer": "passed",
+    "lidar_imu_selection": "passed",
+    "lidar_source_time": 3,
+    "lidar_front_camera_fusion": 27,
+    "lidar_typed_output": 15,
+    "documentation_unit_tests": 17
   },
   "meaning": "Diagnostic consistency only. Not full autonomy or sensor accuracy acceptance; production code unchanged."
 }
