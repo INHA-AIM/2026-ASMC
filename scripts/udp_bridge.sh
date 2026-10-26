@@ -22,15 +22,17 @@ Transport profiles:
   lan2lan MORAI PC 192.168.0.1 and Autonav PC 192.168.0.10
 
 Inputs:
-  default  Ego/Competition/Collision + RGB/LiDAR/GPS/IMU
+  default  CompetitionInfoPublisher/Collision + RGB/LiDAR/GPS/IMU
+           local additionally retains legacy Detail diagnostics
   --gt     adds Object/Semantic/Instance LiDAR; local transport only
 
 The script does not change MORAI UI settings. Import the generated sensor JSON
 matching the selected transport. v3 configures Intensity LiDAR at 15 Hz; GT
 configures Intensity and Instance LiDAR at 15 Hz. Actual scan arrival can be lower.
 
-Competition Vehicle Status is optional in the participant simulator. Use
---require-competition-status only for the organizer/field acceptance gate.
+For the verified MolitComp03 UI, CompetitionInfoPublisher uses 9088 -> 9099
+and the ROS compatibility name /Ego_topic. --require-competition-status checks
+that input. Legacy 9798 is local Detail diagnostics, not a field acceptance gate.
 
 Examples:
   ./scripts/udp_bridge.sh
@@ -134,7 +136,7 @@ if [ "$GT" = true ]; then
   fi
 fi
 if [ "$REQUIRE_COMPETITION_STATUS" = true ] && [ "$GT" = true ]; then
-  echo "[udp_bridge] ERROR: the organizer/field status gate cannot be combined with --gt." >&2
+  echo "[udp_bridge] ERROR: strict Competition acceptance cannot be combined with --gt." >&2
   exit 2
 fi
 NETWORK_PRESET_26R1="config/morai/network/generated/ASMC_network_set_26r1_${TRANSPORT_PROFILE}.json"
@@ -231,9 +233,9 @@ EXTRA+=( "stream_profile:=${STREAM_PROFILE}" )
 EXTRA+=( "competition_status_required:=${REQUIRE_COMPETITION_STATUS}" )
 echo "  cmd_ip         : ${CMD_IP} (Ctrl → Windows MORAI Host PORT)"
 echo "  Ctrl default   : 9093/9094, mode 2"
-echo "  Ego status     : 9088/9099 (both MORAI releases normalized)"
-echo "  Competition    : 9797/9798 (type 787) -> /Competition_topic"
-echo "                   required=${REQUIRE_COMPETITION_STATUS} (participant local default: optional)"
+echo "  Status 9099    : verified MolitComp03 CompetitionInfoPublisher -> /Ego_topic"
+echo "  Detail 9798    : local diagnostic only; disabled on LAN"
+echo "  9099 gate      : required=${REQUIRE_COMPETITION_STATUS}; LAN input is always enabled"
 echo "  TrafficLight GT: 7603/7502 (type 258; not consumed)"
 echo "  Vehicle state  : GPS/IMU -> /vehicle/state"
 echo "  Sensor ports   : competition allowlist 9291..9303"
@@ -242,15 +244,17 @@ if [ "$STREAM_PROFILE" = "development" ]; then
 fi
 echo "  Timestamp      : receive default; GT pairing: timestamp_mode:=source"
 echo "  Verify         : rostopic hz /Ego_topic"
-echo "                  rostopic hz /Competition_topic"
+if [ "$TRANSPORT_PROFILE" = "local" ]; then
+  echo "                  rostopic hz /Competition_topic # legacy local diagnostic, not Competition acceptance"
+fi
 echo "                  rostopic hz /image_jpeg/compressed"
 echo "                  rostopic hz /vehicle/state"
 if [ "$STREAM_PROFILE" = "development" ]; then
   echo "                  rostopic hz /sem_front/image_jpeg/compressed"
   echo "                  rostopic hz /velodyne_points_instance"
 else
-  echo "                  python3 scripts/verify_morai_topics.py --profile competition"
-  echo "                  field gate: add --require-competition-status"
+  echo "                  python3 scripts/verify_morai_topics.py --profile competition --transport ${TRANSPORT_PROFILE}"
+  echo "                  verified 9099 gate: add --require-competition-status"
 fi
 echo "=========================================="
 echo ""

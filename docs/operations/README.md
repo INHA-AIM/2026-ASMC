@@ -1,5 +1,11 @@
 # 개발·시뮬레이터 운영 가이드
 
+> **2026-10-27 현재 실행 기준:** CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.
+> `--require-competition-status`/`verify-field`도 이9099 입력을 검사하도록 정정했다.
+> 9798은 로컬 Detail 진단이며 LAN 운영·수락에서 제외한다. 아래 과거 P3 설명과 현재 역할은
+> [정정 기록](../records/bridge/2026-10-27-competition-9099-correction.md)을 기준으로 구분한다.
+
+
 > **문서 역할:** Canonical — Docker, MORAI UDP profile, bridge 기동과 시뮬 검증
 >
 > **현재 기준:** 공통 `morai_udp` bridge + 본선 `ASMC_sensor_set_v3.json` + ROS1 Noetic + Docker host network
@@ -177,11 +183,10 @@ source devel/setup.bash
 ```bash
 ./scripts/docker_ros_up.sh verify 8 molitcomp03
 ./scripts/docker_ros_up.sh verify 8 26r1
-# 별도9798의 허용 송신이 확인된 환경에서만(현재 설정에 적용하지 않음):
+# 실제 CompetitionInfoPublisher9099 /Ego_topic LAN 수락:
 ./scripts/docker_ros_up.sh verify-field 30 molitcomp03
 
 rostopic hz /Ego_topic
-rostopic hz /Competition_topic
 rostopic hz /image_jpeg/compressed
 rostopic hz /velodyne_points
 rostopic hz /gps
@@ -190,9 +195,9 @@ rostopic echo /Ego_topic -n1
 ```
 
 `verify`는 RGB 4대, LiDAR, GPS, IMU, Ego, 유효 `/vehicle/state`와 privileged publisher
-부재를 확인한다. 현재 정상 Competition은 `/Ego_topic` 경로다. `verify-field`는
-별도 `/Competition_topic`을 추가 요구하는 기존 검사이며 현재 설정의 필수 수락으로 쓰지 않는다.
-release 인자는 bridge 동작이나 필수 목록을 바꾸지 않는 provenance label이다.
+부재를 확인한다. 현재 정상 Competition은 `/Ego_topic` 경로다. 정정된 `verify-field`는
+LAN의9099 `/Ego_topic`을 검사하며 `/Competition_topic` Detail publisher는 거부한다.
+release 인자는 provenance label이며 `verify-field` 수락 범위는 확인된 `molitcomp03`으로 제한한다.
 GT 실험 재현에서만 `--gt`와 `verify-gt 20 molitcomp03`을 함께 사용한다.
 
 LiDAR 실제 도착률만 별도로 검사할 때는 다음처럼 실행한다. 이 exact-arrival 진단은 v3의

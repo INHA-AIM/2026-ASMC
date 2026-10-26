@@ -1,5 +1,10 @@
 # rosbag 기록·재생·평가
 
+LAN 운영 입력용 `competition_raw`는 CompetitionInfoPublisher9099의 `/Ego_topic`과
+센서·`/vehicle/state`를 요구한다. `/Competition_topic`/9798 Detail을 대신 기록하지 않는다.
+새 bag은 저장소 여유·새 run 등록을 통과한 뒤에만 시작한다.
+
+
 > **문서 역할:** Active Guide — Real Time UDP raw/result bag의 재현 가능한 운용
 >
 > 날짜가 있는 rate·latency와 종료된 GT 실험은
