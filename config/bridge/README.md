@@ -36,7 +36,7 @@ python3 tools/audit/validate_bridge_profiles.py
 계약의 P3-E/P3-G 관측과674개 시험 수는 당시 동결 이력이다. 새 검증 결과로 재발행하지 않는다.
 과거9798 해석은 위 정정으로 대체하고 원본 기록·template·fixture는 보존한다.
 
-팀 generated LAN preset은 팀 알고리즘 경계다. 별도 주최 채점/녹화 프로그램의 endpoint를
+팀 LAN 정본은 팀 알고리즘 경계다. 별도 주최 채점/녹화 프로그램의 endpoint를
 포함한 전체 현장 설정을 이 파일로 덮어쓰지 않는다. 9798의 채점 소비 여부는 미확인이며,
 팀 bridge의 비구독과 주최 송신 경로 보존은 별개의 계약이다.
 [두 PC·채점 경계](../../docs/operations/lan2lan-rehearsal.md)를 따른다.

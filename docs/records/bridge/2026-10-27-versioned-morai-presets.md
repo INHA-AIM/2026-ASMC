@@ -57,7 +57,7 @@ Type267은 TF2이다. 팀 입력이 아니므로 loopback과 버퍼 스레드OFF
 
 실행한 검사:
 
-- 계약·CLI/토픽/transport·문서 unittest38개 통과
+- 계약·CLI/토픽/transport·카메라 보정·런처/문서 unittest68개 통과
 - 세 생성기 재생성 일치, canonical8+GT2, JSON/UDP mode 분리 및 metadata 오선택 거부 통과
 - 문서 migration·런처 참조·기존CI145개 검사 보존·shell syntax·diff whitespace 통과
 
@@ -70,6 +70,13 @@ Network4개·Sensor6개의 JSON byte는 기존 SaveFile 배포본과 동일하�
 현재 camera/BEV/LiDAR 설정은 입력 경로 문자열만 바꿨고 수치·원본 sensor SHA를 유지했다.
 현재 parity 목록에는 metadata 경로 수정의 previous SHA를 남겼다. 과거 run·동결 기록은 바꾸지 않았다.
 config 하위에 중복 presets/archive/generated/templates 폴더가 다시 생기면 계약 검사가 실패한다.
+
+경로 변경 후 첫 CI에서 C++ 투영 manifest가 보정 YAML의 이전 파일 SHA를 가리켜
+카메라·차선 투영과 전체 autonomy 경계 시험이 중단됐다. 현재 manifest의 SHA를 갱신하고
+이전 SHA·변경 사유를 남겼다. 보정 수치와 카메라별 calibration ID는 변경하지 않았다.
+host 단위시험에 manifest와 실제 파일의 SHA 일치 검사를 추가했다.
+수정 후 독립 ROS master에서 카메라 투영4개·차선 투영3개 및 private state/object 경계
+smoke가 통과했다. 이 시험은 브릿지·시뮬레이터·차량 제어 transport를 시작하지 않는다.
 
 ## 병합 전 확인
 
