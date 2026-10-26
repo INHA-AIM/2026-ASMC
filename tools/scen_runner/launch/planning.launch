@@ -1,9 +1,7 @@
 <launch>
-  <arg name="lidar_backend" default="main"/>
   <!-- All nodes here are restarted together while ego is held at its spawn. -->
   <include file="$(find planning_inputs)/launch/vehicle_state.launch"/>
   <include file="$(find planning_inputs)/launch/objects.launch">
-    <arg name="source_policy" value="$(eval {'main': 'validated_lidar', 'asmc_lidar': 'asmc_lidar_companion'}[arg('lidar_backend')])"/>
   </include>
   <include file="$(find asmc_planner)/launch/planner_v2.launch">
     <arg name="state_topic" value="/planning/vehicle/state"/>

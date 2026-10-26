@@ -29,4 +29,7 @@
   <exec_depend>asmc_controller</exec_depend>
   <exec_depend>asmc_planner</exec_depend>
   <exec_depend>asmc_bridge</exec_depend>
+  <exec_depend>asmc_lidar</exec_depend>
+  <exec_depend>planning_inputs</exec_depend>
+  <exec_depend>asmc_hd_map</exec_depend>
 </package>

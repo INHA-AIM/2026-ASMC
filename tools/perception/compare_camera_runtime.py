@@ -281,7 +281,7 @@ def main():
         report['source_sha256'] = hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()
         report['measurement_sha256']={f:hashlib.sha256((root/'tools/perception'/f).read_bytes()).hexdigest()
             for f in ('compare_camera_runtime.py','camera_runtime_probe.py','b0_resources.py',
-                      'run_camera_structure_matrix.py','run_b0_matrix.py','camera_measurement_records.py',
+                      'run_camera_structure_matrix.py','runtime_test_support.py','camera_measurement_records.py',
                       'imu_runtime_metrics.py')}
         report['family_view_source_sha256']={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest()
             for p in (root/'src/asmc_camera/src/asmc_camera/bev/family_view.py',
@@ -386,7 +386,7 @@ def main():
     finally:
         # GUI/preview have independent process groups. Reap them before ROS
         # launch shutdown, which can block while model workers join.
-        from run_b0_matrix import stop
+        from runtime_test_support import stop
         if qt_process: stop(qt_process,timeout=5)
         if main_process: stop(main_process,timeout=10)
         report['qt_inventory_after']=qt_viewers()

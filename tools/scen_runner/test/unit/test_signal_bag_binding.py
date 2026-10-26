@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
-from analyze_signal_bag import check_binding_evidence, check_header_order
+from analyze_signal_bag import check_binding_evidence, check_header_order, object_frame
 
 
 class RecordedBindingTest(unittest.TestCase):
@@ -13,6 +13,18 @@ class RecordedBindingTest(unittest.TestCase):
         self.plan=dict(token=self.token,planner_epoch='planner',sequence=3,semantic='C2',accepted_valid=True)
         self.status=dict(token=self.token,planner_epoch='planner',plan_sequence=3,linked=True,
             actuated=True,brake=0.,steering=0.,accel=.1)
+
+    def test_common_tracking_uses_atomic_geometry_header(self):
+        from types import SimpleNamespace as N
+        frame=N(header=N(frame_id='map'),objects=[N(track_id=42)])
+        message=N(observation=N(objects=frame),tracking=[])
+        self.assertIs(object_frame(message),frame)
+
+    def test_historical_bag_decoder_does_not_require_generated_msg_package(self):
+        from types import SimpleNamespace as N
+        frame=N(header=N(frame_id='map'),objects=[])
+        self.assertIs(object_frame(N(tracked=frame)),frame)
+        self.assertIs(object_frame(frame),frame)
 
     def test_explicit_identity_joins_without_relying_on_arrival_times(self):
         self.assertTrue(check_binding_evidence([self.request],[self.plan],[self.status])['passed'])

@@ -43,17 +43,17 @@ class FinalistEvidenceTest(unittest.TestCase):
         rows[0].update(passed=False, failures=['unexpected measurement exception'])
         self.assertFalse(live_summary(rows)[0]['camera_supply_passed'])
 
-    def test_runtime_provenance_includes_adapter_and_main_launch(self):
+    def test_runtime_provenance_includes_canonical_lidar_source_and_launch(self):
         import tempfile
         from pathlib import Path
-        from run_coco7_live_trials import provenance
+        from camera_experiment_metrics import provenance
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             engine = root/'fixture.engine'
             engine.write_bytes(b'fixture')
             sources = provenance(root, engine, 'a'*40)['source_sha256']
-            self.assertIn('src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py', sources)
-            self.assertIn('src/lidar+sensorfusion/src/Main/main.launch', sources)
+            self.assertIn('src/asmc_lidar/src/fusion/front_camera_fusion.cpp', sources)
+            self.assertIn('src/asmc_lidar/launch/lidar.launch', sources)
 
 
 if __name__ == '__main__': unittest.main()

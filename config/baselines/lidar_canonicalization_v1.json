@@ -1964,5 +1964,205 @@
       "unused alternative tracking experiments"
     ]
   },
-  "status": "baseline_recorded"
+  "status": "baseline_recorded",
+  "retired_execution_tools": [
+    {
+      "path": "tools/perception/run_camera_lidar_b0.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "35982fc28d11307130bc70eec2c9761bd40bf2cb91d613f7f16fbf615d84e1fc",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_b0_matrix.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "40e1b877a742c25145efe6bf9ef42689eb30a909f186ac9455d547548f6934b6",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_b1a_trial.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "36c50e3a6a0653b33a630cf7d9b8caf718a8607ae790accda1c95201266afbda",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_b1a_matrix.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "a8f34321169985007c3f2b67a5ec4367d6d2e559aa5f073b7a5b3e089a5e6311",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/prepare_b1a_source.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "80f5816f0d6dc0a8b83de8ead3f98c122e6331c99435b1b8904cd9cb29c2f392",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/make_b1a_fixtures.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "4672591eaa8e1f57fb0e1038843c58aee5d5016570961759030994af6c678d5d",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_frame_boundary_trial.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "a6ec1e30fd5393deb160e11fe3aa1dbe6952376d213028d7b861bc4f60df1aee",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_frame_boundary_matrix.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "422505481c9ddf7b0fe0d08c3d362462ec19bc0f44105ae653e99928c0e7dc0d",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_lidar_continuous_matrix.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "63825c1bdc0cc9f6b0483e2bfccd7d330adab37eb3fc7bf7aee2b05e812b7059",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/compare_camera_objects.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "f75e778fcfbd46700a40473e7da2595a474157af6225092215e8742228af7445",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/replay_camera_objects.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "bfb2f16abc1a9c3bc8f4edd71af973709092a4e4701c6c72ad96f6eda2848bbd",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/check_camera_object_faults.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "6dd2dfa1a61ae5eef9008369749dfae487a0958f982dda0ba2cc84ea002c3b09",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/prepare_camera_handoff_replay.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "203547c05db6302c3c837ba7e06784941ed5a658bd759e6f811fdfd3a9d00e5c",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_coco7_live_trials.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "109afe9e15917cf7a6c019b07963a609fb008b5b30323b728b7a55219686e2eb",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_coco7_fusion_trials.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "fe3ab8cbb251835509ce482346c1ae2d32d836946cdfed32e96992d705aa601a",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_coco7_drive_rehearsal.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "74088079859f9466175404b8fbf47c5600840f43727346f20c5367a613cdbdf8",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_coco7_weather_matrix.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "7c4d1189702782fd407a5066a112e4d5d4424f90c662b3e14e90102648f07496",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_camera_coco_matrix.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "99987c6ec0e8c64078105b186754818741d7d97f3eaa788b999271944acd44c6",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_camera_seg_matrix.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "a952eb41e3150a061978e5b16b46f615762435b5189d85ce5b918ae267e4c8d9",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_camera_lidar_supplements.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "bace82f28b9b0b30830a4ffd55326870f30916b0df243f7c369e07d80c9560b4",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_mission16_bag_trials.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "45f221919f8ee52fae1a4c323b834796d9d733b621c7daafceeb81483e832c13",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_yoloe_l_trials.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "b50e206d29261c8183ce44ac96a1938ef4ef58f809aec780733f0c778fb6eda7",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/fingerprint_yoloe_l.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "0941f0069ad0102e039a78b7c761ce012ac07eef11525eaedf3660cbc714e13c",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/run_lidar_motion_fixture.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "7472e2d55e4ba71e50027bae0d5be2466308b23eefc37afab08dae5a722f3ac8",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/b0_main.launch",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "2b2fb9771b1ad88e2a92073c5cb4181698fbe6e455c95b4cc5956545ec78f312",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/coco7_preview_stack.launch",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "63335ec5fc623d87cf70b55b0bc1fa75011110a782c737aac14712638cd88829",
+      "reason": "historical Main/wire comparison runner; metrics retained in pure helper modules"
+    },
+    {
+      "path": "tools/perception/b1a_probe/CMakeLists.txt",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "f6ea342bb42d9610b689c452a3756393c1c3fda3686e195143d9f791a23e7838",
+      "reason": "standalone historical Main/private-filter build harness; compare existing recorded results or reproduce pinned checkout"
+    },
+    {
+      "path": "tools/perception/b1a_probe/probe.cpp",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "9d2a713ae110e30400fa897d49c4c71326c90fbad37ff54a1bec2bbcd5694afb",
+      "reason": "standalone historical Main/private-filter build harness; compare existing recorded results or reproduce pinned checkout"
+    },
+    {
+      "path": "tools/perception/b1a_probe/map_pose_probe.cpp",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "ea951e483c285bdd430e0a82a20dc98e13858c5398eb51d48bb66873b6dd723c",
+      "reason": "standalone historical Main/private-filter build harness; compare existing recorded results or reproduce pinned checkout"
+    },
+    {
+      "path": "tools/perception/b1a_probe/package.xml",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "fb56d82b514437b1c1928c7420f224291a7b1c7ad82423ce924ebecd50690c8e",
+      "reason": "standalone historical Main/private-filter build harness; compare existing recorded results or reproduce pinned checkout"
+    },
+    {
+      "path": "tools/perception/lidar_filter_audit/CMakeLists.txt",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "41c5223fc032bf2833e064efd5e9ca8cf547c35aa2c92e41b93ae98b1e58ccd1",
+      "reason": "standalone historical Main/private-filter build harness; compare existing recorded results or reproduce pinned checkout"
+    },
+    {
+      "path": "tools/perception/lidar_filter_audit/test_legacy_probes.py",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "9c12dce196bcce80e64a06dd116dc8602bc220c26a7bf9842358310d788658fc",
+      "reason": "standalone historical Main/private-filter build harness; compare existing recorded results or reproduce pinned checkout"
+    },
+    {
+      "path": "tools/perception/lidar_filter_audit/legacy_filter_probe.cpp",
+      "revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+      "sha256": "dac36280c85f8dde00f3df402023cc90bc16bad52d04e4d888c9ab50ed669462",
+      "reason": "standalone historical Main/private-filter build harness; compare existing recorded results or reproduce pinned checkout"
+    }
+  ]
 }

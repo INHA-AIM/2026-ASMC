@@ -51,8 +51,9 @@ def check_conflicts(role, nodes, graph):
     topics = ({'/ctrl_cmd', '/planning/vehicle/state', '/planning/objects', '/planning/trajectory'}
               if role == 'planning' else
               {'/perception/camera/objects', '/perception/lane/boundary_family',
-               '/traffic_light/state', '/last_lidar', '/YOLO/BBox',
-               '/migration/lidar/objects_local', '/migration/lidar/planning_observations_map'})
+               '/traffic_light/state', '/perception/lidar/tracks_local',
+               '/perception/lidar/tracks_map', '/perception/lidar/observations_local',
+               '/perception/lidar/objects_local'})
     conflicts += [topic+' ('+', '.join(names)+')' for topic, names in graph[0] if topic in topics and names]
     if conflicts:
         raise RuntimeError('중복 노드/발행자가 이미 실행 중입니다: '+', '.join(conflicts))

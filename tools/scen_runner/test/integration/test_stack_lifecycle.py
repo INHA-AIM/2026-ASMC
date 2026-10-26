@@ -24,7 +24,7 @@ class StackLifecycleTest(unittest.TestCase):
             check_conflicts('planning', [S(namespace='/', name='mpc_controller')], graph)
 
     def test_planning_can_use_persistent_perception_publishers(self):
-        graph = [[('/last_lidar', ['/Main']), ('/traffic_light/state', ['/traffic_light_infer'])], [], []]
+        graph = [[('/perception/lidar/tracks_map', ['/perception/lidar/lidar_pipeline']), ('/traffic_light/state', ['/traffic_light_infer'])], [], []]
         check_conflicts('planning', [S(namespace='/', name='mpc_controller')], graph)
 
     def test_two_scenario_generations_wait_for_ready_and_stop_their_own_group(self):

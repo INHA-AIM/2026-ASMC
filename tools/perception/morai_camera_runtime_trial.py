@@ -285,14 +285,12 @@ class Trial:
             self.subscribers.append(rospy.Subscriber(topic,kind,lambda m,n=name:self.receive(n,m),queue_size=10))
         self.subscribers.append(rospy.Subscriber('/gps',GPSMessage,self.gps,queue_size=5))
         self.subscribers.append(rospy.Subscriber('/CollisionData',CollisionData,self.collision_callback,queue_size=5))
-        self.run_process('camera',['roslaunch','asmc_camera','perception.launch','profile:=planning',
-            'lane_enable_shared_family_debug:=false','camera_model_grid_max_hz:=15.0'] +
-            (['start_camera_objects:=true','start_traffic_light:=true','traffic_light_wait_first:=0']
-             if self.args.canonical_example else ['start_camera_objects:=false','start_traffic_light:=false']))
+        self.run_process('camera',['roslaunch','asmc_camera','camera.launch',
+            'models:=all' if self.args.canonical_example else 'models:=objects,lane'])
         self.run_process('hd_map',['roslaunch','asmc_hd_map','competition_map.launch',
             'publish_local:=true','local_gps_topic:=/camera_trial/gps','rviz:=false'])
         if self.args.canonical_example:
-            self.run_process('fusion',['roslaunch','Main','main.launch',
+            self.run_process('fusion',['roslaunch','asmc_lidar','lidar.launch',
                 'rviz:=false'])
             self.run_process('region_example',['roslaunch','asmc_camera','camera_region_example.launch',
                 'allow_example_control:=true'])
@@ -302,8 +300,6 @@ class Trial:
                         generation=message.generation,prepared=message.prepared,pipeline_ready=message.pipeline_ready),
                     queue_size=10))
         else:
-            self.run_process('cropped_yolo',['roslaunch','lane_boundary_adapter','camera_bbox_detector.launch',
-                'hood_crop_bottom_ratio:=0.21','python:=/usr/bin/python3','dependencies:=/usr/local/lib/python3.8/dist-packages'])
             self.run_process('preview',['roslaunch','lane_boundary_adapter','camera_bbox_lane_change.launch',
                 'enable_control:=false','target_speed_kph:=5.0','inferred_speed_kph:=5.0',
                 'lane_change_speed_kph:=5.0','far_obstacle_speed_kph:=5.0','lookahead_distance:=8.0',

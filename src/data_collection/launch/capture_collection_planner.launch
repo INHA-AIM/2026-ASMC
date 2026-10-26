@@ -1,18 +1,14 @@
 <launch>
-  <remap from="/ctrl_cmd_0" to="/collection/lidar_unused_ctrl"/>
-  <!-- Existing team planner/Main; collection state is isolated from competition state. -->
+  <!-- Canonical LiDAR and team planner; collection state is isolated from competition state. -->
   <include file="$(find asmc_hd_map)/launch/competition_map.launch">
     <arg name="rviz" value="false"/>
     <arg name="publish_local" value="false"/>
   </include>
-  <include file="$(find Main)/main.launch">
+  <include file="$(find asmc_lidar)/launch/lidar.launch">
     <arg name="rviz" value="false"/>
-    <arg name="start_velodyne_driver" value="false"/>
   </include>
   <include file="$(find planning_inputs)/launch/objects.launch">
-    <arg name="input_topic" value="/last_lidar"/>
-    <arg name="source_policy" value="validated_lidar"/>
-    <arg name="state_topic" value="/collection/vehicle/state"/>
+    <arg name="input_topic" value="/perception/lidar/tracks_map"/>
     <arg name="output_topic" value="/planning/objects"/>
   </include>
   <include file="$(find asmc_planner)/launch/planner_v2.launch">

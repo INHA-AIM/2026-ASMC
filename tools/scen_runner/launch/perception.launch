@@ -1,16 +1,9 @@
 <launch>
-  <arg name="lidar_backend" default="main"/>
-  <!-- Model parameters remain owned by asmc_camera. The launcher selects the
-       GPU Python for semantic_inference/object_detection/traffic_light only. -->
+  <!-- Model settings and GPU Python remain owned by asmc_camera. -->
   <include file="$(find asmc_camera)/launch/camera.launch">
     <arg name="mode" value="active"/>
   </include>
-  <include if="$(eval {'main': True, 'asmc_lidar': False}[arg('lidar_backend')])" file="$(find Main)/main.launch">
-    <arg name="start_velodyne_driver" value="false"/>
+  <include file="$(find asmc_lidar)/launch/lidar.launch">
     <arg name="rviz" value="false"/>
-  </include>
-  <include if="$(eval {'main': False, 'asmc_lidar': True}[arg('lidar_backend')])" file="$(find asmc_lidar)/launch/lidar.launch">
-    <arg name="namespace" value="/migration/lidar"/>
-    <arg name="planning_output" value="true"/>
   </include>
 </launch>

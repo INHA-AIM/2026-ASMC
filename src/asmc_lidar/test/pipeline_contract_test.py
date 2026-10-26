@@ -195,7 +195,6 @@ class PipelineContractTest(unittest.TestCase):
         candidates = {p for p in walk(ROOT / 'src', {'.launch', '.test', '.xml'})
                       if p.suffix != '.xml' or p.name.endswith('.launch.xml')}
         candidates |= set(walk(ROOT / 'tools', {'.launch', '.test'}))
-        candidates |= set((ROOT / 'src/lidar+sensorfusion/src/Main').glob('*.launch'))
         self.assertTrue(candidates)
         offenders = []
         for path in sorted(candidates):
@@ -212,8 +211,12 @@ class PipelineContractTest(unittest.TestCase):
                 self.assertFalse(any(n.get('type') == PIPELINE_NODE for n in root.findall('.//node')))
                 continue
             text = path.read_text(errors='replace')
-            if PIPELINE_NODE in text or re.search(r'asmc_lidar\)?/launch/lidar\.launch', text):
+            if PIPELINE_NODE in text:
                 offenders.append(str(path))
+            if re.search(r'asmc_lidar\)?/launch/lidar\.launch', text):
+                self.assertIn(path.relative_to(ROOT).as_posix(), {
+                    'src/data_collection/launch/capture_collection_planner.launch',
+                    'tools/scen_runner/launch/perception.launch'})
         self.assertEqual(offenders, [])
 
     def test_rostest_node_is_executable(self):
