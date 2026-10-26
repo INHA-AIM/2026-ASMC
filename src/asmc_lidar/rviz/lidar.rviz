@@ -15,7 +15,7 @@ Visualization Manager:
     - Class: rviz/MarkerArray
       Name: Processed LiDAR objects (OBB, ID, classification)
       Enabled: true
-      Marker Topic: /migration/lidar/markers
+      Marker Topic: /perception/lidar/markers
       Queue Size: 1
     - Class: rviz/PointCloud2
       Name: Raw LiDAR (optional reference)

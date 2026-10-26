@@ -1,9 +1,15 @@
 # 인지·판제 좌표계와 IMU 공통화 검토
 
+**2026-10-26 선행 기반:** [기존 기능 보존 이식·판제 직접 소비](../../src/asmc_lidar/docs/planning-runtime.md)가
+구현됐다. 현재 공개 속도는 기존 Main의 적용 추정값이며 새 ego 보상/정밀도 개선을 뜻하지 않는다.
+실제 판제 인수·구 패키지 폐기 이후 필요한 C0–C4를 선택하며 이번에 이 문서의 광범위한 공통화를
+구현한 것은 아니다.
+
 ## 상태와 착수 순서
 
 2026-10-25에 `feat/lidar-hd-map-filter-audit`의 `80b64676` 코드를 대조한 후속 설계다.
-**PR #108의 HD맵 판정·웹 검수를 먼저 마무리하고, 아래 리팩토링은 다음 작업 단위에서 진행한다.**
+**PR #108은 main `ab8db094`에 병합됐다. 다음은 [판제 전환·구 패키지 폐기 기반 B0–B4](../../src/asmc_lidar/docs/cutover-foundation.md)이며,
+아래 광범위한 리팩토링은 그 기준선을 마련한 뒤 진행한다.** 최초 코드 대조 SHA는 당시 근거로 보존한다.
 이 문서 추가는 공용 라이브러리 구현, pose 생산자 통합, 판제 입력 전환이나 운영 수락을 의미하지 않는다.
 현재 실행·검증 정본은 [LiDAR 인계](../handoffs/lidar-migration.md)와
 [패키지 파이프라인](../../src/asmc_lidar/docs/pipeline.md)을 따른다.
@@ -33,7 +39,7 @@ ROS [REP 105](https://github.com/ros-infrastructure/rep/blob/master/rep-0105.rst
 | 비교 BEV·영상 BBox 어댑터 | family가 선택한 CameraGroundProjection 재사용 | 같은 원 JPEG·epoch·보정 ID 대응, 재조회·이중 보정 금지 |
 | 새 LiDAR | ROI/voxel → 수평화 → 높이/지면 → 군집/OBB/추적 → 전방 fusion | 내부 수평화 좌표를 base_link로 잘못 표기하지 않음 |
 | 새 LiDAR 출력 | local/base_link와 pose 조건부 map의 공용 배열·관측 | local/map은 같은 session/generation/scan_sequence의 두 표현 |
-| HD맵 audit | map OBB footprint와 map으로 변환한 전체 cluster support 조회 | 화면 샘플로 판정하지 않음. 객체 제거·tracker 삭제는 아직 없음 |
+| HD맵·상부 전달 필터 | map OBB footprint·전체 cluster support 조회, local 하부 높이 확인 | 기본 filter·10cm·점군3점/10% AND OBB10%. 발행 배열만 제외, tracker 보존. 화면 샘플로 판정하지 않음 |
 | 일반 판제 | planning_inputs → map 객체·차량 상태 → Behavior/Frenet → map 궤적 | 현재 base_link 입력을 거부하므로 단순 remap 전환 불가 |
 | 음영 판제 | base_link family와 영상 투영·차선 소비 어댑터 | 일반 Frenet 입력과 별도 경계·소비 수락 |
 
@@ -198,7 +204,7 @@ Python binding은 배포·호출 비용까지 비교한 뒤 결정한다. 즉시
 | C4 | 중복 계산/출력 조립 축소 | 입력→출력 p50/p95/p99·최대 공백·RSS/CPU·복사 수 비교 | 근거 없는 품질 경량화 |
 | 공동 전환 | 검증된 pose/객체 소비 경계 연결 | 판제·재호와 고정 bag 및 실제 구간 수락·복구 확인 | 사용자 확인 없는 운영 전환 |
 
-첫 착수는 **C0만 구체화**한다. 공통화할 패키지 이름이나 새 메시지는 그 경계 검토 후 확정한다.
+전환 기반 B0–B4 뒤 공통화를 시작할 때는 **C0만 구체화**한다. 공통화할 패키지 이름이나 새 메시지는 그 경계 검토 후 확정한다.
 안승현은 카메라·HD맵 연결과 공통 기하 대조, 재호는 추적·속도·fusion 의미를 확인한다.
 판제 담당은 현재 pose/궤적·Frenet 소비와 fallback 정책을 확인한다. 관련 공개 계약 변경은 공동 검토한다.
 

@@ -15,7 +15,8 @@ rosbridge(websocket/JSON) 없이 UDP 바이너리를 직접 파싱/생성한다.
   EgoVehicleStatus.velocity     m/s   <- UDP km/h 변환
   EgoVehicleStatus.wheel_angle  deg   <- UDP front_steer
   ObjectStatus.velocity         km/h
-  CtrlCmd.steering              rad   -> UDP -1~1 정규화
+  CtrlCmd.steering              rad, left positive -> normalized UDP -1~1
+                                (sign selected by verified invert_steer)
 """
 
 import math
@@ -202,6 +203,10 @@ class MoraiUdpBridge(object):
         self.cmd_port = p("~cmd_port", 9093)          # MORAI 의 Host PORT
         self.max_steer_deg = float(p("~max_steer_deg", 40.0))
         self.cmd_bytes = int(p("~cmd_payload_bytes", 27))
+        # MPC/camera followers use left-positive radians (ENU). Keep the
+        # historically validated team default; the current R1.H3 workstation
+        # requires true based on command/yaw A/B verification (2026-10-26).
+        # Select the transport sign once here, not in the controller model.
         self.invert_steer = bool(p("~invert_steer", False))
         self.frame_id = p("~frame_id", "base_link")
         self.ego_vel_ms = bool(p("~ego_velocity_in_ms", True))
@@ -231,6 +236,11 @@ class MoraiUdpBridge(object):
         self.timestamp_mode = str(p("~timestamp_mode", "receive")).strip().lower()
         if self.timestamp_mode not in ("receive", "source"):
             raise ValueError("timestamp_mode must be receive or source")
+        rospy.loginfo(
+            "MORAI control UDP -> %s:%d payload=%dB max_steer=%.1fdeg invert_steer=%s",
+            self.cmd_ip, self.cmd_port, self.cmd_bytes, self.max_steer_deg,
+            str(self.invert_steer).lower(),
+        )
 
         self.pub_ego = (
             rospy.Publisher("/Ego_topic", EgoVehicleStatus, queue_size=1)

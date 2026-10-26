@@ -47,7 +47,9 @@
 //       12.7.2절, 3.3절, 8.2절
 
 #include "Frenet/frenet_planner.hpp"
+#include <yaml-cpp/yaml.h>
 #include "Frenet/Geometry/PolygonUtils.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Planning/Compatibility/avoid_commit_coordinator.hpp"
 
 #include <algorithm>
@@ -150,6 +152,9 @@ TrackedObject MakeMapObstacle(int id, double x, double y, double heading,
     object.speed = speed;
     object.vx = speed * std::cos(heading);
     object.vy = speed * std::sin(heading);
+    // A stationary synthetic fixture is a confirmed stationary observation,
+    // not UNKNOWN (whose prediction envelope deliberately grows with time).
+    if (speed == 0.0) object.motion_state = ObjectMotionState::LOW_THREAT;
     object.width = width;
     object.length = length;
     object.height = height;
@@ -197,18 +202,21 @@ TrackedObject MakeObstacle(const Waypoints& waypoints, int id, double target_s,
 std::string MakeLocalConfig(const std::string& source,
                             const std::string& waypoints,
                             const std::string& out_path) {
-    std::ifstream in(source);
-    if (!in) return {};
+    auto config = YAML::LoadFile(source);
+    config["waypoint_file"] = waypoints;
+    // These synthetic lateral-offset scenes test the AVOID transaction and
+    // collision contracts, not whether an offset fits the deployed K-City map.
+    // Real-map constraints are covered by avoid_road_constraints_test.
+    config["avoid_hd_map"]["enabled"] = false;
+    config["roundabout_merge"]["enabled"] = false;
+    // Pin the five-cycle boundary exercised below. The deployed static-object
+    // grace is tested independently, so tuning params.yaml cannot silently
+    // change the meaning of these transaction fixtures.
+    config["planner"]["avoid"]["dropout_grace_cycles"] = 5;
+    config["planner"]["avoid"]["static_dropout_grace_cycles"] = 5;
     std::ofstream out(out_path);
     if (!out) return {};
-    std::string line;
-    while (std::getline(in, line)) {
-        if (line.rfind("waypoint_file:", 0) == 0) {
-            out << "waypoint_file: \"" << waypoints << "\"\n";
-        } else {
-            out << line << '\n';
-        }
-    }
+    out << config;
     return out_path;
 }
 
@@ -219,6 +227,10 @@ PlannerCommand MakeAvoidCommand(
     command.mode = AVOID;
     command.target_object_id = target_object_id;
     command.requested_direction = direction;
+    // The synthetic scenes start at 6 m/s. Do not inherit the deployed KEEP
+    // cruise speed: accelerating toward that speed describes a different scene.
+    command.has_target_speed = true;
+    command.target_speed = 6.0;
     return command;
 }
 
@@ -427,6 +439,53 @@ int main() {
                "exceeding the grace window reports TARGET_OBJECT_LOST");
         Expect(planner.active_avoid_target_id() == -1,
                "an exhausted grace window clears the target");
+    }
+
+    // The deployed profile deliberately has a longer static grace than the
+    // generic five-cycle fixture. Check both exact boundaries without changing
+    // the production policy or interpreting UNKNOWN velocity as static.
+    {
+        const auto deployed = YAML::LoadFile(
+            package_src + "/../config/frenet/params.yaml");
+        auto fixture = YAML::LoadFile(config);
+        fixture["planner"]["avoid"]["dropout_grace_cycles"] =
+            deployed["planner"]["avoid"]["dropout_grace_cycles"].as<int>();
+        fixture["planner"]["avoid"]["static_dropout_grace_cycles"] =
+            deployed["planner"]["avoid"]["static_dropout_grace_cycles"].as<int>();
+        const std::string deployed_config =
+            "command_avoid_target_deployed_grace_test_params.yaml";
+        { std::ofstream output(deployed_config); output << fixture; }
+        const int dynamic_grace =
+            deployed["planner"]["avoid"]["dropout_grace_cycles"].as<int>();
+        const int static_grace =
+            deployed["planner"]["avoid"]["static_dropout_grace_cycles"].as<int>();
+        Expect(static_grace > dynamic_grace,
+               "deployed grace: static targets have a longer bounded window");
+        for (bool dynamic : {false, true}) {
+            FrenetPlanner planner;
+            Expect(planner.Init(deployed_config), "deployed grace: fixture loads");
+            auto target = MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0);
+            target.motion_state = dynamic ? ObjectMotionState::DYNAMIC
+                                          : ObjectMotionState::LOW_THREAT;
+            CartesianPath path;
+            const auto command = MakeAvoidCommand(21);
+            planner.Plan(ego, {target}, command, path);
+            bool held = planner.active_avoid_target_id() == 21;
+            const int grace = dynamic ? dynamic_grace : static_grace;
+            for (int cycle = 1; cycle <= grace; ++cycle) {
+                planner.Plan(ego, {}, command, path);
+                held &= planner.active_avoid_target_id() == 21 &&
+                        planner.avoid_missing_cycles() == cycle;
+            }
+            Expect(held, dynamic ? "deployed dynamic grace: exact window survives"
+                                 : "deployed static grace: exact window survives");
+            planner.Plan(ego, {}, command, path);
+            Expect(planner.active_avoid_target_id() == -1 &&
+                       planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+                   dynamic ? "deployed dynamic grace: next cycle expires"
+                           : "deployed static grace: next cycle expires");
+        }
+        std::remove(deployed_config.c_str());
     }
 
     // ===== 6. 재관측하면 유예가 초기화된다 =============================
@@ -1725,9 +1784,12 @@ int main() {
     }
     {
         // 2026-09-18 실차 정지 장면 회귀: 차량은 이미 상자의 오른쪽으로
-        // 약 12.5 deg 틀어져 있고 실제 두 OBB는 분리돼 있다. 예전
-        // fallback은 후보를 reference heading으로 되돌려 8개 모두를
-        // 충돌 처리했다. GPS->rear-axle 0.35 m 보정이 적용된 좌표다.
+        // 약 12.5 deg 틀어져 있고 실제 두 OBB는 분리돼 있다. 현재
+        // Euclidean clearance는 시작 0.45146 m에서 후보 sample 2의
+        // 0.44638 m로 감소한다. 0.45 m margin 밖에서 시작한 경로의
+        // 후속 margin 진입은 recovery가 아니다. 과거의 "물리 충돌만
+        // 없으면 후보 성공" 기대를 현재 안전 계약으로 대체한다.
+        // GPS->rear-axle 0.35 m 보정이 적용된 과거 기록 좌표다.
         FrenetPlanner planner;
         planner.Init(config);
         CartesianState scene_ego{};
@@ -1749,11 +1811,54 @@ int main() {
             MakeAvoidCommandWithTargetD(
                 target.id, target_s, -2.57604, LateralDirection::RIGHT),
             maintenance, result);
+        const auto fixture = YAML::LoadFile(config)["planner"];
+        const auto shape_config = fixture["vehicle_shape"];
+        const VehicleShape shape{shape_config["width"].as<double>(),
+                                 shape_config["length"].as<double>(),
+                                 shape_config["rear_overhang"].as<double>()};
+        const auto collision = fixture["collision_check"];
+        const CollisionCheckConfig clearance_config{
+            collision["safety_margin"].as<double>(),
+            collision["margin_growth_rate"].as<double>(),
+            collision["reactive_lookahead"].as<double>()};
+        const double initial_clearance = geometry::ConvexPolygonDistance(
+            MakeEgoFootprint(scene_ego, shape, 0.0),
+            PredictObstacleFootprint(target, 0.0));
+        bool later_margin_entry = !planner.last_candidate_paths().empty();
+        for (const auto& candidate : planner.last_candidate_paths()) {
+            const auto safety = EvaluateCartesianTrajectorySafety(
+                candidate, {target}, shape, clearance_config,
+                fixture["path_generator"]["dt"].as<double>(), target.id);
+            later_margin_entry &= !safety.clear &&
+                !safety.margin_recovery_used &&
+                safety.blocking_object_id == target.id &&
+                safety.blocking_sample_index > 0;
+            if (safety.blocking_sample_index <= 0 ||
+                static_cast<std::size_t>(safety.blocking_sample_index) >=
+                    candidate.x.size()) {
+                later_margin_entry = false;
+                continue;
+            }
+            const auto index = static_cast<std::size_t>(safety.blocking_sample_index);
+            CartesianState blocked_pose{};
+            blocked_pose.x = candidate.x[index];
+            blocked_pose.y = candidate.y[index];
+            blocked_pose.yaw = candidate.yaw[index];
+            const double blocked_clearance = geometry::ConvexPolygonDistance(
+                MakeEgoFootprint(blocked_pose, shape, 0.0),
+                PredictObstacleFootprint(target, 0.0));
+            later_margin_entry &= blocked_clearance > 0.0 &&
+                blocked_clearance <= clearance_config.safety_margin;
+        }
         Expect(projected && target.geometry_valid,
                "stopped escape scene: recorded geometry is valid");
-        Expect(ok && result.candidate_valid &&
-                   result.valid_candidate_count > 0,
-               "stopped escape scene: a physically clear candidate survives");
+        Expect(initial_clearance > clearance_config.safety_margin &&
+                   later_margin_entry,
+               "stopped escape scene: candidates enter the margin after starting outside");
+        Expect(ok && !maintenance.x.empty() && !result.candidate_valid &&
+                   result.valid_candidate_count == 0 &&
+                   result.blocking_object_id == target.id,
+               "stopped escape scene: unsafe margin entry waits without granting READY");
     }
     {
         // 두 정적 장애물을 함께 검사한다. 지정 대상은 중앙에 있지만 더

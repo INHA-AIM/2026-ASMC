@@ -1,10 +1,24 @@
 # asmc_lidar 웹 모니터 — 처리 결과를 브라우저에서 보기 (읽기 전용)
 
+**2026-10-26 표시 갱신:** 기본 namespace는 `/perception/lidar`다. 기존 시험 노드를 볼 때는
+`namespace:=/migration/lidar`를 명시한다. 포팅한 시설물·구조물·관측 확인 정책 제외는 파란색과
+별도 숨김 항목으로 구분한다. 시설물/구조물 좌표 blacklist는 제거했으며 파란색 정책은
+현재 관측 품질 제외다. 이전 생산자의 사유도 표시할 수 있다. 공개 속도/운동은 연결됐으며 웹은 진단 도구다.
+[속도 의미·실행 경계](planning-runtime.md)를 따른다.
+
+현재 발행 필터와 표시 계층: PR #108의 기본 `filter`는 HD맵 안쪽10cm·점군3점/10% AND
+OBB10% 및 상부 객체 제외를 실제 `objects/observations`에 적용한다. 원본 tracker/점군은
+debug에 남으므로 원본 계층의 박스와 전달 배열을 구분한다. 웹의 숨김/ROI 체크는 표시만 바꾼다.
+속도·운동 색은 진단이다. 상세의 공용 적용 속도/운동 validity는 같은 scan의 실제 발행 배열에서
+표시하며 GPS 무효·UNKNOWN과 유효한 정지 추정을 구분한다.
+[현재 설정·판제 전환·터널 후속](cutover-foundation.md)을 먼저 확인한다.
+
 `roslaunch asmc_lidar view.launch`는 이미 실행 중인 LiDAR의 결과를 구독하는 **읽기 전용 웹 모니터만** 띄운다.
 처리는 별도 `roslaunch asmc_lidar lidar.launch debug:=true`에서 시작한다.
 목적은 "내 asmc_lidar가 실제로 어떤 점을 남겼고 어떤 객체를 추적하는지"를 확인하는 것이다.
 모니터는 ROS를 구독만 하고, 발행·서비스 호출·파라미터 변경·shell 실행을 하지 않는다.
-판제는 계속 기존 `Main`(`/last_lidar`)을 쓴다. 이 launch는 Main·planner·카메라 추론·UDP bridge·Velodyne
+통합 판제 기본은 인수 전까지 기존 `Main`(`/last_lidar`)이며 새 typed 입력은 명시적으로 선택한다.
+이 launch는 Main·planner·카메라 추론·UDP bridge·Velodyne
 driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. TunnelFilter는 기본 OFF다.
 
 ## 가장 짧은 실행
@@ -16,7 +30,8 @@ driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. T
 
 - 기본 숨김은 점군·OBB·높이 후보 모두 ON이다. `제외 후보 모두 숨기기 (화면만)`로 전체를 바꾼다. 점군 근거/OBB 근거/상부 높이 후보를
   개별로 켜고 끌 수 있으며 같은 객체가 여러 사유에 해당할 수 있다. OBB·라벨과 **정확히 소속이 확인된 표시 점**을 함께 숨긴다.
-  **목록·원본 ROS 객체·tracker는 유지**한다. 목록에서 선택한 후보는 다시 그려 근거를 확인한다.
+  **목록·원본 debug track은 유지**하며 체크박스로 ROS 발행 배열을 변경하지 않는다.
+  기본 filter가 이미 제외한 객체는 실제 전달 배열에 없을 수 있다. 목록에서 선택한 후보는 다시 그려 근거를 확인한다.
   보류·지도/pose 무효 객체는 숨기지 않는다. 중심점 하나의 도로 포함 여부로 삭제하지 않는다.
 - `! ID 변경 의심`은 화면에서 관측한 교체 후보이며 동일 물체의 확정 식별이 아니다.
   유효 map pose/영역 안 객체에 대해 최근 0.8초의 map 중심(거리 2m 이하),
@@ -44,13 +59,15 @@ driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. T
   함수 본문을 유지한 transport-free 이식이다. 임계값은 현재 Main 기본값(x10/y4km/h,
   변위 x8/y3km/h)이며 별도 튜닝하지 않았다. map OBB bounds/벡터는 저장된 scan Context로
   계산하고 모든 처리 scan마다 갱신한다. GPS 무효 시 이력을 지워 UNKNOWN으로 복구한다.
-  이는 주행 성능 수락이나 typed dynamic/velocity validity 승격이 아니다. 판제는 미연결이다.
+  이는 속도 정확도의 주행 수락이 아니다. 동일 계산의 적용 속도/4단계 상태는 공용 관측으로
+  연결했고 판제의 `asmc_lidar` 선택에서 직접 소비한다. GPS 무효에서는 validity를 내린다.
 - `주행가능영역·실제 차선`: **`asmc_hd_map`의 최신 v7 정본**
   `config/kcity2025_compact_drivable_map.json`을 읽기 전용으로 표시한다.
   판제의 별도 v5 사본으로 자동 대체하지 않는다. 원점은 판제 `config/behavior/global_info.json`과 pipeline YAML의 map.origin을
   대조한다. 불일치·파일 누락이면 숨기고 사유를 표시한다. 판제 노드를 켤 필요는 없다.
-- `/api/drivable`은 서버 시작 때 검증한 도로 면·실제 paint segment를 제공한다. 원본/운영 지도를 수정하거나
-  이 영역으로 LiDAR 객체를 제거하지 않는다. 지도 부재가 LiDAR 처리를 막지 않는다.
+- `/api/drivable`은 서버 시작 때 검증한 도로 면·실제 paint segment를 제공한다. 이 HTTP 표시 자체가
+  원본 지도를 수정하거나 LiDAR 객체를 제거하지 않는다. 실제 제외는 처리 노드의 별도 전달 필터가
+  수행한다. 지도 부재가 LiDAR local 처리를 막지 않는다.
 
 2026-10-25부터 도로 면을 한 번에 채워 링크별 polygon 테두리와 내부 겹침 띠를 표시하지 않는다.
 별도 링크 중심선·차로 안내 구분선은 추가하지 않는다. 같은 product가 SHA로 고정한 실제 차선·정지선만
@@ -150,6 +167,18 @@ bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌�
 처리 노드는 계속 실행된다. 이때 `dashboard_port:=8092`처럼 다른 포트로 모니터만 다시 띄운다
 (`view.launch`는 항상 화면만 실행한다).
 
+## 8091 포트 충돌과 기존 시험 웹
+
+`Address already in use`는 기존 웹이 같은 포트를 쓰는 상태다. 현재 ROS namespace와 기존
+웹의 `config.topics.scan`을 확인한다. 구 `/migration/lidar` 웹이면 해당 시험 launch를 먼저
+종료하고 정식 `view.launch` 하나만 실행한다. 운영 처리 노드나 ROS master를 종료할 이유는 없다.
+임시 병행이 필요할 때만 기존 인자 `dashboard_port:=8092`를 사용하며 두 화면의 namespace를 구분한다.
+
+2026-10-26 수정: bind 실패 시 Python TCPServer가 초기화 중 `server_close()`를 호출할 수
+있다. worker 목록을 bind 전에 초기화하여 `_workers` AttributeError가 원래 포트 충돌을
+가리지 않게 했다. 기존 서버 정상 응답·추가 worker 생성 없음까지 포함한 HTTP core34개
+회귀를 통과했다. 이 웹 시작 오류는 판제 조향/가속 계산을 변경하지 않는다.
+
 ## 화면
 
 - **큰 화면**: BEV 또는 3D 점군·OBB·자차. 좌클릭 드래그 회전, 가운데 드래그 이동,
@@ -160,8 +189,9 @@ bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌�
   map pose 무효 시 Local은 유지하고 지도 오버레이와 Map 선택은 비활성화한다.
 - **상태**: 서버·pipeline·map·카메라 상태는 상단, Hz·처리시간 등은 접힌 실행 수치에 있다.
 - **객체 상세**(오른쪽): track ID·age·miss, classification·camera_class, frame·stamp, OBB center(표시 frame과
-  leveled), length/width/height, yaw, source point count, distance. 속도·동정적 validity가 false이므로
-  **"미검증/미제공"**으로 표시한다. KF 내부값(`abs_v`, `velocity`)은 아래 "진단용 미검증 값"에만 보인다.
+  leveled), length/width/height, yaw, source point count, distance. **공용 적용 속도와 validity**를
+  같은 scan의 typed 배열에서 읽는다. UNKNOWN/무효를 정지 확인으로 표시하지 않으며 구 생산자가
+  새 validity를 기록하지 않으면 미제공으로 표시한다. KF 내부값(`abs_v`, `velocity`)은 별도 진단값이다.
 - 오른쪽 상태 표: 단계별 실제 점 수, RANSAC 비지면/제거 지면, cluster 수, detections/tracks(관측/예측),
   roll/pitch/yaw/속도, 지면 평면 계수, map pose, 처리·capture ms, 누락 단계(waiting/missing), 모니터 수신 통계.
 

@@ -1,5 +1,9 @@
 # BBOX 검출에 따른 반복 차선변경
 
+2026-10-26: 공용 카메라 결과를 기존 frame bridge가 직접 소비한다. 구 Main CPU 변환과
+`camera_bbox_detector.launch`는 제거했고 Main/Msg가 필요 없다. cutoff0.7과 판정/주행 계산은 유지하며
+원본 subpixel bbox를 private frame에 보존한다. 별도 detector 실행 없이 카메라와 아래 launch를 사용한다.
+
 **IMU 투영은 연결됐고 폐루프 제어 인수는 별도다.** Classifier는 정확한 영상의 보정 context를
 사용하고 follower와 동일한 현재 config SHA를 기대한다. 원래 미터 단위 xy 소비에는 자세를
 다시 적용하지 않는다. metadata 누락·세대 전환은 UNKNOWN이며 기존 제어 정책이 처리한다.
@@ -89,7 +93,6 @@ docker exec -it asmc-ros-noetic bash -lc '
 source /opt/ros/noetic/setup.bash &&
 source /root/ws/devel/setup.bash &&
 source /root/ws/src/lidar+sensorfusion/devel/setup.bash &&
-roslaunch lane_boundary_adapter camera_bbox_detector.launch
 '
 ```
 

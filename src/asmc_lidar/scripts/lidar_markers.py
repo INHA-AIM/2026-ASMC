@@ -142,9 +142,9 @@ class MarkerNode:
         self.last_display_publish = 0.
         self.header = None
         self.stop = threading.Event()
-        self.publisher = rospy.Publisher(rospy.get_param('~output', '/migration/lidar/markers'),
+        self.publisher = rospy.Publisher(rospy.get_param('~output', '/perception/lidar/markers'),
                                          MarkerArray, queue_size=1)
-        self.subscriber = rospy.Subscriber(rospy.get_param('~input', '/migration/lidar/observations_local'),
+        self.subscriber = rospy.Subscriber(rospy.get_param('~input', '/perception/lidar/observations_local'),
                                            LidarObservation, self.receive, queue_size=1, tcp_nodelay=True)
         self.worker = threading.Thread(target=self.expire, name='lidar_marker_expiry', daemon=True)
         self.worker.start()

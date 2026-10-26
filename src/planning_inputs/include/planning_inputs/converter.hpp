@@ -6,6 +6,7 @@
 #include <string>
 
 #include <asmc_msgs/TrackedObjectArray.h>
+#include <asmc_msgs/LidarTrackingObservation.h>
 #include <planning_inputs/DetectedObjectArray.h>
 
 namespace planning_inputs {
@@ -33,6 +34,8 @@ enum class ConversionStatus {
   INVALID_DIMENSIONS,
   INVALID_OBB,
   INVALID_MOTION_STATE,
+  INVALID_OBSERVATION,
+  INVALID_VELOCITY,
 };
 
 struct ConversionStats {
@@ -52,6 +55,14 @@ ConversionStatus ConvertTrackedObjects(
     planning_inputs::DetectedObjectArray* output,
     ConversionStats* stats = nullptr,
     std::string* detail = nullptr);
+
+// Direct common contract. No legacy wire, JSON join, clipping or second
+// classifier. Invalid/pose-unavailable/unrepresentable frames are withheld,
+// never converted into an observed-empty planning frame.
+ConversionStatus ConvertLidarObservation(
+    const asmc_msgs::LidarTrackingObservation& input,
+    planning_inputs::DetectedObjectArray* output,
+    ConversionStats* stats = nullptr, std::string* detail = nullptr);
 
 }  // namespace planning_inputs
 

@@ -150,6 +150,16 @@ runtime:
   # Main RAW_LIDAR_DATA capacity: 2,000,000 B / sizeof(pcl::PointXYZI) (32 B).
   max_points: 62500
 
+# Ground-fragment evidence and observation acquire/release are independent of
+# road membership. Fixed-center catalogs and rectangular structure blacklists
+# are deliberately absent: current HD-map/support/overhead rules own that work.
+# Existing quality thresholds and near-object preservation remain unchanged.
+delivery:
+  enabled: true
+  minimum_obstacle_height_m: 0.10
+  confirmation_frames: 3
+  release_frames: 5
+
 experimental:
   # Preserved TunnelFilterCore stage (PR #102); default OFF.
   tunnel_filter:

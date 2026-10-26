@@ -163,7 +163,7 @@ TEST(KnownStaticObjectFilter, MismatchFailsSafeKeep) {
 TEST(KnownStaticObjectFilter, DropsObservedLongGuardrailOnlyInTargetRegion) {
     KnownStaticObjectFilter filter;
     const std::string catalog_path =
-        (std::filesystem::path(__FILE__).parent_path().parent_path() /
+        (std::filesystem::path(PLANNING_INPUTS_TEST_SOURCE_DIR) /
          "config/validated_0781402/known_static_objects.yaml").string();
     ASSERT_TRUE(filter.Configure(
         catalog_path, "waize_katri_2025-10-23",
@@ -187,7 +187,7 @@ TEST(KnownStaticObjectFilter, DropsObservedLongGuardrailOnlyInTargetRegion) {
 TEST(KnownStaticObjectFilter, DropsFollowingLongGuardrailInSecondRegion) {
     KnownStaticObjectFilter filter;
     const std::string catalog_path =
-        (std::filesystem::path(__FILE__).parent_path().parent_path() /
+        (std::filesystem::path(PLANNING_INPUTS_TEST_SOURCE_DIR) /
          "config/validated_0781402/known_static_objects.yaml").string();
     ASSERT_TRUE(filter.ConfigureWithRegions(
         catalog_path, "waize_katri_2025-10-23",

@@ -14,7 +14,7 @@
 
 namespace asmc { namespace lidar { namespace pipeline { namespace motion_display {
 using float32 = float;
-// Inputs copied from a full scan; outputs are diagnostic-only, not typed validity.
+// Full-scan Main-compatible applied estimates; UNKNOWN is not confirmed static.
 struct MotionObject {
  int s32_Id=-1,s32_MissCount=0;
  double f32_AbsVx=0,f32_AbsVy=0,f32_CoreE=0,f32_CoreN=0;

@@ -2,7 +2,23 @@
 
 > **Document role:** Active Package Guide — Behavior/Frenet/MPC inputs.
 
-## Validated LiDAR policy (default)
+## asmc_lidar 직접 입력
+
+`source_policy:=asmc_lidar`는 `asmc_msgs/LidarTrackingObservation`을 직접 받아 source stamp·
+ID·원본 OBB·적용 속도·4단계 운동 상태를 전달한다. 구 wire/JSON join·두 번째 classifier·
+필터/clipping을 실행하지 않는다. session/generation·설정/보정 ID·freshness·정렬을 검사하고
+정상 빈 결과와 무효/미수신을 구분한다. [속도 의미·검증·복구](../asmc_lidar/docs/planning-runtime.md)를 따른다.
+
+```bash
+roslaunch asmc_lidar lidar.launch
+roslaunch asmc_planner autonomy_no_bridges_v2.launch lidar_source_policy:=asmc_lidar
+```
+
+두 번째 명령은 차량 제어를 포함한다. 현재 통합 판제 기본은 기존 `validated_lidar`로 유지하며
+실제 소비 인수 때 명시적으로 새 경로를 선택한다. 새 경로는 outer workspace만 빌드하고 source한다.
+아래 구 경로는 인수 전 기존 실행·복구를 위한 안내다.
+
+## Validated LiDAR 기존 실행·복구 (통합 launch 기본)
 
 The pre-rebase reference is 0781402 on
 backup/avoid-merge-validated-20261005. Its complete nested Main LiDAR processing

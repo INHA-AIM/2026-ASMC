@@ -131,6 +131,7 @@
   }
   function exclusionKinds(d) {
     const p=d&&d.preview,decision=p?p.decision:d&&d.decision,reason=p?p.reason:d&&d.reason;
+    if(d&&d.delivery_excluded&&reason&&/^(known_static|structure|observation_quality):/.test(reason))return ['policy'];
     if(p&&p.point_decision!==undefined)
       return [['height',p.height_decision],['points',p.point_decision],['obb',p.obb_decision]].filter(a=>a[1]==='exclude_candidate').map(a=>a[0]);
     if(decision!=='exclude_candidate')return [];
@@ -149,7 +150,7 @@
         kind==='keep'&&p&&p.reason==='exception_space_protected'?'구형 미션 보호':kind==='keep'&&p&&p.reason==='joint_drivable_support'?'점군·OBB 유지':
         kind==='keep'&&p&&p.reason==='cluster_drivable_support'?'구형 점군 유지':
         {keep:'유지',exclude_candidate:'제외 후보',undetermined:'보류',unavailable:'미실행'}[kind]||'보류',
-      color:category?{points:'#f472b6',obb:'#c084fc',height:'#fb923c'}[category]:{keep:'#34d399',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',
+      color:category?{points:'#f472b6',obb:'#c084fc',height:'#fb923c',policy:'#60a5fa'}[category]:{keep:'#34d399',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',
       detail:AUDIT_REASONS[p?p.reason:d?d.reason:'']||(p?p.reason:d?d.reason:'audit OFF')};
   }
   function previewVisible(scene,track,showPred,hideCandidates,hideReasons={}){

@@ -64,7 +64,7 @@
     "artifacts": {
       "facade_launch": {
         "path": "src/asmc_bridge/launch/bridge.launch",
-        "sha256": "ead524373a72d35400e56c7dce16dc1a1b4c3c798c7f118e9bce0aab2b8348df"
+        "sha256": "ed4549410b6f39270eb6160016afede6b71f74e8dbf8429f317f766dde74aa21"
       },
       "facade_package": {
         "path": "src/asmc_bridge/package.xml",
@@ -76,11 +76,11 @@
       },
       "network_launch": {
         "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
-        "sha256": "7ecfec0772bd5517e973e53bc9f0efcfc98169869afa04b43b93368b94c2e23f"
+        "sha256": "4dd83e24e97edc9fa3c80df9ac85d0b2d986a649b3868ecfde6f9b1afe2b0b55"
       },
       "network_node": {
         "path": "src/asmc_bridge/scripts/morai_udp_bridge.py",
-        "sha256": "a689089ccf9065a6be3b4cc69264d05783d1e8f7ac1a9e69994093eb968404ca"
+        "sha256": "e060a1ebb3111f09b804f0a173b4c4642ec59cf54b6e0eed6366dd68ed69d805"
       },
       "sensor_launch": {
         "path": "src/asmc_bridge/launch/morai_sensor_bridge.launch",
@@ -104,7 +104,7 @@
       },
       "network_profile_renderer": {
         "path": "tools/bridge/render_morai_network_profiles.py",
-        "sha256": "e836e7cfaa7c037b90688fc809c5b4fff1272fdd7899a355b0acc1d5c13ab18d"
+        "sha256": "f05fd98d21db18902c9fa416733263365a429ca13b62c6be79e7963c449e6c7e"
       },
       "sensor_profile_renderer": {
         "path": "tools/bridge/render_morai_sensor_profiles.py",
@@ -124,9 +124,9 @@
       },
       "telemetry_module": {
         "path": "src/asmc_bridge/src/asmc_bridge/telemetry.py",
-        "sha256": "822653f81f989d6d4c0a533738aa2eca471494cc2a06b5abd0649c58f147643d",
-        "previous_sha256": "e148d13086ceaa63291c045039a43ec0e97ff8ac008102294fc50df80093c527",
-        "revision_reason": "20261018_additive_sensor_frame_timing_kernel_receipt_and_bounded_imu_burst_queue"
+        "sha256": "c3ce78a5b6bdaf7aad0c5cf25f1a356640f783e695e1074f7bd254c50dddd112",
+        "previous_sha256": "822653f81f989d6d4c0a533738aa2eca471494cc2a06b5abd0649c58f147643d",
+        "revision_reason": "20261026_report_loaded_control_transport_and_steering_values_without_changing_sensor_timing"
       },
       "python_setup": {
         "path": "src/asmc_bridge/setup.py",
@@ -283,13 +283,23 @@
       ],
       "source_auxiliary_pubsub_types": [4865],
       "competition_vehicle_status_available": false,
+      "control_import": {
+        "controller": "MoraiCmdController",
+        "pubsub_type": 771,
+        "ego_ctrl_mode": 3,
+        "receive_buffer_size": 59,
+        "verified_release": "26.R1.H3",
+        "verified_export": "C:/MoraiLauncher_Win/MoraiLauncher_Win_Data/SaveFile/Network/26.R1.H3/NetworkInfo_2023_Hyundai_Ioniq5.json",
+        "verified_export_sha256": "8b0af6432ba9f94e3ed5bda13e35a3010830caa47d8a677c9f7b8cc8b46421ba",
+        "note": "2026-10-26 UI/export verification: source type 786 is TrajectoryTrackingCmd. Import egoCtrlMode=3 selects MoraiCmdController in this release; the UDP AutoMode byte remains 2."
+      },
       "generated": {
         "local": "config/morai/network/generated/ASMC_network_set_26r1_local.json",
         "lan2lan": "config/morai/network/generated/ASMC_network_set_26r1_lan2lan.json"
       },
       "generated_sha256": {
-        "local": "16f7e7f116b676be429b8ce7804966a5475e20c1470103d97adf8409c006a59d",
-        "lan2lan": "3d810f2cbf1b1c04061db024a79ad4c6dfa27dece5c3172751521875f5257dbb"
+        "local": "73beac3b5a584b80f4e3c8d7d9e0d4748f874fa975958682061ce20ddb3fc082",
+        "lan2lan": "9914bc6198671720de14b27c4a09d18bccce54b5143247896dfa3d551db2ba00"
       }
     },
     "molitcomp03": {

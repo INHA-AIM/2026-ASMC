@@ -10,13 +10,13 @@ class FilterContract(unittest.TestCase):
     def test_raw_source_and_required_adapter(self):
         root = ET.parse(PKG / 'launch/objects.launch').getroot()
         self.assertEqual(root.find("arg[@name='input_topic']").get('default'),
-                         '/last_lidar')
-        self.assertEqual(root.find("arg[@name='source_policy']").get('default'), 'validated_lidar')
+                         "$(eval '/perception/lidar/tracks_map' if arg('source_policy') == 'asmc_lidar' else '/last_lidar')")
+        self.assertEqual(root.find("arg[@name='source_policy']").get('default'), 'asmc_lidar')
         node = root.find("node[@name='planning_objects_adapter']")
         self.assertEqual(node.get('required'), 'true')
         launch = ET.parse(ROOT / 'src/asmc_planner/launch/autonomy_no_bridges_v2.launch').getroot()
         self.assertEqual(launch.find("arg[@name='lidar_input_topic']").get('default'),
-                         '/last_lidar')
+                         "$(eval '/perception/lidar/tracks_map' if arg('lidar_source_policy') == 'asmc_lidar' else '/last_lidar')")
         for name in ('drivable_mask_image', 'drivable_mask_metadata',
                      'known_static_catalog', 'static_structure_exclusion_config'):
             relative = node.find("param[@name='%s']" % name).get('value')

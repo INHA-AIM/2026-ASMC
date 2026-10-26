@@ -56,8 +56,13 @@ int main(){
  auto pose_at=[&](double s){auto p=Interpolate(ref,s);return CartesianState{p.x,p.y,p.theta,0,0,0};};
  ego=zone.waiting_pose;ego.v=.1;ego.a=-3;
  planner.ResetRoundaboutMerge();expect(tick(300,300)&&r.candidate_valid,"low-speed braking boundary can reach zero and depart without reverse rejection");
- ego=pose_at(zone.stop_s-6);planner.ResetRoundaboutMerge();tick(301,301);tick(301.1,301.1);tick(301.2,301.2);
- expect(r.candidate_valid&&!r.ready,"safe distant candidate cannot commit six metres before the stopline");
+ ego=pose_at(zone.stop_s-6);planner.ResetRoundaboutMerge();
+ tick(301,301);tick(301.1,301.1);tick(301.2,301.2);
+ // A departure from rest need not fit the horizon six metres before the
+ // stopline. Candidate availability and permission to commit are independent.
+ expect(!r.ready&&!planner.CanCommitRoundaboutMerge(r),"distant PREPARE cannot commit six metres before the stopline");
+ ego.v=1.0;planner.ResetRoundaboutMerge();tick(301,301);tick(301.1,301.1);tick(301.2,301.2);
+ expect(r.candidate_valid&&!r.ready&&!planner.CanCommitRoundaboutMerge(r),"a valid moving approach candidate still cannot commit six metres before the stopline");
  ego=pose_at(zone.rear_clear_s-6);ego.v=5;ego.a=2.5;
  planner.ResetRoundaboutMerge();planner.ApplyRoundaboutMergeCommit({});
  expect(tick(302,302)&&r.candidate_valid,"positive acceleration entering exit curve does not force an empty trajectory");
