@@ -45,8 +45,6 @@ class LidarObservationGate {
     if (a.status != a.OBSERVED && a.status != a.OBSERVED_EMPTY) return reject("map_observation_unavailable");
     if ((a.status == a.OBSERVED_EMPTY) != a.objects.empty()) return reject("inconsistent_empty_status");
     if (a.objects.size() != packet.motion_states.size()) return reject("motion_count_mismatch");
-    asmc_msgs::TrackedObjectArray tracked;
-    tracked.header = a.header;
     for (std::size_t i = 0; i < a.objects.size(); ++i) {
       const auto& object = a.objects[i];
       if (object.observation_state != object.OBSERVED || object.miss_count != 0)
@@ -57,19 +55,9 @@ class LidarObservationGate {
       if ((packet.motion_states[i] == packet.LOW_THREAT || packet.motion_states[i] == packet.DYNAMIC) &&
           (!object.dynamic_valid || object.is_dynamic != (packet.motion_states[i] == packet.DYNAMIC)))
         return reject("inconsistent_motion_validity");
-      asmc_msgs::TrackedObject target;
-      target.id = object.track_id;
-      target.age = std::min<uint32_t>(object.age, std::numeric_limits<int32_t>::max());
-      target.classification = object.classification; target.yolo_class = object.camera_class;
-      target.cluster_center = target.obb_center = object.center;
-      target.obb_corners = object.obb_corners; target.obb_yaw = object.yaw;
-      target.length = object.length; target.width = object.width; target.height = object.height;
-      if (object.absolute_velocity_valid) target.velocity_mps = object.absolute_velocity_mps;
-      target.speed_kph = 3.6 * std::hypot(target.velocity_mps.x, target.velocity_mps.y);
-      tracked.objects.push_back(target);
     }
     DetectedObjectArray converted;
-    if (ConvertTrackedObjects(tracked, &converted, nullptr, reason) != ConversionStatus::OK) return false;
+    if (ConvertPlanningGeometry(a, &converted, nullptr, reason) != ConversionStatus::OK) return false;
     // Globally unique private IDs prevent planner caches reusing a retired
     // producer's track after reset/restart. Raw IDs remain in the public packet.
     for (std::size_t i = 0; i < converted.objects.size(); ++i) {

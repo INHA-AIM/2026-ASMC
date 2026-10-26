@@ -35,9 +35,9 @@ Frenet V2는 매 주기 새 객체 입력을 요구하고 stale이면 정지한�
 | 연결 경계 | 현재 전달·제한 | 판제가 확인할 것 |
 |---|---|---|
 | 카메라 관측 | 원본 영상 픽셀 bbox·header와 camera ID, confidence·그룹·원본 이름 | tensor 좌표로 다시 확대하거나 원본 보정을 축소하지 않음. LiDAR의 미터 좌표와 직접 비교하지 않음 |
-| Main 전방 호환 | `/YOLO/BBox`는 전방만, 구형 wire에 confidence·그룹·session 없음 | 추가 cutoff는 변환 전 적용. Main은 원본 이름으로 그룹 재구성. 좌우3뷰 fusion은 손재호 작업 |
+| LiDAR 전방 fusion | 공용 CameraObjectObservation의 원본 픽셀·confidence·그룹·식별자를 수신 | 전방 matching 구현, 좌우3뷰 fusion은 손재호 작업. 구 정수 wire는 폐기 |
 | 판제 숫자 enum | `vehicle/pedestrian/unknown`. 원본 person은 pedestrian, 다른 dynamic/static은 unknown 가능 | **unknown 형상을 삭제하지 않음**. 세 그룹/원본 종류 정책은 문자열을 보존한 tracked 정보에서 연결 |
-| 운동 상태 | semantic 그룹과 `motion_state`·속도 validity는 별개. Main의 opt-in typed 출력은 아직 velocity/dynamic valid=false | unknown·미계산을 정지 속도0으로 해석하지 않음. 실제 운영 출력과 source policy를 확인 |
+| 운동 상태 | semantic 그룹과 `motion_state`·속도 validity는 별개. 공용 추적 관측은 기존 적용 절대속도·4단계 상태와 각각의 유효성을 제공 | unknown·미계산을 정지 속도0으로 해석하지 않음. 정본 공용 관측의 상태와 validity를 확인 |
 | 입력 유지 | 새 관측의 빈 결과와 stale/무효/미수신을 구분 | 미션 밖 입력 토픽을 끊거나 빈 배열을 타이머로 만들어 장애를 숨기지 않음 |
 | 음영 family | `base_link` xyz·support·freshness, 같은 영상의 IMU 지면 context | 좌/우 역할을 home/opposing으로 고정하지 않음. stale·SHA·세대 불일치와 GPS 복귀 정책 인수 |
 | HD 정보 | map pose·station·속도·GPS 유효성은 별도 계약 | [HD 적용 확인표](hd-map-to-planning.md#판제-적용-전-확인--2026-10-20-코드-대조)의 번들·기준점·단위 대조 |
@@ -105,7 +105,7 @@ Frenet V2는 매 주기 새 객체 입력을 요구하고 stale이면 정지한�
 ## 실행·변경 책임
 
 ```bash
-# 각 터미널에서 같은 workspace 환경을 source. bridge/Main은 별도 한 세트 유지.
+# 각 터미널에서 같은 workspace 환경을 source. bridge/LiDAR는 별도 한 세트 유지.
 roslaunch asmc_camera camera.launch
 # 별도 판제 터미널: 카메라가 신호등도 소유하므로 별도 ResNet은 시작하지 않음
 roslaunch asmc_planner autonomy_no_bridges_v2.launch

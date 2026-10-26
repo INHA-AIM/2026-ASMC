@@ -1,2 +1,0 @@
-# This directory is a self-contained nested catkin workspace. The outer
-# 2026-ASMC workspace must not recursively build its duplicate ROS packages.

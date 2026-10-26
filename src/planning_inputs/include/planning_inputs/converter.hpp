@@ -5,14 +5,12 @@
 #include <cstdint>
 #include <string>
 
-#include <asmc_msgs/TrackedObjectArray.h>
 #include <asmc_msgs/LidarTrackingObservation.h>
 #include <planning_inputs/DetectedObjectArray.h>
 
 namespace planning_inputs {
 
-// Canonical ASMC object categories. Msg/TrackedObject.type uses a different
-// numeric convention, so the source integer must never be copied directly.
+// Planner-specific categories; these are not YOLO class or group IDs.
 // Unknown retains geometry/motion; camera static/dynamic groups are not this enum.
 constexpr std::uint8_t kObjectUnknown = 0;
 constexpr std::uint8_t kObjectVehicle = 1;
@@ -48,13 +46,11 @@ struct ConversionStats {
 
 const char* ConversionStatusName(ConversionStatus status);
 
-// Converts one source frame atomically. On failure, output is not modified;
-// callers must not publish an empty substitute for a rejected frame.
-ConversionStatus ConvertTrackedObjects(
-    const asmc_msgs::TrackedObjectArray& input,
-    planning_inputs::DetectedObjectArray* output,
-    ConversionStats* stats = nullptr,
-    std::string* detail = nullptr);
+// Geometry/velocity validation shared with the qualified planning gate. Invalid
+// velocity retains occupancy with velocity_unavailable; it is not measured zero.
+ConversionStatus ConvertPlanningGeometry(
+    const asmc_msgs::LidarObjectArray& input, DetectedObjectArray* output,
+    ConversionStats* stats = nullptr, std::string* detail = nullptr);
 
 // Direct common contract. No legacy wire, JSON join, clipping or second
 // classifier. Invalid/pose-unavailable/unrepresentable frames are withheld,

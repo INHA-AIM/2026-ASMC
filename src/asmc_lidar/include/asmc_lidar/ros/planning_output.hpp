@@ -33,7 +33,7 @@ inline asmc_msgs::LidarPlanningObservation PlanningOutput(
         object.absolute_velocity_mps.z = velocity->z();
         // The diagnostic classifier has a separate maturity gate. Keep unknown
         // and pending distinct; never derive motion from camera class names.
-        const auto& motion = found->second->tracking.display_motion;
+        const auto& motion = found->second->tracking.motion;
         if (motion.motion_valid && motion.s32_MotionState >= out.LOW_THREAT &&
             motion.s32_MotionState <= out.DYNAMIC) state = motion.s32_MotionState;
         object.dynamic_valid = state == out.LOW_THREAT || state == out.DYNAMIC;

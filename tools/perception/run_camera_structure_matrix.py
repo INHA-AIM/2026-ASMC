@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 from xmlrpc.client import ServerProxy
-from run_b0_matrix import stop
+from runtime_test_support import stop
 
 
 def stationary_condition(location, velocity, origin, max_distance=.25, max_speed=.2):

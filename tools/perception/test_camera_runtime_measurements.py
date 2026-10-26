@@ -50,11 +50,11 @@ class RuntimeMeasurementsTest(unittest.TestCase):
             self.assertEqual([r['owned_trial'] for r in result],[True,False])
 
     def test_child_stop_uses_selected_grace_then_kills_ignored_interrupt(self):
-        from run_b0_matrix import stop
+        from runtime_test_support import stop
         from unittest.mock import Mock
         process=Mock(pid=123);process.poll.return_value=None
         process.wait.side_effect=[subprocess.TimeoutExpired('qt',5),0]
-        with patch('run_b0_matrix.os.killpg') as kill:
+        with patch('runtime_test_support.os.killpg') as kill:
             stop(process,timeout=5)
         self.assertEqual(process.wait.call_args_list[0].kwargs,dict(timeout=5))
         self.assertEqual([c.args[0] for c in kill.call_args_list],[123,123])

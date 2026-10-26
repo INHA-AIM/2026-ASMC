@@ -47,7 +47,7 @@ asmc_msgs::LidarObject Message(const pipeline::TrackedObject& original,
   // derivative. LOW_THREAT zeros and UNKNOWN warmup estimates are the existing
   // MotionClassifier policy. Valid means a finite source-time estimate exists,
   // never that the estimate has independent-GT accuracy or confirmed motion.
-  const auto& m = original.tracking.display_motion;
+  const auto& m = original.tracking.motion;
   const Vec applied = output_from_level * Vec(m.f32_PlannerVxKPH / 3.6,
                                               m.f32_PlannerVyKPH / 3.6, 0.);
   out.relative_velocity_valid = false;  // moving-frame derivative is not certified
@@ -69,7 +69,7 @@ asmc_msgs::LidarTrackingState Tracking(const pipeline::TrackedObject& object,
                                       const Pose& output_from_level, bool motion_valid) {
   asmc_msgs::LidarTrackingState out;
   out.track_id = object.tracking.s32_Id;
-  const auto& m = object.tracking.display_motion;
+  const auto& m = object.tracking.motion;
   out.motion_state = motion_valid && m.s32_Id == out.track_id && m.motion_valid &&
       m.s32_MotionState >= 1 && m.s32_MotionState <= 3 ? m.s32_MotionState : out.UNKNOWN;
   Point(output_from_level * Vec(object.detection.f32_CoreX,

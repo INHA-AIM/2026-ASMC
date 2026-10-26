@@ -18,9 +18,12 @@ class FrameBridgeTest(unittest.TestCase):
         boxes = rospy.Publisher('/perception/camera/objects', CameraObjectBoxArray, queue_size=5)
         images = rospy.Publisher('/image_jpeg/compressed', CompressedImage, queue_size=5)
         deadline = time.monotonic() + 5
-        while (not boxes.get_num_connections() or not images.get_num_connections()) and time.monotonic() < deadline:
+        while (not boxes.get_num_connections() or not images.get_num_connections() or
+               not sub.get_num_connections()) and time.monotonic() < deadline:
             time.sleep(.02)
         self.assertGreater(boxes.get_num_connections(), 0)
+        self.assertGreater(images.get_num_connections(), 0)
+        self.assertEqual(sub.get_num_connections(), 1)
         for case in ('box', 'empty', 'low_confidence', 'invalid_confidence', 'invalid', 'nan', 'missing', 'wrong_image_frame', 'side'):
             stamp = rospy.Time.now()
             header = Header(stamp=stamp, frame_id='camera_left' if case == 'side' else 'camera_front')

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import unittest
 sys.path.insert(0,str(Path(__file__).parent))
 from evaluate_coco7_models import evaluate, summary
-from run_coco7_live_trials import measurement_gate, deadline_report
+from camera_experiment_metrics import measurement_gate, deadline_report
 from b0_measurements import output_report
 from fusion_log_accounting import parse_fusion_logs
 from analyze_coco7_trials import temporal_report
@@ -38,7 +38,7 @@ class Coco7EvaluationTest(unittest.TestCase):
         self.assertIsNone(object_state(rows,'class_current',110,7)[0]['fused_lidar_stamp_ns'])
 
     def test_fusion_rate_override_replaces_view_map_without_mutating_source(self):
-        from run_coco7_fusion_trials import pin_uniform_rate
+        from camera_experiment_metrics import pin_uniform_rate
         original=dict(target_hz=20.,target_hz_by_view=dict(front=20.,left=15.,right=15.),conf_thres=.65)
         pinned=pin_uniform_rate(original,10.)
         self.assertEqual(dict(front=10.,left=10.,right=10.),pinned['target_hz_by_view'])
@@ -49,7 +49,7 @@ class Coco7EvaluationTest(unittest.TestCase):
             with self.assertRaises(ValueError): pin_uniform_rate(original,hz)
 
     def test_debug_measurement_consumes_exactly_the_enabled_outputs(self):
-        from run_coco7_live_trials import debug_topics, debug_masks_enabled
+        from camera_experiment_metrics import debug_topics, debug_masks_enabled
         self.assertIs(False,debug_masks_enabled(dict(model='yolo26m-seg')))
         self.assertEqual('false',str(debug_masks_enabled({})).lower())
         self.assertIs(True,debug_masks_enabled(dict(debug=True)))
@@ -115,7 +115,7 @@ class Coco7EvaluationTest(unittest.TestCase):
         self.assertFalse(restoration_check(target,target,3,1)['passed'])
 
     def test_reentry_distinguishes_absent_light_verdict_from_processing_supply(self):
-        from run_coco7_drive_rehearsal import reentry_gate
+        from camera_experiment_metrics import reentry_gate
         row=dict(complete=True,five_second_hz=[9.8,10.],messages=99,valid_messages=0,
             first_second=10,duplicate_stamps=0,reversed_stamps=0,max_gap_sec=.15,
             input_anchor_missing=0,input_to_output_wall_ms=dict(p95=90.,p99=100.))

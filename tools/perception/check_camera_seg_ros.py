@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""GPU-free three-view seg lifecycle, header/mask and legacy adapter contract."""
-import importlib.util
+"""GPU-free three-view seg lifecycle, header/mask."""
 import argparse
 import json
 from pathlib import Path
@@ -20,7 +19,6 @@ from asmc_msgs.srv import SetInferenceMode
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--adapter',action='store_true',help='requires the nested Msg build')
     parser.add_argument('--batched',action='store_true',help='exercise the opt-in batch worker with the same lifecycle contracts')
     args=parser.parse_args()
     root=Path(__file__).resolve().parents[2]
@@ -98,12 +96,6 @@ def main():
             (m.image_width,m.image_height)==(32,24) and [b.source_class_name for b in m.boxes]==names and
             [b.class_name for b in m.boxes]==['person','animal','vehicle','obstacle'] for m in messages)
         checks['coordinates_confidence_kept']=all((b.xmin,b.ymin,b.xmax,b.ymax,b.confidence)==(1.25,2.5,10.75,20.,.875) for m in messages for b in m.boxes)
-        if args.adapter:
-            path=root/'src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py'
-            spec=importlib.util.spec_from_file_location('seg_actual_adapter',path);adapter=importlib.util.module_from_spec(spec);spec.loader.exec_module(adapter)
-            front=next(m for m in messages if m.header.frame_id=='camera_front')
-            converted=adapter.convert(front)
-            checks['front_seven_class_policy']=converted.header==front.header and [b.classes for b in converted.yolo_bbox_arr]==['person','dog','car'] and all(adapter.convert(m) is None for m in messages if m.header.frame_id!='camera_front')
         backend.empty=True;empty=send(6)
         wait(lambda:len(for_headers(outputs,empty))==3,'valid empty')
         checks['empty_valid_all_views']=all(m.valid and not m.boxes for m in for_headers(outputs,empty))

@@ -108,3 +108,7 @@ src/link_node/out/*
 !src/link_node/out/*.h5
 !src/link_node/out/*.yaml
 !src/link_node/out/road_mask.png
+
+# Generated GitHub Actions caches and isolated regression logs
+.ci-cache/
+.ci-results/

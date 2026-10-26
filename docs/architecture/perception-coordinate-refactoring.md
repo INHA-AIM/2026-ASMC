@@ -2,7 +2,7 @@
 
 **2026-10-26 선행 기반:** [기존 기능 보존 이식·판제 직접 소비](../../src/asmc_lidar/docs/planning-runtime.md)가
 구현됐다. 현재 공개 속도는 기존 Main의 적용 추정값이며 새 ego 보상/정밀도 개선을 뜻하지 않는다.
-실제 판제 인수·구 패키지 폐기 이후 필요한 C0–C4를 선택하며 이번에 이 문서의 광범위한 공통화를
+사용자·판제의 새 경로 주행 확인과 B4 정본화 이후 필요한 C0–C4를 선택하며 이번에 이 문서의 광범위한 공통화를
 구현한 것은 아니다.
 
 ## 상태와 착수 순서
@@ -52,7 +52,7 @@ ROS [REP 105](https://github.com/ros-infrastructure/rep/blob/master/rep-0105.rst
 [공용 출력 변환](../../src/asmc_lidar/src/ros/typed_output.cpp),
 [판제 frame 검사](../../src/asmc_planner/src/Parser/PlanningInput.cpp).
 
-운영 Main은 계속 별도다. [main.launch](../../src/lidar+sensorfusion/src/Main/main.launch)의
+운영 Main은 계속 별도다. [main.launch](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/main.launch)의
 `enable_common_geometry`와 `lidar_level_roll` 기본값은 false다. 새 asmc_lidar의 공통 경계·roll+pitch
 기본값이 운영 Main까지 자동 적용됐다고 표시하지 않는다. 실제 실행은 launch 인자와 ROS param도 확인한다.
 

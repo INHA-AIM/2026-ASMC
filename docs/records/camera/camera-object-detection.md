@@ -59,7 +59,7 @@ adapter 수정이 실제로 필요해진 시점에 카메라 파트와 합류한
 |---|---|---|
 | 기본 weight | `src/lidar+sensorfusion/src/Main/YOLOWeight/yolo11m.pt` | 공식 COCO 80-class YOLO11m |
 | SHA-256 | `d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95` | 전달·복사 뒤 동일 weight 확인용 |
-| 현재 launch | [`main.launch`](../../../src/lidar+sensorfusion/src/Main/main.launch) | 위 YOLO11m을 지정 |
+| 현재 launch | [`main.launch`](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/main.launch) | 위 YOLO11m을 지정 |
 | 현재 입력/출력 | 전방 `/camera/image/compressed` → `/YOLO/BBox` | 전방 detector 한 개만 실행 |
 | 현재 허용 이름 | `bus`, `truck`, `person`, `car` | COCO weight와 바로 호환 |
 | 기본 confidence | `0.7` | 편의 기본값일 뿐, 보행자 recall 검증값은 아님 |
@@ -80,7 +80,7 @@ class별 pedestrian recall·독립 test lineage가 저장소에 없다. 이름�
 바꾸지 말고 **출처를 복구할 때까지 진단 후보**로만 사용한다.
 
 현재 실행·topic 확인 절차는
-[`RUN_SENSOR_FUSION.md`](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)를 따른다.
+[`RUN_SENSOR_FUSION.md`](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/RUN_SENSOR_FUSION.md)를 따른다.
 
 ### 새 3-class weight는 아직 drop-in 교체가 아니다
 

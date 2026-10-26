@@ -17,7 +17,7 @@ from analyze_yoloe_selection import best_threshold,EVALUATION_GROUPS,input_pause
 from asmc_camera.detection.batching import shapes_for_front,pack_image,ImageTransform
 from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
 from asmc_camera.detection.backend import Detection
-from run_coco7_weather_matrix import candidate_order
+from camera_experiment_metrics import candidate_order
 from b0_measurements import quantiles, output_report
 
 

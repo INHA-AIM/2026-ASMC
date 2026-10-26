@@ -1,7 +1,0 @@
-Header header
-int32 unique_id
-geometry_msgs/Point front_left_location
-geometry_msgs/Point front_right_location
-geometry_msgs/Point rear_left_location
-geometry_msgs/Point rear_right_location
-uint8 turn_signal_lamp

@@ -101,6 +101,13 @@ def check_header_order(headers, arrival_reorders, sensor_failures,
     headers[identity]=current
 
 
+def object_frame(message):
+    """Use the atomic observation header, with historical bag schema support."""
+    if hasattr(message,'observation'):
+        return message.observation.objects
+    return getattr(message,'tracked',message)
+
+
 def analyze(directory):
     import rosbag
     requests=[];plans=[];statuses=[];topics={};headers={};sensor_failures=[]
@@ -118,14 +125,16 @@ def analyze(directory):
                 '/Ego_topic','/planning/vehicle/gps_imu_state','/planning/vehicle/speed_diagnostics')
             selected+=('/planning/mode','/planning/control_selector/diagnostics')
             selected+=('/lidar/motion_debug','/lidar/tracked_objects_map','/last_lidar',
-                       '/planning/input/tracked_objects','/behavior/feature_debug')
+                       '/planning/input/tracked_objects','/behavior/feature_debug',
+                       '/perception/lidar/tracks_local','/perception/lidar/tracks_map',
+                       '/perception/lidar/diagnostics')
             for topic,msg,stamp in bag.read_messages(topics=list(selected)):
                 topics[topic]=topics.get(topic,0)+1
-                frame=getattr(msg,'tracked',msg)
+                frame=object_frame(msg)
                 if hasattr(frame,'objects'):
                     nonempty_objects[topic]=nonempty_objects.get(topic,0)+bool(frame.objects)
                     for obj in frame.objects:
-                        maximum_track_id[topic]=max(maximum_track_id.get(topic,-1),obj.id)
+                        maximum_track_id[topic]=max(maximum_track_id.get(topic,-1),getattr(obj,'track_id',getattr(obj,'id',-1)))
                 if topic=='/behavior/feature_debug':
                     key=str(msg.selected_behavior)
                     behavior_counts[key]=behavior_counts.get(key,0)+1
@@ -161,13 +170,15 @@ def analyze(directory):
                         plans.append(dict(token=row['token'],planner_epoch=row['planner_epoch'],
                             sequence=row['sequence'],semantic=semantic_digest(row),accepted_valid=bool(valid)))
                     else:statuses.append(row)
-                elif hasattr(msg,'header') and topic not in ('/perception/traffic_light/detection',):
-                    now=msg.header.stamp.to_sec()
+                elif hasattr(frame,'header') and topic not in ('/perception/traffic_light/detection','/perception/lidar/diagnostics'):
+                    now=frame.header.stamp.to_sec()
                     # A frame-timing topic multiplexes cameras. Each original
                     # source must be checked independently, not interleaved.
-                    identity=(topic,msg.header.frame_id)
+                    identity=(topic,frame.header.frame_id)
+                    if hasattr(msg,'observation'):
+                        identity+=(msg.observation.producer_session_id,msg.observation.generation)
                     check_header_order(headers,arrival_reorders,sensor_failures,
-                                       identity,now,msg.header.seq,stamp.to_sec())
+                                       identity,now,getattr(getattr(msg,'observation',None),'scan_sequence',frame.header.seq),stamp.to_sec())
     binding=check_binding_evidence(requests,plans,statuses)
     required=('/planning/vehicle/state','/planning/objects','/perception/traffic_light/detection',
         '/cam_extra/image_jpeg/compressed','/morai_sensor_bridge/frame_timing','/ctrl_cmd')
@@ -177,9 +188,12 @@ def analyze(directory):
         required+=speed_sources
     if manifest_path.is_file() and json.loads(manifest_path.read_text()).get('recording',{}).get('schema_version',1)>=3:
         required+=('/planning/mode','/planning/control_selector/diagnostics')
-    if manifest_path.is_file() and json.loads(manifest_path.read_text()).get('recording',{}).get('schema_version',1)>=4:
+    if manifest_path.is_file() and json.loads(manifest_path.read_text()).get('recording',{}).get('schema_version',1)==4:
         required+=('/lidar/motion_debug','/lidar/tracked_objects_map',
                    '/planning/input/tracked_objects','/behavior/feature_debug')
+    if manifest_path.is_file() and json.loads(manifest_path.read_text()).get('recording',{}).get('schema_version',1)>=5:
+        required+=('/perception/lidar/tracks_local','/perception/lidar/tracks_map',
+                   '/perception/lidar/diagnostics','/behavior/feature_debug')
     missing=[name for name in required if not topics.get(name)]
     result=dict(passed=binding['passed'] and not sensor_failures and not missing,
         scope='recorded binding/input integrity only; independent physical driving verdict is separate',

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""GPU-free expanded-label lifecycle and optional actual legacy adapter check."""
+"""GPU-free expanded-label lifecycle."""
 import argparse
-import importlib.util
 import io
 import json
 from pathlib import Path
@@ -23,7 +22,6 @@ from asmc_msgs.msg import CameraObjectBoxArray
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--profile', choices=['baseline', 'all'], default='all')
-    parser.add_argument('--adapter', action='store_true')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     deadline = time.monotonic()+15
@@ -105,16 +103,6 @@ def main():
         if all_config:
             mapped = {b.source_class_name:b.class_name for b in restored.boxes}
             checks['infrastructure_preserved_with_coarse_group'] = mapped['traffic light']==mapped['stop sign']=='obstacle'
-        if args.adapter:
-            path = root/'src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py'
-            spec = importlib.util.spec_from_file_location('coco_actual_adapter', path)
-            adapter = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(adapter)
-            converted = adapter.convert(restored)
-            expected = [name for name in names if name in ('bus','truck','person','car','dog','bicycle','motorcycle')]
-            checks['actual_adapter_source_classes_header_integer_coordinates'] = (converted.header==restored.header and
-                converted.objc==len(expected) and [b.classes for b in converted.yolo_bbox_arr]==expected and
-                all((b.xMin,b.yMin,b.xMax,b.yMax)==(1,2,10,20) for b in converted.yolo_bbox_arr))
         backend.empty = True
         empty_header = send(6)
         wait(lambda: any(m.header.stamp==empty_header.stamp for m in outputs), 'valid empty')
@@ -124,12 +112,6 @@ def main():
         wait(lambda: any(m.header.stamp==invalid_header.stamp for m in outputs), 'invalid JPEG')
         invalid = next(m for m in outputs if m.header.stamp==invalid_header.stamp)
         checks['decode_failure_source_header_invalid'] = not invalid.valid and not invalid.boxes and invalid.header.frame_id=='camera_front'
-        if args.adapter:
-            checks['adapter_empty_invalid_wrong_frame'] = (adapter.convert(empty).objc==0 and
-                adapter.convert(invalid) is None)
-            wrong = CameraObjectBoxArray().deserialize(wire.getvalue())
-            wrong.header.frame_id='camera_left'
-            checks['adapter_empty_invalid_wrong_frame'] &= adapter.convert(wrong) is None
         service(0, 0.)
         wait(lambda: not outputs[-1].valid, 'STANDBY invalidation')
         checks['standby_invalidates_ready'] = not node.control.state.snapshot()['prepared']
@@ -138,7 +120,7 @@ def main():
         publisher.unregister()
         for subscription in subscriptions:
             subscription.unregister()
-    print(json.dumps(dict(profile=args.profile, adapter=args.adapter, checks=checks, passed=all(checks.values())), indent=2))
+    print(json.dumps(dict(profile=args.profile, checks=checks, passed=all(checks.values())), indent=2))
     return 0 if all(checks.values()) else 1
 
 

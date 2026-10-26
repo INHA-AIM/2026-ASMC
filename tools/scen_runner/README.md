@@ -1,6 +1,6 @@
 # scen_runner — 전체 씬·단일 구간 검증
 
-카메라 실행은 현재 `asmc_camera/camera.launch mode:=active`를 사용한다. Main은 외부 전방 검출의 CPU 어댑터만 실행하고 독립 YOLO 옵션은 제거됐다. 카메라 설정은 카메라 패키지가 소유하며 [LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다.
+카메라 실행은 `asmc_camera/camera.launch`, LiDAR 실행은 `asmc_lidar/lidar.launch`를 사용한다. 카메라는 공용 관측을 발행하고 LiDAR가 전방 matching/fusion을 담당한다. 카메라 설정은 카메라 패키지가 소유하며 [LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다.
 
 MORAI에 객체·환경을 배치하고 ego의 준비 정지, 충돌/도착/정체에 따른 다음 주행과 최종 시작점 복귀를 처리한다. `run_validation.sh`는 기존처럼 키보드 또는 외부 제어기를 사용한다. `run_scenario.sh`는 별도 판제 실행기와 연동하여 리스폰마다 판제·MPC를 재시작하고 준비를 확인한다. 시나리오 자체는 `/ctrl_cmd`를 발행하지 않는다.
 
@@ -95,7 +95,7 @@ GUI의 `선택 모드로 시작`과 `다음 반복 · 다시 준비`도 같은 �
 
 연동 설정은 `config/stack.yaml`에 있다. `instance`가 같은 실행기들이 `.runtime/stack/<instance>/`의 회차별 요청/응답과 heartbeat로 연결된다. 기존 회차의 준비 응답을 새 회차에서 재사용하지 않는다. 모든 실행기에 `--stack-config <같은 YAML 경로>`를 전달해 다른 설정을 사용할 수 있다.
 
-인지 실행기는 `asmc_camera/camera.launch`와 선택한 LiDAR를 실행한다. `config/stack.yaml`의 `lidar_backend: main`은 기존 Main을, `asmc_lidar`는 새 typed 판제 연결을 선택한다. 저장소 기본은 `asmc_lidar`이며, 기존 사용자별 설정에 키가 없으면 `main`을 유지한다. 실제 시뮬레이터 출구 수락은 별도다. [전환과 복구](../../docs/operations/lidar-cutover.md)를 따른다. 카메라 차선·YOLO·신호등 세 GPU 노드의 Python만 이미지의 `ASMC_YOLO_PYTHON`으로 선택한다(RTX50: `/opt/yolo-venv/bin/python`, RTX40: 시스템 Python). CPU의 BEV·차선 후처리, LiDAR·추적·퓨전은 기존 인터프리터/실행 파일을 사용한다. 모델/임계값/제어 파라미터는 팀 소스의 YAML/launch를 읽는다. 차선 제어의 BBOX 입력은 카메라 정본 `/perception/camera/objects`의 전방 결과를 직접 받는다. Main 실행 여부와 무관하다.
+인지 실행기는 `asmc_camera/camera.launch`와 `asmc_lidar/lidar.launch`를 한 세트씩 포함한다. 판제는 `/perception/lidar/planning_observations_map`의 KF 품질 관측을 직접 소비한다. 카메라 세 모델의 GPU Python은 이미지의 `ASMC_YOLO_PYTHON`으로 선택한다. CPU 후처리·LiDAR는 기존 실행 파일을 사용한다. 음영 BBox는 공용 카메라 검출을 frame bridge에서 직접 소비하며 구 정수 wire나 nested 메시지 overlay를 사용하지 않는다.
 
 `config/stack.yaml`의 `camera_runtime: auto`는 로컬에 `.runtime/camera_runtime.json`이 있으면 검증된 GPU용 엔진을 선택한다. RTX 5070용 E8 모델은 같은 학습 체크포인트로 변환한 `/data/models/camera_mission16_v11_e8_rtx5070/yolo26l.engine`을 사용하고, TensorRT·Ultralytics 의존성은 `.runtime/inference_rtx50/python`에서 객체 인식 노드에만 추가한다. 팀 launch의 엔진 경로와 검증 SHA만 바꾸며 클래스·임계값·배치·해상도 설정은 그대로 읽는다. 실행 시 `[카메라 엔진]`에 선택 경로와 SHA가 표시된다.
 
@@ -126,10 +126,7 @@ bash tools/scen_runner/prepare_camera_engines.sh
 ```bash
 cd /root/ws
 ./scripts/build_ws.sh -j2 -l2
-cd src/lidar+sensorfusion
-source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
-catkin_make --only-pkg-with-deps Main --force-cmake -j2 -l2
 ```
 
 TwinLite의 공식 소스가 `/opt/baselines/TwinLiteNetPlus`에 마운트돼 있으면 사용한다. 소스가 없는 기존 컨테이너는 아래와 같이 Git 제외 폴더에 준비할 수 있다. [공식 저장소](https://github.com/chequanghuy/TwinLiteNetPlus)의 버전은 팀 로더가 지정한 커밋으로 고정하며 기존 모델 가중치를 사용한다.
@@ -346,7 +343,7 @@ Simulator 종료 후 **두 수정 모두 주최측 원본으로 원복**하려�
 [명령–궤적 연결](../../docs/contracts/control-binding-v1.md)을 함께 빌드한다.
 기본 운영 설정은 관측 모드다. 아래 실행기만 `active`와 추가 연결을 명시적으로
 선택하고 자신의 판제·MPC·입력 adapter를 기동한다. 기존 판제 실행을 먼저 종료하고
-Bridge·Main·카메라는 유지한다. 실행기는 다른 판제의 ROS 이름을 빼앗지 않는다.
+Bridge·LiDAR·카메라는 유지한다. 실행기는 다른 판제의 ROS 이름을 빼앗지 않는다.
 
 신호는 `SetTrafficLightState`로 바꾸고 `GetTrafficLightInfo`로 실제 값을 확인한다.
 종료 시 원래 교차로 phase에서 자동 주기를 재개한다. 원래 phase의 경과 시간은

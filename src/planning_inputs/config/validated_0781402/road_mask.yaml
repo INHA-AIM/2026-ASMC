@@ -1,9 +1,0 @@
-map_id: waize_katri_2025-10-23
-pixels_per_meter: 5.0
-world_offset:
-- -454.5158996582031
-- -825.0457763671875
-local_origin_in_global:
-- 302595.0
-- 4124145.0
-- 0.0

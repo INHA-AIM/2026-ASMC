@@ -1,42 +1,33 @@
 #!/usr/bin/env python3
-"""Verify default source, pinned assets and unchanged validated filter policy."""
-import pathlib
+"""Canonical perception ownership and direct typed planning input contract."""
+from pathlib import Path
 import unittest
 import xml.etree.ElementTree as ET
 import yaml
-ROOT = pathlib.Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/planning_inputs'
-class FilterContract(unittest.TestCase):
-    def test_raw_source_and_required_adapter(self):
-        root = ET.parse(PKG / 'launch/objects.launch').getroot()
-        self.assertEqual(root.find("arg[@name='input_topic']").get('default'),
-                         "$(eval '/perception/lidar/tracks_map' if arg('source_policy') == 'asmc_lidar' else '/last_lidar')")
-        self.assertEqual(root.find("arg[@name='source_policy']").get('default'), 'asmc_lidar')
-        node = root.find("node[@name='planning_objects_adapter']")
-        self.assertEqual(node.get('required'), 'true')
-        launch = ET.parse(ROOT / 'src/asmc_planner/launch/autonomy_no_bridges_v2.launch').getroot()
-        self.assertEqual(launch.find("arg[@name='lidar_input_topic']").get('default'),
-                         "$(eval '/perception/lidar/tracks_map' if arg('lidar_source_policy') == 'asmc_lidar' else '/last_lidar')")
-        for name in ('drivable_mask_image', 'drivable_mask_metadata',
-                     'known_static_catalog', 'static_structure_exclusion_config'):
-            relative = node.find("param[@name='%s']" % name).get('value')
-            path = pathlib.Path(relative.replace('$(find planning_inputs)', str(PKG)))
-            self.assertTrue(path.is_file(), str(path))
-    def test_validated_catalog_and_policy(self):
-        params = yaml.safe_load((PKG / 'config/object_filter_params.yaml').read_text())
-        self.assertEqual(params['drivable_margin_m'], 0.0)
-        self.assertEqual(params['drivable_ratio_threshold'], 0.15)
-        self.assertEqual(params['known_static_center_tolerance_m'], 2.5)
-        for name in ('drivable_filter_enabled','known_static_filter_enabled',
-                     'static_structure_exclusion_enabled'):
-            self.assertTrue(params[name])
-        folder = PKG / 'config/validated_0781402'
-        metadata = yaml.safe_load((folder / 'road_mask.yaml').read_text())
-        catalog = yaml.safe_load((folder / 'known_static_objects.yaml').read_text())
-        self.assertEqual(metadata['map_id'], params['drivable_map_id'])
-        self.assertEqual(metadata['local_origin_in_global'],
-                         catalog['local_origin_in_global'])
-        self.assertTrue(catalog['observations'])
-        self.assertEqual((folder / 'road_mask.png').read_bytes()[:8], b'\x89PNG\r\n\x1a\n')
-if __name__ == '__main__':
-    unittest.main()
+ROOT=Path(__file__).resolve().parents[3]
+class InputContract(unittest.TestCase):
+    def test_direct_common_input_without_source_selection_or_producer(self):
+        root=ET.parse(ROOT/'src/planning_inputs/launch/objects.launch').getroot()
+        self.assertEqual(root.find("arg[@name='input_topic']").get('default'), '/perception/lidar/planning_observations_map')
+        self.assertEqual(len(root.findall('node')),1)
+        self.assertEqual(root.find('node').get('required'),'true')
+        self.assertEqual(root.findall('.//rosparam'),[])
+        self.assertEqual({p.get('name') for p in root.findall('.//param')},{'input_topic','output_topic'})
+        launch=ET.parse(ROOT/'src/asmc_planner/launch/autonomy_no_bridges_v2.launch').getroot()
+        self.assertEqual(launch.find("arg[@name='lidar_input_topic']").get('default'),'/perception/lidar/planning_observations_map')
+        args={a.get('name') for a in launch.findall('arg')}
+        self.assertTrue({'lidar_source_policy','objects_source'}.isdisjoint(args))
+        self.assertFalse(any(n.get('pkg')=='asmc_lidar' for n in launch.iter('node')))
+    def test_current_filters_stay_in_perception(self):
+        config=yaml.safe_load((ROOT/'src/asmc_lidar/config/lidar_pipeline.yaml').read_text())
+        self.assertEqual(config['hd_map_audit']['mode'],'filter')
+        preview=config['hd_map_audit']['delivery_preview']
+        for k,v in {'minimum_road_points':3,'minimum_road_ratio':.1,'minimum_obb_road_ratio':.1,'road_inset_m':.1}.items():
+            self.assertEqual(preview[k],v)
+        self.assertEqual(config['delivery']['confirmation_frames'],3)
+        self.assertEqual(config['delivery']['release_frames'],5)
+        source=(ROOT/'src/planning_inputs/src/objects_node.cpp').read_text()
+        self.assertNotIn('MotionClassifier',source)
+        self.assertNotIn('PlanningObjectFilter',source)
+        self.assertNotIn('source_policy',source)
+if __name__=='__main__':unittest.main()

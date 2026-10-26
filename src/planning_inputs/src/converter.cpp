@@ -142,10 +142,10 @@ std::uint8_t ConvertClassification(const std::string& source,
   }
   // The frozen numeric enum has only vehicle/pedestrian/unknown. Keep all
   // geometry and motion for the two obstacle groups; raw strings remain on
-  // tracked_objects_map and the validated tracked companion topic.
+  // the common /perception/lidar/tracks_map observation.
   // Planning must keep UNKNOWN geometry as a collision candidate. The enum
   // cannot recover a source class or decide whether an object actually moves;
-  // use the tracked companion and motion validity for those policies.
+  // use the common observation and motion validity for those policies.
   // See docs/handoffs/perception-to-planning.md (consumer acceptance).
   if (label == "dynamic_obstacle" || label == "static_obstacle") {
     if (supported) *supported = true;
@@ -201,103 +201,60 @@ const char* ConversionStatusName(ConversionStatus status) {
   return "UNKNOWN_STATUS";
 }
 
-ConversionStatus ConvertTrackedObjects(
-    const asmc_msgs::TrackedObjectArray& input,
-    planning_inputs::DetectedObjectArray* output,
-    ConversionStats* stats,
+ConversionStatus ConvertPlanningGeometry(
+    const asmc_msgs::LidarObjectArray& array,
+    planning_inputs::DetectedObjectArray* output, ConversionStats* stats,
     std::string* detail) {
-  if (!output) {
-    if (detail) *detail = "output pointer is null";
-    return ConversionStatus::INVALID_ARGUMENT;
-  }
-  if (input.header.frame_id != "map") {
-    if (detail) *detail = "header.frame_id must be exactly 'map'";
-    return ConversionStatus::INVALID_FRAME;
-  }
-  if (input.header.stamp.isZero()) {
-    if (detail) *detail = "header.stamp must be non-zero";
-    return ConversionStatus::INVALID_TIMESTAMP;
-  }
-
-  planning_inputs::DetectedObjectArray converted;
-  converted.header = input.header;
-  converted.objects.reserve(input.objects.size());
-  ConversionStats converted_stats;
-  converted_stats.total = input.objects.size();
+  if (!output) return Fail(ConversionStatus::INVALID_ARGUMENT, 0, -1, "null output", detail);
+  if (array.header.frame_id != "map")
+    return Fail(ConversionStatus::INVALID_FRAME, 0, -1, "global planning requires map", detail);
+  if (array.header.stamp.isZero())
+    return Fail(ConversionStatus::INVALID_TIMESTAMP, 0, -1, "zero source stamp", detail);
+  DetectedObjectArray converted;
+  converted.header = array.header;
+  ConversionStats counts;
+  counts.total = array.objects.size();
   std::unordered_set<std::int32_t> ids;
-
-  for (std::size_t i = 0; i < input.objects.size(); ++i) {
-    const asmc_msgs::TrackedObject& source = input.objects[i];
-    if (source.id < 0) {
-      return Fail(ConversionStatus::INVALID_ID, i, source.id,
-                  "ID must be non-negative", detail);
+  for (std::size_t i = 0; i < array.objects.size(); ++i) {
+    const auto& object = array.objects[i];
+    if (object.track_id < 0 || !ids.insert(object.track_id).second ||
+        object.observation_state != object.OBSERVED || object.miss_count)
+      return Fail(ConversionStatus::INVALID_ID, i, object.track_id, "duplicate, mismatched or non-observed ID", detail);
+    if (!IsFinitePoint(object.center) || !IsFinite(object.yaw))
+      return Fail(ConversionStatus::NON_FINITE_VALUE, i, object.track_id, "non-finite geometry", detail);
+    if (!IsFinite(object.length) || object.length <= 0 || !IsFinite(object.width) ||
+        object.width <= 0 || !IsFinite(object.height) || object.height <= 0)
+      return Fail(ConversionStatus::INVALID_DIMENSIONS, i, object.track_id, "invalid dimensions", detail);
+    std::string reason;
+    if (!ValidateObb(object, &reason))
+      return Fail(ConversionStatus::INVALID_OBB, i, object.track_id, reason, detail);
+    if (object.absolute_velocity_valid && (!IsFiniteVector(object.absolute_velocity_mps) ||
+        !IsFinite(3.6 * std::hypot(object.absolute_velocity_mps.x, object.absolute_velocity_mps.y))))
+      return Fail(ConversionStatus::INVALID_VELOCITY, i, object.track_id, "non-finite qualified velocity", detail);
+    bool supported = true;
+    DetectedObject target;
+    target.id = object.track_id;
+    target.type = ConvertClassification(object.classification == "dynamic_obstacle" &&
+        object.camera_class == "person" ? "person" : object.classification, &supported);
+    target.velocity_unavailable = !object.absolute_velocity_valid;
+    target.center = object.center;
+    target.yaw = object.yaw;
+    if (object.absolute_velocity_valid) {
+      target.vx = object.absolute_velocity_mps.x;
+      target.vy = object.absolute_velocity_mps.y;
     }
-    if (!ids.insert(source.id).second) {
-      return Fail(ConversionStatus::DUPLICATE_ID, i, source.id,
-                  "duplicate ID in one source frame", detail);
-    }
-    if (source.age < 0 || source.miss_count < 0) {
-      return Fail(ConversionStatus::INVALID_ID, i, source.id,
-                  "age and miss_count must be non-negative", detail);
-    }
-    if (!IsFinitePoint(source.cluster_center) ||
-        !IsFinitePoint(source.obb_center) ||
-        !IsFinite(source.obb_yaw) ||
-        !IsFiniteVector(source.velocity_mps) ||
-        !IsFinite(source.speed_kph)) {
-      return Fail(ConversionStatus::NON_FINITE_VALUE, i, source.id,
-                  "center, yaw, velocity, or display speed is non-finite",
-                  detail);
-    }
-    if (!IsFinite(source.length) || source.length <= 0.0 ||
-        !IsFinite(source.width) || source.width <= 0.0 ||
-        !IsFinite(source.height) || source.height <= 0.0) {
-      return Fail(ConversionStatus::INVALID_DIMENSIONS, i, source.id,
-                  "length, width, and height must be finite and positive",
-                  detail);
-    }
-    std::string obb_reason;
-    if (!ValidateObb(source, &obb_reason)) {
-      return Fail(ConversionStatus::INVALID_OBB, i, source.id, obb_reason,
-                  detail);
-    }
-
-    bool supported_classification = true;
-    const std::uint8_t object_type =
-        ConvertClassification(source.classification == "dynamic_obstacle" &&
-                                  source.yolo_class == "person" ? "person" : source.classification,
-                              &supported_classification);
-    if (!supported_classification) {
-      ++converted_stats.unsupported_classification;
-    }
-    if (object_type == kObjectVehicle) {
-      ++converted_stats.vehicle;
-    } else if (object_type == kObjectPedestrian) {
-      ++converted_stats.pedestrian;
-    } else {
-      ++converted_stats.unknown;
-    }
-
-    planning_inputs::DetectedObject target;
-    target.id = source.id;
-    target.type = object_type;
-    target.motion_state = planning_inputs::DetectedObject::MOTION_UNKNOWN;
-    target.center = source.obb_center;
-    target.yaw = source.obb_yaw;
-    target.vx = source.velocity_mps.x;
-    target.vy = source.velocity_mps.y;
-    // The fusion message does not measure yaw rate. Do not derive a value
-    // from OBB orientation in this stateless boundary adapter.
-    target.yaw_rate = 0.0;
-    target.width = source.width;
-    target.length = source.length;
-    target.height = source.height;
-    target.obb_corners = source.obb_corners;
+    // Preserve PR #114's stateless yaw-rate policy; OBB yaw derivative is not measured.
+    target.yaw_rate = 0.;
+    target.width = object.width; target.length = object.length; target.height = object.height;
+    target.obb_corners = object.obb_corners;
+    if (!supported) ++counts.unsupported_classification;
+    if (target.type == kObjectVehicle) ++counts.vehicle;
+    else if (target.type == kObjectPedestrian) ++counts.pedestrian;
+    else ++counts.unknown;
     converted.objects.push_back(std::move(target));
   }
-
   *output = std::move(converted);
-  if (stats) *stats = converted_stats;
+  if (stats) *stats = counts;
   if (detail) detail->clear();
   return ConversionStatus::OK;
 }

@@ -45,12 +45,13 @@ BAG_TOPICS = [
     '/cam_left/image_jpeg/compressed','/cam_right/image_jpeg/compressed',
     '/morai_sensor_bridge/frame_timing','/gps','/imu','/velodyne_points',
     '/Competition_topic','/Ego_topic','/planning/vehicle/gps_imu_state',
-    '/planning/vehicle/speed_diagnostics','/CollisionData','/tf','/tf_static','/last_lidar',
+    '/planning/vehicle/speed_diagnostics','/CollisionData','/tf','/tf_static',
     '/planning/vehicle/state','/planning/objects','/perception/traffic_light/detection',
     '/behavior/command_v2','/planning/trajectory','/planning/frenet_feedback_v2',
     '/behavior/control_request','/planning/control_plan','/control/binding_status',
     '/control/binding_epoch','/planning/signal_policy','/planning/signal_policy_shadow',
-    '/lidar/motion_debug','/lidar/tracked_objects_map','/planning/input/tracked_objects',
+    '/perception/lidar/tracks_local','/perception/lidar/tracks_map',
+    '/perception/lidar/diagnostics',
     '/behavior/feature_debug',
     '/planning/mode','/planning/control_selector/diagnostics',
     '/ctrl_cmd','/ctrl_cmd/normal','/ctrl_cmd/jamming','/rosout_agg',
@@ -58,8 +59,8 @@ BAG_TOPICS = [
 
 
 ASMC_LIDAR_TOPICS = [
-    '/migration/lidar/planning_observations_map',
-    '/migration/lidar/objects_local', '/migration/lidar/diagnostics',
+    '/perception/lidar/planning_observations_map',
+    '/perception/lidar/objects_local', '/perception/lidar/diagnostics',
     '/perception/camera/objects', '/perception/lane/boundary_family',
     '/perception/camera/objects/status', '/perception/camera/lane/status',
     '/planning/camera_bbox_lane_change/diagnostics',
@@ -88,23 +89,17 @@ def closed_bag_manifest(directory, production_stack=False):
         '/perception/traffic_light/detection','/cam_extra/image_jpeg/compressed',
         '/morai_sensor_bridge/frame_timing','/Ego_topic','/planning/vehicle/gps_imu_state',
         '/planning/vehicle/speed_diagnostics','/planning/mode','/planning/control_selector/diagnostics')
-    required+=('/behavior/feature_debug',)
-    if production_stack:
-        required+=('/migration/lidar/planning_observations_map',
-                   '/migration/lidar/diagnostics')
-    else:
-        required+=('/lidar/motion_debug','/lidar/tracked_objects_map',
-                   '/planning/input/tracked_objects','/behavior/control_request',
-                   '/planning/control_plan','/control/binding_status')
+    required+=('/perception/lidar/tracks_local','/perception/lidar/tracks_map',
+               '/perception/lidar/diagnostics','/behavior/feature_debug')
     missing=[name for name in required if not counts.get(name)]
     if missing:raise RuntimeError('required bag evidence missing: '+str(missing))
-    return dict(schema_version=4,files=manifest,topic_counts=counts)
+    return dict(schema_version=5,files=manifest,topic_counts=counts)
 
 
 def fingerprint():
     sources={};extensions={'.py','.cpp','.hpp','.h','.yaml','.launch','.msg','.json'}
-    roots=['src/asmc_planner','src/asmc_controller','src/asmc_msgs','src/lidar+sensorfusion/src/Main',
-           'src/asmc_lidar','src/planning_inputs','src/jamming_lane_boundary_adapter',
+    roots=['src/asmc_planner','src/asmc_controller','src/asmc_msgs','src/asmc_lidar',
+           'src/planning_inputs','src/jamming_lane_boundary_adapter',
            'tools/scen_runner/scen_runner','tools/scen_runner/launch']
     for root in roots:
         for path in sorted((REPO_ROOT/root).rglob('*')):
@@ -120,10 +115,9 @@ def fingerprint():
     for path in [REPO_ROOT/'devel/lib/asmc_planner/asmc_planner_node',
                  REPO_ROOT/'devel/lib/asmc_controller/mpc_controller_node',
                  REPO_ROOT/'devel/lib/planning_inputs/planning_vehicle_state_node',
-                 REPO_ROOT/'devel/lib/libplanning_state_core.so',
                  REPO_ROOT/'devel/lib/lane_boundary_adapter/camera_bbox_lane_change_node',
-                 REPO_ROOT/'src/lidar+sensorfusion/devel/lib/Main/main',
-                 REPO_ROOT/'src/lidar+sensorfusion/devel/lib/libmyHeader.so',
+                 REPO_ROOT/'devel/lib/asmc_lidar/lidar_pipeline_node',
+                 REPO_ROOT/'devel/lib/planning_inputs/planning_objects_adapter',
                  *sorted((REPO_ROOT/'devel/lib').glob('libasmc*.so'))]:
         if path.is_file():binaries[path.relative_to(REPO_ROOT).as_posix()]=hashlib.sha256(path.read_bytes()).hexdigest()
     # The container's older Git refuses even command-scoped safe.directory
@@ -351,12 +345,7 @@ def main():
             if recorder.observe() is not None:raise RuntimeError('bag recorder failed before launch')
         log=(args.output/'planning.log').open('w')
         environment=dict(os.environ)
-        # Same separately built legacy message overlay as run_planning.sh.
-        messages=REPO_ROOT/'src/lidar+sensorfusion/devel/lib/python3/dist-packages'
-        if messages.is_dir():
-            environment['PYTHONPATH']=environment.get('PYTHONPATH','')+os.pathsep+str(messages)
-        command=(['roslaunch','asmc_planner','autonomy_no_bridges_v2.launch',
-                  'lidar_source_policy:=asmc_lidar_companion'] if args.production_stack else
+        command=(['roslaunch','asmc_planner','autonomy_no_bridges_v2.launch'] if args.production_stack else
                  ['roslaunch',str(REPO_ROOT/'tools/scen_runner/launch/yellow_signal_trial.launch'),
                   'clock_profile:='+str(args.clock_profile.resolve()),'mode:=active'])
         launch=OwnedProcess(command,stdout=log,stderr=log,

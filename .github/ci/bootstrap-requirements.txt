@@ -1,0 +1,2 @@
+# Modern resolver supporting the Noetic Python 3.8 environment.
+pip==24.3.1

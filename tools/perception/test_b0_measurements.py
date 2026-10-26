@@ -40,14 +40,6 @@ class B0MeasurementsTest(unittest.TestCase):
         self.assertEqual(6, sum(j['phase'] == 'gps' for j in jobs))
         self.assertEqual(3, sum(bool(j.get('gps_gap')) for j in jobs))
 
-    def test_test_launch_quarantines_existing_main_control_outputs(self):
-        launch = ET.parse(Path(__file__).with_name('b0_main.launch')).getroot()
-        group = launch.find('group')
-        remaps = {r.get('from'): r.get('to') for r in group.findall('remap')}
-        self.assertEqual('/b0/discarded_ctrl_cmd_0', remaps['/ctrl_cmd_0'])
-        self.assertEqual('/b0/discarded_ctrl_cmd', remaps['/ctrl_cmd'])
-        self.assertNotIn('start_yolo', {a.get('name') for a in group.find('include').findall('arg')})
-
     def test_old_epoch_and_invalidity_are_distinct(self):
         row = output_report([output(10.05, 5), output(10.1, 11, False), output(10.2, 12)], 10, 11, 10)
         self.assertEqual(2, row['messages'])

@@ -66,7 +66,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 > `/opt/yolo-venv`(Python 3.9 + PyTorch cu128)를 사용합니다. 두 이미지 모두
 > NVIDIA 드라이버와 Container Toolkit은 **host**에 설치돼 있어야 하며,
 > 컨테이너 안에 드라이버를 설치하면 안 됩니다. 확인·문제해결 절차는
-> [src/lidar+sensorfusion/RUN_SENSOR_FUSION.md](src/lidar+sensorfusion/RUN_SENSOR_FUSION.md#current-camera-connection--2026-10-16)를 보십시오.
+> [LiDAR 실행 정본](src/asmc_lidar/docs/planning-runtime.md)를 보십시오.
 
 상세: [docs/onboarding/README.md](docs/onboarding/README.md)
 
@@ -87,7 +87,6 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 │   ├── jamming_lane_boundary_adapter/ # family 검토·BBox 재밍 제어
 │   ├── asmc_lidar/            # 좌표/시간 코어·이전용 골격
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
-│   ├── lidar+sensorfusion/     # 독립 nested LiDAR/fusion workspace
 │   └── MORAI-ROS_morai_msgs/  # submodule beta_drive
 ├── tools/
 │   ├── scen_runner/           # 현재 전체 씬/구간·충돌 재현
@@ -114,7 +113,7 @@ P4-C6부터 camera semantic, camera BEV/lane, traffic-light의 실행·offline·
 시각화는 `view.launch`·별도 rqt를 사용하며, 세부
 경로와 인수 경계는
 [Perception package README](src/asmc_camera/README.md)를 따른다. `src/data_collection/`과
-`src/lidar+sensorfusion/`은 독립 경계로 남아 있다.
+LiDAR 정본은 `src/asmc_lidar/`이며 구 nested Main/Msg workspace는 폐기했다.
 
 ## Git과 PR
 

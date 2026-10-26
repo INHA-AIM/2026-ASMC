@@ -24,9 +24,9 @@ publisher나 변환 로직은 포함하지 않는다.
 - 기존 planning/perception 타입: 13개, ROS1 MD5 동결
 - HD Map/competition 타입: 12개
 - perception runtime additive 타입: 3개
-- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은42개 메시지·1개 서비스이며 UrbanFeatureDebug, LiDAR/camera handoff·공용 추론 제어·센서/grid timing·시각화 지면 metadata·LiDAR planning companion·공용 tracking 상태/관측을 포함
+- 위 P1/P4 등록은 당시28개 subset. 현재 CMake 등록은42개 메시지·1개 서비스이며 UrbanFeatureDebug, LiDAR/camera handoff·공용 추론 제어·센서/grid timing·시각화 지면 metadata를 포함
 - 외부 MORAI wire type: pinned `src/MORAI-ROS_morai_msgs`, 이 패키지로 복사하지 않음
-- 중복 `Msg` package: consumer 이관과 clean build 전까지 삭제하지 않음
+- 구 중복 `Msg` package: B4에서 소비 전환 후 폐기. 과거 공용 TrackedObject/Array·MD5는 bag 재현용으로 유지
 
 | 계열 | 타입 |
 |---|---|
@@ -36,7 +36,7 @@ publisher나 변환 로직은 포함하지 않는다.
 | HD Map | `HdMapMeta`, `LaneMarking*`, `Lane*`, `LaneAssociation`, `DrivableArea*` |
 | competition | `CompetitionCheckpoint*`, `MissionZone*` |
 | perception runtime v1 | `TrafficLightDetection`, `TrackedObject*` |
-| 카메라/이전용 LiDAR | `CameraObjectBox*`, `CameraObjectObservation`, `LidarObject*`, `LidarObservation`, `LidarPlanningObservation` |
+| 카메라/이전용 LiDAR | `CameraObjectBox*`, `CameraObjectObservation`, `LidarObject*`, `LidarObservation`, `LidarTrackingObservation`, `LidarTrackingState`, `LidarPlanningObservation` |
 | 추론 제어 v2 | `InferenceStatus`, `SetInferenceMode.srv` — 생산자 UUID·모드·준비 상태 |
 | 판제 debug | `UrbanFeatureDebug` |
 | 센서 timing v1 | `SensorFrameTiming` — 원본/수신/발행 clock과 기존 sensor wire의 연결 키 |
@@ -54,8 +54,8 @@ publisher나 변환 로직은 포함하지 않는다.
 현재 전체 목록은 `msg/`·`srv/`, 등록 순서는 `CMakeLists.txt`가 구현 정본이다.
 
 이 패키지는 interface만 제공한다. HD맵 publisher/metadata/geometry는 asmc_hd_map,
-카메라 관측은 asmc_camera, 현재 LiDAR 실행은 nested Main, 판제는 asmc_planner가 소유한다. 판제는 `/hd_map/global/*` latched 토픽을 한 번 받아 위치 기반으로
-조회하는 방식을 기본으로 하고, `/hd_map/local/lanes`와 `/hd_map/local/drivable_grid`는
+카메라 관측은 asmc_camera, 현재 LiDAR 실행은 asmc_lidar, 판제는 asmc_planner가 소유한다. 공용 지도 토픽 계약은 `/hd_map/global/*` latched 조회를 제공한다. 현재 판제/Frenet과 LiDAR 실행은
+설정에 지정된 지도 파일/bundle을 직접 읽으며 지도 launch를 필수로 요구하지 않는다. `/hd_map/local/lanes`와 `/hd_map/local/drivable_grid`는
 선택적 파생 캐시로만 사용한다. `/hd_map/local/current_lane`은 후륜축 중심 `base_link`를
 기준으로 한 상태 포함(`INSIDE/BOUNDARY/NEARBY/STALE`) 차로 association이다. local crop에는
 mission/checkpoint/marking metadata가 중복되지 않는다.

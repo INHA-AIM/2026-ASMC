@@ -143,7 +143,7 @@ Phase 0 개인 레포, Wave 1/2 이식과 `main` 직푸시 Path A 설명은 현�
 - C/C++는 ccache를 compiler launcher로 사용한다. compiler 내용·header·옵션이 유효한 cache만
   재사용하며 job별 최대400MB로 제한한다. build/devel·시험 결과·성공 상태는 캐시하지 않는다.
 - CPU runtime은 고정 버전을 유지하고 pip 다운로드를 재사용한다. cache가 없어도 정상 설치한다.
-- 모든 기존 검사와 구 Main 복구 회귀를 유지한다. 제거한 두 LiDAR 필터의 시험은 해당 구현과
+- 공용 LiDAR·카메라/판제 회귀를 유지하고 구 Main 전용 빌드는 폐기한다. 필요한 원본 시험 사례는 새 코어로 이관한다. 제거한 두 LiDAR 필터의 시험은 해당 구현과
   함께 제거하고, 과거 blacklist 위치의 실제 unknown이 관측 근거에 따라 보존되는 회귀를 추가한다.
 - 마지막 ccache 통계로 적중 여부를 확인한다. hosted 시간 개선은 push 후 이전 run과 대조한다.
 

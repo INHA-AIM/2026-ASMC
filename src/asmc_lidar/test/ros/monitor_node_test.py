@@ -332,7 +332,9 @@ class MonitorNodeTest(unittest.TestCase):
         status = self.wait_until(
             lambda: (lambda s: s if s['pipeline_state'] in ('lidar_stale', 'no_lidar_input') else None)(self.status()),
             10, 'stale or no input')
-        self.assertGreater(status['ages_ms']['scan'], 1000)
+        # Age is serialized as integer milliseconds; the stale transition can
+        # legitimately round down to the 1000ms boundary.
+        self.assertGreaterEqual(status['ages_ms']['scan'], 1000)
         time.sleep(2.5)
         status = self.status()
         self.assertEqual(status['pipeline_state'], 'no_lidar_input')  # diagnostics report input_silence

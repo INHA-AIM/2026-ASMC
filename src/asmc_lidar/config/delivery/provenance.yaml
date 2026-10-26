@@ -11,7 +11,7 @@ retired_ports:
   filters: [KnownStaticObjectFilter, StaticStructureExclusionFilter]
   reason: fixed-center proximity and map rectangles are not semantic evidence;
     current HD-map/support/overhead rules replace these positional deletion rules
-  legacy_rollback: original Main and planning_inputs legacy policies remain unchanged
+  legacy_rollback: isolated checkout of b2e8329f1cb71f11150d5125335e01c5b8d252c5; removed from canonical runtime
 intentional_differences:
 - Current v7 HD-map and height delivery filter replaces the old road mask; no OBB clipping.
 - PR108 fresh YOLO vehicle/dynamic protection takes precedence over observation quality.

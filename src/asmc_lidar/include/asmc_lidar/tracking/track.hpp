@@ -1,13 +1,13 @@
 #pragma once
 #include <asmc_lidar/detection/observation.hpp>
 #include <asmc_lidar/fusion/classification.hpp>
-#include <asmc_lidar/tracking/motion_display.hpp>
+#include <asmc_lidar/tracking/motion_classifier.hpp>
 
 namespace asmc::lidar::pipeline {
 // Filter/frame state, separate from current scan geometry and camera evidence.
 struct TrackState {
   // Main-compatible applied motion history (formerly PR #105 diagnostics only).
-  motion_display::MotionObject display_motion;
+  motion_classifier::MotionObject motion;
   // Common tracking frame record (Global.hpp:522-529).
   bool tracking_frame_valid = false;
   float tracking_height_input = 0.f;

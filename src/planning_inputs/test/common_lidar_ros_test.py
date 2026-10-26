@@ -39,7 +39,7 @@ def main():
     import yaml
     import rospy
     import rosgraph
-    from asmc_msgs.msg import LidarTrackingObservation
+    from asmc_msgs.msg import LidarTrackingObservation, LidarPlanningObservation
     from planning_inputs.msg import DetectedObjectArray
     from sensor_msgs.msg import Imu, PointCloud2, PointField
     from morai_msgs.msg import GPSMessage, EgoVehicleStatus
@@ -52,7 +52,7 @@ def main():
     running = threading.Event()
     state = dict(gps=True, imu=True)
     lock = threading.RLock()
-    local, mapped, output, diagnostic = (collections.deque(maxlen=512) for _ in range(4))
+    local, mapped, output, diagnostic, pipeline_diagnostic = (collections.deque(maxlen=512) for _ in range(5))
     thread = None
     with tempfile.TemporaryDirectory(prefix='asmc-common-lidar-') as temporary:
         temporary = Path(temporary)
@@ -93,10 +93,11 @@ def main():
             ns = '/perception/lidar'
             def pipeline():
                 return spawn(['roslaunch', 'asmc_lidar', 'lidar.launch',
-                    'pipeline_config:='+str(config_path), 'fusion:=false'], 'pipeline-'+str(len(processes)))
+                    'pipeline_config:='+str(config_path), 'fusion:=false',
+                    'debug:=false', 'rviz:=false'], 'pipeline-'+str(len(processes)))
             node = pipeline()
             spawn(['roslaunch', 'planning_inputs', 'objects.launch',
-                'source_policy:=asmc_lidar', 'output_topic:=/contract/planning_objects'], 'adapter')
+                'output_topic:=/contract/planning_objects'], 'adapter')
             def store(target):
                 def callback(message):
                     with lock:
@@ -104,9 +105,10 @@ def main():
                 return callback
             subscribers = [
                 rospy.Subscriber(ns+'/tracks_local', LidarTrackingObservation, store(local), queue_size=2),
-                rospy.Subscriber(ns+'/tracks_map', LidarTrackingObservation, store(mapped), queue_size=2),
+                rospy.Subscriber(ns+'/planning_observations_map', LidarPlanningObservation, store(mapped), queue_size=2),
                 rospy.Subscriber('/contract/planning_objects', DetectedObjectArray, store(output), queue_size=2),
-                rospy.Subscriber('/planning_objects_adapter/diagnostics', DiagnosticArray, store(diagnostic), queue_size=1)]
+                rospy.Subscriber('/planning_objects_adapter/diagnostics', DiagnosticArray, store(diagnostic), queue_size=1),
+                rospy.Subscriber(ns+'/diagnostics', DiagnosticArray, store(pipeline_diagnostic), queue_size=1)]
             pubs = dict(points=rospy.Publisher('/velodyne_points', PointCloud2, queue_size=1),
                         imu=rospy.Publisher('/imu', Imu, queue_size=2),
                         can=rospy.Publisher('/Ego_topic', EgoVehicleStatus, queue_size=2),
@@ -156,14 +158,30 @@ def main():
                 pairs=[(by_stamp[o.header.stamp.to_nsec()],o) for o in output if o.header.stamp.to_nsec() in by_stamp]
             assert len(pairs)>=5
             for source,converted in pairs:
-                assert len(source.tracking)==len(source.observation.objects.objects)==len(converted.objects)
-                for common,tracking,private in zip(source.observation.objects.objects,source.tracking,converted.objects):
-                    assert common.track_id==tracking.track_id==private.id
+                assert len(source.motion_states)==len(source.observation.objects.objects)==len(converted.objects)
+                for common,motion,private in zip(source.observation.objects.objects,source.motion_states,converted.objects):
+                    assert private.id>=0  # private IDs intentionally change across producer epochs
                     assert common.center==private.center and common.obb_corners==private.obb_corners
-                    assert tracking.motion_state==private.motion_state
-                    assert common.absolute_velocity_valid
-                    assert common.absolute_velocity_mps.x==private.vx and common.absolute_velocity_mps.y==private.vy
+                    assert motion==private.motion_state
+                    assert private.velocity_unavailable== (not common.absolute_velocity_valid)
+                    if common.absolute_velocity_valid and motion!=source.LOW_THREAT:
+                        assert common.absolute_velocity_mps.x==private.vx and common.absolute_velocity_mps.y==private.vy
             print('PASS source stamp, IDs, full OBB, applied velocity and four-state delivery',flush=True)
+            require(lambda: latest(pipeline_diagnostic) is not None, 'pipeline diagnostics without debug')
+            values={v.key:v.value for s in latest(pipeline_diagnostic).status for v in s.values}
+            assert values['debug_enabled']=='false'
+            publications, subscriptions, _=master.getSystemState()
+            assert not any(topic.startswith(ns+'/debug/') for topic,nodes in publications)
+            assert not any(topic in (ns+'/trace',ns+'/objects_local',ns+'/objects_map')
+                           for topic,nodes in subscriptions)
+            # The planner must remain sufficient demand for tracks_map: remove
+            # the fixture's tracking subscriptions, leaving only planning_inputs.
+            subscribers[0].unregister();subscribers[1].unregister()
+            before=len(output)
+            require(lambda: len(output)>=before+10, 'planner-only demand supplies new objects without web/trace/RViz')
+            print('PASS debug=false, no stage/trace/array consumer, geometry/velocity delivery continues',flush=True)
+            subscribers[0]=rospy.Subscriber(ns+'/tracks_local', LidarTrackingObservation, store(local), queue_size=2)
+            subscribers[1]=rospy.Subscriber(ns+'/planning_observations_map', LidarPlanningObservation, store(mapped), queue_size=2)
             state['gps']=False
             require(lambda: latest(mapped).observation.objects.status==4,'GPS0 reports POSE_UNAVAILABLE')
             time.sleep(.5)
@@ -193,7 +211,7 @@ def main():
             require(lambda: len(output)>before,'IMU recovery resumes planning')
             require(lambda: latest(diagnostic) is not None,'bounded input diagnostics')
             publishers=dict(master.getSystemState()[0])
-            assert len(publishers.get(ns+'/tracks_map',[]))==1
+            assert len(publishers.get(ns+'/planning_observations_map',[]))==1
             assert not any(publishers.get(t) for t in ('/last_lidar','/YOLO/BBox','/ctrl_cmd_0'))
             assert not publishers.get('/planning/input/tracked_objects')
             print('PASS one producer, no legacy wire/JSON/control dependency',flush=True)

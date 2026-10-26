@@ -1004,7 +1004,7 @@ roslaunch Main main.launch
 
 ### 좌표 변환이 없다
 
-라이다의 `map` 프레임은 [Parser.cpp](../../../lidar+sensorfusion/src/Main/src/Parser/Parser.cpp)
+라이다의 `map` 프레임은 [Parser.cpp](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/src/Parser/Parser.cpp)
 가 UTM52N 에서 `eastOffset`/`northOffset` 을 뺀 ENU 이고, 그 offset 을
 [morai_sensor_bridge.launch](../../../asmc_bridge/launch/morai_sensor_bridge.launch)
 가 `302595.0` / `4124145.0` 으로 넣는다 — 구운 맵의 `local_origin_in_global` 과

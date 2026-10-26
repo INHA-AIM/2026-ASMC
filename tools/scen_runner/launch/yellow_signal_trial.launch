@@ -1,5 +1,5 @@
 <launch>
-  <!-- Explicit opt-in, separately owned trial. Bridges/Main/camera are external.
+  <!-- Explicit opt-in, separately owned trial. Bridges/LiDAR/camera are external.
        The per-run clock profile is produced only after clock acceptance. -->
   <arg name="clock_profile"/>
   <arg name="mode" default="shadow"/>

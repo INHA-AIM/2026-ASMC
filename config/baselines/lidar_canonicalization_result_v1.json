@@ -1,0 +1,306 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "run_id": "lidar-b4-canonicalization-20261026-r1",
+  "baseline_revision": "b2e8329f1cb71f11150d5125335e01c5b8d252c5",
+  "source_registration_revision": "0a6e1169442d1d1f77be6ad91669bbcad88e030a",
+  "source_evidence": "registration.json + working-change.patch + replay-source-snapshot.json; final code and logs retained with the same run",
+  "pipeline_config_sha256": "3ba22270599474819739e600df1d99505acd4bc332458bdabfcb8411b4b0cf89",
+  "independent_bags": 2,
+  "independent_scans": 857,
+  "compared_scans": 4102,
+  "cpp_sources_equal_after_declared_renames": 73,
+  "normalized_source_manifest_sha256": "79a98000977e6741cf54c46ede3f14672a97dfa582a07223f383dbb97f3ecc04",
+  "legacy_sources_preserved_by_git_sha": 375,
+  "retired_execution_tools": 33,
+  "replay": {
+    "run_id": "lidar-b4-canonicalization-20261026-r1",
+    "equal": true,
+    "cases": [
+      {
+        "case": "primary-normal",
+        "scans": 649,
+        "debug": true,
+        "exact_equal": true,
+        "first_difference": null,
+        "resources": {
+          "baseline": {
+            "wall_s": 33.84985525207594,
+            "cpu_s": 31.646362,
+            "max_rss_kib": 162616
+          },
+          "candidate": {
+            "wall_s": 33.89095976296812,
+            "cpu_s": 31.714449,
+            "max_rss_kib": 162752
+          }
+        },
+        "calculation_ms": {
+          "baseline": {
+            "p50": 51.736003,
+            "p95": 67.327728,
+            "p99": 72.700038
+          },
+          "candidate": {
+            "p50": 52.486814,
+            "p95": 68.356973,
+            "p99": 73.014047
+          }
+        }
+      },
+      {
+        "case": "tunnel-normal",
+        "scans": 208,
+        "debug": true,
+        "exact_equal": true,
+        "first_difference": null,
+        "resources": {
+          "candidate": {
+            "wall_s": 14.627669871086255,
+            "cpu_s": 13.636683999999999,
+            "max_rss_kib": 163396
+          },
+          "baseline": {
+            "wall_s": 14.410475688055158,
+            "cpu_s": 13.431182999999999,
+            "max_rss_kib": 162788
+          }
+        },
+        "calculation_ms": {
+          "baseline": {
+            "p50": 64.482362,
+            "p95": 89.120205,
+            "p99": 90.665902
+          },
+          "candidate": {
+            "p50": 66.950771,
+            "p95": 93.295003,
+            "p99": 99.219306
+          }
+        }
+      },
+      {
+        "case": "primary-invalid",
+        "scans": 649,
+        "debug": true,
+        "exact_equal": true,
+        "first_difference": null,
+        "resources": {
+          "baseline": {
+            "wall_s": 33.74114666192327,
+            "cpu_s": 31.560585,
+            "max_rss_kib": 163012
+          },
+          "candidate": {
+            "wall_s": 33.6165733350208,
+            "cpu_s": 31.434731,
+            "max_rss_kib": 163188
+          }
+        },
+        "calculation_ms": {
+          "baseline": {
+            "p50": 51.827994,
+            "p95": 68.050691,
+            "p99": 72.105871
+          },
+          "candidate": {
+            "p50": 51.141741,
+            "p95": 68.102407,
+            "p99": 72.972485
+          }
+        }
+      },
+      {
+        "case": "primary-missing",
+        "scans": 649,
+        "debug": true,
+        "exact_equal": true,
+        "first_difference": null,
+        "resources": {
+          "candidate": {
+            "wall_s": 33.42450873798225,
+            "cpu_s": 31.278154,
+            "max_rss_kib": 163236
+          },
+          "baseline": {
+            "wall_s": 33.502325888955966,
+            "cpu_s": 31.308082000000002,
+            "max_rss_kib": 163300
+          }
+        },
+        "calculation_ms": {
+          "baseline": {
+            "p50": 51.029042,
+            "p95": 68.860123,
+            "p99": 72.327422
+          },
+          "candidate": {
+            "p50": 50.769078,
+            "p95": 67.175968,
+            "p99": 71.149651
+          }
+        }
+      },
+      {
+        "case": "primary-perf-r1",
+        "scans": 649,
+        "debug": false,
+        "exact_equal": true,
+        "first_difference": null,
+        "resources": {
+          "baseline": {
+            "wall_s": 33.255033849040046,
+            "cpu_s": 31.167206999999998,
+            "max_rss_kib": 163248
+          },
+          "candidate": {
+            "wall_s": 33.14768052403815,
+            "cpu_s": 31.020093000000003,
+            "max_rss_kib": 163228
+          }
+        },
+        "calculation_ms": {
+          "baseline": {
+            "p50": 50.628218,
+            "p95": 67.502817,
+            "p99": 70.886896
+          },
+          "candidate": {
+            "p50": 50.953863,
+            "p95": 67.275168,
+            "p99": 73.405281
+          }
+        }
+      },
+      {
+        "case": "primary-perf-r2",
+        "scans": 649,
+        "debug": false,
+        "exact_equal": true,
+        "first_difference": null,
+        "resources": {
+          "candidate": {
+            "wall_s": 33.27455293294042,
+            "cpu_s": 31.233061000000003,
+            "max_rss_kib": 162680
+          },
+          "baseline": {
+            "wall_s": 32.97613318695221,
+            "cpu_s": 31.047871,
+            "max_rss_kib": 163236
+          }
+        },
+        "calculation_ms": {
+          "baseline": {
+            "p50": 50.518185,
+            "p95": 66.431527,
+            "p99": 71.00046
+          },
+          "candidate": {
+            "p50": 51.66137,
+            "p95": 67.377402,
+            "p99": 72.031676
+          }
+        }
+      },
+      {
+        "case": "primary-perf-r3",
+        "scans": 649,
+        "debug": false,
+        "exact_equal": true,
+        "first_difference": null,
+        "resources": {
+          "baseline": {
+            "wall_s": 33.249644026043825,
+            "cpu_s": 31.159582,
+            "max_rss_kib": 162580
+          },
+          "candidate": {
+            "wall_s": 33.20680056291167,
+            "cpu_s": 31.136018,
+            "max_rss_kib": 162564
+          }
+        },
+        "calculation_ms": {
+          "baseline": {
+            "p50": 51.566271,
+            "p95": 66.809302,
+            "p99": 71.006825
+          },
+          "candidate": {
+            "p50": 51.152013,
+            "p95": 67.104918,
+            "p99": 73.754127
+          }
+        }
+      }
+    ],
+    "ignored_fields": [
+      "top-level producer and producer_session_id",
+      "top-level timings_ms",
+      "hd_map_audit.calculation_ms",
+      "hd_map_audit.objects[*].comparison_ms"
+    ],
+    "scope": "fixed-bag regression of current canonical runtime; not full-mission driving or independent velocity accuracy",
+    "comparison_correction": {
+      "reason": "original comparison included measured HD-map calculation_ms and per-object comparison_ms",
+      "original_preserved": "comparison.json",
+      "comparator": "src/asmc_lidar/tools/compare_traces.py --same-contract",
+      "comparator_sha256": "7224dcc57ad99c7039c92a612693c57c25d8f2b137a3187e47f6e71af4714a9a",
+      "generation_config_and_calibration_ids_compared": true
+    }
+  },
+  "debug_off_three_pair_median_ms": {
+    "baseline": {
+      "p50": 50.628218,
+      "p95": 66.809302,
+      "p99": 71.00046
+    },
+    "candidate": {
+      "p50": 51.152013,
+      "p95": 67.275168,
+      "p99": 73.405281
+    }
+  },
+  "debug_off_three_pair_median_cpu_s": {
+    "baseline": 31.159582,
+    "candidate": 31.136018
+  },
+  "debug_off_peak_rss_kib": {
+    "baseline": 163248,
+    "candidate": 163228
+  },
+  "validation": {
+    "clean_build": "passed; outer workspace only",
+    "isolated_install": "passed; install-only environment and ldd",
+    "lidar_ctest": {
+      "passed": 34,
+      "total": 34
+    },
+    "planner_ctest": {
+      "passed": 64,
+      "total": 64
+    },
+    "controller_ctest": {
+      "passed": 18,
+      "total": 18
+    },
+    "common_lidar_ros": "passed: 16 checks",
+    "autonomy_ros": "passed: common tracking to private planning objects, no duplicate producers",
+    "ground_projection": "8 tests passed",
+    "camera_adapter_ros": "5 fixture files passed including IMU",
+    "camera_contract_ros": "baseline/all YOLO and segmentation passed",
+    "scenario_unit": "208/208 passed",
+    "scenario_integration": "112 passed",
+    "documentation": "link/anchor, current runtime commands, historical manifest and five frozen files passed",
+    "hosted_ci": "reported separately on PR; local results are not hosted results",
+    "python_ci_commands": "90 CI unittest commands plus 6 strict comparison/tracking extraction cases passed",
+    "web": "Node20 LiDAR view and planning dashboard motion passed"
+  },
+  "limits": [
+    "No new full-mission or moving-MORAI acceptance in B4.",
+    "Fixed bag regression is not independent velocity or 3-camera fusion accuracy validation.",
+    "Offline replay timing is not a whole-stack ROS input-to-output or live-rate benchmark.",
+    "RSS is process peak per fixed replay; no long-run memory-stability acceptance is claimed."
+  ]
+}

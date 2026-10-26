@@ -49,7 +49,7 @@ components:
     model_selection_policy: startup_restart
     class_profile: mission16_v1
     implementation: asmc_camera/object_detection_node.py
-    consumer: Main/camera_objects_yolo_bbox_adapter.py
+    consumer: asmc_lidar/fusion/front_camera_fusion
   camera_lane:
     enabled_by_default: true  # camera.launch starts ACTIVE; driving use is shadow-only
     sensor_set: ASMC_sensor_set_v3
@@ -156,6 +156,6 @@ external_components:
     profile_owner: data_collection
     integration_policy: independent_runtime
   lidar_fusion:
-    owner_workspace: src/lidar+sensorfusion
-    integration_policy: team_owned_deferred_until_handoff
-    producer_status: opt_in_camera_producer_with_Main_adapter_p2a
+    owner_workspace: src/asmc_lidar
+    integration_policy: independently_started_canonical_runtime
+    producer_status: canonical_camera_observations_front_fusion_three_view_receiver

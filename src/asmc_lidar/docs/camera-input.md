@@ -1,7 +1,7 @@
 # 카메라 관측 연결
 
 이 컴포넌트는 카메라 입력과 투영 근거를 제공한다. 실행 중인 YOLO는 `asmc_camera` 한 곳에
-두고, 손재호의 LiDAR 노드 안에서 `camera::Receiver`를 생성한다. 현재 운영 Main의 전방
+두고, 손재호의 LiDAR 노드 안에서 `camera::Receiver`를 생성한다. 현재 asmc_lidar의 전방
 fusion과 이 수신 라이브러리는 별도다. opt-in shadow 노드([Shadow 파이프라인](pipeline.md))는
 이 Receiver로 `camera_front`만 fusion에 쓴다. 전체 LiDAR 이전·3뷰 객체 매칭은 아직 완료되지 않았다.
 
@@ -18,8 +18,8 @@ fusion과 이 수신 라이브러리는 별도다. opt-in shadow 노드([Shadow 
 상태를 새 타입 토픽으로 이름만 바꿔 재생하지 않는다. 구형 경로/고정 checkout으로 재현하거나
 원본을 보존한 변환 fixture를 사용한다. 새 UUID를 알 수 없는 기록은 새 세션 정답으로 간주하지 않는다.
 
-카메라·Main·새 소비자를 같은 변경으로 빌드하고 재시작한다. 바깥 workspace를 먼저 source한
-뒤 nested Main을 빌드/source한다. LiDAR 수신부는 모드 서비스를 호출하지 않는다.
+카메라·LiDAR·소비자를 outer workspace에서 빌드한다. 실제 배포 때 해당 노드를 재시작하고
+nested overlay는 source하지 않는다. LiDAR 수신부는 모드 서비스를 호출하지 않는다.
 모드 결정은 판제가 한다. 기존 메시지와 서비스의 MD5는 보존하며 새 상태 MD5는
 `8b2caf96bbf9a9eaea848fcb9551b79f`다. 공용 서비스 MD5는
 `94a789aab65be7cc8d09e8f777708430`이지만 타입명도 바뀌므로 서비스 호환을 MD5만으로 판정하지 않는다.

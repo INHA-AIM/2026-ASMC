@@ -12,7 +12,7 @@ class ObservationTest(unittest.TestCase):
     def test_invalid_stale_and_duplicate_never_publish_clear_road(self):
         received = []
         sub = rospy.Subscriber('/planning/objects', DetectedObjectArray, received.append)
-        pub = rospy.Publisher('/migration/lidar/planning_observations_map', LidarPlanningObservation, queue_size=2)
+        pub = rospy.Publisher('/perception/lidar/planning_observations_map', LidarPlanningObservation, queue_size=2)
         deadline = time.monotonic() + 5
         while not pub.get_num_connections() and time.monotonic() < deadline: time.sleep(.02)
         self.assertEqual(pub.get_num_connections(), 1)
