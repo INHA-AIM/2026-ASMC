@@ -10,9 +10,9 @@
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh` 기준.
 > 상세: [개발·시뮬레이터 운영 가이드](../../docs/operations/README.md)
 > bridge 구현·통합 gate: [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)
-> 본선 센서셋: [`ASMC_sensor_set_v3.json`](./sensors/ASMC_sensor_set_v3.json) — 설정·소비 15 Hz, 완성 scan 약 12 Hz 허용<br>
-> 회귀 센서셋: [`ASMC_sensor_set_v2.json`](./sensors/ASMC_sensor_set_v2.json) — 10 Hz 비교용<br>
-> GT용: [`ASMC_sensor_set_GT.json`](./sensors/ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
+> 본선 센서셋: [`ASMC_sensor_set_v3.json`](sensors/261027_ASMC_Local_Sensor_25.S4.MolitComp03.json) — 설정·소비 15 Hz, 완성 scan 약 12 Hz 허용<br>
+> 회귀 센서셋: [`ASMC_sensor_set_v2.json`](../../src/asmc_bridge/test/fixtures/sensor_v2_10hz.json) — 10 Hz 비교용<br>
+> GT용: [`ASMC_sensor_set_GT.json`](sensors/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json) (v2 + Semantic Camera×3 + Instance LiDAR)
 
 ---
 
@@ -22,9 +22,9 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 
 1. Docker Desktop + WSL Integration ON → `./scripts/docker_ros_up.sh up`
 2. MORAI **Host/Dest IP 전부 `127.0.0.1`**
-3. **센서셋** `sensors/generated/ASMC_sensor_set_v3_local.json` Import
-   (10 Hz 과거 회귀가 필요할 때만 `...v2_local.json`)
-4. **Network Settings**: `network/generated/ASMC_network_set_26r1_local.json` Import
+3. **센서셋** `sensors/261027_ASMC_Local_Sensor_26.R1.H3.json` Import
+   (10 Hz 비교 입력은 `src/asmc_bridge/test/fixtures/sensor_v2_10hz.json`)
+4. **Network Settings**: `network/261027_ASMC_Local_Network_26.R1.H3.json` Import
    (현재 bridge 호환 Ego **9099** · Object **7505** · Collision **9092** 포함)
 5. **Cmd Control**: MoraiCmdController(type771), Host/Dest **9093 / 9094**. JSON `egoCtrlMode=3`(Auto), UDP payload `CtrlMode=2`(Auto).
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`

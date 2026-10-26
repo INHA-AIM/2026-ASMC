@@ -272,7 +272,7 @@ source devel/setup.bash
 `runtime_profile`, `transport_profile`, `stream_profile`은 wrapper가 관리한다.
 `transport_profile:=...`를 직접 넘기지 말고 `--transport`를 사용한다.
 `--streams`와 `ASMC_STREAMS`는 폐기했다. GT 개발은 `./scripts/udp_bridge.sh --gt`를 사용하고,
-MORAI UI에서 `config/morai/sensors/ASMC_sensor_set_GT.json`을 로드한다. Intensity·Instance
+MORAI UI에서 `config/morai/sensors/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json`을 로드한다. Intensity·Instance
 LiDAR 모두15Hz로 설정되어 있다. 주기 변경은 JSON 재로드 후 적용되며 실제 수신률은 별도로 확인한다.
 
 직접 launch도 가능하지만 local 디버그 외에는 wrapper가 더 안전하다.
@@ -355,7 +355,7 @@ roslaunch data_collection bag_replay.launch bag_path:=/data/rosbags/raw/<run_id>
 
 전용 NIC는 gateway/DNS를 비우고 MAC·ARP로 상대를 확인한다. 인터넷 NIC의 IP를 대신
 바꾸지 않는다. 설정 도구는 미리보기 후 `-Apply`로 적용하며 기존 ASMC 규칙도 갱신한다.
-시뮬레이터에는 release별 Network JSON과 `ASMC_sensor_set_v3_lan2lan.json`을 사용한다.
+시뮬레이터에는 release별 Network JSON과 `261027_ASMC_LAN2LAN_Sensor_<시뮬레이터버전>.json`을 사용한다.
 이미 LAN 센서셋이 적용돼 있으면 Competition 수정 때문에 다시 로드하지 않는다.
 
 Windows/Hyper-V의 팀 수신 UDP는 다음과 같다. 상대 `.1`, 로컬 `.10`, 전용 NIC로 범위를 제한한다.

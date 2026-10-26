@@ -96,17 +96,28 @@ class BridgeProfileContractTest(unittest.TestCase):
         rendered = render_catalog(load_contract(), catalog)
         self.assertEqual(10, len(rendered))
         for title in ('Local', 'LAN2LAN'):
-            self.assertEqual(rendered[f'261027_ASMC_{title}_Sensor_26.R1.H3.json'],
-                             rendered[f'261027_ASMC_{title}_Sensor_25.S4.MolitComp03.json'])
+            self.assertEqual(rendered[f'sensors/261027_ASMC_{title}_Sensor_26.R1.H3.json'],
+                             rendered[f'sensors/261027_ASMC_{title}_Sensor_25.S4.MolitComp03.json'])
         broken = copy.deepcopy(catalog)
-        name = '261027_ASMC_LAN2LAN_Sensor_26.R1.H3.json'
+        name = 'sensors/261027_ASMC_LAN2LAN_Sensor_26.R1.H3.json'
         broken['files'][name]['version'] = '25.S4.MolitComp03'
         with self.assertRaisesRegex(ValueError, 'Mismatched'):
             render_catalog(load_contract(), broken)
         broken = copy.deepcopy(catalog)
-        broken['files']['261027_ASMC_Local_SensorGT_26.R1.H3.json']['transport'] = 'lan2lan'
+        broken['files']['sensors/261027_ASMC_Local_SensorGT_26.R1.H3.json']['transport'] = 'lan2lan'
         with self.assertRaisesRegex(ValueError, 'GT presets'):
             render_catalog(load_contract(), broken)
+
+    def test_config_folders_contain_only_canonical_imports(self):
+        from render_morai_release_presets import CATALOG
+        catalog = json.loads(CATALOG.read_text())
+        actual = {str(p.relative_to(CATALOG.parent))
+                  for kind in ('network', 'sensors')
+                  for p in (CATALOG.parent / kind).rglob('*.json')}
+        self.assertEqual(set(catalog['files']), actual)
+        self.assertFalse((CATALOG.parent / 'presets').exists())
+        for kind in ('network', 'sensors'):
+            self.assertTrue(all(p.is_file() for p in (CATALOG.parent / kind).iterdir()))
 
     def test_repository_contract_is_valid(self):
         result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
@@ -124,7 +135,7 @@ class BridgeProfileContractTest(unittest.TestCase):
         self.assertEqual(674, result["full_graph_tests"])
         self.assertEqual(["lan2lan", "local"], result["transport_profiles"])
         self.assertEqual(4, result["network_profiles"])
-        self.assertEqual(4, result["sensor_transport_profiles"])
+        self.assertEqual(2, result["sensor_transport_profiles"])
         self.assertEqual("competition", result["default_stream_profile"])
         self.assertEqual("asmc_bridge/bridge.launch", result["canonical_launch"])
         self.assertEqual(15, result["published_topic_count"])
@@ -140,7 +151,7 @@ class BridgeProfileContractTest(unittest.TestCase):
         self.assertEqual([2, 2], result['sensor_sets']['GT']['lidar_frequency_indices'])
         for period in result['sensor_sets']['GT']['lidar_periods_s']:
             self.assertAlmostEqual(1.0 / 15.0, period)
-        sensors = json.loads((REPO_ROOT / 'config/morai/sensors/ASMC_sensor_set_GT.json').read_text())
+        sensors = json.loads((REPO_ROOT / 'tools/bridge/templates/sensor_gt.json').read_text())
         self.assertEqual([5, 11], [row['m_SensorUniqueID'] for row in sensors['Lidar3DList']])
         self.assertEqual([9299, 9311], [row['lc']['udpConfig']['destinationPort'] for row in sensors['Lidar3DList']])
 

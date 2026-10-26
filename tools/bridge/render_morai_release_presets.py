@@ -8,7 +8,7 @@ from pathlib import Path
 from render_morai_network_profiles import load_contract, render_profile, rendered_bytes, REPO_ROOT
 from render_morai_sensor_profiles import render_sensor_profile, iter_udp_configs
 
-CATALOG = REPO_ROOT / 'config/morai/presets/catalog.json'
+CATALOG = REPO_ROOT / 'config/morai/catalog.json'
 VERSIONS = {'26r1': '26.R1.H3', 'molitcomp03': '25.S4.MolitComp03'}
 TRANSPORTS = {'local': 'Local', 'lan2lan': 'LAN2LAN'}
 
@@ -23,7 +23,7 @@ def render_catalog(contract, catalog):
     for release, version in VERSIONS.items():
         for transport, title in TRANSPORTS.items():
             for kind in ('Network', 'Sensor'):
-                filename = f'{date}_ASMC_{title}_{kind}_{version}.json'
+                filename = ('network/' if kind == 'Network' else 'sensors/') + f'{date}_ASMC_{title}_{kind}_{version}.json'
                 document = (render_profile(contract, release, transport) if kind == 'Network'
                             else render_sensor_profile(contract, 'v3', transport))
                 entry = catalog['files'].get(filename, {})
@@ -33,7 +33,7 @@ def render_catalog(contract, catalog):
                     raise ValueError('Mismatched release/transport metadata: ' + filename)
                 result[filename] = rendered_bytes(document)
         # GT is an explicit local development preset; it is not a competition LAN input.
-        filename = f'{date}_ASMC_Local_SensorGT_{version}.json'
+        filename = 'sensors/' + f'{date}_ASMC_Local_SensorGT_{version}.json'
         gt = json.loads((REPO_ROOT / contract['sensor_sets']['GT']['path']).read_text())
         for udp in iter_udp_configs(gt):
             if (udp['hostIP'], udp['destinationIP']) != ('127.0.0.1', '127.0.0.1'):
@@ -70,7 +70,7 @@ def main():
     else:
         for name, content in render_catalog(contract, catalog).items():
             (CATALOG.parent / name).write_bytes(content)
-            print('wrote config/morai/presets/' + name)
+            print('wrote config/morai/' + name)
 
 
 if __name__ == '__main__':

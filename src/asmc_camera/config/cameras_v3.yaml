@@ -1,4 +1,4 @@
-source_sensor_set: config/morai/sensors/ASMC_sensor_set_v3.json
+source_sensor_set: tools/bridge/templates/sensor_v3.json
 source_sha256: 4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f
 
 # v3 changes the VLP-16 period from v2 but preserves all four camera poses,

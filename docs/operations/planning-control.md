@@ -163,7 +163,7 @@ Keyboard/P와 `/ctrl_cmd` 발행자0을 확인했다. 이26R1 대조의 직접 �
 `/planning/objects`, 어댑터 diagnostics의 시각·유효성·탈락 사유를 함께 확인하며 timeout을 늘리거나
 센서 무효를 정상 빈 결과로 바꾸지 않는다.
 
-네트워크 파일의 release별 제어 선택은 [MORAI 설정표](../../config/morai/README.md#network-export-차이)가
+네트워크 파일의 release별 제어 선택은 [MORAI 설정표](../../config/morai/README.md#모드와-채널)가
 정본이다. 26R1 생성본은 type786→771, import `egoCtrlMode`2→3으로 수정했고 MolitComp03의
 type771은 유지하고 import mode는 설치 enum 확인 후3=AutoMode로 정정했다. 두 버전 모두
 JSON1=Keyboard,2=GameWheel,3=AutoMode이며 UDP payload CtrlMode는 별도로2다. 현재 PC 저장본과

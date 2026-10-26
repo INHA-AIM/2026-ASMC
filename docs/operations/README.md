@@ -161,7 +161,7 @@ source devel/setup.bash
 두 개 실행하지 않는다.
 
 26r1과 대회판 모두 같은 `morai_udp` launch를 사용한다. 현장에서는 별도로
-`ASMC_network_set_molitcomp03_lan2lan.json`을 MORAI에 로드해야 하며, 실제 LAN gate 전에는
+`261027_ASMC_LAN2LAN_Network_25.S4.MolitComp03.json`을 MORAI에 로드해야 하며, 실제 LAN gate 전에는
 이를 현장 설정 완료로 간주하지 않는다.
 
 현장 후보 명령은 명시적 transport를 함께 쓴다.

@@ -36,7 +36,7 @@ HD_MAP_REL = Path(
 HD_MAP_SUMMARY_REL = Path(
     "src/asmc_hd_map/reports/kcity2025_route_curation_20260917/summary.json"
 )
-SENSOR_REL = Path("config/morai/sensors/ASMC_sensor_set_v2.json")
+SENSOR_REL = Path("src/asmc_bridge/test/fixtures/sensor_v2_10hz.json")
 CHECKPOINT_REL = Path("R_KR_PG_K-city_2025/2026_molit_comp_checkpoints.json")
 # Rule book v1.2 (2026-09-30): START/END plus checkpoints 1-14.
 OFFICIAL_CHECKPOINT_COUNT = 15

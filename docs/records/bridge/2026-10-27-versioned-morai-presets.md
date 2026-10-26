@@ -1,10 +1,13 @@
 # 버전별 MORAI 정본과 주행 모드 정정
 
 사용자 지정 이름은 `YYMMDD_ASMC_LAN2LAN/Local_Network/Sensor_모라이버전.json`이다.
-[정본 목록](../../../config/morai/presets/catalog.json)은26.R1.H3·25.S4.MolitComp03 각각
+[정본 목록](../../../config/morai/catalog.json)은26.R1.H3·25.S4.MolitComp03 각각
 Network/Sensor의Local/LAN2LAN8개와 별도Local SensorGT2개다.
 정본은 공통 계약·생성기를 공유하고 모드·버전 메타데이터와 모든 JSON byte를 검사한다.
-옛 generated 이름은 코드·회귀 참조 호환을 위해 유지한다. UI 배포명은 새 이름만 사용한다.
+config/morai의 network/·sensors/에는 불러올4+6개 파일만 둔다. 생성 입력4개는
+tools/bridge/templates, 필요한10Hz 입력은 테스트fixture로 이동하고 원본 SHA를 유지한다.
+미사용v1·9111 archive와 중복 generated 파일은 Git 이력2c691304에만 보존한다.
+런처·보정·감사 경로를 함께 바꾸되 과거 bag 식별자와 동결 근거는 치환하지 않는다.
 
 ## 센서 동일성
 
@@ -59,3 +62,11 @@ Type267은 TF2이다. 팀 입력이 아니므로 loopback과 버퍼 스레드OFF
 - 문서 migration·런처 참조·기존CI145개 검사 보존·shell syntax·diff whitespace 통과
 
 실제 두 PC 자율주행·채점 수락은 이 파일 생성 시험과 별도이며 재호 담당 검증을 대체하지 않는다.
+
+## 경로 정리의 검증
+
+Network4개·Sensor6개의 JSON byte는 기존 SaveFile 배포본과 동일하다.
+생성 원본4개와10Hz 회귀fixture도 이동 전 SHA와 같다.
+현재 camera/BEV/LiDAR 설정은 입력 경로 문자열만 바꿨고 수치·원본 sensor SHA를 유지했다.
+현재 parity 목록에는 metadata 경로 수정의 previous SHA를 남겼다. 과거 run·동결 기록은 바꾸지 않았다.
+config 하위에 중복 presets/archive/generated/templates 폴더가 다시 생기면 계약 검사가 실패한다.

@@ -49,7 +49,6 @@ def render_sensor_profile(
     try:
         sensor_spec = contract["sensor_sets"][sensor_set]
         transport_spec = contract["transport_profiles"][transport]
-        sensor_spec["transport_generated"][transport]
     except KeyError as exc:
         raise SensorProfileError(f"unknown or non-renderable profile key: {exc.args[0]}") from exc
 

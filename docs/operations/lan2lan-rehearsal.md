@@ -26,7 +26,7 @@ Wi-Fi/VPN/가상 NIC에 같은 subnet route가 중복되지 않는지 검사한�
 현재 연결 중인 연구실 NIC를 문서만 보고 재설정하지 않는다.
 
 본선 시뮬레이터/맵/차량과 제출 센서셋·카메라 장착/해상도/FOV를 맞춘다.
-`*_molitcomp03_lan2lan.json`과 `ASMC_sensor_set_v3_lan2lan.json`이 팀 통신 연습용이다.
+`261027_ASMC_LAN2LAN_Network_25.S4.MolitComp03.json`과 같은 버전의`LAN2LAN_Sensor`이 팀 통신 연습용이다.
 26.R1에서는 그 release의 import JSON을 사용하며 동일 IP/포트만으로 대회판 packet까지
 동일하게 재현했다고 표시하지 않는다. 센서·network 두 설정 모두 destination을 추론 PC로 바꾼다.
 

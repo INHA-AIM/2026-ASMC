@@ -49,7 +49,7 @@ def main():
     protocol=yaml.safe_load(args.config.read_text())
     calibration=root/'src/asmc_camera/config/cameras_v3.yaml'
     document,cameras=load_calibration_snapshot(calibration)
-    sensor_path=root/'config/morai/sensors/ASMC_sensor_set_v3.json'
+    sensor_path=root/'tools/bridge/templates/sensor_v3.json'
     sensor=json.loads(sensor_path.read_text())
     validate_sensor_set_snapshot(document,cameras,sensor_path)
     lidar=sensor['Lidar3DList'][0];camera=cameras['front']

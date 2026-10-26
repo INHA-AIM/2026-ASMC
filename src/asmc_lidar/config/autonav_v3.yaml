@@ -1,6 +1,6 @@
 # Calibration used by Main's opt-in common geometry adapter.
 # Rear-axle base_link <- LiDAR sensor, metres/degrees. Mount z is not road height.
-source: config/morai/sensors/ASMC_sensor_set_v3.json@4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f
+source: tools/bridge/templates/sensor_v3.json@4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f
 sensor_pose_base_link:
   x_m: 0.80
   y_m: 0.0

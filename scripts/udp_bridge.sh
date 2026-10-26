@@ -141,18 +141,17 @@ if [ "$REQUIRE_COMPETITION_STATUS" = true ] && [ "$GT" = true ]; then
 fi
 PRESET_TRANSPORT="Local"
 if [ "$TRANSPORT_PROFILE" = "lan2lan" ]; then PRESET_TRANSPORT="LAN2LAN"; fi
-NETWORK_PRESET_26R1="config/morai/presets/261027_ASMC_${PRESET_TRANSPORT}_Network_26.R1.H3.json"
-NETWORK_PRESET_COMP="config/morai/presets/261027_ASMC_${PRESET_TRANSPORT}_Network_25.S4.MolitComp03.json"
-SENSOR_PRESET_V2="config/morai/sensors/generated/ASMC_sensor_set_v2_${TRANSPORT_PROFILE}.json"
-SENSOR_PRESET_V3="config/morai/presets/261027_ASMC_${PRESET_TRANSPORT}_Sensor_25.S4.MolitComp03.json"
-SENSOR_PRESET_R1="config/morai/presets/261027_ASMC_${PRESET_TRANSPORT}_Sensor_26.R1.H3.json"
-SENSOR_PRESET_GT="config/morai/presets/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json"
-SENSOR_PRESET_GT_R1="config/morai/presets/261027_ASMC_Local_SensorGT_26.R1.H3.json"
+NETWORK_PRESET_26R1="config/morai/network/261027_ASMC_${PRESET_TRANSPORT}_Network_26.R1.H3.json"
+NETWORK_PRESET_COMP="config/morai/network/261027_ASMC_${PRESET_TRANSPORT}_Network_25.S4.MolitComp03.json"
+SENSOR_PRESET_V3="config/morai/sensors/261027_ASMC_${PRESET_TRANSPORT}_Sensor_25.S4.MolitComp03.json"
+SENSOR_PRESET_R1="config/morai/sensors/261027_ASMC_${PRESET_TRANSPORT}_Sensor_26.R1.H3.json"
+SENSOR_PRESET_GT="config/morai/sensors/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json"
+SENSOR_PRESET_GT_R1="config/morai/sensors/261027_ASMC_Local_SensorGT_26.R1.H3.json"
 
 # Parse and shift our CLI arguments before sourcing catkin setup files. Catkin
 # setup forwards the caller's positional parameters to _setup_util.py.
 cd "$ASMC_WS_ROOT"
-PRESETS=( "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP" "$SENSOR_PRESET_V2" "$SENSOR_PRESET_V3" "$SENSOR_PRESET_R1" )
+PRESETS=( "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP" "$SENSOR_PRESET_V3" "$SENSOR_PRESET_R1" )
 if [ "$GT" = true ]; then PRESETS+=( "$SENSOR_PRESET_GT" "$SENSOR_PRESET_GT_R1" ); fi
 for preset in "${PRESETS[@]}"; do
   if [ ! -f "$ASMC_WS_ROOT/$preset" ]; then
@@ -213,7 +212,6 @@ else
   echo "  Sensor preset  : MolitComp03 v3 -> ${SENSOR_PRESET_V3}"
   echo "                   26r1 v3 -> ${SENSOR_PRESET_R1}"
   echo "                   configured 15 Hz; actual complete scans may arrive slower"
-  echo "                   v2 regression -> ${SENSOR_PRESET_V2} (lidar_rotation_rate:=10.0)"
 fi
 # Receive sockets bind the same ports for both transports. Only the outgoing
 # Ctrl destination changes, so derive it from the explicit transport instead
