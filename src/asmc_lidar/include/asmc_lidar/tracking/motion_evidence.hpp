@@ -1,7 +1,7 @@
 #pragma once
 #include <cmath>
 #include <deque>
-namespace asmc { namespace lidar { namespace pipeline { namespace motion_display { namespace motion_evidence {
+namespace asmc { namespace lidar { namespace pipeline { namespace motion_classifier { namespace motion_evidence {
 struct Sample {
     double time,min_x,max_x,min_y,max_y,vx,vy;
 };

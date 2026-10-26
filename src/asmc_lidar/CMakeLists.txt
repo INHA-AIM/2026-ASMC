@@ -93,7 +93,7 @@ install(DIRECTORY rviz DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 # that a missing dependency (or missing rostest data) fails instead of skipping.
 # ---------------------------------------------------------------------------
 option(ASMC_LIDAR_PIPELINE "Build the asmc_lidar migration pipeline, node and replay" ON)
-option(ASMC_LIDAR_PIPELINE_REQUIRED "Fail the configure step instead of skipping pipeline targets or tests" OFF)
+option(ASMC_LIDAR_PIPELINE_REQUIRED "Fail the configure step instead of skipping pipeline targets or tests" ON)
 if(ASMC_LIDAR_PIPELINE_REQUIRED AND NOT ASMC_LIDAR_PIPELINE)
   message(FATAL_ERROR "ASMC_LIDAR_PIPELINE_REQUIRED=ON needs ASMC_LIDAR_PIPELINE=ON")
 endif()
@@ -151,7 +151,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/detection/obb.cpp
     src/geometry/scan_frame.cpp
     src/tracking/kalman.cpp
-    src/tracking/motion_display.cpp
+    src/tracking/motion_classifier.cpp
     src/tracking/hungarian.cpp
     src/detection/detections.cpp
     src/tracking/tracker.cpp
@@ -231,7 +231,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_tunnel_filter_stage test/pipeline/test_tunnel_filter_stage.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_source_time test/pipeline/test_source_time.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_pipeline test/pipeline/test_pipeline.cpp)
-    lidar_pipeline_gtest(asmc_lidar_test_motion_display test/pipeline/test_motion_display.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_motion_classifier test/pipeline/test_motion_classifier.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_observation_quality test/pipeline/test_observation_quality.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_stage_observer test/pipeline/test_stage_observer.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_typed_output test/runtime/test_typed_output.cpp)

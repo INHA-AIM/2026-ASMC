@@ -1,15 +1,10 @@
 <launch>
   <!-- Integrated planner, input adapters and controller. Bridges and asmc_lidar
        remain separately managed. This wrapper currently supports LiDAR input. -->
-  <arg name="objects_source" default="lidar" doc="Supported source: lidar"/>
   <arg name="state_source" default="competition" doc="competition, gps_imu or external"/>
   <arg name="state_topic" default="/planning/vehicle/state"/>
   <arg name="canonical_objects_topic" default="/planning/objects"/>
-  <!-- Consumer cutover is explicit while the legacy rollback remains in use.
-       lidar_source_policy:=asmc_lidar selects the public typed tracking input.
-       asmc_lidar_companion selects the retained /migration/lidar companion. -->
-  <arg name="lidar_source_policy" default="validated_lidar"/>
-  <arg name="lidar_input_topic" default="$(eval '/perception/lidar/tracks_map' if arg('lidar_source_policy') == 'asmc_lidar' else '/last_lidar')"/>
+  <arg name="lidar_input_topic" default="/perception/lidar/tracks_map"/>
   <arg name="avoid_path_margin_m" default="0.4"/>
   <!-- 신호등 추론·발행은 카메라 담당의 asmc_camera/camera.launch가 단독 소유한다.
        판제는 /perception/traffic_light/detection을 소비하며 별도 ResNet을 시작하지 않는다.
@@ -42,10 +37,8 @@
     <rosparam command="load" file="$(find asmc_planner)/config/competition_speed_state.yaml"/>
     <param name="state_topic" value="$(arg state_topic)"/>
   </node>
-  <include file="$(eval find('planning_inputs') + '/launch/' + {'lidar': 'objects.launch'}[arg('objects_source')])">
+  <include file="$(find planning_inputs)/launch/objects.launch">
     <arg name="input_topic" value="$(arg lidar_input_topic)"/>
-    <arg name="source_policy" value="$(arg lidar_source_policy)"/>
-    <arg name="state_topic" value="$(arg state_topic)"/>
     <arg name="output_topic" value="$(arg canonical_objects_topic)"/>
   </include>
 

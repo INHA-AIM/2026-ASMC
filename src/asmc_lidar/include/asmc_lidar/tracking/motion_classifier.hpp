@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace asmc { namespace lidar { namespace pipeline { namespace motion_display {
+namespace asmc { namespace lidar { namespace pipeline { namespace motion_classifier {
 using float32 = float;
 // Full-scan Main-compatible applied estimates; UNKNOWN is not confirmed static.
 struct MotionObject {
@@ -137,4 +137,4 @@ private:
 };
 
 
-}}}} // namespace asmc::lidar::pipeline::motion_display
+}}}} // namespace asmc::lidar::pipeline::motion_classifier

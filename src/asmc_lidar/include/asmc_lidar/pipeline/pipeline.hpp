@@ -127,7 +127,7 @@ class Pipeline {
   PipelineConfig config_;
   GroundFilter ground_;
   Tracker tracker_;
-  motion_display::MotionClassifier display_motion_;
+  motion_classifier::MotionClassifier motion_classifier_;
   ScanFrame frame_;
   std::unique_ptr<TunnelFilterStage> tunnel_;
   std::int64_t last_raw_ns_ = 0;

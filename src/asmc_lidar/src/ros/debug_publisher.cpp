@@ -85,7 +85,7 @@ DebugPublisher::ObjectSummary Summary(const pipeline::TrackedObject& o) {
   s.abs_vx = o.tracking.f32_AbsVx;
   s.abs_vy = o.tracking.f32_AbsVy;
   s.velocity = o.tracking.f32_Velocity;
-  s.motion = o.tracking.display_motion;
+  s.motion = o.tracking.motion;
   return s;
 }
 

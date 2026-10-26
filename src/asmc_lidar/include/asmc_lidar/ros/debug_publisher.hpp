@@ -89,7 +89,7 @@ class DebugPublisher : public pipeline::StageObserver {
     std::array<pipeline::P3, 8> corners{};
     bool kf_initialized = false;
     float abs_vx = 0.f, abs_vy = 0.f, velocity = 0.f;
-    pipeline::motion_display::MotionObject motion;
+    pipeline::motion_classifier::MotionObject motion;
   };
   struct Snapshot {
     std::int64_t stamp_ns = 0, arrival_ns = 0;

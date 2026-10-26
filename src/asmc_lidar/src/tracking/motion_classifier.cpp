@@ -1,8 +1,8 @@
-#include <asmc_lidar/tracking/motion_display.hpp>
+#include <asmc_lidar/tracking/motion_classifier.hpp>
 #include <algorithm>
 #include <cmath>
 #include <limits>
-namespace asmc { namespace lidar { namespace pipeline { namespace motion_display {
+namespace asmc { namespace lidar { namespace pipeline { namespace motion_classifier {
 namespace { constexpr double kMpsToKph=3.6,kDirectionEpsilon=1e-6;
 double EstimateRigidAxisTranslation(double previous_min,
                                     double previous_max,

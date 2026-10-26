@@ -96,7 +96,7 @@ def main():
                     'pipeline_config:='+str(config_path), 'fusion:=false'], 'pipeline-'+str(len(processes)))
             node = pipeline()
             spawn(['roslaunch', 'planning_inputs', 'objects.launch',
-                'source_policy:=asmc_lidar', 'output_topic:=/contract/planning_objects'], 'adapter')
+                'output_topic:=/contract/planning_objects'], 'adapter')
             def store(target):
                 def callback(message):
                     with lock:

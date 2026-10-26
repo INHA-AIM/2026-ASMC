@@ -43,7 +43,7 @@ GTESTS = {'asmc_lidar_test_tunnel_filter_core': 27, 'asmc_lidar_test_preprocessi
           'asmc_lidar_test_pose_history': 32, 'asmc_lidar_test_gps_ingest': 15,
           'asmc_lidar_test_fusion_policy': 30, 'asmc_lidar_test_front_camera_fusion': 27,
           'asmc_lidar_test_tunnel_filter_stage': 7, 'asmc_lidar_test_pipeline': 15, 'asmc_lidar_test_source_time': 3,
-          'asmc_lidar_test_stage_observer': 5, 'asmc_lidar_test_motion_display': 6,
+          'asmc_lidar_test_stage_observer': 5, 'asmc_lidar_test_motion_classifier': 7,
           'asmc_lidar_test_observation_quality': 28,
           'asmc_lidar_test_typed_output': 15, 'asmc_lidar_test_runtime': 30, 'asmc_lidar_test_delivery_preview': 14}
 # rostest file stem -> (rosunit result name, minimum number of cases).

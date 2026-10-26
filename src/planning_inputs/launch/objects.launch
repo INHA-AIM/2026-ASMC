@@ -1,35 +1,9 @@
 <launch>
-  <arg name="source_policy" default="asmc_lidar"/>
-  <arg name="input_topic" default="$(eval '/perception/lidar/tracks_map' if arg('source_policy') == 'asmc_lidar' else '/last_lidar')"/>
-  <arg name="motion_debug_topic" default="/lidar/motion_debug"/>
+  <arg name="input_topic" default="/perception/lidar/tracks_map"/>
   <arg name="output_topic" default="/planning/objects"/>
-  <arg name="state_topic" default="/planning/vehicle/state"/>
-  <!-- Retain the branch's measured-KF companion for reproducible bag validation.
-       Exactly one adapter publishes output_topic for each source policy. -->
-  <arg name="asmc_input_topic" default="/migration/lidar/planning_observations_map"/>
-  <node if="$(eval arg('source_policy') == 'asmc_lidar_companion')" pkg="planning_inputs" type="asmc_lidar_planning_adapter"
-        name="asmc_lidar_planning_adapter" output="screen" required="true">
-    <param name="input_topic" value="$(arg asmc_input_topic)"/>
-    <param name="output_topic" value="$(arg output_topic)"/>
-  </node>
-  <!-- Frozen legacy wire is rollback-only. Common observations are consumed directly. -->
-  <node unless="$(eval arg('source_policy') in ['asmc_lidar', 'asmc_lidar_companion'])" pkg="planning_inputs" type="tracked_wire_bridge.py" name="planning_tracked_wire_bridge" output="screen">
-    <param name="source_policy" value="$(arg source_policy)"/>
-    <param name="motion_debug_topic" value="$(arg motion_debug_topic)"/>
+  <!-- Common typed observations only. Filtering and motion are producer-owned. -->
+  <node pkg="planning_inputs" type="planning_objects_adapter" name="planning_objects_adapter" output="screen" required="true">
     <param name="input_topic" value="$(arg input_topic)"/>
-    <param name="output_topic" value="/planning/input/tracked_objects"/>
-  </node>
-  <node unless="$(eval arg('source_policy') == 'asmc_lidar_companion')" pkg="planning_inputs" type="planning_objects_adapter" name="planning_objects_adapter" output="screen" required="true">
-    <rosparam command="load" file="$(find planning_inputs)/config/motion_params.yaml"/>
-    <rosparam command="load" file="$(find planning_inputs)/config/object_filter_params.yaml"/>
-    <param name="drivable_mask_image" value="$(find planning_inputs)/config/validated_0781402/road_mask.png"/>
-    <param name="drivable_mask_metadata" value="$(find planning_inputs)/config/validated_0781402/road_mask.yaml"/>
-    <param name="known_static_catalog" value="$(find planning_inputs)/config/validated_0781402/known_static_objects.yaml"/>
-    <param name="static_structure_exclusion_config" value="$(find planning_inputs)/config/static_structure_exclusions.yaml"/>
-    <param name="source_policy" value="$(arg source_policy)"/>
-    <param name="motion_debug_topic" value="$(arg motion_debug_topic)"/>
-    <param name="input_topic" value="$(eval arg('input_topic') if arg('source_policy') == 'asmc_lidar' else '/planning/input/tracked_objects')"/>
     <param name="output_topic" value="$(arg output_topic)"/>
-    <param name="state_topic" value="$(arg state_topic)"/>
   </node>
 </launch>

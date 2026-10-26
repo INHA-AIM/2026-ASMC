@@ -240,13 +240,13 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   // Main decision history runs at full scan rate, never at the throttled web
   // refresh rate. The copy supplies public applied velocity/motion, while the
   // raw tracker/KF remains unchanged. Map loss invalidates this estimate.
-  std::vector<motion_display::MotionObject> motion_objects(object.size());
+  std::vector<motion_classifier::MotionObject> motion_objects(object.size());
   const auto base_from_level = asmc::lidar::base_from_input(result.context);
   const bool motion_map_valid = result.context.map_pose.valid && base_from_level.has_value();
   if (motion_map_valid) {
     const auto map_from_level = result.context.map_pose.map_from_base * *base_from_level;
     for (std::size_t i=0;i<object.size();++i) {
-      const auto& o=object[i];auto& m=motion_objects[i];m=o.tracking.display_motion;
+      const auto& o=object[i];auto& m=motion_objects[i];m=o.tracking.motion;
       m.s32_Id=o.tracking.s32_Id;m.s32_MissCount=o.tracking.s32_MissCount;
       const auto center=(map_from_level * asmc::lidar::Vec(o.detection.f32_CoreX,o.detection.f32_CoreY,o.detection.f32_CoreZ)).eval();
       m.f32_CoreE=static_cast<float>(center.x());m.f32_CoreN=static_cast<float>(center.y());
@@ -267,9 +267,9 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
       }
       m.bounds_valid=m.bounds_valid && m.max_e-m.min_e>.05 && m.max_n-m.min_n>.05;
     }
-    display_motion_.Update(motion_objects, SourceDeltaSeconds(raw, 0));
-  } else display_motion_.InvalidateMapHistory(motion_objects);
-  for(std::size_t i=0;i<object.size();++i)object[i].tracking.display_motion=motion_objects[i];
+    motion_classifier_.Update(motion_objects, SourceDeltaSeconds(raw, 0));
+  } else motion_classifier_.InvalidateMapHistory(motion_objects);
+  for(std::size_t i=0;i<object.size();++i)object[i].tracking.motion=motion_objects[i];
 
   begin = Clock::now();
   std::sort(object.begin(), object.end(),

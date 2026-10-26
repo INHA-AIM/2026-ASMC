@@ -382,7 +382,7 @@ TEST(TypedOutput, PreservesLegacyAppliedMotionAndRotatesVectorsOnce) {
   auto object = MakeTrack(17, 7.f, 2.f, .3f);
   object.detection.f32_CoreX = 6.f;
   object.detection.f32_CoreY = 1.f;
-  auto& motion = object.tracking.display_motion;
+  auto& motion = object.tracking.motion;
   motion.s32_Id = 17; motion.s32_MotionValidObservations = 8;
   motion.s32_MotionState = 2; motion.motion_valid = true; motion.b_IsDynamic = true;
   motion.f32_PlannerVxKPH = 18.; motion.f32_PlannerVyKPH = -3.6;
@@ -413,7 +413,7 @@ TEST(TypedOutput, PreservesLegacyAppliedMotionAndRotatesVectorsOnce) {
 
 TEST(TypedOutput, WarmupEstimateIsUnknownAndGpsLossDoesNotInventMotion) {
   auto object = MakeTrack(7, 5.f, 0.f, 0.f);
-  auto& motion = object.tracking.display_motion;
+  auto& motion = object.tracking.motion;
   motion.s32_Id = 7; motion.s32_MotionValidObservations = 1;
   TypedOutput output;
   auto arrays = output.Observed(MakeResult(kStamp, true), {object});
