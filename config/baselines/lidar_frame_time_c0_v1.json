@@ -1,0 +1,55 @@
+{
+  "schema": "asmc.frame_time_baseline.v1",
+  "baseline_revision": "0dab4adf643470ddcff2edb26c3e8ca91928a196",
+  "configs": {
+    "src/asmc_lidar/config/lidar_pipeline.yaml": "3ba22270599474819739e600df1d99505acd4bc332458bdabfcb8411b4b0cf89",
+    "src/asmc_lidar/config/autonav_v3.yaml": "e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88",
+    "src/asmc_lidar/config/hd_map_audit/manifest.json": "13c517e3fffee3bfd64fabdb6f473c6c668d3d87e2142c38ff756e3650b98f2e",
+    "src/asmc_camera/config/cameras_v3.yaml": "54637d8bbbe5af9b0255824644e4118c86de4b3c683661ddc827913ed1817538",
+    "src/planning_inputs/config/vehicle_state.yaml": "0991e3a62b0a24cfb9576b919058351d25817fbd8c930e059955ceb5249c61e3",
+    "src/asmc_bridge/config/vehicle_state.yaml": "3f774f1c646093d20079e5355d8ba9d010666381f68111fae454abc80234f21b"
+  },
+  "inputs": [
+    {
+      "id": "normal",
+      "path": "data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag",
+      "sha256": "859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02",
+      "interval": "full recording",
+      "clock_evidence": "receive header; acquisition timing unavailable"
+    },
+    {
+      "id": "tunnel",
+      "path": "data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag",
+      "sha256": "9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34",
+      "interval": "full recording",
+      "clock_evidence": "receive header; acquisition timing unavailable"
+    },
+    {
+      "id": "camera_frames",
+      "path": "data/runtime/camera-imu-motion-20261018-r1/live-motion-r1/capture/frames.jsonl",
+      "sha256": "9dc7d4f530b8b15d99741a054624992740abaa3e62416e1ad40e4e94bb65b772",
+      "interval": "full recording",
+      "clock_evidence": "morai_sensor with bridge session; separate recording"
+    },
+    {
+      "id": "camera_events",
+      "path": "data/runtime/camera-imu-motion-20261018-r1/live-motion-r1/capture/events.jsonl",
+      "sha256": "85ce299ee34aa81a2d24796bad1fb68e5790ffd4bb320a0cba4f4307399e6a84",
+      "interval": "full recording",
+      "clock_evidence": "morai_sensor with bridge session; separate recording"
+    }
+  ],
+  "topics": {
+    "points": "/velodyne_points",
+    "gps": "/gps",
+    "imu": "/imu",
+    "can": "/Ego_topic"
+  },
+  "constraints": [
+    "No production changes",
+    "No cross-recording joins",
+    "Arrival-ordered replay, no future samples",
+    "Nearest available planning state is not same-time ground truth",
+    "No runtime math reimplementation in Python"
+  ]
+}
