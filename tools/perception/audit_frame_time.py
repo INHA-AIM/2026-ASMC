@@ -252,7 +252,7 @@ def main():
                  manifest=manifest,bag={},limitations=['Receive-only bag headers are not measurement stamps.',
                  'No cross-recording joins. No independent GT.',
                  'Camera publication queries are causal sensitivity, not measured worker timing.'])
-    summary['binaries']={str(p):sha(p) for p in [args.replay,*[args.probes/name for name in ('frame_projection_probe','context_probe','bridge_state_probe','planning_state_probe')]]}
+    summary['binaries']={str(p):sha(p) for p in [args.replay,*[args.probes/name for name in ('frame_projection_probe','context_probe','bridge_state_probe','planning_state_probe','support_probe')]]}
     summary['projection']=projection_cases(args.probes/'frame_projection_probe')
     for name in ('normal','tunnel'):
         path=inputs[name]; directory=args.output/name;directory.mkdir()
@@ -283,7 +283,10 @@ def main():
     # Optional rendering is part of the tool, with no ROS/GPU process.
     from frame_time.gallery import render
     summary['gallery']=render(args,inputs,camera_rows)
-    summary['passed']=summary['projection']['passed'] and all(x['replay_equal'] for x in summary['bag'].values())
+    from frame_time.audit_support import analyze
+    support_dir=args.output/'support';support_dir.mkdir()
+    summary['support']=analyze(manifest,args.storage_root,args.output,args.probes,support_dir)
+    summary['passed']=summary['support']['passed'] and summary['projection']['passed'] and all(x['replay_equal'] for x in summary['bag'].values())
     write_json(args.output/'summary.json',summary)
     (args.output/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>C0 frame/time</title>'
         '<style>body{font:16px sans-serif;max-width:1200px;margin:2em auto;background:#181d24;color:#eee}a{color:#8df}img{max-width:100%}pre{white-space:pre-wrap}</style>'
