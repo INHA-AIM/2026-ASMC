@@ -51,6 +51,8 @@ if(CATKIN_ENABLE_TESTING)
     test/test_known_static_object_filter.cpp test/test_drivable_boundary_filter.cpp
     test/test_static_structure_exclusion_filter.cpp)
   if(TARGET planning_filter_test)
+    target_compile_definitions(planning_filter_test PRIVATE
+      PLANNING_INPUTS_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(planning_filter_test planning_filter_core)
   endif()
 endif()
