@@ -52,7 +52,7 @@ def main():
     running = threading.Event()
     state = dict(gps=True, imu=True)
     lock = threading.RLock()
-    local, mapped, output, diagnostic = (collections.deque(maxlen=512) for _ in range(4))
+    local, mapped, output, diagnostic, pipeline_diagnostic = (collections.deque(maxlen=512) for _ in range(5))
     thread = None
     with tempfile.TemporaryDirectory(prefix='asmc-common-lidar-') as temporary:
         temporary = Path(temporary)
@@ -93,7 +93,8 @@ def main():
             ns = '/perception/lidar'
             def pipeline():
                 return spawn(['roslaunch', 'asmc_lidar', 'lidar.launch',
-                    'pipeline_config:='+str(config_path), 'fusion:=false'], 'pipeline-'+str(len(processes)))
+                    'pipeline_config:='+str(config_path), 'fusion:=false',
+                    'debug:=false', 'rviz:=false'], 'pipeline-'+str(len(processes)))
             node = pipeline()
             spawn(['roslaunch', 'planning_inputs', 'objects.launch',
                 'output_topic:=/contract/planning_objects'], 'adapter')
@@ -106,7 +107,8 @@ def main():
                 rospy.Subscriber(ns+'/tracks_local', LidarTrackingObservation, store(local), queue_size=2),
                 rospy.Subscriber(ns+'/tracks_map', LidarTrackingObservation, store(mapped), queue_size=2),
                 rospy.Subscriber('/contract/planning_objects', DetectedObjectArray, store(output), queue_size=2),
-                rospy.Subscriber('/planning_objects_adapter/diagnostics', DiagnosticArray, store(diagnostic), queue_size=1)]
+                rospy.Subscriber('/planning_objects_adapter/diagnostics', DiagnosticArray, store(diagnostic), queue_size=1),
+                rospy.Subscriber(ns+'/diagnostics', DiagnosticArray, store(pipeline_diagnostic), queue_size=1)]
             pubs = dict(points=rospy.Publisher('/velodyne_points', PointCloud2, queue_size=1),
                         imu=rospy.Publisher('/imu', Imu, queue_size=2),
                         can=rospy.Publisher('/Ego_topic', EgoVehicleStatus, queue_size=2),
@@ -164,6 +166,21 @@ def main():
                     assert common.absolute_velocity_valid
                     assert common.absolute_velocity_mps.x==private.vx and common.absolute_velocity_mps.y==private.vy
             print('PASS source stamp, IDs, full OBB, applied velocity and four-state delivery',flush=True)
+            require(lambda: latest(pipeline_diagnostic) is not None, 'pipeline diagnostics without debug')
+            values={v.key:v.value for s in latest(pipeline_diagnostic).status for v in s.values}
+            assert values['debug_enabled']=='false'
+            publications, subscriptions, _=master.getSystemState()
+            assert not any(topic.startswith(ns+'/debug/') for topic,nodes in publications)
+            assert not any(topic in (ns+'/trace',ns+'/objects_local',ns+'/objects_map')
+                           for topic,nodes in subscriptions)
+            # The planner must remain sufficient demand for tracks_map: remove
+            # the fixture's tracking subscriptions, leaving only planning_inputs.
+            subscribers[0].unregister();subscribers[1].unregister()
+            before=len(output)
+            require(lambda: len(output)>=before+10, 'planner-only demand supplies new objects without web/trace/RViz')
+            print('PASS debug=false, no stage/trace/array consumer, geometry/velocity delivery continues',flush=True)
+            subscribers[0]=rospy.Subscriber(ns+'/tracks_local', LidarTrackingObservation, store(local), queue_size=2)
+            subscribers[1]=rospy.Subscriber(ns+'/tracks_map', LidarTrackingObservation, store(mapped), queue_size=2)
             state['gps']=False
             require(lambda: latest(mapped).observation.objects.status==4,'GPS0 reports POSE_UNAVAILABLE')
             time.sleep(.5)
