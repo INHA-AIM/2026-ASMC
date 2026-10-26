@@ -425,9 +425,9 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             _require(
                 generated_ctrl["PUBSUB_TYPE"] == 771
                 and import_config["commType"] == 1
-                and import_config["egoCtrlMode"] == (3 if release == "26r1" else 2)
+                and import_config["egoCtrlMode"] == 3
                 and import_udp["receiveBufferSize"] == (59 if release == "26r1" else 55),
-                f"{release}/{transport} must select MoraiCmdController, not TrajectoryTrackingCmd",
+                f"{release}/{transport} must select MoraiCmdController and JSON AutoMode=3",
             )
             if release == "26r1":
                 _require(import_config["_PUBSUB_TYPE"] == 771,
@@ -634,7 +634,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
                 ),
                 f"{name}/{transport} sensor IP mapping changed",
             )
-    for name in ("v2", "v3"):
+    for name in ("v3",):
         _require(
             set(contract["sensor_sets"][name]["transport_generated"])
             == {"local", "lan2lan"},
@@ -645,11 +645,9 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "GT sensor set must not have a deployment transport derivative",
     )
     for name, spec in contract["legacy_network_artifacts"].items():
-        _require(
-            _sha256(REPO_ROOT / spec["path"]) == spec["sha256"],
-            f"{name} legacy network artifact SHA changed",
-        )
-    _require(summaries["v1"]["camera4_pitch_deg"] == 340.0, "v1 camera-4 pitch changed")
+        _require(spec.get("git_revision") == "2c6913048c81afce01b9b465f7c699c0752654f1"
+                 and spec["role"] == "git_history_only",
+                 f"{name} legacy network history reference changed")
     _require(summaries["v2"]["camera4_pitch_deg"] == 328.0, "v2 camera-4 pitch changed")
     _require(summaries["v3"]["camera4_pitch_deg"] == 328.0, "v3 camera-4 pitch changed")
     _require(math.isclose(summaries["v2"]["lidar_period_s"], 0.1, abs_tol=1e-6), "v2 is not 10 Hz")
@@ -724,6 +722,9 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         },
         "P3-G local closeout evidence changed",
     )
+
+    from render_morai_release_presets import check_all as check_release_presets
+    check_release_presets(contract)
 
     return {
         "baseline_id": contract["baseline_id"],

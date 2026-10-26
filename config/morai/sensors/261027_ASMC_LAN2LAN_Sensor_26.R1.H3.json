@@ -20,9 +20,9 @@
         "sensorPeriod": 0.05000000074505806,
         "commType": 1,
         "udpConfig": {
-          "hostIP": "127.0.0.1",
+          "hostIP": "192.168.0.1",
           "hostPort": 9290,
-          "destinationIP": "127.0.0.1",
+          "destinationIP": "192.168.0.10",
           "destinationPort": 9291,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
@@ -63,13 +63,6 @@
           "isActivated": false,
           "gaussianMean": 0.0,
           "gaussianStdev": 0.0
-        },
-        "ros2NativeConfig": {
-          "handlerType": 0,
-          "Topic": "/dafault_topic",
-          "ROS2MessageOnOff": true,
-          "frameID": "",
-          "childFrameID": ""
         },
         "paramType": 0,
         "sensorSize": {
@@ -142,9 +135,9 @@
         "sensorPeriod": 0.05000000074505806,
         "commType": 1,
         "udpConfig": {
-          "hostIP": "127.0.0.1",
+          "hostIP": "192.168.0.1",
           "hostPort": 9292,
-          "destinationIP": "127.0.0.1",
+          "destinationIP": "192.168.0.10",
           "destinationPort": 9293,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
@@ -185,13 +178,6 @@
           "isActivated": false,
           "gaussianMean": 0.0,
           "gaussianStdev": 0.0
-        },
-        "ros2NativeConfig": {
-          "handlerType": 0,
-          "Topic": "/dafault_topic",
-          "ROS2MessageOnOff": true,
-          "frameID": "",
-          "childFrameID": ""
         },
         "paramType": 0,
         "sensorSize": {
@@ -264,9 +250,9 @@
         "sensorPeriod": 0.05000000074505806,
         "commType": 1,
         "udpConfig": {
-          "hostIP": "127.0.0.1",
+          "hostIP": "192.168.0.1",
           "hostPort": 9294,
-          "destinationIP": "127.0.0.1",
+          "destinationIP": "192.168.0.10",
           "destinationPort": 9295,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
@@ -307,13 +293,6 @@
           "isActivated": false,
           "gaussianMean": 0.0,
           "gaussianStdev": 0.0
-        },
-        "ros2NativeConfig": {
-          "handlerType": 0,
-          "Topic": "/dafault_topic",
-          "ROS2MessageOnOff": true,
-          "frameID": "",
-          "childFrameID": ""
         },
         "paramType": 0,
         "sensorSize": {
@@ -386,9 +365,9 @@
         "sensorPeriod": 0.10000000149011612,
         "commType": 1,
         "udpConfig": {
-          "hostIP": "127.0.0.1",
+          "hostIP": "192.168.0.1",
           "hostPort": 9296,
-          "destinationIP": "127.0.0.1",
+          "destinationIP": "192.168.0.10",
           "destinationPort": 9297,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
@@ -429,13 +408,6 @@
           "isActivated": false,
           "gaussianMean": 0.0,
           "gaussianStdev": 0.0
-        },
-        "ros2NativeConfig": {
-          "handlerType": 0,
-          "Topic": "",
-          "ROS2MessageOnOff": true,
-          "frameID": "Camera-4",
-          "childFrameID": ""
         },
         "paramType": 0,
         "sensorSize": {
@@ -507,12 +479,12 @@
       "lc": {
         "sensorName": "DefaultSensor",
         "sensorType": 2,
-        "sensorPeriod": 0.10000000149011612,
+        "sensorPeriod": 0.06666667014360428,
         "commType": 1,
         "udpConfig": {
-          "hostIP": "127.0.0.1",
+          "hostIP": "192.168.0.1",
           "hostPort": 9298,
-          "destinationIP": "127.0.0.1",
+          "destinationIP": "192.168.0.10",
           "destinationPort": 9299,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
@@ -554,17 +526,13 @@
           "gaussianMean": 0.0,
           "gaussianStdev": 0.0
         },
-        "ros2NativeConfig": {
-          "handlerType": 0,
-          "Topic": "/lidar/points",
-          "ROS2MessageOnOff": true,
-          "frameID": "/map",
-          "childFrameID": ""
-        },
         "lidar3DType": 0,
+        "fireDistance": 100.0,
+        "noiseRatio": 0.0,
         "intensityType": 0,
         "isVizPointCloud": false,
-        "frequencyIndex": 1,
+        "velodyneUnit": 0.5,
+        "frequencyIndex": 2,
         "optEq": 0,
         "gamma": 1.5,
         "reflecity": 0.0
@@ -593,9 +561,9 @@
         "sensorPeriod": 0.20000000298023224,
         "commType": 1,
         "udpConfig": {
-          "hostIP": "127.0.0.1",
+          "hostIP": "192.168.0.1",
           "hostPort": 9300,
-          "destinationIP": "127.0.0.1",
+          "destinationIP": "192.168.0.10",
           "destinationPort": 9301,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
@@ -637,13 +605,6 @@
           "gaussianMean": 0.0,
           "gaussianStdev": 0.0
         },
-        "ros2NativeConfig": {
-          "handlerType": 0,
-          "Topic": "/gps",
-          "ROS2MessageOnOff": true,
-          "frameID": "GPS-6",
-          "childFrameID": ""
-        },
         "gpsStatus": 1
       }
     }
@@ -669,9 +630,9 @@
         "sensorPeriod": 0.019999999552965164,
         "commType": 1,
         "udpConfig": {
-          "hostIP": "127.0.0.1",
+          "hostIP": "192.168.0.1",
           "hostPort": 9302,
-          "destinationIP": "127.0.0.1",
+          "destinationIP": "192.168.0.10",
           "destinationPort": 9303,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
@@ -712,13 +673,6 @@
           "isActivated": false,
           "gaussianMean": 0.0,
           "gaussianStdev": 0.0
-        },
-        "ros2NativeConfig": {
-          "handlerType": 0,
-          "Topic": "/Imu",
-          "ROS2MessageOnOff": true,
-          "frameID": "IMU-7",
-          "childFrameID": ""
         },
         "rdAcc_x": {
           "isActivated": false,
@@ -856,7 +810,6 @@
     }
   ],
   "RadarList": [],
-  "Radar4DList": [],
   "UltrasonicList": [],
   "GroundTruthList": [],
   "LightList": [],

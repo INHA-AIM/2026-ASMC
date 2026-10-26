@@ -74,7 +74,7 @@
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "dc5635fa0ceec444612baa9316594024e80fa08354a70fb8fd757d06b29291cb"
+        "sha256": "d8b1edf447e41f8d01f82761ef9ff84e395c4e3ddb9f91e1d54e38fdaaa4f7cc"
       },
       "network_launch": {
         "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
@@ -106,11 +106,11 @@
       },
       "network_profile_renderer": {
         "path": "tools/bridge/render_morai_network_profiles.py",
-        "sha256": "cb88f57837a1d8dd1699ef08652cf234ff7e09b16ef7bdaef958f33452f6a662"
+        "sha256": "10a5c0f2c095beb36db8ae6c33443aeed195ac530c2ab1d69c6d458d1a52c85a"
       },
       "sensor_profile_renderer": {
         "path": "tools/bridge/render_morai_sensor_profiles.py",
-        "sha256": "04b99b06ecfcf07be4588b4f2bd4517c46862d397b36c9609f14c7c339674e1d"
+        "sha256": "1302475cf3b3ae8021d00701db9442b020b1db9faeb08df921dd7825cae2d63e"
       },
       "vehicle_state_launch": {
         "path": "src/asmc_bridge/launch/vehicle_state.launch",
@@ -301,7 +301,7 @@
   },
   "network_templates": {
     "26r1": {
-      "template": "config/morai/network/templates/ASMC_network_template_26r1.json",
+      "template": "tools/bridge/templates/network_26r1.json",
       "template_sha256": "d9fc58beac363f128f4ad90bd087952559c380bb9ec718ad19834c6b80a6d1a3",
       "source_export": "C:/MoraiLauncher_Win/MoraiLauncher_Win_Data/SaveFile/Network/26.R1.H3/ASMC_26r1_network_set_local_v2.json",
       "source_export_sha256": "5b57d2c95b57548f6fda2d574f8db77e1748239cb39056c705516dd79fe93006",
@@ -342,11 +342,12 @@
         "verified_release": "26.R1.H3",
         "verified_export": "C:/MoraiLauncher_Win/MoraiLauncher_Win_Data/SaveFile/Network/26.R1.H3/NetworkInfo_2023_Hyundai_Ioniq5.json",
         "verified_export_sha256": "8b0af6432ba9f94e3ed5bda13e35a3010830caa47d8a677c9f7b8cc8b46421ba",
-        "note": "2026-10-26 UI/export verification: source type 786 is TrajectoryTrackingCmd. Import egoCtrlMode=3 selects MoraiCmdController in this release; the UDP AutoMode byte remains 2."
+        "note": "PUBSUB_TYPE=771 selects MoraiCmdController; JSON egoCtrlMode=3 is AutoMode. UDP payload AutoMode remains 2. Installed assembly enum verified 2026-10-27.",
+        "enum_evidence": "config/morai/control-mode-enums-20261027.json"
       },
       "generated": {
-        "local": "config/morai/network/generated/ASMC_network_set_26r1_local.json",
-        "lan2lan": "config/morai/network/generated/ASMC_network_set_26r1_lan2lan.json"
+        "local": "config/morai/network/261027_ASMC_Local_Network_26.R1.H3.json",
+        "lan2lan": "config/morai/network/261027_ASMC_LAN2LAN_Network_26.R1.H3.json"
       },
       "generated_sha256": {
         "local": "73beac3b5a584b80f4e3c8d7d9e0d4748f874fa975958682061ce20ddb3fc082",
@@ -354,7 +355,7 @@
       }
     },
     "molitcomp03": {
-      "template": "config/morai/network/templates/ASMC_network_template_molitcomp03.json",
+      "template": "tools/bridge/templates/network_molitcomp03.json",
       "template_sha256": "055d7719ab8db076826bd17dbee71912e47b90180f7886377dc7c5a1429a25fa",
       "source_export": "$ASMC_DATA/On-site inspection/MoraiLauncher_Win_S/MoraiLauncher_Win_Data/SaveFile/Network/25.S4.MolitComp03/ASMC_network_set_molitcomp03_local_dev.json",
       "source_export_sha256": "182fdaa802d59a41a343fbff7344d233031153b0435402ccbaa8ea1fbd7f4b51",
@@ -393,12 +394,21 @@
         ]
       },
       "generated": {
-        "local": "config/morai/network/generated/ASMC_network_set_molitcomp03_local.json",
-        "lan2lan": "config/morai/network/generated/ASMC_network_set_molitcomp03_lan2lan.json"
+        "local": "config/morai/network/261027_ASMC_Local_Network_25.S4.MolitComp03.json",
+        "lan2lan": "config/morai/network/261027_ASMC_LAN2LAN_Network_25.S4.MolitComp03.json"
       },
       "generated_sha256": {
-        "local": "bafbd9c02c0e7665f0c18dd95c4586e8003614eba3b922f679acb02a810df198",
-        "lan2lan": "ac16afa3e59d1fa6c9b91ba9cfff059e3ebd2fe4dbc459d3379b1d3770d15cae"
+        "local": "7c3c112b1029fa8b081c1bde25b42b90aa8b918ceea2905b5b7ed1849acf9aed",
+        "lan2lan": "268a3c46d479ed6aada1bb5bbd02a8472693b452badf1a7d39bd856cae911bd4"
+      },
+      "control_import": {
+        "controller": "MoraiCmdController",
+        "pubsub_type": 771,
+        "ego_ctrl_mode": 3,
+        "receive_buffer_size": 55,
+        "verified_release": "25.S4.MolitComp03",
+        "enum_evidence": "config/morai/control-mode-enums-20261027.json",
+        "note": "Installed enum: Keyboard=1, GameWheel=2, AutoMode=3. Historical template value 2 is preserved as provenance, not used as the autonomous preset mode. UDP payload AutoMode remains 2."
       }
     }
   },
@@ -406,43 +416,29 @@
     "26r1_local_9111": {
       "path": "config/morai/network/archive/ASMC_network_set_26r1_local_legacy_9111.json",
       "sha256": "b5b381b19f26891a90fd267ee9d85add0baf9f9a5ec23d99a68055ee1014f828",
-      "role": "historical_reproduction_only"
+      "role": "git_history_only",
+      "git_revision": "2c6913048c81afce01b9b465f7c699c0752654f1"
     }
   },
   "sensor_sets": {
-    "v1": {
-      "path": "config/morai/sensors/ASMC_sensor_set_v1.json",
-      "sha256": "a5c9abf1f51d6676fe5ce79229bc93e00782b018ed4c776c3bd7c5987d1287be",
-      "role": "legacy_reproduction",
-      "lidar_hz": 10,
-      "live_acceptance": "historical"
-    },
     "v2": {
-      "path": "config/morai/sensors/ASMC_sensor_set_v2.json",
+      "path": "src/asmc_bridge/test/fixtures/sensor_v2_10hz.json",
       "sha256": "0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428",
       "role": "current_10hz_regression",
       "lidar_hz": 10,
       "live_acceptance": "accepted_baseline",
-      "expected_udp_channels": 7,
-      "transport_generated": {
-        "local": "config/morai/sensors/generated/ASMC_sensor_set_v2_local.json",
-        "lan2lan": "config/morai/sensors/generated/ASMC_sensor_set_v2_lan2lan.json"
-      },
-      "transport_generated_sha256": {
-        "local": "2a15e3861c859458fd317e60cdad9d73891caaa329ddf2ab6e9a6106a8462c3e",
-        "lan2lan": "262adec024a1dcd0949d09143820d247ef7c716a5ce2452fc0a8a1e753da65e4"
-      }
+      "expected_udp_channels": 7
     },
     "v3": {
-      "path": "config/morai/sensors/ASMC_sensor_set_v3.json",
+      "path": "tools/bridge/templates/sensor_v3.json",
       "sha256": "4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f",
       "role": "competition_configured_15hz",
       "lidar_hz": 15,
       "live_acceptance": "accepted_configured_15hz_observed_complete_scans_about_12hz",
       "expected_udp_channels": 7,
       "transport_generated": {
-        "local": "config/morai/sensors/generated/ASMC_sensor_set_v3_local.json",
-        "lan2lan": "config/morai/sensors/generated/ASMC_sensor_set_v3_lan2lan.json"
+        "local": "config/morai/sensors/261027_ASMC_Local_Sensor_25.S4.MolitComp03.json",
+        "lan2lan": "config/morai/sensors/261027_ASMC_LAN2LAN_Sensor_25.S4.MolitComp03.json"
       },
       "transport_generated_sha256": {
         "local": "2a9e2ec198554b22fa3440725f4eb5b5e6290d1f9bd2ca4c6ac0fe3862c7ea70",
@@ -450,7 +446,7 @@
       }
     },
     "GT": {
-      "path": "config/morai/sensors/ASMC_sensor_set_GT.json",
+      "path": "tools/bridge/templates/sensor_gt.json",
       "sha256": "80ffc6bc17b3bdafd8f2ce920593555c7217947a353ee732810b723fc1a48396",
       "previous_10hz_sha256": "ef278764593c28db4e2cf29a5e657ac530822fbdad38ddf8c7d7015d2886d801",
       "role": "development_ground_truth_only",
@@ -580,6 +576,16 @@
         "fixture_sha256": "8e74227b0cb5a98910b73760f8706bd6e0a6c423e5011409e08c9cfa425beee9",
         "fixture_source": "competition-channel-audit-20261023-r1/packets.json"
       }
+    }
+  },
+  "historical_sensor_sets": {
+    "v1": {
+      "path": "config/morai/sensors/ASMC_sensor_set_v1.json",
+      "sha256": "a5c9abf1f51d6676fe5ce79229bc93e00782b018ed4c776c3bd7c5987d1287be",
+      "role": "legacy_reproduction",
+      "lidar_hz": 10,
+      "live_acceptance": "historical",
+      "git_revision": "2c6913048c81afce01b9b465f7c699c0752654f1"
     }
   }
 }

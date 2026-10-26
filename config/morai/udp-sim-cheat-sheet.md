@@ -10,9 +10,9 @@
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh` 기준.
 > 상세: [개발·시뮬레이터 운영 가이드](../../docs/operations/README.md)
 > bridge 구현·통합 gate: [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)
-> 본선 센서셋: [`ASMC_sensor_set_v3.json`](./sensors/ASMC_sensor_set_v3.json) — 설정·소비 15 Hz, 완성 scan 약 12 Hz 허용<br>
-> 회귀 센서셋: [`ASMC_sensor_set_v2.json`](./sensors/ASMC_sensor_set_v2.json) — 10 Hz 비교용<br>
-> GT용: [`ASMC_sensor_set_GT.json`](./sensors/ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
+> 팀 운영 v3 정본: [Local Sensor](sensors/261027_ASMC_Local_Sensor_25.S4.MolitComp03.json) — 설정·소비 15 Hz, 완성 scan 약 12 Hz 허용<br>
+> 10Hz 회귀 입력: [v2 fixture](../../src/asmc_bridge/test/fixtures/sensor_v2_10hz.json) — 10 Hz 비교용<br>
+> Local GT 정본: [SensorGT](sensors/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json) (일반 센서 + Semantic Camera×3 + Instance LiDAR)
 
 ---
 
@@ -22,11 +22,11 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 
 1. Docker Desktop + WSL Integration ON → `./scripts/docker_ros_up.sh up`
 2. MORAI **Host/Dest IP 전부 `127.0.0.1`**
-3. **센서셋** `sensors/generated/ASMC_sensor_set_v3_local.json` Import
-   (10 Hz 과거 회귀가 필요할 때만 `...v2_local.json`)
-4. **Network Settings**: `network/generated/ASMC_network_set_26r1_local.json` Import
+3. **센서셋** `sensors/261027_ASMC_Local_Sensor_26.R1.H3.json` Import
+   (10 Hz 비교 입력은 `src/asmc_bridge/test/fixtures/sensor_v2_10hz.json`)
+4. **Network Settings**: `network/261027_ASMC_Local_Network_26.R1.H3.json` Import
    (현재 bridge 호환 Ego **9099** · Object **7505** · Collision **9092** 포함)
-5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9093 / 9094**, mode **2**
+5. **Cmd Control**: MoraiCmdController(type771), Host/Dest **9093 / 9094**. JSON `egoCtrlMode=3`(Auto), UDP payload `CtrlMode=2`(Auto).
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
 7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/vehicle/state`
 
@@ -61,7 +61,8 @@ Destination IP:   127.0.0.1
 타입:     Ego Ctrl Cmd          ← TrajectoryTrackingCmd 금지
 Host:     9093
 Dest:     9094
-Mode:     2
+JSON egoCtrlMode: 3 (AutoMode)
+UDP CtrlMode:     2 (AutoMode)
 ```
 
 ---
@@ -83,7 +84,7 @@ GetTrafficLight를 필수 채널로 가정하거나 본선 planning 입력으로
 
 ---
 
-## Sensor Setting — Destination PORT (v2)
+## Sensor Setting — Destination PORT (v3)
 
 | 센서 | Host / Dest | ROS 토픽 |
 |------|-------------|----------|
@@ -100,7 +101,7 @@ GetTrafficLight를 필수 채널로 가정하거나 본선 planning 입력으로
 
 ---
 
-## GT Semantic Camera (ASMC_sensor_set_GT.json)
+## GT Semantic Camera (Local SensorGT)
 
 기본 competition profile은 아래 포트나 publisher를 열지 않는다. GT 센서셋은
 local 개발 profile을 명시해야 수신한다.
@@ -117,7 +118,7 @@ local 개발 profile을 명시해야 수신한다.
 
 Camera-10은 예전 **9090**이 아님 (rosbridge와 충돌).
 
-## GT Instance LiDAR (ASMC_sensor_set_GT.json)
+## GT Instance LiDAR (Local SensorGT)
 
 ID 11은 local development profile에서만 독립 수신한다. 정합용 source stamp가 필요하면:
 

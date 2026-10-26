@@ -87,7 +87,7 @@ staleness, latency와 자원 사용량을 측정한다.
 
 - 맵: `R_KR_PG_K-City_2025`
 - 대회 SIM: `25.S4.MolitComp03`, System Time Scale 1·Target FPS 60, Rendering Quality High 고정
-- 차량 제어: Ego Ctrl Cmd, `cmd type 1`(accel/brake), `ctrl mode 2`만 허용
+- 차량 제어: Ego Ctrl Cmd, `cmd type 1`(accel/brake), UDP payload `CtrlMode=2`만 허용
 - 상태: Competition Vehicle Status와 CollisionData
 - **판정 전용:** Ego Detail Status, Ego Vehicle Status, Get TrafficLight Status는 판정 프로그램만
   쓰며 본선에서 참가팀은 사용할 수 없다. 팀 bridge는 26r1 호환을 위해 수신할 수 있지만 runtime
@@ -122,10 +122,10 @@ ls "$ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_"*
 
 | 저장소 센서셋 | 용도 |
 |---|---|
-| `config/morai/sensors/ASMC_sensor_set_v2.json` | 26.R1.H3 현재 10 Hz 회귀 기준 |
-| `config/morai/sensors/ASMC_sensor_set_v3.json` | 설정·소비 15 Hz 본선본, 실제 scan 약 12 Hz 허용 |
-| `config/morai/sensors/ASMC_sensor_set_GT.json` | Semantic×3 + Instance LiDAR 개발 정답 전용 |
-| `config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 재현 전용 |
+| `src/asmc_bridge/test/fixtures/sensor_v2_10hz.json` | 26.R1.H3 현재 10 Hz 회귀 기준 |
+| `config/morai/sensors/261027_ASMC_Local_Sensor_25.S4.MolitComp03.json` | 설정·소비 15 Hz 본선본, 실제 scan 약 12 Hz 허용 |
+| `config/morai/sensors/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json` | Semantic×3 + Instance LiDAR 개발 정답 전용 |
+| `git show 2c691304:config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 재현 전용 |
 
 현장 자료의 `Autonav_sensor_submitted.json`은 이전 제출본 provenance이고 다른 팀 센서셋은 사용하지
 않는다. v2와 이전 Autonav의 의미 있는 차이는 자유 카메라 pitch `328°` 대 `340°`다. 현재
@@ -235,7 +235,7 @@ PR #64 후속 구현은 HD맵 source·생성 metadata·발행용 payload에 새 
 6. 주행 종료 후 판정 데이터를 저장하고 2번부터 다음 차시를 준비한다.
 
 - [ ] 허용 UDP 채널만 competition profile에서 기동
-- [ ] Ctrl mode 2와 packet 목적지 확인
+- [ ] UDP CtrlMode=2·JSON egoCtrlMode=3와 packet 목적지 확인
 - [ ] Competition Vehicle Status·CollisionData 수신
 - [ ] 카메라·LiDAR·GPS·IMU 포트와 rate 확인
 - [ ] 체크포인트 15개, 3 m 반경과 순서 검증

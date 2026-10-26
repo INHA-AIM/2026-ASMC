@@ -62,7 +62,7 @@ interface는 가능한 한 `asmc_msgs`를 사용하되, Phase 3 전환 PR에서 
 | MORAI→팀 | TrafficLight `7603/7502`, type 258 | 발행하지 않음 | simulator oracle, production bridge 비소비 |
 | MORAI→팀 | Object Dest `7505` | `/Object_topic`, `morai_msgs/ObjectStatusList` | privileged 개발 oracle |
 | MORAI→팀 | Collision Dest `9092` | `/CollisionData`, `morai_msgs/CollisionData` | 충돌 때만 publish |
-| 팀→MORAI | Ctrl Host `9093` | subscribe `/ctrl_cmd`, `morai_msgs/CtrlCmd` | Dest metadata 9094, mode 2, D gear packet |
+| 팀→MORAI | Ctrl Host `9093` | subscribe `/ctrl_cmd`, `morai_msgs/CtrlCmd` | Dest metadata 9094, UDP CtrlMode 2, D gear packet |
 
 Ego UDP velocity는 ROS에서 m/s로 변환한다. Object velocity는 현재 `morai_msgs` 관례에 따라
 km/h다. Ctrl steering 입력은 radian이며 ±40°를 ±1로 정규화한다. 이 단위를 topic 이름만 보고
@@ -258,7 +258,7 @@ make target”으로 실패할 수 있다.
 확정된 목표:
 
 - 개발·현장의 채널과 포트는 같고 IP만 profile로 분리한다.
-- Ctrl `9093/9094`, mode 2
+- Ctrl `9093/9094`, UDP CtrlMode 2; JSON egoCtrlMode 3
 - 현재 CompetitionInfoPublisher `9088/9099` → `/Ego_topic`; 별도9798과 구분([실측](../../../docs/records/bridge/2026-10-23-competition-channel-audit.md))
 - TrafficLight status `7603/7502`, type 258은 simulator oracle이며 bridge 입력이 아님
 - GetTrafficLight/MoraiTLServiceProvider type 778은 조사한 export에 없고 필수 계약이 아님

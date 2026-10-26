@@ -6,6 +6,9 @@ import json
 import subprocess
 import unittest
 import copy
+import tempfile
+import contextlib
+import io
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -63,6 +66,80 @@ class BridgeProfileContractTest(unittest.TestCase):
         network = next(i for i in root.findall('include') if i.get('file').endswith('/morai_udp_bridge.launch'))
         self.assertEqual(next(a.get('value') for a in network.findall('arg') if a.get('name')=='invert_steer'),'$(arg invert_steer)')
 
+    def test_missing_import_mode_cannot_fall_back_to_udp_mode(self):
+        for release in ('26r1', 'molitcomp03'):
+            for bad in (None, 2):
+                contract = copy.deepcopy(load_contract())
+                if bad is None:
+                    del contract['network_templates'][release]['control_import']
+                else:
+                    contract['network_templates'][release]['control_import']['ego_ctrl_mode'] = bad
+                with self.assertRaisesRegex(RuntimeError, 'JSON AutoMode=3'):
+                    render_profile(contract, release, 'lan2lan')
+
+    def test_driving_mode_and_udp_mode_are_distinct(self):
+        contract = load_contract()
+        evidence = json.loads((REPO_ROOT / 'config/morai/control-mode-enums-20261027.json').read_text())
+        self.assertEqual({'Keyboard': 1, 'GameWheel': 2, 'AutoMode': 3},
+                         {key: evidence['values'][key] for key in ('Keyboard', 'GameWheel', 'AutoMode')})
+        for release in ('26r1', 'molitcomp03'):
+            for transport in ('local', 'lan2lan'):
+                document = render_profile(contract, release, transport)
+                rows = [e for ego in document['egoNetworkData'] for e in ego['listEgoNetworkInfo']]
+                control = next(e for e in rows if e['Division_TYPE'] == 3)
+                self.assertEqual(3, control['EgoCtrlConfig']['egoCtrlMode'])
+                self.assertEqual(771, control['PUBSUB_TYPE'])
+                tf = next(e for e in rows if e['PUBSUB_TYPE'] == 267)
+                self.assertFalse(tf['config']['udpConfig']['isBufferThreadActivated'])
+        self.assertEqual(2, contract['channels']['ego_ctrl_cmd']['ctrl_mode'])
+
+    def test_versioned_catalog_cannot_mix_releases_or_gt_transport(self):
+        from render_morai_release_presets import render_catalog, CATALOG
+        catalog = json.loads(CATALOG.read_text())
+        rendered = render_catalog(load_contract(), catalog)
+        self.assertEqual(10, len(rendered))
+        for title in ('Local', 'LAN2LAN'):
+            self.assertEqual(rendered[f'sensors/261027_ASMC_{title}_Sensor_26.R1.H3.json'],
+                             rendered[f'sensors/261027_ASMC_{title}_Sensor_25.S4.MolitComp03.json'])
+        broken = copy.deepcopy(catalog)
+        name = 'sensors/261027_ASMC_LAN2LAN_Sensor_26.R1.H3.json'
+        broken['files'][name]['version'] = '25.S4.MolitComp03'
+        with self.assertRaisesRegex(ValueError, 'Mismatched'):
+            render_catalog(load_contract(), broken)
+        for field, value in (('release', 'molitcomp03'), ('sensor_set', 'v3')):
+            broken = copy.deepcopy(catalog)
+            broken['files']['sensors/261027_ASMC_Local_SensorGT_26.R1.H3.json'][field] = value
+            with self.assertRaisesRegex(ValueError, 'GT presets'):
+                render_catalog(load_contract(), broken)
+        broken = copy.deepcopy(catalog)
+        broken['files']['sensors/261027_ASMC_Local_SensorGT_26.R1.H3.json']['transport'] = 'lan2lan'
+        with self.assertRaisesRegex(ValueError, 'GT presets'):
+            render_catalog(load_contract(), broken)
+
+    def test_release_generator_recreates_missing_output_directories(self):
+        from render_morai_release_presets import render_catalog, write_all, CATALOG
+        catalog = json.loads(CATALOG.read_text())
+        contract = load_contract()
+        with tempfile.TemporaryDirectory(prefix='asmc-morai-write-') as directory:
+            root = Path(directory) / 'missing' / 'morai'
+            with contextlib.redirect_stdout(io.StringIO()):
+                write_all(contract, catalog, root)
+            expected = render_catalog(contract, catalog)
+            self.assertEqual(set(expected), {str(p.relative_to(root)) for p in root.rglob('*.json')})
+            for name, data in expected.items():
+                self.assertEqual(data, (root / name).read_bytes())
+
+    def test_config_folders_contain_only_canonical_imports(self):
+        from render_morai_release_presets import CATALOG
+        catalog = json.loads(CATALOG.read_text())
+        actual = {str(p.relative_to(CATALOG.parent))
+                  for kind in ('network', 'sensors')
+                  for p in (CATALOG.parent / kind).rglob('*.json')}
+        self.assertEqual(set(catalog['files']), actual)
+        self.assertFalse((CATALOG.parent / 'presets').exists())
+        for kind in ('network', 'sensors'):
+            self.assertTrue(all(p.is_file() for p in (CATALOG.parent / kind).iterdir()))
+
     def test_repository_contract_is_valid(self):
         result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
         self.assertEqual("p3g_bridge_local_closeout_v1", result["baseline_id"])
@@ -79,7 +156,7 @@ class BridgeProfileContractTest(unittest.TestCase):
         self.assertEqual(674, result["full_graph_tests"])
         self.assertEqual(["lan2lan", "local"], result["transport_profiles"])
         self.assertEqual(4, result["network_profiles"])
-        self.assertEqual(4, result["sensor_transport_profiles"])
+        self.assertEqual(2, result["sensor_transport_profiles"])
         self.assertEqual("competition", result["default_stream_profile"])
         self.assertEqual("asmc_bridge/bridge.launch", result["canonical_launch"])
         self.assertEqual(15, result["published_topic_count"])
@@ -95,7 +172,7 @@ class BridgeProfileContractTest(unittest.TestCase):
         self.assertEqual([2, 2], result['sensor_sets']['GT']['lidar_frequency_indices'])
         for period in result['sensor_sets']['GT']['lidar_periods_s']:
             self.assertAlmostEqual(1.0 / 15.0, period)
-        sensors = json.loads((REPO_ROOT / 'config/morai/sensors/ASMC_sensor_set_GT.json').read_text())
+        sensors = json.loads((REPO_ROOT / 'tools/bridge/templates/sensor_gt.json').read_text())
         self.assertEqual([5, 11], [row['m_SensorUniqueID'] for row in sensors['Lidar3DList']])
         self.assertEqual([9299, 9311], [row['lc']['udpConfig']['destinationPort'] for row in sensors['Lidar3DList']])
 

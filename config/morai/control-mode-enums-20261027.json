@@ -1,0 +1,12 @@
+{
+  "evidence_kind": "read_only_metadata_from_installed_simulator_assemblies",
+  "field": "EgoCtrlConfig.egoCtrlMode",
+  "values": {"Keyboard": 1, "GameWheel": 2, "AutoMode": 3, "AutoMode_Lateral": 4, "AutoMode_Longitudinal": 5, "CruiseMode": 6, "SynchronousMode": 7},
+  "releases": {
+    "26.R1.H3": {"assembly": "Assembly-CSharp.dll", "sha256": "6bd0fb11b0ccf8d4f7ca6131201eaca86c9e167d6a41b5876013d920d3769649"},
+    "25.S4.MolitComp03": {"assembly": "Assembly-CSharp.dll", "sha256": "697e89e113febed8ac63ec328f49d8906c16ef3e7aebfb99c920992917b62eb6"}
+  },
+  "wire_control_mode": {"field": "#MoraiCtrlCmd$ payload CtrlMode", "Keyboard": 1, "AutoMode": 2, "source": "https://help-morai-sim-en.scrollhelp.site/morai-sim-standard-en/udp-network-settings"},
+  "controller_selection": {"field": "PUBSUB_TYPE", "MoraiCmdController": 771},
+  "note": "JSON driving mode, controller selection and UDP mode are separate fields. Loading a preset is not proof of live Auto mode; check the UI before a controlled run. No simulator control messages were sent for this audit."
+}

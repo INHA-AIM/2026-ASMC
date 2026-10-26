@@ -11,7 +11,8 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PACKAGE_ROOT = REPO_ROOT / "src" / "asmc_camera"
-SENSOR_ROOT = REPO_ROOT / "config" / "morai" / "sensors"
+SENSOR_PATHS = {'v2': REPO_ROOT / 'src/asmc_bridge/test/fixtures/sensor_v2_10hz.json',
+                'v3': REPO_ROOT / 'tools/bridge/templates/sensor_v3.json'}
 
 
 def _camera_contract(camera):
@@ -152,18 +153,24 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             )
 
     def test_v3_calibration_is_bound_to_exact_sensor_artifact(self):
-        sensor_path = SENSOR_ROOT / "ASMC_sensor_set_v3.json"
+        sensor_path = SENSOR_PATHS['v3']
         digest = hashlib.sha256(sensor_path.read_bytes()).hexdigest()
         self.assertEqual(digest, self.calibration["source_sha256"])
         self.assertEqual(
-            "config/morai/sensors/ASMC_sensor_set_v3.json",
+            "tools/bridge/templates/sensor_v3.json",
             self.calibration["source_sensor_set"],
         )
 
+    def test_projection_manifest_tracks_calibration_file_after_path_moves(self):
+        calibration = PACKAGE_ROOT / 'config/cameras_v3.yaml'
+        manifest = yaml.safe_load((PACKAGE_ROOT / 'config/bev/projection_context_v1.yaml').read_text())
+        self.assertEqual(hashlib.sha256(calibration.read_bytes()).hexdigest(),
+                         manifest['calibration_sha256'])
+
     def test_v2_and_v3_camera_runtime_contracts_are_identical(self):
         values = []
-        for name in ("ASMC_sensor_set_v2.json", "ASMC_sensor_set_v3.json"):
-            document = json.loads((SENSOR_ROOT / name).read_text(encoding="utf-8"))
+        for name in ('v2', 'v3'):
+            document = json.loads(SENSOR_PATHS[name].read_text(encoding="utf-8"))
             values.append([_camera_contract(item) for item in document["cameraList"]])
         self.assertEqual(values[0], values[1])
 

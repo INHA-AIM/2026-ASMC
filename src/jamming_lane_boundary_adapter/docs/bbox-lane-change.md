@@ -127,7 +127,7 @@ roslaunch lane_boundary_adapter camera_bbox_lane_change.launch \
 설정이 달라지면 검토 없이 실시간 메시지에서 읽어 자동 승인하지 않는다.
 
 MolitComp03 로컬 실행은 MORAI에
-`config/morai/network/generated/ASMC_network_set_molitcomp03_local.json`을 Import하고
+`config/morai/network/261027_ASMC_Local_Network_25.S4.MolitComp03.json`을 Import하고
 네트워크를 연결해야 한다. Ctrl Host 9093, Ego Status 목적지 9099가 현재 브릿지와 일치해야 한다.
 ROS `/ctrl_cmd` 발행만으로 실제 차량 수신·이동을 확인할 수는 없다.
 

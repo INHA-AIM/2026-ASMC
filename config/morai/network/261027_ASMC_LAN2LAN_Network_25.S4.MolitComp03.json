@@ -81,14 +81,14 @@
             }
           },
           "EgoCtrlConfig": {
-            "egoCtrlMode": 2,
-            "_PUBSUB_TYPE": 0,
+            "egoCtrlMode": 3,
+            "_PUBSUB_TYPE": 771,
             "commType": 1,
             "ctrlSleepTime": 0.016666999086737633,
             "udpConfig": {
-              "hostIP": "127.0.0.1",
+              "hostIP": "192.168.0.1",
               "hostPort": 9093,
-              "destinationIP": "127.0.0.1",
+              "destinationIP": "192.168.0.10",
               "destinationPort": 9094,
               "receiveTimeout": 50,
               "isBufferThreadActivated": true,
@@ -155,9 +155,9 @@
             "pubSleepTime": 0.019999999552965164,
             "pubFrequency": 50.0,
             "udpConfig": {
-              "hostIP": "127.0.0.1",
+              "hostIP": "192.168.0.1",
               "hostPort": 9091,
-              "destinationIP": "127.0.0.1",
+              "destinationIP": "192.168.0.10",
               "destinationPort": 9092,
               "receiveTimeout": 50,
               "isBufferThreadActivated": true,
@@ -439,9 +439,9 @@
             "pubSleepTime": 0.019999999552965164,
             "pubFrequency": 50.0,
             "udpConfig": {
-              "hostIP": "127.0.0.1",
+              "hostIP": "192.168.0.1",
               "hostPort": 9088,
-              "destinationIP": "127.0.0.1",
+              "destinationIP": "192.168.0.10",
               "destinationPort": 9099,
               "receiveTimeout": 50,
               "isBufferThreadActivated": true,

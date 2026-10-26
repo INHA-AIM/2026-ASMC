@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "revision_date": "261027",
+  "naming": "YYMMDD_ASMC_LAN2LAN-or-Local_Network-or-Sensor_version.json",
+  "date_meaning": "preset revision date; not simulator save time",
+  "versions": {
+    "26r1": "26.R1.H3",
+    "molitcomp03": "25.S4.MolitComp03"
+  },
+  "runtime_sensor_identity": "ASMC v3; equivalent to 8_Autonav_sensor.json after selecting LAN IPs",
+  "files": {
+    "network/261027_ASMC_Local_Network_26.R1.H3.json": {
+      "release": "26r1",
+      "version": "26.R1.H3",
+      "transport": "local",
+      "kind": "Network",
+      "sensor_set": null,
+      "role": "team_runtime; judge endpoints require separate field integration"
+    },
+    "sensors/261027_ASMC_Local_Sensor_26.R1.H3.json": {
+      "release": "26r1",
+      "version": "26.R1.H3",
+      "transport": "local",
+      "kind": "Sensor",
+      "sensor_set": "v3",
+      "role": "team_runtime; judge endpoints require separate field integration"
+    },
+    "network/261027_ASMC_LAN2LAN_Network_26.R1.H3.json": {
+      "release": "26r1",
+      "version": "26.R1.H3",
+      "transport": "lan2lan",
+      "kind": "Network",
+      "sensor_set": null,
+      "role": "team_runtime; judge endpoints require separate field integration"
+    },
+    "sensors/261027_ASMC_LAN2LAN_Sensor_26.R1.H3.json": {
+      "release": "26r1",
+      "version": "26.R1.H3",
+      "transport": "lan2lan",
+      "kind": "Sensor",
+      "sensor_set": "v3",
+      "role": "team_runtime; judge endpoints require separate field integration"
+    },
+    "sensors/261027_ASMC_Local_SensorGT_26.R1.H3.json": {
+      "release": "26r1",
+      "version": "26.R1.H3",
+      "transport": "local",
+      "kind": "SensorGT",
+      "sensor_set": "GT",
+      "role": "local_development_only"
+    },
+    "network/261027_ASMC_Local_Network_25.S4.MolitComp03.json": {
+      "release": "molitcomp03",
+      "version": "25.S4.MolitComp03",
+      "transport": "local",
+      "kind": "Network",
+      "sensor_set": null,
+      "role": "team_runtime; judge endpoints require separate field integration"
+    },
+    "sensors/261027_ASMC_Local_Sensor_25.S4.MolitComp03.json": {
+      "release": "molitcomp03",
+      "version": "25.S4.MolitComp03",
+      "transport": "local",
+      "kind": "Sensor",
+      "sensor_set": "v3",
+      "role": "team_runtime; judge endpoints require separate field integration"
+    },
+    "network/261027_ASMC_LAN2LAN_Network_25.S4.MolitComp03.json": {
+      "release": "molitcomp03",
+      "version": "25.S4.MolitComp03",
+      "transport": "lan2lan",
+      "kind": "Network",
+      "sensor_set": null,
+      "role": "team_runtime; judge endpoints require separate field integration"
+    },
+    "sensors/261027_ASMC_LAN2LAN_Sensor_25.S4.MolitComp03.json": {
+      "release": "molitcomp03",
+      "version": "25.S4.MolitComp03",
+      "transport": "lan2lan",
+      "kind": "Sensor",
+      "sensor_set": "v3",
+      "role": "team_runtime; judge endpoints require separate field integration"
+    },
+    "sensors/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json": {
+      "release": "molitcomp03",
+      "version": "25.S4.MolitComp03",
+      "transport": "local",
+      "kind": "SensorGT",
+      "sensor_set": "GT",
+      "role": "local_development_only"
+    }
+  },
+  "scope": "Team runtime input contract; do not replace organizer judging configuration wholesale.",
+  "layout": {
+    "network": "MORAI import files only",
+    "sensors": "MORAI import files only",
+    "generator_inputs": "tools/bridge/templates",
+    "regression_sensor_v2": "src/asmc_bridge/test/fixtures/sensor_v2_10hz.json",
+    "historical_only_commit": "2c6913048c81afce01b9b465f7c699c0752654f1"
+  }
+}
