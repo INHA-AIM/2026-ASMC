@@ -113,6 +113,13 @@ struct Parameters {
     double far_obstacle_speed_kph = 5.0; // [km/h] 먼 BBOX의 차로 미확정 시 접근 속도 상한. 0이면 정지.
     double bbox_source_timeout = 0.5;      // [s] BBOX 원본 영상 나이 상한.
     double bbox_receive_timeout = 0.5;     // [s] 새 BBOX 판정 미수신 상한.
+    // 사람: 차도(OWN/ADJACENT/BOTH)에서 보이면 person_stop_sec 동안 정지한 뒤 출발한다.
+    // 출발 후 person_ignore_sec 동안은 사람으로 다시 정지하지 않는다. 사람 박스는 그동안에도
+    // 일반 장애물로 남아 차도를 점유하면 차로 변경·회피 판단에 쓰인다.
+    bool person_stop = true;
+    std::string person_label = "person";
+    double person_stop_sec = 3.0;
+    double person_ignore_sec = 4.0;
     double max_sensor_skew = 0.4;          // [s] 현재 차선과 BBOX/판정에 사용한 차선 stamp 차이.
     int obstacle_confirm_frames = 2;      // 내 차로 검출을 연속 확인할 서로 다른 BBOX frame 수.
     int adjacent_clear_frames = 3;        // 옆 차로 NO_DETECTION 연속 확인 수. 실제 빈 공간 보장은 아님.
@@ -391,6 +398,13 @@ ros::Publisher reference_lane_publisher;
 bool mode_active = false;
 bool mode_received = false;
 bool await_activation_bbox = false;
+struct PersonStopState {
+    bool active = false;                  // 정지 또는 무시 구간이 진행 중.
+    ros::SteadyTime stop_until;
+    ros::SteadyTime ignore_until;
+} person_state;
+bool personIgnoring(const ros::SteadyTime& now) { return person_state.active && now < person_state.ignore_until; }
+std::string personStopReason();
 
 void bboxCallback(const BboxResult::ConstPtr& message);
 std::string bboxStopReason();
@@ -574,6 +588,7 @@ void resetActuationLifecycle() {
     avoid_state = AvoidState{};
     line_state = LineState{};
     line_mode_active = false;
+    person_state = PersonStopState{};
     // The classifier may still hold a recently published reference lane from
     // the previous driving episode. Discard labels made against that reference.
     change_state.bbox_valid = false;
@@ -890,6 +905,7 @@ void cameraLaneFollowingProcess() {
         lane_hold.active = false;
     }
     if (change_state.change_failed) stop_reason = change_state.change_failure_reason;
+    if (stop_reason.empty()) stop_reason = personStopReason();
     if (stop_reason.empty()) {
         stop_reason = bboxStopReason();
     }
@@ -1612,6 +1628,13 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
         (change_state.deferred_far ? "approaching_unresolved_far_obstacle" : "following")) : reason;
     addDiagnosticValue(status, "bbox_stop_suppressed", ignoreBboxDuringLaneChange() ? "true" : "false");
     addDiagnosticValue(status, "bbox_input_error", change_state.bbox_error);
+    {
+        const auto diag_now = ros::SteadyTime::now();
+        const bool stopping = person_state.active && diag_now < person_state.stop_until;
+        addDiagnosticValue(status, "person_state", stopping ? "stop" : personIgnoring(diag_now) ? "ignore" : "idle");
+        addDiagnosticValue(status, "person_remaining_sec", std::to_string(!person_state.active ? 0.0 :
+            std::max(0.0, ((stopping ? person_state.stop_until : person_state.ignore_until) - diag_now).toSec())));
+    }
 
     addDiagnosticValue(status, "enable_control", params.enable_control ? "true" : "false");
     addDiagnosticValue(status, "mode_received", mode_received ? "true" : "false");
@@ -1736,6 +1759,10 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("reference_lane_topic", params.reference_lane_topic, params.reference_lane_topic);
     private_nh.param("bbox_source_timeout", params.bbox_source_timeout, params.bbox_source_timeout);
     private_nh.param("bbox_receive_timeout", params.bbox_receive_timeout, params.bbox_receive_timeout);
+    private_nh.param("person_stop", params.person_stop, params.person_stop);
+    private_nh.param("person_label", params.person_label, params.person_label);
+    private_nh.param("person_stop_sec", params.person_stop_sec, params.person_stop_sec);
+    private_nh.param("person_ignore_sec", params.person_ignore_sec, params.person_ignore_sec);
     private_nh.param("ignore_bbox_during_lane_change", params.ignore_bbox_during_lane_change, params.ignore_bbox_during_lane_change);
     private_nh.param("one_lane_change_only", params.one_lane_change_only, params.one_lane_change_only);
     private_nh.param("return_to_entry_lane", params.return_to_entry_lane, params.return_to_entry_lane);
@@ -1960,6 +1987,8 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
          message->own_lane != follower_state.locked_lane)) {
         reject("waiting_for_bbox_matching_observed_lane"); return;
     }
+    const ros::SteadyTime person_now = ros::SteadyTime::now();
+    bool person_on_road = false;
     int own = BboxResult::NO_DETECTION, adjacent = BboxResult::NO_DETECTION;
     bool deferred_far = false;
     bool clipped_association = false;
@@ -1972,10 +2001,12 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
         }
         clipped_association |= message->clipped_association[i];
         if (label == BboxResult::UNKNOWN || label > BboxResult::DEFERRED_FAR) { reject("bbox_lane_unknown"); return; }
+        const bool on_road = label == BboxResult::OWN || label == BboxResult::ADJACENT || label == BboxResult::BOTH;
+        person_on_road |= on_road && message->boxes[i].label == params.person_label;
         deferred_far |= label == BboxResult::DEFERRED_FAR;
         if (label == BboxResult::OWN || label == BboxResult::BOTH) own = BboxResult::DETECTED;
         if (label == BboxResult::ADJACENT || label == BboxResult::BOTH) adjacent = BboxResult::DETECTED;
-        if (label == BboxResult::OWN || label == BboxResult::ADJACENT || label == BboxResult::BOTH) {
+        if (on_road) {
             const double x = message->contact_x[i], y_min = message->contact_y_min[i], y_max = message->contact_y_max[i];
             if (std::isfinite(x) && std::isfinite(y_min) && std::isfinite(y_max) && x > 0.0 && y_min <= y_max) {
                 measured.push_back({x, x + params.avoid_obstacle_length, y_min, y_max, false});
@@ -1989,6 +2020,13 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
         if (adjacent != BboxResult::DETECTED) adjacent = BboxResult::UNOBSERVED;
     }
     if (message->own_state != own || message->adjacent_state != adjacent) { reject("bbox_occupancy_mismatch"); return; }
+    if (params.person_stop && person_on_road && !personIgnoring(person_now)) {
+        person_state.active = true;
+        person_state.stop_until = person_now + ros::WallDuration(params.person_stop_sec);
+        person_state.ignore_until = person_state.stop_until + ros::WallDuration(params.person_ignore_sec);
+        ROS_WARN("Person on road: stop %.1fs, then no person stop for %.1fs",
+                 params.person_stop_sec, params.person_ignore_sec);
+    }
     change_state.deferred_far = deferred_far;
     change_state.clipped_association = clipped_association;
     change_state.measured = measured;
@@ -2003,6 +2041,14 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
     change_state.bbox_error.clear();
     change_state.bbox_sequence++;
     await_activation_bbox = false;
+}
+
+std::string personStopReason() {
+    if (!params.person_stop || !person_state.active) return "";
+    const auto now = ros::SteadyTime::now();
+    if (now < person_state.stop_until) return "person_stop";
+    if (now >= person_state.ignore_until) person_state.active = false;
+    return "";
 }
 
 std::string bboxStopReason() {

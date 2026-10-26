@@ -94,7 +94,7 @@ class LaneChangeTest(unittest.TestCase):
         self.assertIsNotNone(self.diag)
         return self.diag.status[0].message,{v.key:v.value for v in self.diag.status[0].values}
 
-    def feed(self, ys=(),shift=0.,duration=.55,camera=True,bbox=True,stamp=None,gap=False,source_gap=False,target_gap=False,far=False,slope=0.,box_x=10.,raw_boxes=None,spans=(),speed=None,lidar=None,imu=None):
+    def feed(self, ys=(),shift=0.,duration=.55,camera=True,bbox=True,stamp=None,gap=False,source_gap=False,target_gap=False,far=False,slope=0.,box_x=10.,raw_boxes=None,spans=(),speed=None,lidar=None,imu=None,label='car'):
         end=time.monotonic()+duration
         while time.monotonic()<end:
             source=rospy.Time.now() if stamp is None else stamp
@@ -128,7 +128,7 @@ class LaneChangeTest(unittest.TestCase):
                 for y in ys:
                     uv,_=self.camera.project_ground(np.array([[box_x,y+shift+slope*box_x]]))
                     u,v=uv[0]
-                    boxes.append(fixture.camera_box(u-15,v-60,u+15,v,'car'))
+                    boxes.append(fixture.camera_box(u-15,v-60,u+15,v,label))
                 for y_min,y_max,x in spans:
                     # Wide box whose bottom edge spans the given ground interval (base_link y, +left).
                     uv,_=self.camera.project_ground(np.array([[x,y_max+shift],[x,y_min+shift]]))
@@ -203,6 +203,20 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(self.status()[1]['locked_lane'], '0')
         self.feed([], shift=-3.5, duration=.9)
         self.assertEqual(self.status()[1]['locked_lane'], '1')
+
+    def test_person_stops_three_seconds_then_changes_lane_without_restop(self):
+        self.feed()
+        self.following()
+        self.assertEqual(self.status()[1]['locked_lane'],'1')
+        self.feed([0],label='person',duration=.5)
+        self.stopped('person_stop')
+        self.assertEqual(self.status()[1]['person_state'],'stop')
+        self.feed([0],label='person',duration=2.8)
+        # After 3 s the person no longer stops the vehicle but still occupies the lane.
+        self.following()
+        self.assertEqual(self.status()[1]['person_state'],'ignore')
+        self.assertEqual(self.status()[1]['locked_lane'],'0')
+        self.assertEqual(self.reference.data,0)
 
     def test_repeat_changes_use_new_own_lane_and_reset_completion(self):
         self.feed()

@@ -57,6 +57,11 @@
   <arg name="far_obstacle_speed_kph" default="5.0"/>
   <arg name="bbox_source_timeout" default="0.5"/>
   <arg name="bbox_receive_timeout" default="0.5"/>
+  <!-- 차도 위 사람: person_stop_sec 정지 후 출발, 그 뒤 person_ignore_sec 동안 사람으로 재정지하지 않는다.
+       사람 박스는 계속 장애물이라 차도를 점유하면 차로 변경·회피한다. -->
+  <arg name="person_stop" default="true"/>
+  <arg name="person_stop_sec" default="3.0"/>
+  <arg name="person_ignore_sec" default="4.0"/>
   <arg name="max_sensor_skew" default="0.4"/>
   <arg name="obstacle_confirm_frames" default="2"/>
   <arg name="adjacent_clear_frames" default="3"/>
@@ -199,6 +204,9 @@
     <param name="far_obstacle_speed_kph" type="double" value="$(arg far_obstacle_speed_kph)"/>
     <param name="bbox_source_timeout" type="double" value="$(arg bbox_source_timeout)"/>
     <param name="bbox_receive_timeout" type="double" value="$(arg bbox_receive_timeout)"/>
+    <param name="person_stop" type="bool" value="$(arg person_stop)"/>
+    <param name="person_stop_sec" type="double" value="$(arg person_stop_sec)"/>
+    <param name="person_ignore_sec" type="double" value="$(arg person_ignore_sec)"/>
     <param name="max_sensor_skew" type="double" value="$(arg max_sensor_skew)"/>
     <param name="obstacle_confirm_frames" type="int" value="$(arg obstacle_confirm_frames)"/>
     <param name="adjacent_clear_frames" type="int" value="$(arg adjacent_clear_frames)"/>
