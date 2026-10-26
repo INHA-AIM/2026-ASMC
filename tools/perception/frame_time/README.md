@@ -4,8 +4,10 @@ This directory contains offline probes only. It is not a catkin package and is
 not installed by an operating launch. `audit_frame_time.py` orchestrates it.
 
 The current input/config inventory is
-`config/baselines/lidar_frame_time_c0_v2.json` (bridge GPS-validity fix).
-The v1 manifest and its source revision remain the pre-fix reproduction baseline.
+`config/baselines/lidar_frame_time_c0_v5.json` (shared geometry and causal rejection history).
+The v1 GPS defect, v2 GPS fix and v3 intermediate diagnostic-only refactor remain historical baselines.
+The v3 replay exposed the future-rejection overwrite; v4 fixes it without relaxing freshness. V5 keeps the same production sources and pins
+the portable, isolated resource-measurement helper and IMU report tool.
 Inputs are resolved beneath an
 explicit storage root; no workstation path is an operating default.
 
@@ -63,7 +65,7 @@ In the container, use its mounted storage paths, not the host `.storage/env.sh`.
 
 ```bash
 python3 tools/perception/audit_frame_time.py \
-  --manifest config/baselines/lidar_frame_time_c0_v2.json \
+  --manifest config/baselines/lidar_frame_time_c0_v5.json \
   --storage-root '/mnt/d/morai dataset/shahn03' \
   --run-id '<registered-new-run-id>' --output '/artifacts/<registered-new-run-id>' \
   --probes /tmp/asmc-c0-probes --replay "$PWD/devel/lib/asmc_lidar/lidar_replay"
@@ -122,3 +124,21 @@ python3 tools/perception/frame_time/replay_gps_recovery.py \
 The actual ROS publication contract is also covered by
 `rostest asmc_bridge vehicle_state.test` in an isolated master. It publishes only
 `/bridge_fixture/*` synthetic sensors/state and never vehicle controls.
+
+## PR #115 refactor and IMU rejection follow-up
+
+`imu_history_probe BAG CONFIG NEW.jsonl` replays the native PoseHistory in bag arrival
+order, querying at recorded trace receipt. It needs no cloud; it does not recreate
+exact worker scheduling. `summarize_imu_rejections.py` correlates those rows with raw
+IMU samples and the saved teleport report. `compare_refactor.py` alternates old/new
+native replay binaries three times per bag, preserves each binary/library SHA and
+compares all track/OBB/filter outputs. Its wall time includes IO and JSON; it is
+not a live supply or perception-latency acceptance test. Use `--help` for exact paths.
+All output must be below a newly registered run and is never overwritten.
+
+[Final results and responsibility boundaries](../../../docs/records/lidar/2026-10-27-frame-time-refactor.md).
+For an intentionally teleported stationary trial, `run_tunnel_motion_trial.py`
+accepts an explicit `--lidar-reset-service /migration/lidar/lidar_pipeline/reset`.
+The caller must own that trial node; no service is guessed and the option is off
+by default. It resets after settling at the new pose and again after restoration.
+Normal sensor invalidity/collisions do not cause automatic resets.

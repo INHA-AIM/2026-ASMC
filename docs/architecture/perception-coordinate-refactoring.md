@@ -5,14 +5,15 @@
 C0는 [좌표·시각 대조 결과](../records/lidar/2026-10-26-frame-time-baseline.md)와 재현 도구까지 완료했다.
 운영 변환·필터·메시지는 바꾸지 않았다. 후속 사용자 승인으로 같은 PR에서
 [bridge GPS `(0,0)` 유효성·복귀 경계](../records/bridge/2026-10-26-gps-validity-recovery.md)를 수정했다.
-공용 라이브러리나 pose 생산자 통합은 아직 후보안이다.
+후속 승인으로 [공용 수학·scan 변환 재사용·인과적 오류 이력](../records/lidar/2026-10-27-frame-time-refactor.md)도
+같은 PR #115에서 구현했다. `asmc_geometry`는 헤더 라이브러리이며 pose 생산자 통합은 아직 후보안이다.
 
 ## 상태와 착수 순서
 
 2026-10-25에 `feat/lidar-hd-map-filter-audit`의 `80b64676` 코드를 대조한 후속 설계다.
 PR #108은 main `ab8db094`에 병합됐으며 [판제 전환·구 패키지 폐기 기반 B0–B4](../../src/asmc_lidar/docs/cutover-foundation.md)도 완료했다.
 최초 코드 대조 SHA는 당시 근거로 보존한다. 아래 C1–C4는 C0 결과를 반영해 순서를 다시 정할 후보이며 일괄 구현 계획이 아니다.
-이 문서 추가는 공용 라이브러리 구현, pose 생산자 통합, 판제 입력 전환이나 운영 수락을 의미하지 않는다.
+최초 설계와 이후 구현을 구분한다. 이번 최소 공용화가 pose 생산자 통합·판제 입력 전환·전체 주행 수락을 의미하지 않는다.
 현재 실행·검증 정본은 [LiDAR 인계](../handoffs/lidar-migration.md)와
 [패키지 파이프라인](../../src/asmc_lidar/docs/pipeline.md)을 따른다.
 
@@ -172,6 +173,13 @@ LAN2LAN worktree의 UDP/IP 설정은 변경하지 않았다. bridge의 안테나
 카메라의 bracket 정책을 scan에 무조건 복제하거나, LiDAR의 최신 표본을 카메라에 대입하지 않는다.
 입력별 시각 근거·선택 표본·정책·실패 이유를 context로 조회할 수 있어야 한다.
 
+PR #115의 LiDAR 오류 이력은 IMU/CAN별 기존 history 기간(기본5초)·최대1024개로 제한된다.
+정상 표본뿐 아니라 거부 표본도 scan 이전에서 선택하므로, worker 대기 중 수신한 미래 오류가 과거 오류를
+덮어쓰지 않는다. 진단의 latest-received와 selected-before-scan은 구분한다. 정상 IMU age120ms,
+GPS bounded300ms·재확보3회, yaw guard5°+120°/s는 유지한다. 텔레포트 직후 명시적 reset은 시험 절차이며
+일반 충돌·센서 오류를 자동으로 정상화하는 운영 정책이 아니다.
+
+
 ## IMU 공통 모듈의 경계
 
 공통 원리는 `R_WB = R_WI · R_BIᵀ`, `n_B = R_WBᵀ · [0,0,1]`이다.
@@ -192,8 +200,11 @@ family worker의 실제 프레임별 선택을 비교 BEV와 BBox 어댑터가 �
 다만 metadata 생산 주체는 여전히 family worker다. lane OFF에서도 필요한 미래 YOLO 지면 투영은
 독립 소비 연결을 설계해야 하며, 지금 모든 센서의 공용 서비스가 완성됐다고 표시하지 않는다.
 
-공용 수학을 family나 lidar 추론 패키지 한쪽에 계속 귀속시키기보다, 필요한 최소 기하·시각 코어를
-가칭 `asmc_geometry` 같은 작은 라이브러리로 분리하는 것이 후보 방향이다.
+PR #115는 [asmc_geometry](../../src/asmc_geometry/README.md)에 GPS 유효성·ENU/UTM 수학·grid yaw 규약과
+같은 clock의 past-only 표본 선택·정수 ns age 비교를 구현했다. bridge/planning은 중복 geodesy 구현을 제거했다.
+LiDAR는 기존 GeographicLib 투영을 유지하고 공통 grid-yaw 계산 규칙에 주입한다.
+카메라 Python SLERP와 지면 투영은 기존 코어를 유지하며 C++와 동일 fixture로 대조한다.
+나머지 quaternion·mount 전체 공통화는 후보로 남긴다.
 기존 `asmc_lidar_frame_time`의 공통 부분을 재사용하고 C++/Python은 같은 fixture로 수치·실패 의미를 검사한다.
 Python binding은 배포·호출 비용까지 비교한 뒤 결정한다. 즉시 모든 Python 연산을 C++로 바꾸지 않는다.
 `asmc_msgs`는 wire 정의만 담당하며 추정기·계산·파일 I/O 코드를 넣지 않는다.
@@ -210,7 +221,9 @@ Python binding은 배포·호출 비용까지 비교한 뒤 결정한다. 즉시
 
 작은 회전행렬 연산 절약만으로 TensorRT 추론이나 군집 지연이 크게 줄어든다고 예상하지 않는다.
 현재 가드레일의 긴 OBB 문제는 군집·관측 형상과 support 판정 문제도 포함하며 좌표계 변경만으로 해결되지 않는다.
-이 설계 자체에 대한 속도 개선율은 아직 미측정이다. 이전 HD맵/높이 ROI 실험 수치를 공통화 효과로 사용하지 않는다.
+PR #115에서 scan별 준비 변환·GPS별 yaw 보정 캐시·점군 변환의 중간 복사 제거를 적용했다.
+[대조 기록](../records/lidar/2026-10-27-frame-time-refactor.md)의 같은 bag 교차 측정만 이번 효과의 근거로 사용한다.
+이전 HD맵/높이 ROI 수치를 공통화 효과로 사용하지 않는다.
 
 ## PR #108 이후 작업 단위
 
@@ -218,14 +231,14 @@ Python binding은 배포·호출 비용까지 비교한 뒤 결정한다. 즉시
 |---|---|---|---|
 | C0 · 완료 | 현행 생산자·소비자·frame/time/기준점 목록과 동일 입력 fixture 고정 | 54 투영 사례·857 scan 동등성·실시간 GPS0 재현. 동일 시각 pose/독립 GT 부족은 명시 | 알고리즘·토픽 변경 |
 | 입력 경계 수정 · 완료 | bridge GPS0·결측·복귀 유효성 일치 | C0 합성 fixture·기록 재생·실제 노드 발행 회귀 | pose 생산자 통합·좌표/속도 추정식 변경 |
-| 다음 진단 후보 | LiDAR IMU stale 원인과 clock 대응 근거 | 수신 지연/표본 선택/scan 취득 구간을 분리 | age 제한 완화·원본 clock 임의 환산 |
-| C1 | 기하·시각 공통 라이브러리 최소 분리 | 기존 수학·무효 처리 동등성, C++/Python fixture, 독립 빌드 | 위치 추정 gain·보간 정책 변경 |
+| IMU 경계 수정 · 완료 | 거부 표본의 scan 이전 이력 조회·수신/선택 진단·명시적 시험 reset | 원래 stale26은 yaw 급변 거부, 추가3건의 오래된 자세 사용 차단. 합성·ROS 회귀 | freshness 완화·자동 collision reset |
+| C1 최소 범위 · 완료 | `asmc_geometry` 수학·시각 기초, scan 변환/입력 복사 정리 | 857 scan 객체 동등성, bridge/planning 상태 바이트 동일, C++/Python fixture | 위치 추정 gain·보간 정책 변경 |
 | C2 | 자세 조회를 센서별 정책으로 연결 | 카메라 M1/M0 동등성, LiDAR leveling·카메라 투영 동등성, 시각 실패 재현 | 새 ego motion·점별 deskew |
 | C3 | pose 정본과 scan 시각 조회 설계·대조 | lever arm·yaw·원점·GPS0/중단/복귀·예측 오차 비교 | 판제 단독 정책 변경 |
 | C4 | 중복 계산/출력 조립 축소 | 입력→출력 p50/p95/p99·최대 공백·RSS/CPU·복사 수 비교 | 근거 없는 품질 경량화 |
 | 공동 전환 | 검증된 pose/객체 소비 경계 연결 | 판제·재호와 고정 bag 및 실제 구간 수락·복구 확인 | 사용자 확인 없는 운영 전환 |
 
-공통화할 패키지 이름이나 새 메시지는 C0 결과와 수정 후 경계를 검토해 확정한다.
+최소 공용 패키지는 `asmc_geometry`로 확정했으며 공개 메시지·MD5는 유지한다. 추가 공통화는 결과와 책임 경계를 보고 결정한다.
 서로 다른 clock을 억지로 통일하거나 현재 pose gain·보간을 공통 코드라는 이유로 바꾸지 않는다.
 안승현은 카메라·HD맵 연결과 공통 기하 대조, 재호는 추적·속도·fusion 의미를 확인한다.
 판제 담당은 현재 pose/궤적·Frenet 소비와 fallback 정책을 확인한다. 관련 공개 계약 변경은 공동 검토한다.
