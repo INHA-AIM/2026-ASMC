@@ -216,7 +216,7 @@ class ValidationRunner(QtCore.QThread):
         self.engine.cleanup()
         configure_replay(self.engine,definition);self.replay=definition
         self.replay_run_index=run_index;self.replay_case_index=case_index;self.replay_done_reason=None
-        kind='정체' if case.event_type=='stagnation' else '충돌'
+        kind={'trial':'장면','stagnation':'정체'}.get(case.event_type,'충돌')
         print(f'[{kind} 재현] {case_index+1}/{len(self.replay_runs[run_index].cases)} · '
               f'{LABELS[case.section]} · {case.path.name}',flush=True)
         self.engine.begin(self.monitor.reset_context())
@@ -274,9 +274,10 @@ class ValidationRunner(QtCore.QThread):
         if self.speed_debug:
             self.speed_trace=SpeedTrace()
             self.engine.on_rpc_observation=self.speed_trace.write
-        self.monitor.start();initial=True
+        initial=True
         try:
             if self.recording:self.recording.start()
+            self.monitor.start()
             if self.save_collisions:
                 try:
                     self.archive=CollisionArchive(self.save_dir,notify=self.archive_message)
@@ -368,6 +369,12 @@ class ValidationRunner(QtCore.QThread):
                     print('[통합 검증 오류] '+self.engine.status,flush=True)
                     self.message.emit(self.engine.status);self.snapshot();initial=False
                 self.msleep(200)
+        except Exception as exc:
+            # Startup recording/archive failure must be visible and terminate
+            # before begin() can release Ego. Preserve partial evidence.
+            self.engine.phase='error';self.engine.error=str(exc)
+            self.archive_message('[검증 시작 실패] '+str(exc))
+            self.closing=True
         finally:
             self.close_resources()
             if self.closing:self.finished_clean.emit()
@@ -396,7 +403,7 @@ class ValidationWindow(QtWidgets.QMainWindow):
         reset=QtWidgets.QPushButton('다음 반복 · 다시 준비');reset.clicked.connect(self.restart_selected);controls.addWidget(reset)
         if replay:
             self.mode.setEnabled(False);self.section.setEnabled(False);apply.setEnabled(False)
-            kind='정체' if replay.get('event_type')=='stagnation' else '충돌'
+            kind={'trial':'장면','stagnation':'정체'}.get(replay.get('event_type'),'충돌')
             reset.setText('저장된 구간 다시 재현');self.setWindowTitle(f'scen_runner · {kind} 구간 재현')
         close=QtWidgets.QPushButton('객체 정리·조종 복귀 후 종료');close.clicked.connect(self.close);controls.addWidget(close)
         layout.addLayout(controls)
@@ -531,7 +538,7 @@ class ValidationWindow(QtWidgets.QMainWindow):
             self.section.setCurrentIndex(list(LABELS).index(frame['section']))
             self.replay_previous.setEnabled(case['case_index']>0)
             self.replay_next.setEnabled(case['case_index']+1<case['count'])
-            kind='정체' if case.get('event_type')=='stagnation' else '충돌'
+            kind={'trial':'장면','stagnation':'정체'}.get(case.get('event_type'),'충돌')
             self.header.setText(f'{kind} 재현 {case["case_index"]+1}/{case["count"]} · {LABELS[frame["section"]]} · '
                                 f'반복 {frame["episode"]}')
             stamp=case['time_kst'].replace('T',' ')[:19]
