@@ -240,7 +240,7 @@ std::string updateLaneChangePlan();
 std::string updateContactPathPlan();
 const LaneChain* getPlanningLane(int lane_index);
 bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample);
-bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale = 1.0, double change_length = 0.0);
+bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale = 1.0, double change_length = 0.0, bool full_shift = false);
 bool buildRoadBoundedChangePath(const LaneChain& lane, std::vector<FamilyPoint2d>& path);
 bool pathInsideRoad(const std::vector<FamilyPoint2d>& path);
 void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>& path);
@@ -1395,7 +1395,7 @@ bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample) {
     return true;
 }
 
-bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale, double change_length) {
+bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale, double change_length, bool full_shift) {
     path.clear();
     LaneSample origin, next;
     if (!samplePlanningLane(lane, 0.0, origin) || !samplePlanningLane(lane, 1.0, next)) return false;
@@ -1411,8 +1411,8 @@ bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>&
             const double ratio = std::clamp(x / (change_length>0?change_length:params.lane_change_length), 0.0, 1.0);
             const double blend = ratio * ratio * ratio * (10.0 + ratio * (-15.0 + 6.0 * ratio));
             // 짧은 관측 지평에서 차량 앞부분이 바깥 경계를 넘지 않도록 횡이동량을 제한.
-            const double lateral_gain = std::min(1.0, params.max_lateral_step /
-                std::max(std::abs(origin.center.y), params.epsilon)) * lateral_scale;
+            const double lateral_gain = (full_shift ? 1.0 : std::min(1.0, params.max_lateral_step /
+                std::max(std::abs(origin.center.y), params.epsilon))) * lateral_scale;
             // 횡이동량만 줄인다. 도로 방향 정렬까지 줄이면 변경 중 차체가 비스듬한
             // 상태에서 모든 후보의 앞 모서리가 바깥 경계를 넘어 영구 정지할 수 있다.
             y -= origin.center.y * (1.0 - blend * lateral_gain);
@@ -1528,7 +1528,10 @@ std::string updateContactPathPlan() {
             for(auto& p:lane.centerline)p.y+=offset;
             std::vector<FamilyPoint2d> path;
             ++contact_candidates;
-            if(!buildPath(lane,true,path,1.0,length))continue;
+            // Contact trial evaluates the complete shift. The old 2.4 m cap
+            // otherwise makes distinct adjacent-lane offsets identical; every
+            // full candidate still passes the unchanged road/curvature guard.
+            if(!buildPath(lane,true,path,1.0,length,true))continue;
             const double supported_axle_x=horizon-params.vehicle_front-params.obstacle_longitudinal_margin-params.path_sample_step-.1;
             while(!path.empty() && path.back().x>supported_axle_x)path.pop_back();
             if(path.empty() || path.back().x<params.lookahead_distance || !pathInsideRoad(path)){++contact_road_rejected;continue;}
