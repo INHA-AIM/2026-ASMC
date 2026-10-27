@@ -1300,7 +1300,11 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
     for(std::size_t i=0;contact_resolvable && i<message->boxes.size();++i)
         contact_resolvable=message->ground_contact_valid[i] &&
             (message->assignments[i]!=BboxResult::UNKNOWN ||
-             message->box_reasons[i].find("contact_overlap_too_small:")==0);
+             message->box_reasons[i].find("contact_overlap_too_small:")==0 ||
+             (message->box_reasons[i].find("local_lidar_supported:")==0 && message->local_obstacles_valid &&
+              message->ground_contact_sources.size()==message->boxes.size() &&
+              message->ground_contact_sources[i]=="lidar_observed" &&
+              std::abs((message->header.stamp-message->local_obstacles_stamp).toSec())<=.050000001)));
     // classifier timeout/UNKNOWN은 같은 stamp여도 즉시 거부한다.
     if (!message->valid && !contact_resolvable) {
         // 원인은 보존한다. 변경 중 제동 제외 여부는 제어 단계에서 결정한다.
@@ -1524,6 +1528,7 @@ std::string updateContactPathPlan() {
     if(contact_result->ground_contacts.size()!=contact_result->boxes.size() ||
        contact_result->ground_contact_valid.size()!=contact_result->boxes.size()) return fail("contact_contract_invalid");
     std::vector<lane_boundary_adapter::clearance::Bounds> contacts;
+    std::vector<lane_boundary_adapter::clearance::Polygon> local_occupied;
     for(std::size_t i=0;i<contact_result->boxes.size();++i){
         if(!contact_result->ground_contact_valid[i] || contact_result->ground_contacts[i].points.size()!=4)
             return fail("contact_ground_unavailable");
@@ -1533,7 +1538,26 @@ std::string updateContactPathPlan() {
             b.xmin=std::min(b.xmin,double(p.x));b.xmax=std::max(b.xmax,double(p.x));
             b.ymin=std::min(b.ymin,double(p.y));b.ymax=std::max(b.ymax,double(p.y));
         }
-        contacts.push_back(b);
+        const bool measured=contact_result->ground_contact_sources.size()==contact_result->boxes.size() &&
+            contact_result->ground_contact_sources[i]=="lidar_observed";
+        if(measured) local_occupied.push_back({{{b.xmin,b.ymin},{b.xmax,b.ymin},{b.xmax,b.ymax},{b.xmin,b.ymax}}});
+        else contacts.push_back(b);
+    }
+    // Supplement camera occupancy with EVERY published local footprint, not
+    // only classified/matched objects. An empty array never clears image boxes.
+    if(contact_result->local_obstacles_valid) {
+        if(std::abs((contact_result->header.stamp-contact_result->local_obstacles_stamp).toSec())>.050000001)
+            return fail("local_obstacle_timestamp_skew");
+        for(const auto& poly:contact_result->local_obstacle_footprints){
+            if(poly.points.size()!=4)return fail("local_obstacle_geometry_invalid");
+            lane_boundary_adapter::clearance::Bounds b{1e100,-1e100,1e100,-1e100};
+            for(const auto& p:poly.points){if(!std::isfinite(p.x)||!std::isfinite(p.y))return fail("local_obstacle_geometry_invalid");
+                b.xmin=std::min(b.xmin,double(p.x));b.xmax=std::max(b.xmax,double(p.x));
+                b.ymin=std::min(b.ymin,double(p.y));b.ymax=std::max(b.ymax,double(p.y));}
+            // Measured OBB envelope (already padded), not an image's unknown
+            // depth corridor. Preserve near/rear points during the pass.
+            local_occupied.push_back({{{b.xmin,b.ymin},{b.xmax,b.ymin},{b.xmax,b.ymax},{b.xmin,b.ymax}}});
+        }
     }
     contact_geometry_ready=true;
     // Classifier can retain 18 m while this consumer intentionally clips at
@@ -1553,6 +1577,7 @@ std::string updateContactPathPlan() {
     std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
     if(!lane_boundary_adapter::clearance::contactOccupancy(contacts,road_reference,horizon,occupied))
         return fail("contact_occlusion_geometry_invalid");
+    occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
     const bool fresh=change_state.decision_sequence!=change_state.bbox_sequence;
     change_state.decision_sequence=change_state.bbox_sequence;
     if(change_state.entry_lane<0)change_state.entry_lane=follower_state.locked_lane;

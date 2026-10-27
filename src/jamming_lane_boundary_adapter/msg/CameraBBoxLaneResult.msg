@@ -31,3 +31,14 @@ bool contact_projection_valid
 float64 contact_support_x_max_m
 geometry_msgs/Polygon[] ground_contacts
 bool[] ground_contact_valid
+
+# Opt-in local geometry support. No map pose/absolute speed is required.
+# A LiDAR-supported contact has observed scan geometry (<=50ms image skew),
+# not an image-plane depth claim. Original scan identity stays distinct.
+string[] ground_contact_sources
+bool local_obstacles_valid
+time local_obstacles_stamp
+string local_obstacles_session
+uint64 local_obstacles_generation
+uint64 local_obstacles_sequence
+geometry_msgs/Polygon[] local_obstacle_footprints
