@@ -326,6 +326,74 @@ struct LineInput {
   bool debug = false;  // digests/clusters/detections (PipelineConfig::capture_debug)
 };
 
+inline void Tunnel(std::ostream& out,const pipeline::TunnelFilterStageReport& t) {
+  out << "{\"ran\":";Bool(out,t.ran);
+  out << ",\"ground_removed\":" << t.ground_labeled << ",\"wall_removed\":" << t.wall_labeled
+      << ",\"removed\":" << t.removed_points
+      << ",\"left_allowed\":";Bool(out,t.wall_left_removal_allowed);
+  out << ",\"right_allowed\":";Bool(out,t.wall_right_removal_allowed);
+  out << ",\"left_reanchored\":";Bool(out,t.wall_left_reanchored);
+  out << ",\"right_reanchored\":";Bool(out,t.wall_right_reanchored);
+  out << ",\"left_state\":";Str(out,t.wall_left_state);
+  out << ",\"right_state\":";Str(out,t.wall_right_state);
+  out << ",\"motion_integrated\":";Bool(out,t.motion_integrated);
+  out << ",\"motion_valid\":";Bool(out,t.motion_valid);
+  out << ",\"motion_reliable\":";Bool(out,t.motion_reliable);
+  out << ",\"motion_dt_s\":";Num(out,t.motion_dt_s);
+  out << ",\"motion_dyaw_rad\":";Num(out,t.motion_dyaw_rad);
+  out << ",\"motion_dx_m\":";Num(out,t.motion_dx_m);
+  out << ",\"motion_dy_m\":";Num(out,t.motion_dy_m);
+  out << ",\"boundary_rescued_clusters\":" << t.boundary_rescued_clusters << ",\"boundary_rescued_points\":" << t.boundary_rescued_points;
+  out << ",\"temporal_enabled\":";Bool(out,t.temporal_enabled);
+  out << ",\"temporal_entry_guard\":";Bool(out,t.temporal_entry_guard);
+  out << ",\"temporal_boundary_exempt\":" << t.temporal_boundary_exempt;
+  out << ",\"temporal_hold_frames\":" << t.temporal_hold_frames
+      << ",\"temporal_candidates\":" << t.temporal_candidates
+      << ",\"temporal_hidden\":" << t.temporal_hidden
+      << ",\"temporal_hidden_predictions\":" << t.temporal_hidden_predictions
+      << ",\"temporal_max_run\":" << t.temporal_max_run
+      << ",\"temporal_removed_points\":" << t.temporal_removed_points;
+  out << ",\"temporal_candidate_kinds\":[";
+  bool first_kind=true;
+  for(const auto& k:t.temporal_candidate_kinds) {
+    if(!first_kind)out << ',';
+    first_kind=false;out << '[' << k.first << ',' << k.second << ']';
+  }
+  out << ']';
+  out << ",\"temporal_required_frames\":[";
+  first_kind=true;
+  for(const auto& k:t.temporal_required_frames) {
+    if(!first_kind)out << ',';
+    first_kind=false;out << '[' << k.first << ',' << k.second << ']';
+  }
+  out << ']';
+  out << ",\"exterior_surface_removed\":" << t.exterior_surface_removed;
+  out << ",\"residual_decisions\":[";
+  bool first_decision=true;
+  for(const auto& d:t.residual_decisions) {
+    if(!first_decision)out<<',';
+    first_decision=false;out<<"{\"obb\":[";
+    for(std::size_t i=0;i<d.first.size();++i){if(i)out<<',';Num(out,d.first[i]);}
+    out<<"],\"reason\":";Str(out,d.second);out<<'}';
+  }
+  out<<']';
+  out << ",\"wall_evidence\":[";
+  bool first_wall=true;
+  for(const auto& w:t.wall_evidence) {
+    if(!first_wall)out << ',';
+    first_wall=false;
+    out << "{\"side\":" << w.side << ",\"allowed\":";Bool(out,w.allowed);
+    out << ",\"valid\":";Bool(out,w.valid);
+    out << ",\"plane\":[";for(int i=0;i<4;++i){if(i)out<<',';Num(out,w.plane[i]);}
+    out << "],\"span\":";Num(out,w.span);out << ",\"reason\":";Str(out,w.reason);
+    out << ",\"intervals\":[";bool first_interval=true;
+    for(const auto& interval:w.intervals){if(!first_interval)out<<',';first_interval=false;out<<'[';Num(out,interval.first);out<<',';Num(out,interval.second);out<<']';}
+    out << "]}";
+  }
+  out << ']';
+  out << ",\"motion_steps\":" << t.motion_steps << '}';
+}
+
 inline std::string Line(const LineInput& in) {
   std::ostringstream out;
   out << std::setprecision(17);
@@ -400,6 +468,7 @@ inline std::string Line(const LineInput& in) {
           << ",\"centroids\":" << n.centroids << ",\"detections\":" << n.detections
           << ",\"tracks\":" << n.tracks << ",\"observed\":" << n.observed_tracks
           << ",\"predicted\":" << n.predicted_tracks << '}';
+      out << ",\"tunnel\":";Tunnel(out,r.tunnel);
       if (in.debug) {
         out << ",\"digests\":{\"roi\":";
         Str(out, r.digests.roi);

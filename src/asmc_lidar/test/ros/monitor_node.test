@@ -10,6 +10,8 @@
   <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="/migration/lidar" output="screen">
     <param name="pipeline_config" value="$(arg pipeline_config)"/>
     <param name="package_dir" value="$(find asmc_lidar)"/>
+    <!-- Generic transport fixture; automatic GPS routing is covered by test_tunnel_runtime. -->
+    <param name="experimental_tunnel_filter" value="false"/>
     <param name="enable_camera_fusion" value="false"/>
     <param name="lidar_level_roll" value="true"/>
     <param name="debug_enabled" value="true"/>

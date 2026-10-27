@@ -87,6 +87,7 @@ class TempDir {
 
 sh::RuntimeConfig ShippedRuntimeConfig() {
   auto cfg=sh::LoadRuntimeConfig(ShippedConfig(), PackageDir());
+  cfg.pipeline.tunnel.enabled = false;  // isolate common-path fixtures; GPS mode tests cover shipped defaults
   // Existing Main-equivalence fixtures use the pre-height/audit path. Production
   // defaults are checked independently below and in the ROS integration tests.
   cfg.pipeline.height_roi.enabled=false;cfg.hd_map_audit_mode="off";

@@ -811,6 +811,171 @@ TEST(TunnelFilterPipeline, EndToEndSyntheticTunnelKeepsCar) {
     EXPECT_EQ(1, car_objects);
 }
 
+TEST(TunnelFilterPreGpsGuard, RemovesOnlyTunnelSpanningObb) {
+    Params params = TestParams();
+    EXPECT_TRUE(IsPreGpsStructuralObb(44.15f, 12.36f, 4.36f, params));
+
+    // 긴 버스/트럭이어도 폭과 높이가 구조물 기준보다 작으면 보존한다.
+    EXPECT_FALSE(IsPreGpsStructuralObb(18.0f, 2.8f, 3.8f, params));
+    // 넓은 차량 군집도 터널처럼 길지 않으면 보존한다.
+    EXPECT_FALSE(IsPreGpsStructuralObb(10.0f, 7.0f, 3.5f, params));
+    // 필터를 끄면 같은 구조물 OBB도 보존한다.
+    params.pre_gps_structural_obb_filter_enable = false;
+    EXPECT_FALSE(IsPreGpsStructuralObb(44.15f, 12.36f, 4.36f, params));
+}
+
+TEST(TunnelResidualSurface, RemovesSupportedWallIncludingLowTailButKeepsSeparateCompactObjectAndPole) {
+    for (int scenario=0;scenario<6;++scenario) {
+        auto params=TestParams();params.wall_max_segments=1;params.obb_filter_enable=false;
+        params.residual_wall_surface_enable=scenario!=0;
+        if(scenario==4)params.wall_enable=false;
+        TunnelPipeline pipeline(params);
+        pcl::PointCloud<pcl::PointXYZI> cloud;AddGround(&cloud);
+        AddWall(&cloud,5,-10,40);AddWall(&cloud,-5,-10,40);
+        const int begin=cloud.size();
+        for(float x=15;x<20;x+=.2f)for(float z=-1.2f;z<(scenario==5?1.2f:2.3f);z+=.2f)
+            cloud.push_back(MakePoint(x,4.4f,z));
+        const int end=cloud.size();
+        AddBox(&cloud,20.6f,21.4f,4.2f,4.6f,-1.2f,-.2f);
+        const int low_end=cloud.size();
+        AddBox(&cloud,10.f,11.f,2.f,2.8f,-1.2f,-.2f);
+        const int compact_end=cloud.size();
+        // Isolated short pole lacks the required continuous wall support.
+        for(float z=-1.2f;z<(scenario==5?1.2f:2.3f);z+=.2f)cloud.push_back(MakePoint(25,4.4f,z));
+        std::vector<std::uint8_t> protect(cloud.size(),0),ambiguous(cloud.size(),0);
+        if(scenario==2)for(int j=begin;j<end;++j)protect[j]=kProtectTruck;
+        if(scenario==3)for(int j=begin;j<end;++j)ambiguous[j]=1;
+        for(int f=0;f<4;++f)pipeline.Process(cloud,0,0,&protect,&ambiguous,scenario!=3);
+        const auto& r=pipeline.LastResult();
+        int removed=0;for(int j=begin;j<end;++j)if(r.labels[j]==kWall)++removed;
+        if((scenario==1||scenario==5))EXPECT_GT(removed,(end-begin)*.8);
+        else EXPECT_EQ(0,removed) << scenario;
+        for(int j=end;j<low_end;++j)EXPECT_EQ((scenario==1||scenario==5)?kWall:kKept,r.labels[j]) << scenario << ":" << j;
+        for(int j=low_end;j<compact_end;++j)EXPECT_EQ(kKept,r.labels[j]);
+        for(std::size_t j=compact_end;j<cloud.size();++j)EXPECT_EQ(kKept,r.labels[j]);
+    }
+}
+
+
+TEST(TunnelResidualSurface, ExteriorLowSurfaceNeedsTwoCurrentInteriorWallsAndPreservesProtection) {
+    for(int scenario=0;scenario<5;++scenario) {
+        auto params=TestParams();params.residual_wall_surface_enable=scenario!=0;
+        params.obb_filter_enable=false;TunnelPipeline pipeline(params);
+        pcl::PointCloud<pcl::PointXYZI> cloud;AddGround(&cloud);
+        AddWall(&cloud,6,-10,40);
+        AddWall(&cloud,-5,scenario==2?5:-10,40); // ego outside support: boundary fail-open
+        const auto exterior_begin=cloud.size();
+        AddBox(&cloud,6,18,-9,-7,kGroundZ+.4f,kGroundZ+.6f);
+        const auto exterior_end=cloud.size();
+        AddBox(&cloud,6,18,0,1.5f,kGroundZ+.4f,kGroundZ+.6f);
+        const auto inside_end=cloud.size();
+        std::vector<std::uint8_t> protect(cloud.size(),0),ambiguous(cloud.size(),0);
+        if(scenario==3)for(auto j=exterior_begin;j<exterior_end;++j)protect[j]=kProtectCar;
+        if(scenario==4)for(auto j=exterior_begin;j<exterior_end;++j)ambiguous[j]=1;
+        for(int frame=0;frame<4;++frame)pipeline.Process(cloud,0,0,&protect,&ambiguous,scenario!=4);
+        const auto& r=pipeline.LastResult();
+        for(auto j=exterior_begin;j<exterior_end;++j)
+            EXPECT_EQ((scenario==1||scenario==4)?kWall:kKept,r.labels[j])<<scenario;
+        for(auto j=exterior_end;j<inside_end;++j)EXPECT_EQ(kKept,r.labels[j])<<scenario;
+        if(scenario==1||scenario==4)EXPECT_EQ(exterior_end-exterior_begin,r.exterior_surface_removed);
+        else EXPECT_EQ(0,r.exterior_surface_removed);
+    }
+}
+
+TEST(TunnelResidualSurface, FragmentedWallRequiresMultipleRunsAndConfirmedOppositeWall) {
+    for(int scenario=0;scenario<4;++scenario) {
+        auto params=TestParams();params.residual_wall_surface_enable=scenario!=0;
+        TunnelPipeline pipeline(params);pcl::PointCloud<pcl::PointXYZI> cloud;AddGround(&cloud);
+        if(scenario!=2)AddWall(&cloud,-5,-10,40);
+        const auto begin=cloud.size();
+        AddWall(&cloud,6,-8,0);AddWall(&cloud,6,12,20);
+        if(scenario!=3)AddWall(&cloud,6,32,40);
+        for(int frame=0;frame<6;++frame)pipeline.Process(cloud,0,0,nullptr,nullptr,true);
+        const auto& r=pipeline.LastResult();
+        if(scenario==1) {
+            ASSERT_TRUE(r.walls[0].removal_allowed);
+            ASSERT_FALSE(r.walls[0].segments.empty());
+            EXPECT_EQ("fragmented_current_support",r.walls[0].segments.front().reject_reason);
+            for(auto j=begin;j<cloud.size();++j)EXPECT_EQ(kWall,r.labels[j]);
+        } else EXPECT_FALSE(r.walls[0].removal_allowed)<<scenario;
+    }
+}
+
+TEST(TunnelResidualSurface, ShortContinuationNeedsCurrentPlaneConfirmedHistoryAndReliableMotion) {
+  for(int scenario=0;scenario<4;++scenario) {
+    auto params=TestParams();params.residual_wall_surface_enable=true;
+    TunnelPipeline pipeline(params);pcl::PointCloud<pcl::PointXYZI> full;AddGround(&full);
+    AddWall(&full,6,-10,40);AddWall(&full,-5,-10,40);
+    for(int frame=0;frame<3;++frame)pipeline.Process(full,0,0,nullptr,nullptr,true);
+    pcl::PointCloud<pcl::PointXYZI> partial;AddGround(&partial);
+    if(scenario!=2)AddWall(&partial,-5,-10,40);
+    AddWall(&partial,scenario==3?7.5f:6.f,5,13);
+    EgoMotion motion;motion.valid=true;motion.reliable=scenario!=1;motion.dt_s=.07f;
+    pipeline.Process(partial,0,0,nullptr,nullptr,true,&motion);
+    const auto& w=pipeline.LastResult().walls[0];
+    if(scenario==0) {
+      ASSERT_TRUE(w.removal_allowed);
+      ASSERT_FALSE(w.segments.empty());
+      EXPECT_EQ("current_short_support_matches_verified_wall",w.segments.front().reject_reason);
+      EXPECT_FALSE(w.segments.front().InIntervals(-5,0));
+    } else EXPECT_FALSE(w.removal_allowed)<<scenario;
+  }
+}
+
+TEST(TunnelResidualSurface, ShortCurrentSupportCanAccumulateConfirmationButCannotSkipThreeFits) {
+  auto params=TestParams();params.residual_wall_surface_enable=true;
+  TunnelPipeline pipeline(params);pcl::PointCloud<pcl::PointXYZI> opposite;AddGround(&opposite);
+  AddWall(&opposite,-5,-10,40);
+  for(int i=0;i<3;++i)pipeline.Process(opposite,0,0,nullptr,nullptr,true);
+  auto full=opposite;AddWall(&full,6,-10,40);
+  pipeline.Process(full,0,0,nullptr,nullptr,true);
+  EXPECT_FALSE(pipeline.LastResult().walls[0].removal_allowed);
+  auto partial=opposite;AddWall(&partial,6,5,13);
+  EgoMotion motion;motion.valid=true;motion.dt_s=.07f;
+  pipeline.Process(partial,0,0,nullptr,nullptr,true,&motion);
+  EXPECT_FALSE(pipeline.LastResult().walls[0].removal_allowed);
+  pipeline.Process(partial,0,0,nullptr,nullptr,true,&motion);
+  EXPECT_TRUE(pipeline.LastResult().walls[0].removal_allowed);
+}
+
+TEST(TunnelResidualSurface, ShortLowSliverOutsideBoundedWallIsNotReleasedByLongLifetime) {
+  auto params=TestParams();params.residual_wall_surface_enable=true;
+  TunnelPipeline pipeline(params);pcl::PointCloud<pcl::PointXYZI> cloud;AddGround(&cloud);
+  AddWall(&cloud,6,-10,40);AddWall(&cloud,-5,-10,40);
+  const auto begin=cloud.size();AddBox(&cloud,7,9,-8,-7.6f,kGroundZ+.4f,kGroundZ+.5f);
+  for(int frame=0;frame<10;++frame)pipeline.Process(cloud,0,0,nullptr,nullptr,true);
+  for(auto j=begin;j<cloud.size();++j)EXPECT_EQ(kWall,pipeline.LastResult().labels[j]);
+}
+
+TEST(TunnelResidualSurface, ExteriorMaskRemovesOnlyVerifiedPartOfBoundaryCrossingSliver) {
+  auto params=TestParams();params.residual_wall_surface_enable=true;
+  TunnelPipeline pipeline(params);pcl::PointCloud<pcl::PointXYZI> cloud;AddGround(&cloud);
+  AddWall(&cloud,6,-10,20);AddWall(&cloud,-5,-10,20);
+  const auto begin=cloud.size();AddBox(&cloud,15,25,-8,-7.6f,kGroundZ+.4f,kGroundZ+.5f);
+  for(int frame=0;frame<4;++frame)pipeline.Process(cloud,0,0,nullptr,nullptr,true);
+  const auto& r=pipeline.LastResult();int removed=0,kept=0;
+  for(auto j=begin;j<cloud.size();++j) {
+    const auto& q=cloud[j];bool bounded=false;
+    for(const auto& wall:r.walls[1].segments)
+      if(wall.InIntervals(wall.AlongWall(q.x,q.y),-2.f))bounded=true;
+    if(bounded){EXPECT_EQ(kWall,r.labels[j]);++removed;}
+    else {EXPECT_EQ(kKept,r.labels[j]);++kept;}
+  }
+  EXPECT_GT(removed,0);EXPECT_GT(kept,0);EXPECT_EQ(removed,r.exterior_surface_removed);
+}
+
+TEST(TunnelResidualSurface, ProvenPlanarExteriorCanRemoveShortConnectedTailButKeepsCompactExitObject) {
+  auto params=TestParams();params.residual_wall_surface_enable=true;
+  TunnelPipeline pipeline(params);pcl::PointCloud<pcl::PointXYZI> cloud;AddGround(&cloud);
+  AddWall(&cloud,6,-10,20);AddWall(&cloud,-5,-10,20);
+  const auto begin=cloud.size();AddBox(&cloud,10,21.5f,-8,-7.6f,kGroundZ+.4f,kGroundZ+.5f);
+  const auto end=cloud.size();AddBox(&cloud,25,26,-7.8f,-7.f,kGroundZ+.3f,kGroundZ+1.3f);
+  for(int frame=0;frame<4;++frame)pipeline.Process(cloud,0,0,nullptr,nullptr,true);
+  const auto& r=pipeline.LastResult();
+  for(auto j=begin;j<end;++j)EXPECT_EQ(kWall,r.labels[j]);
+  for(auto j=end;j<cloud.size();++j)EXPECT_EQ(kKept,r.labels[j]);
+}
+
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

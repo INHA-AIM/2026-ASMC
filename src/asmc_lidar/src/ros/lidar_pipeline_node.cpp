@@ -371,7 +371,8 @@ class LidarPipelineNode {
   // keeps ~enable_camera_fusion (Main enable_sensor_fusion) with no camera source,
   // i.e. Main with no camera traffic: classes stay unknown, FusionLiDAR still runs.
   void SetUpCamera() {
-    if (!config_.enable_camera_fusion) {
+    if (!config_.enable_camera_fusion && !(config_.pipeline.tunnel.enabled &&
+        config_.pipeline.tunnel_route.original_pipeline && config_.pipeline.tunnel_route.protection.enabled)) {
       camera_reason_ = "disabled_by_config";
       return;
     }
