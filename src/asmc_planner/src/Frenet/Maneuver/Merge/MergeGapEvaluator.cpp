@@ -248,6 +248,14 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
     const auto initial_body=MakeEgoFootprint(initial,shape,0);
     const bool lane_established=!entering&&reference_transition&&
         zone.target_region->coversPolygon(initial_body);
+    auto interval=[&](const geometry::Polygon2D& polygon,double hint) {
+        std::pair<double,double> extent{INFINITY,-INFINITY};
+        for(const auto& p:polygon) {
+            const double s=FindClosestS(zone.target_reference,p.x,p.y,&hint,15);
+            extent.first=std::min(extent.first,s);extent.second=std::max(extent.second,s);
+        }
+        return extent;
+    };
     std::vector<bool> followers(objects.size(),false);
     if(!entering&&reference_transition) {
         const auto rp=Interpolate(zone.target_reference,FindClosestS(zone.target_reference,initial.x,initial.y,nullptr,100));
@@ -256,22 +264,37 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             const auto& obj=objects[j];auto nominal=obj;
             nominal.prediction_min_speed=nominal.prediction_max_speed=NAN;
             const auto polygon=PredictObstacleFootprint(nominal,object_time_offset_s);
-            if(obj.motion_state==ObjectMotionState::LOW_THREAT||std::fabs(obj.yaw_rate)>1e-3||
+            // A mapped follower on a bend has a different local tangent from
+            // ego. Compare its velocity in ITS lane frame, then classify rear
+            // position by lane station, never by ego's global tangent alone.
+            const auto actor_pose=PredictTrackedObjectPose(nominal,object_time_offset_s);
+            const double object_s=obj.prediction_lane?FindClosestS(zone.target_reference,
+                actor_pose.x,actor_pose.y,nullptr,100):0;
+            const auto actor_frame=obj.prediction_lane?Interpolate(zone.target_reference,object_s):rp;
+            const double ax=std::cos(actor_frame.theta),ay=std::sin(actor_frame.theta);
+            const auto actual_velocity=obj.prediction_lane?
+                PredictTrackedObjectVelocity(obj,object_time_offset_s):std::make_pair(obj.vx,obj.vy);
+            if(InspectPredictionVelocity(obj)!=PredictionInputStatus::MEASURED||
+               obj.motion_state==ObjectMotionState::LOW_THREAT||std::fabs(obj.yaw_rate)>1e-3||
                ((std::isfinite(obj.continuation_vx)||std::isfinite(obj.continuation_vy))&&
                 (!std::isfinite(obj.continuation_vx)||!std::isfinite(obj.continuation_vy)||
                  obj.continuation_vx*tx+obj.continuation_vy*ty<=0||
                  std::fabs(-obj.continuation_vx*ty+obj.continuation_vy*tx)>cfg.provisional_lateral_speed_mps))||
-               obj.vx*tx+obj.vy*ty<=0||std::fabs(-obj.vx*ty+obj.vy*tx)>cfg.provisional_lateral_speed_mps||
+               actual_velocity.first*ax+actual_velocity.second*ay<=0||
+               std::fabs(-actual_velocity.first*ay+actual_velocity.second*ax)>cfg.provisional_lateral_speed_mps||
                !zone.target_region->coversPolygon(polygon)||
                geometry::ConvexPolygonDistance(initial_body,polygon)<=collision.safety_margin)continue;
-            const bool behind=std::all_of(polygon.begin(),polygon.end(),[&](const auto& p){
-                return (p.x-initial.x)*tx+(p.y-initial.y)*ty < -rear-collision.safety_margin;
-            });
+            const bool behind=obj.prediction_lane?
+                interval(polygon,object_s).second <
+                    interval(initial_body,FindClosestS(zone.target_reference,initial.x,initial.y,nullptr,100)).first-collision.safety_margin:
+                std::all_of(polygon.begin(),polygon.end(),[&](const auto& p){
+                    return (p.x-initial.x)*tx+(p.y-initial.y)*ty < -rear-collision.safety_margin;
+                });
             if(!behind)continue;
             double own_rear=INFINITY,other_front=-INFINITY;
             for(const auto& p:initial_body)own_rear=std::min(own_rear,p.x*tx+p.y*ty);
             for(const auto& p:polygon)other_front=std::max(other_front,p.x*tx+p.y*ty);
-            const double closing=std::max(0.0,obj.vx*tx+obj.vy*ty+speed_errors[j]-
+            const double closing=std::max(0.0,actual_velocity.first*ax+actual_velocity.second*ay+speed_errors[j]-
                 initial.v*std::cos(initial.yaw-rp.theta));
             const double available=own_rear-other_front-collision.safety_margin-
                 closing*highway_rear_response::reaction_s;
@@ -288,14 +311,6 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
     double station_hint=zone.config.start_s,target_hint=0,last_gap_time=-1;
     bool follower_entered=lane_established,follower_departed=false;
     bool have_station=false,have_target=false;
-    auto interval=[&](const geometry::Polygon2D& polygon,double hint) {
-        std::pair<double,double> extent{INFINITY,-INFINITY};
-        for(const auto& p:polygon) {
-            const double s=FindClosestS(zone.target_reference,p.x,p.y,&hint,15);
-            extent.first=std::min(extent.first,s);extent.second=std::max(extent.second,s);
-        }
-        return extent;
-    };
     std::vector<highway_rear_response::State> responses(objects.size());
     std::vector<std::size_t> rear_candidates;
     if(entering&&reference_transition&&std::isfinite(cfg.max_rear_decel_mps2)&&cfg.max_rear_decel_mps2>0) {

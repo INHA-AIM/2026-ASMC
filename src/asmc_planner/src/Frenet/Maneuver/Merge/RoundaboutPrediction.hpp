@@ -1,6 +1,7 @@
 #pragma once
 #include "Frenet/Common/ObjectTypes.hpp"
 #include "Frenet/Geometry/ObservationContinuity.hpp"
+#include "Frenet/Geometry/PredictionInput.hpp"
 #include "Frenet/Reference/Reference.hpp"
 #include <algorithm>
 #include <cmath>
@@ -118,7 +119,7 @@ public:
             if(track.moving)track.last_motion=stamp;
             else track.moving=stamp-track.last_motion<=1;
             track.reliable=track.complete=track.motion_bounded=false;
-            if(!std::isfinite(speed)||speed<.5) {
+            if(InspectPredictionVelocity(object)!=PredictionInputStatus::MEASURED||speed<.5) {
                 track.samples.clear();track.rate=0;continue;
             }
             double direction=std::atan2(object.vy,object.vx);
@@ -180,17 +181,27 @@ public:
     // Map constrains a supported circulating actor's FUTURE displacement.
     // Preserve the measured current center/corners and do not follow ego's exit.
     TrackedObject MappedMotion(const TrackedObject& object,
-        const std::vector<std::shared_ptr<const RefLine>>& references,double horizon=0) const {
+        const std::vector<std::shared_ptr<const RefLine>>& references,double horizon=0,
+        PredictionInputStatus* status=nullptr) const {
+        if(status)*status=InspectPredictionVelocity(object);
         const auto found=tracks_.find(object.id);
         if(object.velocity_unavailable||object.motion_state==ObjectMotionState::LOW_THREAT||
            (object.type!=0&&object.type!=1)||found==tracks_.end())return object;
         // A lane match alone cannot repair disputed velocity or an unstable
         // fragment. Keep the original prediction until independent motion and
         // a recently observed whole body support this road constraint.
+        double disputed_x=0,disputed_y=0;
+        if(DisputedVelocity(found->second,disputed_x,disputed_y)) {
+            if(status)*status=PredictionInputStatus::VELOCITY_DISAGREEMENT;
+            return object;
+        }
         if(!found->second.reliable||!found->second.complete)return object;
         double position_vx=0,position_vy=0,position_error=0;
-        if(!PositionVelocity(found->second,position_vx,position_vy,position_error)||
-           std::hypot(position_vx-object.vx,position_vy-object.vy)>position_error)return object;
+        if(!PositionVelocity(found->second,position_vx,position_vy,position_error))return object;
+        if(std::hypot(position_vx-object.vx,position_vy-object.vy)>position_error) {
+            if(status)*status=PredictionInputStatus::VELOCITY_DISAGREEMENT;
+            return object;
+        }
         const auto& samples=found->second.samples;
         const double speed=std::hypot(object.vx,object.vy);
         if(samples.size()<3||samples.back().t-samples.front().t<.2||speed<.5)return object;
@@ -200,7 +211,13 @@ public:
             const auto point=Interpolate(*line,station);
             const double dx=object.x-point.x,dy=object.y-point.y;
             const double error=std::hypot(dx,dy);
-            if(error>2||station>=line->length-.1||station+speed*std::max(0.0,horizon)>line->length||
+            const double upper=std::isfinite(object.prediction_max_speed)?
+                std::max(speed,object.prediction_max_speed):speed;
+            if(!PredictionLaneCovers(station,line->length,upper,horizon)) {
+                if(status)*status=PredictionInputStatus::MAP_UNCOVERED;
+                continue;
+            }
+            if(error>2||station>=line->length-.1||
                (object.vx*std::cos(point.theta)+object.vy*std::sin(point.theta))/speed<.7)continue;
             bool stable=true;size_t count=0;
             for(auto it=samples.rbegin();it!=samples.rend()&&count<3;++it,++count) {
@@ -210,6 +227,7 @@ public:
             if(stable&&error<distance){best=line;best_s=station;best_d=-dx*std::sin(point.theta)+dy*std::cos(point.theta);distance=error;}
         }
         if(!best)return object;
+        if(status)*status=PredictionInputStatus::MEASURED;
         auto result=object;const auto at=Interpolate(*best,best_s);
         result.prediction_lane=best;result.prediction_lane_s=best_s;result.prediction_lane_d=best_d;
         result.prediction_lane_anchor_x=at.x-best_d*std::sin(at.theta);
@@ -387,6 +405,35 @@ public:
                 track.samples.back().t-track.samples.front().t);
             alternative.continuation_vx=primary.vx;alternative.continuation_vy=primary.vy;
             result.push_back(alternative);
+        }
+        return result;
+    }
+    // A position fit does not authorize free-space extrapolation. Refine a
+    // committed circulating actor only when a full-body/history-supported map
+    // model covers the COMPLETE requested certificate, including the faster
+    // measured/position speed bound. Otherwise retain the sensor model.
+    std::vector<TrackedObject> ExecutionOccupancies(const std::vector<TrackedObject>& objects,
+        const std::vector<std::shared_ptr<const RefLine>>& references,double horizon) const {
+        auto result=objects;
+        for(auto& object:result) {
+            const auto it=tracks_.find(object.id);
+            double vx=0,vy=0,error=0;
+            if((object.type!=0&&object.type!=1)||
+               InspectPredictionVelocity(object)!=PredictionInputStatus::MEASURED||
+               object.motion_state==ObjectMotionState::LOW_THREAT||it==tracks_.end()||
+               !BoundedDisagreement(it->second,vx,vy,error)||
+               std::hypot(vx-object.vx,vy-object.vy)<=error)continue;
+            auto supported=object;
+            supported.vx=vx;supported.vy=vy;supported.speed=std::hypot(vx,vy);
+            const double measured=std::hypot(object.vx,object.vy);
+            supported.prediction_min_speed=std::max(0.0,std::min(supported.speed,measured)-error);
+            supported.prediction_max_speed=std::max(supported.speed,measured)+error;
+            if(std::isfinite(object.prediction_min_speed))supported.prediction_min_speed=
+                std::min(supported.prediction_min_speed,object.prediction_min_speed);
+            if(std::isfinite(object.prediction_max_speed))supported.prediction_max_speed=
+                std::max(supported.prediction_max_speed,object.prediction_max_speed);
+            const auto mapped=MappedMotion(supported,references,horizon);
+            if(mapped.prediction_lane)object=mapped;
         }
         return result;
     }

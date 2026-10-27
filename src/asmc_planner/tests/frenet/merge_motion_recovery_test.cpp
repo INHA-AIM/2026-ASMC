@@ -13,6 +13,12 @@ int main(){
  check(bounded,"prefix/stop seam respects acceleration and jerk bounds");
  auto tiny=full;for(auto* v:{&tiny.x,&tiny.y,&tiny.yaw,&tiny.kappa,&tiny.v,&tiny.a})v->resize(3);
  check(MakeProgressStoppingCertificate(tiny,.1,.1,2,4,10).x.empty(),"no certificate when supplied geometry cannot contain complete stop");
+ const double latest=ProgressPrefixBeforeCollision(full,70,.2,.1,2,4);
+ const auto advanced=MakeProgressStoppingCertificate(full,latest,.1,2,4,.2,.25);
+ check(latest>.2&&latest<7&&!advanced.x.empty()&&advanced.v.back()==0,
+     "future collision opens a physically stop-capable forward prefix instead of immediate braking only");
+ check((advanced.x.size()-1)*.1<=7.3+1e-6,
+     "progress prefix is derived from stopping dynamics before the nominal conflict");
  TrackedObject actor;actor.id=71;actor.geometry_valid=true;actor.length=4;actor.width=2;actor.height=1;actor.x=20;actor.motion_state=ObjectMotionState::LOW_THREAT;
  auto corners=[&](){for(int i=0;i<8;++i)actor.corners[i]={actor.x+(i%4<2?-1.:1.),(i%2?-1.:1.),double(i/4)};};corners();
  CollisionCheckConfig collision{.45,.1,8};VehicleShape shape{1.9,4.635,.79};
@@ -43,8 +49,22 @@ int main(){
  const auto p=PredictTrackedObjectPose(mapped,1);const double angle=.15*1.4;
  check(std::hypot(p.x-20*std::sin(angle),p.y-20*(1-std::cos(angle)))<.02,"future position follows mapped curve rather than noisy instantaneous turn rate");
  check(!round.MappedMotion(car,{line},10).prediction_lane,"partial map cannot certify an unprovided circulating continuation");
+ PredictionInputStatus status;
+ auto upper_bound=car;upper_bound.prediction_max_speed=8;
+ check(!round.MappedMotion(upper_bound,{line},4,&status).prediction_lane&&
+     status==PredictionInputStatus::MAP_UNCOVERED,
+     "map authority must cover fastest bounded speed, not only nominal velocity");
+ auto missing=car;missing.velocity_unavailable=true;
+ check(!round.MappedMotion(missing,{line},1,&status).prediction_lane&&
+     status==PredictionInputStatus::VELOCITY_UNAVAILABLE,
+     "missing velocity is distinct from zero and cannot acquire mapped authority");
+ check(InspectPredictionVelocity(missing)==PredictionInputStatus::VELOCITY_UNAVAILABLE,
+     "shared prediction input contract preserves unavailable velocity");
+ missing.velocity_unavailable=false;missing.vx=NAN;
+ check(InspectPredictionVelocity(missing)==PredictionInputStatus::INVALID_VELOCITY,
+     "nonfinite motion is an invalid model, not a stationary observation");
  auto inconsistent=car;inconsistent.vx*=3;inconsistent.vy*=3;
- check(!round.MappedMotion(inconsistent,{line},1).prediction_lane,"map match cannot mask velocity inconsistent with position history");
+ check(!round.MappedMotion(inconsistent,{line},1,&status).prediction_lane&&status==PredictionInputStatus::VELOCITY_DISAGREEMENT,"map match cannot mask velocity inconsistent with position history");
  car.type=2;check(!round.MappedMotion(car,{line}).prediction_lane,"pedestrian is not forced to circulate");
  car.type=1;car.vx=-car.vx;car.vy=-car.vy;
  check(!round.MappedMotion(car,{line}).prediction_lane,"opposite motion cannot acquire circulating lane");

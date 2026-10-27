@@ -123,6 +123,8 @@ int main(){
         object.vx=6*std::cos(.3*q);object.vy=6*std::sin(.3*q);observe(710+q,1);}
     auto matching=object;matching.yaw_rate=history.Rate(21);
     const auto stable=history.ApproachOccupancies({matching});
+    expect(history.ExecutionOccupancies({matching},{},1).size()==1,
+        "position-consistent real circular motion keeps its original execution model");
     expect(stable.size()==1&&std::fabs(stable[0].yaw_rate-.3)<1e-6&&
         stable[0].vx==object.vx&&stable[0].vy==object.vy,
         "consistent real circular motion retains its original long-horizon turn prediction");
@@ -237,6 +239,29 @@ int main(){
     for(int i=0;i<8;++i){object.x=6*i*.1;object.vx=i%2?14:2;observe(901+i*.1,1,5);}
     expect(history.UncertainNear(0,0)==40,
         "spread beyond the configured error allowance still revokes departure confidence");
+    history.Reset();object.id=50;object.length=4.5;object.width=1.9;
+    object.motion_state=ObjectMotionState::DYNAMIC;object.vx=5;object.vy=0;
+    object.velocity_unavailable=true;
+    for(int i=0;i<6;++i){object.x=.5*i;object.y=0;observe(1000+i*.1,1);}
+    expect(history.UncertainNear(0,0)==50&&history.Rate(50)==0&&
+        history.ConservativeOccupancies({object}).empty(),
+        "unavailable velocity cannot be accumulated as measured motion or authorize departure");
+    object.velocity_unavailable=false;history.Reset();object.id=51;
+    for(int i=0;i<8;++i){object.x=.5*i;object.y=0;object.vx=6.5;object.vy=0;observe(1100+i*.1,1);}
+    auto supplied_lane=std::make_shared<RefLine>();supplied_lane->length=100;
+    for(int i=0;i<=100;++i)supplied_lane->points.push_back({double(i),0,double(i),0,0,0});
+    const auto executed=history.ExecutionOccupancies({object},{supplied_lane},2);
+    expect(executed.size()==1&&bool(executed[0].prediction_lane)&&std::fabs(executed[0].vx-5)<1e-6&&
+        executed[0].prediction_min_speed<=5&&executed[0].prediction_max_speed>=6.5&&
+        executed[0].corners[0].x==object.corners[0].x,
+        "mapped execution retains BOTH measured and position speed bounds with authoritative OBB");
+    expect(!history.ExecutionOccupancies({object},{},2)[0].prediction_lane&&
+        history.ExecutionOccupancies({object},{},2)[0].vx==object.vx&&
+        !history.ExecutionOccupancies({object},{supplied_lane},30)[0].prediction_lane,
+        "missing or partial map cannot authorize free-space positional extrapolation");
+    object.type=2;
+    expect(history.ExecutionOccupancies({object},{supplied_lane},2).size()==1,
+        "vehicle continuation refinement does not force pedestrians into the circulating model");
     return failures?1:0;
 }
 
