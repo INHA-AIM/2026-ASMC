@@ -54,6 +54,7 @@ def analyze(directory, output_name='analysis'):
     images, pending, cases = OrderedDict(), OrderedDict(), []
     case_counts = Counter()
     collision_samples, collision_ids = 0, Counter()
+    unresolved_collision_samples = 0
     contact_decisions = Counter()
     modes = []
     latest_ego = None
@@ -100,7 +101,11 @@ def analyze(directory, output_name='analysis'):
                             heading_deg=msg.heading, velocity_xyz_mps=[msg.velocity.x,msg.velocity.y,msg.velocity.z])
                     elif topic == '/CollisionData':
                         # UDP repeats contact state: count samples and IDs, not unique collisions.
-                        hits = list(msg.collision_object) + list(msg.collision_objecta)
+                        reports = list(msg.collision_object) + list(msg.collision_objecta)
+                        # Local MORAI emits type=-1/id=0 ego-location sentinel
+                        # continuously. Keep it separate; not 4000 collisions.
+                        unresolved_collision_samples += any(o.type<0 or o.unique_id<=0 for o in reports)
+                        hits = [o for o in reports if o.type>=0 and o.unique_id>0]
                         if hits:
                             collision_samples += 1
                             collision_ids.update(str(o.unique_id) for o in hits)
@@ -153,6 +158,7 @@ def analyze(directory, output_name='analysis'):
                    follower_reason_samples=dict(reasons), bbox_reason_samples=dict(box_reasons),
                    selector_samples=dict(selectors), gallery_cases=cases,
                    contact_decision_samples=dict(contact_decisions), mode_transitions=modes,
+                   unresolved_collision_report_samples=unresolved_collision_samples,
                    collision_report_samples=collision_samples, collision_report_ids=dict(collision_ids),
                    interpretation='Counts are message samples, not independent failures. Receipt gaps include startup/reset. '
                    'Last selector sample is diagnostic context, not per-command arbitration proof. '
