@@ -46,6 +46,11 @@
   const worldToScreen = point => ({x: point[0] * view.scale + view.x, y: -point[1] * view.scale + view.y});
   const screenToWorld = (x, y) => [(x - view.x) / view.scale, -(y - view.y) / view.scale];
   const typeInfo = value => objectTypes[Number(value)] || {name: `TYPE ${value}`, css: 'unknown', color: '#a8b6c0'};
+  // Camera/fusion semantics are separate from the planner's legacy policy enum.
+  // For example box/static_obstacle may intentionally retain type=0 (UNKNOWN).
+  // Display the current typed observation; never infer class from motion/debug history.
+  const semanticLabel = object => [object?.camera_class, object?.classification]
+    .map(value => typeof value === 'string' && value.trim() ? value.trim() : 'unknown').join(' · ');
   const motionName = value => {
     if (value === null || value === undefined || value === '') return 'UNKNOWN';
     const labels = ['UNKNOWN', 'LOW_THREAT', 'PENDING', 'DYNAMIC'];
@@ -268,7 +273,8 @@
       const roadRatio = Number(debug?.road_ratio);
       const road = Number.isFinite(roadRatio) && roadRatio >= 0
         ? ` road ${Math.round(roadRatio * 100)}%` : '';
-      ctx.fillText(`ID ${object.id} ${info.name}/${motion.name}${road}${target}`, point.x + 7, point.y - 7);
+      ctx.fillText(`ID ${object.id} ${semanticLabel(object)}${target}`, point.x + 7, point.y - 21);
+      ctx.fillText(`policy ${info.name} · motion ${motion.name}${road}`, point.x + 7, point.y - 7);
     }
   }
 
@@ -514,15 +520,15 @@
       ['Road mask', !data.lidarMotionDebug ? '진단 없음' : boundary.available === false ? 'FAIL-OPEN' : `margin ${fmt(boundary.margin_m)}m · ≥${fmt(Number(boundary.road_ratio_threshold) * 100, 0)}%`],
       ['Fixed filters', !data.lidarMotionDebug ? '진단 없음' : `catalog ${knownStatic.available ? 'ON' : 'OFF'} · zones ${staticZone.available ? staticZone.zone_count ?? 0 : 'OFF'}`],
       ['Output objects', objects.length],
-      ['Vehicle / Ped', `${counts.vehicle} / ${counts.pedestrian}`],
-      ['Unknown', counts.unknown],
+      ['Policy vehicle / ped', `${counts.vehicle} / ${counts.pedestrian}`],
+      ['Policy unknown', counts.unknown],
       ['Motion U/L/P/D', `${stateCounts.UNKNOWN}/${stateCounts.LOW_THREAT}/${stateCounts.PENDING}/${stateCounts.DYNAMIC}`],
       ['Debug ↔ object stamp', finite(stampDeltaMs) ? `${fmt(stampDeltaMs, 1)} ms` : '–'],
       ['AVOID corridor', finite(corridorHalfWidth) ? `±${fmt(corridorHalfWidth, 2)} m` : '–'],
       ['AVOID target', avoidTargetId === null ? 'NONE' : `ID ${avoidTargetId}`],
       ['Appeared IDs', changeText(lidarChanges.appeared)],
       ['Disappeared IDs', changeText(lidarChanges.disappeared)],
-      ['Type changes', changeText(lidarChanges.typeChanged)],
+      ['Policy type changes', changeText(lidarChanges.typeChanged)],
       ['Yaw rate', '0 assumed / unmeasured']
     ]);
     const filterSummary = !data.lidarMotionDebug
@@ -576,7 +582,7 @@
         : '–';
       return `<div class="object-row ${info.css} ${motion.css} ${row.keep ? 'filter-kept' : 'filter-dropped'} ${isAvoidTarget ? 'avoid-selected' : ''}">
         <span class="object-id">ID ${esc(row.id)}${isAvoidTarget ? '<b>AVOID</b>' : ''}</span>
-        <span class="object-type">${esc(object?.camera_class || 'unknown')} · ${esc(object?.classification || 'unknown')}<br>policy ${esc(info.name)}</span>
+        <span class="object-type">${esc(semanticLabel(object))}<br>policy ${esc(info.name)}</span>
         <span class="motion-state">${esc(motion.name)}</span>
         <span class="filter-state">${row.keep ? 'KEEP' : 'DROP'}</span>
         <span class="object-detail" title="${esc(geometry)}">${esc(geometry)}</span>
@@ -768,7 +774,7 @@
       const half=ps=>{const h=[];for(const p of ps){while(h.length>1&&cross(h[h.length-2],h[h.length-1],p)<=0)h.pop();h.push(p);}return h;};
       const hull=half(points).slice(0,-1).concat(half(points.slice().reverse()).slice(0,-1));
       if(hull.length)line(hull.concat([hull[0]]),'#e5b96e',1.5);
-      if ($('showLabels').checked && hull.length) { const p=pixel(hull[0]);ctx.fillStyle='#e5b96e';ctx.fillText(`#${o.id} ${o.camera_class} · ${o.classification}`,p[0],p[1]-4); }
+      if ($('showLabels').checked && hull.length) { const p=pixel(hull[0]);ctx.fillStyle='#e5b96e';ctx.fillText(`#${o.id} ${semanticLabel(o)}`,p[0],p[1]-4); }
     }
     line([[-1,-.95],[3.8,-.95],[3.8,.95],[-1,.95],[-1,-.95]], '#fff', 2);
     ctx.fillStyle='#c9d8e2';ctx.fillText('base_link · 전방 ↑ / 차량 좌측 ← · 관측 간 최대 200ms (정렬 아님)',12,20);

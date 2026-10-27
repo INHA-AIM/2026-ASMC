@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Planning &amp; LiDAR Debug Console</title>
-  <link rel="stylesheet" href="dashboard.css?v=v2-shadow-2">
-  <link rel="stylesheet" href="dashboard_v2.css?v=v2-shadow-2">
+  <link rel="stylesheet" href="dashboard.css?v=v2-shadow-3">
+  <link rel="stylesheet" href="dashboard_v2.css?v=v2-shadow-3">
 </head>
 <body data-interface="v2">
   <header>
@@ -37,9 +37,9 @@
         <div class="legend lidar-legend">
           <span><i class="route"></i>글로벌 경로</span>
           <span><i class="ego"></i>Ego</span>
-          <span><i class="object-vehicle"></i>차량</span>
-          <span><i class="object-pedestrian"></i>보행자</span>
-          <span><i class="object-unknown"></i>미분류 객체</span>
+          <span><i class="object-vehicle"></i>policy VEHICLE</span>
+          <span><i class="object-pedestrian"></i>policy PEDESTRIAN</span>
+          <span><i class="object-unknown"></i>policy UNKNOWN</span>
           <span><i class="motion-low"></i>저위험</span>
           <span><i class="motion-pending"></i>판정보류</span>
           <span><i class="motion-dynamic"></i>동적</span>
@@ -91,6 +91,8 @@
       </section>
       <section>
         <h2>LiDAR Perception</h2>
+        <small>클래스·그룹은 카메라/퓨전의 인식 결과, policy는 기존 판제 타입,
+        motion은 별도 운동 상태입니다. policy UNKNOWN도 box 등으로 인식된 객체일 수 있습니다.</small>
         <div id="lidarGrid" class="kv"></div>
         <div id="motionSummary" class="motion-summary"></div>
         <div id="lidarObjects" class="object-list"></div>
@@ -102,6 +104,6 @@
       <section><h2>Topic Health</h2><div id="health" class="kv"></div></section>
     </aside>
   </main>
-  <script src="dashboard_v2.js?v=v2-shadow-2"></script>
+  <script src="dashboard_v2.js?v=v2-shadow-3"></script>
 </body>
 </html>

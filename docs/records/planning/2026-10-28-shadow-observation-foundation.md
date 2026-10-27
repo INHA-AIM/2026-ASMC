@@ -104,3 +104,22 @@ ROS용 dashboard 모듈은 실행 relay로 설치하면 import가 실패하는 �
 새 코드 경로나 호환 별칭을 만든 것이 아니며 namespace 인자의 일반 기능을 유지한다.
 과거 bag·A1/F1 재현 도구의 원래 토픽 문자열은 당시 기록을 읽기 위해 보존한다.
 새 시험 없이 이 문자열을 현재 운영 출력으로 사용하지 않는다.
+
+## 지도 객체의 클래스·정책 타입 표시 보완
+
+사용자 화면의 `ID 0 UNKNOWN/LOW_THREAT`를 실제 HTTP snapshot과 대조했다.
+해당 관측은 `camera_class=box`, `classification=static_obstacle`, `type=0`,
+`motion_state=1`로 도착했다. 클래스 전달 실패가 아니라 지도 canvas가 기존 숫자 정책 타입만
+표시한 문제였다. 객체 목록과 local 보기에는 이미 원본 클래스·그룹이 연결돼 있었다.
+
+지도 라벨은 `ID 0 box · static_obstacle`과
+`policy UNKNOWN · motion LOW_THREAT`로 나누고, 범례·집계의 숫자 타입도 policy로 명시한다.
+원본 클래스가 없는 관측은 unknown으로 남기며 과거 debug JSON이나 운동 상태로 복원하지 않는다.
+판제의 숫자 타입 변환·회피·정지·운동 판단은 변경하지 않는다. static 그룹을 숫자 STATIC으로
+바꾸거나 vehicle/dynamic 그룹을 실제 운동 상태로 해석하는 변경은 별도 정책 검증이 필요하다.
+
+JS canvas 회귀에서 box의 원본 이름·그룹·AVOID 대상·기존 policy/motion과 입력 불변성을 확인했다.
+vehicle/dynamic의 LOW_THREAT 유지, 클래스 누락 시 과거 debug 값 미사용도 검사했다.
+실제 웹 자산과 위 필드의 합성 snapshot을 Chromium에서 렌더링해 두 줄 라벨과 한글 표시를
+확인했다. 이는 실제 주행 수락 시험이 아니다. 웹 정적 파일만 변경하므로 기존 노드 재시작이나
+재빌드 없이 적용하고 브라우저를 새로고침한다.
