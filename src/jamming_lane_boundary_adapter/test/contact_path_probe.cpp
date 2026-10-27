@@ -96,10 +96,13 @@ int main(int argc,char**argv){
   const double end=horizon-std::hypot(shape.front+shape.longitudinal_margin+params.path_sample_step,shape.half_width+shape.lateral_margin)-.1;
   const double path_end=std::floor(std::min(params.path_horizon,end)/params.path_sample_step)*params.path_sample_step;
   if(!buildPath(lane,true,path,1.,length,true,path_end))continue;
-  const bool road=path.size()>1 && path.back().x>=params.lookahead_distance && pathInsideRoad(path);
+  RoadCheckFailure failure;
+  const bool road=path.size()>1 && path.back().x>=params.lookahead_distance && pathInsideRoad(path,nullptr,&failure);
   std::vector<lane_boundary_adapter::clearance::Point> pts;for(const auto&p:path)pts.push_back({p.x,p.y});
   const bool clear=lane_boundary_adapter::clearance::pathClearOfPolygons(pts,occupied,shape,horizon,params.path_sample_step);
-  std::cout<<"lane="<<lane.lane_index<<" offset="<<offset<<" length="<<length<<" road="<<road<<" clear="<<clear<<" curvature="<<change_state.maximum_path_curvature<<" path=";
+  std::cout<<"lane="<<lane.lane_index<<" offset="<<offset<<" length="<<length<<" road="<<road<<" clear="<<clear<<" curvature="<<change_state.maximum_path_curvature
+   <<" road_failure="<<failure.reason<<" corner="<<failure.x<<','<<failure.y<<" bounds="<<failure.right<<','<<failure.left
+   <<" curvature_limit="<<failure.curvature_limit<<" path=";
   for(unsigned i=0;i<path.size();i+=8) { std::cout<<path[i].x<<','<<path[i].y<<';'; }
   std::cout<<'\n';
  }
