@@ -51,6 +51,7 @@
   <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="$(arg namespace)" output="screen">
     <!-- Canonical launch explicitly opts into its canonical namespace only. -->
     <param name="allow_operational_output" value="$(eval arg('namespace') == '/perception/lidar')"/>
+    <param name="require_optimized_pipeline" value="$(eval arg('namespace') == '/perception/lidar')"/>
     <param name="tracks_local_topic" value="$(arg tracks_local_topic)"/>
     <param name="tracks_map_topic" value="$(arg tracks_map_topic)"/>
     <param name="planning_observations_topic" value="$(arg planning_observations_topic)"/>

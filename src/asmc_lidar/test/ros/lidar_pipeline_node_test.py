@@ -22,6 +22,7 @@ import hashlib
 import json
 import math
 import subprocess
+import tempfile
 import threading
 import time
 import unittest
@@ -732,6 +733,28 @@ class LidarPipelineNodeTest(unittest.TestCase):
                 return matching[-1]
             time.sleep(.02)
         self.fail('no matching LiDAR observation')
+
+    def test_08_canonical_profile_refuses_legacy_algorithms(self):
+        executable = rospy.get_param('~node_executable', '') or roslib.packages.find_node(PKG, 'lidar_pipeline_node')[0]
+        package_dir = roslib.packages.get_pkg_dir(PKG)
+        for field in ('front_only', 'old_tunnel'):
+            with open(self.pipeline_config) as stream:
+                config = yaml.safe_load(stream)
+            if field == 'front_only':
+                config['fusion']['views'] = 'front'
+            else:
+                config['experimental']['tunnel_filter']['original_pipeline'] = False
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as temporary:
+                yaml.safe_dump(config, temporary)
+                temporary.flush()
+                command = [executable, '__name:=canonical_profile_guard', '__ns:=/migration/lidar',
+                           '_pipeline_config:=' + temporary.name, '_package_dir:=' + package_dir,
+                           '_require_optimized_pipeline:=true', '_enable_camera_fusion:=true',
+                           '_experimental_tunnel_filter:=true']
+                result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                        timeout=30, universal_newlines=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('canonical runtime requires', result.stdout)
 
     def test_09_observation_identity_and_explicit_reset(self):
         first = self.observation_after(lambda m: m.objects.status == OBSERVED)
