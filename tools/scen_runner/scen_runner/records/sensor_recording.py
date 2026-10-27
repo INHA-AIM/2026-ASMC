@@ -133,6 +133,12 @@ class SensorRecording:
             errors.append('recorder_not_started')
         if self.log:
             self.log.close()
+        # rosbag's Python launcher can return before its record child has
+        # finished renaming the final split. Never inventory only the first bag.
+        if self.process:
+            deadline=time.monotonic()+20.
+            while list(self.directory.glob('*.active')) and time.monotonic()<deadline:
+                time.sleep(.05)
         bags = sorted(self.directory.glob('*.bag'))
         counts = {}
         types = {}
@@ -155,6 +161,8 @@ class SensorRecording:
                 files[-1]['sha256'] = digest.hexdigest()
             except Exception as error:
                 errors.append(path.name+': '+str(error))
+        if {p.name:p.stat().st_size for p in self.directory.glob('*.bag')} != {f['file']:f['bytes'] for f in files}:
+            errors.append('final_bag_inventory_changed')
         missing = [topic for topic in REQUIRED_TOPICS if not counts.get(topic)]
         if list(self.directory.glob('*.active')):
             errors.append('unclosed_bag')
