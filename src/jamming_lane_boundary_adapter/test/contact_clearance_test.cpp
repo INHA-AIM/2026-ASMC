@@ -3,6 +3,9 @@
 using namespace lane_boundary_adapter::clearance;
 static std::vector<Point> straight(double y=0.){std::vector<Point> p;for(int i=0;i<=40;++i)p.push_back({i*.25,y});return p;}
 TEST(ContactClearance, NearSampleOffsetDoesNotAuthorizeAForwardGap) {
+ EXPECT_DOUBLE_EQ(contiguousSupport({{1.11392,7.7},{7.7,19.4}}),19.4);
+ EXPECT_DOUBLE_EQ(contiguousSupport({{1.11392,7.7},{8.,19.4}}),7.7);
+ EXPECT_DOUBLE_EQ(contiguousSupport({{1.26,19.4}}),0.);
  EXPECT_DOUBLE_EQ(nearReferenceX(.9),1.);
  EXPECT_DOUBLE_EQ(nearReferenceX(1.11392),1.11392);
  EXPECT_DOUBLE_EQ(nearReferenceX(1.25),1.25);

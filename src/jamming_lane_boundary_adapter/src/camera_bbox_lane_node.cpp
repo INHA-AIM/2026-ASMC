@@ -692,13 +692,7 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
         for(const auto& segment:nearest->context.segments)
             if(segment.lateral_index==lane && segment.effective_confidence>=params.min_confidence)
                 intervals.emplace_back(segment.valid_x_min_m,segment.valid_x_max_m);
-        std::sort(intervals.begin(),intervals.end());
-        bool started=false;
-        for(const auto& span:intervals) {
-            if(!started){if(!std::isfinite(lane_boundary_adapter::clearance::nearReferenceX(span.first)))break;support[lane]=span.second;started=true;}
-            else if(span.first<=support[lane]+1e-4) support[lane]=std::max(support[lane],span.second);
-            else break; // never bridge an INVALID gap
-        }
+        support[lane]=lane_boundary_adapter::clearance::contiguousSupport(std::move(intervals));
     }
     result.contact_support_x_max_m=std::min(support[0],support[1]);
     bool own_hit = false, adjacent_hit = false, unknown = false, deferred_far = false;

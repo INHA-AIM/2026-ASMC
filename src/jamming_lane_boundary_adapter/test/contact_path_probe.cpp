@@ -31,8 +31,9 @@ int interpolationRegression(){
 int main(int argc,char**argv){
  if(argc==2 && std::string(argv[1])=="--interpolation-regression")return interpolationRegression();
  const bool inspect=argc==4 && std::string(argv[3])=="--segments";
- if(argc!=3 && argc!=5 && argc!=6 && !inspect)return 2;
- if(inspect){adapter_config.consumer_x_max_m=params.consumer_x_max=20.;params.path_horizon=15.;}
+ const bool support_replay=argc==4 && std::string(argv[3])=="--support-replay";
+ if(argc!=3 && argc!=5 && argc!=6 && !inspect && !support_replay)return 2;
+ if(inspect || support_replay){adapter_config.consumer_x_max_m=params.consumer_x_max=20.;params.path_horizon=15.;}
  if(argc>=5){adapter_config.consumer_x_max_m=std::stod(argv[3]);params.consumer_x_max=std::stod(argv[3]);params.path_horizon=std::stod(argv[4]);}
  ros::Time::init();
  auto family=read<asmc_msgs::LaneBoundaryFamily>(argv[1]);
@@ -41,6 +42,12 @@ int main(int argc,char**argv){
  if(!context.usable()){std::cerr<<context.reason<<'\n';return 3;}
  if(inspect){for(const auto& segment:context.segments)std::cout<<"lane="<<segment.lateral_index<<" begin="<<segment.valid_x_min_m<<" end="<<segment.valid_x_max_m<<" confidence="<<segment.effective_confidence<<'\n';return 0;}
 
+ if(support_replay){double support[2]={};for(unsigned lane=0;lane<2;++lane){
+  std::vector<std::pair<double,double>> spans;for(const auto& segment:context.segments)
+   if(segment.lateral_index==lane && segment.effective_confidence>=params.min_confidence)spans.emplace_back(segment.valid_x_min_m,segment.valid_x_max_m);
+  support[lane]=lane_boundary_adapter::clearance::contiguousSupport(std::move(spans));}
+  bbox->contact_support_x_max_m=std::min(support[0],support[1]);std::cout<<"recomputed_support="<<bbox->contact_support_x_max_m<<'\n';
+ }
  change_state.lanes=buildContinuousLanes(context);params.contact_clearance_enabled=true;
  follower_state.locked_lane=bbox->own_lane;follower_state.source_stamp=bbox->header.stamp;contact_result=bbox;
  contact_lane_history.push_back({bbox->lane_stamp,change_state.lanes});
