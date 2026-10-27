@@ -1,0 +1,10 @@
+{
+  "run_id": "shadow-stop-fix-20261028-r15",
+  "producer_revision": "741b072e",
+  "scope": "Exact paired camera contacts and accepted family at a stopped drum lane-change state. Synthetic collision correctness and MORAI driving remain separate checks.",
+  "files": {
+    "family-probe.rosbin": "64e20d01838562282dbf0cd54fe22604d7b4a0c5ad2ed010da5cff573693f794",
+    "bbox-probe.rosbin": "3dfe8a37eb2f8ca162177d25f4ee1a2490e994e22060f83f834221922e97b588",
+    "probe-input.json": "cc5b17307dfcd1b20b323150d671ac8ac47b025d3a9274d857163259dd2ff160"
+  }
+}
