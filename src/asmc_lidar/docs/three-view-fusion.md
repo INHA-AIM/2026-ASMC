@@ -32,24 +32,36 @@ PR #119의 GPS 무효 시 터널 분기와 이번 3뷰 코드는 같은 실행�
 `pipeline_config`는 YAML만 선택한다. 다른 checkout의 YAML을 지정해도 이미 빌드된
 실행파일이 바뀌지 않으며, `debug:=true`도 빌드 선택과 관계없다.
 
-현재 개인 컨테이너에 준비한 M1 overlay를 사용하는 LiDAR·웹 터미널에서는 다음을 확인한다.
-일반 팀 배포는 해당 checkout에서 빌드한 workspace의 `devel/setup.bash`를 사용한다.
+PR #122 병합 후 정본은 `/root/ws`의 빌드다. 이전 개인 `/root/asmc-m1` overlay는
+재현용으로 보존하지만 기본 셸에서 자동 source하지 않는다. 새 터미널과 LiDAR 웹도
+같은 `/root/ws/devel/setup.bash`를 사용한다.
 
 ```bash
+cd /root/ws
 source /opt/ros/noetic/setup.bash
-source /root/asmc-m1/devel/setup.bash
+./scripts/build_ws.sh -j2 -l2 -DCMAKE_BUILD_TYPE=Release
+source /root/ws/devel/setup.bash
 rospack find asmc_lidar
 rosrun --prefix echo asmc_lidar lidar_pipeline_node
+python3 src/asmc_lidar/tools/check_runtime_build.py
 ```
 
-이 개인 배포의 예상 경로는 `/root/asmc-m1/src/asmc_lidar`와
-`/root/asmc-m1/devel/lib/asmc_lidar/lidar_pipeline_node`다. 마지막 명령은 실행파일 경로만
-출력하며 노드를 시작하지 않는다. 이후 `/root/ws/devel/setup.bash`를 다시 source하면
-underlay 실행파일이 선택되므로 M1 환경을 마지막에 적용한다.
-웹도 같은 overlay에서 실행해야 정적 화면과 C++ 생산자 버전이 맞는다.
-기존 프로세스는 새 빌드나 source 적용만으로 교체되지 않는다. 같은 namespace의 기존
-처리 노드를 사용자가 종료한 뒤 원래 launch 명령으로 재실행하며, 두 생산자를 동시에 띄우지 않는다.
-이 overlay는 개인 시험 배포이고, 병합 후에는 main의 최신 빌드로 통일한다.
+예상 경로는 `/root/ws/src/asmc_lidar`와
+`/root/ws/devel/lib/asmc_lidar/lidar_pipeline_node`다. 점검 도구는 노드를 가동하지 않고
+선택된 실행파일의 `--build-info`와 현재 패키지 C++ 소스 SHA를 대조한다.
+`source_matches: true`를 확인한다. 기존 빌드는 식별 기능이 없어 실패하므로 재빌드한다.
+실행 중인 노드의 교체 여부나 의존 패키지 전체의 동일성까지 증명하는 검사는 아니다.
+YAML은 별도 `config_id/config_sha256`로 확인하며, 정책 변경을 C++ 코드 변경으로 취급하지 않는다.
+
+시작 로그와 기존 1Hz diagnostics에서 `build_package_source_sha256`, `fusion_views=all`,
+`original_tunnel_pipeline=true`를 확인한다. `all`은 선택한 모드이고 세 뷰의 실제 수신/매칭 성공은
+기존 `fusion_view_*` 진단으로 확인한다. 상세 debug를 켜지 않아도 빌드 진단은 제공한다.
+시작 로그의 실제 실행파일 경로와 config 경로도 함께 남긴다.
+
+빌드·source만으로 기존 프로세스는 교체되지 않는다. 기존 launch를 종료한 후 기본 명령
+`roslaunch asmc_lidar lidar.launch`로 다시 실행한다. 같은 namespace에 두 생산자를 띄우지 않는다.
+ROS master를 다시 켠 뒤에는 `rosnode list`에 없는 옛 프로세스도 남을 수 있으므로
+`pgrep -af lidar_pipeline_node`로 함께 확인한다. 다른 사용자의 프로세스를 일괄 종료하지 않는다.
 
 ## 관측 선택과 확인 단위
 

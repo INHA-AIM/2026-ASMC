@@ -193,6 +193,21 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
   add_dependencies(asmc_lidar_runtime ${pipeline_msg_targets})
 
   add_executable(lidar_pipeline_node src/ros/lidar_pipeline_node.cpp src/ros/debug_publisher.cpp)
+  # A new YAML cannot update an old executable. Stamp package C++ content in
+  # the node; edits/additions/removals reconfigure and relink it automatically.
+  file(GLOB_RECURSE lidar_identity_sources CONFIGURE_DEPENDS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+    "include/*.hpp" "include/*.h" "src/*.cpp" "src/*.hpp" "src/*.h")
+  list(APPEND lidar_identity_sources CMakeLists.txt package.xml cmake/build_info.hpp.in)
+  list(SORT lidar_identity_sources)
+  set(lidar_identity "")
+  foreach(path IN LISTS lidar_identity_sources)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${path}")
+    file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/${path}" file_sha)
+    string(APPEND lidar_identity "${path}\n${file_sha}\n")
+  endforeach()
+  string(SHA256 lidar_source_sha256 "${lidar_identity}")
+  configure_file(cmake/build_info.hpp.in generated/asmc_lidar/build_info.hpp @ONLY)
+  target_include_directories(lidar_pipeline_node PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
   target_link_libraries(lidar_pipeline_node asmc_lidar_runtime asmc_lidar_camera_ros
     ${tf2_ros_LIBRARIES} ${catkin_LIBRARIES})
   target_compile_options(lidar_pipeline_node PRIVATE -Wall -Wextra)
@@ -217,6 +232,9 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
 
   if(CATKIN_ENABLE_TESTING)
     find_package(rostest REQUIRED)
+    add_test(NAME asmc_lidar_runtime_build_identity
+      COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/runtime_build_identity_test.py
+        $<TARGET_FILE:lidar_pipeline_node> ${CMAKE_CURRENT_SOURCE_DIR})
     # gtest binaries are built with the package (not only by `make tests`) so
     # a plain ctest run, as in CI, never meets an unbuilt registered test.
     macro(lidar_pipeline_gtest name)

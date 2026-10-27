@@ -27,6 +27,9 @@
 #include <asmc_lidar/ros/runtime.hpp>
 #include <asmc_lidar/ros/planning_output.hpp>
 #include <asmc_lidar/ros/debug_publisher.hpp>
+#include <asmc_lidar/build_info.hpp>
+#include <iostream>
+#include <nlohmann/json.hpp>
 
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
@@ -163,6 +166,11 @@ class LidarPipelineNode {
                     << diagnostics_topic_ << ", " << trace_topic_ << (publish_tf_ ? ", /tf" : "")
                     << "; camera fusion " << (camera_ ? std::string("on") : "off (" + camera_reason_ + ")")
                     << "; debug stages " << (debug_ ? "on under " + debug_config_.topic_prefix : std::string("off")));
+    ROS_INFO_STREAM("lidar_pipeline build: executable=" << std::filesystem::read_symlink("/proc/self/exe")
+                    << "; package_source_sha256=" << build::kSourceSha256
+                    << "; fusion_views=" << config_.fusion.views
+                    << "; original_tunnel_pipeline=" << config_.pipeline.tunnel_route.original_pipeline
+                    << "; config=" << config_.config_path);
     ros::waitForShutdown();
     spinner.stop();  // joins the callback threads: no callback touches the runtime after this
     {
@@ -821,6 +829,10 @@ class LidarPipelineNode {
       number("processing_ms_max", window.empty() ? 0. : *std::max_element(window.begin(), window.end()));
     }
     value("producer_session_id", epoch_.session());
+    value("build_package_source_sha256", build::kSourceSha256);
+    value("build_type", build::kBuildType);
+    value("fusion_views", config.fusion.views);
+    value("original_tunnel_pipeline", config.pipeline.tunnel_route.original_pipeline ? "true" : "false");
     number("generation", epoch_.generation());
     number("retired_results", retired_results_.load());
     value("config_id", config.config_id);
@@ -910,6 +922,15 @@ class LidarPipelineNode {
 }  // namespace asmc
 
 int main(int argc, char** argv) {
+  // No master, subscribers, parameters or GPU are needed for build inspection.
+  if (argc == 2 && std::string(argv[1]) == "--build-info") {
+    using namespace asmc::lidar;
+    std::cout << nlohmann::json({{"schema", "asmc.lidar.build.v1"},
+        {"package_source_sha256", build::kSourceSha256},
+        {"source_directory", build::kSourceDirectory},
+        {"build_type", build::kBuildType}, {"compiler", build::kCompiler}}).dump(2) << '\n';
+    return 0;
+  }
   ros::init(argc, argv, "lidar_pipeline");
   ros::NodeHandle nh, pnh("~");
   try {

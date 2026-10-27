@@ -1,0 +1,9 @@
+#pragma once
+
+// Package C++ source identity, not a model/configuration or whole-workspace SHA.
+namespace asmc::lidar::build {
+inline constexpr char kSourceSha256[] = "@lidar_source_sha256@";
+inline constexpr char kSourceDirectory[] = "@CMAKE_CURRENT_SOURCE_DIR@";
+inline constexpr char kBuildType[] = "@CMAKE_BUILD_TYPE@";
+inline constexpr char kCompiler[] = "@CMAKE_CXX_COMPILER_ID@ @CMAKE_CXX_COMPILER_VERSION@";
+}

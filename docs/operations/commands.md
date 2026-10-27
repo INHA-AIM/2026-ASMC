@@ -33,10 +33,18 @@ source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
 ```
 
-위 환경은 main 배포 기준입니다. PR #122의 work 3뷰 LiDAR를 시험하는 처리·LiDAR 웹
-터미널은 [M1 빌드·실행파일 확인](../../src/asmc_lidar/docs/three-view-fusion.md#빌드와-실제-실행파일-확인)에
-따라 준비된 overlay 환경을 마지막에 적용합니다. `pipeline_config`로 work YAML만 선택해도
-main 실행파일이 3뷰 코드로 바뀌지는 않습니다. 기존 프로세스는 자동 교체하지 않습니다.
+PR #122의 터널 최적화·3뷰 fusion도 위 `/root/ws` 빌드에 포함됩니다.
+개인 M1 overlay를 자동 source하는 과거 설정은 해제하고 같은 workspace로 통일합니다.
+병합·설정 파일 변경만으로 기존 실행파일이나 실행 중인 노드가 갱신되지는 않습니다.
+재빌드 후 다음 점검이 `source_matches: true`인지 확인합니다.
+
+```bash
+python3 /root/ws/src/asmc_lidar/tools/check_runtime_build.py
+```
+
+이 점검은 ROS 노드를 시작하지 않습니다. 실행 후에는 기존 LiDAR diagnostics의
+`build_package_source_sha256`, `fusion_views=all`, `original_tunnel_pipeline=true`로 확인합니다.
+[빌드·실행파일 확인과 재시작 주의](../../src/asmc_lidar/docs/three-view-fusion.md#빌드와-실제-실행파일-확인)를 따릅니다.
 
 ### 터미널별 실행
 
