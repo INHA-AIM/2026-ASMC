@@ -23,3 +23,5 @@ TEST(ContactClearance, BoundaryAndBadGeometryFailClosed) {
  EXPECT_FALSE(pathClear(straight(),{{8.,7.,2.,3.}},Vehicle{},15.));
  EXPECT_FALSE(pathClear(straight(),{{8.,9.,NAN,3.}},Vehicle{},15.));
 }
+
+int main(int argc,char** argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}

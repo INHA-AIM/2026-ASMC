@@ -697,9 +697,19 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
     const auto quads = projectLanes(nearest->context);
     result.contact_projection_valid = projection != nullptr || !params.projection_context_required;
     double support[2] = {0.,0.};
-    for (const auto& segment: nearest->context.segments)
-        if (segment.lateral_index<2 && segment.valid_x_min_m <= 1.0 && segment.effective_confidence>=params.min_confidence)
-            support[segment.lateral_index]=std::max(support[segment.lateral_index],segment.valid_x_max_m);
+    for(unsigned lane=0;lane<2;++lane) {
+        std::vector<std::pair<double,double>> intervals;
+        for(const auto& segment:nearest->context.segments)
+            if(segment.lateral_index==lane && segment.effective_confidence>=params.min_confidence)
+                intervals.emplace_back(segment.valid_x_min_m,segment.valid_x_max_m);
+        std::sort(intervals.begin(),intervals.end());
+        bool started=false;
+        for(const auto& span:intervals) {
+            if(!started){if(span.first>1.0)break;support[lane]=span.second;started=true;}
+            else if(span.first<=support[lane]+1e-4) support[lane]=std::max(support[lane],span.second);
+            else break; // never bridge an INVALID gap
+        }
+    }
     result.contact_support_x_max_m=std::min(support[0],support[1]);
     bool own_hit = false, adjacent_hit = false, unknown = false, deferred_far = false;
     const auto matches = matchBoxTracks(result.boxes, stamp);
