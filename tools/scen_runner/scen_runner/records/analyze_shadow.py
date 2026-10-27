@@ -153,6 +153,10 @@ def analyze(directory, output_name='analysis'):
                                           contact_projection_valid=getattr(msg,'contact_projection_valid',None),
                                           contact_support_x_max_m=getattr(msg,'contact_support_x_max_m',None),
                                           ground_contact_valid=list(getattr(msg,'ground_contact_valid',[])),
+                                          ground_contact_sources=list(getattr(msg,'ground_contact_sources',[])),
+                                          local_obstacles_valid=getattr(msg,'local_obstacles_valid',False),
+                                          local_obstacles_stamp_ns=msg.local_obstacles_stamp.to_nsec() if hasattr(msg,'local_obstacles_stamp') else None,
+                                          local_obstacle_footprints=[[[p.x,p.y,p.z] for p in poly.points] for poly in getattr(msg,'local_obstacle_footprints',[])],
                                           ground_contacts=[[[p.x,p.y,p.z] for p in poly.points]
                                               for poly in getattr(msg,'ground_contacts',[])]))
                         if not msg.valid or 5 in msg.assignments:
