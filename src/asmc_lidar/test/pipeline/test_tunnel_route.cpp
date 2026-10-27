@@ -517,3 +517,22 @@ TEST(TunnelRoute, HealthyGpsBypassesAllTunnelAndHistoricalEntranceFilters) {
   EXPECT_EQ(left.cluster_sizes,right.cluster_sizes);
   EXPECT_EQ(left.objects.size(),right.objects.size());
 }
+
+TEST(TunnelRoute, MultiViewUsesCanonicalOpticalAxesAndEightClassesWithoutClassification) {
+  for(const std::string label:{"car","bus","truck","person","dog","deer","bicycle","stroller"}) {
+    TunnelRoute route(TunnelRouteConfig{});route.Select(false);
+    TunnelCameraInput input;TunnelCameraView camera;camera.calibrated=true;camera.available=true;
+    camera.common_projection=true;camera.calibration.frame_id="camera_front";
+    camera.calibration.width=1280;camera.calibration.height=720;
+    camera.calibration.intrinsic<<640,0,640,0,640,360,0,0,1;
+    camera.calibration.base_from_camera=asmc::lidar::Pose::Identity();
+    asmc::lidar::camera::Box box;box.xmin=550;box.xmax=730;box.ymin=290;box.ymax=440;
+    box.source_class_name=label;camera.boxes={box};input.views={camera};
+    route.Process(Scene(),Local(),1000000000,VehicleSpec{},&input);
+    EXPECT_GT(route.last().protected_points,0)<<label;
+    EXPECT_TRUE(route.last().protection_available);
+    input.views[0].available=false;
+    route.Process(Scene(),Local(),1100000000,VehicleSpec{},&input);
+    EXPECT_EQ(route.last().protected_points,0)<<label;
+  }
+}

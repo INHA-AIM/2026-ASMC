@@ -33,6 +33,11 @@ source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
 ```
 
+위 환경은 main 배포 기준입니다. PR #122의 work 3뷰 LiDAR를 시험하는 처리·LiDAR 웹
+터미널은 [M1 빌드·실행파일 확인](../../src/asmc_lidar/docs/three-view-fusion.md#빌드와-실제-실행파일-확인)에
+따라 준비된 overlay 환경을 마지막에 적용합니다. `pipeline_config`로 work YAML만 선택해도
+main 실행파일이 3뷰 코드로 바뀌지는 않습니다. 기존 프로세스는 자동 교체하지 않습니다.
+
 ### 터미널별 실행
 
 각 행은 별도 터미널에서 foreground로 실행합니다. 기본 실행 명령은 인자 없이 사용하고,
@@ -131,6 +136,10 @@ LiDAR `view.launch`는 모니터만 시작합니다. 기본 `debug:=false`에서
 `debug` 옵션을 켭니다. 판제 주행에는 이 옵션이 필요하지 않습니다.
 기존 `lidar.launch`가 있다면 두 번째 처리 노드를 시작하지 않습니다.
 판제는 C의 `planning_observations_map`을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
+`asmc_lidar`를 고르는 별도 source 옵션은 없습니다. 기본 연결은
+`/perception/lidar/planning_observations_map` (`asmc_msgs/LidarPlanningObservation`)
+→ `planning_objects_adapter` → `/planning/objects`입니다. `tracks_map`은 다른 타입의
+분석용 출력이므로 판제 입력으로 대신 지정하지 않습니다. 수집용 planner도 같은 기본 입력을 상속합니다.
 
 판제 웹은 `http://127.0.0.1:8088/web/index_v2.html`, LiDAR 웹은 `http://127.0.0.1:8091/`입니다.
 기본 포트·ROS 노드 이름이 서로 다르고 두 웹 모두 관측만 합니다. 하나씩 사용하려면 해당 웹 launch
@@ -190,7 +199,7 @@ rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
 ```
 
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
-카메라 공용 관측과 전방 matching 계약는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
+카메라 공용 관측과 기본3뷰 matching 계약은 [LiDAR 인계](../handoffs/camera-to-lidar.md),
 판제 단독/통합 차이는 [판제 운영](planning-control.md)을 봅니다.
 
 ## 2. Container·build 명령

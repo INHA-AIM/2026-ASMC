@@ -1,10 +1,12 @@
 #include <asmc_lidar/experimental/tunnel_route.hpp>
 #include <asmc_lidar/detection/obb.hpp>
 #include <asmc_lidar/geometry/scan_frame.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <limits>
 #include <stdexcept>
 
@@ -29,7 +31,7 @@ void TrackingObbs(const CloudPtr& cloud, const std::vector<pcl::PointIndices>& c
 }
 // Port of 8dde9b69 ComputeProtection: expanded 2D boxes and the closest 10%
 // depth reference. Raw points use the validated sensor mount and camera K/T.
-void Protection(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCameraInput* camera,
+void ProtectionView(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCameraView* camera,
                 const TunnelProtectionConfig& cfg, std::vector<std::uint8_t>& protect,
                 std::vector<std::uint8_t>& ambiguous) {
   const auto n=cloud.size();protect.assign(n,tunnel_filter::kProtectNone);ambiguous.assign(n,0);
@@ -38,6 +40,12 @@ void Protection(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCame
   const bool calibrated=camera && camera->calibrated;
   if(calibrated)P=camera->calibration.intrinsic *
       (camera->calibration.base_from_camera.inverse()*ScanFrame::SensorMount(vehicle)).matrix().topRows<3>();
+  if(calibrated && camera->common_projection) {
+    Context context;context.frame=Frame::Sensor;context.base_from_sensor=ScanFrame::SensorMount(vehicle);
+    context.calibration_source="sensor_mount";
+    const auto canonical=camera_projection(context,camera->calibration.base_from_camera,camera->calibration.intrinsic);
+    if(canonical)P=*canonical;else return;
+  }
   for(std::size_t i=0;i<n;++i) {
     const auto& p=cloud.points[i];if(!std::isfinite(p.x)||!std::isfinite(p.y)||!std::isfinite(p.z))continue;
     range[i]=std::sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
@@ -54,7 +62,7 @@ void Protection(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCame
   for(const auto& box:camera->boxes) {
     auto kind=tunnel_filter::ProtectClassFromLabel(box.source_class_name);
     if(kind==tunnel_filter::kProtectNone)kind=tunnel_filter::ProtectClassFromLabel(box.class_name);
-    if(kind==tunnel_filter::kProtectNone)continue;
+    if(kind==tunnel_filter::kProtectNone || (!camera->common_projection && kind>=tunnel_filter::kProtectDog))continue;
     const float w=box.xmax-box.xmin,h=box.ymax-box.ymin;
     if(!std::isfinite(w)||!std::isfinite(h)||w<=0||h<=0)continue;
     const bool vehicle_class=kind==tunnel_filter::kProtectCar||kind==tunnel_filter::kProtectTruck||kind==tunnel_filter::kProtectBus;
@@ -69,6 +77,26 @@ void Protection(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCame
     for(const auto& q:inside)if(q.first>=ref-cfg.depth_front_margin_m&&q.first<=ref+extent&&protect[q.second]==tunnel_filter::kProtectNone)protect[q.second]=kind;
   }
 }
+// Union of per-view protections, without consuming post-tracking observations.
+void Protection(const Cloud& cloud,const VehicleSpec& vehicle,const TunnelCameraInput* camera,
+                const TunnelProtectionConfig& cfg,std::vector<std::uint8_t>& protect,
+                std::vector<std::uint8_t>& ambiguous) {
+  if(!camera||camera->views.empty()){ProtectionView(cloud,vehicle,camera,cfg,protect,ambiguous);return;}
+  protect.assign(cloud.size(),tunnel_filter::kProtectNone);ambiguous.assign(cloud.size(),0);
+  std::vector<std::uint8_t> covered(cloud.size(),0);
+  for(const auto& view:camera->views) {
+    std::vector<std::uint8_t> p,a;ProtectionView(cloud,vehicle,&view,cfg,p,a);
+    for(std::size_t i=0;i<p.size();++i) {
+      if(protect[i]==tunnel_filter::kProtectNone)protect[i]=p[i];
+      // Availability is per view: a missing camera cannot turn the complete
+      // union into unavailable, nor can another view certify unseen points.
+      if(view.available&&view.calibrated)covered[i]|=a[i];
+      else ambiguous[i]|=a[i];
+    }
+  }
+  for(std::size_t i=0;i<ambiguous.size();++i)ambiguous[i]&=!covered[i];
+}
+
 }
 void ValidateTunnelWall(const TunnelWallConfig& c) {
   if(!std::isfinite(c.fit_distance_m) || !std::isfinite(c.remove_distance_m) ||
@@ -226,8 +254,13 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   if(config_.integrated_motion)motion=integrated_motion?*integrated_motion:tunnel_filter::EgoMotion{};
   anchor_valid_=local.st_IMU.b_ImuReady;anchor_stamp_=stamp;anchor_yaw_=local.st_IMU.f32_Yaw_rad;anchor_speed_=local.st_CAN.f32_CurrentVel_MPS;
   std::vector<std::uint8_t> protect,ambiguous;
+  const auto protection_start=std::chrono::steady_clock::now();
   Protection(*voxel,vehicle,camera,config_.protection,protect,ambiguous);
-  const bool available=config_.protection.enabled&&camera&&camera->calibrated&&camera->available;
+  const double protection_ms=std::chrono::duration<double,std::milli>(
+    std::chrono::steady_clock::now()-protection_start).count();
+  const bool available=config_.protection.enabled&&camera&&
+    (camera->views.empty() ? camera->calibrated&&camera->available :
+     std::all_of(camera->views.begin(),camera->views.end(),[](const auto& v){return v.calibrated&&v.available;}));
   const auto& f=core_.Process(*voxel,local.st_IMU.f32_Roll_rad,local.st_IMU.f32_Pitch_rad,&protect,&ambiguous,available,&motion);
   TunnelRouteOutput out;out.leveled=f.leveled;out.kept_indices=f.kept_indices;
   for(int i:f.kept_indices)out.filtered->push_back(f.leveled->points[i]);
@@ -386,6 +419,13 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   out.report.ran=true;out.report.input_points=f.input_points;out.report.ceiling_labeled=f.ceiling_removed+structure_ceiling_points;
   out.report.wall_labeled=f.wall_removed+structure_wall_points;out.report.ground_labeled=f.ground_removed+structure_ground_points;
   out.report.removed_points=f.input_points-out.filtered->size();out.report.core_ms=f.timings.total_ms;
+  out.report.residual_clusters_reused=f.residual_clusters_reused;
+  const auto& t=f.timings;
+  out.report.timings_ms={{"protection",protection_ms},{"level",t.level_ms},
+    {"ceiling",t.ceiling_ms},{"ground_fit",t.ground_fit_ms},{"ground_remove",t.ground_remove_ms},
+    {"wall_fit",t.wall_fit_ms},{"wall_remove",t.wall_remove_ms},
+    {"residual_cluster",t.residual_cluster_ms},{"residual_obb",t.residual_obb_ms},
+    {"cluster",t.cluster_ms},{"obb",t.obb_ms},{"obb_filter",t.obb_filter_ms},{"core",t.total_ms}};
   return out;
 }
 }  // namespace asmc::lidar::pipeline

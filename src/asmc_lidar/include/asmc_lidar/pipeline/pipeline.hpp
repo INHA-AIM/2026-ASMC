@@ -37,6 +37,7 @@ struct PipelineConfig {
   GroundConfig ground;
   ClusteringConfig clustering;
   TrackingConfig tracking;
+  motion_classifier::MotionClassifierConfig motion;
   VehicleSpec vehicle;
   std::string calibration_id;  // non-empty
   TunnelFilterStageConfig tunnel;
@@ -136,6 +137,8 @@ class Pipeline {
   ScanResult Process(const ScanInput& scan, const LocalState& local,
                      const asmc::lidar::PoseSelection& map_pose);
 
+  void FinalizeMotion(ScanResult& result); // M1: single update after fusion
+
   Tracker& tracker() { return tracker_; }
   const Tracker& tracker() const { return tracker_; }
   const ScanFrame& frame() const { return frame_; }
@@ -145,6 +148,9 @@ class Pipeline {
   GroundFilter ground_;
   Tracker tracker_;
   motion_classifier::MotionClassifier motion_classifier_;
+  std::vector<motion_classifier::MotionObject> motion_inputs_;
+  bool motion_map_valid_=false;
+  std::int64_t motion_input_stamp_=0;
   TunnelNoiseGate tunnel_noise_gate_;
   std::int64_t tunnel_noise_entry_stamp_=0;
   ScanFrame frame_;

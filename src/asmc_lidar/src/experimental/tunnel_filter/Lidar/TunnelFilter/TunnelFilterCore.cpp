@@ -1,3 +1,4 @@
+#include <asmc_lidar/detection/euclidean_components.hpp>
 #include <Lidar/TunnelFilter/TunnelFilterCore.hpp>
 
 #include <pcl/ModelCoefficients.h>
@@ -68,6 +69,8 @@ const char* ProtectClassName(std::uint8_t protect_class) {
         case kProtectBus: return "bus";
         case kProtectPerson: return "person";
         case kProtectPedestrian: return "pedestrian";
+        case kProtectDog:return "dog";case kProtectDeer:return "deer";
+        case kProtectBicycle:return "bicycle";case kProtectStroller:return "stroller";
         default: return "none";
     }
 }
@@ -83,12 +86,14 @@ std::uint8_t ProtectClassFromLabel(const std::string& label) {
     if (lower == "bus") return kProtectBus;
     if (lower == "person") return kProtectPerson;
     if (lower == "pedestrian") return kProtectPedestrian;
+    if(lower=="dog")return kProtectDog;if(lower=="deer")return kProtectDeer;
+    if(lower=="bicycle")return kProtectBicycle;if(lower=="stroller")return kProtectStroller;
     return kProtectNone;
 }
 
 bool IsPersonClass(std::uint8_t protect_class) {
     return protect_class == kProtectPerson ||
-           protect_class == kProtectPedestrian;
+           protect_class == kProtectPedestrian || (protect_class>=kProtectDog && protect_class<=kProtectStroller);
 }
 
 float Plane::HeightAt(float x, float y) const {
@@ -569,6 +574,7 @@ TunnelPipeline::TunnelPipeline(const Params& params, ObbFunction obb_function)
       ground_filter_(params.ground_reuse_max_frames) {}
 
 void TunnelPipeline::Reset() {
+    residual_reusable_=false;residual_clusters_.clear();residual_obbs_.clear();
     ground_filter_.Reset();
     for (auto& track : wall_tracks_) track.Reset();
 }
@@ -607,6 +613,8 @@ const FrameResult& TunnelPipeline::Process(
     r.clusters.clear();
     r.objects.clear();
     r.timings = StageTimings();
+    r.residual_clusters_reused=false;
+    residual_reusable_=false;residual_clusters_.clear();residual_obbs_.clear();
     r.input_points = static_cast<int>(n);
     r.roll_rad = roll_rad;
     r.pitch_rad = pitch_rad;
@@ -1399,20 +1407,18 @@ void TunnelPipeline::RemoveResidualWalls(
     if (!params_.residual_wall_surface_enable) return;
     auto start = Clock::now();
     auto& r = result_;
+    const int removed_before=r.wall_removed;
     pcl::IndicesPtr kept(new std::vector<int>());
     for (std::size_t i=0;i<r.labels.size();++i)
         if (r.labels[i]==kKept) kept->push_back(static_cast<int>(i));
     if (kept->empty()) return;
-    pcl::search::KdTree<pcl::PointXYZI>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZI>());
-    pcl::EuclideanClusterExtraction<pcl::PointXYZI> extraction;
-    extraction.setClusterTolerance(params_.cluster_tolerance_m);
-    extraction.setMinClusterSize(std::max(10,params_.cluster_min_points));
-    extraction.setMaxClusterSize(params_.cluster_max_points);
-    extraction.setInputCloud(r.leveled); extraction.setIndices(kept);
-    extraction.setSearchMethod(tree);
-    std::vector<pcl::PointIndices> clusters; extraction.extract(clusters);
+    auto clusters = asmc::lidar::pipeline::EuclideanComponents(*r.leveled,*kept,
+        params_.cluster_tolerance_m,std::max(10,params_.cluster_min_points),params_.cluster_max_points);
+    r.timings.residual_cluster_ms = ElapsedMs(start);
+    auto obb_start = Clock::now();
     std::vector<Obb> obbs;
     if (!clusters.empty()) obb_function_(r.leveled,clusters,&obbs);
+    r.timings.residual_obb_ms = ElapsedMs(obb_start);
     for (std::size_t c=0;c<clusters.size() && c<obbs.size();++c) {
         const auto& obb=obbs[c];
         r.residual_decisions.emplace_back(obb,"shape_or_support_not_proven");
@@ -1570,6 +1576,14 @@ void TunnelPipeline::RemoveResidualWalls(
             }
         }
     }
+    // This stage can only change kKept -> kWall and increments wall_removed
+    // for every such point. If it changed nothing, final clustering sees the
+    // identical index set. Different minimum sizes must never share a result.
+    if(r.wall_removed==removed_before && params_.cluster_min_points>=10 &&
+       params_.cluster_max_points>=1 && obbs.size()==clusters.size()) {
+        residual_reusable_=true;
+        residual_clusters_=std::move(clusters);residual_obbs_=std::move(obbs);
+    }
     r.timings.wall_remove_ms+=ElapsedMs(start);
 }
 
@@ -1584,18 +1598,11 @@ void TunnelPipeline::ClusterAndFilter(
 
     auto stage_start = Clock::now();
     r.cluster_id.assign(n, -1);
-    if (!r.kept_indices.empty()) {
-        pcl::IndicesPtr kept(new std::vector<int>(r.kept_indices));
-        pcl::search::KdTree<pcl::PointXYZI>::Ptr tree(
-            new pcl::search::KdTree<pcl::PointXYZI>());
-        pcl::EuclideanClusterExtraction<pcl::PointXYZI> extraction;
-        extraction.setClusterTolerance(params_.cluster_tolerance_m);
-        extraction.setMinClusterSize(std::max(1, params_.cluster_min_points));
-        extraction.setMaxClusterSize(std::max(1, params_.cluster_max_points));
-        extraction.setSearchMethod(tree);
-        extraction.setInputCloud(r.leveled);
-        extraction.setIndices(kept);
-        extraction.extract(r.clusters);
+    if (residual_reusable_) {
+        r.clusters=std::move(residual_clusters_);r.residual_clusters_reused=true;
+    } else if (!r.kept_indices.empty()) {
+        r.clusters = asmc::lidar::pipeline::EuclideanComponents(*r.leveled,r.kept_indices,
+            params_.cluster_tolerance_m,std::max(1,params_.cluster_min_points),std::max(1,params_.cluster_max_points));
     }
     for (std::size_t c = 0; c < r.clusters.size(); ++c) {
         for (const int index : r.clusters[c].indices) {
@@ -1606,7 +1613,9 @@ void TunnelPipeline::ClusterAndFilter(
 
     stage_start = Clock::now();
     std::vector<Obb> obbs;
-    if (!r.clusters.empty()) obb_function_(r.leveled, r.clusters, &obbs);
+    if (residual_reusable_) obbs=std::move(residual_obbs_);
+    else if (!r.clusters.empty()) obb_function_(r.leveled, r.clusters, &obbs);
+    residual_reusable_=false;
     obbs.resize(r.clusters.size());
     r.timings.obb_ms = ElapsedMs(stage_start);
 
@@ -1619,7 +1628,7 @@ void TunnelPipeline::ClusterAndFilter(
         TunnelObject object;
         object.obb = obbs[c];
         object.point_count = static_cast<int>(r.clusters[c].indices.size());
-        std::array<int, 6> class_votes{};
+        std::array<int, 10> class_votes{};
         if (protect_class != nullptr) {
             for (const int index : r.clusters[c].indices) {
                 const std::uint8_t value =

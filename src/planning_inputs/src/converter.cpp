@@ -140,12 +140,18 @@ std::uint8_t ConvertClassification(const std::string& source,
     if (supported) *supported = true;
     return kObjectPedestrian;
   }
-  // The frozen numeric enum has only vehicle/pedestrian/unknown. Keep all
-  // geometry and motion for the two obstacle groups; raw strings remain on
-  // the common /perception/lidar/tracks_map observation.
+  // This adapter currently emits only vehicle/pedestrian/unknown; the planner
+  // also defines STATIC_OBSTACLE=3, but this is NOT a mapping of mission groups.
+  // Both vehicle and dynamic_obstacle can be stationary. static_obstacle is a
+  // competition asset category, not proof of zero velocity. Never derive
+  // motion_state/velocity validity from these names (or vice versa).
+  // Keep all geometry and motion for the two obstacle groups. Group and raw
+  // class exist in the SAME incoming LidarPlanningObservation; the private
+  // DetectedObject type currently loses them. A future lossless extension
+  // should copy them there, not join an independent tracks_map topic.
   // Planning must keep UNKNOWN geometry as a collision candidate. The enum
   // cannot recover a source class or decide whether an object actually moves;
-  // use the common observation and motion validity for those policies.
+  // preserve original class/group separately from the pedestrian policy type.
   // See docs/handoffs/perception-to-planning.md (consumer acceptance).
   if (label == "dynamic_obstacle" || label == "static_obstacle") {
     if (supported) *supported = true;

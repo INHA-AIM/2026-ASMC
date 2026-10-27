@@ -10,6 +10,10 @@ namespace behavior_planner {
 namespace {
 
 bool HasStaticAvoidSemantics(const ObjectFeature& object) {
+  // Eligibility for the existing AVOID policy, not proof of physical rest.
+  // UNKNOWN also includes dog/deer/bicycle/stroller and static camera assets
+  // after the current lossy planning_inputs conversion. Preserve geometry and
+  // keep motion validity separate when adding the original groups downstream.
   const bool static_semantics =
       object.type == ObjectType::STATIC_OBSTACLE ||
       object.type == ObjectType::UNKNOWN;
@@ -20,6 +24,8 @@ bool HasStaticAvoidSemantics(const ObjectFeature& object) {
 }
 
 bool IsLongitudinalLeadCandidate(const ObjectFeature& object) {
+  // A stopped vehicle remains a possible lead; VEHICLE does not imply motion.
+  // Whether to bypass it is a planner policy, not a semantic-to-motion remap.
   if (object.type == ObjectType::VEHICLE) return true;
   return object.type == ObjectType::UNKNOWN &&
          (object.motion_state == MotionState::DYNAMIC_PENDING ||
@@ -718,6 +724,10 @@ UrbanFeature FeatureBuilder::build(
         ? physical_corridor_half_width + avoid_target_.path_margin_m +
               obstacle_lateral_half_extent
         : kLaneWidth;
+    // Person-specific policy. The other four dynamic_obstacle classes currently
+    // arrive as UNKNOWN, so this branch alone is not five-class coverage.
+    // Do not remove it or relabel all five as PEDESTRIAN without reviewing the
+    // scoped DynamicObjectPolicy and shared trajectory collision checks too.
     if (object.type == ObjectType::PEDESTRIAN && object.gap > 0.0 &&
         object.gap < safety_.pedestrian_stop_distance &&
         std::abs(relative_d) < pedestrian_lateral_limit) {

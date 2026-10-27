@@ -63,6 +63,7 @@ def fixture():
     # Real binary point provenance: the candidate point belongs to track #1.
     parts = [('leveled.xyzi', 'f32', '<12f', [10, 0, 0, 1, 20, 0, 0, 1, 30, 0, 0, 1]),
              ('leveled.label', 'u8', '<3B', [0, 0, 0]),
+             ('leveled.road', 'u8', '<3B', [1, 3, 0]),
              ('leveled.cluster', 'i32', '<3i', [0, 1, 2]),
              ('leveled.track', 'i32', '<3i', [1, 2, 3])]
     arrays, payload = {}, b''
@@ -86,6 +87,8 @@ window.addEventListener('error',e=>{document.body.dataset.testError=e.message;})
   const app=window.__asmcMonitor,V=window.AsmcMonitorView;
   check(app&&app.state.scene,'fixture delivered to real app');app.pause(true);
   const toggle=(id,on)=>{const e=document.getElementById(id);e.checked=on;e.dispatchEvent(new Event('change'));};
+  const choose=(id,value)=>{const e=document.getElementById(id);e.value=value;e.dispatchEvent(new Event('change'));};
+  choose('opt-point-color','reason');
   let boxes=[],points=[];const draw=V.drawBox,fill=CanvasRenderingContext2D.prototype.fillRect;
   V.drawBox=(...a)=>{boxes.push(a[2][0][0]);return draw(...a);};
   CanvasRenderingContext2D.prototype.fillRect=function(...a){if(a[2]===2&&a[3]===2)points.push(this.fillStyle);return fill.apply(this,a);};
@@ -132,28 +135,65 @@ window.addEventListener('error',e=>{document.body.dataset.testError=e.message;})
     delivery_excluded_count:2,delivery_output_count:2,road_inset_m:.1});
   app.state.scene.hd_map_audit.objects[0].delivery_excluded=true;
   app.selectTrack(2);app.selectTrack(1);render();for(let i=0;i<4;i++)await sleep();
-  check(document.getElementById('audit-summary').textContent.includes('ROS 발행 2 / 4')&&
+  check(document.getElementById('audit-summary').textContent.includes('관측 4 · 발행 2 · 실제 제외 2')&&
     document.getElementById('audit-summary').textContent.includes('안쪽 경계 10cm'),'actual ROS delivery and 10cm inset are displayed');
   check(document.getElementById('detail').textContent.includes('제외 · 원본 tracker는 유지'),'actual delivery exclusion is distinct from screen hiding');
+  app.setStage('detections',false);app.setStage('typed',false);app.setStage('tracks',true);
+  const scene=app.state.scene,first=scene.tracks.find(t=>t.id===1),fourth=scene.tracks.find(t=>t.id===4);
+  const lastExcluded=scene.hd_map_audit.objects[0];
+  first.miss=2;fourth.miss=8;
+  scene.delivery_history=[{stamp_ns:900000000,report:{objects:[lastExcluded]}}];
+  scene.hd_map_audit={...scene.hd_map_audit,objects:scene.hd_map_audit.objects.filter(d=>d.track_id!==1&&d.track_id!==4)};
+  toggle('opt-show-pred',true);toggle('opt-hide-candidates',true);app.selectTrack(1);render();
+  check(!boxes.includes(9)&&!boxes.includes(39),'predictions with excluded history or missing verdict stay hidden');
+  check(!points.includes('#f472b6'),'predicted exclusion also hides selected support points');
+  app.state.road={available:true,sha256:'different-map'};render();
+  check(!boxes.includes(9)&&!boxes.includes(39),'background map mismatch cannot restore excluded or unverified predictions');
+  app.state.road={available:true,sha256:'fixture-v7'};
+  toggle('opt-hide-candidates',false);render();
+  check(boxes.includes(9)&&boxes.includes(39),'predictions can be inspected when exclusion filters are all off');
+  toggle('opt-hide-points',true);render();
+  check(!boxes.includes(9)&&!boxes.includes(39),'individual exclusion filter still applies after prediction toggle');
+  delete scene.delivery_history;render();for(let i=0;i<4;i++)await sleep();
+  check(!boxes.includes(9)&&document.getElementById('display-schema-note').textContent.includes('생산자 진단 구버전'),
+    'old producer without prediction history is visibly identified and cannot bypass filters');
+  first.miss=0;
+  scene.hd_map_audit={...scene.hd_map_audit,objects:[...scene.hd_map_audit.objects,
+    {track_id:1,delivery_excluded:false,preview:{decision:'keep',reason:'camera_vehicle_protected'}}]};
+  render();check(boxes.includes(9),'new observed keep verdict restores a previously excluded track');
+  toggle('opt-hide-candidates',false);choose('opt-point-color','road');render();
+  check(points.includes('#94a3b8')&&points.includes('#34d399')&&points.includes('#facc15'),
+    'point road colors are independent of retained object or camera protection');
+  app.state.arrays['leveled.label'][2]=2;render();
+  check(!points.includes('#facc15'),'final-filter view cannot silently restore structural removals');
+  app.setStage('tunnel',true);choose('opt-point-color','reason');render();
+  check(points.includes('#fb923c'),'structural removals are explicitly restored in reason color');
+  app.setStage('tunnel',false);choose('opt-point-color','road');
+  delete app.state.arrays['leveled.road'];render();for(let i=0;i<4;i++)await sleep();
+  check(!points.includes('#34d399')&&points.includes('#facc15')&&
+    document.getElementById('display-schema-note').textContent.includes('점별 도로 위치'),
+    'missing old producer road codes never imply green inside-road evidence');
   // Exercise the real renderer with final/removed/ground provenance in one scene.
   for(const reason of ['points','obb','height','policy'])toggle('opt-hide-'+reason,false);
   for(const name of ['raw','roi','voxel','leveled','ground','tunnel','height_removed','clusters','detections','tracks','typed'])app.setStage(name,false);
-  app.setStage('nonground',true);app.state.colorMode='stage';
+  app.setStage('nonground',true);choose('opt-point-color','road');
   document.getElementById('view-side').hidden=true;
   app.state.arrays['leveled.xyzi']=new Float32Array([2,0,0,1,4,0,0,1,6,0,0,1]);
   app.state.arrays['leveled.label']=new Uint8Array([0,2,1]);
+  app.state.arrays['leveled.road']=new Uint8Array([3,1,1]);
+  delete app.state.arrays['leveled.track'];
   const source=app.state.scene;
   source.tunnel={ran:true,removed:2};source.counts.cluster_input=1;
   const expectedCounts=JSON.stringify(source.counts);
   render();await sleep();await sleep();await sleep();await sleep();render();
-  check(!points.includes('#fb923c')&&points.filter(c=>c==='#34d399').length===1,'default final view hides removed points');
+  check(!points.includes('#fb923c')&&points.filter(c=>c==='#34d399').length===1,'default final view hides removed points: '+JSON.stringify(points));
   check(document.querySelector('input[data-stage="nonground"]').checked&&
     document.querySelector('input[data-stage="nonground"]').parentElement.textContent.includes('최종 필터 후'),'final-filter view is the default named view');
   const summary=document.getElementById('pipeline-filter-summary');
   check(summary.textContent.includes('음영 필터 실행')&&summary.textContent.includes('3점 → 후(군집 입력) 1점')&&
     summary.textContent.includes('전체 제거 2점'),'full pre/post counts come from this scan');
   check(document.getElementById('c-tunnel').textContent==='표본 1','comparison count is a sample count, not the total removal count');
-  app.setStage('tunnel',true);render();
+  app.setStage('tunnel',true);choose('opt-point-color','reason');render();
   check(points.includes('#fb923c'),'removed-point comparison is orange alongside final points');
   app.setStage('tunnel',false);render();
   check(!points.includes('#fb923c')&&JSON.stringify(source.counts)===expectedCounts,'comparison toggle neither changes counts nor retains removed points');
@@ -210,6 +250,7 @@ def main():
         with tempfile.TemporaryDirectory(prefix='asmc-lidar-browser-') as profile:
             result = subprocess.run([args.chrome, '--headless', '--no-sandbox', '--disable-gpu',
                                      '--disable-dev-shm-usage', '--disable-background-networking',
+                                     '--window-size=1600,1000',
                                      '--no-first-run', '--user-data-dir=' + profile,
                                      '--virtual-time-budget=6000', '--dump-dom',
                                      'http://127.0.0.1:' + str(server.server_port)],

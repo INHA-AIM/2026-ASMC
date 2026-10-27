@@ -53,6 +53,8 @@ struct ViewResult {
   std::vector<Candidate> candidates; // nearest first; never waits or consumes
 };
 struct Query {
+  std::uint64_t epoch=0;
+  std::string gate_reason; // atomic with views, independent of one view failure
   std::map<std::string, ViewResult> views;
 };
 class Buffer {

@@ -8,7 +8,8 @@
     <arg name="rviz" value="false"/>
   </include>
   <include file="$(find planning_inputs)/launch/objects.launch">
-    <arg name="input_topic" value="/perception/lidar/tracks_map"/>
+    <!-- Inherit the canonical LidarPlanningObservation input. Former tracks_map
+         carries LidarTrackingObservation and cannot feed this adapter. -->
     <arg name="output_topic" value="/planning/objects"/>
   </include>
   <include file="$(find asmc_planner)/launch/planner_v2.launch">

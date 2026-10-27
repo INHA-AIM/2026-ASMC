@@ -79,15 +79,19 @@ void UpdateAABB(std::vector<pipeline::TrackedObject>& objects) {
 
 LidarRuntime::LidarRuntime(const RuntimeConfig& config,
                              std::shared_ptr<pipeline::fusion::CameraSource> camera,
-                             const asmc::lidar::camera::Calibration* front_calibration)
+                             const asmc::lidar::camera::Calibration* front_calibration,
+                             const asmc::lidar::camera::Calibrations& cameras)
     : config_(config), pose_(config.pose), gps_(config.gps), pipeline_(config.pipeline),
       camera_(std::move(camera)), output_(config.stamp_provenance),
       delivery_filters_(config.delivery_filters ? *config.delivery_filters : filtering::DeliveryFilters{}) {
+  calibrations_=cameras;
+  if(front_calibration && calibrations_.empty())calibrations_[front_calibration->frame_id]=*front_calibration;
   if(front_calibration) tunnel_camera_calibration_=std::make_unique<asmc::lidar::camera::Calibration>(*front_calibration);
   if (config_.enable_camera_fusion && camera_) {
     if (!front_calibration)
       throw std::invalid_argument("LidarRuntime: camera fusion needs the front camera calibration");
-    fusion_ = std::make_unique<pipeline::fusion::FrontCameraFusion>(config_.fusion, *front_calibration);
+    if(config_.fusion.views=="all")multi_fusion_=std::make_unique<pipeline::fusion::MultiCameraFusion>(config_.fusion,calibrations_);
+    else fusion_ = std::make_unique<pipeline::fusion::FrontCameraFusion>(config_.fusion, *front_calibration);
   }
 }
 
@@ -194,7 +198,7 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
     auto selected=std::make_shared<pipeline::TunnelCameraInput>();
     if(tunnel_camera_calibration_) {selected->calibrated=true;selected->calibration=*tunnel_camera_calibration_;}
     const auto& protection=config_.pipeline.tunnel_route.protection;
-    if(camera_ && selected->calibrated && protection.enabled) {
+    if(config_.fusion.views != "all" && camera_ && selected->calibrated && protection.enabled) {
       ScanTimes now=times;
       if(times.refresh_before_fusion)times.refresh_before_fusion(now);
       const auto limit=static_cast<std::int64_t>(protection.max_time_offset_s*1e9);
@@ -207,6 +211,21 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
       }
       if(best && camera_->Current(*best,now.ros_now_ns,now.steady_now_ns)) {
         selected->available=true;selected->boxes=best->boxes;
+      }
+    }
+    if(config_.fusion.views=="all") {
+      selected->views.clear();selected->available=false;selected->calibrated=false;
+      ScanTimes now=times;if(times.refresh_before_fusion)times.refresh_before_fusion(now);
+      const auto limit=static_cast<std::int64_t>(protection.max_time_offset_s*1e9);
+      const auto snapshot=camera_?camera_->Read(scan_stamp,limit,now.ros_now_ns,now.steady_now_ns):pipeline::fusion::CameraSnapshot{};
+      for(const auto& c:calibrations_) {
+        pipeline::TunnelCameraView v;v.calibrated=true;v.calibration=c.second;v.common_projection=true;
+        auto found=snapshot.by_view.find(c.first);
+        const pipeline::fusion::CameraFrame* best=nullptr;
+        if(snapshot.gate_active&&found!=snapshot.by_view.end())for(const auto& f:found->second)
+          if(std::llabs(f.stamp_ns-scan_stamp)<=limit && (!best||std::llabs(f.stamp_ns-scan_stamp)<std::llabs(best->stamp_ns-scan_stamp)))best=&f;
+        if(best&&camera_->Current(*best,now.ros_now_ns,now.steady_now_ns)){v.available=true;v.boxes=best->boxes;}
+        selected->views.push_back(std::move(v));
       }
     }
     input.tunnel_camera=std::move(selected);
@@ -237,16 +256,20 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
   // Without a camera source runCameraFusion is skipped; this equals Main with
   // no camera status/YOLO traffic, where the call leaves every class unchanged.
   if (config_.enable_camera_fusion) {
-    if (fusion_ && camera_) {
+    if ((fusion_ || multi_fusion_) && camera_) {
       ScanTimes now = times;
       if (times.refresh_before_fusion) times.refresh_before_fusion(now);
-      out.fusion = fusion_->Process(now.decision_ns, out.result.stamp_ns, out.result.context,
+      if(multi_fusion_)out.fusion=multi_fusion_->Process(now.decision_ns,out.result.stamp_ns,out.result.context,
+          out.result.objects,pipeline_.tracker().LastFrame(),*camera_,now.ros_now_ns,now.steady_now_ns);
+      else out.fusion = fusion_->Process(now.decision_ns, out.result.stamp_ns, out.result.context,
                                     out.result.objects, pipeline_.tracker().LastFrame(), *camera_,
                                     now.ros_now_ns, now.steady_now_ns);
       out.fusion_ran = true;
     }
+    pipeline_.FinalizeMotion(out.result);
     UpdateAABB(out.result.objects);
   }
+  if(!config_.enable_camera_fusion)pipeline_.FinalizeMotion(out.result);
   out.arrays = output_.Observed(out.result, out.result.objects);
   Audit(out);
   FilterDelivery(out);
@@ -335,7 +358,7 @@ void LidarRuntime::Audit(ScanOutput& out) const {
             }
             const auto& c=source->camera;
             const bool positive=filtering::PositiveCameraEvidence(frame.stamp_ns,c.camera_observation_ns,
-              fusion_?fusion_->consumer_epoch():0,c.camera_observation_epoch,c.class_miss_counter,
+              camera_epoch(),c.camera_observation_epoch,c.class_miss_counter,
               config_.delivery_preview.camera_age_ms,config_.fusion.max_time_offset_s*1e3);
             const auto group=pipeline::fusion_class::ObservedMissionGroup(c);
             decision.camera_observed_group=group;

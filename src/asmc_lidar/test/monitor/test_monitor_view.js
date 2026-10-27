@@ -421,7 +421,7 @@ test('final tracks and typed boxes use the same hide decision',()=>{
     {track_id:8,preview:{decision:'keep',reason:'camera_dynamic_protected',point_decision:'keep',obb_decision:'keep',height_decision:'keep'}}]}};
   const track={id:7,miss:0},typed={track_id:7};
   const check=t=>V.displayVisibility(scene,{sha256:'v7'},t,false,true,{});
-  assert.deepStrictEqual(check(track),{visible:false,reason:'candidate_hidden'});
+  assert.deepStrictEqual(check(track),{visible:false,reason:'exclusion_hidden'});
   assert.deepStrictEqual(check({id:typed.track_id,miss:0}),check(track));
   assert(check({id:8,miss:0}).visible);
   assert(check({id:9,miss:0}).visible); // No evidence does not mean outside.
@@ -456,6 +456,59 @@ test('ported delivery policies keep their reason and hide independently of point
     assert.equal(V.previewVisible(scene,track,false,true),false);
     assert.equal(V.previewVisible(scene,track,false,false,{policy:true}),false);
     assert.equal(V.previewVisible(scene,track,false,false,{points:true,obb:true,height:true,policy:false}),true);
+  }
+});
+
+test('predicted exclusions retain producer verdict through map mismatch, then reobservation replaces it',()=>{
+  const d={track_id:7,delivery_excluded:true,preview:{decision:'exclude_candidate',reason:'cluster_support_outside',point_decision:'exclude_candidate'}};
+  const scene={hd_map_audit:{enabled:true,delivery_applied:true,map_sha256:'producer',objects:[]},
+    delivery_history:[{stamp_ns:123,report:{objects:[d]}}]};
+  const t={id:7,miss:1};
+  assert.equal(V.auditAppearance(scene,t).label,'마지막 관측에서 제외');
+  assert.equal(V.displayVisibility(scene,{sha256:'other'},t,true,true).visible,false);
+  assert.equal(V.displayVisibility(scene,null,t,true,false,{points:true}).visible,false);
+  assert.equal(V.displayVisibility(scene,null,t,true,false,{}).visible,true);
+  assert.equal(V.displayVisibility(scene,null,t,false,false,{}).visible,false);
+  scene.hd_map_audit.objects=[{track_id:7,delivery_excluded:false,preview:{decision:'keep',reason:'camera_vehicle_protected'}}];
+  assert.equal(V.displayVisibility(scene,null,{id:7,miss:0},false,true).visible,true);
+  assert.equal(V.auditAppearance(scene,{id:8,miss:1}).label,'예측·현재 전달 대상 아님');
+});
+test('point road membership and stage visibility are independent of object protection',()=>{
+  assert.equal(V.pointRoadColor(1),'#94a3b8');
+  assert.equal(V.pointRoadColor(0),'#facc15');
+  assert.equal(V.pointRoadColor(2),V.pointRoadColor(3));
+  assert.equal(V.pointStageVisible(2,{nonground:true,tunnel:false}),false);
+  assert.equal(V.pointStageVisible(2,{nonground:false,tunnel:true}),true);
+  assert.equal(V.pointStageVisible(3,{nonground:true,height_removed:false}),false);
+});
+
+test('old producer predictions cannot bypass active delivery filters without history',()=>{
+  const scene={hd_map_audit:{enabled:true,delivery_applied:true,map_sha256:'a',objects:[]}};
+  const track={id:260,miss:2};
+  for(const road of [null,{sha256:'different'}]) {
+    assert.deepStrictEqual(V.displayVisibility(scene,road,track,true,true),
+      {visible:false,reason:'prediction_verdict_missing'});
+    for(const kind of ['points','obb','height','policy'])
+      assert.equal(V.displayVisibility(scene,road,track,true,false,{[kind]:true}).visible,false);
+    assert.equal(V.displayVisibility(scene,road,track,true,false,{}).visible,true);
+  }
+  assert.equal(V.previewVisible(scene,track,true,true),false);
+  assert.equal(V.displayVisibility(scene,null,{id:260,miss:0},false,true).visible,true);
+  scene.hd_map_audit.delivery_applied=false;
+  assert.equal(V.displayVisibility(scene,null,track,true,true).visible,true);
+});
+
+test('explicit exclusions with unknown or missing reason still follow hide switches',()=>{
+  for(const preview of [undefined,{decision:'undetermined',reason:'future_reason'},
+    {decision:'keep',reason:'future_reason',point_decision:'keep',obb_decision:'keep',height_decision:'keep'}]) {
+    const d={track_id:1,delivery_excluded:true,preview};
+    const scene={hd_map_audit:{enabled:true,delivery_applied:true,objects:[d]}};
+    assert.equal(V.displayVisibility(scene,null,{id:1,miss:0},false,true).visible,false);
+    assert.equal(V.displayVisibility(scene,null,{id:1,miss:0},false,false,{policy:true}).visible,false);
+    scene.delivery_history=[{stamp_ns:123,report:{objects:[d]}}];
+    scene.hd_map_audit.objects=[];
+    assert.equal(V.displayVisibility(scene,null,{id:1,miss:1},true,true).visible,false);
+    assert.equal(V.displayVisibility(scene,null,{id:1,miss:1},true,false,{}).visible,true);
   }
 });
 

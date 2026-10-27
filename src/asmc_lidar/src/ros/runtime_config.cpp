@@ -365,6 +365,10 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   const auto profile = r.Get<std::string>("fusion.camera_class_profile");
   if (profile != "legacy" && profile != "mission16_v1") Fail(file, "Unsupported camera_class_profile");
   auto& f = config.fusion;
+  if(r.Node("fusion")["views"])f.views=r.Node("fusion")["views"].as<std::string>();
+  if(f.views!="front"&&f.views!="all")Fail(file,"fusion.views must be front or all");
+  p.tunnel_route.protection.multiview=f.views=="all";
+  if(root["motion"]&&root["motion"]["semantic_static_enabled"])p.motion.semantic_static_enabled=root["motion"]["semantic_static_enabled"].as<bool>();
   f.mission_profile = profile == "mission16_v1";
   f.yolo_policy = r.Get<std::string>("fusion.fusion_yolo_policy");
   if (f.yolo_policy != "unique" && f.yolo_policy != "bounded_reuse") Fail(file, "invalid fusion_yolo_policy");
@@ -487,6 +491,8 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   effective << "tunnel-residual-wall-surface-driving-v8-corridor," << config.pipeline.tunnel_route.params.residual_wall_surface_enable << '\n';
   effective << "tunnel-boundary-cluster-rescue-v1," << config.pipeline.tunnel_route.boundary_cluster_rescue << '\n';
   effective << "tunnel-temporal-adaptive-v6-reclassification," << config.pipeline.tunnel_noise.enabled << "," << config.pipeline.tunnel_noise.hold_frames << "," << config.pipeline.tunnel_noise.confirmation_all_unknown << "," << config.pipeline.tunnel_noise.confirmation_frames << "," << config.pipeline.tunnel_noise.adaptive_confirmation << "," << config.pipeline.tunnel_noise.structural_confirmation_frames << ',' << config.pipeline.tunnel_noise.low_flat_confirmation_frames << '\n';
+  effective << "semantic-static-v1," << config.pipeline.motion.semantic_static_enabled << ",5,.25,.6,.35,2.5,.7,3,8,350ms\n";
+  effective << "multi-view-fusion-v1," << config.fusion.views << '\n';
   effective << "integrated-tunnel-motion-v1," << config.pipeline.tunnel_route.integrated_motion << ',' << config.pipeline.tunnel_route.params.wall_gap_reanchor_enable << '\n';
   effective << "original-tunnel-8dde9b69," << config.pipeline.tunnel_route.original_pipeline;
   effective << ',' << config.pipeline.tunnel_route.params.dynamic_roi_enable;

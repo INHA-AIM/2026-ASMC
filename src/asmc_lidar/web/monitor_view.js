@@ -118,7 +118,7 @@
     cluster_boundary_protected:'경계 여유 보호',exception_space_protected:'구형 미션 영역 일괄 보호 · 생산자 재시작 필요',
     cluster_outside_boundary_uncertain:'도로 내부 근거 부족 · 경계 오차 미확정',
     obb_support_outside:'OBB 도로 겹침 기준 미달 · 점 근거 부족',
-    cluster_support_outside:'도로 내부 근거 부족',overhead_clearance_candidate:'자차 상부 높이 후보',
+    cluster_support_outside:'도로 내부 근거 부족',overhead_clearance_candidate:'자차 상부 높이 근거',
     overhead_lower_surface_unverified:'하부 관측 검증 대기',insufficient_cluster_support:'근거 점 부족',
     unknown_support_map_cells:'점 위치의 지도 근거 부족',map_or_pose_unavailable:'지도/위치 무효',
     pose_error_bound_unverified:'위치 오차 검증 대기',point_policy_pose_and_scope_unverified:'위치·구간 검증 대기'};
@@ -127,14 +127,26 @@
     if(!report||!report.enabled)return null;
     let index=auditIndices.get(report);
     if(!index){index=new Map((report.objects||[]).map(d=>[d.track_id,d]));auditIndices.set(report,index);}
-    return index.get(track.id)||null;
+    const current=index.get(track.id);
+    if(current && !(track.miss>0))return current;
+    if(track.miss>0) {
+      for(const h of scene.delivery_history||[]) {
+        const d=(h.report.objects||[]).find(d=>d.track_id===track.id);
+        if(d)return {...d,historical:true,observed_stamp_ns:h.stamp_ns};
+      }
+    }
+    return current||null;
   }
   function exclusionKinds(d) {
     const p=d&&d.preview,decision=p?p.decision:d&&d.decision,reason=p?p.reason:d&&d.reason;
     if(d&&d.delivery_excluded&&reason&&/^(known_static|structure|observation_quality):/.test(reason))return ['policy'];
-    if(p&&p.point_decision!==undefined)
-      return [['height',p.height_decision],['points',p.point_decision],['obb',p.obb_decision]].filter(a=>a[1]==='exclude_candidate').map(a=>a[0]);
-    if(decision!=='exclude_candidate')return [];
+    if(p&&p.point_decision!==undefined) {
+      const kinds=[['height',p.height_decision],['points',p.point_decision],['obb',p.obb_decision]].filter(a=>a[1]==='exclude_candidate').map(a=>a[0]);
+      // An explicit delivery exclusion remains authoritative even when a newer
+      // producer's reason is not yet understood by this viewer.
+      return kinds.length?kinds:d.delivery_excluded?['policy']:[];
+    }
+    if(decision!=='exclude_candidate')return d&&d.delivery_excluded?['policy']:[];
     if(reason && reason.startsWith('cluster_'))return ['points'];
     if(reason==='overhead_clearance_candidate')return ['height'];
     return ['obb'];
@@ -143,32 +155,54 @@
   function auditAppearance(scene,track){
     const d=auditForTrack(scene,track),p=d&&d.preview;
     const kind=p?p.decision:d?d.decision:'unavailable';
-    const categories=exclusionKinds(d),category=categories[0]||null;
+    const applied=scene&&scene.hd_map_audit&&scene.hd_map_audit.delivery_applied;
+    const categories=(applied&&d&&!d.delivery_excluded)?[]:exclusionKinds(d),category=categories[0]||null;
     return {decision:kind,category,categories,reason:p?p.reason:d?d.reason:'audit_off',
-      label:d&&d.delivery_excluded?'발행 제외':kind==='keep'&&category==='obb'?'유지·OBB 비교 후보':kind==='keep'&&p&&p.reason==='camera_dynamic_protected'?'YOLO 동적 보호':
+      label:track.miss>0&&!d?'예측·현재 전달 대상 아님':d&&d.delivery_excluded?(d.historical?'마지막 관측에서 제외':'발행 제외'):kind==='keep'&&category==='obb'?'유지·OBB 비교 후보':kind==='keep'&&p&&p.reason==='camera_dynamic_protected'?'YOLO 동적 보호':
         kind==='keep'&&p&&p.reason==='camera_vehicle_protected'?'YOLO 차량 보호':
         kind==='keep'&&p&&p.reason==='exception_space_protected'?'구형 미션 보호':kind==='keep'&&p&&p.reason==='joint_drivable_support'?'점군·OBB 유지':
         kind==='keep'&&p&&p.reason==='cluster_drivable_support'?'구형 점군 유지':
         {keep:'유지',exclude_candidate:'제외 후보',undetermined:'보류',unavailable:'미실행'}[kind]||'보류',
-      color:category?{points:'#f472b6',obb:'#c084fc',height:'#fb923c',policy:'#60a5fa'}[category]:{keep:'#34d399',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',
+      color:track.miss>0&&!d?'#94a3b8':category?{points:'#f472b6',obb:'#c084fc',height:'#fb923c',policy:'#60a5fa'}[category]:{keep:'#34d399',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',
       detail:AUDIT_REASONS[p?p.reason:d?d.reason:'']||(p?p.reason:d?d.reason:'audit OFF')};
   }
   function previewVisible(scene,track,showPred,hideCandidates,hideReasons={}){
     if(!showPred&&track.miss>0)return false;
+    const report=scene&&scene.hd_map_audit,d=auditForTrack(scene,track);
+    // Older producers do not send the last observed delivery verdict. A
+    // prediction must not bypass active exclusion filters just because that
+    // evidence is absent (also covers opening a viewer halfway through a run).
+    // This is display-only: no new road verdict or tracker deletion is made.
+    if(track.miss>0&&report&&report.delivery_applied&&!d&&
+       (hideCandidates||Object.values(hideReasons).some(Boolean)))return false;
+    if(hideCandidates&&d&&d.delivery_excluded)return false;
     const a=auditAppearance(scene,track);
     return !a.categories.length||(!hideCandidates&&!a.categories.some(k=>hideReasons[k]));
   }
   // One policy for final track boxes, typed boxes and their support points.
   // Selection only opens details; it must not bypass an explicit hide switch.
-  // An incompatible map cannot justify hiding, even when a candidate was
-  // computed against another map. Prediction visibility stays independent.
+  // A different background map invalidates audit-only hiding, never an explicit
+  // producer delivery exclusion. Prediction history follows the same rule.
   function displayVisibility(scene,road,track,showPred,hideCandidates,hideReasons={}) {
     if(!showPred&&track.miss>0)return {visible:false,reason:'prediction_hidden'};
     const report=scene&&scene.hd_map_audit;
-    if(report&&road&&report.map_sha256&&road.sha256&&report.map_sha256!==road.sha256)
+    if(track.miss>0&&report&&report.delivery_applied&&!auditForTrack(scene,track)&&
+       (hideCandidates||Object.values(hideReasons).some(Boolean)))
+      return {visible:false,reason:'prediction_verdict_missing'};
+    if(report&&road&&report.map_sha256&&road.sha256&&report.map_sha256!==road.sha256 &&
+       !(auditForTrack(scene,track)||{}).delivery_excluded)
       return {visible:true,reason:'map_mismatch'};
     const visible=previewVisible(scene,track,showPred,hideCandidates,hideReasons);
-    return {visible,reason:visible?'visible':'candidate_hidden'};
+    return {visible,reason:visible?'visible':'exclusion_hidden'};
+  }
+  // Point membership is supplied by the canonical native grid once per snapshot.
+  // 2 is original road within the inset band; 3 is the delivery inset interior.
+  function pointRoadColor(code) {
+    return code===2||code===3?'#34d399':code===1?'#94a3b8':'#facc15';
+  }
+  function pointStageVisible(label,stages) {
+    return label===3?!!stages.height_removed:label===2?!!stages.tunnel:
+      label===1?!!stages.ground:!!stages.nonground;
   }
   function trackVisible(scene,road,track,hideOutside,showPred=true) {
     if(!showPred && track.miss>0)return false;
@@ -309,5 +343,5 @@
 
   return { I4, rot3To4, mul, invRigid, apply, isMatrix, frameMatrices, bevProject, bevUnproject, sideProject, orbitProject,
     boxOutline, drawBox, frameAction, sceneFreshness, fetchErrorKind, pointInPolygon, roadMembership, motionAppearance,
-    trackVisible, IdChangeMonitor, auditForTrack, auditAppearance, previewVisible, displayVisibility, exclusionKind, exclusionKinds };
+    trackVisible, IdChangeMonitor, pointRoadColor, pointStageVisible, auditForTrack, auditAppearance, previewVisible, displayVisibility, exclusionKind, exclusionKinds };
 });

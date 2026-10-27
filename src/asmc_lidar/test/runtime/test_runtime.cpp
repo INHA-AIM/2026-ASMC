@@ -2,6 +2,7 @@
 // input converters, with synthetic inputs and a deterministic logical clock.
 #include <asmc_lidar/ros/ros_inputs.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
+#include <asmc_lidar/ros/delivery_display_history.hpp>
 
 #include <GeographicLib/UTMUPS.hpp>
 #include <gtest/gtest.h>
@@ -87,6 +88,7 @@ class TempDir {
 
 sh::RuntimeConfig ShippedRuntimeConfig() {
   auto cfg=sh::LoadRuntimeConfig(ShippedConfig(), PackageDir());
+  cfg.fusion.views = "front"; // historical front-only fixtures, not deployment default
   cfg.pipeline.tunnel.enabled = false;  // isolate common-path fixtures; GPS mode tests cover shipped defaults
   // Existing Main-equivalence fixtures use the pre-height/audit path. Production
   // defaults are checked independently below and in the ROS integration tests.
@@ -97,6 +99,7 @@ sh::RuntimeConfig ShippedRuntimeConfig() {
 
 TEST(RuntimeDeployment, DefaultMapIsPinnedAndHeightCapIsLocal) {
   const auto cfg=sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
+  EXPECT_EQ(cfg.fusion.views,"all");
   ASSERT_TRUE(cfg.delivery_filters);
   EXPECT_TRUE(cfg.delivery_filters->enabled());
   EXPECT_EQ(cfg.delivery_filters->status(),"observation_quality_only");
@@ -1079,4 +1082,85 @@ TEST(RuntimeIdentity, EffectiveChoicesAndCalibrationAreBoundToConfigId) {
   sh::FinalizeRuntimeIdentity(cfg,"camera-a"); EXPECT_NE(cfg.config_id,id);
   EXPECT_EQ(cfg.calibration_id,calibration);
   sh::FinalizeRuntimeIdentity(cfg,"camera-b"); EXPECT_NE(cfg.calibration_id,calibration);
+}
+
+TEST(DeliveryDisplayHistory, BoundedActualObservationHistoryAndIdentityReset) {
+  sh::DeliveryDisplayHistory h;
+  asmc::lidar::filtering::AuditReport r;r.delivery_applied=true;
+  asmc::lidar::filtering::AuditDecision d;d.track_id=7;d.delivery_excluded=true;r.objects={d};
+  h.Update("session|1|config",100,{7},r);
+  r.objects.clear();h.Update("session|1|config",200,{7,8},r);
+  ASSERT_EQ(h.entries().size(),1u);EXPECT_EQ(h.entries().at(7).stamp_ns,100);
+  d.delivery_excluded=false;r.objects={d};h.Update("session|1|config",300,{7},r);
+  EXPECT_FALSE(h.entries().at(7).decision.delivery_excluded);
+  r.objects.clear();h.Update("session|1|newconfig",400,{7},r);EXPECT_TRUE(h.entries().empty());
+  r.objects={d};h.Update("session|1|newconfig",500,{7},r);
+  r.objects.clear();h.Update("session|1|newconfig",600,{},r);EXPECT_TRUE(h.entries().empty());
+}
+
+// Exercise actual fusion -> typed output across GPS loss; independent camera
+// headings prevent a front-only implementation from satisfying the side cases.
+TEST(LidarRuntime, ThreeViewLocalClassificationSurvivesGpsLossAndMapRecovery) {
+  for (const auto& selected : {std::string("camera_front"), std::string("camera_left"), std::string("camera_right")}) {
+    SCOPED_TRACE(selected);
+    auto cfg = ShippedRuntimeConfig();
+    cfg.fusion.views = sh::LoadRuntimeConfig(ShippedConfig(), PackageDir()).fusion.views;
+    ASSERT_EQ(cfg.fusion.views, "all");
+    asmc::lidar::camera::Calibrations cameras;
+    for (const auto& name : {"camera_front", "camera_left", "camera_right"}) {
+      auto k = FrontCalibration(); k.frame_id = name; k.id = name;
+      const double yaw = k.frame_id == "camera_left" ? M_PI/2 : k.frame_id == "camera_right" ? -M_PI/2 : 0;
+      if (yaw != 0) { k.width=640; k.height=480; k.intrinsic << 320,0,320,0,320,240,0,0,1; }
+      k.base_from_camera.linear() = asmc::lidar::rpy(0,0,yaw);
+      k.base_from_camera.translation() = asmc::lidar::Vec(1.9*std::cos(yaw),1.9*std::sin(yaw),1.2);
+      cameras[name]=k;
+    }
+    struct ProjectedCamera : pl::fusion::CameraSource {
+      asmc::lidar::camera::Calibration calibration;
+      pl::ScanResult previous;
+      pl::fusion::CameraSnapshot Read(std::int64_t stamp, std::int64_t, std::int64_t, std::int64_t) override {
+        pl::fusion::CameraSnapshot s; s.gate_active=true; s.gate_epoch=1;
+        if (!previous.processed) return s;
+        std::vector<pl::fusion::LidarImageBox> boxes;
+        if (!pl::fusion::LidarToImage(previous.objects, previous.context, calibration, pl::fusion::FusionConfig{}, &boxes)) return s;
+        pl::fusion::CameraFrame f; f.stamp_ns=stamp; f.epoch=1; f.frame_id=calibration.frame_id;
+        f.width=calibration.width; f.height=calibration.height; f.identity=f.frame_id+std::to_string(stamp);
+        for (const auto& b:boxes) {
+          asmc::lidar::camera::Box box;
+          box.xmin=b.min_x; box.ymin=b.min_y; box.xmax=b.max_x; box.ymax=b.max_y;
+          box.source_class_name="car"; box.class_name="vehicle"; box.confidence=.9; box.confidence_valid=true;
+          f.boxes.push_back(box);
+        }
+        s.by_view[f.frame_id]={f}; return s;
+      }
+    };
+    auto camera=std::make_shared<ProjectedCamera>(); camera->calibration=cameras.at(selected);
+    sh::LidarRuntime rt(cfg,camera,&cameras.at("camera_front"),cameras);
+    Sim sim(rt);
+    const double yaw=selected=="camera_left"?M_PI/2:selected=="camera_right"?-M_PI/2:0;
+    for(auto& p:*sim.scene) { const auto x=p.x,y=p.y; p.x=std::cos(yaw)*x-std::sin(yaw)*y; p.y=std::sin(yaw)*x+std::cos(yaw)*y; }
+    sim.gps=[](int t){return t>=1500&&t<2500?Mode::kInvalid:Mode::kValid;};
+    bool saw_denied=false,saw_recovery=false;
+    for(int t=300;t<=3300;t+=100) {
+      sim.RunTo(t); const auto& out=sim.scans.at(t); camera->previous=out.result;
+      ASSERT_TRUE(out.processed); ASSERT_TRUE(out.fusion_ran);
+      if(t<1100)continue; // normal five positive observation confirmations
+      ASSERT_FALSE(out.arrays.local.objects.empty());
+      bool classified=false;
+      for(const auto& o:out.arrays.local.objects) if(o.camera_class=="car"&&o.classification=="vehicle") {
+        classified=true;
+        EXPECT_TRUE(std::isfinite(o.center.x)); EXPECT_EQ(o.obb_corners.size(),8u);
+        if(!out.result.context.map_pose.valid) { EXPECT_FALSE(o.absolute_velocity_valid); EXPECT_FALSE(o.dynamic_valid); }
+      }
+      EXPECT_TRUE(classified);
+      EXPECT_EQ(out.arrays.local.header.frame_id,"base_link");
+      EXPECT_EQ(out.arrays.local.header.stamp,out.arrays.map.header.stamp);
+      if(t>=1700&&t<=2400) {
+        saw_denied=true; EXPECT_EQ(out.arrays.map.status,Array::POSE_UNAVAILABLE);
+        EXPECT_TRUE(out.arrays.map.objects.empty()); EXPECT_TRUE(out.arrays.map_tracking.empty());
+      }
+      if(t>=3000) { saw_recovery=true; EXPECT_EQ(out.arrays.map.status,Array::OBSERVED); EXPECT_EQ(Ids(out.arrays.local),Ids(out.arrays.map)); }
+    }
+    EXPECT_TRUE(saw_denied); EXPECT_TRUE(saw_recovery);
+  }
 }

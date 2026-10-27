@@ -848,7 +848,10 @@ TEST(TunnelResidualSurface, RemovesSupportedWallIncludingLowTailButKeepsSeparate
         for(int f=0;f<4;++f)pipeline.Process(cloud,0,0,&protect,&ambiguous,scenario!=3);
         const auto& r=pipeline.LastResult();
         int removed=0;for(int j=begin;j<end;++j)if(r.labels[j]==kWall)++removed;
-        if((scenario==1||scenario==5))EXPECT_GT(removed,(end-begin)*.8);
+        if((scenario==1||scenario==5)) {
+            EXPECT_GT(removed,(end-begin)*.8);
+            EXPECT_FALSE(r.residual_clusters_reused);  // Changed labels require re-clustering.
+        }
         else EXPECT_EQ(0,removed) << scenario;
         for(int j=end;j<low_end;++j)EXPECT_EQ((scenario==1||scenario==5)?kWall:kKept,r.labels[j]) << scenario << ":" << j;
         for(int j=low_end;j<compact_end;++j)EXPECT_EQ(kKept,r.labels[j]);
@@ -979,4 +982,30 @@ TEST(TunnelResidualSurface, ProvenPlanarExteriorCanRemoveShortConnectedTailButKe
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
+}
+
+TEST(TunnelResidualReuse, SameScanOnlyAndDifferentClusterMinimumNeverShares) {
+  for(int minimum:{3,10}) {
+    auto params=TestParams();params.residual_wall_surface_enable=true;
+    params.wall_enable=false;params.cluster_min_points=minimum;
+    int calls=0;
+    TunnelPipeline core(params,[&](const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud,
+        const std::vector<pcl::PointIndices>& clusters,std::vector<Obb>* obbs){
+      ++calls;DefaultObbFunction(cloud,clusters,obbs);
+    });
+    pcl::PointCloud<pcl::PointXYZI> cloud;AddGround(&cloud);AddBox(&cloud,10,11,-1,1,-1,.5);
+    for(int frame=0;frame<2;++frame) {
+      const int before=calls;
+      const auto& result=core.Process(cloud,0,0,nullptr,nullptr,true);
+      ASSERT_FALSE(result.objects.empty());
+      EXPECT_EQ(minimum>=10,result.residual_clusters_reused);
+      EXPECT_EQ(minimum>=10?1:2,calls-before);
+      // Move the next observation; reusing the preceding scan would retain x.
+      EXPECT_NEAR(10.5+frame*3,result.objects.front().obb.cx,.2);
+      for(auto& p:cloud)if(p.x>=9 && p.z>-1.5)p.x+=3;
+    }
+    core.Reset();
+    pcl::PointCloud<pcl::PointXYZI> empty;
+    EXPECT_FALSE(core.Process(empty,0,0,nullptr,nullptr,true).residual_clusters_reused);
+  }
 }

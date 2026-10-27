@@ -117,6 +117,7 @@ Query Buffer::query(Ns scan_stamp, Ns max_difference, Ns ros_now, Ns steady_now)
   std::lock_guard<std::mutex> lock(mutex_);
   Query q;expire_locked(ros_now,steady_now);
   const auto gate=gate_locked(ros_now,steady_now);
+  q.epoch=epoch_;q.gate_reason=gate;
   for(const auto& entry:views_) {
     auto& out=q.views[entry.first];const auto& v=entry.second;
     out.reason=!gate.empty()?gate:(scan_stamp<=0||max_difference<0?"bad_query":v.reason);

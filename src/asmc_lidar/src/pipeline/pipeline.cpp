@@ -1,5 +1,6 @@
 #include <asmc_lidar/experimental/confirmation_wall_evidence.hpp>
 #include <asmc_lidar/tracking/planning_velocity.hpp>
+#include <asmc_lidar/fusion/fusion_policy.hpp>
 #include <asmc_lidar/detection/detections.hpp>
 #include <asmc_lidar/core/source_time.hpp>
 #include <asmc_lidar/tracking/track.hpp>
@@ -71,7 +72,7 @@ std::string CloudDigest(const Cloud& cloud) {
 
 // Ported from Main src/main.cpp:633-636 (InitVehicleSpec + frame_boundary::Configure) (8f93c22e)
 Pipeline::Pipeline(const PipelineConfig& config)
-    : config_(config), ground_(config.ground), tracker_(config.tracking) {
+    : config_(config), ground_(config.ground), tracker_(config.tracking), motion_classifier_(config.motion) {
   if (config_.calibration_id.empty())
     throw std::invalid_argument("pipeline calibration_id must be non-empty");
   frame_.Configure(config_.vehicle, config_.calibration_id);
@@ -249,7 +250,9 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   timings.detection_ms = Ms(begin, end);
   if(original_tunnel) {
     for(std::size_t i=0;i<object.size()&&i<tunnel_classes.size();++i)if(tunnel_classes[i]!="unknown") {
-      object[i].camera.str_ObjectClass=tunnel_classes[i];object[i].camera.str_YoloClass=tunnel_classes[i];
+      if(!config_.tunnel_route.protection.multiview) {
+        object[i].camera.str_ObjectClass=tunnel_classes[i];object[i].camera.str_YoloClass=tunnel_classes[i];
+      } // M1 preprocessing protection is not a confirmed detector observation.
     }
   }
   counts.detections = static_cast<int>(object.size());
@@ -309,8 +312,12 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
       }
       m.bounds_valid=m.bounds_valid && m.max_e-m.min_e>.05 && m.max_n-m.min_n>.05;
     }
-    motion_classifier_.Update(motion_objects, SourceDeltaSeconds(raw, 0));
-  } else motion_classifier_.InvalidateMapHistory(motion_objects);
+    if(!config_.motion.semantic_static_enabled)motion_classifier_.Update(motion_objects, SourceDeltaSeconds(raw, 0));
+  } else if(!config_.motion.semantic_static_enabled)motion_classifier_.InvalidateMapHistory(motion_objects);
+  if(config_.motion.semantic_static_enabled) {
+    // Capture before RecordTrackingFrame/UpdateAABB, exactly like the baseline.
+    motion_inputs_=motion_objects;motion_map_valid_=motion_map_valid;motion_input_stamp_=raw;
+  }
   for(std::size_t i=0;i<object.size();++i)object[i].tracking.motion=motion_objects[i];
 
   begin = Clock::now();
@@ -470,6 +477,27 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     config_.observer->OnScan(view);
   }
   return result;
+}
+
+void Pipeline::FinalizeMotion(ScanResult& result) {
+  if(!config_.motion.semantic_static_enabled||motion_input_stamp_!=result.stamp_ns)return;
+  for(auto& m:motion_inputs_) {
+    auto obj=fusion_state::Find(result.objects,m.s32_Id);
+    m.semantic_static_eligible=false;
+    if(obj) {
+      const auto& c=obj->camera;
+      const auto age=result.stamp_ns-static_cast<std::int64_t>(c.camera_observation_ns);
+      m.semantic_static_eligible=c.str_ObjectClass=="static_obstacle"&&c.observed_class=="static_obstacle"&&
+        !c.group_conflict&&c.class_miss_counter==0&&c.camera_observation_ns>0&&age>=-50000000&&age<=350000000;
+    }
+  }
+  if(motion_map_valid_)motion_classifier_.Update(motion_inputs_,SourceDeltaSeconds(result.stamp_ns,0));
+  else motion_classifier_.InvalidateMapHistory(motion_inputs_);
+  for(const auto& m:motion_inputs_) {
+    if(auto o=fusion_state::Find(result.objects,m.s32_Id))o->tracking.motion=m;
+    if(auto h=tracker_.LastFrame())if(auto o=fusion_state::Find(*h,m.s32_Id))o->tracking.motion=m;
+  }
+  motion_input_stamp_=0;motion_inputs_.clear();
 }
 
 }  // namespace pipeline

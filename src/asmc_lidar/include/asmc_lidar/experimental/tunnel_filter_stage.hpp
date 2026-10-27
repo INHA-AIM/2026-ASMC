@@ -62,7 +62,10 @@ struct TunnelFilterStageReport {
   int wall_labeled = 0;
   int ground_labeled = 0;
   int removed_points = 0;  // removed from the common ground output
+  bool residual_clusters_reused = false;
   double core_ms = 0.;
+  // Diagnostic-only; residual sub-times are included in wall_remove, not additive.
+  std::map<std::string,double> timings_ms;
 };
 
 class TunnelFilterStage {

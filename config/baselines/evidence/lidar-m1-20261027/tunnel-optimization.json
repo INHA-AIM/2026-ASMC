@@ -1,0 +1,116 @@
+{
+  "schema": "asmc.lidar.m1_tunnel_optimization/v1",
+  "run_id": "lidar-m1-tunnel-opt-20261027-r1",
+  "baseline_revision": "97d2e4ca93608933f36b31aff52d7bda69e8600d",
+  "implementation_revision": "9d461d3e",
+  "matrix_sha256": "e3b07ec6be9c4d0094f3909ccdea83a4598c53e1874bf0240df85df44d57b75f",
+  "trials": 48,
+  "all_behavior_equal": true,
+  "pipeline_p95_median_ms": [
+    {
+      "dataset": "stationary",
+      "front_before": 7.047699,
+      "front_after": 6.440059,
+      "three_before": 6.922506,
+      "three_after": 7.018328
+    },
+    {
+      "dataset": "straight",
+      "front_before": 4.858819,
+      "front_after": 4.731554,
+      "three_before": 4.464522,
+      "three_after": 4.478439
+    },
+    {
+      "dataset": "tunnel",
+      "front_before": 4.003327,
+      "front_after": 3.914452,
+      "three_before": 51.636529,
+      "three_after": 8.519081
+    },
+    {
+      "dataset": "foggy",
+      "front_before": 6.898812,
+      "front_after": 6.475128,
+      "three_before": 6.545615,
+      "three_after": 6.413438
+    }
+  ],
+  "tunnel_phase_p95_median_ms": {
+    "before": {
+      "pipeline": 51.636529,
+      "ceiling": 0.01154,
+      "cluster": 23.420831,
+      "core": 49.534063,
+      "ground_fit": 0.476507,
+      "ground_remove": 0.024784,
+      "level": 0.087804,
+      "obb": 1.662795,
+      "obb_filter": 0.005456,
+      "protection": 0.302117,
+      "residual_cluster": 22.808475,
+      "residual_obb": 1.719818,
+      "wall_fit": 1.651728,
+      "wall_remove": 24.491667
+    },
+    "after": {
+      "pipeline": 8.519081,
+      "ceiling": 0.011626,
+      "cluster": 0.004812,
+      "core": 6.733768,
+      "ground_fit": 0.458705,
+      "ground_remove": 0.025906,
+      "level": 0.089451,
+      "obb": 0.00011,
+      "obb_filter": 0.003929,
+      "protection": 0.288818,
+      "residual_cluster": 3.321706,
+      "residual_obb": 1.640165,
+      "wall_fit": 1.555765,
+      "wall_remove": 4.939632
+    }
+  },
+  "maximum_rss_mib": 157.3828125,
+  "maximum_rss_by_version_mib": {
+    "before": 157.3828125,
+    "after": 156.9296875
+  },
+  "tunnel_reused_scans": 643,
+  "tunnel_input_scans": 712,
+  "ctest_passed": 40,
+  "public_contract_changed": false,
+  "defaults": {
+    "fusion_views": "front",
+    "semantic_static_enabled": false
+  },
+  "limits": [
+    "Recorded replay; live MORAI/GPU shared-load supply not accepted",
+    "No new eight-class obstacle/overlap safety acceptance",
+    "Source gaps and original F1 473.47ms failure remain",
+    "No actual static-target semantic prior acceptance"
+  ],
+  "ros_replay": {
+    "ros-three-off": {
+      "scans": 711,
+      "valid_scans": 711,
+      "min_full_5s_hz": 11.6,
+      "max_gap_ms": 123.32729203626513,
+      "rss_max_kib": 154236,
+      "debug_capture_p95_ms": null,
+      "overwritten_scans": 0,
+      "debug_overwritten": null
+    },
+    "ros-three-web": {
+      "scans": 712,
+      "valid_scans": 711,
+      "min_full_5s_hz": 11.6,
+      "max_gap_ms": 127.85732408519834,
+      "rss_max_kib": 155800,
+      "debug_capture_p95_ms": 0.958728,
+      "overwritten_scans": 0,
+      "debug_overwritten": "0"
+    }
+  },
+  "ros_browser_errors": [],
+  "execution_context": "Private ROS master; recorded inputs; existing operating processes were left running. Not a controlled MORAI/GPU simultaneous-load acceptance."
+}
