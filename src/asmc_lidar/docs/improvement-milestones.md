@@ -40,6 +40,7 @@ track ID76을 현재 같은 물체의 ID로 가정하지 않는다. 당시 raw �
 ## M1 — 승현의 구현과 수락 범위
 
 현재 구현·복구 설정과 semantic 보조 경계는 [M1 정본](three-view-fusion.md)을 따른다.
+[터널 연산 최적화](../../../docs/records/lidar/2026-10-27-m1-tunnel-optimization.md)는 같은 결과로 계산 증가 기준을 통과했다. 다음은 실제3뷰 물체 보존·중첩/충돌·공급 검수이며 기본 승격은 아직 보류다.
 아래는 유지하는 수락 경계다.
 
 1. 전방의 receive header ±50ms·최대 대기200ms·unique 관측 사용과 분류 확인 정책을 회귀 기준으로

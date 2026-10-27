@@ -41,7 +41,7 @@ debug의 원본 tracker/점군은 검수를 위해 남긴다. 판제 기본 입�
 | `filtering/` | ROS 독립 HD맵·상부 전달 필터. 발행 배열만 제외하며 원본 tracker 보존 |
 | `pipeline/` | 처리 단계 조합·scan context와 결과 |
 | `ros/` | 센서 수신·설정·메시지 변환·진단·실행 |
-| `experimental/` | 기본 OFF인 기존 TunnelFilter 원본과 연결 stage |
+| `experimental/` | map pose 무효 시 사용하는 터널 경로와 별도 opt-in 비교 stage |
 
 `DetectionObservation`이 점군과 현재 기하를 한 번 소유하고, `TrackState`와 `CameraClassEvidence`를 조합해 `TrackedObject`를 만든다. 기존 tracker 이력의 복사 정책은 유지한다. `filtering/`은 원본 객체와 분리된 작은 판정 결과만 소유한다.
 

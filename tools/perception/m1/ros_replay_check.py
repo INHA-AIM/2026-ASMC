@@ -101,7 +101,7 @@ def main(a):
         summary=dict(run_id=a.run_id,debug=a.debug,scans=len(tr),valid_scans=len(valid),min_full_5s_hz=min(rates) if rates else None,
             max_gap_ms=max(gaps) if gaps else None,rss_first_kib=rss[0],rss_last_kib=rss[-1],rss_max_kib=max(rss),
             debug_capture_p95_ms=percentile(captures,.95),latest_diagnostics=diags[-1] if diags else {},
-            browser_checked=captured,limits='Recorded sensor replay, no MORAI/camera inference contention or actuation')
+            browser_checked=captured,limits='Recorded sensor replay; other host workloads uncontrolled; no controlled MORAI/GPU load acceptance or actuation')
         (output/'summary.json').write_text(json.dumps(summary,indent=2));print(json.dumps(summary))
     finally:
         for p in reversed(children):

@@ -57,6 +57,18 @@ optical 변환이 없는 별도 수식이었으므로 복구 경로와 구분한
 실제로 보는 점은 전체 카메라 미수신으로 취급하지 않는다. 한 뷰의 수신으로 모든 방향을
 검증 완료로 표시하지 않는다. 양성 보호와 무관측 ambiguity는 다르다.
 
+## 터널 연산 최적화
+
+[같은 입력의 전후48회 대조](../../../docs/records/lidar/2026-10-27-m1-tunnel-optimization.md)에서
+3뷰 터널 pipeline p95는51.637→8.519ms, 전방 대비 증가4.605ms였다. 카메라 투영보다
+두 번의 조밀한 벽 군집화가 병목이었다. 정확한 radius 연결 성분 탐색과 같은 scan의
+변경 없는 군집/OBB 재사용을 적용했다. 벽/천장 판단·카메라 미수신 보호·추적·전달 결과는
+유지하며, 다음 scan이나 제거된 점 집합에 cache를 재사용하지 않는다.
+
+판제 family 어댑터는3경계에서2차로 중앙선을 유도한다. LiDAR 터널의 입력이 아니며,
+이번 replay에는 판제/family 노드가 없었다. 계산 기준 통과는 실제 객체 보존·전체 공급
+수락과 별개이므로3뷰/semantic 후보의 기본 OFF는 유지한다.
+
 ## 웹 표시
 
 - 현재 관측은 실제 `delivery_excluded`와 최종 사유로 표시한다. 지도 SHA 경고가 실제 제외를 되살리지 않는다.
@@ -120,3 +132,5 @@ M1 코드는 기존 ASMC 투영·greedy IoU·분류 정책을 확장했다. 외�
 시험 실행파일은 대응하는 공유 라이브러리와 함께 실행한다. 별도 빌드에서
 `LD_LIBRARY_PATH=<candidate-build>/devel/lib:$LD_LIBRARY_PATH`가 빠지면 기존 overlay의 옛 라이브러리를
 읽을 수 있다. 원본 bag·완료 결과는 덮어쓰지 않는다. 저장 bag 결과는 새 MORAI 동시 부하 수락과 다르다.
+
+- `tools/perception/m1/tunnel_benchmark.py`: 군집화 전후48회 strict trace 동등성·세부 시간·RSS 대조.
