@@ -260,9 +260,9 @@ std::string bboxStopReason();
 bool ignoreBboxDuringLaneChange();
 std::string updateLaneChangePlan();
 std::string updateContactPathPlan();
-const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* geometry = nullptr);
+const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* geometry = nullptr, double required_x = -1.0);
 bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample);
-bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale = 1.0, double change_length = 0.0, bool full_shift = false);
+bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale = 1.0, double change_length = 0.0, bool full_shift = false, double supported_end = -1.0);
 bool buildRoadBoundedChangePath(const LaneChain& lane, std::vector<FamilyPoint2d>& path);
 bool pathInsideRoad(const std::vector<FamilyPoint2d>& path, const std::vector<LaneChain>* geometry = nullptr);
 void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>& path);
@@ -1430,14 +1430,15 @@ std::string bboxStopReason() {
 // ============================================================================
 // 12. 공통 경로 생성·도로 경계 검사 (실험 경로의 장애물 검사는 별도 clearance 코어)
 // ============================================================================
-const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* geometry) {
+const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* geometry, double required_x) {
+    const double end_x=required_x>=0.?required_x:params.path_horizon;
     const LaneChain* found = nullptr;
     for (const auto& lane : geometry ? *geometry : change_state.lanes) {
-        if (lane.lane_index != lane_index) continue;
+        if (lane.lane_index != lane_index || lane.centerline.empty()) continue;
         LaneSample first, last;
         const double near_x=params.contact_clearance_enabled ? lane_boundary_adapter::clearance::nearReferenceX(lane.centerline.front().x,params.planning_start_x):params.planning_start_x;
         if (!std::isfinite(near_x) || !interpolateLaneAtX(lane, near_x, first) ||
-            !interpolateLaneAtX(lane, params.path_horizon, last)) continue;
+            !interpolateLaneAtX(lane, end_x, last)) continue;
         if (found != nullptr) return nullptr;  // 겹친 경계가 모호하면 변경하지 않는다.
         found = &lane;
     }
@@ -1467,14 +1468,16 @@ bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample) {
     return true;
 }
 
-bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale, double change_length, bool full_shift) {
+bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale, double change_length, bool full_shift, double supported_end) {
     path.clear();
     LaneSample origin, next;
     if (!samplePlanningLane(lane, 0.0, origin) || !samplePlanningLane(lane, 1.0, next)) return false;
     const double origin_heading = next.center.y - origin.center.y;
-    const int steps = static_cast<int>(std::ceil(params.path_horizon / params.path_sample_step));
+    const double end_x=supported_end>=0.?std::min(supported_end,params.path_horizon):params.path_horizon;
+    if(!std::isfinite(end_x)||end_x<=0.)return false;
+    const int steps = static_cast<int>(std::ceil(end_x / params.path_sample_step));
     for (int index = 0; index <= steps; ++index) {
-        const double x = std::min(index * params.path_sample_step, params.path_horizon);
+        const double x = std::min(index * params.path_sample_step, end_x);
         LaneSample sample;
         if (!samplePlanningLane(lane, x, sample)) return false;
         double y = sample.center.y;
@@ -1623,7 +1626,7 @@ std::string updateContactPathPlan() {
     if(!std::isfinite(horizon) || horizon<params.lookahead_distance+params.vehicle_front+params.obstacle_longitudinal_margin+2*params.path_sample_step)
         return fail("contact_swept_horizon_missing");
     std::vector<lane_boundary_adapter::clearance::Point> road_reference;
-    const auto* reference_lane=getPlanningLane(1,geometry);
+    const auto* reference_lane=getPlanningLane(1,geometry,horizon);
     if(!reference_lane)return fail("contact_road_reference_missing");
     for(const auto& p:reference_lane->left_boundary)road_reference.push_back({p.x,p.y});
     std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
@@ -1635,7 +1638,7 @@ std::string updateContactPathPlan() {
     if(change_state.entry_lane<0)change_state.entry_lane=follower_state.locked_lane;
     struct Candidate { LaneChain lane; std::vector<FamilyPoint2d> path; double offset=0,length=0; };
     auto find=[&](int index,Candidate& found){
-        const auto* original=getPlanningLane(index,geometry);if(!original)return false;
+        const auto* original=getPlanningLane(index,geometry,horizon);if(!original)return false;
         const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
             params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
         // Recorded r24 has a feasible -0.35m/3m remaining corridor missed by
@@ -1651,10 +1654,14 @@ std::string updateContactPathPlan() {
             // Contact trial evaluates the complete shift. The old 2.4 m cap
             // otherwise makes distinct adjacent-lane offsets identical; every
             // full candidate still passes the unchanged road/curvature guard.
-            if(!buildPath(lane,true,path,1.0,length,true))continue;
+            // r34: corrected observations ended at14.76m, so requiring a
+            // fixed15m sample rejected the whole corridor. Generate only to
+            // the existing grid point whose ENTIRE vehicle is supported.
+            // Never invent the missing endpoint or bridge an INVALID gap.
             const double supported_axle_x=horizon-std::hypot(params.vehicle_front+params.obstacle_longitudinal_margin+params.path_sample_step,
                 params.vehicle_width/2+params.obstacle_lateral_margin)-.1;
-            while(!path.empty() && path.back().x>supported_axle_x)path.pop_back();
+            const double path_end=std::floor(std::min(params.path_horizon,supported_axle_x)/params.path_sample_step)*params.path_sample_step;
+            if(!buildPath(lane,true,path,1.0,length,true,path_end))continue;
             if(path.empty() || path.back().x<params.lookahead_distance || !pathInsideRoad(path,geometry)){++contact_road_rejected;continue;}
             std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
             for(const auto& p:path)points.push_back({p.x,p.y});
@@ -1712,7 +1719,7 @@ std::string updateContactPathPlan() {
     storePlannedTarget(candidate.lane,candidate.path);
     change_state.target_lane=target;
     if(change_state.changing){
-        const auto* original=getPlanningLane(target,geometry);LaneSample near,ahead;
+        const auto* original=getPlanningLane(target,geometry,horizon);LaneSample near,ahead;
         if(original && samplePlanningLane(*original,params.planning_start_x,near) &&
            samplePlanningLane(*original,params.planning_start_x+1.,ahead) &&
            contact_result->lane_stamp!=change_state.completion_stamp){
