@@ -163,7 +163,21 @@
   }
   function isStale() { return freshness().stale; }
 
+  function renderFilterSummary() {
+    const sc = state.scene;
+    if (!sc || !sc.stages || sc.processed === false) {
+      el('pipeline-filter-summary').textContent = sc ? '이 스캔 미처리 · 필터 전후 수치 없음' : '필터 상태 수신 대기';
+      return;
+    }
+    const c = sc.counts || {};
+    const removed = Number.isFinite(c.voxel) && Number.isFinite(c.cluster_input) ? c.voxel - c.cluster_input : null;
+    el('pipeline-filter-summary').textContent = '이 스캔 · 음영 필터 ' + (sc.tunnel && sc.tunnel.ran ? '실행' : '미실행') +
+      ' · 전처리 전(voxel) ' + fmtInt(c.voxel) + '점 → 후(군집 입력) ' + fmtInt(c.cluster_input) +
+      '점 · 전체 제거 ' + fmtInt(removed) + '점';
+  }
+
   function renderStatus() {
+    renderFilterSummary();
     const st = state.status;
     const counts={keep:0,exclude_candidate:0,undetermined:0};
     const report=state.scene&&state.scene.hd_map_audit;
@@ -313,8 +327,8 @@
       add('ROI 점', sm('roi'));
       add('voxel 점', sm('voxel'));
       add('leveled 점', sm('leveled'));
-      add('RANSAC 비지면 / 제거 지면', c.ground_kept + ' / ' + (c.leveled - c.ground_kept));
-      add('tunnel 제거', (sc.tunnel && sc.tunnel.ran) ? c.tunnel_removed : 'OFF');
+      add('전처리 전(voxel) / 후(군집 입력)', c.voxel + ' / ' + c.cluster_input);
+      add('음영 경로 전체 제거 (지면 포함)', (sc.tunnel && sc.tunnel.ran) ? c.tunnel_removed : '미실행');
       add('군집 입력 / cluster', c.cluster_input + ' / ' + c.clusters);
       add('detections / tracks (obs/pred)', c.detections + ' / ' + c.tracks + ' (' + c.observed + '/' + c.predicted + ')');
       add('roll / pitch (deg)', fmt(sc.local.roll_rad * 57.29578, 2) + ' / ' + fmt(sc.local.pitch_rad * 57.29578, 2) + (sc.config && sc.config.roll_leveling ? ' · roll+pitch 보정' : ' · pitch only'));
@@ -348,7 +362,9 @@
     cnt('c-roi', c ? c.roi + ' / ' + s.roi.sent : '-');
     cnt('c-voxel', c ? c.voxel + ' / ' + s.voxel.sent : '-');
     cnt('c-leveled', c ? c.leveled + ' / ' + s.leveled.sent : '-');
-    cnt('c-ground', c ? String((c.height_kept===undefined?c.leveled:c.height_kept) - c.ground_kept) : '-');
+    const labels = state.arrays['leveled.label'];
+    const removedSampleCount = (label) => c && labels ? '표본 ' + labels.reduce((n, value) => n + (value === label ? 1 : 0), 0) : '-';
+    cnt('c-ground', removedSampleCount(1));
     cnt('c-height',c?String(c.height_removed||0):'-');
     const roi=sc&&sc.config&&sc.config.roi;
     el('roi-range').textContent=roi?'3D '+roi.range_m.join('–')+'m':'';
@@ -364,8 +380,8 @@
       '하부 점·OBB 하단 >'+fmt(report.roof_limit_base_z,3)+'m (base_link)':'판정 설정 수신 대기';
     el('criteria-obb').textContent=report&&report.minimum_obb_road_ratio!==undefined?
       '도로 안쪽 '+fmt(report.road_inset_m,2)+'m · OBB 면적 ≥'+fmt(report.minimum_obb_road_ratio*100,1)+'%':'구형 비교 · 겹침0% 초과';
-    cnt('c-tunnel', c ? (sc.tunnel && sc.tunnel.ran ? String(c.tunnel_removed) : 'OFF') : '-');
-    cnt('c-nonground', c ? String(c.ground_kept) : '-');
+    cnt('c-tunnel', removedSampleCount(2));
+    cnt('c-nonground', c ? String(c.cluster_input) : '-');
     cnt('c-clusters', c ? String(c.clusters) : '-');
     cnt('c-detections', c ? String(c.detections) : '-');
     cnt('c-tracks', c ? c.observed + ' obs + ' + c.predicted + ' pred' : '-');
