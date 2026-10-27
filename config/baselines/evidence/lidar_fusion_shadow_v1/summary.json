@@ -1,0 +1,1312 @@
+{
+  "experiment": "lidar-fusion-shadow-20261018-r1",
+  "date": "2026-10-18",
+  "gpu": "RTX 4060 Ti 8GB",
+  "input": {
+    "bag": "/data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag",
+    "bag_sha256": "9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34",
+    "scans": 208,
+    "topics": {
+      "/Ego_topic": {
+        "type": "morai_msgs/EgoVehicleStatus",
+        "messages": 1238
+      },
+      "/cam_extra/image_jpeg/compressed": {
+        "type": "sensor_msgs/CompressedImage",
+        "messages": 247
+      },
+      "/cam_left/image_jpeg/compressed": {
+        "type": "sensor_msgs/CompressedImage",
+        "messages": 494
+      },
+      "/cam_right/image_jpeg/compressed": {
+        "type": "sensor_msgs/CompressedImage",
+        "messages": 494
+      },
+      "/gps": {
+        "type": "morai_msgs/GPSMessage",
+        "messages": 124
+      },
+      "/gps/fix": {
+        "type": "sensor_msgs/NavSatFix",
+        "messages": 124
+      },
+      "/image_jpeg/compressed": {
+        "type": "sensor_msgs/CompressedImage",
+        "messages": 494
+      },
+      "/imu": {
+        "type": "sensor_msgs/Imu",
+        "messages": 1223
+      },
+      "/morai_sensor_bridge/diagnostics": {
+        "type": "diagnostic_msgs/DiagnosticArray",
+        "messages": 5
+      },
+      "/morai_udp_bridge/diagnostics": {
+        "type": "diagnostic_msgs/DiagnosticArray",
+        "messages": 5
+      },
+      "/tf_static": {
+        "type": "tf2_msgs/TFMessage",
+        "messages": 1
+      },
+      "/velodyne_points": {
+        "type": "sensor_msgs/PointCloud2",
+        "messages": 208
+      }
+    },
+    "matches_by_view": {
+      "front": 208,
+      "left": 208,
+      "right": 208
+    },
+    "maximum_timestamp_offset_ms": 50,
+    "calibration_sha256": "86d36e10f5ca1f9b32d201b3222e4328a63d9ff1452b49defec07c7b2ca806ec",
+    "sensor_set_sha256": "4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f",
+    "source_sha256": "43dc238091623d3ac8a0bd13ff65624345cf76e2cf45021954fdf257b0596770",
+    "cameras": [
+      "front",
+      "left",
+      "right"
+    ],
+    "extra_camera_excluded": "camera4 points upward/front in v3; not a calibrated rear camera",
+    "coordinate": "raw velodyne -> lidar mount -> base_link -> optical; no leveling or ground removal",
+    "scope": "offline nearest header stamp, may use later image; not causal arrival validation",
+    "gt_available": false,
+    "operational_defaults_changed": false
+  },
+  "executed_source_hashes": {
+    "src/asmc_camera/config/cameras_v3.yaml": "86d36e10f5ca1f9b32d201b3222e4328a63d9ff1452b49defec07c7b2ca806ec",
+    "config/morai/sensors/ASMC_sensor_set_v3.json": "4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f",
+    "src/asmc_camera/src/asmc_camera/detection/yolo_batch_backend.py": "703293c00b576c4f7f112eecb26c27e841bc03391d54bf46f0f3eb8100de8e7b",
+    "src/asmc_camera/src/asmc_camera/detection/segmentation.py": "6c9183ecdc4ef29df057b580c946b1f286014a0a038020f40700d6e8a1d35a2f",
+    "src/asmc_camera/src/asmc_camera/bev/calibration.py": "1bf6efb0c96e1056e12ed9afbff1474b247529ea09b03fbb0b7bc9acccf1fedc",
+    "src/asmc_camera/src/asmc_camera/runtime/tensorrt.py": "1f1eb4b530fcae7bbdfa17479ccb4cbf983dc3911396f8899afa45932ec9fd03"
+  },
+  "pidnet_weights": {
+    "url": "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/pidnet/v2/PIDNet_S_Cityscapes_val.pt",
+    "bytes": 31145857,
+    "sha256": "b51aa935bdb64a0779d776f38267fd49f7cce59413910abbbf0a74934b3d7c01",
+    "source_loader": "https://github.com/qualcomm/ai-hub-models/blob/v0.64.0/src/qai_hub_models/models/pidnet/model.py",
+    "original_drive": "Cityscapes child folder redirected to Google login"
+  },
+  "models": {
+    "e8": {
+      "model": "e8",
+      "frames": 624,
+      "views": {
+        "front": 208,
+        "left": 208,
+        "right": 208
+      },
+      "weights": "/root/ws/src/asmc_camera/models/object_detection/yolo26l-finetuned_e8.engine",
+      "weights_sha256": "c9dc3ca826c9fffa4705da4e31b7ff65c913a50b9658f4d74a7079d08df21f97",
+      "labels": {
+        "box": 258,
+        "bus": 7,
+        "truck": 2,
+        "concrete_barrier": 21,
+        "plastic_barrier": 2,
+        "traffic_drum": 3,
+        "dog": 2,
+        "car": 1
+      },
+      "totals": {
+        "box_points": 37362,
+        "geometry_points": 21821,
+        "mask_points": 0,
+        "detections": 296,
+        "detections_at_07": 217,
+        "with_box_support": 242,
+        "with_geometry_support": 200
+      },
+      "timings_ms": {
+        "inference_ms": {
+          "p50": 22.260504003497772,
+          "p95": 31.782241642213197,
+          "p99": 37.064488024043385
+        },
+        "projection_ms": {
+          "p50": 1.7010479932650924,
+          "p95": 4.1939012975490195,
+          "p99": 7.708298135112271
+        },
+        "geometry_only_ms": {
+          "p50": 0.00025200279196724296,
+          "p95": 3.915289388532984,
+          "p99": 8.689992136496578
+        }
+      },
+      "timings_by_view_ms": {
+        "front": {
+          "p50": 24.92389099643333,
+          "p95": 35.25014415499754,
+          "p99": 40.37673763581552
+        },
+        "left": {
+          "p50": 21.947010995063465,
+          "p95": 29.651906746585148,
+          "p99": 31.167537972651193
+        },
+        "right": {
+          "p50": 20.74963150516851,
+          "p95": 28.632664155156817,
+          "p99": 33.91253689624137
+        }
+      },
+      "torch_peak_allocated_mib": 49.3076171875,
+      "torch_peak_reserved_mib": 80.0,
+      "gpu_total_mib": 8187.5,
+      "gpu_free_before_load_mib": 7054.0,
+      "gpu_free_after_mib": 6632.0,
+      "model_info": {
+        "backend": "tensorrt",
+        "model_kind": "yolo",
+        "task": "detect",
+        "weights": "/root/ws/src/asmc_camera/models/object_detection/yolo26l-finetuned_e8.engine",
+        "weights_sha256": "c9dc3ca826c9fffa4705da4e31b7ff65c913a50b9658f4d74a7079d08df21f97",
+        "allowed_names": [
+          "person",
+          "dog",
+          "deer",
+          "bicycle",
+          "car",
+          "motorcycle",
+          "bus",
+          "truck",
+          "bollard",
+          "box",
+          "concrete_barrier",
+          "steel_barricade",
+          "traffic_drum",
+          "plastic_barrier",
+          "traffic_cone",
+          "stroller"
+        ],
+        "batch_mode": "2plus1",
+        "shapes": {
+          "front": [
+            544,
+            960
+          ],
+          "left": [
+            480,
+            640
+          ],
+          "right": [
+            480,
+            640
+          ]
+        },
+        "device": "cuda:0",
+        "model_device": "cuda:0",
+        "ultralytics": "8.4.150",
+        "torch": "2.1.2+cu118",
+        "conf_thres": 0.4,
+        "model_load_ms": 691.7308919946663,
+        "warmup_ms": 339.1259350028122,
+        "head": "one-to-one + external same-class NMS",
+        "nms_iou": 0.5,
+        "masks_materialized": false,
+        "direct_detect": true,
+        "tensorrt": "10.13.0.35",
+        "input_fp16": false,
+        "export_metadata": {
+          "description": "Ultralytics YOLO26l model trained on /home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/dataset_versions/camera_objects_bbox_v11-preflight-r4/data.yaml",
+          "author": "Ultralytics",
+          "date": "2026-10-14T16:42:25.450210+09:00",
+          "version": "8.4.150",
+          "license": "AGPL-3.0 License (https://ultralytics.com/license)",
+          "docs": "https://docs.ultralytics.com",
+          "stride": 32,
+          "task": "detect",
+          "head": "Detect",
+          "batch": 1,
+          "imgsz": [
+            736,
+            1280
+          ],
+          "names": {
+            "0": "person",
+            "1": "dog",
+            "2": "deer",
+            "3": "bicycle",
+            "4": "car",
+            "5": "motorcycle",
+            "6": "bus",
+            "7": "truck",
+            "8": "bollard",
+            "9": "box",
+            "10": "concrete_barrier",
+            "11": "steel_barricade",
+            "12": "traffic_drum",
+            "13": "plastic_barrier",
+            "14": "traffic_cone",
+            "15": "stroller"
+          },
+          "args": {
+            "data": null,
+            "batch": 3,
+            "fraction": 1.0,
+            "quantize": 16,
+            "nms": false,
+            "dynamic": true,
+            "simplify": true,
+            "opset": 17
+          },
+          "channels": 3,
+          "end2end": true,
+          "dynamic": true
+        }
+      },
+      "script_sha256": "43dc238091623d3ac8a0bd13ff65624345cf76e2cf45021954fdf257b0596770",
+      "input_manifest_sha256": "3b0fedc7e9ff11f34e134d71ad19c73e5038048da7191e0e98d575a4934f463d",
+      "torch": "2.1.2+cu118",
+      "python": "3.8.10",
+      "geometry": {
+        "radius_m": 0.55,
+        "depth_gap_m": 0.75,
+        "min_component_points": 3,
+        "selection": "nearest central supported component"
+      },
+      "gt_accuracy_evaluable": false,
+      "object_deletion_enabled": false,
+      "operational_defaults_changed": false,
+      "scope": "model-isolated offline diagnostic; raw points, no production ground/cluster/tracker or concurrent lane/control; not realtime acceptance",
+      "front_labels": {
+        "box": 200,
+        "concrete_barrier": 21,
+        "plastic_barrier": 2,
+        "traffic_drum": 3,
+        "dog": 2
+      },
+      "labels_at_07": {
+        "box": 214,
+        "concrete_barrier": 3
+      },
+      "detection_frames_by_view": {
+        "front": 163,
+        "left": 23,
+        "right": 42
+      },
+      "box_supported_but_geometry_unknown": 42,
+      "detections_without_raw_support": 54,
+      "active_frame_geometry_ms": {
+        "p50": 1.0306379990652204,
+        "p95": 7.191102847718821,
+        "p99": 15.584661368920914
+      },
+      "maximum_frame_geometry_ms": 41.11856999224983
+    },
+    "yolo26s-seg": {
+      "model": "yolo26s-seg",
+      "frames": 624,
+      "views": {
+        "front": 208,
+        "left": 208,
+        "right": 208
+      },
+      "weights": "/data/models/camera_seg_v1/yolo26s-seg.pt",
+      "weights_sha256": "3da1d83e31caec96f9300eb4064f4f62882c133c7c264d63dfe61a7c197837a4",
+      "labels": {
+        "airplane": 25,
+        "train": 17,
+        "bird": 1,
+        "bench": 1,
+        "skis": 1,
+        "boat": 2,
+        "skateboard": 1
+      },
+      "totals": {
+        "box_points": 67665,
+        "geometry_points": 5314,
+        "mask_points": 43576,
+        "detections": 48,
+        "detections_at_07": 2,
+        "with_box_support": 44,
+        "with_geometry_support": 41
+      },
+      "timings_ms": {
+        "inference_ms": {
+          "p50": 43.69554349250393,
+          "p95": 64.43385100501474,
+          "p99": 77.92955200653522
+        },
+        "projection_ms": {
+          "p50": 1.8743815016932786,
+          "p95": 5.524356348178118,
+          "p99": 10.329439896013351
+        },
+        "geometry_only_ms": {
+          "p50": 0.00020499282982200384,
+          "p95": 2.0315046531322976,
+          "p99": 8.641288466169481
+        }
+      },
+      "timings_by_view_ms": {
+        "front": {
+          "p50": 44.653140008449554,
+          "p95": 67.39178030475156,
+          "p99": 73.9725688600447
+        },
+        "left": {
+          "p50": 45.67715249868343,
+          "p95": 65.30039145072801,
+          "p99": 77.74774113539029
+        },
+        "right": {
+          "p50": 41.27665799751412,
+          "p95": 61.06580474588553,
+          "p99": 80.17909303613125
+        }
+      },
+      "torch_peak_allocated_mib": 271.3466796875,
+      "torch_peak_reserved_mib": 294.0,
+      "gpu_total_mib": 8187.5,
+      "gpu_free_before_load_mib": 7054.0,
+      "gpu_free_after_mib": 6670.0,
+      "model_info": {
+        "backend": "ultralytics",
+        "model_kind": "yolo",
+        "prompt_embeddings_sha256": "",
+        "weights": "/data/models/camera_seg_v1/yolo26s-seg.pt",
+        "weights_sha256": "3da1d83e31caec96f9300eb4064f4f62882c133c7c264d63dfe61a7c197837a4",
+        "device": "cuda:0",
+        "model_device": "cuda:0",
+        "ultralytics": "8.4.150",
+        "torch": "2.1.2+cu118",
+        "conf_thres": 0.4,
+        "allowed_names": [
+          "person",
+          "bicycle",
+          "car",
+          "motorcycle",
+          "airplane",
+          "bus",
+          "train",
+          "truck",
+          "boat",
+          "traffic light",
+          "fire hydrant",
+          "stop sign",
+          "parking meter",
+          "bench",
+          "bird",
+          "cat",
+          "dog",
+          "horse",
+          "sheep",
+          "cow",
+          "elephant",
+          "bear",
+          "zebra",
+          "giraffe",
+          "backpack",
+          "umbrella",
+          "handbag",
+          "tie",
+          "suitcase",
+          "frisbee",
+          "skis",
+          "snowboard",
+          "sports ball",
+          "kite",
+          "baseball bat",
+          "baseball glove",
+          "skateboard",
+          "surfboard",
+          "tennis racket",
+          "bottle",
+          "wine glass",
+          "cup",
+          "fork",
+          "knife",
+          "spoon",
+          "bowl",
+          "banana",
+          "apple",
+          "sandwich",
+          "orange",
+          "broccoli",
+          "carrot",
+          "hot dog",
+          "pizza",
+          "donut",
+          "cake",
+          "chair",
+          "couch",
+          "potted plant",
+          "bed",
+          "dining table",
+          "toilet",
+          "tv",
+          "laptop",
+          "mouse",
+          "remote",
+          "keyboard",
+          "cell phone",
+          "microwave",
+          "oven",
+          "toaster",
+          "sink",
+          "refrigerator",
+          "book",
+          "clock",
+          "vase",
+          "scissors",
+          "teddy bear",
+          "hair drier",
+          "toothbrush"
+        ],
+        "predict_overrides": {
+          "imgsz": 640,
+          "half": false,
+          "end2end": true,
+          "max_det": 300
+        },
+        "warmup_ms": 1934.3,
+        "model_load_ms": 739.2905540036736
+      },
+      "script_sha256": "43dc238091623d3ac8a0bd13ff65624345cf76e2cf45021954fdf257b0596770",
+      "input_manifest_sha256": "3b0fedc7e9ff11f34e134d71ad19c73e5038048da7191e0e98d575a4934f463d",
+      "torch": "2.1.2+cu118",
+      "python": "3.8.10",
+      "geometry": {
+        "radius_m": 0.55,
+        "depth_gap_m": 0.75,
+        "min_component_points": 3,
+        "selection": "nearest central supported component"
+      },
+      "gt_accuracy_evaluable": false,
+      "object_deletion_enabled": false,
+      "operational_defaults_changed": false,
+      "scope": "model-isolated offline diagnostic; raw points, no production ground/cluster/tracker or concurrent lane/control; not realtime acceptance",
+      "front_labels": {
+        "train": 1
+      },
+      "labels_at_07": {
+        "train": 2
+      },
+      "detection_frames_by_view": {
+        "front": 1,
+        "left": 18,
+        "right": 28
+      },
+      "box_supported_but_geometry_unknown": 3,
+      "detections_without_raw_support": 4,
+      "active_frame_geometry_ms": {
+        "p50": 3.1478970049647614,
+        "p95": 18.23672480823006,
+        "p99": 28.38190625654532
+      },
+      "maximum_frame_geometry_ms": 36.02734499145299
+    },
+    "yoloe26s-seg": {
+      "model": "yoloe26s-seg",
+      "frames": 624,
+      "views": {
+        "front": 208,
+        "left": 208,
+        "right": 208
+      },
+      "weights": "/data/models/camera_seg_v1/yoloe-26s-seg.pt",
+      "weights_sha256": "48f24206bc8680d60cbbfa296b0140da849669b9515058b72f5a945142df0654",
+      "labels": {
+        "wooden crate": 89,
+        "airplane": 36,
+        "train": 25,
+        "bench": 45,
+        "scissors": 9,
+        "umbrella": 3,
+        "tv": 1,
+        "kite": 2
+      },
+      "totals": {
+        "box_points": 466603,
+        "geometry_points": 135728,
+        "mask_points": 282195,
+        "detections": 210,
+        "detections_at_07": 38,
+        "with_box_support": 187,
+        "with_geometry_support": 158
+      },
+      "timings_ms": {
+        "inference_ms": {
+          "p50": 50.43586549436441,
+          "p95": 66.91222265217222,
+          "p99": 78.15483569065685
+        },
+        "projection_ms": {
+          "p50": 1.7885500055854209,
+          "p95": 4.212395242211643,
+          "p99": 6.713037844747304
+        },
+        "geometry_only_ms": {
+          "p50": 0.00023200118448585272,
+          "p95": 21.224592442013098,
+          "p99": 129.36939212304264
+        }
+      },
+      "timings_by_view_ms": {
+        "front": {
+          "p50": 51.60044050717261,
+          "p95": 70.32519144631806,
+          "p99": 79.64464182965457
+        },
+        "left": {
+          "p50": 51.758577006694395,
+          "p95": 65.15551849661277,
+          "p99": 73.58595387559035
+        },
+        "right": {
+          "p50": 47.87724299239926,
+          "p95": 65.41684720214106,
+          "p99": 73.4726639770088
+        }
+      },
+      "torch_peak_allocated_mib": 275.248046875,
+      "torch_peak_reserved_mib": 290.0,
+      "gpu_total_mib": 8187.5,
+      "gpu_free_before_load_mib": 7054.0,
+      "gpu_free_after_mib": 6720.0,
+      "model_info": {
+        "backend": "ultralytics",
+        "model_kind": "yoloe",
+        "prompt_embeddings_sha256": "fc680dca84439aaca9fa64e1c2637a833e57bda9ccae24ceed714a1e36a08dd5",
+        "weights": "/data/models/camera_seg_v1/yoloe-26s-seg.pt",
+        "weights_sha256": "48f24206bc8680d60cbbfa296b0140da849669b9515058b72f5a945142df0654",
+        "device": "cuda:0",
+        "model_device": "cuda:0",
+        "ultralytics": "8.4.150",
+        "torch": "2.1.2+cu118",
+        "conf_thres": 0.4,
+        "allowed_names": [
+          "person",
+          "bicycle",
+          "car",
+          "motorcycle",
+          "airplane",
+          "bus",
+          "train",
+          "truck",
+          "boat",
+          "traffic light",
+          "fire hydrant",
+          "stop sign",
+          "parking meter",
+          "bench",
+          "bird",
+          "cat",
+          "dog",
+          "horse",
+          "sheep",
+          "cow",
+          "elephant",
+          "bear",
+          "zebra",
+          "giraffe",
+          "backpack",
+          "umbrella",
+          "handbag",
+          "tie",
+          "suitcase",
+          "frisbee",
+          "skis",
+          "snowboard",
+          "sports ball",
+          "kite",
+          "baseball bat",
+          "baseball glove",
+          "skateboard",
+          "surfboard",
+          "tennis racket",
+          "bottle",
+          "wine glass",
+          "cup",
+          "fork",
+          "knife",
+          "spoon",
+          "bowl",
+          "banana",
+          "apple",
+          "sandwich",
+          "orange",
+          "broccoli",
+          "carrot",
+          "hot dog",
+          "pizza",
+          "donut",
+          "cake",
+          "chair",
+          "couch",
+          "potted plant",
+          "bed",
+          "dining table",
+          "toilet",
+          "tv",
+          "laptop",
+          "mouse",
+          "remote",
+          "keyboard",
+          "cell phone",
+          "microwave",
+          "oven",
+          "toaster",
+          "sink",
+          "refrigerator",
+          "book",
+          "clock",
+          "vase",
+          "scissors",
+          "teddy bear",
+          "hair drier",
+          "toothbrush",
+          "traffic cone",
+          "wooden crate",
+          "cardboard box",
+          "barrel",
+          "barricade",
+          "rock pile",
+          "stroller",
+          "deer",
+          "electric scooter"
+        ],
+        "predict_overrides": {
+          "imgsz": 640,
+          "half": false,
+          "end2end": true,
+          "max_det": 300
+        },
+        "warmup_ms": 1582.3,
+        "model_load_ms": 801.9109229935566
+      },
+      "script_sha256": "43dc238091623d3ac8a0bd13ff65624345cf76e2cf45021954fdf257b0596770",
+      "input_manifest_sha256": "3b0fedc7e9ff11f34e134d71ad19c73e5038048da7191e0e98d575a4934f463d",
+      "torch": "2.1.2+cu118",
+      "python": "3.8.10",
+      "geometry": {
+        "radius_m": 0.55,
+        "depth_gap_m": 0.75,
+        "min_component_points": 3,
+        "selection": "nearest central supported component"
+      },
+      "gt_accuracy_evaluable": false,
+      "object_deletion_enabled": false,
+      "operational_defaults_changed": false,
+      "scope": "model-isolated offline diagnostic; raw points, no production ground/cluster/tracker or concurrent lane/control; not realtime acceptance",
+      "prompt_sha256": "fc680dca84439aaca9fa64e1c2637a833e57bda9ccae24ceed714a1e36a08dd5",
+      "front_labels": {
+        "wooden crate": 67,
+        "train": 1,
+        "bench": 1
+      },
+      "labels_at_07": {
+        "airplane": 7,
+        "wooden crate": 23,
+        "train": 2,
+        "bench": 4,
+        "umbrella": 2
+      },
+      "detection_frames_by_view": {
+        "front": 67,
+        "left": 57,
+        "right": 71
+      },
+      "box_supported_but_geometry_unknown": 29,
+      "detections_without_raw_support": 23,
+      "active_frame_geometry_ms": {
+        "p50": 4.713175003416836,
+        "p95": 45.103776702308075,
+        "p99": 592.5160298010452
+      },
+      "maximum_frame_geometry_ms": 886.549125003512
+    },
+    "pidnet-s": {
+      "model": "pidnet-s",
+      "frames": 624,
+      "views": {
+        "front": 208,
+        "left": 208,
+        "right": 208
+      },
+      "weights": "/tmp/lidar-fusion-shadow-20261018-r1/PIDNet_S_Cityscapes_val.pt",
+      "weights_sha256": "b51aa935bdb64a0779d776f38267fd49f7cce59413910abbbf0a74934b3d7c01",
+      "labels": {
+        "13": 254789,
+        "0": 117515,
+        "15": 834735,
+        "2": 1048840,
+        "14": 589624,
+        "10": 18782,
+        "12": 6421,
+        "9": 60390,
+        "7": 7058,
+        "18": 375,
+        "8": 8444,
+        "17": 14643,
+        "4": 101508,
+        "5": 8634,
+        "6": 9,
+        "1": 121004,
+        "16": 500349,
+        "3": 124942,
+        "11": 2205
+      },
+      "totals": {},
+      "timings_ms": {
+        "inference_ms": {
+          "p50": 23.035885002173018,
+          "p95": 33.55526005761931,
+          "p99": 38.7684158902266
+        },
+        "projection_ms": {
+          "p50": 1.735266501782462,
+          "p95": 3.5554157540900637,
+          "p99": 6.234217739256564
+        },
+        "geometry_only_ms": {}
+      },
+      "timings_by_view_ms": {
+        "front": {
+          "p50": 24.75373000925174,
+          "p95": 34.50433534962937,
+          "p99": 38.706078728428125
+        },
+        "left": {
+          "p50": 22.374931009835564,
+          "p95": 32.46265850466443,
+          "p99": 35.26248750160449
+        },
+        "right": {
+          "p50": 22.718872503901366,
+          "p95": 34.77528104776865,
+          "p99": 39.37912174515077
+        }
+      },
+      "torch_peak_allocated_mib": 243.984375,
+      "torch_peak_reserved_mib": 346.0,
+      "gpu_total_mib": 8187.5,
+      "gpu_free_before_load_mib": 7054.0,
+      "gpu_free_after_mib": 6676.0,
+      "model_info": {},
+      "script_sha256": "43dc238091623d3ac8a0bd13ff65624345cf76e2cf45021954fdf257b0596770",
+      "input_manifest_sha256": "3b0fedc7e9ff11f34e134d71ad19c73e5038048da7191e0e98d575a4934f463d",
+      "torch": "2.1.2+cu118",
+      "python": "3.8.10",
+      "geometry": {
+        "radius_m": 0.55,
+        "depth_gap_m": 0.75,
+        "min_component_points": 3,
+        "selection": "nearest central supported component"
+      },
+      "gt_accuracy_evaluable": false,
+      "object_deletion_enabled": false,
+      "operational_defaults_changed": false,
+      "scope": "model-isolated offline diagnostic; raw points, no production ground/cluster/tracker or concurrent lane/control; not realtime acceptance",
+      "pidnet_revision": "4c158cf24ce432f0a8cb43364fae38d93cee0dc3",
+      "complete_checkpoint": true,
+      "ceiling_class_available": false,
+      "latency_excludes": "CPU resize/normalization and input tensor upload; includes forward/logit resize/argmax/CPU transfer"
+    }
+  },
+  "pcl": {
+    "scans": 208,
+    "timings_ms": {
+      "normal_ms": {
+        "p50": 5.695281,
+        "p95": 12.649961249999992,
+        "p99": 15.251955080000007
+      },
+      "plane_ms": {
+        "p50": 12.691734,
+        "p95": 28.44894319999997,
+        "p99": 37.72491197000005
+      }
+    },
+    "combined_ms": {
+      "p50": 18.030305,
+      "p95": 38.50841405,
+      "p99": 45.18854828
+    },
+    "plane_counts": {
+      "4": 171,
+      "3": 11,
+      "2": 15,
+      "1": 11
+    },
+    "parameters": {
+      "normal_k": 12,
+      "maximum_planes": 4,
+      "ransac_iterations": 150,
+      "distance_m": 0.12
+    },
+    "input_manifest": {
+      "scans": 208,
+      "roi_raw_sensor_m": {
+        "x": [
+          -5,
+          35
+        ],
+        "y": [
+          -15,
+          15
+        ],
+        "z": [
+          -4,
+          10
+        ]
+      },
+      "voxel_m": 0.15,
+      "representative": "first original point, not average; raw ordinal preserved",
+      "point_counts": [
+        2219,
+        2909,
+        2913,
+        1874,
+        2196,
+        1883,
+        2335,
+        2905,
+        2531,
+        1988,
+        2237,
+        2315,
+        2624,
+        2071,
+        2124,
+        1976,
+        2391,
+        2916,
+        2062,
+        2945,
+        2273,
+        2316,
+        3012,
+        2217,
+        1965,
+        2091,
+        1947,
+        3064,
+        2101,
+        2563,
+        3145,
+        2115,
+        2327,
+        2001,
+        2350,
+        2234,
+        2499,
+        2970,
+        3533,
+        2456,
+        3699,
+        2041,
+        2522,
+        3786,
+        3812,
+        2606,
+        2907,
+        4303,
+        4445,
+        4510,
+        4464,
+        4179,
+        3019,
+        3169,
+        3152,
+        3894,
+        4346,
+        4678,
+        5316,
+        4233,
+        4080,
+        3983,
+        5858,
+        5916,
+        5923,
+        4121,
+        5906,
+        4734,
+        5004,
+        5897,
+        4924,
+        4067,
+        5972,
+        4915,
+        3878,
+        4487,
+        5282,
+        5183,
+        4373,
+        3737,
+        5834,
+        5846,
+        4348,
+        4265,
+        5116,
+        5376,
+        4734,
+        4082,
+        4053,
+        5279,
+        5919,
+        5259,
+        4401,
+        5522,
+        4574,
+        4718,
+        4654,
+        4742,
+        4277,
+        6005,
+        6029,
+        5717,
+        4790,
+        5140,
+        4629,
+        5071,
+        4361,
+        4153,
+        4300,
+        5344,
+        4405,
+        5235,
+        4942,
+        5086,
+        4520,
+        5973,
+        3920,
+        5982,
+        4661,
+        5079,
+        4568,
+        4697,
+        4403,
+        6034,
+        5271,
+        4452,
+        4953,
+        5969,
+        4647,
+        4671,
+        4224,
+        5755,
+        3979,
+        4295,
+        4845,
+        5444,
+        4241,
+        4619,
+        4452,
+        4013,
+        4340,
+        4731,
+        5838,
+        5471,
+        4231,
+        5708,
+        4516,
+        3946,
+        5042,
+        3847,
+        4673,
+        5751,
+        5579,
+        4392,
+        3929,
+        3835,
+        4553,
+        3829,
+        4535,
+        4059,
+        3881,
+        3660,
+        3649,
+        3561,
+        3935,
+        4222,
+        4131,
+        3763,
+        3205,
+        3403,
+        3355,
+        3015,
+        3050,
+        3137,
+        3151,
+        3051,
+        2519,
+        2545,
+        2560,
+        2456,
+        2039,
+        2073,
+        2406,
+        2344,
+        2212,
+        1889,
+        1714,
+        1768,
+        1896,
+        2261,
+        1554,
+        2246,
+        1612,
+        2017,
+        2126,
+        2178,
+        2072,
+        1703,
+        1649,
+        1604,
+        1655,
+        1787,
+        2087,
+        2188,
+        1826,
+        2191,
+        1606,
+        1641
+      ],
+      "source": "same raw cloud cache; production ground unchanged"
+    },
+    "scope": "raw sensor ROI/voxel, observation only; no gravity/IMU semantic classification, no PCL RegionGrowing/CEC executed",
+    "deletion_enabled": false
+  },
+  "tracker": {
+    "scans": 208,
+    "ready": 208,
+    "plane_valid": 208,
+    "track_ids": 329,
+    "single_observation_ids": 3,
+    "observation_records": 13790,
+    "internal_kf_relative_speed_mps": {
+      "p50": 5.997113466766979,
+      "p95": 20.01371056929646,
+      "p99": 30.979875182151126
+    },
+    "maximum_internal_relative_speed_mps": 58.34473224759329,
+    "over_10mps_observations": 3573,
+    "largest_internal_speed_events": [
+      {
+        "track_id": 76,
+        "scan_index": 118,
+        "stamp_ns": 1789141098459788799,
+        "relative_kf_speed_mps": 58.34473224759329,
+        "initialization_count": 2,
+        "lidar_misses": 24
+      },
+      {
+        "track_id": 76,
+        "scan_index": 117,
+        "stamp_ns": 1789141098259357213,
+        "relative_kf_speed_mps": 56.64308206294127,
+        "initialization_count": 2,
+        "lidar_misses": 23
+      },
+      {
+        "track_id": 76,
+        "scan_index": 116,
+        "stamp_ns": 1789141098158171892,
+        "relative_kf_speed_mps": 55.7840347896568,
+        "initialization_count": 2,
+        "lidar_misses": 22
+      },
+      {
+        "track_id": 81,
+        "scan_index": 117,
+        "stamp_ns": 1789141098259357213,
+        "relative_kf_speed_mps": 55.441806192144476,
+        "initialization_count": 2,
+        "lidar_misses": 24
+      },
+      {
+        "track_id": 76,
+        "scan_index": 115,
+        "stamp_ns": 1789141098061278820,
+        "relative_kf_speed_mps": 54.9614271297071,
+        "initialization_count": 2,
+        "lidar_misses": 21
+      },
+      {
+        "track_id": 81,
+        "scan_index": 116,
+        "stamp_ns": 1789141098158171892,
+        "relative_kf_speed_mps": 54.54069619173021,
+        "initialization_count": 2,
+        "lidar_misses": 23
+      },
+      {
+        "track_id": 76,
+        "scan_index": 114,
+        "stamp_ns": 1789141097950673818,
+        "relative_kf_speed_mps": 54.02240749581864,
+        "initialization_count": 2,
+        "lidar_misses": 20
+      },
+      {
+        "track_id": 81,
+        "scan_index": 115,
+        "stamp_ns": 1789141098061278820,
+        "relative_kf_speed_mps": 53.677808534878196,
+        "initialization_count": 2,
+        "lidar_misses": 22
+      },
+      {
+        "track_id": 76,
+        "scan_index": 113,
+        "stamp_ns": 1789141097849948644,
+        "relative_kf_speed_mps": 53.16726852374191,
+        "initialization_count": 2,
+        "lidar_misses": 19
+      },
+      {
+        "track_id": 81,
+        "scan_index": 114,
+        "stamp_ns": 1789141097950673818,
+        "relative_kf_speed_mps": 52.692819174076966,
+        "initialization_count": 2,
+        "lidar_misses": 21
+      },
+      {
+        "track_id": 76,
+        "scan_index": 112,
+        "stamp_ns": 1789141097747098684,
+        "relative_kf_speed_mps": 52.294092129474436,
+        "initialization_count": 2,
+        "lidar_misses": 18
+      },
+      {
+        "track_id": 81,
+        "scan_index": 113,
+        "stamp_ns": 1789141097849948644,
+        "relative_kf_speed_mps": 51.795815225817776,
+        "initialization_count": 2,
+        "lidar_misses": 20
+      },
+      {
+        "track_id": 76,
+        "scan_index": 111,
+        "stamp_ns": 1789141097630215883,
+        "relative_kf_speed_mps": 51.301781388736785,
+        "initialization_count": 2,
+        "lidar_misses": 17
+      },
+      {
+        "track_id": 81,
+        "scan_index": 112,
+        "stamp_ns": 1789141097747098684,
+        "relative_kf_speed_mps": 50.879894478698176,
+        "initialization_count": 2,
+        "lidar_misses": 19
+      },
+      {
+        "track_id": 76,
+        "scan_index": 110,
+        "stamp_ns": 1789141097530020236,
+        "relative_kf_speed_mps": 50.451142680681436,
+        "initialization_count": 2,
+        "lidar_misses": 16
+      },
+      {
+        "track_id": 81,
+        "scan_index": 111,
+        "stamp_ns": 1789141097630215883,
+        "relative_kf_speed_mps": 49.83900434292109,
+        "initialization_count": 2,
+        "lidar_misses": 18
+      },
+      {
+        "track_id": 76,
+        "scan_index": 109,
+        "stamp_ns": 1789141097429306030,
+        "relative_kf_speed_mps": 49.5961000281466,
+        "initialization_count": 2,
+        "lidar_misses": 15
+      },
+      {
+        "track_id": 81,
+        "scan_index": 110,
+        "stamp_ns": 1789141097530020236,
+        "relative_kf_speed_mps": 48.946723913772864,
+        "initialization_count": 2,
+        "lidar_misses": 17
+      },
+      {
+        "track_id": 81,
+        "scan_index": 109,
+        "stamp_ns": 1789141097429306030,
+        "relative_kf_speed_mps": 48.049828204804896,
+        "initialization_count": 2,
+        "lidar_misses": 16
+      },
+      {
+        "track_id": 76,
+        "scan_index": 108,
+        "stamp_ns": 1789141097226665258,
+        "relative_kf_speed_mps": 47.87573912135637,
+        "initialization_count": 2,
+        "lidar_misses": 14
+      }
+    ],
+    "profile": "common_pitch",
+    "camera_boxes_replayed": false,
+    "binary_sha256": "fbe82c1d814a9588735b248dc0ba2e62c34d2f04eb10954a0788d1bebcefed09",
+    "settings_sha256": "a6d84af1ab14015cdf555ae715cdd8288cde9f1c1ee7d8e0a96e3931751ad7a2",
+    "scope": "2026-10-14 saved deployment snapshot, logical record-order replay; not newly built 2026-10-18 Main, not latency test",
+    "warning": "IDs are algorithm outputs, not actors. Relative KF state is not absolute actor speed or independently validated velocity.",
+    "state_speed_by_observation_status": {
+      "lidar_misses_zero": {
+        "records": 3078,
+        "quantiles_mps": {
+          "p50": 4.955859514839116,
+          "p95": 13.619170842601122,
+          "p99": 20.73355814504316
+        },
+        "maximum_mps": 34.30043055391443
+      },
+      "lidar_misses_positive": {
+        "records": 10712,
+        "quantiles_mps": {
+          "p50": 6.365245920243131,
+          "p95": 20.55644226317299,
+          "p99": 32.851681883631905
+        },
+        "maximum_mps": 58.34473224759329
+      }
+    }
+  },
+  "followup_priority": [
+    "retain E8 + bounded geometry, explicit unsupported/unknown",
+    "PCL finite-support evidence with gravity/ground + object preservation validation",
+    "YOLOE small only if adapted to MORAI and bounded point processing",
+    "PIDNet only after tunnel semantic adaptation",
+    "COCO YOLO26s-seg replacement deferred"
+  ],
+  "not_executed": [
+    "PCL RegionGrowing/Conditional Euclidean Clustering",
+    "official depth_clustering",
+    "HARP-NeXt/FRNet",
+    "CenterPoint-Pillar",
+    "tracker replacement",
+    "4th/rear camera",
+    "concurrent full stack / control"
+  ],
+  "limitations": [
+    "one development bag; no independent object/semantic/velocity GT",
+    "offline nearest image may arrive after scan; not causal runtime policy",
+    "raw points; no production ground/voxel before camera support adapter",
+    "E8 FP16 TensorRT vs seg FP32 at different input sizes and vocabularies; not isolated architecture comparison",
+    "PIDNet latency excludes CPU resize/normalization/H2D; no end-to-end latency ranking",
+    "Torch allocator peaks exclude TensorRT allocations; no total GPU peak claim",
+    "one pass per candidate, incidental host/CPU load; not repeated performance acceptance"
+  ],
+  "validation": {
+    "point_lineage_and_timestamp_tests": 3,
+    "all_model_frames_complete": true,
+    "pcl_scans_complete": true,
+    "tracker_scans_complete": true
+  },
+  "operational_defaults_changed": false
+}

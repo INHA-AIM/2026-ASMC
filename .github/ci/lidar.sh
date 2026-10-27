@@ -2,6 +2,7 @@
 # Run from the repository root after the single workspace build.
 source .github/ci/ros-env.sh
 python3 tools/audit/check_lidar_canonicalization.py
+python3 tools/perception/test_lidar_research_review.py
 python3 src/asmc_lidar/test/test_tracking_samples.py
 python3 src/asmc_lidar/test/test_compare_traces.py
 "${ASMC_CI_DEVEL:-devel}/lib/planning_inputs/planning_lidar_observation_test"
