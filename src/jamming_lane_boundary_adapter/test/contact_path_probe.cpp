@@ -67,14 +67,14 @@ int main(int argc,char**argv){
  }
  std::cout<<"runtime_decision="<<updateContactPathPlan()<<" candidates="<<contact_candidates<<" road_rejected="<<contact_road_rejected<<" collision_rejected="<<contact_collision_rejected<<'\n';
  std::vector<lane_boundary_adapter::clearance::Polygon> local_occupied;
- std::vector<lane_boundary_adapter::clearance::Bounds> contacts;
+ std::vector<lane_boundary_adapter::clearance::Polygon> contacts;
  unsigned contact_index=0;
  for(const auto& poly:bbox->ground_contacts){
   lane_boundary_adapter::clearance::Bounds b{1e100,-1e100,1e100,-1e100};
   for(const auto&p:poly.points){b.xmin=std::min(b.xmin,double(p.x));b.xmax=std::max(b.xmax,double(p.x));b.ymin=std::min(b.ymin,double(p.y));b.ymax=std::max(b.ymax,double(p.y));}
   if(bbox->ground_contact_sources.size()==bbox->boxes.size() && bbox->ground_contact_sources[contact_index]=="lidar_observed")
    local_occupied.push_back({{{b.xmin,b.ymin},{b.xmax,b.ymin},{b.xmax,b.ymax},{b.xmin,b.ymax}}});
-  else contacts.push_back(b);
+  else {lane_boundary_adapter::clearance::Polygon q;for(unsigned i=0;i<4;++i)q[i]={poly.points[i].x,poly.points[i].y};contacts.push_back(q);}
   ++contact_index;
   std::cout<<"contact "<<b.xmin<<','<<b.xmax<<','<<b.ymin<<','<<b.ymax<<'\n';
  }
@@ -83,7 +83,7 @@ int main(int argc,char**argv){
  std::vector<lane_boundary_adapter::clearance::Point> reference;
  for(const auto& lane:change_state.lanes)if(lane.lane_index==1)for(const auto& p:lane.left_boundary)reference.push_back({p.x,p.y});
  std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
- if(!lane_boundary_adapter::clearance::contactOccupancy(contacts,reference,horizon,occupied))return 4;
+ if(!lane_boundary_adapter::clearance::projectedContactOccupancy(contacts,reference,horizon,occupied))return 4;
  for(const auto& p:bbox->local_obstacle_footprints){lane_boundary_adapter::clearance::Polygon o;for(unsigned i=0;i<4;++i)o[i]={p.points[i].x,p.points[i].y};local_occupied.push_back(o);}
  occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};

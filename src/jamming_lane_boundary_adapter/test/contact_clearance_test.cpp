@@ -45,6 +45,25 @@ TEST(ContactClearance, OcclusionFollowsRoadInsteadOfTurningEgoHeading) {
  EXPECT_NEAR(occupied.back()[2].y,-4.5,1e-8);
  EXPECT_FALSE(contactOccupancy({{8.,9.,-2.,-1.5}},{{0.,0.},{10.,-3.}},15.,occupied));
 }
+TEST(ContactClearance, ProjectedBandDoesNotMixNearAndFarLateralExtents) {
+ const Polygon p{{{25.58,3.475},{24.39,.846},{18.41,.622},{19.04,2.518}}};
+ std::vector<Polygon> exact,box;
+ ASSERT_TRUE(projectedContactOccupancy({p},{{0.,0.},{30.,0.}},20.,exact));
+ ASSERT_TRUE(contactOccupancy({{18.41,25.58,.622,3.475}},{{0.,0.},{30.,0.}},20.,box));
+ std::vector<Point> path;for(int i=0;i<=60;++i)path.push_back({i*.25,4.});
+ EXPECT_TRUE(pathClearOfPolygons(path,exact,Vehicle{},20.));
+ EXPECT_FALSE(pathClearOfPolygons(path,box,Vehicle{},20.));
+ // Geometry at the middle of the real projected band is still occupied.
+ for(auto& point:path)point.y=1.;
+ EXPECT_FALSE(pathClearOfPolygons(path,exact,Vehicle{},20.));
+}
+TEST(ContactClearance, ProjectedContactKeepsUnknownDepthAndRejectsBadOrder) {
+ std::vector<Polygon> occupied;
+ ASSERT_TRUE(projectedContactOccupancy({Polygon{{{5.,-.3},{6.,-.3},{6.,.3},{5.,.3}}}},{{0.,0.},{15.,0.}},15.,occupied));
+ auto path=straight(-2.);for(auto& point:path)if(point.x>8.)point.y=0.;
+ EXPECT_FALSE(pathClearOfPolygons(path,occupied,Vehicle{},15.));
+ EXPECT_FALSE(projectedContactOccupancy({Polygon{{{5.,-.3},{6.,.3},{6.,-.3},{5.,.3}}}},{{0.,0.},{15.,0.}},15.,occupied));
+}
 TEST(ContactClearance, HeadingCorrectionSatisfiesEndpointConditions) {
  const double h=1e-4;
  EXPECT_DOUBLE_EQ(startSlopeBasis(0),0.);

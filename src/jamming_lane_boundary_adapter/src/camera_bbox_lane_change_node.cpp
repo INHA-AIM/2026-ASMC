@@ -1590,7 +1590,7 @@ std::string updateContactPathPlan() {
     if(!geometry)return fail("contact_exact_lane_context_missing");
     if(contact_result->ground_contacts.size()!=contact_result->boxes.size() ||
        contact_result->ground_contact_valid.size()!=contact_result->boxes.size()) return fail("contact_contract_invalid");
-    std::vector<lane_boundary_adapter::clearance::Bounds> contacts;
+    std::vector<lane_boundary_adapter::clearance::Polygon> contacts;
     std::vector<lane_boundary_adapter::clearance::Polygon> local_occupied;
     for(std::size_t i=0;i<contact_result->boxes.size();++i){
         if(!contact_result->ground_contact_valid[i] || contact_result->ground_contacts[i].points.size()!=4)
@@ -1604,7 +1604,11 @@ std::string updateContactPathPlan() {
         const bool measured=contact_result->ground_contact_sources.size()==contact_result->boxes.size() &&
             contact_result->ground_contact_sources[i]=="lidar_observed";
         if(measured) local_occupied.push_back({{{b.xmin,b.ymin},{b.xmax,b.ymin},{b.xmax,b.ymax},{b.xmin,b.ymax}}});
-        else contacts.push_back(b);
+        else {
+            lane_boundary_adapter::clearance::Polygon polygon;
+            for(unsigned j=0;j<4;++j)polygon[j]={contact_result->ground_contacts[i].points[j].x,contact_result->ground_contacts[i].points[j].y};
+            contacts.push_back(polygon);
+        }
     }
     // Supplement camera occupancy with EVERY published local footprint, not
     // only classified/matched objects. An empty array never clears image boxes.
@@ -1638,7 +1642,7 @@ std::string updateContactPathPlan() {
     if(!reference_lane)return fail("contact_road_reference_missing");
     for(const auto& p:reference_lane->left_boundary)road_reference.push_back({p.x,p.y});
     std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
-    if(!lane_boundary_adapter::clearance::contactOccupancy(contacts,road_reference,horizon,occupied))
+    if(!lane_boundary_adapter::clearance::projectedContactOccupancy(contacts,road_reference,horizon,occupied))
         return fail("contact_occlusion_geometry_invalid");
     occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
     const bool fresh=change_state.decision_sequence!=change_state.bbox_sequence;
