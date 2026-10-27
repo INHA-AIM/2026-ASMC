@@ -68,6 +68,8 @@ const char* ProtectClassName(std::uint8_t protect_class) {
         case kProtectBus: return "bus";
         case kProtectPerson: return "person";
         case kProtectPedestrian: return "pedestrian";
+        case kProtectDog:return "dog";case kProtectDeer:return "deer";
+        case kProtectBicycle:return "bicycle";case kProtectStroller:return "stroller";
         default: return "none";
     }
 }
@@ -83,12 +85,14 @@ std::uint8_t ProtectClassFromLabel(const std::string& label) {
     if (lower == "bus") return kProtectBus;
     if (lower == "person") return kProtectPerson;
     if (lower == "pedestrian") return kProtectPedestrian;
+    if(lower=="dog")return kProtectDog;if(lower=="deer")return kProtectDeer;
+    if(lower=="bicycle")return kProtectBicycle;if(lower=="stroller")return kProtectStroller;
     return kProtectNone;
 }
 
 bool IsPersonClass(std::uint8_t protect_class) {
     return protect_class == kProtectPerson ||
-           protect_class == kProtectPedestrian;
+           protect_class == kProtectPedestrian || (protect_class>=kProtectDog && protect_class<=kProtectStroller);
 }
 
 float Plane::HeightAt(float x, float y) const {
@@ -1619,7 +1623,7 @@ void TunnelPipeline::ClusterAndFilter(
         TunnelObject object;
         object.obb = obbs[c];
         object.point_count = static_cast<int>(r.clusters[c].indices.size());
-        std::array<int, 6> class_votes{};
+        std::array<int, 10> class_votes{};
         if (protect_class != nullptr) {
             for (const int index : r.clusters[c].indices) {
                 const std::uint8_t value =

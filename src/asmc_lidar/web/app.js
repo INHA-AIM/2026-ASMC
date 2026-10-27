@@ -291,9 +291,9 @@
     add('IMU/CAN/GPS 거부', [v.imu_rejected, v.can_rejected, v.gps_rejected].map(fmtInt).join(' / '));
     add('camera', (v.camera_fusion || '-') + ' · active ' + (v.camera_active || '-') + ' · ' + (v.camera_reason || '-'));
     add('fusion calls/matched/dropped', [v.fusion_calls, v.fusion_matched, v.fusion_dropped].map(fmtInt).join(' / '));
-    for (const [frame, label] of [['camera_front','전방 · 실제 matching'],['camera_left','좌측 · 수신만 / matching 미구현'],['camera_right','우측 · 수신만 / matching 미구현']]) {
+    for (const [frame, label] of [['camera_front','전방'],['camera_left','좌측'],['camera_right','우측']]) {
       const key = 'fusion_view_'+frame;
-      add(label, (v[key+'_reason'] || '미수신') + ' · 후보 ' + fmtInt(v[key+'_candidates']) + ' · header Δ ' + fmt(v[key+'_offset_ms'],1) + 'ms');
+      add(label+(v[key+'_matching']==='true' ? ' · matching' : ' · 수신만'), (v[key+'_reason'] || '미수신') + ' · 후보 ' + fmtInt(v[key+'_candidates']) + ' · header Δ ' + fmt(v[key+'_offset_ms'],1) + 'ms');
     }
     add('fusion 진단 최근 scan / 생략', fmtInt(v.fusion_window_scans)+' / '+fmtInt(v.fusion_diagnostics_omitted));
     for (const key of Object.keys(v).filter(k=>k.startsWith('fusion_reason_')).sort()) add(key.slice(14),fmtInt(v[key]));
@@ -652,7 +652,7 @@
       ['화면 표시',visibleTrack(t)?'표시 대상 · 레이어 선택에 따름':'숨김 유지 · 상세 선택은 숨김을 해제하지 않음'],
       ['필터 미리보기',a.label+' · '+a.detail],
       ['실제 ROS 전달',t.miss>0?(audit&&audit.historical?'마지막 관측 판정 · '+audit.observed_stamp_ns:'예측 · 현재 전달 대상 아님'):audit&&audit.delivery_excluded?'제외 · 원본 tracker는 유지':sc.hd_map_audit&&sc.hd_map_audit.delivery_applied?'보존':'전달 필터 OFF'],
-      ['독립 근거 · 점군 / OBB / 높이',p?[p.point_decision,p.obb_decision,p.height_decision].map(x=>({keep:'유지',exclude_candidate:'후보',undetermined:'보류'}[x]||'이전 버전')).join(' / '):'미계산'],
+      ['독립 근거 · 점군 / OBB / 높이',p?[p.point_decision,p.obb_decision,p.height_decision].map(x=>({keep:'유지',exclude_candidate:sc.hd_map_audit.delivery_applied?'제외':'비교 후보',undetermined:'보류'}[x]||'이전 버전')).join(' / '):'미계산'],
       ['전달 판단 / 보류 근거',audit?audit.decision+' / '+audit.reason:'OFF'],
       ['군집 도로 점 / 전체',p?p.road_points+' / '+p.support_points+' ('+fmt(p.road_point_ratio*100,1)+'%)':'미계산'],
       ['안쪽 도로 점 / 전체',p&&p.interior_road_points!==undefined?p.interior_road_points+' / '+p.support_points+' ('+fmt(p.interior_road_ratio*100,1)+'%)':'이전 생산자 · 미계산'],
@@ -669,8 +669,11 @@
       ['track ID / age / miss' , t.id + ' / ' + t.age + ' / ' + t.miss + (t.miss ? ' (예측, 관측 없음)' : ' (관측)')],
       ['classification / camera_class', t.class + ' / ' + t.raw_class],
       ['OBB 중심 위치 (참고만)', ROAD_NAMES[membership(t)] + ' · 토픽 발행 필터 아님'],
-      ['동정적 (Main 알고리즘 · 화면 진단)', V.motionAppearance(t.motion).label],
+      ['적용 운동 상태', V.motionAppearance(t.motion).label],
       ['ID 변경 의심', state.idWarnings.has(t.id) ? state.idWarnings.get(t.id).from+' → '+t.id+' · 동일 물체 확정 아님' : '없음'],
+      ['원시 map 속도 km/h',t.motion?[t.motion.raw_map_vx_kph,t.motion.raw_map_vy_kph].map(x=>fmt(x,2)).join(' / '):'미수신'],
+      ['판제 적용 속도 km/h',t.motion?[t.motion.planner_vx_kph,t.motion.planner_vy_kph].map(x=>fmt(x,2)).join(' / '):'미수신'],
+      ['정적 semantic 보조',t.motion?(t.motion.semantic_applied?'적용 · ':'미적용 · ')+(t.motion.semantic_reason||'이전 생산자'):'미수신'],
       ['판정 vx / vy / 실제 이동 km/h', t.motion ? [t.motion.vx_kph,t.motion.vy_kph,t.motion.displacement_kph].map(x=>fmt(x,2)).join(' / ') : '미수신'],
       ['frame · stamp', state.view.frame + ' · ' + stampText(sc.stamp_ns)],
       ['OBB center (표시 frame) m', viewC ? viewC.map((x) => fmt(x, 2)).join(', ') : '-'],

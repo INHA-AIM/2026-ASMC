@@ -50,6 +50,7 @@ enum ProtectClass : std::uint8_t {
     kProtectBus = 3,
     kProtectPerson = 4,
     kProtectPedestrian = 5,
+    kProtectDog=6, kProtectDeer=7, kProtectBicycle=8, kProtectStroller=9,
 };
 
 const char* ProtectClassName(std::uint8_t protect_class);

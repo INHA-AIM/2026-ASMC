@@ -147,8 +147,8 @@ class LidarPipelineNode {
     LoadConfig();
     SetUpCamera();
     SetUpDebug();
-    FinalizeRuntimeIdentity(config_, front_ ? front_->id : "");
-    runtime_ = std::make_shared<LidarRuntime>(config_, camera_, front_);
+    FinalizeRuntimeIdentity(config_, camera::fusion_calibration_identity(calibrations_, config_.fusion.views == "all"));
+    runtime_ = std::make_shared<LidarRuntime>(config_, camera_, front_, calibrations_);
     Advertise();
     Subscribe();
     reset_service_ = pnh_.advertiseService("reset", &LidarPipelineNode::Reset, this);
@@ -228,7 +228,7 @@ class LidarPipelineNode {
   }
 
   bool Reset(std_srvs::Trigger::Request&, std_srvs::Trigger::Response& reply) {
-    auto next = std::make_shared<LidarRuntime>(config_, camera_, front_);
+    auto next = std::make_shared<LidarRuntime>(config_, camera_, front_, calibrations_);
     std::lock_guard<std::mutex> epoch(epoch_mutex_);
     epoch_.Reset();
     runtime_ = std::move(next);  // old worker owns its retired runtime until it finishes
@@ -304,7 +304,7 @@ class LidarPipelineNode {
     pnh_.param("debug_rate_hz", debug_config_.rate_hz, 5.0);
     int debug_max_points = 20000;
     pnh_.param("debug_max_points", debug_max_points, 20000);
-    debug_config_.max_points = static_cast<std::size_t>(std::max(1, debug_max_points));
+    debug_config_.max_points = static_cast<std::size_t>(std::clamp(debug_max_points, 1, 20000));
     debug_config_.topic_prefix = nh_.resolveName(debug_config_.topic_prefix);
     debug_config_.leveled_frame = tf_child_frame_;
   }
@@ -639,7 +639,7 @@ class LidarPipelineNode {
       stats_.fusion_window.push_back(std::move(sample));
       while (stats_.fusion_window.size() > 100) stats_.fusion_window.pop_front();
     }
-    if (const auto* camera_fusion = pending.runtime->fusion()) stats_.fusion = camera_fusion->counters();
+    stats_.fusion = pending.runtime->fusion_counters();
     stats_.audit_reason = out.hd_map_audit.reason;
     stats_.delivery_filter_applied=out.hd_map_audit.delivery_applied;
     stats_.delivery_input=out.hd_map_audit.delivery_input_count;
@@ -785,6 +785,7 @@ class LidarPipelineNode {
       for (const auto& v : stats_.camera_views) {
         const std::string key = "fusion_view_"+v.frame_id;
         value(key+"_reason", v.reason);
+        value(key+"_matching", v.matching_implemented ? "true" : "false");
         number(key+"_candidates", v.candidates);
         number(key+"_offset_ms", double(v.image_minus_scan_ns)/1e6);
         number(key+"_stamp_ns", v.stamp_ns);

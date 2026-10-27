@@ -145,6 +145,10 @@ inline void TrackFields(std::ostream& out, const pipeline::TrackedObject& o) {
   Str(out, o.camera.str_ObjectClass);
   out << ",\"raw_class\":";
   Str(out, o.camera.str_YoloClass);
+  out<<",\"semantic_static_applied\":";Bool(out,o.tracking.motion.semantic_static_applied);
+  out<<",\"semantic_reason\":";Str(out,o.tracking.motion.semantic_reason);
+  out<<",\"group_conflict\":";Bool(out,o.camera.group_conflict);
+  out<<",\"protection_group\":";Str(out,o.camera.protection_group);
   out << ",\"class_misses\":" << o.camera.class_miss_counter << ",\"continuity\":" << o.camera.continuity_counter
       << ",\"ground_evidence\":{\"valid\":";
   Bool(out, o.detection.ground_evidence.valid);
@@ -256,7 +260,7 @@ inline void Fusion(std::ostream& out, const pipeline::fusion::FusionReport& f, b
     if (comma) out << ',';
     comma = true;
     out << "{\"camera_id\":"; Str(out, v.frame_id);
-    out << ",\"matching_implemented\":"; Bool(out, v.frame_id == "camera_front");
+    out << ",\"matching_implemented\":"; Bool(out, v.matching_implemented);
     out << ",\"reason\":"; Str(out, v.reason);
     out << ",\"stamp_ns\":" << v.stamp_ns << ",\"image_minus_scan_ns\":" << v.image_minus_scan_ns
         << ",\"candidates\":" << v.candidates << ",\"generation\":" << v.generation

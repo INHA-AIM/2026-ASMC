@@ -1,6 +1,7 @@
 #include <asmc_lidar/experimental/tunnel_route.hpp>
 #include <asmc_lidar/detection/obb.hpp>
 #include <asmc_lidar/geometry/scan_frame.hpp>
+#include <asmc_lidar/geometry/projection.hpp>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <algorithm>
@@ -29,7 +30,7 @@ void TrackingObbs(const CloudPtr& cloud, const std::vector<pcl::PointIndices>& c
 }
 // Port of 8dde9b69 ComputeProtection: expanded 2D boxes and the closest 10%
 // depth reference. Raw points use the validated sensor mount and camera K/T.
-void Protection(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCameraInput* camera,
+void ProtectionView(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCameraView* camera,
                 const TunnelProtectionConfig& cfg, std::vector<std::uint8_t>& protect,
                 std::vector<std::uint8_t>& ambiguous) {
   const auto n=cloud.size();protect.assign(n,tunnel_filter::kProtectNone);ambiguous.assign(n,0);
@@ -38,6 +39,12 @@ void Protection(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCame
   const bool calibrated=camera && camera->calibrated;
   if(calibrated)P=camera->calibration.intrinsic *
       (camera->calibration.base_from_camera.inverse()*ScanFrame::SensorMount(vehicle)).matrix().topRows<3>();
+  if(calibrated && camera->common_projection) {
+    Context context;context.frame=Frame::Sensor;context.base_from_sensor=ScanFrame::SensorMount(vehicle);
+    context.calibration_source="sensor_mount";
+    const auto canonical=camera_projection(context,camera->calibration.base_from_camera,camera->calibration.intrinsic);
+    if(canonical)P=*canonical;else return;
+  }
   for(std::size_t i=0;i<n;++i) {
     const auto& p=cloud.points[i];if(!std::isfinite(p.x)||!std::isfinite(p.y)||!std::isfinite(p.z))continue;
     range[i]=std::sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
@@ -54,7 +61,7 @@ void Protection(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCame
   for(const auto& box:camera->boxes) {
     auto kind=tunnel_filter::ProtectClassFromLabel(box.source_class_name);
     if(kind==tunnel_filter::kProtectNone)kind=tunnel_filter::ProtectClassFromLabel(box.class_name);
-    if(kind==tunnel_filter::kProtectNone)continue;
+    if(kind==tunnel_filter::kProtectNone || (!camera->common_projection && kind>=tunnel_filter::kProtectDog))continue;
     const float w=box.xmax-box.xmin,h=box.ymax-box.ymin;
     if(!std::isfinite(w)||!std::isfinite(h)||w<=0||h<=0)continue;
     const bool vehicle_class=kind==tunnel_filter::kProtectCar||kind==tunnel_filter::kProtectTruck||kind==tunnel_filter::kProtectBus;
@@ -69,6 +76,18 @@ void Protection(const Cloud& cloud, const VehicleSpec& vehicle, const TunnelCame
     for(const auto& q:inside)if(q.first>=ref-cfg.depth_front_margin_m&&q.first<=ref+extent&&protect[q.second]==tunnel_filter::kProtectNone)protect[q.second]=kind;
   }
 }
+// Union of per-view protections, without consuming post-tracking observations.
+void Protection(const Cloud& cloud,const VehicleSpec& vehicle,const TunnelCameraInput* camera,
+                const TunnelProtectionConfig& cfg,std::vector<std::uint8_t>& protect,
+                std::vector<std::uint8_t>& ambiguous) {
+  if(!camera||camera->views.empty()){ProtectionView(cloud,vehicle,camera,cfg,protect,ambiguous);return;}
+  protect.assign(cloud.size(),tunnel_filter::kProtectNone);ambiguous.assign(cloud.size(),0);
+  for(const auto& view:camera->views) {
+    std::vector<std::uint8_t> p,a;ProtectionView(cloud,vehicle,&view,cfg,p,a);
+    for(std::size_t i=0;i<p.size();++i){if(protect[i]==tunnel_filter::kProtectNone)protect[i]=p[i];ambiguous[i]|=a[i];}
+  }
+}
+
 }
 void ValidateTunnelWall(const TunnelWallConfig& c) {
   if(!std::isfinite(c.fit_distance_m) || !std::isfinite(c.remove_distance_m) ||

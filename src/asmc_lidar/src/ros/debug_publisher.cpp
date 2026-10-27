@@ -179,10 +179,16 @@ void Object(std::ostream& out, const DebugPublisher::ObjectSummary& o, bool trac
     trace::Num(out, o.velocity);
     out << ",\"motion\":{\"state\":" << o.motion.s32_MotionState << ",\"valid\":";
     trace::Bool(out,o.motion.motion_valid);
-    out << ",\"source\":\"main_algorithm_display_only\",\"vx_kph\":";
+    out << ",\"source\":\"canonical_motion_classifier\",\"vx_kph\":";
     trace::Num(out,o.motion.f32_DecisionVxKPH);
     out << ",\"vy_kph\":";trace::Num(out,o.motion.f32_DecisionVyKPH);
     out << ",\"displacement_kph\":";trace::Num(out,o.motion.f32_CorrectedDisplacementSpeedKPH);
+    out<<",\"planner_vx_kph\":";trace::Num(out,o.motion.f32_PlannerVxKPH);
+    out<<",\"planner_vy_kph\":";trace::Num(out,o.motion.f32_PlannerVyKPH);
+    out<<",\"raw_map_vx_kph\":";trace::Num(out,o.motion.map_vx*3.6);
+    out<<",\"raw_map_vy_kph\":";trace::Num(out,o.motion.map_vy*3.6);
+    out<<",\"semantic_applied\":";trace::Bool(out,o.motion.semantic_static_applied);
+    out<<",\"semantic_reason\":";trace::Str(out,o.motion.semantic_reason);
     out << ",\"samples\":" << o.motion.s32_MotionAcceptedSamples << '}';
   }
   out << '}';

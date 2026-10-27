@@ -251,8 +251,8 @@ int Replay(const Options& opt) {
     buffer = std::make_shared<camera::Buffer>(calibrations, camera::Limits{});  // Receiver defaults
     source = std::make_shared<fusion::BufferCameraSource>(buffer, "camera_front");
   }
-  FinalizeRuntimeIdentity(config, front ? front->id : "");
-  LidarRuntime runtime(config, source, front);
+  FinalizeRuntimeIdentity(config, camera::fusion_calibration_identity(calibrations, config.fusion.views == "all"));
+  LidarRuntime runtime(config, source, front, calibrations);
   const ProcessingEpoch epoch;
 
   rosbag::Bag planning_bag;

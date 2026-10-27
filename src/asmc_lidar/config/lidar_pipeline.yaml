@@ -132,6 +132,8 @@ map:
 
 # Main front camera fusion parameters (main.launch).
 fusion:
+  # M1 candidate: all. Keep front until real-scene acceptance completes.
+  views: front
   enable_sensor_fusion: true
   camera_class_profile: mission16_v1   # legacy | mission16_v1
   fusion_yolo_policy: unique            # unique | bounded_reuse
@@ -217,3 +219,7 @@ hd_map_audit:
     # >=10% OBB footprint overlap with that same inset road mask.
     road_inset_m: 0.10
     camera_age_ms: 500.0
+
+# Candidate remains OFF until motion/false-label acceptance is complete.
+motion:
+  semantic_static_enabled: false
