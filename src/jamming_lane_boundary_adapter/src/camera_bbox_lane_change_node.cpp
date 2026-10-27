@@ -22,6 +22,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <deque>
 
 namespace {
 
@@ -223,6 +224,9 @@ struct LaneChangeState {
 } change_state;
 
 BboxResult::ConstPtr contact_result;
+struct ContactLaneFrame { ros::Time stamp; std::vector<LaneChain> lanes; };
+std::deque<ContactLaneFrame> contact_lane_history; // bounded, only accepted geometry
+
 std::string contact_decision = "disabled";
 unsigned contact_candidates = 0, contact_road_rejected=0, contact_collision_rejected=0;
 bool contact_geometry_ready = false;
@@ -238,11 +242,11 @@ std::string bboxStopReason();
 bool ignoreBboxDuringLaneChange();
 std::string updateLaneChangePlan();
 std::string updateContactPathPlan();
-const LaneChain* getPlanningLane(int lane_index);
+const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* geometry = nullptr);
 bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample);
 bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale = 1.0, double change_length = 0.0, bool full_shift = false);
 bool buildRoadBoundedChangePath(const LaneChain& lane, std::vector<FamilyPoint2d>& path);
-bool pathInsideRoad(const std::vector<FamilyPoint2d>& path);
+bool pathInsideRoad(const std::vector<FamilyPoint2d>& path, const std::vector<LaneChain>* geometry = nullptr);
 void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>& path);
 void validateLaneChangeParameters();
 void modeCallback(const std_msgs::UInt8::ConstPtr& message);
@@ -355,6 +359,7 @@ void resetActuationLifecycle() {
     follower_state.last_steering = 0.0;
     follower_state.last_control_time = ros::SteadyTime::now();
 
+    contact_lane_history.clear();
     // Keep latest camera/BBOX observations, but never credit frames received
     // before activation toward a new lane-change decision.
     change_state.path.clear();
@@ -632,6 +637,10 @@ void laneBoundaryCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& msg) {
     // 3. 유효한 경계 조각을 연결하고, 현재 차로부터 lookahead까지 이어지는 후보 선택.
     const std::vector<LaneChain> lanes = buildContinuousLanes(context);
     change_state.lanes = lanes;
+    if(params.contact_clearance_enabled) {
+        contact_lane_history.push_back({msg->header.stamp,lanes});
+        while(contact_lane_history.size()>8)contact_lane_history.pop_front();
+    }
     follower_state.lane_markers_valid = true;
     const std::vector<LaneCandidate> candidates = findOwnLaneCandidates(lanes);
     if (candidates.empty()) {
@@ -660,6 +669,7 @@ void emergencyStopCallback(const std_msgs::Bool::ConstPtr& msg) {
 }
 
 void rejectLaneInput(const std::string& reason) {
+    contact_lane_history.clear();
     follower_state.target_ready = false;
     follower_state.stop_reason = reason;
     follower_state.pending_lane = -1;
@@ -1057,6 +1067,8 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "contact_road_rejected", std::to_string(contact_road_rejected));
     addDiagnosticValue(status, "contact_collision_rejected", std::to_string(contact_collision_rejected));
     addDiagnosticValue(status, "effective_pursuit_x_m", std::to_string(params.contact_clearance_enabled?4.0:params.lookahead_distance));
+    addDiagnosticValue(status, "contact_lane_history_size",std::to_string(contact_lane_history.size()));
+    addDiagnosticValue(status, "contact_geometry_stamp_ns",contact_result?std::to_string(contact_result->lane_stamp.toNSec()):"unavailable");
     addDiagnosticValue(status, "contact_geometry_ready", contact_geometry_ready?"true":"false");
 
     diagnostic_msgs::DiagnosticArray diagnostics;
@@ -1362,9 +1374,9 @@ std::string bboxStopReason() {
 // ============================================================================
 // 12. 경로 생성 / 차량 모서리의 도로 경계 검사 (장애물 충돌 거리 검사는 없음)
 // ============================================================================
-const LaneChain* getPlanningLane(int lane_index) {
+const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* geometry) {
     const LaneChain* found = nullptr;
-    for (const auto& lane : change_state.lanes) {
+    for (const auto& lane : geometry ? *geometry : change_state.lanes) {
         if (lane.lane_index != lane_index) continue;
         LaneSample first, last;
         if (!interpolateLaneAtX(lane, params.planning_start_x, first) ||
@@ -1431,7 +1443,7 @@ bool buildRoadBoundedChangePath(const LaneChain& lane, std::vector<FamilyPoint2d
     return false;
 }
 
-bool pathInsideRoad(const std::vector<FamilyPoint2d>& path) {
+bool pathInsideRoad(const std::vector<FamilyPoint2d>& path, const std::vector<LaneChain>* geometry) {
     change_state.maximum_path_curvature = 0.0;
     for (std::size_t index = 0; index < path.size(); ++index) {
         const auto& point = path[index];
@@ -1448,7 +1460,7 @@ bool pathInsideRoad(const std::vector<FamilyPoint2d>& path) {
                 // 두 차로의 바깥 경계 밖으로 차량 모서리가 나가는 후보는 거부.
                 double road_left = -std::numeric_limits<double>::infinity();
                 double road_right = std::numeric_limits<double>::infinity();
-                for (const auto& lane : change_state.lanes) {
+                for (const auto& lane : geometry ? *geometry : change_state.lanes) {
                     LaneSample sample;
                     if (!samplePlanningLane(lane, x, sample)) continue;
                     road_left = std::max(road_left, sample.left.y);
@@ -1496,6 +1508,10 @@ std::string updateContactPathPlan() {
     if(!contact_result || !contact_result->contact_projection_valid) return fail("contact_projection_unavailable");
     if(std::abs((follower_state.source_stamp-contact_result->header.stamp).toSec())>params.contact_max_skew)
         return fail("contact_lane_timestamp_skew");
+    const std::vector<LaneChain>* geometry=nullptr;
+    for(const auto& frame:contact_lane_history)
+        if(frame.stamp==contact_result->lane_stamp){geometry=&frame.lanes;break;}
+    if(!geometry)return fail("contact_exact_lane_context_missing");
     if(contact_result->ground_contacts.size()!=contact_result->boxes.size() ||
        contact_result->ground_contact_valid.size()!=contact_result->boxes.size()) return fail("contact_contract_invalid");
     std::vector<lane_boundary_adapter::clearance::Bounds> contacts;
@@ -1515,7 +1531,7 @@ std::string updateContactPathPlan() {
     // 15 m. Full vehicle coverage must use their intersection, not the larger
     // upstream support (which made otherwise feasible curved paths fail).
     double horizon=contact_result->contact_support_x_max_m;
-    for(const auto& lane:change_state.lanes) {
+    for(const auto& lane:*geometry) {
         if(lane.left_boundary.empty() || lane.right_boundary.empty())return fail("contact_road_support_missing");
         horizon=std::min({horizon,lane.left_boundary.back().x,lane.right_boundary.back().x});
     }
@@ -1526,7 +1542,7 @@ std::string updateContactPathPlan() {
     if(change_state.entry_lane<0)change_state.entry_lane=follower_state.locked_lane;
     struct Candidate { LaneChain lane; std::vector<FamilyPoint2d> path; double offset=0; };
     auto find=[&](int index,Candidate& found){
-        const auto* original=getPlanningLane(index);if(!original)return false;
+        const auto* original=getPlanningLane(index,geometry);if(!original)return false;
         const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
             params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
         for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5}) for(double length:{12.,10.,8.,6.}) {
@@ -1542,7 +1558,7 @@ std::string updateContactPathPlan() {
             const double supported_axle_x=horizon-std::hypot(params.vehicle_front+params.obstacle_longitudinal_margin+params.path_sample_step,
                 params.vehicle_width/2+params.obstacle_lateral_margin)-.1;
             while(!path.empty() && path.back().x>supported_axle_x)path.pop_back();
-            if(path.empty() || path.back().x<params.lookahead_distance || !pathInsideRoad(path)){++contact_road_rejected;continue;}
+            if(path.empty() || path.back().x<params.lookahead_distance || !pathInsideRoad(path,geometry)){++contact_road_rejected;continue;}
             std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
             for(const auto& p:path)points.push_back({p.x,p.y});
             if(!lane_boundary_adapter::clearance::pathClear(points,contacts,shape,horizon,params.path_sample_step)){++contact_collision_rejected;continue;}
@@ -1583,11 +1599,11 @@ std::string updateContactPathPlan() {
     storePlannedTarget(candidate.lane,candidate.path);
     change_state.target_lane=target;
     if(change_state.changing){
-        const auto* original=getPlanningLane(target);LaneSample near,ahead;
+        const auto* original=getPlanningLane(target,geometry);LaneSample near,ahead;
         if(original && samplePlanningLane(*original,params.planning_start_x,near) &&
            samplePlanningLane(*original,params.planning_start_x+1.,ahead) &&
-           follower_state.source_stamp!=change_state.completion_stamp){
-            change_state.completion_stamp=follower_state.source_stamp;
+           contact_result->lane_stamp!=change_state.completion_stamp){
+            change_state.completion_stamp=contact_result->lane_stamp;
             const double heading=std::atan2(ahead.center.y-near.center.y,1.);
             if(std::abs(near.center.y)<=params.completion_lateral_error &&
                std::abs(heading)<=params.completion_heading_deg*PI/180.)++change_state.completion_hits;
