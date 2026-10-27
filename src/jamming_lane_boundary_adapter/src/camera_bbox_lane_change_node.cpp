@@ -39,6 +39,7 @@ using BboxResult = lane_boundary_adapter::CameraBBoxLaneResult;
 struct Parameters {
     // Internal trial profile. Legacy lane-occupancy policy is the recovery path.
     bool contact_clearance_enabled = false;
+    bool contact_local_required = false;
     double contact_speed_kph = 5.0;
     double contact_max_skew = 0.15; // no ego-motion alignment is claimed
 
@@ -236,6 +237,7 @@ double contact_plan_wall_ms = 0.;
 // pose. The geometric trial is limited to low ACTUAL speed, not just a command.
 ros::Time contact_speed_stamp;
 ros::SteadyTime contact_speed_receipt;
+bool contact_speed_ready=false;
 double contact_actual_speed=std::numeric_limits<double>::quiet_NaN();
 void contactSpeedCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& m) {
     contact_actual_speed=std::isfinite(m->velocity.x)?std::abs(m->velocity.x):std::numeric_limits<double>::quiet_NaN();
@@ -1146,6 +1148,7 @@ void handleShutdownSignal(int) {
 
 void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("contact_clearance_enabled",params.contact_clearance_enabled,false);
+    private_nh.param("contact_local_required",params.contact_local_required,false);
     private_nh.param("contact_speed_kph",params.contact_speed_kph,5.0);
     if(!std::isfinite(params.contact_speed_kph)||params.contact_speed_kph<=0||params.contact_speed_kph>5.0)
         throw std::runtime_error("contact_speed_kph must be in (0,5]");
@@ -1385,8 +1388,14 @@ std::string bboxStopReason() {
     if(params.contact_clearance_enabled) {
         const double speed_age=(ros::Time::now()-contact_speed_stamp).toSec();
         if(contact_speed_stamp.isZero() || !std::isfinite(contact_actual_speed) || speed_age<-.05 || speed_age>.35 ||
-           (ros::SteadyTime::now()-contact_speed_receipt).toSec()>.35)return "contact_actual_speed_unavailable";
-        if(contact_actual_speed>1.6)return "contact_actual_speed_above_trial_limit";
+           (ros::SteadyTime::now()-contact_speed_receipt).toSec()>.35){contact_speed_ready=false;return "contact_actual_speed_unavailable";}
+        // Entry <=5.76 km/h; retain up to7.2 for the speed servo's transient.
+        // The command remains capped at5. GPS shadow never licenses25 km/h
+        // entry into this low-speed experiment. No stale velocity is reused.
+        if(contact_actual_speed>(contact_speed_ready?2.0:1.6)){contact_speed_ready=false;return "contact_actual_speed_above_trial_limit";}
+        contact_speed_ready=true;
+        if(params.contact_local_required && (!contact_result || !contact_result->local_obstacles_valid))
+            return "contact_local_obstacles_unavailable";
     }
     if(params.contact_clearance_enabled && (!contact_result || !contact_result->contact_projection_valid))
         return "contact_projection_unavailable";
