@@ -65,9 +65,8 @@ constexpr char kUsage[] =
     "  [--gps-mode normal|invalid|missing --gps-begin S --gps-end S]\n"
     "  [--points-topic /velodyne_points --imu-topic /imu --can-topic /Ego_topic --gps-topic /gps]\n"
     "  [--camera-observations-topic T --camera-status-topic S] (default: camera disabled)\n"
-    "  [--tunnel-filter on|off] [--capture-debug] [--planning-output NEW.bag]\n"
+    "  [--fusion-diagnostics on|off] [--tunnel-filter on|off] [--capture-debug] [--planning-output NEW.bag]\n"
     "  [--dump-stage-dir NEW_DIR --dump-stage-stamps NS,NS] (offline points)\n";
-
 struct UsageError : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
@@ -81,6 +80,7 @@ struct Options {
   double gps_begin = 0., gps_end = 0.;
   std::string points_topic = "/velodyne_points", imu_topic = "/imu", can_topic = "/Ego_topic";
   std::string gps_topic = "/gps", camera_observations_topic, camera_status_topic;
+  std::string fusion_diagnostics;
   std::string tunnel_filter;  // empty: keep the configured value
   bool capture_debug = false;
 };
@@ -104,6 +104,7 @@ Options Parse(int argc, char** argv) {
       {"--gps-topic", &o.gps_topic},
       {"--camera-observations-topic", &o.camera_observations_topic},
       {"--camera-status-topic", &o.camera_status_topic},
+      {"--fusion-diagnostics", &o.fusion_diagnostics},
       {"--tunnel-filter", &o.tunnel_filter}};
   const std::map<std::string, double*> numbers = {{"--gps-begin", &o.gps_begin}, {"--gps-end", &o.gps_end}};
   for (int i = 1; i < argc; ++i) {
@@ -134,6 +135,8 @@ Options Parse(int argc, char** argv) {
     throw UsageError("--profile must be pitch or roll_pitch");
   if (o.gps_mode != "normal" && o.gps_mode != "invalid" && o.gps_mode != "missing")
     throw UsageError("--gps-mode must be normal, invalid or missing");
+  if (!o.fusion_diagnostics.empty() && o.fusion_diagnostics != "on" && o.fusion_diagnostics != "off")
+    throw UsageError("--fusion-diagnostics must be on or off");
   if (!o.tunnel_filter.empty() && o.tunnel_filter != "on" && o.tunnel_filter != "off")
     throw UsageError("--tunnel-filter must be on or off");
   if (o.camera_observations_topic.empty() != o.camera_status_topic.empty())
@@ -225,6 +228,7 @@ int Replay(const Options& opt) {
       ? opt.package_share
       : std::filesystem::path(opt.config).parent_path().parent_path().string();
   RuntimeConfig config = LoadRuntimeConfig(opt.config, package_share);
+  config.fusion.capture_diagnostics = opt.fusion_diagnostics != "off";
   if (!opt.profile.empty()) config.pipeline.use_roll = opt.profile == "roll_pitch";
   if (!opt.tunnel_filter.empty()) config.pipeline.tunnel.enabled = opt.tunnel_filter == "on";
   config.pipeline.capture_debug = opt.capture_debug;

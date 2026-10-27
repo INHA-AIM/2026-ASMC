@@ -264,6 +264,8 @@ endif()
 
 # Isolation contract (pure Python, no PCL needed): runs whenever tests are enabled.
 if(CATKIN_ENABLE_TESTING)
+  add_test(NAME asmc_lidar_fusion_audit_test
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/perception/test_camera_lidar_fusion_audit.py)
   add_test(NAME asmc_lidar_pipeline_contract_test
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/pipeline_contract_test.py)
   add_test(NAME asmc_lidar_monitor_core_test
