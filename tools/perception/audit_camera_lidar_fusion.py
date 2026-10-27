@@ -81,7 +81,7 @@ def replay_compare(args, manifest):
                  '--camera-observations-topic',manifest['camera_observations_topic'],
                  '--camera-status-topic',manifest['camera_status_topic'],'--fusion-diagnostics',mode]
             with (args.output/f'replay-{repeat}-{mode}.log').open('x') as log:
-                subprocess.run(['/usr/bin/time','-f','%M','-o',str(args.output/f'replay-{repeat}-{mode}.rss-kib'),*cmd],stdout=log,stderr=subprocess.STDOUT,check=True)
+                subprocess.run([sys.executable,str(ROOT/'tools/perception/frame_time/compare_refactor.py'),'--measure-child',str(args.output/f'replay-{repeat}-{mode}.resource.json'),*cmd],stdout=log,stderr=subprocess.STDOUT,check=True)
             digest=hashlib.sha256();times=[]
             with dest.open() as f:
                 for line in f:
@@ -89,7 +89,7 @@ def replay_compare(args, manifest):
                     if obj.get('processed'): times.append(obj['timings_ms']['total'])
             ident=digest.hexdigest()
             if canonical is None: canonical=ident
-            rows.append(dict(repeat=repeat,mode=mode,output_sha=ident,unchanged=ident==canonical,peak_rss_kib=int((args.output/f'replay-{repeat}-{mode}.rss-kib').read_text().strip()),processing_ms=stats(times)))
+            rows.append(dict(repeat=repeat,mode=mode,output_sha=ident,unchanged=ident==canonical,resources=json.loads((args.output/f'replay-{repeat}-{mode}.resource.json').read_text()),processing_ms=stats(times)))
     off=[r['processing_ms']['p95'] for r in rows if r['mode']=='off' and r['processing_ms']['count']]
     on=[r['processing_ms']['p95'] for r in rows if r['mode']=='on' and r['processing_ms']['count']]
     delta=max((b-a for a,b in zip(off,on)),default=None)
@@ -196,6 +196,7 @@ def main(args):
             if q['calibration_id']!=c['view']['calibration_id']:raise ValueError('side calibration ID mismatch')
             c['projection']=q
             side_projection.update(c['view']['camera_id']+':'+p['reason'] for p in q['points'])
+            errors.update('side_'+p['reason'] for p in q['points'] if p['reason'] in ('invalid_time','invalid_geometry','invalid_projection'))
             v=c['view'];key=(manifest['views'][v['camera_id']],v['stamp_ns'],v['wire_sequence'])
             desired.setdefault(key,[]).append(len(cards));cards.append(c)
     # Exact RGB header/sequence only. A later/nearby image is never substituted.
