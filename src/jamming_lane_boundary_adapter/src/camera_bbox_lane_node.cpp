@@ -1,7 +1,9 @@
-// 직선 구간 BBOX 차로 판정. 거리/주행 명령은 출력하지 않는다.
+// BBOX 차로 판정. 운영 기본은 기존 영상 겹침이며, 실험용 local 근거를 선택할 수 있다.
+// 차량 제어 명령은 발행하지 않는다.
 // 기존 YOLO와 차선 모듈을 그대로 사용하고, 영상 하단 접점의 차로만 분류한다.
 #include "lane_boundary_adapter/boundary_family_adapter.hpp"
 #include "lane_boundary_adapter/ground_projection.hpp"
+#include "lane_boundary_adapter/contact_clearance.hpp"
 #include "lane_boundary_adapter/local_obstacle_support.hpp"
 #include <lane_boundary_adapter/CameraBBoxFrame.h>
 #include <lane_boundary_adapter/CameraBBoxLaneResult.h>
@@ -723,7 +725,7 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
         std::sort(intervals.begin(),intervals.end());
         bool started=false;
         for(const auto& span:intervals) {
-            if(!started){if(span.first>1.0)break;support[lane]=span.second;started=true;}
+            if(!started){if(!std::isfinite(lane_boundary_adapter::clearance::nearReferenceX(span.first)))break;support[lane]=span.second;started=true;}
             else if(span.first<=support[lane]+1e-4) support[lane]=std::max(support[lane],span.second);
             else break; // never bridge an INVALID gap
         }

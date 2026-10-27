@@ -2,6 +2,14 @@
 #include <gtest/gtest.h>
 using namespace lane_boundary_adapter::clearance;
 static std::vector<Point> straight(double y=0.){std::vector<Point> p;for(int i=0;i<=40;++i)p.push_back({i*.25,y});return p;}
+TEST(ContactClearance, NearSampleOffsetDoesNotAuthorizeAForwardGap) {
+ EXPECT_DOUBLE_EQ(nearReferenceX(.9),1.);
+ EXPECT_DOUBLE_EQ(nearReferenceX(1.11392),1.11392);
+ EXPECT_DOUBLE_EQ(nearReferenceX(1.25),1.25);
+ EXPECT_TRUE(std::isnan(nearReferenceX(1.251)));
+ EXPECT_TRUE(std::isnan(nearReferenceX(3.)));
+ EXPECT_TRUE(std::isnan(nearReferenceX(NAN)));
+}
 TEST(ContactClearance, EmptyAndSupported) {
  EXPECT_TRUE(pathClear(straight(),std::vector<Bounds>{},Vehicle{},15.));
  EXPECT_FALSE(pathClear(straight(),std::vector<Bounds>{},Vehicle{},12.));
