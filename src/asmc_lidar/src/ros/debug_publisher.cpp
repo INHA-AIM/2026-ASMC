@@ -351,7 +351,6 @@ void DebugPublisher::Finish(std::int64_t stamp_ns, const ScanOutput& out) {
   s->pose_ready = out.pose_ready;
   s->processed = out.processed;
   s->reason = out.reason;
-  s->fusion = out.fusion;
   s->fusion_ran = out.fusion_ran;
   s->camera_active = out.fusion.camera_active;
   s->camera_reason = out.fusion.camera_reason;
@@ -557,9 +556,13 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
     out << "],\"capture_ms\":";
     trace::Num(out, s.capture_ms);
   }
-  out << ",\"fusion\":";
-  trace::Fusion(out, s.fusion, s.fusion_ran);
-  out << ",\"typed\":{\"local\":";
+  out << ",\"fusion\":{\"ran\":";
+  trace::Bool(out, s.fusion_ran);
+  out << ",\"camera_active\":";
+  trace::Bool(out, s.camera_active);
+  out << ",\"camera_reason\":";
+  trace::Str(out, s.camera_reason);
+  out << "},\"typed\":{\"local\":";
   trace::Array(out, s.arrays.accepted, s.arrays.local);
   out << ",\"map\":";
   trace::Array(out, s.arrays.accepted, s.arrays.map);

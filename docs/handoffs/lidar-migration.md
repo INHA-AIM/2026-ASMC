@@ -21,8 +21,6 @@ asmc_camera → /perception/camera/objects/observations → asmc_lidar
 - [C0 좌표·시각 대조](../records/lidar/2026-10-26-frame-time-baseline.md)
 - [공용 좌표 수학·IMU26건 원인과 리팩토링 검증](../records/lidar/2026-10-27-frame-time-refactor.md)
 
-- [F1 전방 fusion 검증·수정과 남은 제한](../records/lidar/2026-10-27-front-fusion-verification.md)
-
 ## 담당과 후속 순서
 
 | 담당 | 다음 작업 |

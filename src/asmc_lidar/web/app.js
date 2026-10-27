@@ -291,13 +291,6 @@
     add('IMU/CAN/GPS 거부', [v.imu_rejected, v.can_rejected, v.gps_rejected].map(fmtInt).join(' / '));
     add('camera', (v.camera_fusion || '-') + ' · active ' + (v.camera_active || '-') + ' · ' + (v.camera_reason || '-'));
     add('fusion calls/matched/dropped', [v.fusion_calls, v.fusion_matched, v.fusion_dropped].map(fmtInt).join(' / '));
-    for (const [frame, label] of [['camera_front','전방 · 실제 matching'],['camera_left','좌측 · 수신만 / matching 미구현'],['camera_right','우측 · 수신만 / matching 미구현']]) {
-      const key = 'fusion_view_'+frame;
-      add(label, (v[key+'_reason'] || '미수신') + ' · 후보 ' + fmtInt(v[key+'_candidates']) + ' · header Δ ' + fmt(v[key+'_offset_ms'],1) + 'ms');
-    }
-    add('fusion 진단 최근 scan / 생략', fmtInt(v.fusion_window_scans)+' / '+fmtInt(v.fusion_diagnostics_omitted));
-    for (const key of Object.keys(v).filter(k=>k.startsWith('fusion_reason_')).sort()) add(key.slice(14),fmtInt(v[key]));
-    add('시각 기준', 'receive header · source/device clock 직접 비교 안 함');
     add('config', (v.config_sha256 ? v.config_sha256.slice(0, 12) : '-') + ' · mount ' + (v.mount_config_sha256 ? v.mount_config_sha256.slice(0, 12) : '-'));
     if (sc && sc.stages) {
       const c = sc.counts || {}, s = sc.sampled || {};
@@ -643,14 +636,7 @@
     let yawView = t.obb.yaw;
     if (m && m.leveled) { const d = [Math.cos(t.obb.yaw), Math.sin(t.obb.yaw), 0]; const r = m.leveled; yawView = Math.atan2(r[4] * d[0] + r[5] * d[1], r[0] * d[0] + r[1] * d[1]); }
     const audit=V.auditForTrack(sc,t),a=V.auditAppearance(sc,t),p=audit&&audit.preview;
-    const fd = sc.fusion && sc.fusion.decisions || [];
-    let match = null, assoc = null;
-    for (const d of fd) for (const a of d.associations || []) if (a.track_id === t.id) { match=d; assoc=a; }
     const rows = [
-      ['이번 snapshot matching',match ? 'scan '+match.scan_sequence+' · '+match.action+' / '+match.reason : '이번 snapshot에 연결 기록 없음 · 이전 분류/보호와 구분'],
-      ['영상 관측 / bbox',match ? match.observation_id+' / '+assoc.source_box_index : '-'],
-      ['matching Δ / 대기',match ? fmt(match.image_minus_scan_ns/1e6,1)+' / '+fmt(match.wait_ns/1e6,1)+'ms' : '-'],
-      ['실제 IoU / 분류 반영',assoc ? fmt(assoc.iou,3)+' · '+assoc.reason+' · '+assoc.class_before+' → '+assoc.class_after : '-'],
       ['화면 표시',visibleTrack(t)?'표시 대상 · 레이어 선택에 따름':'숨김 유지 · 상세 선택은 숨김을 해제하지 않음'],
       ['필터 미리보기',a.label+' · '+a.detail],
       ['실제 ROS 전달',audit&&audit.delivery_excluded?'제외 · 원본 tracker는 유지':sc.hd_map_audit&&sc.hd_map_audit.delivery_applied?'보존':'전달 필터 OFF'],

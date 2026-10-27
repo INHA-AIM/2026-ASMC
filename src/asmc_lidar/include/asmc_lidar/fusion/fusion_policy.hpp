@@ -295,7 +295,6 @@ struct YoloBox {
   float32 min_x = 0.f, min_y = 0.f, max_x = 0.f, max_y = 0.f;
   std::string str_class;      // source_class_name; normalized when matched
   std::string str_raw_class;  // source_class_name as published (original case)
-  int source_index = -1;  // Original observation index, before adapter/hood filtering.
 };
 
 // asmc_camera/detection/mission.py CLASSES (adapter mission16_v1 default).
@@ -353,8 +352,7 @@ inline std::vector<YoloBox> ConvertBoxes(const std::vector<camera::Box>& boxes,
   allowed.reserve(allowed_names.size());
   for (const auto& name : allowed_names) allowed.push_back(LowerAscii(StripAscii(name)));
   std::vector<YoloBox> output;
-  for (std::size_t source_index = 0; source_index < boxes.size(); ++source_index) {
-    const auto& box = boxes[source_index];
+  for (const auto& box : boxes) {
     const double confidence = static_cast<double>(box.confidence);
     const std::string name = LowerAscii(box.source_class_name);
     if (!box.confidence_valid || !std::isfinite(confidence) || confidence < conf_thres ||
@@ -363,7 +361,6 @@ inline std::vector<YoloBox> ConvertBoxes(const std::vector<camera::Box>& boxes,
         !std::isfinite(box.ymax))
       continue;
     YoloBox out;
-    out.source_index = static_cast<int>(source_index);
     out.min_x = TruncateTowardZero(box.xmin);
     out.min_y = TruncateTowardZero(box.ymin);
     out.max_x = TruncateTowardZero(box.xmax);

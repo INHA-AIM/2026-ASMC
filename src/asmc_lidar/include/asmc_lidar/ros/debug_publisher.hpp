@@ -117,7 +117,6 @@ class DebugPublisher : public pipeline::StageObserver {
     std::vector<ObjectSummary> detections, tracks;
     bool pose_ready = false, processed = false;
     std::string reason;
-    pipeline::fusion::FusionReport fusion;
     bool fusion_ran = false, camera_active = false;
     std::string camera_reason;
     TypedOutput::Arrays arrays;

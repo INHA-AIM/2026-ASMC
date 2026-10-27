@@ -200,9 +200,6 @@ class LidarPipelineNode {
     bool camera_active = false;
     std::string camera_reason;
     fusion::FusionCounters fusion;
-    std::vector<fusion::CameraSnapshot::View> camera_views;
-    struct FusionSample { std::map<std::string, std::size_t> reasons; std::size_t omitted=0; };
-    std::deque<FusionSample> fusion_window;
     std::size_t pending_scans = 0;
     std::deque<double> total_ms, delivery_ms;
     struct AuditSample {
@@ -628,15 +625,6 @@ class LidarPipelineNode {
       stats_.camera_active = out.fusion.camera_active;
       stats_.camera_reason = out.fusion.camera_reason;
       stats_.pending_scans = out.fusion.pending_scans;
-      stats_.camera_views = out.fusion.views;
-      Stats::FusionSample sample;
-      sample.omitted = out.fusion.decisions_omitted;
-      for (const auto& d : out.fusion.decisions) {
-        ++sample.reasons[d.reason];
-        sample.omitted += d.associations_omitted;
-      }
-      stats_.fusion_window.push_back(std::move(sample));
-      while (stats_.fusion_window.size() > 100) stats_.fusion_window.pop_front();
     }
     if (const auto* camera_fusion = pending.runtime->fusion()) stats_.fusion = camera_fusion->counters();
     stats_.audit_reason = out.hd_map_audit.reason;
@@ -771,23 +759,6 @@ class LidarPipelineNode {
       number("fusion_confirmations_applied", f.confirmations_applied);
       number("fusion_misses_applied", f.misses_applied);
       number("fusion_pending_scans", stats_.pending_scans);
-      number("fusion_projection_invalid", f.projection_invalid);
-      std::map<std::string, std::size_t> fusion_reasons;
-      std::size_t fusion_omitted=0;
-      for (const auto& sample : stats_.fusion_window) {
-        fusion_omitted += sample.omitted;
-        for (const auto& reason : sample.reasons) fusion_reasons[reason.first] += reason.second;
-      }
-      number("fusion_window_scans", stats_.fusion_window.size());
-      number("fusion_diagnostics_omitted", fusion_omitted);
-      for (const auto& reason : fusion_reasons) number("fusion_reason_"+reason.first, reason.second);
-      for (const auto& v : stats_.camera_views) {
-        const std::string key = "fusion_view_"+v.frame_id;
-        value(key+"_reason", v.reason);
-        number(key+"_candidates", v.candidates);
-        number(key+"_offset_ms", double(v.image_minus_scan_ns)/1e6);
-        number(key+"_stamp_ns", v.stamp_ns);
-      }
       const std::vector<double> window(stats_.total_ms.begin(), stats_.total_ms.end());
       value("hd_map_audit_mode", config.hd_map_audit_mode);
       value("delivery_filter_applied",stats_.delivery_filter_applied?"true":"false");

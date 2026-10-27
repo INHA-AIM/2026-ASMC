@@ -1,7 +1,4 @@
 # 인지·판제 좌표계와 IMU 공통화 검토
-F1은 [전방 fusion 실제 선택·관측 수명 경계 검증](../records/lidar/2026-10-27-front-fusion-verification.md)을 추가했다.
-좌우 수신/투영과 실제 matching을 구분하며, 원본 source clock 매핑은 여전히 미확보다.
-
 
 **2026-10-26 현재 기준:** PR #112 `0dab4adf`에서 B4 정본화를 완료했다.
 [판제 직접 소비](../../src/asmc_lidar/docs/planning-runtime.md)는 `asmc_lidar`만 사용한다.

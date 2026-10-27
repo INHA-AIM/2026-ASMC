@@ -41,25 +41,6 @@ CameraSnapshot BufferCameraSource::Read(std::int64_t reference_stamp_ns, std::in
   CameraSnapshot snapshot;
   // Non-blocking, non-consuming; expires old records and applies the gate.
   const camera::Query query = buffer_->query(reference_stamp_ns, window_ns, ros_now_ns, steady_now_ns);
-  for (const auto& entry : query.views) {
-    CameraSnapshot::View summary;
-    summary.frame_id = entry.first;
-    summary.reason = entry.second.reason;
-    summary.candidates = entry.second.candidates.size();
-    if (!entry.second.candidates.empty() && entry.second.candidates.front().record) {
-      const auto& candidate = entry.second.candidates.front();
-      const auto& o = candidate.record->observation;
-      summary.stamp_ns = o.header.stamp_ns;
-      summary.wire_sequence = o.header.sequence;
-      summary.image_minus_scan_ns = candidate.image_minus_scan_ns;
-      summary.session = o.session;
-      summary.generation = o.generation;
-      summary.calibration_id = o.calibration_id;
-      summary.model_id = o.model_id;
-      summary.config_id = o.config_id;
-    }
-    snapshot.views.push_back(std::move(summary));
-  }
   const auto view = query.views.find(front_);
   if (view == query.views.end()) {
     snapshot.reason = "unknown_camera";

@@ -51,8 +51,3 @@ if(ASMC_C0_RUNTIME_LIB_DIR)
   target_link_libraries(imu_history_probe ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${C0_GEOGRAPHIC_LIBRARY} yaml-cpp ${OpenCV_LIBRARIES} OpenSSL::Crypto ZLIB::ZLIB)
   target_link_libraries(support_probe ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${C0_GEOGRAPHIC_LIBRARY} yaml-cpp ${OpenCV_LIBRARIES} OpenSSL::Crypto ZLIB::ZLIB)
 endif()
-
-# F1 offline image overlay uses the same native camera calibration and projection.
-add_executable(fusion_projection_probe fusion_projection_probe.cpp
-  ${REPO}/src/asmc_lidar/src/geometry/camera_calibration.cpp)
-target_link_libraries(fusion_projection_probe audit_geometry yaml-cpp OpenSSL::Crypto)

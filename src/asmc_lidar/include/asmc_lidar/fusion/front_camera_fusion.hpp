@@ -17,7 +17,6 @@
 #include <asmc_lidar/fusion/fusion_policy.hpp>
 #include <asmc_lidar/tracking/track.hpp>
 
-#include <array>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -32,8 +31,6 @@ namespace pipeline {
 namespace fusion {
 
 struct FusionConfig {
-  // Bounded, observation-only diagnostics. Disabling must not change fusion.
-  bool capture_diagnostics = true;
   // Main ~fusion_* parameters (main.launch values).
   double max_time_offset_s = 0.05;    // Match only within +-50 ms (inclusive)
   double sync_wait_timeout_s = 0.20;  // stop waiting for a later frame after 200 ms
@@ -77,15 +74,6 @@ struct CameraSnapshot {
   std::string reason;
   std::uint64_t epoch = 0;          // epoch of the returned frames; 0 when none
   std::vector<CameraFrame> frames;  // retained front frames, any order
-  struct View {
-    std::string frame_id, reason, session, calibration_id, model_id, config_id;
-    std::uint64_t generation = 0;
-    std::uint32_t wire_sequence = 0;
-    std::int64_t stamp_ns = 0, image_minus_scan_ns = 0;
-    std::size_t candidates = 0;
-  };
-  // Receiver query summaries only. Side views are NOT matched by this class.
-  std::vector<View> views;
 };
 
 class CameraSource {
@@ -107,26 +95,6 @@ struct FusionCounters {
   std::uint64_t observations = 0, confirmations_applied = 0, misses_applied = 0;
   std::uint64_t fresh = 0;        // Main g_TotalFresh (matches of a first-use frame)
   std::uint64_t not_current = 0;  // match deferred: CameraSource::Current() was false
-  std::uint64_t projection_invalid = 0;
-};
-
-struct AssociationDiagnostic {
-  int track_id = -1, source_box_index = -1;
-  double iou = 0.;
-  bool applied = false, projected = false;
-  std::string reason, raw_class, group, class_before, class_after;
-  std::array<float, 4> projected_box{}, camera_box{};
-};
-
-struct MatchDiagnostic {
-  std::uint64_t scan_sequence = 0;
-  std::int64_t scan_stamp_ns = 0, wait_ns = 0, image_stamp_ns = 0, image_minus_scan_ns = 0;
-  std::string action, reason, observation_id, camera_id, session, calibration_id, model_id, config_id;
-  std::uint64_t generation = 0;
-  std::uint32_t wire_sequence = 0;
-  bool reused = false, projection_valid = false;
-  std::size_t boxes_received = 0, boxes_admitted = 0, associations_omitted = 0;
-  std::vector<AssociationDiagnostic> associations;
 };
 
 struct FusionReport {
@@ -138,14 +106,6 @@ struct FusionReport {
   // |image stamp - scan stamp| of each match in this call. No pose
   // compensation is applied for this offset (documented, not validated).
   std::vector<std::int64_t> match_offsets_ns;
-  bool diagnostics_enabled = false;
-  std::uint64_t emitting_scan_sequence = 0;
-  std::int64_t emitting_scan_stamp_ns = 0;
-  std::vector<CameraSnapshot::View> views;
-  // At most 64 scan decisions and 128 object associations per decision.
-  // No point clouds or receiver shared_ptr are retained by diagnostics.
-  std::vector<MatchDiagnostic> decisions;
-  std::size_t decisions_omitted = 0;
 };
 
 // Main BBox of a projected LiDAR object (st_Camera.fusion_data.vec_Lidar_BBoxes):
@@ -168,8 +128,7 @@ bool LidarToImage(const std::vector<TrackedObject>& objects, const asmc::lidar::
 void IOUFusion(std::vector<TrackedObject>& objects,
                const std::vector<fusion_adapter::YoloBox>& detected,
                const std::vector<LidarImageBox>& lidar_boxes, std::uint64_t image_stamp_ns,
-               std::uint64_t epoch, const FusionConfig& config, FusionCounters* counters,
-               MatchDiagnostic* diagnostic = nullptr);
+               std::uint64_t epoch, const FusionConfig& config, FusionCounters* counters);
 
 class FrontCameraFusion {
  public:
