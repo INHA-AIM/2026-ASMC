@@ -969,6 +969,8 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
             obj=PrepareHighwayLaneMotion(obj,track==object_tracks_.end()?nullptr:&track->second,
                 highway_traffic_lanes_,highway_merge_cfg_.motion_fit_min_span_s,
                 highway_merge_cfg_.min_heading_alignment);
+            obj=PrepareHighwayUnresolvedMotion(obj,track==object_tracks_.end()?nullptr:&track->second,
+                highway_merge_cfg_,heading.value_or(NAN),ego,vehicle_shape_);
             // Ordinary KEEP/FOLLOW keeps its existing collision margin. The
             // departure-only longitudinal swept interval is not imported.
             obj.prediction_min_speed=obj.prediction_max_speed=NAN;

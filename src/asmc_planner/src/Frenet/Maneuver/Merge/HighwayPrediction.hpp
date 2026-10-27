@@ -179,3 +179,53 @@ inline TrackedObject PrepareHighwayObjectPrediction(
         predicted.prediction_max_speed=std::max(predicted.prediction_max_speed,object.prediction_max_speed);
     return predicted;
 }
+
+// A newborn rear detection must not acquire a several-second lateral crossing
+// from one velocity sample. Current OBB and short-term measured motion remain
+// strict. The grace ends with SOURCE-TIME history, not planner cycles or IDs.
+// If lane association still fails, actual transverse displacement decides
+// whether to retain general motion. No map direction means no such exemption.
+inline TrackedObject PrepareHighwayUnresolvedMotion(
+    const TrackedObject& object,const ObservedObjectMotion* track,
+    const HighwayMergeConfig& config,double traffic_heading,
+    const CartesianState& ego,const VehicleShape& shape) {
+    auto result=object;
+    const auto vehicle=static_cast<int>(asmc_planner::ObjectType::VEHICLE);
+    const auto unknown=static_cast<int>(asmc_planner::ObjectType::UNKNOWN);
+    if(object.prediction_lane||(object.type!=vehicle&&object.type!=unknown)||
+       object.motion_state==ObjectMotionState::LOW_THREAT||!track||track->samples.empty()||
+       !std::isfinite(traffic_heading)||
+       InspectPredictionVelocity(object)!=PredictionInputStatus::MEASURED)return result;
+    const double tx=std::cos(traffic_heading),ty=std::sin(traffic_heading);
+    const double speed=std::hypot(object.vx,object.vy);
+    const double along=object.vx*tx+object.vy*ty;
+    if(speed<1||along/speed<config.min_heading_alignment)return result;
+    const auto body=MakeEgoFootprint(ego,shape,0);
+    double own_rear=INFINITY,other_front=-INFINITY;
+    for(const auto& p:body)own_rear=std::min(own_rear,p.x*tx+p.y*ty);
+    for(const auto& p:object.corners)other_front=std::max(other_front,p.x*tx+p.y*ty);
+    const double span=track->stamp-track->samples.front().time;
+    const double closing=std::max(0.0,along-ego.v*std::cos(ego.yaw-traffic_heading));
+    if(own_rear-other_front<=config.min_rear_gap+closing*config.motion_fit_min_span_s)return result;
+    if(span>=config.motion_fit_min_span_s) {
+        // Mature but unmapped: use independent source positions, including
+        // large lateral components. Supported cut-ins retain general prediction.
+        if(track->samples.size()<3)return result;
+        using namespace highway_prediction_detail;
+        std::vector<double> slopes,offsets;
+        for(std::size_t i=0;i<track->samples.size();++i)
+            for(std::size_t j=i+1;j<track->samples.size();++j) {
+                const auto& a=track->samples[i];const auto& b=track->samples[j];
+                if(b.time-a.time>=config.motion_fit_min_span_s*.5)
+                    slopes.push_back((-(b.x-a.x)*ty+(b.y-a.y)*tx)/(b.time-a.time));
+            }
+        if(slopes.empty())return result;
+        const double lateral=Median(slopes);
+        for(const auto& p:track->samples)
+            offsets.push_back(-p.x*ty+p.y*tx-lateral*(p.time-track->stamp));
+        if(std::fabs(lateral)*span>std::max(.1,3*Scatter(offsets,Median(offsets))))return result;
+    }
+    result.turn_prediction_duration=config.motion_fit_min_span_s;
+    result.continuation_vx=along*tx;result.continuation_vy=along*ty;
+    return result;
+}

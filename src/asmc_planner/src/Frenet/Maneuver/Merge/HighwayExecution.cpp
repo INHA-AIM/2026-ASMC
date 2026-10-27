@@ -170,6 +170,8 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
             object_tracking_cfg_.min_motion_direction_change_rad);
         object=PrepareHighwayLaneMotion(object,track==object_tracks_.end()?nullptr:&track->second,
             highway_traffic_lanes_,cfg.motion_fit_min_span_s,cfg.min_heading_alignment);
+        object=PrepareHighwayUnresolvedMotion(object,track==object_tracks_.end()?nullptr:&track->second,
+            cfg,heading.value_or(NAN),ego,vehicle_shape_);
     }
     // Source-corridor maintenance uses the ordinary collision policy, not
     // the additional full-merge speed interval. Preserve the fitted motion.

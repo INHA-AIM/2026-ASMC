@@ -165,8 +165,9 @@ bool HighwayReferenceExecution::beginLaneTransition(std::uint32_t id,const Plann
   std::string error;
   auto source_ids=network_->lanes[source]->lanes();source_ids.pop_back();
   zone.source_region=route_->map->corridor(source_ids,error);
+  zone.source_following_region=route_->map->corridor(network_->lanes[source]->lanes(),error);
   zone.target_region=route_->map->corridor(arrival->lanes(),error);
-  if(!zone.source_region||!zone.target_region){detail="request_corridor_invalid: "+error;return false;}
+  if(!zone.source_region||!zone.source_following_region||!zone.target_region){detail="request_corridor_invalid: "+error;return false;}
   zone.target_reference=arrival->line();
   const auto common_start=arrival->map()->lane(network_->common->lanes().front())->centerline.front();
   const double common_s=FindClosestS(active_->reference(),common_start.x,common_start.y,nullptr,100);

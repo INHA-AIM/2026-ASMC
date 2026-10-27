@@ -19,6 +19,9 @@ struct HighwayMergeRoute {
         // footprint/target-overlap frontier, not an intermediate wait point.
         RefLine source_reference;
         std::shared_ptr<const asmc_planner::lane_reference::LaneRegion> source_region;
+        // Same source lane through its common successor. This is only for
+        // established following roles; source-only stop/entry ownership stays above.
+        std::shared_ptr<const asmc_planner::lane_reference::LaneRegion> source_following_region;
         double entry_s=0,source_stop_s=0,source_stop_local_s=0;
         // Optional-change admission facts. Each candidate uses its own actual
         // arrival/progress against this bounded rear observation window.

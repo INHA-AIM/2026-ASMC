@@ -308,6 +308,72 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             followers[j]=lane_established||response_decel<=cfg.max_rear_decel_mps2;
         }
     }
+    // Current/source-lane followers retain ordinary following responsibility
+    // while ego remains wholly in that corridor. Target-lane ENTRY admission
+    // stays strict; this role ends permanently when this candidate leaves source.
+    std::vector<bool> source_followers(objects.size(),false);
+    std::vector<double> source_following_start(objects.size(),0.0);
+    const auto& source_following_region=zone.source_following_region?
+        zone.source_following_region:zone.source_region;
+    if(reference_transition&&source_following_region&&zone.source_reference.points.size()>=3&&
+       source_following_region->coversPolygon(initial_body)) {
+        const double own_s=FindClosestS(zone.source_reference,initial.x,initial.y,nullptr,100);
+        auto extent=[&](const geometry::Polygon2D& polygon,double hint) {
+            std::pair<double,double> value{INFINITY,-INFINITY};
+            for(const auto& p:polygon) {
+                const double s=FindClosestS(zone.source_reference,p.x,p.y,&hint,15);
+                value.first=std::min(value.first,s);value.second=std::max(value.second,s);
+            }
+            return value;
+        };
+        const auto own_extent=extent(initial_body,own_s);
+        for(std::size_t j=0;j<objects.size();++j) {
+            const auto& obj=objects[j];
+            if(obj.type!=static_cast<int>(asmc_planner::ObjectType::VEHICLE)&&
+               obj.type!=static_cast<int>(asmc_planner::ObjectType::UNKNOWN))continue;
+            const bool provisional=std::isfinite(obj.continuation_vx)&&std::isfinite(obj.continuation_vy)&&
+                std::isfinite(obj.turn_prediction_duration)&&obj.turn_prediction_duration>=0&&
+                obj.turn_prediction_duration<=cfg.speed_error_correlation_s;
+            if(InspectPredictionVelocity(obj)!=PredictionInputStatus::MEASURED||
+               obj.motion_state==ObjectMotionState::LOW_THREAT||
+               (!provisional&&std::fabs(obj.yaw_rate)>1e-3))continue;
+            auto nominal=obj;nominal.prediction_min_speed=nominal.prediction_max_speed=NAN;
+            const auto pose=PredictTrackedObjectPose(nominal,object_time_offset_s);
+            const double at_s=FindClosestS(zone.source_reference,pose.x,pose.y,nullptr,100);
+            const auto frame=Interpolate(zone.source_reference,at_s);
+            const double response_time=provisional?
+                std::max(object_time_offset_s,obj.turn_prediction_duration+1e-6):object_time_offset_s;
+            const auto velocity=PredictTrackedObjectVelocity(nominal,response_time);
+            const double tx=std::cos(frame.theta),ty=std::sin(frame.theta);
+            if(velocity.first*tx+velocity.second*ty<=0||
+               std::fabs(-velocity.first*ty+velocity.second*tx)>cfg.provisional_lateral_speed_mps)continue;
+            const auto polygon=PredictObstacleFootprint(nominal,object_time_offset_s);
+            source_followers[j]=source_following_region->coversPolygon(polygon)&&
+                extent(polygon,at_s).second<own_extent.first-collision.safety_margin&&
+                geometry::ConvexPolygonDistance(initial_body,polygon)>collision.safety_margin;
+            source_following_start[j]=std::max(0.0,response_time-object_time_offset_s);
+        }
+    }
+    const bool have_source_followers=std::any_of(source_followers.begin(),source_followers.end(),
+        [](bool value){return value;});
+    bool source_follower_departed=false;
+    std::size_t source_certified_segments=0;
+    const auto source_segment_inside=[&](std::size_t i) {
+        // Certify each ORIGINAL trajectory segment once, not again at every
+        // dense object-collision sample. Position and yaw are linearly
+        // interpolated below. A rotating corner differs from its endpoint
+        // chord by at most radius * delta_yaw^2 / 8; expanded endpoint hulls
+        // therefore cover the whole intervening footprint. Failure only
+        // revokes the following role; physical collision checks still run.
+        const double angle=std::remainder(path.yaw[i+1]-path.yaw[i],2*M_PI);
+        const double guard=ego_radius*angle*angle/8+1e-9;
+        CartesianState a{path.x[i],path.y[i],path.yaw[i],0,0,0};
+        CartesianState b{path.x[i+1],path.y[i+1],path.yaw[i+1],0,0,0};
+        auto points=MakeEgoFootprint(a,shape,guard);
+        const auto end=MakeEgoFootprint(b,shape,guard);
+        points.insert(points.end(),end.begin(),end.end());
+        return source_following_region->coversPolygon(geometry::ComputeConvexHull(points));
+    };
     double station_hint=zone.config.start_s,target_hint=0,last_gap_time=-1;
     bool follower_entered=lane_established,follower_departed=false;
     bool have_station=false,have_target=false;
@@ -436,6 +502,12 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             follower_entered|=inside;
             follower_corridor=inside&&!follower_departed;
         }
+        // Visit each segment only when the physical collision scan reaches it;
+        // an earlier completed certificate need not inspect the unused tail.
+        while(have_source_followers&&!source_follower_departed&&source_certified_segments<=lo) {
+            source_follower_departed=!source_segment_inside(source_certified_segments++);
+        }
+        const bool source_follower_inside=have_source_followers&&!source_follower_departed;
         for(const auto& obj:objects) {
             const auto predicted=PredictTrackedObjectPose(obj,t+object_time_offset_s);
             const double reach=ego_radius+radii[&obj-objects.data()]+collision.safety_margin+
@@ -454,6 +526,11 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             if(geometry::ConvexPolygonDistance(ego_polygon,footprint)<=
                 collision.safety_margin+uncertainty+between_samples_guard) {
                 const auto j=static_cast<std::size_t>(&obj-objects.data());
+                if(t>source_following_start[j]&&source_followers[j]&&source_follower_inside) {
+                    auto nominal=obj;nominal.prediction_min_speed=nominal.prediction_max_speed=NAN;
+                    if(source_following_region->coversPolygon(PredictObstacleFootprint(nominal,t+object_time_offset_s)))
+                        continue;
+                }
                 if(t>0&&followers[j]&&follower_corridor) {
                     auto nominal=obj;nominal.prediction_min_speed=nominal.prediction_max_speed=NAN;
                     if(zone.target_region->coversPolygon(PredictObstacleFootprint(nominal,t+object_time_offset_s)))
