@@ -92,7 +92,7 @@ int main(int argc,char**argv){
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
  std::vector<double> offsets{0.,-.05,.05,-.1,.1,-.15,.15,-.2,.2,-.25,.25,-.3,.3,-.35,.35,-.4,.4,-.45,.45,-.5,.5};
  if(wide)for(double x:{.55,.60,.65,.70,.75}){offsets.push_back(-x);offsets.push_back(x);}
- std::vector<double> maneuver_lengths{3.,4.,5.,6.,8.,10.,12.};
+ std::vector<double> maneuver_lengths{3.,4.,5.,6.,8.,10.,12.,15.};
  // Offline sensitivity only: do not silently widen the operational grid.
  if(lengths){maneuver_lengths.clear();for(double x=3.;x<=20.;x+=.5)maneuver_lengths.push_back(x);}
  for(const auto& original:change_state.lanes)for(double offset:offsets)for(double length:maneuver_lengths){

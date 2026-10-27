@@ -66,6 +66,14 @@ class ContactTest(unittest.TestCase):
         self.assertNotIn('runtime_decision=contact_road_reference_missing',output)
         self.assertIn('runtime_decision= candidates=',output)
 
+    def test_recorded_turn_uses_long_fallback_with_same_guards(self):
+        fixture=Path(__file__).parent/'fixtures/contact-clearance'
+        executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
+        output=subprocess.check_output([executable,str(fixture/'turn-blocked-family.rosbin'),
+            str(fixture/'turn-blocked-bbox.rosbin'),'20','15'],text=True,timeout=5)
+        self.assertIn('runtime_decision= candidates=148 ',output)
+        self.assertRegex(output,r'lane=0 offset=0 length=15 road=1 clear=1')
+
     def test_contact_centerline_barrier_and_far_car(self):
         self.feed()
         self.feed([1.75],far=True,box_x=9.)
