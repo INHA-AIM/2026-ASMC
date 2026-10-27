@@ -39,6 +39,21 @@ def crossing_definition():
 
 
 class ArchiveTest(unittest.TestCase):
+    def test_trial_checkpoint_is_replayable_and_does_not_consume_later_collision(self):
+        self.now[0]=2.
+        self.assertTrue(self.archive.checkpoint(self.engine,'ready'))
+        saved=self.finish()
+        self.assertEqual(saved['schema'],'asmc.section_trial')
+        self.assertNotIn('collision',saved)
+        self.assertEqual(saved['trial']['reason'],'ready')
+        selected,_=load_collision(self.archive.last_file,check_maps=False)
+        self.assertEqual(selected['event_type'],'trial')
+        self.assertEqual(selected['section'],'static')
+        self.assertFalse(self.archive.completed)
+        self.archive.collision(self.engine,{},self.sample(),{'1'})
+        self.assertEqual(self.finish()['schema'],SCHEMA)
+        self.assertEqual(self.archive.saved,2)
+
     def test_section_signal_policy_is_saved_and_restored_in_replay(self):
         settings=dict(policy='green',colors={'C1256W000091':48})
         self.engine.signals=S(snapshot=lambda:copy.deepcopy(settings))

@@ -69,7 +69,7 @@ class ValidationRunner(QtCore.QThread):
 
     def __init__(self,mode,section,seed,sample_json=None,collision_debug=False,speed_debug=False,
                  replay=None,save_dir=None,save_collisions=True,replay_runs=(),run_counts=None,
-                 with_planning=False,stack_config=None):
+                 with_planning=False,stack_config=None,recording_spec=None):
         super().__init__();base=load_config();self.route=EpisodeRoute(sample_json)
         self.link=EpisodeLink(base);self.link.client_key='validation_ego_'+uuid.uuid4().hex
         self.engine=EpisodeController(self.link,self.route,mode,section,seed)
@@ -104,9 +104,17 @@ class ValidationRunner(QtCore.QThread):
         self.last_native_contact=None
         self.engine.on_contact_observation=self.record_contact
         self.engine.on_lifecycle_observation=self.record_lifecycle
+        self.recording=None
+        if recording_spec:
+            from scen_runner.records.sensor_recording import SensorRecording
+            self.recording=SensorRecording(recording_spec,notify=self.archive_message)
+            if not self.save_collisions:raise ValueError('센서 기록에는 장면 저장도 필요합니다.')
+            self.save_dir=self.recording.directory.parent/'scenes'
 
     def archive_ready(self,engine,states):
-        if self.archive:self.archive.begin(engine,states)
+        if self.archive:
+            self.archive.begin(engine,states)
+            if self.recording:self.archive.checkpoint(engine,'ready')
 
     def archive_observe(self,engine,states):
         if self.archive:self.archive.observe(engine,states)
@@ -131,7 +139,10 @@ class ValidationRunner(QtCore.QThread):
             self.speed_trace.record_contact(evidence,[state_evidence(s) for s in sample.get('actor_states',())])
 
     def record_lifecycle(self,record):
-        if self.archive:self.archive.event(record)
+        if self.archive:
+            self.archive.event(record)
+            if self.recording and record.get('event')=='cleanup_requested':
+                self.archive.checkpoint(self.engine,'before_cleanup')
 
     def receive_contact(self,sample):
         self.engine.contact(sample)
@@ -191,7 +202,8 @@ class ValidationRunner(QtCore.QThread):
         for name,close in (('판제 실행 정리',self.engine.planning.close if self.engine.planning else None),
                            ('실행 잠금',self.engine.lease.release),
                            ('속도 기록',self.speed_trace.close if self.speed_trace else None),
-                           ('재현 기록',self.archive.close if self.archive else None)):
+                           ('재현 기록',self.archive.close if self.archive else None),
+                           ('센서 기록',self.recording.close if self.recording else None)):
             if close is None:continue
             try:close()
             except Exception as error:self.archive_message(f'[{name} 종료 오류] '+str(error))
@@ -264,11 +276,15 @@ class ValidationRunner(QtCore.QThread):
             self.engine.on_rpc_observation=self.speed_trace.write
         self.monitor.start();initial=True
         try:
+            if self.recording:self.recording.start()
             if self.save_collisions:
                 try:
-                    self.archive=CollisionArchive(self.save_dir,notify=self.archive_message);self.archive.start()
+                    self.archive=CollisionArchive(self.save_dir,notify=self.archive_message)
+                    if self.recording:self.archive.metadata['sensor_run_id']=self.recording.spec['run_id']
+                    self.archive.start()
                 except Exception as exc:
                     self.archive=None;self.archive_message('[충돌 저장 준비 실패] '+str(exc))
+                    if self.recording:raise
             while True:
                 try:command=self.commands.get_nowait()
                 except queue.Empty:command=None
@@ -276,6 +292,8 @@ class ValidationRunner(QtCore.QThread):
                     # A close request has priority over reconnection and queued resets.
                     if self.close_requested.is_set() or command and command[0]=='close':
                         self.shutdown();return
+                    if self.recording:self.recording.check()
+                    if self.recording and self.archive.error:raise RuntimeError('장면 저장 실패: '+self.archive.error)
                     if not self.link.connected:
                         self.link.connect()
                         self.engine.observe_ego_link()
@@ -358,10 +376,10 @@ class ValidationRunner(QtCore.QThread):
 class ValidationWindow(QtWidgets.QMainWindow):
     def __init__(self,mode='scene',section='static',seed=None,sample_json=None,collision_debug=False,speed_debug=False,
                  replay=None,save_dir=None,save_collisions=True,replay_runs=(),run_counts=None,
-                 with_planning=False,stack_config=None):
+                 with_planning=False,stack_config=None,recording_spec=None):
         super().__init__();self.runner=ValidationRunner(mode,section,seed,sample_json,collision_debug,speed_debug,
                                                      replay,save_dir,save_collisions,replay_runs,run_counts,
-                                                     with_planning,stack_config)
+                                                     with_planning,stack_config,recording_spec)
         replay=self.runner.replay
         if replay:mode='section';section=replay['section']
         self.pending=None;self.pending_ego=None;self.last=None;self.allow_close=False;self.view='ego'
@@ -661,6 +679,7 @@ def main():
     parser.add_argument('--run-counts',type=Path,help='총 주행 횟수 YAML; 기본 tools/scen_runner/config/run_counts.yaml')
     parser.add_argument('--with-planning',action='store_true',help='판제 실행기의 종료/새 위치 입력 준비를 확인하고 주행')
     parser.add_argument('--stack-config',type=Path,help='4개 실행기 연동 설정; 기본 config/stack.yaml')
+    parser.add_argument('--recording-spec',type=Path,help='등록된 실험 run의 ROS 센서·판단 녹화 JSON')
     args=parser.parse_args()
     try:require_morai_endpoint(load_config()['morai'])
     except (OSError,ValueError) as error:parser.error(str(error))
@@ -691,7 +710,7 @@ def main():
     try:
         win=ValidationWindow(args.mode,args.section,args.seed,args.sample_json,args.collision_debug,args.speed_debug,
                              replay,args.collision_log_dir,not args.no_save_collision,replay_runs,args.run_counts,
-                             args.with_planning,args.stack_config)
+                             args.with_planning,args.stack_config,args.recording_spec)
     except (OSError,ValueError) as error:parser.error(str(error))
     win.resize(1350,950);win.show()
     pending_close=[False]
