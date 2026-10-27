@@ -25,7 +25,7 @@ class ContactTest(unittest.TestCase):
         fixture=Path(__file__).parent/'fixtures/contact-clearance'
         executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
         output=subprocess.check_output([executable,str(fixture/'family-probe.rosbin'),
-            str(fixture/'bbox-probe.rosbin')],text=True,timeout=5)
+            str(fixture/'bbox-probe-v2.rosbin')],text=True,timeout=5)
         self.assertRegex(output,r'lane=0 .*road=1 clear=1')
 
     def test_contact_centerline_barrier_and_far_car(self):

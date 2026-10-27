@@ -194,7 +194,7 @@ int main(int argc, char** argv) {
         ros::Subscriber local_sub;
         if(params.local_contact_support_enabled)
             local_sub=nh.subscribe<asmc_msgs::LidarTrackingObservation>("/perception/lidar/tracks_local",8,
-                [](const asmc_msgs::LidarTrackingObservation::ConstPtr& m){local_obstacles.accept(m,ros::Time::now(),ros::SteadyTime::now());});
+                +[](const asmc_msgs::LidarTrackingObservation::ConstPtr& m){local_obstacles.accept(m,ros::Time::now(),ros::SteadyTime::now());});
         ros::Subscriber projection_sub, lane_status_sub;
         if(params.projection_context_required) {
             projection_sub=nh.subscribe<asmc_msgs::CameraGroundProjection>(params.projection_topic,8,
