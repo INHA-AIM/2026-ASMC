@@ -1,6 +1,7 @@
 // 카메라 BBOX로 내 차로 점유를 확인하면 옆 차로로 변경. 거리/라이다 입력 없음.
 // 이 파일에 파라미터, ROS callback, 주행 함수, main을 함께 둔다.
 #include "lane_boundary_adapter/boundary_family_adapter.hpp"
+#include "lane_boundary_adapter/contact_clearance.hpp"
 
 #include <ros/ros.h>
 #include <lane_boundary_adapter/CameraBBoxLaneResult.h>
@@ -34,6 +35,11 @@ using BboxResult = lane_boundary_adapter::CameraBBoxLaneResult;
 // 1. Parameters: 기본값 / 단위 / 설명 (동일 이름의 ROS 인자로 변경 가능)
 // ============================================================================
 struct Parameters {
+    // Internal trial profile. Legacy lane-occupancy policy is the recovery path.
+    bool contact_clearance_enabled = false;
+    double contact_speed_kph = 5.0;
+    double contact_max_skew = 0.15; // no ego-motion alignment is claimed
+
     // 실행 모드와 목표점
     bool enable_control = false;               // true: control_topic 발행. false: preview/RViz만 발행.
     double lookahead_distance = 8.0;           // [m] base_link 전방 x 좌표. 곡선 길이/직선 반경이 아님.
@@ -216,6 +222,10 @@ struct LaneChangeState {
     double maximum_path_curvature = 0.0;
 } change_state;
 
+BboxResult::ConstPtr contact_result;
+std::string contact_decision = "disabled";
+unsigned contact_candidates = 0;
+bool contact_geometry_ready = false;
 ros::Subscriber bbox_subscriber;
 ros::Subscriber mode_subscriber;
 ros::Publisher reference_lane_publisher;
@@ -227,6 +237,7 @@ void bboxCallback(const BboxResult::ConstPtr& message);
 std::string bboxStopReason();
 bool ignoreBboxDuringLaneChange();
 std::string updateLaneChangePlan();
+std::string updateContactPathPlan();
 const LaneChain* getPlanningLane(int lane_index);
 bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample);
 bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale = 1.0);
@@ -420,7 +431,7 @@ void updateLaneChangeTiming(const ros::SteadyTime& now) {
 
 bool ignoreBboxDuringLaneChange() {
     // A voluntary return always keeps live target-obstacle/freshness checks.
-    return params.ignore_bbox_during_lane_change && change_state.changing &&
+    return !params.contact_clearance_enabled && params.ignore_bbox_during_lane_change && change_state.changing &&
            !change_state.returning_to_entry;
 }
 
@@ -440,7 +451,7 @@ void cameraLaneFollowingProcess() {
         stop_reason = bboxStopReason();
     }
     if (stop_reason.empty() && follower_state.target_ready) {
-        stop_reason = updateLaneChangePlan();
+        stop_reason = params.contact_clearance_enabled ? updateContactPathPlan() : updateLaneChangePlan();
     } else {
         change_state.obstacle_hits = 0;
         change_state.clear_hits = 0;
@@ -519,6 +530,7 @@ double calculateSteering(double curvature, double dt) {
 
 double calculateTargetSpeed(double curvature) {
     double target_speed = params.target_speed_kph;
+    if(params.contact_clearance_enabled) target_speed=std::min(target_speed,params.contact_speed_kph);
     // 변경 중에는 BBOX 때문에 속도 0이나 감속 명령이 생기지 않도록 한다.
     if (!ignoreBboxDuringLaneChange()) {
         if (change_state.clipped_association) target_speed = std::min(target_speed, params.clipped_tracking_speed_kph);
@@ -1039,6 +1051,10 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "change_drive_time_sec", std::to_string(change_state.drive_time_sec));
     addDiagnosticValue(status, "change_pause_time_sec", std::to_string(change_state.pause_time_sec));
     addDiagnosticValue(status, "uses_obstacle_distance", "false");
+    addDiagnosticValue(status, "contact_clearance_enabled", params.contact_clearance_enabled?"true":"false");
+    addDiagnosticValue(status, "contact_decision", contact_decision);
+    addDiagnosticValue(status, "contact_candidates", std::to_string(contact_candidates));
+    addDiagnosticValue(status, "contact_geometry_ready", contact_geometry_ready?"true":"false");
 
     diagnostic_msgs::DiagnosticArray diagnostics;
     diagnostics.header.stamp = ros::Time::now();
@@ -1096,6 +1112,10 @@ void handleShutdownSignal(int) {
 }
 
 void loadParameters(ros::NodeHandle& private_nh) {
+    private_nh.param("contact_clearance_enabled",params.contact_clearance_enabled,false);
+    private_nh.param("contact_speed_kph",params.contact_speed_kph,5.0);
+    if(!std::isfinite(params.contact_speed_kph)||params.contact_speed_kph<=0||params.contact_speed_kph>5.0)
+        throw std::runtime_error("contact_speed_kph must be in (0,5]");
     private_nh.param("bbox_topic", params.bbox_topic, params.bbox_topic);
     private_nh.param("reference_lane_topic", params.reference_lane_topic, params.reference_lane_topic);
     private_nh.param("bbox_source_timeout", params.bbox_source_timeout, params.bbox_source_timeout);
@@ -1252,8 +1272,18 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
     if (stamp.isZero() || age < -params.future_tolerance || age > params.bbox_source_timeout) {
         reject("bbox_timestamp_expired"); return;
     }
+    // The experimental geometric path may resolve a tiny lane-overlap ratio,
+    // but cannot reinterpret stale/projection/mask/clipping failures as clear.
+    bool contact_resolvable = params.contact_clearance_enabled && message->contact_projection_valid &&
+        message->ground_contacts.size()==message->boxes.size() &&
+        message->ground_contact_valid.size()==message->boxes.size() &&
+        message->assignments.size()==message->boxes.size() && message->box_reasons.size()==message->boxes.size();
+    for(std::size_t i=0;contact_resolvable && i<message->boxes.size();++i)
+        contact_resolvable=message->ground_contact_valid[i] &&
+            (message->assignments[i]!=BboxResult::UNKNOWN ||
+             message->box_reasons[i].find("contact_overlap_too_small:")==0);
     // classifier timeout/UNKNOWN은 같은 stamp여도 즉시 거부한다.
-    if (!message->valid) {
+    if (!message->valid && !contact_resolvable) {
         // 원인은 보존한다. 변경 중 제동 제외 여부는 제어 단계에서 결정한다.
         std::string detail = message->reason;
         for (std::size_t i = 0; i < message->assignments.size() && i < message->box_reasons.size(); ++i) {
@@ -1288,7 +1318,7 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
             reject("invalid_clipped_bbox_contract"); return;
         }
         clipped_association |= message->clipped_association[i];
-        if (label == BboxResult::UNKNOWN || label > BboxResult::DEFERRED_FAR) { reject("bbox_lane_unknown"); return; }
+        if ((label == BboxResult::UNKNOWN && !contact_resolvable) || label > BboxResult::DEFERRED_FAR) { reject("bbox_lane_unknown"); return; }
         deferred_far |= label == BboxResult::DEFERRED_FAR;
         if (label == BboxResult::OWN || label == BboxResult::BOTH) own = BboxResult::DETECTED;
         if (label == BboxResult::ADJACENT || label == BboxResult::BOTH) adjacent = BboxResult::DETECTED;
@@ -1297,7 +1327,8 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
         if (own != BboxResult::DETECTED) own = BboxResult::UNOBSERVED;
         if (adjacent != BboxResult::DETECTED) adjacent = BboxResult::UNOBSERVED;
     }
-    if (message->own_state != own || message->adjacent_state != adjacent) { reject("bbox_occupancy_mismatch"); return; }
+    if (!contact_resolvable && (message->own_state != own || message->adjacent_state != adjacent)) { reject("bbox_occupancy_mismatch"); return; }
+    contact_result=message;
     change_state.deferred_far = deferred_far;
     change_state.clipped_association = clipped_association;
     change_state.occupancy[message->own_lane] = own;
@@ -1314,6 +1345,8 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
 std::string bboxStopReason() {
     // 차선 입력·경로·비상정지·변경 시간 제한은 별도 검사에서 계속 적용한다.
     if (ignoreBboxDuringLaneChange()) return "";
+    if(params.contact_clearance_enabled && (!contact_result || !contact_result->contact_projection_valid))
+        return "contact_projection_unavailable";
     if (!change_state.bbox_valid) return change_state.bbox_error;
     if ((ros::SteadyTime::now()-change_state.bbox_received_at).toSec() > params.bbox_receive_timeout) return "bbox_receive_timeout";
     const double age = (ros::Time::now()-change_state.bbox_stamp).toSec();
@@ -1448,6 +1481,110 @@ void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>&
         follower_state.target_point = interpolatePoint(path[index - 1], path[index], ratio);
         return;
     }
+}
+
+// Experimental clearance policy uses the SAME path generator, road/curvature
+// checks, controller and selector. It never uses a semantic class to skip an
+// obstacle. Lane overlap and vehicle-corridor collision are separate facts.
+std::string updateContactPathPlan() {
+    contact_candidates=0; contact_geometry_ready=false;
+    auto fail=[](const std::string& reason){contact_decision=reason;return reason;};
+    if(!contact_result || !contact_result->contact_projection_valid) return fail("contact_projection_unavailable");
+    if(std::abs((follower_state.source_stamp-contact_result->header.stamp).toSec())>params.contact_max_skew)
+        return fail("contact_lane_timestamp_skew");
+    if(contact_result->ground_contacts.size()!=contact_result->boxes.size() ||
+       contact_result->ground_contact_valid.size()!=contact_result->boxes.size()) return fail("contact_contract_invalid");
+    std::vector<lane_boundary_adapter::clearance::Bounds> contacts;
+    for(std::size_t i=0;i<contact_result->boxes.size();++i){
+        if(!contact_result->ground_contact_valid[i] || contact_result->ground_contacts[i].points.size()!=4)
+            return fail("contact_ground_unavailable");
+        lane_boundary_adapter::clearance::Bounds b{1e100,-1e100,1e100,-1e100};
+        for(const auto& p:contact_result->ground_contacts[i].points){
+            if(!std::isfinite(p.x)||!std::isfinite(p.y))return fail("contact_geometry_invalid");
+            b.xmin=std::min(b.xmin,double(p.x));b.xmax=std::max(b.xmax,double(p.x));
+            b.ymin=std::min(b.ymin,double(p.y));b.ymax=std::max(b.ymax,double(p.y));
+        }
+        contacts.push_back(b);
+    }
+    contact_geometry_ready=true;
+    const double horizon=contact_result->contact_support_x_max_m;
+    if(!std::isfinite(horizon) || horizon<params.lookahead_distance+params.vehicle_front+params.obstacle_longitudinal_margin+2*params.path_sample_step)
+        return fail("contact_swept_horizon_missing");
+    const bool fresh=change_state.decision_sequence!=change_state.bbox_sequence;
+    change_state.decision_sequence=change_state.bbox_sequence;
+    if(change_state.entry_lane<0)change_state.entry_lane=follower_state.locked_lane;
+    struct Candidate { LaneChain lane; std::vector<FamilyPoint2d> path; double offset=0; };
+    auto find=[&](int index,Candidate& found){
+        const auto* original=getPlanningLane(index);if(!original)return false;
+        const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
+            params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
+        for(double offset:{0.,-.25,.25,-.50,.50}) {
+            LaneChain lane=*original;
+            // Offset only the target center, never the observed road boundaries.
+            for(auto& p:lane.centerline)p.y+=offset;
+            std::vector<FamilyPoint2d> path;
+            ++contact_candidates;
+            if(!buildPath(lane,true,path))continue;
+            const double supported_axle_x=horizon-params.vehicle_front-params.obstacle_longitudinal_margin-params.path_sample_step-.1;
+            while(!path.empty() && path.back().x>supported_axle_x)path.pop_back();
+            if(path.empty() || path.back().x<params.lookahead_distance || !pathInsideRoad(path))continue;
+            std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
+            for(const auto& p:path)points.push_back({p.x,p.y});
+            if(!lane_boundary_adapter::clearance::pathClear(points,contacts,shape,horizon,params.path_sample_step))continue;
+            found={std::move(lane),std::move(path),offset};return true;
+        }
+        return false;
+    };
+    Candidate candidate;
+    int target=change_state.changing?change_state.target_lane:follower_state.locked_lane;
+    bool clear=find(target,candidate);
+    if(!clear && !change_state.changing){
+        target=1-follower_state.locked_lane;
+        clear=find(target,candidate);
+        if(fresh)change_state.clear_hits=clear?change_state.clear_hits+1:0;
+        if(!clear)return fail("contact_all_paths_blocked");
+        if(change_state.clear_hits<params.adjacent_clear_frames)return fail("contact_confirming_clear_path");
+        change_state.target_lane=target;follower_state.locked_lane=target;
+        change_state.changing=true;change_state.returning_to_entry=false;
+        change_state.change_started=change_state.timing_updated_at=ros::SteadyTime::now();
+        change_state.drive_time_sec=change_state.pause_time_sec=0.;change_state.completion_hits=0;
+        ROS_INFO("Contact-checked lane change started: target=%d",target);
+    }
+    if(!clear)return fail("contact_target_path_blocked");
+    if(!change_state.changing){
+        if(contacts.empty() && params.return_to_entry_lane && change_state.has_completed &&
+           target!=change_state.entry_lane && (ros::SteadyTime::now()-change_state.completed_at).toSec()>params.lane_change_cooldown){
+            if(fresh)++change_state.clear_hits;
+            Candidate returning;
+            if(change_state.clear_hits>=params.adjacent_clear_frames && find(change_state.entry_lane,returning)){
+                candidate=std::move(returning);target=change_state.entry_lane;
+                change_state.target_lane=follower_state.locked_lane=target;
+                change_state.changing=change_state.returning_to_entry=true;
+                change_state.change_started=change_state.timing_updated_at=ros::SteadyTime::now();
+                change_state.drive_time_sec=change_state.pause_time_sec=0.;change_state.completion_hits=0;
+            }
+        }else change_state.clear_hits=0;
+    }
+    storePlannedTarget(candidate.lane,candidate.path);
+    change_state.target_lane=target;
+    if(change_state.changing){
+        const auto* original=getPlanningLane(target);LaneSample near,ahead;
+        if(original && samplePlanningLane(*original,params.planning_start_x,near) &&
+           samplePlanningLane(*original,params.planning_start_x+1.,ahead) &&
+           follower_state.source_stamp!=change_state.completion_stamp){
+            change_state.completion_stamp=follower_state.source_stamp;
+            const double heading=std::atan2(ahead.center.y-near.center.y,1.);
+            if(std::abs(near.center.y)<=params.completion_lateral_error &&
+               std::abs(heading)<=params.completion_heading_deg*PI/180.)++change_state.completion_hits;
+            else change_state.completion_hits=0;
+            if(change_state.completion_hits>=params.completion_confirm_frames){
+                change_state.changing=false;change_state.has_completed=true;change_state.returning_to_entry=false;
+                change_state.completed_at=ros::SteadyTime::now();change_state.clear_hits=0;
+            }
+        }
+    }
+    contact_decision="contact_checked:lane="+std::to_string(target)+":offset="+std::to_string(candidate.offset);
+    return "";
 }
 
 // ============================================================================

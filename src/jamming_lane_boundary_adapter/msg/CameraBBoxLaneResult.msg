@@ -22,3 +22,12 @@ string[] box_reasons
 # True only for a short, uniquely matched continuation of an already classified box.
 # The current bottom contact is clipped; consumers must limit motion accordingly.
 bool[] clipped_association
+
+# Experimental local clearance evidence. These are image-ground CONTACT bands,
+# not measured 3-D obstacle footprints. At the same image stamp and selected IMU
+# plane; no GPS, latest-plane substitution, or obstacle height reconstruction.
+# Parallel to boxes. Invalid/clipped contacts must never imply free space.
+bool contact_projection_valid
+float64 contact_support_x_max_m
+geometry_msgs/Polygon[] ground_contacts
+bool[] ground_contact_valid

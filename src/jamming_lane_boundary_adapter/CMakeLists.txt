@@ -20,7 +20,7 @@ find_package(yaml-cpp REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 add_message_files(FILES CameraBBox.msg CameraBBoxFrame.msg CameraBBoxLaneResult.msg)
-generate_messages(DEPENDENCIES std_msgs sensor_msgs)
+generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -78,6 +78,8 @@ target_link_libraries(camera_bbox_lane_change_node lane_boundary_adapter ${catki
 catkin_install_python(PROGRAMS scripts/camera_bbox_crop.py scripts/camera_bbox_frame_bridge.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(contact_clearance_test test/contact_clearance_test.cpp)
+
   catkin_add_nosetests(test/test_rviz_launch_contract.py)
   find_package(rostest REQUIRED)
   add_rostest(test/camera_frame_bridge.test)
