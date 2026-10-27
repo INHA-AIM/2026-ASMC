@@ -7,6 +7,7 @@
 기준선은 PR #119·#121 병합본 `52017fe2`다. 구현은 `feat/lidar-three-view-fusion`에서
 진행한다. 2026-10-28 사용자 승인에 따라 **최적화한 3뷰 fusion을 기본으로 승격**했다.
 정본 YAML과 코드 기본값은 `fusion.views: all`이다. `motion.semantic_static_enabled: false`는 유지한다.
+semantic 보조의 재개·채택 검증은 [V1 보류 작업표](improvement-milestones.md#v1--semantic-정적-보조-검증)를 따른다.
 기본 선택과 전체 대회 주행 수락은 구분한다. 초기 입력 공백·얇은 물체 소실은 미해결이며,
 [승격 검증과 후속 복구 설계](fusion-recovery.md)를 따른다.
 [시험 결과](../../../docs/records/lidar/2026-10-27-m1-three-view-fusion.md)에서 구현·검증·미수락을 구분한다.

@@ -75,6 +75,7 @@ LCF3D의 복구는 별도3D 학습 모델이며 BEV 그림에 박스를 투영�
 
 현재 우선순위는 [음영 정지 재현과 local 판제 기반](../../../docs/architecture/shadow-planning-refactoring.md)이다.
 아래 복구 설계는 보존하되 다음 PR의 확정 착수 범위로 해석하지 않는다.
+상태·인수 조건은 [R1을 포함한 보류 작업표](improvement-milestones.md#보류-과제-인수-단위)에서 관리한다.
 
 1. M0 사례 장부에 이동 중 barricade의 raw·중간 점군·OBB·track·fusion·전달 사유를 연결한다.
    어느 단계에서 사라졌는지 먼저 구분한다. 단순 추적 miss라면 새 검출 생성보다 M3/M4를 우선한다.
