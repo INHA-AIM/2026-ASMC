@@ -35,6 +35,27 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(stats([1,2,3])['p50'],2)
 
 class CoreTests(unittest.TestCase):
+    def test_f1_projection_probe_requires_recorded_receipt(self):
+        import numpy as np
+        from asmc_camera.bev.calibration import load_calibration_snapshot
+        root=Path(__file__).resolve().parents[2]
+        calibration=root/'src/asmc_camera/config/cameras_v3.yaml'
+        _,cameras=load_calibration_snapshot(calibration)
+        requests=[]
+        for name,c in cameras.items():
+            point=np.asarray(c.translation_m)+c.body_from_mount_rotation@np.array([10.,0.,0.])
+            requests.append(dict(camera_id='camera_'+name,scan_stamp_ns=1000000000,
+                scan_arrival_ns=1001000000,image_stamp_ns=1010000000,points=[point.tolist()]))
+        probe=Path(os.environ['C0_PROBES'])/'fusion_projection_probe'
+        for result in json_probe(probe,requests,[calibration]):
+            point=result['points'][0]
+            self.assertTrue(point['valid'])
+            self.assertEqual(point['reason'],'ok_uncompensated_time_offset')
+            self.assertAlmostEqual(point['u'],result['width']/2,places=8)
+            self.assertAlmostEqual(point['v'],result['height']/2,places=8)
+        requests[0]['scan_arrival_ns']=999000000
+        self.assertEqual(json_probe(probe,requests[:1],[calibration])[0]['points'][0]['reason'],'invalid_time')
+
     def test_gallery_uses_signed_drivable_cells(self):
         import numpy as np
         from frame_time.gallery import occupancy_colors

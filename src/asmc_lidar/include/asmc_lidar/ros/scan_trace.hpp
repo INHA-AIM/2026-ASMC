@@ -241,6 +241,75 @@ class LocalInputCache {
   std::deque<std::pair<std::uint64_t, pipeline::CanData>> can_;
 };
 
+// Shared by full trace and sampled web snapshots; no independent matching here.
+inline void Fusion(std::ostream& out, const pipeline::fusion::FusionReport& f, bool ran) {
+  out << "{\"ran\":"; Bool(out, ran);
+  out << ",\"camera_active\":"; Bool(out, f.camera_active);
+  out << ",\"camera_reason\":"; Str(out, f.camera_reason);
+  out << ",\"diagnostics_enabled\":"; Bool(out, f.diagnostics_enabled);
+  out << ",\"emitting_scan_sequence\":" << f.emitting_scan_sequence
+      << ",\"emitting_scan_stamp_ns\":" << f.emitting_scan_stamp_ns
+      << ",\"pending_scans\":" << f.pending_scans
+      << ",\"decisions_omitted\":" << f.decisions_omitted << ",\"views\":[";
+  bool comma = false;
+  for (const auto& v : f.views) {
+    if (comma) out << ',';
+    comma = true;
+    out << "{\"camera_id\":"; Str(out, v.frame_id);
+    out << ",\"matching_implemented\":"; Bool(out, v.frame_id == "camera_front");
+    out << ",\"reason\":"; Str(out, v.reason);
+    out << ",\"stamp_ns\":" << v.stamp_ns << ",\"image_minus_scan_ns\":" << v.image_minus_scan_ns
+        << ",\"candidates\":" << v.candidates << ",\"generation\":" << v.generation
+        << ",\"wire_sequence\":" << v.wire_sequence;
+    out << ",\"session\":"; Str(out, v.session);
+    out << ",\"calibration_id\":"; Str(out, v.calibration_id);
+    out << ",\"model_id\":"; Str(out, v.model_id);
+    out << ",\"config_id\":"; Str(out, v.config_id); out << '}';
+  }
+  out << "],\"decisions\":["; comma = false;
+  for (const auto& d : f.decisions) {
+    if (comma) out << ',';
+    comma = true;
+    out << "{\"scan_sequence\":" << d.scan_sequence << ",\"scan_stamp_ns\":" << d.scan_stamp_ns
+        << ",\"wait_ns\":" << d.wait_ns << ",\"image_stamp_ns\":" << d.image_stamp_ns
+        << ",\"image_minus_scan_ns\":" << d.image_minus_scan_ns
+        << ",\"generation\":" << d.generation << ",\"wire_sequence\":" << d.wire_sequence;
+    out << ",\"action\":"; Str(out, d.action);
+    out << ",\"reason\":"; Str(out, d.reason);
+    out << ",\"observation_id\":"; Str(out, d.observation_id);
+    out << ",\"camera_id\":"; Str(out, d.camera_id);
+    out << ",\"session\":"; Str(out, d.session);
+    out << ",\"calibration_id\":"; Str(out, d.calibration_id);
+    out << ",\"model_id\":"; Str(out, d.model_id);
+    out << ",\"config_id\":"; Str(out, d.config_id);
+    out << ",\"reused\":"; Bool(out, d.reused);
+    out << ",\"projection_valid\":"; Bool(out, d.projection_valid);
+    out << ",\"boxes_received\":" << d.boxes_received << ",\"boxes_admitted\":" << d.boxes_admitted
+        << ",\"associations_omitted\":" << d.associations_omitted << ",\"associations\":[";
+    bool c = false;
+    for (const auto& a : d.associations) {
+      if (c) out << ',';
+      c = true;
+      out << "{\"track_id\":" << a.track_id << ",\"source_box_index\":" << a.source_box_index;
+      out << ",\"iou\":"; Num(out, a.iou);
+      out << ",\"applied\":"; Bool(out, a.applied);
+      out << ",\"projected\":"; Bool(out, a.projected);
+      out << ",\"reason\":"; Str(out, a.reason);
+      out << ",\"raw_class\":"; Str(out, a.raw_class);
+      out << ",\"group\":"; Str(out, a.group);
+      out << ",\"class_before\":"; Str(out, a.class_before);
+      out << ",\"class_after\":"; Str(out, a.class_after);
+      out << ",\"projected_box\":[";
+      for (std::size_t i=0;i<4;++i) { if(i) out << ','; Num(out,a.projected_box[i]); }
+      out << "],\"camera_box\":[";
+      for (std::size_t i=0;i<4;++i) { if(i) out << ','; Num(out,a.camera_box[i]); }
+      out << "]}";
+    }
+    out << "]}";
+  }
+  out << "]}";
+}
+
 struct LineInput {
   std::string producer;
   std::string session_id, config_id, calibration_id;
@@ -384,6 +453,9 @@ inline std::string Line(const LineInput& in) {
       }
       out << ']';
     }
+  }
+  if (o.fusion_ran && o.fusion.diagnostics_enabled) {
+    out << ",\"fusion\":"; Fusion(out, o.fusion, true);
   }
   out << ",\"timings_ms\":{\"total\":" << o.total_ms
       << ",\"roi\":" << r.timings.roi_ms << ",\"voxel\":" << r.timings.voxel_ms

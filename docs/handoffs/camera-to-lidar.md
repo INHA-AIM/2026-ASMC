@@ -9,7 +9,8 @@
 asmc_camera/camera.launch
  → /perception/camera/objects/observations : asmc_msgs/CameraObjectObservation
  → asmc_lidar의 뷰별 수신·버퍼 → 전방 matching·분류 유지
- → 공용 tracks_local/map → planning_inputs → 판제
+ → 공용 planning_observations_map → planning_inputs → 판제
+ → tracks_local/map (분석·local 기하)
 ```
 
 `/YOLO/BBox` 정수 wire와 별도 어댑터는 폐기했다. header·원본 영상 크기·subpixel bbox·원본 이름·
@@ -34,6 +35,13 @@ TwinLite Large E8 TensorRT도 같은 B1/B2 크기·목표15Hz, 신호등은10Hz�
 그룹은 소비용 분류이며 실제 운동 상태가 아니다. fresh 양성 matching의 vehicle/dynamic_obstacle은
 HD맵 도로 밖에서도 보호한다. 오래된 분류나 LiDAR 추정 속도만으로 이 예외를 적용하지 않는다.
 판제 numeric enum은 모든 원본 클래스를 표현하지 못하며 unknown도 충돌 기하를 유지한다.
+
+## F1 연결 검증
+
+전방 실제 matching과 좌우 수신·native 재투영은 [F1 결과](../records/lidar/2026-10-27-front-fusion-verification.md)에 있다.
+투영 실패를 미검출로 처리하던 경계와 투영 중 카메라 세대 변경을 수정했다.
+[진단 해석·갤러리·재현 방법](../../src/asmc_lidar/docs/fusion-verification.md)을 따른다.
+새 진단은 판제 정본 입력이 아니며, 다른 source clock의 원본 시각은 아직 직접 비교할 수 없다.
 
 ## 실행과 후속
 
