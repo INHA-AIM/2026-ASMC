@@ -3,7 +3,7 @@
 목표는 허용 센서로 전체 미션을 반복 완주하고, 충돌·규정 위반·인지/제어 공백을 줄이면서
 주행 시간을 개선하는 것입니다. 모델 점수나 패키지 이전 완료만으로 대회 준비를 판정하지 않습니다.
 담당은 [현재 ownership](../onboarding/ownership.md)을 유지하며 아래는 기존 역할에 따른 다음 작업 제안입니다.
-LiDAR 후속 책임은 [M0–M5 합의](../../src/asmc_lidar/docs/improvement-milestones.md)를 반영하며 수락 완료와 구분합니다.
+LiDAR 후속 책임은 [M0–M5 인수안](../../src/asmc_lidar/docs/improvement-milestones.md)를 반영하며 수락 완료와 구분합니다.
 
 ## 현재 기준선
 
