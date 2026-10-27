@@ -1511,7 +1511,14 @@ std::string updateContactPathPlan() {
         contacts.push_back(b);
     }
     contact_geometry_ready=true;
-    const double horizon=contact_result->contact_support_x_max_m;
+    // Classifier can retain 18 m while this consumer intentionally clips at
+    // 15 m. Full vehicle coverage must use their intersection, not the larger
+    // upstream support (which made otherwise feasible curved paths fail).
+    double horizon=contact_result->contact_support_x_max_m;
+    for(const auto& lane:change_state.lanes) {
+        if(lane.left_boundary.empty() || lane.right_boundary.empty())return fail("contact_road_support_missing");
+        horizon=std::min({horizon,lane.left_boundary.back().x,lane.right_boundary.back().x});
+    }
     if(!std::isfinite(horizon) || horizon<params.lookahead_distance+params.vehicle_front+params.obstacle_longitudinal_margin+2*params.path_sample_step)
         return fail("contact_swept_horizon_missing");
     const bool fresh=change_state.decision_sequence!=change_state.bbox_sequence;
@@ -1532,7 +1539,8 @@ std::string updateContactPathPlan() {
             // otherwise makes distinct adjacent-lane offsets identical; every
             // full candidate still passes the unchanged road/curvature guard.
             if(!buildPath(lane,true,path,1.0,length,true))continue;
-            const double supported_axle_x=horizon-params.vehicle_front-params.obstacle_longitudinal_margin-params.path_sample_step-.1;
+            const double supported_axle_x=horizon-std::hypot(params.vehicle_front+params.obstacle_longitudinal_margin+params.path_sample_step,
+                params.vehicle_width/2+params.obstacle_lateral_margin)-.1;
             while(!path.empty() && path.back().x>supported_axle_x)path.pop_back();
             if(path.empty() || path.back().x<params.lookahead_distance || !pathInsideRoad(path)){++contact_road_rejected;continue;}
             std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
