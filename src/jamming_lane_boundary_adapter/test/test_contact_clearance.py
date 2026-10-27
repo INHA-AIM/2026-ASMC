@@ -37,6 +37,14 @@ class ContactTest(unittest.TestCase):
             str(fixture/'bbox-probe-v2.rosbin')],text=True,timeout=5)
         self.assertRegex(output,r'lane=0 .*road=1 clear=1')
 
+    def test_recorded_near_corridor_retains_unchanged_clearance_margins(self):
+        fixture=Path(__file__).parent/'fixtures/contact-clearance'
+        executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
+        output=subprocess.check_output([executable,str(fixture/'near-family.rosbin'),
+            str(fixture/'near-bbox.rosbin'),'20','15'],text=True,timeout=5)
+        self.assertIn('runtime_decision= candidates=',output)
+        self.assertRegex(output,r'lane=1 offset=-0.35 length=3 road=1 clear=1')
+
     def test_contact_centerline_barrier_and_far_car(self):
         self.feed()
         self.feed([1.75],far=True,box_x=9.)
