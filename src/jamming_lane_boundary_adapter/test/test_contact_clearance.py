@@ -30,6 +30,11 @@ class ContactTest(unittest.TestCase):
         if hasattr(self,'speed_timer'):self.speed_timer.shutdown()
         legacy.LaneChangeTest.tearDown(self)
         rospy.delete_param('/camera_bbox_lane_change/contact_clearance_enabled')
+    def test_interpolation_equivalence(self):
+        executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
+        output=subprocess.check_output([executable,'--interpolation-regression'],text=True,timeout=5)
+        self.assertIn('interpolation_equivalent samples=24220',output)
+
     def test_recorded_drum_heading_has_feasible_candidate(self):
         fixture=Path(__file__).parent/'fixtures/contact-clearance'
         executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
