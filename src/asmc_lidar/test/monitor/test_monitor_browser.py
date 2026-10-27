@@ -135,6 +135,32 @@ window.addEventListener('error',e=>{document.body.dataset.testError=e.message;})
   check(document.getElementById('audit-summary').textContent.includes('ROS 발행 2 / 4')&&
     document.getElementById('audit-summary').textContent.includes('안쪽 경계 10cm'),'actual ROS delivery and 10cm inset are displayed');
   check(document.getElementById('detail').textContent.includes('제외 · 원본 tracker는 유지'),'actual delivery exclusion is distinct from screen hiding');
+  // Exercise the real renderer with final/removed/ground provenance in one scene.
+  for(const reason of ['points','obb','height','policy'])toggle('opt-hide-'+reason,false);
+  for(const name of ['raw','roi','voxel','leveled','ground','tunnel','height_removed','clusters','detections','tracks','typed'])app.setStage(name,false);
+  app.setStage('nonground',true);app.state.colorMode='stage';
+  document.getElementById('view-side').hidden=true;
+  app.state.arrays['leveled.xyzi']=new Float32Array([2,0,0,1,4,0,0,1,6,0,0,1]);
+  app.state.arrays['leveled.label']=new Uint8Array([0,2,1]);
+  const source=app.state.scene;
+  source.tunnel={ran:true,removed:2};source.counts.cluster_input=1;
+  const expectedCounts=JSON.stringify(source.counts);
+  render();await sleep();await sleep();await sleep();await sleep();render();
+  check(!points.includes('#fb923c')&&points.filter(c=>c==='#34d399').length===1,'default final view hides removed points');
+  check(document.querySelector('input[data-stage="nonground"]').checked&&
+    document.querySelector('input[data-stage="nonground"]').parentElement.textContent.includes('최종 필터 후'),'final-filter view is the default named view');
+  const summary=document.getElementById('pipeline-filter-summary');
+  check(summary.textContent.includes('음영 필터 실행')&&summary.textContent.includes('3점 → 후(군집 입력) 1점')&&
+    summary.textContent.includes('전체 제거 2점'),'full pre/post counts come from this scan');
+  check(document.getElementById('c-tunnel').textContent==='표본 1','comparison count is a sample count, not the total removal count');
+  app.setStage('tunnel',true);render();
+  check(points.includes('#fb923c'),'removed-point comparison is orange alongside final points');
+  app.setStage('tunnel',false);render();
+  check(!points.includes('#fb923c')&&JSON.stringify(source.counts)===expectedCounts,'comparison toggle neither changes counts nor retains removed points');
+  source.tunnel.ran=false;await sleep();await sleep();await sleep();await sleep();
+  check(summary.textContent.includes('음영 필터 미실행'),'GPS-normal scan does not claim tunnel execution');
+  source.stages=false;source.processed=false;await sleep();await sleep();await sleep();await sleep();
+  check(summary.textContent.includes('미처리')&&!summary.textContent.includes('3점'),'unprocessed scan does not retain old counts');
   check(!document.body.dataset.testError,'no uncaught application errors');
   const pre=document.createElement('pre');pre.id='browser-test-result';pre.textContent=JSON.stringify({ok:true,checks});document.body.appendChild(pre);
  }catch(e){const pre=document.createElement('pre');pre.id='browser-test-result';pre.textContent=JSON.stringify({ok:false,error:String(e),checks});document.body.appendChild(pre);}
