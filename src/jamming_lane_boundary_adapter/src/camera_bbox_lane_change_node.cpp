@@ -230,6 +230,7 @@ std::deque<ContactLaneFrame> contact_lane_history; // bounded, only accepted geo
 std::string contact_decision = "disabled";
 unsigned contact_candidates = 0, contact_road_rejected=0, contact_collision_rejected=0;
 bool contact_geometry_ready = false;
+double contact_plan_wall_ms = 0.;
 ros::Subscriber bbox_subscriber;
 ros::Subscriber mode_subscriber;
 ros::Publisher reference_lane_publisher;
@@ -456,7 +457,9 @@ void cameraLaneFollowingProcess() {
         stop_reason = bboxStopReason();
     }
     if (stop_reason.empty() && follower_state.target_ready) {
+        const auto plan_started=ros::SteadyTime::now();
         stop_reason = params.contact_clearance_enabled ? updateContactPathPlan() : updateLaneChangePlan();
+        contact_plan_wall_ms=(ros::SteadyTime::now()-plan_started).toSec()*1000.;
     } else {
         change_state.obstacle_hits = 0;
         change_state.clear_hits = 0;
@@ -1060,9 +1063,10 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "change_completed", change_state.has_completed ? "true" : "false");
     addDiagnosticValue(status, "change_drive_time_sec", std::to_string(change_state.drive_time_sec));
     addDiagnosticValue(status, "change_pause_time_sec", std::to_string(change_state.pause_time_sec));
-    addDiagnosticValue(status, "uses_obstacle_distance", "false");
+    addDiagnosticValue(status, "uses_obstacle_distance", params.contact_clearance_enabled?"camera_ground_contact_only":"false");
     addDiagnosticValue(status, "contact_clearance_enabled", params.contact_clearance_enabled?"true":"false");
     addDiagnosticValue(status, "contact_decision", contact_decision);
+    addDiagnosticValue(status, "contact_plan_wall_ms",std::to_string(contact_plan_wall_ms));
     addDiagnosticValue(status, "contact_candidates", std::to_string(contact_candidates));
     addDiagnosticValue(status, "contact_road_rejected", std::to_string(contact_road_rejected));
     addDiagnosticValue(status, "contact_collision_rejected", std::to_string(contact_collision_rejected));
