@@ -89,9 +89,10 @@ int main(int argc,char**argv){
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
  for(const auto& original:change_state.lanes)for(double offset:{0.,-.05,.05,-.1,.1,-.15,.15,-.2,.2,-.25,.25,-.3,.3,-.35,.35,-.4,.4,-.45,.45,-.5,.5})for(double length:{3.,4.,5.,6.,8.,10.,12.}){
   auto lane=original;for(auto&p:lane.centerline)p.y+=offset;
-  std::vector<FamilyPoint2d> path;if(!buildPath(lane,true,path,1.,length,true))continue;
+  std::vector<FamilyPoint2d> path;
   const double end=horizon-std::hypot(shape.front+shape.longitudinal_margin+params.path_sample_step,shape.half_width+shape.lateral_margin)-.1;
-  while(!path.empty() && path.back().x>end)path.pop_back();
+  const double path_end=std::floor(std::min(params.path_horizon,end)/params.path_sample_step)*params.path_sample_step;
+  if(!buildPath(lane,true,path,1.,length,true,path_end))continue;
   const bool road=path.size()>1 && path.back().x>=params.lookahead_distance && pathInsideRoad(path);
   std::vector<lane_boundary_adapter::clearance::Point> pts;for(const auto&p:path)pts.push_back({p.x,p.y});
   const bool clear=lane_boundary_adapter::clearance::pathClearOfPolygons(pts,occupied,shape,horizon,params.path_sample_step);
