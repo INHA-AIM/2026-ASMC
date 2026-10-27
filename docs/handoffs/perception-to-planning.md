@@ -19,8 +19,9 @@ Frenet V2는 매 주기 새 객체 입력을 요구하고 stale이면 정지한�
 
 ## 판제 적용 확인표
 
-2026-10-20 main `2c94bf11` 코드 대조다. 아래 항목은 판제의 적용·인수를 확인하는 안내이며,
-카메라가 판제 정책이나 손재호의 로컬 fusion 구현을 대신 변경한 목록이 아니다.
+YOLO 소비 경계는 2026-10-28 main `56433579`을 포함한 PR #122 작업 기준
+`19be0eed`에서 다시 대조했다. 구간·HD맵 안내는 기존 2026-10-20 대조를 유지한다.
+아래 항목은 판제의 적용·인수를 확인하는 안내이며, 행동 정책을 변경한 목록이 아니다.
 카메라는 원본 이름·그룹·시각·좌표·상태를 제공하고, 판제는 소비·위험 판단·제어를 소유한다.
 
 | 소비 그룹 | 원본 모델 이름 | 정책에서 구분할 사항 |
@@ -35,8 +36,8 @@ Frenet V2는 매 주기 새 객체 입력을 요구하고 stale이면 정지한�
 | 연결 경계 | 현재 전달·제한 | 판제가 확인할 것 |
 |---|---|---|
 | 카메라 관측 | 원본 영상 픽셀 bbox·header와 camera ID, confidence·그룹·원본 이름 | tensor 좌표로 다시 확대하거나 원본 보정을 축소하지 않음. LiDAR의 미터 좌표와 직접 비교하지 않음 |
-| LiDAR 전방 fusion | 공용 CameraObjectObservation의 원본 픽셀·confidence·그룹·식별자를 수신 | 전방 matching 구현, 좌우3뷰 fusion은 손재호 작업. 구 정수 wire는 폐기 |
-| 판제 숫자 enum | `vehicle/pedestrian/unknown`. 원본 person은 pedestrian, 다른 dynamic/static은 unknown 가능 | **unknown 형상을 삭제하지 않음**. 세 그룹/원본 종류 정책은 문자열을 보존한 tracked 정보에서 연결 |
+| LiDAR fusion | 공용 CameraObjectObservation의 원본 픽셀·confidence·그룹·식별자를 수신. PR #122 작업에서는 3뷰가 기본 | 동일 track·scan의 중복 확인을 늘리지 않음. 클래스 유지와 최신 양성 근거는 다름. [3뷰 계약](../../src/asmc_lidar/docs/three-view-fusion.md) 참조 |
+| 판제 숫자 enum | 현재 어댑터 출력은 `vehicle/pedestrian/unknown`. 원본 person은 pedestrian, 나머지 dynamic/static은 unknown | **unknown 형상을 삭제하지 않음**. 판제 내부에는 STATIC_OBSTACLE=3도 있지만 현재 어댑터는 생산하지 않음. 세 그룹·원본 이름을 별도로 보존할 후속 작업 필요 |
 | 운동 상태 | semantic 그룹과 `motion_state`·속도 validity는 별개. 공용 추적 관측은 기존 적용 절대속도·4단계 상태와 각각의 유효성을 제공 | unknown·미계산을 정지 속도0으로 해석하지 않음. 정본 공용 관측의 상태와 validity를 확인 |
 | 입력 유지 | 새 관측의 빈 결과와 stale/무효/미수신을 구분 | 미션 밖 입력 토픽을 끊거나 빈 배열을 타이머로 만들어 장애를 숨기지 않음 |
 | 음영 family | `base_link` xyz·support·freshness, 같은 영상의 IMU 지면 context | 좌/우 역할을 home/opposing으로 고정하지 않음. stale·SHA·세대 불일치와 GPS 복귀 정책 인수 |
@@ -49,6 +50,75 @@ Frenet V2는 매 주기 새 객체 입력을 요구하고 stale이면 정지한�
 원본 이름·confidence가 빠진 구형 메시지를 소비한 뒤 임의로 복원했다고 표시하지 않는다.
 단일 producer·정상 빈 결과·센서 중단·재시작·실제 장애물 회피를 함께 인수한다.
 카메라/LiDAR 수신 구현이 빌드됐다는 사실과 판제 폐루프 인수는 구분한다.
+
+### YOLO 그룹과 판제 타입의 소비 대조 — 2026-10-28
+
+**공용 의미 분류는 세 그룹으로 유지하고, 사람 전용 정책에 쓰는 `PEDESTRIAN`은
+원본 `person`의 파생 구분으로 남긴다.** 세 그룹으로 기존 enum을 단순 교체하면
+사람 전용 대응과 이미 조정한 추종·회피 분기가 바뀐다. 다음 세 축을 독립적으로 소비한다.
+
+- 무엇인가: `vehicle / dynamic_obstacle / static_obstacle`과 원본16종 이름.
+- 실제로 어떻게 움직이는가: `motion_state`, 속도와 속도 유효성.
+- 어떻게 대응할 것인가: 경로 점유·미션·시각·불확실성에 따른 판제 행동.
+
+**vehicle과 dynamic_obstacle도 정적으로 배치되거나 멈춰 있을 수 있다.**
+반대로 static_obstacle이라는 이름만으로 관측 속도를0으로 만들거나 움직임을 무시하지 않는다.
+카메라 오분류·track 연결 오류·외력으로 이동한 물체도 고려한다. 운동 UNKNOWN/속도 무효는
+측정된 정지가 아니다. LOW_THREAT도 절대 정지나 충돌 위험 없음을 뜻하지 않는다.
+현재의 정지 예측 규칙과 점유 검사는 그대로 유지한다.
+
+| 원본 클래스 | 공용 그룹 | 현재 `/planning/objects.type` |
+|---|---|---|
+| car, bus, truck | vehicle | VEHICLE=1 |
+| person | dynamic_obstacle | PEDESTRIAN=2 |
+| dog, deer, bicycle, stroller | dynamic_obstacle | UNKNOWN=0 |
+| motorcycle, bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier, traffic_cone | static_obstacle | UNKNOWN=0 |
+
+즉 원본16종 중12종은 숫자 타입만으로 구별되지 않는다.
+이는 LiDAR가 해당 객체를 버린다는 뜻이 아니다.
+`planning_observations_map.observation.objects.objects[]`에는 그룹
+`classification`과 원본 `camera_class`가 함께 있지만,
+[private DetectedObject](../../src/planning_inputs/msg/DetectedObject.msg)에 해당 필드가 없어
+변환 이후에는 형상·속도·운동 상태만 남는다. 별도 `tracks_map`을 시각으로 다시 결합할 필요 없이
+**동일 관측의 문자열을 손실 없이 전달**하는 것이 첫 개선이다.
+
+현재 행동에서 확인한 범위:
+
+- [FeatureBuilder](../../src/asmc_planner/src/Behavior/Feature/feature_builder.cpp)는
+  VEHICLE을 정지 여부와 무관하게 선행 후보로 검토한다. PEDESTRIAN에는 사람 전용 정지 조건이
+  있다. UNKNOWN/STATIC_OBSTACLE과 UNKNOWN/LOW_THREAT 운동 상태 조합은 정적 회피 후보로
+  검토하지만, 위치·형상·경로·미션 조건도 필요하다. 이 후보 구분은 물리적 정지 판정이 아니다.
+- 최신 [DynamicObjectPolicy](../../src/asmc_planner/src/Behavior/Feature/DynamicObjectPolicy.cpp)는
+  동적 장애물 링크 A728/A599/A207/A205에서 UNKNOWN과 속도 미확정 객체도 점유 검사한다.
+  따라서 dog/deer 등이 UNKNOWN이라는 이유만으로 모든 충돌 검사가 생략된다고 해석하지 않는다.
+  다만 이름별 차이는 사용할 수 없으며 다른 구간에서도 같은 특화 정책이 실행되는 것은 아니다.
+- 이 정책의 `IntersectsRoad`는 현재 도로 겹침이 없는 객체를 특화 판단에서 제외한다.
+  LiDAR의 유효한 YOLO vehicle/dynamic 도로 밖 전달 보호와 **판제의 진입 예측**은 별개다.
+  도로 밖 객체가 진입하는 경우에는 이 조건과 공유 충돌 예측을 함께 검증해야 한다.
+  현재 분기를 제거하거나 실제 놓침이 재현됐다고 결론 낸 것은 아니다.
+- 음영의 [전방 bbox 입력](../../src/jamming_lane_boundary_adapter/scripts/camera_bbox_frame_bridge.py)은
+  원본16종을 모두 받되 전방만 사용하고, 별도 confidence 기본0.7을 적용한다
+  (카메라 생산자0.40과 다름). 라벨은 유지하지만 차로 점유·회피는 주로 기하를 사용한다.
+  일반 map 판제 경로와 동일한 클래스별 정책이 완성된 것으로 간주하지 않는다.
+- LiDAR의 semantic 정적 보조는 현재 `semantic_static_enabled: false`다.
+  정적 라벨만으로 순간 속도 튐을 억제하는 기능이 기본 적용됐다고 안내하지 않는다.
+
+**제안하는 다음 작업 — 아직 행동 변경 미구현**
+
+1. 안승현: 같은 공용 관측의 그룹·원본 이름을 private DetectedObject와 Behavior/Frenet 내부
+   객체까지 보존한다. 기존 type·OBB·운동 상태·속도·필터 결과는 먼저 그대로 유지한다.
+   메시지 필드 추가 시 private MD5와 전체 소비자 재빌드·bag 호환 영향을 명시한다.
+2. 안승현이 판제 담당과 대조: 사람 전용 정책을 유지하며 dog/deer/bicycle/stroller의
+   점유·진입 대응을 어느 범위에서 공유할지 결정한다. 정지 차량/자전거/사람의 추종·정지·회피는
+   그룹 이름만으로 결정하지 않는다. static을 enum3으로 바로 바꾸는 작업도 행동 변경이다.
+3. 클래스×운동 상태×경로 점유×미션의 회귀 자료를 만든다. 정지 차량, 서 있는 사람,
+   세워 둔 자전거, 이동 중 동물, static 오분류, 속도 무효, 도로 밖 진입을 포함한다.
+   변경 전후 AVOID/FOLLOW/STOP·재출발·합류와 공유 충돌 검사를 비교한 후 정책을 반영한다.
+
+관측 문자열 보존과 정책 변경은 별도 커밋·검증으로 진행한다.
+분류가 유지된 객체를 매 scan 새 YOLO 확인으로 계산하지 않는다. 정책에 최신 카메라 근거가
+필요하면 기존 fusion의 신규/유지/만료 의미부터 연결하며 객체 header만으로 새 검출을 추정하지 않는다.
+이번 감사의 코드 변경은 주석뿐이며 메시지·분류 매핑·임계값·운동 상태·행동은 변경하지 않았다.
 
 ## 검토한 소비 범위
 

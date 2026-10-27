@@ -102,6 +102,10 @@ DynamicDecision DynamicObjectPolicy::evaluate(const UrbanFeature& feature,const 
     assessment.motion=static_cast<int>(source.motion_state);
     const bool confirmed=source.motion_state==ObjectMotionState::DYNAMIC;
     const bool pending=source.motion_state==ObjectMotionState::DYNAMIC_PENDING;
+    // "mobile" is a semantic capability, not measured motion: a person or
+    // vehicle can be stationary. dog/deer/bicycle/stroller arrive as UNKNOWN
+    // today and still enter the occupancy checks below. A future group-preserving
+    // input must retain that coverage and the independent motion/validity gates.
     const bool known_mobile=source.type==static_cast<int>(ObjectType::PEDESTRIAN) ||
         source.type==static_cast<int>(ObjectType::VEHICLE);
     // A new track can already occupy our lane before perception has enough

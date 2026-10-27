@@ -10,6 +10,12 @@ enum class BehaviorType : std::uint8_t { KEEP=0, FOLLOW=1, LEFT_CHANGE=2, RIGHT_
 // Existing ManeuverPhase vocabulary; not the ROS feedback execution_state.
 enum class ExecutionPhase : std::uint8_t { NONE=0, PREPARE=1, EXECUTE=2, COMMITTED=3, COMPLETE=4, FAILED=5, CANCELLED=6 };
 
+// Planner policy categories, not camera mission16 group IDs. PEDESTRIAN keeps
+// the person-specific response; it is not the whole dynamic_obstacle group.
+// vehicle/dynamic_obstacle can be parked or stationary; static_obstacle does
+// not prove rest. MotionState and velocity validity remain independent.
+// planning_inputs currently emits 0/1/2 only: 3 exists here but is not yet a
+// lossless camera-group contract. See docs/handoffs/perception-to-planning.md.
 enum class ObjectType : std::uint8_t { UNKNOWN=0, VEHICLE=1, PEDESTRIAN=2, STATIC_OBSTACLE=3 };
 
 enum class MotionState : std::uint8_t {
