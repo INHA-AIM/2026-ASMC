@@ -1,18 +1,18 @@
 # 시스템 구조
 
 현재 구조는 ROS1 Noetic 기반의 모듈식 인지·Behavior/Frenet·MPC입니다. MORAI 경계는 UDP이며
-개발용 gRPC·Capture·GT는 학습·검증 도구에 한정합니다. 현재 팀 소유 패키지와 nested workspace는
+개발용 gRPC·Capture·GT는 학습·검증 도구에 한정합니다. 현재 팀 소유 패키지는
 [저장소 지도](repository-layout.md), 담당은 [ownership](../onboarding/ownership.md)을 봅니다.
 
 ```text
 MORAI 허용 센서 → asmc_bridge
-  RGB 3뷰 → asmc_camera YOLO → 전방 CPU 어댑터 → nested Main fusion/추적
-  LiDAR + GPS/IMU ────────────────────────────→ Main → /last_lidar
+  RGB 3뷰 → asmc_camera YOLO → asmc_lidar 전방 fusion (좌우는 수신·투영)
+  LiDAR + GPS/IMU/속도 → asmc_lidar 검출·추적·전달 필터
   GPS/IMU → planning_inputs → /planning/vehicle/state
   camera4 → asmc_camera ResNet → 신호등 typed 관측
   RGB 3뷰 → TwinLite → model-grid 투영 → 음영 boundary_family
 
-/last_lidar + motion_debug → planning_inputs → /planning/objects
+/perception/lidar/planning_observations_map → planning_inputs → /planning/objects
 차량 상태·객체·신호·local map → asmc_planner(Behavior → Execution → Frenet)
   → /planning/trajectory → asmc_controller → /ctrl_cmd/normal
 음영 제어 어댑터 → /ctrl_cmd/jamming
@@ -23,12 +23,12 @@ MORAI 허용 센서 → asmc_bridge
 
 | 경계 | 현재 구현 | 남은 작업 |
 |---|---|---|
-| 카메라 객체 | E8 기본·사전학습 선택, TensorRT, 원본16종/소비3그룹, 3뷰 관측 | 요청된 실패 조건만 추가학습; 3뷰 관측이 곧 3뷰 fusion은 아님 |
+| 카메라 객체 | E8 기본·사전학습 선택, TensorRT, 원본16종/소비3그룹, 3뷰 관측 | 장원태 detect 추가학습; 승현 3뷰 fusion. 3뷰 관측이 곧 3뷰 fusion은 아님 |
 | 차선 | TwinLite TensorRT·전방544×960/측방480×640, model-grid→shared family | 음영 ODD에서 판제 소비·fallback 공동 확인; 순간 공급 공백 제한 추적 |
-| LiDAR | nested `Main`이 지면·군집·OBB·추적·전방 fusion·판제 출력을 제공. `asmc_lidar` shadow 노드는 지면~전방 fusion(MotionClassifier·판제 후처리 제외)을 `/asmc_lidar/shadow/*`로만 발행(명시 실행, 운영 미연결) | 손재호가 운영 전환까지 기능 이전(MotionClassifier·판제 후처리 포함), 카메라별 버퍼·보정·3뷰 fusion |
+| LiDAR | `asmc_lidar` 검출·OBB·추적·전방 fusion·HD맵/상부 전달 필터, typed 판제 입력. 구 Main/Msg 폐기 | 승현 3뷰 fusion, 재호 터널 통합·OBB/관측 위치·추적/속도. [M0–M5](../../src/asmc_lidar/docs/improvement-milestones.md) |
 | 판제 | `asmc_planner` 단일 패키지, LiDAR 입력 통합 실행, MPC·재밍 선택기 | 전 구간·조건별 반복 수락, 카메라 그룹/음영 소비 정책은 판제 담당 |
 | HD Map | `asmc_hd_map` global/local·mission metadata 제공 | 판제 local map copy와 출처·route parity 확인; 자동 `/hd_map/*` 전환은 아님 |
-| 상태·좌표 | bridge `/vehicle/state`와 판제 전용 `/planning/vehicle/state` 분리 | 두 토픽을 같은 추정기로 오인하지 않음; Main·판제 UTM yaw 설정 일치 |
+| 상태·좌표 | bridge `/vehicle/state`와 판제 전용 `/planning/vehicle/state` 분리 | 두 토픽을 같은 추정기로 오인하지 않음; 공용 geodesy/IMU 선택 코어와 패키지별 추정 정책을 구분 |
 | 현장 | local UDP profile·LAN2LAN 설정과 검사 도구 | 실제 주최 환경·두 PC 네트워크·재시작·장시간 주행 수락 |
 
 ## 최신 팀 변경

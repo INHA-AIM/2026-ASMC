@@ -12,7 +12,7 @@
 | 판제 적용 시 좌표·클래스 확인 | [HD 적용 확인표](handoffs/hd-map-to-planning.md#판제-적용-전-확인--2026-10-20-코드-대조), [객체·유효성 확인표](handoffs/perception-to-planning.md#판제-적용-확인표) |
 | 두 Windows PC·UDP·채점 연결 | [LAN2LAN 준비](operations/lan2lan-rehearsal.md), [채널 대조](records/bridge/2026-10-20-lan-channel-review.md) |
 | 신호등 ResNet 실행·최적화 검토 | [현재 BF16 경로와 TensorRT 후보](../src/asmc_camera/docs/traffic-light-runtime.md) |
-| 카메라와 LiDAR 연결 | [카메라→LiDAR](handoffs/camera-to-lidar.md), [LiDAR 통합 이관](handoffs/lidar-migration.md), [L0–L8 작업표](../src/asmc_lidar/docs/migration-tasks.md), [L1 설계](../src/asmc_lidar/docs/migration-design.md), [현재 판제 연결·속도/상태·복구](../src/asmc_lidar/docs/planning-runtime.md), [전환 기반·터널 후속](../src/asmc_lidar/docs/cutover-foundation.md) |
+| 카메라와 LiDAR 연결 | [카메라→LiDAR](handoffs/camera-to-lidar.md), [LiDAR 통합 이관](handoffs/lidar-migration.md), [공동 작업표](../src/asmc_lidar/docs/migration-tasks.md), [3뷰·OBB·추적 개선 계획](../src/asmc_lidar/docs/improvement-milestones.md), [L1 설계](../src/asmc_lidar/docs/migration-design.md), [현재 판제 연결·속도/상태·복구](../src/asmc_lidar/docs/planning-runtime.md), [전환 기반·터널 후속](../src/asmc_lidar/docs/cutover-foundation.md) |
 | 음영구간 차선·판제 연결 | [카메라→판제](handoffs/camera-to-planning.md), [판제 운영](operations/planning-control.md) |
 | 공용 메시지·좌표·시간 확인 | [계약 목록](contracts/README.md), [센서 원본/수신 시각](architecture/bridge-sensor-timing.md), [IMU 지면 투영](architecture/camera-imu-projection.md) |
 | 인지·판제 좌표계와 IMU 공통화 후속 검토 | [현행 경계·pose 차이·단계별 리팩토링 후보](architecture/perception-coordinate-refactoring.md) — 판제 전환 기반 마련 이후 착수 |
