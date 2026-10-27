@@ -140,9 +140,13 @@
   function exclusionKinds(d) {
     const p=d&&d.preview,decision=p?p.decision:d&&d.decision,reason=p?p.reason:d&&d.reason;
     if(d&&d.delivery_excluded&&reason&&/^(known_static|structure|observation_quality):/.test(reason))return ['policy'];
-    if(p&&p.point_decision!==undefined)
-      return [['height',p.height_decision],['points',p.point_decision],['obb',p.obb_decision]].filter(a=>a[1]==='exclude_candidate').map(a=>a[0]);
-    if(decision!=='exclude_candidate')return [];
+    if(p&&p.point_decision!==undefined) {
+      const kinds=[['height',p.height_decision],['points',p.point_decision],['obb',p.obb_decision]].filter(a=>a[1]==='exclude_candidate').map(a=>a[0]);
+      // An explicit delivery exclusion remains authoritative even when a newer
+      // producer's reason is not yet understood by this viewer.
+      return kinds.length?kinds:d.delivery_excluded?['policy']:[];
+    }
+    if(decision!=='exclude_candidate')return d&&d.delivery_excluded?['policy']:[];
     if(reason && reason.startsWith('cluster_'))return ['points'];
     if(reason==='overhead_clearance_candidate')return ['height'];
     return ['obb'];
@@ -164,6 +168,14 @@
   }
   function previewVisible(scene,track,showPred,hideCandidates,hideReasons={}){
     if(!showPred&&track.miss>0)return false;
+    const report=scene&&scene.hd_map_audit,d=auditForTrack(scene,track);
+    // Older producers do not send the last observed delivery verdict. A
+    // prediction must not bypass active exclusion filters just because that
+    // evidence is absent (also covers opening a viewer halfway through a run).
+    // This is display-only: no new road verdict or tracker deletion is made.
+    if(track.miss>0&&report&&report.delivery_applied&&!d&&
+       (hideCandidates||Object.values(hideReasons).some(Boolean)))return false;
+    if(hideCandidates&&d&&d.delivery_excluded)return false;
     const a=auditAppearance(scene,track);
     return !a.categories.length||(!hideCandidates&&!a.categories.some(k=>hideReasons[k]));
   }
@@ -174,11 +186,14 @@
   function displayVisibility(scene,road,track,showPred,hideCandidates,hideReasons={}) {
     if(!showPred&&track.miss>0)return {visible:false,reason:'prediction_hidden'};
     const report=scene&&scene.hd_map_audit;
+    if(track.miss>0&&report&&report.delivery_applied&&!auditForTrack(scene,track)&&
+       (hideCandidates||Object.values(hideReasons).some(Boolean)))
+      return {visible:false,reason:'prediction_verdict_missing'};
     if(report&&road&&report.map_sha256&&road.sha256&&report.map_sha256!==road.sha256 &&
        !(auditForTrack(scene,track)||{}).delivery_excluded)
       return {visible:true,reason:'map_mismatch'};
     const visible=previewVisible(scene,track,showPred,hideCandidates,hideReasons);
-    return {visible,reason:visible?'visible':'candidate_hidden'};
+    return {visible,reason:visible?'visible':'exclusion_hidden'};
   }
   // Point membership is supplied by the canonical native grid once per snapshot.
   // 2 is original road within the inset band; 3 is the delivery inset interior.

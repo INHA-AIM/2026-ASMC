@@ -175,8 +175,14 @@
       (report&&report.pose_source_age_ms>=0?' · GPS age '+fmt(report.pose_source_age_ms,0)+'ms':'')+' · 그리기 '+fmt(state.lastRenderMs,1)+'ms';
     const tracks=state.scene&&state.scene.tracks||[];
     const observed=tracks.filter(t=>t.miss===0),shown=observed.filter(visibleTrack).length;
+    const predicted=tracks.filter(t=>t.miss>0),shownPredicted=predicted.filter(visibleTrack).length;
     el('filter-summary').textContent='현재 관측 '+observed.length+' · 표시 대상 '+shown+' · 숨김 '+(observed.length-shown)+
-      ' · 예측 '+(tracks.length-observed.length)+' (별도 스위치)';
+      ' · 예측 '+predicted.length+' (표시 '+shownPredicted+' · 숨김 '+(predicted.length-shownPredicted)+')';
+    const missing=[];
+    if(state.scene&&!Array.isArray(state.scene.delivery_history))missing.push('예측의 마지막 관측 판정');
+    if(state.scene&&state.scene.stages&&!state.arrays['leveled.road'])missing.push('점별 도로 위치');
+    el('display-schema-note').textContent=missing.length?'생산자 진단 구버전: '+missing.join(' / ')+
+      ' 미제공. 제외 숨김 중 판정 없는 예측은 숨기고, 도로 위치 미상 점은 노랑입니다. 최신 시각화 생산자 재빌드·재시작이 필요합니다.':'';
     const originals=['raw','roi','voxel','leveled','detections'].filter(k=>state.stages[k]);
     if(state.view.compare)originals.push('voxel 비교');
     el('filter-layer-note').textContent=originals.length?'원본 대조 레이어 ON: '+originals.join(', ')+' · 발행 제외 숨김 미적용':'';

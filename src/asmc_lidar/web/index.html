@@ -56,7 +56,8 @@
       <label><span class="sw" style="background:#60a5fa"></span><input type="checkbox" data-stage="voxel"> voxel <span class="cnt" id="c-voxel">-</span></label>
       <label><span class="sw" style="background:#38bdf8"></span><input type="checkbox" data-stage="leveled"> leveled (전체) <span class="cnt" id="c-leveled">-</span></label>
       <label><span class="sw" style="background:#4b5563"></span><input type="checkbox" data-stage="ground"> RANSAC 제거 지면 <span class="cnt" id="c-ground">-</span></label>
-      <label><span class="sw" style="background:#fb923c"></span><input type="checkbox" data-stage="tunnel"> tunnel 제거 <span class="cnt" id="c-tunnel">-</span></label>
+      <label><span class="sw" style="background:#fb923c"></span><input type="checkbox" data-stage="tunnel"> 구조물 단계 제거점 (터널 필터) <span class="cnt" id="c-tunnel">-</span></label>
+      <p class="note">최신 처리 경로는 map pose 무효 시 터널 처리를 선택합니다. 제거점 전체가 벽이라는 뜻은 아니며, RANSAC 비지면은 객체·벽·가드레일 등을 모두 포함합니다.</p>
       <label><span class="sw sw-multi"></span><input type="checkbox" data-stage="clusters"> cluster 색 구분 <span class="cnt" id="c-clusters">-</span></label>
       <label><span class="sw" style="border:1px dashed #fbbf24"></span><input type="checkbox" data-stage="detections"> detection OBB (추적 전) <span class="cnt" id="c-detections">-</span></label>
       <label><span class="sw" style="border:2px solid #facc15"></span><input type="checkbox" data-stage="typed"> typed local 배열 (base_link) <span class="cnt" id="c-typed">-</span></label>
@@ -75,13 +76,14 @@
       <label><input id="opt-hide-policy" type="checkbox" checked> 관측 품질 제외 숨김 (구 시설물 사유 포함)</label>
       <p class="note">기본 표시는 점군 AND OBB 통과입니다. OBB가 통과해도 점군 미달이면 숨깁니다. 원인별 숨김 해제는 검수용이며 제외된 박스·점을 사유 색으로 다시 표시합니다.</p>
       <p id="filter-summary" class="note">화면 표시 수 대기</p>
+      <p id="display-schema-note" class="note"></p>
       <p class="note">이 체크박스는 화면만 바꾸며 실제 발행 제외는 생산자가 수행합니다. 객체를 선택해도 숨김은 유지하고 상세값만 엽니다.<br>YOLO의 person/dog/deer/bicycle/stroller 및 car/bus/truck이 실제 매칭되면 전 구간 보호합니다. LiDAR 속도·동적 판정, 미션 근접만으로 보호하지 않습니다. 제외 근거 없는 보류 객체와 예측 트랙 표시는 별도입니다.</p>
       <p id="filter-layer-note" class="note"></p>
       <label>점 색상 <select id="opt-point-color"><option value="road">도로 위치</option><option value="reason">처리·제외 사유</option></select></label>
-      <p class="note">점: 원본 도로 안 초록 · 밖 회색 · 지도/pose 무효 노랑. 객체 전달은 안쪽10cm 기준을 사용합니다. 단계 수량은 숨기기 전 전체입니다. 터널 제거점은 해당 체크박스로만 표시합니다.</p>
+      <p class="note">도로 위치 색상: 원본 도로 안 초록 · 밖 회색 · 지도/pose 또는 점별 진단 미제공 노랑. 객체 전달은 안쪽10cm 기준을 사용합니다. 단계 수량은 숨기기 전 전체입니다. 구조물 단계 제거점은 해당 체크박스로만 표시합니다. 처리 사유 색상의 초록은 도로 위치나 벽 판정이 아닙니다.</p>
       <label>객체 색상 <select id="opt-color"><option value="audit">필터 판정</option><option value="motion">운동 진단 (재호)</option><option value="class">카메라 그룹</option></select></label>
       <label><input type="checkbox" id="opt-labels" checked> ID · 카메라 분류 표시</label>
-      <p class="note">숨김을 끄면 OBB는 전달 사유, 점은 선택한 도로 위치 또는 처리 사유 색으로 표시합니다.<br>초록 점군·OBB 통과/YOLO 보호 · 분홍 도로 점 근거 부족 · 보라 OBB 겹침 부족 · 주황 상부 제외 · 노랑 보류.<br>예측 track은 마지막 실제 관측의 판정이며 현재 위치에서 다시 판정한 것이 아닙니다. 구형 미션 일괄 보호는 최신 노드 재시작 전의 표시입니다.</p>
+      <p class="note">숨김을 끄면 OBB는 전달 사유, 점은 선택한 도로 위치 또는 처리 사유 색으로 표시합니다.<br>객체: 초록 통과/YOLO 보호 · 분홍 도로 점 근거 부족 · 보라 OBB 겹침 부족 · 주황 상부 제외 · 노랑 보류.<br>예측 track에도 마지막 실제 관측의 숨김을 적용합니다. 판정 이력이 없는 예측은 제외 숨김 중 표시하지 않으며, 숨김을 모두 해제하면 확인할 수 있습니다. 현재 예측 위치의 새 판정은 아닙니다.</p>
     </section>
     <section>
       <h2>보기</h2>
