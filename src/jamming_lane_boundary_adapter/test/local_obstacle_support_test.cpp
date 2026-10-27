@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <boost/make_shared.hpp>
 #include "lane_boundary_adapter/local_obstacle_support.hpp"
 using Support=lane_boundary_adapter::LocalObstacleSupport;
 using Scan=asmc_msgs::LidarTrackingObservation;

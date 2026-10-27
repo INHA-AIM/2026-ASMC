@@ -21,7 +21,9 @@ class LocalObstacleSupport {
        o.config_id.empty()||o.calibration_id.empty()||
        (now-stamp).toSec()>.35||(stamp-now).toSec()>.05){entries_.clear();return;}
     if(!last_stamp_.isZero() && stamp<last_stamp_){entries_.clear();return;}
-    if(stamp==last_stamp_)return;
+    if((a.status!=a.OBSERVED && a.status!=a.OBSERVED_EMPTY)||a.objects.size()>256){entries_.clear();return;}
+    if(stamp==last_stamp_ && session_==o.producer_session_id && generation_==o.generation &&
+       config_==o.config_id && calibration_==o.calibration_id)return;
     if(session_==o.producer_session_id && o.generation<generation_){entries_.clear();return;}
     if(session_!=o.producer_session_id||generation_!=o.generation||config_!=o.config_id||calibration_!=o.calibration_id)
       entries_.clear();
@@ -32,14 +34,14 @@ class LocalObstacleSupport {
   Scan::ConstPtr select(const ros::Time& image,const ros::Time& now,const ros::SteadyTime& steady)const {
     Scan::ConstPtr best;double distance=.050000001;
     for(const auto& e:entries_){const auto stamp=e.message->observation.objects.header.stamp;
-      if((steady-e.received).toSec()>.35||(now-stamp).toSec()>.35)continue;
+      if((steady-e.received).toSec()>.35||(now-stamp).toSec()>.35||(stamp-now).toSec()>.05)continue;
       const double d=std::abs((image-stamp).toSec());
       if(d<distance){distance=d;best=e.message;}
     }return best;
   }
   static bool footprint(const asmc_msgs::LidarObject& o,geometry_msgs::Polygon& out,double padding=.25) {
     out.points.clear();
-    if(o.observation_state!=o.OBSERVED||o.miss_count||o.source_point_count<3||o.length<=0||o.width<=0||o.height<=0)return false;
+    if(o.observation_state!=o.OBSERVED||o.miss_count||o.source_point_count<3||!std::isfinite(o.length)||!std::isfinite(o.width)||!std::isfinite(o.height)||o.length<=0||o.width<=0||o.height<=0)return false;
     double xmin=1e100,xmax=-1e100,ymin=1e100,ymax=-1e100;
     for(const auto& p:o.obb_corners){if(!std::isfinite(p.x)||!std::isfinite(p.y)||!std::isfinite(p.z))return false;
       xmin=std::min(xmin,p.x);xmax=std::max(xmax,p.x);ymin=std::min(ymin,p.y);ymax=std::max(ymax,p.y);}
@@ -51,7 +53,8 @@ class LocalObstacleSupport {
                            const cv::Vec3d& t,CameraBBox& b){
     b.xmin=b.ymin=std::numeric_limits<float>::infinity();b.xmax=b.ymax=-b.xmin;
     for(const auto& p:o.obb_corners){const auto c=R*cv::Vec3d(p.x,p.y,p.z)+t;
-      if(!std::isfinite(c[2])||c[2]<=.01)return false;const auto u=K*c;
+      if(!std::isfinite(c[2])||c[2]<=.01)return false;
+      const auto u=K*c;
       const double x=u[0]/u[2],y=u[1]/u[2];if(!std::isfinite(x)||!std::isfinite(y))return false;
       b.xmin=std::min(b.xmin,float(x));b.xmax=std::max(b.xmax,float(x));b.ymin=std::min(b.ymin,float(y));b.ymax=std::max(b.ymax,float(y));}
     return b.xmax>b.xmin&&b.ymax>b.ymin;
