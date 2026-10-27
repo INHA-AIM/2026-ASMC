@@ -5,15 +5,33 @@
 #undef main
 #include <fstream>
 #include <iostream>
+#include <chrono>
+#include <iomanip>
 #include <ros/serialization.h>
 template<class T> boost::shared_ptr<T> read(const char* file){
  std::ifstream f(file,std::ios::binary);std::vector<uint8_t> b((std::istreambuf_iterator<char>(f)),{});
  if(b.empty())throw std::runtime_error("empty serialized fixture");
  auto m=boost::make_shared<T>();ros::serialization::IStream s(b.data(),b.size());ros::serialization::deserialize(s,*m);return m;
 }
+// Exercise the previous linear selection exactly, including its epsilon
+// boundary convention. The runtime geometry is monotonic by construction.
+int interpolationRegression(){
+ LaneChain lane;for(int i=0;i<241;++i){double x=i*.083;lane.centerline.push_back({x,std::sin(x)});lane.left_boundary.push_back({x,std::sin(x)+2});lane.right_boundary.push_back({x,std::sin(x)-2});}
+ for(int k=-20;k<24200;++k){double x=k*.00083;LaneSample old,now;bool expected=false;
+  if(x>=lane.centerline.front().x-params.epsilon && x<=lane.centerline.back().x+params.epsilon)
+   for(size_t i=1;i<lane.centerline.size();++i){if(x>lane.centerline[i].x+params.epsilon)continue;
+    double d=lane.centerline[i].x-lane.centerline[i-1].x;if(d<=params.epsilon)break;
+    double r=std::clamp((x-lane.centerline[i-1].x)/d,0.,1.);
+    old.center=interpolatePoint(lane.centerline[i-1],lane.centerline[i],r);old.left=interpolatePoint(lane.left_boundary[i-1],lane.left_boundary[i],r);old.right=interpolatePoint(lane.right_boundary[i-1],lane.right_boundary[i],r);expected=true;break;}
+  bool actual=interpolateLaneAtX(lane,x,now);
+  if(expected!=actual || (actual&&(old.center.x!=now.center.x || old.center.y!=now.center.y || old.left.y!=now.left.y || old.right.y!=now.right.y)))return 6;
+ }
+ std::cout<<"interpolation_equivalent samples=24220\n";return 0;
+}
 int main(int argc,char**argv){
- if(argc!=3 && argc!=5)return 2;
- if(argc==5){adapter_config.consumer_x_max_m=std::stod(argv[3]);params.consumer_x_max=std::stod(argv[3]);params.path_horizon=std::stod(argv[4]);}
+ if(argc==2 && std::string(argv[1])=="--interpolation-regression")return interpolationRegression();
+ if(argc!=3 && argc!=5 && argc!=6)return 2;
+ if(argc>=5){adapter_config.consumer_x_max_m=std::stod(argv[3]);params.consumer_x_max=std::stod(argv[3]);params.path_horizon=std::stod(argv[4]);}
  ros::Time::init();
  auto family=read<asmc_msgs::LaneBoundaryFamily>(argv[1]);
  auto bbox=read<BboxResult>(argv[2]);
@@ -23,6 +41,19 @@ int main(int argc,char**argv){
  follower_state.locked_lane=bbox->own_lane;follower_state.source_stamp=bbox->header.stamp;contact_result=bbox;
  contact_lane_history.push_back({bbox->lane_stamp,change_state.lanes});
  change_state.changing=true;change_state.target_lane=bbox->own_lane;
+ if(argc==6){
+  const int n=std::stoi(argv[5]);if(n<1 || n>10000)return 2;
+  std::vector<double> ms;ms.reserve(n);std::string first;std::vector<FamilyPoint2d> path;
+  for(int i=0;i<n;++i){const auto start=std::chrono::steady_clock::now();const auto decision=updateContactPathPlan();
+   ms.push_back(std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count());
+   if(i==0){first=decision;path=change_state.path;}else{
+    if(first!=decision || path.size()!=change_state.path.size())return 5;
+    for(size_t j=0;j<path.size();++j)if(path[j].x!=change_state.path[j].x || path[j].y!=change_state.path[j].y)return 5;
+   }}
+  std::sort(ms.begin(),ms.end());std::cout<<std::setprecision(17)<<"iterations="<<n<<" decision="<<first<<" candidates="<<contact_candidates
+   <<" p50_ms="<<ms[(n-1)*50/100]<<" p95_ms="<<ms[(n-1)*95/100]<<" p99_ms="<<ms[(n-1)*99/100]<<" max_ms="<<ms.back()<<'\n';
+  for(const auto&p:path)std::cout<<p.x<<','<<p.y<<';';std::cout<<'\n';return 0;
+ }
  std::cout<<"runtime_decision="<<updateContactPathPlan()<<" candidates="<<contact_candidates<<" road_rejected="<<contact_road_rejected<<" collision_rejected="<<contact_collision_rejected<<'\n';
  std::vector<lane_boundary_adapter::clearance::Polygon> local_occupied;
  std::vector<lane_boundary_adapter::clearance::Bounds> contacts;
