@@ -34,7 +34,7 @@ int main(int argc,char**argv){
  std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
  if(!lane_boundary_adapter::clearance::contactOccupancy(contacts,reference,horizon,occupied))return 4;
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
- for(const auto& original:change_state.lanes)for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5})for(double length:{12.,10.,8.,6.}){
+ for(const auto& original:change_state.lanes)for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5})for(double length:{6.,8.,10.,12.}){
   auto lane=original;for(auto&p:lane.centerline)p.y+=offset;
   std::vector<FamilyPoint2d> path;if(!buildPath(lane,true,path,1.,length,true))continue;
   const double end=horizon-std::hypot(shape.front+shape.longitudinal_margin+params.path_sample_step,shape.half_width+shape.lateral_margin)-.1;
