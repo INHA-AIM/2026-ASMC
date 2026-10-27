@@ -3,9 +3,9 @@
 using namespace lane_boundary_adapter::clearance;
 static std::vector<Point> straight(double y=0.){std::vector<Point> p;for(int i=0;i<=40;++i)p.push_back({i*.25,y});return p;}
 TEST(ContactClearance, EmptyAndSupported) {
- EXPECT_TRUE(pathClear(straight(),{},Vehicle{},15.));
- EXPECT_FALSE(pathClear(straight(),{},Vehicle{},12.));
- EXPECT_FALSE(pathClear({}, {},Vehicle{},15.));
+ EXPECT_TRUE(pathClear(straight(),std::vector<Bounds>{},Vehicle{},15.));
+ EXPECT_FALSE(pathClear(straight(),std::vector<Bounds>{},Vehicle{},12.));
+ EXPECT_FALSE(pathClear({}, std::vector<Bounds>{},Vehicle{},15.));
 }
 TEST(ContactClearance, LaneOverlapIsNotVehicleCollision) {
  // A center-line barrier intersects both 3.5m lane strips. A 1.892m body
@@ -24,4 +24,14 @@ TEST(ContactClearance, BoundaryAndBadGeometryFailClosed) {
  EXPECT_FALSE(pathClear(straight(),{{8.,9.,NAN,3.}},Vehicle{},15.));
 }
 
+TEST(ContactClearance, OcclusionFollowsRoadInsteadOfTurningEgoHeading) {
+ std::vector<Polygon> occupied;
+ ASSERT_TRUE(contactOccupancy({{8.,9.,-2.,-1.5}},{{0.,0.},{9.,-3.},{15.,-6.}},15.,occupied));
+ // Measured rectangle is unchanged. Only the unobserved downstream band curves.
+ EXPECT_DOUBLE_EQ(occupied.front()[0].y,-2.);
+ EXPECT_DOUBLE_EQ(occupied.front()[2].x,9.);
+ EXPECT_NEAR(occupied.back()[1].y,-5.,1e-8);
+ EXPECT_NEAR(occupied.back()[2].y,-4.5,1e-8);
+ EXPECT_FALSE(contactOccupancy({{8.,9.,-2.,-1.5}},{{0.,0.},{10.,-3.}},15.,occupied));
+}
 int main(int argc,char** argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}
