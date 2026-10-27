@@ -165,7 +165,7 @@ window.addEventListener('error',e=>{document.body.dataset.testError=e.message;})
   check(points.includes('#94a3b8')&&points.includes('#34d399')&&points.includes('#facc15'),
     'point road colors are independent of retained object or camera protection');
   app.state.arrays['leveled.label'][2]=2;render();
-  check(!points.includes('#facc15'),'RANSAC view cannot silently restore later structural removals');
+  check(!points.includes('#facc15'),'final-filter view cannot silently restore structural removals');
   app.setStage('tunnel',true);choose('opt-point-color','reason');render();
   check(points.includes('#fb923c'),'structural removals are explicitly restored in reason color');
   app.setStage('tunnel',false);choose('opt-point-color','road');
@@ -180,13 +180,13 @@ window.addEventListener('error',e=>{document.body.dataset.testError=e.message;})
   document.getElementById('view-side').hidden=true;
   app.state.arrays['leveled.xyzi']=new Float32Array([2,0,0,1,4,0,0,1,6,0,0,1]);
   app.state.arrays['leveled.label']=new Uint8Array([0,2,1]);
-  app.state.arrays['leveled.road']=new Uint8Array([1,0,0]);
+  app.state.arrays['leveled.road']=new Uint8Array([3,1,1]);
   delete app.state.arrays['leveled.track'];
   const source=app.state.scene;
   source.tunnel={ran:true,removed:2};source.counts.cluster_input=1;
   const expectedCounts=JSON.stringify(source.counts);
   render();await sleep();await sleep();await sleep();await sleep();render();
-  check(!points.includes('#fb923c')&&points.filter(c=>c==='#34d399').length===1,'default final view hides removed points');
+  check(!points.includes('#fb923c')&&points.filter(c=>c==='#34d399').length===1,'default final view hides removed points: '+JSON.stringify(points));
   check(document.querySelector('input[data-stage="nonground"]').checked&&
     document.querySelector('input[data-stage="nonground"]').parentElement.textContent.includes('최종 필터 후'),'final-filter view is the default named view');
   const summary=document.getElementById('pipeline-filter-summary');

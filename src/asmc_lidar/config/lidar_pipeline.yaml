@@ -130,10 +130,10 @@ map:
   # Main ~map_altitude_origin_m; must equal origin z.
   map_altitude_origin_m: 0.0
 
-# Main front camera fusion parameters (main.launch).
+# Camera fusion: policy values retained from the front-only baseline.
 fusion:
-  # M1 candidate: all. Keep front until real-scene acceptance completes.
-  views: front
+  # M1 optimized three-view default; front is the explicit internal rollback.
+  views: all
   enable_sensor_fusion: true
   camera_class_profile: mission16_v1   # legacy | mission16_v1
   fusion_yolo_policy: unique            # unique | bounded_reuse

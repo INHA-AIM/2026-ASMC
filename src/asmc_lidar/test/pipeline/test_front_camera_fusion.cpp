@@ -1225,3 +1225,55 @@ TEST(MultiCameraFusion, NewerEmptyViewDoesNotRefreshPositiveEvidenceTime) {
   }
   r.Run(kT0);EXPECT_EQ(r.objects[0].camera.camera_observation_ns,static_cast<std::uint64_t>(kT0));
 }
+
+TEST(MultiCameraFusion, UnavailableContributingViewsRevokeClassWithoutCountingAMiss) {
+  struct SelectiveSource : FakeSource {
+    std::set<std::string> invalid;
+    bool Current(const CameraFrame& frame,Ns,Ns) override { return !invalid.count(frame.frame_id); }
+  } source;
+  MultiCameraFusion fusion(FusionConfig{},OverlapCameras());
+  std::vector<TrackedObject> objects{MakeCar(7,10)},history;
+  auto run=[&](int i) {
+    const auto stamp=kT0+i*100*kMs;auto context=LeveledContext(stamp);context.scan_sequence=i+1;
+    return fusion.Process(stamp,stamp,context,objects,&history,source,stamp,stamp);
+  };
+  for(int i=0;i<5;++i){ThreeFrames(source,kT0+i*100*kMs,{"car","car","car"});run(i);}
+  ASSERT_EQ(objects[0].camera.str_ObjectClass,"vehicle");
+  source.invalid={"camera_front"};
+  ThreeFrames(source,kT0+500*kMs,{"car","car","car"});run(5);
+  EXPECT_EQ(objects[0].camera.str_ObjectClass,"vehicle"); // surviving side evidence is independent
+  const auto misses=fusion.counters().misses_applied;
+  source.invalid={"camera_front","camera_left","camera_right"};
+  for(auto& view:source.snapshot.views)view.reason="invalid";
+  run(6);
+  EXPECT_EQ(objects[0].camera.str_ObjectClass,"unknown");
+  EXPECT_EQ(objects[0].camera.str_YoloClass,"unknown");
+  EXPECT_EQ(fusion_class::ObservedMissionGroup(objects[0].camera),"unknown");
+  EXPECT_EQ(fusion.counters().misses_applied,misses); // invalid is not a negative detection
+  source.invalid.clear();
+  for(int i=7;i<12;++i) {
+    ThreeFrames(source,kT0+i*100*kMs,{"car","car","car"});run(i);
+    EXPECT_EQ(objects[0].camera.str_ObjectClass,i<11?"unknown":"vehicle");
+  }
+}
+
+TEST(MultiCameraFusion, ExpiredMatchedTokenWithHealthyViewsRetainsClassButNotProtection) {
+  struct ExpiringSource : FakeSource {
+    Ns valid_from=0;
+    bool Current(const CameraFrame& frame,Ns,Ns) override{return frame.stamp_ns>=valid_from;}
+  } source;
+  MultiCameraFusion fusion(FusionConfig{},OverlapCameras());
+  std::vector<TrackedObject> objects{MakeCar(7,10)};
+  for(int i=0;i<5;++i) {
+    const auto t=kT0+i*100*kMs;ThreeFrames(source,t,{"car","car","car"});
+    fusion.Process(t,t,LeveledContext(t),objects,nullptr,source,t,t);
+  }
+  ASSERT_EQ(objects[0].camera.str_ObjectClass,"vehicle");
+  source.valid_from=kT0+500*kMs;
+  // Stream is healthy but outside the 50ms matching tolerance for this scan.
+  ThreeFrames(source,kT0+500*kMs,{"car","car","car"});
+  const auto t=kT0+580*kMs;
+  fusion.Process(t,t,LeveledContext(t),objects,nullptr,source,t,t);
+  EXPECT_EQ(objects[0].camera.str_ObjectClass,"vehicle");
+  EXPECT_EQ(fusion_class::ObservedMissionGroup(objects[0].camera),"unknown");
+}

@@ -13,10 +13,10 @@
   <arg name="namespace" default="/perception/lidar" doc="Output namespace; inputs keep their canonical paths"/>
   <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml" doc="Processing configuration YAML"/>
   <!-- Empty = keep config/lidar_pipeline.yaml (lidar.level_roll: true, experimental
-       tunnel_filter.enabled: false); a value overrides the file. -->
+       tunnel_filter.enabled: true); a value overrides the file. -->
   <arg name="lidar_level_roll" default=""/>
   <!-- Public switch. The internal parameter/YAML names stay unchanged. -->
-  <arg name="fusion" default="true" doc="Use camera observations for classification; false runs LiDAR alone"/>
+  <arg name="fusion" default="true" doc="Use three camera views for classification; false runs LiDAR alone"/>
   <arg name="rviz" default="false" doc="Open RViz and display this pipeline's published objects and ego box"/>
   <!-- Resolve the camera-owned file in SetUpCamera only when fusion is on.
        An eager camera-package lookup would break camera-free installations.

@@ -34,7 +34,7 @@ namespace fusion {
 struct FusionConfig {
   // Bounded, observation-only diagnostics. Disabling must not change fusion.
   bool capture_diagnostics = true;
-  std::string views = "front"; // internal rollback: front or all; no extra launch flag
+  std::string views = "all"; // three-view default; front is internal rollback, no extra launch flag
   // Main ~fusion_* parameters (main.launch values).
   double max_time_offset_s = 0.05;    // Match only within +-50 ms (inclusive)
   double sync_wait_timeout_s = 0.20;  // stop waiting for a later frame after 200 ms

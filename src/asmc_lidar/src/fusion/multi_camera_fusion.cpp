@@ -194,14 +194,42 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
       a.reason=applied_scan_[a.track_id]>s.stamp?"older_scan_sealed":o&&o->camera.group_conflict?"group_conflict":a.applied?"aggregated_once_per_scan":"not_current";
     }
   }
-  // Retain classifications but revoke fresh protection when source records
-  // expire or a view invalidates. A stale YOLO label is never new evidence.
+  // A failed view cannot clear another current view. Once every contributing
+  // source becomes unavailable, clear the camera state (as the front rollback
+  // does), not the LiDAR track. An expired matched token with a healthy stream
+  // only revokes fresh protection: timing gaps must not reset a retained class.
   for(auto& o:live) {
     const auto found=latest_evidence_.find(o.tracking.s32_Id);
     if(found==latest_evidence_.end())continue;
-    bool positive=false,all_protected=true;std::set<std::string> groups;
-    for(const auto& e:found->second)if(e.positive&&camera.Current(e.source,ros,steady)) {
-      positive=true;groups.insert(e.group);all_protected&=Protected(e.group);
+    bool current=false,positive=false,all_protected=true;
+    for(const auto& e:found->second)if(camera.Current(e.source,ros,steady)) {
+      current=true;
+      if(e.positive){positive=true;all_protected&=Protected(e.group);}
+    }
+    bool contributing_view_available=false;
+    if(!current)for(const auto& e:found->second) {
+      const auto info=std::find_if(snapshot.views.begin(),snapshot.views.end(),
+          [&](const auto& v){return v.frame_id==e.source.frame_id;});
+      if(info!=snapshot.views.end()) {
+        contributing_view_available|=Available(info->reason)&&info->reason!="missing";
+      } else {
+        const auto view=snapshot.by_view.find(e.source.frame_id);
+        if(view!=snapshot.by_view.end())for(const auto& f:view->second)
+          contributing_view_available|=camera.Current(f,ros,steady);
+      }
+    }
+    if(!current&&!contributing_view_available) {
+      const int id=o.tracking.s32_Id;
+      fusion_class::InvalidateObservation(o,consumer_epoch_);
+      latest_evidence_.erase(found);
+      // An old pending unit must not restore its pre-expiry confirmed class
+      // when a different view arrives later. Keep applied_scan_ as the seal
+      // against older results; fresh evidence starts from the cleared state.
+      for(auto& scan:pending_) {
+        scan.start.erase(id);
+        for(auto& view:scan.views)view.second.evidence.erase(id);
+      }
+      continue;
     }
     if(!positive){o.camera.observed_class=o.camera.observed_raw_class="unknown";o.camera.protection_group="unknown";}
     else if(!all_protected)o.camera.protection_group="unknown";
