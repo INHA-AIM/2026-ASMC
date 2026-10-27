@@ -229,6 +229,7 @@ struct LaneChain {
     std::vector<FamilyPoint2d> right_boundary;
     std::vector<FamilyPoint2d> centerline;
     bool contains_inferred = false;
+    bool monotonic_x = false;  // validated once after joining; legacy fallback otherwise.
 };
 
 // 같은 전방 위치에서 보간한 중심점과 양쪽 경계점.
@@ -1340,6 +1341,8 @@ std::vector<LaneChain> buildContinuousLanes(const BoundaryFamilyStripContext& co
         may_join_previous = true;
     }
 
+    for(auto& lane:lanes) lane.monotonic_x=std::is_sorted(lane.centerline.begin(),lane.centerline.end(),
+        [](const FamilyPoint2d&a,const FamilyPoint2d&b){return a.x<b.x;});
     return lanes;
 }
 
@@ -1397,7 +1400,15 @@ bool interpolateLaneAtX(const LaneChain& lane, double target_x, LaneSample& samp
         return false;
     }
 
-    for (std::size_t i = 1; i < lane.centerline.size(); ++i) {
+    // Preserve the previous epsilon comparison and arithmetic exactly. A
+    // joined, non-monotonic legacy chain keeps its original linear selection.
+    std::size_t begin=1;
+    if(lane.monotonic_x){
+        auto it=std::lower_bound(lane.centerline.begin()+1,lane.centerline.end(),target_x,
+            [](const FamilyPoint2d&p,double x){return x>p.x+params.epsilon;});
+        begin=std::distance(lane.centerline.begin(),it);
+    }
+    for (std::size_t i = begin; i < lane.centerline.size(); ++i) {
         if (target_x > lane.centerline[i].x + params.epsilon) {
             continue;
         }
