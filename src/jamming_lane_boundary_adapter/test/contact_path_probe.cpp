@@ -30,10 +30,11 @@ int interpolationRegression(){
 }
 int main(int argc,char**argv){
  if(argc==2 && std::string(argv[1])=="--interpolation-regression")return interpolationRegression();
+ const bool wide=argc==4 && std::string(argv[3])=="--wide-search";
  const bool inspect=argc==4 && std::string(argv[3])=="--segments";
  const bool support_replay=argc==4 && std::string(argv[3])=="--support-replay";
- if(argc!=3 && argc!=5 && argc!=6 && !inspect && !support_replay)return 2;
- if(inspect || support_replay){adapter_config.consumer_x_max_m=params.consumer_x_max=20.;params.path_horizon=15.;}
+ if(argc!=3 && argc!=5 && argc!=6 && !inspect && !support_replay && !wide)return 2;
+ if(inspect || support_replay || wide){adapter_config.consumer_x_max_m=params.consumer_x_max=20.;params.path_horizon=15.;}
  if(argc>=5){adapter_config.consumer_x_max_m=std::stod(argv[3]);params.consumer_x_max=std::stod(argv[3]);params.path_horizon=std::stod(argv[4]);}
  ros::Time::init();
  auto family=read<asmc_msgs::LaneBoundaryFamily>(argv[1]);
@@ -87,7 +88,9 @@ int main(int argc,char**argv){
  for(const auto& p:bbox->local_obstacle_footprints){lane_boundary_adapter::clearance::Polygon o;for(unsigned i=0;i<4;++i)o[i]={p.points[i].x,p.points[i].y};local_occupied.push_back(o);}
  occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
- for(const auto& original:change_state.lanes)for(double offset:{0.,-.05,.05,-.1,.1,-.15,.15,-.2,.2,-.25,.25,-.3,.3,-.35,.35,-.4,.4,-.45,.45,-.5,.5})for(double length:{3.,4.,5.,6.,8.,10.,12.}){
+ std::vector<double> offsets{0.,-.05,.05,-.1,.1,-.15,.15,-.2,.2,-.25,.25,-.3,.3,-.35,.35,-.4,.4,-.45,.45,-.5,.5};
+ if(wide)for(double x:{.55,.60,.65,.70,.75}){offsets.push_back(-x);offsets.push_back(x);}
+ for(const auto& original:change_state.lanes)for(double offset:offsets)for(double length:{3.,4.,5.,6.,8.,10.,12.}){
   auto lane=original;for(auto&p:lane.centerline)p.y+=offset;
   std::vector<FamilyPoint2d> path;
   const double end=horizon-std::hypot(shape.front+shape.longitudinal_margin+params.path_sample_step,shape.half_width+shape.lateral_margin)-.1;
