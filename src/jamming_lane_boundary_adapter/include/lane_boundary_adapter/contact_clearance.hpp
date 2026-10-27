@@ -12,6 +12,13 @@ namespace lane_boundary_adapter::clearance {
 struct Point { double x=0, y=0; };
 struct Bounds { double xmin=0, xmax=0, ymin=0, ymax=0; };
 struct Vehicle { double front=3.845,rear=.790,half_width=.946,lateral_margin=.30,longitudinal_margin=.5; };
+// Hermite quintic basis for unit START slope, zero endpoint position/slope/
+// curvature. Multiplying the position blend by x is not this slope basis and
+// causes an unnecessary lateral hump when ego already turns toward the lane.
+inline double startSlopeBasis(double u) {
+  u=std::clamp(u,0.,1.);
+  return u-6*u*u*u+8*u*u*u*u-3*u*u*u*u*u;
+}
 inline bool finite(const Point& p) { return std::isfinite(p.x)&&std::isfinite(p.y); }
 // Separating-axis test, including boundary contact. Invalid input is occupied.
 inline bool overlaps(const std::array<Point,4>& a,const std::array<Point,4>& b) {
