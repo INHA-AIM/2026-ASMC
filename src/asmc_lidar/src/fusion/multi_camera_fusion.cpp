@@ -110,6 +110,15 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
     if(history)fusion_state::Persist(live,*history);
     return report;
   }
+  // The receiver snapshot is immutable during this call. Sort each view once,
+  // not once for every pending scan. Consumption is still checked below after
+  // earlier pending units use a frame, preserving the unique-observation rule.
+  std::map<std::string,std::vector<const CameraFrame*>> ordered_frames;
+  for(const auto& view:snapshot.by_view) {
+    auto& frames=ordered_frames[view.first];frames.reserve(view.second.size());
+    for(const auto& f:view.second)if(f.stamp_ns>0&&!consumed_.count(f.identity))frames.push_back(&f);
+    std::stable_sort(frames.begin(),frames.end(),[](auto a,auto b){return a->stamp_ns<b->stamp_ns;});
+  }
   std::set<int> alive;for(const auto& o:live)alive.insert(o.tracking.s32_Id);
   for(auto i=applied_scan_.begin();i!=applied_scan_.end();)if(!alive.count(i->first))i=applied_scan_.erase(i);else ++i;
   for(auto i=latest_evidence_.begin();i!=latest_evidence_.end();)if(!alive.count(i->first))i=latest_evidence_.erase(i);else ++i;
@@ -132,10 +141,9 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
         v.done=true;record(s,view.first,"drop",info->reason);continue;
       }
       std::vector<const CameraFrame*> frames;
-      auto found=snapshot.by_view.find(view.first);
-      if(found!=snapshot.by_view.end())for(const auto& f:found->second)
-        if(f.stamp_ns>0&&!consumed_.count(f.identity))frames.push_back(&f);
-      std::stable_sort(frames.begin(),frames.end(),[](auto a,auto b){return a->stamp_ns<b->stamp_ns;});
+      const auto found=ordered_frames.find(view.first);
+      if(found!=ordered_frames.end())for(const auto* f:found->second)
+        if(!consumed_.count(f->identity))frames.push_back(f);
       std::vector<std::int64_t> stamps;for(auto f:frames)stamps.push_back(f->stamp_ns);
       const auto choice=fusion_sync::DecideMatch(s.stamp,stamps,decision-s.queued,offset_,wait_);
       if(choice.action==fusion_sync::MatchAction::Wait){++counters_.waits;record(s,view.first,"wait","awaiting_at_or_after_scan");continue;}
@@ -162,7 +170,11 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
         d->calibration_id=calib.id;d->boxes_received=f.boxes.size();d->boxes_admitted=boxes.size();d->projection_valid=true;
         if(f.record){const auto& o=f.record->observation;d->session=o.session;d->generation=o.generation;d->wire_sequence=o.header.sequence;d->model_id=o.model_id;d->config_id=o.config_id;}
       }
-      CameraFrame token=f;token.boxes.clear();
+      // Retain identity/currentness only; copying every detection and then
+      // clearing it needlessly allocates a box vector for each matched view.
+      CameraFrame token;
+      token.stamp_ns=f.stamp_ns;token.epoch=f.epoch;token.frame_id=f.frame_id;
+      token.identity=f.identity;token.width=f.width;token.height=f.height;token.record=f.record;
       for(const auto& p:v.projection) {
         const int id=s.ids.at(p.c_idx);Evidence e;e.visible=true;e.source=token;v.evidence[id]=std::move(e);
       }

@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -1276,4 +1277,70 @@ TEST(MultiCameraFusion, ExpiredMatchedTokenWithHealthyViewsRetainsClassButNotPro
   fusion.Process(t,t,LeveledContext(t),objects,nullptr,source,t,t);
   EXPECT_EQ(objects[0].camera.str_ObjectClass,"vehicle");
   EXPECT_EQ(fusion_class::ObservedMissionGroup(objects[0].camera),"unknown");
+}
+
+TEST(MultiCameraFusion, CanonicalCameraHandoffRetainsOneTrackAndOneConfirmationPerScan) {
+  // Use the actual 70/-70 degree side mounts, intrinsics and original image
+  // sizes. A moving local cluster crosses left/front/right overlap regions;
+  // no GPS/map transform or camera-specific tracker is involved.
+  const auto package=std::filesystem::path(__FILE__).parent_path().parent_path().parent_path();
+  const auto cameras=camera::load_calibrations((package/"../asmc_camera/config/cameras_v3.yaml").string());
+  MultiCameraFusion fusion(FusionConfig{},cameras);FakeSource source;
+  std::vector<TrackedObject> live{MakeCar(7,10)};
+  const auto seed=live.front();
+  std::set<std::string> seen;
+  int step=0;
+  for(double angle:{80.,60.,40.,20.,0.,-20.,-40.,-60.,-80.}) {
+    const auto t=kT0+(step++)*60*kMs;auto context=LeveledContext(t);
+    const auto saved_camera=live.front().camera;
+    live.front()=seed;live.front().camera=saved_camera;
+    const double theta=angle*std::acos(-1.)/180.;
+    for(auto& p:live.front().detection.pcl_ClusterPoints) {
+      p.x+=12.*std::cos(theta)-10.;p.y+=12.*std::sin(theta);
+    }
+    const auto before=live.front();
+    source.snapshot={};source.snapshot.gate_active=true;source.snapshot.gate_epoch=1;
+    for(const auto& view:cameras) {
+      std::vector<LidarImageBox> projected;
+      ASSERT_TRUE(LidarToImage(live,context,view.second,FusionConfig{},&projected));
+      CameraFrame f=MakeFrame(t,{});f.frame_id=view.first;f.identity=view.first+std::to_string(t);
+      f.width=view.second.width;f.height=view.second.height;
+      if(!projected.empty()) {
+        f.boxes={CameraBox(projected.front(),"car","vehicle")};seen.insert(view.first);
+      }
+      source.snapshot.by_view[view.first]={f};
+    }
+    const auto report=fusion.Process(t,t,context,live,nullptr,source,t,t);
+    EXPECT_EQ(report.matched_this_call,3u);
+    EXPECT_EQ(fusion.counters().observations,step);
+    EXPECT_EQ(live.front().camera.class_miss_counter,0);
+    EXPECT_EQ(live.front().camera.observed_raw_class,"car");
+    EXPECT_EQ(live.front().camera.str_ObjectClass,step<5?"unknown":"vehicle");
+    ExpectSameGeometry(before,live.front());
+  }
+  EXPECT_EQ(seen,(std::set<std::string>{"camera_front","camera_left","camera_right"}));
+}
+
+TEST(MultiCameraFusion, DelayedThreeViewObservationUsesStoredScanProjection) {
+  MultiRig r;
+  ThreeFrames(r.source,kT0,{"car","car","car"});
+  const auto later_frames=r.source.snapshot.by_view;r.source.snapshot.by_view.clear();
+  r.Run(kT0);
+  // The later callback has a different attitude and geometry. Matching the
+  // queued scan must use its cached projection and original identity instead.
+  r.source.snapshot.by_view=later_frames;
+  const auto now=kT0+60*kMs;
+  auto context=LeveledContext(now,rpy(.2,.15,.3));context.scan_sequence=2;
+  for(auto& p:r.objects[0].detection.pcl_ClusterPoints)p.y+=40.;
+  const auto before=r.objects.front();
+  const auto report=r.fusion.Process(now,now,context,r.objects,&r.history,r.source,now,now);
+  EXPECT_EQ(report.matched_this_call,3u);
+  EXPECT_EQ(r.objects[0].camera.continuity_counter,1);
+  EXPECT_EQ(r.objects[0].camera.observed_class,"vehicle");
+  EXPECT_EQ(r.objects[0].camera.evidence_scan_ns,kT0);
+  for(const auto& d:report.decisions)if(d.action=="match") {
+    EXPECT_EQ(d.scan_stamp_ns,kT0);EXPECT_EQ(d.image_stamp_ns,kT0);
+    EXPECT_EQ(d.scan_sequence,static_cast<std::uint64_t>(kT0));
+  }
+  ExpectSameGeometry(before,r.objects.front());
 }

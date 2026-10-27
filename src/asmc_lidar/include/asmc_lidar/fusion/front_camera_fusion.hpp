@@ -60,7 +60,7 @@ struct FusionConfig {
   double camera_read_window_s = 1.0;
 };
 
-// One front-camera frame as seen by the fusion consumer.
+// One original-resolution camera observation, shared by front/all consumers.
 struct CameraFrame {
   std::int64_t stamp_ns = 0;
   std::uint64_t epoch = 0;     // receiver epoch of the record
@@ -91,7 +91,8 @@ struct CameraSnapshot {
     std::int64_t stamp_ns = 0, image_minus_scan_ns = 0;
     std::size_t candidates = 0;
   };
-  // Receiver query summaries only. Side views are NOT matched by this class.
+  // Receiver summaries. FrontCameraFusion marks only front as implemented;
+  // MultiCameraFusion marks the independently configured views.
   std::vector<View> views;
 };
 
