@@ -234,6 +234,8 @@ unsigned contact_candidates = 0, contact_road_rejected=0, contact_collision_reje
 bool contact_geometry_ready = false;
 double contact_plan_wall_ms = 0.;
 bool contact_plan_evaluated=false;
+double contact_pursuit_x=4.0;
+double contact_maneuver_length=0.;
 // Competition CAN speed remains valid in GPS shadow; never use its zeroed map
 // pose. The geometric trial is limited to low ACTUAL speed, not just a command.
 ros::Time contact_speed_stamp;
@@ -1086,10 +1088,11 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status,"contact_plan_evaluated",contact_plan_evaluated?"true":"false");
     addDiagnosticValue(status, "contact_plan_wall_ms",std::to_string(contact_plan_wall_ms));
     addDiagnosticValue(status, "contact_actual_speed_mps",std::isfinite(contact_actual_speed)?std::to_string(contact_actual_speed):"unavailable");
+    addDiagnosticValue(status,"contact_maneuver_length_m",std::to_string(contact_maneuver_length));
     addDiagnosticValue(status, "contact_candidates", std::to_string(contact_candidates));
     addDiagnosticValue(status, "contact_road_rejected", std::to_string(contact_road_rejected));
     addDiagnosticValue(status, "contact_collision_rejected", std::to_string(contact_collision_rejected));
-    addDiagnosticValue(status, "effective_pursuit_x_m", std::to_string(params.contact_clearance_enabled?4.0:params.lookahead_distance));
+    addDiagnosticValue(status, "effective_pursuit_x_m", std::to_string(params.contact_clearance_enabled?contact_pursuit_x:params.lookahead_distance));
     addDiagnosticValue(status, "contact_lane_history_size",std::to_string(contact_lane_history.size()));
     addDiagnosticValue(status, "contact_geometry_stamp_ns",contact_result?std::to_string(contact_result->lane_stamp.toNSec()):"unavailable");
     addDiagnosticValue(status, "contact_geometry_ready", contact_geometry_ready?"true":"false");
@@ -1537,7 +1540,7 @@ void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>&
     follower_state.selected_lane = lane;
     follower_state.selected_lane.centerline = path;
     change_state.path = path;
-    const double pursuit_x=params.contact_clearance_enabled?4.0:params.lookahead_distance;
+    const double pursuit_x=params.contact_clearance_enabled?contact_pursuit_x:params.lookahead_distance;
     for (std::size_t index = 1; index < path.size(); ++index) {
         if (path[index].x < pursuit_x) continue;
         const double ratio = (pursuit_x - path[index - 1].x) / (path[index].x - path[index - 1].x);
@@ -1615,7 +1618,7 @@ std::string updateContactPathPlan() {
     const bool fresh=change_state.decision_sequence!=change_state.bbox_sequence;
     change_state.decision_sequence=change_state.bbox_sequence;
     if(change_state.entry_lane<0)change_state.entry_lane=follower_state.locked_lane;
-    struct Candidate { LaneChain lane; std::vector<FamilyPoint2d> path; double offset=0; };
+    struct Candidate { LaneChain lane; std::vector<FamilyPoint2d> path; double offset=0,length=0; };
     auto find=[&](int index,Candidate& found){
         const auto* original=getPlanningLane(index,geometry);if(!original)return false;
         const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
@@ -1641,7 +1644,7 @@ std::string updateContactPathPlan() {
             std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
             for(const auto& p:path)points.push_back({p.x,p.y});
             if(!lane_boundary_adapter::clearance::pathClearOfPolygons(points,occupied,shape,horizon,params.path_sample_step)){++contact_collision_rejected;continue;}
-            found={std::move(lane),std::move(path),offset};return true;
+            found={std::move(lane),std::move(path),offset,length};return true;
         }
         return false;
     };
@@ -1686,6 +1689,11 @@ std::string updateContactPathPlan() {
             }
         }else change_state.clear_hits=0;
     }
+    // A fixed4m target lies beyond a3m residual maneuver and cuts its
+    // curvature. This only selects a target ON the checked path; it does not
+    // relax the vehicle/road/obstacle guards or add another controller.
+    contact_maneuver_length=candidate.length;
+    contact_pursuit_x=std::clamp(candidate.length*.5,1.5,4.0);
     storePlannedTarget(candidate.lane,candidate.path);
     change_state.target_lane=target;
     if(change_state.changing){
