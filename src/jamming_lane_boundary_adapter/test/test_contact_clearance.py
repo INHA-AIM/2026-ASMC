@@ -35,6 +35,14 @@ class ContactTest(unittest.TestCase):
         output=subprocess.check_output([executable,'--interpolation-regression'],text=True,timeout=5)
         self.assertIn('interpolation_equivalent samples=24220',output)
 
+    def test_corrected_near_start_uses_real_contiguous_support(self):
+        fixture=Path(__file__).parent/'fixtures/contact-clearance'
+        executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
+        output=subprocess.check_output([executable,str(fixture/'near-start-family.rosbin'),
+            str(fixture/'near-start-bbox.rosbin'),'--support-replay'],text=True,timeout=5)
+        self.assertIn('recomputed_support=19.4756',output)
+        self.assertIn('runtime_decision= candidates=',output)
+
     def test_recorded_drum_heading_has_feasible_candidate(self):
         fixture=Path(__file__).parent/'fixtures/contact-clearance'
         executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]

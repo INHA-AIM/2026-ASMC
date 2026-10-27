@@ -1,0 +1,9 @@
+{
+  "source_run": "shadow-stop-fix-20261028-r31",
+  "source_revision": "fe144316",
+  "source": "Exact family matched by bbox lane_stamp; original wire support0 preserved. Replay invokes shared contiguous-support calculation; no RGB or GT added.",
+  "files": {
+    "near-start-family.rosbin": "e00bd20e71e9375caf8fe25607c39216104f9afba88c324a3acdae47a90ed25a",
+    "near-start-bbox.rosbin": "468bd5d5869bd11d79b673e8ad56f9bf42ce5f209172b03d940deeb8411b0981"
+  }
+}
