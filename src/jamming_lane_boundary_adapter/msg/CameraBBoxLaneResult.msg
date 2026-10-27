@@ -24,8 +24,9 @@ string[] box_reasons
 bool[] clipped_association
 
 # Experimental local clearance evidence. These are image-ground CONTACT bands,
-# not measured 3-D obstacle footprints. At the same image stamp and selected IMU
-# plane; no GPS, latest-plane substitution, or obstacle height reconstruction.
+# image_plane entries are not measured 3-D obstacle footprints. They use the
+# image stamp and selected IMU plane, without GPS/height reconstruction. Entries
+# marked lidar_observed instead retain the separately identified scan footprint.
 # Parallel to boxes. Invalid/clipped contacts must never imply free space.
 bool contact_projection_valid
 float64 contact_support_x_max_m

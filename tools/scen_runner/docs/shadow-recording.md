@@ -89,6 +89,11 @@ python3 -m scen_runner.records.analyze_shadow /artifacts/shadow-example-r01
 재현을 새로 녹화하려면 **새 등록 run**의 recording spec을 지정한다. `--replay-browser`는
 저장된 trial/collision/stagnation을 구분해 보여준다. 맵 SHA가 다르면 기존 검사를 계속 적용한다.
 
+필수 토픽이 빠졌더라도 **모든 bag이 닫힌 실패 실행**을 분석하려면 `--allow-incomplete`를 명시한다.
+이때도 `.active`, 파일 목록/크기 불일치와 recorder 오류를 숨기지 않는다. 결과의
+`recording_status`, 누락 토픽, lifecycle의 `runtime_error`와 `run_ended`를 그대로 보존한다.
+`section_end`는 생성기 종료 경계 도달이며 독립적인 충돌 없음·안전 수락 판정이 아니다.
+
 분석 결과 `analysis/index.html`에는 정확히 같은 stamp의 RGB와 실제 bbox 판정을 표시한다.
 `summary.json`은 토픽 공급·source stamp 중복/역행·정지 사유 샘플 수,
 `decisions.jsonl`은 bbox·추종기·selector·경고의 기록이다. 재분석은
