@@ -1561,7 +1561,11 @@ std::string updateContactPathPlan() {
         const auto* original=getPlanningLane(index,geometry);if(!original)return false;
         const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
             params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
-        for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5}) for(double length:{12.,10.,8.,6.}) {
+        // Prefer the shortest feasible completion. Reinitializing a 12 m
+        // maneuver at every frame continually moves its endpoint away; the
+        // vehicle can then reach the obstacle before completing the shift.
+        // Curvature, footprint and contact guards still reject aggressive paths.
+        for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5}) for(double length:{6.,8.,10.,12.}) {
             LaneChain lane=*original;
             // Offset only the target center, never the observed road boundaries.
             for(auto& p:lane.centerline)p.y+=offset;
