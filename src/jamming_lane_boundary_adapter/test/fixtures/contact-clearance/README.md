@@ -22,3 +22,11 @@ at14.764m. The former fixed15m requirement produced no road reference. Runtime
 now generates only to the existing grid point whose entire inflated vehicle is
 inside the paired support. It does not extrapolate to15m or relax road/curvature
 checks. `short-end-provenance.json` preserves the source and original failure.
+
+`turn-blocked-*` is a known unsuccessful r45 state after moving the plastic
+barrier farther into the tunnel. Its box has real local LiDAR support, yet the
+target-lane candidates cannot jointly satisfy road and obstacle constraints
+during the turn. This is input for the next planner/controller comparison,
+not a regression requirement that this state must always remain rejected.
+The family/result stamps are paired exactly; the nearby live diagnostic was
+not atomic with those messages. No source images or simulator GT are embedded.

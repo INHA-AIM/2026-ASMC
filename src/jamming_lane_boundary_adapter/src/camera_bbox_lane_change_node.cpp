@@ -1665,7 +1665,15 @@ std::string updateContactPathPlan() {
         // the old0.1m/6m grid. Search147 bounded candidates per lane through
         // unchanged curvature, inflated footprint and observed-road guards.
         // Prefer a short feasible completion without weakening vehicle limits.
-        for(double offset:{0.,-.05,.05,-.1,.1,-.15,.15,-.2,.2,-.25,.25,-.3,.3,-.35,.35,-.4,.4,-.45,.45,-.5,.5}) for(double length:{3.,4.,5.,6.,8.,10.,12.}) {
+        // r45: a15m completion satisfies the SAME road and footprint checks
+        // when all shorter completions overshoot the outer boundary mid-turn.
+        // Try it only after the whole old grid fails, preserving every earlier
+        // accepted choice. Actual output remains clipped to observed support;
+        // completing a mathematical maneuver is never claimed beyond that.
+        for(int pass=0;pass<2;++pass)
+        for(double offset:{0.,-.05,.05,-.1,.1,-.15,.15,-.2,.2,-.25,.25,-.3,.3,-.35,.35,-.4,.4,-.45,.45,-.5,.5})
+        for(double length:{3.,4.,5.,6.,8.,10.,12.,15.}) {
+            if((length==15.)!=(pass==1))continue;
             LaneChain lane=*original;
             // Offset only the target center, never the observed road boundaries.
             for(auto& p:lane.centerline)p.y+=offset;

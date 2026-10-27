@@ -1,0 +1,13 @@
+{
+  "source_run": "shadow-stop-fix-20261028-r45",
+  "source_revision": "76ccc890",
+  "bbox_stamp": 1793141566.1462398,
+  "family_stamp": 1793141566.1462398,
+  "condition": "FOGGY13 plastic relocated to drum position; valid entry; background29 isolated;5kmh",
+  "observation": "measured local plastic at17.34-18.53m; candidate target-lane0 road and collision checks have no common accepted path during the turn",
+  "meaning": "Known unsuccessful closed-loop state, not a requirement to preserve rejection forever. Exact paired family/bbox; diagnostic receipt was not atomic.",
+  "sha256": {
+    "turn-blocked-family.rosbin": "7a1d586d0f9631b02fca31011d03127e5f56fcf3add96095b2728a36c9f567b6",
+    "turn-blocked-bbox.rosbin": "00337cfb557654eefdc4b21c5b144624a2364c826757c8758647628bc7d3e1cf"
+  }
+}
