@@ -21,6 +21,13 @@
   </include>
   <param name="camera_bbox_lane_change/contact_clearance_enabled" value="$(optenv ASMC_SHADOW_CONTACT_CLEARANCE false)" type="bool"/>
   <param name="camera_bbox_lane/local_contact_support_enabled" value="$(optenv ASMC_SHADOW_LOCAL_CONTACT false)" type="bool"/>
+  <!-- Experimental path sees the family provider's available 15-20 m range.
+       Runtime still intersects actual contiguous support and full-body coverage;
+       this does not extrapolate a short family to 20 m. Legacy remains 15/11 m. -->
+  <group if="$(optenv ASMC_SHADOW_CONTACT_CLEARANCE false)">
+    <param name="camera_bbox_lane_change/consumer_x_max" value="20.0" type="double"/>
+    <param name="camera_bbox_lane_change/path_horizon" value="15.0" type="double"/>
+  </group>
   <!-- Trial-only preparation speed: reuse the planner's typed route-link cap.
        Does not change the GPS mode boundary or authorize early lane crossing. -->
   <group if="$(optenv ASMC_SHADOW_APPROACH_CAP false)">
