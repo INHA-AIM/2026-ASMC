@@ -41,7 +41,7 @@ namespace runtime {
 
 struct DebugPublisherConfig {
   bool enabled = false;
-  std::string topic_prefix = "/migration/lidar/debug";
+  std::string topic_prefix = "debug";  // relative to the caller namespace
   double rate_hz = 5.0;          // admitted scans per second (<= 0: every scan)
   std::size_t max_points = 20000;  // per stage cloud; larger clouds are stride-sampled
   std::string leveled_frame = "lidar_pipeline/lidar_leveled";

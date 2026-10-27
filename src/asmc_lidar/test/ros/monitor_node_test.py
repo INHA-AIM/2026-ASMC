@@ -202,10 +202,10 @@ class MonitorNodeTest(unittest.TestCase):
         # timeout; pipeline_state=ok does not make that first snapshot current.
         master = self.wait_until(
             lambda: (lambda m: m if m['ok'] and m['points_publishers'] == 1
-                     and '/migration/lidar/lidar_pipeline' in m['shadow_nodes'] else None)(self.status()['master']),
+                     and '/test/lidar/lidar_pipeline' in m['shadow_nodes'] else None)(self.status()['master']),
             10, 'points publisher and pipeline seen by master')
         self.assertTrue(master['ok'])
-        self.assertIn('/migration/lidar/lidar_pipeline', master['shadow_nodes'])
+        self.assertIn('/test/lidar/lidar_pipeline', master['shadow_nodes'])
         self.assertLess(status['ages_ms']['scan'], 1000)
         # Input/processing rates come from consecutive 1 Hz diagnostics samples.
         rates = self.wait_until(lambda: (lambda r: r if (r['input_hz'] or 0) > 5.0 else None)(self.status()['rates']),
@@ -352,9 +352,9 @@ class MonitorNodeTest(unittest.TestCase):
                 continue
             self.assertNotIn('/asmc_lidar_monitor', nodes, 'monitor publishes %s' % topic)
         subscribed = {topic for topic, nodes in subscribers if '/asmc_lidar_monitor' in nodes}
-        self.assertIn('/migration/lidar/debug/scan', subscribed)
-        self.assertIn('/migration/lidar/debug/leveled', subscribed)
-        self.assertIn('/migration/lidar/diagnostics', subscribed)
+        self.assertIn('/test/lidar/debug/scan', subscribed)
+        self.assertIn('/test/lidar/debug/leveled', subscribed)
+        self.assertIn('/test/lidar/diagnostics', subscribed)
         offered = {service for service, nodes in services if '/asmc_lidar_monitor' in nodes}
         self.assertTrue(offered <= {'/asmc_lidar_monitor/get_loggers', '/asmc_lidar_monitor/set_logger_level'}, offered)
 

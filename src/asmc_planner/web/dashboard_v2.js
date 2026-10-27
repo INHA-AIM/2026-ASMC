@@ -262,7 +262,7 @@
     if ($('showVelocity').checked) velocityArrows(object, debug);
     if ($('showLabels').checked && finite(object.center?.x) && finite(object.center?.y)) {
       const point = worldToScreen([object.center.x, object.center.y]);
-      ctx.font = 'bold 11px ui-monospace, monospace';
+      ctx.font = 'bold 11px ui-monospace, "Malgun Gothic", "Noto Sans CJK KR", monospace';
       ctx.fillStyle = selectedAvoidTarget ? '#ffffff' : motion.color;
       const target = selectedAvoidTarget ? ' AVOID TARGET' : '';
       const roadRatio = Number(debug?.road_ratio);
@@ -311,7 +311,7 @@
       ctx.restore();
       if ($('showVelocity').checked) velocityArrows(object, debug);
       if ($('showLabels').checked) {
-        ctx.font = 'bold 11px ui-monospace, monospace';
+        ctx.font = 'bold 11px ui-monospace, "Malgun Gothic", "Noto Sans CJK KR", monospace';
         ctx.fillStyle = '#ffffff';
         const roadRatio = Number(debug?.road_ratio);
         const road = Number.isFinite(roadRatio) && roadRatio >= 0

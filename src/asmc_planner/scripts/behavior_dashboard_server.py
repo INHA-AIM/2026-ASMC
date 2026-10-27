@@ -70,6 +70,13 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
                 "received_at": {}}
     snapshot_lock = threading.Lock()
 
+    def guess_type(self, path):
+        # Explicit UTF-8 for Korean labels in HTML/CSS/JS; keep binary MIME types.
+        kind = super().guess_type(path)
+        if kind.startswith("text/") or kind in ("application/javascript", "application/json"):
+            return kind + "; charset=utf-8"
+        return kind
+
     def end_headers(self):
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
         self.send_header("Pragma", "no-cache")

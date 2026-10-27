@@ -426,19 +426,22 @@ xhost -local:docker
 ## LiDAR 병행 비교 실행
 
 일반 주행은 앞의 기본 명령과 `/perception/lidar` namespace를 사용합니다.
+구 이관용 `/migration/lidar`는 운영 경로·별칭이 아니며 더 이상 현행 실행 예시로 사용하지 않습니다.
+과거 bag·실험 기록의 토픽 이름은 당시 근거로 보존합니다. `/test/lidar`는 아래 격리 시험의 예시 이름일 뿐,
+새 파이프라인이나 자동 실행 노드를 추가하는 기능이 아닙니다.
 운영 LiDAR와 별도 시험 처리를 **동시에 비교할 때만** 아래처럼 시험 namespace를 명시합니다.
 여기서는 출력 격리를 위한 인자가 필수입니다. 센서·카메라 입력은 기존 정본을 공유하며
 판제는 운영 namespace를 계속 소비합니다.
 
 ```bash
-roslaunch asmc_lidar lidar.launch namespace:=/migration/lidar
+roslaunch asmc_lidar lidar.launch namespace:=/test/lidar
 ```
 
 이 시험 결과를 웹으로 볼 때는 기존 웹 launch를 종료한 뒤 같은 namespace로 실행합니다.
 포트가 같은 웹 서버를 중복 실행하지 않습니다.
 
 ```bash
-roslaunch asmc_lidar view.launch namespace:=/migration/lidar
+roslaunch asmc_lidar view.launch namespace:=/test/lidar
 ```
 
 선택 옵션은 앞의 표와 동일합니다. `fusion:=false`는 카메라 연결 없는 비교,
@@ -448,7 +451,7 @@ OBB·ID·분류와 ego box 표시입니다. 원본 `/velodyne_points`와 처리 
 processing generation이 증가합니다.
 
 ```bash
-rosservice call /migration/lidar/lidar_pipeline/reset "{}"
+rosservice call /test/lidar/lidar_pipeline/reset "{}"
 ```
 
 보정·시간·터널 비교 등의 내부 옵션과 관측·진단 규칙은

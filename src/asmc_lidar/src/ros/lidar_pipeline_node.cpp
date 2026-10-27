@@ -1,8 +1,8 @@
-// lidar_pipeline_node: ROS adapter of the asmc_lidar shadow pipeline.
+// lidar_pipeline_node: ROS adapter of the canonical asmc_lidar pipeline.
 //
 // Inputs: PointCloud2, sensor_msgs/Imu, morai EgoVehicleStatus and GPSMessage,
 // and the canonical camera observation/status topics (camera::Receiver).
-// Outputs, by default only under /migration/lidar/*: typed local/map
+// lidar.launch defaults to /perception/lidar/*; outputs are namespace-relative: typed local/map
 // LidarObjectArray, 1 Hz diagnostics, a per-scan JSON trace (serialized only
 // while subscribed), with ~publish_tf base_link -> ~tf_child_frame and, with
 // ~debug_enabled (default false), rate-limited stage clouds and a scan JSON
@@ -372,13 +372,13 @@ class LidarPipelineNode {
     if (pnh_.getParam("enable_camera_fusion", flag)) config_.enable_camera_fusion = flag;
     if (pnh_.getParam("experimental_tunnel_filter", flag)) config_.pipeline.tunnel.enabled = flag;
     // Canonical launch must not silently run an old comparison YAML. Explicit
-    // comparisons remain available in /migration/lidar; no algorithm fallback.
+    // comparisons use an explicit test namespace; no algorithm fallback.
     bool require_optimized = false;
     pnh_.param("require_optimized_pipeline", require_optimized, false);
     if (require_optimized &&
         ((config_.enable_camera_fusion && config_.fusion.views != "all") ||
          (config_.pipeline.tunnel.enabled && !config_.pipeline.tunnel_route.original_pipeline)))
-      throw StartupRefused("canonical runtime requires fusion.views=all and optimized tunnel original_pipeline=true; use /migration/lidar for comparison profiles");
+      throw StartupRefused("canonical runtime requires fusion.views=all and optimized tunnel original_pipeline=true; use an isolated test namespace for comparison profiles");
     // The trace topic never carries the debug payload (detections/clusters/digests).
     config_.pipeline.capture_debug = false;
   }

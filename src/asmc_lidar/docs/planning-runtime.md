@@ -28,7 +28,7 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 
 마지막 명령은 차량 제어를 포함한다. 판제 launch는 센서·추론 생산자를 시작하지 않는다.
 `fusion:=true`, `debug:=false`, `rviz:=false`가 LiDAR 기본이다. 단일 비교는 `fusion:=false`,
-RViz 추가는 `rviz:=true`, 병행 비교는 `namespace:=/migration/lidar`를 사용한다.
+RViz 추가는 `rviz:=true`, 병행 비교는 `namespace:=/test/lidar`를 사용한다.
 
 웹의 단계별 점군을 보려면 기존 LiDAR 실행 대신 `roslaunch asmc_lidar lidar.launch debug:=true`로
 시작하고 별도 터미널에서 `roslaunch asmc_lidar view.launch` 후 `http://127.0.0.1:8091/`에 접속한다.

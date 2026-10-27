@@ -2,7 +2,7 @@
 
 2026-10-28. PR #122는 **3뷰 확장·동등한 연산 최적화·local/map 전달 검증**으로 병합됐다.
 사용자가 계산 개선 후 기본 승격을 승인했다. `fusion.views: all`이며, 전방 단독 `front`는
-명시적인 `namespace:=/migration/lidar` 비교 경로다. 정본 namespace는 최적화 설정을 검사한다.
+명시적인 `namespace:=/test/lidar` 비교 경로다. 정본 namespace는 최적화 설정을 검사한다.
 semantic 정적 운동 보조는 계속 OFF다. 전체 장면 수락이나 모든
 터널 장애물 보존 완료를 의미하지 않는다. [M1 실행 정본](three-view-fusion.md)을 함께 본다.
 

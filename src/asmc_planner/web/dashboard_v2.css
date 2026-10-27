@@ -144,7 +144,7 @@
   border: 1px solid #1d303d;
   border-radius: 6px;
   background: #0a151e;
-  font: 10px ui-monospace, monospace;
+  font: 10px var(--font-mono);
 }
 
 .object-row.filter-dropped {
@@ -226,14 +226,14 @@
   border: 1px solid #233744;
   border-radius: 6px;
   background: #08131b;
-  font: 10px ui-monospace, monospace;
+  font: 10px var(--font-mono);
 }
 .motion-summary span { display: block; }
 .motion-summary span + span { margin-top: 4px; }
 .motion-summary .summary-filter { color: #9ee7fb; }
 .motion-summary .summary-clear { color: #6debaa; }
 .motion-summary .summary-blocked { color: #ffcf7f; }
-.object-empty { padding: 8px 0; color: #8299a8; font: 11px ui-monospace, monospace; }
+.object-empty { padding: 8px 0; color: #8299a8; font: 11px var(--font-mono); }
 
 /* Separate local scene from global-map policy; no duplicate controller. */
 .toolbar select { background: #162733; color: #d8e6ef; border: 1px solid #3a5365; padding: 5px; max-width: 270px; }

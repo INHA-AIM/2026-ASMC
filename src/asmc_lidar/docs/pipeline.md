@@ -4,7 +4,7 @@
 
 **B4 현행:** `asmc_lidar`가 정본이며 판제 기본은 공용 `planning_observations_map` 직접 입력이다.
 수집·시나리오도 같은 런타임을 쓰고 구 Main/Msg는 폐기했다. 기본 namespace는 `/perception/lidar`,
-병행 비교는 `/migration/lidar`다. [현재 실행·메시지·제한](planning-runtime.md)을 먼저 읽는다.
+병행 비교는 `/test/lidar`다. [현재 실행·메시지·제한](planning-runtime.md)을 먼저 읽는다.
 
 아래 PR #103–105 비교 기준선·수치와 미수락은 당시 근거다. 구 Main 실행은 삭제 전 고정 revision에서만 재현한다.
 
@@ -109,10 +109,10 @@ bag 비교의 동등성 경계는 **추적 결과와 typed local/map 배열**이
 
 | 토픽 (기본값, `~*_topic` 또는 remap으로 변경) | 타입 | 내용 |
 |---|---|---|
-| `/migration/lidar/objects_local` | `asmc_msgs/LidarObjectArray` | frame `base_link`(후륜축), 관측 scan의 source stamp |
-| `/migration/lidar/objects_map` | `asmc_msgs/LidarObjectArray` | frame `map`, 같은 객체·ID를 관측 시각 pose로 변환 |
-| `/migration/lidar/diagnostics` | `diagnostic_msgs/DiagnosticArray` | 1Hz. 처리·무효·덮어쓴 scan 수, 처리시간 p50/p95, map·카메라 사유 |
-| `/migration/lidar/trace` | `std_msgs/String` | 구독자가 있을 때만 scan별 JSON ([형식](scan-trace-schema.md), debug 필드 제외) |
+| `/perception/lidar/objects_local` | `asmc_msgs/LidarObjectArray` | frame `base_link`(후륜축), 관측 scan의 source stamp |
+| `/perception/lidar/objects_map` | `asmc_msgs/LidarObjectArray` | frame `map`, 같은 객체·ID를 관측 시각 pose로 변환 |
+| `/perception/lidar/diagnostics` | `diagnostic_msgs/DiagnosticArray` | 1Hz. 처리·무효·덮어쓴 scan 수, 처리시간 p50/p95, map·카메라 사유 |
+| `/perception/lidar/trace` | `std_msgs/String` | 구독자가 있을 때만 scan별 JSON ([형식](scan-trace-schema.md), debug 필드 제외) |
 
 - `OBSERVED`/`OBSERVED_EMPTY`: 정상 처리. 두 배열 모두 `INPUT_INVALID`(객체 0)인 경우는
   (a) scan 시각의 IMU/CAN이 없거나 stale·무효(reason=pose 사유), (b) 점 0개 scan
@@ -153,13 +153,14 @@ frame을 보내지 않아 0.35초 후 비활성), `successful_batches`/`source_i
 보관량 8개·350ms(Main 128개). ACTIVE 상태에서 전방 관측이 아직 없으면(`missing`) Main처럼 활성·관측 없음으로
 scan 2개까지 대기시키고, 관측이 있던 뒤의 `missing`(세션/세대 전환으로 Receiver가 view를 비움)은 즉시 epoch를 바꾼다.
 
-## 실험 TunnelFilterCore
+## 터널 처리와 과거 비교 stage
 
-`experimental.tunnel_filter.enabled` 기본 false다(노드 `~experimental_tunnel_filter`, launch 인자,
-replay `--tunnel-filter on|off`를 주면 그 값이 설정 파일보다 우선한다). OFF이면
-stage를 만들지 않고 호출하지 않는다. ON이면 GPS와 무관하게 모든 scan에서 RANSAC 뒤·군집 앞에
-core를 호출하고, core가 천장/벽으로 표시한 voxel 점만 지면 제거 결과에서 뺀다.
-`IsGpsDenied`/`ShouldRunExperiment`는 사용하지 않는다. ON의 필터 성능은 수락하지 않았다.
+현재 정본은 `experimental.tunnel_filter.enabled: true`와 `original_pipeline: true`다.
+실제 scan의 map pose가 무효일 때 최적화 터널 경로를 선택하며, 상세 조건은
+[3뷰·터널 실행 정본](three-view-fusion.md#터널-연산-최적화)을 따른다.
+이관 초기의 `original_pipeline: false` 독립 stage는 비교용으로만 보존한다.
+해당 stage의 GPS와 무관한 호출 특성을 현재 정본 실행으로 해석하지 않는다.
+운영 namespace에서는 구 비교 설정을 거부하며, 임의 pitch-only/옛 터널 조합을 기본 실행 예시로 안내하지 않는다.
 
 ## 실행
 
@@ -169,18 +170,14 @@ source /opt/ros/noetic/setup.bash
 cd <repo> && catkin_make -DCATKIN_WHITELIST_PACKAGES=""
 source devel/setup.bash
 
-# 이관 검증 노드 (기존 bridge/카메라가 발행 중인 ROS 입력을 구독)
-roslaunch asmc_lidar lidar.launch namespace:=/migration/lidar
+# 정본 처리 노드 (기존 bridge/카메라의 ROS 입력 구독)
+roslaunch asmc_lidar lidar.launch
 # LiDAR 단독 (카메라 구독 없음)
 roslaunch asmc_lidar lidar.launch fusion:=false
-# pitch-only 수평화 / 실험 TunnelFilter ON (인자를 주지 않으면 config/lidar_pipeline.yaml 값)
-roslaunch asmc_lidar lidar.launch lidar_level_roll:=false
-roslaunch asmc_lidar lidar.launch experimental_tunnel_filter:=true
-
 # local/map 상태 확인
-rostopic echo -n1 /migration/lidar/objects_local/status
-rostopic echo -n1 /migration/lidar/objects_map/reason
-rostopic echo /migration/lidar/diagnostics
+rostopic echo -n1 /perception/lidar/objects_local/status
+rostopic echo -n1 /perception/lidar/objects_map/reason
+rostopic echo /perception/lidar/diagnostics
 
 # bag 재생 (ROS master 불필요, 지정한 토픽만 읽음)
 rosrun asmc_lidar lidar_replay --bag in.bag --output out.jsonl \

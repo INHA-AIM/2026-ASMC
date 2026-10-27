@@ -21,7 +21,7 @@
 - 판제 웹에 실제 선택 제어기, 음영 정지 사유, bbox 판정, family support, 실제 선택 경로,
   local LiDAR 기하를 표시한다. 재피팅·재추론·제어 발행은 없다.
 - 정본 LiDAR launch는 활성 fusion이 all이 아니거나 활성 터널이 최적화 경로가 아니면 시작을 거부한다.
-  과거 비교 설정은 `namespace:=/migration/lidar`에서 명시적으로 사용한다.
+  과거 비교 설정은 `namespace:=/test/lidar`에서 명시적으로 사용한다.
 
 공용 `asmc_msgs` 필드·MD5는 유지한다. **private `planning_inputs/DetectedObject(Array)` MD5는 바뀐다.**
 변경된 소스 전체를 재빌드하고 adapter·Behavior·Frenet·dashboard를 함께 재시작해야 한다.

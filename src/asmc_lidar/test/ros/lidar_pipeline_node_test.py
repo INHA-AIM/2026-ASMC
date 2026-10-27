@@ -149,13 +149,13 @@ class LidarPipelineNodeTest(unittest.TestCase):
         cls.local, cls.map, cls.diagnostics, cls.tf, cls.traces = [], [], [], [], []
         cls.local_observations, cls.map_observations = [], []
         cls.planning_observations = []
-        rospy.Subscriber('/migration/lidar/planning_observations_map', LidarPlanningObservation,
+        rospy.Subscriber('/test/lidar/planning_observations_map', LidarPlanningObservation,
                          cls.store(cls.planning_observations), queue_size=50)
-        rospy.Subscriber("/migration/lidar/observations_local", LidarObservation, cls.store(cls.local_observations), queue_size=50)
-        rospy.Subscriber("/migration/lidar/observations_map", LidarObservation, cls.store(cls.map_observations), queue_size=50)
-        rospy.Subscriber('/migration/lidar/objects_local', LidarObjectArray, cls.store(cls.local), queue_size=50)
-        rospy.Subscriber('/migration/lidar/objects_map', LidarObjectArray, cls.store(cls.map), queue_size=50)
-        rospy.Subscriber('/migration/lidar/diagnostics', DiagnosticArray, cls.store(cls.diagnostics),
+        rospy.Subscriber("/test/lidar/observations_local", LidarObservation, cls.store(cls.local_observations), queue_size=50)
+        rospy.Subscriber("/test/lidar/observations_map", LidarObservation, cls.store(cls.map_observations), queue_size=50)
+        rospy.Subscriber('/test/lidar/objects_local', LidarObjectArray, cls.store(cls.local), queue_size=50)
+        rospy.Subscriber('/test/lidar/objects_map', LidarObjectArray, cls.store(cls.map), queue_size=50)
+        rospy.Subscriber('/test/lidar/diagnostics', DiagnosticArray, cls.store(cls.diagnostics),
                          queue_size=5)
         rospy.Subscriber('/tf', TFMessage, cls.store(cls.tf), queue_size=50)
         cls.pub = dict(
@@ -489,7 +489,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
             self.assertIn(key, values)
 
         traces = []
-        subscriber = rospy.Subscriber('/migration/lidar/trace', String, traces.append, queue_size=5)
+        subscriber = rospy.Subscriber('/test/lidar/trace', String, traces.append, queue_size=5)
         try:
             self.wait_for(lambda: traces, 5.0, 'trace message while subscribed')
         finally:
@@ -683,7 +683,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
         allowed = {'/rosout'} | ({'/tf'} if self.expect_tf else set())
         self.assertTrue(published)
         for topic in published:
-            self.assertTrue(topic.startswith('/migration/lidar/') or topic in allowed, topic)
+            self.assertTrue(topic.startswith('/test/lidar/') or topic in allowed, topic)
         self.assertEqual(sorted(s for s, providers in services if self.node in providers),
                          sorted([self.node + '/get_loggers', self.node + '/set_logger_level', self.node + '/reset']))
 
@@ -693,11 +693,11 @@ class LidarPipelineNodeTest(unittest.TestCase):
             executable = roslib.packages.find_node(PKG, 'lidar_pipeline_node')[0]
         cases = [
             ['_objects_local_topic:=/perception/lidar/objects_local'],
-            ['/migration/lidar/objects_map:=/perception/lidar/objects_map'],
-            ['/migration/lidar/objects_local:=/last_lidar'],
+            ['/test/lidar/objects_map:=/perception/lidar/objects_map'],
+            ['/test/lidar/objects_local:=/last_lidar'],
             ['_diagnostics_topic:=/perception/lidar/diagnostics'],
             ['_observations_local_topic:=/last_lidar'],
-            ['/migration/lidar/observations_map:=/perception/lidar/observations_map'],
+            ['/test/lidar/observations_map:=/perception/lidar/observations_map'],
             ['_trace_topic:=/planning/shadow_trace'],
             ['_tf_child_frame:=lidar_leveled'],
             ['_objects_local_topic:=/perception/lidar/objects'],
@@ -709,7 +709,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
         master = rosgraph.Master('/lidar_pipeline_node_test')
         for index, case in enumerate(cases):
             name = 'lidar_pipeline_guard_%d' % index
-            command = [executable, '__name:=' + name, '__ns:=/migration/lidar', '_pipeline_config:=' + self.pipeline_config,
+            command = [executable, '__name:=' + name, '__ns:=/test/lidar', '_pipeline_config:=' + self.pipeline_config,
                        '_enable_camera_fusion:=false'] + case
             try:
                 result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -747,7 +747,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
             with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as temporary:
                 yaml.safe_dump(config, temporary)
                 temporary.flush()
-                command = [executable, '__name:=canonical_profile_guard', '__ns:=/migration/lidar',
+                command = [executable, '__name:=canonical_profile_guard', '__ns:=/test/lidar',
                            '_pipeline_config:=' + temporary.name, '_package_dir:=' + package_dir,
                            '_require_optimized_pipeline:=true', '_enable_camera_fusion:=true',
                            '_experimental_tunnel_filter:=true']
@@ -829,7 +829,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
     def test_11_hd_map_decisions_match_delivery_mode(self):
         from collections import deque
         traces = deque(maxlen=100)
-        subscriber = rospy.Subscriber('/migration/lidar/trace', String, traces.append, queue_size=1)
+        subscriber = rospy.Subscriber('/test/lidar/trace', String, traces.append, queue_size=1)
         try:
             self.wait_for(lambda: traces, 5.0, 'trace for HD-map audit')
             row = json.loads(traces[-1].data)
@@ -878,7 +878,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
         self.assertEqual(cfg.get('hd_map_audit',{}).get('mode'),'filter',
                          'this delivery suite requires the filter profile')
         traces=deque(maxlen=100)
-        sub=rospy.Subscriber('/migration/lidar/trace',String,traces.append,queue_size=1)
+        sub=rospy.Subscriber('/test/lidar/trace',String,traces.append,queue_size=1)
         cls=type(self);old=(cls.lat,cls.lon)
         try:
             # Same local box/points, deliberately outside the road. Reset only

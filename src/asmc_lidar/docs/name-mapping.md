@@ -56,6 +56,8 @@
 
 `asmc_lidar_shadow_node` → `lidar_pipeline_node`, `asmc_lidar_shadow_replay` → `lidar_replay`.
 출력 namespace는 `/asmc_lidar/shadow`에서 `/migration/lidar`로 변경했다.
+이는 이관 당시 대응표다. 이후 정본화로 운영은 `/perception/lidar`가 됐고,
+현재 비교 예시는 `/test/lidar`다. 구 namespace 별칭·중계는 제공하지 않는다.
 
 이 PR의 초기 이름 `lidar_pipeline.launch`와 `lidar_only.launch`도 최종적으로
 `lidar.launch` 하나로 합쳤다. 일반 launch 인자는 `fusion`이며 내부 파라미터

@@ -1,7 +1,7 @@
 # asmc_lidar 웹 모니터 — 처리 결과를 브라우저에서 보기 (읽기 전용)
 
 **2026-10-26 표시 갱신:** 기본 namespace는 `/perception/lidar`다. 기존 시험 노드를 볼 때는
-`namespace:=/migration/lidar`를 명시한다. 포팅한 시설물·구조물·관측 확인 정책 제외는 파란색과
+`namespace:=/test/lidar`를 명시한다. 포팅한 시설물·구조물·관측 확인 정책 제외는 파란색과
 별도 숨김 항목으로 구분한다. 시설물/구조물 좌표 blacklist는 제거했으며 파란색 정책은
 현재 관측 품질 제외다. 이전 생산자의 사유도 표시할 수 있다. 공개 속도/운동은 연결됐으며 웹은 진단 도구다.
 [속도 의미·실행 경계](planning-runtime.md)를 따른다.
@@ -93,7 +93,7 @@ roslaunch asmc_lidar view.launch open_browser:=true
 | 상황 | 명령 |
 |---|---|
 | 기존 처리 결과에 화면만 추가 | `roslaunch asmc_lidar view.launch open_browser:=true` |
-| 다른 namespace 결과 보기 | `roslaunch asmc_lidar view.launch namespace:=/migration/lidar_tunnel` |
+| 다른 namespace 결과 보기 | `roslaunch asmc_lidar view.launch namespace:=/test/lidar_tunnel` |
 | 카메라 없이 처리 시작(별도 터미널) | `roslaunch asmc_lidar lidar.launch fusion:=false debug:=true` |
 | 포트 변경 | `roslaunch asmc_lidar view.launch dashboard_port:=8092` |
 | 다른 PC에서 접속(명시적 선택) | `roslaunch asmc_lidar view.launch bind_address:=0.0.0.0` |
@@ -106,7 +106,7 @@ roslaunch asmc_lidar view.launch open_browser:=true
 
 | 진입점 | 인자 | 기본값 | 의미 |
 |---|---|---|---|
-| `view.launch` | `namespace` | `/migration/lidar` | 구독할 결과 namespace |
+| `view.launch` | `namespace` | `/perception/lidar` | 구독할 결과 namespace |
 | `view.launch` | `open_browser` | `false` | 준비 후 브라우저 한 번 열기 |
 | `view.launch` | `dashboard_port` | `8091` | HTTP 포트 |
 | `view.launch` | `bind_address` | `127.0.0.1` | `0.0.0.0`은 명시적 외부 공개 |
@@ -178,7 +178,7 @@ bag를 반복 재생(`-l`)하면 두 번째 바퀴부터 stamp가 과거로 돌�
 ## 8091 포트 충돌과 기존 시험 웹
 
 `Address already in use`는 기존 웹이 같은 포트를 쓰는 상태다. 현재 ROS namespace와 기존
-웹의 `config.topics.scan`을 확인한다. 구 `/migration/lidar` 웹이면 해당 시험 launch를 먼저
+웹의 `config.topics.scan`을 확인한다. 구 `/test/lidar` 웹이면 해당 시험 launch를 먼저
 종료하고 정식 `view.launch` 하나만 실행한다. 운영 처리 노드나 ROS master를 종료할 이유는 없다.
 임시 병행이 필요할 때만 기존 인자 `dashboard_port:=8092`를 사용하며 두 화면의 namespace를 구분한다.
 
