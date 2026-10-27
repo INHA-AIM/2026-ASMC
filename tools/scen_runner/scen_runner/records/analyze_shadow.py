@@ -61,18 +61,25 @@ def analyze(directory, output_name='analysis'):
 
     def gallery(stamp, result):
         reason = result.reason+' | '+','.join(sorted(set(result.box_reasons)))
-        if case_counts[reason] >= 2 or len(cases) >= 32 or stamp not in images:
+        kind = result.reason+' | '+','.join(sorted(set(r.split(':')[0] for r in result.box_reasons)))
+        if case_counts[kind] >= 2 or len(cases) >= 32 or stamp not in images:
             return
         frame = images[stamp]
         # Exact source identity only; no nearest-frame substitution.
         extension = '.png' if 'png' in frame.image.format.lower() else '.jpg'
         name = 'case-%02d%s' % (len(cases)+1, extension)
         (output/name).write_bytes(bytes(frame.image.data))
+        import cv2
+        import numpy as np
+        decoded=cv2.imdecode(np.frombuffer(bytes(frame.image.data),np.uint8),cv2.IMREAD_COLOR)
+        if decoded is None:
+            return
+        height,width=decoded.shape[:2]
         boxes = [dict(label=b.label, bbox=[b.xmin,b.ymin,b.xmax,b.ymax],
                       assignment=int(result.assignments[i]), reason=result.box_reasons[i])
                  for i,b in enumerate(result.boxes)]
-        cases.append(dict(image=name, source_stamp_ns=stamp, reason=reason, boxes=boxes))
-        case_counts[reason] += 1
+        cases.append(dict(image=name, width=width, height=height, source_stamp_ns=stamp, reason=reason, boxes=boxes))
+        case_counts[kind] += 1
 
     with logs.open('x', encoding='utf-8') as stream:
         # rosbag split files are timestamped; process in file order, never join
@@ -125,10 +132,22 @@ def analyze(directory, output_name='analysis'):
                    'Last selector sample is diagnostic context, not per-command arbitration proof. '
                    'Gallery uses exact bbox/frame stamp; no independently measured geometry GT.')
     write_json(output/'summary.json', summary)
-    cards=''.join('<article><h2>'+html.escape(c['reason'])+'</h2><img width="960" src="'+c['image']+'"><pre>'+
-                  html.escape(json.dumps(c['boxes'],ensure_ascii=False,indent=2))+'</pre></article>' for c in cases)
+    def card(c):
+        rectangles=[]
+        names=('UNKNOWN','OWN','ADJACENT','BOTH','OUTSIDE','DEFERRED_FAR')
+        for box in c['boxes']:
+            x,y,x2,y2=box['bbox'];assignment=box['assignment']
+            label=html.escape(box['label']+' / '+(names[assignment] if assignment<len(names) else str(assignment)))
+            color='#ffb454' if assignment in (0,5) else '#71f7a2'
+            rectangles.append(f'<rect x="{x}" y="{y}" width="{max(0,x2-x)}" height="{max(0,y2-y)}" '
+                              f'fill="none" stroke="{color}" stroke-width="2"/><text x="{x}" y="{max(14,y-4)}" '
+                              f'fill="{color}" stroke="#111" stroke-width=".3" font-size="15">{label}</text>')
+        return '<article><h2>'+html.escape(c['reason'])+f'</h2><svg viewBox="0 0 {c["width"]} {c["height"]}"><image href="{c["image"]}" '+\
+               f'width="{c["width"]}" height="{c["height"]}"/>'+''.join(rectangles)+'</svg><pre>'+\
+               html.escape(json.dumps(c['boxes'],ensure_ascii=False,indent=2))+'</pre></article>'
+    cards=''.join(card(c) for c in cases)
     (output/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>Shadow trial evidence</title>'
-        '<style>body{background:#161b22;color:#eee;font:16px sans-serif;margin:24px}img{max-width:100%}'
+        '<style>body{background:#161b22;color:#eee;font:16px sans-serif;margin:24px}svg{width:100%;max-width:1280px}'
         'pre{white-space:pre-wrap}article{border-top:1px solid #555;padding:16px 0}</style>'
         '<h1>음영구간 판단 기록</h1><p>동일 stamp의 원본 영상과 실제 bbox 판정입니다. '
         '시나리오 재현은 동일 센서 프레임의 재생을 보장하지 않습니다.</p><a href="summary.json">요약 JSON</a>'+cards,
