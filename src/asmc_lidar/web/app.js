@@ -34,7 +34,7 @@
     paused: false, inflight: false, inflightSince: 0, controller: null,
     view: { frame: 'base', mode: 'bev', bevYaw: 0, yaw: -0.4, pitch: 0.65, road: true, scale: 9, panX: 0, panY: 0, side: 'xz', psize: 2, compare: false, labels: true },
     road: null,
-    hideCandidates:false,hideReasons:{points:true,obb:true,height:true,policy:true},colorMode:"audit",showPred:false,idWarnings:new Map(),
+    hideCandidates:false,hideReasons:{points:true,obb:true,height:true,policy:true},colorMode:"audit",pointColorMode:"road",showPred:false,idWarnings:new Map(),
     stages: {}, selected: null, webFrames: [], matrices: null,
   };
 
@@ -169,8 +169,8 @@
     const report=state.scene&&state.scene.hd_map_audit;
     for(const d of report&&report.objects||[]) {const v=d.preview?d.preview.decision:d.decision;counts[v]=(counts[v]||0)+1;}
     const mapMismatch=report&&report.map_sha256&&state.road&&state.road.sha256&&report.map_sha256!==state.road.sha256;
-    el('audit-summary').textContent=(report&&report.enabled?'원본 '+(report.objects||[]).length+' · 유지 '+counts.keep+' · 제외 후보 '+counts.exclude_candidate+' · 보류 '+counts.undetermined:'audit OFF · 원본 표시')+
-      (report&&report.delivery_applied?' · ROS 발행 '+report.delivery_output_count+' / '+report.delivery_input_count+' · 실제 제외 '+report.delivery_excluded_count:' · ROS 전달 필터 OFF')+
+    el('audit-summary').textContent=(report&&report.delivery_applied?'관측 '+report.delivery_input_count+' · 발행 '+report.delivery_output_count+' · 실제 제외 '+report.delivery_excluded_count+' · 예측 '+((state.scene.tracks||[]).filter(t=>t.miss>0).length):report&&report.enabled?'원본 '+(report.objects||[]).length+' · 유지 '+counts.keep+' · 비교상 제외 후보 '+counts.exclude_candidate+' · 보류 '+counts.undetermined:'audit OFF · 원본 표시')+
+      (report&&report.delivery_applied?' · ROS 발행 '+report.delivery_output_count+' / '+report.delivery_input_count+' · 실제 제외 '+report.delivery_excluded_count:' · audit 비교 · ROS 발행 유지')+
       (report?' · 안쪽 경계 '+fmt(report.road_inset_m*100,0)+'cm':'')+(mapMismatch?' · 주의: 배경/판정 지도 SHA 다름':'')+
       (report&&report.pose_source_age_ms>=0?' · GPS age '+fmt(report.pose_source_age_ms,0)+'ms':'')+' · 그리기 '+fmt(state.lastRenderMs,1)+'ms';
     const tracks=state.scene&&state.scene.tracks||[];
@@ -179,7 +179,7 @@
       ' · 예측 '+(tracks.length-observed.length)+' (별도 스위치)';
     const originals=['raw','roi','voxel','leveled','detections'].filter(k=>state.stages[k]);
     if(state.view.compare)originals.push('voxel 비교');
-    el('filter-layer-note').textContent=originals.length?'원본 대조 레이어 ON: '+originals.join(', ')+' · 후보 숨김 미적용':'';
+    el('filter-layer-note').textContent=originals.length?'원본 대조 레이어 ON: '+originals.join(', ')+' · 발행 제외 숨김 미적용':'';
     const now = performance.now();
     state.webFrames = state.webFrames.filter((t) => now - t < 2000);
     const sinceServer = state.statusAt ? now - state.statusAt : null;
@@ -471,17 +471,15 @@
     const styles=new Map((state.scene.tracks||[]).map(t=>[t.id,{color:V.auditAppearance(state.scene,t).color,visible:visibleTrack(t)}]));
     return (i) => {
       const l = label ? label[i] : 0;
-      if (l === 3) return st.height_removed ? '#fb923c' : null;
-      if (l === 1) return st.ground ? COLORS.ground : null;
-      // RANSAC-after includes all non-ground points, even points a later
-      // experimental tunnel stage would remove. Never mislabel cluster input.
-      if (l === 2) return st.nonground ? COLORS.nonground : (st.tunnel ? COLORS.tunnel : null);
-      if (!st.nonground) return null;
+      if(!V.pointStageVisible(l,st))return null;
       const style=track&&styles.get(track[i]);
       if(style&&!style.visible)return null;
-      if (st.clusters && cluster) { const c = cluster[i]; return c >= 0 ? CLUSTER_PALETTE[c % CLUSTER_PALETTE.length] : '#166534'; }
-      if(state.colorMode==='audit')return style?style.color:'#64748b';
-      return COLORS.nonground;
+      if(state.pointColorMode==='road')return V.pointRoadColor((state.arrays['leveled.road']||[])[i]);
+      if(l===3)return '#fb923c';
+      if(l===2)return COLORS.tunnel;
+      if(l===1)return COLORS.ground;
+      if(st.clusters&&cluster){const c=cluster[i];return c>=0?CLUSTER_PALETTE[c%CLUSTER_PALETTE.length]:'#64748b';}
+      return style?style.color:'#64748b';
     };
   }
   function rawColor(labels) {
@@ -653,7 +651,7 @@
       ['실제 IoU / 분류 반영',assoc ? fmt(assoc.iou,3)+' · '+assoc.reason+' · '+assoc.class_before+' → '+assoc.class_after : '-'],
       ['화면 표시',visibleTrack(t)?'표시 대상 · 레이어 선택에 따름':'숨김 유지 · 상세 선택은 숨김을 해제하지 않음'],
       ['필터 미리보기',a.label+' · '+a.detail],
-      ['실제 ROS 전달',audit&&audit.delivery_excluded?'제외 · 원본 tracker는 유지':sc.hd_map_audit&&sc.hd_map_audit.delivery_applied?'보존':'전달 필터 OFF'],
+      ['실제 ROS 전달',t.miss>0?(audit&&audit.historical?'마지막 관측 판정 · '+audit.observed_stamp_ns:'예측 · 현재 전달 대상 아님'):audit&&audit.delivery_excluded?'제외 · 원본 tracker는 유지':sc.hd_map_audit&&sc.hd_map_audit.delivery_applied?'보존':'전달 필터 OFF'],
       ['독립 근거 · 점군 / OBB / 높이',p?[p.point_decision,p.obb_decision,p.height_decision].map(x=>({keep:'유지',exclude_candidate:'후보',undetermined:'보류'}[x]||'이전 버전')).join(' / '):'미계산'],
       ['전달 판단 / 보류 근거',audit?audit.decision+' / '+audit.reason:'OFF'],
       ['군집 도로 점 / 전체',p?p.road_points+' / '+p.support_points+' ('+fmt(p.road_point_ratio*100,1)+'%)':'미계산'],
@@ -724,6 +722,7 @@
     state.hideCandidates=false;el('opt-hide-candidates').checked=false;state.hideReasons[k]=e.target.checked;
     el('opt-hide-candidates').indeterminate=Object.values(state.hideReasons).some(Boolean);
     renderScene();renderTracks();renderDetail();});
+  el('opt-point-color').addEventListener('change',e=>{state.pointColorMode=e.target.value;renderScene();});
   el('opt-color').addEventListener('change',e=>{state.colorMode=e.target.value;renderScene();renderTracks();});
   el('opt-side-show').addEventListener('change',e=>{el('view-side').hidden=!e.target.checked;el('views').style.gridTemplateRows=e.target.checked?'2fr 1fr':'1fr';renderScene();});
   el('opt-show-pred').addEventListener('change',e=>{state.showPred=e.target.checked;renderScene();renderTracks();renderDetail();});

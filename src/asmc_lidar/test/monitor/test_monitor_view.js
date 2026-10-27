@@ -459,5 +459,28 @@ test('ported delivery policies keep their reason and hide independently of point
   }
 });
 
+test('predicted exclusions retain producer verdict through map mismatch, then reobservation replaces it',()=>{
+  const d={track_id:7,delivery_excluded:true,preview:{decision:'exclude_candidate',reason:'cluster_support_outside',point_decision:'exclude_candidate'}};
+  const scene={hd_map_audit:{enabled:true,delivery_applied:true,map_sha256:'producer',objects:[]},
+    delivery_history:[{stamp_ns:123,report:{objects:[d]}}]};
+  const t={id:7,miss:1};
+  assert.equal(V.auditAppearance(scene,t).label,'마지막 관측에서 제외');
+  assert.equal(V.displayVisibility(scene,{sha256:'other'},t,true,true).visible,false);
+  assert.equal(V.displayVisibility(scene,null,t,true,false,{points:true}).visible,false);
+  assert.equal(V.displayVisibility(scene,null,t,true,false,{}).visible,true);
+  assert.equal(V.displayVisibility(scene,null,t,false,false,{}).visible,false);
+  scene.hd_map_audit.objects=[{track_id:7,delivery_excluded:false,preview:{decision:'keep',reason:'camera_vehicle_protected'}}];
+  assert.equal(V.displayVisibility(scene,null,{id:7,miss:0},false,true).visible,true);
+  assert.equal(V.auditAppearance(scene,{id:8,miss:1}).label,'예측·현재 전달 대상 아님');
+});
+test('point road membership and stage visibility are independent of object protection',()=>{
+  assert.equal(V.pointRoadColor(1),'#94a3b8');
+  assert.equal(V.pointRoadColor(0),'#facc15');
+  assert.equal(V.pointRoadColor(2),V.pointRoadColor(3));
+  assert.equal(V.pointStageVisible(2,{nonground:true,tunnel:false}),false);
+  assert.equal(V.pointStageVisible(2,{nonground:false,tunnel:true}),true);
+  assert.equal(V.pointStageVisible(3,{nonground:true,height_removed:false}),false);
+});
+
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');
 process.exit(failures.length ? 1 : 0);

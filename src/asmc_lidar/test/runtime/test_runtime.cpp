@@ -2,6 +2,7 @@
 // input converters, with synthetic inputs and a deterministic logical clock.
 #include <asmc_lidar/ros/ros_inputs.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
+#include <asmc_lidar/ros/delivery_display_history.hpp>
 
 #include <GeographicLib/UTMUPS.hpp>
 #include <gtest/gtest.h>
@@ -1079,4 +1080,18 @@ TEST(RuntimeIdentity, EffectiveChoicesAndCalibrationAreBoundToConfigId) {
   sh::FinalizeRuntimeIdentity(cfg,"camera-a"); EXPECT_NE(cfg.config_id,id);
   EXPECT_EQ(cfg.calibration_id,calibration);
   sh::FinalizeRuntimeIdentity(cfg,"camera-b"); EXPECT_NE(cfg.calibration_id,calibration);
+}
+
+TEST(DeliveryDisplayHistory, BoundedActualObservationHistoryAndIdentityReset) {
+  sh::DeliveryDisplayHistory h;
+  asmc::lidar::filtering::AuditReport r;r.delivery_applied=true;
+  asmc::lidar::filtering::AuditDecision d;d.track_id=7;d.delivery_excluded=true;r.objects={d};
+  h.Update("session|1|config",100,{7},r);
+  r.objects.clear();h.Update("session|1|config",200,{7,8},r);
+  ASSERT_EQ(h.entries().size(),1u);EXPECT_EQ(h.entries().at(7).stamp_ns,100);
+  d.delivery_excluded=false;r.objects={d};h.Update("session|1|config",300,{7},r);
+  EXPECT_FALSE(h.entries().at(7).decision.delivery_excluded);
+  r.objects.clear();h.Update("session|1|newconfig",400,{7},r);EXPECT_TRUE(h.entries().empty());
+  r.objects={d};h.Update("session|1|newconfig",500,{7},r);
+  r.objects.clear();h.Update("session|1|newconfig",600,{},r);EXPECT_TRUE(h.entries().empty());
 }

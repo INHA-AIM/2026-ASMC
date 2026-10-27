@@ -21,6 +21,7 @@
 
 #include <asmc_lidar/pipeline/stage_observer.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
+#include <asmc_lidar/ros/delivery_display_history.hpp>
 
 #include <ros/ros.h>
 
@@ -100,6 +101,8 @@ class DebugPublisher : public pipeline::StageObserver {
     StageSample raw, roi, voxel, leveled;
     std::vector<std::uint8_t> leveled_label;   // per sent leveled point
     std::vector<std::uint8_t> raw_label;
+    std::vector<std::uint8_t> leveled_road; // 0 unknown, 1 outside, 2 road boundary, 3 inset road
+    std::map<int,DeliveryDisplayHistory::Entry> delivery_history;
     std::vector<std::int32_t> leveled_track;  // exact support ownership, -1 if none/ambiguous
     std::vector<std::int32_t> leveled_cluster;  // per sent leveled point, -1 = none
     pipeline::StageCounts counts;
@@ -135,6 +138,8 @@ class DebugPublisher : public pipeline::StageObserver {
   void Publish(const Snapshot& s);
 
   DebugPublisherConfig config_;
+  std::shared_ptr<const filtering::HdMapAudit> road_map_;
+  DeliveryDisplayHistory delivery_history_;
   bool use_roll_ = true, tunnel_enabled_ = false;
   pipeline::VehicleSpec vehicle_;  // outline/LiDAR position for the page
   pipeline::RangeConfig range_;

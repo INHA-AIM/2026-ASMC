@@ -127,7 +127,15 @@
     if(!report||!report.enabled)return null;
     let index=auditIndices.get(report);
     if(!index){index=new Map((report.objects||[]).map(d=>[d.track_id,d]));auditIndices.set(report,index);}
-    return index.get(track.id)||null;
+    const current=index.get(track.id);
+    if(current && !(track.miss>0))return current;
+    if(track.miss>0) {
+      for(const h of scene.delivery_history||[]) {
+        const d=(h.report.objects||[]).find(d=>d.track_id===track.id);
+        if(d)return {...d,historical:true,observed_stamp_ns:h.stamp_ns};
+      }
+    }
+    return current||null;
   }
   function exclusionKinds(d) {
     const p=d&&d.preview,decision=p?p.decision:d&&d.decision,reason=p?p.reason:d&&d.reason;
@@ -143,14 +151,15 @@
   function auditAppearance(scene,track){
     const d=auditForTrack(scene,track),p=d&&d.preview;
     const kind=p?p.decision:d?d.decision:'unavailable';
-    const categories=exclusionKinds(d),category=categories[0]||null;
+    const applied=scene&&scene.hd_map_audit&&scene.hd_map_audit.delivery_applied;
+    const categories=(applied&&d&&!d.delivery_excluded)?[]:exclusionKinds(d),category=categories[0]||null;
     return {decision:kind,category,categories,reason:p?p.reason:d?d.reason:'audit_off',
-      label:d&&d.delivery_excluded?'발행 제외':kind==='keep'&&category==='obb'?'유지·OBB 비교 후보':kind==='keep'&&p&&p.reason==='camera_dynamic_protected'?'YOLO 동적 보호':
+      label:track.miss>0&&!d?'예측·현재 전달 대상 아님':d&&d.delivery_excluded?(d.historical?'마지막 관측에서 제외':'발행 제외'):kind==='keep'&&category==='obb'?'유지·OBB 비교 후보':kind==='keep'&&p&&p.reason==='camera_dynamic_protected'?'YOLO 동적 보호':
         kind==='keep'&&p&&p.reason==='camera_vehicle_protected'?'YOLO 차량 보호':
         kind==='keep'&&p&&p.reason==='exception_space_protected'?'구형 미션 보호':kind==='keep'&&p&&p.reason==='joint_drivable_support'?'점군·OBB 유지':
         kind==='keep'&&p&&p.reason==='cluster_drivable_support'?'구형 점군 유지':
         {keep:'유지',exclude_candidate:'제외 후보',undetermined:'보류',unavailable:'미실행'}[kind]||'보류',
-      color:category?{points:'#f472b6',obb:'#c084fc',height:'#fb923c',policy:'#60a5fa'}[category]:{keep:'#34d399',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',
+      color:track.miss>0&&!d?'#94a3b8':category?{points:'#f472b6',obb:'#c084fc',height:'#fb923c',policy:'#60a5fa'}[category]:{keep:'#34d399',undetermined:'#fbbf24',unavailable:'#94a3b8'}[kind]||'#fbbf24',
       detail:AUDIT_REASONS[p?p.reason:d?d.reason:'']||(p?p.reason:d?d.reason:'audit OFF')};
   }
   function previewVisible(scene,track,showPred,hideCandidates,hideReasons={}){
@@ -165,10 +174,20 @@
   function displayVisibility(scene,road,track,showPred,hideCandidates,hideReasons={}) {
     if(!showPred&&track.miss>0)return {visible:false,reason:'prediction_hidden'};
     const report=scene&&scene.hd_map_audit;
-    if(report&&road&&report.map_sha256&&road.sha256&&report.map_sha256!==road.sha256)
+    if(report&&road&&report.map_sha256&&road.sha256&&report.map_sha256!==road.sha256 &&
+       !(auditForTrack(scene,track)||{}).delivery_excluded)
       return {visible:true,reason:'map_mismatch'};
     const visible=previewVisible(scene,track,showPred,hideCandidates,hideReasons);
     return {visible,reason:visible?'visible':'candidate_hidden'};
+  }
+  // Point membership is supplied by the canonical native grid once per snapshot.
+  // 2 is original road within the inset band; 3 is the delivery inset interior.
+  function pointRoadColor(code) {
+    return code===2||code===3?'#34d399':code===1?'#94a3b8':'#facc15';
+  }
+  function pointStageVisible(label,stages) {
+    return label===3?!!stages.height_removed:label===2?!!stages.tunnel:
+      label===1?!!stages.ground:!!stages.nonground;
   }
   function trackVisible(scene,road,track,hideOutside,showPred=true) {
     if(!showPred && track.miss>0)return false;
@@ -309,5 +328,5 @@
 
   return { I4, rot3To4, mul, invRigid, apply, isMatrix, frameMatrices, bevProject, bevUnproject, sideProject, orbitProject,
     boxOutline, drawBox, frameAction, sceneFreshness, fetchErrorKind, pointInPolygon, roadMembership, motionAppearance,
-    trackVisible, IdChangeMonitor, auditForTrack, auditAppearance, previewVisible, displayVisibility, exclusionKind, exclusionKinds };
+    trackVisible, IdChangeMonitor, pointRoadColor, pointStageVisible, auditForTrack, auditAppearance, previewVisible, displayVisibility, exclusionKind, exclusionKinds };
 });
