@@ -77,3 +77,30 @@ ROS용 dashboard 모듈은 실행 relay로 설치하면 import가 실패하는 �
 - 473.47ms 공급 실패, 얇은 물체 소실, 실제 속도 정확도는 기존 미해결 목록에 남긴다.
 - S1에서 같은 입력의 정지 원인을 고정한 뒤 S2 구조 흡수, S3 local 통로·객체 계획,
   S4 단일 제어 연결을 순차 검증한다. IMU 위치 적분과 HD맵 재활성화는 이번에 구현하지 않았다.
+
+## 후속 사용자 컨테이너 적용·한글 표시 확인
+
+같은 날 사용자 요청으로 코드 revision `a7e21f16`을 컨테이너가 마운트한
+`2026-ASMC` checkout에 적용하고 `/root/ws` 전체를 Release 재빌드했다.
+작업 브랜치는 `2026-ASMC-work`에 유지하며 main 브랜치를 병합한 것은 아니다.
+확인 당시 실행 중인 운영 ROS master/판제/카메라/LiDAR 노드는 없었다.
+
+- 새 private 메시지 MD5가 위 변경 후 값과 일치했다. 새 interactive 셸은 기본
+  `/root/ws/devel/setup.bash`를 사용하며 개인 overlay가 필요 없다.
+- LiDAR 빌드 점검의 `source_matches=true`, package source SHA는
+  `a2e59ee7597f715d0b6b304745dcc3a20fc1320a2455ac1ac6570db034d7c908`다.
+- 실제 배포 빌드로 LiDAR CTest **41/41**, 56.38초; launch 선택4개;
+  planning 입력 ROS와 dashboard ROS→HTTP 각1개 통과.
+- 웹 HTML/CSS/JS는 UTF-8이고 HTTP에도 charset을 명시했다. 버튼/선택창·진단 고정폭 글꼴에
+  한글 fallback을 적용했다. Chromium에서 실제 CSS와 OS의 Malgun Gothic 글리프 사용을 확인하고
+  한글 화면을 검수했다. 외부 폰트 다운로드나 Windows 폰트 파일의 Git 배포는 하지 않는다.
+- source age·경로 등 화면은 합성 ROS/브라우저 fixture로 검사했다. 실제 차량 주행 검증은 아니다.
+- 마지막에는 기본8088의 읽기 전용 `dashboard.launch`만 시작했다.
+  `/behavior_dashboard_server`와 `/rosout`만 등록됐고 제어 발행자는0이었다.
+  센서·인지·autonomy 실행 전에는 정상적으로 데이터 대기 상태다.
+
+구 `/migration/lidar` 운영 전환은 이미 완료됐다. 현행 실행 안내·회귀 시험은
+운영 `/perception/lidar`, 명시적인 격리 시험 예시 `/test/lidar`로 구분한다.
+새 코드 경로나 호환 별칭을 만든 것이 아니며 namespace 인자의 일반 기능을 유지한다.
+과거 bag·A1/F1 재현 도구의 원래 토픽 문자열은 당시 기록을 읽기 위해 보존한다.
+새 시험 없이 이 문자열을 현재 운영 출력으로 사용하지 않는다.
