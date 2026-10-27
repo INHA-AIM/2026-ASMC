@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from scen_runner.records.analyze_shadow import TopicStats, ScalarStats, native_contact_summary, parse_selector, completed_bags
+from scen_runner.records.analyze_shadow import TopicStats, ScalarStats, native_contact_summary, scenario_outcome_summary, parse_selector, completed_bags
 
 
 class AnalysisTest(unittest.TestCase):
@@ -45,6 +45,17 @@ class AnalysisTest(unittest.TestCase):
             with self.assertRaises(ValueError):completed_bags(r)
             (r/'ros/b.bag.active').rename(r/'ros/b.bag')
             with self.assertRaises(ValueError):completed_bags(r)
+
+    def test_scenario_lifecycle_is_distinct_from_recording_success(self):
+        with tempfile.TemporaryDirectory() as root:
+            p=Path(root)/'scenes/run';p.mkdir(parents=True)
+            (p/'events.jsonl').write_text('\n'.join(json.dumps(x) for x in [
+                dict(event='driving_ready'),dict(event='run_ended',reason='section_end',elapsed_s=100),
+                dict(event='runtime_error',error='preparation_timeout'),dict(event='cleanup_confirmed')]))
+            result=scenario_outcome_summary(root)
+            self.assertEqual(result['counts']['runtime_error'],1)
+            self.assertEqual(result['terminal_events'][0]['reason'],'section_end')
+            self.assertNotIn('success',result)
 
     def test_bounded_cost_and_native_query_errors_are_explicit(self):
         stat=ScalarStats(3)
