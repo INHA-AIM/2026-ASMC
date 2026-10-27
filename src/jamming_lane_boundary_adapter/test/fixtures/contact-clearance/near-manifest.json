@@ -1,0 +1,11 @@
+{
+  "run": "shadow-stop-fix-20261028-r24",
+  "source": "readonly live topics under source464d3d45; exact bbox lane_stamp paired family; same scan local footprint",
+  "files": {
+    "near-family.rosbin": "2994e05440f61a70344deb73d71765d67a4e43130b0dd466b317ff03f7314847",
+    "near-bbox.rosbin": "00d953eb4884fc3c38996f213251c752a99bc0f6c77df7ebdc241b40a5b604ec"
+  },
+  "probe_source": "5fa19555",
+  "result": "previous0.1m/min6m candidates none; offset-0.35 length3 road=1 clear=1",
+  "thresholds_changed": false
+}

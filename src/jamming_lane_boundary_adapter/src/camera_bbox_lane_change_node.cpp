@@ -1620,9 +1620,11 @@ std::string updateContactPathPlan() {
         const auto* original=getPlanningLane(index,geometry);if(!original)return false;
         const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
             params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
-        // Search a bounded set through unchanged curvature/footprint guards.
+        // Recorded r24 has a feasible -0.35m/3m remaining corridor missed by
+        // the old0.1m/6m grid. Search147 bounded candidates per lane through
+        // unchanged curvature, inflated footprint and observed-road guards.
         // Prefer a short feasible completion without weakening vehicle limits.
-        for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5}) for(double length:{6.,8.,10.,12.}) {
+        for(double offset:{0.,-.05,.05,-.1,.1,-.15,.15,-.2,.2,-.25,.25,-.3,.3,-.35,.35,-.4,.4,-.45,.45,-.5,.5}) for(double length:{3.,4.,5.,6.,8.,10.,12.}) {
             LaneChain lane=*original;
             // Offset only the target center, never the observed road boundaries.
             for(auto& p:lane.centerline)p.y+=offset;
