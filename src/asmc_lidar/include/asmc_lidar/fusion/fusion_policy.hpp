@@ -179,7 +179,7 @@ inline void InvalidateObservation(TrackedObject& object, uint64 epoch) {
   object.camera.camera_observation_epoch = epoch;
   object.camera.observed_class = object.camera.observed_raw_class = "unknown";
   object.camera.multiview_evidence=false;object.camera.group_conflict=false;
-  object.camera.protection_group="unknown";object.camera.evidence_scan_ns=0;
+  object.camera.protection_group="unknown";object.camera.evidence_scan_ns=0;object.camera.evidence_ids.clear();
 }
 
 // false when this epoch already applied an image at or after stamp_ns.
@@ -196,7 +196,7 @@ inline bool BeginObservation(TrackedObject& object, uint64 stamp_ns, uint64 epoc
   object.camera.camera_observation_ns = stamp_ns;
   object.camera.observed_class = object.camera.observed_raw_class = "unknown";
   object.camera.multiview_evidence=false;object.camera.group_conflict=false;
-  object.camera.protection_group="unknown";object.camera.evidence_scan_ns=0;
+  object.camera.protection_group="unknown";object.camera.evidence_scan_ns=0;object.camera.evidence_ids.clear();
   return true;
 }
 
@@ -247,7 +247,7 @@ inline void Observe(TrackedObject& object, const std::string& label, const std::
 inline void Miss(TrackedObject& object, int miss_grace) {
   object.camera.observed_class = object.camera.observed_raw_class = "unknown";
   object.camera.multiview_evidence=false;object.camera.group_conflict=false;
-  object.camera.protection_group="unknown";object.camera.evidence_scan_ns=0;
+  object.camera.protection_group="unknown";object.camera.evidence_scan_ns=0;object.camera.evidence_ids.clear();
   ++object.camera.class_miss_counter;
   object.camera.last_seen_class = "unknown";
   object.camera.continuity_counter = 0;
@@ -271,6 +271,7 @@ inline void Copy(const TrackedObject& source, TrackedObject& target, bool unlock
   target.camera.group_conflict=source.camera.group_conflict;
   target.camera.protection_group=source.camera.protection_group;
   target.camera.evidence_scan_ns=source.camera.evidence_scan_ns;
+  target.camera.evidence_ids=source.camera.evidence_ids;
   target.camera.str_ObjectClass = source.camera.str_ObjectClass;
   target.camera.str_YoloClass = source.camera.str_YoloClass;
   target.camera.last_seen_class = source.camera.last_seen_class;

@@ -645,6 +645,9 @@
     let match = null, assoc = null;
     for (const d of fd) for (const a of d.associations || []) if (a.track_id === t.id) { match=d; assoc=a; }
     const rows = [
+      ['최근 양성 관측 ID',t.camera_evidence && t.camera_evidence.ids || '상세 근거 없음'],
+      ['최근 관측 / scan 시각',t.camera_evidence ? t.camera_evidence.image_ns+' / '+t.camera_evidence.scan_ns : '-'],
+      ['현재 양성 그룹 / 충돌',t.camera_evidence ? t.camera_evidence.observed_class+' / '+t.camera_evidence.conflict : '-'],
       ['이번 snapshot matching',match ? 'scan '+match.scan_sequence+' · '+match.action+' / '+match.reason : '이번 snapshot에 연결 기록 없음 · 이전 분류/보호와 구분'],
       ['영상 관측 / bbox',match ? match.observation_id+' / '+assoc.source_box_index : '-'],
       ['matching Δ / 대기',match ? fmt(match.image_minus_scan_ns/1e6,1)+' / '+fmt(match.wait_ns/1e6,1)+'ms' : '-'],

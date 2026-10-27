@@ -175,7 +175,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
   target_link_libraries(asmc_lidar_pipeline PUBLIC asmc_lidar_frame_time asmc_lidar_camera_core
     ${PCL_LIBRARIES} ${ASMC_LIDAR_GEOGRAPHICLIB_LIBRARY})
   target_compile_options(asmc_lidar_pipeline PRIVATE -Wall -Wextra)
-  # Preserved PR #102 core: byte-identical copy, compiled without new warnings.
+  # PR #102 algorithms preserved; M1 extends protected semantic labels only.
   set_source_files_properties(src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.cpp
     PROPERTIES COMPILE_OPTIONS "-w")
 

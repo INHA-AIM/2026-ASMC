@@ -47,6 +47,11 @@ void MultiCameraFusion::Aggregate(Scan& scan,std::vector<TrackedObject>& live,
     }
     // Start-state reaggregation replaces the same scan unit, never increments it
     // once per camera or on every later callback. Newer units seal older units.
+    scratch.camera.evidence_ids.clear();
+    for(const auto& e:evidence)if(e.positive) {
+      if(!scratch.camera.evidence_ids.empty())scratch.camera.evidence_ids+="; ";
+      scratch.camera.evidence_ids+=e.source.frame_id+"="+e.source.identity;
+    }
     scratch.camera.camera_observation_ns=stamp;
     scratch.camera.camera_observation_epoch=consumer_epoch_;
     scratch.camera.observed_class=scratch.camera.observed_raw_class="unknown";
@@ -178,6 +183,14 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
       report.match_offsets_ns.push_back(choice.offset_ns);
     }
     Aggregate(s,live,camera,ros,steady);
+    for(auto& d:report.decisions)if(d.scan_stamp_ns==s.stamp)for(auto& a:d.associations) {
+      const auto* o=fusion_state::Find(live,a.track_id);
+      const auto start=s.start.find(a.track_id);
+      if(start!=s.start.end())a.class_before=start->second.str_ObjectClass;
+      if(o)a.class_after=o->camera.str_ObjectClass;
+      a.applied=o&&applied_scan_[a.track_id]==s.stamp&&!o->camera.group_conflict;
+      a.reason=applied_scan_[a.track_id]>s.stamp?"older_scan_sealed":o&&o->camera.group_conflict?"group_conflict":a.applied?"aggregated_once_per_scan":"not_current";
+    }
   }
   // Retain classifications but revoke fresh protection when source records
   // expire or a view invalidates. A stale YOLO label is never new evidence.

@@ -86,6 +86,7 @@ class DebugPublisher : public pipeline::StageObserver {
   struct ObjectSummary {
     int idx = 0, id = -1, age = 0, miss = 0, points = 0;
     std::string cls, raw_cls;
+    pipeline::CameraClassEvidence camera; // small identifiers, no images or point clouds
     float dist = 0.f, cx = 0.f, cy = 0.f, cz = 0.f, width = 0.f, height = 0.f, zmin = 0.f, zmax = 0.f, yaw = 0.f;
     std::array<pipeline::P3, 8> corners{};
     bool kf_initialized = false;

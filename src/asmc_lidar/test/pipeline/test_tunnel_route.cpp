@@ -530,6 +530,7 @@ TEST(TunnelRoute, MultiViewUsesCanonicalOpticalAxesAndEightClassesWithoutClassif
     box.source_class_name=label;camera.boxes={box};input.views={camera};
     route.Process(Scene(),Local(),1000000000,VehicleSpec{},&input);
     EXPECT_GT(route.last().protected_points,0)<<label;
+    EXPECT_TRUE(route.last().protection_available);
     input.views[0].available=false;
     route.Process(Scene(),Local(),1100000000,VehicleSpec{},&input);
     EXPECT_EQ(route.last().protected_points,0)<<label;

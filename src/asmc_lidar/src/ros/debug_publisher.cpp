@@ -72,6 +72,7 @@ DebugPublisher::ObjectSummary Summary(const pipeline::TrackedObject& o) {
   s.points = static_cast<int>(o.detection.pcl_ClusterPoints.size());
   s.cls = o.camera.str_ObjectClass;
   s.raw_cls = o.camera.str_YoloClass;
+  s.camera=o.camera;
   s.dist = o.detection.f32_Dist;
   s.cx = o.detection.f32_OBB_CenterX;
   s.cy = o.detection.f32_OBB_CenterY;
@@ -168,6 +169,11 @@ void Object(std::ostream& out, const DebugPublisher::ObjectSummary& o, bool trac
     trace::Str(out, o.cls);
     out << ",\"raw_class\":";
     trace::Str(out, o.raw_cls);
+    out << ",\"camera_evidence\":{\"ids\":";trace::Str(out,o.camera.evidence_ids);
+    out << ",\"scan_ns\":" << o.camera.evidence_scan_ns << ",\"image_ns\":" << o.camera.camera_observation_ns;
+    out << ",\"observed_class\":";trace::Str(out,o.camera.observed_class);
+    out << ",\"protection_group\":";trace::Str(out,o.camera.protection_group);
+    out << ",\"conflict\":";trace::Bool(out,o.camera.group_conflict);out << '}';
     out << ",\"kf_initialized\":";
     trace::Bool(out, o.kf_initialized);
     // Internal CA state: frame not validated, never a published velocity.
@@ -208,6 +214,7 @@ std::vector<std::string> DebugPublisher::TopicNames(const std::string& prefix) {
 DebugPublisher::DebugPublisher(ros::NodeHandle& nh, const DebugPublisherConfig& config, const RuntimeConfig& runtime)
     : config_(config), road_map_(runtime.hd_map_audit), use_roll_(runtime.pipeline.use_roll), tunnel_enabled_(runtime.pipeline.tunnel.enabled),
       vehicle_(runtime.pipeline.vehicle),range_(runtime.pipeline.range),roi_(runtime.pipeline.roi),height_roi_(runtime.pipeline.height_roi) {
+  config_.max_points=std::clamp<std::size_t>(config_.max_points,1,20000);
   const auto names = TopicNames(config_.topic_prefix);
   raw_pub_ = nh.advertise<sensor_msgs::PointCloud2>(names[0], 1);
   roi_pub_ = nh.advertise<sensor_msgs::PointCloud2>(names[1], 1);

@@ -24,6 +24,7 @@ struct CameraClassEvidence {
   // It is not a confirmed class and never derives from measured speed.
   std::string protection_group="unknown";
   std::uint64_t evidence_scan_ns=0;
+  std::string evidence_ids; // at most one positive token per view; diagnostics only
 
 };
 

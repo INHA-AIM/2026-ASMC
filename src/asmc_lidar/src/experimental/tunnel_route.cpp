@@ -82,10 +82,18 @@ void Protection(const Cloud& cloud,const VehicleSpec& vehicle,const TunnelCamera
                 std::vector<std::uint8_t>& ambiguous) {
   if(!camera||camera->views.empty()){ProtectionView(cloud,vehicle,camera,cfg,protect,ambiguous);return;}
   protect.assign(cloud.size(),tunnel_filter::kProtectNone);ambiguous.assign(cloud.size(),0);
+  std::vector<std::uint8_t> covered(cloud.size(),0);
   for(const auto& view:camera->views) {
     std::vector<std::uint8_t> p,a;ProtectionView(cloud,vehicle,&view,cfg,p,a);
-    for(std::size_t i=0;i<p.size();++i){if(protect[i]==tunnel_filter::kProtectNone)protect[i]=p[i];ambiguous[i]|=a[i];}
+    for(std::size_t i=0;i<p.size();++i) {
+      if(protect[i]==tunnel_filter::kProtectNone)protect[i]=p[i];
+      // Availability is per view: a missing camera cannot turn the complete
+      // union into unavailable, nor can another view certify unseen points.
+      if(view.available&&view.calibrated)covered[i]|=a[i];
+      else ambiguous[i]|=a[i];
+    }
   }
+  for(std::size_t i=0;i<ambiguous.size();++i)ambiguous[i]&=!covered[i];
 }
 
 }
@@ -246,7 +254,9 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   anchor_valid_=local.st_IMU.b_ImuReady;anchor_stamp_=stamp;anchor_yaw_=local.st_IMU.f32_Yaw_rad;anchor_speed_=local.st_CAN.f32_CurrentVel_MPS;
   std::vector<std::uint8_t> protect,ambiguous;
   Protection(*voxel,vehicle,camera,config_.protection,protect,ambiguous);
-  const bool available=config_.protection.enabled&&camera&&camera->calibrated&&camera->available;
+  const bool available=config_.protection.enabled&&camera&&
+    (camera->views.empty() ? camera->calibrated&&camera->available :
+     std::all_of(camera->views.begin(),camera->views.end(),[](const auto& v){return v.calibrated&&v.available;}));
   const auto& f=core_.Process(*voxel,local.st_IMU.f32_Roll_rad,local.st_IMU.f32_Pitch_rad,&protect,&ambiguous,available,&motion);
   TunnelRouteOutput out;out.leveled=f.leveled;out.kept_indices=f.kept_indices;
   for(int i:f.kept_indices)out.filtered->push_back(f.leveled->points[i]);
