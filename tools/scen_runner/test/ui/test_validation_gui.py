@@ -153,6 +153,20 @@ class ValidationGuiTest(unittest.TestCase):
         finally:
             window.allow_close=True;window.timer.stop();window.close()
 
+    def test_recording_start_failure_never_releases_or_starts_episode(self):
+        from unittest.mock import Mock
+        runner=ValidationRunner('section','tunnel',42,save_collisions=False)
+        runner.recording=Mock()
+        runner.recording.start.side_effect=RuntimeError('recorder unavailable')
+        runner.engine.begin=Mock();runner.monitor.start=Mock();runner.monitor.wait=Mock()
+        runner.run()
+        runner.engine.begin.assert_not_called()
+        runner.monitor.start.assert_not_called()
+        runner.recording.close.assert_called_once()
+        self.assertEqual(runner.engine.phase,'error')
+        self.assertIn('recorder unavailable',runner.engine.error)
+        self.assertTrue(runner.closing)
+
     def test_manual_next_within_batch_counts_toward_same_total(self):
         from unittest.mock import Mock
         with tempfile.TemporaryDirectory() as folder:

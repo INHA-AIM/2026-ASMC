@@ -340,6 +340,7 @@ class EpisodeController:
             if attempt==5:raise RuntimeError('최종 시작점 복귀 또는 ego 정지 상태를 확인하지 못했습니다.')
             time.sleep(.1)
         self.phase='runs_done'
+        self.record_lifecycle('runs_finished',reason=reason,ego_held=True)
         budget=self.run_budget
         label='전체 씬' if self.mode=='scene' else LABELS[self.section]
         self.status=f'총 주행 {budget.started}/{budget.limit}회 완료 · 시작점 복귀 · ego 정지 · 자동 종료'
@@ -352,6 +353,9 @@ class EpisodeController:
             if self.cancelled.is_set():return None
             if self.collision_requested:reason='collision'
             self.phase='transition'
+        # A completed run count can include collisions. Preserve the native
+        # reason so analysis never treats "runs_done" alone as a safe pass.
+        self.record_lifecycle('run_ended',reason=reason,elapsed_s=max(0.,self.clock()-self.run_started))
         if self.run_budget is not None and not self.run_budget.can_start:
             label={'collision':'충돌','scene_end':'완주','section_end':'구간 종료','stagnation':'정체'}[reason]
             self.finish_runs(label,already_held=True);return None

@@ -70,6 +70,8 @@ jobs:
           PYTHONPATH=src/data_collection/src python3 -m unittest discover -s src/data_collection/test -p 'test_data_locations.py'
           python3 -m unittest tools/audit/test_storage_launchers.py
           python3 -m unittest tools/audit/test_data_location_preflight.py
+          python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_sensor_recording.py'
+          python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_shadow_analysis.py'
 
       - name: Verify documentation migration
         run: python3 tools/audit/check_documentation_migration.py
