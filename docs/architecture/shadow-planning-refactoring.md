@@ -10,7 +10,9 @@
 [이번 기반 검증 기록](../records/planning/2026-10-28-shadow-observation-foundation.md)에
 빌드·시험과 private 메시지 MD5 및 배포 조건을 남겼다.
 
-이번 단위는 다음 기반만 변경한다. 음영 회피·제어 알고리즘이나 timeout 완화는 하지 않는다.
+PR #124의 기반 변경은 아래와 같다. 이어진 PR #125에서는 사용자 승인으로 반복 수정 실험까지 확대했다.
+[접점/local 관측 기반 실험](../records/planning/2026-10-28-shadow-contact-clearance.md)을 구분해 읽는다.
+운영 기본 행동은 유지하며 새 clearance 정책은 내부 시험 설정이다. timeout 완화는 하지 않았다.
 
 - 같은 공용 관측의 `classification/camera_class`를 private 객체와 Behavior/Frenet 내부 객체까지 보존한다.
   숫자 type, 운동 상태, 속도 validity, 형상과 기존 행동 분기는 유지한다.
@@ -41,7 +43,7 @@
 | `/perception/lane/boundary_family` | base_link의3경계·observed/inferred/invalid support |
 | `/planning/camera_bbox_lane/result` | 전방16종 bbox의 차로 기하 분류. confidence 기본0.7; 카메라 생산자0.40과 다름 |
 | `/planning/camera_bbox_lane_change/markers` | 후보 중심선과 실제 선택/차선변경 경로. 화면이 별도 경로를 계산하지 않음 |
-| `/perception/lidar/tracks_local` | GPS 무효에도 제공 가능한 local 기하. **현재 음영 제어기는 이를 회피 입력으로 소비하지 않음** |
+| `/perception/lidar/tracks_local` | GPS 무효에도 제공 가능한 local 기하. **운영 기본은 미소비; S1 내부 실험에서만 동일 시각 관측 OBB를 사용** |
 | `/perception/lidar/planning_observations_map` | 일반 판제 정본. GPS 무효 때 map 사용 불가를 전달하며 정상 빈 배열로 위장하지 않음 |
 
 사용자 로그의 `map_observation_unavailable`와 일반 MPC의 `INVALID_EGO`는 GPS 무효와
@@ -60,7 +62,8 @@ source age 약0.1–0.19초인 로그만으로 stale 또는3뷰 계산 지연을
 `roslaunch asmc_planner dashboard.launch` → `http://127.0.0.1:8088/web/index_v2.html`.
 자동/음영 local/일반 map을 선택할 수 있다. local 화면은 X 전방=위, Y 좌측=왼쪽이다.
 family의 실제 관측은 실선, inferred는 점선, invalid support는 끊는다.
-local OBB는 참조용이며 기존 회피기가 사용한다고 표시하지 않는다.
+운영 기본의 local OBB는 참조용이다. S1 실험에서는 diagnostics의 contact_clearance/local 입력 상태로
+실제 사용 여부를 구분하며, 시각화만 보고 제어 입력 사용을 추정하지 않는다.
 
 - source age는 ROS clock끼리, 수신 age는 monotonic끼리 계산한다. 브라우저 clock과 ROS stamp를 빼지 않는다.
 - 기하 freshness350ms, 미래 허용50ms. 서로 다른 기하의 source 차이가200ms를 넘으면 겹쳐 그리지 않는다.
@@ -140,7 +143,8 @@ S1에서 필요한 최소 기록만 새로 수집한다. 이전 공간 예외를
 원태의 `scen_runner`에 등록 run 녹화·정상/실패 장면 저장·정확한 stamp 갤러리를 연결하고,
 터널 6회(주행 허용창 합계 약365초)를 기록했다. [시험 결과](../records/planning/2026-10-28-shadow-scenario-reproduction.md),
 [반복·녹화 명령](../../tools/scen_runner/docs/shadow-recording.md)을 따른다.
-이 단계의 상태는 **재현 기반 구현·첫 실패 자료 확보**다. bbox/family 소비 결함 수정과
+첫6회의 상태는 **재현 기반 구현·첫 실패 자료 확보**다. 이후 사용자가4시간 수정/주행 실험을 승인했고,
+[후속 실험 기록](../records/planning/2026-10-28-shadow-contact-clearance.md)에 실제 변경·실패·수락 범위를 이어서 기록한다. bbox/family 소비 결함 수정과
 음영 주행 전체 수락은 아직 완료가 아니다. `far_obstacle_lane_unresolved` 지속 정지와
 플라스틱 방호벽의 실제 구간 종료 사례를 모두 보존해 클래스만으로 원인을 단정하지 않는다.
 각 단위는 독립 커밋·복구 설정과 함께 검증한다. stop 사유를 숨기거나 freshness를 확대해 통과시키지 않는다.
@@ -150,6 +154,6 @@ S1에서 필요한 최소 기록만 새로 수집한다. 이전 공간 예외를
 보존한다. S1에서 인지 소실·공급 공백이 직접 원인으로 재현되면 해당 M2/R1/Q1만 우선 재개하며,
 터널·복구·OBB·추적·semantic 보조 전체를 음영 판제 착수의 필수조건으로 묶지 않는다.
 
-이번에는 새 논문/알고리즘을 선택하거나 재호의 tracker·터널 코드를 다시 작성하지 않았다.
+재호의 tracker·터널 코드는 다시 작성하지 않았다. S1의 제한된 clearance 후보와 참고 논문은 후속 실험 기록에 둔다.
 다음 계획에서 기존 연구의 EagerMOT/Autoware 연결 경계, 현재 Frenet·충돌 검사·제어 코어를
 실제 실패 fixture와 대조해 적용 범위를 하나씩 확정한다. 새로운 역할 분배는 사용자와 팀이 확인한 뒤 반영한다.
