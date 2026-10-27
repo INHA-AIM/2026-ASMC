@@ -1569,9 +1569,18 @@ std::string updateContactPathPlan() {
     Candidate candidate;
     int target=change_state.changing?change_state.target_lane:follower_state.locked_lane;
     bool clear=find(target,candidate);
-    if(!clear && !change_state.changing){
+    Candidate adjacent;
+    // Do not postpone a verified lane change by repeatedly squeezing along
+    // the road edge: that consumes the longitudinal room needed to shift.
+    // A nominally clear center corridor still stays in its current lane.
+    const bool centered_blocked=clear && std::abs(candidate.offset)>params.epsilon &&
+        change_state.occupancy[follower_state.locked_lane]==BboxResult::DETECTED;
+    const bool adjacent_clear=!change_state.changing && (!clear || centered_blocked) &&
+        find(1-follower_state.locked_lane,adjacent);
+    if(!change_state.changing && (!clear || adjacent_clear)){
         target=1-follower_state.locked_lane;
-        clear=find(target,candidate);
+        clear=adjacent_clear;
+        if(clear)candidate=std::move(adjacent);
         if(fresh)change_state.clear_hits=clear?change_state.clear_hits+1:0;
         if(!clear)return fail("contact_all_paths_blocked");
         if(change_state.clear_hits<params.adjacent_clear_frames)return fail("contact_confirming_clear_path");
