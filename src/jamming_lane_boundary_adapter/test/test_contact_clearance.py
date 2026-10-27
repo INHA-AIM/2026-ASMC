@@ -3,6 +3,8 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import subprocess
+import roslib.packages
 import rospy
 import rostest
 spec=importlib.util.spec_from_file_location('legacy',str(Path(__file__).with_name('test_camera_bbox_lane_change.py')))
@@ -19,6 +21,13 @@ class ContactTest(unittest.TestCase):
     def tearDown(self):
         legacy.LaneChangeTest.tearDown(self)
         rospy.delete_param('/camera_bbox_lane_change/contact_clearance_enabled')
+    def test_recorded_drum_heading_has_feasible_candidate(self):
+        fixture=Path(__file__).parent/'fixtures/contact-clearance'
+        executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
+        output=subprocess.check_output([executable,str(fixture/'family-probe.rosbin'),
+            str(fixture/'bbox-probe.rosbin')],text=True,timeout=5)
+        self.assertRegex(output,r'lane=0 .*road=1 clear=1')
+
     def test_contact_centerline_barrier_and_far_car(self):
         self.feed()
         self.feed([1.75],far=True,box_x=9.)
