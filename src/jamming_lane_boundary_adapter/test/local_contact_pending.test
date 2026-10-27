@@ -1,0 +1,12 @@
+<launch>
+  <!-- Read-only classifier on a private ROS master; no controller is launched. -->
+  <node pkg="lane_boundary_adapter" type="camera_bbox_lane_node" name="paired_local_classifier" required="true">
+    <param name="calibration_file" value="$(find asmc_camera)/config/cameras_v3.yaml"/>
+    <param name="projection_manifest" value="$(find asmc_camera)/config/bev/projection_context_v1.yaml"/>
+    <param name="lane_confirm_frames" value="1"/>
+    <param name="ego_mask_enabled" value="false"/>
+    <param name="local_contact_support_enabled" value="true"/>
+  </node>
+  <test test-name="local_contact_pending" pkg="lane_boundary_adapter"
+        type="test_local_contact_pending.py" time-limit="65"/>
+</launch>
