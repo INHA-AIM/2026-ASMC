@@ -233,6 +233,7 @@ std::string contact_decision = "disabled";
 unsigned contact_candidates = 0, contact_road_rejected=0, contact_collision_rejected=0;
 bool contact_geometry_ready = false;
 double contact_plan_wall_ms = 0.;
+bool contact_plan_evaluated=false;
 // Competition CAN speed remains valid in GPS shadow; never use its zeroed map
 // pose. The geometric trial is limited to low ACTUAL speed, not just a command.
 ros::Time contact_speed_stamp;
@@ -462,6 +463,7 @@ void cameraLaneFollowingProcess() {
     const double dt = std::clamp(elapsed, params.epsilon, params.max_steering_dt);
     follower_state.last_control_time = now;
 
+    contact_plan_evaluated=false;
     updateLaneChangeTiming(now);
 
     // 2. 입력 상태와 비상정지 확인. 추종할 수 없으면 기본 명령은 제동.
@@ -474,6 +476,7 @@ void cameraLaneFollowingProcess() {
         const auto plan_started=ros::SteadyTime::now();
         stop_reason = params.contact_clearance_enabled ? updateContactPathPlan() : updateLaneChangePlan();
         contact_plan_wall_ms=(ros::SteadyTime::now()-plan_started).toSec()*1000.;
+        contact_plan_evaluated=params.contact_clearance_enabled;
     } else {
         change_state.obstacle_hits = 0;
         change_state.clear_hits = 0;
@@ -1080,6 +1083,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "uses_obstacle_distance", params.contact_clearance_enabled?"image_contact_and_observed_local_footprint":"false");
     addDiagnosticValue(status, "contact_clearance_enabled", params.contact_clearance_enabled?"true":"false");
     addDiagnosticValue(status, "contact_decision", contact_decision);
+    addDiagnosticValue(status,"contact_plan_evaluated",contact_plan_evaluated?"true":"false");
     addDiagnosticValue(status, "contact_plan_wall_ms",std::to_string(contact_plan_wall_ms));
     addDiagnosticValue(status, "contact_actual_speed_mps",std::isfinite(contact_actual_speed)?std::to_string(contact_actual_speed):"unavailable");
     addDiagnosticValue(status, "contact_candidates", std::to_string(contact_candidates));

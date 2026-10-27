@@ -5,7 +5,7 @@ are sampled (1 Hz), so this report does not assert exact command arbitration.
 Run under the ROS Python environment: python3 -m scen_runner.records.analyze_shadow.
 """
 import argparse
-from collections import Counter, OrderedDict
+from collections import Counter, OrderedDict, deque
 import html
 import math
 import json
@@ -47,6 +47,40 @@ class TopicStats:
                     untracked_source_stream_samples=self.untracked_stream_samples)
 
 
+class ScalarStats:
+    """Bounded scalar journal; dropped history is explicit, never full objects."""
+    def __init__(self,limit=20000):
+        self.values=deque(maxlen=limit);self.total=0
+    def observe(self,value):
+        value=float(value)
+        if math.isfinite(value):self.values.append(value);self.total+=1
+    def summary(self):
+        values=sorted(self.values)
+        def percentile(q):
+            if not values:return None
+            i=(len(values)-1)*q;lo=int(i);hi=min(lo+1,len(values)-1)
+            return values[lo]+(values[hi]-values[lo])*(i-lo)
+        return dict(total_samples=self.total,retained_samples=len(values),dropped_samples=self.total-len(values),
+                    p50=percentile(.5),p95=percentile(.95),p99=percentile(.99),maximum=max(values) if values else None)
+
+
+def native_contact_summary(directory):
+    counts=Counter();ids=Counter();errors=Counter()
+    for path in sorted(Path(directory).glob('scenes/*/events.jsonl')):
+        with path.open(encoding='utf-8') as stream:
+            for line in stream:
+                row=json.loads(line)
+                if row.get('event')!='native_contact_sample':continue
+                counts['samples']+=1
+                if row.get('error'):errors[str(row['error'])]+=1
+                else:counts['successful_queries']+=1
+                if row.get('contacts'):
+                    counts['samples_with_contact']+=1;ids.update(map(str,row['contacts']))
+    return dict(counts=dict(counts),contact_ids=dict(ids),query_errors=dict(errors),
+                interpretation='Sampled existing native query, including background actors. '
+                'Absence is not continuous independent collision-clearance proof; shutdown query errors are retained.')
+
+
 def parse_selector(value):
     return dict(token.split('=', 1) for token in value.split() if '=' in token)
 
@@ -79,6 +113,7 @@ def analyze(directory, output_name='analysis'):
     collision_samples, collision_ids = 0, Counter()
     unresolved_collision_samples = 0
     contact_decisions = Counter()
+    planning_cost=ScalarStats()
     modes = []
     latest_ego = None
     last_selector = None
@@ -153,6 +188,7 @@ def analyze(directory, output_name='analysis'):
                         for status in msg.status:
                             values = {v.key:v.value for v in status.values}
                             reasons[status.message] += 1
+                            if values.get('contact_plan_evaluated')=='true':planning_cost.observe(values['contact_plan_wall_ms'])
                             contact_decisions[values.get("contact_decision", "not_in_this_revision")] += 1
                             emit(stream, dict(receipt=t, topic=topic, reason=status.message, values=values,
                                               last_selector_sample=latest_selector))
@@ -191,6 +227,7 @@ def analyze(directory, output_name='analysis'):
                    follower_reason_samples=dict(reasons), bbox_reason_samples=dict(box_reasons),
                    selector_samples=dict(selectors), gallery_cases=cases,
                    contact_decision_samples=dict(contact_decisions), mode_transitions=modes,
+                   evaluated_contact_plan_wall_ms=planning_cost.summary(),native_contacts=native_contact_summary(directory),
                    unresolved_collision_report_samples=unresolved_collision_samples,
                    collision_report_samples=collision_samples, collision_report_ids=dict(collision_ids),
                    interpretation='Counts are message samples, not independent failures. Receipt gaps include startup/reset. '
